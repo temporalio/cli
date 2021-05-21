@@ -111,10 +111,10 @@ var tctlCommands = []*cli.Command{
 	// 	Usage:       "Operate Temporal cluster",
 	// 	Subcommands: newClusterCommands(),
 	// },
-	// {
-	// 	Name:        "dataconverter",
-	// 	Aliases:     []string{"dc"},
-	// 	Usage:       "Operate Custom Data Converter",
-	// 	Subcommands: newDataConverterCommands(),
-	// },
+	{
+		Name:        "dataconverter",
+		Aliases:     []string{"dc"},
+		Usage:       "Operate Custom Data Converter",
+		Subcommands: newDataConverterCommands(),
+	},
 }
