@@ -38,9 +38,9 @@ import (
 	workflowpb "go.temporal.io/api/workflow/v1"
 	"go.temporal.io/sdk/converter"
 
-	"github.com/temporalio/tctl/common/payload"
-	"github.com/temporalio/tctl/common/payloads"
-	"github.com/temporalio/tctl/common/primitives/timestamp"
+	"github.com/temporalio/shared-go/timestamp"
+	"github.com/temporalio/tctl/cli/payload"
+	"github.com/temporalio/tctl/cli/payloads"
 )
 
 var (
