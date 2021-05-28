@@ -31,6 +31,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"reflect"
 	"regexp"
@@ -43,6 +44,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli/v2"
+	commonpb "go.temporal.io/api/common/v1"
 	enumspb "go.temporal.io/api/enums/v1"
 	historypb "go.temporal.io/api/history/v1"
 	sdkclient "go.temporal.io/sdk/client"
@@ -52,6 +54,7 @@ import (
 	"github.com/temporalio/shared-go/rpc"
 	"github.com/temporalio/tctl/cli/dataconverter"
 	"github.com/temporalio/tctl/cli/stringify"
+	"github.com/temporalio/tctl/common/payloads"
 )
 
 // GetHistory helper method to iterate over all pages and return complete list of history events
@@ -391,9 +394,10 @@ func printError(msg string, err error) {
 }
 
 // ErrorAndExit print easy to understand error msg first then error detail in a new line
-func ErrorAndExit(msg string, err error) {
+func ErrorAndExit(msg string, err error) error {
 	printError(msg, err)
-	osExit(1)
+	return err
+	// osExit(1)
 }
 
 func getWorkflowClient(c *cli.Context) sdkclient.Client {
@@ -406,6 +410,11 @@ func getWorkflowClientWithOptionalNamespace(c *cli.Context) sdkclient.Client {
 		_ = c.Set(FlagNamespace, "system-namespace")
 	}
 	return getWorkflowClient(c)
+}
+
+func getSDKClient(c *cli.Context) sdkclient.Client {
+	namespace := getRequiredGlobalOption(c, FlagNamespace)
+	return cFactory.SDKClient(c, namespace)
 }
 
 func getRequiredOption(c *cli.Context, optionName string) string {
@@ -581,6 +590,10 @@ func newContext(c *cli.Context) (context.Context, context.CancelFunc) {
 	return newContextWithTimeout(c, defaultContextTimeout)
 }
 
+func newContextForVisibility(c *cli.Context) (context.Context, context.CancelFunc) {
+	return newContextWithTimeout(c, defaultContextTimeoutForVisibility)
+}
+
 func newContextForLongPoll(c *cli.Context) (context.Context, context.CancelFunc) {
 	return newContextWithTimeout(c, defaultContextTimeoutForLongPoll)
 }
@@ -602,83 +615,81 @@ func newContextWithTimeout(c *cli.Context, timeout time.Duration) (context.Conte
 	return rpc.NewContextWithTimeoutAndCLIHeaders(timeout)
 }
 
-// TODO uncomment
-// // process and validate input provided through cmd or file
-// func processJSONInput(c *cli.Context) *commonpb.Payloads {
-// 	jsonsRaw := readJSONInputs(c, jsonTypeInput)
+// process and validate input provided through cmd or file
+func processJSONInput(c *cli.Context) *commonpb.Payloads {
+	jsonsRaw := readJSONInputs(c, jsonTypeInput)
 
-// 	var jsons []interface{}
-// 	for _, jsonRaw := range jsonsRaw {
-// 		if jsonRaw == nil {
-// 			jsons = append(jsons, nil)
-// 		} else {
-// 			var j interface{}
-// 			if err := json.Unmarshal(jsonRaw, &j); err != nil {
-// 				ErrorAndExit("Input is not a valid JSON.", err)
-// 			}
-// 			jsons = append(jsons, j)
-// 		}
+	var jsons []interface{}
+	for _, jsonRaw := range jsonsRaw {
+		if jsonRaw == nil {
+			jsons = append(jsons, nil)
+		} else {
+			var j interface{}
+			if err := json.Unmarshal(jsonRaw, &j); err != nil {
+				ErrorAndExit("Input is not a valid JSON.", err)
+			}
+			jsons = append(jsons, j)
+		}
 
-// 	}
-// 	p, err := payloads.Encode(jsons...)
-// 	if err != nil {
-// 		ErrorAndExit("Unable to encode input.", err)
-// 	}
+	}
+	p, err := payloads.Encode(jsons...)
+	if err != nil {
+		ErrorAndExit("Unable to encode input.", err)
+	}
 
-// 	return p
-// }
+	return p
+}
 
-// TODO uncomment
-// // read multiple inputs presented in json format
-// func readJSONInputs(c *cli.Context, jType jsonType) [][]byte {
-// 	var flagRawInput string
-// 	var flagInputFileName string
+// read multiple inputs presented in json format
+func readJSONInputs(c *cli.Context, jType jsonType) [][]byte {
+	var flagRawInput string
+	var flagInputFileName string
 
-// 	switch jType {
-// 	case jsonTypeInput:
-// 		flagRawInput = FlagInput
-// 		flagInputFileName = FlagInputFile
-// 	case jsonTypeMemo:
-// 		flagRawInput = FlagMemo
-// 		flagInputFileName = FlagMemoFile
-// 	default:
-// 		return nil
-// 	}
+	switch jType {
+	case jsonTypeInput:
+		flagRawInput = FlagInput
+		flagInputFileName = FlagInputFile
+	case jsonTypeMemo:
+		flagRawInput = FlagMemo
+		flagInputFileName = FlagMemoFile
+	default:
+		return nil
+	}
 
-// 	if c.IsSet(flagRawInput) {
-// 		inputsG := c.Generic(flagRawInput)
+	if c.IsSet(flagRawInput) {
+		inputsG := c.Generic(flagRawInput)
 
-// 		var inputs *cli.StringSlice
-// 		var ok bool
-// 		if inputs, ok = inputsG.(*cli.StringSlice); !ok {
-// 			// input could be provided as StringFlag instead of StringSliceFlag
-// 			ss := make(cli.StringSlice, 1)
-// 			ss[0] = fmt.Sprintf("%v", inputsG)
-// 			inputs = &ss
-// 		}
+		var inputs *cli.StringSlice
+		var ok bool
+		if inputs, ok = inputsG.(*cli.StringSlice); !ok {
+			// input could be provided as StringFlag instead of StringSliceFlag
+			ss := cli.StringSlice{}
+			ss.Set(fmt.Sprintf("%v", inputsG))
+			inputs = &ss
+		}
 
-// 		var inputsRaw [][]byte
-// 		for _, i := range *inputs {
-// 			if strings.EqualFold(i, "null") {
-// 				inputsRaw = append(inputsRaw, []byte(nil))
-// 			} else {
-// 				inputsRaw = append(inputsRaw, []byte(i))
-// 			}
-// 		}
+		var inputsRaw [][]byte
+		for _, i := range inputs.Value() {
+			if strings.EqualFold(i, "null") {
+				inputsRaw = append(inputsRaw, []byte(nil))
+			} else {
+				inputsRaw = append(inputsRaw, []byte(i))
+			}
+		}
 
-// 		return inputsRaw
-// 	} else if c.IsSet(flagInputFileName) {
-// 		inputFile := c.String(flagInputFileName)
-// 		// This method is purely used to parse input from the CLI. The input comes from a trusted user
-// 		// #nosec
-// 		data, err := ioutil.ReadFile(inputFile)
-// 		if err != nil {
-// 			ErrorAndExit("Error reading input file", err)
-// 		}
-// 		return [][]byte{data}
-// 	}
-// 	return nil
-// }
+		return inputsRaw
+	} else if c.IsSet(flagInputFileName) {
+		inputFile := c.String(flagInputFileName)
+		// This method is purely used to parse input from the CLI. The input comes from a trusted user
+		// #nosec
+		data, err := ioutil.ReadFile(inputFile)
+		if err != nil {
+			ErrorAndExit("Error reading input file", err)
+		}
+		return [][]byte{data}
+	}
+	return nil
+}
 
 // validate whether str is a valid json or multi valid json concatenated with spaces/newlines
 func validateJSONs(str string) error {
