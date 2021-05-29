@@ -394,10 +394,9 @@ func printError(msg string, err error) {
 }
 
 // ErrorAndExit print easy to understand error msg first then error detail in a new line
-func ErrorAndExit(msg string, err error) error {
+func ErrorAndExit(msg string, err error) {
 	printError(msg, err)
-	return err
-	// osExit(1)
+	os.Exit(1)
 }
 
 func getWorkflowClient(c *cli.Context) sdkclient.Client {

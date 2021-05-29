@@ -56,40 +56,40 @@ import (
 	"go.temporal.io/api/workflowservice/v1"
 	sdkclient "go.temporal.io/sdk/client"
 
+	"github.com/temporalio/shared-go/codec"
+	"github.com/temporalio/shared-go/timestamp"
 	"github.com/temporalio/tctl/cli/dataconverter"
 	"github.com/temporalio/tctl/cli/stringify"
+	"github.com/temporalio/tctl/common/payload"
+	"github.com/temporalio/tctl/common/payloads"
 	clispb "go.temporal.io/server/api/cli/v1"
 	"go.temporal.io/server/common/clock"
-	"go.temporal.io/server/common/codec"
 	"go.temporal.io/server/common/convert"
-	"go.temporal.io/server/common/payload"
-	"go.temporal.io/server/common/payloads"
-	"go.temporal.io/server/common/primitives/timestamp"
 	"go.temporal.io/server/common/searchattribute"
 	"go.temporal.io/server/service/history"
 )
 
 // ShowHistory shows the history of given workflow execution based on workflowID and runID.
-func ShowHistory(c *cli.Context) error {
+func ShowHistory(c *cli.Context) {
 	wid := getRequiredOption(c, FlagWorkflowID)
 	rid := c.String(FlagRunID)
-	return showHistoryHelper(c, wid, rid)
+	showHistoryHelper(c, wid, rid)
 }
 
 // ShowHistoryWithWID shows the history of given workflow with workflow_id
-func ShowHistoryWithWID(c *cli.Context) error {
+func ShowHistoryWithWID(c *cli.Context) {
 	if !c.Args().Present() {
-		return ErrorAndExit("Argument workflow_id is required.", nil)
+		ErrorAndExit("Argument workflow_id is required.", nil)
 	}
 	wid := c.Args().First()
 	rid := ""
 	if c.NArg() >= 2 {
 		rid = c.Args().Get(1)
 	}
-	return showHistoryHelper(c, wid, rid)
+	showHistoryHelper(c, wid, rid)
 }
 
-func showHistoryHelper(c *cli.Context, wid, rid string) error {
+func showHistoryHelper(c *cli.Context, wid, rid string) {
 	sdkClient := getSDKClient(c)
 
 	printDateTime := c.Bool(FlagPrintDateTime)
@@ -107,7 +107,7 @@ func showHistoryHelper(c *cli.Context, wid, rid string) error {
 	defer cancel()
 	history, err := GetHistory(ctx, sdkClient, wid, rid)
 	if err != nil {
-		return ErrorAndExit(fmt.Sprintf("Failed to get history on workflow id: %s, run id: %s.", wid, rid), err)
+		ErrorAndExit(fmt.Sprintf("Failed to get history on workflow id: %s, run id: %s.", wid, rid), err)
 	}
 
 	prevEvent := historypb.HistoryEvent{}
@@ -125,7 +125,7 @@ func showHistoryHelper(c *cli.Context, wid, rid string) error {
 	} else if c.IsSet(FlagEventID) { // only dump that event
 		eventID := c.Int(FlagEventID)
 		if eventID <= 0 || eventID > len(history.Events) {
-			return ErrorAndExit("EventId out of range.", fmt.Errorf("number should be 1 - %d inclusive", len(history.Events)))
+			ErrorAndExit("EventId out of range.", fmt.Errorf("number should be 1 - %d inclusive", len(history.Events)))
 		}
 		e := history.Events[eventID-1]
 		fmt.Println(stringify.AnyToString(e, true, 0, dataconverter.GetCurrent()))
@@ -164,26 +164,25 @@ func showHistoryHelper(c *cli.Context, wid, rid string) error {
 		serializer := codec.NewJSONPBIndentEncoder(" ")
 		data, err := serializer.Encode(history)
 		if err != nil {
-			return ErrorAndExit("Failed to serialize history data.", err)
+			ErrorAndExit("Failed to serialize history data.", err)
 		}
 		if err := ioutil.WriteFile(outputFileName, data, 0666); err != nil {
-			return ErrorAndExit("Failed to export history data file.", err)
+			ErrorAndExit("Failed to export history data file.", err)
 		}
 	}
-	return nil
 }
 
 // StartWorkflow starts a new workflow execution
-func StartWorkflow(c *cli.Context) error {
-	return startWorkflowHelper(c, false)
+func StartWorkflow(c *cli.Context) {
+	startWorkflowHelper(c, false)
 }
 
 // RunWorkflow starts a new workflow execution and print workflow progress and result
-func RunWorkflow(c *cli.Context) error {
-	return startWorkflowHelper(c, true)
+func RunWorkflow(c *cli.Context) {
+	startWorkflowHelper(c, true)
 }
 
-func startWorkflowHelper(c *cli.Context, shouldPrintProgress bool) error {
+func startWorkflowHelper(c *cli.Context, shouldPrintProgress bool) {
 	serviceClient := cFactory.FrontendClient(c)
 
 	namespace := getRequiredGlobalOption(c, FlagNamespace)
@@ -191,7 +190,7 @@ func startWorkflowHelper(c *cli.Context, shouldPrintProgress bool) error {
 	workflowType := getRequiredOption(c, FlagWorkflowType)
 	et := c.Int(FlagExecutionTimeout)
 	if et == 0 {
-		return ErrorAndExit(fmt.Sprintf("Option %s format is invalid.", FlagExecutionTimeout), nil)
+		ErrorAndExit(fmt.Sprintf("Option %s format is invalid.", FlagExecutionTimeout), nil)
 	}
 	dt := c.Int(FlagWorkflowTaskTimeout)
 	wid := c.String(FlagWorkflowID)
@@ -202,7 +201,7 @@ func startWorkflowHelper(c *cli.Context, shouldPrintProgress bool) error {
 	if c.IsSet(FlagWorkflowIDReusePolicy) {
 		reusePolicyInt, err := stringToEnum(c.String(FlagWorkflowIDReusePolicy), enumspb.WorkflowIdReusePolicy_value)
 		if err != nil {
-			return ErrorAndExit("Failed to parse Reuse Policy", err)
+			ErrorAndExit("Failed to parse Reuse Policy", err)
 		}
 		reusePolicy = enumspb.WorkflowIdReusePolicy(reusePolicyInt)
 	}
@@ -229,40 +228,32 @@ func startWorkflowHelper(c *cli.Context, shouldPrintProgress bool) error {
 		startRequest.CronSchedule = c.String(FlagCronSchedule)
 	}
 
-	memoFields, err := processMemo(c)
-	if err != nil {
-		return err
-	}
-
+	memoFields := processMemo(c)
 	if len(memoFields) != 0 {
 		startRequest.Memo = &commonpb.Memo{Fields: memoFields}
 	}
 
-	startRequest.SearchAttributes, err = processSearchAttr(c)
-	if err != nil {
-		return err
-	}
+	startRequest.SearchAttributes = processSearchAttr(c)
 
-	startFn := func() error {
+	startFn := func() {
 		tcCtx, cancel := newContext(c)
 		defer cancel()
 		resp, err := serviceClient.StartWorkflowExecution(tcCtx, startRequest)
 
 		if err != nil {
-			return ErrorAndExit("Failed to create workflow.", err)
+			ErrorAndExit("Failed to create workflow.", err)
 		} else {
 			fmt.Printf("Started Workflow Id: %s, run Id: %s\n", wid, resp.GetRunId())
 		}
-		return nil
 	}
 
-	runFn := func() error {
+	runFn := func() {
 		tcCtx, cancel := newContextForLongPoll(c)
 		defer cancel()
 		resp, err := serviceClient.StartWorkflowExecution(tcCtx, startRequest)
 
 		if err != nil {
-			return ErrorAndExit("Failed to run workflow.", err)
+			ErrorAndExit("Failed to run workflow.", err)
 		}
 
 		// print execution summary
@@ -282,17 +273,16 @@ func startWorkflowHelper(c *cli.Context, shouldPrintProgress bool) error {
 		table.Render()
 
 		printWorkflowProgress(c, wid, resp.GetRunId())
-		return nil
 	}
 
 	if shouldPrintProgress {
-		return runFn()
+		runFn()
 	} else {
-		return startFn()
+		startFn()
 	}
 }
 
-func processSearchAttr(c *cli.Context) (*commonpb.SearchAttributes, error) {
+func processSearchAttr(c *cli.Context) *commonpb.SearchAttributes {
 	sanitize := func(val string) []string {
 		trimmedVal := strings.TrimSpace(val)
 		if len(trimmedVal) == 0 {
@@ -308,15 +298,15 @@ func processSearchAttr(c *cli.Context) (*commonpb.SearchAttributes, error) {
 
 	searchAttrKeys := sanitize(c.String(FlagSearchAttributesKey))
 	if len(searchAttrKeys) == 0 {
-		return nil, nil
+		return nil
 	}
 	searchAttrVals := sanitize(c.String(FlagSearchAttributesVal))
 	if len(searchAttrVals) == 0 {
-		return nil, nil
+		return nil
 	}
 
 	if len(searchAttrKeys) != len(searchAttrVals) {
-		return nil, ErrorAndExit(fmt.Sprintf("Uneven number of search attributes keys (%d): %v and values(%d): %v.", len(searchAttrKeys), searchAttrKeys, len(searchAttrVals), searchAttrVals), nil)
+		ErrorAndExit(fmt.Sprintf("Uneven number of search attributes keys (%d): %v and values(%d): %v.", len(searchAttrKeys), searchAttrKeys, len(searchAttrVals), searchAttrVals), nil)
 	}
 
 	searchAttributesStr := make(map[string]string, len(searchAttrKeys))
@@ -326,13 +316,13 @@ func processSearchAttr(c *cli.Context) (*commonpb.SearchAttributes, error) {
 
 	searchAttributes, err := searchattribute.Parse(searchAttributesStr, nil)
 	if err != nil {
-		return nil, ErrorAndExit("Unable to parse search attributes.", err)
+		ErrorAndExit("Unable to parse search attributes.", err)
 	}
 
-	return searchAttributes, nil
+	return searchAttributes
 }
 
-func processMemo(c *cli.Context) (map[string]*commonpb.Payload, error) {
+func processMemo(c *cli.Context) map[string]*commonpb.Payload {
 	rawMemoKey := c.String(FlagMemoKey)
 	var memoKeys []string
 	if strings.TrimSpace(rawMemoKey) != "" {
@@ -341,12 +331,12 @@ func processMemo(c *cli.Context) (map[string]*commonpb.Payload, error) {
 
 	jsonsRaw := readJSONInputs(c, jsonTypeMemo)
 	if len(jsonsRaw) == 0 {
-		return nil, nil
+		return nil
 	}
 	rawMemoValue := string(jsonsRaw[0]) // StringFlag may contain up to one json
 
 	if err := validateJSONs(rawMemoValue); err != nil {
-		return nil, ErrorAndExit("Input is not valid JSON, or JSONs concatenated with spaces/newlines.", err)
+		ErrorAndExit("Input is not valid JSON, or JSONs concatenated with spaces/newlines.", err)
 	}
 
 	var memoValues []string
@@ -357,31 +347,31 @@ func processMemo(c *cli.Context) (map[string]*commonpb.Payload, error) {
 		memoValues = append(memoValues, sc.Value().String())
 	}
 	if err := sc.Error(); err != nil {
-		return nil, ErrorAndExit("Parse json error.", err)
+		ErrorAndExit("Parse json error.", err)
 	}
 	if len(memoKeys) != len(memoValues) {
-		return nil, ErrorAndExit("Number of memo keys and values are not equal.", nil)
+		ErrorAndExit("Number of memo keys and values are not equal.", nil)
 	}
 
 	fields := map[string]*commonpb.Payload{}
 	for i, key := range memoKeys {
 		fields[key] = payload.EncodeString(memoValues[i])
 	}
-	return fields, nil
+	return fields
 }
 
-func getPrintableMemo(memo *commonpb.Memo) (string, error) {
+func getPrintableMemo(memo *commonpb.Memo) string {
 	buf := new(bytes.Buffer)
 	for k, v := range memo.Fields {
 		var memo string
 		err := payload.Decode(v, &memo)
 		if err != nil {
-			return "", ErrorAndExit("Memo has incoorect formtat.", err)
+			ErrorAndExit("Memo has incoorect formtat.", err)
 		}
 
 		_, _ = fmt.Fprintf(buf, "%s=%s\n", k, memo)
 	}
-	return buf.String(), nil
+	return buf.String()
 }
 
 func getPrintableSearchAttr(searchAttr *commonpb.SearchAttributes) string {
@@ -400,7 +390,7 @@ func getPrintableSearchAttr(searchAttr *commonpb.SearchAttributes) string {
 }
 
 // helper function to print workflow progress with time refresh every second
-func printWorkflowProgress(c *cli.Context, wid, rid string) error {
+func printWorkflowProgress(c *cli.Context, wid, rid string) {
 	fmt.Println(colorMagenta("Progress:"))
 
 	sdkClient := getSDKClient(c)
@@ -419,12 +409,12 @@ func printWorkflowProgress(c *cli.Context, wid, rid string) error {
 		maxFieldLength = c.Int(FlagMaxFieldLength)
 	}
 
-	go func() error {
+	go func() {
 		iter := sdkClient.GetWorkflowHistory(tcCtx, wid, rid, true, enumspb.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
 		for iter.HasNext() {
 			event, err := iter.Next()
 			if err != nil {
-				return ErrorAndExit("Unable to read event.", err)
+				ErrorAndExit("Unable to read event.", err)
 			}
 			if isTimeElapseExist {
 				removePrevious2LinesFromTerminal()
@@ -438,7 +428,6 @@ func printWorkflowProgress(c *cli.Context, wid, rid string) error {
 			lastEvent = event
 		}
 		doneChan <- true
-		return nil
 	}()
 
 	for {
@@ -454,13 +443,13 @@ func printWorkflowProgress(c *cli.Context, wid, rid string) error {
 			fmt.Println(colorMagenta("\nResult:"))
 			fmt.Printf("  Run Time: %d seconds\n", timeElapse)
 			printRunStatus(lastEvent)
-			return nil
+			return
 		}
 	}
 }
 
 // TerminateWorkflow terminates a workflow execution
-func TerminateWorkflow(c *cli.Context) error {
+func TerminateWorkflow(c *cli.Context) {
 	sdkClient := getSDKClient(c)
 
 	wid := getRequiredOption(c, FlagWorkflowID)
@@ -472,15 +461,14 @@ func TerminateWorkflow(c *cli.Context) error {
 	err := sdkClient.TerminateWorkflow(ctx, wid, rid, reason, nil)
 
 	if err != nil {
-		return ErrorAndExit("Terminate workflow failed.", err)
+		ErrorAndExit("Terminate workflow failed.", err)
 	} else {
 		fmt.Println("Terminate workflow succeeded.")
 	}
-	return nil
 }
 
 // CancelWorkflow cancels a workflow execution
-func CancelWorkflow(c *cli.Context) error {
+func CancelWorkflow(c *cli.Context) {
 	sdkClient := getSDKClient(c)
 
 	wid := getRequiredOption(c, FlagWorkflowID)
@@ -491,15 +479,14 @@ func CancelWorkflow(c *cli.Context) error {
 	err := sdkClient.CancelWorkflow(ctx, wid, rid)
 
 	if err != nil {
-		return ErrorAndExit("Cancel workflow failed.", err)
+		ErrorAndExit("Cancel workflow failed.", err)
 	} else {
 		fmt.Println("Cancel workflow succeeded.")
 	}
-	return nil
 }
 
 // SignalWorkflow signals a workflow execution
-func SignalWorkflow(c *cli.Context) error {
+func SignalWorkflow(c *cli.Context) {
 	serviceClient := cFactory.FrontendClient(c)
 
 	namespace := getRequiredGlobalOption(c, FlagNamespace)
@@ -522,29 +509,27 @@ func SignalWorkflow(c *cli.Context) error {
 	})
 
 	if err != nil {
-		return ErrorAndExit("Signal workflow failed.", err)
+		ErrorAndExit("Signal workflow failed.", err)
 	} else {
 		fmt.Println("Signal workflow succeeded.")
 	}
-
-	return nil
 }
 
 // QueryWorkflow query workflow execution
-func QueryWorkflow(c *cli.Context) error {
+func QueryWorkflow(c *cli.Context) {
 	getRequiredGlobalOption(c, FlagNamespace) // for pre-check and alert if not provided
 	getRequiredOption(c, FlagWorkflowID)
 	queryType := getRequiredOption(c, FlagQueryType)
 
-	return queryWorkflowHelper(c, queryType)
+	queryWorkflowHelper(c, queryType)
 }
 
 // QueryWorkflowUsingStackTrace query workflow execution using __stack_trace as query type
-func QueryWorkflowUsingStackTrace(c *cli.Context) error {
-	return queryWorkflowHelper(c, "__stack_trace")
+func QueryWorkflowUsingStackTrace(c *cli.Context) {
+	queryWorkflowHelper(c, "__stack_trace")
 }
 
-func queryWorkflowHelper(c *cli.Context, queryType string) error {
+func queryWorkflowHelper(c *cli.Context, queryType string) {
 	serviceClient := cFactory.FrontendClient(c)
 
 	namespace := getRequiredGlobalOption(c, FlagNamespace)
@@ -575,13 +560,14 @@ func queryWorkflowHelper(c *cli.Context, queryType string) error {
 		case "not_completed_cleanly":
 			rejectCondition = enumspb.QUERY_REJECT_CONDITION_NOT_COMPLETED_CLEANLY
 		default:
-			return ErrorAndExit(fmt.Sprintf("invalid reject condition %v, valid values are \"not_open\" and \"not_completed_cleanly\"", c.String(FlagQueryRejectCondition)), nil)
+			ErrorAndExit(fmt.Sprintf("invalid reject condition %v, valid values are \"not_open\" and \"not_completed_cleanly\"", c.String(FlagQueryRejectCondition)), nil)
 		}
 		queryRequest.QueryRejectCondition = rejectCondition
 	}
 	queryResponse, err := serviceClient.QueryWorkflow(tcCtx, queryRequest)
 	if err != nil {
-		return ErrorAndExit("Query workflow failed.", err)
+		ErrorAndExit("Query workflow failed.", err)
+		return
 	}
 
 	if queryResponse.QueryRejected != nil {
@@ -590,11 +576,10 @@ func queryWorkflowHelper(c *cli.Context, queryType string) error {
 		queryResult := payloads.ToString(queryResponse.QueryResult)
 		fmt.Printf("Query result:\n%v\n", queryResult)
 	}
-	return nil
 }
 
 // ListWorkflow list workflow executions based on filters
-func ListWorkflow(c *cli.Context) error {
+func ListWorkflow(c *cli.Context) {
 	more := c.Bool(FlagMore)
 	queryOpen := c.Bool(FlagOpen)
 
@@ -603,24 +588,18 @@ func ListWorkflow(c *cli.Context) error {
 
 	if printJSON || printDecodedRaw {
 		if !more {
-			results, _, err := getListResultInRaw(c, queryOpen, nil)
-			if err != nil {
-				return err
-			}
+			results, _ := getListResultInRaw(c, queryOpen, nil)
 			fmt.Println("[")
 			printListResults(results, printJSON, false)
 			fmt.Println("]")
 		} else {
-			return ErrorAndExit("Not support printJSON in more mode", nil)
+			ErrorAndExit("Not support printJSON in more mode", nil)
 		}
-		return nil
+		return
 	}
 
 	table := createTableForListWorkflow(c, false, queryOpen)
-	prepareTable, err := listWorkflow(c, table, queryOpen)
-	if err != nil {
-		return err
-	}
+	prepareTable := listWorkflow(c, table, queryOpen)
 
 	if !more { // default mode only show one page items
 		prepareTable(nil)
@@ -628,11 +607,7 @@ func ListWorkflow(c *cli.Context) error {
 	} else { // require input Enter to view next page
 		var nextPageToken []byte
 		for {
-			nextPageToken, _, err = prepareTable(nextPageToken)
-			if err != nil {
-				return err
-			}
-
+			nextPageToken, _ = prepareTable(nextPageToken)
 			table.Render()
 			table.ClearRows()
 
@@ -645,11 +620,10 @@ func ListWorkflow(c *cli.Context) error {
 			}
 		}
 	}
-	return nil
 }
 
 // ListAllWorkflow list all workflow executions based on filters
-func ListAllWorkflow(c *cli.Context) error {
+func ListAllWorkflow(c *cli.Context) {
 	queryOpen := c.Bool(FlagOpen)
 
 	printJSON := c.Bool(FlagPrintJSON)
@@ -658,83 +632,62 @@ func ListAllWorkflow(c *cli.Context) error {
 	if printJSON || printDecodedRaw {
 		var results []*workflowpb.WorkflowExecutionInfo
 		var nextPageToken []byte
-		var err error
 		fmt.Println("[")
 		for {
-			results, nextPageToken, err = getListResultInRaw(c, queryOpen, nextPageToken)
-			if err != nil {
-				return err
-			}
+			results, nextPageToken = getListResultInRaw(c, queryOpen, nextPageToken)
 			printListResults(results, printJSON, nextPageToken != nil)
 			if len(nextPageToken) == 0 {
 				break
 			}
 		}
 		fmt.Println("]")
-		return nil
+		return
 	}
 
 	table := createTableForListWorkflow(c, true, queryOpen)
-	prepareTable, err := listWorkflow(c, table, queryOpen)
-	if err != nil {
-		return err
-	}
-
+	prepareTable := listWorkflow(c, table, queryOpen)
 	var nextPageToken []byte
 	for {
-		nextPageToken, _, err = prepareTable(nextPageToken)
-		if err != nil {
-			return err
-		}
+		nextPageToken, _ = prepareTable(nextPageToken)
 		if len(nextPageToken) == 0 {
 			break
 		}
 	}
 	table.Render()
-	return nil
 }
 
 // ScanAllWorkflow list all workflow executions using Scan API.
 // It should be faster than ListAllWorkflow, but result are not sorted.
-func ScanAllWorkflow(c *cli.Context) error {
+func ScanAllWorkflow(c *cli.Context) {
 	printJSON := c.Bool(FlagPrintJSON)
 	printDecodedRaw := c.Bool(FlagPrintFullyDetail)
 
 	if printJSON || printDecodedRaw {
 		var results []*workflowpb.WorkflowExecutionInfo
 		var nextPageToken []byte
-		var err error
 		fmt.Println("[")
 		for {
-			results, nextPageToken, err = getScanResultInRaw(c, nextPageToken)
-			if err != nil {
-				return err
-			}
+			results, nextPageToken = getScanResultInRaw(c, nextPageToken)
 			printListResults(results, printJSON, nextPageToken != nil)
 			if len(nextPageToken) == 0 {
 				break
 			}
 		}
 		fmt.Println("]")
-		return nil
+		return
 	}
 
 	isQueryOpen := isQueryOpen(c.String(FlagListQuery))
 	table := createTableForListWorkflow(c, true, isQueryOpen)
 	prepareTable := scanWorkflow(c, table, isQueryOpen)
 	var nextPageToken []byte
-	var err error
 	for {
-		nextPageToken, _, err = prepareTable(nextPageToken)
-		if err != nil {
-			return err
-		}
+		nextPageToken, _ = prepareTable(nextPageToken)
 		if len(nextPageToken) == 0 {
 			break
 		}
 	}
 	table.Render()
-	return nil
 }
 
 func isQueryOpen(query string) bool {
@@ -743,7 +696,7 @@ func isQueryOpen(query string) bool {
 }
 
 // CountWorkflow count number of workflows
-func CountWorkflow(c *cli.Context) error {
+func CountWorkflow(c *cli.Context) {
 	sdkClient := getSDKClient(c)
 
 	query := c.String(FlagListQuery)
@@ -755,15 +708,14 @@ func CountWorkflow(c *cli.Context) error {
 	defer cancel()
 	response, err := sdkClient.CountWorkflow(ctx, request)
 	if err != nil {
-		return ErrorAndExit("Failed to count workflow.", err)
+		ErrorAndExit("Failed to count workflow.", err)
 	}
 
 	fmt.Println(response.GetCount())
-	return nil
 }
 
 // ListArchivedWorkflow lists archived workflow executions based on filters
-func ListArchivedWorkflow(c *cli.Context) error {
+func ListArchivedWorkflow(c *cli.Context) {
 	sdkClient := getSDKClient(c)
 
 	printJSON := c.Bool(FlagPrintJSON)
@@ -795,7 +747,7 @@ func ListArchivedWorkflow(c *cli.Context) error {
 		result, err = sdkClient.ListArchivedWorkflow(ctx, request)
 		if err != nil {
 			cancel()
-			return ErrorAndExit("Failed to list archived workflow.", err)
+			ErrorAndExit("Failed to list archived workflow.", err)
 		}
 		request.NextPageToken = result.NextPageToken
 		cancel()
@@ -849,7 +801,7 @@ func ListArchivedWorkflow(c *cli.Context) error {
 		result, err = sdkClient.ListArchivedWorkflow(ctx, request)
 		if err != nil {
 			cancel()
-			return ErrorAndExit("Failed to list archived workflow", err)
+			ErrorAndExit("Failed to list archived workflow", err)
 		}
 		cancel()
 
@@ -865,22 +817,20 @@ func ListArchivedWorkflow(c *cli.Context) error {
 	if len(result.NextPageToken) == 0 {
 		postPrintFn()
 	}
-
-	return nil
 }
 
 // DescribeWorkflow show information about the specified workflow execution
-func DescribeWorkflow(c *cli.Context) error {
+func DescribeWorkflow(c *cli.Context) {
 	wid := getRequiredOption(c, FlagWorkflowID)
 	rid := c.String(FlagRunID)
 
-	return describeWorkflowHelper(c, wid, rid)
+	describeWorkflowHelper(c, wid, rid)
 }
 
 // DescribeWorkflowWithID show information about the specified workflow execution
-func DescribeWorkflowWithID(c *cli.Context) error {
+func DescribeWorkflowWithID(c *cli.Context) {
 	if !c.Args().Present() {
-		return ErrorAndExit("Argument workflow_id is required.", nil)
+		ErrorAndExit("Argument workflow_id is required.", nil)
 	}
 	wid := c.Args().First()
 	rid := ""
@@ -888,10 +838,10 @@ func DescribeWorkflowWithID(c *cli.Context) error {
 		rid = c.Args().Get(1)
 	}
 
-	return describeWorkflowHelper(c, wid, rid)
+	describeWorkflowHelper(c, wid, rid)
 }
 
-func describeWorkflowHelper(c *cli.Context, wid, rid string) error {
+func describeWorkflowHelper(c *cli.Context, wid, rid string) {
 	frontendClient := cFactory.FrontendClient(c)
 	namespace := getRequiredGlobalOption(c, FlagNamespace)
 	printRaw := c.Bool(FlagPrintRaw) // printRaw is false by default,
@@ -909,12 +859,12 @@ func describeWorkflowHelper(c *cli.Context, wid, rid string) error {
 		},
 	})
 	if err != nil {
-		return ErrorAndExit("Describe workflow execution failed", err)
+		ErrorAndExit("Describe workflow execution failed", err)
 	}
 
 	if printResetPointsOnly {
 		printAutoResetPoints(resp)
-		return nil
+		return
 	}
 
 	if printRaw {
@@ -922,8 +872,6 @@ func describeWorkflowHelper(c *cli.Context, wid, rid string) error {
 	} else {
 		prettyPrintJSONObject(convertDescribeWorkflowExecutionResponse(resp))
 	}
-
-	return nil
 }
 
 func printAutoResetPoints(resp *workflowservice.DescribeWorkflowExecutionResponse) {
@@ -1058,7 +1006,7 @@ func createTableForListWorkflow(c *cli.Context, listAll bool, queryOpen bool) *t
 	return table
 }
 
-func listWorkflow(c *cli.Context, table *tablewriter.Table, queryOpen bool) (func([]byte) ([]byte, int, error), error) {
+func listWorkflow(c *cli.Context, table *tablewriter.Table, queryOpen bool) func([]byte) ([]byte, int) {
 	sdkClient := getSDKClient(c)
 
 	earliestTime := parseTime(c.String(FlagEarliestTime), time.Time{}, time.Now().UTC())
@@ -1077,35 +1025,27 @@ func listWorkflow(c *cli.Context, table *tablewriter.Table, queryOpen bool) (fun
 	var workflowStatus enumspb.WorkflowExecutionStatus
 	if c.IsSet(FlagWorkflowStatus) {
 		if queryOpen {
-			return nil, ErrorAndExit(optionErr, errors.New("you can only filter on status for closed workflow, not open workflow"))
+			ErrorAndExit(optionErr, errors.New("you can only filter on status for closed workflow, not open workflow"))
 		}
-		var err error
-		workflowStatus, err = getWorkflowStatus(c.String(FlagWorkflowStatus))
-		if err != nil {
-			return nil, err
-		}
+		workflowStatus = getWorkflowStatus(c.String(FlagWorkflowStatus))
 	} else {
 		workflowStatus = workflowStatusNotSet
 	}
 
 	if len(workflowID) > 0 && len(workflowType) > 0 {
-		return nil, ErrorAndExit(optionErr, errors.New("you can filter on workflow_id or workflow_type, but not on both"))
+		ErrorAndExit(optionErr, errors.New("you can filter on workflow_id or workflow_type, but not on both"))
 	}
 
-	prepareTable := func(next []byte) ([]byte, int, error) {
+	prepareTable := func(next []byte) ([]byte, int) {
 		var result []*workflowpb.WorkflowExecutionInfo
 		var nextPageToken []byte
-		var err error
 		if c.IsSet(FlagListQuery) {
 			listQuery := c.String(FlagListQuery)
-			result, nextPageToken, err = listWorkflowExecutions(sdkClient, pageSize, next, listQuery, c)
+			result, nextPageToken = listWorkflowExecutions(sdkClient, pageSize, next, listQuery, c)
 		} else if queryOpen {
-			result, nextPageToken, err = listOpenWorkflow(sdkClient, pageSize, earliestTime, latestTime, workflowID, workflowType, next, c)
+			result, nextPageToken = listOpenWorkflow(sdkClient, pageSize, earliestTime, latestTime, workflowID, workflowType, next, c)
 		} else {
-			result, nextPageToken, err = listClosedWorkflow(sdkClient, pageSize, earliestTime, latestTime, workflowID, workflowType, workflowStatus, next, c)
-		}
-		if err != nil {
-			return nil, 0, err
+			result, nextPageToken = listClosedWorkflow(sdkClient, pageSize, earliestTime, latestTime, workflowID, workflowType, workflowStatus, next, c)
 		}
 
 		appendWorkflowExecutionsToTable(
@@ -1118,9 +1058,9 @@ func listWorkflow(c *cli.Context, table *tablewriter.Table, queryOpen bool) (fun
 			printSearchAttr,
 		)
 
-		return nextPageToken, len(result), nil
+		return nextPageToken, len(result)
 	}
-	return prepareTable, nil
+	return prepareTable
 }
 
 func appendWorkflowExecutionsToTable(
@@ -1131,7 +1071,7 @@ func appendWorkflowExecutionsToTable(
 	printDateTime bool,
 	printMemo bool,
 	printSearchAttr bool,
-) error {
+) {
 	for _, e := range executions {
 		var startTime, executionTime, closeTime string
 		if printRawTime {
@@ -1148,18 +1088,13 @@ func appendWorkflowExecutionsToTable(
 			row = append(row, closeTime)
 		}
 		if printMemo {
-			memo, err := getPrintableMemo(e.Memo)
-			if err != nil {
-				return err
-			}
-			row = append(row, memo)
+			row = append(row, getPrintableMemo(e.Memo))
 		}
 		if printSearchAttr {
 			row = append(row, getPrintableSearchAttr(e.SearchAttributes))
 		}
 		table.Append(row)
 	}
-	return nil
 }
 
 func printRunStatus(event *historypb.HistoryEvent) {
@@ -1197,7 +1132,7 @@ func trimWorkflowType(str string) string {
 }
 
 func listWorkflowExecutions(sdkClient sdkclient.Client, pageSize int, nextPageToken []byte, query string, c *cli.Context) (
-	[]*workflowpb.WorkflowExecutionInfo, []byte, error) {
+	[]*workflowpb.WorkflowExecutionInfo, []byte) {
 
 	request := &workflowservice.ListWorkflowExecutionsRequest{
 		PageSize:      int32(pageSize),
@@ -1209,13 +1144,13 @@ func listWorkflowExecutions(sdkClient sdkclient.Client, pageSize int, nextPageTo
 	defer cancel()
 	response, err := sdkClient.ListWorkflow(ctx, request)
 	if err != nil {
-		return nil, nil, ErrorAndExit("Failed to list workflow.", err)
+		ErrorAndExit("Failed to list workflow.", err)
 	}
-	return response.Executions, response.NextPageToken, nil
+	return response.Executions, response.NextPageToken
 }
 
 func listOpenWorkflow(sdkClient sdkclient.Client, pageSize int, earliestTime, latestTime time.Time, workflowID, workflowType string,
-	nextPageToken []byte, c *cli.Context) ([]*workflowpb.WorkflowExecutionInfo, []byte, error) {
+	nextPageToken []byte, c *cli.Context) ([]*workflowpb.WorkflowExecutionInfo, []byte) {
 
 	request := &workflowservice.ListOpenWorkflowExecutionsRequest{
 		MaximumPageSize: int32(pageSize),
@@ -1237,13 +1172,13 @@ func listOpenWorkflow(sdkClient sdkclient.Client, pageSize int, earliestTime, la
 	defer cancel()
 	response, err := sdkClient.ListOpenWorkflow(ctx, request)
 	if err != nil {
-		return nil, nil, ErrorAndExit("Failed to list open workflow.", err)
+		ErrorAndExit("Failed to list open workflow.", err)
 	}
-	return response.Executions, response.NextPageToken, nil
+	return response.Executions, response.NextPageToken
 }
 
 func listClosedWorkflow(sdkClient sdkclient.Client, pageSize int, earliestTime, latestTime time.Time, workflowID, workflowType string,
-	workflowStatus enumspb.WorkflowExecutionStatus, nextPageToken []byte, c *cli.Context) ([]*workflowpb.WorkflowExecutionInfo, []byte, error) {
+	workflowStatus enumspb.WorkflowExecutionStatus, nextPageToken []byte, c *cli.Context) ([]*workflowpb.WorkflowExecutionInfo, []byte) {
 
 	request := &workflowservice.ListClosedWorkflowExecutionsRequest{
 		MaximumPageSize: int32(pageSize),
@@ -1267,12 +1202,12 @@ func listClosedWorkflow(sdkClient sdkclient.Client, pageSize int, earliestTime, 
 	defer cancel()
 	response, err := sdkClient.ListClosedWorkflow(ctx, request)
 	if err != nil {
-		return nil, nil, ErrorAndExit("Failed to list closed workflow.", err)
+		ErrorAndExit("Failed to list closed workflow.", err)
 	}
-	return response.Executions, response.NextPageToken, nil
+	return response.Executions, response.NextPageToken
 }
 
-func getListResultInRaw(c *cli.Context, queryOpen bool, nextPageToken []byte) ([]*workflowpb.WorkflowExecutionInfo, []byte, error) {
+func getListResultInRaw(c *cli.Context, queryOpen bool, nextPageToken []byte) ([]*workflowpb.WorkflowExecutionInfo, []byte) {
 	sdkClient := getSDKClient(c)
 	earliestTime := parseTime(c.String(FlagEarliestTime), time.Time{}, time.Now().UTC())
 	latestTime := parseTime(c.String(FlagLatestTime), time.Now().UTC(), time.Now().UTC())
@@ -1286,37 +1221,31 @@ func getListResultInRaw(c *cli.Context, queryOpen bool, nextPageToken []byte) ([
 	var workflowStatus enumspb.WorkflowExecutionStatus
 	if c.IsSet(FlagWorkflowStatus) {
 		if queryOpen {
-			return nil, nil, ErrorAndExit(optionErr, errors.New("you can only filter on status for closed workflow, not open workflow"))
+			ErrorAndExit(optionErr, errors.New("you can only filter on status for closed workflow, not open workflow"))
 		}
-		var err error
-		workflowStatus, err = getWorkflowStatus(c.String(FlagWorkflowStatus))
-		if err != nil {
-			return nil, nil, err
-		}
+		workflowStatus = getWorkflowStatus(c.String(FlagWorkflowStatus))
 	} else {
 		workflowStatus = workflowStatusNotSet
 	}
 
 	if len(workflowID) > 0 && len(workflowType) > 0 {
-		return nil, nil, ErrorAndExit(optionErr, errors.New("you can filter on workflow_id or workflow_type, but not on both"))
+		ErrorAndExit(optionErr, errors.New("you can filter on workflow_id or workflow_type, but not on both"))
 	}
 
 	var result []*workflowpb.WorkflowExecutionInfo
-	var err error
-
 	if c.IsSet(FlagListQuery) {
 		listQuery := c.String(FlagListQuery)
-		result, nextPageToken, err = listWorkflowExecutions(sdkClient, pageSize, nextPageToken, listQuery, c)
+		result, nextPageToken = listWorkflowExecutions(sdkClient, pageSize, nextPageToken, listQuery, c)
 	} else if queryOpen {
-		result, nextPageToken, err = listOpenWorkflow(sdkClient, pageSize, earliestTime, latestTime, workflowID, workflowType, nextPageToken, c)
+		result, nextPageToken = listOpenWorkflow(sdkClient, pageSize, earliestTime, latestTime, workflowID, workflowType, nextPageToken, c)
 	} else {
-		result, nextPageToken, err = listClosedWorkflow(sdkClient, pageSize, earliestTime, latestTime, workflowID, workflowType, workflowStatus, nextPageToken, c)
+		result, nextPageToken = listClosedWorkflow(sdkClient, pageSize, earliestTime, latestTime, workflowID, workflowType, workflowStatus, nextPageToken, c)
 	}
 
-	return result, nextPageToken, err
+	return result, nextPageToken
 }
 
-func getScanResultInRaw(c *cli.Context, nextPageToken []byte) ([]*workflowpb.WorkflowExecutionInfo, []byte, error) {
+func getScanResultInRaw(c *cli.Context, nextPageToken []byte) ([]*workflowpb.WorkflowExecutionInfo, []byte) {
 	sdkClient := getSDKClient(c)
 	listQuery := c.String(FlagListQuery)
 	pageSize := c.Int(FlagPageSize)
@@ -1327,7 +1256,7 @@ func getScanResultInRaw(c *cli.Context, nextPageToken []byte) ([]*workflowpb.Wor
 	return scanWorkflowExecutions(sdkClient, pageSize, nextPageToken, listQuery, c)
 }
 
-func scanWorkflowExecutions(sdkClient sdkclient.Client, pageSize int, nextPageToken []byte, query string, c *cli.Context) ([]*workflowpb.WorkflowExecutionInfo, []byte, error) {
+func scanWorkflowExecutions(sdkClient sdkclient.Client, pageSize int, nextPageToken []byte, query string, c *cli.Context) ([]*workflowpb.WorkflowExecutionInfo, []byte) {
 
 	request := &workflowservice.ScanWorkflowExecutionsRequest{
 		PageSize:      int32(pageSize),
@@ -1339,12 +1268,12 @@ func scanWorkflowExecutions(sdkClient sdkclient.Client, pageSize int, nextPageTo
 	defer cancel()
 	response, err := sdkClient.ScanWorkflow(ctx, request)
 	if err != nil {
-		return nil, nil, ErrorAndExit("Failed to list workflow.", err)
+		ErrorAndExit("Failed to list workflow.", err)
 	}
-	return response.Executions, response.NextPageToken, nil
+	return response.Executions, response.NextPageToken
 }
 
-func scanWorkflow(c *cli.Context, table *tablewriter.Table, queryOpen bool) func([]byte) ([]byte, int, error) {
+func scanWorkflow(c *cli.Context, table *tablewriter.Table, queryOpen bool) func([]byte) ([]byte, int) {
 	sdkClient := getSDKClient(c)
 
 	printRawTime := c.Bool(FlagPrintRawTime)
@@ -1356,15 +1285,11 @@ func scanWorkflow(c *cli.Context, table *tablewriter.Table, queryOpen bool) func
 		pageSize = defaultPageSizeForScan
 	}
 
-	prepareTable := func(next []byte) ([]byte, int, error) {
+	prepareTable := func(next []byte) ([]byte, int) {
 		var result []*workflowpb.WorkflowExecutionInfo
 		var nextPageToken []byte
-		var err error
 		listQuery := c.String(FlagListQuery)
-		result, nextPageToken, err = scanWorkflowExecutions(sdkClient, pageSize, next, listQuery, c)
-		if err != nil {
-			return nil, 0, err
-		}
+		result, nextPageToken = scanWorkflowExecutions(sdkClient, pageSize, next, listQuery, c)
 
 		for _, e := range result {
 			var startTime, executionTime, closeTime string
@@ -1382,11 +1307,7 @@ func scanWorkflow(c *cli.Context, table *tablewriter.Table, queryOpen bool) func
 				row = append(row, closeTime)
 			}
 			if printMemo {
-				memo, err := getPrintableMemo(e.Memo)
-				if err != nil {
-					return nil, 0, err
-				}
-				row = append(row, memo)
+				row = append(row, getPrintableMemo(e.Memo))
 			}
 			if printSearchAttr {
 				row = append(row, getPrintableSearchAttr(e.SearchAttributes))
@@ -1394,17 +1315,17 @@ func scanWorkflow(c *cli.Context, table *tablewriter.Table, queryOpen bool) func
 			table.Append(row)
 		}
 
-		return nextPageToken, len(result), nil
+		return nextPageToken, len(result)
 	}
 	return prepareTable
 }
-func getWorkflowStatus(statusStr string) (enumspb.WorkflowExecutionStatus, error) {
+func getWorkflowStatus(statusStr string) enumspb.WorkflowExecutionStatus {
 	if status, ok := workflowClosedStatusMap[strings.ToLower(statusStr)]; ok {
-		return status, nil
+		return status
 	}
-	return 0, ErrorAndExit(optionErr, errors.New("option status is not one of allowed values "+
+	ErrorAndExit(optionErr, errors.New("option status is not one of allowed values "+
 		"[running, completed, failed, canceled, terminated, continueasnew, timedout]"))
-
+	return 0
 }
 
 // default will print decoded raw
@@ -1429,27 +1350,27 @@ func printListResults(executions []*workflowpb.WorkflowExecutionInfo, inJSON boo
 }
 
 // ObserveHistory show the process of running workflow
-func ObserveHistory(c *cli.Context) error {
+func ObserveHistory(c *cli.Context) {
 	wid := getRequiredOption(c, FlagWorkflowID)
 	rid := c.String(FlagRunID)
 
-	return printWorkflowProgress(c, wid, rid)
+	printWorkflowProgress(c, wid, rid)
 }
 
 // ResetWorkflow reset workflow
-func ResetWorkflow(c *cli.Context) error {
+func ResetWorkflow(c *cli.Context) {
 	namespace := getRequiredGlobalOption(c, FlagNamespace)
 	wid := getRequiredOption(c, FlagWorkflowID)
 	reason := getRequiredOption(c, FlagReason)
 	if len(reason) == 0 {
-		return ErrorAndExit("wrong reason", fmt.Errorf("reason cannot be empty"))
+		ErrorAndExit("wrong reason", fmt.Errorf("reason cannot be empty"))
 	}
 	rid := c.String(FlagRunID)
 	eventID := c.Int64(FlagEventID)
 	resetType := c.String(FlagResetType)
 	extraForResetType, ok := resetTypesMap[resetType]
 	if !ok && eventID <= 0 {
-		return ErrorAndExit(fmt.Sprintf("must specify either valid event_id or reset_type (one of %s)", strings.Join(mapKeysToArray(resetTypesMap), ", ")), nil)
+		ErrorAndExit(fmt.Sprintf("must specify either valid event_id or reset_type (one of %s)", strings.Join(mapKeysToArray(resetTypesMap), ", ")), nil)
 	}
 	if ok && len(extraForResetType) > 0 {
 		getRequiredOption(c, extraForResetType)
@@ -1466,7 +1387,7 @@ func ResetWorkflow(c *cli.Context) error {
 	if resetType != "" {
 		resetBaseRunID, workflowTaskFinishID, err = getResetEventIDByType(ctx, c, resetType, namespace, wid, rid, frontendClient)
 		if err != nil {
-			return ErrorAndExit("getResetEventIDByType failed", err)
+			ErrorAndExit("getResetEventIDByType failed", err)
 		}
 	}
 	resp, err := frontendClient.ResetWorkflowExecution(ctx, &workflowservice.ResetWorkflowExecutionRequest{
@@ -1480,10 +1401,9 @@ func ResetWorkflow(c *cli.Context) error {
 		RequestId:                 uuid.New(),
 	})
 	if err != nil {
-		return ErrorAndExit("reset failed", err)
+		ErrorAndExit("reset failed", err)
 	}
 	prettyPrintJSONObject(resp)
-	return nil
 }
 
 func processResets(c *cli.Context, namespace string, wes chan commonpb.WorkflowExecution, done chan bool, wg *sync.WaitGroup, params batchResetParamsType) {
@@ -1526,7 +1446,7 @@ type batchResetParamsType struct {
 }
 
 // ResetInBatch resets workflow in batch
-func ResetInBatch(c *cli.Context) error {
+func ResetInBatch(c *cli.Context) {
 	namespace := getRequiredGlobalOption(c, FlagNamespace)
 	resetType := getRequiredOption(c, FlagResetType)
 
@@ -1538,7 +1458,7 @@ func ResetInBatch(c *cli.Context) error {
 
 	extraForResetType, ok := resetTypesMap[resetType]
 	if !ok {
-		return ErrorAndExit("Not supported reset type", nil)
+		ErrorAndExit("Not supported reset type", nil)
 	} else if len(extraForResetType) > 0 {
 		getRequiredOption(c, extraForResetType)
 	}
@@ -1553,7 +1473,7 @@ func ResetInBatch(c *cli.Context) error {
 	}
 
 	if inFileName == "" && query == "" {
-		return ErrorAndExit("Must provide input file or list query to get target workflows to reset", nil)
+		ErrorAndExit("Must provide input file or list query to get target workflows to reset", nil)
 	}
 
 	wg := &sync.WaitGroup{}
@@ -1572,7 +1492,7 @@ func ResetInBatch(c *cli.Context) error {
 		// #nosec
 		excFile, err := os.Open(excFileName)
 		if err != nil {
-			return ErrorAndExit("Open failed2", err)
+			ErrorAndExit("Open failed2", err)
 		}
 		defer excFile.Close()
 		scanner := bufio.NewScanner(excFile)
@@ -1586,7 +1506,7 @@ func ResetInBatch(c *cli.Context) error {
 			}
 			cols := strings.Split(line, separator)
 			if len(cols) < 1 {
-				return ErrorAndExit("Split failed", fmt.Errorf("line %v has less than 1 cols separated by comma, only %v ", idx, len(cols)))
+				ErrorAndExit("Split failed", fmt.Errorf("line %v has less than 1 cols separated by comma, only %v ", idx, len(cols)))
 			}
 			wid := strings.TrimSpace(cols[0])
 			rid := "not-needed"
@@ -1598,7 +1518,7 @@ func ResetInBatch(c *cli.Context) error {
 	if len(inFileName) > 0 {
 		inFile, err := os.Open(inFileName)
 		if err != nil {
-			return ErrorAndExit("Open failed", err)
+			ErrorAndExit("Open failed", err)
 		}
 		defer inFile.Close()
 		scanner := bufio.NewScanner(inFile)
@@ -1612,7 +1532,7 @@ func ResetInBatch(c *cli.Context) error {
 			}
 			cols := strings.Split(line, separator)
 			if len(cols) < 1 {
-				return ErrorAndExit("Split failed", fmt.Errorf("line %v has less than 1 cols separated by comma, only %v ", idx, len(cols)))
+				ErrorAndExit("Split failed", fmt.Errorf("line %v has less than 1 cols separated by comma, only %v ", idx, len(cols)))
 			}
 			fmt.Printf("Start processing line %v ...\n", idx)
 			wid := strings.TrimSpace(cols[0])
@@ -1637,12 +1557,8 @@ func ResetInBatch(c *cli.Context) error {
 		pageSize := 1000
 		var nextPageToken []byte
 		var result []*workflowpb.WorkflowExecutionInfo
-		var err error
 		for {
-			result, nextPageToken, err = scanWorkflowExecutions(sdkClient, pageSize, nextPageToken, query, c)
-			if err != nil {
-				return err
-			}
+			result, nextPageToken = scanWorkflowExecutions(sdkClient, pageSize, nextPageToken, query, c)
 			for _, we := range result {
 				wid := we.Execution.GetWorkflowId()
 				rid := we.Execution.GetRunId()
@@ -1667,7 +1583,6 @@ func ResetInBatch(c *cli.Context) error {
 	close(done)
 	fmt.Println("wait for all goroutines...")
 	wg.Wait()
-	return nil
 }
 
 func printErrorAndReturn(msg string, err error) error {
@@ -1982,13 +1897,13 @@ func getLastContinueAsNewID(ctx context.Context, namespace, wid, rid string, fro
 }
 
 // CompleteActivity completes an activity
-func CompleteActivity(c *cli.Context) error {
+func CompleteActivity(c *cli.Context) {
 	namespace := getRequiredGlobalOption(c, FlagNamespace)
 	wid := getRequiredOption(c, FlagWorkflowID)
 	rid := getRequiredOption(c, FlagRunID)
 	activityID := getRequiredOption(c, FlagActivityID)
 	if len(activityID) == 0 {
-		return ErrorAndExit("Invalid activityId", fmt.Errorf("activityId cannot be empty"))
+		ErrorAndExit("Invalid activityId", fmt.Errorf("activityId cannot be empty"))
 	}
 	result := getRequiredOption(c, FlagResult)
 	identity := getRequiredOption(c, FlagIdentity)
@@ -2005,21 +1920,20 @@ func CompleteActivity(c *cli.Context) error {
 		Identity:   identity,
 	})
 	if err != nil {
-		return ErrorAndExit("Completing activity failed", err)
+		ErrorAndExit("Completing activity failed", err)
 	} else {
 		fmt.Println("Complete activity successfully.")
 	}
-	return nil
 }
 
 // FailActivity fails an activity
-func FailActivity(c *cli.Context) error {
+func FailActivity(c *cli.Context) {
 	namespace := getRequiredGlobalOption(c, FlagNamespace)
 	wid := getRequiredOption(c, FlagWorkflowID)
 	rid := getRequiredOption(c, FlagRunID)
 	activityID := getRequiredOption(c, FlagActivityID)
 	if len(activityID) == 0 {
-		return ErrorAndExit("Invalid activityId", fmt.Errorf("activityId cannot be empty"))
+		ErrorAndExit("Invalid activityId", fmt.Errorf("activityId cannot be empty"))
 	}
 	reason := getRequiredOption(c, FlagReason)
 	detail := getRequiredOption(c, FlagDetail)
@@ -2044,17 +1958,16 @@ func FailActivity(c *cli.Context) error {
 		Identity: identity,
 	})
 	if err != nil {
-		return ErrorAndExit("Failing activity failed", err)
+		ErrorAndExit("Failing activity failed", err)
 	} else {
 		fmt.Println("Fail activity successfully.")
 	}
-	return nil
 }
 
 // ObserveHistoryWithID show the process of running workflow
-func ObserveHistoryWithID(c *cli.Context) error {
+func ObserveHistoryWithID(c *cli.Context) {
 	if !c.Args().Present() {
-		return ErrorAndExit("Argument workflow_id is required.", nil)
+		ErrorAndExit("Argument workflow_id is required.", nil)
 	}
 	wid := c.Args().First()
 	rid := ""
@@ -2062,5 +1975,5 @@ func ObserveHistoryWithID(c *cli.Context) error {
 		rid = c.Args().Get(1)
 	}
 
-	return printWorkflowProgress(c, wid, rid)
+	printWorkflowProgress(c, wid, rid)
 }

@@ -25,7 +25,6 @@
 package cli
 
 import (
-	"os"
 	"time"
 
 	"github.com/fatih/color"
@@ -104,7 +103,6 @@ var (
 
 	tableHeaderBlue         = tablewriter.Colors{tablewriter.FgHiBlueColor}
 	optionErr               = "there is something wrong with your command options"
-	osExit                  = os.Exit
 	workflowClosedStatusMap = map[string]enumspb.WorkflowExecutionStatus{
 		"running":        enumspb.WORKFLOW_EXECUTION_STATUS_RUNNING,
 		"completed":      enumspb.WORKFLOW_EXECUTION_STATUS_COMPLETED,

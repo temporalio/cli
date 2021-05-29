@@ -37,7 +37,8 @@ func newWorkflowCommands() []*cli.Command {
 			Usage: "show workflow history",
 			Flags: getFlagsForShow(),
 			Action: func(c *cli.Context) error {
-				return ShowHistory(c)
+				ShowHistory(c)
+				return nil
 			},
 		},
 		{
@@ -46,7 +47,8 @@ func newWorkflowCommands() []*cli.Command {
 			Description: "temporal workflow showid <workflow_id> <run_id>. workflow_id is required; run_id is optional",
 			Flags:       getFlagsForShowID(),
 			Action: func(c *cli.Context) error {
-				return ShowHistoryWithWID(c)
+				ShowHistoryWithWID(c)
+				return nil
 			},
 		},
 		{
@@ -54,7 +56,8 @@ func newWorkflowCommands() []*cli.Command {
 			Usage: "start a new workflow execution",
 			Flags: getFlagsForStart(),
 			Action: func(c *cli.Context) error {
-				return StartWorkflow(c)
+				StartWorkflow(c)
+				return nil
 			},
 		},
 		{
@@ -62,7 +65,8 @@ func newWorkflowCommands() []*cli.Command {
 			Usage: "start a new workflow execution and get workflow progress",
 			Flags: getFlagsForRun(),
 			Action: func(c *cli.Context) error {
-				return RunWorkflow(c)
+				RunWorkflow(c)
+				return nil
 			},
 		},
 		{
@@ -71,7 +75,8 @@ func newWorkflowCommands() []*cli.Command {
 			Usage:   "cancel a workflow execution",
 			Flags:   flagsForExecution,
 			Action: func(c *cli.Context) error {
-				return CancelWorkflow(c)
+				CancelWorkflow(c)
+				return nil
 			},
 		},
 		{
@@ -101,7 +106,8 @@ func newWorkflowCommands() []*cli.Command {
 				},
 			},
 			Action: func(c *cli.Context) error {
-				return SignalWorkflow(c)
+				SignalWorkflow(c)
+				return nil
 			},
 		},
 		{
@@ -123,7 +129,8 @@ func newWorkflowCommands() []*cli.Command {
 				},
 			},
 			Action: func(c *cli.Context) error {
-				return TerminateWorkflow(c)
+				TerminateWorkflow(c)
+				return nil
 			},
 		},
 		{
@@ -133,7 +140,8 @@ func newWorkflowCommands() []*cli.Command {
 			Description: "list one page (default size 10 items) by default, use flag --pagesize to change page size",
 			Flags:       getFlagsForList(),
 			Action: func(c *cli.Context) error {
-				return ListWorkflow(c)
+				ListWorkflow(c)
+				return nil
 			},
 		},
 		{
@@ -142,7 +150,8 @@ func newWorkflowCommands() []*cli.Command {
 			Usage:   "list all open or closed workflow executions",
 			Flags:   getFlagsForListAll(),
 			Action: func(c *cli.Context) error {
-				return ListAllWorkflow(c)
+				ListAllWorkflow(c)
+				return nil
 			},
 		},
 		{
@@ -150,7 +159,8 @@ func newWorkflowCommands() []*cli.Command {
 			Usage: "list archived workflow executions",
 			Flags: getFlagsForListArchived(),
 			Action: func(c *cli.Context) error {
-				return ListArchivedWorkflow(c)
+				ListArchivedWorkflow(c)
+				return nil
 			},
 		},
 		{
@@ -160,7 +170,8 @@ func newWorkflowCommands() []*cli.Command {
 				"It will be faster than listall, but result are not sorted.",
 			Flags: getFlagsForScan(),
 			Action: func(c *cli.Context) error {
-				return ScanAllWorkflow(c)
+				ScanAllWorkflow(c)
+				return nil
 			},
 		},
 		{
@@ -169,7 +180,8 @@ func newWorkflowCommands() []*cli.Command {
 			Usage:   "count number of workflow executions (need to enable Temporal server on ElasticSearch)",
 			Flags:   getFlagsForCount(),
 			Action: func(c *cli.Context) error {
-				return CountWorkflow(c)
+				CountWorkflow(c)
+				return nil
 			},
 		},
 		{
@@ -177,7 +189,8 @@ func newWorkflowCommands() []*cli.Command {
 			Usage: "query workflow execution",
 			Flags: flagsForQuery,
 			Action: func(c *cli.Context) error {
-				return QueryWorkflow(c)
+				QueryWorkflow(c)
+				return nil
 			},
 		},
 		{
@@ -185,7 +198,8 @@ func newWorkflowCommands() []*cli.Command {
 			Usage: "query workflow execution with __stack_trace as query type",
 			Flags: flagsForStackTraceQuery,
 			Action: func(c *cli.Context) error {
-				return QueryWorkflowUsingStackTrace(c)
+				QueryWorkflowUsingStackTrace(c)
+				return nil
 			},
 		},
 		{
@@ -194,7 +208,8 @@ func newWorkflowCommands() []*cli.Command {
 			Usage:   "show information of workflow execution",
 			Flags:   getFlagsForDescribe(),
 			Action: func(c *cli.Context) error {
-				return DescribeWorkflow(c)
+				DescribeWorkflow(c)
+				return nil
 			},
 		},
 		{
@@ -204,7 +219,8 @@ func newWorkflowCommands() []*cli.Command {
 			Description: "tctl workflow describeid <workflow_id> <run_id>. workflow_id is required; run_id is optional",
 			Flags:       getFlagsForDescribeID(),
 			Action: func(c *cli.Context) error {
-				return DescribeWorkflowWithID(c)
+				DescribeWorkflowWithID(c)
+				return nil
 			},
 		},
 		{
@@ -213,7 +229,8 @@ func newWorkflowCommands() []*cli.Command {
 			Usage:   "show the progress of workflow history",
 			Flags:   getFlagsForObserve(),
 			Action: func(c *cli.Context) error {
-				return ObserveHistory(c)
+				ObserveHistory(c)
+				return nil
 			},
 		},
 		{
@@ -222,7 +239,8 @@ func newWorkflowCommands() []*cli.Command {
 			Usage:   "show the progress of workflow history with given workflow_id and optional run_id (a shortcut of `observe -w <wid> -r <rid>`)",
 			Flags:   getFlagsForObserveID(),
 			Action: func(c *cli.Context) error {
-				return ObserveHistoryWithID(c)
+				ObserveHistoryWithID(c)
+				return nil
 			},
 		},
 		{
@@ -256,7 +274,8 @@ func newWorkflowCommands() []*cli.Command {
 				},
 			},
 			Action: func(c *cli.Context) error {
-				return ResetWorkflow(c)
+				ResetWorkflow(c)
+				return nil
 			},
 		},
 		{
@@ -320,7 +339,8 @@ func newWorkflowCommands() []*cli.Command {
 				},
 			},
 			Action: func(c *cli.Context) error {
-				return ResetInBatch(c)
+				ResetInBatch(c)
+				return nil
 			},
 		},
 	}
