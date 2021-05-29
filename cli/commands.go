@@ -11,12 +11,12 @@ var tctlCommands = []*cli.Command{
 	// 	Usage:       "Operate Temporal namespace",
 	// 	Subcommands: newNamespaceCommands(),
 	// },
-	// {
-	// 	Name:        "workflow",
-	// 	Aliases:     []string{"wf"},
-	// 	Usage:       "Operate Temporal workflow",
-	// 	Subcommands: newWorkflowCommands(),
-	// },
+	{
+		Name:        "workflow",
+		Aliases:     []string{"wf"},
+		Usage:       "Operate Temporal workflow",
+		Subcommands: newWorkflowCommands(),
+	},
 	// {
 	// 	Name:        "activity",
 	// 	Aliases:     []string{"act"},

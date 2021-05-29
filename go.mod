@@ -1,22 +1,25 @@
 module github.com/temporalio/tctl
 
+replace github.com/temporalio/shared-go => /home/user0/shared
+
+replace go.temporal.io/server => /home/user0/server
+
 go 1.16
 
 require (
-	github.com/cpuguy83/go-md2man/v2 v2.0.0 // indirect
 	github.com/fatih/color v1.10.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/go-hclog v0.16.1
 	github.com/hashicorp/go-plugin v1.4.1
 	github.com/olekukonko/tablewriter v0.0.5
-	github.com/russross/blackfriday/v2 v2.1.0 // indirect
+	github.com/pborman/uuid v1.2.1
 	github.com/stretchr/testify v1.7.0
 	github.com/temporalio/shared-go v1.0.0
 	github.com/urfave/cli/v2 v2.3.0
-	go.temporal.io/api v1.4.1-0.20210420220407-6f00f7f98373
-	go.temporal.io/sdk v1.6.0
+	github.com/valyala/fastjson v1.6.3
+	go.temporal.io/api v1.4.1-0.20210429213054-a9a257b5cf16
+	go.temporal.io/sdk v1.6.1-0.20210525221837-b434b501f9d5
+	go.temporal.io/server v1.9.2
 	google.golang.org/grpc v1.38.0
-	gopkg.in/check.v1 v1.0.0-20200902074654-038fdea0a05b // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
 )

@@ -126,7 +126,7 @@ func buildPayloadHandler(context *cli.Context, origin string) func(http.Response
 func DataConverter(c *cli.Context) error {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
-		ErrorAndExit("Unable to create listener", err)
+		return ErrorAndExit("Unable to create listener", err)
 	}
 	origin := c.String(FlagWebURL)
 	port := listener.Addr().(*net.TCPAddr).Port
@@ -137,7 +137,7 @@ func DataConverter(c *cli.Context) error {
 
 	http.HandleFunc("/", buildPayloadHandler(c, origin))
 	if err := http.Serve(listener, nil); err != nil {
-		return fmt.Errorf("Unable to start HTTP server for data converter listener.", err)
+		return ErrorAndExit("Unable to start HTTP server for data converter listener.", err)
 	}
 	return nil
 }

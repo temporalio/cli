@@ -39,8 +39,8 @@ import (
 	"go.temporal.io/sdk/converter"
 
 	"github.com/temporalio/shared-go/timestamp"
-	"github.com/temporalio/tctl/cli/payload"
-	"github.com/temporalio/tctl/cli/payloads"
+	"github.com/temporalio/tctl/common/payload"
+	"github.com/temporalio/tctl/common/payloads"
 )
 
 var (

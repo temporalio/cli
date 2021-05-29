@@ -518,7 +518,7 @@ func getFlagsForCount() []cli.Flag {
 }
 
 // all flags of query except QueryType
-var flagsForQueryButNoType = []cli.Flag{
+var flagsForStackTraceQuery = []cli.Flag{
 	&cli.StringFlag{
 		Name:  FlagWorkflowIDWithAlias,
 		Usage: "WorkflowId",
@@ -542,7 +542,7 @@ var flagsForQueryButNoType = []cli.Flag{
 	},
 }
 
-var flagsForQuery = append(flagsForQueryButNoType,
+var flagsForQuery = append(flagsForStackTraceQuery,
 	&cli.StringFlag{
 		Name:  FlagQueryTypeWithAlias,
 		Usage: "The query type you want to run",
