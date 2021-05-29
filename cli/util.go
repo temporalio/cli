@@ -47,11 +47,11 @@ import (
 	historypb "go.temporal.io/api/history/v1"
 	sdkclient "go.temporal.io/sdk/client"
 
+	"github.com/temporalio/shared-go/codec"
+	"github.com/temporalio/shared-go/collection"
+	"github.com/temporalio/shared-go/rpc"
 	"github.com/temporalio/tctl/cli/dataconverter"
 	"github.com/temporalio/tctl/cli/stringify"
-	"github.com/temporalio/tctl/common/codec"
-	"github.com/temporalio/tctl/common/collection"
-	"github.com/temporalio/tctl/common/rpc"
 )
 
 // GetHistory helper method to iterate over all pages and return complete list of history events

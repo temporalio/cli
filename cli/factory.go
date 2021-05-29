@@ -38,9 +38,9 @@ import (
 	"google.golang.org/grpc/credentials"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 
-	"github.com/temporalio/tctl/common/auth"
-	"github.com/temporalio/tctl/common/log"
-	"github.com/temporalio/tctl/common/log/tag"
+	"github.com/temporalio/shared-go/auth"
+	"github.com/temporalio/shared-go/log"
+	"github.com/temporalio/shared-go/log/tag"
 )
 
 // ClientFactory is used to construct rpc clients
@@ -85,7 +85,7 @@ func (b *clientFactory) SDKClient(c *cli.Context, namespace string) sdkclient.Cl
 	sdkClient, err := sdkclient.NewClient(sdkclient.Options{
 		HostPort:  hostPort,
 		Namespace: namespace,
-		Logger:    log.NewSdkLogger(b.logger),
+		Logger:    NewSdkLogger(b.logger),
 		ConnectionOptions: sdkclient.ConnectionOptions{
 			DisableHealthCheck: true,
 			TLS:                tlsConfig,
