@@ -386,35 +386,6 @@ func getFlagsForRun() []cli.Flag {
 	return flagsForRun
 }
 
-func getCommonFlagsForVisibility() []cli.Flag {
-	return []cli.Flag{
-		&cli.BoolFlag{
-			Name:  FlagPrintRawTimeWithAlias,
-			Usage: "Print raw timestamp",
-		},
-		&cli.BoolFlag{
-			Name:  FlagPrintDateTimeWithAlias,
-			Usage: "Print full date time in '2006-01-02T15:04:05Z07:00' format",
-		},
-		&cli.BoolFlag{
-			Name:  FlagPrintMemoWithAlias,
-			Usage: "Print memo",
-		},
-		&cli.BoolFlag{
-			Name:  FlagPrintSearchAttrWithAlias,
-			Usage: "Print search attributes",
-		},
-		&cli.BoolFlag{
-			Name:  FlagPrintFullyDetailWithAlias,
-			Usage: "Print full message without table format",
-		},
-		&cli.BoolFlag{
-			Name:  FlagPrintJSONWithAlias,
-			Usage: "Print in raw json format",
-		},
-	}
-}
-
 var flagsForWorkflowFiltering = []cli.Flag{
 	&cli.BoolFlag{
 		Name:  FlagOpenWithAlias,
@@ -486,28 +457,15 @@ func getFlagsForScan() []cli.Flag {
 			Usage: "Optional SQL like query",
 		},
 	}
-	flagsForScan = append(getCommonFlagsForVisibility(), flagsForScan...)
+	flagsForScan = append(flagsForWorkflowRendering, flagsForScan...)
 	return flagsForScan
 }
 
-func getFlagsForListArchived() []cli.Flag {
-	flagsForListArchived := []cli.Flag{
-		&cli.StringFlag{
-			Name:  FlagListQueryWithAlias,
-			Usage: "SQL like query. Please check the documentation of the visibility archiver used by your namespace for detailed instructions",
-		},
-		&cli.IntFlag{
-			Name:  FlagPageSizeWithAlias,
-			Value: 100,
-			Usage: "Count of visibility records included in a single page, default to 100",
-		},
-		&cli.BoolFlag{
-			Name:  FlagAllWithAlias,
-			Usage: "List all pages",
-		},
-	}
-	flagsForListArchived = append(getCommonFlagsForVisibility(), flagsForListArchived...)
-	return flagsForListArchived
+var flagsForListArchived = []cli.Flag{
+	&cli.StringFlag{
+		Name:  FlagListQueryWithAlias,
+		Usage: "SQL like query. Please check the documentation of the visibility archiver used by your namespace for detailed instructions",
+	},
 }
 
 func getFlagsForCount() []cli.Flag {

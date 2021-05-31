@@ -593,7 +593,7 @@ func ListWorkflow(c *cli.Context) {
 	}
 	wfStatus := enumspb.WorkflowExecutionStatus(wfStatusInt)
 
-	client := getWorkflowClient(c)
+	client := cFactory.FrontendClient(c)
 	var items []interface{}
 	var token []byte
 	paginationFunc := func(paginationToken []byte) ([]interface{}, []byte, error) {
@@ -712,107 +712,42 @@ func CountWorkflow(c *cli.Context) {
 
 // ListArchivedWorkflow lists archived workflow executions based on filters
 func ListArchivedWorkflow(c *cli.Context) {
-	sdkClient := getSDKClient(c)
-
-	printJSON := c.Bool(FlagPrintJSON)
-	printDecodedRaw := c.Bool(FlagPrintFullyDetail)
-	pageSize := c.Int(FlagPageSize)
-	listQuery := getRequiredOption(c, FlagListQuery)
-	printAll := c.Bool(FlagAll)
-	if pageSize <= 0 {
-		pageSize = defaultPageSizeForList
-	}
-
-	request := &workflowservice.ListArchivedWorkflowExecutionsRequest{
-		PageSize: int32(pageSize),
-		Query:    listQuery,
-	}
-
+	query := getRequiredOption(c, FlagListQuery)
 	contextTimeout := defaultContextTimeoutForListArchivedWorkflow
 	if c.IsSet(FlagContextTimeout) {
 		contextTimeout = time.Duration(c.Int(FlagContextTimeout)) * time.Second
 	}
 
-	var result *workflowservice.ListArchivedWorkflowExecutionsResponse
+	client := cFactory.FrontendClient(c)
+	req := &workflowservice.ListArchivedWorkflowExecutionsRequest{
+		Query: query,
+	}
+	var resp *workflowservice.ListArchivedWorkflowExecutionsResponse
 	var err error
-	for result == nil || (len(result.Executions) == 0 && result.NextPageToken != nil) {
+	paginationFunc := func(paginationToken []byte) ([]interface{}, []byte, error) {
 		// the executions will be empty if the query is still running before timeout
 		// so keep calling the API until some results are returned (query completed)
-		ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
-
-		result, err = sdkClient.ListArchivedWorkflow(ctx, request)
-		if err != nil {
+		for resp == nil || (len(resp.Executions) == 0 && resp.NextPageToken != nil) {
+			ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
+			resp, err = client.ListArchivedWorkflowExecutions(ctx, req)
+			if err != nil {
+				cancel()
+				ErrorAndExit("Failed to list archived workflow.", err)
+			}
 			cancel()
-			ErrorAndExit("Failed to list archived workflow.", err)
 		}
-		request.NextPageToken = result.NextPageToken
-		cancel()
+
+		var items []interface{}
+		for _, e := range resp.Executions {
+			items = append(items, e)
+		}
+		token := resp.NextPageToken
+
+		return items, token, nil
 	}
 
-	var table *tablewriter.Table
-	var printFn func([]*workflowpb.WorkflowExecutionInfo, bool)
-	var prePrintFn func()
-	var postPrintFn func()
-	printRawTime := c.Bool(FlagPrintRawTime)
-	printDateTime := c.Bool(FlagPrintDateTime)
-	printMemo := c.Bool(FlagPrintMemo)
-	printSearchAttr := c.Bool(FlagPrintSearchAttr)
-	if printJSON || printDecodedRaw {
-		prePrintFn = func() { fmt.Println("[") }
-		printFn = func(execution []*workflowpb.WorkflowExecutionInfo, more bool) {
-			printListResults(execution, printJSON, more)
-		}
-		postPrintFn = func() { fmt.Println("]") }
-	} else {
-		table = createTableForListWorkflow(c, false, false)
-		prePrintFn = func() { table.ClearRows() }
-		printFn = func(execution []*workflowpb.WorkflowExecutionInfo, _ bool) {
-			appendWorkflowExecutionsToTable(
-				table,
-				execution,
-				false,
-				printRawTime,
-				printDateTime,
-				printMemo,
-				printSearchAttr,
-			)
-		}
-		postPrintFn = func() { table.Render() }
-	}
-
-	prePrintFn()
-	printFn(result.Executions, result.NextPageToken != nil)
-	for len(result.NextPageToken) != 0 {
-		if !printAll {
-			postPrintFn()
-		}
-
-		if !printAll && !showNextPage() {
-			break
-		}
-
-		request.NextPageToken = result.NextPageToken
-		// create a new context for each new request as each request may take a long time
-		ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
-		result, err = sdkClient.ListArchivedWorkflow(ctx, request)
-		if err != nil {
-			cancel()
-			ErrorAndExit("Failed to list archived workflow", err)
-		}
-		cancel()
-
-		if !printAll {
-			prePrintFn()
-		}
-		printFn(result.Executions, result.NextPageToken != nil)
-	}
-
-	// if next page token is not nil here, then it means we are not in all mode,
-	// and user doesn't want to view the next page. In that case the post
-	// operation has already been done and we don't want to perform it again.
-	if len(result.NextPageToken) == 0 {
-		postPrintFn()
-	}
+	fields := []string{"Type.Name", "Execution.WorkflowId", "Execution.RunId", "TaskQueue", "StartTime", "ExecutionTime", "CloseTime"}
+	terminal.Paginate(c, paginationFunc, fields)
 }
 
 // DescribeWorkflow show information about the specified workflow execution
@@ -1974,11 +1909,11 @@ func ObserveHistoryWithID(c *cli.Context) {
 	printWorkflowProgress(c, wid, rid)
 }
 
-func listWorkflows(ctx context.Context, c *cli.Context, client sdkclient.Client) ([]interface{}, []byte, error) {
+func listWorkflows(ctx context.Context, c *cli.Context, client workflowservice.WorkflowServiceClient) ([]interface{}, []byte, error) {
 	req := &workflowservice.ListWorkflowExecutionsRequest{
 		Query: c.String(FlagListQuery),
 	}
-	resp, err := client.ListWorkflow(ctx, req)
+	resp, err := client.ListWorkflowExecutions(ctx, req)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -1991,7 +1926,7 @@ func listWorkflows(ctx context.Context, c *cli.Context, client sdkclient.Client)
 	return items, resp.NextPageToken, nil
 }
 
-func listOpenWorkflows(ctx context.Context, c *cli.Context, client sdkclient.Client, earliestTime, latestTime time.Time, wfID, wfType string) ([]interface{}, []byte, error) {
+func listOpenWorkflows(ctx context.Context, c *cli.Context, client workflowservice.WorkflowServiceClient, earliestTime, latestTime time.Time, wfID, wfType string) ([]interface{}, []byte, error) {
 	req := &workflowservice.ListOpenWorkflowExecutionsRequest{
 		StartTimeFilter: &filterpb.StartTimeFilter{
 			EarliestTime: &earliestTime,
@@ -2004,7 +1939,7 @@ func listOpenWorkflows(ctx context.Context, c *cli.Context, client sdkclient.Cli
 	if len(wfType) > 0 {
 		req.Filters = &workflowservice.ListOpenWorkflowExecutionsRequest_TypeFilter{TypeFilter: &filterpb.WorkflowTypeFilter{Name: wfType}}
 	}
-	resp, err := client.ListOpenWorkflow(ctx, req)
+	resp, err := client.ListOpenWorkflowExecutions(ctx, req)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -2016,7 +1951,7 @@ func listOpenWorkflows(ctx context.Context, c *cli.Context, client sdkclient.Cli
 	return items, resp.NextPageToken, nil
 }
 
-func listClosedWorkflows(ctx context.Context, c *cli.Context, client sdkclient.Client, earliestTime, latestTime time.Time, wfID, wfType string,
+func listClosedWorkflows(ctx context.Context, c *cli.Context, client workflowservice.WorkflowServiceClient, earliestTime, latestTime time.Time, wfID, wfType string,
 	wfStatus enumspb.WorkflowExecutionStatus) ([]interface{}, []byte, error) {
 	req := &workflowservice.ListClosedWorkflowExecutionsRequest{
 		StartTimeFilter: &filterpb.StartTimeFilter{
@@ -2033,7 +1968,7 @@ func listClosedWorkflows(ctx context.Context, c *cli.Context, client sdkclient.C
 	if wfStatus != enumspb.WORKFLOW_EXECUTION_STATUS_UNSPECIFIED {
 		req.Filters = &workflowservice.ListClosedWorkflowExecutionsRequest_StatusFilter{StatusFilter: &filterpb.StatusFilter{Status: wfStatus}}
 	}
-	resp, err := client.ListClosedWorkflow(ctx, req)
+	resp, err := client.ListClosedWorkflowExecutions(ctx, req)
 	if err != nil {
 		return nil, nil, err
 	}
