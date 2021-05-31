@@ -27,6 +27,7 @@ package cli
 import (
 	"strings"
 
+	t "github.com/temporalio/tctl/terminal"
 	"github.com/urfave/cli/v2"
 )
 
@@ -138,19 +139,9 @@ func newWorkflowCommands() []*cli.Command {
 			Aliases:     []string{"l"},
 			Usage:       "list open or closed workflow executions",
 			Description: "list one page (default size 10 items) by default, use flag --pagesize to change page size",
-			Flags:       getFlagsForList(),
+			Flags:       append(append(flagsForWorkflowFiltering, flagsForWorkflowRendering...), t.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
 				ListWorkflow(c)
-				return nil
-			},
-		},
-		{
-			Name:    "listall",
-			Aliases: []string{"la"},
-			Usage:   "list all open or closed workflow executions",
-			Flags:   getFlagsForListAll(),
-			Action: func(c *cli.Context) error {
-				ListAllWorkflow(c)
 				return nil
 			},
 		},

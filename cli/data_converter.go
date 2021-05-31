@@ -37,7 +37,8 @@ func newDataConverterCommands() []*cli.Command {
 				},
 			},
 			Action: func(c *cli.Context) error {
-				return DataConverter(c)
+				DataConverter(c)
+				return nil
 			},
 		},
 	}

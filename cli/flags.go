@@ -252,18 +252,6 @@ var flagsForExecution = []cli.Flag{
 	},
 }
 
-var flagsForPagination = []cli.Flag{
-	&cli.BoolFlag{
-		Name:  FlagMoreWithAlias,
-		Usage: "List more pages, default is to list one page of default page size 10",
-	},
-	&cli.IntFlag{
-		Name:  FlagPageSizeWithAlias,
-		Value: 10,
-		Usage: "Result page size",
-	},
-}
-
 func getFlagsForShow() []cli.Flag {
 	return append(flagsForExecution, getFlagsForShowID()...)
 }
@@ -427,49 +415,63 @@ func getCommonFlagsForVisibility() []cli.Flag {
 	}
 }
 
-func getFlagsForList() []cli.Flag {
-	flagsForList := append(getFlagsForListAll(), flagsForPagination...)
-	return flagsForList
+var flagsForWorkflowFiltering = []cli.Flag{
+	&cli.BoolFlag{
+		Name:  FlagOpenWithAlias,
+		Usage: "List for open workflow executions, default is to list for closed ones",
+	},
+	&cli.StringFlag{
+		Name: FlagEarliestTimeWithAlias,
+		Usage: "EarliestTime of start time, supported formats are '2006-01-02T15:04:05+07:00', raw UnixNano and " +
+			"time range (N<duration>), where 0 < N < 1000000 and duration (full-notation/short-notation) can be second/s, " +
+			"minute/m, hour/h, day/d, week/w, month/M or year/y. For example, '15minute' or '15m' implies last 15 minutes.",
+	},
+	&cli.StringFlag{
+		Name: FlagLatestTimeWithAlias,
+		Usage: "LatestTime of start time, supported formats are '2006-01-02T15:04:05+07:00', raw UnixNano and " +
+			"time range (N<duration>), where 0 < N < 1000000 and duration (in full-notation/short-notation) can be second/s, " +
+			"minute/m, hour/h, day/d, week/w, month/M or year/y. For example, '15minute' or '15m' implies last 15 minutes",
+	},
+	&cli.StringFlag{
+		Name:  FlagWorkflowIDWithAlias,
+		Usage: "WorkflowId",
+	},
+	&cli.StringFlag{
+		Name:  FlagWorkflowTypeWithAlias,
+		Usage: "WorkflowTypeName",
+	},
+	&cli.StringFlag{
+		Name:  FlagWorkflowStatusWithAlias,
+		Usage: "Workflow status [completed, failed, canceled, terminated, continuedasnew, timedout]",
+	},
+	&cli.StringFlag{
+		Name: FlagListQueryWithAlias,
+		Usage: "Optional SQL like query for use of search attributes. NOTE: using query will ignore all other filter flags including: " +
+			"[open, earliest_time, latest_time, workflow_id, workflow_type]",
+	},
 }
 
-func getFlagsForListAll() []cli.Flag {
-	flagsForListAll := []cli.Flag{
-		&cli.BoolFlag{
-			Name:  FlagOpenWithAlias,
-			Usage: "List for open workflow executions, default is to list for closed ones",
-		},
-		&cli.StringFlag{
-			Name: FlagEarliestTimeWithAlias,
-			Usage: "EarliestTime of start time, supported formats are '2006-01-02T15:04:05+07:00', raw UnixNano and " +
-				"time range (N<duration>), where 0 < N < 1000000 and duration (full-notation/short-notation) can be second/s, " +
-				"minute/m, hour/h, day/d, week/w, month/M or year/y. For example, '15minute' or '15m' implies last 15 minutes.",
-		},
-		&cli.StringFlag{
-			Name: FlagLatestTimeWithAlias,
-			Usage: "LatestTime of start time, supported formats are '2006-01-02T15:04:05+07:00', raw UnixNano and " +
-				"time range (N<duration>), where 0 < N < 1000000 and duration (in full-notation/short-notation) can be second/s, " +
-				"minute/m, hour/h, day/d, week/w, month/M or year/y. For example, '15minute' or '15m' implies last 15 minutes",
-		},
-		&cli.StringFlag{
-			Name:  FlagWorkflowIDWithAlias,
-			Usage: "WorkflowId",
-		},
-		&cli.StringFlag{
-			Name:  FlagWorkflowTypeWithAlias,
-			Usage: "WorkflowTypeName",
-		},
-		&cli.StringFlag{
-			Name:  FlagWorkflowStatusWithAlias,
-			Usage: "Workflow status [completed, failed, canceled, terminated, continuedasnew, timedout]",
-		},
-		&cli.StringFlag{
-			Name: FlagListQueryWithAlias,
-			Usage: "Optional SQL like query for use of search attributes. NOTE: using query will ignore all other filter flags including: " +
-				"[open, earliest_time, latest_time, workflow_id, workflow_type]",
-		},
-	}
-	flagsForListAll = append(getCommonFlagsForVisibility(), flagsForListAll...)
-	return flagsForListAll
+var flagsForWorkflowRendering = []cli.Flag{
+	&cli.BoolFlag{
+		Name:  FlagPrintRawTimeWithAlias,
+		Usage: "Print raw timestamp",
+	},
+	&cli.BoolFlag{
+		Name:  FlagPrintDateTimeWithAlias,
+		Usage: "Print full date time in '2006-01-02T15:04:05Z07:00' format",
+	},
+	&cli.BoolFlag{
+		Name:  FlagPrintMemoWithAlias,
+		Usage: "Print memo",
+	},
+	&cli.BoolFlag{
+		Name:  FlagPrintSearchAttrWithAlias,
+		Usage: "Print search attributes",
+	},
+	&cli.BoolFlag{
+		Name:  FlagPrintFullyDetailWithAlias,
+		Usage: "Print full message without table format",
+	},
 }
 
 func getFlagsForScan() []cli.Flag {

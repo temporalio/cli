@@ -62,6 +62,7 @@ import (
 	"github.com/temporalio/tctl/cli/stringify"
 	"github.com/temporalio/tctl/common/payload"
 	"github.com/temporalio/tctl/common/payloads"
+	"github.com/temporalio/tctl/terminal"
 	clispb "go.temporal.io/server/api/cli/v1"
 	"go.temporal.io/server/common/clock"
 	"go.temporal.io/server/common/convert"
@@ -580,46 +581,41 @@ func queryWorkflowHelper(c *cli.Context, queryType string) {
 
 // ListWorkflow list workflow executions based on filters
 func ListWorkflow(c *cli.Context) {
-	more := c.Bool(FlagMore)
 	queryOpen := c.Bool(FlagOpen)
+	workflowID := c.String(FlagWorkflowID)
+	workflowType := c.String(FlagWorkflowType)
+	earliestTime := parseTime(c.String(FlagEarliestTime), time.Time{}, time.Now().UTC())
+	latestTime := parseTime(c.String(FlagLatestTime), time.Now().UTC(), time.Now().UTC())
 
-	printJSON := c.Bool(FlagPrintJSON)
-	printDecodedRaw := c.Bool(FlagPrintFullyDetail)
+	wfStatusInt, err := stringToEnum(c.String(FlagWorkflowStatus), enumspb.WorkflowExecutionStatus_value)
+	if err != nil {
+		ErrorAndExit("Failed to parse Workflow Status", err)
+	}
+	wfStatus := enumspb.WorkflowExecutionStatus(wfStatusInt)
 
-	if printJSON || printDecodedRaw {
-		if !more {
-			results, _ := getListResultInRaw(c, queryOpen, nil)
-			fmt.Println("[")
-			printListResults(results, printJSON, false)
-			fmt.Println("]")
+	client := getWorkflowClient(c)
+	var items []interface{}
+	var token []byte
+	paginationFunc := func(paginationToken []byte) ([]interface{}, []byte, error) {
+		ctx, cancel := newContextForLongPoll(c)
+		defer cancel()
+		var err error
+		if c.IsSet(FlagListQuery) {
+			items, token, err = listWorkflows(ctx, c, client)
+		} else if queryOpen {
+			items, token, err = listOpenWorkflows(ctx, c, client, earliestTime, latestTime, workflowID, workflowType)
 		} else {
-			ErrorAndExit("Not support printJSON in more mode", nil)
+			items, token, err = listClosedWorkflows(ctx, c, client, earliestTime, latestTime, workflowID, workflowType, wfStatus)
 		}
-		return
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return items, token, nil
 	}
 
-	table := createTableForListWorkflow(c, false, queryOpen)
-	prepareTable := listWorkflow(c, table, queryOpen)
-
-	if !more { // default mode only show one page items
-		prepareTable(nil)
-		table.Render()
-	} else { // require input Enter to view next page
-		var nextPageToken []byte
-		for {
-			nextPageToken, _ = prepareTable(nextPageToken)
-			table.Render()
-			table.ClearRows()
-
-			if len(nextPageToken) == 0 {
-				break
-			}
-
-			if !showNextPage() {
-				break
-			}
-		}
-	}
+	fields := []string{"Type.Name", "Execution.WorkflowId", "Execution.RunId", "TaskQueue", "StartTime", "ExecutionTime", "CloseTime"}
+	terminal.Paginate(c, paginationFunc, fields)
 }
 
 // ListAllWorkflow list all workflow executions based on filters
@@ -1976,4 +1972,75 @@ func ObserveHistoryWithID(c *cli.Context) {
 	}
 
 	printWorkflowProgress(c, wid, rid)
+}
+
+func listWorkflows(ctx context.Context, c *cli.Context, client sdkclient.Client) ([]interface{}, []byte, error) {
+	req := &workflowservice.ListWorkflowExecutionsRequest{
+		Query: c.String(FlagListQuery),
+	}
+	resp, err := client.ListWorkflow(ctx, req)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var items []interface{}
+	for _, e := range resp.Executions {
+		items = append(items, e)
+	}
+
+	return items, resp.NextPageToken, nil
+}
+
+func listOpenWorkflows(ctx context.Context, c *cli.Context, client sdkclient.Client, earliestTime, latestTime time.Time, wfID, wfType string) ([]interface{}, []byte, error) {
+	req := &workflowservice.ListOpenWorkflowExecutionsRequest{
+		StartTimeFilter: &filterpb.StartTimeFilter{
+			EarliestTime: &earliestTime,
+			LatestTime:   &latestTime,
+		},
+	}
+	if len(wfID) > 0 {
+		req.Filters = &workflowservice.ListOpenWorkflowExecutionsRequest_ExecutionFilter{ExecutionFilter: &filterpb.WorkflowExecutionFilter{WorkflowId: wfID}}
+	}
+	if len(wfType) > 0 {
+		req.Filters = &workflowservice.ListOpenWorkflowExecutionsRequest_TypeFilter{TypeFilter: &filterpb.WorkflowTypeFilter{Name: wfType}}
+	}
+	resp, err := client.ListOpenWorkflow(ctx, req)
+	if err != nil {
+		return nil, nil, err
+	}
+	var items []interface{}
+	for _, e := range resp.Executions {
+		items = append(items, e)
+	}
+
+	return items, resp.NextPageToken, nil
+}
+
+func listClosedWorkflows(ctx context.Context, c *cli.Context, client sdkclient.Client, earliestTime, latestTime time.Time, wfID, wfType string,
+	wfStatus enumspb.WorkflowExecutionStatus) ([]interface{}, []byte, error) {
+	req := &workflowservice.ListClosedWorkflowExecutionsRequest{
+		StartTimeFilter: &filterpb.StartTimeFilter{
+			EarliestTime: &earliestTime,
+			LatestTime:   &latestTime,
+		},
+	}
+	if len(wfID) > 0 {
+		req.Filters = &workflowservice.ListClosedWorkflowExecutionsRequest_ExecutionFilter{ExecutionFilter: &filterpb.WorkflowExecutionFilter{WorkflowId: wfID}}
+	}
+	if len(wfType) > 0 {
+		req.Filters = &workflowservice.ListClosedWorkflowExecutionsRequest_TypeFilter{TypeFilter: &filterpb.WorkflowTypeFilter{Name: wfType}}
+	}
+	if wfStatus != enumspb.WORKFLOW_EXECUTION_STATUS_UNSPECIFIED {
+		req.Filters = &workflowservice.ListClosedWorkflowExecutionsRequest_StatusFilter{StatusFilter: &filterpb.StatusFilter{Status: wfStatus}}
+	}
+	resp, err := client.ListClosedWorkflow(ctx, req)
+	if err != nil {
+		return nil, nil, err
+	}
+	var items []interface{}
+	for _, e := range resp.Executions {
+		items = append(items, e)
+	}
+
+	return items, resp.NextPageToken, nil
 }

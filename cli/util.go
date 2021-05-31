@@ -33,7 +33,6 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"reflect"
 	"regexp"
 	"runtime/debug"
 	"strconv"
@@ -42,7 +41,6 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/gogo/protobuf/proto"
-	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli/v2"
 	commonpb "go.temporal.io/api/common/v1"
 	enumspb "go.temporal.io/api/enums/v1"
@@ -50,7 +48,6 @@ import (
 	sdkclient "go.temporal.io/sdk/client"
 
 	"github.com/temporalio/shared-go/codec"
-	"github.com/temporalio/shared-go/collection"
 	"github.com/temporalio/shared-go/rpc"
 	"github.com/temporalio/tctl/cli/dataconverter"
 	"github.com/temporalio/tctl/cli/stringify"
@@ -727,80 +724,6 @@ func showNextPage() bool {
 	var input string
 	_, _ = fmt.Scanln(&input)
 	return strings.Trim(input, " ") == ""
-}
-
-// paginate creates an interactive CLI mode to control the printing of items
-func paginate(c *cli.Context, paginationFn collection.PaginationFn) error {
-	more := c.Bool(FlagMore)
-	isTableView := !c.Bool(FlagPrintJSON)
-	pageSize := c.Int(FlagPageSize)
-	if pageSize == 0 {
-		pageSize = defaultPageSizeDLQ
-	}
-	iter := collection.NewPagingIterator(paginationFn)
-
-	var pageItems []interface{}
-	for iter.HasNext() {
-		item, err := iter.Next()
-		if err != nil {
-			return err
-		}
-
-		pageItems = append(pageItems, item)
-		if len(pageItems) == pageSize || !iter.HasNext() {
-			if isTableView {
-				printTable(pageItems)
-			} else {
-				prettyPrintJSONObject(pageItems)
-			}
-
-			if !more || !showNextPage() {
-				break
-			}
-			pageItems = pageItems[:0]
-		}
-	}
-
-	return nil
-}
-
-func printTable(items []interface{}) error {
-	if len(items) == 0 {
-		return nil
-	}
-
-	e := reflect.ValueOf(items[0])
-	for e.Type().Kind() == reflect.Ptr {
-		e = e.Elem()
-	}
-
-	var fields []string
-	t := e.Type()
-	for i := 0; i < e.NumField(); i++ {
-		fields = append(fields, t.Field(i).Name)
-	}
-
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetBorder(false)
-	table.SetColumnSeparator("|")
-	table.SetHeader(fields)
-	table.SetHeaderLine(false)
-	for i := 0; i < len(items); i++ {
-		item := reflect.ValueOf(items[i])
-		for item.Type().Kind() == reflect.Ptr {
-			item = item.Elem()
-		}
-		var columns []string
-		for j := 0; j < len(fields); j++ {
-			col := item.Field(j)
-			columns = append(columns, fmt.Sprintf("%v", col.Interface()))
-		}
-		table.Append(columns)
-	}
-	table.Render()
-	table.ClearRows()
-
-	return nil
 }
 
 func stringToEnum(search string, candidates map[string]int32) (int32, error) {

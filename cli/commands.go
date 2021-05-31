@@ -13,7 +13,7 @@ var tctlCommands = []*cli.Command{
 	// },
 	{
 		Name:        "workflow",
-		Aliases:     []string{"wf"},
+		Aliases:     []string{"w"},
 		Usage:       "Operate Temporal workflow",
 		Subcommands: newWorkflowCommands(),
 	},

@@ -37,7 +37,7 @@ const (
 	FlagAll      = "all"
 )
 
-var flagsForPagination = []cli.Flag{
+var FlagsForPagination = []cli.Flag{
 	&cli.BoolFlag{
 		Name:  FlagAll,
 		Usage: "List all pages",
@@ -48,8 +48,17 @@ var flagsForPagination = []cli.Flag{
 	},
 	&cli.IntFlag{
 		Name:        FlagPageSize,
-		Value:       10,
+		Value:       defaultPageSize,
 		Usage:       "Items per page",
 		DefaultText: strconv.Itoa(defaultPageSize),
 	},
 }
+
+var FlagsForRendering = []cli.Flag{
+	&cli.BoolFlag{
+		Name:  FlagJSON,
+		Usage: "Print in json format",
+	},
+}
+
+var FlagsForPaginationAndRendering = append(FlagsForPagination, FlagsForRendering...)
