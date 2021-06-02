@@ -581,6 +581,7 @@ func queryWorkflowHelper(c *cli.Context, queryType string) {
 
 // ListWorkflow list workflow executions based on filters
 func ListWorkflow(c *cli.Context) {
+	namespace := getRequiredGlobalOption(c, FlagNamespace)
 	queryOpen := c.Bool(FlagOpen)
 	workflowID := c.String(FlagWorkflowID)
 	workflowType := c.String(FlagWorkflowType)
@@ -594,24 +595,24 @@ func ListWorkflow(c *cli.Context) {
 	wfStatus := enumspb.WorkflowExecutionStatus(wfStatusInt)
 
 	client := cFactory.FrontendClient(c)
-	var items []interface{}
-	var token []byte
-	paginationFunc := func(paginationToken []byte) ([]interface{}, []byte, error) {
+	paginationFunc := func(npt []byte) ([]interface{}, []byte, error) {
 		ctx, cancel := newContextForLongPoll(c)
 		defer cancel()
+		var items []interface{}
 		var err error
 		if c.IsSet(FlagListQuery) {
-			items, token, err = listWorkflows(ctx, c, client)
+			query := c.String(FlagListQuery)
+			items, npt, err = listWorkflows(ctx, client, npt, namespace, query)
 		} else if queryOpen {
-			items, token, err = listOpenWorkflows(ctx, c, client, earliestTime, latestTime, workflowID, workflowType)
+			items, npt, err = listOpenWorkflows(ctx, client, npt, namespace, earliestTime, latestTime, workflowID, workflowType)
 		} else {
-			items, token, err = listClosedWorkflows(ctx, c, client, earliestTime, latestTime, workflowID, workflowType, wfStatus)
+			items, npt, err = listClosedWorkflows(ctx, client, npt, namespace, earliestTime, latestTime, workflowID, workflowType, wfStatus)
 		}
 		if err != nil {
 			return nil, nil, err
 		}
 
-		return items, token, nil
+		return items, npt, nil
 	}
 
 	fields := []string{"Type.Name", "Execution.WorkflowId", "Execution.RunId", "TaskQueue", "StartTime", "ExecutionTime", "CloseTime"}
@@ -712,6 +713,7 @@ func CountWorkflow(c *cli.Context) {
 
 // ListArchivedWorkflow lists archived workflow executions based on filters
 func ListArchivedWorkflow(c *cli.Context) {
+	namespace := getRequiredGlobalOption(c, FlagNamespace)
 	query := getRequiredOption(c, FlagListQuery)
 	contextTimeout := defaultContextTimeoutForListArchivedWorkflow
 	if c.IsSet(FlagContextTimeout) {
@@ -720,13 +722,15 @@ func ListArchivedWorkflow(c *cli.Context) {
 
 	client := cFactory.FrontendClient(c)
 	req := &workflowservice.ListArchivedWorkflowExecutionsRequest{
-		Query: query,
+		Namespace: namespace,
+		Query:     query,
 	}
 	var resp *workflowservice.ListArchivedWorkflowExecutionsResponse
 	var err error
-	paginationFunc := func(paginationToken []byte) ([]interface{}, []byte, error) {
+	paginationFunc := func(npt []byte) ([]interface{}, []byte, error) {
 		// the executions will be empty if the query is still running before timeout
 		// so keep calling the API until some results are returned (query completed)
+		req.NextPageToken = npt
 		for resp == nil || (len(resp.Executions) == 0 && resp.NextPageToken != nil) {
 			ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
 			resp, err = client.ListArchivedWorkflowExecutions(ctx, req)
@@ -741,9 +745,8 @@ func ListArchivedWorkflow(c *cli.Context) {
 		for _, e := range resp.Executions {
 			items = append(items, e)
 		}
-		token := resp.NextPageToken
 
-		return items, token, nil
+		return items, resp.NextPageToken, nil
 	}
 
 	fields := []string{"Type.Name", "Execution.WorkflowId", "Execution.RunId", "TaskQueue", "StartTime", "ExecutionTime", "CloseTime"}
@@ -1909,9 +1912,10 @@ func ObserveHistoryWithID(c *cli.Context) {
 	printWorkflowProgress(c, wid, rid)
 }
 
-func listWorkflows(ctx context.Context, c *cli.Context, client workflowservice.WorkflowServiceClient) ([]interface{}, []byte, error) {
+func listWorkflows(ctx context.Context, client workflowservice.WorkflowServiceClient, npt []byte, namespace string, query string) ([]interface{}, []byte, error) {
 	req := &workflowservice.ListWorkflowExecutionsRequest{
-		Query: c.String(FlagListQuery),
+		Namespace: namespace,
+		Query:     query,
 	}
 	resp, err := client.ListWorkflowExecutions(ctx, req)
 	if err != nil {
@@ -1926,8 +1930,9 @@ func listWorkflows(ctx context.Context, c *cli.Context, client workflowservice.W
 	return items, resp.NextPageToken, nil
 }
 
-func listOpenWorkflows(ctx context.Context, c *cli.Context, client workflowservice.WorkflowServiceClient, earliestTime, latestTime time.Time, wfID, wfType string) ([]interface{}, []byte, error) {
+func listOpenWorkflows(ctx context.Context, client workflowservice.WorkflowServiceClient, npt []byte, namespace string, earliestTime, latestTime time.Time, wfID, wfType string) ([]interface{}, []byte, error) {
 	req := &workflowservice.ListOpenWorkflowExecutionsRequest{
+		Namespace: namespace,
 		StartTimeFilter: &filterpb.StartTimeFilter{
 			EarliestTime: &earliestTime,
 			LatestTime:   &latestTime,
@@ -1951,9 +1956,10 @@ func listOpenWorkflows(ctx context.Context, c *cli.Context, client workflowservi
 	return items, resp.NextPageToken, nil
 }
 
-func listClosedWorkflows(ctx context.Context, c *cli.Context, client workflowservice.WorkflowServiceClient, earliestTime, latestTime time.Time, wfID, wfType string,
+func listClosedWorkflows(ctx context.Context, client workflowservice.WorkflowServiceClient, npt []byte, namespace string, earliestTime, latestTime time.Time, wfID, wfType string,
 	wfStatus enumspb.WorkflowExecutionStatus) ([]interface{}, []byte, error) {
 	req := &workflowservice.ListClosedWorkflowExecutionsRequest{
+		Namespace: namespace,
 		StartTimeFilter: &filterpb.StartTimeFilter{
 			EarliestTime: &earliestTime,
 			LatestTime:   &latestTime,
