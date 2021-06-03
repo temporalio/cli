@@ -689,18 +689,18 @@ func ScanAllWorkflow(c *cli.Context) {
 
 // CountWorkflow count number of workflows
 func CountWorkflow(c *cli.Context) {
-	sdkClient := getSDKClient(c)
+	client := cFactory.FrontendClient(c)
 
-	query := c.String(FlagListQuery)
 	request := &workflowservice.CountWorkflowExecutionsRequest{
-		Query: query,
+		Namespace: getRequiredGlobalOption(c, FlagNamespace),
+		Query:     c.String(FlagListQuery),
 	}
 
 	ctx, cancel := newContextForVisibility(c)
 	defer cancel()
-	response, err := sdkClient.CountWorkflow(ctx, request)
+	response, err := client.CountWorkflowExecutions(ctx, request)
 	if err != nil {
-		ErrorAndExit("Failed to count workflow.", err)
+		ErrorAndExit("Unable to count workflow.", err)
 	}
 
 	fmt.Println(response.GetCount())
