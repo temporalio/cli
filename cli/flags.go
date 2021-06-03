@@ -445,20 +445,11 @@ var flagsForWorkflowRendering = []cli.Flag{
 	},
 }
 
-func getFlagsForScan() []cli.Flag {
-	flagsForScan := []cli.Flag{
-		&cli.IntFlag{
-			Name:  FlagPageSizeWithAlias,
-			Value: 2000,
-			Usage: "Page size for each Scan API call",
-		},
-		&cli.StringFlag{
-			Name:  FlagListQueryWithAlias,
-			Usage: "Optional SQL like query",
-		},
-	}
-	flagsForScan = append(flagsForWorkflowRendering, flagsForScan...)
-	return flagsForScan
+var flagsForScan = []cli.Flag{
+	&cli.StringFlag{
+		Name:  FlagListQueryWithAlias,
+		Usage: "Optional SQL like query",
+	},
 }
 
 var flagsForListArchived = []cli.Flag{

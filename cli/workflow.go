@@ -155,11 +155,10 @@ func newWorkflowCommands() []*cli.Command {
 			},
 		},
 		{
-			Name:    "scan",
-			Aliases: []string{"sc", "scanall"},
+			Name: "scan",
 			Usage: "scan workflow executions (need to enable Temporal server on ElasticSearch). " +
 				"It will be faster than listall, but result are not sorted.",
-			Flags: getFlagsForScan(),
+			Flags: append(append(flagsForScan, flagsForWorkflowRendering...), t.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
 				ScanAllWorkflow(c)
 				return nil

@@ -34,7 +34,6 @@ import (
 	"math/rand"
 	"os"
 	"reflect"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -587,14 +586,13 @@ func ListWorkflow(c *cli.Context) {
 	workflowType := c.String(FlagWorkflowType)
 	earliestTime := parseTime(c.String(FlagEarliestTime), time.Time{}, time.Now().UTC())
 	latestTime := parseTime(c.String(FlagLatestTime), time.Now().UTC(), time.Now().UTC())
-
 	wfStatusInt, err := stringToEnum(c.String(FlagWorkflowStatus), enumspb.WorkflowExecutionStatus_value)
 	if err != nil {
 		ErrorAndExit("Failed to parse Workflow Status", err)
 	}
 	wfStatus := enumspb.WorkflowExecutionStatus(wfStatusInt)
-
 	client := cFactory.FrontendClient(c)
+
 	paginationFunc := func(npt []byte) ([]interface{}, []byte, error) {
 		ctx, cancel := newContextForLongPoll(c)
 		defer cancel()
@@ -654,42 +652,39 @@ func ListAllWorkflow(c *cli.Context) {
 }
 
 // ScanAllWorkflow list all workflow executions using Scan API.
-// It should be faster than ListAllWorkflow, but result are not sorted.
 func ScanAllWorkflow(c *cli.Context) {
-	printJSON := c.Bool(FlagPrintJSON)
-	printDecodedRaw := c.Bool(FlagPrintFullyDetail)
+	namespace := getRequiredGlobalOption(c, FlagNamespace)
+	listQuery := c.String(FlagListQuery)
+	client := cFactory.FrontendClient(c)
 
-	if printJSON || printDecodedRaw {
-		var results []*workflowpb.WorkflowExecutionInfo
-		var nextPageToken []byte
-		fmt.Println("[")
-		for {
-			results, nextPageToken = getScanResultInRaw(c, nextPageToken)
-			printListResults(results, printJSON, nextPageToken != nil)
-			if len(nextPageToken) == 0 {
-				break
-			}
+	paginationFunc := func(npt []byte) ([]interface{}, []byte, error) {
+		ctx, cancel := newContextForLongPoll(c)
+		defer cancel()
+		var err error
+
+		req := &workflowservice.ScanWorkflowExecutionsRequest{
+			Namespace:     namespace,
+			NextPageToken: npt,
+			Query:         listQuery,
 		}
-		fmt.Println("]")
-		return
+
+		resp, err := client.ScanWorkflowExecutions(ctx, req)
+		if err != nil {
+			return nil, nil, err
+		}
+		var items []interface{}
+		for _, e := range resp.Executions {
+			items = append(items, e)
+		}
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return items, resp.NextPageToken, nil
 	}
 
-	isQueryOpen := isQueryOpen(c.String(FlagListQuery))
-	table := createTableForListWorkflow(c, true, isQueryOpen)
-	prepareTable := scanWorkflow(c, table, isQueryOpen)
-	var nextPageToken []byte
-	for {
-		nextPageToken, _ = prepareTable(nextPageToken)
-		if len(nextPageToken) == 0 {
-			break
-		}
-	}
-	table.Render()
-}
-
-func isQueryOpen(query string) bool {
-	var openWFPattern = regexp.MustCompile(`CloseTime[ ]*=[ ]*missing`)
-	return openWFPattern.MatchString(query)
+	fields := []string{"Type.Name", "Execution.WorkflowId", "Execution.RunId", "TaskQueue", "StartTime", "ExecutionTime", "CloseTime"}
+	terminal.Paginate(c, paginationFunc, fields)
 }
 
 // CountWorkflow count number of workflows
