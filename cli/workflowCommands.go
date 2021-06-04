@@ -52,6 +52,7 @@ import (
 	"go.temporal.io/api/workflowservice/v1"
 	sdkclient "go.temporal.io/sdk/client"
 
+	"github.com/temporalio/shared-go/collection"
 	"github.com/temporalio/shared-go/timestamp"
 	"github.com/temporalio/tctl/common/payload"
 	"github.com/temporalio/tctl/common/payloads"
@@ -124,7 +125,8 @@ func ShowHistory(c *cli.Context) {
 	}
 
 	fields := []string{"ID", "Type", "Event"}
-	terminal.Paginate(c, paginationFunc, fields)
+	iter := collection.NewPagingIterator(paginationFunc)
+	terminal.Paginate(c, iter, fields)
 }
 
 // StartWorkflow starts a new workflow execution
@@ -540,7 +542,8 @@ func ListWorkflow(c *cli.Context) {
 	}
 
 	fields := []string{"Type.Name", "Execution.WorkflowId", "Execution.RunId", "TaskQueue", "StartTime", "ExecutionTime", "CloseTime"}
-	terminal.Paginate(c, paginationFunc, fields)
+	iter := collection.NewPagingIterator(paginationFunc)
+	terminal.Paginate(c, iter, fields)
 }
 
 // ScanAllWorkflow list all workflow executions using Scan API.
@@ -576,7 +579,8 @@ func ScanAllWorkflow(c *cli.Context) {
 	}
 
 	fields := []string{"Type.Name", "Execution.WorkflowId", "Execution.RunId", "TaskQueue", "StartTime", "ExecutionTime", "CloseTime"}
-	terminal.Paginate(c, paginationFunc, fields)
+	iter := collection.NewPagingIterator(paginationFunc)
+	terminal.Paginate(c, iter, fields)
 }
 
 // CountWorkflow count number of workflows
@@ -637,7 +641,8 @@ func ListArchivedWorkflow(c *cli.Context) {
 	}
 
 	fields := []string{"Type.Name", "Execution.WorkflowId", "Execution.RunId", "TaskQueue", "StartTime", "ExecutionTime", "CloseTime"}
-	terminal.Paginate(c, paginationFunc, fields)
+	iter := collection.NewPagingIterator(paginationFunc)
+	terminal.Paginate(c, iter, fields)
 }
 
 // DescribeWorkflow show information about the specified workflow execution

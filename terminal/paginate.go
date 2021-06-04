@@ -34,14 +34,12 @@ import (
 )
 
 // Paginate creates an interactive CLI mode to control the printing of items
-func Paginate(c *cli.Context, paginationFn collection.PaginationFn, fields []string) error {
+func Paginate(c *cli.Context, iter collection.Iterator, fields []string) error {
 	more := c.Bool(FlagMore)
-	isJSONView := c.Bool(FlagJSON)
 	pageSize := c.Int(FlagPageSize)
 	if pageSize == 0 {
 		pageSize = defaultPageSize
 	}
-	iter := collection.NewPagingIterator(paginationFn)
 
 	var pageItems []interface{}
 	for iter.HasNext() {
@@ -52,12 +50,7 @@ func Paginate(c *cli.Context, paginationFn collection.PaginationFn, fields []str
 
 		pageItems = append(pageItems, item)
 		if len(pageItems) == pageSize || !iter.HasNext() {
-			if isJSONView {
-				printJSON(pageItems)
-			} else {
-				printTable(pageItems, fields)
-			}
-
+			PrintItems(c, pageItems, fields)
 			if !more || !showNextPage() {
 				break
 			}
@@ -66,6 +59,15 @@ func Paginate(c *cli.Context, paginationFn collection.PaginationFn, fields []str
 	}
 
 	return nil
+}
+
+func PrintItems(c *cli.Context, items []interface{}, fields []string) {
+	isJSONView := c.Bool(FlagJSON)
+	if isJSONView {
+		printJSON(items)
+	} else {
+		printTable(items, fields)
+	}
 }
 
 func showNextPage() bool {
