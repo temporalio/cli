@@ -36,19 +36,9 @@ func newWorkflowCommands() []*cli.Command {
 		{
 			Name:  "show",
 			Usage: "show workflow history",
-			Flags: getFlagsForShow(),
+			Flags: append(append(flagsForExecution, flagsForShowWorkflow...), t.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
 				ShowHistory(c)
-				return nil
-			},
-		},
-		{
-			Name:        "showid",
-			Usage:       "show workflow history with given workflow_id and optional run_id (a shortcut of `show -w <wid> -r <rid>`)",
-			Description: "temporal workflow showid <workflow_id> <run_id>. workflow_id is required; run_id is optional",
-			Flags:       getFlagsForShowID(),
-			Action: func(c *cli.Context) error {
-				ShowHistoryWithWID(c)
 				return nil
 			},
 		},

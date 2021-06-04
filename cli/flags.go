@@ -252,46 +252,40 @@ var flagsForExecution = []cli.Flag{
 	},
 }
 
-func getFlagsForShow() []cli.Flag {
-	return append(flagsForExecution, getFlagsForShowID()...)
-}
-
-func getFlagsForShowID() []cli.Flag {
-	return []cli.Flag{
-		&cli.BoolFlag{
-			Name:  FlagPrintDateTimeWithAlias,
-			Usage: "Print timestamp",
-		},
-		&cli.BoolFlag{
-			Name:  FlagPrintRawTimeWithAlias,
-			Usage: "Print raw timestamp",
-		},
-		&cli.StringFlag{
-			Name:  FlagOutputFilenameWithAlias,
-			Usage: "Serialize history event to a file",
-		},
-		&cli.BoolFlag{
-			Name:  FlagPrintFullyDetailWithAlias,
-			Usage: "Print fully event detail",
-		},
-		&cli.BoolFlag{
-			Name:  FlagPrintEventVersionWithAlias,
-			Usage: "Print event version",
-		},
-		&cli.IntFlag{
-			Name:  FlagEventIDWithAlias,
-			Usage: "Print specific event details",
-		},
-		&cli.IntFlag{
-			Name:  FlagMaxFieldLengthWithAlias,
-			Usage: "Maximum length for each attribute field",
-			Value: defaultMaxFieldLength,
-		},
-		&cli.BoolFlag{
-			Name:  FlagResetPointsOnly,
-			Usage: "Only show events that are eligible for reset",
-		},
-	}
+var flagsForShowWorkflow = []cli.Flag{
+	&cli.BoolFlag{
+		Name:  FlagPrintDateTimeWithAlias,
+		Usage: "Print timestamp",
+	},
+	&cli.BoolFlag{
+		Name:  FlagPrintRawTimeWithAlias,
+		Usage: "Print raw timestamp",
+	},
+	&cli.StringFlag{
+		Name:  FlagOutputFilenameWithAlias,
+		Usage: "Serialize history event to a file",
+	},
+	&cli.BoolFlag{
+		Name:  FlagPrintFullyDetailWithAlias,
+		Usage: "Print fully event detail",
+	},
+	&cli.BoolFlag{
+		Name:  FlagPrintEventVersionWithAlias,
+		Usage: "Print event version",
+	},
+	&cli.IntFlag{
+		Name:  FlagEventIDWithAlias,
+		Usage: "Print specific event details",
+	},
+	&cli.IntFlag{
+		Name:  FlagMaxFieldLengthWithAlias,
+		Usage: "Maximum length for each attribute field",
+		Value: defaultMaxFieldLength,
+	},
+	&cli.BoolFlag{
+		Name:  FlagResetPointsOnly,
+		Usage: "Only show events that are eligible for reset",
+	},
 }
 
 func getFlagsForStart() []cli.Flag {

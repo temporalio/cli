@@ -28,7 +28,6 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"reflect"
@@ -53,10 +52,7 @@ import (
 	"go.temporal.io/api/workflowservice/v1"
 	sdkclient "go.temporal.io/sdk/client"
 
-	"github.com/temporalio/shared-go/codec"
 	"github.com/temporalio/shared-go/timestamp"
-	"github.com/temporalio/tctl/cli/dataconverter"
-	"github.com/temporalio/tctl/cli/stringify"
 	"github.com/temporalio/tctl/common/payload"
 	"github.com/temporalio/tctl/common/payloads"
 	"github.com/temporalio/tctl/terminal"
@@ -69,105 +65,66 @@ import (
 
 // ShowHistory shows the history of given workflow execution based on workflowID and runID.
 func ShowHistory(c *cli.Context) {
-	wid := getRequiredOption(c, FlagWorkflowID)
-	rid := c.String(FlagRunID)
-	showHistoryHelper(c, wid, rid)
-}
-
-// ShowHistoryWithWID shows the history of given workflow with workflow_id
-func ShowHistoryWithWID(c *cli.Context) {
-	if !c.Args().Present() {
-		ErrorAndExit("Argument workflow_id is required.", nil)
+	var wid string
+	var rid string
+	if c.NArg() >= 1 {
+		wid = c.Args().First()
+		if c.NArg() >= 2 {
+			rid = c.Args().Get(1)
+		}
+	} else {
+		wid = getRequiredOption(c, FlagWorkflowID)
+		rid = c.String(FlagRunID)
 	}
-	wid := c.Args().First()
-	rid := ""
-	if c.NArg() >= 2 {
-		rid = c.Args().Get(1)
-	}
-	showHistoryHelper(c, wid, rid)
-}
 
-func showHistoryHelper(c *cli.Context, wid, rid string) {
-	sdkClient := getSDKClient(c)
-
-	printDateTime := c.Bool(FlagPrintDateTime)
-	printRawTime := c.Bool(FlagPrintRawTime)
-	printFully := c.Bool(FlagPrintFullyDetail)
-	printVersion := c.Bool(FlagPrintEventVersion)
-	outputFileName := c.String(FlagOutputFilename)
+	namespace := getRequiredGlobalOption(c, FlagNamespace)
 	var maxFieldLength int
-	if c.IsSet(FlagMaxFieldLength) || !printFully {
+	if c.IsSet(FlagMaxFieldLength) || true {
 		maxFieldLength = c.Int(FlagMaxFieldLength)
 	}
-	resetPointsOnly := c.Bool(FlagResetPointsOnly)
+	client := cFactory.FrontendClient(c)
 
-	ctx, cancel := newContext(c)
-	defer cancel()
-	history, err := GetHistory(ctx, sdkClient, wid, rid)
-	if err != nil {
-		ErrorAndExit(fmt.Sprintf("Failed to get history on workflow id: %s, run id: %s.", wid, rid), err)
+	type EventRow struct {
+		ID    string
+		Type  string
+		Event string
 	}
+	paginationFunc := func(npt []byte) ([]interface{}, []byte, error) {
+		ctx, cancel := newContext(c)
+		defer cancel()
+		var err error
 
-	prevEvent := historypb.HistoryEvent{}
-	if printFully { // dump everything
-		for _, e := range history.Events {
-			if resetPointsOnly {
-				if prevEvent.GetEventType() != enumspb.EVENT_TYPE_WORKFLOW_TASK_STARTED {
-					prevEvent = *e
-					continue
-				}
-				prevEvent = *e
-			}
-			fmt.Println(stringify.AnyToString(e, true, maxFieldLength, dataconverter.GetCurrent()))
+		req := &workflowservice.GetWorkflowExecutionHistoryRequest{
+			Namespace: namespace,
+			Execution: &commonpb.WorkflowExecution{
+				WorkflowId: wid,
+				RunId:      rid,
+			},
+			NextPageToken:          npt,
+			HistoryEventFilterType: enumspb.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT,
 		}
-	} else if c.IsSet(FlagEventID) { // only dump that event
-		eventID := c.Int(FlagEventID)
-		if eventID <= 0 || eventID > len(history.Events) {
-			ErrorAndExit("EventId out of range.", fmt.Errorf("number should be 1 - %d inclusive", len(history.Events)))
-		}
-		e := history.Events[eventID-1]
-		fmt.Println(stringify.AnyToString(e, true, 0, dataconverter.GetCurrent()))
-	} else { // use table to pretty output, will trim long text
-		table := tablewriter.NewWriter(os.Stdout)
-		table.SetBorder(false)
-		table.SetColumnSeparator("")
-		for _, e := range history.Events {
-			if resetPointsOnly {
-				if prevEvent.GetEventType() != enumspb.EVENT_TYPE_WORKFLOW_TASK_STARTED {
-					prevEvent = *e
-					continue
-				}
-				prevEvent = *e
-			}
-
-			var columns []string
-			columns = append(columns, convert.Int64ToString(e.GetEventId()))
-
-			if printRawTime {
-				columns = append(columns, convert.Int64ToString(timestamp.TimeValue(e.GetEventTime()).UnixNano()))
-			} else if printDateTime {
-				columns = append(columns, formatTime(timestamp.TimeValue(e.GetEventTime()), false))
-			}
-			if printVersion {
-				columns = append(columns, fmt.Sprintf("(Version: %v)", e.Version))
-			}
-
-			columns = append(columns, ColorEvent(e), HistoryEventToString(e, false, maxFieldLength))
-			table.Append(columns)
-		}
-		table.Render()
-	}
-
-	if outputFileName != "" {
-		serializer := codec.NewJSONPBIndentEncoder(" ")
-		data, err := serializer.Encode(history)
+		res, err := client.GetWorkflowExecutionHistory(ctx, req)
 		if err != nil {
-			ErrorAndExit("Failed to serialize history data.", err)
+			return nil, nil, err
 		}
-		if err := ioutil.WriteFile(outputFileName, data, 0666); err != nil {
-			ErrorAndExit("Failed to export history data file.", err)
+		var items []interface{}
+		for _, e := range res.History.Events {
+			item := EventRow{
+				ID:    convert.Int64ToString(e.GetEventId()),
+				Type:  ColorEvent(e),
+				Event: HistoryEventToString(e, false, maxFieldLength),
+			}
+			items = append(items, item)
 		}
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return items, res.NextPageToken, nil
 	}
+
+	fields := []string{"ID", "Type", "Event"}
+	terminal.Paginate(c, paginationFunc, fields)
 }
 
 // StartWorkflow starts a new workflow execution

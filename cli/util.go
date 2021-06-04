@@ -54,24 +54,6 @@ import (
 	"github.com/temporalio/tctl/common/payloads"
 )
 
-// GetHistory helper method to iterate over all pages and return complete list of history events
-func GetHistory(ctx context.Context, workflowClient sdkclient.Client, workflowID, runID string) (*historypb.History, error) {
-	iter := workflowClient.GetWorkflowHistory(ctx, workflowID, runID, false,
-		enumspb.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
-	var events []*historypb.HistoryEvent
-	for iter.HasNext() {
-		event, err := iter.Next()
-		if err != nil {
-			return nil, err
-		}
-		events = append(events, event)
-	}
-
-	history := &historypb.History{}
-	history.Events = events
-	return history, nil
-}
-
 // HistoryEventToString convert HistoryEvent to string
 func HistoryEventToString(e *historypb.HistoryEvent, printFully bool, maxFieldLength int) string {
 	data := getEventAttributes(e)
