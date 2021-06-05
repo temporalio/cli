@@ -43,18 +43,9 @@ func newWorkflowCommands() []*cli.Command {
 			},
 		},
 		{
-			Name:  "start",
-			Usage: "start a new workflow execution",
-			Flags: getFlagsForStart(),
-			Action: func(c *cli.Context) error {
-				StartWorkflow(c)
-				return nil
-			},
-		},
-		{
 			Name:  "run",
 			Usage: "start a new workflow execution and get workflow progress",
-			Flags: getFlagsForRun(),
+			Flags: append(flagsForRunWorkflow, t.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
 				RunWorkflow(c)
 				return nil

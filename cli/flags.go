@@ -288,96 +288,87 @@ var flagsForShowWorkflow = []cli.Flag{
 	},
 }
 
-func getFlagsForStart() []cli.Flag {
-	return []cli.Flag{
-		&cli.StringFlag{
-			Name:  FlagTaskQueueWithAlias,
-			Usage: "TaskQueue",
-		},
-		&cli.StringFlag{
-			Name:  FlagWorkflowIDWithAlias,
-			Usage: "WorkflowId",
-		},
-		&cli.StringFlag{
-			Name:  FlagWorkflowTypeWithAlias,
-			Usage: "WorkflowTypeName",
-		},
-		&cli.IntFlag{
-			Name:  FlagExecutionTimeoutWithAlias,
-			Usage: "Execution start to close timeout in seconds",
-		},
-		&cli.IntFlag{
-			Name:  FlagWorkflowTaskTimeoutWithAlias,
-			Value: defaultWorkflowTaskTimeoutInSeconds,
-			Usage: "Workflow task start to close timeout in seconds",
-		},
-		&cli.StringFlag{
-			Name: FlagCronSchedule,
-			Usage: "Optional cron schedule for the workflow. Cron spec is as following: \n" +
-				"\t┌───────────── minute (0 - 59) \n" +
-				"\t│ ┌───────────── hour (0 - 23) \n" +
-				"\t│ │ ┌───────────── day of the month (1 - 31) \n" +
-				"\t│ │ │ ┌───────────── month (1 - 12) \n" +
-				"\t│ │ │ │ ┌───────────── day of the week (0 - 6) (Sunday to Saturday) \n" +
-				"\t│ │ │ │ │ \n" +
-				"\t* * * * *",
-		},
-		&cli.StringFlag{
-			Name: FlagWorkflowIDReusePolicyAlias,
-			Usage: "Configure if the same workflow Id is allowed for use in new workflow execution. " +
-				"Options: AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate",
-		},
-		&cli.StringSliceFlag{
-			Name: FlagInputWithAlias,
-			Usage: "Optional input for the workflow in JSON format. If there are multiple parameters, pass each as a separate input flag. " +
-				"Pass \"null\" for null values",
-		},
-		&cli.StringFlag{
-			Name: FlagInputFileWithAlias,
-			Usage: "Optional input for the workflow from JSON file. If there are multiple JSON, concatenate them and separate by space or newline. " +
-				"Input from file will be overwrite by input from command line",
-		},
-		&cli.StringFlag{
-			Name:  FlagMemoKey,
-			Usage: "Optional key of memo. If there are multiple keys, concatenate them and separate by space",
-		},
-		&cli.StringFlag{
-			Name: FlagMemo,
-			Usage: "Optional info that can be showed when list workflow, in JSON format. If there are multiple JSON, concatenate them and separate by space. " +
-				"The order must be same as memo_key",
-		},
-		&cli.StringFlag{
-			Name: FlagMemoFile,
-			Usage: "Optional info that can be listed in list workflow, from JSON format file. If there are multiple JSON, concatenate them and separate by space or newline. " +
-				"The order must be same as memo_key",
-		},
-		&cli.StringFlag{
-			Name: FlagSearchAttributesKey,
-			Usage: "Optional search attributes keys that can be be used in list query. If there are multiple keys, concatenate them and separate by |. " +
-				"Use 'cluster get-search-attr' cmd to list legal keys.",
-		},
-		&cli.StringFlag{
-			Name: FlagSearchAttributesVal,
-			Usage: "Optional search attributes value that can be be used in list query. If there are multiple keys, concatenate them and separate by |. " +
-				"If value is array, use json array like [\"a\",\"b\"], [1,2], [\"true\",\"false\"], [\"2019-06-07T17:16:34-08:00\",\"2019-06-07T18:16:34-08:00\"]. " +
-				"Use 'cluster get-search-attr' cmd to list legal keys and value types",
-		},
-	}
-}
-
-func getFlagsForRun() []cli.Flag {
-	flagsForRun := []cli.Flag{
-		&cli.BoolFlag{
-			Name:  FlagShowDetailWithAlias,
-			Usage: "Show event details",
-		},
-		&cli.IntFlag{
-			Name:  FlagMaxFieldLengthWithAlias,
-			Usage: "Maximum length for each attribute field",
-		},
-	}
-	flagsForRun = append(getFlagsForStart(), flagsForRun...)
-	return flagsForRun
+var flagsForRunWorkflow = []cli.Flag{
+	&cli.StringFlag{
+		Name:  FlagTaskQueueWithAlias,
+		Usage: "TaskQueue",
+	},
+	&cli.StringFlag{
+		Name:  FlagWorkflowIDWithAlias,
+		Usage: "WorkflowId",
+	},
+	&cli.StringFlag{
+		Name:  FlagWorkflowTypeWithAlias,
+		Usage: "WorkflowTypeName",
+	},
+	&cli.IntFlag{
+		Name:  FlagExecutionTimeoutWithAlias,
+		Usage: "Execution start to close timeout in seconds",
+	},
+	&cli.IntFlag{
+		Name:  FlagWorkflowTaskTimeoutWithAlias,
+		Value: defaultWorkflowTaskTimeoutInSeconds,
+		Usage: "Workflow task start to close timeout in seconds",
+	},
+	&cli.StringFlag{
+		Name: FlagCronSchedule,
+		Usage: "Optional cron schedule for the workflow. Cron spec is as following: \n" +
+			"\t┌───────────── minute (0 - 59) \n" +
+			"\t│ ┌───────────── hour (0 - 23) \n" +
+			"\t│ │ ┌───────────── day of the month (1 - 31) \n" +
+			"\t│ │ │ ┌───────────── month (1 - 12) \n" +
+			"\t│ │ │ │ ┌───────────── day of the week (0 - 6) (Sunday to Saturday) \n" +
+			"\t│ │ │ │ │ \n" +
+			"\t* * * * *",
+	},
+	&cli.StringFlag{
+		Name: FlagWorkflowIDReusePolicyAlias,
+		Usage: "Configure if the same workflow Id is allowed for use in new workflow execution. " +
+			"Options: AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate",
+	},
+	&cli.StringSliceFlag{
+		Name: FlagInputWithAlias,
+		Usage: "Optional input for the workflow in JSON format. If there are multiple parameters, pass each as a separate input flag. " +
+			"Pass \"null\" for null values",
+	},
+	&cli.StringFlag{
+		Name: FlagInputFileWithAlias,
+		Usage: "Optional input for the workflow from JSON file. If there are multiple JSON, concatenate them and separate by space or newline. " +
+			"Input from file will be overwrite by input from command line",
+	},
+	&cli.StringFlag{
+		Name:  FlagMemoKey,
+		Usage: "Optional key of memo. If there are multiple keys, concatenate them and separate by space",
+	},
+	&cli.StringFlag{
+		Name: FlagMemo,
+		Usage: "Optional info that can be showed when list workflow, in JSON format. If there are multiple JSON, concatenate them and separate by space. " +
+			"The order must be same as memo_key",
+	},
+	&cli.BoolFlag{
+		Name:  FlagShowDetailWithAlias,
+		Usage: "Show event details",
+	},
+	&cli.IntFlag{
+		Name:  FlagMaxFieldLengthWithAlias,
+		Usage: "Maximum length for each attribute field",
+	},
+	&cli.StringFlag{
+		Name: FlagMemoFile,
+		Usage: "Optional info that can be listed in list workflow, from JSON format file. If there are multiple JSON, concatenate them and separate by space or newline. " +
+			"The order must be same as memo_key",
+	},
+	&cli.StringFlag{
+		Name: FlagSearchAttributesKey,
+		Usage: "Optional search attributes keys that can be be used in list query. If there are multiple keys, concatenate them and separate by |. " +
+			"Use 'cluster get-search-attr' cmd to list legal keys.",
+	},
+	&cli.StringFlag{
+		Name: FlagSearchAttributesVal,
+		Usage: "Optional search attributes value that can be be used in list query. If there are multiple keys, concatenate them and separate by |. " +
+			"If value is array, use json array like [\"a\",\"b\"], [1,2], [\"true\",\"false\"], [\"2019-06-07T17:16:34-08:00\",\"2019-06-07T18:16:34-08:00\"]. " +
+			"Use 'cluster get-search-attr' cmd to list legal keys and value types",
+	},
 }
 
 var flagsForWorkflowFiltering = []cli.Flag{

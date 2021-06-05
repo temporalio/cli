@@ -59,9 +59,11 @@ func Paginate(c *cli.Context, iter collection.Iterator, opts *PaginateOptions) e
 		if all || shouldPrintPage {
 			PrintItems(c, pageItems, opts.Fields)
 			pageItems = pageItems[:0]
-			if all {
+			if detach {
+				break
+			} else if all {
 				continue
-			} else if detach || !promtNextPage() {
+			} else if !promtNextPage() {
 				break
 			}
 		}

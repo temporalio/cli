@@ -114,17 +114,8 @@ func ShowHistory(c *cli.Context) {
 	terminal.Paginate(c, iter, opts)
 }
 
-// StartWorkflow starts a new workflow execution
-func StartWorkflow(c *cli.Context) {
-	startWorkflowHelper(c, false)
-}
-
 // RunWorkflow starts a new workflow execution and print workflow progress and result
 func RunWorkflow(c *cli.Context) {
-	startWorkflowHelper(c, true)
-}
-
-func startWorkflowHelper(c *cli.Context, shouldPrintProgress bool) {
 	serviceClient := cFactory.FrontendClient(c)
 
 	namespace := getRequiredGlobalOption(c, FlagNamespace)
@@ -177,51 +168,31 @@ func startWorkflowHelper(c *cli.Context, shouldPrintProgress bool) {
 
 	startRequest.SearchAttributes = processSearchAttr(c)
 
-	startFn := func() {
-		tcCtx, cancel := newContext(c)
-		defer cancel()
-		resp, err := serviceClient.StartWorkflowExecution(tcCtx, startRequest)
+	tcCtx, cancel := newContextForLongPoll(c)
+	defer cancel()
+	resp, err := serviceClient.StartWorkflowExecution(tcCtx, startRequest)
 
-		if err != nil {
-			ErrorAndExit("Failed to create workflow.", err)
-		} else {
-			fmt.Printf("Started Workflow Id: %s, run Id: %s\n", wid, resp.GetRunId())
-		}
+	if err != nil {
+		ErrorAndExit("Failed to run workflow.", err)
 	}
 
-	runFn := func() {
-		tcCtx, cancel := newContextForLongPoll(c)
-		defer cancel()
-		resp, err := serviceClient.StartWorkflowExecution(tcCtx, startRequest)
-
-		if err != nil {
-			ErrorAndExit("Failed to run workflow.", err)
-		}
-
-		// print execution summary
-		fmt.Println(colorMagenta("Running execution:"))
-		table := tablewriter.NewWriter(os.Stdout)
-		executionData := [][]string{
-			{"Workflow Id", wid},
-			{"Run Id", resp.GetRunId()},
-			{"Type", workflowType},
-			{"Namespace", namespace},
-			{"Task Queue", taskQueue},
-			{"Args", truncate(payloads.ToString(input))}, // in case of large input
-		}
-		table.SetBorder(false)
-		table.SetColumnSeparator(":")
-		table.AppendBulk(executionData) // Add Bulk Data
-		table.Render()
-
-		printWorkflowProgress(c, wid, resp.GetRunId())
+	type row struct {
+		Field string
+		Value string
 	}
 
-	if shouldPrintProgress {
-		runFn()
-	} else {
-		startFn()
+	executionData := []interface{}{
+		&row{Field: "Workflow Id", Value: wid},
+		&row{Field: "Run Id", Value: resp.GetRunId()},
+		&row{Field: "Type", Value: workflowType},
+		&row{Field: "Namespace", Value: namespace},
+		&row{Field: "Task Queue", Value: taskQueue},
+		&row{Field: "Args", Value: truncate(payloads.ToString(input))},
 	}
+	fmt.Println(colorMagenta("Running execution:"))
+	terminal.PrintItems(c, executionData, []string{"Field", "Value"})
+
+	printWorkflowProgress(c, wid, resp.GetRunId())
 }
 
 func processSearchAttr(c *cli.Context) *commonpb.SearchAttributes {
