@@ -96,9 +96,9 @@ func ShowHistory(c *cli.Context) {
 		var items []interface{}
 		for _, e := range res.History.Events {
 			item := eventRow{
-				ID:    convert.Int64ToString(e.GetEventId()),
-				Type:  ColorEvent(e),
-				Event: HistoryEventToString(e, false, maxFieldLength),
+				ID:      convert.Int64ToString(e.GetEventId()),
+				Type:    ColorEvent(e),
+				Details: HistoryEventToString(e, false, maxFieldLength),
 			}
 			items = append(items, item)
 		}
@@ -296,10 +296,10 @@ func (h *historyIterator) Next() (interface{}, error) {
 	reflect.ValueOf(h.lastEvent).Elem().Set(reflect.ValueOf(event).Elem())
 
 	return eventRow{
-		ID:    convert.Int64ToString(event.GetEventId()),
-		Time:  formatTime(timestamp.TimeValue(event.GetEventTime()), false),
-		Type:  ColorEvent(event),
-		Event: HistoryEventToString(event, false, h.maxFieldLength),
+		ID:      convert.Int64ToString(event.GetEventId()),
+		Time:    formatTime(timestamp.TimeValue(event.GetEventTime()), false),
+		Type:    ColorEvent(event),
+		Details: HistoryEventToString(event, false, h.maxFieldLength),
 	}, nil
 }
 
@@ -324,7 +324,7 @@ func printWorkflowProgress(c *cli.Context, wid, rid string) {
 		All:    true,
 	}
 	if showDetails {
-		opts.Fields = append(opts.Fields, "Event")
+		opts.Fields = append(opts.Fields, "Details")
 	}
 	fmt.Println(colorMagenta("Progress:"))
 	var lastEvent historypb.HistoryEvent // used for print result of this run
@@ -1507,8 +1507,8 @@ func listClosedWorkflows(ctx context.Context, client workflowservice.WorkflowSer
 }
 
 type eventRow struct {
-	ID    string
-	Time  string
-	Type  string
-	Event string
+	ID      string
+	Time    string
+	Type    string
+	Details string
 }
