@@ -24,8 +24,6 @@
 package terminal
 
 import (
-	"strconv"
-
 	"github.com/urfave/cli/v2"
 )
 
@@ -44,10 +42,9 @@ var FlagsForPagination = []cli.Flag{
 		Usage:   "print all pages",
 	},
 	&cli.IntFlag{
-		Name:        FlagPageSize,
-		Value:       defaultPageSize,
-		Usage:       "items per page",
-		DefaultText: strconv.Itoa(defaultPageSize),
+		Name:  FlagPageSize,
+		Value: 10,
+		Usage: "items per page",
 	},
 	&cli.BoolFlag{
 		Name:    FlagDetach,

@@ -41,9 +41,6 @@ func Paginate(c *cli.Context, iter collection.Iterator, opts *PaginateOptions) e
 
 	detach := c.Bool(FlagDetach)
 	pageSize := c.Int(FlagPageSize)
-	if pageSize == 0 {
-		pageSize = defaultPageSize
-	}
 	all := opts.All
 	if c.IsSet(FlagAll) {
 		all = c.Bool(FlagAll)
