@@ -44,11 +44,11 @@ type PrintOptions struct {
 }
 
 func PrintItems(c *cli.Context, items []interface{}, opts *PrintOptions) {
+	isJSON := c.Bool(FlagJSON)
 	if opts == nil {
 		opts = &PrintOptions{}
 	}
-	isJSONView := c.Bool(FlagJSON)
-	if isJSONView {
+	if isJSON {
 		printJSON(items)
 	} else {
 		printTable(items, opts)

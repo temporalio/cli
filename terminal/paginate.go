@@ -45,6 +45,9 @@ func Paginate(c *cli.Context, iter collection.Iterator, opts *PaginateOptions) e
 		pageSize = defaultPageSize
 	}
 	all := opts.All
+	if c.IsSet(FlagAll) {
+		all = c.Bool(FlagAll)
+	}
 
 	var pageItems []interface{}
 	var printOpts = &PrintOptions{
