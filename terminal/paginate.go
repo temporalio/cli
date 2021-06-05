@@ -47,6 +47,11 @@ func Paginate(c *cli.Context, iter collection.Iterator, opts *PaginateOptions) e
 	all := opts.All
 
 	var pageItems []interface{}
+	var printOpts = &PrintOptions{
+		Fields:    opts.Fields,
+		Header:    true,
+		Separator: opts.Separator,
+	}
 	for iter.HasNext() {
 		item, err := iter.Next()
 		if err != nil {
@@ -57,8 +62,9 @@ func Paginate(c *cli.Context, iter collection.Iterator, opts *PaginateOptions) e
 		shouldPrintPage := len(pageItems) == pageSize || !iter.HasNext()
 
 		if all || shouldPrintPage {
-			PrintItems(c, pageItems, opts.Fields)
+			PrintItems(c, pageItems, printOpts)
 			pageItems = pageItems[:0]
+			printOpts.Header = false
 			if detach {
 				break
 			} else if all {
@@ -73,8 +79,9 @@ func Paginate(c *cli.Context, iter collection.Iterator, opts *PaginateOptions) e
 }
 
 type PaginateOptions struct {
-	Fields []string
-	All    bool
+	Fields    []string
+	All       bool
+	Separator string
 }
 
 func promtNextPage() bool {

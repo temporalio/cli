@@ -37,16 +37,26 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-func PrintItems(c *cli.Context, items []interface{}, fields []string) {
+type PrintOptions struct {
+	Fields    []string
+	Header    bool
+	Separator string
+}
+
+func PrintItems(c *cli.Context, items []interface{}, opts *PrintOptions) {
+	if opts == nil {
+		opts = &PrintOptions{}
+	}
 	isJSONView := c.Bool(FlagJSON)
 	if isJSONView {
 		printJSON(items)
 	} else {
-		printTable(items, fields)
+		printTable(items, opts)
 	}
 }
 
-func printTable(items []interface{}, fields []string) {
+func printTable(items []interface{}, opts *PrintOptions) {
+	fields := opts.Fields
 	if len(fields) == 0 {
 		// dynamically examine fields
 		if len(items) == 0 {
@@ -64,8 +74,10 @@ func printTable(items []interface{}, fields []string) {
 
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetBorder(false)
-	table.SetColumnSeparator("|")
-	table.SetHeader(fields)
+	table.SetColumnSeparator(opts.Separator)
+	if opts.Header {
+		table.SetHeader(fields)
+	}
 	table.SetHeaderLine(false)
 
 	for _, item := range items {
