@@ -484,31 +484,27 @@ var flagsForQuery = append(flagsForStackTraceQuery,
 		Usage: "The query type you want to run",
 	})
 
-func getFlagsForDescribe() []cli.Flag {
-	return append(flagsForExecution, []cli.Flag{
-		&cli.BoolFlag{
-			Name:  FlagPrintRawWithAlias,
-			Usage: "Print properties as they are stored",
-		},
-		&cli.BoolFlag{
-			Name:  FlagResetPointsOnly,
-			Usage: "Only show auto-reset points",
-		},
-	}...)
-}
+var flagsForDescribeWorkflow = append(flagsForExecution, []cli.Flag{
+	&cli.BoolFlag{
+		Name:  FlagPrintRawWithAlias,
+		Usage: "Print properties as they are stored",
+	},
+	&cli.BoolFlag{
+		Name:  FlagResetPointsOnly,
+		Usage: "Only show auto-reset points",
+	},
+}...)
 
-func getFlagsForObserve() []cli.Flag {
-	return append(flagsForExecution, []cli.Flag{
-		&cli.BoolFlag{
-			Name:  FlagShowDetailWithAlias,
-			Usage: "Optional show event details",
-		},
-		&cli.IntFlag{
-			Name:  FlagMaxFieldLengthWithAlias,
-			Usage: "Optional maximum length for each attribute field when show details",
-		},
-	}...)
-}
+var flagsForObserveHistory = append(flagsForExecution, []cli.Flag{
+	&cli.BoolFlag{
+		Name:  FlagShowDetailWithAlias,
+		Usage: "Optional show event details",
+	},
+	&cli.IntFlag{
+		Name:  FlagMaxFieldLengthWithAlias,
+		Usage: "Optional maximum length for each attribute field when show details",
+	},
+}...)
 
 func getDBFlags() []cli.Flag {
 	return []cli.Flag{

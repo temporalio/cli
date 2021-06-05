@@ -34,7 +34,46 @@ import (
 func newWorkflowCommands() []*cli.Command {
 	return []*cli.Command{
 		{
-			Name:  "show",
+			Name:  "run",
+			Usage: "start a new workflow execution and show progress",
+			Flags: append(flagsForRunWorkflow, t.FlagsForPaginationAndRendering...),
+			Action: func(c *cli.Context) error {
+				RunWorkflow(c)
+				return nil
+			},
+		},
+		{
+			Name:    "describe",
+			Aliases: []string{"desc"},
+			Usage:   "show information of workflow execution",
+			Flags:   flagsForDescribeWorkflow,
+			Action: func(c *cli.Context) error {
+				DescribeWorkflow(c)
+				return nil
+			},
+		},
+		{
+			Name:        "list",
+			Aliases:     []string{"l"},
+			Usage:       "list open or closed workflow executions",
+			Description: "list one page (default size 10 items) by default, use flag --pagesize to change page size",
+			Flags:       append(append(flagsForWorkflowFiltering, flagsForWorkflowRendering...), t.FlagsForPaginationAndRendering...),
+			Action: func(c *cli.Context) error {
+				ListWorkflow(c)
+				return nil
+			},
+		},
+		{
+			Name:  "listarchived",
+			Usage: "list archived workflow executions",
+			Flags: append(append(flagsForListArchived, flagsForWorkflowRendering...), t.FlagsForPaginationAndRendering...),
+			Action: func(c *cli.Context) error {
+				ListArchivedWorkflow(c)
+				return nil
+			},
+		},
+		{
+			Name:  "history",
 			Usage: "show workflow history",
 			Flags: append(append(flagsForExecution, flagsForShowWorkflow...), t.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
@@ -43,21 +82,30 @@ func newWorkflowCommands() []*cli.Command {
 			},
 		},
 		{
-			Name:  "run",
-			Usage: "start a new workflow execution and get workflow progress",
-			Flags: append(flagsForRunWorkflow, t.FlagsForPaginationAndRendering...),
+			Name:    "observe",
+			Aliases: []string{"ob"},
+			Usage:   "show the progress of workflow history",
+			Flags:   flagsForObserveHistory,
 			Action: func(c *cli.Context) error {
-				RunWorkflow(c)
+				ObserveHistory(c)
 				return nil
 			},
 		},
 		{
-			Name:    "cancel",
-			Aliases: []string{"c"},
-			Usage:   "cancel a workflow execution",
-			Flags:   flagsForExecution,
+			Name:  "query",
+			Usage: "query workflow execution",
+			Flags: flagsForQuery,
 			Action: func(c *cli.Context) error {
-				CancelWorkflow(c)
+				QueryWorkflow(c)
+				return nil
+			},
+		},
+		{
+			Name:  "stack",
+			Usage: "query workflow execution with __stack_trace as query type",
+			Flags: flagsForStackTraceQuery,
+			Action: func(c *cli.Context) error {
+				QueryWorkflowUsingStackTrace(c)
 				return nil
 			},
 		},
@@ -93,49 +141,6 @@ func newWorkflowCommands() []*cli.Command {
 			},
 		},
 		{
-			Name:    "terminate",
-			Aliases: []string{"term"},
-			Usage:   "terminate a new workflow execution",
-			Flags: []cli.Flag{
-				&cli.StringFlag{
-					Name:  FlagWorkflowIDWithAlias,
-					Usage: "WorkflowId",
-				},
-				&cli.StringFlag{
-					Name:  FlagRunIDWithAlias,
-					Usage: "RunId",
-				},
-				&cli.StringFlag{
-					Name:  FlagReasonWithAlias,
-					Usage: "The reason you want to terminate the workflow",
-				},
-			},
-			Action: func(c *cli.Context) error {
-				TerminateWorkflow(c)
-				return nil
-			},
-		},
-		{
-			Name:        "list",
-			Aliases:     []string{"l"},
-			Usage:       "list open or closed workflow executions",
-			Description: "list one page (default size 10 items) by default, use flag --pagesize to change page size",
-			Flags:       append(append(flagsForWorkflowFiltering, flagsForWorkflowRendering...), t.FlagsForPaginationAndRendering...),
-			Action: func(c *cli.Context) error {
-				ListWorkflow(c)
-				return nil
-			},
-		},
-		{
-			Name:  "listarchived",
-			Usage: "list archived workflow executions",
-			Flags: append(append(flagsForListArchived, flagsForWorkflowRendering...), t.FlagsForPaginationAndRendering...),
-			Action: func(c *cli.Context) error {
-				ListArchivedWorkflow(c)
-				return nil
-			},
-		},
-		{
 			Name: "scan",
 			Usage: "scan workflow executions (need to enable Temporal server on ElasticSearch). " +
 				"It will be faster than listall, but result are not sorted.",
@@ -156,40 +161,35 @@ func newWorkflowCommands() []*cli.Command {
 			},
 		},
 		{
-			Name:  "query",
-			Usage: "query workflow execution",
-			Flags: flagsForQuery,
+			Name:    "cancel",
+			Aliases: []string{"c"},
+			Usage:   "cancel a workflow execution",
+			Flags:   flagsForExecution,
 			Action: func(c *cli.Context) error {
-				QueryWorkflow(c)
+				CancelWorkflow(c)
 				return nil
 			},
 		},
 		{
-			Name:  "stack",
-			Usage: "query workflow execution with __stack_trace as query type",
-			Flags: flagsForStackTraceQuery,
-			Action: func(c *cli.Context) error {
-				QueryWorkflowUsingStackTrace(c)
-				return nil
+			Name:    "terminate",
+			Aliases: []string{"term"},
+			Usage:   "terminate a new workflow execution",
+			Flags: []cli.Flag{
+				&cli.StringFlag{
+					Name:  FlagWorkflowIDWithAlias,
+					Usage: "WorkflowId",
+				},
+				&cli.StringFlag{
+					Name:  FlagRunIDWithAlias,
+					Usage: "RunId",
+				},
+				&cli.StringFlag{
+					Name:  FlagReasonWithAlias,
+					Usage: "The reason you want to terminate the workflow",
+				},
 			},
-		},
-		{
-			Name:    "describe",
-			Aliases: []string{"desc"},
-			Usage:   "show information of workflow execution",
-			Flags:   getFlagsForDescribe(),
 			Action: func(c *cli.Context) error {
-				DescribeWorkflow(c)
-				return nil
-			},
-		},
-		{
-			Name:    "observe",
-			Aliases: []string{"ob"},
-			Usage:   "show the progress of workflow history",
-			Flags:   getFlagsForObserve(),
-			Action: func(c *cli.Context) error {
-				ObserveHistory(c)
+				TerminateWorkflow(c)
 				return nil
 			},
 		},
