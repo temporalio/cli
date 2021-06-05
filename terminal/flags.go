@@ -31,10 +31,10 @@ import (
 
 // General command line flags
 const (
-	FlagMore     = "more"
+	FlagAll      = "all"
+	FlagDetach   = "detach"
 	FlagJSON     = "json"
 	FlagPageSize = "pagesize"
-	FlagAll      = "all"
 )
 
 var FlagsForPagination = []cli.Flag{
@@ -43,8 +43,8 @@ var FlagsForPagination = []cli.Flag{
 		Usage: "List all pages",
 	},
 	&cli.BoolFlag{
-		Name:  FlagMore,
-		Usage: "Interactively list pages by pressing Enter. Default: prints first page and exits",
+		Name:  FlagDetach,
+		Usage: "Detach after printing first results",
 	},
 	&cli.IntFlag{
 		Name:        FlagPageSize,

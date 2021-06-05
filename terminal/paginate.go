@@ -34,12 +34,17 @@ import (
 )
 
 // Paginate creates an interactive CLI mode to control the printing of items
-func Paginate(c *cli.Context, iter collection.Iterator, fields []string) error {
-	more := c.Bool(FlagMore)
+func Paginate(c *cli.Context, iter collection.Iterator, opts *PaginateOptions) error {
+	if opts == nil {
+		opts = &PaginateOptions{}
+	}
+
+	detach := c.Bool(FlagDetach)
 	pageSize := c.Int(FlagPageSize)
 	if pageSize == 0 {
 		pageSize = defaultPageSize
 	}
+	all := opts.All
 
 	var pageItems []interface{}
 	for iter.HasNext() {
@@ -49,28 +54,28 @@ func Paginate(c *cli.Context, iter collection.Iterator, fields []string) error {
 		}
 
 		pageItems = append(pageItems, item)
-		if len(pageItems) == pageSize || !iter.HasNext() {
-			PrintItems(c, pageItems, fields)
-			if !more || !showNextPage() {
+		shouldPrintPage := len(pageItems) == pageSize || !iter.HasNext()
+
+		if all || shouldPrintPage {
+			PrintItems(c, pageItems, opts.Fields)
+			pageItems = pageItems[:0]
+			if all {
+				continue
+			} else if detach || !promtNextPage() {
 				break
 			}
-			pageItems = pageItems[:0]
 		}
 	}
 
 	return nil
 }
 
-func PrintItems(c *cli.Context, items []interface{}, fields []string) {
-	isJSONView := c.Bool(FlagJSON)
-	if isJSONView {
-		printJSON(items)
-	} else {
-		printTable(items, fields)
-	}
+type PaginateOptions struct {
+	Fields []string
+	All    bool
 }
 
-func showNextPage() bool {
+func promtNextPage() bool {
 	fmt.Printf("Press %s to show next page, press %s to quit: ",
 		color.GreenString("Enter"), color.RedString("any other key then Enter"))
 	var input string

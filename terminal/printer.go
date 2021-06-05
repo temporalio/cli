@@ -34,7 +34,17 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/olekukonko/tablewriter"
 	"github.com/temporalio/shared-go/codec"
+	"github.com/urfave/cli/v2"
 )
+
+func PrintItems(c *cli.Context, items []interface{}, fields []string) {
+	isJSONView := c.Bool(FlagJSON)
+	if isJSONView {
+		printJSON(items)
+	} else {
+		printTable(items, fields)
+	}
+}
 
 func printTable(items []interface{}, fields []string) {
 	if len(fields) == 0 {

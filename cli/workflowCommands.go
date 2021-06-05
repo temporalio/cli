@@ -85,11 +85,6 @@ func ShowHistory(c *cli.Context) {
 	}
 	client := cFactory.FrontendClient(c)
 
-	type EventRow struct {
-		ID    string
-		Type  string
-		Event string
-	}
 	paginationFunc := func(npt []byte) ([]interface{}, []byte, error) {
 		ctx, cancel := newContext(c)
 		defer cancel()
@@ -110,7 +105,7 @@ func ShowHistory(c *cli.Context) {
 		}
 		var items []interface{}
 		for _, e := range res.History.Events {
-			item := EventRow{
+			item := eventRow{
 				ID:    convert.Int64ToString(e.GetEventId()),
 				Type:  ColorEvent(e),
 				Event: HistoryEventToString(e, false, maxFieldLength),
@@ -124,9 +119,9 @@ func ShowHistory(c *cli.Context) {
 		return items, res.NextPageToken, nil
 	}
 
-	fields := []string{"ID", "Type", "Event"}
 	iter := collection.NewPagingIterator(paginationFunc)
-	terminal.Paginate(c, iter, fields)
+	opts := &terminal.PaginateOptions{Fields: []string{"ID", "Type", "Event"}}
+	terminal.Paginate(c, iter, opts)
 }
 
 // StartWorkflow starts a new workflow execution
@@ -541,9 +536,9 @@ func ListWorkflow(c *cli.Context) {
 		return items, npt, nil
 	}
 
-	fields := []string{"Type.Name", "Execution.WorkflowId", "Execution.RunId", "TaskQueue", "StartTime", "ExecutionTime", "CloseTime"}
 	iter := collection.NewPagingIterator(paginationFunc)
-	terminal.Paginate(c, iter, fields)
+	opts := &terminal.PaginateOptions{Fields: []string{"Type.Name", "Execution.WorkflowId", "Execution.RunId", "TaskQueue", "StartTime", "ExecutionTime", "CloseTime"}}
+	terminal.Paginate(c, iter, opts)
 }
 
 // ScanAllWorkflow list all workflow executions using Scan API.
@@ -578,9 +573,9 @@ func ScanAllWorkflow(c *cli.Context) {
 		return items, resp.NextPageToken, nil
 	}
 
-	fields := []string{"Type.Name", "Execution.WorkflowId", "Execution.RunId", "TaskQueue", "StartTime", "ExecutionTime", "CloseTime"}
 	iter := collection.NewPagingIterator(paginationFunc)
-	terminal.Paginate(c, iter, fields)
+	opts := &terminal.PaginateOptions{Fields: []string{"Type.Name", "Execution.WorkflowId", "Execution.RunId", "TaskQueue", "StartTime", "ExecutionTime", "CloseTime"}}
+	terminal.Paginate(c, iter, opts)
 }
 
 // CountWorkflow count number of workflows
@@ -640,9 +635,9 @@ func ListArchivedWorkflow(c *cli.Context) {
 		return items, resp.NextPageToken, nil
 	}
 
-	fields := []string{"Type.Name", "Execution.WorkflowId", "Execution.RunId", "TaskQueue", "StartTime", "ExecutionTime", "CloseTime"}
 	iter := collection.NewPagingIterator(paginationFunc)
-	terminal.Paginate(c, iter, fields)
+	opts := &terminal.PaginateOptions{Fields: []string{"Type.Name", "Execution.WorkflowId", "Execution.RunId", "TaskQueue", "StartTime", "ExecutionTime", "CloseTime"}}
+	terminal.Paginate(c, iter, opts)
 }
 
 // DescribeWorkflow show information about the specified workflow execution
@@ -1543,4 +1538,11 @@ func listClosedWorkflows(ctx context.Context, client workflowservice.WorkflowSer
 	}
 
 	return items, resp.NextPageToken, nil
+}
+
+type eventRow struct {
+	ID    string
+	Time  string
+	Type  string
+	Event string
 }
