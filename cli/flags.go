@@ -507,11 +507,7 @@ func getFlagsForDescribe() []cli.Flag {
 }
 
 func getFlagsForObserve() []cli.Flag {
-	return append(flagsForExecution, getFlagsForObserveID()...)
-}
-
-func getFlagsForObserveID() []cli.Flag {
-	return []cli.Flag{
+	return append(flagsForExecution, []cli.Flag{
 		&cli.BoolFlag{
 			Name:  FlagShowDetailWithAlias,
 			Usage: "Optional show event details",
@@ -520,7 +516,7 @@ func getFlagsForObserveID() []cli.Flag {
 			Name:  FlagMaxFieldLengthWithAlias,
 			Usage: "Optional maximum length for each attribute field when show details",
 		},
-	}
+	}...)
 }
 
 func getDBFlags() []cli.Flag {

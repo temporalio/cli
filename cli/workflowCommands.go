@@ -833,8 +833,7 @@ func scanWorkflowExecutions(sdkClient sdkclient.Client, pageSize int, nextPageTo
 
 // ObserveHistory show the process of running workflow
 func ObserveHistory(c *cli.Context) {
-	wid := getRequiredOption(c, FlagWorkflowID)
-	rid := c.String(FlagRunID)
+	wid, rid := getWorkflowParams(c)
 
 	printWorkflowProgress(c, wid, rid)
 }
@@ -1444,20 +1443,6 @@ func FailActivity(c *cli.Context) {
 	} else {
 		fmt.Println("Fail activity successfully.")
 	}
-}
-
-// ObserveHistoryWithID show the process of running workflow
-func ObserveHistoryWithID(c *cli.Context) {
-	if !c.Args().Present() {
-		ErrorAndExit("Argument workflow_id is required.", nil)
-	}
-	wid := c.Args().First()
-	rid := ""
-	if c.NArg() >= 2 {
-		rid = c.Args().Get(1)
-	}
-
-	printWorkflowProgress(c, wid, rid)
 }
 
 func getWorkflowParams(c *cli.Context) (string, string) {

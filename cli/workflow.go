@@ -203,16 +203,6 @@ func newWorkflowCommands() []*cli.Command {
 			},
 		},
 		{
-			Name:    "observeid",
-			Aliases: []string{"obid"},
-			Usage:   "show the progress of workflow history with given workflow_id and optional run_id (a shortcut of `observe -w <wid> -r <rid>`)",
-			Flags:   getFlagsForObserveID(),
-			Action: func(c *cli.Context) error {
-				ObserveHistoryWithID(c)
-				return nil
-			},
-		},
-		{
 			Name:    "reset",
 			Aliases: []string{"rs"},
 			Usage:   "reset the workflow, by either eventId or resetType.",
