@@ -312,44 +312,67 @@ func processMemo(c *cli.Context) map[string]*commonpb.Payload {
 	return fields
 }
 
+type historyIterator struct {
+	iter interface {
+		HasNext() bool
+		Next() (*historypb.HistoryEvent, error)
+	}
+	maxFieldLength int
+	showDetails    bool
+	lastEvent      *historypb.HistoryEvent
+}
+
+func (h *historyIterator) HasNext() bool {
+	return h.iter.HasNext()
+}
+
+func (h *historyIterator) Next() (interface{}, error) {
+	event, err := h.iter.Next()
+	if err != nil {
+		return nil, err
+	}
+
+	reflect.ValueOf(h.lastEvent).Elem().Set(reflect.ValueOf(event).Elem())
+
+	return eventRow{
+		ID:    convert.Int64ToString(event.GetEventId()),
+		Time:  formatTime(timestamp.TimeValue(event.GetEventTime()), false),
+		Type:  ColorEvent(event),
+		Event: HistoryEventToString(event, false, h.maxFieldLength),
+	}, nil
+}
+
 // helper function to print workflow progress with time refresh every second
 func printWorkflowProgress(c *cli.Context, wid, rid string) {
-	fmt.Println(colorMagenta("Progress:"))
-
-	sdkClient := getSDKClient(c)
-	timeElapse := 1
-	isTimeElapseExist := false
-	doneChan := make(chan bool)
-	var lastEvent *historypb.HistoryEvent // used for print result of this run
-	ticker := time.NewTicker(time.Second).C
-
-	tcCtx, cancel := newIndefiniteContext(c)
-	defer cancel()
-
 	showDetails := c.Bool(FlagShowDetail)
 	var maxFieldLength int
 	if c.IsSet(FlagMaxFieldLength) {
 		maxFieldLength = c.Int(FlagMaxFieldLength)
 	}
+	sdkClient := getSDKClient(c)
+
+	tcCtx, cancel := newIndefiniteContext(c)
+	defer cancel()
+
+	doneChan := make(chan bool)
+	timeElapse := 1
+	isTimeElapseExist := false
+	ticker := time.NewTicker(time.Second).C
+	opts := &terminal.PaginateOptions{
+		Fields: []string{"ID", "Time", "Type"},
+		All:    true,
+	}
+	if showDetails {
+		opts.Fields = append(opts.Fields, "Event")
+	}
+	fmt.Println(colorMagenta("Progress:"))
+	var lastEvent historypb.HistoryEvent // used for print result of this run
 
 	go func() {
-		iter := sdkClient.GetWorkflowHistory(tcCtx, wid, rid, true, enumspb.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
-		for iter.HasNext() {
-			event, err := iter.Next()
-			if err != nil {
-				ErrorAndExit("Unable to read event.", err)
-			}
-			if isTimeElapseExist {
-				removePrevious2LinesFromTerminal()
-				isTimeElapseExist = false
-			}
-			if showDetails {
-				fmt.Printf("  %d, %s, %s, %s\n", event.GetEventId(), formatTime(timestamp.TimeValue(event.GetEventTime()), false), ColorEvent(event), HistoryEventToString(event, true, maxFieldLength))
-			} else {
-				fmt.Printf("  %d, %s, %s\n", event.GetEventId(), formatTime(timestamp.TimeValue(event.GetEventTime()), false), ColorEvent(event))
-			}
-			lastEvent = event
-		}
+		hIter := sdkClient.GetWorkflowHistory(tcCtx, wid, rid, true, enumspb.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
+		iter := &historyIterator{iter: hIter, maxFieldLength: maxFieldLength, showDetails: showDetails, lastEvent: &lastEvent}
+		terminal.Paginate(c, iter, opts)
+
 		doneChan <- true
 	}()
 
@@ -365,7 +388,7 @@ func printWorkflowProgress(c *cli.Context, wid, rid string) {
 		case <-doneChan: // print result of this run
 			fmt.Println(colorMagenta("\nResult:"))
 			fmt.Printf("  Run Time: %d seconds\n", timeElapse)
-			printRunStatus(lastEvent)
+			printRunStatus(&lastEvent)
 			return
 		}
 	}
