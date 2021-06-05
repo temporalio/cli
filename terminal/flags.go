@@ -39,25 +39,28 @@ const (
 
 var FlagsForPagination = []cli.Flag{
 	&cli.BoolFlag{
-		Name:  FlagAll,
-		Usage: "List all pages",
-	},
-	&cli.BoolFlag{
-		Name:  FlagDetach,
-		Usage: "Detach after printing first results",
+		Name:    FlagAll,
+		Aliases: []string{"a"},
+		Usage:   "print all pages",
 	},
 	&cli.IntFlag{
 		Name:        FlagPageSize,
 		Value:       defaultPageSize,
-		Usage:       "Items per page",
+		Usage:       "items per page",
 		DefaultText: strconv.Itoa(defaultPageSize),
+	},
+	&cli.BoolFlag{
+		Name:    FlagDetach,
+		Aliases: []string{"d"},
+		Usage:   "detach after printing first results",
 	},
 }
 
 var FlagsForRendering = []cli.Flag{
 	&cli.BoolFlag{
-		Name:  FlagJSON,
-		Usage: "Print in json format",
+		Name:    FlagJSON,
+		Aliases: []string{"j"},
+		Usage:   "print in json format",
 	},
 }
 
