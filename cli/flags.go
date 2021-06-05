@@ -494,11 +494,7 @@ var flagsForQuery = append(flagsForStackTraceQuery,
 	})
 
 func getFlagsForDescribe() []cli.Flag {
-	return append(flagsForExecution, getFlagsForDescribeID()...)
-}
-
-func getFlagsForDescribeID() []cli.Flag {
-	return []cli.Flag{
+	return append(flagsForExecution, []cli.Flag{
 		&cli.BoolFlag{
 			Name:  FlagPrintRawWithAlias,
 			Usage: "Print properties as they are stored",
@@ -507,7 +503,7 @@ func getFlagsForDescribeID() []cli.Flag {
 			Name:  FlagResetPointsOnly,
 			Usage: "Only show auto-reset points",
 		},
-	}
+	}...)
 }
 
 func getFlagsForObserve() []cli.Flag {

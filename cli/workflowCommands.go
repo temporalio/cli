@@ -66,17 +66,7 @@ import (
 
 // ShowHistory shows the history of given workflow execution based on workflowID and runID.
 func ShowHistory(c *cli.Context) {
-	var wid string
-	var rid string
-	if c.NArg() >= 1 {
-		wid = c.Args().First()
-		if c.NArg() >= 2 {
-			rid = c.Args().Get(1)
-		}
-	} else {
-		wid = getRequiredOption(c, FlagWorkflowID)
-		rid = c.String(FlagRunID)
-	}
+	wid, rid := getWorkflowParams(c)
 
 	namespace := getRequiredGlobalOption(c, FlagNamespace)
 	var maxFieldLength int
@@ -665,27 +655,8 @@ func ListArchivedWorkflow(c *cli.Context) {
 
 // DescribeWorkflow show information about the specified workflow execution
 func DescribeWorkflow(c *cli.Context) {
-	wid := getRequiredOption(c, FlagWorkflowID)
-	rid := c.String(FlagRunID)
+	wid, rid := getWorkflowParams(c)
 
-	describeWorkflowHelper(c, wid, rid)
-}
-
-// DescribeWorkflowWithID show information about the specified workflow execution
-func DescribeWorkflowWithID(c *cli.Context) {
-	if !c.Args().Present() {
-		ErrorAndExit("Argument workflow_id is required.", nil)
-	}
-	wid := c.Args().First()
-	rid := ""
-	if c.NArg() >= 2 {
-		rid = c.Args().Get(1)
-	}
-
-	describeWorkflowHelper(c, wid, rid)
-}
-
-func describeWorkflowHelper(c *cli.Context, wid, rid string) {
 	frontendClient := cFactory.FrontendClient(c)
 	namespace := getRequiredGlobalOption(c, FlagNamespace)
 	printRaw := c.Bool(FlagPrintRaw) // printRaw is false by default,
@@ -1487,6 +1458,22 @@ func ObserveHistoryWithID(c *cli.Context) {
 	}
 
 	printWorkflowProgress(c, wid, rid)
+}
+
+func getWorkflowParams(c *cli.Context) (string, string) {
+	var wid, rid string
+
+	if c.NArg() >= 1 {
+		wid = c.Args().First()
+		if c.NArg() >= 2 {
+			rid = c.Args().Get(1)
+		}
+	} else {
+		wid = getRequiredOption(c, FlagWorkflowID)
+		rid = c.String(FlagRunID)
+	}
+
+	return wid, rid
 }
 
 func listWorkflows(ctx context.Context, client workflowservice.WorkflowServiceClient, npt []byte, namespace string, query string) ([]interface{}, []byte, error) {
