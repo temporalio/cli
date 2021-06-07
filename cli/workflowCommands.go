@@ -122,9 +122,6 @@ func RunWorkflow(c *cli.Context) {
 	taskQueue := getRequiredOption(c, FlagTaskQueue)
 	workflowType := getRequiredOption(c, FlagWorkflowType)
 	et := c.Int(FlagExecutionTimeout)
-	if et == 0 {
-		ErrorAndExit(fmt.Sprintf("Option %s format is invalid.", FlagExecutionTimeout), nil)
-	}
 	dt := c.Int(FlagWorkflowTaskTimeout)
 	wid := c.String(FlagWorkflowID)
 	if len(wid) == 0 {
