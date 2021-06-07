@@ -21,54 +21,17 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
+
 package terminal
 
 import (
-	"github.com/urfave/cli/v2"
+	"time"
 )
 
-// General command line flags
 const (
-	FlagAll      = "all"
-	FlagDetach   = "detach"
-	FlagJSON     = "json"
-	FlagPageSize = "pagesize"
-	FlagRawTime  = "raw-time"
-	FlagDateTime = "date-time"
+	defaultListPageSize = 20
+
+	defaultTimeFormat     = "15:04:05"   // used for converting UnixNano to string like 16:16:36 (only time)
+	defaultDateTimeFormat = time.RFC3339 // used for converting UnixNano to string like 2018-02-15T16:16:36-08:00
+
 )
-
-var FlagsForPagination = []cli.Flag{
-	&cli.BoolFlag{
-		Name:    FlagAll,
-		Aliases: []string{"a"},
-		Usage:   "print all pages",
-	},
-	&cli.IntFlag{
-		Name:  FlagPageSize,
-		Value: defaultListPageSize,
-		Usage: "items per page",
-	},
-	&cli.BoolFlag{
-		Name:    FlagDetach,
-		Aliases: []string{"d"},
-		Usage:   "detach after printing first results",
-	},
-}
-
-var FlagsForRendering = []cli.Flag{
-	&cli.BoolFlag{
-		Name:    FlagJSON,
-		Aliases: []string{"j"},
-		Usage:   "print in json format",
-	},
-	&cli.BoolFlag{
-		Name:  FlagRawTime,
-		Usage: "print raw time",
-	},
-	&cli.BoolFlag{
-		Name:  FlagDateTime,
-		Usage: "print date time",
-	},
-}
-
-var FlagsForPaginationAndRendering = append(FlagsForPagination, FlagsForRendering...)

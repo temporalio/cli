@@ -30,10 +30,12 @@ import (
 	"os"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/olekukonko/tablewriter"
 	"github.com/temporalio/shared-go/codec"
+	"github.com/temporalio/shared-go/timestamp"
 	"github.com/urfave/cli/v2"
 )
 
@@ -51,11 +53,11 @@ func PrintItems(c *cli.Context, items []interface{}, opts *PrintOptions) {
 	if isJSON {
 		printJSON(items)
 	} else {
-		printTable(items, opts)
+		printTable(c, items, opts)
 	}
 }
 
-func printTable(items []interface{}, opts *PrintOptions) {
+func printTable(c *cli.Context, items []interface{}, opts *PrintOptions) {
 	fields := opts.Fields
 	if len(fields) == 0 {
 		// dynamically examine fields
@@ -95,13 +97,37 @@ func printTable(items []interface{}, opts *PrintOptions) {
 				col = val.Interface()
 				val = reflect.ValueOf(col)
 			}
-			columns = append(columns, fmt.Sprintf("%v", col))
+			columns = append(columns, format(c, col))
 			val = reflect.ValueOf(item)
 		}
 		table.Append(columns)
 	}
 	table.Render()
 	table.ClearRows()
+}
+
+func format(c *cli.Context, i interface{}) string {
+	if reflect.TypeOf(i) == reflect.TypeOf(&time.Time{}) {
+		t := i.(*time.Time)
+
+		return formatTime(c, t)
+	}
+
+	return fmt.Sprintf("%v", i)
+}
+
+func formatTime(c *cli.Context, t *time.Time) string {
+	printRawTime := c.Bool(FlagRawTime)
+	printDateTime := c.Bool(FlagDateTime)
+
+	tt := timestamp.TimeValue(t)
+	if printRawTime {
+		return fmt.Sprintf("%v", tt)
+	} else if printDateTime {
+		return tt.Format(defaultDateTimeFormat)
+	} else {
+		return tt.Format(defaultTimeFormat)
+	}
 }
 
 func printJSON(o interface{}) {
