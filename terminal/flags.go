@@ -33,8 +33,8 @@ const (
 	FlagDetach   = "detach"
 	FlagJSON     = "json"
 	FlagPageSize = "pagesize"
-	FlagRawTime  = "raw-time"
-	FlagDateTime = "date-time"
+	FlagRawTime  = "rawtime"
+	FlagDateTime = "datetime"
 )
 
 var FlagsForPagination = []cli.Flag{
