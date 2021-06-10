@@ -57,6 +57,7 @@ import (
 	"github.com/temporalio/tctl/common/payload"
 	"github.com/temporalio/tctl/common/payloads"
 	"github.com/temporalio/tctl/terminal"
+	"github.com/temporalio/tctl/terminal/color"
 	clispb "go.temporal.io/server/api/cli/v1"
 	"go.temporal.io/server/common/clock"
 	"go.temporal.io/server/common/convert"
@@ -186,7 +187,7 @@ func RunWorkflow(c *cli.Context) {
 		&row{Field: "Task Queue", Value: taskQueue},
 		&row{Field: "Args", Value: truncate(payloads.ToString(input))},
 	}
-	fmt.Println(terminal.Magenta(c, "Running execution:"))
+	fmt.Println(color.Magenta(c, "Running execution:"))
 	opts := &terminal.PrintOptions{Fields: []string{"Field", "Value"}, Header: false}
 	terminal.PrintItems(c, executionData, opts)
 
@@ -324,7 +325,7 @@ func printWorkflowProgress(c *cli.Context, wid, rid string) {
 	if showDetails {
 		opts.Fields = append(opts.Fields, "Details")
 	}
-	fmt.Println(terminal.Magenta(c, "Progress:"))
+	fmt.Println(color.Magenta(c, "Progress:"))
 	var lastEvent historypb.HistoryEvent // used for print result of this run
 
 	go func() {
@@ -345,7 +346,7 @@ func printWorkflowProgress(c *cli.Context, wid, rid string) {
 			isTimeElapseExist = true
 			timeElapse++
 		case <-doneChan: // print result of this run
-			fmt.Println(terminal.Magenta(c, "\nResult:"))
+			fmt.Println(color.Magenta(c, "\nResult:"))
 			fmt.Printf("  Run Time: %d seconds\n", timeElapse)
 			printRunStatus(c, &lastEvent)
 			return
@@ -736,7 +737,7 @@ func convertSearchAttributes(c *cli.Context, searchAttributes *commonpb.SearchAt
 	fields, err := searchattribute.Stringify(searchAttributes, nil)
 	if err != nil {
 		fmt.Printf("%s: unable to stringify search attribute: %v\n",
-			terminal.Magenta(c, "Warning"),
+			color.Magenta(c, "Warning"),
 			err)
 	}
 
@@ -767,17 +768,17 @@ func convertFailure(failure *failurepb.Failure) *clispb.Failure {
 func printRunStatus(c *cli.Context, event *historypb.HistoryEvent) {
 	switch event.GetEventType() {
 	case enumspb.EVENT_TYPE_WORKFLOW_EXECUTION_COMPLETED:
-		fmt.Printf("  Status: %s\n", terminal.Green(c, "COMPLETED"))
+		fmt.Printf("  Status: %s\n", color.Green(c, "COMPLETED"))
 		result := payloads.ToString(event.GetWorkflowExecutionCompletedEventAttributes().GetResult())
 		fmt.Printf("  Output: %s\n", result)
 	case enumspb.EVENT_TYPE_WORKFLOW_EXECUTION_FAILED:
-		fmt.Printf("  Status: %s\n", terminal.Red(c, "FAILED"))
+		fmt.Printf("  Status: %s\n", color.Red(c, "FAILED"))
 		fmt.Printf("  Failure: %s\n", convertFailure(event.GetWorkflowExecutionFailedEventAttributes().GetFailure()).String())
 	case enumspb.EVENT_TYPE_WORKFLOW_EXECUTION_TIMED_OUT:
-		fmt.Printf("  Status: %s\n", terminal.Red(c, "TIMEOUT"))
+		fmt.Printf("  Status: %s\n", color.Red(c, "TIMEOUT"))
 		fmt.Printf("  Retry status: %s\n", event.GetWorkflowExecutionTimedOutEventAttributes().GetRetryState())
 	case enumspb.EVENT_TYPE_WORKFLOW_EXECUTION_CANCELED:
-		fmt.Printf("  Status: %s\n", terminal.Red(c, "CANCELED"))
+		fmt.Printf("  Status: %s\n", color.Red(c, "CANCELED"))
 		details := payloads.ToString(event.GetWorkflowExecutionCanceledEventAttributes().GetDetails())
 		fmt.Printf("  Detail: %s\n", details)
 	}

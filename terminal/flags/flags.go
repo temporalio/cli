@@ -21,9 +21,10 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
-package terminal
+package flags
 
 import (
+	"github.com/temporalio/tctl/terminal/defs"
 	"github.com/urfave/cli/v2"
 )
 
@@ -46,7 +47,7 @@ var FlagsForPagination = []cli.Flag{
 	},
 	&cli.IntFlag{
 		Name:  FlagPageSize,
-		Value: defaultListPageSize,
+		Value: defs.DefaultListPageSize,
 		Usage: "items per page",
 	},
 	&cli.BoolFlag{

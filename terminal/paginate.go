@@ -29,6 +29,8 @@ import (
 	"strings"
 
 	"github.com/temporalio/shared-go/collection"
+	"github.com/temporalio/tctl/terminal/color"
+	"github.com/temporalio/tctl/terminal/flags"
 	"github.com/urfave/cli/v2"
 )
 
@@ -38,11 +40,11 @@ func Paginate(c *cli.Context, iter collection.Iterator, opts *PaginateOptions) e
 		opts = &PaginateOptions{}
 	}
 
-	detach := c.Bool(FlagDetach)
-	pageSize := c.Int(FlagPageSize)
+	detach := c.Bool(flags.FlagDetach)
+	pageSize := c.Int(flags.FlagPageSize)
 	all := opts.All
-	if c.IsSet(FlagAll) {
-		all = c.Bool(FlagAll)
+	if c.IsSet(flags.FlagAll) {
+		all = c.Bool(flags.FlagAll)
 	}
 
 	var pageItems []interface{}
@@ -85,7 +87,7 @@ type PaginateOptions struct {
 
 func promtNextPage(c *cli.Context) bool {
 	fmt.Printf("Press %s to show next page, press %s to quit: ",
-		Green(c, "Enter"), Red(c, "any other key then Enter"))
+		color.Green(c, "Enter"), color.Red(c, "any other key then Enter"))
 	var input string
 	_, _ = fmt.Scanln(&input)
 	return strings.Trim(input, " ") == ""

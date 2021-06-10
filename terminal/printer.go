@@ -36,6 +36,8 @@ import (
 	"github.com/olekukonko/tablewriter"
 	"github.com/temporalio/shared-go/codec"
 	"github.com/temporalio/shared-go/timestamp"
+	"github.com/temporalio/tctl/terminal/defs"
+	"github.com/temporalio/tctl/terminal/flags"
 	"github.com/urfave/cli/v2"
 )
 
@@ -46,7 +48,7 @@ type PrintOptions struct {
 }
 
 func PrintItems(c *cli.Context, items []interface{}, opts *PrintOptions) {
-	isJSON := c.Bool(FlagJSON)
+	isJSON := c.Bool(flags.FlagJSON)
 	if opts == nil {
 		opts = &PrintOptions{}
 	}
@@ -117,16 +119,16 @@ func format(c *cli.Context, i interface{}) string {
 }
 
 func formatTime(c *cli.Context, t *time.Time) string {
-	printRawTime := c.Bool(FlagRawTime)
-	printDateTime := c.Bool(FlagDateTime)
+	printRawTime := c.Bool(flags.FlagRawTime)
+	printDateTime := c.Bool(flags.FlagDateTime)
 
 	tt := timestamp.TimeValue(t)
 	if printRawTime {
 		return fmt.Sprintf("%v", tt)
 	} else if printDateTime {
-		return tt.Format(defaultDateTimeFormat)
+		return tt.Format(defs.DefaultDateTimeFormat)
 	} else {
-		return tt.Format(defaultTimeFormat)
+		return tt.Format(defs.DefaultTimeFormat)
 	}
 }
 

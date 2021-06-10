@@ -22,40 +22,16 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package terminal
+package defs
 
 import (
-	"github.com/fatih/color"
-	"github.com/urfave/cli/v2"
+	"time"
 )
 
-var (
-	colorGreen   = color.New(color.FgGreen).SprintfFunc()
-	colorMagenta = color.New(color.FgMagenta).SprintfFunc()
-	colorRed     = color.New(color.FgRed).SprintfFunc()
+const (
+	DefaultListPageSize = 20
+
+	DefaultTimeFormat     = "15:04:05"   // used for converting UnixNano to string like 16:16:36 (only time)
+	DefaultDateTimeFormat = time.RFC3339 // used for converting UnixNano to string like 2018-02-15T16:16:36-08:00
+
 )
-
-func Green(c *cli.Context, format string, a ...interface{}) string {
-	checkNoColor(c)
-	return colorGreen(format, a...)
-}
-
-func Magenta(c *cli.Context, format string, a ...interface{}) string {
-	checkNoColor(c)
-	return colorMagenta(format, a...)
-}
-
-func Yellow(c *cli.Context, format string, a ...interface{}) string {
-	checkNoColor(c)
-	return color.YellowString(format, a...)
-}
-func Red(c *cli.Context, format string, a ...interface{}) string {
-	checkNoColor(c)
-	return colorRed(format, a...)
-}
-
-func checkNoColor(c *cli.Context) {
-	if c.Bool(FlagNoColor) {
-		color.NoColor = true
-	}
-}

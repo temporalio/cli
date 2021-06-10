@@ -27,7 +27,7 @@ package cli
 import (
 	"strings"
 
-	t "github.com/temporalio/tctl/terminal"
+	"github.com/temporalio/tctl/terminal/flags"
 	"github.com/urfave/cli/v2"
 )
 
@@ -36,7 +36,7 @@ func newWorkflowCommands() []*cli.Command {
 		{
 			Name:  "run",
 			Usage: "start a new workflow execution and show progress",
-			Flags: append(flagsForRunWorkflow, t.FlagsForPaginationAndRendering...),
+			Flags: append(flagsForRunWorkflow, flags.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
 				RunWorkflow(c)
 				return nil
@@ -57,7 +57,7 @@ func newWorkflowCommands() []*cli.Command {
 			Aliases:     []string{"l"},
 			Usage:       "list open or closed workflow executions",
 			Description: "list one page (default size 10 items) by default, use flag --pagesize to change page size",
-			Flags:       append(append(flagsForWorkflowFiltering, flagsForWorkflowRendering...), t.FlagsForPaginationAndRendering...),
+			Flags:       append(append(flagsForWorkflowFiltering, flagsForWorkflowRendering...), flags.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
 				ListWorkflow(c)
 				return nil
@@ -66,7 +66,7 @@ func newWorkflowCommands() []*cli.Command {
 		{
 			Name:  "listarchived",
 			Usage: "list archived workflow executions",
-			Flags: append(append(flagsForListArchived, flagsForWorkflowRendering...), t.FlagsForPaginationAndRendering...),
+			Flags: append(append(flagsForListArchived, flagsForWorkflowRendering...), flags.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
 				ListArchivedWorkflow(c)
 				return nil
@@ -75,7 +75,7 @@ func newWorkflowCommands() []*cli.Command {
 		{
 			Name:  "history",
 			Usage: "show workflow history",
-			Flags: append(append(flagsForExecution, flagsForShowWorkflow...), t.FlagsForPaginationAndRendering...),
+			Flags: append(append(flagsForExecution, flagsForShowWorkflow...), flags.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
 				ShowHistory(c)
 				return nil
@@ -144,7 +144,7 @@ func newWorkflowCommands() []*cli.Command {
 			Name: "scan",
 			Usage: "scan workflow executions (need to enable Temporal server on ElasticSearch). " +
 				"It will be faster than listall, but result are not sorted.",
-			Flags: append(append(flagsForScan, flagsForWorkflowRendering...), t.FlagsForPaginationAndRendering...),
+			Flags: append(append(flagsForScan, flagsForWorkflowRendering...), flags.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
 				ScanAllWorkflow(c)
 				return nil
