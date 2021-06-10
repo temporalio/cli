@@ -360,7 +360,7 @@ func mapKeysToArray(m map[string]string) []string {
 
 func printError(msg string, err error) {
 	if err != nil {
-		fmt.Printf("%s %s\n%s %+v\n", colorRed("Error:"), msg, colorMagenta("Error Details:"), err)
+		fmt.Printf("%s %s\n%s %+v\n", color.RedString("Error:"), msg, color.MagentaString("Error Details:"), err)
 		if os.Getenv(showErrorStackEnv) != `` {
 			fmt.Printf("Stack trace:\n")
 			debug.PrintStack()
@@ -368,7 +368,7 @@ func printError(msg string, err error) {
 			fmt.Printf("('export %s=1' to see stack traces)\n", showErrorStackEnv)
 		}
 	} else {
-		fmt.Printf("%s %s\n", colorRed("Error:"), msg)
+		fmt.Printf("%s %s\n", color.RedString("Error:"), msg)
 	}
 }
 

@@ -21,59 +21,41 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
+
 package terminal
 
 import (
+	"github.com/fatih/color"
 	"github.com/urfave/cli/v2"
 )
 
-// General command line flags
-const (
-	FlagAll      = "all"
-	FlagDetach   = "detach"
-	FlagJSON     = "json"
-	FlagPageSize = "pagesize"
-	FlagRawTime  = "rawtime"
-	FlagDateTime = "datetime"
-	FlagNoColor  = "no-color"
+var (
+	colorGreen   = color.New(color.FgGreen).SprintfFunc()
+	colorMagenta = color.New(color.FgMagenta).SprintfFunc()
+	colorRed     = color.New(color.FgRed).SprintfFunc()
 )
 
-var FlagsForPagination = []cli.Flag{
-	&cli.BoolFlag{
-		Name:    FlagAll,
-		Aliases: []string{"a"},
-		Usage:   "print all pages",
-	},
-	&cli.IntFlag{
-		Name:  FlagPageSize,
-		Value: defaultListPageSize,
-		Usage: "items per page",
-	},
-	&cli.BoolFlag{
-		Name:    FlagDetach,
-		Aliases: []string{"d"},
-		Usage:   "detach after printing first results",
-	},
+func Green(c *cli.Context, format string, a ...interface{}) string {
+	checkNoColor(c)
+	return colorGreen(format, a...)
 }
 
-var FlagsForRendering = []cli.Flag{
-	&cli.BoolFlag{
-		Name:    FlagJSON,
-		Aliases: []string{"j"},
-		Usage:   "print in json format",
-	},
-	&cli.BoolFlag{
-		Name:  FlagRawTime,
-		Usage: "print raw time",
-	},
-	&cli.BoolFlag{
-		Name:  FlagDateTime,
-		Usage: "print date time",
-	},
-	&cli.BoolFlag{
-		Name:  FlagNoColor,
-		Usage: "disable color output",
-	},
+func Magenta(c *cli.Context, format string, a ...interface{}) string {
+	checkNoColor(c)
+	return colorMagenta(format, a...)
 }
 
-var FlagsForPaginationAndRendering = append(FlagsForPagination, FlagsForRendering...)
+func Yellow(c *cli.Context, format string, a ...interface{}) string {
+	checkNoColor(c)
+	return color.YellowString(format, a...)
+}
+func Red(c *cli.Context, format string, a ...interface{}) string {
+	checkNoColor(c)
+	return colorRed(format, a...)
+}
+
+func checkNoColor(c *cli.Context) {
+	if c.Bool(FlagNoColor) {
+		color.NoColor = true
+	}
+}

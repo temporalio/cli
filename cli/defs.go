@@ -27,7 +27,6 @@ package cli
 import (
 	"time"
 
-	"github.com/fatih/color"
 	"github.com/olekukonko/tablewriter"
 	enumspb "go.temporal.io/api/enums/v1"
 )
@@ -95,12 +94,7 @@ const (
 )
 
 var (
-	cFactory ClientFactory
-
-	colorRed     = color.New(color.FgRed).SprintFunc()
-	colorMagenta = color.New(color.FgMagenta).SprintFunc()
-	colorGreen   = color.New(color.FgGreen).SprintFunc()
-
+	cFactory                ClientFactory
 	tableHeaderBlue         = tablewriter.Colors{tablewriter.FgHiBlueColor}
 	optionErr               = "there is something wrong with your command options"
 	workflowClosedStatusMap = map[string]enumspb.WorkflowExecutionStatus{

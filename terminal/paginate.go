@@ -28,7 +28,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/fatih/color"
 	"github.com/temporalio/shared-go/collection"
 	"github.com/urfave/cli/v2"
 )
@@ -69,7 +68,7 @@ func Paginate(c *cli.Context, iter collection.Iterator, opts *PaginateOptions) e
 				break
 			} else if all {
 				continue
-			} else if !promtNextPage() {
+			} else if !promtNextPage(c) {
 				break
 			}
 		}
@@ -84,9 +83,9 @@ type PaginateOptions struct {
 	Separator string
 }
 
-func promtNextPage() bool {
+func promtNextPage(c *cli.Context) bool {
 	fmt.Printf("Press %s to show next page, press %s to quit: ",
-		color.GreenString("Enter"), color.RedString("any other key then Enter"))
+		Green(c, "Enter"), Red(c, "any other key then Enter"))
 	var input string
 	_, _ = fmt.Scanln(&input)
 	return strings.Trim(input, " ") == ""

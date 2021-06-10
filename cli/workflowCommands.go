@@ -186,7 +186,7 @@ func RunWorkflow(c *cli.Context) {
 		&row{Field: "Task Queue", Value: taskQueue},
 		&row{Field: "Args", Value: truncate(payloads.ToString(input))},
 	}
-	fmt.Println(colorMagenta("Running execution:"))
+	fmt.Println(terminal.Magenta(c, "Running execution:"))
 	opts := &terminal.PrintOptions{Fields: []string{"Field", "Value"}, Header: false}
 	terminal.PrintItems(c, executionData, opts)
 
@@ -324,7 +324,7 @@ func printWorkflowProgress(c *cli.Context, wid, rid string) {
 	if showDetails {
 		opts.Fields = append(opts.Fields, "Details")
 	}
-	fmt.Println(colorMagenta("Progress:"))
+	fmt.Println(terminal.Magenta(c, "Progress:"))
 	var lastEvent historypb.HistoryEvent // used for print result of this run
 
 	go func() {
@@ -345,9 +345,9 @@ func printWorkflowProgress(c *cli.Context, wid, rid string) {
 			isTimeElapseExist = true
 			timeElapse++
 		case <-doneChan: // print result of this run
-			fmt.Println(colorMagenta("\nResult:"))
+			fmt.Println(terminal.Magenta(c, "\nResult:"))
 			fmt.Printf("  Run Time: %d seconds\n", timeElapse)
-			printRunStatus(&lastEvent)
+			printRunStatus(c, &lastEvent)
 			return
 		}
 	}
@@ -654,7 +654,7 @@ func DescribeWorkflow(c *cli.Context) {
 	if printRaw {
 		prettyPrintJSONObject(resp)
 	} else {
-		prettyPrintJSONObject(convertDescribeWorkflowExecutionResponse(resp))
+		prettyPrintJSONObject(convertDescribeWorkflowExecutionResponse(c, resp))
 	}
 }
 
@@ -680,7 +680,7 @@ func printAutoResetPoints(resp *workflowservice.DescribeWorkflowExecutionRespons
 	table.Render()
 }
 
-func convertDescribeWorkflowExecutionResponse(resp *workflowservice.DescribeWorkflowExecutionResponse) *clispb.DescribeWorkflowExecutionResponse {
+func convertDescribeWorkflowExecutionResponse(c *cli.Context, resp *workflowservice.DescribeWorkflowExecutionResponse) *clispb.DescribeWorkflowExecutionResponse {
 
 	info := resp.GetWorkflowExecutionInfo()
 	executionInfo := &clispb.WorkflowExecutionInfo{
@@ -693,7 +693,7 @@ func convertDescribeWorkflowExecutionResponse(resp *workflowservice.DescribeWork
 		ParentNamespaceId:    info.GetParentNamespaceId(),
 		ParentExecution:      info.GetParentExecution(),
 		Memo:                 info.GetMemo(),
-		SearchAttributes:     convertSearchAttributes(info.GetSearchAttributes()),
+		SearchAttributes:     convertSearchAttributes(c, info.GetSearchAttributes()),
 		AutoResetPoints:      info.GetAutoResetPoints(),
 		StateTransitionCount: info.GetStateTransitionCount(),
 	}
@@ -728,7 +728,7 @@ func convertDescribeWorkflowExecutionResponse(resp *workflowservice.DescribeWork
 	}
 }
 
-func convertSearchAttributes(searchAttributes *commonpb.SearchAttributes) *clispb.SearchAttributes {
+func convertSearchAttributes(c *cli.Context, searchAttributes *commonpb.SearchAttributes) *clispb.SearchAttributes {
 	if len(searchAttributes.GetIndexedFields()) == 0 {
 		return nil
 	}
@@ -736,7 +736,7 @@ func convertSearchAttributes(searchAttributes *commonpb.SearchAttributes) *clisp
 	fields, err := searchattribute.Stringify(searchAttributes, nil)
 	if err != nil {
 		fmt.Printf("%s: unable to stringify search attribute: %v\n",
-			colorMagenta("Warning"),
+			terminal.Magenta(c, "Warning"),
 			err)
 	}
 
@@ -764,20 +764,20 @@ func convertFailure(failure *failurepb.Failure) *clispb.Failure {
 	return f
 }
 
-func printRunStatus(event *historypb.HistoryEvent) {
+func printRunStatus(c *cli.Context, event *historypb.HistoryEvent) {
 	switch event.GetEventType() {
 	case enumspb.EVENT_TYPE_WORKFLOW_EXECUTION_COMPLETED:
-		fmt.Printf("  Status: %s\n", colorGreen("COMPLETED"))
+		fmt.Printf("  Status: %s\n", terminal.Green(c, "COMPLETED"))
 		result := payloads.ToString(event.GetWorkflowExecutionCompletedEventAttributes().GetResult())
 		fmt.Printf("  Output: %s\n", result)
 	case enumspb.EVENT_TYPE_WORKFLOW_EXECUTION_FAILED:
-		fmt.Printf("  Status: %s\n", colorRed("FAILED"))
+		fmt.Printf("  Status: %s\n", terminal.Red(c, "FAILED"))
 		fmt.Printf("  Failure: %s\n", convertFailure(event.GetWorkflowExecutionFailedEventAttributes().GetFailure()).String())
 	case enumspb.EVENT_TYPE_WORKFLOW_EXECUTION_TIMED_OUT:
-		fmt.Printf("  Status: %s\n", colorRed("TIMEOUT"))
+		fmt.Printf("  Status: %s\n", terminal.Red(c, "TIMEOUT"))
 		fmt.Printf("  Retry status: %s\n", event.GetWorkflowExecutionTimedOutEventAttributes().GetRetryState())
 	case enumspb.EVENT_TYPE_WORKFLOW_EXECUTION_CANCELED:
-		fmt.Printf("  Status: %s\n", colorRed("CANCELED"))
+		fmt.Printf("  Status: %s\n", terminal.Red(c, "CANCELED"))
 		details := payloads.ToString(event.GetWorkflowExecutionCanceledEventAttributes().GetDetails())
 		fmt.Printf("  Detail: %s\n", details)
 	}
