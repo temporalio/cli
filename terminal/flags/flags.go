@@ -26,10 +26,12 @@ package flags
 import (
 	"fmt"
 
+	"github.com/urfave/cli/v2"
+
+	"github.com/temporalio/tctl/terminal/color"
 	"github.com/temporalio/tctl/terminal/defs"
 	"github.com/temporalio/tctl/terminal/format"
 	"github.com/temporalio/tctl/terminal/timeformat"
-	"github.com/urfave/cli/v2"
 )
 
 // General command line flags
@@ -37,7 +39,6 @@ const (
 	FlagAll      = "all"
 	FlagDetach   = "detach"
 	FlagPageSize = "pagesize"
-	FlagNoColor  = "no-color"
 )
 
 var FlagsForPagination = []cli.Flag{
@@ -70,9 +71,11 @@ var FlagsForRendering = []cli.Flag{
 		Usage: fmt.Sprintf("format time as: %v, %v, %v.", timeformat.Relative, timeformat.ISO, timeformat.Raw),
 		Value: string(timeformat.Relative),
 	},
-	&cli.BoolFlag{
-		Name:  FlagNoColor,
-		Usage: "disable color output",
+	&cli.StringFlag{
+		Name:    color.FlagColor,
+		Aliases: []string{"c"},
+		Usage:   fmt.Sprintf("when to use color: %v, %v, %v.", color.Auto, color.Always, color.Never),
+		Value:   string(color.Auto),
 	},
 }
 

@@ -26,8 +26,19 @@ package color
 
 import (
 	"github.com/fatih/color"
-	"github.com/temporalio/tctl/terminal/flags"
 	"github.com/urfave/cli/v2"
+)
+
+const (
+	FlagColor = "color"
+)
+
+type ColorOption string
+
+const (
+	Auto   ColorOption = "auto"
+	Always ColorOption = "always"
+	Never  ColorOption = "never"
 )
 
 var (
@@ -37,26 +48,36 @@ var (
 )
 
 func Green(c *cli.Context, format string, a ...interface{}) string {
-	checkNoColor(c)
+	checkColor(c)
 	return colorGreen(format, a...)
 }
 
 func Magenta(c *cli.Context, format string, a ...interface{}) string {
-	checkNoColor(c)
+	checkColor(c)
 	return colorMagenta(format, a...)
 }
 
 func Yellow(c *cli.Context, format string, a ...interface{}) string {
-	checkNoColor(c)
+	checkColor(c)
 	return color.YellowString(format, a...)
 }
 func Red(c *cli.Context, format string, a ...interface{}) string {
-	checkNoColor(c)
+	checkColor(c)
 	return colorRed(format, a...)
 }
 
-func checkNoColor(c *cli.Context) {
-	if c.Bool(flags.FlagNoColor) {
+func checkColor(c *cli.Context) {
+	colorFlag := c.String(FlagColor)
+
+	colorVal := ColorOption(colorFlag)
+	switch colorVal {
+	case Always:
+		color.NoColor = false
+	case Never:
 		color.NoColor = true
+
+	default: // auto
+		// handled by color pkg
+		// tty - color. non-tty - false
 	}
 }
