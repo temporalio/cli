@@ -35,9 +35,8 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/olekukonko/tablewriter"
 	"github.com/temporalio/shared-go/codec"
-	"github.com/temporalio/shared-go/timestamp"
-	"github.com/temporalio/tctl/terminal/defs"
 	"github.com/temporalio/tctl/terminal/flags"
+	"github.com/temporalio/tctl/terminal/timeformat"
 	"github.com/urfave/cli/v2"
 )
 
@@ -109,26 +108,13 @@ func printTable(c *cli.Context, items []interface{}, opts *PrintOptions) {
 }
 
 func format(c *cli.Context, i interface{}) string {
-	if reflect.TypeOf(i) == reflect.TypeOf(&time.Time{}) {
-		t := i.(*time.Time)
-
-		return formatTime(c, t)
-	}
-
-	return fmt.Sprintf("%v", i)
-}
-
-func formatTime(c *cli.Context, t *time.Time) string {
-	printRawTime := c.Bool(flags.FlagRawTime)
-	printDateTime := c.Bool(flags.FlagDateTime)
-
-	tt := timestamp.TimeValue(t)
-	if printRawTime {
-		return fmt.Sprintf("%v", tt)
-	} else if printDateTime {
-		return tt.Format(defs.DefaultDateTimeFormat)
-	} else {
-		return tt.Format(defs.DefaultTimeFormat)
+	switch v := i.(type) {
+	case time.Time:
+		return timeformat.FormatTime(c, &v)
+	case *time.Time:
+		return timeformat.FormatTime(c, v)
+	default:
+		return fmt.Sprintf("%v", i)
 	}
 }
 

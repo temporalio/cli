@@ -24,14 +24,6 @@
 
 package defs
 
-import (
-	"time"
-)
-
 const (
 	DefaultListPageSize = 20
-
-	DefaultTimeFormat     = "15:04:05"   // used for converting UnixNano to string like 16:16:36 (only time)
-	DefaultDateTimeFormat = time.RFC3339 // used for converting UnixNano to string like 2018-02-15T16:16:36-08:00
-
 )

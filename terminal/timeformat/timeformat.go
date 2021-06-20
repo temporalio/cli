@@ -21,58 +21,41 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
-package flags
+
+package timeformat
 
 import (
 	"fmt"
+	"time"
 
-	"github.com/temporalio/tctl/terminal/defs"
-	"github.com/temporalio/tctl/terminal/timeformat"
 	"github.com/urfave/cli/v2"
+
+	"github.com/temporalio/shared-go/timestamp"
 )
 
-// General command line flags
 const (
-	FlagAll      = "all"
-	FlagDetach   = "detach"
-	FlagJSON     = "json"
-	FlagPageSize = "pagesize"
-	FlagNoColor  = "no-color"
+	FlagTimeFormat = "time-format"
 )
 
-var FlagsForPagination = []cli.Flag{
-	&cli.BoolFlag{
-		Name:    FlagAll,
-		Aliases: []string{"a"},
-		Usage:   "print all pages",
-	},
-	&cli.IntFlag{
-		Name:  FlagPageSize,
-		Value: defs.DefaultListPageSize,
-		Usage: "items per page",
-	},
-	&cli.BoolFlag{
-		Name:    FlagDetach,
-		Aliases: []string{"d"},
-		Usage:   "detach after printing first results",
-	},
-}
+type FormatOption string
 
-var FlagsForRendering = []cli.Flag{
-	&cli.BoolFlag{
-		Name:    FlagJSON,
-		Aliases: []string{"j"},
-		Usage:   "print in json format",
-	},
-	&cli.StringFlag{
-		Name:  timeformat.FlagTimeFormat,
-		Usage: fmt.Sprintf("time format: %v, %v, %v.", timeformat.Relative, timeformat.ISO, timeformat.Raw),
-		Value: string(timeformat.Relative),
-	},
-	&cli.BoolFlag{
-		Name:  FlagNoColor,
-		Usage: "disable color output",
-	},
-}
+const (
+	Relative FormatOption = "relative"
+	ISO      FormatOption = "iso"
+	Raw      FormatOption = "raw"
+)
 
-var FlagsForPaginationAndRendering = append(FlagsForPagination, FlagsForRendering...)
+func FormatTime(c *cli.Context, val *time.Time) string {
+	formatFlag := c.String(FlagTimeFormat)
+
+	timeVal := timestamp.TimeValue(val)
+	format := FormatOption(formatFlag)
+	switch format {
+	case ISO:
+		return timeVal.Format(time.RFC3339)
+	case Raw:
+		return fmt.Sprintf("%v", timeVal)
+	default: // Relative
+		return "6 hours ago"
+	}
+}
