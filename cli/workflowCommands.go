@@ -58,6 +58,7 @@ import (
 	"github.com/temporalio/tctl/common/payloads"
 	"github.com/temporalio/tctl/terminal"
 	"github.com/temporalio/tctl/terminal/color"
+	"github.com/temporalio/tctl/terminal/format"
 	clispb "go.temporal.io/server/api/cli/v1"
 	"go.temporal.io/server/common/clock"
 	"go.temporal.io/server/common/convert"
@@ -188,7 +189,7 @@ func RunWorkflow(c *cli.Context) {
 		&row{Field: "Args", Value: truncate(payloads.ToString(input))},
 	}
 	fmt.Println(color.Magenta(c, "Running execution:"))
-	opts := &terminal.PrintOptions{Fields: []string{"Field", "Value"}, Header: false}
+	opts := &format.PrintOptions{Fields: []string{"Field", "Value"}, Header: false}
 	terminal.PrintItems(c, executionData, opts)
 
 	printWorkflowProgress(c, wid, resp.GetRunId())

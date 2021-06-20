@@ -21,59 +21,42 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
-package flags
+
+package format
 
 import (
 	"fmt"
+	"time"
 
-	"github.com/temporalio/tctl/terminal/defs"
-	"github.com/temporalio/tctl/terminal/format"
 	"github.com/temporalio/tctl/terminal/timeformat"
 	"github.com/urfave/cli/v2"
 )
 
-// General command line flags
 const (
-	FlagAll      = "all"
-	FlagDetach   = "detach"
-	FlagPageSize = "pagesize"
-	FlagNoColor  = "no-color"
+	FlagFormat = "format"
 )
 
-var FlagsForPagination = []cli.Flag{
-	&cli.BoolFlag{
-		Name:    FlagAll,
-		Aliases: []string{"a"},
-		Usage:   "print all pages",
-	},
-	&cli.IntFlag{
-		Name:  FlagPageSize,
-		Value: defs.DefaultListPageSize,
-		Usage: "items per page",
-	},
-	&cli.BoolFlag{
-		Name:    FlagDetach,
-		Aliases: []string{"d"},
-		Usage:   "detach after printing first results",
-	},
+type FormatOption string
+
+const (
+	Table FormatOption = "table"
+	JSON  FormatOption = "json"
+	Card  FormatOption = "card"
+)
+
+type PrintOptions struct {
+	Fields    []string
+	Header    bool
+	Separator string
 }
 
-var FlagsForRendering = []cli.Flag{
-	&cli.StringFlag{
-		Name:    format.FlagFormat,
-		Aliases: []string{"f"},
-		Usage:   fmt.Sprintf("format output as: %v, %v, %v.", format.Table, format.JSON, format.Card),
-		Value:   string(format.Table),
-	},
-	&cli.StringFlag{
-		Name:  timeformat.FlagTimeFormat,
-		Usage: fmt.Sprintf("format time as: %v, %v, %v.", timeformat.Relative, timeformat.ISO, timeformat.Raw),
-		Value: string(timeformat.Relative),
-	},
-	&cli.BoolFlag{
-		Name:  FlagNoColor,
-		Usage: "disable color output",
-	},
+func formatField(c *cli.Context, i interface{}) string {
+	switch v := i.(type) {
+	case time.Time:
+		return timeformat.FormatTime(c, &v)
+	case *time.Time:
+		return timeformat.FormatTime(c, v)
+	default:
+		return fmt.Sprintf("%v", v)
+	}
 }
-
-var FlagsForPaginationAndRendering = append(FlagsForPagination, FlagsForRendering...)

@@ -22,27 +22,32 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package terminal
+package format
 
 import (
+	"encoding/json"
 	"fmt"
 
-	"github.com/temporalio/tctl/terminal/format"
-	"github.com/urfave/cli/v2"
+	"os"
+
+	"github.com/gogo/protobuf/proto"
+	"github.com/temporalio/shared-go/codec"
 )
 
-func PrintItems(c *cli.Context, items []interface{}, opts *format.PrintOptions) {
-	formatFlag := c.String(format.FlagFormat)
-
-	option := format.FormatOption(formatFlag)
-	switch option {
-	case format.JSON:
-		format.PrintJSON(items)
-	case format.Card:
-		format.PrintTable(c, items, opts)
-	case format.Table:
-		format.PrintTable(c, items, opts)
-	default:
-		fmt.Print("implement custom formatting") // TODO: implement custom formatting
+func PrintJSON(o interface{}) {
+	var b []byte
+	var err error
+	if pb, ok := o.(proto.Message); ok {
+		encoder := codec.NewJSONPBIndentEncoder("  ")
+		b, err = encoder.Encode(pb)
+	} else {
+		b, err = json.MarshalIndent(o, "", "  ")
 	}
+
+	if err != nil {
+		fmt.Printf("Error when try to print pretty: %v\n", err)
+		fmt.Println(o)
+	}
+	_, _ = os.Stdout.Write(b)
+	fmt.Println()
 }

@@ -31,6 +31,7 @@ import (
 	"github.com/temporalio/shared-go/collection"
 	"github.com/temporalio/tctl/terminal/color"
 	"github.com/temporalio/tctl/terminal/flags"
+	"github.com/temporalio/tctl/terminal/format"
 	"github.com/urfave/cli/v2"
 )
 
@@ -48,7 +49,7 @@ func Paginate(c *cli.Context, iter collection.Iterator, opts *PaginateOptions) e
 	}
 
 	var pageItems []interface{}
-	var printOpts = &PrintOptions{
+	var printOpts = &format.PrintOptions{
 		Fields:    opts.Fields,
 		Header:    true,
 		Separator: opts.Separator,
