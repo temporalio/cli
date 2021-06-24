@@ -32,6 +32,10 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+var (
+	headerColor = tablewriter.Colors{tablewriter.FgHiBlueColor}
+)
+
 func PrintTable(c *cli.Context, items []interface{}, opts *PrintOptions) {
 	fields := opts.Fields
 	if len(fields) == 0 {
@@ -52,10 +56,16 @@ func PrintTable(c *cli.Context, items []interface{}, opts *PrintOptions) {
 	table := tablewriter.NewWriter(opts.Pager)
 	table.SetBorder(false)
 	table.SetColumnSeparator(opts.Separator)
+
 	if opts.Header {
 		table.SetHeader(fields)
+		headerColors := make([]tablewriter.Colors, len(fields))
+		for i := range headerColors {
+			headerColors[i] = headerColor
+		}
+		table.SetHeaderColor(headerColors...)
+		table.SetHeaderLine(false)
 	}
-	table.SetHeaderLine(false)
 
 	for _, item := range items {
 		val := reflect.ValueOf(item)
