@@ -25,39 +25,48 @@
 package format
 
 import (
-	"github.com/olekukonko/tablewriter"
-	"github.com/urfave/cli/v2"
+	"reflect"
+	"strings"
 )
 
-var (
-	headerColor = tablewriter.Colors{tablewriter.FgHiBlueColor}
-)
-
-func PrintTable(c *cli.Context, items []interface{}, opts *PrintOptions) {
-	fields := opts.Fields
-	table := tablewriter.NewWriter(opts.Pager)
-	table.SetBorder(false)
-	table.SetColumnSeparator(opts.Separator)
-
-	if !opts.NoHeader {
-		table.SetHeader(fields)
-		headerColors := make([]tablewriter.Colors, len(fields))
-		for i := range headerColors {
-			headerColors[i] = headerColor
+func extractFieldValues(items []interface{}, fields []string) [][]interface{} {
+	if len(fields) == 0 {
+		// dynamically examine fields
+		if len(items) == 0 {
+			return [][]interface{}{}
 		}
-		table.SetHeaderColor(headerColors...)
-		table.SetHeaderLine(false)
+		e := reflect.ValueOf(items[0])
+		for e.Type().Kind() == reflect.Ptr {
+			e = e.Elem()
+		}
+		t := e.Type()
+		for i := 0; i < e.NumField(); i++ {
+			fields = append(fields, t.Field(i).Name)
+		}
 	}
 
-	rows := extractFieldValues(items, fields)
+	var result = make([][]interface{}, len(items))
+	for i, item := range items {
+		result[i] = make([]interface{}, len(fields))
+		val := reflect.ValueOf(item)
+		// var columns []string
+		for j, field := range fields {
+			nestedFields := strings.Split(field, ".") // results in ex. "Execution", "RunId"
+			var col interface{}
+			for _, nField := range nestedFields {
+				for val.Type().Kind() == reflect.Ptr {
+					// we want the struct value to be able to get a field by name
+					val = val.Elem()
+				}
+				val = val.FieldByName(nField)
+				col = val.Interface()
+				val = reflect.ValueOf(col)
+			}
+			result[i][j] = col
 
-	for _, row := range rows {
-		columns := make([]string, len(row))
-		for j, column := range row {
-			columns[j] = formatField(c, column)
+			val = reflect.ValueOf(item)
 		}
-		table.Append(columns)
 	}
-	table.Render()
-	table.ClearRows()
+
+	return result
 }
