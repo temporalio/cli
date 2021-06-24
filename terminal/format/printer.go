@@ -27,11 +27,9 @@ package format
 import (
 	"fmt"
 	"io"
-	"strings"
 	"time"
 
 	"github.com/temporalio/shared-go/collection"
-	"github.com/temporalio/tctl/terminal/color"
 	"github.com/temporalio/tctl/terminal/pager"
 	"github.com/temporalio/tctl/terminal/timeformat"
 	"github.com/urfave/cli/v2"
@@ -67,7 +65,6 @@ func PrintItems(c *cli.Context, items []interface{}, opts *PrintOptions) {
 	case Card:
 		PrintCards(c, items, opts)
 	default:
-		fmt.Print("implement custom formatting") // TODO: implement custom formatting
 	}
 }
 
@@ -128,12 +125,4 @@ func formatField(c *cli.Context, i interface{}) string {
 	default:
 		return fmt.Sprintf("%v", v)
 	}
-}
-
-func promtNextPage(c *cli.Context) bool {
-	fmt.Printf("Press %s to show next page, press %s to quit: ",
-		color.Green(c, "Enter"), color.Red(c, "any other key then Enter"))
-	var input string
-	_, _ = fmt.Scanln(&input)
-	return strings.Trim(input, " ") == ""
 }
