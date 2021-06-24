@@ -57,7 +57,7 @@ func PrintTable(c *cli.Context, items []interface{}, opts *PrintOptions) {
 	table.SetBorder(false)
 	table.SetColumnSeparator(opts.Separator)
 
-	if opts.Header {
+	if !opts.NoHeader {
 		table.SetHeader(fields)
 		headerColors := make([]tablewriter.Colors, len(fields))
 		for i := range headerColors {

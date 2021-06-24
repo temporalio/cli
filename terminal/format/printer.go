@@ -43,7 +43,7 @@ const (
 
 type PrintOptions struct {
 	Fields    []string
-	Header    bool
+	NoHeader  bool
 	Separator string
 	All       bool
 	Pager     io.Writer
@@ -80,9 +80,7 @@ func Paginate(c *cli.Context, iter collection.Iterator, opts *PrintOptions) erro
 	defer close()
 
 	if opts == nil {
-		opts = &PrintOptions{
-			Header: true,
-		}
+		opts = &PrintOptions{}
 	}
 	opts.Pager = pager
 
@@ -98,7 +96,7 @@ func Paginate(c *cli.Context, iter collection.Iterator, opts *PrintOptions) erro
 		if shouldPrintPage {
 			PrintItems(c, pageItems, opts)
 			pageItems = pageItems[:0]
-			opts.Header = false
+			opts.NoHeader = true
 			if noPager {
 				break
 			}

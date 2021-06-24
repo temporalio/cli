@@ -188,7 +188,7 @@ func RunWorkflow(c *cli.Context) {
 		&row{Field: "Args", Value: truncate(payloads.ToString(input))},
 	}
 	fmt.Println(color.Magenta(c, "Running execution:"))
-	opts := &format.PrintOptions{Fields: []string{"Field", "Value"}, Header: false}
+	opts := &format.PrintOptions{Fields: []string{"Field", "Value"}, NoHeader: true}
 	format.PrintItems(c, executionData, opts)
 
 	printWorkflowProgress(c, wid, resp.GetRunId())
