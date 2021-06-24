@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/dustin/go-humanize"
 	"github.com/urfave/cli/v2"
 
 	"github.com/temporalio/shared-go/timestamp"
@@ -55,7 +56,9 @@ func FormatTime(c *cli.Context, val *time.Time) string {
 		return timeVal.Format(time.RFC3339)
 	case Raw:
 		return fmt.Sprintf("%v", timeVal)
-	default: // Relative
-		return "6 hours ago"
+	case Relative:
+		return humanize.Time(timeVal)
+	default:
+		return humanize.Time(timeVal)
 	}
 }

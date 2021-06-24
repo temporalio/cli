@@ -7,6 +7,7 @@ replace go.temporal.io/server => /home/user0/server
 go 1.16
 
 require (
+	github.com/dustin/go-humanize v1.0.0
 	github.com/fatih/color v1.10.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/gorilla/websocket v1.4.2
