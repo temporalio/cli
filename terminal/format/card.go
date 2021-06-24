@@ -22,63 +22,37 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package color
+package format
 
 import (
-	"github.com/fatih/color"
+	"fmt"
+
+	"github.com/temporalio/tctl/terminal/color"
 	"github.com/urfave/cli/v2"
 )
 
-const (
-	FlagColor = "color"
-)
+func PrintCards(c *cli.Context, items []interface{}, opts *PrintOptions) {
+	rows := extractFieldValues(items, opts.Fields)
 
-type ColorOption string
+	if opts.Pager == nil {
+		pager, close := newPagerWithDefault(c)
+		opts.Pager = pager
+		defer close()
+	}
 
-const (
-	Auto   ColorOption = "auto"
-	Always ColorOption = "always"
-	Never  ColorOption = "never"
-)
+	fieldNames := make([]string, len(opts.Fields))
+	for i, field := range opts.Fields {
+		nestedFields := extractNestedFields(field)
+		fieldNames[i] = nestedFields[len(nestedFields)-1]
+	}
 
-var (
-	colorGreen   = color.New(color.FgGreen).SprintfFunc()
-	colorMagenta = color.New(color.FgMagenta).SprintfFunc()
-	colorRed     = color.New(color.FgRed).SprintfFunc()
-)
-
-func Green(c *cli.Context, format string, a ...interface{}) string {
-	checkColor(c)
-	return colorGreen(format, a...)
-}
-
-func Magenta(c *cli.Context, format string, a ...interface{}) string {
-	checkColor(c)
-	return colorMagenta(format, a...)
-}
-
-func Yellow(c *cli.Context, format string, a ...interface{}) string {
-	checkColor(c)
-	return color.YellowString(format, a...)
-}
-
-func Red(c *cli.Context, format string, a ...interface{}) string {
-	checkColor(c)
-	return colorRed(format, a...)
-}
-
-func checkColor(c *cli.Context) {
-	colorFlag := c.String(FlagColor)
-
-	colorVal := ColorOption(colorFlag)
-	switch colorVal {
-	case Always:
-		color.NoColor = false
-	case Never:
-		color.NoColor = true
-
-	default: // auto
-		// handled by color pkg
-		// tty - color. non-tty - false
+	w := opts.Pager
+	for _, row := range rows {
+		fmt.Fprintf(w, "---------------------------------------------------\n")
+		for j, col := range row {
+			field := fieldNames[j]
+			val := formatField(c, col)
+			fmt.Fprintf(w, "%v \t\t%v\n", color.Magenta(c, field), val)
+		}
 	}
 }

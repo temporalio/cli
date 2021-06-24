@@ -29,6 +29,10 @@ import (
 	"strings"
 )
 
+func extractNestedFields(field string) []string {
+	return strings.Split(field, ".") // results in ex. "Execution", "RunId"
+}
+
 func extractFieldValues(items []interface{}, fields []string) [][]interface{} {
 	if len(fields) == 0 {
 		// dynamically examine fields
@@ -51,7 +55,7 @@ func extractFieldValues(items []interface{}, fields []string) [][]interface{} {
 		val := reflect.ValueOf(item)
 		// var columns []string
 		for j, field := range fields {
-			nestedFields := strings.Split(field, ".") // results in ex. "Execution", "RunId"
+			nestedFields := extractNestedFields(field)
 			var col interface{}
 			for _, nField := range nestedFields {
 				for val.Type().Kind() == reflect.Ptr {

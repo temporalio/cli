@@ -60,12 +60,12 @@ func PrintItems(c *cli.Context, items []interface{}, opts *PrintOptions) {
 	}
 
 	switch format {
+	case Table:
+		PrintTable(c, items, opts)
 	case JSON:
 		PrintJSON(items, opts)
 	case Card:
-		PrintTable(c, items, opts)
-	case Table:
-		PrintTable(c, items, opts)
+		PrintCards(c, items, opts)
 	default:
 		fmt.Print("implement custom formatting") // TODO: implement custom formatting
 	}
