@@ -22,38 +22,71 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package terminal
+package format
 
 import (
 	"fmt"
+	"io"
 	"strings"
+	"time"
 
 	"github.com/temporalio/shared-go/collection"
 	"github.com/temporalio/tctl/terminal/color"
-	"github.com/temporalio/tctl/terminal/flags"
-	"github.com/temporalio/tctl/terminal/format"
+	"github.com/temporalio/tctl/terminal/pager"
+	"github.com/temporalio/tctl/terminal/timeformat"
 	"github.com/urfave/cli/v2"
 )
 
-// Paginate creates an interactive CLI mode to control the printing of items
-func Paginate(c *cli.Context, iter collection.Iterator, opts *PaginateOptions) error {
-	if opts == nil {
-		opts = &PaginateOptions{}
+const (
+	DefaultListPageSize = 20
+)
+
+type PrintOptions struct {
+	Fields    []string
+	Header    bool
+	Separator string
+	All       bool
+	Pager     io.Writer
+}
+
+func PrintItems(c *cli.Context, items []interface{}, opts *PrintOptions) {
+	formatFlag := c.String(FlagFormat)
+	format := FormatOption(formatFlag)
+
+	if opts.Pager == nil {
+		pager, close := newPagerWithDefault(c)
+		opts.Pager = pager
+		defer close()
 	}
 
-	detach := c.Bool(flags.FlagDetach)
-	pageSize := c.Int(flags.FlagPageSize)
-	all := opts.All
-	if c.IsSet(flags.FlagAll) {
-		all = c.Bool(flags.FlagAll)
+	switch format {
+	case JSON:
+		PrintJSON(items, opts)
+	case Card:
+		PrintTable(c, items, opts)
+	case Table:
+		PrintTable(c, items, opts)
+	default:
+		fmt.Print("implement custom formatting") // TODO: implement custom formatting
 	}
+}
+
+// Paginate creates an interactive CLI mode to control the printing of items
+func Paginate(c *cli.Context, iter collection.Iterator, opts *PrintOptions) error {
+	noPager := c.Bool(pager.FlagNoPager)
+	pageSize := c.Int(pager.FlagPageSize)
+
+	pager, close := newPagerWithDefault(c)
+	defer close()
+
+	if opts == nil {
+		opts = &PrintOptions{
+			Header: true,
+		}
+	}
+	opts.Pager = pager
 
 	var pageItems []interface{}
-	var printOpts = &format.PrintOptions{
-		Fields:    opts.Fields,
-		Header:    true,
-		Separator: opts.Separator,
-	}
 	for iter.HasNext() {
 		item, err := iter.Next()
 		if err != nil {
@@ -62,16 +95,11 @@ func Paginate(c *cli.Context, iter collection.Iterator, opts *PaginateOptions) e
 
 		pageItems = append(pageItems, item)
 		shouldPrintPage := len(pageItems) == pageSize || !iter.HasNext()
-
-		if all || shouldPrintPage {
-			PrintItems(c, pageItems, printOpts)
+		if shouldPrintPage {
+			PrintItems(c, pageItems, opts)
 			pageItems = pageItems[:0]
-			printOpts.Header = false
-			if detach {
-				break
-			} else if all {
-				continue
-			} else if !promtNextPage(c) {
+			opts.Header = false
+			if noPager {
 				break
 			}
 		}
@@ -80,10 +108,28 @@ func Paginate(c *cli.Context, iter collection.Iterator, opts *PaginateOptions) e
 	return nil
 }
 
-type PaginateOptions struct {
-	Fields    []string
-	All       bool
-	Separator string
+func newPagerWithDefault(c *cli.Context) (io.Writer, func()) {
+	formatFlag := c.String(FlagFormat)
+	format := FormatOption(formatFlag)
+
+	var defaultPager string
+	if format == Table {
+		defaultPager = string(pager.Less)
+	} else {
+		defaultPager = string(pager.More)
+	}
+	return pager.NewPager(c, defaultPager)
+}
+
+func formatField(c *cli.Context, i interface{}) string {
+	switch v := i.(type) {
+	case time.Time:
+		return timeformat.FormatTime(c, &v)
+	case *time.Time:
+		return timeformat.FormatTime(c, v)
+	default:
+		return fmt.Sprintf("%v", v)
+	}
 }
 
 func promtNextPage(c *cli.Context) bool {

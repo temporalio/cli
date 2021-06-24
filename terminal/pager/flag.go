@@ -22,8 +22,18 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package defs
+package pager
 
 const (
-	DefaultListPageSize = 20
+	FlagPager    = "pager"
+	FlagNoPager  = "no-pager"
+	FlagPageSize = "pagesize"
+)
+
+type PagerOption string
+
+const (
+	Cat  PagerOption = "cat"
+	Less PagerOption = "less"
+	More PagerOption = "more"
 )

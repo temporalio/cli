@@ -29,33 +29,25 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/temporalio/tctl/terminal/color"
-	"github.com/temporalio/tctl/terminal/defs"
 	"github.com/temporalio/tctl/terminal/format"
+	"github.com/temporalio/tctl/terminal/pager"
 	"github.com/temporalio/tctl/terminal/timeformat"
-)
-
-// General command line flags
-const (
-	FlagAll      = "all"
-	FlagDetach   = "detach"
-	FlagPageSize = "pagesize"
 )
 
 var FlagsForPagination = []cli.Flag{
 	&cli.BoolFlag{
-		Name:    FlagAll,
-		Aliases: []string{"a"},
-		Usage:   "print all pages",
+		Name:  pager.FlagNoPager,
+		Usage: "disable interactive paging",
+	},
+	&cli.StringFlag{
+		Name:    pager.FlagPager,
+		Usage:   "pager to use: cat, less, favoritePager..",
+		EnvVars: []string{"PAGER"},
 	},
 	&cli.IntFlag{
-		Name:  FlagPageSize,
-		Value: defs.DefaultListPageSize,
+		Name:  pager.FlagPageSize,
+		Value: pager.DefaultListPageSize,
 		Usage: "items per page",
-	},
-	&cli.BoolFlag{
-		Name:    FlagDetach,
-		Aliases: []string{"d"},
-		Usage:   "detach after printing first results",
 	},
 }
 

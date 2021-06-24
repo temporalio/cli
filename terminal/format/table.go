@@ -25,13 +25,11 @@
 package format
 
 import (
-	"os"
 	"reflect"
 	"strings"
 
-	"github.com/urfave/cli/v2"
-
 	"github.com/olekukonko/tablewriter"
+	"github.com/urfave/cli/v2"
 )
 
 func PrintTable(c *cli.Context, items []interface{}, opts *PrintOptions) {
@@ -51,7 +49,7 @@ func PrintTable(c *cli.Context, items []interface{}, opts *PrintOptions) {
 		}
 	}
 
-	table := tablewriter.NewWriter(os.Stdout)
+	table := tablewriter.NewWriter(opts.Pager)
 	table.SetBorder(false)
 	table.SetColumnSeparator(opts.Separator)
 	if opts.Header {

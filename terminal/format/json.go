@@ -28,13 +28,11 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"os"
-
 	"github.com/gogo/protobuf/proto"
 	"github.com/temporalio/shared-go/codec"
 )
 
-func PrintJSON(o interface{}) {
+func PrintJSON(o interface{}, opts *PrintOptions) {
 	var b []byte
 	var err error
 	if pb, ok := o.(proto.Message); ok {
@@ -46,8 +44,7 @@ func PrintJSON(o interface{}) {
 
 	if err != nil {
 		fmt.Printf("Error when try to print pretty: %v\n", err)
-		fmt.Println(o)
+		fmt.Fprintln(opts.Pager, o)
 	}
-	_, _ = os.Stdout.Write(b)
-	fmt.Println()
+	fmt.Fprintln(opts.Pager, string(b))
 }

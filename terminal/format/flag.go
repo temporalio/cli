@@ -24,14 +24,6 @@
 
 package format
 
-import (
-	"fmt"
-	"time"
-
-	"github.com/temporalio/tctl/terminal/timeformat"
-	"github.com/urfave/cli/v2"
-)
-
 const (
 	FlagFormat = "format"
 )
@@ -43,20 +35,3 @@ const (
 	JSON  FormatOption = "json"
 	Card  FormatOption = "card"
 )
-
-type PrintOptions struct {
-	Fields    []string
-	Header    bool
-	Separator string
-}
-
-func formatField(c *cli.Context, i interface{}) string {
-	switch v := i.(type) {
-	case time.Time:
-		return timeformat.FormatTime(c, &v)
-	case *time.Time:
-		return timeformat.FormatTime(c, v)
-	default:
-		return fmt.Sprintf("%v", v)
-	}
-}
