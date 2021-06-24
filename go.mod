@@ -19,7 +19,7 @@ require (
 	github.com/urfave/cli/v2 v2.3.0
 	github.com/valyala/fastjson v1.6.3
 	go.temporal.io/api v1.4.1-0.20210429213054-a9a257b5cf16
-	go.temporal.io/sdk v1.6.1-0.20210525221837-b434b501f9d5
+	go.temporal.io/sdk v1.7.0
 	go.temporal.io/server v1.9.2
 	google.golang.org/grpc v1.38.0
 )
