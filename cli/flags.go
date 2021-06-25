@@ -343,7 +343,7 @@ var flagsForRunWorkflow = []cli.Flag{
 	&cli.StringFlag{
 		Name: FlagMemo,
 		Usage: "Optional info that can be showed when list workflow, in JSON format. If there are multiple JSON, concatenate them and separate by space. " +
-			"The order must be same as memo_key",
+			"The order must be same as memo-key",
 	},
 	&cli.BoolFlag{
 		Name:  FlagShowDetailWithAlias,
@@ -356,7 +356,7 @@ var flagsForRunWorkflow = []cli.Flag{
 	&cli.StringFlag{
 		Name: FlagMemoFile,
 		Usage: "Optional info that can be listed in list workflow, from JSON format file. If there are multiple JSON, concatenate them and separate by space or newline. " +
-			"The order must be same as memo_key",
+			"The order must be same as memo-key",
 	},
 	&cli.StringFlag{
 		Name: FlagSearchAttributesKey,
