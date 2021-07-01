@@ -56,8 +56,8 @@ import (
 	"github.com/temporalio/shared-go/timestamp"
 	"github.com/temporalio/tctl/common/payload"
 	"github.com/temporalio/tctl/common/payloads"
-	"github.com/temporalio/tctl/terminal/color"
-	"github.com/temporalio/tctl/terminal/format"
+	"github.com/temporalio/tctl/pkg/color"
+	"github.com/temporalio/tctl/pkg/view"
 	clispb "go.temporal.io/server/api/cli/v1"
 	"go.temporal.io/server/common/clock"
 	"go.temporal.io/server/common/convert"
@@ -111,8 +111,8 @@ func ShowHistory(c *cli.Context) {
 	}
 
 	iter := collection.NewPagingIterator(paginationFunc)
-	opts := &format.PrintOptions{Fields: []string{"ID", "Type", "Event"}}
-	format.Paginate(c, iter, opts)
+	opts := &view.PrintOptions{Fields: []string{"ID", "Type", "Event"}}
+	view.Paginate(c, iter, opts)
 }
 
 // RunWorkflow starts a new workflow execution and print workflow progress and result
@@ -188,8 +188,8 @@ func RunWorkflow(c *cli.Context) {
 		&row{Field: "Args", Value: truncate(payloads.ToString(input))},
 	}
 	fmt.Println(color.Magenta(c, "Running execution:"))
-	opts := &format.PrintOptions{Fields: []string{"Field", "Value"}, NoHeader: true}
-	format.PrintItems(c, executionData, opts)
+	opts := &view.PrintOptions{Fields: []string{"Field", "Value"}, NoHeader: true}
+	view.PrintItems(c, executionData, opts)
 
 	printWorkflowProgress(c, wid, resp.GetRunId())
 }
@@ -318,7 +318,7 @@ func printWorkflowProgress(c *cli.Context, wid, rid string) {
 	timeElapse := 1
 	isTimeElapseExist := false
 	ticker := time.NewTicker(time.Second).C
-	opts := &format.PrintOptions{
+	opts := &view.PrintOptions{
 		Fields: []string{"ID", "Time", "Type"},
 		All:    true,
 	}
@@ -331,7 +331,7 @@ func printWorkflowProgress(c *cli.Context, wid, rid string) {
 	go func() {
 		hIter := sdkClient.GetWorkflowHistory(tcCtx, wid, rid, true, enumspb.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
 		iter := &historyIterator{iter: hIter, maxFieldLength: maxFieldLength, showDetails: showDetails, lastEvent: &lastEvent}
-		format.Paginate(c, iter, opts)
+		view.Paginate(c, iter, opts)
 
 		doneChan <- true
 	}()
@@ -520,8 +520,8 @@ func ListWorkflow(c *cli.Context) {
 	}
 
 	iter := collection.NewPagingIterator(paginationFunc)
-	opts := &format.PrintOptions{Fields: []string{"Execution.WorkflowId", "Execution.RunId", "StartTime"}}
-	format.Paginate(c, iter, opts)
+	opts := &view.PrintOptions{Fields: []string{"Execution.WorkflowId", "Execution.RunId", "StartTime"}}
+	view.Paginate(c, iter, opts)
 }
 
 // ScanAllWorkflow list all workflow executions using Scan API.
@@ -557,8 +557,8 @@ func ScanAllWorkflow(c *cli.Context) {
 	}
 
 	iter := collection.NewPagingIterator(paginationFunc)
-	opts := &format.PrintOptions{Fields: []string{"Type.Name", "Execution.WorkflowId", "Execution.RunId", "TaskQueue", "StartTime", "ExecutionTime", "CloseTime"}}
-	format.Paginate(c, iter, opts)
+	opts := &view.PrintOptions{Fields: []string{"Type.Name", "Execution.WorkflowId", "Execution.RunId", "TaskQueue", "StartTime", "ExecutionTime", "CloseTime"}}
+	view.Paginate(c, iter, opts)
 }
 
 // CountWorkflow count number of workflows
@@ -619,8 +619,8 @@ func ListArchivedWorkflow(c *cli.Context) {
 	}
 
 	iter := collection.NewPagingIterator(paginationFunc)
-	opts := &format.PrintOptions{Fields: []string{"Type.Name", "Execution.WorkflowId", "Execution.RunId", "TaskQueue", "StartTime", "ExecutionTime", "CloseTime"}}
-	format.Paginate(c, iter, opts)
+	opts := &view.PrintOptions{Fields: []string{"Type.Name", "Execution.WorkflowId", "Execution.RunId", "TaskQueue", "StartTime", "ExecutionTime", "CloseTime"}}
+	view.Paginate(c, iter, opts)
 }
 
 // DescribeWorkflow show information about the specified workflow execution

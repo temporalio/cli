@@ -28,10 +28,10 @@ import (
 
 	"github.com/urfave/cli/v2"
 
-	"github.com/temporalio/tctl/terminal/color"
-	"github.com/temporalio/tctl/terminal/format"
-	"github.com/temporalio/tctl/terminal/pager"
-	"github.com/temporalio/tctl/terminal/timeformat"
+	"github.com/temporalio/tctl/pkg/color"
+	"github.com/temporalio/tctl/pkg/format"
+	"github.com/temporalio/tctl/pkg/pager"
+	"github.com/temporalio/tctl/pkg/view"
 )
 
 var FlagsForPagination = []cli.Flag{
@@ -53,15 +53,15 @@ var FlagsForPagination = []cli.Flag{
 
 var FlagsForRendering = []cli.Flag{
 	&cli.StringFlag{
-		Name:    format.FlagOutput,
+		Name:    view.FlagOutput,
 		Aliases: []string{"o"},
-		Usage:   fmt.Sprintf("format output as: %v, %v, %v.", format.Table, format.JSON, format.Card),
-		Value:   string(format.Table),
+		Usage:   fmt.Sprintf("format output as: %v, %v, %v.", view.Table, view.JSON, view.Card),
+		Value:   string(view.Table),
 	},
 	&cli.StringFlag{
-		Name:  timeformat.FlagTimeFormat,
-		Usage: fmt.Sprintf("format time as: %v, %v, %v.", timeformat.Relative, timeformat.ISO, timeformat.Raw),
-		Value: string(timeformat.Relative),
+		Name:  format.FlagFormatTime,
+		Usage: fmt.Sprintf("format time as: %v, %v, %v.", format.Relative, format.ISO, format.Raw),
+		Value: string(format.Relative),
 	},
 	&cli.StringFlag{
 		Name:    color.FlagColor,

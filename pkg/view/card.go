@@ -22,12 +22,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package format
+package view
 
 import (
 	"fmt"
 
-	"github.com/temporalio/tctl/terminal/color"
+	"github.com/temporalio/tctl/pkg/color"
 	"github.com/urfave/cli/v2"
 )
 

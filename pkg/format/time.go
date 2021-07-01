@@ -24,14 +24,41 @@
 
 package format
 
-const (
-	FlagOutput = "output"
+import (
+	"fmt"
+	"time"
+
+	"github.com/dustin/go-humanize"
+	"github.com/urfave/cli/v2"
+
+	"github.com/temporalio/shared-go/timestamp"
 )
 
-type OutputOption string
+const (
+	FlagFormatTime = "time-format"
+)
+
+type FormatTimeOption string
 
 const (
-	Table OutputOption = "table"
-	JSON  OutputOption = "json"
-	Card  OutputOption = "card"
+	Relative FormatTimeOption = "relative"
+	ISO      FormatTimeOption = "iso"
+	Raw      FormatTimeOption = "raw"
 )
+
+func FormatTime(c *cli.Context, val *time.Time) string {
+	formatFlag := c.String(FlagFormatTime)
+
+	timeVal := timestamp.TimeValue(val)
+	format := FormatTimeOption(formatFlag)
+	switch format {
+	case ISO:
+		return timeVal.Format(time.RFC3339)
+	case Raw:
+		return fmt.Sprintf("%v", timeVal)
+	case Relative:
+		return humanize.Time(timeVal)
+	default:
+		return humanize.Time(timeVal)
+	}
+}

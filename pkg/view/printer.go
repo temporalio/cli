@@ -22,7 +22,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package format
+package view
 
 import (
 	"fmt"
@@ -30,8 +30,8 @@ import (
 	"time"
 
 	"github.com/temporalio/shared-go/collection"
-	"github.com/temporalio/tctl/terminal/pager"
-	"github.com/temporalio/tctl/terminal/timeformat"
+	"github.com/temporalio/tctl/pkg/format"
+	"github.com/temporalio/tctl/pkg/pager"
 	"github.com/urfave/cli/v2"
 )
 
@@ -119,9 +119,9 @@ func newPagerWithDefault(c *cli.Context) (io.Writer, func()) {
 func formatField(c *cli.Context, i interface{}) string {
 	switch v := i.(type) {
 	case time.Time:
-		return timeformat.FormatTime(c, &v)
+		return format.FormatTime(c, &v)
 	case *time.Time:
-		return timeformat.FormatTime(c, v)
+		return format.FormatTime(c, v)
 	default:
 		return fmt.Sprintf("%v", v)
 	}

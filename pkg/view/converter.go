@@ -22,43 +22,55 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package timeformat
+package view
 
 import (
-	"fmt"
-	"time"
-
-	"github.com/dustin/go-humanize"
-	"github.com/urfave/cli/v2"
-
-	"github.com/temporalio/shared-go/timestamp"
+	"reflect"
+	"strings"
 )
 
-const (
-	FlagTimeFormat = "time-format"
-)
+func extractNestedFields(field string) []string {
+	return strings.Split(field, ".") // results in ex. "Execution", "RunId"
+}
 
-type FormatOption string
-
-const (
-	Relative FormatOption = "relative"
-	ISO      FormatOption = "iso"
-	Raw      FormatOption = "raw"
-)
-
-func FormatTime(c *cli.Context, val *time.Time) string {
-	formatFlag := c.String(FlagTimeFormat)
-
-	timeVal := timestamp.TimeValue(val)
-	format := FormatOption(formatFlag)
-	switch format {
-	case ISO:
-		return timeVal.Format(time.RFC3339)
-	case Raw:
-		return fmt.Sprintf("%v", timeVal)
-	case Relative:
-		return humanize.Time(timeVal)
-	default:
-		return humanize.Time(timeVal)
+func extractFieldValues(items []interface{}, fields []string) [][]interface{} {
+	if len(fields) == 0 {
+		// dynamically examine fields
+		if len(items) == 0 {
+			return [][]interface{}{}
+		}
+		e := reflect.ValueOf(items[0])
+		for e.Type().Kind() == reflect.Ptr {
+			e = e.Elem()
+		}
+		t := e.Type()
+		for i := 0; i < e.NumField(); i++ {
+			fields = append(fields, t.Field(i).Name)
+		}
 	}
+
+	var result = make([][]interface{}, len(items))
+	for i, item := range items {
+		result[i] = make([]interface{}, len(fields))
+		val := reflect.ValueOf(item)
+		// var columns []string
+		for j, field := range fields {
+			nestedFields := extractNestedFields(field)
+			var col interface{}
+			for _, nField := range nestedFields {
+				for val.Type().Kind() == reflect.Ptr {
+					// we want the struct value to be able to get a field by name
+					val = val.Elem()
+				}
+				val = val.FieldByName(nField)
+				col = val.Interface()
+				val = reflect.ValueOf(col)
+			}
+			result[i][j] = col
+
+			val = reflect.ValueOf(item)
+		}
+	}
+
+	return result
 }
