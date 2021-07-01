@@ -25,13 +25,13 @@
 package format
 
 const (
-	FlagFormat = "format"
+	FlagOutput = "output"
 )
 
-type FormatOption string
+type OutputOption string
 
 const (
-	Table FormatOption = "table"
-	JSON  FormatOption = "json"
-	Card  FormatOption = "card"
+	Table OutputOption = "table"
+	JSON  OutputOption = "json"
+	Card  OutputOption = "card"
 )

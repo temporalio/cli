@@ -53,8 +53,8 @@ var FlagsForPagination = []cli.Flag{
 
 var FlagsForRendering = []cli.Flag{
 	&cli.StringFlag{
-		Name:    format.FlagFormat,
-		Aliases: []string{"f"},
+		Name:    format.FlagOutput,
+		Aliases: []string{"o"},
 		Usage:   fmt.Sprintf("format output as: %v, %v, %v.", format.Table, format.JSON, format.Card),
 		Value:   string(format.Table),
 	},

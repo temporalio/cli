@@ -48,8 +48,8 @@ type PrintOptions struct {
 }
 
 func PrintItems(c *cli.Context, items []interface{}, opts *PrintOptions) {
-	formatFlag := c.String(FlagFormat)
-	format := FormatOption(formatFlag)
+	outputFlag := c.String(FlagOutput)
+	output := OutputOption(outputFlag)
 
 	if opts.Pager == nil {
 		pager, close := newPagerWithDefault(c)
@@ -57,7 +57,7 @@ func PrintItems(c *cli.Context, items []interface{}, opts *PrintOptions) {
 		defer close()
 	}
 
-	switch format {
+	switch output {
 	case Table:
 		PrintTable(c, items, opts)
 	case JSON:
@@ -104,11 +104,11 @@ func Paginate(c *cli.Context, iter collection.Iterator, opts *PrintOptions) erro
 }
 
 func newPagerWithDefault(c *cli.Context) (io.Writer, func()) {
-	formatFlag := c.String(FlagFormat)
-	format := FormatOption(formatFlag)
+	outputFlag := c.String(FlagOutput)
+	output := OutputOption(outputFlag)
 
 	var defaultPager string
-	if format == Table {
+	if output == Table {
 		defaultPager = string(pager.Less)
 	} else {
 		defaultPager = string(pager.More)
