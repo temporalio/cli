@@ -278,7 +278,6 @@ type historyIterator struct {
 		Next() (*historypb.HistoryEvent, error)
 	}
 	maxFieldLength int
-	showDetails    bool
 	lastEvent      *historypb.HistoryEvent
 }
 
@@ -304,7 +303,6 @@ func (h *historyIterator) Next() (interface{}, error) {
 
 // helper function to print workflow progress with time refresh every second
 func printWorkflowProgress(c *cli.Context, wid, rid string) {
-	showDetails := c.Bool(FlagShowDetail)
 	var maxFieldLength int
 	if c.IsSet(FlagMaxFieldLength) {
 		maxFieldLength = c.Int(FlagMaxFieldLength)
@@ -319,18 +317,16 @@ func printWorkflowProgress(c *cli.Context, wid, rid string) {
 	isTimeElapseExist := false
 	ticker := time.NewTicker(time.Second).C
 	opts := &view.PrintOptions{
-		Fields: []string{"ID", "Time", "Type"},
-		All:    true,
-	}
-	if showDetails {
-		opts.Fields = append(opts.Fields, "Details")
+		Fields:     []string{"ID", "Time", "Type"},
+		FieldsLong: []string{"Details"},
+		All:        true,
 	}
 	fmt.Println(color.Magenta(c, "Progress:"))
 	var lastEvent historypb.HistoryEvent // used for print result of this run
 
 	go func() {
 		hIter := sdkClient.GetWorkflowHistory(tcCtx, wid, rid, true, enumspb.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
-		iter := &historyIterator{iter: hIter, maxFieldLength: maxFieldLength, showDetails: showDetails, lastEvent: &lastEvent}
+		iter := &historyIterator{iter: hIter, maxFieldLength: maxFieldLength, lastEvent: &lastEvent}
 		view.Paginate(c, iter, opts)
 
 		doneChan <- true
@@ -520,7 +516,10 @@ func ListWorkflow(c *cli.Context) {
 	}
 
 	iter := collection.NewPagingIterator(paginationFunc)
-	opts := &view.PrintOptions{Fields: []string{"Execution.WorkflowId", "Execution.RunId", "StartTime"}}
+	opts := &view.PrintOptions{
+		Fields:     []string{"Execution.WorkflowId", "Execution.RunId", "StartTime"},
+		FieldsLong: []string{"Type.Name", "TaskQueue", "ExecutionTime", "CloseTime"},
+	}
 	view.Paginate(c, iter, opts)
 }
 
@@ -557,7 +556,10 @@ func ScanAllWorkflow(c *cli.Context) {
 	}
 
 	iter := collection.NewPagingIterator(paginationFunc)
-	opts := &view.PrintOptions{Fields: []string{"Type.Name", "Execution.WorkflowId", "Execution.RunId", "TaskQueue", "StartTime", "ExecutionTime", "CloseTime"}}
+	opts := &view.PrintOptions{
+		Fields:     []string{"Execution.WorkflowId", "Execution.RunId", "StartTime"},
+		FieldsLong: []string{"Type.Name", "TaskQueue", "ExecutionTime", "CloseTime"},
+	}
 	view.Paginate(c, iter, opts)
 }
 
@@ -619,7 +621,10 @@ func ListArchivedWorkflow(c *cli.Context) {
 	}
 
 	iter := collection.NewPagingIterator(paginationFunc)
-	opts := &view.PrintOptions{Fields: []string{"Type.Name", "Execution.WorkflowId", "Execution.RunId", "TaskQueue", "StartTime", "ExecutionTime", "CloseTime"}}
+	opts := &view.PrintOptions{
+		Fields:     []string{"Execution.WorkflowId", "Execution.RunId", "StartTime"},
+		FieldsLong: []string{"Type.Name", "TaskQueue", "ExecutionTime", "CloseTime"},
+	}
 	view.Paginate(c, iter, opts)
 }
 

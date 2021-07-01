@@ -25,7 +25,12 @@
 package view
 
 const (
-	FlagOutput = "output"
+	FlagOutput  = "output"
+	FlagColumns = "columns"
+)
+
+const (
+	ColumnsLong = "long"
 )
 
 type OutputOption string
