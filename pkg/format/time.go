@@ -35,7 +35,7 @@ import (
 )
 
 const (
-	FlagFormatTime = "time-format"
+	FlagFormatTime = "format-time"
 )
 
 type FormatTimeOption string
