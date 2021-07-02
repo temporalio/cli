@@ -27,6 +27,8 @@ package view
 import (
 	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli/v2"
+
+	"github.com/temporalio/tctl/pkg/process"
 )
 
 var (
@@ -49,7 +51,10 @@ func PrintTable(c *cli.Context, items []interface{}, opts *PrintOptions) {
 		table.SetHeaderLine(false)
 	}
 
-	rows := extractFieldValues(items, fields)
+	rows, err := extractFieldValues(items, fields)
+	if err != nil {
+		process.ErrorAndExit("unable to print table", err)
+	}
 
 	for _, row := range rows {
 		columns := make([]string, len(row))

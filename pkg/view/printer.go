@@ -27,6 +27,7 @@ package view
 import (
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/temporalio/shared-go/collection"
@@ -59,9 +60,18 @@ func PrintItems(c *cli.Context, items []interface{}, opts *PrintOptions) {
 		defer close()
 	}
 
-	if columns == ColumnsLong {
-		opts.Fields = append(opts.Fields, opts.FieldsLong...)
-		opts.FieldsLong = []string{}
+	if c.IsSet(FlagColumns) {
+		if columns == ColumnsLong {
+			opts.Fields = append(opts.Fields, opts.FieldsLong...)
+			opts.FieldsLong = []string{}
+		} else {
+			cols := strings.Split(columns, ",")
+			for i := range cols {
+				cols[i] = strings.TrimSpace(cols[i])
+			}
+			opts.Fields = cols
+			opts.FieldsLong = []string{}
+		}
 	}
 
 	switch output {
