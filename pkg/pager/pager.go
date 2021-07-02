@@ -100,9 +100,5 @@ func lookupPager(c *cli.Context, defaultPager string) (string, error) {
 		return pager, nil
 	}
 
-	if pager, err := exec.LookPath(string(Cat)); err == nil {
-		return pager, nil
-	}
-
 	return "", errors.New("no pager available. Set $PAGER env variable or install 'less', 'more' or 'cat'")
 }
