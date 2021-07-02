@@ -73,7 +73,7 @@ func newWorkflowCommands() []*cli.Command {
 			},
 		},
 		{
-			Name:  "history",
+			Name:  "show",
 			Usage: "show workflow history",
 			Flags: append(append(flagsForExecution, flagsForShowWorkflow...), flags.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
