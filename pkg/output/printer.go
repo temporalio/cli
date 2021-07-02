@@ -27,6 +27,7 @@ package output
 import (
 	"fmt"
 	"io"
+	"reflect"
 	"strings"
 	"time"
 
@@ -134,12 +135,22 @@ func newPagerWithDefault(c *cli.Context) (io.Writer, func()) {
 }
 
 func formatField(c *cli.Context, i interface{}) string {
-	switch v := i.(type) {
-	case time.Time:
-		return format.FormatTime(c, &v)
-	case *time.Time:
-		return format.FormatTime(c, v)
-	default:
-		return fmt.Sprintf("%v", v)
+	val := reflect.ValueOf(i)
+	val = reflect.Indirect(val)
+
+	var typ reflect.Type
+	if val.IsValid() && !val.IsZero() {
+		typ = val.Type()
+	}
+	kin := val.Kind()
+
+	if typ == reflect.TypeOf(time.Time{}) {
+		return format.FormatTime(c, val.Interface().(time.Time))
+	} else if kin == reflect.Struct && val.CanInterface() {
+		str, _ := ParseToJSON(i, false)
+
+		return str
+	} else {
+		return fmt.Sprintf("%v", i)
 	}
 }

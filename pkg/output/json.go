@@ -33,18 +33,38 @@ import (
 )
 
 func PrintJSON(o interface{}, opts *PrintOptions) {
-	var b []byte
-	var err error
-	if pb, ok := o.(proto.Message); ok {
-		encoder := codec.NewJSONPBIndentEncoder("  ")
-		b, err = encoder.Encode(pb)
-	} else {
-		b, err = json.MarshalIndent(o, "", "  ")
-	}
+	json, err := ParseToJSON(o, true)
 
 	if err != nil {
 		fmt.Printf("Error when try to print pretty: %v\n", err)
 		fmt.Fprintln(opts.Pager, o)
 	}
-	fmt.Fprintln(opts.Pager, string(b))
+
+	fmt.Fprintln(opts.Pager, json)
+}
+
+func ParseToJSON(o interface{}, indent bool) (string, error) {
+	var b []byte
+	var err error
+	if pb, ok := o.(proto.Message); ok {
+		var encoder *codec.JSONPBEncoder
+		if indent {
+			encoder = codec.NewJSONPBIndentEncoder("  ")
+		} else {
+			encoder = codec.NewJSONPBEncoder()
+		}
+		b, err = encoder.Encode(pb)
+	} else {
+		if indent {
+			b, err = json.MarshalIndent(o, "", "  ")
+		} else {
+			b, err = json.Marshal(o)
+		}
+	}
+
+	if err != nil {
+		return "", err
+	}
+
+	return string(b), nil
 }

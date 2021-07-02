@@ -46,10 +46,10 @@ const (
 	Raw      FormatTimeOption = "raw"
 )
 
-func FormatTime(c *cli.Context, val *time.Time) string {
+func FormatTime(c *cli.Context, val time.Time) string {
 	formatFlag := c.String(FlagFormatTime)
 
-	timeVal := timestamp.TimeValue(val)
+	timeVal := timestamp.TimeValue(&val)
 	format := FormatTimeOption(formatFlag)
 	switch format {
 	case ISO:
