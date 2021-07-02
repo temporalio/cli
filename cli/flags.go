@@ -407,29 +407,6 @@ var flagsForWorkflowFiltering = []cli.Flag{
 	},
 }
 
-var flagsForWorkflowRendering = []cli.Flag{
-	&cli.BoolFlag{
-		Name:  FlagPrintRawTimeWithAlias,
-		Usage: "Print raw timestamp",
-	},
-	&cli.BoolFlag{
-		Name:  FlagPrintDateTimeWithAlias,
-		Usage: "Print full date time in '2006-01-02T15:04:05Z07:00' format",
-	},
-	&cli.BoolFlag{
-		Name:  FlagPrintMemoWithAlias,
-		Usage: "Print memo",
-	},
-	&cli.BoolFlag{
-		Name:  FlagPrintSearchAttrWithAlias,
-		Usage: "Print search attributes",
-	},
-	&cli.BoolFlag{
-		Name:  FlagPrintFullyDetailWithAlias,
-		Usage: "Print full message without table format",
-	},
-}
-
 var flagsForScan = []cli.Flag{
 	&cli.StringFlag{
 		Name:  FlagListQueryWithAlias,

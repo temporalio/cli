@@ -35,14 +35,14 @@ import (
 )
 
 var FlagsForPagination = []cli.Flag{
-	&cli.BoolFlag{
-		Name:  pager.FlagNoPager,
-		Usage: "disable interactive paging",
-	},
 	&cli.StringFlag{
 		Name:    pager.FlagPager,
 		Usage:   "pager to use: cat, less, favoritePager..",
 		EnvVars: []string{"PAGER"},
+	},
+	&cli.BoolFlag{
+		Name:  pager.FlagNoPager,
+		Usage: "disable interactive paging",
 	},
 	&cli.IntFlag{
 		Name:  pager.FlagPageSize,

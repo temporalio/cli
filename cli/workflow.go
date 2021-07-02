@@ -57,7 +57,7 @@ func newWorkflowCommands() []*cli.Command {
 			Aliases:     []string{"l"},
 			Usage:       "list open or closed workflow executions",
 			Description: "list one page (default size 10 items) by default, use flag --pagesize to change page size",
-			Flags:       append(append(flagsForWorkflowFiltering, flagsForWorkflowRendering...), flags.FlagsForPaginationAndRendering...),
+			Flags:       append(flagsForWorkflowFiltering, flags.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
 				ListWorkflow(c)
 				return nil
@@ -66,7 +66,7 @@ func newWorkflowCommands() []*cli.Command {
 		{
 			Name:  "listarchived",
 			Usage: "list archived workflow executions",
-			Flags: append(append(flagsForListArchived, flagsForWorkflowRendering...), flags.FlagsForPaginationAndRendering...),
+			Flags: append(flagsForListArchived, flags.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
 				ListArchivedWorkflow(c)
 				return nil
@@ -144,7 +144,7 @@ func newWorkflowCommands() []*cli.Command {
 			Name: "scan",
 			Usage: "scan workflow executions (need to enable Temporal server on ElasticSearch). " +
 				"It will be faster than listall, but result are not sorted.",
-			Flags: append(append(flagsForScan, flagsForWorkflowRendering...), flags.FlagsForPaginationAndRendering...),
+			Flags: append(flagsForScan, flags.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
 				ScanAllWorkflow(c)
 				return nil
