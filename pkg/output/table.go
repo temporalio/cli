@@ -32,7 +32,7 @@ import (
 )
 
 var (
-	headerColor = tablewriter.Colors{tablewriter.FgHiBlueColor}
+	headerColor = tablewriter.Colors{tablewriter.FgHiMagentaColor}
 )
 
 func PrintTable(c *cli.Context, items []interface{}, opts *PrintOptions) {
@@ -42,7 +42,13 @@ func PrintTable(c *cli.Context, items []interface{}, opts *PrintOptions) {
 	table.SetColumnSeparator(opts.Separator)
 
 	if !opts.NoHeader {
-		table.SetHeader(fields)
+		headerNames := make([]string, len(fields))
+		for i, f := range fields {
+			nestedFields := splitFieldPath(f)
+			headerNames[i] = nestedFields[len(nestedFields)-1]
+		}
+		table.SetHeader(headerNames)
+		table.SetAutoFormatHeaders(false)
 		headerColors := make([]tablewriter.Colors, len(fields))
 		for i := range headerColors {
 			headerColors[i] = headerColor
