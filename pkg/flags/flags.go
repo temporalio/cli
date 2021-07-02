@@ -30,8 +30,8 @@ import (
 
 	"github.com/temporalio/tctl/pkg/color"
 	"github.com/temporalio/tctl/pkg/format"
+	"github.com/temporalio/tctl/pkg/output"
 	"github.com/temporalio/tctl/pkg/pager"
-	"github.com/temporalio/tctl/pkg/view"
 )
 
 var FlagsForPagination = []cli.Flag{
@@ -53,10 +53,10 @@ var FlagsForPagination = []cli.Flag{
 
 var FlagsForRendering = []cli.Flag{
 	&cli.StringFlag{
-		Name:    view.FlagOutput,
+		Name:    output.FlagOutput,
 		Aliases: []string{"o"},
-		Usage:   fmt.Sprintf("format output as: %v, %v, %v.", view.Table, view.JSON, view.Card),
-		Value:   string(view.Table),
+		Usage:   fmt.Sprintf("format output as: %v, %v, %v.", output.Table, output.JSON, output.Card),
+		Value:   string(output.Table),
 	},
 	&cli.StringFlag{
 		Name:  format.FlagFormatTime,
@@ -64,7 +64,7 @@ var FlagsForRendering = []cli.Flag{
 		Value: string(format.Relative),
 	},
 	&cli.StringFlag{
-		Name:  view.FlagColumns,
+		Name:  output.FlagColumns,
 		Usage: "customize columns to print. Set to 'long' to automatically print more of main columns",
 	},
 	&cli.StringFlag{

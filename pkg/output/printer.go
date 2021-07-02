@@ -22,7 +22,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package view
+package output
 
 import (
 	"fmt"
@@ -85,8 +85,8 @@ func PrintItems(c *cli.Context, items []interface{}, opts *PrintOptions) {
 	}
 }
 
-// Paginate creates an interactive CLI mode to control the printing of items
-func Paginate(c *cli.Context, iter collection.Iterator, opts *PrintOptions) error {
+// Pager creates an interactive CLI mode to control the printing of items
+func Pager(c *cli.Context, iter collection.Iterator, opts *PrintOptions) error {
 	noPager := c.Bool(pager.FlagNoPager)
 	pageSize := c.Int(pager.FlagPageSize)
 

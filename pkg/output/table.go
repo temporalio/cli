@@ -22,29 +22,47 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package view
+package output
 
 import (
-	"encoding/json"
-	"fmt"
+	"github.com/olekukonko/tablewriter"
+	"github.com/urfave/cli/v2"
 
-	"github.com/gogo/protobuf/proto"
-	"github.com/temporalio/shared-go/codec"
+	"github.com/temporalio/tctl/pkg/process"
 )
 
-func PrintJSON(o interface{}, opts *PrintOptions) {
-	var b []byte
-	var err error
-	if pb, ok := o.(proto.Message); ok {
-		encoder := codec.NewJSONPBIndentEncoder("  ")
-		b, err = encoder.Encode(pb)
-	} else {
-		b, err = json.MarshalIndent(o, "", "  ")
+var (
+	headerColor = tablewriter.Colors{tablewriter.FgHiBlueColor}
+)
+
+func PrintTable(c *cli.Context, items []interface{}, opts *PrintOptions) {
+	fields := opts.Fields
+	table := tablewriter.NewWriter(opts.Pager)
+	table.SetBorder(false)
+	table.SetColumnSeparator(opts.Separator)
+
+	if !opts.NoHeader {
+		table.SetHeader(fields)
+		headerColors := make([]tablewriter.Colors, len(fields))
+		for i := range headerColors {
+			headerColors[i] = headerColor
+		}
+		table.SetHeaderColor(headerColors...)
+		table.SetHeaderLine(false)
 	}
 
+	rows, err := extractFieldValues(items, fields)
 	if err != nil {
-		fmt.Printf("Error when try to print pretty: %v\n", err)
-		fmt.Fprintln(opts.Pager, o)
+		process.ErrorAndExit("unable to print table", err)
 	}
-	fmt.Fprintln(opts.Pager, string(b))
+
+	for _, row := range rows {
+		columns := make([]string, len(row))
+		for j, column := range row {
+			columns[j] = formatField(c, column)
+		}
+		table.Append(columns)
+	}
+	table.Render()
+	table.ClearRows()
 }
