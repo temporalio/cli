@@ -111,7 +111,7 @@ func ShowHistory(c *cli.Context) {
 	}
 
 	iter := collection.NewPagingIterator(paginationFunc)
-	opts := &output.PrintOptions{Fields: []string{"ID", "Type", "Event"}}
+	opts := &output.PrintOptions{Fields: []string{"ID", "Type", "Details"}}
 	output.Pager(c, iter, opts)
 }
 
