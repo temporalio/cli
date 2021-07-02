@@ -28,6 +28,7 @@ import (
 	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli/v2"
 
+	"github.com/temporalio/tctl/pkg/color"
 	"github.com/temporalio/tctl/pkg/process"
 )
 
@@ -36,6 +37,8 @@ var (
 )
 
 func PrintTable(c *cli.Context, items []interface{}, opts *PrintOptions) {
+	colorFlag := c.String(color.FlagColor)
+	enableColor := colorFlag == string(color.Auto) || colorFlag == string(color.Always)
 	fields := opts.Fields
 	table := tablewriter.NewWriter(opts.Pager)
 	table.SetBorder(false)
@@ -49,11 +52,14 @@ func PrintTable(c *cli.Context, items []interface{}, opts *PrintOptions) {
 		}
 		table.SetHeader(headerNames)
 		table.SetAutoFormatHeaders(false)
-		headerColors := make([]tablewriter.Colors, len(fields))
-		for i := range headerColors {
-			headerColors[i] = headerColor
+
+		if enableColor {
+			headerColors := make([]tablewriter.Colors, len(fields))
+			for i := range headerColors {
+				headerColors[i] = headerColor
+			}
+			table.SetHeaderColor(headerColors...)
 		}
-		table.SetHeaderColor(headerColors...)
 		table.SetHeaderLine(false)
 	}
 
