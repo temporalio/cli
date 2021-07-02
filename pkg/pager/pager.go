@@ -45,7 +45,7 @@ func NewPager(c *cli.Context, defaultPager string) (io.Writer, func()) {
 		return os.Stdout, func() {}
 	}
 
-	pager, err := lookupPager(c, defaultPager)
+	pager, err := pickPager(c, defaultPager)
 	if err != nil {
 		return os.Stdout, func() {}
 	}
@@ -80,24 +80,24 @@ func NewPager(c *cli.Context, defaultPager string) (io.Writer, func()) {
 	}
 }
 
-func lookupPager(c *cli.Context, defaultPager string) (string, error) {
+func pickPager(c *cli.Context, defaultPager string) (string, error) {
 	pagerFlag := c.String("pager")
 	if pagerFlag == "" {
 		pagerFlag = defaultPager
 	}
 
 	if pagerFlag != "" {
-		if pager, err := exec.LookPath(pagerFlag); err == nil {
-			return pager, nil
+		if _, err := exec.LookPath(pagerFlag); err == nil {
+			return pagerFlag, nil
 		}
 	}
 
-	if pager, err := exec.LookPath(string(Less)); err == nil {
-		return pager, nil
+	if _, err := exec.LookPath(string(Less)); err == nil {
+		return string(Less), nil
 	}
 
-	if pager, err := exec.LookPath(string(More)); err == nil {
-		return pager, nil
+	if _, err := exec.LookPath(string(More)); err == nil {
+		return string(More), nil
 	}
 
 	return "", errors.New("no pager available. Set $PAGER env variable or install 'less', 'more' or 'cat'")
