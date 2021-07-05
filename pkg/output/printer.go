@@ -42,17 +42,18 @@ const (
 )
 
 type PrintOptions struct {
-	Fields     []string
-	FieldsLong []string
-	NoHeader   bool
-	Separator  string
-	All        bool
-	Pager      io.Writer
+	Fields      []string
+	FieldsLong  []string
+	IgnoreFlags bool
+	Output      OutputOption
+	Pager       io.Writer
+	NoPager     bool
+	NoHeader    bool
+	Separator   string
 }
 
 func PrintItems(c *cli.Context, items []interface{}, opts *PrintOptions) {
 	outputFlag := c.String(FlagOutput)
-	output := OutputOption(outputFlag)
 	columns := c.String(FlagColumns)
 
 	if opts.Pager == nil {
@@ -61,7 +62,7 @@ func PrintItems(c *cli.Context, items []interface{}, opts *PrintOptions) {
 		defer close()
 	}
 
-	if c.IsSet(FlagColumns) {
+	if !opts.IgnoreFlags && c.IsSet(FlagColumns) {
 		if columns == ColumnsLong {
 			opts.Fields = append(opts.Fields, opts.FieldsLong...)
 			opts.FieldsLong = []string{}
@@ -73,6 +74,11 @@ func PrintItems(c *cli.Context, items []interface{}, opts *PrintOptions) {
 			opts.Fields = cols
 			opts.FieldsLong = []string{}
 		}
+	}
+
+	output := opts.Output
+	if !opts.IgnoreFlags && c.IsSet(FlagOutput) {
+		output = OutputOption(outputFlag)
 	}
 
 	switch output {
