@@ -19,8 +19,8 @@ require (
 	github.com/temporalio/shared-go v1.0.0
 	github.com/urfave/cli/v2 v2.3.0
 	github.com/valyala/fastjson v1.6.3
-	go.temporal.io/api v1.4.1-0.20210429213054-a9a257b5cf16
-	go.temporal.io/sdk v1.7.0
+	go.temporal.io/api v1.4.1-0.20210622200201-edd2d5680749
+	go.temporal.io/sdk v1.8.0
 	go.temporal.io/server v1.9.2
 	google.golang.org/grpc v1.38.0
 )
