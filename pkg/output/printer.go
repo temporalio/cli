@@ -76,9 +76,11 @@ func PrintItems(c *cli.Context, items []interface{}, opts *PrintOptions) {
 		}
 	}
 
-	output := opts.Output
+	output := Table
 	if !opts.IgnoreFlags && c.IsSet(FlagOutput) {
 		output = OutputOption(outputFlag)
+	} else if opts.Output != "" {
+		output = opts.Output
 	}
 
 	switch output {
