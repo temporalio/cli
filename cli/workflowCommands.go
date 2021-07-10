@@ -174,22 +174,33 @@ func RunWorkflow(c *cli.Context) {
 		ErrorAndExit("Failed to run workflow.", err)
 	}
 
-	type row struct {
-		Field string
-		Value string
-	}
+	executionDetails := struct {
+		WorkflowId string
+		RunId      string
+		Type       string
+		Namespace  string
+		TaskQueue  string
+		Args       string
+	}{
 
-	executionData := []interface{}{
-		&row{Field: "Workflow Id", Value: wid},
-		&row{Field: "Run Id", Value: resp.GetRunId()},
-		&row{Field: "Type", Value: workflowType},
-		&row{Field: "Namespace", Value: namespace},
-		&row{Field: "Task Queue", Value: taskQueue},
-		&row{Field: "Args", Value: truncate(payloads.ToString(input))},
+		WorkflowId: wid,
+		RunId:      resp.GetRunId(),
+		Type:       workflowType,
+		Namespace:  namespace,
+		TaskQueue:  taskQueue,
+		Args:       truncate(payloads.ToString(input)),
+	}
+	data := []interface{}{
+		executionDetails,
 	}
 	fmt.Println(color.Magenta(c, "Running execution:"))
-	opts := &output.PrintOptions{Fields: []string{"Field", "Value"}, NoHeader: true}
-	output.PrintItems(c, executionData, opts)
+	opts := &output.PrintOptions{
+		Fields:      []string{"WorkflowId", "RunId", "Type", "Namespace", "TaskQueue", "Args"},
+		IgnoreFlags: true,
+		Output:      output.Card,
+		Separator:   "",
+	}
+	output.PrintItems(c, data, opts)
 
 	printWorkflowProgress(c, wid, resp.GetRunId())
 }
@@ -319,7 +330,6 @@ func printWorkflowProgress(c *cli.Context, wid, rid string) {
 	opts := &output.PrintOptions{
 		Fields:     []string{"ID", "Time", "Type"},
 		FieldsLong: []string{"Details"},
-		All:        true,
 	}
 	fmt.Println(color.Magenta(c, "Progress:"))
 	var lastEvent historypb.HistoryEvent // used for print result of this run
