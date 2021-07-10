@@ -87,7 +87,7 @@ func PrintItems(c *cli.Context, items []interface{}, opts *PrintOptions) {
 	case Table:
 		PrintTable(c, items, opts)
 	case JSON:
-		PrintJSON(items, opts)
+		PrintJSON(c, items, opts)
 	case Card:
 		PrintCards(c, items, opts)
 	default:
@@ -155,7 +155,7 @@ func formatField(c *cli.Context, i interface{}) string {
 	if typ == reflect.TypeOf(time.Time{}) {
 		return format.FormatTime(c, val.Interface().(time.Time))
 	} else if kin == reflect.Struct && val.CanInterface() {
-		str, _ := ParseToJSON(i, false)
+		str, _ := ParseToJSON(c, i, false)
 
 		return str
 	} else {

@@ -29,11 +29,15 @@ import (
 	"fmt"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/hokaccha/go-prettyjson"
 	"github.com/temporalio/shared-go/codec"
+	"github.com/urfave/cli/v2"
+
+	"github.com/temporalio/tctl/pkg/color"
 )
 
-func PrintJSON(o interface{}, opts *PrintOptions) {
-	json, err := ParseToJSON(o, true)
+func PrintJSON(c *cli.Context, o interface{}, opts *PrintOptions) {
+	json, err := ParseToJSON(c, o, true)
 
 	if err != nil {
 		fmt.Printf("Error when try to print pretty: %v\n", err)
@@ -43,22 +47,34 @@ func PrintJSON(o interface{}, opts *PrintOptions) {
 	fmt.Fprintln(opts.Pager, json)
 }
 
-func ParseToJSON(o interface{}, indent bool) (string, error) {
+func ParseToJSON(c *cli.Context, o interface{}, indent bool) (string, error) {
+	colorFlag := c.String(color.FlagColor)
+	enableColor := colorFlag == string(color.Auto) || colorFlag == string(color.Always)
 	var b []byte
 	var err error
-	if pb, ok := o.(proto.Message); ok {
-		var encoder *codec.JSONPBEncoder
-		if indent {
-			encoder = codec.NewJSONPBIndentEncoder("  ")
-		} else {
-			encoder = codec.NewJSONPBEncoder()
+
+	if enableColor {
+		encoder := prettyjson.NewFormatter()
+		if !indent {
+			encoder.Indent = 0
+			encoder.Newline = ""
 		}
-		b, err = encoder.Encode(pb)
+		b, err = encoder.Marshal(o)
 	} else {
-		if indent {
-			b, err = json.MarshalIndent(o, "", "  ")
+		if pb, ok := o.(proto.Message); ok {
+			var encoder *codec.JSONPBEncoder
+			if indent {
+				encoder = codec.NewJSONPBIndentEncoder("  ")
+			} else {
+				encoder = codec.NewJSONPBEncoder()
+			}
+			b, err = encoder.Encode(pb)
 		} else {
-			b, err = json.Marshal(o)
+			if indent {
+				b, err = json.MarshalIndent(o, "", "  ")
+			} else {
+				b, err = json.Marshal(o)
+			}
 		}
 	}
 
