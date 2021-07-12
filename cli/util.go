@@ -47,11 +47,11 @@ import (
 	historypb "go.temporal.io/api/history/v1"
 	sdkclient "go.temporal.io/sdk/client"
 
-	"github.com/temporalio/shared-go/codec"
-	"github.com/temporalio/shared-go/rpc"
 	"github.com/temporalio/tctl/cli/dataconverter"
 	"github.com/temporalio/tctl/cli/stringify"
 	"github.com/temporalio/tctl/common/payloads"
+	"go.temporal.io/server/common/codec"
+	"go.temporal.io/server/common/rpc"
 )
 
 // HistoryEventToString convert HistoryEvent to string

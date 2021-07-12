@@ -38,9 +38,9 @@ import (
 	"google.golang.org/grpc/credentials"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 
-	"github.com/temporalio/shared-go/auth"
-	"github.com/temporalio/shared-go/log"
-	"github.com/temporalio/shared-go/log/tag"
+	"go.temporal.io/server/common/auth"
+	"go.temporal.io/server/common/log"
+	"go.temporal.io/server/common/log/tag"
 )
 
 // ClientFactory is used to construct rpc clients

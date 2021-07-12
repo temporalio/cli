@@ -29,8 +29,8 @@ import (
 
 	sdklog "go.temporal.io/sdk/log"
 
-	log "github.com/temporalio/shared-go/log"
-	"github.com/temporalio/shared-go/log/tag"
+	log "go.temporal.io/server/common/log"
+	"go.temporal.io/server/common/log/tag"
 )
 
 const extraSkipForSdkLogger = 1

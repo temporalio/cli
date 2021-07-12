@@ -30,8 +30,8 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/hokaccha/go-prettyjson"
-	"github.com/temporalio/shared-go/codec"
 	"github.com/urfave/cli/v2"
+	"go.temporal.io/server/common/codec"
 
 	"github.com/temporalio/tctl/pkg/color"
 )

@@ -27,9 +27,9 @@ package cli
 import (
 	"github.com/urfave/cli/v2"
 
-	"github.com/temporalio/shared-go/headers"
 	"github.com/temporalio/tctl/cli/dataconverter"
 	"github.com/temporalio/tctl/cli/plugin"
+	"go.temporal.io/server/common/headers"
 )
 
 // SetFactory is used to set the ClientFactory global

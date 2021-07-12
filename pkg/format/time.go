@@ -31,7 +31,7 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/urfave/cli/v2"
 
-	"github.com/temporalio/shared-go/timestamp"
+	"go.temporal.io/server/common/primitives/timestamp"
 )
 
 const (

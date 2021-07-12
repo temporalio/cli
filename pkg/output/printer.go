@@ -31,10 +31,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/temporalio/shared-go/collection"
 	"github.com/temporalio/tctl/pkg/format"
 	"github.com/temporalio/tctl/pkg/pager"
 	"github.com/urfave/cli/v2"
+	"go.temporal.io/server/common/collection"
 )
 
 const (
