@@ -20,4 +20,5 @@ require (
 	go.temporal.io/sdk v1.8.0
 	go.temporal.io/server v1.10.1-0.20210710011605-ef4ee12f5bda
 	google.golang.org/grpc v1.38.0
+	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 )

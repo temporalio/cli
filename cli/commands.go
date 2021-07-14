@@ -17,6 +17,12 @@ var tctlCommands = []*cli.Command{
 		Usage:       "Operate Temporal workflow",
 		Subcommands: newWorkflowCommands(),
 	},
+	{
+		Name:        "config",
+		Aliases:     []string{"c"},
+		Usage:       "Configure tctl",
+		Subcommands: newConfigCommands(),
+	},
 	// {
 	// 	Name:        "activity",
 	// 	Aliases:     []string{"act"},
