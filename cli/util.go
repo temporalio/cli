@@ -49,8 +49,8 @@ import (
 
 	"github.com/temporalio/tctl/cli/dataconverter"
 	"github.com/temporalio/tctl/cli/stringify"
-	"github.com/temporalio/tctl/common/payloads"
 	"go.temporal.io/server/common/codec"
+	"go.temporal.io/server/common/payloads"
 	"go.temporal.io/server/common/rpc"
 )
 
