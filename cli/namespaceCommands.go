@@ -27,10 +27,9 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"os"
 	"strconv"
 
-	"github.com/olekukonko/tablewriter"
+	"github.com/temporalio/tctl/pkg/output"
 	"github.com/urfave/cli/v2"
 	enumspb "go.temporal.io/api/enums/v1"
 	namespacepb "go.temporal.io/api/namespace/v1"
@@ -288,53 +287,7 @@ func DescribeNamespace(c *cli.Context) {
 		ErrorAndExit(fmt.Sprintf("Namespace %s does not exist.", namespace), err)
 	}
 
-	printNamespace(resp)
-}
-
-func printNamespace(resp *workflowservice.DescribeNamespaceResponse) {
-	var formatStr = "Name: %v\nId: %v\nDescription: %v\nOwnerEmail: %v\nNamespaceData: %#v\nState: %v\nRetention: %v\n" +
-		"ActiveClusterName: %v\nClusters: %v\nHistoryArchivalState: %v\n"
-	descValues := []interface{}{
-		resp.NamespaceInfo.GetName(),
-		resp.NamespaceInfo.GetId(),
-		resp.NamespaceInfo.GetDescription(),
-		resp.NamespaceInfo.GetOwnerEmail(),
-		resp.NamespaceInfo.Data,
-		resp.NamespaceInfo.GetState(),
-		timestamp.DurationValue(resp.Config.GetWorkflowExecutionRetentionTtl()),
-		resp.ReplicationConfig.GetActiveClusterName(),
-		clustersToString(resp.ReplicationConfig.Clusters),
-		resp.Config.GetHistoryArchivalState().String(),
-	}
-	if resp.Config.GetHistoryArchivalUri() != "" {
-		formatStr = formatStr + "HistoryArchivalURI: %v\n"
-		descValues = append(descValues, resp.Config.GetHistoryArchivalUri())
-	}
-	formatStr = formatStr + "VisibilityArchivalState: %v\n"
-	descValues = append(descValues, resp.Config.GetVisibilityArchivalState().String())
-	if resp.Config.GetVisibilityArchivalUri() != "" {
-		formatStr = formatStr + "VisibilityArchivalURI: %v\n"
-		descValues = append(descValues, resp.Config.GetVisibilityArchivalUri())
-	}
-	fmt.Printf(formatStr, descValues...)
-	if resp.Config.BadBinaries != nil {
-		fmt.Println("Bad binaries to reset:")
-		table := tablewriter.NewWriter(os.Stdout)
-		table.SetBorder(true)
-		table.SetColumnSeparator("|")
-		header := []string{"Binary Checksum", "Operator", "Start Time", "Reason"}
-		headerColor := []tablewriter.Colors{tableHeaderBlue, tableHeaderBlue, tableHeaderBlue, tableHeaderBlue}
-		table.SetHeader(header)
-		table.SetHeaderColor(headerColor...)
-		for cs, bin := range resp.Config.BadBinaries.Binaries {
-			row := []string{cs}
-			row = append(row, bin.GetOperator())
-			row = append(row, timestamp.TimeValue(bin.GetCreateTime()).String())
-			row = append(row, bin.GetReason())
-			table.Append(row)
-		}
-		table.Render()
-	}
+	printNamespace(c, resp)
 }
 
 // ListNamespaces list all namespaces
@@ -342,8 +295,41 @@ func ListNamespaces(c *cli.Context) {
 
 	client := cFactory.FrontendClient(c)
 	for _, ns := range getAllNamespaces(c, client) {
-		printNamespace(ns)
+		printNamespace(c, ns)
 	}
+}
+
+func printNamespace(c *cli.Context, resp *workflowservice.DescribeNamespaceResponse) {
+	opts := &output.PrintOptions{
+		Fields:     []string{"NamespaceInfo.Name", "NamespaceInfo.Id", "NamespaceInfo.Description", "NamespaceInfo.OwnerEmail", "NamespaceInfo.State", "Config.WorkflowExecutionRetentionTtl", "ReplicationConfig.ActiveClusterName", "ReplicationConfig.Clusters", "Config.HistoryArchivalState", "Config.VisibilityArchivalState"},
+		FieldsLong: []string{"Config.HistoryArchivalUri", "Config.VisibilityArchivalUri"},
+		Output:     output.Card,
+		NoPager:    true,
+	}
+	output.PrintItems(c, []interface{}{resp}, opts)
+
+	type badBinary struct {
+		Checksum   string
+		Operator   string
+		CreateTime string
+		Reason     string
+	}
+	var badBinaries []interface{}
+
+	for cs, bin := range resp.Config.BadBinaries.Binaries {
+		badBinaries = append(badBinaries, badBinary{
+			Checksum:   cs,
+			Operator:   bin.GetOperator(),
+			CreateTime: timestamp.TimeValue(bin.GetCreateTime()).String(),
+			Reason:     bin.GetReason(),
+		})
+	}
+	bOpts := &output.PrintOptions{
+		Fields:      []string{"Checksum", "Operator", "CreateTime", "Reason"},
+		IgnoreFlags: true,
+		NoPager:     true,
+	}
+	output.PrintItems(c, badBinaries, bOpts)
 }
 
 func getAllNamespaces(c *cli.Context, tClient workflowservice.WorkflowServiceClient) []*workflowservice.DescribeNamespaceResponse {
