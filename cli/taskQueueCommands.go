@@ -25,55 +25,49 @@
 package cli
 
 import (
-	"os"
+	"fmt"
 
 	enumspb "go.temporal.io/api/enums/v1"
 	taskqueuepb "go.temporal.io/api/taskqueue/v1"
 	"go.temporal.io/api/workflowservice/v1"
 
-	"github.com/olekukonko/tablewriter"
 	"github.com/temporalio/tctl/pkg/color"
+	"github.com/temporalio/tctl/pkg/output"
 	"github.com/urfave/cli/v2"
-
-	"go.temporal.io/server/common/primitives/timestamp"
 )
 
 // DescribeTaskQueue show pollers info of a given taskqueue
-func DescribeTaskQueue(c *cli.Context) {
+func DescribeTaskQueue(c *cli.Context) error {
 	sdkClient := getSDKClient(c)
 	taskQueue := getRequiredOption(c, FlagTaskQueue)
-	taskQueueType := strToTaskQueueType(c.String(FlagTaskQueueType)) // default type is workflow
+	taskQueueType := strToTaskQueueType(c.String(FlagTaskQueueType))
 
 	ctx, cancel := newContext(c)
 	defer cancel()
-	response, err := sdkClient.DescribeTaskQueue(ctx, taskQueue, taskQueueType)
+	resp, err := sdkClient.DescribeTaskQueue(ctx, taskQueue, taskQueueType)
 	if err != nil {
-		ErrorAndExit("Operation DescribeTaskQueue failed.", err)
+		return fmt.Errorf("failed to describe task queue.\n%s", err)
 	}
 
-	pollers := response.Pollers
+	pollers := resp.Pollers
 	if len(pollers) == 0 {
-		ErrorAndExit(color.Magenta(c, "No poller for taskqueue: %v", taskQueue), nil)
+		return fmt.Errorf(color.Magenta(c, "no pollers running for task queue. %v", taskQueue))
 	}
 
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetBorder(false)
-	table.SetColumnSeparator("|")
-	if taskQueueType == enumspb.TASK_QUEUE_TYPE_ACTIVITY {
-		table.SetHeader([]string{"Activity Poller Identity", "Last Access Time"})
-	} else {
-		table.SetHeader([]string{"Workflow Poller Identity", "Last Access Time"})
+	opts := &output.PrintOptions{
+		Fields: []string{"Identity", "LastAccessTime", "RatePerSecond"},
 	}
-	table.SetHeaderLine(false)
-	table.SetHeaderColor(tableHeaderBlue, tableHeaderBlue)
-	for _, poller := range pollers {
-		table.Append([]string{poller.GetIdentity(), formatTime(timestamp.TimeValue(poller.GetLastAccessTime()), false)})
+	var items []interface{}
+	for _, e := range resp.Pollers {
+		items = append(items, e)
 	}
-	table.Render()
+	output.PrintItems(c, items, opts)
+
+	return nil
 }
 
 // ListTaskQueuePartitions gets all the taskqueue partition and host information.
-func ListTaskQueuePartitions(c *cli.Context) {
+func ListTaskQueuePartitions(c *cli.Context) error {
 	frontendClient := cFactory.FrontendClient(c)
 	namespace := getRequiredGlobalOption(c, FlagNamespace)
 	taskQueue := getRequiredOption(c, FlagTaskQueue)
@@ -88,27 +82,30 @@ func ListTaskQueuePartitions(c *cli.Context) {
 		},
 	}
 
-	response, err := frontendClient.ListTaskQueuePartitions(ctx, request)
+	resp, err := frontendClient.ListTaskQueuePartitions(ctx, request)
 	if err != nil {
-		ErrorAndExit("Operation ListTaskQueuePartitions failed.", err)
+		return fmt.Errorf("failed to list task queues.\n%s", err)
 	}
-	if len(response.WorkflowTaskQueuePartitions) > 0 {
-		printTaskQueuePartitions("Workflow", response.WorkflowTaskQueuePartitions)
-	}
-	if len(response.ActivityTaskQueuePartitions) > 0 {
-		printTaskQueuePartitions("Activity", response.ActivityTaskQueuePartitions)
-	}
-}
 
-func printTaskQueuePartitions(taskQueueType string, partitions []*taskqueuepb.TaskQueuePartitionMetadata) {
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetBorder(false)
-	table.SetColumnSeparator("|")
-	table.SetHeader([]string{taskQueueType + "TaskQueuePartition", "Host"})
-	table.SetHeaderLine(false)
-	table.SetHeaderColor(tableHeaderBlue, tableHeaderBlue)
-	for _, partition := range partitions {
-		table.Append([]string{partition.GetKey(), partition.GetOwnerHostName()})
+	optsW := &output.PrintOptions{
+		Fields: []string{"Key", "OwnerHostName"},
 	}
-	table.Render()
+
+	var items []interface{}
+	fmt.Println(color.Magenta(c, "Workflow TaskQueue Partitions\n"))
+	for _, e := range resp.WorkflowTaskQueuePartitions {
+		items = append(items, e)
+	}
+	output.PrintItems(c, items, optsW)
+
+	optsA := &output.PrintOptions{
+		Fields: []string{"Key", "OwnerHostName"},
+	}
+	items = items[:0]
+	fmt.Println(color.Magenta(c, "\nActivity TaskQueue Partitions\n"))
+	for _, e := range resp.ActivityTaskQueuePartitions {
+		items = append(items, e)
+	}
+	output.PrintItems(c, items, optsA)
+	return nil
 }

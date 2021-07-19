@@ -24,12 +24,12 @@
 
 package output
 
+import "fmt"
+
 const (
 	FlagOutput  = "output"
 	FlagColumns = "columns"
-)
 
-const (
 	ColumnsLong = "long"
 )
 
@@ -39,4 +39,8 @@ const (
 	Table OutputOption = "table"
 	JSON  OutputOption = "json"
 	Card  OutputOption = "card"
+)
+
+var (
+	UsageText = fmt.Sprintf("format output as: %v, %v, %v.", Table, JSON, Card)
 )

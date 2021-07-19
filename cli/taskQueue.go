@@ -24,7 +24,14 @@
 
 package cli
 
-import "github.com/urfave/cli/v2"
+import (
+	"fmt"
+
+	"github.com/temporalio/tctl/pkg/color"
+	"github.com/temporalio/tctl/pkg/flags"
+	"github.com/temporalio/tctl/pkg/output"
+	"github.com/urfave/cli/v2"
+)
 
 func newTaskQueueCommands() []*cli.Command {
 	return []*cli.Command{
@@ -32,7 +39,7 @@ func newTaskQueueCommands() []*cli.Command {
 			Name:    "describe",
 			Aliases: []string{"desc"},
 			Usage:   "Describe pollers info of task queue",
-			Flags: []cli.Flag{
+			Flags: append([]cli.Flag{
 				&cli.StringFlag{
 					Name:  FlagTaskQueueWithAlias,
 					Usage: "TaskQueue description",
@@ -42,10 +49,9 @@ func newTaskQueueCommands() []*cli.Command {
 					Value: "workflow",
 					Usage: "Optional TaskQueue type [workflow|activity]",
 				},
-			},
+			}, flags.FlagsForRendering...),
 			Action: func(c *cli.Context) error {
-				DescribeTaskQueue(c)
-				return nil
+				return DescribeTaskQueue(c)
 			},
 		},
 		{
@@ -57,10 +63,20 @@ func newTaskQueueCommands() []*cli.Command {
 					Name:  FlagTaskQueueWithAlias,
 					Usage: "TaskQueue description",
 				},
+				&cli.StringFlag{
+					Name:    output.FlagOutput,
+					Aliases: []string{"o"},
+					Usage:   output.UsageText,
+					Value:   string(output.Table),
+				},
+				&cli.StringFlag{
+					Name:  color.FlagColor,
+					Usage: fmt.Sprintf("when to use color: %v, %v, %v.", color.Auto, color.Always, color.Never),
+					Value: string(color.Auto),
+				},
 			},
 			Action: func(c *cli.Context) error {
-				ListTaskQueuePartitions(c)
-				return nil
+				return ListTaskQueuePartitions(c)
 			},
 		},
 	}

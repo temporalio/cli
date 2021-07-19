@@ -56,7 +56,7 @@ var FlagsForRendering = []cli.Flag{
 	&cli.StringFlag{
 		Name:    output.FlagOutput,
 		Aliases: []string{"o"},
-		Usage:   fmt.Sprintf("format output as: %v, %v, %v.", output.Table, output.JSON, output.Card),
+		Usage:   output.UsageText,
 		Value:   string(output.Table),
 	},
 	&cli.StringFlag{
