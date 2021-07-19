@@ -25,7 +25,6 @@
 package cli
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -39,49 +38,19 @@ import (
 	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/api/workflowservice/v1"
 
-	"go.temporal.io/server/common/namespace"
 	"go.temporal.io/server/common/primitives/timestamp"
 )
 
-type (
-	namespaceCLIImpl struct {
-		// used when making RPC call to frontend service``
-		frontendClient workflowservice.WorkflowServiceClient
-
-		// act as admin to modify namespace in DB directly
-		namespaceHandler namespace.Handler
-	}
-)
-
-// newNamespaceCLI creates a namespace CLI
-func newNamespaceCLI(
-	c *cli.Context,
-	isAdminMode bool,
-) *namespaceCLIImpl {
-
-	var frontendClient workflowservice.WorkflowServiceClient
-	var namespaceHandler namespace.Handler
-	if !isAdminMode {
-		frontendClient = initializeFrontendClient(c)
-	} else {
-		namespaceHandler = initializeAdminNamespaceHandler(c)
-	}
-	return &namespaceCLIImpl{
-		frontendClient:   frontendClient,
-		namespaceHandler: namespaceHandler,
-	}
-}
-
 // RegisterNamespace register a namespace
-func (d *namespaceCLIImpl) RegisterNamespace(c *cli.Context) {
+func RegisterNamespace(c *cli.Context) {
 	namespace := getRequiredGlobalOption(c, FlagNamespace)
-
 	description := c.String(FlagDescription)
 	ownerEmail := c.String(FlagOwnerEmail)
+
+	client := cFactory.FrontendClient(c)
+
 	retention := defaultNamespaceRetention
-
 	var err error
-
 	if c.IsSet(FlagRetention) {
 		retention, err = timestamp.ParseDurationDefaultDays(c.String(FlagRetention))
 		if err != nil {
@@ -147,7 +116,7 @@ func (d *namespaceCLIImpl) RegisterNamespace(c *cli.Context) {
 
 	ctx, cancel := newContext(c)
 	defer cancel()
-	err = d.registerNamespace(ctx, request)
+	_, err = client.RegisterNamespace(ctx, request)
 	if err != nil {
 		if _, ok := err.(*serviceerror.NamespaceAlreadyExists); !ok {
 			ErrorAndExit("Register namespace operation failed.", err)
@@ -160,8 +129,10 @@ func (d *namespaceCLIImpl) RegisterNamespace(c *cli.Context) {
 }
 
 // UpdateNamespace updates a namespace
-func (d *namespaceCLIImpl) UpdateNamespace(c *cli.Context) {
+func UpdateNamespace(c *cli.Context) {
 	namespace := getRequiredGlobalOption(c, FlagNamespace)
+
+	client := cFactory.FrontendClient(c)
 
 	var updateRequest *workflowservice.UpdateNamespaceRequest
 	ctx, cancel := newContext(c)
@@ -178,7 +149,7 @@ func (d *namespaceCLIImpl) UpdateNamespace(c *cli.Context) {
 			ReplicationConfig: replicationConfig,
 		}
 	} else {
-		resp, err := d.describeNamespace(ctx, &workflowservice.DescribeNamespaceRequest{
+		resp, err := client.DescribeNamespace(ctx, &workflowservice.DescribeNamespaceRequest{
 			Namespace: namespace,
 		})
 		if err != nil {
@@ -275,7 +246,7 @@ func (d *namespaceCLIImpl) UpdateNamespace(c *cli.Context) {
 		}
 	}
 
-	err := d.updateNamespace(ctx, updateRequest)
+	_, err := client.UpdateNamespace(ctx, updateRequest)
 	if err != nil {
 		if _, ok := err.(*serviceerror.NotFound); !ok {
 			ErrorAndExit("Operation UpdateNamespace failed.", err)
@@ -288,7 +259,7 @@ func (d *namespaceCLIImpl) UpdateNamespace(c *cli.Context) {
 }
 
 // DescribeNamespace updates a namespace
-func (d *namespaceCLIImpl) DescribeNamespace(c *cli.Context) {
+func DescribeNamespace(c *cli.Context) {
 	namespace := c.String(FlagNamespace)
 	namespaceID := c.String(FlagNamespaceID)
 
@@ -302,9 +273,11 @@ func (d *namespaceCLIImpl) DescribeNamespace(c *cli.Context) {
 		namespace = ""
 	}
 
+	client := cFactory.FrontendClient(c)
+
 	ctx, cancel := newContext(c)
 	defer cancel()
-	resp, err := d.describeNamespace(ctx, &workflowservice.DescribeNamespaceRequest{
+	resp, err := client.DescribeNamespace(ctx, &workflowservice.DescribeNamespaceRequest{
 		Namespace: namespace,
 		Id:        namespaceID,
 	})
@@ -365,13 +338,15 @@ func printNamespace(resp *workflowservice.DescribeNamespaceResponse) {
 }
 
 // ListNamespaces list all namespaces
-func (d *namespaceCLIImpl) ListNamespaces(c *cli.Context) {
-	for _, ns := range d.getAllNamespaces(c) {
+func ListNamespaces(c *cli.Context) {
+
+	client := cFactory.FrontendClient(c)
+	for _, ns := range getAllNamespaces(c, client) {
 		printNamespace(ns)
 	}
 }
 
-func (d *namespaceCLIImpl) getAllNamespaces(c *cli.Context) []*workflowservice.DescribeNamespaceResponse {
+func getAllNamespaces(c *cli.Context, tClient workflowservice.WorkflowServiceClient) []*workflowservice.DescribeNamespaceResponse {
 	var res []*workflowservice.DescribeNamespaceResponse
 	pagesize := int32(200)
 	var token []byte
@@ -382,7 +357,7 @@ func (d *namespaceCLIImpl) getAllNamespaces(c *cli.Context) []*workflowservice.D
 			PageSize:      pagesize,
 			NextPageToken: token,
 		}
-		listResp, err := d.listNamespaces(ctx, listRequest)
+		listResp, err := tClient.ListNamespaces(ctx, listRequest)
 		if err != nil {
 			ErrorAndExit("Error when list namespaces info", err)
 		}
@@ -390,57 +365,6 @@ func (d *namespaceCLIImpl) getAllNamespaces(c *cli.Context) []*workflowservice.D
 		res = append(res, listResp.GetNamespaces()...)
 	}
 	return res
-}
-
-func (d *namespaceCLIImpl) listNamespaces(
-	ctx context.Context,
-	request *workflowservice.ListNamespacesRequest,
-) (*workflowservice.ListNamespacesResponse, error) {
-
-	if d.frontendClient != nil {
-		return d.frontendClient.ListNamespaces(ctx, request)
-	}
-
-	return d.namespaceHandler.ListNamespaces(ctx, request)
-}
-
-func (d *namespaceCLIImpl) registerNamespace(
-	ctx context.Context,
-	request *workflowservice.RegisterNamespaceRequest,
-) error {
-	if d.frontendClient != nil {
-		_, err := d.frontendClient.RegisterNamespace(ctx, request)
-		return err
-	}
-
-	_, err := d.namespaceHandler.RegisterNamespace(ctx, request)
-	return err
-}
-
-func (d *namespaceCLIImpl) updateNamespace(
-	ctx context.Context,
-	request *workflowservice.UpdateNamespaceRequest,
-) error {
-	if d.frontendClient != nil {
-		_, err := d.frontendClient.UpdateNamespace(ctx, request)
-		return err
-	}
-
-	_, err := d.namespaceHandler.UpdateNamespace(ctx, request)
-	return err
-}
-
-func (d *namespaceCLIImpl) describeNamespace(
-	ctx context.Context,
-	request *workflowservice.DescribeNamespaceRequest,
-) (*workflowservice.DescribeNamespaceResponse, error) {
-
-	if d.frontendClient != nil {
-		return d.frontendClient.DescribeNamespace(ctx, request)
-	}
-
-	resp, err := d.namespaceHandler.DescribeNamespace(ctx, request)
-	return resp, err
 }
 
 func clustersToString(clusters []*replicationpb.ClusterReplicationConfig) string {
