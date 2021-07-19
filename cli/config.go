@@ -44,6 +44,14 @@ func newConfigCommands() []*cli.Command {
 				return GetValue(c)
 			},
 		},
+		{
+			Name:  "set",
+			Usage: "set property",
+			Flags: []cli.Flag{},
+			Action: func(c *cli.Context) error {
+				return SetValue(c)
+			},
+		},
 	}
 }
 
@@ -70,6 +78,26 @@ func GetValue(c *cli.Context) error {
 	if err != nil {
 		ErrorAndExit(fmt.Sprintf("unable to get property %v.", key), err)
 	}
+	fmt.Printf("%v: %v\n", color.Magenta(c, "%v", key), val)
+	return nil
+}
+
+func SetValue(c *cli.Context) error {
+	if c.NArg() != 2 {
+		ErrorAndExit("invalid number of args, expected 2: property and value", nil)
+	}
+
+	key := c.Args().Get(0)
+	val := c.Args().Get(1)
+
+	if err := validateKey(key); err != nil {
+		ErrorAndExit(fmt.Sprintf("unable to set property %v.", key), err)
+	}
+
+	if err := config.Set(key, val); err != nil {
+		ErrorAndExit(fmt.Sprintf("unable to set property %v.", key), err)
+	}
+
 	fmt.Printf("%v: %v\n", color.Magenta(c, "%v", key), val)
 	return nil
 }

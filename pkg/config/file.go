@@ -46,6 +46,26 @@ func (c *Config) GetValue(key string) (string, error) {
 	return config.Value, nil
 }
 
+func (c *Config) SetValue(key string, value string) error {
+	record, err := c.getRecord(key)
+	if err != nil {
+		key := &yaml.Node{
+			Kind:  yaml.ScalarNode,
+			Value: key,
+		}
+		value := &yaml.Node{
+			Kind:  yaml.ScalarNode,
+			Value: value,
+		}
+
+		c.Root.Content[0].Content = append(c.Root.Content[0].Content, key, value)
+	} else if record != nil {
+		record.Value = value
+	}
+
+	return writeConfig(c)
+}
+
 func (c *Config) getRecord(key string) (*yaml.Node, error) {
 	if len(c.Root.Content) > 0 {
 		nodes := c.Root.Content[0].Content
@@ -86,7 +106,33 @@ func readConfig() (*Config, error) {
 		return nil, err
 	}
 
+	if config.Kind == yaml.Kind(0) || len(config.Content) == 0 {
+		config.Kind = yaml.DocumentNode
+		config.Content = []*yaml.Node{{Kind: yaml.MappingNode}}
+	}
+
 	return &Config{Root: &config}, nil
+}
+
+func writeConfig(cfg *Config) error {
+	data, err := yaml.Marshal(cfg.Root)
+	if err != nil {
+		return err
+	}
+
+	fpath, err := configFile()
+	if err != nil {
+		return err
+	}
+
+	file, err := os.OpenFile(fpath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.FileMode(0666))
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	_, err = file.Write(data)
+	return err
 }
 
 func configFile() (string, error) {

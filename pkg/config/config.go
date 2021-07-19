@@ -35,3 +35,11 @@ func Get(key string) (string, error) {
 	}
 	return config.GetValue(key)
 }
+
+func Set(key string, value string) error {
+	config, err := readConfig()
+	if err != nil {
+		return err
+	}
+	return config.SetValue(key, value)
+}
