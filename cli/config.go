@@ -103,6 +103,10 @@ func SetValue(c *cli.Context) error {
 }
 
 func validateKey(key string) error {
+	// in composite keys such as alias.mycommand, the first part before dot is configuration property name
+	// second part is custom value
+	key = strings.Split(key, ".")[0]
+
 	for _, k := range validKeys {
 		if strings.Compare(key, k) == 0 {
 			return nil

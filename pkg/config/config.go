@@ -24,6 +24,10 @@
 
 package config
 
+import (
+	"gopkg.in/yaml.v3"
+)
+
 const (
 	FlagConfig = "config"
 )
@@ -33,7 +37,7 @@ func Get(key string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return config.GetValue(key)
+	return config.GetScalarValue(key)
 }
 
 func Set(key string, value string) error {
@@ -41,5 +45,14 @@ func Set(key string, value string) error {
 	if err != nil {
 		return err
 	}
-	return config.SetValue(key, value)
+
+	if isSequenceKey(key) {
+		return config.SetSequenceValue(key, value)
+	}
+
+	return config.SetScalarValue(key, value)
+}
+
+type Config struct {
+	Root *yaml.Node
 }

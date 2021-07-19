@@ -25,7 +25,6 @@
 package config
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -33,55 +32,6 @@ import (
 
 	"gopkg.in/yaml.v3"
 )
-
-type Config struct {
-	Root *yaml.Node
-}
-
-func (c *Config) GetValue(key string) (string, error) {
-	config, err := c.getRecord(key)
-	if err != nil {
-		return "", err
-	}
-	return config.Value, nil
-}
-
-func (c *Config) SetValue(key string, value string) error {
-	record, err := c.getRecord(key)
-	if err != nil {
-		key := &yaml.Node{
-			Kind:  yaml.ScalarNode,
-			Value: key,
-		}
-		value := &yaml.Node{
-			Kind:  yaml.ScalarNode,
-			Value: value,
-		}
-
-		c.Root.Content[0].Content = append(c.Root.Content[0].Content, key, value)
-	} else if record != nil {
-		record.Value = value
-	}
-
-	return writeConfig(c)
-}
-
-func (c *Config) getRecord(key string) (*yaml.Node, error) {
-	if len(c.Root.Content) > 0 {
-		nodes := c.Root.Content[0].Content
-		for i, n := range nodes {
-			if n.Value == key {
-				var value *yaml.Node
-				if i < len(nodes)-1 {
-					value = nodes[i+1]
-				}
-				return value, nil
-			}
-		}
-	}
-
-	return nil, errors.New("unable to find key " + key)
-}
 
 func readConfig() (*Config, error) {
 	path, err := configFile()
@@ -100,20 +50,18 @@ func readConfig() (*Config, error) {
 		return nil, err
 	}
 
-	var config yaml.Node
-	err = yaml.Unmarshal(data, &config)
+	var cfgNode yaml.Node
+	err = yaml.Unmarshal(data, &cfgNode)
 	if err != nil {
 		return nil, err
 	}
 
-	if config.Kind == yaml.Kind(0) || len(config.Content) == 0 {
-		config.Kind = yaml.DocumentNode
-		config.Content = []*yaml.Node{{Kind: yaml.MappingNode}}
-	}
+	cfg := &Config{Root: &cfgNode}
 
-	return &Config{Root: &config}, nil
+	err = setRootIfEmpty(cfg)
+
+	return cfg, err
 }
-
 func writeConfig(cfg *Config) error {
 	data, err := yaml.Marshal(cfg.Root)
 	if err != nil {
@@ -169,4 +117,13 @@ func configDir() (string, error) {
 	}
 
 	return dpath, nil
+}
+
+func setRootIfEmpty(cfg *Config) error {
+	if cfg.Root.Kind == yaml.Kind(0) || len(cfg.Root.Content) == 0 {
+		cfg.Root.Kind = yaml.DocumentNode
+		cfg.Root.Content = []*yaml.Node{{Kind: yaml.MappingNode}}
+	}
+
+	return nil
 }
