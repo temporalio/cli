@@ -22,56 +22,42 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package config
+package cli
 
 import (
-	"gopkg.in/yaml.v3"
+	"fmt"
+	"os"
+	"strings"
+
+	"github.com/urfave/cli/v2"
+
+	"github.com/temporalio/tctl/pkg/config"
 )
 
-const (
-	FlagConfig = "config"
-)
-
-func Get(key string) (string, error) {
-	config, err := readConfig()
+func useAliasCommands(app *cli.App) {
+	aliases, err := config.GetSequence("alias")
 	if err != nil {
-		return "", err
+		fmt.Print(err)
+		return
 	}
 
-	if isSequenceKey(key) {
-		seqKey, entKey, _ := splitKey(key)
-		entries, err := config.GetSequence(seqKey)
-		if err != nil {
-			return "", err
+	app.CommandNotFound = func(ctx *cli.Context, cmdToFind string) {
+		found := false
+		for aliasCmd, aliasVal := range aliases {
+			if strings.Compare(cmdToFind, aliasCmd) == 0 {
+				found = true
+
+				passedArgs := ctx.Args().Slice()
+				aliasArgs := strings.Split(aliasVal, " ")
+				args := append(passedArgs, aliasArgs...)
+
+				app.Run(args)
+				break
+			}
 		}
-		return entries[entKey], nil
+
+		if !found {
+			fmt.Fprintf(os.Stderr, "%s is not a command. See '%s --help\n'", cmdToFind, ctx.App.Name)
+		}
 	}
-
-	return config.GetScalarValue(key)
-}
-
-func Set(key string, value string) error {
-	config, err := readConfig()
-	if err != nil {
-		return err
-	}
-
-	if isSequenceKey(key) {
-		return config.SetSequenceValue(key, value)
-	}
-
-	return config.SetScalarValue(key, value)
-}
-
-func GetSequence(key string) (map[string]string, error) {
-	config, err := readConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	return config.GetSequence(key)
-}
-
-type Config struct {
-	Root *yaml.Node
 }

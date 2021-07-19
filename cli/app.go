@@ -107,6 +107,8 @@ func NewCliApp() *cli.App {
 	app.Before = loadPlugins
 	app.After = stopPlugins
 
+	useAliasCommands(app)
+
 	// set builder if not customized
 	if cFactory == nil {
 		SetFactory(NewClientFactory())

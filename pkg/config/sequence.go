@@ -31,7 +31,32 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// SetSequenceValue sets an entry for sequence property
+// GetSequence returns a key: value of sequence entries
+// ex. for sequence in .yml:
+// mySequence: # root
+//   - key: myKey1 # entry 1
+//     value: myValue1
+//   - key: myKey2 # entry 2
+//     value: myValue2
+// returns map[string]string{ "myKey1": "myValue1", "myKey2": "myValue2" }
+func (cfg *Config) GetSequence(seqKey string) (map[string]string, error) {
+	seq, err := cfg.getScalarNode(seqKey)
+	if err != nil {
+		return nil, err
+	}
+
+	entries := seq.Content
+	res := make(map[string]string, len(entries))
+	for _, entry := range entries {
+		key := entry.Content[1].Value
+		value := entry.Content[3].Value
+		res[key] = value
+	}
+
+	return res, nil
+}
+
+// SetSequenceValue set an entry for sequence property
 // ex. of sequence in .yml:
 // mySequence: # root
 //   - key: myKey1 # entry 1
