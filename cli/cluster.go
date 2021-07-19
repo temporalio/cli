@@ -24,7 +24,13 @@
 
 package cli
 
-import "github.com/urfave/cli/v2"
+import (
+	"fmt"
+
+	"github.com/temporalio/tctl/pkg/color"
+	"github.com/temporalio/tctl/pkg/output"
+	"github.com/urfave/cli/v2"
+)
 
 func newClusterCommands() []*cli.Command {
 	return []*cli.Command{
@@ -33,17 +39,28 @@ func newClusterCommands() []*cli.Command {
 			Aliases: []string{"h"},
 			Usage:   "Check health of frontend service",
 			Action: func(c *cli.Context) error {
-				HealthCheck(c)
-				return nil
+				return HealthCheck(c)
 			},
 		},
 		{
-			Name:    "get-search-attributes",
+			Name:    "list-search-attributes",
 			Usage:   "List search attributes that can be used in list workflow query",
 			Aliases: []string{"gsa"},
+			Flags: []cli.Flag{
+				&cli.StringFlag{
+					Name:    output.FlagOutput,
+					Aliases: []string{"o"},
+					Usage:   output.UsageText,
+					Value:   string(output.Table),
+				},
+				&cli.StringFlag{
+					Name:  color.FlagColor,
+					Usage: fmt.Sprintf("when to use color: %v, %v, %v.", color.Auto, color.Always, color.Never),
+					Value: string(color.Auto),
+				},
+			},
 			Action: func(c *cli.Context) error {
-				GetSearchAttributes(c)
-				return nil
+				return GetSearchAttributes(c)
 			},
 		},
 	}

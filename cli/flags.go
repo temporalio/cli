@@ -361,13 +361,13 @@ var flagsForRunWorkflow = []cli.Flag{
 	&cli.StringFlag{
 		Name: FlagSearchAttributesKey,
 		Usage: "Optional search attributes keys that can be be used in list query. If there are multiple keys, concatenate them and separate by |. " +
-			"Use 'cluster get-search-attr' cmd to list legal keys.",
+			"Use 'cluster list-search-attr' cmd to list legal keys.",
 	},
 	&cli.StringFlag{
 		Name: FlagSearchAttributesVal,
 		Usage: "Optional search attributes value that can be be used in list query. If there are multiple keys, concatenate them and separate by |. " +
 			"If value is array, use json array like [\"a\",\"b\"], [1,2], [\"true\",\"false\"], [\"2019-06-07T17:16:34-08:00\",\"2019-06-07T18:16:34-08:00\"]. " +
-			"Use 'cluster get-search-attr' cmd to list legal keys and value types",
+			"Use 'cluster list-search-attr' cmd to list legal keys and value types",
 	},
 }
 

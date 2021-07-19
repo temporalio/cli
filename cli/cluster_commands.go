@@ -25,46 +25,70 @@
 package cli
 
 import (
-	"os"
-	"sort"
+	"fmt"
 
-	"github.com/fatih/color"
-	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli/v2"
-	enumspb "go.temporal.io/api/enums/v1"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
+
+	"github.com/temporalio/tctl/pkg/color"
+	"github.com/temporalio/tctl/pkg/output"
 )
 
-// GetSearchAttributes get valid search attributes
-func GetSearchAttributes(c *cli.Context) {
+const (
+	fullWorkflowServiceName = "temporal.api.workflowservice.v1.WorkflowService"
+)
+
+// HealthCheck check frontend health.
+func HealthCheck(c *cli.Context) error {
+	healthClient := cFactory.HealthClient(c)
+	ctx, cancel := newContext(c)
+	defer cancel()
+
+	req := &healthpb.HealthCheckRequest{
+		Service: fullWorkflowServiceName,
+	}
+	resp, err := healthClient.Check(ctx, req)
+
+	if err != nil {
+		return fmt.Errorf("unable to check health, service: %q.\n%s", req.GetService(), err)
+	}
+
+	fmt.Printf("%s: ", req.GetService())
+	if resp.Status != healthpb.HealthCheckResponse_SERVING {
+		fmt.Println(color.Red(c, "%v", resp.Status))
+		return nil
+	}
+
+	fmt.Println(color.Green(c, "%v", resp.Status))
+	return nil
+}
+
+// ListSearchAttributes lists search attributes
+func ListSearchAttributes(c *cli.Context) error {
 	wfClient := getSDKClient(c)
 	ctx, cancel := newContext(c)
 	defer cancel()
 
 	resp, err := wfClient.GetSearchAttributes(ctx)
 	if err != nil {
-		ErrorAndExit("Unable to get search attributes.", err)
+		return fmt.Errorf("unable to get search attributes.\n%s", err)
 	}
 
-	printSearchAttributes(resp.GetKeys(), "Search attributes")
-}
-
-func printSearchAttributes(searchAttributes map[string]enumspb.IndexedValueType, header string) {
-	var rows [][]string
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Name", "Type"})
-	table.SetHeaderColor(tableHeaderBlue, tableHeaderBlue)
-
-	color.Cyan("%s:\n", header)
-	for saName, saType := range searchAttributes {
-		rows = append(rows,
-			[]string{
-				saName,
-				saType.String(),
-			})
+	searchAttributes := resp.GetKeys()
+	var items []interface{}
+	type sa struct {
+		Name string
+		Type string
 	}
-	sort.Slice(rows, func(i, j int) bool {
-		return rows[i][0] < rows[j][0]
-	})
-	table.AppendBulk(rows)
-	table.Render()
+	for key, val := range searchAttributes {
+		items = append(items, sa{Name: key, Type: val.String()})
+	}
+
+	opts := &output.PrintOptions{
+		Fields:  []string{"Name", "Type"},
+		NoPager: true,
+	}
+	output.PrintItems(c, items, opts)
+
+	return nil
 }
