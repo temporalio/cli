@@ -60,7 +60,7 @@ func newClusterCommands() []*cli.Command {
 				},
 			},
 			Action: func(c *cli.Context) error {
-				return GetSearchAttributes(c)
+				return ListSearchAttributes(c)
 			},
 		},
 	}

@@ -43,25 +43,8 @@ import (
 	"go.temporal.io/server/service/worker/batcher"
 )
 
-// TerminateBatchJob stops abatch job
-func TerminateBatchJob(c *cli.Context) {
-	jobID := getRequiredOption(c, FlagJobID)
-	reason := getRequiredOption(c, FlagReason)
-	client := cFactory.SDKClient(c, common.SystemLocalNamespace)
-	tcCtx, cancel := newContext(c)
-	defer cancel()
-	err := client.TerminateWorkflow(tcCtx, jobID, "", reason, nil)
-	if err != nil {
-		ErrorAndExit("Failed to terminate batch job", err)
-	}
-	output := map[string]interface{}{
-		"msg": "batch job is terminated",
-	}
-	prettyPrintJSONObject(output)
-}
-
 // DescribeBatchJob describe the status of the batch job
-func DescribeBatchJob(c *cli.Context) {
+func DescribeBatchJob(c *cli.Context) error {
 	jobID := getRequiredOption(c, FlagJobID)
 
 	client := cFactory.SDKClient(c, common.SystemLocalNamespace)
@@ -69,7 +52,7 @@ func DescribeBatchJob(c *cli.Context) {
 	defer cancel()
 	wf, err := client.DescribeWorkflowExecution(tcCtx, jobID, "")
 	if err != nil {
-		ErrorAndExit("Failed to describe batch job", err)
+		return fmt.Errorf("failed to describe batch job: %w", err)
 	}
 
 	output := map[string]interface{}{}
@@ -86,16 +69,17 @@ func DescribeBatchJob(c *cli.Context) {
 			var hbd batcher.HeartBeatDetails
 			err := payloads.Decode(hbdPayload, &hbd)
 			if err != nil {
-				ErrorAndExit("Failed to describe batch job", err)
+				return fmt.Errorf("failed to describe batch job: %w", err)
 			}
 			output["progress"] = hbd
 		}
 	}
 	prettyPrintJSONObject(output)
+	return nil
 }
 
 // ListBatchJobs list the started batch jobs
-func ListBatchJobs(c *cli.Context) {
+func ListBatchJobs(c *cli.Context) error {
 	namespace := getRequiredGlobalOption(c, FlagNamespace)
 	pageSize := c.Int(FlagPageSize)
 	client := cFactory.SDKClient(c, common.SystemLocalNamespace)
@@ -107,7 +91,7 @@ func ListBatchJobs(c *cli.Context) {
 		Query:     fmt.Sprintf("%s = '%s'", searchattribute.BatcherNamespace, namespace),
 	})
 	if err != nil {
-		ErrorAndExit("Failed to list batch jobs", err)
+		return fmt.Errorf("failed to list batch jobs: %w", err)
 	}
 
 	output := make([]interface{}, 0, len(resp.Executions))
@@ -115,12 +99,12 @@ func ListBatchJobs(c *cli.Context) {
 		var reason, operator string
 		err = payload.Decode(wf.Memo.Fields["Reason"], &reason)
 		if err != nil {
-			ErrorAndExit("Failed to deserialize reason memo field", err)
+			return fmt.Errorf("failed to deserialize reason memo field: %w", err)
 		}
 
 		err = payload.Decode(wf.SearchAttributes.IndexedFields[searchattribute.BatcherUser], &operator)
 		if err != nil {
-			ErrorAndExit("Failed to deserialize operator search attribute", err)
+			return fmt.Errorf("failed to deserialize operator search attribute: %w", err)
 		}
 
 		job := map[string]string{
@@ -140,16 +124,17 @@ func ListBatchJobs(c *cli.Context) {
 		output = append(output, job)
 	}
 	prettyPrintJSONObject(output)
+	return nil
 }
 
 // StartBatchJob starts a batch job
-func StartBatchJob(c *cli.Context) {
+func StartBatchJob(c *cli.Context) error {
 	namespace := getRequiredGlobalOption(c, FlagNamespace)
 	query := getRequiredOption(c, FlagListQuery)
 	reason := getRequiredOption(c, FlagReason)
 	batchType := getRequiredOption(c, FlagBatchType)
 	if !validateBatchType(batchType) {
-		ErrorAndExit("batchType is not valid, supported:"+strings.Join(batcher.AllBatchTypes, ","), nil)
+		return fmt.Errorf("unknown batch type, supported types: %s", strings.Join(batcher.AllBatchTypes, ","))
 	}
 	operator := getCurrentUserFromEnv()
 	var sigName, sigVal string
@@ -167,7 +152,7 @@ func StartBatchJob(c *cli.Context) {
 		Query:     query,
 	})
 	if err != nil {
-		ErrorAndExit("Failed to count impacting workflows for starting a batch job", err)
+		return fmt.Errorf("failed to count impacted workflows: %w", err)
 	}
 	fmt.Printf("This batch job will be operating on %v workflows.\n", resp.GetCount())
 	if !c.Bool(FlagYes) {
@@ -176,13 +161,13 @@ func StartBatchJob(c *cli.Context) {
 			fmt.Print("Please confirm[Yes/No]:")
 			text, err := reader.ReadString('\n')
 			if err != nil {
-				ErrorAndExit("Failed to  get confirmation for starting a batch job", err)
+				return fmt.Errorf("failed to get confirmation to start a batch job: %w", err)
 			}
 			if strings.EqualFold(strings.TrimSpace(text), "yes") {
 				break
 			} else {
 				fmt.Println("Batch job is not started")
-				return
+				return nil
 			}
 		}
 
@@ -202,7 +187,7 @@ func StartBatchJob(c *cli.Context) {
 
 	sigInput, err := payloads.Encode(sigVal)
 	if err != nil {
-		ErrorAndExit("Failed to serialize signal value", err)
+		return fmt.Errorf("failed to serialize signal value: %w", err)
 	}
 
 	params := batcher.BatchParams{
@@ -218,13 +203,32 @@ func StartBatchJob(c *cli.Context) {
 	}
 	wf, err := client.ExecuteWorkflow(tcCtx, options, batcher.BatchWFTypeName, params)
 	if err != nil {
-		ErrorAndExit("Failed to start batch job", err)
+		return fmt.Errorf("failed to start batch job: %w", err)
 	}
 	output := map[string]interface{}{
 		"msg":   "batch job is started",
 		"jobId": wf.GetID(),
 	}
 	prettyPrintJSONObject(output)
+	return nil
+}
+
+// TerminateBatchJob stops abatch job
+func TerminateBatchJob(c *cli.Context) error {
+	jobID := getRequiredOption(c, FlagJobID)
+	reason := getRequiredOption(c, FlagReason)
+	client := cFactory.SDKClient(c, common.SystemLocalNamespace)
+	tcCtx, cancel := newContext(c)
+	defer cancel()
+	err := client.TerminateWorkflow(tcCtx, jobID, "", reason, nil)
+	if err != nil {
+		return fmt.Errorf("failed to terminate batch job: %w", err)
+	}
+	output := map[string]interface{}{
+		"msg": "batch job is terminated",
+	}
+	prettyPrintJSONObject(output)
+	return nil
 }
 
 func validateBatchType(bt string) bool {

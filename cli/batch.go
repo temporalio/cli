@@ -35,9 +35,8 @@ import (
 func newBatchCommands() []*cli.Command {
 	return []*cli.Command{
 		{
-			Name:    "describe",
-			Aliases: []string{"desc"},
-			Usage:   "Describe a batch operation job",
+			Name:  "describe",
+			Usage: "Describe a batch operation job",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:  FlagJobIDWithAlias,
@@ -45,32 +44,12 @@ func newBatchCommands() []*cli.Command {
 				},
 			},
 			Action: func(c *cli.Context) error {
-				DescribeBatchJob(c)
-				return nil
+				return DescribeBatchJob(c)
 			},
 		},
 		{
-			Name:  "terminate",
-			Usage: "terminate a batch operation job",
-			Flags: []cli.Flag{
-				&cli.StringFlag{
-					Name:  FlagJobIDWithAlias,
-					Usage: "Batch Job Id",
-				},
-				&cli.StringFlag{
-					Name:  FlagReasonWithAlias,
-					Usage: "Reason to stop this batch job",
-				},
-			},
-			Action: func(c *cli.Context) error {
-				TerminateBatchJob(c)
-				return nil
-			},
-		},
-		{
-			Name:    "list",
-			Aliases: []string{"l"},
-			Usage:   "Describe a batch operation job",
+			Name:  "list",
+			Usage: "List batch operation jobs",
 			Flags: []cli.Flag{
 				&cli.IntFlag{
 					Name:  FlagPageSizeWithAlias,
@@ -79,8 +58,7 @@ func newBatchCommands() []*cli.Command {
 				},
 			},
 			Action: func(c *cli.Context) error {
-				ListBatchJobs(c)
-				return nil
+				return ListBatchJobs(c)
 			},
 		},
 		{
@@ -99,7 +77,6 @@ func newBatchCommands() []*cli.Command {
 					Name:  FlagBatchTypeWithAlias,
 					Usage: "Types supported: " + strings.Join(batcher.AllBatchTypes, ","),
 				},
-				//below are optional
 				&cli.StringFlag{
 					Name:  FlagSignalNameWithAlias,
 					Usage: "Required for batch signal",
@@ -119,8 +96,24 @@ func newBatchCommands() []*cli.Command {
 				},
 			},
 			Action: func(c *cli.Context) error {
-				StartBatchJob(c)
-				return nil
+				return StartBatchJob(c)
+			},
+		},
+		{
+			Name:  "terminate",
+			Usage: "terminate a batch operation job",
+			Flags: []cli.Flag{
+				&cli.StringFlag{
+					Name:  FlagJobIDWithAlias,
+					Usage: "Batch Job Id",
+				},
+				&cli.StringFlag{
+					Name:  FlagReasonWithAlias,
+					Usage: "Reason to stop this batch job",
+				},
+			},
+			Action: func(c *cli.Context) error {
+				return TerminateBatchJob(c)
 			},
 		},
 	}
