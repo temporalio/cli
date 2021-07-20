@@ -25,10 +25,15 @@
 package cli
 
 import (
+	"fmt"
+	"os"
+	"runtime/debug"
+
 	"github.com/urfave/cli/v2"
 
 	"github.com/temporalio/tctl/cli/dataconverter"
 	"github.com/temporalio/tctl/cli/plugin"
+	"github.com/temporalio/tctl/pkg/color"
 	"go.temporal.io/server/common/headers"
 )
 
@@ -106,7 +111,7 @@ func NewCliApp() *cli.App {
 	app.Commands = tctlCommands
 	app.Before = loadPlugins
 	app.After = stopPlugins
-
+	app.ExitErrHandler = handleError
 	useAliasCommands(app)
 
 	// set builder if not customized
@@ -134,4 +139,15 @@ func stopPlugins(ctx *cli.Context) error {
 	plugin.StopPlugins()
 
 	return nil
+}
+
+func handleError(c *cli.Context, err error) {
+	fmt.Fprintf(os.Stderr, "%s %+v\n", color.Red(c, "Error:"), err)
+	if os.Getenv(showErrorStackEnv) != `` {
+		fmt.Fprintln(os.Stderr, color.Magenta(c, "Stack trace:"))
+		debug.PrintStack()
+	} else {
+		fmt.Fprintf(os.Stderr, "('export %s=1' to see stack traces)\n", showErrorStackEnv)
+	}
+	os.Exit(1)
 }
