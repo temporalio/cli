@@ -142,6 +142,10 @@ func stopPlugins(ctx *cli.Context) error {
 }
 
 func handleError(c *cli.Context, err error) {
+	if err == nil {
+		return
+	}
+
 	fmt.Fprintf(os.Stderr, "%s %+v\n", color.Red(c, "Error:"), err)
 	if os.Getenv(showErrorStackEnv) != `` {
 		fmt.Fprintln(os.Stderr, color.Magenta(c, "Stack trace:"))
