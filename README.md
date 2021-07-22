@@ -1,3 +1,8 @@
+**NOT READY FOR PRODUCTION**
+This is an ongoing work on tctl UX based on proposals:
+ - https://github.com/temporalio/proposals/tree/master/cli
+ - https://github.com/temporalio/proposals/pulls (marked with tctl)
+
 Documentation for the Temporal command line interface is located at our [main site](https://docs.temporal.io/docs/system-tools/tctl).
 
 ## Quick Start
