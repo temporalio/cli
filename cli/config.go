@@ -60,6 +60,7 @@ var (
 		"namespace",
 		"address",
 		"alias",
+		"version",
 	}
 )
 
