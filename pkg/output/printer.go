@@ -96,7 +96,6 @@ func PrintItems(c *cli.Context, items []interface{}, opts *PrintOptions) {
 
 // Pager creates an interactive CLI mode to control the printing of items
 func Pager(c *cli.Context, iter collection.Iterator, opts *PrintOptions) error {
-	noPager := c.Bool(pager.FlagNoPager)
 	pageSize := c.Int(pager.FlagPageSize)
 
 	pager, close := newPagerWithDefault(c)
@@ -120,9 +119,6 @@ func Pager(c *cli.Context, iter collection.Iterator, opts *PrintOptions) error {
 			PrintItems(c, pageItems, opts)
 			pageItems = pageItems[:0]
 			opts.NoHeader = true
-			if noPager {
-				break
-			}
 		}
 	}
 
