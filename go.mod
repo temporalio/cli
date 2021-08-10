@@ -15,6 +15,7 @@ require (
 	github.com/pborman/uuid v1.2.1
 	github.com/stretchr/testify v1.7.0
 	github.com/uber-go/tally v3.3.17+incompatible
+	github.com/urfave/cli v1.22.5
 	github.com/urfave/cli/v2 v2.3.0
 	github.com/valyala/fastjson v1.6.3
 	go.temporal.io/api v1.4.1-0.20210622200201-edd2d5680749

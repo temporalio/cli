@@ -22,26 +22,16 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package main
+package cli_curr
 
 import (
-	"os"
+	"github.com/urfave/cli"
 
-	"github.com/temporalio/tctl/cli"
-	"github.com/temporalio/tctl/pkg/config"
-	"github.com/temporalio/tctl/cli_curr"
+	tctlCurrent "go.temporal.io/server/tools/cli"
 )
 
-// Start using this CLI tool with command
-// See temporal/tools/cli/README.md for usage
-func main() {
-	version, _ := config.Get("version")
-
-	if version == "next" {
-		appNext := cli.NewCliApp()
-		_ = appNext.Run(os.Args)
-	} else {
-		app := cli_curr.NewCliApp()
-		_ = app.Run(os.Args)
-	}
+// NewCliApp instantiates a new instance of the CLI application.
+func NewCliApp() *cli.App {
+	app := tctlCurrent.NewCliApp()
+	return app
 }
