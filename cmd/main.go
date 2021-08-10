@@ -28,8 +28,8 @@ import (
 	"os"
 
 	"github.com/temporalio/tctl/cli"
-	"github.com/temporalio/tctl/pkg/config"
 	"github.com/temporalio/tctl/cli_curr"
+	"github.com/temporalio/tctl/pkg/config"
 )
 
 // Start using this CLI tool with command
