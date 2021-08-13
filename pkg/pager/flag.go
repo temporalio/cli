@@ -25,9 +25,8 @@
 package pager
 
 const (
-	FlagPager    = "pager"
-	FlagNoPager  = "no-pager"
-	FlagPageSize = "pagesize"
+	FlagPager   = "pager"
+	FlagNoPager = "no-pager"
 )
 
 type PagerOption string

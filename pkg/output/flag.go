@@ -29,6 +29,7 @@ import "fmt"
 const (
 	FlagOutput  = "output"
 	FlagColumns = "columns"
+	FlagLimit   = "limit"
 
 	ColumnsLong = "long"
 )

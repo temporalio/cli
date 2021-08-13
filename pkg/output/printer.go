@@ -38,7 +38,7 @@ import (
 )
 
 const (
-	DefaultListPageSize = 20
+	BatchPrintSize = 100 // for consistent formatting, print items in batches (ex. in Table output)
 )
 
 type PrintOptions struct {
@@ -96,7 +96,7 @@ func PrintItems(c *cli.Context, items []interface{}, opts *PrintOptions) {
 
 // Pager creates an interactive CLI mode to control the printing of items
 func Pager(c *cli.Context, iter collection.Iterator, opts *PrintOptions) error {
-	pageSize := c.Int(pager.FlagPageSize)
+	limit := c.Int(FlagLimit)
 
 	pager, close := newPagerWithDefault(c)
 	defer close()
@@ -106,18 +106,27 @@ func Pager(c *cli.Context, iter collection.Iterator, opts *PrintOptions) error {
 	}
 	opts.Pager = pager
 
-	var pageItems []interface{}
+	itemsPrinted := 0
+	var batch []interface{}
 	for iter.HasNext() {
 		item, err := iter.Next()
 		if err != nil {
 			return err
 		}
 
-		pageItems = append(pageItems, item)
-		shouldPrintPage := len(pageItems) == pageSize || !iter.HasNext()
-		if shouldPrintPage {
-			PrintItems(c, pageItems, opts)
-			pageItems = pageItems[:0]
+		if c.IsSet(FlagLimit) && itemsPrinted >= limit {
+			break
+		}
+
+		batch = append(batch, item)
+		itemsPrinted++
+
+		isLastBatch := limit-itemsPrinted < BatchPrintSize
+		isBatchFilled := (len(batch) == BatchPrintSize) || (isLastBatch && len(batch) == limit%BatchPrintSize)
+
+		if isBatchFilled || !iter.HasNext() {
+			PrintItems(c, batch, opts)
+			batch = batch[:0]
 			opts.NoHeader = true
 		}
 	}
