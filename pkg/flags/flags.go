@@ -59,7 +59,7 @@ var FlagsForRendering = []cli.Flag{
 		Value:   string(output.Table),
 	},
 	&cli.StringFlag{
-		Name:  format.FlagFormatTime,
+		Name:  format.FlagTimeFormat,
 		Usage: fmt.Sprintf("format time as: %v, %v, %v.", format.Relative, format.ISO, format.Raw),
 		Value: string(format.Relative),
 	},

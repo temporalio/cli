@@ -35,7 +35,7 @@ import (
 )
 
 const (
-	FlagFormatTime = "format-time"
+	FlagTimeFormat = "time-format"
 )
 
 type FormatTimeOption string
@@ -47,7 +47,7 @@ const (
 )
 
 func FormatTime(c *cli.Context, val time.Time) string {
-	formatFlag := c.String(FlagFormatTime)
+	formatFlag := c.String(FlagTimeFormat)
 
 	timeVal := timestamp.TimeValue(&val)
 	format := FormatTimeOption(formatFlag)
