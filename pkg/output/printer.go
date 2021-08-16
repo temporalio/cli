@@ -54,7 +54,7 @@ type PrintOptions struct {
 
 func PrintItems(c *cli.Context, items []interface{}, opts *PrintOptions) {
 	outputFlag := c.String(FlagOutput)
-	columns := c.String(FlagColumns)
+	fields := c.String(FlagFields)
 
 	if opts.Pager == nil {
 		pager, close := newPagerWithDefault(c)
@@ -62,16 +62,16 @@ func PrintItems(c *cli.Context, items []interface{}, opts *PrintOptions) {
 		defer close()
 	}
 
-	if !opts.IgnoreFlags && c.IsSet(FlagColumns) {
-		if columns == ColumnsLong {
+	if !opts.IgnoreFlags && c.IsSet(FlagFields) {
+		if fields == FieldsLong {
 			opts.Fields = append(opts.Fields, opts.FieldsLong...)
 			opts.FieldsLong = []string{}
 		} else {
-			cols := strings.Split(columns, ",")
-			for i := range cols {
-				cols[i] = strings.TrimSpace(cols[i])
+			f := strings.Split(fields, ",")
+			for i := range f {
+				f[i] = strings.TrimSpace(f[i])
 			}
-			opts.Fields = cols
+			opts.Fields = f
 			opts.FieldsLong = []string{}
 		}
 	}

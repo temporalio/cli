@@ -27,11 +27,11 @@ package output
 import "fmt"
 
 const (
-	FlagOutput  = "output"
-	FlagColumns = "columns"
-	FlagLimit   = "limit"
+	FlagOutput = "output"
+	FlagFields = "fields"
+	FlagLimit  = "limit"
 
-	ColumnsLong = "long"
+	FieldsLong = "long"
 )
 
 type OutputOption string

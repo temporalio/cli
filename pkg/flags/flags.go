@@ -64,8 +64,8 @@ var FlagsForRendering = []cli.Flag{
 		Value: string(format.Relative),
 	},
 	&cli.StringFlag{
-		Name:  output.FlagColumns,
-		Usage: "customize columns to print. Set to 'long' to automatically print more of main columns",
+		Name:  output.FlagFields,
+		Usage: "customize fields to print. Set to 'long' to automatically print more of main fields",
 	},
 	&cli.StringFlag{
 		Name:  color.FlagColor,
