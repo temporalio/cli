@@ -27,6 +27,7 @@ package cli
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"os"
@@ -38,7 +39,6 @@ import (
 	"github.com/olekukonko/tablewriter"
 	"github.com/pborman/uuid"
 	"github.com/urfave/cli/v2"
-	"github.com/valyala/fastjson"
 	commonpb "go.temporal.io/api/common/v1"
 	enumspb "go.temporal.io/api/enums/v1"
 	failurepb "go.temporal.io/api/failure/v1"
@@ -164,7 +164,7 @@ func RunWorkflow(c *cli.Context) {
 		startRequest.Memo = &commonpb.Memo{Fields: memoFields}
 	}
 
-	startRequest.SearchAttributes = processSearchAttr(c)
+	startRequest.SearchAttributes = processSearchAttributes(c)
 
 	tcCtx, cancel := newContextForLongPoll(c)
 	defer cancel()
@@ -205,77 +205,85 @@ func RunWorkflow(c *cli.Context) {
 	printWorkflowProgress(c, wid, resp.GetRunId())
 }
 
-func processSearchAttr(c *cli.Context) *commonpb.SearchAttributes {
-	sanitize := func(val string) []string {
-		trimmedVal := strings.TrimSpace(val)
-		if len(trimmedVal) == 0 {
-			return nil
-		}
-		splitVal := strings.Split(trimmedVal, searchAttrInputSeparator)
-		result := make([]string, len(splitVal))
-		for i, v := range splitVal {
-			result[i] = strings.TrimSpace(v)
-		}
-		return result
-	}
-
-	searchAttrKeys := sanitize(c.String(FlagSearchAttributesKey))
-	if len(searchAttrKeys) == 0 {
-		return nil
-	}
-	searchAttrVals := sanitize(c.String(FlagSearchAttributesVal))
-	if len(searchAttrVals) == 0 {
+func processSearchAttributes(c *cli.Context) *commonpb.SearchAttributes {
+	// Search attributes flags were not passed => Search attributes are not provided.
+	if !c.IsSet(FlagSearchAttributeKey) && !c.IsSet(FlagSearchAttributeValue) {
 		return nil
 	}
 
-	if len(searchAttrKeys) != len(searchAttrVals) {
-		ErrorAndExit(fmt.Sprintf("Uneven number of search attributes keys (%d): %v and values(%d): %v.", len(searchAttrKeys), searchAttrKeys, len(searchAttrVals), searchAttrVals), nil)
+	if !c.IsSet(FlagSearchAttributeKey) {
+		ErrorAndExit(fmt.Sprintf("Search attribute keys must be provided using %s.", FlagSearchAttributeKey), nil)
 	}
 
-	searchAttributesStr := make(map[string]string, len(searchAttrKeys))
-	for i, searchAttrVal := range searchAttrVals {
-		searchAttributesStr[searchAttrKeys[i]] = searchAttrVal
+	if !c.IsSet(FlagSearchAttributeValue) {
+		ErrorAndExit(fmt.Sprintf("Search attribute values must be provided using %s.", FlagSearchAttributeValue), nil)
 	}
 
-	searchAttributes, err := searchattribute.Parse(searchAttributesStr, nil)
-	if err != nil {
-		ErrorAndExit("Unable to parse search attributes.", err)
+	saKeys := c.StringSlice(FlagSearchAttributeKey)
+	saValues := c.StringSlice(FlagSearchAttributeValue)
+
+	if len(saKeys) != len(saValues) {
+		ErrorAndExit(fmt.Sprintf("Number of search attributes keys %d and values %d are not equal.", len(saKeys), len(saValues)), nil)
+	}
+
+	fields := make(map[string]interface{}, len(saKeys))
+
+	for i, saValue := range saValues {
+		var j interface{}
+		if err := json.Unmarshal([]byte(saValue), &j); err != nil {
+			ErrorAndExit("Search attribute JSON parse error.", err)
+		}
+		fields[saKeys[i]] = j
+	}
+
+	// TODO: remove this and return just fields when SDK is used to start workflows.
+	searchAttributes, err := searchattribute.Encode(fields, nil)
+	if err != nil{
+		ErrorAndExit("Unable to encode search attributes.", err)
 	}
 
 	return searchAttributes
 }
 
 func processMemo(c *cli.Context) map[string]*commonpb.Payload {
-	rawMemoKey := c.String(FlagMemoKey)
-	var memoKeys []string
-	if strings.TrimSpace(rawMemoKey) != "" {
-		memoKeys = strings.Split(rawMemoKey, " ")
-	}
-
-	jsonsRaw := readJSONInputs(c, jsonTypeMemo)
-	if len(jsonsRaw) == 0 {
+	// Memo flags were not passed => Memo is not provided.
+	if !c.IsSet(FlagMemoKey) && !c.IsSet(FlagMemo) && !c.IsSet(FlagMemoFile) {
 		return nil
 	}
-	rawMemoValue := string(jsonsRaw[0]) // StringFlag may contain up to one json
 
-	if err := validateJSONs(rawMemoValue); err != nil {
-		ErrorAndExit("Input is not valid JSON, or JSONs concatenated with spaces/newlines.", err)
+	if !c.IsSet(FlagMemoKey) {
+		ErrorAndExit(fmt.Sprintf("Memo keys must be provided using %s.", FlagMemoKey), nil)
 	}
+
+	if c.IsSet(FlagMemo) && c.IsSet(FlagMemoFile) {
+		ErrorAndExit(fmt.Sprintf("Only one of %s or %s should be used.", FlagMemo, FlagMemoFile), nil)
+	}
+
+	if !c.IsSet(FlagMemo) && !c.IsSet(FlagMemoFile) {
+		ErrorAndExit(fmt.Sprintf("Memo values must be provided using %s or %s.", FlagMemo, FlagMemoFile), nil)
+	}
+
+	memoKeys := c.StringSlice(FlagMemoKey)
 
 	var memoValues []string
+	if c.IsSet(FlagMemoFile) {
+		inputFile := c.String(FlagMemoFile)
+		// This method is purely used to parse input from the CLI. The input comes from a trusted user
+		// #nosec
+		data, err := os.ReadFile(inputFile)
+		if err != nil {
+			ErrorAndExit(fmt.Sprintf("Error reading memo file %s.", inputFile), err)
+		}
+		memoValues = strings.Split(string(data), "\n")
+	} else if c.IsSet(FlagMemo) {
+		memoValues = c.StringSlice(FlagMemo)
+	}
 
-	var sc fastjson.Scanner
-	sc.Init(rawMemoValue)
-	for sc.Next() {
-		memoValues = append(memoValues, sc.Value().String())
-	}
-	if err := sc.Error(); err != nil {
-		ErrorAndExit("Parse json error.", err)
-	}
 	if len(memoKeys) != len(memoValues) {
-		ErrorAndExit("Number of memo keys and values are not equal.", nil)
+		ErrorAndExit(fmt.Sprintf("Number of memo keys %d and values %d are not equal.", len(memoKeys), len(memoValues)), nil)
 	}
 
+	// TODO: remove this and return just fields when SDK is used to start workflows.
 	fields := map[string]*commonpb.Payload{}
 	for i, key := range memoKeys {
 		fields[key] = payload.EncodeString(memoValues[i])
