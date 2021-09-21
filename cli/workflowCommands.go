@@ -69,53 +69,7 @@ import (
 func ShowHistory(c *cli.Context) error {
 	wid, rid := getWorkflowParams(c)
 
-	namespace, err := getRequiredGlobalOption(c, FlagNamespace)
-	if err != nil {
-		return err
-	}
-	var maxFieldLength int
-	if c.IsSet(FlagMaxFieldLength) || true {
-		maxFieldLength = c.Int(FlagMaxFieldLength)
-	}
-	client := cFactory.FrontendClient(c)
-
-	paginationFunc := func(npt []byte) ([]interface{}, []byte, error) {
-		ctx, cancel := newContext(c)
-		defer cancel()
-		var err error
-
-		req := &workflowservice.GetWorkflowExecutionHistoryRequest{
-			Namespace: namespace,
-			Execution: &commonpb.WorkflowExecution{
-				WorkflowId: wid,
-				RunId:      rid,
-			},
-			NextPageToken:          npt,
-			HistoryEventFilterType: enumspb.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT,
-		}
-		res, err := client.GetWorkflowExecutionHistory(ctx, req)
-		if err != nil {
-			return nil, nil, err
-		}
-		var items []interface{}
-		for _, e := range res.History.Events {
-			item := eventRow{
-				ID:      convert.Int64ToString(e.GetEventId()),
-				Type:    ColorEvent(e),
-				Details: HistoryEventToString(e, false, maxFieldLength),
-			}
-			items = append(items, item)
-		}
-		if err != nil {
-			return nil, nil, err
-		}
-
-		return items, res.NextPageToken, nil
-	}
-
-	iter := collection.NewPagingIterator(paginationFunc)
-	opts := &output.PrintOptions{Fields: []string{"ID", "Type", "Details"}}
-	return output.Pager(c, iter, opts)
+	return printWorkflowProgress(c, wid, rid, false)
 }
 
 // RunWorkflow starts a new workflow execution and print workflow progress and result
@@ -219,9 +173,7 @@ func RunWorkflow(c *cli.Context) error {
 	}
 	output.PrintItems(c, data, opts)
 
-	printWorkflowProgress(c, wid, resp.GetRunId())
-
-	return nil
+	return printWorkflowProgress(c, wid, resp.GetRunId(), true)
 }
 
 func processSearchAttributes(c *cli.Context) (*commonpb.SearchAttributes, error) {
@@ -340,7 +292,7 @@ func (h *historyIterator) Next() (interface{}, error) {
 }
 
 // helper function to print workflow progress with time refresh every second
-func printWorkflowProgress(c *cli.Context, wid, rid string) error {
+func printWorkflowProgress(c *cli.Context, wid, rid string, watch bool) error {
 	var maxFieldLength int
 	if c.IsSet(FlagMaxFieldLength) {
 		maxFieldLength = c.Int(FlagMaxFieldLength)
@@ -366,9 +318,13 @@ func printWorkflowProgress(c *cli.Context, wid, rid string) error {
 
 	errChan := make(chan error)
 	go func() {
-		hIter := sdkClient.GetWorkflowHistory(tcCtx, wid, rid, true, enumspb.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
+		hIter := sdkClient.GetWorkflowHistory(tcCtx, wid, rid, watch, enumspb.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
 		iter := &historyIterator{iter: hIter, maxFieldLength: maxFieldLength, lastEvent: &lastEvent}
-		errChan <- output.Pager(c, iter, opts)
+		err = output.Pager(c, iter, opts)
+		if err != nil {
+			errChan <- err
+			return
+		}
 
 		doneChan <- true
 	}()
@@ -376,6 +332,10 @@ func printWorkflowProgress(c *cli.Context, wid, rid string) error {
 	for {
 		select {
 		case <-ticker:
+			if !watch {
+				continue
+			}
+
 			if isTimeElapseExist {
 				removePrevious2LinesFromTerminal()
 			}
@@ -384,11 +344,13 @@ func printWorkflowProgress(c *cli.Context, wid, rid string) error {
 			timeElapse++
 		case <-doneChan: // print result of this run
 			fmt.Println(color.Magenta(c, "\nResult:"))
-			fmt.Printf("  Run Time: %d seconds\n", timeElapse)
+			if watch {
+				fmt.Printf("  Run Time: %d seconds\n", timeElapse)
+			}
 			printRunStatus(c, &lastEvent)
 			return nil
-		case <-errChan:
-			return <-errChan
+		case err = <-errChan:
+			return err
 		}
 	}
 }
@@ -905,7 +867,7 @@ func scanWorkflowExecutions(sdkClient sdkclient.Client, pageSize int, nextPageTo
 func ObserveHistory(c *cli.Context) error {
 	wid, rid := getWorkflowParams(c)
 
-	return printWorkflowProgress(c, wid, rid)
+	return printWorkflowProgress(c, wid, rid, true)
 }
 
 // ResetWorkflow reset workflow

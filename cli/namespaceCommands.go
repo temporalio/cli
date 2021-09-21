@@ -25,7 +25,6 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 
