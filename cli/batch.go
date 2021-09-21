@@ -39,8 +39,9 @@ func newBatchCommands() []*cli.Command {
 			Usage: "Describe a batch operation job",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
-					Name:  FlagJobIDWithAlias,
-					Usage: "Batch Job Id",
+					Name:     FlagJobIDWithAlias,
+					Usage:    "Batch Job Id",
+					Required: true,
 				},
 			},
 			Action: func(c *cli.Context) error {
@@ -66,16 +67,19 @@ func newBatchCommands() []*cli.Command {
 			Usage: "Start a batch operation job",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
-					Name:  FlagListQueryWithAlias,
-					Usage: "Query to get workflows for being executed this batch operation",
+					Name:     FlagListQueryWithAlias,
+					Usage:    "Query to get workflows for being executed this batch operation",
+					Required: true,
 				},
 				&cli.StringFlag{
-					Name:  FlagReasonWithAlias,
-					Usage: "Reason to run this batch job",
+					Name:     FlagReasonWithAlias,
+					Usage:    "Reason to run this batch job",
+					Required: true,
 				},
 				&cli.StringFlag{
-					Name:  FlagBatchTypeWithAlias,
-					Usage: "Types supported: " + strings.Join(batcher.AllBatchTypes, ","),
+					Name:     FlagBatchTypeWithAlias,
+					Usage:    "Types supported: " + strings.Join(batcher.AllBatchTypes, ","),
+					Required: true,
 				},
 				&cli.StringFlag{
 					Name:  FlagSignalNameWithAlias,
@@ -104,12 +108,14 @@ func newBatchCommands() []*cli.Command {
 			Usage: "terminate a batch operation job",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
-					Name:  FlagJobIDWithAlias,
-					Usage: "Batch Job Id",
+					Name:     FlagJobIDWithAlias,
+					Usage:    "Batch Job Id",
+					Required: true,
 				},
 				&cli.StringFlag{
-					Name:  FlagReasonWithAlias,
-					Usage: "Reason to stop this batch job",
+					Name:     FlagReasonWithAlias,
+					Usage:    "Reason to stop this batch job",
+					Required: true,
 				},
 			},
 			Action: func(c *cli.Context) error {

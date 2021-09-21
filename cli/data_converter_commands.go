@@ -123,10 +123,10 @@ func buildPayloadHandler(context *cli.Context, origin string) func(http.Response
 }
 
 // DataConverter provides a data converter over a websocket for Temporal web
-func DataConverter(c *cli.Context) {
+func DataConverter(c *cli.Context) error {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
-		ErrorAndExit("Unable to create listener", err)
+		return fmt.Errorf("unable to create listener: %s", err)
 	}
 	origin := c.String(FlagWebURL)
 	port := listener.Addr().(*net.TCPAddr).Port
@@ -137,6 +137,8 @@ func DataConverter(c *cli.Context) {
 
 	http.HandleFunc("/", buildPayloadHandler(c, origin))
 	if err := http.Serve(listener, nil); err != nil {
-		ErrorAndExit("Unable to start HTTP server for data converter listener.", err)
+		return fmt.Errorf("unable to start HTTP server for data converter listener: %s", err)
 	}
+
+	return nil
 }

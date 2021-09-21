@@ -37,23 +37,27 @@ import (
 
 // CompleteActivity completes an activity
 func CompleteActivity(c *cli.Context) error {
-	namespace := getRequiredGlobalOption(c, FlagNamespace)
+	namespace, err := getRequiredGlobalOption(c, FlagNamespace)
+	if err != nil {
+		return err
+	}
+
 	wid, rid := getWorkflowParams(c)
 	if rid == "" {
 		return fmt.Errorf("provide non-empty run id")
 	}
 
-	activityID := getRequiredOption(c, FlagActivityID)
+	activityID := c.String(FlagActivityID)
 	if len(activityID) == 0 {
 		return fmt.Errorf("provide non-empty activity id")
 	}
-	result := getRequiredOption(c, FlagResult)
-	identity := getRequiredOption(c, FlagIdentity)
+	result := c.String(FlagResult)
+	identity := c.String(FlagIdentity)
 	ctx, cancel := newContext(c)
 	defer cancel()
 
 	frontendClient := cFactory.FrontendClient(c)
-	_, err := frontendClient.RespondActivityTaskCompletedById(ctx, &workflowservice.RespondActivityTaskCompletedByIdRequest{
+	_, err = frontendClient.RespondActivityTaskCompletedById(ctx, &workflowservice.RespondActivityTaskCompletedByIdRequest{
 		Namespace:  namespace,
 		WorkflowId: wid,
 		RunId:      rid,
@@ -71,23 +75,27 @@ func CompleteActivity(c *cli.Context) error {
 
 // FailActivity fails an activity
 func FailActivity(c *cli.Context) error {
-	namespace := getRequiredGlobalOption(c, FlagNamespace)
+	namespace, err := getRequiredGlobalOption(c, FlagNamespace)
+	if err != nil {
+		return err
+	}
+
 	wid, rid := getWorkflowParams(c)
 	if rid == "" {
 		return fmt.Errorf("provide non-empty run id")
 	}
-	activityID := getRequiredOption(c, FlagActivityID)
+	activityID := c.String(FlagActivityID)
 	if len(activityID) == 0 {
 		return fmt.Errorf("provide non-empty activity id")
 	}
-	reason := getRequiredOption(c, FlagReason)
-	detail := getRequiredOption(c, FlagDetail)
-	identity := getRequiredOption(c, FlagIdentity)
+	reason := c.String(FlagReason)
+	detail := c.String(FlagDetail)
+	identity := c.String(FlagIdentity)
 	ctx, cancel := newContext(c)
 	defer cancel()
 
 	frontendClient := cFactory.FrontendClient(c)
-	_, err := frontendClient.RespondActivityTaskFailedById(ctx, &workflowservice.RespondActivityTaskFailedByIdRequest{
+	_, err = frontendClient.RespondActivityTaskFailedById(ctx, &workflowservice.RespondActivityTaskFailedByIdRequest{
 		Namespace:  namespace,
 		WorkflowId: wid,
 		RunId:      rid,

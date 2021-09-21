@@ -540,11 +540,20 @@ func (s *cliAppSuite) TestObserveWorkflowWithID() {
 
 // TestParseTime tests the parsing of date argument in UTC and UnixNano formats
 func (s *cliAppSuite) TestParseTime() {
-	s.Equal("1978-08-22 00:00:00 +0000 UTC", parseTime("", time.Date(1978, 8, 22, 0, 0, 0, 0, time.UTC), time.Now().UTC()).String())
-	s.Equal("2018-06-07T15:04:05+07:00", parseTime("2018-06-07T15:04:05+07:00", time.Time{}, time.Now()).Format(time.RFC3339))
+	t, err := parseTime("", time.Date(1978, 8, 22, 0, 0, 0, 0, time.UTC), time.Now().UTC())
+	s.NoError(err)
+	s.Equal("1978-08-22 00:00:00 +0000 UTC", t.String())
+
+	t, err = parseTime("2018-06-07T15:04:05+07:00", time.Time{}, time.Now())
+	s.NoError(err)
+	s.Equal("2018-06-07T15:04:05+07:00", t.Format(time.RFC3339))
+
 	expected, err := time.Parse(defaultDateTimeFormat, "2018-06-07T15:04:05+07:00")
 	s.NoError(err)
-	s.Equal(expected.UTC(), parseTime("1528358645000000000", time.Time{}, time.Now().UTC()))
+
+	t, err = parseTime("1528358645000000000", time.Time{}, time.Now().UTC())
+	s.NoError(err)
+	s.Equal(expected.UTC(), t)
 }
 
 // TestParseTimeDateRange tests the parsing of date argument in time range format, N<duration>
@@ -634,7 +643,9 @@ func (s *cliAppSuite) TestParseTimeDateRange() {
 	}
 	const delta = 5 * time.Millisecond
 	for _, te := range tests {
-		parsedTime := parseTime(te.timeStr, te.defVal, now)
+		parsedTime, err := parseTime(te.timeStr, te.defVal, now)
+		s.NoError(err)
+
 		s.True(te.expected.Before(parsedTime) || te.expected == parsedTime, "Case: %s. %d must be less or equal than parsed %d", te.timeStr, te.expected, parsedTime)
 		s.True(te.expected.Add(delta).After(parsedTime) || te.expected.Add(delta) == parsedTime, "Case: %s. %d must be greater or equal than parsed %d", te.timeStr, te.expected, parsedTime)
 	}

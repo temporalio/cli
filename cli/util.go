@@ -350,7 +350,7 @@ func prettyPrintJSONObject(o interface{}) {
 	fmt.Println()
 }
 
-func mapKeysToArray(m map[string]string) []string {
+func mapKeysToArray(m map[string]interface{}) []string {
 	var out []string
 	for k := range m {
 		out = append(out, k)
@@ -372,57 +372,20 @@ func printError(msg string, err error) {
 	}
 }
 
-// ErrorAndExit print easy to understand error msg first then error detail in a new line
-func ErrorAndExit(msg string, err error) {
-	printError(msg, err)
-	os.Exit(1)
-}
-
-func getWorkflowClient(c *cli.Context) sdkclient.Client {
-	namespace := getRequiredGlobalOption(c, FlagNamespace)
-	return cFactory.SDKClient(c, namespace)
-}
-
-func getWorkflowClientWithOptionalNamespace(c *cli.Context) sdkclient.Client {
-	if !c.IsSet(FlagNamespace) {
-		_ = c.Set(FlagNamespace, "system-namespace")
+func getSDKClient(c *cli.Context) (sdkclient.Client, error) {
+	namespace, err := getRequiredGlobalOption(c, FlagNamespace)
+	if err != nil {
+		return nil, err
 	}
-	return getWorkflowClient(c)
+	return cFactory.SDKClient(c, namespace), nil
 }
 
-func getSDKClient(c *cli.Context) sdkclient.Client {
-	namespace := getRequiredGlobalOption(c, FlagNamespace)
-	return cFactory.SDKClient(c, namespace)
-}
-
-func getRequiredOption(c *cli.Context, optionName string) string {
+func getRequiredGlobalOption(c *cli.Context, optionName string) (string, error) {
 	value := c.String(optionName)
 	if len(value) == 0 {
-		ErrorAndExit(fmt.Sprintf("Option %s is required", optionName), nil)
+		return "", fmt.Errorf("global option is required: %s.", optionName)
 	}
-	return value
-}
-
-func getRequiredInt64Option(c *cli.Context, optionName string) int64 {
-	if !c.IsSet(optionName) {
-		ErrorAndExit(fmt.Sprintf("Option %s is required", optionName), nil)
-	}
-	return c.Int64(optionName)
-}
-
-func getRequiredIntOption(c *cli.Context, optionName string) int {
-	if !c.IsSet(optionName) {
-		ErrorAndExit(fmt.Sprintf("Option %s is required", optionName), nil)
-	}
-	return c.Int(optionName)
-}
-
-func getRequiredGlobalOption(c *cli.Context, optionName string) string {
-	value := c.String(optionName)
-	if len(value) == 0 {
-		ErrorAndExit(fmt.Sprintf("Global option %s is required", optionName), nil)
-	}
-	return value
+	return value, nil
 }
 
 func formatTime(t time.Time, onlyTime bool) string {
@@ -435,30 +398,30 @@ func formatTime(t time.Time, onlyTime bool) string {
 	return result
 }
 
-func parseTime(timeStr string, defaultValue time.Time, now time.Time) time.Time {
+func parseTime(timeStr string, defaultValue time.Time, now time.Time) (time.Time, error) {
 	if len(timeStr) == 0 {
-		return defaultValue
+		return defaultValue, nil
 	}
 
 	// try to parse
 	parsedTime, err := time.Parse(defaultDateTimeFormat, timeStr)
 	if err == nil {
-		return parsedTime
+		return parsedTime, nil
 	}
 
 	// treat as raw unix time
 	resultValue, err := strconv.ParseInt(timeStr, 10, 64)
 	if err == nil {
-		return time.Unix(0, resultValue).UTC()
+		return time.Unix(0, resultValue).UTC(), nil
 	}
 
 	// treat as time range format
 	parsedTime, err = parseTimeRange(timeStr, now)
 	if err != nil {
-		ErrorAndExit(fmt.Sprintf("Cannot parse time '%s', use UTC format '2006-01-02T15:04:05', "+
-			"time range or raw UnixNano directly. See help for more details.", timeStr), err)
+		return time.Time{}, fmt.Errorf("Cannot parse time '%s', use UTC format '2006-01-02T15:04:05', "+
+			"time range or raw UnixNano directly. See help for more details: %s", timeStr, err)
 	}
-	return parsedTime
+	return parsedTime, nil
 }
 
 // parseTimeRange parses a given time duration string (in format X<time-duration>) and
@@ -594,8 +557,11 @@ func newContextWithTimeout(c *cli.Context, timeout time.Duration) (context.Conte
 }
 
 // process and validate input provided through cmd or file
-func processJSONInput(c *cli.Context) *commonpb.Payloads {
-	jsonsRaw := readJSONInputs(c, jsonTypeInput)
+func processJSONInput(c *cli.Context) (*commonpb.Payloads, error) {
+	jsonsRaw, err := readJSONInputs(c, jsonTypeInput)
+	if err != nil {
+		return nil, err
+	}
 
 	var jsons []interface{}
 	for _, jsonRaw := range jsonsRaw {
@@ -604,7 +570,7 @@ func processJSONInput(c *cli.Context) *commonpb.Payloads {
 		} else {
 			var j interface{}
 			if err := json.Unmarshal(jsonRaw, &j); err != nil {
-				ErrorAndExit("Input is not a valid JSON.", err)
+				return nil, fmt.Errorf("input is not a valid JSON: %s.", err)
 			}
 			jsons = append(jsons, j)
 		}
@@ -612,14 +578,14 @@ func processJSONInput(c *cli.Context) *commonpb.Payloads {
 	}
 	p, err := payloads.Encode(jsons...)
 	if err != nil {
-		ErrorAndExit("Unable to encode input.", err)
+		return nil, fmt.Errorf("unable to encode input: %s", err)
 	}
 
-	return p
+	return p, nil
 }
 
 // read multiple inputs presented in json format
-func readJSONInputs(c *cli.Context, jType jsonType) [][]byte {
+func readJSONInputs(c *cli.Context, jType jsonType) ([][]byte, error) {
 	var flagRawInput string
 	var flagInputFileName string
 
@@ -631,7 +597,7 @@ func readJSONInputs(c *cli.Context, jType jsonType) [][]byte {
 		flagRawInput = FlagMemo
 		flagInputFileName = FlagMemoFile
 	default:
-		return nil
+		return nil, nil
 	}
 
 	if c.IsSet(flagRawInput) {
@@ -655,18 +621,18 @@ func readJSONInputs(c *cli.Context, jType jsonType) [][]byte {
 			}
 		}
 
-		return inputsRaw
+		return inputsRaw, nil
 	} else if c.IsSet(flagInputFileName) {
 		inputFile := c.String(flagInputFileName)
 		// This method is purely used to parse input from the CLI. The input comes from a trusted user
 		// #nosec
 		data, err := ioutil.ReadFile(inputFile)
 		if err != nil {
-			ErrorAndExit("Error reading input file", err)
+			return nil, fmt.Errorf("unable to read input file: %s.", err)
 		}
-		return [][]byte{data}
+		return [][]byte{data}, nil
 	}
-	return nil
+	return nil, nil
 }
 
 // validate whether str is a valid json or multi valid json concatenated with spaces/newlines

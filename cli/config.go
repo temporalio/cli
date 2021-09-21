@@ -66,18 +66,18 @@ var (
 
 func GetValue(c *cli.Context) error {
 	if c.NArg() != 1 {
-		ErrorAndExit("invalid number of args, expected 1: property name", nil)
+		return fmt.Errorf("invalid number of args, expected 1: property name")
 	}
 
 	key := c.Args().Get(0)
 
 	if err := validateKey(key); err != nil {
-		ErrorAndExit(fmt.Sprintf("unable to get property %v.", key), err)
+		return fmt.Errorf("unable to get property %v: %s", key, err)
 	}
 
 	val, err := config.Get(key)
 	if err != nil {
-		ErrorAndExit(fmt.Sprintf("unable to get property %v.", key), err)
+		return fmt.Errorf("unable to get property %v: %s", key, err)
 	}
 	fmt.Printf("%v: %v\n", color.Magenta(c, "%v", key), val)
 	return nil
@@ -85,18 +85,18 @@ func GetValue(c *cli.Context) error {
 
 func SetValue(c *cli.Context) error {
 	if c.NArg() != 2 {
-		ErrorAndExit("invalid number of args, expected 2: property and value", nil)
+		return fmt.Errorf("invalid number of args, expected 2: property and value")
 	}
 
 	key := c.Args().Get(0)
 	val := c.Args().Get(1)
 
 	if err := validateKey(key); err != nil {
-		ErrorAndExit(fmt.Sprintf("unable to set property %v.", key), err)
+		return fmt.Errorf("unable to set property %s: %s", key, err)
 	}
 
 	if err := config.Set(key, val); err != nil {
-		ErrorAndExit(fmt.Sprintf("unable to set property %v.", key), err)
+		return fmt.Errorf("unable to set property %s: %s", key, err)
 	}
 
 	fmt.Printf("%v: %v\n", color.Magenta(c, "%v", key), val)

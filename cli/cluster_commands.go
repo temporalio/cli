@@ -65,7 +65,10 @@ func HealthCheck(c *cli.Context) error {
 
 // ListSearchAttributes lists search attributes
 func ListSearchAttributes(c *cli.Context) error {
-	wfClient := getSDKClient(c)
+	wfClient, err := getSDKClient(c)
+	if err != nil {
+		return err
+	}
 	ctx, cancel := newContext(c)
 	defer cancel()
 

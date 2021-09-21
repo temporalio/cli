@@ -25,6 +25,7 @@
 package cli
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -81,8 +82,9 @@ var (
 			Usage: "Flag to indicate whether namespace is a global namespace",
 		},
 		&cli.StringFlag{
-			Name:  FlagNamespaceDataWithAlias,
-			Usage: "Namespace data of key value pairs, in format of k1:v1,k2:v2,k3:v3",
+			Name:     FlagNamespaceDataWithAlias,
+			Usage:    "Namespace data of key value pairs, in format of k1:v1,k2:v2,k3:v3",
+			Required: true,
 		},
 		&cli.StringFlag{
 			Name:  FlagHistoryArchivalStateWithAlias,
@@ -208,9 +210,12 @@ func initializeFrontendClient(
 
 func initializeAdminNamespaceHandler(
 	context *cli.Context,
-) namespace.Handler {
+) (namespace.Handler, error) {
+	configuration, err := loadConfig(context)
+	if err != nil {
+		return nil, err
+	}
 
-	configuration := loadConfig(context)
 	metricsClient := initializeMetricsClient()
 	logger := log.NewZapLogger(log.BuildZapLogger(configuration.Log))
 
@@ -222,33 +227,46 @@ func initializeAdminNamespaceHandler(
 
 	metadataMgr, err := factory.NewMetadataManager()
 	if err != nil {
-		ErrorAndExit("Unable to initialize metadata manager.", err)
+		return nil, fmt.Errorf("unable to initialize metadata manager: %s", err)
 	}
 
 	clusterMetadata := initializeClusterMetadata(configuration)
 
-	dynamicConfig := initializeDynamicConfig(configuration, logger)
+	dynamicConfig, err := initializeDynamicConfig(configuration, logger)
+	if err != nil {
+		return nil, err
+	}
+
+	archProvider, err := initializeArchivalProvider(configuration, clusterMetadata, metricsClient, logger)
+	if err != nil {
+		return nil, err
+	}
+
 	return initializeNamespaceHandler(
 		logger,
 		metadataMgr,
 		clusterMetadata,
 		initializeArchivalMetadata(configuration, dynamicConfig),
-		initializeArchivalProvider(configuration, clusterMetadata, metricsClient, logger),
-	)
+		archProvider,
+	), nil
 }
 
 func loadConfig(
 	context *cli.Context,
-) *config.Config {
+) (*config.Config, error) {
 	env := getEnvironment(context)
 	zone := getZone(context)
-	configDir := getConfigDir(context)
-	var cfg config.Config
-	err := config.Load(env, configDir, zone, &cfg)
+	configDir, err := getConfigDir(context)
 	if err != nil {
-		ErrorAndExit("Unable to load config.", err)
+		return nil, err
 	}
-	return &cfg
+
+	var cfg config.Config
+	err = config.Load(env, configDir, zone, &cfg)
+	if err != nil {
+		return nil, fmt.Errorf("unable to load config: %s", err)
+	}
+	return &cfg, nil
 }
 
 func initializeNamespaceHandler(
@@ -327,7 +345,7 @@ func initializeArchivalProvider(
 	clusterMetadata cluster.Metadata,
 	metricsClient metrics.Client,
 	logger log.Logger,
-) provider.ArchiverProvider {
+) (provider.ArchiverProvider, error) {
 
 	archiverProvider := provider.NewArchiverProvider(
 		serviceConfig.Archival.History.Provider,
@@ -354,9 +372,9 @@ func initializeArchivalProvider(
 		visibilityArchiverBootstrapContainer,
 	)
 	if err != nil {
-		ErrorAndExit("Error initializing archival provider.", err)
+		return nil, fmt.Errorf("error initializing archival provider: %s", err)
 	}
-	return archiverProvider
+	return archiverProvider, nil
 }
 
 func initializeNamespaceReplicator(
@@ -371,7 +389,7 @@ func initializeNamespaceReplicator(
 func initializeDynamicConfig(
 	serviceConfig *config.Config,
 	logger log.Logger,
-) *dynamicconfig.Collection {
+) (*dynamicconfig.Collection, error) {
 
 	// the done channel is used by dynamic config to stop refreshing
 	// and CLI does not need that, so just close the done channel
@@ -383,9 +401,9 @@ func initializeDynamicConfig(
 		doneChan,
 	)
 	if err != nil {
-		ErrorAndExit("Error initializing dynamic config.", err)
+		return nil, fmt.Errorf("unable to initialize dynamic config: %s", err)
 	}
-	return dynamicconfig.NewCollection(dynamicConfigClient, logger)
+	return dynamicconfig.NewCollection(dynamicConfigClient, logger), nil
 }
 
 func initializeMetricsClient() metrics.Client {
@@ -400,10 +418,10 @@ func getZone(c *cli.Context) string {
 	return strings.TrimSpace(c.String(FlagServiceZone))
 }
 
-func getConfigDir(c *cli.Context) string {
+func getConfigDir(c *cli.Context) (string, error) {
 	dirPath := c.String(FlagServiceConfigDir)
 	if len(dirPath) == 0 {
-		ErrorAndExit("Must provide service configuration dir path.", nil)
+		return "", fmt.Errorf("provide service configuration dir path")
 	}
-	return dirPath
+	return dirPath, nil
 }

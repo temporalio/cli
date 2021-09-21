@@ -38,8 +38,11 @@ import (
 
 // DescribeTaskQueue show pollers info of a given taskqueue
 func DescribeTaskQueue(c *cli.Context) error {
-	sdkClient := getSDKClient(c)
-	taskQueue := getRequiredOption(c, FlagTaskQueue)
+	sdkClient, err := getSDKClient(c)
+	if err != nil {
+		return err
+	}
+	taskQueue := c.String(FlagTaskQueue)
 	taskQueueType := strToTaskQueueType(c.String(FlagTaskQueueType))
 
 	ctx, cancel := newContext(c)
@@ -69,8 +72,11 @@ func DescribeTaskQueue(c *cli.Context) error {
 // ListTaskQueuePartitions gets all the taskqueue partition and host information.
 func ListTaskQueuePartitions(c *cli.Context) error {
 	frontendClient := cFactory.FrontendClient(c)
-	namespace := getRequiredGlobalOption(c, FlagNamespace)
-	taskQueue := getRequiredOption(c, FlagTaskQueue)
+	namespace, err := getRequiredGlobalOption(c, FlagNamespace)
+	if err != nil {
+		return err
+	}
+	taskQueue := c.String(FlagTaskQueue)
 
 	ctx, cancel := newContext(c)
 	defer cancel()

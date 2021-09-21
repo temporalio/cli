@@ -126,7 +126,7 @@ func loadPlugins(ctx *cli.Context) error {
 	if dcPlugin != "" {
 		dataConverter, err := plugin.NewDataConverterPlugin(dcPlugin)
 		if err != nil {
-			ErrorAndExit("unable to load data converter plugin", err)
+			return fmt.Errorf("unable to load data converter plugin: %s", err)
 		}
 
 		dataconverter.SetCurrent(dataConverter)

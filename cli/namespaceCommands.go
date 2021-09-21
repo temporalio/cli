@@ -41,19 +41,22 @@ import (
 )
 
 // RegisterNamespace register a namespace
-func RegisterNamespace(c *cli.Context) {
-	namespace := getRequiredGlobalOption(c, FlagNamespace)
+func RegisterNamespace(c *cli.Context) error {
+	namespace, err := getRequiredGlobalOption(c, FlagNamespace)
+	if err != nil {
+		return err
+	}
+
 	description := c.String(FlagDescription)
 	ownerEmail := c.String(FlagOwnerEmail)
 
 	client := cFactory.FrontendClient(c)
 
 	retention := defaultNamespaceRetention
-	var err error
 	if c.IsSet(FlagRetention) {
 		retention, err = timestamp.ParseDurationDefaultDays(c.String(FlagRetention))
 		if err != nil {
-			ErrorAndExit(fmt.Sprintf("Option %s format is invalid.", FlagRetention), err)
+			return fmt.Errorf("option %s format is invalid: %s", FlagRetention, err)
 		}
 	}
 
@@ -61,22 +64,22 @@ func RegisterNamespace(c *cli.Context) {
 	if c.IsSet(FlagIsGlobalNamespace) {
 		isGlobalNamespace, err = strconv.ParseBool(c.String(FlagIsGlobalNamespace))
 		if err != nil {
-			ErrorAndExit(fmt.Sprintf("Option %s format is invalid.", FlagIsGlobalNamespace), err)
+			return fmt.Errorf("option %s format is invalid: %w.", FlagIsGlobalNamespace, err)
 		}
 	}
 
 	namespaceData := map[string]string{}
 	if c.IsSet(FlagNamespaceData) {
-		namespaceDataStr := getRequiredOption(c, FlagNamespaceData)
+		namespaceDataStr := c.String(FlagNamespaceData)
 		namespaceData, err = parseNamespaceDataKVs(namespaceDataStr)
 		if err != nil {
-			ErrorAndExit(fmt.Sprintf("Option %s format is invalid.", FlagNamespaceData), err)
+			return fmt.Errorf("option %s format is invalid: %s", FlagNamespaceData, err)
 		}
 	}
 	if len(requiredNamespaceDataKeys) > 0 {
 		err = checkRequiredNamespaceDataKVs(namespaceData)
 		if err != nil {
-			ErrorAndExit("Namespace data missed required data.", err)
+			return fmt.Errorf("namespace data missed required data: %s", err)
 		}
 	}
 
@@ -98,6 +101,15 @@ func RegisterNamespace(c *cli.Context) {
 		}
 	}
 
+	archState, err := archivalState(c, FlagHistoryArchivalState)
+	if err != nil {
+		return err
+	}
+	archVisState, err := archivalState(c, FlagVisibilityArchivalState)
+	if err != nil {
+		return err
+	}
+
 	request := &workflowservice.RegisterNamespaceRequest{
 		Namespace:                        namespace,
 		Description:                      description,
@@ -106,9 +118,9 @@ func RegisterNamespace(c *cli.Context) {
 		WorkflowExecutionRetentionPeriod: &retention,
 		Clusters:                         clusters,
 		ActiveClusterName:                activeClusterName,
-		HistoryArchivalState:             archivalState(c, FlagHistoryArchivalState),
+		HistoryArchivalState:             archState,
 		HistoryArchivalUri:               c.String(FlagHistoryArchivalURI),
-		VisibilityArchivalState:          archivalState(c, FlagVisibilityArchivalState),
+		VisibilityArchivalState:          archVisState,
 		VisibilityArchivalUri:            c.String(FlagVisibilityArchivalURI),
 		IsGlobalNamespace:                isGlobalNamespace,
 	}
@@ -118,18 +130,23 @@ func RegisterNamespace(c *cli.Context) {
 	_, err = client.RegisterNamespace(ctx, request)
 	if err != nil {
 		if _, ok := err.(*serviceerror.NamespaceAlreadyExists); !ok {
-			ErrorAndExit("Register namespace operation failed.", err)
+			return fmt.Errorf("namespace registration failed: %s", err)
 		} else {
-			ErrorAndExit(fmt.Sprintf("Namespace %s already registered.", namespace), err)
+			return fmt.Errorf("namespace %s is already registered: %s", namespace, err)
 		}
 	} else {
 		fmt.Printf("Namespace %s successfully registered.\n", namespace)
 	}
+
+	return nil
 }
 
 // UpdateNamespace updates a namespace
-func UpdateNamespace(c *cli.Context) {
-	namespace := getRequiredGlobalOption(c, FlagNamespace)
+func UpdateNamespace(c *cli.Context) error {
+	namespace, err := getRequiredGlobalOption(c, FlagNamespace)
+	if err != nil {
+		return err
+	}
 
 	client := cFactory.FrontendClient(c)
 
@@ -153,11 +170,10 @@ func UpdateNamespace(c *cli.Context) {
 		})
 		if err != nil {
 			if _, ok := err.(*serviceerror.NotFound); !ok {
-				ErrorAndExit("Operation UpdateNamespace failed.", err)
+				return fmt.Errorf("namespace update failed: %s", err)
 			} else {
-				ErrorAndExit(fmt.Sprintf("Namespace %s does not exist.", namespace), err)
+				return fmt.Errorf("namespace %s does not exist: %s", namespace, err)
 			}
-			return
 		}
 
 		description := resp.NamespaceInfo.GetDescription()
@@ -176,13 +192,13 @@ func UpdateNamespace(c *cli.Context) {
 			namespaceDataStr := c.String(FlagNamespaceData)
 			namespaceData, err = parseNamespaceDataKVs(namespaceDataStr)
 			if err != nil {
-				ErrorAndExit("Namespace data format is invalid.", err)
+				return fmt.Errorf("namespace data format is invalid: %s.", err)
 			}
 		}
 		if c.IsSet(FlagRetention) {
 			retention, err = timestamp.ParseDurationDefaultDays(c.String(FlagRetention))
 			if err != nil {
-				ErrorAndExit(fmt.Sprintf("Option %s format is invalid.", FlagRetention), err)
+				return fmt.Errorf("option %s format is invalid: %s.", FlagRetention, err)
 			}
 		}
 		if c.IsSet(FlagClusters) {
@@ -200,7 +216,7 @@ func UpdateNamespace(c *cli.Context) {
 		var binBinaries *namespacepb.BadBinaries
 		if c.IsSet(FlagAddBadBinary) {
 			if !c.IsSet(FlagReason) {
-				ErrorAndExit("Must provide a reason.", nil)
+				return fmt.Errorf("reason flag is not provided: %s.", err)
 			}
 			binChecksum := c.String(FlagAddBadBinary)
 			reason := c.String(FlagReason)
@@ -225,11 +241,20 @@ func UpdateNamespace(c *cli.Context) {
 			OwnerEmail:  ownerEmail,
 			Data:        namespaceData,
 		}
+
+		archState, err := archivalState(c, FlagHistoryArchivalState)
+		if err != nil {
+			return err
+		}
+		archVisState, err := archivalState(c, FlagVisibilityArchivalState)
+		if err != nil {
+			return err
+		}
 		updateConfig := &namespacepb.NamespaceConfig{
 			WorkflowExecutionRetentionTtl: &retention,
-			HistoryArchivalState:          archivalState(c, FlagHistoryArchivalState),
+			HistoryArchivalState:          archState,
 			HistoryArchivalUri:            c.String(FlagHistoryArchivalURI),
-			VisibilityArchivalState:       archivalState(c, FlagVisibilityArchivalState),
+			VisibilityArchivalState:       archVisState,
 			VisibilityArchivalUri:         c.String(FlagVisibilityArchivalURI),
 			BadBinaries:                   binBinaries,
 		}
@@ -245,28 +270,30 @@ func UpdateNamespace(c *cli.Context) {
 		}
 	}
 
-	_, err := client.UpdateNamespace(ctx, updateRequest)
+	_, err = client.UpdateNamespace(ctx, updateRequest)
 	if err != nil {
 		if _, ok := err.(*serviceerror.NotFound); !ok {
-			ErrorAndExit("Operation UpdateNamespace failed.", err)
+			return fmt.Errorf("namespace update failed: %s", err)
 		} else {
-			ErrorAndExit(fmt.Sprintf("Namespace %s does not exist.", namespace), err)
+			return fmt.Errorf("namespace %s does not exist: %s", namespace, err)
 		}
 	} else {
 		fmt.Printf("Namespace %s successfully updated.\n", namespace)
 	}
+
+	return nil
 }
 
 // DescribeNamespace updates a namespace
-func DescribeNamespace(c *cli.Context) {
+func DescribeNamespace(c *cli.Context) error {
 	namespace := c.String(FlagNamespace)
 	namespaceID := c.String(FlagNamespaceID)
 
 	if namespaceID == "" && namespace == "" {
-		ErrorAndExit("At least namespace_id or namespace must be provided.", nil)
+		return fmt.Errorf("provide either %s or %s flag", FlagNamespaceID, FlagNamespace)
 	}
 	if c.IsSet(FlagNamespace) && namespaceID != "" {
-		ErrorAndExit("Only one of namespace_id or namespace must be provided.", nil)
+		return fmt.Errorf("provide only one of the flags: %s or %s", FlagNamespaceID, FlagNamespace)
 	}
 	if namespaceID != "" {
 		namespace = ""
@@ -282,21 +309,30 @@ func DescribeNamespace(c *cli.Context) {
 	})
 	if err != nil {
 		if _, ok := err.(*serviceerror.NotFound); !ok {
-			ErrorAndExit("Operation DescribeNamespace failed.", err)
+			return fmt.Errorf("namespace describe failed: %s", err)
 		}
-		ErrorAndExit(fmt.Sprintf("Namespace %s does not exist.", namespace), err)
+		return fmt.Errorf("namespace %s does not exist: %s", namespace, err)
 	}
 
 	printNamespace(c, resp)
+
+	return nil
 }
 
 // ListNamespaces list all namespaces
-func ListNamespaces(c *cli.Context) {
-
+func ListNamespaces(c *cli.Context) error {
 	client := cFactory.FrontendClient(c)
-	for _, ns := range getAllNamespaces(c, client) {
+
+	namespaces, err := getAllNamespaces(c, client)
+	if err != nil {
+		return err
+	}
+
+	for _, ns := range namespaces {
 		printNamespace(c, ns)
 	}
+
+	return nil
 }
 
 func printNamespace(c *cli.Context, resp *workflowservice.DescribeNamespaceResponse) {
@@ -332,7 +368,7 @@ func printNamespace(c *cli.Context, resp *workflowservice.DescribeNamespaceRespo
 	output.PrintItems(c, badBinaries, bOpts)
 }
 
-func getAllNamespaces(c *cli.Context, tClient workflowservice.WorkflowServiceClient) []*workflowservice.DescribeNamespaceResponse {
+func getAllNamespaces(c *cli.Context, tClient workflowservice.WorkflowServiceClient) ([]*workflowservice.DescribeNamespaceResponse, error) {
 	var res []*workflowservice.DescribeNamespaceResponse
 	pagesize := int32(200)
 	var token []byte
@@ -345,12 +381,12 @@ func getAllNamespaces(c *cli.Context, tClient workflowservice.WorkflowServiceCli
 		}
 		listResp, err := tClient.ListNamespaces(ctx, listRequest)
 		if err != nil {
-			ErrorAndExit("Error when list namespaces info", err)
+			return nil, fmt.Errorf("unable to list namespaces: %s", err)
 		}
 		token = listResp.GetNextPageToken()
 		res = append(res, listResp.GetNamespaces()...)
 	}
-	return res
+	return res, nil
 }
 
 func clustersToString(clusters []*replicationpb.ClusterReplicationConfig) string {
@@ -365,16 +401,16 @@ func clustersToString(clusters []*replicationpb.ClusterReplicationConfig) string
 	return res
 }
 
-func archivalState(c *cli.Context, stateFlagName string) enumspb.ArchivalState {
+func archivalState(c *cli.Context, stateFlagName string) (enumspb.ArchivalState, error) {
 	if c.IsSet(stateFlagName) {
 		switch c.String(stateFlagName) {
 		case "disabled":
-			return enumspb.ARCHIVAL_STATE_DISABLED
+			return enumspb.ARCHIVAL_STATE_DISABLED, nil
 		case "enabled":
-			return enumspb.ARCHIVAL_STATE_ENABLED
+			return enumspb.ARCHIVAL_STATE_ENABLED, nil
 		default:
-			ErrorAndExit(fmt.Sprintf("Option %s format is invalid.", stateFlagName), errors.New("invalid state, valid values are \"disabled\" and \"enabled\""))
+			return 0, fmt.Errorf("option %s format is invalid: invalid state, valid values are \"disabled\" and \"enabled\"", stateFlagName)
 		}
 	}
-	return enumspb.ARCHIVAL_STATE_UNSPECIFIED
+	return enumspb.ARCHIVAL_STATE_UNSPECIFIED, nil
 }

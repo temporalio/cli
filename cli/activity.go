@@ -47,16 +47,19 @@ func newActivityCommands() []*cli.Command {
 					Usage: "RunId",
 				},
 				&cli.StringFlag{
-					Name:  FlagActivityIDWithAlias,
-					Usage: "The activityId to operate on",
+					Name:     FlagActivityIDWithAlias,
+					Usage:    "The activityId to operate on",
+					Required: true,
 				},
 				&cli.StringFlag{
-					Name:  FlagResult,
-					Usage: "Result of the activity",
+					Name:     FlagResult,
+					Usage:    "Result of the activity",
+					Required: true,
 				},
 				&cli.StringFlag{
-					Name:  FlagIdentity,
-					Usage: "Identity of the operator",
+					Name:     FlagIdentity,
+					Usage:    "Identity of the operator",
+					Required: true,
 				},
 				&cli.StringFlag{
 					Name:  color.FlagColor,
@@ -82,20 +85,24 @@ func newActivityCommands() []*cli.Command {
 					Usage: "RunId",
 				},
 				&cli.StringFlag{
-					Name:  FlagActivityIDWithAlias,
-					Usage: "The activityId to operate on",
+					Name:     FlagActivityIDWithAlias,
+					Usage:    "The activityId to operate on",
+					Required: true,
 				},
 				&cli.StringFlag{
-					Name:  FlagReason,
-					Usage: "Reason to fail the activity",
+					Name:     FlagReason,
+					Usage:    "Reason to fail the activity",
+					Required: true,
 				},
 				&cli.StringFlag{
-					Name:  FlagDetail,
-					Usage: "Detail to fail the activity",
+					Name:     FlagDetail,
+					Usage:    "Detail to fail the activity",
+					Required: true,
 				},
 				&cli.StringFlag{
-					Name:  FlagIdentity,
-					Usage: "Identity of the operator",
+					Name:     FlagIdentity,
+					Usage:    "Identity of the operator",
+					Required: true,
 				},
 				&cli.StringFlag{
 					Name:  color.FlagColor,

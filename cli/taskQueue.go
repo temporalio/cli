@@ -41,8 +41,9 @@ func newTaskQueueCommands() []*cli.Command {
 			Usage:   "Describe pollers info of task queue",
 			Flags: append([]cli.Flag{
 				&cli.StringFlag{
-					Name:  FlagTaskQueueWithAlias,
-					Usage: "TaskQueue description",
+					Name:     FlagTaskQueueWithAlias,
+					Usage:    "TaskQueue description",
+					Required: true,
 				},
 				&cli.StringFlag{
 					Name:  FlagTaskQueueTypeWithAlias,
@@ -60,8 +61,9 @@ func newTaskQueueCommands() []*cli.Command {
 			Usage:   "List all the taskqueue partitions and the hostname for partitions.",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
-					Name:  FlagTaskQueueWithAlias,
-					Usage: "TaskQueue description",
+					Name:     FlagTaskQueueWithAlias,
+					Usage:    "TaskQueue description",
+					Required: true,
 				},
 				&cli.StringFlag{
 					Name:    output.FlagOutput,

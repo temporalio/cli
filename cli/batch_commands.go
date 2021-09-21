@@ -45,7 +45,7 @@ import (
 
 // DescribeBatchJob describe the status of the batch job
 func DescribeBatchJob(c *cli.Context) error {
-	jobID := getRequiredOption(c, FlagJobID)
+	jobID := c.String(FlagJobID)
 
 	client := cFactory.SDKClient(c, common.SystemLocalNamespace)
 	tcCtx, cancel := newContext(c)
@@ -80,7 +80,10 @@ func DescribeBatchJob(c *cli.Context) error {
 
 // ListBatchJobs list the started batch jobs
 func ListBatchJobs(c *cli.Context) error {
-	namespace := getRequiredGlobalOption(c, FlagNamespace)
+	namespace, err := getRequiredGlobalOption(c, FlagNamespace)
+	if err != nil {
+		return err
+	}
 	pageSize := c.Int(FlagPageSize)
 	client := cFactory.SDKClient(c, common.SystemLocalNamespace)
 	tcCtx, cancel := newContext(c)
@@ -129,18 +132,25 @@ func ListBatchJobs(c *cli.Context) error {
 
 // StartBatchJob starts a batch job
 func StartBatchJob(c *cli.Context) error {
-	namespace := getRequiredGlobalOption(c, FlagNamespace)
-	query := getRequiredOption(c, FlagListQuery)
-	reason := getRequiredOption(c, FlagReason)
-	batchType := getRequiredOption(c, FlagBatchType)
+	namespace, err := getRequiredGlobalOption(c, FlagNamespace)
+	if err != nil {
+		return err
+	}
+	query := c.String(FlagListQuery)
+	reason := c.String(FlagReason)
+	batchType := c.String(FlagBatchType)
 	if !validateBatchType(batchType) {
 		return fmt.Errorf("unknown batch type, supported types: %s", strings.Join(batcher.AllBatchTypes, ","))
 	}
 	operator := getCurrentUserFromEnv()
 	var sigName, sigVal string
 	if batchType == batcher.BatchTypeSignal {
-		sigName = getRequiredOption(c, FlagSignalName)
-		sigVal = getRequiredOption(c, FlagInput)
+		sigName = c.String(FlagSignalName)
+		sigVal = c.String(FlagInput)
+
+		if len(sigName) == 0 || len(sigVal) == 0 {
+			return fmt.Errorf("options %s and %s are required for type %s", FlagSignalName, FlagInput, batcher.BatchTypeSignal)
+		}
 	}
 	rps := c.Int(FlagRPS)
 
@@ -215,8 +225,8 @@ func StartBatchJob(c *cli.Context) error {
 
 // TerminateBatchJob stops abatch job
 func TerminateBatchJob(c *cli.Context) error {
-	jobID := getRequiredOption(c, FlagJobID)
-	reason := getRequiredOption(c, FlagReason)
+	jobID := c.String(FlagJobID)
+	reason := c.String(FlagReason)
 	client := cFactory.SDKClient(c, common.SystemLocalNamespace)
 	tcCtx, cancel := newContext(c)
 	defer cancel()

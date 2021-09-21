@@ -74,8 +74,7 @@ func newNamespaceCommands() []*cli.Command {
 			Usage:   "Register workflow namespace",
 			Flags:   registerNamespaceFlags,
 			Action: func(c *cli.Context) error {
-				RegisterNamespace(c)
-				return nil
+				return RegisterNamespace(c)
 			},
 		},
 		{
@@ -84,8 +83,7 @@ func newNamespaceCommands() []*cli.Command {
 			Usage:   "Update existing workflow namespace",
 			Flags:   updateNamespaceFlags,
 			Action: func(c *cli.Context) error {
-				UpdateNamespace(c)
-				return nil
+				return UpdateNamespace(c)
 			},
 		},
 		{
@@ -94,8 +92,7 @@ func newNamespaceCommands() []*cli.Command {
 			Usage:   "Describe existing workflow namespace",
 			Flags:   describeNamespaceFlags,
 			Action: func(c *cli.Context) error {
-				DescribeNamespace(c)
-				return nil
+				return DescribeNamespace(c)
 			},
 		},
 		{
@@ -104,8 +101,7 @@ func newNamespaceCommands() []*cli.Command {
 			Usage:   "List all namespaces",
 			Flags:   listNamespacesFlags,
 			Action: func(c *cli.Context) error {
-				ListNamespaces(c)
-				return nil
+				return ListNamespaces(c)
 			},
 		},
 	}

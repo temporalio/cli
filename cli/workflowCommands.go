@@ -66,10 +66,13 @@ import (
 )
 
 // ShowHistory shows the history of given workflow execution based on workflowID and runID.
-func ShowHistory(c *cli.Context) {
+func ShowHistory(c *cli.Context) error {
 	wid, rid := getWorkflowParams(c)
 
-	namespace := getRequiredGlobalOption(c, FlagNamespace)
+	namespace, err := getRequiredGlobalOption(c, FlagNamespace)
+	if err != nil {
+		return err
+	}
 	var maxFieldLength int
 	if c.IsSet(FlagMaxFieldLength) || true {
 		maxFieldLength = c.Int(FlagMaxFieldLength)
@@ -112,16 +115,19 @@ func ShowHistory(c *cli.Context) {
 
 	iter := collection.NewPagingIterator(paginationFunc)
 	opts := &output.PrintOptions{Fields: []string{"ID", "Type", "Details"}}
-	output.Pager(c, iter, opts)
+	return output.Pager(c, iter, opts)
 }
 
 // RunWorkflow starts a new workflow execution and print workflow progress and result
-func RunWorkflow(c *cli.Context) {
+func RunWorkflow(c *cli.Context) error {
 	serviceClient := cFactory.FrontendClient(c)
 
-	namespace := getRequiredGlobalOption(c, FlagNamespace)
-	taskQueue := getRequiredOption(c, FlagTaskQueue)
-	workflowType := getRequiredOption(c, FlagWorkflowType)
+	namespace, err := getRequiredGlobalOption(c, FlagNamespace)
+	if err != nil {
+		return err
+	}
+	taskQueue := c.String(FlagTaskQueue)
+	workflowType := c.String(FlagWorkflowType)
 	et := c.Int(FlagExecutionTimeout)
 	dt := c.Int(FlagWorkflowTaskTimeout)
 	wid := c.String(FlagWorkflowID)
@@ -132,12 +138,16 @@ func RunWorkflow(c *cli.Context) {
 	if c.IsSet(FlagWorkflowIDReusePolicy) {
 		reusePolicyInt, err := stringToEnum(c.String(FlagWorkflowIDReusePolicy), enumspb.WorkflowIdReusePolicy_value)
 		if err != nil {
-			ErrorAndExit("Failed to parse Reuse Policy", err)
+			return fmt.Errorf("failed to parse Reuse Policy: %s.", err)
 		}
 		reusePolicy = enumspb.WorkflowIdReusePolicy(reusePolicyInt)
 	}
 
-	input := processJSONInput(c)
+	input, err := processJSONInput(c)
+	if err != nil {
+		return err
+	}
+
 	startRequest := &workflowservice.StartWorkflowExecutionRequest{
 		RequestId:  uuid.New(),
 		Namespace:  namespace,
@@ -159,19 +169,26 @@ func RunWorkflow(c *cli.Context) {
 		startRequest.CronSchedule = c.String(FlagCronSchedule)
 	}
 
-	memoFields := processMemo(c)
+	memoFields, err := processMemo(c)
+	if err != nil {
+		return err
+	}
+
 	if len(memoFields) != 0 {
 		startRequest.Memo = &commonpb.Memo{Fields: memoFields}
 	}
 
-	startRequest.SearchAttributes = processSearchAttributes(c)
+	startRequest.SearchAttributes, err = processSearchAttributes(c)
+	if err != nil {
+		return err
+	}
 
 	tcCtx, cancel := newContextForLongPoll(c)
 	defer cancel()
 	resp, err := serviceClient.StartWorkflowExecution(tcCtx, startRequest)
 
 	if err != nil {
-		ErrorAndExit("Failed to run workflow.", err)
+		return fmt.Errorf("failed to run workflow: %s.", err)
 	}
 
 	executionDetails := struct {
@@ -203,27 +220,29 @@ func RunWorkflow(c *cli.Context) {
 	output.PrintItems(c, data, opts)
 
 	printWorkflowProgress(c, wid, resp.GetRunId())
+
+	return nil
 }
 
-func processSearchAttributes(c *cli.Context) *commonpb.SearchAttributes {
+func processSearchAttributes(c *cli.Context) (*commonpb.SearchAttributes, error) {
 	// Search attributes flags were not passed => Search attributes are not provided.
 	if !c.IsSet(FlagSearchAttributeKey) && !c.IsSet(FlagSearchAttributeValue) {
-		return nil
+		return nil, nil
 	}
 
 	if !c.IsSet(FlagSearchAttributeKey) {
-		ErrorAndExit(fmt.Sprintf("Search attribute keys must be provided using %s.", FlagSearchAttributeKey), nil)
+		return nil, fmt.Errorf("search attribute keys must be provided using %s.", FlagSearchAttributeKey)
 	}
 
 	if !c.IsSet(FlagSearchAttributeValue) {
-		ErrorAndExit(fmt.Sprintf("Search attribute values must be provided using %s.", FlagSearchAttributeValue), nil)
+		return nil, fmt.Errorf("search attribute values must be provided using %s.", FlagSearchAttributeValue)
 	}
 
 	saKeys := c.StringSlice(FlagSearchAttributeKey)
 	saValues := c.StringSlice(FlagSearchAttributeValue)
 
 	if len(saKeys) != len(saValues) {
-		ErrorAndExit(fmt.Sprintf("Number of search attributes keys %d and values %d are not equal.", len(saKeys), len(saValues)), nil)
+		return nil, fmt.Errorf("number of search attributes keys %d and values %d are not equal.", len(saKeys), len(saValues))
 	}
 
 	fields := make(map[string]interface{}, len(saKeys))
@@ -231,36 +250,36 @@ func processSearchAttributes(c *cli.Context) *commonpb.SearchAttributes {
 	for i, saValue := range saValues {
 		var j interface{}
 		if err := json.Unmarshal([]byte(saValue), &j); err != nil {
-			ErrorAndExit("Search attribute JSON parse error.", err)
+			return nil, fmt.Errorf("search attribute JSON parse error: %s", err)
 		}
 		fields[saKeys[i]] = j
 	}
 
 	// TODO: remove this and return just fields when SDK is used to start workflows.
 	searchAttributes, err := searchattribute.Encode(fields, nil)
-	if err != nil{
-		ErrorAndExit("Unable to encode search attributes.", err)
+	if err != nil {
+		return nil, fmt.Errorf("unable to encode search attributes: %s", err)
 	}
 
-	return searchAttributes
+	return searchAttributes, nil
 }
 
-func processMemo(c *cli.Context) map[string]*commonpb.Payload {
+func processMemo(c *cli.Context) (map[string]*commonpb.Payload, error) {
 	// Memo flags were not passed => Memo is not provided.
 	if !c.IsSet(FlagMemoKey) && !c.IsSet(FlagMemo) && !c.IsSet(FlagMemoFile) {
-		return nil
+		return nil, nil
 	}
 
 	if !c.IsSet(FlagMemoKey) {
-		ErrorAndExit(fmt.Sprintf("Memo keys must be provided using %s.", FlagMemoKey), nil)
+		return nil, fmt.Errorf("memo keys must be provided using %s.", FlagMemoKey)
 	}
 
 	if c.IsSet(FlagMemo) && c.IsSet(FlagMemoFile) {
-		ErrorAndExit(fmt.Sprintf("Only one of %s or %s should be used.", FlagMemo, FlagMemoFile), nil)
+		return nil, fmt.Errorf("only one of %s or %s should be used.", FlagMemo, FlagMemoFile)
 	}
 
 	if !c.IsSet(FlagMemo) && !c.IsSet(FlagMemoFile) {
-		ErrorAndExit(fmt.Sprintf("Memo values must be provided using %s or %s.", FlagMemo, FlagMemoFile), nil)
+		return nil, fmt.Errorf("memo values must be provided using %s or %s.", FlagMemo, FlagMemoFile)
 	}
 
 	memoKeys := c.StringSlice(FlagMemoKey)
@@ -272,7 +291,7 @@ func processMemo(c *cli.Context) map[string]*commonpb.Payload {
 		// #nosec
 		data, err := os.ReadFile(inputFile)
 		if err != nil {
-			ErrorAndExit(fmt.Sprintf("Error reading memo file %s.", inputFile), err)
+			return nil, fmt.Errorf("error reading memo file %s: %s", inputFile, err)
 		}
 		memoValues = strings.Split(string(data), "\n")
 	} else if c.IsSet(FlagMemo) {
@@ -280,7 +299,7 @@ func processMemo(c *cli.Context) map[string]*commonpb.Payload {
 	}
 
 	if len(memoKeys) != len(memoValues) {
-		ErrorAndExit(fmt.Sprintf("Number of memo keys %d and values %d are not equal.", len(memoKeys), len(memoValues)), nil)
+		return nil, fmt.Errorf("number of memo keys %d and values %d is not equal", len(memoKeys), len(memoValues))
 	}
 
 	// TODO: remove this and return just fields when SDK is used to start workflows.
@@ -288,7 +307,7 @@ func processMemo(c *cli.Context) map[string]*commonpb.Payload {
 	for i, key := range memoKeys {
 		fields[key] = payload.EncodeString(memoValues[i])
 	}
-	return fields
+	return fields, nil
 }
 
 type historyIterator struct {
@@ -321,12 +340,15 @@ func (h *historyIterator) Next() (interface{}, error) {
 }
 
 // helper function to print workflow progress with time refresh every second
-func printWorkflowProgress(c *cli.Context, wid, rid string) {
+func printWorkflowProgress(c *cli.Context, wid, rid string) error {
 	var maxFieldLength int
 	if c.IsSet(FlagMaxFieldLength) {
 		maxFieldLength = c.Int(FlagMaxFieldLength)
 	}
-	sdkClient := getSDKClient(c)
+	sdkClient, err := getSDKClient(c)
+	if err != nil {
+		return err
+	}
 
 	tcCtx, cancel := newIndefiniteContext(c)
 	defer cancel()
@@ -342,10 +364,11 @@ func printWorkflowProgress(c *cli.Context, wid, rid string) {
 	fmt.Println(color.Magenta(c, "Progress:"))
 	var lastEvent historypb.HistoryEvent // used for print result of this run
 
+	errChan := make(chan error)
 	go func() {
 		hIter := sdkClient.GetWorkflowHistory(tcCtx, wid, rid, true, enumspb.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
 		iter := &historyIterator{iter: hIter, maxFieldLength: maxFieldLength, lastEvent: &lastEvent}
-		output.Pager(c, iter, opts)
+		errChan <- output.Pager(c, iter, opts)
 
 		doneChan <- true
 	}()
@@ -363,61 +386,77 @@ func printWorkflowProgress(c *cli.Context, wid, rid string) {
 			fmt.Println(color.Magenta(c, "\nResult:"))
 			fmt.Printf("  Run Time: %d seconds\n", timeElapse)
 			printRunStatus(c, &lastEvent)
-			return
+			return nil
+		case <-errChan:
+			return <-errChan
 		}
 	}
 }
 
 // TerminateWorkflow terminates a workflow execution
-func TerminateWorkflow(c *cli.Context) {
-	sdkClient := getSDKClient(c)
+func TerminateWorkflow(c *cli.Context) error {
+	sdkClient, err := getSDKClient(c)
+	if err != nil {
+		return err
+	}
 
-	wid := getRequiredOption(c, FlagWorkflowID)
+	wid := c.String(FlagWorkflowID)
 	rid := c.String(FlagRunID)
 	reason := c.String(FlagReason)
 
 	ctx, cancel := newContext(c)
 	defer cancel()
-	err := sdkClient.TerminateWorkflow(ctx, wid, rid, reason, nil)
-
+	err = sdkClient.TerminateWorkflow(ctx, wid, rid, reason, nil)
 	if err != nil {
-		ErrorAndExit("Terminate workflow failed.", err)
-	} else {
-		fmt.Println("Terminate workflow succeeded.")
+		return fmt.Errorf("terminate workflow failed: %s.", err)
 	}
+
+	fmt.Println("Terminate workflow succeeded.")
+
+	return nil
 }
 
 // CancelWorkflow cancels a workflow execution
-func CancelWorkflow(c *cli.Context) {
-	sdkClient := getSDKClient(c)
+func CancelWorkflow(c *cli.Context) error {
+	sdkClient, err := getSDKClient(c)
+	if err != nil {
+		return err
+	}
 
-	wid := getRequiredOption(c, FlagWorkflowID)
+	wid := c.String(FlagWorkflowID)
 	rid := c.String(FlagRunID)
 
 	ctx, cancel := newContext(c)
 	defer cancel()
-	err := sdkClient.CancelWorkflow(ctx, wid, rid)
-
+	err = sdkClient.CancelWorkflow(ctx, wid, rid)
 	if err != nil {
-		ErrorAndExit("Cancel workflow failed.", err)
-	} else {
-		fmt.Println("Cancel workflow succeeded.")
+		return fmt.Errorf("cancel workflow failed: %s", err)
 	}
+	fmt.Println("Cancel workflow succeeded.")
+
+	return nil
 }
 
 // SignalWorkflow signals a workflow execution
-func SignalWorkflow(c *cli.Context) {
+func SignalWorkflow(c *cli.Context) error {
 	serviceClient := cFactory.FrontendClient(c)
 
-	namespace := getRequiredGlobalOption(c, FlagNamespace)
-	wid := getRequiredOption(c, FlagWorkflowID)
+	namespace, err := getRequiredGlobalOption(c, FlagNamespace)
+	if err != nil {
+		return err
+	}
+
+	wid := c.String(FlagWorkflowID)
 	rid := c.String(FlagRunID)
-	name := getRequiredOption(c, FlagName)
-	input := processJSONInput(c)
+	name := c.String(FlagName)
+	input, err := processJSONInput(c)
+	if err != nil {
+		return err
+	}
 
 	tcCtx, cancel := newContext(c)
 	defer cancel()
-	_, err := serviceClient.SignalWorkflowExecution(tcCtx, &workflowservice.SignalWorkflowExecutionRequest{
+	_, err = serviceClient.SignalWorkflowExecution(tcCtx, &workflowservice.SignalWorkflowExecutionRequest{
 		Namespace: namespace,
 		WorkflowExecution: &commonpb.WorkflowExecution{
 			WorkflowId: wid,
@@ -429,33 +468,43 @@ func SignalWorkflow(c *cli.Context) {
 	})
 
 	if err != nil {
-		ErrorAndExit("Signal workflow failed.", err)
-	} else {
-		fmt.Println("Signal workflow succeeded.")
+		return fmt.Errorf("signal workflow failed: %s", err)
 	}
+
+	fmt.Println("Signal workflow succeeded.")
+
+	return nil
 }
 
 // QueryWorkflow query workflow execution
-func QueryWorkflow(c *cli.Context) {
-	getRequiredGlobalOption(c, FlagNamespace) // for pre-check and alert if not provided
-	getRequiredOption(c, FlagWorkflowID)
-	queryType := getRequiredOption(c, FlagQueryType)
+func QueryWorkflow(c *cli.Context) error {
+	queryType := c.String(FlagQueryType)
 
-	queryWorkflowHelper(c, queryType)
+	if err := queryWorkflowHelper(c, queryType); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // QueryWorkflowUsingStackTrace query workflow execution using __stack_trace as query type
-func QueryWorkflowUsingStackTrace(c *cli.Context) {
-	queryWorkflowHelper(c, "__stack_trace")
+func QueryWorkflowUsingStackTrace(c *cli.Context) error {
+	return queryWorkflowHelper(c, "__stack_trace")
 }
 
-func queryWorkflowHelper(c *cli.Context, queryType string) {
+func queryWorkflowHelper(c *cli.Context, queryType string) error {
 	serviceClient := cFactory.FrontendClient(c)
 
-	namespace := getRequiredGlobalOption(c, FlagNamespace)
-	wid := getRequiredOption(c, FlagWorkflowID)
+	namespace, err := getRequiredGlobalOption(c, FlagNamespace)
+	if err != nil {
+		return err
+	}
+	wid := c.String(FlagWorkflowID)
 	rid := c.String(FlagRunID)
-	input := processJSONInput(c)
+	input, err := processJSONInput(c)
+	if err != nil {
+		return err
+	}
 
 	tcCtx, cancel := newContext(c)
 	defer cancel()
@@ -480,14 +529,13 @@ func queryWorkflowHelper(c *cli.Context, queryType string) {
 		case "not_completed_cleanly":
 			rejectCondition = enumspb.QUERY_REJECT_CONDITION_NOT_COMPLETED_CLEANLY
 		default:
-			ErrorAndExit(fmt.Sprintf("invalid reject condition %v, valid values are \"not_open\" and \"not_completed_cleanly\"", c.String(FlagQueryRejectCondition)), nil)
+			return fmt.Errorf("invalid reject condition %v, valid values are \"not_open\" and \"not_completed_cleanly\"", c.String(FlagQueryRejectCondition))
 		}
 		queryRequest.QueryRejectCondition = rejectCondition
 	}
 	queryResponse, err := serviceClient.QueryWorkflow(tcCtx, queryRequest)
 	if err != nil {
-		ErrorAndExit("Query workflow failed.", err)
-		return
+		return fmt.Errorf("query workflow failed: %s", err)
 	}
 
 	if queryResponse.QueryRejected != nil {
@@ -496,19 +544,30 @@ func queryWorkflowHelper(c *cli.Context, queryType string) {
 		queryResult := payloads.ToString(queryResponse.QueryResult)
 		fmt.Printf("Query result:\n%v\n", queryResult)
 	}
+
+	return nil
 }
 
 // ListWorkflow list workflow executions based on filters
-func ListWorkflow(c *cli.Context) {
-	namespace := getRequiredGlobalOption(c, FlagNamespace)
+func ListWorkflow(c *cli.Context) error {
+	namespace, err := getRequiredGlobalOption(c, FlagNamespace)
+	if err != nil {
+		return err
+	}
 	queryOpen := c.Bool(FlagOpen)
 	workflowID := c.String(FlagWorkflowID)
 	workflowType := c.String(FlagWorkflowType)
-	earliestTime := parseTime(c.String(FlagEarliestTime), time.Time{}, time.Now().UTC())
-	latestTime := parseTime(c.String(FlagLatestTime), time.Now().UTC(), time.Now().UTC())
+	earliestTime, err := parseTime(c.String(FlagEarliestTime), time.Time{}, time.Now().UTC())
+	if err != nil {
+		return err
+	}
+	latestTime, err := parseTime(c.String(FlagLatestTime), time.Now().UTC(), time.Now().UTC())
+	if err != nil {
+		return err
+	}
 	wfStatusInt, err := stringToEnum(c.String(FlagWorkflowStatus), enumspb.WorkflowExecutionStatus_value)
 	if err != nil {
-		ErrorAndExit("Failed to parse Workflow Status", err)
+		return fmt.Errorf("unable to parse workflow status: %s", err)
 	}
 	wfStatus := enumspb.WorkflowExecutionStatus(wfStatusInt)
 	client := cFactory.FrontendClient(c)
@@ -538,12 +597,15 @@ func ListWorkflow(c *cli.Context) {
 		Fields:     []string{"Execution.WorkflowId", "Execution.RunId", "StartTime"},
 		FieldsLong: []string{"Type.Name", "TaskQueue", "ExecutionTime", "CloseTime"},
 	}
-	output.Pager(c, iter, opts)
+	return output.Pager(c, iter, opts)
 }
 
 // ScanAllWorkflow list all workflow executions using Scan API.
-func ScanAllWorkflow(c *cli.Context) {
-	namespace := getRequiredGlobalOption(c, FlagNamespace)
+func ScanAllWorkflow(c *cli.Context) error {
+	namespace, err := getRequiredGlobalOption(c, FlagNamespace)
+	if err != nil {
+		return err
+	}
 	listQuery := c.String(FlagListQuery)
 	client := cFactory.FrontendClient(c)
 
@@ -578,15 +640,21 @@ func ScanAllWorkflow(c *cli.Context) {
 		Fields:     []string{"Execution.WorkflowId", "Execution.RunId", "StartTime"},
 		FieldsLong: []string{"Type.Name", "TaskQueue", "ExecutionTime", "CloseTime"},
 	}
-	output.Pager(c, iter, opts)
+
+	return output.Pager(c, iter, opts)
 }
 
 // CountWorkflow count number of workflows
-func CountWorkflow(c *cli.Context) {
+func CountWorkflow(c *cli.Context) error {
 	client := cFactory.FrontendClient(c)
 
+	n, err := getRequiredGlobalOption(c, FlagNamespace)
+	if err != nil {
+		return err
+	}
+
 	request := &workflowservice.CountWorkflowExecutionsRequest{
-		Namespace: getRequiredGlobalOption(c, FlagNamespace),
+		Namespace: n,
 		Query:     c.String(FlagListQuery),
 	}
 
@@ -594,16 +662,21 @@ func CountWorkflow(c *cli.Context) {
 	defer cancel()
 	response, err := client.CountWorkflowExecutions(ctx, request)
 	if err != nil {
-		ErrorAndExit("Unable to count workflow.", err)
+		return fmt.Errorf("unable to count workflows: %s", err)
 	}
 
 	fmt.Println(response.GetCount())
+
+	return nil
 }
 
 // ListArchivedWorkflow lists archived workflow executions based on filters
-func ListArchivedWorkflow(c *cli.Context) {
-	namespace := getRequiredGlobalOption(c, FlagNamespace)
-	query := getRequiredOption(c, FlagListQuery)
+func ListArchivedWorkflow(c *cli.Context) error {
+	namespace, err := getRequiredGlobalOption(c, FlagNamespace)
+	if err != nil {
+		return err
+	}
+	query := c.String(FlagListQuery)
 	contextTimeout := defaultContextTimeoutForListArchivedWorkflow
 	if c.IsSet(FlagContextTimeout) {
 		contextTimeout = time.Duration(c.Int(FlagContextTimeout)) * time.Second
@@ -615,7 +688,7 @@ func ListArchivedWorkflow(c *cli.Context) {
 		Query:     query,
 	}
 	var resp *workflowservice.ListArchivedWorkflowExecutionsResponse
-	var err error
+
 	paginationFunc := func(npt []byte) ([]interface{}, []byte, error) {
 		// the executions will be empty if the query is still running before timeout
 		// so keep calling the API until some results are returned (query completed)
@@ -625,7 +698,7 @@ func ListArchivedWorkflow(c *cli.Context) {
 			resp, err = client.ListArchivedWorkflowExecutions(ctx, req)
 			if err != nil {
 				cancel()
-				ErrorAndExit("Failed to list archived workflow.", err)
+				return nil, nil, fmt.Errorf("unable to list archived workflows: %s", err)
 			}
 			cancel()
 		}
@@ -643,15 +716,18 @@ func ListArchivedWorkflow(c *cli.Context) {
 		Fields:     []string{"Execution.WorkflowId", "Execution.RunId", "StartTime"},
 		FieldsLong: []string{"Type.Name", "TaskQueue", "ExecutionTime", "CloseTime"},
 	}
-	output.Pager(c, iter, opts)
+	return output.Pager(c, iter, opts)
 }
 
 // DescribeWorkflow show information about the specified workflow execution
-func DescribeWorkflow(c *cli.Context) {
+func DescribeWorkflow(c *cli.Context) error {
 	wid, rid := getWorkflowParams(c)
 
 	frontendClient := cFactory.FrontendClient(c)
-	namespace := getRequiredGlobalOption(c, FlagNamespace)
+	namespace, err := getRequiredGlobalOption(c, FlagNamespace)
+	if err != nil {
+		return err
+	}
 	printRaw := c.Bool(FlagPrintRaw) // printRaw is false by default,
 	// and will show datetime and decoded search attributes instead of raw timestamp and byte arrays
 	printResetPointsOnly := c.Bool(FlagResetPointsOnly)
@@ -667,12 +743,12 @@ func DescribeWorkflow(c *cli.Context) {
 		},
 	})
 	if err != nil {
-		ErrorAndExit("Describe workflow execution failed", err)
+		return fmt.Errorf("workflow describe failed: %s", err)
 	}
 
 	if printResetPointsOnly {
 		printAutoResetPoints(resp)
-		return
+		return nil
 	}
 
 	if printRaw {
@@ -680,6 +756,8 @@ func DescribeWorkflow(c *cli.Context) {
 	} else {
 		prettyPrintJSONObject(convertDescribeWorkflowExecutionResponse(c, resp))
 	}
+
+	return nil
 }
 
 func printAutoResetPoints(resp *workflowservice.DescribeWorkflowExecutionResponse) {
@@ -807,8 +885,7 @@ func printRunStatus(c *cli.Context, event *historypb.HistoryEvent) {
 	}
 }
 
-func scanWorkflowExecutions(sdkClient sdkclient.Client, pageSize int, nextPageToken []byte, query string, c *cli.Context) ([]*workflowpb.WorkflowExecutionInfo, []byte) {
-
+func scanWorkflowExecutions(sdkClient sdkclient.Client, pageSize int, nextPageToken []byte, query string, c *cli.Context) ([]*workflowpb.WorkflowExecutionInfo, []byte, error) {
 	request := &workflowservice.ScanWorkflowExecutionsRequest{
 		PageSize:      int32(pageSize),
 		NextPageToken: nextPageToken,
@@ -819,35 +896,45 @@ func scanWorkflowExecutions(sdkClient sdkclient.Client, pageSize int, nextPageTo
 	defer cancel()
 	response, err := sdkClient.ScanWorkflow(ctx, request)
 	if err != nil {
-		ErrorAndExit("Failed to list workflow.", err)
+		return nil, nil, fmt.Errorf("failed to list workflow: %s", err)
 	}
-	return response.Executions, response.NextPageToken
+	return response.Executions, response.NextPageToken, nil
 }
 
 // ObserveHistory show the process of running workflow
-func ObserveHistory(c *cli.Context) {
+func ObserveHistory(c *cli.Context) error {
 	wid, rid := getWorkflowParams(c)
 
-	printWorkflowProgress(c, wid, rid)
+	return printWorkflowProgress(c, wid, rid)
 }
 
 // ResetWorkflow reset workflow
-func ResetWorkflow(c *cli.Context) {
-	namespace := getRequiredGlobalOption(c, FlagNamespace)
-	wid := getRequiredOption(c, FlagWorkflowID)
-	reason := getRequiredOption(c, FlagReason)
+func ResetWorkflow(c *cli.Context) error {
+	namespace, err := getRequiredGlobalOption(c, FlagNamespace)
+	if err != nil {
+		return err
+	}
+	wid := c.String(FlagWorkflowID)
+	reason := c.String(FlagReason)
 	if len(reason) == 0 {
-		ErrorAndExit("wrong reason", fmt.Errorf("reason cannot be empty"))
+		return fmt.Errorf("reason flag cannot be empty")
 	}
 	rid := c.String(FlagRunID)
 	eventID := c.Int64(FlagEventID)
 	resetType := c.String(FlagResetType)
 	extraForResetType, ok := resetTypesMap[resetType]
 	if !ok && eventID <= 0 {
-		ErrorAndExit(fmt.Sprintf("must specify either valid event_id or reset_type (one of %s)", strings.Join(mapKeysToArray(resetTypesMap), ", ")), nil)
+		return fmt.Errorf("specify either valid event id or reset type (one of %s)", strings.Join(mapKeysToArray(resetTypesMap), ", "))
 	}
-	if ok && len(extraForResetType) > 0 {
-		getRequiredOption(c, extraForResetType)
+	if ok && len(extraForResetType.(string)) > 0 {
+		value := c.String(extraForResetType.(string))
+		if len(value) == 0 {
+			return fmt.Errorf("option %s is required", extraForResetType.(string))
+		}
+	}
+	resetReapplyType := c.String(FlagResetReapplyType)
+	if _, ok := resetReapplyTypesMap[resetReapplyType]; !ok {
+		return fmt.Errorf("must specify valid reset reapply type: %v", strings.Join(mapKeysToArray(resetReapplyTypesMap), ", "))
 	}
 
 	ctx, cancel := newContext(c)
@@ -857,11 +944,10 @@ func ResetWorkflow(c *cli.Context) {
 
 	resetBaseRunID := rid
 	workflowTaskFinishID := eventID
-	var err error
 	if resetType != "" {
 		resetBaseRunID, workflowTaskFinishID, err = getResetEventIDByType(ctx, c, resetType, namespace, wid, rid, frontendClient)
 		if err != nil {
-			ErrorAndExit("getResetEventIDByType failed", err)
+			return fmt.Errorf("getting reset event ID by type failed: %s", err)
 		}
 	}
 	resp, err := frontendClient.ResetWorkflowExecution(ctx, &workflowservice.ResetWorkflowExecutionRequest{
@@ -873,11 +959,13 @@ func ResetWorkflow(c *cli.Context) {
 		Reason:                    fmt.Sprintf("%v:%v", getCurrentUserFromEnv(), reason),
 		WorkflowTaskFinishEventId: workflowTaskFinishID,
 		RequestId:                 uuid.New(),
+		ResetReapplyType:          resetReapplyTypesMap[resetReapplyType].(enumspb.ResetReapplyType),
 	})
 	if err != nil {
-		ErrorAndExit("reset failed", err)
+		return fmt.Errorf("reset failed: %s", err)
 	}
 	prettyPrintJSONObject(resp)
+	return nil
 }
 
 func processResets(c *cli.Context, namespace string, wes chan commonpb.WorkflowExecution, done chan bool, wg *sync.WaitGroup, params batchResetParamsType) {
@@ -920,9 +1008,12 @@ type batchResetParamsType struct {
 }
 
 // ResetInBatch resets workflow in batch
-func ResetInBatch(c *cli.Context) {
-	namespace := getRequiredGlobalOption(c, FlagNamespace)
-	resetType := getRequiredOption(c, FlagResetType)
+func ResetInBatch(c *cli.Context) error {
+	namespace, err := getRequiredGlobalOption(c, FlagNamespace)
+	if err != nil {
+		return err
+	}
+	resetType := c.String(FlagResetType)
 
 	inFileName := c.String(FlagInputFile)
 	query := c.String(FlagListQuery)
@@ -932,13 +1023,16 @@ func ResetInBatch(c *cli.Context) {
 
 	extraForResetType, ok := resetTypesMap[resetType]
 	if !ok {
-		ErrorAndExit("Not supported reset type", nil)
-	} else if len(extraForResetType) > 0 {
-		getRequiredOption(c, extraForResetType)
+		return fmt.Errorf("reset type is not supported: %s", extraForResetType)
+	} else if len(extraForResetType.(string)) > 0 {
+		value := c.String(extraForResetType.(string))
+		if len(value) == 0 {
+			return fmt.Errorf("option %s is required", extraForResetType.(string))
+		}
 	}
 
 	batchResetParams := batchResetParamsType{
-		reason:               getRequiredOption(c, FlagReason),
+		reason:               c.String(FlagReason),
 		skipOpen:             c.Bool(FlagSkipCurrentOpen),
 		nonDeterministicOnly: c.Bool(FlagNonDeterministicOnly),
 		skipBaseNotCurrent:   c.Bool(FlagSkipBaseIsNotCurrent),
@@ -947,7 +1041,7 @@ func ResetInBatch(c *cli.Context) {
 	}
 
 	if inFileName == "" && query == "" {
-		ErrorAndExit("Must provide input file or list query to get target workflows to reset", nil)
+		return fmt.Errorf("must provide input file or list query to get target workflows to reset")
 	}
 
 	wg := &sync.WaitGroup{}
@@ -966,7 +1060,7 @@ func ResetInBatch(c *cli.Context) {
 		// #nosec
 		excFile, err := os.Open(excFileName)
 		if err != nil {
-			ErrorAndExit("Open failed2", err)
+			return fmt.Errorf("unable to read exclude rules: %s", err)
 		}
 		defer excFile.Close()
 		scanner := bufio.NewScanner(excFile)
@@ -980,7 +1074,7 @@ func ResetInBatch(c *cli.Context) {
 			}
 			cols := strings.Split(line, separator)
 			if len(cols) < 1 {
-				ErrorAndExit("Split failed", fmt.Errorf("line %v has less than 1 cols separated by comma, only %v ", idx, len(cols)))
+				return fmt.Errorf("exclude file: unable to split, line %v has less than 1 cols separated by comma, only %v", idx, len(cols))
 			}
 			wid := strings.TrimSpace(cols[0])
 			rid := "not-needed"
@@ -992,7 +1086,7 @@ func ResetInBatch(c *cli.Context) {
 	if len(inFileName) > 0 {
 		inFile, err := os.Open(inFileName)
 		if err != nil {
-			ErrorAndExit("Open failed", err)
+			return fmt.Errorf("unable to open input file: %s", err)
 		}
 		defer inFile.Close()
 		scanner := bufio.NewScanner(inFile)
@@ -1006,7 +1100,7 @@ func ResetInBatch(c *cli.Context) {
 			}
 			cols := strings.Split(line, separator)
 			if len(cols) < 1 {
-				ErrorAndExit("Split failed", fmt.Errorf("line %v has less than 1 cols separated by comma, only %v ", idx, len(cols)))
+				return fmt.Errorf("include file: unable to split, line %v has less than 1 cols separated by comma, only %v", idx, len(cols))
 			}
 			fmt.Printf("Start processing line %v ...\n", idx)
 			wid := strings.TrimSpace(cols[0])
@@ -1027,12 +1121,16 @@ func ResetInBatch(c *cli.Context) {
 			}
 		}
 	} else {
-		sdkClient := getSDKClient(c)
+		sdkClient, err := getSDKClient(c)
+		if err != nil {
+			return err
+		}
+
 		pageSize := 1000
 		var nextPageToken []byte
 		var result []*workflowpb.WorkflowExecutionInfo
 		for {
-			result, nextPageToken = scanWorkflowExecutions(sdkClient, pageSize, nextPageToken, query, c)
+			result, nextPageToken, err = scanWorkflowExecutions(sdkClient, pageSize, nextPageToken, query, c)
 			for _, we := range result {
 				wid := we.Execution.GetWorkflowId()
 				rid := we.Execution.GetRunId()
@@ -1057,6 +1155,8 @@ func ResetInBatch(c *cli.Context) {
 	close(done)
 	fmt.Println("wait for all goroutines...")
 	wg.Wait()
+
+	return nil
 }
 
 func printErrorAndReturn(msg string, err error) error {
@@ -1379,7 +1479,7 @@ func getWorkflowParams(c *cli.Context) (string, string) {
 			rid = c.Args().Get(1)
 		}
 	} else {
-		wid = getRequiredOption(c, FlagWorkflowID)
+		wid = c.String(FlagWorkflowID)
 		rid = c.String(FlagRunID)
 	}
 

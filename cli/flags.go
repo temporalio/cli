@@ -189,6 +189,7 @@ const (
 	FlagAddBadBinary                     = "add-bad-binary"
 	FlagRemoveBadBinary                  = "remove-bad-binary"
 	FlagResetType                        = "reset-type"
+	FlagResetReapplyType                 = "reset-reapply-type"
 	FlagResetPointsOnly                  = "reset-points-only"
 	FlagResetBadBinaryChecksum           = "reset-bad-binary-checksum"
 	FlagListQuery                        = "query"
@@ -247,8 +248,9 @@ const (
 
 var flagsForExecution = []cli.Flag{
 	&cli.StringFlag{
-		Name:  FlagWorkflowIDWithAlias,
-		Usage: "WorkflowId",
+		Name:     FlagWorkflowIDWithAlias,
+		Usage:    "WorkflowId",
+		Required: true,
 	},
 	&cli.StringFlag{
 		Name:  FlagRunIDWithAlias,
@@ -294,16 +296,18 @@ var flagsForShowWorkflow = []cli.Flag{
 
 var flagsForRunWorkflow = []cli.Flag{
 	&cli.StringFlag{
-		Name:  FlagTaskQueueWithAlias,
-		Usage: "TaskQueue",
+		Name:     FlagTaskQueueWithAlias,
+		Usage:    "TaskQueue",
+		Required: true,
 	},
 	&cli.StringFlag{
 		Name:  FlagWorkflowIDWithAlias,
 		Usage: "WorkflowId",
 	},
 	&cli.StringFlag{
-		Name:  FlagWorkflowTypeWithAlias,
-		Usage: "WorkflowTypeName",
+		Name:     FlagWorkflowTypeWithAlias,
+		Usage:    "WorkflowTypeName",
+		Required: true,
 	},
 	&cli.IntFlag{
 		Name:  FlagExecutionTimeoutWithAlias,
@@ -418,8 +422,9 @@ var flagsForScan = []cli.Flag{
 
 var flagsForListArchived = []cli.Flag{
 	&cli.StringFlag{
-		Name:  FlagListQueryWithAlias,
-		Usage: "SQL like query. Please check the documentation of the visibility archiver used by your namespace for detailed instructions",
+		Name:     FlagListQueryWithAlias,
+		Usage:    "SQL like query. Please check the documentation of the visibility archiver used by your namespace for detailed instructions",
+		Required: true,
 	},
 }
 
@@ -435,8 +440,9 @@ func getFlagsForCount() []cli.Flag {
 // all flags of query except QueryType
 var flagsForStackTraceQuery = []cli.Flag{
 	&cli.StringFlag{
-		Name:  FlagWorkflowIDWithAlias,
-		Usage: "WorkflowId",
+		Name:     FlagWorkflowIDWithAlias,
+		Usage:    "WorkflowId",
+		Required: true,
 	},
 	&cli.StringFlag{
 		Name:  FlagRunIDWithAlias,
@@ -459,8 +465,9 @@ var flagsForStackTraceQuery = []cli.Flag{
 
 var flagsForQuery = append(flagsForStackTraceQuery,
 	&cli.StringFlag{
-		Name:  FlagQueryTypeWithAlias,
-		Usage: "The query type you want to run",
+		Name:     FlagQueryTypeWithAlias,
+		Usage:    "The query type you want to run",
+		Required: true,
 	})
 
 var flagsForDescribeWorkflow = append(flagsForExecution, []cli.Flag{

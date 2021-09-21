@@ -38,8 +38,7 @@ func newWorkflowCommands() []*cli.Command {
 			Usage: "start a new workflow execution and show progress",
 			Flags: append(flagsForRunWorkflow, flags.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
-				RunWorkflow(c)
-				return nil
+				return RunWorkflow(c)
 			},
 		},
 		{
@@ -48,8 +47,7 @@ func newWorkflowCommands() []*cli.Command {
 			Usage:   "show information of workflow execution",
 			Flags:   flagsForDescribeWorkflow,
 			Action: func(c *cli.Context) error {
-				DescribeWorkflow(c)
-				return nil
+				return DescribeWorkflow(c)
 			},
 		},
 		{
@@ -59,8 +57,7 @@ func newWorkflowCommands() []*cli.Command {
 			Description: "list one page (default size 10 items) by default, use flag --pagesize to change page size",
 			Flags:       append(flagsForWorkflowFiltering, flags.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
-				ListWorkflow(c)
-				return nil
+				return ListWorkflow(c)
 			},
 		},
 		{
@@ -68,8 +65,8 @@ func newWorkflowCommands() []*cli.Command {
 			Usage: "list archived workflow executions",
 			Flags: append(flagsForListArchived, flags.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
-				ListArchivedWorkflow(c)
-				return nil
+				return ListArchivedWorkflow(c)
+
 			},
 		},
 		{
@@ -77,8 +74,8 @@ func newWorkflowCommands() []*cli.Command {
 			Usage: "show workflow history",
 			Flags: append(append(flagsForExecution, flagsForShowWorkflow...), flags.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
-				ShowHistory(c)
-				return nil
+				return ShowHistory(c)
+
 			},
 		},
 		{
@@ -87,8 +84,8 @@ func newWorkflowCommands() []*cli.Command {
 			Usage:   "show the progress of workflow history",
 			Flags:   flagsForObserveHistory,
 			Action: func(c *cli.Context) error {
-				ObserveHistory(c)
-				return nil
+				return ObserveHistory(c)
+
 			},
 		},
 		{
@@ -96,8 +93,8 @@ func newWorkflowCommands() []*cli.Command {
 			Usage: "query workflow execution",
 			Flags: flagsForQuery,
 			Action: func(c *cli.Context) error {
-				QueryWorkflow(c)
-				return nil
+				return QueryWorkflow(c)
+
 			},
 		},
 		{
@@ -105,8 +102,7 @@ func newWorkflowCommands() []*cli.Command {
 			Usage: "query workflow execution with __stack_trace as query type",
 			Flags: flagsForStackTraceQuery,
 			Action: func(c *cli.Context) error {
-				QueryWorkflowUsingStackTrace(c)
-				return nil
+				return QueryWorkflowUsingStackTrace(c)
 			},
 		},
 		{
@@ -115,16 +111,18 @@ func newWorkflowCommands() []*cli.Command {
 			Usage:   "signal a workflow execution",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
-					Name:  FlagWorkflowIDWithAlias,
-					Usage: "WorkflowId",
+					Name:     FlagWorkflowIDWithAlias,
+					Usage:    "WorkflowId",
+					Required: true,
 				},
 				&cli.StringFlag{
 					Name:  FlagRunIDWithAlias,
 					Usage: "RunId",
 				},
 				&cli.StringFlag{
-					Name:  FlagNameWithAlias,
-					Usage: "SignalName",
+					Name:     FlagNameWithAlias,
+					Usage:    "SignalName",
+					Required: true,
 				},
 				&cli.StringFlag{
 					Name:  FlagInputWithAlias,
@@ -136,8 +134,7 @@ func newWorkflowCommands() []*cli.Command {
 				},
 			},
 			Action: func(c *cli.Context) error {
-				SignalWorkflow(c)
-				return nil
+				return SignalWorkflow(c)
 			},
 		},
 		{
@@ -146,8 +143,7 @@ func newWorkflowCommands() []*cli.Command {
 				"It will be faster than listall, but result are not sorted.",
 			Flags: append(flagsForScan, flags.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
-				ScanAllWorkflow(c)
-				return nil
+				return ScanAllWorkflow(c)
 			},
 		},
 		{
@@ -156,8 +152,7 @@ func newWorkflowCommands() []*cli.Command {
 			Usage:   "count number of workflow executions (need to enable Temporal server on ElasticSearch)",
 			Flags:   getFlagsForCount(),
 			Action: func(c *cli.Context) error {
-				CountWorkflow(c)
-				return nil
+				return CountWorkflow(c)
 			},
 		},
 		{
@@ -166,8 +161,7 @@ func newWorkflowCommands() []*cli.Command {
 			Usage:   "cancel a workflow execution",
 			Flags:   flagsForExecution,
 			Action: func(c *cli.Context) error {
-				CancelWorkflow(c)
-				return nil
+				return CancelWorkflow(c)
 			},
 		},
 		{
@@ -176,8 +170,9 @@ func newWorkflowCommands() []*cli.Command {
 			Usage:   "terminate a new workflow execution",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
-					Name:  FlagWorkflowIDWithAlias,
-					Usage: "WorkflowId",
+					Name:     FlagWorkflowIDWithAlias,
+					Usage:    "WorkflowId",
+					Required: true,
 				},
 				&cli.StringFlag{
 					Name:  FlagRunIDWithAlias,
@@ -189,8 +184,7 @@ func newWorkflowCommands() []*cli.Command {
 				},
 			},
 			Action: func(c *cli.Context) error {
-				TerminateWorkflow(c)
-				return nil
+				return TerminateWorkflow(c)
 			},
 		},
 		{
@@ -199,8 +193,9 @@ func newWorkflowCommands() []*cli.Command {
 			Usage:   "reset the workflow, by either eventId or resetType.",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
-					Name:  FlagWorkflowIDWithAlias,
-					Usage: "WorkflowId",
+					Name:     FlagWorkflowIDWithAlias,
+					Usage:    "WorkflowId",
+					Required: true,
 				},
 				&cli.StringFlag{
 					Name:  FlagRunIDWithAlias,
@@ -211,8 +206,9 @@ func newWorkflowCommands() []*cli.Command {
 					Usage: "The eventId of any event after WorkflowTaskStarted you want to reset to (exclusive). It can be WorkflowTaskCompleted, WorkflowTaskFailed or others",
 				},
 				&cli.StringFlag{
-					Name:  FlagReason,
-					Usage: "reason to do the reset",
+					Name:     FlagReason,
+					Usage:    "reason to do the reset",
+					Required: true,
 				},
 				&cli.StringFlag{
 					Name:  FlagResetType,
@@ -224,8 +220,7 @@ func newWorkflowCommands() []*cli.Command {
 				},
 			},
 			Action: func(c *cli.Context) error {
-				ResetWorkflow(c)
-				return nil
+				return ResetWorkflow(c)
 			},
 		},
 		{
@@ -252,8 +247,9 @@ func newWorkflowCommands() []*cli.Command {
 					Usage: "Separator for input file(default to tab)",
 				},
 				&cli.StringFlag{
-					Name:  FlagReason,
-					Usage: "Reason for reset",
+					Name:     FlagReason,
+					Usage:    "Reason for reset",
+					Required: true,
 				},
 				&cli.IntFlag{
 					Name:  FlagParallism,
@@ -280,8 +276,9 @@ func newWorkflowCommands() []*cli.Command {
 					Usage: "Not do real action of reset(just logging in STDOUT)",
 				},
 				&cli.StringFlag{
-					Name:  FlagResetType,
-					Usage: "where to reset. Support one of these: " + strings.Join(mapKeysToArray(resetTypesMap), ","),
+					Name:     FlagResetType,
+					Usage:    "where to reset. Support one of these: " + strings.Join(mapKeysToArray(resetTypesMap), ","),
+					Required: true,
 				},
 				&cli.StringFlag{
 					Name:  FlagResetBadBinaryChecksum,
@@ -289,8 +286,7 @@ func newWorkflowCommands() []*cli.Command {
 				},
 			},
 			Action: func(c *cli.Context) error {
-				ResetInBatch(c)
-				return nil
+				return ResetInBatch(c)
 			},
 		},
 	}
