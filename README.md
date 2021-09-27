@@ -1,3 +1,5 @@
+[![build](https://github.com/temporalio/tctl/actions/workflows/ci.yml/badge.svg)](https://github.com/temporalio/tctl/actions/workflows/ci.yml)
+
 **NOT READY FOR PRODUCTION**
 
 This is an ongoing work on tctl UX based on proposals:
