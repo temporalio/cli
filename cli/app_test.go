@@ -118,25 +118,25 @@ func (s *cliAppSuite) TestAppCommands() {
 
 func (s *cliAppSuite) TestNamespaceRegister_LocalNamespace() {
 	s.frontendClient.EXPECT().RegisterNamespace(gomock.Any(), gomock.Any()).Return(nil, nil)
-	errorCode := s.app.Run([]string{"", "--namespace", cliTestNamespace, "namespace", "register", "--global_namespace", "false"})
+	errorCode := s.app.Run([]string{"", "--namespace", cliTestNamespace, "namespace", "register", "--global-namespace", "false"})
 	s.Equal(0, errorCode)
 }
 
 func (s *cliAppSuite) TestNamespaceRegister_GlobalNamespace() {
 	s.frontendClient.EXPECT().RegisterNamespace(gomock.Any(), gomock.Any()).Return(nil, nil)
-	errorCode := s.app.Run([]string{"", "--namespace", cliTestNamespace, "namespace", "register", "--global_namespace", "true"})
+	errorCode := s.app.Run([]string{"", "--namespace", cliTestNamespace, "namespace", "register", "--global-namespace", "true"})
 	s.Equal(0, errorCode)
 }
 
 func (s *cliAppSuite) TestNamespaceRegister_NamespaceExist() {
 	s.frontendClient.EXPECT().RegisterNamespace(gomock.Any(), gomock.Any()).Return(nil, serviceerror.NewNamespaceAlreadyExists(""))
-	errorCode := s.app.Run([]string{"", "--namespace", cliTestNamespace, "namespace", "register", "--global_namespace", "true"})
+	errorCode := s.app.Run([]string{"", "--namespace", cliTestNamespace, "namespace", "register", "--global-namespace", "true"})
 	s.Equal(1, errorCode)
 }
 
 func (s *cliAppSuite) TestNamespaceRegister_Failed() {
 	s.frontendClient.EXPECT().RegisterNamespace(gomock.Any(), gomock.Any()).Return(nil, serviceerror.NewInvalidArgument("faked error"))
-	errorCode := s.app.Run([]string{"", "--namespace", cliTestNamespace, "namespace", "register", "--global_namespace", "true"})
+	errorCode := s.app.Run([]string{"", "--namespace", cliTestNamespace, "namespace", "register", "--global-namespace", "true"})
 	s.Equal(1, errorCode)
 }
 
