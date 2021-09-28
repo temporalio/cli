@@ -26,11 +26,9 @@ package cli
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"regexp"
@@ -531,10 +529,6 @@ func newContext(c *cli.Context) (context.Context, context.CancelFunc) {
 	return newContextWithTimeout(c, defaultContextTimeout)
 }
 
-func newContextForVisibility(c *cli.Context) (context.Context, context.CancelFunc) {
-	return newContextWithTimeout(c, defaultContextTimeoutForVisibility)
-}
-
 func newContextForLongPoll(c *cli.Context) (context.Context, context.CancelFunc) {
 	return newContextWithTimeout(c, defaultContextTimeoutForLongPoll)
 }
@@ -558,7 +552,7 @@ func newContextWithTimeout(c *cli.Context, timeout time.Duration) (context.Conte
 
 // process and validate input provided through cmd or file
 func processJSONInput(c *cli.Context) (*commonpb.Payloads, error) {
-	jsonsRaw, err := readJSONInputs(c, jsonTypeInput)
+	jsonsRaw, err := readJSONInputs(c)
 	if err != nil {
 		return nil, err
 	}
@@ -585,23 +579,9 @@ func processJSONInput(c *cli.Context) (*commonpb.Payloads, error) {
 }
 
 // read multiple inputs presented in json format
-func readJSONInputs(c *cli.Context, jType jsonType) ([][]byte, error) {
-	var flagRawInput string
-	var flagInputFileName string
-
-	switch jType {
-	case jsonTypeInput:
-		flagRawInput = FlagInput
-		flagInputFileName = FlagInputFile
-	case jsonTypeMemo:
-		flagRawInput = FlagMemo
-		flagInputFileName = FlagMemoFile
-	default:
-		return nil, nil
-	}
-
-	if c.IsSet(flagRawInput) {
-		inputsG := c.Generic(flagRawInput)
+func readJSONInputs(c *cli.Context) ([][]byte, error) {
+	if c.IsSet(FlagInput) {
+		inputsG := c.Generic(FlagInput)
 
 		var inputs *cli.StringSlice
 		var ok bool
@@ -622,8 +602,8 @@ func readJSONInputs(c *cli.Context, jType jsonType) ([][]byte, error) {
 		}
 
 		return inputsRaw, nil
-	} else if c.IsSet(flagInputFileName) {
-		inputFile := c.String(flagInputFileName)
+	} else if c.IsSet(FlagInputFile) {
+		inputFile := c.String(FlagInputFile)
 		// This method is purely used to parse input from the CLI. The input comes from a trusted user
 		// #nosec
 		data, err := ioutil.ReadFile(inputFile)
@@ -633,21 +613,6 @@ func readJSONInputs(c *cli.Context, jType jsonType) ([][]byte, error) {
 		return [][]byte{data}, nil
 	}
 	return nil, nil
-}
-
-// validate whether str is a valid json or multi valid json concatenated with spaces/newlines
-func validateJSONs(str string) error {
-	input := []byte(str)
-	dec := json.NewDecoder(bytes.NewReader(input))
-	for {
-		_, err := dec.Token()
-		if err == io.EOF {
-			return nil // End of input, valid JSON
-		}
-		if err != nil {
-			return err // Invalid input
-		}
-	}
 }
 
 func truncate(str string) string {

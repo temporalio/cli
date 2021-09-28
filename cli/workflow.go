@@ -138,9 +138,8 @@ func newWorkflowCommands() []*cli.Command {
 			},
 		},
 		{
-			Name: "scan",
-			Usage: "scan workflow executions (need to enable Temporal server on ElasticSearch). " +
-				"It will be faster than listall, but result are not sorted.",
+			Name:  "scan",
+			Usage: "Scan workflow executions (requires Elasticsearch to be enabled).",
 			Flags: append(flagsForScan, flags.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
 				return ScanAllWorkflow(c)
@@ -211,8 +210,14 @@ func newWorkflowCommands() []*cli.Command {
 					Required: true,
 				},
 				&cli.StringFlag{
-					Name:  FlagResetType,
-					Usage: "where to reset. Support one of these: " + strings.Join(mapKeysToArray(resetTypesMap), ","),
+					Name: FlagResetType,
+					Usage: "where to reset. Support one of these: " +
+						strings.Join(mapKeysToArray(resetTypesMap), ","),
+				},
+				&cli.StringFlag{
+					Name: FlagResetReapplyType,
+					Usage: "whether to reapply events after the reset point. Support one of these: " +
+						strings.Join(mapKeysToArray(resetReapplyTypesMap), ",") + "Default to: All",
 				},
 				&cli.StringFlag{
 					Name:  FlagResetBadBinaryChecksum,

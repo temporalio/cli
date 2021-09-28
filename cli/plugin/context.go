@@ -23,51 +23,51 @@
 package plugin
 
 import (
-	"fmt"
-	"os/exec"
+	"context"
+	"encoding/gob"
 
-	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-plugin"
-)
-
-const (
-	DataConverterPluginType   = "DataConverter"
-	HeadersProviderPluginType = "HeadersProvider"
+	"google.golang.org/grpc/metadata"
 )
 
 var (
-	PluginHandshakeConfig = plugin.HandshakeConfig{
-		ProtocolVersion:  1,
-		MagicCookieKey:   "TEMPORAL_CLI_PLUGIN",
-		MagicCookieValue: "abb3e448baf947eba1847b10a38554db",
-	}
-
-	pluginMap = map[string]plugin.Plugin{
-		DataConverterPluginType:   &DataConverterPlugin{},
-		HeadersProviderPluginType: &HeadersProviderPlugin{},
-	}
+	grpcIncomingMDKey = "grpc-incoming"
+	grpcOutgoingMDKey = "grpc-outgoing"
 )
 
-func newPluginClient(kind string, name string) (interface{}, error) {
-	pluginClient := plugin.NewClient(&plugin.ClientConfig{
-		HandshakeConfig: PluginHandshakeConfig,
-		Plugins:         pluginMap,
-		Cmd:             exec.Command(name),
-		Managed:         true,
-		Logger: hclog.New(&hclog.LoggerOptions{
-			Name:  "tctl",
-			Level: hclog.LevelFromString("INFO"),
-		}),
-	})
-
-	rpcClient, err := pluginClient.Client()
-	if err != nil {
-		return nil, fmt.Errorf("unable to create plugin client: %w", err)
-	}
-
-	return rpcClient.Dispense(kind)
+type PluginSafeContext struct {
+	Values map[string]interface{}
 }
 
-func StopPlugins() {
-	plugin.CleanupClients()
+func init() {
+	gob.Register(metadata.MD{})
+}
+
+func NewPluginSafeContext(ctx context.Context) PluginSafeContext {
+	values := map[string]interface{}{}
+
+	if md, ok := metadata.FromIncomingContext(ctx); ok {
+		values[grpcIncomingMDKey] = md
+	}
+	if md, ok := metadata.FromOutgoingContext(ctx); ok {
+		values[grpcOutgoingMDKey] = md
+	}
+
+	return PluginSafeContext{Values: values}
+}
+
+func (sCtx *PluginSafeContext) GetContext() context.Context {
+	ctx := context.Background()
+
+	if rv, ok := sCtx.Values[grpcIncomingMDKey]; ok {
+		if md, ok := rv.(metadata.MD); ok {
+			ctx = metadata.NewIncomingContext(ctx, md)
+		}
+	}
+	if rv, ok := sCtx.Values[grpcOutgoingMDKey]; ok {
+		if md, ok := rv.(metadata.MD); ok {
+			ctx = metadata.NewOutgoingContext(ctx, md)
+		}
+	}
+
+	return ctx
 }

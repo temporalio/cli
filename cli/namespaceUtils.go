@@ -27,7 +27,6 @@ package cli
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/uber-go/tally"
@@ -294,11 +293,6 @@ func initializePersistenceFactory(
 ) client.Factory {
 
 	pConfig := serviceConfig.Persistence
-	pConfig.VisibilityConfig = &config.VisibilityConfig{
-		VisibilityListMaxQPS:  dynamicconfig.GetIntPropertyFilteredByNamespace(dependencyMaxQPS),
-		EnableSampling:        dynamicconfig.GetBoolPropertyFn(false), // not used by namespace operation
-		ESProcessorAckTimeout: dynamicconfig.GetDurationPropertyFn(1 * time.Minute),
-	}
 	pFactory := client.NewFactory(
 		&pConfig,
 		resolver.NewNoopResolver(),
@@ -353,17 +347,15 @@ func initializeArchivalProvider(
 	)
 
 	historyArchiverBootstrapContainer := &archiver.HistoryBootstrapContainer{
-		HistoryV2Manager: nil, // not used
+		ExecutionManager: nil, // not used
 		Logger:           logger,
 		MetricsClient:    metricsClient,
 		ClusterMetadata:  clusterMetadata,
-		NamespaceCache:   nil, // not used
 	}
 	visibilityArchiverBootstrapContainer := &archiver.VisibilityBootstrapContainer{
 		Logger:          logger,
 		MetricsClient:   metricsClient,
 		ClusterMetadata: clusterMetadata,
-		NamespaceCache:  nil, // not used
 	}
 
 	err := archiverProvider.RegisterBootstrapContainer(

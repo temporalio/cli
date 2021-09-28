@@ -56,7 +56,6 @@ const (
 	defaultContextTimeout                        = defaultContextTimeoutInSeconds * time.Second
 	defaultContextTimeoutForLongPoll             = 2 * time.Minute
 	defaultContextTimeoutForListArchivedWorkflow = 3 * time.Minute
-	defaultContextTimeoutForVisibility           = 10 * time.Second
 
 	defaultWorkflowTaskTimeoutInSeconds = 10
 	defaultPageSizeForList              = 500
@@ -91,13 +90,6 @@ var resetReapplyTypesMap = map[string]interface{}{
 	"Signal": enumspb.RESET_REAPPLY_TYPE_SIGNAL,
 	"None":   enumspb.RESET_REAPPLY_TYPE_NONE,
 }
-
-type jsonType int
-
-const (
-	jsonTypeInput jsonType = iota
-	jsonTypeMemo
-)
 
 var (
 	cFactory                ClientFactory

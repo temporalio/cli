@@ -52,11 +52,6 @@ func DescribeTaskQueue(c *cli.Context) error {
 		return fmt.Errorf("failed to describe task queue.\n%s", err)
 	}
 
-	pollers := resp.Pollers
-	if len(pollers) == 0 {
-		return fmt.Errorf(color.Magenta(c, "no pollers running for task queue. %v", taskQueue))
-	}
-
 	opts := &output.PrintOptions{
 		Fields: []string{"Identity", "LastAccessTime", "RatePerSecond"},
 	}

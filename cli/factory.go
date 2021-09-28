@@ -25,23 +25,39 @@
 package cli
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
 	"io/ioutil"
 	"net"
+	"net/http"
+	"strings"
+	"time"
 
+	"github.com/temporalio/tctl/cli/headersprovider"
+	"github.com/temporalio/tctl/cli/plugin"
 	"github.com/urfave/cli/v2"
 	"go.temporal.io/api/workflowservice/v1"
 	sdkclient "go.temporal.io/sdk/client"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/metadata"
 
 	"go.temporal.io/server/common/auth"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
 )
+
+var netClient HttpGetter = &http.Client{
+	Timeout: time.Second * 10,
+}
+
+// HttpGetter defines http.Client.Get(...) as an interface so we can mock it
+type HttpGetter interface {
+	Get(url string) (resp *http.Response, err error)
+}
 
 // ClientFactory is used to construct rpc clients
 type ClientFactory interface {
@@ -85,11 +101,13 @@ func (b *clientFactory) SDKClient(c *cli.Context, namespace string) sdkclient.Cl
 	sdkClient, err := sdkclient.NewClient(sdkclient.Options{
 		HostPort:  hostPort,
 		Namespace: namespace,
-		Logger:    NewSdkLogger(b.logger),
+		Logger:    log.NewSdkLogger(b.logger),
+		Identity:  getCliIdentity(),
 		ConnectionOptions: sdkclient.ConnectionOptions{
 			DisableHealthCheck: true,
 			TLS:                tlsConfig,
 		},
+		HeadersProvider: headersprovider.GetCurrent(),
 	})
 	if err != nil {
 		b.logger.Fatal("Failed to create SDK client", tag.Error(err))
@@ -103,6 +121,19 @@ func (b *clientFactory) HealthClient(c *cli.Context) healthpb.HealthClient {
 	connection, _ := b.createGRPCConnection(c)
 
 	return healthpb.NewHealthClient(connection)
+}
+
+func headersProviderInterceptor(headersProvider plugin.HeadersProvider) grpc.UnaryClientInterceptor {
+	return func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+		headers, err := headersProvider.GetHeaders(ctx)
+		if err != nil {
+			return err
+		}
+		for k, v := range headers {
+			ctx = metadata.AppendToOutgoingContext(ctx, k, v)
+		}
+		return invoker(ctx, method, req, reply, cc, opts...)
+	}
 }
 
 func (b *clientFactory) createGRPCConnection(c *cli.Context) (*grpc.ClientConn, error) {
@@ -122,7 +153,15 @@ func (b *clientFactory) createGRPCConnection(c *cli.Context) (*grpc.ClientConn, 
 		grpcSecurityOptions = grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig))
 	}
 
-	connection, err := grpc.Dial(hostPort, grpcSecurityOptions)
+	dialOpts := []grpc.DialOption{
+		grpcSecurityOptions,
+	}
+	headersProvider := headersprovider.GetCurrent()
+	if headersProvider != nil {
+		dialOpts = append(dialOpts, grpc.WithUnaryInterceptor(headersProviderInterceptor(headersProvider)))
+	}
+
+	connection, err := grpc.Dial(hostPort, dialOpts...)
 	if err != nil {
 		b.logger.Fatal("Failed to create connection", tag.Error(err))
 		return nil, err
@@ -131,7 +170,6 @@ func (b *clientFactory) createGRPCConnection(c *cli.Context) (*grpc.ClientConn, 
 }
 
 func (b *clientFactory) createTLSConfig(c *cli.Context) (*tls.Config, error) {
-
 	certPath := c.String(FlagTLSCertPath)
 	keyPath := c.String(FlagTLSKeyPath)
 	caPath := c.String(FlagTLSCaPath)
@@ -190,11 +228,29 @@ func (b *clientFactory) createTLSConfig(c *cli.Context) (*tls.Config, error) {
 	return nil, nil
 }
 
-func fetchCACert(path string) (*x509.CertPool, error) {
-	caPool := x509.NewCertPool()
-	caBytes, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, err
+func fetchCACert(pathOrUrl string) (caPool *x509.CertPool, err error) {
+	caPool = x509.NewCertPool()
+	var caBytes []byte
+
+	if strings.HasPrefix(pathOrUrl, "http://") {
+		return nil, errors.New("HTTP is not supported for CA cert URLs. Provide HTTPS URL")
+	}
+
+	if strings.HasPrefix(pathOrUrl, "https://") {
+		resp, err := netClient.Get(pathOrUrl)
+		if err != nil {
+			return nil, err
+		}
+		defer resp.Body.Close()
+		caBytes, err = ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		caBytes, err = ioutil.ReadFile(pathOrUrl)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if !caPool.AppendCertsFromPEM(caBytes) {
