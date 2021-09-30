@@ -95,7 +95,7 @@ func RunWorkflow(c *cli.Context) error {
 	if c.IsSet(FlagWorkflowIDReusePolicy) {
 		reusePolicyInt, err := stringToEnum(c.String(FlagWorkflowIDReusePolicy), enumspb.WorkflowIdReusePolicy_value)
 		if err != nil {
-			return fmt.Errorf("failed to parse Reuse Policy: %s.", err)
+			return fmt.Errorf("unable to parse Reuse Policy: %s", err)
 		}
 		reusePolicy = enumspb.WorkflowIdReusePolicy(reusePolicyInt)
 	}
@@ -220,7 +220,7 @@ func unmarshalSearchAttrFromCLI(c *cli.Context) (map[string]interface{}, error) 
 	}
 
 	if len(searchAttrKeys) != len(rawSearchAttrVals) {
-		return nil, fmt.Errorf("uneven number of search attributes keys (%d): %v and values(%d): %v.", len(searchAttrKeys), searchAttrKeys, len(rawSearchAttrVals), rawSearchAttrVals)
+		return nil, fmt.Errorf("uneven number of search attributes keys (%d): %v and values(%d): %v", len(searchAttrKeys), searchAttrKeys, len(rawSearchAttrVals), rawSearchAttrVals)
 	}
 
 	fields := make(map[string]interface{}, len(searchAttrKeys))
@@ -228,7 +228,7 @@ func unmarshalSearchAttrFromCLI(c *cli.Context) (map[string]interface{}, error) 
 	for i, v := range rawSearchAttrVals {
 		var j interface{}
 		if err := json.Unmarshal([]byte(v), &j); err != nil {
-			return nil, fmt.Errorf("search attribute JSON parse error: %s.", err)
+			return nil, fmt.Errorf("unable to parse search attribute JSON: %s", err)
 		}
 		fields[searchAttrKeys[i]] = j
 	}
@@ -243,15 +243,15 @@ func unmarshalMemoFromCLI(c *cli.Context) (map[string]interface{}, error) {
 	}
 
 	if !c.IsSet(FlagMemoKey) {
-		return nil, fmt.Errorf("memo keys must be provided using %s.", FlagMemoKey)
+		return nil, fmt.Errorf("memo keys must be provided using %s", FlagMemoKey)
 	}
 
 	if c.IsSet(FlagMemo) && c.IsSet(FlagMemoFile) {
-		return nil, fmt.Errorf("only one of %s or %s should be used.", FlagMemo, FlagMemoFile)
+		return nil, fmt.Errorf("provide only one of %s or %s", FlagMemo, FlagMemoFile)
 	}
 
 	if !c.IsSet(FlagMemo) && !c.IsSet(FlagMemoFile) {
-		return nil, fmt.Errorf("memo values must be provided using %s or %s.", FlagMemo, FlagMemoFile)
+		return nil, fmt.Errorf("memo values must be provided using %s or %s", FlagMemo, FlagMemoFile)
 	}
 
 	memoKeys := c.StringSlice(FlagMemoKey)
@@ -263,7 +263,7 @@ func unmarshalMemoFromCLI(c *cli.Context) (map[string]interface{}, error) {
 		// #nosec
 		data, err := os.ReadFile(inputFile)
 		if err != nil {
-			return nil, fmt.Errorf("error reading memo file %s.", inputFile)
+			return nil, fmt.Errorf("unable to read memo file %s", inputFile)
 		}
 		memoValues = strings.Split(string(data), "\n")
 	} else if c.IsSet(FlagMemo) {
@@ -271,7 +271,7 @@ func unmarshalMemoFromCLI(c *cli.Context) (map[string]interface{}, error) {
 	}
 
 	if len(memoKeys) != len(memoValues) {
-		return nil, fmt.Errorf("Number of memo keys %d and values %d are not equal.", len(memoKeys), len(memoValues))
+		return nil, fmt.Errorf("number of memo keys %d and values %d are not equal", len(memoKeys), len(memoValues))
 	}
 
 	fields := make(map[string]interface{}, len(memoKeys))
@@ -389,7 +389,7 @@ func TerminateWorkflow(c *cli.Context) error {
 	defer cancel()
 	err = sdkClient.TerminateWorkflow(ctx, wid, rid, reason, nil)
 	if err != nil {
-		return fmt.Errorf("terminate workflow failed: %s.", err)
+		return fmt.Errorf("unable to terminate workflow: %s", err)
 	}
 
 	fmt.Println("Terminate workflow succeeded.")
@@ -411,9 +411,9 @@ func CancelWorkflow(c *cli.Context) error {
 	defer cancel()
 	err = sdkClient.CancelWorkflow(ctx, wid, rid)
 	if err != nil {
-		return fmt.Errorf("cancel workflow failed: %s", err)
+		return fmt.Errorf("unable to cancel workflow: %s", err)
 	}
-	fmt.Println("Cancel workflow succeeded.")
+	fmt.Println(color.Green(c, "canceled workflow, workflow id: %s, run id: %s", wid, rid))
 
 	return nil
 }
@@ -614,7 +614,7 @@ func ScanAllWorkflow(c *cli.Context) error {
 		}
 		err := backoff.Retry(op, common.CreateFrontendServiceRetryPolicy(), common.IsContextDeadlineExceededErr)
 		if err != nil {
-			return nil, nil, fmt.Errorf("unable to list workflow executions: %s.", err)
+			return nil, nil, fmt.Errorf("unable to list workflow executions: %s", err)
 		}
 
 		var items []interface{}
@@ -680,7 +680,11 @@ func ListArchivedWorkflow(c *cli.Context) error {
 		contextTimeout = time.Duration(c.Int(FlagContextTimeout)) * time.Second
 	}
 
-	client := cFactory.FrontendClient(c)
+	sdkClient, err := getSDKClient(c)
+	if err != nil {
+		return err
+	}
+
 	req := &workflowservice.ListArchivedWorkflowExecutionsRequest{
 		Namespace: namespace,
 		Query:     query,
@@ -693,7 +697,7 @@ func ListArchivedWorkflow(c *cli.Context) error {
 		req.NextPageToken = npt
 		for resp == nil || (len(resp.Executions) == 0 && resp.NextPageToken != nil) {
 			ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
-			resp, err = client.ListArchivedWorkflowExecutions(ctx, req)
+			resp, err = sdkClient.ListArchivedWorkflow(ctx, req)
 			if err != nil {
 				cancel()
 				return nil, nil, fmt.Errorf("unable to list archived workflows: %s", err)
@@ -1139,6 +1143,9 @@ func ResetInBatch(c *cli.Context) error {
 		var result []*workflowpb.WorkflowExecutionInfo
 		for {
 			result, nextPageToken, err = scanWorkflowExecutions(sdkClient, pageSize, nextPageToken, query, c)
+			if err != nil {
+				return err
+			}
 			for _, we := range result {
 				wid := we.Execution.GetWorkflowId()
 				rid := we.Execution.GetRunId()
@@ -1514,7 +1521,7 @@ func listWorkflows(c *cli.Context, sdkClient sdkclient.Client, npt []byte, names
 	}
 	err := backoff.Retry(op, common.CreateFrontendServiceRetryPolicy(), common.IsContextDeadlineExceededErr)
 	if err != nil {
-		return nil, nil, fmt.Errorf("unable to list workflow executions: %s.", err)
+		return nil, nil, fmt.Errorf("unable to list workflow executions: %s", err)
 	}
 
 	var items []interface{}
@@ -1553,7 +1560,7 @@ func listOpenWorkflows(c *cli.Context, sdkClient sdkclient.Client, npt []byte, n
 	}
 	err := backoff.Retry(op, common.CreateFrontendServiceRetryPolicy(), common.IsContextDeadlineExceededErr)
 	if err != nil {
-		return nil, nil, fmt.Errorf("unable to list open workflow executions: %s.", err)
+		return nil, nil, fmt.Errorf("unable to list open workflow executions: %s", err)
 	}
 
 	var items []interface{}
@@ -1596,7 +1603,7 @@ func listClosedWorkflows(c *cli.Context, sdkClient sdkclient.Client, npt []byte,
 	}
 	err := backoff.Retry(op, common.CreateFrontendServiceRetryPolicy(), common.IsContextDeadlineExceededErr)
 	if err != nil {
-		return nil, nil, fmt.Errorf("unable to list closed workflow executions: %s.", err)
+		return nil, nil, fmt.Errorf("unable to list closed workflow executions: %s", err)
 	}
 	var items []interface{}
 	for _, e := range workflows.Executions {
