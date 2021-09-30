@@ -152,5 +152,6 @@ func handleError(c *cli.Context, err error) {
 	} else {
 		fmt.Fprintf(os.Stderr, "('export %s=1' to see stack traces)\n", showErrorStackEnv)
 	}
-	os.Exit(1)
+
+	cli.OsExiter(1)
 }

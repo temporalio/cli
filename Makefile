@@ -34,7 +34,7 @@ override TEST_TAG := -tags $(TEST_TAG)
 endif
 
 test: clean-test-results
-	@printf $(COLOR) "Run unit tests..."
+	@printf $(COLOR) "Running unit tests..."
 	$(foreach TEST_DIRS,$(TEST_DIRS),\
 		@go test $(TEST_DIRS) -timeout=$(TEST_TIMEOUT) $(TEST_TAG) -race \
 	$(NEWLINE))
