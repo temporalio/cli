@@ -351,14 +351,17 @@ func printNamespace(c *cli.Context, resp *workflowservice.DescribeNamespaceRespo
 	}
 	var badBinaries []interface{}
 
-	for cs, bin := range resp.Config.BadBinaries.Binaries {
-		badBinaries = append(badBinaries, badBinary{
-			Checksum:   cs,
-			Operator:   bin.GetOperator(),
-			CreateTime: timestamp.TimeValue(bin.GetCreateTime()).String(),
-			Reason:     bin.GetReason(),
-		})
+	if resp.Config.BadBinaries != nil {
+		for cs, bin := range resp.Config.BadBinaries.Binaries {
+			badBinaries = append(badBinaries, badBinary{
+				Checksum:   cs,
+				Operator:   bin.GetOperator(),
+				CreateTime: timestamp.TimeValue(bin.GetCreateTime()).String(),
+				Reason:     bin.GetReason(),
+			})
+		}
 	}
+
 	bOpts := &output.PrintOptions{
 		Fields:      []string{"Checksum", "Operator", "CreateTime", "Reason"},
 		IgnoreFlags: true,
