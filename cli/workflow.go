@@ -80,7 +80,7 @@ func newWorkflowCommands() []*cli.Command {
 			Name:    "observe",
 			Aliases: []string{"ob"},
 			Usage:   "show the progress of workflow history",
-			Flags:   flagsForObserveHistory,
+			Flags:   append(append(flagsForExecution, flagsForShowWorkflow...), flags.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
 				return ObserveHistory(c)
 			},

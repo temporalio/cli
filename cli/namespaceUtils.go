@@ -81,9 +81,8 @@ var (
 			Usage: "Flag to indicate whether namespace is a global namespace",
 		},
 		&cli.StringFlag{
-			Name:     FlagNamespaceDataWithAlias,
-			Usage:    "Namespace data of key value pairs, in format of k1:v1,k2:v2,k3:v3",
-			Required: true,
+			Name:  FlagNamespaceDataWithAlias,
+			Usage: "Namespace data of key value pairs, in format of k1:v1,k2:v2,k3:v3",
 		},
 		&cli.StringFlag{
 			Name:  FlagHistoryArchivalStateWithAlias,

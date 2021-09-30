@@ -481,17 +481,6 @@ var flagsForDescribeWorkflow = append(flagsForExecution, []cli.Flag{
 	},
 }...)
 
-var flagsForObserveHistory = append(flagsForExecution, []cli.Flag{
-	&cli.BoolFlag{
-		Name:  FlagShowDetailWithAlias,
-		Usage: "Optional show event details",
-	},
-	&cli.IntFlag{
-		Name:  FlagMaxFieldLengthWithAlias,
-		Usage: "Optional maximum length for each attribute field when show details",
-	},
-}...)
-
 func getDBFlags() []cli.Flag {
 	return []cli.Flag{
 		&cli.StringFlag{
