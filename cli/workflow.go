@@ -66,7 +66,6 @@ func newWorkflowCommands() []*cli.Command {
 			Flags: append(flagsForListArchived, flags.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
 				return ListArchivedWorkflow(c)
-
 			},
 		},
 		{
@@ -75,7 +74,6 @@ func newWorkflowCommands() []*cli.Command {
 			Flags: append(append(flagsForExecution, flagsForShowWorkflow...), flags.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
 				return ShowHistory(c)
-
 			},
 		},
 		{
@@ -85,7 +83,6 @@ func newWorkflowCommands() []*cli.Command {
 			Flags:   flagsForObserveHistory,
 			Action: func(c *cli.Context) error {
 				return ObserveHistory(c)
-
 			},
 		},
 		{

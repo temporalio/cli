@@ -65,13 +65,6 @@ import (
 	"go.temporal.io/server/service/history/workflow"
 )
 
-// ShowHistory shows the history of given workflow execution based on workflowID and runID.
-func ShowHistory(c *cli.Context) error {
-	wid, rid := getWorkflowParams(c)
-
-	return printWorkflowProgress(c, wid, rid, false)
-}
-
 // RunWorkflow starts a new workflow execution and print workflow progress and result
 func RunWorkflow(c *cli.Context) error {
 	sdkClient, err := getSDKClient(c)
@@ -723,7 +716,8 @@ func ListArchivedWorkflow(c *cli.Context) error {
 
 // DescribeWorkflow show information about the specified workflow execution
 func DescribeWorkflow(c *cli.Context) error {
-	wid, rid := getWorkflowParams(c)
+	wid := c.String(FlagWorkflowIDWithAlias)
+	rid := c.String(FlagRunIDWithAlias)
 
 	frontendClient := cFactory.FrontendClient(c)
 	namespace, err := getRequiredGlobalOption(c, FlagNamespace)
@@ -913,9 +907,18 @@ func scanWorkflowExecutions(sdkClient sdkclient.Client, pageSize int, nextPageTo
 	return workflows.Executions, workflows.NextPageToken, nil
 }
 
+// ShowHistory shows the history of given workflow execution based on workflowID and runID.
+func ShowHistory(c *cli.Context) error {
+	wid := c.String(FlagWorkflowIDWithAlias)
+	rid := c.String(FlagRunIDWithAlias)
+
+	return printWorkflowProgress(c, wid, rid, false)
+}
+
 // ObserveHistory show the process of running workflow
 func ObserveHistory(c *cli.Context) error {
-	wid, rid := getWorkflowParams(c)
+	wid := c.String(FlagWorkflowIDWithAlias)
+	rid := c.String(FlagRunIDWithAlias)
 
 	return printWorkflowProgress(c, wid, rid, true)
 }
@@ -1483,22 +1486,6 @@ func getLastContinueAsNewID(ctx context.Context, namespace, wid, rid string, fro
 		return "", 0, printErrorAndReturn("Get LastContinueAsNewID failed", fmt.Errorf("no WorkflowTaskCompletedID"))
 	}
 	return
-}
-
-func getWorkflowParams(c *cli.Context) (string, string) {
-	var wid, rid string
-
-	if c.NArg() >= 1 {
-		wid = c.Args().First()
-		if c.NArg() >= 2 {
-			rid = c.Args().Get(1)
-		}
-	} else {
-		wid = c.String(FlagWorkflowID)
-		rid = c.String(FlagRunID)
-	}
-
-	return wid, rid
 }
 
 func listWorkflows(c *cli.Context, sdkClient sdkclient.Client, npt []byte, namespace string, query string) ([]interface{}, []byte, error) {
