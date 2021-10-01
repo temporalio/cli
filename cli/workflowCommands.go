@@ -78,7 +78,8 @@ func RunWorkflow(c *cli.Context) error {
 	}
 	taskQueue := c.String(FlagTaskQueue)
 	workflowType := c.String(FlagWorkflowType)
-	et := c.Int(FlagExecutionTimeout)
+	et := c.Int(FlagWorkflowExecutionTimeout)
+	rt := c.Int(FlagWorkflowRunTimeout)
 	dt := c.Int(FlagWorkflowTaskTimeout)
 	wid := c.String(FlagWorkflowID)
 	if len(wid) == 0 {
@@ -88,7 +89,7 @@ func RunWorkflow(c *cli.Context) error {
 	if c.IsSet(FlagWorkflowIDReusePolicy) {
 		reusePolicyInt, err := stringToEnum(c.String(FlagWorkflowIDReusePolicy), enumspb.WorkflowIdReusePolicy_value)
 		if err != nil {
-			return fmt.Errorf("unable to parse Reuse Policy: %s", err)
+			return fmt.Errorf("unable to parse workflow ID reuse policy: %s", err)
 		}
 		reusePolicy = enumspb.WorkflowIdReusePolicy(reusePolicyInt)
 	}
@@ -103,6 +104,7 @@ func RunWorkflow(c *cli.Context) error {
 		TaskQueue:                taskQueue,
 		WorkflowExecutionTimeout: time.Duration(et) * time.Second,
 		WorkflowTaskTimeout:      time.Duration(dt) * time.Second,
+		WorkflowRunTimeout:       time.Duration(rt) * time.Second,
 		WorkflowIDReusePolicy:    reusePolicy,
 	}
 	if c.IsSet(FlagCronSchedule) {
