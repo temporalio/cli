@@ -45,7 +45,12 @@ func newWorkflowCommands() []*cli.Command {
 			Name:    "describe",
 			Aliases: []string{"desc"},
 			Usage:   "show information of workflow execution",
-			Flags:   flagsForDescribeWorkflow,
+			Flags: append(flagsForExecution, []cli.Flag{
+				&cli.BoolFlag{
+					Name:  FlagResetPointsOnly,
+					Usage: "Only show auto-reset points",
+				},
+			}...),
 			Action: func(c *cli.Context) error {
 				return DescribeWorkflow(c)
 			},
@@ -88,7 +93,13 @@ func newWorkflowCommands() []*cli.Command {
 		{
 			Name:  "query",
 			Usage: "query workflow execution",
-			Flags: flagsForQuery,
+			Flags: append(flagsForStackTraceQuery,
+				&cli.StringFlag{
+					Name:     FlagQueryType,
+					Aliases:  FlagQueryTypeAlias,
+					Usage:    "The query type you want to run",
+					Required: true,
+				}),
 			Action: func(c *cli.Context) error {
 				return QueryWorkflow(c)
 
@@ -106,30 +117,24 @@ func newWorkflowCommands() []*cli.Command {
 			Name:    "signal",
 			Aliases: []string{"s"},
 			Usage:   "signal a workflow execution",
-			Flags: []cli.Flag{
+			Flags: append(flagsForExecution, []cli.Flag{
 				&cli.StringFlag{
-					Name:     FlagWorkflowIDWithAlias,
-					Usage:    "WorkflowId",
+					Name:     FlagName,
+					Aliases:  FlagNameAlias,
+					Usage:    "Signal Name",
 					Required: true,
 				},
 				&cli.StringFlag{
-					Name:  FlagRunIDWithAlias,
-					Usage: "RunId",
+					Name:    FlagInput,
+					Aliases: FlagInputAlias,
+					Usage:   "Input for the signal, in JSON format.",
 				},
 				&cli.StringFlag{
-					Name:     FlagNameWithAlias,
-					Usage:    "SignalName",
-					Required: true,
+					Name:    FlagInputFile,
+					Aliases: FlagInputFileAlias,
+					Usage:   "Input for the signal from JSON file.",
 				},
-				&cli.StringFlag{
-					Name:  FlagInputWithAlias,
-					Usage: "Input for the signal, in JSON format.",
-				},
-				&cli.StringFlag{
-					Name:  FlagInputFileWithAlias,
-					Usage: "Input for the signal from JSON file.",
-				},
-			},
+			}...),
 			Action: func(c *cli.Context) error {
 				return SignalWorkflow(c)
 			},
@@ -164,21 +169,13 @@ func newWorkflowCommands() []*cli.Command {
 			Name:    "terminate",
 			Aliases: []string{"term"},
 			Usage:   "terminate a new workflow execution",
-			Flags: []cli.Flag{
+			Flags: append(flagsForExecution, []cli.Flag{
 				&cli.StringFlag{
-					Name:     FlagWorkflowIDWithAlias,
-					Usage:    "WorkflowId",
-					Required: true,
+					Name:    FlagReason,
+					Aliases: FlagReasonAlias,
+					Usage:   "The reason you want to terminate the workflow",
 				},
-				&cli.StringFlag{
-					Name:  FlagRunIDWithAlias,
-					Usage: "RunId",
-				},
-				&cli.StringFlag{
-					Name:  FlagReasonWithAlias,
-					Usage: "The reason you want to terminate the workflow",
-				},
-			},
+			}...),
 			Action: func(c *cli.Context) error {
 				return TerminateWorkflow(c)
 			},
@@ -187,16 +184,7 @@ func newWorkflowCommands() []*cli.Command {
 			Name:    "reset",
 			Aliases: []string{"rs"},
 			Usage:   "reset the workflow, by either eventId or resetType.",
-			Flags: []cli.Flag{
-				&cli.StringFlag{
-					Name:     FlagWorkflowIDWithAlias,
-					Usage:    "WorkflowId",
-					Required: true,
-				},
-				&cli.StringFlag{
-					Name:  FlagRunIDWithAlias,
-					Usage: "RunId",
-				},
+			Flags: append(flagsForExecution, []cli.Flag{
 				&cli.StringFlag{
 					Name:  FlagEventID,
 					Usage: "The eventId of any event after WorkflowTaskStarted you want to reset to (exclusive). It can be WorkflowTaskCompleted, WorkflowTaskFailed or others",
@@ -220,7 +208,7 @@ func newWorkflowCommands() []*cli.Command {
 					Name:  FlagResetBadBinaryChecksum,
 					Usage: "Binary checksum for resetType of BadBinary",
 				},
-			},
+			}...),
 			Action: func(c *cli.Context) error {
 				return ResetWorkflow(c)
 			},
@@ -231,12 +219,14 @@ func newWorkflowCommands() []*cli.Command {
 				"To get base workflowIds/runIds to reset, source is from input file or visibility query.",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
-					Name:  FlagInputFileWithAlias,
-					Usage: "Input file to use for resetting, one workflow per line of WorkflowId and RunId. RunId is optional, default to current runId if not specified. ",
+					Name:    FlagInputFile,
+					Aliases: FlagInputFileAlias,
+					Usage:   "Input file to use for resetting, one workflow per line of WorkflowId and RunId. RunId is optional, default to current runId if not specified. ",
 				},
 				&cli.StringFlag{
-					Name:  FlagListQueryWithAlias,
-					Usage: "visibility query to get workflows to reset",
+					Name:    FlagListQuery,
+					Aliases: FlagListQueryAlias,
+					Usage:   "visibility query to get workflows to reset",
 				},
 				&cli.StringFlag{
 					Name:  FlagExcludeFile,

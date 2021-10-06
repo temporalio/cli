@@ -25,9 +25,6 @@
 package cli
 
 import (
-	"fmt"
-
-	"github.com/temporalio/tctl/pkg/color"
 	"github.com/urfave/cli/v2"
 )
 
@@ -37,56 +34,36 @@ func newActivityCommands() []*cli.Command {
 			Name:    "complete",
 			Aliases: []string{"comp"},
 			Usage:   "complete an activity",
-			Flags: []cli.Flag{
+			Flags: append(flagsForExecution, []cli.Flag{
 				&cli.StringFlag{
-					Name:  FlagWorkflowIDWithAlias,
-					Usage: "WorkflowId",
-				},
-				&cli.StringFlag{
-					Name:  FlagRunIDWithAlias,
-					Usage: "RunId",
-				},
-				&cli.StringFlag{
-					Name:     FlagActivityIDWithAlias,
-					Usage:    "The activityId to operate on",
+					Name:     FlagActivityID,
+					Aliases:  FlagActivityIDAlias,
+					Usage:    "The activity Id to complete",
 					Required: true,
 				},
 				&cli.StringFlag{
 					Name:     FlagResult,
-					Usage:    "Result of the activity",
+					Usage:    "Set the result value of completion",
 					Required: true,
 				},
 				&cli.StringFlag{
 					Name:     FlagIdentity,
-					Usage:    "Identity of the operator",
+					Usage:    "Specify operator's identity",
 					Required: true,
 				},
-				&cli.StringFlag{
-					Name:  color.FlagColor,
-					Usage: fmt.Sprintf("when to use color: %v, %v, %v.", color.Auto, color.Always, color.Never),
-					Value: string(color.Auto),
-				},
-			},
+			}...),
 			Action: func(c *cli.Context) error {
-				CompleteActivity(c)
-				return nil
+				return CompleteActivity(c)
 			},
 		},
 		{
 			Name:  "fail",
 			Usage: "fail an activity",
-			Flags: []cli.Flag{
+			Flags: append(flagsForExecution, []cli.Flag{
 				&cli.StringFlag{
-					Name:  FlagWorkflowIDWithAlias,
-					Usage: "WorkflowId",
-				},
-				&cli.StringFlag{
-					Name:  FlagRunIDWithAlias,
-					Usage: "RunId",
-				},
-				&cli.StringFlag{
-					Name:     FlagActivityIDWithAlias,
-					Usage:    "The activityId to operate on",
+					Name:     FlagActivityID,
+					Aliases:  FlagActivityIDAlias,
+					Usage:    "The activity Id to fail",
 					Required: true,
 				},
 				&cli.StringFlag{
@@ -101,18 +78,12 @@ func newActivityCommands() []*cli.Command {
 				},
 				&cli.StringFlag{
 					Name:     FlagIdentity,
-					Usage:    "Identity of the operator",
+					Usage:    "Specify operator's identity",
 					Required: true,
 				},
-				&cli.StringFlag{
-					Name:  color.FlagColor,
-					Usage: fmt.Sprintf("when to use color: %v, %v, %v.", color.Auto, color.Always, color.Never),
-					Value: string(color.Auto),
-				},
-			},
+			}...),
 			Action: func(c *cli.Context) error {
-				FailActivity(c)
-				return nil
+				return FailActivity(c)
 			},
 		},
 	}

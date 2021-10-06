@@ -39,7 +39,8 @@ func newBatchCommands() []*cli.Command {
 			Usage: "Describe a batch operation job",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
-					Name:     FlagJobIDWithAlias,
+					Name:     FlagJobID,
+					Aliases:  FlagJobIDAlias,
 					Usage:    "Batch Job Id",
 					Required: true,
 				},
@@ -53,9 +54,10 @@ func newBatchCommands() []*cli.Command {
 			Usage: "List batch operation jobs",
 			Flags: []cli.Flag{
 				&cli.IntFlag{
-					Name:  FlagPageSizeWithAlias,
-					Value: 30,
-					Usage: "Result page size",
+					Name:    FlagPageSize,
+					Aliases: FlagPageSizeAlias,
+					Value:   30,
+					Usage:   "Result page size",
 				},
 			},
 			Action: func(c *cli.Context) error {
@@ -67,27 +69,32 @@ func newBatchCommands() []*cli.Command {
 			Usage: "Start a batch operation job",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
-					Name:     FlagListQueryWithAlias,
+					Name:     FlagListQuery,
+					Aliases:  FlagListQueryAlias,
 					Usage:    "Query to get workflows for being executed this batch operation",
 					Required: true,
 				},
 				&cli.StringFlag{
-					Name:     FlagReasonWithAlias,
+					Name:     FlagReason,
+					Aliases:  FlagReasonAlias,
 					Usage:    "Reason to run this batch job",
 					Required: true,
 				},
 				&cli.StringFlag{
-					Name:     FlagBatchTypeWithAlias,
+					Name:     FlagBatchType,
+					Aliases:  FlagBatchTypeAlias,
 					Usage:    "Types supported: " + strings.Join(batcher.AllBatchTypes, ","),
 					Required: true,
 				},
 				&cli.StringFlag{
-					Name:  FlagSignalNameWithAlias,
-					Usage: "Required for batch signal",
+					Name:    FlagSignalName,
+					Aliases: FlagSignalNameAlias,
+					Usage:   "Required for batch signal",
 				},
 				&cli.StringFlag{
-					Name:  FlagInputWithAlias,
-					Usage: "Optional input of signal",
+					Name:    FlagInput,
+					Aliases: FlagInputAlias,
+					Usage:   "Optional input of signal",
 				},
 				&cli.IntFlag{
 					Name:  FlagRPS,
@@ -108,12 +115,14 @@ func newBatchCommands() []*cli.Command {
 			Usage: "terminate a batch operation job",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
-					Name:     FlagJobIDWithAlias,
+					Name:     FlagJobID,
+					Aliases:  FlagJobIDAlias,
 					Usage:    "Batch Job Id",
 					Required: true,
 				},
 				&cli.StringFlag{
-					Name:     FlagReasonWithAlias,
+					Name:     FlagReason,
+					Aliases:  FlagReasonAlias,
 					Usage:    "Reason to stop this batch job",
 					Required: true,
 				},

@@ -25,9 +25,6 @@
 package cli
 
 import (
-	"fmt"
-
-	"github.com/temporalio/tctl/pkg/color"
 	"github.com/temporalio/tctl/pkg/output"
 	"github.com/urfave/cli/v2"
 )
@@ -52,11 +49,6 @@ func newClusterCommands() []*cli.Command {
 					Aliases: []string{"o"},
 					Usage:   output.UsageText,
 					Value:   string(output.Table),
-				},
-				&cli.StringFlag{
-					Name:  color.FlagColor,
-					Usage: fmt.Sprintf("when to use color: %v, %v, %v.", color.Auto, color.Always, color.Never),
-					Value: string(color.Auto),
 				},
 			},
 			Action: func(c *cli.Context) error {

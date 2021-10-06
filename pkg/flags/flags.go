@@ -28,7 +28,6 @@ import (
 
 	"github.com/urfave/cli/v2"
 
-	"github.com/temporalio/tctl/pkg/color"
 	"github.com/temporalio/tctl/pkg/format"
 	"github.com/temporalio/tctl/pkg/output"
 	"github.com/temporalio/tctl/pkg/pager"
@@ -66,11 +65,6 @@ var FlagsForRendering = []cli.Flag{
 	&cli.StringFlag{
 		Name:  output.FlagFields,
 		Usage: "customize fields to print. Set to 'long' to automatically print more of main fields",
-	},
-	&cli.StringFlag{
-		Name:  color.FlagColor,
-		Usage: fmt.Sprintf("when to use color: %v, %v, %v.", color.Auto, color.Always, color.Never),
-		Value: string(color.Auto),
 	},
 }
 

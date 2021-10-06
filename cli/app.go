@@ -50,19 +50,21 @@ func NewCliApp() *cli.App {
 	app.Version = headers.CLIVersion
 	app.Flags = []cli.Flag{
 		&cli.StringFlag{
-			Name:    FlagAddressWithAlias,
+			Name:    FlagAddress,
 			Value:   "",
 			Usage:   "host:port for Temporal frontend service",
 			EnvVars: []string{"TEMPORAL_CLI_ADDRESS"},
 		},
 		&cli.StringFlag{
-			Name:    FlagNamespaceWithAlias,
+			Name:    FlagNamespace,
+			Aliases: FlagNamespaceAlias,
 			Value:   "default",
 			Usage:   "Temporal workflow namespace",
 			EnvVars: []string{"TEMPORAL_CLI_NAMESPACE"},
 		},
 		&cli.IntFlag{
-			Name:    FlagContextTimeoutWithAlias,
+			Name:    FlagContextTimeout,
+			Aliases: FlagContextTimeoutAlias,
 			Value:   defaultContextTimeoutInSeconds,
 			Usage:   "optional timeout for context of RPC call in seconds",
 			EnvVars: []string{"TEMPORAL_CONTEXT_TIMEOUT"},
@@ -101,10 +103,15 @@ func NewCliApp() *cli.App {
 			EnvVars: []string{"TEMPORAL_CLI_TLS_SERVER_NAME"},
 		},
 		&cli.StringFlag{
-			Name:    FlagDataConverterPluginWithAlias,
+			Name:    FlagDataConverterPlugin,
 			Value:   "",
 			Usage:   "data converter plugin executable name",
 			EnvVars: []string{"TEMPORAL_CLI_PLUGIN_DATA_CONVERTER"},
+		},
+		&cli.StringFlag{
+			Name:  color.FlagColor,
+			Usage: fmt.Sprintf("when to use color: %v, %v, %v.", color.Auto, color.Always, color.Never),
+			Value: string(color.Auto),
 		},
 	}
 	app.Commands = tctlCommands
