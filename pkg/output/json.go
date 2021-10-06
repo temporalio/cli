@@ -25,13 +25,14 @@
 package output
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 
+	"github.com/gogo/protobuf/jsonpb"
 	"github.com/gogo/protobuf/proto"
 	"github.com/hokaccha/go-prettyjson"
 	"github.com/urfave/cli/v2"
-	"go.temporal.io/server/common/codec"
 
 	"github.com/temporalio/tctl/pkg/color"
 )
@@ -62,13 +63,14 @@ func ParseToJSON(c *cli.Context, o interface{}, indent bool) (string, error) {
 		b, err = encoder.Marshal(o)
 	} else {
 		if pb, ok := o.(proto.Message); ok {
-			var encoder *codec.JSONPBEncoder
+			encoder := jsonpb.Marshaler{}
 			if indent {
-				encoder = codec.NewJSONPBIndentEncoder("  ")
-			} else {
-				encoder = codec.NewJSONPBEncoder()
+				encoder.Indent = "  "
 			}
-			b, err = encoder.Encode(pb)
+
+			var buf bytes.Buffer
+			err = encoder.Marshal(&buf, pb)
+			b = buf.Bytes()
 		} else {
 			if indent {
 				b, err = json.MarshalIndent(o, "", "  ")

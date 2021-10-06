@@ -32,9 +32,9 @@ import (
 	"time"
 
 	"github.com/temporalio/tctl/pkg/format"
+	"github.com/temporalio/tctl/pkg/iterator"
 	"github.com/temporalio/tctl/pkg/pager"
 	"github.com/urfave/cli/v2"
-	"go.temporal.io/server/common/collection"
 )
 
 const (
@@ -95,7 +95,7 @@ func PrintItems(c *cli.Context, items []interface{}, opts *PrintOptions) {
 }
 
 // Pager creates an interactive CLI mode to control the printing of items
-func Pager(c *cli.Context, iter collection.Iterator, opts *PrintOptions) error {
+func Pager(c *cli.Context, iter iterator.Iterator, opts *PrintOptions) error {
 	limit := c.Int(FlagLimit)
 
 	pager, close := newPagerWithDefault(c)

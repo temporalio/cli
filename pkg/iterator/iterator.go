@@ -22,48 +22,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package format
+package iterator
 
-import (
-	"fmt"
-	"time"
-
-	"github.com/dustin/go-humanize"
-	"github.com/urfave/cli/v2"
-)
-
-const (
-	FlagTimeFormat = "time-format"
-)
-
-type FormatTimeOption string
-
-const (
-	Relative FormatTimeOption = "relative"
-	ISO      FormatTimeOption = "iso"
-	Raw      FormatTimeOption = "raw"
-)
-
-func FormatTime(c *cli.Context, val time.Time) string {
-	formatFlag := c.String(FlagTimeFormat)
-
-	timeVal := TimeValue(&val)
-	format := FormatTimeOption(formatFlag)
-	switch format {
-	case ISO:
-		return timeVal.Format(time.RFC3339)
-	case Raw:
-		return fmt.Sprintf("%v", timeVal)
-	case Relative:
-		return humanize.Time(timeVal)
-	default:
-		return humanize.Time(timeVal)
+type (
+	// Iterator represents the interface for iterator
+	Iterator interface {
+		// HasNext return whether this iterator has next value
+		HasNext() bool
+		// Next returns the next item and error
+		Next() (interface{}, error)
 	}
-}
-
-func TimeValue(t *time.Time) time.Time {
-	if t == nil {
-		return time.Time{}
-	}
-	return *t
-}
+)
