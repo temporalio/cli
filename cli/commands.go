@@ -19,12 +19,12 @@ var tctlCommands = []*cli.Command{
 	},
 	{
 		Name:        "activity",
-		Aliases:     []string{"act"},
+		Aliases:     []string{"a"},
 		Usage:       "operate activities of workflow",
 		Subcommands: newActivityCommands(),
 	},
 	{
-		Name:        "taskqueue",
+		Name:        "task-queue",
 		Aliases:     []string{"tq"},
 		Usage:       "Operate Temporal task queue",
 		Subcommands: newTaskQueueCommands(),
@@ -36,12 +36,11 @@ var tctlCommands = []*cli.Command{
 	},
 	{
 		Name:        "cluster",
-		Aliases:     []string{"cl"},
 		Usage:       "Operate Temporal cluster",
 		Subcommands: newClusterCommands(),
 	},
 	{
-		Name:        "dataconverter",
+		Name:        "data-converter",
 		Aliases:     []string{"dc"},
 		Usage:       "Operate Custom Data Converter",
 		Subcommands: newDataConverterCommands(),

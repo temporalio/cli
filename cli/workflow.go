@@ -43,7 +43,7 @@ func newWorkflowCommands() []*cli.Command {
 		},
 		{
 			Name:    "describe",
-			Aliases: []string{"desc"},
+			Aliases: []string{"d"},
 			Usage:   "show information of workflow execution",
 			Flags: append(flagsForExecution, []cli.Flag{
 				&cli.BoolFlag{
@@ -83,7 +83,7 @@ func newWorkflowCommands() []*cli.Command {
 		},
 		{
 			Name:    "observe",
-			Aliases: []string{"ob"},
+			Aliases: []string{"o"},
 			Usage:   "show the progress of workflow history",
 			Flags:   append(append(flagsForExecution, flagsForShowWorkflow...), flags.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
@@ -148,27 +148,24 @@ func newWorkflowCommands() []*cli.Command {
 			},
 		},
 		{
-			Name:    "count",
-			Aliases: []string{"cnt"},
-			Usage:   "count number of workflow executions (need to enable Temporal server on ElasticSearch)",
-			Flags:   getFlagsForCount(),
+			Name:  "count",
+			Usage: "count number of workflow executions (need to enable Temporal server on ElasticSearch)",
+			Flags: getFlagsForCount(),
 			Action: func(c *cli.Context) error {
 				return CountWorkflow(c)
 			},
 		},
 		{
-			Name:    "cancel",
-			Aliases: []string{"c"},
-			Usage:   "cancel a workflow execution",
-			Flags:   flagsForExecution,
+			Name:  "cancel",
+			Usage: "cancel a workflow execution",
+			Flags: flagsForExecution,
 			Action: func(c *cli.Context) error {
 				return CancelWorkflow(c)
 			},
 		},
 		{
-			Name:    "terminate",
-			Aliases: []string{"term"},
-			Usage:   "terminate a new workflow execution",
+			Name:  "terminate",
+			Usage: "terminate a new workflow execution",
 			Flags: append(flagsForExecution, []cli.Flag{
 				&cli.StringFlag{
 					Name:    FlagReason,
@@ -181,9 +178,8 @@ func newWorkflowCommands() []*cli.Command {
 			},
 		},
 		{
-			Name:    "reset",
-			Aliases: []string{"rs"},
-			Usage:   "reset the workflow, by either eventId or resetType.",
+			Name:  "reset",
+			Usage: "reset the workflow, by either eventId or resetType.",
 			Flags: append(flagsForExecution, []cli.Flag{
 				&cli.StringFlag{
 					Name:  FlagEventID,

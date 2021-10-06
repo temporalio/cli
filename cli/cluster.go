@@ -40,9 +40,8 @@ func newClusterCommands() []*cli.Command {
 			},
 		},
 		{
-			Name:    "list-search-attributes",
-			Usage:   "List search attributes that can be used in list workflow query",
-			Aliases: []string{"gsa"},
+			Name:  "list-search-attributes",
+			Usage: "List search attributes that can be used in list workflow query",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:    output.FlagOutput,

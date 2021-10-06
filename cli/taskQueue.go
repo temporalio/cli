@@ -34,7 +34,7 @@ func newTaskQueueCommands() []*cli.Command {
 	return []*cli.Command{
 		{
 			Name:    "describe",
-			Aliases: []string{"desc"},
+			Aliases: []string{"d"},
 			Usage:   "Describe pollers info of task queue",
 			Flags: append([]cli.Flag{
 				&cli.StringFlag{

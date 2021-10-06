@@ -69,26 +69,24 @@ func parseNamespaceDataKVs(namespaceDataStr string) (map[string]string, error) {
 func newNamespaceCommands() []*cli.Command {
 	return []*cli.Command{
 		{
-			Name:    "register",
-			Aliases: []string{"re"},
-			Usage:   "Register workflow namespace",
-			Flags:   registerNamespaceFlags,
+			Name:  "register",
+			Usage: "Register workflow namespace",
+			Flags: registerNamespaceFlags,
 			Action: func(c *cli.Context) error {
 				return RegisterNamespace(c)
 			},
 		},
 		{
-			Name:    "update",
-			Aliases: []string{"up", "u"},
-			Usage:   "Update existing workflow namespace",
-			Flags:   updateNamespaceFlags,
+			Name:  "update",
+			Usage: "Update existing workflow namespace",
+			Flags: updateNamespaceFlags,
 			Action: func(c *cli.Context) error {
 				return UpdateNamespace(c)
 			},
 		},
 		{
 			Name:    "describe",
-			Aliases: []string{"desc"},
+			Aliases: []string{"d"},
 			Usage:   "Describe existing workflow namespace",
 			Flags:   describeNamespaceFlags,
 			Action: func(c *cli.Context) error {

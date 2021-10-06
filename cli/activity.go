@@ -31,9 +31,8 @@ import (
 func newActivityCommands() []*cli.Command {
 	return []*cli.Command{
 		{
-			Name:    "complete",
-			Aliases: []string{"comp"},
-			Usage:   "complete an activity",
+			Name:  "complete",
+			Usage: "complete an activity",
 			Flags: append(flagsForExecution, []cli.Flag{
 				&cli.StringFlag{
 					Name:     FlagActivityID,

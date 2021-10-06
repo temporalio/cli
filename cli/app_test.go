@@ -80,7 +80,7 @@ func (m *clientFactoryMock) HealthClient(_ *cli.Context) healthpb.HealthClient {
 var commands = []string{
 	"namespace", "n",
 	"workflow", "w",
-	"taskqueue", "tq",
+	"task-queue", "tq",
 }
 
 var cliTestNamespace = "cli-test-namespace"
@@ -462,14 +462,14 @@ var describeTaskQueueResponse = &workflowservice.DescribeTaskQueueResponse{
 
 func (s *cliAppSuite) TestDescribeTaskQueue() {
 	s.sdkClient.On("DescribeTaskQueue", mock.Anything, mock.Anything, mock.Anything).Return(describeTaskQueueResponse, nil).Once()
-	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "taskqueue", "describe", "--task-queue", "test-taskQueue"})
+	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "task-queue", "describe", "--task-queue", "test-taskQueue"})
 	s.Nil(err)
 	s.sdkClient.AssertExpectations(s.T())
 }
 
 func (s *cliAppSuite) TestDescribeTaskQueue_Activity() {
 	s.sdkClient.On("DescribeTaskQueue", mock.Anything, mock.Anything, mock.Anything).Return(describeTaskQueueResponse, nil).Once()
-	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "taskqueue", "describe", "--task-queue", "test-taskQueue", "--task-queue-type", "activity"})
+	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "task-queue", "describe", "--task-queue", "test-taskQueue", "--task-queue-type", "activity"})
 	s.Nil(err)
 	s.sdkClient.AssertExpectations(s.T())
 }

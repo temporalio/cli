@@ -14,7 +14,7 @@ get started:
 `./tctl` for help on top level commands and global options   
 `./tctl namespace` for help on namespace operations  
 `./tctl workflow` for help on workflow operations  
-`./tctl taskqueue` for help on tasklist operations  
+`./tctl task-queue` for help on tasklist operations  
 (`./tctl help`, `./tctl help [namespace|workflow]` will also print help messages)
 
 **Note:** Make sure you have a Temporal server running before using the CLI.
