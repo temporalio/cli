@@ -233,26 +233,19 @@ func (s *cliAppSuite) TestShowHistory() {
 	s.sdkClient.AssertExpectations(s.T())
 }
 
-func (s *cliAppSuite) TestShowHistoryWithID() {
-	s.sdkClient.On("GetWorkflowHistory", mock.Anything, "wid", "", mock.Anything, mock.Anything).Return(historyEventIterator()).Once()
-	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "show", "wid"})
-	s.Nil(err)
-	s.sdkClient.AssertExpectations(s.T())
-}
-
 func (s *cliAppSuite) TestRunWorkflow() {
 	s.sdkClient.On("ExecuteWorkflow", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(workflowRun(), nil)
 	s.sdkClient.On("GetWorkflowHistory", mock.Anything, "wid", mock.Anything, mock.Anything, mock.Anything).Return(historyEventIterator()).Once()
 
 	// start with wid
-	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "run", "--taskqueue", "testTaskQueue", "--workflow-type", "testWorkflowType", "--execution-timeout", "60", "--workflow-id", "wid", "wrp", "2"})
+	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "run", "--task-queue", "testTaskQueue", "--type", "testWorkflowType", "--execution-timeout", "60", "--run-timeout", "60", "--workflow-id", "wid", "wrp", "2"})
 	s.Nil(err)
 	s.sdkClient.AssertExpectations(s.T())
 
 	s.sdkClient.On("ExecuteWorkflow", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(workflowRun(), nil)
 	s.sdkClient.On("GetWorkflowHistory", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(historyEventIterator()).Once()
 	// start without wid
-	err = s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "run", "--taskqueue", "testTaskQueue", "--workflow-type", "testWorkflowType", "--execution-timeout", "60", "wrp", "2"})
+	err = s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "run", "--task-queue", "testTaskQueue", "--type", "testWorkflowType", "--execution-timeout", "60", "--run-timeout", "60", "wrp", "2"})
 	s.Nil(err)
 	s.sdkClient.AssertExpectations(s.T())
 }
@@ -261,7 +254,7 @@ func (s *cliAppSuite) TestRunWorkflow_Failed() {
 	s.sdkClient.On("ExecuteWorkflow", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(workflowRun(), serviceerror.NewInvalidArgument("fake error"))
 
 	// start with wid
-	errorCode := s.RunWithExitCode([]string{"", "--namespace", cliTestNamespace, "workflow", "run", "--taskqueue", "testTaskQueue", "--workflow-type", "testWorkflowType", "--execution-timeout", "60", "--workflow-id", "wid"})
+	errorCode := s.RunWithExitCode([]string{"", "--namespace", cliTestNamespace, "workflow", "run", "--task-queue", "testTaskQueue", "--type", "testWorkflowType", "--execution-timeout", "60", "--run-timeout", "60", "--workflow-id", "wid"})
 	s.Equal(1, errorCode)
 	s.sdkClient.AssertExpectations(s.T())
 }
@@ -397,7 +390,7 @@ func (s *cliAppSuite) TestListWorkflow_WithWorkflowID() {
 
 func (s *cliAppSuite) TestListWorkflow_WithWorkflowType() {
 	s.sdkClient.On("ListClosedWorkflow", mock.Anything, mock.Anything).Return(listClosedWorkflowExecutionsResponse, nil).Once()
-	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "list", "--workflow-type", "no-type"})
+	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "list", "--type", "no-type"})
 	s.Nil(err)
 	s.sdkClient.AssertExpectations(s.T())
 }
@@ -426,7 +419,7 @@ func (s *cliAppSuite) TestListWorkflow_Open_WithWorkflowID() {
 
 func (s *cliAppSuite) TestListWorkflow_Open_WithWorkflowType() {
 	s.sdkClient.On("ListOpenWorkflow", mock.Anything, mock.Anything).Return(listOpenWorkflowExecutionsResponse, nil).Once()
-	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "list", "--open", "--workflow-type", "no-type"})
+	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "list", "--open", "--type", "no-type"})
 	s.Nil(err)
 	s.sdkClient.AssertExpectations(s.T())
 }
@@ -469,14 +462,14 @@ var describeTaskQueueResponse = &workflowservice.DescribeTaskQueueResponse{
 
 func (s *cliAppSuite) TestDescribeTaskQueue() {
 	s.sdkClient.On("DescribeTaskQueue", mock.Anything, mock.Anything, mock.Anything).Return(describeTaskQueueResponse, nil).Once()
-	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "taskqueue", "describe", "--taskqueue", "test-taskQueue"})
+	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "taskqueue", "describe", "--task-queue", "test-taskQueue"})
 	s.Nil(err)
 	s.sdkClient.AssertExpectations(s.T())
 }
 
 func (s *cliAppSuite) TestDescribeTaskQueue_Activity() {
 	s.sdkClient.On("DescribeTaskQueue", mock.Anything, mock.Anything, mock.Anything).Return(describeTaskQueueResponse, nil).Once()
-	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "taskqueue", "describe", "--taskqueue", "test-taskQueue", "--taskqueuetype", "activity"})
+	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "taskqueue", "describe", "--task-queue", "test-taskQueue", "--task-queue-type", "activity"})
 	s.Nil(err)
 	s.sdkClient.AssertExpectations(s.T())
 }
@@ -489,18 +482,6 @@ func (s *cliAppSuite) TestObserveWorkflow() {
 
 	s.sdkClient.On("GetWorkflowHistory", mock.Anything, "wid", "", mock.Anything, mock.Anything).Return(historyEventIterator()).Once()
 	err = s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "observe", "--workflow-id", "wid", "--fields", "long"})
-	s.Nil(err)
-	s.sdkClient.AssertExpectations(s.T())
-}
-
-func (s *cliAppSuite) TestObserveWorkflowWithID() {
-	s.sdkClient.On("GetWorkflowHistory", mock.Anything, "wid", "", mock.Anything, mock.Anything).Return(historyEventIterator()).Once()
-	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "observe", "wid"})
-	s.Nil(err)
-	s.sdkClient.AssertExpectations(s.T())
-
-	s.sdkClient.On("GetWorkflowHistory", mock.Anything, "wid", "", mock.Anything, mock.Anything).Return(historyEventIterator()).Once()
-	err = s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "observe", "wid", "--fields", "long"})
 	s.Nil(err)
 	s.sdkClient.AssertExpectations(s.T())
 }

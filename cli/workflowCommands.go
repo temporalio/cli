@@ -533,11 +533,11 @@ func ListWorkflow(c *cli.Context) error {
 	queryOpen := c.Bool(FlagOpen)
 	workflowID := c.String(FlagWorkflowID)
 	workflowType := c.String(FlagWorkflowType)
-	earliestTime, err := parseTime(c.String(FlagEarliestTime), time.Time{}, time.Now().UTC())
+	earliestTime, err := parseTime(c.String(FlagFrom), time.Time{}, time.Now().UTC())
 	if err != nil {
 		return err
 	}
-	latestTime, err := parseTime(c.String(FlagLatestTime), time.Now().UTC(), time.Now().UTC())
+	latestTime, err := parseTime(c.String(FlagTo), time.Now().UTC(), time.Now().UTC())
 	if err != nil {
 		return err
 	}
@@ -718,8 +718,8 @@ func ListArchivedWorkflow(c *cli.Context) error {
 
 // DescribeWorkflow show information about the specified workflow execution
 func DescribeWorkflow(c *cli.Context) error {
-	wid := c.String(FlagWorkflowIDWithAlias)
-	rid := c.String(FlagRunIDWithAlias)
+	wid := c.String(FlagWorkflowID)
+	rid := c.String(FlagRunID)
 
 	frontendClient := cFactory.FrontendClient(c)
 	namespace, err := getRequiredGlobalOption(c, FlagNamespace)
@@ -911,16 +911,16 @@ func scanWorkflowExecutions(sdkClient sdkclient.Client, pageSize int, nextPageTo
 
 // ShowHistory shows the history of given workflow execution based on workflowID and runID.
 func ShowHistory(c *cli.Context) error {
-	wid := c.String(FlagWorkflowIDWithAlias)
-	rid := c.String(FlagRunIDWithAlias)
+	wid := c.String(FlagWorkflowID)
+	rid := c.String(FlagRunID)
 
 	return printWorkflowProgress(c, wid, rid, false)
 }
 
 // ObserveHistory show the process of running workflow
 func ObserveHistory(c *cli.Context) error {
-	wid := c.String(FlagWorkflowIDWithAlias)
-	rid := c.String(FlagRunIDWithAlias)
+	wid := c.String(FlagWorkflowID)
+	rid := c.String(FlagRunID)
 
 	return printWorkflowProgress(c, wid, rid, true)
 }
@@ -1036,7 +1036,7 @@ func ResetInBatch(c *cli.Context) error {
 	query := c.String(FlagListQuery)
 	excFileName := c.String(FlagExcludeFile)
 	separator := c.String(FlagInputSeparator)
-	parallel := c.Int(FlagParallism)
+	parallel := c.Int(FlagParallelism)
 
 	extraForResetType, ok := resetTypesMap[resetType]
 	if !ok {
@@ -1051,7 +1051,7 @@ func ResetInBatch(c *cli.Context) error {
 	batchResetParams := batchResetParamsType{
 		reason:               c.String(FlagReason),
 		skipOpen:             c.Bool(FlagSkipCurrentOpen),
-		nonDeterministicOnly: c.Bool(FlagNonDeterministicOnly),
+		nonDeterministicOnly: c.Bool(FlagNonDeterministic),
 		skipBaseNotCurrent:   c.Bool(FlagSkipBaseIsNotCurrent),
 		dryRun:               c.Bool(FlagDryRun),
 		resetType:            resetType,

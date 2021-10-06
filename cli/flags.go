@@ -58,23 +58,22 @@ const (
 	FlagMinEventID                        = "min-event-id"
 	FlagMaxEventID                        = "max-event-id"
 	FlagStartEventVersion                 = "start-event-version"
-	FlagTaskQueue                         = "taskqueue"
+	FlagTaskQueue                         = "task-queue"
 	FlagTaskQueueWithAlias                = FlagTaskQueue + ", tq"
-	FlagTaskQueueType                     = "taskqueuetype"
+	FlagTaskQueueType                     = "task-queue-type"
 	FlagTaskQueueTypeWithAlias            = FlagTaskQueueType + ", tqt"
-	FlagWorkflowIDReusePolicy             = "workflowidreusepolicy"
-	FlagWorkflowIDReusePolicyAlias        = FlagWorkflowIDReusePolicy + ", wrp"
+	FlagWorkflowIDReusePolicy             = "workflow-id-reuse-policy"
 	FlagCronSchedule                      = "cron"
-	FlagWorkflowType                      = "workflow-type"
-	FlagWorkflowTypeWithAlias             = FlagWorkflowType + ", wt"
+	FlagWorkflowType                      = "type"
+	FlagWorkflowTypeWithAlias             = FlagWorkflowType + ", t"
 	FlagWorkflowStatus                    = "status"
 	FlagWorkflowStatusWithAlias           = FlagWorkflowStatus + ", s"
 	FlagWorkflowExecutionTimeout          = "execution-timeout"
 	FlagWorkflowExecutionTimeoutWithAlias = FlagWorkflowExecutionTimeout + ", et"
 	FlagWorkflowRunTimeout                = "run-timeout"
 	FlagWorkflowRunTimeoutWithAlias       = FlagWorkflowRunTimeout + ", rt"
-	FlagWorkflowTaskTimeout               = "workflow-task-timeout"
-	FlagWorkflowTaskTimeoutWithAlias      = FlagWorkflowTaskTimeout + ", wtt"
+	FlagWorkflowTaskTimeout               = "task-timeout"
+	FlagWorkflowTaskTimeoutWithAlias      = FlagWorkflowTaskTimeout + ", tt"
 	FlagContextTimeout                    = "context-timeout"
 	FlagContextTimeoutWithAlias           = FlagContextTimeout + ", ct"
 	FlagInput                             = "input"
@@ -83,17 +82,14 @@ const (
 	FlagInputFileWithAlias                = FlagInputFile + ", if"
 	FlagExcludeFile                       = "exclude-file"
 	FlagInputSeparator                    = "input-separator"
-	FlagParallism                         = "input-parallism"
+	FlagParallelism                       = "input-parallelism"
 	FlagSkipCurrentOpen                   = "skip-current-open"
 	FlagSkipBaseIsNotCurrent              = "skip-base-is-not-current"
 	FlagDryRun                            = "dry-run"
-	FlagNonDeterministicOnly              = "only-non-deterministic"
-	FlagInputTopic                        = "input-topic"
-	FlagInputTopicWithAlias               = FlagInputTopic + ", it"
+	FlagNonDeterministic                  = "non-deterministic"
 	FlagHostFile                          = "host-file"
 	FlagCluster                           = "cluster"
 	FlagInputCluster                      = "input-cluster"
-	FlagStartOffset                       = "start-offset"
 	FlagTopic                             = "topic"
 	FlagGroup                             = "group"
 	FlagResult                            = "result"
@@ -102,17 +98,10 @@ const (
 	FlagReason                            = "reason"
 	FlagReasonWithAlias                   = FlagReason + ", re"
 	FlagOpen                              = "open"
-	FlagOpenWithAlias                     = FlagOpen + ", op"
-	FlagMore                              = "more"
-	FlagMoreWithAlias                     = FlagMore + ", m"
-	FlagAll                               = "all"
-	FlagAllWithAlias                      = FlagAll + ", a"
 	FlagPageSize                          = "pagesize"
 	FlagPageSizeWithAlias                 = FlagPageSize + ", ps"
-	FlagEarliestTime                      = "earliest-time"
-	FlagEarliestTimeWithAlias             = FlagEarliestTime + ", et"
-	FlagLatestTime                        = "latest-time"
-	FlagLatestTimeWithAlias               = FlagLatestTime + ", lt"
+	FlagFrom                              = "from"
+	FlagTo                                = "to"
 	FlagPrintEventVersion                 = "print-event-version"
 	FlagPrintEventVersionWithAlias        = FlagPrintEventVersion + ", pev"
 	FlagPrintFullyDetail                  = "print-full"
@@ -336,7 +325,7 @@ var flagsForRunWorkflow = []cli.Flag{
 			"\t* * * * *",
 	},
 	&cli.StringFlag{
-		Name: FlagWorkflowIDReusePolicyAlias,
+		Name: FlagWorkflowIDReusePolicy,
 		Usage: "Configure if the same workflow Id is allowed for use in new workflow execution. " +
 			"Options: AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate",
 	},
@@ -385,28 +374,29 @@ var flagsForRunWorkflow = []cli.Flag{
 
 var flagsForWorkflowFiltering = []cli.Flag{
 	&cli.BoolFlag{
-		Name:  FlagOpenWithAlias,
-		Usage: "List for open workflow executions, default is to list for closed ones",
+		Name:  FlagOpen,
+		Usage: "Filter by execution status == Open",
+		Value: false,
 	},
 	&cli.StringFlag{
-		Name: FlagEarliestTimeWithAlias,
-		Usage: "EarliestTime of start time, supported formats are '2006-01-02T15:04:05+07:00', raw UnixNano and " +
+		Name: FlagFrom,
+		Usage: "Filter by lower bound of start time, supported formats are '2006-01-02T15:04:05+07:00', raw UnixNano and " +
 			"time range (N<duration>), where 0 < N < 1000000 and duration (full-notation/short-notation) can be second/s, " +
 			"minute/m, hour/h, day/d, week/w, month/M or year/y. For example, '15minute' or '15m' implies last 15 minutes.",
 	},
 	&cli.StringFlag{
-		Name: FlagLatestTimeWithAlias,
-		Usage: "LatestTime of start time, supported formats are '2006-01-02T15:04:05+07:00', raw UnixNano and " +
+		Name: FlagTo,
+		Usage: "Filter by upper bound of start time, supported formats are '2006-01-02T15:04:05+07:00', raw UnixNano and " +
 			"time range (N<duration>), where 0 < N < 1000000 and duration (in full-notation/short-notation) can be second/s, " +
 			"minute/m, hour/h, day/d, week/w, month/M or year/y. For example, '15minute' or '15m' implies last 15 minutes",
 	},
 	&cli.StringFlag{
 		Name:  FlagWorkflowIDWithAlias,
-		Usage: "WorkflowId",
+		Usage: "Filter by workflow ID",
 	},
 	&cli.StringFlag{
 		Name:  FlagWorkflowTypeWithAlias,
-		Usage: "WorkflowTypeName",
+		Usage: "Filter by workflow type name",
 	},
 	&cli.StringFlag{
 		Name:  FlagWorkflowStatusWithAlias,

@@ -254,7 +254,7 @@ func newWorkflowCommands() []*cli.Command {
 					Required: true,
 				},
 				&cli.IntFlag{
-					Name:  FlagParallism,
+					Name:  FlagParallelism,
 					Value: 1,
 					Usage: "Number of goroutines to run in parallel. Each goroutine would process one line for every second.",
 				},
@@ -270,7 +270,7 @@ func newWorkflowCommands() []*cli.Command {
 					Usage: "Skip if base run is not current run.",
 				},
 				&cli.BoolFlag{
-					Name:  FlagNonDeterministicOnly,
+					Name:  FlagNonDeterministic,
 					Usage: "Only apply onto workflows whose last event is workflowTaskFailed with non deterministic error.",
 				},
 				&cli.BoolFlag{
