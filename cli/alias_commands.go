@@ -31,7 +31,7 @@ import (
 
 	"github.com/urfave/cli/v2"
 
-	"github.com/temporalio/tctl/pkg/config"
+	"github.com/temporalio/tctl-core/pkg/config"
 )
 
 func useAliasCommands(app *cli.App) {

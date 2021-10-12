@@ -25,7 +25,7 @@
 package cli
 
 import (
-	"github.com/temporalio/tctl/pkg/output"
+	"github.com/temporalio/tctl-core/pkg/output"
 	"github.com/urfave/cli/v2"
 )
 

@@ -31,8 +31,8 @@ import (
 	taskqueuepb "go.temporal.io/api/taskqueue/v1"
 	"go.temporal.io/api/workflowservice/v1"
 
-	"github.com/temporalio/tctl/pkg/color"
-	"github.com/temporalio/tctl/pkg/output"
+	"github.com/temporalio/tctl-core/pkg/color"
+	"github.com/temporalio/tctl-core/pkg/output"
 	"github.com/urfave/cli/v2"
 )
 

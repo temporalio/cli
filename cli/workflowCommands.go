@@ -51,8 +51,8 @@ import (
 	"go.temporal.io/api/workflowservice/v1"
 	sdkclient "go.temporal.io/sdk/client"
 
-	"github.com/temporalio/tctl/pkg/color"
-	"github.com/temporalio/tctl/pkg/output"
+	"github.com/temporalio/tctl-core/pkg/color"
+	"github.com/temporalio/tctl-core/pkg/output"
 	clispb "go.temporal.io/server/api/cli/v1"
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/backoff"

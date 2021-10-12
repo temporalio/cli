@@ -31,7 +31,7 @@ import (
 
 	"github.com/urfave/cli"
 
-	"github.com/temporalio/tctl/pkg/config"
+	"github.com/temporalio/tctl-core/pkg/config"
 )
 
 func newConfigCommands() []cli.Command {
