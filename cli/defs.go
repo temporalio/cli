@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/olekukonko/tablewriter"
+	"github.com/temporalio/tctl-core/pkg/config"
 	enumspb "go.temporal.io/api/enums/v1"
 )
 
@@ -93,6 +94,7 @@ var resetReapplyTypesMap = map[string]interface{}{
 
 var (
 	cFactory                ClientFactory
+	tctlConfig              *config.Config
 	tableHeaderBlue         = tablewriter.Colors{tablewriter.FgHiBlueColor}
 	optionErr               = "there is something wrong with your command options"
 	workflowClosedStatusMap = map[string]enumspb.WorkflowExecutionStatus{

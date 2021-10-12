@@ -25,15 +25,18 @@
 package cli
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"runtime/debug"
+	"strings"
 
 	"github.com/urfave/cli/v2"
 
 	"github.com/temporalio/tctl-core/pkg/color"
 	"github.com/temporalio/tctl/cli/dataconverter"
 	"github.com/temporalio/tctl/cli/plugin"
+	"github.com/temporalio/tctl/config"
 	"go.temporal.io/server/common/headers"
 )
 
@@ -118,12 +121,21 @@ func NewCliApp() *cli.App {
 	app.Before = loadPlugins
 	app.After = stopPlugins
 	app.ExitErrHandler = handleError
-	useAliasCommands(app)
 
 	// set builder if not customized
 	if cFactory == nil {
 		SetFactory(NewClientFactory())
 	}
+
+	if tctlConfig == nil {
+		var err error
+		if tctlConfig, err = config.NewTctlConfig(); err != nil {
+			fmt.Printf("unable to load tctl config: %v", err)
+			promptContinueWithoutConfig()
+		}
+	}
+	useAliasCommands(app)
+
 	return app
 }
 
@@ -161,4 +173,20 @@ func handleError(c *cli.Context, err error) {
 	}
 
 	cli.OsExiter(1)
+}
+
+func promptContinueWithoutConfig() {
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		fmt.Print("do you want to continue without reading from tctl config[Yes/No]:")
+		text, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Printf("unable to confirm: %s", err)
+		}
+		if strings.EqualFold(strings.TrimSpace(text), "yes") {
+			break
+		} else {
+			fmt.Println("command is canceled")
+		}
+	}
 }

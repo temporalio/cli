@@ -30,12 +30,10 @@ import (
 	"strings"
 
 	"github.com/urfave/cli/v2"
-
-	"github.com/temporalio/tctl-core/pkg/config"
 )
 
 func useAliasCommands(app *cli.App) {
-	aliases, err := config.GetSequence("alias")
+	aliases, err := tctlConfig.GetAliases()
 	if err != nil {
 		fmt.Print(err)
 		return

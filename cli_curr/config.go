@@ -30,8 +30,6 @@ import (
 	"strings"
 
 	"github.com/urfave/cli"
-
-	"github.com/temporalio/tctl-core/pkg/config"
 )
 
 func newConfigCommands() []cli.Command {
@@ -72,7 +70,7 @@ func GetValue(c *cli.Context) error {
 		return fmt.Errorf("unable to get property %v. %s", key, err)
 	}
 
-	val, err := config.Get(key)
+	val, err := tctlConfig.Get(nil, key)
 	if err != nil {
 		return fmt.Errorf("unable to get property %v. %s", key, err)
 	}
@@ -92,7 +90,7 @@ func SetValue(c *cli.Context) error {
 		return fmt.Errorf("unable to set property %v. %s", key, err)
 	}
 
-	if err := config.Set(key, val); err != nil {
+	if err := tctlConfig.Set(nil, key, val); err != nil {
 		return fmt.Errorf("unable to set property %v. %s", key, err)
 	}
 

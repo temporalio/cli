@@ -1,0 +1,32 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "test",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}/cmd/",
+      "cwd": "${workspaceFolder}",
+      "args": [
+        "config",
+        "get",
+        "version",
+      ]
+    },
+    {
+      "name": "test2",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}/cmd/",
+      "cwd": "${workspaceFolder}",
+      "args": [
+        "config",
+        "set",
+        "address",
+        "127.0.0.1:7233",
+      ]
+    },
+  ]
+}

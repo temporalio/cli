@@ -1,8 +1,6 @@
 // The MIT License
 //
-// Copyright (c) 2020 Temporal Technologies Inc.  All rights reserved.
-//
-// Copyright (c) 2020 Uber Technologies, Inc.
+// Copyright (c) 2021 Temporal Technologies Inc.  All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,34 +20,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package cli_curr
+package config
 
 import (
-	"fmt"
-
-	"github.com/temporalio/tctl/config"
-	"github.com/urfave/cli"
-
-	tctlCurrent "go.temporal.io/server/tools/cli"
+	"github.com/temporalio/tctl-core/pkg/config"
 )
 
-// NewCliApp instantiates a new instance of the CLI application.
-func NewCliApp() *cli.App {
-	app := tctlCurrent.NewCliApp()
-	app.Commands = append(app.Commands,
-		cli.Command{
-			Name:        "config",
-			Aliases:     []string{"c"},
-			Usage:       "Configure tctl",
-			Subcommands: newConfigCommands(),
-		})
-
-	if tctlConfig == nil {
-		var err error
-		if tctlConfig, err = config.NewTctlConfig(); err != nil {
-			fmt.Printf("unable to load tctl config: %v", err)
-		}
-	}
-
-	return app
+func NewTctlConfig() (*config.Config, error) {
+	return config.NewConfig("temporalio", "tctl")
 }

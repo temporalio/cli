@@ -34,6 +34,18 @@ import (
 	"github.com/temporalio/tctl-core/pkg/config"
 )
 
+var (
+	rootKeys = []string{
+		config.KeyActive,
+		config.KeyAlias,
+		"version",
+	}
+	envKeys = []string{
+		"namespace",
+		"address",
+	}
+)
+
 func newConfigCommands() []*cli.Command {
 	return []*cli.Command{
 		{
@@ -55,15 +67,6 @@ func newConfigCommands() []*cli.Command {
 	}
 }
 
-var (
-	validKeys = []string{
-		"namespace",
-		"address",
-		"alias",
-		"version",
-	}
-)
-
 func GetValue(c *cli.Context) error {
 	if c.NArg() != 1 {
 		return fmt.Errorf("invalid number of args, expected 1: property name")
@@ -71,14 +74,19 @@ func GetValue(c *cli.Context) error {
 
 	key := c.Args().Get(0)
 
-	if err := validateKey(key); err != nil {
-		return fmt.Errorf("unable to get property %v: %s", key, err)
+	var val interface{}
+	var err error
+	if isRootKey(key) {
+		val, err = tctlConfig.Get(c, key)
+	} else if isEnvKey(key) {
+		val, err = tctlConfig.GetByEnvironment(c, key)
+	} else {
+		return fmt.Errorf("invalid key: %s", key)
+	}
+	if err != nil {
+		return err
 	}
 
-	val, err := config.Get(key)
-	if err != nil {
-		return fmt.Errorf("unable to get property %v: %s", key, err)
-	}
 	fmt.Printf("%v: %v\n", color.Magenta(c, "%v", key), val)
 	return nil
 }
@@ -91,28 +99,36 @@ func SetValue(c *cli.Context) error {
 	key := c.Args().Get(0)
 	val := c.Args().Get(1)
 
-	if err := validateKey(key); err != nil {
-		return fmt.Errorf("unable to set property %s: %s", key, err)
-	}
-
-	if err := config.Set(key, val); err != nil {
-		return fmt.Errorf("unable to set property %s: %s", key, err)
+	if isRootKey(key) {
+		if err := tctlConfig.Set(c, key, val); err != nil {
+			return fmt.Errorf("unable to set property %s: %s", key, err)
+		}
+	} else if isEnvKey(key) {
+		if err := tctlConfig.SetByEnvironment(c, key, val); err != nil {
+			return fmt.Errorf("unable to set property %s: %s", key, err)
+		}
+	} else {
+		return fmt.Errorf("unable to set property %s: invalid key", key)
 	}
 
 	fmt.Printf("%v: %v\n", color.Magenta(c, "%v", key), val)
 	return nil
 }
 
-func validateKey(key string) error {
-	// in composite keys such as alias.mycommand, the first part before dot is configuration property name
-	// second part is custom value
-	key = strings.Split(key, ".")[0]
-
-	for _, k := range validKeys {
+func isRootKey(key string) bool {
+	for _, k := range rootKeys {
 		if strings.Compare(key, k) == 0 {
-			return nil
+			return true
 		}
 	}
+	return false
+}
 
-	return fmt.Errorf("unknown key %v", key)
+func isEnvKey(key string) bool {
+	for _, k := range envKeys {
+		if strings.Compare(key, k) == 0 {
+			return true
+		}
+	}
+	return false
 }

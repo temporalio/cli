@@ -27,15 +27,15 @@ package main
 import (
 	"os"
 
-	"github.com/temporalio/tctl-core/pkg/config"
 	"github.com/temporalio/tctl/cli"
 	"github.com/temporalio/tctl/cli_curr"
+	"github.com/temporalio/tctl/config"
 )
 
-// Start using this CLI tool with command
-// See temporal/tools/cli/README.md for usage
+// See https://docs.temporal.io/docs/system-tools/tctl/ for usage
 func main() {
-	version, _ := config.Get("version")
+	tctlConfig, _ := config.NewTctlConfig()
+	version, _ := tctlConfig.Get(nil, "version")
 
 	if version == "next" {
 		appNext := cli.NewCliApp()

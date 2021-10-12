@@ -2,8 +2,6 @@ module github.com/temporalio/tctl
 
 go 1.16
 
-replace github.com/temporalio/tctl-core => /home/user0/tc
-
 require (
 	github.com/fatih/color v1.13.0
 	github.com/gogo/protobuf v1.3.2
@@ -14,7 +12,7 @@ require (
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/pborman/uuid v1.2.1
 	github.com/stretchr/testify v1.7.0
-	github.com/temporalio/tctl-core v0.1.0
+	github.com/temporalio/tctl-core v0.0.0-20211012160728-0f52dbf08e9d
 	github.com/uber-go/tally v3.4.2+incompatible
 	github.com/urfave/cli v1.22.5
 	github.com/urfave/cli/v2 v2.3.0
