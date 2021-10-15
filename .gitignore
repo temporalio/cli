@@ -5,7 +5,11 @@
 *.code-workspace
 .DS_Store
 
-# Executables produced by temporal repo
+# Executables
 /tctl
+/bin
+
+# Goreleaser
+/dist
 
 __debug_bin
