@@ -1,10 +1,6 @@
 [![build](https://github.com/temporalio/tctl/actions/workflows/test.yml/badge.svg)](https://github.com/temporalio/tctl/actions/workflows/test.yml)
 
-**NOT READY FOR PRODUCTION**
-
-This is an ongoing work on tctl UX based on proposals:
- - https://github.com/temporalio/proposals/tree/master/cli
- - https://github.com/temporalio/proposals/pulls (marked with tctl)
+The Temporal CLI is a command-line tool you can use to perform various tasks on a Temporal Server. It can perform namespace operations such as register, update, and describe as well as Workflow operations like start Workflow, show Workflow history, and signal Workflow.
 
 Documentation for the Temporal command line interface is located at our [main site](https://docs.temporal.io/docs/system-tools/tctl).
 
@@ -20,6 +16,8 @@ get started:
 **Note:** Make sure you have a Temporal server running before using the CLI.
 
 ### Switching to updated tctl v1.14.0-alpha
+
+**Note** Switching to `tctl v1.14.0-alpha` is not recommended on production environments.
 
 The package contains both `tctl v1.12.1` and the updated `tctl v1.14.0-alpha`. Version v1.14.0-alpha brings updated UX, commands and flags semantics, new features ([see details](https://github.com/temporalio/proposals/tree/master/cli)). Please expect more of upcoming changes in v1.14.0
 
