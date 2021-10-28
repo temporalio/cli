@@ -1,4 +1,4 @@
-[![build](https://github.com/temporalio/tctl/actions/workflows/ci.yml/badge.svg)](https://github.com/temporalio/tctl/actions/workflows/ci.yml)
+[![build](https://github.com/temporalio/tctl/actions/workflows/test.yml/badge.svg)](https://github.com/temporalio/tctl/actions/workflows/test.yml)
 
 **NOT READY FOR PRODUCTION**
 
