@@ -3,6 +3,7 @@ on:
   release:
     types:
       - released
+      - prereleased
 jobs:
   goreleaser:
     runs-on: ubuntu-latest
