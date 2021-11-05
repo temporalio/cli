@@ -411,7 +411,7 @@ func initializeDynamicConfig(
 	doneChan := make(chan interface{})
 	close(doneChan)
 	dynamicConfigClient, err := dynamicconfig.NewFileBasedClient(
-		&serviceConfig.DynamicConfigClient,
+		serviceConfig.DynamicConfigClient,
 		logger,
 		doneChan,
 	)

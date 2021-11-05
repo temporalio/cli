@@ -3,12 +3,13 @@ module github.com/temporalio/tctl
 go 1.16
 
 require (
+	github.com/bitly/go-hostpool v0.1.0 // indirect
 	github.com/fatih/color v1.13.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/mock v1.6.0
 	github.com/gorilla/websocket v1.4.2
-	github.com/hashicorp/go-hclog v0.16.1
-	github.com/hashicorp/go-plugin v1.4.1
+	github.com/hashicorp/go-hclog v0.16.2
+	github.com/hashicorp/go-plugin v1.4.3
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/pborman/uuid v1.2.1
 	github.com/stretchr/testify v1.7.0
@@ -16,8 +17,8 @@ require (
 	github.com/uber-go/tally v3.4.2+incompatible
 	github.com/urfave/cli v1.22.5
 	github.com/urfave/cli/v2 v2.3.0
-	go.temporal.io/api v1.5.0
+	go.temporal.io/api v1.5.1-0.20211018190919-a5f4a169cd08
 	go.temporal.io/sdk v1.10.0
-	go.temporal.io/server v1.12.1
-	google.golang.org/grpc v1.40.0
+	go.temporal.io/server v1.13.1
+	google.golang.org/grpc v1.41.0
 )

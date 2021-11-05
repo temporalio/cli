@@ -37,7 +37,6 @@ import (
 	"github.com/temporalio/tctl/cli/dataconverter"
 	"github.com/temporalio/tctl/cli/plugin"
 	"github.com/temporalio/tctl/config"
-	"go.temporal.io/server/common/headers"
 )
 
 // SetFactory is used to set the ClientFactory global
@@ -50,7 +49,7 @@ func NewCliApp() *cli.App {
 	app := cli.NewApp()
 	app.Name = "tctl"
 	app.Usage = "A command-line tool for Temporal users"
-	app.Version = headers.CLIVersion
+	app.Version = "1.14.0-alpha.2"
 	app.Flags = []cli.Flag{
 		&cli.StringFlag{
 			Name:    FlagAddress,

@@ -44,7 +44,6 @@ import (
 	failurepb "go.temporal.io/api/failure/v1"
 	filterpb "go.temporal.io/api/filter/v1"
 	historypb "go.temporal.io/api/history/v1"
-	namespacepb "go.temporal.io/api/namespace/v1"
 	querypb "go.temporal.io/api/query/v1"
 	"go.temporal.io/api/serviceerror"
 	workflowpb "go.temporal.io/api/workflow/v1"
@@ -1370,6 +1369,15 @@ func getLastWorkflowTaskEventID(ctx context.Context, namespace, wid, rid string,
 	return
 }
 
+func badChecksum(bad string) func(string) error {
+	return func(maybeBad string) error {
+		if maybeBad == bad {
+			return fmt.Errorf("Bad checksum %q", bad)
+		}
+		return nil
+	}
+}
+
 func getBadWorkflowTaskCompletedID(ctx context.Context, namespace, wid, rid, binChecksum string, frontendClient workflowservice.WorkflowServiceClient) (resetBaseRunID string, workflowTaskCompletedID int64, err error) {
 	resetBaseRunID = rid
 	resp, err := frontendClient.DescribeWorkflowExecution(ctx, &workflowservice.DescribeWorkflowExecutionRequest{
@@ -1383,11 +1391,7 @@ func getBadWorkflowTaskCompletedID(ctx context.Context, namespace, wid, rid, bin
 		return "", 0, printErrorAndReturn("DescribeWorkflowExecution failed", err)
 	}
 
-	_, p := workflow.FindAutoResetPoint(clock.NewRealTimeSource(), &namespacepb.BadBinaries{
-		Binaries: map[string]*namespacepb.BadBinaryInfo{
-			binChecksum: {},
-		},
-	}, resp.WorkflowExecutionInfo.AutoResetPoints)
+	_, p := workflow.FindAutoResetPoint(clock.NewRealTimeSource(), badChecksum(binChecksum), resp.WorkflowExecutionInfo.AutoResetPoints)
 	if p != nil {
 		workflowTaskCompletedID = p.GetFirstWorkflowTaskCompletedId()
 	}
