@@ -11,6 +11,7 @@ require (
 	github.com/hashicorp/go-hclog v1.0.0
 	github.com/hashicorp/go-plugin v1.4.3
 	github.com/olekukonko/tablewriter v0.0.5
+	github.com/olivere/elastic/v7 v7.0.29
 	github.com/pborman/uuid v1.2.1
 	github.com/stretchr/testify v1.7.0
 	github.com/temporalio/tctl-core v0.0.0-20211012160728-0f52dbf08e9d
