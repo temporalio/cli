@@ -118,6 +118,7 @@ var (
 	FlagDescriptionAlias              = []string{"desc"}
 	FlagOwnerEmail                    = "owner-email"
 	FlagOwnerEmailAlias               = []string{"oe"}
+	FlagState                         = "state"
 	FlagRetention                     = "retention"
 	FlagRetentionAlias                = []string{"rd"}
 	FlagHistoryArchivalState          = "history-archival-state"
@@ -149,6 +150,7 @@ var (
 	FlagIsGlobalNamespaceAlias        = []string{"gd"}
 	FlagNamespaceData                 = "namespace-data"
 	FlagNamespaceDataAlias            = []string{"dmd"}
+	FlagPromoteNamespace              = "promote-namespace"
 	FlagEventID                       = "event-id"
 	FlagEventIDAlias                  = []string{"eid"}
 	FlagActivityID                    = "activity-id"
@@ -219,7 +221,11 @@ var (
 	FlagAutoConfirm                   = "auto-confirm"
 	FlagDataConverterPlugin           = "data-converter-plugin"
 	FlagWebURL                        = "web-ui-url"
+	FlagHeadersProviderPlugin         = "headers-provider-plugin"
+	FlagHeadersProviderPluginOptions  = "headers-provider-plugin-options"
 	FlagVersion                       = "version"
+	FlagPort                          = "port"
+	FlagEnableConnection              = "enable-connection"
 
 	FlagProtoType  = "type"
 	FlagHexData    = "hex-data"

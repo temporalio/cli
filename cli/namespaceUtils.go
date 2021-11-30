@@ -29,7 +29,7 @@ import (
 	"strings"
 
 	"github.com/golang/mock/gomock"
-	"github.com/uber-go/tally"
+	"github.com/uber-go/tally/v4"
 	"github.com/urfave/cli/v2"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/server/common/config"
@@ -125,6 +125,10 @@ var (
 			Usage:   "Owner email",
 		},
 		&cli.StringFlag{
+			Name:  FlagState,
+			Usage: "Namespace state",
+		},
+		&cli.StringFlag{
 			Name:    FlagRetention,
 			Aliases: FlagRetentionAlias,
 			Usage:   "Workflow execution retention",
@@ -178,6 +182,10 @@ var (
 		&cli.StringFlag{
 			Name:  FlagReason,
 			Usage: "Reason for the operation",
+		},
+		&cli.BoolFlag{
+			Name:  FlagPromoteNamespace,
+			Usage: "Promote local namespace to global namespace",
 		},
 	}
 
@@ -422,7 +430,7 @@ func initializeDynamicConfig(
 }
 
 func initializeMetricsClient() metrics.Client {
-	return metrics.NewClient(tally.NoopScope, metrics.Common)
+	return metrics.NewClient(&metrics.ClientConfig{}, tally.NoopScope, metrics.Common)
 }
 
 func getEnvironment(c *cli.Context) string {

@@ -27,13 +27,14 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"strconv"
 
 	"github.com/gorilla/websocket"
+	"github.com/temporalio/tctl/cli/dataconverter"
 
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/urfave/cli/v2"
 
-	"github.com/temporalio/tctl/cli/dataconverter"
 	commonpb "go.temporal.io/api/common/v1"
 )
 
@@ -124,7 +125,7 @@ func buildPayloadHandler(context *cli.Context, origin string) func(http.Response
 
 // DataConverter provides a data converter over a websocket for Temporal web
 func DataConverter(c *cli.Context) error {
-	listener, err := net.Listen("tcp", "0.0.0.0:0")
+	listener, err := net.Listen("tcp", "0.0.0.0:"+strconv.Itoa(c.Int(FlagPort)))
 	if err != nil {
 		return fmt.Errorf("unable to create listener: %s", err)
 	}

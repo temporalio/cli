@@ -153,7 +153,14 @@ func UpdateNamespace(c *cli.Context) error {
 	ctx, cancel := newContext(c)
 	defer cancel()
 
-	if c.IsSet(FlagActiveClusterName) {
+	if c.IsSet(FlagPromoteNamespace) && c.Bool(FlagPromoteNamespace) {
+		fmt.Printf("Will promote local namespace to global namespace for:%s, other flag will be omitted. "+
+			"If it is already global namespace, this will be no-op.\n", namespace)
+		updateRequest = &workflowservice.UpdateNamespaceRequest{
+			Namespace:        namespace,
+			PromoteNamespace: true,
+		}
+	} else if c.IsSet(FlagActiveClusterName) {
 		activeCluster := c.String(FlagActiveClusterName)
 		fmt.Printf("Will set active cluster name to: %s, other flag will be omitted.\n", activeCluster)
 		replicationConfig := &replicationpb.NamespaceReplicationConfig{
@@ -178,6 +185,7 @@ func UpdateNamespace(c *cli.Context) error {
 		description := resp.NamespaceInfo.GetDescription()
 		ownerEmail := resp.NamespaceInfo.GetOwnerEmail()
 		retention := timestamp.DurationValue(resp.Config.GetWorkflowExecutionRetentionTtl())
+		state := enumspb.NAMESPACE_STATE_UNSPECIFIED
 		var clusters []*replicationpb.ClusterReplicationConfig
 
 		if c.IsSet(FlagDescription) {
@@ -185,6 +193,14 @@ func UpdateNamespace(c *cli.Context) error {
 		}
 		if c.IsSet(FlagOwnerEmail) {
 			ownerEmail = c.String(FlagOwnerEmail)
+		}
+		if c.IsSet(FlagState) {
+			stateStr := c.String(FlagState)
+			if stateInt, ok := enumspb.NamespaceState_value[stateStr]; !ok {
+				return fmt.Errorf("unknown namespace state: %s. Supported states: [Registered, Deprecated, Deleted, Handover].", stateStr)
+			} else {
+				state = enumspb.NamespaceState(stateInt)
+			}
 		}
 		namespaceData := map[string]string{}
 		if c.IsSet(FlagNamespaceData) {
@@ -239,6 +255,7 @@ func UpdateNamespace(c *cli.Context) error {
 			Description: description,
 			OwnerEmail:  ownerEmail,
 			Data:        namespaceData,
+			State:       state,
 		}
 
 		archState, err := archivalState(c, FlagHistoryArchivalState)
