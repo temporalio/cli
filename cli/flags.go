@@ -118,7 +118,6 @@ var (
 	FlagDescriptionAlias              = []string{"desc"}
 	FlagOwnerEmail                    = "owner-email"
 	FlagOwnerEmailAlias               = []string{"oe"}
-	FlagState                         = "state"
 	FlagRetention                     = "retention"
 	FlagRetentionAlias                = []string{"rd"}
 	FlagHistoryArchivalState          = "history-archival-state"

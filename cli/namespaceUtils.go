@@ -125,10 +125,6 @@ var (
 			Usage:   "Owner email",
 		},
 		&cli.StringFlag{
-			Name:  FlagState,
-			Usage: "Namespace state",
-		},
-		&cli.StringFlag{
 			Name:    FlagRetention,
 			Aliases: FlagRetentionAlias,
 			Usage:   "Workflow execution retention",

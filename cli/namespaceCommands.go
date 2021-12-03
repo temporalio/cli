@@ -35,7 +35,6 @@ import (
 	replicationpb "go.temporal.io/api/replication/v1"
 	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/api/workflowservice/v1"
-
 	"go.temporal.io/server/common/primitives/timestamp"
 )
 
@@ -185,7 +184,6 @@ func UpdateNamespace(c *cli.Context) error {
 		description := resp.NamespaceInfo.GetDescription()
 		ownerEmail := resp.NamespaceInfo.GetOwnerEmail()
 		retention := timestamp.DurationValue(resp.Config.GetWorkflowExecutionRetentionTtl())
-		state := enumspb.NAMESPACE_STATE_UNSPECIFIED
 		var clusters []*replicationpb.ClusterReplicationConfig
 
 		if c.IsSet(FlagDescription) {
@@ -193,14 +191,6 @@ func UpdateNamespace(c *cli.Context) error {
 		}
 		if c.IsSet(FlagOwnerEmail) {
 			ownerEmail = c.String(FlagOwnerEmail)
-		}
-		if c.IsSet(FlagState) {
-			stateStr := c.String(FlagState)
-			if stateInt, ok := enumspb.NamespaceState_value[stateStr]; !ok {
-				return fmt.Errorf("unknown namespace state: %s. Supported states: [Registered, Deprecated, Deleted, Handover].", stateStr)
-			} else {
-				state = enumspb.NamespaceState(stateInt)
-			}
 		}
 		namespaceData := map[string]string{}
 		if c.IsSet(FlagNamespaceData) {
@@ -255,7 +245,6 @@ func UpdateNamespace(c *cli.Context) error {
 			Description: description,
 			OwnerEmail:  ownerEmail,
 			Data:        namespaceData,
-			State:       state,
 		}
 
 		archState, err := archivalState(c, FlagHistoryArchivalState)
