@@ -35,6 +35,12 @@ func newDataConverterCommands() []*cli.Command {
 					Usage:    "Web UI URL",
 					Required: true,
 				},
+				&cli.IntFlag{
+					Name:   FlagPort,
+					Value:  0,
+					Usage:  "Port for the dataconverter to listen on. Defaults to a random port.",
+					EnvVars: []string {"TEMPORAL_CLI_DATA_CONVERTER_PORT"},
+				},
 			},
 			Action: func(c *cli.Context) error {
 				return DataConverter(c)
