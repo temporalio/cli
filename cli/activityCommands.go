@@ -31,8 +31,6 @@ import (
 	"github.com/urfave/cli/v2"
 	failurepb "go.temporal.io/api/failure/v1"
 	"go.temporal.io/api/workflowservice/v1"
-
-	"go.temporal.io/server/common/payloads"
 )
 
 // CompleteActivity completes an activity
@@ -57,13 +55,17 @@ func CompleteActivity(c *cli.Context) error {
 	ctx, cancel := newContext(c)
 	defer cancel()
 
+	// TODO: This should use customDataConverter once the plugin interface
+	// supports the full DataConverter API.
+	resultPayloads, _ := defaultDataConverter().ToPayloads(result)
+
 	frontendClient := cFactory.FrontendClient(c)
 	_, err = frontendClient.RespondActivityTaskCompletedById(ctx, &workflowservice.RespondActivityTaskCompletedByIdRequest{
 		Namespace:  namespace,
 		WorkflowId: wid,
 		RunId:      rid,
 		ActivityId: activityID,
-		Result:     payloads.EncodeString(result),
+		Result:     resultPayloads,
 		Identity:   identity,
 	})
 	if err != nil {
@@ -97,6 +99,10 @@ func FailActivity(c *cli.Context) error {
 	ctx, cancel := newContext(c)
 	defer cancel()
 
+	// TODO: This should use customDataConverter once the plugin interface
+	// supports the full DataConverter API.
+	detailsPayloads, _ := defaultDataConverter().ToPayloads(detail)
+
 	frontendClient := cFactory.FrontendClient(c)
 	_, err = frontendClient.RespondActivityTaskFailedById(ctx, &workflowservice.RespondActivityTaskFailedByIdRequest{
 		Namespace:  namespace,
@@ -108,7 +114,7 @@ func FailActivity(c *cli.Context) error {
 			Source:  "CLI",
 			FailureInfo: &failurepb.Failure_ApplicationFailureInfo{ApplicationFailureInfo: &failurepb.ApplicationFailureInfo{
 				NonRetryable: true,
-				Details:      payloads.EncodeString(detail),
+				Details:      detailsPayloads,
 			}},
 		},
 		Identity: identity,
