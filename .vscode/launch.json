@@ -1,8 +1,9 @@
 {
   "version": "0.2.0",
   "configurations": [
+
     {
-      "name": "test",
+      "name": "tctl:config:version",
       "type": "go",
       "request": "launch",
       "mode": "debug",
@@ -15,7 +16,7 @@
       ]
     },
     {
-      "name": "test2",
+      "name": "tctl:config:localhost",
       "type": "go",
       "request": "launch",
       "mode": "debug",
@@ -27,6 +28,67 @@
         "address",
         "127.0.0.1:7233",
       ]
+    },
+    {
+      "name": "temporalite:config",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}/cmd/",
+      "cwd": "${workspaceFolder}",
+      "args": [
+        "config",
+        "set",
+        "address",
+        "temporalite:7233",
+      ]
+    },
+    {
+      "name": "temporalite:health",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}/cmd/",
+      "cwd": "${workspaceFolder}",
+      "args": [
+        "cluster",
+        "health",
+      ]
+    },
+    {
+      "name": "temporalite:namespace:list",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}/cmd/",
+      "cwd": "${workspaceFolder}",
+      "args": [
+        "namespace",
+        "list",
+      ]
+    },
+    {
+      "name": "temporalite:debug",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}/cmd/",
+      "cwd": "${workspaceFolder}",
+      "args": ["${input:args1}", "${input:args2}"],
+    },
+  ],
+  "inputs": [
+    {
+      "id": "args1",
+      "type": "promptString",
+      "description": "first arguments to pass to tctl on the command line",
+      "default": "wf"
+    },
+    {
+      "id": "args2",
+      "type": "promptString",
+      "description": "second arguments to pass to tctl on the command line",
+      "default": "la"
     },
   ]
 }

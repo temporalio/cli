@@ -1,0 +1,10 @@
+FROM golang:1.17 AS builder
+
+ RUN go install github.com/DataDog/temporalite/cmd/temporalite@latest
+
+ FROM gcr.io/distroless/base-debian11
+
+ COPY --from=builder /go/bin/temporalite /
+
+ EXPOSE 7233
+ ENTRYPOINT ["/temporalite", "start", "--ephemeral", "-n", "default", "--ip" , "0.0.0.0"]
