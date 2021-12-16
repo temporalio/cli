@@ -25,8 +25,8 @@
 package cli
 
 import (
-	"github.com/temporalio/tctl-core/pkg/flags"
-	"github.com/temporalio/tctl-core/pkg/output"
+	"github.com/temporalio/tctl-kit/pkg/flags"
+	"github.com/temporalio/tctl-kit/pkg/output"
 	"github.com/urfave/cli/v2"
 )
 

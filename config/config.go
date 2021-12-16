@@ -23,7 +23,7 @@
 package config
 
 import (
-	"github.com/temporalio/tctl-core/pkg/config"
+	"github.com/temporalio/tctl-kit/pkg/config"
 )
 
 func NewTctlConfig() (*config.Config, error) {

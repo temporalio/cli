@@ -28,8 +28,8 @@ import (
 
 	"github.com/urfave/cli/v2"
 
-	"github.com/temporalio/tctl-core/pkg/color"
-	"github.com/temporalio/tctl-core/pkg/config"
+	"github.com/temporalio/tctl-kit/pkg/color"
+	"github.com/temporalio/tctl-kit/pkg/config"
 )
 
 var (

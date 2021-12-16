@@ -27,7 +27,7 @@ package cli
 import (
 	"strings"
 
-	"github.com/temporalio/tctl-core/pkg/flags"
+	"github.com/temporalio/tctl-kit/pkg/flags"
 	"github.com/urfave/cli/v2"
 )
 

@@ -33,7 +33,7 @@ import (
 
 	"github.com/urfave/cli/v2"
 
-	"github.com/temporalio/tctl-core/pkg/color"
+	"github.com/temporalio/tctl-kit/pkg/color"
 	"github.com/temporalio/tctl/cli/dataconverter"
 	"github.com/temporalio/tctl/cli/plugin"
 	"github.com/temporalio/tctl/config"

@@ -30,8 +30,8 @@ import (
 	"github.com/urfave/cli/v2"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 
-	"github.com/temporalio/tctl-core/pkg/color"
-	"github.com/temporalio/tctl-core/pkg/output"
+	"github.com/temporalio/tctl-kit/pkg/color"
+	"github.com/temporalio/tctl-kit/pkg/output"
 )
 
 const (

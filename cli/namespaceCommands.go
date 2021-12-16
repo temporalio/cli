@@ -28,7 +28,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/temporalio/tctl-core/pkg/output"
+	"github.com/temporalio/tctl-kit/pkg/output"
 	"github.com/urfave/cli/v2"
 	enumspb "go.temporal.io/api/enums/v1"
 	namespacepb "go.temporal.io/api/namespace/v1"

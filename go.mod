@@ -3,7 +3,6 @@ module github.com/temporalio/tctl
 go 1.17
 
 require (
-	github.com/bitly/go-hostpool v0.1.0 // indirect
 	github.com/fatih/color v1.13.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/mock v1.6.0
@@ -14,7 +13,7 @@ require (
 	github.com/olivere/elastic/v7 v7.0.29
 	github.com/pborman/uuid v1.2.1
 	github.com/stretchr/testify v1.7.0
-	github.com/temporalio/tctl-core v0.0.0-20211012160728-0f52dbf08e9d
+	github.com/temporalio/tctl-kit v0.0.0-20211209202846-6121be4ba778
 	github.com/uber-go/tally/v4 v4.1.1
 	github.com/urfave/cli v1.22.5
 	github.com/urfave/cli/v2 v2.3.0
@@ -31,6 +30,7 @@ require (
 	github.com/aws/aws-sdk-go v1.41.10 // indirect
 	github.com/benbjohnson/clock v1.1.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
+	github.com/bitly/go-hostpool v0.1.0 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/cactus/go-statsd-client/statsd v0.0.0-20200423205355-cb0885a1018c // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
@@ -71,7 +71,6 @@ require (
 	github.com/mitchellh/mapstructure v1.4.2 // indirect
 	github.com/oklog/run v1.1.0 // indirect
 	github.com/olivere/elastic v6.2.37+incompatible // indirect
-	github.com/olivere/elastic/v7 v7.0.29 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/pelletier/go-toml v1.9.4 // indirect
 	github.com/pkg/errors v0.9.1 // indirect

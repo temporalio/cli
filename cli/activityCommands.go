@@ -27,7 +27,7 @@ package cli
 import (
 	"fmt"
 
-	"github.com/temporalio/tctl-core/pkg/color"
+	"github.com/temporalio/tctl-kit/pkg/color"
 	"github.com/urfave/cli/v2"
 	failurepb "go.temporal.io/api/failure/v1"
 	"go.temporal.io/api/workflowservice/v1"

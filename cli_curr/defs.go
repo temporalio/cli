@@ -25,7 +25,7 @@
 package cli_curr
 
 import (
-	"github.com/temporalio/tctl-core/pkg/config"
+	"github.com/temporalio/tctl-kit/pkg/config"
 )
 
 var (

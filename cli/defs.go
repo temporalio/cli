@@ -28,7 +28,7 @@ import (
 	"time"
 
 	"github.com/olekukonko/tablewriter"
-	"github.com/temporalio/tctl-core/pkg/config"
+	"github.com/temporalio/tctl-kit/pkg/config"
 	enumspb "go.temporal.io/api/enums/v1"
 )
 
