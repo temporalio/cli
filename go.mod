@@ -13,7 +13,7 @@ require (
 	github.com/olivere/elastic/v7 v7.0.29
 	github.com/pborman/uuid v1.2.1
 	github.com/stretchr/testify v1.7.0
-	github.com/temporalio/tctl-kit v0.0.0-20211209202846-6121be4ba778
+	github.com/temporalio/tctl-kit v0.0.0-20211220044822-28c2391a9ce4
 	github.com/uber-go/tally/v4 v4.1.1
 	github.com/urfave/cli v1.22.5
 	github.com/urfave/cli/v2 v2.3.0

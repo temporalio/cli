@@ -139,7 +139,7 @@ func NewCliApp() *cli.App {
 			promptContinueWithoutConfig()
 		}
 	}
-	useAliasCommands(app)
+	useDynamicCommands(app)
 
 	return app
 }

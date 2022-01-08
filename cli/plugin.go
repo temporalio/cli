@@ -1,6 +1,6 @@
 // The MIT License
 //
-// Copyright (c) 2020 Temporal Technologies Inc.  All rights reserved.
+// Copyright (c) 2021 Temporal Technologies Inc.  All rights reserved
 //
 // Copyright (c) 2020 Uber Technologies, Inc.
 //
@@ -25,37 +25,11 @@
 package cli
 
 import (
-	"fmt"
-	"os"
-	"strings"
+	"syscall"
 
 	"github.com/urfave/cli/v2"
 )
 
-func useAliasCommands(app *cli.App) {
-	aliases, err := tctlConfig.GetAliases()
-	if err != nil {
-		fmt.Print(err)
-		return
-	}
-
-	app.CommandNotFound = func(ctx *cli.Context, cmdToFind string) {
-		found := false
-		for aliasCmd, aliasVal := range aliases {
-			if strings.Compare(cmdToFind, aliasCmd) == 0 {
-				found = true
-
-				passedArgs := ctx.Args().Slice()
-				aliasArgs := strings.Split(aliasVal, " ")
-				args := append(passedArgs, aliasArgs...)
-
-				app.Run(args)
-				break
-			}
-		}
-
-		if !found {
-			fmt.Fprintf(os.Stderr, "%s is not a command. See '%s --help\n'", cmdToFind, ctx.App.Name)
-		}
-	}
+func executePlugin(ctx *cli.Context, binPath string, args []string, envs []string) error {
+	return syscall.Exec(binPath, args, envs)
 }
