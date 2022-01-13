@@ -19,7 +19,7 @@ jobs:
         with:
           images: temporaliotest/tctl
           tags: |
-            type=sha,format=long,event=branch
+            type=sha,format=short,event=branch
             type=semver,pattern={{version}}
 
       - name: Set up QEMU
