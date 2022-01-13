@@ -343,6 +343,8 @@ func initializeClusterMetadata(
 		clusterMetadata.MasterClusterName,
 		clusterMetadata.CurrentClusterName,
 		clusterMetadata.ClusterInformation,
+		nil,
+		log.NewNoopLogger(),
 	)
 }
 
