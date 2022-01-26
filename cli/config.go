@@ -39,9 +39,10 @@ var (
 		"version",
 	}
 	envKeys = []string{
-		"namespace",
-		"address",
+		FlagNamespace,
+		FlagAddress,
 	}
+	keys = append(rootKeys, envKeys...)
 )
 
 func newConfigCommands() []*cli.Command {
@@ -49,7 +50,24 @@ func newConfigCommands() []*cli.Command {
 		{
 			Name:  "get",
 			Usage: "get property",
-			Flags: []cli.Flag{},
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name:  config.KeyActive,
+					Usage: "Print active environment",
+				},
+				&cli.BoolFlag{
+					Name:  config.KeyAlias,
+					Usage: "Print command aliases",
+				},
+				&cli.BoolFlag{
+					Name:  FlagNamespace,
+					Usage: "Print default namespace (for active environment)",
+				},
+				&cli.BoolFlag{
+					Name:  FlagAddress,
+					Usage: "Print Temporal address (for active environment)",
+				},
+			},
 			Action: func(c *cli.Context) error {
 				return GetValue(c)
 			},
@@ -57,7 +75,30 @@ func newConfigCommands() []*cli.Command {
 		{
 			Name:  "set",
 			Usage: "set property",
-			Flags: []cli.Flag{},
+			Flags: []cli.Flag{
+				&cli.StringFlag{
+					Name:  config.KeyActive,
+					Usage: "Activate environment",
+					Value: "local",
+				},
+				&cli.StringFlag{
+					Name:  config.KeyAlias,
+					Usage: "Create an alias command",
+				},
+				&cli.StringFlag{
+					Name:  "version",
+					Usage: "Opt-in to a new TCTL UX, values: (current, next)",
+				},
+				&cli.StringFlag{
+					Name:  FlagNamespace,
+					Usage: "Change default namespace",
+				},
+				&cli.StringFlag{
+					Name:  FlagAddress,
+					Usage: "host:port for Temporal frontend service",
+					Value: localHostPort,
+				},
+			},
 			Action: func(c *cli.Context) error {
 				return SetValue(c)
 			},
@@ -66,50 +107,50 @@ func newConfigCommands() []*cli.Command {
 }
 
 func GetValue(c *cli.Context) error {
-	if c.NArg() != 1 {
-		return fmt.Errorf("invalid number of args, expected 1: property name")
-	}
+	for _, key := range keys {
+		if !c.IsSet(key) {
+			continue
+		}
 
-	key := c.Args().Get(0)
+		var val interface{}
+		var err error
+		if isRootKey(key) {
+			val, err = tctlConfig.Get(c, key)
+		} else if isEnvKey(key) {
+			val, err = tctlConfig.GetByEnvironment(c, key)
+		} else {
+			return fmt.Errorf("invalid key: %s", key)
+		}
+		if err != nil {
+			return err
+		}
 
-	var val interface{}
-	var err error
-	if isRootKey(key) {
-		val, err = tctlConfig.Get(c, key)
-	} else if isEnvKey(key) {
-		val, err = tctlConfig.GetByEnvironment(c, key)
-	} else {
-		return fmt.Errorf("invalid key: %s", key)
+		fmt.Printf("%v: %v\n", color.Magenta(c, "%v", key), val)
 	}
-	if err != nil {
-		return err
-	}
-
-	fmt.Printf("%v: %v\n", color.Magenta(c, "%v", key), val)
 	return nil
 }
 
 func SetValue(c *cli.Context) error {
-	if c.NArg() != 2 {
-		return fmt.Errorf("invalid number of args, expected 2: property and value")
+	for _, key := range keys {
+		if !c.IsSet(key) {
+			continue
+		}
+
+		val := c.String(key)
+		if isRootKey(key) {
+			if err := tctlConfig.Set(c, key, val); err != nil {
+				return fmt.Errorf("unable to set property %s: %s", key, err)
+			}
+		} else if isEnvKey(key) {
+			if err := tctlConfig.SetByEnvironment(c, key, val); err != nil {
+				return fmt.Errorf("unable to set property %s: %s", key, err)
+			}
+		} else {
+			return fmt.Errorf("unable to set property %s: invalid key", key)
+		}
+		fmt.Printf("%v: %v\n", color.Magenta(c, "%v", key), val)
 	}
 
-	key := c.Args().Get(0)
-	val := c.Args().Get(1)
-
-	if isRootKey(key) {
-		if err := tctlConfig.Set(c, key, val); err != nil {
-			return fmt.Errorf("unable to set property %s: %s", key, err)
-		}
-	} else if isEnvKey(key) {
-		if err := tctlConfig.SetByEnvironment(c, key, val); err != nil {
-			return fmt.Errorf("unable to set property %s: %s", key, err)
-		}
-	} else {
-		return fmt.Errorf("unable to set property %s: invalid key", key)
-	}
-
-	fmt.Printf("%v: %v\n", color.Magenta(c, "%v", key), val)
 	return nil
 }
 
