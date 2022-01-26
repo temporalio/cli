@@ -51,4 +51,5 @@ var tctlCommands = []*cli.Command{
 		Usage:       "Configure tctl",
 		Subcommands: newConfigCommands(),
 	},
+	newAliasCommand(),
 }

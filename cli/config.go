@@ -35,7 +35,6 @@ import (
 var (
 	rootKeys = []string{
 		config.KeyActive,
-		config.KeyAlias,
 		"version",
 	}
 	envKeys = []string{
@@ -49,7 +48,7 @@ func newConfigCommands() []*cli.Command {
 	return []*cli.Command{
 		{
 			Name:  "get",
-			Usage: "get property",
+			Usage: "Print config values",
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
 					Name:  config.KeyActive,
@@ -74,7 +73,7 @@ func newConfigCommands() []*cli.Command {
 		},
 		{
 			Name:  "set",
-			Usage: "set property",
+			Usage: "Set config values",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:  config.KeyActive,
@@ -154,6 +153,30 @@ func SetValue(c *cli.Context) error {
 	return nil
 }
 
+func newAliasCommand() *cli.Command {
+	return &cli.Command{
+		Name:  "alias",
+		Usage: "Create an alias for command",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:     "command",
+				Usage:    "New command name",
+				Required: true,
+				Value:    "mycommand",
+			},
+			&cli.StringFlag{
+				Name:     "alias",
+				Usage:    "Alias for command",
+				Required: true,
+				Value:    "workflow list --output json",
+			},
+		},
+		Action: func(c *cli.Context) error {
+			return createAlias(c)
+		},
+	}
+}
+
 func isRootKey(key string) bool {
 	for _, k := range rootKeys {
 		if strings.Compare(key, k) == 0 {
@@ -170,4 +193,18 @@ func isEnvKey(key string) bool {
 		}
 	}
 	return false
+}
+
+func createAlias(c *cli.Context) error {
+	command := c.String("command")
+	alias := c.String("alias")
+
+	fullKey := fmt.Sprintf("%s.%s", config.KeyAlias, command)
+
+	if err := tctlConfig.Set(c, fullKey, alias); err != nil {
+		return fmt.Errorf("unable to set property %s: %s", config.KeyAlias, err)
+	}
+
+	fmt.Printf("%v: %v\n", color.Magenta(c, "%v", config.KeyAlias), alias)
+	return nil
 }
