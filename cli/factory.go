@@ -89,7 +89,7 @@ func (b *clientFactory) FrontendClient(c *cli.Context) workflowservice.WorkflowS
 
 // SDKClient builds an SDK client.
 func (b *clientFactory) SDKClient(c *cli.Context, namespace string) sdkclient.Client {
-	hostPort := c.String(FlagAddress)
+	hostPort := readFlagOrConfig(c, FlagAddress)
 	if hostPort == "" {
 		hostPort = localHostPort
 	}
@@ -138,7 +138,7 @@ func headersProviderInterceptor(headersProvider plugin.HeadersProvider) grpc.Una
 }
 
 func (b *clientFactory) createGRPCConnection(c *cli.Context) (*grpc.ClientConn, error) {
-	hostPort := c.String(FlagAddress)
+	hostPort := readFlagOrConfig(c, FlagAddress)
 	if hostPort == "" {
 		hostPort = localHostPort
 	}
@@ -202,7 +202,7 @@ func (b *clientFactory) createTLSConfig(c *cli.Context) (*tls.Config, error) {
 		if serverName != "" {
 			host = serverName
 		} else {
-			hostPort := c.String(FlagAddress)
+			hostPort := readFlagOrConfig(c, FlagAddress)
 			if hostPort == "" {
 				hostPort = localHostPort
 			}

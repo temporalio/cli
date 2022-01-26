@@ -379,11 +379,26 @@ func getSDKClient(c *cli.Context) (sdkclient.Client, error) {
 }
 
 func getRequiredGlobalOption(c *cli.Context, optionName string) (string, error) {
-	value := c.String(optionName)
+	value := readFlagOrConfig(c, optionName)
 	if len(value) == 0 {
 		return "", fmt.Errorf("global option is required: %s.", optionName)
 	}
 	return value, nil
+}
+
+func readFlagOrConfig(c *cli.Context, key string) string {
+	if c.String(key) != "" { // don't use IsSet as it returns false for global flags
+		return c.String(key)
+	}
+
+	var val string
+	if isRootKey(key) {
+		val, _ = tctlConfig.Get(c, key)
+	} else if isEnvKey(key) {
+		val, _ = tctlConfig.GetByEnvironment(c, key)
+	}
+
+	return val
 }
 
 func formatTime(t time.Time, onlyTime bool) string {
