@@ -824,6 +824,7 @@ func convertDescribeWorkflowExecutionResponse(c *cli.Context, resp *workflowserv
 		WorkflowExecutionInfo: executionInfo,
 		PendingActivities:     pendingActivitiesStr,
 		PendingChildren:       resp.PendingChildren,
+		PendingWorkflowTask:   resp.PendingWorkflowTask,
 	}
 }
 
