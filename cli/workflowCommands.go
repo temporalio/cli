@@ -306,10 +306,7 @@ func (h *historyIterator) Next() (interface{}, error) {
 
 // helper function to print workflow progress with time refresh every second
 func printWorkflowProgress(c *cli.Context, wid, rid string, watch bool) error {
-	var maxFieldLength int
-	if c.IsSet(FlagMaxFieldLength) {
-		maxFieldLength = c.Int(FlagMaxFieldLength)
-	}
+	var maxFieldLength = c.Int(FlagMaxFieldLength)
 	sdkClient, err := getSDKClient(c)
 	if err != nil {
 		return err
