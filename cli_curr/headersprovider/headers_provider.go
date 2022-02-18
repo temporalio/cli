@@ -23,7 +23,7 @@
 package headersprovider
 
 import (
-	"go.temporal.io/server/tools/cli/plugin"
+	"github.com/temporalio/tctl/cli_curr/plugin"
 )
 
 var (

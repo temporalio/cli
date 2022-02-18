@@ -47,12 +47,12 @@ import (
 	sdkclient "go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/converter"
 
+	"github.com/temporalio/tctl/cli_curr/dataconverter"
+	"github.com/temporalio/tctl/cli_curr/stringify"
 	"go.temporal.io/server/common/codec"
 	"go.temporal.io/server/common/collection"
 	"go.temporal.io/server/common/payloads"
 	"go.temporal.io/server/common/rpc"
-	"go.temporal.io/server/tools/cli/dataconverter"
-	"go.temporal.io/server/tools/cli/stringify"
 )
 
 // GetHistory helper method to iterate over all pages and return complete list of history events

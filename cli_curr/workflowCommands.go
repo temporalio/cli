@@ -55,6 +55,7 @@ import (
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/backoff"
 
+	"github.com/temporalio/tctl/cli_curr/stringify"
 	clispb "go.temporal.io/server/api/cli/v1"
 	"go.temporal.io/server/common/clock"
 	"go.temporal.io/server/common/codec"
@@ -62,7 +63,6 @@ import (
 	"go.temporal.io/server/common/primitives/timestamp"
 	"go.temporal.io/server/common/searchattribute"
 	"go.temporal.io/server/service/history/workflow"
-	"go.temporal.io/server/tools/cli/stringify"
 )
 
 // ShowHistory shows the history of given workflow execution based on workflowID and runID.
