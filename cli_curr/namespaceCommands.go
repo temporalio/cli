@@ -64,7 +64,11 @@ func newNamespaceCLI(
 	if !isAdminMode {
 		frontendClient = initializeFrontendClient(c)
 	} else {
-		namespaceHandler = initializeAdminNamespaceHandler(c)
+		var err error
+		namespaceHandler, err = initializeAdminNamespaceHandler(c)
+		if err != nil {
+			ErrorAndExit("Unable to initialize admin namespace handler", err)
+		}
 	}
 	return &namespaceCLIImpl{
 		frontendClient:   frontendClient,

@@ -25,6 +25,7 @@
 package cli_curr
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/golang/mock/gomock"
@@ -207,21 +208,28 @@ func initializeFrontendClient(
 
 func initializeAdminNamespaceHandler(
 	context *cli.Context,
-) namespace.Handler {
+) (namespace.Handler, error) {
 
 	configuration := loadConfig(context)
-	metricsClient := initializeMetricsClient()
+	metricsClient, err := initializeMetricsClient()
+	if err != nil {
+		return nil, fmt.Errorf("unable to initialize metrics client: %v", err)
+	}
 	logger := log.NewZapLogger(log.BuildZapLogger(configuration.Log))
 
 	factory := initializePersistenceFactory(
-		configuration,
+		&configuration.Persistence,
+		func(...dynamicconfig.FilterOption) int {
+			return dependencyMaxQPS
+		},
+		"",
 		metricsClient,
 		logger,
 	)
 
 	metadataMgr, err := factory.NewMetadataManager()
 	if err != nil {
-		ErrorAndExit("Unable to initialize metadata manager.", err)
+		return nil, fmt.Errorf("unable to initialize metadata manager: %v", err)
 	}
 
 	clusterMetadata := initializeClusterMetadata(configuration)
@@ -233,7 +241,7 @@ func initializeAdminNamespaceHandler(
 		clusterMetadata,
 		initializeArchivalMetadata(configuration, dynamicConfig),
 		initializeArchivalProvider(configuration, clusterMetadata, metricsClient, logger),
-	)
+	), nil
 }
 
 func loadConfig(
@@ -269,22 +277,29 @@ func initializeNamespaceHandler(
 }
 
 func initializePersistenceFactory(
-	serviceConfig *config.Config,
+	pConfig *config.Persistence,
+	maxQps client.PersistenceMaxQps,
+	clusterName string,
 	metricsClient metrics.Client,
 	logger log.Logger,
 ) client.Factory {
 
-	pConfig := serviceConfig.Persistence
-	pFactory := client.NewFactory(
-		&pConfig,
+	dataStoreFactory, _ := client.DataStoreFactoryProvider(
+		client.ClusterName(clusterName),
 		resolver.NewNoopResolver(),
-		dynamicconfig.GetIntPropertyFn(dependencyMaxQPS),
+		pConfig,
 		nil, // TODO propagate abstract datastore factory from the CLI.
-		"",
-		metricsClient,
 		logger,
+		metricsClient,
 	)
-	return pFactory
+	return client.FactoryProvider(client.NewFactoryParams{
+		DataStoreFactory:  dataStoreFactory,
+		Cfg:               pConfig,
+		PersistenceMaxQPS: maxQps,
+		ClusterName:       client.ClusterName(clusterName),
+		MetricsClient:     metricsClient,
+		Logger:            logger,
+	})
 }
 
 func initializeClusterMetadata(
@@ -298,6 +313,7 @@ func initializeClusterMetadata(
 		clusterMetadata.MasterClusterName,
 		clusterMetadata.CurrentClusterName,
 		clusterMetadata.ClusterInformation,
+		nil,
 		nil,
 		log.NewNoopLogger(),
 	)
@@ -382,7 +398,7 @@ func initializeDynamicConfig(
 	return dynamicconfig.NewCollection(dynamicConfigClient, logger)
 }
 
-func initializeMetricsClient() metrics.Client {
+func initializeMetricsClient() (metrics.Client, error) {
 	return metrics.NewClient(&metrics.ClientConfig{}, tally.NoopScope, metrics.Common)
 }
 
