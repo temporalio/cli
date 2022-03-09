@@ -8,41 +8,41 @@ var tctlCommands = []*cli.Command{
 	{
 		Name:        "namespace",
 		Aliases:     []string{"n"},
-		Usage:       "Operate Temporal namespace",
+		Usage:       "Operations on namespaces",
 		Subcommands: newNamespaceCommands(),
 	},
 	{
 		Name:        "workflow",
 		Aliases:     []string{"w"},
-		Usage:       "Operate Temporal workflow",
+		Usage:       "Operations on workflows",
 		Subcommands: newWorkflowCommands(),
 	},
 	{
 		Name:        "activity",
 		Aliases:     []string{"a"},
-		Usage:       "operate activities of workflow",
+		Usage:       "Operations on activities of workflows",
 		Subcommands: newActivityCommands(),
 	},
 	{
 		Name:        "task-queue",
 		Aliases:     []string{"tq"},
-		Usage:       "Operate Temporal task queue",
+		Usage:       "Operations on task queues",
 		Subcommands: newTaskQueueCommands(),
 	},
 	{
 		Name:        "batch",
-		Usage:       "batch operation on a list of workflows from query.",
+		Usage:       "Batch operations on a list of workflows from a query.",
 		Subcommands: newBatchCommands(),
 	},
 	{
 		Name:        "cluster",
-		Usage:       "Operate Temporal cluster",
+		Usage:       "Operations on a Temporal cluster",
 		Subcommands: newClusterCommands(),
 	},
 	{
 		Name:        "data-converter",
 		Aliases:     []string{"dc"},
-		Usage:       "Operate Custom Data Converter",
+		Usage:       "Operations using a custom data converter",
 		Subcommands: newDataConverterCommands(),
 	},
 	{
