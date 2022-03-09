@@ -18,7 +18,7 @@ require (
 	github.com/urfave/cli v1.22.5
 	github.com/urfave/cli/v2 v2.3.0
 	go.temporal.io/api v1.7.1-0.20220223032354-6e6fe738916a
-	go.temporal.io/sdk v1.13.0
+	go.temporal.io/sdk v1.13.1
 	go.temporal.io/server v1.15.1-0.20220301224234-8433f9f43709
 	google.golang.org/grpc v1.44.0
 )

@@ -188,16 +188,6 @@ var (
 			Usage: "Optional service zone for loading service configuration",
 		},
 	}
-
-	adminUpdateNamespaceFlags = append(
-		updateNamespaceFlags,
-		adminNamespaceCommonFlags...,
-	)
-
-	adminDescribeNamespaceFlags = append(
-		updateNamespaceFlags,
-		adminNamespaceCommonFlags...,
-	)
 )
 
 func initializeFrontendClient(

@@ -36,7 +36,7 @@ func useDynamicCommands(app *cli.App) {
 		// try execute as an alias command
 		cmdValue, err := lookupCmdInAliasCommands(ctx, cmdToFind)
 		if err == nil {
-			err = executeAliasCommand(ctx, app, cmdValue)
+			_ = executeAliasCommand(ctx, app, cmdValue)
 			return
 		}
 
@@ -45,7 +45,7 @@ func useDynamicCommands(app *cli.App) {
 		path, err := exec.LookPath(pluginName)
 		if err == nil {
 			os.Args = append([]string{pluginName}, os.Args[2:]...)
-			err = executePlugin(ctx, path, os.Args, os.Environ())
+			_ = executePlugin(ctx, path, os.Args, os.Environ())
 		}
 
 		fmt.Fprintf(os.Stderr, "%s is not a command. See '%s --help\n'", cmdToFind, ctx.App.Name)

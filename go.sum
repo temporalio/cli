@@ -556,8 +556,9 @@ go.opentelemetry.io/proto/otlp v0.7.0/go.mod h1:PqfVotwruBrMGOCsRd/89rSnXhoiJIqe
 go.temporal.io/api v1.6.1-0.20211110205628-60c98e9cbfe2/go.mod h1:IlUgOTGfmJuOkGrCZdptNxyXKE9CQz6oOx7/aH9bFY4=
 go.temporal.io/api v1.7.1-0.20220223032354-6e6fe738916a h1:SgkeoCikBXMd/3fNNtymIfhpxk8o/E3zIZFBFkHzTtU=
 go.temporal.io/api v1.7.1-0.20220223032354-6e6fe738916a/go.mod h1:OnUq5eS+Nyx+irKb3Ws5YB7yjGFf5XmI3WcVRU9COEo=
-go.temporal.io/sdk v1.13.0 h1:8PW27o/uYAf1C1u8WUd6LNa6He2nYkBhdUX3c5gif5o=
 go.temporal.io/sdk v1.13.0/go.mod h1:TCof7U/xas2FyDnx/UUEv4c/O/S41Lnhva+6JVer+Jo=
+go.temporal.io/sdk v1.13.1 h1:4LRIe1WLM+m2pN6sNod4sMV+0bV8WTscVfRsipOP8N8=
+go.temporal.io/sdk v1.13.1/go.mod h1:TCof7U/xas2FyDnx/UUEv4c/O/S41Lnhva+6JVer+Jo=
 go.temporal.io/server v1.15.1-0.20220301224234-8433f9f43709 h1:3li2Ngo9OcZ0Nrhf+RCxi+XgssR5NI6WKB4d9dOFQcI=
 go.temporal.io/server v1.15.1-0.20220301224234-8433f9f43709/go.mod h1:8K9fE9/UoxAzOEvFB51Fby5SC3fZGlKgpGViJIy2SDI=
 go.temporal.io/version v0.3.0/go.mod h1:UA9S8/1LaKYae6TyD9NaPMJTZb911JcbqghI2CBSP78=

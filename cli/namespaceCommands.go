@@ -62,7 +62,7 @@ func RegisterNamespace(c *cli.Context) error {
 	if c.IsSet(FlagIsGlobalNamespace) {
 		isGlobalNamespace, err = strconv.ParseBool(c.String(FlagIsGlobalNamespace))
 		if err != nil {
-			return fmt.Errorf("option %s format is invalid: %w.", FlagIsGlobalNamespace, err)
+			return fmt.Errorf("option %s format is invalid: %w", FlagIsGlobalNamespace, err)
 		}
 	}
 
@@ -197,13 +197,13 @@ func UpdateNamespace(c *cli.Context) error {
 			namespaceDataStr := c.String(FlagNamespaceData)
 			namespaceData, err = parseNamespaceDataKVs(namespaceDataStr)
 			if err != nil {
-				return fmt.Errorf("namespace data format is invalid: %s.", err)
+				return fmt.Errorf("namespace data format is invalid: %s", err)
 			}
 		}
 		if c.IsSet(FlagRetention) {
 			retention, err = timestamp.ParseDurationDefaultDays(c.String(FlagRetention))
 			if err != nil {
-				return fmt.Errorf("option %s format is invalid: %s.", FlagRetention, err)
+				return fmt.Errorf("option %s format is invalid: %s", FlagRetention, err)
 			}
 		}
 		if c.IsSet(FlagClusters) {
@@ -221,7 +221,7 @@ func UpdateNamespace(c *cli.Context) error {
 		var binBinaries *namespacepb.BadBinaries
 		if c.IsSet(FlagAddBadBinary) {
 			if !c.IsSet(FlagReason) {
-				return fmt.Errorf("reason flag is not provided: %s.", err)
+				return fmt.Errorf("reason flag is not provided: %s", err)
 			}
 			binChecksum := c.String(FlagAddBadBinary)
 			reason := c.String(FlagReason)
@@ -395,18 +395,6 @@ func getAllNamespaces(c *cli.Context, tClient workflowservice.WorkflowServiceCli
 		res = append(res, listResp.GetNamespaces()...)
 	}
 	return res, nil
-}
-
-func clustersToString(clusters []*replicationpb.ClusterReplicationConfig) string {
-	var res string
-	for i, cluster := range clusters {
-		if i == 0 {
-			res = res + cluster.GetClusterName()
-		} else {
-			res = res + ", " + cluster.GetClusterName()
-		}
-	}
-	return res
 }
 
 func archivalState(c *cli.Context, stateFlagName string) (enumspb.ArchivalState, error) {

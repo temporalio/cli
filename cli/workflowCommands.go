@@ -1370,7 +1370,7 @@ func getLastWorkflowTaskEventID(ctx context.Context, namespace, wid, rid string,
 func badChecksum(bad string) func(string) error {
 	return func(maybeBad string) error {
 		if maybeBad == bad {
-			return fmt.Errorf("Bad checksum %q", bad)
+			return fmt.Errorf("bad checksum %q", bad)
 		}
 		return nil
 	}

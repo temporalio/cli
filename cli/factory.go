@@ -43,6 +43,7 @@ import (
 	sdkclient "go.temporal.io/sdk/client"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/metadata"
 
@@ -148,7 +149,7 @@ func (b *clientFactory) createGRPCConnection(c *cli.Context) (*grpc.ClientConn, 
 		return nil, err
 	}
 
-	grpcSecurityOptions := grpc.WithInsecure()
+	grpcSecurityOptions := grpc.WithTransportCredentials(insecure.NewCredentials())
 
 	if tlsConfig != nil {
 		grpcSecurityOptions = grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig))

@@ -25,13 +25,11 @@
 package cli
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"regexp"
-	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -356,20 +354,6 @@ func mapKeysToArray(m map[string]interface{}) []string {
 	return out
 }
 
-func printError(msg string, err error) {
-	if err != nil {
-		fmt.Printf("%s %s\n%s %+v\n", color.RedString("Error:"), msg, color.MagentaString("Error Details:"), err)
-		if os.Getenv(showErrorStackEnv) != `` {
-			fmt.Printf("Stack trace:\n")
-			debug.PrintStack()
-		} else {
-			fmt.Printf("('export %s=1' to see stack traces)\n", showErrorStackEnv)
-		}
-	} else {
-		fmt.Printf("%s %s\n", color.RedString("Error:"), msg)
-	}
-}
-
 func getSDKClient(c *cli.Context) (sdkclient.Client, error) {
 	namespace, err := getRequiredGlobalOption(c, FlagNamespace)
 	if err != nil {
@@ -381,7 +365,7 @@ func getSDKClient(c *cli.Context) (sdkclient.Client, error) {
 func getRequiredGlobalOption(c *cli.Context, optionName string) (string, error) {
 	value := readFlagOrConfig(c, optionName)
 	if len(value) == 0 {
-		return "", fmt.Errorf("global option is required: %s.", optionName)
+		return "", fmt.Errorf("global option is required: %s", optionName)
 	}
 	return value, nil
 }
@@ -431,7 +415,7 @@ func parseTime(timeStr string, defaultValue time.Time, now time.Time) (time.Time
 	// treat as time range format
 	parsedTime, err = parseTimeRange(timeStr, now)
 	if err != nil {
-		return time.Time{}, fmt.Errorf("Cannot parse time '%s', use UTC format '2006-01-02T15:04:05', "+
+		return time.Time{}, fmt.Errorf("cannot parse time '%s', use UTC format '2006-01-02T15:04:05', "+
 			"time range or raw UnixNano directly. See help for more details: %s", timeStr, err)
 	}
 	return parsedTime, nil
@@ -459,7 +443,7 @@ func parseTime(timeStr string, defaultValue time.Time, now time.Time) (time.Time
 func parseTimeRange(timeRange string, now time.Time) (time.Time, error) {
 	match, err := regexp.MatchString(defaultDateTimeRangeShortRE, timeRange)
 	if !match { // fallback on to check if it's of longer notation
-		match, err = regexp.MatchString(defaultDateTimeRangeLongRE, timeRange)
+		_, err = regexp.MatchString(defaultDateTimeRangeLongRE, timeRange)
 	}
 	if err != nil {
 		return time.Time{}, err
@@ -579,7 +563,7 @@ func processJSONInput(c *cli.Context) (*commonpb.Payloads, error) {
 		} else {
 			var j interface{}
 			if err := json.Unmarshal(jsonRaw, &j); err != nil {
-				return nil, fmt.Errorf("input is not a valid JSON: %s.", err)
+				return nil, fmt.Errorf("input is not a valid JSON: %s", err)
 			}
 			jsons = append(jsons, j)
 		}
@@ -623,7 +607,7 @@ func readJSONInputs(c *cli.Context) ([][]byte, error) {
 		// #nosec
 		data, err := os.ReadFile(inputFile)
 		if err != nil {
-			return nil, fmt.Errorf("unable to read input file: %s.", err)
+			return nil, fmt.Errorf("unable to read input file: %s", err)
 		}
 		return [][]byte{data}, nil
 	}
@@ -646,14 +630,6 @@ func removePrevious2LinesFromTerminal() {
 	fmt.Printf("\033[2K")
 }
 
-func showNextPage() bool {
-	fmt.Printf("Press %s to show next page, press %s to quit: ",
-		color.GreenString("Enter"), color.RedString("any other key then Enter"))
-	var input string
-	_, _ = fmt.Scanln(&input)
-	return strings.Trim(input, " ") == ""
-}
-
 func stringToEnum(search string, candidates map[string]int32) (int32, error) {
 	if search == "" {
 		return 0, nil
@@ -667,26 +643,7 @@ func stringToEnum(search string, candidates map[string]int32) (int32, error) {
 		candidateNames = append(candidateNames, key)
 	}
 
-	return 0, fmt.Errorf("Could not find corresponding candidate for %s. Possible candidates: %q", search, candidateNames)
-}
-
-// prompt will show input msg, then waiting user input y/yes to continue
-func prompt(msg string, autoConfirm bool) {
-	reader := bufio.NewReader(os.Stdin)
-	fmt.Print(msg, " ")
-	var text string
-	if autoConfirm {
-		text = "y"
-		fmt.Print("y")
-	} else {
-		text, _ = reader.ReadString('\n')
-	}
-	fmt.Println()
-
-	textLower := strings.ToLower(strings.TrimRight(text, "\n"))
-	if textLower != "y" && textLower != "yes" {
-		os.Exit(0)
-	}
+	return 0, fmt.Errorf("could not find corresponding candidate for %s. Possible candidates: %q", search, candidateNames)
 }
 
 func defaultDataConverter() converter.DataConverter {
