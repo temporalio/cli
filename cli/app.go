@@ -35,6 +35,7 @@ import (
 
 	"github.com/temporalio/tctl-kit/pkg/color"
 	"github.com/temporalio/tctl/cli/dataconverter"
+	"github.com/temporalio/tctl/cli/headersprovider"
 	"github.com/temporalio/tctl/cli/plugin"
 	"github.com/temporalio/tctl/config"
 )
@@ -153,6 +154,16 @@ func loadPlugins(ctx *cli.Context) error {
 		}
 
 		dataconverter.SetCurrent(dataConverter)
+	}
+
+	hpPlugin := ctx.String(FlagHeadersProviderPlugin)
+	if hpPlugin != "" {
+		headersProvider, err := plugin.NewHeadersProviderPlugin(hpPlugin)
+		if err != nil {
+			return fmt.Errorf("unable to load headers provider plugin: %s", err)
+		}
+
+		headersprovider.SetCurrent(headersProvider)
 	}
 
 	return nil
