@@ -18,9 +18,9 @@ COLOR := "\e[1;36m%s\e[0m\n"
 ##### Build #####
 build:
 	@printf $(COLOR) "Build tctl with OS: $(GOOS), ARCH: $(GOARCH)..."
-	CGO_ENABLED=0 go build -o tctl cmd/main.go
+	CGO_ENABLED=0 go build $(PWD)/cmd/tctl
 	@printf $(COLOR) "Build tctl-authorization-plugin with OS: $(GOOS), ARCH: $(GOARCH)..."
-	CGO_ENABLED=$(CGO_ENABLED) go build -o tctl-authorization-plugin cmd/plugins/authorization/main.go
+	CGO_ENABLED=$(CGO_ENABLED) go build $(PWD)/cmd/plugins/tctl-authorization-plugin
 
 clean:
 	@printf $(COLOR) "Clearing binaries..."
