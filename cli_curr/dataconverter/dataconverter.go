@@ -32,6 +32,15 @@ func SetCurrent(dc converter.DataConverter) {
 	dataConverter = dc
 }
 
+func SetRemoteEndpoint(endpoint string) {
+	dataConverter = converter.NewRemoteDataConverter(
+		converter.GetDefaultDataConverter(),
+		converter.RemoteDataConverterOptions{
+			Endpoint: endpoint,
+		},
+	)
+}
+
 func GetCurrent() converter.DataConverter {
 	return dataConverter
 }

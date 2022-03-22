@@ -118,6 +118,12 @@ func NewCliApp() *cli.App {
 			EnvVars: []string{"TEMPORAL_CLI_PLUGIN_DATA_CONVERTER"},
 		},
 		&cli.StringFlag{
+			Name:    FlagRemoteCodecEndpoint,
+			Value:   "",
+			Usage:   "Remote Codec Server Endpoint",
+			EnvVars: []string{"TEMPORAL_CLI_REMOTE_CODEC_ENDPOINT"},
+		},
+		&cli.StringFlag{
 			Name:  color.FlagColor,
 			Usage: fmt.Sprintf("when to use color: %v, %v, %v.", color.Auto, color.Always, color.Never),
 			Value: string(color.Auto),
@@ -146,6 +152,12 @@ func NewCliApp() *cli.App {
 }
 
 func loadPlugins(ctx *cli.Context) error {
+	endpoint := ctx.String(FlagRemoteCodecEndpoint)
+	if endpoint != "" {
+		endpoint := strings.ReplaceAll(endpoint, "{namespace}", ctx.String(FlagNamespace))
+		dataconverter.SetRemoteEndpoint(endpoint)
+	}
+
 	dcPlugin := ctx.String(FlagDataConverterPlugin)
 	if dcPlugin != "" {
 		dataConverter, err := plugin.NewDataConverterPlugin(dcPlugin)

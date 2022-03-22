@@ -231,6 +231,7 @@ const (
 	FlagDataConverterPlugin                   = "data_converter_plugin"
 	FlagDataConverterPluginWithAlias          = FlagDataConverterPlugin + ", dcp"
 	FlagWebURL                                = "web_ui_url"
+	FlagRemoteCodecEndpoint                   = "remote_codec_endpoint"
 	FlagHeadersProviderPlugin                 = "headers_provider_plugin"
 	FlagHeadersProviderPluginWithAlias        = FlagHeadersProviderPlugin + ", hpp"
 	FlagHeadersProviderPluginOptions          = "headers_provider_plugin_options"

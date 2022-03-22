@@ -26,6 +26,7 @@ package cli_curr
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/temporalio/tctl/config"
 	"github.com/urfave/cli"
@@ -110,6 +111,12 @@ func NewCliApp() *cli.App {
 			Value:  "",
 			Usage:  "Data converter plugin executable name",
 			EnvVar: "TEMPORAL_CLI_PLUGIN_DATA_CONVERTER",
+		},
+		cli.StringFlag{
+			Name:   FlagRemoteCodecEndpoint,
+			Value:  "",
+			Usage:  "Remote Codec Server Endpoint",
+			EnvVar: "TEMPORAL_CLI_REMOTE_CODEC_ENDPOINT",
 		},
 	}
 	app.Commands = []cli.Command{
@@ -239,6 +246,12 @@ func NewCliApp() *cli.App {
 }
 
 func loadPlugins(c *cli.Context) error {
+	endpoint := c.String(FlagRemoteCodecEndpoint)
+	if endpoint != "" {
+		endpoint := strings.ReplaceAll(endpoint, "{namespace}", c.String(FlagNamespace))
+		dataconverter.SetRemoteEndpoint(endpoint)
+	}
+
 	dcPlugin := c.String(FlagDataConverterPlugin)
 	if dcPlugin != "" {
 		dataConverter, err := plugin.NewDataConverterPlugin(dcPlugin)

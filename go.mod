@@ -17,10 +17,10 @@ require (
 	github.com/uber-go/tally/v4 v4.1.1
 	github.com/urfave/cli v1.22.5
 	github.com/urfave/cli/v2 v2.3.0
-	go.temporal.io/api v1.7.1-0.20220308002655-96f7fbf5da40
-	go.temporal.io/sdk v1.13.1
-	go.temporal.io/server v1.15.1-0.20220309003626-1e3bc68f4d7e
-	google.golang.org/grpc v1.44.0
+	go.temporal.io/api v1.7.1-0.20220318011046-9d4c099e6f04
+	go.temporal.io/sdk v1.14.0
+	go.temporal.io/server v1.15.1-0.20220318150531-e2d6b31c0b82
+	google.golang.org/grpc v1.45.0
 )
 
 require (
@@ -117,13 +117,13 @@ require (
 	go.uber.org/zap v1.21.0 // indirect
 	golang.org/x/net v0.0.0-20220225172249-27dd8689420f // indirect
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8 // indirect
-	golang.org/x/sys v0.0.0-20220307203707-22a9840ba4d7 // indirect
+	golang.org/x/sys v0.0.0-20220317061510-51cd9980dadf // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/time v0.0.0-20220210224613-90d013bbcef8 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/api v0.68.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/genproto v0.0.0-20220307174427-659dce7fcb03 // indirect
+	google.golang.org/genproto v0.0.0-20220317150908-0efb43f6373e // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.63.2 // indirect
