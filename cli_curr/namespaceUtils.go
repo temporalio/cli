@@ -364,7 +364,7 @@ func initializeNamespaceReplicator(
 ) namespace.Replicator {
 
 	namespaceReplicationQueue := &persistence.MockNamespaceReplicationQueue{}
-	namespaceReplicationQueue.EXPECT().Publish(gomock.Any()).Return(nil)
+	namespaceReplicationQueue.EXPECT().Publish(gomock.Any(), gomock.Any()).Return(nil)
 	return namespace.NewNamespaceReplicator(namespaceReplicationQueue, logger)
 }
 
