@@ -2,7 +2,7 @@ ARG BASE_SERVER_IMAGE=temporalio/base-server:1.2.0
 ARG GOPROXY
 
 ##### tctl builder #####
-FROM golang:1.17-alpine3.14 AS tctl-builder
+FROM golang:1.18-alpine3.14 AS tctl-builder
 
 RUN apk add --update --no-cache \
     make \
