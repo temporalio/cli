@@ -26,7 +26,6 @@ package cli_curr
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/temporalio/tctl/config"
 	"github.com/urfave/cli"
@@ -60,6 +59,12 @@ func NewCliApp() *cli.App {
 			Value:  "default",
 			Usage:  "Temporal workflow namespace",
 			EnvVar: "TEMPORAL_CLI_NAMESPACE",
+		},
+		cli.StringFlag{
+			Name:   FlagAuth,
+			Value:  "",
+			Usage:  "Authorization header to set for GRPC requests",
+			EnvVar: "TEMPORAL_CLI_AUTH",
 		},
 		cli.IntFlag{
 			Name:   FlagContextTimeoutWithAlias,
@@ -113,10 +118,16 @@ func NewCliApp() *cli.App {
 			EnvVar: "TEMPORAL_CLI_PLUGIN_DATA_CONVERTER",
 		},
 		cli.StringFlag{
-			Name:   FlagRemoteCodecEndpoint,
+			Name:   FlagCodecEndpoint,
 			Value:  "",
-			Usage:  "Remote Codec Server Endpoint",
-			EnvVar: "TEMPORAL_CLI_REMOTE_CODEC_ENDPOINT",
+			Usage:  "Codec Server Endpoint",
+			EnvVar: "TEMPORAL_CLI_CODEC_ENDPOINT",
+		},
+		cli.StringFlag{
+			Name:   FlagCodecAuth,
+			Value:  "",
+			Usage:  "Authorization header to set for requests to Codec Server",
+			EnvVar: "TEMPORAL_CLI_CODEC_AUTH",
 		},
 	}
 	app.Commands = []cli.Command{
@@ -227,7 +238,7 @@ func NewCliApp() *cli.App {
 			Subcommands: newConfigCommands(),
 		},
 	}
-	app.Before = loadPlugins
+	app.Before = configureSDK
 	app.After = stopPlugins
 
 	// set builder if not customized
@@ -245,11 +256,18 @@ func NewCliApp() *cli.App {
 	return app
 }
 
-func loadPlugins(c *cli.Context) error {
-	endpoint := c.String(FlagRemoteCodecEndpoint)
+func configureSDK(c *cli.Context) error {
+	endpoint := c.String(FlagCodecEndpoint)
 	if endpoint != "" {
-		endpoint := strings.ReplaceAll(endpoint, "{namespace}", c.String(FlagNamespace))
-		dataconverter.SetRemoteEndpoint(endpoint)
+		dataconverter.SetRemoteEndpoint(
+			endpoint,
+			c.String(FlagNamespace),
+			c.String(FlagCodecAuth),
+		)
+	}
+
+	if c.String(FlagAuth) != "" {
+		headersprovider.SetAuthorizationHeader(c.String(FlagAuth))
 	}
 
 	dcPlugin := c.String(FlagDataConverterPlugin)

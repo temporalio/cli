@@ -59,6 +59,12 @@ func NewCliApp() *cli.App {
 			EnvVars: []string{"TEMPORAL_CLI_ADDRESS"},
 		},
 		&cli.StringFlag{
+			Name:    FlagAuth,
+			Value:   "",
+			Usage:   "Authorization header to set for GRPC requests",
+			EnvVars: []string{"TEMPORAL_CLI_AUTH"},
+		},
+		&cli.StringFlag{
 			Name:    FlagNamespace,
 			Aliases: FlagNamespaceAlias,
 			Value:   "default",
@@ -118,10 +124,16 @@ func NewCliApp() *cli.App {
 			EnvVars: []string{"TEMPORAL_CLI_PLUGIN_DATA_CONVERTER"},
 		},
 		&cli.StringFlag{
-			Name:    FlagRemoteCodecEndpoint,
+			Name:    FlagCodecEndpoint,
 			Value:   "",
 			Usage:   "Remote Codec Server Endpoint",
-			EnvVars: []string{"TEMPORAL_CLI_REMOTE_CODEC_ENDPOINT"},
+			EnvVars: []string{"TEMPORAL_CLI_CODEC_ENDPOINT"},
+		},
+		&cli.StringFlag{
+			Name:    FlagCodecAuth,
+			Value:   "",
+			Usage:   "Authorization header to set for requests to Codec Server",
+			EnvVars: []string{"TEMPORAL_CLI_CODEC_AUTH"},
 		},
 		&cli.StringFlag{
 			Name:  color.FlagColor,
@@ -130,7 +142,7 @@ func NewCliApp() *cli.App {
 		},
 	}
 	app.Commands = tctlCommands
-	app.Before = loadPlugins
+	app.Before = configureSDK
 	app.After = stopPlugins
 	app.ExitErrHandler = handleError
 
@@ -151,11 +163,18 @@ func NewCliApp() *cli.App {
 	return app
 }
 
-func loadPlugins(ctx *cli.Context) error {
-	endpoint := ctx.String(FlagRemoteCodecEndpoint)
+func configureSDK(ctx *cli.Context) error {
+	endpoint := ctx.String(FlagCodecEndpoint)
 	if endpoint != "" {
-		endpoint := strings.ReplaceAll(endpoint, "{namespace}", ctx.String(FlagNamespace))
-		dataconverter.SetRemoteEndpoint(endpoint)
+		dataconverter.SetRemoteEndpoint(
+			endpoint,
+			ctx.String(FlagNamespace),
+			ctx.String(FlagCodecAuth),
+		)
+	}
+
+	if ctx.String(FlagAuth) != "" {
+		headersprovider.SetAuthorizationHeader(ctx.String(FlagAuth))
 	}
 
 	dcPlugin := ctx.String(FlagDataConverterPlugin)
