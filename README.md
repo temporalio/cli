@@ -15,21 +15,21 @@ get started:
 
 **Note:** Make sure you have a Temporal server running before using the CLI.
 
-### Trying out tctl v1.14.0-alpha with the updated UX
+### Trying out new tctl v1.17.0-beta with the 
 
-**Note** Switching to `tctl v1.14.0-alpha` is not recommended on production environments.
+**Note** Switching to `tctl v1.17.0-beta` is not recommended on production environments.
 
-The package contains both `tctl v1.13.1` and the updated `tctl v1.14.0-alpha`. Version v1.14.0-alpha brings updated UX, commands and flags semantics, new features ([see details](https://github.com/temporalio/proposals/tree/master/cli)). Please expect more of upcoming changes in v1.14.0
+The package contains both `tctl v1.16` and the updated `tctl v1.17.0-beta`. Version v1.17.0-beta brings updated UX, commands and flags semantics, new features ([see details](https://github.com/temporalio/proposals/tree/master/cli)). Please expect more of upcoming changes in v1.17.0
 
-By default, executing tctl commands will execute commands from v1.13.1. In order to switch to experimental v1.14.0-alpha run
+By default, executing tctl commands will execute commands from v1.16. In order to switch to experimental v1.17.0-beta run
 
 ```
 tctl config set version next
 ```
 
-This will create a configuration file (`~/.config/temporalio/tctl.yaml`) and set tctl to v1.14.0-alpha.
+This will create a configuration file (`~/.config/temporalio/tctl.yaml`) and set tctl to v1.17.0-beta.
 
-To switch back to the stable v1.13.1, run
+To switch back to the stable v1.16, run
 
 ```
 tctl config set --version current
