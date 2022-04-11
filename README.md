@@ -15,7 +15,7 @@ get started:
 
 **Note:** Make sure you have a Temporal server running before using the CLI.
 
-### Trying out new tctl v1.17.0-beta with the 
+### Trying out new tctl v1.17.0-beta with updated UX
 
 **Note** Switching to `tctl v1.17.0-beta` is not recommended on production environments.
 
