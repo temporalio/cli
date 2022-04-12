@@ -131,13 +131,3 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 )
-
-// This is required to allow go 1.16 to build this (go 1.17 is fine). With go
-// <= 1.16, github.com/cactus/go-statsd-client/statsd is seen as having an
-// ambiguous dependency of github.com/cactus/go-statsd-client/statsd defined
-// earlier in this file (fixed to v3.2.1) and github.com/cactus/go-statsd-client
-// defined in Tally's go.mod (fixed on v3.1.1). This forces that upgrade so that
-// the parent path of github.com/cactus/go-statsd-client is v3.2.1 which means
-// at that tag it no longer provides github.com/cactus/go-statsd-client/statsd
-// thereby removing the import.
-replace github.com/cactus/go-statsd-client => github.com/cactus/go-statsd-client v3.2.1+incompatible
