@@ -245,7 +245,10 @@ func AdminDeleteWorkflow(c *cli.Context) {
 		WorkflowID:  getRequiredOption(c, FlagWorkflowID),
 		RunID:       runID,
 	}
-	err = exeStore.DeleteWorkflowExecution(req)
+
+	ctx, cancel := newContext(c)
+	defer cancel()
+	err = exeStore.DeleteWorkflowExecution(ctx, req)
 	if err != nil {
 		if c.Bool(FlagSkipErrorMode) {
 			fmt.Printf("Unable to DeleteWorkflowExecution for RunID=%s: %v\n", runID, err)
@@ -262,7 +265,10 @@ func AdminDeleteWorkflow(c *cli.Context) {
 		WorkflowID:  getRequiredOption(c, FlagWorkflowID),
 		RunID:       runID,
 	}
-	err = exeStore.DeleteCurrentWorkflowExecution(deleteCurrentReq)
+
+	ctx, cancel = newContext(c)
+	defer cancel()
+	err = exeStore.DeleteCurrentWorkflowExecution(ctx, deleteCurrentReq)
 	if err != nil {
 		if c.Bool(FlagSkipErrorMode) {
 			fmt.Printf("Unable to DeleteCurrentWorkflowExecution for RunID=%s: %v\n", runID, err)

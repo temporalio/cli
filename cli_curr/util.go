@@ -47,12 +47,12 @@ import (
 	sdkclient "go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/converter"
 
+	"github.com/temporalio/tctl/cli/headers"
 	"github.com/temporalio/tctl/cli_curr/dataconverter"
 	"github.com/temporalio/tctl/cli_curr/stringify"
 	"go.temporal.io/server/common/codec"
 	"go.temporal.io/server/common/collection"
 	"go.temporal.io/server/common/payloads"
-	"go.temporal.io/server/common/rpc"
 )
 
 // GetHistory helper method to iterate over all pages and return complete list of history events
@@ -597,10 +597,10 @@ func newContextForLongPoll(c *cli.Context) (context.Context, context.CancelFunc)
 func newIndefiniteContext(c *cli.Context) (context.Context, context.CancelFunc) {
 	if c.GlobalIsSet(FlagContextTimeout) {
 		timeout := time.Duration(c.GlobalInt(FlagContextTimeout)) * time.Second
-		return rpc.NewContextWithTimeoutAndCLIHeaders(timeout)
+		return NewContextWithTimeoutAndCLIHeaders(timeout)
 	}
 
-	return rpc.NewContextWithCLIHeaders()
+	return NewContextWithCLIHeaders()
 }
 
 func newContextWithTimeout(c *cli.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
@@ -608,7 +608,17 @@ func newContextWithTimeout(c *cli.Context, timeout time.Duration) (context.Conte
 		timeout = time.Duration(c.GlobalInt(FlagContextTimeout)) * time.Second
 	}
 
-	return rpc.NewContextWithTimeoutAndCLIHeaders(timeout)
+	return NewContextWithTimeoutAndCLIHeaders(timeout)
+}
+
+// NewContextWithCLIHeaders creates context with version headers for CLI.
+func NewContextWithCLIHeaders() (context.Context, context.CancelFunc) {
+	return context.WithCancel(headers.SetCLIVersions(context.Background()))
+}
+
+// NewContextWithTimeoutAndCLIHeaders creates context with timeout and version headers for CLI.
+func NewContextWithTimeoutAndCLIHeaders(timeout time.Duration) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(headers.SetCLIVersions(context.Background()), timeout)
 }
 
 // process and validate input provided through cmd or file
@@ -698,7 +708,7 @@ func showNextPage() bool {
 }
 
 // paginate creates an interactive CLI mode to control the printing of items
-func paginate(c *cli.Context, paginationFn collection.PaginationFn, pageSize int) error {
+func paginate[V any](c *cli.Context, paginationFn collection.PaginationFn[V], pageSize int) error {
 	more := c.Bool(FlagMore)
 	isTableView := !c.Bool(FlagPrintJSON)
 	iter := collection.NewPagingIterator(paginationFn)

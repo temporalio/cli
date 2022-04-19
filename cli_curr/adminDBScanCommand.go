@@ -328,6 +328,7 @@ func scanShard(
 			}
 			report.Scanned.TotalExecutionsCount++
 			historyVerificationResult, history, historyBranch := fetchAndVerifyHistoryExists(
+				ctx,
 				s.ExecutionInfo,
 				s.ExecutionState,
 				s.NextEventId,
@@ -433,6 +434,7 @@ func scanShard(
 }
 
 func fetchAndVerifyHistoryExists(
+	ctx context.Context,
 	executionInfo *persistencespb.WorkflowExecutionInfo,
 	executionState *persistencespb.WorkflowExecutionState,
 	nextEventID int64,
@@ -472,9 +474,9 @@ func fetchAndVerifyHistoryExists(
 		PageSize:  historyPageSize,
 	}
 	preconditionForDBCall(totalDBRequests, limiter)
-	history, err := executionStore.ReadHistoryBranch(readHistoryBranchReq)
+	history, err := executionStore.ReadHistoryBranch(ctx, readHistoryBranchReq)
 
-	ecf, stillExists := concreteExecutionStillExists(executionInfo, executionState, shardID, executionStore, limiter, totalDBRequests)
+	ecf, stillExists := concreteExecutionStillExists(ctx, executionInfo, executionState, shardID, executionStore, limiter, totalDBRequests)
 	if ecf != nil {
 		checkFailureWriter.Add(ecf)
 		return VerificationResultCheckFailure, nil, nil
@@ -719,6 +721,7 @@ func verifyCurrentExecution(
 }
 
 func concreteExecutionStillExists(
+	ctx context.Context,
 	executionInfo *persistencespb.WorkflowExecutionInfo,
 	executionState *persistencespb.WorkflowExecutionState,
 	shardID int32,
@@ -733,7 +736,7 @@ func concreteExecutionStillExists(
 		RunID:       executionState.GetRunId(),
 	}
 	preconditionForDBCall(totalDBRequests, limiter)
-	_, err := executionStore.GetWorkflowExecution(getConcreteExecution)
+	_, err := executionStore.GetWorkflowExecution(ctx, getConcreteExecution)
 	if err == nil {
 		return nil, true
 	}

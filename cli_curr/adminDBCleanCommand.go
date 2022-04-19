@@ -26,6 +26,7 @@ package cli_curr
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -114,11 +115,14 @@ func AdminDBClean(c *cli.Context) {
 	cleanOutputDirectories := createCleanOutputDirectories()
 
 	reports := make(chan *ShardCleanReport)
+	ctx, cancel := newContext(c)
+	defer cancel()
 	for i := int32(0); i < scanWorkerCount; i++ {
 		go func(workerIdx int32) {
 			for shardID := lowerShardBound; shardID < upperShardBound; shardID++ {
 				if shardID%scanWorkerCount == workerIdx {
 					reports <- cleanShard(
+						ctx,
 						rateLimiter,
 						session,
 						cleanOutputDirectories,
@@ -146,6 +150,7 @@ func AdminDBClean(c *cli.Context) {
 }
 
 func cleanShard(
+	ctx context.Context,
 	limiter quotas.RateLimiter,
 	session gocql.Session,
 	outputDirectories *CleanOutputDirectories,
@@ -202,7 +207,7 @@ func cleanShard(
 			RunID:       ce.RunID,
 		}
 		preconditionForDBCall(&report.TotalDBRequests, limiter)
-		err = execStore.DeleteWorkflowExecution(deleteConcreteReq)
+		err = execStore.DeleteWorkflowExecution(ctx, deleteConcreteReq)
 		if err != nil {
 			report.Handled.FailedCleanedCount++
 			failedCleanWriter.Add(&ce)
@@ -220,7 +225,7 @@ func cleanShard(
 			// deleting current execution is best effort, the success or failure of the cleanup
 			// is determined above based on if the concrete execution could be deleted
 			preconditionForDBCall(&report.TotalDBRequests, limiter)
-			execStore.DeleteCurrentWorkflowExecution(deleteCurrentReq)
+			execStore.DeleteCurrentWorkflowExecution(ctx, deleteCurrentReq)
 		}
 		// TODO: we will want to also cleanup history for corrupted workflows, this will be punted on until this is converted to a workflow
 	}

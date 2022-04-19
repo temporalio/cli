@@ -44,10 +44,10 @@ import (
 	"go.temporal.io/sdk/converter"
 
 	"github.com/temporalio/tctl/cli/dataconverter"
+	"github.com/temporalio/tctl/cli/headers"
 	"github.com/temporalio/tctl/cli/stringify"
 	"go.temporal.io/server/common/codec"
 	"go.temporal.io/server/common/payloads"
-	"go.temporal.io/server/common/rpc"
 )
 
 // HistoryEventToString convert HistoryEvent to string
@@ -539,10 +539,10 @@ func newContextForLongPoll(c *cli.Context) (context.Context, context.CancelFunc)
 func newIndefiniteContext(c *cli.Context) (context.Context, context.CancelFunc) {
 	if c.IsSet(FlagContextTimeout) {
 		timeout := time.Duration(c.Int(FlagContextTimeout)) * time.Second
-		return rpc.NewContextWithTimeoutAndCLIHeaders(timeout)
+		return NewContextWithTimeoutAndCLIHeaders(timeout)
 	}
 
-	return rpc.NewContextWithCLIHeaders()
+	return NewContextWithCLIHeaders()
 }
 
 func newContextWithTimeout(c *cli.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
@@ -550,7 +550,17 @@ func newContextWithTimeout(c *cli.Context, timeout time.Duration) (context.Conte
 		timeout = time.Duration(c.Int(FlagContextTimeout)) * time.Second
 	}
 
-	return rpc.NewContextWithTimeoutAndCLIHeaders(timeout)
+	return NewContextWithTimeoutAndCLIHeaders(timeout)
+}
+
+// NewContextWithCLIHeaders creates context with version headers for CLI.
+func NewContextWithCLIHeaders() (context.Context, context.CancelFunc) {
+	return context.WithCancel(headers.SetCLIVersions(context.Background()))
+}
+
+// NewContextWithTimeoutAndCLIHeaders creates context with timeout and version headers for CLI.
+func NewContextWithTimeoutAndCLIHeaders(timeout time.Duration) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(headers.SetCLIVersions(context.Background()), timeout)
 }
 
 // process and validate input provided through cmd or file

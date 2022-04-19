@@ -50,7 +50,7 @@ func NewCliApp() *cli.App {
 	app := cli.NewApp()
 	app.Name = "tctl"
 	app.Usage = "A command-line tool for Temporal users"
-	app.Version = "1.14.0-alpha.2"
+	app.Version = "1.17.0-alpha.1"
 	app.Flags = []cli.Flag{
 		&cli.StringFlag{
 			Name:    FlagAddress,
