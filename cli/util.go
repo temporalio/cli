@@ -371,18 +371,22 @@ func getRequiredGlobalOption(c *cli.Context, optionName string) (string, error) 
 }
 
 func readFlagOrConfig(c *cli.Context, key string) string {
-	if c.String(key) != "" { // don't use IsSet as it returns false for global flags
+	if c.IsSet(key) {
 		return c.String(key)
 	}
 
-	var val string
+	var cVal string
 	if isRootKey(key) {
-		val, _ = tctlConfig.Get(c, key)
+		cVal, _ = tctlConfig.Get(c, key)
 	} else if isEnvKey(key) {
-		val, _ = tctlConfig.GetByEnvironment(c, key)
+		cVal, _ = tctlConfig.GetByEnvironment(c, key)
 	}
 
-	return val
+	if cVal != "" {
+		return cVal
+	}
+
+	return c.String(key)
 }
 
 func formatTime(t time.Time, onlyTime bool) string {
