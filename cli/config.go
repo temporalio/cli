@@ -40,6 +40,11 @@ var (
 	envKeys = []string{
 		FlagNamespace,
 		FlagAddress,
+		FlagTLSCertPath,
+		FlagTLSKeyPath,
+		FlagTLSCaPath,
+		FlagTLSDisableHostVerification,
+		FlagTLSServerName,
 	}
 	keys = append(rootKeys, envKeys...)
 )
@@ -65,6 +70,30 @@ func newConfigCommands() []*cli.Command {
 				&cli.BoolFlag{
 					Name:  FlagAddress,
 					Usage: "Print Temporal address (for active environment)",
+				},
+				&cli.StringFlag{
+					Name:  FlagTLSCertPath,
+					Value: "",
+					Usage: "Print path to x509 certificate",
+				},
+				&cli.StringFlag{
+					Name:  FlagTLSKeyPath,
+					Value: "",
+					Usage: "Print path to private key",
+				},
+				&cli.StringFlag{
+					Name:  FlagTLSCaPath,
+					Value: "",
+					Usage: "Print path to server CA certificate",
+				},
+				&cli.BoolFlag{
+					Name:  FlagTLSDisableHostVerification,
+					Usage: "Print whether tls host name verification is disabled",
+				},
+				&cli.StringFlag{
+					Name:  FlagTLSServerName,
+					Value: "",
+					Usage: "Print target TLS server name",
 				},
 			},
 			Action: func(c *cli.Context) error {
@@ -96,6 +125,30 @@ func newConfigCommands() []*cli.Command {
 					Name:  FlagAddress,
 					Usage: "host:port for Temporal frontend service",
 					Value: localHostPort,
+				},
+				&cli.StringFlag{
+					Name:  FlagTLSCertPath,
+					Value: "",
+					Usage: "Path to x509 certificate",
+				},
+				&cli.StringFlag{
+					Name:  FlagTLSKeyPath,
+					Value: "",
+					Usage: "Path to private key",
+				},
+				&cli.StringFlag{
+					Name:  FlagTLSCaPath,
+					Value: "",
+					Usage: "Path to server CA certificate",
+				},
+				&cli.BoolFlag{
+					Name:  FlagTLSDisableHostVerification,
+					Usage: "Disable tls host name verification (tls must be enabled)",
+				},
+				&cli.StringFlag{
+					Name:  FlagTLSServerName,
+					Value: "",
+					Usage: "Override for target server name",
 				},
 			},
 			Action: func(c *cli.Context) error {

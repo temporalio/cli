@@ -29,10 +29,12 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -171,11 +173,16 @@ func (b *clientFactory) createGRPCConnection(c *cli.Context) (*grpc.ClientConn, 
 }
 
 func (b *clientFactory) createTLSConfig(c *cli.Context) (*tls.Config, error) {
-	certPath := c.String(FlagTLSCertPath)
-	keyPath := c.String(FlagTLSKeyPath)
-	caPath := c.String(FlagTLSCaPath)
-	disableHostNameVerification := c.Bool(FlagTLSDisableHostVerification)
-	serverName := c.String(FlagTLSServerName)
+	certPath := readFlagOrConfig(c, FlagTLSCertPath)
+	keyPath := readFlagOrConfig(c, FlagTLSKeyPath)
+	caPath := readFlagOrConfig(c, FlagTLSCaPath)
+	disableHostNameVerificationS := readFlagOrConfig(c, FlagTLSDisableHostVerification)
+	disableHostNameVerification, err := strconv.ParseBool(disableHostNameVerificationS)
+	if err != nil {
+		return nil, fmt.Errorf("unable to read TLS disable host verification flag: %s", err)
+	}
+
+	serverName := readFlagOrConfig(c, FlagTLSServerName)
 
 	var host string
 	var cert *tls.Certificate
