@@ -32,7 +32,7 @@ func newActivityCommands() []*cli.Command {
 	return []*cli.Command{
 		{
 			Name:  "complete",
-			Usage: "complete an activity",
+			Usage: "Complete an activity",
 			Flags: append(flagsForExecution, []cli.Flag{
 				&cli.StringFlag{
 					Name:     FlagActivityID,
@@ -57,7 +57,7 @@ func newActivityCommands() []*cli.Command {
 		},
 		{
 			Name:  "fail",
-			Usage: "fail an activity",
+			Usage: "Fail an activity",
 			Flags: append(flagsForExecution, []cli.Flag{
 				&cli.StringFlag{
 					Name:     FlagActivityID,

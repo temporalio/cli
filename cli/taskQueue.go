@@ -57,7 +57,7 @@ func newTaskQueueCommands() []*cli.Command {
 		{
 			Name:    "list-partition",
 			Aliases: []string{"lp"},
-			Usage:   "List all the taskqueue partitions and the hostname for partitions.",
+			Usage:   "List all the taskqueue partitions and the hostname for partitions",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:     FlagTaskQueue,

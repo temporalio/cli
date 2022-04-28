@@ -368,16 +368,12 @@ var flagsForWorkflowFiltering = []cli.Flag{
 		Value: false,
 	},
 	&cli.StringFlag{
-		Name: FlagFrom,
-		Usage: "Filter by lower bound of start time, supported formats are '2006-01-02T15:04:05+07:00', raw UnixNano and " +
-			"time range (N<duration>), where 0 < N < 1000000 and duration (full-notation/short-notation) can be second/s, " +
-			"minute/m, hour/h, day/d, week/w, month/M or year/y. For example, '15minute' or '15m' implies last 15 minutes.",
+		Name:  FlagFrom,
+		Usage: "Filter by start time lower bound. Formats: '2020-01-02T15:04:05+07:00', UnixNano, '15minutes', '15m' (s, m, h, w, M, y)",
 	},
 	&cli.StringFlag{
-		Name: FlagTo,
-		Usage: "Filter by upper bound of start time, supported formats are '2006-01-02T15:04:05+07:00', raw UnixNano and " +
-			"time range (N<duration>), where 0 < N < 1000000 and duration (in full-notation/short-notation) can be second/s, " +
-			"minute/m, hour/h, day/d, week/w, month/M or year/y. For example, '15minute' or '15m' implies last 15 minutes",
+		Name:  FlagTo,
+		Usage: "Filter by start time upper bound. Formats: '2020-01-02T15:04:05+07:00', UnixNano, '15minutes', '15m' (s, m, h, w, M, y)",
 	},
 	&cli.StringFlag{
 		Name:    FlagWorkflowID,
@@ -431,7 +427,7 @@ var flagsForStackTraceQuery = append(flagsForExecution, []cli.Flag{
 	&cli.StringFlag{
 		Name:    FlagInput,
 		Aliases: FlagInputAlias,
-		Usage:   "Optional input for the query, in JSON format. If there are multiple parameters, concatenate them and separate by space.",
+		Usage:   "Optional input for the query, in JSON format. If there are multiple parameters, concatenate them and separate by space",
 	},
 	&cli.StringFlag{
 		Name:    FlagInputFile,

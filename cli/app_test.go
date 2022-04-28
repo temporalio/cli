@@ -74,7 +74,7 @@ func (m *clientFactoryMock) SDKClient(c *cli.Context, namespace string) sdkclien
 }
 
 func (m *clientFactoryMock) HealthClient(_ *cli.Context) healthpb.HealthClient {
-	panic("HealthClient mock is not supported.")
+	panic("HealthClient mock is not supported")
 }
 
 var commands = []string{

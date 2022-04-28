@@ -383,7 +383,7 @@ func TerminateWorkflow(c *cli.Context) error {
 		return fmt.Errorf("unable to terminate workflow: %s", err)
 	}
 
-	fmt.Println("Terminate workflow succeeded.")
+	fmt.Println("Terminate workflow succeeded")
 
 	return nil
 }
@@ -443,7 +443,7 @@ func SignalWorkflow(c *cli.Context) error {
 		return fmt.Errorf("signal workflow failed: %s", err)
 	}
 
-	fmt.Println("Signal workflow succeeded.")
+	fmt.Println("Signal workflow succeeded")
 
 	return nil
 }

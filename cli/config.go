@@ -119,7 +119,7 @@ func newConfigCommands() []*cli.Command {
 				},
 				&cli.StringFlag{
 					Name:  FlagNamespace,
-					Usage: "Change default namespace",
+					Usage: "Default namespace",
 				},
 				&cli.StringFlag{
 					Name:  FlagAddress,
@@ -143,7 +143,7 @@ func newConfigCommands() []*cli.Command {
 				},
 				&cli.BoolFlag{
 					Name:  FlagTLSDisableHostVerification,
-					Usage: "Disable tls host name verification (tls must be enabled)",
+					Usage: "Disable TLS host name verification (TLS must be enabled)",
 				},
 				&cli.StringFlag{
 					Name:  FlagTLSServerName,

@@ -35,7 +35,7 @@ func newWorkflowCommands() []*cli.Command {
 	return []*cli.Command{
 		{
 			Name:  "run",
-			Usage: "start a new workflow execution and show progress",
+			Usage: "Start a new workflow execution and show progress",
 			Flags: append(flagsForRunWorkflow, flags.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
 				return RunWorkflow(c)
@@ -67,7 +67,7 @@ func newWorkflowCommands() []*cli.Command {
 		},
 		{
 			Name:  "listarchived",
-			Usage: "list archived workflow executions",
+			Usage: "List archived workflow executions",
 			Flags: append(flagsForListArchived, flags.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
 				return ListArchivedWorkflow(c)
@@ -75,7 +75,7 @@ func newWorkflowCommands() []*cli.Command {
 		},
 		{
 			Name:  "show",
-			Usage: "show workflow history",
+			Usage: "Show workflow history",
 			Flags: append(append(flagsForExecution, flagsForShowWorkflow...), flags.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
 				return ShowHistory(c)
@@ -84,7 +84,7 @@ func newWorkflowCommands() []*cli.Command {
 		{
 			Name:    "observe",
 			Aliases: []string{"o"},
-			Usage:   "show the progress of workflow history",
+			Usage:   "Show the progress of workflow history",
 			Flags:   append(append(flagsForExecution, flagsForShowWorkflow...), flags.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
 				return ObserveHistory(c)
@@ -92,7 +92,7 @@ func newWorkflowCommands() []*cli.Command {
 		},
 		{
 			Name:  "query",
-			Usage: "query workflow execution",
+			Usage: "Query workflow execution",
 			Flags: append(flagsForStackTraceQuery,
 				&cli.StringFlag{
 					Name:     FlagQueryType,
@@ -107,7 +107,7 @@ func newWorkflowCommands() []*cli.Command {
 		},
 		{
 			Name:  "stack",
-			Usage: "query workflow execution with __stack_trace as query type",
+			Usage: "Query workflow execution with __stack_trace as query type",
 			Flags: flagsForStackTraceQuery,
 			Action: func(c *cli.Context) error {
 				return QueryWorkflowUsingStackTrace(c)
@@ -127,12 +127,12 @@ func newWorkflowCommands() []*cli.Command {
 				&cli.StringFlag{
 					Name:    FlagInput,
 					Aliases: FlagInputAlias,
-					Usage:   "Input for the signal, in JSON format.",
+					Usage:   "Input for the signal (JSON)",
 				},
 				&cli.StringFlag{
 					Name:    FlagInputFile,
 					Aliases: FlagInputFileAlias,
-					Usage:   "Input for the signal from JSON file.",
+					Usage:   "Input for the signal from file (JSON)",
 				},
 			}...),
 			Action: func(c *cli.Context) error {
@@ -141,7 +141,7 @@ func newWorkflowCommands() []*cli.Command {
 		},
 		{
 			Name:  "scan",
-			Usage: "Scan workflow executions (requires Elasticsearch to be enabled).",
+			Usage: "Scan workflow executions (requires Elasticsearch to be enabled)",
 			Flags: append(flagsForScan, flags.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
 				return ScanAllWorkflow(c)
@@ -149,7 +149,7 @@ func newWorkflowCommands() []*cli.Command {
 		},
 		{
 			Name:  "count",
-			Usage: "count number of workflow executions (need to enable Temporal server on ElasticSearch)",
+			Usage: "Count number of workflow executions (need to enable Temporal server on ElasticSearch)",
 			Flags: getFlagsForCount(),
 			Action: func(c *cli.Context) error {
 				return CountWorkflow(c)
@@ -157,7 +157,7 @@ func newWorkflowCommands() []*cli.Command {
 		},
 		{
 			Name:  "cancel",
-			Usage: "cancel a workflow execution",
+			Usage: "Cancel a workflow execution",
 			Flags: flagsForExecution,
 			Action: func(c *cli.Context) error {
 				return CancelWorkflow(c)
@@ -165,7 +165,7 @@ func newWorkflowCommands() []*cli.Command {
 		},
 		{
 			Name:  "terminate",
-			Usage: "terminate a new workflow execution",
+			Usage: "Terminate a new workflow execution",
 			Flags: append(flagsForExecution, []cli.Flag{
 				&cli.StringFlag{
 					Name:    FlagReason,
@@ -179,7 +179,7 @@ func newWorkflowCommands() []*cli.Command {
 		},
 		{
 			Name:  "reset",
-			Usage: "reset the workflow, by either eventId or resetType.",
+			Usage: "Reset the workflow, by either eventId or resetType",
 			Flags: append(flagsForExecution, []cli.Flag{
 				&cli.StringFlag{
 					Name:  FlagEventID,
@@ -192,12 +192,12 @@ func newWorkflowCommands() []*cli.Command {
 				},
 				&cli.StringFlag{
 					Name: FlagResetType,
-					Usage: "where to reset. Support one of these: " +
+					Usage: "Where to reset. Support one of these: " +
 						strings.Join(mapKeysToArray(resetTypesMap), ","),
 				},
 				&cli.StringFlag{
 					Name: FlagResetReapplyType,
-					Usage: "whether to reapply events after the reset point. Support one of these: " +
+					Usage: "Whether to reapply events after the reset point. Support one of these: " +
 						strings.Join(mapKeysToArray(resetReapplyTypesMap), ",") + "Default to: All",
 				},
 				&cli.StringFlag{
@@ -211,8 +211,8 @@ func newWorkflowCommands() []*cli.Command {
 		},
 		{
 			Name: "reset-batch",
-			Usage: "reset workflow in batch by resetType: " + strings.Join(mapKeysToArray(resetTypesMap), ",") +
-				"To get base workflowIds/runIds to reset, source is from input file or visibility query.",
+			Usage: "Reset workflow in batch by resetType: " + strings.Join(mapKeysToArray(resetTypesMap), ",") +
+				"To get base workflowIds/runIds to reset, source is from input file or visibility query",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:    FlagInputFile,
@@ -227,7 +227,7 @@ func newWorkflowCommands() []*cli.Command {
 				&cli.StringFlag{
 					Name:  FlagExcludeFile,
 					Value: "",
-					Usage: "Another input file to use for excluding from resetting, only workflowId is needed.",
+					Usage: "Another input file to use for excluding from resetting, only workflowId is needed",
 				},
 				&cli.StringFlag{
 					Name:  FlagInputSeparator,
@@ -242,22 +242,22 @@ func newWorkflowCommands() []*cli.Command {
 				&cli.IntFlag{
 					Name:  FlagParallelism,
 					Value: 1,
-					Usage: "Number of goroutines to run in parallel. Each goroutine would process one line for every second.",
+					Usage: "Number of goroutines to run in parallel. Each goroutine would process one line for every second",
 				},
 				&cli.BoolFlag{
 					Name:  FlagSkipCurrentOpen,
-					Usage: "Skip the workflow if the current run is open for the same workflowId as base.",
+					Usage: "Skip the workflow if the current run is open for the same workflowId as base",
 				},
 				&cli.BoolFlag{
 					Name: FlagSkipBaseIsNotCurrent,
 					// TODO https://github.com/uber/cadence/issues/2930
 					// The right way to prevent needs server side implementation .
 					// This client side is only best effort
-					Usage: "Skip if base run is not current run.",
+					Usage: "Skip if base run is not current run",
 				},
 				&cli.BoolFlag{
 					Name:  FlagNonDeterministic,
-					Usage: "Only apply onto workflows whose last event is workflowTaskFailed with non deterministic error.",
+					Usage: "Only apply onto workflows whose last event is workflowTaskFailed with non deterministic error",
 				},
 				&cli.BoolFlag{
 					Name:  FlagDryRun,

@@ -31,7 +31,7 @@ var tctlCommands = []*cli.Command{
 	},
 	{
 		Name:        "batch",
-		Usage:       "Batch operations on a list of workflows from a query.",
+		Usage:       "Batch operations on a list of workflows from a query",
 		Subcommands: newBatchCommands(),
 	},
 	{
