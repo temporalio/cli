@@ -174,10 +174,12 @@ func UpdateNamespace(c *cli.Context) error {
 			Namespace: namespace,
 		})
 		if err != nil {
-			if _, ok := err.(*serviceerror.NotFound); !ok {
-				return fmt.Errorf("namespace update failed: %s", err)
-			} else {
+			switch err.(type) {
+			// TODO (alex): *serviceerror.NotFound is for backward compatibility, remove after 5/1/23.
+			case *serviceerror.NotFound, *serviceerror.NamespaceNotFound:
 				return fmt.Errorf("namespace %s does not exist: %s", namespace, err)
+			default:
+				return fmt.Errorf("namespace update failed: %s", err)
 			}
 		}
 
@@ -277,10 +279,12 @@ func UpdateNamespace(c *cli.Context) error {
 
 	_, err = client.UpdateNamespace(ctx, updateRequest)
 	if err != nil {
-		if _, ok := err.(*serviceerror.NotFound); !ok {
-			return fmt.Errorf("namespace update failed: %s", err)
-		} else {
+		switch err.(type) {
+		// TODO (alex): *serviceerror.NotFound is for backward compatibility, remove after 5/1/23.
+		case *serviceerror.NotFound, *serviceerror.NamespaceNotFound:
 			return fmt.Errorf("namespace %s does not exist: %s", namespace, err)
+		default:
+			return fmt.Errorf("namespace update failed: %s", err)
 		}
 	} else {
 		fmt.Printf("Namespace %s successfully updated.\n", namespace)
@@ -313,10 +317,13 @@ func DescribeNamespace(c *cli.Context) error {
 		Id:        namespaceID,
 	})
 	if err != nil {
-		if _, ok := err.(*serviceerror.NotFound); !ok {
+		switch err.(type) {
+		// TODO (alex): *serviceerror.NotFound is for backward compatibility, remove after 5/1/23.
+		case *serviceerror.NotFound, *serviceerror.NamespaceNotFound:
+			return fmt.Errorf("namespace %s does not exist: %s", namespace, err)
+		default:
 			return fmt.Errorf("namespace describe failed: %s", err)
 		}
-		return fmt.Errorf("namespace %s does not exist: %s", namespace, err)
 	}
 
 	printNamespace(c, resp)

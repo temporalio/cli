@@ -193,10 +193,12 @@ func (d *namespaceCLIImpl) UpdateNamespace(c *cli.Context) {
 			Namespace: namespace,
 		})
 		if err != nil {
-			if _, ok := err.(*serviceerror.NotFound); !ok {
-				ErrorAndExit("Operation UpdateNamespace failed.", err)
-			} else {
+			switch err.(type) {
+			// TODO (alex): *serviceerror.NotFound is for backward compatibility, remove after 5/1/23.
+			case *serviceerror.NotFound, *serviceerror.NamespaceNotFound:
 				ErrorAndExit(fmt.Sprintf("Namespace %s does not exist.", namespace), err)
+			default:
+				ErrorAndExit("Operation UpdateNamespace failed.", err)
 			}
 			return
 		}
@@ -288,10 +290,12 @@ func (d *namespaceCLIImpl) UpdateNamespace(c *cli.Context) {
 
 	err := d.updateNamespace(ctx, updateRequest)
 	if err != nil {
-		if _, ok := err.(*serviceerror.NotFound); !ok {
-			ErrorAndExit("Operation UpdateNamespace failed.", err)
-		} else {
+		switch err.(type) {
+		// TODO (alex): *serviceerror.NotFound is for backward compatibility, remove after 5/1/23.
+		case *serviceerror.NotFound, *serviceerror.NamespaceNotFound:
 			ErrorAndExit(fmt.Sprintf("Namespace %s does not exist.", namespace), err)
+		default:
+			ErrorAndExit("Operation UpdateNamespace failed.", err)
 		}
 	} else {
 		fmt.Printf("Namespace %s successfully updated.\n", namespace)
@@ -320,10 +324,13 @@ func (d *namespaceCLIImpl) DescribeNamespace(c *cli.Context) {
 		Id:        namespaceID,
 	})
 	if err != nil {
-		if _, ok := err.(*serviceerror.NotFound); !ok {
+		switch err.(type) {
+		// TODO (alex): *serviceerror.NotFound is for backward compatibility, remove after 5/1/23.
+		case *serviceerror.NotFound, *serviceerror.NamespaceNotFound:
+			ErrorAndExit(fmt.Sprintf("Namespace %s does not exist.", namespace), err)
+		default:
 			ErrorAndExit("Operation DescribeNamespace failed.", err)
 		}
-		ErrorAndExit(fmt.Sprintf("Namespace %s does not exist.", namespace), err)
 	}
 
 	printNamespace(resp)
