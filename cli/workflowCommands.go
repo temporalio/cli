@@ -911,15 +911,9 @@ func ShowHistory(c *cli.Context) error {
 	wid := c.String(FlagWorkflowID)
 	rid := c.String(FlagRunID)
 
-	return printWorkflowProgress(c, wid, rid, false)
-}
+	follow := c.Bool(FlagFollow)
 
-// ObserveHistory show the process of running workflow
-func ObserveHistory(c *cli.Context) error {
-	wid := c.String(FlagWorkflowID)
-	rid := c.String(FlagRunID)
-
-	return printWorkflowProgress(c, wid, rid, true)
+	return printWorkflowProgress(c, wid, rid, follow)
 }
 
 // ResetWorkflow reset workflow

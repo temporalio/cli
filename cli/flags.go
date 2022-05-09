@@ -228,6 +228,7 @@ var (
 	FlagVersion                       = "version"
 	FlagPort                          = "port"
 	FlagEnableConnection              = "enable-connection"
+	FlagFollow                        = "follow"
 
 	FlagProtoType  = "type"
 	FlagHexData    = "hex-data"
@@ -266,6 +267,11 @@ var flagsForShowWorkflow = []cli.Flag{
 	&cli.BoolFlag{
 		Name:  FlagResetPointsOnly,
 		Usage: "Only show events that are eligible for reset",
+	},
+	&cli.BoolFlag{
+		Name:  FlagFollow,
+		Usage: "Follow the progress of workflow execution",
+		Value: false,
 	},
 }
 

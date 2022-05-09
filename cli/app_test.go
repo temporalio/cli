@@ -233,6 +233,18 @@ func (s *cliAppSuite) TestShowHistory() {
 	s.sdkClient.AssertExpectations(s.T())
 }
 
+func (s *cliAppSuite) TestShowHistoryWithFollow() {
+	s.sdkClient.On("GetWorkflowHistory", mock.Anything, "wid", "", mock.Anything, mock.Anything).Return(historyEventIterator()).Once()
+	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "show", "--workflow-id", "wid", "--follow"})
+	s.Nil(err)
+	s.sdkClient.AssertExpectations(s.T())
+
+	s.sdkClient.On("GetWorkflowHistory", mock.Anything, "wid", "", mock.Anything, mock.Anything).Return(historyEventIterator()).Once()
+	err = s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "show", "--workflow-id", "wid", "--fields", "long", "--follow"})
+	s.Nil(err)
+	s.sdkClient.AssertExpectations(s.T())
+}
+
 func (s *cliAppSuite) TestRunWorkflow() {
 	s.sdkClient.On("ExecuteWorkflow", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(workflowRun(), nil)
 	s.sdkClient.On("GetWorkflowHistory", mock.Anything, "wid", mock.Anything, mock.Anything, mock.Anything).Return(historyEventIterator()).Once()
@@ -470,18 +482,6 @@ func (s *cliAppSuite) TestDescribeTaskQueue() {
 func (s *cliAppSuite) TestDescribeTaskQueue_Activity() {
 	s.sdkClient.On("DescribeTaskQueue", mock.Anything, mock.Anything, mock.Anything).Return(describeTaskQueueResponse, nil).Once()
 	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "task-queue", "describe", "--task-queue", "test-taskQueue", "--task-queue-type", "activity"})
-	s.Nil(err)
-	s.sdkClient.AssertExpectations(s.T())
-}
-
-func (s *cliAppSuite) TestObserveWorkflow() {
-	s.sdkClient.On("GetWorkflowHistory", mock.Anything, "wid", "", mock.Anything, mock.Anything).Return(historyEventIterator()).Once()
-	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "observe", "--workflow-id", "wid"})
-	s.Nil(err)
-	s.sdkClient.AssertExpectations(s.T())
-
-	s.sdkClient.On("GetWorkflowHistory", mock.Anything, "wid", "", mock.Anything, mock.Anything).Return(historyEventIterator()).Once()
-	err = s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "observe", "--workflow-id", "wid", "--fields", "long"})
 	s.Nil(err)
 	s.sdkClient.AssertExpectations(s.T())
 }
