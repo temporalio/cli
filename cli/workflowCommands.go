@@ -306,6 +306,12 @@ func (h *historyIterator) Next() (interface{}, error) {
 
 // helper function to print workflow progress with time refresh every second
 func printWorkflowProgress(c *cli.Context, wid, rid string, watch bool) error {
+	outputFormat := output.Table
+	if c.IsSet(output.FlagOutput) {
+		outputFlag := c.String(output.FlagOutput)
+		outputFormat = output.OutputOption(outputFlag)
+	}
+
 	var maxFieldLength = c.Int(FlagMaxFieldLength)
 	sdkClient, err := getSDKClient(c)
 	if err != nil {
@@ -323,7 +329,10 @@ func printWorkflowProgress(c *cli.Context, wid, rid string, watch bool) error {
 		Fields:     []string{"ID", "Time", "Type"},
 		FieldsLong: []string{"Details"},
 	}
-	fmt.Println(color.Magenta(c, "Progress:"))
+	if outputFormat != output.JSON {
+		fmt.Println(color.Magenta(c, "Progress:"))
+	}
+
 	var lastEvent historypb.HistoryEvent // used for print result of this run
 
 	errChan := make(chan error)
@@ -346,18 +355,23 @@ func printWorkflowProgress(c *cli.Context, wid, rid string, watch bool) error {
 				continue
 			}
 
-			if isTimeElapseExist {
-				removePrevious2LinesFromTerminal()
+			if outputFormat != output.JSON {
+				if isTimeElapseExist {
+					removePrevious2LinesFromTerminal()
+				}
+				fmt.Printf("\nTime elapse: %ds\n", timeElapse)
 			}
-			fmt.Printf("\nTime elapse: %ds\n", timeElapse)
+
 			isTimeElapseExist = true
 			timeElapse++
 		case <-doneChan: // print result of this run
-			fmt.Println(color.Magenta(c, "\nResult:"))
-			if watch {
-				fmt.Printf("  Run Time: %d seconds\n", timeElapse)
+			if outputFormat != output.JSON {
+				fmt.Println(color.Magenta(c, "\nResult:"))
+				if watch {
+					fmt.Printf("  Run Time: %d seconds\n", timeElapse)
+				}
+				printRunStatus(c, &lastEvent)
 			}
-			printRunStatus(c, &lastEvent)
 			return nil
 		case err = <-errChan:
 			return err
