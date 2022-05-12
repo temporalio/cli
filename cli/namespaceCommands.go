@@ -349,7 +349,7 @@ func ListNamespaces(c *cli.Context) error {
 
 func printNamespace(c *cli.Context, resp *workflowservice.DescribeNamespaceResponse) {
 	opts := &output.PrintOptions{
-		Fields:     []string{"NamespaceInfo.Name", "NamespaceInfo.Id", "NamespaceInfo.Description", "NamespaceInfo.OwnerEmail", "NamespaceInfo.State", "Config.WorkflowExecutionRetentionTtl", "ReplicationConfig.ActiveClusterName", "ReplicationConfig.Clusters", "Config.HistoryArchivalState", "Config.VisibilityArchivalState"},
+		Fields:     []string{"NamespaceInfo.Name", "NamespaceInfo.Id", "NamespaceInfo.Description", "NamespaceInfo.OwnerEmail", "NamespaceInfo.State", "Config.WorkflowExecutionRetentionTtl", "ReplicationConfig.ActiveClusterName", "ReplicationConfig.Clusters", "Config.HistoryArchivalState", "Config.VisibilityArchivalState", "IsGlobalNamespace"},
 		FieldsLong: []string{"Config.HistoryArchivalUri", "Config.VisibilityArchivalUri"},
 		Output:     output.Card,
 		NoPager:    true,

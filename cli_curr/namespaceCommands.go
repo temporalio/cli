@@ -338,7 +338,7 @@ func (d *namespaceCLIImpl) DescribeNamespace(c *cli.Context) {
 
 func printNamespace(resp *workflowservice.DescribeNamespaceResponse) {
 	var formatStr = "Name: %v\nId: %v\nDescription: %v\nOwnerEmail: %v\nNamespaceData: %#v\nState: %v\nRetention: %v\n" +
-		"ActiveClusterName: %v\nClusters: %v\nHistoryArchivalState: %v\n"
+		"ActiveClusterName: %v\nClusters: %v\nHistoryArchivalState: %v\nIsGlobalNamespace: %v\n"
 	descValues := []interface{}{
 		resp.NamespaceInfo.GetName(),
 		resp.NamespaceInfo.GetId(),
@@ -350,6 +350,7 @@ func printNamespace(resp *workflowservice.DescribeNamespaceResponse) {
 		resp.ReplicationConfig.GetActiveClusterName(),
 		clustersToString(resp.ReplicationConfig.Clusters),
 		resp.Config.GetHistoryArchivalState().String(),
+		resp.GetIsGlobalNamespace(),
 	}
 	if resp.Config.GetHistoryArchivalUri() != "" {
 		formatStr = formatStr + "HistoryArchivalURI: %v\n"
