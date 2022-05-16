@@ -342,8 +342,20 @@ func (s *cliAppSuite) TestQueryWorkflow_Failed() {
 var (
 	status = enumspb.WORKFLOW_EXECUTION_STATUS_COMPLETED
 
-	listClosedWorkflowExecutionsResponse = &workflowservice.ListClosedWorkflowExecutionsResponse{
+	listWorkflowExecutionsResponse = &workflowservice.ListWorkflowExecutionsResponse{
 		Executions: []*workflowpb.WorkflowExecutionInfo{
+			{
+				Execution: &commonpb.WorkflowExecution{
+					WorkflowId: "test-list-open-workflow-id",
+					RunId:      uuid.New(),
+				},
+				Type: &commonpb.WorkflowType{
+					Name: "test-list-open-workflow-type",
+				},
+				StartTime:     timestamp.TimePtr(time.Now().UTC()),
+				CloseTime:     timestamp.TimePtr(time.Now().UTC().Add(time.Hour)),
+				HistoryLength: 12,
+			},
 			{
 				Execution: &commonpb.WorkflowExecution{
 					WorkflowId: "test-list-workflow-id",
@@ -359,79 +371,26 @@ var (
 			},
 		},
 	}
-
-	listOpenWorkflowExecutionsResponse = &workflowservice.ListOpenWorkflowExecutionsResponse{
-		Executions: []*workflowpb.WorkflowExecutionInfo{
-			{
-				Execution: &commonpb.WorkflowExecution{
-					WorkflowId: "test-list-open-workflow-id",
-					RunId:      uuid.New(),
-				},
-				Type: &commonpb.WorkflowType{
-					Name: "test-list-open-workflow-type",
-				},
-				StartTime:     timestamp.TimePtr(time.Now().UTC()),
-				CloseTime:     timestamp.TimePtr(time.Now().UTC().Add(time.Hour)),
-				HistoryLength: 12,
-			},
-		},
-	}
 )
 
 func (s *cliAppSuite) TestListWorkflow() {
-	s.sdkClient.On("ListClosedWorkflow", mock.Anything, mock.Anything).Return(listClosedWorkflowExecutionsResponse, nil).Once()
+	s.sdkClient.On("ListWorkflow", mock.Anything, mock.Anything).Return(listWorkflowExecutionsResponse, nil).Once()
 	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "list"})
 	s.Nil(err)
 	s.sdkClient.AssertExpectations(s.T())
 }
 
 func (s *cliAppSuite) TestListWorkflow_DeadlineExceeded() {
-	s.sdkClient.On("ListClosedWorkflow", mock.Anything, mock.Anything).Return(nil, context.DeadlineExceeded).Once()
-	s.sdkClient.On("ListClosedWorkflow", mock.Anything, mock.Anything).Return(listClosedWorkflowExecutionsResponse, nil).Once()
+	s.sdkClient.On("ListWorkflow", mock.Anything, mock.Anything).Return(nil, context.DeadlineExceeded).Once()
+	s.sdkClient.On("ListWorkflow", mock.Anything, mock.Anything).Return(listWorkflowExecutionsResponse, nil).Once()
 	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "list"})
 	s.Nil(err)
 	s.sdkClient.AssertExpectations(s.T())
 }
 
-func (s *cliAppSuite) TestListWorkflow_WithWorkflowID() {
-	s.sdkClient.On("ListClosedWorkflow", mock.Anything, mock.Anything).Return(listClosedWorkflowExecutionsResponse, nil).Once()
-	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "list", "--workflow-id", "nothing"})
-	s.Nil(err)
-	s.sdkClient.AssertExpectations(s.T())
-}
-
-func (s *cliAppSuite) TestListWorkflow_WithWorkflowType() {
-	s.sdkClient.On("ListClosedWorkflow", mock.Anything, mock.Anything).Return(listClosedWorkflowExecutionsResponse, nil).Once()
-	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "list", "--type", "no-type"})
-	s.Nil(err)
-	s.sdkClient.AssertExpectations(s.T())
-}
-
-func (s *cliAppSuite) TestListWorkflow_Open() {
-	s.sdkClient.On("ListOpenWorkflow", mock.Anything, mock.Anything).Return(listOpenWorkflowExecutionsResponse, nil).Once()
-	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "list", "--open"})
-	s.Nil(err)
-	s.sdkClient.AssertExpectations(s.T())
-}
-
-func (s *cliAppSuite) TestListWorkflow_Open_DeadlineExceeded() {
-	s.sdkClient.On("ListOpenWorkflow", mock.Anything, mock.Anything).Return(nil, context.DeadlineExceeded).Once()
-	s.sdkClient.On("ListOpenWorkflow", mock.Anything, mock.Anything).Return(listOpenWorkflowExecutionsResponse, nil).Once()
-	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "list", "--open"})
-	s.Nil(err)
-	s.sdkClient.AssertExpectations(s.T())
-}
-
-func (s *cliAppSuite) TestListWorkflow_Open_WithWorkflowID() {
-	s.sdkClient.On("ListOpenWorkflow", mock.Anything, mock.Anything).Return(listOpenWorkflowExecutionsResponse, nil).Once()
-	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "list", "--open", "--workflow-id", "nothing"})
-	s.Nil(err)
-	s.sdkClient.AssertExpectations(s.T())
-}
-
-func (s *cliAppSuite) TestListWorkflow_Open_WithWorkflowType() {
-	s.sdkClient.On("ListOpenWorkflow", mock.Anything, mock.Anything).Return(listOpenWorkflowExecutionsResponse, nil).Once()
-	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "list", "--open", "--type", "no-type"})
+func (s *cliAppSuite) TestListWorkflow_Open_WithQuery() {
+	s.sdkClient.On("ListWorkflow", mock.Anything, mock.Anything).Return(listWorkflowExecutionsResponse, nil).Once()
+	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "list", "--query", "ExecutionStatus='Running'"})
 	s.Nil(err)
 	s.sdkClient.AssertExpectations(s.T())
 }

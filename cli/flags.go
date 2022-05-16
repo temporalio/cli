@@ -183,7 +183,7 @@ var (
 	FlagResetBadBinaryChecksum        = "reset-bad-binary-checksum"
 	FlagListQuery                     = "query"
 	FlagListQueryAlias                = []string{"q"}
-	FlagListQueryUsage                = "Filter results using SQL like query. See https://docs.temporal.io/docs/system-tools/tctl/#search-workflows for details"
+	FlagListQueryUsage                = "Filter results using SQL like query. See https://docs.temporal.io/docs/tctl/workflow/list#--query for details"
 	FlagBatchType                     = "batch-type"
 	FlagBatchTypeAlias                = []string{"bt"}
 	FlagSignalName                    = "signal-name"
@@ -368,33 +368,6 @@ var flagsForRunWorkflow = []cli.Flag{
 }
 
 var flagsForWorkflowFiltering = []cli.Flag{
-	&cli.BoolFlag{
-		Name:  FlagOpen,
-		Usage: "Filter by execution status == Open",
-		Value: false,
-	},
-	&cli.StringFlag{
-		Name:  FlagFrom,
-		Usage: "Filter by start time lower bound. Formats: '2020-01-02T15:04:05+07:00', UnixNano, '15minutes', '15m' (s, m, h, w, M, y)",
-	},
-	&cli.StringFlag{
-		Name:  FlagTo,
-		Usage: "Filter by start time upper bound. Formats: '2020-01-02T15:04:05+07:00', UnixNano, '15minutes', '15m' (s, m, h, w, M, y)",
-	},
-	&cli.StringFlag{
-		Name:    FlagWorkflowID,
-		Aliases: FlagWorkflowIDAlias,
-		Usage:   "Filter by workflow Id",
-	},
-	&cli.StringFlag{
-		Name:    FlagWorkflowType,
-		Aliases: FlagWorkflowTypeAlias,
-		Usage:   "Filter by workflow type name",
-	},
-	&cli.StringFlag{
-		Name:  FlagWorkflowStatus,
-		Usage: "Workflow status [completed, failed, canceled, terminated, continuedasnew, timedout]",
-	},
 	&cli.StringFlag{
 		Name:    FlagListQuery,
 		Aliases: FlagListQueryAlias,

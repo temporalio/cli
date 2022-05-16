@@ -42,7 +42,6 @@ import (
 	commonpb "go.temporal.io/api/common/v1"
 	enumspb "go.temporal.io/api/enums/v1"
 	failurepb "go.temporal.io/api/failure/v1"
-	filterpb "go.temporal.io/api/filter/v1"
 	historypb "go.temporal.io/api/history/v1"
 	querypb "go.temporal.io/api/query/v1"
 	"go.temporal.io/api/serviceerror"
@@ -540,22 +539,6 @@ func ListWorkflow(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	queryOpen := c.Bool(FlagOpen)
-	workflowID := c.String(FlagWorkflowID)
-	workflowType := c.String(FlagWorkflowType)
-	earliestTime, err := parseTime(c.String(FlagFrom), time.Time{}, time.Now().UTC())
-	if err != nil {
-		return err
-	}
-	latestTime, err := parseTime(c.String(FlagTo), time.Now().UTC(), time.Now().UTC())
-	if err != nil {
-		return err
-	}
-	wfStatusInt, err := stringToEnum(c.String(FlagWorkflowStatus), enumspb.WorkflowExecutionStatus_value)
-	if err != nil {
-		return fmt.Errorf("unable to parse workflow status: %s", err)
-	}
-	wfStatus := enumspb.WorkflowExecutionStatus(wfStatusInt)
 	sdkClient, err := getSDKClient(c)
 	if err != nil {
 		return err
@@ -564,14 +547,9 @@ func ListWorkflow(c *cli.Context) error {
 	paginationFunc := func(npt []byte) ([]interface{}, []byte, error) {
 		var items []interface{}
 		var err error
-		if c.IsSet(FlagListQuery) {
-			query := c.String(FlagListQuery)
-			items, npt, err = listWorkflows(c, sdkClient, npt, namespace, query)
-		} else if queryOpen {
-			items, npt, err = listOpenWorkflows(c, sdkClient, npt, namespace, earliestTime, latestTime, workflowID, workflowType)
-		} else {
-			items, npt, err = listClosedWorkflows(c, sdkClient, npt, namespace, earliestTime, latestTime, workflowID, workflowType, wfStatus)
-		}
+		query := c.String(FlagListQuery)
+		items, npt, err = listWorkflows(c, sdkClient, npt, namespace, query)
+
 		if err != nil {
 			return nil, nil, err
 		}
@@ -1523,87 +1501,6 @@ func listWorkflows(c *cli.Context, sdkClient sdkclient.Client, npt []byte, names
 		return nil, nil, fmt.Errorf("unable to list workflow executions: %s", err)
 	}
 
-	var items []interface{}
-	for _, e := range workflows.Executions {
-		items = append(items, e)
-	}
-
-	return items, workflows.NextPageToken, nil
-}
-
-func listOpenWorkflows(c *cli.Context, sdkClient sdkclient.Client, npt []byte, namespace string, earliestTime, latestTime time.Time, wfID, wfType string) ([]interface{}, []byte, error) {
-	req := &workflowservice.ListOpenWorkflowExecutionsRequest{
-		Namespace:     namespace,
-		NextPageToken: npt,
-		StartTimeFilter: &filterpb.StartTimeFilter{
-			EarliestTime: &earliestTime,
-			LatestTime:   &latestTime,
-		},
-	}
-	if len(wfID) > 0 {
-		req.Filters = &workflowservice.ListOpenWorkflowExecutionsRequest_ExecutionFilter{ExecutionFilter: &filterpb.WorkflowExecutionFilter{WorkflowId: wfID}}
-	}
-	if len(wfType) > 0 {
-		req.Filters = &workflowservice.ListOpenWorkflowExecutionsRequest_TypeFilter{TypeFilter: &filterpb.WorkflowTypeFilter{Name: wfType}}
-	}
-	var workflows *workflowservice.ListOpenWorkflowExecutionsResponse
-	op := func() error {
-		ctx, cancel := newContext(c)
-		defer cancel()
-		resp, err := sdkClient.ListOpenWorkflow(ctx, req)
-		if err != nil {
-			return err
-		}
-		workflows = resp
-		return nil
-	}
-	err := backoff.Retry(op, common.CreateFrontendServiceRetryPolicy(), common.IsContextDeadlineExceededErr)
-	if err != nil {
-		return nil, nil, fmt.Errorf("unable to list open workflow executions: %s", err)
-	}
-
-	var items []interface{}
-	for _, e := range workflows.Executions {
-		items = append(items, e)
-	}
-
-	return items, workflows.NextPageToken, nil
-}
-
-func listClosedWorkflows(c *cli.Context, sdkClient sdkclient.Client, npt []byte, namespace string, earliestTime, latestTime time.Time, wfID, wfType string,
-	wfStatus enumspb.WorkflowExecutionStatus) ([]interface{}, []byte, error) {
-	req := &workflowservice.ListClosedWorkflowExecutionsRequest{
-		Namespace:     namespace,
-		NextPageToken: npt,
-		StartTimeFilter: &filterpb.StartTimeFilter{
-			EarliestTime: &earliestTime,
-			LatestTime:   &latestTime,
-		},
-	}
-	if len(wfID) > 0 {
-		req.Filters = &workflowservice.ListClosedWorkflowExecutionsRequest_ExecutionFilter{ExecutionFilter: &filterpb.WorkflowExecutionFilter{WorkflowId: wfID}}
-	}
-	if len(wfType) > 0 {
-		req.Filters = &workflowservice.ListClosedWorkflowExecutionsRequest_TypeFilter{TypeFilter: &filterpb.WorkflowTypeFilter{Name: wfType}}
-	}
-	if wfStatus != enumspb.WORKFLOW_EXECUTION_STATUS_UNSPECIFIED {
-		req.Filters = &workflowservice.ListClosedWorkflowExecutionsRequest_StatusFilter{StatusFilter: &filterpb.StatusFilter{Status: wfStatus}}
-	}
-	var workflows *workflowservice.ListClosedWorkflowExecutionsResponse
-	op := func() error {
-		ctx, cancel := newContext(c)
-		defer cancel()
-		resp, err := sdkClient.ListClosedWorkflow(ctx, req)
-		if err != nil {
-			return err
-		}
-		workflows = resp
-		return nil
-	}
-	err := backoff.Retry(op, common.CreateFrontendServiceRetryPolicy(), common.IsContextDeadlineExceededErr)
-	if err != nil {
-		return nil, nil, fmt.Errorf("unable to list closed workflow executions: %s", err)
-	}
 	var items []interface{}
 	for _, e := range workflows.Executions {
 		items = append(items, e)
