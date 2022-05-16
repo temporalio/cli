@@ -27,6 +27,7 @@ package cli
 import (
 	"fmt"
 
+	"github.com/temporalio/tctl-kit/pkg/output"
 	"github.com/urfave/cli/v2"
 )
 
@@ -228,7 +229,7 @@ var (
 	FlagVersion                       = "version"
 	FlagPort                          = "port"
 	FlagEnableConnection              = "enable-connection"
-	FlagFollow                        = "follow"
+	FlagFollowAlias                   = []string{"f"}
 
 	FlagProtoType  = "type"
 	FlagHexData    = "hex-data"
@@ -269,9 +270,10 @@ var flagsForShowWorkflow = []cli.Flag{
 		Usage: "Only show events that are eligible for reset",
 	},
 	&cli.BoolFlag{
-		Name:  FlagFollow,
-		Usage: "Follow the progress of workflow execution",
-		Value: false,
+		Name:    output.FlagFollow,
+		Aliases: FlagFollowAlias,
+		Usage:   "Follow the progress of workflow execution",
+		Value:   false,
 	},
 }
 
