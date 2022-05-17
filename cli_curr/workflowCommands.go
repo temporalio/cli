@@ -1757,8 +1757,9 @@ func isLastEventWorkflowTaskFailedWithNonDeterminism(ctx context.Context, namesp
 	if workflowTaskFailedEvent != nil {
 		attr := workflowTaskFailedEvent.GetWorkflowTaskFailedEventAttributes()
 
-		if attr.GetCause() == enumspb.WORKFLOW_TASK_FAILED_CAUSE_WORKFLOW_WORKER_UNHANDLED_FAILURE ||
-			strings.Contains(attr.GetFailure().GetMessage(), "nondeterministic") {
+		if (attr.GetCause() == enumspb.WORKFLOW_TASK_FAILED_CAUSE_NON_DETERMINISTIC_ERROR) ||
+			(attr.GetCause() == enumspb.WORKFLOW_TASK_FAILED_CAUSE_WORKFLOW_WORKER_UNHANDLED_FAILURE ||
+				strings.Contains(attr.GetFailure().GetMessage(), "nondeterministic")) {
 			fmt.Printf("found non determnistic workflow wid:%v, rid:%v, orignalStartTime:%v \n", wid, rid, timestamp.TimeValue(firstEvent.GetEventTime()))
 			return true, nil
 		}
