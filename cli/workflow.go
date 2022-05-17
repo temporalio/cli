@@ -44,7 +44,7 @@ func newWorkflowCommands() []*cli.Command {
 		{
 			Name:    "describe",
 			Aliases: []string{"d"},
-			Usage:   "show information of workflow execution",
+			Usage:   "Show information of workflow execution",
 			Flags: append(flagsForExecution, []cli.Flag{
 				&cli.BoolFlag{
 					Name:  FlagResetPointsOnly,
@@ -56,21 +56,12 @@ func newWorkflowCommands() []*cli.Command {
 			},
 		},
 		{
-			Name:        "list",
-			Aliases:     []string{"l"},
-			Usage:       "list open or closed workflow executions",
-			Description: "list one page (default size 10 items) by default, use flag --pagesize to change page size",
-			Flags:       append(flagsForWorkflowFiltering, flags.FlagsForPaginationAndRendering...),
+			Name:    "list",
+			Aliases: []string{"l"},
+			Usage:   "List workflow executions based on query",
+			Flags:   append(flagsForWorkflowFiltering, flags.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
 				return ListWorkflow(c)
-			},
-		},
-		{
-			Name:  "listarchived",
-			Usage: "List archived workflow executions",
-			Flags: append(flagsForListArchived, flags.FlagsForPaginationAndRendering...),
-			Action: func(c *cli.Context) error {
-				return ListArchivedWorkflow(c)
 			},
 		},
 		{
@@ -107,7 +98,7 @@ func newWorkflowCommands() []*cli.Command {
 		{
 			Name:    "signal",
 			Aliases: []string{"s"},
-			Usage:   "signal a workflow execution",
+			Usage:   "Signal a workflow execution",
 			Flags: append(flagsForExecution, []cli.Flag{
 				&cli.StringFlag{
 					Name:     FlagName,
@@ -213,7 +204,7 @@ func newWorkflowCommands() []*cli.Command {
 				&cli.StringFlag{
 					Name:    FlagListQuery,
 					Aliases: FlagListQueryAlias,
-					Usage:   "visibility query to get workflows to reset",
+					Usage:   "Visibility query to get workflows to reset",
 				},
 				&cli.StringFlag{
 					Name:  FlagExcludeFile,
@@ -256,7 +247,7 @@ func newWorkflowCommands() []*cli.Command {
 				},
 				&cli.StringFlag{
 					Name:     FlagResetType,
-					Usage:    "where to reset. Support one of these: " + strings.Join(mapKeysToArray(resetTypesMap), ","),
+					Usage:    "Where to reset: " + strings.Join(mapKeysToArray(resetTypesMap), ","),
 					Required: true,
 				},
 				&cli.StringFlag{

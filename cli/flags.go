@@ -185,6 +185,8 @@ var (
 	FlagListQuery                     = "query"
 	FlagListQueryAlias                = []string{"q"}
 	FlagListQueryUsage                = "Filter results using SQL like query. See https://docs.temporal.io/docs/tctl/workflow/list#--query for details"
+	FlagArchive                       = "archived"
+	FlagArchiveAlias                  = []string{"a"}
 	FlagBatchType                     = "batch-type"
 	FlagBatchTypeAlias                = []string{"bt"}
 	FlagSignalName                    = "signal-name"
@@ -374,6 +376,11 @@ var flagsForWorkflowFiltering = []cli.Flag{
 		Name:    FlagListQuery,
 		Aliases: FlagListQueryAlias,
 		Usage:   FlagListQueryUsage,
+	},
+	&cli.BoolFlag{
+		Name:    FlagArchive,
+		Aliases: FlagArchiveAlias,
+		Usage:   "List archived workflow executions (EXPERIMENTAL)",
 	},
 }
 

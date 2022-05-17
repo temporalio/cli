@@ -397,7 +397,7 @@ func (s *cliAppSuite) TestListWorkflow_Open_WithQuery() {
 
 func (s *cliAppSuite) TestListArchivedWorkflow() {
 	s.sdkClient.On("ListArchivedWorkflow", mock.Anything, mock.Anything).Return(&workflowservice.ListArchivedWorkflowExecutionsResponse{}, nil).Once()
-	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "listarchived", "--query", "some query string"})
+	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "list", "--archived", "--query", "some query string"})
 	s.Nil(err)
 	s.sdkClient.AssertExpectations(s.T())
 }

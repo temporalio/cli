@@ -535,6 +535,8 @@ func queryWorkflowHelper(c *cli.Context, queryType string) error {
 
 // ListWorkflow list workflow executions based on filters
 func ListWorkflow(c *cli.Context) error {
+	archived := c.Bool(FlagArchive)
+
 	namespace, err := getRequiredGlobalOption(c, FlagNamespace)
 	if err != nil {
 		return err
@@ -548,7 +550,12 @@ func ListWorkflow(c *cli.Context) error {
 		var items []interface{}
 		var err error
 		query := c.String(FlagListQuery)
-		items, npt, err = listWorkflows(c, sdkClient, npt, namespace, query)
+
+		if archived {
+			items, npt, err = listArchivedWorkflows(c, sdkClient, npt, namespace, query)
+		} else {
+			items, npt, err = listWorkflows(c, sdkClient, npt, namespace, query)
+		}
 
 		if err != nil {
 			return nil, nil, err
@@ -649,59 +656,6 @@ func CountWorkflow(c *cli.Context) error {
 	}
 	fmt.Println(count)
 	return nil
-}
-
-// ListArchivedWorkflow lists archived workflow executions based on filters
-func ListArchivedWorkflow(c *cli.Context) error {
-	namespace, err := getRequiredGlobalOption(c, FlagNamespace)
-	if err != nil {
-		return err
-	}
-	query := c.String(FlagListQuery)
-	contextTimeout := defaultContextTimeoutForListArchivedWorkflow
-	if c.IsSet(FlagContextTimeout) {
-		contextTimeout = time.Duration(c.Int(FlagContextTimeout)) * time.Second
-	}
-
-	sdkClient, err := getSDKClient(c)
-	if err != nil {
-		return err
-	}
-
-	req := &workflowservice.ListArchivedWorkflowExecutionsRequest{
-		Namespace: namespace,
-		Query:     query,
-	}
-	var resp *workflowservice.ListArchivedWorkflowExecutionsResponse
-
-	paginationFunc := func(npt []byte) ([]interface{}, []byte, error) {
-		// the executions will be empty if the query is still running before timeout
-		// so keep calling the API until some results are returned (query completed)
-		req.NextPageToken = npt
-		for resp == nil || (len(resp.Executions) == 0 && resp.NextPageToken != nil) {
-			ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
-			resp, err = sdkClient.ListArchivedWorkflow(ctx, req)
-			if err != nil {
-				cancel()
-				return nil, nil, fmt.Errorf("unable to list archived workflows: %s", err)
-			}
-			cancel()
-		}
-
-		var items []interface{}
-		for _, e := range resp.Executions {
-			items = append(items, e)
-		}
-
-		return items, resp.NextPageToken, nil
-	}
-
-	iter := collection.NewPagingIterator(paginationFunc)
-	opts := &output.PrintOptions{
-		Fields:     []string{"Execution.WorkflowId", "Execution.RunId", "StartTime"},
-		FieldsLong: []string{"Type.Name", "TaskQueue", "ExecutionTime", "CloseTime"},
-	}
-	return output.Pager(c, iter, opts)
 }
 
 // DescribeWorkflow show information about the specified workflow execution
@@ -1499,6 +1453,43 @@ func listWorkflows(c *cli.Context, sdkClient sdkclient.Client, npt []byte, names
 	err := backoff.Retry(op, common.CreateFrontendServiceRetryPolicy(), common.IsContextDeadlineExceededErr)
 	if err != nil {
 		return nil, nil, fmt.Errorf("unable to list workflow executions: %s", err)
+	}
+
+	var items []interface{}
+	for _, e := range workflows.Executions {
+		items = append(items, e)
+	}
+
+	return items, workflows.NextPageToken, nil
+}
+
+func listArchivedWorkflows(c *cli.Context, sdkClient sdkclient.Client, npt []byte, namespace string, query string) ([]interface{}, []byte, error) {
+	req := &workflowservice.ListArchivedWorkflowExecutionsRequest{
+		Namespace:     namespace,
+		NextPageToken: npt,
+		Query:         query,
+	}
+
+	contextTimeout := defaultContextTimeoutForListArchivedWorkflow
+	if c.IsSet(FlagContextTimeout) {
+		contextTimeout = time.Duration(c.Int(FlagContextTimeout)) * time.Second
+	}
+
+	var workflows *workflowservice.ListArchivedWorkflowExecutionsResponse
+	op := func() error {
+		ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
+
+		defer cancel()
+		resp, err := sdkClient.ListArchivedWorkflow(ctx, req)
+		if err != nil {
+			return err
+		}
+		workflows = resp
+		return nil
+	}
+	err := backoff.Retry(op, common.CreateFrontendServiceRetryPolicy(), common.IsContextDeadlineExceededErr)
+	if err != nil {
+		return nil, nil, fmt.Errorf("unable to list archived workflow executions: %s", err)
 	}
 
 	var items []interface{}
