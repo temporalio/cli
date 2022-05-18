@@ -566,8 +566,8 @@ func ListWorkflow(c *cli.Context) error {
 
 	iter := collection.NewPagingIterator(paginationFunc)
 	opts := &output.PrintOptions{
-		Fields:     []string{"Execution.WorkflowId", "Execution.RunId", "StartTime"},
-		FieldsLong: []string{"Type.Name", "TaskQueue", "ExecutionTime", "CloseTime"},
+		Fields:     []string{"Status", "Execution.WorkflowId", "Type.Name", "StartTime"},
+		FieldsLong: []string{"CloseTime", "Execution.RunId", "TaskQueue"},
 	}
 	return output.Pager(c, iter, opts)
 }
