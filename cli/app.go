@@ -51,6 +51,7 @@ func NewCliApp() *cli.App {
 	app.Name = "tctl"
 	app.Usage = "A command-line tool for Temporal users"
 	app.Version = "1.17.0-alpha.1"
+	app.Suggest = true
 	app.Flags = []cli.Flag{
 		&cli.StringFlag{
 			Name:    FlagAddress,

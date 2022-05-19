@@ -16,7 +16,7 @@ require (
 	github.com/temporalio/tctl-kit v0.0.0-20220512165751-9c751176dd14
 	github.com/uber-go/tally/v4 v4.1.1
 	github.com/urfave/cli v1.22.5
-	github.com/urfave/cli/v2 v2.4.0
+	github.com/urfave/cli/v2 v2.7.1
 	go.temporal.io/api v1.7.1-0.20220429205751-8a73b1f896d0
 	go.temporal.io/sdk v1.14.1-0.20220429221638-3a2b86ebed54
 	go.temporal.io/server v1.16.1-0.20220430070347-6035304061a4
@@ -28,6 +28,7 @@ require (
 	cloud.google.com/go/compute v1.5.0 // indirect
 	cloud.google.com/go/iam v0.3.0 // indirect
 	cloud.google.com/go/storage v1.22.0 // indirect
+	github.com/antzucaro/matchr v0.0.0-20210222213004-b04723ef80f0 // indirect
 	github.com/apache/thrift v0.0.0-20161221203622-b2a4d4ae21c7 // indirect
 	github.com/aws/aws-sdk-go v1.43.38 // indirect
 	github.com/benbjohnson/clock v1.3.0 // indirect
@@ -36,7 +37,7 @@ require (
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/cactus/go-statsd-client/statsd v0.0.0-20200423205355-cb0885a1018c // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
-	github.com/cpuguy83/go-md2man/v2 v2.0.1 // indirect
+	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgryski/go-farm v0.0.0-20200201041132-a6ae2369ad13 // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect
