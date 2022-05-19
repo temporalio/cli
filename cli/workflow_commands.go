@@ -738,6 +738,7 @@ func convertDescribeWorkflowExecutionResponse(c *cli.Context, resp *workflowserv
 		SearchAttributes:     convertSearchAttributes(c, info.GetSearchAttributes()),
 		AutoResetPoints:      info.GetAutoResetPoints(),
 		StateTransitionCount: info.GetStateTransitionCount(),
+		ExecutionTime:        info.GetExecutionTime(),
 	}
 
 	var pendingActivitiesStr []*clispb.PendingActivityInfo
