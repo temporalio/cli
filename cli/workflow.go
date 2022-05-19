@@ -58,7 +58,7 @@ func newWorkflowCommands() []*cli.Command {
 		{
 			Name:    "list",
 			Aliases: []string{"l"},
-			Usage:   "List workflow executions based on query",
+			Usage:   "List Workflow Executions based on query",
 			Flags:   append(flagsForWorkflowFiltering, flags.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
 				return ListWorkflow(c)
@@ -123,7 +123,7 @@ func newWorkflowCommands() []*cli.Command {
 		},
 		{
 			Name:  "scan",
-			Usage: "Scan workflow executions (requires Elasticsearch to be enabled)",
+			Usage: "List Workflow Executions. Faster and unsorted (requires Elasticsearch to be enabled)",
 			Flags: append(flagsForScan, flags.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
 				return ScanAllWorkflow(c)
@@ -131,7 +131,7 @@ func newWorkflowCommands() []*cli.Command {
 		},
 		{
 			Name:  "count",
-			Usage: "Count number of workflow executions (need to enable Temporal server on ElasticSearch)",
+			Usage: "Count Workflow Executions (requires ElasticSearch to be enabled)",
 			Flags: getFlagsForCount(),
 			Action: func(c *cli.Context) error {
 				return CountWorkflow(c)
@@ -147,12 +147,12 @@ func newWorkflowCommands() []*cli.Command {
 		},
 		{
 			Name:  "terminate",
-			Usage: "Terminate a new workflow execution",
+			Usage: "Terminate a Workflow Execution",
 			Flags: append(flagsForExecution, []cli.Flag{
 				&cli.StringFlag{
 					Name:    FlagReason,
 					Aliases: FlagReasonAlias,
-					Usage:   "The reason you want to terminate the workflow",
+					Usage:   "Reason for terminating the Workflow Execution",
 				},
 			}...),
 			Action: func(c *cli.Context) error {
@@ -169,18 +169,18 @@ func newWorkflowCommands() []*cli.Command {
 				},
 				&cli.StringFlag{
 					Name:     FlagReason,
-					Usage:    "reason to do the reset",
+					Usage:    "Reason for resetting the Workflow Execution",
 					Required: true,
 				},
 				&cli.StringFlag{
 					Name: FlagResetType,
-					Usage: "Where to reset. Support one of these: " +
+					Usage: "Event type to which you want to reset: " +
 						strings.Join(mapKeysToArray(resetTypesMap), ","),
 				},
 				&cli.StringFlag{
 					Name: FlagResetReapplyType,
-					Usage: "Whether to reapply events after the reset point. Support one of these: " +
-						strings.Join(mapKeysToArray(resetReapplyTypesMap), ",") + "Default to: All",
+					Usage: "Event types to reapply after the reset point: " +
+						strings.Join(mapKeysToArray(resetReapplyTypesMap), ",") + ". (default: All)",
 				},
 				&cli.StringFlag{
 					Name:  FlagResetBadBinaryChecksum,
@@ -192,58 +192,52 @@ func newWorkflowCommands() []*cli.Command {
 			},
 		},
 		{
-			Name: "reset-batch",
-			Usage: "Reset workflow in batch by resetType: " + strings.Join(mapKeysToArray(resetTypesMap), ",") +
-				"To get base workflowIds/runIds to reset, source is from input file or visibility query",
+			Name:  "reset-batch",
+			Usage: " Resets a batch of Workflow Executions by reset type: " + strings.Join(mapKeysToArray(resetTypesMap), ","),
 			Flags: []cli.Flag{
-				&cli.StringFlag{
-					Name:    FlagInputFile,
-					Aliases: FlagInputFileAlias,
-					Usage:   "Input file to use for resetting, one workflow per line of WorkflowId and RunId. RunId is optional, default to current runId if not specified. ",
-				},
 				&cli.StringFlag{
 					Name:    FlagListQuery,
 					Aliases: FlagListQueryAlias,
-					Usage:   "Visibility query to get workflows to reset",
+					Usage:   "Visibility query of Search Attributes describing the Workflow Executions to reset. See https://docs.temporal.io/docs/tctl/workflow/list#--query",
+				}, &cli.StringFlag{
+					Name:    FlagInputFile,
+					Aliases: FlagInputFileAlias,
+					Usage:   "Input file that specifies Workflow Executions to reset. Each line contains one Workflow Id as the base Run and, optionally, a Run Id",
 				},
 				&cli.StringFlag{
 					Name:  FlagExcludeFile,
 					Value: "",
-					Usage: "Another input file to use for excluding from resetting, only workflowId is needed",
+					Usage: "Input file that specifies Workflow Executions to exclude from resetting",
 				},
 				&cli.StringFlag{
 					Name:  FlagInputSeparator,
 					Value: "\t",
-					Usage: "Separator for input file(default to tab)",
+					Usage: "Separator for the input file. The default is a tab (\t)",
 				},
 				&cli.StringFlag{
 					Name:     FlagReason,
-					Usage:    "Reason for reset",
+					Usage:    "Reason for resetting the Workflow Executions",
 					Required: true,
 				},
 				&cli.IntFlag{
 					Name:  FlagParallelism,
 					Value: 1,
-					Usage: "Number of goroutines to run in parallel. Each goroutine would process one line for every second",
+					Usage: "Number of goroutines to run in parallel. Each goroutine processes one line for every second",
 				},
 				&cli.BoolFlag{
 					Name:  FlagSkipCurrentOpen,
-					Usage: "Skip the workflow if the current run is open for the same workflowId as base",
+					Usage: "Skip a Workflow Execution if the current Run is open for the same Workflow Id as the base Run",
 				},
 				&cli.BoolFlag{
 					Name: FlagSkipBaseIsNotCurrent,
 					// TODO https://github.com/uber/cadence/issues/2930
 					// The right way to prevent needs server side implementation .
 					// This client side is only best effort
-					Usage: "Skip if base run is not current run",
+					Usage: "Skip a Workflow Execution if the base Run is not the current Run",
 				},
 				&cli.BoolFlag{
 					Name:  FlagNonDeterministic,
-					Usage: "Only apply onto workflows whose last event is workflowTaskFailed with non deterministic error",
-				},
-				&cli.BoolFlag{
-					Name:  FlagDryRun,
-					Usage: "Not do real action of reset(just logging in STDOUT)",
+					Usage: "Reset Workflow Execution only if its last Event is WorkflowTaskFailed with a nondeterministic error",
 				},
 				&cli.StringFlag{
 					Name:     FlagResetType,
@@ -253,6 +247,10 @@ func newWorkflowCommands() []*cli.Command {
 				&cli.StringFlag{
 					Name:  FlagResetBadBinaryChecksum,
 					Usage: "Binary checksum for resetType of BadBinary",
+				},
+				&cli.BoolFlag{
+					Name:  FlagDryRun,
+					Usage: "Simulate reset without resetting any Workflow Executions",
 				},
 			},
 			Action: func(c *cli.Context) error {
