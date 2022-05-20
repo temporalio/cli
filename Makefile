@@ -15,6 +15,11 @@ endif
 
 COLOR := "\e[1;36m%s\e[0m\n"
 
+define NEWLINE
+
+
+endef
+
 ##### Build #####
 build:
 	@printf $(COLOR) "Build tctl with OS: $(GOOS), ARCH: $(GOARCH)..."

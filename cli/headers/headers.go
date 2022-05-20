@@ -50,6 +50,8 @@ const (
 var (
 	// propagateHeaders are the headers to propagate from the frontend to other services.
 	propagateHeaders = []string{
+		ClientNameHeaderName,
+		ClientVersionHeaderName,
 		SupportedServerVersionsHeaderName,
 		SupportedFeaturesHeaderName,
 	}
