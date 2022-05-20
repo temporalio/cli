@@ -106,8 +106,7 @@ var (
 	FlagPrintFullyDetailAlias         = []string{"pf"}
 	FlagPrintRawTime                  = "print-raw-time"
 	FlagPrintRawTimeAlias             = []string{"prt"}
-	FlagPrintRaw                      = "print-raw"
-	FlagPrintRawAlias                 = []string{"praw"}
+	FlagPrintRaw                      = "raw"
 	FlagPrintDateTime                 = "print-datetime"
 	FlagPrintDateTimeAlias            = []string{"pdt"}
 	FlagPrintMemo                     = "print-memo"

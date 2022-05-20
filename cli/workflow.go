@@ -50,6 +50,10 @@ func newWorkflowCommands() []*cli.Command {
 					Name:  FlagResetPointsOnly,
 					Usage: "Only show auto-reset points",
 				},
+				&cli.BoolFlag{
+					Name:  FlagPrintRaw,
+					Usage: "Print properties as they are stored",
+				},
 			}...),
 			Action: func(c *cli.Context) error {
 				return DescribeWorkflow(c)
