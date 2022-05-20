@@ -44,7 +44,7 @@ func newWorkflowCommands() []*cli.Command {
 		{
 			Name:    "describe",
 			Aliases: []string{"d"},
-			Usage:   "Show information of workflow execution",
+			Usage:   "Show information about a Workflow Execution",
 			Flags: append(flagsForExecution, []cli.Flag{
 				&cli.BoolFlag{
 					Name:  FlagResetPointsOnly,
@@ -66,7 +66,7 @@ func newWorkflowCommands() []*cli.Command {
 		},
 		{
 			Name:  "show",
-			Usage: "Show workflow history",
+			Usage: "Show Workflow Execution history",
 			Flags: append(append(flagsForExecution, flagsForShowWorkflow...), flags.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
 				return ShowHistory(c)
@@ -74,7 +74,7 @@ func newWorkflowCommands() []*cli.Command {
 		},
 		{
 			Name:  "query",
-			Usage: "Query workflow execution",
+			Usage: "Query Workflow Execution",
 			Flags: append(flagsForStackTraceQuery,
 				&cli.StringFlag{
 					Name:     FlagQueryType,
@@ -89,7 +89,7 @@ func newWorkflowCommands() []*cli.Command {
 		},
 		{
 			Name:  "stack",
-			Usage: "Query workflow execution with __stack_trace as query type",
+			Usage: "Query Workflow Execution with __stack_trace as query type",
 			Flags: flagsForStackTraceQuery,
 			Action: func(c *cli.Context) error {
 				return QueryWorkflowUsingStackTrace(c)
@@ -98,7 +98,7 @@ func newWorkflowCommands() []*cli.Command {
 		{
 			Name:    "signal",
 			Aliases: []string{"s"},
-			Usage:   "Signal a workflow execution",
+			Usage:   "Signal a Workflow Execution",
 			Flags: append(flagsForExecution, []cli.Flag{
 				&cli.StringFlag{
 					Name:     FlagName,
@@ -139,7 +139,7 @@ func newWorkflowCommands() []*cli.Command {
 		},
 		{
 			Name:  "cancel",
-			Usage: "Cancel a workflow execution",
+			Usage: "Cancel a Workflow Execution",
 			Flags: flagsForExecution,
 			Action: func(c *cli.Context) error {
 				return CancelWorkflow(c)
@@ -161,7 +161,7 @@ func newWorkflowCommands() []*cli.Command {
 		},
 		{
 			Name:  "reset",
-			Usage: "Reset the workflow, by either eventId or resetType",
+			Usage: "Reset a Workflow Execution by event Id or reset type",
 			Flags: append(flagsForExecution, []cli.Flag{
 				&cli.StringFlag{
 					Name:  FlagEventID,
@@ -173,14 +173,13 @@ func newWorkflowCommands() []*cli.Command {
 					Required: true,
 				},
 				&cli.StringFlag{
-					Name: FlagResetType,
-					Usage: "Event type to which you want to reset: " +
-						strings.Join(mapKeysToArray(resetTypesMap), ","),
+					Name:  FlagResetType,
+					Usage: "Event type to which you want to reset: " + strings.Join(mapKeysToArray(resetTypesMap), ", "),
 				},
 				&cli.StringFlag{
 					Name: FlagResetReapplyType,
 					Usage: "Event types to reapply after the reset point: " +
-						strings.Join(mapKeysToArray(resetReapplyTypesMap), ",") + ". (default: All)",
+						strings.Join(mapKeysToArray(resetReapplyTypesMap), ", ") + ". (default: All)",
 				},
 				&cli.StringFlag{
 					Name:  FlagResetBadBinaryChecksum,
@@ -193,7 +192,7 @@ func newWorkflowCommands() []*cli.Command {
 		},
 		{
 			Name:  "reset-batch",
-			Usage: " Resets a batch of Workflow Executions by reset type: " + strings.Join(mapKeysToArray(resetTypesMap), ","),
+			Usage: " Resets a batch of Workflow Executions by reset type: " + strings.Join(mapKeysToArray(resetTypesMap), ", "),
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:    FlagListQuery,
@@ -241,7 +240,7 @@ func newWorkflowCommands() []*cli.Command {
 				},
 				&cli.StringFlag{
 					Name:     FlagResetType,
-					Usage:    "Where to reset: " + strings.Join(mapKeysToArray(resetTypesMap), ","),
+					Usage:    "Event type to which you want to reset: " + strings.Join(mapKeysToArray(resetTypesMap), ", "),
 					Required: true,
 				},
 				&cli.StringFlag{

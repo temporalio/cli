@@ -43,7 +43,7 @@ var (
 		&cli.StringFlag{
 			Name:    FlagRetention,
 			Aliases: FlagRetentionAlias,
-			Usage:   "Workflow execution retention",
+			Usage:   "Workflow Execution retention",
 		},
 		&cli.StringFlag{
 			Name:    FlagActiveClusterName,
@@ -104,7 +104,7 @@ var (
 		&cli.StringFlag{
 			Name:    FlagRetention,
 			Aliases: FlagRetentionAlias,
-			Usage:   "Workflow execution retention",
+			Usage:   "Workflow Execution retention",
 		},
 		&cli.StringFlag{
 			Name:    FlagActiveClusterName,

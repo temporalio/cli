@@ -274,7 +274,7 @@ var flagsForShowWorkflow = []cli.Flag{
 	&cli.BoolFlag{
 		Name:    output.FlagFollow,
 		Aliases: FlagFollowAlias,
-		Usage:   "Follow the progress of workflow execution",
+		Usage:   "Follow the progress of Workflow Execution",
 		Value:   false,
 	},
 }
@@ -305,7 +305,7 @@ var flagsForRunWorkflow = []cli.Flag{
 	&cli.IntFlag{
 		Name:    FlagWorkflowExecutionTimeout,
 		Aliases: FlagWorkflowExecutionTimeoutAlias,
-		Usage:   "Workflow execution timeout, including retries and continue-as-new (seconds)",
+		Usage:   "Workflow Execution timeout, including retries and continue-as-new (seconds)",
 	},
 	&cli.IntFlag{
 		Name:    FlagWorkflowTaskTimeout,
@@ -315,7 +315,7 @@ var flagsForRunWorkflow = []cli.Flag{
 	},
 	&cli.StringFlag{
 		Name: FlagCronSchedule,
-		Usage: "Optional cron schedule for the workflow. Cron spec is as following: \n" +
+		Usage: "Optional cron schedule for the Workflow. Cron spec is as following: \n" +
 			"\t┌───────────── minute (0 - 59) \n" +
 			"\t│ ┌───────────── hour (0 - 23) \n" +
 			"\t│ │ ┌───────────── day of the month (1 - 31) \n" +
@@ -326,19 +326,19 @@ var flagsForRunWorkflow = []cli.Flag{
 	},
 	&cli.StringFlag{
 		Name: FlagWorkflowIDReusePolicy,
-		Usage: "Configure if the same workflow Id is allowed for use in new workflow execution. " +
+		Usage: "Configure if the same Workflow Id is allowed for use in new Workflow Execution. " +
 			"Options: AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate, TerminateIfRunning",
 	},
 	&cli.StringSliceFlag{
 		Name:    FlagInput,
 		Aliases: FlagInputAlias,
-		Usage: "Optional input for the workflow in JSON format. If there are multiple parameters, pass each as a separate input flag. " +
+		Usage: "Optional input for the Workflow Execution in JSON format. If there are multiple parameters, pass each as a separate input flag. " +
 			"Pass \"null\" for null values",
 	},
 	&cli.StringFlag{
 		Name:    FlagInputFile,
 		Aliases: FlagInputFileAlias,
-		Usage: "Optional input for the workflow from JSON file. If there are multiple JSON, concatenate them and separate by space or newline. " +
+		Usage: "Optional input for the Workflow Execution from JSON file. If there are multiple JSON, concatenate them and separate by space or newline. " +
 			"Input from file will be overwrite by input from command line",
 	},
 	&cli.IntFlag{
@@ -380,7 +380,7 @@ var flagsForWorkflowFiltering = []cli.Flag{
 	&cli.BoolFlag{
 		Name:    FlagArchive,
 		Aliases: FlagArchiveAlias,
-		Usage:   "List archived workflow executions (EXPERIMENTAL)",
+		Usage:   "List archived Workflow Executions (EXPERIMENTAL)",
 	},
 }
 
@@ -426,6 +426,6 @@ var flagsForStackTraceQuery = append(flagsForExecution, []cli.Flag{
 	&cli.StringFlag{
 		Name:    FlagQueryRejectCondition,
 		Aliases: FlagQueryRejectConditionAlias,
-		Usage:   "Optional flag to reject queries based on workflow state. Valid values are \"not_open\" and \"not_completed_cleanly\"",
+		Usage:   "Optional flag to reject queries based on Workflow state. Valid values are \"not_open\" and \"not_completed_cleanly\"",
 	},
 }...)
