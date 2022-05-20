@@ -25,8 +25,6 @@
 package cli
 
 import (
-	"fmt"
-
 	"github.com/temporalio/tctl-kit/pkg/output"
 	"github.com/urfave/cli/v2"
 )
@@ -331,14 +329,14 @@ var flagsForRunWorkflow = []cli.Flag{
 	&cli.StringSliceFlag{
 		Name:    FlagInput,
 		Aliases: FlagInputAlias,
-		Usage: "Optional input for the Workflow Execution in JSON format. If there are multiple parameters, pass each as a separate input flag. " +
-			"Pass \"null\" for null values",
+		Usage:   "Optional input for the Workflow in JSON format. Pass \"null\" for null values",
 	},
 	&cli.StringFlag{
 		Name:    FlagInputFile,
 		Aliases: FlagInputFileAlias,
-		Usage: "Optional input for the Workflow Execution from JSON file. If there are multiple JSON, concatenate them and separate by space or newline. " +
-			"Input from file will be overwrite by input from command line",
+		Usage: "Pass an optional input for the Workflow from a JSON file." +
+			" If there are multiple JSON files, concatenate them and separate by space or newline." +
+			" Input from the command line overwrites input from the file",
 	},
 	&cli.IntFlag{
 		Name:    FlagMaxFieldLength,
@@ -347,26 +345,23 @@ var flagsForRunWorkflow = []cli.Flag{
 	},
 	&cli.StringSliceFlag{
 		Name:  FlagMemoKey,
-		Usage: fmt.Sprintf("Optional key of memo. If there are multiple keys, provide multiple %s flags", FlagMemoKey),
+		Usage: "Pass a key for an optional memo",
 	},
 	&cli.StringSliceFlag{
-		Name: FlagMemo,
-		Usage: fmt.Sprintf("Optional info that can be showed when list workflow. If there are multiple values, provide multiple %s flags. "+
-			"The order must be same as %s", FlagMemo, FlagMemoKey),
+		Name:  FlagMemo,
+		Usage: "Pass a memo value. A memo is information in JSON format that can be shown when the Workflow is listed",
 	},
 	&cli.StringFlag{
-		Name: FlagMemoFile,
-		Usage: fmt.Sprintf("File name of optional info that can be showed when list workflow. If there are multiple values, separate them by newline. "+
-			"The order of lines must be same as %s", FlagMemoKey),
+		Name:  FlagMemoFile,
+		Usage: "Pass information for a memo from a JSON file. If there are multiple values, separate them by newline.",
 	},
 	&cli.StringSliceFlag{
 		Name:  FlagSearchAttributeKey,
-		Usage: fmt.Sprintf("Optional search attributes keys that can be be used in list query. If there are multiple keys, provide multiple %s flags", FlagSearchAttributeKey),
+		Usage: "Specify a Search Attribute key. See https://docs.temporal.io/docs/concepts/what-is-a-search-attribute/",
 	},
 	&cli.StringSliceFlag{
-		Name: FlagSearchAttributeValue,
-		Usage: fmt.Sprintf("Optional search attributes value that can be be used in list query in JSON format. If there are multiple values, provide multiple %s flags. "+
-			"If value is array, use JSON array syntax: [\"a\",\"b\"] or [1,2].", FlagSearchAttributeValue),
+		Name:  FlagSearchAttributeValue,
+		Usage: "Specify a Search Attribute value. If value is an array, use JSON format, such as [\"a\",\"b\"] or [1,2], [\"true\",\"false\"]",
 	},
 }
 
