@@ -66,8 +66,6 @@ const (
 
 	workflowStatusNotSet = -1
 	showErrorStackEnv    = `TEMPORAL_CLI_SHOW_STACKS`
-
-	searchAttrInputSeparator = "|"
 )
 
 var envKeysForUserName = []string{

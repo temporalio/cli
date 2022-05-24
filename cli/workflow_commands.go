@@ -190,30 +190,25 @@ func formatInputsForDisplay(inputs []interface{}) string {
 }
 
 func unmarshalSearchAttrFromCLI(c *cli.Context) (map[string]interface{}, error) {
-	sanitize := func(val string) []string {
-		trimmedVal := strings.TrimSpace(val)
-		if len(trimmedVal) == 0 {
-			return nil
-		}
-		splitVal := strings.Split(trimmedVal, searchAttrInputSeparator)
-		result := make([]string, len(splitVal))
-		for i, v := range splitVal {
+	sanitize := func(val []string) []string {
+		result := make([]string, len(val))
+		for i, v := range val {
 			result[i] = strings.TrimSpace(v)
 		}
 		return result
 	}
 
-	searchAttrKeys := sanitize(c.String(FlagSearchAttributeKey))
+	searchAttrKeys := sanitize(c.StringSlice(FlagSearchAttributeKey))
 	if len(searchAttrKeys) == 0 {
 		return nil, nil
 	}
-	rawSearchAttrVals := sanitize(c.String(FlagSearchAttributeValue))
+	rawSearchAttrVals := sanitize(c.StringSlice(FlagSearchAttributeValue))
 	if len(rawSearchAttrVals) == 0 {
 		return nil, nil
 	}
 
 	if len(searchAttrKeys) != len(rawSearchAttrVals) {
-		return nil, fmt.Errorf("uneven number of search attributes keys (%d): %v and values(%d): %v", len(searchAttrKeys), searchAttrKeys, len(rawSearchAttrVals), rawSearchAttrVals)
+		return nil, fmt.Errorf("uneven number of search attributes keys (%d): %v and values (%d): %v", len(searchAttrKeys), searchAttrKeys, len(rawSearchAttrVals), rawSearchAttrVals)
 	}
 
 	fields := make(map[string]interface{}, len(searchAttrKeys))
