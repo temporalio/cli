@@ -34,11 +34,19 @@ import (
 func newWorkflowCommands() []*cli.Command {
 	return []*cli.Command{
 		{
-			Name:  "run",
-			Usage: "Start a new workflow execution and show progress",
-			Flags: append(flagsForRunWorkflow, flags.FlagsForPaginationAndRendering...),
+			Name:  "start",
+			Usage: "Start a new workflow execution and return its workflowId and runID immediately",
+			Flags: append(flagsForStartWorkflow, flags.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
-				return RunWorkflow(c)
+				return StartWorkflow(c, false)
+			},
+		},
+		{
+			Name:  "execute",
+			Usage: "Start a new workflow execution and await its completion, prints progress",
+			Flags: append(flagsForStartWorkflow, flags.FlagsForPaginationAndRendering...),
+			Action: func(c *cli.Context) error {
+				return StartWorkflow(c, true)
 			},
 		},
 		{

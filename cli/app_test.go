@@ -245,13 +245,13 @@ func (s *cliAppSuite) TestShowHistoryWithFollow() {
 	s.sdkClient.AssertExpectations(s.T())
 }
 
-func (s *cliAppSuite) TestRunWorkflow() {
+func (s *cliAppSuite) TestStartWorkflow() {
 	s.sdkClient.On("ExecuteWorkflow", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(workflowRun(), nil)
-	s.sdkClient.On("GetWorkflowHistory", mock.Anything, "wid", mock.Anything, mock.Anything, mock.Anything).Return(historyEventIterator()).Once()
 
 	// start with wid
-	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "run", "--task-queue", "testTaskQueue", "--type", "testWorkflowType", "--execution-timeout", "60", "--run-timeout", "60", "--workflow-id", "wid", "wrp", "2"})
+	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "start", "--task-queue", "testTaskQueue", "--type", "testWorkflowType", "--execution-timeout", "60", "--run-timeout", "60", "--workflow-id", "wid", "--workflow-id-reuse-policy", "Unspecified"})
 	s.Nil(err)
+	s.sdkClient.AssertNotCalled(s.T(), "GetWorkflowHistory")
 	s.sdkClient.AssertExpectations(s.T())
 
 	hasNoSearchAttributes := mock.MatchedBy(func(options sdkclient.StartWorkflowOptions) bool {
@@ -260,20 +260,18 @@ func (s *cliAppSuite) TestRunWorkflow() {
 	s.sdkClient.AssertCalled(s.T(), "ExecuteWorkflow", mock.Anything, hasNoSearchAttributes, mock.Anything, mock.Anything)
 
 	s.sdkClient.On("ExecuteWorkflow", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(workflowRun(), nil)
-	s.sdkClient.On("GetWorkflowHistory", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(historyEventIterator()).Once()
 	// start without wid
-	err = s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "run", "--task-queue", "testTaskQueue", "--type", "testWorkflowType", "--execution-timeout", "60", "--run-timeout", "60", "wrp", "2"})
+	err = s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "start", "--task-queue", "testTaskQueue", "--type", "testWorkflowType", "--execution-timeout", "60", "--run-timeout", "60", "--workflow-id-reuse-policy", "Unspecified"})
 	s.Nil(err)
+	s.sdkClient.AssertNotCalled(s.T(), "GetWorkflowHistory")
 	s.sdkClient.AssertExpectations(s.T())
 	s.sdkClient.AssertCalled(s.T(), "ExecuteWorkflow", mock.Anything, hasNoSearchAttributes, mock.Anything, mock.Anything)
 }
 
-func (s *cliAppSuite) TestRunWorkflow_SearchAttributes() {
+func (s *cliAppSuite) TestStartWorkflow_SearchAttributes() {
 	s.sdkClient.On("ExecuteWorkflow", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(workflowRun(), nil)
-	s.sdkClient.On("GetWorkflowHistory", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(historyEventIterator()).Once()
-
 	// start with basic search attributes
-	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "run", "--task-queue", "testTaskQueue", "--type", "testWorkflowType",
+	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "start", "--task-queue", "testTaskQueue", "--type", "testWorkflowType",
 		"--search-attribute-key", "k1", "--search-attribute-value", "\"v1\"", "--search-attribute-key", "k2", "--search-attribute-value", "\"v2\""})
 	s.Nil(err)
 	s.sdkClient.AssertExpectations(s.T())
@@ -286,17 +284,25 @@ func (s *cliAppSuite) TestRunWorkflow_SearchAttributes() {
 	s.sdkClient.AssertCalled(s.T(), "ExecuteWorkflow", mock.Anything, hasCorrectSearchAttributes, mock.Anything, mock.Anything)
 
 	s.sdkClient.On("ExecuteWorkflow", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(workflowRun(), nil)
-	s.sdkClient.On("GetWorkflowHistory", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(historyEventIterator()).Once()
 
 	// TODO: test json search attributes once we know how to they'll be specified (--search-attribute-json?)
 }
 
-func (s *cliAppSuite) TestRunWorkflow_Failed() {
+func (s *cliAppSuite) TestStartWorkflow_Failed() {
 	s.sdkClient.On("ExecuteWorkflow", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(workflowRun(), serviceerror.NewInvalidArgument("fake error"))
 
 	// start with wid
-	errorCode := s.RunWithExitCode([]string{"", "--namespace", cliTestNamespace, "workflow", "run", "--task-queue", "testTaskQueue", "--type", "testWorkflowType", "--execution-timeout", "60", "--run-timeout", "60", "--workflow-id", "wid"})
+	errorCode := s.RunWithExitCode([]string{"", "--namespace", cliTestNamespace, "workflow", "start", "--task-queue", "testTaskQueue", "--type", "testWorkflowType", "--execution-timeout", "60", "--run-timeout", "60", "--workflow-id", "wid"})
 	s.Equal(1, errorCode)
+	s.sdkClient.AssertExpectations(s.T())
+}
+
+func (s *cliAppSuite) TestExecuteWorkflow() {
+	s.sdkClient.On("ExecuteWorkflow", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(workflowRun(), nil)
+	s.sdkClient.On("GetWorkflowHistory", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(historyEventIterator()).Once()
+
+	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "execute", "--task-queue", "testTaskQueue", "--type", "testWorkflowType"})
+	s.Nil(err)
 	s.sdkClient.AssertExpectations(s.T())
 }
 

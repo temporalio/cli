@@ -276,7 +276,7 @@ var flagsForShowWorkflow = []cli.Flag{
 	},
 }
 
-var flagsForRunWorkflow = []cli.Flag{
+var flagsForStartWorkflow = []cli.Flag{
 	&cli.StringFlag{
 		Name:    FlagWorkflowID,
 		Aliases: FlagWorkflowIDAlias,
