@@ -145,7 +145,7 @@ var (
 	FlagClustersAlias                 = []string{"cl"}
 	FlagClusterMembershipRole         = "role"
 	FlagIsGlobalNamespace             = "global-namespace"
-	FlagIsGlobalNamespaceAlias        = []string{"gd"}
+	FlagIsGlobalNamespaceAlias        = []string{"gn"}
 	FlagNamespaceData                 = "namespace-data"
 	FlagNamespaceDataAlias            = []string{"dmd"}
 	FlagPromoteNamespace              = "promote-namespace"
