@@ -147,7 +147,7 @@ var (
 	FlagIsGlobalNamespace             = "global-namespace"
 	FlagIsGlobalNamespaceAlias        = []string{"gn"}
 	FlagNamespaceData                 = "namespace-data"
-	FlagNamespaceDataAlias            = []string{"dmd"}
+	FlagNamespaceDataAlias            = []string{"nd"}
 	FlagPromoteNamespace              = "promote-namespace"
 	FlagEventID                       = "event-id"
 	FlagEventIDAlias                  = []string{"eid"}
