@@ -79,10 +79,6 @@ func NewCliApp() *cli.App {
 			Usage:   "Optional timeout for context of RPC call in seconds",
 			EnvVars: []string{"TEMPORAL_CONTEXT_TIMEOUT"},
 		},
-		&cli.BoolFlag{
-			Name:  FlagAutoConfirm,
-			Usage: "Automatically confirm all prompts",
-		},
 		&cli.StringFlag{
 			Name:    FlagTLSCertPath,
 			Value:   "",

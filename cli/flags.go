@@ -200,6 +200,7 @@ var (
 	FlagJobID                         = "job-id"
 	FlagJobIDAlias                    = []string{"jid"}
 	FlagYes                           = "yes"
+	FlagYesAlias                      = []string{"y"}
 	FlagServiceConfigDir              = "service-config-dir"
 	FlagServiceConfigDirAlias         = []string{"scd"}
 	FlagServiceEnv                    = "service-env"
@@ -218,7 +219,6 @@ var (
 	FlagLowerShardBound               = "lower-shard-bound"
 	FlagUpperShardBound               = "upper-shard-bound"
 	FlagInputDirectory                = "input-directory"
-	FlagAutoConfirm                   = "auto-confirm"
 	FlagDataConverterPlugin           = "data-converter-plugin"
 	FlagCodecAuth                     = "codec-auth"
 	FlagCodecEndpoint                 = "codec-endpoint"
@@ -229,6 +229,7 @@ var (
 	FlagPort                          = "port"
 	FlagEnableConnection              = "enable-connection"
 	FlagFollowAlias                   = []string{"f"}
+	FlagType                          = "type"
 
 	FlagProtoType  = "type"
 	FlagHexData    = "hex-data"

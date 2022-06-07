@@ -25,8 +25,11 @@
 package cli
 
 import (
+	"fmt"
+
 	"github.com/temporalio/tctl-kit/pkg/output"
 	"github.com/urfave/cli/v2"
+	enumspb "go.temporal.io/api/enums/v1"
 )
 
 func newClusterCommands() []*cli.Command {
@@ -37,6 +40,28 @@ func newClusterCommands() []*cli.Command {
 			Usage:   "Check health of frontend service",
 			Action: func(c *cli.Context) error {
 				return HealthCheck(c)
+			},
+		},
+		{
+			Name:  "add-search-attributes",
+			Usage: "Add custom search attributes",
+			Flags: []cli.Flag{
+				&cli.StringSliceFlag{
+					Name:  FlagName,
+					Usage: "Search attribute name",
+				},
+				&cli.StringSliceFlag{
+					Name:  FlagType,
+					Usage: fmt.Sprintf("Search attribute type: %v", allowedEnumValues(enumspb.IndexedValueType_name)),
+				},
+				&cli.BoolFlag{
+					Name:    FlagYes,
+					Aliases: FlagYesAlias,
+					Usage:   "Confirm all prompts",
+				},
+			},
+			Action: func(c *cli.Context) error {
+				return AddSearchAttributes(c)
 			},
 		},
 		{
@@ -52,6 +77,24 @@ func newClusterCommands() []*cli.Command {
 			},
 			Action: func(c *cli.Context) error {
 				return ListSearchAttributes(c)
+			},
+		},
+		{
+			Name:  "remove-search-attributes",
+			Usage: "Remove custom search attributes metadata only (Elasticsearch index schema is not modified)",
+			Flags: []cli.Flag{
+				&cli.StringSliceFlag{
+					Name:  FlagName,
+					Usage: "Search attribute name",
+				},
+				&cli.BoolFlag{
+					Name:    FlagYes,
+					Aliases: FlagYesAlias,
+					Usage:   "Confirm all prompts",
+				},
+			},
+			Action: func(c *cli.Context) error {
+				return RemoveSearchAttributes(c)
 			},
 		},
 	}
