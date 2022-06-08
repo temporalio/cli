@@ -385,8 +385,6 @@ func (s *cliAppSuite) TestQueryWorkflow_Failed() {
 }
 
 var (
-	status = enumspb.WORKFLOW_EXECUTION_STATUS_COMPLETED
-
 	listWorkflowExecutionsResponse = &workflowservice.ListWorkflowExecutionsResponse{
 		Executions: []*workflowpb.WorkflowExecutionInfo{
 			{
@@ -411,7 +409,7 @@ var (
 				},
 				StartTime:     timestamp.TimePtr(time.Now().UTC()),
 				CloseTime:     timestamp.TimePtr(time.Now().UTC().Add(time.Hour)),
-				Status:        status,
+				Status:        enumspb.WORKFLOW_EXECUTION_STATUS_COMPLETED,
 				HistoryLength: 12,
 			},
 		},

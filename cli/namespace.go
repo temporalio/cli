@@ -40,7 +40,7 @@ func SetRequiredNamespaceDataKeys(keys []string) {
 }
 
 func checkRequiredNamespaceDataKVs(namespaceData map[string]string) error {
-	//check requiredNamespaceDataKeys
+	// check requiredNamespaceDataKeys
 	for _, k := range requiredNamespaceDataKeys {
 		_, ok := namespaceData[k]
 		if !ok {
@@ -100,6 +100,14 @@ func newNamespaceCommands() []*cli.Command {
 			Flags: updateNamespaceFlags,
 			Action: func(c *cli.Context) error {
 				return UpdateNamespace(c)
+			},
+		},
+		{
+			Name:  "delete",
+			Usage: "Delete existing Namespace",
+			Flags: deleteNamespacesFlags,
+			Action: func(c *cli.Context) error {
+				return DeleteNamespace(c)
 			},
 		},
 	}

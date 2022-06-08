@@ -169,5 +169,18 @@ var (
 		},
 	}
 
-	listNamespacesFlags = []cli.Flag{}
+	listNamespacesFlags []cli.Flag
+
+	deleteNamespacesFlags = []cli.Flag{
+		&cli.StringFlag{
+			Name:    FlagName,
+			Aliases: FlagNameAlias,
+			Usage:   "Namespace name to delete",
+		},
+		&cli.BoolFlag{
+			Name:    FlagYes,
+			Aliases: FlagYesAlias,
+			Usage:   "Confirm all prompts",
+		},
+	}
 )

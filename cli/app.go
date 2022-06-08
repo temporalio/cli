@@ -34,6 +34,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/temporalio/tctl-kit/pkg/color"
+
 	"github.com/temporalio/tctl/cli/dataconverter"
 	"github.com/temporalio/tctl/cli/headersprovider"
 	"github.com/temporalio/tctl/cli/plugin"
@@ -62,7 +63,7 @@ func NewCliApp() *cli.App {
 		&cli.StringFlag{
 			Name:    FlagAuth,
 			Value:   "",
-			Usage:   "Authorization header to set for GRPC requests",
+			Usage:   "Authorization header to set for gRPC requests",
 			EnvVars: []string{"TEMPORAL_CLI_AUTH"},
 		},
 		&cli.StringFlag{

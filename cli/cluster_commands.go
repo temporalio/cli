@@ -146,7 +146,7 @@ func AddSearchAttributes(c *cli.Context) error {
 		"You are about to add search attributes %s. Continue? Y/N",
 		color.Yellow(c, strings.TrimLeft(fmt.Sprintf("%v", searchAttributes), "map")),
 	)
-	if !prompt(promptMsg, c.Bool(FlagYes)) {
+	if !promptYes(promptMsg, c.Bool(FlagYes)) {
 		return nil
 	}
 
@@ -172,7 +172,7 @@ func RemoveSearchAttributes(c *cli.Context) error {
 		"You are about to remove search attributes %s. Continue? Y/N",
 		color.Yellow(c, "%v", names),
 	)
-	if !prompt(promptMsg, c.Bool(FlagYes)) {
+	if !promptYes(promptMsg, c.Bool(FlagYes)) {
 		return nil
 	}
 

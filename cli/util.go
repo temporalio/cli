@@ -44,11 +44,12 @@ import (
 	sdkclient "go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/converter"
 
+	"go.temporal.io/server/common/codec"
+	"go.temporal.io/server/common/payloads"
+
 	"github.com/temporalio/tctl/cli/dataconverter"
 	"github.com/temporalio/tctl/cli/headers"
 	"github.com/temporalio/tctl/cli/stringify"
-	"go.temporal.io/server/common/codec"
-	"go.temporal.io/server/common/payloads"
 )
 
 // HistoryEventToString convert HistoryEvent to string
@@ -677,23 +678,34 @@ func allowedEnumValues(names map[int32]string) []string {
 	return result
 }
 
-// prompt user to confirm/deny action
-func prompt(msg string, autoConfirm bool) bool {
+func promptYes(msg string, autoConfirm bool) bool {
+	return prompt(msg, autoConfirm, "yes", "y")
+}
+
+// prompt user to confirm/deny action. Supports empty expectedInputs.
+func prompt(msg string, autoConfirm bool, expectedInputs ...string) bool {
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Print(msg, " ")
 	var text string
 	if autoConfirm {
-		text = "y"
-		fmt.Print("y")
+		if len(expectedInputs) > 0 {
+			text = expectedInputs[0]
+		}
+		fmt.Print(text)
 	} else {
 		text, _ = reader.ReadString('\n')
 	}
 	fmt.Println()
 
-	textLower := strings.ToLower(strings.TrimRight(text, "\n"))
-	if textLower != "y" && textLower != "yes" {
-		return false
+	if len(expectedInputs) == 0 {
+		return true
 	}
 
-	return true
+	textLower := strings.ToLower(strings.TrimRight(text, "\n"))
+	for _, expectedInput := range expectedInputs {
+		if expectedInput == textLower {
+			return true
+		}
+	}
+	return false
 }

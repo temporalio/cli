@@ -28,10 +28,12 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/temporalio/tctl-kit/pkg/color"
 	"github.com/temporalio/tctl-kit/pkg/output"
 	"github.com/urfave/cli/v2"
 	enumspb "go.temporal.io/api/enums/v1"
 	namespacepb "go.temporal.io/api/namespace/v1"
+	"go.temporal.io/api/operatorservice/v1"
 	replicationpb "go.temporal.io/api/replication/v1"
 	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/api/workflowservice/v1"
@@ -175,9 +177,8 @@ func UpdateNamespace(c *cli.Context) error {
 		})
 		if err != nil {
 			switch err.(type) {
-			// TODO (alex): *serviceerror.NotFound is for backward compatibility, remove after 5/1/23.
-			case *serviceerror.NotFound, *serviceerror.NamespaceNotFound:
-				return fmt.Errorf("namespace %s does not exist: %s", namespace, err)
+			case *serviceerror.NamespaceNotFound:
+				return err
 			default:
 				return fmt.Errorf("namespace update failed: %s", err)
 			}
@@ -280,9 +281,8 @@ func UpdateNamespace(c *cli.Context) error {
 	_, err = client.UpdateNamespace(ctx, updateRequest)
 	if err != nil {
 		switch err.(type) {
-		// TODO (alex): *serviceerror.NotFound is for backward compatibility, remove after 5/1/23.
-		case *serviceerror.NotFound, *serviceerror.NamespaceNotFound:
-			return fmt.Errorf("namespace %s does not exist: %s", namespace, err)
+		case *serviceerror.NamespaceNotFound:
+			return err
 		default:
 			return fmt.Errorf("namespace update failed: %s", err)
 		}
@@ -318,9 +318,8 @@ func DescribeNamespace(c *cli.Context) error {
 	})
 	if err != nil {
 		switch err.(type) {
-		// TODO (alex): *serviceerror.NotFound is for backward compatibility, remove after 5/1/23.
-		case *serviceerror.NotFound, *serviceerror.NamespaceNotFound:
-			return fmt.Errorf("namespace %s does not exist: %s", namespace, err)
+		case *serviceerror.NamespaceNotFound:
+			return err
 		default:
 			return fmt.Errorf("namespace describe failed: %s", err)
 		}
@@ -344,6 +343,39 @@ func ListNamespaces(c *cli.Context) error {
 		printNamespace(c, ns)
 	}
 
+	return nil
+}
+
+// DeleteNamespace deletes namespace.
+func DeleteNamespace(c *cli.Context) error {
+	nsName := c.String(FlagName)
+
+	if nsName == "" {
+		return fmt.Errorf("provide %s flag", FlagName)
+	}
+
+	promptMsg := color.Red(c, "Are you sure you want to delete namespace %s? Type namespace name to confirm:", nsName)
+	if !prompt(promptMsg, c.Bool(FlagYes), nsName) {
+		return nil
+	}
+
+	client := cFactory.OperatorClient(c)
+	ctx, cancel := newContext(c)
+	defer cancel()
+	_, err := client.DeleteNamespace(ctx, &operatorservice.DeleteNamespaceRequest{
+		Namespace: nsName,
+	})
+	if err != nil {
+		switch err.(type) {
+		case *serviceerror.NamespaceNotFound:
+			// Message is already good enough.
+			return err
+		default:
+			return fmt.Errorf("unable to delete namespace: %w", err)
+		}
+	}
+
+	fmt.Println(color.Green(c, "Namespace %s has been deleted", nsName))
 	return nil
 }
 
