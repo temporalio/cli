@@ -38,20 +38,19 @@ import (
 
 	"github.com/olekukonko/tablewriter"
 	"github.com/pborman/uuid"
+	"github.com/temporalio/tctl-kit/pkg/color"
+	"github.com/temporalio/tctl-kit/pkg/output"
 	"github.com/urfave/cli/v2"
 	commonpb "go.temporal.io/api/common/v1"
 	enumspb "go.temporal.io/api/enums/v1"
 	failurepb "go.temporal.io/api/failure/v1"
 	historypb "go.temporal.io/api/history/v1"
+	"go.temporal.io/api/operatorservice/v1"
 	querypb "go.temporal.io/api/query/v1"
 	"go.temporal.io/api/serviceerror"
 	workflowpb "go.temporal.io/api/workflow/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	sdkclient "go.temporal.io/sdk/client"
-
-	"github.com/temporalio/tctl-kit/pkg/color"
-	"github.com/temporalio/tctl-kit/pkg/output"
-	"github.com/temporalio/tctl/cli/stringify"
 	clispb "go.temporal.io/server/api/cli/v1"
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/backoff"
@@ -61,6 +60,8 @@ import (
 	"go.temporal.io/server/common/primitives/timestamp"
 	"go.temporal.io/server/common/searchattribute"
 	"go.temporal.io/server/service/history/workflow"
+
+	"github.com/temporalio/tctl/cli/stringify"
 )
 
 // StartWorkflow starts a new workflow execution and optionally prints progress
@@ -396,6 +397,35 @@ func TerminateWorkflow(c *cli.Context) error {
 	}
 
 	fmt.Println("Terminate workflow succeeded")
+
+	return nil
+}
+
+// DeleteWorkflow deletes a workflow execution.
+func DeleteWorkflow(c *cli.Context) error {
+	nsName, err := getRequiredGlobalOption(c, FlagNamespace)
+	if err != nil {
+		return err
+	}
+	wid := c.String(FlagWorkflowID)
+	rid := c.String(FlagRunID)
+
+	client := cFactory.OperatorClient(c)
+	ctx, cancel := newContext(c)
+	defer cancel()
+	_, err = client.DeleteWorkflowExecution(ctx, &operatorservice.DeleteWorkflowExecutionRequest{
+		Namespace: nsName,
+		WorkflowExecution: &commonpb.WorkflowExecution{
+			WorkflowId: wid,
+			RunId:      rid,
+		},
+	})
+
+	if err != nil {
+		return fmt.Errorf("unable to delete workflow: %w", err)
+	}
+
+	fmt.Println(color.Green(c, "Delete workflow succeeded"))
 
 	return nil
 }

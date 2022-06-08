@@ -172,6 +172,14 @@ func newWorkflowCommands() []*cli.Command {
 			},
 		},
 		{
+			Name:  "delete",
+			Usage: "Delete a Workflow Execution",
+			Flags: flagsForExecution,
+			Action: func(c *cli.Context) error {
+				return DeleteWorkflow(c)
+			},
+		},
+		{
 			Name:  "reset",
 			Usage: "Reset a Workflow Execution by event Id or reset type",
 			Flags: append(flagsForExecution, []cli.Flag{
@@ -204,7 +212,7 @@ func newWorkflowCommands() []*cli.Command {
 		},
 		{
 			Name:  "reset-batch",
-			Usage: " Resets a batch of Workflow Executions by reset type: " + strings.Join(mapKeysToArray(resetTypesMap), ", "),
+			Usage: "Reset a batch of Workflow Executions by reset type: " + strings.Join(mapKeysToArray(resetTypesMap), ", "),
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:    FlagListQuery,

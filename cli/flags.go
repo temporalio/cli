@@ -243,7 +243,7 @@ var flagsForExecution = []cli.Flag{
 	&cli.StringFlag{
 		Name:     FlagWorkflowID,
 		Aliases:  FlagWorkflowIDAlias,
-		Usage:    "Workflow ID",
+		Usage:    "Workflow Id",
 		Required: true,
 	},
 	&cli.StringFlag{
