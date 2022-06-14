@@ -30,6 +30,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/user"
 	"regexp"
 	"strconv"
 	"strings"
@@ -525,9 +526,13 @@ func strToTaskQueueType(str string) enumspb.TaskQueueType {
 func getCliIdentity() string {
 	hostName, err := os.Hostname()
 	if err != nil {
-		hostName = "UnKnown"
+		hostName = "Unknown"
 	}
-	return fmt.Sprintf("tctl@%s", hostName)
+	userName := "unknown"
+	if u, err := user.Current(); err == nil {
+		userName = u.Username
+	}
+	return fmt.Sprintf("tctl:%s@%s", userName, hostName)
 }
 
 func newContext(c *cli.Context) (context.Context, context.CancelFunc) {
@@ -565,25 +570,34 @@ func NewContextWithTimeoutAndCLIHeaders(timeout time.Duration) (context.Context,
 	return context.WithTimeout(headers.SetCLIVersions(context.Background()), timeout)
 }
 
-// process and validate input provided through cmd or file
-func processJSONInput(c *cli.Context) (*commonpb.Payloads, error) {
+func unmarshalInputsFromCLI(c *cli.Context) ([]interface{}, error) {
 	jsonsRaw, err := readJSONInputs(c)
 	if err != nil {
 		return nil, err
 	}
 
-	var jsons []interface{}
+	var result []interface{}
 	for _, jsonRaw := range jsonsRaw {
 		if jsonRaw == nil {
-			jsons = append(jsons, nil)
+			result = append(result, nil)
 		} else {
 			var j interface{}
 			if err := json.Unmarshal(jsonRaw, &j); err != nil {
-				return nil, fmt.Errorf("input is not a valid JSON: %s", err)
+				return nil, fmt.Errorf("input is not valid JSON: %s", err)
 			}
-			jsons = append(jsons, j)
+			result = append(result, j)
 		}
 
+	}
+
+	return result, nil
+}
+
+// process and validate input provided through cmd or file
+func processJSONInput(c *cli.Context) (*commonpb.Payloads, error) {
+	jsons, err := unmarshalInputsFromCLI(c)
+	if err != nil {
+		return nil, err
 	}
 	p, err := payloads.Encode(jsons...)
 	if err != nil {
@@ -708,4 +722,42 @@ func prompt(msg string, autoConfirm bool, expectedInputs ...string) bool {
 		}
 	}
 	return false
+}
+
+func encodeMemo(memo map[string]interface{}) (*commonpb.Memo, error) {
+	if len(memo) == 0 {
+		return nil, nil
+	}
+	dc := customDataConverter()
+	fields := make(map[string]*commonpb.Payload, len(memo))
+	var err error
+	for k, v := range memo {
+		fields[k], err = dc.ToPayload(v)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return &commonpb.Memo{Fields: fields}, nil
+}
+
+func encodeSearchAttributes(sa map[string]interface{}) (*commonpb.SearchAttributes, error) {
+	if len(sa) == 0 {
+		return nil, nil
+	}
+	dc := defaultDataConverter()
+	fields := make(map[string]*commonpb.Payload, len(sa))
+	var err error
+	for k, v := range sa {
+		fields[k], err = dc.ToPayload(v)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return &commonpb.SearchAttributes{IndexedFields: fields}, nil
+}
+
+func ensureNonNil[T any, P ~*T](ptr *P) {
+	if *ptr == nil {
+		*ptr = new(T)
+	}
 }

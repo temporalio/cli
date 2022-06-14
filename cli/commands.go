@@ -30,6 +30,12 @@ var tctlCommands = []*cli.Command{
 		Subcommands: newTaskQueueCommands(),
 	},
 	{
+		Name:        "schedule",
+		Aliases:     []string{"s"},
+		Usage:       "Operations on schedules",
+		Subcommands: newScheduleCommands(),
+	},
+	{
 		Name:        "batch",
 		Usage:       "Batch operations on a list of workflows from a query",
 		Subcommands: newBatchCommands(),

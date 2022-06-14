@@ -230,6 +230,24 @@ var (
 	FlagEnableConnection              = "enable-connection"
 	FlagFollowAlias                   = []string{"f"}
 	FlagType                          = "type"
+	FlagScheduleID                    = "schedule-id"
+	FlagScheduleIDAlias               = []string{"sid"}
+	FlagOverlapPolicy                 = "overlap-policy"
+	FlagCalendar                      = "calendar"
+	FlagCalendarAlias                 = []string{"cal"}
+	FlagInterval                      = "interval"
+	FlagStartTime                     = "start-time"
+	FlagEndTime                       = "end-time"
+	FlagJitter                        = "jitter"
+	FlagTimeZone                      = "time-zone"
+	FlagTimeZoneAlias                 = []string{"tz"}
+	FlagInitialNotes                  = "initial-notes"
+	FlagInitialPaused                 = "initial-paused"
+	FlagRemainingActions              = "remaining-actions"
+	FlagCatchupWindow                 = "catchup-window"
+	FlagPauseOnFailure                = "pause-on-failure"
+	FlagPause                         = "pause"
+	FlagUnpause                       = "unpause"
 
 	FlagProtoType  = "type"
 	FlagHexData    = "hex-data"
