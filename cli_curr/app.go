@@ -157,7 +157,7 @@ func NewCliApp() *cli.App {
 		},
 		{
 			Name:        "batch",
-			Usage:       "Batch operation on a list of workflows from query.",
+			Usage:       "Batch operation on a list of workflows from query",
 			Subcommands: newBatchCommands(),
 		},
 		{

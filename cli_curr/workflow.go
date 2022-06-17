@@ -107,7 +107,7 @@ func newWorkflowCommands() []cli.Command {
 		{
 			Name:    "terminate",
 			Aliases: []string{"term"},
-			Usage:   "terminate a new workflow execution",
+			Usage:   "terminate a workflow execution",
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  FlagWorkflowIDWithAlias,
@@ -227,7 +227,7 @@ func newWorkflowCommands() []cli.Command {
 		{
 			Name:    "reset",
 			Aliases: []string{"rs"},
-			Usage:   "reset the workflow, by either eventId or resetType.",
+			Usage:   "reset the workflow, by either eventId or resetType",
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  FlagWorkflowIDWithAlias,
