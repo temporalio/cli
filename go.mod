@@ -5,6 +5,7 @@ go 1.18
 require (
 	github.com/fatih/color v1.13.0
 	github.com/gogo/protobuf v1.3.2
+	github.com/gogo/status v1.1.0
 	github.com/golang/mock v1.6.0
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/go-hclog v1.2.0
@@ -16,7 +17,7 @@ require (
 	github.com/temporalio/tctl-kit v0.0.0-20220512165751-9c751176dd14
 	github.com/uber-go/tally/v4 v4.1.1
 	github.com/urfave/cli v1.22.5
-	github.com/urfave/cli/v2 v2.7.1
+	github.com/urfave/cli/v2 v2.4.0
 	go.temporal.io/api v1.8.1-0.20220603192404-e65836719706
 	go.temporal.io/sdk v1.15.0
 	go.temporal.io/server v1.16.1-0.20220520210750-d3f3a2989dd7
@@ -29,7 +30,6 @@ require (
 	cloud.google.com/go/compute v1.6.0 // indirect
 	cloud.google.com/go/iam v0.3.0 // indirect
 	cloud.google.com/go/storage v1.22.1 // indirect
-	github.com/antzucaro/matchr v0.0.0-20210222213004-b04723ef80f0 // indirect
 	github.com/apache/thrift v0.0.0-20161221203622-b2a4d4ae21c7 // indirect
 	github.com/aws/aws-sdk-go v1.43.38 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.16.3 // indirect
@@ -61,7 +61,6 @@ require (
 	github.com/go-sql-driver/mysql v1.5.0 // indirect
 	github.com/gocql/gocql v1.0.0 // indirect
 	github.com/gogo/googleapis v1.4.1 // indirect
-	github.com/gogo/status v1.1.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
