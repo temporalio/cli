@@ -25,6 +25,7 @@
 package cli
 
 import (
+	"fmt"
 	"github.com/temporalio/tctl-kit/pkg/output"
 	"github.com/urfave/cli/v2"
 )
@@ -215,6 +216,7 @@ var (
 	FlagTLSServerName                 = "tls-server-name"
 	FlagLastMessageID                 = "last-message-id"
 	FlagConcurrency                   = "concurrency"
+	FlagConcurrencyAlias              = []string{"c"}
 	FlagReportRate                    = "report-rate"
 	FlagLowerShardBound               = "lower-shard-bound"
 	FlagUpperShardBound               = "upper-shard-bound"
@@ -248,6 +250,10 @@ var (
 	FlagPauseOnFailure                = "pause-on-failure"
 	FlagPause                         = "pause"
 	FlagUnpause                       = "unpause"
+	FlagFold                          = "fold"
+	FlagNoFold                        = "no-fold"
+	FlagDepth                         = "depth"
+	FlagDepthAlias                    = []string{"d"}
 
 	FlagProtoType  = "type"
 	FlagHexData    = "hex-data"
@@ -442,3 +448,27 @@ var flagsForStackTraceQuery = append(flagsForExecution, []cli.Flag{
 		Usage:   "Optional flag to reject queries based on Workflow state. Valid values are \"not_open\" and \"not_completed_cleanly\"",
 	},
 }...)
+
+var flagsForTraceWorkflow = []cli.Flag{
+	&cli.IntFlag{
+		Name:    FlagDepth,
+		Aliases: FlagDepthAlias,
+		Value:   -1,
+		Usage:   "Number of child workflows to expand, -1 to expand all child workflows",
+	},
+	&cli.IntFlag{
+		Name:    FlagConcurrency,
+		Aliases: FlagConcurrencyAlias,
+		Value:   10,
+		Usage:   "Request concurrency",
+	},
+	&cli.StringFlag{
+		Name:  FlagFold,
+		Usage: fmt.Sprintf("Statuses for which child workflows will be folded in (this will reduce the number of information fetched and displayed). Case-insensitive and ignored if --%s supplied", FlagNoFold),
+		Value: "completed,canceled,terminated",
+	},
+	&cli.BoolFlag{
+		Name:  FlagNoFold,
+		Usage: "Disable folding. All child workflows within the set depth will be fetched and displayed",
+	},
+}

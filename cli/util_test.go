@@ -25,6 +25,7 @@
 package cli
 
 import (
+	enumspb "go.temporal.io/api/enums/v1"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -88,4 +89,63 @@ func (s *utilSuite) TestStringToEnum_MapEmptyEnum() {
 	result, err := stringToEnum("Timer", enumValues)
 	s.Error(err)
 	s.Equal(result, int32(0))
+}
+
+func (s *utilSuite) TestParseFoldStatusList() {
+	tests := map[string]struct {
+		value   string
+		want    []enumspb.WorkflowExecutionStatus
+		wantErr bool
+	}{
+		"default values": {
+			value: "completed,canceled,terminated",
+			want: []enumspb.WorkflowExecutionStatus{
+				enumspb.WORKFLOW_EXECUTION_STATUS_COMPLETED,
+				enumspb.WORKFLOW_EXECUTION_STATUS_CANCELED,
+				enumspb.WORKFLOW_EXECUTION_STATUS_TERMINATED,
+			},
+		},
+		"no values": {
+			value: "",
+			want:  nil,
+		},
+		"invalid": {
+			value:   "Foobar",
+			wantErr: true,
+		},
+		"title case": {
+			value: "Running,Completed,Failed,Canceled,Terminated,ContinuedAsNew,TimedOut",
+			want: []enumspb.WorkflowExecutionStatus{
+				enumspb.WORKFLOW_EXECUTION_STATUS_RUNNING,
+				enumspb.WORKFLOW_EXECUTION_STATUS_COMPLETED,
+				enumspb.WORKFLOW_EXECUTION_STATUS_FAILED,
+				enumspb.WORKFLOW_EXECUTION_STATUS_CANCELED,
+				enumspb.WORKFLOW_EXECUTION_STATUS_TERMINATED,
+				enumspb.WORKFLOW_EXECUTION_STATUS_CONTINUED_AS_NEW,
+				enumspb.WORKFLOW_EXECUTION_STATUS_TIMED_OUT,
+			},
+		},
+		"upper case": {
+			value: "RUNNING,COMPLETED,FAILED,CANCELED,TERMINATED,CONTINUEDASNEW,TIMEDOUT",
+			want: []enumspb.WorkflowExecutionStatus{
+				enumspb.WORKFLOW_EXECUTION_STATUS_RUNNING,
+				enumspb.WORKFLOW_EXECUTION_STATUS_COMPLETED,
+				enumspb.WORKFLOW_EXECUTION_STATUS_FAILED,
+				enumspb.WORKFLOW_EXECUTION_STATUS_CANCELED,
+				enumspb.WORKFLOW_EXECUTION_STATUS_TERMINATED,
+				enumspb.WORKFLOW_EXECUTION_STATUS_CONTINUED_AS_NEW,
+				enumspb.WORKFLOW_EXECUTION_STATUS_TIMED_OUT,
+			},
+		},
+	}
+	for name, tt := range tests {
+		s.Run(name, func() {
+			got, err := parseFoldStatusList(tt.value)
+			if tt.wantErr {
+				s.Error(err)
+			} else {
+				s.Equal(tt.want, got)
+			}
+		})
+	}
 }

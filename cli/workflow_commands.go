@@ -29,6 +29,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"go.temporal.io/api/operatorservice/v1"
+	"go.temporal.io/api/workflowservice/v1"
 	"math/rand"
 	"os"
 	"reflect"
@@ -45,11 +47,9 @@ import (
 	enumspb "go.temporal.io/api/enums/v1"
 	failurepb "go.temporal.io/api/failure/v1"
 	historypb "go.temporal.io/api/history/v1"
-	"go.temporal.io/api/operatorservice/v1"
 	querypb "go.temporal.io/api/query/v1"
 	"go.temporal.io/api/serviceerror"
 	workflowpb "go.temporal.io/api/workflow/v1"
-	"go.temporal.io/api/workflowservice/v1"
 	sdkclient "go.temporal.io/sdk/client"
 	clispb "go.temporal.io/server/api/cli/v1"
 	"go.temporal.io/server/common"
@@ -1518,6 +1518,15 @@ func listArchivedWorkflows(c *cli.Context, sdkClient sdkclient.Client, npt []byt
 	}
 
 	return items, workflows.NextPageToken, nil
+}
+
+func TraceWorkflow(c *cli.Context) error {
+	_, err := parseFoldStatusList(c.String(FlagFold))
+	if err != nil {
+		return err
+	}
+	fmt.Println("Trace hasn't been implemented yet.")
+	return nil
 }
 
 type eventRow struct {
