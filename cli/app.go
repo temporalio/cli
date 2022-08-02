@@ -65,13 +65,6 @@ func NewCliApp() *cli.App {
 			Usage:   "Authorization header to set for gRPC requests",
 			EnvVars: []string{"TEMPORAL_CLI_AUTH"},
 		},
-		&cli.StringFlag{
-			Name:    FlagNamespace,
-			Aliases: FlagNamespaceAlias,
-			Value:   "default",
-			Usage:   "Temporal workflow namespace",
-			EnvVars: []string{"TEMPORAL_CLI_NAMESPACE"},
-		},
 		&cli.IntFlag{
 			Name:    FlagContextTimeout,
 			Aliases: FlagContextTimeoutAlias,
@@ -138,7 +131,7 @@ func NewCliApp() *cli.App {
 			Value: string(color.Auto),
 		},
 	}
-	app.Commands = tctlCommands
+	app.Commands = withFlags(tctlCommands, sharedFlags)
 	app.Before = configureSDK
 	app.After = stopPlugins
 	app.ExitErrHandler = handleError

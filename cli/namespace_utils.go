@@ -165,18 +165,13 @@ var (
 	describeNamespaceFlags = []cli.Flag{
 		&cli.StringFlag{
 			Name:  FlagNamespaceID,
-			Usage: "Namespace Id (required if not specify namespace)",
+			Usage: "Namespace Id",
 		},
 	}
 
 	listNamespacesFlags []cli.Flag
 
 	deleteNamespacesFlags = []cli.Flag{
-		&cli.StringFlag{
-			Name:    FlagName,
-			Aliases: FlagNameAlias,
-			Usage:   "Namespace name to delete",
-		},
 		&cli.BoolFlag{
 			Name:    FlagYes,
 			Aliases: FlagYesAlias,

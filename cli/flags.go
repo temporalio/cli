@@ -26,6 +26,7 @@ package cli
 
 import (
 	"fmt"
+
 	"github.com/temporalio/tctl-kit/pkg/output"
 	"github.com/urfave/cli/v2"
 )
@@ -130,7 +131,6 @@ var (
 	FlagVisibilityArchivalURI         = "visibility-uri"
 	FlagVisibilityArchivalURIAlias    = []string{"vuri"}
 	FlagName                          = "name"
-	FlagNameAlias                     = []string{"n"}
 	FlagOutputFilename                = "output-filename"
 	FlagOutputFilenameAlias           = []string{"of"}
 	FlagOutputFormat                  = "output"

@@ -118,10 +118,6 @@ func newConfigCommands() []*cli.Command {
 					Usage: "Opt-in to a new TCTL UX, values: (current, next)",
 				},
 				&cli.StringFlag{
-					Name:  FlagNamespace,
-					Usage: "Default namespace",
-				},
-				&cli.StringFlag{
 					Name:  FlagAddress,
 					Usage: "host:port for Temporal frontend service",
 					Value: localHostPort,

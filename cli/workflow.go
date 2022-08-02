@@ -114,7 +114,6 @@ func newWorkflowCommands() []*cli.Command {
 			Flags: append(flagsForExecution, []cli.Flag{
 				&cli.StringFlag{
 					Name:     FlagName,
-					Aliases:  FlagNameAlias,
 					Usage:    "Signal Name",
 					Required: true,
 				},

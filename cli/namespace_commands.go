@@ -348,10 +348,10 @@ func ListNamespaces(c *cli.Context) error {
 
 // DeleteNamespace deletes namespace.
 func DeleteNamespace(c *cli.Context) error {
-	nsName := c.String(FlagName)
+	nsName := c.String(FlagNamespace)
 
 	if nsName == "" {
-		return fmt.Errorf("provide %s flag", FlagName)
+		return fmt.Errorf("provide %s flag", FlagNamespace)
 	}
 
 	promptMsg := color.Red(c, "Are you sure you want to delete namespace %s? Type namespace name to confirm:", nsName)

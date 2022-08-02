@@ -71,7 +71,7 @@ func newNamespaceCommands() []*cli.Command {
 		{
 			Name:    "describe",
 			Aliases: []string{"d"},
-			Usage:   "Describe a Namespace",
+			Usage:   "Describe a Namespace by name or Id",
 			Flags:   describeNamespaceFlags,
 			Action: func(c *cli.Context) error {
 				return DescribeNamespace(c)
