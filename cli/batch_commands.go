@@ -140,7 +140,7 @@ func StartBatchJob(c *cli.Context) error {
 	reason := c.String(FlagReason)
 	batchType := c.String(FlagBatchType)
 	if !validateBatchType(batchType) {
-		return fmt.Errorf("unknown batch type, supported types: %s", strings.Join(batcher.AllBatchTypes, ","))
+		return fmt.Errorf("unknown batch type, supported types: %s", strings.Join(allBatchTypes, ","))
 	}
 	operator := getCurrentUserFromEnv()
 	var sigName, sigVal string
@@ -245,7 +245,7 @@ func TerminateBatchJob(c *cli.Context) error {
 }
 
 func validateBatchType(bt string) bool {
-	for _, b := range batcher.AllBatchTypes {
+	for _, b := range allBatchTypes {
 		if b == bt {
 			return true
 		}

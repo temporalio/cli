@@ -149,7 +149,7 @@ func StartBatchJob(c *cli.Context) {
 	reason := getRequiredOption(c, FlagReason)
 	batchType := getRequiredOption(c, FlagBatchType)
 	if !validateBatchType(batchType) {
-		ErrorAndExit("batchType is not valid, supported:"+strings.Join(batcher.AllBatchTypes, ","), nil)
+		ErrorAndExit("batchType is not valid, supported:"+strings.Join(allBatchTypes, ","), nil)
 	}
 	operator := getCurrentUserFromEnv()
 	var sigName, sigVal string
@@ -231,7 +231,7 @@ func StartBatchJob(c *cli.Context) {
 }
 
 func validateBatchType(bt string) bool {
-	for _, b := range batcher.AllBatchTypes {
+	for _, b := range allBatchTypes {
 		if b == bt {
 			return true
 		}

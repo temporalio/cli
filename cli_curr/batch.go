@@ -32,6 +32,8 @@ import (
 	"go.temporal.io/server/service/worker/batcher"
 )
 
+var allBatchTypes = []string{batcher.BatchTypeTerminate, batcher.BatchTypeCancel, batcher.BatchTypeSignal}
+
 func newBatchCommands() []cli.Command {
 	return []cli.Command{
 		{
@@ -94,7 +96,7 @@ func newBatchCommands() []cli.Command {
 				},
 				cli.StringFlag{
 					Name:  FlagBatchTypeWithAlias,
-					Usage: "Types supported: " + strings.Join(batcher.AllBatchTypes, ","),
+					Usage: "Types supported: " + strings.Join(allBatchTypes, ","),
 				},
 				//below are optional
 				cli.StringFlag{

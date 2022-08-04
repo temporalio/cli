@@ -29,10 +29,10 @@ import (
 	"strings"
 
 	"github.com/golang/mock/gomock"
-	"github.com/uber-go/tally/v4"
 	"github.com/urfave/cli"
 	"go.temporal.io/api/workflowservice/v1"
 
+	"go.temporal.io/server/common/clock"
 	"go.temporal.io/server/common/config"
 
 	"go.temporal.io/server/common"
@@ -201,11 +201,8 @@ func initializeAdminNamespaceHandler(
 ) (namespace.Handler, error) {
 
 	configuration := loadConfig(context)
-	metricsClient, err := initializeMetricsClient()
-	if err != nil {
-		return nil, fmt.Errorf("unable to initialize metrics client: %v", err)
-	}
 	logger := log.NewZapLogger(log.BuildZapLogger(configuration.Log))
+	metricsClient := initializeMetricsClient(logger)
 
 	factory := initializePersistenceFactory(
 		&configuration.Persistence,
@@ -225,12 +222,15 @@ func initializeAdminNamespaceHandler(
 	clusterMetadata := initializeClusterMetadata(configuration)
 
 	dynamicConfig := initializeDynamicConfig(configuration, logger)
+
 	return initializeNamespaceHandler(
 		logger,
 		metadataMgr,
 		clusterMetadata,
 		initializeArchivalMetadata(configuration, dynamicConfig),
 		initializeArchivalProvider(configuration, clusterMetadata, metricsClient, logger),
+		nil,
+		nil,
 	), nil
 }
 
@@ -254,6 +254,8 @@ func initializeNamespaceHandler(
 	clusterMetadata cluster.Metadata,
 	archivalMetadata archiver.ArchivalMetadata,
 	archiverProvider provider.ArchiverProvider,
+	enableSchedules dynamicconfig.BoolPropertyFnWithNamespaceFilter,
+	timeSource clock.TimeSource,
 ) namespace.Handler {
 	return namespace.NewHandler(
 		dynamicconfig.GetIntPropertyFilteredByNamespace(namespace.MaxBadBinaries),
@@ -263,6 +265,8 @@ func initializeNamespaceHandler(
 		initializeNamespaceReplicator(logger),
 		archivalMetadata,
 		archiverProvider,
+		enableSchedules,
+		timeSource,
 	)
 }
 
@@ -388,8 +392,10 @@ func initializeDynamicConfig(
 	return dynamicconfig.NewCollection(dynamicConfigClient, logger)
 }
 
-func initializeMetricsClient() (metrics.Client, error) {
-	return metrics.NewClient(&metrics.ClientConfig{}, tally.NoopScope, metrics.Common)
+func initializeMetricsClient(logger log.Logger) metrics.Client {
+	provider := metrics.MetricsHandlerFromConfig(logger, &metrics.Config{})
+
+	return metrics.NewClient(provider, metrics.Common)
 }
 
 func getEnvironment(c *cli.Context) string {
