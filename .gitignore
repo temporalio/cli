@@ -2,6 +2,7 @@
 
 .idea/
 .vscode/settings.json
+.vscode/*.log
 *.code-workspace
 .DS_Store
 
