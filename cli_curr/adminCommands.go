@@ -534,11 +534,11 @@ func AdminListShardTasks(c *cli.Context) {
 		Category: category,
 		TaskRange: &history.TaskRange{
 			InclusiveMinTaskKey: &history.TaskKey{
-				FireTime: timestamp.TimePtr(parseTime(c.String(FlagMinVisibilityTimestamp), time.Time{}, time.Now().UTC())),
+				FireTime: timestamp.TimePtr(parseTime(c.String(FlagMinVisibilityTimestamp), time.Unix(0, 0), time.Now().UTC())),
 				TaskId:   c.Int64(FlagMinTaskID),
 			},
 			ExclusiveMaxTaskKey: &history.TaskKey{
-				FireTime: timestamp.TimePtr(parseTime(c.String(FlagMaxVisibilityTimestamp), time.Time{}, time.Now().UTC())),
+				FireTime: timestamp.TimePtr(parseTime(c.String(FlagMaxVisibilityTimestamp), time.Unix(0, 0), time.Now().UTC())),
 				TaskId:   c.Int64(FlagMaxTaskID),
 			},
 		},
