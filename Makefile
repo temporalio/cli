@@ -49,3 +49,16 @@ test: clean-test-results
 clean-test-results:
 	@rm -f test.log
 	@go clean -testcache
+
+
+##### Checks #####
+
+check: copyright-check
+
+copyright-check:
+	@printf $(COLOR) "Fix license header..."
+	@go run ./cmd/copyright/licensegen.go --verifyOnly
+
+copyright:
+	@printf $(COLOR) "Fix license header..."
+	@go run ./cmd/copyright/licensegen.go
