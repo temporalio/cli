@@ -111,8 +111,7 @@ func newAdminWorkflowCommands() []cli.Command {
 			Name:    "delete",
 			Aliases: []string{"del"},
 			Usage:   "Delete current workflow execution and the mutableState record",
-			Flags: append(
-				getDBAndESFlags(),
+			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  FlagWorkflowIDWithAlias,
 					Usage: "WorkflowId",
@@ -122,9 +121,10 @@ func newAdminWorkflowCommands() []cli.Command {
 					Usage: "RunId",
 				},
 				cli.BoolFlag{
-					Name:  FlagSkipErrorModeWithAlias,
-					Usage: "skip errors",
-				}),
+					Name:  FlagYes,
+					Usage: "Optional flag to disable confirmation prompt",
+				},
+			},
 			Action: func(c *cli.Context) {
 				AdminDeleteWorkflow(c)
 			},
