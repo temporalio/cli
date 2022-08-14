@@ -715,7 +715,7 @@ func prompt(msg string, autoConfirm bool, expectedInputs ...string) bool {
 		return true
 	}
 
-	textLower := strings.ToLower(strings.TrimRight(text, "\n"))
+	textLower := strings.ToLower(strings.TrimSpace(text))
 	for _, expectedInput := range expectedInputs {
 		if expectedInput == textLower {
 			return true

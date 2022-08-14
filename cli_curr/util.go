@@ -814,7 +814,7 @@ func prompt(msg string, autoConfirm bool) {
 	}
 	fmt.Println()
 
-	textLower := strings.ToLower(strings.TrimRight(text, "\n"))
+	textLower := strings.ToLower(strings.TrimSpace(text))
 	if textLower != "y" && textLower != "yes" {
 		os.Exit(1)
 	}
