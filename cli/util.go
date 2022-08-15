@@ -328,7 +328,7 @@ func getCurrentUserFromEnv() string {
 			return os.Getenv(n)
 		}
 	}
-	return "unkown"
+	return "unknown"
 }
 
 func prettyPrintJSONObject(o interface{}) {
@@ -378,12 +378,7 @@ func readFlagOrConfig(c *cli.Context, key string) string {
 		return c.String(key)
 	}
 
-	var cVal string
-	if isRootKey(key) {
-		cVal, _ = tctlConfig.Get(c, key)
-	} else if isEnvKey(key) {
-		cVal, _ = tctlConfig.GetByEnvironment(c, key)
-	}
+	cVal, _ := tctlConfig.GetByCurrentEnvironment(key)
 
 	if cVal != "" {
 		return cVal

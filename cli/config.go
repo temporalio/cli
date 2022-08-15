@@ -24,7 +24,6 @@ package cli
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/urfave/cli/v2"
 
@@ -32,70 +31,12 @@ import (
 	"github.com/temporalio/tctl-kit/pkg/config"
 )
 
-var (
-	rootKeys = []string{
-		config.KeyActive,
-		"version",
-	}
-	envKeys = []string{
-		FlagNamespace,
-		FlagAddress,
-		FlagTLSCertPath,
-		FlagTLSKeyPath,
-		FlagTLSCaPath,
-		FlagTLSDisableHostVerification,
-		FlagTLSServerName,
-	}
-	keys = append(rootKeys, envKeys...)
-)
-
 func newConfigCommands() []*cli.Command {
 	return []*cli.Command{
 		{
 			Name:  "get",
 			Usage: "Print config values",
-			Flags: []cli.Flag{
-				&cli.BoolFlag{
-					Name:  config.KeyActive,
-					Usage: "Print active environment",
-				},
-				&cli.BoolFlag{
-					Name:  config.KeyAlias,
-					Usage: "Print command aliases",
-				},
-				&cli.BoolFlag{
-					Name:  FlagNamespace,
-					Usage: "Print default namespace (for active environment)",
-				},
-				&cli.BoolFlag{
-					Name:  FlagAddress,
-					Usage: "Print Temporal address (for active environment)",
-				},
-				&cli.StringFlag{
-					Name:  FlagTLSCertPath,
-					Value: "",
-					Usage: "Print path to x509 certificate",
-				},
-				&cli.StringFlag{
-					Name:  FlagTLSKeyPath,
-					Value: "",
-					Usage: "Print path to private key",
-				},
-				&cli.StringFlag{
-					Name:  FlagTLSCaPath,
-					Value: "",
-					Usage: "Print path to server CA certificate",
-				},
-				&cli.BoolFlag{
-					Name:  FlagTLSDisableHostVerification,
-					Usage: "Print whether tls host name verification is disabled",
-				},
-				&cli.StringFlag{
-					Name:  FlagTLSServerName,
-					Value: "",
-					Usage: "Print target TLS server name",
-				},
-			},
+			Flags: []cli.Flag{},
 			Action: func(c *cli.Context) error {
 				return GetValue(c)
 			},
@@ -103,50 +44,8 @@ func newConfigCommands() []*cli.Command {
 		{
 			Name:  "set",
 			Usage: "Set config values",
-			Flags: []cli.Flag{
-				&cli.StringFlag{
-					Name:  config.KeyActive,
-					Usage: "Activate environment",
-					Value: "local",
-				},
-				&cli.StringFlag{
-					Name:  config.KeyAlias,
-					Usage: "Create an alias command",
-				},
-				&cli.StringFlag{
-					Name:  "version",
-					Usage: "Opt-in to a new TCTL UX, values: (current, next)",
-				},
-				&cli.StringFlag{
-					Name:  FlagAddress,
-					Usage: "host:port for Temporal frontend service",
-					Value: localHostPort,
-				},
-				&cli.StringFlag{
-					Name:  FlagTLSCertPath,
-					Value: "",
-					Usage: "Path to x509 certificate",
-				},
-				&cli.StringFlag{
-					Name:  FlagTLSKeyPath,
-					Value: "",
-					Usage: "Path to private key",
-				},
-				&cli.StringFlag{
-					Name:  FlagTLSCaPath,
-					Value: "",
-					Usage: "Path to server CA certificate",
-				},
-				&cli.BoolFlag{
-					Name:  FlagTLSDisableHostVerification,
-					Usage: "Disable TLS host name verification (TLS must be enabled)",
-				},
-				&cli.StringFlag{
-					Name:  FlagTLSServerName,
-					Value: "",
-					Usage: "Override for target server name",
-				},
-			},
+			Flags: []cli.Flag{},
+
 			Action: func(c *cli.Context) error {
 				return SetValue(c)
 			},
@@ -155,49 +54,37 @@ func newConfigCommands() []*cli.Command {
 }
 
 func GetValue(c *cli.Context) error {
-	for _, key := range keys {
-		if !c.IsSet(key) {
-			continue
-		}
+	for i := 0; i < c.Args().Len(); i++ {
+		key := c.Args().Get(i)
+		val, err := tctlConfig.Get(key)
 
-		var val interface{}
-		var err error
-		if isRootKey(key) {
-			val, err = tctlConfig.Get(c, key)
-		} else if isEnvKey(key) {
-			val, err = tctlConfig.GetByEnvironment(c, key)
-		} else {
-			return fmt.Errorf("invalid key: %s", key)
-		}
 		if err != nil {
 			return err
 		}
 
 		fmt.Printf("%v: %v\n", color.Magenta(c, "%v", key), val)
 	}
+
 	return nil
 }
 
 func SetValue(c *cli.Context) error {
-	for _, key := range keys {
-		if !c.IsSet(key) {
-			continue
-		}
-
-		val := c.String(key)
-		if isRootKey(key) {
-			if err := tctlConfig.Set(c, key, val); err != nil {
-				return fmt.Errorf("unable to set property %s: %s", key, err)
-			}
-		} else if isEnvKey(key) {
-			if err := tctlConfig.SetByEnvironment(c, key, val); err != nil {
-				return fmt.Errorf("unable to set property %s: %s", key, err)
-			}
-		} else {
-			return fmt.Errorf("unable to set property %s: invalid key", key)
-		}
-		fmt.Printf("%v: %v\n", color.Magenta(c, "%v", key), val)
+	if c.Args().Len() == 0 {
+		return fmt.Errorf("no key specified")
 	}
+
+	key := c.Args().Get(0)
+
+	var val string
+	if c.Args().Len() > 1 {
+		val = c.Args().Get(1)
+	}
+
+	if err := tctlConfig.Set(key, val); err != nil {
+		return fmt.Errorf("unable to set property %s: %s", key, err)
+	}
+
+	fmt.Printf("%v: %v\n", color.Magenta(c, "%v", key), val)
 
 	return nil
 }
@@ -226,34 +113,16 @@ func newAliasCommand() *cli.Command {
 	}
 }
 
-func isRootKey(key string) bool {
-	for _, k := range rootKeys {
-		if strings.Compare(key, k) == 0 {
-			return true
-		}
-	}
-	return false
-}
-
-func isEnvKey(key string) bool {
-	for _, k := range envKeys {
-		if strings.Compare(key, k) == 0 {
-			return true
-		}
-	}
-	return false
-}
-
 func createAlias(c *cli.Context) error {
 	command := c.String("command")
 	alias := c.String("alias")
 
-	fullKey := fmt.Sprintf("%s.%s", config.KeyAlias, command)
+	fullKey := fmt.Sprintf("%s.%s", config.KeyAliases, command)
 
-	if err := tctlConfig.Set(c, fullKey, alias); err != nil {
-		return fmt.Errorf("unable to set property %s: %s", config.KeyAlias, err)
+	if err := tctlConfig.Set(fullKey, alias); err != nil {
+		return fmt.Errorf("unable to set property %s: %s", config.KeyAliases, err)
 	}
 
-	fmt.Printf("%v: %v\n", color.Magenta(c, "%v", config.KeyAlias), alias)
+	fmt.Printf("%v: %v\n", color.Magenta(c, "%v", config.KeyAliases), alias)
 	return nil
 }

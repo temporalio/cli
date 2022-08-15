@@ -70,7 +70,7 @@ func GetValue(c *cli.Context) error {
 		return fmt.Errorf("unable to get property %v. %s", key, err)
 	}
 
-	val, err := tctlConfig.Get(nil, key)
+	val, err := tctlConfig.Get(key)
 	if err != nil {
 		return fmt.Errorf("unable to get property %v. %s", key, err)
 	}
@@ -90,7 +90,7 @@ func SetValue(c *cli.Context) error {
 		return fmt.Errorf("unable to set property %v. %s", key, err)
 	}
 
-	if err := tctlConfig.Set(nil, key, val); err != nil {
+	if err := tctlConfig.Set(key, val); err != nil {
 		return fmt.Errorf("unable to set property %v. %s", key, err)
 	}
 

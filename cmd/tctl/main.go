@@ -35,7 +35,7 @@ import (
 // See https://docs.temporal.io/docs/system-tools/tctl/ for usage
 func main() {
 	tctlConfig, _ := config.NewTctlConfig()
-	version, _ := tctlConfig.Get(nil, "version")
+	version, _ := tctlConfig.Get("version")
 
 	if version == "next" {
 		appNext := cli.NewCliApp()

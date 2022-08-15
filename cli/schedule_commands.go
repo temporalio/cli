@@ -398,7 +398,7 @@ func BackfillSchedule(c *cli.Context) error {
 		ScheduleId: scheduleID,
 		Patch: &schedpb.SchedulePatch{
 			BackfillRequest: []*schedpb.BackfillRequest{
-				&schedpb.BackfillRequest{
+				{
 					StartTime:     timestamp.TimePtr(startTime),
 					EndTime:       timestamp.TimePtr(endTime),
 					OverlapPolicy: overlap,

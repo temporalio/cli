@@ -479,6 +479,8 @@ github.com/temporalio/ringpop-go v0.0.0-20211012191444-6f91b5915e95 h1:8G34e73qt
 github.com/temporalio/ringpop-go v0.0.0-20211012191444-6f91b5915e95/go.mod h1:Ek9J8CAfI1IwVSqHpTOgj7FjzRSJ5SM/ud52eCmkhsw=
 github.com/temporalio/tctl-kit v0.0.0-20220512165751-9c751176dd14 h1:4qVgd+wa3QAJL+CAZbxJUaOaygOeRXgQTNGJ10cUp5E=
 github.com/temporalio/tctl-kit v0.0.0-20220512165751-9c751176dd14/go.mod h1:2Ef/g3r5xjrvCe36AX4SXS0IUhD1plwwexNyVn8TB4I=
+github.com/temporalio/tctl-kit v0.0.0-20220810223931-23f1dcdbad08 h1:PMXGN2MzWUFCdaVm7K38spW7NNKRwUNyPNjb2OBlAu8=
+github.com/temporalio/tctl-kit v0.0.0-20220810223931-23f1dcdbad08/go.mod h1:2Ef/g3r5xjrvCe36AX4SXS0IUhD1plwwexNyVn8TB4I=
 github.com/twmb/murmur3 v1.1.5/go.mod h1:Qq/R7NUyOfr65zD+6Q5IHKsJLwP7exErjN6lyyq3OSQ=
 github.com/twmb/murmur3 v1.1.6 h1:mqrRot1BRxm+Yct+vavLMou2/iJt0tNVTTC0QoIjaZg=
 github.com/twmb/murmur3 v1.1.6/go.mod h1:Qq/R7NUyOfr65zD+6Q5IHKsJLwP7exErjN6lyyq3OSQ=
