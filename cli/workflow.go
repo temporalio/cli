@@ -35,7 +35,7 @@ func newWorkflowCommands() []*cli.Command {
 	return []*cli.Command{
 		{
 			Name:  "start",
-			Usage: "Start a new workflow execution and return its workflowId and runID immediately",
+			Usage: "Start a new Workflow Execution",
 			Flags: append(flagsForStartWorkflow, flags.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
 				return StartWorkflow(c, false)
@@ -43,7 +43,7 @@ func newWorkflowCommands() []*cli.Command {
 		},
 		{
 			Name:  "execute",
-			Usage: "Start a new workflow execution and await its completion, prints progress",
+			Usage: "Start a new Workflow Execution and print progress",
 			Flags: append(flagsForStartWorkflow, flags.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
 				return StartWorkflow(c, true)
@@ -70,7 +70,7 @@ func newWorkflowCommands() []*cli.Command {
 		{
 			Name:    "list",
 			Aliases: []string{"l"},
-			Usage:   "List Workflow Executions based on query",
+			Usage:   "List Workflow Executions based on a Query",
 			Flags:   append(flagsForWorkflowFiltering, flags.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
 				return ListWorkflow(c)
@@ -78,7 +78,7 @@ func newWorkflowCommands() []*cli.Command {
 		},
 		{
 			Name:  "show",
-			Usage: "Show Workflow Execution history",
+			Usage: "Show Event History for a Workflow Execution",
 			Flags: append(append(flagsForExecution, flagsForShowWorkflow...), flags.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
 				return ShowHistory(c)
@@ -86,7 +86,7 @@ func newWorkflowCommands() []*cli.Command {
 		},
 		{
 			Name:  "query",
-			Usage: "Query Workflow Execution",
+			Usage: "Query a Workflow Execution",
 			Flags: append(flagsForStackTraceQuery,
 				&cli.StringFlag{
 					Name:     FlagQueryType,
@@ -101,7 +101,7 @@ func newWorkflowCommands() []*cli.Command {
 		},
 		{
 			Name:  "stack",
-			Usage: "Query Workflow Execution with __stack_trace as query type",
+			Usage: "Query a Workflow Execution with __stack_trace as the query type",
 			Flags: flagsForStackTraceQuery,
 			Action: func(c *cli.Context) error {
 				return QueryWorkflowUsingStackTrace(c)
@@ -278,7 +278,7 @@ func newWorkflowCommands() []*cli.Command {
 		{
 			Name:    "trace",
 			Aliases: []string{"t"},
-			Usage:   "Traces a workflow's execution with progress of its child workflows and activities",
+			Usage:   "Trace progress of a Workflow Execution and its children",
 			Flags:   append(flagsForExecution, flagsForTraceWorkflow...),
 			Action:  TraceWorkflow,
 		},
