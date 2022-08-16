@@ -48,9 +48,9 @@ import (
 	"go.temporal.io/server/common/codec"
 	"go.temporal.io/server/common/payloads"
 
-	"github.com/temporalio/tctl/cli/dataconverter"
-	"github.com/temporalio/tctl/cli/headers"
-	"github.com/temporalio/tctl/cli/stringify"
+	"github.com/temporalio/tctl/v2/cli/dataconverter"
+	"github.com/temporalio/tctl/v2/cli/headers"
+	"github.com/temporalio/tctl/v2/cli/stringify"
 )
 
 // HistoryEventToString convert HistoryEvent to string

@@ -31,7 +31,7 @@ import (
 	"strings"
 
 	"github.com/gorilla/websocket"
-	"github.com/temporalio/tctl/cli/dataconverter"
+	"github.com/temporalio/tctl/v2/cli/dataconverter"
 
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/urfave/cli/v2"

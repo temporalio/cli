@@ -25,16 +25,17 @@
 package cli
 
 import (
-	enumspb "go.temporal.io/api/enums/v1"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	enumspb "go.temporal.io/api/enums/v1"
 )
 
 func (s *utilSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 }
+
 func TestUtilSuite(t *testing.T) {
 	suite.Run(t, new(utilSuite))
 }

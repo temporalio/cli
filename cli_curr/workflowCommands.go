@@ -55,7 +55,7 @@ import (
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/backoff"
 
-	"github.com/temporalio/tctl/cli_curr/stringify"
+	"github.com/temporalio/tctl/v2/cli_curr/stringify"
 	clispb "go.temporal.io/server/api/cli/v1"
 	"go.temporal.io/server/common/clock"
 	"go.temporal.io/server/common/codec"

@@ -47,9 +47,9 @@ import (
 	sdkclient "go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/converter"
 
-	"github.com/temporalio/tctl/cli/headers"
-	"github.com/temporalio/tctl/cli_curr/dataconverter"
-	"github.com/temporalio/tctl/cli_curr/stringify"
+	"github.com/temporalio/tctl/v2/cli/headers"
+	"github.com/temporalio/tctl/v2/cli_curr/dataconverter"
+	"github.com/temporalio/tctl/v2/cli_curr/stringify"
 	"go.temporal.io/server/common/codec"
 	"go.temporal.io/server/common/collection"
 	"go.temporal.io/server/common/payloads"

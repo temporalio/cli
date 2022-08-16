@@ -27,17 +27,17 @@ package main
 import (
 	"os"
 
-	"github.com/temporalio/tctl/cli"
-	"github.com/temporalio/tctl/cli_curr"
-	"github.com/temporalio/tctl/config"
+	"github.com/temporalio/tctl/v2/cli"
+	"github.com/temporalio/tctl/v2/cli_curr"
+	"github.com/temporalio/tctl/v2/config"
 )
 
-// See https://docs.temporal.io/docs/system-tools/tctl/ for usage
+// See https://docs.temporal.io/tctl/ for usage
 func main() {
 	tctlConfig, _ := config.NewTctlConfig()
 	version, _ := tctlConfig.Get("version")
 
-	if version == "next" {
+	if version == "next" || version == "2" {
 		appNext := cli.NewCliApp()
 		_ = appNext.Run(os.Args)
 	} else {

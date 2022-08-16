@@ -35,10 +35,10 @@ import (
 
 	"github.com/temporalio/tctl-kit/pkg/color"
 
-	"github.com/temporalio/tctl/cli/dataconverter"
-	"github.com/temporalio/tctl/cli/headersprovider"
-	"github.com/temporalio/tctl/cli/plugin"
-	"github.com/temporalio/tctl/config"
+	"github.com/temporalio/tctl/v2/cli/dataconverter"
+	"github.com/temporalio/tctl/v2/cli/headersprovider"
+	"github.com/temporalio/tctl/v2/cli/plugin"
+	"github.com/temporalio/tctl/v2/config"
 )
 
 // SetFactory is used to set the ClientFactory global
@@ -51,7 +51,7 @@ func NewCliApp() *cli.App {
 	app := cli.NewApp()
 	app.Name = "tctl"
 	app.Usage = "A command-line tool for Temporal users"
-	app.Version = "1.17.0-alpha.2"
+	app.Version = "2.0.0-beta.1"
 	app.Flags = []cli.Flag{
 		&cli.StringFlag{
 			Name:    FlagAddress,
