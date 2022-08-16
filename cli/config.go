@@ -126,3 +126,30 @@ func createAlias(c *cli.Context) error {
 	fmt.Printf("%v: %v\n", color.Magenta(c, "%v", config.KeyAliases), alias)
 	return nil
 }
+
+func populateFlags(commands []*cli.Command, globalFlags []cli.Flag) {
+	for _, command := range commands {
+		populateFlags(command.Subcommands, globalFlags)
+		command.Before = populateFlagsFunc(command, globalFlags)
+	}
+}
+
+func populateFlagsFunc(command *cli.Command, globalFlags []cli.Flag) func(ctx *cli.Context) error {
+	return func(ctx *cli.Context) error {
+		flags := append(command.Flags, globalFlags...)
+		for _, flag := range flags {
+			name := flag.Names()[0]
+
+			for _, c := range ctx.Lineage() {
+				if !c.IsSet(name) {
+					value, _ := tctlConfig.GetByCurrentEnvironment(name)
+					if value != "" {
+						c.Set(name, value)
+					}
+				}
+			}
+		}
+
+		return nil
+	}
+}

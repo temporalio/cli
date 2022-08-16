@@ -148,6 +148,7 @@ func NewCliApp() *cli.App {
 			promptContinueWithoutConfig()
 		}
 	}
+	populateFlags(app.Commands, app.Flags)
 	useDynamicCommands(app)
 
 	return app

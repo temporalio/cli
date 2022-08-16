@@ -103,7 +103,7 @@ func (b *clientFactory) OperatorClient(c *cli.Context) operatorservice.OperatorS
 
 // SDKClient builds an SDK client.
 func (b *clientFactory) SDKClient(c *cli.Context, namespace string) sdkclient.Client {
-	hostPort := readFlagOrConfig(c, FlagAddress)
+	hostPort := c.String(FlagAddress)
 	if hostPort == "" {
 		hostPort = localHostPort
 	}
@@ -159,7 +159,7 @@ func errorInterceptor() grpc.UnaryClientInterceptor {
 }
 
 func (b *clientFactory) createGRPCConnection(c *cli.Context) (*grpc.ClientConn, error) {
-	hostPort := readFlagOrConfig(c, FlagAddress)
+	hostPort := c.String(FlagAddress)
 	if hostPort == "" {
 		hostPort = localHostPort
 	}
@@ -197,16 +197,16 @@ func (b *clientFactory) createGRPCConnection(c *cli.Context) (*grpc.ClientConn, 
 }
 
 func (b *clientFactory) createTLSConfig(c *cli.Context) (*tls.Config, error) {
-	certPath := readFlagOrConfig(c, FlagTLSCertPath)
-	keyPath := readFlagOrConfig(c, FlagTLSKeyPath)
-	caPath := readFlagOrConfig(c, FlagTLSCaPath)
-	disableHostNameVerificationS := readFlagOrConfig(c, FlagTLSDisableHostVerification)
+	certPath := c.String(FlagTLSCertPath)
+	keyPath := c.String(FlagTLSKeyPath)
+	caPath := c.String(FlagTLSCaPath)
+	disableHostNameVerificationS := c.String(FlagTLSDisableHostVerification)
 	disableHostNameVerification, err := strconv.ParseBool(disableHostNameVerificationS)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read TLS disable host verification flag: %s", err)
 	}
 
-	serverName := readFlagOrConfig(c, FlagTLSServerName)
+	serverName := c.String(FlagTLSServerName)
 
 	var host string
 	var cert *tls.Certificate
@@ -233,7 +233,7 @@ func (b *clientFactory) createTLSConfig(c *cli.Context) (*tls.Config, error) {
 		if serverName != "" {
 			host = serverName
 		} else {
-			hostPort := readFlagOrConfig(c, FlagAddress)
+			hostPort := c.String(FlagAddress)
 			if hostPort == "" {
 				hostPort = localHostPort
 			}
