@@ -32,7 +32,7 @@ import (
 )
 
 func newConfigCommands() []*cli.Command {
-	return []*cli.Command{
+	return append([]*cli.Command{
 		{
 			Name:  "get",
 			Usage: "Print config values",
@@ -50,7 +50,7 @@ func newConfigCommands() []*cli.Command {
 				return SetValue(c)
 			},
 		},
-	}
+	}, newEnvCommands()...)
 }
 
 func GetValue(c *cli.Context) error {

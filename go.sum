@@ -477,10 +477,8 @@ github.com/subosito/gotenv v1.2.0 h1:Slr1R9HxAlEKefgq5jn9U+DnETlIUa6HfgEzj0g5d7s
 github.com/subosito/gotenv v1.2.0/go.mod h1:N0PQaV/YGNqwC0u51sEeR/aUtSLEXKX9iv69rRypqCw=
 github.com/temporalio/ringpop-go v0.0.0-20211012191444-6f91b5915e95 h1:8G34e73qtrkG9sDFcSC8uot0np3e6BLoMZxleTcpUiA=
 github.com/temporalio/ringpop-go v0.0.0-20211012191444-6f91b5915e95/go.mod h1:Ek9J8CAfI1IwVSqHpTOgj7FjzRSJ5SM/ud52eCmkhsw=
-github.com/temporalio/tctl-kit v0.0.0-20220512165751-9c751176dd14 h1:4qVgd+wa3QAJL+CAZbxJUaOaygOeRXgQTNGJ10cUp5E=
-github.com/temporalio/tctl-kit v0.0.0-20220512165751-9c751176dd14/go.mod h1:2Ef/g3r5xjrvCe36AX4SXS0IUhD1plwwexNyVn8TB4I=
-github.com/temporalio/tctl-kit v0.0.0-20220810223931-23f1dcdbad08 h1:PMXGN2MzWUFCdaVm7K38spW7NNKRwUNyPNjb2OBlAu8=
-github.com/temporalio/tctl-kit v0.0.0-20220810223931-23f1dcdbad08/go.mod h1:2Ef/g3r5xjrvCe36AX4SXS0IUhD1plwwexNyVn8TB4I=
+github.com/temporalio/tctl-kit v0.0.0-20220820043607-ce6822af0b23 h1:plZ5yxhI+6C/5iwuSZMc5/gifnflZ5dZBnNoHo5I8fQ=
+github.com/temporalio/tctl-kit v0.0.0-20220820043607-ce6822af0b23/go.mod h1:Fr5JT1TBMoUzgaFaAgMZLCC5Ig4S5L1lcycmCNmpUQk=
 github.com/twmb/murmur3 v1.1.5/go.mod h1:Qq/R7NUyOfr65zD+6Q5IHKsJLwP7exErjN6lyyq3OSQ=
 github.com/twmb/murmur3 v1.1.6 h1:mqrRot1BRxm+Yct+vavLMou2/iJt0tNVTTC0QoIjaZg=
 github.com/twmb/murmur3 v1.1.6/go.mod h1:Qq/R7NUyOfr65zD+6Q5IHKsJLwP7exErjN6lyyq3OSQ=

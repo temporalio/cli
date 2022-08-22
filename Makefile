@@ -50,7 +50,6 @@ clean-test-results:
 	@rm -f test.log
 	@go clean -testcache
 
-
 ##### Checks #####
 
 check: copyright-check
