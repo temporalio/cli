@@ -68,35 +68,32 @@ func newEnvCommands() []*cli.Command {
 				return UseEnv(c)
 			},
 		},
+		{
+			Name:      "remove-env",
+			Usage:     "Remove environment",
+			Flags:     []cli.Flag{},
+			ArgsUsage: " [ENV NAME]",
+			Action: func(c *cli.Context) error {
+				return RemoveEnv(c)
+			},
+		},
 	}
 }
 
 func CurrentEnv(c *cli.Context) error {
-	envName, err := tctlConfig.Get(config.KeyCurrentEnvironment)
-	if err != nil {
-		return err
-	}
-
-	fmt.Println(envName)
+	fmt.Print(tctlConfig.CurrentEnv)
 
 	return nil
 }
 
 func ShowEnv(c *cli.Context) error {
 	envName := c.Args().Get(0)
-	var err error
 
 	if envName == "" {
-		envName, err = tctlConfig.Get(config.KeyCurrentEnvironment)
-		if err != nil {
-			return err
-		}
+		envName = tctlConfig.CurrentEnv
 	}
 
-	env, err := tctlConfig.GetEnv(envName)
-	if err != nil {
-		return err
-	}
+	env := tctlConfig.Env(envName)
 
 	type flag struct {
 		Flag  string
@@ -121,11 +118,27 @@ func UseEnv(c *cli.Context) error {
 
 	envName := c.Args().Get(0)
 
-	if err := tctlConfig.Set(config.KeyCurrentEnvironment, envName); err != nil {
+	if err := tctlConfig.SetCurrentEnv(envName); err != nil {
 		return fmt.Errorf("unable to set property %s: %s", config.KeyCurrentEnvironment, err)
 	}
 
 	fmt.Printf("%v: %v\n", color.Magenta(c, "%v", config.KeyCurrentEnvironment), envName)
+
+	return nil
+}
+
+func RemoveEnv(c *cli.Context) error {
+	if c.Args().Len() == 0 {
+		return fmt.Errorf("env name is required")
+	}
+
+	envName := c.Args().Get(0)
+
+	if err := tctlConfig.RemoveEnv(envName); err != nil {
+		return fmt.Errorf("unable to remove env %s: %s", envName, err)
+	}
+
+	fmt.Printf("Removed env %v\n", color.Magenta(c, "%v", envName))
 
 	return nil
 }

@@ -24,12 +24,6 @@
 
 package cli
 
-import (
-	"log"
-	"os"
-	"path/filepath"
-)
-
 const (
 	testEnvName = "tctl-test-env"
 )
@@ -57,31 +51,11 @@ func ExampleShowEnv() {
 	tctl := NewCliApp()
 
 	tctl.Run([]string{"", "config", "use-env", testEnvName})
-	tctl.Run([]string{"", "config", "set", "env." + testEnvName + ".namespace", "tctl-test-namespace"})
+	tctl.Run([]string{"", "config", "set", "namespace", "tctl-test-namespace"})
 
 	tctl.Run([]string{"", "config", "show-env", testEnvName})
 	// Output:
 	// current-env: tctl-test-env
-	// env.tctl-test-env.namespace: tctl-test-namespace
+	// Set 'namespace' to: tctl-test-namespace
 	//   namespace  tctl-test-namespace
-}
-
-func readConfig() string {
-	path := getConfigPath()
-	content, err := os.ReadFile(path)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return string(content)
-}
-
-func getConfigPath() string {
-	dpath, err := os.UserHomeDir()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	path := filepath.Join(dpath, ".config", "temporalio", "tctl.yaml")
-
-	return path
 }

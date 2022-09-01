@@ -54,10 +54,7 @@ func useDynamicCommands(app *cli.App) {
 
 // looks up an alias command in tctl config and returns its value
 func lookupCmdInAliasCommands(ctx *cli.Context, cmd string) (string, error) {
-	aliases, err := tctlConfig.GetAliases()
-	if err != nil {
-		return "", err
-	}
+	aliases := tctlConfig.Aliases
 
 	for aliasCmd, aliasVal := range aliases {
 		if cmd == aliasCmd {

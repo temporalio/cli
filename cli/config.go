@@ -23,108 +23,114 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/urfave/cli/v2"
 
-	"github.com/temporalio/tctl-kit/pkg/color"
 	"github.com/temporalio/tctl-kit/pkg/config"
 )
 
 func newConfigCommands() []*cli.Command {
 	return append([]*cli.Command{
 		{
-			Name:  "get",
-			Usage: "Print config values",
-			Flags: []cli.Flag{},
+			Name:      "get",
+			Usage:     "Print the value of an env property",
+			Flags:     []cli.Flag{},
+			ArgsUsage: "env.[ENV NAME].[PROPERTY NAME] or [PROPERTY NAME] for current env",
 			Action: func(c *cli.Context) error {
-				return GetValue(c)
+				return EnvProperty(c)
 			},
 		},
 		{
-			Name:  "set",
-			Usage: "Set config values",
-			Flags: []cli.Flag{},
-
+			Name:      "set",
+			Usage:     "Set the value of an env property",
+			Flags:     []cli.Flag{},
+			ArgsUsage: `env.[ENV NAME].[PROPERTY NAME] [VALUE] or [PROPERTY NAME] [VALUE] for current env`,
 			Action: func(c *cli.Context) error {
-				return SetValue(c)
+				return SetEnvProperty(c)
 			},
 		},
 	}, newEnvCommands()...)
 }
 
-func GetValue(c *cli.Context) error {
-	for i := 0; i < c.Args().Len(); i++ {
-		key := c.Args().Get(i)
-		val, err := tctlConfig.Get(key)
+func EnvProperty(c *cli.Context) error {
+	if c.NArg() != 1 {
+		return errors.New("invalid number of args, expected 1: env property name")
+	}
 
-		if err != nil {
-			return err
+	fullKey := c.Args().Get(0)
+
+	if err := validateEnvKey(fullKey); err != nil {
+		return err
+	}
+
+	env, key := envKey(fullKey)
+
+	val := tctlConfig.EnvProperty(env, key)
+	fmt.Println(val)
+
+	return nil
+}
+
+func SetEnvProperty(c *cli.Context) error {
+	if c.NArg() != 2 {
+		return errors.New("invalid number of args, expected 2: property and value")
+	}
+
+	fullKey := c.Args().Get(0)
+	val := c.Args().Get(1)
+
+	if fullKey == "version" {
+		if err := tctlConfig.SetVersion(val); err != nil {
+			return fmt.Errorf("unable to set version: %s", err)
 		}
 
-		fmt.Printf("%v: %v\n", color.Magenta(c, "%v", key), val)
+		return nil
+	}
+
+	if err := validateEnvKey(fullKey); err != nil {
+		return err
+	}
+
+	env, key := envKey(fullKey)
+
+	if err := tctlConfig.SetEnvProperty(env, key, val); err != nil {
+		return fmt.Errorf("unable to set env property %v. %s", key, err)
+	}
+
+	fmt.Printf("Set '%v' to: %v\n", fullKey, val)
+	return nil
+}
+
+func validateEnvKey(fullKey string) error {
+	keys := strings.Split(fullKey, ".")
+
+	if len(keys) != 1 && len(keys) != 3 {
+		return fmt.Errorf("invalid env key %v. Env key must be in a format <env-name> or env.<env name>.<property-name>", fullKey)
+	}
+
+	if len(keys) == 3 && keys[0] != config.KeyEnvironment {
+		return fmt.Errorf("invalid env key %v. Env key must be in a format <env-name> or env.<env name>.<property-name>", fullKey)
 	}
 
 	return nil
 }
 
-func SetValue(c *cli.Context) error {
-	if c.Args().Len() == 0 {
-		return fmt.Errorf("no key specified")
+func envKey(fullKey string) (string, string) {
+	keys := strings.Split(fullKey, ".")
+
+	var env, key string
+	if len(keys) == 1 {
+		env = tctlConfig.CurrentEnv
+		key = keys[0]
+	} else if len(keys) == 3 {
+		env = keys[1]
+		key = keys[2]
 	}
 
-	key := c.Args().Get(0)
-
-	var val string
-	if c.Args().Len() > 1 {
-		val = c.Args().Get(1)
-	}
-
-	if err := tctlConfig.Set(key, val); err != nil {
-		return fmt.Errorf("unable to set property %s: %s", key, err)
-	}
-
-	fmt.Printf("%v: %v\n", color.Magenta(c, "%v", key), val)
-
-	return nil
-}
-
-func newAliasCommand() *cli.Command {
-	return &cli.Command{
-		Name:  "alias",
-		Usage: "Create an alias for command",
-		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:     "command",
-				Usage:    "New command name",
-				Required: true,
-				Value:    "mycommand",
-			},
-			&cli.StringFlag{
-				Name:     "alias",
-				Usage:    "Alias for command",
-				Required: true,
-				Value:    "workflow list --output json",
-			},
-		},
-		Action: func(c *cli.Context) error {
-			return createAlias(c)
-		},
-	}
-}
-
-func createAlias(c *cli.Context) error {
-	command := c.String("command")
-	alias := c.String("alias")
-
-	fullKey := fmt.Sprintf("%s.%s", config.KeyAliases, command)
-
-	if err := tctlConfig.Set(fullKey, alias); err != nil {
-		return fmt.Errorf("unable to set property %s: %s", config.KeyAliases, err)
-	}
-
-	fmt.Printf("%v: %v\n", color.Magenta(c, "%v", config.KeyAliases), alias)
-	return nil
+	return env, key
 }
 
 func populateFlags(commands []*cli.Command, globalFlags []cli.Flag) {
@@ -142,7 +148,7 @@ func populateFlagsFunc(command *cli.Command, globalFlags []cli.Flag) func(ctx *c
 
 			for _, c := range ctx.Lineage() {
 				if !c.IsSet(name) {
-					value, _ := tctlConfig.GetByCurrentEnvironment(name)
+					value := tctlConfig.EnvProperty(tctlConfig.CurrentEnv, name)
 					if value != "" {
 						c.Set(name, value)
 					}

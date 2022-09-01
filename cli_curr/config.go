@@ -27,7 +27,6 @@ package cli_curr
 import (
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/urfave/cli"
 )
@@ -35,17 +34,19 @@ import (
 func newConfigCommands() []cli.Command {
 	return []cli.Command{
 		{
-			Name:  "get",
-			Usage: "get property",
-			Flags: []cli.Flag{},
+			Name:      "get",
+			Usage:     "get config property",
+			Flags:     []cli.Flag{},
+			ArgsUsage: "version",
 			Action: func(c *cli.Context) error {
 				return GetValue(c)
 			},
 		},
 		{
-			Name:  "set",
-			Usage: "set property",
-			Flags: []cli.Flag{},
+			Name:      "set",
+			Usage:     "set config property",
+			Flags:     []cli.Flag{},
+			ArgsUsage: "version 2",
 			Action: func(c *cli.Context) error {
 				return SetValue(c)
 			},
@@ -53,28 +54,19 @@ func newConfigCommands() []cli.Command {
 	}
 }
 
-var (
-	validKeys = []string{
-		"version",
-	}
-)
-
 func GetValue(c *cli.Context) error {
 	if c.NArg() != 1 {
-		return errors.New("invalid number of args, expected 1: property name")
+		return errors.New("invalid number of args, expected 1: env property name")
 	}
 
-	key := c.Args().Get(0)
+	fullKey := c.Args().Get(0)
 
-	if err := validateKey(key); err != nil {
-		return fmt.Errorf("unable to get property %v. %s", key, err)
+	if fullKey != "version" {
+		return errors.New("only the version property is supported")
 	}
 
-	val, err := tctlConfig.Get(key)
-	if err != nil {
-		return fmt.Errorf("unable to get property %v. %s", key, err)
-	}
-	fmt.Printf("%v: %v\n", key, val)
+	fmt.Println(tctlConfig.Version)
+
 	return nil
 }
 
@@ -83,31 +75,16 @@ func SetValue(c *cli.Context) error {
 		return errors.New("invalid number of args, expected 2: property and value")
 	}
 
-	key := c.Args().Get(0)
+	fullKey := c.Args().Get(0)
 	val := c.Args().Get(1)
 
-	if err := validateKey(key); err != nil {
-		return fmt.Errorf("unable to set property %v. %s", key, err)
+	if fullKey != "version" {
+		return errors.New("only the version property is supported")
 	}
 
-	if err := tctlConfig.Set(key, val); err != nil {
-		return fmt.Errorf("unable to set property %v. %s", key, err)
+	if err := tctlConfig.SetVersion(val); err != nil {
+		return fmt.Errorf("unable to set version: %s", err)
 	}
 
-	fmt.Printf("%v: %v\n", key, val)
 	return nil
-}
-
-func validateKey(key string) error {
-	// in composite keys such as alias.mycommand, the first part before dot is configuration property name
-	// second part is custom value
-	key = strings.Split(key, ".")[0]
-
-	for _, k := range validKeys {
-		if strings.Compare(key, k) == 0 {
-			return nil
-		}
-	}
-
-	return fmt.Errorf("unknown key %v", key)
 }

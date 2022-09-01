@@ -81,7 +81,11 @@ var tctlCommands = []*cli.Command{
 		Usage:       "Configure tctl",
 		Subcommands: newConfigCommands(),
 	},
-	newAliasCommand(),
+	{
+		Name:        "alias",
+		Usage:       "Create an alias for a command",
+		Subcommands: newAliasCommand(),
+	},
 }
 
 var sharedFlags = []cli.Flag{

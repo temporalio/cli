@@ -1,6 +1,6 @@
 // The MIT License
 //
-// Copyright (c) 2020 Temporal Technologies Inc.  All rights reserved.
+// Copyright (c) 2022 Temporal Technologies Inc.  All rights reserved.
 //
 // Copyright (c) 2020 Uber Technologies, Inc.
 //
@@ -22,26 +22,42 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package main
+package cli
 
 import (
-	"os"
+	"errors"
+	"fmt"
 
-	"github.com/temporalio/tctl/v2/cli"
-	"github.com/temporalio/tctl/v2/cli_curr"
-	"github.com/temporalio/tctl/v2/config"
+	"github.com/urfave/cli/v2"
+
+	"github.com/temporalio/tctl-kit/pkg/color"
+	"github.com/temporalio/tctl-kit/pkg/config"
 )
 
-// See https://docs.temporal.io/tctl/ for usage
-func main() {
-	tctlConfig, _ := config.NewTctlConfig()
-	version := tctlConfig.Version
+func newAliasCommand() []*cli.Command {
+	return []*cli.Command{
+		{
+			Name:  "set",
+			Usage: "Create an alias for command",
+			Flags: []cli.Flag{},
+			Action: func(c *cli.Context) error {
+				return SetAlias(c)
+			},
+		}}
+}
 
-	if version == "next" || version == "2" {
-		appNext := cli.NewCliApp()
-		_ = appNext.Run(os.Args)
-	} else {
-		app := cli_curr.NewCliApp()
-		_ = app.Run(os.Args)
+func SetAlias(c *cli.Context) error {
+	if c.NArg() != 2 {
+		return errors.New("invalid number of args, expected 2: property and value")
 	}
+
+	name := c.Args().Get(0)
+	value := c.Args().Get(1)
+
+	if err := tctlConfig.SetAlias(name, value); err != nil {
+		return fmt.Errorf("unable to set property %s: %s", config.KeyAliases, err)
+	}
+
+	fmt.Printf("%v: %v\n", color.Magenta(c, "%v", config.KeyAliases), value)
+	return nil
 }
