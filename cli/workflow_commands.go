@@ -40,6 +40,7 @@ import (
 	"github.com/pborman/uuid"
 	"github.com/temporalio/tctl-kit/pkg/color"
 	"github.com/temporalio/tctl-kit/pkg/output"
+	"github.com/temporalio/tctl-kit/pkg/pager"
 	"github.com/urfave/cli/v2"
 	commonpb "go.temporal.io/api/common/v1"
 	enumspb "go.temporal.io/api/enums/v1"
@@ -160,10 +161,10 @@ func StartWorkflow(c *cli.Context, printProgress bool) error {
 	}
 	fmt.Println(color.Magenta(c, "Running execution:"))
 	opts := &output.PrintOptions{
-		Fields:      []string{"WorkflowId", "RunId", "Type", "Namespace", "TaskQueue", "Args"},
-		IgnoreFlags: true,
-		Output:      output.Card,
-		Separator:   "",
+		Fields:       []string{"WorkflowId", "RunId", "Type", "Namespace", "TaskQueue", "Args"},
+		ForceFields:  true,
+		OutputFormat: output.Card,
+		Separator:    "",
 	}
 	output.PrintItems(c, data, opts)
 
@@ -294,10 +295,10 @@ func (h *historyIterator) Next() (interface{}, error) {
 
 // helper function to print workflow progress with time refresh every second
 func printWorkflowProgress(c *cli.Context, wid, rid string, watch bool) error {
-	outputFormat := output.Table
+	isJSON := false
 	if c.IsSet(output.FlagOutput) {
 		outputFlag := c.String(output.FlagOutput)
-		outputFormat = output.OutputOption(outputFlag)
+		isJSON = outputFlag == string(output.JSON)
 	}
 
 	var maxFieldLength = c.Int(FlagMaxFieldLength)
@@ -313,21 +314,22 @@ func printWorkflowProgress(c *cli.Context, wid, rid string, watch bool) error {
 	timeElapse := 1
 	isTimeElapseExist := false
 	ticker := time.NewTicker(time.Second).C
-	opts := &output.PrintOptions{
-		Fields:     []string{"ID", "Time", "Type"},
-		FieldsLong: []string{"Details"},
-	}
-	if outputFormat != output.JSON {
+	if !isJSON {
 		fmt.Println(color.Magenta(c, "Progress:"))
 	}
 
 	var lastEvent historypb.HistoryEvent // used for print result of this run
 
+	po := &output.PrintOptions{
+		Fields:     []string{"ID", "Time", "Type"},
+		FieldsLong: []string{"Details"},
+		Pager:      pager.Less,
+	}
 	errChan := make(chan error)
 	go func() {
 		hIter := sdkClient.GetWorkflowHistory(tcCtx, wid, rid, watch, enumspb.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
 		iter := &historyIterator{iter: hIter, maxFieldLength: maxFieldLength, lastEvent: &lastEvent}
-		err = output.Pager(c, iter, opts)
+		err = output.PrintIterator(c, iter, po)
 		if err != nil {
 			errChan <- err
 			return
@@ -343,7 +345,7 @@ func printWorkflowProgress(c *cli.Context, wid, rid string, watch bool) error {
 				continue
 			}
 
-			if outputFormat != output.JSON {
+			if !isJSON {
 				if isTimeElapseExist {
 					removePrevious2LinesFromTerminal()
 				}
@@ -353,7 +355,7 @@ func printWorkflowProgress(c *cli.Context, wid, rid string, watch bool) error {
 			isTimeElapseExist = true
 			timeElapse++
 		case <-doneChan: // print result of this run
-			if outputFormat != output.JSON {
+			if !isJSON {
 				fmt.Println(color.Magenta(c, "\nResult:"))
 				if watch {
 					fmt.Printf("  Run Time: %d seconds\n", timeElapse)
@@ -586,8 +588,9 @@ func ListWorkflow(c *cli.Context) error {
 	opts := &output.PrintOptions{
 		Fields:     []string{"Status", "Execution.WorkflowId", "Type.Name", "StartTime"},
 		FieldsLong: []string{"CloseTime", "Execution.RunId", "TaskQueue"},
+		Pager:      pager.Less,
 	}
-	return output.Pager(c, iter, opts)
+	return output.PrintIterator(c, iter, opts)
 }
 
 // ScanAllWorkflow list all workflow executions using Scan API.
@@ -640,9 +643,10 @@ func ScanAllWorkflow(c *cli.Context) error {
 	opts := &output.PrintOptions{
 		Fields:     []string{"Execution.WorkflowId", "Execution.RunId", "StartTime"},
 		FieldsLong: []string{"Type.Name", "TaskQueue", "ExecutionTime", "CloseTime"},
+		Pager:      pager.Less,
 	}
 
-	return output.Pager(c, iter, opts)
+	return output.PrintIterator(c, iter, opts)
 }
 
 // CountWorkflow count number of workflows

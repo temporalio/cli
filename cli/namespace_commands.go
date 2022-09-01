@@ -378,13 +378,12 @@ func DeleteNamespace(c *cli.Context) error {
 }
 
 func printNamespace(c *cli.Context, resp *workflowservice.DescribeNamespaceResponse) {
-	opts := &output.PrintOptions{
-		Fields:     []string{"NamespaceInfo.Name", "NamespaceInfo.Id", "NamespaceInfo.Description", "NamespaceInfo.OwnerEmail", "NamespaceInfo.State", "Config.WorkflowExecutionRetentionTtl", "ReplicationConfig.ActiveClusterName", "ReplicationConfig.Clusters", "Config.HistoryArchivalState", "Config.VisibilityArchivalState", "IsGlobalNamespace"},
-		FieldsLong: []string{"Config.HistoryArchivalUri", "Config.VisibilityArchivalUri"},
-		Output:     output.Card,
-		NoPager:    true,
+	po := &output.PrintOptions{
+		Fields:       []string{"NamespaceInfo.Name", "NamespaceInfo.Id", "NamespaceInfo.Description", "NamespaceInfo.OwnerEmail", "NamespaceInfo.State", "Config.WorkflowExecutionRetentionTtl", "ReplicationConfig.ActiveClusterName", "ReplicationConfig.Clusters", "Config.HistoryArchivalState", "Config.VisibilityArchivalState", "IsGlobalNamespace"},
+		FieldsLong:   []string{"Config.HistoryArchivalUri", "Config.VisibilityArchivalUri"},
+		OutputFormat: output.Card,
 	}
-	output.PrintItems(c, []interface{}{resp}, opts)
+	output.PrintItems(c, []interface{}{resp}, po)
 
 	type badBinary struct {
 		Checksum   string
@@ -405,12 +404,11 @@ func printNamespace(c *cli.Context, resp *workflowservice.DescribeNamespaceRespo
 		}
 	}
 
-	bOpts := &output.PrintOptions{
+	bpo := &output.PrintOptions{
 		Fields:      []string{"Checksum", "Operator", "CreateTime", "Reason"},
-		IgnoreFlags: true,
-		NoPager:     true,
+		ForceFields: true,
 	}
-	output.PrintItems(c, badBinaries, bOpts)
+	output.PrintItems(c, badBinaries, bpo)
 }
 
 func getAllNamespaces(c *cli.Context, tClient workflowservice.WorkflowServiceClient) ([]*workflowservice.DescribeNamespaceResponse, error) {

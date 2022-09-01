@@ -92,8 +92,7 @@ func ListSearchAttributes(c *cli.Context) error {
 	}
 
 	opts := &output.PrintOptions{
-		Fields:  []string{"Name", "Type"},
-		NoPager: true,
+		Fields: []string{"Name", "Type"},
 	}
 	output.PrintItems(c, items, opts)
 

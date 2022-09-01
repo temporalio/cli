@@ -105,7 +105,7 @@ func ShowEnv(c *cli.Context) error {
 		flags = append(flags, flag{Flag: k, Value: v})
 	}
 
-	po := &output.PrintOptions{Output: output.Table}
+	po := &output.PrintOptions{OutputFormat: output.Table}
 	output.PrintItems(c, flags, po)
 
 	return nil

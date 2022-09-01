@@ -43,6 +43,7 @@ import (
 	"github.com/pborman/uuid"
 	"github.com/temporalio/tctl-kit/pkg/color"
 	"github.com/temporalio/tctl-kit/pkg/output"
+	"github.com/temporalio/tctl-kit/pkg/pager"
 	"github.com/urfave/cli/v2"
 	"go.temporal.io/api/workflowservice/v1"
 )
@@ -627,11 +628,12 @@ func ListSchedules(c *cli.Context) error {
 	opts := &output.PrintOptions{
 		Fields:     []string{"ScheduleId", "StartWorkflow.WorkflowType", "State.Paused", "State.Notes", "Info.NextRunTime", "Info.LastRunTime"},
 		FieldsLong: []string{"Info.LastRunActualTime", "Info.LastRunExecution", "Specification"},
+		Pager:      pager.Less,
 	}
 	if missingExtendedInfo {
 		fmt.Println(color.Yellow(c, "Note: Extended schedule information is not available without Elasticsearch"))
 		opts.Fields = []string{"ScheduleId"}
 		opts.FieldsLong = nil
 	}
-	return output.Pager(c, iter, opts)
+	return output.PrintIterator(c, iter, opts)
 }
