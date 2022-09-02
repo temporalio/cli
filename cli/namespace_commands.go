@@ -346,14 +346,14 @@ func ListNamespaces(c *cli.Context) error {
 
 // DeleteNamespace deletes namespace.
 func DeleteNamespace(c *cli.Context) error {
-	nsName := c.String(FlagNamespace)
+	ns := c.String(FlagNamespace)
 
-	if nsName == "" {
+	if ns == "" {
 		return fmt.Errorf("provide %s flag", FlagNamespace)
 	}
 
-	promptMsg := color.Red(c, "Are you sure you want to delete namespace %s? Type namespace name to confirm:", nsName)
-	if !prompt(promptMsg, c.Bool(FlagYes), nsName) {
+	promptMsg := color.Red(c, "Are you sure you want to delete namespace %s? Type namespace name to confirm:", ns)
+	if !prompt(promptMsg, c.Bool(FlagYes), ns) {
 		return nil
 	}
 
@@ -361,7 +361,7 @@ func DeleteNamespace(c *cli.Context) error {
 	ctx, cancel := newContext(c)
 	defer cancel()
 	_, err := client.DeleteNamespace(ctx, &operatorservice.DeleteNamespaceRequest{
-		Namespace: nsName,
+		Namespace: ns,
 	})
 	if err != nil {
 		switch err.(type) {
@@ -373,7 +373,7 @@ func DeleteNamespace(c *cli.Context) error {
 		}
 	}
 
-	fmt.Println(color.Green(c, "Namespace %s has been deleted", nsName))
+	fmt.Println(color.Green(c, "Namespace %s has been deleted", ns))
 	return nil
 }
 

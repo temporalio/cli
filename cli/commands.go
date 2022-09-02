@@ -87,13 +87,3 @@ var tctlCommands = []*cli.Command{
 		Subcommands: newAliasCommand(),
 	},
 }
-
-var sharedFlags = []cli.Flag{
-	&cli.StringFlag{
-		Name:    FlagNamespace,
-		Aliases: FlagNamespaceAlias,
-		Value:   "default",
-		Usage:   "Namespace to operate on",
-		EnvVars: []string{"TEMPORAL_CLI_NAMESPACE"},
-	},
-}

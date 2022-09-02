@@ -60,17 +60,17 @@ func NewCliApp() *cli.App {
 			EnvVars: []string{"TEMPORAL_CLI_ADDRESS"},
 		},
 		&cli.StringFlag{
+			Name:    FlagNamespace,
+			Aliases: FlagNamespaceAlias,
+			Value:   "default",
+			Usage:   "Temporal workflow namespace",
+			EnvVars: []string{"TEMPORAL_CLI_NAMESPACE"},
+		},
+		&cli.StringFlag{
 			Name:    FlagAuth,
 			Value:   "",
 			Usage:   "Authorization header to set for gRPC requests",
 			EnvVars: []string{"TEMPORAL_CLI_AUTH"},
-		},
-		&cli.IntFlag{
-			Name:    FlagContextTimeout,
-			Aliases: FlagContextTimeoutAlias,
-			Value:   defaultContextTimeoutInSeconds,
-			Usage:   "Optional timeout for context of RPC call in seconds",
-			EnvVars: []string{"TEMPORAL_CONTEXT_TIMEOUT"},
 		},
 		&cli.StringFlag{
 			Name:    FlagTLSCertPath,
@@ -100,6 +100,13 @@ func NewCliApp() *cli.App {
 			Value:   "",
 			Usage:   "Override for target server name",
 			EnvVars: []string{"TEMPORAL_CLI_TLS_SERVER_NAME"},
+		},
+		&cli.IntFlag{
+			Name:    FlagContextTimeout,
+			Aliases: FlagContextTimeoutAlias,
+			Value:   defaultContextTimeoutInSeconds,
+			Usage:   "Optional timeout for context of RPC call in seconds",
+			EnvVars: []string{"TEMPORAL_CONTEXT_TIMEOUT"},
 		},
 		&cli.StringFlag{
 			Name:    FlagHeadersProviderPlugin,
@@ -131,7 +138,7 @@ func NewCliApp() *cli.App {
 			Value: string(color.Auto),
 		},
 	}
-	app.Commands = withFlags(tctlCommands, sharedFlags)
+	app.Commands = tctlCommands
 	app.Before = configureSDK
 	app.After = stopPlugins
 	app.ExitErrHandler = handleError

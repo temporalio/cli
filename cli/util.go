@@ -368,7 +368,7 @@ func getSDKClient(c *cli.Context) (sdkclient.Client, error) {
 func getRequiredGlobalOption(c *cli.Context, optionName string) (string, error) {
 	value := c.String(optionName)
 	if len(value) == 0 {
-		return "", fmt.Errorf("option is required: %s", optionName)
+		return "", fmt.Errorf("global option is required: %s", optionName)
 	}
 	return value, nil
 }
@@ -774,39 +774,4 @@ func parseFoldStatusList(flagValue string) ([]enumspb.WorkflowExecutionStatus, e
 		}
 	}
 	return statusList, nil
-}
-
-func withFlags(commands []*cli.Command, newFlags []cli.Flag) []*cli.Command {
-	for _, c := range tctlCommands {
-		for _, subc := range c.Subcommands {
-			for _, newF := range newFlags {
-				flagExists := false
-				for _, subf := range subc.Flags {
-					if intersects(subf.Names(), newF.Names()) {
-						flagExists = true
-						continue
-					}
-				}
-
-				if !flagExists {
-					subc.Flags = append([]cli.Flag{newF}, subc.Flags...)
-				} else {
-					// fmt.Printf("WARNING: flag %s already exists in command %s %s\n", newF.Names(), c.Name, subc.Name)
-				}
-			}
-		}
-	}
-
-	return commands
-}
-
-func intersects(slice1 []string, slice2 []string) bool {
-	for _, s1 := range slice1 {
-		for _, s2 := range slice2 {
-			if s1 == s2 {
-				return true
-			}
-		}
-	}
-	return false
 }
