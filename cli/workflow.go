@@ -50,9 +50,8 @@ func newWorkflowCommands() []*cli.Command {
 			},
 		},
 		{
-			Name:    "describe",
-			Aliases: []string{"d"},
-			Usage:   "Show information about a Workflow Execution",
+			Name:  "describe",
+			Usage: "Show information about a Workflow Execution",
 			Flags: append(flagsForExecution, []cli.Flag{
 				&cli.BoolFlag{
 					Name:  FlagResetPointsOnly,
@@ -68,10 +67,9 @@ func newWorkflowCommands() []*cli.Command {
 			},
 		},
 		{
-			Name:    "list",
-			Aliases: []string{"l"},
-			Usage:   "List Workflow Executions based on a Query",
-			Flags:   append(flagsForWorkflowFiltering, flags.FlagsForPaginationAndRendering...),
+			Name:  "list",
+			Usage: "List Workflow Executions based on a Query",
+			Flags: append(flagsForWorkflowFiltering, flags.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
 				return ListWorkflow(c)
 			},
@@ -108,9 +106,8 @@ func newWorkflowCommands() []*cli.Command {
 			},
 		},
 		{
-			Name:    "signal",
-			Aliases: []string{"s"},
-			Usage:   "Signal a Workflow Execution",
+			Name:  "signal",
+			Usage: "Signal a Workflow Execution",
 			Flags: append(flagsForExecution, []cli.Flag{
 				&cli.StringFlag{
 					Name:     FlagName,
@@ -276,11 +273,10 @@ func newWorkflowCommands() []*cli.Command {
 			},
 		},
 		{
-			Name:    "trace",
-			Aliases: []string{"t"},
-			Usage:   "Trace progress of a Workflow Execution and its children",
-			Flags:   append(flagsForExecution, flagsForTraceWorkflow...),
-			Action:  TraceWorkflow,
+			Name:   "trace",
+			Usage:  "Trace progress of a Workflow Execution and its children",
+			Flags:  append(flagsForExecution, flagsForTraceWorkflow...),
+			Action: TraceWorkflow,
 		},
 	}
 }

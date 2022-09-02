@@ -137,7 +137,6 @@ func newScheduleCommands() []*cli.Command {
 	return []*cli.Command{
 		{
 			Name:        "create",
-			Aliases:     []string{"c"},
 			Usage:       "Create a new schedule",
 			Description: "Takes a schedule specification plus all the same args as starting a workflow",
 			Flags:       createFlags,
@@ -201,9 +200,8 @@ func newScheduleCommands() []*cli.Command {
 			Action: BackfillSchedule,
 		},
 		{
-			Name:    "describe",
-			Aliases: []string{"d"},
-			Usage:   "Get schedule configuration and current state",
+			Name:  "describe",
+			Usage: "Get schedule configuration and current state",
 			Flags: append([]cli.Flag{
 				sid,
 				&cli.BoolFlag{
@@ -222,11 +220,10 @@ func newScheduleCommands() []*cli.Command {
 			Action: DeleteSchedule,
 		},
 		{
-			Name:    "list",
-			Aliases: []string{"l"},
-			Usage:   "Lists schedules",
-			Flags:   append([]cli.Flag{}, flags.FlagsForPaginationAndRendering...),
-			Action:  ListSchedules,
+			Name:   "list",
+			Usage:  "Lists schedules",
+			Flags:  append([]cli.Flag{}, flags.FlagsForPaginationAndRendering...),
+			Action: ListSchedules,
 		},
 	}
 }

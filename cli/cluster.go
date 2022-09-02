@@ -35,9 +35,8 @@ import (
 func newClusterCommands() []*cli.Command {
 	return []*cli.Command{
 		{
-			Name:    "health",
-			Aliases: []string{"h"},
-			Usage:   "Check health of frontend service",
+			Name:  "health",
+			Usage: "Check health of frontend service",
 			Action: func(c *cli.Context) error {
 				return HealthCheck(c)
 			},

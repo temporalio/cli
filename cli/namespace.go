@@ -69,19 +69,17 @@ func parseNamespaceDataKVs(namespaceDataStr string) (map[string]string, error) {
 func newNamespaceCommands() []*cli.Command {
 	return []*cli.Command{
 		{
-			Name:    "describe",
-			Aliases: []string{"d"},
-			Usage:   "Describe a Namespace by name or Id",
-			Flags:   describeNamespaceFlags,
+			Name:  "describe",
+			Usage: "Describe a Namespace by name or Id",
+			Flags: describeNamespaceFlags,
 			Action: func(c *cli.Context) error {
 				return DescribeNamespace(c)
 			},
 		},
 		{
-			Name:    "list",
-			Aliases: []string{"l"},
-			Usage:   "List all Namespaces",
-			Flags:   listNamespacesFlags,
+			Name:  "list",
+			Usage: "List all Namespaces",
+			Flags: listNamespacesFlags,
 			Action: func(c *cli.Context) error {
 				return ListNamespaces(c)
 			},

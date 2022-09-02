@@ -31,31 +31,26 @@ import (
 var tctlCommands = []*cli.Command{
 	{
 		Name:        "namespace",
-		Aliases:     []string{"n"},
 		Usage:       "Operations on namespaces",
 		Subcommands: newNamespaceCommands(),
 	},
 	{
 		Name:        "workflow",
-		Aliases:     []string{"w"},
 		Usage:       "Operations on workflows",
 		Subcommands: newWorkflowCommands(),
 	},
 	{
 		Name:        "activity",
-		Aliases:     []string{"a"},
 		Usage:       "Operations on activities of workflows",
 		Subcommands: newActivityCommands(),
 	},
 	{
 		Name:        "task-queue",
-		Aliases:     []string{"tq"},
 		Usage:       "Operations on task queues",
 		Subcommands: newTaskQueueCommands(),
 	},
 	{
 		Name:        "schedule",
-		Aliases:     []string{"s"},
 		Usage:       "Operations on schedules",
 		Subcommands: newScheduleCommands(),
 	},
@@ -71,13 +66,11 @@ var tctlCommands = []*cli.Command{
 	},
 	{
 		Name:        "data-converter",
-		Aliases:     []string{"dc"},
 		Usage:       "Operations using a custom data converter",
 		Subcommands: newDataConverterCommands(),
 	},
 	{
 		Name:        "config",
-		Aliases:     []string{"c"},
 		Usage:       "Configure tctl",
 		Subcommands: newConfigCommands(),
 	},

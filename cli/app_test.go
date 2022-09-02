@@ -86,9 +86,9 @@ func (m *clientFactoryMock) HealthClient(_ *cli.Context) healthpb.HealthClient {
 }
 
 var commands = []string{
-	"namespace", "n",
-	"workflow", "w",
-	"task-queue", "tq",
+	"namespace",
+	"workflow",
+	"task-queue",
 }
 
 var cliTestNamespace = "cli-test-namespace"
