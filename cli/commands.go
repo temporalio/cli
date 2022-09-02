@@ -55,6 +55,11 @@ var tctlCommands = []*cli.Command{
 		Subcommands: newScheduleCommands(),
 	},
 	{
+		Name:        "search-attribute",
+		Usage:       "Operations on search attributes",
+		Subcommands: newSearchAttributeCommands(),
+	},
+	{
 		Name:        "batch",
 		Usage:       "Batch operations on a list of workflows from a query",
 		Subcommands: newBatchCommands(),

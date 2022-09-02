@@ -25,38 +25,18 @@
 package cli
 
 import (
-	"fmt"
-
-	"github.com/temporalio/tctl-kit/pkg/color"
-	"github.com/urfave/cli/v2"
-	healthpb "google.golang.org/grpc/health/grpc_health_v1"
+	"github.com/stretchr/testify/mock"
+	"go.temporal.io/api/workflowservice/v1"
 )
 
-const (
-	fullWorkflowServiceName = "temporal.api.workflowservice.v1.WorkflowService"
-)
+func (s *cliAppSuite) TestListSearchAttributes() {
+	s.sdkClient.On("GetSearchAttributes", mock.Anything).Return(&workflowservice.GetSearchAttributesResponse{}, nil).Once()
+	err := s.app.Run([]string{"", "search-attribute", "list"})
+	s.Nil(err)
+	s.sdkClient.AssertExpectations(s.T())
 
-// HealthCheck check frontend health.
-func HealthCheck(c *cli.Context) error {
-	healthClient := cFactory.HealthClient(c)
-	ctx, cancel := newContext(c)
-	defer cancel()
-
-	req := &healthpb.HealthCheckRequest{
-		Service: fullWorkflowServiceName,
-	}
-	resp, err := healthClient.Check(ctx, req)
-
-	if err != nil {
-		return fmt.Errorf("unable to check health, service: %q.\n%s", req.GetService(), err)
-	}
-
-	fmt.Printf("%s: ", req.GetService())
-	if resp.Status != healthpb.HealthCheckResponse_SERVING {
-		fmt.Println(color.Red(c, "%v", resp.Status))
-		return nil
-	}
-
-	fmt.Println(color.Green(c, "%v", resp.Status))
-	return nil
+	s.sdkClient.On("GetSearchAttributes", mock.Anything).Return(&workflowservice.GetSearchAttributesResponse{}, nil).Once()
+	err = s.app.Run([]string{"", "--namespace", cliTestNamespace, "search-attribute", "list"})
+	s.Nil(err)
+	s.sdkClient.AssertExpectations(s.T())
 }

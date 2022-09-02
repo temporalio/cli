@@ -601,18 +601,6 @@ func (s *cliAppSuite) TestParseTimeDateRange() {
 	}
 }
 
-func (s *cliAppSuite) TestGetSearchAttributes() {
-	s.sdkClient.On("GetSearchAttributes", mock.Anything).Return(&workflowservice.GetSearchAttributesResponse{}, nil).Once()
-	err := s.app.Run([]string{"", "cluster", "list-search-attributes"})
-	s.Nil(err)
-	s.sdkClient.AssertExpectations(s.T())
-
-	s.sdkClient.On("GetSearchAttributes", mock.Anything).Return(&workflowservice.GetSearchAttributesResponse{}, nil).Once()
-	err = s.app.Run([]string{"", "--namespace", cliTestNamespace, "cluster", "list-search-attributes"})
-	s.Nil(err)
-	s.sdkClient.AssertExpectations(s.T())
-}
-
 func historyEventIterator() sdkclient.HistoryEventIterator {
 	iteratorMock := &sdkmocks.HistoryEventIterator{}
 
