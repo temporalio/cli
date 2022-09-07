@@ -55,7 +55,6 @@ import (
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/backoff"
 
-	"github.com/temporalio/tctl/v2/cli_curr/stringify"
 	clispb "go.temporal.io/server/api/cli/v1"
 	"go.temporal.io/server/common/clock"
 	"go.temporal.io/server/common/codec"
@@ -63,6 +62,8 @@ import (
 	"go.temporal.io/server/common/primitives/timestamp"
 	"go.temporal.io/server/common/searchattribute"
 	"go.temporal.io/server/service/history/workflow"
+
+	"github.com/temporalio/tctl/v2/cli_curr/stringify"
 )
 
 // ShowHistory shows the history of given workflow execution based on workflowID and runID.
@@ -725,7 +726,7 @@ func CountWorkflow(c *cli.Context) {
 		count = response.GetCount()
 		return nil
 	}
-	err := backoff.Retry(op, common.CreateFrontendServiceRetryPolicy(), common.IsContextDeadlineExceededErr)
+	err := backoff.ThrottleRetry(op, common.CreateFrontendClientRetryPolicy(), common.IsContextDeadlineExceededErr)
 	if err != nil {
 		ErrorAndExit("Failed to count workflow.", err)
 	}
@@ -1169,7 +1170,7 @@ func listWorkflowExecutions(sdkClient sdkclient.Client, pageSize int, nextPageTo
 		workflows = response
 		return nil
 	}
-	err := backoff.Retry(op, common.CreateFrontendServiceRetryPolicy(), common.IsContextDeadlineExceededErr)
+	err := backoff.ThrottleRetry(op, common.CreateFrontendClientRetryPolicy(), common.IsContextDeadlineExceededErr)
 	if err != nil {
 		ErrorAndExit("Failed to list workflow.", err)
 	}
@@ -1205,7 +1206,7 @@ func listOpenWorkflow(sdkClient sdkclient.Client, pageSize int, earliestTime, la
 		workflows = response
 		return nil
 	}
-	err := backoff.Retry(op, common.CreateFrontendServiceRetryPolicy(), common.IsContextDeadlineExceededErr)
+	err := backoff.ThrottleRetry(op, common.CreateFrontendClientRetryPolicy(), common.IsContextDeadlineExceededErr)
 	if err != nil {
 		ErrorAndExit("Failed to list open workflow.", err)
 	}
@@ -1244,7 +1245,7 @@ func listClosedWorkflow(sdkClient sdkclient.Client, pageSize int, earliestTime, 
 		workflows = response
 		return nil
 	}
-	err := backoff.Retry(op, common.CreateFrontendServiceRetryPolicy(), common.IsContextDeadlineExceededErr)
+	err := backoff.ThrottleRetry(op, common.CreateFrontendClientRetryPolicy(), common.IsContextDeadlineExceededErr)
 	if err != nil {
 		ErrorAndExit("Failed to list closed workflow.", err)
 	}
@@ -1319,7 +1320,7 @@ func scanWorkflowExecutions(sdkClient sdkclient.Client, pageSize int, nextPageTo
 		workflows = response
 		return nil
 	}
-	err := backoff.Retry(op, common.CreateFrontendServiceRetryPolicy(), common.IsContextDeadlineExceededErr)
+	err := backoff.ThrottleRetry(op, common.CreateFrontendClientRetryPolicy(), common.IsContextDeadlineExceededErr)
 	if err != nil {
 		ErrorAndExit("Failed to list workflow.", err)
 	}

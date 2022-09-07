@@ -32,7 +32,6 @@ import (
 	"go.temporal.io/server/common/config"
 
 	"go.temporal.io/server/common/auth"
-	"go.temporal.io/server/common/dynamicconfig"
 	"go.temporal.io/server/common/log"
 	persistenceClient "go.temporal.io/server/common/persistence/client"
 	"go.temporal.io/server/common/persistence/sql/sqlplugin/mysql"
@@ -114,6 +113,6 @@ func CreateDefaultDBConfig(c *cli.Context) (config.DataStore, error) {
 }
 
 // GetQPS returns default queries per second
-func GetQPS(...dynamicconfig.FilterOption) int {
+func GetQPS() int {
 	return 3000
 }

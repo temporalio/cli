@@ -206,7 +206,7 @@ func initializeAdminNamespaceHandler(
 
 	factory := initializePersistenceFactory(
 		&configuration.Persistence,
-		func(...dynamicconfig.FilterOption) int {
+		func() int {
 			return dependencyMaxQPS
 		},
 		"",

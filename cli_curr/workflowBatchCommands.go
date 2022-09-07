@@ -34,8 +34,8 @@ import (
 	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	sdkclient "go.temporal.io/sdk/client"
+	"go.temporal.io/server/common/primitives"
 
-	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/payload"
 	"go.temporal.io/server/common/payloads"
 	"go.temporal.io/server/common/primitives/timestamp"
@@ -47,7 +47,7 @@ import (
 func TerminateBatchJob(c *cli.Context) {
 	jobID := getRequiredOption(c, FlagJobID)
 	reason := getRequiredOption(c, FlagReason)
-	client := cFactory.SDKClient(c, common.SystemLocalNamespace)
+	client := cFactory.SDKClient(c, primitives.SystemLocalNamespace)
 	tcCtx, cancel := newContext(c)
 	defer cancel()
 	err := client.TerminateWorkflow(tcCtx, jobID, "", reason, nil)
@@ -64,7 +64,7 @@ func TerminateBatchJob(c *cli.Context) {
 func DescribeBatchJob(c *cli.Context) {
 	jobID := getRequiredOption(c, FlagJobID)
 
-	client := cFactory.SDKClient(c, common.SystemLocalNamespace)
+	client := cFactory.SDKClient(c, primitives.SystemLocalNamespace)
 	tcCtx, cancel := newContext(c)
 	defer cancel()
 	wf, err := client.DescribeWorkflowExecution(tcCtx, jobID, "")
@@ -98,11 +98,11 @@ func DescribeBatchJob(c *cli.Context) {
 func ListBatchJobs(c *cli.Context) {
 	namespace := getRequiredGlobalOption(c, FlagNamespace)
 	pageSize := c.Int(FlagPageSize)
-	client := cFactory.SDKClient(c, common.SystemLocalNamespace)
+	client := cFactory.SDKClient(c, primitives.SystemLocalNamespace)
 	tcCtx, cancel := newContext(c)
 	defer cancel()
 	resp, err := client.ListWorkflow(tcCtx, &workflowservice.ListWorkflowExecutionsRequest{
-		Namespace: common.SystemLocalNamespace,
+		Namespace: primitives.SystemLocalNamespace,
 		PageSize:  int32(pageSize),
 		Query:     fmt.Sprintf("%s = '%s'", searchattribute.BatcherNamespace, namespace),
 	})
@@ -160,7 +160,7 @@ func StartBatchJob(c *cli.Context) {
 	rps := c.Int(FlagRPS)
 	concurrency := c.Int(FlagConcurrency)
 
-	client := cFactory.SDKClient(c, common.SystemLocalNamespace)
+	client := cFactory.SDKClient(c, primitives.SystemLocalNamespace)
 	tcCtx, cancel := newContext(c)
 	defer cancel()
 	resp, err := client.CountWorkflow(tcCtx, &workflowservice.CountWorkflowExecutionsRequest{
@@ -192,7 +192,7 @@ func StartBatchJob(c *cli.Context) {
 	tcCtx, cancel = newContext(c)
 	defer cancel()
 	options := sdkclient.StartWorkflowOptions{
-		TaskQueue: batcher.BatcherTaskQueueName,
+		TaskQueue: "temporal-sys-batcher-taskqueue",
 		Memo: map[string]interface{}{
 			"Reason": reason,
 		},

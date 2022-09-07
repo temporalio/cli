@@ -46,7 +46,6 @@ import (
 	enumspb "go.temporal.io/api/enums/v1"
 	failurepb "go.temporal.io/api/failure/v1"
 	historypb "go.temporal.io/api/history/v1"
-	"go.temporal.io/api/operatorservice/v1"
 	querypb "go.temporal.io/api/query/v1"
 	"go.temporal.io/api/serviceerror"
 	workflowpb "go.temporal.io/api/workflow/v1"
@@ -401,10 +400,10 @@ func DeleteWorkflow(c *cli.Context) error {
 	wid := c.String(FlagWorkflowID)
 	rid := c.String(FlagRunID)
 
-	client := cFactory.OperatorClient(c)
+	client := cFactory.FrontendClient(c)
 	ctx, cancel := newContext(c)
 	defer cancel()
-	_, err = client.DeleteWorkflowExecution(ctx, &operatorservice.DeleteWorkflowExecutionRequest{
+	_, err = client.DeleteWorkflowExecution(ctx, &workflowservice.DeleteWorkflowExecutionRequest{
 		Namespace: nsName,
 		WorkflowExecution: &commonpb.WorkflowExecution{
 			WorkflowId: wid,
@@ -623,7 +622,7 @@ func ScanAllWorkflow(c *cli.Context) error {
 			workflows = response
 			return nil
 		}
-		err := backoff.Retry(op, common.CreateFrontendServiceRetryPolicy(), common.IsContextDeadlineExceededErr)
+		err := backoff.ThrottleRetry(op, common.CreateFrontendClientRetryPolicy(), common.IsContextDeadlineExceededErr)
 		if err != nil {
 			return nil, nil, fmt.Errorf("unable to list workflow executions: %s", err)
 		}
@@ -672,7 +671,7 @@ func CountWorkflow(c *cli.Context) error {
 		count = response.GetCount()
 		return nil
 	}
-	err = backoff.Retry(op, common.CreateFrontendServiceRetryPolicy(), common.IsContextDeadlineExceededErr)
+	err = backoff.ThrottleRetry(op, common.CreateFrontendClientRetryPolicy(), common.IsContextDeadlineExceededErr)
 	if err != nil {
 		return fmt.Errorf("unable to count workflows: %s", err)
 	}
@@ -867,7 +866,7 @@ func scanWorkflowExecutions(sdkClient sdkclient.Client, pageSize int, nextPageTo
 		workflows = response
 		return nil
 	}
-	err := backoff.Retry(op, common.CreateFrontendServiceRetryPolicy(), common.IsContextDeadlineExceededErr)
+	err := backoff.ThrottleRetry(op, common.CreateFrontendClientRetryPolicy(), common.IsContextDeadlineExceededErr)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to list workflow: %s", err)
 	}
@@ -1474,7 +1473,7 @@ func listWorkflows(c *cli.Context, sdkClient sdkclient.Client, npt []byte, names
 		workflows = resp
 		return nil
 	}
-	err := backoff.Retry(op, common.CreateFrontendServiceRetryPolicy(), common.IsContextDeadlineExceededErr)
+	err := backoff.ThrottleRetry(op, common.CreateFrontendClientRetryPolicy(), common.IsContextDeadlineExceededErr)
 	if err != nil {
 		return nil, nil, fmt.Errorf("unable to list workflow executions: %s", err)
 	}
@@ -1511,7 +1510,7 @@ func listArchivedWorkflows(c *cli.Context, sdkClient sdkclient.Client, npt []byt
 		workflows = resp
 		return nil
 	}
-	err := backoff.Retry(op, common.CreateFrontendServiceRetryPolicy(), common.IsContextDeadlineExceededErr)
+	err := backoff.ThrottleRetry(op, common.CreateFrontendClientRetryPolicy(), common.IsContextDeadlineExceededErr)
 	if err != nil {
 		return nil, nil, fmt.Errorf("unable to list archived workflow executions: %s", err)
 	}
