@@ -130,14 +130,6 @@ func newWorkflowCommands() []*cli.Command {
 			},
 		},
 		{
-			Name:  "scan",
-			Usage: "List Workflow Executions. Faster and unsorted (requires Elasticsearch to be enabled)",
-			Flags: append(flagsForScan, flags.FlagsForPaginationAndRendering...),
-			Action: func(c *cli.Context) error {
-				return ScanAllWorkflow(c)
-			},
-		},
-		{
 			Name:  "count",
 			Usage: "Count Workflow Executions (requires ElasticSearch to be enabled)",
 			Flags: getFlagsForCount(),
