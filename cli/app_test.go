@@ -128,25 +128,25 @@ func (s *cliAppSuite) TestAppCommands() {
 
 func (s *cliAppSuite) TestNamespaceRegister_LocalNamespace() {
 	s.frontendClient.EXPECT().RegisterNamespace(gomock.Any(), gomock.Any()).Return(nil, nil)
-	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "namespace", "register", "--global-namespace", "false"})
+	err := s.app.Run([]string{"", "namespace", "register", "--global-namespace", "false", cliTestNamespace})
 	s.NoError(err)
 }
 
 func (s *cliAppSuite) TestNamespaceRegister_GlobalNamespace() {
 	s.frontendClient.EXPECT().RegisterNamespace(gomock.Any(), gomock.Any()).Return(nil, nil)
-	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "namespace", "register", "--global-namespace", "true"})
+	err := s.app.Run([]string{"", "namespace", "register", "--global-namespace", "true", cliTestNamespace})
 	s.NoError(err)
 }
 
 func (s *cliAppSuite) TestNamespaceRegister_NamespaceExist() {
 	s.frontendClient.EXPECT().RegisterNamespace(gomock.Any(), gomock.Any()).Return(nil, serviceerror.NewNamespaceAlreadyExists(""))
-	errorCode := s.RunWithExitCode([]string{"", "--namespace", cliTestNamespace, "namespace", "register", "--global-namespace", "true"})
+	errorCode := s.RunWithExitCode([]string{"", "namespace", "register", "--global-namespace", "true", cliTestNamespace})
 	s.Equal(1, errorCode)
 }
 
 func (s *cliAppSuite) TestNamespaceRegister_Failed() {
 	s.frontendClient.EXPECT().RegisterNamespace(gomock.Any(), gomock.Any()).Return(nil, serviceerror.NewInvalidArgument("faked error"))
-	errorCode := s.RunWithExitCode([]string{"", "--namespace", cliTestNamespace, "namespace", "register", "--global-namespace", "true"})
+	errorCode := s.RunWithExitCode([]string{"", "namespace", "register", "--global-namespace", "true", cliTestNamespace})
 	s.Equal(1, errorCode)
 }
 
@@ -176,9 +176,9 @@ func (s *cliAppSuite) TestNamespaceUpdate() {
 	resp := describeNamespaceResponseServer
 	s.frontendClient.EXPECT().DescribeNamespace(gomock.Any(), gomock.Any()).Return(resp, nil).Times(2)
 	s.frontendClient.EXPECT().UpdateNamespace(gomock.Any(), gomock.Any()).Return(nil, nil).Times(2)
-	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "namespace", "update"})
+	err := s.app.Run([]string{"", "namespace", "update", cliTestNamespace})
 	s.Nil(err)
-	err = s.app.Run([]string{"", "--namespace", cliTestNamespace, "namespace", "update", "--description", "another desc", "--owner-email", "another@uber.com", "--retention", "1"})
+	err = s.app.Run([]string{"", "namespace", "update", "--description", "another desc", "--owner-email", "another@uber.com", "--retention", "1", cliTestNamespace})
 	s.Nil(err)
 }
 
@@ -186,13 +186,13 @@ func (s *cliAppSuite) TestNamespaceUpdate_NamespaceNotExist() {
 	resp := describeNamespaceResponseServer
 	s.frontendClient.EXPECT().DescribeNamespace(gomock.Any(), gomock.Any()).Return(resp, nil)
 	s.frontendClient.EXPECT().UpdateNamespace(gomock.Any(), gomock.Any()).Return(nil, serviceerror.NewNamespaceNotFound("missing-namespace"))
-	errorCode := s.RunWithExitCode([]string{"", "--namespace", cliTestNamespace, "namespace", "update"})
+	errorCode := s.RunWithExitCode([]string{"", "namespace", "update", cliTestNamespace})
 	s.Equal(1, errorCode)
 }
 
 func (s *cliAppSuite) TestNamespaceUpdate_ActiveClusterFlagNotSet_NamespaceNotExist() {
 	s.frontendClient.EXPECT().DescribeNamespace(gomock.Any(), gomock.Any()).Return(nil, serviceerror.NewNamespaceNotFound("missing-namespace"))
-	errorCode := s.RunWithExitCode([]string{"", "--namespace", cliTestNamespace, "namespace", "update"})
+	errorCode := s.RunWithExitCode([]string{"", "namespace", "update", cliTestNamespace})
 	s.Equal(1, errorCode)
 }
 
@@ -200,14 +200,14 @@ func (s *cliAppSuite) TestNamespaceUpdate_Failed() {
 	resp := describeNamespaceResponseServer
 	s.frontendClient.EXPECT().DescribeNamespace(gomock.Any(), gomock.Any()).Return(resp, nil)
 	s.frontendClient.EXPECT().UpdateNamespace(gomock.Any(), gomock.Any()).Return(nil, serviceerror.NewInvalidArgument("faked error"))
-	errorCode := s.RunWithExitCode([]string{"", "--namespace", cliTestNamespace, "namespace", "update"})
+	errorCode := s.RunWithExitCode([]string{"", "namespace", "update", cliTestNamespace})
 	s.Equal(1, errorCode)
 }
 
 func (s *cliAppSuite) TestNamespaceDescribe() {
 	resp := describeNamespaceResponseServer
 	s.frontendClient.EXPECT().DescribeNamespace(gomock.Any(), &workflowservice.DescribeNamespaceRequest{Namespace: cliTestNamespace, Id: ""}).Return(resp, nil)
-	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "namespace", "describe"})
+	err := s.app.Run([]string{"", "namespace", "describe", cliTestNamespace})
 	s.Nil(err)
 }
 
@@ -221,14 +221,32 @@ func (s *cliAppSuite) TestNamespaceDescribe_ById() {
 func (s *cliAppSuite) TestNamespaceDescribe_NamespaceNotExist() {
 	resp := describeNamespaceResponseServer
 	s.frontendClient.EXPECT().DescribeNamespace(gomock.Any(), gomock.Any()).Return(resp, serviceerror.NewNamespaceNotFound("missing-namespace"))
-	errorCode := s.RunWithExitCode([]string{"", "--namespace", cliTestNamespace, "namespace", "describe"})
+	errorCode := s.RunWithExitCode([]string{"", "namespace", "describe", cliTestNamespace})
 	s.Equal(1, errorCode)
 }
 
 func (s *cliAppSuite) TestNamespaceDescribe_Failed() {
 	resp := describeNamespaceResponseServer
 	s.frontendClient.EXPECT().DescribeNamespace(gomock.Any(), gomock.Any()).Return(resp, serviceerror.NewInvalidArgument("faked error"))
-	errorCode := s.RunWithExitCode([]string{"", "--namespace", cliTestNamespace, "namespace", "describe"})
+	errorCode := s.RunWithExitCode([]string{"", "namespace", "describe", cliTestNamespace})
+	s.Equal(1, errorCode)
+}
+
+func (s *cliAppSuite) TestNamespaceDelete() {
+	s.operatorClient.EXPECT().DeleteNamespace(gomock.Any(), &operatorservice.DeleteNamespaceRequest{Namespace: cliTestNamespace}).Return(&operatorservice.DeleteNamespaceResponse{}, nil)
+	err := s.app.Run([]string{"", "namespace", "delete", "--yes", cliTestNamespace})
+	s.Nil(err)
+}
+
+func (s *cliAppSuite) TestNamespaceDelete_NamespaceNotExist() {
+	s.operatorClient.EXPECT().DeleteNamespace(gomock.Any(), gomock.Any()).Return(nil, serviceerror.NewNamespaceNotFound("missing-namespace"))
+	errorCode := s.RunWithExitCode([]string{"", "namespace", "delete", "--yes", cliTestNamespace})
+	s.Equal(1, errorCode)
+}
+
+func (s *cliAppSuite) TestNamespaceDelete_Failed() {
+	s.operatorClient.EXPECT().DeleteNamespace(gomock.Any(), gomock.Any()).Return(nil, serviceerror.NewInvalidArgument("faked error"))
+	errorCode := s.RunWithExitCode([]string{"", "namespace", "delete", "--yes", cliTestNamespace})
 	s.Equal(1, errorCode)
 }
 

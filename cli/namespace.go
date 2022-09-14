@@ -32,7 +32,7 @@ import (
 )
 
 // by default we don't require any namespace data. But this can be overridden by calling SetRequiredNamespaceDataKeys()
-var requiredNamespaceDataKeys = []string{}
+var requiredNamespaceDataKeys []string
 
 // SetRequiredNamespaceDataKeys will set requiredNamespaceDataKeys
 func SetRequiredNamespaceDataKeys(keys []string) {
@@ -69,41 +69,46 @@ func parseNamespaceDataKVs(namespaceDataStr string) (map[string]string, error) {
 func newNamespaceCommands() []*cli.Command {
 	return []*cli.Command{
 		{
-			Name:  "describe",
-			Usage: "Describe a Namespace by name or Id",
-			Flags: describeNamespaceFlags,
+			Name:      "describe",
+			Usage:     "Describe a Namespace by name or Id",
+			Flags:     describeNamespaceFlags,
+			ArgsUsage: "namespace_name",
 			Action: func(c *cli.Context) error {
 				return DescribeNamespace(c)
 			},
 		},
 		{
-			Name:  "list",
-			Usage: "List all Namespaces",
-			Flags: listNamespacesFlags,
+			Name:      "list",
+			Usage:     "List all Namespaces",
+			Flags:     listNamespacesFlags,
+			ArgsUsage: " ",
 			Action: func(c *cli.Context) error {
 				return ListNamespaces(c)
 			},
 		},
 		{
-			Name:  "register",
-			Usage: "Register a new Namespace",
-			Flags: registerNamespaceFlags,
+			Name:      "register",
+			Usage:     "Register a new Namespace",
+			Flags:     registerNamespaceFlags,
+			ArgsUsage: "namespace_name [cluster_name...]",
 			Action: func(c *cli.Context) error {
 				return RegisterNamespace(c)
 			},
 		},
 		{
-			Name:  "update",
-			Usage: "Update a Namespace",
-			Flags: updateNamespaceFlags,
+			Name:      "update",
+			Usage:     "Update a Namespace",
+			Flags:     updateNamespaceFlags,
+			ArgsUsage: "namespace_name [cluster_name...]",
 			Action: func(c *cli.Context) error {
 				return UpdateNamespace(c)
 			},
 		},
 		{
-			Name:  "delete",
-			Usage: "Delete existing Namespace",
-			Flags: deleteNamespacesFlags,
+			Name:      "delete",
+			Usage:     "Delete existing Namespace",
+			Flags:     deleteNamespacesFlags,
+			ArgsUsage: "namespace_name",
 			Action: func(c *cli.Context) error {
 				return DeleteNamespace(c)
 			},

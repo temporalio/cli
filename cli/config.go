@@ -38,7 +38,7 @@ func newConfigCommands() []*cli.Command {
 			Name:      "get",
 			Usage:     "Print the value of an env property",
 			Flags:     []cli.Flag{},
-			ArgsUsage: "env.[ENV NAME].[PROPERTY NAME] or [PROPERTY NAME] for current env",
+			ArgsUsage: "[env.env_name.]property_name",
 			Action: func(c *cli.Context) error {
 				return EnvProperty(c)
 			},
@@ -47,7 +47,7 @@ func newConfigCommands() []*cli.Command {
 			Name:      "set",
 			Usage:     "Set the value of an env property",
 			Flags:     []cli.Flag{},
-			ArgsUsage: `env.[ENV NAME].[PROPERTY NAME] [VALUE] or [PROPERTY NAME] [VALUE] for current env`,
+			ArgsUsage: "[env.env_name.]property_name value",
 			Action: func(c *cli.Context) error {
 				return SetEnvProperty(c)
 			},
