@@ -50,6 +50,10 @@ func newScheduleCommands() []*cli.Command {
 			Usage:   `Calendar specification in JSON, e.g. {"dayOfWeek":"Fri","hour":"17","minute":"5"}`,
 		},
 		&cli.StringSliceFlag{
+			Name:  FlagCronSchedule,
+			Usage: `Calendar specification as cron string, e.g. "30 2 * * 5" or "@daily"`,
+		},
+		&cli.StringSliceFlag{
 			Name:  FlagInterval,
 			Usage: "Interval duration, e.g. 90m, or 90m/13m to include phase offset",
 		},

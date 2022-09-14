@@ -17,7 +17,7 @@ require (
 	github.com/temporalio/tctl-kit v0.0.0-20220830191903-8c776228690e
 	github.com/urfave/cli v1.22.9
 	github.com/urfave/cli/v2 v2.10.2
-	go.temporal.io/api v1.11.1-0.20220907212620-b33b767daf85
+	go.temporal.io/api v1.11.1-0.20220913002535-fb282e306388
 	go.temporal.io/sdk v1.16.1-0.20220907175405-9341009cb68a
 	go.temporal.io/server v1.16.1-0.20220907222358-163d94b57dc6
 	golang.org/x/exp v0.0.0-20220613132600-b0d781184e0d
@@ -113,15 +113,15 @@ require (
 	go.uber.org/fx v1.17.1 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	go.uber.org/zap v1.21.0 // indirect
-	golang.org/x/net v0.0.0-20220907135653-1e95f45603a7 // indirect
+	golang.org/x/net v0.0.0-20220909164309-bea034e7d591 // indirect
 	golang.org/x/oauth2 v0.0.0-20220622183110-fd043fe589d2 // indirect
-	golang.org/x/sys v0.0.0-20220907062415-87db552b00fd // indirect
+	golang.org/x/sys v0.0.0-20220909162455-aba9fc2a8ff2 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/time v0.0.0-20220609170525-579cf78fd858 // indirect
 	golang.org/x/xerrors v0.0.0-20220609144429-65e65417b02f // indirect
-	google.golang.org/api v0.85.0 // indirect
+	google.golang.org/api v0.93.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/genproto v0.0.0-20220902135211-223410557253 // indirect
+	google.golang.org/genproto v0.0.0-20220909194730-69f6226f97e5 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/validator.v2 v2.0.1 // indirect

@@ -103,6 +103,7 @@ func buildScheduleSpec(c *cli.Context) (*schedpb.ScheduleSpec, error) {
 		}
 		out.Calendar = append(out.Calendar, cal)
 	}
+	out.CronString = c.StringSlice(FlagCronSchedule)
 	for _, s := range c.StringSlice(FlagInterval) {
 		cal, err := buildIntervalSpec(s)
 		if err != nil {
@@ -476,6 +477,7 @@ func DescribeSchedule(c *cli.Context) error {
 	s, i := resp.Schedule, resp.Info
 	item.ScheduleId = scheduleID
 	item.Specification = s.Spec
+	uncanonicalizeSpec(item.Specification)
 	if sw := s.Action.GetStartWorkflow(); sw != nil {
 		item.StartWorkflow = sw
 		item.WorkflowType = sw.WorkflowType.GetName()
@@ -619,6 +621,7 @@ func ListSchedules(c *cli.Context) error {
 				item.Info.LastRunExecution = ra.StartWorkflowResult
 			}
 			item.Specification = info.GetSpec()
+			uncanonicalizeSpec(item.Specification)
 			items[i] = item
 		}
 		return items, resp.NextPageToken, nil
@@ -636,4 +639,35 @@ func ListSchedules(c *cli.Context) error {
 		opts.FieldsLong = nil
 	}
 	return output.PrintIterator(c, iter, opts)
+}
+
+func uncanonicalizeSpec(spec *schedpb.ScheduleSpec) {
+	processField := func(ranges []*schedpb.Range) string {
+		var out []string
+		for _, r := range ranges {
+			s := fmt.Sprintf("%d", r.Start)
+			if r.End > r.Start {
+				s += fmt.Sprintf("-%d", r.End)
+			}
+			if r.Step > 1 {
+				s += fmt.Sprintf("/%d", r.Step)
+			}
+			out = append(out, s)
+		}
+		return strings.Join(out, ",")
+	}
+	// Turn StructuredCalenderSpec into CalendarSpec for ease of reading
+	for _, scs := range spec.StructuredCalendar {
+		spec.Calendar = append(spec.Calendar, &schedpb.CalendarSpec{
+			Second:     processField(scs.Second),
+			Minute:     processField(scs.Minute),
+			Hour:       processField(scs.Hour),
+			DayOfMonth: processField(scs.DayOfMonth),
+			Month:      processField(scs.Month),
+			Year:       processField(scs.Year),
+			DayOfWeek:  processField(scs.DayOfWeek),
+			Comment:    scs.Comment,
+		})
+	}
+	spec.StructuredCalendar = nil
 }
