@@ -88,7 +88,6 @@ func newWorkflowCommands() []*cli.Command {
 			Flags: append(flagsForStackTraceQuery,
 				&cli.StringFlag{
 					Name:     FlagQueryType,
-					Aliases:  FlagQueryTypeAlias,
 					Usage:    "The query type you want to run",
 					Required: true,
 				}),
@@ -120,9 +119,8 @@ func newWorkflowCommands() []*cli.Command {
 					Usage:   "Input for the signal (JSON)",
 				},
 				&cli.StringFlag{
-					Name:    FlagInputFile,
-					Aliases: FlagInputFileAlias,
-					Usage:   "Input for the signal from file (JSON)",
+					Name:  FlagInputFile,
+					Usage: "Input for the signal from file (JSON)",
 				},
 			}...),
 			Action: func(c *cli.Context) error {
@@ -150,9 +148,8 @@ func newWorkflowCommands() []*cli.Command {
 			Usage: "Terminate a Workflow Execution",
 			Flags: append(flagsForExecution, []cli.Flag{
 				&cli.StringFlag{
-					Name:    FlagReason,
-					Aliases: FlagReasonAlias,
-					Usage:   "Reason for terminating the Workflow Execution",
+					Name:  FlagReason,
+					Usage: "Reason for terminating the Workflow Execution",
 				},
 			}...),
 			Action: func(c *cli.Context) error {
@@ -207,9 +204,8 @@ func newWorkflowCommands() []*cli.Command {
 					Aliases: FlagListQueryAlias,
 					Usage:   "Visibility query of Search Attributes describing the Workflow Executions to reset. See https://docs.temporal.io/docs/tctl/workflow/list#--query",
 				}, &cli.StringFlag{
-					Name:    FlagInputFile,
-					Aliases: FlagInputFileAlias,
-					Usage:   "Input file that specifies Workflow Executions to reset. Each line contains one Workflow Id as the base Run and, optionally, a Run Id",
+					Name:  FlagInputFile,
+					Usage: "Input file that specifies Workflow Executions to reset. Each line contains one Workflow Id as the base Run and, optionally, a Run Id",
 				},
 				&cli.StringFlag{
 					Name:  FlagExcludeFile,

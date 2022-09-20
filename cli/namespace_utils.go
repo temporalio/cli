@@ -31,118 +31,97 @@ import (
 var (
 	registerNamespaceFlags = []cli.Flag{
 		&cli.StringFlag{
-			Name:    FlagDescription,
-			Aliases: FlagDescriptionAlias,
-			Usage:   "Namespace description",
+			Name:  FlagDescription,
+			Usage: "Namespace description",
 		},
 		&cli.StringFlag{
-			Name:    FlagOwnerEmail,
-			Aliases: FlagOwnerEmailAlias,
-			Usage:   "Owner email",
+			Name:  FlagOwnerEmail,
+			Usage: "Owner email",
 		},
 		&cli.StringFlag{
-			Name:    FlagRetention,
-			Aliases: FlagRetentionAlias,
-			Usage:   "Workflow Execution retention",
+			Name:  FlagRetention,
+			Usage: "Workflow Execution retention",
 		},
 		&cli.StringFlag{
-			Name:    FlagActiveClusterName,
-			Aliases: FlagActiveClusterNameAlias,
-			Usage:   "Active cluster name",
+			Name:  FlagActiveClusterName,
+			Usage: "Active cluster name",
 		},
 		&cli.StringFlag{
 			// use StringFlag instead of buggy StringSliceFlag
 			// TODO when https://github.com/urfave/cli/pull/392 & v2 is released
 			//  consider update urfave/cli
-			Name:    FlagClusters,
-			Aliases: FlagClustersAlias,
-			Usage:   "Clusters",
+			Name:  FlagClusters,
+			Usage: "Clusters",
 		},
 		&cli.StringFlag{
-			Name:    FlagIsGlobalNamespace,
-			Aliases: FlagIsGlobalNamespaceAlias,
-			Usage:   "Flag to indicate whether namespace is a global namespace",
+			Name:  FlagIsGlobalNamespace,
+			Usage: "Flag to indicate whether namespace is a global namespace",
 		},
 		&cli.StringFlag{
-			Name:    FlagNamespaceData,
-			Aliases: FlagNamespaceDataAlias,
-			Usage:   "Namespace data of key value pairs, in format of k1:v1,k2:v2,k3:v3",
+			Name:  FlagNamespaceData,
+			Usage: "Namespace data of key value pairs, in format of k1:v1,k2:v2,k3:v3",
 		},
 		&cli.StringFlag{
-			Name:    FlagHistoryArchivalState,
-			Aliases: FlagHistoryArchivalStateAlias,
-			Usage:   "Flag to set history archival state, valid values are \"disabled\" and \"enabled\"",
+			Name:  FlagHistoryArchivalState,
+			Usage: "Flag to set history archival state, valid values are \"disabled\" and \"enabled\"",
 		},
 		&cli.StringFlag{
-			Name:    FlagHistoryArchivalURI,
-			Aliases: FlagHistoryArchivalURIAlias,
-			Usage:   "Optionally specify history archival URI (cannot be changed after first time archival is enabled)",
+			Name:  FlagHistoryArchivalURI,
+			Usage: "Optionally specify history archival URI (cannot be changed after first time archival is enabled)",
 		},
 		&cli.StringFlag{
-			Name:    FlagVisibilityArchivalState,
-			Aliases: FlagVisibilityArchivalStateAlias,
-			Usage:   "Flag to set visibility archival state, valid values are \"disabled\" and \"enabled\"",
+			Name:  FlagVisibilityArchivalState,
+			Usage: "Flag to set visibility archival state, valid values are \"disabled\" and \"enabled\"",
 		},
 		&cli.StringFlag{
-			Name:    FlagVisibilityArchivalURI,
-			Aliases: FlagVisibilityArchivalURIAlias,
-			Usage:   "Optionally specify visibility archival URI (cannot be changed after first time archival is enabled)",
+			Name:  FlagVisibilityArchivalURI,
+			Usage: "Optionally specify visibility archival URI (cannot be changed after first time archival is enabled)",
 		},
 	}
 
 	updateNamespaceFlags = []cli.Flag{
 		&cli.StringFlag{
-			Name:    FlagDescription,
-			Aliases: FlagDescriptionAlias,
-			Usage:   "Namespace description",
+			Name:  FlagDescription,
+			Usage: "Namespace description",
 		},
 		&cli.StringFlag{
-			Name:    FlagOwnerEmail,
-			Aliases: FlagOwnerEmailAlias,
-			Usage:   "Owner email",
+			Name:  FlagOwnerEmail,
+			Usage: "Owner email",
 		},
 		&cli.StringFlag{
-			Name:    FlagRetention,
-			Aliases: FlagRetentionAlias,
-			Usage:   "Workflow Execution retention",
+			Name:  FlagRetention,
+			Usage: "Workflow Execution retention",
 		},
 		&cli.StringFlag{
-			Name:    FlagActiveClusterName,
-			Aliases: FlagActiveClusterNameAlias,
-			Usage:   "Active cluster name",
+			Name:  FlagActiveClusterName,
+			Usage: "Active cluster name",
 		},
 		&cli.StringFlag{
 			// use StringFlag instead of buggy StringSliceFlag
 			// TODO when https://github.com/urfave/cli/pull/392 & v2 is released
 			//  consider update urfave/cli
-			Name:    FlagClusters,
-			Aliases: FlagClustersAlias,
-			Usage:   "Clusters",
+			Name:  FlagClusters,
+			Usage: "Clusters",
 		},
 		&cli.StringFlag{
-			Name:    FlagNamespaceData,
-			Aliases: FlagNamespaceDataAlias,
-			Usage:   "Namespace data of key value pairs, in format of k1:v1,k2:v2,k3:v3 ",
+			Name:  FlagNamespaceData,
+			Usage: "Namespace data of key value pairs, in format of k1:v1,k2:v2,k3:v3 ",
 		},
 		&cli.StringFlag{
-			Name:    FlagHistoryArchivalState,
-			Aliases: FlagHistoryArchivalStateAlias,
-			Usage:   "Flag to set history archival state, valid values are \"disabled\" and \"enabled\"",
+			Name:  FlagHistoryArchivalState,
+			Usage: "Flag to set history archival state, valid values are \"disabled\" and \"enabled\"",
 		},
 		&cli.StringFlag{
-			Name:    FlagHistoryArchivalURI,
-			Aliases: FlagHistoryArchivalURIAlias,
-			Usage:   "Optionally specify history archival URI (cannot be changed after first time archival is enabled)",
+			Name:  FlagHistoryArchivalURI,
+			Usage: "Optionally specify history archival URI (cannot be changed after first time archival is enabled)",
 		},
 		&cli.StringFlag{
-			Name:    FlagVisibilityArchivalState,
-			Aliases: FlagVisibilityArchivalStateAlias,
-			Usage:   "Flag to set visibility archival state, valid values are \"disabled\" and \"enabled\"",
+			Name:  FlagVisibilityArchivalState,
+			Usage: "Flag to set visibility archival state, valid values are \"disabled\" and \"enabled\"",
 		},
 		&cli.StringFlag{
-			Name:    FlagVisibilityArchivalURI,
-			Aliases: FlagVisibilityArchivalURIAlias,
-			Usage:   "Optionally specify visibility archival URI (cannot be changed after first time archival is enabled)",
+			Name:  FlagVisibilityArchivalURI,
+			Usage: "Optionally specify visibility archival URI (cannot be changed after first time archival is enabled)",
 		},
 		&cli.StringFlag{
 			Name:  FlagAddBadBinary,

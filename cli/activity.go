@@ -36,7 +36,6 @@ func newActivityCommands() []*cli.Command {
 			Flags: append(flagsForExecution, []cli.Flag{
 				&cli.StringFlag{
 					Name:     FlagActivityID,
-					Aliases:  FlagActivityIDAlias,
 					Usage:    "The activity Id to complete",
 					Required: true,
 				},
@@ -61,7 +60,6 @@ func newActivityCommands() []*cli.Command {
 			Flags: append(flagsForExecution, []cli.Flag{
 				&cli.StringFlag{
 					Name:     FlagActivityID,
-					Aliases:  FlagActivityIDAlias,
 					Usage:    "The activity Id to fail",
 					Required: true,
 				},

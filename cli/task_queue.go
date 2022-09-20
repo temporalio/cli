@@ -43,10 +43,9 @@ func newTaskQueueCommands() []*cli.Command {
 					Required: true,
 				},
 				&cli.StringFlag{
-					Name:    FlagTaskQueueType,
-					Aliases: FlagTaskQueueTypeAlias,
-					Value:   "workflow",
-					Usage:   "Task Queue type [workflow|activity]",
+					Name:  FlagTaskQueueType,
+					Value: "workflow",
+					Usage: "Task Queue type [workflow|activity]",
 				},
 			}, flags.FlagsForRendering...),
 			Action: func(c *cli.Context) error {

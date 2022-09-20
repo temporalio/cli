@@ -31,7 +31,6 @@ import (
 	"time"
 
 	"go.temporal.io/api/common/v1"
-	commonpb "go.temporal.io/api/common/v1"
 	enumspb "go.temporal.io/api/enums/v1"
 	schedpb "go.temporal.io/api/schedule/v1"
 	"go.temporal.io/api/taskqueue/v1"
@@ -223,7 +222,7 @@ func buildSchedule(c *cli.Context) (*schedpb.Schedule, error) {
 	return sched, nil
 }
 
-func getMemoAndSearchAttributesForSchedule(c *cli.Context) (*commonpb.Memo, *commonpb.SearchAttributes, error) {
+func getMemoAndSearchAttributesForSchedule(c *cli.Context) (*common.Memo, *common.SearchAttributes, error) {
 	if memoMap, err := unmarshalMemoFromCLI(c); err != nil {
 		return nil, nil, err
 	} else if memo, err := encodeMemo(memoMap); err != nil {
@@ -467,7 +466,7 @@ func DescribeSchedule(c *cli.Context) error {
 		// more convenient copies of values from Info
 		NextRunTime       *time.Time
 		LastRunTime       *time.Time
-		LastRunExecution  *commonpb.WorkflowExecution
+		LastRunExecution  *common.WorkflowExecution
 		LastRunActualTime *time.Time
 
 		Memo             map[string]string // json only
@@ -599,7 +598,7 @@ func ListSchedules(c *cli.Context) error {
 				Info struct {
 					NextRunTime       *time.Time
 					LastRunTime       *time.Time
-					LastRunExecution  *commonpb.WorkflowExecution
+					LastRunExecution  *common.WorkflowExecution
 					LastRunActualTime *time.Time
 				}
 			}

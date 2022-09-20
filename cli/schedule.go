@@ -45,9 +45,8 @@ func newScheduleCommands() []*cli.Command {
 
 	scheduleSpecFlags := []cli.Flag{
 		&cli.StringSliceFlag{
-			Name:    FlagCalendar,
-			Aliases: FlagCalendarAlias,
-			Usage:   `Calendar specification in JSON, e.g. {"dayOfWeek":"Fri","hour":"17","minute":"5"}`,
+			Name:  FlagCalendar,
+			Usage: `Calendar specification in JSON, e.g. {"dayOfWeek":"Fri","hour":"17","minute":"5"}`,
 		},
 		&cli.StringSliceFlag{
 			Name:  FlagCronSchedule,
@@ -70,9 +69,8 @@ func newScheduleCommands() []*cli.Command {
 			Usage: "Jitter duration",
 		},
 		&cli.StringFlag{
-			Name:    FlagTimeZone,
-			Aliases: FlagTimeZoneAlias,
-			Usage:   "Time zone (IANA name)",
+			Name:  FlagTimeZone,
+			Usage: "Time zone (IANA name)",
 		},
 	}
 
@@ -167,10 +165,9 @@ func newScheduleCommands() []*cli.Command {
 					Usage: "Unpauses the schedule",
 				},
 				&cli.StringFlag{
-					Name:    FlagReason,
-					Aliases: FlagReasonAlias,
-					Usage:   "Free-form text to describe reason for pause/unpause",
-					Value:   "(no reason provided)",
+					Name:  FlagReason,
+					Usage: "Free-form text to describe reason for pause/unpause",
+					Value: "(no reason provided)",
 				},
 			},
 			Action: ToggleSchedule,
