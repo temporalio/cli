@@ -106,7 +106,6 @@ var (
 	FlagListQueryAlias             = []string{"q"}
 	FlagListQueryUsage             = "Filter results using SQL like query. See https://docs.temporal.io/docs/tctl/workflow/list#--query for details"
 	FlagArchive                    = "archived"
-	FlagBatchType                  = "batch-type"
 	FlagSignalName                 = "signal-name"
 	FlagRPS                        = "rps"
 	FlagJobID                      = "job-id"

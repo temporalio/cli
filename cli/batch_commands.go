@@ -30,15 +30,16 @@ import (
 	"os"
 	"strings"
 
+	"github.com/temporalio/tctl-kit/pkg/output"
+	"github.com/temporalio/tctl-kit/pkg/pager"
 	"github.com/urfave/cli/v2"
 	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	sdkclient "go.temporal.io/sdk/client"
+	"go.temporal.io/server/common/collection"
 	"go.temporal.io/server/common/primitives"
 
-	"go.temporal.io/server/common/payload"
 	"go.temporal.io/server/common/payloads"
-	"go.temporal.io/server/common/primitives/timestamp"
 	"go.temporal.io/server/common/searchattribute"
 	"go.temporal.io/server/service/worker/batcher"
 )
@@ -80,54 +81,36 @@ func DescribeBatchJob(c *cli.Context) error {
 
 // ListBatchJobs list the started batch jobs
 func ListBatchJobs(c *cli.Context) error {
-	namespace, err := getRequiredGlobalOption(c, FlagNamespace)
-	if err != nil {
-		return err
-	}
-	pageSize := c.Int(FlagPageSize)
-	client := cFactory.SDKClient(c, primitives.SystemLocalNamespace)
-	tcCtx, cancel := newContext(c)
-	defer cancel()
-	resp, err := client.ListWorkflow(tcCtx, &workflowservice.ListWorkflowExecutionsRequest{
-		Namespace: primitives.SystemLocalNamespace,
-		PageSize:  int32(pageSize),
-		Query:     fmt.Sprintf("%s = '%s'", searchattribute.BatcherNamespace, namespace),
-	})
-	if err != nil {
-		return fmt.Errorf("failed to list batch jobs: %w", err)
-	}
+	client := cFactory.FrontendClient(c)
 
-	output := make([]interface{}, 0, len(resp.Executions))
-	for _, wf := range resp.Executions {
-		var reason, operator string
-		err = payload.Decode(wf.Memo.Fields["Reason"], &reason)
+	paginationFunc := func(npt []byte) ([]interface{}, []byte, error) {
+		var items []interface{}
+		var err error
+
+		ctx, cancel := newContext(c)
+		defer cancel()
+		resp, err := client.ListBatchOperations(ctx, &workflowservice.ListBatchOperationsRequest{
+			Namespace: primitives.SystemLocalNamespace,
+		})
+
+		for _, e := range resp.OperationInfo {
+			items = append(items, e)
+		}
+
 		if err != nil {
-			return fmt.Errorf("failed to deserialize reason memo field: %w", err)
+			return nil, nil, err
 		}
 
-		err = payload.Decode(wf.SearchAttributes.IndexedFields[searchattribute.BatcherUser], &operator)
-		if err != nil {
-			return fmt.Errorf("failed to deserialize operator search attribute: %w", err)
-		}
-
-		job := map[string]string{
-			"jobId":     wf.Execution.GetWorkflowId(),
-			"startTime": formatTime(timestamp.TimeValue(wf.GetStartTime()), false),
-			"reason":    reason,
-			"operator":  operator,
-		}
-
-		if wf.GetStatus() != enumspb.WORKFLOW_EXECUTION_STATUS_RUNNING {
-			job["status"] = wf.GetStatus().String()
-			job["closeTime"] = formatTime(timestamp.TimeValue(wf.GetCloseTime()), false)
-		} else {
-			job["status"] = "RUNNING"
-		}
-
-		output = append(output, job)
+		return items, npt, nil
 	}
-	prettyPrintJSONObject(output)
-	return nil
+
+	iter := collection.NewPagingIterator(paginationFunc)
+	opts := &output.PrintOptions{
+		Fields:     []string{"State", "JobId", "StartTime"},
+		FieldsLong: []string{"CloseTime"},
+		Pager:      pager.Less,
+	}
+	return output.PrintIterator(c, iter, opts)
 }
 
 // StartBatchJob starts a batch job
@@ -138,7 +121,7 @@ func StartBatchJob(c *cli.Context) error {
 	}
 	query := c.String(FlagListQuery)
 	reason := c.String(FlagReason)
-	batchType := c.String(FlagBatchType)
+	batchType := c.String(FlagType)
 	if !validateBatchType(batchType) {
 		return fmt.Errorf("unknown batch type, supported types: %s", strings.Join(allBatchTypes, ","))
 	}

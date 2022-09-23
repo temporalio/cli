@@ -27,6 +27,7 @@ package cli
 import (
 	"strings"
 
+	"github.com/temporalio/tctl-kit/pkg/flags"
 	"github.com/urfave/cli/v2"
 
 	"go.temporal.io/server/service/worker/batcher"
@@ -51,15 +52,10 @@ func newBatchCommands() []*cli.Command {
 			},
 		},
 		{
-			Name:  "list",
-			Usage: "List batch operation jobs",
-			Flags: []cli.Flag{
-				&cli.IntFlag{
-					Name:  FlagPageSize,
-					Value: 30,
-					Usage: "Result page size",
-				},
-			},
+			Name:      "list",
+			Usage:     "List batch operation jobs",
+			Flags:     flags.FlagsForPaginationAndRendering,
+			ArgsUsage: " ",
 			Action: func(c *cli.Context) error {
 				return ListBatchJobs(c)
 			},
@@ -80,8 +76,8 @@ func newBatchCommands() []*cli.Command {
 					Required: true,
 				},
 				&cli.StringFlag{
-					Name:     FlagBatchType,
-					Usage:    "Types supported: " + strings.Join(allBatchTypes, ","),
+					Name:     FlagType,
+					Usage:    "Batch type: " + strings.Join(allBatchTypes, ","),
 					Required: true,
 				},
 				&cli.StringFlag{

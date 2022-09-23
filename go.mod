@@ -17,8 +17,8 @@ require (
 	github.com/temporalio/tctl-kit v0.0.0-20220830191903-8c776228690e
 	github.com/urfave/cli v1.22.9
 	github.com/urfave/cli/v2 v2.10.2
-	go.temporal.io/api v1.11.1-0.20220913002535-fb282e306388
-	go.temporal.io/sdk v1.16.1-0.20220907175405-9341009cb68a
+	go.temporal.io/api v1.12.0
+	go.temporal.io/sdk v1.17.0
 	go.temporal.io/server v1.16.1-0.20220907222358-163d94b57dc6
 	golang.org/x/exp v0.0.0-20220613132600-b0d781184e0d
 	google.golang.org/grpc v1.49.0
