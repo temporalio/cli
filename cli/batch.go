@@ -104,8 +104,8 @@ func newBatchCommands() []*cli.Command {
 			},
 		},
 		{
-			Name:  "terminate",
-			Usage: "terminate a batch operation job",
+			Name:  "stop",
+			Usage: "stop a batch operation job",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:     FlagJobID,
@@ -119,7 +119,7 @@ func newBatchCommands() []*cli.Command {
 				},
 			},
 			Action: func(c *cli.Context) error {
-				return TerminateBatchJob(c)
+				return StopBatchJob(c)
 			},
 		},
 	}

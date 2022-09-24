@@ -39,3 +39,17 @@ func (s *cliAppSuite) TestListBatchJobs() {
 	s.Nil(err)
 	s.sdkClient.AssertExpectations(s.T())
 }
+
+func (s *cliAppSuite) TestStopBatchJob() {
+	s.frontendClient.EXPECT().StopBatchOperation(gomock.Any(), gomock.Any()).Return(&workflowservice.StopBatchOperationResponse{}, nil).Times(1)
+	err := s.app.Run([]string{"", "batch", "stop", "--job-id", "test", "--reason", "test"})
+	s.Nil(err)
+	s.sdkClient.AssertExpectations(s.T())
+}
+
+func (s *cliAppSuite) TestDescribeBatchJob() {
+	s.frontendClient.EXPECT().DescribeBatchOperation(gomock.Any(), gomock.Any()).Return(&workflowservice.DescribeBatchOperationResponse{}, nil).Times(1)
+	err := s.app.Run([]string{"", "batch", "describe", "--job-id", "test"})
+	s.Nil(err)
+	s.sdkClient.AssertExpectations(s.T())
+}

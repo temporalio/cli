@@ -30,16 +30,15 @@ import (
 	"os"
 	"strings"
 
+	"github.com/temporalio/tctl-kit/pkg/color"
 	"github.com/temporalio/tctl-kit/pkg/output"
 	"github.com/temporalio/tctl-kit/pkg/pager"
 	"github.com/urfave/cli/v2"
-	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	sdkclient "go.temporal.io/sdk/client"
 	"go.temporal.io/server/common/collection"
-	"go.temporal.io/server/common/primitives"
-
 	"go.temporal.io/server/common/payloads"
+	"go.temporal.io/server/common/primitives"
 	"go.temporal.io/server/common/searchattribute"
 	"go.temporal.io/server/service/worker/batcher"
 )
@@ -48,34 +47,23 @@ import (
 func DescribeBatchJob(c *cli.Context) error {
 	jobID := c.String(FlagJobID)
 
-	client := cFactory.SDKClient(c, primitives.SystemLocalNamespace)
-	tcCtx, cancel := newContext(c)
+	client := cFactory.FrontendClient(c)
+	ctx, cancel := newContext(c)
 	defer cancel()
-	wf, err := client.DescribeWorkflowExecution(tcCtx, jobID, "")
+	resp, err := client.DescribeBatchOperation(ctx, &workflowservice.DescribeBatchOperationRequest{
+		Namespace: primitives.SystemLocalNamespace,
+		JobId:     jobID,
+	})
 	if err != nil {
 		return fmt.Errorf("failed to describe batch job: %w", err)
 	}
 
-	output := map[string]interface{}{}
-	if wf.WorkflowExecutionInfo.GetStatus() != enumspb.WORKFLOW_EXECUTION_STATUS_RUNNING {
-		if wf.WorkflowExecutionInfo.GetStatus() != enumspb.WORKFLOW_EXECUTION_STATUS_COMPLETED {
-			output["msg"] = "batch job stopped status: " + wf.WorkflowExecutionInfo.GetStatus().String()
-		} else {
-			output["msg"] = "batch job is finished successfully"
-		}
-	} else {
-		output["msg"] = "batch job is running"
-		if len(wf.PendingActivities) > 0 {
-			hbdPayload := wf.PendingActivities[0].HeartbeatDetails
-			var hbd batcher.HeartBeatDetails
-			err := payloads.Decode(hbdPayload, &hbd)
-			if err != nil {
-				return fmt.Errorf("failed to describe batch job: %w", err)
-			}
-			output["progress"] = hbd
-		}
+	opts := &output.PrintOptions{
+		Fields:     []string{"State", "JobId", "StartTime"},
+		FieldsLong: []string{"Identity", "Reason"},
+		Pager:      pager.Less,
 	}
-	prettyPrintJSONObject(output)
+	output.PrintItems(c, []interface{}{resp}, opts)
 	return nil
 }
 
@@ -209,21 +197,26 @@ func StartBatchJob(c *cli.Context) error {
 	return nil
 }
 
-// TerminateBatchJob stops abatch job
-func TerminateBatchJob(c *cli.Context) error {
+// StopBatchJob stops a batch job
+func StopBatchJob(c *cli.Context) error {
 	jobID := c.String(FlagJobID)
 	reason := c.String(FlagReason)
-	client := cFactory.SDKClient(c, primitives.SystemLocalNamespace)
-	tcCtx, cancel := newContext(c)
+	client := cFactory.FrontendClient(c)
+
+	ctx, cancel := newContext(c)
 	defer cancel()
-	err := client.TerminateWorkflow(tcCtx, jobID, "", reason, nil)
+	_, err := client.StopBatchOperation(ctx, &workflowservice.StopBatchOperationRequest{
+		Namespace: primitives.SystemLocalNamespace,
+		JobId:     jobID,
+		Reason:    reason,
+		Identity:  getCurrentUserFromEnv(),
+	})
+
 	if err != nil {
-		return fmt.Errorf("failed to terminate batch job: %w", err)
+		return fmt.Errorf("unable to stop a batch job %s: %s", color.Magenta(c, jobID), err)
 	}
-	output := map[string]interface{}{
-		"msg": "batch job is terminated",
-	}
-	prettyPrintJSONObject(output)
+
+	fmt.Printf("Batch job %s is stopped\n", color.Magenta(c, jobID))
 	return nil
 }
 
