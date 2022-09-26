@@ -25,18 +25,16 @@
 package cli
 
 import (
-	"github.com/stretchr/testify/mock"
-	"go.temporal.io/api/workflowservice/v1"
+	"github.com/golang/mock/gomock"
+	"go.temporal.io/api/operatorservice/v1"
 )
 
 func (s *cliAppSuite) TestListSearchAttributes() {
-	s.sdkClient.On("GetSearchAttributes", mock.Anything).Return(&workflowservice.GetSearchAttributesResponse{}, nil).Once()
+	s.operatorClient.EXPECT().ListSearchAttributes(gomock.Any(), gomock.Any()).Return(&operatorservice.ListSearchAttributesResponse{}, nil)
 	err := s.app.Run([]string{"", "search-attribute", "list"})
 	s.Nil(err)
-	s.sdkClient.AssertExpectations(s.T())
 
-	s.sdkClient.On("GetSearchAttributes", mock.Anything).Return(&workflowservice.GetSearchAttributesResponse{}, nil).Once()
+	s.operatorClient.EXPECT().ListSearchAttributes(gomock.Any(), gomock.Any()).Return(&operatorservice.ListSearchAttributesResponse{}, nil)
 	err = s.app.Run([]string{"", "--namespace", cliTestNamespace, "search-attribute", "list"})
 	s.Nil(err)
-	s.sdkClient.AssertExpectations(s.T())
 }

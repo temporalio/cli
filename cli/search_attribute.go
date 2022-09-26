@@ -39,12 +39,14 @@ func newSearchAttributeCommands() []*cli.Command {
 			Usage: "Add custom search attributes",
 			Flags: []cli.Flag{
 				&cli.StringSliceFlag{
-					Name:  FlagName,
-					Usage: "Search attribute name",
+					Name:     FlagName,
+					Required: true,
+					Usage:    "Search attribute name",
 				},
 				&cli.StringSliceFlag{
-					Name:  FlagType,
-					Usage: fmt.Sprintf("Search attribute type: %v", allowedEnumValues(enumspb.IndexedValueType_name)),
+					Name:     FlagType,
+					Required: true,
+					Usage:    fmt.Sprintf("Search attribute type: %v", allowedEnumValues(enumspb.IndexedValueType_name)),
 				},
 				&cli.BoolFlag{
 					Name:    FlagYes,
@@ -76,8 +78,9 @@ func newSearchAttributeCommands() []*cli.Command {
 			Usage: "Remove custom search attributes metadata only (Elasticsearch index schema is not modified)",
 			Flags: []cli.Flag{
 				&cli.StringSliceFlag{
-					Name:  FlagName,
-					Usage: "Search attribute name",
+					Name:     FlagName,
+					Required: true,
+					Usage:    "Search attribute name",
 				},
 				&cli.BoolFlag{
 					Name:    FlagYes,

@@ -26,6 +26,7 @@ package cli
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -42,27 +43,29 @@ const (
 
 // ListSearchAttributes lists search attributes
 func ListSearchAttributes(c *cli.Context) error {
-	wfClient, err := getSDKClient(c)
-	if err != nil {
-		return err
-	}
+	client := cFactory.OperatorClient(c)
 	ctx, cancel := newContext(c)
 	defer cancel()
 
-	resp, err := wfClient.GetSearchAttributes(ctx)
+	resp, err := client.ListSearchAttributes(ctx, &operatorservice.ListSearchAttributesRequest{})
 	if err != nil {
-		return fmt.Errorf("unable to get search attributes.\n%s", err)
+		return fmt.Errorf("unable to list search attributes: %v", err)
 	}
 
-	searchAttributes := resp.GetKeys()
 	var items []interface{}
 	type sa struct {
 		Name string
 		Type string
 	}
-	for key, val := range searchAttributes {
-		items = append(items, sa{Name: key, Type: val.String()})
+	for saName, saType := range resp.GetSystemAttributes() {
+		items = append(items, sa{Name: saName, Type: saType.String()})
 	}
+	for saName, saType := range resp.GetCustomAttributes() {
+		items = append(items, sa{Name: saName, Type: saType.String()})
+	}
+	sort.Slice(items, func(i, j int) bool {
+		return items[i].(sa).Name < items[j].(sa).Name
+	})
 
 	opts := &output.PrintOptions{
 		Fields: []string{"Name", "Type"},
@@ -78,7 +81,7 @@ func AddSearchAttributes(c *cli.Context) error {
 	typeStrs := c.StringSlice(FlagType)
 
 	if len(names) != len(typeStrs) {
-		return fmt.Errorf("Number of names and types options should be the same.")
+		return fmt.Errorf("number of names and types options should be the same")
 	}
 
 	client := cFactory.OperatorClient(c)
@@ -88,7 +91,7 @@ func AddSearchAttributes(c *cli.Context) error {
 	listReq := &operatorservice.ListSearchAttributesRequest{}
 	existingSearchAttributes, err := client.ListSearchAttributes(ctx, listReq)
 	if err != nil {
-		return fmt.Errorf("Unable to get existing search attributes.: %s", err)
+		return fmt.Errorf("unable to get existing search attributes: %v", err)
 	}
 
 	searchAttributes := make(map[string]enumspb.IndexedValueType, len(typeStrs))
@@ -97,7 +100,7 @@ func AddSearchAttributes(c *cli.Context) error {
 
 		typeInt, err := stringToEnum(typeStr, enumspb.IndexedValueType_value)
 		if err != nil {
-			return fmt.Errorf("Unable to parse search attribute type %s: %s", typeStr, err)
+			return fmt.Errorf("unable to parse search attribute type %s: %s", typeStr, err)
 		}
 		existingSearchAttributeType, searchAttributeExists := existingSearchAttributes.CustomAttributes[names[i]]
 		if !searchAttributeExists {
@@ -105,7 +108,7 @@ func AddSearchAttributes(c *cli.Context) error {
 			continue
 		}
 		if existingSearchAttributeType != enumspb.IndexedValueType(typeInt) {
-			return fmt.Errorf("Search attribute %s already exists and has different type %s: %s", names[i], existingSearchAttributeType, err)
+			return fmt.Errorf("search attribute %s already exists and has different type %s: %s", names[i], existingSearchAttributeType, err)
 		}
 	}
 
@@ -130,7 +133,7 @@ func AddSearchAttributes(c *cli.Context) error {
 	defer cancel()
 	_, err = client.AddSearchAttributes(ctx, request)
 	if err != nil {
-		return fmt.Errorf("unable to add search attributes.: %s", err)
+		return fmt.Errorf("unable to add search attributes: %v", err)
 	}
 	fmt.Println(color.Green(c, "Search attributes have been added"))
 	return nil
@@ -157,7 +160,7 @@ func RemoveSearchAttributes(c *cli.Context) error {
 
 	_, err := client.RemoveSearchAttributes(ctx, request)
 	if err != nil {
-		return fmt.Errorf("unable to remove search attributes.: %s", err)
+		return fmt.Errorf("unable to remove search attributes: %v", err)
 	}
 	fmt.Println(color.Green(c, "Search attributes have been removed"))
 	return nil
