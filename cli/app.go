@@ -25,11 +25,9 @@
 package cli
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"runtime/debug"
-	"strings"
 
 	"github.com/urfave/cli/v2"
 
@@ -147,13 +145,7 @@ func NewCliApp() *cli.App {
 		SetFactory(NewClientFactory())
 	}
 
-	if tctlConfig == nil {
-		var err error
-		if tctlConfig, err = config.NewTctlConfig(); err != nil {
-			fmt.Printf("unable to load tctl config: %v", err)
-			promptContinueWithoutConfig()
-		}
-	}
+	tctlConfig, _ = config.NewTctlConfig()
 	populateFlags(app.Commands, app.Flags)
 	useDynamicCommands(app)
 
@@ -217,20 +209,4 @@ func handleError(c *cli.Context, err error) {
 	}
 
 	cli.OsExiter(1)
-}
-
-func promptContinueWithoutConfig() {
-	reader := bufio.NewReader(os.Stdin)
-	for {
-		fmt.Print("do you want to continue without reading from tctl config[Yes/No]:")
-		text, err := reader.ReadString('\n')
-		if err != nil {
-			fmt.Printf("unable to confirm: %s", err)
-		}
-		if strings.EqualFold(strings.TrimSpace(text), "yes") {
-			break
-		} else {
-			fmt.Println("command is canceled")
-		}
-	}
 }
