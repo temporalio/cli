@@ -53,6 +53,8 @@ func DescribeTaskQueue(c *cli.Context) error {
 	}
 
 	opts := &output.PrintOptions{
+		// TODO enable when versioning feature is out
+		// Fields: []string{"Identity", "LastAccessTime", "RatePerSecond", "WorkerVersioningId"},
 		Fields: []string{"Identity", "LastAccessTime", "RatePerSecond"},
 	}
 	var items []interface{}
@@ -93,7 +95,7 @@ func ListTaskQueuePartitions(c *cli.Context) error {
 	}
 
 	var items []interface{}
-	fmt.Println(color.Magenta(c, "Workflow TaskQueue Partitions\n"))
+	fmt.Println(color.Magenta(c, "Workflow Task Queue Partitions\n"))
 	for _, e := range resp.WorkflowTaskQueuePartitions {
 		items = append(items, e)
 	}
@@ -103,7 +105,7 @@ func ListTaskQueuePartitions(c *cli.Context) error {
 		Fields: []string{"Key", "OwnerHostName"},
 	}
 	items = items[:0]
-	fmt.Println(color.Magenta(c, "\nActivity TaskQueue Partitions\n"))
+	fmt.Println(color.Magenta(c, "\nActivity Task Queue Partitions\n"))
 	for _, e := range resp.ActivityTaskQueuePartitions {
 		items = append(items, e)
 	}
