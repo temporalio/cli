@@ -58,7 +58,7 @@ func (s *cliAppSuite) TestDescribeBatchJob() {
 func (s *cliAppSuite) TestStartBatchJob_Signal() {
 	s.sdkClient.On("CountWorkflow", mock.Anything, mock.Anything).Return(&workflowservice.CountWorkflowExecutionsResponse{Count: 5}, nil).Once()
 	s.frontendClient.EXPECT().StartBatchOperation(gomock.Any(), gomock.Any()).Return(&workflowservice.StartBatchOperationResponse{}, nil).Times(1)
-	err := s.app.Run([]string{"", "batch", "start", "--type", "signal", "--query", "WorkflowType='test-type'", "--reason", "test-reason", "--signal-name", "test-signal", "--input", "test-input", "--yes"})
+	err := s.app.Run([]string{"", "batch", "signal", "--query", "WorkflowType='test-type'", "--reason", "test-reason", "--signal-name", "test-signal", "--input", "test-input", "--yes"})
 	s.Nil(err)
 	s.sdkClient.AssertExpectations(s.T())
 }
@@ -66,7 +66,7 @@ func (s *cliAppSuite) TestStartBatchJob_Signal() {
 func (s *cliAppSuite) TestStartBatchJob_Terminate() {
 	s.sdkClient.On("CountWorkflow", mock.Anything, mock.Anything).Return(&workflowservice.CountWorkflowExecutionsResponse{Count: 5}, nil).Once()
 	s.frontendClient.EXPECT().StartBatchOperation(gomock.Any(), gomock.Any()).Return(&workflowservice.StartBatchOperationResponse{}, nil).Times(1)
-	err := s.app.Run([]string{"", "batch", "start", "--type", "terminate", "--query", "WorkflowType='test-type'", "--reason", "test-reason", "--yes"})
+	err := s.app.Run([]string{"", "batch", "terminate", "--query", "WorkflowType='test-type'", "--reason", "test-reason", "--yes"})
 	s.Nil(err)
 	s.sdkClient.AssertExpectations(s.T())
 }
@@ -74,7 +74,7 @@ func (s *cliAppSuite) TestStartBatchJob_Terminate() {
 func (s *cliAppSuite) TestStartBatchJob_Cancel() {
 	s.sdkClient.On("CountWorkflow", mock.Anything, mock.Anything).Return(&workflowservice.CountWorkflowExecutionsResponse{Count: 5}, nil).Once()
 	s.frontendClient.EXPECT().StartBatchOperation(gomock.Any(), gomock.Any()).Return(&workflowservice.StartBatchOperationResponse{}, nil).Times(1)
-	err := s.app.Run([]string{"", "batch", "start", "--type", "cancel", "--query", "WorkflowType='test-type'", "--reason", "test-reason", "--yes"})
+	err := s.app.Run([]string{"", "batch", "cancel", "--query", "WorkflowType='test-type'", "--reason", "test-reason", "--yes"})
 	s.Nil(err)
 	s.sdkClient.AssertExpectations(s.T())
 }

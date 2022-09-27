@@ -25,28 +25,22 @@
 package cli
 
 import (
-	"strings"
-
 	"github.com/temporalio/tctl-kit/pkg/flags"
 	"github.com/urfave/cli/v2"
-
-	"go.temporal.io/server/service/worker/batcher"
 )
-
-var allBatchTypes = []string{batcher.BatchTypeTerminate, batcher.BatchTypeCancel, batcher.BatchTypeSignal}
 
 func newBatchCommands() []*cli.Command {
 	return []*cli.Command{
 		{
 			Name:  "describe",
 			Usage: "Describe a batch operation job",
-			Flags: []cli.Flag{
+			Flags: append([]cli.Flag{
 				&cli.StringFlag{
 					Name:     FlagJobID,
 					Usage:    "Batch Job Id",
 					Required: true,
 				},
-			},
+			}, flags.FlagsForRendering...),
 			Action: func(c *cli.Context) error {
 				return DescribeBatchJob(c)
 			},
@@ -61,33 +55,29 @@ func newBatchCommands() []*cli.Command {
 			},
 		},
 		{
-			Name:  "start",
-			Usage: "Start a batch operation job",
+			Name:  "signal",
+			Usage: "Signal a batch of Workflow Executions",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:     FlagQuery,
 					Aliases:  FlagQueryAlias,
-					Usage:    "Specify the Workflow Executions to operate on",
+					Usage:    "Specify the Workflow Executions to operate on. See https://docs.temporal.io/docs/tctl/workflow/list#--query for details",
 					Required: true,
 				},
 				&cli.StringFlag{
-					Name:     FlagReason,
-					Usage:    "Reason to run this batch job",
+					Name:     FlagSignalName,
+					Usage:    "Signal name",
 					Required: true,
-				},
-				&cli.StringFlag{
-					Name:     FlagType,
-					Usage:    "Batch type: " + strings.Join(allBatchTypes, ","),
-					Required: true,
-				},
-				&cli.StringFlag{
-					Name:  FlagSignalName,
-					Usage: "Required for batch signal",
 				},
 				&cli.StringFlag{
 					Name:    FlagInput,
 					Aliases: FlagInputAlias,
-					Usage:   "Optional input of signal",
+					Usage:   "Input for the signal (JSON)",
+				},
+				&cli.StringFlag{
+					Name:     FlagReason,
+					Usage:    "Reason to signal",
+					Required: true,
 				},
 				&cli.BoolFlag{
 					Name:    FlagYes,
@@ -96,12 +86,62 @@ func newBatchCommands() []*cli.Command {
 				},
 			},
 			Action: func(c *cli.Context) error {
-				return StartBatchJob(c)
+				return BatchTerminate(c)
+			},
+		},
+		{
+			Name:  "terminate",
+			Usage: "Terminate a batch of Workflow Executions",
+			Flags: []cli.Flag{
+				&cli.StringFlag{
+					Name:     FlagQuery,
+					Aliases:  FlagQueryAlias,
+					Usage:    "Specify the Workflow Executions to operate on. See https://docs.temporal.io/docs/tctl/workflow/list#--query for details",
+					Required: true,
+				},
+				&cli.StringFlag{
+					Name:     FlagReason,
+					Usage:    "Reason to terminate",
+					Required: true,
+				},
+				&cli.BoolFlag{
+					Name:    FlagYes,
+					Aliases: FlagYesAlias,
+					Usage:   "Confirm all prompts",
+				},
+			},
+			Action: func(c *cli.Context) error {
+				return BatchTerminate(c)
+			},
+		},
+		{
+			Name:  "cancel",
+			Usage: "Cancel a batch of Workflow Executions",
+			Flags: []cli.Flag{
+				&cli.StringFlag{
+					Name:     FlagQuery,
+					Aliases:  FlagQueryAlias,
+					Usage:    "Specify the Workflow Executions to operate on. See https://docs.temporal.io/docs/tctl/workflow/list#--query for details",
+					Required: true,
+				},
+				&cli.StringFlag{
+					Name:     FlagReason,
+					Usage:    "Reason to cancel",
+					Required: true,
+				},
+				&cli.BoolFlag{
+					Name:    FlagYes,
+					Aliases: FlagYesAlias,
+					Usage:   "Confirm all prompts",
+				},
+			},
+			Action: func(c *cli.Context) error {
+				return BatchCancel(c)
 			},
 		},
 		{
 			Name:  "stop",
-			Usage: "stop a batch operation job",
+			Usage: "Stop a batch operation job",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:     FlagJobID,
@@ -110,7 +150,7 @@ func newBatchCommands() []*cli.Command {
 				},
 				&cli.StringFlag{
 					Name:     FlagReason,
-					Usage:    "Reason to stop this batch job",
+					Usage:    "Reason to stop the batch job",
 					Required: true,
 				},
 			},

@@ -26,7 +26,6 @@ package cli
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/pborman/uuid"
 	"github.com/temporalio/tctl-kit/pkg/color"
@@ -37,19 +36,21 @@ import (
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/server/common/collection"
 	"go.temporal.io/server/common/payloads"
-	"go.temporal.io/server/common/primitives"
-	"go.temporal.io/server/service/worker/batcher"
 )
 
 // DescribeBatchJob describe the status of the batch job
 func DescribeBatchJob(c *cli.Context) error {
+	namespace, err := getRequiredGlobalOption(c, FlagNamespace)
+	if err != nil {
+		return err
+	}
 	jobID := c.String(FlagJobID)
 
 	client := cFactory.FrontendClient(c)
 	ctx, cancel := newContext(c)
 	defer cancel()
 	resp, err := client.DescribeBatchOperation(ctx, &workflowservice.DescribeBatchOperationRequest{
-		Namespace: primitives.SystemLocalNamespace,
+		Namespace: namespace,
 		JobId:     jobID,
 	})
 	if err != nil {
@@ -67,6 +68,10 @@ func DescribeBatchJob(c *cli.Context) error {
 
 // ListBatchJobs list the started batch jobs
 func ListBatchJobs(c *cli.Context) error {
+	namespace, err := getRequiredGlobalOption(c, FlagNamespace)
+	if err != nil {
+		return err
+	}
 	client := cFactory.FrontendClient(c)
 
 	paginationFunc := func(npt []byte) ([]interface{}, []byte, error) {
@@ -76,7 +81,7 @@ func ListBatchJobs(c *cli.Context) error {
 		ctx, cancel := newContext(c)
 		defer cancel()
 		resp, err := client.ListBatchOperations(ctx, &workflowservice.ListBatchOperationsRequest{
-			Namespace: primitives.SystemLocalNamespace,
+			Namespace: namespace,
 		})
 
 		for _, e := range resp.OperationInfo {
@@ -99,21 +104,73 @@ func ListBatchJobs(c *cli.Context) error {
 	return output.PrintIterator(c, iter, opts)
 }
 
-// StartBatchJob starts a batch job
-func StartBatchJob(c *cli.Context) error {
+// BatchTerminate terminate a list of workflows
+func BatchTerminate(c *cli.Context) error {
+	operator := getCurrentUserFromEnv()
+
+	req := workflowservice.StartBatchOperationRequest{
+		Operation: &workflowservice.StartBatchOperationRequest_TerminationOperation{
+			TerminationOperation: &batch.BatchOperationTermination{
+				Identity: operator,
+			},
+		},
+	}
+
+	return startBatchJob(c, &req)
+}
+
+// BatchCancel cancel a list of workflows
+func BatchCancel(c *cli.Context) error {
+	operator := getCurrentUserFromEnv()
+
+	req := workflowservice.StartBatchOperationRequest{
+		Operation: &workflowservice.StartBatchOperationRequest_CancellationOperation{
+			CancellationOperation: &batch.BatchOperationCancellation{
+				Identity: operator,
+			},
+		},
+	}
+
+	return startBatchJob(c, &req)
+}
+
+// BatchSignal send a signal to a list of workflows
+func BatchSignal(c *cli.Context) error {
+	signalName := c.String(FlagSignalName)
+	input := c.String(FlagInput)
+	operator := getCurrentUserFromEnv()
+
+	inputP, err := payloads.Encode(input)
+	if err != nil {
+		return fmt.Errorf("unable to serialize signal input: %w", err)
+	}
+
+	req := workflowservice.StartBatchOperationRequest{
+		Operation: &workflowservice.StartBatchOperationRequest_SignalOperation{
+			SignalOperation: &batch.BatchOperationSignal{
+				Signal:   signalName,
+				Identity: operator,
+				Input:    inputP,
+			},
+		},
+	}
+
+	return startBatchJob(c, &req)
+}
+
+// startBatchJob starts a batch job
+func startBatchJob(c *cli.Context, req *workflowservice.StartBatchOperationRequest) error {
 	namespace, err := getRequiredGlobalOption(c, FlagNamespace)
 	if err != nil {
 		return err
 	}
 	query := c.String(FlagQuery)
 	reason := c.String(FlagReason)
-	batchType := c.String(FlagType)
-	operator := getCurrentUserFromEnv()
 
 	sdk := cFactory.SDKClient(c, namespace)
 	tcCtx, cancel := newContext(c)
 	defer cancel()
-	cResp, err := sdk.CountWorkflow(tcCtx, &workflowservice.CountWorkflowExecutionsRequest{
+	count, err := sdk.CountWorkflow(tcCtx, &workflowservice.CountWorkflowExecutionsRequest{
 		Namespace: namespace,
 		Query:     query,
 	})
@@ -123,61 +180,22 @@ func StartBatchJob(c *cli.Context) error {
 
 	promptMsg := fmt.Sprintf(
 		"Will start a batch job operating on %v Workflow Executions. Continue? Y/N",
-		color.Yellow(c, "%v", cResp.GetCount()),
+		color.Yellow(c, "%v", count.GetCount()),
 	)
 	if !promptYes(promptMsg, c.Bool(FlagYes)) {
 		return nil
 	}
 
-	input := c.String(FlagInput)
-	payloads, err := payloads.Encode(input)
-	if err != nil {
-		return fmt.Errorf("failed to serialize signal value: %w", err)
-	}
-
 	jobID := uuid.New()
-	req := workflowservice.StartBatchOperationRequest{
-		Namespace:       namespace,
-		Reason:          reason,
-		VisibilityQuery: query,
-		JobId:           jobID,
-	}
-
-	switch batchType {
-	case batcher.BatchTypeSignal:
-		sigName := c.String(FlagSignalName)
-
-		if sigName == "" {
-			return fmt.Errorf("option %s are required for type %s", FlagSignalName, batcher.BatchTypeSignal)
-		}
-
-		req.Operation = &workflowservice.StartBatchOperationRequest_SignalOperation{
-			SignalOperation: &batch.BatchOperationSignal{
-				Signal:   sigName,
-				Input:    payloads,
-				Identity: operator,
-			},
-		}
-	case batcher.BatchTypeTerminate:
-		req.Operation = &workflowservice.StartBatchOperationRequest_TerminationOperation{
-			TerminationOperation: &batch.BatchOperationTermination{
-				Identity: operator,
-			},
-		}
-	case batcher.BatchTypeCancel:
-		req.Operation = &workflowservice.StartBatchOperationRequest_CancellationOperation{
-			CancellationOperation: &batch.BatchOperationCancellation{
-				Identity: operator,
-			},
-		}
-	default:
-		return fmt.Errorf("unknown batch type. Supported types: %s", strings.Join(allBatchTypes, ","))
-	}
+	req.JobId = jobID
+	req.Namespace = namespace
+	req.VisibilityQuery = query
+	req.Reason = reason
 
 	client := cFactory.FrontendClient(c)
 	ctx, cancel := newContext(c)
 	defer cancel()
-	_, err = client.StartBatchOperation(ctx, &req)
+	_, err = client.StartBatchOperation(ctx, req)
 	if err != nil {
 		return fmt.Errorf("unable to start batch job: %s", err)
 	}
@@ -188,14 +206,18 @@ func StartBatchJob(c *cli.Context) error {
 
 // StopBatchJob stops a batch job
 func StopBatchJob(c *cli.Context) error {
+	namespace, err := getRequiredGlobalOption(c, FlagNamespace)
+	if err != nil {
+		return err
+	}
 	jobID := c.String(FlagJobID)
 	reason := c.String(FlagReason)
 	client := cFactory.FrontendClient(c)
 
 	ctx, cancel := newContext(c)
 	defer cancel()
-	_, err := client.StopBatchOperation(ctx, &workflowservice.StopBatchOperationRequest{
-		Namespace: primitives.SystemLocalNamespace,
+	_, err = client.StopBatchOperation(ctx, &workflowservice.StopBatchOperationRequest{
+		Namespace: namespace,
 		JobId:     jobID,
 		Reason:    reason,
 		Identity:  getCurrentUserFromEnv(),
