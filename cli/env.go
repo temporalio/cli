@@ -106,9 +106,7 @@ func ShowEnv(c *cli.Context) error {
 	}
 
 	po := &output.PrintOptions{OutputFormat: output.Table}
-	output.PrintItems(c, flags, po)
-
-	return nil
+	return output.PrintItems(c, flags, po)
 }
 
 func UseEnv(c *cli.Context) error {

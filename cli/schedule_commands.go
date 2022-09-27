@@ -537,8 +537,7 @@ func DescribeSchedule(c *cli.Context) error {
 			"Info.InvalidScheduleError",
 		},
 	}
-	output.PrintItems(c, []interface{}{item}, opts)
-	return nil
+	return output.PrintItems(c, []interface{}{item}, opts)
 }
 
 func DeleteSchedule(c *cli.Context) error {

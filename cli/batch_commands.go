@@ -62,8 +62,7 @@ func DescribeBatchJob(c *cli.Context) error {
 		FieldsLong: []string{"Identity", "Reason"},
 		Pager:      pager.Less,
 	}
-	output.PrintItems(c, []interface{}{resp}, opts)
-	return nil
+	return output.PrintItems(c, []interface{}{resp}, opts)
 }
 
 // ListBatchJobs list the started batch jobs

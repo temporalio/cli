@@ -165,7 +165,10 @@ func StartWorkflow(c *cli.Context, printProgress bool) error {
 		OutputFormat: output.Card,
 		Separator:    "",
 	}
-	output.PrintItems(c, data, opts)
+	err = output.PrintItems(c, data, opts)
+	if err != nil {
+		return err
+	}
 
 	if printProgress {
 		return printWorkflowProgress(c, wid, resp.GetRunID(), true)

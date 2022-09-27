@@ -70,9 +70,7 @@ func ListSearchAttributes(c *cli.Context) error {
 	opts := &output.PrintOptions{
 		Fields: []string{"Name", "Type"},
 	}
-	output.PrintItems(c, items, opts)
-
-	return nil
+	return output.PrintItems(c, items, opts)
 }
 
 // AddSearchAttributes to add search attributes

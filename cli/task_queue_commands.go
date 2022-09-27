@@ -61,9 +61,7 @@ func DescribeTaskQueue(c *cli.Context) error {
 	for _, e := range resp.Pollers {
 		items = append(items, e)
 	}
-	output.PrintItems(c, items, opts)
-
-	return nil
+	return output.PrintItems(c, items, opts)
 }
 
 // ListTaskQueuePartitions gets all the taskqueue partition and host information.
@@ -99,7 +97,10 @@ func ListTaskQueuePartitions(c *cli.Context) error {
 	for _, e := range resp.WorkflowTaskQueuePartitions {
 		items = append(items, e)
 	}
-	output.PrintItems(c, items, optsW)
+	err = output.PrintItems(c, items, optsW)
+	if err != nil {
+		return err
+	}
 
 	optsA := &output.PrintOptions{
 		Fields: []string{"Key", "OwnerHostName"},
@@ -109,6 +110,5 @@ func ListTaskQueuePartitions(c *cli.Context) error {
 	for _, e := range resp.ActivityTaskQueuePartitions {
 		items = append(items, e)
 	}
-	output.PrintItems(c, items, optsA)
-	return nil
+	return output.PrintItems(c, items, optsA)
 }
