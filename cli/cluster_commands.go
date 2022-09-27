@@ -28,7 +28,9 @@ import (
 	"fmt"
 
 	"github.com/temporalio/tctl-kit/pkg/color"
+	"github.com/temporalio/tctl-kit/pkg/output"
 	"github.com/urfave/cli/v2"
+	"go.temporal.io/api/workflowservice/v1"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 )
 
@@ -58,5 +60,23 @@ func HealthCheck(c *cli.Context) error {
 	}
 
 	fmt.Println(color.Green(c, "%v", resp.Status))
+	return nil
+}
+
+func DescribeSystem(c *cli.Context) error {
+	client := cFactory.FrontendClient(c)
+	ctx, cancel := newContext(c)
+	defer cancel()
+
+	system, err := client.GetSystemInfo(ctx, &workflowservice.GetSystemInfoRequest{})
+	if err != nil {
+		return fmt.Errorf("unable to get system information: %v", err)
+	}
+
+	po := &output.PrintOptions{
+		Fields:     []string{"ServerVersion", "Capabilities.SupportsSchedules", "Capabilities.UpsertMemo"},
+		FieldsLong: []string{"Capabilities.SignalAndQueryHeader", "Capabilities.ActivityFailureIncludeHeartbeat", "Capabilities.InternalErrorDifferentiation"},
+	}
+	output.PrintItems(c, []interface{}{system}, po)
 	return nil
 }

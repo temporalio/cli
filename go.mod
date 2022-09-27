@@ -14,7 +14,7 @@ require (
 	github.com/olivere/elastic/v7 v7.0.32
 	github.com/pborman/uuid v1.2.1
 	github.com/stretchr/testify v1.8.0
-	github.com/temporalio/tctl-kit v0.0.0-20220927172351-1f2d40e721c1
+	github.com/temporalio/tctl-kit v0.0.0-20220927185913-0326664b982c
 	github.com/urfave/cli v1.22.9
 	github.com/urfave/cli/v2 v2.10.2
 	go.temporal.io/api v1.12.0
@@ -59,7 +59,6 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.10.3 // indirect
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
 	github.com/hashicorp/yamux v0.0.0-20211028200310-0bc27b27de87 // indirect
-	github.com/hokaccha/go-prettyjson v0.0.0-20210113012101-fb4e108d2519 // indirect
 	github.com/iancoleman/strcase v0.2.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/jmoiron/sqlx v1.3.4 // indirect

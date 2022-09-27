@@ -293,8 +293,6 @@ github.com/hashicorp/golang-lru v0.5.1/go.mod h1:/m3WP610KZHVQ1SGc6re/UDhFvYD7pJ
 github.com/hashicorp/yamux v0.0.0-20180604194846-3520598351bb/go.mod h1:+NfK9FKeTrX5uv1uIXGdwYDTeHna2qgaIlx54MXqjAM=
 github.com/hashicorp/yamux v0.0.0-20211028200310-0bc27b27de87 h1:xixZ2bWeofWV68J+x6AzmKuVM/JWCQwkWm6GW/MUR6I=
 github.com/hashicorp/yamux v0.0.0-20211028200310-0bc27b27de87/go.mod h1:CtWFDAQgb7dxtzFs4tWbplKIe2jSi3+5vKbgIO0SLnQ=
-github.com/hokaccha/go-prettyjson v0.0.0-20210113012101-fb4e108d2519 h1:nqAlWFEdqI0ClbTDrhDvE/8LeQ4pftrqKUX9w5k0j3s=
-github.com/hokaccha/go-prettyjson v0.0.0-20210113012101-fb4e108d2519/go.mod h1:pFlLw2CfqZiIBOx6BuCeRLCrfxBJipTY0nIOF/VbGcI=
 github.com/iancoleman/strcase v0.2.0 h1:05I4QRnGpI0m37iZQRuskXh+w77mr6Z41lwQzuHLwW0=
 github.com/iancoleman/strcase v0.2.0/go.mod h1:iwCmte+B7n89clKwxIoIXy/HfoL7AsD47ZCWhYzw7ho=
 github.com/ianlancetaylor/demangle v0.0.0-20181102032728-5e5cf60278f6/go.mod h1:aSSvb/t6k1mPoxDqO4vJh6VOCGPwU4O0C2/Eqndh1Sc=
@@ -453,8 +451,8 @@ github.com/temporalio/ringpop-go v0.0.0-20220818230611-30bf23b490b2 h1:QIwUh2HCt
 github.com/temporalio/ringpop-go v0.0.0-20220818230611-30bf23b490b2/go.mod h1:ZEYrWwPO7607ZEaPzK7nWRv55cIrTtH4TeBBu3V532U=
 github.com/temporalio/tchannel-go v1.22.1-0.20220818200552-1be8d8cffa5b h1:Fs3LdlF7xbnOWHymbFmvIEuxIEt1dNRCfaDkoajSaZk=
 github.com/temporalio/tchannel-go v1.22.1-0.20220818200552-1be8d8cffa5b/go.mod h1:c+V9Z/ZgkzAdyGvHrvC5AsXgN+M9Qwey04cBdKYzV7U=
-github.com/temporalio/tctl-kit v0.0.0-20220927172351-1f2d40e721c1 h1:tic3pBB3aKpa3WUsV6U5hIZbwf8Q2nqPJMy9QR7ZSLM=
-github.com/temporalio/tctl-kit v0.0.0-20220927172351-1f2d40e721c1/go.mod h1:gWHot6KbA7mHG+7+P3K7aOhvtv3QwBl8tUyipkcQUaI=
+github.com/temporalio/tctl-kit v0.0.0-20220927185913-0326664b982c h1:Pk9GpwEnnpzTHjU8C6jGIGLZ1pn6plLFgs+pLgv37UM=
+github.com/temporalio/tctl-kit v0.0.0-20220927185913-0326664b982c/go.mod h1:RROUUg2qvj/cAwqZ7Kz76u5/Oos0zbp+k8yNcTFr1dw=
 github.com/twmb/murmur3 v1.1.5/go.mod h1:Qq/R7NUyOfr65zD+6Q5IHKsJLwP7exErjN6lyyq3OSQ=
 github.com/twmb/murmur3 v1.1.6 h1:mqrRot1BRxm+Yct+vavLMou2/iJt0tNVTTC0QoIjaZg=
 github.com/twmb/murmur3 v1.1.6/go.mod h1:Qq/R7NUyOfr65zD+6Q5IHKsJLwP7exErjN6lyyq3OSQ=

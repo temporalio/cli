@@ -67,7 +67,7 @@ RatePerSecond is the maximum Activities per second the Worker will execute.`,
 				},
 				&cli.StringFlag{
 					Name:    output.FlagOutput,
-					Aliases: []string{"o"},
+					Aliases: FlagOutputAlias,
 					Usage:   output.UsageText,
 					Value:   string(output.Table),
 				},

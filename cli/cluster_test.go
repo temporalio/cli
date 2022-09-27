@@ -1,6 +1,6 @@
 // The MIT License
 //
-// Copyright (c) 2020 Temporal Technologies Inc.  All rights reserved.
+// Copyright (c) 2022 Temporal Technologies Inc.  All rights reserved.
 //
 // Copyright (c) 2020 Uber Technologies, Inc.
 //
@@ -25,38 +25,17 @@
 package cli
 
 import (
-	"github.com/temporalio/tctl-kit/pkg/output"
-	"github.com/urfave/cli/v2"
+	"github.com/golang/mock/gomock"
+	"go.temporal.io/api/workflowservice/v1"
 )
 
-func newClusterCommands() []*cli.Command {
-	return []*cli.Command{
-		{
-			Name:  "health",
-			Usage: "Check health of frontend service",
-			Action: func(c *cli.Context) error {
-				return HealthCheck(c)
-			},
-		},
-		{
-			Name:      "system",
-			Usage:     "Show information about the system and capabilities",
-			ArgsUsage: " ",
-			Flags: []cli.Flag{
-				&cli.StringFlag{
-					Name:    output.FlagOutput,
-					Aliases: FlagOutputAlias,
-					Usage:   output.UsageText,
-					Value:   string(output.Table),
-				},
-				&cli.StringFlag{
-					Name:  output.FlagFields,
-					Usage: "customize fields to print. Set to 'long' to automatically print more of main fields",
-				},
-			},
-			Action: func(c *cli.Context) error {
-				return DescribeSystem(c)
-			},
-		},
-	}
+func (s *cliAppSuite) TestClusterSystem() {
+	s.frontendClient.EXPECT().GetSystemInfo(gomock.Any(), gomock.Any()).Return(&workflowservice.GetSystemInfoResponse{
+		Capabilities: &workflowservice.GetSystemInfoResponse_Capabilities{},
+	}, nil).Times(2)
+	err := s.app.Run([]string{"", "cluster", "system"})
+	s.NoError(err)
+
+	err = s.app.Run([]string{"", "cluster", "system", "--fields", "long", "--output", "table"})
+	s.NoError(err)
 }

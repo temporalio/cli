@@ -144,6 +144,7 @@ var (
 	FlagFold                       = "fold"
 	FlagNoFold                     = "no-fold"
 	FlagDepth                      = "depth"
+	FlagOutputAlias                = []string{"o"}
 
 	FlagProtoType  = "type"
 	FlagHexData    = "hex-data"
