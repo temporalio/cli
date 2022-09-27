@@ -200,8 +200,8 @@ func newWorkflowCommands() []*cli.Command {
 			Usage: "Reset a batch of Workflow Executions by reset type: " + strings.Join(mapKeysToArray(resetTypesMap), ", "),
 			Flags: []cli.Flag{
 				&cli.StringFlag{
-					Name:    FlagListQuery,
-					Aliases: FlagListQueryAlias,
+					Name:    FlagQuery,
+					Aliases: FlagQueryAlias,
 					Usage:   "Visibility query of Search Attributes describing the Workflow Executions to reset. See https://docs.temporal.io/docs/tctl/workflow/list#--query",
 				}, &cli.StringFlag{
 					Name:  FlagInputFile,

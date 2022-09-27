@@ -65,9 +65,9 @@ func newBatchCommands() []*cli.Command {
 			Usage: "Start a batch operation job",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
-					Name:     FlagListQuery,
-					Aliases:  FlagListQueryAlias,
-					Usage:    "Query to get workflows for being executed this batch operation",
+					Name:     FlagQuery,
+					Aliases:  FlagQueryAlias,
+					Usage:    "Specify the Workflow Executions to operate on",
 					Required: true,
 				},
 				&cli.StringFlag{
@@ -89,14 +89,10 @@ func newBatchCommands() []*cli.Command {
 					Aliases: FlagInputAlias,
 					Usage:   "Optional input of signal",
 				},
-				&cli.IntFlag{
-					Name:  FlagRPS,
-					Value: batcher.DefaultRPS,
-					Usage: "RPS of processing",
-				},
 				&cli.BoolFlag{
-					Name:  FlagYes,
-					Usage: "Optional flag to disable confirmation prompt",
+					Name:    FlagYes,
+					Aliases: FlagYesAlias,
+					Usage:   "Confirm all prompts",
 				},
 			},
 			Action: func(c *cli.Context) error {

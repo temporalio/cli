@@ -102,9 +102,9 @@ var (
 	FlagResetReapplyType           = "reset-reapply-type"
 	FlagResetPointsOnly            = "reset-points-only"
 	FlagResetBadBinaryChecksum     = "reset-bad-binary-checksum"
-	FlagListQuery                  = "query"
-	FlagListQueryAlias             = []string{"q"}
-	FlagListQueryUsage             = "Filter results using SQL like query. See https://docs.temporal.io/docs/tctl/workflow/list#--query for details"
+	FlagQuery                      = "query"
+	FlagQueryAlias                 = []string{"q"}
+	FlagQueryUsage                 = "Filter results using SQL like query. See https://docs.temporal.io/docs/tctl/workflow/list#--query for details"
 	FlagArchive                    = "archived"
 	FlagSignalName                 = "signal-name"
 	FlagRPS                        = "rps"
@@ -274,9 +274,9 @@ var flagsForStartWorkflow = []cli.Flag{
 
 var flagsForWorkflowFiltering = []cli.Flag{
 	&cli.StringFlag{
-		Name:    FlagListQuery,
-		Aliases: FlagListQueryAlias,
-		Usage:   FlagListQueryUsage,
+		Name:    FlagQuery,
+		Aliases: FlagQueryAlias,
+		Usage:   FlagQueryUsage,
 	},
 	&cli.BoolFlag{
 		Name:  FlagArchive,
@@ -287,9 +287,9 @@ var flagsForWorkflowFiltering = []cli.Flag{
 func getFlagsForCount() []cli.Flag {
 	return []cli.Flag{
 		&cli.StringFlag{
-			Name:    FlagListQuery,
-			Aliases: FlagListQueryAlias,
-			Usage:   FlagListQueryUsage,
+			Name:    FlagQuery,
+			Aliases: FlagQueryAlias,
+			Usage:   FlagQueryUsage,
 		},
 	}
 }

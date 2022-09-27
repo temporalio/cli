@@ -564,7 +564,7 @@ func ListWorkflow(c *cli.Context) error {
 	paginationFunc := func(npt []byte) ([]interface{}, []byte, error) {
 		var items []interface{}
 		var err error
-		query := c.String(FlagListQuery)
+		query := c.String(FlagQuery)
 
 		if archived {
 			items, npt, err = listArchivedWorkflows(c, sdkClient, npt, query)
@@ -595,7 +595,7 @@ func CountWorkflow(c *cli.Context) error {
 		return err
 	}
 
-	query := c.String(FlagListQuery)
+	query := c.String(FlagQuery)
 	request := &workflowservice.CountWorkflowExecutionsRequest{
 		Query: query,
 	}
@@ -906,7 +906,7 @@ func ResetInBatch(c *cli.Context) error {
 	resetType := c.String(FlagResetType)
 
 	inFileName := c.String(FlagInputFile)
-	query := c.String(FlagListQuery)
+	query := c.String(FlagQuery)
 	excFileName := c.String(FlagExcludeFile)
 	separator := c.String(FlagInputSeparator)
 	parallel := c.Int(FlagParallelism)

@@ -25,21 +25,19 @@
 package cli
 
 import (
-	"bufio"
 	"fmt"
-	"os"
 	"strings"
 
+	"github.com/pborman/uuid"
 	"github.com/temporalio/tctl-kit/pkg/color"
 	"github.com/temporalio/tctl-kit/pkg/output"
 	"github.com/temporalio/tctl-kit/pkg/pager"
 	"github.com/urfave/cli/v2"
+	"go.temporal.io/api/batch/v1"
 	"go.temporal.io/api/workflowservice/v1"
-	sdkclient "go.temporal.io/sdk/client"
 	"go.temporal.io/server/common/collection"
 	"go.temporal.io/server/common/payloads"
 	"go.temporal.io/server/common/primitives"
-	"go.temporal.io/server/common/searchattribute"
 	"go.temporal.io/server/service/worker/batcher"
 )
 
@@ -107,93 +105,84 @@ func StartBatchJob(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	query := c.String(FlagListQuery)
+	query := c.String(FlagQuery)
 	reason := c.String(FlagReason)
 	batchType := c.String(FlagType)
-	if !validateBatchType(batchType) {
-		return fmt.Errorf("unknown batch type, supported types: %s", strings.Join(allBatchTypes, ","))
-	}
 	operator := getCurrentUserFromEnv()
-	var sigName, sigVal string
-	if batchType == batcher.BatchTypeSignal {
-		sigName = c.String(FlagSignalName)
-		sigVal = c.String(FlagInput)
 
-		if len(sigName) == 0 || len(sigVal) == 0 {
-			return fmt.Errorf("options %s and %s are required for type %s", FlagSignalName, FlagInput, batcher.BatchTypeSignal)
-		}
-	}
-	rps := c.Int(FlagRPS)
-	concurrency := c.Int(FlagConcurrency)
-
-	client := cFactory.SDKClient(c, primitives.SystemLocalNamespace)
+	sdk := cFactory.SDKClient(c, namespace)
 	tcCtx, cancel := newContext(c)
 	defer cancel()
-	resp, err := client.CountWorkflow(tcCtx, &workflowservice.CountWorkflowExecutionsRequest{
+	cResp, err := sdk.CountWorkflow(tcCtx, &workflowservice.CountWorkflowExecutionsRequest{
 		Namespace: namespace,
 		Query:     query,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to count impacted workflows: %w", err)
-	}
-	fmt.Printf("This batch job will be operating on %v workflows, with max RPS of %v and concurrency of %v.\n",
-		resp.GetCount(), rps, concurrency)
-	if !c.Bool(FlagYes) {
-		reader := bufio.NewReader(os.Stdin)
-		for {
-			fmt.Print("Please confirm[Yes/No]:")
-			text, err := reader.ReadString('\n')
-			if err != nil {
-				return fmt.Errorf("failed to get confirmation to start a batch job: %w", err)
-			}
-			if strings.EqualFold(strings.TrimSpace(text), "yes") {
-				break
-			} else {
-				fmt.Println("Batch job is not started")
-				return nil
-			}
-		}
-
-	}
-	tcCtx, cancel = newContext(c)
-	defer cancel()
-	options := sdkclient.StartWorkflowOptions{
-		TaskQueue: "temporal-sys-batcher-taskqueue",
-		Memo: map[string]interface{}{
-			"Reason": reason,
-		},
-		SearchAttributes: map[string]interface{}{
-			searchattribute.BatcherNamespace: namespace,
-			searchattribute.BatcherUser:      operator,
-		},
+		return fmt.Errorf("unable to count impacted workflows: %v", err)
 	}
 
-	sigInput, err := payloads.Encode(sigVal)
+	promptMsg := fmt.Sprintf(
+		"Will start a batch job operating on %v Workflow Executions. Continue? Y/N",
+		color.Yellow(c, "%v", cResp.GetCount()),
+	)
+	if !promptYes(promptMsg, c.Bool(FlagYes)) {
+		return nil
+	}
+
+	input := c.String(FlagInput)
+	payloads, err := payloads.Encode(input)
 	if err != nil {
 		return fmt.Errorf("failed to serialize signal value: %w", err)
 	}
 
-	params := batcher.BatchParams{
-		Namespace: namespace,
-		Query:     query,
-		Reason:    reason,
-		BatchType: batchType,
-		SignalParams: batcher.SignalParams{
-			SignalName: sigName,
-			Input:      sigInput,
-		},
-		RPS:         rps,
-		Concurrency: concurrency,
+	jobID := uuid.New()
+	req := workflowservice.StartBatchOperationRequest{
+		Namespace:       namespace,
+		Reason:          reason,
+		VisibilityQuery: query,
+		JobId:           jobID,
 	}
-	wf, err := client.ExecuteWorkflow(tcCtx, options, batcher.BatchWFTypeName, params)
+
+	switch batchType {
+	case batcher.BatchTypeSignal:
+		sigName := c.String(FlagSignalName)
+
+		if sigName == "" {
+			return fmt.Errorf("option %s are required for type %s", FlagSignalName, batcher.BatchTypeSignal)
+		}
+
+		req.Operation = &workflowservice.StartBatchOperationRequest_SignalOperation{
+			SignalOperation: &batch.BatchOperationSignal{
+				Signal:   sigName,
+				Input:    payloads,
+				Identity: operator,
+			},
+		}
+	case batcher.BatchTypeTerminate:
+		req.Operation = &workflowservice.StartBatchOperationRequest_TerminationOperation{
+			TerminationOperation: &batch.BatchOperationTermination{
+				Identity: operator,
+			},
+		}
+	case batcher.BatchTypeCancel:
+		req.Operation = &workflowservice.StartBatchOperationRequest_CancellationOperation{
+			CancellationOperation: &batch.BatchOperationCancellation{
+				Identity: operator,
+			},
+		}
+	default:
+		return fmt.Errorf("unknown batch type. Supported types: %s", strings.Join(allBatchTypes, ","))
+	}
+
+	client := cFactory.FrontendClient(c)
+	ctx, cancel := newContext(c)
+	defer cancel()
+	_, err = client.StartBatchOperation(ctx, &req)
 	if err != nil {
-		return fmt.Errorf("failed to start batch job: %w", err)
+		return fmt.Errorf("unable to start batch job: %s", err)
 	}
-	output := map[string]interface{}{
-		"msg":   "batch job is started",
-		"jobId": wf.GetID(),
-	}
-	prettyPrintJSONObject(output)
+
+	fmt.Printf("Batch job %s is started\n", color.Magenta(c, jobID))
 	return nil
 }
 
@@ -218,13 +207,4 @@ func StopBatchJob(c *cli.Context) error {
 
 	fmt.Printf("Batch job %s is stopped\n", color.Magenta(c, jobID))
 	return nil
-}
-
-func validateBatchType(bt string) bool {
-	for _, b := range allBatchTypes {
-		if b == bt {
-			return true
-		}
-	}
-	return false
 }
