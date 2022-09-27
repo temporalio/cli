@@ -28,6 +28,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/rand"
 	"os"
@@ -100,7 +101,7 @@ func StartWorkflow(c *cli.Context, printProgress bool) error {
 	if c.IsSet(FlagWorkflowIDReusePolicy) {
 		reusePolicyInt, err := stringToEnum(c.String(FlagWorkflowIDReusePolicy), enumspb.WorkflowIdReusePolicy_value)
 		if err != nil {
-			return fmt.Errorf("unable to parse workflow ID reuse policy: %s", err)
+			return fmt.Errorf("unable to parse workflow ID reuse policy: %w", err)
 		}
 		reusePolicy = enumspb.WorkflowIdReusePolicy(reusePolicyInt)
 	}
@@ -136,7 +137,7 @@ func StartWorkflow(c *cli.Context, printProgress bool) error {
 	resp, err := sdkClient.ExecuteWorkflow(tcCtx, wo, workflowType, inputs...)
 
 	if err != nil {
-		return fmt.Errorf("failed to run workflow: %s", err)
+		return fmt.Errorf("unable to run workflow: %w", err)
 	}
 
 	executionDetails := struct {
@@ -213,7 +214,7 @@ func unmarshalSearchAttrFromCLI(c *cli.Context) (map[string]interface{}, error) 
 	for i, v := range rawSearchAttrVals {
 		var j interface{}
 		if err := json.Unmarshal([]byte(v), &j); err != nil {
-			return nil, fmt.Errorf("unable to parse search attribute JSON: %s", err)
+			return nil, fmt.Errorf("unable to parse search attribute JSON: %w", err)
 		}
 		fields[searchAttrKeys[i]] = j
 	}
@@ -386,7 +387,7 @@ func TerminateWorkflow(c *cli.Context) error {
 	defer cancel()
 	err = sdkClient.TerminateWorkflow(ctx, wid, rid, reason, nil)
 	if err != nil {
-		return fmt.Errorf("unable to terminate workflow: %s", err)
+		return fmt.Errorf("unable to terminate workflow: %w", err)
 	}
 
 	fmt.Println("Terminate workflow succeeded")
@@ -437,7 +438,7 @@ func CancelWorkflow(c *cli.Context) error {
 	defer cancel()
 	err = sdkClient.CancelWorkflow(ctx, wid, rid)
 	if err != nil {
-		return fmt.Errorf("unable to cancel workflow: %s", err)
+		return fmt.Errorf("unable to cancel workflow: %w", err)
 	}
 	fmt.Println(color.Green(c, "canceled workflow, workflow id: %s, run id: %s", wid, rid))
 
@@ -475,7 +476,7 @@ func SignalWorkflow(c *cli.Context) error {
 	})
 
 	if err != nil {
-		return fmt.Errorf("signal workflow failed: %s", err)
+		return fmt.Errorf("signal workflow failed: %w", err)
 	}
 
 	fmt.Println("Signal workflow succeeded")
@@ -542,7 +543,7 @@ func queryWorkflowHelper(c *cli.Context, queryType string) error {
 	}
 	queryResponse, err := serviceClient.QueryWorkflow(tcCtx, queryRequest)
 	if err != nil {
-		return fmt.Errorf("query workflow failed: %s", err)
+		return fmt.Errorf("query workflow failed: %w", err)
 	}
 
 	if queryResponse.QueryRejected != nil {
@@ -557,6 +558,9 @@ func queryWorkflowHelper(c *cli.Context, queryType string) error {
 
 // ListWorkflow list workflow executions based on filters
 func ListWorkflow(c *cli.Context) error {
+	err := errors.New("list workflow is deprecated, please use list workflow run instead")
+	fmt.Fprintln(os.Stderr, fmt.Errorf("data converter websocket error: %w", err))
+
 	archived := c.Bool(FlagArchive)
 
 	sdkClient, err := getSDKClient(c)
@@ -616,7 +620,7 @@ func CountWorkflow(c *cli.Context) error {
 	}
 	err = backoff.ThrottleRetry(op, common.CreateFrontendClientRetryPolicy(), common.IsContextDeadlineExceededErr)
 	if err != nil {
-		return fmt.Errorf("unable to count workflows: %s", err)
+		return fmt.Errorf("unable to count workflows: %w", err)
 	}
 	fmt.Println(count)
 	return nil
@@ -647,7 +651,7 @@ func DescribeWorkflow(c *cli.Context) error {
 		},
 	})
 	if err != nil {
-		return fmt.Errorf("workflow describe failed: %s", err)
+		return fmt.Errorf("workflow describe failed: %w", err)
 	}
 
 	if printResetPointsOnly {
@@ -840,7 +844,7 @@ func ResetWorkflow(c *cli.Context) error {
 	if resetType != "" {
 		resetBaseRunID, workflowTaskFinishID, err = getResetEventIDByType(ctx, c, resetType, namespace, wid, rid, frontendClient)
 		if err != nil {
-			return fmt.Errorf("getting reset event ID by type failed: %s", err)
+			return fmt.Errorf("getting reset event ID by type failed: %w", err)
 		}
 	}
 	resp, err := frontendClient.ResetWorkflowExecution(ctx, &workflowservice.ResetWorkflowExecutionRequest{
@@ -855,7 +859,7 @@ func ResetWorkflow(c *cli.Context) error {
 		ResetReapplyType:          resetReapplyTypesMap[resetReapplyType].(enumspb.ResetReapplyType),
 	})
 	if err != nil {
-		return fmt.Errorf("reset failed: %s", err)
+		return fmt.Errorf("reset failed: %w", err)
 	}
 	prettyPrintJSONObject(resp)
 	return nil
@@ -916,7 +920,7 @@ func ResetInBatch(c *cli.Context) error {
 
 	extraForResetType, ok := resetTypesMap[resetType]
 	if !ok {
-		return fmt.Errorf("reset type is not supported: %s", extraForResetType)
+		return fmt.Errorf("reset type is not supported: %v", extraForResetType)
 	} else if len(extraForResetType.(string)) > 0 {
 		value := c.String(extraForResetType.(string))
 		if len(value) == 0 {
@@ -953,7 +957,7 @@ func ResetInBatch(c *cli.Context) error {
 		// #nosec
 		excFile, err := os.Open(excFileName)
 		if err != nil {
-			return fmt.Errorf("unable to read exclude rules: %s", err)
+			return fmt.Errorf("unable to read exclude rules: %w", err)
 		}
 		defer excFile.Close()
 		scanner := bufio.NewScanner(excFile)
@@ -979,7 +983,7 @@ func ResetInBatch(c *cli.Context) error {
 	if len(inFileName) > 0 {
 		inFile, err := os.Open(inFileName)
 		if err != nil {
-			return fmt.Errorf("unable to open input file: %s", err)
+			return fmt.Errorf("unable to open input file: %w", err)
 		}
 		defer inFile.Close()
 		scanner := bufio.NewScanner(inFile)
@@ -1396,7 +1400,7 @@ func listWorkflows(c *cli.Context, sdkClient sdkclient.Client, npt []byte, query
 	}
 	err := backoff.ThrottleRetry(op, common.CreateFrontendClientRetryPolicy(), common.IsContextDeadlineExceededErr)
 	if err != nil {
-		return nil, nil, fmt.Errorf("unable to list workflow executions: %s", err)
+		return nil, nil, fmt.Errorf("unable to list workflow executions: %w", err)
 	}
 
 	var items []interface{}
@@ -1432,7 +1436,7 @@ func listArchivedWorkflows(c *cli.Context, sdkClient sdkclient.Client, npt []byt
 	}
 	err := backoff.ThrottleRetry(op, common.CreateFrontendClientRetryPolicy(), common.IsContextDeadlineExceededErr)
 	if err != nil {
-		return nil, nil, fmt.Errorf("unable to list archived workflow executions: %s", err)
+		return nil, nil, fmt.Errorf("unable to list archived workflow executions: %w", err)
 	}
 
 	var items []interface{}

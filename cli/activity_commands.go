@@ -69,7 +69,7 @@ func CompleteActivity(c *cli.Context) error {
 		Identity:   identity,
 	})
 	if err != nil {
-		return fmt.Errorf("unable to Complete activity.\n%s", err)
+		return fmt.Errorf("unable to Complete activity: %w", err)
 	} else {
 		fmt.Println(color.Green(c, "activity was Completed"))
 	}
@@ -120,7 +120,7 @@ func FailActivity(c *cli.Context) error {
 		Identity: identity,
 	})
 	if err != nil {
-		return fmt.Errorf("unable to Fail activity.\n%s", err)
+		return fmt.Errorf("unable to Fail activity: %w", err)
 	} else {
 		fmt.Println(color.Green(c, "activity was Failed"))
 

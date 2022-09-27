@@ -50,7 +50,7 @@ func HealthCheck(c *cli.Context) error {
 	resp, err := healthClient.Check(ctx, req)
 
 	if err != nil {
-		return fmt.Errorf("unable to check health, service: %q.\n%s", req.GetService(), err)
+		return fmt.Errorf("unable to health check %q service: %w", req.GetService(), err)
 	}
 
 	fmt.Printf("%s: ", req.GetService())
@@ -70,13 +70,12 @@ func DescribeSystem(c *cli.Context) error {
 
 	system, err := client.GetSystemInfo(ctx, &workflowservice.GetSystemInfoRequest{})
 	if err != nil {
-		return fmt.Errorf("unable to get system information: %v", err)
+		return fmt.Errorf("unable to get system information: %w", err)
 	}
 
 	po := &output.PrintOptions{
 		Fields:     []string{"ServerVersion", "Capabilities.SupportsSchedules", "Capabilities.UpsertMemo"},
 		FieldsLong: []string{"Capabilities.SignalAndQueryHeader", "Capabilities.ActivityFailureIncludeHeartbeat", "Capabilities.InternalErrorDifferentiation"},
 	}
-	output.PrintItems(c, []interface{}{system}, po)
-	return nil
+	return output.PrintItems(c, []interface{}{system}, po)
 }

@@ -57,7 +57,7 @@ func RegisterNamespace(c *cli.Context) error {
 	if c.IsSet(FlagRetention) {
 		retention, err = timestamp.ParseDurationDefaultDays(c.String(FlagRetention))
 		if err != nil {
-			return fmt.Errorf("option %s format is invalid: %s", FlagRetention, err)
+			return fmt.Errorf("option %s format is invalid: %w", FlagRetention, err)
 		}
 	}
 
@@ -74,13 +74,13 @@ func RegisterNamespace(c *cli.Context) error {
 		namespaceDataStr := c.String(FlagNamespaceData)
 		namespaceData, err = parseNamespaceDataKVs(namespaceDataStr)
 		if err != nil {
-			return fmt.Errorf("option %s format is invalid: %s", FlagNamespaceData, err)
+			return fmt.Errorf("option %s format is invalid: %w", FlagNamespaceData, err)
 		}
 	}
 	if len(requiredNamespaceDataKeys) > 0 {
 		err = checkRequiredNamespaceDataKVs(namespaceData)
 		if err != nil {
-			return fmt.Errorf("namespace data missed required data: %s", err)
+			return fmt.Errorf("namespace data missed required data: %w", err)
 		}
 	}
 
@@ -131,9 +131,9 @@ func RegisterNamespace(c *cli.Context) error {
 	_, err = client.RegisterNamespace(ctx, request)
 	if err != nil {
 		if _, ok := err.(*serviceerror.NamespaceAlreadyExists); !ok {
-			return fmt.Errorf("namespace registration failed: %s", err)
+			return fmt.Errorf("namespace registration failed: %w", err)
 		} else {
-			return fmt.Errorf("namespace %s is already registered: %s", ns, err)
+			return fmt.Errorf("namespace %s is already registered: %w", ns, err)
 		}
 	} else {
 		fmt.Printf("Namespace %s successfully registered.\n", ns)
@@ -181,7 +181,7 @@ func UpdateNamespace(c *cli.Context) error {
 			case *serviceerror.NamespaceNotFound:
 				return err
 			default:
-				return fmt.Errorf("namespace update failed: %s", err)
+				return fmt.Errorf("namespace update failed: %w", err)
 			}
 		}
 
@@ -201,13 +201,13 @@ func UpdateNamespace(c *cli.Context) error {
 			namespaceDataStr := c.String(FlagNamespaceData)
 			namespaceData, err = parseNamespaceDataKVs(namespaceDataStr)
 			if err != nil {
-				return fmt.Errorf("namespace data format is invalid: %s", err)
+				return fmt.Errorf("namespace data format is invalid: %w", err)
 			}
 		}
 		if c.IsSet(FlagRetention) {
 			retention, err = timestamp.ParseDurationDefaultDays(c.String(FlagRetention))
 			if err != nil {
-				return fmt.Errorf("option %s format is invalid: %s", FlagRetention, err)
+				return fmt.Errorf("option %s format is invalid: %w", FlagRetention, err)
 			}
 		}
 		if c.IsSet(FlagClusters) {
@@ -225,7 +225,7 @@ func UpdateNamespace(c *cli.Context) error {
 		var binBinaries *namespacepb.BadBinaries
 		if c.IsSet(FlagAddBadBinary) {
 			if !c.IsSet(FlagReason) {
-				return fmt.Errorf("reason flag is not provided: %s", err)
+				return fmt.Errorf("reason flag is not provided: %w", err)
 			}
 			binChecksum := c.String(FlagAddBadBinary)
 			reason := c.String(FlagReason)
@@ -285,7 +285,7 @@ func UpdateNamespace(c *cli.Context) error {
 		case *serviceerror.NamespaceNotFound:
 			return err
 		default:
-			return fmt.Errorf("namespace update failed: %s", err)
+			return fmt.Errorf("namespace update failed: %w", err)
 		}
 	} else {
 		fmt.Printf("Namespace %s successfully updated.\n", ns)
@@ -314,7 +314,7 @@ func DescribeNamespace(c *cli.Context) error {
 		case *serviceerror.NamespaceNotFound:
 			return err
 		default:
-			return fmt.Errorf("namespace describe failed: %s", err)
+			return fmt.Errorf("namespace describe failed: %w", err)
 		}
 	}
 
@@ -421,7 +421,7 @@ func getAllNamespaces(c *cli.Context, tClient workflowservice.WorkflowServiceCli
 		}
 		listResp, err := tClient.ListNamespaces(ctx, listRequest)
 		if err != nil {
-			return nil, fmt.Errorf("unable to list namespaces: %s", err)
+			return nil, fmt.Errorf("unable to list namespaces: %w", err)
 		}
 		token = listResp.GetNextPageToken()
 		res = append(res, listResp.GetNamespaces()...)

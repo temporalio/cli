@@ -170,7 +170,7 @@ func configureSDK(ctx *cli.Context) error {
 	if dcPlugin != "" {
 		dataConverter, err := plugin.NewDataConverterPlugin(dcPlugin)
 		if err != nil {
-			return fmt.Errorf("unable to load data converter plugin: %s", err)
+			return fmt.Errorf("unable to load data converter plugin: %w", err)
 		}
 
 		dataconverter.SetCurrent(dataConverter)
@@ -180,7 +180,7 @@ func configureSDK(ctx *cli.Context) error {
 	if hpPlugin != "" {
 		headersProvider, err := plugin.NewHeadersProviderPlugin(hpPlugin)
 		if err != nil {
-			return fmt.Errorf("unable to load headers provider plugin: %s", err)
+			return fmt.Errorf("unable to load headers provider plugin: %w", err)
 		}
 
 		headersprovider.SetCurrent(headersProvider)

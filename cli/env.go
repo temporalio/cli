@@ -117,7 +117,7 @@ func UseEnv(c *cli.Context) error {
 	envName := c.Args().Get(0)
 
 	if err := tctlConfig.SetCurrentEnv(envName); err != nil {
-		return fmt.Errorf("unable to set property %s: %s", config.KeyCurrentEnvironment, err)
+		return fmt.Errorf("unable to set property %s: %w", config.KeyCurrentEnvironment, err)
 	}
 
 	fmt.Printf("%v: %v\n", color.Magenta(c, "%v", config.KeyCurrentEnvironment), envName)
@@ -133,7 +133,7 @@ func RemoveEnv(c *cli.Context) error {
 	envName := c.Args().Get(0)
 
 	if err := tctlConfig.RemoveEnv(envName); err != nil {
-		return fmt.Errorf("unable to remove env %s: %s", envName, err)
+		return fmt.Errorf("unable to remove env %s: %w", envName, err)
 	}
 
 	fmt.Printf("Removed env %v\n", color.Magenta(c, "%v", envName))

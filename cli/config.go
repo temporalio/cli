@@ -84,7 +84,7 @@ func SetEnvProperty(c *cli.Context) error {
 
 	if fullKey == "version" {
 		if err := tctlConfig.SetVersion(val); err != nil {
-			return fmt.Errorf("unable to set version: %s", err)
+			return fmt.Errorf("unable to set version: %w", err)
 		}
 
 		return nil
@@ -97,7 +97,7 @@ func SetEnvProperty(c *cli.Context) error {
 	env, key := envKey(fullKey)
 
 	if err := tctlConfig.SetEnvProperty(env, key, val); err != nil {
-		return fmt.Errorf("unable to set env property %v. %s", key, err)
+		return fmt.Errorf("unable to set env property %v: %w", key, err)
 	}
 
 	fmt.Printf("Set '%v' to: %v\n", fullKey, val)

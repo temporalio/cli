@@ -49,7 +49,7 @@ func ListSearchAttributes(c *cli.Context) error {
 
 	resp, err := client.ListSearchAttributes(ctx, &operatorservice.ListSearchAttributesRequest{})
 	if err != nil {
-		return fmt.Errorf("unable to list search attributes: %v", err)
+		return fmt.Errorf("unable to list search attributes: %w", err)
 	}
 
 	var items []interface{}
@@ -89,7 +89,7 @@ func AddSearchAttributes(c *cli.Context) error {
 	listReq := &operatorservice.ListSearchAttributesRequest{}
 	existingSearchAttributes, err := client.ListSearchAttributes(ctx, listReq)
 	if err != nil {
-		return fmt.Errorf("unable to get existing search attributes: %v", err)
+		return fmt.Errorf("unable to get existing search attributes: %w", err)
 	}
 
 	searchAttributes := make(map[string]enumspb.IndexedValueType, len(typeStrs))
@@ -98,7 +98,7 @@ func AddSearchAttributes(c *cli.Context) error {
 
 		typeInt, err := stringToEnum(typeStr, enumspb.IndexedValueType_value)
 		if err != nil {
-			return fmt.Errorf("unable to parse search attribute type %s: %s", typeStr, err)
+			return fmt.Errorf("unable to parse search attribute type %s: %w", typeStr, err)
 		}
 		existingSearchAttributeType, searchAttributeExists := existingSearchAttributes.CustomAttributes[names[i]]
 		if !searchAttributeExists {
@@ -106,7 +106,7 @@ func AddSearchAttributes(c *cli.Context) error {
 			continue
 		}
 		if existingSearchAttributeType != enumspb.IndexedValueType(typeInt) {
-			return fmt.Errorf("search attribute %s already exists and has different type %s: %s", names[i], existingSearchAttributeType, err)
+			return fmt.Errorf("search attribute %s already exists and has different type %s: %w", names[i], existingSearchAttributeType, err)
 		}
 	}
 
@@ -131,7 +131,7 @@ func AddSearchAttributes(c *cli.Context) error {
 	defer cancel()
 	_, err = client.AddSearchAttributes(ctx, request)
 	if err != nil {
-		return fmt.Errorf("unable to add search attributes: %v", err)
+		return fmt.Errorf("unable to add search attributes: %w", err)
 	}
 	fmt.Println(color.Green(c, "Search attributes have been added"))
 	return nil
@@ -158,7 +158,7 @@ func RemoveSearchAttributes(c *cli.Context) error {
 
 	_, err := client.RemoveSearchAttributes(ctx, request)
 	if err != nil {
-		return fmt.Errorf("unable to remove search attributes: %v", err)
+		return fmt.Errorf("unable to remove search attributes: %w", err)
 	}
 	fmt.Println(color.Green(c, "Search attributes have been removed"))
 	return nil

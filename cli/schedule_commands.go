@@ -265,7 +265,7 @@ func CreateSchedule(c *cli.Context) error {
 
 	_, err = frontendClient.CreateSchedule(ctx, req)
 	if err != nil {
-		return fmt.Errorf("unable to create schedule: %s", err)
+		return fmt.Errorf("unable to create schedule: %w", err)
 	}
 
 	fmt.Println(color.Green(c, "Schedule created"))
@@ -295,7 +295,7 @@ func UpdateSchedule(c *cli.Context) error {
 
 	_, err = frontendClient.UpdateSchedule(ctx, req)
 	if err != nil {
-		return fmt.Errorf("failed to update schedule.\n%s", err)
+		return fmt.Errorf("unable to update schedule: %w", err)
 	}
 
 	fmt.Println(color.Green(c, "Schedule updated"))
@@ -332,7 +332,7 @@ func ToggleSchedule(c *cli.Context) error {
 	}
 	_, err = frontendClient.PatchSchedule(ctx, req)
 	if err != nil {
-		return fmt.Errorf("failed to toggle schedule.\n%s", err)
+		return fmt.Errorf("unable to toggle schedule: %w", err)
 	}
 
 	fmt.Println(color.Green(c, "Schedule updated"))
@@ -365,7 +365,7 @@ func TriggerSchedule(c *cli.Context) error {
 	}
 	_, err = frontendClient.PatchSchedule(ctx, req)
 	if err != nil {
-		return fmt.Errorf("failed to trigger schedule.\n%s", err)
+		return fmt.Errorf("unable to trigger schedule: %w", err)
 	}
 
 	fmt.Println(color.Green(c, "Trigger request sent"))
@@ -411,7 +411,7 @@ func BackfillSchedule(c *cli.Context) error {
 	}
 	_, err = frontendClient.PatchSchedule(ctx, req)
 	if err != nil {
-		return fmt.Errorf("failed to backfill schedule.\n%s", err)
+		return fmt.Errorf("unable to backfill schedule: %w", err)
 	}
 
 	fmt.Println(color.Green(c, "Backfill request sent"))
@@ -432,7 +432,7 @@ func DescribeSchedule(c *cli.Context) error {
 	}
 	resp, err := frontendClient.DescribeSchedule(ctx, req)
 	if err != nil {
-		return fmt.Errorf("failed to describe schedule.\n%s", err)
+		return fmt.Errorf("unable to describe schedule: %w", err)
 	}
 
 	if c.Bool(FlagPrintRaw) {
@@ -555,7 +555,7 @@ func DeleteSchedule(c *cli.Context) error {
 	}
 	_, err = frontendClient.DeleteSchedule(ctx, req)
 	if err != nil {
-		return fmt.Errorf("failed to delete schedule.\n%s", err)
+		return fmt.Errorf("unable to delete schedule: %w", err)
 	}
 
 	fmt.Println(color.Green(c, "Schedule deleted"))
@@ -580,7 +580,7 @@ func ListSchedules(c *cli.Context) error {
 		}
 		resp, err := frontendClient.ListSchedules(ctx, req)
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to list schedules.\n%s", err)
+			return nil, nil, fmt.Errorf("unable to list schedules: %w", err)
 		}
 		items := make([]interface{}, len(resp.Schedules))
 		for i, sch := range resp.Schedules {

@@ -49,7 +49,7 @@ func DescribeTaskQueue(c *cli.Context) error {
 	defer cancel()
 	resp, err := sdkClient.DescribeTaskQueue(ctx, taskQueue, taskQueueType)
 	if err != nil {
-		return fmt.Errorf("failed to describe task queue.\n%s", err)
+		return fmt.Errorf("unable to describe task queue: %w", err)
 	}
 
 	opts := &output.PrintOptions{
@@ -85,7 +85,7 @@ func ListTaskQueuePartitions(c *cli.Context) error {
 
 	resp, err := frontendClient.ListTaskQueuePartitions(ctx, request)
 	if err != nil {
-		return fmt.Errorf("failed to list task queues.\n%s", err)
+		return fmt.Errorf("unable to list task queues: %w", err)
 	}
 
 	optsW := &output.PrintOptions{

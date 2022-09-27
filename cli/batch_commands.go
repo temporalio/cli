@@ -54,7 +54,7 @@ func DescribeBatchJob(c *cli.Context) error {
 		JobId:     jobID,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to describe batch job: %w", err)
+		return fmt.Errorf("unable to describe batch job: %w", err)
 	}
 
 	opts := &output.PrintOptions{
@@ -174,7 +174,7 @@ func startBatchJob(c *cli.Context, req *workflowservice.StartBatchOperationReque
 		Query:     query,
 	})
 	if err != nil {
-		return fmt.Errorf("unable to count impacted workflows: %v", err)
+		return fmt.Errorf("unable to count impacted workflows: %w", err)
 	}
 
 	promptMsg := fmt.Sprintf(
@@ -196,7 +196,7 @@ func startBatchJob(c *cli.Context, req *workflowservice.StartBatchOperationReque
 	defer cancel()
 	_, err = client.StartBatchOperation(ctx, req)
 	if err != nil {
-		return fmt.Errorf("unable to start batch job: %s", err)
+		return fmt.Errorf("unable to start batch job: %w", err)
 	}
 
 	fmt.Printf("Batch job %s is started\n", color.Magenta(c, jobID))
@@ -223,7 +223,7 @@ func StopBatchJob(c *cli.Context) error {
 	})
 
 	if err != nil {
-		return fmt.Errorf("unable to stop a batch job %s: %s", color.Magenta(c, jobID), err)
+		return fmt.Errorf("unable to stop a batch job %s: %w", color.Magenta(c, jobID), err)
 	}
 
 	fmt.Printf("Batch job %s is stopped\n", color.Magenta(c, jobID))

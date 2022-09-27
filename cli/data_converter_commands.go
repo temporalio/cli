@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 
@@ -116,7 +117,7 @@ func buildPayloadHandler(context *cli.Context, origin string) func(http.Response
 						return
 					}
 				}
-				fmt.Printf("data converter websocket error: %v\n", err)
+				fmt.Fprintln(os.Stderr, fmt.Errorf("data converter websocket error: %w", err))
 
 				return
 			}
@@ -128,7 +129,7 @@ func buildPayloadHandler(context *cli.Context, origin string) func(http.Response
 func DataConverter(c *cli.Context) error {
 	listener, err := net.Listen("tcp", "0.0.0.0:"+strconv.Itoa(c.Int(FlagPort)))
 	if err != nil {
-		return fmt.Errorf("unable to create listener: %s", err)
+		return fmt.Errorf("unable to create listener: %w", err)
 	}
 	origin := strings.TrimSuffix(c.String(FlagWebURL), "/")
 	port := listener.Addr().(*net.TCPAddr).Port
@@ -139,7 +140,7 @@ func DataConverter(c *cli.Context) error {
 
 	http.HandleFunc("/", buildPayloadHandler(c, origin))
 	if err := http.Serve(listener, nil); err != nil {
-		return fmt.Errorf("unable to start HTTP server for data converter listener: %s", err)
+		return fmt.Errorf("unable to start HTTP server for data converter listener: %w", err)
 	}
 
 	return nil

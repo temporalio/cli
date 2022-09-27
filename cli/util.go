@@ -342,7 +342,7 @@ func prettyPrintJSONObject(o interface{}) {
 	}
 
 	if err != nil {
-		fmt.Printf("Error when try to print pretty: %v\n", err)
+		fmt.Printf("Error when try to print pretty: %v", err)
 		fmt.Println(o)
 	}
 	_, _ = os.Stdout.Write(b)
@@ -368,7 +368,7 @@ func getSDKClient(c *cli.Context) (sdkclient.Client, error) {
 func getRequiredGlobalOption(c *cli.Context, optionName string) (string, error) {
 	value := c.String(optionName)
 	if len(value) == 0 {
-		return "", fmt.Errorf("global option is required: %s", optionName)
+		return "", fmt.Errorf("global option is required: %v", optionName)
 	}
 	return value, nil
 }
@@ -564,7 +564,7 @@ func unmarshalInputsFromCLI(c *cli.Context) ([]interface{}, error) {
 		} else {
 			var j interface{}
 			if err := json.Unmarshal(jsonRaw, &j); err != nil {
-				return nil, fmt.Errorf("input is not valid JSON: %s", err)
+				return nil, fmt.Errorf("input is not valid JSON: %w", err)
 			}
 			result = append(result, j)
 		}
@@ -582,7 +582,7 @@ func processJSONInput(c *cli.Context) (*commonpb.Payloads, error) {
 	}
 	p, err := payloads.Encode(jsons...)
 	if err != nil {
-		return nil, fmt.Errorf("unable to encode input: %s", err)
+		return nil, fmt.Errorf("unable to encode input: %w", err)
 	}
 
 	return p, nil
@@ -618,7 +618,7 @@ func readJSONInputs(c *cli.Context) ([][]byte, error) {
 		// #nosec
 		data, err := os.ReadFile(inputFile)
 		if err != nil {
-			return nil, fmt.Errorf("unable to read input file: %s", err)
+			return nil, fmt.Errorf("unable to read input file: %w", err)
 		}
 		return [][]byte{data}, nil
 	}
@@ -770,7 +770,7 @@ func parseFoldStatusList(flagValue string) ([]enumspb.WorkflowExecutionStatus, e
 			statusList = append(statusList, status)
 		} else {
 			return nil,
-				fmt.Errorf("invalid status \"%s\" for fold flag. Valid values: %s", value, listWorkflowExecutionStatusNames())
+				fmt.Errorf("invalid status \"%s\" for fold flag. Valid values: %v", value, listWorkflowExecutionStatusNames())
 		}
 	}
 	return statusList, nil

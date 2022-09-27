@@ -55,7 +55,7 @@ func SetAlias(c *cli.Context) error {
 	value := c.Args().Get(1)
 
 	if err := tctlConfig.SetAlias(name, value); err != nil {
-		return fmt.Errorf("unable to set property %s: %s", config.KeyAliases, err)
+		return fmt.Errorf("unable to set property %s: %w", config.KeyAliases, err)
 	}
 
 	fmt.Printf("%v: %v\n", color.Magenta(c, "%v", config.KeyAliases), value)
