@@ -50,7 +50,7 @@ var (
 			// use StringFlag instead of buggy StringSliceFlag
 			// TODO when https://github.com/urfave/cli/pull/392 & v2 is released
 			//  consider update urfave/cli
-			Name:  FlagClusters,
+			Name:  FlagCluster,
 			Usage: "Clusters",
 		},
 		&cli.StringFlag{
@@ -100,7 +100,7 @@ var (
 			// use StringFlag instead of buggy StringSliceFlag
 			// TODO when https://github.com/urfave/cli/pull/392 & v2 is released
 			//  consider update urfave/cli
-			Name:  FlagClusters,
+			Name:  FlagCluster,
 			Usage: "Clusters",
 		},
 		&cli.StringFlag{

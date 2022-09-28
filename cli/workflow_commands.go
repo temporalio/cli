@@ -71,7 +71,7 @@ func startWorkflowBaseArgs(c *cli.Context) (
 	wid string,
 ) {
 	taskQueue = c.String(FlagTaskQueue)
-	workflowType = c.String(FlagWorkflowType)
+	workflowType = c.String(FlagType)
 	et = c.Int(FlagWorkflowExecutionTimeout)
 	rt = c.Int(FlagWorkflowRunTimeout)
 	dt = c.Int(FlagWorkflowTaskTimeout)
@@ -485,7 +485,7 @@ func SignalWorkflow(c *cli.Context) error {
 
 // QueryWorkflow query workflow execution
 func QueryWorkflow(c *cli.Context) error {
-	queryType := c.String(FlagQueryType)
+	queryType := c.String(FlagType)
 
 	if err := queryWorkflowHelper(c, queryType); err != nil {
 		return err

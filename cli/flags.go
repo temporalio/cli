@@ -33,9 +33,6 @@ import (
 
 // Flags used to specify cli command line arguments
 var (
-	FlagUsername                   = "username"
-	FlagPassword                   = "password"
-	FlagKeyspace                   = "keyspace"
 	FlagAddress                    = "address"
 	FlagAuth                       = "auth"
 	FlagNamespaceID                = "namespace-id"
@@ -48,9 +45,8 @@ var (
 	FlagTaskQueue                  = "task-queue"
 	FlagTaskQueueAlias             = []string{"t"}
 	FlagTaskQueueType              = "task-queue-type"
-	FlagWorkflowIDReusePolicy      = "workflow-id-reuse-policy"
+	FlagWorkflowIDReusePolicy      = "id-reuse-policy"
 	FlagCronSchedule               = "cron"
-	FlagWorkflowType               = "type"
 	FlagWorkflowExecutionTimeout   = "execution-timeout"
 	FlagWorkflowRunTimeout         = "run-timeout"
 	FlagWorkflowTaskTimeout        = "task-timeout"
@@ -65,15 +61,13 @@ var (
 	FlagSkipBaseIsNotCurrent       = "skip-base-is-not-current"
 	FlagDryRun                     = "dry-run"
 	FlagNonDeterministic           = "non-deterministic"
-	FlagCluster                    = "cluster"
 	FlagResult                     = "result"
 	FlagIdentity                   = "identity"
 	FlagDetail                     = "detail"
 	FlagReason                     = "reason"
-	FlagPageSize                   = "pagesize"
 	FlagPrintRaw                   = "raw"
 	FlagDescription                = "description"
-	FlagOwnerEmail                 = "owner-email"
+	FlagOwnerEmail                 = "email"
 	FlagRetention                  = "retention"
 	FlagHistoryArchivalState       = "history-archival-state"
 	FlagHistoryArchivalURI         = "history-uri"
@@ -81,13 +75,12 @@ var (
 	FlagVisibilityArchivalURI      = "visibility-uri"
 	FlagName                       = "name"
 	FlagOutputFilename             = "output-filename"
-	FlagQueryType                  = "query-type"
-	FlagQueryRejectCondition       = "query-reject-condition"
+	FlagQueryRejectCondition       = "reject-condition"
 	FlagActiveClusterName          = "active-cluster"
-	FlagClusters                   = "clusters"
-	FlagIsGlobalNamespace          = "global-namespace"
-	FlagNamespaceData              = "namespace-data"
-	FlagPromoteNamespace           = "promote-namespace"
+	FlagCluster                    = "cluster"
+	FlagNamespaceData              = "data"
+	FlagIsGlobalNamespace          = "global"
+	FlagPromoteNamespace           = "promote-global"
 	FlagEventID                    = "event-id"
 	FlagActivityID                 = "activity-id"
 	FlagMaxFieldLength             = "max-field-length"
@@ -106,7 +99,6 @@ var (
 	FlagQueryAlias                 = []string{"q"}
 	FlagQueryUsage                 = "Filter results using SQL like query. See https://docs.temporal.io/docs/tctl/workflow/list#--query for details"
 	FlagArchive                    = "archived"
-	FlagSignalName                 = "signal-name"
 	FlagRPS                        = "rps"
 	FlagJobID                      = "job-id"
 	FlagYes                        = "yes"
@@ -120,7 +112,7 @@ var (
 	FlagDataConverterPlugin        = "data-converter-plugin"
 	FlagCodecAuth                  = "codec-auth"
 	FlagCodecEndpoint              = "codec-endpoint"
-	FlagWebURL                     = "web-ui-url"
+	FlagWebURL                     = "url"
 	FlagHeadersProviderPlugin      = "headers-provider-plugin"
 	FlagPort                       = "port"
 	FlagFollowAlias                = []string{"f"}
@@ -134,8 +126,7 @@ var (
 	FlagEndTime                    = "end-time"
 	FlagJitter                     = "jitter"
 	FlagTimeZone                   = "time-zone"
-	FlagInitialNotes               = "initial-notes"
-	FlagInitialPaused              = "initial-paused"
+	FlagNotes                      = "notes"
 	FlagRemainingActions           = "remaining-actions"
 	FlagCatchupWindow              = "catchup-window"
 	FlagPauseOnFailure             = "pause-on-failure"
@@ -145,13 +136,6 @@ var (
 	FlagNoFold                     = "no-fold"
 	FlagDepth                      = "depth"
 	FlagOutputAlias                = []string{"o"}
-
-	FlagProtoType  = "type"
-	FlagHexData    = "hex-data"
-	FlagHexFile    = "hex-file"
-	FlagBinaryFile = "binary-file"
-	FlagBase64Data = "base64-data"
-	FlagBase64File = "base64-file"
 )
 
 var flagsForExecution = []cli.Flag{
@@ -203,7 +187,7 @@ var flagsForStartWorkflow = []cli.Flag{
 		Required: true,
 	},
 	&cli.StringFlag{
-		Name:     FlagWorkflowType,
+		Name:     FlagType,
 		Usage:    "Workflow type name",
 		Required: true,
 	},

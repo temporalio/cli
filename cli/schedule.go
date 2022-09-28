@@ -76,11 +76,11 @@ func newScheduleCommands() []*cli.Command {
 
 	scheduleStateFlags := []cli.Flag{
 		&cli.StringFlag{
-			Name:  FlagInitialNotes,
+			Name:  FlagNotes,
 			Usage: "Initial value of notes field",
 		},
 		&cli.BoolFlag{
-			Name:  FlagInitialPaused,
+			Name:  FlagPause,
 			Usage: "Initial value of paused state",
 		},
 		&cli.IntFlag{

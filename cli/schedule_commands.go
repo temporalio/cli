@@ -169,8 +169,8 @@ func buildScheduleAction(c *cli.Context) (*schedpb.ScheduleAction, error) {
 
 func buildScheduleState(c *cli.Context) (*schedpb.ScheduleState, error) {
 	var out schedpb.ScheduleState
-	out.Notes = c.String(FlagInitialNotes)
-	out.Paused = c.Bool(FlagInitialPaused)
+	out.Notes = c.String(FlagNotes)
+	out.Paused = c.Bool(FlagPause)
 	if c.IsSet(FlagRemainingActions) {
 		out.LimitedActions = true
 		out.RemainingActions = int64(c.Int(FlagRemainingActions))

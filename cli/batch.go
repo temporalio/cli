@@ -65,7 +65,7 @@ func newBatchCommands() []*cli.Command {
 					Required: true,
 				},
 				&cli.StringFlag{
-					Name:     FlagSignalName,
+					Name:     FlagName,
 					Usage:    "Signal name",
 					Required: true,
 				},

@@ -135,7 +135,7 @@ func BatchCancel(c *cli.Context) error {
 
 // BatchSignal send a signal to a list of workflows
 func BatchSignal(c *cli.Context) error {
-	signalName := c.String(FlagSignalName)
+	signalName := c.String(FlagName)
 	input := c.String(FlagInput)
 	operator := getCurrentUserFromEnv()
 

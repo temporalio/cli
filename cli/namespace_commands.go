@@ -90,8 +90,8 @@ func RegisterNamespace(c *cli.Context) error {
 	}
 
 	var clusters []*replicationpb.ClusterReplicationConfig
-	if c.IsSet(FlagClusters) {
-		clusterStr := c.String(FlagClusters)
+	if c.IsSet(FlagCluster) {
+		clusterStr := c.String(FlagCluster)
 		clusters = append(clusters, &replicationpb.ClusterReplicationConfig{
 			ClusterName: clusterStr,
 		})
@@ -210,8 +210,8 @@ func UpdateNamespace(c *cli.Context) error {
 				return fmt.Errorf("option %s format is invalid: %w", FlagRetention, err)
 			}
 		}
-		if c.IsSet(FlagClusters) {
-			clusterStr := c.String(FlagClusters)
+		if c.IsSet(FlagCluster) {
+			clusterStr := c.String(FlagCluster)
 			clusters = append(clusters, &replicationpb.ClusterReplicationConfig{
 				ClusterName: clusterStr,
 			})

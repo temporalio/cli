@@ -87,7 +87,7 @@ func newWorkflowCommands() []*cli.Command {
 			Usage: "Query a Workflow Execution",
 			Flags: append(flagsForStackTraceQuery,
 				&cli.StringFlag{
-					Name:     FlagQueryType,
+					Name:     FlagType,
 					Usage:    "The query type you want to run",
 					Required: true,
 				}),
