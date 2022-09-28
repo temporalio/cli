@@ -43,15 +43,12 @@ var (
 			Usage: "Workflow Execution retention",
 		},
 		&cli.StringFlag{
-			Name:  FlagActiveClusterName,
+			Name:  FlagActiveCluster,
 			Usage: "Active cluster name",
 		},
-		&cli.StringFlag{
-			// use StringFlag instead of buggy StringSliceFlag
-			// TODO when https://github.com/urfave/cli/pull/392 & v2 is released
-			//  consider update urfave/cli
+		&cli.StringSliceFlag{
 			Name:  FlagCluster,
-			Usage: "Clusters",
+			Usage: "Cluster name",
 		},
 		&cli.StringFlag{
 			Name:  FlagIsGlobalNamespace,
@@ -93,15 +90,12 @@ var (
 			Usage: "Workflow Execution retention",
 		},
 		&cli.StringFlag{
-			Name:  FlagActiveClusterName,
+			Name:  FlagActiveCluster,
 			Usage: "Active cluster name",
 		},
 		&cli.StringFlag{
-			// use StringFlag instead of buggy StringSliceFlag
-			// TODO when https://github.com/urfave/cli/pull/392 & v2 is released
-			//  consider update urfave/cli
 			Name:  FlagCluster,
-			Usage: "Clusters",
+			Usage: "Cluster name",
 		},
 		&cli.StringSliceFlag{
 			Name:  FlagNamespaceData,

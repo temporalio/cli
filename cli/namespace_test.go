@@ -60,6 +60,12 @@ func (s *cliAppSuite) TestNamespaceRegister_NamespaceExist() {
 	s.Equal(1, errorCode)
 }
 
+func (s *cliAppSuite) TestNamespaceRegister_Cluster() {
+	s.frontendClient.EXPECT().RegisterNamespace(gomock.Any(), gomock.Any()).Return(nil, nil)
+	err := s.app.Run([]string{"", "namespace", "register", "--cluster", "active", "--cluster", "standby", cliTestNamespace})
+	s.NoError(err)
+}
+
 func (s *cliAppSuite) TestNamespaceRegister_Failed() {
 	s.frontendClient.EXPECT().RegisterNamespace(gomock.Any(), gomock.Any()).Return(nil, serviceerror.NewInvalidArgument("faked error"))
 	errorCode := s.RunWithExitCode([]string{"", "namespace", "register", "--global", "true", cliTestNamespace})
@@ -117,6 +123,14 @@ func (s *cliAppSuite) TestNamespaceUpdate_ActiveClusterFlagNotSet_NamespaceNotEx
 	s.frontendClient.EXPECT().DescribeNamespace(gomock.Any(), gomock.Any()).Return(nil, serviceerror.NewNamespaceNotFound("missing-namespace"))
 	errorCode := s.RunWithExitCode([]string{"", "namespace", "update", cliTestNamespace})
 	s.Equal(1, errorCode)
+}
+
+func (s *cliAppSuite) TestNamespaceUpdate_Cluster() {
+	resp := describeNamespaceResponseServer
+	s.frontendClient.EXPECT().DescribeNamespace(gomock.Any(), gomock.Any()).Return(resp, nil).Times(1)
+	s.frontendClient.EXPECT().UpdateNamespace(gomock.Any(), gomock.Any()).Return(nil, nil)
+	err := s.app.Run([]string{"", "namespace", "update", "--cluster", "active", "--cluster", "standby", cliTestNamespace})
+	s.NoError(err)
 }
 
 func (s *cliAppSuite) TestNamespaceUpdate_Failed() {

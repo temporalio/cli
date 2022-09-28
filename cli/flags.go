@@ -76,7 +76,7 @@ var (
 	FlagName                       = "name"
 	FlagOutputFilename             = "output-filename"
 	FlagQueryRejectCondition       = "reject-condition"
-	FlagActiveClusterName          = "active-cluster"
+	FlagActiveCluster              = "active-cluster"
 	FlagCluster                    = "cluster"
 	FlagNamespaceData              = "data"
 	FlagIsGlobalNamespace          = "global"

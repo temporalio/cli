@@ -85,20 +85,17 @@ func RegisterNamespace(c *cli.Context) error {
 		}
 	}
 
-	var activeClusterName string
-	if c.IsSet(FlagActiveClusterName) {
-		activeClusterName = c.String(FlagActiveClusterName)
+	var activeCluster string
+	if c.IsSet(FlagActiveCluster) {
+		activeCluster = c.String(FlagActiveCluster)
 	}
 
 	var clusters []*replicationpb.ClusterReplicationConfig
 	if c.IsSet(FlagCluster) {
-		clusterStr := c.String(FlagCluster)
-		clusters = append(clusters, &replicationpb.ClusterReplicationConfig{
-			ClusterName: clusterStr,
-		})
-		for _, clusterStr := range c.Args().Slice()[1:] { // First element is namespace name.
+		clusterNames := c.StringSlice(FlagCluster)
+		for _, clusterName := range clusterNames {
 			clusters = append(clusters, &replicationpb.ClusterReplicationConfig{
-				ClusterName: clusterStr,
+				ClusterName: clusterName,
 			})
 		}
 	}
@@ -119,7 +116,7 @@ func RegisterNamespace(c *cli.Context) error {
 		Data:                             data,
 		WorkflowExecutionRetentionPeriod: &retention,
 		Clusters:                         clusters,
-		ActiveClusterName:                activeClusterName,
+		ActiveClusterName:                activeCluster,
 		HistoryArchivalState:             archState,
 		HistoryArchivalUri:               c.String(FlagHistoryArchivalURI),
 		VisibilityArchivalState:          archVisState,
@@ -163,8 +160,8 @@ func UpdateNamespace(c *cli.Context) error {
 			Namespace:        ns,
 			PromoteNamespace: true,
 		}
-	} else if c.IsSet(FlagActiveClusterName) {
-		activeCluster := c.String(FlagActiveClusterName)
+	} else if c.IsSet(FlagActiveCluster) {
+		activeCluster := c.String(FlagActiveCluster)
 		fmt.Printf("Will set active cluster name to: %s, other flag will be omitted.\n", activeCluster)
 		replicationConfig := &replicationpb.NamespaceReplicationConfig{
 			ActiveClusterName: activeCluster,
@@ -189,7 +186,6 @@ func UpdateNamespace(c *cli.Context) error {
 		description := resp.NamespaceInfo.GetDescription()
 		ownerEmail := resp.NamespaceInfo.GetOwnerEmail()
 		retention := timestamp.DurationValue(resp.Config.GetWorkflowExecutionRetentionTtl())
-		var clusters []*replicationpb.ClusterReplicationConfig
 
 		if c.IsSet(FlagDescription) {
 			description = c.String(FlagDescription)
@@ -211,14 +207,12 @@ func UpdateNamespace(c *cli.Context) error {
 				return fmt.Errorf("option %s format is invalid: %w", FlagRetention, err)
 			}
 		}
+		var clusters []*replicationpb.ClusterReplicationConfig
 		if c.IsSet(FlagCluster) {
-			clusterStr := c.String(FlagCluster)
-			clusters = append(clusters, &replicationpb.ClusterReplicationConfig{
-				ClusterName: clusterStr,
-			})
-			for _, clusterStr := range c.Args().Slice()[1:] { // First element is namespace name.
+			clusterNames := c.StringSlice(FlagCluster)
+			for _, clusterName := range clusterNames {
 				clusters = append(clusters, &replicationpb.ClusterReplicationConfig{
-					ClusterName: clusterStr,
+					ClusterName: clusterName,
 				})
 			}
 		}
