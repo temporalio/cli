@@ -57,9 +57,9 @@ var (
 			Name:  FlagIsGlobalNamespace,
 			Usage: "Flag to indicate whether namespace is a global namespace",
 		},
-		&cli.StringFlag{
+		&cli.StringSliceFlag{
 			Name:  FlagNamespaceData,
-			Usage: "Namespace data of key value pairs, in format of k1:v1,k2:v2,k3:v3",
+			Usage: "Namespace data in a format key=value",
 		},
 		&cli.StringFlag{
 			Name:  FlagHistoryArchivalState,
@@ -103,9 +103,9 @@ var (
 			Name:  FlagCluster,
 			Usage: "Clusters",
 		},
-		&cli.StringFlag{
+		&cli.StringSliceFlag{
 			Name:  FlagNamespaceData,
-			Usage: "Namespace data of key value pairs, in format of k1:v1,k2:v2,k3:v3 ",
+			Usage: "Namespace data in a format key=value",
 		},
 		&cli.StringFlag{
 			Name:  FlagHistoryArchivalState,

@@ -28,6 +28,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/temporalio/tctl-kit/pkg/color"
 	"github.com/temporalio/tctl-kit/pkg/output"
@@ -69,18 +70,18 @@ func RegisterNamespace(c *cli.Context) error {
 		}
 	}
 
-	namespaceData := map[string]string{}
+	data := map[string]string{}
 	if c.IsSet(FlagNamespaceData) {
-		namespaceDataStr := c.String(FlagNamespaceData)
-		namespaceData, err = parseNamespaceDataKVs(namespaceDataStr)
+		datas := c.StringSlice(FlagNamespaceData)
+		data, err = parseNamespaceData(datas)
 		if err != nil {
-			return fmt.Errorf("option %s format is invalid: %w", FlagNamespaceData, err)
+			return err
 		}
 	}
 	if len(requiredNamespaceDataKeys) > 0 {
-		err = checkRequiredNamespaceDataKVs(namespaceData)
+		err = validateNamespaceDataRequiredKeys(data)
 		if err != nil {
-			return fmt.Errorf("namespace data missed required data: %w", err)
+			return err
 		}
 	}
 
@@ -115,7 +116,7 @@ func RegisterNamespace(c *cli.Context) error {
 		Namespace:                        ns,
 		Description:                      description,
 		OwnerEmail:                       ownerEmail,
-		Data:                             namespaceData,
+		Data:                             data,
 		WorkflowExecutionRetentionPeriod: &retention,
 		Clusters:                         clusters,
 		ActiveClusterName:                activeClusterName,
@@ -196,12 +197,12 @@ func UpdateNamespace(c *cli.Context) error {
 		if c.IsSet(FlagOwnerEmail) {
 			ownerEmail = c.String(FlagOwnerEmail)
 		}
-		namespaceData := map[string]string{}
+		data := map[string]string{}
 		if c.IsSet(FlagNamespaceData) {
-			namespaceDataStr := c.String(FlagNamespaceData)
-			namespaceData, err = parseNamespaceDataKVs(namespaceDataStr)
+			datas := c.StringSlice(FlagNamespaceData)
+			data, err = parseNamespaceData(datas)
 			if err != nil {
-				return fmt.Errorf("namespace data format is invalid: %w", err)
+				return err
 			}
 		}
 		if c.IsSet(FlagRetention) {
@@ -248,7 +249,7 @@ func UpdateNamespace(c *cli.Context) error {
 		updateInfo := &namespacepb.UpdateNamespaceInfo{
 			Description: description,
 			OwnerEmail:  ownerEmail,
-			Data:        namespaceData,
+			Data:        data,
 		}
 
 		archState, err := archivalState(c, FlagHistoryArchivalState)
@@ -473,4 +474,29 @@ func getNamespaceFromIDArgs(c *cli.Context) (string, string, error) {
 	}
 
 	return ns, nsID, nil
+}
+
+func validateNamespaceDataRequiredKeys(namespaceData map[string]string) error {
+	for _, k := range requiredNamespaceDataKeys {
+		_, ok := namespaceData[k]
+		if !ok {
+			return fmt.Errorf("missing namespace data key %v. Required keys: %v", k, requiredNamespaceDataKeys)
+		}
+	}
+	return nil
+}
+
+func parseNamespaceData(kvs []string) (map[string]string, error) {
+	kvMap := map[string]string{}
+	for _, kvstr := range kvs {
+		kv := strings.Split(kvstr, "=")
+		if len(kv) != 2 {
+			return kvMap, fmt.Errorf("unable to parse --%s. Expected format: --%s k1=v1 --%s k2=v2", FlagNamespaceData, FlagNamespaceData, FlagNamespaceData)
+		}
+		k := strings.TrimSpace(kv[0])
+		v := strings.TrimSpace(kv[1])
+		kvMap[k] = v
+	}
+
+	return kvMap, nil
 }
