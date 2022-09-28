@@ -106,8 +106,23 @@ func newWorkflowCommands() []*cli.Command {
 		},
 		{
 			Name:  "signal",
-			Usage: "Signal a Workflow Execution",
-			Flags: append(flagsForExecution, []cli.Flag{
+			Usage: "Signal Workflow Execution by Id or List Filter",
+			Flags: []cli.Flag{
+				&cli.StringFlag{
+					Name:    FlagWorkflowID,
+					Aliases: FlagWorkflowIDAlias,
+					Usage:   "Signal Workflow Execution by Id",
+				},
+				&cli.StringFlag{
+					Name:    FlagRunID,
+					Aliases: FlagRunIDAlias,
+					Usage:   "Run Id",
+				},
+				&cli.StringFlag{
+					Name:    FlagQuery,
+					Aliases: FlagQueryAlias,
+					Usage:   "Signal Workflow Executions by List Filter. See https://docs.temporal.io/concepts/what-is-a-list-filter/",
+				},
 				&cli.StringFlag{
 					Name:     FlagName,
 					Usage:    "Signal Name",
@@ -122,7 +137,16 @@ func newWorkflowCommands() []*cli.Command {
 					Name:  FlagInputFile,
 					Usage: "Input for the signal from file (JSON)",
 				},
-			}...),
+				&cli.StringFlag{
+					Name:  FlagReason,
+					Usage: "Reason for signaling with List Filter",
+				},
+				&cli.BoolFlag{
+					Name:    FlagYes,
+					Aliases: FlagYesAlias,
+					Usage:   "Confirm all prompts",
+				},
+			},
 			Action: func(c *cli.Context) error {
 				return SignalWorkflow(c)
 			},
@@ -138,20 +162,65 @@ func newWorkflowCommands() []*cli.Command {
 		{
 			Name:  "cancel",
 			Usage: "Cancel a Workflow Execution",
-			Flags: flagsForExecution,
+			Flags: []cli.Flag{
+				&cli.StringFlag{
+					Name:    FlagWorkflowID,
+					Aliases: FlagWorkflowIDAlias,
+					Usage:   "Cancel Workflow Execution by Id",
+				},
+				&cli.StringFlag{
+					Name:    FlagRunID,
+					Aliases: FlagRunIDAlias,
+					Usage:   "Run Id",
+				},
+				&cli.StringFlag{
+					Name:    FlagQuery,
+					Aliases: FlagQueryAlias,
+					Usage:   "Cancel Workflow Executions by List Filter. See https://docs.temporal.io/concepts/what-is-a-list-filter/",
+				},
+				&cli.StringFlag{
+					Name:  FlagReason,
+					Usage: "Reason for canceling with List Filter",
+				},
+				&cli.BoolFlag{
+					Name:    FlagYes,
+					Aliases: FlagYesAlias,
+					Usage:   "Confirm all prompts",
+				},
+			},
 			Action: func(c *cli.Context) error {
 				return CancelWorkflow(c)
 			},
 		},
 		{
 			Name:  "terminate",
-			Usage: "Terminate a Workflow Execution",
-			Flags: append(flagsForExecution, []cli.Flag{
+			Usage: "Terminate Workflow Execution by Id or List Filter",
+			Flags: []cli.Flag{
+				&cli.StringFlag{
+					Name:    FlagWorkflowID,
+					Aliases: FlagWorkflowIDAlias,
+					Usage:   "Terminate Workflow Execution by Id",
+				},
+				&cli.StringFlag{
+					Name:    FlagRunID,
+					Aliases: FlagRunIDAlias,
+					Usage:   "Run Id",
+				},
+				&cli.StringFlag{
+					Name:    FlagQuery,
+					Aliases: FlagQueryAlias,
+					Usage:   "Terminate Workflow Executions by List Filter. See https://docs.temporal.io/concepts/what-is-a-list-filter/",
+				},
 				&cli.StringFlag{
 					Name:  FlagReason,
-					Usage: "Reason for terminating the Workflow Execution",
+					Usage: "Reason for termination",
 				},
-			}...),
+				&cli.BoolFlag{
+					Name:    FlagYes,
+					Aliases: FlagYesAlias,
+					Usage:   "Confirm all prompts",
+				},
+			},
 			Action: func(c *cli.Context) error {
 				return TerminateWorkflow(c)
 			},

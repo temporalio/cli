@@ -371,14 +371,25 @@ func printWorkflowProgress(c *cli.Context, wid, rid string, watch bool) error {
 	}
 }
 
-// TerminateWorkflow terminates a workflow execution
 func TerminateWorkflow(c *cli.Context) error {
+	if c.String(FlagQuery) != "" {
+		return BatchTerminate(c)
+	} else {
+		return terminateWorkflow(c)
+	}
+}
+
+// TerminateWorkflow terminates a workflow execution
+func terminateWorkflow(c *cli.Context) error {
 	sdkClient, err := getSDKClient(c)
 	if err != nil {
 		return err
 	}
 
-	wid := c.String(FlagWorkflowID)
+	wid, err := requiredFlag(c, FlagWorkflowID)
+	if err != nil {
+		return err
+	}
 	rid := c.String(FlagRunID)
 	reason := c.String(FlagReason)
 
@@ -423,14 +434,25 @@ func DeleteWorkflow(c *cli.Context) error {
 	return nil
 }
 
-// CancelWorkflow cancels a workflow execution
 func CancelWorkflow(c *cli.Context) error {
+	if c.String(FlagQuery) != "" {
+		return BatchCancel(c)
+	} else {
+		return cancelWorkflow(c)
+	}
+}
+
+// cancelWorkflow cancels a workflow execution
+func cancelWorkflow(c *cli.Context) error {
 	sdkClient, err := getSDKClient(c)
 	if err != nil {
 		return err
 	}
 
-	wid := c.String(FlagWorkflowID)
+	wid, err := requiredFlag(c, FlagWorkflowID)
+	if err != nil {
+		return err
+	}
 	rid := c.String(FlagRunID)
 
 	ctx, cancel := newContext(c)
@@ -444,8 +466,16 @@ func CancelWorkflow(c *cli.Context) error {
 	return nil
 }
 
-// SignalWorkflow signals a workflow execution
 func SignalWorkflow(c *cli.Context) error {
+	if c.String(FlagQuery) != "" {
+		return BatchSignal(c)
+	} else {
+		return signalWorkflow(c)
+	}
+}
+
+// signalWorkflow signals a workflow execution
+func signalWorkflow(c *cli.Context) error {
 	serviceClient := cFactory.FrontendClient(c)
 
 	namespace, err := requiredFlag(c, FlagNamespace)
@@ -453,7 +483,10 @@ func SignalWorkflow(c *cli.Context) error {
 		return err
 	}
 
-	wid := c.String(FlagWorkflowID)
+	wid, err := requiredFlag(c, FlagWorkflowID)
+	if err != nil {
+		return err
+	}
 	rid := c.String(FlagRunID)
 	name := c.String(FlagName)
 	input, err := processJSONInput(c)
