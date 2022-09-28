@@ -28,7 +28,6 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/temporalio/tctl-kit/pkg/color"
 	"github.com/temporalio/tctl-kit/pkg/output"
@@ -73,7 +72,7 @@ func RegisterNamespace(c *cli.Context) error {
 	data := map[string]string{}
 	if c.IsSet(FlagNamespaceData) {
 		datas := c.StringSlice(FlagNamespaceData)
-		data, err = parseNamespaceData(datas)
+		data, err = ParseKeyValuePairs(datas)
 		if err != nil {
 			return err
 		}
@@ -196,7 +195,7 @@ func UpdateNamespace(c *cli.Context) error {
 		data := map[string]string{}
 		if c.IsSet(FlagNamespaceData) {
 			datas := c.StringSlice(FlagNamespaceData)
-			data, err = parseNamespaceData(datas)
+			data, err = ParseKeyValuePairs(datas)
 			if err != nil {
 				return err
 			}
@@ -478,19 +477,4 @@ func validateNamespaceDataRequiredKeys(namespaceData map[string]string) error {
 		}
 	}
 	return nil
-}
-
-func parseNamespaceData(kvs []string) (map[string]string, error) {
-	kvMap := map[string]string{}
-	for _, kvstr := range kvs {
-		kv := strings.Split(kvstr, "=")
-		if len(kv) != 2 {
-			return kvMap, fmt.Errorf("unable to parse --%s. Expected format: --%s k1=v1 --%s k2=v2", FlagNamespaceData, FlagNamespaceData, FlagNamespaceData)
-		}
-		k := strings.TrimSpace(kv[0])
-		v := strings.TrimSpace(kv[1])
-		kvMap[k] = v
-	}
-
-	return kvMap, nil
 }

@@ -150,3 +150,57 @@ func (s *utilSuite) TestParseFoldStatusList() {
 		})
 	}
 }
+
+func (s *utilSuite) TestParseKeyValuePairs() {
+	tests := map[string]struct {
+		input   []string
+		want    map[string]string
+		wantErr bool
+	}{
+		"simple values": {
+			input: []string{
+				"key1=value1",
+				"key2=value2",
+				"key3=value3=with=equal",
+				"key4=value4:with-symbols",
+				"key5=",
+				`key6={"Auth":{"Enabled":false,"Options":["audience","organization"]},"ShowTemporalSystemNamespace":true}`,
+			},
+			want: map[string]string{
+				"key1": "value1",
+				"key2": "value2",
+				"key3": "value3=with=equal",
+				"key4": "value4:with-symbols",
+				"key5": "",
+				"key6": `{"Auth":{"Enabled":false,"Options":["audience","organization"]},"ShowTemporalSystemNamespace":true}`,
+			},
+		},
+		"no values": {
+			input: []string{},
+			want:  map[string]string{},
+		},
+		"empty": {
+			input:   []string{""},
+			wantErr: true,
+		},
+		"no separator": {
+			input:   []string{"key:value"},
+			wantErr: true,
+		},
+		"no key": {
+			input:   []string{"=value"},
+			wantErr: true,
+		},
+	}
+
+	for name, tt := range tests {
+		s.Run(name, func() {
+			got, err := ParseKeyValuePairs(tt.input)
+			if tt.wantErr {
+				s.Error(err)
+			} else {
+				s.Equal(tt.want, got)
+			}
+		})
+	}
+}
