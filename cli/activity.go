@@ -33,10 +33,22 @@ func newActivityCommands() []*cli.Command {
 		{
 			Name:  "complete",
 			Usage: "Complete an activity",
-			Flags: append(flagsForExecution, []cli.Flag{
+			Flags: []cli.Flag{
+				&cli.StringFlag{
+					Name:     FlagWorkflowID,
+					Aliases:  FlagWorkflowIDAlias,
+					Usage:    "Workflow Id",
+					Required: true,
+				},
+				&cli.StringFlag{
+					Name:     FlagRunID,
+					Aliases:  FlagRunIDAlias,
+					Usage:    "Run Id",
+					Required: true,
+				},
 				&cli.StringFlag{
 					Name:     FlagActivityID,
-					Usage:    "The activity Id to complete",
+					Usage:    "The Activity Id to complete",
 					Required: true,
 				},
 				&cli.StringFlag{
@@ -49,7 +61,7 @@ func newActivityCommands() []*cli.Command {
 					Usage:    "Specify operator's identity",
 					Required: true,
 				},
-			}...),
+			},
 			Action: func(c *cli.Context) error {
 				return CompleteActivity(c)
 			},
@@ -57,20 +69,32 @@ func newActivityCommands() []*cli.Command {
 		{
 			Name:  "fail",
 			Usage: "Fail an activity",
-			Flags: append(flagsForExecution, []cli.Flag{
+			Flags: []cli.Flag{
+				&cli.StringFlag{
+					Name:     FlagWorkflowID,
+					Aliases:  FlagWorkflowIDAlias,
+					Usage:    "Workflow Id",
+					Required: true,
+				},
+				&cli.StringFlag{
+					Name:     FlagRunID,
+					Aliases:  FlagRunIDAlias,
+					Usage:    "Run Id",
+					Required: true,
+				},
 				&cli.StringFlag{
 					Name:     FlagActivityID,
-					Usage:    "The activity Id to fail",
+					Usage:    "The Activity Id to fail",
 					Required: true,
 				},
 				&cli.StringFlag{
 					Name:     FlagReason,
-					Usage:    "Reason to fail the activity",
+					Usage:    "Reason to fail the Activity",
 					Required: true,
 				},
 				&cli.StringFlag{
 					Name:     FlagDetail,
-					Usage:    "Detail to fail the activity",
+					Usage:    "Detail to fail the Activity",
 					Required: true,
 				},
 				&cli.StringFlag{
@@ -78,7 +102,7 @@ func newActivityCommands() []*cli.Command {
 					Usage:    "Specify operator's identity",
 					Required: true,
 				},
-			}...),
+			},
 			Action: func(c *cli.Context) error {
 				return FailActivity(c)
 			},

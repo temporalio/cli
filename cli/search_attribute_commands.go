@@ -79,7 +79,7 @@ func AddSearchAttributes(c *cli.Context) error {
 	typeStrs := c.StringSlice(FlagType)
 
 	if len(names) != len(typeStrs) {
-		return fmt.Errorf("number of names and types options should be the same")
+		return fmt.Errorf("number of --%s and --%s options should be the same", FlagName, FlagType)
 	}
 
 	client := cFactory.OperatorClient(c)

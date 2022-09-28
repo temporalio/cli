@@ -54,13 +54,13 @@ func scheduleBaseArgs(c *cli.Context) (
 	err error,
 ) {
 	frontendClient = cFactory.FrontendClient(c)
-	namespace, err = getRequiredGlobalOption(c, FlagNamespace)
+	namespace, err = requiredFlag(c, FlagNamespace)
 	if err != nil {
 		return nil, "", "", err
 	}
-	scheduleID = c.String(FlagScheduleID)
-	if scheduleID == "" {
-		return nil, "", "", errors.New("empty schedule id")
+	scheduleID, err = requiredFlag(c, FlagScheduleID)
+	if err != nil {
+		return nil, "", "", err
 	}
 	return frontendClient, namespace, scheduleID, nil
 }
@@ -134,7 +134,7 @@ func buildScheduleSpec(c *cli.Context) (*schedpb.ScheduleSpec, error) {
 	if c.IsSet(FlagTimeZone) {
 		tzName := c.String(FlagTimeZone)
 		if _, err := time.LoadLocation(tzName); err != nil {
-			return nil, fmt.Errorf("Unknown time zone name %q", tzName)
+			return nil, fmt.Errorf("unknown time zone name %q", tzName)
 		}
 		out.TimezoneName = tzName
 	}
@@ -564,7 +564,7 @@ func DeleteSchedule(c *cli.Context) error {
 
 func ListSchedules(c *cli.Context) error {
 	frontendClient := cFactory.FrontendClient(c)
-	namespace, err := getRequiredGlobalOption(c, FlagNamespace)
+	namespace, err := requiredFlag(c, FlagNamespace)
 	if err != nil {
 		return err
 	}

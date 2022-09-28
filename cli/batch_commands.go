@@ -40,7 +40,7 @@ import (
 
 // DescribeBatchJob describe the status of the batch job
 func DescribeBatchJob(c *cli.Context) error {
-	namespace, err := getRequiredGlobalOption(c, FlagNamespace)
+	namespace, err := requiredFlag(c, FlagNamespace)
 	if err != nil {
 		return err
 	}
@@ -67,7 +67,7 @@ func DescribeBatchJob(c *cli.Context) error {
 
 // ListBatchJobs list the started batch jobs
 func ListBatchJobs(c *cli.Context) error {
-	namespace, err := getRequiredGlobalOption(c, FlagNamespace)
+	namespace, err := requiredFlag(c, FlagNamespace)
 	if err != nil {
 		return err
 	}
@@ -159,7 +159,7 @@ func BatchSignal(c *cli.Context) error {
 
 // startBatchJob starts a batch job
 func startBatchJob(c *cli.Context, req *workflowservice.StartBatchOperationRequest) error {
-	namespace, err := getRequiredGlobalOption(c, FlagNamespace)
+	namespace, err := requiredFlag(c, FlagNamespace)
 	if err != nil {
 		return err
 	}
@@ -205,7 +205,7 @@ func startBatchJob(c *cli.Context, req *workflowservice.StartBatchOperationReque
 
 // StopBatchJob stops a batch job
 func StopBatchJob(c *cli.Context) error {
-	namespace, err := getRequiredGlobalOption(c, FlagNamespace)
+	namespace, err := requiredFlag(c, FlagNamespace)
 	if err != nil {
 		return err
 	}

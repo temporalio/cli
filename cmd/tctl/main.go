@@ -25,6 +25,7 @@
 package main
 
 import (
+	"log"
 	"os"
 
 	"github.com/temporalio/tctl/v2/cli"
@@ -37,11 +38,16 @@ func main() {
 	tctlConfig, _ := config.NewTctlConfig()
 	version := tctlConfig.Version
 
+	var err error
 	if version == "next" || version == "2" {
 		appNext := cli.NewCliApp()
-		_ = appNext.Run(os.Args)
+		err = appNext.Run(os.Args)
 	} else {
 		app := cli_curr.NewCliApp()
-		_ = app.Run(os.Args)
+		err = app.Run(os.Args)
+	}
+
+	if err != nil {
+		log.Fatal(err)
 	}
 }

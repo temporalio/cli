@@ -28,7 +28,6 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math/rand"
 	"os"
@@ -90,7 +89,7 @@ func StartWorkflow(c *cli.Context, printProgress bool) error {
 		return err
 	}
 
-	namespace, err := getRequiredGlobalOption(c, FlagNamespace)
+	namespace, err := requiredFlag(c, FlagNamespace)
 	if err != nil {
 		return err
 	}
@@ -397,7 +396,7 @@ func TerminateWorkflow(c *cli.Context) error {
 
 // DeleteWorkflow deletes a workflow execution.
 func DeleteWorkflow(c *cli.Context) error {
-	nsName, err := getRequiredGlobalOption(c, FlagNamespace)
+	nsName, err := requiredFlag(c, FlagNamespace)
 	if err != nil {
 		return err
 	}
@@ -449,7 +448,7 @@ func CancelWorkflow(c *cli.Context) error {
 func SignalWorkflow(c *cli.Context) error {
 	serviceClient := cFactory.FrontendClient(c)
 
-	namespace, err := getRequiredGlobalOption(c, FlagNamespace)
+	namespace, err := requiredFlag(c, FlagNamespace)
 	if err != nil {
 		return err
 	}
@@ -503,7 +502,7 @@ func QueryWorkflowUsingStackTrace(c *cli.Context) error {
 func queryWorkflowHelper(c *cli.Context, queryType string) error {
 	serviceClient := cFactory.FrontendClient(c)
 
-	namespace, err := getRequiredGlobalOption(c, FlagNamespace)
+	namespace, err := requiredFlag(c, FlagNamespace)
 	if err != nil {
 		return err
 	}
@@ -558,9 +557,6 @@ func queryWorkflowHelper(c *cli.Context, queryType string) error {
 
 // ListWorkflow list workflow executions based on filters
 func ListWorkflow(c *cli.Context) error {
-	err := errors.New("list workflow is deprecated, please use list workflow run instead")
-	fmt.Fprintln(os.Stderr, fmt.Errorf("data converter websocket error: %w", err))
-
 	archived := c.Bool(FlagArchive)
 
 	sdkClient, err := getSDKClient(c)
@@ -632,7 +628,7 @@ func DescribeWorkflow(c *cli.Context) error {
 	rid := c.String(FlagRunID)
 
 	frontendClient := cFactory.FrontendClient(c)
-	namespace, err := getRequiredGlobalOption(c, FlagNamespace)
+	namespace, err := requiredFlag(c, FlagNamespace)
 	if err != nil {
 		return err
 	}
@@ -807,7 +803,7 @@ func ShowHistory(c *cli.Context) error {
 
 // ResetWorkflow reset workflow
 func ResetWorkflow(c *cli.Context) error {
-	namespace, err := getRequiredGlobalOption(c, FlagNamespace)
+	namespace, err := requiredFlag(c, FlagNamespace)
 	if err != nil {
 		return err
 	}
@@ -906,7 +902,7 @@ type batchResetParamsType struct {
 
 // ResetInBatch resets workflow in batch
 func ResetInBatch(c *cli.Context) error {
-	namespace, err := getRequiredGlobalOption(c, FlagNamespace)
+	namespace, err := requiredFlag(c, FlagNamespace)
 	if err != nil {
 		return err
 	}

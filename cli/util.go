@@ -38,19 +38,18 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/gogo/protobuf/proto"
+	tColor "github.com/temporalio/tctl-kit/pkg/color"
+	"github.com/temporalio/tctl/v2/cli/dataconverter"
+	"github.com/temporalio/tctl/v2/cli/headers"
+	"github.com/temporalio/tctl/v2/cli/stringify"
 	"github.com/urfave/cli/v2"
 	commonpb "go.temporal.io/api/common/v1"
 	enumspb "go.temporal.io/api/enums/v1"
 	historypb "go.temporal.io/api/history/v1"
 	sdkclient "go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/converter"
-
 	"go.temporal.io/server/common/codec"
 	"go.temporal.io/server/common/payloads"
-
-	"github.com/temporalio/tctl/v2/cli/dataconverter"
-	"github.com/temporalio/tctl/v2/cli/headers"
-	"github.com/temporalio/tctl/v2/cli/stringify"
 )
 
 // HistoryEventToString convert HistoryEvent to string
@@ -358,17 +357,17 @@ func mapKeysToArray(m map[string]interface{}) []string {
 }
 
 func getSDKClient(c *cli.Context) (sdkclient.Client, error) {
-	namespace, err := getRequiredGlobalOption(c, FlagNamespace)
+	namespace, err := requiredFlag(c, FlagNamespace)
 	if err != nil {
 		return nil, err
 	}
 	return cFactory.SDKClient(c, namespace), nil
 }
 
-func getRequiredGlobalOption(c *cli.Context, optionName string) (string, error) {
+func requiredFlag(c *cli.Context, optionName string) (string, error) {
 	value := c.String(optionName)
 	if len(value) == 0 {
-		return "", fmt.Errorf("global option is required: %v", optionName)
+		return "", fmt.Errorf("option %v is required: ", tColor.Yellow(c, "--%v", optionName))
 	}
 	return value, nil
 }

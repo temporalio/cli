@@ -33,23 +33,16 @@ import (
 	"go.temporal.io/api/workflowservice/v1"
 )
 
-// CompleteActivity completes an activity
+// CompleteActivity completes an Activity
 func CompleteActivity(c *cli.Context) error {
-	namespace, err := getRequiredGlobalOption(c, FlagNamespace)
+	namespace, err := requiredFlag(c, FlagNamespace)
 	if err != nil {
 		return err
 	}
 
 	wid := c.String(FlagWorkflowID)
 	rid := c.String(FlagRunID)
-	if rid == "" {
-		return fmt.Errorf("provide non-empty run id")
-	}
-
-	activityID := c.String(FlagActivityID)
-	if len(activityID) == 0 {
-		return fmt.Errorf("provide non-empty activity id")
-	}
+	aid := c.String(FlagActivityID)
 	result := c.String(FlagResult)
 	identity := c.String(FlagIdentity)
 	ctx, cancel := newContext(c)
@@ -64,30 +57,27 @@ func CompleteActivity(c *cli.Context) error {
 		Namespace:  namespace,
 		WorkflowId: wid,
 		RunId:      rid,
-		ActivityId: activityID,
+		ActivityId: aid,
 		Result:     resultPayloads,
 		Identity:   identity,
 	})
 	if err != nil {
-		return fmt.Errorf("unable to Complete activity: %w", err)
+		return fmt.Errorf("unable to complete Activity: %w", err)
 	} else {
-		fmt.Println(color.Green(c, "activity was Completed"))
+		fmt.Println(color.Green(c, "Activity was completed"))
 	}
 	return nil
 }
 
 // FailActivity fails an activity
 func FailActivity(c *cli.Context) error {
-	namespace, err := getRequiredGlobalOption(c, FlagNamespace)
+	namespace, err := requiredFlag(c, FlagNamespace)
 	if err != nil {
 		return err
 	}
 
 	wid := c.String(FlagWorkflowID)
 	rid := c.String(FlagRunID)
-	if rid == "" {
-		return fmt.Errorf("provide non-empty run id")
-	}
 
 	activityID := c.String(FlagActivityID)
 	if len(activityID) == 0 {
