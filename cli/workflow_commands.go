@@ -847,7 +847,7 @@ func ResetWorkflow(c *cli.Context) error {
 	}
 	rid := c.String(FlagRunID)
 	eventID := c.Int64(FlagEventID)
-	resetType := c.String(FlagResetType)
+	resetType := c.String(FlagType)
 	extraForResetType, ok := resetTypesMap[resetType]
 	if !ok && eventID <= 0 {
 		return fmt.Errorf("specify either valid event id or reset type (one of %s)", strings.Join(mapKeysToArray(resetTypesMap), ", "))
@@ -939,7 +939,7 @@ func ResetInBatch(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	resetType := c.String(FlagResetType)
+	resetType := c.String(FlagType)
 
 	inFileName := c.String(FlagInputFile)
 	query := c.String(FlagQuery)

@@ -243,11 +243,11 @@ func newWorkflowCommands() []*cli.Command {
 				},
 				&cli.StringFlag{
 					Name:     FlagReason,
-					Usage:    "Reason for resetting the Workflow Execution",
+					Usage:    "Reason to reset",
 					Required: true,
 				},
 				&cli.StringFlag{
-					Name:  FlagResetType,
+					Name:  FlagType,
 					Usage: "Event type to which you want to reset: " + strings.Join(mapKeysToArray(resetTypesMap), ", "),
 				},
 				&cli.StringFlag{
@@ -312,7 +312,7 @@ func newWorkflowCommands() []*cli.Command {
 					Usage: "Reset Workflow Execution only if its last Event is WorkflowTaskFailed with a nondeterministic error",
 				},
 				&cli.StringFlag{
-					Name:     FlagResetType,
+					Name:     FlagType,
 					Usage:    "Event type to which you want to reset: " + strings.Join(mapKeysToArray(resetTypesMap), ", "),
 					Required: true,
 				},

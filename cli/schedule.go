@@ -130,7 +130,7 @@ func newScheduleCommands() []*cli.Command {
 	createFlags = append(createFlags, scheduleStateFlags...)
 	createFlags = append(createFlags, schedulePolicyFlags...)
 	createFlags = append(createFlags, scheduleVisibilityFlags...)
-	createFlags = append(createFlags, removeFlags(flagsForStartWorkflow,
+	createFlags = append(createFlags, removeFlags(flagsForStartWorkflowLong,
 		FlagCronSchedule, FlagWorkflowIDReusePolicy,
 		FlagMemoKey, FlagMemo, FlagMemoFile,
 		FlagSearchAttributeKey, FlagSearchAttributeValue,

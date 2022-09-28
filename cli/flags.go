@@ -91,10 +91,9 @@ var (
 	FlagSearchAttributeValue       = "search-attribute-value"
 	FlagAddBadBinary               = "add-bad-binary"
 	FlagRemoveBadBinary            = "remove-bad-binary"
-	FlagResetType                  = "reset-type"
-	FlagResetReapplyType           = "reset-reapply-type"
-	FlagResetPointsOnly            = "reset-points-only"
-	FlagResetBadBinaryChecksum     = "reset-bad-binary-checksum"
+	FlagResetReapplyType           = "reapply-type"
+	FlagResetPointsOnly            = "reset-points"
+	FlagResetBadBinaryChecksum     = "bad-binary-checksum"
 	FlagQuery                      = "query"
 	FlagQueryAlias                 = []string{"q"}
 	FlagQueryUsage                 = "Filter results using SQL like query. See https://docs.temporal.io/docs/tctl/workflow/list#--query for details"
@@ -117,6 +116,7 @@ var (
 	FlagPort                       = "port"
 	FlagFollowAlias                = []string{"f"}
 	FlagType                       = "type"
+	FlagWorkflowType               = "workflow-type"
 	FlagScheduleID                 = "schedule-id"
 	FlagScheduleIDAlias            = []string{"s"}
 	FlagOverlapPolicy              = "overlap-policy"
@@ -174,7 +174,21 @@ var flagsForShowWorkflow = []cli.Flag{
 	},
 }
 
-var flagsForStartWorkflow = []cli.Flag{
+var flagsForStartWorkflow = append(flagsForStartWorkflowT,
+	&cli.StringFlag{
+		Name:     FlagType,
+		Usage:    "Workflow type name",
+		Required: true,
+	})
+
+var flagsForStartWorkflowLong = append(flagsForStartWorkflowT,
+	&cli.StringFlag{
+		Name:     FlagWorkflowType,
+		Usage:    "Workflow type name",
+		Required: true,
+	})
+
+var flagsForStartWorkflowT = []cli.Flag{
 	&cli.StringFlag{
 		Name:    FlagWorkflowID,
 		Aliases: FlagWorkflowIDAlias,
@@ -184,11 +198,6 @@ var flagsForStartWorkflow = []cli.Flag{
 		Name:     FlagTaskQueue,
 		Aliases:  FlagTaskQueueAlias,
 		Usage:    "Task queue",
-		Required: true,
-	},
-	&cli.StringFlag{
-		Name:     FlagType,
-		Usage:    "Workflow type name",
 		Required: true,
 	},
 	&cli.IntFlag{
