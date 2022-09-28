@@ -39,6 +39,26 @@ func newClusterCommands() []*cli.Command {
 			},
 		},
 		{
+			Name:      "describe",
+			Usage:     "Show information about the cluster",
+			ArgsUsage: " ",
+			Flags: []cli.Flag{
+				&cli.StringFlag{
+					Name:    output.FlagOutput,
+					Aliases: FlagOutputAlias,
+					Usage:   output.UsageText,
+					Value:   string(output.Table),
+				},
+				&cli.StringFlag{
+					Name:  output.FlagFields,
+					Usage: "customize fields to print. Set to 'long' to automatically print more of main fields",
+				},
+			},
+			Action: func(c *cli.Context) error {
+				return DescribeCluster(c)
+			},
+		},
+		{
 			Name:      "system",
 			Usage:     "Show information about the system and capabilities",
 			ArgsUsage: " ",

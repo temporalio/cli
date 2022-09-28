@@ -63,6 +63,23 @@ func HealthCheck(c *cli.Context) error {
 	return nil
 }
 
+func DescribeCluster(c *cli.Context) error {
+	client := cFactory.FrontendClient(c)
+	ctx, cancel := newContext(c)
+	defer cancel()
+
+	cluster, err := client.GetClusterInfo(ctx, &workflowservice.GetClusterInfoRequest{})
+	if err != nil {
+		return fmt.Errorf("unable to get cluster information: %w", err)
+	}
+
+	po := &output.PrintOptions{
+		Fields:     []string{"ClusterName", "PersistenceStore", "VisibilityStore"},
+		FieldsLong: []string{"HistoryShardCount", "VersionInfo"},
+	}
+	return output.PrintItems(c, []interface{}{cluster}, po)
+}
+
 func DescribeSystem(c *cli.Context) error {
 	client := cFactory.FrontendClient(c)
 	ctx, cancel := newContext(c)

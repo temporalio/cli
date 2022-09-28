@@ -29,7 +29,16 @@ import (
 	"go.temporal.io/api/workflowservice/v1"
 )
 
-func (s *cliAppSuite) TestClusterSystem() {
+func (s *cliAppSuite) TestDescribeCluster() {
+	s.frontendClient.EXPECT().GetClusterInfo(gomock.Any(), gomock.Any()).Return(&workflowservice.GetClusterInfoResponse{}, nil).Times(2)
+	err := s.app.Run([]string{"", "cluster", "describe"})
+	s.NoError(err)
+
+	err = s.app.Run([]string{"", "cluster", "describe", "--fields", "long", "--output", "table"})
+	s.NoError(err)
+}
+
+func (s *cliAppSuite) TestDescribeSystem() {
 	s.frontendClient.EXPECT().GetSystemInfo(gomock.Any(), gomock.Any()).Return(&workflowservice.GetSystemInfoResponse{
 		Capabilities: &workflowservice.GetSystemInfoResponse_Capabilities{},
 	}, nil).Times(2)
