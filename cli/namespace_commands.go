@@ -72,7 +72,7 @@ func RegisterNamespace(c *cli.Context) error {
 	data := map[string]string{}
 	if c.IsSet(FlagNamespaceData) {
 		datas := c.StringSlice(FlagNamespaceData)
-		data, err = ParseKeyValuePairs(datas)
+		data, err = SplitKeyValuePairs(datas)
 		if err != nil {
 			return err
 		}
@@ -195,7 +195,7 @@ func UpdateNamespace(c *cli.Context) error {
 		data := map[string]string{}
 		if c.IsSet(FlagNamespaceData) {
 			datas := c.StringSlice(FlagNamespaceData)
-			data, err = ParseKeyValuePairs(datas)
+			data, err = SplitKeyValuePairs(datas)
 			if err != nil {
 				return err
 			}

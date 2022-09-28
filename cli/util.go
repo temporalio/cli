@@ -776,13 +776,13 @@ func parseFoldStatusList(flagValue string) ([]enumspb.WorkflowExecutionStatus, e
 	return statusList, nil
 }
 
-// ParseKeyValuePairs parses key=value pairs
-func ParseKeyValuePairs(kvs []string) (map[string]string, error) {
+// SplitKeyValuePairs parses key=value pairs
+func SplitKeyValuePairs(kvs []string) (map[string]string, error) {
 	pairs := make(map[string]string, len(kvs))
 	for _, v := range kvs {
 		parts := strings.SplitN(v, "=", 2)
 		if len(parts) != 2 {
-			return nil, fmt.Errorf("unable to parse key=value pair: %v", v)
+			return nil, fmt.Errorf("unable to split key=value pair: %v", v)
 		}
 		key := strings.TrimSpace(parts[0])
 		value := strings.TrimSpace(parts[1])

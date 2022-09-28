@@ -104,24 +104,16 @@ func newScheduleCommands() []*cli.Command {
 	// These are the same flags as for start workflow, but we need to change the Usage to talk about schedules instead of workflows.
 	scheduleVisibilityFlags := []cli.Flag{
 		&cli.StringSliceFlag{
-			Name:  FlagMemoKey,
-			Usage: "Key for an optional memo",
+			Name:  FlagSearchAttribute,
+			Usage: "Set Search Attribute on a schedule. Format: key=value. Use valid JSON formats for value",
 		},
 		&cli.StringSliceFlag{
 			Name:  FlagMemo,
-			Usage: "Memo value to be set on the schedule",
+			Usage: "Set a memo on a schedule. Format: key=value. Use valid JSON formats for value",
 		},
 		&cli.StringFlag{
 			Name:  FlagMemoFile,
-			Usage: "Information for a memo from a JSON file. If there are multiple values, separate them by newline",
-		},
-		&cli.StringSliceFlag{
-			Name:  FlagSearchAttributeKey,
-			Usage: "Search Attribute key to be set on the schedule",
-		},
-		&cli.StringSliceFlag{
-			Name:  FlagSearchAttributeValue,
-			Usage: "Search Attribute value. If value is an array, use JSON format, such as [\"a\",\"b\"] or [1,2], [\"true\",\"false\"]",
+			Usage: "Set a memo from a file. Each line should follow the format key=value. Use valid JSON formats for value",
 		},
 	}
 
@@ -132,8 +124,8 @@ func newScheduleCommands() []*cli.Command {
 	createFlags = append(createFlags, scheduleVisibilityFlags...)
 	createFlags = append(createFlags, removeFlags(flagsForStartWorkflowLong,
 		FlagCronSchedule, FlagWorkflowIDReusePolicy,
-		FlagMemoKey, FlagMemo, FlagMemoFile,
-		FlagSearchAttributeKey, FlagSearchAttributeValue,
+		FlagMemo, FlagMemoFile,
+		FlagSearchAttribute,
 	)...)
 
 	return []*cli.Command{

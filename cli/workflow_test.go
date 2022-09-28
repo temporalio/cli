@@ -87,7 +87,7 @@ func (s *cliAppSuite) TestStartWorkflow_SearchAttributes() {
 	s.sdkClient.On("ExecuteWorkflow", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(workflowRun(), nil)
 	// start with basic search attributes
 	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "start", "--task-queue", "testTaskQueue", "--type", "testWorkflowType",
-		"--search-attribute-key", "k1", "--search-attribute-value", "\"v1\"", "--search-attribute-key", "k2", "--search-attribute-value", "\"v2\""})
+		"--search-attribute", "k1=\"v1\"", "--search-attribute", "k2=\"v2\""})
 	s.Nil(err)
 	s.sdkClient.AssertExpectations(s.T())
 
@@ -99,8 +99,24 @@ func (s *cliAppSuite) TestStartWorkflow_SearchAttributes() {
 	s.sdkClient.AssertCalled(s.T(), "ExecuteWorkflow", mock.Anything, hasCorrectSearchAttributes, mock.Anything, mock.Anything)
 
 	s.sdkClient.On("ExecuteWorkflow", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(workflowRun(), nil)
+}
 
-	// TODO: test json search attributes once we know how to they'll be specified (--search-attribute-json?)
+func (s *cliAppSuite) TestStartWorkflow_Memo() {
+	s.sdkClient.On("ExecuteWorkflow", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(workflowRun(), nil)
+	// start with basic search attributes
+	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "start", "--task-queue", "testTaskQueue", "--type", "testWorkflowType",
+		"--memo", "k1=\"v1\"", "--memo", "k2=\"v2\""})
+	s.Nil(err)
+	s.sdkClient.AssertExpectations(s.T())
+
+	hasCorrectMemo := mock.MatchedBy(func(options sdkclient.StartWorkflowOptions) bool {
+		return len(options.Memo) == 2 &&
+			options.Memo["k1"] == "v1" &&
+			options.Memo["k2"] == "v2"
+	})
+	s.sdkClient.AssertCalled(s.T(), "ExecuteWorkflow", mock.Anything, hasCorrectMemo, mock.Anything, mock.Anything)
+
+	s.sdkClient.On("ExecuteWorkflow", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(workflowRun(), nil)
 }
 
 func (s *cliAppSuite) TestStartWorkflow_Failed() {

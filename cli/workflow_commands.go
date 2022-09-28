@@ -187,83 +187,60 @@ func formatInputsForDisplay(inputs []interface{}) string {
 }
 
 func unmarshalSearchAttrFromCLI(c *cli.Context) (map[string]interface{}, error) {
-	sanitize := func(val []string) []string {
-		result := make([]string, len(val))
-		for i, v := range val {
-			result[i] = strings.TrimSpace(v)
-		}
-		return result
+	raw := c.StringSlice(FlagSearchAttribute)
+	parsed, err := SplitKeyValuePairs(raw)
+	if err != nil {
+		return nil, err
 	}
 
-	searchAttrKeys := sanitize(c.StringSlice(FlagSearchAttributeKey))
-	if len(searchAttrKeys) == 0 {
-		return nil, nil
-	}
-	rawSearchAttrVals := sanitize(c.StringSlice(FlagSearchAttributeValue))
-	if len(rawSearchAttrVals) == 0 {
-		return nil, nil
-	}
-
-	if len(searchAttrKeys) != len(rawSearchAttrVals) {
-		return nil, fmt.Errorf("uneven number of search attributes keys (%d): %v and values (%d): %v", len(searchAttrKeys), searchAttrKeys, len(rawSearchAttrVals), rawSearchAttrVals)
-	}
-
-	fields := make(map[string]interface{}, len(searchAttrKeys))
-
-	for i, v := range rawSearchAttrVals {
+	attributes := make(map[string]interface{}, len(parsed))
+	for k, v := range parsed {
 		var j interface{}
 		if err := json.Unmarshal([]byte(v), &j); err != nil {
-			return nil, fmt.Errorf("unable to parse search attribute JSON: %w", err)
+			return nil, fmt.Errorf("unable to parse Search Attribute JSON: %w", err)
 		}
-		fields[searchAttrKeys[i]] = j
+		attributes[k] = j
 	}
 
-	return fields, nil
+	return attributes, nil
 }
 
 func unmarshalMemoFromCLI(c *cli.Context) (map[string]interface{}, error) {
-	// Memo flags were not passed => Memo is not provided.
-	if !c.IsSet(FlagMemoKey) && !c.IsSet(FlagMemo) && !c.IsSet(FlagMemoFile) {
+	if !c.IsSet(FlagMemo) && !c.IsSet(FlagMemoFile) {
 		return nil, nil
 	}
 
-	if !c.IsSet(FlagMemoKey) {
-		return nil, fmt.Errorf("memo keys must be provided using %s", FlagMemoKey)
-	}
+	raw := c.StringSlice(FlagMemo)
 
-	if c.IsSet(FlagMemo) && c.IsSet(FlagMemoFile) {
-		return nil, fmt.Errorf("provide only one of %s or %s", FlagMemo, FlagMemoFile)
-	}
-
-	if !c.IsSet(FlagMemo) && !c.IsSet(FlagMemoFile) {
-		return nil, fmt.Errorf("memo values must be provided using %s or %s", FlagMemo, FlagMemoFile)
-	}
-
-	memoKeys := c.StringSlice(FlagMemoKey)
-
-	var memoValues []string
+	var rawFromFile []string
 	if c.IsSet(FlagMemoFile) {
 		inputFile := c.String(FlagMemoFile)
-		// This method is purely used to parse input from the CLI. The input comes from a trusted user
+		// The input comes from a trusted user
 		// #nosec
 		data, err := os.ReadFile(inputFile)
 		if err != nil {
 			return nil, fmt.Errorf("unable to read memo file %s", inputFile)
 		}
-		memoValues = strings.Split(string(data), "\n")
-	} else if c.IsSet(FlagMemo) {
-		memoValues = c.StringSlice(FlagMemo)
+		rawFromFile = strings.Split(string(data), "\n")
 	}
 
-	if len(memoKeys) != len(memoValues) {
-		return nil, fmt.Errorf("number of memo keys %d and values %d are not equal", len(memoKeys), len(memoValues))
+	raw = append(raw, rawFromFile...)
+
+	parsed, err := SplitKeyValuePairs(raw)
+	if err != nil {
+		return nil, err
 	}
 
-	fields := make(map[string]interface{}, len(memoKeys))
-	for i, key := range memoKeys {
-		fields[key] = memoValues[i]
+	memo := make(map[string]interface{}, len(parsed))
+	for k, v := range parsed {
+		var j interface{}
+		if err := json.Unmarshal([]byte(v), &j); err != nil {
+			return nil, fmt.Errorf("unable to parse Search Attribute JSON: %w", err)
+		}
+		memo[k] = j
 	}
-	return fields, nil
+
+	return memo, nil
 }
 
 type historyIterator struct {

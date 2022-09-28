@@ -84,11 +84,9 @@ var (
 	FlagEventID                    = "event-id"
 	FlagActivityID                 = "activity-id"
 	FlagMaxFieldLength             = "max-field-length"
-	FlagMemoKey                    = "memo-key"
 	FlagMemo                       = "memo"
 	FlagMemoFile                   = "memo-file"
-	FlagSearchAttributeKey         = "search-attribute-key"
-	FlagSearchAttributeValue       = "search-attribute-value"
+	FlagSearchAttribute            = "search-attribute"
 	FlagAddBadBinary               = "add-bad-binary"
 	FlagRemoveBadBinary            = "remove-bad-binary"
 	FlagResetReapplyType           = "reapply-type"
@@ -245,24 +243,16 @@ var flagsForStartWorkflowT = []cli.Flag{
 		Usage: "Maximum length for each attribute field",
 	},
 	&cli.StringSliceFlag{
-		Name:  FlagMemoKey,
-		Usage: "Pass a key for an optional memo",
+		Name:  FlagSearchAttribute,
+		Usage: "Pass Search Attribute in a format key=value. Use valid JSON formats for value",
 	},
 	&cli.StringSliceFlag{
 		Name:  FlagMemo,
-		Usage: "Pass a memo value. A memo is information in JSON format that can be shown when the Workflow is listed",
+		Usage: "Pass a memo in a format key=value. Use valid JSON formats for value",
 	},
 	&cli.StringFlag{
 		Name:  FlagMemoFile,
-		Usage: "Pass information for a memo from a JSON file. If there are multiple values, separate them by newline.",
-	},
-	&cli.StringSliceFlag{
-		Name:  FlagSearchAttributeKey,
-		Usage: "Specify a Search Attribute key. See https://docs.temporal.io/docs/concepts/what-is-a-search-attribute/",
-	},
-	&cli.StringSliceFlag{
-		Name:  FlagSearchAttributeValue,
-		Usage: "Specify a Search Attribute value. If value is an array, use JSON format, such as [\"a\",\"b\"] or [1,2], [\"true\",\"false\"]",
+		Usage: "Pass a memo from a file, where each line follows the format key=value. Use valid JSON formats for value",
 	},
 }
 

@@ -195,7 +195,7 @@ func (s *utilSuite) TestParseKeyValuePairs() {
 
 	for name, tt := range tests {
 		s.Run(name, func() {
-			got, err := ParseKeyValuePairs(tt.input)
+			got, err := SplitKeyValuePairs(tt.input)
 			if tt.wantErr {
 				s.Error(err)
 			} else {
