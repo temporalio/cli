@@ -25,6 +25,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -131,6 +132,35 @@ var describeTaskQueueResponse = &workflowservice.DescribeTaskQueueResponse{
 			Identity:       "tester",
 		},
 	},
+}
+
+// TestAcceptStringSliceArgsWithCommas tests that the cli accepts string slice args with commas
+// If the test fails consider downgrading urfave/cli/v2 to v2.4.0
+// See https://github.com/urfave/cli/pull/1241
+func (s *cliAppSuite) TestAcceptStringSliceArgsWithCommas() {
+	app := cli.NewApp()
+	app.Name = "testapp"
+	app.Commands = []*cli.Command{
+		{
+			Name: "dostuff",
+			Action: func(c *cli.Context) error {
+				s.Equal(2, len(c.StringSlice("input")))
+				for _, inp := range c.StringSlice("input") {
+					var thing any
+					s.NoError(json.Unmarshal([]byte(inp), &thing))
+				}
+				return nil
+			},
+			Flags: []cli.Flag{
+				&cli.StringSliceFlag{
+					Name: "input",
+				},
+			},
+		},
+	}
+	app.Run([]string{"testapp", "dostuff",
+		"--input", `{"field1": 34, "field2": false}`,
+		"--input", `{"numbers": [4,5,6]}`})
 }
 
 func (s *cliAppSuite) TestDescribeTaskQueue() {

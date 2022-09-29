@@ -62,7 +62,7 @@ const maxEventID = 9999
 
 // AdminShowWorkflow shows history
 func AdminShowWorkflow(c *cli.Context) {
-	namespace := getRequiredGlobalOption(c, FlagNamespace)
+	namespace := getRequiredGlobalOption(c, FlagNamespaceID)
 	wid := getRequiredOption(c, FlagWorkflowID)
 	rid := getRequiredOption(c, FlagRunID)
 	startEventId := c.Int64(FlagMinEventID)
@@ -80,7 +80,7 @@ func AdminShowWorkflow(c *cli.Context) {
 	defer cancel()
 
 	resp, err := client.GetWorkflowExecutionRawHistoryV2(ctx, &adminservice.GetWorkflowExecutionRawHistoryV2Request{
-		Namespace: namespace,
+		NamespaceId: namespace,
 		Execution: &commonpb.WorkflowExecution{
 			WorkflowId: wid,
 			RunId:      rid,
@@ -682,7 +682,7 @@ func AdminDescribeHistoryHost(c *cli.Context) {
 func AdminRefreshWorkflowTasks(c *cli.Context) {
 	adminClient := cFactory.AdminClient(c)
 
-	namespace := getRequiredGlobalOption(c, FlagNamespace)
+	namespace := getRequiredGlobalOption(c, FlagNamespaceID)
 	wid := getRequiredOption(c, FlagWorkflowID)
 	rid := c.String(FlagRunID)
 
@@ -690,7 +690,7 @@ func AdminRefreshWorkflowTasks(c *cli.Context) {
 	defer cancel()
 
 	_, err := adminClient.RefreshWorkflowTasks(ctx, &adminservice.RefreshWorkflowTasksRequest{
-		Namespace: namespace,
+		NamespaceId: namespace,
 		Execution: &commonpb.WorkflowExecution{
 			WorkflowId: wid,
 			RunId:      rid,

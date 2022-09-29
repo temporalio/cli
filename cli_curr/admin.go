@@ -39,6 +39,10 @@ func newAdminWorkflowCommands() []cli.Command {
 			Usage:   "show workflow history from database",
 			Flags: []cli.Flag{
 				cli.StringFlag{
+					Name:  FlagNamespaceID,
+					Usage: "Namespace Id",
+				},
+				cli.StringFlag{
 					Name:  FlagWorkflowIDWithAlias,
 					Usage: "WorkflowId",
 				},
@@ -94,6 +98,10 @@ func newAdminWorkflowCommands() []cli.Command {
 			Aliases: []string{"rt"},
 			Usage:   "Refreshes all the tasks of a workflow",
 			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  FlagNamespaceID,
+					Usage: "Namespace Id",
+				},
 				cli.StringFlag{
 					Name:  FlagWorkflowIDWithAlias,
 					Usage: "WorkflowId",

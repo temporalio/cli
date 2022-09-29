@@ -16,6 +16,10 @@ ifndef GOARCH
 GOARCH := $(shell go env GOARCH)
 endif
 
+
+PINNED_DEPENDENCIES := \
+	github.com/urfave/cli/v2@v2.4.0 # needs to accept comma in values before unlocking https://github.com/urfave/cli/pull/1241
+
 ##### Build #####
 
 build:
@@ -44,3 +48,10 @@ copyright-check:
 copyright:
 	@printf $(COLOR) "Fix license header..."
 	@go run ./cmd/copyright/licensegen.go
+
+##### Misc #####
+
+update-dependencies:
+	@printf $(COLOR) "Update dependencies..."
+	@go get -u -t $(PINNED_DEPENDENCIES) ./...
+	@go mod tidy

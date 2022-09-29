@@ -103,7 +103,6 @@ func (s *cliAppSuite) TestStartWorkflow_SearchAttributes() {
 
 func (s *cliAppSuite) TestStartWorkflow_Memo() {
 	s.sdkClient.On("ExecuteWorkflow", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(workflowRun(), nil)
-	// start with basic search attributes
 	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "start", "--task-queue", "testTaskQueue", "--type", "testWorkflowType",
 		"--memo", "k1=\"v1\"", "--memo", "k2=\"v2\""})
 	s.Nil(err)
