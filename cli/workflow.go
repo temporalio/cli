@@ -255,10 +255,6 @@ func newWorkflowCommands() []*cli.Command {
 					Usage: "Event types to reapply after the reset point: " +
 						strings.Join(mapKeysToArray(resetReapplyTypesMap), ", ") + ". (default: All)",
 				},
-				&cli.StringFlag{
-					Name:  FlagResetBadBinaryChecksum,
-					Usage: "Binary checksum for resetType of BadBinary",
-				},
 			}...),
 			Action: func(c *cli.Context) error {
 				return ResetWorkflow(c)
@@ -315,10 +311,6 @@ func newWorkflowCommands() []*cli.Command {
 					Name:     FlagType,
 					Usage:    "Event type to which you want to reset: " + strings.Join(mapKeysToArray(resetTypesMap), ", "),
 					Required: true,
-				},
-				&cli.StringFlag{
-					Name:  FlagResetBadBinaryChecksum,
-					Usage: "Binary checksum for resetType of BadBinary",
 				},
 				&cli.BoolFlag{
 					Name:  FlagDryRun,

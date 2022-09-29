@@ -118,14 +118,6 @@ var (
 			Usage: "Optionally specify visibility archival URI (cannot be changed after first time archival is enabled)",
 		},
 		&cli.StringFlag{
-			Name:  FlagAddBadBinary,
-			Usage: "Binary checksum to add for resetting workflow",
-		},
-		&cli.StringFlag{
-			Name:  FlagRemoveBadBinary,
-			Usage: "Binary checksum to remove for resetting workflow",
-		},
-		&cli.StringFlag{
 			Name:  FlagReason,
 			Usage: "Reason for the operation",
 		},

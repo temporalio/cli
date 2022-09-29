@@ -87,11 +87,8 @@ var (
 	FlagMemo                       = "memo"
 	FlagMemoFile                   = "memo-file"
 	FlagSearchAttribute            = "search-attribute"
-	FlagAddBadBinary               = "add-bad-binary"
-	FlagRemoveBadBinary            = "remove-bad-binary"
 	FlagResetReapplyType           = "reapply-type"
 	FlagResetPointsOnly            = "reset-points"
-	FlagResetBadBinaryChecksum     = "bad-binary-checksum"
 	FlagQuery                      = "query"
 	FlagQueryAlias                 = []string{"q"}
 	FlagQueryUsage                 = "Filter results using SQL like query. See https://docs.temporal.io/docs/tctl/workflow/list#--query for details"

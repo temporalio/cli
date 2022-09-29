@@ -54,12 +54,10 @@ import (
 	clispb "go.temporal.io/server/api/cli/v1"
 	"go.temporal.io/server/common"
 	"go.temporal.io/server/common/backoff"
-	"go.temporal.io/server/common/clock"
 	"go.temporal.io/server/common/collection"
 	"go.temporal.io/server/common/convert"
 	"go.temporal.io/server/common/primitives/timestamp"
 	"go.temporal.io/server/common/searchattribute"
-	"go.temporal.io/server/service/history/workflow"
 
 	"github.com/temporalio/tctl/v2/cli/stringify"
 )
@@ -1213,12 +1211,6 @@ func getResetEventIDByType(ctx context.Context, c *cli.Context, resetType, names
 		if err != nil {
 			return
 		}
-	case "BadBinary":
-		binCheckSum := c.String(FlagResetBadBinaryChecksum)
-		resetBaseRunID, workflowTaskFinishID, err = getBadWorkflowTaskCompletedID(ctx, namespace, wid, rid, binCheckSum, frontendClient)
-		if err != nil {
-			return
-		}
 	default:
 		panic("not supported resetType")
 	}
@@ -1258,39 +1250,6 @@ func getLastWorkflowTaskEventID(ctx context.Context, namespace, wid, rid string,
 	}
 	if workflowTaskEventID == 0 {
 		return "", 0, printErrorAndReturn("Get LastWorkflowTaskID failed", fmt.Errorf("unable to find any scheduled or completed task"))
-	}
-	return
-}
-
-func badChecksum(bad string) func(string) error {
-	return func(maybeBad string) error {
-		if maybeBad == bad {
-			return fmt.Errorf("bad checksum %q", bad)
-		}
-		return nil
-	}
-}
-
-func getBadWorkflowTaskCompletedID(ctx context.Context, namespace, wid, rid, binChecksum string, frontendClient workflowservice.WorkflowServiceClient) (resetBaseRunID string, workflowTaskCompletedID int64, err error) {
-	resetBaseRunID = rid
-	resp, err := frontendClient.DescribeWorkflowExecution(ctx, &workflowservice.DescribeWorkflowExecutionRequest{
-		Namespace: namespace,
-		Execution: &commonpb.WorkflowExecution{
-			WorkflowId: wid,
-			RunId:      rid,
-		},
-	})
-	if err != nil {
-		return "", 0, printErrorAndReturn("DescribeWorkflowExecution failed", err)
-	}
-
-	_, p := workflow.FindAutoResetPoint(clock.NewRealTimeSource(), badChecksum(binChecksum), resp.WorkflowExecutionInfo.AutoResetPoints)
-	if p != nil {
-		workflowTaskCompletedID = p.GetFirstWorkflowTaskCompletedId()
-	}
-
-	if workflowTaskCompletedID == 0 {
-		return "", 0, printErrorAndReturn("Get BadWorkflowTaskCompletedID failed", serviceerror.NewInvalidArgument("no WorkflowTaskCompletedID"))
 	}
 	return
 }

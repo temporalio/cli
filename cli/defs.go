@@ -78,7 +78,6 @@ var resetTypesMap = map[string]interface{}{
 	"FirstWorkflowTask":  "",
 	"LastWorkflowTask":   "",
 	"LastContinuedAsNew": "",
-	"BadBinary":          FlagResetBadBinaryChecksum,
 }
 
 var resetReapplyTypesMap = map[string]interface{}{

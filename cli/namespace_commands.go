@@ -216,29 +216,6 @@ func UpdateNamespace(c *cli.Context) error {
 			}
 		}
 
-		var binBinaries *namespacepb.BadBinaries
-		if c.IsSet(FlagAddBadBinary) {
-			if !c.IsSet(FlagReason) {
-				return fmt.Errorf("reason flag is not provided: %w", err)
-			}
-			binChecksum := c.String(FlagAddBadBinary)
-			reason := c.String(FlagReason)
-			operator := getCurrentUserFromEnv()
-			binBinaries = &namespacepb.BadBinaries{
-				Binaries: map[string]*namespacepb.BadBinaryInfo{
-					binChecksum: {
-						Reason:   reason,
-						Operator: operator,
-					},
-				},
-			}
-		}
-
-		var badBinaryToDelete string
-		if c.IsSet(FlagRemoveBadBinary) {
-			badBinaryToDelete = c.String(FlagRemoveBadBinary)
-		}
-
 		updateInfo := &namespacepb.UpdateNamespaceInfo{
 			Description: description,
 			OwnerEmail:  ownerEmail,
@@ -259,7 +236,6 @@ func UpdateNamespace(c *cli.Context) error {
 			HistoryArchivalUri:            c.String(FlagHistoryArchivalURI),
 			VisibilityArchivalState:       archVisState,
 			VisibilityArchivalUri:         c.String(FlagVisibilityArchivalURI),
-			BadBinaries:                   binBinaries,
 		}
 		replicationConfig := &replicationpb.NamespaceReplicationConfig{
 			Clusters: clusters,
@@ -269,7 +245,6 @@ func UpdateNamespace(c *cli.Context) error {
 			UpdateInfo:        updateInfo,
 			Config:            updateConfig,
 			ReplicationConfig: replicationConfig,
-			DeleteBadBinary:   badBinaryToDelete,
 		}
 	}
 
@@ -371,35 +346,7 @@ func printNamespace(c *cli.Context, resp *workflowservice.DescribeNamespaceRespo
 		FieldsLong:   []string{"Config.HistoryArchivalUri", "Config.VisibilityArchivalUri"},
 		OutputFormat: output.Card,
 	}
-	err := output.PrintItems(c, []interface{}{resp}, po)
-	if err != nil {
-		return err
-	}
-
-	type badBinary struct {
-		Checksum   string
-		Operator   string
-		CreateTime string
-		Reason     string
-	}
-	var badBinaries []interface{}
-
-	if resp.Config.BadBinaries != nil {
-		for cs, bin := range resp.Config.BadBinaries.Binaries {
-			badBinaries = append(badBinaries, badBinary{
-				Checksum:   cs,
-				Operator:   bin.GetOperator(),
-				CreateTime: timestamp.TimeValue(bin.GetCreateTime()).String(),
-				Reason:     bin.GetReason(),
-			})
-		}
-	}
-
-	bpo := &output.PrintOptions{
-		Fields:      []string{"Checksum", "Operator", "CreateTime", "Reason"},
-		ForceFields: true,
-	}
-	return output.PrintItems(c, badBinaries, bpo)
+	return output.PrintItems(c, []interface{}{resp}, po)
 }
 
 func getAllNamespaces(c *cli.Context, tClient workflowservice.WorkflowServiceClient) ([]*workflowservice.DescribeNamespaceResponse, error) {
