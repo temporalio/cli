@@ -16,9 +16,11 @@ ifndef GOARCH
 GOARCH := $(shell go env GOARCH)
 endif
 
-
+# go.opentelemetry.io/otel/sdk/metric@v0.31.0 - there are breaking changes in v0.32.0.
+# github.com/urfave/cli/v2@v2.4.0             - needs to accept comma in values before unlocking https://github.com/urfave/cli/pull/1241.
 PINNED_DEPENDENCIES := \
-	github.com/urfave/cli/v2@v2.4.0 # needs to accept comma in values before unlocking https://github.com/urfave/cli/pull/1241
+	go.opentelemetry.io/otel/sdk/metric@v0.31.0 \
+	github.com/urfave/cli/v2@v2.4.0
 
 ##### Build #####
 
