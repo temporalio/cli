@@ -26,6 +26,7 @@ package cli
 
 import (
 	"github.com/golang/mock/gomock"
+	"go.temporal.io/api/operatorservice/v1"
 	"go.temporal.io/api/workflowservice/v1"
 )
 
@@ -46,5 +47,26 @@ func (s *cliAppSuite) TestDescribeSystem() {
 	s.NoError(err)
 
 	err = s.app.Run([]string{"", "cluster", "system", "--fields", "long", "--output", "table"})
+	s.NoError(err)
+}
+
+func (s *cliAppSuite) TestUpsertCluster() {
+	s.operatorClient.EXPECT().AddOrUpdateRemoteCluster(gomock.Any(), gomock.Any()).Return(&operatorservice.AddOrUpdateRemoteClusterResponse{}, nil).Times(1)
+	err := s.app.Run([]string{"", "cluster", "upsert", "--frontend-address", "localhost:7233", "--enable-connection", "true"})
+	s.NoError(err)
+}
+
+func (s *cliAppSuite) TestListCluster() {
+	s.operatorClient.EXPECT().ListClusters(gomock.Any(), gomock.Any()).Return(&operatorservice.ListClustersResponse{}, nil).Times(2)
+	err := s.app.Run([]string{"", "cluster", "list"})
+	s.NoError(err)
+
+	err = s.app.Run([]string{"", "cluster", "list", "--fields", "long", "--output", "table"})
+	s.NoError(err)
+}
+
+func (s *cliAppSuite) TestRemoveCluster() {
+	s.operatorClient.EXPECT().RemoveRemoteCluster(gomock.Any(), gomock.Any()).Return(&operatorservice.RemoveRemoteClusterResponse{}, nil).Times(1)
+	err := s.app.Run([]string{"", "cluster", "remove", "--name", "test"})
 	s.NoError(err)
 }

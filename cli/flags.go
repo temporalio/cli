@@ -131,6 +131,8 @@ var (
 	FlagNoFold                     = "no-fold"
 	FlagDepth                      = "depth"
 	FlagOutputAlias                = []string{"o"}
+	FlagClusterAddress             = "frontend-address"
+	FlagClusterEnableConnection    = "enable-connection"
 )
 
 var flagsForExecution = []cli.Flag{

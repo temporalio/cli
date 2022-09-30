@@ -25,6 +25,7 @@
 package cli
 
 import (
+	"github.com/temporalio/tctl-kit/pkg/flags"
 	"github.com/temporalio/tctl-kit/pkg/output"
 	"github.com/urfave/cli/v2"
 )
@@ -76,6 +77,48 @@ func newClusterCommands() []*cli.Command {
 			},
 			Action: func(c *cli.Context) error {
 				return DescribeSystem(c)
+			},
+		},
+		{
+			Name:      "upsert",
+			Usage:     "Add or update a remote cluster",
+			ArgsUsage: " ",
+			Flags: []cli.Flag{
+				&cli.StringFlag{
+					Name:  FlagClusterAddress,
+					Usage: "Frontend address of the remote cluster",
+				},
+				&cli.BoolFlag{
+					Name:  FlagClusterEnableConnection,
+					Usage: "Enable cross cluster connection",
+				},
+			},
+			Action: func(c *cli.Context) error {
+				return UpsertCluster(c)
+			},
+		},
+		{
+			Name:      "list",
+			Usage:     "List all remote clusters",
+			ArgsUsage: " ",
+			Flags:     flags.FlagsForPaginationAndRendering,
+			Action: func(c *cli.Context) error {
+				return ListClusters(c)
+			},
+		},
+		{
+			Name:      "remove",
+			Usage:     "Remove a remote cluster",
+			ArgsUsage: " ",
+			Flags: []cli.Flag{
+				&cli.StringFlag{
+					Name:     FlagName,
+					Usage:    "Frontend address of the remote cluster",
+					Required: true,
+				},
+			},
+			Action: func(c *cli.Context) error {
+				return RemoveCluster(c)
 			},
 		},
 	}
