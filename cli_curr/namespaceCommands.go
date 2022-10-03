@@ -361,6 +361,9 @@ func printNamespace(resp *workflowservice.DescribeNamespaceResponse) {
 		formatVals = append(formatVals, formatVal{"HistoryArchivalState: %v", resp.Config.GetHistoryArchivalState().String()})
 	}
 	formatVals = append(formatVals, formatVal{"IsGlobalNamespace: %v", resp.GetIsGlobalNamespace()})
+	formatVals = append(formatVals, formatVal{"FailoverVersion: %v", resp.GetFailoverVersion()})
+	formatVals = append(formatVals, formatVal{"FailoverHistory: %v", resp.GetFailoverHistory()})
+
 	if resp.GetConfig().GetHistoryArchivalUri() != "" {
 		formatVals = append(formatVals, formatVal{"HistoryArchivalURI: %v", resp.Config.GetHistoryArchivalUri()})
 	}
