@@ -827,3 +827,41 @@ func defaultDataConverter() converter.DataConverter {
 func customDataConverter() converter.DataConverter {
 	return dataconverter.GetCurrent()
 }
+
+func encodeMemo(memo map[string]interface{}) *commonpb.Memo {
+	if len(memo) == 0 {
+		return nil
+	}
+	dc := customDataConverter()
+	fields := make(map[string]*commonpb.Payload, len(memo))
+	var err error
+	for k, v := range memo {
+		fields[k], err = dc.ToPayload(v)
+		if err != nil {
+			ErrorAndExit("unable to encode memo", err)
+		}
+	}
+	return &commonpb.Memo{Fields: fields}
+}
+
+func encodeSearchAttributes(sa map[string]interface{}) *commonpb.SearchAttributes {
+	if len(sa) == 0 {
+		return nil
+	}
+	dc := defaultDataConverter()
+	fields := make(map[string]*commonpb.Payload, len(sa))
+	var err error
+	for k, v := range sa {
+		fields[k], err = dc.ToPayload(v)
+		if err != nil {
+			ErrorAndExit("unable to encode search attributes", err)
+		}
+	}
+	return &commonpb.SearchAttributes{IndexedFields: fields}
+}
+
+func ensureNonNil[T any, P ~*T](ptr *P) {
+	if *ptr == nil {
+		*ptr = new(T)
+	}
+}

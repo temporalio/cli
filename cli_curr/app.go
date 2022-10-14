@@ -156,6 +156,11 @@ func NewCliApp() *cli.App {
 			Subcommands: newTaskQueueCommands(),
 		},
 		{
+			Name:        "schedule",
+			Usage:       "Operate schedules",
+			Subcommands: newScheduleCommands(),
+		},
+		{
 			Name:        "batch",
 			Usage:       "Batch operation on a list of workflows from query",
 			Subcommands: newBatchCommands(),

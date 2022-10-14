@@ -69,7 +69,11 @@ func startWorkflowBaseArgs(c *cli.Context) (
 	wid string,
 ) {
 	taskQueue = c.String(FlagTaskQueue)
-	workflowType = c.String(FlagType)
+	workflowType = c.String(FlagWorkflowType)
+	if workflowType == "" {
+		// "workflow start" expects FlagType rather than full FlagWorkflowType
+		workflowType = c.String(FlagType)
+	}
 	et = c.Int(FlagWorkflowExecutionTimeout)
 	rt = c.Int(FlagWorkflowRunTimeout)
 	dt = c.Int(FlagWorkflowTaskTimeout)
