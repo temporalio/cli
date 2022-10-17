@@ -81,7 +81,7 @@ func newEnvCommands() []*cli.Command {
 }
 
 func CurrentEnv(c *cli.Context) error {
-	fmt.Print(tctlConfig.CurrentEnv)
+	fmt.Println(tctlConfig.CurrentEnv)
 
 	return nil
 }
