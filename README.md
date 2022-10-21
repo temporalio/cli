@@ -32,7 +32,7 @@ This will create a configuration file (`~/.config/temporalio/tctl.yaml`) and set
 To switch back to the stable v1.16, run
 
 ```
-tctl config set --version current
+tctl config set version current
 ```
 
 ## License
