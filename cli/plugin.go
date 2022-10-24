@@ -25,11 +25,17 @@
 package cli
 
 import (
-	"syscall"
+	"os"
+	"os/exec"
 
 	"github.com/urfave/cli/v2"
 )
 
 func executePlugin(ctx *cli.Context, binPath string, args []string, envs []string) error {
-	return syscall.Exec(binPath, args, envs)
+	cmd := exec.CommandContext(ctx.Context, binPath, args...)
+	cmd.Env = envs
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }
