@@ -27,7 +27,7 @@ import (
 	"os"
 
 	"github.com/hashicorp/go-plugin"
-	cliplugin "github.com/temporalio/tctl/v2/cli/plugin"
+	cliplugin "github.com/temporalio/tctl/cli/plugin"
 )
 
 type provider struct {

@@ -28,9 +28,9 @@ import (
 	"log"
 	"os"
 
-	"github.com/temporalio/tctl/v2/cli"
-	"github.com/temporalio/tctl/v2/cli_curr"
-	"github.com/temporalio/tctl/v2/config"
+	"github.com/temporalio/tctl/cli"
+	"github.com/temporalio/tctl/cli_curr"
+	"github.com/temporalio/tctl/config"
 )
 
 // See https://docs.temporal.io/tctl/ for usage

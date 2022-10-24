@@ -44,8 +44,8 @@ import (
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/metadata"
 
-	"github.com/temporalio/tctl/v2/cli_curr/headersprovider"
-	"github.com/temporalio/tctl/v2/cli_curr/plugin"
+	"github.com/temporalio/tctl/cli_curr/headersprovider"
+	"github.com/temporalio/tctl/cli_curr/plugin"
 	"go.temporal.io/server/api/adminservice/v1"
 	"go.temporal.io/server/common/auth"
 	"go.temporal.io/server/common/log"

@@ -63,7 +63,7 @@ import (
 	"go.temporal.io/server/common/searchattribute"
 	"go.temporal.io/server/service/history/workflow"
 
-	"github.com/temporalio/tctl/v2/cli_curr/stringify"
+	"github.com/temporalio/tctl/cli_curr/stringify"
 )
 
 // ShowHistory shows the history of given workflow execution based on workflowID and runID.

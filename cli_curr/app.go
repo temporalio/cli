@@ -27,13 +27,13 @@ package cli_curr
 import (
 	"fmt"
 
-	"github.com/temporalio/tctl/v2/config"
+	"github.com/temporalio/tctl/config"
 	"github.com/urfave/cli"
 
-	"github.com/temporalio/tctl/v2/cli/headers"
-	"github.com/temporalio/tctl/v2/cli_curr/dataconverter"
-	"github.com/temporalio/tctl/v2/cli_curr/headersprovider"
-	"github.com/temporalio/tctl/v2/cli_curr/plugin"
+	"github.com/temporalio/tctl/cli/headers"
+	"github.com/temporalio/tctl/cli_curr/dataconverter"
+	"github.com/temporalio/tctl/cli_curr/headersprovider"
+	"github.com/temporalio/tctl/cli_curr/plugin"
 )
 
 // SetFactory is used to set the ClientFactory global

@@ -59,7 +59,7 @@ import (
 	"go.temporal.io/server/common/primitives/timestamp"
 	"go.temporal.io/server/common/searchattribute"
 
-	"github.com/temporalio/tctl/v2/cli/stringify"
+	"github.com/temporalio/tctl/cli/stringify"
 )
 
 func startWorkflowBaseArgs(c *cli.Context) (

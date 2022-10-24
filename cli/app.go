@@ -33,10 +33,10 @@ import (
 
 	"github.com/temporalio/tctl-kit/pkg/color"
 
-	"github.com/temporalio/tctl/v2/cli/dataconverter"
-	"github.com/temporalio/tctl/v2/cli/headersprovider"
-	"github.com/temporalio/tctl/v2/cli/plugin"
-	"github.com/temporalio/tctl/v2/config"
+	"github.com/temporalio/tctl/cli/dataconverter"
+	"github.com/temporalio/tctl/cli/headersprovider"
+	"github.com/temporalio/tctl/cli/plugin"
+	"github.com/temporalio/tctl/config"
 )
 
 // SetFactory is used to set the ClientFactory global

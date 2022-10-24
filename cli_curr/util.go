@@ -47,9 +47,9 @@ import (
 	sdkclient "go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/converter"
 
-	"github.com/temporalio/tctl/v2/cli/headers"
-	"github.com/temporalio/tctl/v2/cli_curr/dataconverter"
-	"github.com/temporalio/tctl/v2/cli_curr/stringify"
+	"github.com/temporalio/tctl/cli/headers"
+	"github.com/temporalio/tctl/cli_curr/dataconverter"
+	"github.com/temporalio/tctl/cli_curr/stringify"
 	"go.temporal.io/server/common/codec"
 	"go.temporal.io/server/common/collection"
 	"go.temporal.io/server/common/payloads"
@@ -81,12 +81,13 @@ func HistoryEventToString(e *historypb.HistoryEvent, printFully bool, maxFieldLe
 
 // ColorEvent takes an event and return string with color
 // Event with color mapping rules:
-//   Failed - red
-//   Timeout - yellow
-//   Canceled - magenta
-//   Completed - green
-//   Started - blue
-//   Others - default (white/black)
+//
+//	Failed - red
+//	Timeout - yellow
+//	Canceled - magenta
+//	Completed - green
+//	Started - blue
+//	Others - default (white/black)
 func ColorEvent(e *historypb.HistoryEvent) string {
 	var data string
 	switch e.GetEventType() {

@@ -1,4 +1,4 @@
-module github.com/temporalio/tctl/v2
+module github.com/temporalio/tctl
 
 go 1.18
 
