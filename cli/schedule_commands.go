@@ -640,6 +640,9 @@ func ListSchedules(c *cli.Context) error {
 }
 
 func uncanonicalizeSpec(spec *schedpb.ScheduleSpec) {
+	if spec == nil {
+		return
+	}
 	processField := func(ranges []*schedpb.Range) string {
 		var out []string
 		for _, r := range ranges {
