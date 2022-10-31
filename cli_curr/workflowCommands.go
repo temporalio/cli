@@ -467,6 +467,14 @@ func printWorkflowProgress(c *cli.Context, wid, rid string) {
 
 // TerminateWorkflow terminates a workflow execution
 func TerminateWorkflow(c *cli.Context) {
+	if c.String(FlagListQuery) != "" {
+		BatchTerminateV2(c)
+	} else {
+		terminateWorkflow(c)
+	}
+}
+
+func terminateWorkflow(c *cli.Context) {
 	sdkClient := getSDKClient(c)
 
 	wid := getRequiredOption(c, FlagWorkflowID)
@@ -486,6 +494,14 @@ func TerminateWorkflow(c *cli.Context) {
 
 // CancelWorkflow cancels a workflow execution
 func CancelWorkflow(c *cli.Context) {
+	if c.String(FlagListQuery) != "" {
+		BatchCancelV2(c)
+	} else {
+		cancelWorkflow(c)
+	}
+}
+
+func cancelWorkflow(c *cli.Context) {
 	sdkClient := getSDKClient(c)
 
 	wid := getRequiredOption(c, FlagWorkflowID)
@@ -504,6 +520,14 @@ func CancelWorkflow(c *cli.Context) {
 
 // SignalWorkflow signals a workflow execution
 func SignalWorkflow(c *cli.Context) {
+	if c.String(FlagListQuery) != "" {
+		BatchSignalV2(c)
+	} else {
+		signalWorkflow(c)
+	}
+}
+
+func signalWorkflow(c *cli.Context) {
 	serviceClient := cFactory.FrontendClient(c)
 
 	namespace := getRequiredGlobalOption(c, FlagNamespace)
