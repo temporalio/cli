@@ -1,0 +1,58 @@
+name: Go
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  copyright:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version-file: 'go.mod'
+          check-latest: true
+      - name: Verify File Headers
+        run: go run ./internal/copyright --verify-only
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version-file: 'go.mod'
+          check-latest: true
+      - name: Race
+        run: go test -v -race ./...
+        continue-on-error: true
+      - name: Test
+        run: go test -v -coverpkg=./... -covermode=atomic -coverprofile=coverage.out ./...
+      - name: Coverage
+        uses: codecov/codecov-action@v2
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+  build:
+    strategy:
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-18.04]
+        flags:
+        - ""
+        - -tags headless
+        cgo: ["0", "1"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version-file: 'go.mod'
+          check-latest: true
+      - name: Test
+        env:
+          CGO_ENABLED: ${{ matrix.cgo }}
+        run: go test -v ${{ matrix.flags }} ./...

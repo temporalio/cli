@@ -1,14 +1,14 @@
 ARG BASE_SERVER_IMAGE=temporalio/base-server:1.2.0
 ARG GOPROXY
 
-##### tctl builder #####
-FROM golang:1.18-alpine3.14 AS tctl-builder
+##### builder #####
+FROM golang:1.18-alpine3.14 AS temporal-cli-builder
 
 RUN apk add --update --no-cache \
     make \
     git
 
-WORKDIR /home/tctl-builder
+WORKDIR /home/temporal-cli-builder
 
 # pre-build dependecies to improve subsequent build times
 COPY go.mod go.sum ./
@@ -17,12 +17,14 @@ RUN go mod download
 COPY . .
 RUN make build
 
-##### tctl #####
+##### temporal CLI #####
 FROM ${BASE_SERVER_IMAGE} AS ui-server
 WORKDIR /etc/temporal
 
-COPY --from=tctl-builder /home/tctl-builder/tctl /usr/local/bin
-COPY --from=tctl-builder /home/tctl-builder/tctl-authorization-plugin /usr/local/bin
+COPY --from=temporal-cli-builder /home/temporal-cli-builder/temporal /usr/local/bin
+COPY --from=temporal-cli-builder /home/temporal-cli-builder/tctl-authorization-plugin /usr/local/bin
+
+EXPOSE 7233
 
 # Keep the container running.
-ENTRYPOINT ["tail", "-f", "/dev/null"]
+ENTRYPOINT ["/temporal", "server", "start-dev", "--ephemeral", "-n", "default", "--ip" , "0.0.0.0"]

@@ -1,94 +1,19 @@
 {
   "version": "0.2.0",
   "configurations": [
-
     {
-      "name": "tctl:config:version",
+      "name": "--ephemeral",
       "type": "go",
       "request": "launch",
       "mode": "debug",
-      "program": "${workspaceFolder}/cmd/tctl",
+      "program": "${workspaceFolder}/cmd/temporalite",
       "cwd": "${workspaceFolder}",
       "args": [
-        "config",
-        "get",
-        "version",
+        "start",
+        "--namespace",
+        "default",
+        "--ephemeral",
       ]
-    },
-    {
-      "name": "tctl:config:localhost",
-      "type": "go",
-      "request": "launch",
-      "mode": "debug",
-      "program": "${workspaceFolder}/cmd/tctl",
-      "cwd": "${workspaceFolder}",
-      "args": [
-        "config",
-        "set",
-        "address",
-        "127.0.0.1:7233",
-      ]
-    },
-    {
-      "name": "temporalite:config",
-      "type": "go",
-      "request": "launch",
-      "mode": "debug",
-      "program": "${workspaceFolder}/cmd/tctl",
-      "cwd": "${workspaceFolder}",
-      "args": [
-        "config",
-        "set",
-        "address",
-        "temporalite:7233",
-      ]
-    },
-    {
-      "name": "temporalite:health",
-      "type": "go",
-      "request": "launch",
-      "mode": "debug",
-      "program": "${workspaceFolder}/cmd/tctl",
-      "cwd": "${workspaceFolder}",
-      "args": [
-        "cluster",
-        "health",
-      ]
-    },
-    {
-      "name": "temporalite:namespace:list",
-      "type": "go",
-      "request": "launch",
-      "mode": "debug",
-      "program": "${workspaceFolder}/cmd/tctl",
-      "cwd": "${workspaceFolder}",
-      "args": [
-        "namespace",
-        "list",
-      ]
-    },
-    {
-      "name": "temporalite:debug",
-      "type": "go",
-      "request": "launch",
-      "mode": "debug",
-      "program": "${workspaceFolder}/cmd/tctl",
-      "cwd": "${workspaceFolder}",
-      "args": ["${input:args1}", "${input:args2}"],
     },
   ],
-  "inputs": [
-    {
-      "id": "args1",
-      "type": "promptString",
-      "description": "first arguments to pass to tctl on the command line",
-      "default": "wf"
-    },
-    {
-      "id": "args2",
-      "type": "promptString",
-      "description": "second arguments to pass to tctl on the command line",
-      "default": "la"
-    },
-  ]
 }
