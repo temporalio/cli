@@ -1,9 +1,9 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the README at:
 // https://github.com/microsoft/vscode-dev-containers/tree/v0.209.5/containers/docker-from-docker-compose
 {
-	"name": "Hello tctl",
+	"name": "Hello Temporal",
 	"dockerComposeFile": "docker-compose.yml",
-	"service": "tctl",
+	"service": "temporal",
 	"workspaceFolder": "/workspace",
 	"shutdownAction": "stopCompose",
 	// Use this environment variable if you need to bind mount your local source code into a new container.
