@@ -396,7 +396,7 @@ func WithFlags(commands []*cli.Command, newFlags []cli.Flag) []*cli.Command {
 				}
 
 				if !flagExists {
-					subc.Flags = append([]cli.Flag{newF}, subc.Flags...)
+					subc.Flags = append(subc.Flags, newF)
 				}
 			}
 		}

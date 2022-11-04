@@ -41,7 +41,7 @@ func BuildApp(version string) *cli.App {
 	app.Name = "temporal"
 	app.Usage = "Temporal single binary"
 	app.Version = fmt.Sprintf("%s (server %s)", version, headers.ServerVersion)
-	app.Commands = common.WithFlags(commands(defaultCfg), common.SharedFlags)
+	app.Commands = commands(defaultCfg)
 	app.Before = configureCLI
 	app.After = stopPlugins
 	app.ExitErrHandler = HandleError
@@ -118,63 +118,65 @@ func HandleError(c *cli.Context, err error) {
 }
 
 func commands(defaultCfg *sconfig.Config) []*cli.Command {
-	return []*cli.Command{
+	return append([]*cli.Command{
 		{
 			Name:        "server",
 			Usage:       "Commands for managing a Temporal server",
 			Subcommands: server.NewServerCommands(defaultCfg),
-		},
-		{
-			Name:        "workflow",
-			Usage:       "Operations on Workflows",
-			Subcommands: workflow.NewWorkflowCommands(),
-		},
-		{
-			Name:        "activity",
-			Usage:       "Operations on Activities of Workflows",
-			Subcommands: activity.NewActivityCommands(),
-		},
-		{
-			Name:        "task-queue",
-			Usage:       "Operations on Task Queues",
-			Subcommands: taskqueue.NewTaskQueueCommands(),
-		},
-		{
-			Name:        "schedule",
-			Usage:       "Operations on Schedules",
-			Subcommands: schedule.NewScheduleCommands(),
-		},
+		}}, clientCommands...)
+}
 
-		{
-			Name:        "batch",
-			Usage:       "Operations on Batch jobs",
-			Subcommands: batch.NewBatchCommands(),
-		},
-		{
-			Name:        "env",
-			Usage:       "Manage client environment configurations",
-			Subcommands: env.NewEnvCommands(),
-		},
-		{
-			Name:  "operator",
-			Usage: "Operation on Temporal server",
-			Subcommands: []*cli.Command{
-				{
-					Name:        "namespace",
-					Usage:       "Operations on namespaces",
-					Subcommands: namespace.NewNamespaceCommands(),
-				},
-				{
-					Name:        "search-attribute",
-					Usage:       "Operations on search attributes",
-					Subcommands: searchattribute.NewSearchAttributeCommands(),
-				},
-				{
-					Name:        "cluster",
-					Usage:       "Operations on a Temporal cluster",
-					Subcommands: cluster.NewClusterCommands(),
-				},
+var clientCommands = common.WithFlags([]*cli.Command{
+	{
+		Name:        "workflow",
+		Usage:       "Operations on Workflows",
+		Subcommands: workflow.NewWorkflowCommands(),
+	},
+	{
+		Name:        "activity",
+		Usage:       "Operations on Activities of Workflows",
+		Subcommands: activity.NewActivityCommands(),
+	},
+	{
+		Name:        "task-queue",
+		Usage:       "Operations on Task Queues",
+		Subcommands: taskqueue.NewTaskQueueCommands(),
+	},
+	{
+		Name:        "schedule",
+		Usage:       "Operations on Schedules",
+		Subcommands: schedule.NewScheduleCommands(),
+	},
+
+	{
+		Name:        "batch",
+		Usage:       "Operations on Batch jobs",
+		Subcommands: batch.NewBatchCommands(),
+	},
+	{
+		Name:        "env",
+		Usage:       "Manage client environment configurations",
+		Subcommands: env.NewEnvCommands(),
+	},
+	{
+		Name:  "operator",
+		Usage: "Operation on Temporal server",
+		Subcommands: []*cli.Command{
+			{
+				Name:        "namespace",
+				Usage:       "Operations on namespaces",
+				Subcommands: namespace.NewNamespaceCommands(),
+			},
+			{
+				Name:        "search-attribute",
+				Usage:       "Operations on search attributes",
+				Subcommands: searchattribute.NewSearchAttributeCommands(),
+			},
+			{
+				Name:        "cluster",
+				Usage:       "Operations on a Temporal cluster",
+				Subcommands: cluster.NewClusterCommands(),
 			},
 		},
-	}
-}
+	},
+}, common.SharedFlags)
