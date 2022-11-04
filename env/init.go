@@ -26,6 +26,6 @@ import (
 	"github.com/temporalio/tctl-kit/pkg/config"
 )
 
-func NewTctlConfig() (*config.Config, error) {
+func NewClientConfig() (*config.Config, error) {
 	return config.NewConfig("temporalio", "temporal")
 }

@@ -51,8 +51,6 @@ func BuildApp(version string) *cli.App {
 		SetFactory(client.NewClientFactory())
 	}
 
-	common.TctlConfig, _ = env.NewTctlConfig()
-
 	return app
 }
 
@@ -62,9 +60,7 @@ func SetFactory(factory client.ClientFactory) {
 }
 
 func configureCLI(ctx *cli.Context) error {
-	envName := ctx.String(common.FlagEnv)
-
-	env.PopulateFlags(ctx.App.Commands, ctx.App.Flags, envName)
+	env.Build(ctx)
 	return configureSDK(ctx)
 }
 

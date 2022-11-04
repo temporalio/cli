@@ -27,7 +27,6 @@ package common
 import (
 	"time"
 
-	"github.com/temporalio/tctl-kit/pkg/config"
 	enumspb "go.temporal.io/api/enums/v1"
 )
 
@@ -68,7 +67,3 @@ var envKeysForUserName = []string{
 	"LOGNAME",
 	"HOME",
 }
-
-var (
-	TctlConfig *config.Config
-)

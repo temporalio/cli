@@ -37,6 +37,10 @@ import (
 	"github.com/temporalio/tctl-kit/pkg/output"
 )
 
+var (
+	ClientConfig *config.Config
+)
+
 func NewEnvCommands() []*cli.Command {
 	return []*cli.Command{
 		{
@@ -86,8 +90,7 @@ func NewEnvCommands() []*cli.Command {
 
 func ShowEnv(c *cli.Context) error {
 	envName := c.Args().Get(0)
-
-	env := common.TctlConfig.Env(envName)
+	env := ClientConfig.Env(envName)
 
 	type flag struct {
 		Flag  string
@@ -110,7 +113,7 @@ func UseEnv(c *cli.Context) error {
 
 	envName := c.Args().Get(0)
 
-	if err := common.TctlConfig.SetCurrentEnv(envName); err != nil {
+	if err := ClientConfig.SetCurrentEnv(envName); err != nil {
 		return fmt.Errorf("unable to set property %s: %w", config.KeyCurrentEnvironment, err)
 	}
 
@@ -126,7 +129,7 @@ func RemoveEnv(c *cli.Context) error {
 
 	envName := c.Args().Get(0)
 
-	if err := common.TctlConfig.RemoveEnv(envName); err != nil {
+	if err := ClientConfig.RemoveEnv(envName); err != nil {
 		return fmt.Errorf("unable to remove env %s: %w", envName, err)
 	}
 
@@ -148,7 +151,11 @@ func EnvProperty(c *cli.Context) error {
 
 	env, key := envKey(fullKey)
 
-	val := common.TctlConfig.EnvProperty(env, key)
+	val, err := ClientConfig.EnvProperty(env, key)
+	if err != nil {
+		return err
+	}
+
 	fmt.Println(val)
 
 	return nil
@@ -163,7 +170,7 @@ func SetEnvProperty(c *cli.Context) error {
 	val := c.Args().Get(1)
 
 	if fullKey == "version" {
-		if err := common.TctlConfig.SetVersion(val); err != nil {
+		if err := ClientConfig.SetVersion(val); err != nil {
 			return fmt.Errorf("unable to set version: %w", err)
 		}
 
@@ -176,7 +183,7 @@ func SetEnvProperty(c *cli.Context) error {
 
 	env, key := envKey(fullKey)
 
-	if err := common.TctlConfig.SetEnvProperty(env, key, val); err != nil {
+	if err := ClientConfig.SetEnvProperty(env, key, val); err != nil {
 		return fmt.Errorf("unable to set env property %v: %w", key, err)
 	}
 
@@ -206,22 +213,43 @@ func envKey(fullKey string) (string, string) {
 	return env, key
 }
 
-func PopulateFlags(commands []*cli.Command, globalFlags []cli.Flag, env string) {
-	for _, command := range commands {
-		PopulateFlags(command.Subcommands, globalFlags, env)
-		command.Before = populateFlagsFunc(command, globalFlags, env)
+func Build(c *cli.Context) {
+	ClientConfig, _ = NewClientConfig()
+
+	for _, c := range c.App.Commands {
+		loadEnvVariables(c)
 	}
 }
 
-func populateFlagsFunc(command *cli.Command, globalFlags []cli.Flag, env string) func(ctx *cli.Context) error {
+func loadEnvVariables(command *cli.Command) {
+	for _, subcommand := range command.Subcommands {
+		if len(subcommand.Subcommands) == 0 {
+			// only populate flag values for leaf commands
+			subcommand.Before = envLoader(subcommand)
+		}
+
+		loadEnvVariables(subcommand)
+	}
+}
+
+func envLoader(command *cli.Command) func(ctx *cli.Context) error {
 	return func(ctx *cli.Context) error {
-		flags := append(command.Flags, globalFlags...)
-		for _, flag := range flags {
+		env := ctx.String(common.FlagEnv)
+
+		if env == "" {
+			return nil
+		}
+
+		for _, flag := range command.Flags {
 			name := flag.Names()[0]
 
 			for _, c := range ctx.Lineage() {
 				if !c.IsSet(name) {
-					value := common.TctlConfig.EnvProperty(env, name)
+					value, err := ClientConfig.EnvProperty(env, name)
+					if err != nil {
+						return err
+					}
+
 					if value != "" {
 						c.Set(name, value)
 					}
