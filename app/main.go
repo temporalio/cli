@@ -154,11 +154,6 @@ var clientCommands = common.WithFlags([]*cli.Command{
 		Subcommands: batch.NewBatchCommands(),
 	},
 	{
-		Name:        "env",
-		Usage:       "Manage client environment configurations",
-		Subcommands: env.NewEnvCommands(),
-	},
-	{
 		Name:  "operator",
 		Usage: "Operation on Temporal server",
 		Subcommands: []*cli.Command{
@@ -178,5 +173,10 @@ var clientCommands = common.WithFlags([]*cli.Command{
 				Subcommands: cluster.NewClusterCommands(),
 			},
 		},
+	},
+	{
+		Name:        "env",
+		Usage:       "Manage client environment configurations",
+		Subcommands: env.NewEnvCommands(),
 	},
 }, common.SharedFlags)

@@ -199,8 +199,8 @@ func envKey(fullKey string) (string, string) {
 
 	var env, key string
 	if len(keys) == 2 {
-		env = keys[1]
-		key = keys[2]
+		env = keys[0]
+		key = keys[1]
 	}
 
 	return env, key

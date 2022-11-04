@@ -27,5 +27,5 @@ import (
 )
 
 func NewTctlConfig() (*config.Config, error) {
-	return config.NewConfig("temporalio", "tctl")
+	return config.NewConfig("temporalio", "temporal")
 }
