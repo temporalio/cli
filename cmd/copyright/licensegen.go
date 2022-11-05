@@ -65,12 +65,12 @@ var (
 // command line utility that adds license header
 // to the source files. Usage as follows:
 //
-//  ./cmd/copyright/licensegen.go
+// ./cmd/copyright/licensegen.go
 func main() {
 	var cfg config
-	flag.StringVar(&cfg.licenseFile, "licenseFile", licenseFileName, "directory to scan")
-	flag.StringVar(&cfg.scanDir, "scanDir", ".", "directory to scan")
-	flag.BoolVar(&cfg.verifyOnly, "verifyOnly", false, "don't automatically add headers, just verify all files")
+	flag.StringVar(&cfg.licenseFile, "header-file", "./LICENSE", "file containing copyright header content")
+	flag.StringVar(&cfg.scanDir, "scan-dir", ".", "directory to scan")
+	flag.BoolVar(&cfg.verifyOnly, "verify-only", false, "don't automatically add headers, just verify all files")
 	flag.Parse()
 
 	task := newAddLicenseHeaderTask(&cfg)

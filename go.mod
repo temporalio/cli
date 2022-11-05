@@ -13,7 +13,7 @@ require (
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/pborman/uuid v1.2.1
 	github.com/stretchr/testify v1.8.0
-	github.com/temporalio/tctl-kit v0.0.0-20220930184216-35456dd1edc9
+	github.com/temporalio/tctl-kit v0.0.0-20221105000105-c7dd78af47af
 	github.com/temporalio/ui-server/v2 v2.8.1
 	github.com/urfave/cli/v2 v2.20.2
 	go.temporal.io/api v1.12.0
