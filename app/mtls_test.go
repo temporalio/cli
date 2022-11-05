@@ -56,7 +56,7 @@ func TestMTLSConfig(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	_, thisFile, _, _ := runtime.Caller(0)
-	mtlsDir := filepath.Join(thisFile, "../../../internal/examples/mtls")
+	mtlsDir := filepath.Join(thisFile, "../testdata/mtls")
 
 	// Create temp config dir
 	confDir := t.TempDir()
@@ -92,12 +92,11 @@ func TestMTLSConfig(t *testing.T) {
 	)
 	portProvider.Close()
 
-	// Run ephemerally using temp config
+	// Run in-memory using temp config
 	args := []string{
 		"temporal",
 		"server",
 		"start-dev",
-		"--ephemeral",
 		"--config", confDir,
 		"--namespace", "default",
 		"--log-format", "noop",

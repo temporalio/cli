@@ -7,8 +7,6 @@
 
 Temporal CLI is a distribution of [Temporal](https://github.com/temporalio/temporal) that runs as a single process with zero runtime dependencies.
 
-Persistence to disk and an in-memory mode are both supported via SQLite.
-
 ## Getting Started
 
 ### Download and Start Temporal Server Locally
@@ -50,20 +48,16 @@ Registering namespaces the old-fashioned way via `temporal namespace register fo
 
 ### Persistence Modes
 
+### In-memory
+
+By default `temporal server start-dev` run in an in-memory mode.
+
 #### File on Disk
 
-By default `temporal` persists state to a file in the [current user's config directory](https://pkg.go.dev/os#UserConfigDir). This path may be overridden:
+To persist the state to a file use `--db-filename`:
 
 ```bash
-temporal server start-dev -f my_test.db
-```
-
-#### Ephemeral
-
-An in-memory mode is also available. Note that all data will be lost on each restart.
-
-```bash
-temporal server start-dev --ephemeral
+temporal server start-dev --db-filename my_test.db
 ```
 
 ### Temporal UI
@@ -91,7 +85,7 @@ temporal server start-dev --dynamic-config-value system.forceSearchAttributesCac
 To compile the source run:
 
 ```bash
-go build -o dist/temporal ./cmd/temporal 
+go build -o dist/temporal ./cmd/temporal
 ```
 
 To run all tests:
@@ -102,4 +96,4 @@ go test ./...
 
 ## Known Issues
 
-- When consuming Temporal as a library in go mod, you may want to replace grpc-gateway with a fork to address URL escaping issue in UI. See <https://github.com/temporalio/temporalite/pull/118>
+-   When consuming Temporal as a library in go mod, you may want to replace grpc-gateway with a fork to address URL escaping issue in UI. See <https://github.com/temporalio/temporalite/pull/118>

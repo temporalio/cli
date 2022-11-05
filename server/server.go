@@ -32,7 +32,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	sconfig "github.com/temporalio/cli/server/config"
 	"go.temporal.io/sdk/client"
@@ -177,11 +176,4 @@ func (s *Server) NewClientWithOptions(ctx context.Context, options client.Option
 // NewClient or NewClientWithOptions should be used instead.
 func (s *Server) FrontendHostPort() string {
 	return s.frontendHostPort
-}
-
-func timeoutFromContext(ctx context.Context, defaultTimeout time.Duration) time.Duration {
-	if deadline, ok := ctx.Deadline(); ok {
-		return deadline.Sub(time.Now())
-	}
-	return defaultTimeout
 }

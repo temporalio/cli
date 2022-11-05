@@ -26,7 +26,7 @@
 
 //go:build headless
 
-package server
+package main
 
 import (
 	"runtime/debug"
@@ -38,8 +38,8 @@ import (
 func TestNoUIServerDependency(t *testing.T) {
 	info, _ := debug.ReadBuildInfo()
 	for _, dep := range info.Deps {
-		if dep.Path == UIServerModule {
-			t.Errorf("%s should not be a dependency when headless tag is enabled", UIServerModule)
+		if dep.Path == server.UIServerModule {
+			t.Errorf("%s should not be a dependency when headless tag is enabled", server.UIServerModule)
 		}
 	}
 }

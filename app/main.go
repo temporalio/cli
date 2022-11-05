@@ -38,6 +38,7 @@ import (
 	"github.com/temporalio/cli/common"
 	"github.com/temporalio/cli/dataconverter"
 	"github.com/temporalio/cli/env"
+	"github.com/temporalio/cli/headers"
 	"github.com/temporalio/cli/headersprovider"
 	"github.com/temporalio/cli/namespace"
 	"github.com/temporalio/cli/plugin"
@@ -48,21 +49,22 @@ import (
 	"github.com/temporalio/cli/taskqueue"
 	"github.com/temporalio/cli/workflow"
 	"github.com/temporalio/tctl-kit/pkg/color"
+	uiversion "github.com/temporalio/ui-server/v2/server/version"
 	"github.com/urfave/cli/v2"
-	"go.temporal.io/server/common/headers"
+	sheaders "go.temporal.io/server/common/headers"
 	_ "go.temporal.io/server/common/persistence/sql/sqlplugin/sqlite" // load sqlite storage driver
 )
 
 func BuildApp(version string) *cli.App {
 	defaultCfg, _ := sconfig.NewDefaultConfig()
 
-	if version == "" {
-		version = "(devel)"
-	}
 	app := cli.NewApp()
 	app.Name = "temporal"
-	app.Usage = "Temporal single binary"
-	app.Version = fmt.Sprintf("%s (server %s)", version, headers.ServerVersion)
+	app.Usage = "Temporal command-line interface and development server"
+	if version == "" {
+		version = headers.CLIVersion
+	}
+	app.Version = fmt.Sprintf("%s (server %s) (ui %s)", version, sheaders.ServerVersion, uiversion.UIVersion)
 	app.Commands = commands(defaultCfg)
 	app.Before = configureCLI
 	app.After = stopPlugins

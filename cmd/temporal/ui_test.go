@@ -1,8 +1,10 @@
 // The MIT License
 //
-// Copyright (c) 2020 Temporal Technologies Inc.  All rights reserved.
+// Copyright (c) 2022 Temporal Technologies Inc.  All rights reserved.
 //
 // Copyright (c) 2020 Uber Technologies, Inc.
+//
+// Copyright (c) 2021 Datadog, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,19 +24,28 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package app_test
+//go:build !headless
+
+package main
 
 import (
-	"github.com/golang/mock/gomock"
-	"go.temporal.io/api/operatorservice/v1"
+	"runtime/debug"
+	"testing"
+
+	"github.com/temporalio/cli/server"
 )
 
-func (s *cliAppSuite) TestListSearchAttributes() {
-	s.operatorClient.EXPECT().ListSearchAttributes(gomock.Any(), gomock.Any()).Return(&operatorservice.ListSearchAttributesResponse{}, nil)
-	err := s.app.Run([]string{"", "operator", "search-attribute", "list"})
-	s.Nil(err)
-
-	s.operatorClient.EXPECT().ListSearchAttributes(gomock.Any(), gomock.Any()).Return(&operatorservice.ListSearchAttributesResponse{}, nil)
-	err = s.app.Run([]string{"", "operator", "search-attribute", "list", "--namespace", cliTestNamespace})
-	s.Nil(err)
+// This test ensures that ui-server is a dependency of Temporal CLI built in non-headless mode.
+func TestHasUIServerDependency(t *testing.T) {
+	info, _ := debug.ReadBuildInfo()
+	for _, dep := range info.Deps {
+		if dep.Path == server.UIServerModule {
+			return
+		}
+	}
+	t.Errorf("%s should be a dependency when headless tag is not enabled", server.UIServerModule)
+	// If the ui-server module name is ever changed, this test should fail and indicate that the
+	// module name should be updated for this and the equivalent test case in ui_disabled_test.go
+	// to continue working.
+	t.Logf("Temporal CLI's %s dependency is missing. Was this module renamed recently?", server.UIServerModule)
 }

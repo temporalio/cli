@@ -47,7 +47,8 @@ import (
 func newServerAndClientOpts(port int, customArgs ...string) ([]string, client.Options) {
 	args := []string{
 		"temporal",
-		"start",
+		"server",
+		"start-dev",
 		"--namespace", "default",
 		// Use noop logger to avoid fatal logs failing tests on shutdown signal.
 		"--log-format", "noop",

@@ -125,7 +125,7 @@ func (b *clientFactory) SDKClient(c *cli.Context, namespace string) sdkclient.Cl
 		b.logger.Fatal("Failed to configure TLS for SDK client", tag.Error(err))
 	}
 
-	sdkClient, err := sdkclient.NewClient(sdkclient.Options{
+	sdkClient, err := sdkclient.Dial(sdkclient.Options{
 		HostPort:  hostPort,
 		Namespace: namespace,
 		Logger:    log.NewSdkLogger(b.logger),

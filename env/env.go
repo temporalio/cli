@@ -73,7 +73,7 @@ func NewEnvCommands() []*cli.Command {
 				},
 			},
 			Action: func(c *cli.Context) error {
-				return ShowEnv(c)
+				return DescribeEnv(c)
 			},
 		},
 		{
@@ -88,7 +88,7 @@ func NewEnvCommands() []*cli.Command {
 	}
 }
 
-func ShowEnv(c *cli.Context) error {
+func DescribeEnv(c *cli.Context) error {
 	envName := c.Args().Get(0)
 	env := ClientConfig.Env(envName)
 
@@ -104,22 +104,6 @@ func ShowEnv(c *cli.Context) error {
 
 	po := &output.PrintOptions{OutputFormat: output.Table}
 	return output.PrintItems(c, flags, po)
-}
-
-func UseEnv(c *cli.Context) error {
-	if c.Args().Len() == 0 {
-		return fmt.Errorf("env name is required")
-	}
-
-	envName := c.Args().Get(0)
-
-	if err := ClientConfig.SetCurrentEnv(envName); err != nil {
-		return fmt.Errorf("unable to set property %s: %w", config.KeyCurrentEnvironment, err)
-	}
-
-	fmt.Printf("%v: %v\n", color.Magenta(c, "%v", config.KeyCurrentEnvironment), envName)
-
-	return nil
 }
 
 func RemoveEnv(c *cli.Context) error {

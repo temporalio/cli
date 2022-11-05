@@ -44,7 +44,7 @@ import (
 const UIServerModule = "github.com/temporalio/ui-server/v2"
 
 func newUIOption(frontendAddr string, uiIP string, uiPort int, configDir string) (ServerOption, error) {
-	cfg, err := newUIConfig(
+	cfg, err := NewUIConfig(
 		frontendAddr,
 		uiIP,
 		uiPort,
@@ -56,7 +56,7 @@ func newUIOption(frontendAddr string, uiIP string, uiPort int, configDir string)
 	return WithUI(uiserver.NewServer(uiserveroptions.WithConfigProvider(cfg))), nil
 }
 
-func newUIConfig(frontendAddr string, uiIP string, uiPort int, configDir string) (*uiconfig.Config, error) {
+func NewUIConfig(frontendAddr string, uiIP string, uiPort int, configDir string) (*uiconfig.Config, error) {
 	cfg := &uiconfig.Config{
 		Host: uiIP,
 		Port: uiPort,

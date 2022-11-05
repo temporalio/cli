@@ -29,8 +29,6 @@ package liteconfig
 import (
 	"fmt"
 	"math/rand"
-	"os"
-	"path/filepath"
 	"sort"
 	"time"
 
@@ -100,14 +98,9 @@ func GetAllowedPragmas() []string {
 }
 
 func NewDefaultConfig() (*Config, error) {
-	userConfigDir, err := os.UserConfigDir()
-	if err != nil {
-		return nil, fmt.Errorf("cannot determine user config directory: %w", err)
-	}
-
 	return &Config{
 		Ephemeral:        true,
-		DatabaseFilePath: filepath.Join(userConfigDir, "temporal", "db", "default.db"),
+		DatabaseFilePath: "",
 		FrontendPort:     0,
 		MetricsPort:      0,
 		UIServer:         noopUIServer{},

@@ -92,8 +92,6 @@ func FailActivity(c *cli.Context) error {
 	ctx, cancel := common.NewContext(c)
 	defer cancel()
 
-	// TODO: This should use CustomDataConverter once the plugin interface
-	// supports the full DataConverter API.
 	detailsPayloads, _ := dataconverter.DefaultDataConverter().ToPayloads(detail)
 
 	frontendClient := client.CFactory.FrontendClient(c)

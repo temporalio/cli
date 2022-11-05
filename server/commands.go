@@ -50,11 +50,6 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 			Usage:     "Start Temporal development server",
 			ArgsUsage: " ",
 			Flags: []cli.Flag{
-				&cli.BoolFlag{
-					Name:  common.FlagEphemeral,
-					Value: defaultCfg.Ephemeral,
-					Usage: "enable the in-memory storage driver **data will be lost on restart**",
-				},
 				&cli.StringFlag{
 					Name:    common.FlagDBPath,
 					Aliases: []string{"f"},
@@ -132,9 +127,6 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 			Before: func(c *cli.Context) error {
 				if c.Args().Len() > 0 {
 					return cli.Exit("ERROR: start-dev command doesn't support arguments.", 1)
-				}
-				if c.IsSet(common.FlagEphemeral) && c.IsSet(common.FlagDBPath) {
-					return cli.Exit(fmt.Sprintf("ERROR: only one of %q or %q flags may be passed at a time", common.FlagEphemeral, common.FlagDBPath), 1)
 				}
 
 				// Make sure the default db path exists (user does not specify path explicitly)
@@ -239,7 +231,7 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 						opts = append(opts, opt)
 					}
 				}
-				if c.Bool(common.FlagEphemeral) {
+				if c.String(common.FlagDBPath) == "" {
 					opts = append(opts, WithPersistenceDisabled())
 				}
 

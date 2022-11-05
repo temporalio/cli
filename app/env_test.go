@@ -24,40 +24,84 @@
 
 package app_test
 
-import "github.com/temporalio/cli/app"
+import (
+	"log"
+	"os"
+	"path/filepath"
+
+	"github.com/temporalio/cli/app"
+	"github.com/urfave/cli/v2"
+)
 
 const (
 	testEnvName = "tctl-test-env"
 )
 
-func ExampleCurrentEnv() {
+func ExampleDescribeEnv() {
 	tctl := app.BuildApp("")
 
-	tctl.Run([]string{"", "config", "use-env", testEnvName})
-	tctl.Run([]string{"", "config", "current-env"})
+	tctl.Run([]string{"", "env", "set", testEnvName + ".namespace", "tctl-test-namespace"})
 
+	tctl.Run([]string{"", "env", "describe", testEnvName})
 	// Output:
-	// current-env: tctl-test-env
-	// tctl-test-env
+	// Set 'tctl-test-env.namespace' to: tctl-test-namespace
+	//   namespace  tctl-test-namespace
 }
 
-func (s *cliAppSuite) TestUseEnv() {
-	err := s.app.Run([]string{"", "config", "use-env", testEnvName})
+func ExampleEnvProperty() {
+	tctl := app.BuildApp("")
+	defer setupConfig(tctl)()
+
+	tctl.Run([]string{"", "env", "get", testEnvName + ".namespace"})
+
+	// Output:
+	// Set 'tctl-test-env.namespace' to: tctl-test-namespace
+	// tctl-test-namespace
+	// Removed env tctl-test-env
+}
+
+func (s *cliAppSuite) TestSetConfigValue() {
+	defer setupConfig(s.app)()
+
+	err := s.app.Run([]string{"", "env", "set", testEnvName + ".address", "0.0.0.0:00000"})
 	s.NoError(err)
 
 	config := readConfig()
-	s.Contains(config, "current-env: "+testEnvName)
+	s.Contains(config, "    tctl-test-env:")
+	s.Contains(config, "        address: 0.0.0.0:00000")
+	s.Contains(config, "        namespace: tctl-test-namespace")
 }
 
-func ExampleShowEnv() {
-	tctl := app.BuildApp("")
+func setupConfig(app *cli.App) func() {
+	err := app.Run([]string{"", "env", "set", testEnvName + ".namespace", "tctl-test-namespace"})
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	tctl.Run([]string{"", "config", "use-env", testEnvName})
-	tctl.Run([]string{"", "config", "set", "namespace", "tctl-test-namespace"})
+	return func() {
+		err := app.Run([]string{"", "env", "remove", testEnvName})
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+}
 
-	tctl.Run([]string{"", "config", "show-env", testEnvName})
-	// Output:
-	// current-env: tctl-test-env
-	// Set 'namespace' to: tctl-test-namespace
-	//   namespace  tctl-test-namespace
+func readConfig() string {
+	path := getConfigPath()
+	content, err := os.ReadFile(path)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return string(content)
+}
+
+func getConfigPath() string {
+	dpath, err := os.UserHomeDir()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	path := filepath.Join(dpath, ".config", "temporalio", "tctl.yaml")
+
+	return path
 }

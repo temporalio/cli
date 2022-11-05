@@ -44,19 +44,19 @@ import (
 
 func (s *cliAppSuite) TestShowHistory() {
 	s.sdkClient.On("GetWorkflowHistory", mock.Anything, "wid", "", mock.Anything, mock.Anything).Return(historyEventIterator()).Once()
-	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "show", "--workflow-id", "wid"})
+	err := s.app.Run([]string{"", "workflow", "show", "--namespace", cliTestNamespace, "--workflow-id", "wid"})
 	s.Nil(err)
 	s.sdkClient.AssertExpectations(s.T())
 }
 
 func (s *cliAppSuite) TestShowHistoryWithFollow() {
 	s.sdkClient.On("GetWorkflowHistory", mock.Anything, "wid", "", mock.Anything, mock.Anything).Return(historyEventIterator()).Once()
-	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "show", "--workflow-id", "wid", "--follow"})
+	err := s.app.Run([]string{"", "workflow", "show", "--namespace", cliTestNamespace, "--workflow-id", "wid", "--follow"})
 	s.Nil(err)
 	s.sdkClient.AssertExpectations(s.T())
 
 	s.sdkClient.On("GetWorkflowHistory", mock.Anything, "wid", "", mock.Anything, mock.Anything).Return(historyEventIterator()).Once()
-	err = s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "show", "--workflow-id", "wid", "--fields", "long", "--follow"})
+	err = s.app.Run([]string{"", "workflow", "show", "--namespace", cliTestNamespace, "--workflow-id", "wid", "--fields", "long", "--follow"})
 	s.Nil(err)
 	s.sdkClient.AssertExpectations(s.T())
 }
@@ -65,7 +65,7 @@ func (s *cliAppSuite) TestStartWorkflow() {
 	s.sdkClient.On("ExecuteWorkflow", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(workflowRun(), nil)
 
 	// start with wid
-	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "start", "--task-queue", "testTaskQueue", "--type", "testWorkflowType", "--execution-timeout", "60", "--run-timeout", "60", "--workflow-id", "wid", "--id-reuse-policy", "Unspecified"})
+	err := s.app.Run([]string{"", "workflow", "start", "--namespace", cliTestNamespace, "--task-queue", "testTaskQueue", "--type", "testWorkflowType", "--execution-timeout", "60", "--run-timeout", "60", "--workflow-id", "wid", "--id-reuse-policy", "Unspecified"})
 	s.Nil(err)
 	s.sdkClient.AssertNotCalled(s.T(), "GetWorkflowHistory")
 	s.sdkClient.AssertExpectations(s.T())
@@ -77,7 +77,7 @@ func (s *cliAppSuite) TestStartWorkflow() {
 
 	s.sdkClient.On("ExecuteWorkflow", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(workflowRun(), nil)
 	// start without wid
-	err = s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "start", "--task-queue", "testTaskQueue", "--type", "testWorkflowType", "--execution-timeout", "60", "--run-timeout", "60", "--id-reuse-policy", "Unspecified"})
+	err = s.app.Run([]string{"", "workflow", "start", "--namespace", cliTestNamespace, "--task-queue", "testTaskQueue", "--type", "testWorkflowType", "--execution-timeout", "60", "--run-timeout", "60", "--id-reuse-policy", "Unspecified"})
 	s.Nil(err)
 	s.sdkClient.AssertNotCalled(s.T(), "GetWorkflowHistory")
 	s.sdkClient.AssertExpectations(s.T())
@@ -87,7 +87,7 @@ func (s *cliAppSuite) TestStartWorkflow() {
 func (s *cliAppSuite) TestStartWorkflow_SearchAttributes() {
 	s.sdkClient.On("ExecuteWorkflow", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(workflowRun(), nil)
 	// start with basic search attributes
-	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "start", "--task-queue", "testTaskQueue", "--type", "testWorkflowType",
+	err := s.app.Run([]string{"", "workflow", "start", "--namespace", cliTestNamespace, "--task-queue", "testTaskQueue", "--type", "testWorkflowType",
 		"--search-attribute", "k1=\"v1\"", "--search-attribute", "k2=\"v2\""})
 	s.Nil(err)
 	s.sdkClient.AssertExpectations(s.T())
@@ -104,7 +104,7 @@ func (s *cliAppSuite) TestStartWorkflow_SearchAttributes() {
 
 func (s *cliAppSuite) TestStartWorkflow_Memo() {
 	s.sdkClient.On("ExecuteWorkflow", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(workflowRun(), nil)
-	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "start", "--task-queue", "testTaskQueue", "--type", "testWorkflowType",
+	err := s.app.Run([]string{"", "workflow", "start", "--namespace", cliTestNamespace, "--task-queue", "testTaskQueue", "--type", "testWorkflowType",
 		"--memo", "k1=\"v1\"", "--memo", "k2=\"v2\""})
 	s.Nil(err)
 	s.sdkClient.AssertExpectations(s.T())
@@ -123,7 +123,7 @@ func (s *cliAppSuite) TestStartWorkflow_Failed() {
 	s.sdkClient.On("ExecuteWorkflow", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(workflowRun(), serviceerror.NewInvalidArgument("fake error"))
 
 	// start with wid
-	errorCode := s.RunWithExitCode([]string{"", "--namespace", cliTestNamespace, "workflow", "start", "--task-queue", "testTaskQueue", "--type", "testWorkflowType", "--execution-timeout", "60", "--run-timeout", "60", "--workflow-id", "wid"})
+	errorCode := s.RunWithExitCode([]string{"", "workflow", "start", "--namespace", cliTestNamespace, "--task-queue", "testTaskQueue", "--type", "testWorkflowType", "--execution-timeout", "60", "--run-timeout", "60", "--workflow-id", "wid"})
 	s.Equal(1, errorCode)
 	s.sdkClient.AssertExpectations(s.T())
 }
@@ -132,7 +132,7 @@ func (s *cliAppSuite) TestExecuteWorkflow() {
 	s.sdkClient.On("ExecuteWorkflow", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(workflowRun(), nil)
 	s.sdkClient.On("GetWorkflowHistory", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(historyEventIterator()).Once()
 
-	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "execute", "--task-queue", "testTaskQueue", "--type", "testWorkflowType"})
+	err := s.app.Run([]string{"", "workflow", "execute", "--namespace", cliTestNamespace, "--task-queue", "testTaskQueue", "--type", "testWorkflowType"})
 	s.Nil(err)
 	s.sdkClient.AssertExpectations(s.T())
 }
@@ -140,41 +140,41 @@ func (s *cliAppSuite) TestExecuteWorkflow() {
 func (s *cliAppSuite) TestTerminateWorkflow() {
 	s.sdkClient.On("TerminateWorkflow", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
 
-	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "terminate", "--workflow-id", "wid"})
+	err := s.app.Run([]string{"", "workflow", "terminate", "--namespace", cliTestNamespace, "--workflow-id", "wid"})
 	s.Nil(err)
 	s.sdkClient.AssertExpectations(s.T())
 }
 
 func (s *cliAppSuite) TestTerminateWorkflow_Failed() {
 	s.sdkClient.On("TerminateWorkflow", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(serviceerror.NewInvalidArgument("faked error")).Once()
-	errorCode := s.RunWithExitCode([]string{"", "--namespace", cliTestNamespace, "workflow", "terminate", "--workflow-id", "wid"})
+	errorCode := s.RunWithExitCode([]string{"", "workflow", "terminate", "--namespace", cliTestNamespace, "--workflow-id", "wid"})
 	s.Equal(1, errorCode)
 	s.sdkClient.AssertExpectations(s.T())
 }
 
 func (s *cliAppSuite) TestCancelWorkflow() {
 	s.sdkClient.On("CancelWorkflow", mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
-	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "cancel", "--workflow-id", "wid"})
+	err := s.app.Run([]string{"", "workflow", "cancel", "--namespace", cliTestNamespace, "--workflow-id", "wid"})
 	s.Nil(err)
 	s.sdkClient.AssertExpectations(s.T())
 }
 
 func (s *cliAppSuite) TestCancelWorkflow_Failed() {
 	s.sdkClient.On("CancelWorkflow", mock.Anything, mock.Anything, mock.Anything).Return(serviceerror.NewInvalidArgument("faked error")).Once()
-	errorCode := s.RunWithExitCode([]string{"", "--namespace", cliTestNamespace, "workflow", "cancel", "--workflow-id", "wid"})
+	errorCode := s.RunWithExitCode([]string{"", "workflow", "cancel", "--namespace", cliTestNamespace, "--workflow-id", "wid"})
 	s.Equal(1, errorCode)
 	s.sdkClient.AssertExpectations(s.T())
 }
 
 func (s *cliAppSuite) TestSignalWorkflow() {
 	s.frontendClient.EXPECT().SignalWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil, nil)
-	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "signal", "--name", "signal-name", "--workflow-id", "wid"})
+	err := s.app.Run([]string{"", "workflow", "signal", "--namespace", cliTestNamespace, "--name", "signal-name", "--workflow-id", "wid"})
 	s.Nil(err)
 }
 
 func (s *cliAppSuite) TestSignalWorkflow_Failed() {
 	s.frontendClient.EXPECT().SignalWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil, serviceerror.NewInvalidArgument("faked error"))
-	errorCode := s.RunWithExitCode([]string{"", "--namespace", cliTestNamespace, "workflow", "signal", "--name", "signal-name", "--workflow-id", "wid"})
+	errorCode := s.RunWithExitCode([]string{"", "workflow", "signal", "--namespace", cliTestNamespace, "--name", "signal-name", "--workflow-id", "wid"})
 	s.Equal(1, errorCode)
 }
 
@@ -183,7 +183,7 @@ func (s *cliAppSuite) TestQueryWorkflow() {
 		QueryResult: payloads.EncodeString("query-result"),
 	}
 	s.frontendClient.EXPECT().QueryWorkflow(gomock.Any(), gomock.Any()).Return(resp, nil)
-	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "query", "--workflow-id", "wid", "--type", "query-type-test"})
+	err := s.app.Run([]string{"", "workflow", "query", "--namespace", cliTestNamespace, "--workflow-id", "wid", "--type", "query-type-test"})
 	s.Nil(err)
 }
 
@@ -192,7 +192,7 @@ func (s *cliAppSuite) TestQueryWorkflowUsingStackTrace() {
 		QueryResult: payloads.EncodeString("query-result"),
 	}
 	s.frontendClient.EXPECT().QueryWorkflow(gomock.Any(), gomock.Any()).Return(resp, nil)
-	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "stack", "--workflow-id", "wid"})
+	err := s.app.Run([]string{"", "workflow", "stack", "--namespace", cliTestNamespace, "--workflow-id", "wid"})
 	s.Nil(err)
 }
 
@@ -201,7 +201,7 @@ func (s *cliAppSuite) TestQueryWorkflow_Failed() {
 		QueryResult: payloads.EncodeString("query-result"),
 	}
 	s.frontendClient.EXPECT().QueryWorkflow(gomock.Any(), gomock.Any()).Return(resp, serviceerror.NewInvalidArgument("faked error"))
-	errorCode := s.RunWithExitCode([]string{"", "--namespace", cliTestNamespace, "workflow", "query", "--workflow-id", "wid", "--type", "query-type-test"})
+	errorCode := s.RunWithExitCode([]string{"", "workflow", "query", "--namespace", cliTestNamespace, "--workflow-id", "wid", "--type", "query-type-test"})
 	s.Equal(1, errorCode)
 }
 
@@ -239,7 +239,7 @@ var (
 
 func (s *cliAppSuite) TestListWorkflow() {
 	s.sdkClient.On("ListWorkflow", mock.Anything, mock.Anything).Return(listWorkflowExecutionsResponse, nil).Once()
-	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "list"})
+	err := s.app.Run([]string{"", "workflow", "list", "--namespace", cliTestNamespace})
 	s.Nil(err)
 	s.sdkClient.AssertExpectations(s.T())
 }
@@ -247,33 +247,33 @@ func (s *cliAppSuite) TestListWorkflow() {
 func (s *cliAppSuite) TestListWorkflow_DeadlineExceeded() {
 	s.sdkClient.On("ListWorkflow", mock.Anything, mock.Anything).Return(nil, context.DeadlineExceeded).Once()
 	s.sdkClient.On("ListWorkflow", mock.Anything, mock.Anything).Return(listWorkflowExecutionsResponse, nil).Once()
-	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "list"})
+	err := s.app.Run([]string{"", "workflow", "list", "--namespace", cliTestNamespace})
 	s.Nil(err)
 	s.sdkClient.AssertExpectations(s.T())
 }
 
 func (s *cliAppSuite) TestListWorkflow_Open_WithQuery() {
 	s.sdkClient.On("ListWorkflow", mock.Anything, mock.Anything).Return(listWorkflowExecutionsResponse, nil).Once()
-	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "list", "--query", "ExecutionStatus='Running'"})
+	err := s.app.Run([]string{"", "workflow", "list", "--query", "ExecutionStatus='Running'", "--namespace", cliTestNamespace})
 	s.Nil(err)
 	s.sdkClient.AssertExpectations(s.T())
 }
 
 func (s *cliAppSuite) TestListArchivedWorkflow() {
 	s.sdkClient.On("ListArchivedWorkflow", mock.Anything, mock.Anything).Return(&workflowservice.ListArchivedWorkflowExecutionsResponse{}, nil).Once()
-	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "list", "--archived", "--query", "some query string"})
+	err := s.app.Run([]string{"", "workflow", "list", "--archived", "--query", "some query string", "--namespace", cliTestNamespace})
 	s.Nil(err)
 	s.sdkClient.AssertExpectations(s.T())
 }
 
 func (s *cliAppSuite) TestCountWorkflow() {
 	s.sdkClient.On("CountWorkflow", mock.Anything, mock.Anything).Return(&workflowservice.CountWorkflowExecutionsResponse{}, nil).Once()
-	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "count"})
+	err := s.app.Run([]string{"", "workflow", "count", "--namespace", cliTestNamespace})
 	s.Nil(err)
 	s.sdkClient.AssertExpectations(s.T())
 
 	s.sdkClient.On("CountWorkflow", mock.Anything, mock.Anything).Return(&workflowservice.CountWorkflowExecutionsResponse{}, nil).Once()
-	err = s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "count", "--query", "'CloseTime = missing'"})
+	err = s.app.Run([]string{"", "workflow", "count", "--query", "'CloseTime = missing'", "--namespace", cliTestNamespace})
 	s.Nil(err)
 	s.sdkClient.AssertExpectations(s.T())
 }
@@ -281,7 +281,7 @@ func (s *cliAppSuite) TestCountWorkflow() {
 func (s *cliAppSuite) TestCountWorkflowDeadlineExceeded() {
 	s.sdkClient.On("CountWorkflow", mock.Anything, mock.Anything).Return(nil, context.DeadlineExceeded).Once()
 	s.sdkClient.On("CountWorkflow", mock.Anything, mock.Anything).Return(&workflowservice.CountWorkflowExecutionsResponse{}, nil).Once()
-	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "workflow", "count", "--query", "'CloseTime = missing'"})
+	err := s.app.Run([]string{"", "workflow", "count", "--query", "'CloseTime = missing'", "--namespace", cliTestNamespace})
 	s.Nil(err)
 	s.sdkClient.AssertExpectations(s.T())
 }

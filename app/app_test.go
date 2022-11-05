@@ -166,14 +166,14 @@ func (s *cliAppSuite) TestAcceptStringSliceArgsWithCommas() {
 
 func (s *cliAppSuite) TestDescribeTaskQueue() {
 	s.sdkClient.On("DescribeTaskQueue", mock.Anything, mock.Anything, mock.Anything).Return(describeTaskQueueResponse, nil).Once()
-	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "task-queue", "describe", "--task-queue", "test-taskQueue"})
+	err := s.app.Run([]string{"", "task-queue", "describe", "--task-queue", "test-taskQueue", "--namespace", cliTestNamespace})
 	s.Nil(err)
 	s.sdkClient.AssertExpectations(s.T())
 }
 
 func (s *cliAppSuite) TestDescribeTaskQueue_Activity() {
 	s.sdkClient.On("DescribeTaskQueue", mock.Anything, mock.Anything, mock.Anything).Return(describeTaskQueueResponse, nil).Once()
-	err := s.app.Run([]string{"", "--namespace", cliTestNamespace, "task-queue", "describe", "--task-queue", "test-taskQueue", "--task-queue-type", "activity"})
+	err := s.app.Run([]string{"", "task-queue", "describe", "--namespace", cliTestNamespace, "--task-queue", "test-taskQueue", "--task-queue-type", "activity"})
 	s.Nil(err)
 	s.sdkClient.AssertExpectations(s.T())
 }
