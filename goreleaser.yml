@@ -5,7 +5,7 @@ before:
 archives:
   - id: default
     builds:
-      - tctl
+      - temporal
       - tctl-authorization-plugin
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     format_overrides:
@@ -13,9 +13,9 @@ archives:
         format: zip
 
 builds:
-  - id: "tctl"
-    dir: cmd/tctl
-    binary: tctl
+  - id: "temporal"
+    dir: cmd/temporal
+    binary: temporal
     env:
       - CGO_ENABLED=0
     goos:

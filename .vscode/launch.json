@@ -2,18 +2,30 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "--ephemeral",
+      "name": "serve in memory",
       "type": "go",
       "request": "launch",
       "mode": "debug",
-      "program": "${workspaceFolder}/cmd/temporalite",
+      "program": "${workspaceFolder}/cmd/temporal",
       "cwd": "${workspaceFolder}",
       "args": [
-        "start",
+        "server",
+        "start-dev",
         "--namespace",
         "default",
-        "--ephemeral",
       ]
     },
+    {
+      "name": "workflow list",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}/cmd/temporal",
+      "cwd": "${workspaceFolder}",
+      "args": [
+        "workflow",
+        "list",
+      ]
+    }
   ],
 }

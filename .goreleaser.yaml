@@ -4,7 +4,7 @@ before:
     - go mod tidy
     - go test ./...
 builds:
-  - main: ./cmd/temporalite
+  - main: ./cmd/temporal
     env:
       - CGO_ENABLED=0
     goos:
