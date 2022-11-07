@@ -15,7 +15,7 @@ require (
 	github.com/stretchr/testify v1.8.0
 	github.com/temporalio/tctl-kit v0.0.0-20221105000105-c7dd78af47af
 	github.com/temporalio/ui-server/v2 v2.8.1
-	github.com/urfave/cli/v2 v2.10.2
+	github.com/urfave/cli/v2 v2.23.4
 	go.temporal.io/api v1.12.0
 	go.temporal.io/sdk v1.17.0
 	go.temporal.io/server v1.18.4
