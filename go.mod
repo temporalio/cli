@@ -12,7 +12,7 @@ require (
 	github.com/hashicorp/go-plugin v1.4.5
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/pborman/uuid v1.2.1
-	github.com/stretchr/testify v1.8.0
+	github.com/stretchr/testify v1.8.1
 	github.com/temporalio/tctl-kit v0.0.0-20221105000105-c7dd78af47af
 	github.com/temporalio/ui-server/v2 v2.8.1
 	github.com/urfave/cli/v2 v2.10.2
@@ -93,7 +93,7 @@ require (
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/sirupsen/logrus v1.9.0 // indirect
-	github.com/stretchr/objx v0.4.0 // indirect
+	github.com/stretchr/objx v0.5.0 // indirect
 	github.com/temporalio/ringpop-go v0.0.0-20220818230611-30bf23b490b2 // indirect
 	github.com/temporalio/tchannel-go v1.22.1-0.20220818200552-1be8d8cffa5b // indirect
 	github.com/twmb/murmur3 v1.1.6 // indirect
