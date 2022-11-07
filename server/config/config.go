@@ -105,7 +105,7 @@ func NewDefaultConfig() (*Config, error) {
 		MetricsPort:      0,
 		UIServer:         noopUIServer{},
 		DynamicPorts:     false,
-		Namespaces:       nil,
+		Namespaces:       []string{"default"},
 		SQLitePragmas:    nil,
 		Logger: log.NewZapLogger(log.BuildZapLogger(log.Config{
 			Stdout:     true,
