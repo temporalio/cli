@@ -28,8 +28,6 @@
 
 package server
 
-import "github.com/temporalio/cli"
-
 func newUIOption(frontendAddr string, uiIP string, uiPort int, configDir string) (ServerOption, error) {
 	return nil, nil
 }

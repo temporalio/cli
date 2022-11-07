@@ -27,10 +27,10 @@ package activity
 import (
 	"fmt"
 
-	"github.com/temporalio/cli/client"
-	"github.com/temporalio/cli/common"
-	"github.com/temporalio/cli/dataconverter"
 	"github.com/temporalio/tctl-kit/pkg/color"
+	"github.com/temporalio/temporal-cli/client"
+	"github.com/temporalio/temporal-cli/common"
+	"github.com/temporalio/temporal-cli/dataconverter"
 	"github.com/urfave/cli/v2"
 	failurepb "go.temporal.io/api/failure/v1"
 	"go.temporal.io/api/workflowservice/v1"

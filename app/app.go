@@ -31,24 +31,24 @@ import (
 	"os"
 	"runtime/debug"
 
-	"github.com/temporalio/cli/activity"
-	"github.com/temporalio/cli/batch"
-	"github.com/temporalio/cli/client"
-	"github.com/temporalio/cli/cluster"
-	"github.com/temporalio/cli/common"
-	"github.com/temporalio/cli/dataconverter"
-	"github.com/temporalio/cli/env"
-	"github.com/temporalio/cli/headers"
-	"github.com/temporalio/cli/headersprovider"
-	"github.com/temporalio/cli/namespace"
-	"github.com/temporalio/cli/plugin"
-	"github.com/temporalio/cli/schedule"
-	"github.com/temporalio/cli/searchattribute"
-	"github.com/temporalio/cli/server"
-	sconfig "github.com/temporalio/cli/server/config"
-	"github.com/temporalio/cli/taskqueue"
-	"github.com/temporalio/cli/workflow"
 	"github.com/temporalio/tctl-kit/pkg/color"
+	"github.com/temporalio/temporal-cli/activity"
+	"github.com/temporalio/temporal-cli/batch"
+	"github.com/temporalio/temporal-cli/client"
+	"github.com/temporalio/temporal-cli/cluster"
+	"github.com/temporalio/temporal-cli/common"
+	"github.com/temporalio/temporal-cli/dataconverter"
+	"github.com/temporalio/temporal-cli/env"
+	"github.com/temporalio/temporal-cli/headers"
+	"github.com/temporalio/temporal-cli/headersprovider"
+	"github.com/temporalio/temporal-cli/namespace"
+	"github.com/temporalio/temporal-cli/plugin"
+	"github.com/temporalio/temporal-cli/schedule"
+	"github.com/temporalio/temporal-cli/searchattribute"
+	"github.com/temporalio/temporal-cli/server"
+	sconfig "github.com/temporalio/temporal-cli/server/config"
+	"github.com/temporalio/temporal-cli/taskqueue"
+	"github.com/temporalio/temporal-cli/workflow"
 	uiversion "github.com/temporalio/ui-server/v2/server/version"
 	"github.com/urfave/cli/v2"
 	sheaders "go.temporal.io/server/common/headers"
@@ -85,6 +85,8 @@ func SetFactory(factory client.ClientFactory) {
 
 func configureCLI(ctx *cli.Context) error {
 	env.Build(ctx)
+	common.WithFlags2(ctx, common.SharedFlags)
+
 	return configureSDK(ctx)
 }
 
@@ -146,7 +148,7 @@ func commands(defaultCfg *sconfig.Config) []*cli.Command {
 		}}, clientCommands...)
 }
 
-var clientCommands = common.WithFlags([]*cli.Command{
+var clientCommands = []*cli.Command{
 	{
 		Name:        "workflow",
 		Usage:       "Operations on Workflows",
@@ -199,4 +201,4 @@ var clientCommands = common.WithFlags([]*cli.Command{
 		Usage:       "Manage client environment configurations",
 		Subcommands: env.NewEnvCommands(),
 	},
-}, common.SharedFlags)
+}

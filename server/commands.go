@@ -32,8 +32,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/temporalio/cli/common"
-	sconfig "github.com/temporalio/cli/server/config"
+	"github.com/temporalio/temporal-cli/common"
+	sconfig "github.com/temporalio/temporal-cli/server/config"
 	"github.com/urfave/cli/v2"
 	"go.temporal.io/server/common/config"
 	"go.temporal.io/server/common/dynamicconfig"

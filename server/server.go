@@ -33,7 +33,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	sconfig "github.com/temporalio/cli/server/config"
+	sconfig "github.com/temporalio/temporal-cli/server/config"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/server/common/authorization"
 	"go.temporal.io/server/common/config"

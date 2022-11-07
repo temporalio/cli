@@ -29,7 +29,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/temporalio/cli/app"
+	"github.com/temporalio/temporal-cli/app"
 	"github.com/urfave/cli/v2"
 )
 

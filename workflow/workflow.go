@@ -28,8 +28,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/temporalio/cli/common"
 	"github.com/temporalio/tctl-kit/pkg/flags"
+	"github.com/temporalio/temporal-cli/common"
 	"github.com/urfave/cli/v2"
 )
 

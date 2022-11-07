@@ -32,7 +32,7 @@ import (
 	"runtime/debug"
 	"testing"
 
-	"github.com/temporalio/cli/server"
+	"github.com/temporalio/temporal-cli/server"
 )
 
 // This test ensures that ui-server is a dependency of Temporal CLI built in non-headless mode.

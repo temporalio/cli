@@ -1,7 +1,7 @@
 # Temporal CLI
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/temporalio/cli.svg)](https://pkg.go.dev/github.com/temporalio/cli)
-[![ci](https://github.com/temporalio/cli/actions/workflows/ci.yml/badge.svg)](https://github.com/temporalio/cli/actions/workflows/ci.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/temporalio/temporal-cli.svg)](https://pkg.go.dev/github.com/temporalio/temporal-cli)
+[![ci](https://github.com/temporalio/temporal-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/temporalio/temporal-cli/actions/workflows/ci.yml)
 
 > ⚠️ This project is experimental and not suitable for production use. ⚠️
 
@@ -11,7 +11,7 @@ Temporal CLI is a distribution of [Temporal](https://github.com/temporalio/tempo
 
 ### Download and Start Temporal Server Locally
 
-Download and extract the [latest release](https://github.com/temporalio/cli/releases/latest) from [GitHub releases](https://github.com/temporalio/cli/releases).
+Download and extract the [latest release](https://github.com/temporalio/temporal-cli/releases/latest) from [GitHub releases](https://github.com/temporalio/temporal-cli/releases).
 
 Start Temporal server:
 

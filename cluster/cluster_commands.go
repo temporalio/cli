@@ -27,11 +27,11 @@ package cluster
 import (
 	"fmt"
 
-	"github.com/temporalio/cli/client"
-	"github.com/temporalio/cli/common"
 	"github.com/temporalio/tctl-kit/pkg/color"
 	"github.com/temporalio/tctl-kit/pkg/output"
 	"github.com/temporalio/tctl-kit/pkg/pager"
+	"github.com/temporalio/temporal-cli/client"
+	"github.com/temporalio/temporal-cli/common"
 	"github.com/urfave/cli/v2"
 	"go.temporal.io/api/operatorservice/v1"
 	"go.temporal.io/api/workflowservice/v1"

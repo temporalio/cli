@@ -25,7 +25,7 @@ package headersprovider
 import (
 	"context"
 
-	"github.com/temporalio/cli/plugin"
+	"github.com/temporalio/temporal-cli/plugin"
 )
 
 type HeadersProvider interface {

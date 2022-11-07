@@ -25,7 +25,9 @@
 package app_test
 
 import (
-	"encoding/json"
+	"context"
+	"fmt"
+	"strconv"
 	"testing"
 	"time"
 
@@ -33,9 +35,10 @@ import (
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
-	"github.com/temporalio/cli/app"
+	"github.com/temporalio/temporal-cli/app"
 	"github.com/urfave/cli/v2"
 	commonpb "go.temporal.io/api/common/v1"
+	"go.temporal.io/api/enums/v1"
 	enumspb "go.temporal.io/api/enums/v1"
 	historypb "go.temporal.io/api/history/v1"
 	"go.temporal.io/api/operatorservice/v1"
@@ -43,11 +46,11 @@ import (
 	taskqueuepb "go.temporal.io/api/taskqueue/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/api/workflowservicemock/v1"
+	"go.temporal.io/sdk/client"
 	sdkclient "go.temporal.io/sdk/client"
 	sdkmocks "go.temporal.io/sdk/mocks"
-	healthpb "google.golang.org/grpc/health/grpc_health_v1"
-
 	"go.temporal.io/server/common/primitives/timestamp"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 )
 
 type cliAppSuite struct {
@@ -82,9 +85,11 @@ func (m *clientFactoryMock) HealthClient(_ *cli.Context) healthpb.HealthClient {
 }
 
 var commands = []string{
-	"namespace",
+	"activity",
 	"workflow",
 	"task-queue",
+	"operator",
+	"env",
 }
 
 var cliTestNamespace = "cli-test-namespace"
@@ -135,34 +140,34 @@ var describeTaskQueueResponse = &workflowservice.DescribeTaskQueueResponse{
 	},
 }
 
-// TestAcceptStringSliceArgsWithCommas tests that the cli accepts string slice args with commas
-// If the test fails consider downgrading urfave/cli/v2 to v2.4.0
-// See https://github.com/urfave/cli/pull/1241
-func (s *cliAppSuite) TestAcceptStringSliceArgsWithCommas() {
-	app := cli.NewApp()
-	app.Name = "testapp"
-	app.Commands = []*cli.Command{
-		{
-			Name: "dostuff",
-			Action: func(c *cli.Context) error {
-				s.Equal(2, len(c.StringSlice("input")))
-				for _, inp := range c.StringSlice("input") {
-					var thing any
-					s.NoError(json.Unmarshal([]byte(inp), &thing))
-				}
-				return nil
-			},
-			Flags: []cli.Flag{
-				&cli.StringSliceFlag{
-					Name: "input",
-				},
-			},
-		},
-	}
-	app.Run([]string{"testapp", "dostuff",
-		"--input", `{"field1": 34, "field2": false}`,
-		"--input", `{"numbers": [4,5,6]}`})
-}
+// // TestAcceptStringSliceArgsWithCommas tests that the cli accepts string slice args with commas
+// // If the test fails consider downgrading urfave/cli/v2 to v2.4.0
+// // See https://github.com/urfave/cli/pull/1241
+// func (s *cliAppSuite) TestAcceptStringSliceArgsWithCommas() {
+// 	app := cli.NewApp()
+// 	app.Name = "testapp"
+// 	app.Commands = []*cli.Command{
+// 		{
+// 			Name: "dostuff",
+// 			Action: func(c *cli.Context) error {
+// 				s.Equal(2, len(c.StringSlice("input")))
+// 				for _, inp := range c.StringSlice("input") {
+// 					var thing any
+// 					s.NoError(json.Unmarshal([]byte(inp), &thing))
+// 				}
+// 				return nil
+// 			},
+// 			Flags: []cli.Flag{
+// 				&cli.StringSliceFlag{
+// 					Name: "input",
+// 				},
+// 			},
+// 		},
+// 	}
+// 	app.Run([]string{"testapp", "dostuff",
+// 		"--input", `{"field1": 34, "field2": false}`,
+// 		"--input", `{"numbers": [4,5,6]}`})
+// }
 
 func (s *cliAppSuite) TestDescribeTaskQueue() {
 	s.sdkClient.On("DescribeTaskQueue", mock.Anything, mock.Anything, mock.Anything).Return(describeTaskQueueResponse, nil).Once()
@@ -236,3 +241,146 @@ func (s *cliAppSuite) RunWithExitCode(arguments []string) int {
 	s.app.Run(arguments)
 	return exitCode
 }
+
+func newServerAndClientOpts(port int, customArgs ...string) ([]string, client.Options) {
+	args := []string{
+		"temporal",
+		"server",
+		"start-dev",
+		"--namespace", "default",
+		// Use noop logger to avoid fatal logs failing tests on shutdown signal.
+		"--log-format", "noop",
+		"--headless",
+		"--port", strconv.Itoa(port),
+	}
+
+	return append(args, customArgs...), client.Options{
+		HostPort:  fmt.Sprintf("localhost:%d", port),
+		Namespace: "temporal-system",
+	}
+}
+
+func assertServerHealth(t *testing.T, ctx context.Context, opts client.Options) {
+	var (
+		c         client.Client
+		clientErr error
+	)
+	for i := 0; i < 50; i++ {
+		if c, clientErr = client.Dial(opts); clientErr == nil {
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	if clientErr != nil {
+		t.Error(clientErr)
+	}
+
+	if _, err := c.CheckHealth(ctx, nil); err != nil {
+		t.Error(err)
+	}
+
+	// Check for pollers on a system task queue to ensure that the worker service is running.
+	for {
+		if ctx.Err() != nil {
+			t.Error(ctx.Err())
+			break
+		}
+		resp, err := c.DescribeTaskQueue(ctx, "temporal-sys-tq-scanner-taskqueue-0", enums.TASK_QUEUE_TYPE_WORKFLOW)
+		if err != nil {
+			t.Error(err)
+		}
+		if len(resp.GetPollers()) > 0 {
+			break
+		}
+		time.Sleep(time.Millisecond * 100)
+	}
+}
+
+// func TestCreateDataDirectory(t *testing.T) {
+// 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+// 	defer cancel()
+
+// 	testUserHome := filepath.Join(os.TempDir(), "temporal_test", t.Name())
+// 	t.Cleanup(func() {
+// 		if err := os.RemoveAll(testUserHome); err != nil {
+// 			fmt.Println("error cleaning up temp dir:", err)
+// 		}
+// 	})
+// 	// Set user home for all supported operating systems
+// 	t.Setenv("AppData", testUserHome)         // Windows
+// 	t.Setenv("HOME", testUserHome)            // macOS
+// 	t.Setenv("XDG_CONFIG_HOME", testUserHome) // linux
+// 	// Verify that worked
+// 	configDir, _ := os.UserConfigDir()
+// 	if !strings.HasPrefix(configDir, testUserHome) {
+// 		t.Fatalf("expected config dir %q to be inside user home directory %q", configDir, testUserHome)
+// 	}
+
+// 	temporalCLI := app.BuildApp("")
+// 	// Don't call os.Exit
+// 	temporalCLI.ExitErrHandler = func(_ *cli.Context, _ error) {}
+
+// 	portProvider := sconfig.NewPortProvider()
+// 	var (
+// 		port1 = portProvider.MustGetFreePort()
+// 		port2 = portProvider.MustGetFreePort()
+// 		port3 = portProvider.MustGetFreePort()
+// 	)
+// 	portProvider.Close()
+
+// 	t.Run("default db path", func(t *testing.T) {
+// 		ctx, cancel := context.WithCancel(ctx)
+// 		defer cancel()
+
+// 		args, clientOpts := newServerAndClientOpts(port1)
+
+// 		go func() {
+// 			if err := temporalCLI.RunContext(ctx, args); err != nil {
+// 				fmt.Println("Server closed with error:", err)
+// 			}
+// 		}()
+
+// 		assertServerHealth(t, ctx, clientOpts)
+
+// 		// If the rest of this test case passes but this assertion fails,
+// 		// there may have been a breaking change in the liteconfig package
+// 		// related to how the default db file path is calculated.
+// 		if _, err := os.Stat(filepath.Join(configDir, "temporal", "db", "default.db")); err != nil {
+// 			t.Errorf("error checking for default db file: %s", err)
+// 		}
+// 	})
+
+// 	t.Run("custom db path -- missing directory", func(t *testing.T) {
+// 		customDBPath := filepath.Join(testUserHome, "foo", "bar", "baz.db")
+// 		args, _ := newServerAndClientOpts(
+// 			port2, "-f", customDBPath,
+// 		)
+// 		if err := temporalCLI.RunContext(ctx, args); err != nil {
+// 			if !errors.Is(err, os.ErrNotExist) {
+// 				t.Errorf("expected error %q, got %q", os.ErrNotExist, err)
+// 			}
+// 			if !strings.Contains(err.Error(), filepath.Dir(customDBPath)) {
+// 				t.Errorf("expected error %q to contain string %q", err, filepath.Dir(customDBPath))
+// 			}
+// 		} else {
+// 			t.Error("no error when directory missing")
+// 		}
+// 	})
+
+// 	t.Run("custom db path -- existing directory", func(t *testing.T) {
+// 		ctx, cancel := context.WithCancel(ctx)
+// 		defer cancel()
+
+// 		args, clientOpts := newServerAndClientOpts(
+// 			port3, "-f", filepath.Join(testUserHome, "foo.db"),
+// 		)
+
+// 		go func() {
+// 			if err := temporalCLI.RunContext(ctx, args); err != nil {
+// 				fmt.Println("Server closed with error:", err)
+// 			}
+// 		}()
+
+// 		assertServerHealth(t, ctx, clientOpts)
+// 	})
+// }
