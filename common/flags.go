@@ -382,44 +382,29 @@ var FlagsForStackTraceQuery = append(FlagsForExecution, []cli.Flag{
 	},
 }...)
 
-// func WithFlags(commands []*cli.Command, newFlags []cli.Flag) []*cli.Command {
-// 	for _, c := range commands {
-// 		for _, subc := range c.Subcommands {
-// 			for _, newF := range newFlags {
-// 				flagExists := false
-// 				for _, subf := range subc.Flags {
-// 					if intersects(subf.Names(), newF.Names()) {
-// 						flagExists = true
-// 						continue
-// 					}
-// 				}
+func WithFlags(commands []*cli.Command, newFlags []cli.Flag) []*cli.Command {
 
-// 				if !flagExists {
-// 					subc.Flags = append(subc.Flags, newF)
-// 				}
-// 			}
-// 		}
-// 	}
+	for _, cmd := range commands {
+		if len(cmd.Subcommands) == 0 {
+			for _, newF := range newFlags {
+				flagExists := false
+				for _, subf := range cmd.Flags {
+					if intersects(subf.Names(), newF.Names()) {
+						flagExists = true
+						continue
+					}
+				}
 
-// 	return commands
-// }
-
-func WithFlags2(ctx *cli.Context, newFlags []cli.Flag) {
-	cmd := ctx.Command
-
-	for _, newF := range newFlags {
-		flagExists := false
-		for _, subf := range cmd.Flags {
-			if intersects(subf.Names(), newF.Names()) {
-				flagExists = true
-				continue
+				if !flagExists {
+					cmd.Flags = append(cmd.Flags, newF)
+				}
 			}
 		}
 
-		if !flagExists {
-			cmd.Flags = append(cmd.Flags, newF)
-		}
+		WithFlags(cmd.Subcommands, newFlags)
 	}
+
+	return commands
 }
 
 func intersects(slice1 []string, slice2 []string) bool {

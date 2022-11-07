@@ -201,46 +201,35 @@ func Build(c *cli.Context) {
 	ClientConfig, _ = NewClientConfig()
 
 	for _, c := range c.App.Commands {
-		loadEnvVariables(c)
+		common.AddBeforeHandler(c, loadEnv)
 	}
 }
 
-func loadEnvVariables(command *cli.Command) {
-	for _, subcommand := range command.Subcommands {
-		if len(subcommand.Subcommands) == 0 {
-			// only populate flag values for leaf commands
-			subcommand.Before = envLoader(subcommand)
-		}
+// loadEnv loads environment options from the config file
+func loadEnv(ctx *cli.Context) error {
+	cmd := ctx.Command
+	env := ctx.String(common.FlagEnv)
 
-		loadEnvVariables(subcommand)
+	if env == "" {
+		return nil
 	}
-}
 
-func envLoader(command *cli.Command) func(ctx *cli.Context) error {
-	return func(ctx *cli.Context) error {
-		env := ctx.String(common.FlagEnv)
+	for _, flag := range cmd.Flags {
+		name := flag.Names()[0]
 
-		if env == "" {
-			return nil
-		}
+		for _, c := range ctx.Lineage() {
+			if !c.IsSet(name) {
+				value, err := ClientConfig.EnvProperty(env, name)
+				if err != nil {
+					return err
+				}
 
-		for _, flag := range command.Flags {
-			name := flag.Names()[0]
-
-			for _, c := range ctx.Lineage() {
-				if !c.IsSet(name) {
-					value, err := ClientConfig.EnvProperty(env, name)
-					if err != nil {
-						return err
-					}
-
-					if value != "" {
-						c.Set(name, value)
-					}
+				if value != "" {
+					c.Set(name, value)
 				}
 			}
 		}
-
-		return nil
 	}
+
+	return nil
 }

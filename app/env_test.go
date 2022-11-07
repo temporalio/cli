@@ -101,7 +101,7 @@ func getConfigPath() string {
 		log.Fatal(err)
 	}
 
-	path := filepath.Join(dpath, ".config", "temporalio", "tctl.yaml")
+	path := filepath.Join(dpath, ".config", "temporalio", "temporal.yaml")
 
 	return path
 }

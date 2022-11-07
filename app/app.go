@@ -85,8 +85,6 @@ func SetFactory(factory client.ClientFactory) {
 
 func configureCLI(ctx *cli.Context) error {
 	env.Build(ctx)
-	common.WithFlags2(ctx, common.SharedFlags)
-
 	return configureSDK(ctx)
 }
 
@@ -145,7 +143,7 @@ func commands(defaultCfg *sconfig.Config) []*cli.Command {
 			Name:        "server",
 			Usage:       "Commands for managing a Temporal server",
 			Subcommands: server.NewServerCommands(defaultCfg),
-		}}, clientCommands...)
+		}}, common.WithFlags(clientCommands, common.SharedFlags)...)
 }
 
 var clientCommands = []*cli.Command{

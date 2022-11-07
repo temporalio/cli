@@ -553,3 +553,24 @@ func SplitKeyValuePairs(kvs []string) (map[string]string, error) {
 
 	return pairs, nil
 }
+
+func AddBeforeHandler(cmd *cli.Command, h func(*cli.Context) error) {
+	// only populate leaf commands
+	if len(cmd.Subcommands) == 0 {
+		_before := cmd.Before
+		cmd.Before = func(c *cli.Context) error {
+			if _before != nil {
+				err := _before(c)
+				if err != nil {
+					return err
+				}
+			}
+
+			return h(c)
+		}
+	}
+
+	for _, subcmd := range cmd.Subcommands {
+		AddBeforeHandler(subcmd, h)
+	}
+}
