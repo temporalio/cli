@@ -26,4 +26,4 @@ COPY --from=temporal-cli-builder /home/temporal-cli-builder/temporal /usr/local/
 EXPOSE 7233
 
 # Keep the container running.
-ENTRYPOINT ["/temporal", "server", "start-dev", "--ephemeral", "-n", "default", "--ip" , "0.0.0.0"]
+ENTRYPOINT ["/temporal", "server", "start-dev", "-n", "default", "--ip" , "0.0.0.0"]

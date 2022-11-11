@@ -213,7 +213,6 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 					WithFrontendPort(serverPort),
 					WithMetricsPort(metricsPort),
 					WithFrontendIP(ip),
-					WithDatabaseFilePath(c.String(common.FlagDBPath)),
 					WithNamespaces(c.StringSlice(common.FlagNamespace)...),
 					WithSQLitePragmas(pragmas),
 					WithUpstreamOptions(
@@ -221,6 +220,11 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 					),
 					WithBaseConfig(baseConfig),
 				}
+
+				if c.IsSet(common.FlagDBPath) {
+					opts = append(opts, WithDatabaseFilePath(c.String(common.FlagDBPath)))
+				}
+
 				if !c.Bool(common.FlagHeadless) {
 					frontendAddr := fmt.Sprintf("%s:%d", ip, serverPort)
 					opt, err := newUIOption(frontendAddr, uiIP, uiPort, c.String(common.FlagConfig))

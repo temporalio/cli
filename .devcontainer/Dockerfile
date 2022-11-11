@@ -7,4 +7,4 @@ FROM golang:1.17 AS builder
  COPY --from=builder /go/bin/temporal /
 
  EXPOSE 7233
- ENTRYPOINT ["/temporal", "server", "start-dev", "--ephemeral", "-n", "default", "--ip" , "0.0.0.0"]
+ ENTRYPOINT ["/temporal", "server", "start-dev", "-n", "default", "--ip" , "0.0.0.0"]

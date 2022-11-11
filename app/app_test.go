@@ -27,8 +27,12 @@ package app_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -37,6 +41,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"github.com/temporalio/temporal-cli/app"
+	sconfig "github.com/temporalio/temporal-cli/server/config"
 	"github.com/urfave/cli/v2"
 	commonpb "go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
@@ -339,91 +344,68 @@ func assertServerHealth(t *testing.T, ctx context.Context, opts client.Options) 
 	}
 }
 
-// func TestCreateDataDirectory(t *testing.T) {
-// 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-// 	defer cancel()
+func TestCreateDataDirectory(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 
-// 	testUserHome := filepath.Join(os.TempDir(), "temporal_test", t.Name())
-// 	t.Cleanup(func() {
-// 		if err := os.RemoveAll(testUserHome); err != nil {
-// 			fmt.Println("error cleaning up temp dir:", err)
-// 		}
-// 	})
-// 	// Set user home for all supported operating systems
-// 	t.Setenv("AppData", testUserHome)         // Windows
-// 	t.Setenv("HOME", testUserHome)            // macOS
-// 	t.Setenv("XDG_CONFIG_HOME", testUserHome) // linux
-// 	// Verify that worked
-// 	configDir, _ := os.UserConfigDir()
-// 	if !strings.HasPrefix(configDir, testUserHome) {
-// 		t.Fatalf("expected config dir %q to be inside user home directory %q", configDir, testUserHome)
-// 	}
+	testUserHome := filepath.Join(os.TempDir(), "temporal_test", t.Name())
+	t.Cleanup(func() {
+		if err := os.RemoveAll(testUserHome); err != nil {
+			fmt.Println("error cleaning up temp dir:", err)
+		}
+	})
+	// Set user home for all supported operating systems
+	t.Setenv("AppData", testUserHome)         // Windows
+	t.Setenv("HOME", testUserHome)            // macOS
+	t.Setenv("XDG_CONFIG_HOME", testUserHome) // linux
+	// Verify that worked
+	configDir, _ := os.UserConfigDir()
+	if !strings.HasPrefix(configDir, testUserHome) {
+		t.Fatalf("expected config dir %q to be inside user home directory %q", configDir, testUserHome)
+	}
 
-// 	temporalCLI := app.BuildApp("")
-// 	// Don't call os.Exit
-// 	temporalCLI.ExitErrHandler = func(_ *cli.Context, _ error) {}
+	temporalCLI := app.BuildApp("")
+	// Don't call os.Exit
+	temporalCLI.ExitErrHandler = func(_ *cli.Context, _ error) {}
 
-// 	portProvider := sconfig.NewPortProvider()
-// 	var (
-// 		port1 = portProvider.MustGetFreePort()
-// 		port2 = portProvider.MustGetFreePort()
-// 		port3 = portProvider.MustGetFreePort()
-// 	)
-// 	portProvider.Close()
+	portProvider := sconfig.NewPortProvider()
+	var (
+		port1 = portProvider.MustGetFreePort()
+		port2 = portProvider.MustGetFreePort()
+	)
+	portProvider.Close()
 
-// 	t.Run("default db path", func(t *testing.T) {
-// 		ctx, cancel := context.WithCancel(ctx)
-// 		defer cancel()
+	t.Run("custom db path -- missing directory", func(t *testing.T) {
+		customDBPath := filepath.Join(testUserHome, "foo", "bar", "baz.db")
+		args, _ := newServerAndClientOpts(
+			port1, "-f", customDBPath,
+		)
+		if err := temporalCLI.RunContext(ctx, args); err != nil {
+			if !errors.Is(err, os.ErrNotExist) {
+				t.Errorf("expected error %q, got %q", os.ErrNotExist, err)
+			}
+			if !strings.Contains(err.Error(), filepath.Dir(customDBPath)) {
+				t.Errorf("expected error %q to contain string %q", err, filepath.Dir(customDBPath))
+			}
+		} else {
+			t.Error("no error when directory missing")
+		}
+	})
 
-// 		args, clientOpts := newServerAndClientOpts(port1)
+	t.Run("custom db path -- existing directory", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
 
-// 		go func() {
-// 			if err := temporalCLI.RunContext(ctx, args); err != nil {
-// 				fmt.Println("Server closed with error:", err)
-// 			}
-// 		}()
+		args, clientOpts := newServerAndClientOpts(
+			port2, "-f", filepath.Join(testUserHome, "foo.db"),
+		)
 
-// 		assertServerHealth(t, ctx, clientOpts)
+		go func() {
+			if err := temporalCLI.RunContext(ctx, args); err != nil {
+				fmt.Println("Server closed with error:", err)
+			}
+		}()
 
-// 		// If the rest of this test case passes but this assertion fails,
-// 		// there may have been a breaking change in the liteconfig package
-// 		// related to how the default db file path is calculated.
-// 		if _, err := os.Stat(filepath.Join(configDir, "temporal", "db", "default.db")); err != nil {
-// 			t.Errorf("error checking for default db file: %s", err)
-// 		}
-// 	})
-
-// 	t.Run("custom db path -- missing directory", func(t *testing.T) {
-// 		customDBPath := filepath.Join(testUserHome, "foo", "bar", "baz.db")
-// 		args, _ := newServerAndClientOpts(
-// 			port2, "-f", customDBPath,
-// 		)
-// 		if err := temporalCLI.RunContext(ctx, args); err != nil {
-// 			if !errors.Is(err, os.ErrNotExist) {
-// 				t.Errorf("expected error %q, got %q", os.ErrNotExist, err)
-// 			}
-// 			if !strings.Contains(err.Error(), filepath.Dir(customDBPath)) {
-// 				t.Errorf("expected error %q to contain string %q", err, filepath.Dir(customDBPath))
-// 			}
-// 		} else {
-// 			t.Error("no error when directory missing")
-// 		}
-// 	})
-
-// 	t.Run("custom db path -- existing directory", func(t *testing.T) {
-// 		ctx, cancel := context.WithCancel(ctx)
-// 		defer cancel()
-
-// 		args, clientOpts := newServerAndClientOpts(
-// 			port3, "-f", filepath.Join(testUserHome, "foo.db"),
-// 		)
-
-// 		go func() {
-// 			if err := temporalCLI.RunContext(ctx, args); err != nil {
-// 				fmt.Println("Server closed with error:", err)
-// 			}
-// 		}()
-
-// 		assertServerHealth(t, ctx, clientOpts)
-// 	})
-// }
+		assertServerHealth(t, ctx, clientOpts)
+	})
+}
