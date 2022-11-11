@@ -61,6 +61,7 @@ func BuildApp(version string) *cli.App {
 	app := cli.NewApp()
 	app.Name = "temporal"
 	app.Usage = "Temporal command-line interface and development server"
+	app.Suggest = true
 	if version == "" {
 		version = headers.CLIVersion
 	}
