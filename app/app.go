@@ -63,6 +63,7 @@ func BuildApp(version string) *cli.App {
 		version = headers.CLIVersion
 	}
 	app.Version = fmt.Sprintf("%s (server %s) (ui %s)", version, sheaders.ServerVersion, uiversion.UIVersion)
+	app.DisableSliceFlagSeparator = true
 	app.Commands = commands(defaultCfg)
 	app.Before = configureCLI
 	app.ExitErrHandler = HandleError
