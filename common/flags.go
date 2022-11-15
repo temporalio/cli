@@ -38,7 +38,6 @@ var (
 	FlagActivityID                 = "activity-id"
 	FlagAddress                    = "address"
 	FlagArchive                    = "archived"
-	FlagAuth                       = "auth"
 	FlagCalendar                   = "calendar"
 	FlagCatchupWindow              = "catchup-window"
 	FlagCluster                    = "cluster"
@@ -62,7 +61,6 @@ var (
 	FlagExcludeFile                = "exclude-file"
 	FlagFold                       = "fold"
 	FlagFollowAlias                = []string{"f"}
-	FlagHeadersProviderPlugin      = "headers-provider-plugin"
 	FlagHeadless                   = "headless"
 	FlagHistoryArchivalState       = "history-archival-state"
 	FlagHistoryArchivalURI         = "history-uri"
@@ -135,7 +133,6 @@ var (
 	FlagUnpause                    = "unpause"
 	FlagVisibilityArchivalState    = "visibility-archival-state"
 	FlagVisibilityArchivalURI      = "visibility-uri"
-	FlagWebURL                     = "url"
 	FlagWorkflowExecutionTimeout   = "execution-timeout"
 	FlagWorkflowID                 = "workflow-id"
 	FlagWorkflowIDAlias            = []string{"w"}
@@ -166,12 +163,6 @@ var SharedFlags = []cli.Flag{
 		Value:   "default",
 		Usage:   "Temporal workflow namespace",
 		EnvVars: []string{"TEMPORAL_CLI_NAMESPACE"},
-	},
-	&cli.StringFlag{
-		Name:    FlagAuth,
-		Value:   "",
-		Usage:   "Authorization header to set for gRPC requests",
-		EnvVars: []string{"TEMPORAL_CLI_AUTH"},
 	},
 	&cli.StringFlag{
 		Name:    FlagTLSCertPath,
@@ -207,12 +198,6 @@ var SharedFlags = []cli.Flag{
 		Value:   defaultContextTimeoutInSeconds,
 		Usage:   "Optional timeout for context of RPC call in seconds",
 		EnvVars: []string{"TEMPORAL_CONTEXT_TIMEOUT"},
-	},
-	&cli.StringFlag{
-		Name:    FlagHeadersProviderPlugin,
-		Value:   "",
-		Usage:   "Headers provider plugin executable name",
-		EnvVars: []string{"TEMPORAL_CLI_PLUGIN_HEADERS_PROVIDER"},
 	},
 	&cli.StringFlag{
 		Name:    FlagCodecEndpoint,

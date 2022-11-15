@@ -25,14 +25,12 @@ PINNED_DEPENDENCIES := \
 ##### Build #####
 
 build:
-	@printf $(COLOR) "Build temporal with OS: $(GOOS), ARCH: $(GOARCH)..."
+	@printf $(COLOR) "Build Temporal CLI with OS: $(GOOS), ARCH: $(GOARCH)..."
 	CGO_ENABLED=0 go build ./cmd/temporal
-	@printf $(COLOR) "Build tctl-authorization-plugin with OS: $(GOOS), ARCH: $(GOARCH)..."
-	CGO_ENABLED=$(CGO_ENABLED) go build ./cmd/plugins/tctl-authorization-plugin
 
 clean:
 	@printf $(COLOR) "Clearing binaries..."
-	@rm -f temporal tctl-authorization-plugin
+	@rm -f temporal
 
 ##### Test #####
 test:

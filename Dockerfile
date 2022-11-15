@@ -22,7 +22,6 @@ FROM ${BASE_SERVER_IMAGE} AS ui-server
 WORKDIR /etc/temporal
 
 COPY --from=temporal-cli-builder /home/temporal-cli-builder/temporal /usr/local/bin
-COPY --from=temporal-cli-builder /home/temporal-cli-builder/tctl-authorization-plugin /usr/local/bin
 
 EXPOSE 7233
 
