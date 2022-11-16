@@ -1,6 +1,5 @@
 # Binaries for programs and plugins
 /temporal
-/tctl-authorization-plugin
 *.exe
 *.exe~
 *.dll

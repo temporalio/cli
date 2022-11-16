@@ -25,21 +25,15 @@ package dataconverter
 import (
 	"encoding/json"
 	"fmt"
-	"net"
 	"net/http"
 	"os"
-	"strconv"
-	"strings"
 
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/gorilla/websocket"
-	"github.com/temporalio/temporal-cli/common"
 	"github.com/urfave/cli/v2"
 
 	commonpb "go.temporal.io/api/common/v1"
 )
-
-const dataConverterURL = "%s/data-converter/%d"
 
 type PayloadRequest struct {
 	RequestID string `json:"requestId"`
@@ -122,25 +116,4 @@ func buildPayloadHandler(context *cli.Context, origin string) func(http.Response
 			}
 		}
 	}
-}
-
-// DataConverter provides a data converter over a websocket for Temporal web
-func DataConverter(c *cli.Context) error {
-	listener, err := net.Listen("tcp", "0.0.0.0:"+strconv.Itoa(c.Int(common.FlagPort)))
-	if err != nil {
-		return fmt.Errorf("unable to create listener: %w", err)
-	}
-	origin := strings.TrimSuffix(c.String(common.FlagWebURL), "/")
-	port := listener.Addr().(*net.TCPAddr).Port
-	url := fmt.Sprintf(dataConverterURL, origin, port)
-
-	fmt.Printf("To configure your Web UI session to use the local data converter use this URL:\n")
-	fmt.Printf("\t%s\n", url)
-
-	http.HandleFunc("/", buildPayloadHandler(c, origin))
-	if err := http.Serve(listener, nil); err != nil {
-		return fmt.Errorf("unable to start HTTP server for data converter listener: %w", err)
-	}
-
-	return nil
 }

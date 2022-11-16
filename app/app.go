@@ -40,9 +40,7 @@ import (
 	"github.com/temporalio/temporal-cli/dataconverter"
 	"github.com/temporalio/temporal-cli/env"
 	"github.com/temporalio/temporal-cli/headers"
-	"github.com/temporalio/temporal-cli/headersprovider"
 	"github.com/temporalio/temporal-cli/namespace"
-	"github.com/temporalio/temporal-cli/plugin"
 	"github.com/temporalio/temporal-cli/schedule"
 	"github.com/temporalio/temporal-cli/searchattribute"
 	"github.com/temporalio/temporal-cli/server"
@@ -68,7 +66,6 @@ func BuildApp(version string) *cli.App {
 	app.Version = fmt.Sprintf("%s (server %s) (ui %s)", version, sheaders.ServerVersion, uiversion.UIVersion)
 	app.Commands = commands(defaultCfg)
 	app.Before = configureCLI
-	app.After = stopPlugins
 	app.ExitErrHandler = HandleError
 
 	// set builder if not customized
@@ -98,26 +95,6 @@ func configureSDK(ctx *cli.Context) error {
 			ctx.String(common.FlagCodecAuth),
 		)
 	}
-
-	if ctx.String(common.FlagAuth) != "" {
-		headersprovider.SetAuthorizationHeader(ctx.String(common.FlagAuth))
-	}
-
-	hpPlugin := ctx.String(common.FlagHeadersProviderPlugin)
-	if hpPlugin != "" {
-		headersProvider, err := plugin.NewHeadersProviderPlugin(hpPlugin)
-		if err != nil {
-			return fmt.Errorf("unable to load headers provider plugin: %w", err)
-		}
-
-		headersprovider.SetCurrent(headersProvider)
-	}
-
-	return nil
-}
-
-func stopPlugins(ctx *cli.Context) error {
-	plugin.StopPlugins()
 
 	return nil
 }

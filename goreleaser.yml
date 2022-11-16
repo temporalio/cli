@@ -6,7 +6,6 @@ archives:
   - id: default
     builds:
       - temporal
-      - tctl-authorization-plugin
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     format_overrides:
       - goos: windows
@@ -16,19 +15,6 @@ builds:
   - id: "temporal"
     dir: cmd/temporal
     binary: temporal
-    env:
-      - CGO_ENABLED=0
-    goos:
-      - linux
-      - darwin
-      - windows
-    goarch:
-      - amd64
-      - arm64
-
-  - id: "tctl-authorization-plugin"
-    dir: cmd/plugins/tctl-authorization-plugin
-    binary: tctl-authorization-plugin
     env:
       - CGO_ENABLED=0
     goos:

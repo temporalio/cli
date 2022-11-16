@@ -40,8 +40,6 @@ import (
 
 	"github.com/gogo/status"
 	"github.com/temporalio/temporal-cli/common"
-	"github.com/temporalio/temporal-cli/headersprovider"
-	"github.com/temporalio/temporal-cli/plugin"
 	"github.com/urfave/cli/v2"
 	"go.temporal.io/api/operatorservice/v1"
 	"go.temporal.io/api/serviceerror"
@@ -54,7 +52,6 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
-	"google.golang.org/grpc/metadata"
 )
 
 var (
@@ -133,7 +130,6 @@ func (b *clientFactory) SDKClient(c *cli.Context, namespace string) sdkclient.Cl
 		ConnectionOptions: sdkclient.ConnectionOptions{
 			TLS: tlsConfig,
 		},
-		HeadersProvider: headersprovider.GetCurrent(),
 	})
 	if err != nil {
 		b.logger.Fatal("Failed to create SDK client", tag.Error(err))
@@ -147,19 +143,6 @@ func (b *clientFactory) HealthClient(c *cli.Context) healthpb.HealthClient {
 	connection, _ := b.createGRPCConnection(c)
 
 	return healthpb.NewHealthClient(connection)
-}
-
-func headersProviderInterceptor(headersProvider plugin.HeadersProvider) grpc.UnaryClientInterceptor {
-	return func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
-		headers, err := headersProvider.GetHeaders(ctx)
-		if err != nil {
-			return err
-		}
-		for k, v := range headers {
-			ctx = metadata.AppendToOutgoingContext(ctx, k, v)
-		}
-		return invoker(ctx, method, req, reply, cc, opts...)
-	}
 }
 
 func errorInterceptor() grpc.UnaryClientInterceptor {
@@ -189,10 +172,6 @@ func (b *clientFactory) createGRPCConnection(c *cli.Context) (*grpc.ClientConn, 
 
 	interceptors := []grpc.UnaryClientInterceptor{
 		errorInterceptor(),
-	}
-	headersProvider := headersprovider.GetCurrent()
-	if headersProvider != nil {
-		interceptors = append(interceptors, headersProviderInterceptor(headersProvider))
 	}
 
 	dialOpts := []grpc.DialOption{
