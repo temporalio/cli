@@ -37,7 +37,6 @@ import (
 	"github.com/temporalio/temporal-cli/client"
 	"github.com/temporalio/temporal-cli/cluster"
 	"github.com/temporalio/temporal-cli/common"
-	"github.com/temporalio/temporal-cli/dataconverter"
 	"github.com/temporalio/temporal-cli/env"
 	"github.com/temporalio/temporal-cli/headers"
 	"github.com/temporalio/temporal-cli/namespace"
@@ -83,18 +82,7 @@ func SetFactory(factory client.ClientFactory) {
 
 func configureCLI(ctx *cli.Context) error {
 	env.Build(ctx)
-	return configureSDK(ctx)
-}
-
-func configureSDK(ctx *cli.Context) error {
-	endpoint := ctx.String(common.FlagCodecEndpoint)
-	if endpoint != "" {
-		dataconverter.SetRemoteEndpoint(
-			endpoint,
-			ctx.String(common.FlagNamespace),
-			ctx.String(common.FlagCodecAuth),
-		)
-	}
+	client.Build(ctx)
 
 	return nil
 }

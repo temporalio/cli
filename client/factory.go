@@ -40,6 +40,8 @@ import (
 
 	"github.com/gogo/status"
 	"github.com/temporalio/temporal-cli/common"
+	"github.com/temporalio/temporal-cli/dataconverter"
+	"github.com/temporalio/temporal-cli/headersprovider"
 	"github.com/urfave/cli/v2"
 	"go.temporal.io/api/operatorservice/v1"
 	"go.temporal.io/api/serviceerror"
@@ -52,6 +54,7 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/metadata"
 )
 
 var (
@@ -81,6 +84,32 @@ type ClientFactory interface {
 	OperatorClient(c *cli.Context) operatorservice.OperatorServiceClient
 	SDKClient(c *cli.Context, namespace string) sdkclient.Client
 	HealthClient(c *cli.Context) healthpb.HealthClient
+}
+
+func Build(c *cli.Context) {
+	for _, c := range c.App.Commands {
+		common.AddBeforeHandler(c, configureSDK)
+	}
+}
+
+func configureSDK(ctx *cli.Context) error {
+	endpoint := ctx.String(common.FlagCodecEndpoint)
+	if endpoint != "" {
+		dataconverter.SetRemoteEndpoint(
+			endpoint,
+			ctx.String(common.FlagNamespace),
+			ctx.String(common.FlagCodecAuth),
+		)
+	}
+
+	md, err := common.SplitKeyValuePairs(ctx.StringSlice(common.FlagGRPCHeader))
+	if err != nil {
+		return err
+	}
+
+	headersprovider.SetGRPCHeadersProvider(md)
+
+	return nil
 }
 
 type clientFactory struct {
@@ -130,6 +159,7 @@ func (b *clientFactory) SDKClient(c *cli.Context, namespace string) sdkclient.Cl
 		ConnectionOptions: sdkclient.ConnectionOptions{
 			TLS: tlsConfig,
 		},
+		HeadersProvider: headersprovider.GetCurrent(),
 	})
 	if err != nil {
 		b.logger.Fatal("Failed to create SDK client", tag.Error(err))
@@ -143,6 +173,19 @@ func (b *clientFactory) HealthClient(c *cli.Context) healthpb.HealthClient {
 	connection, _ := b.createGRPCConnection(c)
 
 	return healthpb.NewHealthClient(connection)
+}
+
+func headersProviderInterceptor(headersProvider headersprovider.HeadersProvider) grpc.UnaryClientInterceptor {
+	return func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+		headers, err := headersProvider.GetHeaders(ctx)
+		if err != nil {
+			return err
+		}
+		for k, v := range headers {
+			ctx = metadata.AppendToOutgoingContext(ctx, k, v)
+		}
+		return invoker(ctx, method, req, reply, cc, opts...)
+	}
 }
 
 func errorInterceptor() grpc.UnaryClientInterceptor {

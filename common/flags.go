@@ -79,6 +79,7 @@ var (
 	FlagMaxFieldLength             = "max-field-length"
 	FlagMemo                       = "memo"
 	FlagMemoFile                   = "memo-file"
+	FlagGRPCHeader                 = "grpc-header"
 	FlagMetricsPort                = "metrics-port"
 	FlagName                       = "name"
 	FlagNamespace                  = "namespace"
@@ -163,6 +164,10 @@ var SharedFlags = []cli.Flag{
 		Value:   "default",
 		Usage:   "Temporal workflow namespace",
 		EnvVars: []string{"TEMPORAL_CLI_NAMESPACE"},
+	},
+	&cli.StringSliceFlag{
+		Name:  FlagGRPCHeader,
+		Usage: "gRPC metadata to be passed to the server. Format: key=value. Use valid JSON formats for value",
 	},
 	&cli.StringFlag{
 		Name:    FlagTLSCertPath,
@@ -368,7 +373,6 @@ var FlagsForStackTraceQuery = append(FlagsForExecution, []cli.Flag{
 }...)
 
 func WithFlags(commands []*cli.Command, newFlags []cli.Flag) []*cli.Command {
-
 	for _, cmd := range commands {
 		if len(cmd.Subcommands) == 0 {
 			for _, newF := range newFlags {
