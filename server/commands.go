@@ -275,6 +275,11 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 				if err != nil {
 					return err
 				}
+
+				if _, ok := configVals[dynamicconfig.ForceSearchAttributesCacheRefreshOnRead]; !ok {
+					opts = append(opts, WithSearchAttributeCacheDisabled())
+				}
+
 				for k, v := range configVals {
 					opts = append(opts, WithDynamicConfigValue(k, v))
 				}
