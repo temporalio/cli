@@ -147,3 +147,6 @@ require (
 )
 
 replace github.com/grpc-ecosystem/grpc-gateway => github.com/temporalio/grpc-gateway v1.17.0
+
+// TODO replace urfave/cli until there is a release newer than v2.23.5
+replace github.com/urfave/cli/v2 => github.com/temporalio/urfave-cli/v2 v2.24.0
