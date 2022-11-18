@@ -49,12 +49,12 @@ func NewClusterCommands() []*cli.Command {
 					Aliases:  common.FlagOutputAlias,
 					Usage:    output.UsageText,
 					Value:    string(output.Table),
-					Category: common.CategoryFormatting,
+					Category: common.CategoryDisplay,
 				},
 				&cli.StringFlag{
 					Name:     output.FlagFields,
 					Usage:    "customize fields to print. Set to 'long' to automatically print more of main fields",
-					Category: common.CategoryFormatting,
+					Category: common.CategoryDisplay,
 				},
 			},
 			Action: func(c *cli.Context) error {
@@ -71,12 +71,12 @@ func NewClusterCommands() []*cli.Command {
 					Aliases:  common.FlagOutputAlias,
 					Usage:    output.UsageText,
 					Value:    string(output.Table),
-					Category: common.CategoryFormatting,
+					Category: common.CategoryDisplay,
 				},
 				&cli.StringFlag{
 					Name:     output.FlagFields,
 					Usage:    "customize fields to print. Set to 'long' to automatically print more of main fields",
-					Category: common.CategoryFormatting,
+					Category: common.CategoryDisplay,
 				},
 			},
 			Action: func(c *cli.Context) error {

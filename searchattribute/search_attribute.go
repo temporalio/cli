@@ -71,7 +71,7 @@ func NewSearchAttributeCommands() []*cli.Command {
 					Aliases:  common.FlagOutputAlias,
 					Usage:    output.UsageText,
 					Value:    string(output.Table),
-					Category: common.CategoryFormatting,
+					Category: common.CategoryDisplay,
 				},
 			},
 			Action: func(c *cli.Context) error {

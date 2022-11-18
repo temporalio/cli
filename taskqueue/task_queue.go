@@ -73,7 +73,7 @@ RatePerSecond is the maximum Activities per second the Worker will execute.`,
 					Aliases:  common.FlagOutputAlias,
 					Usage:    output.UsageText,
 					Value:    string(output.Table),
-					Category: common.CategoryFormatting,
+					Category: common.CategoryDisplay,
 				},
 			},
 			Action: func(c *cli.Context) error {

@@ -187,6 +187,10 @@ func (s *cliAppSuite) TestDescribeTaskQueue_Activity() {
 // As urfave/cli only prints flags in --help with Category set
 func (s *cliAppSuite) TestFlagCategory_IsSet() {
 	for _, cmd := range s.app.Commands {
+		if cmd.Name == "server" {
+			continue
+		}
+
 		verifyCategory(s, cmd)
 	}
 }

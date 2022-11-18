@@ -36,10 +36,9 @@ import (
 
 // Categories used to structure --help output
 var (
-	CategoryClient     = "Client Options:"
-	CategoryFormatting = "Formatting Options:"
-	CategoryMain       = "Main Options:"
-	CategoryPagination = "Pagination Options:"
+	CategoryClient  = "Client Options:"
+	CategoryDisplay = "Display Options:"
+	CategoryMain    = "Main Options:"
 )
 
 // Flags used to specify cli command line arguments
@@ -161,7 +160,7 @@ var SharedFlags = []cli.Flag{
 		Value:    "",
 		Usage:    "Env name to read the client environment variables from",
 		EnvVars:  []string{"TEMPORAL_CLI_ADDRESS"},
-		Category: CategoryClient,
+		Category: CategoryMain,
 	},
 	&cli.StringFlag{
 		Name:     FlagAddress,
@@ -179,8 +178,9 @@ var SharedFlags = []cli.Flag{
 		Category: CategoryClient,
 	},
 	&cli.StringSliceFlag{
-		Name:  FlagMetadata,
-		Usage: "gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value",
+		Name:     FlagMetadata,
+		Usage:    "gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value",
+		Category: CategoryClient,
 	},
 	&cli.StringFlag{
 		Name:     FlagTLSCertPath,
@@ -241,7 +241,7 @@ var SharedFlags = []cli.Flag{
 		Name:     color.FlagColor,
 		Usage:    fmt.Sprintf("when to use color: %v, %v, %v.", color.Auto, color.Always, color.Never),
 		Value:    string(color.Auto),
-		Category: CategoryClient,
+		Category: CategoryDisplay,
 	},
 }
 
@@ -424,19 +424,19 @@ var FlagsForPagination = []cli.Flag{
 	&cli.IntFlag{
 		Name:     output.FlagLimit,
 		Usage:    "number of items to print",
-		Category: CategoryPagination,
+		Category: CategoryDisplay,
 	},
 	&cli.StringFlag{
 		Name:     pager.FlagPager,
 		Usage:    "pager to use: less, more, favoritePager..",
 		EnvVars:  []string{"PAGER"},
-		Category: CategoryPagination,
+		Category: CategoryDisplay,
 	},
 	&cli.BoolFlag{
 		Name:     pager.FlagNoPager,
 		Aliases:  []string{"P"},
 		Usage:    "disable interactive pager",
-		Category: CategoryPagination,
+		Category: CategoryDisplay,
 	},
 }
 
@@ -446,18 +446,18 @@ var FlagsForFormatting = []cli.Flag{
 		Aliases:  []string{"o"},
 		Usage:    output.UsageText,
 		Value:    string(output.Table),
-		Category: CategoryFormatting,
+		Category: CategoryDisplay,
 	},
 	&cli.StringFlag{
 		Name:     format.FlagTimeFormat,
 		Usage:    fmt.Sprintf("format time as: %v, %v, %v.", format.Relative, format.ISO, format.Raw),
 		Value:    string(format.Relative),
-		Category: CategoryFormatting,
+		Category: CategoryDisplay,
 	},
 	&cli.StringFlag{
 		Name:     output.FlagFields,
 		Usage:    "customize fields to print. Set to 'long' to automatically print more of main fields",
-		Category: CategoryFormatting,
+		Category: CategoryDisplay,
 	},
 }
 

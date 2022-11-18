@@ -70,7 +70,7 @@ func NewEnvCommands() []*cli.Command {
 					Name:     output.FlagOutput,
 					Aliases:  common.FlagOutputAlias,
 					Usage:    output.UsageText,
-					Category: common.CategoryFormatting,
+					Category: common.CategoryDisplay,
 				},
 			},
 			Action: func(c *cli.Context) error {
