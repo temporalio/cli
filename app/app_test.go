@@ -203,6 +203,10 @@ func verifyCategory(s *cliAppSuite, cmd *cli.Command) {
 	msgT := "flag %s should have a category, command: %s %s"
 
 	for _, flag := range cmd.Flags {
+		if flag.Names()[0] == "help" {
+			continue
+		}
+
 		msg := fmt.Sprintf(msgT, "--"+flag.Names()[0], cmd.Name, cmd.Usage)
 
 		switch f := flag.(type) {
