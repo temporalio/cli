@@ -148,7 +148,7 @@ var clientCommands = []*cli.Command{
 
 	{
 		Name:        "batch",
-		Usage:       "Operations on Batch jobs",
+		Usage:       "Operations on Batch jobs. Use workflow commands with --query flag to start batch jobs",
 		Subcommands: batch.NewBatchCommands(),
 	},
 	{
