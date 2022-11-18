@@ -32,116 +32,130 @@ import (
 var (
 	registerNamespaceFlags = []cli.Flag{
 		&cli.StringFlag{
-			Name:  common.FlagDescription,
-			Usage: "Namespace description",
+			Name:     common.FlagDescription,
+			Usage:    "Namespace description",
+			Category: common.CategoryMain,
 		},
 		&cli.StringFlag{
-			Name:  common.FlagOwnerEmail,
-			Usage: "Owner email",
+			Name:     common.FlagOwnerEmail,
+			Usage:    "Owner email",
+			Category: common.CategoryMain,
 		},
 		&cli.StringFlag{
-			Name:  common.FlagRetention,
-			Usage: "Workflow Execution retention",
+			Name:     common.FlagRetention,
+			Usage:    "Workflow Execution retention",
+			Category: common.CategoryMain,
 		},
 		&cli.StringFlag{
-			Name:  common.FlagActiveCluster,
-			Usage: "Active cluster name",
+			Name:     common.FlagActiveCluster,
+			Usage:    "Active cluster name",
+			Category: common.CategoryMain,
 		},
 		&cli.StringSliceFlag{
-			Name:  common.FlagCluster,
-			Usage: "Cluster name",
+			Name:     common.FlagCluster,
+			Usage:    "Cluster name",
+			Category: common.CategoryMain,
 		},
 		&cli.StringFlag{
-			Name:  common.FlagIsGlobalNamespace,
-			Usage: "Flag to indicate whether namespace is a global namespace",
+			Name:     common.FlagIsGlobalNamespace,
+			Usage:    "Flag to indicate whether namespace is a global namespace",
+			Category: common.CategoryMain,
 		},
 		&cli.StringSliceFlag{
-			Name:  common.FlagNamespaceData,
-			Usage: "Namespace data in a format key=value",
+			Name:     common.FlagNamespaceData,
+			Usage:    "Namespace data in a format key=value",
+			Category: common.CategoryMain,
 		},
 		&cli.StringFlag{
-			Name:  common.FlagHistoryArchivalState,
-			Usage: "Flag to set history archival state, valid values are \"disabled\" and \"enabled\"",
+			Name:     common.FlagHistoryArchivalState,
+			Usage:    "Flag to set history archival state, valid values are \"disabled\" and \"enabled\"",
+			Category: common.CategoryMain,
 		},
 		&cli.StringFlag{
-			Name:  common.FlagHistoryArchivalURI,
-			Usage: "Optionally specify history archival URI (cannot be changed after first time archival is enabled)",
+			Name:     common.FlagHistoryArchivalURI,
+			Usage:    "Optionally specify history archival URI (cannot be changed after first time archival is enabled)",
+			Category: common.CategoryMain,
 		},
 		&cli.StringFlag{
-			Name:  common.FlagVisibilityArchivalState,
-			Usage: "Flag to set visibility archival state, valid values are \"disabled\" and \"enabled\"",
+			Name:     common.FlagVisibilityArchivalState,
+			Usage:    "Flag to set visibility archival state, valid values are \"disabled\" and \"enabled\"",
+			Category: common.CategoryMain,
 		},
 		&cli.StringFlag{
-			Name:  common.FlagVisibilityArchivalURI,
-			Usage: "Optionally specify visibility archival URI (cannot be changed after first time archival is enabled)",
+			Name:     common.FlagVisibilityArchivalURI,
+			Usage:    "Optionally specify visibility archival URI (cannot be changed after first time archival is enabled)",
+			Category: common.CategoryMain,
 		},
 	}
 
 	updateNamespaceFlags = []cli.Flag{
 		&cli.StringFlag{
-			Name:  common.FlagDescription,
-			Usage: "Namespace description",
+			Name:     common.FlagDescription,
+			Usage:    "Namespace description",
+			Category: common.CategoryMain,
 		},
 		&cli.StringFlag{
-			Name:  common.FlagOwnerEmail,
-			Usage: "Owner email",
+			Name:     common.FlagOwnerEmail,
+			Usage:    "Owner email",
+			Category: common.CategoryMain,
 		},
 		&cli.StringFlag{
-			Name:  common.FlagRetention,
-			Usage: "Workflow Execution retention",
+			Name:     common.FlagRetention,
+			Usage:    "Workflow Execution retention",
+			Category: common.CategoryMain,
 		},
 		&cli.StringFlag{
-			Name:  common.FlagActiveCluster,
-			Usage: "Active cluster name",
+			Name:     common.FlagActiveCluster,
+			Usage:    "Active cluster name",
+			Category: common.CategoryMain,
 		},
 		&cli.StringFlag{
-			Name:  common.FlagCluster,
-			Usage: "Cluster name",
+			Name:     common.FlagCluster,
+			Usage:    "Cluster name",
+			Category: common.CategoryMain,
 		},
 		&cli.StringSliceFlag{
-			Name:  common.FlagNamespaceData,
-			Usage: "Namespace data in a format key=value",
+			Name:     common.FlagNamespaceData,
+			Usage:    "Namespace data in a format key=value",
+			Category: common.CategoryMain,
 		},
 		&cli.StringFlag{
-			Name:  common.FlagHistoryArchivalState,
-			Usage: "Flag to set history archival state, valid values are \"disabled\" and \"enabled\"",
+			Name:     common.FlagHistoryArchivalState,
+			Usage:    "Flag to set history archival state, valid values are \"disabled\" and \"enabled\"",
+			Category: common.CategoryMain,
 		},
 		&cli.StringFlag{
-			Name:  common.FlagHistoryArchivalURI,
-			Usage: "Optionally specify history archival URI (cannot be changed after first time archival is enabled)",
+			Name:     common.FlagHistoryArchivalURI,
+			Usage:    "Optionally specify history archival URI (cannot be changed after first time archival is enabled)",
+			Category: common.CategoryMain,
 		},
 		&cli.StringFlag{
-			Name:  common.FlagVisibilityArchivalState,
-			Usage: "Flag to set visibility archival state, valid values are \"disabled\" and \"enabled\"",
+			Name:     common.FlagVisibilityArchivalState,
+			Usage:    "Flag to set visibility archival state, valid values are \"disabled\" and \"enabled\"",
+			Category: common.CategoryMain,
 		},
 		&cli.StringFlag{
-			Name:  common.FlagVisibilityArchivalURI,
-			Usage: "Optionally specify visibility archival URI (cannot be changed after first time archival is enabled)",
+			Name:     common.FlagVisibilityArchivalURI,
+			Usage:    "Optionally specify visibility archival URI (cannot be changed after first time archival is enabled)",
+			Category: common.CategoryMain,
 		},
 		&cli.StringFlag{
-			Name:  common.FlagReason,
-			Usage: "Reason for the operation",
+			Name:     common.FlagReason,
+			Usage:    "Reason for the operation",
+			Category: common.CategoryMain,
 		},
 		&cli.BoolFlag{
-			Name:  common.FlagPromoteNamespace,
-			Usage: "Promote local namespace to global namespace",
+			Name:     common.FlagPromoteNamespace,
+			Usage:    "Promote local namespace to global namespace",
+			Category: common.CategoryMain,
 		},
 	}
 
 	describeNamespaceFlags = []cli.Flag{
 		&cli.StringFlag{
-			Name:  common.FlagNamespaceID,
-			Usage: "Namespace Id",
-		},
-	}
-
-	listNamespacesFlags []cli.Flag
-
-	deleteNamespacesFlags = []cli.Flag{
-		&cli.BoolFlag{
-			Name:    common.FlagYes,
-			Aliases: common.FlagYesAlias,
-			Usage:   "Confirm all prompts",
+			Name:     common.FlagNamespaceID,
+			Usage:    "Namespace Id",
+			Category: common.CategoryMain,
 		},
 	}
 )

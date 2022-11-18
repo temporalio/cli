@@ -107,7 +107,7 @@ func commands(defaultCfg *sconfig.Config) []*cli.Command {
 	return append([]*cli.Command{
 		{
 			Name:        "server",
-			Usage:       "Commands for managing a Temporal server",
+			Usage:       "Commands for managing Temporal server",
 			Subcommands: server.NewServerCommands(defaultCfg),
 		}}, common.WithFlags(clientCommands, common.SharedFlags)...)
 }

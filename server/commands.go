@@ -59,7 +59,7 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 				&cli.StringSliceFlag{
 					Name:    common.FlagNamespace,
 					Aliases: common.FlagNamespaceAlias,
-					Usage:   "Specify namespaces that should be pre-created",
+					Usage:   "Specify namespaces that should be pre-created. Namespace 'default' is auto created",
 					EnvVars: nil,
 					Value:   nil,
 				},

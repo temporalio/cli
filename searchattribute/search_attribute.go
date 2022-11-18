@@ -43,16 +43,19 @@ func NewSearchAttributeCommands() []*cli.Command {
 					Name:     common.FlagName,
 					Required: true,
 					Usage:    "Search attribute name",
+					Category: common.CategoryMain,
 				},
 				&cli.StringSliceFlag{
 					Name:     common.FlagType,
 					Required: true,
 					Usage:    fmt.Sprintf("Search attribute type: %v", common.AllowedEnumValues(enumspb.IndexedValueType_name)),
+					Category: common.CategoryMain,
 				},
 				&cli.BoolFlag{
-					Name:    common.FlagYes,
-					Aliases: common.FlagYesAlias,
-					Usage:   "Confirm all prompts",
+					Name:     common.FlagYes,
+					Aliases:  common.FlagYesAlias,
+					Usage:    "Confirm all prompts",
+					Category: common.CategoryMain,
 				},
 			},
 			Action: func(c *cli.Context) error {
@@ -64,10 +67,11 @@ func NewSearchAttributeCommands() []*cli.Command {
 			Usage: "List search attributes that can be used in list workflow query",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
-					Name:    output.FlagOutput,
-					Aliases: common.FlagOutputAlias,
-					Usage:   output.UsageText,
-					Value:   string(output.Table),
+					Name:     output.FlagOutput,
+					Aliases:  common.FlagOutputAlias,
+					Usage:    output.UsageText,
+					Value:    string(output.Table),
+					Category: common.CategoryDisplay,
 				},
 			},
 			Action: func(c *cli.Context) error {
@@ -82,11 +86,13 @@ func NewSearchAttributeCommands() []*cli.Command {
 					Name:     common.FlagName,
 					Required: true,
 					Usage:    "Search attribute name",
+					Category: common.CategoryMain,
 				},
 				&cli.BoolFlag{
-					Name:    common.FlagYes,
-					Aliases: common.FlagYesAlias,
-					Usage:   "Confirm all prompts",
+					Name:     common.FlagYes,
+					Aliases:  common.FlagYesAlias,
+					Usage:    "Confirm all prompts",
+					Category: common.CategoryMain,
 				},
 			},
 			Action: func(c *cli.Context) error {
