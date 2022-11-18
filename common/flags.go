@@ -79,7 +79,7 @@ var (
 	FlagMaxFieldLength             = "max-field-length"
 	FlagMemo                       = "memo"
 	FlagMemoFile                   = "memo-file"
-	FlagGRPCHeader                 = "grpc-header"
+	FlagMetadata                   = "grpc-meta"
 	FlagMetricsPort                = "metrics-port"
 	FlagName                       = "name"
 	FlagNamespace                  = "namespace"
@@ -166,8 +166,8 @@ var SharedFlags = []cli.Flag{
 		EnvVars: []string{"TEMPORAL_CLI_NAMESPACE"},
 	},
 	&cli.StringSliceFlag{
-		Name:  FlagGRPCHeader,
-		Usage: "gRPC headers to send with requests. Format: key=value. Use valid JSON formats for value",
+		Name:  FlagMetadata,
+		Usage: "gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value",
 	},
 	&cli.StringFlag{
 		Name:    FlagTLSCertPath,

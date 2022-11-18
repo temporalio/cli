@@ -102,7 +102,7 @@ func configureSDK(ctx *cli.Context) error {
 		)
 	}
 
-	md, err := common.SplitKeyValuePairs(ctx.StringSlice(common.FlagGRPCHeader))
+	md, err := common.SplitKeyValuePairs(ctx.StringSlice(common.FlagMetadata))
 	if err != nil {
 		return err
 	}
