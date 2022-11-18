@@ -159,8 +159,7 @@ var SharedFlags = []cli.Flag{
 		Name:     FlagEnv,
 		Value:    "",
 		Usage:    "Env name to read the client environment variables from",
-		EnvVars:  []string{"TEMPORAL_CLI_ADDRESS"},
-		Category: CategoryMain,
+		Category: CategoryClient,
 	},
 	&cli.StringFlag{
 		Name:     FlagAddress,
