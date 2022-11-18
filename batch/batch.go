@@ -25,7 +25,6 @@
 package batch
 
 import (
-	"github.com/temporalio/tctl-kit/pkg/flags"
 	"github.com/temporalio/temporal-cli/common"
 	"github.com/urfave/cli/v2"
 )
@@ -40,8 +39,9 @@ func NewBatchCommands() []*cli.Command {
 					Name:     common.FlagJobID,
 					Usage:    "Batch Job Id",
 					Required: true,
+					Category: common.CategoryMain,
 				},
-			}, flags.FlagsForRendering...),
+			}, common.FlagsForFormatting...),
 			Action: func(c *cli.Context) error {
 				return DescribeBatchJob(c)
 			},
@@ -49,7 +49,7 @@ func NewBatchCommands() []*cli.Command {
 		{
 			Name:      "list",
 			Usage:     "List batch operation jobs",
-			Flags:     flags.FlagsForPaginationAndRendering,
+			Flags:     common.FlagsForPaginationAndRendering,
 			ArgsUsage: " ",
 			Action: func(c *cli.Context) error {
 				return ListBatchJobs(c)
@@ -63,11 +63,13 @@ func NewBatchCommands() []*cli.Command {
 					Name:     common.FlagJobID,
 					Usage:    "Batch Job Id",
 					Required: true,
+					Category: common.CategoryMain,
 				},
 				&cli.StringFlag{
 					Name:     common.FlagReason,
 					Usage:    "Reason to stop the batch job",
 					Required: true,
+					Category: common.CategoryMain,
 				},
 			},
 			Action: func(c *cli.Context) error {

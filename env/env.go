@@ -67,9 +67,10 @@ func NewEnvCommands() []*cli.Command {
 			ArgsUsage: "env_name",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
-					Name:    output.FlagOutput,
-					Aliases: common.FlagOutputAlias,
-					Usage:   output.UsageText,
+					Name:     output.FlagOutput,
+					Aliases:  common.FlagOutputAlias,
+					Usage:    output.UsageText,
+					Category: common.CategoryFormatting,
 				},
 			},
 			Action: func(c *cli.Context) error {

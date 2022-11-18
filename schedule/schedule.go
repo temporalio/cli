@@ -25,7 +25,6 @@
 package schedule
 
 import (
-	"github.com/temporalio/tctl-kit/pkg/flags"
 	"github.com/temporalio/temporal-cli/common"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/exp/slices"
@@ -37,83 +36,100 @@ func NewScheduleCommands() []*cli.Command {
 		Aliases:  common.FlagScheduleIDAlias,
 		Usage:    "Schedule Id",
 		Required: true,
+		Category: common.CategoryMain,
 	}
 	overlap := &cli.StringFlag{
-		Name:  common.FlagOverlapPolicy,
-		Usage: "Overlap policy: Skip, BufferOne, BufferAll, CancelOther, TerminateOther, AllowAll",
+		Name:     common.FlagOverlapPolicy,
+		Usage:    "Overlap policy: Skip, BufferOne, BufferAll, CancelOther, TerminateOther, AllowAll",
+		Category: common.CategoryMain,
 	}
 
 	scheduleSpecFlags := []cli.Flag{
 		&cli.StringSliceFlag{
-			Name:  common.FlagCalendar,
-			Usage: `Calendar specification in JSON, e.g. {"dayOfWeek":"Fri","hour":"17","minute":"5"}`,
+			Name:     common.FlagCalendar,
+			Usage:    `Calendar specification in JSON, e.g. {"dayOfWeek":"Fri","hour":"17","minute":"5"}`,
+			Category: common.CategoryMain,
 		},
 		&cli.StringSliceFlag{
-			Name:  common.FlagCronSchedule,
-			Usage: `Calendar specification as cron string, e.g. "30 2 * * 5" or "@daily"`,
+			Name:     common.FlagCronSchedule,
+			Usage:    `Calendar specification as cron string, e.g. "30 2 * * 5" or "@daily"`,
+			Category: common.CategoryMain,
 		},
 		&cli.StringSliceFlag{
-			Name:  common.FlagInterval,
-			Usage: "Interval duration, e.g. 90m, or 90m/13m to include phase offset",
+			Name:     common.FlagInterval,
+			Usage:    "Interval duration, e.g. 90m, or 90m/13m to include phase offset",
+			Category: common.CategoryMain,
 		},
 		&cli.StringFlag{
-			Name:  common.FlagStartTime,
-			Usage: "Overall schedule start time",
+			Name:     common.FlagStartTime,
+			Usage:    "Overall schedule start time",
+			Category: common.CategoryMain,
 		},
 		&cli.StringFlag{
-			Name:  common.FlagEndTime,
-			Usage: "Overall schedule end time",
+			Name:     common.FlagEndTime,
+			Usage:    "Overall schedule end time",
+			Category: common.CategoryMain,
 		},
 		&cli.StringFlag{
-			Name:  common.FlagJitter,
-			Usage: "Jitter duration",
+			Name:     common.FlagJitter,
+			Usage:    "Jitter duration",
+			Category: common.CategoryMain,
 		},
 		&cli.StringFlag{
-			Name:  common.FlagTimeZone,
-			Usage: "Time zone (IANA name)",
+			Name:     common.FlagTimeZone,
+			Usage:    "Time zone (IANA name)",
+			Category: common.CategoryMain,
 		},
 	}
 
 	scheduleStateFlags := []cli.Flag{
 		&cli.StringFlag{
-			Name:  common.FlagNotes,
-			Usage: "Initial value of notes field",
+			Name:     common.FlagNotes,
+			Usage:    "Initial value of notes field",
+			Category: common.CategoryMain,
 		},
 		&cli.BoolFlag{
-			Name:  common.FlagPause,
-			Usage: "Initial value of paused state",
+			Name:     common.FlagPause,
+			Usage:    "Initial value of paused state",
+			Category: common.CategoryMain,
 		},
 		&cli.IntFlag{
-			Name:  common.FlagRemainingActions,
-			Usage: "Total number of actions allowed",
+			Name:     common.FlagRemainingActions,
+			Usage:    "Total number of actions allowed",
+			Category: common.CategoryMain,
 		},
 	}
 
 	schedulePolicyFlags := []cli.Flag{
 		overlap,
 		&cli.StringFlag{
-			Name:  common.FlagCatchupWindow,
-			Usage: "Maximum allowed catch-up time if server is down",
+			Name:     common.FlagCatchupWindow,
+			Usage:    "Maximum allowed catch-up time if server is down",
+			Category: common.CategoryMain,
 		},
 		&cli.BoolFlag{
-			Name:  common.FlagPauseOnFailure,
-			Usage: "Pause schedule after any workflow failure",
+			Name:     common.FlagPauseOnFailure,
+			Usage:    "Pause schedule after any workflow failure",
+			Category: common.CategoryMain,
 		},
 	}
 
 	// These are the same flags as for start workflow, but we need to change the Usage to talk about schedules instead of workflows.
 	scheduleVisibilityFlags := []cli.Flag{
 		&cli.StringSliceFlag{
-			Name:  common.FlagSearchAttribute,
-			Usage: "Set Search Attribute on a schedule. Format: key=value. Use valid JSON formats for value",
+			Name:     common.FlagSearchAttribute,
+			Usage:    "Set Search Attribute on a schedule. Format: key=value. Use valid JSON formats for value",
+			Category: common.CategoryMain,
 		},
 		&cli.StringSliceFlag{
-			Name:  common.FlagMemo,
-			Usage: "Set a memo on a schedule. Format: key=value. Use valid JSON formats for value",
+			Name:     common.FlagMemo,
+			Usage:    "Set a memo on a schedule. Format: key=value. Use valid JSON formats for value",
+			Category: common.CategoryMain,
 		},
 		&cli.StringFlag{
-			Name:  common.FlagMemoFile,
-			Usage: "Set a memo from a file. Each line should follow the format key=value. Use valid JSON formats for value",
+			Name:     common.FlagMemoFile,
+			Usage:    "Set a memo from a file. Each line should follow the format key=value. Use valid JSON formats for value",
+			Category: common.CategoryMain,
 		},
 	}
 
@@ -135,6 +151,7 @@ func NewScheduleCommands() []*cli.Command {
 			Description: "Takes a schedule specification plus all the same args as starting a workflow",
 			Flags:       createFlags,
 			Action:      CreateSchedule,
+			Category:    common.CategoryMain,
 		},
 		{
 			Name:        "update",
@@ -142,6 +159,7 @@ func NewScheduleCommands() []*cli.Command {
 			Description: "Takes a schedule specification plus all the same args as starting a workflow",
 			Flags:       createFlags,
 			Action:      UpdateSchedule,
+			Category:    common.CategoryMain,
 		},
 		{
 			Name:  "toggle",
@@ -149,17 +167,20 @@ func NewScheduleCommands() []*cli.Command {
 			Flags: []cli.Flag{
 				sid,
 				&cli.BoolFlag{
-					Name:  common.FlagPause,
-					Usage: "Pauses the schedule",
+					Name:     common.FlagPause,
+					Usage:    "Pauses the schedule",
+					Category: common.CategoryMain,
 				},
 				&cli.BoolFlag{
-					Name:  common.FlagUnpause,
-					Usage: "Unpauses the schedule",
+					Name:     common.FlagUnpause,
+					Usage:    "Unpauses the schedule",
+					Category: common.CategoryMain,
 				},
 				&cli.StringFlag{
-					Name:  common.FlagReason,
-					Usage: "Free-form text to describe reason for pause/unpause",
-					Value: "(no reason provided)",
+					Name:     common.FlagReason,
+					Usage:    "Free-form text to describe reason for pause/unpause",
+					Value:    "(no reason provided)",
+					Category: common.CategoryMain,
 				},
 			},
 			Action: ToggleSchedule,
@@ -183,11 +204,13 @@ func NewScheduleCommands() []*cli.Command {
 					Name:     common.FlagStartTime,
 					Usage:    "Backfill start time",
 					Required: true,
+					Category: common.CategoryMain,
 				},
 				&cli.StringFlag{
 					Name:     common.FlagEndTime,
 					Usage:    "Backfill end time",
 					Required: true,
+					Category: common.CategoryMain,
 				},
 			},
 			Action: BackfillSchedule,
@@ -198,10 +221,11 @@ func NewScheduleCommands() []*cli.Command {
 			Flags: append([]cli.Flag{
 				sid,
 				&cli.BoolFlag{
-					Name:  common.FlagPrintRaw,
-					Usage: "Print raw data as json (prefer this over -o json for scripting)",
+					Name:     common.FlagPrintRaw,
+					Usage:    "Print raw data as json (prefer this over -o json for scripting)",
+					Category: common.CategoryMain,
 				},
-			}, flags.FlagsForRendering...),
+			}, common.FlagsForFormatting...),
 			Action: DescribeSchedule,
 		},
 		{
@@ -215,7 +239,7 @@ func NewScheduleCommands() []*cli.Command {
 		{
 			Name:   "list",
 			Usage:  "Lists schedules",
-			Flags:  append([]cli.Flag{}, flags.FlagsForPaginationAndRendering...),
+			Flags:  common.FlagsForPaginationAndRendering,
 			Action: ListSchedules,
 		},
 	}

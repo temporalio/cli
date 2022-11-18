@@ -25,6 +25,7 @@
 package namespace
 
 import (
+	"github.com/temporalio/temporal-cli/common"
 	"github.com/urfave/cli/v2"
 )
 
@@ -50,7 +51,6 @@ func NewNamespaceCommands() []*cli.Command {
 		{
 			Name:      "list",
 			Usage:     "List all Namespaces",
-			Flags:     listNamespacesFlags,
 			ArgsUsage: " ",
 			Action: func(c *cli.Context) error {
 				return ListNamespaces(c)
@@ -75,9 +75,16 @@ func NewNamespaceCommands() []*cli.Command {
 			},
 		},
 		{
-			Name:      "delete",
-			Usage:     "Delete existing Namespace",
-			Flags:     deleteNamespacesFlags,
+			Name:  "delete",
+			Usage: "Delete existing Namespace",
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name:     common.FlagYes,
+					Aliases:  common.FlagYesAlias,
+					Usage:    "Confirm all prompts",
+					Category: common.CategoryMain,
+				},
+			},
 			ArgsUsage: "namespace_name",
 			Action: func(c *cli.Context) error {
 				return DeleteNamespace(c)

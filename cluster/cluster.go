@@ -25,7 +25,6 @@
 package cluster
 
 import (
-	"github.com/temporalio/tctl-kit/pkg/flags"
 	"github.com/temporalio/tctl-kit/pkg/output"
 	"github.com/temporalio/temporal-cli/common"
 	"github.com/urfave/cli/v2"
@@ -46,14 +45,16 @@ func NewClusterCommands() []*cli.Command {
 			ArgsUsage: " ",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
-					Name:    output.FlagOutput,
-					Aliases: common.FlagOutputAlias,
-					Usage:   output.UsageText,
-					Value:   string(output.Table),
+					Name:     output.FlagOutput,
+					Aliases:  common.FlagOutputAlias,
+					Usage:    output.UsageText,
+					Value:    string(output.Table),
+					Category: common.CategoryFormatting,
 				},
 				&cli.StringFlag{
-					Name:  output.FlagFields,
-					Usage: "customize fields to print. Set to 'long' to automatically print more of main fields",
+					Name:     output.FlagFields,
+					Usage:    "customize fields to print. Set to 'long' to automatically print more of main fields",
+					Category: common.CategoryFormatting,
 				},
 			},
 			Action: func(c *cli.Context) error {
@@ -66,14 +67,16 @@ func NewClusterCommands() []*cli.Command {
 			ArgsUsage: " ",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
-					Name:    output.FlagOutput,
-					Aliases: common.FlagOutputAlias,
-					Usage:   output.UsageText,
-					Value:   string(output.Table),
+					Name:     output.FlagOutput,
+					Aliases:  common.FlagOutputAlias,
+					Usage:    output.UsageText,
+					Value:    string(output.Table),
+					Category: common.CategoryFormatting,
 				},
 				&cli.StringFlag{
-					Name:  output.FlagFields,
-					Usage: "customize fields to print. Set to 'long' to automatically print more of main fields",
+					Name:     output.FlagFields,
+					Usage:    "customize fields to print. Set to 'long' to automatically print more of main fields",
+					Category: common.CategoryFormatting,
 				},
 			},
 			Action: func(c *cli.Context) error {
@@ -86,12 +89,14 @@ func NewClusterCommands() []*cli.Command {
 			ArgsUsage: " ",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
-					Name:  common.FlagClusterAddress,
-					Usage: "Frontend address of the remote cluster",
+					Name:     common.FlagClusterAddress,
+					Usage:    "Frontend address of the remote cluster",
+					Category: common.CategoryMain,
 				},
 				&cli.BoolFlag{
-					Name:  common.FlagClusterEnableConnection,
-					Usage: "Enable cross cluster connection",
+					Name:     common.FlagClusterEnableConnection,
+					Usage:    "Enable cross cluster connection",
+					Category: common.CategoryMain,
 				},
 			},
 			Action: func(c *cli.Context) error {
@@ -102,7 +107,7 @@ func NewClusterCommands() []*cli.Command {
 			Name:      "list",
 			Usage:     "List all remote clusters",
 			ArgsUsage: " ",
-			Flags:     flags.FlagsForPaginationAndRendering,
+			Flags:     common.FlagsForPaginationAndRendering,
 			Action: func(c *cli.Context) error {
 				return ListClusters(c)
 			},
@@ -116,6 +121,7 @@ func NewClusterCommands() []*cli.Command {
 					Name:     common.FlagName,
 					Usage:    "Frontend address of the remote cluster",
 					Required: true,
+					Category: common.CategoryMain,
 				},
 			},
 			Action: func(c *cli.Context) error {

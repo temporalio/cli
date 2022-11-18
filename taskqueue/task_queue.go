@@ -25,7 +25,6 @@
 package taskqueue
 
 import (
-	"github.com/temporalio/tctl-kit/pkg/flags"
 	"github.com/temporalio/tctl-kit/pkg/output"
 	"github.com/temporalio/temporal-cli/common"
 	"github.com/urfave/cli/v2"
@@ -45,13 +44,15 @@ RatePerSecond is the maximum Activities per second the Worker will execute.`,
 					Aliases:  common.FlagTaskQueueAlias,
 					Usage:    "Task Queue name",
 					Required: true,
+					Category: common.CategoryMain,
 				},
 				&cli.StringFlag{
-					Name:  common.FlagTaskQueueType,
-					Value: "workflow",
-					Usage: "Task Queue type [workflow|activity]",
+					Name:     common.FlagTaskQueueType,
+					Value:    "workflow",
+					Usage:    "Task Queue type [workflow|activity]",
+					Category: common.CategoryMain,
 				},
-			}, flags.FlagsForRendering...),
+			}, common.FlagsForFormatting...),
 			Action: func(c *cli.Context) error {
 				return DescribeTaskQueue(c)
 			},
@@ -65,12 +66,14 @@ RatePerSecond is the maximum Activities per second the Worker will execute.`,
 					Aliases:  common.FlagTaskQueueAlias,
 					Usage:    "Task Queue name",
 					Required: true,
+					Category: common.CategoryMain,
 				},
 				&cli.StringFlag{
-					Name:    output.FlagOutput,
-					Aliases: common.FlagOutputAlias,
-					Usage:   output.UsageText,
-					Value:   string(output.Table),
+					Name:     output.FlagOutput,
+					Aliases:  common.FlagOutputAlias,
+					Usage:    output.UsageText,
+					Value:    string(output.Table),
+					Category: common.CategoryFormatting,
 				},
 			},
 			Action: func(c *cli.Context) error {

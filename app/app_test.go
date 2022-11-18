@@ -183,6 +183,37 @@ func (s *cliAppSuite) TestDescribeTaskQueue_Activity() {
 	s.sdkClient.AssertExpectations(s.T())
 }
 
+// TestFlagCategory_IsSet verifies that command flags have Category set
+// As urfave/cli only prints flags in --help with Category set
+func (s *cliAppSuite) TestFlagCategory_IsSet() {
+	for _, cmd := range s.app.Commands {
+		verifyCategory(s, cmd)
+	}
+}
+
+func verifyCategory(s *cliAppSuite, cmd *cli.Command) {
+	msgT := "flag %s should have a category, command: %s %s"
+
+	for _, flag := range cmd.Flags {
+		msg := fmt.Sprintf(msgT, "--"+flag.Names()[0], cmd.Name, cmd.Usage)
+
+		switch f := flag.(type) {
+		case *cli.BoolFlag:
+			s.NotEmpty(f.Category, msg)
+		case *cli.IntSliceFlag:
+			s.NotEmpty(f.Category, msg)
+		case *cli.StringFlag:
+			s.NotEmpty(f.Category, msg)
+		case *cli.StringSliceFlag:
+			s.NotEmpty(f.Category, msg)
+		}
+	}
+
+	for _, subCmd := range cmd.Subcommands {
+		verifyCategory(s, subCmd)
+	}
+}
+
 func historyEventIterator() sdkclient.HistoryEventIterator {
 	iteratorMock := &sdkmocks.HistoryEventIterator{}
 
