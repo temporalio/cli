@@ -167,7 +167,7 @@ var SharedFlags = []cli.Flag{
 	},
 	&cli.StringSliceFlag{
 		Name:  FlagGRPCHeader,
-		Usage: "gRPC metadata to be passed to the server. Format: key=value. Use valid JSON formats for value",
+		Usage: "gRPC headers to send with requests. Format: key=value. Use valid JSON formats for value",
 	},
 	&cli.StringFlag{
 		Name:    FlagTLSCertPath,
