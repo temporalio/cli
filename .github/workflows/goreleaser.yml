@@ -16,7 +16,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v3.0.0
         with:
-          go-version: 1.18
+          go-version: 1.19
 
       - name: Get build date
         id: date
