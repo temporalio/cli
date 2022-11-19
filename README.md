@@ -16,7 +16,7 @@ Download and extract the [latest release](https://github.com/temporalio/temporal
 Start Temporal server:
 
 ```bash
-temporal server start-dev --namespace default
+temporal server start-dev
 ```
 
 At this point you should have a server running on `localhost:7233` and a web interface at <http://localhost:8233>.
@@ -38,7 +38,9 @@ temporal server start-dev -h
 
 ### Namespace Registration
 
-Namespaces can be pre-registered at startup so they're available to use right away:
+Namespaces are pre-registered at startup so they're available to use right away.
+
+By default, the "default" namespace is registered. To customize the pre-registered namespaces, start the server with:
 
 ```bash
 temporal server start-dev --namespace foo --namespace bar
