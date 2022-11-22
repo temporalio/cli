@@ -460,8 +460,8 @@ github.com/temporalio/ringpop-go v0.0.0-20220818230611-30bf23b490b2 h1:QIwUh2HCt
 github.com/temporalio/ringpop-go v0.0.0-20220818230611-30bf23b490b2/go.mod h1:ZEYrWwPO7607ZEaPzK7nWRv55cIrTtH4TeBBu3V532U=
 github.com/temporalio/tchannel-go v1.22.1-0.20220818200552-1be8d8cffa5b h1:Fs3LdlF7xbnOWHymbFmvIEuxIEt1dNRCfaDkoajSaZk=
 github.com/temporalio/tchannel-go v1.22.1-0.20220818200552-1be8d8cffa5b/go.mod h1:c+V9Z/ZgkzAdyGvHrvC5AsXgN+M9Qwey04cBdKYzV7U=
-github.com/temporalio/tctl-kit v0.0.0-20221105000105-c7dd78af47af h1:XVwh/Gvs2IIaEp+nVBRETdwdnH6kXQ3riTc87rieRsU=
-github.com/temporalio/tctl-kit v0.0.0-20221105000105-c7dd78af47af/go.mod h1:VSiXCSr9dY+0TSRondg2YF5HhQhrMDN63jaRaBHy1+k=
+github.com/temporalio/tctl-kit v0.0.0-20221128225502-a682971cf481 h1:zaikUeNmdLQEsUXTyUAy65P2IzKFlt7EAEflQQF2ZUA=
+github.com/temporalio/tctl-kit v0.0.0-20221128225502-a682971cf481/go.mod h1:VSiXCSr9dY+0TSRondg2YF5HhQhrMDN63jaRaBHy1+k=
 github.com/temporalio/ui-server/v2 v2.8.3 h1:eII8RPOa2UGLZp+bzZdZbnqcR28SIACv+RWE/N3k0rY=
 github.com/temporalio/ui-server/v2 v2.8.3/go.mod h1:Fd68+cECpTXc7oZh2oHUA5DQ1tIPa87mg9PPlJ8hPaA=
 github.com/temporalio/urfave-cli/v2 v2.24.0 h1:ap+gp98hFdus3gNC1d3hCY/LpFzIAupKXgWIig0FtcU=

@@ -28,6 +28,7 @@ import (
 	"fmt"
 
 	"github.com/temporalio/tctl-kit/pkg/color"
+	"github.com/temporalio/tctl-kit/pkg/config"
 	"github.com/temporalio/tctl-kit/pkg/format"
 	"github.com/temporalio/tctl-kit/pkg/output"
 	"github.com/temporalio/tctl-kit/pkg/pager"
@@ -157,7 +158,7 @@ var (
 var SharedFlags = []cli.Flag{
 	&cli.StringFlag{
 		Name:     FlagEnv,
-		Value:    "",
+		Value:    config.DefaultEnv,
 		Usage:    "Env name to read the client environment variables from",
 		Category: CategoryClient,
 	},
