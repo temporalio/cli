@@ -31,7 +31,6 @@ import (
 
 	"github.com/urfave/cli/v2"
 
-	"github.com/temporalio/tctl-kit/pkg/color"
 	"github.com/temporalio/tctl-kit/pkg/config"
 	"github.com/temporalio/tctl-kit/pkg/output"
 	"github.com/temporalio/temporal-cli/common"
@@ -45,16 +44,16 @@ func NewEnvCommands() []*cli.Command {
 	return []*cli.Command{
 		{
 			Name:      "get",
-			Usage:     "Print the value of an env property",
+			Usage:     "Print environment properties",
 			Flags:     []cli.Flag{},
-			ArgsUsage: "env_name.property_name",
+			ArgsUsage: "env_name or env_name.property_name",
 			Action: func(c *cli.Context) error {
 				return EnvProperty(c)
 			},
 		},
 		{
 			Name:      "set",
-			Usage:     "Set the value of an env property",
+			Usage:     "Set environment property",
 			Flags:     []cli.Flag{},
 			ArgsUsage: "env_name.property_name value",
 			Action: func(c *cli.Context) error {
@@ -62,65 +61,23 @@ func NewEnvCommands() []*cli.Command {
 			},
 		},
 		{
-			Name:      "describe",
-			Usage:     "Print environment properties",
-			ArgsUsage: "env_name",
-			Flags: []cli.Flag{
-				&cli.StringFlag{
-					Name:     output.FlagOutput,
-					Aliases:  common.FlagOutputAlias,
-					Usage:    output.UsageText,
-					Category: common.CategoryDisplay,
-				},
-			},
-			Action: func(c *cli.Context) error {
-				return DescribeEnv(c)
-			},
-		},
-		{
-			Name:      "remove",
-			Usage:     "Remove environment",
+			Name:      "delete",
+			Usage:     "Delete environment or environment property",
 			Flags:     []cli.Flag{},
-			ArgsUsage: "env_name",
+			ArgsUsage: "env_name or env_name.property_name",
 			Action: func(c *cli.Context) error {
-				return RemoveEnv(c)
+				return DeleteEnv(c)
 			},
 		},
 	}
 }
 
-func DescribeEnv(c *cli.Context) error {
-	envName := c.Args().Get(0)
-	env := ClientConfig.Env(envName)
+func Build(c *cli.Context) {
+	ClientConfig, _ = NewClientConfig()
 
-	type flag struct {
-		Flag  string
-		Value string
+	for _, c := range c.App.Commands {
+		common.AddBeforeHandler(c, loadEnv)
 	}
-
-	var flags []interface{}
-	for k, v := range env {
-		flags = append(flags, flag{Flag: k, Value: v})
-	}
-
-	po := &output.PrintOptions{OutputFormat: output.Table}
-	return output.PrintItems(c, flags, po)
-}
-
-func RemoveEnv(c *cli.Context) error {
-	if c.Args().Len() == 0 {
-		return fmt.Errorf("env name is required")
-	}
-
-	envName := c.Args().Get(0)
-
-	if err := ClientConfig.RemoveEnv(envName); err != nil {
-		return fmt.Errorf("unable to remove env %s: %w", envName, err)
-	}
-
-	fmt.Printf("Removed env %v\n", color.Magenta(c, "%v", envName))
-
-	return nil
 }
 
 func EnvProperty(c *cli.Context) error {
@@ -130,20 +87,39 @@ func EnvProperty(c *cli.Context) error {
 
 	fullKey := c.Args().Get(0)
 
-	if err := validateEnvKey(fullKey); err != nil {
+	if err := validateEnvArg(fullKey); err != nil {
 		return err
 	}
 
-	env, key := envKey(fullKey)
+	envName, key := envKey(fullKey)
 
-	val, err := ClientConfig.EnvProperty(env, key)
-	if err != nil {
-		return err
+	type flag struct {
+		Flag  string
+		Value string
+	}
+	var flags []interface{}
+
+	if key == "" {
+		// print all env properties
+
+		env := ClientConfig.Env(envName)
+
+		for k, v := range env {
+			flags = append(flags, flag{Flag: k, Value: v})
+		}
+
+	} else {
+		// print specific env property
+		val, err := ClientConfig.EnvProperty(envName, key)
+		if err != nil {
+			return err
+		}
+
+		flags = append(flags, flag{Flag: key, Value: val})
 	}
 
-	fmt.Println(val)
-
-	return nil
+	po := &output.PrintOptions{OutputFormat: output.Table}
+	return output.PrintItems(c, flags, po)
 }
 
 func SetEnvProperty(c *cli.Context) error {
@@ -162,7 +138,7 @@ func SetEnvProperty(c *cli.Context) error {
 		return nil
 	}
 
-	if err := validateEnvKey(fullKey); err != nil {
+	if err := validateEnvArg(fullKey); err != nil {
 		return err
 	}
 
@@ -176,11 +152,39 @@ func SetEnvProperty(c *cli.Context) error {
 	return nil
 }
 
-func validateEnvKey(fullKey string) error {
-	keys := strings.Split(fullKey, ".")
+func validateEnvArg(fullArg string) error {
+	keys := strings.Split(fullArg, ".")
 
-	if len(keys) != 2 {
-		return fmt.Errorf("invalid env key %v. Env key must be in a format <env name>.<property-name>", fullKey)
+	if len(keys) != 1 && len(keys) != 2 {
+		return fmt.Errorf("invalid env argument %v. Env argument must be in a format <env name> or <env name>.<property-name>", fullArg)
+	}
+
+	return nil
+}
+
+func DeleteEnv(c *cli.Context) error {
+	if c.Args().Len() == 0 {
+		return fmt.Errorf("env name is required")
+	}
+
+	fullKey := c.Args().Get(0)
+
+	if err := validateEnvArg(fullKey); err != nil {
+		return err
+	}
+
+	envName, key := envKey(fullKey)
+
+	if key == "" {
+		if err := ClientConfig.RemoveEnv(envName); err != nil {
+			return fmt.Errorf("unable to delete env %v: %w", envName, err)
+		}
+		fmt.Printf("Deleted env: %v\n", envName)
+	} else {
+		if err := ClientConfig.RemoveEnvProperty(envName, key); err != nil {
+			return fmt.Errorf("unable to delete env property %v: %w", key, err)
+		}
+		fmt.Printf("Deleted env property: %v\n", fullKey)
 	}
 
 	return nil
@@ -190,20 +194,14 @@ func envKey(fullKey string) (string, string) {
 	keys := strings.Split(fullKey, ".")
 
 	var env, key string
+
+	env = keys[0]
+
 	if len(keys) == 2 {
-		env = keys[0]
 		key = keys[1]
 	}
 
 	return env, key
-}
-
-func Build(c *cli.Context) {
-	ClientConfig, _ = NewClientConfig()
-
-	for _, c := range c.App.Commands {
-		common.AddBeforeHandler(c, loadEnv)
-	}
 }
 
 // loadEnv loads environment options from the config file
