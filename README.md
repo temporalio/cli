@@ -5,7 +5,7 @@
 
 > ⚠️ This project is experimental and not suitable for production use. ⚠️
 
-Temporal CLI is a distribution of [Temporal](https://github.com/temporalio/temporal), [UI](https://github.com/temporalio/ui) and that runs as a single process with zero runtime dependencies. Temporal CLI additionally includes commands to operate on namespaces, workflows etc..
+Temporal CLI is a distribution of [Temporal](https://github.com/temporalio/temporal), [UI](https://github.com/temporalio/ui) and that runs as a single process with zero runtime dependencies. Temporal CLI includes commands to operate on namespaces, workflows etc..
 
 ## Getting Started
 
