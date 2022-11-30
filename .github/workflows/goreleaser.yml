@@ -17,6 +17,7 @@ jobs:
         uses: actions/setup-go@v3
         with:
           go-version-file: "go.mod"
+          check-latest: true
 
       - name: Get build date
         id: date
