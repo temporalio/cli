@@ -3,8 +3,8 @@ package searchattribute
 import (
 	"fmt"
 
+	"github.com/temporalio/cli/common"
 	"github.com/temporalio/tctl-kit/pkg/output"
-	"github.com/temporalio/temporal-cli/common"
 	"github.com/urfave/cli/v2"
 	enumspb "go.temporal.io/api/enums/v1"
 )

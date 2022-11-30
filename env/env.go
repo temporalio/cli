@@ -7,9 +7,9 @@ import (
 
 	"github.com/urfave/cli/v2"
 
+	"github.com/temporalio/cli/common"
 	"github.com/temporalio/tctl-kit/pkg/config"
 	"github.com/temporalio/tctl-kit/pkg/output"
-	"github.com/temporalio/temporal-cli/common"
 )
 
 var (

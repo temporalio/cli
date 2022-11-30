@@ -1,8 +1,8 @@
 package cluster
 
 import (
+	"github.com/temporalio/cli/common"
 	"github.com/temporalio/tctl-kit/pkg/output"
-	"github.com/temporalio/temporal-cli/common"
 	"github.com/urfave/cli/v2"
 )
 

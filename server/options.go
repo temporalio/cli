@@ -27,7 +27,7 @@
 package server
 
 import (
-	sconfig "github.com/temporalio/temporal-cli/server/config"
+	sconfig "github.com/temporalio/cli/server/config"
 	"go.temporal.io/server/common/config"
 	"go.temporal.io/server/common/dynamicconfig"
 	"go.temporal.io/server/common/log"

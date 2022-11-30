@@ -1,6 +1,6 @@
 FROM golang:1.17 AS builder
 
- RUN go install github.com/temporalio/temporal-cli/cmd/temporal@latest
+ RUN go install github.com/temporalio/cli/cmd/temporal@latest
 
  FROM gcr.io/distroless/base-debian11
 

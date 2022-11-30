@@ -17,7 +17,7 @@ This doc is for contributors to Temporal CLI (hopefully that's you!)
 Temporal CLI uses go modules, there is no dependency on `$GOPATH` variable. Clone the repo into the preferred location:
 
 ```bash
-git clone https://github.com/temporalio/temporal-cli.git
+git clone https://github.com/temporalio/cli.git
 ```
 
 ## Build

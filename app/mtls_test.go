@@ -16,8 +16,8 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/temporalio/temporal-cli/app"
-	sconfig "github.com/temporalio/temporal-cli/server/config"
+	"github.com/temporalio/cli/app"
+	sconfig "github.com/temporalio/cli/server/config"
 	"github.com/urfave/cli/v2"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/workflowservice/v1"

@@ -1,7 +1,7 @@
 package schedule
 
 import (
-	"github.com/temporalio/temporal-cli/common"
+	"github.com/temporalio/cli/common"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/exp/slices"
 )
