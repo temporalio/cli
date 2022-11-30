@@ -37,18 +37,6 @@ test:
 	@printf $(COLOR) "Running unit tests..."
 	go test ./... -race
 
-##### Checks #####
-
-check: copyright-check
-
-copyright-check:
-	@printf $(COLOR) "Fix license header..."
-	@go run ./cmd/copyright/licensegen.go --verifyOnly
-
-copyright:
-	@printf $(COLOR) "Fix license header..."
-	@go run ./cmd/copyright/licensegen.go
-
 ##### Misc #####
 
 update-dependencies:
