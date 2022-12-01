@@ -11,14 +11,12 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"runtime/debug"
 	"strconv"
 	"testing"
 	"text/template"
 	"time"
 
 	"github.com/temporalio/temporal-cli/app"
-	"github.com/temporalio/temporal-cli/server"
 	sconfig "github.com/temporalio/temporal-cli/server/config"
 	"github.com/urfave/cli/v2"
 	"go.temporal.io/api/enums/v1"
@@ -134,11 +132,6 @@ func TestMTLSConfig(t *testing.T) {
 		t.Fatalf("Bad state: %v", resp.NamespaceInfo.State)
 	}
 
-	if !isUIPresent() {
-		t.Log("headless build detected, not testing temporal-ui mTLS")
-		return
-	}
-
 	// Pretend to be a browser to invoke the UI API
 	res, err := http.Get(fmt.Sprintf("http://localhost:%d/api/v1/namespaces?", webUIPort))
 	if err != nil {
@@ -152,14 +145,4 @@ func TestMTLSConfig(t *testing.T) {
 	if res.StatusCode != http.StatusOK {
 		t.Fatalf("Unexpected response %s, with body %s", res.Status, string(body))
 	}
-}
-
-func isUIPresent() bool {
-	info, _ := debug.ReadBuildInfo()
-	for _, dep := range info.Deps {
-		if dep.Path == server.UIServerModule {
-			return true
-		}
-	}
-	return false
 }

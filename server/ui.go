@@ -24,8 +24,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-//go:build !headless
-
 package server
 
 // This file should be the only one to import ui-server packages.
@@ -38,10 +36,6 @@ import (
 	uiconfig "github.com/temporalio/ui-server/v2/server/config"
 	uiserveroptions "github.com/temporalio/ui-server/v2/server/server_options"
 )
-
-// Name of the ui-server module, used in tests to verify that it is included/excluded
-// as a dependency when building with the `headless` tag enabled.
-const UIServerModule = "github.com/temporalio/ui-server/v2"
 
 func newUIOption(frontendAddr string, uiIP string, uiPort int, configDir string) (ServerOption, error) {
 	cfg, err := NewUIConfig(
