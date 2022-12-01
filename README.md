@@ -3,9 +3,9 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/temporalio/cli.svg)](https://pkg.go.dev/github.com/temporalio/cli)
 [![ci](https://github.com/temporalio/cli/actions/workflows/ci.yml/badge.svg)](https://github.com/temporalio/cli/actions/workflows/ci.yml)
 
-> ⚠️ This project is experimental and not suitable for production use. ⚠️
+> ⚠️ Temporal CLI's API is still a subject for changes. ⚠️
 
-Temporal CLI is a distribution of [Temporal](https://github.com/temporalio/temporal) that runs as a single process with zero runtime dependencies.
+The Temporal CLI is a command-line interface for running Temporal Server and interacting with Workflows, Activities, Namespaces, and other parts of Temporal.
 
 ## Getting Started
 
