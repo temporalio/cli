@@ -3,7 +3,7 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/temporalio/temporal-cli.svg)](https://pkg.go.dev/github.com/temporalio/temporal-cli)
 [![ci](https://github.com/temporalio/temporal-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/temporalio/temporal-cli/actions/workflows/ci.yml)
 
-> ⚠️ This project is experimental and not suitable for production use. ⚠️
+> ⚠️ Temporal CLI's API is still a subject for changes. ⚠️
 
 Temporal CLI is a single-process binary that integrates the Temporal Server and UI suitable for development purposes. It also includes commands helpful for operating on Namespaces, Workflows, and other Temporal entities. 
 
