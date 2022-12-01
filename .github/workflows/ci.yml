@@ -17,10 +17,10 @@ jobs:
       - name: Print build information
         run: "echo head_ref: ${{ github.head_ref }}, ref: ${{ github.ref }}, os: ${{ matrix.os }}"
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Set up Go
-        uses: actions/setup-go@v3.0.0
+        uses: actions/setup-go@v3
         with:
           go-version-file: "go.mod"
           check-latest: true
