@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/temporalio/temporal-cli/common"
+	"github.com/temporalio/cli/common"
 	"github.com/urfave/cli/v2"
 )
 

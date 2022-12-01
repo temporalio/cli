@@ -1,4 +1,4 @@
-module github.com/temporalio/temporal-cli
+module github.com/temporalio/cli
 
 go 1.19
 

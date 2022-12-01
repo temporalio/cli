@@ -1,7 +1,7 @@
 package namespace
 
 import (
-	"github.com/temporalio/temporal-cli/common"
+	"github.com/temporalio/cli/common"
 	"github.com/urfave/cli/v2"
 )
 

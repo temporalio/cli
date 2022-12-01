@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/temporalio/cli/client"
+	"github.com/temporalio/cli/common"
 	"github.com/temporalio/tctl-kit/pkg/color"
 	"github.com/temporalio/tctl-kit/pkg/output"
-	"github.com/temporalio/temporal-cli/client"
-	"github.com/temporalio/temporal-cli/common"
 	"github.com/urfave/cli/v2"
 	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/operatorservice/v1"

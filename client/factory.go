@@ -15,9 +15,9 @@ import (
 	"time"
 
 	"github.com/gogo/status"
-	"github.com/temporalio/temporal-cli/common"
-	"github.com/temporalio/temporal-cli/dataconverter"
-	"github.com/temporalio/temporal-cli/headersprovider"
+	"github.com/temporalio/cli/common"
+	"github.com/temporalio/cli/dataconverter"
+	"github.com/temporalio/cli/headersprovider"
 	"github.com/urfave/cli/v2"
 	"go.temporal.io/api/operatorservice/v1"
 	"go.temporal.io/api/serviceerror"
