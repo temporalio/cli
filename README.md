@@ -5,7 +5,7 @@
 
 > ⚠️ This project is experimental and not suitable for production use. ⚠️
 
-Temporal CLI is a single-process binary that integrates Temporal Server and UI suitable for development purposes. It also includes commands helpful for operating on Namespaces, Workflows, and other Temporal entities. 
+Temporal CLI is a single-process binary that integrates the Temporal Server and UI suitable for development purposes. It also includes commands helpful for operating on Namespaces, Workflows, and other Temporal entities. 
 
 ## Getting Started
 
