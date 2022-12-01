@@ -5,7 +5,7 @@
 
 > ⚠️ Temporal CLI's API is still a subject for changes. ⚠️
 
-Temporal CLI is a single-process binary that integrates the Temporal Server and UI suitable for development purposes. It also includes commands helpful for operating on Namespaces, Workflows, and other Temporal entities. 
+The Temporal CLI is a command-line interface for running Temporal Server and interacting with Workflows, Activities, Namespaces, and other parts of Temporal.
 
 ## Getting Started
 
