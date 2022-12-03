@@ -9,11 +9,17 @@ The Temporal CLI is a command-line interface for running Temporal Server and int
 
 ## Getting Started
 
-### Download and Start Temporal Server Locally
+### Installation
+
+#### Homebrew
+
+`brew install temporal`
+
+#### GitHub Releases
 
 Download and extract the [latest release](https://github.com/temporalio/cli/releases/latest) from [GitHub releases](https://github.com/temporalio/cli/releases).
 
-Start Temporal server:
+### Start Temporal server:
 
 ```bash
 temporal server start-dev
