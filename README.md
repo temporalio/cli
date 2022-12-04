@@ -30,7 +30,7 @@ At this point you should have a server running on `localhost:7233` and a web int
 Run individual commands to interact with the local Temporal server.
 
 ```bash
-temporal namespace list
+temporal operator namespace list
 temporal workflow list
 ```
 
@@ -52,7 +52,7 @@ By default, the "default" namespace is registered. To customize the pre-register
 temporal server start-dev --namespace foo --namespace bar
 ```
 
-Registering namespaces the old-fashioned way via `temporal namespace register foo` works too!
+Registering namespaces the old-fashioned way via `temporal operator namespace register foo` works too!
 
 ### Persistence Modes
 
