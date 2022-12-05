@@ -13,7 +13,7 @@ require (
 	github.com/stretchr/testify v1.8.1
 	github.com/temporalio/tctl-kit v0.0.0-20221128225502-a682971cf481
 	github.com/temporalio/ui-server/v2 v2.9.0
-	github.com/urfave/cli/v2 v2.23.5
+	github.com/urfave/cli/v2 v2.23.6
 	go.temporal.io/api v1.12.0
 	go.temporal.io/sdk v1.17.0
 	go.temporal.io/server v1.18.5
@@ -147,6 +147,3 @@ require (
 )
 
 replace github.com/grpc-ecosystem/grpc-gateway => github.com/temporalio/grpc-gateway v1.17.0
-
-// TODO replace urfave/cli until there is a release newer than v2.23.5
-replace github.com/urfave/cli/v2 => github.com/temporalio/urfave-cli/v2 v2.24.0

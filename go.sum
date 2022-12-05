@@ -464,8 +464,6 @@ github.com/temporalio/tctl-kit v0.0.0-20221128225502-a682971cf481 h1:zaikUeNmdLQ
 github.com/temporalio/tctl-kit v0.0.0-20221128225502-a682971cf481/go.mod h1:VSiXCSr9dY+0TSRondg2YF5HhQhrMDN63jaRaBHy1+k=
 github.com/temporalio/ui-server/v2 v2.9.0 h1:YPX2FOovAJ+YT/Lidn/VuWhVj0nGu+i3FgSS4a3+kE8=
 github.com/temporalio/ui-server/v2 v2.9.0/go.mod h1:Fd68+cECpTXc7oZh2oHUA5DQ1tIPa87mg9PPlJ8hPaA=
-github.com/temporalio/urfave-cli/v2 v2.24.0 h1:ap+gp98hFdus3gNC1d3hCY/LpFzIAupKXgWIig0FtcU=
-github.com/temporalio/urfave-cli/v2 v2.24.0/go.mod h1:GHupkWPMM0M/sj1a2b4wUrWBPzazNrIjouW6fmdJLxc=
 github.com/twmb/murmur3 v1.1.5/go.mod h1:Qq/R7NUyOfr65zD+6Q5IHKsJLwP7exErjN6lyyq3OSQ=
 github.com/twmb/murmur3 v1.1.6 h1:mqrRot1BRxm+Yct+vavLMou2/iJt0tNVTTC0QoIjaZg=
 github.com/twmb/murmur3 v1.1.6/go.mod h1:Qq/R7NUyOfr65zD+6Q5IHKsJLwP7exErjN6lyyq3OSQ=
@@ -479,6 +477,8 @@ github.com/uber/jaeger-client-go v2.22.1+incompatible/go.mod h1:WVhlPFC8FDjOFMMW
 github.com/uber/jaeger-client-go v2.30.0+incompatible h1:D6wyKGCecFaSRUpo8lCVbaOOb6ThwMmTEbhRwtKR97o=
 github.com/uber/jaeger-lib v2.4.1+incompatible h1:td4jdvLcExb4cBISKIpHuGoVXh+dVKhn2Um6rjCsSsg=
 github.com/uber/jaeger-lib v2.4.1+incompatible/go.mod h1:ComeNDZlWwrWnDv8aPp0Ba6+uUTzImX/AauajbLI56U=
+github.com/urfave/cli/v2 v2.23.6 h1:iWmtKD+prGo1nKUtLO0Wg4z9esfBM4rAV4QRLQiEmJ4=
+github.com/urfave/cli/v2 v2.23.6/go.mod h1:GHupkWPMM0M/sj1a2b4wUrWBPzazNrIjouW6fmdJLxc=
 github.com/valyala/bytebufferpool v1.0.0 h1:GqA5TC/0021Y/b9FG4Oi9Mr3q7XYx6KllzawFIhcdPw=
 github.com/valyala/bytebufferpool v1.0.0/go.mod h1:6bBcMArwyJ5K/AmCkWv1jt77kVWyCJ6HpOuEn7z0Csc=
 github.com/valyala/fasttemplate v1.2.1 h1:TVEnxayobAdVkhQfrfes2IzOB6o+z4roRkPF52WA1u4=
