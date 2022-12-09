@@ -6,6 +6,8 @@
 
 # Copyright (c) 2014 Jordan Harband
 
+# Copyright (c) 2022 Temporal Technologies Inc.
+
 # Permission is hereby granted, free of charge, to any person obtaining a copy of
 # this software and associated documentation files (the "Software"), to deal in
 # the Software without restriction, including without limitation the rights to
@@ -25,6 +27,8 @@
 
 { # this ensures the entire script is downloaded #
 
+TEMPORAL_BINARY="temporalite"
+
 nvm_has() {
   type "$1" > /dev/null 2>&1
 }
@@ -35,7 +39,7 @@ nvm_echo() {
 
 if [ -z "${BASH_VERSION}" ] || [ -n "${ZSH_VERSION}" ]; then
   # shellcheck disable=SC2016
-  nvm_echo >&2 'Error: the install instructions explicitly say to pipe the install script to `bash`; please follow them'
+  nvm_echo >&2 'Error: Pipe the install script to `bash`'
   exit 1
 fi
 
@@ -44,19 +48,15 @@ nvm_grep() {
 }
 
 nvm_default_install_dir() {
-  [ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm"
+  [ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.temporalio" || printf %s "${XDG_CONFIG_HOME}/temporalio"
 }
 
 nvm_install_dir() {
-  if [ -n "$NVM_DIR" ]; then
-    printf %s "${NVM_DIR}"
+  if [ -n "$TEMPORAL_DIR" ]; then
+    printf %s "${TEMPORAL_DIR}"
   else
     nvm_default_install_dir
   fi
-}
-
-nvm_latest_version() {
-  nvm_echo "v0.39.2"
 }
 
 nvm_profile_is_bash_or_zsh() {
@@ -74,46 +74,91 @@ nvm_profile_is_bash_or_zsh() {
 
 #
 # Outputs the location to NVM depending on:
-# * The availability of $NVM_SOURCE
+# * The availability of $TEMPORAL_SOURCE
 # * The method used ("script" or "git" in the script, defaults to "git")
-# NVM_SOURCE always takes precedence unless the method is "script-nvm-exec"
+# TEMPORAL_SOURCE always takes precedence unless the method is "script-nvm-exec"
 #
 nvm_source() {
-  local NVM_GITHUB_REPO
-  NVM_GITHUB_REPO="${NVM_INSTALL_GITHUB_REPO:-nvm-sh/nvm}"
-  local NVM_VERSION
-  NVM_VERSION="${NVM_INSTALL_VERSION:-$(nvm_latest_version)}"
-  local NVM_METHOD
-  NVM_METHOD="$1"
-  local NVM_SOURCE_URL
-  NVM_SOURCE_URL="$NVM_SOURCE"
-  if [ "_$NVM_METHOD" = "_script-nvm-exec" ]; then
-    NVM_SOURCE_URL="https://raw.githubusercontent.com/${NVM_GITHUB_REPO}/${NVM_VERSION}/nvm-exec"
-  elif [ "_$NVM_METHOD" = "_script-nvm-bash-completion" ]; then
-    NVM_SOURCE_URL="https://raw.githubusercontent.com/${NVM_GITHUB_REPO}/${NVM_VERSION}/bash_completion"
-  elif [ -z "$NVM_SOURCE_URL" ]; then
-    if [ "_$NVM_METHOD" = "_script" ]; then
-      NVM_SOURCE_URL="https://raw.githubusercontent.com/${NVM_GITHUB_REPO}/${NVM_VERSION}/nvm.sh"
-    elif [ "_$NVM_METHOD" = "_git" ] || [ -z "$NVM_METHOD" ]; then
-      NVM_SOURCE_URL="https://github.com/${NVM_GITHUB_REPO}.git"
-    else
-      nvm_echo >&2 "Unexpected value \"$NVM_METHOD\" for \$NVM_METHOD"
-      return 1
-    fi
+  local TEMPORAL_SOURCE_URL
+  TEMPORAL_SOURCE_URL="$TEMPORAL_SOURCE"
+  local TEMPORAL_ARCH
+  TEMPORAL_ARCH="$(temporal_arch)"
+  local TEMPORAL_PLATFORM
+  TEMPORAL_PLATFORM="$(temporal_os)"
+  TEMPORAL_SOURCE_META_URL="https://temporal.download/temporalite/latest?platform=${TEMPORAL_PLATFORM}&arch=${TEMPORAL_ARCH}"
+
+  if nvm_has "curl"; then
+      TEMPORAL_SOURCE_URL="$(curl --fail -s -q "$TEMPORAL_SOURCE_META_URL" | jq '.archiveUrl' | tr -d '"')"
+  elif nvm_has "wget"; then
+    # Emulate curl with wget
+    ARGS=$(nvm_echo "$TEMPORAL_SOURCE_META_URL" | command sed -e 's/--progress-bar /--progress=bar /' \
+                            -e 's/--compressed //' \
+                            -e 's/--fail //' \
+                            -e 's/-L //' \
+                            -e 's/-I /--server-response /' \
+                            -e 's/-s /-q /' \
+                            -e 's/-sS /-nv /' \
+                            -e 's/-o /-O /' \
+                            -e 's/-C - /-c /')
+    # shellcheck disable=SC2086
+    TEMPORAL_SOURCE_URL="$(eval wget $ARGS | jq '.archiveUrl' | tr -d '"')"
   fi
-  nvm_echo "$NVM_SOURCE_URL"
+
+  nvm_echo "$TEMPORAL_SOURCE_URL"
 }
 
+temporal_arch() {
+  local TEMPORAL_ARCH
+  TEMPORAL_ARCH="$(uname -m)"
+  case "$TEMPORAL_ARCH" in
+    "x86_64" | "amd64")
+      TEMPORAL_ARCH="amd64"
+    ;;
+    "arm64" | "aarch64")
+      TEMPORAL_ARCH="arm64"
+    ;;
+    *)
+      nvm_echo >&2 "Unsupported architecture $(uname -m)"
+      return 1
+    ;;
+  esac
+  nvm_echo "$TEMPORAL_ARCH"
+}
+
+temporal_os() {
+  local TEMPORAL_OS
+  TEMPORAL_OS="$(uname -s)"
+  case "$TEMPORAL_OS" in
+    "Linux")
+      TEMPORAL_OS="linux"
+    ;;
+    "Darwin")
+      TEMPORAL_OS="darwin"
+    ;;
+    *)
+      nvm_echo >&2 "Unsupported OS $(uname -s)"
+      return 1
+    ;;
+  esac
+  nvm_echo "$TEMPORAL_OS"
+}
+
+# 
+# Unarchives and deletes the archive
 #
-# Node.js version to install
-#
-nvm_node_version() {
-  nvm_echo "$NODE_VERSION"
+temporal_unzip_and_delete() {
+  local TEMPORAL_INSTALL_DIR
+  TEMPORAL_INSTALL_DIR="$1"
+  local TEMPORAL_FILENAME
+  TEMPORAL_FILENAME="$2"
+
+  tar -xzvf "$TEMPORAL_INSTALL_DIR/$TEMPORAL_FILENAME" -C "$TEMPORAL_INSTALL_DIR"
+  rm "$TEMPORAL_INSTALL_DIR/$TEMPORAL_FILENAME"
 }
 
 nvm_download() {
   if nvm_has "curl"; then
-    curl --fail --compressed -q "$@"
+    curl --fail --compressed --show-error -q "$@"
   elif nvm_has "wget"; then
     # Emulate curl with wget
     ARGS=$(nvm_echo "$@" | command sed -e 's/--progress-bar /--progress=bar /' \
@@ -130,141 +175,35 @@ nvm_download() {
   fi
 }
 
-install_nvm_from_git() {
-  local INSTALL_DIR
-  INSTALL_DIR="$(nvm_install_dir)"
-  local NVM_VERSION
-  NVM_VERSION="${NVM_INSTALL_VERSION:-$(nvm_latest_version)}"
-  if [ -n "${NVM_INSTALL_VERSION:-}" ]; then
-    # Check if version is an existing ref
-    if command git ls-remote "$(nvm_source "git")" "$NVM_VERSION" | nvm_grep -q "$NVM_VERSION" ; then
-      :
-    # Check if version is an existing changeset
-    elif ! nvm_download -o /dev/null "$(nvm_source "script-nvm-exec")"; then
-      nvm_echo >&2 "Failed to find '$NVM_VERSION' version."
-      exit 1
-    fi
-  fi
-
-  local fetch_error
-  if [ -d "$INSTALL_DIR/.git" ]; then
-    # Updating repo
-    nvm_echo "=> nvm is already installed in $INSTALL_DIR, trying to update using git"
-    command printf '\r=> '
-    fetch_error="Failed to update nvm with $NVM_VERSION, run 'git fetch' in $INSTALL_DIR yourself."
-  else
-    fetch_error="Failed to fetch origin with $NVM_VERSION. Please report this!"
-    nvm_echo "=> Downloading nvm from git to '$INSTALL_DIR'"
-    command printf '\r=> '
-    mkdir -p "${INSTALL_DIR}"
-    if [ "$(ls -A "${INSTALL_DIR}")" ]; then
-      # Initializing repo
-      command git init "${INSTALL_DIR}" || {
-        nvm_echo >&2 'Failed to initialize nvm repo. Please report this!'
-        exit 2
-      }
-      command git --git-dir="${INSTALL_DIR}/.git" remote add origin "$(nvm_source)" 2> /dev/null \
-        || command git --git-dir="${INSTALL_DIR}/.git" remote set-url origin "$(nvm_source)" || {
-        nvm_echo >&2 'Failed to add remote "origin" (or set the URL). Please report this!'
-        exit 2
-      }
-    else
-      # Cloning repo
-      command git clone "$(nvm_source)" --depth=1 "${INSTALL_DIR}" || {
-        nvm_echo >&2 'Failed to clone nvm repo. Please report this!'
-        exit 2
-      }
-    fi
-  fi
-  # Try to fetch tag
-  if command git --git-dir="$INSTALL_DIR"/.git --work-tree="$INSTALL_DIR" fetch origin tag "$NVM_VERSION" --depth=1 2>/dev/null; then
-    :
-  # Fetch given version
-  elif ! command git --git-dir="$INSTALL_DIR"/.git --work-tree="$INSTALL_DIR" fetch origin "$NVM_VERSION" --depth=1; then
-    nvm_echo >&2 "$fetch_error"
-    exit 1
-  fi
-  command git -c advice.detachedHead=false --git-dir="$INSTALL_DIR"/.git --work-tree="$INSTALL_DIR" checkout -f --quiet FETCH_HEAD || {
-    nvm_echo >&2 "Failed to checkout the given version $NVM_VERSION. Please report this!"
-    exit 2
-  }
-  if [ -n "$(command git --git-dir="$INSTALL_DIR"/.git --work-tree="$INSTALL_DIR" show-ref refs/heads/master)" ]; then
-    if command git --no-pager --git-dir="$INSTALL_DIR"/.git --work-tree="$INSTALL_DIR" branch --quiet 2>/dev/null; then
-      command git --no-pager --git-dir="$INSTALL_DIR"/.git --work-tree="$INSTALL_DIR" branch --quiet -D master >/dev/null 2>&1
-    else
-      nvm_echo >&2 "Your version of git is out of date. Please update it!"
-      command git --no-pager --git-dir="$INSTALL_DIR"/.git --work-tree="$INSTALL_DIR" branch -D master >/dev/null 2>&1
-    fi
-  fi
-
-  nvm_echo "=> Compressing and cleaning up git repository"
-  if ! command git --git-dir="$INSTALL_DIR"/.git --work-tree="$INSTALL_DIR" reflog expire --expire=now --all; then
-    nvm_echo >&2 "Your version of git is out of date. Please update it!"
-  fi
-  if ! command git --git-dir="$INSTALL_DIR"/.git --work-tree="$INSTALL_DIR" gc --auto --aggressive --prune=now ; then
-    nvm_echo >&2 "Your version of git is out of date. Please update it!"
-  fi
-  return
-}
-
-#
-# Automatically install Node.js
-#
-nvm_install_node() {
-  local NODE_VERSION_LOCAL
-  NODE_VERSION_LOCAL="$(nvm_node_version)"
-
-  if [ -z "$NODE_VERSION_LOCAL" ]; then
-    return 0
-  fi
-
-  nvm_echo "=> Installing Node.js version $NODE_VERSION_LOCAL"
-  nvm install "$NODE_VERSION_LOCAL"
-  local CURRENT_NVM_NODE
-
-  CURRENT_NVM_NODE="$(nvm_version current)"
-  if [ "$(nvm_version "$NODE_VERSION_LOCAL")" == "$CURRENT_NVM_NODE" ]; then
-    nvm_echo "=> Node.js version $NODE_VERSION_LOCAL has been successfully installed"
-  else
-    nvm_echo >&2 "Failed to install Node.js $NODE_VERSION_LOCAL"
-  fi
-}
-
 install_nvm_as_script() {
   local INSTALL_DIR
   INSTALL_DIR="$(nvm_install_dir)"
-  local NVM_SOURCE_LOCAL
-  NVM_SOURCE_LOCAL="$(nvm_source script)"
-  local NVM_EXEC_SOURCE
-  NVM_EXEC_SOURCE="$(nvm_source script-nvm-exec)"
-  local NVM_BASH_COMPLETION_SOURCE
-  NVM_BASH_COMPLETION_SOURCE="$(nvm_source script-nvm-bash-completion)"
+  local TEMPORAL_EXEC_SOURCE
+  TEMPORAL_EXEC_SOURCE="$(nvm_source)"
 
   # Downloading to $INSTALL_DIR
   mkdir -p "$INSTALL_DIR"
-  if [ -f "$INSTALL_DIR/nvm.sh" ]; then
-    nvm_echo "=> nvm is already installed in $INSTALL_DIR, trying to update the script"
+  if [ -f "$INSTALL_DIR/$TEMPORAL_BINARY" ]; then
+    nvm_echo "=> $TEMPORAL_BINARY is already installed in $INSTALL_DIR, trying to update the script"
   else
-    nvm_echo "=> Downloading nvm as script to '$INSTALL_DIR'"
+    nvm_echo "=> Downloading $TEMPORAL_BINARY to '$INSTALL_DIR'"
   fi
-  nvm_download -s "$NVM_SOURCE_LOCAL" -o "$INSTALL_DIR/nvm.sh" || {
-    nvm_echo >&2 "Failed to download '$NVM_SOURCE_LOCAL'"
-    return 1
-  } &
-  nvm_download -s "$NVM_EXEC_SOURCE" -o "$INSTALL_DIR/nvm-exec" || {
-    nvm_echo >&2 "Failed to download '$NVM_EXEC_SOURCE'"
+  nvm_download -s "$TEMPORAL_EXEC_SOURCE" -o "$INSTALL_DIR/temporal.tar.gz" || {
+    nvm_echo >&2 "Failed to download $TEMPORAL_EXEC_SOURCE"
     return 2
-  } &
-  nvm_download -s "$NVM_BASH_COMPLETION_SOURCE" -o "$INSTALL_DIR/bash_completion" || {
-    nvm_echo >&2 "Failed to download '$NVM_BASH_COMPLETION_SOURCE'"
-    return 2
-  } &
+  }
   for job in $(jobs -p | command sort)
   do
     wait "$job" || return $?
   done
-  chmod a+x "$INSTALL_DIR/nvm-exec" || {
-    nvm_echo >&2 "Failed to mark '$INSTALL_DIR/nvm-exec' as executable"
+
+  temporal_unzip_and_delete "$INSTALL_DIR" temporal.tar.gz || {
+    nvm_echo >&2 "Failed to unzip '$INSTALL_DIR/temporal.tar.gz'"
+    return 2
+  }
+
+  chmod a+x "$INSTALL_DIR/$TEMPORAL_BINARY" || {
+    nvm_echo >&2 "Failed to mark '$INSTALL_DIR/$TEMPORAL_BINARY' as executable"
     return 3
   }
 }
@@ -324,66 +263,17 @@ nvm_detect_profile() {
   fi
 }
 
-#
-# Check whether the user has any globally-installed npm modules in their system
-# Node, and warn them if so.
-#
-nvm_check_global_modules() {
-  local NPM_COMMAND
-  NPM_COMMAND="$(command -v npm 2>/dev/null)" || return 0
-  [ -n "${NVM_DIR}" ] && [ -z "${NPM_COMMAND%%"$NVM_DIR"/*}" ] && return 0
-
-  local NPM_VERSION
-  NPM_VERSION="$(npm --version)"
-  NPM_VERSION="${NPM_VERSION:--1}"
-  [ "${NPM_VERSION%%[!-0-9]*}" -gt 0 ] || return 0
-
-  local NPM_GLOBAL_MODULES
-  NPM_GLOBAL_MODULES="$(
-    npm list -g --depth=0 |
-    command sed -e '/ npm@/d' -e '/ (empty)$/d'
-  )"
-
-  local MODULE_COUNT
-  MODULE_COUNT="$(
-    command printf %s\\n "$NPM_GLOBAL_MODULES" |
-    command sed -ne '1!p' |                     # Remove the first line
-    wc -l | command tr -d ' '                   # Count entries
-  )"
-
-  if [ "${MODULE_COUNT}" != '0' ]; then
-    # shellcheck disable=SC2016
-    nvm_echo '=> You currently have modules installed globally with `npm`. These will no'
-    # shellcheck disable=SC2016
-    nvm_echo '=> longer be linked to the active version of Node when you install a new node'
-    # shellcheck disable=SC2016
-    nvm_echo '=> with `nvm`; and they may (depending on how you construct your `$PATH`)'
-    # shellcheck disable=SC2016
-    nvm_echo '=> override the binaries of modules installed with `nvm`:'
-    nvm_echo
-
-    command printf %s\\n "$NPM_GLOBAL_MODULES"
-    nvm_echo '=> If you wish to uninstall them at a later point (or re-install them under your'
-    # shellcheck disable=SC2016
-    nvm_echo '=> `nvm` Nodes), you can remove them from the system Node as follows:'
-    nvm_echo
-    nvm_echo '     $ nvm use system'
-    nvm_echo '     $ npm uninstall -g a_module'
-    nvm_echo
-  fi
-}
-
 nvm_do_install() {
-  if [ -n "${NVM_DIR-}" ] && ! [ -d "${NVM_DIR}" ]; then
-    if [ -e "${NVM_DIR}" ]; then
-      nvm_echo >&2 "File \"${NVM_DIR}\" has the same name as installation directory."
+  if [ -n "${TEMPORAL_DIR-}" ] && ! [ -d "${TEMPORAL_DIR}" ]; then
+    if [ -e "${TEMPORAL_DIR}" ]; then
+      nvm_echo >&2 "File \"${TEMPORAL_DIR}\" has the same name as installation directory."
       exit 1
     fi
 
-    if [ "${NVM_DIR}" = "$(nvm_default_install_dir)" ]; then
-      mkdir "${NVM_DIR}"
+    if [ "${TEMPORAL_DIR}" = "$(nvm_default_install_dir)" ]; then
+      mkdir "${TEMPORAL_DIR}"
     else
-      nvm_echo >&2 "You have \$NVM_DIR set to \"${NVM_DIR}\", but that directory does not exist. Check your profile files and environment."
+      nvm_echo >&2 "You have \$TEMPORAL_DIR set to \"${TEMPORAL_DIR}\", but that directory does not exist. Check your profile files and environment."
       exit 1
     fi
   fi
@@ -395,30 +285,13 @@ nvm_do_install() {
     nvm_echo >&2 'If so, run `xcode-select --install` and try again. If not, please report this!'
     exit 1
   fi
-  if [ -z "${METHOD}" ]; then
-    # Autodetect install method
-    if nvm_has git; then
-      install_nvm_from_git
-    elif nvm_has curl || nvm_has wget; then
-      install_nvm_as_script
-    else
-      nvm_echo >&2 'You need git, curl, or wget to install nvm'
-      exit 1
-    fi
-  elif [ "${METHOD}" = 'git' ]; then
-    if ! nvm_has git; then
-      nvm_echo >&2 "You need git to install nvm"
-      exit 1
-    fi
-    install_nvm_from_git
-  elif [ "${METHOD}" = 'script' ]; then
-    if ! nvm_has curl && ! nvm_has wget; then
-      nvm_echo >&2 "You need curl or wget to install nvm"
-      exit 1
-    fi
-    install_nvm_as_script
+
+  if nvm_has curl || nvm_has wget; then
+    install_nvm_as_script  || {
+    exit 1
+  }
   else
-    nvm_echo >&2 "The environment variable \$METHOD is set to \"${METHOD}\", which is not recognized as a valid installation method."
+    nvm_echo >&2 'You need curl or wget to install $TEMPORAL_BINARY'
     exit 1
   fi
 
@@ -429,10 +302,10 @@ nvm_do_install() {
   local PROFILE_INSTALL_DIR
   PROFILE_INSTALL_DIR="$(nvm_install_dir | command sed "s:^$HOME:\$HOME:")"
 
-  SOURCE_STR="\\nexport NVM_DIR=\"${PROFILE_INSTALL_DIR}\"\\n[ -s \"\$NVM_DIR/nvm.sh\" ] && \\. \"\$NVM_DIR/nvm.sh\"  # This loads nvm\\n"
+  SOURCE_STR="\\nexport TEMPORAL_DIR=\"${PROFILE_INSTALL_DIR}\"\\n[ -s \"\$TEMPORAL_DIR/$TEMPORAL_BINARY\" ] && \\. \"\$TEMPORAL_DIR/$TEMPORAL_BINARY\"  # This loads temporal\\n"
 
   # shellcheck disable=SC2016
-  COMPLETION_STR='[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion\n'
+  COMPLETION_STR='[ -s "$TEMPORAL_DIR/bash_completion" ] && \. "$TEMPORAL_DIR/bash_completion"  # This loads temporal bash_completion\n'
   BASH_OR_ZSH=false
 
   if [ -z "${NVM_PROFILE-}" ] ; then
@@ -450,14 +323,14 @@ nvm_do_install() {
     if nvm_profile_is_bash_or_zsh "${NVM_PROFILE-}"; then
       BASH_OR_ZSH=true
     fi
-    if ! command grep -qc '/nvm.sh' "$NVM_PROFILE"; then
-      nvm_echo "=> Appending nvm source string to $NVM_PROFILE"
+    if ! command grep -qc '/$TEMPORAL_BINARY' "$NVM_PROFILE"; then
+      nvm_echo "=> Appending $TEMPORAL_BINARY source string to $NVM_PROFILE"
       command printf "${SOURCE_STR}" >> "$NVM_PROFILE"
     else
-      nvm_echo "=> nvm source string already in ${NVM_PROFILE}"
+      nvm_echo "=> $TEMPORAL_BINARY source string already in ${NVM_PROFILE}"
     fi
     # shellcheck disable=SC2016
-    if ${BASH_OR_ZSH} && ! command grep -qc '$NVM_DIR/bash_completion' "$NVM_PROFILE"; then
+    if ${BASH_OR_ZSH} && ! command grep -qc '$TEMPORAL_DIR/bash_completion' "$NVM_PROFILE"; then
       nvm_echo "=> Appending bash_completion source string to $NVM_PROFILE"
       command printf "$COMPLETION_STR" >> "$NVM_PROFILE"
     else
@@ -471,15 +344,11 @@ nvm_do_install() {
 
   # Source nvm
   # shellcheck source=/dev/null
-  \. "$(nvm_install_dir)/nvm.sh"
-
-  nvm_check_global_modules
-
-  nvm_install_node
+  \. "$(nvm_install_dir)/$TEMPORAL_BINARY"
 
   nvm_reset
 
-  nvm_echo "=> Close and reopen your terminal to start using nvm or run the following to use it now:"
+  nvm_echo "=> Close and reopen your terminal to start using $TEMPORAL_BINARY or run the following to use it now:"
   command printf "${SOURCE_STR}"
   if ${BASH_OR_ZSH} ; then
     command printf "${COMPLETION_STR}"
@@ -491,12 +360,13 @@ nvm_do_install() {
 # during the execution of the install script
 #
 nvm_reset() {
-  unset -f nvm_has nvm_install_dir nvm_latest_version nvm_profile_is_bash_or_zsh \
-    nvm_source nvm_node_version nvm_download install_nvm_from_git nvm_install_node \
-    install_nvm_as_script nvm_try_profile nvm_detect_profile nvm_check_global_modules \
-    nvm_do_install nvm_reset nvm_default_install_dir nvm_grep
+  unset -f nvm_has nvm_install_dir nvm_profile_is_bash_or_zsh \
+    nvm_source nvm_download \
+    install_nvm_as_script nvm_try_profile nvm_detect_profile \
+    nvm_do_install nvm_reset nvm_default_install_dir nvm_grep \
+    temporal_arch temporal_os temporal_unzip_and_delete
 }
 
-[ "_$NVM_ENV" = "_testing" ] || nvm_do_install
+[ "_$TEMPORAL_ENV" = "_testing" ] || nvm_do_install
 
 } # this ensures the entire script is downloaded #
