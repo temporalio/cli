@@ -328,8 +328,6 @@ nvm_do_install() {
 
   SOURCE_STR="\\nexport TEMPORAL_DIR=\"${PROFILE_INSTALL_DIR}\"\\n[ -s \"\$TEMPORAL_DIR/$TEMPORAL_BINARY\" ] && \\. \"\$TEMPORAL_DIR/$TEMPORAL_BINARY\"  # This loads temporal\\n"
 
-  # shellcheck disable=SC2016
-  COMPLETION_STR='[ -s "$TEMPORAL_DIR/bash_completion" ] && \. "$TEMPORAL_DIR/bash_completion"  # This loads temporal bash_completion\n'
   BASH_OR_ZSH=false
 
   if [ -z "${NVM_PROFILE-}" ] ; then
@@ -353,17 +351,6 @@ nvm_do_install() {
     else
       nvm_echo "=> $TEMPORAL_BINARY source string already in ${NVM_PROFILE}"
     fi
-    # shellcheck disable=SC2016
-    if ${BASH_OR_ZSH} && ! command grep -qc '$TEMPORAL_DIR/bash_completion' "$NVM_PROFILE"; then
-      nvm_echo "=> Appending bash_completion source string to $NVM_PROFILE"
-      command printf "$COMPLETION_STR" >> "$NVM_PROFILE"
-    else
-      nvm_echo "=> bash_completion source string already in ${NVM_PROFILE}"
-    fi
-  fi
-  if ${BASH_OR_ZSH} && [ -z "${NVM_PROFILE-}" ] ; then
-    nvm_echo "=> Please also append the following lines to the if you are using bash/zsh shell:"
-    command printf "${COMPLETION_STR}"
   fi
 
   # Source temporal
@@ -374,9 +361,6 @@ nvm_do_install() {
 
   nvm_echo "=> Close and reopen your terminal to start using $TEMPORAL_BINARY or run the following to use it now:"
   command printf "${SOURCE_STR}"
-  if ${BASH_OR_ZSH} ; then
-    command printf "${COMPLETION_STR}"
-  fi
 }
 
 #
