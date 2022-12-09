@@ -194,6 +194,24 @@ temporal_fetch() {
   nvm_echo "$TEMPORAL_RESPONSE"
 }
 
+temporal_install_env() {
+  local TEMPORAL_DIR
+  TEMPORAL_DIR="$1"
+
+cat > "$(nvm_install_dir)/env" << EOL
+#!/bin/sh
+case ":\${PATH}:" in
+    *:"$(nvm_install_dir)":*)
+        ;;
+    *)
+        export PATH="$(nvm_install_dir):\$PATH"
+        ;;
+esac
+EOL
+
+  nvm_echo . "$(nvm_install_dir)/env"
+}
+
 install_nvm_as_script() {
   local INSTALL_DIR
   INSTALL_DIR="$(nvm_install_dir)"
@@ -326,7 +344,7 @@ nvm_do_install() {
   local PROFILE_INSTALL_DIR
   PROFILE_INSTALL_DIR="$(nvm_install_dir | command sed "s:^$HOME:\$HOME:")"
 
-  SOURCE_STR="\\nexport TEMPORAL_DIR=\"${PROFILE_INSTALL_DIR}\"\\n[ -s \"\$TEMPORAL_DIR/$TEMPORAL_BINARY\" ] && \\. \"\$TEMPORAL_DIR/$TEMPORAL_BINARY\"  # This loads temporal\\n"
+  SOURCE_STR="$(temporal_install_env)"
 
   BASH_OR_ZSH=false
 
@@ -345,9 +363,9 @@ nvm_do_install() {
     if nvm_profile_is_bash_or_zsh "${NVM_PROFILE-}"; then
       BASH_OR_ZSH=true
     fi
-    if ! command grep -qc '/$TEMPORAL_BINARY' "$NVM_PROFILE"; then
+    if ! command grep -qc '/.temporalio' "$NVM_PROFILE"; then
       nvm_echo "=> Appending $TEMPORAL_BINARY source string to $NVM_PROFILE"
-      command printf "${SOURCE_STR}" >> "$NVM_PROFILE"
+      command printf "${SOURCE_STR}\n" >> "$NVM_PROFILE"
     else
       nvm_echo "=> $TEMPORAL_BINARY source string already in ${NVM_PROFILE}"
     fi
@@ -355,7 +373,7 @@ nvm_do_install() {
 
   # Source temporal
   # shellcheck source=/dev/null
-  \. "$(nvm_install_dir)/$TEMPORAL_BINARY"
+  $SOURCE_STR
 
   nvm_reset
 
