@@ -27,8 +27,6 @@
 
 { # this ensures the entire script is downloaded #
 
-TEMPORAL_BINARY="temporalite"
-
 nvm_has() {
   type "$1" > /dev/null 2>&1
 }
@@ -73,12 +71,9 @@ nvm_profile_is_bash_or_zsh() {
 }
 
 #
-# Outputs the location to NVM depending on:
-# * The availability of $TEMPORAL_SOURCE
-# * The method used ("script" or "git" in the script, defaults to "git")
-# TEMPORAL_SOURCE always takes precedence unless the method is "script-nvm-exec"
+# Fetches archive meta data from the Temporal CDN
 #
-nvm_source() {
+temporal_fetch_meta() {
   local TEMPORAL_SOURCE_URL
   TEMPORAL_SOURCE_URL="$TEMPORAL_SOURCE"
   local TEMPORAL_ARCH
@@ -87,24 +82,23 @@ nvm_source() {
   TEMPORAL_PLATFORM="$(temporal_os)"
   TEMPORAL_SOURCE_META_URL="https://temporal.download/temporalite/latest?platform=${TEMPORAL_PLATFORM}&arch=${TEMPORAL_ARCH}"
 
-  if nvm_has "curl"; then
-      TEMPORAL_SOURCE_URL="$(curl --fail -s -q "$TEMPORAL_SOURCE_META_URL" | jq '.archiveUrl' | tr -d '"')"
-  elif nvm_has "wget"; then
-    # Emulate curl with wget
-    ARGS=$(nvm_echo "$TEMPORAL_SOURCE_META_URL" | command sed -e 's/--progress-bar /--progress=bar /' \
-                            -e 's/--compressed //' \
-                            -e 's/--fail //' \
-                            -e 's/-L //' \
-                            -e 's/-I /--server-response /' \
-                            -e 's/-s /-q /' \
-                            -e 's/-sS /-nv /' \
-                            -e 's/-o /-O /' \
-                            -e 's/-C - /-c /')
-    # shellcheck disable=SC2086
-    TEMPORAL_SOURCE_URL="$(eval wget $ARGS | jq '.archiveUrl' | tr -d '"')"
-  fi
+  TEMPORAL_SOURCE_URL="$(temporal_fetch "$TEMPORAL_SOURCE_META_URL")"
 
   nvm_echo "$TEMPORAL_SOURCE_URL"
+}
+
+temporal_archive_url() {
+  local TEMPORAL_ARCHIVE_URL
+  TEMPORAL_ARCHIVE_URL="$(temporal_fetch_meta | jq '.archiveUrl' | tr -d '"')"
+
+  nvm_echo "$TEMPORAL_ARCHIVE_URL"
+}
+
+temporal_binary_name() {
+  local TEMPORAL_FILENAME
+  TEMPORAL_FILENAME="$(temporal_fetch_meta | jq '.fileToExtract' | tr -d '"')"
+
+  nvm_echo "$TEMPORAL_FILENAME"
 }
 
 temporal_arch() {
@@ -175,11 +169,38 @@ nvm_download() {
   fi
 }
 
+temporal_fetch() {
+  local TEMPORAL_URL
+  TEMPORAL_URL="$1"
+  local TEMPORAL_RESPONSE
+
+  if nvm_has "curl"; then
+      TEMPORAL_RESPONSE="$(curl --fail -s -q "$TEMPORAL_URL")"
+  elif nvm_has "wget"; then
+    # Emulate curl with wget
+    ARGS=$(nvm_echo "$TEMPORAL_URL" | command sed -e 's/--progress-bar /--progress=bar /' \
+                            -e 's/--compressed //' \
+                            -e 's/--fail //' \
+                            -e 's/-L //' \
+                            -e 's/-I /--server-response /' \
+                            -e 's/-s /-q /' \
+                            -e 's/-sS /-nv /' \
+                            -e 's/-o /-O /' \
+                            -e 's/-C - /-c /')
+    # shellcheck disable=SC2086
+    TEMPORAL_RESPONSE="$(eval wget $ARGS)"
+  fi
+
+  nvm_echo "$TEMPORAL_RESPONSE"
+}
+
 install_nvm_as_script() {
   local INSTALL_DIR
   INSTALL_DIR="$(nvm_install_dir)"
   local TEMPORAL_EXEC_SOURCE
-  TEMPORAL_EXEC_SOURCE="$(nvm_source)"
+  TEMPORAL_EXEC_SOURCE="$(temporal_archive_url)"
+  local TEMPORAL_BINARY
+  TEMPORAL_BINARY="$(temporal_binary_name)"
 
   # Downloading to $INSTALL_DIR
   mkdir -p "$INSTALL_DIR"
@@ -264,6 +285,9 @@ nvm_detect_profile() {
 }
 
 nvm_do_install() {
+  local TEMPORAL_BINARY
+  TEMPORAL_BINARY="$(temporal_binary_name)"
+
   if [ -n "${TEMPORAL_DIR-}" ] && ! [ -d "${TEMPORAL_DIR}" ]; then
     if [ -e "${TEMPORAL_DIR}" ]; then
       nvm_echo >&2 "File \"${TEMPORAL_DIR}\" has the same name as installation directory."
@@ -342,7 +366,7 @@ nvm_do_install() {
     command printf "${COMPLETION_STR}"
   fi
 
-  # Source nvm
+  # Source temporal
   # shellcheck source=/dev/null
   \. "$(nvm_install_dir)/$TEMPORAL_BINARY"
 
@@ -361,10 +385,11 @@ nvm_do_install() {
 #
 nvm_reset() {
   unset -f nvm_has nvm_install_dir nvm_profile_is_bash_or_zsh \
-    nvm_source nvm_download \
+    nvm_download \
     install_nvm_as_script nvm_try_profile nvm_detect_profile \
     nvm_do_install nvm_reset nvm_default_install_dir nvm_grep \
-    temporal_arch temporal_os temporal_unzip_and_delete
+    temporal_arch temporal_archive_url temporal_os temporal_unzip_and_delete \
+    temporal_fetch temporal_binary_name
 }
 
 [ "_$TEMPORAL_ENV" = "_testing" ] || nvm_do_install
