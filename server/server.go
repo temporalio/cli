@@ -128,8 +128,13 @@ func NewServer(opts ...ServerOption) (*Server, error) {
 		serverOpts = append(serverOpts, c.UpstreamOptions...)
 	}
 
+	si, err := temporal.NewServer(serverOpts...)
+	if err != nil {
+		return nil, err
+	}
+
 	s := &Server{
-		internal:         temporal.NewServer(serverOpts...),
+		internal:         si,
 		ui:               c.UIServer,
 		frontendHostPort: cfg.PublicClient.HostPort,
 		config:           c,
