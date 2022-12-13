@@ -36,6 +36,7 @@ import (
 
 	"github.com/temporalio/cli/common"
 	sconfig "github.com/temporalio/cli/server/config"
+	uiconfig "github.com/temporalio/ui-server/v2/server/config"
 	"github.com/urfave/cli/v2"
 	"go.temporal.io/server/common/config"
 	"go.temporal.io/server/common/dynamicconfig"
@@ -95,6 +96,11 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 					Name:        common.FlagUIIP,
 					Usage:       `IPv4 address to bind the web UI to instead of localhost`,
 					DefaultText: "same as --ip (eg. 127.0.0.1)",
+				},
+				&cli.StringFlag{
+					Name:    common.FlagUICodecEndpoint,
+					Usage:   `UI Remote data converter HTTP endpoint`,
+					EnvVars: nil,
 				},
 				&cli.StringFlag{
 					Name:    common.FlagLogFormat,
@@ -166,11 +172,12 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 			},
 			Action: func(c *cli.Context) error {
 				var (
-					ip          = c.String(common.FlagIP)
-					serverPort  = c.Int(common.FlagPort)
-					metricsPort = c.Int(common.FlagMetricsPort)
-					uiPort      = serverPort + 1000
-					uiIP        = ip
+					ip              = c.String(common.FlagIP)
+					serverPort      = c.Int(common.FlagPort)
+					metricsPort     = c.Int(common.FlagMetricsPort)
+					uiPort          = serverPort + 1000
+					uiIP            = ip
+					uiCodecEndpoint = ""
 				)
 
 				if c.IsSet(common.FlagUIPort) {
@@ -179,6 +186,10 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 
 				if c.IsSet(common.FlagUIIP) {
 					uiIP = c.String(common.FlagUIIP)
+				}
+
+				if c.IsSet(common.FlagUICodecEndpoint) {
+					uiCodecEndpoint = c.String(common.FlagUICodecEndpoint)
 				}
 
 				pragmas, err := getPragmaMap(c.StringSlice(common.FlagPragma))
@@ -229,7 +240,19 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 
 				if !c.Bool(common.FlagHeadless) {
 					frontendAddr := fmt.Sprintf("%s:%d", ip, serverPort)
-					opt, err := newUIOption(frontendAddr, uiIP, uiPort, c.String(common.FlagConfig))
+
+					cfg := &uiconfig.Config{
+						Host:                uiIP,
+						Port:                uiPort,
+						TemporalGRPCAddress: frontendAddr,
+						EnableUI:            true,
+						Codec: uiconfig.Codec{
+							Endpoint: uiCodecEndpoint,
+						},
+					}
+
+					opt, err := newUIOption(cfg, c.String(common.FlagConfig))
+
 					if err != nil {
 						return err
 					}

@@ -28,10 +28,18 @@ package server
 
 import (
 	"testing"
+
+	uiconfig "github.com/temporalio/ui-server/v2/server/config"
 )
 
 func TestNewUIConfig(t *testing.T) {
-	cfg, err := NewUIConfig("localhost:7233", "localhost", 8233, "")
+	c := &uiconfig.Config{
+		Host:                "localhost",
+		Port:                8233,
+		TemporalGRPCAddress: "localhost:7233",
+		EnableUI:            true,
+	}
+	cfg, err := MergeWithConfigFile(c, "")
 	if err != nil {
 		t.Errorf("cannot create config: %s", err)
 		return
@@ -42,7 +50,13 @@ func TestNewUIConfig(t *testing.T) {
 }
 
 func TestNewUIConfigWithMissingConfigFile(t *testing.T) {
-	cfg, err := NewUIConfig("localhost:7233", "localhost", 8233, "wibble")
+	c := &uiconfig.Config{
+		Host:                "localhost",
+		Port:                8233,
+		TemporalGRPCAddress: "localhost:7233",
+		EnableUI:            true,
+	}
+	cfg, err := MergeWithConfigFile(c, "wibble")
 	if err != nil {
 		t.Errorf("cannot create config: %s", err)
 		return
@@ -53,7 +67,13 @@ func TestNewUIConfigWithMissingConfigFile(t *testing.T) {
 }
 
 func TestNewUIConfigWithPresentConfigFile(t *testing.T) {
-	cfg, err := NewUIConfig("localhost:7233", "localhost", 8233, "testdata")
+	c := &uiconfig.Config{
+		Host:                "localhost",
+		Port:                8233,
+		TemporalGRPCAddress: "localhost:7233",
+		EnableUI:            true,
+	}
+	cfg, err := MergeWithConfigFile(c, "testdata")
 	if err != nil {
 		t.Errorf("cannot create config: %s", err)
 		return
