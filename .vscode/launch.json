@@ -9,11 +9,14 @@
       "program": "${workspaceFolder}/cmd/temporal",
       "cwd": "${workspaceFolder}",
       "args": [
-        "server",
-        "start-dev",
-        "--namespace",
+        "env",
+        "set",
+        "default.namespace",
         "default",
-      ]
+      ],
+      "env": {
+        "CGO_ENABLED": "0",
+      }
     },
     {
       "name": "workflow list",
