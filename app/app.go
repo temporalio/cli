@@ -10,6 +10,7 @@ import (
 	"github.com/temporalio/cli/client"
 	"github.com/temporalio/cli/cluster"
 	"github.com/temporalio/cli/common"
+	"github.com/temporalio/cli/completion"
 	"github.com/temporalio/cli/env"
 	"github.com/temporalio/cli/headers"
 	"github.com/temporalio/cli/namespace"
@@ -32,11 +33,12 @@ func BuildApp(version string) *cli.App {
 	app := cli.NewApp()
 	app.Name = "temporal"
 	app.Usage = "Temporal command-line interface and development server"
-	app.Suggest = true
 	if version == "" {
 		version = headers.CLIVersion
 	}
 	app.Version = fmt.Sprintf("%s (server %s) (ui %s)", version, sheaders.ServerVersion, uiversion.UIVersion)
+	app.Suggest = true
+	app.EnableBashCompletion = true
 	app.DisableSliceFlagSeparator = true
 	app.Commands = commands(defaultCfg)
 	app.Before = configureCLI
@@ -79,12 +81,17 @@ func HandleError(c *cli.Context, err error) {
 }
 
 func commands(defaultCfg *sconfig.Config) []*cli.Command {
-	return append([]*cli.Command{
+	return append(append(serverCommands(defaultCfg), common.WithFlags(clientCommands, common.SharedFlags)...), completionCommands...)
+}
+
+func serverCommands(defaultCfg *sconfig.Config) []*cli.Command {
+	return []*cli.Command{
 		{
 			Name:        "server",
 			Usage:       "Commands for managing Temporal server",
 			Subcommands: server.NewServerCommands(defaultCfg),
-		}}, common.WithFlags(clientCommands, common.SharedFlags)...)
+		},
+	}
 }
 
 var clientCommands = []*cli.Command{
@@ -139,5 +146,13 @@ var clientCommands = []*cli.Command{
 		Name:        "env",
 		Usage:       "Manage client environment configurations",
 		Subcommands: env.NewEnvCommands(),
+	},
+}
+
+var completionCommands = []*cli.Command{
+	{
+		Name:        "completion",
+		Usage:       "Output shell completion code for the specified shell (zsh, bash)",
+		Subcommands: completion.NewCompletionCommands(),
 	},
 }
