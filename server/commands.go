@@ -61,7 +61,7 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 				&cli.StringSliceFlag{
 					Name:    common.FlagNamespace,
 					Aliases: common.FlagNamespaceAlias,
-					Usage:   "Specify namespaces that should be pre-created (namespace 'default' is always created)",
+					Usage:   `Specify namespaces that should be pre-created (namespace "default" is always created)`,
 					EnvVars: nil,
 					Value:   nil,
 				},
@@ -73,8 +73,9 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 				},
 				&cli.IntFlag{
 					Name:  common.FlagMetricsPort,
-					Usage: "Port for the metrics listener",
+					Usage: "Port for /metrics",
 					Value: sconfig.DefaultMetricsPort,
+					DefaultText: "disabled",
 				},
 				&cli.IntFlag{
 					Name:        common.FlagUIPort,
@@ -94,23 +95,23 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 				&cli.StringFlag{
 					Name:        common.FlagUIIP,
 					Usage:       `IPv4 address to bind the Web UI to`,
-					DefaultText: "same as --ip (eg. 127.0.0.1)",
+					DefaultText: "same as --ip",
 				},
 				&cli.StringFlag{
 					Name:    common.FlagLogFormat,
-					Usage:   `Set the log formatting (allowed: ["json" "pretty"])`,
+					Usage:   `Set the log formatting. Options: ["json", "pretty"].`,
 					EnvVars: nil,
 					Value:   "json",
 				},
 				&cli.StringFlag{
 					Name:    common.FlagLogLevel,
-					Usage:   `Set the log level (allowed: ["debug" "info" "warn" "error" "fatal"])`,
+					Usage:   `Set the log level. Options: ["debug" "info" "warn" "error" "fatal"].`,
 					EnvVars: nil,
 					Value:   "info",
 				},
 				&cli.StringSliceFlag{
 					Name:    common.FlagPragma,
-					Usage:   fmt.Sprintf("Specify sqlite pragma statements in pragma=value format (allowed: %q)", sconfig.GetAllowedPragmas()),
+					Usage:   fmt.Sprintf("Specify sqlite pragma statements in pragma=value format. Pragma options: %q.", sconfig.GetAllowedPragmas()),
 					EnvVars: nil,
 					Value:   nil,
 				},
