@@ -149,3 +149,5 @@ require (
 )
 
 replace github.com/grpc-ecosystem/grpc-gateway => github.com/temporalio/grpc-gateway v1.17.0
+
+replace github.com/temporalio/ui-server/v2 v2.9.1 => github.com/temporalio/ui-server/v2 v2.9.2-0.20230105175408-7b947c15ce48

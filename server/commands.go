@@ -98,6 +98,11 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 					DefaultText: "same as --ip (eg. 127.0.0.1)",
 				},
 				&cli.StringFlag{
+					Name:    common.FlagUIAssetPath,
+					Usage:   `UI Custom Assets path`,
+					EnvVars: nil,
+				},
+				&cli.StringFlag{
 					Name:    common.FlagUICodecEndpoint,
 					Usage:   `UI Remote data converter HTTP endpoint`,
 					EnvVars: nil,
@@ -178,6 +183,7 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 					uiPort          = serverPort + 1000
 					uiIP            = ip
 					uiCodecEndpoint = ""
+					uiAssetPath     = ""
 				)
 
 				if c.IsSet(common.FlagUIPort) {
@@ -186,6 +192,10 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 
 				if c.IsSet(common.FlagUIIP) {
 					uiIP = c.String(common.FlagUIIP)
+				}
+
+				if c.IsSet(common.FlagUIAssetPath) {
+					uiAssetPath = c.String(common.FlagUIAssetPath)
 				}
 
 				if c.IsSet(common.FlagUICodecEndpoint) {
@@ -246,6 +256,7 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 						Port:                uiPort,
 						TemporalGRPCAddress: frontendAddr,
 						EnableUI:            true,
+						UIAssetPath:         uiAssetPath,
 						Codec: uiconfig.Codec{
 							Endpoint: uiCodecEndpoint,
 						},

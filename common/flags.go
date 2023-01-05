@@ -116,6 +116,7 @@ var (
 	FlagTLSServerName              = "tls-server-name"
 	FlagType                       = "type"
 	FlagUIIP                       = "ui-ip"
+	FlagUIAssetPath                = "ui-asset-path"
 	FlagUICodecEndpoint            = "ui-codec-endpoint"
 	FlagUIPort                     = "ui-port"
 	FlagUnpause                    = "unpause"
