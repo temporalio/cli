@@ -37,11 +37,9 @@ import (
 	uiserveroptions "github.com/temporalio/ui-server/v2/server/server_options"
 )
 
-func newUIOption(frontendAddr string, uiIP string, uiPort int, configDir string) (ServerOption, error) {
-	cfg, err := NewUIConfig(
-		frontendAddr,
-		uiIP,
-		uiPort,
+func newUIOption(c *uiconfig.Config, configDir string) (ServerOption, error) {
+	cfg, err := MergeWithConfigFile(
+		c,
 		configDir,
 	)
 	if err != nil {
@@ -50,11 +48,7 @@ func newUIOption(frontendAddr string, uiIP string, uiPort int, configDir string)
 	return WithUI(uiserver.NewServer(uiserveroptions.WithConfigProvider(cfg))), nil
 }
 
-func NewUIConfig(frontendAddr string, uiIP string, uiPort int, configDir string) (*uiconfig.Config, error) {
-	cfg := &uiconfig.Config{
-		Host: uiIP,
-		Port: uiPort,
-	}
+func MergeWithConfigFile(cfg *uiconfig.Config, configDir string) (*uiconfig.Config, error) {
 	if configDir != "" {
 		if err := provider.Load(configDir, cfg, "temporal-ui"); err != nil {
 			if !strings.HasPrefix(err.Error(), "no config files found") {
@@ -62,7 +56,6 @@ func NewUIConfig(frontendAddr string, uiIP string, uiPort int, configDir string)
 			}
 		}
 	}
-	cfg.TemporalGRPCAddress = frontendAddr
-	cfg.EnableUI = true
+
 	return cfg, nil
 }
