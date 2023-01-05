@@ -9,10 +9,8 @@
       "program": "${workspaceFolder}/cmd/temporal",
       "cwd": "${workspaceFolder}",
       "args": [
-        "env",
-        "set",
-        "default.namespace",
-        "default",
+        "server",
+        "start-dev",
       ],
       "env": {
         "CGO_ENABLED": "0",
