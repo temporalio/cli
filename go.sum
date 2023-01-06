@@ -764,8 +764,8 @@ github.com/temporalio/tchannel-go v1.22.1-0.20220818200552-1be8d8cffa5b h1:Fs3Ld
 github.com/temporalio/tchannel-go v1.22.1-0.20220818200552-1be8d8cffa5b/go.mod h1:c+V9Z/ZgkzAdyGvHrvC5AsXgN+M9Qwey04cBdKYzV7U=
 github.com/temporalio/tctl-kit v0.0.0-20221128225502-a682971cf481 h1:zaikUeNmdLQEsUXTyUAy65P2IzKFlt7EAEflQQF2ZUA=
 github.com/temporalio/tctl-kit v0.0.0-20221128225502-a682971cf481/go.mod h1:VSiXCSr9dY+0TSRondg2YF5HhQhrMDN63jaRaBHy1+k=
-github.com/temporalio/ui-server/v2 v2.9.2-0.20230105175408-7b947c15ce48 h1:gZV/uAqsyGkjCXysBokalSN2xOQUCqE3wH/U6jCUU3s=
-github.com/temporalio/ui-server/v2 v2.9.2-0.20230105175408-7b947c15ce48/go.mod h1:Fd68+cECpTXc7oZh2oHUA5DQ1tIPa87mg9PPlJ8hPaA=
+github.com/temporalio/ui-server/v2 v2.9.2-0.20230106074906-529addb76f82 h1:Ks4uepFdm3I/G6z879Dna3E3v9OwkDfE38bKI5BN2pw=
+github.com/temporalio/ui-server/v2 v2.9.2-0.20230106074906-529addb76f82/go.mod h1:Fd68+cECpTXc7oZh2oHUA5DQ1tIPa87mg9PPlJ8hPaA=
 github.com/twmb/murmur3 v1.1.5/go.mod h1:Qq/R7NUyOfr65zD+6Q5IHKsJLwP7exErjN6lyyq3OSQ=
 github.com/twmb/murmur3 v1.1.6 h1:mqrRot1BRxm+Yct+vavLMou2/iJt0tNVTTC0QoIjaZg=
 github.com/twmb/murmur3 v1.1.6/go.mod h1:Qq/R7NUyOfr65zD+6Q5IHKsJLwP7exErjN6lyyq3OSQ=
