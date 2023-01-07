@@ -3,7 +3,6 @@ package app_test
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -320,10 +319,62 @@ func assertServerHealth(t *testing.T, ctx context.Context, opts client.Options) 
 	}
 }
 
-func TestCreateDataDirectory(t *testing.T) {
+func TestCreateDataDirectory_MissingDirectory(t *testing.T) {
+	temporalCLI := app.BuildApp("")
+	// Don't call os.Exit
+	temporalCLI.ExitErrHandler = func(_ *cli.Context, _ error) {}
+
+	portProvider := sconfig.NewPortProvider()
+	var (
+		port = portProvider.MustGetFreePort()
+	)
+	portProvider.Close()
+
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
+	testUserHome := setupConfigOptions(t)
+
+	customDBPath := filepath.Join(testUserHome, "foo", "bar", "baz.db")
+	args, _ := newServerAndClientOpts(
+		port, "-f", customDBPath,
+	)
+	err := temporalCLI.RunContext(ctx, args)
+	if errCoder, ok := err.(cli.ExitCoder); !ok || errCoder.ExitCode() != 0 {
+		t.Errorf("expected no error (error code = 0).got %q", err)
+	}
+}
+
+func TestCreateDataDirectory_ExistingDirectory(t *testing.T) {
+	temporalCLI := app.BuildApp("")
+	// Don't call os.Exit
+	temporalCLI.ExitErrHandler = func(_ *cli.Context, _ error) {}
+
+	portProvider := sconfig.NewPortProvider()
+	var (
+		port = portProvider.MustGetFreePort()
+	)
+	portProvider.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	testUserHome := setupConfigOptions(t)
+
+	args, clientOpts := newServerAndClientOpts(
+		port, "-f", filepath.Join(testUserHome, "foo.db"),
+	)
+
+	go func() {
+		if err := temporalCLI.RunContext(ctx, args); err != nil {
+			fmt.Println("Server closed with error:", err)
+		}
+	}()
+
+	assertServerHealth(t, ctx, clientOpts)
+}
+
+func setupConfigOptions(t *testing.T) string {
 	testUserHome := filepath.Join(os.TempDir(), "temporal_test", t.Name())
 	t.Cleanup(func() {
 		if err := os.RemoveAll(testUserHome); err != nil {
@@ -340,48 +391,5 @@ func TestCreateDataDirectory(t *testing.T) {
 		t.Fatalf("expected config dir %q to be inside user home directory %q", configDir, testUserHome)
 	}
 
-	temporalCLI := app.BuildApp("")
-	// Don't call os.Exit
-	temporalCLI.ExitErrHandler = func(_ *cli.Context, _ error) {}
-
-	portProvider := sconfig.NewPortProvider()
-	var (
-		port1 = portProvider.MustGetFreePort()
-		port2 = portProvider.MustGetFreePort()
-	)
-	portProvider.Close()
-
-	t.Run("custom db path -- missing directory", func(t *testing.T) {
-		customDBPath := filepath.Join(testUserHome, "foo", "bar", "baz.db")
-		args, _ := newServerAndClientOpts(
-			port1, "-f", customDBPath,
-		)
-		if err := temporalCLI.RunContext(ctx, args); err != nil {
-			if !errors.Is(err, os.ErrNotExist) {
-				t.Errorf("expected error %q, got %q", os.ErrNotExist, err)
-			}
-			if !strings.Contains(err.Error(), filepath.Dir(customDBPath)) {
-				t.Errorf("expected error %q to contain string %q", err, filepath.Dir(customDBPath))
-			}
-		} else {
-			t.Error("no error when directory missing")
-		}
-	})
-
-	t.Run("custom db path -- existing directory", func(t *testing.T) {
-		ctx, cancel := context.WithCancel(ctx)
-		defer cancel()
-
-		args, clientOpts := newServerAndClientOpts(
-			port2, "-f", filepath.Join(testUserHome, "foo.db"),
-		)
-
-		go func() {
-			if err := temporalCLI.RunContext(ctx, args); err != nil {
-				fmt.Println("Server closed with error:", err)
-			}
-		}()
-
-		assertServerHealth(t, ctx, clientOpts)
-	})
+	return testUserHome
 }
