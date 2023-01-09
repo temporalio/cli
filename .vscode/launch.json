@@ -11,9 +11,10 @@
       "args": [
         "server",
         "start-dev",
-        "--namespace",
-        "default",
-      ]
+      ],
+      "env": {
+        "CGO_ENABLED": "0",
+      }
     },
     {
       "name": "workflow list",
