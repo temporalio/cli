@@ -122,12 +122,12 @@ func main() {
 	//close and remove big file
 	readFile.Close()
 
-	//e := os.Remove("cli.md")
-	//fatal_check(e)
+	e := os.Remove("cli.md")
+	fatal_check(e)
 }
 
 
-
+// I got sick of putting these code blocks everywhere, so now they're functions.
 func fatal_check(e error) {
 	if e != nil {
 		log.Fatal(e)
