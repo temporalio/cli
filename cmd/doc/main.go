@@ -29,7 +29,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"time"
+	"strings"
 
 	"github.com/temporalio/cli/app"
 )
@@ -61,20 +61,19 @@ func main() {
 
 
 	// track header for file and folder creation
-	//var header string
-	//var path string
+	var header string
+
 	// read line
 	for scanner.Scan() {
 		line := scanner.Text()
-		fmt.Println(line)
-		time.Sleep(2 * time.Millisecond)
-
-		/*// directory creation
-		if strings.HasPrefix(line, "##") {
-			header = strings.TrimSpace(line[1:])
-			path = fmt.Sprintf("/docs/", header)
+		
+		// directory creation
+		if strings.HasPrefix(line, "## ") {
+			header = strings.TrimSpace(line[2:])
+			path = "/docs/" + header
 			
-			error_dir := os.Mkdir("path", 0750)
+			fmt.Println(path)
+			/*error_dir := os.Mkdir("path", 0750)
 
 			// error check
 			if error_dir != nil {
@@ -134,12 +133,6 @@ func main() {
 	if err != nil {
 		log.Fatal(e)
 	}
+}
 
-
-
-
-
-
-
-	}
-
+}
