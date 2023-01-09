@@ -325,9 +325,7 @@ func TestCreateDataDirectory_MissingDirectory(t *testing.T) {
 	temporalCLI.ExitErrHandler = func(_ *cli.Context, _ error) {}
 
 	portProvider := sconfig.NewPortProvider()
-	var (
-		port = portProvider.MustGetFreePort()
-	)
+	port := portProvider.MustGetFreePort()
 	portProvider.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
