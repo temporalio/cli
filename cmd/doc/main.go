@@ -29,7 +29,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
+	"time"
 
 	"github.com/temporalio/cli/app"
 )
@@ -38,31 +38,38 @@ import (
 // todo: create separate files and folders.
 // todo: elaborate on each file
 func main() {
+	// build app and convert to Markdown
 	doc, err := app.BuildApp("").ToMarkdown()
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	appFile, err := os.Open(doc)
+	path := "cli.md"
+	err = os.WriteFile(path, []byte(doc), 0644)
 	if err != nil {
 		fmt.Println(err)
-		return
 	}
 
-	defer appFile.Close()
+	// open file for scanner
+	readFile, err := os.Open(path)
+    if err != nil {
+        fmt.Println(err)
+    }
 
 	// create scanner
-	scanner := bufio.NewScanner(appFile)
+	scanner := bufio.NewScanner(readFile)
+	scanner.Split(bufio.ScanLines)
+
 
 	// track header for file and folder creation
-	var header string
-	var path string
-
+	//var header string
+	//var path string
 	// read line
 	for scanner.Scan() {
 		line := scanner.Text()
+		fmt.Println(line)
+		time.Sleep(2 * time.Millisecond)
 
-		// directory creation
+		/*// directory creation
 		if strings.HasPrefix(line, "##") {
 			header = strings.TrimSpace(line[1:])
 			path = fmt.Sprintf("/docs/", header)
@@ -116,19 +123,23 @@ func main() {
 
 		} else {
 
-		}
+		}*/
+	}
+
+
+	//close and remove big file
+	readFile.Close()
+
+	e := os.Remove("cli.md")
+	if err != nil {
+		log.Fatal(e)
 	}
 
 
 
 
 
-	// all other levels go in that directory
 
 
+	}
 
-
-
-
-
-}
