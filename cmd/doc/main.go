@@ -40,20 +40,15 @@ import (
 func main() {
 	// build app and convert to Markdown
 	doc, err := app.BuildApp("").ToMarkdown()
-	if err != nil {
-		log.Fatal(err)
-	}
+	fatal_check(err)
+
 	path := "cli.md"
 	err = os.WriteFile(path, []byte(doc), 0644)
-	if err != nil {
-		fmt.Println(err)
-	}
+	print_check(err)
 
 	// open file for scanner
 	readFile, err := os.Open(path)
-    if err != nil {
-        fmt.Println(err)
-    }
+    print_check(err)
 
 	// create scanner
 	scanner := bufio.NewScanner(readFile)
@@ -70,17 +65,15 @@ func main() {
 		// directory creation
 		if strings.HasPrefix(line, "## ") {
 			header = strings.TrimSpace(line[2:])
-			path = "/docs/" + header
+			path_docs := "/docs/" + header
 			
-			fmt.Println(path)
-			/*error_dir := os.Mkdir("path", 0750)
+			fmt.Println(path_docs)
+			
+			//err := os.MkdirAll(path_docs, os.ModePerm)
+			//print_check(err)
+			
 
-			// error check
-			if error_dir != nil {
-				log.Fatal(error_dir)
-			}
-
-			// create index file here
+			/*// create index file here
 			headerFile, err := os.Create(header + ".md")
 
 			// error check
@@ -119,20 +112,31 @@ func main() {
 				}
 			}
 			defer headerFile.Close()
-
-		} else {
-
-		}*/
+*/
+		}  else {
+			continue
+		}
 	}
 
 
 	//close and remove big file
 	readFile.Close()
 
-	e := os.Remove("cli.md")
-	if err != nil {
-		log.Fatal(e)
-	}
+	//e := os.Remove("cli.md")
+	//fatal_check(e)
 }
 
+
+
+func fatal_check(e error) {
+	if e != nil {
+		log.Fatal(e)
+	}
+
+}
+
+func print_check(e error) {
+	if e != nil {
+		log.Println(e)
+	}
 }
