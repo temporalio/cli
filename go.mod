@@ -22,7 +22,10 @@ require (
 	google.golang.org/grpc v1.51.0
 )
 
-require cloud.google.com/go/compute/metadata v0.2.1 // indirect
+require (
+	cloud.google.com/go/compute/metadata v0.2.1 // indirect
+	github.com/gomarkdown/markdown v0.0.0-20221013030248-663e2500819c // indirect
+)
 
 require (
 	cloud.google.com/go v0.105.0 // indirect

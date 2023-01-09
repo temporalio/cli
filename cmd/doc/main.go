@@ -25,21 +25,110 @@
 package main
 
 import (
+	"bufio"
+	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/temporalio/cli/app"
 )
 
+// currently writes to one big file.
+// todo: create separate files and folders.
+// todo: elaborate on each file
 func main() {
 	doc, err := app.BuildApp("").ToMarkdown()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	path := "cli.md"
-	err = os.WriteFile(path, []byte(doc), 0644)
+	appFile, err := os.Open(doc)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
+		return
 	}
+
+	defer appFile.Close()
+
+	// create scanner
+	scanner := bufio.NewScanner(appFile)
+
+	// track header for file and folder creation
+	var header string
+	var path string
+
+	// read line
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		// directory creation
+		if strings.HasPrefix(line, "##") {
+			header = strings.TrimSpace(line[1:])
+			path = fmt.Sprintf("/docs/", header)
+			
+			error_dir := os.Mkdir("path", 0750)
+
+			// error check
+			if error_dir != nil {
+				log.Fatal(error_dir)
+			}
+
+			// create index file here
+			headerFile, err := os.Create(header + ".md")
+
+			// error check
+			if err != nil {
+				log.Fatal(err)
+			}
+			
+			// index file creation
+			for (!strings.HasPrefix(line, "**")) {
+				_, err := headerFile.WriteString(line + "\n")
+				if err != nil {
+					fmt.Println(err)
+					return
+				}
+			}
+			defer headerFile.Close()
+
+
+		// create files within directory
+		// TODO: special case for operator commands
+		} else if strings.HasPrefix(line, "###") {
+			header = strings.TrimSpace(line[1:])
+			headerFile, err := os.Create(header + ".md")
+
+			// error check
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			// file creation
+			for (!strings.HasPrefix(line, "**")) {
+				_, err := headerFile.WriteString(line + "\n")
+				if err != nil {
+					fmt.Println(err)
+					return
+				}
+			}
+			defer headerFile.Close()
+
+		} else {
+
+		}
+	}
+
+
+
+
+
+	// all other levels go in that directory
+
+
+
+
+
+
+
 }
