@@ -23,10 +23,12 @@ Env name to read the client environment variables from (default: default)
 **--grpc-meta**
 gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
 
-**--namespace, -n**
+**--namespace**
+Alias: ** -n**
 Temporal workflow namespace (default: default)
 
-**--run-id, -r**
+**--run-id**
+Alias: ** -r**
 Run Id
 
 **--tls-ca-path**
@@ -44,6 +46,7 @@ Path to private key
 **--tls-server-name**
 Override for target server name
 
-**--workflow-id, -w**
+**--workflow-id**
+Alias: ** -w**
 Workflow Id
 

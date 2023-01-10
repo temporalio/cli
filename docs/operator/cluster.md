@@ -27,7 +27,8 @@ Env name to read the client environment variables from (default: default)
 **--grpc-meta**
 gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
 
-**--namespace, -n**
+**--namespace**
+Alias: ** -n**
 Temporal workflow namespace (default: default)
 
 **--tls-ca-path**
@@ -73,10 +74,12 @@ customize fields to print. Set to 'long' to automatically print more of main fie
 **--grpc-meta**
 gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
 
-**--namespace, -n**
+**--namespace**
+Alias: ** -n**
 Temporal workflow namespace (default: default)
 
-**--output, -o**
+**--output**
+Alias: ** -o**
 format output as: table, json, card. (default: table)
 
 **--tls-ca-path**
@@ -122,10 +125,12 @@ customize fields to print. Set to 'long' to automatically print more of main fie
 **--grpc-meta**
 gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
 
-**--namespace, -n**
+**--namespace**
+Alias: ** -n**
 Temporal workflow namespace (default: default)
 
-**--output, -o**
+**--output**
+Alias: ** -o**
 format output as: table, json, card. (default: table)
 
 **--tls-ca-path**
@@ -174,7 +179,8 @@ Frontend address of the remote cluster
 **--grpc-meta**
 gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
 
-**--namespace, -n**
+**--namespace**
+Alias: ** -n**
 Temporal workflow namespace (default: default)
 
 **--tls-ca-path**
@@ -223,13 +229,16 @@ gRPC metadata to send with requests. Format: key=value. Use valid JSON formats f
 **--limit**
 number of items to print (default: 0)
 
-**--namespace, -n**
+**--namespace**
+Alias: ** -n**
 Temporal workflow namespace (default: default)
 
-**--no-pager, -P**
+**--no-pager**
+Alias: ** -P**
 disable interactive pager
 
-**--output, -o**
+**--output**
+Alias: ** -o**
 format output as: table, json, card. (default: table)
 
 **--pager**
@@ -281,7 +290,8 @@ gRPC metadata to send with requests. Format: key=value. Use valid JSON formats f
 **--name**
 Frontend address of the remote cluster
 
-**--namespace, -n**
+**--namespace**
+Alias: ** -n**
 Temporal workflow namespace (default: default)
 
 **--tls-ca-path**

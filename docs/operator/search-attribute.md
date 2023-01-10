@@ -30,7 +30,8 @@ gRPC metadata to send with requests. Format: key=value. Use valid JSON formats f
 **--name**
 Search attribute name
 
-**--namespace, -n**
+**--namespace**
+Alias: ** -n**
 Temporal workflow namespace (default: default)
 
 **--tls-ca-path**
@@ -51,7 +52,8 @@ Override for target server name
 **--type**
 Search attribute type: [Text Keyword Int Double Bool Datetime KeywordList]
 
-**--yes, -y**
+**--yes**
+Alias: ** -y**
 Confirm all prompts
 
 #### list
@@ -79,10 +81,12 @@ Env name to read the client environment variables from (default: default)
 **--grpc-meta**
 gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
 
-**--namespace, -n**
+**--namespace**
+Alias: ** -n**
 Temporal workflow namespace (default: default)
 
-**--output, -o**
+**--output**
+Alias: ** -o**
 format output as: table, json, card. (default: table)
 
 **--tls-ca-path**
@@ -128,7 +132,8 @@ gRPC metadata to send with requests. Format: key=value. Use valid JSON formats f
 **--name**
 Search attribute name
 
-**--namespace, -n**
+**--namespace**
+Alias: ** -n**
 Temporal workflow namespace (default: default)
 
 **--tls-ca-path**
@@ -146,6 +151,7 @@ Path to private key
 **--tls-server-name**
 Override for target server name
 
-**--yes, -y**
+**--yes**
+Alias: ** -y**
 Confirm all prompts
 

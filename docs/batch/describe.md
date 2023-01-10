@@ -29,10 +29,12 @@ gRPC metadata to send with requests. Format: key=value. Use valid JSON formats f
 **--job-id**
 Batch Job Id
 
-**--namespace, -n**
+**--namespace**
+Alias: ** -n**
 Temporal workflow namespace (default: default)
 
-**--output, -o**
+**--output**
+Alias: ** -o**
 format output as: table, json, card. (default: table)
 
 **--time-format**

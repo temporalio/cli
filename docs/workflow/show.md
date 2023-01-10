@@ -23,7 +23,8 @@ Env name to read the client environment variables from (default: default)
 **--fields**
 customize fields to print. Set to 'long' to automatically print more of main fields
 
-**--follow, -f**
+**--follow**
+Alias: ** -f**
 Follow the progress of Workflow Execution
 
 **--grpc-meta**
@@ -35,13 +36,16 @@ number of items to print (default: 0)
 **--max-field-length**
 Maximum length for each attribute field (default: 500)
 
-**--namespace, -n**
+**--namespace**
+Alias: ** -n**
 Temporal workflow namespace (default: default)
 
-**--no-pager, -P**
+**--no-pager**
+Alias: ** -P**
 disable interactive pager
 
-**--output, -o**
+**--output**
+Alias: ** -o**
 format output as: table, json, card. (default: table)
 
 **--output-filename**
@@ -53,7 +57,8 @@ pager to use: less, more, favoritePager..
 **--reset-points**
 Only show events that are eligible for reset
 
-**--run-id, -r**
+**--run-id**
+Alias: ** -r**
 Run Id
 
 **--time-format**
@@ -74,6 +79,7 @@ Path to private key
 **--tls-server-name**
 Override for target server name
 
-**--workflow-id, -w**
+**--workflow-id**
+Alias: ** -w**
 Workflow Id
 

@@ -42,7 +42,8 @@ gRPC metadata to send with requests. Format: key=value. Use valid JSON formats f
 **--id-reuse-policy**
 Configure if the same Workflow Id is allowed for use in new Workflow Execution. Options: AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate, TerminateIfRunning
 
-**--input, -i**
+**--input**
+Alias: ** -i**
 Optional input for the Workflow in JSON format. Pass "null" for null values
 
 **--input-file**
@@ -60,13 +61,16 @@ Pass a memo in a format key=value. Use valid JSON formats for value
 **--memo-file**
 Pass a memo from a file, where each line follows the format key=value. Use valid JSON formats for value
 
-**--namespace, -n**
+**--namespace**
+Alias: ** -n**
 Temporal workflow namespace (default: default)
 
-**--no-pager, -P**
+**--no-pager**
+Alias: ** -P**
 disable interactive pager
 
-**--output, -o**
+**--output**
+Alias: ** -o**
 format output as: table, json, card. (default: table)
 
 **--pager**
@@ -78,7 +82,8 @@ Single workflow run timeout (seconds) (default: 0)
 **--search-attribute**
 Pass Search Attribute in a format key=value. Use valid JSON formats for value
 
-**--task-queue, -t**
+**--task-queue**
+Alias: ** -t**
 Task queue
 
 **--task-timeout**
@@ -105,6 +110,7 @@ Override for target server name
 **--type**
 Workflow type name
 
-**--workflow-id, -w**
+**--workflow-id**
+Alias: ** -w**
 Workflow Id
 

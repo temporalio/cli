@@ -26,16 +26,19 @@ customize fields to print. Set to 'long' to automatically print more of main fie
 **--grpc-meta**
 gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
 
-**--namespace, -n**
+**--namespace**
+Alias: ** -n**
 Temporal workflow namespace (default: default)
 
-**--output, -o**
+**--output**
+Alias: ** -o**
 format output as: table, json, card. (default: table)
 
 **--raw**
 Print raw data as json (prefer this over -o json for scripting)
 
-**--schedule-id, -s**
+**--schedule-id**
+Alias: ** -s**
 Schedule Id
 
 **--time-format**

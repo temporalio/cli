@@ -23,10 +23,12 @@ Env name to read the client environment variables from (default: default)
 **--grpc-meta**
 gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
 
-**--namespace, -n**
+**--namespace**
+Alias: ** -n**
 Temporal workflow namespace (default: default)
 
-**--query, -q**
+**--query**
+Alias: ** -q**
 Filter results using SQL like query. See https://docs.temporal.io/docs/tctl/workflow/list#--query for details
 
 **--tls-ca-path**

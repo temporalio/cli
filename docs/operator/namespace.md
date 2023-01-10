@@ -27,7 +27,8 @@ Env name to read the client environment variables from (default: default)
 **--grpc-meta**
 gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
 
-**--namespace, -n**
+**--namespace**
+Alias: ** -n**
 Temporal workflow namespace (default: default)
 
 **--namespace-id**
@@ -73,7 +74,8 @@ Env name to read the client environment variables from (default: default)
 **--grpc-meta**
 gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
 
-**--namespace, -n**
+**--namespace**
+Alias: ** -n**
 Temporal workflow namespace (default: default)
 
 **--tls-ca-path**
@@ -140,7 +142,8 @@ Flag to set history archival state, valid values are "disabled" and "enabled"
 **--history-uri**
 Optionally specify history archival URI (cannot be changed after first time archival is enabled)
 
-**--namespace, -n**
+**--namespace**
+Alias: ** -n**
 Temporal workflow namespace (default: default)
 
 **--retention**
@@ -213,7 +216,8 @@ Flag to set history archival state, valid values are "disabled" and "enabled"
 **--history-uri**
 Optionally specify history archival URI (cannot be changed after first time archival is enabled)
 
-**--namespace, -n**
+**--namespace**
+Alias: ** -n**
 Temporal workflow namespace (default: default)
 
 **--promote-global**
@@ -271,7 +275,8 @@ Env name to read the client environment variables from (default: default)
 **--grpc-meta**
 gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
 
-**--namespace, -n**
+**--namespace**
+Alias: ** -n**
 Temporal workflow namespace (default: default)
 
 **--tls-ca-path**
@@ -289,6 +294,7 @@ Path to private key
 **--tls-server-name**
 Override for target server name
 
-**--yes, -y**
+**--yes**
+Alias: ** -y**
 Confirm all prompts
 

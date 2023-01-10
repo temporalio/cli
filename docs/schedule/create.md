@@ -38,7 +38,8 @@ Workflow Execution timeout, including retries and continue-as-new (seconds) (def
 **--grpc-meta**
 gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
 
-**--input, -i**
+**--input**
+Alias: ** -i**
 Optional input for the Workflow in JSON format. Pass "null" for null values
 
 **--input-file**
@@ -59,7 +60,8 @@ Set a memo on a schedule. Format: key=value. Use valid JSON formats for value
 **--memo-file**
 Set a memo from a file. Each line should follow the format key=value. Use valid JSON formats for value
 
-**--namespace, -n**
+**--namespace**
+Alias: ** -n**
 Temporal workflow namespace (default: default)
 
 **--notes**
@@ -80,7 +82,8 @@ Total number of actions allowed (default: 0)
 **--run-timeout**
 Single workflow run timeout (seconds) (default: 0)
 
-**--schedule-id, -s**
+**--schedule-id**
+Alias: ** -s**
 Schedule Id
 
 **--search-attribute**
@@ -89,7 +92,8 @@ Set Search Attribute on a schedule. Format: key=value. Use valid JSON formats fo
 **--start-time**
 Overall schedule start time
 
-**--task-queue, -t**
+**--task-queue**
+Alias: ** -t**
 Task queue
 
 **--task-timeout**
@@ -113,7 +117,8 @@ Path to private key
 **--tls-server-name**
 Override for target server name
 
-**--workflow-id, -w**
+**--workflow-id**
+Alias: ** -w**
 Workflow Id
 
 **--workflow-type**

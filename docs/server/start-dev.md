@@ -2,10 +2,12 @@
 
 Start Temporal development server
 
-**--config, -c**
+**--config**
+Alias: ** -c**
 Path to config directory
 
-**--db-filename, -f**
+**--db-filename**
+Alias: ** -f**
 File in which to persist Temporal state (by default, Workflows are lost when the process dies)
 
 **--dynamic-config-value**
@@ -26,10 +28,12 @@ Set the log level. Options: ["debug" "info" "warn" "error" "fatal"]. (default: i
 **--metrics-port**
 Port for /metrics (default: 0)
 
-**--namespace, -n**
+**--namespace**
+Alias: ** -n**
 Specify namespaces that should be pre-created (namespace "default" is always created)
 
-**--port, -p**
+**--port**
+Alias: ** -p**
 Port for the frontend gRPC service (default: 7233)
 
 **--sqlite-pragma**
