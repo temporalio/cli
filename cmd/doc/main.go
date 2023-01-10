@@ -80,11 +80,16 @@ func main() {
 		} else if strings.HasPrefix(line, "**--") {
 			// split into term and definition
 			term, definition, found := strings.Cut(line, ":")
+	
+			// write to file
+			term = strings.TrimSuffix(term, "=\"\"")
 
 			// TODO: separate terms and aliases
-			
-			// write to file
-			writeLine(currentHeaderFile,strings.TrimSuffix(term, "=\"\""))
+			if strings.Contains(term, ",") {
+				makeAlias(currentHeaderFile, term)
+			} else {
+				writeLine(currentHeaderFile, term)
+			}
 			writeLine(currentHeaderFile, strings.TrimSpace(definition))
 			log.Info(found)
 
@@ -105,4 +110,11 @@ func writeLine(file *os.File, line string) {
 	if err != nil {
 		log.Printf("Error when trying to write to file: %v", err)
 	}
+}
+
+// separates aliases from terms
+func makeAlias(file *os.File, line string) {
+	termArray := strings.Split(line, ",")
+	writeLine(file, termArray[0] + "**")
+	writeLine(file, "Alias: **" + strings.TrimSpace(termArray[1]))
 }
