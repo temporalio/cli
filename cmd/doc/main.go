@@ -65,13 +65,12 @@ func main() {
 		if strings.HasPrefix(line, "## ") {
 			header = strings.TrimSpace(line[2:])
 			path_docs := "docs/" + header
-			//fmt.Println(path_docs)
 			
 			err := os.MkdirAll(path_docs, os.ModePerm)
 			print_check(err)
 			
 			// create index file here
-			headerFile, err = os.Create(filepath.Join(path_docs, header + ".md"))
+			headerFile, err = os.Create(filepath.Join(path_docs, "index.md"))
 			print_check(err)
 			
 
@@ -82,11 +81,11 @@ func main() {
 			continue
 		}
 
+	}
 	//close and remove big file
-	//defer readFile.Close()
-	//e := os.Remove("cli.md")
-	//fatal_check(e)
-}
+	readFile.Close()
+	e := os.Remove("cli.md")
+	fatal_check(e)
 }
 
 // I got sick of putting these code blocks everywhere, so now they're functions.
