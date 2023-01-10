@@ -644,7 +644,7 @@ Reset a Workflow Execution by event Id or reset type
 
 **--namespace, -n**="": Temporal workflow namespace (default: default)
 
-**--reapply-type**="": Event types to reapply after the reset point: None, , Signal. (default: All)
+**--reapply-type**="": Event types to reapply after the reset point: , Signal, None. (default: All)
 
 **--reason**="": Reason to reset
 
@@ -714,7 +714,7 @@ Reset a batch of Workflow Executions by reset type: FirstWorkflowTask, LastWorkf
 
 **--tls-server-name**="": Override for target server name
 
-**--type**="": Event type to which you want to reset: LastWorkflowTask, LastContinuedAsNew, FirstWorkflowTask
+**--type**="": Event type to which you want to reset: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew
 
 ### trace
 

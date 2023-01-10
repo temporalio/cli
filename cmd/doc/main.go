@@ -67,7 +67,7 @@ func main() {
 			path_docs := "docs/" + header
 			//fmt.Println(path_docs)
 			
-			err := os.MkdirAll(path_docs, 077)
+			err := os.MkdirAll(path_docs, os.ModePerm)
 			print_check(err)
 			
 			// create index file here
