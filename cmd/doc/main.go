@@ -1,117 +1,97 @@
-// The MIT License
-//
-// Copyright (c) 2022 Temporal Technologies Inc.  All rights reserved.
-//
-// Copyright (c) 2020 Uber Technologies, Inc.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
-
 package main
 
 import (
 	"bufio"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/temporalio/cli/app"
 )
 
-// todo: elaborate on each file
+const (
+	docsPath  = "docs"
+	cliFile   = "cli.md"
+	filePerm  = 0644
+	indexFile = "index.md"
+)
+
+// `BuildApp` takes a string and returns a `*App` and an error
 func main() {
-	// build app and convert to Markdown
 	doc, err := app.BuildApp("").ToMarkdown()
-	fatal_check(err)
+	if err != nil {
+		log.Fatalf("Error when trying to build app: %v", err)
+	}
 
-	path := "cli.md"
-	err = os.WriteFile(path, []byte(doc), 0644)
-	print_check(err)
+	err = os.WriteFile(cliFile, []byte(doc), filePerm)
+	if err != nil {
+		log.Fatalf("Error when trying to write markdown to %s file: %v", cliFile, err)
+	}
 
-	// open file for scanner
-	readFile, err := os.Open(path)
-    print_check(err)
-
-	// create scanner
+	readFile, err := os.Open(cliFile)
+	if err != nil {
+		log.Fatalf("Error when trying to open %s file: %v", cliFile, err)
+	}
 	scanner := bufio.NewScanner(readFile)
 	scanner.Split(bufio.ScanLines)
 
+	var currentHeader string
+	var currentHeaderFile *os.File
+	createdFiles := make(map[string]*os.File)
 
-	// track header for file and folder creation
-	var header string
-	var headerFile *os.File
-
-	// read line
 	for scanner.Scan() {
 		line := scanner.Text()
 		if strings.HasPrefix(line, "## ") {
-			header = strings.TrimSpace(line[2:])
-			path_docs := "docs/" + header
+			currentHeader = strings.TrimSpace(line[2:])
+			path := filepath.Join(docsPath, currentHeader)
 
-			//create directory
-			err := os.MkdirAll(path_docs, os.ModePerm)
-			print_check(err)
-			
-			// create index file here
-			headerFile, err = os.Create(filepath.Join(path_docs, "index.md"))
-			print_check(err)
+			err := os.MkdirAll(path, os.ModePerm)
+			if err != nil {
+				log.Printf("Error when trying to create directory %s: %v", path, err)
+				continue
+			}
 
-			write_line(headerFile, line)
+			headerIndexFile := filepath.Join(path, indexFile)
+			currentHeaderFile, err = os.Create(headerIndexFile)
+			if err != nil {
+				log.Printf("Error when trying to create file %s: %v", headerIndexFile, err)
+				continue
+			}
+			createdFiles[headerIndexFile] = currentHeaderFile
+			writeLine(currentHeaderFile, line)
 
-		} else if strings.HasPrefix(line, "### "){
-			path_docs := "docs/" + header
+		} else if strings.HasPrefix(line, "### ") {
+			path := filepath.Join(docsPath, currentHeader)
 			fileName := strings.TrimSpace(line[3:])
 
-			//create file within directory
-			headerFile, err = os.Create(filepath.Join(path_docs, fileName + ".md"))
-			print_check(err)
-			//h1 for page
-			write_line(headerFile, line)
-
+			filePath := filepath.Join(path, fileName+".md")
+			// check if already created file
+			currentHeaderFile = createdFiles[filePath]
+			if currentHeaderFile == nil {
+				currentHeaderFile, err = os.Create(filePath)
+				if err != nil {
+					log.Printf("Error when trying to create file %s: %v", filePath, err)
+					continue
+				}
+				createdFiles[filePath] = currentHeaderFile
+			}
+			writeLine(currentHeaderFile, line)
 		} else if !strings.HasPrefix(line, "# ") {
-			write_line(headerFile, line)
+			writeLine(currentHeaderFile, line)
 		} else {
 			continue
 		}
-
 	}
-	//close and remove big file
+	// close file descriptor after for loop has completed
 	readFile.Close()
-	e := os.Remove("cli.md")
-	fatal_check(e)
+	defer os.Remove(cliFile)
 }
 
-// write line to current file
-func write_line(fileName *os.File, line string) {
-	_, err := fileName.WriteString(line + "\n")
-	print_check(err)
-}
-
-// I got sick of putting these code blocks everywhere, so now they're functions.
-func fatal_check(e error) {
-	if e != nil {
-		log.Fatal(e)
-	}
-}
-
-func print_check(e error) {
-	if e != nil {
-		log.Println(e)
+// It takes a file and a string, and writes the string to the file
+func writeLine(file *os.File, line string) {
+	_, err := file.WriteString(line + "\n")
+	if err != nil {
+		log.Printf("Error when trying to write to file: %v", err)
 	}
 }
