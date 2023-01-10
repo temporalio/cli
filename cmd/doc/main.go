@@ -55,12 +55,12 @@ func main() {
 
 	// track header for file and folder creation
 	var header string
-	var headerFile *os.File
+	//var headerFile *os.File
+
 
 	// read line
 	for scanner.Scan() {
 		line := scanner.Text()
-		
 		if strings.HasPrefix(line, "## ") {
 			header = strings.TrimSpace(line[2:])
 			path_docs := "docs/" + header
@@ -70,18 +70,13 @@ func main() {
 			print_check(err)
 			
 			// create index file here
-			headerFile, err = os.Create(header + ".md")
-			print_check(err)
+			//headerFile, err = os.Create(header + ".md")
+			//print_check(err)
 			
 
-	}	else if strings.HasPrefix(line, "### "){
-			header = strings.TrimSpace(line[3:])
-			headerFile, err = os.Create(header + ".md")
-			print_check(err)
-			
-	} 	else {
-			continue
-	}
+		}	else {
+				continue
+		} 
 
 
 		/*// create files within directory
@@ -110,10 +105,10 @@ func main() {
 
 
 	//close and remove big file
-	readFile.Close()
+	//readFile.Close()
 
-	e := os.Remove("cli.md")
-	fatal_check(e)
+	//e := os.Remove("cli.md")
+	//fatal_check(e)
 }
 }
 
