@@ -1,3 +1,4 @@
+### delete
 
 Deletes a schedule
 

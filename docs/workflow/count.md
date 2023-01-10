@@ -1,3 +1,4 @@
+### count
 
 Count Workflow Executions (requires ElasticSearch to be enabled)
 

@@ -1,3 +1,4 @@
+### toggle
 
 Pauses or unpauses a schedule
 

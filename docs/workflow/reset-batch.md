@@ -1,5 +1,6 @@
+### reset-batch
 
-Reset a batch of Workflow Executions by reset type: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew
+Reset a batch of Workflow Executions by reset type: LastWorkflowTask, LastContinuedAsNew, FirstWorkflowTask
 
 **--address**="": host:port for Temporal frontend service
 
@@ -47,5 +48,5 @@ Reset a batch of Workflow Executions by reset type: FirstWorkflowTask, LastWorkf
 
 **--tls-server-name**="": Override for target server name
 
-**--type**="": Event type to which you want to reset: LastContinuedAsNew, FirstWorkflowTask, LastWorkflowTask
+**--type**="": Event type to which you want to reset: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew
 

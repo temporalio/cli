@@ -1,3 +1,4 @@
+### stack
 
 Query a Workflow Execution with __stack_trace as the query type
 

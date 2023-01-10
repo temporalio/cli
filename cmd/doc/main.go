@@ -34,7 +34,6 @@ import (
 	"github.com/temporalio/cli/app"
 )
 
-// todo: create separate files and folders.
 // todo: elaborate on each file
 func main() {
 	// build app and convert to Markdown
@@ -73,6 +72,8 @@ func main() {
 			headerFile, err = os.Create(filepath.Join(path_docs, "index.md"))
 			print_check(err)
 
+			write_line(headerFile, line)
+
 		} else if strings.HasPrefix(line, "### "){
 			path_docs := "docs/" + header
 			fileName := strings.TrimSpace(line[3:])
@@ -80,10 +81,11 @@ func main() {
 			//create file within directory
 			headerFile, err = os.Create(filepath.Join(path_docs, fileName + ".md"))
 			print_check(err)
+			//h1 for page
+			write_line(headerFile, line)
 
 		} else if !strings.HasPrefix(line, "# ") {
-			_, err := headerFile.WriteString(line + "\n")
-			print_check(err)
+			write_line(headerFile, line)
 		} else {
 			continue
 		}
@@ -93,6 +95,12 @@ func main() {
 	readFile.Close()
 	e := os.Remove("cli.md")
 	fatal_check(e)
+}
+
+// write line to current file
+func write_line(fileName *os.File, line string) {
+	_, err := fileName.WriteString(line + "\n")
+	print_check(err)
 }
 
 // I got sick of putting these code blocks everywhere, so now they're functions.

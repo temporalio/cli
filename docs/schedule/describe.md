@@ -1,3 +1,4 @@
+### describe
 
 Get schedule configuration and current state
 
