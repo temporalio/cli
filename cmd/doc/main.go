@@ -67,7 +67,7 @@ func main() {
 			path_docs := "docs/" + header
 			//fmt.Println(path_docs)
 			
-			err := os.MkdirAll(path_docs, os.ModeAppend)
+			err := os.MkdirAll(path_docs, 077)
 			print_check(err)
 			
 			// create index file here
@@ -82,35 +82,8 @@ func main() {
 			continue
 		}
 
-
-		/*// create files within directory
-		// TODO: special case for operator commands
-		} else {
-			header = strings.TrimSpace(line[1:])
-			headerFile, err := os.Create(header + ".md")
-
-			// error check
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			// file creation
-			for (!strings.HasPrefix(line, "**")) {
-				_, err := headerFile.WriteString(line + "\n")
-				if err != nil {
-					fmt.Println(err)
-					return
-				}
-			}
-			defer headerFile.Close()
-
-		*/  
-	
-
-
 	//close and remove big file
-	//readFile.Close()
-
+	//defer readFile.Close()
 	//e := os.Remove("cli.md")
 	//fatal_check(e)
 }
