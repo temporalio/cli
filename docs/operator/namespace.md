@@ -6,199 +6,289 @@ Operations on namespaces
 
 Describe a Namespace by name or Id
 
-**--address**="": host:port for Temporal frontend service
+**--address**
+host:port for Temporal frontend service
 
-**--codec-auth**="": Authorization header to set for requests to Codec Server
+**--codec-auth**
+Authorization header to set for requests to Codec Server
 
-**--codec-endpoint**="": Remote Codec Server Endpoint
+**--codec-endpoint**
+Remote Codec Server Endpoint
 
-**--color**="": when to use color: auto, always, never. (default: auto)
+**--color**
+when to use color: auto, always, never. (default: auto)
 
-**--context-timeout**="": Optional timeout for context of RPC call in seconds (default: 5)
+**--context-timeout**
+Optional timeout for context of RPC call in seconds (default: 5)
 
-**--env**="": Env name to read the client environment variables from (default: default)
+**--env**
+Env name to read the client environment variables from (default: default)
 
-**--grpc-meta**="": gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
+**--grpc-meta**
+gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
 
-**--namespace, -n**="": Temporal workflow namespace (default: default)
+**--namespace, -n**
+Temporal workflow namespace (default: default)
 
-**--namespace-id**="": Namespace Id
+**--namespace-id**
+Namespace Id
 
-**--tls-ca-path**="": Path to server CA certificate
+**--tls-ca-path**
+Path to server CA certificate
 
-**--tls-cert-path**="": Path to x509 certificate
+**--tls-cert-path**
+Path to x509 certificate
 
-**--tls-disable-host-verification**: Disable tls host name verification (tls must be enabled)
+**--tls-disable-host-verification**
+Disable tls host name verification (tls must be enabled)
 
-**--tls-key-path**="": Path to private key
+**--tls-key-path**
+Path to private key
 
-**--tls-server-name**="": Override for target server name
+**--tls-server-name**
+Override for target server name
 
 #### list
 
 List all Namespaces
 
-**--address**="": host:port for Temporal frontend service
+**--address**
+host:port for Temporal frontend service
 
-**--codec-auth**="": Authorization header to set for requests to Codec Server
+**--codec-auth**
+Authorization header to set for requests to Codec Server
 
-**--codec-endpoint**="": Remote Codec Server Endpoint
+**--codec-endpoint**
+Remote Codec Server Endpoint
 
-**--color**="": when to use color: auto, always, never. (default: auto)
+**--color**
+when to use color: auto, always, never. (default: auto)
 
-**--context-timeout**="": Optional timeout for context of RPC call in seconds (default: 5)
+**--context-timeout**
+Optional timeout for context of RPC call in seconds (default: 5)
 
-**--env**="": Env name to read the client environment variables from (default: default)
+**--env**
+Env name to read the client environment variables from (default: default)
 
-**--grpc-meta**="": gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
+**--grpc-meta**
+gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
 
-**--namespace, -n**="": Temporal workflow namespace (default: default)
+**--namespace, -n**
+Temporal workflow namespace (default: default)
 
-**--tls-ca-path**="": Path to server CA certificate
+**--tls-ca-path**
+Path to server CA certificate
 
-**--tls-cert-path**="": Path to x509 certificate
+**--tls-cert-path**
+Path to x509 certificate
 
-**--tls-disable-host-verification**: Disable tls host name verification (tls must be enabled)
+**--tls-disable-host-verification**
+Disable tls host name verification (tls must be enabled)
 
-**--tls-key-path**="": Path to private key
+**--tls-key-path**
+Path to private key
 
-**--tls-server-name**="": Override for target server name
+**--tls-server-name**
+Override for target server name
 
 #### register
 
 Register a new Namespace
 
-**--active-cluster**="": Active cluster name
+**--active-cluster**
+Active cluster name
 
-**--address**="": host:port for Temporal frontend service
+**--address**
+host:port for Temporal frontend service
 
-**--cluster**="": Cluster name
+**--cluster**
+Cluster name
 
-**--codec-auth**="": Authorization header to set for requests to Codec Server
+**--codec-auth**
+Authorization header to set for requests to Codec Server
 
-**--codec-endpoint**="": Remote Codec Server Endpoint
+**--codec-endpoint**
+Remote Codec Server Endpoint
 
-**--color**="": when to use color: auto, always, never. (default: auto)
+**--color**
+when to use color: auto, always, never. (default: auto)
 
-**--context-timeout**="": Optional timeout for context of RPC call in seconds (default: 5)
+**--context-timeout**
+Optional timeout for context of RPC call in seconds (default: 5)
 
-**--data**="": Namespace data in a format key=value
+**--data**
+Namespace data in a format key=value
 
-**--description**="": Namespace description
+**--description**
+Namespace description
 
-**--email**="": Owner email
+**--email**
+Owner email
 
-**--env**="": Env name to read the client environment variables from (default: default)
+**--env**
+Env name to read the client environment variables from (default: default)
 
-**--global**="": Flag to indicate whether namespace is a global namespace
+**--global**
+Flag to indicate whether namespace is a global namespace
 
-**--grpc-meta**="": gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
+**--grpc-meta**
+gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
 
-**--history-archival-state**="": Flag to set history archival state, valid values are "disabled" and "enabled"
+**--history-archival-state**
+Flag to set history archival state, valid values are "disabled" and "enabled"
 
-**--history-uri**="": Optionally specify history archival URI (cannot be changed after first time archival is enabled)
+**--history-uri**
+Optionally specify history archival URI (cannot be changed after first time archival is enabled)
 
-**--namespace, -n**="": Temporal workflow namespace (default: default)
+**--namespace, -n**
+Temporal workflow namespace (default: default)
 
-**--retention**="": Workflow Execution retention
+**--retention**
+Workflow Execution retention
 
-**--tls-ca-path**="": Path to server CA certificate
+**--tls-ca-path**
+Path to server CA certificate
 
-**--tls-cert-path**="": Path to x509 certificate
+**--tls-cert-path**
+Path to x509 certificate
 
-**--tls-disable-host-verification**: Disable tls host name verification (tls must be enabled)
+**--tls-disable-host-verification**
+Disable tls host name verification (tls must be enabled)
 
-**--tls-key-path**="": Path to private key
+**--tls-key-path**
+Path to private key
 
-**--tls-server-name**="": Override for target server name
+**--tls-server-name**
+Override for target server name
 
-**--visibility-archival-state**="": Flag to set visibility archival state, valid values are "disabled" and "enabled"
+**--visibility-archival-state**
+Flag to set visibility archival state, valid values are "disabled" and "enabled"
 
-**--visibility-uri**="": Optionally specify visibility archival URI (cannot be changed after first time archival is enabled)
+**--visibility-uri**
+Optionally specify visibility archival URI (cannot be changed after first time archival is enabled)
 
 #### update
 
 Update a Namespace
 
-**--active-cluster**="": Active cluster name
+**--active-cluster**
+Active cluster name
 
-**--address**="": host:port for Temporal frontend service
+**--address**
+host:port for Temporal frontend service
 
-**--cluster**="": Cluster name
+**--cluster**
+Cluster name
 
-**--codec-auth**="": Authorization header to set for requests to Codec Server
+**--codec-auth**
+Authorization header to set for requests to Codec Server
 
-**--codec-endpoint**="": Remote Codec Server Endpoint
+**--codec-endpoint**
+Remote Codec Server Endpoint
 
-**--color**="": when to use color: auto, always, never. (default: auto)
+**--color**
+when to use color: auto, always, never. (default: auto)
 
-**--context-timeout**="": Optional timeout for context of RPC call in seconds (default: 5)
+**--context-timeout**
+Optional timeout for context of RPC call in seconds (default: 5)
 
-**--data**="": Namespace data in a format key=value
+**--data**
+Namespace data in a format key=value
 
-**--description**="": Namespace description
+**--description**
+Namespace description
 
-**--email**="": Owner email
+**--email**
+Owner email
 
-**--env**="": Env name to read the client environment variables from (default: default)
+**--env**
+Env name to read the client environment variables from (default: default)
 
-**--grpc-meta**="": gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
+**--grpc-meta**
+gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
 
-**--history-archival-state**="": Flag to set history archival state, valid values are "disabled" and "enabled"
+**--history-archival-state**
+Flag to set history archival state, valid values are "disabled" and "enabled"
 
-**--history-uri**="": Optionally specify history archival URI (cannot be changed after first time archival is enabled)
+**--history-uri**
+Optionally specify history archival URI (cannot be changed after first time archival is enabled)
 
-**--namespace, -n**="": Temporal workflow namespace (default: default)
+**--namespace, -n**
+Temporal workflow namespace (default: default)
 
-**--promote-global**: Promote local namespace to global namespace
+**--promote-global**
+Promote local namespace to global namespace
 
-**--reason**="": Reason for the operation
+**--reason**
+Reason for the operation
 
-**--retention**="": Workflow Execution retention
+**--retention**
+Workflow Execution retention
 
-**--tls-ca-path**="": Path to server CA certificate
+**--tls-ca-path**
+Path to server CA certificate
 
-**--tls-cert-path**="": Path to x509 certificate
+**--tls-cert-path**
+Path to x509 certificate
 
-**--tls-disable-host-verification**: Disable tls host name verification (tls must be enabled)
+**--tls-disable-host-verification**
+Disable tls host name verification (tls must be enabled)
 
-**--tls-key-path**="": Path to private key
+**--tls-key-path**
+Path to private key
 
-**--tls-server-name**="": Override for target server name
+**--tls-server-name**
+Override for target server name
 
-**--visibility-archival-state**="": Flag to set visibility archival state, valid values are "disabled" and "enabled"
+**--visibility-archival-state**
+Flag to set visibility archival state, valid values are "disabled" and "enabled"
 
-**--visibility-uri**="": Optionally specify visibility archival URI (cannot be changed after first time archival is enabled)
+**--visibility-uri**
+Optionally specify visibility archival URI (cannot be changed after first time archival is enabled)
 
 #### delete
 
 Delete existing Namespace
 
-**--address**="": host:port for Temporal frontend service
+**--address**
+host:port for Temporal frontend service
 
-**--codec-auth**="": Authorization header to set for requests to Codec Server
+**--codec-auth**
+Authorization header to set for requests to Codec Server
 
-**--codec-endpoint**="": Remote Codec Server Endpoint
+**--codec-endpoint**
+Remote Codec Server Endpoint
 
-**--color**="": when to use color: auto, always, never. (default: auto)
+**--color**
+when to use color: auto, always, never. (default: auto)
 
-**--context-timeout**="": Optional timeout for context of RPC call in seconds (default: 5)
+**--context-timeout**
+Optional timeout for context of RPC call in seconds (default: 5)
 
-**--env**="": Env name to read the client environment variables from (default: default)
+**--env**
+Env name to read the client environment variables from (default: default)
 
-**--grpc-meta**="": gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
+**--grpc-meta**
+gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
 
-**--namespace, -n**="": Temporal workflow namespace (default: default)
+**--namespace, -n**
+Temporal workflow namespace (default: default)
 
-**--tls-ca-path**="": Path to server CA certificate
+**--tls-ca-path**
+Path to server CA certificate
 
-**--tls-cert-path**="": Path to x509 certificate
+**--tls-cert-path**
+Path to x509 certificate
 
-**--tls-disable-host-verification**: Disable tls host name verification (tls must be enabled)
+**--tls-disable-host-verification**
+Disable tls host name verification (tls must be enabled)
 
-**--tls-key-path**="": Path to private key
+**--tls-key-path**
+Path to private key
 
-**--tls-server-name**="": Override for target server name
+**--tls-server-name**
+Override for target server name
 
-**--yes, -y**: Confirm all prompts
+**--yes, -y**
+Confirm all prompts
 

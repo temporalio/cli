@@ -2,17 +2,23 @@
 
 Start a new Workflow Execution
 
-**--address**="": host:port for Temporal frontend service
+**--address**
+host:port for Temporal frontend service
 
-**--codec-auth**="": Authorization header to set for requests to Codec Server
+**--codec-auth**
+Authorization header to set for requests to Codec Server
 
-**--codec-endpoint**="": Remote Codec Server Endpoint
+**--codec-endpoint**
+Remote Codec Server Endpoint
 
-**--color**="": when to use color: auto, always, never. (default: auto)
+**--color**
+when to use color: auto, always, never. (default: auto)
 
-**--context-timeout**="": Optional timeout for context of RPC call in seconds (default: 5)
+**--context-timeout**
+Optional timeout for context of RPC call in seconds (default: 5)
 
-**--cron**="": Optional cron schedule for the Workflow. Cron spec is as following: 
+**--cron**
+Optional cron schedule for the Workflow. Cron spec is as following:
 	┌───────────── minute (0 - 59) 
 	│ ┌───────────── hour (0 - 23) 
 	│ │ ┌───────────── day of the month (1 - 31) 
@@ -21,57 +27,84 @@ Start a new Workflow Execution
 	│ │ │ │ │ 
 	* * * * *
 
-**--env**="": Env name to read the client environment variables from (default: default)
+**--env**
+Env name to read the client environment variables from (default: default)
 
-**--execution-timeout**="": Workflow Execution timeout, including retries and continue-as-new (seconds) (default: 0)
+**--execution-timeout**
+Workflow Execution timeout, including retries and continue-as-new (seconds) (default: 0)
 
-**--fields**="": customize fields to print. Set to 'long' to automatically print more of main fields
+**--fields**
+customize fields to print. Set to 'long' to automatically print more of main fields
 
-**--grpc-meta**="": gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
+**--grpc-meta**
+gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
 
-**--id-reuse-policy**="": Configure if the same Workflow Id is allowed for use in new Workflow Execution. Options: AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate, TerminateIfRunning
+**--id-reuse-policy**
+Configure if the same Workflow Id is allowed for use in new Workflow Execution. Options: AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate, TerminateIfRunning
 
-**--input, -i**="": Optional input for the Workflow in JSON format. Pass "null" for null values
+**--input, -i**
+Optional input for the Workflow in JSON format. Pass "null" for null values
 
-**--input-file**="": Pass an optional input for the Workflow from a JSON file. If there are multiple JSON files, concatenate them and separate by space or newline. Input from the command line overwrites input from the file
+**--input-file**
+Pass an optional input for the Workflow from a JSON file. If there are multiple JSON files, concatenate them and separate by space or newline. Input from the command line overwrites input from the file
 
-**--limit**="": number of items to print (default: 0)
+**--limit**
+number of items to print (default: 0)
 
-**--max-field-length**="": Maximum length for each attribute field (default: 0)
+**--max-field-length**
+Maximum length for each attribute field (default: 0)
 
-**--memo**="": Pass a memo in a format key=value. Use valid JSON formats for value
+**--memo**
+Pass a memo in a format key=value. Use valid JSON formats for value
 
-**--memo-file**="": Pass a memo from a file, where each line follows the format key=value. Use valid JSON formats for value
+**--memo-file**
+Pass a memo from a file, where each line follows the format key=value. Use valid JSON formats for value
 
-**--namespace, -n**="": Temporal workflow namespace (default: default)
+**--namespace, -n**
+Temporal workflow namespace (default: default)
 
-**--no-pager, -P**: disable interactive pager
+**--no-pager, -P**
+disable interactive pager
 
-**--output, -o**="": format output as: table, json, card. (default: table)
+**--output, -o**
+format output as: table, json, card. (default: table)
 
-**--pager**="": pager to use: less, more, favoritePager..
+**--pager**
+pager to use: less, more, favoritePager..
 
-**--run-timeout**="": Single workflow run timeout (seconds) (default: 0)
+**--run-timeout**
+Single workflow run timeout (seconds) (default: 0)
 
-**--search-attribute**="": Pass Search Attribute in a format key=value. Use valid JSON formats for value
+**--search-attribute**
+Pass Search Attribute in a format key=value. Use valid JSON formats for value
 
-**--task-queue, -t**="": Task queue
+**--task-queue, -t**
+Task queue
 
-**--task-timeout**="": Workflow task start to close timeout (seconds) (default: 10)
+**--task-timeout**
+Workflow task start to close timeout (seconds) (default: 10)
 
-**--time-format**="": format time as: relative, iso, raw. (default: relative)
+**--time-format**
+format time as: relative, iso, raw. (default: relative)
 
-**--tls-ca-path**="": Path to server CA certificate
+**--tls-ca-path**
+Path to server CA certificate
 
-**--tls-cert-path**="": Path to x509 certificate
+**--tls-cert-path**
+Path to x509 certificate
 
-**--tls-disable-host-verification**: Disable tls host name verification (tls must be enabled)
+**--tls-disable-host-verification**
+Disable tls host name verification (tls must be enabled)
 
-**--tls-key-path**="": Path to private key
+**--tls-key-path**
+Path to private key
 
-**--tls-server-name**="": Override for target server name
+**--tls-server-name**
+Override for target server name
 
-**--type**="": Workflow type name
+**--type**
+Workflow type name
 
-**--workflow-id, -w**="": Workflow Id
+**--workflow-id, -w**
+Workflow Id
 

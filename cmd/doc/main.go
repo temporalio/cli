@@ -77,6 +77,17 @@ func main() {
 				createdFiles[filePath] = currentHeaderFile
 			}
 			writeLine(currentHeaderFile, line)
+		} else if strings.HasPrefix(line, "**--") {
+			// split into term and definition
+			term, definition, found := strings.Cut(line, ":")
+
+			// TODO: separate terms and aliases
+			
+			// write to file
+			writeLine(currentHeaderFile,strings.TrimSuffix(term, "=\"\""))
+			writeLine(currentHeaderFile, strings.TrimSpace(definition))
+			log.Info(found)
+
 		} else if !strings.HasPrefix(line, "# ") {
 			writeLine(currentHeaderFile, line)
 		} else {
