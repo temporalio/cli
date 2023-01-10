@@ -22,35 +22,35 @@ Commands for managing Temporal server
 
 Start Temporal development server
 
-**--config, -c**="": config dir path
+**--config, -c**="": Path to config directory
 
-**--db-filename, -f**="": File in which to persist Temporal state
+**--db-filename, -f**="": File in which to persist Temporal state (by default, Workflows are lost when the process dies)
 
-**--dynamic-config-value**="": dynamic config value, as KEY=JSON_VALUE (meaning strings need quotes)
+**--dynamic-config-value**="": Dynamic config value, as KEY=JSON_VALUE (string values need quotes)
 
-**--headless**: disable the temporal web UI
+**--headless**: Disable the Web UI
 
-**--ip**="": IPv4 address to bind the frontend service to instead of localhost (default: 127.0.0.1)
+**--ip**="": IPv4 address to bind the frontend service to (default: 127.0.0.1)
 
-**--log-format**="": customize the log formatting (allowed: ["json" "pretty"]) (default: json)
+**--log-format**="": Set the log formatting. Options: ["json", "pretty"]. (default: json)
 
-**--log-level**="": customize the log level (allowed: ["debug" "info" "warn" "error" "fatal"]) (default: info)
+**--log-level**="": Set the log level. Options: ["debug" "info" "warn" "error" "fatal"]. (default: info)
 
-**--metrics-port**="": Port for the metrics listener (default: 0)
+**--metrics-port**="": Port for /metrics (default: 0)
 
-**--namespace, -n**="": Specify namespaces that should be pre-created. Namespace 'default' is auto created
+**--namespace, -n**="": Specify namespaces that should be pre-created (namespace "default" is always created)
 
-**--port, -p**="": Port for the temporal-frontend GRPC service (default: 7233)
+**--port, -p**="": Port for the frontend gRPC service (default: 7233)
 
-**--sqlite-pragma**="": specify sqlite pragma statements in pragma=value format (allowed: ["journal_mode" "synchronous"])
+**--sqlite-pragma**="": Specify sqlite pragma statements in pragma=value format. Pragma options: ["journal_mode" "synchronous"].
 
 **--ui-asset-path**="": UI Custom Assets path
 
 **--ui-codec-endpoint**="": UI Remote data converter HTTP endpoint
 
-**--ui-ip**="": IPv4 address to bind the web UI to instead of localhost
+**--ui-ip**="": IPv4 address to bind the Web UI to
 
-**--ui-port**="": port for the temporal web UI (default: 0)
+**--ui-port**="": Port for the Web UI (default: 0)
 
 ## workflow
 
@@ -666,7 +666,7 @@ Reset a Workflow Execution by event Id or reset type
 
 ### reset-batch
 
-Reset a batch of Workflow Executions by reset type: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew
+Reset a batch of Workflow Executions by reset type: LastContinuedAsNew, FirstWorkflowTask, LastWorkflowTask
 
 **--address**="": host:port for Temporal frontend service
 
@@ -714,7 +714,7 @@ Reset a batch of Workflow Executions by reset type: FirstWorkflowTask, LastWorkf
 
 **--tls-server-name**="": Override for target server name
 
-**--type**="": Event type to which you want to reset: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew
+**--type**="": Event type to which you want to reset: LastContinuedAsNew, FirstWorkflowTask, LastWorkflowTask
 
 ### trace
 
