@@ -26,7 +26,6 @@ package main
 
 import (
 	"bufio"
-	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -34,7 +33,6 @@ import (
 	"github.com/temporalio/cli/app"
 )
 
-// currently writes to one big file.
 // todo: create separate files and folders.
 // todo: elaborate on each file
 func main() {
@@ -57,44 +55,38 @@ func main() {
 
 	// track header for file and folder creation
 	var header string
+	var headerFile *os.File
 
 	// read line
 	for scanner.Scan() {
 		line := scanner.Text()
 		
-		// directory creation
 		if strings.HasPrefix(line, "## ") {
 			header = strings.TrimSpace(line[2:])
-			path_docs := "/docs/" + header
+			path_docs := "docs/" + header
+			//fmt.Println(path_docs)
 			
-			fmt.Println(path_docs)
+			err := os.MkdirAll(path_docs, os.ModePerm)
+			print_check(err)
 			
-			//err := os.MkdirAll(path_docs, os.ModePerm)
-			//print_check(err)
+			// create index file here
+			headerFile, err = os.Create(header + ".md")
+			print_check(err)
 			
 
-			/*// create index file here
-			headerFile, err := os.Create(header + ".md")
-
-			// error check
-			if err != nil {
-				log.Fatal(err)
-			}
+	}	else if strings.HasPrefix(line, "### "){
+			header = strings.TrimSpace(line[3:])
+			headerFile, err = os.Create(header + ".md")
+			print_check(err)
 			
-			// index file creation
-			for (!strings.HasPrefix(line, "**")) {
-				_, err := headerFile.WriteString(line + "\n")
-				if err != nil {
-					fmt.Println(err)
-					return
-				}
-			}
-			defer headerFile.Close()
+	} 	else {
+			continue
+	}
 
 
-		// create files within directory
+		/*// create files within directory
 		// TODO: special case for operator commands
-		} else if strings.HasPrefix(line, "###") {
+		} else {
 			header = strings.TrimSpace(line[1:])
 			headerFile, err := os.Create(header + ".md")
 
@@ -112,11 +104,9 @@ func main() {
 				}
 			}
 			defer headerFile.Close()
-*/
-		}  else {
-			continue
-		}
-	}
+
+		*/  
+	
 
 
 	//close and remove big file
@@ -124,6 +114,7 @@ func main() {
 
 	e := os.Remove("cli.md")
 	fatal_check(e)
+}
 }
 
 
