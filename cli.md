@@ -644,7 +644,7 @@ Reset a Workflow Execution by event Id or reset type
 
 **--namespace, -n**="": Temporal workflow namespace (default: default)
 
-**--reapply-type**="": Event types to reapply after the reset point: , Signal, None. (default: All)
+**--reapply-type**="": Event types to reapply after the reset point: None, , Signal. (default: All)
 
 **--reason**="": Reason to reset
 

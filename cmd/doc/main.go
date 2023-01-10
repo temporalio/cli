@@ -28,6 +28,7 @@ import (
 	"bufio"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/temporalio/cli/app"
@@ -55,7 +56,7 @@ func main() {
 
 	// track header for file and folder creation
 	var header string
-	//var headerFile *os.File
+	var headerFile *os.File
 
 
 	// read line
@@ -66,17 +67,20 @@ func main() {
 			path_docs := "docs/" + header
 			//fmt.Println(path_docs)
 			
-			err := os.MkdirAll(path_docs, os.ModePerm)
+			err := os.MkdirAll(path_docs, os.ModeAppend)
 			print_check(err)
 			
 			// create index file here
-			//headerFile, err = os.Create(header + ".md")
-			//print_check(err)
+			headerFile, err = os.Create(filepath.Join(path_docs, header + ".md"))
+			print_check(err)
 			
 
-		}	else {
-				continue
-		} 
+		}	else if !strings.HasPrefix(line, "# "){
+			_, err := headerFile.WriteString(line + "\n")
+			print_check(err)
+		} else {
+			continue
+		}
 
 
 		/*// create files within directory
@@ -111,7 +115,6 @@ func main() {
 	//fatal_check(e)
 }
 }
-
 
 // I got sick of putting these code blocks everywhere, so now they're functions.
 func fatal_check(e error) {
