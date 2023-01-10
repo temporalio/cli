@@ -58,23 +58,30 @@ func main() {
 	var header string
 	var headerFile *os.File
 
-
 	// read line
 	for scanner.Scan() {
 		line := scanner.Text()
 		if strings.HasPrefix(line, "## ") {
 			header = strings.TrimSpace(line[2:])
 			path_docs := "docs/" + header
-			
+
+			//create directory
 			err := os.MkdirAll(path_docs, os.ModePerm)
 			print_check(err)
 			
 			// create index file here
 			headerFile, err = os.Create(filepath.Join(path_docs, "index.md"))
 			print_check(err)
-			
 
-		}	else if !strings.HasPrefix(line, "# "){
+		} else if strings.HasPrefix(line, "### "){
+			path_docs := "docs/" + header
+			fileName := strings.TrimSpace(line[3:])
+
+			//create file within directory
+			headerFile, err = os.Create(filepath.Join(path_docs, fileName + ".md"))
+			print_check(err)
+
+		} else if !strings.HasPrefix(line, "# ") {
 			_, err := headerFile.WriteString(line + "\n")
 			print_check(err)
 		} else {
@@ -93,7 +100,6 @@ func fatal_check(e error) {
 	if e != nil {
 		log.Fatal(e)
 	}
-
 }
 
 func print_check(e error) {
