@@ -27,17 +27,17 @@ The eventId of any event after WorkflowTaskStarted you want to reset to (exclusi
 gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
 
 **--namespace**
-Alias: ** -n**
+Alias: **-n**
 Temporal workflow namespace (default: default)
 
 **--reapply-type**
-Event types to reapply after the reset point: Signal, None, . (default: All)
+Event types to reapply after the reset point: , Signal, None. (default: All)
 
 **--reason**
 Reason to reset
 
 **--run-id**
-Alias: ** -r**
+Alias: **-r**
 Run Id
 
 **--tls-ca-path**
@@ -59,6 +59,6 @@ Override for target server name
 Event type to which you want to reset: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew
 
 **--workflow-id**
-Alias: ** -w**
+Alias: **-w**
 Workflow Id
 

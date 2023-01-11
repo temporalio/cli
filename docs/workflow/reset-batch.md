@@ -39,14 +39,14 @@ Number of goroutines to run in parallel. Each goroutine processes one line for e
 Separator for the input file. The default is a tab (	) (default: 	)
 
 **--namespace**
-Alias: ** -n**
+Alias: **-n**
 Temporal workflow namespace (default: default)
 
 **--non-deterministic**
 Reset Workflow Execution only if its last Event is WorkflowTaskFailed with a nondeterministic error
 
 **--query**
-Alias: ** -q**
+Alias: **-q**
 Visibility query of Search Attributes describing the Workflow Executions to reset. See https://docs.temporal.io/docs/tctl/workflow/list#--query
 
 **--reason**

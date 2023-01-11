@@ -33,22 +33,22 @@ gRPC metadata to send with requests. Format: key=value. Use valid JSON formats f
 number of items to print (default: 0)
 
 **--namespace**
-Alias: ** -n**
+Alias: **-n**
 Temporal workflow namespace (default: default)
 
 **--no-pager**
-Alias: ** -P**
+Alias: **-P**
 disable interactive pager
 
 **--output**
-Alias: ** -o**
+Alias: **-o**
 format output as: table, json, card. (default: table)
 
 **--pager**
 pager to use: less, more, favoritePager..
 
 **--query**
-Alias: ** -q**
+Alias: **-q**
 Filter results using SQL like query. See https://docs.temporal.io/docs/tctl/workflow/list#--query for details
 
 **--time-format**

@@ -24,7 +24,7 @@ Env name to read the client environment variables from (default: default)
 gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
 
 **--namespace**
-Alias: ** -n**
+Alias: **-n**
 Temporal workflow namespace (default: default)
 
 **--pause**
@@ -34,7 +34,7 @@ Pauses the schedule
 Free-form text to describe reason for pause/unpause (default: (no reason provided))
 
 **--schedule-id**
-Alias: ** -s**
+Alias: **-s**
 Schedule Id
 
 **--tls-ca-path**

@@ -24,15 +24,15 @@ Env name to read the client environment variables from (default: default)
 gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
 
 **--namespace**
-Alias: ** -n**
+Alias: **-n**
 Temporal workflow namespace (default: default)
 
 **--output**
-Alias: ** -o**
+Alias: **-o**
 format output as: table, json, card. (default: table)
 
 **--task-queue**
-Alias: ** -t**
+Alias: **-t**
 Task Queue name
 
 **--tls-ca-path**

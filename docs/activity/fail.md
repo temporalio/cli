@@ -33,14 +33,14 @@ gRPC metadata to send with requests. Format: key=value. Use valid JSON formats f
 Specify operator's identity
 
 **--namespace**
-Alias: ** -n**
+Alias: **-n**
 Temporal workflow namespace (default: default)
 
 **--reason**
 Reason to fail the Activity
 
 **--run-id**
-Alias: ** -r**
+Alias: **-r**
 Run Id
 
 **--tls-ca-path**
@@ -59,6 +59,6 @@ Path to private key
 Override for target server name
 
 **--workflow-id**
-Alias: ** -w**
+Alias: **-w**
 Workflow Id
 

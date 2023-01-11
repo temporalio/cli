@@ -28,7 +28,7 @@ Env name to read the client environment variables from (default: default)
 gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
 
 **--namespace**
-Alias: ** -n**
+Alias: **-n**
 Temporal workflow namespace (default: default)
 
 **--tls-ca-path**
@@ -75,11 +75,11 @@ customize fields to print. Set to 'long' to automatically print more of main fie
 gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
 
 **--namespace**
-Alias: ** -n**
+Alias: **-n**
 Temporal workflow namespace (default: default)
 
 **--output**
-Alias: ** -o**
+Alias: **-o**
 format output as: table, json, card. (default: table)
 
 **--tls-ca-path**
@@ -126,11 +126,11 @@ customize fields to print. Set to 'long' to automatically print more of main fie
 gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
 
 **--namespace**
-Alias: ** -n**
+Alias: **-n**
 Temporal workflow namespace (default: default)
 
 **--output**
-Alias: ** -o**
+Alias: **-o**
 format output as: table, json, card. (default: table)
 
 **--tls-ca-path**
@@ -180,7 +180,7 @@ Frontend address of the remote cluster
 gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
 
 **--namespace**
-Alias: ** -n**
+Alias: **-n**
 Temporal workflow namespace (default: default)
 
 **--tls-ca-path**
@@ -230,15 +230,15 @@ gRPC metadata to send with requests. Format: key=value. Use valid JSON formats f
 number of items to print (default: 0)
 
 **--namespace**
-Alias: ** -n**
+Alias: **-n**
 Temporal workflow namespace (default: default)
 
 **--no-pager**
-Alias: ** -P**
+Alias: **-P**
 disable interactive pager
 
 **--output**
-Alias: ** -o**
+Alias: **-o**
 format output as: table, json, card. (default: table)
 
 **--pager**
@@ -291,7 +291,7 @@ gRPC metadata to send with requests. Format: key=value. Use valid JSON formats f
 Frontend address of the remote cluster
 
 **--namespace**
-Alias: ** -n**
+Alias: **-n**
 Temporal workflow namespace (default: default)
 
 **--tls-ca-path**

@@ -27,15 +27,15 @@ customize fields to print. Set to 'long' to automatically print more of main fie
 gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
 
 **--namespace**
-Alias: ** -n**
+Alias: **-n**
 Temporal workflow namespace (default: default)
 
 **--output**
-Alias: ** -o**
+Alias: **-o**
 format output as: table, json, card. (default: table)
 
 **--task-queue**
-Alias: ** -t**
+Alias: **-t**
 Task Queue name
 
 **--task-queue-type**
