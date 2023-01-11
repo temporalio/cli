@@ -3,6 +3,8 @@
 
 # Copyright (c) 2016 The Rust Project Developers
 
+# Copyright (c) 2022 Temporal Technologies Inc.
+
 # Permission is hereby granted, free of charge, to any
 # person obtaining a copy of this software and associated
 # documentation files (the "Software"), to deal in the
@@ -153,6 +155,11 @@ main() {
     fi
 
     ensure mkdir -p "$_dir"
+
+
+    say "TODO $_url -> $_file $_arch"
+    exit 1
+
     ensure downloader "$_url" "$_file" "$_arch"
     ensure chmod u+x "$_file"
     if [ ! -x "$_file" ]; then
