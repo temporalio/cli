@@ -44,11 +44,7 @@ if [ "$KSH_VERSION" = 'Version JM 93t+ 2010-03-05' ]; then
     exit 1
 fi
 
-
 set -u
-
-# If RUSTUP_UPDATE_ROOT is unset or empty, default it.
-RUSTUP_UPDATE_ROOT="${RUSTUP_UPDATE_ROOT:-https://static.rust-lang.org/rustup}"
 
 #XXX: If you change anything here, please make the same changes in setup_mode.rs
 usage() {
@@ -85,30 +81,22 @@ main() {
     need_cmd mkdir
     need_cmd rm
     need_cmd rmdir
+    need_cmd tar
 
     get_architecture || return 1
     local _arch="$RETVAL"
     assert_nz "$_arch" "arch"
 
-    local _ext=""
-    case "$_arch" in
-        *windows*)
-            _ext=".exe"
-            ;;
-    esac
-
-    local _url="${RUSTUP_UPDATE_ROOT}/dist/${_arch}/rustup-init${_ext}"
-
-    local _dir
-    _dir="$(ensure mktemp -d)"
-    local _file="${_dir}/rustup-init${_ext}"
+    get_platform || return 1
+    local _platform="$RETVAL"
+    assert_nz "$_platform" "platform"
 
     local _ansi_escapes_are_valid=false
     if [ -t 2 ]; then
         if [ "${TERM+set}" = 'set' ]; then
             case "$TERM" in
-                xterm*|rxvt*|urxvt*|linux*|vt*)
-                    _ansi_escapes_are_valid=true
+            xterm* | rxvt* | urxvt* | linux* | vt*)
+                _ansi_escapes_are_valid=true
                 ;;
             esac
         fi
@@ -118,33 +106,33 @@ main() {
     local need_tty=yes
     for arg in "$@"; do
         case "$arg" in
-            --help)
-                usage
-                exit 0
-                ;;
-            *)
-                OPTIND=1
-                if [ "${arg%%--*}" = "" ]; then
-                    # Long option (other than --help);
-                    # don't attempt to interpret it.
-                    continue
-                fi
-                while getopts :hy sub_arg "$arg"; do
-                    case "$sub_arg" in
-                        h)
-                            usage
-                            exit 0
-                            ;;
-                        y)
-                            # user wants to skip the prompt --
-                            # we don't need /dev/tty
-                            need_tty=no
-                            ;;
-                        *)
-                            ;;
-                        esac
-                done
-                ;;
+        --help)
+            usage
+            exit 0
+            ;;
+        *)
+            OPTIND=1
+            if [ "${arg%%--*}" = "" ]; then
+                # Long option (other than --help);
+                # don't attempt to interpret it.
+                continue
+            fi
+            while getopts :hy sub_arg "$arg"; do
+                case "$sub_arg" in
+                h)
+                    usage
+                    exit 0
+                    ;;
+                y)
+                    # user wants to skip the prompt --
+                    # we don't need /dev/tty
+                    need_tty=no
+                    ;;
+                *) ;;
+
+                esac
+            done
+            ;;
         esac
     done
 
@@ -154,46 +142,45 @@ main() {
         printf '%s\n' 'info: downloading installer' 1>&2
     fi
 
+
+    # TODO replace with
+    # local _url="https://temporal.download/temporalite/archive/latest?platform=${_platform}&arch=${_arch}"
+    local _url="https://temporal.download/assets/temporalio/cli/releases/download/v0.2.0/cli_0.2.0_${_platform}_${_arch}.tar.gz"
+
+    local _ext="tar.gz"
+    case "$_arch" in
+    *windows*)
+        _ext=".zip"
+        ;;
+    esac
+
+    local _dir
+    _dir="$(ensure install_dir)"
     ensure mkdir -p "$_dir"
 
+    local _archive="${_dir}/temporal_cli_latest${_ext}"
+    ensure downloader "$_url" "$_archive" "$_arch"
+    ensure unzip "$_archive" "$_dir"
+    ensure rm "$_archive"
 
-    say "TODO $_url -> $_file $_arch"
-    exit 1
-
-    ensure downloader "$_url" "$_file" "$_arch"
-    ensure chmod u+x "$_file"
-    if [ ! -x "$_file" ]; then
-        printf '%s\n' "Cannot execute $_file (likely because of mounting /tmp as noexec)." 1>&2
-        printf '%s\n' "Please copy the file to a location where you can execute binaries and run ./rustup-init${_ext}." 1>&2
-        exit 1
-    fi
-
-    if [ "$need_tty" = "yes" ] && [ ! -t 0 ]; then
-        # The installer is going to want to ask for confirmation by
-        # reading stdin.  This script was piped into `sh` though and
-        # doesn't have stdin to pass to its children. Instead we're going
-        # to explicitly connect /dev/tty to the installer's stdin.
-        if [ ! -t 1 ]; then
-            err "Unable to run interactively. Run with -y to accept defaults, --help for additional options"
-        fi
-
-        ignore "$_file" "$@" < /dev/tty
-    else
-        ignore "$_file" "$@"
-    fi
+    local _bext=""
+    case "$_arch" in
+    *windows*)
+        _bext=".exe"
+        ;;
+    esac
+    local _exe_name="temporal$_bext"
+    local _exe="$_dir/$_exe_name"
+    ensure chmod u+x "$_exe"
 
     local _retval=$?
-
-    ignore rm "$_file"
-    ignore rmdir "$_dir"
-
     return "$_retval"
 }
 
 check_proc() {
     # Check for /proc by looking for the /proc/self/exe link
     # This is only run on Linux
-    if ! test -L /proc/self/exe ; then
+    if ! test -L /proc/self/exe; then
         err "fatal: Unable to find /proc/self/exe.  Is /proc mounted?  Installation cannot proceed without /proc."
     fi
 }
@@ -207,7 +194,7 @@ get_bitness() {
     # The printf builtin on some shells like dash only supports octal
     # escape sequences, so we use those.
     local _current_exe_head
-    _current_exe_head=$(head -c 5 /proc/self/exe )
+    _current_exe_head=$(head -c 5 /proc/self/exe)
     if [ "$_current_exe_head" = "$(printf '\177ELF\001')" ]; then
         echo 32
     elif [ "$_current_exe_head" = "$(printf '\177ELF\002')" ]; then
@@ -249,217 +236,39 @@ get_endianness() {
 }
 
 get_architecture() {
-    local _ostype _cputype _bitness _arch _clibtype
-    _ostype="$(uname -s)"
-    _cputype="$(uname -m)"
-    _clibtype="gnu"
-
-    if [ "$_ostype" = Linux ]; then
-        if [ "$(uname -o)" = Android ]; then
-            _ostype=Android
-        fi
-        if ldd --version 2>&1 | grep -q 'musl'; then
-            _clibtype="musl"
-        fi
-    fi
-
-    if [ "$_ostype" = Darwin ] && [ "$_cputype" = i386 ]; then
-        # Darwin `uname -m` lies
-        if sysctl hw.optional.x86_64 | grep -q ': 1'; then
-            _cputype=x86_64
-        fi
-    fi
-
-    if [ "$_ostype" = SunOS ]; then
-        # Both Solaris and illumos presently announce as "SunOS" in "uname -s"
-        # so use "uname -o" to disambiguate.  We use the full path to the
-        # system uname in case the user has coreutils uname first in PATH,
-        # which has historically sometimes printed the wrong value here.
-        if [ "$(/usr/bin/uname -o)" = illumos ]; then
-            _ostype=illumos
-        fi
-
-        # illumos systems have multi-arch userlands, and "uname -m" reports the
-        # machine hardware name; e.g., "i86pc" on both 32- and 64-bit x86
-        # systems.  Check for the native (widest) instruction set on the
-        # running kernel:
-        if [ "$_cputype" = i86pc ]; then
-            _cputype="$(isainfo -n)"
-        fi
-    fi
-
-    case "$_ostype" in
-
-        Android)
-            _ostype=linux-android
-            ;;
-
-        Linux)
-            check_proc
-            _ostype=unknown-linux-$_clibtype
-            _bitness=$(get_bitness)
-            ;;
-
-        FreeBSD)
-            _ostype=unknown-freebsd
-            ;;
-
-        NetBSD)
-            _ostype=unknown-netbsd
-            ;;
-
-        DragonFly)
-            _ostype=unknown-dragonfly
-            ;;
-
-        Darwin)
-            _ostype=apple-darwin
-            ;;
-
-        illumos)
-            _ostype=unknown-illumos
-            ;;
-
-        MINGW* | MSYS* | CYGWIN* | Windows_NT)
-            _ostype=pc-windows-gnu
-            ;;
-
-        *)
-            err "unrecognized OS type: $_ostype"
-            ;;
-
+    local _arch="$(uname -m)"
+    case "$_arch" in
+    "x86_64" | "amd64")
+        _arch="amd64"
+        ;;
+    "arm64" | "aarch64")
+        _arch="arm64"
+        ;;
+    *)
+        err "Unsupported architecture $_arch"
+        return 1
+        ;;
     esac
-
-    case "$_cputype" in
-
-        i386 | i486 | i686 | i786 | x86)
-            _cputype=i686
-            ;;
-
-        xscale | arm)
-            _cputype=arm
-            if [ "$_ostype" = "linux-android" ]; then
-                _ostype=linux-androideabi
-            fi
-            ;;
-
-        armv6l)
-            _cputype=arm
-            if [ "$_ostype" = "linux-android" ]; then
-                _ostype=linux-androideabi
-            else
-                _ostype="${_ostype}eabihf"
-            fi
-            ;;
-
-        armv7l | armv8l)
-            _cputype=armv7
-            if [ "$_ostype" = "linux-android" ]; then
-                _ostype=linux-androideabi
-            else
-                _ostype="${_ostype}eabihf"
-            fi
-            ;;
-
-        aarch64 | arm64)
-            _cputype=aarch64
-            ;;
-
-        x86_64 | x86-64 | x64 | amd64)
-            _cputype=x86_64
-            ;;
-
-        mips)
-            _cputype=$(get_endianness mips '' el)
-            ;;
-
-        mips64)
-            if [ "$_bitness" -eq 64 ]; then
-                # only n64 ABI is supported for now
-                _ostype="${_ostype}abi64"
-                _cputype=$(get_endianness mips64 '' el)
-            fi
-            ;;
-
-        ppc)
-            _cputype=powerpc
-            ;;
-
-        ppc64)
-            _cputype=powerpc64
-            ;;
-
-        ppc64le)
-            _cputype=powerpc64le
-            ;;
-
-        s390x)
-            _cputype=s390x
-            ;;
-        riscv64)
-            _cputype=riscv64gc
-            ;;
-        *)
-            err "unknown CPU type: $_cputype"
-
-    esac
-
-    # Detect 64-bit linux with 32-bit userland
-    if [ "${_ostype}" = unknown-linux-gnu ] && [ "${_bitness}" -eq 32 ]; then
-        case $_cputype in
-            x86_64)
-                if [ -n "${RUSTUP_CPUTYPE:-}" ]; then
-                    _cputype="$RUSTUP_CPUTYPE"
-                else {
-                    # 32-bit executable for amd64 = x32
-                    if is_host_amd64_elf; then {
-                         echo "This host is running an x32 userland; as it stands, x32 support is poor," 1>&2
-                         echo "and there isn't a native toolchain -- you will have to install" 1>&2
-                         echo "multiarch compatibility with i686 and/or amd64, then select one" 1>&2
-                         echo "by re-running this script with the RUSTUP_CPUTYPE environment variable" 1>&2
-                         echo "set to i686 or x86_64, respectively." 1>&2
-                         echo 1>&2
-                         echo "You will be able to add an x32 target after installation by running" 1>&2
-                         echo "  rustup target add x86_64-unknown-linux-gnux32" 1>&2
-                         exit 1
-                    }; else
-                        _cputype=i686
-                    fi
-                }; fi
-                ;;
-            mips64)
-                _cputype=$(get_endianness mips '' el)
-                ;;
-            powerpc64)
-                _cputype=powerpc
-                ;;
-            aarch64)
-                _cputype=armv7
-                if [ "$_ostype" = "linux-android" ]; then
-                    _ostype=linux-androideabi
-                else
-                    _ostype="${_ostype}eabihf"
-                fi
-                ;;
-            riscv64gc)
-                err "riscv64 with 32-bit userland unsupported"
-                ;;
-        esac
-    fi
-
-    # Detect armv7 but without the CPU features Rust needs in that build,
-    # and fall back to arm.
-    # See https://github.com/rust-lang/rustup.rs/issues/587.
-    if [ "$_ostype" = "unknown-linux-gnueabihf" ] && [ "$_cputype" = armv7 ]; then
-        if ensure grep '^Features' /proc/cpuinfo | grep -q -v neon; then
-            # At least one processor does not have NEON.
-            _cputype=arm
-        fi
-    fi
-
-    _arch="${_cputype}-${_ostype}"
 
     RETVAL="$_arch"
+}
+
+get_platform() {
+    local _platform="$(uname -s)"
+    case "$_platform" in
+    "Linux")
+        TEMPORAL_OS="linux"
+        ;;
+    "Darwin")
+        TEMPORAL_OS="darwin"
+        ;;
+    *)
+        err "Unsupported OS $_platform"
+        return 1
+        ;;
+    esac
+
+    RETVAL="$_platform"
 }
 
 say() {
@@ -478,7 +287,7 @@ need_cmd() {
 }
 
 check_cmd() {
-    command -v "$1" > /dev/null 2>&1
+    command -v "$1" >/dev/null 2>&1
 }
 
 assert_nz() {
@@ -544,7 +353,7 @@ downloader() {
         fi
         return $_status
     elif [ "$_dld" = wget ]; then
-        if [ "$(wget -V 2>&1|head -2|tail -1|cut -f1 -d" ")" = "BusyBox" ]; then
+        if [ "$(wget -V 2>&1 | head -2 | tail -1 | cut -f1 -d" ")" = "BusyBox" ]; then
             echo "Warning: using the BusyBox version of wget.  Not enforcing strong cipher suites for TLS or TLS v1.2, this is potentially less secure"
             _err=$(wget "$1" -O "$2" 2>&1)
             _status=$?
@@ -574,8 +383,27 @@ downloader() {
         fi
         return $_status
     else
-        err "Unknown downloader"   # should not reach here
+        err "Unknown downloader" # should not reach here
     fi
+}
+
+unzip() {
+    local _file="$1"
+    local _dir="$2"
+
+    tar -xzvf "$_file" -C "$_dir"
+}
+
+default_install_dir() {
+  [ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.temporalio" || printf %s "${XDG_CONFIG_HOME}/temporalio"
+}
+
+install_dir() {
+  if [ -n "$TEMPORAL_DIR" ]; then
+    printf %s "${TEMPORAL_DIR}"
+  else
+    default_install_dir
+  fi
 }
 
 check_help_for() {
@@ -589,33 +417,33 @@ check_help_for() {
 
     local _category
     if "$_cmd" --help | grep -q 'For all options use the manual or "--help all".'; then
-      _category="all"
+        _category="all"
     else
-      _category=""
+        _category=""
     fi
 
     case "$_arch" in
 
-        *darwin*)
+    *darwin*)
         if check_cmd sw_vers; then
             case $(sw_vers -productVersion) in
-                10.*)
-                    # If we're running on macOS, older than 10.13, then we always
-                    # fail to find these options to force fallback
-                    if [ "$(sw_vers -productVersion | cut -d. -f2)" -lt 13 ]; then
-                        # Older than 10.13
-                        echo "Warning: Detected macOS platform older than 10.13"
-                        return 1
-                    fi
-                    ;;
-                11.*)
-                    # We assume Big Sur will be OK for now
-                    ;;
-                *)
-                    # Unknown product version, warn and continue
-                    echo "Warning: Detected unknown macOS major version: $(sw_vers -productVersion)"
-                    echo "Warning TLS capabilities detection may fail"
-                    ;;
+            10.*)
+                # If we're running on macOS, older than 10.13, then we always
+                # fail to find these options to force fallback
+                if [ "$(sw_vers -productVersion | cut -d. -f2)" -lt 13 ]; then
+                    # Older than 10.13
+                    echo "Warning: Detected macOS platform older than 10.13"
+                    return 1
+                fi
+                ;;
+            11.*)
+                # We assume Big Sur will be OK for now
+                ;;
+            *)
+                # Unknown product version, warn and continue
+                echo "Warning: Detected unknown macOS major version: $(sw_vers -productVersion)"
+                echo "Warning TLS capabilities detection may fail"
+                ;;
             esac
         fi
         ;;
@@ -633,13 +461,13 @@ check_help_for() {
 
 # Check if curl supports the --retry flag, then pass it to the curl invocation.
 check_curl_for_retry_support() {
-  local _retry_supported=""
-  # "unspecified" is for arch, allows for possibility old OS using macports, homebrew, etc.
-  if check_help_for "notspecified" "curl" "--retry"; then
-    _retry_supported="--retry 3"
-  fi
+    local _retry_supported=""
+    # "unspecified" is for arch, allows for possibility old OS using macports, homebrew, etc.
+    if check_help_for "notspecified" "curl" "--retry"; then
+        _retry_supported="--retry 3"
+    fi
 
-  RETVAL="$_retry_supported"
+    RETVAL="$_retry_supported"
 
 }
 
