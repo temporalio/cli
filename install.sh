@@ -1,399 +1,561 @@
-#!/usr/bin/env bash
+#!/bin/sh
+# shellcheck shell=dash
 
-# The MIT License (MIT)
-
-# Copyright (c) 2010 Tim Caswell
-
-# Copyright (c) 2014 Jordan Harband
+# Copyright (c) 2016 The Rust Project Developers
 
 # Copyright (c) 2022 Temporal Technologies Inc.
 
-# Permission is hereby granted, free of charge, to any person obtaining a copy of
-# this software and associated documentation files (the "Software"), to deal in
-# the Software without restriction, including without limitation the rights to
-# use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
-# the Software, and to permit persons to whom the Software is furnished to do so,
-# subject to the following conditions:
+# Permission is hereby granted, free of charge, to any
+# person obtaining a copy of this software and associated
+# documentation files (the "Software"), to deal in the
+# Software without restriction, including without
+# limitation the rights to use, copy, modify, merge,
+# publish, distribute, sublicense, and/or sell copies of
+# the Software, and to permit persons to whom the Software
+# is furnished to do so, subject to the following
+# conditions:
 
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
+# The above copyright notice and this permission notice
+# shall be included in all copies or substantial portions
+# of the Software.
 
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
-# FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
-# COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
-# IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-# CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF
+# ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
+# TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
+# SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+# CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+# OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
+# IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+# DEALINGS IN THE SOFTWARE.
 
-{ # this ensures the entire script is downloaded #
+# This is just a little script that can be downloaded from the internet to
+# install rustup. It just does platform detection, downloads the installer
+# and runs it.
 
-nvm_has() {
-  type "$1" > /dev/null 2>&1
-}
+# It runs on Unix shells like {a,ba,da,k,z}sh. It uses the common `local`
+# extension. Note: Most shells limit `local` to 1 var per line, contra bash.
 
-nvm_echo() {
-  command printf %s\\n "$*" 2>/dev/null
-}
-
-if [ -z "${BASH_VERSION}" ] || [ -n "${ZSH_VERSION}" ]; then
-  # shellcheck disable=SC2016
-  nvm_echo >&2 'Error: Pipe the install script to `bash`'
-  exit 1
+if [ "$KSH_VERSION" = 'Version JM 93t+ 2010-03-05' ]; then
+    # The version of ksh93 that ships with many illumos systems does not
+    # support the "local" extension.  Print a message rather than fail in
+    # subtle ways later on:
+    echo 'rustup does not work with this ksh93 version; please try bash!' >&2
+    exit 1
 fi
 
-nvm_grep() {
-  GREP_OPTIONS='' command grep "$@"
+set -u
+
+#XXX: If you change anything here, please make the same changes in setup_mode.rs
+usage() {
+    cat 1>&2 <<EOF
+rustup-init 1.25.1 (48d233f65 2022-07-12)
+The installer for rustup
+
+USAGE:
+    rustup-init [FLAGS] [OPTIONS]
+
+FLAGS:
+    -v, --verbose           Enable verbose output
+    -q, --quiet             Disable progress output
+    -y                      Disable confirmation prompt.
+        --no-modify-path    Don't configure the PATH environment variable
+    -h, --help              Prints help information
+    -V, --version           Prints version information
+
+OPTIONS:
+        --default-host <default-host>              Choose a default host triple
+        --default-toolchain <default-toolchain>    Choose a default toolchain to install
+        --default-toolchain none                   Do not install any toolchains
+        --profile [minimal|default|complete]       Choose a profile
+    -c, --component <components>...                Component name to also install
+    -t, --target <targets>...                      Target name to also install
+EOF
 }
 
-nvm_default_install_dir() {
+main() {
+    downloader --check
+    need_cmd uname
+    need_cmd mktemp
+    need_cmd chmod
+    need_cmd mkdir
+    need_cmd rm
+    need_cmd rmdir
+    need_cmd tar
+
+    get_architecture || return 1
+    local _arch="$RETVAL"
+    assert_nz "$_arch" "arch"
+
+    get_platform || return 1
+    local _platform="$RETVAL"
+    assert_nz "$_platform" "platform"
+
+    local _ansi_escapes_are_valid=false
+    if [ -t 2 ]; then
+        if [ "${TERM+set}" = 'set' ]; then
+            case "$TERM" in
+            xterm* | rxvt* | urxvt* | linux* | vt*)
+                _ansi_escapes_are_valid=true
+                ;;
+            esac
+        fi
+    fi
+
+    # check if we have to use /dev/tty to prompt the user
+    local need_tty=yes
+    for arg in "$@"; do
+        case "$arg" in
+        --help)
+            usage
+            exit 0
+            ;;
+        *)
+            OPTIND=1
+            if [ "${arg%%--*}" = "" ]; then
+                # Long option (other than --help);
+                # don't attempt to interpret it.
+                continue
+            fi
+            while getopts :hy sub_arg "$arg"; do
+                case "$sub_arg" in
+                h)
+                    usage
+                    exit 0
+                    ;;
+                y)
+                    # user wants to skip the prompt --
+                    # we don't need /dev/tty
+                    need_tty=no
+                    ;;
+                *) ;;
+
+                esac
+            done
+            ;;
+        esac
+    done
+
+    if $_ansi_escapes_are_valid; then
+        printf "\33[1minfo:\33[0m downloading installer\n" 1>&2
+    else
+        printf '%s\n' 'info: downloading installer' 1>&2
+    fi
+
+
+    # TODO replace with
+    # local _url="https://temporal.download/temporalite/archive/latest?platform=${_platform}&arch=${_arch}"
+    local _url="https://temporal.download/assets/temporalio/cli/releases/download/v0.2.0/cli_0.2.0_${_platform}_${_arch}.tar.gz"
+
+    local _ext="tar.gz"
+    case "$_arch" in
+    *windows*)
+        _ext=".zip"
+        ;;
+    esac
+
+    local _dir
+    _dir="$(ensure install_dir)"
+    ensure mkdir -p "$_dir"
+
+    local _archive="${_dir}/temporal_cli_latest${_ext}"
+    ensure downloader "$_url" "$_archive" "$_arch"
+    ensure unzip "$_archive" "$_dir"
+    ensure rm "$_archive"
+
+    local _bext=""
+    case "$_arch" in
+    *windows*)
+        _bext=".exe"
+        ;;
+    esac
+    local _exe_name="temporal$_bext"
+    local _exe="$_dir/$_exe_name"
+    ensure chmod u+x "$_exe"
+
+    local _retval=$?
+    return "$_retval"
+}
+
+check_proc() {
+    # Check for /proc by looking for the /proc/self/exe link
+    # This is only run on Linux
+    if ! test -L /proc/self/exe; then
+        err "fatal: Unable to find /proc/self/exe.  Is /proc mounted?  Installation cannot proceed without /proc."
+    fi
+}
+
+get_bitness() {
+    need_cmd head
+    # Architecture detection without dependencies beyond coreutils.
+    # ELF files start out "\x7fELF", and the following byte is
+    #   0x01 for 32-bit and
+    #   0x02 for 64-bit.
+    # The printf builtin on some shells like dash only supports octal
+    # escape sequences, so we use those.
+    local _current_exe_head
+    _current_exe_head=$(head -c 5 /proc/self/exe)
+    if [ "$_current_exe_head" = "$(printf '\177ELF\001')" ]; then
+        echo 32
+    elif [ "$_current_exe_head" = "$(printf '\177ELF\002')" ]; then
+        echo 64
+    else
+        err "unknown platform bitness"
+    fi
+}
+
+is_host_amd64_elf() {
+    need_cmd head
+    need_cmd tail
+    # ELF e_machine detection without dependencies beyond coreutils.
+    # Two-byte field at offset 0x12 indicates the CPU,
+    # but we're interested in it being 0x3E to indicate amd64, or not that.
+    local _current_exe_machine
+    _current_exe_machine=$(head -c 19 /proc/self/exe | tail -c 1)
+    [ "$_current_exe_machine" = "$(printf '\076')" ]
+}
+
+get_endianness() {
+    local cputype=$1
+    local suffix_eb=$2
+    local suffix_el=$3
+
+    # detect endianness without od/hexdump, like get_bitness() does.
+    need_cmd head
+    need_cmd tail
+
+    local _current_exe_endianness
+    _current_exe_endianness="$(head -c 6 /proc/self/exe | tail -c 1)"
+    if [ "$_current_exe_endianness" = "$(printf '\001')" ]; then
+        echo "${cputype}${suffix_el}"
+    elif [ "$_current_exe_endianness" = "$(printf '\002')" ]; then
+        echo "${cputype}${suffix_eb}"
+    else
+        err "unknown platform endianness"
+    fi
+}
+
+get_architecture() {
+    local _arch="$(uname -m)"
+    case "$_arch" in
+    "x86_64" | "amd64")
+        _arch="amd64"
+        ;;
+    "arm64" | "aarch64")
+        _arch="arm64"
+        ;;
+    *)
+        err "Unsupported architecture $_arch"
+        return 1
+        ;;
+    esac
+
+    RETVAL="$_arch"
+}
+
+get_platform() {
+    local _platform="$(uname -s)"
+    case "$_platform" in
+    "Linux")
+        TEMPORAL_OS="linux"
+        ;;
+    "Darwin")
+        TEMPORAL_OS="darwin"
+        ;;
+    *)
+        err "Unsupported OS $_platform"
+        return 1
+        ;;
+    esac
+
+    RETVAL="$_platform"
+}
+
+say() {
+    printf 'rustup: %s\n' "$1"
+}
+
+err() {
+    say "$1" >&2
+    exit 1
+}
+
+need_cmd() {
+    if ! check_cmd "$1"; then
+        err "need '$1' (command not found)"
+    fi
+}
+
+check_cmd() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+assert_nz() {
+    if [ -z "$1" ]; then err "assert_nz $2"; fi
+}
+
+# Run a command that should never fail. If the command fails execution
+# will immediately terminate with an error showing the failing
+# command.
+ensure() {
+    if ! "$@"; then err "command failed: $*"; fi
+}
+
+# This is just for indicating that commands' results are being
+# intentionally ignored. Usually, because it's being executed
+# as part of error handling.
+ignore() {
+    "$@"
+}
+
+# This wraps curl or wget. Try curl first, if not installed,
+# use wget instead.
+downloader() {
+    local _dld
+    local _ciphersuites
+    local _err
+    local _status
+    local _retry
+    if check_cmd curl; then
+        _dld=curl
+    elif check_cmd wget; then
+        _dld=wget
+    else
+        _dld='curl or wget' # to be used in error message of need_cmd
+    fi
+
+    if [ "$1" = --check ]; then
+        need_cmd "$_dld"
+    elif [ "$_dld" = curl ]; then
+        check_curl_for_retry_support
+        _retry="$RETVAL"
+        get_ciphersuites_for_curl
+        _ciphersuites="$RETVAL"
+        if [ -n "$_ciphersuites" ]; then
+            _err=$(curl $_retry --proto '=https' --tlsv1.2 --ciphers "$_ciphersuites" --silent --show-error --fail --location "$1" --output "$2" 2>&1)
+            _status=$?
+        else
+            echo "Warning: Not enforcing strong cipher suites for TLS, this is potentially less secure"
+            if ! check_help_for "$3" curl --proto --tlsv1.2; then
+                echo "Warning: Not enforcing TLS v1.2, this is potentially less secure"
+                _err=$(curl $_retry --silent --show-error --fail --location "$1" --output "$2" 2>&1)
+                _status=$?
+            else
+                _err=$(curl $_retry --proto '=https' --tlsv1.2 --silent --show-error --fail --location "$1" --output "$2" 2>&1)
+                _status=$?
+            fi
+        fi
+        if [ -n "$_err" ]; then
+            echo "$_err" >&2
+            if echo "$_err" | grep -q 404$; then
+                err "installer for platform '$3' not found, this may be unsupported"
+            fi
+        fi
+        return $_status
+    elif [ "$_dld" = wget ]; then
+        if [ "$(wget -V 2>&1 | head -2 | tail -1 | cut -f1 -d" ")" = "BusyBox" ]; then
+            echo "Warning: using the BusyBox version of wget.  Not enforcing strong cipher suites for TLS or TLS v1.2, this is potentially less secure"
+            _err=$(wget "$1" -O "$2" 2>&1)
+            _status=$?
+        else
+            get_ciphersuites_for_wget
+            _ciphersuites="$RETVAL"
+            if [ -n "$_ciphersuites" ]; then
+                _err=$(wget --https-only --secure-protocol=TLSv1_2 --ciphers "$_ciphersuites" "$1" -O "$2" 2>&1)
+                _status=$?
+            else
+                echo "Warning: Not enforcing strong cipher suites for TLS, this is potentially less secure"
+                if ! check_help_for "$3" wget --https-only --secure-protocol; then
+                    echo "Warning: Not enforcing TLS v1.2, this is potentially less secure"
+                    _err=$(wget "$1" -O "$2" 2>&1)
+                    _status=$?
+                else
+                    _err=$(wget --https-only --secure-protocol=TLSv1_2 "$1" -O "$2" 2>&1)
+                    _status=$?
+                fi
+            fi
+        fi
+        if [ -n "$_err" ]; then
+            echo "$_err" >&2
+            if echo "$_err" | grep -q ' 404 Not Found$'; then
+                err "installer for platform '$3' not found, this may be unsupported"
+            fi
+        fi
+        return $_status
+    else
+        err "Unknown downloader" # should not reach here
+    fi
+}
+
+unzip() {
+    local _file="$1"
+    local _dir="$2"
+
+    tar -xzvf "$_file" -C "$_dir"
+}
+
+default_install_dir() {
   [ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.temporalio" || printf %s "${XDG_CONFIG_HOME}/temporalio"
 }
 
-nvm_install_dir() {
+install_dir() {
   if [ -n "$TEMPORAL_DIR" ]; then
     printf %s "${TEMPORAL_DIR}"
   else
-    nvm_default_install_dir
+    default_install_dir
   fi
 }
 
-nvm_profile_is_bash_or_zsh() {
-  local TEST_PROFILE
-  TEST_PROFILE="${1-}"
-  case "${TEST_PROFILE-}" in
-    *"/.bashrc" | *"/.bash_profile" | *"/.zshrc" | *"/.zprofile")
-      return
-    ;;
-    *)
-      return 1
-    ;;
-  esac
-}
+check_help_for() {
+    local _arch
+    local _cmd
+    local _arg
+    _arch="$1"
+    shift
+    _cmd="$1"
+    shift
 
-#
-# Fetches archive meta data from the Temporal CDN
-#
-temporal_fetch_meta() {
-  local TEMPORAL_SOURCE_URL
-  TEMPORAL_SOURCE_URL="$TEMPORAL_SOURCE"
-  local TEMPORAL_ARCH
-  TEMPORAL_ARCH="$(temporal_arch)"
-  local TEMPORAL_PLATFORM
-  TEMPORAL_PLATFORM="$(temporal_os)"
-  TEMPORAL_SOURCE_META_URL="https://temporal.download/temporalite/latest?platform=${TEMPORAL_PLATFORM}&arch=${TEMPORAL_ARCH}"
-
-  TEMPORAL_SOURCE_URL="$(temporal_fetch "$TEMPORAL_SOURCE_META_URL")"
-
-  nvm_echo "$TEMPORAL_SOURCE_URL"
-}
-
-temporal_archive_url() {
-  local TEMPORAL_ARCHIVE_URL
-  TEMPORAL_ARCHIVE_URL="$(temporal_fetch_meta | jq '.archiveUrl' | tr -d '"')"
-
-  nvm_echo "$TEMPORAL_ARCHIVE_URL"
-}
-
-temporal_binary_name() {
-  local TEMPORAL_FILENAME
-  TEMPORAL_FILENAME="$(temporal_fetch_meta | jq '.fileToExtract' | tr -d '"')"
-
-  nvm_echo "$TEMPORAL_FILENAME"
-}
-
-temporal_arch() {
-  local TEMPORAL_ARCH
-  TEMPORAL_ARCH="$(uname -m)"
-  case "$TEMPORAL_ARCH" in
-    "x86_64" | "amd64")
-      TEMPORAL_ARCH="amd64"
-    ;;
-    "arm64" | "aarch64")
-      TEMPORAL_ARCH="arm64"
-    ;;
-    *)
-      nvm_echo >&2 "Unsupported architecture $(uname -m)"
-      return 1
-    ;;
-  esac
-  nvm_echo "$TEMPORAL_ARCH"
-}
-
-temporal_os() {
-  local TEMPORAL_OS
-  TEMPORAL_OS="$(uname -s)"
-  case "$TEMPORAL_OS" in
-    "Linux")
-      TEMPORAL_OS="linux"
-    ;;
-    "Darwin")
-      TEMPORAL_OS="darwin"
-    ;;
-    *)
-      nvm_echo >&2 "Unsupported OS $(uname -s)"
-      return 1
-    ;;
-  esac
-  nvm_echo "$TEMPORAL_OS"
-}
-
-# 
-# Unarchives and deletes the archive
-#
-temporal_unzip_and_delete() {
-  local TEMPORAL_INSTALL_DIR
-  TEMPORAL_INSTALL_DIR="$1"
-  local TEMPORAL_FILENAME
-  TEMPORAL_FILENAME="$2"
-
-  tar -xzvf "$TEMPORAL_INSTALL_DIR/$TEMPORAL_FILENAME" -C "$TEMPORAL_INSTALL_DIR"
-  rm "$TEMPORAL_INSTALL_DIR/$TEMPORAL_FILENAME"
-}
-
-nvm_download() {
-  if nvm_has "curl"; then
-    curl --fail --compressed --show-error -q "$@"
-  elif nvm_has "wget"; then
-    # Emulate curl with wget
-    ARGS=$(nvm_echo "$@" | command sed -e 's/--progress-bar /--progress=bar /' \
-                            -e 's/--compressed //' \
-                            -e 's/--fail //' \
-                            -e 's/-L //' \
-                            -e 's/-I /--server-response /' \
-                            -e 's/-s /-q /' \
-                            -e 's/-sS /-nv /' \
-                            -e 's/-o /-O /' \
-                            -e 's/-C - /-c /')
-    # shellcheck disable=SC2086
-    eval wget $ARGS
-  fi
-}
-
-temporal_fetch() {
-  local TEMPORAL_URL
-  TEMPORAL_URL="$1"
-  local TEMPORAL_RESPONSE
-
-  if nvm_has "curl"; then
-      TEMPORAL_RESPONSE="$(curl --fail -s -q "$TEMPORAL_URL")"
-  elif nvm_has "wget"; then
-    # Emulate curl with wget
-    ARGS=$(nvm_echo "$TEMPORAL_URL" | command sed -e 's/--progress-bar /--progress=bar /' \
-                            -e 's/--compressed //' \
-                            -e 's/--fail //' \
-                            -e 's/-L //' \
-                            -e 's/-I /--server-response /' \
-                            -e 's/-s /-q /' \
-                            -e 's/-sS /-nv /' \
-                            -e 's/-o /-O /' \
-                            -e 's/-C - /-c /')
-    # shellcheck disable=SC2086
-    TEMPORAL_RESPONSE="$(eval wget $ARGS)"
-  fi
-
-  nvm_echo "$TEMPORAL_RESPONSE"
-}
-
-temporal_install_env() {
-  local TEMPORAL_DIR
-  TEMPORAL_DIR="$1"
-
-cat > "$(nvm_install_dir)/env" << EOL
-#!/bin/sh
-case ":\${PATH}:" in
-    *:"$(nvm_install_dir)":*)
-        ;;
-    *)
-        export PATH="$(nvm_install_dir):\$PATH"
-        ;;
-esac
-EOL
-
-  nvm_echo . "$(nvm_install_dir)/env"
-}
-
-install_nvm_as_script() {
-  local INSTALL_DIR
-  INSTALL_DIR="$(nvm_install_dir)"
-  local TEMPORAL_EXEC_SOURCE
-  TEMPORAL_EXEC_SOURCE="$(temporal_archive_url)"
-  local TEMPORAL_BINARY
-  TEMPORAL_BINARY="$(temporal_binary_name)"
-
-  # Downloading to $INSTALL_DIR
-  mkdir -p "$INSTALL_DIR"
-  if [ -f "$INSTALL_DIR/$TEMPORAL_BINARY" ]; then
-    nvm_echo "=> $TEMPORAL_BINARY is already installed in $INSTALL_DIR, trying to update the script"
-  else
-    nvm_echo "=> Downloading $TEMPORAL_BINARY to '$INSTALL_DIR'"
-  fi
-  nvm_download -s "$TEMPORAL_EXEC_SOURCE" -o "$INSTALL_DIR/temporal.tar.gz" || {
-    nvm_echo >&2 "Failed to download $TEMPORAL_EXEC_SOURCE"
-    return 2
-  }
-  for job in $(jobs -p | command sort)
-  do
-    wait "$job" || return $?
-  done
-
-  temporal_unzip_and_delete "$INSTALL_DIR" temporal.tar.gz || {
-    nvm_echo >&2 "Failed to unzip '$INSTALL_DIR/temporal.tar.gz'"
-    return 2
-  }
-
-  chmod a+x "$INSTALL_DIR/$TEMPORAL_BINARY" || {
-    nvm_echo >&2 "Failed to mark '$INSTALL_DIR/$TEMPORAL_BINARY' as executable"
-    return 3
-  }
-}
-
-nvm_try_profile() {
-  if [ -z "${1-}" ] || [ ! -f "${1}" ]; then
-    return 1
-  fi
-  nvm_echo "${1}"
-}
-
-#
-# Detect profile file if not specified as environment variable
-# (eg: PROFILE=~/.myprofile)
-# The echo'ed path is guaranteed to be an existing file
-# Otherwise, an empty string is returned
-#
-nvm_detect_profile() {
-  if [ "${PROFILE-}" = '/dev/null' ]; then
-    # the user has specifically requested NOT to have nvm touch their profile
-    return
-  fi
-
-  if [ -n "${PROFILE}" ] && [ -f "${PROFILE}" ]; then
-    nvm_echo "${PROFILE}"
-    return
-  fi
-
-  local DETECTED_PROFILE
-  DETECTED_PROFILE=''
-
-  if [ "${SHELL#*bash}" != "$SHELL" ]; then
-    if [ -f "$HOME/.bashrc" ]; then
-      DETECTED_PROFILE="$HOME/.bashrc"
-    elif [ -f "$HOME/.bash_profile" ]; then
-      DETECTED_PROFILE="$HOME/.bash_profile"
+    local _category
+    if "$_cmd" --help | grep -q 'For all options use the manual or "--help all".'; then
+        _category="all"
+    else
+        _category=""
     fi
-  elif [ "${SHELL#*zsh}" != "$SHELL" ]; then
-    if [ -f "$HOME/.zshrc" ]; then
-      DETECTED_PROFILE="$HOME/.zshrc"
-    elif [ -f "$HOME/.zprofile" ]; then
-      DETECTED_PROFILE="$HOME/.zprofile"
-    fi
-  fi
 
-  if [ -z "$DETECTED_PROFILE" ]; then
-    for EACH_PROFILE in ".profile" ".bashrc" ".bash_profile" ".zprofile" ".zshrc"
-    do
-      if DETECTED_PROFILE="$(nvm_try_profile "${HOME}/${EACH_PROFILE}")"; then
-        break
-      fi
+    case "$_arch" in
+
+    *darwin*)
+        if check_cmd sw_vers; then
+            case $(sw_vers -productVersion) in
+            10.*)
+                # If we're running on macOS, older than 10.13, then we always
+                # fail to find these options to force fallback
+                if [ "$(sw_vers -productVersion | cut -d. -f2)" -lt 13 ]; then
+                    # Older than 10.13
+                    echo "Warning: Detected macOS platform older than 10.13"
+                    return 1
+                fi
+                ;;
+            11.*)
+                # We assume Big Sur will be OK for now
+                ;;
+            *)
+                # Unknown product version, warn and continue
+                echo "Warning: Detected unknown macOS major version: $(sw_vers -productVersion)"
+                echo "Warning TLS capabilities detection may fail"
+                ;;
+            esac
+        fi
+        ;;
+
+    esac
+
+    for _arg in "$@"; do
+        if ! "$_cmd" --help $_category | grep -q -- "$_arg"; then
+            return 1
+        fi
     done
-  fi
 
-  if [ -n "$DETECTED_PROFILE" ]; then
-    nvm_echo "$DETECTED_PROFILE"
-  fi
+    true # not strictly needed
 }
 
-nvm_do_install() {
-  local TEMPORAL_BINARY
-  TEMPORAL_BINARY="$(temporal_binary_name)"
-
-  if [ -n "${TEMPORAL_DIR-}" ] && ! [ -d "${TEMPORAL_DIR}" ]; then
-    if [ -e "${TEMPORAL_DIR}" ]; then
-      nvm_echo >&2 "File \"${TEMPORAL_DIR}\" has the same name as installation directory."
-      exit 1
+# Check if curl supports the --retry flag, then pass it to the curl invocation.
+check_curl_for_retry_support() {
+    local _retry_supported=""
+    # "unspecified" is for arch, allows for possibility old OS using macports, homebrew, etc.
+    if check_help_for "notspecified" "curl" "--retry"; then
+        _retry_supported="--retry 3"
     fi
 
-    if [ "${TEMPORAL_DIR}" = "$(nvm_default_install_dir)" ]; then
-      mkdir "${TEMPORAL_DIR}"
+    RETVAL="$_retry_supported"
+
+}
+
+# Return cipher suite string specified by user, otherwise return strong TLS 1.2-1.3 cipher suites
+# if support by local tools is detected. Detection currently supports these curl backends:
+# GnuTLS and OpenSSL (possibly also LibreSSL and BoringSSL). Return value can be empty.
+get_ciphersuites_for_curl() {
+    if [ -n "${RUSTUP_TLS_CIPHERSUITES-}" ]; then
+        # user specified custom cipher suites, assume they know what they're doing
+        RETVAL="$RUSTUP_TLS_CIPHERSUITES"
+        return
+    fi
+
+    local _openssl_syntax="no"
+    local _gnutls_syntax="no"
+    local _backend_supported="yes"
+    if curl -V | grep -q ' OpenSSL/'; then
+        _openssl_syntax="yes"
+    elif curl -V | grep -iq ' LibreSSL/'; then
+        _openssl_syntax="yes"
+    elif curl -V | grep -iq ' BoringSSL/'; then
+        _openssl_syntax="yes"
+    elif curl -V | grep -iq ' GnuTLS/'; then
+        _gnutls_syntax="yes"
     else
-      nvm_echo >&2 "You have \$TEMPORAL_DIR set to \"${TEMPORAL_DIR}\", but that directory does not exist. Check your profile files and environment."
-      exit 1
+        _backend_supported="no"
     fi
-  fi
-  # Disable the optional which check, https://www.shellcheck.net/wiki/SC2230
-  # shellcheck disable=SC2230
-  if nvm_has xcode-select && [ "$(xcode-select -p >/dev/null 2>/dev/null ; echo $?)" = '2' ] && [ "$(which git)" = '/usr/bin/git' ] && [ "$(which curl)" = '/usr/bin/curl' ]; then
-    nvm_echo >&2 'You may be on a Mac, and need to install the Xcode Command Line Developer Tools.'
-    # shellcheck disable=SC2016
-    nvm_echo >&2 'If so, run `xcode-select --install` and try again. If not, please report this!'
-    exit 1
-  fi
 
-  if nvm_has curl || nvm_has wget; then
-    install_nvm_as_script  || {
-    exit 1
-  }
-  else
-    nvm_echo >&2 'You need curl or wget to install $TEMPORAL_BINARY'
-    exit 1
-  fi
-
-  nvm_echo
-
-  local NVM_PROFILE
-  NVM_PROFILE="$(nvm_detect_profile)"
-  local PROFILE_INSTALL_DIR
-  PROFILE_INSTALL_DIR="$(nvm_install_dir | command sed "s:^$HOME:\$HOME:")"
-
-  SOURCE_STR="$(temporal_install_env)"
-
-  BASH_OR_ZSH=false
-
-  if [ -z "${NVM_PROFILE-}" ] ; then
-    local TRIED_PROFILE
-    if [ -n "${PROFILE}" ]; then
-      TRIED_PROFILE="${NVM_PROFILE} (as defined in \$PROFILE), "
+    local _args_supported="no"
+    if [ "$_backend_supported" = "yes" ]; then
+        # "unspecified" is for arch, allows for possibility old OS using macports, homebrew, etc.
+        if check_help_for "notspecified" "curl" "--tlsv1.2" "--ciphers" "--proto"; then
+            _args_supported="yes"
+        fi
     fi
-    nvm_echo "=> Profile not found. Tried ${TRIED_PROFILE-}~/.bashrc, ~/.bash_profile, ~/.zprofile, ~/.zshrc, and ~/.profile."
-    nvm_echo "=> Create one of them and run this script again"
-    nvm_echo "   OR"
-    nvm_echo "=> Append the following lines to the correct file yourself:"
-    command printf "${SOURCE_STR}"
-    nvm_echo
-  else
-    if nvm_profile_is_bash_or_zsh "${NVM_PROFILE-}"; then
-      BASH_OR_ZSH=true
+
+    local _cs=""
+    if [ "$_args_supported" = "yes" ]; then
+        if [ "$_openssl_syntax" = "yes" ]; then
+            _cs=$(get_strong_ciphersuites_for "openssl")
+        elif [ "$_gnutls_syntax" = "yes" ]; then
+            _cs=$(get_strong_ciphersuites_for "gnutls")
+        fi
     fi
-    if ! command grep -qc '/.temporalio' "$NVM_PROFILE"; then
-      nvm_echo "=> Appending $TEMPORAL_BINARY source string to $NVM_PROFILE"
-      command printf "${SOURCE_STR}\n" >> "$NVM_PROFILE"
-    else
-      nvm_echo "=> $TEMPORAL_BINARY source string already in ${NVM_PROFILE}"
-    fi
-  fi
 
-  # Source temporal
-  # shellcheck source=/dev/null
-  $SOURCE_STR
-
-  nvm_reset
-
-  nvm_echo "=> Close and reopen your terminal to start using $TEMPORAL_BINARY or run the following to use it now:"
-  command printf "${SOURCE_STR}"
+    RETVAL="$_cs"
 }
 
-#
-# Unsets the various functions defined
-# during the execution of the install script
-#
-nvm_reset() {
-  unset -f nvm_has nvm_install_dir nvm_profile_is_bash_or_zsh \
-    nvm_download \
-    install_nvm_as_script nvm_try_profile nvm_detect_profile \
-    nvm_do_install nvm_reset nvm_default_install_dir nvm_grep \
-    temporal_arch temporal_archive_url temporal_os temporal_unzip_and_delete \
-    temporal_fetch temporal_binary_name
+# Return cipher suite string specified by user, otherwise return strong TLS 1.2-1.3 cipher suites
+# if support by local tools is detected. Detection currently supports these wget backends:
+# GnuTLS and OpenSSL (possibly also LibreSSL and BoringSSL). Return value can be empty.
+get_ciphersuites_for_wget() {
+    if [ -n "${RUSTUP_TLS_CIPHERSUITES-}" ]; then
+        # user specified custom cipher suites, assume they know what they're doing
+        RETVAL="$RUSTUP_TLS_CIPHERSUITES"
+        return
+    fi
+
+    local _cs=""
+    if wget -V | grep -q '\-DHAVE_LIBSSL'; then
+        # "unspecified" is for arch, allows for possibility old OS using macports, homebrew, etc.
+        if check_help_for "notspecified" "wget" "TLSv1_2" "--ciphers" "--https-only" "--secure-protocol"; then
+            _cs=$(get_strong_ciphersuites_for "openssl")
+        fi
+    elif wget -V | grep -q '\-DHAVE_LIBGNUTLS'; then
+        # "unspecified" is for arch, allows for possibility old OS using macports, homebrew, etc.
+        if check_help_for "notspecified" "wget" "TLSv1_2" "--ciphers" "--https-only" "--secure-protocol"; then
+            _cs=$(get_strong_ciphersuites_for "gnutls")
+        fi
+    fi
+
+    RETVAL="$_cs"
 }
 
-[ "_$TEMPORAL_ENV" = "_testing" ] || nvm_do_install
+# Return strong TLS 1.2-1.3 cipher suites in OpenSSL or GnuTLS syntax. TLS 1.2
+# excludes non-ECDHE and non-AEAD cipher suites. DHE is excluded due to bad
+# DH params often found on servers (see RFC 7919). Sequence matches or is
+# similar to Firefox 68 ESR with weak cipher suites disabled via about:config.
+# $1 must be openssl or gnutls.
+get_strong_ciphersuites_for() {
+    if [ "$1" = "openssl" ]; then
+        # OpenSSL is forgiving of unknown values, no problems with TLS 1.3 values on versions that don't support it yet.
+        echo "TLS_AES_128_GCM_SHA256:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_256_GCM_SHA384:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384"
+    elif [ "$1" = "gnutls" ]; then
+        # GnuTLS isn't forgiving of unknown values, so this may require a GnuTLS version that supports TLS 1.3 even if wget doesn't.
+        # Begin with SECURE128 (and higher) then remove/add to build cipher suites. Produces same 9 cipher suites as OpenSSL but in slightly different order.
+        echo "SECURE128:-VERS-SSL3.0:-VERS-TLS1.0:-VERS-TLS1.1:-VERS-DTLS-ALL:-CIPHER-ALL:-MAC-ALL:-KX-ALL:+AEAD:+ECDHE-ECDSA:+ECDHE-RSA:+AES-128-GCM:+CHACHA20-POLY1305:+AES-256-GCM"
+    fi
+}
 
-} # this ensures the entire script is downloaded #
+main "$@" || exit 1
