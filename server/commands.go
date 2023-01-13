@@ -144,7 +144,7 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 				}
 
 				// Make sure the default db path exists (user does not specify path explicitly)
-				if !c.IsSet(common.FlagDBPath) {
+				if c.IsSet(common.FlagDBPath) {
 					if err := os.MkdirAll(filepath.Dir(c.String(common.FlagDBPath)), os.ModePerm); err != nil {
 						return cli.Exit(err.Error(), 1)
 					}
