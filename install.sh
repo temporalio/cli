@@ -1,6 +1,8 @@
 #!/bin/sh
 # shellcheck shell=dash
 
+# The MIT License (MIT)
+
 # Copyright (c) 2016 The Rust Project Developers
 
 # Copyright (c) 2022 Temporal Technologies Inc.
