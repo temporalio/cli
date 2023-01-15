@@ -155,29 +155,7 @@ main() {
         ;;
     esac
 
-    if [ -n "${TEMPORAL_DIR-}" ] && ! [ -d "${TEMPORAL_DIR}" ]; then
-        if [ -e "${TEMPORAL_DIR}" ]; then
-            err "File \"${TEMPORAL_DIR}\" has the same name as installation directory."
-            exit 1
-        fi
-
-        if [ "${TEMPORAL_DIR}" = "$(get_default_install_dir)" ]; then
-            mkdir "${TEMPORAL_DIR}"
-        else
-            err "You have \$TEMPORAL_DIR set to \"${TEMPORAL_DIR}\", but that directory does not exist. Check your profile files and environment."
-            exit 1
-        fi
-    fi
-
-
-    local TEMPORAL_DIR="hey"
-    say "$TEMPORAL_DIR"
-    local _dir="$(ensure get_install_dir)"
-
-    say "TODO 3 $_dir"
-
-    exit 0
-
+    local _dir="$(ensure get_default_install_dir)"
     ensure mkdir -p "$_dir"
 
     local _archive="${_dir}/temporal_cli_latest${_ext}"
@@ -418,16 +396,6 @@ unzip() {
 
 get_default_install_dir() {
     [ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.temporalio" || printf %s "${XDG_CONFIG_HOME}/temporalio"
-}
-
-get_install_dir() {
-    if [ -n "$TEMPORAL_DIR" ]; then
-        say "TODO 4.1 preset dir: $TEMPORAL_DIR"
-        printf %s "${TEMPORAL_DIR}"
-    else
-        say "TODO 4.2 default dir: $(get_default_install_dir)"
-        get_default_install_dir
-    fi
 }
 
 check_help_for() {
