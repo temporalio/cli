@@ -144,7 +144,6 @@ main() {
         printf '%s\n' 'info: downloading installer' 1>&2
     fi
 
-
     # TODO replace with
     # local _url="https://temporal.download/temporalite/archive/latest?platform=${_platform}&arch=${_arch}"
     local _url="https://temporal.download/assets/temporalio/cli/releases/download/v0.2.0/cli_0.2.0_${_platform}_${_arch}.tar.gz"
@@ -156,8 +155,29 @@ main() {
         ;;
     esac
 
-    local _dir
-    _dir="$(ensure install_dir)"
+    if [ -n "${TEMPORAL_DIR-}" ] && ! [ -d "${TEMPORAL_DIR}" ]; then
+        if [ -e "${TEMPORAL_DIR}" ]; then
+            err "File \"${TEMPORAL_DIR}\" has the same name as installation directory."
+            exit 1
+        fi
+
+        if [ "${TEMPORAL_DIR}" = "$(get_default_install_dir)" ]; then
+            mkdir "${TEMPORAL_DIR}"
+        else
+            err "You have \$TEMPORAL_DIR set to \"${TEMPORAL_DIR}\", but that directory does not exist. Check your profile files and environment."
+            exit 1
+        fi
+    fi
+
+
+    local TEMPORAL_DIR="hey"
+    say "$TEMPORAL_DIR"
+    local _dir="$(ensure get_install_dir)"
+
+    say "TODO 3 $_dir"
+
+    exit 0
+
     ensure mkdir -p "$_dir"
 
     local _archive="${_dir}/temporal_cli_latest${_ext}"
@@ -396,16 +416,18 @@ unzip() {
     tar -xzvf "$_file" -C "$_dir"
 }
 
-default_install_dir() {
-  [ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.temporalio" || printf %s "${XDG_CONFIG_HOME}/temporalio"
+get_default_install_dir() {
+    [ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.temporalio" || printf %s "${XDG_CONFIG_HOME}/temporalio"
 }
 
-install_dir() {
-  if [ -n "$TEMPORAL_DIR" ]; then
-    printf %s "${TEMPORAL_DIR}"
-  else
-    default_install_dir
-  fi
+get_install_dir() {
+    if [ -n "$TEMPORAL_DIR" ]; then
+        say "TODO 4.1 preset dir: $TEMPORAL_DIR"
+        printf %s "${TEMPORAL_DIR}"
+    else
+        say "TODO 4.2 default dir: $(get_default_install_dir)"
+        get_default_install_dir
+    fi
 }
 
 check_help_for() {
