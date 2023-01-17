@@ -1,6 +1,6 @@
 ### namespace
 
-Operations on namespaces
+Operations applying to Namespaces.
 
 #### describe
 

@@ -56,7 +56,7 @@ Path to private key
 Override for target server name
 
 **--type**
-Event type to which you want to reset: LastContinuedAsNew, FirstWorkflowTask, LastWorkflowTask
+Event type to which you want to reset: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew
 
 **--workflow-id**
 Alias: **-w**

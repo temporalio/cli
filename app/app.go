@@ -88,7 +88,9 @@ func serverCommands(defaultCfg *sconfig.Config) []*cli.Command {
 	return []*cli.Command{
 		{
 			Name:        "server",
-			Usage:       "Commands for managing Temporal server",
+			Usage:       "",
+			UsageText: "",
+			Description: "Commands for managing the Temporal Server.",
 			Subcommands: server.NewServerCommands(defaultCfg),
 		},
 	}
@@ -97,54 +99,68 @@ func serverCommands(defaultCfg *sconfig.Config) []*cli.Command {
 var clientCommands = []*cli.Command{
 	{
 		Name:        "workflow",
-		Usage:       "Operations on Workflows",
+		Usage:       "",
+		UsageText: "",
+		Description: "Operations that can be performed on Workflows.",
 		Subcommands: workflow.NewWorkflowCommands(),
 	},
 	{
 		Name:        "activity",
-		Usage:       "Operations on Activities of Workflows",
+		Usage:       "",
+		UsageText: "",
+		Description: "Operations that can be performed on Workflow Activities.",
 		Subcommands: activity.NewActivityCommands(),
 	},
 	{
 		Name:        "task-queue",
-		Usage:       "Operations on Task Queues",
+		Usage:       "",
+		UsageText: "",
+		Description: "Operations performed on Task Queues.",
 		Subcommands: taskqueue.NewTaskQueueCommands(),
 	},
 	{
 		Name:        "schedule",
-		Usage:       "Operations on Schedules",
+		Usage:       "",
+		UsageText: "",
+		Description: "Operations performed on Schedules.",
 		Subcommands: schedule.NewScheduleCommands(),
 	},
 
 	{
 		Name:        "batch",
-		Usage:       "Operations on Batch jobs. Use Workflow commands with --query flag to start batch jobs",
+		Usage:       "",
+		UsageText: "",
+		Description: "Operations performed on Batch jobs. Use Workflow commands with --query flag to start batch jobs.",
 		Subcommands: batch.NewBatchCommands(),
 	},
 	{
 		Name:  "operator",
-		Usage: "Operation on Temporal server",
+		Usage: "",
+		UsageText: "",
+		Description: "Operations on Temporal Server.",
 		Subcommands: []*cli.Command{
 			{
 				Name:        "namespace",
-				Usage:       "Operations on namespaces",
+				Usage:       "Operations applying to Namespaces.",
 				Subcommands: namespace.NewNamespaceCommands(),
 			},
 			{
 				Name:        "search-attribute",
-				Usage:       "Operations on search attributes",
+				Usage:       "Operations applying to Search Attributes.",
 				Subcommands: searchattribute.NewSearchAttributeCommands(),
 			},
 			{
 				Name:        "cluster",
-				Usage:       "Operations on a Temporal Cluster",
+				Usage:       "Operations for running a Temporal Cluster.",
 				Subcommands: cluster.NewClusterCommands(),
 			},
 		},
 	},
 	{
 		Name:        "env",
-		Usage:       "Manage client environment configurations",
+		Usage:       "",
+		UsageText: "",
+		Description: "Manage environment configurations on Temporal Client.",
 		Subcommands: env.NewEnvCommands(),
 	},
 }
@@ -152,7 +168,7 @@ var clientCommands = []*cli.Command{
 var completionCommands = []*cli.Command{
 	{
 		Name:        "completion",
-		Usage:       "Output shell completion code for the specified shell (zsh, bash)",
+		Usage:       "Output shell completion code for the specified shell (zsh, bash).",
 		Subcommands: completion.NewCompletionCommands(),
 	},
 }

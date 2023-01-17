@@ -1,4 +1,4 @@
 ## schedule
 
-Operations on Schedules
+Operations performed on Schedules.
 

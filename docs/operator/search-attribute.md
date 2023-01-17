@@ -1,6 +1,6 @@
 ### search-attribute
 
-Operations on search attributes
+Operations applying to Search Attributes.
 
 #### create
 

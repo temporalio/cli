@@ -1,4 +1,4 @@
 ## task-queue
 
-Operations on Task Queues
+Operations performed on Task Queues.
 

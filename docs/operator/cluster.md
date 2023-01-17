@@ -1,6 +1,6 @@
 ### cluster
 
-Operations on a Temporal Cluster
+Operations for running a Temporal Cluster.
 
 #### health
 

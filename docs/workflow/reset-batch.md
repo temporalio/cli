@@ -1,6 +1,6 @@
 ### reset-batch
 
-Reset a batch of Workflow Executions by reset type: LastWorkflowTask, LastContinuedAsNew, FirstWorkflowTask
+Reset a batch of Workflow Executions by reset type: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew
 
 **--address**
 host:port for Temporal frontend service

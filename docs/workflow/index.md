@@ -1,4 +1,4 @@
 ## workflow
 
-Operations on Workflows
+Operations that can be performed on Workflows.
 

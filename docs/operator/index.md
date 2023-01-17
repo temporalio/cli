@@ -1,4 +1,4 @@
 ## operator
 
-Operation on Temporal server
+Operations on Temporal Server.
 
