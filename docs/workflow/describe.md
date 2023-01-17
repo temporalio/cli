@@ -1,6 +1,6 @@
 ### describe
 
-Show information about a Workflow Execution
+Show information about a Workflow Execution.
 
 **--address**
 host:port for Temporal frontend service
@@ -28,10 +28,10 @@ Alias: **-n**
 Temporal workflow namespace (default: default)
 
 **--raw**
-Print properties as they are stored
+Print properties as they are stored.
 
 **--reset-points**
-Only show auto-reset points
+Only show auto-reset points.
 
 **--run-id**
 Alias: **-r**

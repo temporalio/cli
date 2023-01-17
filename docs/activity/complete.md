@@ -1,9 +1,9 @@
 ### complete
 
-Complete an activity
+Complete an Activity.
 
 **--activity-id**
-The Activity Id to complete
+Identifies the Activity to be completed.
 
 **--address**
 host:port for Temporal frontend service
@@ -27,18 +27,18 @@ Env name to read the client environment variables from (default: default)
 gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
 
 **--identity**
-Specify operator's identity
+Specify operator's identity.
 
 **--namespace**
 Alias: **-n**
 Temporal workflow namespace (default: default)
 
 **--result**
-Set the result value of completion
+Set the result value of Activity completion.
 
 **--run-id**
 Alias: **-r**
-Run Id
+Identifies the current Workflow Run.
 
 **--tls-ca-path**
 Path to server CA certificate
@@ -57,5 +57,5 @@ Override for target server name
 
 **--workflow-id**
 Alias: **-w**
-Workflow Id
+Identifies the Workflow that the Activity is running on.
 

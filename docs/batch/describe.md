@@ -1,6 +1,6 @@
 ### describe
 
-Describe a batch operation job
+Describe a Batch operation job.
 
 **--address**
 host:port for Temporal frontend service

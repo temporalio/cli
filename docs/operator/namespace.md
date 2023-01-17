@@ -4,7 +4,7 @@ Operations on namespaces
 
 #### describe
 
-Describe a Namespace by name or Id
+Describe a Namespace by name or Id.
 
 **--address**
 host:port for Temporal frontend service
@@ -51,7 +51,7 @@ Override for target server name
 
 #### list
 
-List all Namespaces
+List all Namespaces.
 
 **--address**
 host:port for Temporal frontend service
@@ -95,7 +95,7 @@ Override for target server name
 
 #### register
 
-Register a new Namespace
+Register a new Namespace.
 
 **--active-cluster**
 Active cluster name
@@ -172,7 +172,7 @@ Optionally specify visibility archival URI (cannot be changed after first time a
 
 #### update
 
-Update a Namespace
+Update a Namespace.
 
 **--active-cluster**
 Active cluster name
@@ -252,7 +252,7 @@ Optionally specify visibility archival URI (cannot be changed after first time a
 
 #### delete
 
-Delete existing Namespace
+Delete existing Namespace.
 
 **--address**
 host:port for Temporal frontend service
@@ -296,5 +296,5 @@ Override for target server name
 
 **--yes**
 Alias: **-y**
-Confirm all prompts
+Confirm all prompts.
 

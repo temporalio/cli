@@ -1,6 +1,6 @@
 ### list
 
-List batch operation jobs
+List Batch operation jobs.
 
 **--address**
 host:port for Temporal frontend service

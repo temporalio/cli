@@ -36,7 +36,7 @@ format output as: table, json, card. (default: table)
 
 **--task-queue**
 Alias: **-t**
-Task Queue name
+Task Queue name.
 
 **--task-queue-type**
 Task Queue type [workflow|activity] (default: workflow)

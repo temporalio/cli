@@ -1,10 +1,10 @@
 ### cluster
 
-Operations on a Temporal cluster
+Operations on a Temporal Cluster
 
 #### health
 
-Check health of frontend service
+Check health of frontend service.
 
 **--address**
 host:port for Temporal frontend service
@@ -48,7 +48,7 @@ Override for target server name
 
 #### describe
 
-Show information about the cluster
+Show information about the Cluster.
 
 **--address**
 host:port for Temporal frontend service
@@ -69,7 +69,7 @@ Optional timeout for context of RPC call in seconds (default: 5)
 Env name to read the client environment variables from (default: default)
 
 **--fields**
-customize fields to print. Set to 'long' to automatically print more of main fields
+Customize fields to print. Set to 'long' to automatically print more of main fields.
 
 **--grpc-meta**
 gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
@@ -99,7 +99,7 @@ Override for target server name
 
 #### system
 
-Show information about the system and capabilities
+Show information about the system and its capabilities.
 
 **--address**
 host:port for Temporal frontend service
@@ -120,7 +120,7 @@ Optional timeout for context of RPC call in seconds (default: 5)
 Env name to read the client environment variables from (default: default)
 
 **--fields**
-customize fields to print. Set to 'long' to automatically print more of main fields
+Customize fields to print. Set to 'long' to automatically print more of main fields.
 
 **--grpc-meta**
 gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
@@ -150,7 +150,7 @@ Override for target server name
 
 #### upsert
 
-Add or update a remote cluster
+Add or update a remote Cluster.
 
 **--address**
 host:port for Temporal frontend service
@@ -168,13 +168,13 @@ when to use color: auto, always, never. (default: auto)
 Optional timeout for context of RPC call in seconds (default: 5)
 
 **--enable-connection**
-Enable cross cluster connection
+Enable cross-cluster connection.
 
 **--env**
 Env name to read the client environment variables from (default: default)
 
 **--frontend-address**
-Frontend address of the remote cluster
+Frontend address of the remote Cluster.
 
 **--grpc-meta**
 gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
@@ -200,7 +200,7 @@ Override for target server name
 
 #### list
 
-List all remote clusters
+List all remote Clusters.
 
 **--address**
 host:port for Temporal frontend service
@@ -264,7 +264,7 @@ Override for target server name
 
 #### remove
 
-Remove a remote cluster
+Remove a remote Cluster.
 
 **--address**
 host:port for Temporal frontend service
@@ -288,7 +288,7 @@ Env name to read the client environment variables from (default: default)
 gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
 
 **--name**
-Frontend address of the remote cluster
+Frontend address of the remote Cluster.
 
 **--namespace**
 Alias: **-n**

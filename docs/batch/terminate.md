@@ -1,6 +1,6 @@
 ### terminate
 
-Stop a batch operation job
+Stop a Batch operation job.
 
 **--address**
 host:port for Temporal frontend service
@@ -31,7 +31,7 @@ Alias: **-n**
 Temporal workflow namespace (default: default)
 
 **--reason**
-Reason to stop the batch job
+Reason to stop the Batch job.
 
 **--tls-ca-path**
 Path to server CA certificate

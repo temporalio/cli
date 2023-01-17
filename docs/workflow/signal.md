@@ -1,6 +1,6 @@
 ### signal
 
-Signal Workflow Execution by Id or List Filter
+Signal Workflow Execution by Id or List Filter.
 
 **--address**
 host:port for Temporal frontend service
@@ -25,10 +25,10 @@ gRPC metadata to send with requests. Format: key=value. Use valid JSON formats f
 
 **--input**
 Alias: **-i**
-Input for the signal (JSON)
+Input for the signal (JSON).
 
 **--input-file**
-Input for the signal from file (JSON)
+Input for the signal from file (JSON).
 
 **--name**
 Signal Name
@@ -39,10 +39,10 @@ Temporal workflow namespace (default: default)
 
 **--query**
 Alias: **-q**
-Signal Workflow Executions by List Filter. See https://docs.temporal.io/concepts/what-is-a-list-filter/
+Signal Workflow Executions by List Filter. See https://docs.temporal.io/concepts/what-is-a-list-filter/.
 
 **--reason**
-Reason for signaling with List Filter
+Reason for signaling with List Filter.
 
 **--run-id**
 Alias: **-r**
@@ -65,9 +65,9 @@ Override for target server name
 
 **--workflow-id**
 Alias: **-w**
-Signal Workflow Execution by Id
+Signal Workflow Execution by Id.
 
 **--yes**
 Alias: **-y**
-Confirm all prompts
+Confirm all prompts.
 

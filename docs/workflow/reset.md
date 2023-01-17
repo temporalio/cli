@@ -1,6 +1,6 @@
 ### reset
 
-Reset a Workflow Execution by event Id or reset type
+Reset a Workflow Execution by Event Id or reset type.
 
 **--address**
 host:port for Temporal frontend service
@@ -21,7 +21,7 @@ Optional timeout for context of RPC call in seconds (default: 5)
 Env name to read the client environment variables from (default: default)
 
 **--event-id**
-The eventId of any event after WorkflowTaskStarted you want to reset to (exclusive). It can be WorkflowTaskCompleted, WorkflowTaskFailed or others
+The eventId of any event after WorkflowTaskStarted you want to reset to (exclusive). It can be WorkflowTaskCompleted, WorkflowTaskFailed or others.
 
 **--grpc-meta**
 gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
@@ -34,7 +34,7 @@ Temporal workflow namespace (default: default)
 Event types to reapply after the reset point: , Signal, None. (default: All)
 
 **--reason**
-Reason to reset
+Reason to reset.
 
 **--run-id**
 Alias: **-r**
@@ -56,7 +56,7 @@ Path to private key
 Override for target server name
 
 **--type**
-Event type to which you want to reset: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew
+Event type to which you want to reset: LastContinuedAsNew, FirstWorkflowTask, LastWorkflowTask
 
 **--workflow-id**
 Alias: **-w**

@@ -1,6 +1,6 @@
 ### count
 
-Count Workflow Executions (requires ElasticSearch to be enabled)
+Count Workflow Executions (requires ElasticSearch to be enabled).
 
 **--address**
 host:port for Temporal frontend service

@@ -1,6 +1,6 @@
 ### cancel
 
-Cancel a Workflow Execution
+Cancel a Workflow Execution.
 
 **--address**
 host:port for Temporal frontend service
@@ -29,10 +29,10 @@ Temporal workflow namespace (default: default)
 
 **--query**
 Alias: **-q**
-Cancel Workflow Executions by List Filter. See https://docs.temporal.io/concepts/what-is-a-list-filter/
+Cancel Workflow Executions by List Filter. See https://docs.temporal.io/concepts/what-is-a-list-filter/.
 
 **--reason**
-Reason for canceling with List Filter
+Reason for canceling with List Filter.
 
 **--run-id**
 Alias: **-r**
@@ -55,9 +55,9 @@ Override for target server name
 
 **--workflow-id**
 Alias: **-w**
-Cancel Workflow Execution by Id
+Cancel Workflow Execution by Id.
 
 **--yes**
 Alias: **-y**
-Confirm all prompts
+Confirm all prompts.
 

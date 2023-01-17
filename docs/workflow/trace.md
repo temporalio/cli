@@ -1,6 +1,6 @@
 ### trace
 
-Trace progress of a Workflow Execution and its children
+Trace progress of a Workflow Execution and its children.
 
 **--address**
 host:port for Temporal frontend service
@@ -21,13 +21,13 @@ Request concurrency (default: 10)
 Optional timeout for context of RPC call in seconds (default: 5)
 
 **--depth**
-Number of child workflows to expand, -1 to expand all child workflows (default: -1)
+Number of Child Workflows to expand, -1 to expand all Child Workflows. (default: -1)
 
 **--env**
 Env name to read the client environment variables from (default: default)
 
 **--fold**
-Statuses for which child workflows will be folded in (this will reduce the number of information fetched and displayed). Case-insensitive and ignored if --no-fold supplied (default: completed,canceled,terminated)
+Statuses for which Child Workflows will be folded in (this will reduce the number of information fetched and displayed). Case-insensitive and ignored if --no-fold supplied. (default: completed,canceled,terminated)
 
 **--grpc-meta**
 gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
@@ -37,7 +37,7 @@ Alias: **-n**
 Temporal workflow namespace (default: default)
 
 **--no-fold**
-Disable folding. All child workflows within the set depth will be fetched and displayed
+Disable folding. All Child Workflows within the set depth will be fetched and displayed.
 
 **--run-id**
 Alias: **-r**

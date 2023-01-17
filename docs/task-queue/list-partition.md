@@ -33,7 +33,7 @@ format output as: table, json, card. (default: table)
 
 **--task-queue**
 Alias: **-t**
-Task Queue name
+Task Queue name.
 
 **--tls-ca-path**
 Path to server CA certificate

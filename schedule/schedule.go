@@ -33,27 +33,27 @@ func NewScheduleCommands() []*cli.Command {
 		},
 		&cli.StringSliceFlag{
 			Name:     common.FlagInterval,
-			Usage:    "Interval duration, e.g. 90m, or 90m/13m to include phase offset",
+			Usage:    "Interval duration, e.g. 90m, or 90m/13m to include phase offset.",
 			Category: common.CategoryMain,
 		},
 		&cli.StringFlag{
 			Name:     common.FlagStartTime,
-			Usage:    "Overall schedule start time",
+			Usage:    "Overall schedule start time.",
 			Category: common.CategoryMain,
 		},
 		&cli.StringFlag{
 			Name:     common.FlagEndTime,
-			Usage:    "Overall schedule end time",
+			Usage:    "Overall schedule end time.",
 			Category: common.CategoryMain,
 		},
 		&cli.StringFlag{
 			Name:     common.FlagJitter,
-			Usage:    "Jitter duration",
+			Usage:    "Jitter duration.",
 			Category: common.CategoryMain,
 		},
 		&cli.StringFlag{
 			Name:     common.FlagTimeZone,
-			Usage:    "Time zone (IANA name)",
+			Usage:    "Time zone (IANA name).",
 			Category: common.CategoryMain,
 		},
 	}

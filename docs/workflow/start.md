@@ -1,6 +1,6 @@
 ### start
 
-Start a new Workflow Execution
+Start a new Workflow Execution.
 
 **--address**
 host:port for Temporal frontend service

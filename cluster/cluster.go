@@ -10,14 +10,14 @@ func NewClusterCommands() []*cli.Command {
 	return []*cli.Command{
 		{
 			Name:  "health",
-			Usage: "Check health of frontend service",
+			Usage: "Check health of frontend service.",
 			Action: func(c *cli.Context) error {
 				return HealthCheck(c)
 			},
 		},
 		{
 			Name:      "describe",
-			Usage:     "Show information about the cluster",
+			Usage:     "Show information about the Cluster.",
 			ArgsUsage: " ",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
@@ -29,7 +29,7 @@ func NewClusterCommands() []*cli.Command {
 				},
 				&cli.StringFlag{
 					Name:     output.FlagFields,
-					Usage:    "customize fields to print. Set to 'long' to automatically print more of main fields",
+					Usage:    "Customize fields to print. Set to 'long' to automatically print more of main fields.",
 					Category: common.CategoryDisplay,
 				},
 			},
@@ -39,7 +39,7 @@ func NewClusterCommands() []*cli.Command {
 		},
 		{
 			Name:      "system",
-			Usage:     "Show information about the system and capabilities",
+			Usage:     "Show information about the system and its capabilities.",
 			ArgsUsage: " ",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
@@ -51,7 +51,7 @@ func NewClusterCommands() []*cli.Command {
 				},
 				&cli.StringFlag{
 					Name:     output.FlagFields,
-					Usage:    "customize fields to print. Set to 'long' to automatically print more of main fields",
+					Usage:    "Customize fields to print. Set to 'long' to automatically print more of main fields.",
 					Category: common.CategoryDisplay,
 				},
 			},
@@ -61,17 +61,17 @@ func NewClusterCommands() []*cli.Command {
 		},
 		{
 			Name:      "upsert",
-			Usage:     "Add or update a remote cluster",
+			Usage:     "Add or update a remote Cluster.",
 			ArgsUsage: " ",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:     common.FlagClusterAddress,
-					Usage:    "Frontend address of the remote cluster",
+					Usage:    "Frontend address of the remote Cluster.",
 					Category: common.CategoryMain,
 				},
 				&cli.BoolFlag{
 					Name:     common.FlagClusterEnableConnection,
-					Usage:    "Enable cross cluster connection",
+					Usage:    "Enable cross-cluster connection.",
 					Category: common.CategoryMain,
 				},
 			},
@@ -81,7 +81,7 @@ func NewClusterCommands() []*cli.Command {
 		},
 		{
 			Name:      "list",
-			Usage:     "List all remote clusters",
+			Usage:     "List all remote Clusters.",
 			ArgsUsage: " ",
 			Flags:     common.FlagsForPaginationAndRendering,
 			Action: func(c *cli.Context) error {
@@ -90,12 +90,12 @@ func NewClusterCommands() []*cli.Command {
 		},
 		{
 			Name:      "remove",
-			Usage:     "Remove a remote cluster",
+			Usage:     "Remove a remote Cluster.",
 			ArgsUsage: " ",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:     common.FlagName,
-					Usage:    "Frontend address of the remote cluster",
+					Usage:    "Frontend address of the remote Cluster.",
 					Required: true,
 					Category: common.CategoryMain,
 				},

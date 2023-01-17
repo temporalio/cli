@@ -1,6 +1,6 @@
 ### terminate
 
-Terminate Workflow Execution by Id or List Filter
+Terminate Workflow Execution by Id or List Filter.
 
 **--address**
 host:port for Temporal frontend service
@@ -29,10 +29,10 @@ Temporal workflow namespace (default: default)
 
 **--query**
 Alias: **-q**
-Terminate Workflow Executions by List Filter. See https://docs.temporal.io/concepts/what-is-a-list-filter/
+Terminate Workflow Executions by List Filter. See https://docs.temporal.io/concepts/what-is-a-list-filter/.
 
 **--reason**
-Reason for termination
+Reason for termination.
 
 **--run-id**
 Alias: **-r**
@@ -55,9 +55,9 @@ Override for target server name
 
 **--workflow-id**
 Alias: **-w**
-Terminate Workflow Execution by Id
+Terminate Workflow Execution by Id.
 
 **--yes**
 Alias: **-y**
-Confirm all prompts
+Confirm all prompts.
 

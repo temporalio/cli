@@ -27,7 +27,7 @@ Optional timeout for context of RPC call in seconds (default: 5)
 Calendar specification as cron string, e.g. "30 2 * * 5" or "@daily"
 
 **--end-time**
-Overall schedule end time
+Overall schedule end time.
 
 **--env**
 Env name to read the client environment variables from (default: default)
@@ -46,10 +46,10 @@ Optional input for the Workflow in JSON format. Pass "null" for null values
 Pass an optional input for the Workflow from a JSON file. If there are multiple JSON files, concatenate them and separate by space or newline. Input from the command line overwrites input from the file
 
 **--interval**
-Interval duration, e.g. 90m, or 90m/13m to include phase offset
+Interval duration, e.g. 90m, or 90m/13m to include phase offset.
 
 **--jitter**
-Jitter duration
+Jitter duration.
 
 **--max-field-length**
 Maximum length for each attribute field (default: 0)
@@ -90,7 +90,7 @@ Schedule Id
 Set Search Attribute on a schedule. Format: key=value. Use valid JSON formats for value
 
 **--start-time**
-Overall schedule start time
+Overall schedule start time.
 
 **--task-queue**
 Alias: **-t**
@@ -100,7 +100,7 @@ Task queue
 Workflow task start to close timeout (seconds) (default: 10)
 
 **--time-zone**
-Time zone (IANA name)
+Time zone (IANA name).
 
 **--tls-ca-path**
 Path to server CA certificate

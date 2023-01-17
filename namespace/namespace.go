@@ -17,7 +17,7 @@ func NewNamespaceCommands() []*cli.Command {
 	return []*cli.Command{
 		{
 			Name:      "describe",
-			Usage:     "Describe a Namespace by name or Id",
+			Usage:     "Describe a Namespace by name or Id.",
 			Flags:     describeNamespaceFlags,
 			ArgsUsage: "namespace_name",
 			Action: func(c *cli.Context) error {
@@ -26,7 +26,7 @@ func NewNamespaceCommands() []*cli.Command {
 		},
 		{
 			Name:      "list",
-			Usage:     "List all Namespaces",
+			Usage:     "List all Namespaces.",
 			ArgsUsage: " ",
 			Action: func(c *cli.Context) error {
 				return ListNamespaces(c)
@@ -34,7 +34,7 @@ func NewNamespaceCommands() []*cli.Command {
 		},
 		{
 			Name:      "register",
-			Usage:     "Register a new Namespace",
+			Usage:     "Register a new Namespace.",
 			Flags:     registerNamespaceFlags,
 			ArgsUsage: "namespace_name [cluster_name...]",
 			Action: func(c *cli.Context) error {
@@ -43,7 +43,7 @@ func NewNamespaceCommands() []*cli.Command {
 		},
 		{
 			Name:      "update",
-			Usage:     "Update a Namespace",
+			Usage:     "Update a Namespace.",
 			Flags:     updateNamespaceFlags,
 			ArgsUsage: "namespace_name [cluster_name...]",
 			Action: func(c *cli.Context) error {
@@ -52,12 +52,12 @@ func NewNamespaceCommands() []*cli.Command {
 		},
 		{
 			Name:  "delete",
-			Usage: "Delete existing Namespace",
+			Usage: "Delete existing Namespace.",
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
 					Name:     common.FlagYes,
 					Aliases:  common.FlagYesAlias,
-					Usage:    "Confirm all prompts",
+					Usage:    "Confirm all prompts.",
 					Category: common.CategoryMain,
 				},
 			},

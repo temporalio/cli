@@ -1,6 +1,6 @@
 ### execute
 
-Start a new Workflow Execution and print progress
+Start a new Workflow Execution and prints its progress.
 
 **--address**
 host:port for Temporal frontend service

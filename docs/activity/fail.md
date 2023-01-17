@@ -1,9 +1,9 @@
 ### fail
 
-Fail an activity
+Fail an Activity.
 
 **--activity-id**
-The Activity Id to fail
+Identifies the Activity to fail.
 
 **--address**
 host:port for Temporal frontend service
@@ -21,7 +21,7 @@ when to use color: auto, always, never. (default: auto)
 Optional timeout for context of RPC call in seconds (default: 5)
 
 **--detail**
-Detail to fail the Activity
+Detail to fail the Activity.
 
 **--env**
 Env name to read the client environment variables from (default: default)
@@ -30,18 +30,18 @@ Env name to read the client environment variables from (default: default)
 gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
 
 **--identity**
-Specify operator's identity
+Specify the operator's identity.
 
 **--namespace**
 Alias: **-n**
 Temporal workflow namespace (default: default)
 
 **--reason**
-Reason to fail the Activity
+Reason to fail the Activity.
 
 **--run-id**
 Alias: **-r**
-Run Id
+Identifies the current Workflow Run.
 
 **--tls-ca-path**
 Path to server CA certificate
@@ -60,5 +60,5 @@ Override for target server name
 
 **--workflow-id**
 Alias: **-w**
-Workflow Id
+Identifies the Workflow that the Activity is running on.
 

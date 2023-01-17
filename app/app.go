@@ -118,7 +118,7 @@ var clientCommands = []*cli.Command{
 
 	{
 		Name:        "batch",
-		Usage:       "Operations on Batch jobs. Use workflow commands with --query flag to start batch jobs",
+		Usage:       "Operations on Batch jobs. Use Workflow commands with --query flag to start batch jobs",
 		Subcommands: batch.NewBatchCommands(),
 	},
 	{
@@ -137,7 +137,7 @@ var clientCommands = []*cli.Command{
 			},
 			{
 				Name:        "cluster",
-				Usage:       "Operations on a Temporal cluster",
+				Usage:       "Operations on a Temporal Cluster",
 				Subcommands: cluster.NewClusterCommands(),
 			},
 		},

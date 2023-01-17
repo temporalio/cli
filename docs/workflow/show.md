@@ -1,6 +1,6 @@
 ### show
 
-Show Event History for a Workflow Execution
+Show Event History for a Workflow Execution.
 
 **--address**
 host:port for Temporal frontend service

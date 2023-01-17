@@ -4,7 +4,7 @@ Operations on search attributes
 
 #### create
 
-Add custom search attributes
+Add custom search attributes.
 
 **--address**
 host:port for Temporal frontend service
@@ -28,7 +28,7 @@ Env name to read the client environment variables from (default: default)
 gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
 
 **--name**
-Search attribute name
+Search attribute name.
 
 **--namespace**
 Alias: **-n**
@@ -54,11 +54,11 @@ Search attribute type: [Text Keyword Int Double Bool Datetime KeywordList]
 
 **--yes**
 Alias: **-y**
-Confirm all prompts
+Confirm all prompts.
 
 #### list
 
-List search attributes that can be used in list workflow query
+List search attributes that can be used in list Workflow Query.
 
 **--address**
 host:port for Temporal frontend service
@@ -106,7 +106,7 @@ Override for target server name
 
 #### remove
 
-Remove custom search attributes metadata only (Elasticsearch index schema is not modified)
+Remove custom search attributes metadata only (Elasticsearch index schema is not modified).
 
 **--address**
 host:port for Temporal frontend service
@@ -130,7 +130,7 @@ Env name to read the client environment variables from (default: default)
 gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
 
 **--name**
-Search attribute name
+Search attribute name.
 
 **--namespace**
 Alias: **-n**
@@ -153,5 +153,5 @@ Override for target server name
 
 **--yes**
 Alias: **-y**
-Confirm all prompts
+Confirm all prompts.
 

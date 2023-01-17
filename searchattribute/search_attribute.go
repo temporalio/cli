@@ -13,12 +13,12 @@ func NewSearchAttributeCommands() []*cli.Command {
 	return []*cli.Command{
 		{
 			Name:  "create",
-			Usage: "Add custom search attributes",
+			Usage: "Add custom search attributes.",
 			Flags: []cli.Flag{
 				&cli.StringSliceFlag{
 					Name:     common.FlagName,
 					Required: true,
-					Usage:    "Search attribute name",
+					Usage:    "Search attribute name.",
 					Category: common.CategoryMain,
 				},
 				&cli.StringSliceFlag{
@@ -30,7 +30,7 @@ func NewSearchAttributeCommands() []*cli.Command {
 				&cli.BoolFlag{
 					Name:     common.FlagYes,
 					Aliases:  common.FlagYesAlias,
-					Usage:    "Confirm all prompts",
+					Usage:    "Confirm all prompts.",
 					Category: common.CategoryMain,
 				},
 			},
@@ -40,7 +40,7 @@ func NewSearchAttributeCommands() []*cli.Command {
 		},
 		{
 			Name:  "list",
-			Usage: "List search attributes that can be used in list workflow query",
+			Usage: "List search attributes that can be used in list Workflow Query.",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:     output.FlagOutput,
@@ -56,18 +56,18 @@ func NewSearchAttributeCommands() []*cli.Command {
 		},
 		{
 			Name:  "remove",
-			Usage: "Remove custom search attributes metadata only (Elasticsearch index schema is not modified)",
+			Usage: "Remove custom search attributes metadata only (Elasticsearch index schema is not modified).",
 			Flags: []cli.Flag{
 				&cli.StringSliceFlag{
 					Name:     common.FlagName,
 					Required: true,
-					Usage:    "Search attribute name",
+					Usage:    "Search attribute name.",
 					Category: common.CategoryMain,
 				},
 				&cli.BoolFlag{
 					Name:     common.FlagYes,
 					Aliases:  common.FlagYesAlias,
-					Usage:    "Confirm all prompts",
+					Usage:    "Confirm all prompts.",
 					Category: common.CategoryMain,
 				},
 			},

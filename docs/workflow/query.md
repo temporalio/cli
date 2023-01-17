@@ -1,6 +1,6 @@
 ### query
 
-Query a Workflow Execution
+Query a Workflow Execution.
 
 **--address**
 host:port for Temporal frontend service
@@ -57,7 +57,7 @@ Path to private key
 Override for target server name
 
 **--type**
-The query type you want to run
+The query type you want to run.
 
 **--workflow-id**
 Alias: **-w**

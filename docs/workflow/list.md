@@ -1,6 +1,6 @@
 ### list
 
-List Workflow Executions based on a Query
+List Workflow Executions based on a Query.
 
 **--address**
 host:port for Temporal frontend service
