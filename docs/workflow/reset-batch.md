@@ -1,11 +1,10 @@
 ---
-id:
-title:
-sidebar_label:
-description:
+id: %s
+title: %s
+sidebar_label: %s
+description: %s
 tags:
 ---
-
 
 ### reset-batch
 
@@ -85,5 +84,5 @@ Path to private key
 Override for target server name
 
 **--type**
-Event type to which you want to reset: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew
+Event type to which you want to reset: LastWorkflowTask, LastContinuedAsNew, FirstWorkflowTask
 

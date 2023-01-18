@@ -1,12 +1,3 @@
----
-id:
-title:
-sidebar_label:
-description:
-tags:
----
-
-
 ## operator
 
 Operations on Temporal Server.

@@ -17,6 +17,16 @@ const (
 	indexFile = "index.md"
 )
 
+var FrontMatterTemplate = 
+`---
+id: %s
+title: %s
+sidebar_label: %s
+description: %s
+tags:
+---
+`
+
 // `BuildApp` takes a string and returns a `*App` and an error
 func main() {
 	doc, err := app.BuildApp("").ToMarkdown()
@@ -60,7 +70,6 @@ func main() {
 				continue
 			}
 			createdFiles[headerIndexFile] = currentHeaderFile
-			writeLine(currentHeaderFile,FrontMatterTemplate)
 			writeLine(currentHeaderFile, line)
 
 		} else if strings.HasPrefix(line, "### ") {
@@ -120,18 +129,4 @@ func makeAlias(file *os.File, line string) {
 	writeLine(file, termArray[0] + "**")
 	writeLine(file, "Alias: **" + strings.TrimSpace(termArray[1]))
 }
-
-// create frontmatter for docs team :)
-var FrontMatterTemplate = 
-`---
-id:
-title:
-sidebar_label:
-description:
-tags:
----
-`
-
-	
-
 
