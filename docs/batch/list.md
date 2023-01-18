@@ -2,7 +2,7 @@
 
 List Batch operation jobs.
 
->When used, all Batch operation jobs within the system are listed.
+When used, all Batch operation jobs within the system are listed.
 
 **--address**
 host:port for Temporal frontend service

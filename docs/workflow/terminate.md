@@ -2,7 +2,9 @@
 
 Terminate Workflow Execution by Id or List Filter.
 
->Terminating a running Workflow records a `WorkflowExecutionTerminated` event as the closing event. Command tasks cannot be scheduled after this. 
+    Terminating a running Workflow records a `WorkflowExecutionTerminated` event as the closing event.
+    
+    Any further command tasks cannot be scheduled after running `terminate`.
 
 **--address**
 host:port for Temporal frontend service

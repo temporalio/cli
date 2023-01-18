@@ -2,7 +2,7 @@
 
 List Workflow Executions based on a Query.
 
->By default, this command lists up to 10 closed Workflow Executions.
+By default, this command lists up to 10 closed Workflow Executions.
 
 **--address**
 host:port for Temporal frontend service

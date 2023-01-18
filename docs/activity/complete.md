@@ -2,8 +2,6 @@
 
 Completes an Activity.
 
->When used, the Activity is scheduled to be completed.
-
 **--activity-id**
 Identifies the Activity to be completed.
 

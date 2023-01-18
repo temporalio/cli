@@ -41,7 +41,6 @@ func main() {
 	createdFiles := make(map[string]*os.File)
 
 	// TODO: identify different option categories and print flags accordingly
-	// TODO: rework what is written to the string
 	for scanner.Scan() {
 		line := scanner.Text()
 		if strings.HasPrefix(line, "## ") {
@@ -86,7 +85,6 @@ func main() {
 			// write to file
 			term = strings.TrimSuffix(term, "=\"\"")
 
-			// TODO: separate terms and aliases
 			if strings.Contains(term, ",") {
 				makeAlias(currentHeaderFile, term)
 			} else {
@@ -95,6 +93,8 @@ func main() {
 			writeLine(currentHeaderFile, strings.TrimSpace(definition))
 			log.Info(found)
 
+		} else if strings.HasPrefix(line, ">") {
+			writeLine(currentHeaderFile, strings.TrimPrefix(line, ">"))
 		} else {
 			writeLine(currentHeaderFile, line)
 		} 

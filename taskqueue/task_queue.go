@@ -10,10 +10,8 @@ func NewTaskQueueCommands() []*cli.Command {
 	return []*cli.Command{
 		{
 			Name:  "describe",
-			Usage: "Describes the Workers that have recently polled on this Task Queue",
-			UsageText: `The Server records the last time of each poll request. Poll requests can last up to a minute, so a LastAccessTime under a minute is normal. If it's over a minute, then likely either the Worker is at capacity (all Workflow and Activity slots are full) or it has shut down. Once it has been 5 minutes since the last poll request, the Worker is removed from the list.
-
-RatePerSecond is the maximum Activities per second the Worker will execute.`,
+			Usage: common.DescribeTaskQueueDefinition,
+			UsageText:common.DescribeTaskQueueUsageText,
 			Flags: append([]cli.Flag{
 				&cli.StringFlag{
 					Name:     common.FlagTaskQueue,
@@ -35,7 +33,7 @@ RatePerSecond is the maximum Activities per second the Worker will execute.`,
 		},
 		{
 			Name:  "list-partition",
-			Usage: "Lists the Task Queue's partitions and which matching node they are assigned to.",
+			Usage: common.ListPartitionTaskQueueDefinition,
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:     common.FlagTaskQueue,

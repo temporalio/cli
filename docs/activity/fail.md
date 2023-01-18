@@ -1,6 +1,6 @@
 ### fail
 
-Fail an Activity.
+Fails an Activity.
 
 **--activity-id**
 Identifies the Activity to fail.

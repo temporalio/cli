@@ -2,7 +2,7 @@
 
 Stop a Batch operation job.
 
->When used, the Batch job with the provided Batch Id is terminated.
+When used, the Batch job with the provided Batch Id is terminated.
 
 **--address**
 host:port for Temporal frontend service

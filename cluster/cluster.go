@@ -10,14 +10,14 @@ func NewClusterCommands() []*cli.Command {
 	return []*cli.Command{
 		{
 			Name:  "health",
-			Usage: "Checks the health of the Frontend Service.",
+			Usage: common.HealthDefinition,
 			Action: func(c *cli.Context) error {
 				return HealthCheck(c)
 			},
 		},
 		{
 			Name:      "describe",
-			Usage:     "Show information about the Cluster.",
+			Usage:     common.DescribeDefinition,
 			ArgsUsage: " ",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
@@ -39,7 +39,7 @@ func NewClusterCommands() []*cli.Command {
 		},
 		{
 			Name:      "system",
-			Usage:     "Shows information about the system and its capabilities.",
+			Usage:     common.SystemDefinition,
 			ArgsUsage: " ",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
@@ -61,7 +61,7 @@ func NewClusterCommands() []*cli.Command {
 		},
 		{
 			Name:      "upsert",
-			Usage:     "Add or update a remote Cluster.",
+			Usage:     common.UpsertDefinition,
 			ArgsUsage: " ",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
@@ -81,7 +81,7 @@ func NewClusterCommands() []*cli.Command {
 		},
 		{
 			Name:      "list",
-			Usage:     "List all remote Clusters.",
+			Usage:     common.ListDefinition,
 			ArgsUsage: " ",
 			Flags:     common.FlagsForPaginationAndRendering,
 			Action: func(c *cli.Context) error {
@@ -90,7 +90,7 @@ func NewClusterCommands() []*cli.Command {
 		},
 		{
 			Name:      "remove",
-			Usage:     "Remove a remote Cluster.",
+			Usage:     common.RemoveDefinition,
 			ArgsUsage: " ",
 			Flags: []cli.Flag{
 				&cli.StringFlag{

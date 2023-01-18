@@ -97,57 +97,56 @@ func serverCommands(defaultCfg *sconfig.Config) []*cli.Command {
 var clientCommands = []*cli.Command{
 	{
 		Name:        "workflow",
-		Usage:       "Operations that can be performed on Workflows.",
+		Usage:       common.WorkflowDefinition,
 		Subcommands: workflow.NewWorkflowCommands(),
 	},
 	{
 		Name:        "activity",
-		Usage:        "Operations that can be performed on Workflow Activities.",
+		Usage:       common.ActivityDefinition,
 		Subcommands: activity.NewActivityCommands(),
 	},
 	{
 		Name:        "task-queue",
-		Usage:        "Operations performed on Task Queues.",
+		Usage:       common.TaskQueueDefinition,
 		Subcommands: taskqueue.NewTaskQueueCommands(),
 	},
 	{
 		Name:        "schedule",
-		Usage:       "Operations performed on Schedules.",
-		UsageText: "These commands allow Schedules to be created, used, and updated.",
+		Usage:       common.ScheduleDefinition,
+		UsageText: common.ScheduleUsageText,
 		Subcommands: schedule.NewScheduleCommands(),
 	},
-
 	{
 		Name:        "batch",
-		Usage:       "Operations performed on Batch jobs. Use Workflow commands with --query flag to start batch jobs.",
-		UsageText:   "Batch jobs run in the background and affect Workflow Executions one at a time. In `cli`, the batch commands are used to view the status of Batch jobs, and to terminate them. A successfully started Batch job returns a Job Id, which is needed to execute batch commands. Terminating a batch job does not roll back the operations already performed by the job itself.",
+		Usage:       common.BatchDefinition,
+		UsageText:   common.BatchUsageText,
 		Subcommands: batch.NewBatchCommands(),
 	},
 	{
 		Name:  "operator",
-		Usage: "Operations on Temporal Server.",
-		UsageText: "These commands enable operations on Namespaces, Search Attributes, and Temporal Clusters.",
+		Usage: common.OperatorDefinition,
+		UsageText: common.OperatorUsageText,
 		Subcommands: []*cli.Command{
 			{
 				Name:        "namespace",
-				Usage:       "Operations applying to Namespaces.",
+				Usage:       common.NamespaceDefinition,
 				Subcommands: namespace.NewNamespaceCommands(),
 			},
 			{
 				Name:        "search-attribute",
-				Usage:       "Operations applying to Search Attributes.",
+				Usage:       common.SearchAttributeDefinition,
 				Subcommands: searchattribute.NewSearchAttributeCommands(),
 			},
 			{
 				Name:        "cluster",
-				Usage:       "Operations for running a Temporal Cluster.",
+				Usage:       common.ClusterDefinition,
 				Subcommands: cluster.NewClusterCommands(),
 			},
 		},
 	},
 	{
 		Name:        "env",
-		Usage:       "Manage environmental configurations on Temporal Client.",
+		Usage:       common.EnvDefinition,
 		Subcommands: env.NewEnvCommands(),
 	},
 }

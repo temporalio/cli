@@ -2,7 +2,7 @@
 
 Start a new Workflow Execution and prints its progress.
 
->Single quotes('') are used to wrap input as JSON.
+Single quotes('') are used to wrap input as JSON.
 
 **--address**
 host:port for Temporal frontend service

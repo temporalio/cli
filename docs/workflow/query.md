@@ -2,7 +2,8 @@
 
 Query a Workflow Execution.
 
->Queries can retrieve all or part of the Workflow state within given parameters. Queries can also be used on completed Workflows.
+    Queries can retrieve all or part of the Workflow state within given parameters.
+    Queries can also be used on completed Workflows.
 
 **--address**
 host:port for Temporal frontend service
