@@ -1,6 +1,6 @@
 ### delete
 
-Delete environment or environment property
+Delete environment or environmental property.
 
 **--address**
 host:port for Temporal frontend service

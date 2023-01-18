@@ -4,7 +4,7 @@ Operations for running a Temporal Cluster.
 
 #### health
 
-Check health of frontend service.
+Checks the health of the Frontend Service.
 
 **--address**
 host:port for Temporal frontend service
@@ -99,7 +99,7 @@ Override for target server name
 
 #### system
 
-Show information about the system and its capabilities.
+Shows information about the system and its capabilities.
 
 **--address**
 host:port for Temporal frontend service

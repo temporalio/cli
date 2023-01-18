@@ -2,6 +2,8 @@
 
 Cancel a Workflow Execution.
 
+>Canceling a running Workflow Execution records a `WorkflowExecutionCancelRequested` event in the Event History. A new command task will be scheduled. After cancellation, the Workflow Execution can perform cleanup work.
+
 **--address**
 host:port for Temporal frontend service
 

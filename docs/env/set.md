@@ -1,6 +1,6 @@
 ### set
 
-Set environment property
+Set environmental properties.
 
 **--address**
 host:port for Temporal frontend service

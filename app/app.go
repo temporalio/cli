@@ -88,9 +88,7 @@ func serverCommands(defaultCfg *sconfig.Config) []*cli.Command {
 	return []*cli.Command{
 		{
 			Name:        "server",
-			Usage:       "",
-			UsageText: "",
-			Description: "Commands for managing the Temporal Server.",
+			Usage:       "Commands for managing the Temporal Server.",
 			Subcommands: server.NewServerCommands(defaultCfg),
 		},
 	}
@@ -99,45 +97,36 @@ func serverCommands(defaultCfg *sconfig.Config) []*cli.Command {
 var clientCommands = []*cli.Command{
 	{
 		Name:        "workflow",
-		Usage:       "",
-		UsageText: "",
-		Description: "Operations that can be performed on Workflows.",
+		Usage:       "Operations that can be performed on Workflows.",
 		Subcommands: workflow.NewWorkflowCommands(),
 	},
 	{
 		Name:        "activity",
-		Usage:       "",
-		UsageText: "",
-		Description: "Operations that can be performed on Workflow Activities.",
+		Usage:        "Operations that can be performed on Workflow Activities.",
 		Subcommands: activity.NewActivityCommands(),
 	},
 	{
 		Name:        "task-queue",
-		Usage:       "",
-		UsageText: "",
-		Description: "Operations performed on Task Queues.",
+		Usage:        "Operations performed on Task Queues.",
 		Subcommands: taskqueue.NewTaskQueueCommands(),
 	},
 	{
 		Name:        "schedule",
-		Usage:       "",
-		UsageText: "",
-		Description: "Operations performed on Schedules.",
+		Usage:       "Operations performed on Schedules.",
+		UsageText: "These commands allow Schedules to be created, used, and updated.",
 		Subcommands: schedule.NewScheduleCommands(),
 	},
 
 	{
 		Name:        "batch",
-		Usage:       "",
-		UsageText: "",
-		Description: "Operations performed on Batch jobs. Use Workflow commands with --query flag to start batch jobs.",
+		Usage:       "Operations performed on Batch jobs. Use Workflow commands with --query flag to start batch jobs.",
+		UsageText:   "Batch jobs run in the background and affect Workflow Executions one at a time. In `cli`, the batch commands are used to view the status of Batch jobs, and to terminate them. A successfully started Batch job returns a Job Id, which is needed to execute batch commands. Terminating a batch job does not roll back the operations already performed by the job itself.",
 		Subcommands: batch.NewBatchCommands(),
 	},
 	{
 		Name:  "operator",
-		Usage: "",
-		UsageText: "",
-		Description: "Operations on Temporal Server.",
+		Usage: "Operations on Temporal Server.",
+		UsageText: "These commands enable operations on Namespaces, Search Attributes, and Temporal Clusters.",
 		Subcommands: []*cli.Command{
 			{
 				Name:        "namespace",
@@ -158,9 +147,7 @@ var clientCommands = []*cli.Command{
 	},
 	{
 		Name:        "env",
-		Usage:       "",
-		UsageText: "",
-		Description: "Manage environment configurations on Temporal Client.",
+		Usage:       "Manage environmental configurations on Temporal Client.",
 		Subcommands: env.NewEnvCommands(),
 	},
 }

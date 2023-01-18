@@ -1,6 +1,6 @@
 ### delete
 
-Delete a Workflow Execution.
+Deletes a Workflow Execution.
 
 **--address**
 host:port for Temporal frontend service

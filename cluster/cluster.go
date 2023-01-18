@@ -10,7 +10,7 @@ func NewClusterCommands() []*cli.Command {
 	return []*cli.Command{
 		{
 			Name:  "health",
-			Usage: "Check health of frontend service.",
+			Usage: "Checks the health of the Frontend Service.",
 			Action: func(c *cli.Context) error {
 				return HealthCheck(c)
 			},
@@ -39,7 +39,7 @@ func NewClusterCommands() []*cli.Command {
 		},
 		{
 			Name:      "system",
-			Usage:     "Show information about the system and its capabilities.",
+			Usage:     "Shows information about the system and its capabilities.",
 			ArgsUsage: " ",
 			Flags: []cli.Flag{
 				&cli.StringFlag{

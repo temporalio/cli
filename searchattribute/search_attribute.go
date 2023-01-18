@@ -13,7 +13,7 @@ func NewSearchAttributeCommands() []*cli.Command {
 	return []*cli.Command{
 		{
 			Name:  "create",
-			Usage: "Add custom search attributes.",
+			Usage: "Adds one or more custom Search Attributes.",
 			Flags: []cli.Flag{
 				&cli.StringSliceFlag{
 					Name:     common.FlagName,
@@ -40,7 +40,7 @@ func NewSearchAttributeCommands() []*cli.Command {
 		},
 		{
 			Name:  "list",
-			Usage: "List search attributes that can be used in list Workflow Query.",
+			Usage: "Lists all Search Attributes that can be used in list Workflow Queries.",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:     output.FlagOutput,
@@ -56,7 +56,7 @@ func NewSearchAttributeCommands() []*cli.Command {
 		},
 		{
 			Name:  "remove",
-			Usage: "Remove custom search attributes metadata only (Elasticsearch index schema is not modified).",
+			Usage: "Removes custom search attribute metadata only (Elasticsearch index schema is not modified).",
 			Flags: []cli.Flag{
 				&cli.StringSliceFlag{
 					Name:     common.FlagName,

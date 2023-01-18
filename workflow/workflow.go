@@ -13,6 +13,7 @@ func NewWorkflowCommands() []*cli.Command {
 		{
 			Name:  "start",
 			Usage: "Start a new Workflow Execution.",
+			UsageText: "When invoked successfully, the Workflow and Run Ids of the recently started Workflow are returned.",
 			Flags: append(common.FlagsForStartWorkflow, common.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
 				return StartWorkflow(c, false)
@@ -21,6 +22,7 @@ func NewWorkflowCommands() []*cli.Command {
 		{
 			Name:  "execute",
 			Usage: "Start a new Workflow Execution and prints its progress.",
+			UsageText: "Single quotes('') are used to wrap input as JSON.",
 			Flags: append(common.FlagsForStartWorkflow, common.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
 				return StartWorkflow(c, true)
@@ -29,6 +31,7 @@ func NewWorkflowCommands() []*cli.Command {
 		{
 			Name:  "describe",
 			Usage: "Show information about a Workflow Execution.",
+			UsageText: "This information can be used to locate a Workflow Execution that failed.",
 			Flags: append(common.FlagsForExecution, []cli.Flag{
 				&cli.BoolFlag{
 					Name:     common.FlagResetPointsOnly,
@@ -48,6 +51,7 @@ func NewWorkflowCommands() []*cli.Command {
 		{
 			Name:  "list",
 			Usage: "List Workflow Executions based on a Query.",
+			UsageText: "By default, this command lists up to 10 closed Workflow Executions.",
 			Flags: append(common.FlagsForWorkflowFiltering, common.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
 				return ListWorkflow(c)
@@ -64,6 +68,7 @@ func NewWorkflowCommands() []*cli.Command {
 		{
 			Name:  "query",
 			Usage: "Query a Workflow Execution.",
+			UsageText: "Queries can retrieve all or part of the Workflow state within given parameters. Queries can also be used on completed Workflows.",
 			Flags: append(common.FlagsForStackTraceQuery,
 				&cli.StringFlag{
 					Name:     common.FlagType,
@@ -87,6 +92,7 @@ func NewWorkflowCommands() []*cli.Command {
 		{
 			Name:  "signal",
 			Usage: "Signal Workflow Execution by Id or List Filter.",
+			UsageText: "",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:     common.FlagWorkflowID,
@@ -157,6 +163,7 @@ func NewWorkflowCommands() []*cli.Command {
 		{
 			Name:  "cancel",
 			Usage: "Cancel a Workflow Execution.",
+			UsageText: "Canceling a running Workflow Execution records a `WorkflowExecutionCancelRequested` event in the Event History. A new command task will be scheduled. After cancellation, the Workflow Execution can perform cleanup work.",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:     common.FlagWorkflowID,
@@ -195,6 +202,7 @@ func NewWorkflowCommands() []*cli.Command {
 		{
 			Name:  "terminate",
 			Usage: "Terminate Workflow Execution by Id or List Filter.",
+			UsageText: "Terminating a running Workflow records a `WorkflowExecutionTerminated` event as the closing event. Command tasks cannot be scheduled after this. ",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:     common.FlagWorkflowID,
@@ -232,7 +240,7 @@ func NewWorkflowCommands() []*cli.Command {
 		},
 		{
 			Name:  "delete",
-			Usage: "Delete a Workflow Execution.",
+			Usage: "Deletes a Workflow Execution.",
 			Flags: common.FlagsForExecution,
 			Action: func(c *cli.Context) error {
 				return DeleteWorkflow(c)
@@ -240,7 +248,8 @@ func NewWorkflowCommands() []*cli.Command {
 		},
 		{
 			Name:  "reset",
-			Usage: "Reset a Workflow Execution by Event Id or reset type.",
+			Usage: "Resets a Workflow Execution by Event Id or reset type.",
+			UsageText: "A reset allows the Workflow to be resumed from a certain point without losing your parameters or Event History.",
 			Flags: append(common.FlagsForExecution, []cli.Flag{
 				&cli.StringFlag{
 					Name:     common.FlagEventID,
@@ -272,6 +281,7 @@ func NewWorkflowCommands() []*cli.Command {
 		{
 			Name:  "reset-batch",
 			Usage: "Reset a batch of Workflow Executions by reset type: " + strings.Join(mapKeysToArray(resetTypesMap), ", "),
+			UsageText: "Resetting a Workflow allows the process to resume from a certain point without losing your parameters or Event History.",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:     common.FlagQuery,

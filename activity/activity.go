@@ -9,7 +9,8 @@ func NewActivityCommands() []*cli.Command {
 	return []*cli.Command{
 		{
 			Name:  "complete",
-			Usage: "Complete an Activity.",
+			Usage: "Completes an Activity.",
+			UsageText: "When used, the Activity is scheduled to be completed.",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:     common.FlagWorkflowID,

@@ -118,3 +118,4 @@ func makeAlias(file *os.File, line string) {
 	writeLine(file, termArray[0] + "**")
 	writeLine(file, "Alias: **" + strings.TrimSpace(termArray[1]))
 }
+

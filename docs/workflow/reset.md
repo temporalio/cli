@@ -1,6 +1,8 @@
 ### reset
 
-Reset a Workflow Execution by Event Id or reset type.
+Resets a Workflow Execution by Event Id or reset type.
+
+>A reset allows the Workflow to be resumed from a certain point without losing your parameters or Event History.
 
 **--address**
 host:port for Temporal frontend service
@@ -31,7 +33,7 @@ Alias: **-n**
 Temporal workflow namespace (default: default)
 
 **--reapply-type**
-Event types to reapply after the reset point: , Signal, None. (default: All)
+Event types to reapply after the reset point: Signal, None, . (default: All)
 
 **--reason**
 Reason to reset.
@@ -56,7 +58,7 @@ Path to private key
 Override for target server name
 
 **--type**
-Event type to which you want to reset: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew
+Event type to which you want to reset: LastContinuedAsNew, FirstWorkflowTask, LastWorkflowTask
 
 **--workflow-id**
 Alias: **-w**

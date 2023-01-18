@@ -4,7 +4,7 @@ Operations applying to Search Attributes.
 
 #### create
 
-Add custom search attributes.
+Adds one or more custom Search Attributes.
 
 **--address**
 host:port for Temporal frontend service
@@ -58,7 +58,7 @@ Confirm all prompts.
 
 #### list
 
-List search attributes that can be used in list Workflow Query.
+Lists all Search Attributes that can be used in list Workflow Queries.
 
 **--address**
 host:port for Temporal frontend service
@@ -106,7 +106,7 @@ Override for target server name
 
 #### remove
 
-Remove custom search attributes metadata only (Elasticsearch index schema is not modified).
+Removes custom search attribute metadata only (Elasticsearch index schema is not modified).
 
 **--address**
 host:port for Temporal frontend service

@@ -10,6 +10,7 @@ func NewBatchCommands() []*cli.Command {
 		{
 			Name:  "describe",
 			Usage: "Describe a Batch operation job.",
+			UsageText: "This command shows the progress of an ongoing Batch job.",
 			Flags: append([]cli.Flag{
 				&cli.StringFlag{
 					Name:     common.FlagJobID,
@@ -25,6 +26,7 @@ func NewBatchCommands() []*cli.Command {
 		{
 			Name:      "list",
 			Usage:     "List Batch operation jobs.",
+			UsageText: "When used, all Batch operation jobs within the system are listed.",
 			Flags:     common.FlagsForPaginationAndRendering,
 			ArgsUsage: " ",
 			Action: func(c *cli.Context) error {
@@ -34,6 +36,7 @@ func NewBatchCommands() []*cli.Command {
 		{
 			Name:  "terminate",
 			Usage: "Stop a Batch operation job.",
+			UsageText: "When used, the Batch job with the provided Batch Id is terminated.",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:     common.FlagJobID,

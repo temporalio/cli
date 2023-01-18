@@ -1,6 +1,6 @@
 ### get
 
-Print environment properties
+Prints environmental properties.
 
 **--address**
 host:port for Temporal frontend service

@@ -1,6 +1,6 @@
 ### list-partition
 
-List the Task Queue's partitions and which matching node they are assigned to
+Lists the Task Queue's partitions and which matching node they are assigned to.
 
 **--address**
 host:port for Temporal frontend service

@@ -1,4 +1,4 @@
 ## env
 
-Manage environment configurations on Temporal Client.
+Manage environmental configurations on Temporal Client.
 
