@@ -32,7 +32,7 @@
 # DEALINGS IN THE SOFTWARE.
 
 # This is just a little script that can be downloaded from the internet to
-# install rustup. It just does platform detection, downloads the installer
+# install Temporal CLI. It just does platform detection, downloads the installer
 # and runs it.
 
 # It runs on Unix shells like {a,ba,da,k,z}sh. It uses the common `local`
@@ -42,7 +42,7 @@ if [ "$KSH_VERSION" = 'Version JM 93t+ 2010-03-05' ]; then
     # The version of ksh93 that ships with many illumos systems does not
     # support the "local" extension.  Print a message rather than fail in
     # subtle ways later on:
-    echo 'rustup does not work with this ksh93 version; please try bash!' >&2
+    echo 'temporal does not work with this ksh93 version; please try bash!' >&2
     exit 1
 fi
 
@@ -51,27 +51,11 @@ set -u
 #XXX: If you change anything here, please make the same changes in setup_mode.rs
 usage() {
     cat 1>&2 <<EOF
-rustup-init 1.25.1 (48d233f65 2022-07-12)
-The installer for rustup
+temporal.sh 0.1.0
+The installer for temporal
 
 USAGE:
-    rustup-init [FLAGS] [OPTIONS]
-
-FLAGS:
-    -v, --verbose           Enable verbose output
-    -q, --quiet             Disable progress output
-    -y                      Disable confirmation prompt.
-        --no-modify-path    Don't configure the PATH environment variable
-    -h, --help              Prints help information
-    -V, --version           Prints version information
-
-OPTIONS:
-        --default-host <default-host>              Choose a default host triple
-        --default-toolchain <default-toolchain>    Choose a default toolchain to install
-        --default-toolchain none                   Do not install any toolchains
-        --profile [minimal|default|complete]       Choose a profile
-    -c, --component <components>...                Component name to also install
-    -t, --target <targets>...                      Target name to also install
+    sh install.sh
 EOF
 }
 
@@ -272,7 +256,7 @@ get_platform() {
 }
 
 say() {
-    printf 'rustup: %s\n' "$1"
+    printf 'temporal: %s\n' "$1"
 }
 
 err() {
@@ -467,9 +451,9 @@ check_curl_for_retry_support() {
 # if support by local tools is detected. Detection currently supports these curl backends:
 # GnuTLS and OpenSSL (possibly also LibreSSL and BoringSSL). Return value can be empty.
 get_ciphersuites_for_curl() {
-    if [ -n "${RUSTUP_TLS_CIPHERSUITES-}" ]; then
+    if [ -n "${TEMPORAL_TLS_CIPHERSUITES-}" ]; then
         # user specified custom cipher suites, assume they know what they're doing
-        RETVAL="$RUSTUP_TLS_CIPHERSUITES"
+        RETVAL="$TEMPORAL_TLS_CIPHERSUITES"
         return
     fi
 
@@ -512,9 +496,9 @@ get_ciphersuites_for_curl() {
 # if support by local tools is detected. Detection currently supports these wget backends:
 # GnuTLS and OpenSSL (possibly also LibreSSL and BoringSSL). Return value can be empty.
 get_ciphersuites_for_wget() {
-    if [ -n "${RUSTUP_TLS_CIPHERSUITES-}" ]; then
+    if [ -n "${TEMPORAL_TLS_CIPHERSUITES-}" ]; then
         # user specified custom cipher suites, assume they know what they're doing
-        RETVAL="$RUSTUP_TLS_CIPHERSUITES"
+        RETVAL="$TEMPORAL_TLS_CIPHERSUITES"
         return
     fi
 
