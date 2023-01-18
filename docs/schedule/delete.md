@@ -1,3 +1,12 @@
+---
+id:
+title:
+sidebar_label:
+description:
+tags:
+---
+
+
 ### delete
 
 Deletes a schedule

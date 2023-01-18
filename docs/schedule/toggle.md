@@ -1,3 +1,12 @@
+---
+id:
+title:
+sidebar_label:
+description:
+tags:
+---
+
+
 ### toggle
 
 Pauses or unpauses a schedule

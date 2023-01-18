@@ -1,8 +1,17 @@
+---
+id:
+title:
+sidebar_label:
+description:
+tags:
+---
+
+
 ### describe
 
 Describe a Batch operation job.
 
-This command shows the progress of an ongoing Batch job.
+>This command shows the progress of an ongoing Batch job.
 
 **--address**
 host:port for Temporal frontend service

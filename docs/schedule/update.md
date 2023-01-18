@@ -1,3 +1,12 @@
+---
+id:
+title:
+sidebar_label:
+description:
+tags:
+---
+
+
 ### update
 
 Updates a schedule with a new definition (full replacement, not patch)

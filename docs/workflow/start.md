@@ -1,8 +1,17 @@
+---
+id:
+title:
+sidebar_label:
+description:
+tags:
+---
+
+
 ### start
 
 Starts a new Workflow Execution.
 
-When invoked successfully, the Workflow and Run Ids of the recently started Workflow are returned.
+>When invoked successfully, the Workflow and Run Ids of the recently started Workflow are returned.
 
 **--address**
 host:port for Temporal frontend service

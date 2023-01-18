@@ -1,8 +1,17 @@
+---
+id:
+title:
+sidebar_label:
+description:
+tags:
+---
+
+
 ### describe
 
 Show information about a Workflow Execution.
 
-This information can be used to locate a Workflow Execution that failed.
+>This information can be used to locate a Workflow Execution that failed.
 
 **--address**
 host:port for Temporal frontend service

@@ -1,8 +1,17 @@
+---
+id:
+title:
+sidebar_label:
+description:
+tags:
+---
+
+
 ### reset
 
 Resets a Workflow Execution by Event Id or reset type.
 
-A reset allows the Workflow to be resumed from a certain point without losing your parameters or Event History.
+>A reset allows the Workflow to be resumed from a certain point without losing your parameters or Event History.
 
 **--address**
 host:port for Temporal frontend service
@@ -58,7 +67,7 @@ Path to private key
 Override for target server name
 
 **--type**
-Event type to which you want to reset: LastContinuedAsNew, FirstWorkflowTask, LastWorkflowTask
+Event type to which you want to reset: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew
 
 **--workflow-id**
 Alias: **-w**

@@ -60,6 +60,7 @@ func main() {
 				continue
 			}
 			createdFiles[headerIndexFile] = currentHeaderFile
+			writeLine(currentHeaderFile,FrontMatterTemplate)
 			writeLine(currentHeaderFile, line)
 
 		} else if strings.HasPrefix(line, "### ") {
@@ -77,6 +78,7 @@ func main() {
 				}
 				createdFiles[filePath] = currentHeaderFile
 			}
+			writeLine(currentHeaderFile,FrontMatterTemplate)
 			writeLine(currentHeaderFile, line)
 		} else if strings.HasPrefix(line, "**--") {
 			// split into term and definition
@@ -94,7 +96,7 @@ func main() {
 			log.Info(found)
 
 		} else if strings.HasPrefix(line, ">") {
-			writeLine(currentHeaderFile, strings.TrimPrefix(line, ">"))
+			writeLine(currentHeaderFile, strings.TrimPrefix(line, " >"))
 		} else {
 			writeLine(currentHeaderFile, line)
 		} 
@@ -118,4 +120,18 @@ func makeAlias(file *os.File, line string) {
 	writeLine(file, termArray[0] + "**")
 	writeLine(file, "Alias: **" + strings.TrimSpace(termArray[1]))
 }
+
+// create frontmatter for docs team :)
+var FrontMatterTemplate = 
+`---
+id:
+title:
+sidebar_label:
+description:
+tags:
+---
+`
+
+	
+
 

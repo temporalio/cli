@@ -1,3 +1,12 @@
+---
+id:
+title:
+sidebar_label:
+description:
+tags:
+---
+
+
 ### search-attribute
 
 Operations applying to Search Attributes.

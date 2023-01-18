@@ -1,8 +1,17 @@
+---
+id:
+title:
+sidebar_label:
+description:
+tags:
+---
+
+
 ### reset-batch
 
 Reset a batch of Workflow Executions by reset type: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew
 
-Resetting a Workflow allows the process to resume from a certain point without losing your parameters or Event History.
+>Resetting a Workflow allows the process to resume from a certain point without losing your parameters or Event History.
 
 **--address**
 host:port for Temporal frontend service
@@ -76,5 +85,5 @@ Path to private key
 Override for target server name
 
 **--type**
-Event type to which you want to reset: LastWorkflowTask, LastContinuedAsNew, FirstWorkflowTask
+Event type to which you want to reset: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew
 
