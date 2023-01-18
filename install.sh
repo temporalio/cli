@@ -128,9 +128,7 @@ main() {
         printf '%s\n' 'info: downloading installer' 1>&2
     fi
 
-    # TODO replace with
-    # local _url="https://temporal.download/temporalite/archive/latest?platform=${_platform}&arch=${_arch}"
-    local _url="https://temporal.download/assets/temporalio/cli/releases/download/v0.2.0/cli_0.2.0_${_platform}_${_arch}.tar.gz"
+    local _url="https://temporal.download/cli/archive/latest?platform=${_platform}&arch=${_arch}"
 
     local _ext="tar.gz"
     case "$_arch" in
