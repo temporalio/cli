@@ -7,10 +7,6 @@
 
 # Copyright (c) 2022 Temporal Technologies Inc.
 
-# Copyright (c) 2010 Tim Caswell
-
-# Copyright (c) 2014 Jordan Harband
-
 # Permission is hereby granted, free of charge, to any
 # person obtaining a copy of this software and associated
 # documentation files (the "Software"), to deal in the
@@ -127,9 +123,9 @@ main() {
     done
 
     if $_ansi_escapes_are_valid; then
-        printf "\33[1minfo:\33[0m downloading installer\n" 1>&2
+        printf "\33[1minfo:\33[0m downloading Temporal CLI\n" 1>&2
     else
-        printf '%s\n' 'info: downloading installer' 1>&2
+        printf '%s\n' 'info: downloading Temporal CLI' 1>&2
     fi
 
     local _url="https://temporal.download/cli/archive/latest?platform=${_platform}&arch=${_arch}"
@@ -352,81 +348,8 @@ esac
 EOL
 
     local _source=". $_dir/env"
-
-    local _profile="$(ensure detect_profile)"
-    if [ -z "${_profile-}" ]; then
-        local _tried_profiles
-        if [ -n "${PROFILE}" ]; then
-            _tried_profiles="${_profile} (as defined in \$PROFILE), "
-        fi
-        say "Profile not found. Tried ${_tried_profiles-}~/.bashrc, ~/.bash_profile, ~/.zprofile, ~/.zshrc, and ~/.profile."
-        say "Create one of them and run this script again"
-        say "   OR"
-        say "Append the following lines to the correct file yourself:"
-        command printf "${_source}"
-        say "\n"
-    else
-        if ! command grep -qc '/.temporalio' "$_profile"; then
-            say "Appending Temporal CLI source string to $_profile"
-            command printf "\n${_source}\n" >>"$_profile"
-        else
-            say "Temporal CLI source string is already in ${_profile}"
-        fi
-    fi
-}
-
-#
-# Detect profile file if not specified as environment variable
-# (eg: PROFILE=~/.myprofile)
-# The echo'ed path is guaranteed to be an existing file
-# Otherwise, an empty string is returned
-#
-detect_profile() {
-    if [ "${PROFILE-}" = '/dev/null' ]; then
-        # the user has specifically requested NOT to touch their profile
-        return
-    fi
-
-    if [ -n "${PROFILE-}" ] && [ -f "${PROFILE}" ]; then
-        printf %s "${PROFILE}"
-        return
-    fi
-
-    local DETECTED_PROFILE
-    DETECTED_PROFILE=''
-
-    if [ "${SHELL#*bash}" != "$SHELL" ]; then
-        if [ -f "$HOME/.bashrc" ]; then
-            DETECTED_PROFILE="$HOME/.bashrc"
-        elif [ -f "$HOME/.bash_profile" ]; then
-            DETECTED_PROFILE="$HOME/.bash_profile"
-        fi
-    elif [ "${SHELL#*zsh}" != "$SHELL" ]; then
-        if [ -f "$HOME/.zshrc" ]; then
-            DETECTED_PROFILE="$HOME/.zshrc"
-        elif [ -f "$HOME/.zprofile" ]; then
-            DETECTED_PROFILE="$HOME/.zprofile"
-        fi
-    fi
-
-    if [ -z "$DETECTED_PROFILE" ]; then
-        for EACH_PROFILE in ".profile" ".bashrc" ".bash_profile" ".zprofile" ".zshrc"; do
-            if DETECTED_PROFILE="$(try_profile "${HOME}/${EACH_PROFILE}")"; then
-                break
-            fi
-        done
-    fi
-
-    if [ -n "$DETECTED_PROFILE" ]; then
-        printf %s "$DETECTED_PROFILE"
-    fi
-}
-
-try_profile() {
-    if [ -z "${1-}" ] || [ ! -f "${1}" ]; then
-        return 1
-    fi
-    printf %s "${1}"
+    say "To add temporal to PATH update your user profile with the following (ex. ~/.bash_profile):"
+    command printf "${_source}\n"
 }
 
 check_help_for() {
