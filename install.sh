@@ -319,7 +319,7 @@ unzip() {
 }
 
 get_default_install_dir() {
-    [ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.temporalio" || printf %s "${XDG_CONFIG_HOME}/temporalio"
+    printf %s "${HOME}/.temporalio"
 }
 
 check_help_for() {
