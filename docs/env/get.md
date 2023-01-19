@@ -1,9 +1,10 @@
 ---
-id: %s
-title: %s
-sidebar_label: %s
-description: %s
+id: get
+title: temporal env get
+sidebar_label: get
+description: words words words
 tags:
+	- cli
 ---
 
 ### get

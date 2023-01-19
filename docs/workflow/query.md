@@ -1,9 +1,10 @@
 ---
-id: %s
-title: %s
-sidebar_label: %s
-description: %s
+id: query
+title: temporal workflow query
+sidebar_label: query
+description: words words words
 tags:
+	- cli
 ---
 
 ### query

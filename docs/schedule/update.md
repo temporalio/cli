@@ -1,9 +1,10 @@
 ---
-id: %s
-title: %s
-sidebar_label: %s
-description: %s
+id: update
+title: temporal schedule update
+sidebar_label: update
+description: words words words
 tags:
+	- cli
 ---
 
 ### update

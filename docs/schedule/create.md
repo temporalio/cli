@@ -1,9 +1,10 @@
 ---
-id: %s
-title: %s
-sidebar_label: %s
-description: %s
+id: create
+title: temporal schedule create
+sidebar_label: create
+description: words words words
 tags:
+	- cli
 ---
 
 ### create

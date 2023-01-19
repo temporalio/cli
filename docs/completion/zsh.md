@@ -1,9 +1,10 @@
 ---
-id: %s
-title: %s
-sidebar_label: %s
-description: %s
+id: zsh
+title: temporal completion zsh
+sidebar_label: zsh
+description: words words words
 tags:
+	- cli
 ---
 
 ### zsh

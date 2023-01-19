@@ -1,9 +1,10 @@
 ---
-id: %s
-title: %s
-sidebar_label: %s
-description: %s
+id: list-partition
+title: temporal task-queue list-partition
+sidebar_label: list-partition
+description: words words words
 tags:
+	- cli
 ---
 
 ### list-partition

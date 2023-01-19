@@ -1,9 +1,10 @@
 ---
-id: %s
-title: %s
-sidebar_label: %s
-description: %s
+id: set
+title: temporal env set
+sidebar_label: set
+description: words words words
 tags:
+	- cli
 ---
 
 ### set

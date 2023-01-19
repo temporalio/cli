@@ -1,9 +1,10 @@
 ---
-id: %s
-title: %s
-sidebar_label: %s
-description: %s
+id: count
+title: temporal workflow count
+sidebar_label: count
+description: words words words
 tags:
+	- cli
 ---
 
 ### count

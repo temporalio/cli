@@ -1,9 +1,10 @@
 ---
-id: %s
-title: %s
-sidebar_label: %s
-description: %s
+id: trace
+title: temporal workflow trace
+sidebar_label: trace
+description: words words words
 tags:
+	- cli
 ---
 
 ### trace

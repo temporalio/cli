@@ -1,9 +1,10 @@
 ---
-id: %s
-title: %s
-sidebar_label: %s
-description: %s
+id: terminate
+title: temporal batch terminate
+sidebar_label: terminate
+description: words words words
 tags:
+	- cli
 ---
 
 ### terminate

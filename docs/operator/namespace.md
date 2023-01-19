@@ -1,9 +1,10 @@
 ---
-id: %s
-title: %s
-sidebar_label: %s
-description: %s
+id: namespace
+title: temporal operator namespace
+sidebar_label: namespace
+description: words words words
 tags:
+	- cli
 ---
 
 ### namespace

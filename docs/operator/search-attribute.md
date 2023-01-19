@@ -1,9 +1,10 @@
 ---
-id: %s
-title: %s
-sidebar_label: %s
-description: %s
+id: search-attribute
+title: temporal operator search-attribute
+sidebar_label: search-attribute
+description: words words words
 tags:
+	- cli
 ---
 
 ### search-attribute

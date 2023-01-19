@@ -1,9 +1,10 @@
 ---
-id: %s
-title: %s
-sidebar_label: %s
-description: %s
+id: delete
+title: temporal schedule delete
+sidebar_label: delete
+description: words words words
 tags:
+	- cli
 ---
 
 ### delete

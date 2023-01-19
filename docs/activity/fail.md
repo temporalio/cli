@@ -1,9 +1,10 @@
 ---
-id: %s
-title: %s
-sidebar_label: %s
-description: %s
+id: fail
+title: temporal activity fail
+sidebar_label: fail
+description: words words words
 tags:
+	- cli
 ---
 
 ### fail

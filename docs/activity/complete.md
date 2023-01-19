@@ -1,9 +1,10 @@
 ---
-id: %s
-title: %s
-sidebar_label: %s
-description: %s
+id: complete
+title: temporal activity complete
+sidebar_label: complete
+description: words words words
 tags:
+	- cli
 ---
 
 ### complete

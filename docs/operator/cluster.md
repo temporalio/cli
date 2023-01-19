@@ -1,9 +1,10 @@
 ---
-id: %s
-title: %s
-sidebar_label: %s
-description: %s
+id: cluster
+title: temporal operator cluster
+sidebar_label: cluster
+description: words words words
 tags:
+	- cli
 ---
 
 ### cluster

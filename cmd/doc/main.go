@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"text/template"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/temporalio/cli/app"
@@ -17,15 +18,23 @@ const (
 	indexFile = "index.md"
 )
 
-var FrontMatterTemplate = 
+const FrontMatterTemplate = 
 `---
-id: %s
-title: %s
-sidebar_label: %s
-description: %s
+id: {{.ID}}
+title: temporal {{.Title}}{{if not .IsIndex}} {{.ID}}{{end}}
+sidebar_label:{{if .IsIndex}} {{.Title}}{{else}} {{.ID}}{{end}}
+description: words words words
 tags:
+	- cli
 ---
+
 `
+
+type FMStruct struct {
+	ID string 
+	Title string
+	IsIndex bool
+}
 
 // `BuildApp` takes a string and returns a `*App` and an error
 func main() {
@@ -70,6 +79,8 @@ func main() {
 				continue
 			}
 			createdFiles[headerIndexFile] = currentHeaderFile
+		
+			writeFrontMatter(indexFile, currentHeader, true, currentHeaderFile)
 			writeLine(currentHeaderFile, line)
 
 		} else if strings.HasPrefix(line, "### ") {
@@ -87,7 +98,7 @@ func main() {
 				}
 				createdFiles[filePath] = currentHeaderFile
 			}
-			writeLine(currentHeaderFile,FrontMatterTemplate)
+			writeFrontMatter(fileName, currentHeader, false, currentHeaderFile)
 			writeLine(currentHeaderFile, line)
 		} else if strings.HasPrefix(line, "**--") {
 			// split into term and definition
@@ -128,5 +139,24 @@ func makeAlias(file *os.File, line string) {
 	termArray := strings.Split(line, ",")
 	writeLine(file, termArray[0] + "**")
 	writeLine(file, "Alias: **" + strings.TrimSpace(termArray[1]))
+}
+
+// write front matter
+func writeFrontMatter (idName string, titleName string, isIndex bool, currentHeaderFile *os.File) {
+	// make struct
+	data := FMStruct{
+		ID: idName,
+		Title: titleName,
+		IsIndex: isIndex,
+	}
+
+	tmpl := template.Must(template.New("fm").Parse(FrontMatterTemplate))
+	
+	err := tmpl.ExecuteTemplate(currentHeaderFile, "fm", data)
+
+	if err != nil {
+		log.Println("Execute: ", err)
+		return
+	}
 }
 

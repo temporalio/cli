@@ -1,9 +1,10 @@
 ---
-id: %s
-title: %s
-sidebar_label: %s
-description: %s
+id: trigger
+title: temporal schedule trigger
+sidebar_label: trigger
+description: words words words
 tags:
+	- cli
 ---
 
 ### trigger

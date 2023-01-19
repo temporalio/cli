@@ -1,9 +1,10 @@
 ---
-id: %s
-title: %s
-sidebar_label: %s
-description: %s
+id: toggle
+title: temporal schedule toggle
+sidebar_label: toggle
+description: words words words
 tags:
+	- cli
 ---
 
 ### toggle

@@ -1,9 +1,10 @@
 ---
-id: %s
-title: %s
-sidebar_label: %s
-description: %s
+id: reset
+title: temporal workflow reset
+sidebar_label: reset
+description: words words words
 tags:
+	- cli
 ---
 
 ### reset
@@ -66,7 +67,7 @@ Path to private key
 Override for target server name
 
 **--type**
-Event type to which you want to reset: LastWorkflowTask, LastContinuedAsNew, FirstWorkflowTask
+Event type to which you want to reset: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew
 
 **--workflow-id**
 Alias: **-w**

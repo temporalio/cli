@@ -1,9 +1,10 @@
 ---
-id: %s
-title: %s
-sidebar_label: %s
-description: %s
+id: reset-batch
+title: temporal workflow reset-batch
+sidebar_label: reset-batch
+description: words words words
 tags:
+	- cli
 ---
 
 ### reset-batch
@@ -84,5 +85,5 @@ Path to private key
 Override for target server name
 
 **--type**
-Event type to which you want to reset: LastWorkflowTask, LastContinuedAsNew, FirstWorkflowTask
+Event type to which you want to reset: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew
 

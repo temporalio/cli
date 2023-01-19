@@ -1,9 +1,10 @@
 ---
-id: %s
-title: %s
-sidebar_label: %s
-description: %s
+id: bash
+title: temporal completion bash
+sidebar_label: bash
+description: words words words
 tags:
+	- cli
 ---
 
 ### bash

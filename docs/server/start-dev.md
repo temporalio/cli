@@ -1,9 +1,10 @@
 ---
-id: %s
-title: %s
-sidebar_label: %s
-description: %s
+id: start-dev
+title: temporal server start-dev
+sidebar_label: start-dev
+description: words words words
 tags:
+	- cli
 ---
 
 ### start-dev

@@ -1,3 +1,12 @@
+---
+id: index.md
+title: temporal batch
+sidebar_label: batch
+description: words words words
+tags:
+	- cli
+---
+
 ## batch
 
 Operations performed on Batch jobs. Use Workflow commands with --query flag to start batch jobs.
