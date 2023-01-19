@@ -2,12 +2,11 @@
 id: index
 title: temporal task-queue
 sidebar_label: task-queue
-description: Temporal CLI operation for ....
+description: nextLine
 tags:
 	- cli
 ---
 
-## task-queue
 
-Operations performed on [Task Queues](https://docs.temporal.io/tasks/#task-queue).
+Operations performed on Task Queues.
 

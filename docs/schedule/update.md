@@ -2,7 +2,7 @@
 id: update
 title: temporal schedule update
 sidebar_label: update
-description: Temporal CLI operation for ....
+description: ### update
 tags:
 	- cli
 ---

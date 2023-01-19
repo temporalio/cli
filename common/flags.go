@@ -89,7 +89,7 @@ var (
 	FlagQuery                      = "query"
 	FlagQueryAlias                 = []string{"q"}
 	FlagQueryRejectCondition       = "reject-condition"
-	FlagQueryUsage                 = "Filter results using an SQL-like query. See [Queries](https://docs.temporal.io/docs/tctl/workflow/list#--query) for more information."
+	FlagQueryUsage                 = "Filter results using an SQL-like query. See https://docs.temporal.io/docs/tctl/workflow/list#--query for more information."
 	FlagReason                     = "reason"
 	FlagRemainingActions           = "remaining-actions"
 	FlagResetPointsOnly            = "reset-points"

@@ -2,7 +2,7 @@
 id: get
 title: temporal env get
 sidebar_label: get
-description: Temporal CLI operation for ....
+description: ### get
 tags:
 	- cli
 ---

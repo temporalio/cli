@@ -2,7 +2,7 @@
 id: zsh
 title: temporal completion zsh
 sidebar_label: zsh
-description: Temporal CLI operation for ....
+description: ### zsh
 tags:
 	- cli
 ---

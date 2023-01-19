@@ -2,7 +2,7 @@
 id: delete
 title: temporal schedule delete
 sidebar_label: delete
-description: Temporal CLI operation for ....
+description: ### delete
 tags:
 	- cli
 ---

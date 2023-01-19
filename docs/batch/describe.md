@@ -2,7 +2,7 @@
 id: describe
 title: temporal batch describe
 sidebar_label: describe
-description: Temporal CLI operation for ....
+description: ### describe
 tags:
 	- cli
 ---

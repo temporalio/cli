@@ -2,14 +2,14 @@
 id: cluster
 title: temporal operator cluster
 sidebar_label: cluster
-description: Temporal CLI operation for ....
+description: ### cluster
 tags:
 	- cli
 ---
 
 ### cluster
 
-Operations for running a [Temporal Cluster](https://docs.temporal.io/clusters).
+Operations for running a Temporal Cluster.
 
 #### health
 

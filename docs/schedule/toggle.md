@@ -2,7 +2,7 @@
 id: toggle
 title: temporal schedule toggle
 sidebar_label: toggle
-description: Temporal CLI operation for ....
+description: ### toggle
 tags:
 	- cli
 ---

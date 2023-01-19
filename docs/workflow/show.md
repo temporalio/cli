@@ -2,14 +2,14 @@
 id: show
 title: temporal workflow show
 sidebar_label: show
-description: Temporal CLI operation for ....
+description: ### show
 tags:
 	- cli
 ---
 
 ### show
 
-Show [Event History](https://docs.temporal.io/workflows/#event-history) for a [Workflow Execution](https://docs.temporal.io/workflows/#workflow-execution).
+Show Event History for a Workflow Execution.
 
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.

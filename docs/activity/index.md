@@ -2,12 +2,11 @@
 id: index
 title: temporal activity
 sidebar_label: activity
-description: Temporal CLI operation for ....
+description: nextLine
 tags:
 	- cli
 ---
 
-## activity
 
-Operations that can be performed on Workflow [Activities](https://docs.temporal.io/activities).
+Operations that can be performed on Workflow Activities.
 

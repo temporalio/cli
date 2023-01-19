@@ -2,14 +2,14 @@
 id: describe
 title: temporal workflow describe
 sidebar_label: describe
-description: Temporal CLI operation for ....
+description: ### describe
 tags:
 	- cli
 ---
 
 ### describe
 
-Show information about a [Workflow Execution](https://docs.temporal.io/workflows/#workflow-execution).
+Show information about a Workflow Execution.
 
 This information can be used to locate a Workflow Execution that failed.
 

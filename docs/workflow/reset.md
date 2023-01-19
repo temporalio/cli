@@ -2,14 +2,14 @@
 id: reset
 title: temporal workflow reset
 sidebar_label: reset
-description: Temporal CLI operation for ....
+description: ### reset
 tags:
 	- cli
 ---
 
 ### reset
 
-Resets a [Workflow Execution](https://docs.temporal.io/workflows/#workflow-execution) by Event Id or reset type.
+Resets a Workflow Execution by Event Id or reset type.
 
 A reset allows the Workflow to be resumed from a certain point without losing your parameters or [Event History](https://docs.temporal.io/workflows/#event-history).
 

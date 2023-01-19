@@ -2,14 +2,14 @@
 id: fail
 title: temporal activity fail
 sidebar_label: fail
-description: Temporal CLI operation for ....
+description: ### fail
 tags:
 	- cli
 ---
 
 ### fail
 
-Fails an [Activity](https://docs.temporal.io/activities).
+Fails an Activity.
 
 **--activity-id**
 Identifies the Activity to fail.

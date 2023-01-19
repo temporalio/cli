@@ -2,7 +2,7 @@
 id: list
 title: temporal schedule list
 sidebar_label: list
-description: Temporal CLI operation for ....
+description: ### list
 tags:
 	- cli
 ---

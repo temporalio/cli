@@ -2,7 +2,7 @@
 id: list-partition
 title: temporal task-queue list-partition
 sidebar_label: list-partition
-description: Temporal CLI operation for ....
+description: ### list-partition
 tags:
 	- cli
 ---

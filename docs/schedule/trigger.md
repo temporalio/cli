@@ -2,7 +2,7 @@
 id: trigger
 title: temporal schedule trigger
 sidebar_label: trigger
-description: Temporal CLI operation for ....
+description: ### trigger
 tags:
 	- cli
 ---

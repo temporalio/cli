@@ -2,12 +2,11 @@
 id: index
 title: temporal completion
 sidebar_label: completion
-description: Temporal CLI operation for ....
+description: nextLine
 tags:
 	- cli
 ---
 
-## completion
 
 Output shell completion code for the specified shell (zsh, bash).
 

@@ -2,14 +2,14 @@
 id: cancel
 title: temporal workflow cancel
 sidebar_label: cancel
-description: Temporal CLI operation for ....
+description: ### cancel
 tags:
 	- cli
 ---
 
 ### cancel
 
-Cancel a [Workflow Execution](https://docs.temporal.io/workflows/#workflow-execution).
+Cancel a Workflow Execution.
 
     Canceling a running Workflow Execution records a [`WorkflowExecutionCancelRequested` event](https://docs.temporal.io/references/events/#workflowexecutioncanceled) in the [Event History](https://docs.temporal.io/workflows/#event-history).
     

@@ -2,14 +2,14 @@
 id: complete
 title: temporal activity complete
 sidebar_label: complete
-description: Temporal CLI operation for ....
+description: ### complete
 tags:
 	- cli
 ---
 
 ### complete
 
-Completes an [Activity](https://docs.temporal.io/activities).
+Completes an Activity.
 
 **--activity-id**
 Identifies the Activity to be completed.

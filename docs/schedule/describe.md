@@ -2,7 +2,7 @@
 id: describe
 title: temporal schedule describe
 sidebar_label: describe
-description: Temporal CLI operation for ....
+description: ### describe
 tags:
 	- cli
 ---

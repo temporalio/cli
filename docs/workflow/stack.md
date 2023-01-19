@@ -2,14 +2,14 @@
 id: stack
 title: temporal workflow stack
 sidebar_label: stack
-description: Temporal CLI operation for ....
+description: ### stack
 tags:
 	- cli
 ---
 
 ### stack
 
-Query a [Workflow Execution](https://docs.temporal.io/workflows/#workflow-execution) with [__stack_trace](https://docs.temporal.io/workflows/#stack-trace-query) as the query type.
+Query a Workflow Execution with __stack_trace as the query type.
 
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.

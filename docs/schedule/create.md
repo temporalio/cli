@@ -2,7 +2,7 @@
 id: create
 title: temporal schedule create
 sidebar_label: create
-description: Temporal CLI operation for ....
+description: ### create
 tags:
 	- cli
 ---

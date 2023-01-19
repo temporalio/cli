@@ -2,7 +2,7 @@
 id: set
 title: temporal env set
 sidebar_label: set
-description: Temporal CLI operation for ....
+description: ### set
 tags:
 	- cli
 ---

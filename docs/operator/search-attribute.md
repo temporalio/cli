@@ -2,14 +2,14 @@
 id: search-attribute
 title: temporal operator search-attribute
 sidebar_label: search-attribute
-description: Temporal CLI operation for ....
+description: ### search-attribute
 tags:
 	- cli
 ---
 
 ### search-attribute
 
-Operations applying to [Search Attributes](https://docs.temporal.io/visibility#search-attribute).
+Operations applying to Search Attributes.
 
 #### create
 

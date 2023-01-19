@@ -2,7 +2,7 @@
 id: terminate
 title: temporal batch terminate
 sidebar_label: terminate
-description: Temporal CLI operation for ....
+description: ### terminate
 tags:
 	- cli
 ---

@@ -2,14 +2,14 @@
 id: start
 title: temporal workflow start
 sidebar_label: start
-description: Temporal CLI operation for ....
+description: ### start
 tags:
 	- cli
 ---
 
 ### start
 
-Starts a new [Workflow Execution](https://docs.temporal.io/workflows/#workflow-execution).
+Starts a new Workflow Execution.
 
 When invoked successfully, the Workflow and Run Ids of the recently started [Workflow](https://docs.temporal.io/workflows) are returned.
 

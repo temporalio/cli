@@ -2,14 +2,14 @@
 id: namespace
 title: temporal operator namespace
 sidebar_label: namespace
-description: Temporal CLI operation for ....
+description: ### namespace
 tags:
 	- cli
 ---
 
 ### namespace
 
-Operations applying to [Namespaces](https://docs.temporal.io/namespaces).
+Operations applying to Namespaces.
 
 #### describe
 

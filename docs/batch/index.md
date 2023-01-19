@@ -2,14 +2,13 @@
 id: index
 title: temporal batch
 sidebar_label: batch
-description: Temporal CLI operation for ....
+description: nextLine
 tags:
 	- cli
 ---
 
-## batch
 
-Operations performed on Batch jobs. Use [Workflows](https://docs.temporal.io/workflows) commands with --query flag to start batch jobs.
+Operations performed on Batch jobs. Use Workflow commands with --query flag to start batch jobs.
 
     Batch Jobs run in the background and affect [Workflow Executions](https://docs.temporal.io/workflows/#workflow-execution) one at a time.
     

@@ -2,14 +2,14 @@
 id: signal
 title: temporal workflow signal
 sidebar_label: signal
-description: Temporal CLI operation for ....
+description: ### signal
 tags:
 	- cli
 ---
 
 ### signal
 
-Signal [Workflow Execution](https://docs.temporal.io/workflows/#workflow-execution) by Id or [List Filter](https://docs.temporal.io/visibility/#list-filter).
+Signal Workflow Execution by Id or List Filter.
 
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.

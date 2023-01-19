@@ -2,14 +2,14 @@
 id: list
 title: temporal workflow list
 sidebar_label: list
-description: Temporal CLI operation for ....
+description: ### list
 tags:
 	- cli
 ---
 
 ### list
 
-List [Workflow Executions](https://docs.temporal.io/workflows/#workflow-execution) based on a [Query](https://docs.temporal.io/workflows/#query).
+List Workflow Executions based on a Query.
 
 By default, this command lists up to 10 closed Workflow Executions.
 
@@ -62,7 +62,7 @@ Options: less, more, favoritePager.
 
 **--query**
 Alias: **-q**
-Filter results using an SQL-like query. See [Queries](https://docs.temporal.io/docs/tctl/workflow/list#--query) for more information.
+Filter results using an SQL-like query. See https://docs.temporal.io/docs/tctl/workflow/list#--query for more information.
 
 **--time-format**
 Format time as: relative, iso, raw. (default: relative)
