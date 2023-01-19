@@ -3,5 +3,5 @@
 set -ex
 
 sh ./install.sh
-# . "$HOME"/.temporalio/env
+ . "$HOME"/.temporalio/env
 temporal -v
