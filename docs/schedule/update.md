@@ -2,7 +2,7 @@
 id: update
 title: temporal schedule update
 sidebar_label: update
-description: words words words
+description: Temporal CLI operation for ....
 tags:
 	- cli
 ---
@@ -12,7 +12,7 @@ tags:
 Updates a schedule with a new definition (full replacement, not patch)
 
 **--address**
-host:port for Temporal frontend service
+The host and port (formatted as host:port) for the Temporal Frontend Service.
 
 **--calendar**
 Calendar specification in JSON, e.g. {"dayOfWeek":"Fri","hour":"17","minute":"5"}
@@ -21,16 +21,16 @@ Calendar specification in JSON, e.g. {"dayOfWeek":"Fri","hour":"17","minute":"5"
 Maximum allowed catch-up time if server is down
 
 **--codec-auth**
-Authorization header to set for requests to Codec Server
+Sets the authorization header on requests to the Codec Server.
 
 **--codec-endpoint**
-Remote Codec Server Endpoint
+Endpoint for a remote Codec Server.
 
 **--color**
 when to use color: auto, always, never. (default: auto)
 
 **--context-timeout**
-Optional timeout for context of RPC call in seconds (default: 5)
+An optional timeout for the context of an RPC call (in seconds). (default: 5)
 
 **--cron**
 Calendar specification as cron string, e.g. "30 2 * * 5" or "@daily"
@@ -39,13 +39,13 @@ Calendar specification as cron string, e.g. "30 2 * * 5" or "@daily"
 Overall schedule end time.
 
 **--env**
-Env name to read the client environment variables from (default: default)
+Name of the environment to read environmental variables from. (default: default)
 
 **--execution-timeout**
 Workflow Execution timeout, including retries and continue-as-new (seconds) (default: 0)
 
 **--grpc-meta**
-gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
+Contains gRPC metadata to send with requests (Format: key=value). Values must be in a valid JSON format.
 
 **--input**
 Alias: **-i**
@@ -71,7 +71,7 @@ Set a memo from a file. Each line should follow the format key=value. Use valid 
 
 **--namespace**
 Alias: **-n**
-Temporal workflow namespace (default: default)
+Identifies a Namespace in the Temporal Workflow. (default: default)
 
 **--notes**
 Initial value of notes field
@@ -89,7 +89,7 @@ Pause schedule after any workflow failure
 Total number of actions allowed (default: 0)
 
 **--run-timeout**
-Single workflow run timeout (seconds) (default: 0)
+Timeout (in seconds) of a single Workflow run. (default: 0)
 
 **--schedule-id**
 Alias: **-s**
@@ -103,7 +103,7 @@ Overall schedule start time.
 
 **--task-queue**
 Alias: **-t**
-Task queue
+Task Queue
 
 **--task-timeout**
 Workflow task start to close timeout (seconds) (default: 10)
@@ -112,24 +112,24 @@ Workflow task start to close timeout (seconds) (default: 10)
 Time zone (IANA name).
 
 **--tls-ca-path**
-Path to server CA certificate
+Path to server CA certificate.
 
 **--tls-cert-path**
-Path to x509 certificate
+Path to x509 certificate.
 
 **--tls-disable-host-verification**
-Disable tls host name verification (tls must be enabled)
+Disables TLS host name verification if already enabled.
 
 **--tls-key-path**
-Path to private key
+Path to private certificate key.
 
 **--tls-server-name**
-Override for target server name
+Provides an override for the target TLS server name.
 
 **--workflow-id**
 Alias: **-w**
 Workflow Id
 
 **--workflow-type**
-Workflow type name
+Workflow type name.
 

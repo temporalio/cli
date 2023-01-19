@@ -1,8 +1,8 @@
 ---
-id: index.md
+id: index
 title: temporal server
 sidebar_label: server
-description: words words words
+description: Temporal CLI operation for ....
 tags:
 	- cli
 ---

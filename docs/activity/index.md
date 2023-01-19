@@ -1,8 +1,8 @@
 ---
-id: index.md
+id: index
 title: temporal activity
 sidebar_label: activity
-description: words words words
+description: Temporal CLI operation for ....
 tags:
 	- cli
 ---

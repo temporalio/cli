@@ -1,5 +1,6 @@
 package common
 
+// TODO: add links to Temporal concepts after confirming the format won't screw with the command line
 const (
 	// Main command definitions
 	WorkflowDefinition = "Operations that can be performed on Workflows."

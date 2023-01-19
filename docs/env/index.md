@@ -1,8 +1,8 @@
 ---
-id: index.md
+id: index
 title: temporal env
 sidebar_label: env
-description: words words words
+description: Temporal CLI operation for ....
 tags:
 	- cli
 ---

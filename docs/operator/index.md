@@ -1,8 +1,8 @@
 ---
-id: index.md
+id: index
 title: temporal operator
 sidebar_label: operator
-description: words words words
+description: Temporal CLI operation for ....
 tags:
 	- cli
 ---
@@ -11,5 +11,5 @@ tags:
 
 Operations on Temporal Server.
 
->These commands enable operations on Namespaces, Search Attributes, and Temporal Clusters.
+These commands enable operations on Namespaces, Search Attributes, and Temporal Clusters.
 

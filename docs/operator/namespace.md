@@ -2,7 +2,7 @@
 id: namespace
 title: temporal operator namespace
 sidebar_label: namespace
-description: words words words
+description: Temporal CLI operation for ....
 tags:
 	- cli
 ---
@@ -16,91 +16,91 @@ Operations applying to Namespaces.
 Describe a Namespace by its name or Id.
 
 **--address**
-host:port for Temporal frontend service
+The host and port (formatted as host:port) for the Temporal Frontend Service.
 
 **--codec-auth**
-Authorization header to set for requests to Codec Server
+Sets the authorization header on requests to the Codec Server.
 
 **--codec-endpoint**
-Remote Codec Server Endpoint
+Endpoint for a remote Codec Server.
 
 **--color**
 when to use color: auto, always, never. (default: auto)
 
 **--context-timeout**
-Optional timeout for context of RPC call in seconds (default: 5)
+An optional timeout for the context of an RPC call (in seconds). (default: 5)
 
 **--env**
-Env name to read the client environment variables from (default: default)
+Name of the environment to read environmental variables from. (default: default)
 
 **--grpc-meta**
-gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
+Contains gRPC metadata to send with requests (Format: key=value). Values must be in a valid JSON format.
 
 **--namespace**
 Alias: **-n**
-Temporal workflow namespace (default: default)
+Identifies a Namespace in the Temporal Workflow. (default: default)
 
 **--namespace-id**
 Namespace Id
 
 **--tls-ca-path**
-Path to server CA certificate
+Path to server CA certificate.
 
 **--tls-cert-path**
-Path to x509 certificate
+Path to x509 certificate.
 
 **--tls-disable-host-verification**
-Disable tls host name verification (tls must be enabled)
+Disables TLS host name verification if already enabled.
 
 **--tls-key-path**
-Path to private key
+Path to private certificate key.
 
 **--tls-server-name**
-Override for target server name
+Provides an override for the target TLS server name.
 
 #### list
 
 List all Namespaces.
 
 **--address**
-host:port for Temporal frontend service
+The host and port (formatted as host:port) for the Temporal Frontend Service.
 
 **--codec-auth**
-Authorization header to set for requests to Codec Server
+Sets the authorization header on requests to the Codec Server.
 
 **--codec-endpoint**
-Remote Codec Server Endpoint
+Endpoint for a remote Codec Server.
 
 **--color**
 when to use color: auto, always, never. (default: auto)
 
 **--context-timeout**
-Optional timeout for context of RPC call in seconds (default: 5)
+An optional timeout for the context of an RPC call (in seconds). (default: 5)
 
 **--env**
-Env name to read the client environment variables from (default: default)
+Name of the environment to read environmental variables from. (default: default)
 
 **--grpc-meta**
-gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
+Contains gRPC metadata to send with requests (Format: key=value). Values must be in a valid JSON format.
 
 **--namespace**
 Alias: **-n**
-Temporal workflow namespace (default: default)
+Identifies a Namespace in the Temporal Workflow. (default: default)
 
 **--tls-ca-path**
-Path to server CA certificate
+Path to server CA certificate.
 
 **--tls-cert-path**
-Path to x509 certificate
+Path to x509 certificate.
 
 **--tls-disable-host-verification**
-Disable tls host name verification (tls must be enabled)
+Disables TLS host name verification if already enabled.
 
 **--tls-key-path**
-Path to private key
+Path to private certificate key.
 
 **--tls-server-name**
-Override for target server name
+Provides an override for the target TLS server name.
 
 #### register
 
@@ -110,22 +110,22 @@ Registers a new Namespace.
 Active cluster name
 
 **--address**
-host:port for Temporal frontend service
+The host and port (formatted as host:port) for the Temporal Frontend Service.
 
 **--cluster**
 Cluster name
 
 **--codec-auth**
-Authorization header to set for requests to Codec Server
+Sets the authorization header on requests to the Codec Server.
 
 **--codec-endpoint**
-Remote Codec Server Endpoint
+Endpoint for a remote Codec Server.
 
 **--color**
 when to use color: auto, always, never. (default: auto)
 
 **--context-timeout**
-Optional timeout for context of RPC call in seconds (default: 5)
+An optional timeout for the context of an RPC call (in seconds). (default: 5)
 
 **--data**
 Namespace data in a format key=value
@@ -137,13 +137,13 @@ Namespace description
 Owner email
 
 **--env**
-Env name to read the client environment variables from (default: default)
+Name of the environment to read environmental variables from. (default: default)
 
 **--global**
 Flag to indicate whether namespace is a global namespace
 
 **--grpc-meta**
-gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
+Contains gRPC metadata to send with requests (Format: key=value). Values must be in a valid JSON format.
 
 **--history-archival-state**
 Flag to set history archival state, valid values are "disabled" and "enabled"
@@ -153,25 +153,25 @@ Optionally specify history archival URI (cannot be changed after first time arch
 
 **--namespace**
 Alias: **-n**
-Temporal workflow namespace (default: default)
+Identifies a Namespace in the Temporal Workflow. (default: default)
 
 **--retention**
 Workflow Execution retention
 
 **--tls-ca-path**
-Path to server CA certificate
+Path to server CA certificate.
 
 **--tls-cert-path**
-Path to x509 certificate
+Path to x509 certificate.
 
 **--tls-disable-host-verification**
-Disable tls host name verification (tls must be enabled)
+Disables TLS host name verification if already enabled.
 
 **--tls-key-path**
-Path to private key
+Path to private certificate key.
 
 **--tls-server-name**
-Override for target server name
+Provides an override for the target TLS server name.
 
 **--visibility-archival-state**
 Flag to set visibility archival state, valid values are "disabled" and "enabled"
@@ -187,22 +187,22 @@ Updates a Namespace.
 Active cluster name
 
 **--address**
-host:port for Temporal frontend service
+The host and port (formatted as host:port) for the Temporal Frontend Service.
 
 **--cluster**
 Cluster name
 
 **--codec-auth**
-Authorization header to set for requests to Codec Server
+Sets the authorization header on requests to the Codec Server.
 
 **--codec-endpoint**
-Remote Codec Server Endpoint
+Endpoint for a remote Codec Server.
 
 **--color**
 when to use color: auto, always, never. (default: auto)
 
 **--context-timeout**
-Optional timeout for context of RPC call in seconds (default: 5)
+An optional timeout for the context of an RPC call (in seconds). (default: 5)
 
 **--data**
 Namespace data in a format key=value
@@ -214,10 +214,10 @@ Namespace description
 Owner email
 
 **--env**
-Env name to read the client environment variables from (default: default)
+Name of the environment to read environmental variables from. (default: default)
 
 **--grpc-meta**
-gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
+Contains gRPC metadata to send with requests (Format: key=value). Values must be in a valid JSON format.
 
 **--history-archival-state**
 Flag to set history archival state, valid values are "disabled" and "enabled"
@@ -227,7 +227,7 @@ Optionally specify history archival URI (cannot be changed after first time arch
 
 **--namespace**
 Alias: **-n**
-Temporal workflow namespace (default: default)
+Identifies a Namespace in the Temporal Workflow. (default: default)
 
 **--promote-global**
 Promote local namespace to global namespace
@@ -239,19 +239,19 @@ Reason for the operation
 Workflow Execution retention
 
 **--tls-ca-path**
-Path to server CA certificate
+Path to server CA certificate.
 
 **--tls-cert-path**
-Path to x509 certificate
+Path to x509 certificate.
 
 **--tls-disable-host-verification**
-Disable tls host name verification (tls must be enabled)
+Disables TLS host name verification if already enabled.
 
 **--tls-key-path**
-Path to private key
+Path to private certificate key.
 
 **--tls-server-name**
-Override for target server name
+Provides an override for the target TLS server name.
 
 **--visibility-archival-state**
 Flag to set visibility archival state, valid values are "disabled" and "enabled"
@@ -264,44 +264,44 @@ Optionally specify visibility archival URI (cannot be changed after first time a
 Deletes an existing Namespace.
 
 **--address**
-host:port for Temporal frontend service
+The host and port (formatted as host:port) for the Temporal Frontend Service.
 
 **--codec-auth**
-Authorization header to set for requests to Codec Server
+Sets the authorization header on requests to the Codec Server.
 
 **--codec-endpoint**
-Remote Codec Server Endpoint
+Endpoint for a remote Codec Server.
 
 **--color**
 when to use color: auto, always, never. (default: auto)
 
 **--context-timeout**
-Optional timeout for context of RPC call in seconds (default: 5)
+An optional timeout for the context of an RPC call (in seconds). (default: 5)
 
 **--env**
-Env name to read the client environment variables from (default: default)
+Name of the environment to read environmental variables from. (default: default)
 
 **--grpc-meta**
-gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
+Contains gRPC metadata to send with requests (Format: key=value). Values must be in a valid JSON format.
 
 **--namespace**
 Alias: **-n**
-Temporal workflow namespace (default: default)
+Identifies a Namespace in the Temporal Workflow. (default: default)
 
 **--tls-ca-path**
-Path to server CA certificate
+Path to server CA certificate.
 
 **--tls-cert-path**
-Path to x509 certificate
+Path to x509 certificate.
 
 **--tls-disable-host-verification**
-Disable tls host name verification (tls must be enabled)
+Disables TLS host name verification if already enabled.
 
 **--tls-key-path**
-Path to private key
+Path to private certificate key.
 
 **--tls-server-name**
-Override for target server name
+Provides an override for the target TLS server name.
 
 **--yes**
 Alias: **-y**

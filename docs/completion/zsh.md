@@ -2,7 +2,7 @@
 id: zsh
 title: temporal completion zsh
 sidebar_label: zsh
-description: words words words
+description: Temporal CLI operation for ....
 tags:
 	- cli
 ---

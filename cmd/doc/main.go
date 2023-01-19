@@ -23,7 +23,7 @@ const FrontMatterTemplate =
 id: {{.ID}}
 title: temporal {{.Title}}{{if not .IsIndex}} {{.ID}}{{end}}
 sidebar_label:{{if .IsIndex}} {{.Title}}{{else}} {{.ID}}{{end}}
-description: words words words
+description: Temporal CLI operation for ....
 tags:
 	- cli
 ---
@@ -80,7 +80,7 @@ func main() {
 			}
 			createdFiles[headerIndexFile] = currentHeaderFile
 		
-			writeFrontMatter(indexFile, currentHeader, true, currentHeaderFile)
+			writeFrontMatter(strings.Trim(indexFile, ".md"), currentHeader, true, currentHeaderFile)
 			writeLine(currentHeaderFile, line)
 
 		} else if strings.HasPrefix(line, "### ") {
@@ -116,7 +116,7 @@ func main() {
 			log.Info(found)
 
 		} else if strings.HasPrefix(line, ">") {
-			writeLine(currentHeaderFile, strings.TrimPrefix(line, " >"))
+			writeLine(currentHeaderFile, strings.Trim(line, ">"))
 		} else {
 			writeLine(currentHeaderFile, line)
 		} 
@@ -143,7 +143,7 @@ func makeAlias(file *os.File, line string) {
 
 // write front matter
 func writeFrontMatter (idName string, titleName string, isIndex bool, currentHeaderFile *os.File) {
-	// make struct
+	// make struct to pass into the template
 	data := FMStruct{
 		ID: idName,
 		Title: titleName,
@@ -153,7 +153,6 @@ func writeFrontMatter (idName string, titleName string, isIndex bool, currentHea
 	tmpl := template.Must(template.New("fm").Parse(FrontMatterTemplate))
 	
 	err := tmpl.ExecuteTemplate(currentHeaderFile, "fm", data)
-
 	if err != nil {
 		log.Println("Execute: ", err)
 		return

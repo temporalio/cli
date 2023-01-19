@@ -2,7 +2,7 @@
 id: reset
 title: temporal workflow reset
 sidebar_label: reset
-description: words words words
+description: Temporal CLI operation for ....
 tags:
 	- cli
 ---
@@ -11,38 +11,38 @@ tags:
 
 Resets a Workflow Execution by Event Id or reset type.
 
->A reset allows the Workflow to be resumed from a certain point without losing your parameters or Event History.
+A reset allows the Workflow to be resumed from a certain point without losing your parameters or Event History.
 
 **--address**
-host:port for Temporal frontend service
+The host and port (formatted as host:port) for the Temporal Frontend Service.
 
 **--codec-auth**
-Authorization header to set for requests to Codec Server
+Sets the authorization header on requests to the Codec Server.
 
 **--codec-endpoint**
-Remote Codec Server Endpoint
+Endpoint for a remote Codec Server.
 
 **--color**
 when to use color: auto, always, never. (default: auto)
 
 **--context-timeout**
-Optional timeout for context of RPC call in seconds (default: 5)
+An optional timeout for the context of an RPC call (in seconds). (default: 5)
 
 **--env**
-Env name to read the client environment variables from (default: default)
+Name of the environment to read environmental variables from. (default: default)
 
 **--event-id**
 The eventId of any event after WorkflowTaskStarted you want to reset to (exclusive). It can be WorkflowTaskCompleted, WorkflowTaskFailed or others.
 
 **--grpc-meta**
-gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
+Contains gRPC metadata to send with requests (Format: key=value). Values must be in a valid JSON format.
 
 **--namespace**
 Alias: **-n**
-Temporal workflow namespace (default: default)
+Identifies a Namespace in the Temporal Workflow. (default: default)
 
 **--reapply-type**
-Event types to reapply after the reset point: , Signal, None. (default: All)
+Event types to reapply after the reset point: Signal, None, . (default: All)
 
 **--reason**
 Reason to reset.
@@ -52,19 +52,19 @@ Alias: **-r**
 Run Id
 
 **--tls-ca-path**
-Path to server CA certificate
+Path to server CA certificate.
 
 **--tls-cert-path**
-Path to x509 certificate
+Path to x509 certificate.
 
 **--tls-disable-host-verification**
-Disable tls host name verification (tls must be enabled)
+Disables TLS host name verification if already enabled.
 
 **--tls-key-path**
-Path to private key
+Path to private certificate key.
 
 **--tls-server-name**
-Override for target server name
+Provides an override for the target TLS server name.
 
 **--type**
 Event type to which you want to reset: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew

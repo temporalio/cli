@@ -2,7 +2,7 @@
 id: start-dev
 title: temporal server start-dev
 sidebar_label: start-dev
-description: words words words
+description: Temporal CLI operation for ....
 tags:
 	- cli
 ---

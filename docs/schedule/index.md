@@ -1,8 +1,8 @@
 ---
-id: index.md
+id: index
 title: temporal schedule
 sidebar_label: schedule
-description: words words words
+description: Temporal CLI operation for ....
 tags:
 	- cli
 ---
@@ -11,5 +11,5 @@ tags:
 
 Operations performed on Schedules.
 
->These commands allow Schedules to be created, used, and updated.
+These commands allow Schedules to be created, used, and updated.
 

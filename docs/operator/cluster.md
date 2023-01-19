@@ -2,7 +2,7 @@
 id: cluster
 title: temporal operator cluster
 sidebar_label: cluster
-description: words words words
+description: Temporal CLI operation for ....
 tags:
 	- cli
 ---
@@ -16,231 +16,231 @@ Operations for running a Temporal Cluster.
 Checks the health of the Frontend Service.
 
 **--address**
-host:port for Temporal frontend service
+The host and port (formatted as host:port) for the Temporal Frontend Service.
 
 **--codec-auth**
-Authorization header to set for requests to Codec Server
+Sets the authorization header on requests to the Codec Server.
 
 **--codec-endpoint**
-Remote Codec Server Endpoint
+Endpoint for a remote Codec Server.
 
 **--color**
 when to use color: auto, always, never. (default: auto)
 
 **--context-timeout**
-Optional timeout for context of RPC call in seconds (default: 5)
+An optional timeout for the context of an RPC call (in seconds). (default: 5)
 
 **--env**
-Env name to read the client environment variables from (default: default)
+Name of the environment to read environmental variables from. (default: default)
 
 **--grpc-meta**
-gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
+Contains gRPC metadata to send with requests (Format: key=value). Values must be in a valid JSON format.
 
 **--namespace**
 Alias: **-n**
-Temporal workflow namespace (default: default)
+Identifies a Namespace in the Temporal Workflow. (default: default)
 
 **--tls-ca-path**
-Path to server CA certificate
+Path to server CA certificate.
 
 **--tls-cert-path**
-Path to x509 certificate
+Path to x509 certificate.
 
 **--tls-disable-host-verification**
-Disable tls host name verification (tls must be enabled)
+Disables TLS host name verification if already enabled.
 
 **--tls-key-path**
-Path to private key
+Path to private certificate key.
 
 **--tls-server-name**
-Override for target server name
+Provides an override for the target TLS server name.
 
 #### describe
 
 Show information about the Cluster.
 
 **--address**
-host:port for Temporal frontend service
+The host and port (formatted as host:port) for the Temporal Frontend Service.
 
 **--codec-auth**
-Authorization header to set for requests to Codec Server
+Sets the authorization header on requests to the Codec Server.
 
 **--codec-endpoint**
-Remote Codec Server Endpoint
+Endpoint for a remote Codec Server.
 
 **--color**
 when to use color: auto, always, never. (default: auto)
 
 **--context-timeout**
-Optional timeout for context of RPC call in seconds (default: 5)
+An optional timeout for the context of an RPC call (in seconds). (default: 5)
 
 **--env**
-Env name to read the client environment variables from (default: default)
+Name of the environment to read environmental variables from. (default: default)
 
 **--fields**
 Customize fields to print. Set to 'long' to automatically print more of main fields.
 
 **--grpc-meta**
-gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
+Contains gRPC metadata to send with requests (Format: key=value). Values must be in a valid JSON format.
 
 **--namespace**
 Alias: **-n**
-Temporal workflow namespace (default: default)
+Identifies a Namespace in the Temporal Workflow. (default: default)
 
 **--output**
 Alias: **-o**
 format output as: table, json, card. (default: table)
 
 **--tls-ca-path**
-Path to server CA certificate
+Path to server CA certificate.
 
 **--tls-cert-path**
-Path to x509 certificate
+Path to x509 certificate.
 
 **--tls-disable-host-verification**
-Disable tls host name verification (tls must be enabled)
+Disables TLS host name verification if already enabled.
 
 **--tls-key-path**
-Path to private key
+Path to private certificate key.
 
 **--tls-server-name**
-Override for target server name
+Provides an override for the target TLS server name.
 
 #### system
 
 Shows information about the system and its capabilities.
 
 **--address**
-host:port for Temporal frontend service
+The host and port (formatted as host:port) for the Temporal Frontend Service.
 
 **--codec-auth**
-Authorization header to set for requests to Codec Server
+Sets the authorization header on requests to the Codec Server.
 
 **--codec-endpoint**
-Remote Codec Server Endpoint
+Endpoint for a remote Codec Server.
 
 **--color**
 when to use color: auto, always, never. (default: auto)
 
 **--context-timeout**
-Optional timeout for context of RPC call in seconds (default: 5)
+An optional timeout for the context of an RPC call (in seconds). (default: 5)
 
 **--env**
-Env name to read the client environment variables from (default: default)
+Name of the environment to read environmental variables from. (default: default)
 
 **--fields**
 Customize fields to print. Set to 'long' to automatically print more of main fields.
 
 **--grpc-meta**
-gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
+Contains gRPC metadata to send with requests (Format: key=value). Values must be in a valid JSON format.
 
 **--namespace**
 Alias: **-n**
-Temporal workflow namespace (default: default)
+Identifies a Namespace in the Temporal Workflow. (default: default)
 
 **--output**
 Alias: **-o**
 format output as: table, json, card. (default: table)
 
 **--tls-ca-path**
-Path to server CA certificate
+Path to server CA certificate.
 
 **--tls-cert-path**
-Path to x509 certificate
+Path to x509 certificate.
 
 **--tls-disable-host-verification**
-Disable tls host name verification (tls must be enabled)
+Disables TLS host name verification if already enabled.
 
 **--tls-key-path**
-Path to private key
+Path to private certificate key.
 
 **--tls-server-name**
-Override for target server name
+Provides an override for the target TLS server name.
 
 #### upsert
 
 Add or update a remote Cluster.
 
 **--address**
-host:port for Temporal frontend service
+The host and port (formatted as host:port) for the Temporal Frontend Service.
 
 **--codec-auth**
-Authorization header to set for requests to Codec Server
+Sets the authorization header on requests to the Codec Server.
 
 **--codec-endpoint**
-Remote Codec Server Endpoint
+Endpoint for a remote Codec Server.
 
 **--color**
 when to use color: auto, always, never. (default: auto)
 
 **--context-timeout**
-Optional timeout for context of RPC call in seconds (default: 5)
+An optional timeout for the context of an RPC call (in seconds). (default: 5)
 
 **--enable-connection**
 Enable cross-cluster connection.
 
 **--env**
-Env name to read the client environment variables from (default: default)
+Name of the environment to read environmental variables from. (default: default)
 
 **--frontend-address**
 Frontend address of the remote Cluster.
 
 **--grpc-meta**
-gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
+Contains gRPC metadata to send with requests (Format: key=value). Values must be in a valid JSON format.
 
 **--namespace**
 Alias: **-n**
-Temporal workflow namespace (default: default)
+Identifies a Namespace in the Temporal Workflow. (default: default)
 
 **--tls-ca-path**
-Path to server CA certificate
+Path to server CA certificate.
 
 **--tls-cert-path**
-Path to x509 certificate
+Path to x509 certificate.
 
 **--tls-disable-host-verification**
-Disable tls host name verification (tls must be enabled)
+Disables TLS host name verification if already enabled.
 
 **--tls-key-path**
-Path to private key
+Path to private certificate key.
 
 **--tls-server-name**
-Override for target server name
+Provides an override for the target TLS server name.
 
 #### list
 
 List all remote Clusters.
 
 **--address**
-host:port for Temporal frontend service
+The host and port (formatted as host:port) for the Temporal Frontend Service.
 
 **--codec-auth**
-Authorization header to set for requests to Codec Server
+Sets the authorization header on requests to the Codec Server.
 
 **--codec-endpoint**
-Remote Codec Server Endpoint
+Endpoint for a remote Codec Server.
 
 **--color**
 when to use color: auto, always, never. (default: auto)
 
 **--context-timeout**
-Optional timeout for context of RPC call in seconds (default: 5)
+An optional timeout for the context of an RPC call (in seconds). (default: 5)
 
 **--env**
-Env name to read the client environment variables from (default: default)
+Name of the environment to read environmental variables from. (default: default)
 
 **--fields**
 customize fields to print. Set to 'long' to automatically print more of main fields
 
 **--grpc-meta**
-gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
+Contains gRPC metadata to send with requests (Format: key=value). Values must be in a valid JSON format.
 
 **--limit**
 number of items to print (default: 0)
 
 **--namespace**
 Alias: **-n**
-Temporal workflow namespace (default: default)
+Identifies a Namespace in the Temporal Workflow. (default: default)
 
 **--no-pager**
 Alias: **-P**
@@ -257,64 +257,64 @@ pager to use: less, more, favoritePager..
 format time as: relative, iso, raw. (default: relative)
 
 **--tls-ca-path**
-Path to server CA certificate
+Path to server CA certificate.
 
 **--tls-cert-path**
-Path to x509 certificate
+Path to x509 certificate.
 
 **--tls-disable-host-verification**
-Disable tls host name verification (tls must be enabled)
+Disables TLS host name verification if already enabled.
 
 **--tls-key-path**
-Path to private key
+Path to private certificate key.
 
 **--tls-server-name**
-Override for target server name
+Provides an override for the target TLS server name.
 
 #### remove
 
 Remove a remote Cluster.
 
 **--address**
-host:port for Temporal frontend service
+The host and port (formatted as host:port) for the Temporal Frontend Service.
 
 **--codec-auth**
-Authorization header to set for requests to Codec Server
+Sets the authorization header on requests to the Codec Server.
 
 **--codec-endpoint**
-Remote Codec Server Endpoint
+Endpoint for a remote Codec Server.
 
 **--color**
 when to use color: auto, always, never. (default: auto)
 
 **--context-timeout**
-Optional timeout for context of RPC call in seconds (default: 5)
+An optional timeout for the context of an RPC call (in seconds). (default: 5)
 
 **--env**
-Env name to read the client environment variables from (default: default)
+Name of the environment to read environmental variables from. (default: default)
 
 **--grpc-meta**
-gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value
+Contains gRPC metadata to send with requests (Format: key=value). Values must be in a valid JSON format.
 
 **--name**
 Frontend address of the remote Cluster.
 
 **--namespace**
 Alias: **-n**
-Temporal workflow namespace (default: default)
+Identifies a Namespace in the Temporal Workflow. (default: default)
 
 **--tls-ca-path**
-Path to server CA certificate
+Path to server CA certificate.
 
 **--tls-cert-path**
-Path to x509 certificate
+Path to x509 certificate.
 
 **--tls-disable-host-verification**
-Disable tls host name verification (tls must be enabled)
+Disables TLS host name verification if already enabled.
 
 **--tls-key-path**
-Path to private key
+Path to private certificate key.
 
 **--tls-server-name**
-Override for target server name
+Provides an override for the target TLS server name.
 

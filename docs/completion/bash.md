@@ -2,7 +2,7 @@
 id: bash
 title: temporal completion bash
 sidebar_label: bash
-description: words words words
+description: Temporal CLI operation for ....
 tags:
 	- cli
 ---
