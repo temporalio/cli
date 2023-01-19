@@ -227,13 +227,6 @@ ensure() {
     if ! "$@"; then err "command failed: $*"; fi
 }
 
-# This is just for indicating that commands' results are being
-# intentionally ignored. Usually, because it's being executed
-# as part of error handling.
-ignore() {
-    "$@"
-}
-
 # This wraps curl or wget. Try curl first, if not installed,
 # use wget instead.
 downloader() {
