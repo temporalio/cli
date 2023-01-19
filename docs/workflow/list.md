@@ -9,7 +9,7 @@ tags:
 
 ### list
 
-List Workflow Executions based on a Query.
+List [Workflow Executions](https://docs.temporal.io/workflows/#workflow-execution) based on a [Query](https://docs.temporal.io/workflows/#query).
 
 By default, this command lists up to 10 closed Workflow Executions.
 
@@ -17,7 +17,8 @@ By default, this command lists up to 10 closed Workflow Executions.
 The host and port (formatted as host:port) for the Temporal Frontend Service.
 
 **--archived**
-List archived Workflow Executions (EXPERIMENTAL)
+List archived Workflow Executions.
+Currently an experimental feature.
 
 **--codec-auth**
 Sets the authorization header on requests to the Codec Server.
@@ -35,13 +36,13 @@ An optional timeout for the context of an RPC call (in seconds). (default: 5)
 Name of the environment to read environmental variables from. (default: default)
 
 **--fields**
-customize fields to print. Set to 'long' to automatically print more of main fields
+Customize fields to print. Set to 'long' to automatically print more of main fields.
 
 **--grpc-meta**
 Contains gRPC metadata to send with requests (Format: key=value). Values must be in a valid JSON format.
 
 **--limit**
-number of items to print (default: 0)
+Number of items to print. (default: 0)
 
 **--namespace**
 Alias: **-n**
@@ -49,21 +50,22 @@ Identifies a Namespace in the Temporal Workflow. (default: default)
 
 **--no-pager**
 Alias: **-P**
-disable interactive pager
+Disables the interactive pager.
 
 **--output**
 Alias: **-o**
 format output as: table, json, card. (default: table)
 
 **--pager**
-pager to use: less, more, favoritePager..
+Sets the pager for Temporal CLI to use.
+Options: less, more, favoritePager.
 
 **--query**
 Alias: **-q**
-Filter results using SQL like query. See https://docs.temporal.io/docs/tctl/workflow/list#--query for details
+Filter results using an SQL-like query. See [Queries](https://docs.temporal.io/docs/tctl/workflow/list#--query) for more information.
 
 **--time-format**
-format time as: relative, iso, raw. (default: relative)
+Format time as: relative, iso, raw. (default: relative)
 
 **--tls-ca-path**
 Path to server CA certificate.

@@ -9,5 +9,5 @@ tags:
 
 ## workflow
 
-Operations that can be performed on Workflows.
+Operations that can be performed on [Workflows](https://docs.temporal.io/workflows).
 

@@ -9,7 +9,7 @@ tags:
 
 ### stack
 
-Query a Workflow Execution with __stack_trace as the query type.
+Query a [Workflow Execution](https://docs.temporal.io/workflows/#workflow-execution) with [__stack_trace](https://docs.temporal.io/workflows/#stack-trace-query) as the query type.
 
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.
@@ -34,17 +34,19 @@ Contains gRPC metadata to send with requests (Format: key=value). Values must be
 
 **--input**
 Alias: **-i**
-Optional input for the query, in JSON format. If there are multiple parameters, concatenate them and separate by space
+Optional query input, in JSON format. For multiple parameters, concatenate them and separate by space.
 
 **--input-file**
-Optional input for the query from JSON file. If there are multiple JSON, concatenate them and separate by space or newline. Input from file will be overwrite by input from command line
+Passes optional Query input from a JSON file.
+If there are multiple JSON, concatenate them and separate by space or newline.
+Input from the command line will overwrite file input.
 
 **--namespace**
 Alias: **-n**
 Identifies a Namespace in the Temporal Workflow. (default: default)
 
 **--reject-condition**
-Optional flag to reject queries based on Workflow state. Valid values are "not_open" and "not_completed_cleanly"
+Optional flag for rejecting Queries based on Workflow state. Valid values are "not_open" and "not_completed_cleanly".
 
 **--run-id**
 Alias: **-r**

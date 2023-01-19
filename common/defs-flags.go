@@ -40,6 +40,21 @@ const (
 	"\t* * * * *"
 	FlagWorkflowIdReusePolicyDefinition = "Allows the same Workflow Id to be used in a new Workflow Execution. " +
 	"Options: AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate, TerminateIfRunning."
-	FlagInputDefinition = "Optional JSON input to provide to the Workflow.\nPass Pass \"null\" for null values."
+	FlagInputDefinition = "Optional JSON input to provide to the Workflow.\nPass \"null\" for null values."
+	FlagInputFileDefinition = "Passes optional input for the Workflow from a JSON file.\n" +
+	"If there are multiple JSON files, concatenate them and separate by space or newline.\n" +
+	"Input from the command line will overwrite file input."
+	FlagSearchAttributeDefinition = "Passes Search Attribute in key=value format. Use valid JSON formats for value."
+	FlagMemoDefinition = "Passes a memo in key=value format. Use valid JSON formats for value."
+	FlagMemoFileDefinition = "Passes a memo as file input, with each line following key=value format. Use valid JSON formats for value."
 
+	// Stack trace query flag definitions
+	FlagInputSTQDefinition = "Optional query input, in JSON format. For multiple parameters, concatenate them and separate by space."
+	FlagInputFileSTQDefinition = "Passes optional Query input from a JSON file.\nIf there are multiple JSON, concatenate them and separate by space or newline.\n" + "Input from the command line will overwrite file input."
+	FlagQueryRejectConditionDefinition = "Optional flag for rejecting Queries based on Workflow state. Valid values are \"not_open\" and \"not_completed_cleanly\"."
+
+	// Pagination flag definitions
+	FlagLimitDefinition = "Number of items to print."
+	FlagPagerDefinition = "Sets the pager for Temporal CLI to use.\nOptions: less, more, favoritePager."
+	FlagNoPagerDefinition = "Disables the interactive pager."
 )

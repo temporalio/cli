@@ -9,7 +9,7 @@ tags:
 
 ### search-attribute
 
-Operations applying to Search Attributes.
+Operations applying to [Search Attributes](https://docs.temporal.io/visibility#search-attribute).
 
 #### create
 

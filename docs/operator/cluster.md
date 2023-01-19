@@ -9,7 +9,7 @@ tags:
 
 ### cluster
 
-Operations for running a Temporal Cluster.
+Operations for running a [Temporal Cluster](https://docs.temporal.io/clusters).
 
 #### health
 
@@ -230,13 +230,13 @@ An optional timeout for the context of an RPC call (in seconds). (default: 5)
 Name of the environment to read environmental variables from. (default: default)
 
 **--fields**
-customize fields to print. Set to 'long' to automatically print more of main fields
+Customize fields to print. Set to 'long' to automatically print more of main fields.
 
 **--grpc-meta**
 Contains gRPC metadata to send with requests (Format: key=value). Values must be in a valid JSON format.
 
 **--limit**
-number of items to print (default: 0)
+Number of items to print. (default: 0)
 
 **--namespace**
 Alias: **-n**
@@ -244,17 +244,18 @@ Identifies a Namespace in the Temporal Workflow. (default: default)
 
 **--no-pager**
 Alias: **-P**
-disable interactive pager
+Disables the interactive pager.
 
 **--output**
 Alias: **-o**
 format output as: table, json, card. (default: table)
 
 **--pager**
-pager to use: less, more, favoritePager..
+Sets the pager for Temporal CLI to use.
+Options: less, more, favoritePager.
 
 **--time-format**
-format time as: relative, iso, raw. (default: relative)
+Format time as: relative, iso, raw. (default: relative)
 
 **--tls-ca-path**
 Path to server CA certificate.

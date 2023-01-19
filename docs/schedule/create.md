@@ -42,17 +42,20 @@ Overall schedule end time.
 Name of the environment to read environmental variables from. (default: default)
 
 **--execution-timeout**
-Workflow Execution timeout, including retries and continue-as-new (seconds) (default: 0)
+Timeout (in seconds) for a WorkflowExecution, including retries and continue-as-new tasks. (default: 0)
 
 **--grpc-meta**
 Contains gRPC metadata to send with requests (Format: key=value). Values must be in a valid JSON format.
 
 **--input**
 Alias: **-i**
-Optional input for the Workflow in JSON format. Pass "null" for null values
+Optional JSON input to provide to the Workflow.
+Pass "null" for null values.
 
 **--input-file**
-Pass an optional input for the Workflow from a JSON file. If there are multiple JSON files, concatenate them and separate by space or newline. Input from the command line overwrites input from the file
+Passes optional input for the Workflow from a JSON file.
+If there are multiple JSON files, concatenate them and separate by space or newline.
+Input from the command line will overwrite file input.
 
 **--interval**
 Interval duration, e.g. 90m, or 90m/13m to include phase offset.
@@ -61,7 +64,7 @@ Interval duration, e.g. 90m, or 90m/13m to include phase offset.
 Jitter duration.
 
 **--max-field-length**
-Maximum length for each attribute field (default: 0)
+Maximum length for each attribute field. (default: 0)
 
 **--memo**
 Set a memo on a schedule. Format: key=value. Use valid JSON formats for value
@@ -106,7 +109,7 @@ Alias: **-t**
 Task Queue
 
 **--task-timeout**
-Workflow task start to close timeout (seconds) (default: 10)
+Start-to-close timeout for a Workflow Task (in seconds). (default: 10)
 
 **--time-zone**
 Time zone (IANA name).

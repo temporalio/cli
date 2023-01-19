@@ -38,7 +38,7 @@ Identifies a Namespace in the Temporal Workflow. (default: default)
 
 **--query**
 Alias: **-q**
-Filter results using SQL like query. See https://docs.temporal.io/docs/tctl/workflow/list#--query for details
+Filter results using an SQL-like query. See [Queries](https://docs.temporal.io/docs/tctl/workflow/list#--query) for more information.
 
 **--tls-ca-path**
 Path to server CA certificate.

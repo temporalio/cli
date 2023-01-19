@@ -9,10 +9,10 @@ tags:
 
 ### query
 
-Query a Workflow Execution.
+[Query](https://docs.temporal.io/workflows/#query) a [Workflow Execution](https://docs.temporal.io/workflows/#workflow-execution).
 
     Queries can retrieve all or part of the Workflow state within given parameters.
-    Queries can also be used on completed Workflows.
+    Queries can also be used on completed [Workflows](https://docs.temporal.io/workflows/).
 
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.
@@ -37,17 +37,19 @@ Contains gRPC metadata to send with requests (Format: key=value). Values must be
 
 **--input**
 Alias: **-i**
-Optional input for the query, in JSON format. If there are multiple parameters, concatenate them and separate by space
+Optional query input, in JSON format. For multiple parameters, concatenate them and separate by space.
 
 **--input-file**
-Optional input for the query from JSON file. If there are multiple JSON, concatenate them and separate by space or newline. Input from file will be overwrite by input from command line
+Passes optional Query input from a JSON file.
+If there are multiple JSON, concatenate them and separate by space or newline.
+Input from the command line will overwrite file input.
 
 **--namespace**
 Alias: **-n**
 Identifies a Namespace in the Temporal Workflow. (default: default)
 
 **--reject-condition**
-Optional flag to reject queries based on Workflow state. Valid values are "not_open" and "not_completed_cleanly"
+Optional flag for rejecting Queries based on Workflow state. Valid values are "not_open" and "not_completed_cleanly".
 
 **--run-id**
 Alias: **-r**

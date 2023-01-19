@@ -9,7 +9,7 @@ tags:
 
 ### signal
 
-Signal Workflow Execution by Id or List Filter.
+Signal [Workflow Execution](https://docs.temporal.io/workflows/#workflow-execution) by Id or [List Filter](https://docs.temporal.io/visibility/#list-filter).
 
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.

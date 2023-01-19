@@ -30,7 +30,7 @@ An optional timeout for the context of an RPC call (in seconds). (default: 5)
 Name of the environment to read environmental variables from. (default: default)
 
 **--fields**
-customize fields to print. Set to 'long' to automatically print more of main fields
+Customize fields to print. Set to 'long' to automatically print more of main fields.
 
 **--grpc-meta**
 Contains gRPC metadata to send with requests (Format: key=value). Values must be in a valid JSON format.
@@ -51,7 +51,7 @@ Alias: **-s**
 Schedule Id
 
 **--time-format**
-format time as: relative, iso, raw. (default: relative)
+Format time as: relative, iso, raw. (default: relative)
 
 **--tls-ca-path**
 Path to server CA certificate.

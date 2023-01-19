@@ -9,7 +9,7 @@ tags:
 
 ### show
 
-Show Event History for a Workflow Execution.
+Show [Event History](https://docs.temporal.io/workflows/#event-history) for a [Workflow Execution](https://docs.temporal.io/workflows/#workflow-execution).
 
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.
@@ -30,7 +30,7 @@ An optional timeout for the context of an RPC call (in seconds). (default: 5)
 Name of the environment to read environmental variables from. (default: default)
 
 **--fields**
-customize fields to print. Set to 'long' to automatically print more of main fields
+Customize fields to print. Set to 'long' to automatically print more of main fields.
 
 **--follow**
 Alias: **-f**
@@ -40,7 +40,7 @@ Follow the progress of a Workflow Execution.
 Contains gRPC metadata to send with requests (Format: key=value). Values must be in a valid JSON format.
 
 **--limit**
-number of items to print (default: 0)
+Number of items to print. (default: 0)
 
 **--max-field-length**
 Maximum length for each attribute field. (default: 500)
@@ -51,7 +51,7 @@ Identifies a Namespace in the Temporal Workflow. (default: default)
 
 **--no-pager**
 Alias: **-P**
-disable interactive pager
+Disables the interactive pager.
 
 **--output**
 Alias: **-o**
@@ -61,7 +61,8 @@ format output as: table, json, card. (default: table)
 Serializes Event History to a file.
 
 **--pager**
-pager to use: less, more, favoritePager..
+Sets the pager for Temporal CLI to use.
+Options: less, more, favoritePager.
 
 **--reset-points**
 Only show Workflow Events that are eligible for reset.
@@ -71,7 +72,7 @@ Alias: **-r**
 Run Id
 
 **--time-format**
-format time as: relative, iso, raw. (default: relative)
+Format time as: relative, iso, raw. (default: relative)
 
 **--tls-ca-path**
 Path to server CA certificate.

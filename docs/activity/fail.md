@@ -9,7 +9,7 @@ tags:
 
 ### fail
 
-Fails an Activity.
+Fails an [Activity](https://docs.temporal.io/activities).
 
 **--activity-id**
 Identifies the Activity to fail.

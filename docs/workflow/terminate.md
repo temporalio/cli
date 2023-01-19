@@ -9,11 +9,11 @@ tags:
 
 ### terminate
 
-Terminate Workflow Execution by Id or List Filter.
+Terminate [Workflow Execution](https://docs.temporal.io/workflows/#workflow-execution) by Id or [List Filter](https://docs.temporal.io/visibility/#list-filter).
 
-    Terminating a running Workflow records a `WorkflowExecutionTerminated` event as the closing event.
+    Terminating a running Workflow records a [`WorkflowExecutionTerminated` event](https://docs.temporal.io/references/events/#workflowexecutionterminated) as the closing event.
     
-    Any further command tasks cannot be scheduled after running `terminate`.
+    Any further [Command](https://docs.temporal.io/workflows/#command) tasks cannot be scheduled after running `terminate`.
 
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.

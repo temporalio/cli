@@ -9,7 +9,7 @@ tags:
 
 ### trace
 
-Trace progress of a Workflow Execution and its children.
+Trace progress of a [Workflow Execution](https://docs.temporal.io/workflows/#workflow-execution) and its [children](https://docs.temporal.io/workflows/#child-workflow).
 
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.

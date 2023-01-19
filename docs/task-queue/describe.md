@@ -9,12 +9,12 @@ tags:
 
 ### describe
 
-Describes the Workers that have recently polled on this Task Queue
+Describes the [Workers](https://docs.temporal.io/workers) that have recently polled on this [Task Queue](https://docs.temporal.io/tasks/#task-queue)
 
-    The Server records the last time of each poll request.
+    The [Server](https://docs.temporal.io/clusters/#temporal-server) records the last time of each poll request.
     
     Poll requests can last up to a minute, so a LastAccessTime under a minute is normal.
-    If it's over a minute, then likely either the Worker is at capacity (all Workflow and Activity slots are full) or it has shut down.
+    If it's over a minute, then likely either the Worker is at capacity (all [Workflow](https://docs.temporal.io/workflows/) and [Activity](https://docs.temporal.io/activities) slots are full) or it has shut down.
     Once it has been 5 minutes since the last poll request, the Worker is removed from the list.
     
     RatePerSecond is the maximum Activities per second the Worker will execute.
@@ -38,7 +38,7 @@ An optional timeout for the context of an RPC call (in seconds). (default: 5)
 Name of the environment to read environmental variables from. (default: default)
 
 **--fields**
-customize fields to print. Set to 'long' to automatically print more of main fields
+Customize fields to print. Set to 'long' to automatically print more of main fields.
 
 **--grpc-meta**
 Contains gRPC metadata to send with requests (Format: key=value). Values must be in a valid JSON format.
@@ -59,7 +59,7 @@ Task Queue name.
 Task Queue type [workflow|activity] (default: workflow)
 
 **--time-format**
-format time as: relative, iso, raw. (default: relative)
+Format time as: relative, iso, raw. (default: relative)
 
 **--tls-ca-path**
 Path to server CA certificate.

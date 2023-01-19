@@ -9,7 +9,7 @@ tags:
 
 ### delete
 
-Deletes a Workflow Execution.
+Deletes a [Workflow Execution](https://docs.temporal.io/workflows/#workflow-execution).
 
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.

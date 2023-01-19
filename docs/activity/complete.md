@@ -9,7 +9,7 @@ tags:
 
 ### complete
 
-Completes an Activity.
+Completes an [Activity](https://docs.temporal.io/activities).
 
 **--activity-id**
 Identifies the Activity to be completed.

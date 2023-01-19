@@ -9,7 +9,7 @@ tags:
 
 ## operator
 
-Operations on Temporal Server.
+Operations performed on the [Temporal Server](https://docs.temporal.io/clusters/#temporal-server).
 
-These commands enable operations on Namespaces, Search Attributes, and Temporal Clusters.
+These commands enable operations on [Namespaces](https://docs.temporal.io/namespaces), [Search Attributes](https://docs.temporal.io/visibility#search-attribute), and [Temporal Clusters](https://docs.temporal.io/clusters).
 

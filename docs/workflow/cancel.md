@@ -9,11 +9,11 @@ tags:
 
 ### cancel
 
-Cancel a Workflow Execution.
+Cancel a [Workflow Execution](https://docs.temporal.io/workflows/#workflow-execution).
 
-    Canceling a running Workflow Execution records a `WorkflowExecutionCancelRequested` event in the Event History.
+    Canceling a running Workflow Execution records a [`WorkflowExecutionCancelRequested` event](https://docs.temporal.io/references/events/#workflowexecutioncanceled) in the [Event History](https://docs.temporal.io/workflows/#event-history).
     
-    After cancellation, the Workflow Execution can perform cleanup work,and a new command task will be scheduled.
+    After cancellation, the Workflow Execution can perform cleanup work,and a new [Command](https://docs.temporal.io/workflows/#command) task will be scheduled.
 
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.

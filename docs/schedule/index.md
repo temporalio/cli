@@ -9,7 +9,7 @@ tags:
 
 ## schedule
 
-Operations performed on Schedules.
+Operations performed on [Schedules](https://docs.temporal.io/workflows/#schedule).
 
-These commands allow Schedules to be created, used, and updated.
+These commands allow [Schedules](https://docs.temporal.io/workflows/#schedule) to be created, used, and updated.
 

@@ -9,9 +9,9 @@ tags:
 
 ### reset
 
-Resets a Workflow Execution by Event Id or reset type.
+Resets a [Workflow Execution](https://docs.temporal.io/workflows/#workflow-execution) by Event Id or reset type.
 
-A reset allows the Workflow to be resumed from a certain point without losing your parameters or Event History.
+A reset allows the Workflow to be resumed from a certain point without losing your parameters or [Event History](https://docs.temporal.io/workflows/#event-history).
 
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.
@@ -42,7 +42,7 @@ Alias: **-n**
 Identifies a Namespace in the Temporal Workflow. (default: default)
 
 **--reapply-type**
-Event types to reapply after the reset point: Signal, None, . (default: All)
+Event types to reapply after the reset point: , Signal, None. (default: All)
 
 **--reason**
 Reason to reset.

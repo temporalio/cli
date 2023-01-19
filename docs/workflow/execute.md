@@ -9,7 +9,7 @@ tags:
 
 ### execute
 
-Start a new Workflow Execution and prints its progress.
+Start a new [Workflow Execution](https://docs.temporal.io/workflows/#workflow-execution) and prints its progress.
 
 Single quotes('') are used to wrap input as JSON.
 
@@ -29,7 +29,7 @@ when to use color: auto, always, never. (default: auto)
 An optional timeout for the context of an RPC call (in seconds). (default: 5)
 
 **--cron**
-Optional cron schedule for the Workflow. Cron spec is as following:
+Optional Cron Schedule for the Workflow. Cron spec is formatted as:
 	┌───────────── minute (0 - 59) 
 	│ ┌───────────── hour (0 - 23) 
 	│ │ ┌───────────── day of the month (1 - 31) 
@@ -42,35 +42,38 @@ Optional cron schedule for the Workflow. Cron spec is as following:
 Name of the environment to read environmental variables from. (default: default)
 
 **--execution-timeout**
-Workflow Execution timeout, including retries and continue-as-new (seconds) (default: 0)
+Timeout (in seconds) for a WorkflowExecution, including retries and continue-as-new tasks. (default: 0)
 
 **--fields**
-customize fields to print. Set to 'long' to automatically print more of main fields
+Customize fields to print. Set to 'long' to automatically print more of main fields.
 
 **--grpc-meta**
 Contains gRPC metadata to send with requests (Format: key=value). Values must be in a valid JSON format.
 
 **--id-reuse-policy**
-Configure if the same Workflow Id is allowed for use in new Workflow Execution. Options: AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate, TerminateIfRunning
+Allows the same Workflow Id to be used in a new Workflow Execution. Options: AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate, TerminateIfRunning.
 
 **--input**
 Alias: **-i**
-Optional input for the Workflow in JSON format. Pass "null" for null values
+Optional JSON input to provide to the Workflow.
+Pass "null" for null values.
 
 **--input-file**
-Pass an optional input for the Workflow from a JSON file. If there are multiple JSON files, concatenate them and separate by space or newline. Input from the command line overwrites input from the file
+Passes optional input for the Workflow from a JSON file.
+If there are multiple JSON files, concatenate them and separate by space or newline.
+Input from the command line will overwrite file input.
 
 **--limit**
-number of items to print (default: 0)
+Number of items to print. (default: 0)
 
 **--max-field-length**
-Maximum length for each attribute field (default: 0)
+Maximum length for each attribute field. (default: 0)
 
 **--memo**
-Pass a memo in a format key=value. Use valid JSON formats for value
+Passes a memo in key=value format. Use valid JSON formats for value.
 
 **--memo-file**
-Pass a memo from a file, where each line follows the format key=value. Use valid JSON formats for value
+Passes a memo as file input, with each line following key=value format. Use valid JSON formats for value.
 
 **--namespace**
 Alias: **-n**
@@ -78,30 +81,31 @@ Identifies a Namespace in the Temporal Workflow. (default: default)
 
 **--no-pager**
 Alias: **-P**
-disable interactive pager
+Disables the interactive pager.
 
 **--output**
 Alias: **-o**
 format output as: table, json, card. (default: table)
 
 **--pager**
-pager to use: less, more, favoritePager..
+Sets the pager for Temporal CLI to use.
+Options: less, more, favoritePager.
 
 **--run-timeout**
 Timeout (in seconds) of a single Workflow run. (default: 0)
 
 **--search-attribute**
-Pass Search Attribute in a format key=value. Use valid JSON formats for value
+Passes Search Attribute in key=value format. Use valid JSON formats for value.
 
 **--task-queue**
 Alias: **-t**
 Task Queue
 
 **--task-timeout**
-Workflow task start to close timeout (seconds) (default: 10)
+Start-to-close timeout for a Workflow Task (in seconds). (default: 10)
 
 **--time-format**
-format time as: relative, iso, raw. (default: relative)
+Format time as: relative, iso, raw. (default: relative)
 
 **--tls-ca-path**
 Path to server CA certificate.

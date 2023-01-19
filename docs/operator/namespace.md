@@ -9,7 +9,7 @@ tags:
 
 ### namespace
 
-Operations applying to Namespaces.
+Operations applying to [Namespaces](https://docs.temporal.io/namespaces).
 
 #### describe
 

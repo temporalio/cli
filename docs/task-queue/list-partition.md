@@ -9,7 +9,7 @@ tags:
 
 ### list-partition
 
-Lists the Task Queue's partitions and which matching node they are assigned to.
+Lists the [Task Queue's](https://docs.temporal.io/tasks/#task-queue) partitions and which matching node they are assigned to.
 
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.

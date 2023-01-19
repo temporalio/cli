@@ -9,7 +9,7 @@ tags:
 
 ### describe
 
-Show information about a Workflow Execution.
+Show information about a [Workflow Execution](https://docs.temporal.io/workflows/#workflow-execution).
 
 This information can be used to locate a Workflow Execution that failed.
 

@@ -9,5 +9,5 @@ tags:
 
 ## env
 
-Manage environmental configurations on Temporal Client.
+Manage environmental configurations on [Temporal Client](https://docs.temporal.io/temporal/#temporal-client).
 

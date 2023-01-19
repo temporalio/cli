@@ -9,5 +9,5 @@ tags:
 
 ## task-queue
 
-Operations performed on Task Queues.
+Operations performed on [Task Queues](https://docs.temporal.io/tasks/#task-queue).
 
