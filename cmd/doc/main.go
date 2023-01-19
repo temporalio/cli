@@ -23,7 +23,7 @@ const FrontMatterTemplate =
 id: {{.ID}}
 title: temporal {{.Title}}{{if not .IsIndex}} {{.ID}}{{end}}
 sidebar_label:{{if .IsIndex}} {{.Title}}{{else}} {{.ID}}{{end}}
-description: Temporal CLI operation for ....
+description: {{.Description}}
 tags:
 	- cli
 ---
@@ -33,6 +33,7 @@ tags:
 type FMStruct struct {
 	ID string 
 	Title string
+	Description string
 	IsIndex bool
 }
 
@@ -52,8 +53,14 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error when trying to open %s file: %v", cliFile, err)
 	}
+	var pos int64
 	scanner := bufio.NewScanner(readFile)
-	scanner.Split(bufio.ScanLines)
+	scanLines := func(data []byte, atEOF bool) (advance int, token []byte, err error) {
+        advance, token, err = bufio.ScanLines(data, atEOF)
+        pos += int64(advance)
+        return
+    }
+	scanner.Split(scanLines)
 
 	var currentHeader string
 	var currentHeaderFile *os.File
@@ -79,9 +86,9 @@ func main() {
 				continue
 			}
 			createdFiles[headerIndexFile] = currentHeaderFile
-		
-			writeFrontMatter(strings.Trim(indexFile, ".md"), currentHeader, true, currentHeaderFile)
-			writeLine(currentHeaderFile, line)
+			// get next line for description text
+
+			writeFrontMatter(strings.Trim(indexFile, ".md"), currentHeader, "nextLine", true, currentHeaderFile)
 
 		} else if strings.HasPrefix(line, "### ") {
 			path := filepath.Join(docsPath, currentHeader)
@@ -98,7 +105,7 @@ func main() {
 				}
 				createdFiles[filePath] = currentHeaderFile
 			}
-			writeFrontMatter(fileName, currentHeader, false, currentHeaderFile)
+			writeFrontMatter(fileName, currentHeader, scanner.Text(), false,currentHeaderFile)
 			writeLine(currentHeaderFile, line)
 		} else if strings.HasPrefix(line, "**--") {
 			// split into term and definition
@@ -106,6 +113,8 @@ func main() {
 	
 			// write to file
 			term = strings.TrimSuffix(term, "=\"\"")
+
+			// TODO: make files and separate directory and reference THAT
 
 			if strings.Contains(term, ",") {
 				makeAlias(currentHeaderFile, term)
@@ -115,7 +124,7 @@ func main() {
 			writeLine(currentHeaderFile, strings.TrimSpace(definition))
 			log.Info(found)
 
-		} else if strings.HasPrefix(line, ">") {
+		} else if strings.Contains(line, ">") {
 			writeLine(currentHeaderFile, strings.Trim(line, ">"))
 		} else {
 			writeLine(currentHeaderFile, line)
@@ -142,11 +151,12 @@ func makeAlias(file *os.File, line string) {
 }
 
 // write front matter
-func writeFrontMatter (idName string, titleName string, isIndex bool, currentHeaderFile *os.File) {
+func writeFrontMatter (idName string, titleName string, descriptionTxt string, isIndex bool, currentHeaderFile *os.File) {
 	// make struct to pass into the template
 	data := FMStruct{
 		ID: idName,
 		Title: titleName,
+		Description: descriptionTxt,
 		IsIndex: isIndex,
 	}
 
