@@ -52,7 +52,7 @@ set -u
 usage() {
     cat 1>&2 <<EOF
 temporal.sh 0.1.0
-The installer for temporal
+The installer for the Temporal CLI
 
 USAGE:
     sh install.sh
@@ -128,7 +128,7 @@ main() {
         printf '%s\n' 'info: downloading Temporal CLI' 1>&2
     fi
 
-    local _url="https://temporal.download/cli/archive/latest?platform=${_platform}&arch=${_arch}"
+    local _url="https://temporal.download/assets/temporalio/cli/releases/download/v0.2.0/cli_0.2.0_${_platform}_${_arch}.tar.gz"
 
     local _ext="tar.gz"
     case "$_arch" in
@@ -348,7 +348,7 @@ esac
 EOL
 
     local _source=". $_dir/env"
-    say "To add temporal to PATH update your user profile with the following (ex. ~/.bash_profile):"
+    say "If you are using bash, you can add temporal to PATH by appending the following to your user profile (e.g. ~/.bash_profile):"
     command printf "${_source}\n"
 }
 
