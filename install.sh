@@ -128,7 +128,7 @@ main() {
         printf '%s\n' 'info: downloading Temporal CLI' 1>&2
     fi
 
-    local _url="https://temporal.download/assets/temporalio/cli/releases/download/v0.2.0/cli_0.2.0_${_platform}_${_arch}.tar.gz"
+    local _url="https://temporal.download/cli/archive/latest?platform=${_platform}&arch=${_arch}"
 
     local _ext="tar.gz"
     case "$_arch" in
