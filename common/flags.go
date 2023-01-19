@@ -137,13 +137,13 @@ var SharedFlags = []cli.Flag{
 	&cli.StringFlag{
 		Name:     FlagEnv,
 		Value:    config.DefaultEnv,
-		Usage:    "Env name to read the client environment variables from",
+		Usage:    FlagEnvDefinition,
 		Category: CategoryClient,
 	},
 	&cli.StringFlag{
 		Name:     FlagAddress,
 		Value:    "",
-		Usage:    "host:port for Temporal frontend service",
+		Usage:    FlagAddrDefinition,
 		EnvVars:  []string{"TEMPORAL_CLI_ADDRESS"},
 		Category: CategoryClient,
 	},
@@ -151,67 +151,67 @@ var SharedFlags = []cli.Flag{
 		Name:     FlagNamespace,
 		Aliases:  FlagNamespaceAlias,
 		Value:    "default",
-		Usage:    "Temporal workflow namespace",
+		Usage:    FlagNSAliasDefinition,
 		EnvVars:  []string{"TEMPORAL_CLI_NAMESPACE"},
 		Category: CategoryClient,
 	},
 	&cli.StringSliceFlag{
 		Name:     FlagMetadata,
-		Usage:    "gRPC metadata to send with requests. Format: key=value. Use valid JSON formats for value",
+		Usage:    FlagMetadataDefinition,
 		Category: CategoryClient,
 	},
 	&cli.StringFlag{
 		Name:     FlagTLSCertPath,
 		Value:    "",
-		Usage:    "Path to x509 certificate",
+		Usage:    FlagTLSCertPathDefinition,
 		EnvVars:  []string{"TEMPORAL_CLI_TLS_CERT"},
 		Category: CategoryClient,
 	},
 	&cli.StringFlag{
 		Name:     FlagTLSKeyPath,
 		Value:    "",
-		Usage:    "Path to private key",
+		Usage:    FlagTLSKeyPathDefinition,
 		EnvVars:  []string{"TEMPORAL_CLI_TLS_KEY"},
 		Category: CategoryClient,
 	},
 	&cli.StringFlag{
 		Name:     FlagTLSCaPath,
 		Value:    "",
-		Usage:    "Path to server CA certificate",
+		Usage:    FlagTLSCaPathDefinition,
 		EnvVars:  []string{"TEMPORAL_CLI_TLS_CA"},
 		Category: CategoryClient,
 	},
 	&cli.BoolFlag{
 		Name:     FlagTLSDisableHostVerification,
-		Usage:    "Disable tls host name verification (tls must be enabled)",
+		Usage:    FlagTLSDisableHVDefinition,
 		EnvVars:  []string{"TEMPORAL_CLI_TLS_DISABLE_HOST_VERIFICATION"},
 		Category: CategoryClient,
 	},
 	&cli.StringFlag{
 		Name:     FlagTLSServerName,
 		Value:    "",
-		Usage:    "Override for target server name",
+		Usage:    FlagTLSServerNameDefinition,
 		EnvVars:  []string{"TEMPORAL_CLI_TLS_SERVER_NAME"},
 		Category: CategoryClient,
 	},
 	&cli.IntFlag{
 		Name:     FlagContextTimeout,
 		Value:    defaultContextTimeoutInSeconds,
-		Usage:    "Optional timeout for context of RPC call in seconds",
+		Usage:    FlagContextTimeoutDefinition,
 		EnvVars:  []string{"TEMPORAL_CONTEXT_TIMEOUT"},
 		Category: CategoryClient,
 	},
 	&cli.StringFlag{
 		Name:     FlagCodecEndpoint,
 		Value:    "",
-		Usage:    "Remote Codec Server Endpoint",
+		Usage:    FlagCodecEndpointDefinition,
 		EnvVars:  []string{"TEMPORAL_CLI_CODEC_ENDPOINT"},
 		Category: CategoryClient,
 	},
 	&cli.StringFlag{
 		Name:     FlagCodecAuth,
 		Value:    "",
-		Usage:    "Authorization header to set for requests to Codec Server",
+		Usage:    FlagCodecAuthDefinition,
 		EnvVars:  []string{"TEMPORAL_CLI_CODEC_AUTH"},
 		Category: CategoryClient,
 	},
@@ -234,7 +234,7 @@ var FlagsForExecution = []cli.Flag{
 	&cli.StringFlag{
 		Name:     FlagRunID,
 		Aliases:  FlagRunIDAlias,
-		Usage:    "Run Id",
+		Usage:    FlagRunIdDefinition,
 		Category: CategoryMain,
 	},
 }
@@ -242,24 +242,24 @@ var FlagsForExecution = []cli.Flag{
 var FlagsForShowWorkflow = []cli.Flag{
 	&cli.StringFlag{
 		Name:     FlagOutputFilename,
-		Usage:    "Serialize history event to a file",
+		Usage:    FlagOutputFilenameDefinition,
 		Category: CategoryMain,
 	},
 	&cli.IntFlag{
 		Name:     FlagMaxFieldLength,
-		Usage:    "Maximum length for each attribute field",
+		Usage:    FlagMaxFieldLengthDefinition,
 		Value:    defaultMaxFieldLength,
 		Category: CategoryMain,
 	},
 	&cli.BoolFlag{
 		Name:     FlagResetPointsOnly,
-		Usage:    "Only show events that are eligible for reset",
+		Usage:    FlagResetPointsOnlyDefinition,
 		Category: CategoryMain,
 	},
 	&cli.BoolFlag{
 		Name:     output.FlagFollow,
 		Aliases:  FlagFollowAlias,
-		Usage:    "Follow the progress of Workflow Execution",
+		Usage:    FlagFollowAliasDefinition,
 		Value:    false,
 		Category: CategoryMain,
 	},
@@ -268,7 +268,7 @@ var FlagsForShowWorkflow = []cli.Flag{
 var FlagsForStartWorkflow = append(FlagsForStartWorkflowT,
 	&cli.StringFlag{
 		Name:     FlagType,
-		Usage:    "Workflow type name",
+		Usage:    FlagWFTypeDefinition,
 		Required: true,
 		Category: CategoryMain,
 	})
@@ -276,7 +276,7 @@ var FlagsForStartWorkflow = append(FlagsForStartWorkflowT,
 var FlagsForStartWorkflowLong = append(FlagsForStartWorkflowT,
 	&cli.StringFlag{
 		Name:     FlagWorkflowType,
-		Usage:    "Workflow type name",
+		Usage:    FlagWFTypeDefinition,
 		Required: true,
 		Category: CategoryMain,
 	})
@@ -285,54 +285,46 @@ var FlagsForStartWorkflowT = []cli.Flag{
 	&cli.StringFlag{
 		Name:     FlagWorkflowID,
 		Aliases:  FlagWorkflowIDAlias,
-		Usage:    "Workflow Id",
+		Usage:    FlagWorkflowIdDefinition,
 		Category: CategoryMain,
 	},
 	&cli.StringFlag{
 		Name:     FlagTaskQueue,
 		Aliases:  FlagTaskQueueAlias,
-		Usage:    "Task queue",
+		Usage:    FlagTaskQueueDefinition,
 		Required: true,
 		Category: CategoryMain,
 	},
 	&cli.IntFlag{
 		Name:     FlagWorkflowRunTimeout,
-		Usage:    "Single workflow run timeout (seconds)",
+		Usage:    FlagWorkflowRunTimeoutDefinition,
 		Category: CategoryMain,
 	},
 	&cli.IntFlag{
 		Name:     FlagWorkflowExecutionTimeout,
-		Usage:    "Workflow Execution timeout, including retries and continue-as-new (seconds)",
+		Usage:    FlagWorkflowExecutionTimeoutDefinition,
 		Category: CategoryMain,
 	},
 	&cli.IntFlag{
 		Name:     FlagWorkflowTaskTimeout,
 		Value:    defaultWorkflowTaskTimeoutInSeconds,
-		Usage:    "Workflow task start to close timeout (seconds)",
+		Usage:    FlagWorkflowTaskTimeoutDefinition,
 		Category: CategoryMain,
 	},
 	&cli.StringFlag{
 		Name: FlagCronSchedule,
-		Usage: "Optional cron schedule for the Workflow. Cron spec is as following: \n" +
-			"\t┌───────────── minute (0 - 59) \n" +
-			"\t│ ┌───────────── hour (0 - 23) \n" +
-			"\t│ │ ┌───────────── day of the month (1 - 31) \n" +
-			"\t│ │ │ ┌───────────── month (1 - 12) \n" +
-			"\t│ │ │ │ ┌───────────── day of the week (0 - 6) (Sunday to Saturday) \n" +
-			"\t│ │ │ │ │ \n" +
-			"\t* * * * *",
+		Usage: FlagCronScheduleDefinition,
 		Category: CategoryMain,
 	},
 	&cli.StringFlag{
 		Name: FlagWorkflowIDReusePolicy,
-		Usage: "Configure if the same Workflow Id is allowed for use in new Workflow Execution. " +
-			"Options: AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate, TerminateIfRunning",
+		Usage: FlagWorkflowIdReusePolicyDefinition,
 		Category: CategoryMain,
 	},
 	&cli.StringSliceFlag{
 		Name:     FlagInput,
 		Aliases:  FlagInputAlias,
-		Usage:    "Optional input for the Workflow in JSON format. Pass \"null\" for null values",
+		Usage:    FlagInputDefinition,
 		Category: CategoryMain,
 	},
 	&cli.StringFlag{
