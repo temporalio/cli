@@ -155,7 +155,7 @@ main() {
     local _exe="$_dir/$_exe_name"
     ensure chmod u+x "$_exe"
 
-    ensure install_env "$_dir"
+    ensure prompt_for_path "$_dir"
 
     local _retval=$?
     return "$_retval"
@@ -326,7 +326,7 @@ get_install_dir() {
     printf %s "$_dir"
 }
 
-install_env() {
+prompt_for_path() {
     local _dir="$1"
 
     cat >"$_dir/env" <<EOL
