@@ -314,7 +314,7 @@ unzip() {
 }
 
 get_default_install_dir() {
-    printf %s "${HOME}/.temporalio"
+    printf %s "${HOME}/.temporalio/bin"
 }
 
 get_install_dir() {
