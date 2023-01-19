@@ -89,7 +89,7 @@ var (
 	FlagQuery                      = "query"
 	FlagQueryAlias                 = []string{"q"}
 	FlagQueryRejectCondition       = "reject-condition"
-	FlagQueryUsage                 = "Filter results using SQL like query. See https://docs.temporal.io/docs/tctl/workflow/list#--query for details"
+	FlagQueryUsage                 = "Filter results using an SQL-like query. See [Queries](https://docs.temporal.io/docs/tctl/workflow/list#--query) for more information."
 	FlagReason                     = "reason"
 	FlagRemainingActions           = "remaining-actions"
 	FlagResetPointsOnly            = "reset-points"
@@ -329,29 +329,27 @@ var FlagsForStartWorkflowT = []cli.Flag{
 	},
 	&cli.StringFlag{
 		Name: FlagInputFile,
-		Usage: "Pass an optional input for the Workflow from a JSON file." +
-			" If there are multiple JSON files, concatenate them and separate by space or newline." +
-			" Input from the command line overwrites input from the file",
+		Usage: FlagInputFileDefinition,
 		Category: CategoryMain,
 	},
 	&cli.IntFlag{
 		Name:     FlagMaxFieldLength,
-		Usage:    "Maximum length for each attribute field",
+		Usage:    FlagMaxFieldLengthDefinition,
 		Category: CategoryMain,
 	},
 	&cli.StringSliceFlag{
 		Name:     FlagSearchAttribute,
-		Usage:    "Pass Search Attribute in a format key=value. Use valid JSON formats for value",
+		Usage:    FlagSearchAttributeDefinition,
 		Category: CategoryMain,
 	},
 	&cli.StringSliceFlag{
 		Name:     FlagMemo,
-		Usage:    "Pass a memo in a format key=value. Use valid JSON formats for value",
+		Usage:    FlagMemoDefinition,
 		Category: CategoryMain,
 	},
 	&cli.StringFlag{
 		Name:     FlagMemoFile,
-		Usage:    "Pass a memo from a file, where each line follows the format key=value. Use valid JSON formats for value",
+		Usage:    FlagMemoFileDefinition,
 		Category: CategoryMain,
 	},
 }
@@ -365,7 +363,7 @@ var FlagsForWorkflowFiltering = []cli.Flag{
 	},
 	&cli.BoolFlag{
 		Name:     FlagArchive,
-		Usage:    "List archived Workflow Executions (EXPERIMENTAL)",
+		Usage:    "List archived Workflow Executions.\nCurrently an experimental feature.",
 		Category: CategoryMain,
 	},
 }
@@ -374,18 +372,17 @@ var FlagsForStackTraceQuery = append(FlagsForExecution, []cli.Flag{
 	&cli.StringFlag{
 		Name:     FlagInput,
 		Aliases:  FlagInputAlias,
-		Usage:    "Optional input for the query, in JSON format. If there are multiple parameters, concatenate them and separate by space",
+		Usage:    FlagInputSTQDefinition,
 		Category: CategoryMain,
 	},
 	&cli.StringFlag{
 		Name: FlagInputFile,
-		Usage: "Optional input for the query from JSON file. If there are multiple JSON, concatenate them and separate by space or newline. " +
-			"Input from file will be overwrite by input from command line",
+		Usage: FlagInputFileSTQDefinition,
 		Category: CategoryMain,
 	},
 	&cli.StringFlag{
 		Name:     FlagQueryRejectCondition,
-		Usage:    "Optional flag to reject queries based on Workflow state. Valid values are \"not_open\" and \"not_completed_cleanly\"",
+		Usage:    FlagQueryRejectConditionDefinition,
 		Category: CategoryMain,
 	},
 }...)
@@ -393,19 +390,19 @@ var FlagsForStackTraceQuery = append(FlagsForExecution, []cli.Flag{
 var FlagsForPagination = []cli.Flag{
 	&cli.IntFlag{
 		Name:     output.FlagLimit,
-		Usage:    "number of items to print",
+		Usage:    FlagLimitDefinition,
 		Category: CategoryDisplay,
 	},
 	&cli.StringFlag{
 		Name:     pager.FlagPager,
-		Usage:    "pager to use: less, more, favoritePager..",
+		Usage:    FlagPagerDefinition,
 		EnvVars:  []string{"PAGER"},
 		Category: CategoryDisplay,
 	},
 	&cli.BoolFlag{
 		Name:     pager.FlagNoPager,
 		Aliases:  []string{"P"},
-		Usage:    "disable interactive pager",
+		Usage:    FlagNoPagerDefinition,
 		Category: CategoryDisplay,
 	},
 }
@@ -420,13 +417,13 @@ var FlagsForFormatting = []cli.Flag{
 	},
 	&cli.StringFlag{
 		Name:     format.FlagTimeFormat,
-		Usage:    fmt.Sprintf("format time as: %v, %v, %v.", format.Relative, format.ISO, format.Raw),
+		Usage:    fmt.Sprintf("Format time as: %v, %v, %v.", format.Relative, format.ISO, format.Raw),
 		Value:    string(format.Relative),
 		Category: CategoryDisplay,
 	},
 	&cli.StringFlag{
 		Name:     output.FlagFields,
-		Usage:    "customize fields to print. Set to 'long' to automatically print more of main fields",
+		Usage:    "Customize fields to print. Set to 'long' to automatically print more of main fields.",
 		Category: CategoryDisplay,
 	},
 }
