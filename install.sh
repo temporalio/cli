@@ -55,7 +55,10 @@ install.sh 0.1.0
 The installer for the Temporal CLI
 
 USAGE:
-    sh install.sh
+    sh install.sh [OPTIONS]
+
+OPTIONS:
+    -d, --dir                Installation directory (default: $HOME/.temporalio/bin)
 EOF
 }
 
@@ -103,7 +106,7 @@ main() {
         ;;
     esac
 
-    local _dir="$(ensure get_install_dir)"
+    local _dir="$(ensure get_install_dir "$@")"
     ensure mkdir -p "$_dir"
 
     local _archive="${_dir}/temporal_cli_latest${_ext}"
@@ -286,9 +289,19 @@ get_default_install_dir() {
 get_install_dir() {
     local _dir
     _dir="$(get_default_install_dir)"
-    if [ -n "${TEMPORAL_DIR-}" ]; then
-        _dir="$TEMPORAL_DIR"
-    fi
+
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --dir)
+                _dir="$2"
+                shift
+                ;;
+            *)
+                ;;
+        esac
+        shift
+    done
+
     printf %s "$_dir"
 }
 
