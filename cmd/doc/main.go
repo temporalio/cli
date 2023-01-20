@@ -37,11 +37,8 @@ type FMStruct struct {
 	IsIndex bool
 }
 
-var currentHeader string
-var fileName string
-var path string
+var currentHeader, fileName, path, headerIndexFile string
 var currentHeaderFile *os.File
-var headerIndexFile string
 
 // `BuildApp` takes a string and returns a `*App` and an error
 func main() {
@@ -71,27 +68,12 @@ func main() {
 			currentHeader = strings.TrimSpace(line[2:])
 			path = filepath.Join(docsPath, currentHeader)
 			makeFile(path, true, scanner, createdFiles)
-
 		} else if strings.HasPrefix(line, "### ") {
 			fileName = strings.TrimSpace(line[3:])
 			path = filepath.Join(docsPath, currentHeader)
-			// special condition for operator command file gen.
 			if strings.Contains(currentHeader, "operator") {
 				opPath := filepath.Join(path, fileName)
-				err := os.MkdirAll(opPath, os.ModePerm)
-				if err != nil {
-					log.Printf("Error when trying to create directory %s: %v", path, err)
-					continue
-				}
-				headerIndexFile := filepath.Join(opPath, indexFile)
-				currentHeaderFile, err = os.Create(headerIndexFile)
-				if err != nil {
-					log.Printf("Error when trying to create file %s: %v", headerIndexFile, err)
-					continue
-				}
-				createdFiles[headerIndexFile] = currentHeaderFile
-
-				writeFrontMatter(strings.Trim(indexFile, ".md"), currentHeader, scanner, true, currentHeaderFile)
+				makeFile(opPath, true, scanner, createdFiles)
 			} else {
 				filePath := filepath.Join(path, fileName+".md")
 				// check if already created file
@@ -158,14 +140,25 @@ func makeFile(path string, isIndex bool, scanner *bufio.Scanner, createdFiles ma
 		headerIndexFile = filepath.Join(path, indexFile)
 		currentHeaderFile, err = os.Create(headerIndexFile)
 		if err != nil {
-			log.Printf("Error when trying to create file %s: %v", headerIndexFile, err)
+			log.Printf("Error when trying to create index file %s: %v", headerIndexFile, err)
 		}
 		if err != nil {
-			log.Printf("Error when trying to create file %s: %v", headerIndexFile, err)
+			log.Printf("Error when trying to create index file %s: %v", headerIndexFile, err)
 		}
 		createdFiles[headerIndexFile] = currentHeaderFile
 		writeFrontMatter(strings.Trim(indexFile, ".md"), currentHeader, scanner, true, currentHeaderFile)
-}
+	} else {
+		// check if we already created the file
+		currentHeaderFile = createdFiles[path]
+		if currentHeaderFile == nil {
+			currentHeaderFile, err = os.Create(path)
+			if err != nil {
+				log.Printf("Error when trying to create non-index file %s: %v", path, err)
+			}
+			createdFiles[path] = currentHeaderFile
+		}
+		writeFrontMatter(fileName, currentHeader, scanner, false, currentHeaderFile)
+	}
 }
 
 // It takes a file and a string, and writes the string to the file
