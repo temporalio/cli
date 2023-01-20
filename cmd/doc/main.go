@@ -43,6 +43,8 @@ var currentHeaderFile *os.File
 
 // `BuildApp` takes a string and returns a `*App` and an error
 func main() {
+	deleteExistingFolder()
+
 	doc, err := app.BuildApp("").ToMarkdown()
 	if err != nil {
 		log.Fatalf("Error when trying to build app: %v", err)
@@ -77,32 +79,12 @@ func main() {
 				makeFile(opPath, true, false, scanner, createdFiles)
 			} else {
 				filePath := filepath.Join(path, fileName+".md")
-				// check if already created file
-				currentHeaderFile = createdFiles[filePath]
-				if currentHeaderFile == nil {
-					currentHeaderFile, err = os.Create(filePath)
-					if err != nil {
-						log.Printf("Error when trying to create file %s: %v", filePath, err)
-						continue
-					}
-					createdFiles[filePath] = currentHeaderFile
-				}
-			writeFrontMatter(fileName, currentHeader, scanner, false, currentHeaderFile)
-		}
+				makeFile(filePath, false, false, scanner, createdFiles)
+			}
 		} else if strings.HasPrefix(line, "#### ") {
 			operatorFileName := strings.TrimSpace(line[4:])
 			filePath := filepath.Join(path, fileName, operatorFileName+".md")
-			// check if already created file
-			currentHeaderFile = createdFiles[filePath]
-			if currentHeaderFile == nil {
-				currentHeaderFile, err = os.Create(filePath)
-				if err != nil {
-					log.Printf("Error when trying to create file %s: %v", filePath, err)
-					continue
-				}
-				createdFiles[filePath] = currentHeaderFile
-			}
-			writeFrontMatter(fileName, currentHeader, scanner, false, currentHeaderFile)
+			makeFile(filePath, false, false, scanner, createdFiles)
 			
 		} else if strings.HasPrefix(line, "**--") {
 			// split into term and definition
@@ -134,18 +116,18 @@ func main() {
 
 func makeFile(path string, isIndex bool, isOptions bool, scanner *bufio.Scanner, createdFiles map[string]*os.File) {
 	var err error
-	
+
 	if (isOptions) {
 		err = os.MkdirAll(filepath.Join(docsPath, optionsPath), os.ModePerm)
 		if err != nil {
 			log.Printf("Error when trying to create a directory %s: %v", path, err)
 		}
-	} else {
+	} else if (isIndex) {
 		err = os.MkdirAll(path, os.ModePerm)
 		if err != nil {
 			log.Printf("Error when trying to create a directory %s: %v", path, err)
 		}
-	}
+	} 
 
 	if (isIndex) {
 		headerIndexFile = filepath.Join(path, indexFile)
@@ -189,7 +171,7 @@ func makeAlias(file *os.File, line string) {
 }
 
 // write front matter
-func writeFrontMatter (idName string, titleName string, scanner *bufio.Scanner, isIndex bool, currentHeaderFile *os.File) {
+func writeFrontMatter(idName string, titleName string, scanner *bufio.Scanner, isIndex bool, currentHeaderFile *os.File) {
 	for i := 0; i < 2; i++ {
 		scanner.Scan()
 	}
@@ -208,5 +190,14 @@ func writeFrontMatter (idName string, titleName string, scanner *bufio.Scanner, 
 		log.Println("Execute: ", err)
 		return
 	}
+}
+
+func deleteExistingFolder() {
+	// delete existing docs folder (if applicable)
+	folderinfo, err := os.Stat(filepath.Join(docsPath))
+	if os.IsExist(err) {
+		os.RemoveAll(filepath.Join(docsPath))
+	}
+	log.Println("deleted docs folder, %v", folderinfo)
 }
 
