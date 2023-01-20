@@ -37,8 +37,11 @@ type FMStruct struct {
 	IsIndex bool
 }
 
-var currentHeader, fileName, path, headerIndexFile string
+var currentHeader string
+var fileName string
+var path string
 var currentHeaderFile *os.File
+var headerIndexFile string
 
 // `BuildApp` takes a string and returns a `*App` and an error
 func main() {
@@ -68,9 +71,11 @@ func main() {
 			currentHeader = strings.TrimSpace(line[2:])
 			path = filepath.Join(docsPath, currentHeader)
 			makeFile(path, true, scanner, createdFiles)
+
 		} else if strings.HasPrefix(line, "### ") {
 			fileName = strings.TrimSpace(line[3:])
 			path = filepath.Join(docsPath, currentHeader)
+			// special condition for operator command file gen.
 			if strings.Contains(currentHeader, "operator") {
 				opPath := filepath.Join(path, fileName)
 				makeFile(opPath, true, scanner, createdFiles)
@@ -140,10 +145,10 @@ func makeFile(path string, isIndex bool, scanner *bufio.Scanner, createdFiles ma
 		headerIndexFile = filepath.Join(path, indexFile)
 		currentHeaderFile, err = os.Create(headerIndexFile)
 		if err != nil {
-			log.Printf("Error when trying to create index file %s: %v", headerIndexFile, err)
+			log.Printf("Error when trying to create file %s: %v", headerIndexFile, err)
 		}
 		if err != nil {
-			log.Printf("Error when trying to create index file %s: %v", headerIndexFile, err)
+			log.Printf("Error when trying to create file %s: %v", headerIndexFile, err)
 		}
 		createdFiles[headerIndexFile] = currentHeaderFile
 		writeFrontMatter(strings.Trim(indexFile, ".md"), currentHeader, scanner, true, currentHeaderFile)
@@ -153,13 +158,15 @@ func makeFile(path string, isIndex bool, scanner *bufio.Scanner, createdFiles ma
 		if currentHeaderFile == nil {
 			currentHeaderFile, err = os.Create(path)
 			if err != nil {
-				log.Printf("Error when trying to create non-index file %s: %v", path, err)
+				log.Printf("Error when trying to create file %s: %v", path, err)
 			}
 			createdFiles[path] = currentHeaderFile
 		}
 		writeFrontMatter(fileName, currentHeader, scanner, false, currentHeaderFile)
 	}
 }
+
+func MakeDirectory () {}
 
 // It takes a file and a string, and writes the string to the file
 func writeLine(file *os.File, line string) {

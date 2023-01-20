@@ -39,7 +39,7 @@ Alias: **-n**
 Identifies a Namespace in the Temporal Workflow. (default: default)
 
 **--reapply-type**
-Event types to reapply after the reset point: Signal, None, . (default: All)
+Event types to reapply after the reset point: None, , Signal. (default: All)
 
 **--reason**
 Reason to reset.
