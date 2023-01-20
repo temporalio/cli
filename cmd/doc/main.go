@@ -16,6 +16,7 @@ const (
 	cliFile   = "cli.md"
 	filePerm  = 0644
 	indexFile = "index.md"	
+	optionsPath = "cmd-options"
 )
 
 const FrontMatterTemplate = 
@@ -63,6 +64,8 @@ func main() {
 	scanner := bufio.NewScanner(readFile)
 	scanner.Split(bufio.ScanLines)
 	createdFiles := make(map[string]*os.File)
+
+
 
 	// TODO: identify different option categories and print flags accordingly
 	for scanner.Scan() {
@@ -137,11 +140,10 @@ func main() {
 }
 
 func makeFile(path string, isIndex bool, scanner *bufio.Scanner, createdFiles map[string]*os.File) {
-	err := os.MkdirAll(path, os.ModePerm)
-	if err != nil {
-		log.Printf("Error when trying to create directory %s: %v", path, err)
-	}
+	var err error
+	MakeDirectory(true)
 	if (isIndex) {
+		MakeDirectory(false)
 		headerIndexFile = filepath.Join(path, indexFile)
 		currentHeaderFile, err = os.Create(headerIndexFile)
 		if err != nil {
@@ -166,7 +168,17 @@ func makeFile(path string, isIndex bool, scanner *bufio.Scanner, createdFiles ma
 	}
 }
 
-func MakeDirectory () {}
+func MakeDirectory (isOptions bool) {
+	var err error
+	if isOptions {
+		err = os.MkdirAll(filepath.Join(docsPath, optionsPath), os.ModePerm)
+	} else {
+		err = os.MkdirAll(path, os.ModePerm)
+	} 
+	if err != nil {
+		log.Printf("Error when trying to create a directory %s: %v", path, err)
+	}
+}
 
 // It takes a file and a string, and writes the string to the file
 func writeLine(file *os.File, line string) {

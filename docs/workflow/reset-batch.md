@@ -82,5 +82,5 @@ Path to private certificate key.
 Provides an override for the target TLS server name.
 
 **--type**
-Event type to which you want to reset: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew
+Event type to which you want to reset: LastContinuedAsNew, FirstWorkflowTask, LastWorkflowTask
 
