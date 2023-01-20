@@ -38,8 +38,8 @@ type FMStruct struct {
 	IsIndex bool
 }
 
-var currentHeader, fileName, path, headerIndexFile string
-var currentHeaderFile *os.File
+var currentHeader, fileName, optionFileName, path, optionFilePath, headerIndexFile  string
+var currentHeaderFile, currentOptionFile *os.File
 
 // `BuildApp` takes a string and returns a `*App` and an error
 func main() {
@@ -89,8 +89,6 @@ func main() {
 		} else if strings.HasPrefix(line, "**--") {
 			// split into term and definition
 			term, definition, found := strings.Cut(line, ":")
-	
-			// write to file
 			term = strings.TrimSuffix(term, "=\"\"")
 			if strings.Contains(term, ",") {
 				makeAlias(currentHeaderFile, term)
@@ -99,7 +97,15 @@ func main() {
 			}
 			writeLine(currentHeaderFile, strings.TrimSpace(definition))
 			log.Info(found)
-			
+
+			optionFileName = strings.Trim(term, "*-,")
+			//filePath := filepath.Join(docsPath, optionsPath, optionFileName+".md")
+			err = os.MkdirAll(filepath.Join(docsPath, optionsPath), os.ModePerm)
+			if err != nil {
+				log.Printf("Error when trying to create options directory %s: %v", path, err)
+			}
+			//makeFile(filePath, false, true, scanner, createdFiles)
+		
 
 		} else if strings.Contains(line, ">") {
 			writeLine(currentHeaderFile, strings.Trim(line, ">"))
@@ -116,10 +122,15 @@ func makeFile(path string, isIndex bool, isOptions bool, scanner *bufio.Scanner,
 	var err error
 
 	if (isOptions) {
-		err = os.MkdirAll(filepath.Join(docsPath, optionsPath), os.ModePerm)
-		if err != nil {
-			log.Printf("Error when trying to create a directory %s: %v", path, err)
+		currentOptionFile = createdFiles[path]
+		if currentOptionFile == nil {
+			currentOptionFile, err = os.Create(path)
+			if err != nil {
+				log.Printf("Error when trying to create options file %s: %v", path, err)
+			}
+			createdFiles[path] = currentOptionFile
 		}
+		writeFrontMatter(optionFileName, "", scanner, false, currentOptionFile)
 	} else if (isIndex) {
 		err = os.MkdirAll(path, os.ModePerm)
 		if err != nil {
