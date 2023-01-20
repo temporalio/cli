@@ -102,11 +102,9 @@ func main() {
 			optionFileName = strings.TrimPrefix(optionFileName, "**--")
 			optionFileName = strings.TrimSuffix(optionFileName, "**")
 
-			filePath := filepath.Join(docsPath, optionsPath, optionFileName+".md")
+			optionFilePath = filepath.Join(docsPath, optionsPath, optionFileName+".md")
 
-			//makeFile(filePath, false, true, scanner, createdFiles)
-			log.Println(filePath)
-		
+			makeFile(optionFilePath, false, true, scanner, createdFiles)
 
 		} else if strings.Contains(line, ">") {
 			writeLine(currentHeaderFile, strings.Trim(line, ">"))
@@ -126,26 +124,20 @@ func makeFile(path string, isIndex bool, isOptions bool, scanner *bufio.Scanner,
 		if err != nil {
 			log.Printf("Error when trying to create options directory %s: %v", path, err)
 		}
-		optionFileName = filepath.Join()
-		if currentOptionFile == nil {
-			currentOptionFile, err = os.Create(path)
-			if err != nil {
-				log.Printf("Error when trying to create options file %s: %v", path, err)
-			}
-			createdFiles[path] = currentOptionFile
-			writeFrontMatter(optionFileName, "", scanner, false, currentOptionFile)
-			
+		currentOptionFile, err = os.Create(optionFilePath)
+		if err != nil {
+			log.Printf("Error when trying to create option file %s: %v", optionFilePath, err)
 		}
-	} else if (isIndex) {
+		createdFiles[optionFileName] = currentOptionFile
+		//writeFrontMatter(optionFileName, "", scanner, false, currentOptionFile)
+			
+		} else if (isIndex) {
 		err = os.MkdirAll(path, os.ModePerm)
 		if err != nil {
 			log.Printf("Error when trying to create a directory %s: %v", path, err)
 		}
 		headerIndexFile = filepath.Join(path, indexFile)
 		currentHeaderFile, err = os.Create(headerIndexFile)
-		if err != nil {
-			log.Printf("Error when trying to create index file %s: %v", headerIndexFile, err)
-		}
 		if err != nil {
 			log.Printf("Error when trying to create index file %s: %v", headerIndexFile, err)
 		}
