@@ -92,9 +92,6 @@ func main() {
 	
 			// write to file
 			term = strings.TrimSuffix(term, "=\"\"")
-
-			// TODO: make files and separate directory and reference THAT
-
 			if strings.Contains(term, ",") {
 				makeAlias(currentHeaderFile, term)
 			} else {
@@ -102,6 +99,7 @@ func main() {
 			}
 			writeLine(currentHeaderFile, strings.TrimSpace(definition))
 			log.Info(found)
+			
 
 		} else if strings.Contains(line, ">") {
 			writeLine(currentHeaderFile, strings.Trim(line, ">"))
@@ -127,9 +125,6 @@ func makeFile(path string, isIndex bool, isOptions bool, scanner *bufio.Scanner,
 		if err != nil {
 			log.Printf("Error when trying to create a directory %s: %v", path, err)
 		}
-	} 
-
-	if (isIndex) {
 		headerIndexFile = filepath.Join(path, indexFile)
 		currentHeaderFile, err = os.Create(headerIndexFile)
 		if err != nil {
@@ -193,11 +188,12 @@ func writeFrontMatter(idName string, titleName string, scanner *bufio.Scanner, i
 }
 
 func deleteExistingFolder() {
-	// delete existing docs folder (if applicable)
-	folderinfo, err := os.Stat(filepath.Join(docsPath))
-	if os.IsExist(err) {
-		os.RemoveAll(filepath.Join(docsPath))
+	folderinfo, err := os.Stat(docsPath)
+	if os.IsNotExist(err) {
+		log.Info("Folder doesn't exist.")
+		return
 	}
-	log.Println("deleted docs folder, %v", folderinfo)
+	os.RemoveAll(docsPath)
+	log.Println("deleted docs folder %v", folderinfo)
 }
 
