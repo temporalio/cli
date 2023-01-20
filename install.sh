@@ -55,10 +55,13 @@ install.sh 0.1.0
 The installer for the Temporal CLI
 
 USAGE:
-    sh install.sh [OPTIONS]
+    sh install.sh [FLAGS] [OPTIONS]
+
+FLAGS:
+    --help        Prints help information
 
 OPTIONS:
-    -d, --dir                Installation directory (default: $HOME/.temporalio/bin)
+    --dir         Installation directory (default: $HOME/.temporalio/bin)
 EOF
 }
 
@@ -90,6 +93,15 @@ main() {
             esac
         fi
     fi
+
+    for arg in "$@"; do
+        case "$arg" in
+        --help)
+            usage
+            exit 0
+            ;;
+        esac
+    done
 
     if $_ansi_escapes_are_valid; then
         printf "\33[1minfo:\33[0m downloading Temporal CLI\n" 1>&2
