@@ -183,10 +183,10 @@ get_platform() {
     local _platform="$(uname -s)"
     case "$_platform" in
     "Linux")
-        TEMPORAL_OS="linux"
+        _platform="linux"
         ;;
     "Darwin")
-        TEMPORAL_OS="darwin"
+        _platform="darwin"
         ;;
     *)
         err "Unsupported OS $_platform"
