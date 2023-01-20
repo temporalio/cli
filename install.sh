@@ -341,7 +341,7 @@ esac
 EOL
 
     local _source=". $_dir/env"
-    say "If you are using bash, you can add temporal to PATH by appending the following to your user profile (e.g. ~/.bash_profile):"
+    say "If you are using bash, you can add the temporal command to PATH by appending the following to your user profile (e.g. ~/.bash_profile):"
     command printf "${_source}\n"
 }
 
