@@ -105,6 +105,7 @@ func main() {
 			optionFilePath = filepath.Join(docsPath, optionsPath, optionFileName+".md")
 
 			makeFile(optionFilePath, false, true, scanner, createdFiles)
+			writeLine(currentOptionFile, definition)
 
 		} else if strings.Contains(line, ">") {
 			writeLine(currentHeaderFile, strings.Trim(line, ">"))
@@ -129,7 +130,7 @@ func makeFile(path string, isIndex bool, isOptions bool, scanner *bufio.Scanner,
 			log.Printf("Error when trying to create option file %s: %v", optionFilePath, err)
 		}
 		createdFiles[optionFileName] = currentOptionFile
-		//writeFrontMatter(optionFileName, "", scanner, false, currentOptionFile)
+		writeFrontMatter(optionFileName, "", scanner, false, currentOptionFile)
 			
 		} else if (isIndex) {
 		err = os.MkdirAll(path, os.ModePerm)
@@ -176,10 +177,16 @@ func makeAlias(file *os.File, line string) {
 
 // write front matter
 func writeFrontMatter(idName string, titleName string, scanner *bufio.Scanner, isIndex bool, currentHeaderFile *os.File) {
-	for i := 0; i < 2; i++ {
-		scanner.Scan()
+	var descriptionTxt string
+	if (titleName != "") {
+		for i := 0; i < 2; i++ {
+			scanner.Scan()
+		}
+		descriptionTxt = scanner.Text()
+	} else {
+		descriptionTxt = "Definition for the " + idName + " command option."
 	}
-	descriptionTxt := scanner.Text()
+
 	data := FMStruct{
 		ID: idName,
 		Title: titleName,
