@@ -2,14 +2,11 @@
 id: delete
 title: temporal schedule delete
 sidebar_label: delete
-description: ### delete
+description: Deletes a schedule
 tags:
 	- cli
 ---
 
-### delete
-
-Deletes a schedule
 
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.

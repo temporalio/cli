@@ -2,14 +2,11 @@
 id: terminate
 title: temporal batch terminate
 sidebar_label: terminate
-description: ### terminate
+description: Stop a Batch operation job.
 tags:
 	- cli
 ---
 
-### terminate
-
-Stop a Batch operation job.
 
 When used, the Batch job with the provided Batch Id is terminated.
 

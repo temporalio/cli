@@ -2,14 +2,11 @@
 id: delete
 title: temporal workflow delete
 sidebar_label: delete
-description: ### delete
+description: Deletes a Workflow Execution.
 tags:
 	- cli
 ---
 
-### delete
-
-Deletes a Workflow Execution.
 
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.

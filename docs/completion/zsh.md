@@ -2,11 +2,8 @@
 id: zsh
 title: temporal completion zsh
 sidebar_label: zsh
-description: ### zsh
+description: zsh completion output
 tags:
 	- cli
 ---
 
-### zsh
-
-zsh completion output

@@ -2,14 +2,11 @@
 id: execute
 title: temporal workflow execute
 sidebar_label: execute
-description: ### execute
+description: Start a new Workflow Execution and prints its progress.
 tags:
 	- cli
 ---
 
-### execute
-
-Start a new Workflow Execution and prints its progress.
 
 Single quotes('') are used to wrap input as JSON.
 

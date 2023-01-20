@@ -2,14 +2,11 @@
 id: backfill
 title: temporal schedule backfill
 sidebar_label: backfill
-description: ### backfill
+description: Backfills a past time range of actions
 tags:
 	- cli
 ---
 
-### backfill
-
-Backfills a past time range of actions
 
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.

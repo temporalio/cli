@@ -2,14 +2,11 @@
 id: list
 title: temporal schedule list
 sidebar_label: list
-description: ### list
+description: Lists schedules
 tags:
 	- cli
 ---
 
-### list
-
-Lists schedules
 
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.

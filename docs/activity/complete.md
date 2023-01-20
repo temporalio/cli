@@ -2,14 +2,11 @@
 id: complete
 title: temporal activity complete
 sidebar_label: complete
-description: ### complete
+description: Completes an Activity.
 tags:
 	- cli
 ---
 
-### complete
-
-Completes an Activity.
 
 **--activity-id**
 Identifies the Activity to be completed.

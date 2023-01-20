@@ -1,16 +1,12 @@
 ---
-id: cancel
-title: temporal workflow cancel
-sidebar_label: cancel
-description: Cancel a Workflow Execution.
+id: cluster
+title: temporal operator cluster
+sidebar_label: cluster
+description: Shows information about the system and its capabilities.
 tags:
 	- cli
 ---
 
-
-    Canceling a running Workflow Execution records a [`WorkflowExecutionCancelRequested` event](https://docs.temporal.io/references/events/#workflowexecutioncanceled) in the [Event History](https://docs.temporal.io/workflows/#event-history).
-    
-    After cancellation, the Workflow Execution can perform cleanup work,and a new [Command](https://docs.temporal.io/workflows/#command) task will be scheduled.
 
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.
@@ -30,6 +26,9 @@ An optional timeout for the context of an RPC call (in seconds). (default: 5)
 **--env**
 Name of the environment to read environmental variables from. (default: default)
 
+**--fields**
+Customize fields to print. Set to 'long' to automatically print more of main fields.
+
 **--grpc-meta**
 Contains gRPC metadata to send with requests (Format: key=value). Values must be in a valid JSON format.
 
@@ -37,16 +36,9 @@ Contains gRPC metadata to send with requests (Format: key=value). Values must be
 Alias: **-n**
 Identifies a Namespace in the Temporal Workflow. (default: default)
 
-**--query**
-Alias: **-q**
-Cancel Workflow Executions by List Filter. See https://docs.temporal.io/concepts/what-is-a-list-filter/.
-
-**--reason**
-Reason for canceling with List Filter.
-
-**--run-id**
-Alias: **-r**
-Run Id
+**--output**
+Alias: **-o**
+format output as: table, json, card. (default: table)
 
 **--tls-ca-path**
 Path to server CA certificate.
@@ -62,12 +54,4 @@ Path to private certificate key.
 
 **--tls-server-name**
 Provides an override for the target TLS server name.
-
-**--workflow-id**
-Alias: **-w**
-Cancel Workflow Execution by Id.
-
-**--yes**
-Alias: **-y**
-Confirm all prompts.
 

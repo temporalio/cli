@@ -2,14 +2,11 @@
 id: list
 title: temporal workflow list
 sidebar_label: list
-description: ### list
+description: List Workflow Executions based on a Query.
 tags:
 	- cli
 ---
 
-### list
-
-List Workflow Executions based on a Query.
 
 By default, this command lists up to 10 closed Workflow Executions.
 

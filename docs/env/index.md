@@ -2,11 +2,9 @@
 id: index
 title: temporal env
 sidebar_label: env
-description: nextLine
+description: Manage environmental configurations on Temporal Client.
 tags:
 	- cli
 ---
 
-
-Manage environmental configurations on Temporal Client.
 

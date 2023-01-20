@@ -2,14 +2,11 @@
 id: list-partition
 title: temporal task-queue list-partition
 sidebar_label: list-partition
-description: ### list-partition
+description: Lists the [Task Queue's](https://docs.temporal.io/tasks/#task-queue) partitions and which matching node they are assigned to.
 tags:
 	- cli
 ---
 
-### list-partition
-
-Lists the [Task Queue's](https://docs.temporal.io/tasks/#task-queue) partitions and which matching node they are assigned to.
 
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.

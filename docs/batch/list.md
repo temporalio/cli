@@ -2,14 +2,11 @@
 id: list
 title: temporal batch list
 sidebar_label: list
-description: ### list
+description: List Batch operation jobs.
 tags:
 	- cli
 ---
 
-### list
-
-List Batch operation jobs.
 
 When used, all Batch operation jobs within the system are listed.
 

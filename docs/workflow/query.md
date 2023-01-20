@@ -2,14 +2,11 @@
 id: query
 title: temporal workflow query
 sidebar_label: query
-description: ### query
+description: Query a Workflow Execution.
 tags:
 	- cli
 ---
 
-### query
-
-Query a Workflow Execution.
 
     Queries can retrieve all or part of the Workflow state within given parameters.
     Queries can also be used on completed [Workflows](https://docs.temporal.io/workflows/).

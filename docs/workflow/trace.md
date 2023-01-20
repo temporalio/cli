@@ -2,14 +2,11 @@
 id: trace
 title: temporal workflow trace
 sidebar_label: trace
-description: ### trace
+description: Trace progress of a Workflow Execution and its children.
 tags:
 	- cli
 ---
 
-### trace
-
-Trace progress of a Workflow Execution and its children.
 
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.

@@ -2,14 +2,11 @@
 id: set
 title: temporal env set
 sidebar_label: set
-description: ### set
+description: Set environmental properties.
 tags:
 	- cli
 ---
 
-### set
-
-Set environmental properties.
 
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.

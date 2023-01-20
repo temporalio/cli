@@ -2,14 +2,11 @@
 id: describe
 title: temporal task-queue describe
 sidebar_label: describe
-description: ### describe
+description: Describes the Workers that have recently polled on this Task Queue.
 tags:
 	- cli
 ---
 
-### describe
-
-Describes the Workers that have recently polled on this Task Queue.
 
     The [Server](https://docs.temporal.io/clusters/#temporal-server) records the last time of each poll request.
     

@@ -2,14 +2,11 @@
 id: count
 title: temporal workflow count
 sidebar_label: count
-description: ### count
+description: Count Workflow Executions (requires ElasticSearch to be enabled).
 tags:
 	- cli
 ---
 
-### count
-
-Count Workflow Executions (requires ElasticSearch to be enabled).
 
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.

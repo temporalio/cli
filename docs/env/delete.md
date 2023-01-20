@@ -2,14 +2,11 @@
 id: delete
 title: temporal env delete
 sidebar_label: delete
-description: ### delete
+description: Delete an environment or environmental property.
 tags:
 	- cli
 ---
 
-### delete
-
-Delete an environment or environmental property.
 
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.

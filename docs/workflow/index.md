@@ -2,11 +2,9 @@
 id: index
 title: temporal workflow
 sidebar_label: workflow
-description: nextLine
+description: Operations that can be performed on Workflows.
 tags:
 	- cli
 ---
 
-
-Operations that can be performed on Workflows.
 

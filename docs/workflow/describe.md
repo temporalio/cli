@@ -2,14 +2,11 @@
 id: describe
 title: temporal workflow describe
 sidebar_label: describe
-description: ### describe
+description: Show information about a Workflow Execution.
 tags:
 	- cli
 ---
 
-### describe
-
-Show information about a Workflow Execution.
 
 This information can be used to locate a Workflow Execution that failed.
 

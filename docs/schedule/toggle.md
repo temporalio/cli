@@ -2,14 +2,11 @@
 id: toggle
 title: temporal schedule toggle
 sidebar_label: toggle
-description: ### toggle
+description: Pauses or unpauses a schedule
 tags:
 	- cli
 ---
 
-### toggle
-
-Pauses or unpauses a schedule
 
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.

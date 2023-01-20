@@ -2,14 +2,11 @@
 id: get
 title: temporal env get
 sidebar_label: get
-description: ### get
+description: Prints environmental properties.
 tags:
 	- cli
 ---
 
-### get
-
-Prints environmental properties.
 
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.

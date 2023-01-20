@@ -2,14 +2,11 @@
 id: start-dev
 title: temporal server start-dev
 sidebar_label: start-dev
-description: ### start-dev
+description: Start Temporal development server.
 tags:
 	- cli
 ---
 
-### start-dev
-
-Start Temporal development server.
 
 **--config**
 Alias: **-c**

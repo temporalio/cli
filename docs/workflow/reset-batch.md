@@ -2,14 +2,11 @@
 id: reset-batch
 title: temporal workflow reset-batch
 sidebar_label: reset-batch
-description: ### reset-batch
+description: Reset a batch of Workflow Executions by reset type: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew
 tags:
 	- cli
 ---
 
-### reset-batch
-
-Reset a batch of Workflow Executions by reset type: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew
 
 Resetting a Workflow allows the process to resume from a certain point without losing your parameters or [Event History](https://docs.temporal.io/workflows/#event-history).
 
@@ -85,5 +82,5 @@ Path to private certificate key.
 Provides an override for the target TLS server name.
 
 **--type**
-Event type to which you want to reset: LastContinuedAsNew, FirstWorkflowTask, LastWorkflowTask
+Event type to which you want to reset: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew
 

@@ -15,7 +15,7 @@ const (
 	docsPath  = "docs"
 	cliFile   = "cli.md"
 	filePerm  = 0644
-	indexFile = "index.md"
+	indexFile = "index.md"	
 )
 
 const FrontMatterTemplate = 
@@ -37,6 +37,12 @@ type FMStruct struct {
 	IsIndex bool
 }
 
+var currentHeader string
+var fileName string
+var path string
+var currentHeaderFile *os.File
+var headerIndexFile string
+
 // `BuildApp` takes a string and returns a `*App` and an error
 func main() {
 	doc, err := app.BuildApp("").ToMarkdown()
@@ -53,17 +59,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error when trying to open %s file: %v", cliFile, err)
 	}
-	var pos int64
-	scanner := bufio.NewScanner(readFile)
-	scanLines := func(data []byte, atEOF bool) (advance int, token []byte, err error) {
-        advance, token, err = bufio.ScanLines(data, atEOF)
-        pos += int64(advance)
-        return
-    }
-	scanner.Split(scanLines)
 
-	var currentHeader string
-	var currentHeaderFile *os.File
+	scanner := bufio.NewScanner(readFile)
+	scanner.Split(bufio.ScanLines)
 	createdFiles := make(map[string]*os.File)
 
 	// TODO: identify different option categories and print flags accordingly
@@ -71,30 +69,46 @@ func main() {
 		line := scanner.Text()
 		if strings.HasPrefix(line, "## ") {
 			currentHeader = strings.TrimSpace(line[2:])
-			path := filepath.Join(docsPath, currentHeader)
-
-			err := os.MkdirAll(path, os.ModePerm)
-			if err != nil {
-				log.Printf("Error when trying to create directory %s: %v", path, err)
-				continue
-			}
-
-			headerIndexFile := filepath.Join(path, indexFile)
-			currentHeaderFile, err = os.Create(headerIndexFile)
-			if err != nil {
-				log.Printf("Error when trying to create file %s: %v", headerIndexFile, err)
-				continue
-			}
-			createdFiles[headerIndexFile] = currentHeaderFile
-			// get next line for description text
-
-			writeFrontMatter(strings.Trim(indexFile, ".md"), currentHeader, "nextLine", true, currentHeaderFile)
+			path = filepath.Join(docsPath, currentHeader)
+			makeFile(path, true, scanner, createdFiles)
 
 		} else if strings.HasPrefix(line, "### ") {
-			path := filepath.Join(docsPath, currentHeader)
-			fileName := strings.TrimSpace(line[3:])
+			fileName = strings.TrimSpace(line[3:])
+			path = filepath.Join(docsPath, currentHeader)
+			// special condition for operator command file gen.
+			if strings.Contains(currentHeader, "operator") {
+				opPath := filepath.Join(path, fileName)
+				err := os.MkdirAll(opPath, os.ModePerm)
+				if err != nil {
+					log.Printf("Error when trying to create directory %s: %v", path, err)
+					continue
+				}
+				headerIndexFile := filepath.Join(opPath, indexFile)
+				currentHeaderFile, err = os.Create(headerIndexFile)
+				if err != nil {
+					log.Printf("Error when trying to create file %s: %v", headerIndexFile, err)
+					continue
+				}
+				createdFiles[headerIndexFile] = currentHeaderFile
 
-			filePath := filepath.Join(path, fileName+".md")
+				writeFrontMatter(strings.Trim(indexFile, ".md"), currentHeader, scanner, true, currentHeaderFile)
+			} else {
+				filePath := filepath.Join(path, fileName+".md")
+				// check if already created file
+				currentHeaderFile = createdFiles[filePath]
+				if currentHeaderFile == nil {
+					currentHeaderFile, err = os.Create(filePath)
+					if err != nil {
+						log.Printf("Error when trying to create file %s: %v", filePath, err)
+						continue
+					}
+					createdFiles[filePath] = currentHeaderFile
+				}
+			writeFrontMatter(fileName, currentHeader, scanner, false, currentHeaderFile)
+		}
+		} else if strings.HasPrefix(line, "#### ") {
+			operatorFileName := strings.TrimSpace(line[4:])
+			filePath := filepath.Join(path, fileName, operatorFileName+".md")
 			// check if already created file
 			currentHeaderFile = createdFiles[filePath]
 			if currentHeaderFile == nil {
@@ -105,8 +119,8 @@ func main() {
 				}
 				createdFiles[filePath] = currentHeaderFile
 			}
-			writeFrontMatter(fileName, currentHeader, scanner.Text(), false,currentHeaderFile)
-			writeLine(currentHeaderFile, line)
+			writeFrontMatter(fileName, currentHeader, scanner, false, currentHeaderFile)
+			
 		} else if strings.HasPrefix(line, "**--") {
 			// split into term and definition
 			term, definition, found := strings.Cut(line, ":")
@@ -135,6 +149,25 @@ func main() {
 	defer os.Remove(cliFile)
 }
 
+func makeFile(path string, isIndex bool, scanner *bufio.Scanner, createdFiles map[string]*os.File) {
+	err := os.MkdirAll(path, os.ModePerm)
+	if err != nil {
+		log.Printf("Error when trying to create directory %s: %v", path, err)
+	}
+	if (isIndex) {
+		headerIndexFile = filepath.Join(path, indexFile)
+		currentHeaderFile, err = os.Create(headerIndexFile)
+		if err != nil {
+			log.Printf("Error when trying to create file %s: %v", headerIndexFile, err)
+		}
+		if err != nil {
+			log.Printf("Error when trying to create file %s: %v", headerIndexFile, err)
+		}
+		createdFiles[headerIndexFile] = currentHeaderFile
+		writeFrontMatter(strings.Trim(indexFile, ".md"), currentHeader, scanner, true, currentHeaderFile)
+}
+}
+
 // It takes a file and a string, and writes the string to the file
 func writeLine(file *os.File, line string) {
 	_, err := file.WriteString(line + "\n")
@@ -145,14 +178,18 @@ func writeLine(file *os.File, line string) {
 
 // separates aliases from terms
 func makeAlias(file *os.File, line string) {
+	
 	termArray := strings.Split(line, ",")
 	writeLine(file, termArray[0] + "**")
 	writeLine(file, "Alias: **" + strings.TrimSpace(termArray[1]))
 }
 
 // write front matter
-func writeFrontMatter (idName string, titleName string, descriptionTxt string, isIndex bool, currentHeaderFile *os.File) {
-	// make struct to pass into the template
+func writeFrontMatter (idName string, titleName string, scanner *bufio.Scanner, isIndex bool, currentHeaderFile *os.File) {
+	for i := 0; i < 2; i++ {
+		scanner.Scan()
+	}
+	descriptionTxt := scanner.Text()
 	data := FMStruct{
 		ID: idName,
 		Title: titleName,

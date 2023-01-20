@@ -2,14 +2,11 @@
 id: trigger
 title: temporal schedule trigger
 sidebar_label: trigger
-description: ### trigger
+description: Triggers an immediate action
 tags:
 	- cli
 ---
 
-### trigger
-
-Triggers an immediate action
 
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.

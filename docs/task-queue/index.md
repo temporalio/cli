@@ -2,11 +2,9 @@
 id: index
 title: temporal task-queue
 sidebar_label: task-queue
-description: nextLine
+description: Operations performed on Task Queues.
 tags:
 	- cli
 ---
 
-
-Operations performed on Task Queues.
 

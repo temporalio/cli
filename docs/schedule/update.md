@@ -2,14 +2,11 @@
 id: update
 title: temporal schedule update
 sidebar_label: update
-description: ### update
+description: Updates a schedule with a new definition (full replacement, not patch)
 tags:
 	- cli
 ---
 
-### update
-
-Updates a schedule with a new definition (full replacement, not patch)
 
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.

@@ -2,14 +2,11 @@
 id: terminate
 title: temporal workflow terminate
 sidebar_label: terminate
-description: ### terminate
+description: Terminate Workflow Execution by Id or List Filter.
 tags:
 	- cli
 ---
 
-### terminate
-
-Terminate Workflow Execution by Id or List Filter.
 
     Terminating a running Workflow records a [`WorkflowExecutionTerminated` event](https://docs.temporal.io/references/events/#workflowexecutionterminated) as the closing event.
     

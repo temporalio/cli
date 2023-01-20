@@ -2,11 +2,9 @@
 id: index
 title: temporal server
 sidebar_label: server
-description: nextLine
+description: Commands for managing the Temporal Server.
 tags:
 	- cli
 ---
 
-
-Commands for managing the Temporal Server.
 

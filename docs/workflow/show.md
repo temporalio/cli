@@ -2,14 +2,11 @@
 id: show
 title: temporal workflow show
 sidebar_label: show
-description: ### show
+description: Show Event History for a Workflow Execution.
 tags:
 	- cli
 ---
 
-### show
-
-Show Event History for a Workflow Execution.
 
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.

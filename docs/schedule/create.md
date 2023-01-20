@@ -2,14 +2,11 @@
 id: create
 title: temporal schedule create
 sidebar_label: create
-description: ### create
+description: Create a new schedule
 tags:
 	- cli
 ---
 
-### create
-
-Create a new schedule
 
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.

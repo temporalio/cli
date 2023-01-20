@@ -2,14 +2,11 @@
 id: fail
 title: temporal activity fail
 sidebar_label: fail
-description: ### fail
+description: Fails an Activity.
 tags:
 	- cli
 ---
 
-### fail
-
-Fails an Activity.
 
 **--activity-id**
 Identifies the Activity to fail.

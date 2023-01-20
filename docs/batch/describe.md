@@ -2,14 +2,11 @@
 id: describe
 title: temporal batch describe
 sidebar_label: describe
-description: ### describe
+description: Describe a Batch operation job.
 tags:
 	- cli
 ---
 
-### describe
-
-Describe a Batch operation job.
 
 This command shows the progress of an ongoing Batch job.
 

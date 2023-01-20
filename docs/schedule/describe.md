@@ -2,14 +2,11 @@
 id: describe
 title: temporal schedule describe
 sidebar_label: describe
-description: ### describe
+description: Get schedule configuration and current state
 tags:
 	- cli
 ---
 
-### describe
-
-Get schedule configuration and current state
 
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.
