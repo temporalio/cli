@@ -94,17 +94,18 @@ func main() {
 				makeAlias(currentHeaderFile, term)
 			} else {
 				writeLine(currentHeaderFile, term)
+				optionFileName = term
 			}
 			writeLine(currentHeaderFile, strings.TrimSpace(definition))
-			log.Info(found)
+			log.Info("string split successfully into term and definition (%v)",found)
 
-			optionFileName = strings.Trim(term, "*-,")
-			//filePath := filepath.Join(docsPath, optionsPath, optionFileName+".md")
-			err = os.MkdirAll(filepath.Join(docsPath, optionsPath), os.ModePerm)
-			if err != nil {
-				log.Printf("Error when trying to create options directory %s: %v", path, err)
-			}
+			optionFileName = strings.TrimPrefix(optionFileName, "**--")
+			optionFileName = strings.TrimSuffix(optionFileName, "**")
+
+			filePath := filepath.Join(docsPath, optionsPath, optionFileName+".md")
+
 			//makeFile(filePath, false, true, scanner, createdFiles)
+			log.Println(filePath)
 		
 
 		} else if strings.Contains(line, ">") {
@@ -120,17 +121,21 @@ func main() {
 
 func makeFile(path string, isIndex bool, isOptions bool, scanner *bufio.Scanner, createdFiles map[string]*os.File) {
 	var err error
-
 	if (isOptions) {
-		currentOptionFile = createdFiles[path]
+		err = os.MkdirAll(filepath.Join(docsPath, optionsPath), os.ModePerm)
+		if err != nil {
+			log.Printf("Error when trying to create options directory %s: %v", path, err)
+		}
+		optionFileName = filepath.Join()
 		if currentOptionFile == nil {
 			currentOptionFile, err = os.Create(path)
 			if err != nil {
 				log.Printf("Error when trying to create options file %s: %v", path, err)
 			}
 			createdFiles[path] = currentOptionFile
+			writeFrontMatter(optionFileName, "", scanner, false, currentOptionFile)
+			
 		}
-		writeFrontMatter(optionFileName, "", scanner, false, currentOptionFile)
 	} else if (isIndex) {
 		err = os.MkdirAll(path, os.ModePerm)
 		if err != nil {
@@ -174,6 +179,7 @@ func makeAlias(file *os.File, line string) {
 	termArray := strings.Split(line, ",")
 	writeLine(file, termArray[0] + "**")
 	writeLine(file, "Alias: **" + strings.TrimSpace(termArray[1]))
+	optionFileName = termArray[0]
 }
 
 // write front matter
