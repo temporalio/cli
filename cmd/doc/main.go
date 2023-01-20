@@ -15,8 +15,8 @@ const (
 	docsPath  = "docs"
 	cliFile   = "cli.md"
 	filePerm  = 0644
-	indexFile = "index.md"	
-	optionsPath = "cmd-options"
+	indexFile = "index.md"
+	optionsPath = "cmd-options"	
 )
 
 const FrontMatterTemplate = 
@@ -38,11 +38,8 @@ type FMStruct struct {
 	IsIndex bool
 }
 
-var currentHeader string
-var fileName string
-var path string
+var currentHeader, fileName, path, headerIndexFile string
 var currentHeaderFile *os.File
-var headerIndexFile string
 
 // `BuildApp` takes a string and returns a `*App` and an error
 func main() {
@@ -65,23 +62,19 @@ func main() {
 	scanner.Split(bufio.ScanLines)
 	createdFiles := make(map[string]*os.File)
 
-
-
 	// TODO: identify different option categories and print flags accordingly
 	for scanner.Scan() {
 		line := scanner.Text()
 		if strings.HasPrefix(line, "## ") {
 			currentHeader = strings.TrimSpace(line[2:])
 			path = filepath.Join(docsPath, currentHeader)
-			makeFile(path, true, scanner, createdFiles)
-
+			makeFile(path, true, false, scanner, createdFiles)
 		} else if strings.HasPrefix(line, "### ") {
 			fileName = strings.TrimSpace(line[3:])
 			path = filepath.Join(docsPath, currentHeader)
-			// special condition for operator command file gen.
 			if strings.Contains(currentHeader, "operator") {
 				opPath := filepath.Join(path, fileName)
-				makeFile(opPath, true, scanner, createdFiles)
+				makeFile(opPath, true, false, scanner, createdFiles)
 			} else {
 				filePath := filepath.Join(path, fileName+".md")
 				// check if already created file
@@ -139,18 +132,29 @@ func main() {
 	defer os.Remove(cliFile)
 }
 
-func makeFile(path string, isIndex bool, scanner *bufio.Scanner, createdFiles map[string]*os.File) {
+func makeFile(path string, isIndex bool, isOptions bool, scanner *bufio.Scanner, createdFiles map[string]*os.File) {
 	var err error
-	MakeDirectory(true)
+	
+	if (isOptions) {
+		err = os.MkdirAll(filepath.Join(docsPath, optionsPath), os.ModePerm)
+		if err != nil {
+			log.Printf("Error when trying to create a directory %s: %v", path, err)
+		}
+	} else {
+		err = os.MkdirAll(path, os.ModePerm)
+		if err != nil {
+			log.Printf("Error when trying to create a directory %s: %v", path, err)
+		}
+	}
+
 	if (isIndex) {
-		MakeDirectory(false)
 		headerIndexFile = filepath.Join(path, indexFile)
 		currentHeaderFile, err = os.Create(headerIndexFile)
 		if err != nil {
-			log.Printf("Error when trying to create file %s: %v", headerIndexFile, err)
+			log.Printf("Error when trying to create index file %s: %v", headerIndexFile, err)
 		}
 		if err != nil {
-			log.Printf("Error when trying to create file %s: %v", headerIndexFile, err)
+			log.Printf("Error when trying to create index file %s: %v", headerIndexFile, err)
 		}
 		createdFiles[headerIndexFile] = currentHeaderFile
 		writeFrontMatter(strings.Trim(indexFile, ".md"), currentHeader, scanner, true, currentHeaderFile)
@@ -160,23 +164,11 @@ func makeFile(path string, isIndex bool, scanner *bufio.Scanner, createdFiles ma
 		if currentHeaderFile == nil {
 			currentHeaderFile, err = os.Create(path)
 			if err != nil {
-				log.Printf("Error when trying to create file %s: %v", path, err)
+				log.Printf("Error when trying to create non-index file %s: %v", path, err)
 			}
 			createdFiles[path] = currentHeaderFile
 		}
 		writeFrontMatter(fileName, currentHeader, scanner, false, currentHeaderFile)
-	}
-}
-
-func MakeDirectory (isOptions bool) {
-	var err error
-	if isOptions {
-		err = os.MkdirAll(filepath.Join(docsPath, optionsPath), os.ModePerm)
-	} else {
-		err = os.MkdirAll(path, os.ModePerm)
-	} 
-	if err != nil {
-		log.Printf("Error when trying to create a directory %s: %v", path, err)
 	}
 }
 
