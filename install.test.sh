@@ -10,20 +10,37 @@ assert() {
 
   if ! eval "$_command" | grep -q "$_string"; then
     local _assertion_failed
-    if $_ansi_escapes_are_valid; then
-      _assertion_failed="\33[1;31mAssertion failed:\33[0m"
-    else
-      _assertion_failed="Assertion failed:"
-    fi
-
-    printf "$_assertion_failed '$_command' does not contain $_string\n"
+    local _status="$(failure "Assertion failed:" $_ansi_escapes_are_valid)"
+    printf "$_status '$_command' does not contain '$_string'\n"
+    exit 1
   fi
+}
+
+failure() {
+  local _string="$1"
+  local _ansi_escapes_are_valid="$2"
+
+  if $_ansi_escapes_are_valid; then
+    _string="\33[1;31m$_string\33[0m"
+  fi
+
+  echo "$_string"
+}
+
+success() {
+  local _string="$1"
+  local _ansi_escapes_are_valid="$2"
+
+  if $_ansi_escapes_are_valid; then
+    _string="\33[1;32m$_string\33[0m"
+  fi
+
+  echo "$_string"
 }
 
 main() {
   sh ./install.sh
   . "$HOME"/.temporalio/env
-  temporal -v
 
   local _ansi_escapes_are_valid=false
   if [ -t 2 ]; then
@@ -36,8 +53,11 @@ main() {
     fi
   fi
 
-  assert "temporal -v" "temporal" $_ansi_escapes_are_valid
+  assert "temporal -v" "temporal version" $_ansi_escapes_are_valid
   assert "sh ./install.sh --help" "Temporal CLI" $_ansi_escapes_are_valid
+
+  local _status="$(success "Tests passed" $_ansi_escapes_are_valid)"
+  printf "$_status\n"
 }
 
 main "$@" || exit 1

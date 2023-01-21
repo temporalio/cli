@@ -102,11 +102,7 @@ main() {
         esac
     done
 
-    if $_ansi_escapes_are_valid; then
-        printf "\33[1minfo:\33[0m downloading Temporal CLI\n" 1>&2
-    else
-        printf '%s\n' 'info: downloading Temporal CLI' 1>&2
-    fi
+    say "Downloading Temporal CLI" >&2
 
     local _url="https://temporal.download/assets/temporalio/cli/releases/download/v0.2.0/cli_0.2.0_${_platform}_${_arch}.tar.gz"
 
@@ -141,12 +137,9 @@ main() {
     local _exe_name="temporal$_bext"
     mv "$_temp/${_exe_name}" "$_dirbin"
     ensure rm -rf "$_temp"
-
     ensure chmod u+x "$_dirbin/$_exe_name"
 
-    say "Success, Temporal CLI installed at $_dirbin"
-
-    ensure prompt_for_path "$_dir" "$_dirbin"
+    ensure prompt_for_path "$_dirbin"
 
     local _retval=$?
     return "$_retval"
@@ -332,23 +325,20 @@ get_install_dir() {
 }
 
 prompt_for_path() {
-    local _dir="$1"
-    local _dirbin="$2"
+    local _dirbin="$1"
 
-    cat >"$_dir/env" <<EOL
-#!/bin/sh
-case ":\${PATH}:" in
-    *:"$_dirbin":*)
-        ;;
-    *)
-        export PATH="$_dirbin:\$PATH"
-        ;;
-esac
-EOL
+    local _source="export PATH=\"\$PATH:$_dirbin\" >> ~/.bash_profile"
 
-    local _source=". $_dir/env"
-    say "If you are using bash, you can add the temporal command to PATH by appending the following to your user profile (e.g. ~/.bash_profile):"
-    command printf "${_source}\n"
+    say "Temporal CLI installed at $_dirbin/temporal"
+
+    if echo ":$PATH:" | grep -q "$_dirbin"; then
+        say "Start the server with: temporal server start-dev"
+        say "Or start a workflow with: temporal workflow start"
+        say "For usage, run: temporal --help"
+    else 
+        say "For convenience, we recommend adding it to your PATH"
+        say "If using bash, run echo $_source"
+    fi
 }
 
 check_help_for() {
