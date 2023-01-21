@@ -50,7 +50,7 @@ set -u
 
 #XXX: If you change anything here, please make the same changes in setup_mode.rs
 usage() {
-    cat 1>&2 <<EOF
+    cat <<EOF
 install.sh 0.1.0
 The installer for the Temporal CLI
 
