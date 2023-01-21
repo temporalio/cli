@@ -298,7 +298,7 @@ unzip() {
     local _file="$1"
     local _dir="$2"
 
-    tar -xzvf "$_file" -C "$_dir"
+    tar -xzf "$_file" -C "$_dir"
 }
 
 get_default_install_dir() {
