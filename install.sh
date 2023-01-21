@@ -61,7 +61,7 @@ FLAGS:
     --help        Prints help information
 
 OPTIONS:
-    --dir         Installation directory (default: $HOME/.temporalio/bin)
+    --dir         Installation directory (default: $HOME/.temporalio)
 EOF
 }
 
@@ -72,7 +72,6 @@ main() {
     need_cmd chmod
     need_cmd mkdir
     need_cmd rm
-    need_cmd rmdir
     need_cmd tar
 
     get_architecture || return 1
@@ -118,13 +117,19 @@ main() {
         ;;
     esac
 
-    local _dir="$(ensure get_install_dir "$@")"
-    ensure mkdir -p "$_dir"
+    local _temp
+    if ! _temp="$(ensure mktemp -d)"; then
+        # Because the previous command ran in a subshell, we must manually
+        # propagate exit status.
+        exit 1
+    fi
 
-    local _archive="${_dir}/temporal_cli_latest${_ext}"
+    local _archive="${_temp}/temporal_cli_latest${_ext}"
     ensure downloader "$_url" "$_archive" "$_arch"
-    ensure unzip "$_archive" "$_dir"
-    ensure rm "$_archive"
+    ensure unzip "$_archive" "$_temp"
+    local _dir="$(ensure get_install_dir "$@")"
+    local _dirbin="$_dir/bin"
+    ensure mkdir -p "$_dirbin"
 
     local _bext=""
     case "$_arch" in
@@ -132,11 +137,13 @@ main() {
         _bext=".exe"
         ;;
     esac
-    local _exe_name="temporal$_bext"
-    local _exe="$_dir/$_exe_name"
-    ensure chmod u+x "$_exe"
 
-    ensure prompt_for_path "$_dir"
+    local _exe_name="temporal$_bext"
+    mv "$_temp/${_exe_name}" "$_dirbin"
+    ensure rm -rf "$_temp"
+
+    ensure chmod u+x "$_dirbin/$_exe_name"
+    ensure prompt_for_path "$_dir" "$_dirbin"
 
     local _retval=$?
     return "$_retval"
@@ -295,7 +302,7 @@ unzip() {
 }
 
 get_default_install_dir() {
-    printf %s "${HOME}/.temporalio/bin"
+    printf %s "${HOME}/.temporalio"
 }
 
 get_install_dir() {
@@ -304,12 +311,12 @@ get_install_dir() {
 
     while [ $# -gt 0 ]; do
         case "$1" in
-            --dir)
-                _dir="$2"
-                shift
-                ;;
-            *)
-                ;;
+        --dir)
+            _dir="$2"
+            shift
+            ;;
+        *) ;;
+
         esac
         shift
     done
@@ -319,14 +326,15 @@ get_install_dir() {
 
 prompt_for_path() {
     local _dir="$1"
+    local _dirbin="$2"
 
     cat >"$_dir/env" <<EOL
 #!/bin/sh
 case ":\${PATH}:" in
-    *:"$_dir":*)
+    *:"$_dirbin":*)
         ;;
     *)
-        export PATH="$_dir:\$PATH"
+        export PATH="$_dirbin:\$PATH"
         ;;
 esac
 EOL
