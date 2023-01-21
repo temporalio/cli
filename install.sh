@@ -143,6 +143,9 @@ main() {
     ensure rm -rf "$_temp"
 
     ensure chmod u+x "$_dirbin/$_exe_name"
+
+    say "Success, Temporal CLI installed at $_dirbin"
+
     ensure prompt_for_path "$_dir" "$_dirbin"
 
     local _retval=$?
@@ -186,7 +189,11 @@ get_platform() {
 }
 
 say() {
-    printf 'temporal: %s\n' "$1"
+    if $_ansi_escapes_are_valid; then
+        printf "\33[1mtemporal:\33[0m %s\n" "$1"
+    else
+        printf 'temporal: %s\n' "$1"
+    fi
 }
 
 err() {
