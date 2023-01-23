@@ -331,7 +331,7 @@ prompt_for_path() {
 
     say "Temporal CLI installed at $_dirbin/temporal"
 
-    if echo ":$PATH:" | grep -q "$_dirbin"; then
+    if echo ":$PATH:" | grep -q ":$_dirbin:"; then
         say "Start the server with: temporal server start-dev"
         say "Or start a workflow with: temporal workflow start"
         say "For usage, run: temporal --help"
