@@ -38,6 +38,8 @@ jobs:
 
       - name: Run ShellCheck
         uses: ludeeus/action-shellcheck@master
+        with:
+            ignore_paths: ./.devcontainer
 
   test-install:
     strategy:
