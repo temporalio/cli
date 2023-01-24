@@ -34,6 +34,7 @@ func NewNamespaceCommands() []*cli.Command {
 		},
 		{
 			Name:      "create",
+			Aliases:   []string{"register"},
 			Usage:     "Register a new Namespace",
 			Flags:     registerNamespaceFlags,
 			ArgsUsage: "namespace_name [cluster_name...]",
