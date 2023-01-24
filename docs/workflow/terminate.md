@@ -8,9 +8,16 @@ tags:
 ---
 
 
-    Terminating a running Workflow records a [`WorkflowExecutionTerminated` event](https://docs.temporal.io/references/events/#workflowexecutionterminated) as the closing event.
-    
-    Any further [Command](https://docs.temporal.io/workflows/#command) tasks cannot be scheduled after running `terminate`.
+The `temporal workflow terminate` command terminates a [Workflow Execution](/concepts/what-is-a-workflow-execution)
+
+Terminating a running Workflow Execution records a [`WorkflowExecutionTerminated` event]() as the closing Event in the [Event History]().
+Any further [Command]() Tasks cannot be scheduled after running this command.
+
+Use the options listed below to change termination behavior.
+Make sure to write the command as follows:
+`temporal workflow terminate [command options] [arguments]`
+
+## OPTIONS
 
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.

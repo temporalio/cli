@@ -110,7 +110,7 @@ func main() {
 		} else if strings.Contains(line, ">") {
 			writeLine(currentHeaderFile, strings.Trim(line, ">"))
 		} else {
-			writeLine(currentHeaderFile, line)
+			writeLine(currentHeaderFile, strings.TrimSpace(line))
 		} 
 	}
 	// close file descriptor after for loop has completed

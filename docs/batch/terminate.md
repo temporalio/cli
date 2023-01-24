@@ -8,7 +8,13 @@ tags:
 ---
 
 
-When used, the Batch job with the provided Batch Id is terminated.
+The `temporal batch terminate` command terminates a Batch job with the provided Job ID.
+
+Use the command options listed below to change the behavior of this command.
+Make sure to write the command as follows:
+`temporal batch terminate [command options] [arguments]`
+
+## OPTIONS
 
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.

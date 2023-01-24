@@ -2,7 +2,7 @@
 id: reset-batch
 title: temporal workflow reset-batch
 sidebar_label: reset-batch
-description: Reset a batch of Workflow Executions by reset type: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew
+description: Reset a batch of Workflow Executions by reset type: LastWorkflowTask, LastContinuedAsNew, FirstWorkflowTask
 tags:
 	- cli
 ---
@@ -82,5 +82,5 @@ Path to private certificate key.
 Provides an override for the target TLS server name.
 
 **--type**
-Event type to which you want to reset: LastContinuedAsNew, FirstWorkflowTask, LastWorkflowTask
+Event type to which you want to reset: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew
 

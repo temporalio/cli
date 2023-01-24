@@ -2,7 +2,7 @@
 id: namespace
 title: temporal operator namespace
 sidebar_label: namespace
-description: Registers a new Namespace.
+description: Register a new Namespace
 tags:
 	- cli
 ---

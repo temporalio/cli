@@ -8,10 +8,13 @@ tags:
 ---
 
 
-    Batch Jobs run in the background and affect [Workflow Executions](https://docs.temporal.io/workflows/#workflow-execution) one at a time.
-    
-    In `cli`, the Batch Commands are used to view the status of Batch jobs, and to terminate them.
-    A successfully started Batch job returns a Job Id, which is needed to execute Batch Commands.
-    
-    Terminating a Batch Job does not roll back the operations already performed by the job itself.
+Batch commands allow you to change multiple [Workflow Executions](/concepts/what-is-a-workflow-execution) without having to repeat yourself on the command line.
+In order to do this, you provide the command with a [List Filter](/concepts/what-is-a-list-filter) and the type of Batch job to execute.
+
+The List Filter identifies the Workflow Executions that will be affected by the Batch job.
+The Batch type determines the other parameters that need to be provided, along with what is being affected on the Workflow Executions.
+
+To start the Batch job, run `temporal workflow query`.
+A successfully started Batch job will return a Job ID.
+Use this Job ID to execute other actions on the Batch job.
 

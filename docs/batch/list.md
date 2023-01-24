@@ -8,7 +8,13 @@ tags:
 ---
 
 
-When used, all Batch operation jobs within the system are listed.
+When used, `temporal batch list` returns all Batch jobs.
+
+Use the command options listed below to change the information returned by this command.
+Make sure to write the command in this format:
+`temporal batch list [command options] [arguments]`
+
+## OPTIONS
 
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.

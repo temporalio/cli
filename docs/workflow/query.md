@@ -8,8 +8,16 @@ tags:
 ---
 
 
-    Queries can retrieve all or part of the Workflow state within given parameters.
-    Queries can also be used on completed [Workflows](https://docs.temporal.io/workflows/).
+The `temporal workflow query` command sends a [Query](/concepts/what-is-a-query) to a [Workflow Execution](/concepts/what-is-a-workflow-execution).
+
+Queries can retrieve all or part of the Workflow state within given parameters.
+Queries can also be used on completed [Workflows](/concepts/what-is-a-workflow).
+
+Use the command options listed below to change the information returned by this command.
+Make sure to write the command as follows:
+`temporal workflow query [command options] [arguments]`
+
+## OPTIONS
 
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.
