@@ -104,15 +104,6 @@ main() {
 
     say "Downloading Temporal CLI" >&2
 
-    local _url="https://temporal.download/assets/temporalio/cli/releases/download/v0.2.0/cli_0.2.0_${_platform}_${_arch}.tar.gz"
-
-    local _ext="tar.gz"
-    case "$_arch" in
-    *windows*)
-        _ext=".zip"
-        ;;
-    esac
-
     local _temp
     if ! _temp="$(ensure mktemp -d)"; then
         # Because the previous command ran in a subshell, we must manually
@@ -120,9 +111,16 @@ main() {
         exit 1
     fi
 
-    local _archive="${_temp}/temporal_cli_latest${_ext}"
-    ensure downloader "$_url" "$_archive" "$_arch"
-    ensure unzip "$_archive" "$_temp"
+    local _ext="tar.gz"
+    case "$_arch" in
+    *windows*)
+        _ext=".zip"
+        ;;
+    esac
+    local _archive_path="${_temp}/temporal_cli_latest${_ext}"
+    local _url="https://temporal.download/cli/archive/latest?platform=${_platform}&arch=${_arch}"
+    ensure downloader "$_url" "$_archive_path" "$_arch"
+    ensure unzip "$_archive_path" "$_temp"
     local _dir="$(ensure get_install_dir "$@")"
     local _dirbin="$_dir/bin"
     ensure mkdir -p "$_dirbin"
@@ -135,7 +133,7 @@ main() {
     esac
 
     local _exe_name="temporal$_bext"
-    mv "$_temp/${_exe_name}" "$_dirbin"
+    ensure mv "$_temp/${_exe_name}" "$_dirbin"
     ensure rm -rf "$_temp"
     ensure chmod u+x "$_dirbin/$_exe_name"
 
@@ -327,7 +325,7 @@ get_install_dir() {
 prompt_for_path() {
     local _dirbin="$1"
 
-    local _source="export PATH=\"\$PATH:$_dirbin\" >> ~/.bash_profile"
+    local _source="export PATH=\"\\\$PATH:$_dirbin\" >> ~/.bashrc"
 
     say "Temporal CLI installed at $_dirbin/temporal"
 
@@ -335,7 +333,7 @@ prompt_for_path() {
         say "Start the server with: temporal server start-dev"
         say "Or start a workflow with: temporal workflow start"
         say "For usage, run: temporal --help"
-    else 
+    else
         say "For convenience, we recommend adding it to your PATH"
         say "If using bash, run echo $_source"
     fi
