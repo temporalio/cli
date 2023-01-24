@@ -19,8 +19,8 @@ import (
 	"go.temporal.io/server/common/primitives/timestamp"
 )
 
-// RegisterNamespace register a namespace
-func RegisterNamespace(c *cli.Context) error {
+// createNamespace register a namespace
+func createNamespace(c *cli.Context) error {
 	ns, err := getNamespaceFromArgs(c)
 	if err != nil {
 		return err

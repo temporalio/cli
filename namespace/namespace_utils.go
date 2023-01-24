@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	registerNamespaceFlags = []cli.Flag{
+	createNamespaceFlags = []cli.Flag{
 		&cli.StringFlag{
 			Name:     common.FlagDescription,
 			Usage:    "Namespace description",

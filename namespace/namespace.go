@@ -33,12 +33,13 @@ func NewNamespaceCommands() []*cli.Command {
 			},
 		},
 		{
-			Name:      "register",
-			Usage:     common.RegisterNamespaceDefinition,
-			Flags:     registerNamespaceFlags,
+			Name:      "create",
+			Aliases:   []string{"register"},
+			Usage:     "Register a new Namespace",
+			Flags:     createNamespaceFlags,
 			ArgsUsage: "namespace_name [cluster_name...]",
 			Action: func(c *cli.Context) error {
-				return RegisterNamespace(c)
+				return createNamespace(c)
 			},
 		},
 		{

@@ -12,39 +12,39 @@ import (
 	"go.temporal.io/server/common/primitives/timestamp"
 )
 
-func (s *cliAppSuite) TestNamespaceRegister_LocalNamespace() {
+func (s *cliAppSuite) TestNamespaceCreate_LocalNamespace() {
 	s.frontendClient.EXPECT().RegisterNamespace(gomock.Any(), gomock.Any()).Return(nil, nil)
-	err := s.app.Run([]string{"", "operator", "namespace", "register", "--global", "false", cliTestNamespace})
+	err := s.app.Run([]string{"", "operator", "namespace", "create", "--global", "false", cliTestNamespace})
 	s.NoError(err)
 }
 
-func (s *cliAppSuite) TestNamespaceRegister_GlobalNamespace() {
+func (s *cliAppSuite) TestNamespaceCreate_GlobalNamespace() {
 	s.frontendClient.EXPECT().RegisterNamespace(gomock.Any(), gomock.Any()).Return(nil, nil)
-	err := s.app.Run([]string{"", "operator", "namespace", "register", "--global", "true", cliTestNamespace})
+	err := s.app.Run([]string{"", "operator", "namespace", "create", "--global", "true", cliTestNamespace})
 	s.NoError(err)
 }
 
-func (s *cliAppSuite) TestNamespaceRegister_Data() {
+func (s *cliAppSuite) TestNamespaceCreate_Data() {
 	s.frontendClient.EXPECT().RegisterNamespace(gomock.Any(), gomock.Any()).Return(nil, nil)
-	err := s.app.Run([]string{"", "operator", "namespace", "register", "--data", "k1=v1", "--data", "k2=v2", "true", cliTestNamespace})
+	err := s.app.Run([]string{"", "operator", "namespace", "create", "--data", "k1=v1", "--data", "k2=v2", "true", cliTestNamespace})
 	s.NoError(err)
 }
 
-func (s *cliAppSuite) TestNamespaceRegister_NamespaceExist() {
+func (s *cliAppSuite) TestNamespaceCreate_NamespaceExist() {
 	s.frontendClient.EXPECT().RegisterNamespace(gomock.Any(), gomock.Any()).Return(nil, serviceerror.NewNamespaceAlreadyExists(""))
-	errorCode := s.RunWithExitCode([]string{"", "operator", "namespace", "register", "--global", "true", cliTestNamespace})
+	errorCode := s.RunWithExitCode([]string{"", "operator", "namespace", "create", "--global", "true", cliTestNamespace})
 	s.Equal(1, errorCode)
 }
 
-func (s *cliAppSuite) TestNamespaceRegister_Cluster() {
+func (s *cliAppSuite) TestNamespaceCreate_Cluster() {
 	s.frontendClient.EXPECT().RegisterNamespace(gomock.Any(), gomock.Any()).Return(nil, nil)
-	err := s.app.Run([]string{"", "operator", "namespace", "register", "--cluster", "active", "--cluster", "standby", cliTestNamespace})
+	err := s.app.Run([]string{"", "operator", "namespace", "create", "--cluster", "active", "--cluster", "standby", cliTestNamespace})
 	s.NoError(err)
 }
 
-func (s *cliAppSuite) TestNamespaceRegister_Failed() {
+func (s *cliAppSuite) TestNamespaceCreate_Failed() {
 	s.frontendClient.EXPECT().RegisterNamespace(gomock.Any(), gomock.Any()).Return(nil, serviceerror.NewInvalidArgument("faked error"))
-	errorCode := s.RunWithExitCode([]string{"", "operator", "namespace", "register", "--global", "true", cliTestNamespace})
+	errorCode := s.RunWithExitCode([]string{"", "operator", "namespace", "create", "--global", "true", cliTestNamespace})
 	s.Equal(1, errorCode)
 }
 
