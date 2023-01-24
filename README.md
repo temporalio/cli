@@ -13,7 +13,7 @@ The Temporal CLI is a command-line interface for running Temporal Server and int
 
 #### curl
 
-`curl -sSf https://temporal.download/cli/install.sh | sh`
+`curl -sSf https://temporal.download/cli.sh | sh`
 
 #### Homebrew
 
