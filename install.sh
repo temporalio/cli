@@ -122,6 +122,10 @@ main() {
     ensure downloader "$_url" "$_archive_path" "$_arch"
     ensure unzip "$_archive_path" "$_temp"
     local _dir="$(ensure get_install_dir "$@")"
+    if [ -z "$_dir" ]; then
+        exit 1
+    fi
+
     local _dirbin="$_dir/bin"
     ensure mkdir -p "$_dirbin"
 
