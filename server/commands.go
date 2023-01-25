@@ -73,9 +73,9 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 					Value:   sconfig.DefaultFrontendPort,
 				},
 				&cli.IntFlag{
-					Name:  common.FlagMetricsPort,
-					Usage: "Port for /metrics.",
-					Value: sconfig.DefaultMetricsPort,
+					Name:        common.FlagMetricsPort,
+					Usage:       "Port for /metrics",
+					Value:       sconfig.DefaultMetricsPort,
 					DefaultText: "disabled",
 				},
 				&cli.IntFlag{
