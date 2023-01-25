@@ -34,6 +34,7 @@ func NewTaskQueueCommands() []*cli.Command {
 		{
 			Name:  "list-partition",
 			Usage: common.ListPartitionTaskQueueDefinition,
+			UsageText: common.TaskQueueListPartitionUsageText,
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:     common.FlagTaskQueue,

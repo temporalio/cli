@@ -60,6 +60,7 @@ func NewWorkflowCommands() []*cli.Command {
 		{
 			Name:  "show",
 			Usage: common.ShowWorkflowDefinition,
+			UsageText: common.WorkflowShowUsageText,
 			Flags: append(append(common.FlagsForExecution, common.FlagsForShowWorkflow...), common.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
 				return ShowHistory(c)
@@ -84,6 +85,7 @@ func NewWorkflowCommands() []*cli.Command {
 		{
 			Name:  "stack",
 			Usage: common.StackWorkflowDefinition,
+			UsageText: common.WorkflowStackUsageText,
 			Flags: common.FlagsForStackTraceQuery,
 			Action: func(c *cli.Context) error {
 				return QueryWorkflowUsingStackTrace(c)
@@ -92,7 +94,7 @@ func NewWorkflowCommands() []*cli.Command {
 		{
 			Name:  "signal",
 			Usage: common.SignalWorkflowDefinition,
-			UsageText: "",
+			UsageText: common.WorkflowSignalUsageText,
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:     common.FlagWorkflowID,
@@ -148,6 +150,7 @@ func NewWorkflowCommands() []*cli.Command {
 		{
 			Name:  "count",
 			Usage: common.CountWorkflowDefinition,
+			UsageText: common.WorkflowCountUsageText,
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:     common.FlagQuery,
@@ -241,6 +244,7 @@ func NewWorkflowCommands() []*cli.Command {
 		{
 			Name:  "delete",
 			Usage: common.DeleteWorkflowDefinition,
+			UsageText: common.WorkflowDeleteUsageText,
 			Flags: common.FlagsForExecution,
 			Action: func(c *cli.Context) error {
 				return DeleteWorkflow(c)
@@ -354,6 +358,7 @@ func NewWorkflowCommands() []*cli.Command {
 		{
 			Name:  "trace",
 			Usage: common.TraceWorkflowDefinition,
+			UsageText: common.WorkflowTraceUsageText,
 			Flags: append(common.FlagsForExecution,
 				&cli.IntFlag{
 					Name:     common.FlagDepth,

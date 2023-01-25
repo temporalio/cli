@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/temporalio/cli/common"
 	"github.com/urfave/cli/v2"
 )
 
@@ -53,6 +54,7 @@ func NewCompletionCommands() []*cli.Command {
 		{
 			Name:  "bash",
 			Usage: "bash completion output",
+      UsageText: common.CompletionBashUsageText,
 			Action: func(c *cli.Context) error {
 				fmt.Fprintln(os.Stdout, bash_script)
 				return nil
@@ -61,6 +63,7 @@ func NewCompletionCommands() []*cli.Command {
 		{
 			Name:  "zsh",
 			Usage: "zsh completion output",
+      UsageText: common.CompletionZshUsageText,
 			Action: func(c *cli.Context) error {
 				fmt.Fprintln(os.Stdout, zsh_script)
 				return nil

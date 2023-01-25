@@ -10,6 +10,7 @@ func NewActivityCommands() []*cli.Command {
 		{
 			Name:  "complete",
 			Usage: common.CompleteActivityDefinition,
+			UsageText: common.CompleteActivityUsageText,
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:     common.FlagWorkflowID,
@@ -51,6 +52,7 @@ func NewActivityCommands() []*cli.Command {
 		{
 			Name:  "fail",
 			Usage: common.FailActivityDefinition,
+			UsageText: common.FailActivityUsageText,
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:     common.FlagWorkflowID,

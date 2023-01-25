@@ -14,6 +14,7 @@ func NewSearchAttributeCommands() []*cli.Command {
 		{
 			Name:  "create",
 			Usage: common.CreateSearchAttributeDefinition,
+			UsageText: common.SearchAttributeCreateUsageText,
 			Flags: []cli.Flag{
 				&cli.StringSliceFlag{
 					Name:     common.FlagName,
@@ -41,6 +42,7 @@ func NewSearchAttributeCommands() []*cli.Command {
 		{
 			Name:  "list",
 			Usage: common.ListSearchAttributesDefinition,
+			UsageText: common.SearchAttributeListUsageText,
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:     output.FlagOutput,
@@ -57,6 +59,7 @@ func NewSearchAttributeCommands() []*cli.Command {
 		{
 			Name:  "remove",
 			Usage: common.RemoveSearchAttributesDefinition,
+			UsageText: common.SearchAttributeRemoveUsageText,
 			Flags: []cli.Flag{
 				&cli.StringSliceFlag{
 					Name:     common.FlagName,

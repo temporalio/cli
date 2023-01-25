@@ -21,6 +21,7 @@ func NewEnvCommands() []*cli.Command {
 		{
 			Name:      "get",
 			Usage:     common.GetDefinition,
+			UsageText: common.EnvGetUsageText,
 			Flags:     []cli.Flag{},
 			ArgsUsage: "env_name or env_name.property_name",
 			Action: func(c *cli.Context) error {
@@ -30,6 +31,7 @@ func NewEnvCommands() []*cli.Command {
 		{
 			Name:      "set",
 			Usage:     common.SetDefinition,
+			UsageText: common.EnvSetUsageText,
 			Flags:     []cli.Flag{},
 			ArgsUsage: "env_name.property_name value",
 			Action: func(c *cli.Context) error {
@@ -39,6 +41,7 @@ func NewEnvCommands() []*cli.Command {
 		{
 			Name:      "delete",
 			Usage:     common.DeleteDefinition,
+			UsageText: common.EnvDeleteUsageText,
 			Flags:     []cli.Flag{},
 			ArgsUsage: "env_name or env_name.property_name",
 			Action: func(c *cli.Context) error {
