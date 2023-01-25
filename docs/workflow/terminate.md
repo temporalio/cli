@@ -8,10 +8,10 @@ tags:
 ---
 
 
-The `temporal workflow terminate` command terminates a [Workflow Execution](/concepts/what-is-a-workflow-execution)
+The `temporal workflow terminate` command terminates a [Workflow Execution](/workflows#workflow-execution)
 
-Terminating a running Workflow Execution records a [`WorkflowExecutionTerminated` event]() as the closing Event in the [Event History]().
-Any further [Command]() Tasks cannot be scheduled after running this command.
+Terminating a running Workflow Execution records a [`WorkflowExecutionTerminated` event](/events#workflowexecutionterminated) as the closing Event in the [Event History](/workflows#event-history).
+Any further [Command](/workflows#command) Tasks cannot be scheduled after running this command.
 
 Use the options listed below to change termination behavior.
 Make sure to write the command as follows:

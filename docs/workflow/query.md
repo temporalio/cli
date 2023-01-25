@@ -8,10 +8,10 @@ tags:
 ---
 
 
-The `temporal workflow query` command sends a [Query](/concepts/what-is-a-query) to a [Workflow Execution](/concepts/what-is-a-workflow-execution).
+The `temporal workflow query` command sends a [Query](/workflows#query) to a [Workflow Execution](/workflows#workflow-execution).
 
 Queries can retrieve all or part of the Workflow state within given parameters.
-Queries can also be used on completed [Workflows](/concepts/what-is-a-workflow).
+Queries can also be used on completed [Workflows](/workflows#workflow-execution).
 
 Use the command options listed below to change the information returned by this command.
 Make sure to write the command as follows:

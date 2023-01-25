@@ -8,8 +8,8 @@ tags:
 ---
 
 
-The `temporal workflow start` command starts a new [Workflow Execution](/concepts/what-is-a-workflow-execution).
-When invoked successfully, the Workflow and Run ID are returned immediately after starting the [Workflow](/concepts/what-is-a-workflow).
+The `temporal workflow start` command starts a new [Workflow Execution](/workflows#workflow-execution).
+When invoked successfully, the Workflow and Run ID are returned immediately after starting the [Workflow](/workflows).
 
 Use the command options listed below to change how the Workflow Execution behaves upon starting.
 Make sure to write the command in this format:

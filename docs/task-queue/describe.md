@@ -8,13 +8,17 @@ tags:
 ---
 
 
-The [Server](https://docs.temporal.io/clusters/#temporal-server) records the last time of each poll request.
+The `temporal task-queue describe` command provides [poller](/applcation-development/worker-performance#poller-count) information for a given [Task Queue](/tasks#task-queue).
 
-Poll requests can last up to a minute, so a LastAccessTime under a minute is normal.
-If it's over a minute, then likely either the Worker is at capacity (all [Workflow](https://docs.temporal.io/workflows/) and [Activity](https://docs.temporal.io/activities) slots are full) or it has shut down.
-Once it has been 5 minutes since the last poll request, the Worker is removed from the list.
+The [Server](/clusters#temporal-server) records the last time of each poll request.
+Should `LastAccessTime` exceeds one minute, it's likely that the Worker is at capacity (all Workflow and Activity slots are full) or that the Worker has shut down.
+[Workers](/workers) are removed if 5 minutes have passed since the last poll request.
 
-RatePerSecond is the maximum Activities per second the Worker will execute.
+Use the options listed below to modify what this command returns.
+Make sure to write the command as follows:
+`temporal task-queue describe [command options] [arguments]`
+
+## OPTIONS
 
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.

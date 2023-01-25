@@ -8,5 +8,8 @@ tags:
 ---
 
 
-These commands allow [Schedules](https://docs.temporal.io/workflows/#schedule) to be created, used, and updated.
+Schedule commands allow the user to create, use, and update [Schedules](/workflows#schedule).
+Schedules control when certain Actions for a Workflow Execution are performed, making it a useful tool for automation.
+
+To run a Schedule command, run `temporal schedule [command] [command options] [arguments]`.
 

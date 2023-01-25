@@ -8,8 +8,8 @@ tags:
 ---
 
 
-The `temporal workflow execute` command starts a new [Workflow Execution](/concepts/what-is-a-workflow-execution) and prints its progress.
-The command doesn't finish until the [Workflow](/concepts/what-is-a-workflow) completes.
+The `temporal workflow execute` command starts a new [Workflow Execution](/workflows#workflow-execution) and prints its progress.
+The command doesn't finish until the [Workflow](/workflows) completes.
 
 Single quotes('') are used to wrap input as JSON.
 

@@ -2,13 +2,20 @@
 id: reset-batch
 title: temporal workflow reset-batch
 sidebar_label: reset-batch
-description: Reset a batch of Workflow Executions by reset type: LastWorkflowTask, LastContinuedAsNew, FirstWorkflowTask
+description: Reset a batch of Workflow Executions by reset type: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew
 tags:
 	- cli
 ---
 
 
-Resetting a Workflow allows the process to resume from a certain point without losing your parameters or [Event History](https://docs.temporal.io/workflows/#event-history).
+The `temporal workflow reset-batch` command resets a batch of [Workflow Executions](/workflows#workflow-execution) by `resetType`.
+Resetting a [Workflow](/workflows) allows the process to resume from a certain point without losing your parameters or [Event History](/workflows#event-history).
+
+Use the options listed below to change reset behavior.
+Make sure to write the command as follows:
+`temporal workflow reset-batch [command options] [arguments]`
+
+## OPTIONS
 
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.

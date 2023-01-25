@@ -8,7 +8,14 @@ tags:
 ---
 
 
-A reset allows the Workflow to be resumed from a certain point without losing your parameters or [Event History](https://docs.temporal.io/workflows/#event-history).
+The `temporal workflow reset` command resets a [Workflow Execution](/workflows#workflow-execution).
+A reset allows the Workflow to be resumed from a certain point without losing your parameters or [Event History](/workflows#event-history).
+
+Use the options listed below to change reset behavior.
+Make sure to write the command as follows:
+`temporal workflow reset [command options] [arguments]`
+
+## OPTIONS
 
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.
@@ -64,7 +71,7 @@ Path to private certificate key.
 Provides an override for the target TLS server name.
 
 **--type**
-Event type to which you want to reset: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew
+Event type to which you want to reset: LastWorkflowTask, LastContinuedAsNew, FirstWorkflowTask
 
 **--workflow-id**
 Alias: **-w**

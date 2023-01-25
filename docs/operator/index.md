@@ -8,5 +8,8 @@ tags:
 ---
 
 
-These commands enable operations on [Namespaces](https://docs.temporal.io/namespaces), [Search Attributes](https://docs.temporal.io/visibility#search-attribute), and [Temporal Clusters](https://docs.temporal.io/clusters).
+Operator commands enable actions on [Namespaces](/namespaces), [Search Attributes](/visibility#search-attribute), and [Temporal Clusters](/clusters).
+These actions are performed through subcommands for each Operator area.
+
+To run an Operator command, run `temporal operator [command] [subcommand] [command options] [arguments]`.
 

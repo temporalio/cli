@@ -8,7 +8,7 @@ tags:
 ---
 
 
-The `temporal workflow describe` command shows information about a given [Workflow Execution](/concepts/what-is-a-workflow-execution).
+The `temporal workflow describe` command shows information about a given [Workflow Execution](/workflows#workflow-execution).
 This information can be used to locate Workflow Executions that weren't able to run successfully.
 
 Use the command options listed below to change the information returned by this command.

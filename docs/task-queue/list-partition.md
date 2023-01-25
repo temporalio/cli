@@ -2,7 +2,7 @@
 id: list-partition
 title: temporal task-queue list-partition
 sidebar_label: list-partition
-description: Lists the [Task Queue's](https://docs.temporal.io/tasks/#task-queue) partitions and which matching node they are assigned to.
+description: Lists the Task Queue's partitions and which matching node they are assigned to.
 tags:
 	- cli
 ---
