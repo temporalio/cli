@@ -51,16 +51,18 @@ complete -o bashdefault -o default -o nospace -F _cli_bash_autocomplete temporal
 func NewCompletionCommands() []*cli.Command {
 	return []*cli.Command{
 		{
-			Name:  "bash",
-			Usage: "bash completion output",
+			Name:      "bash",
+			Usage:     "bash completion output",
+			UsageText: "source <(temporal completion bash)",
 			Action: func(c *cli.Context) error {
 				fmt.Fprintln(os.Stdout, bash_script)
 				return nil
 			},
 		},
 		{
-			Name:  "zsh",
-			Usage: "zsh completion output",
+			Name:      "zsh",
+			Usage:     "zsh completion output",
+			UsageText: "source <(temporal completion zsh)",
 			Action: func(c *cli.Context) error {
 				fmt.Fprintln(os.Stdout, zsh_script)
 				return nil
