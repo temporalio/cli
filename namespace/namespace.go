@@ -36,7 +36,6 @@ func NewNamespaceCommands() []*cli.Command {
 		},
 		{
 			Name:      "create",
-			Aliases:   []string{"register"},
 			Usage:     "Register a new Namespace",
 			UsageText: common.NamespaceCreateUsageText,
 			Flags:     createNamespaceFlags,

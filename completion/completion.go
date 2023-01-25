@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/temporalio/cli/common"
 	"github.com/urfave/cli/v2"
 )
 
@@ -52,30 +51,18 @@ complete -o bashdefault -o default -o nospace -F _cli_bash_autocomplete temporal
 func NewCompletionCommands() []*cli.Command {
 	return []*cli.Command{
 		{
-<<<<<<< auto-generate-cli-docs
-			Name:  "bash",
-			Usage: "bash completion output",
-      UsageText: common.CompletionBashUsageText,
-=======
 			Name:      "bash",
 			Usage:     "bash completion output",
 			UsageText: "source <(temporal completion bash)",
->>>>>>> main
 			Action: func(c *cli.Context) error {
 				fmt.Fprintln(os.Stdout, bash_script)
 				return nil
 			},
 		},
 		{
-<<<<<<< auto-generate-cli-docs
-			Name:  "zsh",
-			Usage: "zsh completion output",
-      UsageText: common.CompletionZshUsageText,
-=======
 			Name:      "zsh",
 			Usage:     "zsh completion output",
 			UsageText: "source <(temporal completion zsh)",
->>>>>>> main
 			Action: func(c *cli.Context) error {
 				fmt.Fprintln(os.Stdout, zsh_script)
 				return nil
