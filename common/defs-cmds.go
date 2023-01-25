@@ -353,23 +353,95 @@ Make sure to write the command as follows:
 
 ## OPTIONS
 `
-const ScheduleCreateUsageText = ``
+const ScheduleCreateUsageText = `The `+"`"+`temporal schedule create`+"`"+` command creates a new [Schedule](/workflows#schedule).
+Newly created Schedules return a Schedule ID to be used in other Schedule commands.
 
-const ScheduleUpdateUsageText = ``
+Schedules need to follow a format like the example shown here:
+`+"`"+``+"`"+``+"`"+`
+temporal schedule create \
+		--sid 'your-schedule-id' \
+		--cron '3 11 * * Fri' \
+		--wid 'your-workflow-id' \
+		--tq 'your-task-queue' \
+		--type 'YourWorkflowType' 
+`+"`"+``+"`"+``+"`"+`
 
-const ScheduleToggleUsageText = ``
+Any combination of `+"`"+`--cal`+"`"+`, `+"`"+`--interval`+"`"+`, and `+"`"+`--cron`+"`"+` is supported.
+Actions will be executed at any time specified in the Schedule.
 
-const ScheduleTriggerUsageText = ``
+Use the options provided below to change the command's behavior.
 
-const ScheduleBackfillUsageText = ``
+## OPTIONS
+`
+const ScheduleUpdateUsageText = `The `+"`"+`temporal schedule update`+"`"+` command updates an existing [Schedule](/workflows#schedule).
 
-const ScheduleDescribeUsageText = ``
+Like `+"`"+`temporal schedule create`+"`"+`, updated Schedules need to follow a certain format:
+`+"`"+``+"`"+``+"`"+`
+temporal schedule update 			\
+		--sid 'your-schedule-id' 	\
+		--cron '3 11 * * Fri' 		\
+		--wid 'your-workflow-id' 	\
+		--tq 'your-task-queue' 		\
+		--type 'YourWorkflowType' 
+`+"`"+``+"`"+``+"`"+`
 
-const ScheduleDeleteUsageText = ``
+Updating a Schedule takes the given options and replaces the entire configuration of the Schedule with what's provided. 
+If you only change one value of the Schedule, be sure to provide the other unchanged fields to prevent them from being overwritten.
 
-const ScheduleListUsageText = ``
+Use the options provided below to change the command's behavior.
 
-const SearchAttributeCreateUsageText = ``
+## OPTIONS
+`
+
+const ScheduleToggleUsageText = `The `+"`"+`temporal schedule toggle`+"`"+` command can pause and unpause a [Schedule](/workflows#schedule).
+
+Toggling a Schedule requires a reason to be entered on the command line. 
+Use `+"`"+`--reason`+"`"+` to note the issue leading to the pause or unpause.
+
+Schedule toggles are passed in this format:
+`+"`"+` temporal schedule toggle --sid 'your-schedule-id' --pause --reason "paused because the database is down"`+"`"+`
+`+"`"+`temporal schedule toggle --sid 'your-schedule-id' --unpause --reason "the database is back up"`+"`"+`
+
+Use the options provided below to change this command's behavior.
+
+## OPTIONS
+`
+
+const ScheduleTriggerUsageText = `The `+"`"+`temporal schedule trigger`+"`"+` command triggers an immediate action with a given Schedule.
+By default, this action is subject to the Overlap Policy of the Schedule.
+
+`+"`"+`temporal schedule trigger`+"`"+` can be used to start a Workflow Run immediately.
+`+"`"+`temporal schedule trigger --sid 'your-schedule-id'`+"`"+` 
+
+The Overlap Policy of the Schedule can be overridden as well.
+`+"`"+`temporal schedule trigger --sid 'your-schedule-id' --overlap-policy 'AllowAll'`+"`"+`
+
+Use the options provided below to change this command's behavior.
+
+## OPTIONS
+`
+
+const ScheduleBackfillUsageText = `The `+"`"+`temporal schedule backfill`+"`"+` command executes Actions ahead of their specified time range. 
+Backfilling can be used to fill in Workflow Runs from a time period when the Schedule was paused, or from before the Schedule was created. 
+
+`+"`"+``+"`"+``+"`"+`
+temporal schedule backfill --sid 'your-schedule-id' \
+		--overlap-policy 'BufferAll' 				\
+		--start-time '2022-05-0101T00:00:00Z'		\
+		--end-time '2022-05-31T23:59:59Z'
+`+"`"+``+"`"+``+"`"+`
+
+Use the options provided below to change this command's behavior.
+
+## OPTIONS
+`
+const ScheduleDescribeUsageText = `The `+"`"+`temporal schedule describe`+"`"+` command`
+
+const ScheduleDeleteUsageText = `The `+"`"+`temporal schedule delete`+"`"+` command`
+
+const ScheduleListUsageText = `The `+"`"+`temporal schedule list`+"`"+` command`
+
+const SearchAttributeCreateUsageText = `The `+"`"+`temporal search-attribute create`+"`"+` command`
 
 const SearchAttributeListUsageText = ``
 
