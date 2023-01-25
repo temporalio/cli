@@ -32,7 +32,7 @@ Set the log formatting. Options: ["json", "pretty"]. (default: json)
 Set the log level. Options: ["debug" "info" "warn" "error" "fatal"]. (default: info)
 
 **--metrics-port**
-Port for /metrics. (default: 0)
+Port for /metrics (default: 0)
 
 **--namespace**
 Alias: **-n**

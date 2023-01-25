@@ -8,6 +8,14 @@ tags:
 ---
 
 
+The `temporal operator search-attrbute list` command displays a list of all [Search Attributes](/visibility#search-attribute) that can be used in ` temporal workflow list --query`.
+
+Use the options listed below to change the command's behavior.
+Make sure to write the command as follows:
+`temporal operator search-attribute list [command options] [arguments]`
+
+## OPTIONS
+
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.
 

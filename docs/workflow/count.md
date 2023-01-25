@@ -8,6 +8,15 @@ tags:
 ---
 
 
+The `temporal workflow count` command returns a count of [Workflow Executions](/workflows#workflow-execution).
+This command requires Elasticsearch to be enabled.
+
+Use the options listed below to change the command's behavior.
+Make sure to write the command as follows:
+`temporal workflow count [command options] [arguments]`
+
+## OPTIONS
+
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.
 

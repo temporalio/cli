@@ -8,6 +8,14 @@ tags:
 ---
 
 
+The `temporal operator namespace create` command creates a new [Namespace](/namespaces).
+
+Use the options listed below to change the command's behavior.
+Make sure to write the command as follows:
+`temporal operator namespace create [command options] [arguments]`
+
+## OPTIONS
+
 **--active-cluster**
 Active cluster name
 

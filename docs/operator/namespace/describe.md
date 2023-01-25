@@ -8,6 +8,15 @@ tags:
 ---
 
 
+The `temporal operator namespace describe` command provides a description of a [Namespace](/namespaces).
+Namespaces can be identified by name or Namespace ID.
+
+Use the options listed below to change the command's output.
+Make sure to write the command as follows:
+`temporal operator namespace describe [command options] [arguments]`
+
+## OPTIONS
+
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.
 

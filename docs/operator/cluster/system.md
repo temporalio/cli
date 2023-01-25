@@ -8,6 +8,14 @@ tags:
 ---
 
 
+The `temporal operator cluster system` command provides information about the system the Cluster is running on.
+
+Use the options listed below to change this command's output.
+Make sure to write the command as follows:
+`temporal operator cluster system [command options] [arguments]`
+
+## OPTIONS
+
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.
 

@@ -2,11 +2,20 @@
 id: describe
 title: temporal schedule describe
 sidebar_label: describe
-description: Get schedule configuration and current state
+description: Get schedule configuration and current state.
 tags:
 	- cli
 ---
 
+
+The `temporal schedule describe` command shows the current [Schedule](#workflows#schedule) configuration.
+This command also provides information about past, current, and future [Workflow Runs](/workflows#run-id).
+
+`temporal schedule describe --sid 'your-schedule-id' [command options] [arguments]`
+
+Use the options below to change this command's output.
+
+## OPTIONS
 
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.
@@ -41,7 +50,7 @@ Alias: **-o**
 format output as: table, json, card. (default: table)
 
 **--raw**
-Print raw data as json (prefer this over -o json for scripting)
+Print raw data as json (prefer this over -o json for scripting).
 
 **--schedule-id**
 Alias: **-s**

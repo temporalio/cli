@@ -8,6 +8,14 @@ tags:
 ---
 
 
+The `temporal task-queue list-partition` command displays the partitions of a [Task Queue](/tasks#task-queue), along with the matching node they are assigned to.
+
+Use the options listed below to change the command's behavior.
+Make sure to write the command as follows:
+`temporal task-queue list-partition [command options] [arguments]`
+
+## OPTIONS
+
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.
 

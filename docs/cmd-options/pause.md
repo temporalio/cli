@@ -7,4 +7,4 @@ tags:
 	- cli
 ---
 
- Pauses the schedule
+ Pauses the schedule.

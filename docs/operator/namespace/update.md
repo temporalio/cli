@@ -8,6 +8,14 @@ tags:
 ---
 
 
+The `temporal operator namespace update` command updates a given [Namespace](/namespaces).
+
+Use the options listed below to change the command's behavior.
+Make sure to write the command as follows:
+`temporal operator namespace update [command options] [arguments]`
+
+## OPTIONS
+
 **--active-cluster**
 Active cluster name
 

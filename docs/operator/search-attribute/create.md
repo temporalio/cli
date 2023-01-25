@@ -8,6 +8,15 @@ tags:
 ---
 
 
+The `temporal operator search-attribute create` command adds one or more custom [Search Attributes](/visibility#search-attribute).
+These Search Attributes can be used to [filter a list](/visibility#list-filter) of [Workflow Executions](/workflows#workflow-execution) that contain the given Search Attributes in their metadata.
+
+Use the options listed below to change the command's behavior.
+Make sure to write the command as follows:
+`temporal operator search-attribute create [command options] [arguments]`
+
+## OPTIONS
+
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.
 

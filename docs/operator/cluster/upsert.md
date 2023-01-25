@@ -8,6 +8,14 @@ tags:
 ---
 
 
+The `temporal operator cluster upsert` command allows the user to add or update a remote [Cluster](/clusters).
+
+Use the options listed below to change the behavior of this command.
+Make sure to write the command as follows:
+`temporal operator cluster upsert [command options] [arguments]`
+
+## OPTIONS
+
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.
 

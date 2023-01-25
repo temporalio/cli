@@ -8,6 +8,14 @@ tags:
 ---
 
 
+The `temporal workflow delete` command deletes the specified [Workflow Execution](/workflows#workflow-execution).
+
+Use the options listed below to change the command's behavior.
+Make sure to write the command as follows:
+`temporal workflow delete [command options] [arguments]`
+
+## OPTIONS
+
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.
 

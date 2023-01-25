@@ -8,6 +8,14 @@ tags:
 ---
 
 
+The `temporal activity complete` command completes an [Activity Execution](/activities#activity-execution).
+
+Use the options listed below to change the behavior of this command.
+Make sure to write the command as follows:
+`temporal activity complete [command options] [arguments]`
+
+## OPTIONS
+
 **--activity-id**
 Identifies the Activity to be completed.
 

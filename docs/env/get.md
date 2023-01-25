@@ -8,6 +8,14 @@ tags:
 ---
 
 
+The `temporal env get` command prints the environmental properties for the environment in use.
+
+Use the options listed below to change the command's behavior.
+Make sure to write the command as follows:
+`temporal env get [command options] [arguments]`
+
+## OPTIONS
+
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.
 

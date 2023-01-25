@@ -8,3 +8,5 @@ tags:
 ---
 
 
+source <(temporal completion bash)
+

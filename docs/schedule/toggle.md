@@ -2,11 +2,24 @@
 id: toggle
 title: temporal schedule toggle
 sidebar_label: toggle
-description: Pauses or unpauses a schedule
+description: Pauses or unpauses a schedule.
 tags:
 	- cli
 ---
 
+
+The `temporal schedule toggle` command can pause and unpause a [Schedule](/workflows#schedule).
+
+Toggling a Schedule requires a reason to be entered on the command line.
+Use `--reason` to note the issue leading to the pause or unpause.
+
+Schedule toggles are passed in this format:
+` temporal schedule toggle --sid 'your-schedule-id' --pause --reason "paused because the database is down"`
+`temporal schedule toggle --sid 'your-schedule-id' --unpause --reason "the database is back up"`
+
+Use the options provided below to change this command's behavior.
+
+## OPTIONS
 
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.
@@ -34,10 +47,10 @@ Alias: **-n**
 Identifies a Namespace in the Temporal Workflow. (default: default)
 
 **--pause**
-Pauses the schedule
+Pauses the schedule.
 
 **--reason**
-Free-form text to describe reason for pause/unpause (default: (no reason provided))
+Free-form text to describe reason for pause/unpause. (default: (no reason provided))
 
 **--schedule-id**
 Alias: **-s**
@@ -59,5 +72,5 @@ Path to private certificate key.
 Provides an override for the target TLS server name.
 
 **--unpause**
-Unpauses the schedule
+Unpauses the schedule.
 

@@ -8,6 +8,14 @@ tags:
 ---
 
 
+The `temporal workflow trace` command tracks the progress of a [Workflow Execution](/workflows#workflow-execution) and any  [Child Workflows](/workflows#child-workflow) it generates.
+
+Use the options listed below to change the command's behavior.
+Make sure to write the command as follows:
+`temporal workflow trace [command options] [arguments]`
+
+## OPTIONS
+
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.
 

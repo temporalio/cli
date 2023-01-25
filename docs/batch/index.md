@@ -2,7 +2,7 @@
 id: index
 title: temporal batch
 sidebar_label: batch
-description: Operations performed on Batch jobs. Use Workflow commands with --query flag to start batch jobs.
+description: Operations performed on Batch jobs.
 tags:
 	- cli
 ---

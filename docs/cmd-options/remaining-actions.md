@@ -7,4 +7,4 @@ tags:
 	- cli
 ---
 
- Total number of actions allowed (default: 0)
+ Total number of actions allowed. (default: 0)

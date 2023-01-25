@@ -7,4 +7,4 @@ tags:
 	- cli
 ---
 
- Set a memo from a file. Each line should follow the format key=value. Use valid JSON formats for value
+ Set a memo from a file. Each line should follow the format key=value. Use valid JSON formats for value.

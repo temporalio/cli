@@ -8,6 +8,14 @@ tags:
 ---
 
 
+The `temporal workflow show` command provides the [Event History](/workflows#event-history) for a specified [Workflow Execution](/workflows#workflow-execution).
+
+Use the options listed below to change the command's behavior.
+Make sure to write the command as follows:
+`temporal workflow show [command options] [arguments]`
+
+## OPTIONS
+
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.
 

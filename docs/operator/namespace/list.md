@@ -8,6 +8,14 @@ tags:
 ---
 
 
+The `temporal operator namespace list` command lists all [Namespaces](/namespaces) on the [Server](/clusters#frontend-server).
+
+Use the options listed below to change the command's output.
+Make sure to write the command as follows:
+`temporal operator namespace list [command options] [arguments]`
+
+## OPTIONS
+
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.
 

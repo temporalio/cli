@@ -8,6 +8,14 @@ tags:
 ---
 
 
+The `temporal env set` command sets the value for an environmental property.
+
+Use the options listed below to change the command's behavior.
+Make sure to write the command as follows:
+`temporal env set [command options] [arguments]`
+
+## OPTIONS
+
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.
 

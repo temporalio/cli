@@ -7,4 +7,4 @@ tags:
 	- cli
 ---
 
- Unpauses the schedule
+ Unpauses the schedule.

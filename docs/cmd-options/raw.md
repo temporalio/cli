@@ -7,4 +7,4 @@ tags:
 	- cli
 ---
 
- Print raw data as json (prefer this over -o json for scripting)
+ Print raw data as json (prefer this over -o json for scripting).

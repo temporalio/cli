@@ -7,4 +7,4 @@ tags:
 	- cli
 ---
 
- Port for /metrics. (default: 0)
+ Port for /metrics (default: 0)

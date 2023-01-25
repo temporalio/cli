@@ -7,3 +7,5 @@ tags:
 	- cli
 ---
 
+
+source <(temporal completion zsh)

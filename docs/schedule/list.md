@@ -2,11 +2,20 @@
 id: list
 title: temporal schedule list
 sidebar_label: list
-description: Lists schedules
+description: Lists schedules.
 tags:
 	- cli
 ---
 
+
+The `temporal schedule list` command lists all [Schedule](/workflows#schedule) configurations.
+Listing Schedules in [Standard Visibility](/visibility#standard-visibility) will only provide Schedule IDs.
+
+`temporal schedule list [command options] [arguments]`
+
+Use the options below to change the behavior of this command.
+
+## OPTIONS
 
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.

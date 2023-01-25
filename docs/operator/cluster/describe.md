@@ -8,6 +8,14 @@ tags:
 ---
 
 
+The `temporal operator cluster describe` command shows information about the [Cluster](/clusters).
+
+Use the options listed below to change the output of this command.
+Make sure to write the command as follows:
+`temporal operator cluster describe [command options] [arguments]`
+
+## OPTIONS
+
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.
 

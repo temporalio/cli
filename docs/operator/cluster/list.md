@@ -8,6 +8,14 @@ tags:
 ---
 
 
+The `temporal operator cluster list` command prints a list of all remote [Clusters](/clusters) on the system.
+
+Use the options listed below to change the command's behavior.
+Make sure to write the command as follows:
+`temporal operator cluster list [command options] [arguments]`
+
+## OPTIONS
+
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.
 

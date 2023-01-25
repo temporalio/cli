@@ -46,7 +46,7 @@ Alias: **-n**
 Identifies a Namespace in the Temporal Workflow. (default: default)
 
 **--reapply-type**
-Event types to reapply after the reset point: , Signal, None. (default: All)
+Event types to reapply after the reset point: Signal, None, . (default: All)
 
 **--reason**
 Reason to reset.
@@ -71,7 +71,7 @@ Path to private certificate key.
 Provides an override for the target TLS server name.
 
 **--type**
-Event type to which you want to reset: LastWorkflowTask, LastContinuedAsNew, FirstWorkflowTask
+Event type to which you want to reset: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew
 
 **--workflow-id**
 Alias: **-w**

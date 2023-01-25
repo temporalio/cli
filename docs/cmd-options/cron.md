@@ -7,4 +7,4 @@ tags:
 	- cli
 ---
 
- Calendar specification as cron string, e.g. "30 2 * * 5" or "@daily"
+ Calendar specification as cron string, e.g. "30 2 * * 5" or "@daily".

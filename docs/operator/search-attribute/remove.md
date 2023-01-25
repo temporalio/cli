@@ -8,6 +8,16 @@ tags:
 ---
 
 
+The `temporal operator search-attribute remove` command removes custom [Search Attribute](/visibility#search-attribute) metadata.
+This command does not remove custom Search Attributes from Elasticsearch.
+The index schema is not modified.
+
+Use the options listed below to change the command's behavior.
+Make sure to write the command as follows:
+`temporal operator search-attribute remove [command options] [arguments]`
+
+## OPTIONS
+
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.
 

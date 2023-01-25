@@ -8,6 +8,14 @@ tags:
 ---
 
 
+The `temporal operator cluster remove` command removes a remote [Cluster](/clusters) from the system.
+
+Use the options listed below to change the command's behavior.
+Make sure to write the command as follows:
+`temporal operator cluster remove [command options] [arguments]`
+
+## OPTIONS
+
 **--address**
 The host and port (formatted as host:port) for the Temporal Frontend Service.
 
