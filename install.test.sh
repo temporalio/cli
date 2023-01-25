@@ -40,7 +40,7 @@ success() {
 
 main() {
   sh ./install.sh
-  . "$HOME"/.temporalio/env
+  export PATH="$PATH:$HOME/.temporalio/bin"
 
   local _colored=false
   if [ -t 2 ]; then
