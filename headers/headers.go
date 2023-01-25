@@ -17,7 +17,7 @@ const (
 const (
 	ClientNameCLI = "temporal-cli"
 
-	CLIVersion = "0.2.0" // TODO switch version to "1.18.1.0" once server accepts new format
+	CLIVersion = "0.3.0" // TODO switch version to "1.18.1.0" once server accepts new format
 
 	// SupportedServerVersions is used by CLI and inter role communication.
 	SupportedServerVersions = ">=1.0.0 <2.0.0"
