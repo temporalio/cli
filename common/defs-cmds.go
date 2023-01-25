@@ -283,11 +283,6 @@ Make sure to write the command as follows:
 
 ## OPTIONS
 `
-
-const CompletionBashUsageText = ``
-
-const CompletionZshUsageText = ``
-
 const EnvGetUsageText = `The `+"`"+`temporal env get`+"`"+` command prints the environmental properties for the environment in use.
 
 Use the options listed below to change the command's behavior.
@@ -407,7 +402,7 @@ Use the options provided below to change this command's behavior.
 ## OPTIONS
 `
 
-const ScheduleTriggerUsageText = `The `+"`"+`temporal schedule trigger`+"`"+` command triggers an immediate action with a given Schedule.
+const ScheduleTriggerUsageText = `The `+"`"+`temporal schedule trigger`+"`"+` command triggers an immediate action with a given [Schedule](/workflows#schedule).
 By default, this action is subject to the Overlap Policy of the Schedule.
 
 `+"`"+`temporal schedule trigger`+"`"+` can be used to start a Workflow Run immediately.
@@ -422,7 +417,7 @@ Use the options provided below to change this command's behavior.
 `
 
 const ScheduleBackfillUsageText = `The `+"`"+`temporal schedule backfill`+"`"+` command executes Actions ahead of their specified time range. 
-Backfilling can be used to fill in Workflow Runs from a time period when the Schedule was paused, or from before the Schedule was created. 
+Backfilling can be used to fill in [Workflow Runs](/workflows#run-id) from a time period when the Schedule was paused, or from before the Schedule was created. 
 
 `+"`"+``+"`"+``+"`"+`
 temporal schedule backfill --sid 'your-schedule-id' \
@@ -435,28 +430,119 @@ Use the options provided below to change this command's behavior.
 
 ## OPTIONS
 `
-const ScheduleDescribeUsageText = `The `+"`"+`temporal schedule describe`+"`"+` command`
+const ScheduleDescribeUsageText = `The `+"`"+`temporal schedule describe`+"`"+` command shows the current [Schedule](#workflows#schedule) configuration.
+This command also provides information about past, current, and future [Workflow Runs](/workflows#run-id).
 
-const ScheduleDeleteUsageText = `The `+"`"+`temporal schedule delete`+"`"+` command`
+`+"`"+`temporal schedule describe --sid 'your-schedule-id' [command options] [arguments]`+"`"+`
 
-const ScheduleListUsageText = `The `+"`"+`temporal schedule list`+"`"+` command`
+Use the options below to change this command's output.
 
-const SearchAttributeCreateUsageText = `The `+"`"+`temporal search-attribute create`+"`"+` command`
+## OPTIONS
+`
+const ScheduleDeleteUsageText = `The `+"`"+`temporal schedule delete`+"`"+` command deletes a [Schedule](/workflows#schedule).
+Deleting a Schedule does not affect any [Workflows](/workflows) started by the Schedule.
 
-const SearchAttributeListUsageText = ``
+[Workflow Executions](/workflows#workflow-execution) started by Schedules can be cancelled or terminated like other Workflow Executions.
+However, Workflow Executions started by a Schedule can be identified by their [Search Attributes](/visibility#search-attribute), making them targetable by batch command for termination.
 
-const SearchAttributeRemoveUsageText = ``
+`+"`"+`temporal schedule delete --sid 'your-schedule-id' [command options] [arguments]`+"`"+`
 
-const TaskQueueListPartitionUsageText = ``
+Use the options below to change the behavior of this command.
 
-const WorkflowShowUsageText = ``
+## OPTIONS
+`
+const ScheduleListUsageText = `The `+"`"+`temporal schedule list`+"`"+` command lists all [Schedule](/workflows#schedule) configurations.
+Listing Schedules in [Standard Visibility](/visibility#standard-visibility) will only provide Schedule IDs.
 
-const WorkflowStackUsageText = ``
+`+"`"+`temporal schedule list [command options] [arguments]`+"`"+`
 
-const WorkflowSignalUsageText = ``
+Use the options below to change the behavior of this command.
 
-const WorkflowCountUsageText = ``
+## OPTIONS
+`
+const SearchAttributeCreateUsageText = `The `+"`"+`temporal operator search-attribute create`+"`"+` command adds one or more custom [Search Attributes](/visibility#search-attribute).
+These Search Attributes can be used to [filter a list](/visibility#list-filter) of [Workflow Executions](/workflows#workflow-execution) that contain the given Search Attributes in their metadata.
 
-const WorkflowDeleteUsageText = ``
+Use the options listed below to change the command's behavior.
+Make sure to write the command as follows:
+`+"`"+`temporal operator search-attribute create [command options] [arguments]`+"`"+`
 
-const WorkflowTraceUsageText = ``
+## OPTIONS
+`
+const SearchAttributeListUsageText = `The `+"`"+`temporal operator search-attrbute list`+"`"+` command displays a list of all [Search Attributes](/visibility#search-attribute) that can be used in `+"`"+` temporal workflow list --query`+"`"+`.
+
+Use the options listed below to change the command's behavior.
+Make sure to write the command as follows:
+`+"`"+`temporal operator search-attribute list [command options] [arguments]`+"`"+`
+
+## OPTIONS
+`
+const SearchAttributeRemoveUsageText = `The `+"`"+`temporal operator search-attribute remove`+"`"+` command removes custom [Search Attribute](/visibility#search-attribute) metadata.
+This command does not remove custom Search Attributes from Elasticsearch.
+The index schema is not modified.
+
+Use the options listed below to change the command's behavior.
+Make sure to write the command as follows:
+`+"`"+`temporal operator search-attribute remove [command options] [arguments]`+"`"+`
+
+## OPTIONS
+`
+const TaskQueueListPartitionUsageText = `The `+"`"+`temporal task-queue list-partition`+"`"+` command displays the partitions of a [Task Queue](/tasks#task-queue), along with the matching node they are assigned to.
+
+Use the options listed below to change the command's behavior.
+Make sure to write the command as follows:
+`+"`"+`temporal task-queue list-partition [command options] [arguments]`+"`"+`
+
+## OPTIONS
+`
+const WorkflowShowUsageText = `The `+"`"+`temporal workflow show`+"`"+` command provides the [Event History](/workflows#event-history) for a specified [Workflow Execution](/workflows#workflow-execution).
+
+Use the options listed below to change the command's behavior.
+Make sure to write the command as follows:
+`+"`"+`temporal workflow show [command options] [arguments]`+"`"+`
+
+## OPTIONS
+`
+const WorkflowStackUsageText = `The `+"`"+`temporal workflow stack`+"`"+` command queries a [Workflow Execution](/workflows#workflow-execution) with `+"`"+`--stack-trace`+"`"+` as the [Query](/workflows#stack-trace-query) type.
+Returning the stack trace of all the threads owned by a Workflow Execution can be great for troubleshooting in production.
+
+Use the options listed below to change the command's behavior.
+Make sure to write the command as follows:
+`+"`"+`temporal workflow stack [command options] [arguments]`+"`"+`
+
+## OPTIONS
+`
+const WorkflowSignalUsageText = `The `+"`"+`temporal workflow signal`+"`"+` command is used to [Signal](/workflows#signal) a [Workflow Execution](/workflows#workflow-execution) by ID or [List Filter](/visibility#list-filter).
+
+Use the options listed below to change the command's behavior.
+Make sure to write the command as follows:
+`+"`"+`temporal workflow signal [command options] [arguments]`+"`"+`
+
+## OPTIONS
+`
+const WorkflowCountUsageText = `The `+"`"+`temporal workflow count`+"`"+` command returns a count of [Workflow Executions](/workflows#workflow-execution).
+This command requires Elasticsearch to be enabled.
+
+Use the options listed below to change the command's behavior.
+Make sure to write the command as follows:
+`+"`"+`temporal workflow count [command options] [arguments]`+"`"+`
+
+## OPTIONS
+`
+const WorkflowDeleteUsageText = `The `+"`"+`temporal workflow delete`+"`"+` command deletes the specified [Workflow Execution](/workflows#workflow-execution).
+
+Use the options listed below to change the command's behavior.
+Make sure to write the command as follows:
+`+"`"+`temporal workflow delete [command options] [arguments]`+"`"+`
+
+## OPTIONS
+`
+
+const WorkflowTraceUsageText = `The `+"`"+`temporal workflow trace`+"`"+` command tracks the progress of a [Workflow Execution](/workflows#workflow-execution) and any  [Child Workflows](/workflows#child-workflow) it generates.
+
+Use the options listed below to change the command's behavior.
+Make sure to write the command as follows:
+`+"`"+`temporal workflow trace [command options] [arguments]`+"`"+`
+
+## OPTIONS
+`
