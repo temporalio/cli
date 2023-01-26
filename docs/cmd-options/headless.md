@@ -7,4 +7,5 @@ tags:
 	- cli
 ---
 
- Disable the Web UI.
+Alias: **-f**
+Disable the Web UI.

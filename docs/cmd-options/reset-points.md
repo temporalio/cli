@@ -7,4 +7,5 @@ tags:
 	- cli
 ---
 
- Only show Workflow Events that are eligible for reset.
+Alias: **-o**
+Only show Workflow Events that are eligible for reset.

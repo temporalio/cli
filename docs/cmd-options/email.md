@@ -7,4 +7,5 @@ tags:
 	- cli
 ---
 
- Owner email
+Alias: **-n**
+Owner email

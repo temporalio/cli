@@ -7,5 +7,5 @@ tags:
 	- cli
 ---
 
-Alias: **-o**="": format output as: table
- format output as: table, json, card. (default: table)
+Alias: **-o**
+format output as: table, json, card. (default: table)

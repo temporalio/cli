@@ -7,4 +7,5 @@ tags:
 	- cli
 ---
 
- Overlap policy: Skip, BufferOne, BufferAll, CancelOther, TerminateOther, AllowAll.
+Alias: **-n**
+Overlap policy: Skip, BufferOne, BufferAll, CancelOther, TerminateOther, AllowAll.

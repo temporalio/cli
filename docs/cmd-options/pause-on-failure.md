@@ -7,4 +7,5 @@ tags:
 	- cli
 ---
 
- Pause schedule after any workflow failure.
+Alias: **-n**
+Pause schedule after any workflow failure.

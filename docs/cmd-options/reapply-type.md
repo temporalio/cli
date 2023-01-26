@@ -7,4 +7,5 @@ tags:
 	- cli
 ---
 
- Event types to reapply after the reset point: , Signal, None. (default: All)
+Alias: **-n**
+Event types to reapply after the reset point: None, , Signal. (default: All)

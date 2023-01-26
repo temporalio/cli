@@ -7,4 +7,5 @@ tags:
 	- cli
 ---
 
- Pauses the schedule.
+Alias: **-n**
+Pauses the schedule.

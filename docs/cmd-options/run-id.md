@@ -7,5 +7,5 @@ tags:
 	- cli
 ---
 
-Alias: **-r**="": Identifies the current Workflow Run.
- Identifies the current Workflow Run.
+Alias: **-r**
+Identifies the current Workflow Run.

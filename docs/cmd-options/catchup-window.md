@@ -7,4 +7,5 @@ tags:
 	- cli
 ---
 
- Maximum allowed catch-up time if server is down.
+Alias: **-w**
+Maximum allowed catch-up time if server is down.

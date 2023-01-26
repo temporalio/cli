@@ -7,4 +7,5 @@ tags:
 	- cli
 ---
 
- Set Search Attribute on a schedule. Format: key=value. Use valid JSON formats for value.
+Alias: **-s**
+Set Search Attribute on a schedule. Format: key=value. Use valid JSON formats for value.

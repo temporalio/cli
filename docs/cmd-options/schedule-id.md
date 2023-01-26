@@ -7,5 +7,5 @@ tags:
 	- cli
 ---
 
-Alias: **-s**="": Schedule Id
- Schedule Id
+Alias: **-s**
+Schedule Id

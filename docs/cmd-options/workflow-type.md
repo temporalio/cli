@@ -7,4 +7,5 @@ tags:
 	- cli
 ---
 
- Workflow type name.
+Alias: **-w**
+Workflow type name.

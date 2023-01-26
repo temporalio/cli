@@ -7,4 +7,5 @@ tags:
 	- cli
 ---
 
- Path to private certificate key.
+Alias: **-n**
+Path to private certificate key.

@@ -7,4 +7,5 @@ tags:
 	- cli
 ---
 
- Workflow Execution retention
+Alias: **-n**
+Workflow Execution retention

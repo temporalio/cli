@@ -7,4 +7,5 @@ tags:
 	- cli
 ---
 
- Number of items to print. (default: 0)
+Alias: **-n**
+Number of items to print. (default: 0)

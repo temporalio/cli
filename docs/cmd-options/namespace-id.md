@@ -7,4 +7,5 @@ tags:
 	- cli
 ---
 
- Namespace Id
+Alias: **-n**
+Namespace Id

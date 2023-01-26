@@ -7,4 +7,5 @@ tags:
 	- cli
 ---
 
- Set the log level. Options: ["debug" "info" "warn" "error" "fatal"]. (default: info)
+Alias: **-f**
+Set the log level. Options: ["debug" "info" "warn" "error" "fatal"]. (default: info)

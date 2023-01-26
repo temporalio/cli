@@ -7,4 +7,5 @@ tags:
 	- cli
 ---
 
- Number of goroutines to run in parallel. Each goroutine processes one line for every second. (default: 1)
+Alias: **-w**
+Number of goroutines to run in parallel. Each goroutine processes one line for every second. (default: 1)

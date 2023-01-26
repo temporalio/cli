@@ -7,4 +7,5 @@ tags:
 	- cli
 ---
 
- Optionally specify history archival URI (cannot be changed after first time archival is enabled)
+Alias: **-n**
+Optionally specify history archival URI (cannot be changed after first time archival is enabled)

@@ -7,4 +7,5 @@ tags:
 	- cli
 ---
 
- Sets the authorization header on requests to the Codec Server.
+Alias: **-n**
+Sets the authorization header on requests to the Codec Server.

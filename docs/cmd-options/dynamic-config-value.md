@@ -7,4 +7,5 @@ tags:
 	- cli
 ---
 
- Dynamic config value, as KEY=JSON_VALUE (string values need quotes).
+Alias: **-f**
+Dynamic config value, as KEY=JSON_VALUE (string values need quotes).

@@ -7,4 +7,5 @@ tags:
 	- cli
 ---
 
- Disables TLS host name verification if already enabled.
+Alias: **-n**
+Disables TLS host name verification if already enabled.

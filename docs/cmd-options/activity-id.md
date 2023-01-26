@@ -7,4 +7,5 @@ tags:
 	- cli
 ---
 
- Identifies the Activity to fail.
+Alias: **-w**
+Identifies the Activity to fail.

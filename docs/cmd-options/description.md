@@ -7,4 +7,5 @@ tags:
 	- cli
 ---
 
- Namespace description
+Alias: **-n**
+Namespace description

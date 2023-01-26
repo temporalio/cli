@@ -7,4 +7,5 @@ tags:
 	- cli
 ---
 
- Frontend address of the remote Cluster.
+Alias: **-o**
+Frontend address of the remote Cluster.

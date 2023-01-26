@@ -7,4 +7,5 @@ tags:
 	- cli
 ---
 
- Enable cross-cluster connection.
+Alias: **-o**
+Enable cross-cluster connection.

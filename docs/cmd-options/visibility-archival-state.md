@@ -7,4 +7,5 @@ tags:
 	- cli
 ---
 
- Flag to set visibility archival state, valid values are "disabled" and "enabled"
+Alias: **-n**
+Flag to set visibility archival state, valid values are "disabled" and "enabled"

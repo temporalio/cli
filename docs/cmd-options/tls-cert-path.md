@@ -7,4 +7,5 @@ tags:
 	- cli
 ---
 
- Path to x509 certificate.
+Alias: **-n**
+Path to x509 certificate.

@@ -7,4 +7,5 @@ tags:
 	- cli
 ---
 
- Separator for the input file. The default is a tab (	). (default: 	)
+Alias: **-w**
+Separator for the input file. The default is a tab (	). (default: 	)

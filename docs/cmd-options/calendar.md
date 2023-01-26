@@ -7,4 +7,5 @@ tags:
 	- cli
 ---
 
- Calendar specification in JSON, e.g. {"dayOfWeek":"Fri","hour":"17","minute":"5"}
+Alias: **-w**
+Calendar specification in JSON, e.g. {"dayOfWeek":"Fri","hour":"17","minute":"5"}

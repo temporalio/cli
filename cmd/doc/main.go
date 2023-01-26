@@ -38,7 +38,7 @@ type FMStruct struct {
 	IsIndex bool
 }
 
-var currentHeader, fileName, optionFileName, operatorFileName, path, optionFilePath, headerIndexFile  string
+var currentHeader, fileName, optionFileName, operatorFileName, path, optionFilePath, headerIndexFile, aliasName string
 var currentHeaderFile, currentOptionFile *os.File
 
 // `BuildApp` takes a string and returns a `*App` and an error
@@ -91,13 +91,12 @@ func main() {
 			term, definition, found := strings.Cut(line, ":")
 			term = strings.TrimSuffix(term, "=\"\"")
 			if strings.Contains(term, ",") {
-				makeAlias(currentHeaderFile, term)
+				termArray := strings.Split(line, ",")
+				optionFileName = termArray[0] + "**"
+				aliasName = "Alias: **" + strings.TrimSpace(termArray[1])
 			} else {
-				//TODO: change for docusaurus
 				optionFileName = term
 			}
-			//TODO: change for docusaurus
-			//writeLine(currentHeaderFile, strings.TrimSpace(definition))
 			log.Info("string split successfully into term and definition (%v)",found)
 
 			optionFileName = strings.TrimPrefix(optionFileName, "**--")
@@ -105,8 +104,14 @@ func main() {
 
 			optionFilePath = filepath.Join(docsPath, optionsPath, optionFileName+".md")
 
+			termLink := "- [--" + optionFileName + "](/cmd-options/" + optionFileName + ")"
 			makeFile(optionFilePath, false, true, scanner, createdFiles)
-			writeLine(currentOptionFile, definition)
+			writeLine(currentHeaderFile, termLink)
+			if (aliasName != "") {
+				aliasArray := strings.Split(aliasName, "=")
+				writeLine(currentOptionFile, aliasArray[0])
+			}
+			writeLine(currentOptionFile, strings.TrimSpace(definition))
 
 		} else if strings.Contains(line, ">") {
 			writeLine(currentHeaderFile, strings.Trim(line, ">"))
@@ -168,15 +173,6 @@ func writeLine(file *os.File, line string) {
 	if err != nil {
 		log.Printf("Error when trying to write to file: %v", err)
 	}
-}
-
-// separates aliases from terms
-func makeAlias(file *os.File, line string) {
-	
-	termArray := strings.Split(line, ",")
-	writeLine(file, termArray[0] + "**")
-	writeLine(file, "Alias: **" + strings.TrimSpace(termArray[1]))
-	optionFileName = termArray[0]
 }
 
 // write front matter

@@ -7,4 +7,5 @@ tags:
 	- cli
 ---
 
- Format time as: relative, iso, raw. (default: relative)
+Alias: **-o**
+Format time as: relative, iso, raw. (default: relative)

@@ -7,4 +7,5 @@ tags:
 	- cli
 ---
 
- when to use color: auto, always, never. (default: auto)
+Alias: **-n**
+when to use color: auto, always, never. (default: auto)

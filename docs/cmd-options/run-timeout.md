@@ -7,4 +7,5 @@ tags:
 	- cli
 ---
 
- Timeout (in seconds) of a single Workflow run. (default: 0)
+Alias: **-n**
+Timeout (in seconds) of a single Workflow run. (default: 0)

@@ -7,4 +7,5 @@ tags:
 	- cli
 ---
 
- Endpoint for a remote Codec Server.
+Alias: **-n**
+Endpoint for a remote Codec Server.

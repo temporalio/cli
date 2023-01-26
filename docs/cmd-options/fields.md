@@ -7,4 +7,5 @@ tags:
 	- cli
 ---
 
- Customize fields to print. Set to 'long' to automatically print more of main fields.
+Alias: **-n**
+Customize fields to print. Set to 'long' to automatically print more of main fields.

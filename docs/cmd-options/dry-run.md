@@ -7,4 +7,5 @@ tags:
 	- cli
 ---
 
- Simulate reset without resetting any Workflow Executions.
+Alias: **-w**
+Simulate reset without resetting any Workflow Executions.

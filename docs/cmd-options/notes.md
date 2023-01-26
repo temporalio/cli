@@ -7,4 +7,5 @@ tags:
 	- cli
 ---
 
- Initial value of notes field.
+Alias: **-n**
+Initial value of notes field.

@@ -7,4 +7,5 @@ tags:
 	- cli
 ---
 
- Serializes Event History to a file.
+Alias: **-o**
+Serializes Event History to a file.

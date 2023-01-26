@@ -7,4 +7,5 @@ tags:
 	- cli
 ---
 
- Disable folding. All Child Workflows within the set depth will be fetched and displayed.
+Alias: **-n**
+Disable folding. All Child Workflows within the set depth will be fetched and displayed.

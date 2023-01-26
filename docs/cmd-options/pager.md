@@ -7,4 +7,5 @@ tags:
 	- cli
 ---
 
- Sets the pager for Temporal CLI to use.
+Alias: **-o**
+Sets the pager for Temporal CLI to use.

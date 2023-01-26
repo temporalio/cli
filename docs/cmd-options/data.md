@@ -7,4 +7,5 @@ tags:
 	- cli
 ---
 
- Namespace data in a format key=value
+Alias: **-n**
+Namespace data in a format key=value

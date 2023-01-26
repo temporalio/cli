@@ -7,4 +7,5 @@ tags:
 	- cli
 ---
 
- List archived Workflow Executions.
+Alias: **-w**
+List archived Workflow Executions.

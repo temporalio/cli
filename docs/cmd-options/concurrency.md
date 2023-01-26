@@ -7,4 +7,5 @@ tags:
 	- cli
 ---
 
- Request concurrency (default: 10)
+Alias: **-q**
+Request concurrency (default: 10)
