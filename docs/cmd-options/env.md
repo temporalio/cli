@@ -7,5 +7,4 @@ tags:
 	- cli
 ---
 
-Alias: **-n**
 Name of the environment to read environmental variables from. (default: default)

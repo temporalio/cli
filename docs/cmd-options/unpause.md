@@ -7,5 +7,4 @@ tags:
 	- cli
 ---
 
-Alias: **-s**
 Unpauses the schedule.

@@ -7,5 +7,4 @@ tags:
 	- cli
 ---
 
-Alias: **-f**
 Port for /metrics (default: 0)

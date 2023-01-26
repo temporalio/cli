@@ -7,5 +7,4 @@ tags:
 	- cli
 ---
 
-Alias: **-n**
 Set the result value of Activity completion.

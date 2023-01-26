@@ -7,5 +7,4 @@ tags:
 	- cli
 ---
 
-Alias: **-n**
 The host and port (formatted as host:port) for the Temporal Frontend Service.

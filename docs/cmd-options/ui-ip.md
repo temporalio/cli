@@ -7,5 +7,4 @@ tags:
 	- cli
 ---
 
-Alias: **-p**
 IPv4 address to bind the Web UI to.

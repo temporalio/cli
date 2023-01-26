@@ -7,5 +7,4 @@ tags:
 	- cli
 ---
 
-Alias: **-n**
 Reset Workflow Execution only if its last Event is WorkflowTaskFailed with a nondeterministic error.

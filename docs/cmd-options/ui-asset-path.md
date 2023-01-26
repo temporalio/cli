@@ -7,5 +7,4 @@ tags:
 	- cli
 ---
 
-Alias: **-p**
 UI Custom Assets path.

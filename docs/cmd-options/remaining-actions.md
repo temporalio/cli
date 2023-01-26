@@ -7,5 +7,4 @@ tags:
 	- cli
 ---
 
-Alias: **-n**
 Total number of actions allowed. (default: 0)

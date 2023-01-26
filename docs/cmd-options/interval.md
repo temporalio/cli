@@ -7,5 +7,4 @@ tags:
 	- cli
 ---
 
-Alias: **-i**
 Interval duration, e.g. 90m, or 90m/13m to include phase offset.

@@ -7,5 +7,4 @@ tags:
 	- cli
 ---
 
-Alias: **-o**
 Batch Job Id

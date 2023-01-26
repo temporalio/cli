@@ -7,5 +7,4 @@ tags:
 	- cli
 ---
 
-Alias: **-n**
 Path to server CA certificate.

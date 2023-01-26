@@ -7,5 +7,4 @@ tags:
 	- cli
 ---
 
-Alias: **-i**
 Set a memo on a schedule. Format: key=value. Use valid JSON formats for value.

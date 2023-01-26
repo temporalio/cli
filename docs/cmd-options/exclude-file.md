@@ -7,5 +7,4 @@ tags:
 	- cli
 ---
 
-Alias: **-w**
 Input file that specifies Workflow Executions to exclude from resetting.

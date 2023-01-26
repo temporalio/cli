@@ -7,5 +7,4 @@ tags:
 	- cli
 ---
 
-Alias: **-q**
 Skip a Workflow Execution if the base Run is not the current Run.

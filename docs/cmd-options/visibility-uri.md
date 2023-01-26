@@ -7,5 +7,4 @@ tags:
 	- cli
 ---
 
-Alias: **-n**
 Optionally specify visibility archival URI (cannot be changed after first time archival is enabled)

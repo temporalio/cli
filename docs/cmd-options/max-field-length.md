@@ -7,5 +7,4 @@ tags:
 	- cli
 ---
 
-Alias: **-i**
 Maximum length for each attribute field. (default: 0)

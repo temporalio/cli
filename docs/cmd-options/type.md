@@ -7,5 +7,4 @@ tags:
 	- cli
 ---
 
-Alias: **-n**
 Search attribute type: [Text Keyword Int Double Bool Datetime KeywordList]

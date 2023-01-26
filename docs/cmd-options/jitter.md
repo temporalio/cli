@@ -7,5 +7,4 @@ tags:
 	- cli
 ---
 
-Alias: **-i**
 Jitter duration.

@@ -7,5 +7,4 @@ tags:
 	- cli
 ---
 
-Alias: **-s**
 Backfill end time.

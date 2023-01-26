@@ -7,5 +7,4 @@ tags:
 	- cli
 ---
 
-Alias: **-w**
 Detail to fail the Activity.

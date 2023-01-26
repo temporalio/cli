@@ -7,5 +7,4 @@ tags:
 	- cli
 ---
 
-Alias: **-t**
 Time zone (IANA name).

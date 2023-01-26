@@ -110,6 +110,7 @@ func main() {
 			if (aliasName != "") {
 				aliasArray := strings.Split(aliasName, "=")
 				writeLine(currentOptionFile, aliasArray[0])
+				aliasName = ""
 			}
 			writeLine(currentOptionFile, strings.TrimSpace(definition))
 
@@ -136,7 +137,7 @@ func makeFile(path string, isIndex bool, isOptions bool, scanner *bufio.Scanner,
 			log.Printf("Error when trying to create option file %s: %v", optionFilePath, err)
 		}
 		createdFiles[optionFileName] = currentOptionFile
-		writeFrontMatter(optionFileName, "", scanner, false, currentOptionFile)
+		writeFrontMatter(strings.TrimSpace(optionFileName), "", scanner, false, currentOptionFile)
 			
 		} else if (isIndex) {
 		err = os.MkdirAll(path, os.ModePerm)

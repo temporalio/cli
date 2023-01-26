@@ -7,5 +7,4 @@ tags:
 	- cli
 ---
 
-Alias: **-i**
 Passes optional input for the Workflow from a JSON file.

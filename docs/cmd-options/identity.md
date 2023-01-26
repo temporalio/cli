@@ -7,5 +7,4 @@ tags:
 	- cli
 ---
 
-Alias: **-w**
 Specify the operator's identity.

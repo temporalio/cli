@@ -7,5 +7,4 @@ tags:
 	- cli
 ---
 
-Alias: **-n**
 An optional timeout for the context of an RPC call (in seconds). (default: 5)

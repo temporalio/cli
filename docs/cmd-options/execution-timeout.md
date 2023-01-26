@@ -7,5 +7,4 @@ tags:
 	- cli
 ---
 
-Alias: **-w**
 Timeout (in seconds) for a WorkflowExecution, including retries and continue-as-new tasks. (default: 0)

@@ -7,5 +7,4 @@ tags:
 	- cli
 ---
 
-Alias: **-q**
 Number of Child Workflows to expand, -1 to expand all Child Workflows. (default: -1)

@@ -7,5 +7,4 @@ tags:
 	- cli
 ---
 
-Alias: **-q**
 Skip a Workflow Execution if the current Run is open for the same Workflow Id as the base Run.

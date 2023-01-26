@@ -7,5 +7,4 @@ tags:
 	- cli
 ---
 
-Alias: **-p**
 UI Remote data converter HTTP endpoint.
