@@ -50,12 +50,18 @@ set -u
 
 #XXX: If you change anything here, please make the same changes in setup_mode.rs
 usage() {
-    cat 1>&2 <<EOF
-temporal.sh 0.1.0
-The installer for temporal
+    cat <<EOF
+install.sh 0.1.0
+The installer for the Temporal CLI
 
 USAGE:
-    sh install.sh
+    sh install.sh [FLAGS] [OPTIONS]
+
+FLAGS:
+    --help        Prints help information
+
+OPTIONS:
+    --dir         Installation directory (default: $HOME/.temporalio)
 EOF
 }
 
@@ -66,7 +72,6 @@ main() {
     need_cmd chmod
     need_cmd mkdir
     need_cmd rm
-    need_cmd rmdir
     need_cmd tar
 
     get_architecture || return 1
@@ -88,47 +93,23 @@ main() {
         fi
     fi
 
-    # check if we have to use /dev/tty to prompt the user
-    local need_tty=yes
     for arg in "$@"; do
         case "$arg" in
         --help)
             usage
             exit 0
             ;;
-        *)
-            OPTIND=1
-            if [ "${arg%%--*}" = "" ]; then
-                # Long option (other than --help);
-                # don't attempt to interpret it.
-                continue
-            fi
-            while getopts :hy sub_arg "$arg"; do
-                case "$sub_arg" in
-                h)
-                    usage
-                    exit 0
-                    ;;
-                y)
-                    # user wants to skip the prompt --
-                    # we don't need /dev/tty
-                    need_tty=no
-                    ;;
-                *) ;;
-
-                esac
-            done
-            ;;
         esac
     done
 
-    if $_ansi_escapes_are_valid; then
-        printf "\33[1minfo:\33[0m downloading installer\n" 1>&2
-    else
-        printf '%s\n' 'info: downloading installer' 1>&2
-    fi
+    say "Downloading Temporal CLI" >&2
 
-    local _url="https://temporal.download/cli/archive/latest?platform=${_platform}&arch=${_arch}"
+    local _temp
+    if ! _temp="$(ensure mktemp -d)"; then
+        # Because the previous command ran in a subshell, we must manually
+        # propagate exit status.
+        exit 1
+    fi
 
     local _ext="tar.gz"
     case "$_arch" in
@@ -136,14 +117,17 @@ main() {
         _ext=".zip"
         ;;
     esac
+    local _archive_path="${_temp}/temporal_cli_latest${_ext}"
+    local _url="https://temporal.download/cli/archive/latest?platform=${_platform}&arch=${_arch}"
+    ensure downloader "$_url" "$_archive_path" "$_arch"
+    ensure unzip "$_archive_path" "$_temp"
+    local _dir="$(ensure get_install_dir "$@")"
+    if [ -z "$_dir" ]; then
+        exit 1
+    fi
 
-    local _dir="$(ensure get_default_install_dir)"
-    ensure mkdir -p "$_dir"
-
-    local _archive="${_dir}/temporal_cli_latest${_ext}"
-    ensure downloader "$_url" "$_archive" "$_arch"
-    ensure unzip "$_archive" "$_dir"
-    ensure rm "$_archive"
+    local _dirbin="$_dir/bin"
+    ensure mkdir -p "$_dirbin"
 
     local _bext=""
     case "$_arch" in
@@ -151,9 +135,13 @@ main() {
         _bext=".exe"
         ;;
     esac
+
     local _exe_name="temporal$_bext"
-    local _exe="$_dir/$_exe_name"
-    ensure chmod u+x "$_exe"
+    ensure mv "$_temp/${_exe_name}" "$_dirbin"
+    ensure rm -rf "$_temp"
+    ensure chmod u+x "$_dirbin/$_exe_name"
+
+    ensure prompt_for_path "$_dirbin"
 
     local _retval=$?
     return "$_retval"
@@ -181,10 +169,10 @@ get_platform() {
     local _platform="$(uname -s)"
     case "$_platform" in
     "Linux")
-        TEMPORAL_OS="linux"
+        _platform="linux"
         ;;
     "Darwin")
-        TEMPORAL_OS="darwin"
+        _platform="darwin"
         ;;
     *)
         err "Unsupported OS $_platform"
@@ -196,7 +184,11 @@ get_platform() {
 }
 
 say() {
-    printf 'temporal: %s\n' "$1"
+    if $_ansi_escapes_are_valid; then
+        printf "\33[1mtemporal:\33[0m %s\n" "$1"
+    else
+        printf 'temporal: %s\n' "$1"
+    fi
 }
 
 err() {
@@ -223,13 +215,6 @@ assert_nz() {
 # command.
 ensure() {
     if ! "$@"; then err "command failed: $*"; fi
-}
-
-# This is just for indicating that commands' results are being
-# intentionally ignored. Usually, because it's being executed
-# as part of error handling.
-ignore() {
-    "$@"
 }
 
 # This wraps curl or wget. Try curl first, if not installed,
@@ -315,11 +300,47 @@ unzip() {
     local _file="$1"
     local _dir="$2"
 
-    tar -xzvf "$_file" -C "$_dir"
+    tar -xzf "$_file" -C "$_dir"
 }
 
 get_default_install_dir() {
     printf %s "${HOME}/.temporalio"
+}
+
+get_install_dir() {
+    local _dir
+    _dir="$(get_default_install_dir)"
+
+    while [ $# -gt 0 ]; do
+        case "$1" in
+        --dir)
+            _dir="$2"
+            shift
+            ;;
+        *) ;;
+
+        esac
+        shift
+    done
+
+    printf %s "$_dir"
+}
+
+prompt_for_path() {
+    local _dirbin="$1"
+
+    local _source="export PATH=\"\\\$PATH:$_dirbin\" >> ~/.bashrc"
+
+    say "Temporal CLI installed at $_dirbin/temporal"
+
+    if echo ":$PATH:" | grep -q ":$_dirbin:"; then
+        say "Start the server with: temporal server start-dev"
+        say "Or start a workflow with: temporal workflow start"
+        say "For usage, run: temporal --help"
+    else
+        say "For convenience, we recommend adding it to your PATH"
+        say "If using bash, run echo $_source"
+    fi
 }
 
 check_help_for() {
