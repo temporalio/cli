@@ -16,60 +16,39 @@ Make sure to write the command as follows:
 
 ## OPTIONS
 
-**--activity-id**
-Identifies the Activity to be completed.
+- [--activity-id](/cmd-options/activity-id)
 
-**--address**
-The host and port (formatted as host:port) for the Temporal Frontend Service.
+- [--address](/cmd-options/address)
 
-**--codec-auth**
-Sets the authorization header on requests to the Codec Server.
+- [--codec-auth](/cmd-options/codec-auth)
 
-**--codec-endpoint**
-Endpoint for a remote Codec Server.
+- [--codec-endpoint](/cmd-options/codec-endpoint)
 
-**--color**
-when to use color: auto, always, never. (default: auto)
+- [--color](/cmd-options/color)
 
-**--context-timeout**
-An optional timeout for the context of an RPC call (in seconds). (default: 5)
+- [--context-timeout](/cmd-options/context-timeout)
 
-**--env**
-Name of the environment to read environmental variables from. (default: default)
+- [--env](/cmd-options/env)
 
-**--grpc-meta**
-Contains gRPC metadata to send with requests (Format: key=value). Values must be in a valid JSON format.
+- [--grpc-meta](/cmd-options/grpc-meta)
 
-**--identity**
-Specify operator's identity.
+- [--identity](/cmd-options/identity)
 
-**--namespace**
-Alias: **-n**
-Identifies a Namespace in the Temporal Workflow. (default: default)
+- [--namespace](/cmd-options/namespace)
 
-**--result**
-Set the result value of Activity completion.
+- [--result](/cmd-options/result)
 
-**--run-id**
-Alias: **-r**
-Identifies the current Workflow Run.
+- [--run-id](/cmd-options/run-id)
 
-**--tls-ca-path**
-Path to server CA certificate.
+- [--tls-ca-path](/cmd-options/tls-ca-path)
 
-**--tls-cert-path**
-Path to x509 certificate.
+- [--tls-cert-path](/cmd-options/tls-cert-path)
 
-**--tls-disable-host-verification**
-Disables TLS host name verification if already enabled.
+- [--tls-disable-host-verification](/cmd-options/tls-disable-host-verification)
 
-**--tls-key-path**
-Path to private certificate key.
+- [--tls-key-path](/cmd-options/tls-key-path)
 
-**--tls-server-name**
-Provides an override for the target TLS server name.
+- [--tls-server-name](/cmd-options/tls-server-name)
 
-**--workflow-id**
-Alias: **-w**
-Identifies the Workflow that the Activity is running on.
+- [--workflow-id](/cmd-options/workflow-id)
 

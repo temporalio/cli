@@ -7,4 +7,5 @@ tags:
 	- cli
 ---
 
+Alias: **-P**: Disables the interactive pager.
  Disables the interactive pager.

@@ -19,23 +19,17 @@ Make sure to write the command in this format:
 
 ## OPTIONS
 
-**--address**
-The host and port (formatted as host:port) for the Temporal Frontend Service.
+- [--address](/cmd-options/address)
 
-**--codec-auth**
-Sets the authorization header on requests to the Codec Server.
+- [--codec-auth](/cmd-options/codec-auth)
 
-**--codec-endpoint**
-Endpoint for a remote Codec Server.
+- [--codec-endpoint](/cmd-options/codec-endpoint)
 
-**--color**
-when to use color: auto, always, never. (default: auto)
+- [--color](/cmd-options/color)
 
-**--context-timeout**
-An optional timeout for the context of an RPC call (in seconds). (default: 5)
+- [--context-timeout](/cmd-options/context-timeout)
 
-**--cron**
-Optional Cron Schedule for the Workflow. Cron spec is formatted as:
+- [--cron](/cmd-options/cron)
 ┌───────────── minute (0 - 59)
 │ ┌───────────── hour (0 - 23)
 │ │ ┌───────────── day of the month (1 - 31)
@@ -44,94 +38,61 @@ Optional Cron Schedule for the Workflow. Cron spec is formatted as:
 │ │ │ │ │
 * * * * *
 
-**--env**
-Name of the environment to read environmental variables from. (default: default)
+- [--env](/cmd-options/env)
 
-**--execution-timeout**
-Timeout (in seconds) for a WorkflowExecution, including retries and continue-as-new tasks. (default: 0)
+- [--execution-timeout](/cmd-options/execution-timeout)
 
-**--fields**
-Customize fields to print. Set to 'long' to automatically print more of main fields.
+- [--fields](/cmd-options/fields)
 
-**--grpc-meta**
-Contains gRPC metadata to send with requests (Format: key=value). Values must be in a valid JSON format.
+- [--grpc-meta](/cmd-options/grpc-meta)
 
-**--id-reuse-policy**
-Allows the same Workflow Id to be used in a new Workflow Execution. Options: AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate, TerminateIfRunning.
+- [--id-reuse-policy](/cmd-options/id-reuse-policy)
 
-**--input**
-Alias: **-i**
-Optional JSON input to provide to the Workflow.
+- [--input](/cmd-options/input)
 Pass "null" for null values.
 
-**--input-file**
-Passes optional input for the Workflow from a JSON file.
+- [--input-file](/cmd-options/input-file)
 If there are multiple JSON files, concatenate them and separate by space or newline.
 Input from the command line will overwrite file input.
 
-**--limit**
-Number of items to print. (default: 0)
+- [--limit](/cmd-options/limit)
 
-**--max-field-length**
-Maximum length for each attribute field. (default: 0)
+- [--max-field-length](/cmd-options/max-field-length)
 
-**--memo**
-Passes a memo in key=value format. Use valid JSON formats for value.
+- [--memo](/cmd-options/memo)
 
-**--memo-file**
-Passes a memo as file input, with each line following key=value format. Use valid JSON formats for value.
+- [--memo-file](/cmd-options/memo-file)
 
-**--namespace**
-Alias: **-n**
-Identifies a Namespace in the Temporal Workflow. (default: default)
+- [--namespace](/cmd-options/namespace)
 
-**--no-pager**
-Alias: **-P**
-Disables the interactive pager.
+- [--no-pager](/cmd-options/no-pager)
 
-**--output**
-Alias: **-o**
-format output as: table, json, card. (default: table)
+- [--output](/cmd-options/output)
 
-**--pager**
-Sets the pager for Temporal CLI to use.
+- [--pager](/cmd-options/pager)
 Options: less, more, favoritePager.
 
-**--run-timeout**
-Timeout (in seconds) of a single Workflow run. (default: 0)
+- [--run-timeout](/cmd-options/run-timeout)
 
-**--search-attribute**
-Passes Search Attribute in key=value format. Use valid JSON formats for value.
+- [--search-attribute](/cmd-options/search-attribute)
 
-**--task-queue**
-Alias: **-t**
-Task Queue
+- [--task-queue](/cmd-options/task-queue)
 
-**--task-timeout**
-Start-to-close timeout for a Workflow Task (in seconds). (default: 10)
+- [--task-timeout](/cmd-options/task-timeout)
 
-**--time-format**
-Format time as: relative, iso, raw. (default: relative)
+- [--time-format](/cmd-options/time-format)
 
-**--tls-ca-path**
-Path to server CA certificate.
+- [--tls-ca-path](/cmd-options/tls-ca-path)
 
-**--tls-cert-path**
-Path to x509 certificate.
+- [--tls-cert-path](/cmd-options/tls-cert-path)
 
-**--tls-disable-host-verification**
-Disables TLS host name verification if already enabled.
+- [--tls-disable-host-verification](/cmd-options/tls-disable-host-verification)
 
-**--tls-key-path**
-Path to private certificate key.
+- [--tls-key-path](/cmd-options/tls-key-path)
 
-**--tls-server-name**
-Provides an override for the target TLS server name.
+- [--tls-server-name](/cmd-options/tls-server-name)
 
-**--type**
-Workflow type name.
+- [--type](/cmd-options/type)
 
-**--workflow-id**
-Alias: **-w**
-Workflow Id
+- [--workflow-id](/cmd-options/workflow-id)
 

@@ -1,14 +1,21 @@
 ---
-id: namespace
-title: temporal operator namespace
-sidebar_label: namespace
+id: update
+title: temporal operator update
+sidebar_label: update
 description: Updates a Namespace.
 tags:
 	- cli
 ---
 
+---
+id: namespace
+title: temporal operator namespace
+sidebar_label: namespace
+description: The `temporal operator namespace update` command updates a given [Namespace](/namespaces).
+tags:
+	- cli
+---
 
-The `temporal operator namespace update` command updates a given [Namespace](/namespaces).
 
 Use the options listed below to change the command's behavior.
 Make sure to write the command as follows:
@@ -16,79 +23,53 @@ Make sure to write the command as follows:
 
 ## OPTIONS
 
-**--active-cluster**
-Active cluster name
+- [--active-cluster](/cmd-options/active-cluster)
 
-**--address**
-The host and port (formatted as host:port) for the Temporal Frontend Service.
+- [--address](/cmd-options/address)
 
-**--cluster**
-Cluster name
+- [--cluster](/cmd-options/cluster)
 
-**--codec-auth**
-Sets the authorization header on requests to the Codec Server.
+- [--codec-auth](/cmd-options/codec-auth)
 
-**--codec-endpoint**
-Endpoint for a remote Codec Server.
+- [--codec-endpoint](/cmd-options/codec-endpoint)
 
-**--color**
-when to use color: auto, always, never. (default: auto)
+- [--color](/cmd-options/color)
 
-**--context-timeout**
-An optional timeout for the context of an RPC call (in seconds). (default: 5)
+- [--context-timeout](/cmd-options/context-timeout)
 
-**--data**
-Namespace data in a format key=value
+- [--data](/cmd-options/data)
 
-**--description**
-Namespace description
+- [--description](/cmd-options/description)
 
-**--email**
-Owner email
+- [--email](/cmd-options/email)
 
-**--env**
-Name of the environment to read environmental variables from. (default: default)
+- [--env](/cmd-options/env)
 
-**--grpc-meta**
-Contains gRPC metadata to send with requests (Format: key=value). Values must be in a valid JSON format.
+- [--grpc-meta](/cmd-options/grpc-meta)
 
-**--history-archival-state**
-Flag to set history archival state, valid values are "disabled" and "enabled"
+- [--history-archival-state](/cmd-options/history-archival-state)
 
-**--history-uri**
-Optionally specify history archival URI (cannot be changed after first time archival is enabled)
+- [--history-uri](/cmd-options/history-uri)
 
-**--namespace**
-Alias: **-n**
-Identifies a Namespace in the Temporal Workflow. (default: default)
+- [--namespace](/cmd-options/namespace)
 
-**--promote-global**
-Promote local namespace to global namespace
+- [--promote-global](/cmd-options/promote-global)
 
-**--reason**
-Reason for the operation
+- [--reason](/cmd-options/reason)
 
-**--retention**
-Workflow Execution retention
+- [--retention](/cmd-options/retention)
 
-**--tls-ca-path**
-Path to server CA certificate.
+- [--tls-ca-path](/cmd-options/tls-ca-path)
 
-**--tls-cert-path**
-Path to x509 certificate.
+- [--tls-cert-path](/cmd-options/tls-cert-path)
 
-**--tls-disable-host-verification**
-Disables TLS host name verification if already enabled.
+- [--tls-disable-host-verification](/cmd-options/tls-disable-host-verification)
 
-**--tls-key-path**
-Path to private certificate key.
+- [--tls-key-path](/cmd-options/tls-key-path)
 
-**--tls-server-name**
-Provides an override for the target TLS server name.
+- [--tls-server-name](/cmd-options/tls-server-name)
 
-**--visibility-archival-state**
-Flag to set visibility archival state, valid values are "disabled" and "enabled"
+- [--visibility-archival-state](/cmd-options/visibility-archival-state)
 
-**--visibility-uri**
-Optionally specify visibility archival URI (cannot be changed after first time archival is enabled)
+- [--visibility-uri](/cmd-options/visibility-uri)
 

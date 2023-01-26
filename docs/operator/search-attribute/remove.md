@@ -1,14 +1,21 @@
 ---
-id: search-attribute
-title: temporal operator search-attribute
-sidebar_label: search-attribute
+id: remove
+title: temporal operator remove
+sidebar_label: remove
 description: Removes custom search attribute metadata only (Elasticsearch index schema is not modified).
 tags:
 	- cli
 ---
 
+---
+id: search-attribute
+title: temporal operator search-attribute
+sidebar_label: search-attribute
+description: The `temporal operator search-attribute remove` command removes custom [Search Attribute](/visibility#search-attribute) metadata.
+tags:
+	- cli
+---
 
-The `temporal operator search-attribute remove` command removes custom [Search Attribute](/visibility#search-attribute) metadata.
 This command does not remove custom Search Attributes from Elasticsearch.
 The index schema is not modified.
 
@@ -18,50 +25,33 @@ Make sure to write the command as follows:
 
 ## OPTIONS
 
-**--address**
-The host and port (formatted as host:port) for the Temporal Frontend Service.
+- [--address](/cmd-options/address)
 
-**--codec-auth**
-Sets the authorization header on requests to the Codec Server.
+- [--codec-auth](/cmd-options/codec-auth)
 
-**--codec-endpoint**
-Endpoint for a remote Codec Server.
+- [--codec-endpoint](/cmd-options/codec-endpoint)
 
-**--color**
-when to use color: auto, always, never. (default: auto)
+- [--color](/cmd-options/color)
 
-**--context-timeout**
-An optional timeout for the context of an RPC call (in seconds). (default: 5)
+- [--context-timeout](/cmd-options/context-timeout)
 
-**--env**
-Name of the environment to read environmental variables from. (default: default)
+- [--env](/cmd-options/env)
 
-**--grpc-meta**
-Contains gRPC metadata to send with requests (Format: key=value). Values must be in a valid JSON format.
+- [--grpc-meta](/cmd-options/grpc-meta)
 
-**--name**
-Search attribute name.
+- [--name](/cmd-options/name)
 
-**--namespace**
-Alias: **-n**
-Identifies a Namespace in the Temporal Workflow. (default: default)
+- [--namespace](/cmd-options/namespace)
 
-**--tls-ca-path**
-Path to server CA certificate.
+- [--tls-ca-path](/cmd-options/tls-ca-path)
 
-**--tls-cert-path**
-Path to x509 certificate.
+- [--tls-cert-path](/cmd-options/tls-cert-path)
 
-**--tls-disable-host-verification**
-Disables TLS host name verification if already enabled.
+- [--tls-disable-host-verification](/cmd-options/tls-disable-host-verification)
 
-**--tls-key-path**
-Path to private certificate key.
+- [--tls-key-path](/cmd-options/tls-key-path)
 
-**--tls-server-name**
-Provides an override for the target TLS server name.
+- [--tls-server-name](/cmd-options/tls-server-name)
 
-**--yes**
-Alias: **-y**
-Confirm all prompts.
+- [--yes](/cmd-options/yes)
 

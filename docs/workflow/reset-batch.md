@@ -2,7 +2,7 @@
 id: reset-batch
 title: temporal workflow reset-batch
 sidebar_label: reset-batch
-description: Reset a batch of Workflow Executions by reset type: LastContinuedAsNew, FirstWorkflowTask, LastWorkflowTask
+description: Reset a batch of Workflow Executions by reset type: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew
 tags:
 	- cli
 ---
@@ -17,77 +17,51 @@ Make sure to write the command as follows:
 
 ## OPTIONS
 
-**--address**
-The host and port (formatted as host:port) for the Temporal Frontend Service.
+- [--address](/cmd-options/address)
 
-**--codec-auth**
-Sets the authorization header on requests to the Codec Server.
+- [--codec-auth](/cmd-options/codec-auth)
 
-**--codec-endpoint**
-Endpoint for a remote Codec Server.
+- [--codec-endpoint](/cmd-options/codec-endpoint)
 
-**--color**
-when to use color: auto, always, never. (default: auto)
+- [--color](/cmd-options/color)
 
-**--context-timeout**
-An optional timeout for the context of an RPC call (in seconds). (default: 5)
+- [--context-timeout](/cmd-options/context-timeout)
 
-**--dry-run**
-Simulate reset without resetting any Workflow Executions.
+- [--dry-run](/cmd-options/dry-run)
 
-**--env**
-Name of the environment to read environmental variables from. (default: default)
+- [--env](/cmd-options/env)
 
-**--exclude-file**
-Input file that specifies Workflow Executions to exclude from resetting.
+- [--exclude-file](/cmd-options/exclude-file)
 
-**--grpc-meta**
-Contains gRPC metadata to send with requests (Format: key=value). Values must be in a valid JSON format.
+- [--grpc-meta](/cmd-options/grpc-meta)
 
-**--input-file**
-Input file that specifies Workflow Executions to reset. Each line contains one Workflow Id as the base Run and, optionally, a Run Id.
+- [--input-file](/cmd-options/input-file)
 
-**--input-parallelism**
-Number of goroutines to run in parallel. Each goroutine processes one line for every second. (default: 1)
+- [--input-parallelism](/cmd-options/input-parallelism)
 
-**--input-separator**
-Separator for the input file. The default is a tab (	). (default: 	)
+- [--input-separator](/cmd-options/input-separator)
 
-**--namespace**
-Alias: **-n**
-Identifies a Namespace in the Temporal Workflow. (default: default)
+- [--namespace](/cmd-options/namespace)
 
-**--non-deterministic**
-Reset Workflow Execution only if its last Event is WorkflowTaskFailed with a nondeterministic error.
+- [--non-deterministic](/cmd-options/non-deterministic)
 
-**--query**
-Alias: **-q**
-Visibility query of Search Attributes describing the Workflow Executions to reset. See https://docs.temporal.io/docs/tctl/workflow/list#--query.
+- [--query](/cmd-options/query)
 
-**--reason**
-Reason for resetting the Workflow Executions.
+- [--reason](/cmd-options/reason)
 
-**--skip-base-is-not-current**
-Skip a Workflow Execution if the base Run is not the current Run.
+- [--skip-base-is-not-current](/cmd-options/skip-base-is-not-current)
 
-**--skip-current-open**
-Skip a Workflow Execution if the current Run is open for the same Workflow Id as the base Run.
+- [--skip-current-open](/cmd-options/skip-current-open)
 
-**--tls-ca-path**
-Path to server CA certificate.
+- [--tls-ca-path](/cmd-options/tls-ca-path)
 
-**--tls-cert-path**
-Path to x509 certificate.
+- [--tls-cert-path](/cmd-options/tls-cert-path)
 
-**--tls-disable-host-verification**
-Disables TLS host name verification if already enabled.
+- [--tls-disable-host-verification](/cmd-options/tls-disable-host-verification)
 
-**--tls-key-path**
-Path to private certificate key.
+- [--tls-key-path](/cmd-options/tls-key-path)
 
-**--tls-server-name**
-Provides an override for the target TLS server name.
+- [--tls-server-name](/cmd-options/tls-server-name)
 
-**--type**
-Event type to which you want to reset: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew
+- [--type](/cmd-options/type)
 

@@ -1,14 +1,21 @@
 ---
-id: search-attribute
-title: temporal operator search-attribute
-sidebar_label: search-attribute
+id: list
+title: temporal operator list
+sidebar_label: list
 description: Lists all Search Attributes that can be used in list Workflow Queries.
 tags:
 	- cli
 ---
 
+---
+id: search-attribute
+title: temporal operator search-attribute
+sidebar_label: search-attribute
+description: The `temporal operator search-attrbute list` command displays a list of all [Search Attributes](/visibility#search-attribute) that can be used in ` temporal workflow list --query`.
+tags:
+	- cli
+---
 
-The `temporal operator search-attrbute list` command displays a list of all [Search Attributes](/visibility#search-attribute) that can be used in ` temporal workflow list --query`.
 
 Use the options listed below to change the command's behavior.
 Make sure to write the command as follows:
@@ -16,47 +23,31 @@ Make sure to write the command as follows:
 
 ## OPTIONS
 
-**--address**
-The host and port (formatted as host:port) for the Temporal Frontend Service.
+- [--address](/cmd-options/address)
 
-**--codec-auth**
-Sets the authorization header on requests to the Codec Server.
+- [--codec-auth](/cmd-options/codec-auth)
 
-**--codec-endpoint**
-Endpoint for a remote Codec Server.
+- [--codec-endpoint](/cmd-options/codec-endpoint)
 
-**--color**
-when to use color: auto, always, never. (default: auto)
+- [--color](/cmd-options/color)
 
-**--context-timeout**
-An optional timeout for the context of an RPC call (in seconds). (default: 5)
+- [--context-timeout](/cmd-options/context-timeout)
 
-**--env**
-Name of the environment to read environmental variables from. (default: default)
+- [--env](/cmd-options/env)
 
-**--grpc-meta**
-Contains gRPC metadata to send with requests (Format: key=value). Values must be in a valid JSON format.
+- [--grpc-meta](/cmd-options/grpc-meta)
 
-**--namespace**
-Alias: **-n**
-Identifies a Namespace in the Temporal Workflow. (default: default)
+- [--namespace](/cmd-options/namespace)
 
-**--output**
-Alias: **-o**
-format output as: table, json, card. (default: table)
+- [--output](/cmd-options/output)
 
-**--tls-ca-path**
-Path to server CA certificate.
+- [--tls-ca-path](/cmd-options/tls-ca-path)
 
-**--tls-cert-path**
-Path to x509 certificate.
+- [--tls-cert-path](/cmd-options/tls-cert-path)
 
-**--tls-disable-host-verification**
-Disables TLS host name verification if already enabled.
+- [--tls-disable-host-verification](/cmd-options/tls-disable-host-verification)
 
-**--tls-key-path**
-Path to private certificate key.
+- [--tls-key-path](/cmd-options/tls-key-path)
 
-**--tls-server-name**
-Provides an override for the target TLS server name.
+- [--tls-server-name](/cmd-options/tls-server-name)
 

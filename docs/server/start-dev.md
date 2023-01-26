@@ -8,52 +8,33 @@ tags:
 ---
 
 
-**--config**
-Alias: **-c**
-Path to config directory.
+- [--config](/cmd-options/config)
 
-**--db-filename**
-Alias: **-f**
-File in which to persist Temporal state (by default, Workflows are lost when the process dies).
+- [--db-filename](/cmd-options/db-filename)
 
-**--dynamic-config-value**
-Dynamic config value, as KEY=JSON_VALUE (string values need quotes).
+- [--dynamic-config-value](/cmd-options/dynamic-config-value)
 
-**--headless**
-Disable the Web UI.
+- [--headless](/cmd-options/headless)
 
-**--ip**
-IPv4 address to bind the frontend service to. (default: 127.0.0.1)
+- [--ip](/cmd-options/ip)
 
-**--log-format**
-Set the log formatting. Options: ["json", "pretty"]. (default: json)
+- [--log-format](/cmd-options/log-format)
 
-**--log-level**
-Set the log level. Options: ["debug" "info" "warn" "error" "fatal"]. (default: info)
+- [--log-level](/cmd-options/log-level)
 
-**--metrics-port**
-Port for /metrics (default: 0)
+- [--metrics-port](/cmd-options/metrics-port)
 
-**--namespace**
-Alias: **-n**
-Specify namespaces that should be pre-created (namespace "default" is always created).
+- [--namespace](/cmd-options/namespace)
 
-**--port**
-Alias: **-p**
-Port for the frontend gRPC service. (default: 7233)
+- [--port](/cmd-options/port)
 
-**--sqlite-pragma**
-Specify sqlite pragma statements in pragma=value format. Pragma options: ["journal_mode" "synchronous"].
+- [--sqlite-pragma](/cmd-options/sqlite-pragma)
 
-**--ui-asset-path**
-UI Custom Assets path.
+- [--ui-asset-path](/cmd-options/ui-asset-path)
 
-**--ui-codec-endpoint**
-UI Remote data converter HTTP endpoint.
+- [--ui-codec-endpoint](/cmd-options/ui-codec-endpoint)
 
-**--ui-ip**
-IPv4 address to bind the Web UI to.
+- [--ui-ip](/cmd-options/ui-ip)
 
-**--ui-port**
-Port for the Web UI. (default: 0)
+- [--ui-port](/cmd-options/ui-port)
 

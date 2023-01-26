@@ -38,7 +38,7 @@ type FMStruct struct {
 	IsIndex bool
 }
 
-var currentHeader, fileName, optionFileName, path, optionFilePath, headerIndexFile  string
+var currentHeader, fileName, optionFileName, operatorFileName, path, optionFilePath, headerIndexFile  string
 var currentHeaderFile, currentOptionFile *os.File
 
 // `BuildApp` takes a string and returns a `*App` and an error
@@ -82,7 +82,7 @@ func main() {
 				makeFile(filePath, false, false, scanner, createdFiles)
 			}
 		} else if strings.HasPrefix(line, "#### ") {
-			operatorFileName := strings.TrimSpace(line[4:])
+			operatorFileName = strings.TrimSpace(line[4:])
 			filePath := filepath.Join(path, fileName, operatorFileName+".md")
 			makeFile(filePath, false, false, scanner, createdFiles)
 			
@@ -93,10 +93,11 @@ func main() {
 			if strings.Contains(term, ",") {
 				makeAlias(currentHeaderFile, term)
 			} else {
-				writeLine(currentHeaderFile, term)
+				//TODO: change for docusaurus
 				optionFileName = term
 			}
-			writeLine(currentHeaderFile, strings.TrimSpace(definition))
+			//TODO: change for docusaurus
+			//writeLine(currentHeaderFile, strings.TrimSpace(definition))
 			log.Info("string split successfully into term and definition (%v)",found)
 
 			optionFileName = strings.TrimPrefix(optionFileName, "**--")
@@ -153,6 +154,9 @@ func makeFile(path string, isIndex bool, isOptions bool, scanner *bufio.Scanner,
 				log.Printf("Error when trying to create non-index file %s: %v", path, err)
 			}
 			createdFiles[path] = currentHeaderFile
+		} 
+		if (strings.Contains(path, "operator")) {
+			writeFrontMatter(operatorFileName, currentHeader, scanner, false, currentHeaderFile)
 		}
 		writeFrontMatter(fileName, currentHeader, scanner, false, currentHeaderFile)
 	}
@@ -182,7 +186,7 @@ func writeFrontMatter(idName string, titleName string, scanner *bufio.Scanner, i
 		for i := 0; i < 2; i++ {
 			scanner.Scan()
 		}
-		descriptionTxt = scanner.Text()
+		descriptionTxt = strings.TrimSpace(scanner.Text())
 	} else {
 		descriptionTxt = "Definition for the " + idName + " command option."
 	}

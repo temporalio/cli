@@ -16,85 +16,54 @@ Make sure to write the command as follows:
 
 ## OPTIONS
 
-**--address**
-The host and port (formatted as host:port) for the Temporal Frontend Service.
+- [--address](/cmd-options/address)
 
-**--codec-auth**
-Sets the authorization header on requests to the Codec Server.
+- [--codec-auth](/cmd-options/codec-auth)
 
-**--codec-endpoint**
-Endpoint for a remote Codec Server.
+- [--codec-endpoint](/cmd-options/codec-endpoint)
 
-**--color**
-when to use color: auto, always, never. (default: auto)
+- [--color](/cmd-options/color)
 
-**--context-timeout**
-An optional timeout for the context of an RPC call (in seconds). (default: 5)
+- [--context-timeout](/cmd-options/context-timeout)
 
-**--env**
-Name of the environment to read environmental variables from. (default: default)
+- [--env](/cmd-options/env)
 
-**--fields**
-Customize fields to print. Set to 'long' to automatically print more of main fields.
+- [--fields](/cmd-options/fields)
 
-**--follow**
-Alias: **-f**
-Follow the progress of a Workflow Execution.
+- [--follow](/cmd-options/follow)
 
-**--grpc-meta**
-Contains gRPC metadata to send with requests (Format: key=value). Values must be in a valid JSON format.
+- [--grpc-meta](/cmd-options/grpc-meta)
 
-**--limit**
-Number of items to print. (default: 0)
+- [--limit](/cmd-options/limit)
 
-**--max-field-length**
-Maximum length for each attribute field. (default: 500)
+- [--max-field-length](/cmd-options/max-field-length)
 
-**--namespace**
-Alias: **-n**
-Identifies a Namespace in the Temporal Workflow. (default: default)
+- [--namespace](/cmd-options/namespace)
 
-**--no-pager**
-Alias: **-P**
-Disables the interactive pager.
+- [--no-pager](/cmd-options/no-pager)
 
-**--output**
-Alias: **-o**
-format output as: table, json, card. (default: table)
+- [--output](/cmd-options/output)
 
-**--output-filename**
-Serializes Event History to a file.
+- [--output-filename](/cmd-options/output-filename)
 
-**--pager**
-Sets the pager for Temporal CLI to use.
+- [--pager](/cmd-options/pager)
 Options: less, more, favoritePager.
 
-**--reset-points**
-Only show Workflow Events that are eligible for reset.
+- [--reset-points](/cmd-options/reset-points)
 
-**--run-id**
-Alias: **-r**
-Run Id
+- [--run-id](/cmd-options/run-id)
 
-**--time-format**
-Format time as: relative, iso, raw. (default: relative)
+- [--time-format](/cmd-options/time-format)
 
-**--tls-ca-path**
-Path to server CA certificate.
+- [--tls-ca-path](/cmd-options/tls-ca-path)
 
-**--tls-cert-path**
-Path to x509 certificate.
+- [--tls-cert-path](/cmd-options/tls-cert-path)
 
-**--tls-disable-host-verification**
-Disables TLS host name verification if already enabled.
+- [--tls-disable-host-verification](/cmd-options/tls-disable-host-verification)
 
-**--tls-key-path**
-Path to private certificate key.
+- [--tls-key-path](/cmd-options/tls-key-path)
 
-**--tls-server-name**
-Provides an override for the target TLS server name.
+- [--tls-server-name](/cmd-options/tls-server-name)
 
-**--workflow-id**
-Alias: **-w**
-Workflow Id
+- [--workflow-id](/cmd-options/workflow-id)
 
