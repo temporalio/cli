@@ -31,7 +31,7 @@ tags:
 
 `
 
-type FMStruct struct {
+type FrontMatter struct {
 	ID string 
 	Title string
 	Description string
@@ -188,7 +188,7 @@ func writeFrontMatter(idName string, titleName string, scanner *bufio.Scanner, i
 		descriptionTxt = "Definition for the " + idName + " command option."
 	}
 
-	data := FMStruct{
+	data := FrontMatter{
 		ID: idName,
 		Title: titleName,
 		Description: descriptionTxt,
