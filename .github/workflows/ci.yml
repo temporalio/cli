@@ -29,3 +29,30 @@ jobs:
         env:
           CGO_ENABLED: 0
         run: go test -v ./...
+
+  test-shellcheck:
+    name: Shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@master
+        with:
+            ignore_paths: ./.devcontainer
+
+  test-install:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        shell: [sh, bash, zsh]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Print build information
+        run: "echo head_ref: ${{ github.head_ref }}, ref: ${{ github.ref }}"
+
+      - uses: actions/checkout@v3
+
+      - name: "Run with ${{ matrix.shell }}"
+        run: sh -c '${{ matrix.shell }} -c "./install.sh"'

@@ -13,13 +13,13 @@ require (
 	github.com/stretchr/testify v1.8.1
 	github.com/temporalio/tctl-kit v0.0.0-20230104170414-10932650d727
 	github.com/temporalio/ui-server/v2 v2.9.2-0.20230106074906-529addb76f82
-	github.com/urfave/cli/v2 v2.24.1
+	github.com/urfave/cli/v2 v2.24.2
 	go.temporal.io/api v1.15.0
 	go.temporal.io/sdk v1.20.0
 	go.temporal.io/server v1.19.1
 	go.uber.org/zap v1.24.0
 	golang.org/x/exp v0.0.0-20220929160808-de9c53c655b9
-	google.golang.org/grpc v1.52.1
+	google.golang.org/grpc v1.52.3
 )
 
 require (
