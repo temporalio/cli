@@ -47,17 +47,17 @@ func main() {
 
 	doc, err := app.BuildApp("").ToMarkdown()
 	if err != nil {
-		log.Fatalf("Error when trying to build app: %v", err)
+		log.Fatalf("Error when trying to build app: %s", err)
 	}
 
 	err = os.WriteFile(cliFile, []byte(doc), filePerm)
 	if err != nil {
-		log.Fatalf("Error when trying to write markdown to %s file: %v", cliFile, err)
+		log.Fatalf("Error when trying to write markdown to %s file: %s", cliFile, err)
 	}
 
 	readFile, err := os.Open(cliFile)
 	if err != nil {
-		log.Fatalf("Error when trying to open %s file: %v", cliFile, err)
+		log.Fatalf("Error when trying to open %s file: %s", cliFile, err)
 	}
 
 	scanner := bufio.NewScanner(readFile)
@@ -97,7 +97,7 @@ func main() {
 			} else {
 				optionFileName = term
 			}
-			log.Info("string split successfully into term and definition (%v)",found)
+			log.Info("string split successfully into term and definition (%s)",found)
 
 			optionFileName = strings.TrimPrefix(optionFileName, "**--")
 			optionFileName = strings.TrimSuffix(optionFileName, "**")
@@ -130,11 +130,11 @@ func makeFile(path string, isIndex bool, isOptions bool, scanner *bufio.Scanner,
 	if (isOptions) {
 		err = os.MkdirAll(filepath.Join(docsPath, optionsPath), os.ModePerm)
 		if err != nil {
-			log.Printf("Error when trying to create options directory %s: %v", path, err)
+			log.Printf("Error when trying to create options directory %s: %s", path, err)
 		}
 		currentOptionFile, err = os.Create(optionFilePath)
 		if err != nil {
-			log.Printf("Error when trying to create option file %s: %v", optionFilePath, err)
+			log.Printf("Error when trying to create option file %s: %s", optionFilePath, err)
 		}
 		createdFiles[optionFileName] = currentOptionFile
 		writeFrontMatter(strings.TrimSpace(optionFileName), "", scanner, false, currentOptionFile)
@@ -142,12 +142,12 @@ func makeFile(path string, isIndex bool, isOptions bool, scanner *bufio.Scanner,
 		} else if (isIndex) {
 		err = os.MkdirAll(path, os.ModePerm)
 		if err != nil {
-			log.Printf("Error when trying to create a directory %s: %v", path, err)
+			log.Printf("Error when trying to create a directory %s: %s", path, err)
 		}
 		headerIndexFile = filepath.Join(path, indexFile)
 		currentHeaderFile, err = os.Create(headerIndexFile)
 		if err != nil {
-			log.Printf("Error when trying to create index file %s: %v", headerIndexFile, err)
+			log.Printf("Error when trying to create index file %s: %s", headerIndexFile, err)
 		}
 		createdFiles[headerIndexFile] = currentHeaderFile
 		writeFrontMatter(strings.Trim(indexFile, ".md"), currentHeader, scanner, true, currentHeaderFile)
@@ -157,7 +157,7 @@ func makeFile(path string, isIndex bool, isOptions bool, scanner *bufio.Scanner,
 		if currentHeaderFile == nil {
 			currentHeaderFile, err = os.Create(path)
 			if err != nil {
-				log.Printf("Error when trying to create non-index file %s: %v", path, err)
+				log.Printf("Error when trying to create non-index file %s: %s", path, err)
 			}
 			createdFiles[path] = currentHeaderFile
 		} 
@@ -172,7 +172,7 @@ func makeFile(path string, isIndex bool, isOptions bool, scanner *bufio.Scanner,
 func writeLine(file *os.File, line string) {
 	_, err := file.WriteString(line + "\n")
 	if err != nil {
-		log.Printf("Error when trying to write to file: %v", err)
+		log.Printf("Error when trying to write to file: %s", err)
 	}
 }
 
@@ -211,6 +211,6 @@ func deleteExistingFolder() {
 		return
 	}
 	os.RemoveAll(docsPath)
-	log.Println("deleted docs folder %v", folderinfo)
+	log.Println("deleted docs folder %s", folderinfo)
 }
 
