@@ -48,7 +48,7 @@ const (
 	// Namespace subcommand definitions
 	DescribeNamespaceDefinition =  "Describe a Namespace by its name or Id."
 	ListNamespacesDefinition = "List all Namespaces."
-	RegisterNamespaceDefinition = "Registers a new Namespace."
+	CreateNamespaceDefinition = "Registers a new Namespace."
 	UpdateNamespaceDefinition = "Updates a Namespace."
 	DeleteNamespaceDefinition = "Deletes an existing Namespace."
 
@@ -69,6 +69,18 @@ const (
 	GetDefinition = "Prints environmental properties."
 	SetDefinition = "Set environmental properties."
 	DeleteDefinition = "Delete an environment or environmental property."
+
+	// Schedule definitions
+	ScheduleCreateDefinition = "Create a new Schedule."
+	ScheduleCreateDescription = "Takes a Schedule specification plus all the same args as starting a Workflow."
+	ScheduleUpdateDefinition = "Updates a Schedule with a new definition (full replacement, not patch)."
+	ScheduleUpdateDescription = "Takes a Schedule specification plus all the same args as starting a Workflow."
+	ScheduleToggleDefinition = "Pauses or unpauses a Schedule."
+	ScheduleTriggerDefinition = "Triggers an immediate action."
+	ScheduleBackfillDefinition = "Backfills a past time range of actions."
+	ScheduleDescribeDefinition = "Get Schedule configuration and current state."
+	ScheduleDeleteDefinition = "Deletes a Schedule."
+	ScheduleListDefinition = "Lists Schedules."
 )
 
 //TODO: get information checked for all UsageTexts
