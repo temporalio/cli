@@ -2,25 +2,24 @@ package main
 
 import (
 	"bufio"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"text/template"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/temporalio/cli/app"
 )
 
 const (
-	docsPath  = "docs"
-	cliFile   = "cli.md"
-	filePerm  = 0644
-	indexFile = "index.md"
-	optionsPath = "cmd-options"	
+	docsPath    = "docs"
+	cliFile     = "cli.md"
+	filePerm    = 0644
+	indexFile   = "index.md"
+	optionsPath = "cmd-options"
 )
 
-const FrontMatterTemplate = 
-`---
+const FrontMatterTemplate = `---
 id: {{.ID}}
 title: temporal {{.Title}}{{if not .IsIndex}} {{.ID}}{{end}}
 sidebar_label:{{if .IsIndex}} {{.Title}}{{else}} {{.ID}}{{end}}
@@ -32,10 +31,10 @@ tags:
 `
 
 type FrontMatter struct {
-	ID string 
-	Title string
+	ID          string
+	Title       string
 	Description string
-	IsIndex bool
+	IsIndex     bool
 }
 
 var currentHeader, fileName, optionFileName, operatorFileName, path, optionFilePath, headerIndexFile, aliasName string
@@ -85,7 +84,7 @@ func main() {
 			operatorFileName = strings.TrimSpace(line[4:])
 			filePath := filepath.Join(path, fileName, operatorFileName+".md")
 			makeFile(filePath, false, false, scanner, createdFiles)
-			
+
 		} else if strings.HasPrefix(line, "**--") {
 			// split into term and definition
 			term, definition, found := strings.Cut(line, ":")
@@ -97,7 +96,7 @@ func main() {
 			} else {
 				optionFileName = term
 			}
-			log.Info("string split successfully into term and definition (%s)",found)
+			log.Printf("string split successfully into term and definition (%v)", found)
 
 			optionFileName = strings.TrimPrefix(optionFileName, "**--")
 			optionFileName = strings.TrimSuffix(optionFileName, "**")
@@ -107,7 +106,7 @@ func main() {
 			termLink := "- [--" + optionFileName + "](/cmd-options/" + optionFileName + ")"
 			makeFile(optionFilePath, false, true, scanner, createdFiles)
 			writeLine(currentHeaderFile, termLink)
-			if (aliasName != "") {
+			if aliasName != "" {
 				aliasArray := strings.Split(aliasName, "=")
 				writeLine(currentOptionFile, aliasArray[0])
 				aliasName = ""
@@ -118,7 +117,7 @@ func main() {
 			writeLine(currentHeaderFile, strings.Trim(line, ">"))
 		} else {
 			writeLine(currentHeaderFile, strings.TrimSpace(line))
-		} 
+		}
 	}
 	// close file descriptor after for loop has completed
 	readFile.Close()
@@ -127,7 +126,7 @@ func main() {
 
 func makeFile(path string, isIndex bool, isOptions bool, scanner *bufio.Scanner, createdFiles map[string]*os.File) {
 	var err error
-	if (isOptions) {
+	if isOptions {
 		err = os.MkdirAll(filepath.Join(docsPath, optionsPath), os.ModePerm)
 		if err != nil {
 			log.Printf("Error when trying to create options directory %s: %s", path, err)
@@ -138,8 +137,8 @@ func makeFile(path string, isIndex bool, isOptions bool, scanner *bufio.Scanner,
 		}
 		createdFiles[optionFileName] = currentOptionFile
 		writeFrontMatter(strings.TrimSpace(optionFileName), "", scanner, false, currentOptionFile)
-			
-		} else if (isIndex) {
+
+	} else if isIndex {
 		err = os.MkdirAll(path, os.ModePerm)
 		if err != nil {
 			log.Printf("Error when trying to create a directory %s: %s", path, err)
@@ -160,8 +159,8 @@ func makeFile(path string, isIndex bool, isOptions bool, scanner *bufio.Scanner,
 				log.Printf("Error when trying to create non-index file %s: %s", path, err)
 			}
 			createdFiles[path] = currentHeaderFile
-		} 
-		if (strings.Contains(path, "operator")) {
+		}
+		if strings.Contains(path, "operator") {
 			writeFrontMatter(operatorFileName, currentHeader, scanner, false, currentHeaderFile)
 		}
 		writeFrontMatter(fileName, currentHeader, scanner, false, currentHeaderFile)
@@ -179,7 +178,7 @@ func writeLine(file *os.File, line string) {
 // write front matter
 func writeFrontMatter(idName string, titleName string, scanner *bufio.Scanner, isIndex bool, currentHeaderFile *os.File) {
 	var descriptionTxt string
-	if (titleName != "") {
+	if titleName != "" {
 		for i := 0; i < 2; i++ {
 			scanner.Scan()
 		}
@@ -189,14 +188,14 @@ func writeFrontMatter(idName string, titleName string, scanner *bufio.Scanner, i
 	}
 
 	data := FrontMatter{
-		ID: idName,
-		Title: titleName,
+		ID:          idName,
+		Title:       titleName,
 		Description: descriptionTxt,
-		IsIndex: isIndex,
+		IsIndex:     isIndex,
 	}
 
 	tmpl := template.Must(template.New("fm").Parse(FrontMatterTemplate))
-	
+
 	err := tmpl.ExecuteTemplate(currentHeaderFile, "fm", data)
 	if err != nil {
 		log.Println("Execute: ", err)
@@ -207,10 +206,9 @@ func writeFrontMatter(idName string, titleName string, scanner *bufio.Scanner, i
 func deleteExistingFolder() {
 	folderinfo, err := os.Stat(docsPath)
 	if os.IsNotExist(err) {
-		log.Info("Folder doesn't exist.")
+		log.Printf("Folder doesn't exist.")
 		return
 	}
 	os.RemoveAll(docsPath)
-	log.Println("deleted docs folder %s", folderinfo)
+	log.Printf("deleted docs folder %s", folderinfo)
 }
-
