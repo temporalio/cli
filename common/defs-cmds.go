@@ -92,8 +92,11 @@ The List Filter identifies the Workflow Executions that will be affected by the 
 The Batch type determines the other parameters that need to be provided, along with what is being affected on the Workflow Executions.
 
 To start the Batch job, run `+"`"+`temporal workflow query`+"`"+`.
+Running Signal, Terminate, or Cancel with the `+"`"+`--query`+"`"+` modifier will start a Batch job automatically.
+
 A successfully started Batch job will return a Job ID.
 Use this Job ID to execute other actions on the Batch job.
+
 `
 const DescribeBatchUsageText = `The `+"`"+`temporal batch describe`+"`"+` command shows the progress of an ongoing Batch job.
 
