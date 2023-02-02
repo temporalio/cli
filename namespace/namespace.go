@@ -36,7 +36,7 @@ func NewNamespaceCommands() []*cli.Command {
 		},
 		{
 			Name:      "create",
-			Usage:     "Register a new Namespace",
+			Usage:     common.CreateNamespaceDefinition,
 			UsageText: common.NamespaceCreateUsageText,
 			Flags:     createNamespaceFlags,
 			ArgsUsage: "namespace_name [cluster_name...]",

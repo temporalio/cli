@@ -227,7 +227,7 @@ var FlagsForExecution = []cli.Flag{
 	&cli.StringFlag{
 		Name:     FlagWorkflowID,
 		Aliases:  FlagWorkflowIDAlias,
-		Usage:    "Workflow Id",
+		Usage:    FlagWorkflowId,
 		Required: true,
 		Category: CategoryMain,
 	},
@@ -285,7 +285,7 @@ var FlagsForStartWorkflowT = []cli.Flag{
 	&cli.StringFlag{
 		Name:     FlagWorkflowID,
 		Aliases:  FlagWorkflowIDAlias,
-		Usage:    FlagWorkflowIdDefinition,
+		Usage:    FlagWorkflowId,
 		Category: CategoryMain,
 	},
 	&cli.StringFlag{
@@ -363,7 +363,7 @@ var FlagsForWorkflowFiltering = []cli.Flag{
 	},
 	&cli.BoolFlag{
 		Name:     FlagArchive,
-		Usage:    "List archived Workflow Executions.\nCurrently an experimental feature.",
+		Usage:    FlagArchiveDefinition,
 		Category: CategoryMain,
 	},
 }
@@ -423,7 +423,7 @@ var FlagsForFormatting = []cli.Flag{
 	},
 	&cli.StringFlag{
 		Name:     output.FlagFields,
-		Usage:    "Customize fields to print. Set to 'long' to automatically print more of main fields.",
+		Usage:    FlagFieldsDefinition,
 		Category: CategoryDisplay,
 	},
 }

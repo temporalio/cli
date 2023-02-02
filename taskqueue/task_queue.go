@@ -16,14 +16,14 @@ func NewTaskQueueCommands() []*cli.Command {
 				&cli.StringFlag{
 					Name:     common.FlagTaskQueue,
 					Aliases:  common.FlagTaskQueueAlias,
-					Usage:    "Task Queue name.",
+					Usage:    common.FlagTaskQueueName,
 					Required: true,
 					Category: common.CategoryMain,
 				},
 				&cli.StringFlag{
 					Name:     common.FlagTaskQueueType,
 					Value:    "workflow",
-					Usage:    "Task Queue type [workflow|activity]",
+					Usage:    common.FlagTaskQueueTypeDefinition,
 					Category: common.CategoryMain,
 				},
 			}, common.FlagsForFormatting...),
@@ -39,7 +39,7 @@ func NewTaskQueueCommands() []*cli.Command {
 				&cli.StringFlag{
 					Name:     common.FlagTaskQueue,
 					Aliases:  common.FlagTaskQueueAlias,
-					Usage:    "Task Queue name.",
+					Usage:    common.FlagTaskQueueName,
 					Required: true,
 					Category: common.CategoryMain,
 				},

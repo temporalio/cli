@@ -14,7 +14,7 @@ func NewBatchCommands() []*cli.Command {
 			Flags: append([]cli.Flag{
 				&cli.StringFlag{
 					Name:     common.FlagJobID,
-					Usage:    "Batch Job Id",
+					Usage:    common.FlagJobIDDefinition,
 					Required: true,
 					Category: common.CategoryMain,
 				},
@@ -40,13 +40,13 @@ func NewBatchCommands() []*cli.Command {
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:     common.FlagJobID,
-					Usage:    "Batch Job Id",
+					Usage:    common.FlagJobIDDefinition,
 					Required: true,
 					Category: common.CategoryMain,
 				},
 				&cli.StringFlag{
 					Name:     common.FlagReason,
-					Usage:    "Reason to stop the Batch job.",
+					Usage:    common.FlagReasonBatchDefinition,
 					Required: true,
 					Category: common.CategoryMain,
 				},

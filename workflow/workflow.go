@@ -35,12 +35,12 @@ func NewWorkflowCommands() []*cli.Command {
 			Flags: append(common.FlagsForExecution, []cli.Flag{
 				&cli.BoolFlag{
 					Name:     common.FlagResetPointsOnly,
-					Usage:    "Only show auto-reset points.",
+					Usage:    common.FlagResetPointsUsage,
 					Category: common.CategoryMain,
 				},
 				&cli.BoolFlag{
 					Name:     common.FlagPrintRaw,
-					Usage:    "Print properties as they are stored.",
+					Usage:    common.FlagPrintRawUsage,
 					Category: common.CategoryMain,
 				},
 			}...),
@@ -73,7 +73,7 @@ func NewWorkflowCommands() []*cli.Command {
 			Flags: append(common.FlagsForStackTraceQuery,
 				&cli.StringFlag{
 					Name:     common.FlagType,
-					Usage:    "The query type you want to run.",
+					Usage:    common.QueryFlagTypeUsage,
 					Required: true,
 					Category: common.CategoryMain,
 				}),
@@ -99,47 +99,47 @@ func NewWorkflowCommands() []*cli.Command {
 				&cli.StringFlag{
 					Name:     common.FlagWorkflowID,
 					Aliases:  common.FlagWorkflowIDAlias,
-					Usage:    "Signal Workflow Execution by Id.",
+					Usage:    common.FlagWorkflowSignalUsage,
 					Category: common.CategoryMain,
 				},
 				&cli.StringFlag{
 					Name:     common.FlagRunID,
 					Aliases:  common.FlagRunIDAlias,
-					Usage:    "Run Id",
+					Usage:    common.FlagRunIdDefinition,
 					Category: common.CategoryMain,
 				},
 				&cli.StringFlag{
 					Name:     common.FlagQuery,
 					Aliases:  common.FlagQueryAlias,
-					Usage:    "Signal Workflow Executions by List Filter. See https://docs.temporal.io/concepts/what-is-a-list-filter/.",
+					Usage:    common.FlagQueryDefinition,
 					Category: common.CategoryMain,
 				},
 				&cli.StringFlag{
 					Name:     common.FlagName,
-					Usage:    "Signal Name",
+					Usage:    common.FlagSignalName,
 					Required: true,
 					Category: common.CategoryMain,
 				},
 				&cli.StringFlag{
 					Name:     common.FlagInput,
 					Aliases:  common.FlagInputAlias,
-					Usage:    "Input for the signal (JSON).",
+					Usage:    common.FlagInputSignal,
 					Category: common.CategoryMain,
 				},
 				&cli.StringFlag{
 					Name:     common.FlagInputFile,
-					Usage:    "Input for the signal from file (JSON).",
+					Usage:    common.FlagInputFileSignal,
 					Category: common.CategoryMain,
 				},
 				&cli.StringFlag{
 					Name:     common.FlagReason,
-					Usage:    "Reason for signaling with List Filter.",
+					Usage:    common.FlagReasonSignal,
 					Category: common.CategoryMain,
 				},
 				&cli.BoolFlag{
 					Name:     common.FlagYes,
 					Aliases:  common.FlagYesAlias,
-					Usage:    "Confirm all prompts.",
+					Usage:    common.FlagYesDefinition,
 					Category: common.CategoryMain,
 				},
 			},
@@ -171,30 +171,30 @@ func NewWorkflowCommands() []*cli.Command {
 				&cli.StringFlag{
 					Name:     common.FlagWorkflowID,
 					Aliases:  common.FlagWorkflowIDAlias,
-					Usage:    "Cancel Workflow Execution by Id.",
+					Usage:    common.FlagCancelWorkflow,
 					Category: common.CategoryMain,
 				},
 				&cli.StringFlag{
 					Name:     common.FlagRunID,
 					Aliases:  common.FlagRunIDAlias,
-					Usage:    "Run Id",
+					Usage:    common.FlagRunIdDefinition,
 					Category: common.CategoryMain,
 				},
 				&cli.StringFlag{
 					Name:     common.FlagQuery,
 					Aliases:  common.FlagQueryAlias,
-					Usage:    "Cancel Workflow Executions by List Filter. See https://docs.temporal.io/concepts/what-is-a-list-filter/.",
+					Usage:    common.FlagQueryDefinition,
 					Category: common.CategoryMain,
 				},
 				&cli.StringFlag{
 					Name:     common.FlagReason,
-					Usage:    "Reason for canceling with List Filter.",
+					Usage:    common.FlagReasonCancel,
 					Category: common.CategoryMain,
 				},
 				&cli.BoolFlag{
 					Name:     common.FlagYes,
 					Aliases:  common.FlagYesAlias,
-					Usage:    "Confirm all prompts.",
+					Usage:    common.FlagYesDefinition,
 					Category: common.CategoryMain,
 				},
 			},
@@ -210,30 +210,30 @@ func NewWorkflowCommands() []*cli.Command {
 				&cli.StringFlag{
 					Name:     common.FlagWorkflowID,
 					Aliases:  common.FlagWorkflowIDAlias,
-					Usage:    "Terminate Workflow Execution by Id.",
+					Usage:    common.FlagWorkflowIDTerminate,
 					Category: common.CategoryMain,
 				},
 				&cli.StringFlag{
 					Name:     common.FlagRunID,
 					Aliases:  common.FlagRunIDAlias,
-					Usage:    "Run Id",
+					Usage:    common.FlagRunIdDefinition,
 					Category: common.CategoryMain,
 				},
 				&cli.StringFlag{
 					Name:     common.FlagQuery,
 					Aliases:  common.FlagQueryAlias,
-					Usage:    "Terminate Workflow Executions by List Filter. See https://docs.temporal.io/concepts/what-is-a-list-filter/.",
+					Usage:    common.FlagQueryTerminate,
 					Category: common.CategoryMain,
 				},
 				&cli.StringFlag{
 					Name:     common.FlagReason,
-					Usage:    "Reason for termination.",
+					Usage:    common.FlagReasonTerminate,
 					Category: common.CategoryMain,
 				},
 				&cli.BoolFlag{
 					Name:     common.FlagYes,
 					Aliases:  common.FlagYesAlias,
-					Usage:    "Confirm all prompts.",
+					Usage:    common.FlagYesDefinition,
 					Category: common.CategoryMain,
 				},
 			},
@@ -257,12 +257,12 @@ func NewWorkflowCommands() []*cli.Command {
 			Flags: append(common.FlagsForExecution, []cli.Flag{
 				&cli.StringFlag{
 					Name:     common.FlagEventID,
-					Usage:    "The eventId of any event after WorkflowTaskStarted you want to reset to (exclusive). It can be WorkflowTaskCompleted, WorkflowTaskFailed or others.",
+					Usage:    common.FlagEventIDDefinition,
 					Category: common.CategoryMain,
 				},
 				&cli.StringFlag{
 					Name:     common.FlagReason,
-					Usage:    "Reason to reset.",
+					Usage:    common.FlagReasonReset,
 					Required: true,
 					Category: common.CategoryMain,
 				},
@@ -290,40 +290,40 @@ func NewWorkflowCommands() []*cli.Command {
 				&cli.StringFlag{
 					Name:     common.FlagQuery,
 					Aliases:  common.FlagQueryAlias,
-					Usage:    "Visibility query of Search Attributes describing the Workflow Executions to reset. See https://docs.temporal.io/docs/tctl/workflow/list#--query.",
+					Usage:    common.FlagQueryResetBatch,
 					Category: common.CategoryMain,
 				}, &cli.StringFlag{
 					Name:     common.FlagInputFile,
-					Usage:    "Input file that specifies Workflow Executions to reset. Each line contains one Workflow Id as the base Run and, optionally, a Run Id.",
+					Usage:    common.FlagInputFileReset,
 					Category: common.CategoryMain,
 				},
 				&cli.StringFlag{
 					Name:     common.FlagExcludeFile,
 					Value:    "",
-					Usage:    "Input file that specifies Workflow Executions to exclude from resetting.",
+					Usage:    common.FlagExcludeFileDefinition,
 					Category: common.CategoryMain,
 				},
 				&cli.StringFlag{
 					Name:     common.FlagInputSeparator,
 					Value:    "\t",
-					Usage:    "Separator for the input file. The default is a tab (\t).",
+					Usage:    common.FlagInputSeparatorDefinition,
 					Category: common.CategoryMain,
 				},
 				&cli.StringFlag{
 					Name:     common.FlagReason,
-					Usage:    "Reason for resetting the Workflow Executions.",
+					Usage:    common.FlagReasonResetBatch,
 					Required: true,
 					Category: common.CategoryMain,
 				},
 				&cli.IntFlag{
 					Name:     common.FlagParallelism,
 					Value:    1,
-					Usage:    "Number of goroutines to run in parallel. Each goroutine processes one line for every second.",
+					Usage:    common.FlagParallelismDefinition,
 					Category: common.CategoryMain,
 				},
 				&cli.BoolFlag{
 					Name:     common.FlagSkipCurrentOpen,
-					Usage:    "Skip a Workflow Execution if the current Run is open for the same Workflow Id as the base Run.",
+					Usage:    common.FlagSkipCurrentOpenDefinition,
 					Category: common.CategoryMain,
 				},
 				&cli.BoolFlag{
@@ -331,12 +331,12 @@ func NewWorkflowCommands() []*cli.Command {
 					// TODO https://github.com/uber/cadence/issues/2930
 					// The right way to prevent needs server side implementation .
 					// This client side is only best effort
-					Usage:    "Skip a Workflow Execution if the base Run is not the current Run.",
+					Usage:   common.FlagSkipBaseDefinition,
 					Category: common.CategoryMain,
 				},
 				&cli.BoolFlag{
 					Name:     common.FlagNonDeterministic,
-					Usage:    "Reset Workflow Execution only if its last Event is WorkflowTaskFailed with a nondeterministic error.",
+					Usage:    common.FlagNonDeterministicDefinition,
 					Category: common.CategoryMain,
 				},
 				&cli.StringFlag{
@@ -347,7 +347,7 @@ func NewWorkflowCommands() []*cli.Command {
 				},
 				&cli.BoolFlag{
 					Name:     common.FlagDryRun,
-					Usage:    "Simulate reset without resetting any Workflow Executions.",
+					Usage:    common.FlagDryRunDefinition,
 					Category: common.CategoryMain,
 				},
 			},
@@ -363,13 +363,13 @@ func NewWorkflowCommands() []*cli.Command {
 				&cli.IntFlag{
 					Name:     common.FlagDepth,
 					Value:    -1,
-					Usage:    "Number of Child Workflows to expand, -1 to expand all Child Workflows.",
+					Usage:    common.FlagDepthDefinition,
 					Category: common.CategoryMain,
 				},
 				&cli.IntFlag{
 					Name:     common.FlagConcurrency,
 					Value:    10,
-					Usage:    "Request concurrency",
+					Usage:    common.FlagConcurrencyDefinition,
 					Category: common.CategoryMain,
 				},
 				&cli.StringFlag{
@@ -380,7 +380,7 @@ func NewWorkflowCommands() []*cli.Command {
 				},
 				&cli.BoolFlag{
 					Name:     common.FlagNoFold,
-					Usage:    "Disable folding. All Child Workflows within the set depth will be fetched and displayed.",
+					Usage:    common.FlagNoFoldDefinition,
 					Category: common.CategoryMain,
 				}),
 			Action: TraceWorkflow,

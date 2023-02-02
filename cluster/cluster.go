@@ -31,7 +31,7 @@ func NewClusterCommands() []*cli.Command {
 				},
 				&cli.StringFlag{
 					Name:     output.FlagFields,
-					Usage:    "Customize fields to print. Set to 'long' to automatically print more of main fields.",
+					Usage:    common.FlagFieldsDefinition,
 					Category: common.CategoryDisplay,
 				},
 			},
@@ -54,7 +54,7 @@ func NewClusterCommands() []*cli.Command {
 				},
 				&cli.StringFlag{
 					Name:     output.FlagFields,
-					Usage:    "Customize fields to print. Set to 'long' to automatically print more of main fields.",
+					Usage:    common.FlagFieldsDefinition,
 					Category: common.CategoryDisplay,
 				},
 			},
@@ -70,12 +70,12 @@ func NewClusterCommands() []*cli.Command {
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:     common.FlagClusterAddress,
-					Usage:    "Frontend address of the remote Cluster.",
+					Usage:    common.FlagClusterAddressDefinition,
 					Category: common.CategoryMain,
 				},
 				&cli.BoolFlag{
 					Name:     common.FlagClusterEnableConnection,
-					Usage:    "Enable cross-cluster connection.",
+					Usage:    common.FlagClusterEnableConnectionDefinition,
 					Category: common.CategoryMain,
 				},
 			},
@@ -101,7 +101,7 @@ func NewClusterCommands() []*cli.Command {
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:     common.FlagName,
-					Usage:    "Frontend address of the remote Cluster.",
+					Usage:    common.FlagNameDefinition,
 					Required: true,
 					Category: common.CategoryMain,
 				},

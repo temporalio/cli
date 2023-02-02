@@ -19,7 +19,7 @@ func NewSearchAttributeCommands() []*cli.Command {
 				&cli.StringSliceFlag{
 					Name:     common.FlagName,
 					Required: true,
-					Usage:    "Search attribute name.",
+					Usage:    common.FlagNameSearchAttribute,
 					Category: common.CategoryMain,
 				},
 				&cli.StringSliceFlag{
@@ -31,7 +31,7 @@ func NewSearchAttributeCommands() []*cli.Command {
 				&cli.BoolFlag{
 					Name:     common.FlagYes,
 					Aliases:  common.FlagYesAlias,
-					Usage:    "Confirm all prompts.",
+					Usage:    common.FlagYesDefinition,
 					Category: common.CategoryMain,
 				},
 			},
@@ -64,13 +64,13 @@ func NewSearchAttributeCommands() []*cli.Command {
 				&cli.StringSliceFlag{
 					Name:     common.FlagName,
 					Required: true,
-					Usage:    "Search attribute name.",
+					Usage:    common.FlagNameSearchAttribute,
 					Category: common.CategoryMain,
 				},
 				&cli.BoolFlag{
 					Name:     common.FlagYes,
 					Aliases:  common.FlagYesAlias,
-					Usage:    "Confirm all prompts.",
+					Usage:    common.FlagYesDefinition,
 					Category: common.CategoryMain,
 				},
 			},
