@@ -14,9 +14,9 @@ require (
 	github.com/temporalio/tctl-kit v0.0.0-20230104170414-10932650d727
 	github.com/temporalio/ui-server/v2 v2.10.1
 	github.com/urfave/cli/v2 v2.24.2
-	go.temporal.io/api v1.15.1-0.20230130221739-35f91d43296f
-	go.temporal.io/sdk v1.20.1-0.20230131233224-093eabe1f8d1
-	go.temporal.io/server v1.18.1-0.20230203000623-e43e5b500d81
+	go.temporal.io/api v1.16.0
+	go.temporal.io/sdk v1.21.0
+	go.temporal.io/server v1.18.1-0.20230203202137-a4943bbd2f2f
 	go.uber.org/zap v1.24.0
 	golang.org/x/exp v0.0.0-20221126150942-6ab00d035af9
 	google.golang.org/grpc v1.52.3
@@ -70,6 +70,7 @@ require (
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
 	github.com/labstack/echo/v4 v4.9.1 // indirect
 	github.com/labstack/gommon v0.4.0 // indirect
+	github.com/lib/pq v1.10.7 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.17 // indirect
