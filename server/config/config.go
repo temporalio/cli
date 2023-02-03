@@ -216,7 +216,6 @@ func Convert(cfg *Config) *config.Config {
 			Provider:   nil,
 		},
 	}
-
 	baseConfig.NamespaceDefaults = config.NamespaceDefaults{
 		Archival: config.ArchivalNamespaceDefaults{
 			History: config.HistoryArchivalNamespaceDefaults{
