@@ -107,7 +107,7 @@ func NewServer(opts ...ServerOption) (*Server, error) {
 
 	serverOpts := []temporal.ServerOption{
 		temporal.WithConfig(cfg),
-		temporal.ForServices(temporal.Services),
+		temporal.ForServices(temporal.DefaultServices),
 		temporal.WithLogger(c.Logger),
 		temporal.WithAuthorizer(authorizer),
 		temporal.WithClaimMapper(func(cfg *config.Config) authorization.ClaimMapper {
