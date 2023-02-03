@@ -106,14 +106,6 @@ func SetEnvProperty(c *cli.Context) error {
 	fullKey := c.Args().Get(0)
 	val := c.Args().Get(1)
 
-	if fullKey == "version" {
-		if err := ClientConfig.SetVersion(val); err != nil {
-			return fmt.Errorf("unable to set version: %w", err)
-		}
-
-		return nil
-	}
-
 	if err := validateEnvArg(fullKey); err != nil {
 		return err
 	}
