@@ -198,10 +198,11 @@ func Convert(cfg *Config) *config.Config {
 		Policy: "noop",
 	}
 	baseConfig.Services = map[string]config.Service{
-		"frontend": cfg.mustGetService(0),
-		"history":  cfg.mustGetService(1),
-		"matching": cfg.mustGetService(2),
-		"worker":   cfg.mustGetService(3),
+		"frontend":          cfg.mustGetService(0),
+		"history":           cfg.mustGetService(1),
+		"matching":          cfg.mustGetService(2),
+		"internal-frontend": cfg.mustGetService(3),
+		"worker":            cfg.mustGetService(6),
 	}
 	baseConfig.Archival = config.Archival{
 		History: config.HistoryArchival{
@@ -215,9 +216,7 @@ func Convert(cfg *Config) *config.Config {
 			Provider:   nil,
 		},
 	}
-	baseConfig.PublicClient = config.PublicClient{
-		HostPort: fmt.Sprintf("%s:%d", broadcastAddress, cfg.FrontendPort),
-	}
+
 	baseConfig.NamespaceDefaults = config.NamespaceDefaults{
 		Archival: config.ArchivalNamespaceDefaults{
 			History: config.HistoryArchivalNamespaceDefaults{
