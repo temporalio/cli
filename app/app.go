@@ -88,7 +88,7 @@ func serverCommands(defaultCfg *sconfig.Config) []*cli.Command {
 	return []*cli.Command{
 		{
 			Name:        "server",
-			Usage:       "Commands for managing Temporal server",
+			Usage:       "Commands for managing the Temporal Server.",
 			Subcommands: server.NewServerCommands(defaultCfg),
 		},
 	}
@@ -97,54 +97,56 @@ func serverCommands(defaultCfg *sconfig.Config) []*cli.Command {
 var clientCommands = []*cli.Command{
 	{
 		Name:        "workflow",
-		Usage:       "Operations on Workflows",
+		Usage:       common.WorkflowDefinition,
 		Subcommands: workflow.NewWorkflowCommands(),
 	},
 	{
 		Name:        "activity",
-		Usage:       "Operations on Activities of Workflows",
+		Usage:       common.ActivityDefinition,
 		Subcommands: activity.NewActivityCommands(),
 	},
 	{
 		Name:        "task-queue",
-		Usage:       "Operations on Task Queues",
+		Usage:       common.TaskQueueDefinition,
 		Subcommands: taskqueue.NewTaskQueueCommands(),
 	},
 	{
 		Name:        "schedule",
-		Usage:       "Operations on Schedules",
+		Usage:       common.ScheduleDefinition,
+		UsageText: common.ScheduleUsageText,
 		Subcommands: schedule.NewScheduleCommands(),
 	},
-
 	{
 		Name:        "batch",
-		Usage:       "Operations on Batch jobs. Use workflow commands with --query flag to start batch jobs",
+		Usage:       common.BatchDefinition,
+		UsageText:   common.BatchUsageText,
 		Subcommands: batch.NewBatchCommands(),
 	},
 	{
 		Name:  "operator",
-		Usage: "Operation on Temporal server",
+		Usage: common.OperatorDefinition,
+		UsageText: common.OperatorUsageText,
 		Subcommands: []*cli.Command{
 			{
 				Name:        "namespace",
-				Usage:       "Operations on namespaces",
+				Usage:       common.NamespaceDefinition,
 				Subcommands: namespace.NewNamespaceCommands(),
 			},
 			{
 				Name:        "search-attribute",
-				Usage:       "Operations on search attributes",
+				Usage:       common.SearchAttributeDefinition,
 				Subcommands: searchattribute.NewSearchAttributeCommands(),
 			},
 			{
 				Name:        "cluster",
-				Usage:       "Operations on a Temporal cluster",
+				Usage:       common.ClusterDefinition,
 				Subcommands: cluster.NewClusterCommands(),
 			},
 		},
 	},
 	{
 		Name:        "env",
-		Usage:       "Manage client environment configurations",
+		Usage:       common.EnvDefinition,
 		Subcommands: env.NewEnvCommands(),
 	},
 }
@@ -152,7 +154,7 @@ var clientCommands = []*cli.Command{
 var completionCommands = []*cli.Command{
 	{
 		Name:        "completion",
-		Usage:       "Output shell completion code for the specified shell (zsh, bash)",
+		Usage:       "Output shell completion code for the specified shell (zsh, bash).",
 		Subcommands: completion.NewCompletionCommands(),
 	},
 }

@@ -50,26 +50,26 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 	return []*cli.Command{
 		{
 			Name:      "start-dev",
-			Usage:     "Start Temporal development server",
+			Usage:     "Start Temporal development server.",
 			ArgsUsage: " ",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:    common.FlagDBPath,
 					Aliases: []string{"f"},
 					Value:   defaultCfg.DatabaseFilePath,
-					Usage:   "File in which to persist Temporal state (by default, Workflows are lost when the process dies)",
+					Usage:   "File in which to persist Temporal state (by default, Workflows are lost when the process dies).",
 				},
 				&cli.StringSliceFlag{
 					Name:    common.FlagNamespace,
 					Aliases: common.FlagNamespaceAlias,
-					Usage:   `Specify namespaces that should be pre-created (namespace "default" is always created)`,
+					Usage:   `Specify namespaces that should be pre-created (namespace "default" is always created).`,
 					EnvVars: nil,
 					Value:   nil,
 				},
 				&cli.IntFlag{
 					Name:    common.FlagPort,
 					Aliases: []string{"p"},
-					Usage:   "Port for the frontend gRPC service",
+					Usage:   "Port for the frontend gRPC service.",
 					Value:   sconfig.DefaultFrontendPort,
 				},
 				&cli.IntFlag{
@@ -80,32 +80,32 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 				},
 				&cli.IntFlag{
 					Name:        common.FlagUIPort,
-					Usage:       "Port for the Web UI",
+					Usage:       "Port for the Web UI.",
 					DefaultText: fmt.Sprintf("--port + 1000, eg. %d", sconfig.DefaultFrontendPort+1000),
 				},
 				&cli.BoolFlag{
 					Name:  common.FlagHeadless,
-					Usage: "Disable the Web UI",
+					Usage: "Disable the Web UI.",
 				},
 				&cli.StringFlag{
 					Name:    common.FlagIP,
-					Usage:   `IPv4 address to bind the frontend service to`,
+					Usage:   `IPv4 address to bind the frontend service to.`,
 					EnvVars: nil,
 					Value:   "127.0.0.1",
 				},
 				&cli.StringFlag{
 					Name:        common.FlagUIIP,
-					Usage:       `IPv4 address to bind the Web UI to`,
+					Usage:       `IPv4 address to bind the Web UI to.`,
 					DefaultText: "same as --ip",
 				},
 				&cli.StringFlag{
 					Name:    common.FlagUIAssetPath,
-					Usage:   `UI Custom Assets path`,
+					Usage:   `UI Custom Assets path.`,
 					EnvVars: nil,
 				},
 				&cli.StringFlag{
 					Name:    common.FlagUICodecEndpoint,
-					Usage:   `UI Remote data converter HTTP endpoint`,
+					Usage:   `UI Remote data converter HTTP endpoint.`,
 					EnvVars: nil,
 				},
 				&cli.StringFlag{
@@ -129,13 +129,13 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 				&cli.StringFlag{
 					Name:    common.FlagConfig,
 					Aliases: []string{"c"},
-					Usage:   `Path to config directory`,
+					Usage:   `Path to config directory.`,
 					EnvVars: []string{config.EnvKeyConfigDir},
 					Value:   "",
 				},
 				&cli.StringSliceFlag{
 					Name:  common.FlagDynamicConfigValue,
-					Usage: `Dynamic config value, as KEY=JSON_VALUE (string values need quotes)`,
+					Usage: `Dynamic config value, as KEY=JSON_VALUE (string values need quotes).`,
 				},
 			},
 			Before: func(c *cli.Context) error {

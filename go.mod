@@ -22,11 +22,10 @@ require (
 	google.golang.org/grpc v1.52.3
 )
 
-require cloud.google.com/go/compute/metadata v0.2.1 // indirect
-
 require (
 	cloud.google.com/go v0.105.0 // indirect
 	cloud.google.com/go/compute v1.13.0 // indirect
+	cloud.google.com/go/compute/metadata v0.2.1 // indirect
 	cloud.google.com/go/iam v0.8.0 // indirect
 	cloud.google.com/go/storage v1.27.0 // indirect
 	github.com/apache/thrift v0.17.0 // indirect
