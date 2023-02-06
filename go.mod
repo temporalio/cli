@@ -14,8 +14,8 @@ require (
 	github.com/temporalio/tctl-kit v0.0.0-20230104170414-10932650d727
 	github.com/temporalio/ui-server/v2 v2.9.2-0.20230106074906-529addb76f82
 	github.com/urfave/cli/v2 v2.24.3
-	go.temporal.io/api v1.15.0
-	go.temporal.io/sdk v1.20.0
+	go.temporal.io/api v1.16.0
+	go.temporal.io/sdk v1.21.0
 	go.temporal.io/server v1.19.1
 	go.uber.org/zap v1.24.0
 	golang.org/x/exp v0.0.0-20220929160808-de9c53c655b9
@@ -130,7 +130,7 @@ require (
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/api v0.103.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/genproto v0.0.0-20230124163310-31e0e69b6fc2 // indirect
+	google.golang.org/genproto v0.0.0-20230127162408-596548ed4efa // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
