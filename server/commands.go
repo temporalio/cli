@@ -34,8 +34,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pborman/uuid"
 	"github.com/temporalio/cli/common"
 	sconfig "github.com/temporalio/cli/server/config"
+	cliconfig "github.com/temporalio/tctl-kit/pkg/config"
 	uiconfig "github.com/temporalio/ui-server/v2/server/config"
 	"github.com/urfave/cli/v2"
 	"go.temporal.io/server/common/config"
@@ -252,7 +254,7 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 				if !c.Bool(common.FlagHeadless) {
 					frontendAddr := fmt.Sprintf("%s:%d", ip, serverPort)
 
-					cfg := &uiconfig.Config{
+					uiBaseCfg := &uiconfig.Config{
 						Host:                uiIP,
 						Port:                uiPort,
 						TemporalGRPCAddress: frontendAddr,
@@ -263,7 +265,7 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 						},
 					}
 
-					opt, err := newUIOption(cfg, c.String(common.FlagConfig))
+					opt, err := newUIOption(uiBaseCfg, c.String(common.FlagConfig))
 
 					if err != nil {
 						return err
@@ -274,6 +276,20 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 				}
 				if c.String(common.FlagDBPath) == "" {
 					opts = append(opts, WithPersistenceDisabled())
+
+					if clusterCfg, err := cliconfig.NewConfig("temporalio", "version-info"); err == nil {
+						defaultEnv := "default"
+						clusterIDKey := "cluster-id"
+
+						clusterID, _ := clusterCfg.EnvProperty(defaultEnv, clusterIDKey)
+
+						if clusterID == "" {
+							clusterID = uuid.New()
+							clusterCfg.SetEnvProperty(defaultEnv, clusterIDKey, clusterID)
+						}
+
+						opts = append(opts, WithCustomClusterID(clusterID))
+					}
 				}
 
 				var logger log.Logger

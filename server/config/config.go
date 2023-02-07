@@ -68,6 +68,7 @@ func (noopUIServer) Stop() {}
 
 type Config struct {
 	Ephemeral        bool
+	ClusterID        string
 	DatabaseFilePath string
 	FrontendPort     int
 	MetricsPort      int
@@ -191,6 +192,7 @@ func Convert(cfg *Config) *config.Config {
 				Enabled:                true,
 				InitialFailoverVersion: 1,
 				RPCAddress:             fmt.Sprintf("%s:%d", broadcastAddress, cfg.FrontendPort),
+				ClusterID:              cfg.ClusterID,
 			},
 		},
 	}
@@ -214,9 +216,6 @@ func Convert(cfg *Config) *config.Config {
 			EnableRead: false,
 			Provider:   nil,
 		},
-	}
-	baseConfig.PublicClient = config.PublicClient{
-		HostPort: fmt.Sprintf("%s:%d", broadcastAddress, cfg.FrontendPort),
 	}
 	baseConfig.NamespaceDefaults = config.NamespaceDefaults{
 		Archival: config.ArchivalNamespaceDefaults{

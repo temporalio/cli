@@ -57,6 +57,13 @@ func WithPersistenceDisabled() ServerOption {
 	})
 }
 
+// WithCustomClusterID explicitly sets the cluster ID to use.
+func WithCustomClusterID(clusterID string) ServerOption {
+	return newApplyFuncContainer(func(cfg *sconfig.Config) {
+		cfg.ClusterID = clusterID
+	})
+}
+
 // WithUI enables the Temporal web interface.
 //
 // When unspecified, Temporal will run in headless mode.
