@@ -6,15 +6,29 @@ archives:
   - id: default
     builds:
       - temporal
+      - temporal-doc-gen
     name_template: "temporal_cli_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     format_overrides:
       - goos: windows
         format: zip
 
 builds:
-  - id: "temporal"
+  - id: temporal
     dir: cmd/temporal
     binary: temporal
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+
+  - id: temporal-doc-gen
+    dir: cmd/docgen
+    binary: temporal-doc-gen
     env:
       - CGO_ENABLED=0
     goos:
