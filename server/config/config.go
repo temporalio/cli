@@ -201,7 +201,7 @@ func Convert(cfg *Config) *config.Config {
 		"frontend": cfg.mustGetService(0),
 		"history":  cfg.mustGetService(1),
 		"matching": cfg.mustGetService(2),
-		"worker":   cfg.mustGetService(6),
+		"worker":   cfg.mustGetService(3),
 	}
 	baseConfig.Archival = config.Archival{
 		History: config.HistoryArchival{
