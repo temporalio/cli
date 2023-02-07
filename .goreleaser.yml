@@ -3,11 +3,18 @@ before:
     - go mod download
 
 archives:
-  - id: default
+  - id: temporal
     builds:
       - temporal
-      - temporal-doc-gen
     name_template: "temporal_cli_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        format: zip
+
+  - id: temporal-doc-gen
+    builds:
+      - temporal-doc-gen
+    name_template: "temporal_cli_doc_gen_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     format_overrides:
       - goos: windows
         format: zip
