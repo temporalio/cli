@@ -24,15 +24,9 @@ PINNED_DEPENDENCIES := \
 
 ##### Build #####
 
-build: build-cli build-doc-gen
-
-build-cli:
+build:
 	@printf $(COLOR) "Building Temporal CLI with OS: $(GOOS), ARCH: $(GOARCH)..."
 	CGO_ENABLED=0 go build ./cmd/temporal
-
-build-doc-gen:
-	@printf $(COLOR) "Building Temporal CLI Documentation Generator with OS: $(GOOS), ARCH: $(GOARCH)..."
-	CGO_ENABLED=0 go build -o temporal-doc-gen ./cmd/docgen
 
 clean:
 	@printf $(COLOR) "Clearing binaries..."
