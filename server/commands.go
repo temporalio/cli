@@ -284,6 +284,7 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 						clusterID, _ := clusterCfg.EnvProperty(defaultEnv, clusterIDKey)
 
 						if clusterID == "" {
+							// fallback to generating a new cluster Id in case of errors or empty value
 							clusterID = uuid.New()
 							clusterCfg.SetEnvProperty(defaultEnv, clusterIDKey, clusterID)
 						}

@@ -217,6 +217,9 @@ func Convert(cfg *Config) *config.Config {
 			Provider:   nil,
 		},
 	}
+	baseConfig.PublicClient = config.PublicClient{
+		HostPort: fmt.Sprintf("%s:%d", broadcastAddress, cfg.FrontendPort),
+	}
 	baseConfig.NamespaceDefaults = config.NamespaceDefaults{
 		Archival: config.ArchivalNamespaceDefaults{
 			History: config.HistoryArchivalNamespaceDefaults{
