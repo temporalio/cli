@@ -12,7 +12,7 @@ require (
 	github.com/pborman/uuid v1.2.1
 	github.com/stretchr/testify v1.8.1
 	github.com/temporalio/tctl-kit v0.0.0-20230104170414-10932650d727
-	github.com/temporalio/ui-server/v2 v2.10.1
+	github.com/temporalio/ui-server/v2 v2.10.3
 	github.com/urfave/cli/v2 v2.24.3
 	go.temporal.io/api v1.16.0
 	go.temporal.io/sdk v1.21.0
