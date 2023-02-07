@@ -9,11 +9,12 @@ func NewBatchCommands() []*cli.Command {
 	return []*cli.Command{
 		{
 			Name:  "describe",
-			Usage: "Describe a batch operation job",
+			Usage: common.DescribeBatchJobDefinition,
+			UsageText: common.DescribeBatchUsageText,
 			Flags: append([]cli.Flag{
 				&cli.StringFlag{
 					Name:     common.FlagJobID,
-					Usage:    "Batch Job Id",
+					Usage:    common.FlagJobIDDefinition,
 					Required: true,
 					Category: common.CategoryMain,
 				},
@@ -24,7 +25,8 @@ func NewBatchCommands() []*cli.Command {
 		},
 		{
 			Name:      "list",
-			Usage:     "List batch operation jobs",
+			Usage:     common.ListBatchJobsDefinition,
+			UsageText: common.ListBatchUsageText,
 			Flags:     common.FlagsForPaginationAndRendering,
 			ArgsUsage: " ",
 			Action: func(c *cli.Context) error {
@@ -33,17 +35,18 @@ func NewBatchCommands() []*cli.Command {
 		},
 		{
 			Name:  "terminate",
-			Usage: "Stop a batch operation job",
+			Usage: common.TerminateBatchJobDefinition,
+			UsageText: common.TerminateBatchUsageText,
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:     common.FlagJobID,
-					Usage:    "Batch Job Id",
+					Usage:    common.FlagJobIDDefinition,
 					Required: true,
 					Category: common.CategoryMain,
 				},
 				&cli.StringFlag{
 					Name:     common.FlagReason,
-					Usage:    "Reason to stop the batch job",
+					Usage:    common.FlagReasonBatchDefinition,
 					Required: true,
 					Category: common.CategoryMain,
 				},
