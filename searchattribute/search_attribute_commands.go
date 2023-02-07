@@ -21,11 +21,19 @@ const (
 
 // ListSearchAttributes lists search attributes
 func ListSearchAttributes(c *cli.Context) error {
+	namespace, err := common.RequiredFlag(c, common.FlagNamespace)
+	if err != nil {
+		return err
+	}
+
 	client := client.CFactory.OperatorClient(c)
 	ctx, cancel := common.NewContext(c)
 	defer cancel()
 
-	resp, err := client.ListSearchAttributes(ctx, &operatorservice.ListSearchAttributesRequest{})
+	request := &operatorservice.ListSearchAttributesRequest{
+		Namespace: namespace,
+	}
+	resp, err := client.ListSearchAttributes(ctx, request)
 	if err != nil {
 		return fmt.Errorf("unable to list search attributes: %w", err)
 	}
@@ -60,11 +68,18 @@ func AddSearchAttributes(c *cli.Context) error {
 		return fmt.Errorf("number of --%s and --%s options should be the same", common.FlagName, common.FlagType)
 	}
 
+	namespace, err := common.RequiredFlag(c, common.FlagNamespace)
+	if err != nil {
+		return err
+	}
+
 	client := client.CFactory.OperatorClient(c)
 
 	ctx, cancel := common.NewContext(c)
 	defer cancel()
-	listReq := &operatorservice.ListSearchAttributesRequest{}
+	listReq := &operatorservice.ListSearchAttributesRequest{
+		Namespace: namespace,
+	}
 	existingSearchAttributes, err := client.ListSearchAttributes(ctx, listReq)
 	if err != nil {
 		return fmt.Errorf("unable to get existing search attributes: %w", err)
@@ -103,6 +118,7 @@ func AddSearchAttributes(c *cli.Context) error {
 
 	request := &operatorservice.AddSearchAttributesRequest{
 		SearchAttributes: searchAttributes,
+		Namespace:        namespace,
 	}
 
 	ctx, cancel = common.NewContextWithTimeout(c, addSearchAttributesTimeout)
@@ -118,6 +134,10 @@ func AddSearchAttributes(c *cli.Context) error {
 // RemoveSearchAttributes to add search attributes
 func RemoveSearchAttributes(c *cli.Context) error {
 	names := c.StringSlice(common.FlagName)
+	namespace, err := common.RequiredFlag(c, common.FlagNamespace)
+	if err != nil {
+		return err
+	}
 
 	promptMsg := fmt.Sprintf(
 		"You are about to remove search attributes %s. Continue? Y/N",
@@ -132,9 +152,10 @@ func RemoveSearchAttributes(c *cli.Context) error {
 	defer cancel()
 	request := &operatorservice.RemoveSearchAttributesRequest{
 		SearchAttributes: names,
+		Namespace:        namespace,
 	}
 
-	_, err := client.RemoveSearchAttributes(ctx, request)
+	_, err = client.RemoveSearchAttributes(ctx, request)
 	if err != nil {
 		return fmt.Errorf("unable to remove search attributes: %w", err)
 	}
