@@ -25,7 +25,7 @@ PINNED_DEPENDENCIES := \
 ##### Build #####
 
 build:
-	@printf $(COLOR) "Build Temporal CLI with OS: $(GOOS), ARCH: $(GOARCH)..."
+	@printf $(COLOR) "Building Temporal CLI with OS: $(GOOS), ARCH: $(GOARCH)..."
 	CGO_ENABLED=0 go build ./cmd/temporal
 
 clean:
