@@ -117,6 +117,9 @@ Make sure to write the command as follows:
 `+"`"+`temporal batch terminate [command options] [arguments]`+"`"+`
 
 `
+const WorkflowUsageText = `Workflow commands allow operations to be performed on [Workflow Executions](/concepts/what-is-a-workflow-execution).
+`
+
 const StartWorkflowUsageText = `The `+"`"+`temporal workflow start`+"`"+` command starts a new [Workflow Execution](/concepts/what-is-a-workflow-execution).
 When invoked successfully, the Workflow and Run ID are returned immediately after starting the [Workflow](/concepts/what-is-a-workflow).
 
@@ -197,6 +200,9 @@ Make sure to write the command as follows:
 `+"`"+`temporal workflow reset-batch [command options] [arguments]`+"`"+`
 
 `
+const TaskQueueUsageText = `Task Queue commands allow operations to be performed on [Task Queues](concepts/what-is-a-task-queue).
+`
+
 const DescribeTaskQueueUsageText = `The `+"`"+`temporal task-queue describe`+"`"+` command provides [poller](/application-development/worker-performance#poller-count) information for a given [Task Queue](/concepts/what-is-a-task-queue).
 
 The [Server](/concepts/what-is-the-temporal-server) records the last time of each poll request.
@@ -217,6 +223,9 @@ const OperatorUsageText = `Operator commands enable actions on [Namespaces](/con
 These actions are performed through subcommands for each Operator area.
 
 To run an Operator command, run `+"`"+`temporal operator [command] [subcommand] [command options] [arguments]`+"`"+`.
+`
+
+const ActivityUsageText = `Activity commands enable operations on [Activity Executions](/concepts/what-is-an-activity-execution).
 `
 const CompleteActivityUsageText = `The `+"`"+`temporal activity complete`+"`"+` command completes an [Activity Execution](/concepts/what-is-an-activity-execution).
 
@@ -273,6 +282,10 @@ const ClusterRemoveUsageText = `The `+"`"+`temporal operator cluster remove`+"`"
 Use the options listed below to change the command's behavior.
 Make sure to write the command as follows:
 `+"`"+`temporal operator cluster remove [command options] [arguments]`+"`"+`
+
+`
+
+const EnvUsageText = `Environment (or 'env') commands allow the user to configure the properties for the environment in use.
 
 `
 const EnvGetUsageText = `The `+"`"+`temporal env get`+"`"+` command prints the environmental properties for the environment in use.

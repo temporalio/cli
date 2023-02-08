@@ -98,16 +98,19 @@ var clientCommands = []*cli.Command{
 	{
 		Name:        "workflow",
 		Usage:       common.WorkflowDefinition,
+		UsageText:   common.WorkflowUsageText,	
 		Subcommands: workflow.NewWorkflowCommands(),
 	},
 	{
 		Name:        "activity",
 		Usage:       common.ActivityDefinition,
+		UsageText: 	 common.ActivityUsageText,
 		Subcommands: activity.NewActivityCommands(),
 	},
 	{
 		Name:        "task-queue",
 		Usage:       common.TaskQueueDefinition,
+		UsageText: common.TaskQueueUsageText,
 		Subcommands: taskqueue.NewTaskQueueCommands(),
 	},
 	{
@@ -147,6 +150,7 @@ var clientCommands = []*cli.Command{
 	{
 		Name:        "env",
 		Usage:       common.EnvDefinition,
+		UsageText: common.EnvUsageText,
 		Subcommands: env.NewEnvCommands(),
 	},
 }

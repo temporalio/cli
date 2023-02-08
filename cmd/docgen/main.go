@@ -27,7 +27,6 @@ description: {{.Description}}
 tags:
 	- cli
 ---
-
 `
 
 type FrontMatter struct {
@@ -70,20 +69,24 @@ func main() {
 			currentHeader = strings.TrimSpace(line[2:])
 			path = filepath.Join(docsPath, currentHeader)
 			makeFile(path, true, false, scanner, createdFiles)
+			
 		} else if strings.HasPrefix(line, "### ") {
 			fileName = strings.TrimSpace(line[3:])
 			path = filepath.Join(docsPath, currentHeader)
 			if strings.Contains(currentHeader, "operator") {
 				opPath := filepath.Join(path, fileName)
 				makeFile(opPath, true, false, scanner, createdFiles)
+				
 			} else {
 				filePath := filepath.Join(path, fileName+".md")
 				makeFile(filePath, false, false, scanner, createdFiles)
+				
 			}
 		} else if strings.HasPrefix(line, "#### ") {
 			operatorFileName = strings.TrimSpace(line[4:])
 			filePath := filepath.Join(path, fileName, operatorFileName+".md")
 			makeFile(filePath, false, false, scanner, createdFiles)
+			
 
 		} else if strings.HasPrefix(line, "**--") {
 			// split into term and definition
@@ -112,9 +115,13 @@ func main() {
 				aliasName = ""
 			}
 			writeLine(currentOptionFile, strings.TrimSpace(definition))
+			// write additional definition info to file
+			
+
 
 		} else if strings.Contains(line, ">") {
 			writeLine(currentHeaderFile, strings.Trim(line, ">"))
+			
 		} else {
 			writeLine(currentHeaderFile, strings.TrimSpace(line))
 		}
@@ -162,6 +169,7 @@ func makeFile(path string, isIndex bool, isOptions bool, scanner *bufio.Scanner,
 		}
 		if strings.Contains(path, "operator") {
 			writeFrontMatter(operatorFileName, currentHeader, scanner, false, currentHeaderFile)
+			return
 		}
 		writeFrontMatter(fileName, currentHeader, scanner, false, currentHeaderFile)
 	}
