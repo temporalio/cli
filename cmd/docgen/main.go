@@ -109,14 +109,17 @@ func main() {
 				writeLine(currentOptionFile, aliasArray[0])
 				aliasName = ""
 			}
-			writeLine(currentOptionFile, definition)
+
+			writeLine(currentOptionFile, strings.TrimSpace(definition))
+			
+			
 		} else if strings.Contains(line, ">") {
 			writeLine(currentHeaderFile, strings.Trim(line, ">"))
 		}  else {
 			if(createdFiles[path] == currentOptionFile) {
 				writeLine(currentOptionFile, strings.TrimSpace(line))
 			} else {
-			writeLine(currentHeaderFile, strings.TrimSpace(line))
+				writeLine(currentHeaderFile, strings.TrimSpace(line))
 			}
 		}
 	}
