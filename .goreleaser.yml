@@ -1,6 +1,7 @@
 before:
   hooks:
     - go mod download
+    - go run ./cmd/docgen
 
 archives:
   - id: temporal
@@ -12,30 +13,16 @@ archives:
         format: zip
 
   - id: temporal-doc-gen
-    builds:
-      - temporal-doc-gen
-    name_template: "temporal_cli_doc_gen_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    format_overrides:
-      - goos: windows
-        format: zip
+    builds: []
+    name_template: "temporal_cli_documentation_{{ .Version }}"
+    wrap_in_directory: false
+    files:
+      - docs/*
 
 builds:
   - id: temporal
     dir: cmd/temporal
     binary: temporal
-    env:
-      - CGO_ENABLED=0
-    goos:
-      - linux
-      - darwin
-      - windows
-    goarch:
-      - amd64
-      - arm64
-
-  - id: temporal-doc-gen
-    dir: cmd/docgen
-    binary: temporal-doc-gen
     env:
       - CGO_ENABLED=0
     goos:
