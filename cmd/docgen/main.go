@@ -95,7 +95,6 @@ func main() {
 				optionFileName = term
 			}
 			log.Printf("string split successfully into term and definition (%v)", found)
-			definitionArray := strings.Split(definition, "\n")
 
 			optionFileName = strings.TrimPrefix(optionFileName, "**--")
 			optionFileName = strings.TrimSuffix(optionFileName, "**")
@@ -110,14 +109,15 @@ func main() {
 				writeLine(currentOptionFile, aliasArray[0])
 				aliasName = ""
 			}
-			for i := 0; i < len(definitionArray); i++ {
-				writeLine(currentOptionFile,definitionArray[i])
-			}
-
+			writeLine(currentOptionFile, definition)
 		} else if strings.Contains(line, ">") {
 			writeLine(currentHeaderFile, strings.Trim(line, ">"))
 		}  else {
+			if(createdFiles[path] == currentOptionFile) {
+				writeLine(currentOptionFile, strings.TrimSpace(line))
+			} else {
 			writeLine(currentHeaderFile, strings.TrimSpace(line))
+			}
 		}
 	}
 	// close file descriptor after for loop has completed
