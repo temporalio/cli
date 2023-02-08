@@ -41,15 +41,12 @@ const (
 	"\t│ │ │ │ ┌───────────── day of the week (0 - 6) (Sunday to Saturday) \n" +
 	"\t│ │ │ │ │ \n" +
 	"\t* * * * *"
-	FlagWorkflowIdReusePolicyDefinition = "Allows the same Workflow Id to be used in a new Workflow Execution. " +
-	"Options: AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate, TerminateIfRunning."
+	FlagWorkflowIdReusePolicyDefinition = "Allows the same Workflow Id to be used in a new Workflow Execution.\nOptions: AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate, TerminateIfRunning."
 	FlagInputDefinition = "Optional JSON input to provide to the Workflow.\nPass \"null\" for null values."
-	FlagInputFileDefinition = "Passes optional input for the Workflow from a JSON file.\n" +
-	"If there are multiple JSON files, concatenate them and separate by space or newline.\n" +
-	"Input from the command line will overwrite file input."
-	FlagSearchAttributeDefinition = "Passes Search Attribute in key=value format. Use valid JSON formats for value."
-	FlagMemoDefinition = "Passes a memo in key=value format. Use valid JSON formats for value."
-	FlagMemoFileDefinition = "Passes a memo as file input, with each line following key=value format. Use valid JSON formats for value."
+	FlagInputFileDefinition = "Passes optional input for the Workflow from a JSON file.\nIf there are multiple JSON files, concatenate them and separate by space or newline.\nInput from the command line will overwrite file input."
+	FlagSearchAttributeDefinition = "Passes Search Attribute in key=value format.\nUse valid JSON formats for value."
+	FlagMemoDefinition = "Passes a memo in key=value format.\nUse valid JSON formats for value."
+	FlagMemoFileDefinition = "Passes a memo as file input, with each line following key=value format.\nUse valid JSON formats for value."
 
 	// Other Workflow flags
 	FlagResetPointsUsage = "Only show auto-reset points."
@@ -66,14 +63,14 @@ const (
 	FlagWorkflowIDTerminate = "Terminate Workflow Execution by Id."
 	FlagQueryTerminate = "Terminate Workflow Executions by List Filter. See https://docs.temporal.io/concepts/what-is-a-list-filter/."
 	FlagReasonTerminate = "Reason for termination."
-	FlagEventIDDefinition = "The Event Id for any Event after WorkflowTaskStarted you want to reset to (exclusive). It can be WorkflowTaskCompleted, WorkflowTaskFailed or others."
+	FlagEventIDDefinition = "The Event Id for any Event after WorkflowTaskStarted you want to reset to (exclusive).\nIt can be WorkflowTaskCompleted, WorkflowTaskFailed or others."
 	FlagReasonReset = "Reason to reset."
 	FlagQueryResetBatch = "Visibility Query of Search Attributes describing the Workflow Executions to reset. See https://docs.temporal.io/docs/tctl/workflow/list#--query."
-	FlagInputFileReset = "Input file that specifies Workflow Executions to reset. Each line contains one Workflow Id as the base Run and, optionally, a Run Id."
+	FlagInputFileReset = "Input file that specifies Workflow Executions to reset.\nEach line contains one Workflow Id as the base Run and, optionally, a Run Id."
 	FlagExcludeFileDefinition = "Input file that specifies Workflow Executions to exclude from resetting."
-	FlagInputSeparatorDefinition = "Separator for the input file. The default is a tab (\t)."
+	FlagInputSeparatorDefinition = "Separator for the input file.\nThe default is a tab (\t)."
 	FlagReasonResetBatch = "Reason for resetting the Workflow Executions."
-	FlagParallelismDefinition = "Number of goroutines to run in parallel. Each goroutine processes one line for every second."
+	FlagParallelismDefinition = "Number of goroutines to run in parallel.\nEach goroutine processes one line for every second."
 	FlagSkipCurrentOpenDefinition = "Skip a Workflow Execution if the current Run is open for the same Workflow Id as the base Run."
 	FlagSkipBaseDefinition =  "Skip a Workflow Execution if the base Run is not the current Run."
 	FlagNonDeterministicDefinition = "Reset Workflow Execution only if its last Event is WorkflowTaskFailed with a nondeterministic error."
@@ -84,7 +81,7 @@ const (
 
 
 	// Stack trace query flag definitions
-	FlagInputSTQDefinition = "Optional Query input, in JSON format. For multiple parameters, concatenate them and separate by space."
+	FlagInputSTQDefinition = "Optional Query input, in JSON format.\nFor multiple parameters, concatenate them and separate by space."
 	FlagInputFileSTQDefinition = "Passes optional Query input from a JSON file.\nIf there are multiple JSON, concatenate them and separate by space or newline.\n" + "Input from the command line will overwrite file input."
 	FlagQueryRejectConditionDefinition = "Optional flag for rejecting Queries based on Workflow state. Valid values are \"not_open\" and \"not_completed_cleanly\"."
 
