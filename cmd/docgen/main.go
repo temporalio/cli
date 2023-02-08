@@ -62,32 +62,27 @@ func main() {
 	scanner.Split(bufio.ScanLines)
 	createdFiles := make(map[string]*os.File)
 
-	// TODO: identify different option categories and print flags accordingly
+	// Identify different option categories and print flags accordingly
 	for scanner.Scan() {
 		line := scanner.Text()
 		if strings.HasPrefix(line, "## ") {
 			currentHeader = strings.TrimSpace(line[2:])
 			path = filepath.Join(docsPath, currentHeader)
 			makeFile(path, true, false, scanner, createdFiles)
-			
 		} else if strings.HasPrefix(line, "### ") {
 			fileName = strings.TrimSpace(line[3:])
 			path = filepath.Join(docsPath, currentHeader)
 			if strings.Contains(currentHeader, "operator") {
 				opPath := filepath.Join(path, fileName)
 				makeFile(opPath, true, false, scanner, createdFiles)
-				
 			} else {
 				filePath := filepath.Join(path, fileName+".md")
 				makeFile(filePath, false, false, scanner, createdFiles)
-				
 			}
 		} else if strings.HasPrefix(line, "#### ") {
 			operatorFileName = strings.TrimSpace(line[4:])
 			filePath := filepath.Join(path, fileName, operatorFileName+".md")
 			makeFile(filePath, false, false, scanner, createdFiles)
-			
-
 		} else if strings.HasPrefix(line, "**--") {
 			// split into term and definition
 			term, definition, found := strings.Cut(line, ":")
@@ -100,6 +95,7 @@ func main() {
 				optionFileName = term
 			}
 			log.Printf("string split successfully into term and definition (%v)", found)
+			definitionArray := strings.Split(definition, "\n\t")
 
 			optionFileName = strings.TrimPrefix(optionFileName, "**--")
 			optionFileName = strings.TrimSuffix(optionFileName, "**")
@@ -114,15 +110,13 @@ func main() {
 				writeLine(currentOptionFile, aliasArray[0])
 				aliasName = ""
 			}
-			writeLine(currentOptionFile, strings.TrimSpace(definition))
-			// write additional definition info to file
-			
-
+			for i := 0; i < len(definitionArray); i++ {
+				writeLine(currentOptionFile, strings.TrimSpace(definitionArray[i]))
+			}
 
 		} else if strings.Contains(line, ">") {
 			writeLine(currentHeaderFile, strings.Trim(line, ">"))
-			
-		} else {
+		}  else {
 			writeLine(currentHeaderFile, strings.TrimSpace(line))
 		}
 	}
@@ -156,7 +150,11 @@ func makeFile(path string, isIndex bool, isOptions bool, scanner *bufio.Scanner,
 			log.Printf("Error when trying to create index file %s: %s", headerIndexFile, err)
 		}
 		createdFiles[headerIndexFile] = currentHeaderFile
-		writeFrontMatter(strings.Trim(indexFile, ".md"), currentHeader, scanner, true, currentHeaderFile)
+		if !strings.Contains(path, "operator") {
+			writeFrontMatter(strings.Trim(indexFile, ".md"), currentHeader, scanner, true, currentHeaderFile)
+		} else {
+			writeFrontMatter(strings.Trim(indexFile, ".md"), currentHeader + " " + fileName, scanner, true, currentHeaderFile)
+		}
 	} else {
 		// check if we already created the file
 		currentHeaderFile = createdFiles[path]
@@ -193,6 +191,9 @@ func writeFrontMatter(idName string, titleName string, scanner *bufio.Scanner, i
 		descriptionTxt = strings.TrimSpace(scanner.Text())
 	} else {
 		descriptionTxt = "Definition for the " + idName + " command option."
+	}
+	if strings.Contains(titleName, "operator") {
+		
 	}
 
 	data := FrontMatter{
