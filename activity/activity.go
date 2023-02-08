@@ -28,7 +28,7 @@ func NewActivityCommands() []*cli.Command {
 				},
 				&cli.StringFlag{
 					Name:     common.FlagActivityID,
-					Usage:    common.FlagActivityCompleteDefinition,
+					Usage:    common.FlagActivityIDDefinition,
 					Required: true,
 					Category: common.CategoryMain,
 				},
@@ -70,7 +70,7 @@ func NewActivityCommands() []*cli.Command {
 				},
 				&cli.StringFlag{
 					Name:     common.FlagActivityID,
-					Usage:    common.FlagActivityFailDefinition,
+					Usage:    common.FlagActivityIDDefinition,
 					Required: true,
 					Category: common.CategoryMain,
 				},

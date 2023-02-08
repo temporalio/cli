@@ -28,7 +28,7 @@ func NewScheduleCommands() []*cli.Command {
 		},
 		&cli.StringSliceFlag{
 			Name:     common.FlagCronSchedule,
-			Usage:    common.FlagCronScheduleShortDefinition,
+			Usage:    common.FlagCronScheduleDefinition,
 			Category: common.CategoryMain,
 		},
 		&cli.StringSliceFlag{
@@ -157,7 +157,7 @@ func NewScheduleCommands() []*cli.Command {
 				},
 				&cli.StringFlag{
 					Name:     common.FlagReason,
-					Usage:    common.FlagReasonScheduleDefinition,
+					Usage:    common.FlagReasonDefinition,
 					Value:    "(no reason provided)",
 					Category: common.CategoryMain,
 				},

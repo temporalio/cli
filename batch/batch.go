@@ -46,7 +46,7 @@ func NewBatchCommands() []*cli.Command {
 				},
 				&cli.StringFlag{
 					Name:     common.FlagReason,
-					Usage:    common.FlagReasonBatchDefinition,
+					Usage:    common.FlagReasonDefinition,
 					Required: true,
 					Category: common.CategoryMain,
 				},

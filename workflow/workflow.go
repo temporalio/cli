@@ -133,7 +133,7 @@ func NewWorkflowCommands() []*cli.Command {
 				},
 				&cli.StringFlag{
 					Name:     common.FlagReason,
-					Usage:    common.FlagReasonSignal,
+					Usage:    common.FlagReasonDefinition,
 					Category: common.CategoryMain,
 				},
 				&cli.BoolFlag{
@@ -188,7 +188,7 @@ func NewWorkflowCommands() []*cli.Command {
 				},
 				&cli.StringFlag{
 					Name:     common.FlagReason,
-					Usage:    common.FlagReasonCancel,
+					Usage:    common.FlagReasonDefinition,
 					Category: common.CategoryMain,
 				},
 				&cli.BoolFlag{
@@ -227,7 +227,7 @@ func NewWorkflowCommands() []*cli.Command {
 				},
 				&cli.StringFlag{
 					Name:     common.FlagReason,
-					Usage:    common.FlagReasonTerminate,
+					Usage:    common.FlagReasonDefinition,
 					Category: common.CategoryMain,
 				},
 				&cli.BoolFlag{
@@ -262,7 +262,7 @@ func NewWorkflowCommands() []*cli.Command {
 				},
 				&cli.StringFlag{
 					Name:     common.FlagReason,
-					Usage:    common.FlagReasonReset,
+					Usage:    common.FlagReasonDefinition,
 					Required: true,
 					Category: common.CategoryMain,
 				},
@@ -311,7 +311,7 @@ func NewWorkflowCommands() []*cli.Command {
 				},
 				&cli.StringFlag{
 					Name:     common.FlagReason,
-					Usage:    common.FlagReasonResetBatch,
+					Usage:    common.FlagReasonDefinition,
 					Required: true,
 					Category: common.CategoryMain,
 				},

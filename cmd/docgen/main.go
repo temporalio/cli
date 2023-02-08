@@ -95,7 +95,7 @@ func main() {
 				optionFileName = term
 			}
 			log.Printf("string split successfully into term and definition (%v)", found)
-			definitionArray := strings.Split(definition, "\n\t")
+			definitionArray := strings.Split(definition, "\n")
 
 			optionFileName = strings.TrimPrefix(optionFileName, "**--")
 			optionFileName = strings.TrimSuffix(optionFileName, "**")
@@ -111,7 +111,7 @@ func main() {
 				aliasName = ""
 			}
 			for i := 0; i < len(definitionArray); i++ {
-				writeLine(currentOptionFile, strings.TrimSpace(definitionArray[i]))
+				writeLine(currentOptionFile,definitionArray[i])
 			}
 
 		} else if strings.Contains(line, ">") {
@@ -191,9 +191,6 @@ func writeFrontMatter(idName string, titleName string, scanner *bufio.Scanner, i
 		descriptionTxt = strings.TrimSpace(scanner.Text())
 	} else {
 		descriptionTxt = "Definition for the " + idName + " command option."
-	}
-	if strings.Contains(titleName, "operator") {
-		
 	}
 
 	data := FrontMatter{

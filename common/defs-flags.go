@@ -57,19 +57,14 @@ const (
 	FlagSignalName = "Signal Name"
 	FlagInputSignal = "Input for the Signal (JSON)."
 	FlagInputFileSignal = "Input for the Signal from file (JSON)."
-	FlagReasonSignal = "Reason for signaling with List Filter."
 	FlagCancelWorkflow = "Cancel Workflow Execution by Id."
-	FlagReasonCancel = "Reason for canceling with List Filter."
 	FlagWorkflowIDTerminate = "Terminate Workflow Execution by Id."
 	FlagQueryTerminate = "Terminate Workflow Executions by List Filter. See https://docs.temporal.io/concepts/what-is-a-list-filter/."
-	FlagReasonTerminate = "Reason for termination."
 	FlagEventIDDefinition = "The Event Id for any Event after WorkflowTaskStarted you want to reset to (exclusive).\nIt can be WorkflowTaskCompleted, WorkflowTaskFailed or others."
-	FlagReasonReset = "Reason to reset."
 	FlagQueryResetBatch = "Visibility Query of Search Attributes describing the Workflow Executions to reset. See https://docs.temporal.io/docs/tctl/workflow/list#--query."
 	FlagInputFileReset = "Input file that specifies Workflow Executions to reset.\nEach line contains one Workflow Id as the base Run and, optionally, a Run Id."
 	FlagExcludeFileDefinition = "Input file that specifies Workflow Executions to exclude from resetting."
 	FlagInputSeparatorDefinition = "Separator for the input file.\nThe default is a tab (\t)."
-	FlagReasonResetBatch = "Reason for resetting the Workflow Executions."
 	FlagParallelismDefinition = "Number of goroutines to run in parallel.\nEach goroutine processes one line for every second."
 	FlagSkipCurrentOpenDefinition = "Skip a Workflow Execution if the current Run is open for the same Workflow Id as the base Run."
 	FlagSkipBaseDefinition =  "Skip a Workflow Execution if the base Run is not the current Run."
@@ -94,15 +89,13 @@ const (
 	// Activity flag definitions
 	FlagWorkflowIDDefinition = "Identifies the Workflow that the Activity is running on."
 	FlagRunIDDefinition = "Identifies the current Workflow Run."
-	FlagActivityCompleteDefinition = "Identifies the Activity to be completed."
+	FlagActivityIDDefinition = "Identifies the Activity Execution."
 	FlagResultDefinition = "Set the result value of Activity completion."
 	FlagIdentityDefinition = "Specify operator's identity."
-	FlagActivityFailDefinition = "Identifies the Activity to fail."
-	FlagReasonDefinition = "Reason to fail the Activity."
+
 	FlagDetailDefinition = "Detail to fail the Activity."
 
-	// Batch flag definitions
-	FlagReasonBatchDefinition = "Reason to stop the Batch job."
+	FlagReasonDefinition = "Reason to perform a given operation on the Cluster."
 
 	// Cluster flag definition
 	FlagClusterAddressDefinition = "Frontend address of the remote Cluster."
@@ -111,8 +104,7 @@ const (
 
 	// Schedule flag definition
 	FlagOverlapPolicyDefinition = "Overlap policy: Skip, BufferOne, BufferAll, CancelOther, TerminateOther, AllowAll."
-	FlagCalenderDefinition = `Calendar specification in JSON, e.g. {"dayOfWeek":"Fri","hour":"17","minute":"5"}`
-	FlagCronScheduleShortDefinition = `Calendar specification as cron string, e.g. "30 2 * * 5" or "@daily".`
+	FlagCalenderDefinition = `Calendar specification in JSON ({"dayOfWeek":"Fri","hour":"17","minute":"5"}) or as a Cron string ("30 2 * * 5" or "@daily").`
 	FlagIntervalDefinition = "Interval duration, e.g. 90m, or 90m/13m to include phase offset."
 	FlagStartTimeDefinition = "Overall schedule start time."
 	FlagEndTimeDefinition = "Overall schedule end time."
@@ -128,7 +120,6 @@ const (
 	FlagMemoFileScheduleDefinition = "Set a memo from a file. Each line should follow the format key=value. Use valid JSON formats for value."
 	FlagPauseScheduleDefinition = "Pauses the Schedule."
 	FlagUnpauseDefinition = "Unpauses the Schedule."
-	FlagReasonScheduleDefinition = "Free-form text to describe reason for pause/unpause."
 	FlagBackfillStartTime = "Backfill start time."
 	FlagBackfillEndTime = "Backfill end time."
 	FlagPrintRawDefinition = "Print raw data as json (prefer this over -o json for scripting)."
