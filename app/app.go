@@ -89,6 +89,7 @@ func serverCommands(defaultCfg *sconfig.Config) []*cli.Command {
 		{
 			Name:        "server",
 			Usage:       "Commands for managing the Temporal Server.",
+			UsageText:   common.ServerUsageText,
 			Subcommands: server.NewServerCommands(defaultCfg),
 		},
 	}
@@ -133,16 +134,19 @@ var clientCommands = []*cli.Command{
 			{
 				Name:        "namespace",
 				Usage:       common.NamespaceDefinition,
+				UsageText:   common.NamespaceUsageText,
 				Subcommands: namespace.NewNamespaceCommands(),
 			},
 			{
 				Name:        "search-attribute",
 				Usage:       common.SearchAttributeDefinition,
+				UsageText:   common.SearchAttributeUsageText,
 				Subcommands: searchattribute.NewSearchAttributeCommands(),
 			},
 			{
 				Name:        "cluster",
 				Usage:       common.ClusterDefinition,
+				UsageText:   common.ClusterUsageText,
 				Subcommands: cluster.NewClusterCommands(),
 			},
 		},
