@@ -191,6 +191,7 @@ func (b *clientFactory) createGRPCConnection(c *cli.Context) (*grpc.ClientConn, 
 
 	interceptors := []grpc.UnaryClientInterceptor{
 		errorInterceptor(),
+		headersProviderInterceptor(headersprovider.GetCurrent()),
 	}
 
 	dialOpts := []grpc.DialOption{
