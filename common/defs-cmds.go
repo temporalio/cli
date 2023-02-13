@@ -200,7 +200,7 @@ Make sure to write the command as follows:
 `+"`"+`temporal workflow reset-batch [command options] [arguments]`+"`"+`
 
 `
-const TaskQueueUsageText = `Task Queue commands allow operations to be performed on [Task Queues](concepts/what-is-a-task-queue).
+const TaskQueueUsageText = `Task Queue commands allow operations to be performed on [Task Queues](/concepts/what-is-a-task-queue).
 `
 
 const DescribeTaskQueueUsageText = `The `+"`"+`temporal task-queue describe`+"`"+` command provides [poller](/application-development/worker-performance#poller-count) information for a given [Task Queue](/concepts/what-is-a-task-queue).
