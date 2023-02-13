@@ -116,7 +116,7 @@ func main() {
 		} else if strings.Contains(line, ">") {
 			writeLine(currentHeaderFile, strings.Trim(line, ">"))
 		}  else {
-			if(createdFiles[path] == currentOptionFile) {
+			if(createdFiles[path] == currentOptionFile) || strings.Contains(line, "┌") || strings.Contains(line , "|") {
 				writeLine(currentOptionFile, strings.TrimSpace(line))
 			} else {
 				writeLine(currentHeaderFile, strings.TrimSpace(line))
