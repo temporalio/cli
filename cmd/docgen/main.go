@@ -27,7 +27,6 @@ description: {{.Description}}
 tags:
 	- cli
 ---
-
 `
 
 type FrontMatter struct {
@@ -63,7 +62,7 @@ func main() {
 	scanner.Split(bufio.ScanLines)
 	createdFiles := make(map[string]*os.File)
 
-	// TODO: identify different option categories and print flags accordingly
+	// Identify different option categories and print flags accordingly
 	for scanner.Scan() {
 		line := scanner.Text()
 		if strings.HasPrefix(line, "## ") {
@@ -84,7 +83,6 @@ func main() {
 			operatorFileName = strings.TrimSpace(line[4:])
 			filePath := filepath.Join(path, fileName, operatorFileName+".md")
 			makeFile(filePath, false, false, scanner, createdFiles)
-
 		} else if strings.HasPrefix(line, "**--") {
 			// split into term and definition
 			term, definition, found := strings.Cut(line, ":")
@@ -111,12 +109,18 @@ func main() {
 				writeLine(currentOptionFile, aliasArray[0])
 				aliasName = ""
 			}
-			writeLine(currentOptionFile, strings.TrimSpace(definition))
 
+			writeLine(currentOptionFile, strings.TrimSpace(definition))
+			
+			
 		} else if strings.Contains(line, ">") {
 			writeLine(currentHeaderFile, strings.Trim(line, ">"))
-		} else {
-			writeLine(currentHeaderFile, strings.TrimSpace(line))
+		}  else {
+			if(createdFiles[path] == currentOptionFile) || strings.Contains(line, "┌") || strings.Contains(line , "|") {
+				writeLine(currentOptionFile, strings.TrimSpace(line))
+			} else {
+				writeLine(currentHeaderFile, strings.TrimSpace(line))
+			}
 		}
 	}
 	// close file descriptor after for loop has completed
@@ -149,7 +153,11 @@ func makeFile(path string, isIndex bool, isOptions bool, scanner *bufio.Scanner,
 			log.Printf("Error when trying to create index file %s: %s", headerIndexFile, err)
 		}
 		createdFiles[headerIndexFile] = currentHeaderFile
-		writeFrontMatter(strings.Trim(indexFile, ".md"), currentHeader, scanner, true, currentHeaderFile)
+		if !strings.Contains(path, "operator") {
+			writeFrontMatter(strings.Trim(indexFile, ".md"), currentHeader, scanner, true, currentHeaderFile)
+		} else {
+			writeFrontMatter(strings.Trim(indexFile, ".md"), currentHeader + " " + fileName, scanner, true, currentHeaderFile)
+		}
 	} else {
 		// check if we already created the file
 		currentHeaderFile = createdFiles[path]
@@ -162,6 +170,7 @@ func makeFile(path string, isIndex bool, isOptions bool, scanner *bufio.Scanner,
 		}
 		if strings.Contains(path, "operator") {
 			writeFrontMatter(operatorFileName, currentHeader, scanner, false, currentHeaderFile)
+			return
 		}
 		writeFrontMatter(fileName, currentHeader, scanner, false, currentHeaderFile)
 	}

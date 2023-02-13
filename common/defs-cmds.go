@@ -117,6 +117,9 @@ Make sure to write the command as follows:
 `+"`"+`temporal batch terminate [command options] [arguments]`+"`"+`
 
 `
+const WorkflowUsageText = `Workflow commands allow operations to be performed on [Workflow Executions](/concepts/what-is-a-workflow-execution).
+`
+
 const StartWorkflowUsageText = `The `+"`"+`temporal workflow start`+"`"+` command starts a new [Workflow Execution](/concepts/what-is-a-workflow-execution).
 When invoked successfully, the Workflow and Run ID are returned immediately after starting the [Workflow](/concepts/what-is-a-workflow).
 
@@ -197,6 +200,9 @@ Make sure to write the command as follows:
 `+"`"+`temporal workflow reset-batch [command options] [arguments]`+"`"+`
 
 `
+const TaskQueueUsageText = `Task Queue commands allow operations to be performed on [Task Queues](/concepts/what-is-a-task-queue).
+`
+
 const DescribeTaskQueueUsageText = `The `+"`"+`temporal task-queue describe`+"`"+` command provides [poller](/application-development/worker-performance#poller-count) information for a given [Task Queue](/concepts/what-is-a-task-queue).
 
 The [Server](/concepts/what-is-the-temporal-server) records the last time of each poll request.
@@ -217,6 +223,9 @@ const OperatorUsageText = `Operator commands enable actions on [Namespaces](/con
 These actions are performed through subcommands for each Operator area.
 
 To run an Operator command, run `+"`"+`temporal operator [command] [subcommand] [command options] [arguments]`+"`"+`.
+`
+
+const ActivityUsageText = `Activity commands enable operations on [Activity Executions](/concepts/what-is-an-activity-execution).
 `
 const CompleteActivityUsageText = `The `+"`"+`temporal activity complete`+"`"+` command completes an [Activity Execution](/concepts/what-is-an-activity-execution).
 
@@ -239,6 +248,8 @@ Make sure to write the command as follows:
 `+"`"+`temporal operator cluster health [command options] [arguments]`+"`"+`
 
 `
+const ClusterUsageText = `Cluster commands enabled operations on [Temporal Clusters](/concepts/what-is-a-cluster).`
+
 const ClusterDescribeUsageText = `The `+"`"+`temporal operator cluster describe`+"`"+` command shows information about the [Cluster](/concepts/what-is-a-temporal-cluster).
 
 Use the options listed below to change the output of this command.
@@ -275,6 +286,10 @@ Make sure to write the command as follows:
 `+"`"+`temporal operator cluster remove [command options] [arguments]`+"`"+`
 
 `
+
+const EnvUsageText = `Environment (or 'env') commands allow the user to configure the properties for the environment in use.
+
+`
 const EnvGetUsageText = `The `+"`"+`temporal env get`+"`"+` command prints the environmental properties for the environment in use.
 
 Use the options listed below to change the command's behavior.
@@ -295,6 +310,8 @@ Use the options listed below to change the command's behavior.
 Make sure to write the command as follows:
 `+"`"+`temporal env delete [command options] [arguments]`+"`"+`
 
+`
+const NamespaceUsageText = `Namespace commands allow [Namespace](/concepts/what-is-a-namespace) oeprations to be performed on the [Temporal Cluster](/concepts/what-is-a-cluster).
 `
 const NamespaceDescribeUsageText = `The `+"`"+`temporal operator namespace describe`+"`"+` command provides a description of a [Namespace](/concepts/what-is-a-namespace).
 Namespaces can be identified by name or Namespace ID.
@@ -332,6 +349,7 @@ Make sure to write the command as follows:
 `+"`"+`temporal operator namespace delete [command options] [arguments]`+"`"+`
 
 `
+
 const ScheduleCreateUsageText = `The `+"`"+`temporal schedule create`+"`"+` command creates a new [Schedule](/concepts/what-is-a-schedule).
 Newly created Schedules return a Schedule ID to be used in other Schedule commands.
 
@@ -436,6 +454,7 @@ Listing Schedules in [Standard Visibility](/concepts/what-is-standard-visibility
 Use the options below to change the behavior of this command.
 
 `
+const SearchAttributeUsageText = `Search Attribute commands enable operations for the creation, listing, and removal of [Search Attributes](/concepts/what-is-a-search-attribute).`
 const SearchAttributeCreateUsageText = `The `+"`"+`temporal operator search-attribute create`+"`"+` command adds one or more custom [Search Attributes](/concepts/what-is-a-search-attribute).
 These Search Attributes can be used to [filter a list](/concepts/whaat-is-a-list-filter) of [Workflow Executions](/concepts/what-is-a-workflow-execution) that contain the given Search Attributes in their metadata.
 
@@ -511,4 +530,13 @@ Use the options listed below to change the command's behavior.
 Make sure to write the command as follows:
 `+"`"+`temporal workflow trace [command options] [arguments]`+"`"+`
 
+`
+
+const ServerUsageText = `Server commands allow you to start and manage the [Temporal Server](/concepts/what-is-a-temporal-server) from the command line.
+
+Currently, `+"`"+`cli`+"`"+` server functionality extends to starting the Server. 
+`
+
+const StartDevUsageText = `The `+"`"+`temporal server start-dev`+"`"+` command starts the Temporal Server on `+"`"+`localhost:7233`+"`"+`.
+The results of any command run on the Server can be viewed at http://localhost:7233.
 `

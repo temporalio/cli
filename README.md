@@ -157,6 +157,12 @@ To compile the source run:
 go build -o dist/temporal ./cmd/temporal
 ```
 
+To compile the documentation, run:
+
+```bash
+go build -o dist/temporal-docgen ./cmd/temporal-docgen
+```
+
 To run all tests:
 
 ```bash

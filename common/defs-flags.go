@@ -41,14 +41,11 @@ const (
 	"\t│ │ │ │ ┌───────────── day of the week (0 - 6) (Sunday to Saturday) \n" +
 	"\t│ │ │ │ │ \n" +
 	"\t* * * * *"
-	FlagWorkflowIdReusePolicyDefinition = "Allows the same Workflow Id to be used in a new Workflow Execution. " +
-	"Options: AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate, TerminateIfRunning."
-	FlagInputDefinition = "Optional JSON input to provide to the Workflow.\nPass \"null\" for null values."
-	FlagInputFileDefinition = "Passes optional input for the Workflow from a JSON file.\n" +
-	"If there are multiple JSON files, concatenate them and separate by space or newline.\n" +
-	"Input from the command line will overwrite file input."
+	FlagWorkflowIdReusePolicyDefinition = "Allows the same Workflow Id to be used in a new Workflow Execution. Options: AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate, TerminateIfRunning."
+	FlagInputDefinition = "Optional JSON input to provide to the Workflow. Pass \"null\" for null values."
+	FlagInputFileDefinition = "Passes optional input for the Workflow from a JSON file. If there are multiple JSON files, concatenate them and separate by space or newline. Input from the command line will overwrite file input."
 	FlagSearchAttributeDefinition = "Passes Search Attribute in key=value format. Use valid JSON formats for value."
-	FlagMemoDefinition = "Passes a memo in key=value format. Use valid JSON formats for value."
+	FlagMemoDefinition = "Passes a memo in key=value format.\nUse valid JSON formats for value."
 	FlagMemoFileDefinition = "Passes a memo as file input, with each line following key=value format. Use valid JSON formats for value."
 
 	// Other Workflow flags
@@ -60,19 +57,14 @@ const (
 	FlagSignalName = "Signal Name"
 	FlagInputSignal = "Input for the Signal (JSON)."
 	FlagInputFileSignal = "Input for the Signal from file (JSON)."
-	FlagReasonSignal = "Reason for signaling with List Filter."
 	FlagCancelWorkflow = "Cancel Workflow Execution by Id."
-	FlagReasonCancel = "Reason for canceling with List Filter."
 	FlagWorkflowIDTerminate = "Terminate Workflow Execution by Id."
 	FlagQueryTerminate = "Terminate Workflow Executions by List Filter. See https://docs.temporal.io/concepts/what-is-a-list-filter/."
-	FlagReasonTerminate = "Reason for termination."
 	FlagEventIDDefinition = "The Event Id for any Event after WorkflowTaskStarted you want to reset to (exclusive). It can be WorkflowTaskCompleted, WorkflowTaskFailed or others."
-	FlagReasonReset = "Reason to reset."
 	FlagQueryResetBatch = "Visibility Query of Search Attributes describing the Workflow Executions to reset. See https://docs.temporal.io/docs/tctl/workflow/list#--query."
 	FlagInputFileReset = "Input file that specifies Workflow Executions to reset. Each line contains one Workflow Id as the base Run and, optionally, a Run Id."
 	FlagExcludeFileDefinition = "Input file that specifies Workflow Executions to exclude from resetting."
 	FlagInputSeparatorDefinition = "Separator for the input file. The default is a tab (\t)."
-	FlagReasonResetBatch = "Reason for resetting the Workflow Executions."
 	FlagParallelismDefinition = "Number of goroutines to run in parallel. Each goroutine processes one line for every second."
 	FlagSkipCurrentOpenDefinition = "Skip a Workflow Execution if the current Run is open for the same Workflow Id as the base Run."
 	FlagSkipBaseDefinition =  "Skip a Workflow Execution if the base Run is not the current Run."
@@ -84,28 +76,26 @@ const (
 
 
 	// Stack trace query flag definitions
-	FlagInputSTQDefinition = "Optional Query input, in JSON format. For multiple parameters, concatenate them and separate by space."
+	FlagInputSTQDefinition = "Optional Query input, in JSON format.\nFor multiple parameters, concatenate them and separate by space."
 	FlagInputFileSTQDefinition = "Passes optional Query input from a JSON file.\nIf there are multiple JSON, concatenate them and separate by space or newline.\n" + "Input from the command line will overwrite file input."
 	FlagQueryRejectConditionDefinition = "Optional flag for rejecting Queries based on Workflow state. Valid values are \"not_open\" and \"not_completed_cleanly\"."
 
 	// Pagination flag definitions
 	FlagLimitDefinition = "Number of items to print."
-	FlagPagerDefinition = "Sets the pager for Temporal CLI to use.\nOptions: less, more, favoritePager."
+	FlagPagerDefinition = "Sets the pager for Temporal CLI to use. Options: less, more, favoritePager."
 	FlagNoPagerDefinition = "Disables the interactive pager."
 	FlagFieldsDefinition = "Customize fields to print. Set to 'long' to automatically print more of main fields."
 
 	// Activity flag definitions
 	FlagWorkflowIDDefinition = "Identifies the Workflow that the Activity is running on."
 	FlagRunIDDefinition = "Identifies the current Workflow Run."
-	FlagActivityCompleteDefinition = "Identifies the Activity to be completed."
+	FlagActivityIDDefinition = "Identifies the Activity Execution."
 	FlagResultDefinition = "Set the result value of Activity completion."
 	FlagIdentityDefinition = "Specify operator's identity."
-	FlagActivityFailDefinition = "Identifies the Activity to fail."
-	FlagReasonDefinition = "Reason to fail the Activity."
+
 	FlagDetailDefinition = "Detail to fail the Activity."
 
-	// Batch flag definitions
-	FlagReasonBatchDefinition = "Reason to stop the Batch job."
+	FlagReasonDefinition = "Reason to perform a given operation on the Cluster."
 
 	// Cluster flag definition
 	FlagClusterAddressDefinition = "Frontend address of the remote Cluster."
@@ -114,8 +104,7 @@ const (
 
 	// Schedule flag definition
 	FlagOverlapPolicyDefinition = "Overlap policy: Skip, BufferOne, BufferAll, CancelOther, TerminateOther, AllowAll."
-	FlagCalenderDefinition = `Calendar specification in JSON, e.g. {"dayOfWeek":"Fri","hour":"17","minute":"5"}`
-	FlagCronScheduleShortDefinition = `Calendar specification as cron string, e.g. "30 2 * * 5" or "@daily".`
+	FlagCalenderDefinition = `Calendar specification in JSON ({"dayOfWeek":"Fri","hour":"17","minute":"5"}) or as a Cron string ("30 2 * * 5" or "@daily").`
 	FlagIntervalDefinition = "Interval duration, e.g. 90m, or 90m/13m to include phase offset."
 	FlagStartTimeDefinition = "Overall schedule start time."
 	FlagEndTimeDefinition = "Overall schedule end time."
@@ -131,7 +120,6 @@ const (
 	FlagMemoFileScheduleDefinition = "Set a memo from a file. Each line should follow the format key=value. Use valid JSON formats for value."
 	FlagPauseScheduleDefinition = "Pauses the Schedule."
 	FlagUnpauseDefinition = "Unpauses the Schedule."
-	FlagReasonScheduleDefinition = "Free-form text to describe reason for pause/unpause."
 	FlagBackfillStartTime = "Backfill start time."
 	FlagBackfillEndTime = "Backfill end time."
 	FlagPrintRawDefinition = "Print raw data as json (prefer this over -o json for scripting)."
