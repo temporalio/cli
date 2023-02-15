@@ -26,6 +26,15 @@ archives:
     files:
       - LICENSE
 
+  - id: docgen
+    builds:
+      - docgen
+    name_template: "temporal_cli_documentation_{{ .Version }}"
+    wrap_in_directory: false
+    files:
+      - LICENSE
+      - docs/*
+
 builds:
   - <<: &build_defaults
       dir: cmd/temporal
@@ -48,6 +57,14 @@ builds:
       - windows
     hooks:
       post: # TODO sign Windows release
+
+  - id: docgen
+    dir: cmd/docgen
+    binary: docgen
+    goos:
+      - linux
+    goarch:
+      - amd64
 
 checksum:
   name_template: "checksums.txt"
