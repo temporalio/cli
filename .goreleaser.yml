@@ -3,35 +3,51 @@ before:
     - go mod download
     - go run ./cmd/docgen
 
-archives:
-  - id: temporal
-    builds:
-      - temporal
-    name_template: "temporal_cli_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    format_overrides:
-      - goos: windows
-        format: zip
+release:
+  prerelease: auto
+  draft: false
+  name_template: "v{{.Version}}"
 
-  - id: temporal-doc-gen
-    builds: []
-    name_template: "temporal_cli_documentation_{{ .Version }}"
-    wrap_in_directory: false
+archives:
+  - <<: &archive_defaults
+      name_template: "temporal_cli_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    id: nix
+    builds:
+      - nix
+    format: tar.gz
     files:
-      - docs/*
+      - LICENSE
+
+  - <<: *archive_defaults
+    id: windows
+    builds:
+      - windows
+    format: zip
+    files:
+      - LICENSE
 
 builds:
-  - id: temporal
-    dir: cmd/temporal
-    binary: temporal
-    env:
-      - CGO_ENABLED=0
+  - <<: &build_defaults
+      dir: cmd/temporal
+      binary: temporal
+      ldflags:
+        - -s -w -X github.com/temporalio/cli/headers.Version={{.Version}}
+      goarch:
+        - amd64
+        - arm64
+      env:
+        - CGO_ENABLED=0
+    id: nix
     goos:
       - linux
       - darwin
+
+  - <<: *build_defaults
+    id: windows
+    goos:
       - windows
-    goarch:
-      - amd64
-      - arm64
+    hooks:
+      post: # TODO sign Windows release
 
 checksum:
   name_template: "checksums.txt"

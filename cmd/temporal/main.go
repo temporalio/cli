@@ -10,11 +10,8 @@ import (
 	"github.com/temporalio/cli/app"
 )
 
-// These variables are set by GoReleaser using ldflags
-var version string
-
 func main() {
-	if err := app.BuildApp(version).Run(os.Args); err != nil {
+	if err := app.BuildApp().Run(os.Args); err != nil {
 		goLog.Fatal(err)
 	}
 }

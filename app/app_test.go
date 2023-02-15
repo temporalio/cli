@@ -81,7 +81,7 @@ func TestCLIAppSuite(t *testing.T) {
 }
 
 func (s *cliAppSuite) SetupSuite() {
-	s.app = app.BuildApp("")
+	s.app = app.BuildApp()
 }
 
 func (s *cliAppSuite) SetupTest() {
@@ -320,7 +320,7 @@ func assertServerHealth(t *testing.T, ctx context.Context, opts client.Options) 
 }
 
 func TestCreateDataDirectory_MissingDirectory(t *testing.T) {
-	temporalCLI := app.BuildApp("")
+	temporalCLI := app.BuildApp()
 	// Don't call os.Exit
 	temporalCLI.ExitErrHandler = func(_ *cli.Context, _ error) {}
 
@@ -344,7 +344,7 @@ func TestCreateDataDirectory_MissingDirectory(t *testing.T) {
 }
 
 func TestCreateDataDirectory_ExistingDirectory(t *testing.T) {
-	temporalCLI := app.BuildApp("")
+	temporalCLI := app.BuildApp()
 	// Don't call os.Exit
 	temporalCLI.ExitErrHandler = func(_ *cli.Context, _ error) {}
 

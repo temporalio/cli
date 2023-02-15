@@ -62,7 +62,7 @@ type ClientFactory interface {
 	HealthClient(c *cli.Context) healthpb.HealthClient
 }
 
-func Build(c *cli.Context) {
+func Init(c *cli.Context) {
 	for _, c := range c.App.Commands {
 		common.AddBeforeHandler(c, configureSDK)
 	}

@@ -27,16 +27,14 @@ import (
 	_ "go.temporal.io/server/common/persistence/sql/sqlplugin/sqlite" // load sqlite storage driver
 )
 
-func BuildApp(version string) *cli.App {
+func BuildApp() *cli.App {
 	defaultCfg, _ := sconfig.NewDefaultConfig()
 
 	app := cli.NewApp()
 	app.Name = "temporal"
 	app.Usage = "Temporal command-line interface and development server"
-	if version == "" {
-		version = headers.CLIVersion
-	}
-	app.Version = fmt.Sprintf("%s (server %s) (ui %s)", version, sheaders.ServerVersion, uiversion.UIVersion)
+	app.Version = fmt.Sprintf("%s (server %s) (ui %s)", headers.Version,
+		sheaders.ServerVersion, uiversion.UIVersion)
 	app.Suggest = true
 	app.EnableBashCompletion = true
 	app.DisableSliceFlagSeparator = true
@@ -58,8 +56,9 @@ func SetFactory(factory client.ClientFactory) {
 }
 
 func configureCLI(ctx *cli.Context) error {
-	env.Build(ctx)
-	client.Build(ctx)
+	env.Init(ctx)
+	client.Init(ctx)
+	headers.Init()
 
 	return nil
 }
@@ -99,25 +98,25 @@ var clientCommands = []*cli.Command{
 	{
 		Name:        "workflow",
 		Usage:       common.WorkflowDefinition,
-		UsageText:   common.WorkflowUsageText,	
+		UsageText:   common.WorkflowUsageText,
 		Subcommands: workflow.NewWorkflowCommands(),
 	},
 	{
 		Name:        "activity",
 		Usage:       common.ActivityDefinition,
-		UsageText: 	 common.ActivityUsageText,
+		UsageText:   common.ActivityUsageText,
 		Subcommands: activity.NewActivityCommands(),
 	},
 	{
 		Name:        "task-queue",
 		Usage:       common.TaskQueueDefinition,
-		UsageText: common.TaskQueueUsageText,
+		UsageText:   common.TaskQueueUsageText,
 		Subcommands: taskqueue.NewTaskQueueCommands(),
 	},
 	{
 		Name:        "schedule",
 		Usage:       common.ScheduleDefinition,
-		UsageText: common.ScheduleUsageText,
+		UsageText:   common.ScheduleUsageText,
 		Subcommands: schedule.NewScheduleCommands(),
 	},
 	{
@@ -127,8 +126,8 @@ var clientCommands = []*cli.Command{
 		Subcommands: batch.NewBatchCommands(),
 	},
 	{
-		Name:  "operator",
-		Usage: common.OperatorDefinition,
+		Name:      "operator",
+		Usage:     common.OperatorDefinition,
 		UsageText: common.OperatorUsageText,
 		Subcommands: []*cli.Command{
 			{
@@ -154,7 +153,7 @@ var clientCommands = []*cli.Command{
 	{
 		Name:        "env",
 		Usage:       common.EnvDefinition,
-		UsageText: common.EnvUsageText,
+		UsageText:   common.EnvUsageText,
 		Subcommands: env.NewEnvCommands(),
 	},
 }
