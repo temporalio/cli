@@ -51,7 +51,7 @@ func NewEnvCommands() []*cli.Command {
 	}
 }
 
-func Build(c *cli.Context) {
+func Init(c *cli.Context) {
 	ClientConfig, _ = NewClientConfig()
 
 	for _, c := range c.App.Commands {

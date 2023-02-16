@@ -2,6 +2,7 @@ package headers
 
 import (
 	"context"
+	"runtime/debug"
 
 	"google.golang.org/grpc/metadata"
 )
@@ -14,10 +15,11 @@ const (
 	SupportedFeaturesHeaderDelim      = ","
 )
 
+// Set by GoReleaser using ldflags
+var Version = "DEV"
+
 const (
 	ClientNameCLI = "temporal-cli"
-
-	CLIVersion = "0.5.0"
 
 	// SupportedServerVersions is used by CLI and inter role communication.
 	SupportedServerVersions = ">=1.0.0 <2.0.0"
@@ -38,12 +40,20 @@ var (
 
 	cliVersionHeaders = metadata.New(map[string]string{
 		ClientNameHeaderName:              ClientNameCLI,
-		ClientVersionHeaderName:           CLIVersion,
+		ClientVersionHeaderName:           Version,
 		SupportedServerVersionsHeaderName: SupportedServerVersions,
 		// TODO: This should include SupportedFeaturesHeaderName with a value that's taken
 		// from the Go SDK (since the cli uses the Go SDK for most operations).
 	})
 )
+
+func Init() {
+	if Version == "DEV" {
+		if info, ok := debug.ReadBuildInfo(); ok && info.Main.Version != "(devel)" {
+			Version = info.Main.Version
+		}
+	}
+}
 
 // GetValues returns header values for passed header names.
 // It always returns slice of the same size as number of passed header names.

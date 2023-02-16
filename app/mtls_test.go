@@ -76,7 +76,7 @@ func TestMTLSConfig(t *testing.T) {
 		"--ui-port", strconv.Itoa(webUIPort),
 	}
 	go func() {
-		temporalCLI := app.BuildApp("")
+		temporalCLI := app.BuildApp()
 		// Don't call os.Exit
 		temporalCLI.ExitErrHandler = func(_ *cli.Context, _ error) {}
 

@@ -43,7 +43,7 @@ var currentHeaderFile, currentOptionFile *os.File
 func main() {
 	deleteExistingFolder()
 
-	doc, err := app.BuildApp("").ToMarkdown()
+	doc, err := app.BuildApp().ToMarkdown()
 	if err != nil {
 		log.Fatalf("Error when trying to build app: %s", err)
 	}
@@ -111,12 +111,10 @@ func main() {
 			}
 
 			writeLine(currentOptionFile, strings.TrimSpace(definition))
-			
-			
 		} else if strings.Contains(line, ">") {
 			writeLine(currentHeaderFile, strings.Trim(line, ">"))
-		}  else {
-			if(createdFiles[path] == currentOptionFile) || strings.Contains(line, "┌") || strings.Contains(line , "|") {
+		} else {
+			if (createdFiles[path] == currentOptionFile) || strings.Contains(line, "┌") || strings.Contains(line, "|") {
 				writeLine(currentOptionFile, strings.TrimSpace(line))
 			} else {
 				writeLine(currentHeaderFile, strings.TrimSpace(line))
@@ -156,7 +154,7 @@ func makeFile(path string, isIndex bool, isOptions bool, scanner *bufio.Scanner,
 		if !strings.Contains(path, "operator") {
 			writeFrontMatter(strings.Trim(indexFile, ".md"), currentHeader, scanner, true, currentHeaderFile)
 		} else {
-			writeFrontMatter(strings.Trim(indexFile, ".md"), currentHeader + " " + fileName, scanner, true, currentHeaderFile)
+			writeFrontMatter(strings.Trim(indexFile, ".md"), currentHeader+" "+fileName, scanner, true, currentHeaderFile)
 		}
 	} else {
 		// check if we already created the file
