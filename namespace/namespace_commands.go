@@ -367,7 +367,7 @@ func getNamespaceFromArgs(c *cli.Context) (string, error) {
 	if ns == "" {
 		errMessage := "provide namespace as an argument"
 		if c.IsSet(common.FlagNamespace) {
-			errMessage = fmt.Sprintf("%s. Global flag '%s' is not supported by namespace commands", errMessage, common.FlagNamespace)
+			errMessage = fmt.Sprintf("%s. Command flag '--%s' is not supported by namespace commands", errMessage, common.FlagNamespace)
 		}
 		return "", errors.New(errMessage)
 	}
