@@ -285,8 +285,8 @@ func printWorkflowProgress(c *cli.Context, wid, rid string, watch bool) error {
 	defer cancel()
 
 	doneChan := make(chan bool)
-	timeElapse := 1
-	isTimeElapseExist := false
+	timeElapsed := 1
+	timeElapsedExists := false
 	ticker := time.NewTicker(time.Second).C
 	if !isJSON {
 		fmt.Println(color.Magenta(c, "Progress:"))
@@ -320,19 +320,19 @@ func printWorkflowProgress(c *cli.Context, wid, rid string, watch bool) error {
 			}
 
 			if !isJSON {
-				if isTimeElapseExist {
+				if timeElapsedExists {
 					removePrevious2LinesFromTerminal()
 				}
-				fmt.Printf("\nTime elapse: %ds\n", timeElapse)
+				fmt.Printf("\nTime elapsed: %ds\n", timeElapsed)
 			}
 
-			isTimeElapseExist = true
-			timeElapse++
+			timeElapsedExists = true
+			timeElapsed++
 		case <-doneChan: // print result of this run
 			if !isJSON {
 				fmt.Println(color.Magenta(c, "\nResult:"))
 				if watch {
-					fmt.Printf("  Run Time: %d seconds\n", timeElapse)
+					fmt.Printf("  Run Time: %d seconds\n", timeElapsed)
 				}
 				printRunStatus(c, &lastEvent)
 			}
