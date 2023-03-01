@@ -328,21 +328,21 @@ Make sure to write the command as follows:
 `+"`"+`temporal operator namespace list [command options] [arguments]`+"`"+`
 
 `
-const NamespaceCreateUsageText = `The `+"`"+`temporal operator namespace create`+"`"+` command creates a new [Namespace](/concepts-what-is-a-namespace).
+const NamespaceCreateUsageText = `The `+"`"+`temporal operator namespace create`+"`"+` command creates a new [Namespace](/concepts/what-is-a-namespace).
 
 Use the options listed below to change the command's behavior.
 Make sure to write the command as follows:
 `+"`"+`temporal operator namespace create [command options] [arguments]`+"`"+`
 
 `
-const NamespaceUpdateUsageText = `The `+"`"+`temporal operator namespace update`+"`"+` command updates a given [Namespace](/concepts-what-is-a-namespace).
+const NamespaceUpdateUsageText = `The `+"`"+`temporal operator namespace update`+"`"+` command updates a given [Namespace](/concepts/what-is-a-namespace).
 
 Use the options listed below to change the command's behavior.
 Make sure to write the command as follows:
 `+"`"+`temporal operator namespace update [command options] [arguments]`+"`"+`
 
 `
-const NamespaceDeleteUsageText = `The `+"`"+`temporal operator namespace delete`+"`"+` command deletes a given [Namespace](/concepts-what-is-a-namespace) from the system.
+const NamespaceDeleteUsageText = `The `+"`"+`temporal operator namespace delete`+"`"+` command deletes a given [Namespace](/concepts/what-is-a-namespace) from the system.
 
 Use the options listed below to change the command's behavior.
 Make sure to write the command as follows:
@@ -456,7 +456,7 @@ Use the options below to change the behavior of this command.
 `
 const SearchAttributeUsageText = `Search Attribute commands enable operations for the creation, listing, and removal of [Search Attributes](/concepts/what-is-a-search-attribute).`
 const SearchAttributeCreateUsageText = `The `+"`"+`temporal operator search-attribute create`+"`"+` command adds one or more custom [Search Attributes](/concepts/what-is-a-search-attribute).
-These Search Attributes can be used to [filter a list](/concepts/whaat-is-a-list-filter) of [Workflow Executions](/concepts/what-is-a-workflow-execution) that contain the given Search Attributes in their metadata.
+These Search Attributes can be used to [filter a list](/concepts/what-is-a-list-filter) of [Workflow Executions](/concepts/what-is-a-workflow-execution) that contain the given Search Attributes in their metadata.
 
 Use the options listed below to change the command's behavior.
 Make sure to write the command as follows:

@@ -4,7 +4,7 @@ const (
 	FlagEnvDefinition = "Name of the environment to read environmental variables from."
 	FlagAddrDefinition = "The host and port (formatted as host:port) for the Temporal Frontend Service."
 	FlagNSAliasDefinition = "Identifies a Namespace in the Temporal Workflow."
-	FlagMetadataDefinition = "Contains gRPC metadata to send with requests (Format: key=value). Values must be in a valid JSON format."
+	FlagMetadataDefinition = "Contains gRPC metadata to send with requests (format: key=value). Values must be in a valid JSON format."
 	FlagTLSCertPathDefinition = "Path to x509 certificate."
 	FlagTLSKeyPathDefinition = "Path to private certificate key."
 	FlagTLSCaPathDefinition = "Path to server CA certificate."
@@ -41,7 +41,7 @@ const (
 	"\t│ │ │ │ ┌───────────── day of the week (0 - 6) (Sunday to Saturday) \n" +
 	"\t│ │ │ │ │ \n" +
 	"\t* * * * *"
-	FlagWorkflowIdReusePolicyDefinition = "Allows the same Workflow Id to be used in a new Workflow Execution. Options: AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate, TerminateIfRunning."
+	FlagWorkflowIdReusePolicyDefinition = "Allows the same Workflow Id to be used in a new Workflow Execution (AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate, TerminateIfRunning)."
 	FlagInputDefinition = "Optional JSON input to provide to the Workflow. Pass \"null\" for null values."
 	FlagInputFileDefinition = "Passes optional input for the Workflow from a JSON file. If there are multiple JSON files, concatenate them and separate by space or newline. Input from the command line will overwrite file input."
 	FlagSearchAttributeDefinition = "Passes Search Attribute in key=value format. Use valid JSON formats for value."
@@ -82,7 +82,7 @@ const (
 
 	// Pagination flag definitions
 	FlagLimitDefinition = "Number of items to print."
-	FlagPagerDefinition = "Sets the pager for Temporal CLI to use. Options: less, more, favoritePager."
+	FlagPagerDefinition = "Sets the pager for Temporal CLI to use (options: less, more, favoritePager)."
 	FlagNoPagerDefinition = "Disables the interactive pager."
 	FlagFieldsDefinition = "Customize fields to print. Set to 'long' to automatically print more of main fields."
 
@@ -103,7 +103,7 @@ const (
 	FlagNameDefinition = "Frontend address of the remote Cluster."
 
 	// Schedule flag definition
-	FlagOverlapPolicyDefinition = "Overlap policy: Skip, BufferOne, BufferAll, CancelOther, TerminateOther, AllowAll."
+	FlagOverlapPolicyDefinition = "Overlap policy (options: Skip, BufferOne, BufferAll, CancelOther, TerminateOther, AllowAll)."
 	FlagCalenderDefinition = `Calendar specification in JSON ({"dayOfWeek":"Fri","hour":"17","minute":"5"}) or as a Cron string ("30 2 * * 5" or "@daily").`
 	FlagIntervalDefinition = "Interval duration, e.g. 90m, or 90m/13m to include phase offset."
 	FlagStartTimeDefinition = "Overall schedule start time."
@@ -116,7 +116,7 @@ const (
 	FlagCatchupWindowDefinition = "Maximum allowed catch-up time if server is down."
 	FlagPauseOnFailureDefinition = "Pause schedule after any workflow failure."
 	FlagSearchAttributeScheduleDefinition = "Set Search Attribute on a schedule. Format: key=value. Use valid JSON formats for value."
-	FlagMemoScheduleDefinition = "Set a memo on a schedule. Format: key=value. Use valid JSON formats for value."
+	FlagMemoScheduleDefinition = "Set a memo on a schedule (format: key=value). Use valid JSON formats for value."
 	FlagMemoFileScheduleDefinition = "Set a memo from a file. Each line should follow the format key=value. Use valid JSON formats for value."
 	FlagPauseScheduleDefinition = "Pauses the Schedule."
 	FlagUnpauseDefinition = "Unpauses the Schedule."
