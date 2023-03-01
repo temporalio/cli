@@ -311,7 +311,7 @@ Make sure to write the command as follows:
 `+"`"+`temporal env delete [command options] [arguments]`+"`"+`
 
 `
-const NamespaceUsageText = `Namespace commands allow [Namespace](/concepts/what-is-a-namespace) oeprations to be performed on the [Temporal Cluster](/concepts/what-is-a-temporal-cluster).
+const NamespaceUsageText = `Namespace commands allow [Namespace](/concepts/what-is-a-namespace) operations to be performed on the [Temporal Cluster](/concepts/what-is-a-temporal-cluster).
 `
 const NamespaceDescribeUsageText = `The `+"`"+`temporal operator namespace describe`+"`"+` command provides a description of a [Namespace](/concepts/what-is-a-namespace).
 Namespaces can be identified by name or Namespace ID.
