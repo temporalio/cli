@@ -3,7 +3,6 @@ package searchattribute
 import (
 	"fmt"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/temporalio/cli/client"
@@ -105,14 +104,6 @@ func AddSearchAttributes(c *cli.Context) error {
 
 	if len(searchAttributes) == 0 {
 		fmt.Println(color.Yellow(c, "Search attributes already exist"))
-		return nil
-	}
-
-	promptMsg := fmt.Sprintf(
-		"You are about to add search attributes %s. Continue? Y/N",
-		color.Yellow(c, strings.TrimLeft(fmt.Sprintf("%v", searchAttributes), "map")),
-	)
-	if !common.PromptYes(promptMsg, c.Bool(common.FlagYes)) {
 		return nil
 	}
 

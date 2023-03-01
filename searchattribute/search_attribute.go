@@ -12,8 +12,8 @@ import (
 func NewSearchAttributeCommands() []*cli.Command {
 	return []*cli.Command{
 		{
-			Name:  "create",
-			Usage: common.CreateSearchAttributeDefinition,
+			Name:      "create",
+			Usage:     common.CreateSearchAttributeDefinition,
 			UsageText: common.SearchAttributeCreateUsageText,
 			Flags: []cli.Flag{
 				&cli.StringSliceFlag{
@@ -28,20 +28,14 @@ func NewSearchAttributeCommands() []*cli.Command {
 					Usage:    fmt.Sprintf("Search attribute type: %v", common.AllowedEnumValues(enumspb.IndexedValueType_name)),
 					Category: common.CategoryMain,
 				},
-				&cli.BoolFlag{
-					Name:     common.FlagYes,
-					Aliases:  common.FlagYesAlias,
-					Usage:    common.FlagYesDefinition,
-					Category: common.CategoryMain,
-				},
 			},
 			Action: func(c *cli.Context) error {
 				return AddSearchAttributes(c)
 			},
 		},
 		{
-			Name:  "list",
-			Usage: common.ListSearchAttributesDefinition,
+			Name:      "list",
+			Usage:     common.ListSearchAttributesDefinition,
 			UsageText: common.SearchAttributeListUsageText,
 			Flags: []cli.Flag{
 				&cli.StringFlag{
@@ -57,8 +51,8 @@ func NewSearchAttributeCommands() []*cli.Command {
 			},
 		},
 		{
-			Name:  "remove",
-			Usage: common.RemoveSearchAttributesDefinition,
+			Name:      "remove",
+			Usage:     common.RemoveSearchAttributesDefinition,
 			UsageText: common.SearchAttributeRemoveUsageText,
 			Flags: []cli.Flag{
 				&cli.StringSliceFlag{
