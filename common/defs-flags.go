@@ -13,7 +13,7 @@ const (
 	FlagContextTimeoutDefinition = "An optional timeout for the context of an RPC call (in seconds)."
 	FlagCodecEndpointDefinition = "Endpoint for a remote Codec Server."
 	FlagCodecAuthDefinition = "Sets the authorization header on requests to the Codec Server."
-	FlagArchiveDefinition = "List archived Workflow Executions.\nCurrently an experimental feature."
+	FlagArchiveDefinition = "List archived Workflow Executions. Currently an experimental feature."
 
 	// Execution flags
 	FlagWorkflowId = "Workflow Id"
@@ -45,7 +45,7 @@ const (
 	FlagInputDefinition = "Optional JSON input to provide to the Workflow. Pass \"null\" for null values."
 	FlagInputFileDefinition = "Passes optional input for the Workflow from a JSON file. If there are multiple JSON files, concatenate them and separate by space or newline. Input from the command line will overwrite file input."
 	FlagSearchAttributeDefinition = "Passes Search Attribute in key=value format. Use valid JSON formats for value."
-	FlagMemoDefinition = "Passes a memo in key=value format.\nUse valid JSON formats for value."
+	FlagMemoDefinition = "Passes a memo in key=value format. Use valid JSON formats for value."
 	FlagMemoFileDefinition = "Passes a memo as file input, with each line following key=value format. Use valid JSON formats for value."
 
 	// Other Workflow flags
@@ -76,8 +76,6 @@ const (
 
 
 	// Stack trace query flag definitions
-	FlagInputSTQDefinition = "Optional Query input, in JSON format.\nFor multiple parameters, concatenate them and separate by space."
-	FlagInputFileSTQDefinition = "Passes optional Query input from a JSON file.\nIf there are multiple JSON, concatenate them and separate by space or newline.\n" + "Input from the command line will overwrite file input."
 	FlagQueryRejectConditionDefinition = "Optional flag for rejecting Queries based on Workflow state. Valid values are \"not_open\" and \"not_completed_cleanly\"."
 
 	// Pagination flag definitions
@@ -115,7 +113,7 @@ const (
 	FlagRemainingActionsDefinition = "Total number of actions allowed."
 	FlagCatchupWindowDefinition = "Maximum allowed catch-up time if server is down."
 	FlagPauseOnFailureDefinition = "Pause schedule after any workflow failure."
-	FlagSearchAttributeScheduleDefinition = "Set Search Attribute on a schedule. Format: key=value. Use valid JSON formats for value."
+	FlagSearchAttributeScheduleDefinition = "Set Search Attribute on a schedule (format: key=value). Use valid JSON formats for value."
 	FlagMemoScheduleDefinition = "Set a memo on a schedule (format: key=value). Use valid JSON formats for value."
 	FlagMemoFileScheduleDefinition = "Set a memo from a file. Each line should follow the format key=value. Use valid JSON formats for value."
 	FlagPauseScheduleDefinition = "Pauses the Schedule."

@@ -1,7 +1,5 @@
 package common
 
-
-
 const (
 	// Main command definitions
 	WorkflowDefinition = "Operations that can be performed on Workflows."
@@ -540,3 +538,5 @@ Currently, `+"`"+`cli`+"`"+` server functionality extends to starting the Server
 const StartDevUsageText = `The `+"`"+`temporal server start-dev`+"`"+` command starts the Temporal Server on `+"`"+`localhost:7233`+"`"+`.
 The results of any command run on the Server can be viewed at http://localhost:7233.
 `
+
+const CompletionText = "testing something"

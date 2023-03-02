@@ -109,12 +109,11 @@ func main() {
 				writeLine(currentOptionFile, aliasArray[0])
 				aliasName = ""
 			}
-
 			writeLine(currentOptionFile, strings.TrimSpace(definition))
 		} else if strings.Contains(line, ">") {
 			writeLine(currentHeaderFile, strings.Trim(line, ">"))
 		} else {
-			if (createdFiles[path] == currentOptionFile) || strings.Contains(line, "┌") || strings.Contains(line, "|") {
+			if (createdFiles[path] == currentOptionFile) || strings.Contains(line, "┌") || strings.Contains(line, "|") || strings.Contains(line, "*") || strings.Contains(line, "│"){
 				writeLine(currentOptionFile, strings.TrimSpace(line))
 			} else {
 				writeLine(currentHeaderFile, strings.TrimSpace(line))
@@ -123,7 +122,7 @@ func main() {
 	}
 	// close file descriptor after for loop has completed
 	readFile.Close()
-	defer os.Remove(cliFile)
+	//defer os.Remove(cliFile)
 }
 
 func makeFile(path string, isIndex bool, isOptions bool, scanner *bufio.Scanner, createdFiles map[string]*os.File) {

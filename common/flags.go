@@ -372,12 +372,12 @@ var FlagsForStackTraceQuery = append(FlagsForExecution, []cli.Flag{
 	&cli.StringFlag{
 		Name:     FlagInput,
 		Aliases:  FlagInputAlias,
-		Usage:    FlagInputSTQDefinition,
+		Usage:    FlagInputDefinition,
 		Category: CategoryMain,
 	},
 	&cli.StringFlag{
 		Name: FlagInputFile,
-		Usage: FlagInputFileSTQDefinition,
+		Usage: FlagInputFileDefinition,
 		Category: CategoryMain,
 	},
 	&cli.StringFlag{
