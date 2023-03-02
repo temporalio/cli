@@ -122,7 +122,7 @@ func main() {
 	}
 	// close file descriptor after for loop has completed
 	readFile.Close()
-	//defer os.Remove(cliFile)
+	defer os.Remove(cliFile)
 }
 
 func makeFile(path string, isIndex bool, isOptions bool, scanner *bufio.Scanner, createdFiles map[string]*os.File) {

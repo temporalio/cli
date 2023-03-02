@@ -530,7 +530,7 @@ Make sure to write the command as follows:
 
 `
 
-const ServerUsageText = `Server commands allow you to start and manage the [Temporal Server](/concepts/what-is-a-temporal-server) from the command line.
+const ServerUsageText = `Server commands allow you to start and manage the [Temporal Server](/concepts/what-is-the-temporal-server) from the command line.
 
 Currently, `+"`"+`cli`+"`"+` server functionality extends to starting the Server. 
 `
