@@ -101,7 +101,7 @@ func main() {
 
 			optionFilePath = filepath.Join(docsPath, optionsPath, optionFileName+".md")
 
-			termLink := "- [--" + optionFileName + "](/cmd-options/" + optionFileName + ")"
+			termLink := "- [--" + optionFileName + "](/cli/cmd-options/" + optionFileName + ")"
 			makeFile(optionFilePath, false, true, scanner, createdFiles)
 			writeLine(currentHeaderFile, termLink)
 			if aliasName != "" {
@@ -109,12 +109,11 @@ func main() {
 				writeLine(currentOptionFile, aliasArray[0])
 				aliasName = ""
 			}
-
 			writeLine(currentOptionFile, strings.TrimSpace(definition))
 		} else if strings.Contains(line, ">") {
 			writeLine(currentHeaderFile, strings.Trim(line, ">"))
 		} else {
-			if (createdFiles[path] == currentOptionFile) || strings.Contains(line, "┌") || strings.Contains(line, "|") {
+			if (createdFiles[path] == currentOptionFile) || strings.Contains(line, "┌") || strings.Contains(line, "|") || strings.Contains(line, "*") || strings.Contains(line, "│"){
 				writeLine(currentOptionFile, strings.TrimSpace(line))
 			} else {
 				writeLine(currentHeaderFile, strings.TrimSpace(line))

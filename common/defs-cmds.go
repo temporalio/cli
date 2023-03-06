@@ -1,7 +1,5 @@
 package common
 
-
-
 const (
 	// Main command definitions
 	WorkflowDefinition = "Operations that can be performed on Workflows."
@@ -248,7 +246,7 @@ Make sure to write the command as follows:
 `+"`"+`temporal operator cluster health [command options] [arguments]`+"`"+`
 
 `
-const ClusterUsageText = `Cluster commands enabled operations on [Temporal Clusters](/concepts/what-is-a-cluster).`
+const ClusterUsageText = `Cluster commands enabled operations on [Temporal Clusters](/concepts/what-is-a-temporal-cluster).`
 
 const ClusterDescribeUsageText = `The `+"`"+`temporal operator cluster describe`+"`"+` command shows information about the [Cluster](/concepts/what-is-a-temporal-cluster).
 
@@ -311,7 +309,7 @@ Make sure to write the command as follows:
 `+"`"+`temporal env delete [command options] [arguments]`+"`"+`
 
 `
-const NamespaceUsageText = `Namespace commands allow [Namespace](/concepts/what-is-a-namespace) oeprations to be performed on the [Temporal Cluster](/concepts/what-is-a-cluster).
+const NamespaceUsageText = `Namespace commands allow [Namespace](/concepts/what-is-a-namespace) operations to be performed on the [Temporal Cluster](/concepts/what-is-a-temporal-cluster).
 `
 const NamespaceDescribeUsageText = `The `+"`"+`temporal operator namespace describe`+"`"+` command provides a description of a [Namespace](/concepts/what-is-a-namespace).
 Namespaces can be identified by name or Namespace ID.
@@ -321,28 +319,28 @@ Make sure to write the command as follows:
 `+"`"+`temporal operator namespace describe [command options] [arguments]`+"`"+`
 
 `
-const NamespaceListUsageText = `The `+"`"+`temporal operator namespace list`+"`"+` command lists all [Namespaces](/namespaces) on the [Server](/concepts/what-is-a-frontend-server).
+const NamespaceListUsageText = `The `+"`"+`temporal operator namespace list`+"`"+` command lists all [Namespaces](/namespaces) on the [Server](/concepts/what-is-a-frontend-service).
 
 Use the options listed below to change the command's output.
 Make sure to write the command as follows:
 `+"`"+`temporal operator namespace list [command options] [arguments]`+"`"+`
 
 `
-const NamespaceCreateUsageText = `The `+"`"+`temporal operator namespace create`+"`"+` command creates a new [Namespace](/concepts-what-is-a-namespace).
+const NamespaceCreateUsageText = `The `+"`"+`temporal operator namespace create`+"`"+` command creates a new [Namespace](/concepts/what-is-a-namespace).
 
 Use the options listed below to change the command's behavior.
 Make sure to write the command as follows:
 `+"`"+`temporal operator namespace create [command options] [arguments]`+"`"+`
 
 `
-const NamespaceUpdateUsageText = `The `+"`"+`temporal operator namespace update`+"`"+` command updates a given [Namespace](/concepts-what-is-a-namespace).
+const NamespaceUpdateUsageText = `The `+"`"+`temporal operator namespace update`+"`"+` command updates a given [Namespace](/concepts/what-is-a-namespace).
 
 Use the options listed below to change the command's behavior.
 Make sure to write the command as follows:
 `+"`"+`temporal operator namespace update [command options] [arguments]`+"`"+`
 
 `
-const NamespaceDeleteUsageText = `The `+"`"+`temporal operator namespace delete`+"`"+` command deletes a given [Namespace](/concepts-what-is-a-namespace) from the system.
+const NamespaceDeleteUsageText = `The `+"`"+`temporal operator namespace delete`+"`"+` command deletes a given [Namespace](/concepts/what-is-a-namespace) from the system.
 
 Use the options listed below to change the command's behavior.
 Make sure to write the command as follows:
@@ -456,7 +454,7 @@ Use the options below to change the behavior of this command.
 `
 const SearchAttributeUsageText = `Search Attribute commands enable operations for the creation, listing, and removal of [Search Attributes](/concepts/what-is-a-search-attribute).`
 const SearchAttributeCreateUsageText = `The `+"`"+`temporal operator search-attribute create`+"`"+` command adds one or more custom [Search Attributes](/concepts/what-is-a-search-attribute).
-These Search Attributes can be used to [filter a list](/concepts/whaat-is-a-list-filter) of [Workflow Executions](/concepts/what-is-a-workflow-execution) that contain the given Search Attributes in their metadata.
+These Search Attributes can be used to [filter a list](/concepts/what-is-a-list-filter) of [Workflow Executions](/concepts/what-is-a-workflow-execution) that contain the given Search Attributes in their metadata.
 
 Use the options listed below to change the command's behavior.
 Make sure to write the command as follows:
@@ -524,7 +522,7 @@ Make sure to write the command as follows:
 
 `
 
-const WorkflowTraceUsageText = `The `+"`"+`temporal workflow trace`+"`"+` command tracks the progress of a [Workflow Execution](/concepts/what-is-a-workflow-execution) and any  [Child Workflows](/concepts/what-is-a-child-workflow) it generates.
+const WorkflowTraceUsageText = `The `+"`"+`temporal workflow trace`+"`"+` command tracks the progress of a [Workflow Execution](/concepts/what-is-a-workflow-execution) and any  [Child Workflows](/concepts/what-is-a-child-workflow-execution) it generates.
 
 Use the options listed below to change the command's behavior.
 Make sure to write the command as follows:
@@ -532,7 +530,7 @@ Make sure to write the command as follows:
 
 `
 
-const ServerUsageText = `Server commands allow you to start and manage the [Temporal Server](/concepts/what-is-a-temporal-server) from the command line.
+const ServerUsageText = `Server commands allow you to start and manage the [Temporal Server](/concepts/what-is-the-temporal-server) from the command line.
 
 Currently, `+"`"+`cli`+"`"+` server functionality extends to starting the Server. 
 `
@@ -540,3 +538,5 @@ Currently, `+"`"+`cli`+"`"+` server functionality extends to starting the Server
 const StartDevUsageText = `The `+"`"+`temporal server start-dev`+"`"+` command starts the Temporal Server on `+"`"+`localhost:7233`+"`"+`.
 The results of any command run on the Server can be viewed at http://localhost:7233.
 `
+
+const CompletionText = "testing something"
