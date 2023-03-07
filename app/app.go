@@ -41,6 +41,16 @@ func BuildApp() *cli.App {
 	app.Commands = commands(defaultCfg)
 	app.Before = configureCLI
 	app.ExitErrHandler = HandleError
+	app.CustomAppHelpTemplate = `NAME:
+	{{template "helpNameTemplate" .}}
+ USAGE:
+	{{if .VisibleCommands}}command [command options] {{end}}{{if .ArgsUsage}}{{.ArgsUsage}}{{else}}[arguments...]{{end}}{{end}}{{if .Description}}
+ DESCRIPTION:
+	{{template "descriptionTemplate" .}}{{end}}{{if .VisibleCommands}}
+ COMMANDS:{{template "visibleCommandTemplate" .}}{{end}}{{if .VisibleFlagCategories}}
+ OPTIONS:{{template "visibleFlagCategoryTemplate" .}}{{else if .VisibleFlags}}
+ OPTIONS:{{template "visibleFlagTemplate" .}}{{end}}
+ `
 
 	// set builder if not customized
 	if client.CFactory == nil {
