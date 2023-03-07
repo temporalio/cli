@@ -44,7 +44,7 @@ func BuildApp() *cli.App {
 	app.CustomAppHelpTemplate = `NAME:
 	{{template "helpNameTemplate" .}}
  USAGE:
-	{{if .VisibleCommands}}command [command options] {{end}}{{if .ArgsUsage}}{{.ArgsUsage}}{{else}}[arguments...]{{end}}{{end}}{{if .Description}}
+	{{if .VisibleCommands}}command [command options] {{end}}{{if .ArgsUsage}}{{.ArgsUsage}}{{else}}[arguments...]{{end}}{{if .Description}}
  DESCRIPTION:
 	{{template "descriptionTemplate" .}}{{end}}{{if .VisibleCommands}}
  COMMANDS:{{template "visibleCommandTemplate" .}}{{end}}{{if .VisibleFlagCategories}}
