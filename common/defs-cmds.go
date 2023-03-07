@@ -98,7 +98,7 @@ const DescribeBatchUsageText = `The `+"`"+`temporal batch describe`+"`"+` comman
 
 Use the command options listed below to change the information returned by this command.
 Make sure to write the command in this format:
-`+"`"+`temporal batch describe [command options] [arguments]`+"`"+`
+`+"`"+`temporal batch describe [command options]`+"`"+`
 
 `
 const ListBatchUsageText = `When used, `+"`"+`temporal batch list`+"`"+` returns all Batch jobs. 
@@ -223,7 +223,7 @@ These actions are performed through subcommands for each Operator area.
 To run an Operator command, run `+"`"+`temporal operator [command] [subcommand] [command options] [arguments]`+"`"+`.
 `
 
-const ActivityUsageText = `Activity commands enable operations on [Activity Executions](/concepts/what-is-an-activity-execution).
+const ActivityUsageText = `Activity commands operate on [Activity Executions](/concepts/what-is-an-activity-execution).
 `
 const CompleteActivityUsageText = `The `+"`"+`temporal activity complete`+"`"+` command completes an [Activity Execution](/concepts/what-is-an-activity-execution).
 
@@ -236,7 +236,7 @@ const FailActivityUsageText = `The `+"`"+`temporal activity fail`+"`"+` command 
 
 Use the options listed below to change the behavior of this command.
 Make sure to write the command as follows:
-`+"`"+`temporal activity fail [command options] [arguments]`+"`"+`
+`+"`"+`temporal activity fail [command options]`+"`"+`
 
 `
 const HealthUsageText = `The `+"`"+`temporal operator cluster health`+"`"+` command checks the health of the [Frontend Service](/concepts/what-is-a-frontend-service).
