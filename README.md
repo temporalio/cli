@@ -56,7 +56,7 @@ By default, the "default" namespace is registered. To customize the pre-register
 temporal server start-dev --namespace foo --namespace bar
 ```
 
-Registering namespaces the old-fashioned way via `temporal operator namespace register foo` works too!
+Registering namespaces the old-fashioned way via `temporal operator namespace create foo` works too!
 
 ### Persistence Modes
 
