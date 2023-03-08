@@ -260,6 +260,7 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 						Port:                uiPort,
 						TemporalGRPCAddress: frontendAddr,
 						EnableUI:            true,
+						EnableOpenAPI:       true,
 						UIAssetPath:         uiAssetPath,
 						Codec: uiconfig.Codec{
 							Endpoint: uiCodecEndpoint,
