@@ -67,10 +67,14 @@ func (m *clientFactoryMock) HealthClient(_ *cli.Context) healthpb.HealthClient {
 
 var commands = []string{
 	"activity",
-	"workflow",
-	"task-queue",
-	"operator",
+	"batch",
+	"completion",
 	"env",
+	"operator",
+	"schedule",
+	"server",
+	"task-queue",
+	"workflow",
 }
 
 var cliTestNamespace = "cli-test-namespace"
@@ -101,7 +105,7 @@ func (s *cliAppSuite) TearDownTest() {
 	s.mockCtrl.Finish() // assert mock’s expectations
 }
 
-func (s *cliAppSuite) TestAppCommands() {
+func (s *cliAppSuite) TestTopLevelCommands() {
 	for _, test := range commands {
 		cmd := s.app.Command(test)
 		s.NotNil(cmd)
