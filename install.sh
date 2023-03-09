@@ -75,14 +75,18 @@ main() {
     need_cmd tar
 
     get_architecture || return 1
-    local _arch="$RETVAL"
+    local _arch
+    _arch="$RETVAL"
     assert_nz "$_arch" "arch"
 
     get_platform || return 1
-    local _platform="$RETVAL"
+    local _platform
+    _platform="$RETVAL"
+
     assert_nz "$_platform" "platform"
 
-    local _ansi_escapes_are_valid=false
+    local _ansi_escapes_are_valid
+    _ansi_escapes_are_valid=false
     if [ -t 2 ]; then
         if [ "${TERM+set}" = 'set' ]; then
             case "$TERM" in
@@ -111,44 +115,57 @@ main() {
         exit 1
     fi
 
-    local _ext="tar.gz"
+    local _ext
+    _ext=".tar.gz"
+
     case "$_arch" in
     *windows*)
         _ext=".zip"
         ;;
     esac
-    local _archive_path="${_temp}/temporal_cli_latest${_ext}"
-    local _url="https://temporal.download/cli/archive/latest?platform=${_platform}&arch=${_arch}"
+    
+    local _archive_path
+    _archive_path="${_temp}/temporal_cli_latest${_ext}"
+    local _url
+    _url="https://temporal.download/cli/archive/latest?platform=${_platform}&arch=${_arch}"
+    
     ensure downloader "$_url" "$_archive_path" "$_arch"
     ensure unzip "$_archive_path" "$_temp"
-    local _dir="$(ensure get_install_dir "$@")"
+    local _dir
+    _dir="$(ensure get_install_dir "$@")"
     if [ -z "$_dir" ]; then
         exit 1
     fi
 
-    local _dirbin="$_dir/bin"
+    local _dirbin
+    _dirbin="$_dir/bin"
     ensure mkdir -p "$_dirbin"
 
-    local _bext=""
+    local _bext
+    _bext=""
     case "$_arch" in
     *windows*)
         _bext=".exe"
         ;;
     esac
 
-    local _exe_name="temporal$_bext"
+    local _exe_name
+    _exe_name="temporal$_bext"
     ensure mv "$_temp/${_exe_name}" "$_dirbin"
     ensure rm -rf "$_temp"
     ensure chmod u+x "$_dirbin/$_exe_name"
 
     ensure prompt_for_path "$_dirbin"
 
-    local _retval=$?
+    local _retval
+    _retval=$?
     return "$_retval"
 }
 
 get_architecture() {
-    local _arch="$(uname -m)"
+    local _arch
+    _arch="$(uname -m)"
+
     case "$_arch" in
     "x86_64" | "amd64")
         _arch="amd64"
@@ -158,6 +175,7 @@ get_architecture() {
         ;;
     *)
         err "Unsupported architecture $_arch"
+        # shellcheck disable=SC2317
         return 1
         ;;
     esac
@@ -166,7 +184,9 @@ get_architecture() {
 }
 
 get_platform() {
-    local _platform="$(uname -s)"
+    local _platform
+    _platform="$(uname -s)"
+
     case "$_platform" in
     "Linux")
         _platform="linux"
@@ -176,6 +196,7 @@ get_platform() {
         ;;
     *)
         err "Unsupported OS $_platform"
+        # shellcheck disable=SC2317
         return 1
         ;;
     esac
@@ -224,7 +245,6 @@ downloader() {
     local _ciphersuites
     local _err
     local _status
-    local _retry
     if check_cmd curl; then
         _dld=curl
     elif check_cmd wget; then
@@ -236,21 +256,19 @@ downloader() {
     if [ "$1" = --check ]; then
         need_cmd "$_dld"
     elif [ "$_dld" = curl ]; then
-        check_curl_for_retry_support
-        _retry="$RETVAL"
         get_ciphersuites_for_curl
         _ciphersuites="$RETVAL"
         if [ -n "$_ciphersuites" ]; then
-            _err=$(curl $_retry --proto '=https' --tlsv1.2 --ciphers "$_ciphersuites" --silent --show-error --fail --location "$1" --output "$2" 2>&1)
+            _err=$(curl --proto '=https' --tlsv1.2 --ciphers "$_ciphersuites" --silent --show-error --fail --location "$1" --output "$2" 2>&1)
             _status=$?
         else
             echo "Warning: Not enforcing strong cipher suites for TLS, this is potentially less secure"
             if ! check_help_for "$3" curl --proto --tlsv1.2; then
                 echo "Warning: Not enforcing TLS v1.2, this is potentially less secure"
-                _err=$(curl $_retry --silent --show-error --fail --location "$1" --output "$2" 2>&1)
+                _err=$(curl --silent --show-error --fail --location "$1" --output "$2" 2>&1)
                 _status=$?
             else
-                _err=$(curl $_retry --proto '=https' --tlsv1.2 --silent --show-error --fail --location "$1" --output "$2" 2>&1)
+                _err=$(curl --proto '=https' --tlsv1.2 --silent --show-error --fail --location "$1" --output "$2" 2>&1)
                 _status=$?
             fi
         fi
@@ -297,8 +315,10 @@ downloader() {
 }
 
 unzip() {
-    local _file="$1"
-    local _dir="$2"
+    local _file
+    _file="$1"
+    local _dir
+    _dir="$2"
 
     tar -xzf "$_file" -C "$_dir"
 }
@@ -327,9 +347,10 @@ get_install_dir() {
 }
 
 prompt_for_path() {
-    local _dirbin="$1"
-
-    local _source="export PATH=\"\\\$PATH:$_dirbin\" >> ~/.bashrc"
+    local _dirbin
+    _dirbin="$1"
+    local _source
+    _source="export PATH=\"\\\$PATH:$_dirbin\" >> ~/.bashrc"
 
     say "Temporal CLI installed at $_dirbin/temporal"
 
@@ -396,18 +417,6 @@ check_help_for() {
     true # not strictly needed
 }
 
-# Check if curl supports the --retry flag, then pass it to the curl invocation.
-check_curl_for_retry_support() {
-    local _retry_supported=""
-    # "unspecified" is for arch, allows for possibility old OS using macports, homebrew, etc.
-    if check_help_for "notspecified" "curl" "--retry"; then
-        _retry_supported="--retry 3"
-    fi
-
-    RETVAL="$_retry_supported"
-
-}
-
 # Return cipher suite string specified by user, otherwise return strong TLS 1.2-1.3 cipher suites
 # if support by local tools is detected. Detection currently supports these curl backends:
 # GnuTLS and OpenSSL (possibly also LibreSSL and BoringSSL). Return value can be empty.
@@ -418,9 +427,12 @@ get_ciphersuites_for_curl() {
         return
     fi
 
-    local _openssl_syntax="no"
-    local _gnutls_syntax="no"
-    local _backend_supported="yes"
+    local _openssl_syntax
+    _openssl_syntax="no"
+    local _gnutls_syntax
+    _gnutls_syntax="no"
+    local _backend_supported
+    _backend_supported="yes"
     if curl -V | grep -q ' OpenSSL/'; then
         _openssl_syntax="yes"
     elif curl -V | grep -iq ' LibreSSL/'; then
@@ -433,7 +445,8 @@ get_ciphersuites_for_curl() {
         _backend_supported="no"
     fi
 
-    local _args_supported="no"
+    local _args_supported
+    _args_supported="no"
     if [ "$_backend_supported" = "yes" ]; then
         # "unspecified" is for arch, allows for possibility old OS using macports, homebrew, etc.
         if check_help_for "notspecified" "curl" "--tlsv1.2" "--ciphers" "--proto"; then
@@ -441,7 +454,8 @@ get_ciphersuites_for_curl() {
         fi
     fi
 
-    local _cs=""
+    local _cs
+    _cs=""
     if [ "$_args_supported" = "yes" ]; then
         if [ "$_openssl_syntax" = "yes" ]; then
             _cs=$(get_strong_ciphersuites_for "openssl")
@@ -463,7 +477,8 @@ get_ciphersuites_for_wget() {
         return
     fi
 
-    local _cs=""
+    local _cs
+    _cs=""
     if wget -V | grep -q '\-DHAVE_LIBSSL'; then
         # "unspecified" is for arch, allows for possibility old OS using macports, homebrew, etc.
         if check_help_for "notspecified" "wget" "TLSv1_2" "--ciphers" "--https-only" "--secure-protocol"; then
