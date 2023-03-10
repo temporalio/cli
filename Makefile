@@ -26,7 +26,7 @@ PINNED_DEPENDENCIES := \
 
 build:
 	@printf $(COLOR) "Building Temporal CLI with OS: $(GOOS), ARCH: $(GOARCH)..."
-	CGO_ENABLED=0 go build ./cmd/temporal
+	CGO_ENABLED=0 go build -ldflags "-s -w -X github.com/temporalio/cli/headers.Version=0.0.0" ./cmd/temporal
 
 clean:
 	@printf $(COLOR) "Clearing binaries..."
