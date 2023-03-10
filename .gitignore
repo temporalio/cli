@@ -1,5 +1,6 @@
 # Binaries for programs and plugins
 /temporal
+test-temporal
 /temporal-doc-gen
 *.exe
 *.exe~
