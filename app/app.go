@@ -68,6 +68,8 @@ func HandleError(c *cli.Context, err error) {
 		return
 	}
 
+	cli.HandleExitCoder(err)
+
 	fmt.Fprintf(os.Stderr, "%s %+v\n", color.Red(c, "Error:"), err)
 	if os.Getenv(common.ShowErrorStackEnv) != `` {
 		fmt.Fprintln(os.Stderr, color.Magenta(c, "Stack trace:"))

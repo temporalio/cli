@@ -8,12 +8,9 @@
       "mode": "debug",
       "program": "${workspaceFolder}/cmd/temporal",
       "cwd": "${workspaceFolder}",
-      "args": [
-        "server",
-        "start-dev",
-      ],
+      "args": ["server", "start-dev"],
       "env": {
-        "CGO_ENABLED": "0",
+        "CGO_ENABLED": "0"
       }
     },
     {
@@ -23,10 +20,23 @@
       "mode": "debug",
       "program": "${workspaceFolder}/cmd/temporal",
       "cwd": "${workspaceFolder}",
-      "args": [
-        "workflow",
-        "list",
-      ]
+      "args": ["workflow", "list"]
+    },
+    {
+      // Make sure to first start dev server process with:
+      // ~/go/bin/dlv --listen=127.0.0.1:2345 --headless=true --api-version=2 exec ./temporal server start-dev
+      // Useful for debugging SIGTERM (aka Ctrl+C) when running dev server
+      "name": "attach to server",
+      "type": "go",
+      "request": "attach",
+      "mode": "remote",
+      "remotePath": "/cmd/temporal",
+      "port": 2345,
+      "host": "127.0.0.1",
+      "cwd": "${workspaceFolder}",
+      "trace": "verbose",
+      "apiVersion": 2,
+      "showLog": true
     }
-  ],
+  ]
 }
