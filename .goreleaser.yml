@@ -19,10 +19,18 @@ archives:
       - LICENSE
 
   - <<: *archive_defaults
-    id: windows
+    id: windows-zip
     builds:
       - windows
     format: zip
+    files:
+      - LICENSE
+
+    # used by SDKs as zip cannot be used by rust https://github.com/zip-rs/zip/issues/108
+  - <<: *archive_defaults
+    id: windows-targz
+    builds:
+      - windows
     files:
       - LICENSE
 
