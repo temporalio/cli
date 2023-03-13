@@ -36,7 +36,7 @@ type FrontMatter struct {
 	IsIndex     bool
 }
 
-var currentHeader, fileName, optionFileName, operatorFileName, path, optionFilePath, headerIndexFile, aliasName string
+var currentHeader, fileName, optionFileName, operatorFileName, path, optionFilePath, headerIndexFile string
 var currentHeaderFile, currentOptionFile *os.File
 
 // `BuildApp` takes a string and returns a `*App` and an error
