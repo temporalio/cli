@@ -224,6 +224,7 @@ To run an Operator command, run ` + "`" + `temporal operator [command] [subcomma
 `
 
 const ActivityUsageText = `Activity commands operate on [Activity Executions](/concepts/what-is-an-activity-execution).
+const ActivityUsageText = `Activity commands operate on [Activity Executions](/concepts/what-is-an-activity-execution).
 `
 const CompleteActivityUsageText = `The ` + "`" + `temporal activity complete` + "`" + ` command completes an [Activity Execution](/concepts/what-is-an-activity-execution).
 
