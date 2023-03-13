@@ -89,7 +89,7 @@ func main() {
 			if strings.Contains(term, ",") {
 				termArray := strings.Split(line, ",")
 				optionFileName = termArray[0]
-				aliasName = "Alias: **" + strings.TrimSpace(termArray[1])
+				//aliasName = "Alias: **" + strings.TrimSpace(termArray[1])
 			} else {
 				optionFileName = term
 			}

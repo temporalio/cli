@@ -223,9 +223,8 @@ These actions are performed through subcommands for each Operator area.
 To run an Operator command, run ` + "`" + `temporal operator [command] [subcommand] [command options] [arguments]` + "`" + `.
 `
 
-const ActivityUsageText = `Activity commands operate on [Activity Executions](/concepts/what-is-an-activity-execution).
-const ActivityUsageText = `Activity commands operate on [Activity Executions](/concepts/what-is-an-activity-execution).
-`
+const ActivityUsageText = `Activity commands operate on [Activity Executions](/concepts/what-is-an-activity-execution).`
+
 const CompleteActivityUsageText = `The ` + "`" + `temporal activity complete` + "`" + ` command completes an [Activity Execution](/concepts/what-is-an-activity-execution).
 
 Use the options listed below to change the behavior of this command.
@@ -247,6 +246,7 @@ Make sure to write the command as follows:
 ` + "`" + `temporal operator cluster health [command options] [arguments]` + "`" + `
 
 `
+
 const ClusterUsageText = `Cluster commands enabled operations on [Temporal Clusters](/concepts/what-is-a-temporal-cluster).`
 
 const ClusterDescribeUsageText = `The ` + "`" + `temporal operator cluster describe` + "`" + ` command shows information about the [Cluster](/concepts/what-is-a-temporal-cluster).
@@ -475,7 +475,7 @@ The index schema is not modified.
 
 Use the options listed below to change the command's behavior.
 Make sure to write the command as follows:
-` + "`" + `temporal operator search-attribute remove [command options] [arguments]` + "`" + `
+`+ "`" +`temporal operator search-attribute remove [command options] [arguments]`+ "`" +`
 
 `
 const TaskQueueListPartitionUsageText = `The ` + "`" + `temporal task-queue list-partition` + "`" + ` command displays the partitions of a [Task Queue](/concepts/what-is-a-task-queue), along with the matching node they are assigned to.
