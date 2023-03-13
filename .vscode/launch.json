@@ -37,6 +37,14 @@
       "trace": "verbose",
       "apiVersion": 2,
       "showLog": true
+    },
+    {
+      "name": "Generate docs",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}/cmd/docgen",
+      "cwd": "${workspaceFolder}",
     }
   ]
 }
