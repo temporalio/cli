@@ -134,27 +134,47 @@ func (s *cliAppSuite) TestAcceptStringSliceArgsWithCommas() {
 	app := cli.NewApp()
 	app.Name = "testapp"
 	app.DisableSliceFlagSeparator = true
+
+	action := func(c *cli.Context) error {
+		s.Equal(3, len(c.StringSlice("input")))
+		for _, inp := range c.StringSlice("input") {
+			var thing any
+			s.NoError(json.Unmarshal([]byte(inp), &thing))
+		}
+		return nil
+	}
+	flags := []cli.Flag{
+		&cli.StringSliceFlag{
+			Name: "input",
+		},
+	}
+
 	app.Commands = []*cli.Command{
 		{
-			Name: "dostuff",
-			Action: func(c *cli.Context) error {
-				s.Equal(2, len(c.StringSlice("input")))
-				for _, inp := range c.StringSlice("input") {
-					var thing any
-					s.NoError(json.Unmarshal([]byte(inp), &thing))
-				}
-				return nil
-			},
-			Flags: []cli.Flag{
-				&cli.StringSliceFlag{
-					Name: "input",
+			Name:   "topdo",
+			Action: action,
+			Flags:  flags,
+			Subcommands: []*cli.Command{
+				{
+					Name:   "subdo",
+					Action: action,
+					Flags:  flags,
 				},
 			},
 		},
 	}
-	app.Run([]string{"testapp", "dostuff",
+
+	app.Run([]string{"testapp", "topdo",
 		"--input", `{"field1": 34, "field2": false}`,
-		"--input", `{"numbers": [4,5,6]}`})
+		"--input", `{"numbers": [4,5,6]}`,
+		"--input", `{"a":"b","c":"d"}`,
+	})
+
+	app.Run([]string{"testapp", "topdo", "subdo",
+		"--input", `{"field1": 34, "field2": false}`,
+		"--input", `{"numbers": [4,5,6]}`,
+		"--input", `{"a":"b","c":"d"}`,
+	})
 }
 
 func (s *cliAppSuite) TestDescribeTaskQueue() {
