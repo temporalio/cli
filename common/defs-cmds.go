@@ -278,7 +278,8 @@ Make sure to write the command as follows:
 ` + "`" + `temporal operator cluster list [command options]` + "`" + `
 
 `
-const ClusterRemoveUsageText = `The ` + "`" + `temporal operator cluster remove` + "`" + ` commaZ ç	qnd removes a remote [Cluster](/concepts/what-is-a-temporal-cluster) from the system.
+
+const ClusterRemoveUsageText = `The ` + "`" + `temporal operator cluster remove` + "`" + ` command removes a remote [Cluster](/concepts/what-is-a-temporal-cluster) from the system.
 
 Use the options listed below to change the command's behavior.
 Make sure to write the command as follows:

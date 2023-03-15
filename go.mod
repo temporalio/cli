@@ -3,7 +3,7 @@ module github.com/temporalio/cli
 go 1.19
 
 require (
-	github.com/fatih/color v1.14.1
+	github.com/fatih/color v1.15.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/gogo/status v1.1.1
 	github.com/golang/mock v1.6.0
@@ -12,8 +12,8 @@ require (
 	github.com/pborman/uuid v1.2.1
 	github.com/stretchr/testify v1.8.2
 	github.com/temporalio/tctl-kit v0.0.0-20230104170414-10932650d727
-	github.com/temporalio/ui-server/v2 v2.11.1
-	github.com/urfave/cli/v2 v2.25.0
+	github.com/temporalio/ui-server/v2 v2.11.2
+	github.com/urfave/cli/v2 v2.23.6
 	go.temporal.io/api v1.18.1
 	go.temporal.io/sdk v1.21.1
 	go.temporal.io/server v1.20.0
@@ -124,7 +124,7 @@ require (
 	golang.org/x/mod v0.7.0 // indirect
 	golang.org/x/net v0.7.0 // indirect
 	golang.org/x/oauth2 v0.4.0 // indirect
-	golang.org/x/sys v0.5.0 // indirect
+	golang.org/x/sys v0.6.0 // indirect
 	golang.org/x/text v0.7.0 // indirect
 	golang.org/x/time v0.2.0 // indirect
 	golang.org/x/tools v0.3.0 // indirect
