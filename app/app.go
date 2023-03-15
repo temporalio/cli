@@ -92,6 +92,7 @@ func serverCommands(defaultCfg *sconfig.Config) []*cli.Command {
 			Name:        "server",
 			Usage:       "Commands for managing the Temporal Server.",
 			UsageText:   common.ServerUsageText,
+			CustomHelpTemplate: common.CustomTemplateHelpCLI,
 			Subcommands: server.NewServerCommands(defaultCfg),
 		},
 	}
@@ -102,53 +103,62 @@ var clientCommands = []*cli.Command{
 		Name:        "workflow",
 		Usage:       common.WorkflowDefinition,
 		UsageText:   common.WorkflowUsageText,
+		CustomHelpTemplate: common.CustomTemplateHelpCLI,
 		Subcommands: workflow.NewWorkflowCommands(),
 	},
 	{
 		Name:        "activity",
 		Usage:       common.ActivityDefinition,
 		UsageText:   common.ActivityUsageText,
+		CustomHelpTemplate: common.CustomTemplateHelpCLI,
 		Subcommands: activity.NewActivityCommands(),
 	},
 	{
 		Name:        "task-queue",
 		Usage:       common.TaskQueueDefinition,
 		UsageText:   common.TaskQueueUsageText,
+		CustomHelpTemplate: common.CustomTemplateHelpCLI,
 		Subcommands: taskqueue.NewTaskQueueCommands(),
 	},
 	{
 		Name:        "schedule",
 		Usage:       common.ScheduleDefinition,
 		UsageText:   common.ScheduleUsageText,
+		CustomHelpTemplate: common.CustomTemplateHelpCLI,
 		Subcommands: schedule.NewScheduleCommands(),
 	},
 	{
 		Name:        "batch",
 		Usage:       common.BatchDefinition,
 		UsageText:   common.BatchUsageText,
+		CustomHelpTemplate: common.CustomTemplateHelpCLI,
 		Subcommands: batch.NewBatchCommands(),
 	},
 	{
 		Name:      "operator",
 		Usage:     common.OperatorDefinition,
 		UsageText: common.OperatorUsageText,
+		CustomHelpTemplate: common.CustomTemplateHelpCLI,
 		Subcommands: []*cli.Command{
 			{
 				Name:        "namespace",
 				Usage:       common.NamespaceDefinition,
 				UsageText:   common.NamespaceUsageText,
+				CustomHelpTemplate: common.CustomTemplateHelpCLI,
 				Subcommands: namespace.NewNamespaceCommands(),
 			},
 			{
 				Name:        "search-attribute",
 				Usage:       common.SearchAttributeDefinition,
 				UsageText:   common.SearchAttributeUsageText,
+				CustomHelpTemplate: common.CustomTemplateHelpCLI,
 				Subcommands: searchattribute.NewSearchAttributeCommands(),
 			},
 			{
 				Name:        "cluster",
 				Usage:       common.ClusterDefinition,
 				UsageText:   common.ClusterUsageText,
+				CustomHelpTemplate: common.CustomTemplateHelpCLI,
 				Subcommands: cluster.NewClusterCommands(),
 			},
 		},
@@ -157,6 +167,7 @@ var clientCommands = []*cli.Command{
 		Name:        "env",
 		Usage:       common.EnvDefinition,
 		UsageText:   common.EnvUsageText,
+		CustomHelpTemplate: common.CustomTemplateHelpCLI,
 		Subcommands: env.NewEnvCommands(),
 	},
 }
@@ -165,6 +176,7 @@ var completionCommands = []*cli.Command{
 	{
 		Name:        "completion",
 		Usage:       "Output shell completion code for the specified shell (zsh, bash).",
+		CustomHelpTemplate: common.CustomTemplateHelpCLI,
 		Subcommands: completion.NewCompletionCommands(),
 	},
 }
