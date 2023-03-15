@@ -41,6 +41,7 @@ func BuildApp() *cli.App {
 	app.Commands = commands(defaultCfg)
 	app.Before = configureCLI
 	app.ExitErrHandler = HandleError
+	app.CustomAppHelpTemplate = common.CustomTemplateHelpCLI
 
 	// set builder if not customized
 	if client.CFactory == nil {
