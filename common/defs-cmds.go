@@ -544,7 +544,7 @@ The results of any command run on the Server can be viewed at http://localhost:7
 const CustomTemplateHelpCLI = `NAME:
 {{template "helpNameTemplate" .}}
 USAGE:
-{{if .VisibleCommands}}command [command options] {{end}}{{if .ArgsUsage}}{{.ArgsUsage}}{{else}}[arguments...]{{end}}{{if .Description}}
+{{if .VisibleCommands}}command [command options] {{end}}{{if .ArgsUsage}}[arguments...]{{end}}{{if .Description}}
 DESCRIPTION:
 {{template "descriptionTemplate" .}}{{end}}{{if .VisibleCommands}}
 COMMANDS:{{template "visibleCommandTemplate" .}}{{end}}{{if .VisibleFlagCategories}}
