@@ -12,6 +12,7 @@ func NewClusterCommands() []*cli.Command {
 			Name:  "health",
 			Usage: common.HealthDefinition,
 			UsageText: common.HealthUsageText,
+			CustomHelpTemplate: common.CustomTemplateHelpCLI,
 			Action: func(c *cli.Context) error {
 				return HealthCheck(c)
 			},
@@ -20,6 +21,7 @@ func NewClusterCommands() []*cli.Command {
 			Name:      "describe",
 			Usage:     common.DescribeDefinition,
 			UsageText: common.ClusterDescribeUsageText,
+			CustomHelpTemplate: common.CustomTemplateHelpCLI,
 			ArgsUsage: " ",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
@@ -43,6 +45,7 @@ func NewClusterCommands() []*cli.Command {
 			Name:      "system",
 			Usage:     common.SystemDefinition,
 			UsageText: common.ClusterSystemUsageText,
+			CustomHelpTemplate: common.CustomTemplateHelpCLI,
 			ArgsUsage: " ",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
@@ -66,6 +69,7 @@ func NewClusterCommands() []*cli.Command {
 			Name:      "upsert",
 			Usage:     common.UpsertDefinition,
 			UsageText: common.ClusterUpsertUsageText,
+			CustomHelpTemplate: common.CustomTemplateHelpCLI,
 			ArgsUsage: " ",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
@@ -87,6 +91,7 @@ func NewClusterCommands() []*cli.Command {
 			Name:      "list",
 			Usage:     common.ListDefinition,
 			UsageText: common.ClusterListUsageText,
+			CustomHelpTemplate: common.CustomTemplateHelpCLI,
 			ArgsUsage: " ",
 			Flags:     common.FlagsForPaginationAndRendering,
 			Action: func(c *cli.Context) error {
@@ -97,6 +102,7 @@ func NewClusterCommands() []*cli.Command {
 			Name:      "remove",
 			Usage:     common.RemoveDefinition,
 			UsageText: common.ClusterRemoveUsageText,
+			CustomHelpTemplate: common.CustomTemplateHelpCLI,
 			ArgsUsage: " ",
 			Flags: []cli.Flag{
 				&cli.StringFlag{

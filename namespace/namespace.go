@@ -19,6 +19,7 @@ func NewNamespaceCommands() []*cli.Command {
 			Name:      "describe",
 			Usage:     common.DescribeNamespaceDefinition,
 			UsageText: common.NamespaceDescribeUsageText,
+			CustomHelpTemplate: common.CustomTemplateHelpCLI,
 			Flags:     describeNamespaceFlags,
 			ArgsUsage: "namespace_name",
 			Action: func(c *cli.Context) error {
@@ -29,6 +30,7 @@ func NewNamespaceCommands() []*cli.Command {
 			Name:      "list",
 			Usage:     common.ListNamespacesDefinition,
 			UsageText: common.NamespaceListUsageText,
+			CustomHelpTemplate: common.CustomTemplateHelpCLI,
 			ArgsUsage: " ",
 			Action: func(c *cli.Context) error {
 				return ListNamespaces(c)
@@ -38,6 +40,7 @@ func NewNamespaceCommands() []*cli.Command {
 			Name:      "create",
 			Usage:     common.CreateNamespaceDefinition,
 			UsageText: common.NamespaceCreateUsageText,
+			CustomHelpTemplate: common.CustomTemplateHelpCLI,
 			Flags:     createNamespaceFlags,
 			ArgsUsage: "namespace_name [cluster_name...]",
 			Action: func(c *cli.Context) error {
@@ -48,6 +51,7 @@ func NewNamespaceCommands() []*cli.Command {
 			Name:      "update",
 			Usage:     common.UpdateNamespaceDefinition,
 			UsageText: common.NamespaceUpdateUsageText,
+			CustomHelpTemplate: common.CustomTemplateHelpCLI,
 			Flags:     updateNamespaceFlags,
 			ArgsUsage: "namespace_name [cluster_name...]",
 			Action: func(c *cli.Context) error {
@@ -58,6 +62,7 @@ func NewNamespaceCommands() []*cli.Command {
 			Name:  "delete",
 			Usage: common.DeleteNamespaceDefinition,
 			UsageText: common.NamespaceDeleteUsageText,
+			CustomHelpTemplate: common.CustomTemplateHelpCLI,
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
 					Name:     common.FlagYes,

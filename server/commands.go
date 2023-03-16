@@ -54,6 +54,7 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 			Name:      "start-dev",
 			Usage:     "Start Temporal development server.",
 			UsageText: common.StartDevUsageText,
+			CustomHelpTemplate: common.CustomTemplateHelpCLI,
 			ArgsUsage: " ",
 			Flags: []cli.Flag{
 				&cli.StringFlag{

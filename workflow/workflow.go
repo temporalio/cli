@@ -14,6 +14,7 @@ func NewWorkflowCommands() []*cli.Command {
 			Name:  "start",
 			Usage: common.StartWorkflowDefinition,
 			UsageText: common.StartWorkflowUsageText,
+			CustomHelpTemplate: common.CustomTemplateHelpCLI,
 			Flags: append(common.FlagsForStartWorkflow, common.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
 				return StartWorkflow(c, false)
@@ -23,6 +24,7 @@ func NewWorkflowCommands() []*cli.Command {
 			Name:  "execute",
 			Usage: common.ExecuteWorkflowDefinition,
 			UsageText: common.ExecuteWorkflowUsageText,
+			CustomHelpTemplate: common.CustomTemplateHelpCLI,
 			Flags: append(common.FlagsForStartWorkflow, common.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
 				return StartWorkflow(c, true)
@@ -32,6 +34,7 @@ func NewWorkflowCommands() []*cli.Command {
 			Name:  "describe",
 			Usage: common.DescribeWorkflowDefinition,
 			UsageText: common.DescribeWorkflowUsageText,
+			CustomHelpTemplate: common.CustomTemplateHelpCLI,
 			Flags: append(common.FlagsForExecution, []cli.Flag{
 				&cli.BoolFlag{
 					Name:     common.FlagResetPointsOnly,
@@ -52,6 +55,7 @@ func NewWorkflowCommands() []*cli.Command {
 			Name:  "list",
 			Usage: common.ListWorkflowDefinition,
 			UsageText: common.ListWorkflowUsageText,
+			CustomHelpTemplate: common.CustomTemplateHelpCLI,
 			Flags: append(common.FlagsForWorkflowFiltering, common.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
 				return ListWorkflow(c)
@@ -61,6 +65,7 @@ func NewWorkflowCommands() []*cli.Command {
 			Name:  "show",
 			Usage: common.ShowWorkflowDefinition,
 			UsageText: common.WorkflowShowUsageText,
+			CustomHelpTemplate: common.CustomTemplateHelpCLI,
 			Flags: append(append(common.FlagsForExecution, common.FlagsForShowWorkflow...), common.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
 				return ShowHistory(c)
@@ -70,6 +75,7 @@ func NewWorkflowCommands() []*cli.Command {
 			Name:  "query",
 			Usage: common.QueryWorkflowDefinition,
 			UsageText: common.QueryWorkflowUsageText,
+			CustomHelpTemplate: common.CustomTemplateHelpCLI,
 			Flags: append(common.FlagsForStackTraceQuery,
 				&cli.StringFlag{
 					Name:     common.FlagType,
@@ -86,6 +92,7 @@ func NewWorkflowCommands() []*cli.Command {
 			Name:  "stack",
 			Usage: common.StackWorkflowDefinition,
 			UsageText: common.WorkflowStackUsageText,
+			CustomHelpTemplate: common.CustomTemplateHelpCLI,
 			Flags: common.FlagsForStackTraceQuery,
 			Action: func(c *cli.Context) error {
 				return QueryWorkflowUsingStackTrace(c)
@@ -95,6 +102,7 @@ func NewWorkflowCommands() []*cli.Command {
 			Name:  "signal",
 			Usage: common.SignalWorkflowDefinition,
 			UsageText: common.WorkflowSignalUsageText,
+			CustomHelpTemplate: common.CustomTemplateHelpCLI,
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:     common.FlagWorkflowID,
@@ -151,6 +159,7 @@ func NewWorkflowCommands() []*cli.Command {
 			Name:  "count",
 			Usage: common.CountWorkflowDefinition,
 			UsageText: common.WorkflowCountUsageText,
+			CustomHelpTemplate: common.CustomTemplateHelpCLI,
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:     common.FlagQuery,
@@ -167,6 +176,7 @@ func NewWorkflowCommands() []*cli.Command {
 			Name:  "cancel",
 			Usage: common.CancelWorkflowDefinition,
 			UsageText: common.CancelWorkflowUsageText,
+			CustomHelpTemplate: common.CustomTemplateHelpCLI,
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:     common.FlagWorkflowID,
@@ -206,6 +216,7 @@ func NewWorkflowCommands() []*cli.Command {
 			Name:  "terminate",
 			Usage: common.TerminateWorkflowDefinition,
 			UsageText: common.TerminateWorkflowUsageText,
+			CustomHelpTemplate: common.CustomTemplateHelpCLI,
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:     common.FlagWorkflowID,
@@ -245,6 +256,7 @@ func NewWorkflowCommands() []*cli.Command {
 			Name:  "delete",
 			Usage: common.DeleteWorkflowDefinition,
 			UsageText: common.WorkflowDeleteUsageText,
+			CustomHelpTemplate: common.CustomTemplateHelpCLI,
 			Flags: common.FlagsForExecution,
 			Action: func(c *cli.Context) error {
 				return DeleteWorkflow(c)
@@ -254,6 +266,7 @@ func NewWorkflowCommands() []*cli.Command {
 			Name:  "reset",
 			Usage: common.ResetWorkflowDefinition,
 			UsageText: common.ResetWorkflowUsageText,
+			CustomHelpTemplate: common.CustomTemplateHelpCLI,
 			Flags: append(common.FlagsForExecution, []cli.Flag{
 				&cli.StringFlag{
 					Name:     common.FlagEventID,
@@ -286,6 +299,7 @@ func NewWorkflowCommands() []*cli.Command {
 			Name:  "reset-batch",
 			Usage: "Reset a batch of Workflow Executions by reset type (" + strings.Join(mapKeysToArray(resetTypesMap), "), "),
 			UsageText: common.ResetBatchUsageText,
+			CustomHelpTemplate: common.CustomTemplateHelpCLI,
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:     common.FlagQuery,
@@ -359,6 +373,7 @@ func NewWorkflowCommands() []*cli.Command {
 			Name:  "trace",
 			Usage: common.TraceWorkflowDefinition,
 			UsageText: common.WorkflowTraceUsageText,
+			CustomHelpTemplate: common.CustomTemplateHelpCLI,
 			Flags: append(common.FlagsForExecution,
 				&cli.IntFlag{
 					Name:     common.FlagDepth,

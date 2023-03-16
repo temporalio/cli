@@ -126,6 +126,7 @@ func NewScheduleCommands() []*cli.Command {
 			Usage:       common.ScheduleCreateDefinition,
 			UsageText: common.ScheduleCreateUsageText,
 			Description: common.ScheduleCreateDescription,
+			CustomHelpTemplate: common.CustomTemplateHelpCLI,
 			Flags:       createFlags,
 			Action:      CreateSchedule,
 			Category:    common.CategoryMain,
@@ -135,6 +136,7 @@ func NewScheduleCommands() []*cli.Command {
 			Usage:       common.ScheduleUpdateDefinition,
 			UsageText: common.ScheduleUpdateUsageText,
 			Description: common.ScheduleUpdateDescription,
+			CustomHelpTemplate: common.CustomTemplateHelpCLI,
 			Flags:       createFlags,
 			Action:      UpdateSchedule,
 			Category:    common.CategoryMain,
@@ -143,6 +145,7 @@ func NewScheduleCommands() []*cli.Command {
 			Name:  "toggle",
 			Usage: common.ScheduleToggleDefinition,
 			UsageText: common.ScheduleToggleUsageText,
+			CustomHelpTemplate: common.CustomTemplateHelpCLI,
 			Flags: []cli.Flag{
 				sid,
 				&cli.BoolFlag{
@@ -168,6 +171,7 @@ func NewScheduleCommands() []*cli.Command {
 			Name:  "trigger",
 			Usage: common.ScheduleTriggerDefinition,
 			UsageText: common.ScheduleTriggerUsageText,
+			CustomHelpTemplate: common.CustomTemplateHelpCLI,
 			Flags: []cli.Flag{
 				sid,
 				overlap,
@@ -178,6 +182,7 @@ func NewScheduleCommands() []*cli.Command {
 			Name:  "backfill",
 			Usage: common.ScheduleBackfillDefinition,
 			UsageText: common.ScheduleBackfillUsageText,
+			CustomHelpTemplate: common.CustomTemplateHelpCLI,
 			Flags: []cli.Flag{
 				sid,
 				overlap,
@@ -200,6 +205,7 @@ func NewScheduleCommands() []*cli.Command {
 			Name:  "describe",
 			Usage: common.ScheduleDescribeDefinition,
 			UsageText: common.ScheduleDescribeUsageText,
+			CustomHelpTemplate: common.CustomTemplateHelpCLI,
 			Flags: append([]cli.Flag{
 				sid,
 				&cli.BoolFlag{
@@ -214,6 +220,7 @@ func NewScheduleCommands() []*cli.Command {
 			Name:  "delete",
 			Usage: common.ScheduleDeleteDefinition,
 			UsageText: common.ScheduleDeleteUsageText,
+			CustomHelpTemplate: common.CustomTemplateHelpCLI,
 			Flags: []cli.Flag{
 				sid,
 			},
@@ -224,6 +231,7 @@ func NewScheduleCommands() []*cli.Command {
 			Usage:  common.ScheduleListDefinition,
 			UsageText: common.ScheduleListUsageText,
 			Flags:  common.FlagsForPaginationAndRendering,
+			CustomHelpTemplate: common.CustomTemplateHelpCLI,
 			Action: ListSchedules,
 		},
 	}

@@ -11,6 +11,7 @@ func NewBatchCommands() []*cli.Command {
 			Name:  "describe",
 			Usage: common.DescribeBatchJobDefinition,
 			UsageText: common.DescribeBatchUsageText,
+			CustomHelpTemplate: common.CustomTemplateHelpCLI,
 			Flags: append([]cli.Flag{
 				&cli.StringFlag{
 					Name:     common.FlagJobID,
@@ -27,6 +28,7 @@ func NewBatchCommands() []*cli.Command {
 			Name:      "list",
 			Usage:     common.ListBatchJobsDefinition,
 			UsageText: common.ListBatchUsageText,
+			CustomHelpTemplate: common.CustomTemplateHelpCLI,
 			Flags:     common.FlagsForPaginationAndRendering,
 			ArgsUsage: " ",
 			Action: func(c *cli.Context) error {
@@ -37,6 +39,7 @@ func NewBatchCommands() []*cli.Command {
 			Name:  "terminate",
 			Usage: common.TerminateBatchJobDefinition,
 			UsageText: common.TerminateBatchUsageText,
+			CustomHelpTemplate: common.CustomTemplateHelpCLI,
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:     common.FlagJobID,

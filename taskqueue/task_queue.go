@@ -12,6 +12,7 @@ func NewTaskQueueCommands() []*cli.Command {
 			Name:  "describe",
 			Usage: common.DescribeTaskQueueDefinition,
 			UsageText:common.DescribeTaskQueueUsageText,
+			CustomHelpTemplate: common.CustomTemplateHelpCLI,
 			Flags: append([]cli.Flag{
 				&cli.StringFlag{
 					Name:     common.FlagTaskQueue,
@@ -35,6 +36,7 @@ func NewTaskQueueCommands() []*cli.Command {
 			Name:  "list-partition",
 			Usage: common.ListPartitionTaskQueueDefinition,
 			UsageText: common.TaskQueueListPartitionUsageText,
+			CustomHelpTemplate: common.CustomTemplateHelpCLI,
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:     common.FlagTaskQueue,
