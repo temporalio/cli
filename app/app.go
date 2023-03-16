@@ -103,7 +103,7 @@ var clientCommands = []*cli.Command{
 		Name:        "workflow",
 		Usage:       common.WorkflowDefinition,
 		UsageText:   common.WorkflowUsageText,
-		CustomHelpTemplate: common.CustomTemplateHelpCLI,
+		
 		Subcommands: workflow.NewWorkflowCommands(),
 	},
 	{
