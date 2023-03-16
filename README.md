@@ -3,33 +3,52 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/temporalio/cli.svg)](https://pkg.go.dev/github.com/temporalio/cli)
 [![ci](https://github.com/temporalio/cli/actions/workflows/ci.yml/badge.svg)](https://github.com/temporalio/cli/actions/workflows/ci.yml)
 
-> ⚠️ Temporal CLI's API is still a subject for changes. ⚠️
+> ⚠️ Temporal CLI's API is still subject to change. ⚠️
 
-The Temporal CLI is a command-line interface for running Temporal Server and interacting with Workflows, Activities, Namespaces, and other parts of Temporal.
+The Temporal CLI is a tool for interacting with Temporal from the command line.
+Temporal CLI functions as a distribution of the Temporal Server and Web UI that runs as a single process with zero runtime dependencies.
+The tool supports persistence to disk and in-memory mode through SQLite.
 
-## Getting Started
+## Installation
 
-### Installation
+Temporal CLI can be installed through several different methods. While most of them can be used across all operating systems, please note that Homebrew is macOS-exclusive.
 
-#### curl
+### cURL
+
+Run the following command to install the latest version of Temporal CLI.
 
 `curl -sSf https://temporal.download/cli.sh | sh`
 
-#### Homebrew
+### Homebrew
+
+Run the following command in a new terminal window to install CLI for macOS.
 
 `brew install temporal`
 
-#### GitHub Releases
+### GitHub releases
 
 Download and extract the [latest release](https://github.com/temporalio/cli/releases/latest) from [GitHub releases](https://github.com/temporalio/cli/releases).
 
-### Start Temporal server:
+### CDN
+
+To install the Temporal CLI from CDN:
+
+1. Select the binary with the corresponding platform and architecture of your system.
+2. Download the binary.
+3. Extract the downloaded archive.
+4. Add the `temporal.exe` binary to your system PATH.
+
+##  Starting the Temporal Server
+
+Run the command provided below to start the Temporal Server.
+This will automatically start the Web UI.
 
 ```bash
 temporal server start-dev
 ```
 
 At this point you should have a server running on `localhost:7233` and a web interface at <http://localhost:8233>.
+A default Namespace has also been created.
 
 Run individual commands to interact with the local Temporal server.
 
@@ -40,41 +59,46 @@ temporal workflow list
 
 ## Configuration
 
-Use the help flag to see all available options:
+Use the help flag to see a full list of CLI options:
 
 ```bash
 temporal server start-dev -h
 ```
 
-### Namespace Registration
+Configure the environment with `env` commands:
+
+```bash
+temporal env set [environment options]
+```
+
+### Namespace registration
 
 Namespaces are pre-registered at startup so they're available to use right away.
-
-By default, the "default" namespace is registered. To customize the pre-registered namespaces, start the server with:
+To customize the pre-registered namespaces, start the server with:
 
 ```bash
 temporal server start-dev --namespace foo --namespace bar
 ```
 
-Registering namespaces the old-fashioned way via `temporal operator namespace create foo` works too!
+You can also register Namespaces with the following command:
 
-### Persistence Modes
+```bash
+temporal operator namespace create foo`
+```
 
-### In-memory
+### Persistence modes
 
-By default `temporal server start-dev` run in an in-memory mode.
+By default, `temporal server start-dev` runs in an in-memory mode.
 
-#### File on Disk
-
-To persist the state to a file use `--db-filename`:
+To persist the state to a file on disk, use `--db-filename`:
 
 ```bash
 temporal server start-dev --db-filename my_test.db
 ```
 
-### Temporal UI
+### Enable or disable Temporal UI
 
-By default the Temporal UI is started with Temporal CLI. The UI can be disabled via a runtime flag:
+By default, the Temporal UI is started with Temporal CLI. The UI can be disabled via a runtime flag:
 
 ```bash
 temporal server start-dev --headless
@@ -82,67 +106,91 @@ temporal server start-dev --headless
 
 To build without static UI assets, use the `headless` build tag when running `go build`.
 
-### Dynamic Config
+<!--TODO: add go example -->
 
-Some advanced uses require Temporal dynamic configuration values which are usually set via a dynamic configuration file inside the Temporal configuration file. Alternatively, dynamic configuration values can be set via `--dynamic-config-value KEY=JSON_VALUE`.
+### Dynamic configuration
 
-For example, to disable search attribute cache to make created search attributes available for use right away:
+Advanced configuration of the Temporal CLI requires the use of a dynamic configuration file.
+This file is created outside of the Temporal CLI; it is usually located with the service's config files.
+
+Dynamic configuration values can also be set via `--dynamic-config-value KEY=JSON_VALUE`.
+For example, to disable the search attribute cache, run:
 
 ```bash
 temporal server start-dev --dynamic-config-value system.forceSearchAttributesCacheRefreshOnRead=true
 ```
 
+This setting makes created search attributes immediately available for use.
+
 ## Auto-completion
 
-Running `temporal completion SHELL` will output the related completion SHELL code. See the following
-sections for more details for each specific shell / OS and how to enable it.
+The Temporal CLI has the capability to auto-complete commands.
+
+Running `temporal completion SHELL` will output the related completion SHELL code. 
 
 ### zsh auto-completion
 
-Add the following to your `~/.zshrc` file:
+<!-- TODO: add more information about zsh to make comparable to bash section -->
+
+Add the following code snippet to your `~/.zshrc` file:
 
 ```sh
 source <(temporal completion zsh)
 ```
 
-or from your terminal run:
+If you're running auto-completion from the terminal, run the command below:
 
 ```sh
 echo 'source <(temporal completion zsh)' >> ~/.zshrc
 ```
 
-Then run `source ~/.zshrc`.
+After setting the variable, run:
 
-### Bash auto-completion (linux)
+`source ~/.zshrc`.
 
-Bash auto-completion relies on [bash-completion](https://github.com/scop/bash-completion#installation). Make sure
-you follow the instruction [here](https://github.com/scop/bash-completion#installation) and install the software or
-use a package manager to install it like `apt install bash-completion`, `pacman -S bash-completion` or `yum install bash-completion`, etc. For example
-on alpine linux:
+### Bash auto-completion
 
--   apk update
--   apk add bash-completion
--   source /etc/profile.d/bash_completion.sh
+Bash auto-completion relies on `bash-completion`.
 
-Verify that bash-completion is installed by running `type _init_completion` add the following to your `.bashrc`
-file to enable completion for temporal
+Install the software with the steps provided [here](https://github.com/scop/bash-completion#installation), or use your preferred package manager on your operating system.
+
+#### Linux installation
+Use any of the following package managers to install `bash-completion`:
+`apt install bash-completion`
+`pacman -S bash-completion`
+`yum install bash-completion` 
+
+Verify that `bash-completion` is installed by running `type _init_completion`.
+
+To install the software on Alpine Linux, run:
+
+```bash
+  apk update
+  apk add bash-completion
+  source /etc/profile.d/bash_completion.sh
+```
+
+Finally, enable completion for Temporal by adding the following code to your bash file:
 
 ```
 echo 'source <(temporal completion bash)' >>~/.bashrc
 source ~/.bashrc
 ```
 
-### Bash auto-completion (macos)
+#### macOS installation
 
-For macos you can install it via brew `brew install bash-completion@2` and add the following line to
-your `~/.bashrc`:
+Install `bash-completion` through Homebrew:
+`brew install bash-completion@2` 
+
+Add the provided code snippet to your `~/.bashrc` file:
 
 ```sh
 [[ -r "/usr/local/etc/profile.d/bash_completion.sh" ]] && . "/usr/local/etc/profile.d/bash_completion.sh"
 ```
 
-Verify that bash-completion is installed by running `type _init_completion` and add the following to your `.bashrc`
-file to enable completion for temporal
+Verify that `bash-completion` is installed by running `type _init_completion`.
+
+Enable completion for Temporal by adding the following code to your bash file:
 
 ```
 echo 'source <(temporal completion bash)' >> ~/.bashrc
@@ -151,7 +199,9 @@ source ~/.bashrc
 
 ## Development
 
-To compile the source run:
+The Temporal CLI can be compiled and executed from your system.
+
+To compile the source code into an executable, run:
 
 ```bash
 go build -o dist/temporal ./cmd/temporal
