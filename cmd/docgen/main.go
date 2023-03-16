@@ -17,6 +17,7 @@ const (
 	filePerm    = 0644
 	indexFile   = "index.md"
 	optionsPath = "cmd-options"
+	readme = "README.md"
 )
 
 const FrontMatterTemplate = `---
@@ -117,6 +118,10 @@ func main() {
 	// close file descriptor after for loop has completed
 	readFile.Close()
 	defer os.Remove(cliFile)
+
+	// copy README to this folder
+	copyInstructionsToDocs(readme, docsPath)
+
 }
 
 func makeFile(path string, isIndex bool, isOptions bool, scanner *bufio.Scanner, createdFiles map[string]*os.File) {
@@ -211,4 +216,34 @@ func deleteExistingFolder() {
 	}
 	os.RemoveAll(docsPath)
 	log.Printf("deleted docs folder %s", folderinfo)
+}
+
+func copyInstructionsToDocs(src, dest string) {
+	sourceFileStat, err := os.Stat(src)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if !sourceFileStat.Mode().IsRegular() {
+		log.Fatal("not a regular file.", src)
+	}
+
+	source, err := os.Open(src)
+	if err != nil {
+		log.Fatal(err)
+	}
+	// defer source.Close()
+
+	destination, err := os.Create(filepath.Join(docsPath, "README.md"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	scanner := bufio.NewScanner(source)
+	scanner.Split(bufio.ScanLines)
+	for scanner.Scan() {
+		writeLine(destination, scanner.Text())
+	}
+
+	log.Printf("Copied file.")
 }
