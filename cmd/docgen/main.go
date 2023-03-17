@@ -37,7 +37,7 @@ type FrontMatter struct {
 	IsIndex     bool
 }
 
-var currentHeader, fileName, optionFileName, operatorFileName, path, optionFilePath, headerIndexFile string
+var currentHeader, fileName, optionFileName, operatorFileName, path, optionFilePath, headerIndexFile, aliasName string
 var currentHeaderFile, currentOptionFile *os.File
 
 // `BuildApp` takes a string and returns a `*App` and an error
@@ -87,10 +87,12 @@ func main() {
 		} else if strings.HasPrefix(line, "**--") {
 			// split into term and definition
 			term, definition, found := strings.Cut(line, ":")
+			term = strings.TrimSuffix(term, "=\"\"")
+
 			if strings.Contains(term, ",") {
 				termArray := strings.Split(line, ",")
 				optionFileName = termArray[0]
-				//aliasName = "Alias: **" + strings.TrimSpace(termArray[1])
+				aliasName = "Alias: **" + strings.TrimSpace(termArray[1])
 			} else {
 				optionFileName = term
 			}
@@ -104,6 +106,11 @@ func main() {
 			termLink := "- [--" + optionFileName + "](/cli/cmd-options/" + optionFileName + ")"
 			makeFile(optionFilePath, false, true, scanner, createdFiles)
 			writeLine(currentHeaderFile, termLink)
+			if aliasName != "" {
+				aliasArray := strings.Split(aliasName, "=")
+				writeLine(currentOptionFile, aliasArray[0])
+				aliasName = ""
+			}
 			writeLine(currentOptionFile, strings.TrimSpace(definition))
 		} else if strings.Contains(line, ">") {
 			writeLine(currentHeaderFile, strings.Trim(line, ">"))
