@@ -27,7 +27,7 @@ Run the following command in a new terminal window to install CLI for macOS.
 
 ### GitHub releases
 
-Download and extract the [latest release](https://github.com/temporalio/cli/releases/latest) from [GitHub releases](https://github.com/temporalio/cli/releases).
+Download and extract the latest release from [GitHub releases](https://github.com/temporalio/cli/releases).
 
 ### CDN
 
@@ -36,9 +36,9 @@ To install the Temporal CLI from CDN:
 1. Select the binary with the corresponding platform and architecture of your system.
 2. Download the binary.
 3. Extract the downloaded archive.
-4. Add the `temporal.exe` binary to your system PATH.
+4. Add the `temporal` binary to your system PATH.
 
-##  Starting the Temporal Server
+## Starting the Temporal Server
 
 Run the command provided below to start the Temporal Server.
 This will automatically start the Web UI.
@@ -62,7 +62,7 @@ temporal workflow list
 Use the help flag to see a full list of CLI options:
 
 ```bash
-temporal server start-dev -h
+temporal server start-dev --help
 ```
 
 Configure the environment with `env` commands:
@@ -83,7 +83,7 @@ temporal server start-dev --namespace foo --namespace bar
 You can also register Namespaces with the following command:
 
 ```bash
-temporal operator namespace create foo`
+temporal operator namespace create foo
 ```
 
 ### Persistence modes
@@ -126,7 +126,7 @@ This setting makes created search attributes immediately available for use.
 
 The Temporal CLI has the capability to auto-complete commands.
 
-Running `temporal completion SHELL` will output the related completion SHELL code. 
+Running `temporal completion SHELL` will output the related completion SHELL code.
 
 ### zsh auto-completion
 
@@ -155,19 +155,20 @@ Bash auto-completion relies on `bash-completion`.
 Install the software with the steps provided [here](https://github.com/scop/bash-completion#installation), or use your preferred package manager on your operating system.
 
 #### Linux installation
+
 Use any of the following package managers to install `bash-completion`:
 `apt install bash-completion`
 `pacman -S bash-completion`
-`yum install bash-completion` 
+`yum install bash-completion`
 
 Verify that `bash-completion` is installed by running `type _init_completion`.
 
 To install the software on Alpine Linux, run:
 
 ```bash
-  apk update
-  apk add bash-completion
-  source /etc/profile.d/bash_completion.sh
+apk update
+apk add bash-completion
+source /etc/profile.d/bash_completion.sh
 ```
 
 Finally, enable completion for Temporal by adding the following code to your bash file:
@@ -180,7 +181,7 @@ source ~/.bashrc
 #### macOS installation
 
 Install `bash-completion` through Homebrew:
-`brew install bash-completion@2` 
+`brew install bash-completion@2`
 
 Add the provided code snippet to your `~/.bashrc` file:
 
