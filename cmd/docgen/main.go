@@ -21,7 +21,7 @@ const (
 
 var FrontMatterTemplate = `---
 id: {{.ID}}
-title: temporal {{if not .IsOperator}}{{.Category}}{{ else }}operator {{.Category}}{{end}}{{if not .IsIndex}}{{.ID}}{{else}}index{{end}}
+title: temporal {{if not .IsOperator}}{{.Category}}{{ else }}operator {{.Category}}{{end}}{{if not .IsIndex}} {{.ID}}{{else}} index{{end}}
 sidebar_label:{{if .IsIndex}} {{.Category}}{{else}} {{.ID}}{{end}}
 description: {{.Description}}
 tags:
@@ -191,7 +191,8 @@ func writeFrontMatter(idName string, categoryName string, scanner *bufio.Scanner
 		}
 		descriptionTxt = strings.TrimSpace(scanner.Text())
 	} else {
-		descriptionTxt = "Definition for the " + idName + " command option."
+		_, definition, _ := strings.Cut(scanner.Text(), ":")
+		descriptionTxt = strings.TrimSpace(definition)
 	}
 
 	data := FrontMatter{
