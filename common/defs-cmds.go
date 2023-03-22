@@ -92,28 +92,24 @@ Running Signal, Terminate, or Cancel with the ` + "`" + `--query` + "`" + ` modi
 
 A successfully started Batch job will return a Job ID.
 Use this Job ID to execute other actions on the Batch job.
-
 `
 const DescribeBatchUsageText = `The ` + "`" + `temporal batch describe` + "`" + ` command shows the progress of an ongoing Batch job.
 
 Use the command options listed below to change the information returned by this command.
 Make sure to write the command in this format:
 ` + "`" + `temporal batch describe [command options]` + "`" + `
-
 `
 const ListBatchUsageText = `When used, ` + "`" + `temporal batch list` + "`" + ` returns all Batch jobs. 
 
 Use the command options listed below to change the information returned by this command.
 Make sure to write the command in this format:
 ` + "`" + `temporal batch list [command options] ` + "`" + `
-
 `
 const TerminateBatchUsageText = `The ` + "`" + `temporal batch terminate` + "`" + ` command terminates a Batch job with the provided Job ID. 
 
 Use the command options listed below to change the behavior of this command.
 Make sure to write the command as follows:
 ` + "`" + `temporal batch terminate [command options] ` + "`" + `
-
 `
 const WorkflowUsageText = `Workflow commands allow operations to be performed on [Workflow Executions](/concepts/what-is-a-workflow-execution).
 `
@@ -124,7 +120,6 @@ When invoked successfully, the Workflow and Run ID are returned immediately afte
 Use the command options listed below to change how the Workflow Execution behaves upon starting.
 Make sure to write the command in this format:
 ` + "`" + `temporal workflow start [command options]` + "`" + `
-
 `
 const ExecuteWorkflowUsageText = `The ` + "`" + `temporal workflow execute` + "`" + ` command starts a new [Workflow Execution](/concepts/what-is-a-workflow-execution) and prints its progress.
 The command doesn't finish until the [Workflow](/concepts/what-is-a-workflow) completes.
@@ -134,7 +129,6 @@ Single quotes('') are used to wrap input as JSON.
 Use the command options listed below to change how the Workflow Execution behaves during its run.
 Make sure to write the command in this format:
 ` + "`" + `temporal workflow execute [command options]` + "`" + `
-
 `
 const DescribeWorkflowUsageText = `The ` + "`" + `temporal workflow describe` + "`" + ` command shows information about a given [Workflow Execution](/concepts/what-is-a-workflow-execution).
 This information can be used to locate Workflow Executions that weren't able to run successfully.
@@ -142,7 +136,6 @@ This information can be used to locate Workflow Executions that weren't able to 
 Use the command options listed below to change the information returned by this command.
 Make sure to write the command in this format:
 ` + "`" + `temporal workflow describe [command options]` + "`" + `
-
 `
 const ListWorkflowUsageText = `The ` + "`" + `temporal workflow list` + "`" + ` command provides a list of [Workflow Executions](/concepts/what-is-a-workflow-execution) that meet the criteria of a given [Query](/concepts/what-is-a-query).
 By default, this command returns a list of up to 10 closed Workflow Executions.
@@ -150,7 +143,6 @@ By default, this command returns a list of up to 10 closed Workflow Executions.
 Use the command options listed below to change the information returned by this command.
 Make sure to write the command as follows:
 ` + "`" + `temporal workflow list [command options]` + "`" + `
-
 `
 const QueryWorkflowUsageText = `The ` + "`" + `temporal workflow query` + "`" + ` command sends a [Query](/concepts/what-is-a-query) to a [Workflow Execution](/concepts/what-is-a-workflow-execution).
 
@@ -160,7 +152,6 @@ Queries can also be used on completed [Workflows](/concepts/what-is-a-workflow-e
 Use the command options listed below to change the information returned by this command.
 Make sure to write the command as follows:
 ` + "`" + `temporal workflow query [command options]` + "`" + `
-
 `
 const CancelWorkflowUsageText = `The ` + "`" + `temporal workflow cancel` + "`" + ` command cancels a [Workflow Execution](/concepts/what-is-a-workflow-execution).
 
@@ -170,7 +161,6 @@ A new [Command](/concepts/what-is-a-command) Task will be scheduled, and the Wor
 Use the options listed below to change the behavior of this command.
 Make sure to write the command as follows:
 ` + "`" + `temporal workflow cancel [command options]` + "`" + `
-
 `
 const TerminateWorkflowUsageText = `The ` + "`" + `temporal workflow terminate` + "`" + ` command terminates a [Workflow Execution](/concepts/what-is-a-workflow-execution)
 
@@ -180,7 +170,6 @@ Any further [Command](/concepts/what-is-a-command) Tasks cannot be scheduled aft
 Use the options listed below to change termination behavior.
 Make sure to write the command as follows:
 ` + "`" + `temporal workflow terminate [command options]` + "`" + `
-
 `
 const ResetWorkflowUsageText = `The ` + "`" + `temporal workflow reset` + "`" + ` command resets a [Workflow Execution](/concepts/what-is-a-workflow-execution).
 A reset allows the Workflow to be resumed from a certain point without losing your parameters or [Event History](/concepts/what-is-an-event-history).
@@ -188,7 +177,6 @@ A reset allows the Workflow to be resumed from a certain point without losing yo
 Use the options listed below to change reset behavior.
 Make sure to write the command as follows:
 ` + "`" + `temporal workflow reset [command options]` + "`" + `
-
 `
 const ResetBatchUsageText = `The ` + "`" + `temporal workflow reset-batch` + "`" + ` command resets a batch of [Workflow Executions](/concepts/what-is-a-workflow-execution) by ` + "`" + `resetType` + "`" + `.
 Resetting a [Workflow](/concepts/what-is-a-workflow) allows the process to resume from a certain point without losing your parameters or [Event History](/concepts/what-is-an-event-history).
@@ -196,7 +184,6 @@ Resetting a [Workflow](/concepts/what-is-a-workflow) allows the process to resum
 Use the options listed below to change reset behavior.
 Make sure to write the command as follows:
 ` + "`" + `temporal workflow reset-batch [command options]` + "`" + `
-
 `
 const TaskQueueUsageText = `Task Queue commands allow operations to be performed on [Task Queues](/concepts/what-is-a-task-queue).
 `
@@ -210,7 +197,6 @@ Should ` + "`" + `LastAccessTime` + "`" + ` exceeds one minute, it's likely that
 Use the options listed below to modify what this command returns.
 Make sure to write the command as follows:
 ` + "`" + `temporal task-queue describe [command options]` + "`" + `
-
 `
 const ScheduleUsageText = `Schedule commands allow the user to create, use, and update [Schedules](/concepts/what-is-a-schedule).
 Schedules control when certain Actions for a Workflow Execution are performed, making it a useful tool for automation.
@@ -230,21 +216,18 @@ const CompleteActivityUsageText = `The ` + "`" + `temporal activity complete` + 
 Use the options listed below to change the behavior of this command.
 Make sure to write the command as follows:
 ` + "`" + `temporal activity complete [command options] ` + "`" + `
-
 `
 const FailActivityUsageText = `The ` + "`" + `temporal activity fail` + "`" + ` command fails an [Activity Execution](/concepts/what-is-an-activity-execution).
 
 Use the options listed below to change the behavior of this command.
 Make sure to write the command as follows:
 ` + "`" + `temporal activity fail [command options]` + "`" + `
-
 `
 const HealthUsageText = `The ` + "`" + `temporal operator cluster health` + "`" + ` command checks the health of the [Frontend Service](/concepts/what-is-a-frontend-service).
 
 Use the options listed below to change the behavior and output of this command.
 Make sure to write the command as follows:
 ` + "`" + `temporal operator cluster health [command options]` + "`" + `
-
 `
 
 const ClusterUsageText = `Cluster commands enabled operations on [Temporal Clusters](/concepts/what-is-a-temporal-cluster).`
@@ -254,21 +237,18 @@ const ClusterDescribeUsageText = `The ` + "`" + `temporal operator cluster descr
 Use the options listed below to change the output of this command.
 Make sure to write the command as follows:
 ` + "`" + `temporal operator cluster describe [command options]` + "`" + `
-
 `
 const ClusterSystemUsageText = `The ` + "`" + `temporal operator cluster system` + "`" + ` command provides information about the system the Cluster is running on.
 
 Use the options listed below to change this command's output.
 Make sure to write the command as follows:
 ` + "`" + `temporal operator cluster system [command options]` + "`" + `
-
 `
 const ClusterUpsertUsageText = `The ` + "`" + `temporal operator cluster upsert` + "`" + ` command allows the user to add or update a remote [Cluster](/concepts/what-is-a-temporal-cluster).
 
 Use the options listed below to change the behavior of this command.
 Make sure to write the command as follows:
 ` + "`" + `temporal operator cluster upsert [command options]` + "`" + `
-
 `
 
 const ClusterListUsageText = `The ` + "`" + `temporal operator cluster list` + "`" + ` command prints a list of all remote [Clusters](/concepts/what-is-a-temporal-cluster) on the system.
@@ -276,7 +256,6 @@ const ClusterListUsageText = `The ` + "`" + `temporal operator cluster list` + "
 Use the options listed below to change the command's behavior.
 Make sure to write the command as follows:
 ` + "`" + `temporal operator cluster list [command options]` + "`" + `
-
 `
 
 const ClusterRemoveUsageText = `The ` + "`" + `temporal operator cluster remove` + "`" + ` command removes a remote [Cluster](/concepts/what-is-a-temporal-cluster) from the system.
@@ -284,7 +263,6 @@ const ClusterRemoveUsageText = `The ` + "`" + `temporal operator cluster remove`
 Use the options listed below to change the command's behavior.
 Make sure to write the command as follows:
 ` + "`" + `temporal operator cluster remove [command options]` + "`" + `
-
 `
 
 const EnvUsageText = `Environment (or 'env') commands allow the user to configure the properties for the environment in use.
@@ -295,21 +273,18 @@ const EnvGetUsageText = `The ` + "`" + `temporal env get` + "`" + ` command prin
 Use the options listed below to change the command's behavior.
 Make sure to write the command as follows:
 ` + "`" + `temporal env get [command options] [arguments]` + "`" + `
-
 `
 const EnvSetUsageText = `The ` + "`" + `temporal env set` + "`" + ` command sets the value for an environmental property.
 
 Use the options listed below to change the command's behavior.
 Make sure to write the command as follows:
 ` + "`" + `temporal env set [command options] [arguments]` + "`" + `
-
 `
 const EnvDeleteUsageText = `The ` + "`" + `temporal env delete` + "`" + ` command deletes a given environment or environmental property.
 
 Use the options listed below to change the command's behavior.
 Make sure to write the command as follows:
 ` + "`" + `temporal env delete [command options]` + "`" + `
-
 `
 const NamespaceUsageText = `Namespace commands allow [Namespace](/concepts/what-is-a-namespace) operations to be performed on the [Temporal Cluster](/concepts/what-is-a-temporal-cluster).
 `
@@ -319,35 +294,30 @@ Namespaces can be identified by name or Namespace ID.
 Use the options listed below to change the command's output.
 Make sure to write the command as follows:
 ` + "`" + `temporal operator namespace describe [command options] [arguments]` + "`" + `
-
 `
 const NamespaceListUsageText = `The ` + "`" + `temporal operator namespace list` + "`" + ` command lists all [Namespaces](/namespaces) on the [Server](/concepts/what-is-a-frontend-service).
 
 Use the options listed below to change the command's output.
 Make sure to write the command as follows:
 ` + "`" + `temporal operator namespace list [command options]` + "`" + `
-
 `
 const NamespaceCreateUsageText = `The ` + "`" + `temporal operator namespace create` + "`" + ` command creates a new [Namespace](/concepts/what-is-a-namespace).
 
 Use the options listed below to change the command's behavior.
 Make sure to write the command as follows:
 ` + "`" + `temporal operator namespace create [command options] [arguments]` + "`" + `
-
 `
 const NamespaceUpdateUsageText = `The ` + "`" + `temporal operator namespace update` + "`" + ` command updates a given [Namespace](/concepts/what-is-a-namespace).
 
 Use the options listed below to change the command's behavior.
 Make sure to write the command as follows:
 ` + "`" + `temporal operator namespace update [command options] [arguments]` + "`" + `
-
 `
 const NamespaceDeleteUsageText = `The ` + "`" + `temporal operator namespace delete` + "`" + ` command deletes a given [Namespace](/concepts/what-is-a-namespace) from the system.
 
 Use the options listed below to change the command's behavior.
 Make sure to write the command as follows:
 ` + "`" + `temporal operator namespace delete [command options] [arguments]` + "`" + `
-
 `
 
 const ScheduleCreateUsageText = `The ` + "`" + `temporal schedule create` + "`" + ` command creates a new [Schedule](/concepts/what-is-a-schedule).
@@ -367,7 +337,6 @@ Any combination of ` + "`" + `--cal` + "`" + `, ` + "`" + `--interval` + "`" + `
 Actions will be executed at any time specified in the Schedule.
 
 Use the options provided below to change the command's behavior.
-
 `
 const ScheduleUpdateUsageText = `The ` + "`" + `temporal schedule update` + "`" + ` command updates an existing [Schedule](/concepts/what-is-a-schedule).
 
@@ -385,7 +354,6 @@ Updating a Schedule takes the given options and replaces the entire configuratio
 If you only change one value of the Schedule, be sure to provide the other unchanged fields to prevent them from being overwritten.
 
 Use the options provided below to change the command's behavior.
-
 `
 
 const ScheduleToggleUsageText = `The ` + "`" + `temporal schedule toggle` + "`" + ` command can pause and unpause a [Schedule](/concepts/what-is-a-schedule).
@@ -398,7 +366,6 @@ Schedule toggles are passed in this format:
 ` + "`" + `temporal schedule toggle --sid 'your-schedule-id' --unpause --reason "the database is back up"` + "`" + `
 
 Use the options provided below to change this command's behavior.
-
 `
 
 const ScheduleTriggerUsageText = `The ` + "`" + `temporal schedule trigger` + "`" + ` command triggers an immediate action with a given [Schedule](/concepts/what-is-a-schedule).
@@ -411,7 +378,6 @@ The Overlap Policy of the Schedule can be overridden as well.
 ` + "`" + `temporal schedule trigger --sid 'your-schedule-id' --overlap-policy 'AllowAll'` + "`" + `
 
 Use the options provided below to change this command's behavior.
-
 `
 
 const ScheduleBackfillUsageText = `The ` + "`" + `temporal schedule backfill` + "`" + ` command executes Actions ahead of their specified time range. 
@@ -425,7 +391,6 @@ temporal schedule backfill --sid 'your-schedule-id' \
 ` + "`" + `` + "`" + `` + "`" + `
 
 Use the options provided below to change this command's behavior.
-
 `
 const ScheduleDescribeUsageText = `The ` + "`" + `temporal schedule describe` + "`" + ` command shows the current [Schedule](/concepts/what-is-a-schedule) configuration.
 This command also provides information about past, current, and future [Workflow Runs](/concepts/what-is-a-run-id).
@@ -433,7 +398,6 @@ This command also provides information about past, current, and future [Workflow
 ` + "`" + `temporal schedule describe --sid 'your-schedule-id' [command options] ` + "`" + `
 
 Use the options below to change this command's output.
-
 `
 const ScheduleDeleteUsageText = `The ` + "`" + `temporal schedule delete` + "`" + ` command deletes a [Schedule](/concepts/what-is-a-schedule).
 Deleting a Schedule does not affect any [Workflows](/concepts/what-is-a-workflow) started by the Schedule.
@@ -444,7 +408,6 @@ However, Workflow Executions started by a Schedule can be identified by their [S
 ` + "`" + `temporal schedule delete --sid 'your-schedule-id' [command options] ` + "`" + `
 
 Use the options below to change the behavior of this command.
-
 `
 const ScheduleListUsageText = `The ` + "`" + `temporal schedule list` + "`" + ` command lists all [Schedule](/concepts/what-is-a-schedule) configurations.
 Listing Schedules in [Standard Visibility](/concepts/what-is-standard-visibility) will only provide Schedule IDs.
@@ -452,7 +415,6 @@ Listing Schedules in [Standard Visibility](/concepts/what-is-standard-visibility
 ` + "`" + `temporal schedule list [command options] ` + "`" + `
 
 Use the options below to change the behavior of this command.
-
 `
 const SearchAttributeUsageText = `Search Attribute commands enable operations for the creation, listing, and removal of [Search Attributes](/concepts/what-is-a-search-attribute).`
 const SearchAttributeCreateUsageText = `The ` + "`" + `temporal operator search-attribute create` + "`" + ` command adds one or more custom [Search Attributes](/concepts/what-is-a-search-attribute).
@@ -461,14 +423,12 @@ These Search Attributes can be used to [filter a list](/concepts/what-is-a-list-
 Use the options listed below to change the command's behavior.
 Make sure to write the command as follows:
 ` + "`" + `temporal operator search-attribute create [command options] ` + "`" + `
-
 `
 const SearchAttributeListUsageText = `The ` + "`" + `temporal operator search-attrbute list` + "`" + ` command displays a list of all [Search Attributes](/concepts/what-is-a-search-attribute) that can be used in ` + "`" + ` temporal workflow list --query` + "`" + `.
 
 Use the options listed below to change the command's behavior.
 Make sure to write the command as follows:
 ` + "`" + `temporal operator search-attribute list [command options] ` + "`" + `
-
 `
 const SearchAttributeRemoveUsageText = `The ` + "`" + `temporal operator search-attribute remove` + "`" + ` command removes custom [Search Attribute](/concepts/what-is-a-search-attribute) metadata.
 This command does not remove custom Search Attributes from Elasticsearch.
@@ -477,21 +437,18 @@ The index schema is not modified.
 Use the options listed below to change the command's behavior.
 Make sure to write the command as follows:
 `+ "`" +`temporal operator search-attribute remove [command options]`+ "`" +`
-
 `
 const TaskQueueListPartitionUsageText = `The ` + "`" + `temporal task-queue list-partition` + "`" + ` command displays the partitions of a [Task Queue](/concepts/what-is-a-task-queue), along with the matching node they are assigned to.
 
 Use the options listed below to change the command's behavior.
 Make sure to write the command as follows:
 ` + "`" + `temporal task-queue list-partition [command options]` + "`" + `
-
 `
 const WorkflowShowUsageText = `The ` + "`" + `temporal workflow show` + "`" + ` command provides the [Event History](/concepts/what-is-an-event-history) for a specified [Workflow Execution](/concepts/what-is-a-workflow-execution).
 
 Use the options listed below to change the command's behavior.
 Make sure to write the command as follows:
 ` + "`" + `temporal workflow show [command options]` + "`" + `
-
 `
 const WorkflowStackUsageText = `The ` + "`" + `temporal workflow stack` + "`" + ` command queries a [Workflow Execution](/concepts/what-is-a-workflow-execution) with ` + "`" + `--stack-trace` + "`" + ` as the [Query](/concepts/what-is-a-query#stack-trace-query) type.
 Returning the stack trace of all the threads owned by a Workflow Execution can be great for troubleshooting in production.
@@ -499,14 +456,12 @@ Returning the stack trace of all the threads owned by a Workflow Execution can b
 Use the options listed below to change the command's behavior.
 Make sure to write the command as follows:
 ` + "`" + `temporal workflow stack [command options]` + "`" + `
-
 `
 const WorkflowSignalUsageText = `The ` + "`" + `temporal workflow signal` + "`" + ` command is used to [Signal](/concepts/what-is-a-signal) a [Workflow Execution](/concepts/what-is-a-workflow-execution) by ID or [List Filter](/concepts/what-is-a-list-filter).
 
 Use the options listed below to change the command's behavior.
 Make sure to write the command as follows:
 ` + "`" + `temporal workflow signal [command options]` + "`" + `
-
 `
 const WorkflowCountUsageText = `The ` + "`" + `temporal workflow count` + "`" + ` command returns a count of [Workflow Executions](/concepts/what-is-a-workflow-execution).
 This command requires Elasticsearch to be enabled.
@@ -514,14 +469,12 @@ This command requires Elasticsearch to be enabled.
 Use the options listed below to change the command's behavior.
 Make sure to write the command as follows:
 ` + "`" + `temporal workflow count [command options]` + "`" + `
-
 `
 const WorkflowDeleteUsageText = `The ` + "`" + `temporal workflow delete` + "`" + ` command deletes the specified [Workflow Execution](/concepts/what-is-a-workflow-execution).
 
 Use the options listed below to change the command's behavior.
 Make sure to write the command as follows:
 ` + "`" + `temporal workflow delete [command options]` + "`" + `
-
 `
 
 const WorkflowTraceUsageText = `The ` + "`" + `temporal workflow trace` + "`" + ` command tracks the progress of a [Workflow Execution](/concepts/what-is-a-workflow-execution) and any  [Child Workflows](/concepts/what-is-a-child-workflow-execution) it generates.
@@ -529,7 +482,6 @@ const WorkflowTraceUsageText = `The ` + "`" + `temporal workflow trace` + "`" + 
 Use the options listed below to change the command's behavior.
 Make sure to write the command as follows:
 ` + "`" + `temporal workflow trace [command options]` + "`" + `
-
 `
 
 const ServerUsageText = `Server commands allow you to start and manage the [Temporal Server](/concepts/what-is-the-temporal-server) from the command line.
