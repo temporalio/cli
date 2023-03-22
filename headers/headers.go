@@ -15,8 +15,10 @@ const (
 	SupportedFeaturesHeaderDelim      = ","
 )
 
+const DEV_VERSION = "0.0.0-DEV"
+
 // Set by GoReleaser using ldflags
-var Version = "0.0.0-DEV"
+var Version = DEV_VERSION
 
 const (
 	ClientNameCLI = "temporal-cli"
@@ -36,7 +38,7 @@ var (
 )
 
 func Init() {
-	if Version == "0.0.0-DEV" {
+	if Version == DEV_VERSION {
 		if info, ok := debug.ReadBuildInfo(); ok && info.Main.Version != "(devel)" {
 			Version = info.Main.Version
 		}

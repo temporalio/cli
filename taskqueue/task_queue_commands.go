@@ -91,6 +91,128 @@ func ListTaskQueuePartitions(c *cli.Context) error {
 	return output.PrintItems(c, items, optsA)
 }
 
+// BuildIDAddNewDefault is implements the `update-build-ids add-new-default` subcommand
+func BuildIDAddNewDefault(c *cli.Context) error {
+	newBuildID := c.String(common.FlagBuildID)
+	operation := workflowservice.UpdateWorkerBuildIdCompatibilityRequest{
+		Operation: &workflowservice.UpdateWorkerBuildIdCompatibilityRequest_AddNewBuildIdInNewDefaultSet{
+			AddNewBuildIdInNewDefaultSet: newBuildID,
+		},
+	}
+	return updateBuildIDs(c, operation)
+}
+
+// BuildIDAddNewCompatible is implements the `update-build-ids add-new-compatible` subcommand
+func BuildIDAddNewCompatible(c *cli.Context) error {
+	newBuildID := c.String(common.FlagBuildID)
+	existingBuildID := c.String(common.FlagExistingCompatibleBuildID)
+	setAsDefault := c.Bool(common.FlagSetBuildIDAsDefault)
+	operation := workflowservice.UpdateWorkerBuildIdCompatibilityRequest{
+		Operation: &workflowservice.UpdateWorkerBuildIdCompatibilityRequest_AddNewCompatibleBuildId{
+			AddNewCompatibleBuildId: &workflowservice.UpdateWorkerBuildIdCompatibilityRequest_AddNewCompatibleVersion{
+				NewBuildId:                newBuildID,
+				ExistingCompatibleBuildId: existingBuildID,
+				MakeSetDefault:            setAsDefault,
+			},
+		},
+	}
+	return updateBuildIDs(c, operation)
+}
+
+// BuildIDPromoteSet is implements the `update-build-ids promote-set` subcommand
+func BuildIDPromoteSet(c *cli.Context) error {
+	buildID := c.String(common.FlagBuildID)
+	operation := workflowservice.UpdateWorkerBuildIdCompatibilityRequest{
+		Operation: &workflowservice.UpdateWorkerBuildIdCompatibilityRequest_PromoteSetByBuildId{
+			PromoteSetByBuildId: buildID,
+		},
+	}
+	return updateBuildIDs(c, operation)
+}
+
+// BuildIDPromoteInSet is implements the `update-build-ids promote-id-in-set` subcommand
+func BuildIDPromoteInSet(c *cli.Context) error {
+	buildID := c.String(common.FlagBuildID)
+	operation := workflowservice.UpdateWorkerBuildIdCompatibilityRequest{
+		Operation: &workflowservice.UpdateWorkerBuildIdCompatibilityRequest_PromoteBuildIdWithinSet{
+			PromoteBuildIdWithinSet: buildID,
+		},
+	}
+	return updateBuildIDs(c, operation)
+}
+
+// GetBuildIDs is implements the `get-build-ids` subcommand
+func GetBuildIDs(c *cli.Context) error {
+	frontendClient := client.CFactory.FrontendClient(c)
+	namespace, err := common.RequiredFlag(c, common.FlagNamespace)
+	if err != nil {
+		return err
+	}
+	taskQueue := c.String(common.FlagTaskQueue)
+
+	ctx, cancel := common.NewContext(c)
+	defer cancel()
+	request := &workflowservice.GetWorkerBuildIdCompatibilityRequest{
+		Namespace: namespace,
+		TaskQueue: taskQueue,
+	}
+
+	resp, err := frontendClient.GetWorkerBuildIdCompatibility(ctx, request)
+	if err != nil {
+		return fmt.Errorf("unable to get task queue build ids: %w", err)
+	}
+
+	type rowtype struct {
+		VersionSetId  string
+		BuildIds      []string
+		IsDefaultSet  bool
+		DefaultForSet string
+	}
+	opts := &output.PrintOptions{
+		Fields: []string{"VersionSetId", "BuildIds", "DefaultForSet", "IsDefaultSet"},
+	}
+	var items []interface{}
+	for ix, e := range resp.GetMajorVersionSets() {
+		row := rowtype{
+			VersionSetId:  e.GetVersionSetId(),
+			BuildIds:      e.GetBuildIds(),
+			IsDefaultSet:  ix == len(resp.GetMajorVersionSets())-1,
+			DefaultForSet: e.GetBuildIds()[len(e.GetBuildIds())-1],
+		}
+		items = append(items, row)
+	}
+	return output.PrintItems(c, items, opts)
+}
+
+// updateBuildIDs manipulates the build ids of a given taskqueue. `partialReq` is a partial request
+// containing only the operation field filled out.
+func updateBuildIDs(c *cli.Context, partialReq workflowservice.UpdateWorkerBuildIdCompatibilityRequest) error {
+	frontendClient := client.CFactory.FrontendClient(c)
+	namespace, err := common.RequiredFlag(c, common.FlagNamespace)
+	if err != nil {
+		return err
+	}
+	taskQueue := c.String(common.FlagTaskQueue)
+
+	ctx, cancel := common.NewContext(c)
+	defer cancel()
+
+	request := &workflowservice.UpdateWorkerBuildIdCompatibilityRequest{
+		Namespace: namespace,
+		TaskQueue: taskQueue,
+		Operation: partialReq.Operation,
+	}
+
+	resp, err := frontendClient.UpdateWorkerBuildIdCompatibility(ctx, request)
+	if err != nil {
+		return fmt.Errorf("error updating task queue build ids: %w", err)
+	}
+
+	fmt.Println(color.Green(c, "Successfully updated task queue build ids. Set ID: %v", resp.GetVersionSetId()))
+
+	return nil
+}
+
 func strToTaskQueueType(str string) enumspb.TaskQueueType {
 	if strings.ToLower(str) == "activity" {
 		return enumspb.TASK_QUEUE_TYPE_ACTIVITY

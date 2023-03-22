@@ -59,15 +59,6 @@ func NewTaskQueueCommands() []*cli.Command {
 			Name:      "update-build-ids",
 			Usage:     common.UpdateBuildIDsDefinition,
 			UsageText: common.UpdateBuildIDsDefinitionText,
-			Flags: []cli.Flag{
-				&cli.StringFlag{
-					Name:     common.FlagTaskQueue,
-					Aliases:  common.FlagTaskQueueAlias,
-					Usage:    common.FlagTaskQueueName,
-					Required: true,
-					Category: common.CategoryMain,
-				},
-			},
 			Subcommands: []*cli.Command{
 				{
 					Name:      "add-new-default",
@@ -75,11 +66,21 @@ func NewTaskQueueCommands() []*cli.Command {
 					UsageText: common.AddNewDefaultBuildIDDefinitionUsage,
 					Flags: []cli.Flag{
 						&cli.StringFlag{
+							Name:     common.FlagTaskQueue,
+							Aliases:  common.FlagTaskQueueAlias,
+							Usage:    common.FlagTaskQueueName,
+							Required: true,
+							Category: common.CategoryMain,
+						},
+						&cli.StringFlag{
 							Name:     common.FlagBuildID,
 							Usage:    common.FlagNewBuildIDUsage,
 							Required: true,
 							Category: common.CategoryMain,
 						},
+					},
+					Action: func(c *cli.Context) error {
+						return BuildIDAddNewDefault(c)
 					},
 				},
 				{
@@ -87,6 +88,13 @@ func NewTaskQueueCommands() []*cli.Command {
 					Usage:     common.AddNewCompatibleBuildIDDefinition,
 					UsageText: common.AddNewCompatibleBuildIDDefinitionUsage,
 					Flags: []cli.Flag{
+						&cli.StringFlag{
+							Name:     common.FlagTaskQueue,
+							Aliases:  common.FlagTaskQueueAlias,
+							Usage:    common.FlagTaskQueueName,
+							Required: true,
+							Category: common.CategoryMain,
+						},
 						&cli.StringFlag{
 							Name:     common.FlagBuildID,
 							Usage:    common.FlagNewBuildIDUsage,
@@ -105,6 +113,9 @@ func NewTaskQueueCommands() []*cli.Command {
 							Category: common.CategoryMain,
 						},
 					},
+					Action: func(c *cli.Context) error {
+						return BuildIDAddNewCompatible(c)
+					},
 				},
 				{
 					Name:      "promote-set",
@@ -112,11 +123,21 @@ func NewTaskQueueCommands() []*cli.Command {
 					UsageText: common.PromoteSetDefinitionUsage,
 					Flags: []cli.Flag{
 						&cli.StringFlag{
+							Name:     common.FlagTaskQueue,
+							Aliases:  common.FlagTaskQueueAlias,
+							Usage:    common.FlagTaskQueueName,
+							Required: true,
+							Category: common.CategoryMain,
+						},
+						&cli.StringFlag{
 							Name:     common.FlagBuildID,
 							Usage:    common.FlagPromoteSetBuildIDUsage,
 							Required: true,
 							Category: common.CategoryMain,
 						},
+					},
+					Action: func(c *cli.Context) error {
+						return BuildIDPromoteSet(c)
 					},
 				},
 				{
@@ -125,11 +146,21 @@ func NewTaskQueueCommands() []*cli.Command {
 					UsageText: common.PromoteIDInSetDefinitionUsage,
 					Flags: []cli.Flag{
 						&cli.StringFlag{
+							Name:     common.FlagTaskQueue,
+							Aliases:  common.FlagTaskQueueAlias,
+							Usage:    common.FlagTaskQueueName,
+							Required: true,
+							Category: common.CategoryMain,
+						},
+						&cli.StringFlag{
 							Name:     common.FlagBuildID,
 							Usage:    common.FlagPromoteBuildIDUsage,
 							Required: true,
 							Category: common.CategoryMain,
 						},
+					},
+					Action: func(c *cli.Context) error {
+						return BuildIDPromoteInSet(c)
 					},
 				},
 			},
@@ -139,6 +170,13 @@ func NewTaskQueueCommands() []*cli.Command {
 			Usage:     common.GetBuildIDsDefinition,
 			UsageText: common.GetBuildIDsDefinitionText,
 			Flags: []cli.Flag{
+				&cli.StringFlag{
+					Name:     common.FlagTaskQueue,
+					Aliases:  common.FlagTaskQueueAlias,
+					Usage:    common.FlagTaskQueueName,
+					Required: true,
+					Category: common.CategoryMain,
+				},
 				&cli.BoolFlag{
 					Name:     common.FlagIncludeRetirementCandidates,
 					Usage:    common.FlagIncludeRetirementCandidatesUsage,
@@ -155,6 +193,9 @@ func NewTaskQueueCommands() []*cli.Command {
 					Category: common.CategoryMain,
 					Value:    0,
 				},
+			},
+			Action: func(c *cli.Context) error {
+				return GetBuildIDs(c)
 			},
 		},
 	}
