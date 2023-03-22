@@ -35,6 +35,7 @@ const (
 	DescribeTaskQueueDefinition      = "Provides information for Workers that have recently polled on this Task Queue."
 	ListPartitionTaskQueueDefinition = "Lists the Task Queue's partitions and the matching nodes they are assigned to."
 	UpdateBuildIDsDefinition         = "Operations to update the sets of worker Build ID versions on the Task Queue"
+	GetBuildIDsDefinition            = "Fetch the sets of worker Build ID versions on the Task Queue"
 
 	// Batch subcommand definitions
 	DescribeBatchJobDefinition  = "Provide information about a Batch operation job."
@@ -576,6 +577,8 @@ The results of any command run on the Server can be viewed at http://localhost:7
 `
 
 const UpdateBuildIDsDefinitionText = "Provides various commands for adding or changing the sets of compatible build IDs associated with a Task Queue. See the help for each sub-command for more."
+
+const GetBuildIDsDefinitionText = "Fetch the sets of compatible build IDs associated with a Task Queue and associated information."
 
 const CustomTemplateHelpCLI = `NAME:
    {{template "helpNameTemplate" .}}{{if .Description}}

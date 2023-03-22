@@ -138,10 +138,13 @@ const (
 	FlagTaskQueueTypeDefinition = "Task Queue type [workflow|activity]"
 
 	// Build id based versioning flags
-	FlagNewBuildIDUsage                = "The new build id to be added."
-	FlagExistingCompatibleBuildIDUsage = "A build id which must already exist in the version sets known by the task queue. The new id will be stored in the set containing this id, marking it as compatible with the versions within."
-	FlagSetBuildIDAsDefaultUsage       = "When set, establishes the compatible set being targeted as the overall default for the queue. If a different set was the current default, the targeted set will replace it as the new default."
-	FlagPromoteSetBuildIDUsage         = "An existing build id whose containing set will be promoted."
-	FlagPromoteBuildIDUsage            = "An existing build id which will be promoted to be the default inside its containing set."
+	FlagNewBuildIDUsage                  = "The new build id to be added."
+	FlagExistingCompatibleBuildIDUsage   = "A build id which must already exist in the version sets known by the task queue. The new id will be stored in the set containing this id, marking it as compatible with the versions within."
+	FlagSetBuildIDAsDefaultUsage         = "When set, establishes the compatible set being targeted as the overall default for the queue. If a different set was the current default, the targeted set will replace it as the new default."
+	FlagPromoteSetBuildIDUsage           = "An existing build id whose containing set will be promoted."
+	FlagPromoteBuildIDUsage              = "An existing build id which will be promoted to be the default inside its containing set."
+	FlagMaxBuildIDSetsUsage              = "Limits how many compatible sets will be returned. Specify 1 to only return the current default major version set. 0 returns all sets."
+	FlagIncludeRetirementCandidatesUsage = "When set, output will include information about workers with build ids that may be retired."
+	FlagIncludePollerCompatibilityUsage  = "When set, output will include information about hich versions have open workflows, and whether or not there are currently polling workers who are compatible with those versions."
 )
 

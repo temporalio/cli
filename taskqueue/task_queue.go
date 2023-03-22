@@ -134,5 +134,28 @@ func NewTaskQueueCommands() []*cli.Command {
 				},
 			},
 		},
+		{
+			Name:      "get-build-ids",
+			Usage:     common.GetBuildIDsDefinition,
+			UsageText: common.GetBuildIDsDefinitionText,
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name:     common.FlagIncludeRetirementCandidates,
+					Usage:    common.FlagIncludeRetirementCandidatesUsage,
+					Category: common.CategoryMain,
+				},
+				&cli.BoolFlag{
+					Name:     common.FlagIncludePollerCompatibility,
+					Usage:    common.FlagIncludePollerCompatibilityUsage,
+					Category: common.CategoryMain,
+				},
+				&cli.IntFlag{
+					Name:     common.FlagMaxBuildIDSets,
+					Usage:    common.FlagMaxBuildIDSetsUsage,
+					Category: common.CategoryMain,
+					Value:    0,
+				},
+			},
+		},
 	}
 }
