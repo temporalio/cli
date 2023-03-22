@@ -243,7 +243,7 @@ func UnmarshalMemoFromCLI(c *cli.Context) (map[string]interface{}, error) {
 type historyTableIter struct {
 	iter           iterator.Iterator[*historypb.HistoryEvent]
 	maxFieldLength int
-	lastEvent      *historypb.HistoryEvent
+	wfResult       *historypb.HistoryEvent
 }
 
 func (h *historyTableIter) HasNext() bool {
@@ -256,7 +256,7 @@ func (h *historyTableIter) Next() (interface{}, error) {
 		return nil, err
 	}
 
-	reflect.ValueOf(h.lastEvent).Elem().Set(reflect.ValueOf(event).Elem())
+	reflect.ValueOf(h.wfResult).Elem().Set(reflect.ValueOf(event).Elem())
 
 	// adapted structure for Table output view
 	return struct {
@@ -297,7 +297,7 @@ func printWorkflowProgress(c *cli.Context, wid, rid string, watch bool) error {
 		fmt.Println(color.Magenta(c, "Progress:"))
 	}
 
-	var lastEvent historypb.HistoryEvent
+	var wfResult historypb.HistoryEvent
 
 	errChan := make(chan error)
 	go func() {
@@ -305,7 +305,7 @@ func printWorkflowProgress(c *cli.Context, wid, rid string, watch bool) error {
 		if isJSON {
 			printReplayableHistory(c, iter)
 		} else {
-			hIter := &historyTableIter{iter: iter, maxFieldLength: maxFieldLength, lastEvent: &lastEvent}
+			hIter := &historyTableIter{iter: iter, maxFieldLength: maxFieldLength, wfResult: &wfResult}
 			po := &output.PrintOptions{
 				Fields:     []string{"ID", "Time", "Type"},
 				FieldsLong: []string{"Details"},
@@ -344,7 +344,7 @@ func printWorkflowProgress(c *cli.Context, wid, rid string, watch bool) error {
 				if watch {
 					fmt.Printf("  Run Time: %d seconds\n", timeElapsed)
 				}
-				printRunStatus(c, &lastEvent)
+				printRunStatus(c, &wfResult)
 			}
 			return nil
 		case err = <-errChan:
