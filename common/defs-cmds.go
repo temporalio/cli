@@ -475,7 +475,7 @@ The index schema is not modified.
 
 Use the options listed below to change the command's behavior.
 Make sure to write the command as follows:
-`+ "`" +`temporal operator search-attribute remove [command options]`+ "`" +`
+` + "`" + `temporal operator search-attribute remove [command options]` + "`" + `
 
 `
 const TaskQueueListPartitionUsageText = `The ` + "`" + `temporal task-queue list-partition` + "`" + ` command displays the partitions of a [Task Queue](/concepts/what-is-a-task-queue), along with the matching node they are assigned to.
@@ -541,12 +541,18 @@ The results of any command run on the Server can be viewed at http://localhost:7
 `
 
 const CustomTemplateHelpCLI = `NAME:
-{{template "helpNameTemplate" .}}
+   {{template "helpNameTemplate" .}}
+
 USAGE:
-{{if .VisibleCommands}}command [command options] {{end}}{{if .ArgsUsage}}{{.ArgsUsage}}{{else}}[arguments...]{{end}}{{if .Description}}
+   {{if .UsageText}}{{wrap .UsageText 3 | markdown2Text}}{{end}}{{if .Category}}
+
+CATEGORY:
+   {{.Category}}{{end}}{{if .Description}}
+
 DESCRIPTION:
-{{template "descriptionTemplate" .}}{{end}}{{if .VisibleCommands}}
-COMMANDS:{{template "visibleCommandTemplate" .}}{{end}}{{if .VisibleFlagCategories}}
+   {{template "descriptionTemplate" .}}{{end}}{{if .VisibleFlagCategories}}
+
 OPTIONS:{{template "visibleFlagCategoryTemplate" .}}{{else if .VisibleFlags}}
+
 OPTIONS:{{template "visibleFlagTemplate" .}}{{end}}
 `
