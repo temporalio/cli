@@ -16,7 +16,6 @@ import (
 	"github.com/temporalio/tctl-kit/pkg/output"
 	"github.com/temporalio/tctl-kit/pkg/pager"
 	"github.com/urfave/cli/v2"
-	apicommon "go.temporal.io/api/common/v1"
 	commonpb "go.temporal.io/api/common/v1"
 	enumspb "go.temporal.io/api/enums/v1"
 	schedpb "go.temporal.io/api/schedule/v1"
@@ -132,7 +131,7 @@ func buildScheduleAction(c *cli.Context) (*schedpb.ScheduleAction, error) {
 
 	newWorkflow := &workflowpb.NewWorkflowExecutionInfo{
 		WorkflowId:               wid,
-		WorkflowType:             &apicommon.WorkflowType{Name: workflowType},
+		WorkflowType:             &commonpb.WorkflowType{Name: workflowType},
 		TaskQueue:                &taskqueue.TaskQueue{Name: taskQueue},
 		Input:                    inputs,
 		WorkflowExecutionTimeout: timestamp.DurationPtr(time.Second * time.Duration(et)),
@@ -202,7 +201,7 @@ func buildSchedule(c *cli.Context) (*schedpb.Schedule, error) {
 	return sched, nil
 }
 
-func getMemoAndSearchAttributesForSchedule(c *cli.Context) (*apicommon.Memo, *apicommon.SearchAttributes, error) {
+func getMemoAndSearchAttributesForSchedule(c *cli.Context) (*commonpb.Memo, *commonpb.SearchAttributes, error) {
 	if memoMap, err := workflow.UnmarshalMemoFromCLI(c); err != nil {
 		return nil, nil, err
 	} else if memo, err := encodeMemo(memoMap); err != nil {
@@ -416,7 +415,7 @@ func DescribeSchedule(c *cli.Context) error {
 	}
 
 	if c.Bool(common.FlagPrintRaw) {
-		common.PrettyPrintJSONObject(resp)
+		common.PrettyPrintJSONObject(c, resp)
 		return nil
 	}
 
@@ -446,7 +445,7 @@ func DescribeSchedule(c *cli.Context) error {
 		// more convenient copies of values from Info
 		NextRunTime       *time.Time
 		LastRunTime       *time.Time
-		LastRunExecution  *apicommon.WorkflowExecution
+		LastRunExecution  *commonpb.WorkflowExecution
 		LastRunActualTime *time.Time
 
 		Memo             map[string]string // json only
@@ -577,7 +576,7 @@ func ListSchedules(c *cli.Context) error {
 				Info struct {
 					NextRunTime       *time.Time
 					LastRunTime       *time.Time
-					LastRunExecution  *apicommon.WorkflowExecution
+					LastRunExecution  *commonpb.WorkflowExecution
 					LastRunActualTime *time.Time
 				}
 			}

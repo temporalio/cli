@@ -303,7 +303,7 @@ func printWorkflowProgress(c *cli.Context, wid, rid string, watch bool) error {
 	go func() {
 		iter := sdkClient.GetWorkflowHistory(tcCtx, wid, rid, watch, enumspb.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
 		if isJSON {
-			printReplayableHistory(iter)
+			printReplayableHistory(c, iter)
 		} else {
 			hIter := &historyTableIter{iter: iter, maxFieldLength: maxFieldLength, lastEvent: &lastEvent}
 			po := &output.PrintOptions{
@@ -353,7 +353,7 @@ func printWorkflowProgress(c *cli.Context, wid, rid string, watch bool) error {
 	}
 }
 
-func printReplayableHistory(iter iterator.Iterator[*historypb.HistoryEvent]) error {
+func printReplayableHistory(c *cli.Context, iter iterator.Iterator[*historypb.HistoryEvent]) error {
 	var events []*historypb.HistoryEvent
 	for iter.HasNext() {
 		event, err := iter.Next()
@@ -367,7 +367,7 @@ func printReplayableHistory(iter iterator.Iterator[*historypb.HistoryEvent]) err
 	history := &historypb.History{}
 	history.Events = events
 
-	common.PrettyPrintJSONObject(history)
+	common.PrettyPrintJSONObject(c, history)
 
 	return nil
 }
@@ -690,9 +690,9 @@ func DescribeWorkflow(c *cli.Context) error {
 	}
 
 	if printRaw {
-		common.PrettyPrintJSONObject(resp)
+		common.PrettyPrintJSONObject(c, resp)
 	} else {
-		common.PrettyPrintJSONObject(convertDescribeWorkflowExecutionResponse(c, resp))
+		common.PrettyPrintJSONObject(c, convertDescribeWorkflowExecutionResponse(c, resp))
 	}
 
 	return nil
@@ -890,7 +890,7 @@ func ResetWorkflow(c *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("reset failed: %w", err)
 	}
-	common.PrettyPrintJSONObject(resp)
+	common.PrettyPrintJSONObject(c, resp)
 	return nil
 }
 
