@@ -55,9 +55,10 @@ const (
 	FlagPrintRawUsage              = "Print properties without changing their format."
 	QueryFlagTypeUsage             = "The type of Query to run."
 	FlagWorkflowSignalUsage        = "Signal Workflow Execution by Id."
+
 	FlagSignalName                 = "Signal Name"
-	FlagInputSignal                = "Input for the Signal. Formatted in JSON."
-	FlagInputFileSignal            = "Input for the Signal from file. Formatted in JSON."
+	FlagInputSignal                = "Input for the Signal . Formatted in JSON."
+	FlagInputFileSignal            = "Input for the Signal from file . Formatted in JSON."
 	FlagUpdateHandlerName          = "Update handler Name"
 	FlagUpdateHandlerInput         = "Args for the Update handler. Formatted in JSON."
 	FlagUpdateIDDefinition         = "UpdateID to check the result of an update (either UpdateID or Update handler name should be passed)"
@@ -135,4 +136,12 @@ const (
 	// Task Queue flags
 	FlagTaskQueueName           = "Name of the Task Queue."
 	FlagTaskQueueTypeDefinition = "Task Queue type [workflow|activity]"
+
+	// Build id based versioning flags
+	FlagNewBuildIDUsage                = "The new build id to be added."
+	FlagExistingCompatibleBuildIDUsage = "A build id which must already exist in the version sets known by the task queue. The new id will be stored in the set containing this id, marking it as compatible with the versions within."
+	FlagSetBuildIDAsDefaultUsage       = "When set, establishes the compatible set being targeted as the overall default for the queue. If a different set was the current default, the targeted set will replace it as the new default."
+	FlagPromoteSetBuildIDUsage         = "An existing build id whose containing set will be promoted."
+	FlagPromoteBuildIDUsage            = "An existing build id which will be promoted to be the default inside its containing set."
 )
+

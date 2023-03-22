@@ -135,6 +135,9 @@ var (
 	FlagWorkflowType               = "workflow-type"
 	FlagYes                        = "yes"
 	FlagYesAlias                   = []string{"y"}
+	FlagBuildID                    = "build-id"
+	FlagExistingCompatibleBuildID  = "existing-compatible-build-id"
+	FlagSetBuildIDAsDefault        = "set-as-default"
 )
 
 var SharedFlags = []cli.Flag{
