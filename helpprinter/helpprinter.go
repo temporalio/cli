@@ -4,8 +4,14 @@ import (
 	"html/template"
 	"io"
 	"regexp"
+	"strings"
 
 	"github.com/urfave/cli/v2"
+)
+
+const (
+	Reset = "\033[0m"
+	Bold  = "\033[1m"
 )
 
 func HelpPrinter() func(w io.Writer, templ string, data interface{}, customFunc map[string]interface{}) {
@@ -30,10 +36,29 @@ func WithHelpTemplate(commands []*cli.Command, template string) []*cli.Command {
 }
 
 func MarkdownToText(input string) string {
-	return removeLinks(input)
+	input = removeLinks(input)
+	input = highlightedCode(input)
+	return input
 }
 
 func removeLinks(input string) string {
 	linkPattern := regexp.MustCompile(`\[(.*?)\]\((.*?)\)`)
 	return linkPattern.ReplaceAllString(input, "$1")
+}
+
+func highlightedCode(text string) string {
+	multilineCodeBlockRegex := regexp.MustCompile("```([\\s\\S]+?)```")
+	highlightedText := multilineCodeBlockRegex.ReplaceAllStringFunc(text, func(match string) string {
+		codeBlock := strings.Trim(match, "`")
+		codeBlock = strings.Trim(codeBlock, " ")
+		codeBlock = strings.Trim(codeBlock, "\n")
+		return Bold + codeBlock + Reset
+	})
+
+	inlineCodeBlockRegex := regexp.MustCompile("`([^`]+)`")
+	highlightedText = inlineCodeBlockRegex.ReplaceAllStringFunc(highlightedText, func(match string) string {
+		codeBlock := strings.Trim(match, "`")
+		return Bold + codeBlock + Reset
+	})
+	return highlightedText
 }
