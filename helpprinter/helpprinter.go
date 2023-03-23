@@ -3,9 +3,11 @@ package helpprinter
 import (
 	"html/template"
 	"io"
+	"os"
 	"regexp"
 	"strings"
 
+	"github.com/mattn/go-isatty"
 	"github.com/urfave/cli/v2"
 )
 
@@ -37,7 +39,7 @@ func WithHelpTemplate(commands []*cli.Command, template string) []*cli.Command {
 
 func MarkdownToText(input string) string {
 	input = removeLinks(input)
-	input = highlightedCode(input)
+	input = highlightCode(input)
 	return input
 }
 
@@ -46,7 +48,11 @@ func removeLinks(input string) string {
 	return linkPattern.ReplaceAllString(input, "$1")
 }
 
-func highlightedCode(text string) string {
+func highlightCode(text string) string {
+	if !isatty.IsTerminal(os.Stdout.Fd()) {
+		return text
+	}
+
 	multilineCodeBlockRegex := regexp.MustCompile("```([\\s\\S]+?)```")
 	highlightedText := multilineCodeBlockRegex.ReplaceAllStringFunc(text, func(match string) string {
 		codeBlock := strings.Trim(match, "`")
