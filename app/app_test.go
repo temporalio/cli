@@ -80,8 +80,7 @@ var commands = []string{
 var cliTestNamespace = "cli-test-namespace"
 
 func TestCLIAppSuite(t *testing.T) {
-	s := new(cliAppSuite)
-	suite.Run(t, s)
+	suite.Run(t, new(cliAppSuite))
 }
 
 func (s *cliAppSuite) SetupSuite() {

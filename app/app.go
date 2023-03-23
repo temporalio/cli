@@ -13,6 +13,7 @@ import (
 	"github.com/temporalio/cli/completion"
 	"github.com/temporalio/cli/env"
 	"github.com/temporalio/cli/headers"
+	"github.com/temporalio/cli/helpprinter"
 	"github.com/temporalio/cli/namespace"
 	"github.com/temporalio/cli/schedule"
 	"github.com/temporalio/cli/searchattribute"
@@ -38,10 +39,9 @@ func BuildApp() *cli.App {
 	app.Suggest = true
 	app.EnableBashCompletion = true
 	app.DisableSliceFlagSeparator = true
-	app.Commands = commands(defaultCfg)
+	app.Commands = helpprinter.WithHelpTemplate(commands(defaultCfg), common.CustomTemplateHelpCLI)
 	app.Before = configureCLI
 	app.ExitErrHandler = HandleError
-	app.CustomAppHelpTemplate = common.CustomTemplateHelpCLI
 
 	// set builder if not customized
 	if client.CFactory == nil {
@@ -60,6 +60,7 @@ func configureCLI(ctx *cli.Context) error {
 	env.Init(ctx)
 	client.Init(ctx)
 	headers.Init()
+	cli.HelpPrinterCustom = helpprinter.HelpPrinter()
 
 	return nil
 }
@@ -83,7 +84,13 @@ func HandleError(c *cli.Context, err error) {
 }
 
 func commands(defaultCfg *sconfig.Config) []*cli.Command {
-	return append(append(serverCommands(defaultCfg), common.WithFlags(clientCommands, common.SharedFlags)...), completionCommands...)
+	return append(
+		append(
+			serverCommands(defaultCfg),
+			common.WithFlags(clientCommands, common.SharedFlags)...,
+		),
+		completionCommands...,
+	)
 }
 
 func serverCommands(defaultCfg *sconfig.Config) []*cli.Command {
