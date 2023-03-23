@@ -541,16 +541,13 @@ The results of any command run on the Server can be viewed at http://localhost:7
 `
 
 const CustomTemplateHelpCLI = `NAME:
-   {{template "helpNameTemplate" .}}
-
-USAGE:
-   {{if .UsageText}}{{wrap .UsageText 3 | markdown2Text}}{{end}}{{if .Category}}
-
-CATEGORY:
-   {{.Category}}{{end}}{{if .Description}}
+   {{template "helpNameTemplate" .}}{{if .Description}}
 
 DESCRIPTION:
-   {{template "descriptionTemplate" .}}{{end}}{{if .VisibleFlagCategories}}
+   {{template "descriptionTemplate" .}}{{end}}{{if .UsageText}}
+
+USAGE:
+   {{wrap .UsageText 3 | markdown2Text}}{{end}}{{if .VisibleFlagCategories}}
 
 OPTIONS:{{template "visibleFlagCategoryTemplate" .}}{{else if .VisibleFlags}}
 
