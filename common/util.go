@@ -328,7 +328,7 @@ func GetCliIdentity() string {
 	if u, err := user.Current(); err == nil {
 		userName = u.Username
 	}
-	return fmt.Sprintf("tctl:%s@%s", userName, hostName)
+	return fmt.Sprintf("temporal-cli:%s@%s", userName, hostName)
 }
 
 func NewContext(c *cli.Context) (context.Context, context.CancelFunc) {

@@ -234,3 +234,8 @@ func (s *utilSuite) TestParseTimeDateRange() {
 		s.True(te.expected.Add(delta).After(parsedTime) || te.expected.Add(delta) == parsedTime, "Case: %s. %d must be greater or equal than parsed %d", te.timeStr, te.expected, parsedTime)
 	}
 }
+
+func (s *utilSuite) TestGetCliIdentity() {
+	identity := GetCliIdentity()
+	s.Contains(identity, "temporal-cli")
+}
