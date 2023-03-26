@@ -5,13 +5,36 @@
 
 > ⚠️ Temporal CLI's API is still subject to change. ⚠️
 
-The Temporal CLI is a tool for interacting with Temporal from the command line.
-Temporal CLI functions as a distribution of the Temporal Server and Web UI that runs as a single process with zero runtime dependencies.
-The tool supports persistence to disk and in-memory mode through SQLite.
+Use the CLI to run a Temporal Server and interact with it.
 
-## Installation
+**Table of Contents**
 
-Temporal CLI can be installed through several different methods. While most of them can be used across all operating systems, please note that Homebrew is macOS-exclusive.
+- [Install](#install)
+  - [cURL](#curl)
+  - [Homebrew](#homebrew)
+  - [GitHub releases](#github-releases)
+  - [CDN](#cdn)
+- [Start the Temporal Server](#start-the-temporal-server)
+- [Configure](#configure)
+  - [Namespace registration](#namespace-registration)
+  - [Persistence modes](#persistence-modes)
+  - [Enable or disable Temporal UI](#enable-or-disable-temporal-ui)
+  - [Dynamic configuration](#dynamic-configuration)
+- [Auto-completion](#auto-completion)
+  - [zsh auto-completion](#zsh-auto-completion)
+  - [Bash auto-completion](#bash-auto-completion)
+    - [macOS installation](#macos-installation)
+    - [Linux installation](#linux-installation)
+- [Development](#development)
+  - [Compile and run CLI](#compile-and-run-cli)
+  - [Compile docs](#compile-docs)
+  - [Run tests](#run-tests)
+- [Known Issues](#known-issues)
+
+
+## Install
+
+Temporal CLI can be installed through several different methods.
 
 ### cURL
 
@@ -21,13 +44,13 @@ Run the following command to install the latest version of Temporal CLI.
 
 ### Homebrew
 
-Run the following command in a new terminal window to install CLI for macOS.
+Run the following command to install the CLI on macOS.
 
 `brew install temporal`
 
 ### GitHub releases
 
-Download and extract the latest release from [GitHub releases](https://github.com/temporalio/cli/releases).
+Download and extract the latest release from [GitHub releases](https://github.com/temporalio/cli/releases), and add it to your PATH.
 
 ### CDN
 
@@ -38,31 +61,32 @@ To install the Temporal CLI from CDN:
 3. Extract the downloaded archive.
 4. Add the `temporal` binary to your system PATH.
 
-## Starting the Temporal Server
-
-Run the command provided below to start the Temporal Server.
-This will automatically start the Web UI.
+## Start the Temporal Server
 
 ```bash
 temporal server start-dev
 ```
 
-At this point you should have a server running on `localhost:7233` and a web interface at <http://localhost:8233>.
-A default Namespace has also been created.
+This:
 
-Run individual commands to interact with the local Temporal server.
+- Starts the Server on `localhost:7233`
+- Runs the Web UI at <http://localhost:8233>
+- Creates a `default` Namespace
+
+In another terminal, run commands to interact with the Server:
 
 ```bash
-temporal operator namespace list
 temporal workflow list
+temporal operator namespace list
 ```
 
-## Configuration
+## Configure
 
 Use the help flag to see a full list of CLI options:
 
 ```bash
-temporal server start-dev --help
+temporal -h
+temporal server start-dev -h
 ```
 
 Configure the environment with `env` commands:
@@ -154,6 +178,41 @@ Bash auto-completion relies on `bash-completion`.
 
 Install the software with the steps provided [here](https://github.com/scop/bash-completion#installation), or use your preferred package manager on your operating system.
 
+#### macOS installation
+
+Install `bash-completion` through Homebrew:
+`brew install bash-completion@2`
+
+Follow the instruction printed in the "Caveats" section, which will say to add one of the following lines to your `~/.bashrc` file:
+
+```sh
+[[ -r "/opt/homebrew/etc/profile.d/bash_completion.sh" ]] && . "/opt/homebrew/etc/profile.d/bash_completion.sh"
+```
+
+or:
+
+```sh
+[[ -r "/usr/local/etc/profile.d/bash_completion.sh" ]] && . "/usr/local/etc/profile.d/bash_completion.sh"
+```
+
+Verify that `bash-completion` is installed by running `type _init_completion`. 
+It should say `_init_completion is a function` and print the function.
+
+Enable completion for Temporal by adding the following code to your bash file:
+
+```bash
+echo 'source <(temporal completion bash)' >> ~/.bashrc
+source ~/.bashrc
+```
+
+Now test by typing `temporal`, space, and then tab twice. You should see:
+
+```bash
+$ temporal 
+activity    completion  h           operator    server      workflow    
+batch       env         help        schedule    task-queue
+```
+
 #### Linux installation
 
 Use any of the following package managers to install `bash-completion`:
@@ -174,47 +233,26 @@ source /etc/profile.d/bash_completion.sh
 Finally, enable completion for Temporal by adding the following code to your bash file:
 
 ```
-echo 'source <(temporal completion bash)' >>~/.bashrc
-source ~/.bashrc
-```
-
-#### macOS installation
-
-Install `bash-completion` through Homebrew:
-`brew install bash-completion@2`
-
-Add the provided code snippet to your `~/.bashrc` file:
-
-```sh
-[[ -r "/usr/local/etc/profile.d/bash_completion.sh" ]] && . "/usr/local/etc/profile.d/bash_completion.sh"
-```
-
-Verify that `bash-completion` is installed by running `type _init_completion`.
-
-Enable completion for Temporal by adding the following code to your bash file:
-
-```
 echo 'source <(temporal completion bash)' >> ~/.bashrc
 source ~/.bashrc
 ```
 
 ## Development
 
-The Temporal CLI can be compiled and executed from your system.
-
-To compile the source code into an executable, run:
+### Compile and run CLI
 
 ```bash
 go build -o dist/temporal ./cmd/temporal
+dist/temporal
 ```
 
-To compile the documentation, run:
+### Compile docs
 
 ```bash
 go build -o dist/temporal-docgen ./cmd/temporal-docgen
 ```
 
-To run all tests:
+### Run tests
 
 ```bash
 go test ./...
@@ -224,6 +262,6 @@ go test ./...
 
 - When consuming Temporal as a library in go mod, you may want to replace grpc-gateway with a fork to address URL escaping issue in UI. See <https://github.com/temporalio/temporalite/pull/118>
 
-- When running the executables from the Releases page in macOS you will want to allowlist `temporal` binary in `Security & Privacy` settings:
+- When running the executables from the Releases page in macOS you will need to allowlist `temporal` binary in `Security & Privacy` settings:
 
 <img width="654" alt="image (1)" src="https://user-images.githubusercontent.com/11838981/203155541-f33395f9-9ed2-4d53-a4ac-c61098cf19ef.png">
