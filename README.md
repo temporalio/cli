@@ -262,6 +262,6 @@ go test ./...
 
 - When consuming Temporal as a library in go mod, you may want to replace grpc-gateway with a fork to address URL escaping issue in UI. See <https://github.com/temporalio/temporalite/pull/118>
 
-- When running the executables from the Releases page in macOS you will need to allowlist `temporal` binary in `Security & Privacy` settings:
+- When running the executables from the Releases page in macOS you will need to click "Allow Anyway" in `Security & Privacy` settings:
 
 <img width="654" alt="image (1)" src="https://user-images.githubusercontent.com/11838981/203155541-f33395f9-9ed2-4d53-a4ac-c61098cf19ef.png">
