@@ -33,7 +33,7 @@ Download and extract the latest release from [GitHub releases](https://github.co
 
 To install the Temporal CLI from CDN:
 
-  1. Select the platform and architecture needed.
+  1. Download:
      - <a href="https://temporal.download/cli/archive/latest?platform=linux&arch=amd64">Download for Linux amd64</a>
      - <a href="https://temporal.download/cli/archive/latest?platform=linux&arch=arm64">Download for Linux arm64</a>
      - <a href="https://temporal.download/cli/archive/latest?platform=darwin&arch=amd64">Download for macOS amd64</a>
