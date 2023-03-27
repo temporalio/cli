@@ -98,21 +98,23 @@ Use this Job ID to execute other actions on the Batch job.
 
 const DescribeBatchUsageText = `The ` + "`" + `temporal batch describe` + "`" + ` command shows the progress of an ongoing Batch job.
 
-Use the command options listed below to change the information returned by this command.
-Make sure to write the command in this format:
-` + "`" + `temporal batch describe [command options]` + "`"
+Pass a valid Job ID to return a Batch Job's information.
+` + "`" + `temporal batch describe --jobid=HelloJobId` + "`" + `
+
+Use the command options listed below to change the information returned by this command.`
 
 const ListBatchUsageText = `When used, ` + "`" + `temporal batch list` + "`" + ` returns all Batch jobs. 
+Batch Jobs can be returned for an entire Cluster or a single Namespace.
+` + "`" + `temporal batch list --namespace=HelloNamespace` + "`" + `
 
-Use the command options listed below to change the information returned by this command.
-Make sure to write the command in this format:
-` + "`" + `temporal batch list [command options] ` + "`"
+Use the command options listed below to change the information returned by this command.`
 
 const TerminateBatchUsageText = `The ` + "`" + `temporal batch terminate` + "`" + ` command terminates a Batch job with the provided Job ID. 
+A reason for terminating the Batch Job can also be provided for future reference.
 
-Use the command options listed below to change the behavior of this command.
-Make sure to write the command as follows:
-` + "`" + `temporal batch terminate [command options] ` + "`"
+` + "`" + `temporal batch terminate --job-id=HelloJobId --reason=JobReason` + "`" + `
+
+Use the command options listed below to change the behavior of this command.`
 
 const WorkflowUsageText = `Workflow commands allow operations to be performed on [Workflow Executions](/concepts/what-is-a-workflow-execution).
 `
@@ -132,14 +134,20 @@ To execute a Workflow from the CLI:
 
 Single quotes('') are used to wrap input as JSON.
 
+` + "`" + `temporal workflow execute --workflow-id=hello-activity-workflow-id --input='JSON Input'` + "`" + `
+
 Use the command options listed below to change how the Workflow Execution behaves during its run.`
 
 const DescribeWorkflowUsageText = `The ` + "`" + `temporal workflow describe` + "`" + ` command shows information about a given [Workflow Execution](/concepts/what-is-a-workflow-execution).
 This information can be used to locate Workflow Executions that weren't able to run successfully.
 
-Use the command options listed below to change the information returned by this command.
-Make sure to write the command in this format:
-` + "`" + `temporal workflow describe [command options]` + "`"
+` + "`" + `temporal workflow describe --workflow-id=HelloWorkflow` + "`" + `
+
+The output of this command can be changed to show as printed ('raw') or to only show the Workflow's auto-reset points.
+
+` + "`" + `temporal workflow describe --workflow-id=HelloWorkflow --raw=true --reset-points=true` + "`" + `
+
+Use the command options listed below to change the information returned by this command.`
 
 const ListWorkflowUsageText = `The ` + "`" + `temporal workflow list` + "`" + ` command provides a list of [Workflow Executions](/concepts/what-is-a-workflow-execution) that meet the criteria of a given [Query](/concepts/what-is-a-query).
 By default, this command returns a list of up to 10 closed Workflow Executions.
@@ -167,9 +175,12 @@ const CancelWorkflowUsageText = `The ` + "`" + `temporal workflow cancel` + "`" 
 Canceling a running Workflow Execution records a [` + "`" + `WorkflowExecutionCancelRequested` + "`" + ` event](/references/events#workflow-execution-cancel-requested) in the [Event History](/concepts/what-is-an-event-history).
 A new [Command](/concepts/what-is-a-command) Task will be scheduled, and the Workflow Execution performs cleanup work.
 
-Use the options listed below to change the behavior of this command.
-Make sure to write the command as follows:
-` + "`" + `temporal workflow cancel [command options]` + "`"
+` + "`" + `temporal workflow cancel --workflow-id=HelloWorkflow` + "`" + `
+
+In addition to Workflow IDs, Workflows can also be Signaled by a Query.
+` + "`" + `temporal workflow cancel --query=helloQuery` + "`" + `
+
+Use the options listed below to change the behavior of this command.`
 
 const TerminateWorkflowUsageText = `The ` + "`" + `temporal workflow terminate` + "`" + ` command terminates a [Workflow Execution](/concepts/what-is-a-workflow-execution)
 
@@ -185,16 +196,26 @@ Use the options listed below to change termination behavior.`
 const ResetWorkflowUsageText = `The ` + "`" + `temporal workflow reset` + "`" + ` command resets a [Workflow Execution](/concepts/what-is-a-workflow-execution).
 A reset allows the Workflow to be resumed from a certain point without losing your parameters or [Event History](/concepts/what-is-an-event-history).
 
-Use the options listed below to change reset behavior.
-Make sure to write the command as follows:
-` + "`" + `temporal workflow reset [command options]` + "`"
+The Workflow can be set to a given Event Type.
+` + "`" + `temporal workflow reset --workflow-id=HelloWorkflow --type=LastContinuedAsNew` + "`" + `
+
+Alternatively, the Workflow can be reset to any Event after WorkflowTaskStarted.
+` + "`" + `temporal workflow reset --workflow-id=HelloWorkflow --event-id=HelloLastContinuedEvent` + "`" + `
+
+Use the options listed below to change reset behavior.`
 
 const ResetBatchUsageText = `The ` + "`" + `temporal workflow reset-batch` + "`" + ` command resets a batch of [Workflow Executions](/concepts/what-is-a-workflow-execution) by ` + "`" + `resetType` + "`" + `.
 Resetting a [Workflow](/concepts/what-is-a-workflow) allows the process to resume from a certain point without losing your parameters or [Event History](/concepts/what-is-an-event-history).
 
-Use the options listed below to change reset behavior.
-Make sure to write the command as follows:
-` + "`" + `temporal workflow reset-batch [command options]` + "`"
+The set of Workflow Executions to reset can be specified in an input file.
+The input file must have a Workflow ID on each line.
+
+` + "`" + `temporal workflow reset-batch --input-file=HelloInput --input-separator="\t"` + "`" + `
+
+Workflow Executions can also be found by Query.
+` + "`" + `temporal workflow reset-batch --query=HelloQuery
+
+Use the options listed below to change reset behavior.`
 
 const TaskQueueUsageText = `Task Queue commands allow operations to be performed on [Task Queues](/concepts/what-is-a-task-queue).
 `
@@ -205,9 +226,11 @@ The [Server](/concepts/what-is-the-temporal-server) records the last time of eac
 Should ` + "`" + `LastAccessTime` + "`" + ` exceeds one minute, it's likely that the Worker is at capacity (all Workflow and Activity slots are full) or that the Worker has shut down.
 [Workers](/concepts/what-is-a-worker) are removed if 5 minutes have passed since the last poll request.
 
-Use the options listed below to modify what this command returns.
-Make sure to write the command as follows:
-` + "`" + `temporal task-queue describe [command options]` + "`"
+With this command, information about the Task Queue can be returned to troubleshoot server issues.
+
+` + "`" + `temporal task-queue describe --task-queue=HelloTaskQueue --task-queue-type="activity"` + "`" + `
+
+Use the options listed below to modify what this command returns.`
 
 const ScheduleUsageText = `Schedule commands allow the user to create, use, and update [Schedules](/concepts/what-is-a-schedule).
 Schedules control when certain Actions for a Workflow Execution are performed, making it a useful tool for automation.
@@ -223,60 +246,62 @@ To run an Operator command, run ` + "`" + `temporal operator [command] [subcomma
 const ActivityUsageText = `Activity commands operate on [Activity Executions](/concepts/what-is-an-activity-execution).`
 
 const CompleteActivityUsageText = `The ` + "`" + `temporal activity complete` + "`" + ` command completes an [Activity Execution](/concepts/what-is-an-activity-execution).
+Along with completing the Activity, the result given upon return can be set as well.
 
-Use the options listed below to change the behavior of this command.
-Make sure to write the command as follows:
-` + "`" + `temporal activity complete [command options] ` + "`"
+` + "`" + `temporal activity complete --activity-id=HelloActivity --result=ActivityComplete` + "`" + `
+
+Use the options listed below to change the behavior of this command.`
 
 const FailActivityUsageText = `The ` + "`" + `temporal activity fail` + "`" + ` command fails an [Activity Execution](/concepts/what-is-an-activity-execution).
+The Activity must already be running on a valid Workflow.
+` + "`" + `temporal fail --workflow-id=HelloWorkflow --activity-id=HelloActivity` + "`" + ` 
 
-Use the options listed below to change the behavior of this command.
-Make sure to write the command as follows:
-` + "`" + `temporal activity fail [command options]` + "`"
+Use the options listed below to change the behavior of this command.`
 
 const HealthUsageText = `The ` + "`" + `temporal operator cluster health` + "`" + ` command checks the health of the [Frontend Service](/concepts/what-is-a-frontend-service).
+A successful execution returns a list of Cluster metrics.
 
-Use the options listed below to change the behavior and output of this command.
-Make sure to write the command as follows:
-` + "`" + `temporal operator cluster health [command options]` + "`"
+Use the options listed below to change the behavior and output of this command.`
 
-const ClusterUsageText = `Cluster commands enabled operations on [Temporal Clusters](/concepts/what-is-a-temporal-cluster).`
+const ClusterUsageText = `Cluster commands enable operations on [Temporal Clusters](/concepts/what-is-a-temporal-cluster).`
 
 const ClusterDescribeUsageText = `The ` + "`" + `temporal operator cluster describe` + "`" + ` command shows information about the [Cluster](/concepts/what-is-a-temporal-cluster).
+This information can include information about other connected services, such as a remote codec server.
 
-Use the options listed below to change the output of this command.
-Make sure to write the command as follows:
-` + "`" + `temporal operator cluster describe [command options]` + "`"
+Use the options listed below to change the output of this command.`
 
 const ClusterSystemUsageText = `The ` + "`" + `temporal operator cluster system` + "`" + ` command provides information about the system the Cluster is running on.
+This information can be used to diagnose problems occurring in the Temporal Server.
 
-Use the options listed below to change this command's output.
-Make sure to write the command as follows:
-` + "`" + `temporal operator cluster system [command options]` + "`"
+` + "`" + `temporal operator cluster system` + "`" + `
+
+Use the options listed below to change this command's output.`
 
 const ClusterUpsertUsageText = `The ` + "`" + `temporal operator cluster upsert` + "`" + ` command allows the user to add or update a remote [Cluster](/concepts/what-is-a-temporal-cluster).
+` + "`" + `temporal operator cluster upsert --frontend-address="127.0.2.1"` + "`" + `
 
-Use the options listed below to change the behavior of this command.
-Make sure to write the command as follows:
-` + "`" + `temporal operator cluster upsert [command options]` + "`"
+Upserting can also be used to enable or disabled cross-cluster connection.
+` + "`" + `temporal operator cluster upsert --enable-connection=true` + "`" + `
+
+Use the options listed below to change the behavior of this command.`
 
 const ClusterListUsageText = `The ` + "`" + `temporal operator cluster list` + "`" + ` command prints a list of all remote [Clusters](/concepts/what-is-a-temporal-cluster) on the system.
 
-Use the options listed below to change the command's behavior.
-Make sure to write the command as follows:
-` + "`" + `temporal operator cluster list [command options]` + "`"
+` + "`" + `temporal operator cluster list` + "`" + `
+
+Use the options listed below to change the command's behavior.`
 
 const ClusterRemoveUsageText = `The ` + "`" + `temporal operator cluster remove` + "`" + ` command removes a remote [Cluster](/concepts/what-is-a-temporal-cluster) from the system.
 
-Use the options listed below to change the command's behavior.
-Make sure to write the command as follows:
-` + "`" + `temporal operator cluster remove [command options]` + "`"
+` + "`" + `temporal operator cluster remove --name=SomeCluster` + "`" + `
+
+Use the options listed below to change the command's behavior.`
 
 const EnvUsageText = `Environment (or 'env') commands allow the user to configure the properties for the environment in use.`
 
 const EnvGetUsageText = `The ` + "`" + `temporal env get` + "`" + ` command prints the environmental properties for the environment in use.
 
-For example, passing the 'local' Namespace returns the name, address, and certificate paths for your default local environment.
+For example, passing the 'local' Namespace returns the name, address, and certificate paths for the local environment.
 ` + "`" + `temporal env get local` + "`" + `
 ` + "`" + `
 Output:
@@ -310,29 +335,44 @@ Use the options listed below to change the command's behavior.`
 const NamespaceUsageText = `Namespace commands allow [Namespace](/concepts/what-is-a-namespace) operations to be performed on the [Temporal Cluster](/concepts/what-is-a-temporal-cluster).
 `
 const NamespaceDescribeUsageText = `The ` + "`" + `temporal operator namespace describe` + "`" + ` command provides a description of a [Namespace](/concepts/what-is-a-namespace).
-Namespaces can be identified by name or Namespace ID.
+Namespaces are identified by Namespace ID.
 
-Use the options listed below to change the command's output.
-Make sure to write the command as follows:
-` + "`" + `temporal operator namespace describe [command options] [arguments]` + "`"
+` + "`" + `temporal operator namespace describe --namespace-id=hello_namespace_id` + "`" + `
+
+Use the options listed below to change the command's output.`
 
 const NamespaceListUsageText = `The ` + "`" + `temporal operator namespace list` + "`" + ` command lists all [Namespaces](/namespaces) on the [Server](/concepts/what-is-a-frontend-service).
 
-Use the options listed below to change the command's output.
-Make sure to write the command as follows:
-` + "`" + `temporal operator namespace list [command options]` + "`"
+` + "`" + `temporal operator namespace list` + "`" + `
+
+Use the options listed below to change the command's output.`
 
 const NamespaceCreateUsageText = `The ` + "`" + `temporal operator namespace create` + "`" + ` command creates a new [Namespace](/concepts/what-is-a-namespace).
+The Namespace can be created on the active Cluster, or any named Cluster within the system.
+` + "`" + `temporal operator namespace --cluster=HelloCluster` + "`" + `
 
-Use the options listed below to change the command's behavior.
-Make sure to write the command as follows:
-` + "`" + `temporal operator namespace create [command options] [arguments]` + "`"
+Global Namespaces can also be created.
+` + "`" + `temporal operator namespace create --global` + "`" + `
+
+Other settings, such as retention and Visibility Archival State, can be configured according to the application's needs.
+The Visibility Archive can be set on a separate URI.
+` + "`" + `temporal operator namespace create --retention=RetentionHelloWorkflow --visibility-archival-state="enabled" --visibility-uri="some-uri"` + "`" + `
+
+Use the options listed below to change the command's behavior.`
 
 const NamespaceUpdateUsageText = `The ` + "`" + `temporal operator namespace update` + "`" + ` command updates a given [Namespace](/concepts/what-is-a-namespace).
 
-Use the options listed below to change the command's behavior.
-Make sure to write the command as follows:
-` + "`" + `temporal operator namespace update [command options] [arguments]` + "`"
+Namespaces can be assigned a different active cluster.
+` + "`" + `temporal operator namespace update --active-cluster=NewActiveCluster` + "`" + `
+
+Namespaces can also be promoted to global Namespaces.
+` + "`" + `temporal operator namespace --promote-global=true` + "`" + `
+
+Any Archives that were previously enabled or disabled can be changed through this command.
+However, URI values for archival states cannot be changed after the states are enabled.
+` + "`" + `temporal operator namespace update --history-archival-state="enabled" --visibility-archival-state="disabled"` + "`" + `
+
+Use the options listed below to change the command's behavior.`
 
 const NamespaceDeleteUsageText = `The ` + "`" + `temporal operator namespace delete` + "`" + ` command deletes a given [Namespace](/concepts/what-is-a-namespace) from the system.
 
