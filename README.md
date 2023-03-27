@@ -41,7 +41,7 @@ To install the Temporal CLI from CDN:
      - <a href="https://temporal.download/cli/archive/latest?platform=windows&arch=amd64">Download for Windows amd64</a>
      - <a href="https://temporal.download/cli/archive/latest?platform=windows&arch=arm64">Download for Windows arm64</a>
   2. Extract the downloaded archive.
-  3. Add the `temporal` binary to your PATH.
+  3. Add the `temporal` binary to your PATH. `temporal.exe` for Windows
 
 ## Starting the Temporal Server
 
