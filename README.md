@@ -57,12 +57,12 @@ Download and extract the latest release from [GitHub releases](https://github.co
 To install the Temporal CLI from CDN:
 
   1. Download:
-     - <a href="https://temporal.download/cli/archive/latest?platform=linux&arch=amd64">Download for Linux amd64</a>
-     - <a href="https://temporal.download/cli/archive/latest?platform=linux&arch=arm64">Download for Linux arm64</a>
-     - <a href="https://temporal.download/cli/archive/latest?platform=darwin&arch=amd64">Download for macOS amd64</a>
-     - <a href="https://temporal.download/cli/archive/latest?platform=darwin&arch=arm64">Download for macOS arm64</a> (Apple silicon)
-     - <a href="https://temporal.download/cli/archive/latest?platform=windows&arch=amd64">Download for Windows amd64</a>
-     - <a href="https://temporal.download/cli/archive/latest?platform=windows&arch=arm64">Download for Windows arm64</a>
+     - [Download for Linux amd64](https://temporal.download/cli/archive/latest?platform=linux&arch=amd64)
+     - [Download for Linux arm64](https://temporal.download/cli/archive/latest?platform=linux&arch=arm64")
+     - [Download for macOS amd64](https://temporal.download/cli/archive/latest?platform=darwin&arch=amd64")
+     - [Download for macOS arm64](https://temporal.download/cli/archive/latest?platform=darwin&arch=arm64") (Apple silicon)
+     - [Download for Windows amd64](https://temporal.download/cli/archive/latest?platform=windows&arch=amd64")
+     - [Download for Windows arm64](https://temporal.download/cli/archive/latest?platform=windows&arch=arm64")
   2. Extract the downloaded archive.
   3. Add the `temporal` binary to your PATH. (`temporal.exe` for Windows)
 
