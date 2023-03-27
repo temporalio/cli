@@ -81,17 +81,20 @@ const (
 	ScheduleListDefinition     = "Lists Schedules."
 )
 
-const BatchUsageText = `Batch commands allow you to change multiple [Workflow Executions](/concepts/what-is-a-workflow-execution) without having to repeat yourself on the command line. 
+const BatchUsageText = `Batch commands allow you to change multiple [Workflow Executions](/concepts/what-is-a-workflow-execution) in the background.
 In order to do this, you provide the command with a [List Filter](/concepts/what-is-visibility) and the type of Batch job to execute.
 
 The List Filter identifies the Workflow Executions that will be affected by the Batch job.
 The Batch type determines the other parameters that need to be provided, along with what is being affected on the Workflow Executions.
 
-To start the Batch job, run ` + "`" + `temporal workflow query` + "`" + `.
-Running Signal, Terminate, or Cancel with the ` + "`" + `--query` + "`" + ` modifier will start a Batch job automatically.
+There are three types of Batch Jobs:
+	- Signal: sends a [Signal](/concepts/what-is-a-signal) to the Workflow Executions specified by the List Filter.
+	- Cancel: cancels the Workflow Executions specified by the List Filter.
+	- Terminate: terminates the Workflow Executions specified by the List Filter.
 
 A successfully started Batch job will return a Job ID.
-Use this Job ID to execute other actions on the Batch job.`
+Use this Job ID to execute other actions on the Batch job. 
+`
 
 const DescribeBatchUsageText = `The ` + "`" + `temporal batch describe` + "`" + ` command shows the progress of an ongoing Batch job.
 
@@ -117,18 +120,19 @@ const WorkflowUsageText = `Workflow commands allow operations to be performed on
 const StartWorkflowUsageText = `The ` + "`" + `temporal workflow start` + "`" + ` command starts a new [Workflow Execution](/concepts/what-is-a-workflow-execution).
 When invoked successfully, the Workflow and Run ID are returned immediately after starting the [Workflow](/concepts/what-is-a-workflow).
 
-Use the command options listed below to change how the Workflow Execution behaves upon starting.
-Make sure to write the command in this format:
-` + "`" + `temporal workflow start [command options]` + "`"
+` + "`" + `temporal workflow start --task-queue=HelloTaskQueue` + "`" + `
+
+Use the command options listed below to change how the Workflow Execution behaves upon starting.`
 
 const ExecuteWorkflowUsageText = `The ` + "`" + `temporal workflow execute` + "`" + ` command starts a new [Workflow Execution](/concepts/what-is-a-workflow-execution) and prints its progress.
 The command doesn't finish until the [Workflow](/concepts/what-is-a-workflow) completes.
 
+To execute a Workflow from the CLI:
+` + "`" + `temporal workflow execute --workflow-id=hello-activity-workflow-id --task-queue=hello-activity-task-queue --type=GreetingWorkflow` + "`" + `
+
 Single quotes('') are used to wrap input as JSON.
 
-Use the command options listed below to change how the Workflow Execution behaves during its run.
-Make sure to write the command in this format:
-` + "`" + `temporal workflow execute [command options]` + "`"
+Use the command options listed below to change how the Workflow Execution behaves during its run.`
 
 const DescribeWorkflowUsageText = `The ` + "`" + `temporal workflow describe` + "`" + ` command shows information about a given [Workflow Execution](/concepts/what-is-a-workflow-execution).
 This information can be used to locate Workflow Executions that weren't able to run successfully.
@@ -140,18 +144,23 @@ Make sure to write the command in this format:
 const ListWorkflowUsageText = `The ` + "`" + `temporal workflow list` + "`" + ` command provides a list of [Workflow Executions](/concepts/what-is-a-workflow-execution) that meet the criteria of a given [Query](/concepts/what-is-a-query).
 By default, this command returns a list of up to 10 closed Workflow Executions.
 
-Use the command options listed below to change the information returned by this command.
-Make sure to write the command as follows:
-` + "`" + `temporal workflow list [command options]` + "`"
+` + "`" + `temporal workflow list --query=HelloQuery` + "`" + `
+
+The command can also return a list of archived Workflow Executions.
+
+` + "`" + `temporal workflow list --archived=true` + "`" + `
+
+Use the command options listed below to change the information returned by this command.`
 
 const QueryWorkflowUsageText = `The ` + "`" + `temporal workflow query` + "`" + ` command sends a [Query](/concepts/what-is-a-query) to a [Workflow Execution](/concepts/what-is-a-workflow-execution).
 
 Queries can retrieve all or part of the Workflow state within given parameters.
 Queries can also be used on completed [Workflows](/concepts/what-is-a-workflow-execution).
 
-Use the command options listed below to change the information returned by this command.
-Make sure to write the command as follows:
-` + "`" + `temporal workflow query [command options]` + "`"
+` + "`" + `temporal workflow query --workflow-id=hello-activity-workflow-id --type=getCount` + "`" + `
+
+Use the command options listed below to change the information returned by this command.`
+
 
 const CancelWorkflowUsageText = `The ` + "`" + `temporal workflow cancel` + "`" + ` command cancels a [Workflow Execution](/concepts/what-is-a-workflow-execution).
 
@@ -167,9 +176,11 @@ const TerminateWorkflowUsageText = `The ` + "`" + `temporal workflow terminate` 
 Terminating a running Workflow Execution records a [` + "`" + `WorkflowExecutionTerminated` + "`" + ` event](/references/events#workflowexecutionterminated) as the closing Event in the [Event History](/concepts/what-is-an-event-history).
 Any further [Command](/concepts/what-is-a-command) Tasks cannot be scheduled after running this command.
 
-Use the options listed below to change termination behavior.
-Make sure to write the command as follows:
-` + "`" + `temporal workflow terminate [command options]` + "`"
+Workflow terminations require a valid [Workflow ID](/concepts/what-is-a-workflow-id) to function.
+` + "`" + `temporal workflow terminate --workflow-id=hello-activity-workflow-id` + "`" + `
+
+Use the options listed below to change termination behavior.`
+
 
 const ResetWorkflowUsageText = `The ` + "`" + `temporal workflow reset` + "`" + ` command resets a [Workflow Execution](/concepts/what-is-a-workflow-execution).
 A reset allows the Workflow to be resumed from a certain point without losing your parameters or [Event History](/concepts/what-is-an-event-history).
@@ -204,7 +215,7 @@ Schedules control when certain Actions for a Workflow Execution are performed, m
 To run a Schedule command, run ` + "`" + `temporal schedule [command] [command options]` + "`" + `.
 `
 const OperatorUsageText = `Operator commands enable actions on [Namespaces](/concepts/what-is-a-namespace), [Search Attributes](/concepts/what-is-a-search-attribute), and [Temporal Clusters](/concepts/what-is-a-temporal-cluster).
-These actions are performed through subcommands for each Operator area.
+These actions are performed through subcommands.
 
 To run an Operator command, run ` + "`" + `temporal operator [command] [subcommand] [command options]` + "`" + `.
 `
@@ -265,21 +276,36 @@ const EnvUsageText = `Environment (or 'env') commands allow the user to configur
 
 const EnvGetUsageText = `The ` + "`" + `temporal env get` + "`" + ` command prints the environmental properties for the environment in use.
 
-Use the options listed below to change the command's behavior.
-Make sure to write the command as follows:
-` + "`" + `temporal env get [command options] [arguments]` + "`"
+For example, passing the 'local' Namespace returns the name, address, and certificate paths for your default local environment.
+` + "`" + `temporal env get local` + "`" + `
+` + "`" + `
+Output:
+tls-cert-path  /home/my-user/certs/cluster.cert  
+tls-key-path   /home/my-user/certs/cluster.key   
+address        127.0.0.1:7233                    
+namespace      accounting 
+` + "`" + `
+
+Output can be narrowed down to a specific option.
+` + "`" + `temporal env get local.tls-key-path` + "`" + `
+` + "`" + `tls-key-path  /home/my-user/certs/cluster.key` + "`" + `
+
+Use the options listed below to change the command's behavior.`
 
 const EnvSetUsageText = `The ` + "`" + `temporal env set` + "`" + ` command sets the value for an environmental property.
 
-Use the options listed below to change the command's behavior.
-Make sure to write the command as follows:
-` + "`" + `temporal env set [command options] [arguments]` + "`"
+Properties can be set for the entire system, such as the frontend address:
+` + "`" + `temporal env set local.address 127.0.0.1:7233` + "`" + `
+
+Use the options listed below to change the command's behavior.`
 
 const EnvDeleteUsageText = `The ` + "`" + `temporal env delete` + "`" + ` command deletes a given environment or environmental property.
 
-Use the options listed below to change the command's behavior.
-Make sure to write the command as follows:
-` + "`" + `temporal env delete [command options]` + "`"
+Deleting a given environment (such as 'local') and its saved values is achieved by passing a valid Namespace name.
+
+` + "`" + `temporal env delete local` + "`" + `
+
+Use the options listed below to change the command's behavior.`
 
 const NamespaceUsageText = `Namespace commands allow [Namespace](/concepts/what-is-a-namespace) operations to be performed on the [Temporal Cluster](/concepts/what-is-a-temporal-cluster).
 `
@@ -363,6 +389,7 @@ Use the options provided below to change this command's behavior.`
 const ScheduleTriggerUsageText = `The ` + "`" + `temporal schedule trigger` + "`" + ` command triggers an immediate action with a given [Schedule](/concepts/what-is-a-schedule).
 By default, this action is subject to the Overlap Policy of the Schedule.
 
+Schedule triggers are passed in this format:
 ` + "`" + `temporal schedule trigger` + "`" + ` can be used to start a Workflow Run immediately.
 ` + "`" + `temporal schedule trigger --sid 'your-schedule-id'` + "`" + ` 
 
@@ -374,6 +401,7 @@ Use the options provided below to change this command's behavior.`
 const ScheduleBackfillUsageText = `The ` + "`" + `temporal schedule backfill` + "`" + ` command executes Actions ahead of their specified time range. 
 Backfilling can be used to fill in [Workflow Runs](/concepts/what-is-a-run-id) from a time period when the Schedule was paused, or from before the Schedule was created. 
 
+Schedule backfills require a valid Schedule ID, along with the time in which to run the Schedule and a change to the overlap policy.
 ` + "`" + `` + "`" + `` + "`" + `
 temporal schedule backfill --sid 'your-schedule-id' \
 		--overlap-policy 'BufferAll' 				\
