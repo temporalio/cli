@@ -7,19 +7,24 @@
 
 Use the CLI to run a Temporal Server and interact with it.
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
 **Table of Contents**
 
 - [Install](#install)
   - [cURL](#curl)
   - [Homebrew](#homebrew)
-  - [GitHub releases](#github-releases)
-  - [CDN](#cdn)
-- [Start the Temporal Server](#start-the-temporal-server)
+  - [Manual](#manual)
+- [Use](#use)
+  - [Start the Server](#start-the-server)
+  - [Interact with the Server](#interact-with-the-server)
 - [Configure](#configure)
   - [Namespace registration](#namespace-registration)
   - [Persistence modes](#persistence-modes)
   - [Enable or disable Temporal UI](#enable-or-disable-temporal-ui)
   - [Dynamic configuration](#dynamic-configuration)
+  - [Environment variables](#environment-variables)
 - [Auto-completion](#auto-completion)
   - [zsh auto-completion](#zsh-auto-completion)
   - [Bash auto-completion](#bash-auto-completion)
@@ -31,42 +36,37 @@ Use the CLI to run a Temporal Server and interact with it.
   - [Run tests](#run-tests)
 - [Known Issues](#known-issues)
 
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 ## Install
 
-Temporal CLI can be installed through several different methods.
+You can install the CLI using one of the below methods.
 
 ### cURL
-
-Run the following command to install the latest version of Temporal CLI.
 
 `curl -sSf https://temporal.download/cli.sh | sh`
 
 ### Homebrew
 
-Run the following command to install the CLI on macOS.
-
 `brew install temporal`
 
-### GitHub releases
+### Manual
 
-Download and extract the latest release from [GitHub releases](https://github.com/temporalio/cli/releases), and add it to your PATH.
+1. Download the version for your OS and architecture:
+    - [Linux amd64](https://temporal.download/cli/archive/latest?platform=linux&arch=amd64)
+    - [Linux arm64](https://temporal.download/cli/archive/latest?platform=linux&arch=arm64")
+    - [macOS amd64](https://temporal.download/cli/archive/latest?platform=darwin&arch=amd64")
+    - [macOS arm64](https://temporal.download/cli/archive/latest?platform=darwin&arch=arm64") (Apple silicon)
+    - [Windows amd64](https://temporal.download/cli/archive/latest?platform=windows&arch=amd64")
+    - [Windows arm64](https://temporal.download/cli/archive/latest?platform=windows&arch=arm64")
+2. Extract the downloaded archive.
+3. Add the `temporal` binary to your PATH. (`temporal.exe` for Windows)
 
-### CDN
+You can also download older versions from [GitHub releases](https://github.com/temporalio/cli/releases).
 
-To install the Temporal CLI from CDN:
+## Use
 
-  1. Download:
-     - [Download for Linux amd64](https://temporal.download/cli/archive/latest?platform=linux&arch=amd64)
-     - [Download for Linux arm64](https://temporal.download/cli/archive/latest?platform=linux&arch=arm64")
-     - [Download for macOS amd64](https://temporal.download/cli/archive/latest?platform=darwin&arch=amd64")
-     - [Download for macOS arm64](https://temporal.download/cli/archive/latest?platform=darwin&arch=arm64") (Apple silicon)
-     - [Download for Windows amd64](https://temporal.download/cli/archive/latest?platform=windows&arch=amd64")
-     - [Download for Windows arm64](https://temporal.download/cli/archive/latest?platform=windows&arch=arm64")
-  2. Extract the downloaded archive.
-  3. Add the `temporal` binary to your PATH. (`temporal.exe` for Windows)
-
-## Start the Temporal Server
+### Start the Server
 
 ```bash
 temporal server start-dev
@@ -78,12 +78,22 @@ This:
 - Runs the Web UI at <http://localhost:8233>
 - Creates a `default` Namespace
 
-In another terminal, run commands to interact with the Server:
+You can create other namespaces, have the Server persist data to a file so you don't lose your Workflows between sessions, and make other customizations via command-line options. For a full list of options, run:
+
+```bash
+temporal server start-dev --help
+```
+
+### Interact with the Server
+
+You can also run commands to interact with the Server in a separate terminal:
 
 ```bash
 temporal workflow list
 temporal operator namespace list
 ```
+
+For a full list of commands, see the [CLI docs](https://docs.temporal.io/cli/) or run `temporal help`.
 
 ## Configure
 
@@ -150,6 +160,10 @@ temporal server start-dev --dynamic-config-value system.forceSearchAttributesCac
 ```
 
 This setting makes created search attributes immediately available for use.
+
+### Environment variables
+
+See the CLI docs for a [list of env vars](https://docs.temporal.io/cli#environmental-variables).
 
 ## Auto-completion
 
