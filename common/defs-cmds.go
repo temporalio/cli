@@ -479,67 +479,47 @@ const SearchAttributeUsageText = `Search Attribute commands enable operations fo
 const SearchAttributeCreateUsageText = `The ` + "`" + `temporal operator search-attribute create` + "`" + ` command adds one or more custom [Search Attributes](/concepts/what-is-a-search-attribute).
 These Search Attributes can be used to [filter a list](/concepts/what-is-a-list-filter) of [Workflow Executions](/concepts/what-is-a-workflow-execution) that contain the given Search Attributes in their metadata.
 
-Use the options listed below to change the command's behavior.
-Make sure to write the command as follows:
-` + "`" + `temporal operator search-attribute create [command options] ` + "`"
+Use the options listed below to change the command's behavior.`
 
 const SearchAttributeListUsageText = `The ` + "`" + `temporal operator search-attrbute list` + "`" + ` command displays a list of all [Search Attributes](/concepts/what-is-a-search-attribute) that can be used in ` + "`" + ` temporal workflow list --query` + "`" + `.
 
-Use the options listed below to change the command's behavior.
-Make sure to write the command as follows:
-` + "`" + `temporal operator search-attribute list [command options] ` + "`"
+Use the options listed below to change the command's behavior.`
 
 const SearchAttributeRemoveUsageText = `The ` + "`" + `temporal operator search-attribute remove` + "`" + ` command removes custom [Search Attribute](/concepts/what-is-a-search-attribute) metadata.
 This command does not remove custom Search Attributes from Elasticsearch.
 The index schema is not modified.
 
-Use the options listed below to change the command's behavior.
-Make sure to write the command as follows:
-` + "`" + `temporal operator search-attribute remove [command options]` + "`"
+Use the options listed below to change the command's behavior.`
 
 const TaskQueueListPartitionUsageText = `The ` + "`" + `temporal task-queue list-partition` + "`" + ` command displays the partitions of a [Task Queue](/concepts/what-is-a-task-queue), along with the matching node they are assigned to.
 
-Use the options listed below to change the command's behavior.
-Make sure to write the command as follows:
-` + "`" + `temporal task-queue list-partition [command options]` + "`"
+Use the options listed below to change the command's behavior.`
 
 const WorkflowShowUsageText = `The ` + "`" + `temporal workflow show` + "`" + ` command provides the [Event History](/concepts/what-is-an-event-history) for a specified [Workflow Execution](/concepts/what-is-a-workflow-execution).
 
-Use the options listed below to change the command's behavior.
-Make sure to write the command as follows:
-` + "`" + `temporal workflow show [command options]` + "`"
+Use the options listed below to change the command's behavior.`
 
 const WorkflowStackUsageText = `The ` + "`" + `temporal workflow stack` + "`" + ` command queries a [Workflow Execution](/concepts/what-is-a-workflow-execution) with ` + "`" + `--stack-trace` + "`" + ` as the [Query](/concepts/what-is-a-query#stack-trace-query) type.
 Returning the stack trace of all the threads owned by a Workflow Execution can be great for troubleshooting in production.
 
-Use the options listed below to change the command's behavior.
-Make sure to write the command as follows:
-` + "`" + `temporal workflow stack [command options]` + "`"
+Use the options listed below to change the command's behavior.`
 
 const WorkflowSignalUsageText = `The ` + "`" + `temporal workflow signal` + "`" + ` command is used to [Signal](/concepts/what-is-a-signal) a [Workflow Execution](/concepts/what-is-a-workflow-execution) by ID or [List Filter](/concepts/what-is-a-list-filter).
 
-Use the options listed below to change the command's behavior.
-Make sure to write the command as follows:
-` + "`" + `temporal workflow signal [command options]` + "`"
+Use the options listed below to change the command's behavior.`
 
 const WorkflowCountUsageText = `The ` + "`" + `temporal workflow count` + "`" + ` command returns a count of [Workflow Executions](/concepts/what-is-a-workflow-execution).
 This command requires Elasticsearch to be enabled.
 
-Use the options listed below to change the command's behavior.
-Make sure to write the command as follows:
-` + "`" + `temporal workflow count [command options]` + "`"
+Use the options listed below to change the command's behavior.`
 
 const WorkflowDeleteUsageText = `The ` + "`" + `temporal workflow delete` + "`" + ` command deletes the specified [Workflow Execution](/concepts/what-is-a-workflow-execution).
 
-Use the options listed below to change the command's behavior.
-Make sure to write the command as follows:
-` + "`" + `temporal workflow delete [command options]` + "`"
+Use the options listed below to change the command's behavior.`
 
 const WorkflowTraceUsageText = `The ` + "`" + `temporal workflow trace` + "`" + ` command tracks the progress of a [Workflow Execution](/concepts/what-is-a-workflow-execution) and any  [Child Workflows](/concepts/what-is-a-child-workflow-execution) it generates.
 
-Use the options listed below to change the command's behavior.
-Make sure to write the command as follows:
-` + "`" + `temporal workflow trace [command options]` + "`"
+Use the options listed below to change the command's behavior.`
 
 const ServerUsageText = `Server commands allow you to start and manage the [Temporal Server](/concepts/what-is-the-temporal-server) from the command line.
 

@@ -13,9 +13,9 @@ import (
 
 // Categories used to structure --help output
 var (
-	CategoryClient  = "Client Options:"
+	CategoryGlobal  = "Global Options:"
 	CategoryDisplay = "Display Options:"
-	CategoryMain    = "Main Options:"
+	CategoryMain    = "Command Options:"
 )
 
 // Flags used to specify cli command line arguments
@@ -138,14 +138,14 @@ var SharedFlags = []cli.Flag{
 		Name:     FlagEnv,
 		Value:    config.DefaultEnv,
 		Usage:    FlagEnvDefinition,
-		Category: CategoryClient,
+		Category: CategoryGlobal,
 	},
 	&cli.StringFlag{
 		Name:     FlagAddress,
 		Value:    "",
 		Usage:    FlagAddrDefinition,
 		EnvVars:  []string{"TEMPORAL_CLI_ADDRESS"},
-		Category: CategoryClient,
+		Category: CategoryGlobal,
 	},
 	&cli.StringFlag{
 		Name:     FlagNamespace,
@@ -153,67 +153,67 @@ var SharedFlags = []cli.Flag{
 		Value:    "default",
 		Usage:    FlagNSAliasDefinition,
 		EnvVars:  []string{"TEMPORAL_CLI_NAMESPACE"},
-		Category: CategoryClient,
+		Category: CategoryGlobal,
 	},
 	&cli.StringSliceFlag{
 		Name:     FlagMetadata,
 		Usage:    FlagMetadataDefinition,
-		Category: CategoryClient,
+		Category: CategoryGlobal,
 	},
 	&cli.StringFlag{
 		Name:     FlagTLSCertPath,
 		Value:    "",
 		Usage:    FlagTLSCertPathDefinition,
 		EnvVars:  []string{"TEMPORAL_CLI_TLS_CERT"},
-		Category: CategoryClient,
+		Category: CategoryGlobal,
 	},
 	&cli.StringFlag{
 		Name:     FlagTLSKeyPath,
 		Value:    "",
 		Usage:    FlagTLSKeyPathDefinition,
 		EnvVars:  []string{"TEMPORAL_CLI_TLS_KEY"},
-		Category: CategoryClient,
+		Category: CategoryGlobal,
 	},
 	&cli.StringFlag{
 		Name:     FlagTLSCaPath,
 		Value:    "",
 		Usage:    FlagTLSCaPathDefinition,
 		EnvVars:  []string{"TEMPORAL_CLI_TLS_CA"},
-		Category: CategoryClient,
+		Category: CategoryGlobal,
 	},
 	&cli.BoolFlag{
 		Name:     FlagTLSDisableHostVerification,
 		Usage:    FlagTLSDisableHVDefinition,
 		EnvVars:  []string{"TEMPORAL_CLI_TLS_DISABLE_HOST_VERIFICATION"},
-		Category: CategoryClient,
+		Category: CategoryGlobal,
 	},
 	&cli.StringFlag{
 		Name:     FlagTLSServerName,
 		Value:    "",
 		Usage:    FlagTLSServerNameDefinition,
 		EnvVars:  []string{"TEMPORAL_CLI_TLS_SERVER_NAME"},
-		Category: CategoryClient,
+		Category: CategoryGlobal,
 	},
 	&cli.IntFlag{
 		Name:     FlagContextTimeout,
 		Value:    defaultContextTimeoutInSeconds,
 		Usage:    FlagContextTimeoutDefinition,
 		EnvVars:  []string{"TEMPORAL_CONTEXT_TIMEOUT"},
-		Category: CategoryClient,
+		Category: CategoryGlobal,
 	},
 	&cli.StringFlag{
 		Name:     FlagCodecEndpoint,
 		Value:    "",
 		Usage:    FlagCodecEndpointDefinition,
 		EnvVars:  []string{"TEMPORAL_CLI_CODEC_ENDPOINT"},
-		Category: CategoryClient,
+		Category: CategoryGlobal,
 	},
 	&cli.StringFlag{
 		Name:     FlagCodecAuth,
 		Value:    "",
 		Usage:    FlagCodecAuthDefinition,
 		EnvVars:  []string{"TEMPORAL_CLI_CODEC_AUTH"},
-		Category: CategoryClient,
+		Category: CategoryGlobal,
 	},
 	&cli.StringFlag{
 		Name:     color.FlagColor,
