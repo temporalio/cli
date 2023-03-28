@@ -305,7 +305,7 @@ func newServerAndClientOpts(port int, customArgs ...string) ([]string, sdkclient
 	}
 }
 
-func assertServerHealth(ctx context.Context, t *testing.T, opts sdkclient.Options) {
+func assertServerHealth(ctx context.Context, t *testing.T, opts sdkclient.Options) client.Client {
 	var (
 		c         sdkclient.Client
 		clientErr error
@@ -339,6 +339,7 @@ func assertServerHealth(ctx context.Context, t *testing.T, opts sdkclient.Option
 		}
 		time.Sleep(time.Millisecond * 100)
 	}
+	return c
 }
 
 func TestCreateDataDirectory_MissingDirectory(t *testing.T) {
