@@ -1,4 +1,4 @@
-name: golangci-lint
+name: Lint
 
 on:
   pull_request:
@@ -8,17 +8,16 @@ permissions:
 
 jobs:
   golangci:
-    name: lint
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
       - uses: actions/setup-go@v3
         with:
           go-version-file: "go.mod"
           check-latest: true
-
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
 
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
