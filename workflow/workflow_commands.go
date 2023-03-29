@@ -364,8 +364,7 @@ func printReplayableHistory(c *cli.Context, iter iterator.Iterator[*historypb.Hi
 		events = append(events, event)
 	}
 
-	history := &historypb.History{}
-	history.Events = events
+	history := &historypb.History{Events: events}
 
 	common.PrettyPrintJSONObject(c, history)
 
