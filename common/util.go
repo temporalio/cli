@@ -169,7 +169,7 @@ func GetCurrentUserFromEnv() string {
 	return "unknown"
 }
 
-func PrettyPrintJSONObject(o interface{}) {
+func PrettyPrintJSONObject(c *cli.Context, o interface{}) {
 	var b []byte
 	var err error
 	if pb, ok := o.(proto.Message); ok {
@@ -179,12 +179,15 @@ func PrettyPrintJSONObject(o interface{}) {
 		b, err = json.MarshalIndent(o, "", "  ")
 	}
 
+	w := c.App.Writer
+
 	if err != nil {
-		fmt.Printf("Error when try to print pretty: %v", err)
-		fmt.Println(o)
+		fmt.Fprintf(w, "Error when try to print pretty: %v", err)
+		fmt.Fprintln(w, o)
 	}
-	_, _ = os.Stdout.Write(b)
-	fmt.Println()
+
+	_, _ = w.Write(b)
+	fmt.Fprintln(w)
 }
 
 func RequiredFlag(c *cli.Context, optionName string) (string, error) {
