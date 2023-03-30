@@ -42,28 +42,29 @@ var currentHeaderFile, currentOptionFile *os.File
 
 // `BuildApp` takes a string and returns a `*App` and an error
 func main() {
+	// delete existing content; start anew.
 	deleteExistingFolder()
 
+	// create giant CLI file for breakdown. check for errors.
 	doc, err := app.BuildApp().ToMarkdown()
 	if err != nil {
 		log.Fatalf("Error when trying to build app: %s", err)
 	}
-
 	err = os.WriteFile(cliFile, []byte(doc), filePerm)
 	if err != nil {
 		log.Fatalf("Error when trying to write markdown to %s file: %s", cliFile, err)
 	}
-
 	readFile, err := os.Open(cliFile)
 	if err != nil {
 		log.Fatalf("Error when trying to open %s file: %s", cliFile, err)
 	}
 
+	// create scanner to read the big Markdown file
 	scanner := bufio.NewScanner(readFile)
 	scanner.Split(bufio.ScanLines)
 	createdFiles := make(map[string]*os.File)
 
-	// Identify different option categories and print flags accordingly
+	// Identify commmands and subcommands; create folders accordingly.
 	for scanner.Scan() {
 		line := scanner.Text()
 		if strings.HasPrefix(line, "## ") {
@@ -101,15 +102,10 @@ func main() {
 			optionFileName = strings.TrimSuffix(optionFileName, "**")
 
 			optionFilePath = filepath.Join(docsPath, optionsPath, optionFileName+".md")
-
+			// TODO: identify and categorize command option flags instead of printing an alphabetical list
 			termLink := "- [--" + optionFileName + "](/cli/cmd-options/" + optionFileName + ")"
 			makeFile(optionFilePath, false, true, scanner, createdFiles)
 			writeLine(currentHeaderFile, termLink)
-			if aliasName != "" {
-				aliasArray := strings.Split(aliasName, "=")
-				writeLine(currentOptionFile, aliasArray[0])
-				aliasName = ""
-			}
 			writeLine(currentOptionFile, strings.TrimSpace(definition))
 		} else if strings.Contains(line, ">") {
 			writeLine(currentHeaderFile, strings.Trim(line, ">"))
