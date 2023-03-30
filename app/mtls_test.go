@@ -69,7 +69,7 @@ func TestMTLSConfig(t *testing.T) {
 		"temporal",
 		"server",
 		"start-dev",
-		"--config", confDir,
+		"--config-dir", confDir,
 		"--namespace", "default",
 		"--log-format", "noop",
 		"--port", strconv.Itoa(frontendPort),
