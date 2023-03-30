@@ -472,7 +472,7 @@ Use the options below to change the behavior of this command.`
 const ScheduleListUsageText = `The ` + "`" + `temporal schedule list` + "`" + ` command lists all [Schedule](/concepts/what-is-a-schedule) configurations.
 Listing Schedules in [Standard Visibility](/concepts/what-is-standard-visibility) will only provide Schedule IDs.
 
-` + "`" + `temporal schedule list [command options] ` + "`" + `
+` + "`" + `temporal schedule list` + "`" + `
 
 Use the options below to change the behavior of this command.`
 
@@ -540,8 +540,8 @@ DESCRIPTION:
 
 USAGE:
    {{wrap .UsageText 3 | markdown2Text}}{{end}}{{if .VisibleFlagCategories}}
+   {{template "visibleFlagCategoryTemplate" .}}{{else if .VisibleFlags}}
 
-OPTIONS:{{template "visibleFlagCategoryTemplate" .}}{{else if .VisibleFlags}}
-
-OPTIONS:{{template "visibleFlagTemplate" .}}{{end}}
+DISPLAY OPTIONS:
+   {{template "visibleFlagTemplate" .}}{{end}}
 `

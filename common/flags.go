@@ -13,7 +13,7 @@ import (
 
 // Categories used to structure --help output
 var (
-	CategoryGlobal  = "Global Options:"
+	CategoryGlobal  = "Shared Options:"
 	CategoryDisplay = "Display Options:"
 	CategoryMain    = "Command Options:"
 )
