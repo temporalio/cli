@@ -130,7 +130,7 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 					Value:   nil,
 				},
 				&cli.StringFlag{
-					Name:    common.FlagConfig,
+					Name:    common.FlagConfigDir,
 					Aliases: []string{"c"},
 					Usage:   `Path to config directory.`,
 					EnvVars: []string{config.EnvKeyConfigDir},
@@ -170,10 +170,10 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 					return cli.Exit(fmt.Sprintf("bad value %q passed for flag %q", c.String(common.FlagIP), common.FlagIP), 1)
 				}
 
-				if c.IsSet(common.FlagConfig) {
-					cfgPath := c.String(common.FlagConfig)
+				if c.IsSet(common.FlagConfigDir) {
+					cfgPath := c.String(common.FlagConfigDir)
 					if _, err := os.Stat(cfgPath); os.IsNotExist(err) {
-						return cli.Exit(fmt.Sprintf("bad value %q passed for flag %q: file not found", c.String(common.FlagConfig), common.FlagConfig), 1)
+						return cli.Exit(fmt.Sprintf("bad value %q passed for flag %q: file not found", c.String(common.FlagConfigDir), common.FlagConfigDir), 1)
 					}
 				}
 
@@ -212,14 +212,14 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 				}
 
 				baseConfig := &config.Config{}
-				if c.IsSet(common.FlagConfig) {
+				if c.IsSet(common.FlagConfigDir) {
 					// Temporal server requires a couple of persistence config values to
 					// be explicitly set or the config loading fails. While these are the
 					// same values used internally, they are overridden later anyways,
 					// they are just here to pass validation.
 					baseConfig.Persistence.DefaultStore = sconfig.PersistenceStoreName
 					baseConfig.Persistence.NumHistoryShards = 1
-					if err := config.Load("temporal", c.String(common.FlagConfig), "", &baseConfig); err != nil {
+					if err := config.Load("temporal", c.String(common.FlagConfigDir), "", &baseConfig); err != nil {
 						return err
 					}
 				}
@@ -267,7 +267,7 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 						},
 					}
 
-					opt, err := newUIOption(uiBaseCfg, c.String(common.FlagConfig))
+					opt, err := newUIOption(uiBaseCfg, c.String(common.FlagConfigDir))
 
 					if err != nil {
 						return err
