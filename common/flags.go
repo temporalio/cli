@@ -32,7 +32,6 @@ var (
 	FlagCodecAuth                  = "codec-auth"
 	FlagCodecEndpoint              = "codec-endpoint"
 	FlagConcurrency                = "concurrency"
-	FlagConfigDir                  = "config-dir"
 	FlagContextTimeout             = "context-timeout"
 	FlagCronSchedule               = "cron"
 	FlagDBPath                     = "db-filename"

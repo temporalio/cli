@@ -33,55 +33,13 @@ import (
 )
 
 func TestNewUIConfig(t *testing.T) {
-	c := &uiconfig.Config{
+	cfg := &uiconfig.Config{
 		Host:                "localhost",
 		Port:                8233,
 		TemporalGRPCAddress: "localhost:7233",
 		EnableUI:            true,
 	}
-	cfg, err := MergeWithConfigFile(c, "")
-	if err != nil {
-		t.Errorf("cannot create config: %s", err)
-		return
-	}
-	if err = cfg.Validate(); err != nil {
+	if err := cfg.Validate(); err != nil {
 		t.Errorf("config not valid: %s", err)
-	}
-}
-
-func TestNewUIConfigWithMissingConfigFile(t *testing.T) {
-	c := &uiconfig.Config{
-		Host:                "localhost",
-		Port:                8233,
-		TemporalGRPCAddress: "localhost:7233",
-		EnableUI:            true,
-	}
-	cfg, err := MergeWithConfigFile(c, "wibble")
-	if err != nil {
-		t.Errorf("cannot create config: %s", err)
-		return
-	}
-	if err = cfg.Validate(); err != nil {
-		t.Errorf("config not valid: %s", err)
-	}
-}
-
-func TestNewUIConfigWithPresentConfigFile(t *testing.T) {
-	c := &uiconfig.Config{
-		Host:                "localhost",
-		Port:                8233,
-		TemporalGRPCAddress: "localhost:7233",
-		EnableUI:            true,
-	}
-	cfg, err := MergeWithConfigFile(c, "testdata")
-	if err != nil {
-		t.Errorf("cannot create config: %s", err)
-		return
-	}
-	if err = cfg.Validate(); err != nil {
-		t.Errorf("config not valid: %s", err)
-	}
-	if cfg.TLS.ServerName != "local.dev" {
-		t.Errorf("did not load expected config file")
 	}
 }
