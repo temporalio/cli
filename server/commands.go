@@ -129,13 +129,6 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 					EnvVars: nil,
 					Value:   nil,
 				},
-				&cli.StringFlag{
-					Name:    common.FlagConfig,
-					Aliases: []string{"c"},
-					Usage:   `Path to config directory.`,
-					EnvVars: []string{config.EnvKeyConfigDir},
-					Value:   "",
-				},
 				&cli.StringSliceFlag{
 					Name:  common.FlagDynamicConfigValue,
 					Usage: `Dynamic config value, as KEY=JSON_VALUE (string values need quotes).`,
@@ -168,13 +161,6 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 				// Check that ip address is valid
 				if c.IsSet(common.FlagIP) && net.ParseIP(c.String(common.FlagIP)) == nil {
 					return cli.Exit(fmt.Sprintf("bad value %q passed for flag %q", c.String(common.FlagIP), common.FlagIP), 1)
-				}
-
-				if c.IsSet(common.FlagConfig) {
-					cfgPath := c.String(common.FlagConfig)
-					if _, err := os.Stat(cfgPath); os.IsNotExist(err) {
-						return cli.Exit(fmt.Sprintf("bad value %q passed for flag %q: file not found", c.String(common.FlagConfig), common.FlagConfig), 1)
-					}
 				}
 
 				return nil
@@ -210,20 +196,6 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 				if err != nil {
 					return err
 				}
-
-				baseConfig := &config.Config{}
-				if c.IsSet(common.FlagConfig) {
-					// Temporal server requires a couple of persistence config values to
-					// be explicitly set or the config loading fails. While these are the
-					// same values used internally, they are overridden later anyways,
-					// they are just here to pass validation.
-					baseConfig.Persistence.DefaultStore = sconfig.PersistenceStoreName
-					baseConfig.Persistence.NumHistoryShards = 1
-					if err := config.Load("temporal", c.String(common.FlagConfig), "", &baseConfig); err != nil {
-						return err
-					}
-				}
-
 				interruptChan := make(chan interface{}, 1)
 				go func() {
 					if doneChan := c.Done(); doneChan != nil {
@@ -245,7 +217,7 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 					WithUpstreamOptions(
 						temporal.InterruptOn(interruptChan),
 					),
-					WithBaseConfig(baseConfig),
+					WithBaseConfig(&config.Config{}),
 				}
 
 				if c.IsSet(common.FlagDBPath) {
@@ -267,11 +239,11 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 						},
 					}
 
-					opt, err := newUIOption(uiBaseCfg, c.String(common.FlagConfig))
-
+					opt, err := newUIOption(uiBaseCfg)
 					if err != nil {
 						return err
 					}
+
 					if opt != nil {
 						opts = append(opts, opt)
 					}
