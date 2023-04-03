@@ -1,15 +1,38 @@
-package sundial
+// The MIT License
+//
+// Copyright (c) 2022 Temporal Technologies Inc.  All rights reserved.
+//
+// Copyright (c) 2020 Uber Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
+package trace
 
 import (
 	"fmt"
-	"testing"
-	"time"
-
 	"github.com/stretchr/testify/assert"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/failure/v1"
 	"go.temporal.io/api/history/v1"
+	"testing"
+	"time"
 )
 
 var events = map[string]*history.HistoryEvent{
@@ -219,6 +242,31 @@ var events = map[string]*history.HistoryEvent{
 			WorkflowExecutionStartedEventAttributes: &history.WorkflowExecutionStartedEventAttributes{
 				WorkflowType: &common.WorkflowType{Name: "baz"},
 				Attempt:      1,
+			},
+		},
+	},
+	"child workflow initiated child": { // Child workflow has a child workflow
+		EventId:   50,
+		EventType: enums.EVENT_TYPE_START_CHILD_WORKFLOW_EXECUTION_INITIATED,
+		Attributes: &history.HistoryEvent_StartChildWorkflowExecutionInitiatedEventAttributes{
+			StartChildWorkflowExecutionInitiatedEventAttributes: &history.StartChildWorkflowExecutionInitiatedEventAttributes{
+				Namespace:    "default",
+				WorkflowId:   "depth2child",
+				WorkflowType: &common.WorkflowType{Name: "baz"},
+			},
+		},
+	},
+	"child workflow started child": {
+		EventId:   52,
+		EventType: enums.EVENT_TYPE_CHILD_WORKFLOW_EXECUTION_STARTED,
+		Attributes: &history.HistoryEvent_ChildWorkflowExecutionStartedEventAttributes{
+			ChildWorkflowExecutionStartedEventAttributes: &history.ChildWorkflowExecutionStartedEventAttributes{
+				Namespace:        "default",
+				InitiatedEventId: 50,
+				WorkflowExecution: &common.WorkflowExecution{
+					WorkflowId: "depth2child", RunId: "depth2childRunId",
+				},
+				WorkflowType: &common.WorkflowType{Name: "baz"},
 			},
 		},
 	},

@@ -3,6 +3,7 @@ module github.com/temporalio/cli
 go 1.19
 
 require (
+	github.com/alitto/pond v1.8.3
 	github.com/fatih/color v1.15.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/gogo/status v1.1.1
