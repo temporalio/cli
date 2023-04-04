@@ -1132,6 +1132,8 @@ go.temporal.io/api v1.18.2-0.20230324225508-f2c7ab685b44 h1:ilEY3HPpO6UwiwopVMuX
 go.temporal.io/api v1.18.2-0.20230324225508-f2c7ab685b44/go.mod h1:VAc6LF2ckIwAbMEMv+eo+3yw4SjIzwosukjiwXajCJc=
 go.temporal.io/sdk v1.21.1 h1:SJCzSsZLBsFiHniJ+E7Yy74pcAs1lg7NbFnsUJ4ggIM=
 go.temporal.io/sdk v1.21.1/go.mod h1:Pq3Mp7p0lWNFM+YS2guBy8V/lJySh329AcyS+Wj/Wmo=
+go.temporal.io/sdk/contrib/tools/workflowcheck v0.0.0-20230328164709-88a40de39c33 h1:tpDvC3HKzoPGmYZT7LBkYtBWrbZa8GNiLR2LG5iG5sw=
+go.temporal.io/sdk/contrib/tools/workflowcheck v0.0.0-20230328164709-88a40de39c33/go.mod h1:CW0zVy7oLeWxBo3wG5bMU2dy4xaprM2net3/DkBzruw=
 go.temporal.io/server v1.20.1 h1:vhI7XLQJP0TbYWIJTHzliCaYrekxY3XUhtg0MUSxaXs=
 go.temporal.io/server v1.20.1/go.mod h1:0XqeAbOIa+6J1qvne7yEbXKfchw3sIkCaQ16Qo6ZeiU=
 go.temporal.io/version v0.3.0 h1:dMrei9l9NyHt8nG6EB8vAwDLLTwx2SvRyucCSumAiig=
