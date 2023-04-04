@@ -215,7 +215,7 @@ func (state *WorkflowExecutionState) updateTimer(startedId int64, event *history
 // IsClosed returns true when the Workflow Execution is closed. A Closed status means that the Workflow Execution cannot make further progress.
 func (state *WorkflowExecutionState) IsClosed() (bool, error) {
 	if state.Status == enums.WORKFLOW_EXECUTION_STATUS_UNSPECIFIED {
-		return false, fmt.Errorf("workflow status in an unspecified state")
+		return false, fmt.Errorf("workflow execution status is in an unspecified state, cannot determine if it's closed")
 	}
 	return state.Status != enums.WORKFLOW_EXECUTION_STATUS_RUNNING, nil
 }
