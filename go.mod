@@ -14,7 +14,7 @@ require (
 	github.com/temporalio/tctl-kit v0.0.0-20230328153839-577f95d16fa0
 	github.com/temporalio/ui-server/v2 v2.13.3
 	github.com/urfave/cli/v2 v2.23.6
-	go.temporal.io/api v1.18.2-0.20230324225508-f2c7ab685b44
+	go.temporal.io/api v1.19.0
 	go.temporal.io/sdk v1.21.1
 	go.temporal.io/sdk/contrib/tools/workflowcheck v0.0.0-20230328164709-88a40de39c33
 	go.temporal.io/server v1.20.1
