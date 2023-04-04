@@ -53,9 +53,10 @@ func (job *WorkflowStateJob) Run(group *pond.TaskGroupWithContext) func() error 
 		runId := state.Execution.GetRunId()
 
 		// Get workflow's history length, so we know when we're up-to-date.
-		if execInfo, err := GetWorkflowExecutionInfo(job.ctx, job.client, state.Execution.GetWorkflowId(), state.Execution.GetRunId()); err != nil {
+		if description, err := job.client.DescribeWorkflowExecution(job.ctx, state.Execution.GetWorkflowId(), state.Execution.GetRunId()); err != nil {
 			return err
 		} else {
+			execInfo := description.GetWorkflowExecutionInfo()
 			state.HistoryLength = execInfo.HistoryLength
 			state.IsArchived = execInfo.HistoryLength == 0 // TODO: Find a better way to identify archived workflows
 		}

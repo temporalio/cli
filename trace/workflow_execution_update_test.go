@@ -62,9 +62,9 @@ func (s *WorkflowExecutionUpdateSuite) SetWorkflowHistoryMocks(client *mocks.Cli
 	client.On("GetWorkflowHistory", mock.Anything, wfId, runId, mock.Anything, mock.Anything).Return(mockIterator)
 }
 
-// RemoveStateMaps removes caching data from WorkflowExecutionState (i.e. activityMap and childWfMap) so it can be easily asserted upon
+// RemoveStateMaps removes caching data from WorkflowExecutionState (i.e. activityMap and childWorkflowMap) so it can be easily asserted upon
 func RemoveStateMaps(state *WorkflowExecutionState) *WorkflowExecutionState {
-	state.childWfMap = nil
+	state.childWorkflowMap = nil
 	state.activityMap = nil
 	state.timerMap = nil
 	return state
