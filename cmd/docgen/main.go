@@ -20,9 +20,9 @@ const (
 )
 
 var FrontMatterTemplate = `---
-id: {{.ID}}
-title: temporal {{if not .IsOperator}}{{.Category}}{{ else }}operator {{.Category}}{{end}}{{if not .IsIndex}} {{.ID}}{{else}} index{{end}}
-sidebar_label:{{if .IsIndex}} {{.Category}}{{else}} {{.ID}}{{end}}
+id: {{.Subcommand}}
+title: temporal{{if not .IsOperator}}{{.Command}}{{ else }} operator {{.Command}}{{end}}{{if not .IsIndex}}{{.Subcommand}}{{else}}{{if .IsOperator}} {{.Subcommand}}{{end}} index{{end}}
+sidebar_label: {{if .IsIndex}}{{.Command}}{{else}}{{.Subcommand}}{{end}}
 description: {{.Description}}
 tags:
     - cli
@@ -30,8 +30,8 @@ tags:
 `
 
 type FrontMatter struct {
-	ID          string
-	Category    string
+	Subcommand  string
+	Command     string
 	Description string
 	IsIndex     bool
 	IsOperator  bool
@@ -206,8 +206,8 @@ func writeFrontMatter(idName string, categoryName string, scanner *bufio.Scanner
 	}
 
 	data := FrontMatter{
-		ID:          idName,
-		Category:    categoryName,
+		Subcommand:  idName,
+		Command:     categoryName,
 		Description: descriptionTxt,
 		IsIndex:     isIndex,
 		IsOperator:  isOperator,
