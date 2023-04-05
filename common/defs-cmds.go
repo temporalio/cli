@@ -122,8 +122,6 @@ const WorkflowUsageText = `[Workflow](/concepts/what-is-a-workflow) commands per
 
 Workflow commands use this syntax:
 ` + "`" + `temporal workflow COMMAND [ARGS]` + "`" + `
-
-## Commands
 `
 
 const StartWorkflowUsageText = `The ` + "`" + `temporal workflow start` + "`" + ` command starts a new [Workflow Execution](/concepts/what-is-a-workflow-execution).
@@ -246,23 +244,18 @@ Schedules control when certain Actions for a [Workflow Execution](/concepts/what
 Schedule commands follow this syntax:
 
 ` + "`" + `temporal schedule [command] [command options]` + "`" + `.
-
-## Commands
 `
 const OperatorUsageText = `Operator commands enable actions on [Namespaces](/concepts/what-is-a-namespace), [Search Attributes](/concepts/what-is-a-search-attribute), and [Temporal Clusters](/concepts/what-is-a-temporal-cluster).
 These actions are performed through subcommands.
 
 To run an Operator command, run ` + "`" + `temporal operator [command] [subcommand] [command options]` + "`" + `.
-
-## Commands
 `
 
 const ActivityUsageText = `Activity commands operate on [Activity Executions](/concepts/what-is-an-activity-execution).
 
 Activity commands follow this syntax:
 ` + "`" + `temporal activity [command] [command options]` + "`" + `
-
-## Commands`
+`
 
 const CompleteActivityUsageText = `The ` + "`" + `temporal activity complete` + "`" + ` command completes an [Activity Execution](/concepts/what-is-an-activity-execution).
 The result given upon return can also be set with the command.
