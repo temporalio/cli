@@ -33,6 +33,16 @@ func NewWorkflowStateJob(ctx context.Context, client sdkclient.Client, state *Wo
 		return nil, errors.New("updateChan cannot be nil for a workflow state job")
 	}
 
+	// Get workflow execution's description, so we can know if we're up-to-date. Doing this synchronously will allow us to correctly
+	// assess how many events need to be processed (otherwise only the ones from the root workflow will be counted).
+	if description, err := client.DescribeWorkflowExecution(ctx, state.Execution.GetWorkflowId(), state.Execution.GetRunId()); err != nil {
+		return nil, err
+	} else {
+		execInfo := description.GetWorkflowExecutionInfo()
+		state.HistoryLength = execInfo.HistoryLength
+		state.IsArchived = execInfo.HistoryLength == 0 // TODO: Find a better way to identify archived workflows
+	}
+
 	return &WorkflowStateJob{
 		ctx:        ctx,
 		client:     client,
@@ -51,15 +61,6 @@ func (job *WorkflowStateJob) Run(group *pond.TaskGroupWithContext) func() error 
 		state := job.state
 		wfId := state.Execution.GetWorkflowId()
 		runId := state.Execution.GetRunId()
-
-		// Get workflow's history length, so we know when we're up-to-date.
-		if description, err := job.client.DescribeWorkflowExecution(job.ctx, state.Execution.GetWorkflowId(), state.Execution.GetRunId()); err != nil {
-			return err
-		} else {
-			execInfo := description.GetWorkflowExecutionInfo()
-			state.HistoryLength = execInfo.HistoryLength
-			state.IsArchived = execInfo.HistoryLength == 0 // TODO: Find a better way to identify archived workflows
-		}
 
 		// Make sure to not long poll archived workflows since GetWorkflowHistory fails under those circumstances.
 		isLongPoll := !state.IsArchived
