@@ -64,7 +64,7 @@ const (
 	FlagQueryResetBatch = "Visibility Query of Search Attributes describing the Workflow Executions to reset. See https://docs.temporal.io/docs/tctl/workflow/list#--query."
 	FlagInputFileReset = "Input file that specifies Workflow Executions to reset. Each line contains one Workflow Id as the base Run and, optionally, a Run Id."
 	FlagExcludeFileDefinition = "Input file that specifies Workflow Executions to exclude from a reset."
-	FlagInputSeparatorDefinition = "Separator for the input file. The default is a tab (\t)."
+	FlagInputSeparatorDefinition = "Separator for the input file. The default is a tab (`\t`)."
 	FlagParallelismDefinition = "Number of goroutines to run in parallel. Each goroutine processes one line per second."
 	FlagSkipCurrentOpenDefinition = "Skip a Workflow Execution if the current Run is open for the same Workflow Id as the base Run."
 	FlagSkipBaseDefinition =  "Skip a Workflow Execution if the base Run is not the current Workflow Run."
@@ -79,7 +79,7 @@ const (
 
 	// Pagination flag definitions
 	FlagLimitDefinition = "Number of items to print."
-	FlagPagerDefinition = "Sets the pager for Temporal CLI to use (options: less, more, favoritePager)."
+	FlagPagerDefinition = "Sets the pager for Temporal CLI to use. Options are less, more, and favoritePager."
 	FlagNoPagerDefinition = "Disables the interactive pager."
 	FlagFieldsDefinition = "Customize fields to print. Set to 'long' to automatically print more information for main fields."
 
