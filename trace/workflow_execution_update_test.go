@@ -242,6 +242,9 @@ func (s *WorkflowExecutionUpdateSuite) Test_GetWorkflowExecutionUpdates() {
 }
 
 func (s *WorkflowExecutionUpdateSuite) Test_GetWorkflowExecutionUpdatesErrors() {
+	// We're testing the following:
+	// - If DescribeWorkflow returns an error, GetWorkflowExecutionUpdate returns no error (since it's a nice-to-have).
+	// - If the update iterator errors, it's available in Next().
 	client := &mocks.Client{}
 
 	exec := NewWorkflowExecutionState("foo", "bar").Execution
@@ -250,14 +253,18 @@ func (s *WorkflowExecutionUpdateSuite) Test_GetWorkflowExecutionUpdatesErrors() 
 	// Setup DescribeWorkflowExecution mocks
 	s.SetDescribeWorkflowErrorMocks(client, exec.GetWorkflowId(), exec.GetRunId(), fmt.Errorf("hey, I'm an error"))
 
-	// Execute what we're testing
+	// Call function under testing.
 	iter, updateErr := GetWorkflowExecutionUpdates(s.ctx, client, exec.GetWorkflowId(), exec.GetRunId(), true, 0, 5)
 	require.NoError(s.T(), updateErr)
 
-	// Only call once since we only want to check on the first error.
+	// First Next returns the "started" event.
 	iter.HasNext()
 	update, err := iter.Next()
+	require.NotNil(s.T(), update)
+	require.NoError(s.T(), err)
 
+	// Second Next returns an error.
+	update, err = iter.Next()
 	require.Nil(s.T(), update)
 	require.Error(s.T(), err)
 }

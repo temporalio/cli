@@ -35,9 +35,8 @@ func NewWorkflowStateJob(ctx context.Context, client sdkclient.Client, state *Wo
 
 	// Get workflow execution's description, so we can know if we're up-to-date. Doing this synchronously will allow us to correctly
 	// assess how many events need to be processed (otherwise only the ones from the root workflow will be counted).
-	if description, err := client.DescribeWorkflowExecution(ctx, state.Execution.GetWorkflowId(), state.Execution.GetRunId()); err != nil {
-		return nil, err
-	} else {
+	// We don't mind if this fails, since HistoryLength is used only to display event processing progress.
+	if description, err := client.DescribeWorkflowExecution(ctx, state.Execution.GetWorkflowId(), state.Execution.GetRunId()); err == nil {
 		execInfo := description.GetWorkflowExecutionInfo()
 		state.HistoryLength = execInfo.HistoryLength
 		state.IsArchived = execInfo.HistoryLength == 0 // TODO: Find a better way to identify archived workflows
