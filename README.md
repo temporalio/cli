@@ -54,7 +54,7 @@ You can install the CLI using one of the below methods.
 
 1. Download the version for your OS and architecture:
     - [Linux amd64](https://temporal.download/cli/archive/latest?platform=linux&arch=amd64)
-    - [Linux arm64](https://temporal.download/cli/archive/latest?platform=linux&arch=arm64")
+    - [Linux arm64](https://temporal.download/cli/archive/latest?platform=linux&arch=arm64)
     - [macOS amd64](https://temporal.download/cli/archive/latest?platform=darwin&arch=amd64)
     - [macOS arm64](https://temporal.download/cli/archive/latest?platform=darwin&arch=arm64) (Apple silicon)
     - [Windows amd64](https://temporal.download/cli/archive/latest?platform=windows&arch=amd64)
