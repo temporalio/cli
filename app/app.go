@@ -87,7 +87,7 @@ func commands(defaultCfg *sconfig.Config) []*cli.Command {
 	return append(
 		append(
 			serverCommands(defaultCfg),
-			common.WithFlags(clientCommands, common.FlagsForPaginationAndRendering)...,
+			common.WithFlags(clientCommands, common.SharedFlags)...,
 		),
 		completionCommands...,
 	)
