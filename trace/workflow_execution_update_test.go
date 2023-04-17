@@ -98,7 +98,7 @@ func (s *WorkflowExecutionUpdateSuite) Test_ParametersAreValid() {
 			// Setup mocks since valid parameters will start WorkflowStateJobs
 			s.SetDescribeWorkflowMocks(client, "foo", "bar", nil)
 			s.SetWorkflowHistoryMocks(client, "foo", "bar", nil)
-			iter, err := GetWorkflowExecutionUpdates(s.ctx, client, "foo", "bar", true, -1, tt.args.concurrency)
+			iter, err := GetWorkflowExecutionUpdates(s.ctx, client, "foo", "bar", true, nil, -1, tt.args.concurrency)
 
 			tt.assertError(s.T(), err)
 
@@ -221,7 +221,7 @@ func (s *WorkflowExecutionUpdateSuite) Test_GetWorkflowExecutionUpdates() {
 			s.SetDescribeWorkflowMocks(client, "childWfId", "childRunId", tt.childEvents)
 
 			// Execute what we're testing
-			iter, _ := GetWorkflowExecutionUpdates(s.ctx, client, exec.GetWorkflowId(), exec.GetRunId(), true, tt.depth, 5)
+			iter, _ := GetWorkflowExecutionUpdates(s.ctx, client, exec.GetWorkflowId(), exec.GetRunId(), true, nil, tt.depth, 5)
 
 			// Iterate over all the updates to get the final state
 			var update *WorkflowExecutionUpdate
@@ -243,7 +243,6 @@ func (s *WorkflowExecutionUpdateSuite) Test_GetWorkflowExecutionUpdates() {
 
 func (s *WorkflowExecutionUpdateSuite) Test_GetWorkflowExecutionUpdatesErrors() {
 	// We're testing the following:
-	// - If DescribeWorkflow returns an error, GetWorkflowExecutionUpdate returns no error (since it's a nice-to-have).
 	// - If the update iterator errors, it's available in Next().
 	client := &mocks.Client{}
 
@@ -251,10 +250,10 @@ func (s *WorkflowExecutionUpdateSuite) Test_GetWorkflowExecutionUpdatesErrors() 
 	s.SetWorkflowHistoryMocks(client, exec.GetWorkflowId(), exec.GetRunId(), []*history.HistoryEvent{events["started"]})
 
 	// Setup DescribeWorkflowExecution mocks
-	s.SetDescribeWorkflowErrorMocks(client, exec.GetWorkflowId(), exec.GetRunId(), fmt.Errorf("hey, I'm an error"))
+	s.SetDescribeWorkflowMocks(client, exec.GetWorkflowId(), exec.GetRunId(), []*history.HistoryEvent{events["started"]})
 
 	// Call function under testing.
-	iter, updateErr := GetWorkflowExecutionUpdates(s.ctx, client, exec.GetWorkflowId(), exec.GetRunId(), true, 0, 5)
+	iter, updateErr := GetWorkflowExecutionUpdates(s.ctx, client, exec.GetWorkflowId(), exec.GetRunId(), true, nil, 0, 5)
 	require.NoError(s.T(), updateErr)
 
 	// First Next returns the "started" event.

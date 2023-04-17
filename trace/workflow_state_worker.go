@@ -18,6 +18,7 @@ type WorkflowStateJob struct {
 	state      *WorkflowExecutionState
 	depth      int
 	fetchAll   bool
+	foldStatus []enums.WorkflowExecutionStatus
 	childJobs  []*WorkflowStateJob
 	isUpToDate bool
 
@@ -25,7 +26,7 @@ type WorkflowStateJob struct {
 }
 
 // NewWorkflowStateJob returns a new WorkflowStateJob. It requires an updateChan to signal when there's updates.
-func NewWorkflowStateJob(ctx context.Context, client sdkclient.Client, state *WorkflowExecutionState, fetchAll bool, depth int, updateChan chan struct{}) (*WorkflowStateJob, error) {
+func NewWorkflowStateJob(ctx context.Context, client sdkclient.Client, state *WorkflowExecutionState, fetchAll bool, foldStatus []enums.WorkflowExecutionStatus, depth int, updateChan chan struct{}) (*WorkflowStateJob, error) {
 	if state == nil {
 		return nil, errors.New("workflow state cannot be nil for a workflow state job")
 	}
@@ -36,7 +37,9 @@ func NewWorkflowStateJob(ctx context.Context, client sdkclient.Client, state *Wo
 	// Get workflow execution's description, so we can know if we're up-to-date. Doing this synchronously will allow us to correctly
 	// assess how many events need to be processed (otherwise only the ones from the root workflow will be counted).
 	// We don't mind if this fails, since HistoryLength is used only to display event processing progress.
-	if description, err := client.DescribeWorkflowExecution(ctx, state.Execution.GetWorkflowId(), state.Execution.GetRunId()); err == nil {
+	if description, err := client.DescribeWorkflowExecution(ctx, state.Execution.GetWorkflowId(), state.Execution.GetRunId()); err != nil {
+		return nil, err
+	} else {
 		execInfo := description.GetWorkflowExecutionInfo()
 		state.HistoryLength = execInfo.HistoryLength
 		state.IsArchived = execInfo.HistoryLength == 0 // TODO: Find a better way to identify archived workflows
@@ -48,6 +51,7 @@ func NewWorkflowStateJob(ctx context.Context, client sdkclient.Client, state *Wo
 		state:      state,
 		depth:      depth,
 		fetchAll:   fetchAll,
+		foldStatus: foldStatus,
 		updateChan: updateChan,
 		childJobs:  []*WorkflowStateJob{},
 	}, nil
@@ -118,7 +122,7 @@ func (job *WorkflowStateJob) GetChildJob(event *history.HistoryEvent) (*Workflow
 	}
 
 	// Create child job
-	childJob, err := NewWorkflowStateJob(job.ctx, job.client, wf, job.fetchAll, job.depth-1, job.updateChan)
+	childJob, err := NewWorkflowStateJob(job.ctx, job.client, wf, job.fetchAll, job.foldStatus, job.depth-1, job.updateChan)
 	if err != nil {
 		return nil, err
 	}
@@ -128,12 +132,13 @@ func (job *WorkflowStateJob) GetChildJob(event *history.HistoryEvent) (*Workflow
 // ShouldStart will return true if the state is in a status that requires requesting its event history.
 // This will help reduce the amount of event histories requested when they're not needed.
 func (job *WorkflowStateJob) ShouldStart() bool {
-	switch job.state.Status {
-	case enums.WORKFLOW_EXECUTION_STATUS_RUNNING,
-		enums.WORKFLOW_EXECUTION_STATUS_TIMED_OUT,
-		enums.WORKFLOW_EXECUTION_STATUS_FAILED:
+	if job.fetchAll {
 		return true
-	default:
-		return job.fetchAll
 	}
+	for _, st := range job.foldStatus {
+		if st == job.state.Status {
+			return false
+		}
+	}
+	return true
 }

@@ -4,11 +4,19 @@ import (
 	"context"
 	"fmt"
 	"github.com/alitto/pond"
+	"go.temporal.io/api/enums/v1"
 	sdkclient "go.temporal.io/sdk/client"
 )
 
 type WorkflowExecutionUpdate struct {
 	State *WorkflowExecutionState
+}
+
+func (update *WorkflowExecutionUpdate) GetState() *WorkflowExecutionState {
+	if update == nil {
+		return nil
+	}
+	return update.State
 }
 
 // WorkflowExecutionUpdateIterator is the interface the provides iterative updates, analogous to the HistoryEventIterator interface.
@@ -44,7 +52,7 @@ type WorkflowExecutionUpdateIteratorImpl struct {
 //		update = iter.Next()
 //		PrintWorkflowState(update.State)
 //	}
-func GetWorkflowExecutionUpdates(ctx context.Context, client sdkclient.Client, wfId, runId string, fetchAll bool, depth int, concurrency int) (WorkflowExecutionUpdateIterator, error) {
+func GetWorkflowExecutionUpdates(ctx context.Context, client sdkclient.Client, wfId, runId string, fetchAll bool, foldStatus []enums.WorkflowExecutionStatus, depth int, concurrency int) (WorkflowExecutionUpdateIterator, error) {
 	if concurrency < 1 {
 		return nil, fmt.Errorf("invalid value for concurrency (expected non-zero positive integer, got %d)", concurrency)
 	}
@@ -58,7 +66,7 @@ func GetWorkflowExecutionUpdates(ctx context.Context, client sdkclient.Client, w
 	errorChan := make(chan error)
 
 	state := NewWorkflowExecutionState(wfId, runId)
-	job, err := NewWorkflowStateJob(poolCtx, client, state, fetchAll, depth, updateChan)
+	job, err := NewWorkflowStateJob(poolCtx, client, state, fetchAll, foldStatus, depth, updateChan)
 	if err != nil {
 		return nil, err
 	}
