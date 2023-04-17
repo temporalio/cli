@@ -5,69 +5,103 @@
 
 > ⚠️ Temporal CLI's API is still subject to change. ⚠️
 
-The Temporal CLI is a tool for interacting with Temporal from the command line.
-Temporal CLI functions as a distribution of the Temporal Server and Web UI that runs as a single process with zero runtime dependencies.
-The tool supports persistence to disk and in-memory mode through SQLite.
+Use the CLI to run a Temporal Server and interact with it.
 
-## Installation
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
-Temporal CLI can be installed through several different methods. While most of them can be used across all operating systems, please note that Homebrew is macOS-exclusive.
+**Table of Contents**
+
+- [Install](#install)
+  - [cURL](#curl)
+  - [Homebrew](#homebrew)
+  - [Manual](#manual)
+- [Use](#use)
+  - [Start the Server](#start-the-server)
+  - [Interact with the Server](#interact-with-the-server)
+- [Configure](#configure)
+  - [Namespace registration](#namespace-registration)
+  - [Persistence modes](#persistence-modes)
+  - [Enable or disable Temporal UI](#enable-or-disable-temporal-ui)
+  - [Dynamic configuration](#dynamic-configuration)
+  - [Environment variables](#environment-variables)
+- [Auto-completion](#auto-completion)
+  - [zsh auto-completion](#zsh-auto-completion)
+  - [Bash auto-completion](#bash-auto-completion)
+    - [macOS installation](#macos-installation)
+    - [Linux installation](#linux-installation)
+- [Development](#development)
+  - [Compile and run CLI](#compile-and-run-cli)
+  - [Compile docs](#compile-docs)
+  - [Run tests](#run-tests)
+- [Known Issues](#known-issues)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
+## Install
+
+You can install the CLI using one of the below methods.
 
 ### cURL
-
-Run the following command to install the latest version of Temporal CLI.
 
 `curl -sSf https://temporal.download/cli.sh | sh`
 
 ### Homebrew
 
-Run the following command in a new terminal window to install CLI for macOS.
-
 `brew install temporal`
 
-### GitHub releases
+### Manual
 
-Download and extract the latest release from [GitHub releases](https://github.com/temporalio/cli/releases).
+1. Download the version for your OS and architecture:
+    - [Linux amd64](https://temporal.download/cli/archive/latest?platform=linux&arch=amd64)
+    - [Linux arm64](https://temporal.download/cli/archive/latest?platform=linux&arch=arm64)
+    - [macOS amd64](https://temporal.download/cli/archive/latest?platform=darwin&arch=amd64)
+    - [macOS arm64](https://temporal.download/cli/archive/latest?platform=darwin&arch=arm64) (Apple silicon)
+    - [Windows amd64](https://temporal.download/cli/archive/latest?platform=windows&arch=amd64)
+    - [Windows arm64](https://temporal.download/cli/archive/latest?platform=windows&arch=arm64)
+2. Extract the downloaded archive.
+3. Add the `temporal` binary to your PATH. (`temporal.exe` for Windows)
 
-### CDN
+You can also download older versions from [GitHub releases](https://github.com/temporalio/cli/releases).
 
-To install the Temporal CLI from CDN:
+## Use
 
-  1. Download:
-     - <a href="https://temporal.download/cli/archive/latest?platform=linux&arch=amd64">Download for Linux amd64</a>
-     - <a href="https://temporal.download/cli/archive/latest?platform=linux&arch=arm64">Download for Linux arm64</a>
-     - <a href="https://temporal.download/cli/archive/latest?platform=darwin&arch=amd64">Download for macOS amd64</a>
-     - <a href="https://temporal.download/cli/archive/latest?platform=darwin&arch=arm64">Download for macOS arm64</a> (Apple silicon)
-     - <a href="https://temporal.download/cli/archive/latest?platform=windows&arch=amd64">Download for Windows amd64</a>
-     - <a href="https://temporal.download/cli/archive/latest?platform=windows&arch=arm64">Download for Windows arm64</a>
-  2. Extract the downloaded archive.
-  3. Add the `temporal` binary to your PATH. (`temporal.exe` for Windows)
-
-## Starting the Temporal Server
-
-Run the command provided below to start the Temporal Server.
-This will automatically start the Web UI.
+### Start the Server
 
 ```bash
 temporal server start-dev
 ```
 
-At this point you should have a server running on `localhost:7233` and a web interface at <http://localhost:8233>.
-A default Namespace has also been created.
+This:
 
-Run individual commands to interact with the local Temporal server.
+- Starts the Server on `localhost:7233`
+- Runs the Web UI at <http://localhost:8233>
+- Creates a `default` Namespace
+
+You can create other namespaces, have the Server persist data to a file so you don't lose your Workflows between sessions, and make other customizations via command-line options. For a full list of options, run:
 
 ```bash
-temporal operator namespace list
-temporal workflow list
+temporal server start-dev --help
 ```
 
-## Configuration
+### Interact with the Server
+
+You can also run commands to interact with the Server in a separate terminal:
+
+```bash
+temporal workflow list
+temporal operator namespace list
+```
+
+For a full list of commands, see the [CLI docs](https://docs.temporal.io/cli/) or run `temporal help`.
+
+## Configure
 
 Use the help flag to see a full list of CLI options:
 
 ```bash
-temporal server start-dev --help
+temporal -h
+temporal server start-dev -h
 ```
 
 Configure the environment with `env` commands:
@@ -127,6 +161,10 @@ temporal server start-dev --dynamic-config-value system.forceSearchAttributesCac
 
 This setting makes created search attributes immediately available for use.
 
+### Environment variables
+
+See the CLI docs for a [list of env vars](https://docs.temporal.io/cli#environmental-variables).
+
 ## Auto-completion
 
 The Temporal CLI has the capability to auto-complete commands.
@@ -159,6 +197,41 @@ Bash auto-completion relies on `bash-completion`.
 
 Install the software with the steps provided [here](https://github.com/scop/bash-completion#installation), or use your preferred package manager on your operating system.
 
+#### macOS installation
+
+Install `bash-completion` through Homebrew:
+`brew install bash-completion@2`
+
+Follow the instruction printed in the "Caveats" section, which will say to add one of the following lines to your `~/.bashrc` file:
+
+```sh
+[[ -r "/opt/homebrew/etc/profile.d/bash_completion.sh" ]] && . "/opt/homebrew/etc/profile.d/bash_completion.sh"
+```
+
+or:
+
+```sh
+[[ -r "/usr/local/etc/profile.d/bash_completion.sh" ]] && . "/usr/local/etc/profile.d/bash_completion.sh"
+```
+
+Verify that `bash-completion` is installed by running `type _init_completion`. 
+It should say `_init_completion is a function` and print the function.
+
+Enable completion for Temporal by adding the following code to your bash file:
+
+```bash
+echo 'source <(temporal completion bash)' >> ~/.bashrc
+source ~/.bashrc
+```
+
+Now test by typing `temporal`, space, and then tab twice. You should see:
+
+```bash
+$ temporal 
+activity    completion  h           operator    server      workflow    
+batch       env         help        schedule    task-queue
+```
+
 #### Linux installation
 
 Use any of the following package managers to install `bash-completion`:
@@ -179,47 +252,26 @@ source /etc/profile.d/bash_completion.sh
 Finally, enable completion for Temporal by adding the following code to your bash file:
 
 ```
-echo 'source <(temporal completion bash)' >>~/.bashrc
-source ~/.bashrc
-```
-
-#### macOS installation
-
-Install `bash-completion` through Homebrew:
-`brew install bash-completion@2`
-
-Add the provided code snippet to your `~/.bashrc` file:
-
-```sh
-[[ -r "/usr/local/etc/profile.d/bash_completion.sh" ]] && . "/usr/local/etc/profile.d/bash_completion.sh"
-```
-
-Verify that `bash-completion` is installed by running `type _init_completion`.
-
-Enable completion for Temporal by adding the following code to your bash file:
-
-```
 echo 'source <(temporal completion bash)' >> ~/.bashrc
 source ~/.bashrc
 ```
 
 ## Development
 
-The Temporal CLI can be compiled and executed from your system.
-
-To compile the source code into an executable, run:
+### Compile and run CLI
 
 ```bash
 go build -o dist/temporal ./cmd/temporal
+dist/temporal
 ```
 
-To compile the documentation, run:
+### Compile docs
 
 ```bash
 go build -o dist/temporal-docgen ./cmd/temporal-docgen
 ```
 
-To run all tests:
+### Run tests
 
 ```bash
 go test ./...
@@ -229,6 +281,6 @@ go test ./...
 
 - When consuming Temporal as a library in go mod, you may want to replace grpc-gateway with a fork to address URL escaping issue in UI. See <https://github.com/temporalio/temporalite/pull/118>
 
-- When running the executables from the Releases page in macOS you will want to allowlist `temporal` binary in `Security & Privacy` settings:
+- When running the executables from the Releases page in macOS you will need to click "Allow Anyway" in `Security & Privacy` settings:
 
 <img width="654" alt="image (1)" src="https://user-images.githubusercontent.com/11838981/203155541-f33395f9-9ed2-4d53-a4ac-c61098cf19ef.png">

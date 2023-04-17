@@ -151,14 +151,14 @@ func startBatchJob(c *cli.Context, req *workflowservice.StartBatchOperationReque
 		Namespace: namespace,
 		Query:     query,
 	})
-	if err != nil {
-		return fmt.Errorf("unable to count impacted workflows: %w", err)
+
+	var promptMsg string
+	if err == nil {
+		promptMsg = fmt.Sprintf("Will start a batch job operating on %v Workflow Executions. Continue? Y/N", color.Yellow(c, "%v", count.GetCount()))
+	} else {
+		promptMsg = fmt.Sprintf("Unable to count impacted workflows: %s. Will start a batch job on all Workflow Executions that match %s. Continue? Y/N", err, color.Yellow(c, "%v", query))
 	}
 
-	promptMsg := fmt.Sprintf(
-		"Will start a batch job operating on %v Workflow Executions. Continue? Y/N",
-		color.Yellow(c, "%v", count.GetCount()),
-	)
 	if !common.PromptYes(promptMsg, c.Bool(common.FlagYes)) {
 		return nil
 	}

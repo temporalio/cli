@@ -32,7 +32,6 @@ var (
 	FlagCodecAuth                  = "codec-auth"
 	FlagCodecEndpoint              = "codec-endpoint"
 	FlagConcurrency                = "concurrency"
-	FlagConfig                     = "config"
 	FlagContextTimeout             = "context-timeout"
 	FlagCronSchedule               = "cron"
 	FlagDBPath                     = "db-filename"
@@ -76,7 +75,6 @@ var (
 	FlagNonDeterministic           = "non-deterministic"
 	FlagNotes                      = "notes"
 	FlagOutputAlias                = []string{"o"}
-	FlagOutputFilename             = "output-filename"
 	FlagOverlapPolicy              = "overlap-policy"
 	FlagOwnerEmail                 = "email"
 	FlagParallelism                = "input-parallelism"
@@ -240,11 +238,6 @@ var FlagsForExecution = []cli.Flag{
 }
 
 var FlagsForShowWorkflow = []cli.Flag{
-	&cli.StringFlag{
-		Name:     FlagOutputFilename,
-		Usage:    FlagOutputFilenameDefinition,
-		Category: CategoryMain,
-	},
 	&cli.IntFlag{
 		Name:     FlagMaxFieldLength,
 		Usage:    FlagMaxFieldLengthDefinition,
@@ -312,13 +305,13 @@ var FlagsForStartWorkflowT = []cli.Flag{
 		Category: CategoryMain,
 	},
 	&cli.StringFlag{
-		Name: FlagCronSchedule,
-		Usage: FlagCronScheduleDefinition,
+		Name:     FlagCronSchedule,
+		Usage:    FlagCronScheduleDefinition,
 		Category: CategoryMain,
 	},
 	&cli.StringFlag{
-		Name: FlagWorkflowIDReusePolicy,
-		Usage: FlagWorkflowIdReusePolicyDefinition,
+		Name:     FlagWorkflowIDReusePolicy,
+		Usage:    FlagWorkflowIdReusePolicyDefinition,
 		Category: CategoryMain,
 	},
 	&cli.StringSliceFlag{
@@ -328,8 +321,8 @@ var FlagsForStartWorkflowT = []cli.Flag{
 		Category: CategoryMain,
 	},
 	&cli.StringFlag{
-		Name: FlagInputFile,
-		Usage: FlagInputFileDefinition,
+		Name:     FlagInputFile,
+		Usage:    FlagInputFileDefinition,
 		Category: CategoryMain,
 	},
 	&cli.IntFlag{
@@ -376,8 +369,8 @@ var FlagsForStackTraceQuery = append(FlagsForExecution, []cli.Flag{
 		Category: CategoryMain,
 	},
 	&cli.StringFlag{
-		Name: FlagInputFile,
-		Usage: FlagInputFileDefinition,
+		Name:     FlagInputFile,
+		Usage:    FlagInputFileDefinition,
 		Category: CategoryMain,
 	},
 	&cli.StringFlag{

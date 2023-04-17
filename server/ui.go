@@ -29,33 +29,11 @@ package server
 // This file should be the only one to import ui-server packages.
 // This is to avoid embedding the UI's static assets in the binary when the `headless` build tag is enabled.
 import (
-	"strings"
-
-	provider "github.com/temporalio/ui-server/v2/plugins/fs_config_provider"
 	uiserver "github.com/temporalio/ui-server/v2/server"
 	uiconfig "github.com/temporalio/ui-server/v2/server/config"
 	uiserveroptions "github.com/temporalio/ui-server/v2/server/server_options"
 )
 
-func newUIOption(c *uiconfig.Config, configDir string) (ServerOption, error) {
-	cfg, err := MergeWithConfigFile(
-		c,
-		configDir,
-	)
-	if err != nil {
-		return nil, err
-	}
-	return WithUI(uiserver.NewServer(uiserveroptions.WithConfigProvider(cfg))), nil
-}
-
-func MergeWithConfigFile(cfg *uiconfig.Config, configDir string) (*uiconfig.Config, error) {
-	if configDir != "" {
-		if err := provider.Load(configDir, cfg, "temporal-ui"); err != nil {
-			if !strings.HasPrefix(err.Error(), "no config files found") {
-				return nil, err
-			}
-		}
-	}
-
-	return cfg, nil
+func newUIOption(c *uiconfig.Config) (ServerOption, error) {
+	return WithUI(uiserver.NewServer(uiserveroptions.WithConfigProvider(c))), nil
 }

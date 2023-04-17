@@ -20,6 +20,7 @@ import (
 	"github.com/temporalio/cli/common/stringify"
 	"github.com/temporalio/cli/dataconverter"
 	"github.com/temporalio/tctl-kit/pkg/color"
+	"github.com/temporalio/tctl-kit/pkg/iterator"
 	"github.com/temporalio/tctl-kit/pkg/output"
 	"github.com/temporalio/tctl-kit/pkg/pager"
 	"github.com/urfave/cli/v2"
@@ -238,28 +239,32 @@ func UnmarshalMemoFromCLI(c *cli.Context) (map[string]interface{}, error) {
 	return memo, nil
 }
 
-type historyIterator struct {
-	iter interface {
-		HasNext() bool
-		Next() (*historypb.HistoryEvent, error)
-	}
+// historyTableIter adapts history iterator for Table output view
+type historyTableIter struct {
+	iter           iterator.Iterator[*historypb.HistoryEvent]
 	maxFieldLength int
-	lastEvent      *historypb.HistoryEvent
+	wfResult       *historypb.HistoryEvent
 }
 
-func (h *historyIterator) HasNext() bool {
+func (h *historyTableIter) HasNext() bool {
 	return h.iter.HasNext()
 }
 
-func (h *historyIterator) Next() (interface{}, error) {
+func (h *historyTableIter) Next() (interface{}, error) {
 	event, err := h.iter.Next()
 	if err != nil {
 		return nil, err
 	}
 
-	reflect.ValueOf(h.lastEvent).Elem().Set(reflect.ValueOf(event).Elem())
+	reflect.ValueOf(h.wfResult).Elem().Set(reflect.ValueOf(event).Elem())
 
-	return eventRow{
+	// adapted structure for Table output view
+	return struct {
+		ID      string
+		Time    string
+		Type    string
+		Details string
+	}{
 		ID:      convert.Int64ToString(event.GetEventId()),
 		Time:    common.FormatTime(timestamp.TimeValue(event.GetEventTime()), false),
 		Type:    common.ColorEvent(event),
@@ -292,18 +297,23 @@ func printWorkflowProgress(c *cli.Context, wid, rid string, watch bool) error {
 		fmt.Println(color.Magenta(c, "Progress:"))
 	}
 
-	var lastEvent historypb.HistoryEvent // used for print result of this run
+	var wfResult historypb.HistoryEvent
 
-	po := &output.PrintOptions{
-		Fields:     []string{"ID", "Time", "Type"},
-		FieldsLong: []string{"Details"},
-		Pager:      pager.Less,
-	}
 	errChan := make(chan error)
 	go func() {
-		hIter := sdkClient.GetWorkflowHistory(tcCtx, wid, rid, watch, enumspb.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
-		iter := &historyIterator{iter: hIter, maxFieldLength: maxFieldLength, lastEvent: &lastEvent}
-		err = output.PrintIterator(c, iter, po)
+		iter := sdkClient.GetWorkflowHistory(tcCtx, wid, rid, watch, enumspb.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
+		if isJSON {
+			printReplayableHistory(c, iter)
+		} else {
+			hIter := &historyTableIter{iter: iter, maxFieldLength: maxFieldLength, wfResult: &wfResult}
+			po := &output.PrintOptions{
+				Fields:     []string{"ID", "Time", "Type"},
+				FieldsLong: []string{"Details"},
+				Pager:      pager.Less,
+			}
+			err = output.PrintIterator(c, hIter, po)
+		}
+
 		if err != nil {
 			errChan <- err
 			return
@@ -334,13 +344,31 @@ func printWorkflowProgress(c *cli.Context, wid, rid string, watch bool) error {
 				if watch {
 					fmt.Printf("  Run Time: %d seconds\n", timeElapsed)
 				}
-				printRunStatus(c, &lastEvent)
+				printRunStatus(c, &wfResult)
 			}
 			return nil
 		case err = <-errChan:
 			return err
 		}
 	}
+}
+
+func printReplayableHistory(c *cli.Context, iter iterator.Iterator[*historypb.HistoryEvent]) error {
+	var events []*historypb.HistoryEvent
+	for iter.HasNext() {
+		event, err := iter.Next()
+		if err != nil {
+			return err
+
+		}
+		events = append(events, event)
+	}
+
+	history := &historypb.History{Events: events}
+
+	common.PrettyPrintJSONObject(c, history)
+
+	return nil
 }
 
 func TerminateWorkflow(c *cli.Context) error {
@@ -661,9 +689,9 @@ func DescribeWorkflow(c *cli.Context) error {
 	}
 
 	if printRaw {
-		common.PrettyPrintJSONObject(resp)
+		common.PrettyPrintJSONObject(c, resp)
 	} else {
-		common.PrettyPrintJSONObject(convertDescribeWorkflowExecutionResponse(c, resp))
+		common.PrettyPrintJSONObject(c, convertDescribeWorkflowExecutionResponse(c, resp))
 	}
 
 	return nil
@@ -800,7 +828,6 @@ func printRunStatus(c *cli.Context, event *historypb.HistoryEvent) {
 func ShowHistory(c *cli.Context) error {
 	wid := c.String(common.FlagWorkflowID)
 	rid := c.String(common.FlagRunID)
-
 	follow := c.Bool(output.FlagFollow)
 
 	return printWorkflowProgress(c, wid, rid, follow)
@@ -862,7 +889,7 @@ func ResetWorkflow(c *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("reset failed: %w", err)
 	}
-	common.PrettyPrintJSONObject(resp)
+	common.PrettyPrintJSONObject(c, resp)
 	return nil
 }
 
@@ -1416,13 +1443,6 @@ func TraceWorkflow(c *cli.Context) error {
 	}
 	fmt.Println("Trace hasn't been implemented yet.")
 	return nil
-}
-
-type eventRow struct {
-	ID      string
-	Time    string
-	Type    string
-	Details string
 }
 
 // this only works for ANSI terminal, which means remove existing lines won't work if users redirect to file
