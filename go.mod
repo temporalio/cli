@@ -8,6 +8,7 @@ require (
 	github.com/gogo/status v1.1.1
 	github.com/golang/mock v1.6.0
 	github.com/gorilla/websocket v1.5.0
+	github.com/mattn/go-isatty v0.0.17
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/pborman/uuid v1.2.1
 	github.com/stretchr/testify v1.8.2
@@ -73,7 +74,6 @@ require (
 	github.com/lib/pq v1.10.7 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
-	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/mattn/go-runewidth v0.0.14 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/olivere/elastic/v7 v7.0.32 // indirect
@@ -97,7 +97,6 @@ require (
 	github.com/twmb/murmur3 v1.1.6 // indirect
 	github.com/uber-common/bark v1.3.0 // indirect
 	github.com/uber-go/tally/v4 v4.1.3 // indirect
-	github.com/urfave/cli v1.22.12
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.1 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
