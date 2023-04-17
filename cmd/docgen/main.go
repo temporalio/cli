@@ -20,9 +20,9 @@ const (
 )
 
 var FrontMatterTemplate = `---
-id: {{.ID}}
-title: temporal {{if not .IsOperator}}{{.Category}}{{ else }}operator {{.Category}}{{end}}{{if not .IsIndex}} {{.ID}}{{else}} index{{end}}
-sidebar_label:{{if .IsIndex}} {{.Category}}{{else}} {{.ID}}{{end}}
+id: {{.Subcommand}}
+title: temporal{{if not .IsOperator}}{{.Command}}{{ else }} operator {{.Command}}{{end}}{{if not .IsIndex}}{{.Subcommand}}{{else}}{{if .IsOperator}} {{.Subcommand}}{{end}} index{{end}}
+sidebar_label: {{if .IsIndex}}{{.Command}}{{else}}{{.Subcommand}}{{end}}
 description: {{.Description}}
 tags:
     - cli
@@ -30,40 +30,41 @@ tags:
 `
 
 type FrontMatter struct {
-	ID          string
-	Category    string
+	Subcommand  string
+	Command     string
 	Description string
 	IsIndex     bool
 	IsOperator  bool
 }
 
-var currentHeader, fileName, optionFileName, operatorFileName, path, optionFilePath, headerIndexFile, aliasName string
+var currentHeader, fileName, optionFileName, operatorFileName, path, optionFilePath, headerIndexFile string
 var currentHeaderFile, currentOptionFile *os.File
 
 // `BuildApp` takes a string and returns a `*App` and an error
 func main() {
+	// delete existing content; start anew.
 	deleteExistingFolder()
 
+	// create giant CLI file for breakdown. check for errors.
 	doc, err := app.BuildApp().ToMarkdown()
 	if err != nil {
 		log.Fatalf("Error when trying to build app: %s", err)
 	}
-
 	err = os.WriteFile(cliFile, []byte(doc), filePerm)
 	if err != nil {
 		log.Fatalf("Error when trying to write markdown to %s file: %s", cliFile, err)
 	}
-
 	readFile, err := os.Open(cliFile)
 	if err != nil {
 		log.Fatalf("Error when trying to open %s file: %s", cliFile, err)
 	}
 
+	// create scanner to read the big Markdown file
 	scanner := bufio.NewScanner(readFile)
 	scanner.Split(bufio.ScanLines)
 	createdFiles := make(map[string]*os.File)
 
-	// Identify different option categories and print flags accordingly
+	// Identify commmands and subcommands; create folders accordingly.
 	for scanner.Scan() {
 		line := scanner.Text()
 		if strings.HasPrefix(line, "## ") {
@@ -86,31 +87,33 @@ func main() {
 			makeFile(filePath, false, false, scanner, createdFiles)
 		} else if strings.HasPrefix(line, "**--") {
 			// split into term and definition
-			term, definition, found := strings.Cut(line, ":")
+			term, definition, _ := strings.Cut(line, ":")
 			term = strings.TrimSuffix(term, "=\"\"")
 			if strings.Contains(term, ",") {
 				termArray := strings.Split(line, ",")
 				optionFileName = termArray[0] + "**"
-				aliasName = "Alias: **" + strings.TrimSpace(termArray[1])
 			} else {
 				optionFileName = term
 			}
-			log.Printf("string split successfully into term and definition (%v)", found)
+			log.Printf("string split successfully into term and definition: (%v), (%v)", term, definition)
 
 			optionFileName = strings.TrimPrefix(optionFileName, "**--")
 			optionFileName = strings.TrimSuffix(optionFileName, "**")
 
 			optionFilePath = filepath.Join(docsPath, optionsPath, optionFileName+".md")
-
+			// TODO: identify and categorize command option flags instead of printing an alphabetical list
 			termLink := "- [--" + optionFileName + "](/cli/cmd-options/" + optionFileName + ")"
+			// Separate definition lines so that only the first one qualifies as descriptor.
+			definitionArray := strings.Split(definition, ".")
 			makeFile(optionFilePath, false, true, scanner, createdFiles)
 			writeLine(currentHeaderFile, termLink)
-			if aliasName != "" {
-				aliasArray := strings.Split(aliasName, "=")
-				writeLine(currentOptionFile, aliasArray[0])
-				aliasName = ""
+			if len(definitionArray) == 1 {
+				writeLine(currentOptionFile, strings.TrimSpace(definitionArray[0]) + ".")
+			} else {
+				for i := 0; i < len(definitionArray) - 1; i++ {
+					writeLine(currentOptionFile, strings.TrimSpace(definitionArray[i]) + ".")
+				}
 			}
-			writeLine(currentOptionFile, strings.TrimSpace(definition))
 		} else if strings.Contains(line, ">") {
 			writeLine(currentHeaderFile, strings.Trim(line, ">"))
 		} else {
@@ -192,12 +195,18 @@ func writeFrontMatter(idName string, categoryName string, scanner *bufio.Scanner
 		descriptionTxt = strings.TrimSpace(scanner.Text())
 	} else {
 		_, definition, _ := strings.Cut(scanner.Text(), ":")
-		descriptionTxt = strings.TrimSpace(definition)
+		defArray := strings.Split(definition, ".")
+		if strings.Contains(defArray[0], ":") {
+			validDescription := strings.Split(defArray[0], ":")
+			descriptionTxt = validDescription[0]
+		} else {
+			descriptionTxt = strings.TrimSpace(defArray[0])
+		}
 	}
 
 	data := FrontMatter{
-		ID:          idName,
-		Category:    categoryName,
+		Subcommand:  idName,
+		Command:     categoryName,
 		Description: descriptionTxt,
 		IsIndex:     isIndex,
 		IsOperator:  isOperator,
