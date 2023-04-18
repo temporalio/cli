@@ -72,10 +72,11 @@ type WorkflowExecutionState struct {
 	// HistoryLength is the number of HistoryEvents available in the server. It will zero for archived workflows and non-zero positive for any other workflow executions.
 	HistoryLength int64
 
+	// mtx locks the state for read/write access. This is mainly used to avoid concurrent read/writes on the child maps (activityMap, childWorkflowMap and timerMap).
+	mtx sync.RWMutex
+
 	// ChildStates contains all the ExecutionStates contained by this WorkflowExecutionState in order of execution.
 	ChildStates []ExecutionState
-	// childMapLock locks the state for read/write access. This is mainly used to avoid concurrent read/writes on the child maps (activityMap, childWorkflowMap and timerMap).
-	childMapLock sync.RWMutex
 	// activityMap contains all the activities executed in the Workflow, indexed by the EVENT_TYPE_ACTIVITY_TASK_SCHEDULED event id
 	// Used to retrieve the activities from events
 	activityMap map[int64]*ActivityExecutionState
@@ -140,8 +141,8 @@ func (state *WorkflowExecutionState) GetDuration() *time.Duration {
 
 // newActivityFromEvent adds a new ActivityExecutionState to the WorkflowExecutionState's ChildStates.
 func (state *WorkflowExecutionState) newActivityFromEvent(event *history.HistoryEvent) *ActivityExecutionState {
-	state.childMapLock.RLock()
-	defer state.childMapLock.RUnlock()
+	state.mtx.RLock()
+	defer state.mtx.RUnlock()
 
 	if state.activityMap == nil {
 		state.activityMap = make(map[int64]*ActivityExecutionState)
@@ -157,8 +158,8 @@ func (state *WorkflowExecutionState) newActivityFromEvent(event *history.History
 
 // updateActivity updates a child ActivityExecutionState with a HistoryEvent by its scheduleId
 func (state *WorkflowExecutionState) updateActivity(scheduledId int64, event *history.HistoryEvent) {
-	state.childMapLock.RLock()
-	defer state.childMapLock.RUnlock()
+	state.mtx.RLock()
+	defer state.mtx.RUnlock()
 
 	if activityState, ok := state.activityMap[scheduledId]; ok {
 		activityState.Update(event)
@@ -167,8 +168,8 @@ func (state *WorkflowExecutionState) updateActivity(scheduledId int64, event *hi
 
 // newChildWorkflowFromEvent adds a new WorkflowExecutionState to the WorkflowExecutionState's ChildStates.
 func (state *WorkflowExecutionState) newChildWorkflowFromEvent(event *history.HistoryEvent) *WorkflowExecutionState {
-	state.childMapLock.Lock()
-	defer state.childMapLock.Unlock()
+	state.mtx.Lock()
+	defer state.mtx.Unlock()
 
 	if state.childWorkflowMap == nil {
 		state.childWorkflowMap = make(map[int64]*WorkflowExecutionState)
@@ -185,8 +186,8 @@ func (state *WorkflowExecutionState) newChildWorkflowFromEvent(event *history.Hi
 
 // GetChildWorkflowByEventId returns a child workflow for a given initiated event id
 func (state *WorkflowExecutionState) GetChildWorkflowByEventId(initiatedEventId int64) (*WorkflowExecutionState, bool) {
-	state.childMapLock.RLock()
-	defer state.childMapLock.RUnlock()
+	state.mtx.RLock()
+	defer state.mtx.RUnlock()
 
 	childWfState, ok := state.childWorkflowMap[initiatedEventId]
 	return childWfState, ok
@@ -194,8 +195,8 @@ func (state *WorkflowExecutionState) GetChildWorkflowByEventId(initiatedEventId 
 
 // newTimerFromEvent adds a new TimerExecutionState to the WorkflowExecutionState's ChildStates.
 func (state *WorkflowExecutionState) newTimerFromEvent(event *history.HistoryEvent) *TimerExecutionState {
-	state.childMapLock.Lock()
-	defer state.childMapLock.Unlock()
+	state.mtx.Lock()
+	defer state.mtx.Unlock()
 
 	if state.timerMap == nil {
 		state.timerMap = make(map[int64]*TimerExecutionState)
@@ -211,8 +212,8 @@ func (state *WorkflowExecutionState) newTimerFromEvent(event *history.HistoryEve
 
 // updateTimer updates a child TimerExecutionState with a HistoryEvent by its startedId
 func (state *WorkflowExecutionState) updateTimer(startedId int64, event *history.HistoryEvent) {
-	state.childMapLock.RLock()
-	defer state.childMapLock.RUnlock()
+	state.mtx.RLock()
+	defer state.mtx.RUnlock()
 
 	if timerState, ok := state.timerMap[startedId]; ok {
 		timerState.Update(event)
