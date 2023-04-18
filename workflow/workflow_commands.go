@@ -30,6 +30,7 @@ import (
 	historypb "go.temporal.io/api/history/v1"
 	querypb "go.temporal.io/api/query/v1"
 	"go.temporal.io/api/serviceerror"
+	update "go.temporal.io/api/update/v1"
 	workflowpb "go.temporal.io/api/workflow/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	sdkclient "go.temporal.io/sdk/client"
@@ -53,6 +54,11 @@ var (
 		"":       enumspb.RESET_REAPPLY_TYPE_SIGNAL, // default value
 		"Signal": enumspb.RESET_REAPPLY_TYPE_SIGNAL,
 		"None":   enumspb.RESET_REAPPLY_TYPE_NONE,
+	}
+	updateWaitPolicyMap = map[string]interface{}{
+		"Admitted":  enumspb.UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_ADMITTED,
+		"Accepted":  enumspb.UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_ACCEPTED,
+		"Completed": enumspb.UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_COMPLETED,
 	}
 )
 
@@ -1442,6 +1448,53 @@ func TraceWorkflow(c *cli.Context) error {
 		return err
 	}
 	fmt.Println("Trace hasn't been implemented yet.")
+	return nil
+}
+
+func UpdateWorkflow(c *cli.Context) error {
+	namespace, err := common.RequiredFlag(c, common.FlagNamespace)
+	if err != nil {
+		return err
+	}
+	wid := c.String(common.FlagWorkflowID)
+	rid := c.String(common.FlagRunID)
+	name := c.String(common.FlagName)
+	args, err := common.ProcessJSONInput(c)
+	first_execution_run_id := c.String(common.FlagUpdateFirstExecutionRunID)
+	if err != nil {
+		return err
+	}
+	waitPolicy := c.String(common.FlagUpdateWaitPolicy)
+	if _, ok := updateWaitPolicyMap[waitPolicy]; !ok {
+		return fmt.Errorf("must specify valid wait policy: %v", strings.Join(mapKeysToArray(updateWaitPolicyMap), ", "))
+	}
+	client := client.CFactory.FrontendClient(c)
+	ctx, cancel := common.NewContext(c)
+	defer cancel()
+
+	_, err = client.UpdateWorkflowExecution(ctx, &workflowservice.UpdateWorkflowExecutionRequest{
+		Namespace: namespace,
+		WorkflowExecution: &commonpb.WorkflowExecution{
+			WorkflowId: wid,
+			RunId:      rid,
+		},
+		FirstExecutionRunId: first_execution_run_id,
+		WaitPolicy:          &update.WaitPolicy{LifecycleStage: updateWaitPolicyMap[waitPolicy].(enumspb.UpdateWorkflowExecutionLifecycleStage)},
+		Request: &update.Request{
+			Meta: &update.Meta{UpdateId: uuid.New(),
+				Identity: common.GetCliIdentity()},
+			Input: &update.Input{
+				Name: name,
+				Args: args,
+			},
+		},
+	})
+
+	if err != nil {
+		return fmt.Errorf("unable to update workflow: %w", err)
+	}
+
+	fmt.Println(color.Green(c, "update workflow succeeded"))
 	return nil
 }
 

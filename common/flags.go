@@ -118,6 +118,8 @@ var (
 	FlagUICodecEndpoint            = "ui-codec-endpoint"
 	FlagUIPort                     = "ui-port"
 	FlagUnpause                    = "unpause"
+	FlagUpdateWaitPolicy           = "wait-policy"
+	FlagUpdateFirstExecutionRunID  = "first-execution-run-id"
 	FlagVisibilityArchivalState    = "visibility-archival-state"
 	FlagVisibilityArchivalURI      = "visibility-uri"
 	FlagWorkflowExecutionTimeout   = "execution-timeout"
