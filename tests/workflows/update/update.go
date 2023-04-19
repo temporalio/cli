@@ -21,7 +21,7 @@ func Counter(ctx workflow.Context) (int, error) {
 		func(ctx workflow.Context, i int) (int, error) {
 			tmp := counter
 			counter += i
-			log.Info("counter updated", "addend", i, "new-value", counter)
+			log.Info("counter updated", "added", i, "new-value", counter)
 			return tmp, nil
 		},
 		workflow.UpdateHandlerOptions{Validator: nonNegative},
