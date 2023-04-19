@@ -201,6 +201,10 @@ func (s *WorkflowExecutionUpdateSuite) Test_GetWorkflowExecutionUpdates() {
 							WorkflowId: "childWfId",
 							RunId:      "childRunId",
 						},
+						ParentWorkflowExecution: &common.WorkflowExecution{
+							WorkflowId: "foo",
+							RunId:      "bar",
+						},
 					},
 				},
 			},

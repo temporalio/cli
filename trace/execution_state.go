@@ -177,6 +177,8 @@ func (state *WorkflowExecutionState) newChildWorkflowFromEvent(event *history.Hi
 	attrs := event.GetStartChildWorkflowExecutionInitiatedEventAttributes()
 	childWorkflowState := NewWorkflowExecutionState(attrs.GetWorkflowId(), "")
 	childWorkflowState.Type = attrs.GetWorkflowType()
+	// Set parent workflow execution since child events don't contain that info.
+	childWorkflowState.ParentWorkflowExecution = state.Execution
 
 	state.childWorkflowMap[event.EventId] = childWorkflowState
 	state.ChildStates = append(state.ChildStates, childWorkflowState)

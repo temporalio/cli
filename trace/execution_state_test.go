@@ -532,6 +532,9 @@ func TestExecutionState_UpdateChildWorkflows(t *testing.T) {
 					Execution: &common.WorkflowExecution{
 						WorkflowId: "childWfId", RunId: "",
 					},
+					ParentWorkflowExecution: &common.WorkflowExecution{
+						WorkflowId: "foo",
+					},
 				},
 			},
 		},
@@ -547,6 +550,9 @@ func TestExecutionState_UpdateChildWorkflows(t *testing.T) {
 					Status: enums.WORKFLOW_EXECUTION_STATUS_RUNNING,
 					Execution: &common.WorkflowExecution{
 						WorkflowId: "childWfId", RunId: "childRunId",
+					},
+					ParentWorkflowExecution: &common.WorkflowExecution{
+						WorkflowId: "foo",
 					},
 				},
 			},
@@ -565,6 +571,9 @@ func TestExecutionState_UpdateChildWorkflows(t *testing.T) {
 					Execution: &common.WorkflowExecution{
 						WorkflowId: "childWfId", RunId: "childRunId",
 					},
+					ParentWorkflowExecution: &common.WorkflowExecution{
+						WorkflowId: "foo",
+					},
 				},
 			},
 		},
@@ -581,6 +590,9 @@ func TestExecutionState_UpdateChildWorkflows(t *testing.T) {
 					Status: enums.WORKFLOW_EXECUTION_STATUS_FAILED,
 					Execution: &common.WorkflowExecution{
 						WorkflowId: "childWfId", RunId: "childRunId",
+					},
+					ParentWorkflowExecution: &common.WorkflowExecution{
+						WorkflowId: "foo",
 					},
 					Failure: &failure.Failure{
 						Message: "This child failed us",
@@ -602,6 +614,9 @@ func TestExecutionState_UpdateChildWorkflows(t *testing.T) {
 					Status: enums.WORKFLOW_EXECUTION_STATUS_CANCELED,
 					Execution: &common.WorkflowExecution{
 						WorkflowId: "childWfId", RunId: "childRunId",
+					},
+					ParentWorkflowExecution: &common.WorkflowExecution{
+						WorkflowId: "foo",
 					},
 				},
 			},
