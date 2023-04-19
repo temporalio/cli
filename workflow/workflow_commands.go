@@ -1468,11 +1468,14 @@ func UpdateWorkflow(c *cli.Context) error {
 	if _, ok := updateWaitPolicyMap[waitPolicy]; !ok {
 		return fmt.Errorf("must specify valid wait policy: %v", strings.Join(mapKeysToArray(updateWaitPolicyMap), ", "))
 	}
-	client := client.CFactory.FrontendClient(c)
+	sdk, err := client.GetSDKClient(c)
+	if err != nil {
+		return err
+	}
 	ctx, cancel := common.NewContext(c)
 	defer cancel()
 
-	_, err = client.UpdateWorkflowExecution(ctx, &workflowservice.UpdateWorkflowExecutionRequest{
+	_, err = sdk.WorkflowService().UpdateWorkflowExecution(ctx, &workflowservice.UpdateWorkflowExecutionRequest{
 		Namespace: namespace,
 		WorkflowExecution: &commonpb.WorkflowExecution{
 			WorkflowId: wid,
