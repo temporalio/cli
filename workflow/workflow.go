@@ -410,7 +410,7 @@ func NewWorkflowCommands() []*cli.Command {
 				},
 				&cli.StringFlag{
 					Name:     common.FlagUpdateFirstExecutionRunID,
-					Usage:    "Do not run update if workflow exectuion (--run-id or if not set, latest workflow execution)  is not part of the same execution chain as this id.",
+					Usage:    "Run update on the last execution in the chain that started with this run ID.",
 					Category: common.CategoryMain,
 				},
 			),
