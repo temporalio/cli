@@ -35,7 +35,10 @@ func TestClientIntegrationSuite(t *testing.T) {
 
 func (s *e2eSuite) SetupSuite() {
 	s.app = app.BuildApp()
-	server, err := testsuite.StartDevServer(context.Background(), testsuite.DevServerOptions{})
+	server, err := testsuite.StartDevServer(context.Background(), testsuite.DevServerOptions{
+		//TODO: remove this flag when update workflow is enabled in the server by default
+		ExtraArgs: []string{"--dynamic-config-value", "frontend.enableUpdateWorkflowExecution=true"},
+	})
 	s.NoError(err)
 	s.ts = server
 }

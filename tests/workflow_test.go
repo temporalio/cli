@@ -76,8 +76,7 @@ func (s *e2eSuite) TestWorkflowUpdate() {
 
 	defer signalWorkflow()
 
-	// update
-	//TODO: uncomment when update is enabled in the server by default, currently there is no way to enable it to test the command
-	//err = s.app.Run([]string{"", "workflow", "update", "--workflow-id", wfr.GetID(), "--run-id", wfr.GetRunID(), "--namespace", "default", "--name", update.FetchAndAdd, "-i", `"1"`, "--wait-policy", "Completed"})
-	//s.NoError(err)
+	// successful update
+	err = s.app.Run([]string{"", "workflow", "update", "--workflow-id", wfr.GetID(), "--run-id", wfr.GetRunID(), "--namespace", "default", "--name", update.FetchAndAdd, "-i", `"1"`})
+	s.NoError(err)
 }
