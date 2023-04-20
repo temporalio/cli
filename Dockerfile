@@ -27,4 +27,5 @@ EXPOSE 7233
 EXPOSE 8233
 
 # Keep the container running.
-ENTRYPOINT ["/temporal", "server", "start-dev", "-n", "default", "--ip" , "0.0.0.0"]
+ENTRYPOINT ["temporal"]
+CMD ["server", "start-dev", "-n", "default", "--ip" , "0.0.0.0"]
