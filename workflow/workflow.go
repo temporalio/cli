@@ -392,9 +392,13 @@ func NewWorkflowCommands() []*cli.Command {
 			Flags: append(common.FlagsForExecution,
 				&cli.StringFlag{
 					Name:     common.FlagUpdateWaitPolicy,
-					Usage:    "Wait policy determines how long the client should wait for a return value from the server:" + strings.Join(mapKeysToArray(updateWaitPolicyMap), ", "),
+					Usage:    "Wait policy determines which status the client should wait to receive from the server:" + strings.Join(mapKeysToArray(updateWaitPolicyMap), ", "),
 					Category: common.CategoryMain,
 					Required: true,
+					// TODO: Remove these after more wait policies has been added
+					Hidden:     true,
+					HasBeenSet: true,
+					Value:      "Completed",
 				},
 				&cli.StringFlag{
 					Name:     common.FlagName,
