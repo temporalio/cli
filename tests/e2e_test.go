@@ -48,6 +48,7 @@ func (s *e2eSuite) SetupSuite() {
 }
 
 func (s *e2eSuite) TearDownSuite() {
+	s.ts.Stop()
 }
 
 func (s *e2eSuite) SetupTest() {
@@ -64,7 +65,6 @@ func (s *e2eSuite) SetupTest() {
 }
 
 func (s *e2eSuite) TearDownTest() {
-	s.ts.Stop()
 }
 
 func (s *e2eSuite) NewWorker(taskQueue string, registerFunc func(registry worker.Registry)) worker.Worker {
