@@ -11,9 +11,9 @@ const (
 	Done        = "done"
 )
 
-func Counter(ctx workflow.Context) (int, error) {
+func Counter(ctx workflow.Context, val int) (int, error) {
 	log := workflow.GetLogger(ctx)
-	counter := 0
+	counter := val
 
 	if err := workflow.SetUpdateHandlerWithOptions(
 		ctx,

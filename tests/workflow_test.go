@@ -7,7 +7,6 @@ import (
 	"math/rand"
 	"os"
 	"strconv"
-	"time"
 
 	"github.com/pborman/uuid"
 	"github.com/temporalio/cli/tests/workflows/helloworld"
@@ -63,11 +62,12 @@ func (s *e2eSuite) TestWorkflowUpdate() {
 	s.NewWorker(testTq, func(r worker.Registry) {
 		r.RegisterWorkflow(update.Counter)
 	})
-
+	randomInt := rand.Intn(100)
 	wfr, err := c.ExecuteWorkflow(
 		context.Background(),
 		sdkclient.StartWorkflowOptions{TaskQueue: testTq},
 		update.Counter,
+		randomInt,
 	)
 	s.NoError(err)
 	signalWorkflow := func() {
@@ -79,16 +79,9 @@ func (s *e2eSuite) TestWorkflowUpdate() {
 	defer signalWorkflow()
 
 	// successful update with wait policy Completed, should show the result
-	rand.Seed(time.Now().UnixNano())
-	randomInt := strconv.Itoa(rand.Intn(100))
-	err = s.app.Run([]string{"", "workflow", "update", "--workflow-id", wfr.GetID(), "--run-id", wfr.GetRunID(), "--name", update.FetchAndAdd, "-i", randomInt})
+	err = s.app.Run([]string{"", "workflow", "update", "--workflow-id", wfr.GetID(), "--run-id", wfr.GetRunID(), "--name", update.FetchAndAdd, "-i", strconv.Itoa(randomInt)})
 	s.NoError(err)
-	s.Contains(s.writer.GetContent(), ": 0")
-
-	// successful update with wait policy Completed, make sure previous val is returned and printed
-	err = s.app.Run([]string{"", "workflow", "update", "--workflow-id", wfr.GetID(), "--run-id", wfr.GetRunID(), "--name", update.FetchAndAdd, "-i", "1"})
-	s.NoError(err)
-	want := fmt.Sprintf(": %s", randomInt)
+	want := fmt.Sprintf(": %v", randomInt)
 	s.Contains(s.writer.GetContent(), want)
 
 	// successful update with wait policy Completed, passing first-execution-run-id
