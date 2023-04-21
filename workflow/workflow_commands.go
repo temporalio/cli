@@ -1452,13 +1452,13 @@ func UpdateWorkflow(c *cli.Context) error {
 	wid := c.String(common.FlagWorkflowID)
 	rid := c.String(common.FlagRunID)
 	name := c.String(common.FlagName)
-	args, err := common.UnmarshalInputsFromCLI(c)
 	first_execution_run_id := c.String(common.FlagUpdateFirstExecutionRunID)
+	args, err := common.UnmarshalInputsFromCLI(c)
 	if err != nil {
 		return err
 	}
-	waitPolicy := c.String(common.FlagUpdateWaitPolicy)
-	if _, ok := updateWaitPolicyMap[waitPolicy]; !ok {
+	waitPolicy, ok := updateWaitPolicyMap[c.String(common.FlagUpdateWaitPolicy)]
+	if !ok {
 		return fmt.Errorf("must specify valid wait policy: %v", strings.Join(mapKeysToArray(updateWaitPolicyMap), ", "))
 	}
 	sdk, err := client.GetSDKClient(c)
@@ -1468,7 +1468,7 @@ func UpdateWorkflow(c *cli.Context) error {
 	ctx, cancel := common.NewContext(c)
 	defer cancel()
 
-	_, err = sdk.UpdateWorkflowWithOptions(ctx, &sdkclient.UpdateWorkflowWithOptionsRequest{
+	workflowUpdateHandle, err := sdk.UpdateWorkflowWithOptions(ctx, &sdkclient.UpdateWorkflowWithOptionsRequest{
 		WorkflowID:          wid,
 		RunID:               rid,
 		UpdateName:          name,
@@ -1482,7 +1482,22 @@ func UpdateWorkflow(c *cli.Context) error {
 		return fmt.Errorf("unable to update workflow: %w", err)
 	}
 
-	fmt.Println(color.Green(c, "update workflow succeeded"))
+	switch waitPolicy {
+	case enumspb.UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_COMPLETED:
+		var valuePtr interface{}
+		err = workflowUpdateHandle.Get(ctx, &valuePtr)
+		if err != nil {
+			return fmt.Errorf("unable to update workflow: %w", err)
+		}
+		result := map[string]interface{}{
+			"Name":     name,
+			"UpdateID": workflowUpdateHandle.UpdateID(),
+			"Result":   valuePtr,
+		}
+
+		fmt.Println(color.Green(c, "update workflow succeeded:"))
+		common.PrettyPrintJSONObject(c, result)
+	}
 	return nil
 }
 
