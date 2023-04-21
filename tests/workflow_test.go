@@ -2,11 +2,14 @@ package tests
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"os"
+	"strconv"
+	"time"
 
 	"github.com/pborman/uuid"
-	"github.com/temporalio/cli/app"
 	"github.com/temporalio/cli/tests/workflows/helloworld"
 	"github.com/temporalio/cli/tests/workflows/update"
 	sdkclient "go.temporal.io/sdk/client"
@@ -55,7 +58,6 @@ func (s *e2eSuite) TestWorkflowShow_ReplayableHistory() {
 }
 
 func (s *e2eSuite) TestWorkflowUpdate() {
-	s.app = app.BuildApp()
 	c := s.ts.Client()
 
 	s.NewWorker(testTq, func(r worker.Registry) {
@@ -76,7 +78,29 @@ func (s *e2eSuite) TestWorkflowUpdate() {
 
 	defer signalWorkflow()
 
-	// successful update
-	err = s.app.Run([]string{"", "workflow", "update", "--workflow-id", wfr.GetID(), "--run-id", wfr.GetRunID(), "--namespace", "default", "--name", update.FetchAndAdd, "-i", `"1"`})
+	// successful update with wait policy Completed, should show the result
+	rand.Seed(time.Now().UnixNano())
+	randomInt := strconv.Itoa(rand.Intn(100))
+	err = s.app.Run([]string{"", "workflow", "update", "--workflow-id", wfr.GetID(), "--run-id", wfr.GetRunID(), "--name", update.FetchAndAdd, "-i", randomInt})
 	s.NoError(err)
+	s.Contains(s.writer.GetContent(), ": 0")
+
+	// successful update with wait policy Completed, make sure previous val is returned and printed
+	err = s.app.Run([]string{"", "workflow", "update", "--workflow-id", wfr.GetID(), "--run-id", wfr.GetRunID(), "--name", update.FetchAndAdd, "-i", "1"})
+	s.NoError(err)
+	want := fmt.Sprintf(": %s", randomInt)
+	s.Contains(s.writer.GetContent(), want)
+
+	// successful update with wait policy Completed, passing first-execution-run-id
+	err = s.app.Run([]string{"", "workflow", "update", "--workflow-id", wfr.GetID(), "--run-id", wfr.GetRunID(), "--name", update.FetchAndAdd, "-i", "1", "--first-execution-run-id", wfr.GetRunID()})
+	s.NoError(err)
+
+	// update rejected, wrong workflowID
+	err = s.app.Run([]string{"", "workflow", "update", "--workflow-id", "non-existent-ID", "--run-id", wfr.GetRunID(), "--name", update.FetchAndAdd, "-i", "1"})
+	s.Error(err)
+
+	// update rejected, wrong update name
+	err = s.app.Run([]string{"", "workflow", "update", "--workflow-id", wfr.GetID(), "--run-id", wfr.GetRunID(), "--name", "non-existent-name", "-i", "1"})
+	s.Error(err)
+
 }

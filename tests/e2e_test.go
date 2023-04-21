@@ -36,8 +36,12 @@ func TestClientIntegrationSuite(t *testing.T) {
 func (s *e2eSuite) SetupSuite() {
 	s.app = app.BuildApp()
 	server, err := testsuite.StartDevServer(context.Background(), testsuite.DevServerOptions{
-		//TODO: remove this flag when update workflow is enabled in the server by default
-		ExtraArgs: []string{"--dynamic-config-value", "frontend.enableUpdateWorkflowExecution=true"},
+		ExtraArgs: []string{
+			// server logs are too noisy, limit server logs
+			"--log-level", "error",
+			//TODO: remove this flag when update workflow is enabled in the server by default
+			"--dynamic-config-value", "frontend.enableUpdateWorkflowExecution=true",
+		},
 	})
 	s.NoError(err)
 	s.ts = server
@@ -54,6 +58,9 @@ func (s *e2eSuite) SetupTest() {
 	})
 	s.writer = &MemWriter{}
 	s.app.Writer = s.writer
+
+	// noop exiter to prevent the app from exiting mid test
+	cli.OsExiter = func(code int) { return }
 }
 
 func (s *e2eSuite) TearDownTest() {
