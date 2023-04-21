@@ -403,7 +403,11 @@ func NewWorkflowCommands() []*cli.Command {
 				&cli.StringFlag{
 					Name:     common.FlagName,
 					Usage:    common.FlagUpdateHandlerName,
-					Required: true,
+					Category: common.CategoryMain,
+				},
+				&cli.StringFlag{
+					Name:     common.FlagUpdateID,
+					Usage:    common.FlagUpdateIDDefinition,
 					Category: common.CategoryMain,
 				},
 				&cli.StringFlag{

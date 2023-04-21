@@ -120,6 +120,7 @@ var (
 	FlagUnpause                    = "unpause"
 	FlagUpdateWaitPolicy           = "wait-policy"
 	FlagUpdateFirstExecutionRunID  = "first-execution-run-id"
+	FlagUpdateID                   = "update-id"
 	FlagVisibilityArchivalState    = "visibility-archival-state"
 	FlagVisibilityArchivalURI      = "visibility-uri"
 	FlagWorkflowExecutionTimeout   = "execution-timeout"

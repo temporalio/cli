@@ -1452,6 +1452,7 @@ func UpdateWorkflow(c *cli.Context) error {
 	wid := c.String(common.FlagWorkflowID)
 	rid := c.String(common.FlagRunID)
 	name := c.String(common.FlagName)
+	uid := c.String(common.FlagUpdateID)
 	first_execution_run_id := c.String(common.FlagUpdateFirstExecutionRunID)
 	args, err := common.UnmarshalInputsFromCLI(c)
 	if err != nil {
@@ -1461,22 +1462,38 @@ func UpdateWorkflow(c *cli.Context) error {
 	if !ok {
 		return fmt.Errorf("must specify valid wait policy: %v", strings.Join(mapKeysToArray(updateWaitPolicyMap), ", "))
 	}
+	if (len(name) == 0 && len(uid) == 0) || (len(name) > 0 && len(uid) > 0) {
+		return fmt.Errorf("either %v or %v should be provided", color.Yellow(c, "--%v", common.FlagName), color.Yellow(c, "--%v", common.FlagUpdateID))
+	}
+
+	if len(name) > 0 {
+		request := sdkclient.UpdateWorkflowWithOptionsRequest{
+			WorkflowID:          wid,
+			RunID:               rid,
+			UpdateName:          name,
+			Args:                args,
+			FirstExecutionRunID: first_execution_run_id,
+			// TODO: uncomment when waitPolicy is available
+			// waitPolicy:          waitPolicy,
+		}
+		return updateWorkflowHelper(c, &request, waitPolicy)
+	} else {
+		// TODO: implement this when GetWorkflowUpdateHandle is available in SDKClient
+		return fmt.Errorf("Getting update result is not yet implemented")
+	}
+
+}
+
+// TODO: remove waitPolicy after it is available in the request
+func updateWorkflowHelper(c *cli.Context, request *sdkclient.UpdateWorkflowWithOptionsRequest, waitPolicy interface{}) error {
+	ctx, cancel := common.NewContext(c)
+	defer cancel()
 	sdk, err := client.GetSDKClient(c)
 	if err != nil {
 		return err
 	}
-	ctx, cancel := common.NewContext(c)
-	defer cancel()
 
-	workflowUpdateHandle, err := sdk.UpdateWorkflowWithOptions(ctx, &sdkclient.UpdateWorkflowWithOptionsRequest{
-		WorkflowID:          wid,
-		RunID:               rid,
-		UpdateName:          name,
-		Args:                args,
-		FirstExecutionRunID: first_execution_run_id,
-		// TODO: uncomment when waitPolicy is available
-		// waitPolicy:          waitPolicy,
-	})
+	workflowUpdateHandle, err := sdk.UpdateWorkflowWithOptions(ctx, request)
 
 	if err != nil {
 		return fmt.Errorf("unable to update workflow: %w", err)
@@ -1490,7 +1507,7 @@ func UpdateWorkflow(c *cli.Context) error {
 			return fmt.Errorf("unable to update workflow: %w", err)
 		}
 		result := map[string]interface{}{
-			"Name":     name,
+			"Name":     request.UpdateName,
 			"UpdateID": workflowUpdateHandle.UpdateID(),
 			"Result":   valuePtr,
 		}

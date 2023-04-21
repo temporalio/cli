@@ -88,6 +88,10 @@ func (s *e2eSuite) TestWorkflowUpdate() {
 	err = s.app.Run([]string{"", "workflow", "update", "--workflow-id", wfr.GetID(), "--run-id", wfr.GetRunID(), "--name", update.FetchAndAdd, "-i", "1", "--first-execution-run-id", wfr.GetRunID()})
 	s.NoError(err)
 
+	// update rejected, when name or update-id is not available
+	err = s.app.Run([]string{"", "workflow", "update", "--workflow-id", "non-existent-ID", "--run-id", wfr.GetRunID(), "-i", "1"})
+	s.Error(err)
+
 	// update rejected, wrong workflowID
 	err = s.app.Run([]string{"", "workflow", "update", "--workflow-id", "non-existent-ID", "--run-id", wfr.GetRunID(), "--name", update.FetchAndAdd, "-i", "1"})
 	s.Error(err)

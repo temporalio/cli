@@ -60,6 +60,7 @@ const (
 	FlagInputFileSignal            = "Input for the Signal from file. Formatted in JSON."
 	FlagUpdateHandlerName          = "Update handler Name"
 	FlagUpdateHandlerInput         = "Args for the Update handler. Formatted in JSON."
+	FlagUpdateIDDefinition         = "UpdateID to check the result of an update (either UpdateID or Update handler name should be passed)"
 	FlagCancelWorkflow             = "Cancel Workflow Execution with given Workflow Id."
 	FlagWorkflowIDTerminate        = "Terminate Workflow Execution with given Workflow Id."
 	FlagQueryTerminate             = "Terminate Workflow Executions with given List Filter."
