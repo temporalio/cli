@@ -107,6 +107,7 @@ var (
 	FlagTaskQueueAlias             = []string{"t"}
 	FlagTaskQueueType              = "task-queue-type"
 	FlagTimeZone                   = "time-zone"
+	FlagTLS                        = "tls"
 	FlagTLSCaPath                  = "tls-ca-path"
 	FlagTLSCertPath                = "tls-cert-path"
 	FlagTLSDisableHostVerification = "tls-disable-host-verification"
@@ -156,6 +157,12 @@ var SharedFlags = []cli.Flag{
 	&cli.StringSliceFlag{
 		Name:     FlagMetadata,
 		Usage:    FlagMetadataDefinition,
+		Category: CategoryGlobal,
+	},
+	&cli.BoolFlag{
+		Name:     FlagTLS,
+		Usage:    FlagTLSDefinition,
+		EnvVars:  []string{"TEMPORAL_CLI_TLS"},
 		Category: CategoryGlobal,
 	},
 	&cli.StringFlag{
