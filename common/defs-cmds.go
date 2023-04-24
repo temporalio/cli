@@ -64,9 +64,10 @@ const (
 	RemoveDefinition   = "Remove a remote Cluster."
 
 	// Env subcommand definitions
-	GetDefinition    = "Prints environmental properties."
-	SetDefinition    = "Set environmental properties."
-	DeleteDefinition = "Delete an environment or environmental property."
+	ListEnvDefinition = "Prints all environments."
+	GetDefinition     = "Prints environmental properties."
+	SetDefinition     = "Set environmental properties."
+	DeleteDefinition  = "Delete an environment or environmental property."
 
 	// Schedule definitions
 	ScheduleCreateDefinition   = "Create a new Schedule."
@@ -197,7 +198,6 @@ Workflow terminations require a valid [Workflow ID](/concepts/what-is-a-workflow
 
 Use the options listed below to change termination behavior.`
 
-
 const ResetWorkflowUsageText = `The ` + "`" + `temporal workflow reset` + "`" + ` command resets a [Workflow Execution](/concepts/what-is-a-workflow-execution).
 A reset allows the Workflow to resume from a certain point without losing its parameters or [Event History](/concepts/what-is-an-event-history).
 
@@ -313,6 +313,8 @@ const ClusterRemoveUsageText = `The ` + "`" + `temporal operator cluster remove`
 Use the options listed below to change the command's behavior.`
 
 const EnvUsageText = `Environment (or 'env') commands allow the user to configure the properties for the environment in use.`
+
+const EnvListUsageText = `List all environments`
 
 const EnvGetUsageText = `The ` + "`" + `temporal env get` + "`" + ` command prints the environmental properties for the environment in use.
 

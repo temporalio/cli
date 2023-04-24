@@ -19,6 +19,16 @@ var (
 func NewEnvCommands() []*cli.Command {
 	return []*cli.Command{
 		{
+			Name:      "list",
+			Usage:     common.ListEnvDefinition,
+			UsageText: common.EnvListUsageText,
+			Flags:     []cli.Flag{},
+			ArgsUsage: "",
+			Action: func(c *cli.Context) error {
+				return ListEnvs(c)
+			},
+		},
+		{
 			Name:      "get",
 			Usage:     common.GetDefinition,
 			UsageText: common.EnvGetUsageText,
@@ -57,6 +67,21 @@ func Init(c *cli.Context) {
 	for _, c := range c.App.Commands {
 		common.AddBeforeHandler(c, loadEnv)
 	}
+}
+
+func ListEnvs(c *cli.Context) error {
+	type envStruct struct {
+		Name string
+	}
+
+	for k := range ClientConfig.Envs {
+		env := envStruct{Name: k}
+		if ClientConfig.CurrentEnv == k {
+			env.Name = "*" + k
+		}
+		output.PrintItems(c, []interface{}{env}, &output.PrintOptions{})
+	}
+	return nil
 }
 
 func EnvProperty(c *cli.Context) error {
