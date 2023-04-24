@@ -64,7 +64,7 @@ const (
 	RemoveDefinition   = "Remove a remote Cluster."
 
 	// Env subcommand definitions
-	ListEnvDefinition = "Prints all environments."
+	ListEnvDefinition = "Prints all local configuration envs."
 	GetDefinition     = "Prints environmental properties."
 	SetDefinition     = "Set environmental properties."
 	DeleteDefinition  = "Delete an environment or environmental property."

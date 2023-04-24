@@ -22,7 +22,14 @@ func NewEnvCommands() []*cli.Command {
 			Name:      "list",
 			Usage:     common.ListEnvDefinition,
 			UsageText: common.EnvListUsageText,
-			Flags:     []cli.Flag{},
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name:     common.FlagVerbose,
+					Aliases:  common.FlagVerboseAlias,
+					Usage:    "List envs in verbose mode",
+					Category: common.CategoryDisplay,
+				},
+			},
 			ArgsUsage: "",
 			Action: func(c *cli.Context) error {
 				return ListEnvs(c)
@@ -70,16 +77,20 @@ func Init(c *cli.Context) {
 }
 
 func ListEnvs(c *cli.Context) error {
-	type envStruct struct {
-		Name string
-	}
-
-	for k := range ClientConfig.Envs {
-		env := envStruct{Name: k}
-		if ClientConfig.CurrentEnv == k {
-			env.Name = "*" + k
+	printVerbose := c.Bool(common.FlagVerbose)
+	for env := range ClientConfig.Envs {
+		envFlag := env
+		if ClientConfig.CurrentEnv == env {
+			envFlag = env + "*"
 		}
-		output.PrintItems(c, []interface{}{env}, &output.PrintOptions{})
+		fmt.Printf("%s\n", envFlag)
+
+		if printVerbose {
+			err := printEnvProperties(c, env, "")
+			if err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
@@ -97,33 +108,7 @@ func EnvProperty(c *cli.Context) error {
 
 	envName, key := envKey(fullKey)
 
-	type flag struct {
-		Flag  string
-		Value string
-	}
-	var flags []interface{}
-
-	if key == "" {
-		// print all env properties
-
-		env := ClientConfig.Env(envName)
-
-		for k, v := range env {
-			flags = append(flags, flag{Flag: k, Value: v})
-		}
-
-	} else {
-		// print specific env property
-		val, err := ClientConfig.EnvProperty(envName, key)
-		if err != nil {
-			return err
-		}
-
-		flags = append(flags, flag{Flag: key, Value: val})
-	}
-
-	po := &output.PrintOptions{OutputFormat: output.Table}
-	return output.PrintItems(c, flags, po)
+	return printEnvProperties(c, envName, key)
 }
 
 func SetEnvProperty(c *cli.Context) error {
@@ -198,6 +183,36 @@ func envKey(fullKey string) (string, string) {
 	}
 
 	return env, key
+}
+
+func printEnvProperties(c *cli.Context, envName string, key string) error {
+	type flag struct {
+		Flag  string
+		Value string
+	}
+	var flags []interface{}
+
+	if key == "" {
+		// print all env properties
+
+		env := ClientConfig.Env(envName)
+
+		for k, v := range env {
+			flags = append(flags, flag{Flag: k, Value: v})
+		}
+
+	} else {
+		// print specific env property
+		val, err := ClientConfig.EnvProperty(envName, key)
+		if err != nil {
+			return err
+		}
+
+		flags = append(flags, flag{Flag: key, Value: val})
+	}
+
+	po := &output.PrintOptions{OutputFormat: output.Table}
+	return output.PrintItems(c, flags, po)
 }
 
 // loadEnv loads environment options from the config file
