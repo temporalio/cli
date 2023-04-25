@@ -54,9 +54,6 @@ var (
 		"Signal": enumspb.RESET_REAPPLY_TYPE_SIGNAL,
 		"None":   enumspb.RESET_REAPPLY_TYPE_NONE,
 	}
-	updateWaitPolicyMap = map[string]interface{}{
-		"Completed": enumspb.UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_COMPLETED,
-	}
 )
 
 func StartWorkflowBaseArgs(c *cli.Context) (
@@ -1452,40 +1449,23 @@ func UpdateWorkflow(c *cli.Context) error {
 	wid := c.String(common.FlagWorkflowID)
 	rid := c.String(common.FlagRunID)
 	name := c.String(common.FlagName)
-	uid := c.String(common.FlagUpdateID)
 	first_execution_run_id := c.String(common.FlagUpdateFirstExecutionRunID)
 	args, err := common.UnmarshalInputsFromCLI(c)
 	if err != nil {
 		return err
 	}
-	waitPolicy, ok := updateWaitPolicyMap[c.String(common.FlagUpdateWaitPolicy)]
-	if !ok {
-		return fmt.Errorf("must specify valid wait policy: %v", strings.Join(mapKeysToArray(updateWaitPolicyMap), ", "))
+	request := sdkclient.UpdateWorkflowWithOptionsRequest{
+		WorkflowID:          wid,
+		RunID:               rid,
+		UpdateName:          name,
+		Args:                args,
+		FirstExecutionRunID: first_execution_run_id,
 	}
-	if (len(name) == 0 && len(uid) == 0) || (len(name) > 0 && len(uid) > 0) {
-		return fmt.Errorf("either %v or %v should be provided", color.Yellow(c, "--%v", common.FlagName), color.Yellow(c, "--%v", common.FlagUpdateID))
-	}
-
-	if len(name) > 0 {
-		request := sdkclient.UpdateWorkflowWithOptionsRequest{
-			WorkflowID:          wid,
-			RunID:               rid,
-			UpdateName:          name,
-			Args:                args,
-			FirstExecutionRunID: first_execution_run_id,
-			// TODO: uncomment when waitPolicy is available
-			// waitPolicy:          waitPolicy,
-		}
-		return updateWorkflowHelper(c, &request, waitPolicy)
-	} else {
-		// TODO: implement this when GetWorkflowUpdateHandle is available in SDKClient
-		return fmt.Errorf("Getting update result is not yet implemented")
-	}
+	return updateWorkflowHelper(c, &request)
 
 }
 
-// TODO: remove waitPolicy after it is available in the request
-func updateWorkflowHelper(c *cli.Context, request *sdkclient.UpdateWorkflowWithOptionsRequest, waitPolicy interface{}) error {
+func updateWorkflowHelper(c *cli.Context, request *sdkclient.UpdateWorkflowWithOptionsRequest) error {
 	ctx, cancel := common.NewContext(c)
 	defer cancel()
 	sdk, err := client.GetSDKClient(c)
@@ -1499,22 +1479,19 @@ func updateWorkflowHelper(c *cli.Context, request *sdkclient.UpdateWorkflowWithO
 		return fmt.Errorf("unable to update workflow: %w", err)
 	}
 
-	switch waitPolicy {
-	case enumspb.UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_COMPLETED:
-		var valuePtr interface{}
-		err = workflowUpdateHandle.Get(ctx, &valuePtr)
-		if err != nil {
-			return fmt.Errorf("unable to update workflow: %w", err)
-		}
-		result := map[string]interface{}{
-			"Name":     request.UpdateName,
-			"UpdateID": workflowUpdateHandle.UpdateID(),
-			"Result":   valuePtr,
-		}
-
-		fmt.Println(color.Green(c, "update workflow succeeded:"))
-		common.PrettyPrintJSONObject(c, result)
+	var valuePtr interface{}
+	err = workflowUpdateHandle.Get(ctx, &valuePtr)
+	if err != nil {
+		return fmt.Errorf("update workflow failed: %w", err)
 	}
+	result := map[string]interface{}{
+		"Name":     request.UpdateName,
+		"UpdateID": workflowUpdateHandle.UpdateID(),
+		"Result":   valuePtr,
+	}
+
+	fmt.Println(color.Green(c, "update workflow succeeded:"))
+	common.PrettyPrintJSONObject(c, result)
 	return nil
 }
 
