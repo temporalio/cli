@@ -5,11 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/urfave/cli/v2"
-
 	"github.com/temporalio/cli/common"
 	"github.com/temporalio/tctl-kit/pkg/config"
 	"github.com/temporalio/tctl-kit/pkg/output"
+	"github.com/urfave/cli/v2"
 )
 
 var (
@@ -23,6 +22,13 @@ func NewEnvCommands() []*cli.Command {
 			Usage:     common.ListEnvDefinition,
 			UsageText: common.EnvListUsageText,
 			Flags: []cli.Flag{
+				&cli.StringFlag{
+					Name:     output.FlagOutput,
+					Aliases:  common.FlagOutputAlias,
+					Usage:    output.UsageText,
+					Value:    string(output.Table),
+					Category: common.CategoryDisplay,
+				},
 				&cli.BoolFlag{
 					Name:     common.FlagVerbose,
 					Aliases:  common.FlagVerboseAlias,
@@ -76,23 +82,43 @@ func Init(c *cli.Context) {
 	}
 }
 
-func ListEnvs(c *cli.Context) error {
-	printVerbose := c.Bool(common.FlagVerbose)
-	for env := range ClientConfig.Envs {
-		envFlag := env
-		if ClientConfig.CurrentEnv == env {
-			envFlag = env + "*"
-		}
-		fmt.Printf("%s\n", envFlag)
+type Data map[string]string
 
-		if printVerbose {
-			err := printEnvProperties(c, env, "")
-			if err != nil {
-				return err
-			}
-		}
+func (d Data) String() string {
+	var sb strings.Builder
+	for k, v := range d {
+		sb.WriteString(fmt.Sprintf("\n%s=%s", k, v))
 	}
-	return nil
+	return sb.String()
+}
+
+type Env struct {
+	Name string
+	Data Data
+}
+
+func ListEnvs(c *cli.Context) error {
+	envs := make([]interface{}, 0, len(ClientConfig.Envs))
+
+	for name, data := range ClientConfig.Envs {
+		envs = append(envs, Env{Name: name, Data: data})
+	}
+	if c.Bool(common.FlagVerbose) {
+		err := output.PrintItems(c, envs, &output.PrintOptions{
+			OutputFormat: output.Table,
+			Separator:    "",
+			NoHeader:     false,
+			ForceFields:  true,
+			Fields:       []string{"Name", "Data"},
+		})
+		return err
+	} else {
+		err := output.PrintItems(c, envs, &output.PrintOptions{
+			NoHeader: true,
+			Fields:   []string{"Name"},
+		})
+		return err
+	}
 }
 
 func EnvProperty(c *cli.Context) error {
@@ -107,8 +133,33 @@ func EnvProperty(c *cli.Context) error {
 	}
 
 	envName, key := envKey(fullKey)
+	type flag struct {
+		Flag  string
+		Value string
+	}
+	var flags []interface{}
 
-	return printEnvProperties(c, envName, key)
+	if key == "" {
+		// print all env properties
+
+		env := ClientConfig.Env(envName)
+
+		for k, v := range env {
+			flags = append(flags, flag{Flag: k, Value: v})
+		}
+
+	} else {
+		// print specific env property
+		val, err := ClientConfig.EnvProperty(envName, key)
+		if err != nil {
+			return err
+		}
+
+		flags = append(flags, flag{Flag: key, Value: val})
+	}
+
+	po := &output.PrintOptions{OutputFormat: output.Table}
+	return output.PrintItems(c, flags, po)
 }
 
 func SetEnvProperty(c *cli.Context) error {
@@ -183,36 +234,6 @@ func envKey(fullKey string) (string, string) {
 	}
 
 	return env, key
-}
-
-func printEnvProperties(c *cli.Context, envName string, key string) error {
-	type flag struct {
-		Flag  string
-		Value string
-	}
-	var flags []interface{}
-
-	if key == "" {
-		// print all env properties
-
-		env := ClientConfig.Env(envName)
-
-		for k, v := range env {
-			flags = append(flags, flag{Flag: k, Value: v})
-		}
-
-	} else {
-		// print specific env property
-		val, err := ClientConfig.EnvProperty(envName, key)
-		if err != nil {
-			return err
-		}
-
-		flags = append(flags, flag{Flag: key, Value: val})
-	}
-
-	po := &output.PrintOptions{OutputFormat: output.Table}
-	return output.PrintItems(c, flags, po)
 }
 
 // loadEnv loads environment options from the config file
