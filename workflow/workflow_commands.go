@@ -1490,7 +1490,6 @@ func updateWorkflowHelper(c *cli.Context, request *sdkclient.UpdateWorkflowWithO
 		"Result":   valuePtr,
 	}
 
-	fmt.Println(color.Green(c, "update workflow succeeded:"))
 	common.PrettyPrintJSONObject(c, result)
 	return nil
 }
