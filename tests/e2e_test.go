@@ -48,7 +48,9 @@ func (s *e2eSuite) SetupSuite() {
 }
 
 func (s *e2eSuite) TearDownSuite() {
-	s.ts.Stop()
+	err := s.ts.Stop()
+	s.NoError(err)
+
 }
 
 func (s *e2eSuite) SetupTest() {
