@@ -29,8 +29,10 @@ func Counter(ctx workflow.Context, val int) (int, error) {
 		return 0, err
 	}
 
-	_ = workflow.GetSignalChannel(ctx, Done).Receive(ctx, nil)
-	return counter, ctx.Err()
+	if err := workflow.GetSignalChannel(ctx, Done).Receive(ctx, nil); err != nil {
+	    return 0, err
+	}
+	return counter, nil
 }
 
 func nonNegative(ctx workflow.Context, i int) error {
