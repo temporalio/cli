@@ -45,3 +45,9 @@ update-dependencies:
 	@printf $(COLOR) "Update dependencies..."
 	@go get -u -t $(PINNED_DEPENDENCIES) ./...
 	@go mod tidy
+
+lint:
+	@printf $(COLOR) "Run linters..."
+	@golangci-lint run --verbose --timeout 10m --fix=false --new-from-rev=HEAD~ --config=.golangci.yml
+
+
