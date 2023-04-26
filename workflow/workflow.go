@@ -397,14 +397,14 @@ func NewWorkflowCommands() []*cli.Command {
 					Required: true,
 				},
 				&cli.StringFlag{
-					Name:     common.FlagUpdateID,
-					Usage:    common.FlagUpdateIDDefinition,
-					Category: common.CategoryMain,
-				},
-				&cli.StringFlag{
 					Name:     common.FlagInput,
 					Aliases:  common.FlagInputAlias,
 					Usage:    common.FlagUpdateHandlerInput,
+					Category: common.CategoryMain,
+				},
+				&cli.StringFlag{
+					Name:     common.FlagUpdateFirstExecutionRunID,
+					Usage:    "Run update on the last execution in the chain that started with this run ID.",
 					Category: common.CategoryMain,
 				},
 			),

@@ -12,7 +12,6 @@ const (
 )
 
 func Counter(ctx workflow.Context, val int) (int, error) {
-	log := workflow.GetLogger(ctx)
 	counter := val
 
 	if err := workflow.SetUpdateHandlerWithOptions(
@@ -21,6 +20,7 @@ func Counter(ctx workflow.Context, val int) (int, error) {
 		func(ctx workflow.Context, i int) (int, error) {
 			tmp := counter
 			counter += i
+			log := workflow.GetLogger(ctx)
 			log.Info("counter updated", "added", i, "new-value", counter)
 			return tmp, nil
 		},
@@ -29,8 +29,8 @@ func Counter(ctx workflow.Context, val int) (int, error) {
 		return 0, err
 	}
 
-	if err := workflow.GetSignalChannel(ctx, Done).Receive(ctx, nil); err != nil {
-	    return 0, err
+	if ok := workflow.GetSignalChannel(ctx, Done).Receive(ctx, nil); !ok {
+		return 0, fmt.Errorf("Signal Channel %s was closed", Done)
 	}
 	return counter, nil
 }
