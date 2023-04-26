@@ -123,12 +123,12 @@ main() {
         _ext=".zip"
         ;;
     esac
-    
+
     local _archive_path
     _archive_path="${_temp}/temporal_cli_latest${_ext}"
     local _url
     _url="https://temporal.download/cli/archive/latest?platform=${_platform}&arch=${_arch}"
-    
+
     ensure downloader "$_url" "$_archive_path" "$_arch"
     ensure unzip "$_archive_path" "$_temp"
     local _dir
@@ -205,6 +205,7 @@ get_platform() {
 }
 
 say() {
+    _ansi_escapes_are_valid="${_ansi_escapes_are_valid:-false}"
     if $_ansi_escapes_are_valid; then
         printf "\33[1mtemporal:\33[0m %s\n" "$1"
     else
