@@ -1449,7 +1449,7 @@ func UpdateWorkflow(c *cli.Context) error {
 	wid := c.String(common.FlagWorkflowID)
 	rid := c.String(common.FlagRunID)
 	name := c.String(common.FlagName)
-	first_execution_run_id := c.String(common.FlagUpdateFirstExecutionRunID)
+	firstExecutionRunID := c.String(common.FlagUpdateFirstExecutionRunID)
 	args, err := common.UnmarshalInputsFromCLI(c)
 	if err != nil {
 		return err
@@ -1459,7 +1459,7 @@ func UpdateWorkflow(c *cli.Context) error {
 		RunID:               rid,
 		UpdateName:          name,
 		Args:                args,
-		FirstExecutionRunID: first_execution_run_id,
+		FirstExecutionRunID: firstExecutionRunID,
 	}
 	return updateWorkflowHelper(c, &request)
 
