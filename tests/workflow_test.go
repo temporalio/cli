@@ -90,17 +90,14 @@ func (s *e2eSuite) TestWorkflowUpdate() {
 
 	// update rejected, when name is not available
 	err = s.app.Run([]string{"", "workflow", "update", "--workflow-id", "non-existent-ID", "--run-id", wfr.GetRunID(), "-i", "1"})
-	s.Error(err)
 	s.ErrorContains(err, "Required flag \"name\" not set")
 
 	// update rejected, wrong workflowID
 	err = s.app.Run([]string{"", "workflow", "update", "--workflow-id", "non-existent-ID", "--run-id", wfr.GetRunID(), "--name", update.FetchAndAdd, "-i", "1"})
-	s.Error(err)
 	s.ErrorContains(err, "update workflow failed")
 
 	// update rejected, wrong update name
 	err = s.app.Run([]string{"", "workflow", "update", "--workflow-id", wfr.GetID(), "--run-id", wfr.GetRunID(), "--name", "non-existent-name", "-i", "1"})
-	s.Error(err)
 	s.ErrorContains(err, "update workflow failed: unknown update")
 
 }
