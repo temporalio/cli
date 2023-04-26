@@ -31,9 +31,13 @@ package server
 import (
 	uiserver "github.com/temporalio/ui-server/v2/server"
 	uiconfig "github.com/temporalio/ui-server/v2/server/config"
+	"github.com/temporalio/ui-server/v2/server/log"
 	uiserveroptions "github.com/temporalio/ui-server/v2/server/server_options"
 )
 
-func newUIOption(c *uiconfig.Config) (ServerOption, error) {
-	return WithUI(uiserver.NewServer(uiserveroptions.WithConfigProvider(c))), nil
+func newUIOption(c *uiconfig.Config, logger log.Logger) (ServerOption, error) {
+	return WithUI(uiserver.NewServer(
+		uiserveroptions.WithConfigProvider(c),
+		uiserveroptions.WithLogger(logger),
+	)), nil
 }

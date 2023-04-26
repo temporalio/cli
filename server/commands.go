@@ -207,66 +207,6 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 					}
 				}()
 
-				opts := []ServerOption{
-					WithDynamicPorts(),
-					WithFrontendPort(serverPort),
-					WithMetricsPort(metricsPort),
-					WithFrontendIP(ip),
-					WithNamespaces(c.StringSlice(common.FlagNamespace)...),
-					WithSQLitePragmas(pragmas),
-					WithUpstreamOptions(
-						temporal.InterruptOn(interruptChan),
-					),
-					WithBaseConfig(&config.Config{}),
-				}
-
-				if c.IsSet(common.FlagDBPath) {
-					opts = append(opts, WithDatabaseFilePath(c.String(common.FlagDBPath)))
-				}
-
-				if !c.Bool(common.FlagHeadless) {
-					frontendAddr := fmt.Sprintf("%s:%d", ip, serverPort)
-
-					uiBaseCfg := &uiconfig.Config{
-						Host:                uiIP,
-						Port:                uiPort,
-						TemporalGRPCAddress: frontendAddr,
-						EnableUI:            true,
-						EnableOpenAPI:       true,
-						UIAssetPath:         uiAssetPath,
-						Codec: uiconfig.Codec{
-							Endpoint: uiCodecEndpoint,
-						},
-					}
-
-					opt, err := newUIOption(uiBaseCfg)
-					if err != nil {
-						return err
-					}
-
-					if opt != nil {
-						opts = append(opts, opt)
-					}
-				}
-				if c.String(common.FlagDBPath) == "" {
-					opts = append(opts, WithPersistenceDisabled())
-
-					if clusterCfg, err := cliconfig.NewConfig("temporalio", "version-info"); err == nil {
-						defaultEnv := "default"
-						clusterIDKey := "cluster-id"
-
-						clusterID, _ := clusterCfg.EnvProperty(defaultEnv, clusterIDKey)
-
-						if clusterID == "" {
-							// fallback to generating a new cluster Id in case of errors or empty value
-							clusterID = uuid.New()
-							clusterCfg.SetEnvProperty(defaultEnv, clusterIDKey, clusterID)
-						}
-
-						opts = append(opts, WithCustomClusterID(clusterID))
-					}
-				}
-
 				var logger log.Logger
 				switch c.String(common.FlagLogFormat) {
 				case "pretty":
@@ -301,7 +241,68 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 						OutputFile: "",
 					}))
 				}
-				opts = append(opts, WithLogger(logger))
+
+				opts := []ServerOption{
+					WithDynamicPorts(),
+					WithFrontendPort(serverPort),
+					WithMetricsPort(metricsPort),
+					WithFrontendIP(ip),
+					WithNamespaces(c.StringSlice(common.FlagNamespace)...),
+					WithSQLitePragmas(pragmas),
+					WithUpstreamOptions(
+						temporal.InterruptOn(interruptChan),
+					),
+					WithBaseConfig(&config.Config{}),
+					WithLogger(logger),
+				}
+
+				if c.IsSet(common.FlagDBPath) {
+					opts = append(opts, WithDatabaseFilePath(c.String(common.FlagDBPath)))
+				}
+
+				if !c.Bool(common.FlagHeadless) {
+					frontendAddr := fmt.Sprintf("%s:%d", ip, serverPort)
+
+					uiBaseCfg := &uiconfig.Config{
+						Host:                uiIP,
+						Port:                uiPort,
+						TemporalGRPCAddress: frontendAddr,
+						EnableUI:            true,
+						EnableOpenAPI:       true,
+						UIAssetPath:         uiAssetPath,
+						Codec: uiconfig.Codec{
+							Endpoint: uiCodecEndpoint,
+						},
+					}
+
+					loggerAdapter := NewUILoggerAdapter(logger)
+					opt, err := newUIOption(uiBaseCfg, loggerAdapter)
+					if err != nil {
+						return err
+					}
+
+					if opt != nil {
+						opts = append(opts, opt)
+					}
+				}
+				if c.String(common.FlagDBPath) == "" {
+					opts = append(opts, WithPersistenceDisabled())
+
+					if clusterCfg, err := cliconfig.NewConfig("temporalio", "version-info"); err == nil {
+						defaultEnv := "default"
+						clusterIDKey := "cluster-id"
+
+						clusterID, _ := clusterCfg.EnvProperty(defaultEnv, clusterIDKey)
+
+						if clusterID == "" {
+							// fallback to generating a new cluster Id in case of errors or empty value
+							clusterID = uuid.New()
+							clusterCfg.SetEnvProperty(defaultEnv, clusterIDKey, clusterID)
+						}
+
+						opts = append(opts, WithCustomClusterID(clusterID))
+					}
+				}
 
 				configVals, err := getDynamicConfigValues(c.StringSlice(common.FlagDynamicConfigValue))
 				if err != nil {
