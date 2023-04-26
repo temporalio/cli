@@ -5,7 +5,7 @@ const (
 	FlagEnvDefinition            = "Environment to read environmental variables from."
 	FlagAddrDefinition           = "The host and port (formatted as host:port) for the Temporal Frontend Service."
 	FlagNSAliasDefinition        = "Identifies a Namespace in the Temporal Workflow."
-	FlagMetadataDefinition       = "Contains gRPC metadata to send with requests (formatted as key=value). Values must be in a valid JSON format."
+	FlagMetadataDefinition       = "Contains gRPC metadata to send with requests (formatted as key=value)."
 	FlagTLSCertPathDefinition    = "Path to x509 certificate."
 	FlagTLSKeyPathDefinition     = "Path to private certificate key."
 	FlagTLSCaPathDefinition      = "Path to server CA certificate."
