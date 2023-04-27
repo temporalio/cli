@@ -46,30 +46,30 @@ jobs:
       fail-fast: true
       matrix:
         include:
-          # - os: ubuntu-latest
-          #   shell: bash
-          #   install-approach:
-          # - os: ubuntu-latest
-          #   shell: sh
-          #   install-approach:
+          - os: ubuntu-latest
+            shell: bash
+            install-approach:
+          - os: ubuntu-latest
+            shell: sh
+            install-approach:
           - os: ubuntu-latest
             shell: zsh
             install-approach: sudo apt update && sudo apt install -y zsh
-          # - os: ubuntu-latest
-          #   shell: fish
-          #   install-approach: sudo apt update && sudo apt install -y fish
-          # - os: macos-latest
-          #   shell: bash
-          #   install-approach:
-          # - os: macos-latest
-          #   shell: sh
-          #   install-approach:
-          # - os: macos-latest
-          #   shell: zsh
-          #   install-approach: brew update && brew install zsh
-          # - os: macos-latest
-          #   shell: fish
-          #   install-approach: brew update && brew install fish
+          - os: ubuntu-latest
+            shell: fish
+            install-approach: sudo apt update && sudo apt install -y fish
+          - os: macos-latest
+            shell: bash
+            install-approach:
+          - os: macos-latest
+            shell: sh
+            install-approach:
+          - os: macos-latest
+            shell: zsh
+            install-approach: brew update && brew install zsh
+          - os: macos-latest
+            shell: fish
+            install-approach: brew update && brew install fish
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -82,9 +82,6 @@ jobs:
         run: |
           echo ${{ matrix.install-approach }}
           ${{ matrix.install-approach }}
-
-      # - name: Update SHELL env variable
-      #   run: "env SHELL=$(which ${{ matrix.shell }})"
 
       - name: "Run Install Script"
         run: sh -c '${{ matrix.shell }} -c "./install.sh"'
