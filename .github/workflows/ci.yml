@@ -44,7 +44,7 @@ jobs:
 
   test-install:
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
