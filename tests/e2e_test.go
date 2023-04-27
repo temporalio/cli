@@ -33,17 +33,18 @@ func TestClientIntegrationSuite(t *testing.T) {
 	suite.Run(t, new(e2eSuite))
 }
 
-func (s *e2eSuite) SetupSuite() {
+func (s *e2eSuite) SetupTest() {
 	s.app = app.BuildApp()
-	server, err := testsuite.StartDevServer(context.Background(), testsuite.DevServerOptions{})
+	server, err := testsuite.StartDevServer(context.Background(), testsuite.DevServerOptions{
+		ExtraArgs: []string{
+			// server logs are too noisy, limit server logs
+			"--log-level", "error",
+			//TODO: remove this flag when update workflow is enabled in the server by default
+			"--dynamic-config-value", "frontend.enableUpdateWorkflowExecution=true",
+		},
+	})
 	s.NoError(err)
 	s.ts = server
-}
-
-func (s *e2eSuite) TearDownSuite() {
-}
-
-func (s *e2eSuite) SetupTest() {
 	app.SetFactory(&clientFactory{
 		frontendClient: nil,
 		operatorClient: nil,
@@ -51,10 +52,14 @@ func (s *e2eSuite) SetupTest() {
 	})
 	s.writer = &MemWriter{}
 	s.app.Writer = s.writer
+
+	// noop exiter to prevent the app from exiting mid test
+	cli.OsExiter = func(code int) { return }
 }
 
 func (s *e2eSuite) TearDownTest() {
-	s.ts.Stop()
+	err := s.ts.Stop()
+	s.NoError(err)
 }
 
 func (s *e2eSuite) NewWorker(taskQueue string, registerFunc func(registry worker.Registry)) worker.Worker {

@@ -25,6 +25,7 @@ const (
 	DeleteWorkflowDefinition    = "Deletes a Workflow Execution."
 	ResetWorkflowDefinition     = "Resets a Workflow Execution by Event ID or reset type."
 	TraceWorkflowDefinition     = "Trace progress of a Workflow Execution and its children."
+	UpdateWorkflowDefinition    = "Updates a running workflow synchronously."
 
 	// Activity subcommand definitions
 	CompleteActivityDefinition = "Completes an Activity Execution."
@@ -196,7 +197,6 @@ Workflow terminations require a valid [Workflow ID](/concepts/what-is-a-workflow
 ` + "`" + `temporal workflow terminate --workflow-id=meaningful-business-id` + "`" + `
 
 Use the options listed below to change termination behavior.`
-
 
 const ResetWorkflowUsageText = `The ` + "`" + `temporal workflow reset` + "`" + ` command resets a [Workflow Execution](/concepts/what-is-a-workflow-execution).
 A reset allows the Workflow to resume from a certain point without losing its parameters or [Event History](/concepts/what-is-an-event-history).
@@ -544,6 +544,10 @@ const WorkflowDeleteUsageText = `The ` + "`" + `temporal workflow delete` + "`" 
 Use the options listed below to change the command's behavior.`
 
 const WorkflowTraceUsageText = `The ` + "`" + `temporal workflow trace` + "`" + ` command tracks the progress of a [Workflow Execution](/concepts/what-is-a-workflow-execution) and any  [Child Workflows](/concepts/what-is-a-child-workflow-execution) it generates.
+
+Use the options listed below to change the command's behavior.`
+
+const WorkflowUpdateUsageText = `The ` + "`" + `temporal workflow update` + "`" + ` command synchronously updates a running [Workflow Execution](/concepts/what-is-a-workflow-execution).
 
 Use the options listed below to change the command's behavior.`
 
