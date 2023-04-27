@@ -87,4 +87,5 @@ jobs:
       #   run: "env SHELL=$(which ${{ matrix.shell }})"
 
       - name: "Run Install Script"
+        shell: ${{ matrix.shell }}
         run: "./install.sh"
