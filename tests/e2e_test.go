@@ -29,11 +29,7 @@ type (
 	}
 )
 
-func TestClientIntegrationSuite(t *testing.T) {
-	suite.Run(t, new(e2eSuite))
-}
-
-func (s *e2eSuite) SetupTest() {
+func (s *e2eSuite) SetupSuite() {
 	s.app = app.BuildApp()
 	server, err := testsuite.StartDevServer(context.Background(), testsuite.DevServerOptions{
 		ExtraArgs: []string{
@@ -45,6 +41,18 @@ func (s *e2eSuite) SetupTest() {
 	})
 	s.NoError(err)
 	s.ts = server
+}
+
+func (s *e2eSuite) TearDonwSuite() {
+	err := s.ts.Stop()
+	s.NoError(err)
+}
+
+func TestClientIntegrationSuite(t *testing.T) {
+	suite.Run(t, new(e2eSuite))
+}
+
+func (s *e2eSuite) SetupTest() {
 	app.SetFactory(&clientFactory{
 		frontendClient: nil,
 		operatorClient: nil,
@@ -58,8 +66,6 @@ func (s *e2eSuite) SetupTest() {
 }
 
 func (s *e2eSuite) TearDownTest() {
-	err := s.ts.Stop()
-	s.NoError(err)
 }
 
 func (s *e2eSuite) NewWorker(taskQueue string, registerFunc func(registry worker.Registry)) worker.Worker {
