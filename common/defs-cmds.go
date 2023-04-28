@@ -65,7 +65,7 @@ const (
 
 	// Env subcommand definitions
 	ListEnvDefinition = "Print all local configuration envs."
-	GetDefinition     = "Prints environmental properties."
+	GetDefinition     = "Print environmental properties."
 	SetDefinition     = "Set environmental properties."
 	DeleteDefinition  = "Delete an environment or environmental property."
 
