@@ -1445,6 +1445,55 @@ func TraceWorkflow(c *cli.Context) error {
 	return nil
 }
 
+func UpdateWorkflow(c *cli.Context) error {
+	wid := c.String(common.FlagWorkflowID)
+	rid := c.String(common.FlagRunID)
+	name := c.String(common.FlagName)
+	firstExecutionRunID := c.String(common.FlagUpdateFirstExecutionRunID)
+	args, err := common.UnmarshalInputsFromCLI(c)
+	if err != nil {
+		return err
+	}
+	request := sdkclient.UpdateWorkflowWithOptionsRequest{
+		WorkflowID:          wid,
+		RunID:               rid,
+		UpdateName:          name,
+		Args:                args,
+		FirstExecutionRunID: firstExecutionRunID,
+	}
+	return updateWorkflowHelper(c, &request)
+
+}
+
+func updateWorkflowHelper(c *cli.Context, request *sdkclient.UpdateWorkflowWithOptionsRequest) error {
+	ctx, cancel := common.NewContext(c)
+	defer cancel()
+	sdk, err := client.GetSDKClient(c)
+	if err != nil {
+		return err
+	}
+
+	workflowUpdateHandle, err := sdk.UpdateWorkflowWithOptions(ctx, request)
+
+	if err != nil {
+		return fmt.Errorf("unable to update workflow: %w", err)
+	}
+
+	var valuePtr interface{}
+	err = workflowUpdateHandle.Get(ctx, &valuePtr)
+	if err != nil {
+		return fmt.Errorf("update workflow failed: %w", err)
+	}
+	result := map[string]interface{}{
+		"Name":     request.UpdateName,
+		"UpdateID": workflowUpdateHandle.UpdateID(),
+		"Result":   valuePtr,
+	}
+
+	common.PrettyPrintJSONObject(c, result)
+	return nil
+}
+
 // this only works for ANSI terminal, which means remove existing lines won't work if users redirect to file
 // ref: https://en.wikipedia.org/wiki/ANSI_escape_code
 func removePrevious2LinesFromTerminal() {

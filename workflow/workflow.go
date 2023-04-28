@@ -11,26 +11,26 @@ import (
 func NewWorkflowCommands() []*cli.Command {
 	return []*cli.Command{
 		{
-			Name:  "start",
-			Usage: common.StartWorkflowDefinition,
+			Name:      "start",
+			Usage:     common.StartWorkflowDefinition,
 			UsageText: common.StartWorkflowUsageText,
-			Flags: append(common.FlagsForStartWorkflow, common.FlagsForPaginationAndRendering...),
+			Flags:     append(common.FlagsForStartWorkflow, common.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
 				return StartWorkflow(c, false)
 			},
 		},
 		{
-			Name:  "execute",
-			Usage: common.ExecuteWorkflowDefinition,
+			Name:      "execute",
+			Usage:     common.ExecuteWorkflowDefinition,
 			UsageText: common.ExecuteWorkflowUsageText,
-			Flags: append(common.FlagsForStartWorkflow, common.FlagsForPaginationAndRendering...),
+			Flags:     append(common.FlagsForStartWorkflow, common.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
 				return StartWorkflow(c, true)
 			},
 		},
 		{
-			Name:  "describe",
-			Usage: common.DescribeWorkflowDefinition,
+			Name:      "describe",
+			Usage:     common.DescribeWorkflowDefinition,
 			UsageText: common.DescribeWorkflowUsageText,
 			Flags: append(common.FlagsForExecution, []cli.Flag{
 				&cli.BoolFlag{
@@ -49,26 +49,26 @@ func NewWorkflowCommands() []*cli.Command {
 			},
 		},
 		{
-			Name:  "list",
-			Usage: common.ListWorkflowDefinition,
+			Name:      "list",
+			Usage:     common.ListWorkflowDefinition,
 			UsageText: common.ListWorkflowUsageText,
-			Flags: append(common.FlagsForWorkflowFiltering, common.FlagsForPaginationAndRendering...),
+			Flags:     append(common.FlagsForWorkflowFiltering, common.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
 				return ListWorkflow(c)
 			},
 		},
 		{
-			Name:  "show",
-			Usage: common.ShowWorkflowDefinition,
+			Name:      "show",
+			Usage:     common.ShowWorkflowDefinition,
 			UsageText: common.WorkflowShowUsageText,
-			Flags: append(append(common.FlagsForExecution, common.FlagsForShowWorkflow...), common.FlagsForPaginationAndRendering...),
+			Flags:     append(append(common.FlagsForExecution, common.FlagsForShowWorkflow...), common.FlagsForPaginationAndRendering...),
 			Action: func(c *cli.Context) error {
 				return ShowHistory(c)
 			},
 		},
 		{
-			Name:  "query",
-			Usage: common.QueryWorkflowDefinition,
+			Name:      "query",
+			Usage:     common.QueryWorkflowDefinition,
 			UsageText: common.QueryWorkflowUsageText,
 			Flags: append(common.FlagsForStackTraceQuery,
 				&cli.StringFlag{
@@ -83,17 +83,17 @@ func NewWorkflowCommands() []*cli.Command {
 			},
 		},
 		{
-			Name:  "stack",
-			Usage: common.StackWorkflowDefinition,
+			Name:      "stack",
+			Usage:     common.StackWorkflowDefinition,
 			UsageText: common.WorkflowStackUsageText,
-			Flags: common.FlagsForStackTraceQuery,
+			Flags:     common.FlagsForStackTraceQuery,
 			Action: func(c *cli.Context) error {
 				return QueryWorkflowUsingStackTrace(c)
 			},
 		},
 		{
-			Name:  "signal",
-			Usage: common.SignalWorkflowDefinition,
+			Name:      "signal",
+			Usage:     common.SignalWorkflowDefinition,
 			UsageText: common.WorkflowSignalUsageText,
 			Flags: []cli.Flag{
 				&cli.StringFlag{
@@ -148,8 +148,8 @@ func NewWorkflowCommands() []*cli.Command {
 			},
 		},
 		{
-			Name:  "count",
-			Usage: common.CountWorkflowDefinition,
+			Name:      "count",
+			Usage:     common.CountWorkflowDefinition,
 			UsageText: common.WorkflowCountUsageText,
 			Flags: []cli.Flag{
 				&cli.StringFlag{
@@ -164,8 +164,8 @@ func NewWorkflowCommands() []*cli.Command {
 			},
 		},
 		{
-			Name:  "cancel",
-			Usage: common.CancelWorkflowDefinition,
+			Name:      "cancel",
+			Usage:     common.CancelWorkflowDefinition,
 			UsageText: common.CancelWorkflowUsageText,
 			Flags: []cli.Flag{
 				&cli.StringFlag{
@@ -203,8 +203,8 @@ func NewWorkflowCommands() []*cli.Command {
 			},
 		},
 		{
-			Name:  "terminate",
-			Usage: common.TerminateWorkflowDefinition,
+			Name:      "terminate",
+			Usage:     common.TerminateWorkflowDefinition,
 			UsageText: common.TerminateWorkflowUsageText,
 			Flags: []cli.Flag{
 				&cli.StringFlag{
@@ -242,17 +242,17 @@ func NewWorkflowCommands() []*cli.Command {
 			},
 		},
 		{
-			Name:  "delete",
-			Usage: common.DeleteWorkflowDefinition,
+			Name:      "delete",
+			Usage:     common.DeleteWorkflowDefinition,
 			UsageText: common.WorkflowDeleteUsageText,
-			Flags: common.FlagsForExecution,
+			Flags:     common.FlagsForExecution,
 			Action: func(c *cli.Context) error {
 				return DeleteWorkflow(c)
 			},
 		},
 		{
-			Name:  "reset",
-			Usage: common.ResetWorkflowDefinition,
+			Name:      "reset",
+			Usage:     common.ResetWorkflowDefinition,
 			UsageText: common.ResetWorkflowUsageText,
 			Flags: append(common.FlagsForExecution, []cli.Flag{
 				&cli.StringFlag{
@@ -283,8 +283,8 @@ func NewWorkflowCommands() []*cli.Command {
 			},
 		},
 		{
-			Name:  "reset-batch",
-			Usage: "Reset a batch of Workflow Executions by reset type (" + strings.Join(mapKeysToArray(resetTypesMap), "), "),
+			Name:      "reset-batch",
+			Usage:     "Reset a batch of Workflow Executions by reset type (" + strings.Join(mapKeysToArray(resetTypesMap), "), "),
 			UsageText: common.ResetBatchUsageText,
 			Flags: []cli.Flag{
 				&cli.StringFlag{
@@ -331,7 +331,7 @@ func NewWorkflowCommands() []*cli.Command {
 					// TODO https://github.com/uber/cadence/issues/2930
 					// The right way to prevent needs server side implementation .
 					// This client side is only best effort
-					Usage:   common.FlagSkipBaseDefinition,
+					Usage:    common.FlagSkipBaseDefinition,
 					Category: common.CategoryMain,
 				},
 				&cli.BoolFlag{
@@ -356,8 +356,8 @@ func NewWorkflowCommands() []*cli.Command {
 			},
 		},
 		{
-			Name:  "trace",
-			Usage: common.TraceWorkflowDefinition,
+			Name:      "trace",
+			Usage:     common.TraceWorkflowDefinition,
 			UsageText: common.WorkflowTraceUsageText,
 			Flags: append(common.FlagsForExecution,
 				&cli.IntFlag{
@@ -384,6 +384,33 @@ func NewWorkflowCommands() []*cli.Command {
 					Category: common.CategoryMain,
 				}),
 			Action: TraceWorkflow,
+		},
+		{
+			Name:      "update",
+			Usage:     common.UpdateWorkflowDefinition,
+			UsageText: common.WorkflowUpdateUsageText,
+			Flags: append(common.FlagsForExecution,
+				&cli.StringFlag{
+					Name:     common.FlagName,
+					Usage:    common.FlagUpdateHandlerName,
+					Category: common.CategoryMain,
+					Required: true,
+				},
+				&cli.StringFlag{
+					Name:     common.FlagInput,
+					Aliases:  common.FlagInputAlias,
+					Usage:    common.FlagUpdateHandlerInput,
+					Category: common.CategoryMain,
+				},
+				&cli.StringFlag{
+					Name:     common.FlagUpdateFirstExecutionRunID,
+					Usage:    "Run update on the last execution in the chain that started with this run ID.",
+					Category: common.CategoryMain,
+				},
+			),
+			Action: func(c *cli.Context) error {
+				return UpdateWorkflow(c)
+			},
 		},
 	}
 }
