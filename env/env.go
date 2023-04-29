@@ -29,12 +29,6 @@ func NewEnvCommands() []*cli.Command {
 					Value:    string(output.Table),
 					Category: common.CategoryDisplay,
 				},
-				&cli.BoolFlag{
-					Name:     common.FlagVerbose,
-					Aliases:  common.FlagVerboseAlias,
-					Usage:    "List envs in verbose mode",
-					Category: common.CategoryDisplay,
-				},
 			},
 			ArgsUsage: "",
 			Action: func(c *cli.Context) error {
@@ -82,43 +76,21 @@ func Init(c *cli.Context) {
 	}
 }
 
-type Data map[string]string
-
-func (d Data) String() string {
-	var sb strings.Builder
-	for k, v := range d {
-		sb.WriteString(fmt.Sprintf("\n%s=%s", k, v))
-	}
-	return sb.String()
-}
-
 type Env struct {
 	Name string
-	Data Data
 }
 
 func ListEnvs(c *cli.Context) error {
 	envs := make([]interface{}, 0, len(ClientConfig.Envs))
 
-	for name, data := range ClientConfig.Envs {
-		envs = append(envs, Env{Name: name, Data: data})
+	for name := range ClientConfig.Envs {
+		envs = append(envs, Env{Name: name})
 	}
-	if c.Bool(common.FlagVerbose) {
-		err := output.PrintItems(c, envs, &output.PrintOptions{
-			OutputFormat: output.Table,
-			Separator:    "",
-			NoHeader:     false,
-			ForceFields:  true,
-			Fields:       []string{"Name", "Data"},
-		})
-		return err
-	} else {
-		err := output.PrintItems(c, envs, &output.PrintOptions{
-			NoHeader: true,
-			Fields:   []string{"Name"},
-		})
-		return err
-	}
+
+	return output.PrintItems(c, envs, &output.PrintOptions{
+		NoHeader: true,
+		Fields:   []string{"Name"},
+	})
 }
 
 func EnvProperty(c *cli.Context) error {

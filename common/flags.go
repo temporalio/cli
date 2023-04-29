@@ -118,8 +118,6 @@ var (
 	FlagUICodecEndpoint            = "ui-codec-endpoint"
 	FlagUIPort                     = "ui-port"
 	FlagUnpause                    = "unpause"
-	FlagVerbose                    = "verbose"
-	FlagVerboseAlias               = []string{"v"}
 	FlagVisibilityArchivalState    = "visibility-archival-state"
 	FlagVisibilityArchivalURI      = "visibility-uri"
 	FlagWorkflowExecutionTimeout   = "execution-timeout"
