@@ -131,10 +131,11 @@ func RemoveSearchAttributes(c *cli.Context) error {
 	}
 
 	promptMsg := fmt.Sprintf(
-		"You are about to remove search attributes %s. Continue? Y/N",
+		"You are about to remove search attributes %s. Continue? y/N",
 		color.Yellow(c, "%v", names),
 	)
 	if !common.PromptYes(promptMsg, c.Bool(common.FlagYes)) {
+		fmt.Println(color.Green(c, "Operation canceled"))
 		return nil
 	}
 
