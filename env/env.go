@@ -76,15 +76,11 @@ func Init(c *cli.Context) {
 	}
 }
 
-type Env struct {
-	Name string
-}
-
 func ListEnvs(c *cli.Context) error {
 	envs := make([]interface{}, 0, len(ClientConfig.Envs))
 
 	for name := range ClientConfig.Envs {
-		envs = append(envs, Env{Name: name})
+		envs = append(envs, struct{ Name string }{Name: name})
 	}
 
 	return output.PrintItems(c, envs, &output.PrintOptions{
