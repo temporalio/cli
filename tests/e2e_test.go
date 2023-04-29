@@ -29,6 +29,10 @@ type (
 	}
 )
 
+func TestClientIntegrationSuite(t *testing.T) {
+	suite.Run(t, new(e2eSuite))
+}
+
 func (s *e2eSuite) SetupSuite() {
 	s.app = app.BuildApp()
 	server, err := testsuite.StartDevServer(context.Background(), testsuite.DevServerOptions{
@@ -43,13 +47,9 @@ func (s *e2eSuite) SetupSuite() {
 	s.ts = server
 }
 
-func (s *e2eSuite) TearDonwSuite() {
+func (s *e2eSuite) TearDownSuite() {
 	err := s.ts.Stop()
 	s.NoError(err)
-}
-
-func TestClientIntegrationSuite(t *testing.T) {
-	suite.Run(t, new(e2eSuite))
 }
 
 func (s *e2eSuite) SetupTest() {
