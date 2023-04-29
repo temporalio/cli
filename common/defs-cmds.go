@@ -65,9 +65,10 @@ const (
 	RemoveDefinition   = "Remove a remote Cluster."
 
 	// Env subcommand definitions
-	GetDefinition    = "Prints environmental properties."
-	SetDefinition    = "Set environmental properties."
-	DeleteDefinition = "Delete an environment or environmental property."
+	ListEnvDefinition = "Print all local configuration envs."
+	GetDefinition     = "Print environmental properties."
+	SetDefinition     = "Set environmental properties."
+	DeleteDefinition  = "Delete an environment or environmental property."
 
 	// Schedule definitions
 	ScheduleCreateDefinition   = "Create a new Schedule."
@@ -313,6 +314,8 @@ const ClusterRemoveUsageText = `The ` + "`" + `temporal operator cluster remove`
 Use the options listed below to change the command's behavior.`
 
 const EnvUsageText = `Environment (or 'env') commands allow the user to configure the properties for the environment in use.`
+
+const EnvListUsageText = `List all environments`
 
 const EnvGetUsageText = `The ` + "`" + `temporal env get` + "`" + ` command prints the environmental properties for the environment in use.
 

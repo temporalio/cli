@@ -5,11 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/urfave/cli/v2"
-
 	"github.com/temporalio/cli/common"
 	"github.com/temporalio/tctl-kit/pkg/config"
 	"github.com/temporalio/tctl-kit/pkg/output"
+	"github.com/urfave/cli/v2"
 )
 
 var (
@@ -18,6 +17,24 @@ var (
 
 func NewEnvCommands() []*cli.Command {
 	return []*cli.Command{
+		{
+			Name:      "list",
+			Usage:     common.ListEnvDefinition,
+			UsageText: common.EnvListUsageText,
+			Flags: []cli.Flag{
+				&cli.StringFlag{
+					Name:     output.FlagOutput,
+					Aliases:  common.FlagOutputAlias,
+					Usage:    output.UsageText,
+					Value:    string(output.Table),
+					Category: common.CategoryDisplay,
+				},
+			},
+			ArgsUsage: "",
+			Action: func(c *cli.Context) error {
+				return ListEnvs(c)
+			},
+		},
 		{
 			Name:      "get",
 			Usage:     common.GetDefinition,
@@ -59,6 +76,19 @@ func Init(c *cli.Context) {
 	}
 }
 
+func ListEnvs(c *cli.Context) error {
+	envs := make([]interface{}, 0, len(ClientConfig.Envs))
+
+	for name := range ClientConfig.Envs {
+		envs = append(envs, struct{ Name string }{Name: name})
+	}
+
+	return output.PrintItems(c, envs, &output.PrintOptions{
+		NoHeader: true,
+		Fields:   []string{"Name"},
+	})
+}
+
 func EnvProperty(c *cli.Context) error {
 	if c.NArg() != 1 {
 		return errors.New("invalid number of args, expected 1: env property name")
@@ -71,7 +101,6 @@ func EnvProperty(c *cli.Context) error {
 	}
 
 	envName, key := envKey(fullKey)
-
 	type flag struct {
 		Flag  string
 		Value string
