@@ -1,7 +1,11 @@
 package namespace
 
 import (
+	"fmt"
+	"reflect"
+
 	"github.com/temporalio/cli/common"
+	"github.com/temporalio/tctl-kit/pkg/output"
 	"github.com/urfave/cli/v2"
 )
 
@@ -125,6 +129,19 @@ var (
 			Usage:    "Promote local namespace to global namespace",
 			Category: common.CategoryMain,
 		},
+		&cli.StringFlag{
+			Name:     output.FlagOutput,
+			Aliases:  common.FlagOutputAlias,
+			Usage:    output.UsageText,
+			Value:    string(output.Table),
+			Category: common.CategoryDisplay,
+		},
+		&cli.BoolFlag{
+			Name:     common.FlagVerbose,
+			Aliases:  common.FlagVerboseAlias,
+			Usage:    "Print applied namespace changes",
+			Category: common.CategoryDisplay,
+		},
 	}
 
 	describeNamespaceFlags = []cli.Flag{
@@ -135,3 +152,65 @@ var (
 		},
 	}
 )
+
+type mutation struct {
+	Field  string
+	Before interface{}
+	After  interface{}
+}
+
+func compareStructs(a, b interface{}) []mutation {
+	var mutations []mutation
+	va := reflect.ValueOf(a)
+	vb := reflect.ValueOf(b)
+
+	// Dereference pointers if needed
+	if va.Kind() == reflect.Ptr {
+		va = va.Elem()
+	}
+	if vb.Kind() == reflect.Ptr {
+		vb = vb.Elem()
+	}
+
+	// Check if both values are structs
+	if va.Kind() != reflect.Struct || vb.Kind() != reflect.Struct {
+		panic("Input values must be structs or pointers to structs")
+	}
+
+	compareStructsRecursively("", va, vb, &mutations)
+	return mutations
+}
+
+func compareStructsRecursively(prefix string, va, vb reflect.Value, mutations *[]mutation) {
+	for i := 0; i < va.NumField(); i++ {
+		fieldA := va.Field(i)
+		fieldB := vb.Field(i)
+		fieldName := va.Type().Field(i).Name
+
+		// Build the field path
+		if prefix != "" {
+			fieldName = fmt.Sprintf("%s.%s", prefix, fieldName)
+		}
+
+		// Dereference pointers if needed
+		if fieldA.Kind() == reflect.Ptr {
+			fieldA = fieldA.Elem()
+		}
+		if fieldB.Kind() == reflect.Ptr {
+			fieldB = fieldB.Elem()
+		}
+
+		if fieldA.Kind() == reflect.Struct && fieldB.Kind() == reflect.Struct {
+			// Recursively compare nested structures
+			compareStructsRecursively(fieldName, fieldA, fieldB, mutations)
+		} else {
+			if !reflect.DeepEqual(fieldA.Interface(), fieldB.Interface()) {
+				*mutations = append(*mutations, mutation{
+					Field:  fieldName,
+					Before: fieldA.Interface(),
+					After:  fieldB.Interface(),
+				})
+			}
+		}
+	}
+}

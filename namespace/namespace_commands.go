@@ -124,11 +124,23 @@ func UpdateNamespace(c *cli.Context) error {
 		return err
 	}
 
-	client := cliclient.Factory(c.App).FrontendClient(c)
+	sdkclient := cliclient.Factory(c.App).SDKClient(c, ns)
 
 	var updateRequest *workflowservice.UpdateNamespaceRequest
 	ctx, cancel := common.NewContext(c)
 	defer cancel()
+
+	nsBefore, err := sdkclient.WorkflowService().DescribeNamespace(ctx, &workflowservice.DescribeNamespaceRequest{
+		Namespace: ns,
+	})
+	if err != nil {
+		switch err.(type) {
+		case *serviceerror.NamespaceNotFound:
+			return err
+		default:
+			return fmt.Errorf("unable to update namespace: %w", err)
+		}
+	}
 
 	if c.IsSet(common.FlagPromoteNamespace) && c.Bool(common.FlagPromoteNamespace) {
 		fmt.Printf("Will promote local namespace to global namespace for:%s, other flag will be omitted. "+
@@ -148,21 +160,9 @@ func UpdateNamespace(c *cli.Context) error {
 			ReplicationConfig: replicationConfig,
 		}
 	} else {
-		resp, err := client.DescribeNamespace(ctx, &workflowservice.DescribeNamespaceRequest{
-			Namespace: ns,
-		})
-		if err != nil {
-			switch err.(type) {
-			case *serviceerror.NamespaceNotFound:
-				return err
-			default:
-				return fmt.Errorf("namespace update failed: %w", err)
-			}
-		}
-
-		description := resp.NamespaceInfo.GetDescription()
-		ownerEmail := resp.NamespaceInfo.GetOwnerEmail()
-		retention := timestamp.DurationValue(resp.Config.GetWorkflowExecutionRetentionTtl())
+		description := nsBefore.NamespaceInfo.GetDescription()
+		ownerEmail := nsBefore.NamespaceInfo.GetOwnerEmail()
+		retention := timestamp.DurationValue(nsBefore.Config.GetWorkflowExecutionRetentionTtl())
 
 		if c.IsSet(common.FlagDescription) {
 			description = c.String(common.FlagDescription)
@@ -226,7 +226,7 @@ func UpdateNamespace(c *cli.Context) error {
 		}
 	}
 
-	_, err = client.UpdateNamespace(ctx, updateRequest)
+	_, err = sdkclient.WorkflowService().UpdateNamespace(ctx, updateRequest)
 	if err != nil {
 		switch err.(type) {
 		case *serviceerror.NamespaceNotFound:
@@ -235,7 +235,31 @@ func UpdateNamespace(c *cli.Context) error {
 			return fmt.Errorf("namespace update failed: %w", err)
 		}
 	} else {
-		fmt.Printf("Namespace %s successfully updated.\n", ns)
+		_, _ = fmt.Fprintf(c.App.Writer, "Namespace %s update succeeded.\n", ns)
+	}
+
+	nsAfter, err := sdkclient.WorkflowService().DescribeNamespace(ctx, &workflowservice.DescribeNamespaceRequest{
+		Namespace: ns,
+	})
+	if err != nil {
+		return fmt.Errorf("unable to describe namespace after update: %w", err)
+	}
+
+	mutations := compareStructs(nsBefore, nsAfter)
+	if len(mutations) == 0 {
+		_, err = fmt.Fprintln(c.App.Writer, color.Yellow(c, "Warn:"), "No namespace fields are updated. Please ensure namespace argument is passed last.")
+		return err
+	}
+
+	if c.Bool(common.FlagVerbose) {
+		opts := &output.PrintOptions{
+			Fields: []string{"Field", "Before", "After"},
+		}
+		var items []interface{}
+		for _, e := range mutations {
+			items = append(items, e)
+		}
+		return output.PrintItems(c, items, opts)
 	}
 
 	return nil
