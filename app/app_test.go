@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"github.com/temporalio/cli/app"
+	"github.com/temporalio/cli/client"
 	sconfig "github.com/temporalio/cli/server/config"
 	"github.com/urfave/cli/v2"
 	commonpb "go.temporal.io/api/common/v1"
@@ -27,7 +28,6 @@ import (
 	taskqueuepb "go.temporal.io/api/taskqueue/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/api/workflowservicemock/v1"
-	"go.temporal.io/sdk/client"
 	sdkclient "go.temporal.io/sdk/client"
 	sdkmocks "go.temporal.io/sdk/mocks"
 	"go.temporal.io/server/common/primitives/timestamp"
@@ -93,7 +93,7 @@ func (s *cliAppSuite) SetupTest() {
 	s.frontendClient = workflowservicemock.NewMockWorkflowServiceClient(s.mockCtrl)
 	s.operatorClient = operatorservicemock.NewMockOperatorServiceClient(s.mockCtrl)
 	s.sdkClient = &sdkmocks.Client{}
-	app.SetFactory(&clientFactoryMock{
+	client.SetFactory(s.app, &clientFactoryMock{
 		frontendClient: s.frontendClient,
 		operatorClient: s.operatorClient,
 		sdkClient:      s.sdkClient,
@@ -288,7 +288,7 @@ func (s *cliAppSuite) RunWithExitCode(arguments []string) int {
 	return exitCode
 }
 
-func newServerAndClientOpts(port int, customArgs ...string) ([]string, client.Options) {
+func newServerAndClientOpts(port int, customArgs ...string) ([]string, sdkclient.Options) {
 	args := []string{
 		"temporal",
 		"server",
@@ -300,19 +300,19 @@ func newServerAndClientOpts(port int, customArgs ...string) ([]string, client.Op
 		"--port", strconv.Itoa(port),
 	}
 
-	return append(args, customArgs...), client.Options{
+	return append(args, customArgs...), sdkclient.Options{
 		HostPort:  fmt.Sprintf("localhost:%d", port),
 		Namespace: "temporal-system",
 	}
 }
 
-func assertServerHealth(t *testing.T, ctx context.Context, opts client.Options) {
+func assertServerHealth(ctx context.Context, t *testing.T, opts sdkclient.Options) {
 	var (
-		c         client.Client
+		c         sdkclient.Client
 		clientErr error
 	)
 	for i := 0; i < 50; i++ {
-		if c, clientErr = client.Dial(opts); clientErr == nil {
+		if c, clientErr = sdkclient.Dial(opts); clientErr == nil {
 			break
 		}
 		time.Sleep(100 * time.Millisecond)
@@ -390,7 +390,7 @@ func TestCreateDataDirectory_ExistingDirectory(t *testing.T) {
 		}
 	}()
 
-	assertServerHealth(t, ctx, clientOpts)
+	assertServerHealth(ctx, t, clientOpts)
 }
 
 func setupConfigOptions(t *testing.T) string {

@@ -32,7 +32,7 @@ func scheduleBaseArgs(c *cli.Context) (
 	scheduleID string,
 	err error,
 ) {
-	frontendClient = client.CFactory.FrontendClient(c)
+	frontendClient = client.Factory(c.App).FrontendClient(c)
 	namespace, err = common.RequiredFlag(c, common.FlagNamespace)
 	if err != nil {
 		return nil, "", "", err
@@ -542,7 +542,7 @@ func DeleteSchedule(c *cli.Context) error {
 }
 
 func ListSchedules(c *cli.Context) error {
-	frontendClient := client.CFactory.FrontendClient(c)
+	frontendClient := client.Factory(c.App).FrontendClient(c)
 	namespace, err := common.RequiredFlag(c, common.FlagNamespace)
 	if err != nil {
 		return err

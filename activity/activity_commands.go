@@ -31,7 +31,7 @@ func CompleteActivity(c *cli.Context) error {
 	// supports the full DataConverter API.
 	resultPayloads, _ := dataconverter.DefaultDataConverter().ToPayloads(result)
 
-	frontendClient := client.CFactory.FrontendClient(c)
+	frontendClient := client.Factory(c.App).FrontendClient(c)
 	_, err = frontendClient.RespondActivityTaskCompletedById(ctx, &workflowservice.RespondActivityTaskCompletedByIdRequest{
 		Namespace:  namespace,
 		WorkflowId: wid,
@@ -70,7 +70,7 @@ func FailActivity(c *cli.Context) error {
 
 	detailsPayloads, _ := dataconverter.DefaultDataConverter().ToPayloads(detail)
 
-	frontendClient := client.CFactory.FrontendClient(c)
+	frontendClient := client.Factory(c.App).FrontendClient(c)
 	_, err = frontendClient.RespondActivityTaskFailedById(ctx, &workflowservice.RespondActivityTaskFailedByIdRequest{
 		Namespace:  namespace,
 		WorkflowId: wid,

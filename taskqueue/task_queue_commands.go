@@ -44,7 +44,7 @@ func DescribeTaskQueue(c *cli.Context) error {
 
 // ListTaskQueuePartitions gets all the taskqueue partition and host information.
 func ListTaskQueuePartitions(c *cli.Context) error {
-	frontendClient := client.CFactory.FrontendClient(c)
+	frontendClient := client.Factory(c.App).FrontendClient(c)
 	namespace, err := common.RequiredFlag(c, common.FlagNamespace)
 	if err != nil {
 		return err

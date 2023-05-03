@@ -44,16 +44,11 @@ func BuildApp() *cli.App {
 	app.ExitErrHandler = HandleError
 
 	// set builder if not customized
-	if client.CFactory == nil {
-		SetFactory(client.NewClientFactory())
+	if client.Factory(app) == nil {
+		client.SetFactory(app, client.NewClientFactory())
 	}
 
 	return app
-}
-
-// SetFactory is used to set the ClientFactory global
-func SetFactory(factory client.ClientFactory) {
-	client.CFactory = factory
 }
 
 func configureCLI(ctx *cli.Context) error {

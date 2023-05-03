@@ -3,7 +3,7 @@ package cluster
 import (
 	"fmt"
 
-	"github.com/temporalio/cli/client"
+	cliclient "github.com/temporalio/cli/client"
 	"github.com/temporalio/cli/common"
 	"github.com/temporalio/tctl-kit/pkg/color"
 	"github.com/temporalio/tctl-kit/pkg/output"
@@ -21,7 +21,7 @@ const (
 
 // HealthCheck check frontend health.
 func HealthCheck(c *cli.Context) error {
-	healthClient := client.CFactory.HealthClient(c)
+	healthClient := cliclient.Factory(c.App).HealthClient(c)
 	ctx, cancel := common.NewContext(c)
 	defer cancel()
 
@@ -45,7 +45,7 @@ func HealthCheck(c *cli.Context) error {
 }
 
 func DescribeCluster(c *cli.Context) error {
-	client := client.CFactory.FrontendClient(c)
+	client := cliclient.Factory(c.App).FrontendClient(c)
 	ctx, cancel := common.NewContext(c)
 	defer cancel()
 
@@ -62,7 +62,7 @@ func DescribeCluster(c *cli.Context) error {
 }
 
 func DescribeSystem(c *cli.Context) error {
-	client := client.CFactory.FrontendClient(c)
+	client := cliclient.Factory(c.App).FrontendClient(c)
 	ctx, cancel := common.NewContext(c)
 	defer cancel()
 
@@ -79,7 +79,7 @@ func DescribeSystem(c *cli.Context) error {
 }
 
 func UpsertCluster(c *cli.Context) error {
-	client := client.CFactory.OperatorClient(c)
+	client := cliclient.Factory(c.App).OperatorClient(c)
 	ctx, cancel := common.NewContext(c)
 	defer cancel()
 
@@ -98,7 +98,7 @@ func UpsertCluster(c *cli.Context) error {
 }
 
 func ListClusters(c *cli.Context) error {
-	client := client.CFactory.OperatorClient(c)
+	client := cliclient.Factory(c.App).OperatorClient(c)
 
 	paginationFunc := func(npt []byte) ([]interface{}, []byte, error) {
 		var items []interface{}
@@ -133,7 +133,7 @@ func ListClusters(c *cli.Context) error {
 }
 
 func RemoveCluster(c *cli.Context) error {
-	client := client.CFactory.OperatorClient(c)
+	client := cliclient.Factory(c.App).OperatorClient(c)
 	ctx, cancel := common.NewContext(c)
 	defer cancel()
 

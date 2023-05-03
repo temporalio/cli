@@ -33,20 +33,10 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-var (
-	CFactory ClientFactory
-)
+const factoryKey = "clientFactory"
 
 var netClient HttpGetter = &http.Client{
 	Timeout: time.Second * 10,
-}
-
-func GetSDKClient(c *cli.Context) (sdkclient.Client, error) {
-	namespace, err := common.RequiredFlag(c, common.FlagNamespace)
-	if err != nil {
-		return nil, err
-	}
-	return CFactory.SDKClient(c, namespace), nil
 }
 
 // HttpGetter defines http.Client.Get(...) as an interface so we can mock it
@@ -68,24 +58,35 @@ func Init(c *cli.Context) {
 	}
 }
 
-func configureSDK(ctx *cli.Context) error {
-	endpoint := ctx.String(common.FlagCodecEndpoint)
-	if endpoint != "" {
-		dataconverter.SetRemoteEndpoint(
-			endpoint,
-			ctx.String(common.FlagNamespace),
-			ctx.String(common.FlagCodecAuth),
-		)
+// Factory returns a ClientFactory from the app's metadata
+func Factory(app *cli.App) ClientFactory {
+	if app.Metadata == nil {
+		return nil
 	}
 
-	md, err := common.SplitKeyValuePairs(ctx.StringSlice(common.FlagMetadata))
+	if app.Metadata[factoryKey] == nil {
+		return nil
+	}
+
+	return app.Metadata[factoryKey].(ClientFactory)
+}
+
+// SetFactory sets the app's metadata to include a ClientFactory
+func SetFactory(app *cli.App, factory ClientFactory) {
+	if app.Metadata == nil {
+		app.Metadata = make(map[string]interface{})
+	}
+	app.Metadata[factoryKey] = factory
+}
+
+// GetSDKClient is a helper function to get an SDK client from a cli.Context
+func GetSDKClient(c *cli.Context) (sdkclient.Client, error) {
+	namespace, err := common.RequiredFlag(c, common.FlagNamespace)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	headersprovider.SetGRPCHeadersProvider(md)
-
-	return nil
+	return Factory(c.App).SDKClient(c, namespace), nil
 }
 
 type clientFactory struct {
@@ -149,6 +150,26 @@ func (b *clientFactory) HealthClient(c *cli.Context) healthpb.HealthClient {
 	connection, _ := b.createGRPCConnection(c)
 
 	return healthpb.NewHealthClient(connection)
+}
+
+func configureSDK(ctx *cli.Context) error {
+	endpoint := ctx.String(common.FlagCodecEndpoint)
+	if endpoint != "" {
+		dataconverter.SetRemoteEndpoint(
+			endpoint,
+			ctx.String(common.FlagNamespace),
+			ctx.String(common.FlagCodecAuth),
+		)
+	}
+
+	md, err := common.SplitKeyValuePairs(ctx.StringSlice(common.FlagMetadata))
+	if err != nil {
+		return err
+	}
+
+	headersprovider.SetGRPCHeadersProvider(md)
+
+	return nil
 }
 
 func headersProviderInterceptor(headersProvider headersprovider.HeadersProvider) grpc.UnaryClientInterceptor {
