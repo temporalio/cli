@@ -15,7 +15,7 @@ import (
 	"github.com/olekukonko/tablewriter"
 	"github.com/pborman/uuid"
 	"github.com/temporalio/cli/batch"
-	"github.com/temporalio/cli/client"
+	cliclient "github.com/temporalio/cli/client"
 	"github.com/temporalio/cli/common"
 	"github.com/temporalio/cli/common/stringify"
 	"github.com/temporalio/cli/dataconverter"
@@ -80,7 +80,7 @@ func StartWorkflowBaseArgs(c *cli.Context) (
 
 // StartWorkflow starts a new workflow execution and optionally prints progress
 func StartWorkflow(c *cli.Context, printProgress bool) error {
-	sdkClient, err := client.GetSDKClient(c)
+	sdkClient, err := cliclient.GetSDKClient(c)
 	if err != nil {
 		return err
 	}
@@ -281,7 +281,7 @@ func printWorkflowProgress(c *cli.Context, wid, rid string, watch bool) error {
 	}
 
 	var maxFieldLength = c.Int(common.FlagMaxFieldLength)
-	sdkClient, err := client.GetSDKClient(c)
+	sdkClient, err := cliclient.GetSDKClient(c)
 	if err != nil {
 		return err
 	}
@@ -381,7 +381,7 @@ func TerminateWorkflow(c *cli.Context) error {
 
 // TerminateWorkflow terminates a workflow execution
 func terminateWorkflow(c *cli.Context) error {
-	sdkClient, err := client.GetSDKClient(c)
+	sdkClient, err := cliclient.GetSDKClient(c)
 	if err != nil {
 		return err
 	}
@@ -414,7 +414,7 @@ func DeleteWorkflow(c *cli.Context) error {
 	wid := c.String(common.FlagWorkflowID)
 	rid := c.String(common.FlagRunID)
 
-	client := client.CFactory.FrontendClient(c)
+	client := cliclient.Factory(c.App).FrontendClient(c)
 	ctx, cancel := common.NewContext(c)
 	defer cancel()
 	_, err = client.DeleteWorkflowExecution(ctx, &workflowservice.DeleteWorkflowExecutionRequest{
@@ -444,7 +444,7 @@ func CancelWorkflow(c *cli.Context) error {
 
 // cancelWorkflow cancels a workflow execution
 func cancelWorkflow(c *cli.Context) error {
-	sdkClient, err := client.GetSDKClient(c)
+	sdkClient, err := cliclient.GetSDKClient(c)
 	if err != nil {
 		return err
 	}
@@ -476,7 +476,7 @@ func SignalWorkflow(c *cli.Context) error {
 
 // signalWorkflow signals a workflow execution
 func signalWorkflow(c *cli.Context) error {
-	serviceClient := client.CFactory.FrontendClient(c)
+	serviceClient := cliclient.Factory(c.App).FrontendClient(c)
 
 	namespace, err := common.RequiredFlag(c, common.FlagNamespace)
 	if err != nil {
@@ -533,7 +533,7 @@ func QueryWorkflowUsingStackTrace(c *cli.Context) error {
 }
 
 func queryWorkflowHelper(c *cli.Context, queryType string) error {
-	serviceClient := client.CFactory.FrontendClient(c)
+	serviceClient := cliclient.Factory(c.App).FrontendClient(c)
 
 	namespace, err := common.RequiredFlag(c, common.FlagNamespace)
 	if err != nil {
@@ -592,7 +592,7 @@ func queryWorkflowHelper(c *cli.Context, queryType string) error {
 func ListWorkflow(c *cli.Context) error {
 	archived := c.Bool(common.FlagArchive)
 
-	sdkClient, err := client.GetSDKClient(c)
+	sdkClient, err := cliclient.GetSDKClient(c)
 	if err != nil {
 		return err
 	}
@@ -626,7 +626,7 @@ func ListWorkflow(c *cli.Context) error {
 
 // CountWorkflow count number of workflows
 func CountWorkflow(c *cli.Context) error {
-	sdkClient, err := client.GetSDKClient(c)
+	sdkClient, err := cliclient.GetSDKClient(c)
 	if err != nil {
 		return err
 	}
@@ -660,7 +660,7 @@ func DescribeWorkflow(c *cli.Context) error {
 	wid := c.String(common.FlagWorkflowID)
 	rid := c.String(common.FlagRunID)
 
-	frontendClient := client.CFactory.FrontendClient(c)
+	frontendClient := cliclient.Factory(c.App).FrontendClient(c)
 	namespace, err := common.RequiredFlag(c, common.FlagNamespace)
 	if err != nil {
 		return err
@@ -865,7 +865,7 @@ func ResetWorkflow(c *cli.Context) error {
 	ctx, cancel := common.NewContext(c)
 	defer cancel()
 
-	frontendClient := client.CFactory.FrontendClient(c)
+	frontendClient := cliclient.Factory(c.App).FrontendClient(c)
 
 	resetBaseRunID := rid
 	workflowTaskFinishID := eventID
@@ -1046,7 +1046,7 @@ func ResetInBatch(c *cli.Context) error {
 			}
 		}
 	} else {
-		sdkClient, err := client.GetSDKClient(c)
+		sdkClient, err := cliclient.GetSDKClient(c)
 		if err != nil {
 			return err
 		}
@@ -1101,7 +1101,7 @@ func doReset(c *cli.Context, namespace, wid, rid string, params batchResetParams
 	ctx, cancel := common.NewContext(c)
 	defer cancel()
 
-	frontendClient := client.CFactory.FrontendClient(c)
+	frontendClient := cliclient.Factory(c.App).FrontendClient(c)
 	resp, err := frontendClient.DescribeWorkflowExecution(ctx, &workflowservice.DescribeWorkflowExecutionRequest{
 		Namespace: namespace,
 		Execution: &commonpb.WorkflowExecution{
@@ -1468,7 +1468,7 @@ func UpdateWorkflow(c *cli.Context) error {
 func updateWorkflowHelper(c *cli.Context, request *sdkclient.UpdateWorkflowWithOptionsRequest) error {
 	ctx, cancel := common.NewContext(c)
 	defer cancel()
-	sdk, err := client.GetSDKClient(c)
+	sdk, err := cliclient.GetSDKClient(c)
 	if err != nil {
 		return err
 	}

@@ -3,7 +3,6 @@ package tests
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"strconv"
@@ -20,12 +19,20 @@ const (
 )
 
 func (s *e2eSuite) TestWorkflowShow_ReplayableHistory() {
-	c := s.ts.Client()
+	s.T().Parallel()
 
-	s.NewWorker(testTq, func(r worker.Registry) {
+	testserver, app, writer := s.setUpTestEnvironment()
+	defer func() {
+		_ = testserver.Stop()
+	}()
+
+	c := testserver.Client()
+
+	w := s.newWorker(testserver, testTq, func(r worker.Registry) {
 		r.RegisterWorkflow(helloworld.Workflow)
 		r.RegisterActivity(helloworld.Activity)
 	})
+	defer w.Stop()
 
 	wfr, err := c.ExecuteWorkflow(
 		context.Background(),
@@ -40,13 +47,12 @@ func (s *e2eSuite) TestWorkflowShow_ReplayableHistory() {
 	s.NoError(err)
 
 	// show history
-	err = s.app.Run([]string{"", "workflow", "show", "--workflow-id", wfr.GetID(), "--run-id", wfr.GetRunID(), "--output", "json"})
+	err = app.Run([]string{"", "workflow", "show", "--workflow-id", wfr.GetID(), "--run-id", wfr.GetRunID(), "--output", "json"})
 	s.NoError(err)
 
 	// save history to file
 	historyFile := uuid.New() + ".json"
-	logs := s.writer.GetContent()
-	err = ioutil.WriteFile(historyFile, []byte(logs), 0644)
+	err = os.WriteFile(historyFile, []byte(writer.GetContent()), 0644)
 	s.NoError(err)
 	defer os.Remove(historyFile)
 
@@ -57,11 +63,20 @@ func (s *e2eSuite) TestWorkflowShow_ReplayableHistory() {
 }
 
 func (s *e2eSuite) TestWorkflowUpdate() {
-	c := s.ts.Client()
+	s.T().Parallel()
 
-	s.NewWorker(testTq, func(r worker.Registry) {
+	testserver, app, writer := s.setUpTestEnvironment()
+	defer func() {
+		_ = testserver.Stop()
+	}()
+
+	c := testserver.Client()
+
+	w := s.newWorker(testserver, testTq, func(r worker.Registry) {
 		r.RegisterWorkflow(update.Counter)
 	})
+	defer w.Stop()
+
 	randomInt := rand.Intn(100)
 	wfr, err := c.ExecuteWorkflow(
 		context.Background(),
@@ -79,25 +94,25 @@ func (s *e2eSuite) TestWorkflowUpdate() {
 	defer signalWorkflow()
 
 	// successful update with wait policy Completed, should show the result
-	err = s.app.Run([]string{"", "workflow", "update", "--workflow-id", wfr.GetID(), "--run-id", wfr.GetRunID(), "--name", update.FetchAndAdd, "-i", strconv.Itoa(randomInt)})
+	err = app.Run([]string{"", "workflow", "update", "--workflow-id", wfr.GetID(), "--run-id", wfr.GetRunID(), "--name", update.FetchAndAdd, "-i", strconv.Itoa(randomInt)})
 	s.NoError(err)
 	want := fmt.Sprintf(": %v", randomInt)
-	s.Contains(s.writer.GetContent(), want)
+	s.Contains(writer.GetContent(), want)
 
 	// successful update with wait policy Completed, passing first-execution-run-id
-	err = s.app.Run([]string{"", "workflow", "update", "--workflow-id", wfr.GetID(), "--run-id", wfr.GetRunID(), "--name", update.FetchAndAdd, "-i", "1", "--first-execution-run-id", wfr.GetRunID()})
+	err = app.Run([]string{"", "workflow", "update", "--workflow-id", wfr.GetID(), "--run-id", wfr.GetRunID(), "--name", update.FetchAndAdd, "-i", "1", "--first-execution-run-id", wfr.GetRunID()})
 	s.NoError(err)
 
 	// update rejected, when name is not available
-	err = s.app.Run([]string{"", "workflow", "update", "--workflow-id", "non-existent-ID", "--run-id", wfr.GetRunID(), "-i", "1"})
+	err = app.Run([]string{"", "workflow", "update", "--workflow-id", "non-existent-ID", "--run-id", wfr.GetRunID(), "-i", "1"})
 	s.ErrorContains(err, "Required flag \"name\" not set")
 
 	// update rejected, wrong workflowID
-	err = s.app.Run([]string{"", "workflow", "update", "--workflow-id", "non-existent-ID", "--run-id", wfr.GetRunID(), "--name", update.FetchAndAdd, "-i", "1"})
+	err = app.Run([]string{"", "workflow", "update", "--workflow-id", "non-existent-ID", "--run-id", wfr.GetRunID(), "--name", update.FetchAndAdd, "-i", "1"})
 	s.ErrorContains(err, "update workflow failed")
 
 	// update rejected, wrong update name
-	err = s.app.Run([]string{"", "workflow", "update", "--workflow-id", wfr.GetID(), "--run-id", wfr.GetRunID(), "--name", "non-existent-name", "-i", "1"})
+	err = app.Run([]string{"", "workflow", "update", "--workflow-id", wfr.GetID(), "--run-id", wfr.GetRunID(), "--name", "non-existent-name", "-i", "1"})
 	s.ErrorContains(err, "update workflow failed: unknown update")
 
 }

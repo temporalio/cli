@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/temporalio/cli/client"
+	cliclient "github.com/temporalio/cli/client"
 	"github.com/temporalio/cli/common"
 	"github.com/temporalio/tctl-kit/pkg/color"
 	"github.com/temporalio/tctl-kit/pkg/output"
@@ -29,7 +29,7 @@ func createNamespace(c *cli.Context) error {
 	description := c.String(common.FlagDescription)
 	ownerEmail := c.String(common.FlagOwnerEmail)
 
-	client := client.CFactory.FrontendClient(c)
+	client := cliclient.Factory(c.App).FrontendClient(c)
 
 	retention := common.DefaultNamespaceRetention
 	if c.IsSet(common.FlagRetention) {
@@ -124,7 +124,7 @@ func UpdateNamespace(c *cli.Context) error {
 		return err
 	}
 
-	client := client.CFactory.FrontendClient(c)
+	client := cliclient.Factory(c.App).FrontendClient(c)
 
 	var updateRequest *workflowservice.UpdateNamespaceRequest
 	ctx, cancel := common.NewContext(c)
@@ -248,7 +248,7 @@ func DescribeNamespace(c *cli.Context) error {
 		return err
 	}
 
-	client := client.CFactory.FrontendClient(c)
+	client := cliclient.Factory(c.App).FrontendClient(c)
 
 	ctx, cancel := common.NewContext(c)
 	defer cancel()
@@ -272,7 +272,7 @@ func DescribeNamespace(c *cli.Context) error {
 
 // ListNamespaces list all namespaces
 func ListNamespaces(c *cli.Context) error {
-	client := client.CFactory.FrontendClient(c)
+	client := cliclient.Factory(c.App).FrontendClient(c)
 
 	namespaces, err := getAllNamespaces(c, client)
 	if err != nil {
@@ -298,7 +298,7 @@ func DeleteNamespace(c *cli.Context) error {
 		return nil
 	}
 
-	client := client.CFactory.OperatorClient(c)
+	client := cliclient.Factory(c.App).OperatorClient(c)
 	ctx, cancel := common.NewContext(c)
 	defer cancel()
 	_, err = client.DeleteNamespace(ctx, &operatorservice.DeleteNamespaceRequest{

@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/pborman/uuid"
-	"github.com/temporalio/cli/client"
+	cliclient "github.com/temporalio/cli/client"
 	"github.com/temporalio/cli/common"
 	"github.com/temporalio/tctl-kit/pkg/color"
 	"github.com/temporalio/tctl-kit/pkg/output"
@@ -24,7 +24,7 @@ func DescribeBatchJob(c *cli.Context) error {
 	}
 	jobID := c.String(common.FlagJobID)
 
-	client := client.CFactory.FrontendClient(c)
+	client := cliclient.Factory(c.App).FrontendClient(c)
 	ctx, cancel := common.NewContext(c)
 	defer cancel()
 	resp, err := client.DescribeBatchOperation(ctx, &workflowservice.DescribeBatchOperationRequest{
@@ -49,7 +49,7 @@ func ListBatchJobs(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	client := client.CFactory.FrontendClient(c)
+	client := cliclient.Factory(c.App).FrontendClient(c)
 
 	paginationFunc := func(npt []byte) ([]interface{}, []byte, error) {
 		var items []interface{}
@@ -144,7 +144,7 @@ func startBatchJob(c *cli.Context, req *workflowservice.StartBatchOperationReque
 	query := c.String(common.FlagQuery)
 	reason := c.String(common.FlagReason)
 
-	sdk := client.CFactory.SDKClient(c, namespace)
+	sdk := cliclient.Factory(c.App).SDKClient(c, namespace)
 	tcCtx, cancel := common.NewContext(c)
 	defer cancel()
 	count, err := sdk.CountWorkflow(tcCtx, &workflowservice.CountWorkflowExecutionsRequest{
@@ -170,7 +170,7 @@ func startBatchJob(c *cli.Context, req *workflowservice.StartBatchOperationReque
 	req.VisibilityQuery = query
 	req.Reason = reason
 
-	client := client.CFactory.FrontendClient(c)
+	client := cliclient.Factory(c.App).FrontendClient(c)
 	ctx, cancel := common.NewContext(c)
 	defer cancel()
 	_, err = client.StartBatchOperation(ctx, req)
@@ -190,7 +190,7 @@ func StopBatchJob(c *cli.Context) error {
 	}
 	jobID := c.String(common.FlagJobID)
 	reason := c.String(common.FlagReason)
-	client := client.CFactory.FrontendClient(c)
+	client := cliclient.Factory(c.App).FrontendClient(c)
 
 	ctx, cancel := common.NewContext(c)
 	defer cancel()

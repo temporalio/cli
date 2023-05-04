@@ -5,7 +5,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/temporalio/cli/client"
+	cliclient "github.com/temporalio/cli/client"
 	"github.com/temporalio/cli/common"
 	"github.com/temporalio/tctl-kit/pkg/color"
 	"github.com/temporalio/tctl-kit/pkg/output"
@@ -25,7 +25,7 @@ func ListSearchAttributes(c *cli.Context) error {
 		return err
 	}
 
-	client := client.CFactory.OperatorClient(c)
+	client := cliclient.Factory(c.App).OperatorClient(c)
 	ctx, cancel := common.NewContext(c)
 	defer cancel()
 
@@ -72,7 +72,7 @@ func AddSearchAttributes(c *cli.Context) error {
 		return err
 	}
 
-	client := client.CFactory.OperatorClient(c)
+	client := cliclient.Factory(c.App).OperatorClient(c)
 
 	ctx, cancel := common.NewContext(c)
 	defer cancel()
@@ -139,7 +139,7 @@ func RemoveSearchAttributes(c *cli.Context) error {
 		return nil
 	}
 
-	client := client.CFactory.OperatorClient(c)
+	client := cliclient.Factory(c.App).OperatorClient(c)
 	ctx, cancel := common.NewContext(c)
 	defer cancel()
 	request := &operatorservice.RemoveSearchAttributesRequest{

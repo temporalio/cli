@@ -9,11 +9,13 @@ import (
 
 	"github.com/stretchr/testify/suite"
 	"github.com/temporalio/cli/app"
+	"github.com/temporalio/cli/client"
 	"github.com/urfave/cli/v2"
 	"go.temporal.io/api/operatorservice/v1"
 	"go.temporal.io/api/workflowservice/v1"
-	"go.temporal.io/sdk/client"
+	sdkclient "go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/testsuite"
+
 	"go.temporal.io/sdk/worker"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 )
@@ -21,20 +23,39 @@ import (
 type (
 	e2eSuite struct {
 		suite.Suite
-		app                  *cli.App
-		ts                   *testsuite.DevServer
-		workers              []worker.Worker
 		defaultWorkerOptions worker.Options
-		writer               *MemWriter
 	}
 )
 
-func TestClientIntegrationSuite(t *testing.T) {
+func TestClientE2ESuite(t *testing.T) {
 	suite.Run(t, new(e2eSuite))
 }
 
 func (s *e2eSuite) SetupSuite() {
-	s.app = app.BuildApp()
+	// noop exiter to prevent the app from exiting mid test
+	cli.OsExiter = func(code int) {}
+}
+
+func (s *e2eSuite) TearDownSuite() {
+}
+
+func (s *e2eSuite) SetupTest() {
+}
+
+func (s *e2eSuite) TearDownTest() {
+}
+
+func (s *e2eSuite) setUpTestEnvironment() (*testsuite.DevServer, *cli.App, *MemWriter) {
+	server, err := s.createServer()
+	s.Require().NoError(err)
+
+	writer := &MemWriter{}
+	tcli := s.createApp(server, writer)
+
+	return server, tcli, writer
+}
+
+func (s *e2eSuite) createServer() (*testsuite.DevServer, error) {
 	server, err := testsuite.StartDevServer(context.Background(), testsuite.DevServerOptions{
 		ExtraArgs: []string{
 			// server logs are too noisy, limit server logs
@@ -43,35 +64,25 @@ func (s *e2eSuite) SetupSuite() {
 			"--dynamic-config-value", "frontend.enableUpdateWorkflowExecution=true",
 		},
 	})
-	s.NoError(err)
-	s.ts = server
+	return server, err
 }
 
-func (s *e2eSuite) TearDownSuite() {
-	err := s.ts.Stop()
-	s.NoError(err)
-}
+func (s *e2eSuite) createApp(server *testsuite.DevServer, writer *MemWriter) *cli.App {
+	tcli := app.BuildApp()
+	tcli.Writer = writer
 
-func (s *e2eSuite) SetupTest() {
-	app.SetFactory(&clientFactory{
+	client.SetFactory(tcli, &clientFactory{
 		frontendClient: nil,
 		operatorClient: nil,
-		sdkClient:      s.ts.Client(),
+		sdkClient:      server.Client(),
 	})
-	s.writer = &MemWriter{}
-	s.app.Writer = s.writer
 
-	// noop exiter to prevent the app from exiting mid test
-	cli.OsExiter = func(code int) { return }
+	return tcli
 }
 
-func (s *e2eSuite) TearDownTest() {
-}
-
-func (s *e2eSuite) NewWorker(taskQueue string, registerFunc func(registry worker.Registry)) worker.Worker {
-	w := worker.New(s.ts.Client(), taskQueue, s.defaultWorkerOptions)
+func (s *e2eSuite) newWorker(server *testsuite.DevServer, taskQueue string, registerFunc func(registry worker.Registry)) worker.Worker {
+	w := worker.New(server.Client(), taskQueue, s.defaultWorkerOptions)
 	registerFunc(w)
-	s.workers = append(s.workers, w)
 
 	err := w.Start()
 	s.NoError(err)
@@ -82,7 +93,7 @@ func (s *e2eSuite) NewWorker(taskQueue string, registerFunc func(registry worker
 type clientFactory struct {
 	frontendClient workflowservice.WorkflowServiceClient
 	operatorClient operatorservice.OperatorServiceClient
-	sdkClient      client.Client
+	sdkClient      sdkclient.Client
 }
 
 func (m *clientFactory) FrontendClient(c *cli.Context) workflowservice.WorkflowServiceClient {
@@ -93,7 +104,7 @@ func (m *clientFactory) OperatorClient(c *cli.Context) operatorservice.OperatorS
 	return m.operatorClient
 }
 
-func (m *clientFactory) SDKClient(c *cli.Context, namespace string) client.Client {
+func (m *clientFactory) SDKClient(c *cli.Context, namespace string) sdkclient.Client {
 	return m.sdkClient
 }
 
@@ -106,20 +117,23 @@ type MemWriter struct {
 	content bytes.Buffer
 }
 
-func (tlw *MemWriter) Write(p []byte) (n int, err error) {
-	return tlw.content.Write(p)
+func (mw *MemWriter) Write(p []byte) (n int, err error) {
+	return mw.content.Write(p)
 }
 
-func (tlw *MemWriter) GetContent() string {
-	return tlw.content.String()
+func (mw *MemWriter) GetContent() string {
+	return mw.content.String()
 }
 
 func TestMemWriter(t *testing.T) {
-	tlw := &MemWriter{}
-	fmt.Fprintln(tlw, "This message is written to the TestLogWriter.")
+	mw := &MemWriter{}
+	_, err := fmt.Fprintln(mw, "This message is written to the MemWriter.")
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	content := tlw.GetContent()
-	expected := "This message is written to the TestLogWriter."
+	expected := "This message is written to the MemWriter."
+	content := mw.GetContent()
 
 	if !strings.Contains(content, expected) {
 		t.Errorf("Expected log content to contain '%s', but it doesn't. Content: '%s'", expected, content)
