@@ -64,11 +64,10 @@ func Factory(app *cli.App) ClientFactory {
 		return nil
 	}
 
-	if app.Metadata[factoryKey] == nil {
-		return nil
+	if clientFactory, ok := app.Metadata[factoryKey]; ok {
+		return clientFactory.(ClientFactory)
 	}
-
-	return app.Metadata[factoryKey].(ClientFactory)
+	return nil
 }
 
 // SetFactory sets the app's metadata to include a ClientFactory

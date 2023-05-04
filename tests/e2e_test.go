@@ -77,9 +77,6 @@ func (s *e2eSuite) createApp(server *testsuite.DevServer, writer *MemWriter) *cl
 		sdkClient:      server.Client(),
 	})
 
-	// noop exiter to prevent the app from exiting mid test
-	cli.OsExiter = func(code int) {}
-
 	return tcli
 }
 
