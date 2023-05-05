@@ -22,7 +22,7 @@ require (
 	go.temporal.io/server v1.20.2
 	go.uber.org/zap v1.24.0
 	golang.org/x/exp v0.0.0-20221126150942-6ab00d035af9
-	google.golang.org/grpc v1.54.0
+	google.golang.org/grpc v1.55.0
 )
 
 require (
