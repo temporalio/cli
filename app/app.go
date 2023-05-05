@@ -67,12 +67,12 @@ func HandleError(c *cli.Context, err error) {
 
 	cli.HandleExitCoder(err)
 
-	_, _ = fmt.Fprintf(c.App.ErrWriter, "%s %+v\n", color.Red(c, "Error:"), err)
+	fmt.Fprintf(os.Stderr, "%s %+v\n", color.Red(c, "Error:"), err)
 	if os.Getenv(common.ShowErrorStackEnv) != `` {
-		_, _ = fmt.Fprintln(c.App.ErrWriter, color.Magenta(c, "Stack trace:"))
+		fmt.Fprintln(os.Stderr, color.Magenta(c, "Stack trace:"))
 		debug.PrintStack()
 	} else {
-		_, _ = fmt.Fprintf(c.App.ErrWriter, "('export %s=1' to see stack traces)\n", common.ShowErrorStackEnv)
+		fmt.Fprintf(os.Stderr, "('export %s=1' to see stack traces)\n", common.ShowErrorStackEnv)
 	}
 
 	cli.OsExiter(1)
