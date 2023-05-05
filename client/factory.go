@@ -5,12 +5,10 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
-	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -231,17 +229,8 @@ func (b *clientFactory) createTLSConfig(c *cli.Context) (*tls.Config, error) {
 	certPath := c.String(common.FlagTLSCertPath)
 	keyPath := c.String(common.FlagTLSKeyPath)
 	caPath := c.String(common.FlagTLSCaPath)
-	disableHostNameVerificationS := c.String(common.FlagTLSDisableHostVerification)
-	disableHostNameVerification, err := strconv.ParseBool(disableHostNameVerificationS)
-	if err != nil {
-		return nil, fmt.Errorf("unable to read TLS disable host verification flag: %w", err)
-	}
-	enableTLSS := c.String(common.FlagTLS)
-	enableTLS, err := strconv.ParseBool(enableTLSS)
-	if err != nil {
-		return nil, fmt.Errorf("unable to read TLS flag: %w", err)
-	}
-
+	disableHostNameVerification := c.Bool(common.FlagTLSDisableHostVerification)
+	enableTLS := c.Bool(common.FlagTLS)
 	serverName := c.String(common.FlagTLSServerName)
 
 	var host string

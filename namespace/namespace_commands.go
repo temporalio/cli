@@ -3,7 +3,6 @@ package namespace
 import (
 	"errors"
 	"fmt"
-	"strconv"
 
 	cliclient "github.com/temporalio/cli/client"
 	"github.com/temporalio/cli/common"
@@ -41,10 +40,7 @@ func createNamespace(c *cli.Context) error {
 
 	var isGlobalNamespace bool
 	if c.IsSet(common.FlagIsGlobalNamespace) {
-		isGlobalNamespace, err = strconv.ParseBool(c.String(common.FlagIsGlobalNamespace))
-		if err != nil {
-			return fmt.Errorf("option %s format is invalid: %w", common.FlagIsGlobalNamespace, err)
-		}
+		isGlobalNamespace = c.Bool(common.FlagIsGlobalNamespace)
 	}
 
 	data := map[string]string{}
