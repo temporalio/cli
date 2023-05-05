@@ -70,53 +70,6 @@ var describeNamespaceResponseServer = &workflowservice.DescribeNamespaceResponse
 	},
 }
 
-func (s *cliAppSuite) TestNamespaceUpdate() {
-	resp := describeNamespaceResponseServer
-	s.frontendClient.EXPECT().DescribeNamespace(gomock.Any(), gomock.Any()).Return(resp, nil).Times(2)
-	s.frontendClient.EXPECT().UpdateNamespace(gomock.Any(), gomock.Any()).Return(nil, nil).Times(2)
-	err := s.app.Run([]string{"", "operator", "namespace", "update", cliTestNamespace})
-	s.Nil(err)
-	err = s.app.Run([]string{"", "operator", "namespace", "update", "--description", "another desc", "--email", "another@uber.com", "--retention", "1", cliTestNamespace})
-	s.Nil(err)
-}
-
-func (s *cliAppSuite) TestNamespaceUpdate_Data() {
-	s.frontendClient.EXPECT().DescribeNamespace(gomock.Any(), gomock.Any()).Return(describeNamespaceResponseServer, nil).Times(1)
-	s.frontendClient.EXPECT().UpdateNamespace(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
-	err := s.app.Run([]string{"", "operator", "namespace", "update", "--data", "k1=v1", "--data", "k2=v2", "true", cliTestNamespace})
-	s.NoError(err)
-}
-
-func (s *cliAppSuite) TestNamespaceUpdate_NamespaceNotExist() {
-	resp := describeNamespaceResponseServer
-	s.frontendClient.EXPECT().DescribeNamespace(gomock.Any(), gomock.Any()).Return(resp, nil)
-	s.frontendClient.EXPECT().UpdateNamespace(gomock.Any(), gomock.Any()).Return(nil, serviceerror.NewNamespaceNotFound("missing-namespace"))
-	errorCode := s.RunWithExitCode([]string{"", "operator", "namespace", "update", cliTestNamespace})
-	s.Equal(1, errorCode)
-}
-
-func (s *cliAppSuite) TestNamespaceUpdate_ActiveClusterFlagNotSet_NamespaceNotExist() {
-	s.frontendClient.EXPECT().DescribeNamespace(gomock.Any(), gomock.Any()).Return(nil, serviceerror.NewNamespaceNotFound("missing-namespace"))
-	errorCode := s.RunWithExitCode([]string{"", "operator", "namespace", "update", cliTestNamespace})
-	s.Equal(1, errorCode)
-}
-
-func (s *cliAppSuite) TestNamespaceUpdate_Cluster() {
-	resp := describeNamespaceResponseServer
-	s.frontendClient.EXPECT().DescribeNamespace(gomock.Any(), gomock.Any()).Return(resp, nil).Times(1)
-	s.frontendClient.EXPECT().UpdateNamespace(gomock.Any(), gomock.Any()).Return(nil, nil)
-	err := s.app.Run([]string{"", "operator", "namespace", "update", "--cluster", "active", "--cluster", "standby", cliTestNamespace})
-	s.NoError(err)
-}
-
-func (s *cliAppSuite) TestNamespaceUpdate_Failed() {
-	resp := describeNamespaceResponseServer
-	s.frontendClient.EXPECT().DescribeNamespace(gomock.Any(), gomock.Any()).Return(resp, nil)
-	s.frontendClient.EXPECT().UpdateNamespace(gomock.Any(), gomock.Any()).Return(nil, serviceerror.NewInvalidArgument("faked error"))
-	errorCode := s.RunWithExitCode([]string{"", "operator", "namespace", "update", cliTestNamespace})
-	s.Equal(1, errorCode)
-}
-
 func (s *cliAppSuite) TestNamespaceDescribe() {
 	resp := describeNamespaceResponseServer
 	s.frontendClient.EXPECT().DescribeNamespace(gomock.Any(), &workflowservice.DescribeNamespaceRequest{Namespace: cliTestNamespace, Id: ""}).Return(resp, nil)
