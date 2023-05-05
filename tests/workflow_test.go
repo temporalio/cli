@@ -94,25 +94,25 @@ func (s *e2eSuite) TestWorkflowUpdate() {
 	defer signalWorkflow()
 
 	// successful update with wait policy Completed, should show the result
-	err = app.Run([]string{"", "workflow", "update", "--workflow-id", wfr.GetID(), "--run-id", wfr.GetRunID(), "--name", update.FetchAndAdd, "-i", strconv.Itoa(randomInt)})
+	err = app.Run([]string{"", "workflow", "update", "--context-timeout", "10", "--workflow-id", wfr.GetID(), "--run-id", wfr.GetRunID(), "--name", update.FetchAndAdd, "-i", strconv.Itoa(randomInt)})
 	s.NoError(err)
 	want := fmt.Sprintf(": %v", randomInt)
 	s.Contains(writer.GetContent(), want)
 
 	// successful update with wait policy Completed, passing first-execution-run-id
-	err = app.Run([]string{"", "workflow", "update", "--workflow-id", wfr.GetID(), "--run-id", wfr.GetRunID(), "--name", update.FetchAndAdd, "-i", "1", "--first-execution-run-id", wfr.GetRunID()})
+	err = app.Run([]string{"", "workflow", "update", "--context-timeout", "10", "--workflow-id", wfr.GetID(), "--run-id", wfr.GetRunID(), "--name", update.FetchAndAdd, "-i", "1", "--first-execution-run-id", wfr.GetRunID()})
 	s.NoError(err)
 
 	// update rejected, when name is not available
-	err = app.Run([]string{"", "workflow", "update", "--workflow-id", "non-existent-ID", "--run-id", wfr.GetRunID(), "-i", "1"})
+	err = app.Run([]string{"", "workflow", "update", "--context-timeout", "10", "--workflow-id", "non-existent-ID", "--run-id", wfr.GetRunID(), "-i", "1"})
 	s.ErrorContains(err, "Required flag \"name\" not set")
 
 	// update rejected, wrong workflowID
-	err = app.Run([]string{"", "workflow", "update", "--workflow-id", "non-existent-ID", "--run-id", wfr.GetRunID(), "--name", update.FetchAndAdd, "-i", "1"})
+	err = app.Run([]string{"", "workflow", "update", "--context-timeout", "10", "--workflow-id", "non-existent-ID", "--run-id", wfr.GetRunID(), "--name", update.FetchAndAdd, "-i", "1"})
 	s.ErrorContains(err, "update workflow failed")
 
 	// update rejected, wrong update name
-	err = app.Run([]string{"", "workflow", "update", "--workflow-id", wfr.GetID(), "--run-id", wfr.GetRunID(), "--name", "non-existent-name", "-i", "1"})
+	err = app.Run([]string{"", "workflow", "update", "--context-timeout", "10", "--workflow-id", wfr.GetID(), "--run-id", wfr.GetRunID(), "--name", "non-existent-name", "-i", "1"})
 	s.ErrorContains(err, "update workflow failed: unknown update")
 
 }

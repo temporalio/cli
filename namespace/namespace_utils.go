@@ -85,7 +85,7 @@ var (
 			Usage:    "Active cluster name",
 			Category: common.CategoryMain,
 		},
-		&cli.StringFlag{
+		&cli.StringSliceFlag{
 			Name:     common.FlagCluster,
 			Usage:    "Cluster name",
 			Category: common.CategoryMain,
@@ -115,15 +115,16 @@ var (
 			Usage:    "Optionally specify visibility archival URI (cannot be changed after first time archival is enabled)",
 			Category: common.CategoryMain,
 		},
-		&cli.StringFlag{
-			Name:     common.FlagReason,
-			Usage:    "Reason for the operation",
-			Category: common.CategoryMain,
-		},
 		&cli.BoolFlag{
 			Name:     common.FlagPromoteNamespace,
 			Usage:    "Promote local namespace to global namespace",
 			Category: common.CategoryMain,
+		},
+		&cli.BoolFlag{
+			Name:     common.FlagVerbose,
+			Aliases:  common.FlagVerboseAlias,
+			Usage:    "Print applied namespace changes",
+			Category: common.CategoryDisplay,
 		},
 	}
 

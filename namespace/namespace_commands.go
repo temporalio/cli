@@ -120,7 +120,7 @@ func UpdateNamespace(c *cli.Context) error {
 		return err
 	}
 
-	client := cliclient.Factory(c.App).FrontendClient(c)
+	sdkclient := cliclient.Factory(c.App).SDKClient(c, ns)
 
 	var updateRequest *workflowservice.UpdateNamespaceRequest
 	ctx, cancel := common.NewContext(c)
@@ -144,7 +144,7 @@ func UpdateNamespace(c *cli.Context) error {
 			ReplicationConfig: replicationConfig,
 		}
 	} else {
-		resp, err := client.DescribeNamespace(ctx, &workflowservice.DescribeNamespaceRequest{
+		resp, err := sdkclient.WorkflowService().DescribeNamespace(ctx, &workflowservice.DescribeNamespaceRequest{
 			Namespace: ns,
 		})
 		if err != nil {
@@ -222,7 +222,19 @@ func UpdateNamespace(c *cli.Context) error {
 		}
 	}
 
-	_, err = client.UpdateNamespace(ctx, updateRequest)
+	if c.Bool(common.FlagVerbose) {
+		opts := &output.PrintOptions{
+			OutputFormat: output.JSON,
+		}
+
+		_, _ = fmt.Fprintln(c.App.Writer, color.Magenta(c, "namespace update request detail:"))
+		if err := output.PrintItems(c, []interface{}{updateRequest}, opts); err != nil {
+			_, _ = fmt.Fprintln(c.App.Writer, color.Yellow(c, "Warn:"), "unable to print namespace update request details:", err)
+		}
+	}
+
+	_, err = sdkclient.WorkflowService().UpdateNamespace(ctx, updateRequest)
+
 	if err != nil {
 		switch err.(type) {
 		case *serviceerror.NamespaceNotFound:
@@ -231,7 +243,7 @@ func UpdateNamespace(c *cli.Context) error {
 			return fmt.Errorf("namespace update failed: %w", err)
 		}
 	} else {
-		fmt.Printf("Namespace %s successfully updated.\n", ns)
+		_, _ = fmt.Fprintf(c.App.Writer, "Namespace %s update succeeded.\n", ns)
 	}
 
 	return nil
