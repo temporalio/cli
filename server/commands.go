@@ -237,6 +237,9 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 						Codec: uiconfig.Codec{
 							Endpoint: uiCodecEndpoint,
 						},
+						CORS: uiconfig.CORS{
+							CookieInsecure: false,
+						},
 					}
 
 					opt, err := newUIOption(uiBaseCfg)
