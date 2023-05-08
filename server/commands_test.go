@@ -59,9 +59,9 @@ func TestGetDynamicConfigValues(t *testing.T) {
 	assertBadVal("foo=bar")
 	assertBadVal("foo=123a")
 
-	assertGoodVals(v{"foo": {123.0}}, "foo=123")
+	assertGoodVals(v{"foo": {123}}, "foo=123")
 	assertGoodVals(
-		v{"foo": {123.0, []interface{}{"123", false}}, "bar": {"baz"}, "qux": {true}},
+		v{"foo": {123, []interface{}{"123", false}}, "bar": {"baz"}, "qux": {true}},
 		"foo=123", `bar="baz"`, "qux=true", `foo=["123", false]`,
 	)
 }

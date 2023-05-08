@@ -27,6 +27,7 @@
 package server
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -353,8 +354,21 @@ func getDynamicConfigValues(input []string) (map[dynamicconfig.Key][]dynamicconf
 		key := dynamicconfig.Key(keyVal[0])
 		// We don't support constraints currently
 		var val dynamicconfig.ConstrainedValue
-		if err := json.Unmarshal([]byte(keyVal[1]), &val.Value); err != nil {
-			return nil, fmt.Errorf("invalid JSON value for key %q: %w", key, err)
+		dec := json.NewDecoder(bytes.NewReader([]byte(keyVal[1])))
+		dec.UseNumber()
+		if err := dec.Decode(&val.Value); err != nil || dec.InputOffset() != int64(len(keyVal[1])) {
+			return nil, fmt.Errorf("invalid JSON value for key %q", key)
+		}
+		if num, ok := val.Value.(json.Number); ok {
+			if v, err := num.Int64(); err == nil {
+				// dynamic config only accepts int type, not int32 nor int64
+				val.Value = int(v)
+			} else if v, err := num.Float64(); err == nil {
+				val.Value = v
+			} else {
+				// should not be possible: decoded json.Number must be parsable to int64 or float64
+				return nil, fmt.Errorf("invalid JSON value for key %q", key)
+			}
 		}
 		ret[key] = append(ret[key], val)
 	}
