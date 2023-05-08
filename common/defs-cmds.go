@@ -95,7 +95,7 @@ There are three types of Batch Jobs:
 	- Terminate: terminates the Workflow Executions specified by the List Filter.
 
 A successfully started Batch job will return a Job ID.
-Use this Job ID to execute other actions on the Batch job. 
+Use this Job ID to execute other actions on the Batch job.
 
 Use the command options below to change the information returned by this command.
 `
@@ -107,7 +107,7 @@ Pass a valid Job ID to return a Batch Job's information.
 
 Use the command options below to change the information returned by this command.`
 
-const ListBatchUsageText = `The ` + "`" + `temporal batch list` + "`" + ` command returns all Batch jobs. 
+const ListBatchUsageText = `The ` + "`" + `temporal batch list` + "`" + ` command returns all Batch jobs.
 Batch Jobs can be returned for an entire Cluster or a single Namespace.
 ` + "`" + `temporal batch list --namespace=MyNamespace` + "`" + `
 
@@ -141,7 +141,7 @@ The command completes when the Workflow Execution completes.
 
 Single quotes('') are used to wrap input as JSON.
 
-` + "`" + `temporal workflow execute --workflow-id=meaningful-business-id --type-MyWorkflow --task-queue-MyTaskQueue --input='{"JSON": "Input"}'` + "`" + `
+` + "`" + `temporal workflow execute --workflow-id=meaningful-business-id --type=MyWorkflow --task-queue-MyTaskQueue --input='{"JSON": "Input"}'` + "`" + `
 
 Use the command options below to change the information returned by this command.`
 
@@ -267,7 +267,7 @@ Use the options listed below to change the behavior of this command.`
 
 const FailActivityUsageText = `The ` + "`" + `temporal activity fail` + "`" + ` command fails an [Activity Execution](/concepts/what-is-an-activity-execution).
 The Activity must be running on a valid [Workflow](/concepts/what-is-a-workflow).
-` + "`" + `temporal fail --workflow-id=meaningful-business-id --activity-id=MyActivity` + "`" + ` 
+` + "`" + `temporal fail --workflow-id=meaningful-business-id --activity-id=MyActivity` + "`" + `
 
 Use the options listed below to change the behavior of this command.`
 
@@ -408,11 +408,11 @@ Newly created Schedules return a Schedule ID to be used in other Schedule comman
 Schedules are passed in the following format:
 ` + "`" + `` + "`" + `` + "`" + `
 temporal schedule create \
-		--sid 'your-schedule-id' \
+		--schedule-id 'your-schedule-id' \
 		--cron '3 11 * * Fri' \
-		--wid 'your-workflow-id' \
-		--tq 'your-task-queue' \
-		--type 'YourWorkflowType' 
+		--workflow-id 'your-workflow-id' 	\
+		--task-queue 'your-task-queue' 		\
+		--workflow-type 'YourWorkflowType'
 ` + "`" + `` + "`" + `` + "`" + `
 
 Any combination of ` + "`" + `--cal` + "`" + `, ` + "`" + `--interval` + "`" + `, and ` + "`" + `--cron` + "`" + ` is supported.
@@ -425,26 +425,26 @@ const ScheduleUpdateUsageText = `The ` + "`" + `temporal schedule update` + "`" 
 Updated Schedules need to follow a certain format:
 ` + "`" + `` + "`" + `` + "`" + `
 temporal schedule update 			\
-		--sid 'your-schedule-id' 	\
+		--schedule-id 'your-schedule-id' 	\
 		--cron '3 11 * * Fri' 		\
-		--wid 'your-workflow-id' 	\
-		--tq 'your-task-queue' 		\
-		--type 'YourWorkflowType' 
+		--workflow-id 'your-workflow-id' 	\
+		--task-queue 'your-task-queue' 		\
+		--workflow-type 'YourWorkflowType'
 ` + "`" + `` + "`" + `` + "`" + `
 
-Updating a Schedule takes the given options and replaces the entire configuration of the Schedule with what's provided. 
+Updating a Schedule takes the given options and replaces the entire configuration of the Schedule with what's provided.
 If you only change one value of the Schedule, be sure to provide the other unchanged fields to prevent them from being overwritten.
 
 Use the command options below to change the information returned by this command.`
 
 const ScheduleToggleUsageText = `The ` + "`" + `temporal schedule toggle` + "`" + ` command can pause and unpause a [Schedule](/concepts/what-is-a-schedule).
 
-Toggling a Schedule requires a reason. 
+Toggling a Schedule requires a reason.
 Use ` + "`" + `--reason` + "`" + ` to note the issue leading to the pause or unpause.
 
 Schedule toggles follow this syntax:
-` + "`" + ` temporal schedule toggle --sid 'your-schedule-id' --pause --reason "paused because the database is down"` + "`" + `
-` + "`" + `temporal schedule toggle --sid 'your-schedule-id' --unpause --reason "the database is back up"` + "`" + `
+` + "`" + ` temporal schedule toggle --schedule-id 'your-schedule-id' --pause --reason "paused because the database is down"` + "`" + `
+` + "`" + `temporal schedule toggle --schedule-id 'your-schedule-id' --unpause --reason "the database is back up"` + "`" + `
 
 Use the command options below to change the information returned by this command.`
 
@@ -453,10 +453,10 @@ By default, this action is subject to the Overlap Policy of the Schedule.
 
 Schedule triggers follow this syntax:
 ` + "`" + `temporal schedule trigger` + "`" + ` can be used to start a Workflow Run immediately.
-` + "`" + `temporal schedule trigger --sid 'your-schedule-id'` + "`" + ` 
+` + "`" + `temporal schedule trigger --schedule-id 'your-schedule-id'` + "`" + `
 
 The Overlap Policy of the Schedule can be overridden as well.
-` + "`" + `temporal schedule trigger --sid 'your-schedule-id' --overlap-policy 'AllowAll'` + "`" + `
+` + "`" + `temporal schedule trigger --schedule-id 'your-schedule-id' --overlap-policy 'AllowAll'` + "`" + `
 
 Use the options provided below to change this command's behavior.`
 
@@ -465,7 +465,7 @@ Backfilling can fill in [Workflow Runs](/concepts/what-is-a-run-id) from a time 
 
 Schedule backfills require a valid Schedule ID, along with the time in which to run the Schedule and a change to the overlap policy.
 ` + "`" + `` + "`" + `` + "`" + `
-temporal schedule backfill --sid 'your-schedule-id' \
+temporal schedule backfill --schedule-id 'your-schedule-id' \
 		--overlap-policy 'BufferAll' 				\
 		--start-time '2022-05-0101T00:00:00Z'		\
 		--end-time '2022-05-31T23:59:59Z'
@@ -476,7 +476,7 @@ Use the options provided below to change this command's behavior.`
 const ScheduleDescribeUsageText = `The ` + "`" + `temporal schedule describe` + "`" + ` command shows the current [Schedule](/concepts/what-is-a-schedule) configuration.
 This command also provides information about past, current, and future [Workflow Runs](/concepts/what-is-a-run-id).
 
-` + "`" + `temporal schedule describe --sid 'your-schedule-id' [command options] ` + "`" + `
+` + "`" + `temporal schedule describe --schedule-id 'your-schedule-id' [command options] ` + "`" + `
 
 Use the options below to change this command's output.`
 
@@ -486,7 +486,7 @@ Deleting a Schedule does not affect any [Workflows](/concepts/what-is-a-workflow
 [Workflow Executions](/concepts/what-is-a-workflow-execution) started by Schedules can be cancelled or terminated.
 In additon, Workflow Executions started by a Schedule can be identified by their [Search Attributes](/concepts/what-is-a-search-attribute), making them targetable by batch command for termination.
 
-` + "`" + `temporal schedule delete --sid 'your-schedule-id' [command options] ` + "`" + `
+` + "`" + `temporal schedule delete --schedule-id 'your-schedule-id' [command options] ` + "`" + `
 
 Use the options below to change the behavior of this command.`
 
@@ -556,7 +556,7 @@ Use the options listed below to change the command's behavior.`
 
 const ServerUsageText = `Server commands allow you to start and manage the [Temporal Server](/concepts/what-is-the-temporal-server) from the command line.
 
-Currently, ` + "`" + `cli` + "`" + ` server functionality extends to starting the Server. 
+Currently, ` + "`" + `cli` + "`" + ` server functionality extends to starting the Server.
 
 Server commands follow this syntax:
 ` + "`" + `temporal server COMMAND` + "`" + `
