@@ -144,19 +144,27 @@ func (s *e2eSuite) TestWorkflowCancel_Batch() {
 	err := app.Run([]string{"", "workflow", "cancel", "--query", "WorkflowId = '1' OR WorkflowId = '2'", "--reason", "test", "--yes", "--namespace", testNamespace})
 	s.NoError(err)
 
-	// verify the job is complete
-	time.Sleep(1 * time.Second)
-	resp, err := c.WorkflowService().ListBatchOperations(context.Background(),
-		&workflowservice.ListBatchOperationsRequest{Namespace: testNamespace})
-	s.NoError(err)
-	s.Equal(1, len(resp.OperationInfo))
-	deleteJob, err := c.WorkflowService().DescribeBatchOperation(context.Background(),
-		&workflowservice.DescribeBatchOperationRequest{
-			JobId:     resp.OperationInfo[0].JobId,
-			Namespace: testNamespace,
-		})
-	s.NoError(err)
-	s.Equal(enums.BATCH_OPERATION_STATE_COMPLETED, deleteJob.State)
+	s.Eventually(func() bool {
+		resp, err := c.WorkflowService().ListBatchOperations(context.Background(),
+			&workflowservice.ListBatchOperationsRequest{Namespace: testNamespace})
+		if err != nil {
+			return false
+		}
+		if len(resp.OperationInfo) == 0 {
+			return false
+		}
+
+		batchJob, err := c.WorkflowService().DescribeBatchOperation(context.Background(),
+			&workflowservice.DescribeBatchOperationRequest{
+				JobId:     resp.OperationInfo[0].JobId,
+				Namespace: testNamespace,
+			})
+		if err != nil {
+			return false
+		}
+
+		return batchJob.State == enums.BATCH_OPERATION_STATE_COMPLETED
+	}, time.Second, 10*time.Second)
 
 	w1 := c.GetWorkflowHistory(context.Background(), "1", "", false, enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
 	s.True(checkForEventType(w1, enums.EVENT_TYPE_WORKFLOW_EXECUTION_CANCEL_REQUESTED), "Workflow 1 should have a cancellation event")
@@ -192,19 +200,27 @@ func (s *e2eSuite) TestWorkflowSignal_Batch() {
 	err := app.Run([]string{"", "workflow", "signal", "--input", "\"testvalue\"", "--name", "test-signal", "--query", "WorkflowId = '1' OR WorkflowId = '2'", "--reason", "test", "--yes", "--namespace", testNamespace})
 	s.NoError(err)
 
-	// verify the job is complete
-	time.Sleep(1 * time.Second)
-	resp, err := c.WorkflowService().ListBatchOperations(context.Background(),
-		&workflowservice.ListBatchOperationsRequest{Namespace: testNamespace})
-	s.NoError(err)
-	s.Equal(1, len(resp.OperationInfo))
-	deleteJob, err := c.WorkflowService().DescribeBatchOperation(context.Background(),
-		&workflowservice.DescribeBatchOperationRequest{
-			JobId:     resp.OperationInfo[0].JobId,
-			Namespace: testNamespace,
-		})
-	s.NoError(err)
-	s.Equal(enums.BATCH_OPERATION_STATE_COMPLETED, deleteJob.State)
+	s.Eventually(func() bool {
+		resp, err := c.WorkflowService().ListBatchOperations(context.Background(),
+			&workflowservice.ListBatchOperationsRequest{Namespace: testNamespace})
+		if err != nil {
+			return false
+		}
+		if len(resp.OperationInfo) == 0 {
+			return false
+		}
+
+		batchJob, err := c.WorkflowService().DescribeBatchOperation(context.Background(),
+			&workflowservice.DescribeBatchOperationRequest{
+				JobId:     resp.OperationInfo[0].JobId,
+				Namespace: testNamespace,
+			})
+		if err != nil {
+			return false
+		}
+
+		return batchJob.State == enums.BATCH_OPERATION_STATE_COMPLETED
+	}, time.Second, 10*time.Second)
 
 	w1 := c.GetWorkflowHistory(context.Background(), "1", "", false, enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
 	s.True(checkForEventType(w1, enums.EVENT_TYPE_WORKFLOW_EXECUTION_SIGNALED), "Workflow 1 should have received a signal")
@@ -240,19 +256,27 @@ func (s *e2eSuite) TestWorkflowTerminate_Batch() {
 	err := app.Run([]string{"", "workflow", "terminate", "--query", "WorkflowId = '1' OR WorkflowId = '2'", "--reason", "test", "--yes", "--namespace", testNamespace})
 	s.NoError(err)
 
-	// verify the job is complete
-	time.Sleep(1 * time.Second)
-	resp, err := c.WorkflowService().ListBatchOperations(context.Background(),
-		&workflowservice.ListBatchOperationsRequest{Namespace: testNamespace})
-	s.NoError(err)
-	s.Equal(1, len(resp.OperationInfo))
-	deleteJob, err := c.WorkflowService().DescribeBatchOperation(context.Background(),
-		&workflowservice.DescribeBatchOperationRequest{
-			JobId:     resp.OperationInfo[0].JobId,
-			Namespace: testNamespace,
-		})
-	s.NoError(err)
-	s.Equal(enums.BATCH_OPERATION_STATE_COMPLETED, deleteJob.State)
+	s.Eventually(func() bool {
+		resp, err := c.WorkflowService().ListBatchOperations(context.Background(),
+			&workflowservice.ListBatchOperationsRequest{Namespace: testNamespace})
+		if err != nil {
+			return false
+		}
+		if len(resp.OperationInfo) == 0 {
+			return false
+		}
+
+		batchJob, err := c.WorkflowService().DescribeBatchOperation(context.Background(),
+			&workflowservice.DescribeBatchOperationRequest{
+				JobId:     resp.OperationInfo[0].JobId,
+				Namespace: testNamespace,
+			})
+		if err != nil {
+			return false
+		}
+
+		return batchJob.State == enums.BATCH_OPERATION_STATE_COMPLETED
+	}, time.Second, 10*time.Second)
 
 	w1, err := c.DescribeWorkflowExecution(context.Background(), "1", "")
 	s.NoError(err)
