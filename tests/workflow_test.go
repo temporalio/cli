@@ -335,6 +335,55 @@ func awaitBatchJob(s *e2eSuite, c sdkclient.Client, ns string) {
 	}, 10*time.Second, time.Second, "cancellation batch job timed out")
 }
 
+func (s *e2eSuite) TestWorkflowDelete_Batch() {
+	s.T().Parallel()
+
+	testserver, app, _ := s.setUpTestEnvironment()
+	defer func() {
+		_ = testserver.Stop()
+	}()
+
+	c := testserver.Client()
+
+	ids := []string{"1", "2", "3"}
+
+	for _, id := range ids {
+		_, err := c.ExecuteWorkflow(
+			context.Background(),
+			sdkclient.StartWorkflowOptions{ID: id, TaskQueue: testTq},
+			"non-existing-workflow-type",
+		)
+		s.NoError(err)
+	}
+
+	err := app.Run([]string{"", "workflow", "delete", "--query", "WorkflowId = '1' OR WorkflowId = '2'", "--reason", "test", "--yes", "--namespace", testNamespace})
+	s.NoError(err)
+
+	// verify the deletion is complete
+	time.Sleep(1 * time.Second)
+	resp, err := c.WorkflowService().ListBatchOperations(context.Background(),
+		&workflowservice.ListBatchOperationsRequest{Namespace: testNamespace})
+	s.NoError(err)
+	s.Equal(1, len(resp.OperationInfo))
+	deleteJob, err := c.WorkflowService().DescribeBatchOperation(context.Background(),
+		&workflowservice.DescribeBatchOperationRequest{
+			JobId:     resp.OperationInfo[0].JobId,
+			Namespace: testNamespace,
+		})
+	s.NoError(err)
+	s.Equal(enums.BATCH_OPERATION_STATE_COMPLETED, deleteJob.State)
+
+	_, err = c.DescribeWorkflowExecution(context.Background(), "1", "")
+	s.Error(err)
+
+	_, err = c.DescribeWorkflowExecution(context.Background(), "2", "")
+	s.Error(err)
+
+	w3, err := c.DescribeWorkflowExecution(context.Background(), "3", "")
+	s.NoError(err)
+	s.Equal(enums.WORKFLOW_EXECUTION_STATUS_RUNNING, w3.WorkflowExecutionInfo.Status)
+}
+
 func checkForEventType(events sdkclient.HistoryEventIterator, eventType enums.EventType) bool {
 	for events.HasNext() {
 		event, err := events.Next()

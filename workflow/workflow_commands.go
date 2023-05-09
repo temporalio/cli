@@ -406,8 +406,17 @@ func terminateWorkflowByID(c *cli.Context) error {
 	return nil
 }
 
-// DeleteWorkflow deletes a workflow execution.
+// DeleteWorkflow deletes workflow executions based on filter parameters
 func DeleteWorkflow(c *cli.Context) error {
+	if c.String(common.FlagQuery) != "" {
+		return batch.BatchDelete(c)
+	} else {
+		return deleteWorkflowByID(c)
+	}
+}
+
+// deleteWorkflowByID deletes a single workflow execution
+func deleteWorkflowByID(c *cli.Context) error {
 	nsName, err := common.RequiredFlag(c, common.FlagNamespace)
 	if err != nil {
 		return err
