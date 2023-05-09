@@ -1,0 +1,23 @@
+{{ define "extras" }}
+{{- if .State.StartTime }}{{ faint "(" }}{{ duration .State.StartTime .State.CloseTime | faint }}
+    {{- if gt (.State.GetAttempt) 1 }}{{ printf ", %d attempts" .State.GetAttempt | faint }}{{end}}
+{{- faint ")"}}{{ end }}
+{{- end }}
+
+{{ define "failure" }}
+{{- with .State.GetFailure }}
+{{- $lines := splitLines .Message }}
+{{- /* Print first error line with title */}}
+{{- indent $.Depth 1 }} {{ red "Failure:" }} {{ index $lines 0 | faint }}
+{{- /* Print other error lines, add extra 4 spaces to indent so it looks like it's part of the failure message */}}
+{{range $line := slice $lines 1 }}
+    {{- indent $.Depth 1 }}     {{ faint $line }}
+{{ end }}
+{{- end }}
+{{- end }}
+
+{{ define "retry" }}
+{{- with .State.RetryState }}
+{{- indent $.Depth 1 }} {{ red "Retry state:" }} {{ faint . }}
+{{ end }}
+{{- end }}

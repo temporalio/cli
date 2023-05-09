@@ -246,6 +246,9 @@ func (state *WorkflowExecutionState) Update(event *history.HistoryEvent) {
 		state.StartTime = event.EventTime
 		state.Attempt = attrs.GetAttempt()
 		state.Type = attrs.GetWorkflowType()
+		if state.Execution.GetRunId() == "" {
+			state.Execution.RunId = attrs.GetOriginalExecutionRunId()
+		}
 
 		state.ParentWorkflowExecution = attrs.ParentWorkflowExecution
 
