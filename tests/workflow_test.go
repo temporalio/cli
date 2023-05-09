@@ -6,16 +6,20 @@ import (
 	"math/rand"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/pborman/uuid"
 	"github.com/temporalio/cli/tests/workflows/helloworld"
 	"github.com/temporalio/cli/tests/workflows/update"
+	"go.temporal.io/api/enums/v1"
+	"go.temporal.io/api/workflowservice/v1"
 	sdkclient "go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
 )
 
 const (
-	testTq = "test-queue"
+	testTq        = "test-queue"
+	testNamespace = "default"
 )
 
 func (s *e2eSuite) TestWorkflowShow_ReplayableHistory() {
@@ -114,5 +118,164 @@ func (s *e2eSuite) TestWorkflowUpdate() {
 	// update rejected, wrong update name
 	err = app.Run([]string{"", "workflow", "update", "--context-timeout", "10", "--workflow-id", wfr.GetID(), "--run-id", wfr.GetRunID(), "--name", "non-existent-name", "-i", "1"})
 	s.ErrorContains(err, "update workflow failed: unknown update")
+}
 
+func (s *e2eSuite) TestWorkflowCancel_Batch() {
+	s.T().Parallel()
+
+	testserver, app, _ := s.setUpTestEnvironment()
+	defer func() {
+		_ = testserver.Stop()
+	}()
+
+	c := testserver.Client()
+
+	ids := []string{"1", "2", "3"}
+
+	for _, id := range ids {
+		_, err := c.ExecuteWorkflow(
+			context.Background(),
+			sdkclient.StartWorkflowOptions{ID: id, TaskQueue: testTq},
+			"non-existing-workflow-type",
+		)
+		s.NoError(err)
+	}
+
+	err := app.Run([]string{"", "workflow", "cancel", "--query", "WorkflowId = '1' OR WorkflowId = '2'", "--reason", "test", "--yes", "--namespace", testNamespace})
+	s.NoError(err)
+
+	// verify the job is complete
+	time.Sleep(1 * time.Second)
+	resp, err := c.WorkflowService().ListBatchOperations(context.Background(),
+		&workflowservice.ListBatchOperationsRequest{Namespace: testNamespace})
+	s.NoError(err)
+	s.Equal(1, len(resp.OperationInfo))
+	deleteJob, err := c.WorkflowService().DescribeBatchOperation(context.Background(),
+		&workflowservice.DescribeBatchOperationRequest{
+			JobId:     resp.OperationInfo[0].JobId,
+			Namespace: testNamespace,
+		})
+	s.NoError(err)
+	s.Equal(enums.BATCH_OPERATION_STATE_COMPLETED, deleteJob.State)
+
+	w1 := c.GetWorkflowHistory(context.Background(), "1", "", false, enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
+	s.True(checkForEventType(w1, enums.EVENT_TYPE_WORKFLOW_EXECUTION_CANCEL_REQUESTED), "Workflow 1 should have a cancellation event")
+
+	w2 := c.GetWorkflowHistory(context.Background(), "2", "", false, enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
+	s.True(checkForEventType(w2, enums.EVENT_TYPE_WORKFLOW_EXECUTION_CANCEL_REQUESTED), "Workflow 2 should have a cancellation event")
+
+	w3 := c.GetWorkflowHistory(context.Background(), "3", "", false, enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
+	s.False(checkForEventType(w3, enums.EVENT_TYPE_WORKFLOW_EXECUTION_CANCEL_REQUESTED), "Workflow 3 should not have a cancellation event")
+}
+
+func (s *e2eSuite) TestWorkflowSignal_Batch() {
+	s.T().Parallel()
+
+	testserver, app, _ := s.setUpTestEnvironment()
+	defer func() {
+		_ = testserver.Stop()
+	}()
+
+	c := testserver.Client()
+
+	ids := []string{"1", "2", "3"}
+
+	for _, id := range ids {
+		_, err := c.ExecuteWorkflow(
+			context.Background(),
+			sdkclient.StartWorkflowOptions{ID: id, TaskQueue: testTq},
+			"non-existing-workflow-type",
+		)
+		s.NoError(err)
+	}
+
+	err := app.Run([]string{"", "workflow", "signal", "--input", "\"testvalue\"", "--name", "test-signal", "--query", "WorkflowId = '1' OR WorkflowId = '2'", "--reason", "test", "--yes", "--namespace", testNamespace})
+	s.NoError(err)
+
+	// verify the job is complete
+	time.Sleep(1 * time.Second)
+	resp, err := c.WorkflowService().ListBatchOperations(context.Background(),
+		&workflowservice.ListBatchOperationsRequest{Namespace: testNamespace})
+	s.NoError(err)
+	s.Equal(1, len(resp.OperationInfo))
+	deleteJob, err := c.WorkflowService().DescribeBatchOperation(context.Background(),
+		&workflowservice.DescribeBatchOperationRequest{
+			JobId:     resp.OperationInfo[0].JobId,
+			Namespace: testNamespace,
+		})
+	s.NoError(err)
+	s.Equal(enums.BATCH_OPERATION_STATE_COMPLETED, deleteJob.State)
+
+	w1 := c.GetWorkflowHistory(context.Background(), "1", "", false, enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
+	s.True(checkForEventType(w1, enums.EVENT_TYPE_WORKFLOW_EXECUTION_SIGNALED), "Workflow 1 should have received a signal")
+
+	w2 := c.GetWorkflowHistory(context.Background(), "2", "", false, enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
+	s.True(checkForEventType(w2, enums.EVENT_TYPE_WORKFLOW_EXECUTION_SIGNALED), "Workflow 2 should have received a signal")
+
+	w3 := c.GetWorkflowHistory(context.Background(), "3", "", false, enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
+	s.False(checkForEventType(w3, enums.EVENT_TYPE_WORKFLOW_EXECUTION_SIGNALED), "Workflow 3 should not have received a signal")
+}
+
+func (s *e2eSuite) TestWorkflowTerminate_Batch() {
+	s.T().Parallel()
+
+	testserver, app, _ := s.setUpTestEnvironment()
+	defer func() {
+		_ = testserver.Stop()
+	}()
+
+	c := testserver.Client()
+
+	ids := []string{"1", "2", "3"}
+
+	for _, id := range ids {
+		_, err := c.ExecuteWorkflow(
+			context.Background(),
+			sdkclient.StartWorkflowOptions{ID: id, TaskQueue: testTq},
+			"non-existing-workflow-type",
+		)
+		s.NoError(err)
+	}
+
+	err := app.Run([]string{"", "workflow", "terminate", "--query", "WorkflowId = '1' OR WorkflowId = '2'", "--reason", "test", "--yes", "--namespace", testNamespace})
+	s.NoError(err)
+
+	// verify the job is complete
+	time.Sleep(1 * time.Second)
+	resp, err := c.WorkflowService().ListBatchOperations(context.Background(),
+		&workflowservice.ListBatchOperationsRequest{Namespace: testNamespace})
+	s.NoError(err)
+	s.Equal(1, len(resp.OperationInfo))
+	deleteJob, err := c.WorkflowService().DescribeBatchOperation(context.Background(),
+		&workflowservice.DescribeBatchOperationRequest{
+			JobId:     resp.OperationInfo[0].JobId,
+			Namespace: testNamespace,
+		})
+	s.NoError(err)
+	s.Equal(enums.BATCH_OPERATION_STATE_COMPLETED, deleteJob.State)
+
+	w1, err := c.DescribeWorkflowExecution(context.Background(), "1", "")
+	s.NoError(err)
+	s.Equal(enums.WORKFLOW_EXECUTION_STATUS_TERMINATED, w1.GetWorkflowExecutionInfo().GetStatus())
+
+	w2, err := c.DescribeWorkflowExecution(context.Background(), "2", "")
+	s.NoError(err)
+	s.Equal(enums.WORKFLOW_EXECUTION_STATUS_TERMINATED, w2.GetWorkflowExecutionInfo().GetStatus())
+
+	w3, err := c.DescribeWorkflowExecution(context.Background(), "3", "")
+	s.NoError(err)
+	s.Equal(enums.WORKFLOW_EXECUTION_STATUS_RUNNING, w3.GetWorkflowExecutionInfo().GetStatus())
+}
+
+func checkForEventType(events sdkclient.HistoryEventIterator, eventType enums.EventType) bool {
+	for events.HasNext() {
+		event, err := events.Next()
+		if err != nil {
+			break
+		}
+		if event.GetEventType() == eventType {
+			return true
+		}
+	}
+	return false
 }

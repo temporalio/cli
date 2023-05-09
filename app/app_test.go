@@ -20,7 +20,6 @@ import (
 	sconfig "github.com/temporalio/cli/server/config"
 	"github.com/urfave/cli/v2"
 	commonpb "go.temporal.io/api/common/v1"
-	"go.temporal.io/api/enums/v1"
 	enumspb "go.temporal.io/api/enums/v1"
 	historypb "go.temporal.io/api/history/v1"
 	"go.temporal.io/api/operatorservice/v1"
@@ -331,7 +330,7 @@ func assertServerHealth(ctx context.Context, t *testing.T, opts sdkclient.Option
 			t.Error(ctx.Err())
 			break
 		}
-		resp, err := c.DescribeTaskQueue(ctx, "temporal-sys-tq-scanner-taskqueue-0", enums.TASK_QUEUE_TYPE_WORKFLOW)
+		resp, err := c.DescribeTaskQueue(ctx, "temporal-sys-tq-scanner-taskqueue-0", enumspb.TASK_QUEUE_TYPE_WORKFLOW)
 		if err != nil {
 			t.Error(err)
 		}
