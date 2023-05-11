@@ -375,9 +375,9 @@ func printReplayableHistory(c *cli.Context, iter iterator.Iterator[*historypb.Hi
 func TerminateWorkflow(c *cli.Context) error {
 	if c.String(common.FlagQuery) != "" {
 		return batch.BatchTerminate(c)
-	} else {
-		return terminateWorkflowByID(c)
 	}
+
+	return terminateWorkflowByID(c)
 }
 
 // terminateWorkflowByID terminates a single workflow execution
@@ -410,9 +410,9 @@ func terminateWorkflowByID(c *cli.Context) error {
 func DeleteWorkflow(c *cli.Context) error {
 	if c.String(common.FlagQuery) != "" {
 		return batch.BatchDelete(c)
-	} else {
-		return deleteWorkflowByID(c)
 	}
+
+	return deleteWorkflowByID(c)
 }
 
 // deleteWorkflowByID deletes a single workflow execution
@@ -448,9 +448,9 @@ func deleteWorkflowByID(c *cli.Context) error {
 func CancelWorkflow(c *cli.Context) error {
 	if c.String(common.FlagQuery) != "" {
 		return batch.BatchCancel(c)
-	} else {
-		return cancelWorkflowByID(c)
 	}
+
+	return cancelWorkflowByID(c)
 }
 
 // cancelWorkflowByID cancels a single workflow execution
@@ -481,9 +481,9 @@ func cancelWorkflowByID(c *cli.Context) error {
 func SignalWorkflow(c *cli.Context) error {
 	if c.String(common.FlagQuery) != "" {
 		return batch.BatchSignal(c)
-	} else {
-		return signalWorkflowByID(c)
 	}
+
+	return signalWorkflowByID(c)
 }
 
 // signalWorkflowByID signals a single workflow execution
