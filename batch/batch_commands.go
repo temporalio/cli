@@ -24,10 +24,10 @@ func DescribeBatchJob(c *cli.Context) error {
 	}
 	jobID := c.String(common.FlagJobID)
 
-	client := cliclient.Factory(c.App).FrontendClient(c)
+	fclient := cliclient.Factory(c.App).FrontendClient(c)
 	ctx, cancel := common.NewContext(c)
 	defer cancel()
-	resp, err := client.DescribeBatchOperation(ctx, &workflowservice.DescribeBatchOperationRequest{
+	resp, err := fclient.DescribeBatchOperation(ctx, &workflowservice.DescribeBatchOperationRequest{
 		Namespace: namespace,
 		JobId:     jobID,
 	})
@@ -49,7 +49,7 @@ func ListBatchJobs(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	client := cliclient.Factory(c.App).FrontendClient(c)
+	fclient := cliclient.Factory(c.App).FrontendClient(c)
 
 	paginationFunc := func(npt []byte) ([]interface{}, []byte, error) {
 		var items []interface{}
@@ -57,7 +57,7 @@ func ListBatchJobs(c *cli.Context) error {
 
 		ctx, cancel := common.NewContext(c)
 		defer cancel()
-		resp, err := client.ListBatchOperations(ctx, &workflowservice.ListBatchOperationsRequest{
+		resp, err := fclient.ListBatchOperations(ctx, &workflowservice.ListBatchOperationsRequest{
 			Namespace: namespace,
 		})
 
@@ -170,10 +170,10 @@ func startBatchJob(c *cli.Context, req *workflowservice.StartBatchOperationReque
 	req.VisibilityQuery = query
 	req.Reason = reason
 
-	client := cliclient.Factory(c.App).FrontendClient(c)
 	ctx, cancel := common.NewContext(c)
 	defer cancel()
-	_, err = client.StartBatchOperation(ctx, req)
+
+	_, err = sdk.WorkflowService().StartBatchOperation(ctx, req)
 	if err != nil {
 		return fmt.Errorf("unable to start batch job: %w", err)
 	}

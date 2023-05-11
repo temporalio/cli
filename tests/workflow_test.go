@@ -6,16 +6,21 @@ import (
 	"math/rand"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/pborman/uuid"
+	"github.com/temporalio/cli/tests/workflows/awaitsignal"
 	"github.com/temporalio/cli/tests/workflows/helloworld"
 	"github.com/temporalio/cli/tests/workflows/update"
+	"go.temporal.io/api/enums/v1"
+	"go.temporal.io/api/workflowservice/v1"
 	sdkclient "go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
 )
 
 const (
-	testTq = "test-queue"
+	testTq        = "test-queue"
+	testNamespace = "default"
 )
 
 func (s *e2eSuite) TestWorkflowShow_ReplayableHistory() {
@@ -94,25 +99,251 @@ func (s *e2eSuite) TestWorkflowUpdate() {
 	defer signalWorkflow()
 
 	// successful update with wait policy Completed, should show the result
-	err = app.Run([]string{"", "workflow", "update", "--context-timeout", "10", "--workflow-id", wfr.GetID(), "--run-id", wfr.GetRunID(), "--name", update.FetchAndAdd, "-i", strconv.Itoa(randomInt)})
+	err = app.Run([]string{"", "workflow", "update", "--context-timeout", "30", "--workflow-id", wfr.GetID(), "--run-id", wfr.GetRunID(), "--name", update.FetchAndAdd, "-i", strconv.Itoa(randomInt)})
 	s.NoError(err)
 	want := fmt.Sprintf(": %v", randomInt)
 	s.Contains(writer.GetContent(), want)
 
 	// successful update with wait policy Completed, passing first-execution-run-id
-	err = app.Run([]string{"", "workflow", "update", "--context-timeout", "10", "--workflow-id", wfr.GetID(), "--run-id", wfr.GetRunID(), "--name", update.FetchAndAdd, "-i", "1", "--first-execution-run-id", wfr.GetRunID()})
+	err = app.Run([]string{"", "workflow", "update", "--context-timeout", "30", "--workflow-id", wfr.GetID(), "--run-id", wfr.GetRunID(), "--name", update.FetchAndAdd, "-i", "1", "--first-execution-run-id", wfr.GetRunID()})
 	s.NoError(err)
 
 	// update rejected, when name is not available
-	err = app.Run([]string{"", "workflow", "update", "--context-timeout", "10", "--workflow-id", "non-existent-ID", "--run-id", wfr.GetRunID(), "-i", "1"})
+	err = app.Run([]string{"", "workflow", "update", "--context-timeout", "30", "--workflow-id", "non-existent-ID", "--run-id", wfr.GetRunID(), "-i", "1"})
 	s.ErrorContains(err, "Required flag \"name\" not set")
 
 	// update rejected, wrong workflowID
-	err = app.Run([]string{"", "workflow", "update", "--context-timeout", "10", "--workflow-id", "non-existent-ID", "--run-id", wfr.GetRunID(), "--name", update.FetchAndAdd, "-i", "1"})
+	err = app.Run([]string{"", "workflow", "update", "--context-timeout", "30", "--workflow-id", "non-existent-ID", "--run-id", wfr.GetRunID(), "--name", update.FetchAndAdd, "-i", "1"})
 	s.ErrorContains(err, "update workflow failed")
 
 	// update rejected, wrong update name
-	err = app.Run([]string{"", "workflow", "update", "--context-timeout", "10", "--workflow-id", wfr.GetID(), "--run-id", wfr.GetRunID(), "--name", "non-existent-name", "-i", "1"})
+	err = app.Run([]string{"", "workflow", "update", "--context-timeout", "30", "--workflow-id", wfr.GetID(), "--run-id", wfr.GetRunID(), "--name", "non-existent-name", "-i", "1"})
 	s.ErrorContains(err, "update workflow failed: unknown update")
+}
 
+func (s *e2eSuite) TestWorkflowCancel_Batch() {
+	s.T().Parallel()
+
+	testserver, app, _ := s.setUpTestEnvironment()
+	defer func() {
+		_ = testserver.Stop()
+	}()
+
+	w := s.newWorker(testserver, testTq, func(r worker.Registry) {
+		r.RegisterWorkflow(awaitsignal.Workflow)
+	})
+	defer w.Stop()
+
+	c := testserver.Client()
+
+	ids := []string{"1", "2", "3"}
+	for _, id := range ids {
+		_, err := c.ExecuteWorkflow(
+			context.Background(),
+			sdkclient.StartWorkflowOptions{ID: id, TaskQueue: testTq},
+			awaitsignal.Workflow,
+		)
+		s.NoError(err)
+	}
+
+	err := app.Run([]string{"", "workflow", "cancel", "--query", "WorkflowId = '1' OR WorkflowId = '2'", "--reason", "test", "--yes", "--namespace", testNamespace})
+	s.NoError(err)
+
+	awaitTaskQueuePoller(s, c, testTq)
+	awaitBatchJob(s, c, testNamespace)
+
+	s.Eventually(func() bool {
+		w1 := c.GetWorkflowHistory(context.Background(), "1", "", false, enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
+		if expected := checkForEventType(w1, enums.EVENT_TYPE_WORKFLOW_EXECUTION_CANCEL_REQUESTED); !expected {
+			return false
+		}
+
+		w2 := c.GetWorkflowHistory(context.Background(), "2", "", false, enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
+		if expected := checkForEventType(w2, enums.EVENT_TYPE_WORKFLOW_EXECUTION_CANCEL_REQUESTED); !expected {
+			return false
+		}
+
+		w3 := c.GetWorkflowHistory(context.Background(), "3", "", false, enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
+		if expected := !checkForEventType(w3, enums.EVENT_TYPE_WORKFLOW_EXECUTION_CANCEL_REQUESTED); !expected {
+			return false
+		}
+
+		return true
+	}, 10*time.Second, time.Second, "timed out awaiting for workflows cancellation")
+}
+
+func (s *e2eSuite) TestWorkflowSignal_Batch() {
+	s.T().Parallel()
+
+	testserver, app, _ := s.setUpTestEnvironment()
+	defer func() {
+		_ = testserver.Stop()
+	}()
+
+	w := s.newWorker(testserver, testTq, func(r worker.Registry) {
+		r.RegisterWorkflow(awaitsignal.Workflow)
+	})
+	defer w.Stop()
+
+	c := testserver.Client()
+
+	ids := []string{"1", "2", "3"}
+	for _, id := range ids {
+		_, err := c.ExecuteWorkflow(
+			context.Background(),
+			sdkclient.StartWorkflowOptions{ID: id, TaskQueue: testTq},
+			awaitsignal.Workflow,
+		)
+		s.NoError(err)
+	}
+
+	s.Eventually(func() bool {
+		wfs, err := c.ListWorkflow(context.Background(), &workflowservice.ListWorkflowExecutionsRequest{
+			Namespace: testNamespace,
+		})
+		if err != nil {
+			return false
+		}
+		return len(wfs.GetExecutions()) == 3
+	}, 10*time.Second, time.Second)
+
+	err := app.Run([]string{"", "workflow", "signal", "--name", awaitsignal.Done, "--query", "WorkflowId = '1' OR WorkflowId = '2'", "--reason", "test", "--yes", "--namespace", testNamespace})
+	s.NoError(err)
+
+	awaitTaskQueuePoller(s, c, testTq)
+	awaitBatchJob(s, c, testNamespace)
+
+	s.Eventually(func() bool {
+		wfs, err := c.ListWorkflow(context.Background(), &workflowservice.ListWorkflowExecutionsRequest{
+			Namespace: testNamespace,
+		})
+		s.NoError(err)
+
+		for _, wf := range wfs.GetExecutions() {
+			switch wf.GetExecution().GetWorkflowId() {
+			case "1", "2":
+				if wf.GetStatus() != enums.WORKFLOW_EXECUTION_STATUS_COMPLETED {
+					return false
+				}
+			case "3":
+				if wf.GetStatus() != enums.WORKFLOW_EXECUTION_STATUS_RUNNING {
+					return false
+				}
+			}
+		}
+
+		return true
+	}, 3*time.Second, time.Second, "timed out awaiting for workflows completion after signal")
+}
+
+func (s *e2eSuite) TestWorkflowTerminate_Batch() {
+	s.T().Parallel()
+
+	testserver, app, _ := s.setUpTestEnvironment()
+	defer func() {
+		_ = testserver.Stop()
+	}()
+
+	w := s.newWorker(testserver, testTq, func(r worker.Registry) {
+		r.RegisterWorkflow(awaitsignal.Workflow)
+	})
+	defer w.Stop()
+
+	c := testserver.Client()
+
+	ids := []string{"1", "2", "3"}
+	for _, id := range ids {
+		_, err := c.ExecuteWorkflow(
+			context.Background(),
+			sdkclient.StartWorkflowOptions{ID: id, TaskQueue: testTq},
+			awaitsignal.Workflow,
+		)
+		s.NoError(err)
+	}
+
+	s.Eventually(func() bool {
+		wfs, err := c.ListWorkflow(context.Background(), &workflowservice.ListWorkflowExecutionsRequest{
+			Namespace: testNamespace,
+		})
+		if err != nil {
+			return false
+		}
+		return len(wfs.GetExecutions()) == 3
+	}, 10*time.Second, time.Second)
+
+	err := app.Run([]string{"", "workflow", "terminate", "--query", "WorkflowId = '1' OR WorkflowId = '2'", "--reason", "test", "--yes", "--namespace", testNamespace})
+	s.NoError(err)
+
+	awaitTaskQueuePoller(s, c, testTq)
+	awaitBatchJob(s, c, testNamespace)
+
+	s.Eventually(func() bool {
+		wfs, err := c.ListWorkflow(context.Background(), &workflowservice.ListWorkflowExecutionsRequest{
+			Namespace: testNamespace,
+		})
+		s.NoError(err)
+
+		for _, wf := range wfs.GetExecutions() {
+			switch wf.GetExecution().GetWorkflowId() {
+			case "1", "2":
+				if wf.GetStatus() != enums.WORKFLOW_EXECUTION_STATUS_TERMINATED {
+					return false
+				}
+			case "3":
+				if wf.GetStatus() != enums.WORKFLOW_EXECUTION_STATUS_RUNNING {
+					return false
+				}
+			}
+		}
+
+		return true
+	}, 10*time.Second, time.Second, "timed out awaiting for workflows termination")
+}
+
+// awaitTaskQueuePoller used mostly for more explicit failure message
+func awaitTaskQueuePoller(s *e2eSuite, c sdkclient.Client, taskqueue string) {
+	s.Eventually(func() bool {
+		resp, err := c.DescribeTaskQueue(context.Background(), taskqueue, enums.TASK_QUEUE_TYPE_WORKFLOW)
+		if err != nil {
+			return false
+		}
+		return len(resp.GetPollers()) > 0
+	}, 10*time.Second, time.Second, "no worker started for taskqueue "+taskqueue)
+}
+
+func awaitBatchJob(s *e2eSuite, c sdkclient.Client, ns string) {
+	s.Eventually(func() bool {
+		resp, err := c.WorkflowService().ListBatchOperations(context.Background(),
+			&workflowservice.ListBatchOperationsRequest{Namespace: ns})
+		if err != nil {
+			return false
+		}
+		if len(resp.OperationInfo) == 0 {
+			return false
+		}
+
+		batchJob, err := c.WorkflowService().DescribeBatchOperation(context.Background(),
+			&workflowservice.DescribeBatchOperationRequest{
+				JobId:     resp.OperationInfo[0].JobId,
+				Namespace: ns,
+			})
+		if err != nil {
+			return false
+		}
+
+		return batchJob.State == enums.BATCH_OPERATION_STATE_COMPLETED
+	}, 10*time.Second, time.Second, "cancellation batch job timed out")
+}
+
+func checkForEventType(events sdkclient.HistoryEventIterator, eventType enums.EventType) bool {
+	for events.HasNext() {
+		event, err := events.Next()
+		if err != nil {
+			break
+		}
+		if event.GetEventType() == eventType {
+			return true
+		}
+	}
+	return false
 }

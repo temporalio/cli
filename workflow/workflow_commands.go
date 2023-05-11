@@ -15,7 +15,7 @@ import (
 	"github.com/olekukonko/tablewriter"
 	"github.com/pborman/uuid"
 	"github.com/temporalio/cli/batch"
-	cliclient "github.com/temporalio/cli/client"
+	"github.com/temporalio/cli/client"
 	"github.com/temporalio/cli/common"
 	"github.com/temporalio/cli/common/stringify"
 	"github.com/temporalio/cli/dataconverter"
@@ -80,7 +80,7 @@ func StartWorkflowBaseArgs(c *cli.Context) (
 
 // StartWorkflow starts a new workflow execution and optionally prints progress
 func StartWorkflow(c *cli.Context, printProgress bool) error {
-	sdkClient, err := cliclient.GetSDKClient(c)
+	sdkClient, err := client.GetSDKClient(c)
 	if err != nil {
 		return err
 	}
@@ -281,7 +281,7 @@ func printWorkflowProgress(c *cli.Context, wid, rid string, watch bool) error {
 	}
 
 	var maxFieldLength = c.Int(common.FlagMaxFieldLength)
-	sdkClient, err := cliclient.GetSDKClient(c)
+	sdkClient, err := client.GetSDKClient(c)
 	if err != nil {
 		return err
 	}
@@ -371,17 +371,18 @@ func printReplayableHistory(c *cli.Context, iter iterator.Iterator[*historypb.Hi
 	return nil
 }
 
+// TerminateWorkflow terminates workflow executions based on filter parameters
 func TerminateWorkflow(c *cli.Context) error {
 	if c.String(common.FlagQuery) != "" {
 		return batch.BatchTerminate(c)
 	} else {
-		return terminateWorkflow(c)
+		return terminateWorkflowByID(c)
 	}
 }
 
-// TerminateWorkflow terminates a workflow execution
-func terminateWorkflow(c *cli.Context) error {
-	sdkClient, err := cliclient.GetSDKClient(c)
+// terminateWorkflowByID terminates a single workflow execution
+func terminateWorkflowByID(c *cli.Context) error {
+	sdkClient, err := client.GetSDKClient(c)
 	if err != nil {
 		return err
 	}
@@ -414,10 +415,10 @@ func DeleteWorkflow(c *cli.Context) error {
 	wid := c.String(common.FlagWorkflowID)
 	rid := c.String(common.FlagRunID)
 
-	client := cliclient.Factory(c.App).FrontendClient(c)
+	fclient := client.Factory(c.App).FrontendClient(c)
 	ctx, cancel := common.NewContext(c)
 	defer cancel()
-	_, err = client.DeleteWorkflowExecution(ctx, &workflowservice.DeleteWorkflowExecutionRequest{
+	_, err = fclient.DeleteWorkflowExecution(ctx, &workflowservice.DeleteWorkflowExecutionRequest{
 		Namespace: nsName,
 		WorkflowExecution: &commonpb.WorkflowExecution{
 			WorkflowId: wid,
@@ -434,17 +435,18 @@ func DeleteWorkflow(c *cli.Context) error {
 	return nil
 }
 
+// CancelWorkflow cancels workflow executions based on filter parameters
 func CancelWorkflow(c *cli.Context) error {
 	if c.String(common.FlagQuery) != "" {
 		return batch.BatchCancel(c)
 	} else {
-		return cancelWorkflow(c)
+		return cancelWorkflowByID(c)
 	}
 }
 
-// cancelWorkflow cancels a workflow execution
-func cancelWorkflow(c *cli.Context) error {
-	sdkClient, err := cliclient.GetSDKClient(c)
+// cancelWorkflowByID cancels a single workflow execution
+func cancelWorkflowByID(c *cli.Context) error {
+	sdkClient, err := client.GetSDKClient(c)
 	if err != nil {
 		return err
 	}
@@ -466,17 +468,18 @@ func cancelWorkflow(c *cli.Context) error {
 	return nil
 }
 
+// SignalWorkflow signals workflow executions based on filter parameters
 func SignalWorkflow(c *cli.Context) error {
 	if c.String(common.FlagQuery) != "" {
 		return batch.BatchSignal(c)
 	} else {
-		return signalWorkflow(c)
+		return signalWorkflowByID(c)
 	}
 }
 
-// signalWorkflow signals a workflow execution
-func signalWorkflow(c *cli.Context) error {
-	serviceClient := cliclient.Factory(c.App).FrontendClient(c)
+// signalWorkflowByID signals a single workflow execution
+func signalWorkflowByID(c *cli.Context) error {
+	serviceClient := client.Factory(c.App).FrontendClient(c)
 
 	namespace, err := common.RequiredFlag(c, common.FlagNamespace)
 	if err != nil {
@@ -533,7 +536,7 @@ func QueryWorkflowUsingStackTrace(c *cli.Context) error {
 }
 
 func queryWorkflowHelper(c *cli.Context, queryType string) error {
-	serviceClient := cliclient.Factory(c.App).FrontendClient(c)
+	fclient := client.Factory(c.App).FrontendClient(c)
 
 	namespace, err := common.RequiredFlag(c, common.FlagNamespace)
 	if err != nil {
@@ -573,7 +576,7 @@ func queryWorkflowHelper(c *cli.Context, queryType string) error {
 		}
 		queryRequest.QueryRejectCondition = rejectCondition
 	}
-	queryResponse, err := serviceClient.QueryWorkflow(tcCtx, queryRequest)
+	queryResponse, err := fclient.QueryWorkflow(tcCtx, queryRequest)
 	if err != nil {
 		return fmt.Errorf("query workflow failed: %w", err)
 	}
@@ -592,7 +595,7 @@ func queryWorkflowHelper(c *cli.Context, queryType string) error {
 func ListWorkflow(c *cli.Context) error {
 	archived := c.Bool(common.FlagArchive)
 
-	sdkClient, err := cliclient.GetSDKClient(c)
+	sdkClient, err := client.GetSDKClient(c)
 	if err != nil {
 		return err
 	}
@@ -626,7 +629,7 @@ func ListWorkflow(c *cli.Context) error {
 
 // CountWorkflow count number of workflows
 func CountWorkflow(c *cli.Context) error {
-	sdkClient, err := cliclient.GetSDKClient(c)
+	sdkClient, err := client.GetSDKClient(c)
 	if err != nil {
 		return err
 	}
@@ -660,7 +663,7 @@ func DescribeWorkflow(c *cli.Context) error {
 	wid := c.String(common.FlagWorkflowID)
 	rid := c.String(common.FlagRunID)
 
-	frontendClient := cliclient.Factory(c.App).FrontendClient(c)
+	frontendClient := client.Factory(c.App).FrontendClient(c)
 	namespace, err := common.RequiredFlag(c, common.FlagNamespace)
 	if err != nil {
 		return err
@@ -865,7 +868,7 @@ func ResetWorkflow(c *cli.Context) error {
 	ctx, cancel := common.NewContext(c)
 	defer cancel()
 
-	frontendClient := cliclient.Factory(c.App).FrontendClient(c)
+	frontendClient := client.Factory(c.App).FrontendClient(c)
 
 	resetBaseRunID := rid
 	workflowTaskFinishID := eventID
@@ -1046,7 +1049,7 @@ func ResetInBatch(c *cli.Context) error {
 			}
 		}
 	} else {
-		sdkClient, err := cliclient.GetSDKClient(c)
+		sdkClient, err := client.GetSDKClient(c)
 		if err != nil {
 			return err
 		}
@@ -1101,7 +1104,7 @@ func doReset(c *cli.Context, namespace, wid, rid string, params batchResetParams
 	ctx, cancel := common.NewContext(c)
 	defer cancel()
 
-	frontendClient := cliclient.Factory(c.App).FrontendClient(c)
+	frontendClient := client.Factory(c.App).FrontendClient(c)
 	resp, err := frontendClient.DescribeWorkflowExecution(ctx, &workflowservice.DescribeWorkflowExecutionRequest{
 		Namespace: namespace,
 		Execution: &commonpb.WorkflowExecution{
@@ -1468,7 +1471,7 @@ func UpdateWorkflow(c *cli.Context) error {
 func updateWorkflowHelper(c *cli.Context, request *sdkclient.UpdateWorkflowWithOptionsRequest) error {
 	ctx, cancel := common.NewContext(c)
 	defer cancel()
-	sdk, err := cliclient.GetSDKClient(c)
+	sdk, err := client.GetSDKClient(c)
 	if err != nil {
 		return err
 	}
