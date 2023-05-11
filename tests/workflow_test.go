@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/pborman/uuid"
+	"github.com/temporalio/cli/tests/workflows/awaitsignal"
 	"github.com/temporalio/cli/tests/workflows/helloworld"
 	"github.com/temporalio/cli/tests/workflows/update"
 	"go.temporal.io/api/enums/v1"
@@ -128,15 +129,19 @@ func (s *e2eSuite) TestWorkflowCancel_Batch() {
 		_ = testserver.Stop()
 	}()
 
+	w := s.newWorker(testserver, testTq, func(r worker.Registry) {
+		r.RegisterWorkflow(awaitsignal.Workflow)
+	})
+	defer w.Stop()
+
 	c := testserver.Client()
 
 	ids := []string{"1", "2", "3"}
-
 	for _, id := range ids {
 		_, err := c.ExecuteWorkflow(
 			context.Background(),
 			sdkclient.StartWorkflowOptions{ID: id, TaskQueue: testTq},
-			"non-existing-workflow-type",
+			awaitsignal.Workflow,
 		)
 		s.NoError(err)
 	}
@@ -144,36 +149,27 @@ func (s *e2eSuite) TestWorkflowCancel_Batch() {
 	err := app.Run([]string{"", "workflow", "cancel", "--query", "WorkflowId = '1' OR WorkflowId = '2'", "--reason", "test", "--yes", "--namespace", testNamespace})
 	s.NoError(err)
 
+	awaitTaskQueuePoller(s, c, testTq)
+	awaitBatchJob(s, c, testNamespace)
+
 	s.Eventually(func() bool {
-		resp, err := c.WorkflowService().ListBatchOperations(context.Background(),
-			&workflowservice.ListBatchOperationsRequest{Namespace: testNamespace})
-		if err != nil {
-			return false
-		}
-		if len(resp.OperationInfo) == 0 {
+		w1 := c.GetWorkflowHistory(context.Background(), "1", "", false, enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
+		if expected := checkForEventType(w1, enums.EVENT_TYPE_WORKFLOW_EXECUTION_CANCEL_REQUESTED); !expected {
 			return false
 		}
 
-		batchJob, err := c.WorkflowService().DescribeBatchOperation(context.Background(),
-			&workflowservice.DescribeBatchOperationRequest{
-				JobId:     resp.OperationInfo[0].JobId,
-				Namespace: testNamespace,
-			})
-		if err != nil {
+		w2 := c.GetWorkflowHistory(context.Background(), "2", "", false, enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
+		if expected := checkForEventType(w2, enums.EVENT_TYPE_WORKFLOW_EXECUTION_CANCEL_REQUESTED); !expected {
 			return false
 		}
 
-		return batchJob.State == enums.BATCH_OPERATION_STATE_COMPLETED
-	}, time.Second, 10*time.Second)
+		w3 := c.GetWorkflowHistory(context.Background(), "3", "", false, enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
+		if expected := !checkForEventType(w3, enums.EVENT_TYPE_WORKFLOW_EXECUTION_CANCEL_REQUESTED); !expected {
+			return false
+		}
 
-	w1 := c.GetWorkflowHistory(context.Background(), "1", "", false, enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
-	s.True(checkForEventType(w1, enums.EVENT_TYPE_WORKFLOW_EXECUTION_CANCEL_REQUESTED), "Workflow 1 should have a cancellation event")
-
-	w2 := c.GetWorkflowHistory(context.Background(), "2", "", false, enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
-	s.True(checkForEventType(w2, enums.EVENT_TYPE_WORKFLOW_EXECUTION_CANCEL_REQUESTED), "Workflow 2 should have a cancellation event")
-
-	w3 := c.GetWorkflowHistory(context.Background(), "3", "", false, enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
-	s.False(checkForEventType(w3, enums.EVENT_TYPE_WORKFLOW_EXECUTION_CANCEL_REQUESTED), "Workflow 3 should not have a cancellation event")
+		return true
+	}, 10*time.Second, time.Second, "timed out awaiting for workflows cancellation")
 }
 
 func (s *e2eSuite) TestWorkflowSignal_Batch() {
@@ -184,52 +180,60 @@ func (s *e2eSuite) TestWorkflowSignal_Batch() {
 		_ = testserver.Stop()
 	}()
 
+	w := s.newWorker(testserver, testTq, func(r worker.Registry) {
+		r.RegisterWorkflow(awaitsignal.Workflow)
+	})
+	defer w.Stop()
+
 	c := testserver.Client()
 
 	ids := []string{"1", "2", "3"}
-
 	for _, id := range ids {
 		_, err := c.ExecuteWorkflow(
 			context.Background(),
 			sdkclient.StartWorkflowOptions{ID: id, TaskQueue: testTq},
-			"non-existing-workflow-type",
+			awaitsignal.Workflow,
 		)
 		s.NoError(err)
 	}
 
-	err := app.Run([]string{"", "workflow", "signal", "--input", "\"testvalue\"", "--name", "test-signal", "--query", "WorkflowId = '1' OR WorkflowId = '2'", "--reason", "test", "--yes", "--namespace", testNamespace})
+	s.Eventually(func() bool {
+		wfs, err := c.ListWorkflow(context.Background(), &workflowservice.ListWorkflowExecutionsRequest{
+			Namespace: testNamespace,
+		})
+		if err != nil {
+			return false
+		}
+		return len(wfs.GetExecutions()) == 3
+	}, 10*time.Second, time.Second)
+
+	err := app.Run([]string{"", "workflow", "signal", "--name", awaitsignal.Done, "--query", "WorkflowId = '1' OR WorkflowId = '2'", "--reason", "test", "--yes", "--namespace", testNamespace})
 	s.NoError(err)
 
+	awaitTaskQueuePoller(s, c, testTq)
+	awaitBatchJob(s, c, testNamespace)
+
 	s.Eventually(func() bool {
-		resp, err := c.WorkflowService().ListBatchOperations(context.Background(),
-			&workflowservice.ListBatchOperationsRequest{Namespace: testNamespace})
-		if err != nil {
-			return false
+		wfs, err := c.ListWorkflow(context.Background(), &workflowservice.ListWorkflowExecutionsRequest{
+			Namespace: testNamespace,
+		})
+		s.NoError(err)
+
+		for _, wf := range wfs.GetExecutions() {
+			switch wf.GetExecution().GetWorkflowId() {
+			case "1", "2":
+				if wf.GetStatus() != enums.WORKFLOW_EXECUTION_STATUS_COMPLETED {
+					return false
+				}
+			case "3":
+				if wf.GetStatus() != enums.WORKFLOW_EXECUTION_STATUS_RUNNING {
+					return false
+				}
+			}
 		}
-		if len(resp.OperationInfo) == 0 {
-			return false
-		}
 
-		batchJob, err := c.WorkflowService().DescribeBatchOperation(context.Background(),
-			&workflowservice.DescribeBatchOperationRequest{
-				JobId:     resp.OperationInfo[0].JobId,
-				Namespace: testNamespace,
-			})
-		if err != nil {
-			return false
-		}
-
-		return batchJob.State == enums.BATCH_OPERATION_STATE_COMPLETED
-	}, time.Second, 10*time.Second)
-
-	w1 := c.GetWorkflowHistory(context.Background(), "1", "", false, enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
-	s.True(checkForEventType(w1, enums.EVENT_TYPE_WORKFLOW_EXECUTION_SIGNALED), "Workflow 1 should have received a signal")
-
-	w2 := c.GetWorkflowHistory(context.Background(), "2", "", false, enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
-	s.True(checkForEventType(w2, enums.EVENT_TYPE_WORKFLOW_EXECUTION_SIGNALED), "Workflow 2 should have received a signal")
-
-	w3 := c.GetWorkflowHistory(context.Background(), "3", "", false, enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
-	s.False(checkForEventType(w3, enums.EVENT_TYPE_WORKFLOW_EXECUTION_SIGNALED), "Workflow 3 should not have received a signal")
+		return true
+	}, 3*time.Second, time.Second, "timed out awaiting for workflows completion after signal")
 }
 
 func (s *e2eSuite) TestWorkflowTerminate_Batch() {
@@ -240,25 +244,77 @@ func (s *e2eSuite) TestWorkflowTerminate_Batch() {
 		_ = testserver.Stop()
 	}()
 
+	w := s.newWorker(testserver, testTq, func(r worker.Registry) {
+		r.RegisterWorkflow(awaitsignal.Workflow)
+	})
+	defer w.Stop()
+
 	c := testserver.Client()
 
 	ids := []string{"1", "2", "3"}
-
 	for _, id := range ids {
 		_, err := c.ExecuteWorkflow(
 			context.Background(),
 			sdkclient.StartWorkflowOptions{ID: id, TaskQueue: testTq},
-			"non-existing-workflow-type",
+			awaitsignal.Workflow,
 		)
 		s.NoError(err)
 	}
 
+	s.Eventually(func() bool {
+		wfs, err := c.ListWorkflow(context.Background(), &workflowservice.ListWorkflowExecutionsRequest{
+			Namespace: testNamespace,
+		})
+		if err != nil {
+			return false
+		}
+		return len(wfs.GetExecutions()) == 3
+	}, 10*time.Second, time.Second)
+
 	err := app.Run([]string{"", "workflow", "terminate", "--query", "WorkflowId = '1' OR WorkflowId = '2'", "--reason", "test", "--yes", "--namespace", testNamespace})
 	s.NoError(err)
 
+	awaitTaskQueuePoller(s, c, testTq)
+	awaitBatchJob(s, c, testNamespace)
+
+	s.Eventually(func() bool {
+		wfs, err := c.ListWorkflow(context.Background(), &workflowservice.ListWorkflowExecutionsRequest{
+			Namespace: testNamespace,
+		})
+		s.NoError(err)
+
+		for _, wf := range wfs.GetExecutions() {
+			switch wf.GetExecution().GetWorkflowId() {
+			case "1", "2":
+				if wf.GetStatus() != enums.WORKFLOW_EXECUTION_STATUS_TERMINATED {
+					return false
+				}
+			case "3":
+				if wf.GetStatus() != enums.WORKFLOW_EXECUTION_STATUS_RUNNING {
+					return false
+				}
+			}
+		}
+
+		return true
+	}, 10*time.Second, time.Second, "timed out awaiting for workflows termination")
+}
+
+// awaitTaskQueuePoller used mostly for more explicit failure message
+func awaitTaskQueuePoller(s *e2eSuite, c sdkclient.Client, taskqueue string) {
+	s.Eventually(func() bool {
+		resp, err := c.DescribeTaskQueue(context.Background(), taskqueue, enums.TASK_QUEUE_TYPE_WORKFLOW)
+		if err != nil {
+			return false
+		}
+		return len(resp.GetPollers()) > 0
+	}, 10*time.Second, time.Second, "no worker started for taskqueue "+taskqueue)
+}
+
+func awaitBatchJob(s *e2eSuite, c sdkclient.Client, ns string) {
 	s.Eventually(func() bool {
 		resp, err := c.WorkflowService().ListBatchOperations(context.Background(),
-			&workflowservice.ListBatchOperationsRequest{Namespace: testNamespace})
+			&workflowservice.ListBatchOperationsRequest{Namespace: ns})
 		if err != nil {
 			return false
 		}
@@ -269,26 +325,14 @@ func (s *e2eSuite) TestWorkflowTerminate_Batch() {
 		batchJob, err := c.WorkflowService().DescribeBatchOperation(context.Background(),
 			&workflowservice.DescribeBatchOperationRequest{
 				JobId:     resp.OperationInfo[0].JobId,
-				Namespace: testNamespace,
+				Namespace: ns,
 			})
 		if err != nil {
 			return false
 		}
 
 		return batchJob.State == enums.BATCH_OPERATION_STATE_COMPLETED
-	}, time.Second, 10*time.Second)
-
-	w1, err := c.DescribeWorkflowExecution(context.Background(), "1", "")
-	s.NoError(err)
-	s.Equal(enums.WORKFLOW_EXECUTION_STATUS_TERMINATED, w1.GetWorkflowExecutionInfo().GetStatus())
-
-	w2, err := c.DescribeWorkflowExecution(context.Background(), "2", "")
-	s.NoError(err)
-	s.Equal(enums.WORKFLOW_EXECUTION_STATUS_TERMINATED, w2.GetWorkflowExecutionInfo().GetStatus())
-
-	w3, err := c.DescribeWorkflowExecution(context.Background(), "3", "")
-	s.NoError(err)
-	s.Equal(enums.WORKFLOW_EXECUTION_STATUS_RUNNING, w3.GetWorkflowExecutionInfo().GetStatus())
+	}, 10*time.Second, time.Second, "cancellation batch job timed out")
 }
 
 func checkForEventType(events sdkclient.HistoryEventIterator, eventType enums.EventType) bool {
