@@ -300,6 +300,51 @@ func (s *e2eSuite) TestWorkflowTerminate_Batch() {
 	}, 10*time.Second, time.Second, "timed out awaiting for workflows termination")
 }
 
+func (s *e2eSuite) TestWorkflowDelete_Batch() {
+	s.T().Parallel()
+
+	testserver, app, _ := s.setUpTestEnvironment()
+	defer func() {
+		_ = testserver.Stop()
+	}()
+
+	w := s.newWorker(testserver, testTq, func(r worker.Registry) {
+		r.RegisterWorkflow(awaitsignal.Workflow)
+	})
+	defer w.Stop()
+
+	c := testserver.Client()
+
+	ids := []string{"1", "2", "3"}
+	for _, id := range ids {
+		_, err := c.ExecuteWorkflow(
+			context.Background(),
+			sdkclient.StartWorkflowOptions{ID: id, TaskQueue: testTq},
+			awaitsignal.Workflow,
+		)
+		s.NoError(err)
+	}
+
+	err := app.Run([]string{"", "workflow", "delete", "--query", "WorkflowId = '1' OR WorkflowId = '2'", "--reason", "test", "--yes", "--namespace", testNamespace})
+	s.NoError(err)
+
+	awaitTaskQueuePoller(s, c, testTq)
+	awaitBatchJob(s, c, testNamespace)
+
+	s.Eventually(func() bool {
+		wfs, err := c.ListWorkflow(context.Background(), &workflowservice.ListWorkflowExecutionsRequest{
+			Namespace: testNamespace,
+		})
+		s.NoError(err)
+
+		if len(wfs.GetExecutions()) == 1 && wfs.GetExecutions()[0].GetExecution().GetWorkflowId() == "3" {
+			return true
+		}
+
+		return false
+	}, 10*time.Second, time.Second, "timed out awaiting for workflows termination")
+}
+
 // awaitTaskQueuePoller used mostly for more explicit failure message
 func awaitTaskQueuePoller(s *e2eSuite, c sdkclient.Client, taskqueue string) {
 	s.Eventually(func() bool {

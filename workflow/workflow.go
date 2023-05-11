@@ -245,7 +245,37 @@ func NewWorkflowCommands() []*cli.Command {
 			Name:      "delete",
 			Usage:     common.DeleteWorkflowDefinition,
 			UsageText: common.WorkflowDeleteUsageText,
-			Flags:     common.FlagsForExecution,
+			Flags: []cli.Flag{
+				&cli.StringFlag{
+					Name:     common.FlagWorkflowID,
+					Aliases:  common.FlagWorkflowIDAlias,
+					Usage:    common.FlagWorkflowIDTerminate,
+					Category: common.CategoryMain,
+				},
+				&cli.StringFlag{
+					Name:     common.FlagRunID,
+					Aliases:  common.FlagRunIDAlias,
+					Usage:    common.FlagRunIdDefinition,
+					Category: common.CategoryMain,
+				},
+				&cli.StringFlag{
+					Name:     common.FlagQuery,
+					Aliases:  common.FlagQueryAlias,
+					Usage:    common.FlagQueryDelete,
+					Category: common.CategoryMain,
+				},
+				&cli.StringFlag{
+					Name:     common.FlagReason,
+					Usage:    common.FlagReasonDefinition,
+					Category: common.CategoryMain,
+				},
+				&cli.BoolFlag{
+					Name:     common.FlagYes,
+					Aliases:  common.FlagYesAlias,
+					Usage:    common.FlagYesDefinition,
+					Category: common.CategoryMain,
+				},
+			},
 			Action: func(c *cli.Context) error {
 				return DeleteWorkflow(c)
 			},

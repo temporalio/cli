@@ -135,6 +135,21 @@ func BatchSignal(c *cli.Context) error {
 	return startBatchJob(c, &req)
 }
 
+// BatchDelete delete a list of workflows
+func BatchDelete(c *cli.Context) error {
+	operator := common.GetCurrentUserFromEnv()
+
+	req := workflowservice.StartBatchOperationRequest{
+		Operation: &workflowservice.StartBatchOperationRequest_DeletionOperation{
+			DeletionOperation: &batch.BatchOperationDeletion{
+				Identity: operator,
+			},
+		},
+	}
+
+	return startBatchJob(c, &req)
+}
+
 // startBatchJob starts a batch job
 func startBatchJob(c *cli.Context, req *workflowservice.StartBatchOperationRequest) error {
 	namespace, err := common.RequiredFlag(c, common.FlagNamespace)
