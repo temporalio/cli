@@ -111,7 +111,7 @@ func NewWorkflowCommands() []*cli.Command {
 				&cli.StringFlag{
 					Name:     common.FlagQuery,
 					Aliases:  common.FlagQueryAlias,
-					Usage:    common.FlagQueryDefinition,
+					Usage:    common.FlagQuerySignal,
 					Category: common.CategoryMain,
 				},
 				&cli.StringFlag{
@@ -183,7 +183,7 @@ func NewWorkflowCommands() []*cli.Command {
 				&cli.StringFlag{
 					Name:     common.FlagQuery,
 					Aliases:  common.FlagQueryAlias,
-					Usage:    common.FlagQueryDefinition,
+					Usage:    common.FlagQueryCancel,
 					Category: common.CategoryMain,
 				},
 				&cli.StringFlag{
