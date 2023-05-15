@@ -371,7 +371,7 @@ get_version() {
         esac
     done
 
-    if [ "$(echo "$_version" | grep -E '^[0-9]+')" ]; then
+    if echo "$_version" | grep -qE '^[0-9]+'; then
         _version="v$_version"
     fi
 
