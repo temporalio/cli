@@ -371,11 +371,10 @@ get_version() {
         esac
     done
 
-    if [[ $_version == v* ]] || [[ $_version == "latest" ]]; then
-        printf %s "$_version"
-    else
-        printf 'v%s' "$_version"
+    if [[ $_version == [0-9]* ]]; then
+        _version="v$_version"
     fi
+    printf %s "$_version"
 }
 
 prompt_for_path() {
