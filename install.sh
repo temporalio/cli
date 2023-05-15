@@ -337,7 +337,7 @@ get_install_dir() {
     local _dir
     _dir="$(get_default_install_dir)"
 
-    while [[ $# -gt 0 ]]; do
+    while [ $# -gt 0 ]; do
         case "$1" in
         --dir)
             _dir="$2"
@@ -359,7 +359,7 @@ get_version() {
     local _version
     _version="latest"
 
-    while [[ $# -gt 0 ]]; do
+    while [ $# -gt 0 ]; do
         case "$1" in
         --version)
             _version="$2"
@@ -371,9 +371,10 @@ get_version() {
         esac
     done
 
-    if [[ $_version == [0-9]* ]]; then
+    if [ "$(echo "$_version" | grep -E '^[0-9]+')" ]; then
         _version="v$_version"
     fi
+
     printf %s "$_version"
 }
 
