@@ -124,11 +124,13 @@ main() {
         ;;
     esac
 
+    local _version
+    _version="$(ensure get_version "$@")"
+    local _url
+    _url="https://temporal.download/cli/archive/${_version}?platform=${_platform}&arch=${_arch}"
+
     local _archive_path
     _archive_path="${_temp}/temporal_cli_latest${_ext}"
-    local _url
-    _url="https://temporal.download/cli/archive/latest?platform=${_platform}&arch=${_arch}"
-
     ensure downloader "$_url" "$_archive_path" "$_arch"
     ensure unzip "$_archive_path" "$_temp"
     local _dir
@@ -342,6 +344,26 @@ get_install_dir() {
 
         esac
         shift
+    done
+
+    printf %s "$_dir"
+}
+
+# Function to retrieve the version from the command-line arguments
+get_version() {
+    local _version
+    _dir="latest"
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+        --version)
+            --version="$2"
+            return
+            ;;
+        *)
+            shift
+            ;;
+        esac
     done
 
     printf %s "$_dir"
