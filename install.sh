@@ -337,16 +337,16 @@ get_install_dir() {
     local _dir
     _dir="$(get_default_install_dir)"
 
-    while [ $# -gt 0 ]; do
+    while [[ $# -gt 0 ]]; do
         case "$1" in
         --dir)
             _dir="$2"
+            shift 2
+            ;;
+        *)
             shift
             ;;
-        *) ;;
-
         esac
-        shift
     done
 
     printf %s "$_dir"
