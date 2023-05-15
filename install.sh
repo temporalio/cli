@@ -330,6 +330,9 @@ get_default_install_dir() {
     printf %s "${HOME}/.temporalio"
 }
 
+# Retrieves the installation directory from the command-line arguments
+# Accepts flag: --dir /tmp/temporalio
+# Default: $HOME/.temporalio
 get_install_dir() {
     local _dir
     _dir="$(get_default_install_dir)"
@@ -349,16 +352,18 @@ get_install_dir() {
     printf %s "$_dir"
 }
 
-# Function to retrieve the version from the command-line arguments
+# Retrieve the version from the command-line arguments
+# Accepts flag: --version 1.1.0, --version v1.1.0, --version latest
+# Default: latest
 get_version() {
     local _version
-    _dir="latest"
+    _version="latest"
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
         --version)
-            --version="$2"
-            return
+            _version="$2"
+            shift 2
             ;;
         *)
             shift
@@ -366,7 +371,11 @@ get_version() {
         esac
     done
 
-    printf %s "$_dir"
+    if [[ $_version == v* ]] || [[ $_version == "latest" ]]; then
+        printf %s "$_version"
+    else
+        printf 'v%s' "$_version"
+    fi
 }
 
 prompt_for_path() {
