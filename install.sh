@@ -124,11 +124,13 @@ main() {
         ;;
     esac
 
+    local _version
+    _version="$(ensure get_version "$@")"
+    local _url
+    _url="https://temporal.download/cli/archive/${_version}?platform=${_platform}&arch=${_arch}"
+
     local _archive_path
     _archive_path="${_temp}/temporal_cli_latest${_ext}"
-    local _url
-    _url="https://temporal.download/cli/archive/latest?platform=${_platform}&arch=${_arch}"
-
     ensure downloader "$_url" "$_archive_path" "$_arch"
     ensure unzip "$_archive_path" "$_temp"
     local _dir
@@ -328,6 +330,9 @@ get_default_install_dir() {
     printf %s "${HOME}/.temporalio"
 }
 
+# Retrieves the installation directory from the command-line arguments
+# Accepts flag: --dir /tmp/temporalio
+# Default: $HOME/.temporalio
 get_install_dir() {
     local _dir
     _dir="$(get_default_install_dir)"
@@ -336,15 +341,41 @@ get_install_dir() {
         case "$1" in
         --dir)
             _dir="$2"
+            shift 2
+            ;;
+        *)
             shift
             ;;
-        *) ;;
-
         esac
-        shift
     done
 
     printf %s "$_dir"
+}
+
+# Retrieve the version from the command-line arguments
+# Accepts flag: --version 1.1.0, --version v1.1.0, --version latest
+# Default: latest
+get_version() {
+    local _version
+    _version="latest"
+
+    while [ $# -gt 0 ]; do
+        case "$1" in
+        --version)
+            _version="$2"
+            shift 2
+            ;;
+        *)
+            shift
+            ;;
+        esac
+    done
+
+    if echo "$_version" | grep -qE '^[0-9]+'; then
+        _version="v$_version"
+    fi
+
+    printf %s "$_version"
 }
 
 prompt_for_path() {
