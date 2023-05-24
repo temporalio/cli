@@ -75,7 +75,7 @@ const (
 	FlagSkipBaseDefinition         = "Skip a Workflow Execution if the base Run is not the current Workflow Run."
 	FlagNonDeterministicDefinition = "Reset Workflow Execution if its last Event is `WorkflowTaskFailed` with a nondeterministic error."
 	FlagDryRunDefinition           = "Simulate reset without resetting any Workflow Executions."
-	FlagDepthDefinition            = "Number of Child Workflows to expand. Use -1 to expand all Child Workflows."
+	FlagDepthDefinition            = "Depth of child workflows to fetch. Use -1 to fetch child workflows at any depth."
 	FlagConcurrencyDefinition      = "Request concurrency."
 	FlagNoFoldDefinition           = "Disable folding. All Child Workflows within the set depth will be fetched and displayed."
 

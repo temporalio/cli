@@ -774,3 +774,85 @@ func TestExecutionState_TimerExecutionStateImplementation(t *testing.T) {
 		})
 	}
 }
+
+func TestWorkflowExecutionState_GetNumberOfEvents(t *testing.T) {
+	tests := map[string]struct {
+		state       *WorkflowExecutionState
+		wantCurrent int64
+		wantTotal   int64
+	}{
+		"no childs": {
+			state: &WorkflowExecutionState{
+				LastEventId:   1,
+				HistoryLength: 5,
+			},
+			wantCurrent: 1,
+			wantTotal:   5,
+		},
+		"one child": {
+			state: &WorkflowExecutionState{
+				LastEventId:   5,
+				HistoryLength: 10,
+				ChildStates: []ExecutionState{
+					&WorkflowExecutionState{
+						LastEventId:   1,
+						HistoryLength: 3,
+					},
+				},
+			},
+			wantCurrent: 6,
+			wantTotal:   13,
+		},
+		"multiple childs": {
+			state: &WorkflowExecutionState{
+				LastEventId:   5,
+				HistoryLength: 10,
+				ChildStates: []ExecutionState{
+					&WorkflowExecutionState{
+						LastEventId:   1,
+						HistoryLength: 3,
+					},
+					&ActivityExecutionState{},
+					&TimerExecutionState{},
+					&WorkflowExecutionState{
+						LastEventId:   1,
+						HistoryLength: 3,
+					},
+				},
+			},
+			wantCurrent: 7,
+			wantTotal:   16,
+		},
+		"multiple depths": {
+			state: &WorkflowExecutionState{
+				LastEventId:   5,
+				HistoryLength: 10,
+				ChildStates: []ExecutionState{
+					&WorkflowExecutionState{
+						LastEventId:   1,
+						HistoryLength: 3,
+					},
+					&WorkflowExecutionState{
+						LastEventId:   5,
+						HistoryLength: 10,
+						ChildStates: []ExecutionState{
+							&WorkflowExecutionState{
+								LastEventId:   1,
+								HistoryLength: 3,
+							},
+						},
+					},
+				},
+			},
+			wantCurrent: 12,
+			wantTotal:   26,
+		},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			resCurrent, resTotal := tt.state.GetNumberOfEvents()
+			assert.Equalf(t, tt.wantCurrent, resCurrent, "GetNumberOfEvents() current")
+			assert.Equalf(t, tt.wantTotal, resTotal, "GetNumberOfEvents() total")
+		})
+	}
+}

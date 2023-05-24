@@ -395,14 +395,13 @@ func (state *WorkflowExecutionState) Update(event *history.HistoryEvent) {
 // This method iteratively sums the LastEventId (the sequential id of the last event processed) and the HistoryLength for all child workflows
 func (state *WorkflowExecutionState) GetNumberOfEvents() (int64, int64) {
 	var current, total int64
-	if state.ChildStates == nil {
-		return 0, 0
-	}
-	for _, child := range state.ChildStates {
-		if childWf, ok := child.(*WorkflowExecutionState); ok {
-			c, t := childWf.GetNumberOfEvents()
-			current += c
-			total += t
+	if state.ChildStates != nil {
+		for _, child := range state.ChildStates {
+			if childWf, ok := child.(*WorkflowExecutionState); ok {
+				c, t := childWf.GetNumberOfEvents()
+				current += c
+				total += t
+			}
 		}
 	}
 	return current + state.LastEventId, total + state.HistoryLength
