@@ -103,10 +103,10 @@ func (w *TermWriter) clearLines() error {
 	}
 	b := bytes.NewBuffer([]byte{})
 	if w.lineCount > 1 {
-		b.Write([]byte(MoveCursorUp(w.lineCount - 1)))
+		_, _ = b.Write([]byte(MoveCursorUp(w.lineCount - 1)))
 	}
-	b.Write([]byte(AnsiMoveCursorStartLine))
-	b.Write([]byte(AnsiEraseToEnd))
+	_, _ = b.Write([]byte(AnsiMoveCursorStartLine))
+	_, _ = b.Write([]byte(AnsiEraseToEnd))
 	_, err := w.out.Write(b.Bytes())
 	return err
 }

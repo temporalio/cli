@@ -97,7 +97,7 @@ func PrintWorkflowTrace(c *cli.Context, wid, rid string, foldStatus []enums.Work
 		return 1, err
 	}
 
-	fmt.Println(title("Progress:"))
+	_, _ = fmt.Println(title("Progress:"))
 	for {
 		select {
 		case <-ticker:
