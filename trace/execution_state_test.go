@@ -26,13 +26,14 @@ package trace
 
 import (
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/stretchr/testify/assert"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/failure/v1"
 	"go.temporal.io/api/history/v1"
-	"testing"
-	"time"
 )
 
 var events = map[string]*history.HistoryEvent{
@@ -781,7 +782,7 @@ func TestWorkflowExecutionState_GetNumberOfEvents(t *testing.T) {
 		wantCurrent int64
 		wantTotal   int64
 	}{
-		"no childs": {
+		"no children": {
 			state: &WorkflowExecutionState{
 				LastEventId:   1,
 				HistoryLength: 5,
@@ -803,7 +804,7 @@ func TestWorkflowExecutionState_GetNumberOfEvents(t *testing.T) {
 			wantCurrent: 6,
 			wantTotal:   13,
 		},
-		"multiple childs": {
+		"multiple children": {
 			state: &WorkflowExecutionState{
 				LastEventId:   5,
 				HistoryLength: 10,
