@@ -393,12 +393,12 @@ func TestExecutionState_UpdateWorkflow(t *testing.T) {
 
 func TestExecutionState_UpdateActivities(t *testing.T) {
 	tests := map[string]struct {
-		events         []*history.HistoryEvent
-		expectedChilds []ExecutionState
+		events           []*history.HistoryEvent
+		expectedChildren []ExecutionState
 	}{
 		"activity scheduled": {
 			events: []*history.HistoryEvent{events["started"], events["activity scheduled"]},
-			expectedChilds: []ExecutionState{
+			expectedChildren: []ExecutionState{
 				&ActivityExecutionState{
 					ActivityId: "abc",
 					Type:       &common.ActivityType{Name: "Mr ActivityFace"},
@@ -412,7 +412,7 @@ func TestExecutionState_UpdateActivities(t *testing.T) {
 				events["activity scheduled"],
 				events["activity started"],
 			},
-			expectedChilds: []ExecutionState{
+			expectedChildren: []ExecutionState{
 				&ActivityExecutionState{
 					ActivityId: "abc",
 					Type:       &common.ActivityType{Name: "Mr ActivityFace"},
@@ -428,7 +428,7 @@ func TestExecutionState_UpdateActivities(t *testing.T) {
 				events["activity started"],
 				events["activity failed"],
 			},
-			expectedChilds: []ExecutionState{
+			expectedChildren: []ExecutionState{
 				&ActivityExecutionState{
 					ActivityId: "abc",
 					Type:       &common.ActivityType{Name: "Mr ActivityFace"},
@@ -445,7 +445,7 @@ func TestExecutionState_UpdateActivities(t *testing.T) {
 				events["activity started"],
 				events["activity completed"],
 			},
-			expectedChilds: []ExecutionState{
+			expectedChildren: []ExecutionState{
 				&ActivityExecutionState{
 					ActivityId: "abc",
 					Type:       &common.ActivityType{Name: "Mr ActivityFace"},
@@ -461,7 +461,7 @@ func TestExecutionState_UpdateActivities(t *testing.T) {
 				events["second activity scheduled"],
 				events["activity started"],
 			},
-			expectedChilds: []ExecutionState{
+			expectedChildren: []ExecutionState{
 				&ActivityExecutionState{
 					ActivityId: "abc",
 					Type:       &common.ActivityType{Name: "Mr ActivityFace"},
@@ -482,7 +482,7 @@ func TestExecutionState_UpdateActivities(t *testing.T) {
 				events["activity started"],
 				events["activity cancel requested"],
 			},
-			expectedChilds: []ExecutionState{
+			expectedChildren: []ExecutionState{
 				&ActivityExecutionState{
 					ActivityId: "abc",
 					Type:       &common.ActivityType{Name: "Mr ActivityFace"},
@@ -499,7 +499,7 @@ func TestExecutionState_UpdateActivities(t *testing.T) {
 				events["activity cancel requested"],
 				events["activity canceled"],
 			},
-			expectedChilds: []ExecutionState{
+			expectedChildren: []ExecutionState{
 				&ActivityExecutionState{
 					ActivityId: "abc",
 					Type:       &common.ActivityType{Name: "Mr ActivityFace"},
@@ -515,19 +515,19 @@ func TestExecutionState_UpdateActivities(t *testing.T) {
 			for _, event := range tt.events {
 				state.Update(event)
 			}
-			assert.Equal(t, tt.expectedChilds, state.ChildStates)
+			assert.Equal(t, tt.expectedChildren, state.ChildStates)
 		})
 	}
 }
 
 func TestExecutionState_UpdateChildWorkflows(t *testing.T) {
 	tests := map[string]struct {
-		events         []*history.HistoryEvent
-		expectedChilds []ExecutionState
+		events           []*history.HistoryEvent
+		expectedChildren []ExecutionState
 	}{
 		"child workflow initiated": {
 			events: []*history.HistoryEvent{events["started"], events["child workflow initiated"]},
-			expectedChilds: []ExecutionState{
+			expectedChildren: []ExecutionState{
 				&WorkflowExecutionState{
 					Type: &common.WorkflowType{Name: "baz"},
 					Execution: &common.WorkflowExecution{
@@ -545,7 +545,7 @@ func TestExecutionState_UpdateChildWorkflows(t *testing.T) {
 				events["child workflow initiated"],
 				events["child workflow started"],
 			},
-			expectedChilds: []ExecutionState{
+			expectedChildren: []ExecutionState{
 				&WorkflowExecutionState{
 					Type:   &common.WorkflowType{Name: "baz"},
 					Status: enums.WORKFLOW_EXECUTION_STATUS_RUNNING,
@@ -565,7 +565,7 @@ func TestExecutionState_UpdateChildWorkflows(t *testing.T) {
 				events["child workflow started"],
 				events["child workflow completed"],
 			},
-			expectedChilds: []ExecutionState{
+			expectedChildren: []ExecutionState{
 				&WorkflowExecutionState{
 					Type:   &common.WorkflowType{Name: "baz"},
 					Status: enums.WORKFLOW_EXECUTION_STATUS_COMPLETED,
@@ -585,7 +585,7 @@ func TestExecutionState_UpdateChildWorkflows(t *testing.T) {
 				events["child workflow started"],
 				events["child workflow failed"],
 			},
-			expectedChilds: []ExecutionState{
+			expectedChildren: []ExecutionState{
 				&WorkflowExecutionState{
 					Type:   &common.WorkflowType{Name: "baz"},
 					Status: enums.WORKFLOW_EXECUTION_STATUS_FAILED,
@@ -609,7 +609,7 @@ func TestExecutionState_UpdateChildWorkflows(t *testing.T) {
 				events["child workflow started"],
 				events["child workflow canceled"],
 			},
-			expectedChilds: []ExecutionState{
+			expectedChildren: []ExecutionState{
 				&WorkflowExecutionState{
 					Type:   &common.WorkflowType{Name: "baz"},
 					Status: enums.WORKFLOW_EXECUTION_STATUS_CANCELED,
@@ -629,19 +629,19 @@ func TestExecutionState_UpdateChildWorkflows(t *testing.T) {
 			for _, event := range tt.events {
 				state.Update(event)
 			}
-			assert.Equal(t, tt.expectedChilds, state.ChildStates)
+			assert.Equal(t, tt.expectedChildren, state.ChildStates)
 		})
 	}
 }
 
 func TestExecutionState_UpdateTimers(t *testing.T) {
 	tests := map[string]struct {
-		events         []*history.HistoryEvent
-		expectedChilds []ExecutionState
+		events           []*history.HistoryEvent
+		expectedChildren []ExecutionState
 	}{
 		"timer started": {
 			events: []*history.HistoryEvent{events["started"], events["timer started"]},
-			expectedChilds: []ExecutionState{
+			expectedChildren: []ExecutionState{
 				&TimerExecutionState{
 					Name:               "Timer (1h0m0s)",
 					TimerId:            "20",
@@ -652,7 +652,7 @@ func TestExecutionState_UpdateTimers(t *testing.T) {
 		},
 		"timer fired": {
 			events: []*history.HistoryEvent{events["started"], events["timer started"], events["timer fired"]},
-			expectedChilds: []ExecutionState{
+			expectedChildren: []ExecutionState{
 				&TimerExecutionState{
 					Name:               "Timer (1h0m0s)",
 					TimerId:            "20",
@@ -663,7 +663,7 @@ func TestExecutionState_UpdateTimers(t *testing.T) {
 		},
 		"timer canceled": {
 			events: []*history.HistoryEvent{events["started"], events["timer started"], events["timer canceled"]},
-			expectedChilds: []ExecutionState{
+			expectedChildren: []ExecutionState{
 				&TimerExecutionState{
 					Name:               "Timer (1h0m0s)",
 					TimerId:            "20",
@@ -680,7 +680,7 @@ func TestExecutionState_UpdateTimers(t *testing.T) {
 			for _, event := range tt.events {
 				state.Update(event)
 			}
-			assert.Equal(t, tt.expectedChilds, state.ChildStates)
+			assert.Equal(t, tt.expectedChildren, state.ChildStates)
 		})
 	}
 }

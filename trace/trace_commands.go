@@ -2,16 +2,17 @@ package trace
 
 import (
 	"fmt"
-	"github.com/fatih/color"
-	"github.com/temporalio/cli/client"
-	"github.com/temporalio/cli/common"
-	"github.com/urfave/cli/v2"
-	"go.temporal.io/api/enums/v1"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/fatih/color"
+	"github.com/temporalio/cli/client"
+	"github.com/temporalio/cli/common"
+	"github.com/urfave/cli/v2"
+	"go.temporal.io/api/enums/v1"
 )
 
 var (
@@ -49,7 +50,7 @@ func GetFoldStatus(c *cli.Context) ([]enums.WorkflowExecutionStatus, error) {
 
 // PrintWorkflowTrace prints and updates a workflow trace following printWorkflowProgress pattern
 func PrintWorkflowTrace(c *cli.Context, wid, rid string, foldStatus []enums.WorkflowExecutionStatus) (int, error) {
-	childsDepth := c.Int(common.FlagDepth)
+	childWfsDepth := c.Int(common.FlagDepth)
 	concurrency := c.Int(common.FlagConcurrency)
 	noFold := c.Bool(common.FlagNoFold)
 
@@ -72,7 +73,7 @@ func PrintWorkflowTrace(c *cli.Context, wid, rid string, foldStatus []enums.Work
 	// Start update fetching
 	var update *WorkflowExecutionUpdate
 	go func() {
-		iter, err := GetWorkflowExecutionUpdates(tcCtx, sdkClient, wid, rid, noFold, foldStatus, childsDepth, concurrency)
+		iter, err := GetWorkflowExecutionUpdates(tcCtx, sdkClient, wid, rid, noFold, foldStatus, childWfsDepth, concurrency)
 		if err != nil {
 			errChan <- err
 			return
@@ -102,7 +103,7 @@ func PrintWorkflowTrace(c *cli.Context, wid, rid string, foldStatus []enums.Work
 		case <-ticker:
 			state := update.GetState()
 			if state == nil {
-				writer.WriteString(ProgressString(currentEvents, totalEvents))
+				_, _ = writer.WriteString(ProgressString(currentEvents, totalEvents))
 				writer.Flush(true)
 				continue
 			}
@@ -114,10 +115,10 @@ func PrintWorkflowTrace(c *cli.Context, wid, rid string, foldStatus []enums.Work
 
 			if isUpToDate {
 				if err := tmpl.Execute(update.GetState(), 0); err != nil {
-					writer.WriteString(fmt.Sprintf("%s %s", color.RedString("Error:"), err.Error()))
+					_, _ = writer.WriteString(fmt.Sprintf("%s %s", color.RedString("Error:"), err.Error()))
 				}
 			} else {
-				writer.WriteString(ProgressString(currentEvents, totalEvents))
+				_, _ = writer.WriteString(ProgressString(currentEvents, totalEvents))
 			}
 			if err := writer.Flush(true); err != nil {
 				return 1, err
