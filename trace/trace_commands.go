@@ -8,15 +8,16 @@ import (
 	"syscall"
 	"time"
 
+	sdkclient "go.temporal.io/sdk/client"
+
 	"github.com/fatih/color"
-	"github.com/temporalio/cli/client"
 	"github.com/temporalio/cli/common"
 	"github.com/urfave/cli/v2"
 	"go.temporal.io/api/enums/v1"
 )
 
 var (
-	title = color.New(color.FgMagenta).SprintFunc()
+	title = color.New(color.FgMagenta)
 )
 
 func GetFoldStatus(c *cli.Context) ([]enums.WorkflowExecutionStatus, error) {
@@ -49,15 +50,10 @@ func GetFoldStatus(c *cli.Context) ([]enums.WorkflowExecutionStatus, error) {
 }
 
 // PrintWorkflowTrace prints and updates a workflow trace following printWorkflowProgress pattern
-func PrintWorkflowTrace(c *cli.Context, wid, rid string, foldStatus []enums.WorkflowExecutionStatus) (int, error) {
+func PrintWorkflowTrace(c *cli.Context, sdkClient sdkclient.Client, wid, rid string, foldStatus []enums.WorkflowExecutionStatus) (int, error) {
 	childWfsDepth := c.Int(common.FlagDepth)
 	concurrency := c.Int(common.FlagConcurrency)
 	noFold := c.Bool(common.FlagNoFold)
-
-	sdkClient, err := client.GetSDKClient(c)
-	if err != nil {
-		return 1, err
-	}
 
 	tcCtx, cancel := common.NewIndefiniteContext(c)
 	defer cancel()
@@ -97,7 +93,7 @@ func PrintWorkflowTrace(c *cli.Context, wid, rid string, foldStatus []enums.Work
 		return 1, err
 	}
 
-	_, _ = fmt.Println(title("Progress:"))
+	_, _ = title.Println("Progress:")
 	for {
 		select {
 		case <-ticker:
