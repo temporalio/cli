@@ -2,19 +2,25 @@ package trace
 
 import (
 	"fmt"
-	"github.com/temporalio/cli/client"
-	"github.com/temporalio/cli/common"
-	"github.com/urfave/cli/v2"
-	"go.temporal.io/api/enums/v1"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/fatih/color"
+	"github.com/temporalio/cli/client"
+	"github.com/temporalio/cli/common"
+	"github.com/urfave/cli/v2"
+	"go.temporal.io/api/enums/v1"
+)
+
+var (
+	title = color.New(color.FgMagenta).SprintFunc()
 )
 
 func GetFoldStatus(c *cli.Context) ([]enums.WorkflowExecutionStatus, error) {
-	values := []enums.WorkflowExecutionStatus{}
+	var values []enums.WorkflowExecutionStatus
 	flagFold := c.String(common.FlagFold)
 	for _, v := range strings.Split(flagFold, ",") {
 		var status enums.WorkflowExecutionStatus
@@ -42,25 +48,18 @@ func GetFoldStatus(c *cli.Context) ([]enums.WorkflowExecutionStatus, error) {
 	return values, nil
 }
 
-// printWorkflowTrace prints and updates a workflow trace following printWorkflowProgress pattern
-func printWorkflowTrace(c *cli.Context, wid, rid string) (int, error) {
-	childsDepth := c.Int(common.FlagDepth)
+// PrintWorkflowTrace prints and updates a workflow trace following printWorkflowProgress pattern
+func PrintWorkflowTrace(c *cli.Context, wid, rid string, foldStatus []enums.WorkflowExecutionStatus) (int, error) {
+	childWfsDepth := c.Int(common.FlagDepth)
 	concurrency := c.Int(common.FlagConcurrency)
-	allFlag := c.Bool(common.FlagNoFold)
-
-	foldStatus, err := GetFoldStatus(c)
-	if err != nil {
-		return 1, err
-	}
+	noFold := c.Bool(common.FlagNoFold)
 
 	sdkClient, err := client.GetSDKClient(c)
-	//sdkClient, err := temporal.NewClientFromEnv()
 	if err != nil {
 		return 1, err
 	}
 
 	tcCtx, cancel := common.NewIndefiniteContext(c)
-	//tcCtx, cancel := context.WithCancel(c.Context)
 	defer cancel()
 
 	doneChan := make(chan bool)
@@ -74,7 +73,7 @@ func printWorkflowTrace(c *cli.Context, wid, rid string) (int, error) {
 	// Start update fetching
 	var update *WorkflowExecutionUpdate
 	go func() {
-		iter, err := GetWorkflowExecutionUpdates(tcCtx, sdkClient, wid, rid, allFlag, foldStatus, childsDepth, concurrency)
+		iter, err := GetWorkflowExecutionUpdates(tcCtx, sdkClient, wid, rid, noFold, foldStatus, childWfsDepth, concurrency)
 		if err != nil {
 			errChan <- err
 			return
@@ -87,49 +86,72 @@ func printWorkflowTrace(c *cli.Context, wid, rid string) (int, error) {
 		doneChan <- true
 	}()
 
-	//var printedRows int
-	//var prevString string
 	var currentEvents int64
 	var totalEvents int64
 	var isUpToDate bool
-	//fmt.Println(style.Title("Progress:"))
+
+	// Load templates
+	writer := NewTermWriter().WithTerminalSize()
+	tmpl, err := NewExecutionTemplate(writer, foldStatus, noFold)
+	if err != nil {
+		return 1, err
+	}
+
+	_, _ = fmt.Println(title("Progress:"))
 	for {
 		select {
 		case <-ticker:
 			state := update.GetState()
 			if state == nil {
-				printProgress(currentEvents, totalEvents)
+				_, _ = writer.WriteString(ProgressString(currentEvents, totalEvents))
+				writer.Flush(true)
 				continue
 			}
 
 			if !isUpToDate {
 				currentEvents, totalEvents = state.GetNumberOfEvents()
-				isUpToDate = currentEvents >= totalEvents && !state.IsArchived
+				isUpToDate = totalEvents > 0 && currentEvents >= totalEvents && !state.IsArchived
 			}
 
 			if isUpToDate {
-				//printedRows, prevString = updateWorkflow(state, printedRows, prevString, allFlag, true)
+				if err := tmpl.Execute(update.GetState(), 0); err != nil {
+					_, _ = writer.WriteString(fmt.Sprintf("%s %s", color.RedString("Error:"), err.Error()))
+				}
 			} else {
-				printProgress(currentEvents, totalEvents)
+				_, _ = writer.WriteString(ProgressString(currentEvents, totalEvents))
+			}
+			if err := writer.Flush(true); err != nil {
+				return 1, err
 			}
 		case <-doneChan:
+			return PrintAndExit(writer, tmpl, update)
 		case <-sigChan:
-			// Print last execution state available, this one doesn't need to be trimmed.
-			//updateWorkflow(update.GetState(), printedRows, prevString, allFlag, false)
-			return GetExitCode(update.GetState()), nil
+			return PrintAndExit(writer, tmpl, update)
 		case err = <-errChan:
-			//fmt.Println(style.Danger("Error:"), err)
 			return 1, err
 		}
 	}
 }
 
-func printProgress(currentEvents int64, totalEvents int64) {
-	//if totalEvents == 0 {
-	//	fmt.Printf("%sProcessing HistoryEvents (%d)\r", output.CLEAR_LINE, currentEvents)
-	//} else {
-	//	fmt.Printf("%sProcessing HistoryEvents (%d/%d)\r", output.CLEAR_LINE, currentEvents, totalEvents)
-	//}
+func ProgressString(currentEvents int64, totalEvents int64) string {
+	if totalEvents == 0 {
+		if currentEvents == 0 {
+			return "Processing HistoryEvents"
+		}
+		return fmt.Sprintf("Processing HistoryEvents (%d)", currentEvents)
+	} else {
+		return fmt.Sprintf("Processing HistoryEvents (%d/%d)", currentEvents, totalEvents)
+	}
+}
+
+func PrintAndExit(writer *TermWriter, tmpl *ExecutionTemplate, update *WorkflowExecutionUpdate) (int, error) {
+	if err := tmpl.Execute(update.GetState(), 0); err != nil {
+		return 1, err
+	}
+	if err := writer.Flush(false); err != nil {
+		return 1, err
+	}
+	return GetExitCode(update.GetState()), nil
 }
 
 // GetExitCode returns the exit code for a given workflow execution status.

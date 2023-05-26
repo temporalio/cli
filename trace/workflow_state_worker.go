@@ -96,8 +96,8 @@ func (job *WorkflowStateJob) Run(group *pond.TaskGroupWithContext) func() error 
 				}
 			}
 
-			// Start child jobs when we're up-to-date
-			if !job.isUpToDate && event.EventId >= state.HistoryLength {
+			// Start child jobs when we're up-to-date and if we haven't reached max depth.
+			if !job.isUpToDate && event.EventId >= state.HistoryLength && job.depth != 0 {
 				job.isUpToDate = true
 				for _, childJob := range job.childJobs {
 					if childJob.ShouldStart() {
