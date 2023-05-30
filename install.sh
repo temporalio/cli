@@ -106,7 +106,10 @@ main() {
         esac
     done
 
-    say "Downloading Temporal CLI" >&2
+    local _version
+    _version="$(ensure get_version "$@")"
+
+    say "Downloading Temporal CLI $_version" >&2
 
     local _temp
     if ! _temp="$(ensure mktemp -d)"; then
@@ -124,8 +127,6 @@ main() {
         ;;
     esac
 
-    local _version
-    _version="$(ensure get_version "$@")"
     local _url
     _url="https://temporal.download/cli/archive/${_version}?platform=${_platform}&arch=${_arch}"
 

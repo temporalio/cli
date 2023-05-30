@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/temporalio/cli/trace"
 	"math/rand"
 	"os"
 	"reflect"
@@ -1451,12 +1452,14 @@ func listArchivedWorkflows(c *cli.Context, sdkClient sdkclient.Client, npt []byt
 }
 
 func TraceWorkflow(c *cli.Context) error {
-	_, err := ParseFoldStatusList(c.String(common.FlagFold))
+	foldStatus, err := ParseFoldStatusList(c.String(common.FlagFold))
 	if err != nil {
 		return err
 	}
-	fmt.Println("Trace hasn't been implemented yet.")
-	return nil
+	wid := c.String(common.FlagWorkflowID)
+	rid := c.String(common.FlagRunID)
+	_, err = trace.PrintWorkflowTrace(c, wid, rid, foldStatus)
+	return err
 }
 
 func UpdateWorkflow(c *cli.Context) error {

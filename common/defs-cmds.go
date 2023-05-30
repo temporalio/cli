@@ -546,7 +546,7 @@ const WorkflowDeleteUsageText = `The ` + "`" + `temporal workflow delete` + "`" 
 
 Use the options listed below to change the command's behavior.`
 
-const WorkflowTraceUsageText = `The ` + "`" + `temporal workflow trace` + "`" + ` command tracks the progress of a [Workflow Execution](/concepts/what-is-a-workflow-execution) and any  [Child Workflows](/concepts/what-is-a-child-workflow-execution) it generates.
+const WorkflowTraceUsageText = `The ` + "`" + `temporal workflow trace` + "`" + ` command tracks the progress of a [Workflow Execution](/concepts/what-is-a-workflow-execution) and any [Child Workflows](/concepts/what-is-a-child-workflow-execution) it generates.
 
 Use the options listed below to change the command's behavior.`
 
