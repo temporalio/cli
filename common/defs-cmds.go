@@ -36,6 +36,7 @@ const (
 	ListPartitionTaskQueueDefinition = "Lists the Task Queue's partitions and the matching nodes they are assigned to."
 	UpdateBuildIDsDefinition         = "Operations to update the sets of worker Build ID versions on the Task Queue"
 	GetBuildIDsDefinition            = "Fetch the sets of worker Build ID versions on the Task Queue"
+	GetBuildIDReachabilityDefinition = "Retrieves information about the reachability of Build IDs on one or more Task Queues"
 
 	// Batch subcommand definitions
 	DescribeBatchJobDefinition  = "Provide information about a Batch operation job."
@@ -576,9 +577,11 @@ const StartDevUsageText = `The ` + "`" + `temporal server start-dev` + "`" + ` c
 The results of any command run on the Server can be viewed at http://localhost:7233.
 `
 
-const UpdateBuildIDsDefinitionText = "Provides various commands for adding or changing the sets of compatible build IDs associated with a Task Queue. See the help for each sub-command for more."
-
+const UpdateBuildIDsDefinitionText = "Provides various commands for adding or changing the sets of compatible build IDs associated with a Task Queue. See the help of each sub-command for more."
 const GetBuildIDsDefinitionText = "Fetch the sets of compatible build IDs associated with a Task Queue and associated information."
+const GetBuildIDReachabilityDefinitionText = "This command can tell you whether or not Build IDs may be used for for new, existing, or closed workflows. " +
+	"Both the --build-id and --task-queue flags may be specified multiple times. " +
+	"If you do not provide a task queue, reachability for the provided Build IDs will be checked against all task queues."
 
 const CustomTemplateHelpCLI = `NAME:
    {{template "helpNameTemplate" .}}{{if .Description}}

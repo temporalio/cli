@@ -102,7 +102,7 @@ func BuildIDAddNewDefault(c *cli.Context) error {
 	return updateBuildIDs(c, operation)
 }
 
-// BuildIDAddNewCompatible is implements the `update-build-ids add-new-compatible` subcommand
+// BuildIDAddNewCompatible implements the `update-build-ids add-new-compatible` subcommand
 func BuildIDAddNewCompatible(c *cli.Context) error {
 	newBuildID := c.String(common.FlagBuildID)
 	existingBuildID := c.String(common.FlagExistingCompatibleBuildID)
@@ -119,7 +119,7 @@ func BuildIDAddNewCompatible(c *cli.Context) error {
 	return updateBuildIDs(c, operation)
 }
 
-// BuildIDPromoteSet is implements the `update-build-ids promote-set` subcommand
+// BuildIDPromoteSet implements the `update-build-ids promote-set` subcommand
 func BuildIDPromoteSet(c *cli.Context) error {
 	buildID := c.String(common.FlagBuildID)
 	operation := workflowservice.UpdateWorkerBuildIdCompatibilityRequest{
@@ -130,7 +130,7 @@ func BuildIDPromoteSet(c *cli.Context) error {
 	return updateBuildIDs(c, operation)
 }
 
-// BuildIDPromoteInSet is implements the `update-build-ids promote-id-in-set` subcommand
+// BuildIDPromoteInSet implements the `update-build-ids promote-id-in-set` subcommand
 func BuildIDPromoteInSet(c *cli.Context) error {
 	buildID := c.String(common.FlagBuildID)
 	operation := workflowservice.UpdateWorkerBuildIdCompatibilityRequest{
@@ -169,17 +169,69 @@ func GetBuildIDs(c *cli.Context) error {
 		DefaultForSet string
 	}
 	opts := &output.PrintOptions{
-		Fields: []string{"VersionSetId", "BuildIds", "DefaultForSet", "IsDefaultSet"},
+		Fields: []string{"BuildId", "DefaultForSet", "IsDefaultSet"},
 	}
 	var items []interface{}
 	for ix, e := range resp.GetMajorVersionSets() {
 		row := rowtype{
-			VersionSetId:  e.GetVersionSetId(),
 			BuildIds:      e.GetBuildIds(),
 			IsDefaultSet:  ix == len(resp.GetMajorVersionSets())-1,
 			DefaultForSet: e.GetBuildIds()[len(e.GetBuildIds())-1],
 		}
 		items = append(items, row)
+	}
+	return output.PrintItems(c, items, opts)
+}
+
+// GetBuildIDReachability implements the `get-build-id-reachability` subcommand
+func GetBuildIDReachability(c *cli.Context) error {
+	frontendClient := client.CFactory.FrontendClient(c)
+	namespace, err := common.RequiredFlag(c, common.FlagNamespace)
+	if err != nil {
+		return err
+	}
+	buildIDs := c.StringSlice(common.FlagBuildID)
+	taskQueues := c.StringSlice(common.FlagTaskQueue)
+	ignoreClosed := c.Bool(common.FlagIgnoreClosedWorkflows)
+
+	ctx, cancel := common.NewContext(c)
+	defer cancel()
+	request := &workflowservice.GetWorkerTaskReachabilityRequest{
+		Namespace:  namespace,
+		BuildIds:   buildIDs,
+		TaskQueues: taskQueues,
+	}
+	if ignoreClosed {
+		request.Reachability = enumspb.TASK_REACHABILITY_OPEN_WORKFLOWS
+	}
+
+	resp, err := frontendClient.GetWorkerTaskReachability(ctx, request)
+	if err != nil {
+		return fmt.Errorf("unable to get Build ID reachability: %w", err)
+	}
+
+	type rowtype struct {
+		BuildId      string
+		TaskQueue    string
+		Reachability []string
+	}
+	opts := &output.PrintOptions{
+		Fields: []string{"BuildId", "TaskQueue", "Reachability"},
+	}
+	var items []interface{}
+	for _, e := range resp.GetBuildIdReachability() {
+		for _, r := range e.GetTaskQueueReachability() {
+			reachability := make([]string, len(r.GetReachability()))
+			for i, v := range r.GetReachability() {
+				reachability[i] = v.String()
+			}
+			row := rowtype{
+				BuildId:      e.GetBuildId(),
+				TaskQueue:    r.GetTaskQueue(),
+				Reachability: reachability,
+			}
+			items = append(items, row)
+		}
 	}
 	return output.PrintItems(c, items, opts)
 }

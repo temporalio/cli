@@ -177,16 +177,6 @@ func NewTaskQueueCommands() []*cli.Command {
 					Required: true,
 					Category: common.CategoryMain,
 				},
-				&cli.BoolFlag{
-					Name:     common.FlagIncludeRetirementCandidates,
-					Usage:    common.FlagIncludeRetirementCandidatesUsage,
-					Category: common.CategoryMain,
-				},
-				&cli.BoolFlag{
-					Name:     common.FlagIncludePollerCompatibility,
-					Usage:    common.FlagIncludePollerCompatibilityUsage,
-					Category: common.CategoryMain,
-				},
 				&cli.IntFlag{
 					Name:     common.FlagMaxBuildIDSets,
 					Usage:    common.FlagMaxBuildIDSetsUsage,
@@ -196,6 +186,32 @@ func NewTaskQueueCommands() []*cli.Command {
 			},
 			Action: func(c *cli.Context) error {
 				return GetBuildIDs(c)
+			},
+		},
+		{
+			Name:      "get-build-id-reachability",
+			Usage:     common.GetBuildIDReachabilityDefinition,
+			UsageText: common.GetBuildIDReachabilityDefinitionText,
+			Flags: []cli.Flag{
+				&cli.StringSliceFlag{
+					Name:     common.FlagBuildID,
+					Usage:    common.FlagBuildIDReachabilityUsage,
+					Category: common.CategoryMain,
+				},
+				&cli.StringSliceFlag{
+					Name:     common.FlagTaskQueue,
+					Aliases:  common.FlagTaskQueueAlias,
+					Usage:    common.FlagTaskQueueForReachabilityUsage,
+					Category: common.CategoryMain,
+				},
+				&cli.StringFlag{
+					Name:     common.FlagIgnoreClosedWorkflows,
+					Usage:    common.FlagIgnoreClosedWorkflowsUsage,
+					Category: common.CategoryMain,
+				},
+			},
+			Action: func(c *cli.Context) error {
+				return GetBuildIDReachability(c)
 			},
 		},
 	}
