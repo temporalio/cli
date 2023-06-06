@@ -17,29 +17,32 @@ func TestServerInterruptRC(t *testing.T) {
 		exeName += ".exe"
 	}
 
-	// build and run the binary, not "go run" as it modifies the exit code
+	// build and run the binary. Don't use "go run" as it modifies the exit code
 	build := exec.Command("go", "build", "-o", exeName, "../cmd/temporal")
 	build.Env = append(os.Environ(), "CGO_ENABLED=0")
 	err := build.Run()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(exeName)
+	assert.NoError(t, err)
+	defer func() {
+		err = os.Remove(exeName)
+		assert.NoError(t, err)
+	}()
 
 	cmd := exec.Command(exeName, "server", "start-dev", "--headless")
 	err = cmd.Start()
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 
 	// ensure the dev server process is killed, even if SIGTERM fails
-	defer cmd.Process.Signal(syscall.SIGKILL)
+	defer func() {
+		_ = cmd.Process.Signal(syscall.SIGKILL)
+	}()
 
 	// Wait for the app to start
 	time.Sleep(time.Second * 2)
 
-	cmd.Process.Signal(syscall.SIGTERM)
-	_ = cmd.Wait()
+	err = cmd.Process.Signal(syscall.SIGTERM)
+	assert.NoError(t, err)
+	err = cmd.Wait()
+	assert.NoError(t, err)
 
 	assert.Equal(t, 0, cmd.ProcessState.ExitCode())
 }
