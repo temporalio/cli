@@ -1,0 +1,46 @@
+//go:build windows
+
+package trace
+
+import (
+	"syscall"
+	"unsafe"
+)
+
+type (
+	SHORT int16
+	WORD  uint16
+
+	COORD struct {
+		X SHORT
+		Y SHORT
+	}
+
+	SMALL_RECT struct {
+		Left   SHORT
+		Top    SHORT
+		Right  SHORT
+		Bottom SHORT
+	}
+
+	CONSOLE_SCREEN_BUFFER_INFO struct {
+		Size              COORD
+		CursorPosition    COORD
+		Attributes        WORD
+		Window            SMALL_RECT
+		MaximumWindowSize COORD
+	}
+)
+
+var (
+	kernel32                       = syscall.NewLazyDLL("kernel32.dll")
+	procGetConsoleScreenBufferInfo = kernel32.NewProc("GetConsoleScreenBufferInfo")
+)
+
+func getTerminalSize() (int, int) {
+	var csbi CONSOLE_SCREEN_BUFFER_INFO
+
+	procGetConsoleScreenBufferInfo.Call(uintptr(syscall.Stdout), uintptr(unsafe.Pointer(&csbi)))
+
+	return int(csbi.Size.X), int(csbi.Size.Y)
+}
