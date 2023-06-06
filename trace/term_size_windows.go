@@ -37,10 +37,13 @@ var (
 	procGetConsoleScreenBufferInfo = kernel32.NewProc("GetConsoleScreenBufferInfo")
 )
 
-func getTerminalSize() (int, int) {
+func getTerminalSize() (width int, height int) {
 	var csbi CONSOLE_SCREEN_BUFFER_INFO
 
 	procGetConsoleScreenBufferInfo.Call(uintptr(syscall.Stdout), uintptr(unsafe.Pointer(&csbi)))
 
-	return int(csbi.Size.X), int(csbi.Size.Y)
+	width = int(csbi.Size.X)
+	height = int(csbi.Size.Y)
+
+	return
 }
