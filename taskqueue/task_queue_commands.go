@@ -143,7 +143,7 @@ func BuildIDPromoteInSet(c *cli.Context) error {
 
 // GetBuildIDs is implements the `get-build-ids` subcommand
 func GetBuildIDs(c *cli.Context) error {
-	frontendClient := client.CFactory.FrontendClient(c)
+	frontendClient := client.Factory(c.App).FrontendClient(c)
 	namespace, err := common.RequiredFlag(c, common.FlagNamespace)
 	if err != nil {
 		return err
@@ -185,7 +185,7 @@ func GetBuildIDs(c *cli.Context) error {
 
 // GetBuildIDReachability implements the `get-build-id-reachability` subcommand
 func GetBuildIDReachability(c *cli.Context) error {
-	frontendClient := client.CFactory.FrontendClient(c)
+	frontendClient := client.Factory(c.App).FrontendClient(c)
 	namespace, err := common.RequiredFlag(c, common.FlagNamespace)
 	if err != nil {
 		return err
@@ -239,7 +239,7 @@ func GetBuildIDReachability(c *cli.Context) error {
 // updateBuildIDs manipulates the build ids of a given taskqueue. `partialReq` is a partial request
 // containing only the operation field filled out.
 func updateBuildIDs(c *cli.Context, partialReq workflowservice.UpdateWorkerBuildIdCompatibilityRequest) error {
-	frontendClient := client.CFactory.FrontendClient(c)
+	frontendClient := client.Factory(c.App).FrontendClient(c)
 	namespace, err := common.RequiredFlag(c, common.FlagNamespace)
 	if err != nil {
 		return err
