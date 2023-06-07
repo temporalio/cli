@@ -40,7 +40,10 @@ var (
 func getTerminalSize() (width int, height int) {
 	var csbi CONSOLE_SCREEN_BUFFER_INFO
 
-	procGetConsoleScreenBufferInfo.Call(uintptr(syscall.Stdout), uintptr(unsafe.Pointer(&csbi)))
+	_, _, err := procGetConsoleScreenBufferInfo.Call(uintptr(syscall.Stdout), uintptr(unsafe.Pointer(&csbi)))
+	if err != syscall.Errno(0) {
+		return 80, 25 // assume default terminal size
+	}
 
 	width = int(csbi.Size.X)
 	height = int(csbi.Size.Y)
