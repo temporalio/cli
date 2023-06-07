@@ -2,61 +2,16 @@ package trace
 
 import (
 	"fmt"
-	"io"
-	"os"
 
-	"github.com/fatih/color"
 	"github.com/temporalio/cli/common"
+	"github.com/temporalio/tctl-kit/pkg/output"
 	"github.com/urfave/cli/v2"
 	sdkclient "go.temporal.io/sdk/client"
 )
 
-var (
-	bold = color.New(color.Bold)
-)
-
-// Table is a list of rows to be printed with the same width on the first column
-type Table struct {
-	rows []Row
-	w    io.Writer
-}
-
 type Row struct {
-	key   string
-	value string
-}
-
-func NewTable(w io.Writer) *Table {
-	t := new(Table)
-	t.w = w
-	return t
-}
-
-// padRight pads a text to the right with spaces to fill the padding width.
-func padRight(text string, padding int) string {
-	return fmt.Sprintf("%-*s", padding, text)
-}
-
-func (t *Table) Print() error {
-	// Figure out which is the widest key
-	maxWidth := 0
-	for _, row := range t.rows {
-		if l := len(row.key); l > maxWidth {
-			maxWidth = l
-		}
-	}
-	for _, row := range t.rows {
-		_, err := fmt.Fprintf(t.w, "  %s : %s\n", bold.Sprintf(padRight(row.key, maxWidth)), row.value)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// AppendRows appends a list of rows to the table
-func (t *Table) AppendRows(rows ...Row) {
-	t.rows = append(t.rows, rows...)
+	Key   string
+	Value string
 }
 
 func PrintWorkflowSummary(c *cli.Context, sdkClient sdkclient.Client, wfId, runId string) error {
@@ -71,15 +26,24 @@ func PrintWorkflowSummary(c *cli.Context, sdkClient sdkclient.Client, wfId, runI
 	info := res.GetWorkflowExecutionInfo()
 
 	_, _ = title.Println("Execution summary:")
-	tb := NewTable(os.Stdout)
-	tb.AppendRows(
+	rows := []Row{
 		Row{"Workflow Id", info.GetExecution().GetWorkflowId()},
 		Row{"Workflow Run Id", info.GetExecution().GetRunId()},
 		Row{"Workflow Type", info.GetType().GetName()},
 		Row{"Task Queue", info.GetTaskQueue()},
+	}
+	var i []interface{}
+	for _, row := range rows {
+		i = append(i, row)
+	}
+
+	err = output.PrintItems(c, i,
+		&output.PrintOptions{
+			Fields:   []string{"Key", "Value"},
+			NoHeader: true,
+		},
 	)
-	_ = tb.Print()
 	_, _ = fmt.Println()
 
-	return nil
+	return err
 }
