@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -24,6 +25,8 @@ type (
 	e2eSuite struct {
 		suite.Suite
 		defaultWorkerOptions worker.Options
+		mutex                sync.Mutex
+		servers              []*testsuite.DevServer
 	}
 )
 
@@ -37,6 +40,10 @@ func (s *e2eSuite) SetupSuite() {
 }
 
 func (s *e2eSuite) TearDownSuite() {
+	// Ensure all servers are stopped in case not explicitly stopped from tests
+	for _, server := range s.servers {
+		_ = server.Stop()
+	}
 }
 
 func (s *e2eSuite) SetupTest() {
@@ -56,6 +63,9 @@ func (s *e2eSuite) setUpTestEnvironment() (*testsuite.DevServer, *cli.App, *MemW
 }
 
 func (s *e2eSuite) createServer() (*testsuite.DevServer, error) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
 	server, err := testsuite.StartDevServer(context.Background(), testsuite.DevServerOptions{
 		ExtraArgs: []string{
 			// server logs are too noisy, limit server logs
@@ -64,6 +74,11 @@ func (s *e2eSuite) createServer() (*testsuite.DevServer, error) {
 			"--dynamic-config-value", "frontend.enableUpdateWorkflowExecution=true",
 		},
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	s.servers = append(s.servers, server)
 	return server, err
 }
 
