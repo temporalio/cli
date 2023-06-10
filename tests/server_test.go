@@ -4,7 +4,6 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
-	"syscall"
 	"testing"
 	"time"
 
@@ -34,14 +33,14 @@ func TestServerInterruptRC(t *testing.T) {
 
 	// ensure the dev server process is killed, even if SIGTERM fails
 	defer func() {
-		_ = cmd.Process.Signal(syscall.SIGKILL)
+		_ = cmd.Process.Kill()
 	}()
 
-	// Wait for the app to start
+	// Wait for the server to start before sending signal
 	time.Sleep(time.Second * 2)
 
-	err = cmd.Process.Signal(syscall.SIGTERM)
-	assert.NoError(t, err)
+	assert.NoError(t, sendTerminate(cmd.Process))
+
 	err = cmd.Wait()
 	assert.NoError(t, err)
 
