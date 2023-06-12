@@ -39,7 +39,7 @@ func TestServerInterruptRC(t *testing.T) {
 	// Wait for the server to start before sending signal
 	time.Sleep(time.Second * 2)
 
-	assert.NoError(t, sendTerminate(cmd.Process))
+	assert.NoError(t, sendInterrupt(cmd.Process))
 
 	err = cmd.Wait()
 	assert.NoError(t, err)
