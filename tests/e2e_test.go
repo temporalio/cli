@@ -31,7 +31,7 @@ type (
 )
 
 func TestClientE2ESuite(t *testing.T) {
-	// suite.Run(t, new(e2eSuite))
+	suite.Run(t, new(e2eSuite))
 }
 
 func (s *e2eSuite) SetupSuite() {
