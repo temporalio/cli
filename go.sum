@@ -1146,12 +1146,12 @@ go.opentelemetry.io/proto/otlp v0.19.0/go.mod h1:H7XAot3MsfNsj7EXtrA2q5xSNQ10UqI
 go.temporal.io/api v1.21.0/go.mod h1:xlsUEakkN2vU2/WV7e5NqMG4N93nfuNfvbXdaXUpU8w=
 go.temporal.io/api v1.23.0 h1:4y9mTQjEHsE0Du0WJ2ExJUcP/1/a+B/UefzIDm4ALTE=
 go.temporal.io/api v1.23.0/go.mod h1:AcJd1+rc1j0zte+ZBIkOHGHjntR/17LnZWFz+gMFHQ0=
-go.temporal.io/sdk v1.23.1-0.20230616142555-00e8cec765f7 h1:LhBDy8Tx05CI5wlmML/DI2RNNQqGPS+oNbQlvUmO6/c=
-go.temporal.io/sdk v1.23.1-0.20230616142555-00e8cec765f7/go.mod h1:S7vWxU01lGcCny0sWx03bkkYw4VtVrpzeqBTn2A6y+E=
+go.temporal.io/sdk v1.23.1 h1:HzOaw5+f6QgDW/HH1jzwgupII7nVz+fzxFPjmFJqKiQ=
+go.temporal.io/sdk v1.23.1/go.mod h1:S7vWxU01lGcCny0sWx03bkkYw4VtVrpzeqBTn2A6y+E=
 go.temporal.io/sdk/contrib/tools/workflowcheck v0.0.0-20230328164709-88a40de39c33 h1:tpDvC3HKzoPGmYZT7LBkYtBWrbZa8GNiLR2LG5iG5sw=
 go.temporal.io/sdk/contrib/tools/workflowcheck v0.0.0-20230328164709-88a40de39c33/go.mod h1:CW0zVy7oLeWxBo3wG5bMU2dy4xaprM2net3/DkBzruw=
-go.temporal.io/server v1.20.1-0.20230616052957-187f699a6f2a h1:aCzleBHxrAi3JtgPpkkh8Aiv6hTHkImvubEXncV2UGI=
-go.temporal.io/server v1.20.1-0.20230616052957-187f699a6f2a/go.mod h1:Wtl0Io+CzQ56261Na3UnFcT6oXFsmkdOQ7OddEknnq4=
+go.temporal.io/server v1.20.1-0.20230616203625-3392a7ab579a h1:ckFeiF8XdIVde74T9+TNIzLmKuIZDlk0KTKQ4XuG8NA=
+go.temporal.io/server v1.20.1-0.20230616203625-3392a7ab579a/go.mod h1:Wtl0Io+CzQ56261Na3UnFcT6oXFsmkdOQ7OddEknnq4=
 go.temporal.io/version v0.3.0 h1:dMrei9l9NyHt8nG6EB8vAwDLLTwx2SvRyucCSumAiig=
 go.temporal.io/version v0.3.0/go.mod h1:UA9S8/1LaKYae6TyD9NaPMJTZb911JcbqghI2CBSP78=
 go.uber.org/atomic v1.4.0/go.mod h1:gD2HeocX3+yG+ygLZcrzQJaqmWj9AIm7n08wl/qW/PE=
