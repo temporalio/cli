@@ -17,7 +17,7 @@ require (
 	github.com/temporalio/ui-server/v2 v2.15.0
 	github.com/urfave/cli/v2 v2.23.6
 	go.temporal.io/api v1.23.0
-	go.temporal.io/sdk v1.23.1-0.20230613004511-5075346f3931
+	go.temporal.io/sdk v1.23.1-0.20230616142555-00e8cec765f7
 	go.temporal.io/sdk/contrib/tools/workflowcheck v0.0.0-20230328164709-88a40de39c33
 	go.temporal.io/server v1.20.1-0.20230612195522-a6ae65114839
 	go.uber.org/zap v1.24.0
