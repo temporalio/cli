@@ -51,10 +51,10 @@ const (
 	FlagMemoFileDefinition              = "Passes a memo as file input, with each line following key=value format. Use valid JSON formats for value."
 
 	// Other Workflow flags
-	FlagResetPointsUsage           = "Only show auto-reset points."
-	FlagPrintRawUsage              = "Print properties without changing their format."
-	QueryFlagTypeUsage             = "The type of Query to run."
-	FlagWorkflowSignalUsage        = "Signal Workflow Execution by Id."
+	FlagResetPointsUsage    = "Only show auto-reset points."
+	FlagPrintRawUsage       = "Print properties without changing their format."
+	QueryFlagTypeUsage      = "The type of Query to run."
+	FlagWorkflowSignalUsage = "Signal Workflow Execution by Id."
 
 	FlagSignalName                 = "Signal Name"
 	FlagInputSignal                = "Input for the Signal . Formatted in JSON."
@@ -148,4 +148,3 @@ const (
 	FlagTaskQueueForReachabilityUsage  = "Which Task Queue(s) to constrain the reachability search to. May be specified multiple times."
 	FlagIgnoreClosedWorkflowsUsage     = "If set to true, the reachability query will only consider new and currently opened workflows, and closed workflows will not be considered. Do not set this flag if you care about reaching closed workflows (ex: for querying them)."
 )
-

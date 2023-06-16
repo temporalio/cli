@@ -82,6 +82,7 @@ linters-settings:
       - name: unhandled-error
         arguments:
           - "fmt.Printf"
+          - "fmt.Println"
 issues:
   # Exclude cyclomatic and cognitive complexity rules for functional tests in the `tests` root directory.
   exclude-rules:

@@ -169,7 +169,7 @@ func GetBuildIDs(c *cli.Context) error {
 		DefaultForSet string
 	}
 	opts := &output.PrintOptions{
-		Fields: []string{"BuildId", "DefaultForSet", "IsDefaultSet"},
+		Fields: []string{"BuildIds", "DefaultForSet", "IsDefaultSet"},
 	}
 	var items []interface{}
 	for ix, e := range resp.GetMajorVersionSets() {
