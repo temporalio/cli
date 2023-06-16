@@ -305,7 +305,7 @@ func newServerAndClientOpts(port int, customArgs ...string) ([]string, sdkclient
 	}
 }
 
-func assertServerHealth(ctx context.Context, t *testing.T, opts sdkclient.Options) client.Client {
+func assertServerHealth(ctx context.Context, t *testing.T, opts sdkclient.Options) sdkclient.Client {
 	var (
 		c         sdkclient.Client
 		clientErr error

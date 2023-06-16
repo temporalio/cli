@@ -40,7 +40,7 @@ func (s *buildIdCompatSuite) SetupSuite() {
 		}
 	}()
 
-	s.client = assertServerHealth(s.T(), ctx, clientOpts)
+	s.client = assertServerHealth(ctx, s.T(), clientOpts)
 }
 
 func (s *buildIdCompatSuite) TearDownSuite() {
