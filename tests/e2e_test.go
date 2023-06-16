@@ -40,7 +40,7 @@ func (s *e2eSuite) SetupSuite() {
 }
 
 func (s *e2eSuite) TearDownSuite() {
-	// Ensure all servers are stopped in case not explicitly stopped from tests
+	// ensure all servers are stopped in case not explicitly stopped from tests
 	for _, server := range s.servers {
 		_ = server.Stop()
 	}
