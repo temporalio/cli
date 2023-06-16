@@ -19,7 +19,7 @@ require (
 	go.temporal.io/api v1.23.0
 	go.temporal.io/sdk v1.23.1-0.20230616142555-00e8cec765f7
 	go.temporal.io/sdk/contrib/tools/workflowcheck v0.0.0-20230328164709-88a40de39c33
-	go.temporal.io/server v1.20.1-0.20230612195522-a6ae65114839
+	go.temporal.io/server v1.20.1-0.20230616052957-187f699a6f2a
 	go.uber.org/zap v1.24.0
 	golang.org/x/exp v0.0.0-20230213192124-5e25df0256eb
 	google.golang.org/grpc v1.55.0
@@ -33,7 +33,7 @@ require (
 	cloud.google.com/go/storage v1.29.0 // indirect
 	github.com/apache/thrift v0.18.0 // indirect
 	github.com/aws/aws-sdk-go v1.44.203 // indirect
-	github.com/benbjohnson/clock v1.3.0 // indirect; indgo irect
+	github.com/benbjohnson/clock v1.3.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/cactus/go-statsd-client/statsd v0.0.0-20200423205355-cb0885a1018c // indirect
