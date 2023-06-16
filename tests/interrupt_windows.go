@@ -4,7 +4,6 @@ package tests
 
 import (
 	"os"
-	"syscall"
 
 	"golang.org/x/sys/windows"
 )
