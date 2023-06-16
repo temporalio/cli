@@ -118,7 +118,7 @@ func (s *e2eSuite) TestWorkflowUpdate() {
 
 	// update rejected, wrong update name
 	err = app.Run([]string{"", "workflow", "update", "--context-timeout", "30", "--workflow-id", wfr.GetID(), "--run-id", wfr.GetRunID(), "--name", "non-existent-name", "-i", "1"})
-	s.ErrorContains(err, "update workflow failed: unknown update")
+	s.ErrorContains(err, "unable to update workflow")
 }
 
 func (s *e2eSuite) TestWorkflowCancel_Batch() {

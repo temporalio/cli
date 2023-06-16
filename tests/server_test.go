@@ -3,7 +3,6 @@ package tests
 import (
 	"os"
 	"os/exec"
-	"runtime"
 	"testing"
 	"time"
 
@@ -11,10 +10,6 @@ import (
 )
 
 func TestServerInterruptRC(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("There is no option to send SIGTERM or os.Interrupt on Windows")
-	}
-
 	exePath := "./test-temporal"
 
 	// build and run the binary. Don't use "go run" as it modifies the exit code
@@ -27,7 +22,7 @@ func TestServerInterruptRC(t *testing.T) {
 		assert.NoError(t, err)
 	}()
 
-	cmd := exec.Command(exePath, "server", "start-dev", "--headless")
+	cmd := newCmd(exePath, "server", "start-dev", "--headless")
 	err = cmd.Start()
 	assert.NoError(t, err)
 
