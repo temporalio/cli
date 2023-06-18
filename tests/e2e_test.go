@@ -4,10 +4,15 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/temporalio/cli/app"
 	"github.com/temporalio/cli/client"
@@ -25,6 +30,7 @@ type (
 	e2eSuite struct {
 		suite.Suite
 		defaultWorkerOptions worker.Options
+		exePath              string
 		mutex                sync.Mutex
 		servers              []*testsuite.DevServer
 	}
@@ -35,6 +41,18 @@ func TestClientE2ESuite(t *testing.T) {
 }
 
 func (s *e2eSuite) SetupSuite() {
+	// build the temporal cli binary
+	temp := os.TempDir()
+	s.exePath = filepath.Join(temp, "temporal-cli-e2e")
+
+	if runtime.GOOS == "windows" {
+		s.exePath += ".exe"
+	}
+	build := exec.Command("go", "build", "-o", s.exePath, "../cmd/temporal")
+	build.Env = append(os.Environ(), "CGO_ENABLED=0")
+	err := build.Run()
+	require.NoError(s.T(), err)
+
 	// noop exiter to prevent the app from exiting mid test
 	cli.OsExiter = func(code int) {}
 }
@@ -67,6 +85,7 @@ func (s *e2eSuite) createServer() (*testsuite.DevServer, error) {
 	defer s.mutex.Unlock()
 
 	server, err := testsuite.StartDevServer(context.Background(), testsuite.DevServerOptions{
+		ExistingPath: s.exePath,
 		ExtraArgs: []string{
 			// server logs are too noisy, limit server logs
 			"--log-level", "error",
