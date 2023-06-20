@@ -736,19 +736,21 @@ func convertDescribeWorkflowExecutionResponse(c *cli.Context, resp *workflowserv
 
 	info := resp.GetWorkflowExecutionInfo()
 	executionInfo := &clispb.WorkflowExecutionInfo{
-		Execution:            info.GetExecution(),
-		Type:                 info.GetType(),
-		CloseTime:            info.GetCloseTime(),
-		StartTime:            info.GetStartTime(),
-		Status:               info.GetStatus(),
-		HistoryLength:        info.GetHistoryLength(),
-		ParentNamespaceId:    info.GetParentNamespaceId(),
-		ParentExecution:      info.GetParentExecution(),
-		Memo:                 info.GetMemo(),
-		SearchAttributes:     convertSearchAttributes(c, info.GetSearchAttributes()),
-		AutoResetPoints:      info.GetAutoResetPoints(),
-		StateTransitionCount: info.GetStateTransitionCount(),
-		ExecutionTime:        info.GetExecutionTime(),
+		Execution:                    info.GetExecution(),
+		Type:                         info.GetType(),
+		CloseTime:                    info.GetCloseTime(),
+		StartTime:                    info.GetStartTime(),
+		Status:                       info.GetStatus(),
+		HistoryLength:                info.GetHistoryLength(),
+		ParentNamespaceId:            info.GetParentNamespaceId(),
+		ParentExecution:              info.GetParentExecution(),
+		Memo:                         info.GetMemo(),
+		SearchAttributes:             convertSearchAttributes(c, info.GetSearchAttributes()),
+		AutoResetPoints:              info.GetAutoResetPoints(),
+		StateTransitionCount:         info.GetStateTransitionCount(),
+		ExecutionTime:                info.GetExecutionTime(),
+		HistorySizeBytes:             info.GetHistorySizeBytes(),
+		MostRecentWorkerVersionStamp: info.GetMostRecentWorkerVersionStamp(),
 	}
 
 	var pendingActivitiesStr []*clispb.PendingActivityInfo
