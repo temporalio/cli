@@ -51,14 +51,13 @@ const (
 	FlagMemoFileDefinition              = "Passes a memo as file input, with each line following key=value format. Use valid JSON formats for value."
 
 	// Other Workflow flags
-	FlagResetPointsUsage    = "Only show auto-reset points."
-	FlagPrintRawUsage       = "Print properties without changing their format."
-	QueryFlagTypeUsage      = "The type of Query to run."
-	FlagWorkflowSignalUsage = "Signal Workflow Execution by Id."
-
+	FlagResetPointsUsage           = "Only show auto-reset points."
+	FlagPrintRawUsage              = "Print properties without changing their format."
+	QueryFlagTypeUsage             = "The type of Query to run."
+	FlagWorkflowSignalUsage        = "Signal Workflow Execution by Id."
 	FlagSignalName                 = "Signal Name"
-	FlagInputSignal                = "Input for the Signal . Formatted in JSON."
-	FlagInputFileSignal            = "Input for the Signal from file . Formatted in JSON."
+	FlagInputSignal                = "Input for the Signal. Formatted in JSON."
+	FlagInputFileSignal            = "Input for the Signal from file. Formatted in JSON."
 	FlagUpdateHandlerName          = "Update handler Name"
 	FlagUpdateHandlerInput         = "Args for the Update handler. Formatted in JSON."
 	FlagUpdateIDDefinition         = "UpdateID to check the result of an update (either UpdateID or Update handler name should be passed)"
