@@ -205,9 +205,10 @@ func NewTaskQueueCommands() []*cli.Command {
 					Category: common.CategoryMain,
 				},
 				&cli.StringFlag{
-					Name:     common.FlagIgnoreClosedWorkflows,
-					Usage:    common.FlagIgnoreClosedWorkflowsUsage,
+					Name:     common.FlagReachabilityType,
+					Usage:    common.FlagReachabilityTypeUsage,
 					Category: common.CategoryMain,
+					Value:    "existing",
 				},
 			},
 			Action: func(c *cli.Context) error {

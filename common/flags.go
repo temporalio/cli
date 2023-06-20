@@ -142,7 +142,7 @@ var (
 	FlagExistingCompatibleBuildID = "existing-compatible-build-id"
 	FlagSetBuildIDAsDefault       = "set-as-default"
 	FlagMaxBuildIDSets            = "max-sets"
-	FlagIgnoreClosedWorkflows     = "ignore-closed"
+	FlagReachabilityType          = "reachability-type"
 )
 
 var SharedFlags = []cli.Flag{

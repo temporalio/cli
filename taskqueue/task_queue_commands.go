@@ -192,17 +192,27 @@ func GetBuildIDReachability(c *cli.Context) error {
 	}
 	buildIDs := c.StringSlice(common.FlagBuildID)
 	taskQueues := c.StringSlice(common.FlagTaskQueue)
-	ignoreClosed := c.Bool(common.FlagIgnoreClosedWorkflows)
+	reachabilityType := strings.ToLower(c.String(common.FlagReachabilityType))
+	reachability := enumspb.TASK_REACHABILITY_UNSPECIFIED
+	if reachabilityType != "" {
+		if reachabilityType == "open" {
+			reachability = enumspb.TASK_REACHABILITY_OPEN_WORKFLOWS
+		} else if reachabilityType == "closed" {
+			reachability = enumspb.TASK_REACHABILITY_CLOSED_WORKFLOWS
+		} else if reachabilityType == "existing" {
+			reachability = enumspb.TASK_REACHABILITY_EXISTING_WORKFLOWS
+		} else {
+			return fmt.Errorf("invalid reachability type: %v", reachabilityType)
+		}
+	}
 
 	ctx, cancel := common.NewContext(c)
 	defer cancel()
 	request := &workflowservice.GetWorkerTaskReachabilityRequest{
-		Namespace:  namespace,
-		BuildIds:   buildIDs,
-		TaskQueues: taskQueues,
-	}
-	if ignoreClosed {
-		request.Reachability = enumspb.TASK_REACHABILITY_OPEN_WORKFLOWS
+		Namespace:    namespace,
+		BuildIds:     buildIDs,
+		TaskQueues:   taskQueues,
+		Reachability: reachability,
 	}
 
 	resp, err := frontendClient.GetWorkerTaskReachability(ctx, request)

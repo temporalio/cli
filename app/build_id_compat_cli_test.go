@@ -105,3 +105,11 @@ func (s *buildIdCompatSuite) TestPromoteBuildIdInSet() {
 		"--build-id", "foo"))
 	s.Nil(err)
 }
+
+func (s *buildIdCompatSuite) TestReachability() {
+	err := s.app.Run(s.makeArgs(
+		"task-queue", "update-build-ids", "add-new-default", "--build-id", "foo"))
+	s.Nil(err)
+	err = s.app.Run(s.makeArgs("task-queue", "get-build-id-reachability", "--build-id", "foo"))
+	s.Nil(err)
+}

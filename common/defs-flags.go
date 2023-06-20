@@ -146,5 +146,5 @@ const (
 	FlagMaxBuildIDSetsUsage            = "Limits how many compatible sets will be returned. Specify 1 to only return the current default major version set. 0 returns all sets."
 	FlagBuildIDReachabilityUsage       = "Which Build ID to get reachability information for. May be specified multiple times."
 	FlagTaskQueueForReachabilityUsage  = "Which Task Queue(s) to constrain the reachability search to. May be specified multiple times."
-	FlagIgnoreClosedWorkflowsUsage     = "If set to true, the reachability query will only consider new and currently opened workflows, and closed workflows will not be considered. Do not set this flag if you care about reaching closed workflows (ex: for querying them)."
+	FlagReachabilityTypeUsage          = "Specify how you'd like to filter the reachability of Build IDs. Valid choices are `open` (reachable by one or more open workflows), `closed` (reachable by one or more closed workflows), or `existing` (reachable by either). If a Build ID is reachable by new workflows, that is always reported."
 )
