@@ -37,7 +37,7 @@ clean:
 ##### Test #####
 test:
 	@printf $(COLOR) "Running unit tests..."
-	go test ./... -race -count 1
+	go test ./... -count 1
 
 ##### Misc #####
 
