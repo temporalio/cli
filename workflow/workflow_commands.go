@@ -1257,7 +1257,7 @@ func getResetEventIDByType(ctx context.Context, c *cli.Context, resetType, names
 // Returns event id of the last completed task or id of the next event after scheduled task.
 func getLastWorkflowTaskEventID(ctx context.Context, namespace, wid, rid string, frontendClient workflowservice.WorkflowServiceClient) (resetBaseRunID string, workflowTaskEventID int64, err error) {
 	resetBaseRunID = rid
-	req := &workflowservice.GetWorkflowExecutionHistoryRequest{
+	req := &workflowservice.GetWorkflowExecutionHistoryReverseRequest{
 		Namespace: namespace,
 		Execution: &commonpb.WorkflowExecution{
 			WorkflowId: wid,
@@ -1268,14 +1268,16 @@ func getLastWorkflowTaskEventID(ctx context.Context, namespace, wid, rid string,
 	}
 
 	for {
-		resp, err := frontendClient.GetWorkflowExecutionHistory(ctx, req)
+		resp, err := frontendClient.GetWorkflowExecutionHistoryReverse(ctx, req)
 		if err != nil {
 			return "", 0, printErrorAndReturn("GetWorkflowExecutionHistory failed", err)
 		}
 		for _, e := range resp.GetHistory().GetEvents() {
 			if e.GetEventType() == enumspb.EVENT_TYPE_WORKFLOW_TASK_COMPLETED {
 				workflowTaskEventID = e.GetEventId()
+				break
 			} else if e.GetEventType() == enumspb.EVENT_TYPE_WORKFLOW_TASK_SCHEDULED {
+				// if there is no task completed event, set it to first scheduled event + 1
 				workflowTaskEventID = e.GetEventId() + 1
 			}
 		}
