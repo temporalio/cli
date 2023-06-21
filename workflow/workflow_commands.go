@@ -12,8 +12,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/temporalio/cli/trace"
-
 	"github.com/olekukonko/tablewriter"
 	"github.com/pborman/uuid"
 	"github.com/temporalio/cli/batch"
