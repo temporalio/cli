@@ -8,7 +8,7 @@ const (
 	ScheduleDefinition  = "Operations performed on Schedules."
 	BatchDefinition     = "Operations performed on Batch jobs."
 	OperatorDefinition  = "Operations performed on the Temporal Server."
-	EnvDefinition       = "Manage environmental configurations on Temporal Client."
+	EnvDefinition       = "Manage CLI environments."
 
 	// Workflow subcommand definitions
 	StartWorkflowDefinition     = "Starts a new Workflow Execution."
@@ -65,10 +65,10 @@ const (
 	RemoveDefinition   = "Remove a remote Cluster."
 
 	// Env subcommand definitions
-	ListEnvDefinition = "Print all local configuration envs."
-	GetDefinition     = "Print environmental properties."
-	SetDefinition     = "Set environmental properties."
-	DeleteDefinition  = "Delete an environment or environmental property."
+	ListEnvDefinition = "Print all environments."
+	GetDefinition     = "Print environment properties."
+	SetDefinition     = "Set environment properties."
+	DeleteDefinition  = "Delete an environment or environment property."
 
 	// Schedule definitions
 	ScheduleCreateDefinition   = "Create a new Schedule."
@@ -313,42 +313,40 @@ const ClusterRemoveUsageText = `The ` + "`" + `temporal operator cluster remove`
 
 Use the options listed below to change the command's behavior.`
 
-const EnvUsageText = `Environment (or 'env') commands allow the user to configure the properties for the environment in use.`
+const EnvUsageText = `Use the '--env <env name>' option with other commands to point the CLI at a different Temporal Server instance. If --env is not passed, the 'default' environment is used.`
 
 const EnvListUsageText = `List all environments`
 
-const EnvGetUsageText = `The ` + "`" + `temporal env get` + "`" + ` command prints the environmental properties for the environment in use.
+const EnvGetUsageText = "`" + `temporal env get [environment or property]` + "`" + `
 
-Passing the 'local' [Namespace](/concepts/what-is-a-namespace) returns the name, address, and certificate paths for the local environment.
-` + "`" + `temporal env get local` + "`" + `
-` + "`" + `
-Output:
-tls-cert-path  /home/my-user/certs/cluster.cert  
-tls-key-path   /home/my-user/certs/cluster.key   
-address        127.0.0.1:7233                    
-namespace      someNamespace 
-` + "`" + `
+Print all properties of the 'prod' environment:
 
-Output can be narrowed down to a specific environmental property.
-` + "`" + `temporal env get local.tls-key-path` + "`" + `
-` + "`" + `tls-key-path  /home/my-user/certs/cluster.key` + "`" + `
+` + "`" + `temporal env get prod` + "`" + `
 
-Use the options listed below to change the command's behavior.`
+tls-cert-path  /home/my-user/certs/client.cert
+tls-key-path   /home/my-user/certs/client.key
+address        temporal.example.com:7233
+namespace      someNamespace
 
-const EnvSetUsageText = `The ` + "`" + `temporal env set` + "`" + ` command sets the value for an environmental property.
+Print a single property:
 
-Properties (such as the frontend address) can be set for the entire system:
-` + "`" + `temporal env set local.address 127.0.0.1:7233` + "`" + `
+` + "`" + `temporal env get prod.tls-key-path` + "`" + `
 
-Use the options listed below to change the command's behavior.`
+tls-key-path  /home/my-user/certs/cluster.key`
 
-const EnvDeleteUsageText = `The ` + "`" + `temporal env delete` + "`" + ` command deletes a given environment or environmental property.
+const EnvSetUsageText = "`" + `temporal env set [environment.property name] [property value]` + "`" + ` 
 
-Delete an environment (such as 'local') and its saved values by passing a valid [Namespace](/concepts/what-is-a-namespace) name.
+Property names match CLI option names, for example '--address' and '--tls-cert-path':
 
-` + "`" + `temporal env delete local` + "`" + `
+` + "`" + `temporal env set prod.address 127.0.0.1:7233` + "`" + `
+` + "`" + `temporal env set prod.tls-cert-path  /home/my-user/certs/cluster.cert` + "`"
 
-Use the options listed below to change the command's behavior.`
+const EnvDeleteUsageText = "`" + `temporal env delete [environment or property]` + "`" + `
+
+Delete an environment or just a single property:
+
+` + "`" + `temporal env delete prod` + "`" + `
+` + "`" + `temporal env delete prod.tls-cert-path` + "`"
 
 const NamespaceUsageText = `Namespace commands perform operations on [Namespaces](/concepts/what-is-a-namespace) contained in the [Temporal Cluster](/concepts/what-is-a-temporal-cluster).
 
