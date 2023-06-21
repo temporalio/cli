@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"github.com/alitto/pond"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/history/v1"
@@ -102,6 +103,9 @@ func (job *WorkflowStateJob) Run(group *pond.TaskGroupWithContext) func() error 
 				for _, childJob := range job.childJobs {
 					if childJob.ShouldStart() {
 						group.Submit(childJob.Run(group))
+					} else {
+						// Consider the child job completed if it's not going to be started
+						childJob.state.LastEventId = childJob.state.HistoryLength
 					}
 				}
 			}
