@@ -2,10 +2,13 @@ package trace
 
 import (
 	"bytes"
-	"github.com/stretchr/testify/require"
-	"go.temporal.io/api/common/v1"
+	"runtime"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
+	"go.temporal.io/api/common/v1"
 
 	"github.com/stretchr/testify/assert"
 	"go.temporal.io/api/enums/v1"
@@ -126,6 +129,10 @@ func TestExecuteWorkflowTemplate(t *testing.T) {
 			require.NoError(t, err)
 
 			require.NoError(t, tmpl.Execute(tt.state, tt.depth))
+
+			if runtime.GOOS == "windows" {
+				tt.want = strings.ReplaceAll(tt.want, "\n", "\r\n")
+			}
 
 			assert.Equal(t, tt.want, b.String())
 		})

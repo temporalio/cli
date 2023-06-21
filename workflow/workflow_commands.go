@@ -21,6 +21,7 @@ import (
 	"github.com/temporalio/cli/common"
 	"github.com/temporalio/cli/common/stringify"
 	"github.com/temporalio/cli/dataconverter"
+	"github.com/temporalio/cli/trace"
 	"github.com/temporalio/tctl-kit/pkg/color"
 	"github.com/temporalio/tctl-kit/pkg/iterator"
 	"github.com/temporalio/tctl-kit/pkg/output"
@@ -1506,7 +1507,7 @@ func updateWorkflowHelper(c *cli.Context, request *sdkclient.UpdateWorkflowWithO
 	var valuePtr interface{}
 	err = workflowUpdateHandle.Get(ctx, &valuePtr)
 	if err != nil {
-		return fmt.Errorf("update workflow failed: %w", err)
+		return fmt.Errorf("unable to update workflow: %w", err)
 	}
 	result := map[string]interface{}{
 		"Name":     request.UpdateName,

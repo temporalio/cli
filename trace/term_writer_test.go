@@ -3,8 +3,9 @@ package trace
 import (
 	"bytes"
 	"fmt"
-	"github.com/stretchr/testify/require"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestTermWriter_OneFlush(t *testing.T) {
@@ -56,8 +57,8 @@ func TestTermWriter_OneFlush(t *testing.T) {
 			b := bytes.NewBufferString("") // Start with an empty string so we can test no content being written
 			w := NewTermWriter().WithWriter(b).WithSize(tt.width, tt.height)
 
-			_, err := w.WriteString(tt.content)
-			err = w.Flush(tt.trim)
+			_, _ = w.WriteString(tt.content)
+			err := w.Flush(tt.trim)
 
 			require.NoError(t, err)
 			require.Equalf(t, b, bytes.NewBufferString(tt.want), "flushed message doesn't match expected message")
@@ -101,8 +102,8 @@ func TestTermWriter_MultipleFlushes(t *testing.T) {
 			w := NewTermWriter().WithWriter(b).WithSize(tt.width, tt.height)
 
 			for _, s := range tt.content {
-				_, err := w.WriteString(s)
-				err = w.Flush(tt.trim)
+				_, _ = w.WriteString(s)
+				err := w.Flush(tt.trim)
 				require.NoError(t, err)
 			}
 
