@@ -3,12 +3,13 @@ package trace
 import (
 	"embed"
 	"fmt"
-	"github.com/fatih/color"
-	"go.temporal.io/api/enums/v1"
 	"io"
 	"strings"
 	"text/template"
 	"time"
+
+	"github.com/fatih/color"
+	"go.temporal.io/api/enums/v1"
 )
 
 const (
@@ -130,7 +131,7 @@ func DiffDuration(start *time.Time, close *time.Time) string {
 	if close != nil {
 		return FmtDuration(close.Sub(*start))
 	}
-	return fmt.Sprintf("%s ago", FmtDuration(time.Now().Sub(*start)))
+	return fmt.Sprintf("%s ago", FmtDuration(time.Since(*start)))
 }
 
 // FmtDuration produces a string for a given duration, rounding to the most reasonable timeframe.
