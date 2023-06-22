@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/temporalio/cli/common"
+
 	"github.com/stretchr/testify/suite"
 	"github.com/temporalio/cli/app"
 	sconfig "github.com/temporalio/cli/server/config"
@@ -18,6 +20,7 @@ type buildIdCompatSuite struct {
 	stopServerCancel context.CancelFunc
 	client           client.Client
 	port             int
+	writer           *common.MemWriter
 }
 
 func TestBuildIdCompatSuite(t *testing.T) {
@@ -26,6 +29,9 @@ func TestBuildIdCompatSuite(t *testing.T) {
 
 func (s *buildIdCompatSuite) SetupSuite() {
 	s.app = app.BuildApp()
+	mw := &common.MemWriter{}
+	s.app.Writer = mw
+	s.writer = mw
 	// Don't call os.Exit
 	s.app.ExitErrHandler = func(_ *cli.Context, _ error) {}
 	portProvider := sconfig.NewPortProvider()
@@ -112,4 +118,8 @@ func (s *buildIdCompatSuite) TestReachability() {
 	s.Nil(err)
 	err = s.app.Run(s.makeArgs("task-queue", "get-build-id-reachability", "--build-id", "foo"))
 	s.Nil(err)
+	writtenContent := s.writer.GetContent()
+	println(writtenContent)
+	s.Contains(writtenContent, "foo")
+	s.Contains(writtenContent, "[NewWorkflows]")
 }

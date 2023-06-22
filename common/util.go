@@ -2,6 +2,7 @@ package common
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -552,4 +553,17 @@ func AddBeforeHandler(cmd *cli.Command, h func(*cli.Context) error) {
 	for _, subcmd := range cmd.Subcommands {
 		AddBeforeHandler(subcmd, h)
 	}
+}
+
+// MemWriter is an io.Writer implementation that stores the written content.
+type MemWriter struct {
+	content bytes.Buffer
+}
+
+func (mw *MemWriter) Write(p []byte) (n int, err error) {
+	return mw.content.Write(p)
+}
+
+func (mw *MemWriter) GetContent() string {
+	return mw.content.String()
 }
