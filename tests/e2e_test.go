@@ -1,16 +1,15 @@
 package tests
 
 import (
-	"bytes"
 	"context"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"sync"
 	"testing"
+
+	"github.com/temporalio/cli/common"
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -70,11 +69,11 @@ func (s *e2eSuite) SetupTest() {
 func (s *e2eSuite) TearDownTest() {
 }
 
-func (s *e2eSuite) setUpTestEnvironment() (*testsuite.DevServer, *cli.App, *MemWriter) {
+func (s *e2eSuite) setUpTestEnvironment() (*testsuite.DevServer, *cli.App, *common.MemWriter) {
 	server, err := s.createServer()
 	s.Require().NoError(err)
 
-	writer := &MemWriter{}
+	writer := &common.MemWriter{}
 	tcli := s.createApp(server, writer)
 
 	return server, tcli, writer
@@ -101,7 +100,7 @@ func (s *e2eSuite) createServer() (*testsuite.DevServer, error) {
 	return server, err
 }
 
-func (s *e2eSuite) createApp(server *testsuite.DevServer, writer *MemWriter) *cli.App {
+func (s *e2eSuite) createApp(server *testsuite.DevServer, writer *common.MemWriter) *cli.App {
 	tcli := app.BuildApp()
 	tcli.Writer = writer
 
@@ -144,32 +143,4 @@ func (m *clientFactory) SDKClient(c *cli.Context, namespace string) sdkclient.Cl
 
 func (m *clientFactory) HealthClient(_ *cli.Context) healthpb.HealthClient {
 	panic("HealthClient mock is not supported")
-}
-
-// MemWriter is an io.Writer implementation that stores the written content.
-type MemWriter struct {
-	content bytes.Buffer
-}
-
-func (mw *MemWriter) Write(p []byte) (n int, err error) {
-	return mw.content.Write(p)
-}
-
-func (mw *MemWriter) GetContent() string {
-	return mw.content.String()
-}
-
-func TestMemWriter(t *testing.T) {
-	mw := &MemWriter{}
-	_, err := fmt.Fprintln(mw, "This message is written to the MemWriter.")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	expected := "This message is written to the MemWriter."
-	content := mw.GetContent()
-
-	if !strings.Contains(content, expected) {
-		t.Errorf("Expected log content to contain '%s', but it doesn't. Content: '%s'", expected, content)
-	}
 }

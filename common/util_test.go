@@ -1,6 +1,8 @@
 package common
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -238,4 +240,19 @@ func (s *utilSuite) TestParseTimeDateRange() {
 func (s *utilSuite) TestGetCliIdentity() {
 	identity := GetCliIdentity()
 	s.Contains(identity, "temporal-cli")
+}
+
+func TestMemWriter(t *testing.T) {
+	mw := &MemWriter{}
+	_, err := fmt.Fprintln(mw, "This message is written to the MemWriter.")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := "This message is written to the MemWriter."
+	content := mw.GetContent()
+
+	if !strings.Contains(content, expected) {
+		t.Errorf("Expected log content to contain '%s', but it doesn't. Content: '%s'", expected, content)
+	}
 }

@@ -68,6 +68,7 @@ func (s *e2eSuite) TestWorkflowShow_ReplayableHistory() {
 }
 
 func (s *e2eSuite) TestWorkflowUpdate() {
+	s.T().Skip("Skipped because downloaded dev server has old update implementation")
 	s.T().Parallel()
 
 	testserver, app, writer := s.setUpTestEnvironment()
