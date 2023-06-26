@@ -34,6 +34,9 @@ const (
 	// Task Queue subcommand definitions
 	DescribeTaskQueueDefinition      = "Provides information for Workers that have recently polled on this Task Queue."
 	ListPartitionTaskQueueDefinition = "Lists the Task Queue's partitions and the matching nodes they are assigned to."
+	UpdateBuildIDsDefinition         = "Operations to update the sets of worker Build ID versions on the Task Queue"
+	GetBuildIDsDefinition            = "Fetch the sets of worker Build ID versions on the Task Queue"
+	GetBuildIDReachabilityDefinition = "Retrieves information about the reachability of Build IDs on one or more Task Queues"
 
 	// Batch subcommand definitions
 	DescribeBatchJobDefinition  = "Provide information about a Batch operation job."
@@ -81,6 +84,16 @@ const (
 	ScheduleDescribeDefinition = "Get Schedule configuration and current state."
 	ScheduleDeleteDefinition   = "Deletes a Schedule."
 	ScheduleListDefinition     = "Lists Schedules."
+
+	// Update build id subcommand definitions
+	AddNewDefaultBuildIDDefinition         = "Add a new default (incompatible) build ID to the Task Queue version sets."
+	AddNewDefaultBuildIDDefinitionUsage    = "Creates a new build id set which will become the new overall default for the queue with the provided build id as its only member. This new set is incompatible with all previous sets/versions."
+	AddNewCompatibleBuildIDDefinition      = "Add a new build ID compatible with an existing ID to the Task Queue version sets."
+	AddNewCompatibleBuildIDDefinitionUsage = "The new build ID will become the default for the set containing the existing ID. See per-flag help for more."
+	PromoteSetDefinition                   = "Promote an existing build ID set to become the default for the Task Queue."
+	PromoteSetDefinitionUsage              = "If the set is already the default, this command has no effect."
+	PromoteIDInSetDefinition               = "Promote an existing build ID to become the default for its containing set."
+	PromoteIDInSetDefinitionUsage          = "New tasks compatible with the the set will be dispatched to the default id."
 )
 
 const BatchUsageText = `Batch commands change multiple [Workflow Executions](/concepts/what-is-a-workflow-execution)
@@ -113,7 +126,7 @@ Batch Jobs can be returned for an entire Cluster or a single Namespace.
 
 Use the command options below to change the information returned by this command.`
 
-const TerminateBatchUsageText = `The ` + "`" + `temporal batch terminate` + "`" + ` command terminates a Batch job with the provided Job ID. 
+const TerminateBatchUsageText = `The ` + "`" + `temporal batch terminate` + "`" + ` command terminates a Batch job with the provided Job ID.
 For future reference, provide a reason for terminating the Batch Job.
 
 ` + "`" + `temporal batch terminate --job-id=MyJobId --reason=JobReason` + "`" + `
@@ -334,7 +347,7 @@ Print a single property:
 
 tls-key-path  /home/my-user/certs/cluster.key`
 
-const EnvSetUsageText = "`" + `temporal env set [environment.property name] [property value]` + "`" + ` 
+const EnvSetUsageText = "`" + `temporal env set [environment.property name] [property value]` + "`" + `
 
 Property names match CLI option names, for example '--address' and '--tls-cert-path':
 
@@ -458,8 +471,8 @@ The Overlap Policy of the Schedule can be overridden as well.
 
 Use the options provided below to change this command's behavior.`
 
-const ScheduleBackfillUsageText = `The ` + "`" + `temporal schedule backfill` + "`" + ` command executes Actions ahead of their specified time range. 
-Backfilling can fill in [Workflow Runs](/concepts/what-is-a-run-id) from a time period when the Schedule was paused, or from before the Schedule was created. 
+const ScheduleBackfillUsageText = `The ` + "`" + `temporal schedule backfill` + "`" + ` command executes Actions ahead of their specified time range.
+Backfilling can fill in [Workflow Runs](/concepts/what-is-a-run-id) from a time period when the Schedule was paused, or from before the Schedule was created.
 
 Schedule backfills require a valid Schedule ID, along with the time in which to run the Schedule and a change to the overlap policy.
 ` + "`" + `` + "`" + `` + "`" + `
@@ -563,6 +576,12 @@ Server commands follow this syntax:
 const StartDevUsageText = `The ` + "`" + `temporal server start-dev` + "`" + ` command starts the Temporal Server on ` + "`" + `localhost:7233` + "`" + `.
 The results of any command run on the Server can be viewed at http://localhost:7233.
 `
+
+const UpdateBuildIDsDefinitionText = "Provides various commands for adding or changing the sets of compatible build IDs associated with a Task Queue. See the help of each sub-command for more."
+const GetBuildIDsDefinitionText = "Fetch the sets of compatible build IDs associated with a Task Queue and associated information."
+const GetBuildIDReachabilityDefinitionText = "This command can tell you whether or not Build IDs may be used for for new, existing, or closed workflows. " +
+	"Both the --build-id and --task-queue flags may be specified multiple times. " +
+	"If you do not provide a task queue, reachability for the provided Build IDs will be checked against all task queues."
 
 const CustomTemplateHelpCLI = `NAME:
    {{template "helpNameTemplate" .}}{{if .Description}}
