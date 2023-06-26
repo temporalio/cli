@@ -27,10 +27,10 @@ func PrintWorkflowSummary(c *cli.Context, sdkClient sdkclient.Client, wfId, runI
 
 	_, _ = title.Println("Execution summary:")
 	rows := []Row{
-		Row{"Workflow Id", info.GetExecution().GetWorkflowId()},
-		Row{"Workflow Run Id", info.GetExecution().GetRunId()},
-		Row{"Workflow Type", info.GetType().GetName()},
-		Row{"Task Queue", info.GetTaskQueue()},
+		{"Workflow Id", info.GetExecution().GetWorkflowId()},
+		{"Workflow Run Id", info.GetExecution().GetRunId()},
+		{"Workflow Type", info.GetType().GetName()},
+		{"Task Queue", info.GetTaskQueue()},
 	}
 	var i []interface{}
 	for _, row := range rows {

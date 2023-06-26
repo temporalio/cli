@@ -1,6 +1,7 @@
 package trace
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -58,15 +59,26 @@ func PrintWorkflowTrace(c *cli.Context, sdkClient sdkclient.Client, wid, rid str
 	tcCtx, cancel := common.NewIndefiniteContext(c)
 	defer cancel()
 
-	doneChan := make(chan bool)
-	errChan := make(chan error)
-	ticker := time.NewTicker(time.Second).C
-
 	// Capture interrupt signals to do a last print
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
 
-	// Start update fetching
+	doneChan, errChan, update := setupUpdateChannels(tcCtx, sdkClient, wid, rid, noFold, foldStatus, childWfsDepth, concurrency)
+
+	// Load templates
+	writer := NewTermWriter().WithTerminalSize()
+	tmpl, err := NewExecutionTemplate(writer, foldStatus, noFold)
+	if err != nil {
+		return 1, err
+	}
+
+	_, _ = title.Println("Progress:")
+	return monitorUpdates(writer, tmpl, update, doneChan, sigChan, errChan)
+}
+
+func setupUpdateChannels(tcCtx context.Context, sdkClient sdkclient.Client, wid, rid string, noFold bool, foldStatus []enums.WorkflowExecutionStatus, childWfsDepth, concurrency int) (chan bool, chan error, *WorkflowExecutionUpdate) {
+	doneChan := make(chan bool)
+	errChan := make(chan error)
 	var update *WorkflowExecutionUpdate
 	go func() {
 		iter, err := GetWorkflowExecutionUpdates(tcCtx, sdkClient, wid, rid, noFold, foldStatus, childWfsDepth, concurrency)
@@ -81,19 +93,15 @@ func PrintWorkflowTrace(c *cli.Context, sdkClient sdkclient.Client, wid, rid str
 		}
 		doneChan <- true
 	}()
+	return doneChan, errChan, update
+}
 
+func monitorUpdates(writer *TermWriter, tmpl *ExecutionTemplate, update *WorkflowExecutionUpdate, doneChan chan bool, sigChan chan os.Signal, errChan chan error) (int, error) {
 	var currentEvents int64
 	var totalEvents int64
 	var isUpToDate bool
+	ticker := time.NewTicker(time.Second).C
 
-	// Load templates
-	writer := NewTermWriter().WithTerminalSize()
-	tmpl, err := NewExecutionTemplate(writer, foldStatus, noFold)
-	if err != nil {
-		return 1, err
-	}
-
-	_, _ = title.Println("Progress:")
 	for {
 		select {
 		case <-ticker:
@@ -123,7 +131,7 @@ func PrintWorkflowTrace(c *cli.Context, sdkClient sdkclient.Client, wid, rid str
 			return PrintAndExit(writer, tmpl, update)
 		case <-sigChan:
 			return PrintAndExit(writer, tmpl, update)
-		case err = <-errChan:
+		case err := <-errChan:
 			return 1, err
 		}
 	}
