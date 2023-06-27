@@ -38,7 +38,7 @@ Use the CLI to run a Temporal Server and interact with it.
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
-## Install
+## 📦 Install
 
 You can install the CLI using one of the below methods.
 
@@ -64,7 +64,7 @@ You can install the CLI using one of the below methods.
 
 You can also download older versions from [GitHub releases](https://github.com/temporalio/cli/releases).
 
-## Use
+## 🚀 Use
 
 ### Start the Server
 
@@ -95,7 +95,7 @@ temporal operator namespace list
 
 For a full list of commands, see the [CLI docs](https://docs.temporal.io/cli/) or run `temporal help`.
 
-## Configure
+## ⚙️ Configure
 
 Use the help flag to see a full list of CLI options:
 
@@ -256,7 +256,7 @@ echo 'source <(temporal completion bash)' >> ~/.bashrc
 source ~/.bashrc
 ```
 
-## Development
+## 🔧 Development
 
 ### Compile and run CLI
 
