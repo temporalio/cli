@@ -169,7 +169,7 @@ See the CLI docs for a [list of env vars](https://docs.temporal.io/cli#environme
 
 The Temporal CLI has the capability to auto-complete commands.
 
-Running `temporal completion SHELL` will output the related completion SHELL code.
+Running `temporal completion SHELL` will output completion setup code for the given shell.
 
 ### zsh auto-completion
 
@@ -187,37 +187,19 @@ If you're running auto-completion from the terminal, run the command below:
 echo 'source <(temporal completion zsh)' >> ~/.zshrc
 ```
 
-After setting the variable, run:
+After editing the file, run:
 
 `source ~/.zshrc`.
 
 ### Bash auto-completion
 
-Bash auto-completion relies on `bash-completion`.
+Enable completion for Temporal by adding the following code to your `~/.bashrc` file:
 
-Install the software with the steps provided [here](https://github.com/scop/bash-completion#installation), or use your preferred package manager on your operating system.
-
-#### macOS installation
-
-Install `bash-completion` through Homebrew:
-`brew install bash-completion@2`
-
-Follow the instruction printed in the "Caveats" section, which will say to add one of the following lines to your `~/.bashrc` file:
-
-```sh
-[[ -r "/opt/homebrew/etc/profile.d/bash_completion.sh" ]] && . "/opt/homebrew/etc/profile.d/bash_completion.sh"
+```bash
+source <(temporal completion bash)
 ```
 
-or:
-
-```sh
-[[ -r "/usr/local/etc/profile.d/bash_completion.sh" ]] && . "/usr/local/etc/profile.d/bash_completion.sh"
-```
-
-Verify that `bash-completion` is installed by running `type _init_completion`. 
-It should say `_init_completion is a function` and print the function.
-
-Enable completion for Temporal by adding the following code to your bash file:
+In an existing terminal, you can do that and load completion by running:
 
 ```bash
 echo 'source <(temporal completion bash)' >> ~/.bashrc
@@ -228,32 +210,8 @@ Now test by typing `temporal`, space, and then tab twice. You should see:
 
 ```bash
 $ temporal 
-activity    completion  h           operator    server      workflow    
+activity    completion  h           operator    server      workflow
 batch       env         help        schedule    task-queue
-```
-
-#### Linux installation
-
-Use any of the following package managers to install `bash-completion`:
-`apt install bash-completion`
-`pacman -S bash-completion`
-`yum install bash-completion`
-
-Verify that `bash-completion` is installed by running `type _init_completion`.
-
-To install the software on Alpine Linux, run:
-
-```bash
-apk update
-apk add bash-completion
-source /etc/profile.d/bash_completion.sh
-```
-
-Finally, enable completion for Temporal by adding the following code to your bash file:
-
-```
-echo 'source <(temporal completion bash)' >> ~/.bashrc
-source ~/.bashrc
 ```
 
 ## Development
