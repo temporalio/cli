@@ -8,8 +8,7 @@ import (
 )
 
 // taken from https://github.com/urfave/cli/blob/master/autocomplete/zsh_autocomplete
-var zsh_script = `
-#compdef temporal
+var zsh_script = `#compdef temporal
 _cli_zsh_autocomplete() {
   local -a opts
   local cur
@@ -29,8 +28,8 @@ _cli_zsh_autocomplete() {
 compdef _cli_zsh_autocomplete temporal
 `
 
-var bash_script = `
-#! /bin/bash
+// taken from https://github.com/urfave/cli/blob/master/autocomplete/bash_autocomplete
+var bash_script = `#! /bin/bash
 _cli_bash_autocomplete() {
   if [[ "${COMP_WORDS[0]}" != "source" ]]; then
     local cur opts base
@@ -45,7 +44,7 @@ _cli_bash_autocomplete() {
     return 0
   fi
 }
-complete -o bashdefault -o default -o nospace -F _cli_bash_autocomplete temporal
+complete -o bashdefault -o default -F _cli_bash_autocomplete temporal
 `
 
 func NewCompletionCommands() []*cli.Command {

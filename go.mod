@@ -15,7 +15,7 @@ require (
 	github.com/stretchr/testify v1.8.4
 	github.com/temporalio/tctl-kit v0.0.0-20230328153839-577f95d16fa0
 	github.com/temporalio/ui-server/v2 v2.16.2
-	github.com/urfave/cli/v2 v2.23.6
+	github.com/urfave/cli/v2 v2.25.7
 	go.temporal.io/api v1.23.0
 	go.temporal.io/sdk v1.23.1
 	go.temporal.io/sdk/contrib/tools/workflowcheck v0.0.0-20230328164709-88a40de39c33
