@@ -193,13 +193,37 @@ After editing the file, run:
 
 ### Bash auto-completion
 
-Enable completion for Temporal by adding the following code to your `~/.bashrc` file:
+Bash auto-completion relies on `bash-completion`.
+
+Install the software with the steps provided [here](https://github.com/scop/bash-completion#installation), or use your preferred package manager on your operating system.
+
+#### macOS installation
+
+Install `bash-completion` through Homebrew:
+`brew install bash-completion@2`
+
+Follow the instruction printed in the "Caveats" section, which will say to add one of the following lines to your `~/.bashrc` file:
+
+```sh
+[[ -r "/opt/homebrew/etc/profile.d/bash_completion.sh" ]] && . "/opt/homebrew/etc/profile.d/bash_completion.sh"
+```
+
+or:
+
+```sh
+[[ -r "/usr/local/etc/profile.d/bash_completion.sh" ]] && . "/usr/local/etc/profile.d/bash_completion.sh"
+```
+
+Verify that `bash-completion` is installed by running `type _init_completion`. 
+It should say `_init_completion is a function` and print the function.
+
+Enable completion for Temporal by adding the following code to your bash file:
 
 ```bash
 source <(temporal completion bash)
 ```
 
-In an existing terminal, you can do that and load completion by running:
+In an existing terminal, you can do that by running:
 
 ```bash
 echo 'source <(temporal completion bash)' >> ~/.bashrc
@@ -209,9 +233,33 @@ source ~/.bashrc
 Now test by typing `temporal`, space, and then tab twice. You should see:
 
 ```bash
-$ temporal 
+$ temporal
 activity    completion  h           operator    server      workflow
 batch       env         help        schedule    task-queue
+```
+
+#### Linux installation
+
+Use any of the following package managers to install `bash-completion`:
+`apt install bash-completion`
+`pacman -S bash-completion`
+`yum install bash-completion`
+
+Verify that `bash-completion` is installed by running `type _init_completion`.
+
+To install the software on Alpine Linux, run:
+
+```bash
+apk update
+apk add bash-completion
+source /etc/profile.d/bash_completion.sh
+```
+
+Finally, enable completion for Temporal by adding the following code to your bash file:
+
+```
+echo 'source <(temporal completion bash)' >> ~/.bashrc
+source ~/.bashrc
 ```
 
 ## Development
