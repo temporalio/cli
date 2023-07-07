@@ -29,6 +29,15 @@ func NewWorkflowCommands() []*cli.Command {
 			},
 		},
 		{
+			Name:      "list",
+			Usage:     common.ListWorkflowDefinition,
+			UsageText: common.ListWorkflowUsageText,
+			Flags:     append(common.FlagsForWorkflowFiltering, common.FlagsForPaginationAndRendering...),
+			Action: func(c *cli.Context) error {
+				return ListWorkflow(c)
+			},
+		},
+		{
 			Name:      "describe",
 			Usage:     common.DescribeWorkflowDefinition,
 			UsageText: common.DescribeWorkflowUsageText,
@@ -46,15 +55,6 @@ func NewWorkflowCommands() []*cli.Command {
 			}...),
 			Action: func(c *cli.Context) error {
 				return DescribeWorkflow(c)
-			},
-		},
-		{
-			Name:      "list",
-			Usage:     common.ListWorkflowDefinition,
-			UsageText: common.ListWorkflowUsageText,
-			Flags:     append(common.FlagsForWorkflowFiltering, common.FlagsForPaginationAndRendering...),
-			Action: func(c *cli.Context) error {
-				return ListWorkflow(c)
 			},
 		},
 		{
