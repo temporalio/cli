@@ -1,7 +1,6 @@
 package tests
 
 import (
-	"log"
 	"os"
 	"path/filepath"
 
@@ -19,13 +18,13 @@ func (s *e2eSuite) TestSetEnvValue() {
 		_ = testserver.Stop()
 	}()
 
-	cleanup := setupConfig(app)
+	cleanup := setupConfig(s, app)
 	defer cleanup()
 
 	err := app.Run([]string{"", "env", "set", testEnvName + ".address", "0.0.0.0:00000"})
 	s.NoError(err)
 
-	cfg := readConfig()
+	cfg := readConfig(s)
 	s.Contains(cfg, "tctl-test-env:")
 	s.Contains(cfg, "address: 0.0.0.0:00000")
 	s.Contains(cfg, "namespace: tctl-test-namespace")
@@ -37,7 +36,7 @@ func (s *e2eSuite) TestDeleteEnvProperty() {
 		_ = testserver.Stop()
 	}()
 
-	cleanup := setupConfig(app)
+	cleanup := setupConfig(s, app)
 	defer cleanup()
 
 	err := app.Run([]string{"", "env", "set", testEnvName + ".address", "1.2.3.4:5678"})
@@ -46,7 +45,7 @@ func (s *e2eSuite) TestDeleteEnvProperty() {
 	err = app.Run([]string{"", "env", "delete", testEnvName + ".address"})
 	s.NoError(err)
 
-	cfg := readConfig()
+	cfg := readConfig(s)
 	s.Contains(cfg, "tctl-test-env:")
 	s.Contains(cfg, "namespace: tctl-test-namespace")
 	s.NotContains(cfg, "address: 1.2.3.4:5678")
@@ -58,7 +57,7 @@ func (s *e2eSuite) TestDeleteEnv() {
 		_ = testserver.Stop()
 	}()
 
-	cleanup := setupConfig(app)
+	cleanup := setupConfig(s, app)
 	defer cleanup()
 
 	err := app.Run([]string{"", "env", "set", testEnvName + ".address", "1.2.3.4:5678"})
@@ -67,7 +66,7 @@ func (s *e2eSuite) TestDeleteEnv() {
 	err = app.Run([]string{"", "env", "delete", testEnvName})
 	s.NoError(err)
 
-	cfg := readConfig()
+	cfg := readConfig(s)
 	s.NotContains(cfg, "tctl-test-env:")
 	s.NotContains(cfg, "namespace: tctl-test-namespace")
 	s.NotContains(cfg, "address: 1.2.3.4:5678")
@@ -79,7 +78,7 @@ func (s *e2eSuite) TestDeleteEnv_Default() {
 		_ = testserver.Stop()
 	}()
 
-	cleanup := setupConfig(app)
+	cleanup := setupConfig(s, app)
 	defer cleanup()
 
 	err := app.Run([]string{"", "env", "set", testEnvName + ".address", "1.2.3.4:5678"})
@@ -88,41 +87,34 @@ func (s *e2eSuite) TestDeleteEnv_Default() {
 	err = app.Run([]string{"", "env", "delete", config.DefaultEnv})
 	s.NoError(err)
 
-	cfg := readConfig()
+	cfg := readConfig(s)
 	s.NotContains(cfg, "default:")
 
 	err = app.Run([]string{"", "workflow", "list"})
 	s.NoError(err)
 }
 
-func setupConfig(app *cli.App) func() {
+func setupConfig(s *e2eSuite, app *cli.App) func() {
 	err := app.Run([]string{"", "env", "set", testEnvName + ".namespace", "tctl-test-namespace"})
-	if err != nil {
-		log.Fatal(err)
-	}
+	s.NoError(err)
 
 	return func() {
 		err := app.Run([]string{"", "env", "delete", testEnvName})
-		if err != nil {
-			log.Printf("unable to unset test env: %s", err)
-		}
+		s.NoError(err, "unable to unset test env")
 	}
 }
 
-func readConfig() string {
-	path := getConfigPath()
+func readConfig(s *e2eSuite) string {
+	path := getConfigPath(s)
 	content, err := os.ReadFile(path)
-	if err != nil {
-		log.Fatal(err)
-	}
+	s.NoError(err)
+
 	return string(content)
 }
 
-func getConfigPath() string {
+func getConfigPath(s *e2eSuite) string {
 	dpath, err := os.UserHomeDir()
-	if err != nil {
-		log.Fatal(err)
-	}
+	s.NoError(err)
 
 	path := filepath.Join(dpath, ".config", "temporalio", "temporal.yaml")
 
