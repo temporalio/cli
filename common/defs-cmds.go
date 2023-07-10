@@ -8,7 +8,7 @@ const (
 	ScheduleDefinition  = "Operations performed on Schedules."
 	BatchDefinition     = "Operations performed on Batch jobs."
 	OperatorDefinition  = "Operations performed on the Temporal Server."
-	EnvDefinition       = "Manage environmental configurations on Temporal Client."
+	EnvDefinition       = "Manage CLI environments."
 
 	// Workflow subcommand definitions
 	StartWorkflowDefinition     = "Starts a new Workflow Execution."
@@ -34,6 +34,9 @@ const (
 	// Task Queue subcommand definitions
 	DescribeTaskQueueDefinition      = "Provides information for Workers that have recently polled on this Task Queue."
 	ListPartitionTaskQueueDefinition = "Lists the Task Queue's partitions and the matching nodes they are assigned to."
+	UpdateBuildIDsDefinition         = "Operations to update the sets of worker Build ID versions on the Task Queue"
+	GetBuildIDsDefinition            = "Fetch the sets of worker Build ID versions on the Task Queue"
+	GetBuildIDReachabilityDefinition = "Retrieves information about the reachability of Build IDs on one or more Task Queues"
 
 	// Batch subcommand definitions
 	DescribeBatchJobDefinition  = "Provide information about a Batch operation job."
@@ -65,10 +68,10 @@ const (
 	RemoveDefinition   = "Remove a remote Cluster."
 
 	// Env subcommand definitions
-	ListEnvDefinition = "Print all local configuration envs."
-	GetDefinition     = "Print environmental properties."
-	SetDefinition     = "Set environmental properties."
-	DeleteDefinition  = "Delete an environment or environmental property."
+	ListEnvDefinition = "Print all environments."
+	GetDefinition     = "Print environment properties."
+	SetDefinition     = "Set environment properties."
+	DeleteDefinition  = "Delete an environment or environment property."
 
 	// Schedule definitions
 	ScheduleCreateDefinition   = "Create a new Schedule."
@@ -81,6 +84,16 @@ const (
 	ScheduleDescribeDefinition = "Get Schedule configuration and current state."
 	ScheduleDeleteDefinition   = "Deletes a Schedule."
 	ScheduleListDefinition     = "Lists Schedules."
+
+	// Update build id subcommand definitions
+	AddNewDefaultBuildIDDefinition         = "Add a new default (incompatible) build ID to the Task Queue version sets."
+	AddNewDefaultBuildIDDefinitionUsage    = "Creates a new build id set which will become the new overall default for the queue with the provided build id as its only member. This new set is incompatible with all previous sets/versions."
+	AddNewCompatibleBuildIDDefinition      = "Add a new build ID compatible with an existing ID to the Task Queue version sets."
+	AddNewCompatibleBuildIDDefinitionUsage = "The new build ID will become the default for the set containing the existing ID. See per-flag help for more."
+	PromoteSetDefinition                   = "Promote an existing build ID set to become the default for the Task Queue."
+	PromoteSetDefinitionUsage              = "If the set is already the default, this command has no effect."
+	PromoteIDInSetDefinition               = "Promote an existing build ID to become the default for its containing set."
+	PromoteIDInSetDefinitionUsage          = "New tasks compatible with the the set will be dispatched to the default id."
 )
 
 const BatchUsageText = `Batch commands change multiple [Workflow Executions](/concepts/what-is-a-workflow-execution)
@@ -113,7 +126,7 @@ Batch Jobs can be returned for an entire Cluster or a single Namespace.
 
 Use the command options below to change the information returned by this command.`
 
-const TerminateBatchUsageText = `The ` + "`" + `temporal batch terminate` + "`" + ` command terminates a Batch job with the provided Job ID. 
+const TerminateBatchUsageText = `The ` + "`" + `temporal batch terminate` + "`" + ` command terminates a Batch job with the provided Job ID.
 For future reference, provide a reason for terminating the Batch Job.
 
 ` + "`" + `temporal batch terminate --job-id=MyJobId --reason=JobReason` + "`" + `
@@ -313,42 +326,40 @@ const ClusterRemoveUsageText = `The ` + "`" + `temporal operator cluster remove`
 
 Use the options listed below to change the command's behavior.`
 
-const EnvUsageText = `Environment (or 'env') commands allow the user to configure the properties for the environment in use.`
+const EnvUsageText = `Use the '--env <env name>' option with other commands to point the CLI at a different Temporal Server instance. If --env is not passed, the 'default' environment is used.`
 
 const EnvListUsageText = `List all environments`
 
-const EnvGetUsageText = `The ` + "`" + `temporal env get` + "`" + ` command prints the environmental properties for the environment in use.
+const EnvGetUsageText = "`" + `temporal env get [environment or property]` + "`" + `
 
-Passing the 'local' [Namespace](/concepts/what-is-a-namespace) returns the name, address, and certificate paths for the local environment.
-` + "`" + `temporal env get local` + "`" + `
-` + "`" + `
-Output:
-tls-cert-path  /home/my-user/certs/cluster.cert  
-tls-key-path   /home/my-user/certs/cluster.key   
-address        127.0.0.1:7233                    
-namespace      someNamespace 
-` + "`" + `
+Print all properties of the 'prod' environment:
 
-Output can be narrowed down to a specific environmental property.
-` + "`" + `temporal env get local.tls-key-path` + "`" + `
-` + "`" + `tls-key-path  /home/my-user/certs/cluster.key` + "`" + `
+` + "`" + `temporal env get prod` + "`" + `
 
-Use the options listed below to change the command's behavior.`
+tls-cert-path  /home/my-user/certs/client.cert
+tls-key-path   /home/my-user/certs/client.key
+address        temporal.example.com:7233
+namespace      someNamespace
 
-const EnvSetUsageText = `The ` + "`" + `temporal env set` + "`" + ` command sets the value for an environmental property.
+Print a single property:
 
-Properties (such as the frontend address) can be set for the entire system:
-` + "`" + `temporal env set local.address 127.0.0.1:7233` + "`" + `
+` + "`" + `temporal env get prod.tls-key-path` + "`" + `
 
-Use the options listed below to change the command's behavior.`
+tls-key-path  /home/my-user/certs/cluster.key`
 
-const EnvDeleteUsageText = `The ` + "`" + `temporal env delete` + "`" + ` command deletes a given environment or environmental property.
+const EnvSetUsageText = "`" + `temporal env set [environment.property name] [property value]` + "`" + `
 
-Delete an environment (such as 'local') and its saved values by passing a valid [Namespace](/concepts/what-is-a-namespace) name.
+Property names match CLI option names, for example '--address' and '--tls-cert-path':
 
-` + "`" + `temporal env delete local` + "`" + `
+` + "`" + `temporal env set prod.address 127.0.0.1:7233` + "`" + `
+` + "`" + `temporal env set prod.tls-cert-path  /home/my-user/certs/cluster.cert` + "`"
 
-Use the options listed below to change the command's behavior.`
+const EnvDeleteUsageText = "`" + `temporal env delete [environment or property]` + "`" + `
+
+Delete an environment or just a single property:
+
+` + "`" + `temporal env delete prod` + "`" + `
+` + "`" + `temporal env delete prod.tls-cert-path` + "`"
 
 const NamespaceUsageText = `Namespace commands perform operations on [Namespaces](/concepts/what-is-a-namespace) contained in the [Temporal Cluster](/concepts/what-is-a-temporal-cluster).
 
@@ -460,8 +471,8 @@ The Overlap Policy of the Schedule can be overridden as well.
 
 Use the options provided below to change this command's behavior.`
 
-const ScheduleBackfillUsageText = `The ` + "`" + `temporal schedule backfill` + "`" + ` command executes Actions ahead of their specified time range. 
-Backfilling can fill in [Workflow Runs](/concepts/what-is-a-run-id) from a time period when the Schedule was paused, or from before the Schedule was created. 
+const ScheduleBackfillUsageText = `The ` + "`" + `temporal schedule backfill` + "`" + ` command executes Actions ahead of their specified time range.
+Backfilling can fill in [Workflow Runs](/concepts/what-is-a-run-id) from a time period when the Schedule was paused, or from before the Schedule was created.
 
 Schedule backfills require a valid Schedule ID, along with the time in which to run the Schedule and a change to the overlap policy.
 ` + "`" + `` + "`" + `` + "`" + `
@@ -565,6 +576,12 @@ Server commands follow this syntax:
 const StartDevUsageText = `The ` + "`" + `temporal server start-dev` + "`" + ` command starts the Temporal Server on ` + "`" + `localhost:7233` + "`" + `.
 The results of any command run on the Server can be viewed at http://localhost:7233.
 `
+
+const UpdateBuildIDsDefinitionText = "Provides various commands for adding or changing the sets of compatible build IDs associated with a Task Queue. See the help of each sub-command for more."
+const GetBuildIDsDefinitionText = "Fetch the sets of compatible build IDs associated with a Task Queue and associated information."
+const GetBuildIDReachabilityDefinitionText = "This command can tell you whether or not Build IDs may be used for for new, existing, or closed workflows. " +
+	"Both the --build-id and --task-queue flags may be specified multiple times. " +
+	"If you do not provide a task queue, reachability for the provided Build IDs will be checked against all task queues."
 
 const CustomTemplateHelpCLI = `NAME:
    {{template "helpNameTemplate" .}}{{if .Description}}

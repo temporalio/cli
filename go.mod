@@ -14,20 +14,20 @@ require (
 	github.com/pborman/uuid v1.2.1
 	github.com/stretchr/testify v1.8.4
 	github.com/temporalio/tctl-kit v0.0.0-20230328153839-577f95d16fa0
-	github.com/temporalio/ui-server/v2 v2.15.0
+	github.com/temporalio/ui-server/v2 v2.16.2
 	github.com/urfave/cli/v2 v2.23.6
 	go.temporal.io/api v1.23.0
 	go.temporal.io/sdk v1.23.1
 	go.temporal.io/sdk/contrib/tools/workflowcheck v0.0.0-20230328164709-88a40de39c33
-	go.temporal.io/server v1.20.1-0.20230616203625-3392a7ab579a
+	go.temporal.io/server v1.21.1
 	go.uber.org/zap v1.24.0
 	golang.org/x/exp v0.0.0-20230213192124-5e25df0256eb
-	google.golang.org/grpc v1.55.0
+	google.golang.org/grpc v1.56.1
 )
 
 require (
 	cloud.google.com/go v0.110.0 // indirect
-	cloud.google.com/go/compute v1.19.0 // indirect
+	cloud.google.com/go/compute v1.19.1 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
 	cloud.google.com/go/iam v0.13.0 // indirect
 	cloud.google.com/go/storage v1.29.0 // indirect
@@ -127,7 +127,7 @@ require (
 	golang.org/x/net v0.10.0 // indirect
 	golang.org/x/oauth2 v0.8.0 // indirect
 	golang.org/x/sync v0.2.0 // indirect
-	golang.org/x/sys v0.8.0
+	golang.org/x/sys v0.10.0
 	golang.org/x/text v0.9.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/tools v0.7.0 // indirect
