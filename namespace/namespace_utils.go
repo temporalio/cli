@@ -77,7 +77,7 @@ var (
 		},
 		&cli.StringFlag{
 			Name:     common.FlagRetention,
-			Usage:    "Workflow Execution retention",
+			Usage:    "Length of time (in days) a closed Workflow is preserved before deletion",
 			Category: common.CategoryMain,
 		},
 		&cli.StringFlag{
