@@ -168,6 +168,15 @@ func WithSearchAttributeCacheDisabled() ServerOption {
 	)
 }
 
+// WithPersistenceQPS sets an increased default persistence QPS. Addresses occasional QPS related errors in UI. This
+// delegates to WithDynamicConfigValue.
+func WithPersistenceQPS() ServerOption {
+	return WithDynamicConfigValue(
+		dynamicconfig.FrontendPersistenceMaxQPS,
+		[]dynamicconfig.ConstrainedValue{{Value: 10000}},
+	)
+}
+
 type applyFuncContainer struct {
 	applyInternal func(*sconfig.Config)
 }

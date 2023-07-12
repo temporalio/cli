@@ -29,6 +29,15 @@ func NewWorkflowCommands() []*cli.Command {
 			},
 		},
 		{
+			Name:      "list",
+			Usage:     common.ListWorkflowDefinition,
+			UsageText: common.ListWorkflowUsageText,
+			Flags:     append(common.FlagsForWorkflowFiltering, common.FlagsForPaginationAndRendering...),
+			Action: func(c *cli.Context) error {
+				return ListWorkflow(c)
+			},
+		},
+		{
 			Name:      "describe",
 			Usage:     common.DescribeWorkflowDefinition,
 			UsageText: common.DescribeWorkflowUsageText,
@@ -49,15 +58,6 @@ func NewWorkflowCommands() []*cli.Command {
 			},
 		},
 		{
-			Name:      "list",
-			Usage:     common.ListWorkflowDefinition,
-			UsageText: common.ListWorkflowUsageText,
-			Flags:     append(common.FlagsForWorkflowFiltering, common.FlagsForPaginationAndRendering...),
-			Action: func(c *cli.Context) error {
-				return ListWorkflow(c)
-			},
-		},
-		{
 			Name:      "show",
 			Usage:     common.ShowWorkflowDefinition,
 			UsageText: common.WorkflowShowUsageText,
@@ -65,6 +65,36 @@ func NewWorkflowCommands() []*cli.Command {
 			Action: func(c *cli.Context) error {
 				return ShowHistory(c)
 			},
+		},
+		{
+			Name:      "trace",
+			Usage:     common.TraceWorkflowDefinition,
+			UsageText: common.WorkflowTraceUsageText,
+			Flags: append(common.FlagsForExecution,
+				&cli.IntFlag{
+					Name:     common.FlagDepth,
+					Value:    -1,
+					Usage:    common.FlagDepthDefinition,
+					Category: common.CategoryMain,
+				},
+				&cli.IntFlag{
+					Name:     common.FlagConcurrency,
+					Value:    10,
+					Usage:    common.FlagConcurrencyDefinition,
+					Category: common.CategoryMain,
+				},
+				&cli.StringFlag{
+					Name:     common.FlagFold,
+					Usage:    fmt.Sprintf("Statuses for which Child Workflows will be folded in (this will reduce the number of information fetched and displayed). Case-insensitive and ignored if --%s supplied.", common.FlagNoFold),
+					Value:    "completed,canceled,terminated",
+					Category: common.CategoryMain,
+				},
+				&cli.BoolFlag{
+					Name:     common.FlagNoFold,
+					Usage:    common.FlagNoFoldDefinition,
+					Category: common.CategoryMain,
+				}),
+			Action: TraceWorkflow,
 		},
 		{
 			Name:      "query",
@@ -148,19 +178,30 @@ func NewWorkflowCommands() []*cli.Command {
 			},
 		},
 		{
-			Name:      "count",
-			Usage:     common.CountWorkflowDefinition,
-			UsageText: common.WorkflowCountUsageText,
-			Flags: []cli.Flag{
+			Name:      "update",
+			Usage:     common.UpdateWorkflowDefinition,
+			UsageText: common.WorkflowUpdateUsageText,
+			Flags: append(common.FlagsForExecution,
 				&cli.StringFlag{
-					Name:     common.FlagQuery,
-					Aliases:  common.FlagQueryAlias,
-					Usage:    common.FlagQueryUsage,
+					Name:     common.FlagName,
+					Usage:    common.FlagUpdateHandlerName,
+					Category: common.CategoryMain,
+					Required: true,
+				},
+				&cli.StringFlag{
+					Name:     common.FlagInput,
+					Aliases:  common.FlagInputAlias,
+					Usage:    common.FlagUpdateHandlerInput,
 					Category: common.CategoryMain,
 				},
-			},
+				&cli.StringFlag{
+					Name:     common.FlagUpdateFirstExecutionRunID,
+					Usage:    "Run update on the last execution in the chain that started with this run ID.",
+					Category: common.CategoryMain,
+				},
+			),
 			Action: func(c *cli.Context) error {
-				return CountWorkflow(c)
+				return UpdateWorkflow(c)
 			},
 		},
 		{
@@ -386,60 +427,19 @@ func NewWorkflowCommands() []*cli.Command {
 			},
 		},
 		{
-			Name:      "trace",
-			Usage:     common.TraceWorkflowDefinition,
-			UsageText: common.WorkflowTraceUsageText,
-			Flags: append(common.FlagsForExecution,
-				&cli.IntFlag{
-					Name:     common.FlagDepth,
-					Value:    -1,
-					Usage:    common.FlagDepthDefinition,
-					Category: common.CategoryMain,
-				},
-				&cli.IntFlag{
-					Name:     common.FlagConcurrency,
-					Value:    10,
-					Usage:    common.FlagConcurrencyDefinition,
-					Category: common.CategoryMain,
-				},
+			Name:      "count",
+			Usage:     common.CountWorkflowDefinition,
+			UsageText: common.WorkflowCountUsageText,
+			Flags: []cli.Flag{
 				&cli.StringFlag{
-					Name:     common.FlagFold,
-					Usage:    fmt.Sprintf("Statuses for which Child Workflows will be folded in (this will reduce the number of information fetched and displayed). Case-insensitive and ignored if --%s supplied.", common.FlagNoFold),
-					Value:    "completed,canceled,terminated",
+					Name:     common.FlagQuery,
+					Aliases:  common.FlagQueryAlias,
+					Usage:    common.FlagQueryUsage,
 					Category: common.CategoryMain,
 				},
-				&cli.BoolFlag{
-					Name:     common.FlagNoFold,
-					Usage:    common.FlagNoFoldDefinition,
-					Category: common.CategoryMain,
-				}),
-			Action: TraceWorkflow,
-		},
-		{
-			Name:      "update",
-			Usage:     common.UpdateWorkflowDefinition,
-			UsageText: common.WorkflowUpdateUsageText,
-			Flags: append(common.FlagsForExecution,
-				&cli.StringFlag{
-					Name:     common.FlagName,
-					Usage:    common.FlagUpdateHandlerName,
-					Category: common.CategoryMain,
-					Required: true,
-				},
-				&cli.StringFlag{
-					Name:     common.FlagInput,
-					Aliases:  common.FlagInputAlias,
-					Usage:    common.FlagUpdateHandlerInput,
-					Category: common.CategoryMain,
-				},
-				&cli.StringFlag{
-					Name:     common.FlagUpdateFirstExecutionRunID,
-					Usage:    "Run update on the last execution in the chain that started with this run ID.",
-					Category: common.CategoryMain,
-				},
-			),
+			},
 			Action: func(c *cli.Context) error {
-				return UpdateWorkflow(c)
+				return CountWorkflow(c)
 			},
 		},
 	}
