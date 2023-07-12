@@ -143,7 +143,7 @@ const (
 	FlagHistoryArchivalStateDefinition    = "History archival state, valid values are \"disabled\" and \"enabled\""
 	FlagHistoryArchivalURIDefinition      = "Optionally specify history archival URI (cannot be changed after first time archival is enabled)"
 	FlagIsGlobalNamespaceDefinition       = "Whether the namespace is a global namespace."
-	FlagNamespaceDataDefinition           = "Namespace data in key=value format. Use valid JSON formats for value."
+	FlagNamespaceDataDefinition           = "Namespace data in key=value format. Use JSON for values."
 	FlagNamespaceVerboseDefinition        = "Print applied namespace changes"
 	FlagOwnerDefinition                   = "Owner email."
 	FlagPromoteNamespaceDefinition        = "Promote local namespace to global namespace"
