@@ -136,6 +136,21 @@ const (
 	FlagTaskQueueName           = "Name of the Task Queue."
 	FlagTaskQueueTypeDefinition = "Task Queue type [workflow|activity]"
 
+	// Namespace update flags
+	FlagActiveClusterDefinition           = "Active cluster name."
+	FlagClusterDefinition                 = "Cluster name."
+	FlagDescriptionDefinition             = "Namespace description."
+	FlagHistoryArchivalStateDefinition    = "History archival state, valid values are \"disabled\" and \"enabled\""
+	FlagHistoryArchivalURIDefinition      = "Optionally specify history archival URI (cannot be changed after first time archival is enabled)"
+	FlagIsGlobalNamespaceDefinition       = "Whether the namespace is a global namespace."
+	FlagNamespaceDataDefinition           = "Namespace data in key=value format. Use valid JSON formats for value."
+	FlagNamespaceVerboseDefinition        = "Print applied namespace changes"
+	FlagOwnerDefinition                   = "Owner email."
+	FlagPromoteNamespaceDefinition        = "Promote local namespace to global namespace"
+	FlagRetentionDefinition               = "Length of time (in days) a closed Workflow is preserved before deletion."
+	FlagVisibilityArchivalStateDefinition = "Visibility archival state, valid values are \"disabled\" and \"enabled\""
+	FlagVisibilityArchivalURIDefinition   = "Optionally specify visibility archival URI (cannot be changed after first time archival is enabled)"
+
 	// Build id based versioning flags
 	FlagNewBuildIDUsage                = "The new build id to be added."
 	FlagExistingCompatibleBuildIDUsage = "A build id which must already exist in the version sets known by the task queue. The new id will be stored in the set containing this id, marking it as compatible with the versions within."
