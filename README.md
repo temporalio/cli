@@ -169,7 +169,7 @@ See the CLI docs for a [list of env vars](https://docs.temporal.io/cli#environme
 
 The Temporal CLI has the capability to auto-complete commands.
 
-Running `temporal completion SHELL` will output the related completion SHELL code.
+Running `temporal completion SHELL` will output completion setup code for the given shell.
 
 ### zsh auto-completion
 
@@ -187,7 +187,7 @@ If you're running auto-completion from the terminal, run the command below:
 echo 'source <(temporal completion zsh)' >> ~/.zshrc
 ```
 
-After setting the variable, run:
+After editing the file, run:
 
 `source ~/.zshrc`.
 
@@ -220,6 +220,12 @@ It should say `_init_completion is a function` and print the function.
 Enable completion for Temporal by adding the following code to your bash file:
 
 ```bash
+source <(temporal completion bash)
+```
+
+In an existing terminal, you can do that by running:
+
+```bash
 echo 'source <(temporal completion bash)' >> ~/.bashrc
 source ~/.bashrc
 ```
@@ -227,8 +233,8 @@ source ~/.bashrc
 Now test by typing `temporal`, space, and then tab twice. You should see:
 
 ```bash
-$ temporal 
-activity    completion  h           operator    server      workflow    
+$ temporal
+activity    completion  h           operator    server      workflow
 batch       env         help        schedule    task-queue
 ```
 
