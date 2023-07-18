@@ -207,7 +207,8 @@ func (s *e2eSuite) TestWorkflowSignal_Batch() {
 		return len(wfs.GetExecutions()) == 3
 	}, 10*time.Second, time.Second)
 
-	err := app.Run([]string{"", "workflow", "signal", "--name", awaitsignal.Done, "--input", "\"input1\"", "--query", "WorkflowId = '1' OR WorkflowId = '2'", "--reason", "test", "--yes", "--namespace", testNamespace})
+	i1 := "\"" + awaitsignal.Input1 + "\""
+	err := app.Run([]string{"", "workflow", "signal", "--name", awaitsignal.Done, "--input", i1, "--query", "WorkflowId = '1' OR WorkflowId = '2'", "--reason", "test", "--yes", "--namespace", testNamespace})
 	s.NoError(err)
 
 	awaitTaskQueuePoller(s, c, testTq)
