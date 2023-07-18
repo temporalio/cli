@@ -13,7 +13,6 @@ import (
 	"go.temporal.io/api/batch/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/server/common/collection"
-	"go.temporal.io/server/common/payloads"
 )
 
 // DescribeBatchJob describe the status of the batch job
@@ -114,12 +113,10 @@ func BatchCancel(c *cli.Context) error {
 // BatchSignal send a signal to a list of workflows
 func BatchSignal(c *cli.Context) error {
 	signalName := c.String(common.FlagName)
-	input := c.String(common.FlagInput)
 	operator := common.GetCurrentUserFromEnv()
-
-	inputP, err := payloads.Encode(input)
+	input, err := common.ProcessJSONInput(c)
 	if err != nil {
-		return fmt.Errorf("unable to serialize signal input: %w", err)
+		return err
 	}
 
 	req := workflowservice.StartBatchOperationRequest{
@@ -127,7 +124,7 @@ func BatchSignal(c *cli.Context) error {
 			SignalOperation: &batch.BatchOperationSignal{
 				Signal:   signalName,
 				Identity: operator,
-				Input:    inputP,
+				Input:    input,
 			},
 		},
 	}

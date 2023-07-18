@@ -181,10 +181,9 @@ func (s *e2eSuite) TestWorkflowSignal_Batch() {
 		_ = testserver.Stop()
 	}()
 
-	w := s.newWorker(testserver, testTq, func(r worker.Registry) {
+	defer s.newWorker(testserver, testTq, func(r worker.Registry) {
 		r.RegisterWorkflow(awaitsignal.Workflow)
-	})
-	defer w.Stop()
+	}).Stop()
 
 	c := testserver.Client()
 
@@ -208,7 +207,7 @@ func (s *e2eSuite) TestWorkflowSignal_Batch() {
 		return len(wfs.GetExecutions()) == 3
 	}, 10*time.Second, time.Second)
 
-	err := app.Run([]string{"", "workflow", "signal", "--name", awaitsignal.Done, "--query", "WorkflowId = '1' OR WorkflowId = '2'", "--reason", "test", "--yes", "--namespace", testNamespace})
+	err := app.Run([]string{"", "workflow", "signal", "--name", awaitsignal.Done, "--input", "\"input1\"", "--query", "WorkflowId = '1' OR WorkflowId = '2'", "--reason", "test", "--yes", "--namespace", testNamespace})
 	s.NoError(err)
 
 	awaitTaskQueuePoller(s, c, testTq)
