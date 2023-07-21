@@ -1,7 +1,6 @@
 package tests
 
 func (s *e2eSuite) TestHelp_PrintsCommands() {
-	s.T().Skip("Skipped because downloaded dev server has old update implementation")
 	s.T().Parallel()
 
 	testserver, app, writer := s.setUpTestEnvironment()
@@ -27,7 +26,6 @@ func (s *e2eSuite) TestHelp_PrintsCommands() {
 }
 
 func (s *e2eSuite) TestHelp_PrintsSubcommands() {
-	s.T().Skip("Skipped because downloaded dev server has old update implementation")
 	s.T().Parallel()
 
 	testserver, app, writer := s.setUpTestEnvironment()
@@ -53,7 +51,6 @@ func (s *e2eSuite) TestHelp_PrintsSubcommands() {
 }
 
 func (s *e2eSuite) TestHelp_PrintsFlags() {
-	s.T().Skip("Skipped because downloaded dev server has old update implementation")
 	s.T().Parallel()
 
 	testserver, app, writer := s.setUpTestEnvironment()
