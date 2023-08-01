@@ -22,8 +22,10 @@ require (
 	go.temporal.io/server v1.21.3
 	go.uber.org/zap v1.24.0
 	golang.org/x/exp v0.0.0-20230213192124-5e25df0256eb
-	google.golang.org/grpc v1.56.2
+	google.golang.org/grpc v1.57.0
 )
+
+require golang.org/x/sync v0.3.0 // indirect
 
 require (
 	cloud.google.com/go v0.110.0 // indirect
