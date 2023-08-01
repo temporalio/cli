@@ -19,7 +19,7 @@ require (
 	go.temporal.io/api v1.23.0
 	go.temporal.io/sdk v1.23.1
 	go.temporal.io/sdk/contrib/tools/workflowcheck v0.1.0
-	go.temporal.io/server v1.21.3
+	go.temporal.io/server v1.21.4
 	go.uber.org/zap v1.24.0
 	golang.org/x/exp v0.0.0-20230213192124-5e25df0256eb
 	google.golang.org/grpc v1.57.0
