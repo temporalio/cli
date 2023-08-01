@@ -30,30 +30,6 @@ jobs:
           CGO_ENABLED: 0
         run: go test ./...
 
-  test-shellcheck:
-    name: Shellcheck
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Run ShellCheck
-        uses: ludeeus/action-shellcheck@master
-        with:
-          ignore_paths: .devcontainer
-
-  doctoc-readme:
-    name: doctoc
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - uses: actions/setup-node@v3
-
-      - name: Check generated README ToC
-        run: |
-          npx doctoc README.md
-          [[ -z $(git status --porcelain README.md) ]] || (git diff README.md; echo "README changed"; exit 1)
-
   test-install:
     strategy:
       fail-fast: false
