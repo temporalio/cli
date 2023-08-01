@@ -144,9 +144,10 @@ The Workflow and Run IDs are returned after starting the [Workflow](/concepts/wh
 
 ` + "`" + `` + "`" + `` + "`" + `
 temporal workflow start \
-		--type=MyWorkflow \
-		--task-queue=MyTaskQueue \
-		--input='{"Input": "As-JSON"}'
+		--workflow-id meaningful-business-id \
+		--type MyWorkflow \
+		--task-queue MyTaskQueue \
+		--input '{"Input": "As-JSON"}'
 ` + "`" + `` + "`" + `` + "`" + `
 
 Use the command options below to change the information returned by this command.`
@@ -154,16 +155,15 @@ Use the command options below to change the information returned by this command
 const ExecuteWorkflowUsageText = `The ` + "`" + `temporal workflow execute` + "`" + ` command starts a new [Workflow Execution](/concepts/what-is-a-workflow-execution) and prints its progress.
 The command completes when the Workflow Execution completes.
 
-` + "`" + `` + "`" + `` + "`" + `
-temporal workflow execute \
-		--type=MyWorkflow \
-		--task-queue=MyTaskQueue \
-		--input='{"Input": "As-JSON"}'
-` + "`" + `` + "`" + `` + "`" + `
-
 Single quotes('') are used to wrap input as JSON.
 
-` + "`" + `temporal workflow execute --workflow-id=meaningful-business-id --type=MyWorkflow --task-queue-MyTaskQueue --input='{"JSON": "Input"}'` + "`" + `
+` + "`" + `` + "`" + `` + "`" + `
+temporal workflow execute
+		--workflow-id meaningful-business-id \
+		--type MyWorkflow \
+		--task-queue MyTaskQueue \
+		--input '{"Input": "As-JSON"}'
+` + "`" + `` + "`" + `` + "`" + `
 
 Use the command options below to change the information returned by this command.`
 
@@ -433,7 +433,7 @@ temporal schedule create \
 		--workflow-id MyWorkflowId \
 		--task-queue MyTaskQueue \
 		--workflow-type MyWorkflowType \
-		--input='{"Input": "As-JSON"}'
+		--input '{"Input": "As-JSON"}'
 ` + "`" + `` + "`" + `` + "`" + `
 
 Any combination of ` + "`" + `--cal` + "`" + `, ` + "`" + `--interval` + "`" + `, and ` + "`" + `--cron` + "`" + ` is supported.
@@ -445,12 +445,12 @@ const ScheduleUpdateUsageText = `The ` + "`" + `temporal schedule update` + "`" 
 
 Updated Schedules need to follow a certain format:
 ` + "`" + `` + "`" + `` + "`" + `
-temporal schedule update 			\
-		--schedule-id 'your-schedule-id' 	\
-		--cron '3 11 * * Fri' 		\
-		--workflow-id 'your-workflow-id' 	\
-		--task-queue 'your-task-queue' 		\
-		--workflow-type 'YourWorkflowType'
+temporal schedule update \
+		--schedule-id MyScheduleId \
+		--cron '3 11 * * Fri' \
+		--workflow-id MyWorkflowId \
+		--task-queue MyTaskQueue \
+		--workflow-type MyWorkflowType
 ` + "`" + `` + "`" + `` + "`" + `
 
 Updating a Schedule takes the given options and replaces the entire configuration of the Schedule with what's provided.
@@ -560,7 +560,7 @@ const WorkflowSignalUsageText = `The ` + "`" + `temporal workflow signal` + "`" 
 temporal workflow signal \
 		--workflow-id MyWorkflowId \
 		--name MySignal \
-		--input='{"Input": "As-JSON"}'
+		--input '{"Input": "As-JSON"}'
 ` + "`" + `` + "`" + `` + "`" + `
 
 Use the options listed below to change the command's behavior.`
