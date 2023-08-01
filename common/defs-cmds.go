@@ -428,11 +428,11 @@ Newly created Schedules return a Schedule ID to be used in other Schedule comman
 Schedules are passed in the following format:
 ` + "`" + `` + "`" + `` + "`" + `
 temporal schedule create \
-		--schedule-id 'your-schedule-id' \
+		--schedule-id MyScheduleId \
 		--cron '3 11 * * Fri' \
-		--workflow-id 'your-workflow-id' 	\
-		--task-queue 'your-task-queue' 		\
-		--workflow-type 'YourWorkflowType'
+		--workflow-id MyWorkflowId \
+		--task-queue MyTaskQueue \
+		--workflow-type MyWorkflowType \
 		--input='{"Input": "As-JSON"}'
 ` + "`" + `` + "`" + `` + "`" + `
 
@@ -558,8 +558,8 @@ const WorkflowSignalUsageText = `The ` + "`" + `temporal workflow signal` + "`" 
 
 ` + "`" + `` + "`" + `` + "`" + `
 temporal workflow signal \
-		--workflow-id my-workflow-id \
-		--name my-signal \
+		--workflow-id MyWorkflowId \
+		--name MySignal \
 		--input='{"Input": "As-JSON"}'
 ` + "`" + `` + "`" + `` + "`" + `
 
