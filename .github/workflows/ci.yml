@@ -41,6 +41,15 @@ jobs:
         with:
           ignore_paths: .devcontainer
 
+  doctoc-readme:
+    name: doctoc
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v3
+      - name: Check generated README ToC
+        run: |
+          npx doctoc README.md
+          [[ -z $(git status --porcelain README.md) ]] || (git diff README.md; echo "README changed"; exit 1)
 
   test-install:
     strategy:
