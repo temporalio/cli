@@ -313,6 +313,10 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 					opts = append(opts, WithSearchAttributeCacheDisabled())
 				}
 
+				if _, ok := configVals[dynamicconfig.FrontendPersistenceMaxQPS]; !ok {
+					opts = append(opts, WithPersistenceQPS())
+				}
+
 				for k, v := range configVals {
 					opts = append(opts, WithDynamicConfigValue(k, v))
 				}

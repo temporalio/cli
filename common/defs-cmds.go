@@ -590,9 +590,11 @@ DESCRIPTION:
    {{template "descriptionTemplate" .}}{{end}}{{if .UsageText}}
 
 USAGE:
-   {{wrap .UsageText 3 | markdown2Text}}{{end}}{{if .VisibleFlagCategories}}
-   {{template "visibleFlagCategoryTemplate" .}}{{else if .VisibleFlags}}
+   {{wrap .UsageText 3 | markdown2Text | trimSpace}}{{end}}{{if .VisibleCommands}}
 
-DISPLAY OPTIONS:
-   {{template "visibleFlagTemplate" .}}{{end}}
+COMMANDS:{{template "visibleCommandCategoryTemplate" .}}{{end}}{{if .VisibleFlagCategories}}
+
+OPTIONS:{{template "visibleFlagCategoryTemplate" .}}{{else if .VisibleFlags}}
+
+OPTIONS:{{template "visibleFlagTemplate" .}}{{end}}
 `

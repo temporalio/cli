@@ -21,6 +21,7 @@ func HelpPrinter() func(w io.Writer, templ string, data interface{}, customFunc 
 	return func(w io.Writer, templ string, data interface{}, customFunc map[string]interface{}) {
 		cfs := template.FuncMap{
 			"markdown2Text": MarkdownToText,
+			"trimSpace":     strings.TrimSpace,
 		}
 
 		_helpPrinterOrig(w, templ, data, cfs)

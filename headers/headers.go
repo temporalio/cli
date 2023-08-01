@@ -13,6 +13,7 @@ const (
 	SupportedServerVersionsHeaderName = "supported-server-versions"
 	SupportedFeaturesHeaderName       = "supported-features"
 	SupportedFeaturesHeaderDelim      = ","
+	CallerTypeHeaderName              = "caller-type"
 )
 
 const DEV_VERSION = "0.0.0-DEV"
@@ -21,7 +22,8 @@ const DEV_VERSION = "0.0.0-DEV"
 var Version = DEV_VERSION
 
 const (
-	ClientNameCLI = "temporal-cli"
+	ClientNameCLI       = "temporal-cli"
+	CallerTypeHeaderCLI = "operator"
 
 	// SupportedServerVersions is used by CLI and inter role communication.
 	SupportedServerVersions = ">=1.0.0 <2.0.0"
@@ -32,6 +34,7 @@ var (
 		ClientNameHeaderName:              ClientNameCLI,
 		ClientVersionHeaderName:           Version,
 		SupportedServerVersionsHeaderName: SupportedServerVersions,
+		CallerTypeHeaderName:              CallerTypeHeaderCLI,
 		// TODO: This should include SupportedFeaturesHeaderName with a value that's taken
 		// from the Go SDK (since the cli uses the Go SDK for most operations).
 	})

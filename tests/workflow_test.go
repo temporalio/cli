@@ -68,7 +68,6 @@ func (s *e2eSuite) TestWorkflowShow_ReplayableHistory() {
 }
 
 func (s *e2eSuite) TestWorkflowUpdate() {
-	s.T().Skip("Skipped because downloaded dev server has old update implementation")
 	s.T().Parallel()
 
 	testserver, app, writer := s.setUpTestEnvironment()
@@ -181,10 +180,9 @@ func (s *e2eSuite) TestWorkflowSignal_Batch() {
 		_ = testserver.Stop()
 	}()
 
-	w := s.newWorker(testserver, testTq, func(r worker.Registry) {
+	defer s.newWorker(testserver, testTq, func(r worker.Registry) {
 		r.RegisterWorkflow(awaitsignal.Workflow)
-	})
-	defer w.Stop()
+	}).Stop()
 
 	c := testserver.Client()
 
@@ -208,7 +206,9 @@ func (s *e2eSuite) TestWorkflowSignal_Batch() {
 		return len(wfs.GetExecutions()) == 3
 	}, 10*time.Second, time.Second)
 
-	err := app.Run([]string{"", "workflow", "signal", "--name", awaitsignal.Done, "--query", "WorkflowId = '1' OR WorkflowId = '2'", "--reason", "test", "--yes", "--namespace", testNamespace})
+	i1 := "\"" + awaitsignal.Input1 + "\""
+	q := "WorkflowId = '1' OR WorkflowId = '2'"
+	err := app.Run([]string{"", "workflow", "signal", "--name", awaitsignal.Done, "--input", i1, "--query", q, "--reason", "test", "--yes", "--namespace", testNamespace})
 	s.NoError(err)
 
 	awaitTaskQueuePoller(s, c, testTq)
