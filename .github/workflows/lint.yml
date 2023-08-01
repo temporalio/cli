@@ -1,0 +1,45 @@
+name: Lint
+on:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  golangci:
+    name: golangci-lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-go@v3
+        with:
+          go-version: 1.19
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.51.2
+          args: --verbose --timeout 10m --fix=false --new-from-rev=HEAD~ --config=.golangci.yml
+
+  shellcheck:
+    name: shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@master
+        with:
+          ignore_paths: .devcontainer
+
+  doctoc-readme:
+    name: doctoc
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-node@v3
+
+      - name: Check generated README ToC
+        run: |
+          npx doctoc README.md
+          [[ -z $(git status --porcelain README.md) ]] || (git diff README.md; echo "README changed"; exit 1)

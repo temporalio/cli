@@ -10,16 +10,14 @@ Use the CLI to run a Temporal Server and interact with it.
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
-**Table of Contents**
-
-- [Install](#install)
+- [📦 Install](#-install)
   - [cURL](#curl)
   - [Homebrew](#homebrew)
   - [Manual](#manual)
-- [Use](#use)
+- [🚀 Use](#-use)
   - [Start the Server](#start-the-server)
   - [Interact with the Server](#interact-with-the-server)
-- [Configure](#configure)
+- [⚙️ Configure](#-configure)
   - [Namespace registration](#namespace-registration)
   - [Persistence modes](#persistence-modes)
   - [Enable or disable Temporal UI](#enable-or-disable-temporal-ui)
@@ -30,7 +28,7 @@ Use the CLI to run a Temporal Server and interact with it.
   - [Bash auto-completion](#bash-auto-completion)
     - [macOS installation](#macos-installation)
     - [Linux installation](#linux-installation)
-- [Development](#development)
+- [🔧 Development](#-development)
   - [Compile and run CLI](#compile-and-run-cli)
   - [Compile docs](#compile-docs)
   - [Run tests](#run-tests)
@@ -38,7 +36,7 @@ Use the CLI to run a Temporal Server and interact with it.
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
-## Install
+## 📦 Install
 
 You can install the CLI using one of the below methods.
 
@@ -64,7 +62,7 @@ You can install the CLI using one of the below methods.
 
 You can also download older versions from [GitHub releases](https://github.com/temporalio/cli/releases).
 
-## Use
+## 🚀 Use
 
 ### Start the Server
 
@@ -95,7 +93,7 @@ temporal operator namespace list
 
 For a full list of commands, see the [CLI docs](https://docs.temporal.io/cli/) or run `temporal help`.
 
-## Configure
+## ⚙️ Configure
 
 Use the help flag to see a full list of CLI options:
 
@@ -262,7 +260,7 @@ echo 'source <(temporal completion bash)' >> ~/.bashrc
 source ~/.bashrc
 ```
 
-## Development
+## 🔧 Development
 
 ### Compile and run CLI
 
