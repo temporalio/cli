@@ -23,7 +23,7 @@ Use the CLI to run a Temporal Server and interact with it.
   - [Enable or disable Temporal UI](#enable-or-disable-temporal-ui)
   - [Dynamic configuration](#dynamic-configuration)
   - [Environment variables](#environment-variables)
-- [Auto-completion](#auto-completion)
+- [⌨️ Auto-completion](#-auto-completion)
   - [zsh auto-completion](#zsh-auto-completion)
   - [Bash auto-completion](#bash-auto-completion)
     - [macOS installation](#macos-installation)
@@ -32,7 +32,7 @@ Use the CLI to run a Temporal Server and interact with it.
   - [Compile and run CLI](#compile-and-run-cli)
   - [Compile docs](#compile-docs)
   - [Run tests](#run-tests)
-- [Known Issues](#known-issues)
+- [⚠️ Known Issues](#-known-issues)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -163,7 +163,7 @@ This setting makes created search attributes immediately available for use.
 
 See the CLI docs for a [list of env vars](https://docs.temporal.io/cli#environmental-variables).
 
-## Auto-completion
+## ⌨️ Auto-completion
 
 The Temporal CLI has the capability to auto-complete commands.
 
@@ -281,7 +281,7 @@ go build -o dist/temporal-docgen ./cmd/temporal-docgen
 go test ./...
 ```
 
-## Known Issues
+## ⚠️ Known Issues
 
 - When consuming Temporal as a library in go mod, you may want to replace grpc-gateway with a fork to address URL escaping issue in UI. See <https://github.com/temporalio/temporalite/pull/118>
 
