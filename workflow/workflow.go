@@ -332,52 +332,20 @@ func NewWorkflowCommands() []*cli.Command {
 					Category: common.CategoryMain,
 				},
 				&cli.StringFlag{
-					Name:     common.FlagReason,
-					Usage:    common.FlagReasonDefinition,
-					Required: true,
+					Name:     common.FlagQuery,
+					Aliases:  common.FlagQueryAlias,
+					Usage:    common.FlagQueryReset,
 					Category: common.CategoryMain,
 				},
 				&cli.StringFlag{
 					Name:     common.FlagType,
-					Usage:    "Event type to which you want to reset: " + strings.Join(mapKeysToArray(resetTypesMap), ", "),
+					Usage:    "Event type to reset to: " + strings.Join(common.MapKeysToArray(common.ResetTypeMap), ", "),
 					Category: common.CategoryMain,
 				},
 				&cli.StringFlag{
 					Name: common.FlagResetReapplyType,
 					Usage: "Event types to reapply after the reset point: " +
-						strings.Join(mapKeysToArray(resetReapplyTypesMap), ", ") + ". (default: All)",
-					Category: common.CategoryMain,
-				},
-			}...),
-			Action: func(c *cli.Context) error {
-				return ResetWorkflow(c)
-			},
-		},
-		{
-			Name:      "reset-batch",
-			Usage:     "Reset a batch of Workflow Executions by reset type (" + strings.Join(mapKeysToArray(resetTypesMap), "), "),
-			UsageText: common.ResetBatchUsageText,
-			Flags: []cli.Flag{
-				&cli.StringFlag{
-					Name:     common.FlagQuery,
-					Aliases:  common.FlagQueryAlias,
-					Usage:    common.FlagQueryResetBatch,
-					Category: common.CategoryMain,
-				}, &cli.StringFlag{
-					Name:     common.FlagInputFile,
-					Usage:    common.FlagInputFileReset,
-					Category: common.CategoryMain,
-				},
-				&cli.StringFlag{
-					Name:     common.FlagExcludeFile,
-					Value:    "",
-					Usage:    common.FlagExcludeFileDefinition,
-					Category: common.CategoryMain,
-				},
-				&cli.StringFlag{
-					Name:     common.FlagInputSeparator,
-					Value:    "\t",
-					Usage:    common.FlagInputSeparatorDefinition,
+						strings.Join(common.MapKeysToArray(common.ResetReapplyTypeMap), ", ") + ". (default: All)",
 					Category: common.CategoryMain,
 				},
 				&cli.StringFlag{
@@ -386,44 +354,15 @@ func NewWorkflowCommands() []*cli.Command {
 					Required: true,
 					Category: common.CategoryMain,
 				},
-				&cli.IntFlag{
-					Name:     common.FlagParallelism,
-					Value:    1,
-					Usage:    common.FlagParallelismDefinition,
-					Category: common.CategoryMain,
-				},
 				&cli.BoolFlag{
-					Name:     common.FlagSkipCurrentOpen,
-					Usage:    common.FlagSkipCurrentOpenDefinition,
+					Name:     common.FlagYes,
+					Aliases:  common.FlagYesAlias,
+					Usage:    common.FlagYesDefinition,
 					Category: common.CategoryMain,
 				},
-				&cli.BoolFlag{
-					Name: common.FlagSkipBaseIsNotCurrent,
-					// TODO https://github.com/uber/cadence/issues/2930
-					// The right way to prevent needs server side implementation .
-					// This client side is only best effort
-					Usage:    common.FlagSkipBaseDefinition,
-					Category: common.CategoryMain,
-				},
-				&cli.BoolFlag{
-					Name:     common.FlagNonDeterministic,
-					Usage:    common.FlagNonDeterministicDefinition,
-					Category: common.CategoryMain,
-				},
-				&cli.StringFlag{
-					Name:     common.FlagType,
-					Usage:    "Event type to which you want to reset: " + strings.Join(mapKeysToArray(resetTypesMap), ", "),
-					Required: true,
-					Category: common.CategoryMain,
-				},
-				&cli.BoolFlag{
-					Name:     common.FlagDryRun,
-					Usage:    common.FlagDryRunDefinition,
-					Category: common.CategoryMain,
-				},
-			},
+			}...),
 			Action: func(c *cli.Context) error {
-				return ResetInBatch(c)
+				return ResetWorkflow(c)
 			},
 		},
 		{

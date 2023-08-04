@@ -44,3 +44,16 @@ var envKeysForUserName = []string{
 	"HOME",
 }
 
+var (
+	ResetTypeMap = map[string]interface{}{
+		"FirstWorkflowTask":  "",
+		"LastWorkflowTask":   "",
+		"LastContinuedAsNew": "",
+	}
+
+	ResetReapplyTypeMap = map[string]interface{}{
+		"":       enumspb.RESET_REAPPLY_TYPE_SIGNAL, // default value
+		"Signal": enumspb.RESET_REAPPLY_TYPE_SIGNAL,
+		"None":   enumspb.RESET_REAPPLY_TYPE_NONE,
+	}
+)

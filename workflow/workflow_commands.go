@@ -1,15 +1,12 @@
 package workflow
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
-	"math/rand"
 	"os"
 	"reflect"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/olekukonko/tablewriter"
@@ -30,8 +27,6 @@ import (
 	failurepb "go.temporal.io/api/failure/v1"
 	historypb "go.temporal.io/api/history/v1"
 	querypb "go.temporal.io/api/query/v1"
-	"go.temporal.io/api/serviceerror"
-	workflowpb "go.temporal.io/api/workflow/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	sdkclient "go.temporal.io/sdk/client"
 	clispb "go.temporal.io/server/api/cli/v1"
@@ -45,16 +40,6 @@ import (
 
 var (
 	tableHeaderBlue = tablewriter.Colors{tablewriter.FgHiBlueColor}
-	resetTypesMap   = map[string]interface{}{
-		"FirstWorkflowTask":  "",
-		"LastWorkflowTask":   "",
-		"LastContinuedAsNew": "",
-	}
-	resetReapplyTypesMap = map[string]interface{}{
-		"":       enumspb.RESET_REAPPLY_TYPE_SIGNAL, // default value
-		"Signal": enumspb.RESET_REAPPLY_TYPE_SIGNAL,
-		"None":   enumspb.RESET_REAPPLY_TYPE_NONE,
-	}
 )
 
 func StartWorkflowBaseArgs(c *cli.Context) (
@@ -848,12 +833,22 @@ func ShowHistory(c *cli.Context) error {
 	return printWorkflowProgress(c, wid, rid, follow)
 }
 
-// ResetWorkflow reset workflow
+// ResetWorkflow resets workflow executions based on filter parameters
 func ResetWorkflow(c *cli.Context) error {
-	namespace, err := common.RequiredFlag(c, common.FlagNamespace)
+	if c.String(common.FlagQuery) != "" {
+		return batch.BatchReset(c)
+	}
+
+	return resetWorkflowByID(c)
+}
+
+// resetWorkflowByID reset workflow
+func resetWorkflowByID(c *cli.Context) error {
+	sdkClient, err := client.GetSDKClient(c)
 	if err != nil {
 		return err
 	}
+
 	wid := c.String(common.FlagWorkflowID)
 	reason := c.String(common.FlagReason)
 	if len(reason) == 0 {
@@ -862,9 +857,9 @@ func ResetWorkflow(c *cli.Context) error {
 	rid := c.String(common.FlagRunID)
 	eventID := c.Int64(common.FlagEventID)
 	resetType := c.String(common.FlagType)
-	extraForResetType, ok := resetTypesMap[resetType]
+	extraForResetType, ok := common.ResetTypeMap[resetType]
 	if !ok && eventID <= 0 {
-		return fmt.Errorf("specify either valid event id or reset type (one of %s)", strings.Join(mapKeysToArray(resetTypesMap), ", "))
+		return fmt.Errorf("specify either valid event id or reset type (one of %s)", strings.Join(common.MapKeysToArray(common.ResetTypeMap), ", "))
 	}
 	if ok && len(extraForResetType.(string)) > 0 {
 		value := c.String(extraForResetType.(string))
@@ -873,24 +868,28 @@ func ResetWorkflow(c *cli.Context) error {
 		}
 	}
 	resetReapplyType := c.String(common.FlagResetReapplyType)
-	if _, ok := resetReapplyTypesMap[resetReapplyType]; !ok {
-		return fmt.Errorf("must specify valid reset reapply type: %v", strings.Join(mapKeysToArray(resetReapplyTypesMap), ", "))
+	if _, ok := common.ResetReapplyTypeMap[resetReapplyType]; !ok {
+		return fmt.Errorf("must specify valid reset reapply type: %v", strings.Join(common.MapKeysToArray(common.ResetReapplyTypeMap), ", "))
 	}
 
 	ctx, cancel := common.NewContext(c)
 	defer cancel()
 
-	frontendClient := client.Factory(c.App).FrontendClient(c)
-
 	resetBaseRunID := rid
 	workflowTaskFinishID := eventID
+
+	namespace, err := common.RequiredFlag(c, common.FlagNamespace)
+	if err != nil {
+		return err
+	}
+
 	if resetType != "" {
-		resetBaseRunID, workflowTaskFinishID, err = getResetEventIDByType(ctx, c, resetType, namespace, wid, rid, frontendClient)
+		resetBaseRunID, workflowTaskFinishID, err = getResetEventIDByType(ctx, c, resetType, namespace, wid, rid, sdkClient)
 		if err != nil {
-			return fmt.Errorf("getting reset event ID by type failed: %w", err)
+			return fmt.Errorf("unable to get reset event ID by type: %w", err)
 		}
 	}
-	resp, err := frontendClient.ResetWorkflowExecution(ctx, &workflowservice.ResetWorkflowExecutionRequest{
+	resp, err := sdkClient.ResetWorkflowExecution(ctx, &workflowservice.ResetWorkflowExecutionRequest{
 		Namespace: namespace,
 		WorkflowExecution: &commonpb.WorkflowExecution{
 			WorkflowId: wid,
@@ -899,211 +898,12 @@ func ResetWorkflow(c *cli.Context) error {
 		Reason:                    fmt.Sprintf("%v:%v", common.GetCurrentUserFromEnv(), reason),
 		WorkflowTaskFinishEventId: workflowTaskFinishID,
 		RequestId:                 uuid.New(),
-		ResetReapplyType:          resetReapplyTypesMap[resetReapplyType].(enumspb.ResetReapplyType),
+		ResetReapplyType:          common.ResetReapplyTypeMap[resetReapplyType].(enumspb.ResetReapplyType),
 	})
 	if err != nil {
-		return fmt.Errorf("reset failed: %w", err)
+		return fmt.Errorf("unable to reset: %w", err)
 	}
 	common.PrettyPrintJSONObject(c, resp)
-	return nil
-}
-
-func processResets(c *cli.Context, namespace string, wes chan commonpb.WorkflowExecution, done chan bool, wg *sync.WaitGroup, params batchResetParamsType) {
-	for {
-		select {
-		case we := <-wes:
-			fmt.Println("received: ", we.GetWorkflowId(), we.GetRunId())
-			wid := we.GetWorkflowId()
-			rid := we.GetRunId()
-			var err error
-			for i := 0; i < 3; i++ {
-				err = doReset(c, namespace, wid, rid, params)
-				if err == nil {
-					break
-				}
-				if _, ok := err.(*serviceerror.InvalidArgument); ok {
-					break
-				}
-				fmt.Println("failed and retry...: ", wid, rid, err)
-				time.Sleep(time.Millisecond * time.Duration(rand.Intn(2000)))
-			}
-			time.Sleep(time.Millisecond * time.Duration(rand.Intn(1000)))
-			if err != nil {
-				fmt.Println("[ERROR] failed processing: ", wid, rid, err.Error())
-			}
-		case <-done:
-			wg.Done()
-			return
-		}
-	}
-}
-
-type batchResetParamsType struct {
-	reason               string
-	skipOpen             bool
-	nonDeterministicOnly bool
-	skipBaseNotCurrent   bool
-	dryRun               bool
-	resetType            string
-}
-
-// ResetInBatch resets workflow in batch
-func ResetInBatch(c *cli.Context) error {
-	namespace, err := common.RequiredFlag(c, common.FlagNamespace)
-	if err != nil {
-		return err
-	}
-	resetType := c.String(common.FlagType)
-
-	inFileName := c.String(common.FlagInputFile)
-	query := c.String(common.FlagQuery)
-	excFileName := c.String(common.FlagExcludeFile)
-	separator := c.String(common.FlagInputSeparator)
-	parallel := c.Int(common.FlagParallelism)
-
-	extraForResetType, ok := resetTypesMap[resetType]
-	if !ok {
-		return fmt.Errorf("reset type is not supported: %v", extraForResetType)
-	} else if len(extraForResetType.(string)) > 0 {
-		value := c.String(extraForResetType.(string))
-		if len(value) == 0 {
-			return fmt.Errorf("option %s is required", extraForResetType.(string))
-		}
-	}
-
-	batchResetParams := batchResetParamsType{
-		reason:               c.String(common.FlagReason),
-		skipOpen:             c.Bool(common.FlagSkipCurrentOpen),
-		nonDeterministicOnly: c.Bool(common.FlagNonDeterministic),
-		skipBaseNotCurrent:   c.Bool(common.FlagSkipBaseIsNotCurrent),
-		dryRun:               c.Bool(common.FlagDryRun),
-		resetType:            resetType,
-	}
-
-	if inFileName == "" && query == "" {
-		return fmt.Errorf("must provide input file or list query to get target workflows to reset")
-	}
-
-	wg := &sync.WaitGroup{}
-
-	wes := make(chan commonpb.WorkflowExecution)
-	done := make(chan bool)
-	for i := 0; i < parallel; i++ {
-		wg.Add(1)
-		go processResets(c, namespace, wes, done, wg, batchResetParams)
-	}
-
-	// read exclude
-	excludes := map[string]string{}
-	if len(excFileName) > 0 {
-		// This code is only used in the CLI. The input provided is from a trusted user.
-		// #nosec
-		excFile, err := os.Open(excFileName)
-		if err != nil {
-			return fmt.Errorf("unable to read exclude rules: %w", err)
-		}
-		defer excFile.Close()
-		scanner := bufio.NewScanner(excFile)
-		idx := 0
-		for scanner.Scan() {
-			idx++
-			line := strings.TrimSpace(scanner.Text())
-			if len(line) == 0 {
-				fmt.Printf("line %v is empty, skipped\n", idx)
-				continue
-			}
-			cols := strings.Split(line, separator)
-			if len(cols) < 1 {
-				return fmt.Errorf("exclude file: unable to split, line %v has less than 1 cols separated by comma, only %v", idx, len(cols))
-			}
-			wid := strings.TrimSpace(cols[0])
-			rid := "not-needed"
-			excludes[wid] = rid
-		}
-	}
-	fmt.Println("num of excludes:", len(excludes))
-
-	if len(inFileName) > 0 {
-		inFile, err := os.Open(inFileName)
-		if err != nil {
-			return fmt.Errorf("unable to open input file: %w", err)
-		}
-		defer inFile.Close()
-		scanner := bufio.NewScanner(inFile)
-		idx := 0
-		for scanner.Scan() {
-			idx++
-			line := strings.TrimSpace(scanner.Text())
-			if len(line) == 0 {
-				fmt.Printf("line %v is empty, skipped\n", idx)
-				continue
-			}
-			cols := strings.Split(line, separator)
-			if len(cols) < 1 {
-				return fmt.Errorf("include file: unable to split, line %v has less than 1 cols separated by comma, only %v", idx, len(cols))
-			}
-			fmt.Printf("Start processing line %v ...\n", idx)
-			wid := strings.TrimSpace(cols[0])
-			rid := ""
-			if len(cols) > 1 {
-				rid = strings.TrimSpace(cols[1])
-			}
-
-			_, ok := excludes[wid]
-			if ok {
-				fmt.Println("skip by exclude file: ", wid, rid)
-				continue
-			}
-
-			wes <- commonpb.WorkflowExecution{
-				WorkflowId: wid,
-				RunId:      rid,
-			}
-		}
-	} else {
-		sdkClient, err := client.GetSDKClient(c)
-		if err != nil {
-			return err
-		}
-
-		var nextPageToken []byte
-		var result []any
-		for {
-			result, nextPageToken, err = listWorkflows(c, sdkClient, nextPageToken, query)
-			if err != nil {
-				return err
-			}
-			for _, resultItem := range result {
-				we, ok := resultItem.(*workflowpb.WorkflowExecutionInfo)
-				if !ok {
-					fmt.Printf("skip by wrong type:%T instead of:%T\n", resultItem, &workflowpb.WorkflowExecutionInfo{})
-					continue
-				}
-
-				wid := we.Execution.GetWorkflowId()
-				rid := we.Execution.GetRunId()
-				_, ok = excludes[wid]
-				if ok {
-					fmt.Println("skip by exclude file: ", wid, rid)
-					continue
-				}
-
-				wes <- commonpb.WorkflowExecution{
-					WorkflowId: wid,
-					RunId:      rid,
-				}
-			}
-
-			if nextPageToken == nil {
-				break
-			}
-		}
-	}
-
-	close(done)
-	fmt.Println("wait for all goroutines...")
-	wg.Wait()
-
 	return nil
 }
 
@@ -1112,141 +912,21 @@ func printErrorAndReturn(msg string, err error) error {
 	return err
 }
 
-func doReset(c *cli.Context, namespace, wid, rid string, params batchResetParamsType) error {
-	ctx, cancel := common.NewContext(c)
-	defer cancel()
-
-	frontendClient := client.Factory(c.App).FrontendClient(c)
-	resp, err := frontendClient.DescribeWorkflowExecution(ctx, &workflowservice.DescribeWorkflowExecutionRequest{
-		Namespace: namespace,
-		Execution: &commonpb.WorkflowExecution{
-			WorkflowId: wid,
-		},
-	})
-	if err != nil {
-		return printErrorAndReturn("DescribeWorkflowExecution failed", err)
-	}
-
-	currentRunID := resp.WorkflowExecutionInfo.Execution.GetRunId()
-	if currentRunID != rid && params.skipBaseNotCurrent {
-		fmt.Println("skip because base run is different from current run: ", wid, rid, currentRunID)
-		return nil
-	}
-	if rid == "" {
-		rid = currentRunID
-	}
-
-	if resp.WorkflowExecutionInfo.GetStatus() == enumspb.WORKFLOW_EXECUTION_STATUS_RUNNING || resp.WorkflowExecutionInfo.CloseTime == nil {
-		if params.skipOpen {
-			fmt.Println("skip because current run is open: ", wid, rid, currentRunID)
-			// skip and not terminate current if open
-			return nil
-		}
-	}
-
-	if params.nonDeterministicOnly {
-		isLDN, err := isLastEventWorkflowTaskFailedWithNonDeterminism(ctx, namespace, wid, rid, frontendClient)
-		if err != nil {
-			return printErrorAndReturn("check isLastEventWorkflowTaskFailedWithNonDeterminism failed", err)
-		}
-		if !isLDN {
-			fmt.Println("skip because last event is not WorkflowTaskFailedWithNonDeterminism")
-			return nil
-		}
-	}
-
-	resetBaseRunID, workflowTaskFinishID, err := getResetEventIDByType(ctx, c, params.resetType, namespace, wid, rid, frontendClient)
-	if err != nil {
-		return printErrorAndReturn("getResetEventIDByType failed", err)
-	}
-	fmt.Println("WorkflowTaskFinishEventId for reset:", wid, rid, resetBaseRunID, workflowTaskFinishID)
-
-	if params.dryRun {
-		fmt.Printf("dry run to reset wid: %v, rid:%v to baseRunId:%v, eventId:%v \n", wid, rid, resetBaseRunID, workflowTaskFinishID)
-	} else {
-		resp2, err := frontendClient.ResetWorkflowExecution(ctx, &workflowservice.ResetWorkflowExecutionRequest{
-			Namespace: namespace,
-			WorkflowExecution: &commonpb.WorkflowExecution{
-				WorkflowId: wid,
-				RunId:      resetBaseRunID,
-			},
-			WorkflowTaskFinishEventId: workflowTaskFinishID,
-			RequestId:                 uuid.New(),
-			Reason:                    fmt.Sprintf("%v:%v", common.GetCurrentUserFromEnv(), params.reason),
-		})
-
-		if err != nil {
-			return printErrorAndReturn("ResetWorkflowExecution failed", err)
-		}
-		fmt.Println("new runId for wid/rid is ,", wid, rid, resp2.GetRunId())
-	}
-
-	return nil
-}
-
-func isLastEventWorkflowTaskFailedWithNonDeterminism(ctx context.Context, namespace, wid, rid string, frontendClient workflowservice.WorkflowServiceClient) (bool, error) {
-	req := &workflowservice.GetWorkflowExecutionHistoryRequest{
-		Namespace: namespace,
-		Execution: &commonpb.WorkflowExecution{
-			WorkflowId: wid,
-			RunId:      rid,
-		},
-		MaximumPageSize: 1000,
-		NextPageToken:   nil,
-	}
-
-	var firstEvent, workflowTaskFailedEvent *historypb.HistoryEvent
-	for {
-		resp, err := frontendClient.GetWorkflowExecutionHistory(ctx, req)
-		if err != nil {
-			return false, printErrorAndReturn("GetWorkflowExecutionHistory failed", err)
-		}
-		for _, e := range resp.GetHistory().GetEvents() {
-			if firstEvent == nil {
-				firstEvent = e
-			}
-			if e.GetEventType() == enumspb.EVENT_TYPE_WORKFLOW_TASK_FAILED {
-				workflowTaskFailedEvent = e
-			} else if e.GetEventType() == enumspb.EVENT_TYPE_WORKFLOW_TASK_COMPLETED {
-				workflowTaskFailedEvent = nil
-			}
-		}
-		if len(resp.NextPageToken) != 0 {
-			req.NextPageToken = resp.NextPageToken
-		} else {
-			break
-		}
-	}
-
-	if workflowTaskFailedEvent != nil {
-		attr := workflowTaskFailedEvent.GetWorkflowTaskFailedEventAttributes()
-
-		if (attr.GetCause() == enumspb.WORKFLOW_TASK_FAILED_CAUSE_NON_DETERMINISTIC_ERROR) ||
-			(attr.GetCause() == enumspb.WORKFLOW_TASK_FAILED_CAUSE_WORKFLOW_WORKER_UNHANDLED_FAILURE ||
-				strings.Contains(attr.GetFailure().GetMessage(), "nondeterministic")) {
-			fmt.Printf("found non determnistic workflow wid:%v, rid:%v, orignalStartTime:%v \n", wid, rid, timestamp.TimeValue(firstEvent.GetEventTime()))
-			return true, nil
-		}
-	}
-
-	return false, nil
-}
-
-func getResetEventIDByType(ctx context.Context, c *cli.Context, resetType, namespace, wid, rid string, frontendClient workflowservice.WorkflowServiceClient) (resetBaseRunID string, workflowTaskFinishID int64, err error) {
+func getResetEventIDByType(ctx context.Context, c *cli.Context, resetType, namespace, wid, rid string, sdkClient sdkclient.Client) (resetBaseRunID string, workflowTaskFinishID int64, err error) {
 	fmt.Println("resetType:", resetType)
 	switch resetType {
 	case "LastWorkflowTask":
-		resetBaseRunID, workflowTaskFinishID, err = getLastWorkflowTaskEventID(ctx, namespace, wid, rid, frontendClient)
+		resetBaseRunID, workflowTaskFinishID, err = getLastWorkflowTaskEventID(ctx, namespace, wid, rid, sdkClient)
 		if err != nil {
 			return
 		}
 	case "LastContinuedAsNew":
-		resetBaseRunID, workflowTaskFinishID, err = getLastContinueAsNewID(ctx, namespace, wid, rid, frontendClient)
+		resetBaseRunID, workflowTaskFinishID, err = getLastContinueAsNewID(ctx, namespace, wid, rid, sdkClient)
 		if err != nil {
 			return
 		}
 	case "FirstWorkflowTask":
-		resetBaseRunID, workflowTaskFinishID, err = getFirstWorkflowTaskEventID(ctx, namespace, wid, rid, frontendClient)
+		resetBaseRunID, workflowTaskFinishID, err = getFirstWorkflowTaskEventID(ctx, namespace, wid, rid, sdkClient)
 		if err != nil {
 			return
 		}
@@ -1257,7 +937,7 @@ func getResetEventIDByType(ctx context.Context, c *cli.Context, resetType, names
 }
 
 // Returns event id of the last completed task or id of the next event after scheduled task.
-func getLastWorkflowTaskEventID(ctx context.Context, namespace, wid, rid string, frontendClient workflowservice.WorkflowServiceClient) (resetBaseRunID string, workflowTaskEventID int64, err error) {
+func getLastWorkflowTaskEventID(ctx context.Context, namespace, wid, rid string, sdkClient sdkclient.Client) (resetBaseRunID string, workflowTaskEventID int64, err error) {
 	resetBaseRunID = rid
 	req := &workflowservice.GetWorkflowExecutionHistoryReverseRequest{
 		Namespace: namespace,
@@ -1270,7 +950,7 @@ func getLastWorkflowTaskEventID(ctx context.Context, namespace, wid, rid string,
 	}
 
 	for {
-		resp, err := frontendClient.GetWorkflowExecutionHistoryReverse(ctx, req)
+		resp, err := sdkClient.WorkflowService().GetWorkflowExecutionHistoryReverse(ctx, req)
 		if err != nil {
 			return "", 0, printErrorAndReturn("GetWorkflowExecutionHistory failed", err)
 		}
@@ -1296,91 +976,59 @@ func getLastWorkflowTaskEventID(ctx context.Context, namespace, wid, rid string,
 }
 
 // Returns id of the first workflow task completed event or if it doesn't exist then id of the event after task scheduled event.
-func getFirstWorkflowTaskEventID(ctx context.Context, namespace, wid, rid string, frontendClient workflowservice.WorkflowServiceClient) (resetBaseRunID string, workflowTaskEventID int64, err error) {
+func getFirstWorkflowTaskEventID(ctx context.Context, namespace, wid, rid string, sdkClient sdkclient.Client) (resetBaseRunID string, workflowTaskEventID int64, err error) {
 	resetBaseRunID = rid
-	req := &workflowservice.GetWorkflowExecutionHistoryRequest{
-		Namespace: namespace,
-		Execution: &commonpb.WorkflowExecution{
-			WorkflowId: wid,
-			RunId:      rid,
-		},
-		MaximumPageSize: 1000,
-		NextPageToken:   nil,
-	}
-	for {
-		resp, err := frontendClient.GetWorkflowExecutionHistory(ctx, req)
+	resp := sdkClient.GetWorkflowHistory(ctx, wid, rid, false, enumspb.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
+
+	for resp.HasNext() {
+		e, err := resp.Next()
 		if err != nil {
-			return "", 0, printErrorAndReturn("GetWorkflowExecutionHistory failed", err)
+			return "", 0, printErrorAndReturn("Unable to retrieve first event", err)
 		}
-		for _, e := range resp.GetHistory().GetEvents() {
-			if e.GetEventType() == enumspb.EVENT_TYPE_WORKFLOW_TASK_COMPLETED {
-				workflowTaskEventID = e.GetEventId()
-				return resetBaseRunID, workflowTaskEventID, nil
-			}
-			if e.GetEventType() == enumspb.EVENT_TYPE_WORKFLOW_TASK_SCHEDULED {
-				if workflowTaskEventID == 0 {
-					workflowTaskEventID = e.GetEventId() + 1
-				}
-			}
+
+		if e.GetEventType() == enumspb.EVENT_TYPE_WORKFLOW_TASK_COMPLETED {
+			workflowTaskEventID = e.GetEventId()
+			return resetBaseRunID, workflowTaskEventID, nil
 		}
-		if len(resp.NextPageToken) != 0 {
-			req.NextPageToken = resp.NextPageToken
-		} else {
-			break
+		if e.GetEventType() == enumspb.EVENT_TYPE_WORKFLOW_TASK_SCHEDULED {
+			if workflowTaskEventID == 0 {
+				workflowTaskEventID = e.GetEventId() + 1
+			}
 		}
 	}
+
 	if workflowTaskEventID == 0 {
 		return "", 0, printErrorAndReturn("Get FirstWorkflowTaskID failed", fmt.Errorf("unable to find any scheduled or completed task"))
 	}
+
 	return
 }
 
-func getLastContinueAsNewID(ctx context.Context, namespace, wid, rid string, frontendClient workflowservice.WorkflowServiceClient) (resetBaseRunID string, workflowTaskCompletedID int64, err error) {
+func getLastContinueAsNewID(ctx context.Context, namespace, wid, rid string, sdkClient sdkclient.Client) (resetBaseRunID string, workflowTaskCompletedID int64, err error) {
 	// get first event
-	req := &workflowservice.GetWorkflowExecutionHistoryRequest{
-		Namespace: namespace,
-		Execution: &commonpb.WorkflowExecution{
-			WorkflowId: wid,
-			RunId:      rid,
-		},
-		MaximumPageSize: 1,
-		NextPageToken:   nil,
-	}
-	resp, err := frontendClient.GetWorkflowExecutionHistory(ctx, req)
+	resp := sdkClient.GetWorkflowHistory(ctx, wid, rid, false, enumspb.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
+	firstEvent, err := resp.Next()
 	if err != nil {
 		return "", 0, printErrorAndReturn("GetWorkflowExecutionHistory failed", err)
 	}
-	firstEvent := resp.History.Events[0]
+
 	resetBaseRunID = firstEvent.GetWorkflowExecutionStartedEventAttributes().GetContinuedExecutionRunId()
 	if resetBaseRunID == "" {
 		return "", 0, printErrorAndReturn("GetWorkflowExecutionHistory failed", fmt.Errorf("cannot get resetBaseRunId"))
 	}
 
-	req = &workflowservice.GetWorkflowExecutionHistoryRequest{
-		Namespace: namespace,
-		Execution: &commonpb.WorkflowExecution{
-			WorkflowId: wid,
-			RunId:      resetBaseRunID,
-		},
-		MaximumPageSize: 1000,
-		NextPageToken:   nil,
-	}
-	for {
-		resp, err := frontendClient.GetWorkflowExecutionHistory(ctx, req)
+	resp = sdkClient.GetWorkflowHistory(ctx, wid, rid, false, enumspb.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
+	for resp.HasNext() {
+		e, err := resp.Next()
 		if err != nil {
 			return "", 0, printErrorAndReturn("GetWorkflowExecutionHistory failed", err)
 		}
-		for _, e := range resp.GetHistory().GetEvents() {
-			if e.GetEventType() == enumspb.EVENT_TYPE_WORKFLOW_TASK_COMPLETED {
-				workflowTaskCompletedID = e.GetEventId()
-			}
-		}
-		if len(resp.NextPageToken) != 0 {
-			req.NextPageToken = resp.NextPageToken
-		} else {
+		if e.GetEventType() == enumspb.EVENT_TYPE_WORKFLOW_TASK_COMPLETED {
+			workflowTaskCompletedID = e.GetEventId()
 			break
 		}
 	}
+
 	if workflowTaskCompletedID == 0 {
 		return "", 0, printErrorAndReturn("Get LastContinueAsNewID failed", fmt.Errorf("no WorkflowTaskCompletedID"))
 	}
@@ -1520,14 +1168,6 @@ func removePrevious2LinesFromTerminal() {
 	fmt.Printf("\033[2K")
 	fmt.Printf("\033[1A")
 	fmt.Printf("\033[2K")
-}
-
-func mapKeysToArray(m map[string]interface{}) []string {
-	var out []string
-	for k := range m {
-		out = append(out, k)
-	}
-	return out
 }
 
 func ParseFoldStatusList(flagValue string) ([]enumspb.WorkflowExecutionStatus, error) {

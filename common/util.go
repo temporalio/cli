@@ -567,3 +567,11 @@ func (mw *MemWriter) Write(p []byte) (n int, err error) {
 func (mw *MemWriter) GetContent() string {
 	return mw.content.String()
 }
+
+func MapKeysToArray(m map[string]interface{}) []string {
+	var out []string
+	for k := range m {
+		out = append(out, k)
+	}
+	return out
+}

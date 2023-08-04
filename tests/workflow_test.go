@@ -346,6 +346,71 @@ func (s *e2eSuite) TestWorkflowDelete_Batch() {
 	}, 10*time.Second, time.Second, "timed out awaiting for workflows termination")
 }
 
+func (s *e2eSuite) TestWorkflowReset_Batch() {
+	s.T().Parallel()
+
+	testserver, app, _ := s.setUpTestEnvironment()
+	defer func() {
+		_ = testserver.Stop()
+	}()
+
+	w := s.newWorker(testserver, testTq, func(r worker.Registry) {
+		r.RegisterWorkflow(helloworld.Workflow)
+		r.RegisterActivity(helloworld.Activity)
+	})
+
+	c := testserver.Client()
+
+	ids := []string{"1", "2", "3"}
+	for _, id := range ids {
+		wfr, err := c.ExecuteWorkflow(
+			context.Background(),
+			sdkclient.StartWorkflowOptions{ID: id, TaskQueue: testTq},
+			helloworld.Workflow,
+			"world",
+		)
+		s.NoError(err)
+
+		// ensure all worfklows complete before resetting
+		wfr.Get(context.Background(), nil)
+		s.NoError(err)
+	}
+
+	w.Stop() // stop worker to freeze Workflow Execution states
+
+	err := app.Run([]string{"", "workflow", "reset",
+		"--query", "WorkflowId = '1' OR WorkflowId = '2'",
+		"--type", "FirstWorkflowTask",
+		"--yes", "--namespace", testNamespace})
+
+	s.NoError(err)
+
+	// awaitTaskQueuePoller(s, c, testTq)
+	awaitBatchJob(s, c, testNamespace)
+
+	s.Eventually(func() bool {
+		wfs, err := c.ListWorkflow(context.Background(), &workflowservice.ListWorkflowExecutionsRequest{
+			Namespace: testNamespace,
+		})
+		s.NoError(err)
+
+		for _, wf := range wfs.GetExecutions() {
+			switch wf.GetExecution().GetWorkflowId() {
+			case "1", "2":
+				if wf.GetStatus() != enums.WORKFLOW_EXECUTION_STATUS_RUNNING {
+					return false
+				}
+			case "3":
+				if wf.GetStatus() != enums.WORKFLOW_EXECUTION_STATUS_COMPLETED {
+					return false
+				}
+			}
+		}
+
+		return true
+	}, 10*time.Second, time.Second, "timed out awaiting for workflows reset")
+}
+
 // awaitTaskQueuePoller used mostly for more explicit failure message
 func awaitTaskQueuePoller(s *e2eSuite, c sdkclient.Client, taskqueue string) {
 	s.Eventually(func() bool {

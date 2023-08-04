@@ -2,6 +2,7 @@ package batch
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/pborman/uuid"
 	cliclient "github.com/temporalio/cli/client"
@@ -11,6 +12,7 @@ import (
 	"github.com/temporalio/tctl-kit/pkg/pager"
 	"github.com/urfave/cli/v2"
 	"go.temporal.io/api/batch/v1"
+	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/server/common/collection"
 )
@@ -140,6 +142,33 @@ func BatchDelete(c *cli.Context) error {
 		Operation: &workflowservice.StartBatchOperationRequest_DeletionOperation{
 			DeletionOperation: &batch.BatchOperationDeletion{
 				Identity: operator,
+			},
+		},
+	}
+
+	return startBatchJob(c, &req)
+}
+
+// BatchReset reset a list of workflows
+func BatchReset(c *cli.Context) error {
+	operator := common.GetCurrentUserFromEnv()
+
+	resetType := c.String(common.FlagType)
+	if _, ok := common.ResetTypeMap[resetType]; !ok {
+		return fmt.Errorf("specify valid reset type (one of %s)", strings.Join(common.MapKeysToArray(common.ResetTypeMap), ", "))
+	}
+
+	resetReapplyType := c.String(common.FlagResetReapplyType)
+	if _, ok := common.ResetReapplyTypeMap[resetReapplyType]; !ok {
+		return fmt.Errorf("specify valid reset reapply type (one of %s)", strings.Join(common.MapKeysToArray(common.ResetReapplyTypeMap), ", "))
+	}
+
+	req := workflowservice.StartBatchOperationRequest{
+		Operation: &workflowservice.StartBatchOperationRequest_ResetOperation{
+			ResetOperation: &batch.BatchOperationReset{
+				Identity:         operator,
+				ResetType:        common.ResetTypeMap[resetType].(enumspb.ResetType),
+				ResetReapplyType: common.ResetReapplyTypeMap[resetReapplyType].(enumspb.ResetReapplyType),
 			},
 		},
 	}
