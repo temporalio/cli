@@ -2,13 +2,13 @@ package common
 
 const (
 	// Main command definitions
-	WorkflowDefinition  = "Operations performed on Workflows."
-	ActivityDefinition  = "Operations performed on Workflow Activities."
-	TaskQueueDefinition = "Operations performed on Task Queues."
-	ScheduleDefinition  = "Operations performed on Schedules."
-	BatchDefinition     = "Operations performed on Batch jobs."
-	OperatorDefinition  = "Operations performed on the Temporal Server."
-	EnvDefinition       = "Manage CLI environments."
+	WorkflowDefinition  = "Start, list, and operate on Workflows"
+	ActivityDefinition  = "Complete or fail Activities"
+	TaskQueueDefinition = "Manage Task Queues"
+	ScheduleDefinition  = "Create and edit Schedules"
+	BatchDefinition     = "List and terminate Batch jobs"
+	OperatorDefinition  = "Manage a running Server"
+	EnvDefinition       = "Manage Server connections"
 
 	// Workflow subcommand definitions
 	StartWorkflowDefinition     = "Starts a new Workflow Execution."
@@ -582,17 +582,20 @@ const WorkflowUpdateUsageText = `The ` + "`" + `temporal workflow update` + "`" 
 
 Use the options listed below to change the command's behavior.`
 
-const ServerUsageText = `Server commands allow you to start and manage the [Temporal Server](/concepts/what-is-the-temporal-server) from the command line.
+const ServerUsageText = `Start a development version of [Temporal Server](/concepts/what-is-the-temporal-server):
 
-Currently, ` + "`" + `cli` + "`" + ` server functionality extends to starting the Server.
-
-Server commands follow this syntax:
-` + "`" + `temporal server COMMAND` + "`" + `
+` + "`" + `temporal server start-dev` + "`" + `
 `
 
-const StartDevUsageText = `The ` + "`" + `temporal server start-dev` + "`" + ` command starts the Temporal Server on ` + "`" + `localhost:7233` + "`" + `.
-The results of any command run on the Server can be viewed at http://localhost:7233.
-`
+const StartDevUsageText = `Start [Temporal Server](/concepts/what-is-the-temporal-server) on ` + "`" + `localhost:7233` + "`" + ` with:
+
+` + "`" + `temporal server start-dev` + "`" + `
+
+View the UI at http://localhost:8233
+
+To persist Workflows across runs, use:
+
+` + "`" + `temporal server start-dev --db-filename temporal.db` + "`"
 
 const UpdateBuildIDsDefinitionText = "Provides various commands for adding or changing the sets of compatible build IDs associated with a Task Queue. See the help of each sub-command for more."
 const GetBuildIDsDefinitionText = "Fetch the sets of compatible build IDs associated with a Task Queue and associated information."

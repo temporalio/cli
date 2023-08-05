@@ -15,9 +15,9 @@ func (s *e2eSuite) TestHelp_PrintsCommands() {
 		want string
 	}{
 		{"workflow"},
-		{"Operations performed on Workflows"},
+		{"Start, list, and operate on Workflows"},
 		{"schedule"},
-		{"Operations performed on Schedules"},
+		{"Create and edit Schedules"},
 	}
 
 	for _, tt := range tests {
