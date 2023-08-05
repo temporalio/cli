@@ -591,7 +591,7 @@ const StartDevUsageText = `Start [Temporal Server](/concepts/what-is-the-tempora
 
 ` + "`" + `temporal server start-dev` + "`" + `
 
-View the UI at http://localhost:8233.
+View the UI at http://localhost:8233
 
 To persist Workflows across runs, use:
 

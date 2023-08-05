@@ -33,7 +33,7 @@ func BuildApp() *cli.App {
 
 	app := cli.NewApp()
 	app.Name = "temporal"
-	app.Usage = "Temporal CLI and development server"
+	app.Usage = "Temporal command-line interface and development server"
 	app.Version = fmt.Sprintf("%s (server %s) (ui %s)", headers.Version,
 		sheaders.ServerVersion, uiversion.UIVersion)
 	app.Suggest = true
