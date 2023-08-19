@@ -55,8 +55,13 @@ func configureCLI(ctx *cli.Context) error {
 	env.Init(ctx)
 	client.Init(ctx)
 	headers.Init()
+	cli.HelpFlag = &cli.BoolFlag{
+		Name: "help",
+		Aliases: []string{"h"},
+		Usage:   "Show help",
+		DisableDefaultText: true,
+	}
 	cli.HelpPrinterCustom = helpprinter.HelpPrinter()
-
 	return nil
 }
 
@@ -103,7 +108,6 @@ var clientCommands = []*cli.Command{
 	{
 		Name:        "workflow",
 		Usage:       common.WorkflowDefinition,
-		UsageText:   common.WorkflowUsageText,
 		Subcommands: workflow.NewWorkflowCommands(),
 	},
 	{

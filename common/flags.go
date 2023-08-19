@@ -375,6 +375,7 @@ var FlagsForWorkflowFiltering = []cli.Flag{
 		Name:     FlagArchive,
 		Usage:    FlagArchiveDefinition,
 		Category: CategoryMain,
+		DisableDefaultText: true,
 	},
 }
 

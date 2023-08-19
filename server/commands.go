@@ -66,7 +66,7 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 				&cli.StringSliceFlag{
 					Name:    common.FlagNamespace,
 					Aliases: common.FlagNamespaceAlias,
-					Usage:   `Specify namespaces that should be pre-created (namespace "default" is always created)`,
+					Usage:   `Namespaces to create (namespace "default" is always created)`,
 					EnvVars: nil,
 					Value:   nil,
 				},
@@ -126,7 +126,7 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 				},
 				&cli.StringSliceFlag{
 					Name:    common.FlagPragma,
-					Usage:   fmt.Sprintf("Specify SQLite pragma statements in pragma=value format. Pragma options: %q.", sconfig.GetAllowedPragmas()),
+					Usage:   fmt.Sprintf("SQLite pragma statements in pragma=value format. Pragma options: %q.", sconfig.GetAllowedPragmas()),
 					EnvVars: nil,
 					Value:   nil,
 				},

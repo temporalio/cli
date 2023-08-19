@@ -11,89 +11,90 @@ const (
 	EnvDefinition       = "Manage Server connections"
 
 	// Workflow subcommand definitions
-	StartWorkflowDefinition     = "Starts a new Workflow Execution."
-	ExecuteWorkflowDefinition   = "Start a new Workflow Execution and prints its progress."
-	DescribeWorkflowDefinition  = "Show information about a Workflow Execution."
-	ListWorkflowDefinition      = "List Workflow Executions based on a Query."
-	ShowWorkflowDefinition      = "Show Event History for a Workflow Execution."
-	QueryWorkflowDefinition     = "Query a Workflow Execution."
-	StackWorkflowDefinition     = "Query a Workflow Execution with __stack_trace as the query type."
-	SignalWorkflowDefinition    = "Signal Workflow Execution by Id or List Filter."
-	CountWorkflowDefinition     = "Count Workflow Executions (requires ElasticSearch to be enabled)."
-	CancelWorkflowDefinition    = "Cancel a Workflow Execution."
-	TerminateWorkflowDefinition = "Terminate Workflow Execution by ID or List Filter."
-	DeleteWorkflowDefinition    = "Deletes a Workflow Execution."
-	ResetWorkflowDefinition     = "Resets a Workflow Execution by Event ID or reset type."
-	TraceWorkflowDefinition     = "Trace progress of a Workflow Execution and its children."
-	UpdateWorkflowDefinition    = "Updates a running workflow synchronously."
+	StartWorkflowDefinition     = "Start a new Workflow"
+	ExecuteWorkflowDefinition   = "Start a new Workflow and print its result"
+	DescribeWorkflowDefinition  = "Print information about a Workflow"
+	ListWorkflowDefinition      = "List Workflows"
+	ShowWorkflowDefinition      = "Print the Event History of a Workflow"
+	QueryWorkflowDefinition     = "Query a Workflow"
+	StackWorkflowDefinition     = "Print the stack trace of a Workflow" // Query a Workflow Execution with __stack_trace as the query type
+	SignalWorkflowDefinition    = "Signal a Workflow"
+	CountWorkflowDefinition     = "Count Workflows"
+	CancelWorkflowDefinition    = "Cancel a Workflow"
+	TerminateWorkflowDefinition = "Terminate a Workflow"
+	DeleteWorkflowDefinition    = "Delete a Workflow"
+	ResetWorkflowDefinition     = "Reset a Workflow" //  by Event ID or reset type
+	ResetBatchWorkflowDefinition     = "Reset multiple Workflows"
+	TraceWorkflowDefinition     = "Trace progress of a Workflow and its children"
+	UpdateWorkflowDefinition    = "Update a Workflow"
 
 	// Activity subcommand definitions
-	CompleteActivityDefinition = "Completes an Activity Execution."
-	FailActivityDefinition     = "Fails an Activity Execution."
+	CompleteActivityDefinition = "Completes an Activity Execution"
+	FailActivityDefinition     = "Fails an Activity Execution"
 
 	// Task Queue subcommand definitions
-	DescribeTaskQueueDefinition      = "Provides information for Workers that have recently polled on this Task Queue."
-	ListPartitionTaskQueueDefinition = "Lists the Task Queue's partitions and the matching nodes they are assigned to."
+	DescribeTaskQueueDefinition      = "Provides information for Workers that have recently polled on this Task Queue"
+	ListPartitionTaskQueueDefinition = "Lists the Task Queue's partitions and the matching nodes they are assigned to"
 	UpdateBuildIDsDefinition         = "Operations to update the sets of worker Build ID versions on the Task Queue"
 	GetBuildIDsDefinition            = "Fetch the sets of worker Build ID versions on the Task Queue"
 	GetBuildIDReachabilityDefinition = "Retrieves information about the reachability of Build IDs on one or more Task Queues"
 
 	// Batch subcommand definitions
-	DescribeBatchJobDefinition  = "Provide information about a Batch operation job."
-	ListBatchJobsDefinition     = "List all Batch operation jobs on the Temporal Client."
-	TerminateBatchJobDefinition = "Stop an ongoing Batch operation job."
+	DescribeBatchJobDefinition  = "Provide information about a Batch operation job"
+	ListBatchJobsDefinition     = "List all Batch operation jobs on the Temporal Client"
+	TerminateBatchJobDefinition = "Stop an ongoing Batch operation job"
 
-	NamespaceDefinition       = "Operations performed on Namespaces."
-	SearchAttributeDefinition = "Operations applying to Search Attributes."
-	ClusterDefinition         = "Operations for running a Temporal Cluster."
+	NamespaceDefinition       = "Operations performed on Namespaces"
+	SearchAttributeDefinition = "Operations applying to Search Attributes"
+	ClusterDefinition         = "Operations for running a Temporal Cluster"
 
 	// Namespace subcommand definitions
-	DescribeNamespaceDefinition = "Describe a Namespace by its name or ID."
-	ListNamespacesDefinition    = "List all Namespaces."
-	CreateNamespaceDefinition   = "Registers a new Namespace."
-	UpdateNamespaceDefinition   = "Updates a Namespace."
-	DeleteNamespaceDefinition   = "Deletes an existing Namespace."
+	DescribeNamespaceDefinition = "Describe a Namespace by its name or ID"
+	ListNamespacesDefinition    = "List all Namespaces"
+	CreateNamespaceDefinition   = "Registers a new Namespace"
+	UpdateNamespaceDefinition   = "Updates a Namespace"
+	DeleteNamespaceDefinition   = "Deletes an existing Namespace"
 
 	// Search Attribute subcommand defintions
-	CreateSearchAttributeDefinition  = "Adds one or more custom Search Attributes."
-	ListSearchAttributesDefinition   = "Lists all Search Attributes that can be used in list Workflow Queries."
-	RemoveSearchAttributesDefinition = "Removes custom search attribute metadata only (Elasticsearch index schema is not modified)."
+	CreateSearchAttributeDefinition  = "Adds one or more custom Search Attributes"
+	ListSearchAttributesDefinition   = "Lists all Search Attributes that can be used in list Workflow Queries"
+	RemoveSearchAttributesDefinition = "Removes custom search attribute metadata only (Elasticsearch index schema is not modified)"
 
 	// Cluster subcommand defintions
-	HealthDefinition   = "Checks the health of the Frontend Service."
-	DescribeDefinition = "Show information about the Cluster."
-	SystemDefinition   = "Shows information about the system and its capabilities."
-	UpsertDefinition   = "Add or update a remote Cluster."
-	ListDefinition     = "List all remote Clusters."
-	RemoveDefinition   = "Remove a remote Cluster."
+	HealthDefinition   = "Checks the health of the Frontend Service"
+	DescribeDefinition = "Show information about the Cluster"
+	SystemDefinition   = "Shows information about the system and its capabilities"
+	UpsertDefinition   = "Add or update a remote Cluster"
+	ListDefinition     = "List all remote Clusters"
+	RemoveDefinition   = "Remove a remote Cluster"
 
 	// Env subcommand definitions
-	ListEnvDefinition = "Print all environments."
-	GetDefinition     = "Print environment properties."
-	SetDefinition     = "Set environment properties."
-	DeleteDefinition  = "Delete an environment or environment property."
+	ListEnvDefinition = "Print all environments"
+	GetDefinition     = "Print environment properties"
+	SetDefinition     = "Set environment properties"
+	DeleteDefinition  = "Delete an environment or environment property"
 
 	// Schedule definitions
-	ScheduleCreateDefinition   = "Create a new Schedule."
-	ScheduleCreateDescription  = "Takes a Schedule specification plus all the same args as starting a Workflow."
-	ScheduleUpdateDefinition   = "Updates a Schedule with a new definition (full replacement, not patch)."
-	ScheduleUpdateDescription  = "Takes a Schedule specification plus all the same args as starting a Workflow."
-	ScheduleToggleDefinition   = "Pauses or unpauses a Schedule."
-	ScheduleTriggerDefinition  = "Triggers an immediate action."
-	ScheduleBackfillDefinition = "Backfills a past time range of actions."
-	ScheduleDescribeDefinition = "Get Schedule configuration and current state."
-	ScheduleDeleteDefinition   = "Deletes a Schedule."
-	ScheduleListDefinition     = "Lists Schedules."
+	ScheduleCreateDefinition   = "Create a new Schedule"
+	ScheduleCreateDescription  = "Takes a Schedule specification plus all the same args as starting a Workflow"
+	ScheduleUpdateDefinition   = "Updates a Schedule with a new definition (full replacement, not patch)"
+	ScheduleUpdateDescription  = "Takes a Schedule specification plus all the same args as starting a Workflow"
+	ScheduleToggleDefinition   = "Pauses or unpauses a Schedule"
+	ScheduleTriggerDefinition  = "Triggers an immediate action"
+	ScheduleBackfillDefinition = "Backfills a past time range of actions"
+	ScheduleDescribeDefinition = "Get Schedule configuration and current state"
+	ScheduleDeleteDefinition   = "Deletes a Schedule"
+	ScheduleListDefinition     = "Lists Schedules"
 
 	// Update build id subcommand definitions
-	AddNewDefaultBuildIDDefinition         = "Add a new default (incompatible) build ID to the Task Queue version sets."
-	AddNewDefaultBuildIDDefinitionUsage    = "Creates a new build id set which will become the new overall default for the queue with the provided build id as its only member. This new set is incompatible with all previous sets/versions."
-	AddNewCompatibleBuildIDDefinition      = "Add a new build ID compatible with an existing ID to the Task Queue version sets."
-	AddNewCompatibleBuildIDDefinitionUsage = "The new build ID will become the default for the set containing the existing ID. See per-flag help for more."
-	PromoteSetDefinition                   = "Promote an existing build ID set to become the default for the Task Queue."
-	PromoteSetDefinitionUsage              = "If the set is already the default, this command has no effect."
-	PromoteIDInSetDefinition               = "Promote an existing build ID to become the default for its containing set."
-	PromoteIDInSetDefinitionUsage          = "New tasks compatible with the the set will be dispatched to the default id."
+	AddNewDefaultBuildIDDefinition         = "Add a new default (incompatible) build ID to the Task Queue version sets"
+	AddNewDefaultBuildIDDefinitionUsage    = "Creates a new build id set which will become the new overall default for the queue with the provided build id as its only member. This new set is incompatible with all previous sets/versions"
+	AddNewCompatibleBuildIDDefinition      = "Add a new build ID compatible with an existing ID to the Task Queue version sets"
+	AddNewCompatibleBuildIDDefinitionUsage = "The new build ID will become the default for the set containing the existing ID. See per-flag help for more"
+	PromoteSetDefinition                   = "Promote an existing build ID set to become the default for the Task Queue"
+	PromoteSetDefinitionUsage              = "If the set is already the default, this command has no effect"
+	PromoteIDInSetDefinition               = "Promote an existing build ID to become the default for its containing set"
+	PromoteIDInSetDefinitionUsage          = "New tasks compatible with the the set will be dispatched to the default id"
 )
 
 const BatchUsageText = `Batch commands change multiple [Workflow Executions](/concepts/what-is-a-workflow-execution)
@@ -133,39 +134,28 @@ For future reference, provide a reason for terminating the Batch Job.
 
 Use the command options below to change the information returned by this command.`
 
-const WorkflowUsageText = `[Workflow](/concepts/what-is-a-workflow) commands perform operations on on [Workflow Executions](/concepts/what-is-a-workflow-execution).
-
-Workflow commands use this syntax:
-` + "`" + `temporal workflow COMMAND [ARGS]` + "`" + `
-`
-
 const StartWorkflowUsageText = `The ` + "`" + `temporal workflow start` + "`" + ` command starts a new [Workflow Execution](/concepts/what-is-a-workflow-execution).
 The Workflow and Run IDs are returned after starting the [Workflow](/concepts/what-is-a-workflow).
 
-` + "`" + `` + "`" + `` + "`" + `
+` + "```" + `
 temporal workflow start \
 		--workflow-id meaningful-business-id \
 		--type MyWorkflow \
 		--task-queue MyTaskQueue \
 		--input '{"Input": "As-JSON"}'
-` + "`" + `` + "`" + `` + "`" + `
+` + "```" + `
 
 Use the command options below to change the information returned by this command.`
 
-const ExecuteWorkflowUsageText = `The ` + "`" + `temporal workflow execute` + "`" + ` command starts a new [Workflow Execution](/concepts/what-is-a-workflow-execution) and prints its progress.
-The command completes when the Workflow Execution completes.
+const ExecuteWorkflowUsageText = `Starts a new [Workflow Execution](/concepts/what-is-a-workflow-execution), waits for it to complete, and prints its [Event History](/concepts/what-is-an-event-history) and result.
 
-Single quotes('') are used to wrap input as JSON.
-
-` + "`" + `` + "`" + `` + "`" + `
+` + "```" + `
 temporal workflow execute
-		--workflow-id meaningful-business-id \
-		--type MyWorkflow \
-		--task-queue MyTaskQueue \
-		--input '{"Input": "As-JSON"}'
-` + "`" + `` + "`" + `` + "`" + `
-
-Use the command options below to change the information returned by this command.`
+		 --workflow-id meaningful-business-id \
+		 --type MyWorkflow \
+		 --task-queue MyTaskQueue \
+		 --input '{"foo": 1, "bar": "baz"}'
+` + "```"
 
 const DescribeWorkflowUsageText = `The ` + "`" + `temporal workflow describe` + "`" + ` command shows information about a given [Workflow Execution](/concepts/what-is-a-workflow-execution).
 
@@ -179,16 +169,9 @@ Output can be shown as printed ('raw') or formatted to only show the Workflow Ex
 
 Use the command options below to change the information returned by this command.`
 
-const ListWorkflowUsageText = `The ` + "`" + `temporal workflow list` + "`" + ` command provides a list of [Workflow Executions](/concepts/what-is-a-workflow-execution) that meet the criteria of a given [Query](/concepts/what-is-a-query).
-By default, this command returns up to 10 closed Workflow Executions.
+const ListWorkflowUsageText = `Lists [Workflow Executions](/concepts/what-is-a-workflow-execution) that match a [List Filter](/concepts/what-is-a-list-filter):
 
-` + "`" + `temporal workflow list --query=MyQuery` + "`" + `
-
-The command can also return a list of archived Workflow Executions.
-
-` + "`" + `temporal workflow list --archived=true` + "`" + `
-
-Use the command options below to change the information returned by this command.`
+` + "`" + `temporal workflow list --query=MyQuery` + "`"
 
 const QueryWorkflowUsageText = `The ` + "`" + `temporal workflow query` + "`" + ` command sends a [Query](/concepts/what-is-a-query) to a [Workflow Execution](/concepts/what-is-a-workflow-execution).
 
@@ -426,7 +409,7 @@ const ScheduleCreateUsageText = `The ` + "`" + `temporal schedule create` + "`" 
 Newly created Schedules return a Schedule ID to be used in other Schedule commands.
 
 Schedules are passed in the following format:
-` + "`" + `` + "`" + `` + "`" + `
+` + "```" + `
 temporal schedule create \
 		--schedule-id MyScheduleId \
 		--cron '3 11 * * Fri' \
@@ -434,7 +417,7 @@ temporal schedule create \
 		--task-queue MyTaskQueue \
 		--workflow-type MyWorkflowType \
 		--input '{"Input": "As-JSON"}'
-` + "`" + `` + "`" + `` + "`" + `
+` + "```" + `
 
 Any combination of ` + "`" + `--cal` + "`" + `, ` + "`" + `--interval` + "`" + `, and ` + "`" + `--cron` + "`" + ` is supported.
 Actions will be executed at any time specified in the Schedule.
@@ -444,14 +427,14 @@ Use the options provided below to change the command's behavior.`
 const ScheduleUpdateUsageText = `The ` + "`" + `temporal schedule update` + "`" + ` command updates an existing [Schedule](/concepts/what-is-a-schedule).
 
 Updated Schedules need to follow a certain format:
-` + "`" + `` + "`" + `` + "`" + `
+` + "```" + `
 temporal schedule update \
 		--schedule-id MyScheduleId \
 		--cron '3 11 * * Fri' \
 		--workflow-id MyWorkflowId \
 		--task-queue MyTaskQueue \
 		--workflow-type MyWorkflowType
-` + "`" + `` + "`" + `` + "`" + `
+` + "```" + `
 
 Updating a Schedule takes the given options and replaces the entire configuration of the Schedule with what's provided.
 If you only change one value of the Schedule, be sure to provide the other unchanged fields to prevent them from being overwritten.
@@ -485,12 +468,12 @@ const ScheduleBackfillUsageText = `The ` + "`" + `temporal schedule backfill` + 
 Backfilling can fill in [Workflow Runs](/concepts/what-is-a-run-id) from a time period when the Schedule was paused, or from before the Schedule was created.
 
 Schedule backfills require a valid Schedule ID, along with the time in which to run the Schedule and a change to the overlap policy.
-` + "`" + `` + "`" + `` + "`" + `
+` + "```" + `
 temporal schedule backfill --schedule-id 'your-schedule-id' \
 		--overlap-policy 'BufferAll' 				\
 		--start-time '2022-05-0101T00:00:00Z'		\
 		--end-time '2022-05-31T23:59:59Z'
-` + "`" + `` + "`" + `` + "`" + `
+` + "```" + `
 
 Use the options provided below to change this command's behavior.`
 
@@ -556,12 +539,12 @@ Use the options listed below to change the command's behavior.`
 
 const WorkflowSignalUsageText = `The ` + "`" + `temporal workflow signal` + "`" + ` command is used to [Signal](/concepts/what-is-a-signal) a [Workflow Execution](/concepts/what-is-a-workflow-execution) by [ID](/concepts/what-is-a-workflow-id) or [List Filter](/concepts/what-is-a-list-filter).
 
-` + "`" + `` + "`" + `` + "`" + `
+` + "```" + `
 temporal workflow signal \
 		--workflow-id MyWorkflowId \
 		--name MySignal \
 		--input '{"Input": "As-JSON"}'
-` + "`" + `` + "`" + `` + "`" + `
+` + "```" + `
 
 Use the options listed below to change the command's behavior.`
 
@@ -591,17 +574,17 @@ const StartDevUsageText = `Start [Temporal Server](/concepts/what-is-the-tempora
 
 ` + "`" + `temporal server start-dev` + "`" + `
 
-View the UI at http://localhost:8233
+View the UI at: http://localhost:8233
 
 To persist Workflows across runs, use:
 
 ` + "`" + `temporal server start-dev --db-filename temporal.db` + "`"
 
 const UpdateBuildIDsDefinitionText = "Provides various commands for adding or changing the sets of compatible build IDs associated with a Task Queue. See the help of each sub-command for more."
-const GetBuildIDsDefinitionText = "Fetch the sets of compatible build IDs associated with a Task Queue and associated information."
+const GetBuildIDsDefinitionText = "Fetch the sets of compatible build IDs associated with a Task Queue and associated information"
 const GetBuildIDReachabilityDefinitionText = "This command can tell you whether or not Build IDs may be used for for new, existing, or closed workflows. " +
 	"Both the --build-id and --task-queue flags may be specified multiple times. " +
-	"If you do not provide a task queue, reachability for the provided Build IDs will be checked against all task queues."
+	"If you do not provide a task queue, reachability for the provided Build IDs will be checked against all task queues"
 
 const CustomTemplateHelpCLI = `NAME:
    {{template "helpNameTemplate" .}}{{if .Description}}
