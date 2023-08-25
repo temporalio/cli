@@ -147,6 +147,7 @@ var SharedFlags = []cli.Flag{
 		Name:     FlagEnv,
 		Value:    config.DefaultEnv,
 		Usage:    FlagEnvDefinition,
+		EnvVars:  []string{"TEMPORAL_ENV"},
 		Category: CategoryGlobal,
 	},
 	&cli.StringFlag{
