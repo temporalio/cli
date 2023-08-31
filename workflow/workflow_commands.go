@@ -39,6 +39,7 @@ import (
 	"go.temporal.io/server/common/backoff"
 	"go.temporal.io/server/common/collection"
 	"go.temporal.io/server/common/convert"
+	"go.temporal.io/server/common/payload"
 	"go.temporal.io/server/common/primitives/timestamp"
 	"go.temporal.io/server/common/searchattribute"
 )
@@ -649,22 +650,32 @@ func CountWorkflow(c *cli.Context) error {
 		Query: query,
 	}
 
-	var count int64
+	var response *workflowservice.CountWorkflowExecutionsResponse
 	op := func() error {
 		ctx, cancel := common.NewContext(c)
 		defer cancel()
-		response, err := sdkClient.CountWorkflow(ctx, request)
+		var err error
+		response, err = sdkClient.CountWorkflow(ctx, request)
 		if err != nil {
 			return err
 		}
-		count = response.GetCount()
 		return nil
 	}
 	err = backoff.ThrottleRetry(op, scommon.CreateFrontendClientRetryPolicy(), scommon.IsContextDeadlineExceededErr)
 	if err != nil {
 		return fmt.Errorf("unable to count workflows: %w", err)
 	}
-	fmt.Println(count)
+	fmt.Printf("Total: %d\n", response.GetCount())
+	groups := response.GetGroups()
+	for _, g := range groups {
+		values := make([]any, len(g.GroupValues))
+		for i, v := range g.GroupValues {
+			if err := payload.Decode(v, &values[i]); err != nil {
+				return err
+			}
+		}
+		fmt.Printf("Group: %v,  Count: %d\n", values, g.Count)
+	}
 	return nil
 }
 
