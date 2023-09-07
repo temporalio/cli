@@ -245,7 +245,7 @@ func (cfg *Config) mustGetService(frontendPortOffset int) config.Service {
 		},
 	}
 
-	// Enable HTTP port only on frontend if non-zero
+	// Enable HTTP port only on frontend and only if non-zero
 	if frontendPortOffset == 0 && cfg.FrontendHTTPPort > 0 {
 		svc.RPC.HTTPPort = cfg.FrontendHTTPPort
 	}
