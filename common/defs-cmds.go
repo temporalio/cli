@@ -116,7 +116,7 @@ Use the command options below to change the information returned by this command
 const DescribeBatchUsageText = `The ` + "`" + `temporal batch describe` + "`" + ` command shows the progress of an ongoing Batch job.
 
 Pass a valid Job ID to return a Batch Job's information.
-` + "`" + `temporal batch describe --jobid=MyJobId` + "`" + `
+` + "`" + `temporal batch describe --job-id=MyJobId` + "`" + `
 
 Use the command options below to change the information returned by this command.`
 
