@@ -14,7 +14,7 @@ require (
 	github.com/pborman/uuid v1.2.1
 	github.com/stretchr/testify v1.8.4
 	github.com/temporalio/tctl-kit v0.0.0-20230328153839-577f95d16fa0
-	github.com/temporalio/ui-server/v2 v2.17.2
+	github.com/temporalio/ui-server/v2 v2.18.1
 	github.com/urfave/cli/v2 v2.25.7
 	go.temporal.io/api v1.24.0
 	go.temporal.io/sdk v1.24.0
@@ -25,10 +25,9 @@ require (
 	google.golang.org/grpc v1.57.0
 )
 
-require (
-	github.com/cactus/go-statsd-client/v5 v5.0.0 // indirect
-	github.com/google/s2a-go v0.1.4 // indirect
-)
+require github.com/google/s2a-go v0.1.4 // indirect
+
+require github.com/cactus/go-statsd-client/v5 v5.0.0 // indirect
 
 require (
 	cloud.google.com/go v0.110.7 // indirect
