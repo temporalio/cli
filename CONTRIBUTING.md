@@ -28,6 +28,15 @@ Build the `temporal` binary:
 go build ./cmd/temporal
 ```
 
+## Generate docs
+
+```bash
+go build -o temporal-doc-gen ./cmd/docgen
+./temporal-doc-gen
+```
+
+Docs are generated as Markdown files in `./docs`.
+
 ## Run tests
 
 Run all tests:
@@ -73,3 +82,26 @@ To verify that this file is up to date execute:
 ```bash
 go run ./cmd/licensecheck
 ```
+
+## Release process
+
+If you're a Temporal engineer / code owner, here's how to do a release:
+
+1. Do some manual testing to make sure things look good--start a dev-server, run
+   some workflows, etc.
+2. Make sure CI is passing on `main`.
+3. Create a tag of the form `vX.Y.Z` off of `main` and push it to GitHub.
+4. GoReleaser will automatically build and publish the release artifacts.
+5. The `temporal.download` links will automatically update once the artifacts
+   are available.
+6. Open a PR against Homebrew to modify [the temporal formula] to fetch the
+   source tarball from the latest release on GitHub.  Don't forget to update
+   the checksum of the source tarball. ([Example PR])
+   - Homebrew should take care of rebottling the formula and updating the bottle
+     checksums; you don't need to do this yourself.
+
+For reference, here are all of the places where releases get published:
+https://docs.temporal.io/cli/#installation
+
+[the temporal formula]: https://github.com/Homebrew/homebrew-core/blob/master/Formula/t/temporal.rb
+[Example PR]: https://github.com/Homebrew/homebrew-core/commit/23f09be7fe7e2b00eee53a12db9a5a15c1c206ff
