@@ -49,6 +49,7 @@ var (
 	FlagHeadless                   = "headless"
 	FlagHistoryArchivalState       = "history-archival-state"
 	FlagHistoryArchivalURI         = "history-uri"
+	FlagHTTPPort                   = "http-port"
 	FlagIdentity                   = "identity"
 	FlagInput                      = "input"
 	FlagInputAlias                 = []string{"i"}

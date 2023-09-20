@@ -77,6 +77,12 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 					Value:   sconfig.DefaultFrontendPort,
 				},
 				&cli.IntFlag{
+					Name:        common.FlagHTTPPort,
+					Usage:       "Port for the frontend HTTP service",
+					Value:       sconfig.DefaultFrontendHTTPPort,
+					DefaultText: "disabled",
+				},
+				&cli.IntFlag{
 					Name:        common.FlagMetricsPort,
 					Usage:       "Port for /metrics",
 					Value:       sconfig.DefaultMetricsPort,
@@ -170,6 +176,7 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 				var (
 					ip              = c.String(common.FlagIP)
 					serverPort      = c.Int(common.FlagPort)
+					httpPort        = c.Int(common.FlagHTTPPort)
 					metricsPort     = c.Int(common.FlagMetricsPort)
 					uiPort          = serverPort + 1000
 					uiIP            = ip
@@ -211,6 +218,7 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 				opts := []ServerOption{
 					WithDynamicPorts(),
 					WithFrontendPort(serverPort),
+					WithFrontendHTTPPort(httpPort),
 					WithMetricsPort(metricsPort),
 					WithFrontendIP(ip),
 					WithNamespaces(c.StringSlice(common.FlagNamespace)...),
