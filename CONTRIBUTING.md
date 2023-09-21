@@ -20,6 +20,12 @@ Temporal CLI uses go modules, there is no dependency on `$GOPATH` variable. Clon
 git clone https://github.com/temporalio/cli.git
 ```
 
+## Makefile
+
+There is a very simple `Makefile` available for the convenience of UNIXy
+developers which covers most of the points below. The default target will do a
+clean build (`make clean && make build`), and `make test` will run tests.
+
 ## Build
 
 Build the `temporal` binary:
@@ -103,5 +109,5 @@ If you're a Temporal engineer / code owner, here's how to do a release:
 For reference, here are all of the places where releases get published:
 https://docs.temporal.io/cli/#installation
 
-[the temporal formula]: https://github.com/Homebrew/homebrew-core/blob/master/Formula/t/temporal.rb
+[the temporal formula]: https://github.com/Homebrew/homebrew-core/blob/fc3afa61f03205d6d88f5443e805a7f782171aa2/Formula/t/temporal.rb
 [Example PR]: https://github.com/Homebrew/homebrew-core/commit/23f09be7fe7e2b00eee53a12db9a5a15c1c206ff
