@@ -29,9 +29,6 @@ Use the CLI to run a Temporal Server and interact with it.
     - [macOS installation](#macos-installation)
     - [Linux installation](#linux-installation)
 - [🔧 Development](#-development)
-  - [Compile and run CLI](#compile-and-run-cli)
-  - [Compile docs](#compile-docs)
-  - [Run tests](#run-tests)
 - [⚠️ Known Issues](#-known-issues)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
@@ -212,7 +209,7 @@ or:
 [[ -r "/usr/local/etc/profile.d/bash_completion.sh" ]] && . "/usr/local/etc/profile.d/bash_completion.sh"
 ```
 
-Verify that `bash-completion` is installed by running `type _init_completion`. 
+Verify that `bash-completion` is installed by running `type _init_completion`.
 It should say `_init_completion is a function` and print the function.
 
 Enable completion for Temporal by adding the following code to your bash file:
@@ -262,24 +259,7 @@ source ~/.bashrc
 
 ## 🔧 Development
 
-### Compile and run CLI
-
-```bash
-go build -o dist/temporal ./cmd/temporal
-dist/temporal
-```
-
-### Compile docs
-
-```bash
-go build -o dist/temporal-docgen ./cmd/temporal-docgen
-```
-
-### Run tests
-
-```bash
-go test ./...
-```
+See [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## ⚠️ Known Issues
 
