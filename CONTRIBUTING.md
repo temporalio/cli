@@ -37,8 +37,7 @@ go build ./cmd/temporal
 ## Generate docs
 
 ```bash
-go build -o temporal-doc-gen ./cmd/docgen
-./temporal-doc-gen
+go run ./cmd/docgen
 ```
 
 Docs are generated as Markdown files in `./docs`.
@@ -105,9 +104,13 @@ If you're a Temporal engineer / code owner, here's how to do a release:
    the checksum of the source tarball. ([Example PR])
    - Homebrew should take care of rebottling the formula and updating the bottle
      checksums; you don't need to do this yourself.
+7. Re-generate the docs, and follow [the docs team's process] to update [the
+   CLI documentation].
 
 For reference, here are all of the places where releases get published:
 https://docs.temporal.io/cli/#installation
 
 [the temporal formula]: https://github.com/Homebrew/homebrew-core/blob/fc3afa61f03205d6d88f5443e805a7f782171aa2/Formula/t/temporal.rb
 [Example PR]: https://github.com/Homebrew/homebrew-core/commit/23f09be7fe7e2b00eee53a12db9a5a15c1c206ff
+[the docs team's process]: https://github.com/temporalio/documentation/blob/main/README.md#how-to-make-changes-to-this-repository
+[the CLI documentation]: https://github.com/temporalio/documentation/tree/main/docs-src/cli
