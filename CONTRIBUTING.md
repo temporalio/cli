@@ -96,21 +96,22 @@ If you're a Temporal engineer / code owner, here's how to do a release:
    some workflows, etc.
 2. Make sure CI is passing on `main`.
 3. Create a tag of the form `vX.Y.Z` off of `main` and push it to GitHub.
-4. GoReleaser will automatically build and publish the release artifacts.
-5. The `temporal.download` links will automatically update once the artifacts
+4. GoReleaser will automatically create a GitHub release from the tag, and will
+   build and publish the release artifacts.
+5. Update the release notes on GitHub to summarize what's changed.
+6. The `temporal.download` links will automatically update once the artifacts
    are available.
-6. Open a PR against Homebrew to modify [the temporal formula] to fetch the
-   source tarball from the latest release on GitHub.  Don't forget to update
-   the checksum of the source tarball. ([Example PR])
-   - Homebrew should take care of rebottling the formula and updating the bottle
-     checksums; you don't need to do this yourself.
-7. Re-generate the docs, and follow [the docs team's process] to update [the
+7. Follow [Homebrew's instructions] to bump the CLI version in Homebrew. tl;dr:
+   1. [first time only] `brew tap homebrew/core git@github.com:Homebrew/homebrew-core.git`
+   2. [first time only] Fixup homebrew/core to use SSH, or it won't be able to push to your fork:
+      `git -C /opt/homebrew/Library/Taps/homebrew/homebrew-core remote set-url origin git@github.com:Homebrew/homebrew-core`
+   3. `brew bump-formula-pr --strict temporal --url=https://github.com/temporalio/cli/archive/refs/tags/vXXX.tar.gz` (replace `vXXX` with the tag name)
+8. Re-generate the docs, and follow [the docs team's process] to update [the
    CLI documentation].
 
 For reference, here are all of the places where releases get published:
 https://docs.temporal.io/cli/#installation
 
-[the temporal formula]: https://github.com/Homebrew/homebrew-core/blob/fc3afa61f03205d6d88f5443e805a7f782171aa2/Formula/t/temporal.rb
-[Example PR]: https://github.com/Homebrew/homebrew-core/commit/23f09be7fe7e2b00eee53a12db9a5a15c1c206ff
+[Homebrew's instructions]: https://github.com/Homebrew/homebrew-core/blob/HEAD/CONTRIBUTING.md
 [the docs team's process]: https://github.com/temporalio/documentation/blob/main/README.md#how-to-make-changes-to-this-repository
 [the CLI documentation]: https://github.com/temporalio/documentation/tree/main/docs-src/cli
