@@ -33,10 +33,10 @@ func (s *e2eSuite) TestWorkflowExecute_Input() {
 
 	client := server.Client()
 
-	worker := s.newWorker(server, testTq, func(r worker.Registry) {
+	w := s.newWorker(server, testTq, func(r worker.Registry) {
 		r.RegisterWorkflow(encodejson.Workflow)
 	})
-	defer worker.Stop()
+	defer w.Stop()
 
 	// Run the workflow to completion using the CLI.  (TODO: We unfortunately
 	// don't have a way to check the CLI output directly to make sure it prints
@@ -75,10 +75,10 @@ func (s *e2eSuite) TestWorkflowExecute_InputFile() {
 
 	client := server.Client()
 
-	worker := s.newWorker(server, testTq, func(r worker.Registry) {
+	w := s.newWorker(server, testTq, func(r worker.Registry) {
 		r.RegisterWorkflow(encodejson.Workflow)
 	})
-	defer worker.Stop()
+	defer w.Stop()
 
 	// Run the workflow to completion using the CLI.  (TODO: We unfortunately
 	// don't have a way to check the CLI output directly to make sure it prints

@@ -439,7 +439,7 @@ func readJSONInputs(c *cli.Context) ([][]byte, error) {
 		inputFiles := c.StringSlice(FlagInputFile)
 
 		args := [][]byte{}
-		for _, inputFile := range(inputFiles) {
+		for _, inputFile := range inputFiles {
 			// This method is purely used to parse input from the CLI. The input
 			// comes from a trusted user #nosec
 			data, err := os.ReadFile(inputFile)
