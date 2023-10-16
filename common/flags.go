@@ -339,7 +339,7 @@ var FlagsForStartWorkflowT = []cli.Flag{
 		Usage:    FlagInputDefinition,
 		Category: CategoryMain,
 	},
-	&cli.StringFlag{
+	&cli.StringSliceFlag{
 		Name:     FlagInputFile,
 		Usage:    FlagInputFileDefinition,
 		Category: CategoryMain,
@@ -387,7 +387,7 @@ var FlagsForStackTraceQuery = append(FlagsForExecution, []cli.Flag{
 		Usage:    FlagInputDefinition,
 		Category: CategoryMain,
 	},
-	&cli.StringFlag{
+	&cli.StringSliceFlag{
 		Name:     FlagInputFile,
 		Usage:    FlagInputFileDefinition,
 		Category: CategoryMain,
