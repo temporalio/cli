@@ -227,7 +227,9 @@ func (b *clientFactory) createGRPCConnection(c *cli.Context) (*grpc.ClientConn, 
 
 func (b *clientFactory) createTLSConfig(c *cli.Context) (*tls.Config, error) {
 	certPath := c.String(common.FlagTLSCertPath)
+	certData := c.String(common.FlagTLSCertData)
 	keyPath := c.String(common.FlagTLSKeyPath)
+	keyData := c.String(common.FlagTLSKeyData)
 	caPath := c.String(common.FlagTLSCaPath)
 	disableHostNameVerification := c.Bool(common.FlagTLSDisableHostVerification)
 	enableTLS := c.Bool(common.FlagTLS)
@@ -247,6 +249,13 @@ func (b *clientFactory) createTLSConfig(c *cli.Context) (*tls.Config, error) {
 	}
 	if certPath != "" {
 		myCert, err := tls.LoadX509KeyPair(certPath, keyPath)
+		if err != nil {
+			b.logger.Fatal("Failed to load client certificate", tag.Error(err))
+			return nil, err
+		}
+		cert = &myCert
+	} else if certData != "" {
+		myCert, err := tls.X509KeyPair([]byte(certData), []byte(keyData))
 		if err != nil {
 			b.logger.Fatal("Failed to load client certificate", tag.Error(err))
 			return nil, err

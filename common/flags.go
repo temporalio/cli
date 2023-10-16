@@ -111,8 +111,10 @@ var (
 	FlagTLS                        = "tls"
 	FlagTLSCaPath                  = "tls-ca-path"
 	FlagTLSCertPath                = "tls-cert-path"
+	FlagTLSCertData                = "tls-cert-data"
 	FlagTLSDisableHostVerification = "tls-disable-host-verification"
 	FlagTLSKeyPath                 = "tls-key-path"
+	FlagTLSKeyData                 = "tls-key-data"
 	FlagTLSServerName              = "tls-server-name"
 	FlagType                       = "type"
 	FlagUIAssetPath                = "ui-asset-path"
@@ -185,10 +187,24 @@ var SharedFlags = []cli.Flag{
 		Category: CategoryGlobal,
 	},
 	&cli.StringFlag{
+		Name:     FlagTLSCertData,
+		Value:    "",
+		Usage:    FlagTLSCertDataDefinition,
+		EnvVars:  []string{"TEMPORAL_TLS_CERT_DATA"},
+		Category: CategoryGlobal,
+	},
+	&cli.StringFlag{
 		Name:     FlagTLSKeyPath,
 		Value:    "",
 		Usage:    FlagTLSKeyPathDefinition,
 		EnvVars:  []string{"TEMPORAL_TLS_KEY"},
+		Category: CategoryGlobal,
+	},
+	&cli.StringFlag{
+		Name:     FlagTLSKeyData,
+		Value:    "",
+		Usage:    FlagTLSKeyDataDefinition,
+		EnvVars:  []string{"TEMPORAL_TLS_KEY_DATA"},
 		Category: CategoryGlobal,
 	},
 	&cli.StringFlag{
