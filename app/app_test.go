@@ -320,7 +320,7 @@ func assertServerHealth(ctx context.Context, t *testing.T, opts sdkclient.Option
 		t.Error(clientErr)
 	}
 
-	// Give the server 10 seconds to become healthy.
+	// Give the server 1 second to become healthy.
 	for i := 0; i < 10; i++ {
 		_, clientErr = c.CheckHealth(ctx, nil)
 		if clientErr == nil {
