@@ -320,8 +320,16 @@ func assertServerHealth(ctx context.Context, t *testing.T, opts sdkclient.Option
 		t.Error(clientErr)
 	}
 
-	if _, err := c.CheckHealth(ctx, nil); err != nil {
-		t.Error(err)
+	// Give the server 10 seconds to become healthy.
+	for i := 0; i < 10; i++ {
+		_, clientErr = c.CheckHealth(ctx, nil)
+		if clientErr == nil {
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	if clientErr != nil {
+		t.Error(clientErr)
 	}
 
 	// Check for pollers on a system task queue to ensure that the worker service is running.
