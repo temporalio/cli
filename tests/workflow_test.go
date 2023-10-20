@@ -42,8 +42,8 @@ func (s *e2eSuite) TestWorkflowExecute_Input() {
 	// don't have a way to check the CLI output directly to make sure it prints
 	// the right result...)
 	err := cli.Run([]string{"", "workflow", "execute",
-		"--input", "1", "--input", "\"two\"", "--input", "{\"three\": 3}",
-		"--input", "[\"a\", \"b\", \"c\"]",
+		"--input", `1`, "--input", `"two"`, "--input", `{"three": 3}`,
+		"--input", `["a", "b", "c"]`,
 		"--type", "Workflow", "--task-queue", testTq, "--workflow-id", "test"})
 	s.NoError(err)
 
@@ -54,7 +54,7 @@ func (s *e2eSuite) TestWorkflowExecute_Input() {
 	err = wf.Get(context.Background(), &result)
 	s.NoError(err)
 
-	s.Assert().Equal("[1,\"two\",{\"three\":3},[\"a\",\"b\",\"c\"]]", result)
+	s.Assert().Equal(`[1,"two",{"three":3},["a","b","c"]]`, result)
 }
 
 func (s *e2eSuite) TestWorkflowExecute_InputFile() {
@@ -66,9 +66,9 @@ func (s *e2eSuite) TestWorkflowExecute_InputFile() {
 		filepath.Join(tempDir, "arg3.json"), filepath.Join(tempDir, "arg4.json"),
 	}
 	s.NoError(os.WriteFile(argFiles[0], []byte("1"), 0700))
-	s.NoError(os.WriteFile(argFiles[1], []byte("\"two\""), 0700))
-	s.NoError(os.WriteFile(argFiles[2], []byte("{\"three\": 3}"), 0700))
-	s.NoError(os.WriteFile(argFiles[3], []byte("[\"a\", \"b\", \"c\"]"), 0700))
+	s.NoError(os.WriteFile(argFiles[1], []byte(`"two"`), 0700))
+	s.NoError(os.WriteFile(argFiles[2], []byte(`{"three": 3}`), 0700))
+	s.NoError(os.WriteFile(argFiles[3], []byte(`["a", "b", "c"]`), 0700))
 
 	server, cli, _ := s.setUpTestEnvironment()
 	defer func() { _ = server.Stop() }()
@@ -96,7 +96,7 @@ func (s *e2eSuite) TestWorkflowExecute_InputFile() {
 	err = wf.Get(context.Background(), &result)
 	s.NoError(err)
 
-	s.Assert().Equal("[1,\"two\",{\"three\":3},[\"a\",\"b\",\"c\"]]", result)
+	s.Assert().Equal(`[1,"two",{"three":3},["a","b","c"]]`, result)
 }
 
 func (s *e2eSuite) TestWorkflowShow_ReplayableHistory() {
