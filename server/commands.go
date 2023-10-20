@@ -337,6 +337,7 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 				if err := s.Start(); err != nil {
 					return cli.Exit(fmt.Sprintf("Unable to start server. Error: %v", err), 1)
 				}
+				s.Stop()
 				return cli.Exit("All services are stopped.", 0)
 			},
 		},
