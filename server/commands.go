@@ -362,7 +362,7 @@ func getDynamicConfigValues(input []string) (map[dynamicconfig.Key][]dynamicconf
 	for _, keyValStr := range input {
 		keyVal := strings.SplitN(keyValStr, "=", 2)
 		if len(keyVal) != 2 {
-			return nil, fmt.Errorf("dynamic config value not in KEY=JSON_VAL format")
+			return nil, fmt.Errorf("dynamic config value %s not in KEY=JSON_VAL format", keyValStr)
 		}
 		key := dynamicconfig.Key(keyVal[0])
 		// We don't support constraints currently
