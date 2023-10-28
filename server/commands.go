@@ -34,6 +34,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/pborman/uuid"
 	"github.com/temporalio/cli/common"
@@ -217,7 +218,7 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 
 				opts := []ServerOption{
 					WithDynamicPorts(),
-					WithFrontendPort(serverPort),
+					WithFrontendPort(availablePort(serverPort)),
 					WithFrontendHTTPPort(httpPort),
 					WithMetricsPort(metricsPort),
 					WithFrontendIP(ip),
@@ -238,7 +239,7 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 
 					uiBaseCfg := &uiconfig.Config{
 						Host:                uiIP,
-						Port:                uiPort,
+						Port:                availablePort(uiPort),
 						TemporalGRPCAddress: frontendAddr,
 						EnableUI:            true,
 						EnableOpenAPI:       true,
@@ -386,4 +387,31 @@ func getDynamicConfigValues(input []string) (map[dynamicconfig.Key][]dynamicconf
 		ret[key] = append(ret[key], val)
 	}
 	return ret, nil
+}
+
+func availablePort(port int) int {
+	i := 0
+
+	for isPortTaken("127.0.0.1", port+i) {
+		i += 1
+	}
+
+	return port + i
+}
+
+func isPortTaken(host string, port int) bool {
+	timeout := 2 * time.Second
+	target := fmt.Sprintf("%s:%d", host, port)
+
+	conn, err := net.DialTimeout("tcp", target, timeout)
+	if err != nil {
+		return false
+	}
+
+	if conn != nil {
+		_ = conn.Close()
+		return true
+	}
+
+	return false
 }
