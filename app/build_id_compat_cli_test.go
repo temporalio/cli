@@ -41,7 +41,7 @@ func (s *buildIdCompatSuite) SetupSuite() {
 	ctx, cancel := context.WithCancel(context.Background())
 	s.stopServerCancel = cancel
 
-	args, clientOpts := newServerAndClientOpts(port)
+	args, clientOpts := newHeadlessServerAndClientOpts(port)
 	args = append(args,
 		"--dynamic-config-value",
 		"frontend.workerVersioningDataAPIs=true",

@@ -295,7 +295,6 @@ func newServerAndClientOpts(port int, customArgs ...string) ([]string, sdkclient
 		"--namespace", "default",
 		// Use noop logger to avoid fatal logs failing tests on shutdown signal.
 		"--log-format", "noop",
-		"--headless",
 		"--port", strconv.Itoa(port),
 	}
 
@@ -303,6 +302,11 @@ func newServerAndClientOpts(port int, customArgs ...string) ([]string, sdkclient
 		HostPort:  fmt.Sprintf("localhost:%d", port),
 		Namespace: "temporal-system",
 	}
+}
+
+func newHeadlessServerAndClientOpts(port int, customArgs ...string) ([]string, sdkclient.Options) {
+	customArgs = append(customArgs, "--headless")
+	return newServerAndClientOpts(port, customArgs...)
 }
 
 func assertServerHealth(ctx context.Context, t *testing.T, opts sdkclient.Options) sdkclient.Client {
@@ -365,7 +369,7 @@ func TestCreateDataDirectory_MissingDirectory(t *testing.T) {
 	testUserHome := setupConfigOptions(t)
 
 	customDBPath := filepath.Join(testUserHome, "foo", "bar", "baz.db")
-	args, _ := newServerAndClientOpts(
+	args, _ := newHeadlessServerAndClientOpts(
 		port, "-f", customDBPath,
 	)
 	err := temporalCLI.RunContext(ctx, args)
@@ -388,7 +392,7 @@ func TestCreateDataDirectory_ExistingDirectory(t *testing.T) {
 
 	testUserHome := setupConfigOptions(t)
 
-	args, clientOpts := newServerAndClientOpts(
+	args, clientOpts := newHeadlessServerAndClientOpts(
 		port, "-f", filepath.Join(testUserHome, "foo.db"),
 	)
 
