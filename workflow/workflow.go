@@ -144,6 +144,11 @@ func NewWorkflowCommands() []*cli.Command {
 					Usage:    common.FlagQuerySignal,
 					Category: common.CategoryMain,
 				},
+				&cli.Float64Flag{
+					Name:     common.FlagRPS,
+					Usage:    common.FlagRPSDefinition,
+					Category: common.CategoryMain,
+				},
 				&cli.StringFlag{
 					Name:     common.FlagName,
 					Usage:    common.FlagSignalName,
@@ -227,6 +232,11 @@ func NewWorkflowCommands() []*cli.Command {
 					Usage:    common.FlagQueryCancel,
 					Category: common.CategoryMain,
 				},
+				&cli.Float64Flag{
+					Name:     common.FlagRPS,
+					Usage:    common.FlagRPSDefinition,
+					Category: common.CategoryMain,
+				},
 				&cli.StringFlag{
 					Name:     common.FlagReason,
 					Usage:    common.FlagReasonDefinition,
@@ -266,6 +276,11 @@ func NewWorkflowCommands() []*cli.Command {
 					Usage:    common.FlagQueryTerminate,
 					Category: common.CategoryMain,
 				},
+				&cli.Float64Flag{
+					Name:     common.FlagRPS,
+					Usage:    common.FlagRPSDefinition,
+					Category: common.CategoryMain,
+				},
 				&cli.StringFlag{
 					Name:     common.FlagReason,
 					Usage:    common.FlagReasonDefinition,
@@ -303,6 +318,11 @@ func NewWorkflowCommands() []*cli.Command {
 					Name:     common.FlagQuery,
 					Aliases:  common.FlagQueryAlias,
 					Usage:    common.FlagQueryDelete,
+					Category: common.CategoryMain,
+				},
+				&cli.Float64Flag{
+					Name:     common.FlagRPS,
+					Usage:    common.FlagRPSDefinition,
 					Category: common.CategoryMain,
 				},
 				&cli.StringFlag{
@@ -361,9 +381,10 @@ func NewWorkflowCommands() []*cli.Command {
 				&cli.StringFlag{
 					Name:     common.FlagQuery,
 					Aliases:  common.FlagQueryAlias,
-					Usage:    common.FlagQueryResetBatch,
+					Usage:    common.FlagQueryReset,
 					Category: common.CategoryMain,
-				}, &cli.StringFlag{
+				},
+				&cli.StringFlag{
 					Name:     common.FlagInputFile,
 					Usage:    common.FlagInputFileReset,
 					Category: common.CategoryMain,
