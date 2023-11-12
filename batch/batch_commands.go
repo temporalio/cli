@@ -83,10 +83,8 @@ func ListBatchJobs(c *cli.Context) error {
 // BatchTerminate terminate a list of workflows
 func BatchTerminate(c *cli.Context) error {
 	operator := common.GetCurrentUserFromEnv()
-	rps := float32(c.Float64(common.FlagRPS))
 
 	req := workflowservice.StartBatchOperationRequest{
-		MaxOperationsPerSecond: rps,
 		Operation: &workflowservice.StartBatchOperationRequest_TerminationOperation{
 			TerminationOperation: &batch.BatchOperationTermination{
 				Identity: operator,
@@ -100,10 +98,8 @@ func BatchTerminate(c *cli.Context) error {
 // BatchCancel cancel a list of workflows
 func BatchCancel(c *cli.Context) error {
 	operator := common.GetCurrentUserFromEnv()
-	rps := float32(c.Float64(common.FlagRPS))
 
 	req := workflowservice.StartBatchOperationRequest{
-		MaxOperationsPerSecond: rps,
 		Operation: &workflowservice.StartBatchOperationRequest_CancellationOperation{
 			CancellationOperation: &batch.BatchOperationCancellation{
 				Identity: operator,
@@ -118,14 +114,12 @@ func BatchCancel(c *cli.Context) error {
 func BatchSignal(c *cli.Context) error {
 	signalName := c.String(common.FlagName)
 	operator := common.GetCurrentUserFromEnv()
-	rps := float32(c.Float64(common.FlagRPS))
 	input, err := common.ProcessJSONInput(c)
 	if err != nil {
 		return err
 	}
 
 	req := workflowservice.StartBatchOperationRequest{
-		MaxOperationsPerSecond: rps,
 		Operation: &workflowservice.StartBatchOperationRequest_SignalOperation{
 			SignalOperation: &batch.BatchOperationSignal{
 				Signal:   signalName,
@@ -141,10 +135,8 @@ func BatchSignal(c *cli.Context) error {
 // BatchDelete delete a list of workflows
 func BatchDelete(c *cli.Context) error {
 	operator := common.GetCurrentUserFromEnv()
-	rps := float32(c.Float64(common.FlagRPS))
 
 	req := workflowservice.StartBatchOperationRequest{
-		MaxOperationsPerSecond: rps,
 		Operation: &workflowservice.StartBatchOperationRequest_DeletionOperation{
 			DeletionOperation: &batch.BatchOperationDeletion{
 				Identity: operator,
