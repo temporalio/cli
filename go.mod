@@ -17,9 +17,9 @@ require (
 	github.com/temporalio/ui-server/v2 v2.21.3
 	github.com/urfave/cli/v2 v2.25.7
 	go.temporal.io/api v1.25.0
-	go.temporal.io/sdk v1.24.0
+	go.temporal.io/sdk v1.25.1
 	go.temporal.io/sdk/contrib/tools/workflowcheck v0.1.0
-	go.temporal.io/server v1.22.0
+	go.temporal.io/server v1.22.2
 	go.uber.org/zap v1.25.0
 	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1
 	google.golang.org/grpc v1.59.0
