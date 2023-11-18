@@ -9,8 +9,8 @@ import (
 func NewClusterCommands() []*cli.Command {
 	return []*cli.Command{
 		{
-			Name:  "health",
-			Usage: common.HealthDefinition,
+			Name:      "health",
+			Usage:     common.HealthDefinition,
 			UsageText: common.HealthUsageText,
 			Action: func(c *cli.Context) error {
 				return HealthCheck(c)

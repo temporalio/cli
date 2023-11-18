@@ -11,22 +11,22 @@ const (
 	EnvDefinition       = "Manage Server connections"
 
 	// Workflow subcommand definitions
-	StartWorkflowDefinition     = "Start a new Workflow"
-	ExecuteWorkflowDefinition   = "Start a new Workflow and print its result"
-	DescribeWorkflowDefinition  = "Print information about a Workflow"
-	ListWorkflowDefinition      = "List Workflows"
-	ShowWorkflowDefinition      = "Print the Event History of a Workflow"
-	QueryWorkflowDefinition     = "Query a Workflow"
-	StackWorkflowDefinition     = "Print the stack trace of a Workflow" // Query a Workflow Execution with __stack_trace as the query type
-	SignalWorkflowDefinition    = "Signal a Workflow"
-	CountWorkflowDefinition     = "Count Workflows"
-	CancelWorkflowDefinition    = "Cancel a Workflow"
-	TerminateWorkflowDefinition = "Terminate a Workflow"
-	DeleteWorkflowDefinition    = "Delete a Workflow"
-	ResetWorkflowDefinition     = "Reset a Workflow" //  by Event ID or reset type
-	ResetBatchWorkflowDefinition     = "Reset multiple Workflows"
-	TraceWorkflowDefinition     = "Trace progress of a Workflow and its children"
-	UpdateWorkflowDefinition    = "Update a Workflow"
+	StartWorkflowDefinition      = "Start a new Workflow"
+	ExecuteWorkflowDefinition    = "Start a new Workflow and print its result"
+	DescribeWorkflowDefinition   = "Print information about a Workflow"
+	ListWorkflowDefinition       = "List Workflows"
+	ShowWorkflowDefinition       = "Print the Event History of a Workflow"
+	QueryWorkflowDefinition      = "Query a Workflow"
+	StackWorkflowDefinition      = "Print the stack trace of a Workflow" // Query a Workflow Execution with __stack_trace as the query type
+	SignalWorkflowDefinition     = "Signal a Workflow"
+	CountWorkflowDefinition      = "Count Workflows"
+	CancelWorkflowDefinition     = "Cancel a Workflow"
+	TerminateWorkflowDefinition  = "Terminate a Workflow"
+	DeleteWorkflowDefinition     = "Delete a Workflow"
+	ResetWorkflowDefinition      = "Reset a Workflow" //  by Event ID or reset type
+	ResetBatchWorkflowDefinition = "Reset multiple Workflows"
+	TraceWorkflowDefinition      = "Trace progress of a Workflow and its children"
+	UpdateWorkflowDefinition     = "Update a Workflow"
 
 	// Activity subcommand definitions
 	CompleteActivityDefinition = "Completes an Activity Execution"

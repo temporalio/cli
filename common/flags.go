@@ -372,9 +372,9 @@ var FlagsForWorkflowFiltering = []cli.Flag{
 		Category: CategoryMain,
 	},
 	&cli.BoolFlag{
-		Name:     FlagArchive,
-		Usage:    FlagArchiveDefinition,
-		Category: CategoryMain,
+		Name:               FlagArchive,
+		Usage:              FlagArchiveDefinition,
+		Category:           CategoryMain,
 		DisableDefaultText: true,
 	},
 }

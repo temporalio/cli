@@ -108,10 +108,10 @@ func main() {
 			makeFile(optionFilePath, false, true, scanner, createdFiles)
 			writeLine(currentHeaderFile, termLink)
 			if len(definitionArray) == 1 {
-				writeLine(currentOptionFile, strings.TrimSpace(definitionArray[0]) + ".")
+				writeLine(currentOptionFile, strings.TrimSpace(definitionArray[0])+".")
 			} else {
-				for i := 0; i < len(definitionArray) - 1; i++ {
-					writeLine(currentOptionFile, strings.TrimSpace(definitionArray[i]) + ".")
+				for i := 0; i < len(definitionArray)-1; i++ {
+					writeLine(currentOptionFile, strings.TrimSpace(definitionArray[i])+".")
 				}
 			}
 		} else if strings.Contains(line, ">") {

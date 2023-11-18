@@ -56,9 +56,9 @@ func configureCLI(ctx *cli.Context) error {
 	client.Init(ctx)
 	headers.Init()
 	cli.HelpFlag = &cli.BoolFlag{
-		Name: "help",
-		Aliases: []string{"h"},
-		Usage:   "Show help",
+		Name:               "help",
+		Aliases:            []string{"h"},
+		Usage:              "Show help",
 		DisableDefaultText: true,
 	}
 	cli.HelpPrinterCustom = helpprinter.HelpPrinter()

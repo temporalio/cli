@@ -55,8 +55,8 @@ func NewNamespaceCommands() []*cli.Command {
 			},
 		},
 		{
-			Name:  "delete",
-			Usage: common.DeleteNamespaceDefinition,
+			Name:      "delete",
+			Usage:     common.DeleteNamespaceDefinition,
 			UsageText: common.NamespaceDeleteUsageText,
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
