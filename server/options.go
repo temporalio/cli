@@ -86,6 +86,15 @@ func WithFrontendPort(port int) ServerOption {
 	})
 }
 
+// WithFrontendPort sets the listening port for the temporal-frontend HTTP service.
+//
+// When unspecified or 0, the HTTP service will be disabled.
+func WithFrontendHTTPPort(port int) ServerOption {
+	return newApplyFuncContainer(func(cfg *sconfig.Config) {
+		cfg.FrontendHTTPPort = port
+	})
+}
+
 // WithMetricsPort sets the listening port for metrics.
 //
 // When unspecified, the port will be system-chosen.

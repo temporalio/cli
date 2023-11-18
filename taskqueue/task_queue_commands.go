@@ -265,12 +265,11 @@ func updateBuildIDs(c *cli.Context, partialReq workflowservice.UpdateWorkerBuild
 		Operation: partialReq.Operation,
 	}
 
-	resp, err := frontendClient.UpdateWorkerBuildIdCompatibility(ctx, request)
-	if err != nil {
-		return fmt.Errorf("error updating task queue build ids: %w", err)
+	if _, err = frontendClient.UpdateWorkerBuildIdCompatibility(ctx, request); err != nil {
+		return fmt.Errorf("error updating task queue build IDs: %w", err)
 	}
 
-	fmt.Println(color.Green(c, "Successfully updated task queue build ids. Set ID: %v", resp.GetVersionSetId()))
+	fmt.Println(color.Green(c, "Successfully updated task queue build IDs"))
 
 	return nil
 }

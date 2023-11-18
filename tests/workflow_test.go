@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 
 	"github.com/pborman/uuid"
 	"github.com/temporalio/cli/tests/workflows/awaitsignal"
+	"github.com/temporalio/cli/tests/workflows/encodejson"
 	"github.com/temporalio/cli/tests/workflows/helloworld"
 	"github.com/temporalio/cli/tests/workflows/update"
 	"go.temporal.io/api/enums/v1"
@@ -22,6 +24,80 @@ const (
 	testTq        = "test-queue"
 	testNamespace = "default"
 )
+
+func (s *e2eSuite) TestWorkflowExecute_Input() {
+	s.T().Parallel()
+
+	server, cli, _ := s.setUpTestEnvironment()
+	defer func() { _ = server.Stop() }()
+
+	client := server.Client()
+
+	w := s.newWorker(server, testTq, func(r worker.Registry) {
+		r.RegisterWorkflow(encodejson.Workflow)
+	})
+	defer w.Stop()
+
+	// Run the workflow to completion using the CLI.  (TODO: We unfortunately
+	// don't have a way to check the CLI output directly to make sure it prints
+	// the right result...)
+	err := cli.Run([]string{"", "workflow", "execute",
+		"--input", `1`, "--input", `"two"`, "--input", `{"three": 3}`,
+		"--input", `["a", "b", "c"]`,
+		"--type", "Workflow", "--task-queue", testTq, "--workflow-id", "test"})
+	s.NoError(err)
+
+	// Check that the workflow produced the result we expect--if it did, that
+	// means the CLI passed the arguments correctly.
+	var result interface{}
+	wf := client.GetWorkflow(context.Background(), "test", "")
+	err = wf.Get(context.Background(), &result)
+	s.NoError(err)
+
+	s.Assert().Equal(`[1,"two",{"three":3},["a","b","c"]]`, result)
+}
+
+func (s *e2eSuite) TestWorkflowExecute_InputFile() {
+	s.T().Parallel()
+
+	tempDir := s.T().TempDir()
+	argFiles := []string{
+		filepath.Join(tempDir, "arg1.json"), filepath.Join(tempDir, "arg2.json"),
+		filepath.Join(tempDir, "arg3.json"), filepath.Join(tempDir, "arg4.json"),
+	}
+	s.NoError(os.WriteFile(argFiles[0], []byte("1"), 0700))
+	s.NoError(os.WriteFile(argFiles[1], []byte(`"two"`), 0700))
+	s.NoError(os.WriteFile(argFiles[2], []byte(`{"three": 3}`), 0700))
+	s.NoError(os.WriteFile(argFiles[3], []byte(`["a", "b", "c"]`), 0700))
+
+	server, cli, _ := s.setUpTestEnvironment()
+	defer func() { _ = server.Stop() }()
+
+	client := server.Client()
+
+	w := s.newWorker(server, testTq, func(r worker.Registry) {
+		r.RegisterWorkflow(encodejson.Workflow)
+	})
+	defer w.Stop()
+
+	// Run the workflow to completion using the CLI.  (TODO: We unfortunately
+	// don't have a way to check the CLI output directly to make sure it prints
+	// the right result...)
+	err := cli.Run([]string{"", "workflow", "execute",
+		"--input-file", argFiles[0], "--input-file", argFiles[1],
+		"--input-file", argFiles[2], "--input-file", argFiles[3],
+		"--type", "Workflow", "--task-queue", testTq, "--workflow-id", "test"})
+	s.NoError(err)
+
+	// Check that the workflow produced the result we expect--if it did, that
+	// means the CLI passed the arguments correctly.
+	var result interface{}
+	wf := client.GetWorkflow(context.Background(), "test", "")
+	err = wf.Get(context.Background(), &result)
+	s.NoError(err)
+
+	s.Assert().Equal(`[1,"two",{"three":3},["a","b","c"]]`, result)
+}
 
 func (s *e2eSuite) TestWorkflowShow_ReplayableHistory() {
 	s.T().Parallel()

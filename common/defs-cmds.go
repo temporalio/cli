@@ -117,7 +117,7 @@ Use the command options below to change the information returned by this command
 const DescribeBatchUsageText = `The ` + "`" + `temporal batch describe` + "`" + ` command shows the progress of an ongoing Batch job.
 
 Pass a valid Job ID to return a Batch Job's information.
-` + "`" + `temporal batch describe --jobid=MyJobId` + "`" + `
+` + "`" + `temporal batch describe --job-id=MyJobId` + "`" + `
 
 Use the command options below to change the information returned by this command.`
 
@@ -373,14 +373,14 @@ Use the options listed below to change the command's output.`
 
 const NamespaceCreateUsageText = `The ` + "`" + `temporal operator namespace create` + "`" + ` command creates a new [Namespace](/concepts/what-is-a-namespace) on the [Server](/concepts/what-is-a-frontend-service).
 Namespaces can be created on the active [Cluster](/concepts/what-is-a-temporal-cluster), or any named Cluster.
-` + "`" + `temporal operator namespace --cluster=MyCluster` + "`" + `
+` + "`" + `temporal operator namespace --cluster=MyCluster example-1` + "`" + `
 
 Global Namespaces can also be created.
-` + "`" + `temporal operator namespace create --global` + "`" + `
+` + "`" + `temporal operator namespace create --global example-2` + "`" + `
 
 Other settings, such as [retention](/concepts/what-is-a-retention-period) and [Visibility Archival State](/concepts/what-is-visibility), can be configured as needed.
 For example, the Visibility Archive can be set on a separate URI.
-` + "`" + `temporal operator namespace create --retention=RetentionMyWorkflow --visibility-archival-state="enabled" --visibility-uri="some-uri"` + "`" + `
+` + "`" + `temporal operator namespace create --retention=RetentionMyWorkflow --visibility-archival-state="enabled" --visibility-uri="some-uri" example-3` + "`" + `
 
 Use the options listed below to change the command's behavior.`
 

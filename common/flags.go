@@ -49,6 +49,7 @@ var (
 	FlagHeadless                   = "headless"
 	FlagHistoryArchivalState       = "history-archival-state"
 	FlagHistoryArchivalURI         = "history-uri"
+	FlagHTTPPort                   = "http-port"
 	FlagIdentity                   = "identity"
 	FlagInput                      = "input"
 	FlagInputAlias                 = []string{"i"}
@@ -147,6 +148,7 @@ var SharedFlags = []cli.Flag{
 		Name:     FlagEnv,
 		Value:    config.DefaultEnv,
 		Usage:    FlagEnvDefinition,
+		EnvVars:  []string{"TEMPORAL_ENV"},
 		Category: CategoryGlobal,
 	},
 	&cli.StringFlag{
@@ -337,7 +339,7 @@ var FlagsForStartWorkflowT = []cli.Flag{
 		Usage:    FlagInputDefinition,
 		Category: CategoryMain,
 	},
-	&cli.StringFlag{
+	&cli.StringSliceFlag{
 		Name:     FlagInputFile,
 		Usage:    FlagInputFileDefinition,
 		Category: CategoryMain,
@@ -386,7 +388,7 @@ var FlagsForStackTraceQuery = append(FlagsForExecution, []cli.Flag{
 		Usage:    FlagInputDefinition,
 		Category: CategoryMain,
 	},
-	&cli.StringFlag{
+	&cli.StringSliceFlag{
 		Name:     FlagInputFile,
 		Usage:    FlagInputFileDefinition,
 		Category: CategoryMain,

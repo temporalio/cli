@@ -77,6 +77,12 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 					Value:   sconfig.DefaultFrontendPort,
 				},
 				&cli.IntFlag{
+					Name:        common.FlagHTTPPort,
+					Usage:       "Port for the frontend HTTP service",
+					Value:       sconfig.DefaultFrontendHTTPPort,
+					DefaultText: "disabled",
+				},
+				&cli.IntFlag{
 					Name:        common.FlagMetricsPort,
 					Usage:       "Port for /metrics",
 					Value:       sconfig.DefaultMetricsPort,
@@ -170,6 +176,7 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 				var (
 					ip              = c.String(common.FlagIP)
 					serverPort      = c.Int(common.FlagPort)
+					httpPort        = c.Int(common.FlagHTTPPort)
 					metricsPort     = c.Int(common.FlagMetricsPort)
 					uiPort          = serverPort + 1000
 					uiIP            = ip
@@ -211,6 +218,7 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 				opts := []ServerOption{
 					WithDynamicPorts(),
 					WithFrontendPort(serverPort),
+					WithFrontendHTTPPort(httpPort),
 					WithMetricsPort(metricsPort),
 					WithFrontendIP(ip),
 					WithNamespaces(c.StringSlice(common.FlagNamespace)...),
@@ -233,7 +241,6 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 						Port:                uiPort,
 						TemporalGRPCAddress: frontendAddr,
 						EnableUI:            true,
-						EnableOpenAPI:       true,
 						UIAssetPath:         uiAssetPath,
 						Codec: uiconfig.Codec{
 							Endpoint: uiCodecEndpoint,
@@ -329,6 +336,7 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 				if err := s.Start(); err != nil {
 					return cli.Exit(fmt.Sprintf("Unable to start server. Error: %v", err), 1)
 				}
+				s.Stop()
 				return cli.Exit("All services are stopped.", 0)
 			},
 		},
@@ -353,7 +361,7 @@ func getDynamicConfigValues(input []string) (map[dynamicconfig.Key][]dynamicconf
 	for _, keyValStr := range input {
 		keyVal := strings.SplitN(keyValStr, "=", 2)
 		if len(keyVal) != 2 {
-			return nil, fmt.Errorf("dynamic config value not in KEY=JSON_VAL format")
+			return nil, fmt.Errorf("dynamic config value %s not in KEY=JSON_VAL format", keyValStr)
 		}
 		key := dynamicconfig.Key(keyVal[0])
 		// We don't support constraints currently
