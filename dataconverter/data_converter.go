@@ -4,23 +4,12 @@ import (
 	"net/http"
 	"strings"
 
-	commonpb "go.temporal.io/api/common/v1"
 	"go.temporal.io/sdk/converter"
 )
 
-type IdentityPayloadCodec struct{}
-
-func (c IdentityPayloadCodec) Encode(payload []*commonpb.Payload) ([]*commonpb.Payload, error) {
-	return payload, nil
-}
-
-func (c IdentityPayloadCodec) Decode(payloads []*commonpb.Payload) ([]*commonpb.Payload, error) {
-	return payloads, nil
-}
-
 var (
 	dataConverter                        = converter.GetDefaultDataConverter()
-	payloadCodec  converter.PayloadCodec = IdentityPayloadCodec{}
+	payloadCodec  converter.PayloadCodec = nil
 )
 
 func DefaultDataConverter() converter.DataConverter {

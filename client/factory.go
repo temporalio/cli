@@ -126,13 +126,17 @@ func (b *clientFactory) SDKClient(c *cli.Context, namespace string) sdkclient.Cl
 		b.logger.Fatal("Failed to configure TLS for SDK client", tag.Error(err))
 	}
 
-	interceptor, err := converter.NewPayloadCodecGRPCClientInterceptor(
-		converter.PayloadCodecGRPCClientInterceptorOptions{
-			Codecs: []converter.PayloadCodec{dataconverter.CustomPayloadCodec()},
-		},
-	)
-	if err != nil {
-		b.logger.Fatal("Failed to configure payload codec interceptor for SDK client", tag.Error(err))
+	dialOptions := []grpc.DialOption{}
+	if payloadCodec := dataconverter.CustomPayloadCodec(); payloadCodec != nil {
+		interceptor, err := converter.NewPayloadCodecGRPCClientInterceptor(
+			converter.PayloadCodecGRPCClientInterceptorOptions{
+				Codecs: []converter.PayloadCodec{payloadCodec},
+			},
+		)
+		if err != nil {
+			b.logger.Fatal("Failed to configure payload codec interceptor for SDK client", tag.Error(err))
+		}
+		dialOptions = append(dialOptions, grpc.WithChainUnaryInterceptor(interceptor))
 	}
 
 	sdkClient, err := sdkclient.Dial(sdkclient.Options{
@@ -141,13 +145,11 @@ func (b *clientFactory) SDKClient(c *cli.Context, namespace string) sdkclient.Cl
 		Logger:    log.NewSdkLogger(b.logger),
 		Identity:  common.GetCliIdentity(),
 		ConnectionOptions: sdkclient.ConnectionOptions{
-			DialOptions: []grpc.DialOption{
-				grpc.WithChainUnaryInterceptor(interceptor)},
-			TLS: tlsConfig,
+			DialOptions: dialOptions,
+			TLS:         tlsConfig,
 		},
 		HeadersProvider: headersprovider.GetCurrent(),
 	})
-
 	if err != nil {
 		b.logger.Fatal("Failed to create SDK client", tag.Error(err))
 	}
