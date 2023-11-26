@@ -14,7 +14,6 @@ import (
 
 	"github.com/gogo/status"
 	"github.com/temporalio/cli/common"
-	"github.com/temporalio/cli/dataconverter"
 	"github.com/temporalio/cli/headersprovider"
 	"github.com/urfave/cli/v2"
 	"go.temporal.io/api/operatorservice/v1"
@@ -127,14 +126,10 @@ func (b *clientFactory) SDKClient(c *cli.Context, namespace string) sdkclient.Cl
 	}
 
 	dialOptions := []grpc.DialOption{}
-	if payloadCodec := dataconverter.CustomPayloadCodec(); payloadCodec != nil {
-		interceptor, err := converter.NewPayloadCodecGRPCClientInterceptor(
-			converter.PayloadCodecGRPCClientInterceptorOptions{
-				Codecs: []converter.PayloadCodec{payloadCodec},
-			},
-		)
+	if codecEndpoint := c.String(common.FlagCodecEndpoint); codecEndpoint != "" {
+		interceptor, err := newPayloadCodecGRPCClientInterceptor(c, codecEndpoint)
 		if err != nil {
-			b.logger.Fatal("Failed to configure payload codec interceptor for SDK client", tag.Error(err))
+			b.logger.Fatal("Failed to configure payload codec interceptor", tag.Error(err))
 		}
 		dialOptions = append(dialOptions, grpc.WithChainUnaryInterceptor(interceptor))
 	}
@@ -157,6 +152,32 @@ func (b *clientFactory) SDKClient(c *cli.Context, namespace string) sdkclient.Cl
 	return sdkClient
 }
 
+func newPayloadCodecGRPCClientInterceptor(c *cli.Context, codecEndpoint string) (grpc.UnaryClientInterceptor, error) {
+	namespace := c.String(common.FlagNamespace)
+	auth := c.String(common.FlagCodecAuth)
+	codecEndpoint = strings.ReplaceAll(codecEndpoint, "{namespace}", namespace)
+
+	payloadCodec := converter.NewRemoteDataConverter(
+		converter.GetDefaultDataConverter(),
+		converter.RemoteDataConverterOptions{
+			Endpoint: codecEndpoint,
+			ModifyRequest: func(req *http.Request) error {
+				req.Header.Set("X-Namespace", namespace)
+				if auth != "" {
+					req.Header.Set("Authorization", auth)
+				}
+
+				return nil
+			},
+		},
+	)
+	return converter.NewPayloadCodecGRPCClientInterceptor(
+		converter.PayloadCodecGRPCClientInterceptorOptions{
+			Codecs: []converter.PayloadCodec{payloadCodec},
+		},
+	)
+}
+
 // HealthClient builds a health client.
 func (b *clientFactory) HealthClient(c *cli.Context) healthpb.HealthClient {
 	connection, _ := b.createGRPCConnection(c)
@@ -165,15 +186,6 @@ func (b *clientFactory) HealthClient(c *cli.Context) healthpb.HealthClient {
 }
 
 func configureSDK(ctx *cli.Context) error {
-	endpoint := ctx.String(common.FlagCodecEndpoint)
-	if endpoint != "" {
-		dataconverter.SetRemoteEndpoint(
-			endpoint,
-			ctx.String(common.FlagNamespace),
-			ctx.String(common.FlagCodecAuth),
-		)
-	}
-
 	md, err := common.SplitKeyValuePairs(ctx.StringSlice(common.FlagMetadata))
 	if err != nil {
 		return err

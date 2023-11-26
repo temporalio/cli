@@ -18,7 +18,6 @@ import (
 	"github.com/temporalio/cli/client"
 	"github.com/temporalio/cli/common"
 	"github.com/temporalio/cli/common/stringify"
-	"github.com/temporalio/cli/dataconverter"
 	"github.com/temporalio/cli/trace"
 	"github.com/temporalio/tctl-kit/pkg/color"
 	"github.com/temporalio/tctl-kit/pkg/iterator"
@@ -34,6 +33,7 @@ import (
 	workflowpb "go.temporal.io/api/workflow/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	sdkclient "go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/converter"
 	clispb "go.temporal.io/server/api/cli/v1"
 	scommon "go.temporal.io/server/common"
 	"go.temporal.io/server/common/backoff"
@@ -595,7 +595,7 @@ func queryWorkflowHelper(c *cli.Context, queryType string) error {
 	if queryResponse.QueryRejected != nil {
 		fmt.Printf("Query was rejected, workflow has status: %v\n", queryResponse.QueryRejected.GetStatus())
 	} else {
-		queryResult := stringify.AnyToString(queryResponse.QueryResult, true, 0, dataconverter.CustomDataConverter())
+		queryResult := stringify.AnyToString(queryResponse.QueryResult, true, 0, converter.GetDefaultDataConverter())
 		fmt.Printf("Query result:\n%v\n", queryResult)
 	}
 
@@ -781,7 +781,7 @@ func convertDescribeWorkflowExecutionResponse(c *cli.Context, resp *workflowserv
 		}
 
 		if pendingActivity.GetHeartbeatDetails() != nil {
-			pendingActivityStr.HeartbeatDetails = stringify.AnyToString(pendingActivity.GetHeartbeatDetails(), true, 0, dataconverter.CustomDataConverter())
+			pendingActivityStr.HeartbeatDetails = stringify.AnyToString(pendingActivity.GetHeartbeatDetails(), true, 0, converter.GetDefaultDataConverter())
 		}
 		pendingActivitiesStr = append(pendingActivitiesStr, pendingActivityStr)
 	}
@@ -835,7 +835,7 @@ func printRunStatus(c *cli.Context, event *historypb.HistoryEvent) {
 	switch event.GetEventType() {
 	case enumspb.EVENT_TYPE_WORKFLOW_EXECUTION_COMPLETED:
 		fmt.Printf("  Status: %s\n", color.Green(c, "COMPLETED"))
-		result := stringify.AnyToString(event.GetWorkflowExecutionCompletedEventAttributes().GetResult(), true, 0, dataconverter.CustomDataConverter())
+		result := stringify.AnyToString(event.GetWorkflowExecutionCompletedEventAttributes().GetResult(), true, 0, converter.GetDefaultDataConverter())
 		fmt.Printf("  Output: %s\n", result)
 	case enumspb.EVENT_TYPE_WORKFLOW_EXECUTION_FAILED:
 		fmt.Printf("  Status: %s\n", color.Red(c, "FAILED"))
@@ -845,7 +845,7 @@ func printRunStatus(c *cli.Context, event *historypb.HistoryEvent) {
 		fmt.Printf("  Retry status: %s\n", event.GetWorkflowExecutionTimedOutEventAttributes().GetRetryState())
 	case enumspb.EVENT_TYPE_WORKFLOW_EXECUTION_CANCELED:
 		fmt.Printf("  Status: %s\n", color.Red(c, "CANCELED"))
-		details := stringify.AnyToString(event.GetWorkflowExecutionCanceledEventAttributes().GetDetails(), true, 0, dataconverter.CustomDataConverter())
+		details := stringify.AnyToString(event.GetWorkflowExecutionCanceledEventAttributes().GetDetails(), true, 0, converter.GetDefaultDataConverter())
 		fmt.Printf("  Detail: %s\n", details)
 	}
 }
@@ -1577,7 +1577,7 @@ func findWorkflowStatusValue(name string) (enumspb.WorkflowExecutionStatus, bool
 // historyEventToString convert HistoryEvent to string
 func historyEventToString(e *historypb.HistoryEvent, printFully bool, maxFieldLength int) string {
 	data := getEventAttributes(e)
-	return stringify.AnyToString(data, printFully, maxFieldLength, dataconverter.CustomDataConverter())
+	return stringify.AnyToString(data, printFully, maxFieldLength, converter.GetDefaultDataConverter())
 }
 
 func getEventAttributes(e *historypb.HistoryEvent) interface{} {
