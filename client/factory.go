@@ -21,6 +21,7 @@ import (
 	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/api/workflowservice/v1"
 	sdkclient "go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/converter"
 	"go.temporal.io/server/common/auth"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -125,16 +126,28 @@ func (b *clientFactory) SDKClient(c *cli.Context, namespace string) sdkclient.Cl
 		b.logger.Fatal("Failed to configure TLS for SDK client", tag.Error(err))
 	}
 
+	interceptor, err := converter.NewPayloadCodecGRPCClientInterceptor(
+		converter.PayloadCodecGRPCClientInterceptorOptions{
+			Codecs: []converter.PayloadCodec{dataconverter.CustomPayloadCodec()},
+		},
+	)
+	if err != nil {
+		b.logger.Fatal("Failed to configure payload codec interceptor for SDK client", tag.Error(err))
+	}
+
 	sdkClient, err := sdkclient.Dial(sdkclient.Options{
 		HostPort:  hostPort,
 		Namespace: namespace,
 		Logger:    log.NewSdkLogger(b.logger),
 		Identity:  common.GetCliIdentity(),
 		ConnectionOptions: sdkclient.ConnectionOptions{
+			DialOptions: []grpc.DialOption{
+				grpc.WithChainUnaryInterceptor(interceptor)},
 			TLS: tlsConfig,
 		},
 		HeadersProvider: headersprovider.GetCurrent(),
 	})
+
 	if err != nil {
 		b.logger.Fatal("Failed to create SDK client", tag.Error(err))
 	}
