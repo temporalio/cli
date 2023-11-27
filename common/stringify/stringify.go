@@ -20,6 +20,9 @@ const (
 	maxWordLength = 120 // if text length is larger than maxWordLength, it will be inserted spaces
 )
 
+//revive:disable:cognitive-complexity
+//revive:disable:cyclomatic
+//revive:disable:flag-parameter
 func AnyToString(val interface{}, printFully bool, maxFieldLength int) string {
 	dc := converter.GetDefaultDataConverter()
 	v := reflect.ValueOf(val)
@@ -169,17 +172,18 @@ func AnyToString(val interface{}, printFully bool, maxFieldLength int) string {
 	}
 }
 
+//revive:disable:flag-parameter
 func sliceToString(slice reflect.Value, printFully bool, maxFieldLength int) string {
 	var b strings.Builder
 	b.WriteRune('[')
 	for i := 0; i < slice.Len(); i++ {
 		if i == 0 || printFully {
-			b.WriteString(AnyToString(slice.Index(i).Interface(), printFully, maxFieldLength))
+			_, _ = b.WriteString(AnyToString(slice.Index(i).Interface(), printFully, maxFieldLength))
 			if i < slice.Len()-1 {
 				b.WriteRune(',')
 			}
 			if !printFully && slice.Len() > 1 {
-				b.WriteString(fmt.Sprintf("...%d more]", slice.Len()-1))
+				_, _ = b.WriteString(fmt.Sprintf("...%d more]", slice.Len()-1))
 				return b.String()
 			}
 		}

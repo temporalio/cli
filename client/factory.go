@@ -154,7 +154,7 @@ func (b *clientFactory) SDKClient(c *cli.Context, namespace string) sdkclient.Cl
 
 func newPayloadCodecGRPCClientInterceptor(c *cli.Context, codecEndpoint string) (grpc.UnaryClientInterceptor, error) {
 	namespace := c.String(common.FlagNamespace)
-	auth := c.String(common.FlagCodecAuth)
+	codecAuth := c.String(common.FlagCodecAuth)
 	codecEndpoint = strings.ReplaceAll(codecEndpoint, "{namespace}", namespace)
 
 	payloadCodec := converter.NewRemoteDataConverter(
@@ -163,8 +163,8 @@ func newPayloadCodecGRPCClientInterceptor(c *cli.Context, codecEndpoint string) 
 			Endpoint: codecEndpoint,
 			ModifyRequest: func(req *http.Request) error {
 				req.Header.Set("X-Namespace", namespace)
-				if auth != "" {
-					req.Header.Set("Authorization", auth)
+				if codecAuth != "" {
+					req.Header.Set("Authorization", codecAuth)
 				}
 
 				return nil
