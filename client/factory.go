@@ -238,6 +238,13 @@ func (b *clientFactory) createGRPCConnection(c *cli.Context) (*grpc.ClientConn, 
 		errorInterceptor(),
 		headersProviderInterceptor(headersprovider.GetCurrent()),
 	}
+	if codecEndpoint := c.String(common.FlagCodecEndpoint); codecEndpoint != "" {
+		interceptor, err := newPayloadCodecGRPCClientInterceptor(c, codecEndpoint)
+		if err != nil {
+			b.logger.Fatal("Failed to configure payload codec interceptor", tag.Error(err))
+		}
+		interceptors = append(interceptors, interceptor)
+	}
 
 	dialOpts := []grpc.DialOption{
 		grpcSecurityOptions,
