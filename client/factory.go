@@ -157,9 +157,8 @@ func newPayloadCodecGRPCClientInterceptor(c *cli.Context, codecEndpoint string) 
 	codecAuth := c.String(common.FlagCodecAuth)
 	codecEndpoint = strings.ReplaceAll(codecEndpoint, "{namespace}", namespace)
 
-	payloadCodec := converter.NewRemoteDataConverter(
-		converter.GetDefaultDataConverter(),
-		converter.RemoteDataConverterOptions{
+	payloadCodec := converter.NewRemotePayloadCodec(
+		converter.RemotePayloadCodecOptions{
 			Endpoint: codecEndpoint,
 			ModifyRequest: func(req *http.Request) error {
 				req.Header.Set("X-Namespace", namespace)
