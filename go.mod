@@ -156,3 +156,5 @@ require (
 )
 
 replace github.com/grpc-ecosystem/grpc-gateway => github.com/temporalio/grpc-gateway v1.17.0
+
+replace go.temporal.io/sdk => github.com/dandavison/temporalio-sdk-go v1.30.0
