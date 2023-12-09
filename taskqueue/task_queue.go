@@ -26,6 +26,12 @@ func NewTaskQueueCommands() []*cli.Command {
 					Usage:    common.FlagTaskQueueTypeDefinition,
 					Category: common.CategoryMain,
 				},
+				&cli.IntFlag{
+					Name:     common.FlagPartitions,
+					Value:    1,
+					Usage:    common.FlagPartitionsDefinition,
+					Category: common.CategoryMain,
+				},
 			}, common.FlagsForFormatting...),
 			Action: func(c *cli.Context) error {
 				return DescribeTaskQueue(c)
