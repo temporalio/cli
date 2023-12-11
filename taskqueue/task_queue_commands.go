@@ -44,12 +44,13 @@ func DescribeTaskQueue(c *cli.Context) error {
 		Partition int `json:"partition"`
 		taskqueuepb.PollerInfo
 		// copy this out to display nicer in table or card, but not json
-		VersionCaps *commonpb.WorkerVersionCapabilities `json:"-"`
+		Versioning *commonpb.WorkerVersionCapabilities `json:"-"`
 	}
 
 	var statuses []any
 	var pollers []any
 
+	// TOOD: remove this when the server does partition fan-out
 	for p := 0; p < partitions; p++ {
 		resp, err := frontendClient.DescribeTaskQueue(ctx, &workflowservice.DescribeTaskQueueRequest{
 			Namespace: namespace,
@@ -70,9 +71,9 @@ func DescribeTaskQueue(c *cli.Context) error {
 		})
 		for _, pi := range resp.Pollers {
 			pollers = append(pollers, &pollerWithPartition{
-				Partition:   p,
-				PollerInfo:  *pi,
-				VersionCaps: pi.WorkerVersionCapabilities,
+				Partition:  p,
+				PollerInfo: *pi,
+				Versioning: pi.WorkerVersionCapabilities,
 			})
 		}
 	}
@@ -99,7 +100,7 @@ func DescribeTaskQueue(c *cli.Context) error {
 	}
 
 	opts = &output.PrintOptions{
-		Fields: []string{"Partition", "PollerInfo.Identity", "PollerInfo.LastAccessTime", "PollerInfo.RatePerSecond", "VersionCaps.BuildId", "VersionCaps.UseVersioning"},
+		Fields: []string{"Partition", "PollerInfo.Identity", "PollerInfo.LastAccessTime", "PollerInfo.RatePerSecond", "Versioning.BuildId", "Versioning.UseVersioning"},
 	}
 	return output.PrintItems(c, pollers, opts)
 }

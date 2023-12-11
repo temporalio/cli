@@ -26,6 +26,7 @@ func NewTaskQueueCommands() []*cli.Command {
 					Usage:    common.FlagTaskQueueTypeDefinition,
 					Category: common.CategoryMain,
 				},
+				// TOOD: remove this when the server does partition fan-out
 				&cli.IntFlag{
 					Name:     common.FlagPartitions,
 					Value:    1,
