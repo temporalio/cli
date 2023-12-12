@@ -135,6 +135,7 @@ const (
 	// Task Queue flags
 	FlagTaskQueueName           = "Name of the Task Queue."
 	FlagTaskQueueTypeDefinition = "Task Queue type [workflow|activity]"
+	FlagPartitionsDefinition    = "Query for all partitions up to this number (experimental+temporary feature)"
 
 	// Namespace update flags
 	FlagActiveClusterDefinition           = "Active cluster name."

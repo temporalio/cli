@@ -79,6 +79,7 @@ var (
 	FlagOverlapPolicy              = "overlap-policy"
 	FlagOwnerEmail                 = "email"
 	FlagParallelism                = "input-parallelism"
+	FlagPartitions                 = "partitions"
 	FlagPause                      = "pause"
 	FlagPauseOnFailure             = "pause-on-failure"
 	FlagPort                       = "port"
