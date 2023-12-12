@@ -93,6 +93,7 @@ func StartWorkflow(c *cli.Context, printProgress bool) error {
 	}
 
 	taskQueue, workflowType, et, rt, dt, wid := StartWorkflowBaseArgs(c)
+	startDelay := c.Int(common.FlagStartDelay)
 
 	reusePolicy := common.DefaultWorkflowIDReusePolicy
 	if c.IsSet(common.FlagWorkflowIDReusePolicy) {
@@ -115,6 +116,7 @@ func StartWorkflow(c *cli.Context, printProgress bool) error {
 		WorkflowTaskTimeout:      time.Duration(dt) * time.Second,
 		WorkflowRunTimeout:       time.Duration(rt) * time.Second,
 		WorkflowIDReusePolicy:    reusePolicy,
+		StartDelay:               time.Duration(startDelay) * time.Second,
 	}
 	if c.IsSet(common.FlagCronSchedule) {
 		wo.CronSchedule = c.String(common.FlagCronSchedule)
