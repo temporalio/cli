@@ -49,6 +49,7 @@ const (
 	FlagSearchAttributeDefinition       = "Passes Search Attribute in key=value format. Use valid JSON formats for value."
 	FlagMemoDefinition                  = "Passes a memo in key=value format. Use valid JSON formats for value."
 	FlagMemoFileDefinition              = "Passes a memo as file input, with each line following key=value format. Use valid JSON formats for value."
+	FlagStartDelayDefinition            = "Specify a delay before the workflow starts (in seconds). Cannot be used with a cron schedule. If the workflow receives a signal before the delay has elapsed, it will begin immediately."
 
 	// Other Workflow flags
 	FlagResetPointsUsage           = "Only show auto-reset points."
