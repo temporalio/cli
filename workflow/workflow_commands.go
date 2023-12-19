@@ -1473,7 +1473,15 @@ func TraceWorkflow(c *cli.Context) error {
 	}
 	wid := c.String(common.FlagWorkflowID)
 	rid := c.String(common.FlagRunID)
-	_, err = trace.PrintWorkflowTrace(c, wid, rid, foldStatus)
+	sdkClient, err := client.GetSDKClient(c)
+	if err != nil {
+		return err
+	}
+
+	if err = trace.PrintWorkflowSummary(c, sdkClient, wid, rid); err != nil {
+		return err
+	}
+	_, err = trace.PrintWorkflowTrace(c, sdkClient, wid, rid, foldStatus)
 	return err
 }
 
