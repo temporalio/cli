@@ -409,6 +409,10 @@ func ProcessJSONInput(c *cli.Context) (*commonpb.Payloads, error) {
 
 // read multiple inputs presented in json format
 func readJSONInputs(c *cli.Context) ([][]byte, error) {
+	if c.IsSet(FlagInput) && c.IsSet(FlagInputFile) {
+		return nil, fmt.Errorf("you may not combine --input and --input-file; please use one or the other")
+	}
+
 	if c.IsSet(FlagInput) {
 		inputsG := c.Generic(FlagInput)
 
@@ -432,14 +436,20 @@ func readJSONInputs(c *cli.Context) ([][]byte, error) {
 
 		return inputsRaw, nil
 	} else if c.IsSet(FlagInputFile) {
-		inputFile := c.String(FlagInputFile)
-		// This method is purely used to parse input from the CLI. The input comes from a trusted user
-		// #nosec
-		data, err := os.ReadFile(inputFile)
-		if err != nil {
-			return nil, fmt.Errorf("unable to read input file: %w", err)
+		inputFiles := c.StringSlice(FlagInputFile)
+
+		args := make([][]byte, 0, len(inputFiles))
+		for _, inputFile := range inputFiles {
+			// This method is purely used to parse input from the CLI. The input
+			// comes from a trusted user #nosec
+			data, err := os.ReadFile(inputFile)
+			if err != nil {
+				return nil, fmt.Errorf("unable to read input file: %w", err)
+			}
+			args = append(args, data)
 		}
-		return [][]byte{data}, nil
+
+		return args, nil
 	}
 	return nil, nil
 }

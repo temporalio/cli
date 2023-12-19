@@ -93,18 +93,10 @@ func AddSearchAttributes(c *cli.Context) error {
 			return fmt.Errorf("unable to parse search attribute type %s: %w", typeStr, err)
 		}
 		existingSearchAttributeType, searchAttributeExists := existingSearchAttributes.CustomAttributes[names[i]]
-		if !searchAttributeExists {
-			searchAttributes[names[i]] = enumspb.IndexedValueType(typeInt)
-			continue
-		}
-		if existingSearchAttributeType != enumspb.IndexedValueType(typeInt) {
+		if searchAttributeExists && existingSearchAttributeType != enumspb.IndexedValueType(typeInt) {
 			return fmt.Errorf("search attribute %s already exists and has different type %s: %w", names[i], existingSearchAttributeType, err)
 		}
-	}
-
-	if len(searchAttributes) == 0 {
-		fmt.Println(color.Yellow(c, "Search attributes already exist"))
-		return nil
+		searchAttributes[names[i]] = enumspb.IndexedValueType(typeInt)
 	}
 
 	request := &operatorservice.AddSearchAttributesRequest{

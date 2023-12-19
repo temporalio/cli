@@ -13,7 +13,6 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"github.com/temporalio/cli/app"
 	"github.com/temporalio/cli/client"
@@ -100,7 +99,6 @@ func (s *cliAppSuite) SetupTest() {
 }
 
 func (s *cliAppSuite) TearDownTest() {
-	s.mockCtrl.Finish() // assert mock’s expectations
 }
 
 func (s *cliAppSuite) TestTopLevelCommands() {
@@ -119,6 +117,19 @@ var describeTaskQueueResponse = &workflowservice.DescribeTaskQueueResponse{
 		{
 			LastAccessTime: timestamp.TimePtr(time.Now().UTC()),
 			Identity:       "tester",
+			WorkerVersionCapabilities: &commonpb.WorkerVersionCapabilities{
+				BuildId:       "some-build-id",
+				UseVersioning: false,
+			},
+		},
+	},
+	TaskQueueStatus: &taskqueuepb.TaskQueueStatus{
+		BacklogCountHint: 0,
+		ReadLevel:        100000,
+		AckLevel:         100000,
+		TaskIdBlock: &taskqueuepb.TaskIdBlock{
+			StartId: 100001,
+			EndId:   200000,
 		},
 	},
 }
@@ -176,17 +187,15 @@ func (s *cliAppSuite) TestAcceptStringSliceArgsWithCommas() {
 }
 
 func (s *cliAppSuite) TestDescribeTaskQueue() {
-	s.sdkClient.On("DescribeTaskQueue", mock.Anything, mock.Anything, mock.Anything).Return(describeTaskQueueResponse, nil).Once()
+	s.frontendClient.EXPECT().DescribeTaskQueue(gomock.Any(), gomock.Any()).Return(describeTaskQueueResponse, nil)
 	err := s.app.Run([]string{"", "task-queue", "describe", "--task-queue", "test-taskQueue", "--namespace", cliTestNamespace})
 	s.Nil(err)
-	s.sdkClient.AssertExpectations(s.T())
 }
 
 func (s *cliAppSuite) TestDescribeTaskQueue_Activity() {
-	s.sdkClient.On("DescribeTaskQueue", mock.Anything, mock.Anything, mock.Anything).Return(describeTaskQueueResponse, nil).Once()
+	s.frontendClient.EXPECT().DescribeTaskQueue(gomock.Any(), gomock.Any()).Return(describeTaskQueueResponse, nil)
 	err := s.app.Run([]string{"", "task-queue", "describe", "--namespace", cliTestNamespace, "--task-queue", "test-taskQueue", "--task-queue-type", "activity"})
 	s.Nil(err)
-	s.sdkClient.AssertExpectations(s.T())
 }
 
 // TestFlagCategory_IsSet verifies that command flags have Category set
@@ -320,8 +329,16 @@ func assertServerHealth(ctx context.Context, t *testing.T, opts sdkclient.Option
 		t.Error(clientErr)
 	}
 
-	if _, err := c.CheckHealth(ctx, nil); err != nil {
-		t.Error(err)
+	// Give the server 1 second to become healthy.
+	for i := 0; i < 10; i++ {
+		_, clientErr = c.CheckHealth(ctx, nil)
+		if clientErr == nil {
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	if clientErr != nil {
+		t.Error(clientErr)
 	}
 
 	// Check for pollers on a system task queue to ensure that the worker service is running.

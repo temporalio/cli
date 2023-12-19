@@ -42,10 +42,11 @@ import (
 )
 
 const (
-	broadcastAddress     = "127.0.0.1"
-	PersistenceStoreName = "sqlite-default"
-	DefaultFrontendPort  = 7233
-	DefaultMetricsPort   = 0
+	broadcastAddress        = "127.0.0.1"
+	PersistenceStoreName    = "sqlite-default"
+	DefaultFrontendPort     = 7233
+	DefaultFrontendHTTPPort = 0
+	DefaultMetricsPort      = 0
 )
 
 // UIServer abstracts the github.com/temporalio/ui-server project to
@@ -71,6 +72,7 @@ type Config struct {
 	ClusterID        string
 	DatabaseFilePath string
 	FrontendPort     int
+	FrontendHTTPPort int
 	MetricsPort      int
 	DynamicPorts     bool
 	Namespaces       []string
@@ -241,6 +243,11 @@ func (cfg *Config) mustGetService(frontendPortOffset int) config.Service {
 			BindOnLocalHost: true,
 			BindOnIP:        "",
 		},
+	}
+
+	// Enable HTTP port only on frontend and only if non-zero
+	if frontendPortOffset == 0 && cfg.FrontendHTTPPort > 0 {
+		svc.RPC.HTTPPort = cfg.FrontendHTTPPort
 	}
 
 	// Assign any open port when configured to use dynamic ports

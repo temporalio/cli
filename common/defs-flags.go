@@ -44,11 +44,12 @@ const (
 		"\t│ │ │ │ │ \n" +
 		"\t* * * * *"
 	FlagWorkflowIdReusePolicyDefinition = "Allows the same Workflow Id to be used in a new Workflow Execution. Options are: AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate, TerminateIfRunning."
-	FlagInputDefinition                 = "Optional JSON input to provide to the Workflow. Pass \"null\" for null values."
-	FlagInputFileDefinition             = "Passes optional input for the Workflow from a JSON file. If there are multiple JSON files, concatenate them and separate by space or newline. Input from the command line will overwrite file input."
+	FlagInputDefinition                 = "JSON value to provide to the Workflow or Query. You may use --input multiple times to pass multiple arguments. May not be combined with --input-file."
+	FlagInputFileDefinition             = "Reads a JSON file and provides the JSON as input to the Workflow or Query. The file must contain a single JSON value (typically an object). Each file is passed as a separate argument; you may use --input-file multiple times to pass multiple arguments. May not be combined with --input."
 	FlagSearchAttributeDefinition       = "Passes Search Attribute in key=value format. Use valid JSON formats for value."
 	FlagMemoDefinition                  = "Passes a memo in key=value format. Use valid JSON formats for value."
 	FlagMemoFileDefinition              = "Passes a memo as file input, with each line following key=value format. Use valid JSON formats for value."
+	FlagStartDelayDefinition            = "Specify a delay before the workflow starts (in seconds). Cannot be used with a cron schedule. If the workflow receives a signal or update before the delay has elapsed, it will begin immediately."
 
 	// Other Workflow flags
 	FlagResetPointsUsage           = "Only show auto-reset points."
@@ -135,6 +136,22 @@ const (
 	// Task Queue flags
 	FlagTaskQueueName           = "Name of the Task Queue."
 	FlagTaskQueueTypeDefinition = "Task Queue type [workflow|activity]"
+	FlagPartitionsDefinition    = "Query for all partitions up to this number (experimental+temporary feature)"
+
+	// Namespace update flags
+	FlagActiveClusterDefinition           = "Active cluster name."
+	FlagClusterDefinition                 = "Cluster name."
+	FlagDescriptionDefinition             = "Namespace description."
+	FlagHistoryArchivalStateDefinition    = "History archival state, valid values are \"disabled\" and \"enabled\""
+	FlagHistoryArchivalURIDefinition      = "Optionally specify history archival URI (cannot be changed after first time archival is enabled)"
+	FlagIsGlobalNamespaceDefinition       = "Whether the namespace is a global namespace."
+	FlagNamespaceDataDefinition           = "Namespace data in key=value format. Use JSON for values."
+	FlagNamespaceVerboseDefinition        = "Print applied namespace changes"
+	FlagOwnerDefinition                   = "Owner email."
+	FlagPromoteNamespaceDefinition        = "Promote local namespace to global namespace"
+	FlagRetentionDefinition               = "Length of time (in days) a closed Workflow is preserved before deletion."
+	FlagVisibilityArchivalStateDefinition = "Visibility archival state, valid values are \"disabled\" and \"enabled\""
+	FlagVisibilityArchivalURIDefinition   = "Optionally specify visibility archival URI (cannot be changed after first time archival is enabled)"
 
 	// Build id based versioning flags
 	FlagNewBuildIDUsage                = "The new build id to be added."

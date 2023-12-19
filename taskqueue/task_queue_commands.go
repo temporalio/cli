@@ -1,6 +1,7 @@
 package taskqueue
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -9,37 +10,99 @@ import (
 	"github.com/temporalio/tctl-kit/pkg/color"
 	"github.com/temporalio/tctl-kit/pkg/output"
 	"github.com/urfave/cli/v2"
+	commonpb "go.temporal.io/api/common/v1"
 	enumspb "go.temporal.io/api/enums/v1"
 	taskqueuepb "go.temporal.io/api/taskqueue/v1"
 	"go.temporal.io/api/workflowservice/v1"
+	"go.temporal.io/server/common/tqname"
 )
 
 // DescribeTaskQueue show pollers info of a given taskqueue
 func DescribeTaskQueue(c *cli.Context) error {
-	sdkClient, err := client.GetSDKClient(c)
+	taskQueue := c.String(common.FlagTaskQueue)
+	tqName, err := tqname.FromBaseName(taskQueue)
 	if err != nil {
 		return err
 	}
-	taskQueue := c.String(common.FlagTaskQueue)
 	taskQueueType := strToTaskQueueType(c.String(common.FlagTaskQueueType))
+	partitions := c.Int(common.FlagPartitions)
 
 	ctx, cancel := common.NewContext(c)
 	defer cancel()
-	resp, err := sdkClient.DescribeTaskQueue(ctx, taskQueue, taskQueueType)
+
+	frontendClient := client.Factory(c.App).FrontendClient(c)
+	namespace, err := common.RequiredFlag(c, common.FlagNamespace)
 	if err != nil {
-		return fmt.Errorf("unable to describe task queue: %w", err)
+		return err
+	}
+
+	type statusWithPartition struct {
+		Partition int `json:"partition"`
+		taskqueuepb.TaskQueueStatus
+	}
+	type pollerWithPartition struct {
+		Partition int `json:"partition"`
+		taskqueuepb.PollerInfo
+		// copy this out to display nicer in table or card, but not json
+		Versioning *commonpb.WorkerVersionCapabilities `json:"-"`
+	}
+
+	var statuses []any
+	var pollers []any
+
+	// TOOD: remove this when the server does partition fan-out
+	for p := 0; p < partitions; p++ {
+		resp, err := frontendClient.DescribeTaskQueue(ctx, &workflowservice.DescribeTaskQueueRequest{
+			Namespace: namespace,
+			TaskQueue: &taskqueuepb.TaskQueue{
+				Name: tqName.WithPartition(p).FullName(),
+				Kind: enumspb.TASK_QUEUE_KIND_NORMAL,
+			},
+			TaskQueueType:          taskQueueType,
+			IncludeTaskQueueStatus: true,
+		})
+		// note that even if it doesn't exist before this call, DescribeTaskQueue will return something
+		if err != nil {
+			return fmt.Errorf("unable to describe task queue: %w", err)
+		}
+		statuses = append(statuses, &statusWithPartition{
+			Partition:       p,
+			TaskQueueStatus: *resp.TaskQueueStatus,
+		})
+		for _, pi := range resp.Pollers {
+			pollers = append(pollers, &pollerWithPartition{
+				Partition:  p,
+				PollerInfo: *pi,
+				Versioning: pi.WorkerVersionCapabilities,
+			})
+		}
+	}
+
+	if output.OutputOption(c.String(output.FlagOutput)) == output.JSON {
+		// handle specially so we output a single object instead of two
+		b, err := json.MarshalIndent(map[string]any{
+			"taskQueues": statuses,
+			"pollers":    pollers,
+		}, "", "  ")
+		if err != nil {
+			return err
+		}
+		_, err = fmt.Println(string(b))
+		return err
 	}
 
 	opts := &output.PrintOptions{
-		// TODO enable when versioning feature is out
-		// Fields: []string{"Identity", "LastAccessTime", "RatePerSecond", "WorkerVersioningId"},
-		Fields: []string{"Identity", "LastAccessTime", "RatePerSecond"},
+		Fields: []string{"Partition", "TaskQueueStatus.RatePerSecond", "TaskQueueStatus.BacklogCountHint", "TaskQueueStatus.ReadLevel", "TaskQueueStatus.AckLevel", "TaskQueueStatus.TaskIdBlock"},
 	}
-	var items []interface{}
-	for _, e := range resp.Pollers {
-		items = append(items, e)
+	err = output.PrintItems(c, statuses, opts)
+	if err != nil {
+		return err
 	}
-	return output.PrintItems(c, items, opts)
+
+	opts = &output.PrintOptions{
+		Fields: []string{"Partition", "PollerInfo.Identity", "PollerInfo.LastAccessTime", "PollerInfo.RatePerSecond", "Versioning.BuildId", "Versioning.UseVersioning"},
+	}
+	return output.PrintItems(c, pollers, opts)
 }
 
 // ListTaskQueuePartitions gets all the taskqueue partition and host information.
@@ -265,12 +328,11 @@ func updateBuildIDs(c *cli.Context, partialReq workflowservice.UpdateWorkerBuild
 		Operation: partialReq.Operation,
 	}
 
-	resp, err := frontendClient.UpdateWorkerBuildIdCompatibility(ctx, request)
-	if err != nil {
-		return fmt.Errorf("error updating task queue build ids: %w", err)
+	if _, err = frontendClient.UpdateWorkerBuildIdCompatibility(ctx, request); err != nil {
+		return fmt.Errorf("error updating task queue build IDs: %w", err)
 	}
 
-	fmt.Println(color.Green(c, "Successfully updated task queue build ids. Set ID: %v", resp.GetVersionSetId()))
+	fmt.Println(color.Green(c, "Successfully updated task queue build IDs"))
 
 	return nil
 }

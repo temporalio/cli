@@ -53,7 +53,7 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 	return []*cli.Command{
 		{
 			Name:      "start-dev",
-			Usage:     "Start Temporal development server.",
+			Usage:     "Start Temporal development server",
 			UsageText: common.StartDevUsageText,
 			ArgsUsage: " ",
 			Flags: []cli.Flag{
@@ -61,20 +61,26 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 					Name:    common.FlagDBPath,
 					Aliases: []string{"f"},
 					Value:   defaultCfg.DatabaseFilePath,
-					Usage:   "File in which to persist Temporal state (by default, Workflows are lost when the process dies).",
+					Usage:   "File in which to persist Temporal state (by default, Workflows are lost when the process dies)",
 				},
 				&cli.StringSliceFlag{
 					Name:    common.FlagNamespace,
 					Aliases: common.FlagNamespaceAlias,
-					Usage:   `Specify namespaces that should be pre-created (namespace "default" is always created).`,
+					Usage:   `Specify namespaces that should be pre-created (namespace "default" is always created)`,
 					EnvVars: nil,
 					Value:   nil,
 				},
 				&cli.IntFlag{
 					Name:    common.FlagPort,
 					Aliases: []string{"p"},
-					Usage:   "Port for the frontend gRPC service.",
+					Usage:   "Port for the frontend gRPC service",
 					Value:   sconfig.DefaultFrontendPort,
+				},
+				&cli.IntFlag{
+					Name:        common.FlagHTTPPort,
+					Usage:       "Port for the frontend HTTP service",
+					Value:       sconfig.DefaultFrontendHTTPPort,
+					DefaultText: "disabled",
 				},
 				&cli.IntFlag{
 					Name:        common.FlagMetricsPort,
@@ -84,32 +90,32 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 				},
 				&cli.IntFlag{
 					Name:        common.FlagUIPort,
-					Usage:       "Port for the Web UI.",
-					DefaultText: fmt.Sprintf("--port + 1000, eg. %d", sconfig.DefaultFrontendPort+1000),
+					Usage:       "Port for the Web UI",
+					DefaultText: fmt.Sprintf("--port + 1000, e.g. %d", sconfig.DefaultFrontendPort+1000),
 				},
 				&cli.BoolFlag{
 					Name:  common.FlagHeadless,
-					Usage: "Disable the Web UI.",
+					Usage: "Disable the Web UI",
 				},
 				&cli.StringFlag{
 					Name:    common.FlagIP,
-					Usage:   `IPv4 address to bind the frontend service to.`,
+					Usage:   `IPv4 address to bind the frontend service to`,
 					EnvVars: nil,
 					Value:   "127.0.0.1",
 				},
 				&cli.StringFlag{
 					Name:        common.FlagUIIP,
-					Usage:       `IPv4 address to bind the Web UI to.`,
+					Usage:       `IPv4 address to bind the Web UI to`,
 					DefaultText: "same as --ip",
 				},
 				&cli.StringFlag{
 					Name:    common.FlagUIAssetPath,
-					Usage:   `UI Custom Assets path.`,
+					Usage:   `UI custom assets path`,
 					EnvVars: nil,
 				},
 				&cli.StringFlag{
 					Name:    common.FlagUICodecEndpoint,
-					Usage:   `UI Remote data converter HTTP endpoint.`,
+					Usage:   `UI remote codec HTTP endpoint`,
 					EnvVars: nil,
 				},
 				&cli.StringFlag{
@@ -126,13 +132,13 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 				},
 				&cli.StringSliceFlag{
 					Name:    common.FlagPragma,
-					Usage:   fmt.Sprintf("Specify sqlite pragma statements in pragma=value format. Pragma options: %q.", sconfig.GetAllowedPragmas()),
+					Usage:   fmt.Sprintf("Specify SQLite pragma statements in pragma=value format. Pragma options: %q.", sconfig.GetAllowedPragmas()),
 					EnvVars: nil,
 					Value:   nil,
 				},
 				&cli.StringSliceFlag{
 					Name:  common.FlagDynamicConfigValue,
-					Usage: `Dynamic config value, as KEY=JSON_VALUE (string values need quotes).`,
+					Usage: `Dynamic config value, as KEY=JSON_VALUE (string values need quotes)`,
 				},
 			},
 			Before: func(c *cli.Context) error {
@@ -170,6 +176,7 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 				var (
 					ip              = c.String(common.FlagIP)
 					serverPort      = c.Int(common.FlagPort)
+					httpPort        = c.Int(common.FlagHTTPPort)
 					metricsPort     = c.Int(common.FlagMetricsPort)
 					uiPort          = serverPort + 1000
 					uiIP            = ip
@@ -211,6 +218,7 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 				opts := []ServerOption{
 					WithDynamicPorts(),
 					WithFrontendPort(serverPort),
+					WithFrontendHTTPPort(httpPort),
 					WithMetricsPort(metricsPort),
 					WithFrontendIP(ip),
 					WithNamespaces(c.StringSlice(common.FlagNamespace)...),
@@ -233,7 +241,6 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 						Port:                uiPort,
 						TemporalGRPCAddress: frontendAddr,
 						EnableUI:            true,
-						EnableOpenAPI:       true,
 						UIAssetPath:         uiAssetPath,
 						Codec: uiconfig.Codec{
 							Endpoint: uiCodecEndpoint,
@@ -313,6 +320,10 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 					opts = append(opts, WithSearchAttributeCacheDisabled())
 				}
 
+				if _, ok := configVals[dynamicconfig.FrontendPersistenceMaxQPS]; !ok {
+					opts = append(opts, WithPersistenceQPS())
+				}
+
 				for k, v := range configVals {
 					opts = append(opts, WithDynamicConfigValue(k, v))
 				}
@@ -325,6 +336,7 @@ func NewServerCommands(defaultCfg *sconfig.Config) []*cli.Command {
 				if err := s.Start(); err != nil {
 					return cli.Exit(fmt.Sprintf("Unable to start server. Error: %v", err), 1)
 				}
+				s.Stop()
 				return cli.Exit("All services are stopped.", 0)
 			},
 		},
@@ -349,7 +361,7 @@ func getDynamicConfigValues(input []string) (map[dynamicconfig.Key][]dynamicconf
 	for _, keyValStr := range input {
 		keyVal := strings.SplitN(keyValStr, "=", 2)
 		if len(keyVal) != 2 {
-			return nil, fmt.Errorf("dynamic config value not in KEY=JSON_VAL format")
+			return nil, fmt.Errorf("dynamic config value %s not in KEY=JSON_VAL format", keyValStr)
 		}
 		key := dynamicconfig.Key(keyVal[0])
 		// We don't support constraints currently

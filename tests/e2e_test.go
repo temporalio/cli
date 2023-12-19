@@ -69,8 +69,8 @@ func (s *e2eSuite) SetupTest() {
 func (s *e2eSuite) TearDownTest() {
 }
 
-func (s *e2eSuite) setUpTestEnvironment() (*testsuite.DevServer, *cli.App, *common.MemWriter) {
-	server, err := s.createServer()
+func (s *e2eSuite) setUpTestEnvironment(extraArgs ...string) (*testsuite.DevServer, *cli.App, *common.MemWriter) {
+	server, err := s.createServer(extraArgs...)
 	s.Require().NoError(err)
 
 	writer := &common.MemWriter{}
@@ -79,18 +79,18 @@ func (s *e2eSuite) setUpTestEnvironment() (*testsuite.DevServer, *cli.App, *comm
 	return server, tcli, writer
 }
 
-func (s *e2eSuite) createServer() (*testsuite.DevServer, error) {
+func (s *e2eSuite) createServer(extraArgs ...string) (*testsuite.DevServer, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
 	server, err := testsuite.StartDevServer(context.Background(), testsuite.DevServerOptions{
 		ExistingPath: s.exePath,
-		ExtraArgs: []string{
+		ExtraArgs: append([]string{
 			// server logs are too noisy, limit server logs
 			"--log-level", "error",
 			//TODO: remove this flag when update workflow is enabled in the server by default
 			"--dynamic-config-value", "frontend.enableUpdateWorkflowExecution=true",
-		},
+		}, extraArgs...),
 	})
 	if err != nil {
 		return nil, err

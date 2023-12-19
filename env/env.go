@@ -213,6 +213,13 @@ func loadEnv(ctx *cli.Context) error {
 		return nil
 	}
 
+	if env == config.DefaultEnv {
+		if envV := ClientConfig.Env(env); envV == nil {
+			// ignore if default env is not defined (ex. has been removed)
+			return nil
+		}
+	}
+
 	for _, flag := range cmd.Flags {
 		name := flag.Names()[0]
 

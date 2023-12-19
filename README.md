@@ -10,35 +10,30 @@ Use the CLI to run a Temporal Server and interact with it.
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
-**Table of Contents**
-
-- [Install](#install)
+- [📦 Install](#-install)
   - [cURL](#curl)
   - [Homebrew](#homebrew)
   - [Manual](#manual)
-- [Use](#use)
+- [🚀 Use](#-use)
   - [Start the Server](#start-the-server)
   - [Interact with the Server](#interact-with-the-server)
-- [Configure](#configure)
+- [⚙️ Configure](#-configure)
   - [Namespace registration](#namespace-registration)
   - [Persistence modes](#persistence-modes)
   - [Enable or disable Temporal UI](#enable-or-disable-temporal-ui)
   - [Dynamic configuration](#dynamic-configuration)
   - [Environment variables](#environment-variables)
-- [Auto-completion](#auto-completion)
+- [⌨️ Auto-completion](#-auto-completion)
   - [zsh auto-completion](#zsh-auto-completion)
   - [Bash auto-completion](#bash-auto-completion)
     - [macOS installation](#macos-installation)
     - [Linux installation](#linux-installation)
-- [Development](#development)
-  - [Compile and run CLI](#compile-and-run-cli)
-  - [Compile docs](#compile-docs)
-  - [Run tests](#run-tests)
-- [Known Issues](#known-issues)
+- [🔧 Development](#-development)
+- [⚠️ Known Issues](#-known-issues)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
-## Install
+## 📦 Install
 
 You can install the CLI using one of the below methods.
 
@@ -64,7 +59,7 @@ You can install the CLI using one of the below methods.
 
 You can also download older versions from [GitHub releases](https://github.com/temporalio/cli/releases).
 
-## Use
+## 🚀 Use
 
 ### Start the Server
 
@@ -95,7 +90,7 @@ temporal operator namespace list
 
 For a full list of commands, see the [CLI docs](https://docs.temporal.io/cli/) or run `temporal help`.
 
-## Configure
+## ⚙️ Configure
 
 Use the help flag to see a full list of CLI options:
 
@@ -165,11 +160,11 @@ This setting makes created search attributes immediately available for use.
 
 See the CLI docs for a [list of env vars](https://docs.temporal.io/cli#environmental-variables).
 
-## Auto-completion
+## ⌨️ Auto-completion
 
 The Temporal CLI has the capability to auto-complete commands.
 
-Running `temporal completion SHELL` will output the related completion SHELL code.
+Running `temporal completion SHELL` will output completion setup code for the given shell.
 
 ### zsh auto-completion
 
@@ -187,7 +182,7 @@ If you're running auto-completion from the terminal, run the command below:
 echo 'source <(temporal completion zsh)' >> ~/.zshrc
 ```
 
-After setting the variable, run:
+After editing the file, run:
 
 `source ~/.zshrc`.
 
@@ -214,10 +209,16 @@ or:
 [[ -r "/usr/local/etc/profile.d/bash_completion.sh" ]] && . "/usr/local/etc/profile.d/bash_completion.sh"
 ```
 
-Verify that `bash-completion` is installed by running `type _init_completion`. 
+Verify that `bash-completion` is installed by running `type _init_completion`.
 It should say `_init_completion is a function` and print the function.
 
 Enable completion for Temporal by adding the following code to your bash file:
+
+```bash
+source <(temporal completion bash)
+```
+
+In an existing terminal, you can do that by running:
 
 ```bash
 echo 'source <(temporal completion bash)' >> ~/.bashrc
@@ -227,8 +228,8 @@ source ~/.bashrc
 Now test by typing `temporal`, space, and then tab twice. You should see:
 
 ```bash
-$ temporal 
-activity    completion  h           operator    server      workflow    
+$ temporal
+activity    completion  h           operator    server      workflow
 batch       env         help        schedule    task-queue
 ```
 
@@ -256,28 +257,11 @@ echo 'source <(temporal completion bash)' >> ~/.bashrc
 source ~/.bashrc
 ```
 
-## Development
+## 🔧 Development
 
-### Compile and run CLI
+See [CONTRIBUTING.md](CONTRIBUTING.md)
 
-```bash
-go build -o dist/temporal ./cmd/temporal
-dist/temporal
-```
-
-### Compile docs
-
-```bash
-go build -o dist/temporal-docgen ./cmd/temporal-docgen
-```
-
-### Run tests
-
-```bash
-go test ./...
-```
-
-## Known Issues
+## ⚠️ Known Issues
 
 - When consuming Temporal as a library in go mod, you may want to replace grpc-gateway with a fork to address URL escaping issue in UI. See <https://github.com/temporalio/temporalite/pull/118>
 

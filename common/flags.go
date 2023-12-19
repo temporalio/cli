@@ -49,6 +49,7 @@ var (
 	FlagHeadless                   = "headless"
 	FlagHistoryArchivalState       = "history-archival-state"
 	FlagHistoryArchivalURI         = "history-uri"
+	FlagHTTPPort                   = "http-port"
 	FlagIdentity                   = "identity"
 	FlagInput                      = "input"
 	FlagInputAlias                 = []string{"i"}
@@ -78,6 +79,7 @@ var (
 	FlagOverlapPolicy              = "overlap-policy"
 	FlagOwnerEmail                 = "email"
 	FlagParallelism                = "input-parallelism"
+	FlagPartitions                 = "partitions"
 	FlagPause                      = "pause"
 	FlagPauseOnFailure             = "pause-on-failure"
 	FlagPort                       = "port"
@@ -103,6 +105,7 @@ var (
 	FlagSkipBaseIsNotCurrent       = "skip-base-is-not-current"
 	FlagSkipCurrentOpen            = "skip-current-open"
 	FlagStartTime                  = "start-time"
+	FlagStartDelay                 = "start-delay"
 	FlagTaskQueue                  = "task-queue"
 	FlagTaskQueueAlias             = []string{"t"}
 	FlagTaskQueueType              = "task-queue-type"
@@ -147,6 +150,7 @@ var SharedFlags = []cli.Flag{
 		Name:     FlagEnv,
 		Value:    config.DefaultEnv,
 		Usage:    FlagEnvDefinition,
+		EnvVars:  []string{"TEMPORAL_ENV"},
 		Category: CategoryGlobal,
 	},
 	&cli.StringFlag{
@@ -337,7 +341,7 @@ var FlagsForStartWorkflowT = []cli.Flag{
 		Usage:    FlagInputDefinition,
 		Category: CategoryMain,
 	},
-	&cli.StringFlag{
+	&cli.StringSliceFlag{
 		Name:     FlagInputFile,
 		Usage:    FlagInputFileDefinition,
 		Category: CategoryMain,
@@ -360,6 +364,11 @@ var FlagsForStartWorkflowT = []cli.Flag{
 	&cli.StringFlag{
 		Name:     FlagMemoFile,
 		Usage:    FlagMemoFileDefinition,
+		Category: CategoryMain,
+	},
+	&cli.StringFlag{
+		Name:     FlagStartDelay,
+		Usage:    FlagStartDelayDefinition,
 		Category: CategoryMain,
 	},
 }
@@ -385,7 +394,7 @@ var FlagsForStackTraceQuery = append(FlagsForExecution, []cli.Flag{
 		Usage:    FlagInputDefinition,
 		Category: CategoryMain,
 	},
-	&cli.StringFlag{
+	&cli.StringSliceFlag{
 		Name:     FlagInputFile,
 		Usage:    FlagInputFileDefinition,
 		Category: CategoryMain,

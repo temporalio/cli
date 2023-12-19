@@ -15,12 +15,12 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Print build information
-        run: "echo head_ref: ${{ github.head_ref }}, ref: ${{ github.ref }}, os: ${{ matrix.os }}"
+        run: "echo head_ref: $GITHUB_HEAD_REF, ref: $GITHUB_REF, os: ${{ matrix.os }}"
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
 
       - name: Set up Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
         with:
           go-version-file: "go.mod"
           check-latest: true
@@ -29,18 +29,6 @@ jobs:
         env:
           CGO_ENABLED: 0
         run: go test ./...
-
-  test-shellcheck:
-    name: Shellcheck
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Run ShellCheck
-        uses: ludeeus/action-shellcheck@master
-        with:
-          ignore_paths: .devcontainer
-
 
   test-install:
     strategy:
@@ -75,9 +63,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Print build information
-        run: "echo head_ref: ${{ github.head_ref }}, ref: ${{ github.ref }}"
+        run: "echo head_ref: $GITHUB_HEAD_REF, ref: $GITHUB_REF"
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
 
       - name: Ensure shell ${{ matrix.shell }} in ${{ matrix.os }}
         run: |

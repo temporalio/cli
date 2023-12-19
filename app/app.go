@@ -92,7 +92,7 @@ func serverCommands(defaultCfg *sconfig.Config) []*cli.Command {
 	return []*cli.Command{
 		{
 			Name:        "server",
-			Usage:       "Commands for managing the Temporal Server.",
+			Usage:       "Run Temporal Server",
 			UsageText:   common.ServerUsageText,
 			Subcommands: server.NewServerCommands(defaultCfg),
 		},
@@ -166,7 +166,7 @@ var clientCommands = []*cli.Command{
 var completionCommands = []*cli.Command{
 	{
 		Name:        "completion",
-		Usage:       "Output shell completion code for the specified shell (zsh, bash).",
+		Usage:       "Print shell completion code",
 		Subcommands: completion.NewCompletionCommands(),
 	},
 }
