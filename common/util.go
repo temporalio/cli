@@ -486,7 +486,7 @@ func AllowedEnumValues(names map[int32]string) []string {
 }
 
 func PromptYes(msg string, autoConfirm bool) bool {
-	return Prompt(msg, autoConfirm, "yes", "y")
+	return Prompt(msg, autoConfirm, "yes", "y", "Yes", "YES", "Y")
 }
 
 // Prompt user to confirm/deny action. Supports empty expectedInputs.
@@ -501,6 +501,7 @@ func Prompt(msg string, autoConfirm bool, expectedInputs ...string) bool {
 		fmt.Print(text)
 	} else {
 		text, _ = reader.ReadString('\n')
+		text = strings.TrimRight(text, "\n")
 	}
 	fmt.Println()
 
@@ -508,9 +509,8 @@ func Prompt(msg string, autoConfirm bool, expectedInputs ...string) bool {
 		return true
 	}
 
-	textLower := strings.ToLower(strings.TrimSpace(text))
 	for _, expectedInput := range expectedInputs {
-		if expectedInput == textLower {
+		if expectedInput == text {
 			return true
 		}
 	}

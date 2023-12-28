@@ -303,7 +303,7 @@ func DeleteNamespace(c *cli.Context) error {
 
 	promptMsg := color.Red(c, "Are you sure you want to delete namespace %s? Type namespace name to confirm:", ns)
 	if !common.Prompt(promptMsg, c.Bool(common.FlagYes), ns) {
-		return nil
+		return fmt.Errorf("namespace name does not match: expected %v", ns)
 	}
 
 	client := cliclient.Factory(c.App).OperatorClient(c)
