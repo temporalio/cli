@@ -21,9 +21,10 @@ This document has a specific structure used by a parser. Here are the rules:
       * `<short-description>` can be just about anything so long as it doesn't match trailing attributes. Any wrap
         around to newlines + two-space indention is trimmed to a single space.
       * `<extra-attributes>` can be:
-        * `Required.` - marks the option as required.
-        * `Default: <default-value>.` - sets the default value of the option. No default means zero value of the type.
+        * `Required.` - Marks the option as required.
+        * `Default: <default-value>.` - Sets the default value of the option. No default means zero value of the type.
         * `Options: <option>, <option>.` - Sets the possible options for a string enum type.
+        * `Env: <env-var>.` - Binds the environment variable to this flag.
       * Options should be in order of most commonly used.
     * Also can have single lines below options that say
       `Includes options set for [<options-set-name>](#options-set-for-<options-set-link-name>).` which is the equivalent
@@ -45,13 +46,14 @@ This document has a specific structure used by a parser. Here are the rules:
 
 #### Options
 
-* `--env` (string) - Environment to read environmental variables from. Default: default.
+* `--env` (string) - Environment to read environment-specific flags from. Default: default. Env: TEMPORAL_ENV.
 * `--env-file` (string) - File to read all environments (defaults to `$HOME/.config/temporalio/temporal.yaml`).
 * `--log-level` (string-enum) - Log level. Options: debug, info, warn, error, off. Default: info.
 * `--log-format` (string-enum) - Log format. Options: text, json. Default: text.
 * `--output`, `-o` (string-enum) - Data output format. Options: text, json. Default: text.
 * `--time-format` (string-enum) - Time format. Options: relative, iso, raw. Default: relative.
 * `--color` (string-enum) - Set coloring. Options: always, never, auto. Default: auto.
+* `--no-json-shorthand-payloads` (bool) - Always all payloads as raw payloads even if they are JSON.
 
 ### temporal env: Manage environments.
 
@@ -148,6 +150,36 @@ To persist Workflows across runs, use:
 * `--dynamic-config-value` (string[]) - Dynamic config value, as KEY=JSON_VALUE (string values need quotes).
 * `--log-config` (bool) - Log the server config being used in stderr.
 
+### temporal task-queue: Manage Task Queues.
+
+Task Queue commands allow operations to be performed on [Task Queues](/concepts/what-is-a-task-queue). To run a Task
+Queue command, run `temporal task-queue [command] [command options]`.
+
+#### Options
+
+Includes options set for [client](#options-set-for-client).
+
+### temporal task-queue describe: Provides information for Workers that have recently polled on this Task Queue.
+
+The `temporal task-queue describe` command provides [poller](/application-development/worker-performance#poller-count)
+information for a given [Task Queue](/concepts/what-is-a-task-queue).
+
+The [Server](/concepts/what-is-the-temporal-server) records the last time of each poll request. A `LastAccessTime` value
+in excess of one minute can indicate the Worker is at capacity (all Workflow and Activity slots are full) or that the
+Worker has shut down. [Workers](/concepts/what-is-a-worker) are removed if 5 minutes have passed since the last poll
+request.
+
+Information about the Task Queue can be returned to troubleshoot server issues.
+
+`temporal task-queue describe --task-queue=MyTaskQueue --task-queue-type="activity"`
+
+Use the options listed below to modify what this command returns.
+
+#### Options
+
+* `--task-queue`, `-t` (string) - Task queue name. Required.
+* `--task-queue-type` (string-enum) - Task Queue type. Options: workflow, activity. Default: workflow.
+
 ### temporal workflow: Start, list, and operate on Workflows.
 
 [Workflow](/concepts/what-is-a-workflow) commands perform operations on 
@@ -157,18 +189,19 @@ Workflow commands use this syntax:`temporal workflow COMMAND [ARGS]`.
 
 #### Options set for client:
 
-* `--address` (string) - Temporal server address. Required.
-* `--namespace`, `-n` (string) - Temporal server namespace. Default: default.
-* `--grpc-meta` (string[]) - Contains gRPC metadata to send with requests (formatted as key=value).
-* `--tls` (bool) - Enable TLS encryption without additional options such as mTLS or client certificates.
-* `--tls-cert-path` (string) - Path to x509 certificate.
-* `--tls-key-path` (string) - Path to private certificate key.
-* `--tls-ca-path` (string) - Path to server CA certificate.
-* `--tls-disable-host-verification` (bool) - Disables TLS host-name verification.
-* `--tls-server-name` (string) - Overrides target TLS server name.
-* `--context-timeout` (duration) - Optional timeout for the context of an RPC call. Default: 5s.
-* `--codec-endpoint` (string) - Endpoint for a remote Codec Server.
-* `--codec-auth` (string) - Sets the authorization header on requests to the Codec Server.
+* `--address` (string) - Temporal server address. Default: 127.0.0.1:7233. Env: TEMPORAL_ADDRESS.
+* `--namespace`, `-n` (string) - Temporal server namespace. Default: default. Env: TEMPORAL_NAMESPACE.
+* `--grpc-meta` (string[]) - HTTP headers to send with requests (formatted as key=value).
+* `--tls` (bool) - Enable TLS encryption without additional options such as mTLS or client certificates. Env:
+  TEMPORAL_TLS.
+* `--tls-cert-path` (string) - Path to x509 certificate. Env: TEMPORAL_TLS_CERT.
+* `--tls-key-path` (string) - Path to private certificate key. Env: TEMPORAL_TLS_KEY.
+* `--tls-ca-path` (string) - Path to server CA certificate. Env: TEMPORAL_TLS_CA.
+* `--tls-disable-host-verification` (bool) - Disables TLS host-name verification. Env:
+  TEMPORAL_TLS_DISABLE_HOST_VERIFICATION.
+* `--tls-server-name` (string) - Overrides target TLS server name. Env: TEMPORAL_TLS_SERVER_NAME.
+* `--codec-endpoint` (string) - Endpoint for a remote Codec Server. Env: TEMPORAL_CODEC_ENDPOINT.
+* `--codec-auth` (string) - Sets the authorization header on requests to the Codec Server. Env: TEMPORAL_CODEC_AUTH.
 
 ### temporal workflow cancel: Cancel a Workflow Execution.
 
@@ -221,8 +254,9 @@ temporal workflow execute
 
 #### Options
 
-* `--event-details` (bool) - If set, when using text output this will print the event details instead of just the event
-  during workflow progress.
+* `--event-details` (bool) - If set when using text output, this will print the event details instead of just the event
+  during workflow progress. If set when using JSON output, this will include the entire "history" JSON key of the
+  started run (does not follow runs).
 
 Includes options set for [workflow start](#options-set-for-workflow-start).
 Includes options set for [payload input](#options-set-for-payload-input).
@@ -245,6 +279,7 @@ Use the command options below to change the information returned by this command
 
 * `--query`, `-q` (string) - Filter results using a SQL-like query.
 * `--archived` (bool) - If set, will only query and list archived workflows instead of regular workflows.
+* `--limit` (int) - Limit the number of items to print.
 
 ### temporal workflow query: Query a Workflow Execution.
 
@@ -306,6 +341,7 @@ temporal workflow start \
   AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate, TerminateIfRunning.
 * `--search-attribute` (string[]) - Passes Search Attribute in key=value format. Use valid JSON formats for value.
 * `--memo` (string[]) - Passes Memo in key=value format. Use valid JSON formats for value.
+* `--allow-existing` (bool) - Do not fail if the workflow already exists.
 
 #### Options set for payload input:
 

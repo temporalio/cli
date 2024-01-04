@@ -112,7 +112,7 @@ func (c *Command) writeCode(w *codeWriter) error {
 		}
 		w.writeLinef("}\n")
 		// Flag builder
-		w.writeLinef("func (v *%v) buildFlags(f *%v.FlagSet) {",
+		w.writeLinef("func (v *%v) buildFlags(cctx *CommandContext, f *%v.FlagSet) {",
 			optSet.setStructName(), w.importPflag())
 		optSet.writeFlagBuilding("v", "f", w)
 		w.writeLinef("}\n")
@@ -196,7 +196,7 @@ func (c *Command) writeCode(w *codeWriter) error {
 	for _, optSet := range c.OptionsSets {
 		// If there's a name, this is done in the method
 		if optSet.SetName != "" {
-			w.writeLinef("s.%v.buildFlags(%v)", optSet.setStructName(), flagVar)
+			w.writeLinef("s.%v.buildFlags(cctx, %v)", optSet.setStructName(), flagVar)
 			continue
 		}
 		// Each field
@@ -212,7 +212,6 @@ func (c *Command) writeCode(w *codeWriter) error {
 		w.writeLinef("}")
 		w.writeLinef("}")
 	}
-	w.writeLinef("cctx.BindConfigFlags(%v)", flagVar)
 	// Init
 	if c.HasInit {
 		w.writeLinef("s.initCommand(cctx)")
@@ -236,7 +235,7 @@ func (c *CommandOptions) writeStructFields(w *codeWriter) error {
 func (c *CommandOptions) writeFlagBuilding(selfVar, flagVar string, w *codeWriter) error {
 	// Embedded sets
 	for _, include := range c.IncludeOptionsSets {
-		w.writeLinef("%v.%vOptions.buildFlags(%v)", selfVar, namify(include, true), flagVar)
+		w.writeLinef("%v.%vOptions.buildFlags(cctx, %v)", selfVar, namify(include, true), flagVar)
 	}
 	// Each direct option
 	for _, option := range c.Options {
@@ -321,6 +320,9 @@ func (c *CommandOption) writeFlagBuilding(selfVar, flagVar string, w *codeWriter
 	}
 	if c.Required {
 		w.writeLinef("_ = %v.MarkFlagRequired(%v, %q)", w.importCobra(), flagVar, c.Name)
+	}
+	if c.EnvVar != "" {
+		w.writeLinef("cctx.BindFlagEnvVar(%v.Lookup(%q), %q)", flagVar, c.Name, c.EnvVar)
 	}
 	return nil
 }

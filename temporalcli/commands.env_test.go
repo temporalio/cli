@@ -18,21 +18,21 @@ func TestEnv_Simple(t *testing.T) {
 	defer h.Close()
 
 	// Non-existent file, no env found for get
-	h.Options.EnvFile = "does-not-exist"
+	h.Options.EnvConfigFile = "does-not-exist"
 	res := h.Execute("env", "get", "myenv")
 	h.ErrorContains(res.Err, `env "myenv" not found`)
 
 	// Temp file for env
 	tmpFile, err := os.CreateTemp("", "")
 	h.NoError(err)
-	h.Options.EnvFile = tmpFile.Name()
-	defer os.Remove(h.Options.EnvFile)
+	h.Options.EnvConfigFile = tmpFile.Name()
+	defer os.Remove(h.Options.EnvConfigFile)
 
 	// Store a key
 	res = h.Execute("env", "set", "myenv.foo", "bar")
 	h.NoError(res.Err)
 	// Confirm file is YAML with expected values
-	b, err := os.ReadFile(h.Options.EnvFile)
+	b, err := os.ReadFile(h.Options.EnvConfigFile)
 	h.NoError(err)
 	var yamlVals map[string]map[string]map[string]string
 	h.NoError(yaml.Unmarshal(b, &yamlVals))

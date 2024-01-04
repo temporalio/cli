@@ -2,12 +2,14 @@ package temporalcli
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -15,9 +17,14 @@ import (
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"github.com/spf13/viper"
+	"github.com/temporalio/cli/temporalcli/internal/printer"
 	"github.com/temporalio/ui-server/v2/server/version"
+	"go.temporal.io/api/common/v1"
+	"go.temporal.io/api/failure/v1"
+	"go.temporal.io/api/temporalproto"
 	"go.temporal.io/server/common/headers"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"gopkg.in/yaml.v3"
 )
 
@@ -28,25 +35,29 @@ var Version = "0.0.0-DEV"
 type CommandContext struct {
 	// This context is closed on interrupt
 	context.Context
-	Options  CommandOptions
-	EnvFlags map[string]map[string]string
-	EnvViper *viper.Viper
+	Options          CommandOptions
+	EnvConfigValues  map[string]map[string]string
+	FlagsWithEnvVars []*pflag.Flag
 
 	// These values may not be available until after pre-run of main command
-	Printer    Printer
-	JSONOutput bool
-	Logger     *slog.Logger
+	Printer               *printer.Printer
+	Logger                *slog.Logger
+	JSONOutput            bool
+	JSONShorthandPayloads bool
 }
 
 type CommandOptions struct {
 	// If empty, assumed to be os.Args[1:]
 	Args []string
 	// If unset, defaulted to $HOME/.config/temporalio/temporal.yaml
-	EnvFile string
-	// If unset, attempts to extract --env from Args
-	Env string
-	// If true, does not do any env reading
-	DisableEnv bool
+	EnvConfigFile string
+	// If unset, attempts to extract --env from Args (which defaults to "default")
+	EnvConfigName string
+	// If true, does not do any env config reading
+	DisableEnvConfig bool
+	// If nil, os.LookupEnv is used. This is for environment variables and not
+	// related to env config stuff above.
+	LookupEnv func(string) (string, bool)
 
 	// These two default to OS values
 	Stdout io.Writer
@@ -62,11 +73,6 @@ func NewCommandContext(ctx context.Context, options CommandOptions) (*CommandCon
 		return nil, nil, err
 	}
 
-	// Use viper for flag binding
-	v := viper.New()
-	v.Set(cctx.Options.Env, cctx.EnvFlags[cctx.Options.Env])
-	cctx.EnvViper = v.Sub(cctx.Options.Env)
-
 	// Setup interrupt handler
 	ctx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	cctx.Context = ctx
@@ -77,6 +83,9 @@ func (c *CommandContext) preprocessOptions() error {
 	if len(c.Options.Args) == 0 {
 		c.Options.Args = os.Args[1:]
 	}
+	if c.Options.LookupEnv == nil {
+		c.Options.LookupEnv = os.LookupEnv
+	}
 
 	if c.Options.Stdout == nil {
 		c.Options.Stdout = os.Stdout
@@ -85,34 +94,34 @@ func (c *CommandContext) preprocessOptions() error {
 		c.Options.Stderr = os.Stderr
 	}
 
-	if !c.Options.DisableEnv {
-		if c.Options.EnvFile == "" {
+	if !c.Options.DisableEnvConfig {
+		if c.Options.EnvConfigFile == "" {
 			// Default to --env-file, prefetched from CLI args
 			for i, arg := range c.Options.Args {
 				if arg == "--env-file" && i+1 < len(c.Options.Args) {
-					c.Options.EnvFile = c.Options.Args[i+1]
+					c.Options.EnvConfigFile = c.Options.Args[i+1]
 				}
 			}
 			// Default to inside home dir
-			if c.Options.EnvFile == "" {
-				c.Options.EnvFile = defaultEnvFile("temporalio", "temporal")
+			if c.Options.EnvConfigFile == "" {
+				c.Options.EnvConfigFile = defaultEnvConfigFile("temporalio", "temporal")
 			}
 		}
 
-		if c.Options.Env == "" {
-			c.Options.Env = "default"
+		if c.Options.EnvConfigName == "" {
+			c.Options.EnvConfigName = "default"
 			// Default to --env, prefetched from CLI args
 			for i, arg := range c.Options.Args {
 				if arg == "--env" && i+1 < len(c.Options.Args) {
-					c.Options.Env = c.Options.Args[i+1]
+					c.Options.EnvConfigName = c.Options.Args[i+1]
 				}
 			}
 		}
 
 		// Load env flags
-		if c.Options.EnvFile != "" {
+		if c.Options.EnvConfigFile != "" {
 			var err error
-			if c.EnvFlags, err = readEnvFile(c.Options.EnvFile); err != nil {
+			if c.EnvConfigValues, err = readEnvConfigFile(c.Options.EnvConfigFile); err != nil {
 				return err
 			}
 		}
@@ -121,6 +130,11 @@ func (c *CommandContext) preprocessOptions() error {
 	// Setup default fail callback
 	if c.Options.Fail == nil {
 		c.Options.Fail = func(err error) {
+			// If context is closed, say that the program was interrupted and ignore
+			// the actual error
+			if c.Err() != nil {
+				err = fmt.Errorf("program interrupted")
+			}
 			if c.Logger != nil {
 				c.Logger.Error(err.Error())
 			} else {
@@ -132,18 +146,107 @@ func (c *CommandContext) preprocessOptions() error {
 	return nil
 }
 
-func (c *CommandContext) BindConfigFlags(flags *pflag.FlagSet) {
-	if err := c.EnvViper.BindPFlags(flags); err != nil {
-		panic(err)
+const flagEnvVarAnnotation = "__temporal_env_var"
+
+func (c *CommandContext) BindFlagEnvVar(flag *pflag.Flag, envVar string) {
+	if flag.Annotations == nil {
+		flag.Annotations = map[string][]string{}
 	}
+	flag.Annotations[flagEnvVarAnnotation] = []string{envVar}
+	c.FlagsWithEnvVars = append(c.FlagsWithEnvVars, flag)
 }
 
-func (c *CommandContext) WriteEnvToFile() error {
-	if c.Options.EnvFile == "" {
+func (c *CommandContext) WriteEnvConfigToFile() error {
+	if c.Options.EnvConfigFile == "" {
 		return fmt.Errorf("unable to find place for env file (unknown HOME dir)")
 	}
-	c.Logger.Info("Writing env file", "file", c.Options.EnvFile)
-	return writeEnvFile(c.Options.EnvFile, c.EnvFlags)
+	c.Logger.Info("Writing env file", "file", c.Options.EnvConfigFile)
+	return writeEnvConfigFile(c.Options.EnvConfigFile, c.EnvConfigValues)
+}
+
+func (c *CommandContext) MarshalFriendlyJSONPayloads(m *common.Payloads) (json.RawMessage, error) {
+	if m == nil {
+		return []byte("null"), nil
+	}
+	// Use one if there's one, otherwise just serialize whole thing
+	if p := m.GetPayloads(); len(p) == 1 {
+		return c.MarshalProtoJSON(p[0])
+	}
+	return c.MarshalProtoJSON(m)
+}
+
+// Starts with newline
+func (c *CommandContext) MarshalFriendlyFailureBodyText(f *failure.Failure, indent string) (s string) {
+	for f != nil {
+		s += "\n" + indent + "Message: " + f.Message
+		if f.StackTrace != "" {
+			s += "\n" + indent + "StackTrace:\n" + indent + "    " +
+				strings.Join(strings.Split(f.StackTrace, "\n"), "\n"+indent+"    ")
+		}
+		if f = f.Cause; f != nil {
+			s += "\n" + indent + "Cause:"
+			indent += "    "
+		}
+	}
+	return
+}
+
+// Takes payload shorthand into account, can use
+// MarshalProtoJSONNoPayloadShorthand if needed
+func (c *CommandContext) MarshalProtoJSON(m proto.Message) ([]byte, error) {
+	return MarshalProtoJSONWithOptions(m, c.JSONShorthandPayloads)
+}
+
+func MarshalProtoJSONWithOptions(m proto.Message, jsonShorthandPayloads bool) ([]byte, error) {
+	opts := temporalproto.CustomJSONMarshalOptions{Indent: "  "}
+	if jsonShorthandPayloads {
+		opts.Metadata = map[string]any{common.EnablePayloadShorthandMetadataKey: true}
+	}
+	return opts.Marshal(m)
+}
+
+func (c *CommandContext) UnmarshalProtoJSON(b []byte, m proto.Message) error {
+	return UnmarshalProtoJSONWithOptions(b, m, c.JSONShorthandPayloads)
+}
+
+func UnmarshalProtoJSONWithOptions(b []byte, m proto.Message, jsonShorthandPayloads bool) error {
+	opts := temporalproto.CustomJSONUnmarshalOptions{DiscardUnknown: true}
+	if jsonShorthandPayloads {
+		opts.Metadata = map[string]any{common.EnablePayloadShorthandMetadataKey: true}
+	}
+	return opts.Unmarshal(b, m)
+}
+
+func (c *CommandContext) populateEnv(flags *pflag.FlagSet) error {
+	if flags == nil {
+		return nil
+	}
+	var flagErr error
+	flags.VisitAll(func(flag *pflag.Flag) {
+		// If the flag was already changed by the user, we don't overwrite
+		if flagErr != nil || flag.Changed {
+			return
+		}
+		// Env config first, then environ
+		if v, ok := c.EnvConfigValues[c.Options.EnvConfigName][flag.Name]; ok {
+			if err := flag.Value.Set(v); err != nil {
+				flagErr = fmt.Errorf("failed setting flag %v from config with value %v: %w", flag.Name, v, err)
+				return
+			}
+			flag.Changed = true
+		}
+		if anns := flag.Annotations[flagEnvVarAnnotation]; len(anns) == 1 {
+			if envVal, ok := c.Options.LookupEnv(anns[0]); ok {
+				if err := flag.Value.Set(envVal); err != nil {
+					flagErr = fmt.Errorf("failed setting flag %v with env name %v and value %v: %w",
+						flag.Name, anns[0], envVal, err)
+					return
+				}
+				flag.Changed = true
+			}
+		}
+	})
+	return flagErr
 }
 
 // TODO(cretz): Make it clear this logs error
@@ -168,7 +271,13 @@ func (c *TemporalCommand) initCommand(cctx *CommandContext) {
 	// Unfortunately color is a global option, so we can set in pre-run but we
 	// must unset in post-run
 	origNoColor := color.NoColor
-	c.Command.PersistentPreRunE = func(*cobra.Command, []string) error {
+	c.Command.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+		// Populate environ. We will make the error return here which will cause
+		// usage to be printed.
+		if err := cctx.populateEnv(cmd.Flags()); err != nil {
+			return err
+		}
+
 		// Only override if never or always, let auto keep the value
 		if c.Color.Value == "never" || c.Color.Value == "always" {
 			color.NoColor = c.Color.Value == "never"
@@ -214,33 +323,31 @@ func (c *TemporalCommand) preRun(cctx *CommandContext) error {
 	}
 
 	// Configure printer if not already on context
+	cctx.JSONOutput = c.Output.Value == "json"
 	if cctx.Printer == nil {
-		switch c.Output.Value {
-		case "text":
-			opts := TextPrinterOptions{Output: cctx.Options.Stdout}
-			switch c.TimeFormat.Value {
-			case "iso":
-				opts.FormatTime = func(t time.Time) string { return t.Format(time.RFC3339) }
-			case "raw":
-				opts.FormatTime = func(t time.Time) string { return fmt.Sprintf("%v", t) }
-			case "relative":
-				opts.FormatTime = humanize.Time
-			default:
-				panic("unknown time format")
-			}
-			cctx.Printer = NewTextPrinter(opts)
-		case "json":
-			cctx.Printer = NewJSONPrinter(JSONPrinterOptions{Output: cctx.Options.Stdout})
-			cctx.JSONOutput = true
+		cctx.Printer = &printer.Printer{
+			Output:               cctx.Options.Stdout,
+			JSON:                 cctx.JSONOutput,
+			JSONIndent:           "  ",
+			JSONPayloadShorthand: !c.NoJsonShorthandPayloads,
+		}
+		switch c.TimeFormat.Value {
+		case "iso":
+			cctx.Printer.FormatTime = func(t time.Time) string { return t.Format(time.RFC3339) }
+		case "raw":
+			cctx.Printer.FormatTime = func(t time.Time) string { return fmt.Sprintf("%v", t) }
+		case "relative":
+			cctx.Printer.FormatTime = humanize.Time
 		default:
-			return fmt.Errorf("invalid output format %q", c.Output.Value)
+			return fmt.Errorf("invalid time format %q", c.TimeFormat.Value)
 		}
 	}
+	cctx.JSONShorthandPayloads = !c.NoJsonShorthandPayloads
 	return nil
 }
 
 // May be empty result if can't get user home dir
-func defaultEnvFile(appName, configName string) string {
+func defaultEnvConfigFile(appName, configName string) string {
 	// No env file if no $HOME
 	if dir, err := os.UserHomeDir(); err == nil {
 		return filepath.Join(dir, ".config", appName, configName+".yaml")
@@ -248,7 +355,7 @@ func defaultEnvFile(appName, configName string) string {
 	return ""
 }
 
-func readEnvFile(file string) (env map[string]map[string]string, err error) {
+func readEnvConfigFile(file string) (env map[string]map[string]string, err error) {
 	b, err := os.ReadFile(file)
 	if os.IsNotExist(err) {
 		return nil, nil
@@ -262,7 +369,7 @@ func readEnvFile(file string) (env map[string]map[string]string, err error) {
 	return m["env"], nil
 }
 
-func writeEnvFile(file string, env map[string]map[string]string) error {
+func writeEnvConfigFile(file string, env map[string]map[string]string) error {
 	b, err := yaml.Marshal(map[string]any{"env": env})
 	if err != nil {
 		return fmt.Errorf("failed marshaling YAML: %w", err)
@@ -284,3 +391,10 @@ func (discardLogHandler) Enabled(context.Context, slog.Level) bool  { return fal
 func (discardLogHandler) Handle(context.Context, slog.Record) error { return nil }
 func (d discardLogHandler) WithAttrs([]slog.Attr) slog.Handler      { return d }
 func (d discardLogHandler) WithGroup(string) slog.Handler           { return d }
+
+func timestampToTime(t *timestamppb.Timestamp) time.Time {
+	if t == nil {
+		return time.Time{}
+	}
+	return t.AsTime()
+}

@@ -6,12 +6,16 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"os"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 	"github.com/temporalio/cli/temporalcli"
 	"github.com/temporalio/cli/temporalcli/devserver"
 	"go.temporal.io/sdk/client"
@@ -21,23 +25,60 @@ import (
 
 type CommandHarness struct {
 	*require.Assertions
-	T       *testing.T
+	t       *testing.T
 	Options temporalcli.CommandOptions
 	// Defaults to a context closed on close or test complete
 	Context context.Context
 	// Can be used to cancel context given to commands (simulating interrupt)
 	CancelContext context.CancelFunc
+
+	previousEnv map[string]*string
 }
 
 func NewCommandHarness(t *testing.T) *CommandHarness {
-	h := &CommandHarness{Assertions: require.New(t), T: t}
+	h := &CommandHarness{Assertions: require.New(t), t: t}
 	h.Context, h.CancelContext = context.WithCancel(context.Background())
 	t.Cleanup(h.Close)
 	return h
 }
 
 // Reentrant, called after test by default, cancels context
-func (h *CommandHarness) Close() { h.CancelContext() }
+func (h *CommandHarness) Close() {
+	// Cancel context
+	if h.CancelContext != nil {
+		h.CancelContext()
+	}
+	// Put env changes back
+	for k, v := range h.previousEnv {
+		if v == nil {
+			os.Unsetenv(k)
+		} else {
+			os.Setenv(k, *v)
+		}
+	}
+}
+
+func (h *CommandHarness) ContainsOnSameLine(text string, pieces ...string) {
+	// Split into lines, then check each piece is present
+	lines := strings.Split(text, "\n")
+	for _, line := range lines {
+		foundAll := true
+		for _, piece := range pieces {
+			if !strings.Contains(line, piece) {
+				foundAll = false
+				break
+			}
+		}
+		if foundAll {
+			return
+		}
+	}
+	h.Fail("Pieces not found on any line together")
+}
+
+func (h *CommandHarness) T() *testing.T {
+	return h.t
+}
 
 type CommandResult struct {
 	Err    error
@@ -53,8 +94,8 @@ func (h *CommandHarness) Execute(args ...string) *CommandResult {
 	options.Stdout, options.Stderr = &res.Stdout, &res.Stderr
 	// Set args
 	options.Args = args
-	// Disable env if no env file
-	options.DisableEnv = options.EnvFile == ""
+	// Disable env if no env file and no --env-file arg
+	options.DisableEnvConfig = options.EnvConfigFile == "" && !slices.Contains(args, "--env-file")
 	// Capture error
 	options.Fail = func(err error) {
 		if res.Err != nil {
@@ -65,47 +106,81 @@ func (h *CommandHarness) Execute(args ...string) *CommandResult {
 
 	// Run
 	ctx, cancel := context.WithCancel(h.Context)
-	h.T.Cleanup(cancel)
+	h.t.Cleanup(cancel)
 	defer cancel()
-	h.T.Logf("Calling: %v", strings.Join(args, " "))
+	h.t.Logf("Calling: %v", strings.Join(args, " "))
 	temporalcli.Execute(ctx, options)
 	if res.Stdout.Len() > 0 {
-		h.T.Logf("Stdout:\n-----\n%s-----", &res.Stdout)
+		h.t.Logf("Stdout:\n-----\n%s\n-----", &res.Stdout)
 	}
 	if res.Stderr.Len() > 0 {
-		h.T.Logf("Stderr:\n-----\n%s-----", &res.Stderr)
+		h.t.Logf("Stderr:\n-----\n%s\n-----", &res.Stderr)
 	}
 	return res
 }
 
-type WorkerCommandHarness struct {
+// Run shared server suite
+func TestSharedServerSuite(t *testing.T) {
+	suite.Run(t, new(SharedServerSuite))
+}
+
+type SharedServerSuite struct {
+	// Replaced each test
 	*CommandHarness
-	Server *DevServer
+
+	*DevServer
 	Worker *DevWorker
+	Suite  suite.Suite
 }
 
-type WorkerCommandHarnessOptions struct {
-	Server DevServerOptions
-	Worker DevWorkerOptions
-}
-
-// NewCommandHarness + StartDevServer + StartDevWorker
-func StartWorkerCommandHarness(t *testing.T, options WorkerCommandHarnessOptions) *WorkerCommandHarness {
-	h := &WorkerCommandHarness{CommandHarness: NewCommandHarness(t)}
+func (s *SharedServerSuite) SetupSuite() {
+	s.DevServer = StartDevServer(s.Suite.T(), DevServerOptions{})
+	// Stop server if we fail later
 	success := false
 	defer func() {
 		if !success {
-			h.Close()
+			s.Server.Stop()
 		}
 	}()
-	h.Server = h.StartDevServer(options.Server)
-	h.Worker = h.Server.StartDevWorker(options.Worker)
+	s.Worker = s.DevServer.StartDevWorker(s.Suite.T(), DevWorkerOptions{})
 	success = true
-	return h
 }
 
+func (s *SharedServerSuite) TearDownSuite() {
+	s.Stop()
+}
+
+func (s *SharedServerSuite) Stop() {
+	s.Worker.Stop()
+	s.DevServer.Stop()
+}
+
+func (s *SharedServerSuite) SetupTest() {
+	// Clear log buffer
+	s.ResetLogOutput()
+	// Reset worker
+	s.Worker.Reset()
+	// Create new command harness
+	s.CommandHarness = NewCommandHarness(s.Suite.T())
+}
+
+func (s *SharedServerSuite) TearDownTest() {
+	// If there is log output, log it
+	if b := s.LogOutput(); len(b) > 0 {
+		s.t.Logf("Server/SDK Log Output:\n-----\n%s-----", b)
+	}
+	if s.CommandHarness != nil {
+		s.CommandHarness.Close()
+	}
+	s.CommandHarness = nil
+}
+
+func (s *SharedServerSuite) T() *testing.T                 { return s.Suite.T() }
+func (s *SharedServerSuite) SetT(t *testing.T)             { s.Suite.SetT(t) }
+func (s *SharedServerSuite) SetS(suite suite.TestingSuite) { s.Suite.SetS(suite) }
+
 type DevServer struct {
-	Harness *CommandHarness
+	Server *devserver.Server
 	// With defaults populated
 	Options DevServerOptions
 	// For first namespace in options
@@ -122,12 +197,10 @@ type DevServerOptions struct {
 	ClientOptions client.Options
 }
 
-// Automatically closed when harness context is (create new harness if needing
-// to separate from another harness). Logs are dumped to test Logf on test
-// cleanup.
-func (h *CommandHarness) StartDevServer(options DevServerOptions) *DevServer {
-	// Prepare options
-	d := &DevServer{Harness: h, Options: options}
+func StartDevServer(t *testing.T, options DevServerOptions) *DevServer {
+	success := false
+	// Build options
+	d := &DevServer{Options: options}
 	if d.Options.FrontendIP == "" {
 		d.Options.FrontendIP = "127.0.0.1"
 	}
@@ -138,48 +211,62 @@ func (h *CommandHarness) StartDevServer(options DevServerOptions) *DevServer {
 		d.Options.Namespaces = []string{"default"}
 	}
 	if d.Options.Logger == nil {
-		d.Options.Logger = slog.New(slog.NewTextHandler(
-			&concurrentWriter{w: &d.logOutput, wLock: &d.logOutputLock}, &slog.HandlerOptions{AddSource: true}))
+		w := &concurrentWriter{w: &d.logOutput, wLock: &d.logOutputLock}
+		d.Options.Logger = slog.New(slog.NewTextHandler(w, &slog.HandlerOptions{AddSource: true}))
+		// If this fails, we want to dump logs
+		defer func() {
+			if !success {
+				if b := d.LogOutput(); len(b) > 0 {
+					t.Logf("Server/SDK Log Output:\n-----\n%s-----", b)
+				}
+			}
+		}()
 	}
 	if d.Options.ClientOptions.Logger == nil {
 		d.Options.ClientOptions.Logger = d.Options.Logger
 	}
 	d.Options.ClientOptions.HostPort = fmt.Sprintf("%v:%v", d.Options.FrontendIP, d.Options.FrontendPort)
 	d.Options.ClientOptions.Namespace = d.Options.Namespaces[0]
-
-	// Create new context, cancel it on failure in this method
-	serverCtx, cancel := context.WithCancel(h.Context)
-	success := false
-	defer func() {
-		if !success {
-			cancel()
-		}
-	}()
+	if d.Options.ClientOptions.Identity == "" {
+		d.Options.ClientOptions.Identity = "cli-test-client"
+	}
 
 	// Start
-	srv, err := devserver.Start(d.Options.StartOptions)
-	// Dump logs on cleanup
-	h.T.Cleanup(func() {
-		h.T.Logf("Server/SDK Log Output:\n-----\n%s-----", d.LogOutput())
-	})
-	h.NoError(err)
-	// Stop on context cancel
-	go func() {
-		<-serverCtx.Done()
-		srv.Stop()
+	var err error
+	d.Server, err = devserver.Start(d.Options.StartOptions)
+	require.NoError(t, err)
+	defer func() {
+		if !success {
+			d.Server.Stop()
+		}
 	}()
 
 	// Dial client
 	d.Client, err = client.Dial(d.Options.ClientOptions)
-	h.NoError(err)
+	require.NoError(t, err)
 	success = true
 	return d
+}
+
+func (d *DevServer) Stop() {
+	d.Client.Close()
+	d.Server.Stop()
 }
 
 func (d *DevServer) LogOutput() []byte {
 	d.logOutputLock.RLock()
 	defer d.logOutputLock.RUnlock()
-	return d.logOutput.Bytes()
+	// Copy bytes
+	b := d.logOutput.Bytes()
+	newB := make([]byte, len(b))
+	copy(newB, b)
+	return newB
+}
+
+func (d *DevServer) ResetLogOutput() {
+	d.logOutputLock.Lock()
+	defer d.logOutputLock.Unlock()
+	d.logOutput.Reset()
 }
 
 // Shortcut for d.Options.ClientOptions.HostPort
@@ -193,13 +280,15 @@ func (d *DevServer) Namespace() string {
 }
 
 type DevWorker struct {
-	// Has defaults populated. Any DevWorkflowX options here can be mutated after
-	// start.
+	Worker worker.Worker
+	// Has defaults populated
 	Options DevWorkerOptions
-	Worker  worker.Worker
-	// If mutating Options.DevWorkflowX fields after a workflow may have started,
-	// a write lock needs to be obtained
-	DevWorkflowLock sync.RWMutex
+
+	// Do not access these fields directly
+	devOpsLock           sync.Mutex
+	devWorkflowCallback  func(workflow.Context, any) (any, error)
+	devWorkflowLastInput any
+	devActivityCallback  func(context.Context, any) (any, error)
 }
 
 type DevWorkerOptions struct {
@@ -208,63 +297,100 @@ type DevWorkerOptions struct {
 	TaskQueue string
 	// Optional, no default, but DevWorkflow is always registered
 	Workflows []any
-	// Optional, no default
+	// Optional, no default, but DevActivity is always registered
 	Activities []any
-
-	// If unset, default behavior is just to return DevWorkflowOutput
-	DevWorkflowOnRun func(workflow.Context, any) (any, error)
-	// Ignored if DevWorkflowOnRun is non-nil
-	DevWorkflowOutput any
-	// Ignored if DevWorkflowOnRun is non-nil
-	DevWorkflowError error
 }
 
 // Simply a stub for client use
 func DevWorkflow(workflow.Context, any) (any, error) { panic("Unreachable") }
 
+// Simply a stub for client use
+func DevActivity(context.Context, any) (any, error) { panic("Unreachable") }
+
 // Stops when harness closes.
-func (d *DevServer) StartDevWorker(options DevWorkerOptions) *DevWorker {
+func (d *DevServer) StartDevWorker(t *testing.T, options DevWorkerOptions) *DevWorker {
 	// Prepare options
 	w := &DevWorker{Options: options}
 	if w.Options.TaskQueue == "" {
 		w.Options.TaskQueue = uuid.NewString()
+	}
+	if w.Options.Worker.OnFatalError == nil {
+		w.Options.Worker.OnFatalError = func(err error) {
+			t.Logf("Worker fatal error: %v", err)
+		}
 	}
 	// Create worker and register workflows/activities
 	w.Worker = worker.New(d.Client, w.Options.TaskQueue, w.Options.Worker)
 	for _, wf := range w.Options.Workflows {
 		w.Worker.RegisterWorkflow(wf)
 	}
-	w.Worker.RegisterWorkflowWithOptions(
-		(&devWorkflow{opts: &w.Options, optsLock: &w.DevWorkflowLock}).DevWorkflow,
-		workflow.RegisterOptions{Name: "DevWorkflow"},
-	)
 	for _, act := range w.Options.Activities {
 		w.Worker.RegisterActivity(act)
 	}
+	ops := &devOperations{w}
+	w.Worker.RegisterWorkflowWithOptions(ops.DevWorkflow, workflow.RegisterOptions{Name: "DevWorkflow"})
+	w.Worker.RegisterActivity(ops.DevActivity)
 	// Start worker or fail
-	d.Harness.NoError(w.Worker.Start(), "failed starting worker")
-
-	// Stop on context cancel
-	go func() {
-		d.Harness.Context.Done()
-		w.Worker.Stop()
-	}()
+	require.NoError(t, w.Worker.Start(), "failed starting worker")
 	return w
 }
 
-type devWorkflow struct {
-	opts     *DevWorkerOptions
-	optsLock *sync.RWMutex
+func (d *DevWorker) Stop() {
+	d.Worker.Stop()
 }
 
-func (d *devWorkflow) DevWorkflow(ctx workflow.Context, input any) (any, error) {
-	d.optsLock.RLock()
-	run, out, err := d.opts.DevWorkflowOnRun, d.opts.DevWorkflowOutput, d.opts.DevWorkflowError
-	d.optsLock.RUnlock()
-	if run != nil {
-		return run(ctx, input)
+// Default is just to return DevActivity result
+func (d *DevWorker) OnDevWorkflow(fn func(workflow.Context, any) (any, error)) {
+	d.devOpsLock.Lock()
+	defer d.devOpsLock.Unlock()
+	d.devWorkflowCallback = fn
+}
+
+func (d *DevWorker) DevWorkflowLastInput() any {
+	d.devOpsLock.Lock()
+	defer d.devOpsLock.Unlock()
+	return d.devWorkflowLastInput
+}
+
+// Default is just to return result
+func (d *DevWorker) OnDevActivity(fn func(context.Context, any) (any, error)) {
+	d.devOpsLock.Lock()
+	defer d.devOpsLock.Unlock()
+	d.devActivityCallback = fn
+}
+
+func (d *DevWorker) Reset() {
+	d.devOpsLock.Lock()
+	defer d.devOpsLock.Unlock()
+	d.devWorkflowCallback = nil
+	d.devWorkflowLastInput = nil
+	d.devActivityCallback = nil
+}
+
+type devOperations struct{ worker *DevWorker }
+
+func (d *devOperations) DevWorkflow(ctx workflow.Context, input any) (any, error) {
+	d.worker.devOpsLock.Lock()
+	d.worker.devWorkflowLastInput = input
+	callback := d.worker.devWorkflowCallback
+	d.worker.devOpsLock.Unlock()
+	if callback != nil {
+		return callback(ctx, input)
 	}
-	return out, err
+	ctx = workflow.WithActivityOptions(ctx, workflow.ActivityOptions{StartToCloseTimeout: 10 * time.Second})
+	var res any
+	err := workflow.ExecuteActivity(ctx, DevActivity, input).Get(ctx, &res)
+	return res, err
+}
+
+func (d *devOperations) DevActivity(ctx context.Context, input any) (any, error) {
+	d.worker.devOpsLock.Lock()
+	callback := d.worker.devActivityCallback
+	d.worker.devOpsLock.Unlock()
+	if callback != nil {
+		return callback(ctx, input)
+	}
+	return input, nil
 }
 
 type concurrentWriter struct {

@@ -64,18 +64,18 @@ func persistentClusterID() string {
 	// If there is not a database file in use, we want a cluster ID to be the same
 	// for every re-run, so we set it as an environment config in a special env
 	// file. We do not error if we can neither read nor write the file.
-	file := defaultEnvFile("temporalio", "version-info")
+	file := defaultEnvConfigFile("temporalio", "version-info")
 	if file == "" {
 		// No file, can do nothing here
 		return uuid.NewString()
 	}
 	// Try to get existing first
-	env, _ := readEnvFile(file)
+	env, _ := readEnvConfigFile(file)
 	if id := env["default"]["cluster-id"]; id != "" {
 		return id
 	}
 	// Create and try to write
 	id := uuid.NewString()
-	_ = writeEnvFile(file, map[string]map[string]string{"default": {"cluster-id": id}})
+	_ = writeEnvConfigFile(file, map[string]map[string]string{"default": {"cluster-id": id}})
 	return id
 }

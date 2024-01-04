@@ -6,19 +6,7 @@ func (*TemporalWorkflowCancelCommand) run(*CommandContext, []string) error {
 	return fmt.Errorf("TODO")
 }
 
-func (*TemporalWorkflowCountCommand) run(*CommandContext, []string) error {
-	return fmt.Errorf("TODO")
-}
-
 func (*TemporalWorkflowDeleteCommand) run(*CommandContext, []string) error {
-	return fmt.Errorf("TODO")
-}
-
-func (*TemporalWorkflowDescribeCommand) run(*CommandContext, []string) error {
-	return fmt.Errorf("TODO")
-}
-
-func (*TemporalWorkflowListCommand) run(*CommandContext, []string) error {
 	return fmt.Errorf("TODO")
 }
 
@@ -31,10 +19,6 @@ func (*TemporalWorkflowResetCommand) run(*CommandContext, []string) error {
 }
 
 func (*TemporalWorkflowResetBatchCommand) run(*CommandContext, []string) error {
-	return fmt.Errorf("TODO")
-}
-
-func (*TemporalWorkflowShowCommand) run(*CommandContext, []string) error {
 	return fmt.Errorf("TODO")
 }
 

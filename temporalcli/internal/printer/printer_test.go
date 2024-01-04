@@ -1,4 +1,4 @@
-package temporalcli_test
+package printer_test
 
 import (
 	"bytes"
@@ -6,7 +6,8 @@ import (
 	"testing"
 	"unicode"
 
-	"github.com/temporalio/cli/temporalcli"
+	"github.com/stretchr/testify/require"
+	"github.com/temporalio/cli/temporalcli/internal/printer"
 )
 
 // TODO(cretz): Test:
@@ -15,43 +16,45 @@ import (
 // * JSON printer
 
 func TestTextPrinter(t *testing.T) {
-	h := NewCommandHarness(t)
-	defer h.Close()
 	type MyStruct struct {
-		Foo             string
-		Bar             bool
-		unexportedBaz   string
-		ReallyLongField any
+		Foo              string
+		Bar              bool
+		unexportedBaz    string
+		ReallyLongField  any
+		Omitted          string `cli:",omit"`
+		OmittedCardEmpty string `cli:",cardOmitEmpty"`
 	}
 	var buf bytes.Buffer
-	p := temporalcli.NewTextPrinter(temporalcli.TextPrinterOptions{Output: &buf})
-
+	p := printer.Printer{Output: &buf}
 	// Simple struct non-table no fields set
-	h.NoError(p.Print(temporalcli.PrintOptions{}, []*MyStruct{
+	require.NoError(t, p.PrintStructured([]*MyStruct{
 		{
 			Foo:           "1",
 			unexportedBaz: "2",
 			ReallyLongField: struct {
 				Key any `json:"key"`
 			}{Key: 123},
+			Omitted:          "value",
+			OmittedCardEmpty: "value",
 		},
 		{
 			Foo:             "not-a-number",
 			Bar:             true,
 			ReallyLongField: map[string]int{"": 0},
 		},
-	}))
+	}, printer.StructuredOptions{}))
 	// Check
-	h.Equal(normalizeMultiline(`
-  Foo                        1
-  Bar              false
-  ReallyLongField  {"key":123}
+	require.Equal(t, normalizeMultiline(`
+  Foo               1
+  Bar               false
+  ReallyLongField   {"key":123}
+  OmittedCardEmpty  value
 
   Foo              not-a-number
   Bar              true
   ReallyLongField  map[:0]`), normalizeMultiline(buf.String()))
 
-	// TODO(cretz): more
+	// TODO(cretz): Tables and more options
 }
 
 func normalizeMultiline(s string) string {

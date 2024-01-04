@@ -17,14 +17,15 @@ import (
 var hasHighlighting = isatty.IsTerminal(os.Stdout.Fd())
 
 type TemporalCommand struct {
-	Command    cobra.Command
-	Env        string
-	EnvFile    string
-	LogLevel   StringEnum
-	LogFormat  StringEnum
-	Output     StringEnum
-	TimeFormat StringEnum
-	Color      StringEnum
+	Command                 cobra.Command
+	Env                     string
+	EnvFile                 string
+	LogLevel                StringEnum
+	LogFormat               StringEnum
+	Output                  StringEnum
+	TimeFormat              StringEnum
+	Color                   StringEnum
+	NoJsonShorthandPayloads bool
 }
 
 func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
@@ -35,8 +36,10 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalEnvCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalServerCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalTaskQueueCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowCommand(cctx, &s).Command)
-	s.Command.PersistentFlags().StringVar(&s.Env, "env", "default", "Environment to read environmental variables from.")
+	s.Command.PersistentFlags().StringVar(&s.Env, "env", "default", "Environment to read environment-specific flags from.")
+	cctx.BindFlagEnvVar(s.Command.PersistentFlags().Lookup("env"), "TEMPORAL_ENV")
 	s.Command.PersistentFlags().StringVar(&s.EnvFile, "env-file", "", "File to read all environments (defaults to `$HOME/.config/temporalio/temporal.yaml`).")
 	s.LogLevel = NewStringEnum([]string{"debug", "info", "warn", "error", "off"}, "info")
 	s.Command.PersistentFlags().Var(&s.LogLevel, "log-level", "Log level.")
@@ -48,7 +51,7 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	s.Command.PersistentFlags().Var(&s.TimeFormat, "time-format", "Time format.")
 	s.Color = NewStringEnum([]string{"always", "never", "auto"}, "auto")
 	s.Command.PersistentFlags().Var(&s.Color, "color", "Set coloring.")
-	cctx.BindConfigFlags(s.Command.PersistentFlags())
+	s.Command.PersistentFlags().BoolVar(&s.NoJsonShorthandPayloads, "no-json-shorthand-payloads", false, "Always all payloads as raw payloads even if they are JSON.")
 	s.initCommand(cctx)
 	return &s
 }
@@ -69,7 +72,6 @@ func NewTemporalEnvCommand(cctx *CommandContext, parent *TemporalCommand) *Tempo
 	s.Command.AddCommand(&NewTemporalEnvGetCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalEnvListCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalEnvSetCommand(cctx, &s).Command)
-	cctx.BindConfigFlags(s.Command.PersistentFlags())
 	return &s
 }
 
@@ -94,7 +96,6 @@ func NewTemporalEnvDeleteCommand(cctx *CommandContext, parent *TemporalEnvComman
 			cctx.Options.Fail(err)
 		}
 	}
-	cctx.BindConfigFlags(s.Command.Flags())
 	return &s
 }
 
@@ -119,7 +120,6 @@ func NewTemporalEnvGetCommand(cctx *CommandContext, parent *TemporalEnvCommand) 
 			cctx.Options.Fail(err)
 		}
 	}
-	cctx.BindConfigFlags(s.Command.Flags())
 	return &s
 }
 
@@ -140,7 +140,6 @@ func NewTemporalEnvListCommand(cctx *CommandContext, parent *TemporalEnvCommand)
 			cctx.Options.Fail(err)
 		}
 	}
-	cctx.BindConfigFlags(s.Command.Flags())
 	return &s
 }
 
@@ -165,7 +164,6 @@ func NewTemporalEnvSetCommand(cctx *CommandContext, parent *TemporalEnvCommand) 
 			cctx.Options.Fail(err)
 		}
 	}
-	cctx.BindConfigFlags(s.Command.Flags())
 	return &s
 }
 
@@ -186,7 +184,6 @@ func NewTemporalServerCommand(cctx *CommandContext, parent *TemporalCommand) *Te
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalServerStartDevCommand(cctx, &s).Command)
-	cctx.BindConfigFlags(s.Command.PersistentFlags())
 	return &s
 }
 
@@ -239,7 +236,58 @@ func NewTemporalServerStartDevCommand(cctx *CommandContext, parent *TemporalServ
 			cctx.Options.Fail(err)
 		}
 	}
-	cctx.BindConfigFlags(s.Command.Flags())
+	return &s
+}
+
+type TemporalTaskQueueCommand struct {
+	Parent  *TemporalCommand
+	Command cobra.Command
+	ClientOptions
+}
+
+func NewTemporalTaskQueueCommand(cctx *CommandContext, parent *TemporalCommand) *TemporalTaskQueueCommand {
+	var s TemporalTaskQueueCommand
+	s.Parent = parent
+	s.Command.Use = "task-queue"
+	s.Command.Short = "Manage Task Queues."
+	if hasHighlighting {
+		s.Command.Long = "Task Queue commands allow operations to be performed on Task Queues. To run a Task\nQueue command, run \x1b[1mtemporal task-queue [command] [command options]\x1b[0m."
+	} else {
+		s.Command.Long = "Task Queue commands allow operations to be performed on Task Queues. To run a Task\nQueue command, run `temporal task-queue [command] [command options]`."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalTaskQueueDescribeCommand(cctx, &s).Command)
+	s.ClientOptions.buildFlags(cctx, s.Command.PersistentFlags())
+	return &s
+}
+
+type TemporalTaskQueueDescribeCommand struct {
+	Parent        *TemporalTaskQueueCommand
+	Command       cobra.Command
+	TaskQueue     string
+	TaskQueueType StringEnum
+}
+
+func NewTemporalTaskQueueDescribeCommand(cctx *CommandContext, parent *TemporalTaskQueueCommand) *TemporalTaskQueueDescribeCommand {
+	var s TemporalTaskQueueDescribeCommand
+	s.Parent = parent
+	s.Command.Use = "describe"
+	s.Command.Short = "Provides information for Workers that have recently polled on this Task Queue."
+	if hasHighlighting {
+		s.Command.Long = "The \x1b[1mtemporal task-queue describe\x1b[0m command provides poller\ninformation for a given Task Queue.\n\nThe Server records the last time of each poll request. A \x1b[1mLastAccessTime\x1b[0m value\nin excess of one minute can indicate the Worker is at capacity (all Workflow and Activity slots are full) or that the\nWorker has shut down. Workers are removed if 5 minutes have passed since the last poll\nrequest.\n\nInformation about the Task Queue can be returned to troubleshoot server issues.\n\n\x1b[1mtemporal task-queue describe --task-queue=MyTaskQueue --task-queue-type=\"activity\"\x1b[0m\n\nUse the options listed below to modify what this command returns."
+	} else {
+		s.Command.Long = "The `temporal task-queue describe` command provides poller\ninformation for a given Task Queue.\n\nThe Server records the last time of each poll request. A `LastAccessTime` value\nin excess of one minute can indicate the Worker is at capacity (all Workflow and Activity slots are full) or that the\nWorker has shut down. Workers are removed if 5 minutes have passed since the last poll\nrequest.\n\nInformation about the Task Queue can be returned to troubleshoot server issues.\n\n`temporal task-queue describe --task-queue=MyTaskQueue --task-queue-type=\"activity\"`\n\nUse the options listed below to modify what this command returns."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task queue name.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
+	s.TaskQueueType = NewStringEnum([]string{"workflow", "activity"}, "workflow")
+	s.Command.Flags().Var(&s.TaskQueueType, "task-queue-type", "Task Queue type.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
 	return &s
 }
 
@@ -253,25 +301,32 @@ type ClientOptions struct {
 	TlsCaPath                  string
 	TlsDisableHostVerification bool
 	TlsServerName              string
-	ContextTimeout             time.Duration
 	CodecEndpoint              string
 	CodecAuth                  string
 }
 
-func (v *ClientOptions) buildFlags(f *pflag.FlagSet) {
-	f.StringVar(&v.Address, "address", "", "Temporal server address.")
-	_ = cobra.MarkFlagRequired(f, "address")
+func (v *ClientOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
+	f.StringVar(&v.Address, "address", "127.0.0.1:7233", "Temporal server address.")
+	cctx.BindFlagEnvVar(f.Lookup("address"), "TEMPORAL_ADDRESS")
 	f.StringVarP(&v.Namespace, "namespace", "n", "default", "Temporal server namespace.")
-	f.StringArrayVar(&v.GrpcMeta, "grpc-meta", nil, "Contains gRPC metadata to send with requests (formatted as key=value).")
+	cctx.BindFlagEnvVar(f.Lookup("namespace"), "TEMPORAL_NAMESPACE")
+	f.StringArrayVar(&v.GrpcMeta, "grpc-meta", nil, "HTTP headers to send with requests (formatted as key=value).")
 	f.BoolVar(&v.Tls, "tls", false, "Enable TLS encryption without additional options such as mTLS or client certificates.")
+	cctx.BindFlagEnvVar(f.Lookup("tls"), "TEMPORAL_TLS")
 	f.StringVar(&v.TlsCertPath, "tls-cert-path", "", "Path to x509 certificate.")
+	cctx.BindFlagEnvVar(f.Lookup("tls-cert-path"), "TEMPORAL_TLS_CERT")
 	f.StringVar(&v.TlsKeyPath, "tls-key-path", "", "Path to private certificate key.")
+	cctx.BindFlagEnvVar(f.Lookup("tls-key-path"), "TEMPORAL_TLS_KEY")
 	f.StringVar(&v.TlsCaPath, "tls-ca-path", "", "Path to server CA certificate.")
+	cctx.BindFlagEnvVar(f.Lookup("tls-ca-path"), "TEMPORAL_TLS_CA")
 	f.BoolVar(&v.TlsDisableHostVerification, "tls-disable-host-verification", false, "Disables TLS host-name verification.")
+	cctx.BindFlagEnvVar(f.Lookup("tls-disable-host-verification"), "TEMPORAL_TLS_DISABLE_HOST_VERIFICATION")
 	f.StringVar(&v.TlsServerName, "tls-server-name", "", "Overrides target TLS server name.")
-	f.DurationVar(&v.ContextTimeout, "context-timeout", 5000*time.Millisecond, "Optional timeout for the context of an RPC call.")
+	cctx.BindFlagEnvVar(f.Lookup("tls-server-name"), "TEMPORAL_TLS_SERVER_NAME")
 	f.StringVar(&v.CodecEndpoint, "codec-endpoint", "", "Endpoint for a remote Codec Server.")
+	cctx.BindFlagEnvVar(f.Lookup("codec-endpoint"), "TEMPORAL_CODEC_ENDPOINT")
 	f.StringVar(&v.CodecAuth, "codec-auth", "", "Sets the authorization header on requests to the Codec Server.")
+	cctx.BindFlagEnvVar(f.Lookup("codec-auth"), "TEMPORAL_CODEC_AUTH")
 }
 
 type TemporalWorkflowCommand struct {
@@ -307,8 +362,7 @@ func NewTemporalWorkflowCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.AddCommand(&NewTemporalWorkflowTerminateCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowTraceCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowUpdateCommand(cctx, &s).Command)
-	s.ClientOptions.buildFlags(s.Command.PersistentFlags())
-	cctx.BindConfigFlags(s.Command.PersistentFlags())
+	s.ClientOptions.buildFlags(cctx, s.Command.PersistentFlags())
 	return &s
 }
 
@@ -329,7 +383,6 @@ func NewTemporalWorkflowCancelCommand(cctx *CommandContext, parent *TemporalWork
 			cctx.Options.Fail(err)
 		}
 	}
-	cctx.BindConfigFlags(s.Command.Flags())
 	return &s
 }
 
@@ -350,7 +403,6 @@ func NewTemporalWorkflowCountCommand(cctx *CommandContext, parent *TemporalWorkf
 			cctx.Options.Fail(err)
 		}
 	}
-	cctx.BindConfigFlags(s.Command.Flags())
 	return &s
 }
 
@@ -371,7 +423,6 @@ func NewTemporalWorkflowDeleteCommand(cctx *CommandContext, parent *TemporalWork
 			cctx.Options.Fail(err)
 		}
 	}
-	cctx.BindConfigFlags(s.Command.Flags())
 	return &s
 }
 
@@ -405,7 +456,6 @@ func NewTemporalWorkflowDescribeCommand(cctx *CommandContext, parent *TemporalWo
 			cctx.Options.Fail(err)
 		}
 	}
-	cctx.BindConfigFlags(s.Command.Flags())
 	return &s
 }
 
@@ -428,15 +478,14 @@ func NewTemporalWorkflowExecuteCommand(cctx *CommandContext, parent *TemporalWor
 		s.Command.Long = "The `temporal workflow execute` command starts a new Workflow Execution and\nprints its progress. The command completes when the Workflow Execution completes.\n\nSingle quotes('') are used to wrap input as JSON.\n\n```\ntemporal workflow execute\n\t\t--workflow-id meaningful-business-id \\\n\t\t--type MyWorkflow \\\n\t\t--task-queue MyTaskQueue \\\n\t\t--input '{\"Input\": \"As-JSON\"}'\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.WorkflowStartOptions.buildFlags(s.Command.Flags())
-	s.PayloadInputOptions.buildFlags(s.Command.Flags())
-	s.Command.Flags().BoolVar(&s.EventDetails, "event-details", false, "If set, when using text output this will print the event details instead of just the event during workflow progress.")
+	s.WorkflowStartOptions.buildFlags(cctx, s.Command.Flags())
+	s.PayloadInputOptions.buildFlags(cctx, s.Command.Flags())
+	s.Command.Flags().BoolVar(&s.EventDetails, "event-details", false, "If set when using text output, this will print the event details instead of just the event during workflow progress. If set when using JSON output, this will include the entire \"history\" JSON key of the started run (does not follow runs).")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
 		}
 	}
-	cctx.BindConfigFlags(s.Command.Flags())
 	return &s
 }
 
@@ -445,6 +494,7 @@ type TemporalWorkflowListCommand struct {
 	Command  cobra.Command
 	Query    string
 	Archived bool
+	Limit    int
 }
 
 func NewTemporalWorkflowListCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowListCommand {
@@ -460,12 +510,12 @@ func NewTemporalWorkflowListCommand(cctx *CommandContext, parent *TemporalWorkfl
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Filter results using a SQL-like query.")
 	s.Command.Flags().BoolVar(&s.Archived, "archived", false, "If set, will only query and list archived workflows instead of regular workflows.")
+	s.Command.Flags().IntVar(&s.Limit, "limit", 0, "Limit the number of items to print.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
 		}
 	}
-	cctx.BindConfigFlags(s.Command.Flags())
 	return &s
 }
 
@@ -486,7 +536,6 @@ func NewTemporalWorkflowQueryCommand(cctx *CommandContext, parent *TemporalWorkf
 			cctx.Options.Fail(err)
 		}
 	}
-	cctx.BindConfigFlags(s.Command.Flags())
 	return &s
 }
 
@@ -507,7 +556,6 @@ func NewTemporalWorkflowResetCommand(cctx *CommandContext, parent *TemporalWorkf
 			cctx.Options.Fail(err)
 		}
 	}
-	cctx.BindConfigFlags(s.Command.Flags())
 	return &s
 }
 
@@ -528,7 +576,6 @@ func NewTemporalWorkflowResetBatchCommand(cctx *CommandContext, parent *Temporal
 			cctx.Options.Fail(err)
 		}
 	}
-	cctx.BindConfigFlags(s.Command.Flags())
 	return &s
 }
 
@@ -562,7 +609,6 @@ func NewTemporalWorkflowShowCommand(cctx *CommandContext, parent *TemporalWorkfl
 			cctx.Options.Fail(err)
 		}
 	}
-	cctx.BindConfigFlags(s.Command.Flags())
 	return &s
 }
 
@@ -583,7 +629,6 @@ func NewTemporalWorkflowSignalCommand(cctx *CommandContext, parent *TemporalWork
 			cctx.Options.Fail(err)
 		}
 	}
-	cctx.BindConfigFlags(s.Command.Flags())
 	return &s
 }
 
@@ -604,7 +649,6 @@ func NewTemporalWorkflowStackCommand(cctx *CommandContext, parent *TemporalWorkf
 			cctx.Options.Fail(err)
 		}
 	}
-	cctx.BindConfigFlags(s.Command.Flags())
 	return &s
 }
 
@@ -619,9 +663,10 @@ type WorkflowStartOptions struct {
 	IdReusePolicy    string
 	SearchAttribute  []string
 	Memo             []string
+	AllowExisting    bool
 }
 
-func (v *WorkflowStartOptions) buildFlags(f *pflag.FlagSet) {
+func (v *WorkflowStartOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
 	f.StringVarP(&v.WorkflowId, "workflow-id", "w", "", "Workflow Id.")
 	f.StringVar(&v.Type, "type", "", "Workflow Type name.")
 	_ = cobra.MarkFlagRequired(f, "type")
@@ -634,6 +679,7 @@ func (v *WorkflowStartOptions) buildFlags(f *pflag.FlagSet) {
 	f.StringVar(&v.IdReusePolicy, "id-reuse-policy", "", "Allows the same Workflow Id to be used in a new Workflow Execution.")
 	f.StringArrayVar(&v.SearchAttribute, "search-attribute", nil, "Passes Search Attribute in key=value format. Use valid JSON formats for value.")
 	f.StringArrayVar(&v.Memo, "memo", nil, "Passes Memo in key=value format. Use valid JSON formats for value.")
+	f.BoolVar(&v.AllowExisting, "allow-existing", false, "Do not fail if the workflow already exists.")
 }
 
 type PayloadInputOptions struct {
@@ -643,7 +689,7 @@ type PayloadInputOptions struct {
 	InputBase64 bool
 }
 
-func (v *PayloadInputOptions) buildFlags(f *pflag.FlagSet) {
+func (v *PayloadInputOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
 	f.StringArrayVarP(&v.Input, "input", "i", nil, "Input value (default JSON unless --input-payload-meta is non-JSON encoding). Can be given multiple times for multiple arguments. Cannot be combined with --input-file.")
 	f.StringArrayVar(&v.InputFile, "input-file", nil, "Reads a file as the input (JSON by default unless --input-payload-meta is non-JSON encoding). Can be given multiple times for multiple arguments. Cannot be combined with --input.")
 	f.StringArrayVar(&v.InputMeta, "input-meta", nil, "Metadata for the input payload. Expected as key=value. If key is encoding, overrides the default of json/plain.")
@@ -668,14 +714,13 @@ func NewTemporalWorkflowStartCommand(cctx *CommandContext, parent *TemporalWorkf
 		s.Command.Long = "The `temporal workflow start` command starts a new Workflow Execution. The\nWorkflow and Run IDs are returned after starting the Workflow.\n\n```\ntemporal workflow start \\\n\t\t--workflow-id meaningful-business-id \\\n\t\t--type MyWorkflow \\\n\t\t--task-queue MyTaskQueue \\\n\t\t--input '{\"Input\": \"As-JSON\"}'\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.WorkflowStartOptions.buildFlags(s.Command.Flags())
-	s.PayloadInputOptions.buildFlags(s.Command.Flags())
+	s.WorkflowStartOptions.buildFlags(cctx, s.Command.Flags())
+	s.PayloadInputOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
 		}
 	}
-	cctx.BindConfigFlags(s.Command.Flags())
 	return &s
 }
 
@@ -696,7 +741,6 @@ func NewTemporalWorkflowTerminateCommand(cctx *CommandContext, parent *TemporalW
 			cctx.Options.Fail(err)
 		}
 	}
-	cctx.BindConfigFlags(s.Command.Flags())
 	return &s
 }
 
@@ -717,7 +761,6 @@ func NewTemporalWorkflowTraceCommand(cctx *CommandContext, parent *TemporalWorkf
 			cctx.Options.Fail(err)
 		}
 	}
-	cctx.BindConfigFlags(s.Command.Flags())
 	return &s
 }
 
@@ -738,6 +781,5 @@ func NewTemporalWorkflowUpdateCommand(cctx *CommandContext, parent *TemporalWork
 			cctx.Options.Fail(err)
 		}
 	}
-	cctx.BindConfigFlags(s.Command.Flags())
 	return &s
 }

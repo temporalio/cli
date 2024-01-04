@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	"github.com/temporalio/cli/temporalcli/internal/printer"
 )
 
 func (c *TemporalEnvDeleteCommand) run(cctx *CommandContext, args []string) error {
@@ -12,7 +14,7 @@ func (c *TemporalEnvDeleteCommand) run(cctx *CommandContext, args []string) erro
 		return fmt.Errorf("env property key to get cannot have more than one dot")
 	}
 	// Env must be present (but flag itself doesn't have to be)
-	env, ok := cctx.EnvFlags[keyPieces[0]]
+	env, ok := cctx.EnvConfigValues[keyPieces[0]]
 	if !ok {
 		return fmt.Errorf("env %q not found", keyPieces[0])
 	}
@@ -22,9 +24,9 @@ func (c *TemporalEnvDeleteCommand) run(cctx *CommandContext, args []string) erro
 		delete(env, keyPieces[1])
 	} else {
 		cctx.Logger.Info("Deleting env", "env", keyPieces[0])
-		delete(cctx.EnvFlags, keyPieces[0])
+		delete(cctx.EnvConfigValues, keyPieces[0])
 	}
-	return cctx.WriteEnvToFile()
+	return cctx.WriteEnvConfigToFile()
 }
 
 func (c *TemporalEnvGetCommand) run(cctx *CommandContext, args []string) error {
@@ -33,7 +35,7 @@ func (c *TemporalEnvGetCommand) run(cctx *CommandContext, args []string) error {
 		return fmt.Errorf("env key to get cannot have more than one dot")
 	}
 	// Env must be present (but flag itself doesn't have to me)
-	env, ok := cctx.EnvFlags[keyPieces[0]]
+	env, ok := cctx.EnvConfigValues[keyPieces[0]]
 	if !ok {
 		return fmt.Errorf("env %q not found", keyPieces[0])
 	}
@@ -53,19 +55,19 @@ func (c *TemporalEnvGetCommand) run(cctx *CommandContext, args []string) error {
 		sort.Slice(props, func(i, j int) bool { return props[i].Property < props[j].Property })
 	}
 	// Print as table
-	return cctx.Printer.Print(PrintOptions{Table: &PrintTableOptions{}}, props)
+	return cctx.Printer.PrintStructured(props, printer.StructuredOptions{Table: &printer.TableOptions{}})
 }
 
 func (c *TemporalEnvListCommand) run(cctx *CommandContext, args []string) error {
 	type env struct {
 		Name string `json:"name"`
 	}
-	envs := make([]env, 0, len(cctx.EnvFlags))
-	for k := range cctx.EnvFlags {
+	envs := make([]env, 0, len(cctx.EnvConfigValues))
+	for k := range cctx.EnvConfigValues {
 		envs = append(envs, env{Name: k})
 	}
 	// Print as table
-	return cctx.Printer.Print(PrintOptions{Table: &PrintTableOptions{}}, envs)
+	return cctx.Printer.PrintStructured(envs, printer.StructuredOptions{Table: &printer.TableOptions{}})
 }
 
 func (c *TemporalEnvSetCommand) run(cctx *CommandContext, args []string) error {
@@ -73,13 +75,13 @@ func (c *TemporalEnvSetCommand) run(cctx *CommandContext, args []string) error {
 	if len(keyPieces) != 2 {
 		return fmt.Errorf("env property key to set must have single dot separating env and value")
 	}
-	if cctx.EnvFlags == nil {
-		cctx.EnvFlags = map[string]map[string]string{}
+	if cctx.EnvConfigValues == nil {
+		cctx.EnvConfigValues = map[string]map[string]string{}
 	}
-	if cctx.EnvFlags[keyPieces[0]] == nil {
-		cctx.EnvFlags[keyPieces[0]] = map[string]string{}
+	if cctx.EnvConfigValues[keyPieces[0]] == nil {
+		cctx.EnvConfigValues[keyPieces[0]] = map[string]string{}
 	}
 	cctx.Logger.Info("Setting env property", "env", keyPieces[0], "property", keyPieces[1], "value", args[1])
-	cctx.EnvFlags[keyPieces[0]][keyPieces[1]] = args[1]
-	return cctx.WriteEnvToFile()
+	cctx.EnvConfigValues[keyPieces[0]][keyPieces[1]] = args[1]
+	return cctx.WriteEnvConfigToFile()
 }

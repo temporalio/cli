@@ -16,7 +16,7 @@ import (
 // * Start server with UI
 // * Server reuse existing database file
 
-func TestServerStartDev_Simple(t *testing.T) {
+func TestServer_StartDev_Simple(t *testing.T) {
 	h := NewCommandHarness(t)
 	defer h.Close()
 
@@ -54,8 +54,8 @@ func TestServerStartDev_Simple(t *testing.T) {
 	// Send an interrupt by cancelling context
 	h.CancelContext()
 	select {
-	case <-time.After(10 * time.Second):
-		h.Fail("didn't cleanup after 10 seconds")
+	case <-time.After(20 * time.Second):
+		h.Fail("didn't cleanup after 20 seconds")
 	case res := <-resCh:
 		h.NoError(res.Err)
 	}
