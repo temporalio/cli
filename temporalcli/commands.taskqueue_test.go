@@ -1,8 +1,25 @@
 package temporalcli_test
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"time"
+
+	"go.temporal.io/api/enums/v1"
+)
 
 func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
+	// Wait until the poller appears
+	s.Eventually(func() bool {
+		desc, err := s.Client.DescribeTaskQueue(s.Context, s.Worker.Options.TaskQueue, enums.TASK_QUEUE_TYPE_WORKFLOW)
+		s.NoError(err)
+		for _, poller := range desc.Pollers {
+			if poller.Identity == s.DevServer.Options.ClientOptions.Identity {
+				return true
+			}
+		}
+		return false
+	}, 5*time.Second, 100*time.Millisecond, "Worker never appeared")
+
 	// Text
 	res := s.Execute(
 		"task-queue", "describe",

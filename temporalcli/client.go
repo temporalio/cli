@@ -64,7 +64,7 @@ func (c *ClientOptions) dialClient(cctx *CommandContext) (client.Client, error) 
 
 func (c *ClientOptions) tlsConfig() (*tls.Config, error) {
 	// We need TLS if any of these TLS options are set
-	if !c.Tls || c.TlsCaPath != "" || c.TlsCertPath != "" || c.TlsKeyPath != "" {
+	if !c.Tls && c.TlsCaPath == "" && c.TlsCertPath == "" && c.TlsKeyPath == "" {
 		return nil, nil
 	}
 

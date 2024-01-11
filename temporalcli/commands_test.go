@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"os"
 	"slices"
 	"strings"
 	"sync"
@@ -31,8 +30,6 @@ type CommandHarness struct {
 	Context context.Context
 	// Can be used to cancel context given to commands (simulating interrupt)
 	CancelContext context.CancelFunc
-
-	previousEnv map[string]*string
 }
 
 func NewCommandHarness(t *testing.T) *CommandHarness {
@@ -47,14 +44,6 @@ func (h *CommandHarness) Close() {
 	// Cancel context
 	if h.CancelContext != nil {
 		h.CancelContext()
-	}
-	// Put env changes back
-	for k, v := range h.previousEnv {
-		if v == nil {
-			os.Unsetenv(k)
-		} else {
-			os.Setenv(k, *v)
-		}
 	}
 }
 

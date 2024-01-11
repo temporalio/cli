@@ -339,6 +339,8 @@ github.com/temporalio/sqlparser v0.0.0-20231115171017-f4060bcfa6cb/go.mod h1:143
 github.com/temporalio/tchannel-go v1.22.1-0.20220818200552-1be8d8cffa5b/go.mod h1:c+V9Z/ZgkzAdyGvHrvC5AsXgN+M9Qwey04cBdKYzV7U=
 github.com/temporalio/tchannel-go v1.22.1-0.20231116015023-bd4fb7678499 h1:PUclzwrSQgakQIiEvvgVdcfulynpX0JM1f716pEcCTU=
 github.com/temporalio/tchannel-go v1.22.1-0.20231116015023-bd4fb7678499/go.mod h1:ezRQRwu9KQXy8Wuuv1aaFFxoCNz5CeNbVOOkh3xctbY=
+github.com/temporalio/ui-server/v2 v2.21.4-0.20240111221047-91eab86e3734 h1:kpKxIS3Nt3qNafNP2A1GUwzGjPqWn69xyCJUcLf+G1A=
+github.com/temporalio/ui-server/v2 v2.21.4-0.20240111221047-91eab86e3734/go.mod h1:n7Sl9Zygt0ZGaQHi+OBQMj0l0b00MIOf+gvoU7KLImM=
 github.com/twmb/murmur3 v1.1.5/go.mod h1:Qq/R7NUyOfr65zD+6Q5IHKsJLwP7exErjN6lyyq3OSQ=
 github.com/twmb/murmur3 v1.1.8 h1:8Yt9taO/WN3l08xErzjeschgZU2QSrwm1kclYq+0aRg=
 github.com/twmb/murmur3 v1.1.8/go.mod h1:Qq/R7NUyOfr65zD+6Q5IHKsJLwP7exErjN6lyyq3OSQ=

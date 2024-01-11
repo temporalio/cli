@@ -11,7 +11,8 @@ require (
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.4
-	github.com/temporalio/ui-server/v2 v2.21.3
+	// TODO: Waiting on ui-server to have gogo removed
+	github.com/temporalio/ui-server/v2 v2.21.4-0.20240111221047-91eab86e3734
 	go.temporal.io/api v1.26.2-0.20231129165614-630d88440548
 	go.temporal.io/sdk v1.25.2-0.20231204212658-5fdbecc56c8c
 	go.temporal.io/server v1.23.0-rc2.0.20231212000105-51ea367f9f37
@@ -146,5 +147,3 @@ require (
 	modernc.org/strutil v1.1.3 // indirect
 	modernc.org/token v1.1.0 // indirect
 )
-
-replace github.com/temporalio/ui-server/v2 => ../ui-server
