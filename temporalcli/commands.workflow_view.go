@@ -60,7 +60,6 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 			false,
 			enums.HISTORY_EVENT_FILTER_TYPE_CLOSE_EVENT,
 		)
-		// TODO(cretz): Ok to error here?
 		if !iter.HasNext() {
 			return fmt.Errorf("missing close event: %w", err)
 		} else if closeEvent, err = iter.Next(); err != nil {
@@ -213,8 +212,7 @@ func (c *TemporalWorkflowListCommand) run(cctx *CommandContext, args []string) e
 			execsProcessed++
 			// For JSON we are going to dump one line of JSON per execution
 			if cctx.JSONOutput {
-				// Need JSON newline since we're streaming
-				_ = cctx.Printer.PrintStructured(exec, printer.StructuredOptions{AppendJSONNewline: true})
+				_ = cctx.Printer.PrintStructured(exec, printer.StructuredOptions{})
 			} else {
 				// For non-JSON, we are doing a table for each page
 				textTable = append(textTable, map[string]any{

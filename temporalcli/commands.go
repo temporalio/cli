@@ -59,7 +59,7 @@ type CommandOptions struct {
 	// related to env config stuff above.
 	LookupEnv func(string) (string, bool)
 
-	// These two default to OS values
+	// These two fields below default to OS values
 	Stdout io.Writer
 	Stderr io.Writer
 
@@ -217,7 +217,7 @@ func UnmarshalProtoJSONWithOptions(b []byte, m proto.Message, jsonShorthandPaylo
 	return opts.Unmarshal(b, m)
 }
 
-func (c *CommandContext) populateEnv(flags *pflag.FlagSet) error {
+func (c *CommandContext) populateFlagsFromEnv(flags *pflag.FlagSet) error {
 	if flags == nil {
 		return nil
 	}
@@ -249,7 +249,9 @@ func (c *CommandContext) populateEnv(flags *pflag.FlagSet) error {
 	return flagErr
 }
 
-// TODO(cretz): Make it clear this logs error
+// Execute runs the Temporal CLI with the given context and options. This
+// intentionally does not return an error but rather invokes Fail on the
+// options.
 func Execute(ctx context.Context, options CommandOptions) {
 	// Create context and run
 	cctx, cancel, err := NewCommandContext(ctx, options)
@@ -274,11 +276,12 @@ func (c *TemporalCommand) initCommand(cctx *CommandContext) {
 	c.Command.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
 		// Populate environ. We will make the error return here which will cause
 		// usage to be printed.
-		if err := cctx.populateEnv(cmd.Flags()); err != nil {
+		if err := cctx.populateFlagsFromEnv(cmd.Flags()); err != nil {
 			return err
 		}
 
-		// Only override if never or always, let auto keep the value
+		// Default color.NoColor global is equivalent to "auto" so only override if
+		// never or always
 		if c.Color.Value == "never" || c.Color.Value == "always" {
 			color.NoColor = c.Color.Value == "never"
 		}
@@ -375,9 +378,9 @@ func writeEnvConfigFile(file string, env map[string]map[string]string) error {
 		return fmt.Errorf("failed marshaling YAML: %w", err)
 	}
 	// Make parent directories as needed
-	if err := os.MkdirAll(filepath.Dir(file), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(file), 0700); err != nil {
 		return fmt.Errorf("failed making env file parent dirs: %w", err)
-	} else if err := os.WriteFile(file, b, 0644); err != nil {
+	} else if err := os.WriteFile(file, b, 0600); err != nil {
 		return fmt.Errorf("failed writing env file: %w", err)
 	}
 	return nil

@@ -55,7 +55,6 @@ type StructuredOptions struct {
 	// printing.
 	Table                        *TableOptions
 	OverrideJSONPayloadShorthand *bool
-	AppendJSONNewline            bool
 }
 
 type Align int
@@ -177,7 +176,7 @@ func (p *Printer) printJSON(v any, options StructuredOptions) error {
 		return err
 	}
 	_, err = p.Output.Write(b)
-	if err == nil && options.AppendJSONNewline {
+	if err == nil {
 		_, err = p.Output.Write([]byte("\n"))
 	}
 	return err

@@ -17,6 +17,7 @@ var CommandsMarkdown []byte
 type Command struct {
 	FullName        string
 	NamePath        []string
+	UseSuffix       string
 	Short           string
 	LongPlain       string
 	LongHighlighted string
@@ -79,6 +80,12 @@ func (c *Command) parseSection(section string) error {
 		return fmt.Errorf("heading needs command name and short description")
 	}
 	c.FullName = strings.TrimSpace(headingPieces[0])
+	// If there's a bracket in the name, that needs to be removed and made the use
+	// suffix
+	if bracketIndex := strings.Index(c.FullName, "["); bracketIndex > 0 {
+		c.UseSuffix = " " + c.FullName[bracketIndex:]
+		c.FullName = strings.TrimSpace(c.FullName[:bracketIndex])
+	}
 	c.NamePath = strings.Split(c.FullName, " ")
 	c.Short = strings.TrimSpace(headingPieces[1])
 

@@ -11,7 +11,7 @@ import (
 func (c *TemporalEnvDeleteCommand) run(cctx *CommandContext, args []string) error {
 	keyPieces := strings.Split(args[0], ".")
 	if len(keyPieces) > 2 {
-		return fmt.Errorf("env property key to get cannot have more than one dot")
+		return fmt.Errorf("env property key to delete cannot have more than one dot")
 	}
 	// Env must be present (but flag itself doesn't have to be)
 	env, ok := cctx.EnvConfigValues[keyPieces[0]]

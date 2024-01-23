@@ -83,7 +83,8 @@ type TemporalEnvDeleteCommand struct {
 func NewTemporalEnvDeleteCommand(cctx *CommandContext, parent *TemporalEnvCommand) *TemporalEnvDeleteCommand {
 	var s TemporalEnvDeleteCommand
 	s.Parent = parent
-	s.Command.Use = "delete"
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "delete [flags] [environment or property]"
 	s.Command.Short = "Delete an environment or environment property."
 	if hasHighlighting {
 		s.Command.Long = "\x1b[1mtemporal env delete [environment or property]\x1b[0m\n\nDelete an environment or just a single property:\n\n\x1b[1mtemporal env delete prod\x1b[0m\n\x1b[1mtemporal env delete prod.tls-cert-path\x1b[0m"
@@ -107,7 +108,8 @@ type TemporalEnvGetCommand struct {
 func NewTemporalEnvGetCommand(cctx *CommandContext, parent *TemporalEnvCommand) *TemporalEnvGetCommand {
 	var s TemporalEnvGetCommand
 	s.Parent = parent
-	s.Command.Use = "get"
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "get [flags] [environment or property]"
 	s.Command.Short = "Print environment properties."
 	if hasHighlighting {
 		s.Command.Long = "\x1b[1mtemporal env get [environment or property]\x1b[0m\n\nPrint all properties of the 'prod' environment:\n\n\x1b[1mtemporal env get prod\x1b[0m\n\ntls-cert-path  /home/my-user/certs/client.cert\ntls-key-path   /home/my-user/certs/client.key\naddress        temporal.example.com:7233\nnamespace      someNamespace\n\nPrint a single property:\n\n\x1b[1mtemporal env get prod.tls-key-path\x1b[0m\n\ntls-key-path  /home/my-user/certs/cluster.key"
@@ -131,7 +133,8 @@ type TemporalEnvListCommand struct {
 func NewTemporalEnvListCommand(cctx *CommandContext, parent *TemporalEnvCommand) *TemporalEnvListCommand {
 	var s TemporalEnvListCommand
 	s.Parent = parent
-	s.Command.Use = "list"
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
 	s.Command.Short = "Print all environments."
 	s.Command.Long = "List all environments."
 	s.Command.Args = cobra.NoArgs
@@ -151,7 +154,8 @@ type TemporalEnvSetCommand struct {
 func NewTemporalEnvSetCommand(cctx *CommandContext, parent *TemporalEnvCommand) *TemporalEnvSetCommand {
 	var s TemporalEnvSetCommand
 	s.Parent = parent
-	s.Command.Use = "set"
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "set [flags] [environment.property name] [property value]"
 	s.Command.Short = "Set environment properties."
 	if hasHighlighting {
 		s.Command.Long = "\x1b[1mtemporal env set [environment.property name] [property value]\x1b[0m\n\nProperty names match CLI option names, for example '--address' and '--tls-cert-path':\n\n\x1b[1mtemporal env set prod.address 127.0.0.1:7233\x1b[0m\n\x1b[1mtemporal env set prod.tls-cert-path  /home/my-user/certs/cluster.cert\x1b[0m"
@@ -209,7 +213,8 @@ type TemporalServerStartDevCommand struct {
 func NewTemporalServerStartDevCommand(cctx *CommandContext, parent *TemporalServerCommand) *TemporalServerStartDevCommand {
 	var s TemporalServerStartDevCommand
 	s.Parent = parent
-	s.Command.Use = "start-dev"
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "start-dev [flags]"
 	s.Command.Short = "Start Temporal development server."
 	if hasHighlighting {
 		s.Command.Long = "Start Temporal Server on \x1b[1mlocalhost:7233\x1b[0m with:\n\n\x1b[1mtemporal server start-dev\x1b[0m\n\nView the UI at http://localhost:8233\n\nTo persist Workflows across runs, use:\n\n\x1b[1mtemporal server start-dev --db-filename temporal.db\x1b[0m"
@@ -271,7 +276,8 @@ type TemporalTaskQueueDescribeCommand struct {
 func NewTemporalTaskQueueDescribeCommand(cctx *CommandContext, parent *TemporalTaskQueueCommand) *TemporalTaskQueueDescribeCommand {
 	var s TemporalTaskQueueDescribeCommand
 	s.Parent = parent
-	s.Command.Use = "describe"
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "describe [flags]"
 	s.Command.Short = "Provides information for Workers that have recently polled on this Task Queue."
 	if hasHighlighting {
 		s.Command.Long = "The \x1b[1mtemporal task-queue describe\x1b[0m command provides poller\ninformation for a given Task Queue.\n\nThe Server records the last time of each poll request. A \x1b[1mLastAccessTime\x1b[0m value\nin excess of one minute can indicate the Worker is at capacity (all Workflow and Activity slots are full) or that the\nWorker has shut down. Workers are removed if 5 minutes have passed since the last poll\nrequest.\n\nInformation about the Task Queue can be returned to troubleshoot server issues.\n\n\x1b[1mtemporal task-queue describe --task-queue=MyTaskQueue --task-queue-type=\"activity\"\x1b[0m\n\nUse the options listed below to modify what this command returns."
@@ -374,7 +380,8 @@ type TemporalWorkflowCancelCommand struct {
 func NewTemporalWorkflowCancelCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowCancelCommand {
 	var s TemporalWorkflowCancelCommand
 	s.Parent = parent
-	s.Command.Use = "cancel"
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "cancel [flags]"
 	s.Command.Short = "Cancel a Workflow Execution."
 	s.Command.Long = "TODO"
 	s.Command.Args = cobra.NoArgs
@@ -394,7 +401,8 @@ type TemporalWorkflowCountCommand struct {
 func NewTemporalWorkflowCountCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowCountCommand {
 	var s TemporalWorkflowCountCommand
 	s.Parent = parent
-	s.Command.Use = "count"
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "count [flags]"
 	s.Command.Short = "Count Workflow Executions."
 	s.Command.Long = "TODO"
 	s.Command.Args = cobra.NoArgs
@@ -414,7 +422,8 @@ type TemporalWorkflowDeleteCommand struct {
 func NewTemporalWorkflowDeleteCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowDeleteCommand {
 	var s TemporalWorkflowDeleteCommand
 	s.Parent = parent
-	s.Command.Use = "delete"
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "delete [flags]"
 	s.Command.Short = "Deletes a Workflow Execution."
 	s.Command.Long = "TODO"
 	s.Command.Args = cobra.NoArgs
@@ -438,7 +447,8 @@ type TemporalWorkflowDescribeCommand struct {
 func NewTemporalWorkflowDescribeCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowDescribeCommand {
 	var s TemporalWorkflowDescribeCommand
 	s.Parent = parent
-	s.Command.Use = "describe"
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "describe [flags]"
 	s.Command.Short = "Show information about a Workflow Execution."
 	if hasHighlighting {
 		s.Command.Long = "The \x1b[1mtemporal workflow describe\x1b[0m command shows information about a given\nWorkflow Execution.\n\nThis information can be used to locate Workflow Executions that weren't able to run successfully.\n\n\x1b[1mtemporal workflow describe --workflow-id=meaningful-business-id\x1b[0m\n\nOutput can be shown as printed ('raw') or formatted to only show the Workflow Execution's auto-reset points.\n\n\x1b[1mtemporal workflow describe --workflow-id=meaningful-business-id --raw=true --reset-points=true\x1b[0m\n\nUse the command options below to change the information returned by this command."
@@ -470,7 +480,8 @@ type TemporalWorkflowExecuteCommand struct {
 func NewTemporalWorkflowExecuteCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowExecuteCommand {
 	var s TemporalWorkflowExecuteCommand
 	s.Parent = parent
-	s.Command.Use = "execute"
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "execute [flags]"
 	s.Command.Short = "Start a new Workflow Execution and prints its progress."
 	if hasHighlighting {
 		s.Command.Long = "The \x1b[1mtemporal workflow execute\x1b[0m command starts a new Workflow Execution and\nprints its progress. The command completes when the Workflow Execution completes.\n\nSingle quotes('') are used to wrap input as JSON.\n\n\x1b[1mtemporal workflow execute\n\t\t--workflow-id meaningful-business-id \\\n\t\t--type MyWorkflow \\\n\t\t--task-queue MyTaskQueue \\\n\t\t--input '{\"Input\": \"As-JSON\"}'\x1b[0m"
@@ -500,7 +511,8 @@ type TemporalWorkflowListCommand struct {
 func NewTemporalWorkflowListCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowListCommand {
 	var s TemporalWorkflowListCommand
 	s.Parent = parent
-	s.Command.Use = "list"
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
 	s.Command.Short = "List Workflow Executions based on a Query."
 	if hasHighlighting {
 		s.Command.Long = "The \x1b[1mtemporal workflow list\x1b[0m command provides a list of Workflow Executions\nthat meet the criteria of a given Query.\nBy default, this command returns up to 10 closed Workflow Executions.\n\n\x1b[1mtemporal workflow list --query=MyQuery\x1b[0m\n\nThe command can also return a list of archived Workflow Executions.\n\n\x1b[1mtemporal workflow list --archived\x1b[0m\n\nUse the command options below to change the information returned by this command."
@@ -527,7 +539,8 @@ type TemporalWorkflowQueryCommand struct {
 func NewTemporalWorkflowQueryCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowQueryCommand {
 	var s TemporalWorkflowQueryCommand
 	s.Parent = parent
-	s.Command.Use = "query"
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "query [flags]"
 	s.Command.Short = "Query a Workflow Execution."
 	s.Command.Long = "TODO"
 	s.Command.Args = cobra.NoArgs
@@ -547,7 +560,8 @@ type TemporalWorkflowResetCommand struct {
 func NewTemporalWorkflowResetCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowResetCommand {
 	var s TemporalWorkflowResetCommand
 	s.Parent = parent
-	s.Command.Use = "reset"
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "reset [flags]"
 	s.Command.Short = "Resets a Workflow Execution by Event ID or reset type."
 	s.Command.Long = "TODO"
 	s.Command.Args = cobra.NoArgs
@@ -567,7 +581,8 @@ type TemporalWorkflowResetBatchCommand struct {
 func NewTemporalWorkflowResetBatchCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowResetBatchCommand {
 	var s TemporalWorkflowResetBatchCommand
 	s.Parent = parent
-	s.Command.Use = "reset-batch"
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "reset-batch [flags]"
 	s.Command.Short = "Reset a batch of Workflow Executions by reset type."
 	s.Command.Long = "TODO"
 	s.Command.Args = cobra.NoArgs
@@ -591,7 +606,8 @@ type TemporalWorkflowShowCommand struct {
 func NewTemporalWorkflowShowCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowShowCommand {
 	var s TemporalWorkflowShowCommand
 	s.Parent = parent
-	s.Command.Use = "show"
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "show [flags]"
 	s.Command.Short = "Show Event History for a Workflow Execution."
 	if hasHighlighting {
 		s.Command.Long = "The \x1b[1mtemporal workflow show\x1b[0m command provides the Event History for a\nWorkflow Execution.\n\nUse the options listed below to change the command's behavior."
@@ -620,7 +636,8 @@ type TemporalWorkflowSignalCommand struct {
 func NewTemporalWorkflowSignalCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowSignalCommand {
 	var s TemporalWorkflowSignalCommand
 	s.Parent = parent
-	s.Command.Use = "signal"
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "signal [flags]"
 	s.Command.Short = "Signal Workflow Execution by Id or List Filter."
 	s.Command.Long = "TODO"
 	s.Command.Args = cobra.NoArgs
@@ -640,7 +657,8 @@ type TemporalWorkflowStackCommand struct {
 func NewTemporalWorkflowStackCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowStackCommand {
 	var s TemporalWorkflowStackCommand
 	s.Parent = parent
-	s.Command.Use = "stack"
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "stack [flags]"
 	s.Command.Short = "Query a Workflow Execution with __stack_trace as the query type."
 	s.Command.Long = "TODO"
 	s.Command.Args = cobra.NoArgs
@@ -706,7 +724,8 @@ type TemporalWorkflowStartCommand struct {
 func NewTemporalWorkflowStartCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowStartCommand {
 	var s TemporalWorkflowStartCommand
 	s.Parent = parent
-	s.Command.Use = "start"
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "start [flags]"
 	s.Command.Short = "Starts a new Workflow Execution."
 	if hasHighlighting {
 		s.Command.Long = "The \x1b[1mtemporal workflow start\x1b[0m command starts a new Workflow Execution. The\nWorkflow and Run IDs are returned after starting the Workflow.\n\n\x1b[1mtemporal workflow start \\\n\t\t--workflow-id meaningful-business-id \\\n\t\t--type MyWorkflow \\\n\t\t--task-queue MyTaskQueue \\\n\t\t--input '{\"Input\": \"As-JSON\"}'\x1b[0m"
@@ -732,7 +751,8 @@ type TemporalWorkflowTerminateCommand struct {
 func NewTemporalWorkflowTerminateCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowTerminateCommand {
 	var s TemporalWorkflowTerminateCommand
 	s.Parent = parent
-	s.Command.Use = "terminate"
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "terminate [flags]"
 	s.Command.Short = "Terminate Workflow Execution by ID or List Filter."
 	s.Command.Long = "TODO"
 	s.Command.Args = cobra.NoArgs
@@ -752,7 +772,8 @@ type TemporalWorkflowTraceCommand struct {
 func NewTemporalWorkflowTraceCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowTraceCommand {
 	var s TemporalWorkflowTraceCommand
 	s.Parent = parent
-	s.Command.Use = "trace"
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "trace [flags]"
 	s.Command.Short = "Trace progress of a Workflow Execution and its children."
 	s.Command.Long = "TODO"
 	s.Command.Args = cobra.NoArgs
@@ -772,7 +793,8 @@ type TemporalWorkflowUpdateCommand struct {
 func NewTemporalWorkflowUpdateCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowUpdateCommand {
 	var s TemporalWorkflowUpdateCommand
 	s.Parent = parent
-	s.Command.Use = "update"
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "update [flags]"
 	s.Command.Short = "Updates a running workflow synchronously."
 	s.Command.Long = "TODO"
 	s.Command.Args = cobra.NoArgs

@@ -84,7 +84,7 @@ func (c *TemporalWorkflowExecuteCommand) run(cctx *CommandContext, args []string
 	// Log print failure and return workflow failure if workflow failed
 	if closeEvent.EventType != enums.EVENT_TYPE_WORKFLOW_EXECUTION_COMPLETED {
 		if err != nil {
-			cctx.Logger.Error("Workflow failed, but also failed printing output", "error", err)
+			cctx.Logger.Error("Workflow failed, and printing the output also failed", "error", err)
 		}
 		err = fmt.Errorf("workflow failed")
 	}
@@ -150,7 +150,8 @@ func (c *TemporalWorkflowExecuteCommand) printJSONResult(
 			}
 			histProto.Events = append(histProto.Events, event)
 		}
-		// Do proto serialization here that would never do shorthand payloads
+		// Do proto serialization here that would never do shorthand (i.e.
+		// auto-lift JSON) payloads
 		if result.History, err = MarshalProtoJSONWithOptions(&histProto, false); err != nil {
 			return fmt.Errorf("failed marshaling history: %w", err)
 		}

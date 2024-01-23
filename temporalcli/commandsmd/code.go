@@ -162,8 +162,20 @@ func (c *Command) writeCode(w *codeWriter) error {
 	if parent != nil {
 		w.writeLinef("s.Parent = parent")
 	}
+	// Collect subcommands
+	var subCommands []*Command
+	for _, maybeSubCmd := range w.allCommands {
+		if maybeSubCmd.isSubCommand(c) {
+			subCommands = append(subCommands, maybeSubCmd)
+		}
+	}
 	// Set basic command values
-	w.writeLinef("s.Command.Use = %q", c.NamePath[len(c.NamePath)-1])
+	if len(subCommands) == 0 {
+		w.writeLinef("s.Command.DisableFlagsInUseLine = true")
+		w.writeLinef("s.Command.Use = %q", c.NamePath[len(c.NamePath)-1]+" [flags]"+c.UseSuffix)
+	} else {
+		w.writeLinef("s.Command.Use = %q", c.NamePath[len(c.NamePath)-1])
+	}
 	w.writeLinef("s.Command.Short = %q", c.Short)
 	if c.LongHighlighted != c.LongPlain {
 		w.writeLinef("if hasHighlighting {")
@@ -180,16 +192,12 @@ func (c *Command) writeCode(w *codeWriter) error {
 		w.writeLinef("s.Command.Args = %v.NoArgs", w.importCobra())
 	}
 	// Add subcommands
-	hasSubCommands := false
-	for _, maybeSubCmd := range w.allCommands {
-		if maybeSubCmd.isSubCommand(c) {
-			hasSubCommands = true
-			w.writeLinef("s.Command.AddCommand(&New%v(cctx, &s).Command)", maybeSubCmd.structName())
-		}
+	for _, subCommand := range subCommands {
+		w.writeLinef("s.Command.AddCommand(&New%v(cctx, &s).Command)", subCommand.structName())
 	}
 	// Set flags
 	flagVar := "s.Command.Flags()"
-	if hasSubCommands {
+	if len(subCommands) > 0 {
 		// If there are subcommands, this needs to be persistent flags
 		flagVar = "s.Command.PersistentFlags()"
 	}
@@ -205,7 +213,7 @@ func (c *Command) writeCode(w *codeWriter) error {
 		}
 	}
 	// If there are no subcommands, we need a run function
-	if !hasSubCommands {
+	if len(subCommands) == 0 {
 		w.writeLinef("s.Command.Run = func(c *%v.Command, args []string) {", w.importCobra())
 		w.writeLinef("if err := s.run(cctx, args); err != nil {")
 		w.writeLinef("cctx.Options.Fail(err)")

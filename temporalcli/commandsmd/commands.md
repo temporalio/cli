@@ -9,6 +9,8 @@ This document has a specific structure used by a parser. Here are the rules:
 * Each command is a `### <command>: <short-description>` heading. Command is full command path including parent
   commands.
   * Heading must be a single line.
+  * <command> will have all up until the leading "[" as the name and the bracket-and-post-bracket content as just
+    additional "use" info. This would be used to document positional arguments.
   * Contents of each command section up to `#### Options` is the long description of the command.
     * End of long description can have XML comment section that has `*` bulleted attributes (one line per bullet):
       * `* has-init` - Will assume an `initCommand` method is on the command
@@ -60,7 +62,7 @@ This document has a specific structure used by a parser. Here are the rules:
 Use the '--env <env name>' option with other commands to point the CLI at a different Temporal Server instance. If --env
 is not passed, the 'default' environment is used.
 
-### temporal env delete: Delete an environment or environment property.
+### temporal env delete [environment or property]: Delete an environment or environment property.
 
 `temporal env delete [environment or property]`
 
@@ -73,7 +75,7 @@ Delete an environment or just a single property:
 * exact-args=1
 -->
 
-### temporal env get: Print environment properties.
+### temporal env get [environment or property]: Print environment properties.
 
 `temporal env get [environment or property]`
 
@@ -100,7 +102,7 @@ tls-key-path  /home/my-user/certs/cluster.key
 
 List all environments.
 
-### temporal env set: Set environment properties.
+### temporal env set [environment.property name] [property value]: Set environment properties.
 
 `temporal env set [environment.property name] [property value]`
 
