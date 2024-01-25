@@ -274,6 +274,19 @@ func (w *WorkflowStartOptions) buildStartOptions() (client.StartWorkflowOptions,
 }
 
 func (p *PayloadInputOptions) buildRawInput() ([]any, error) {
+	payloads, err := p.buildRawInputPayloads()
+	if err != nil {
+		return nil, err
+	}
+	// Convert to raw values that our special data converter understands
+	ret := make([]any, len(payloads.Payloads))
+	for i, payload := range payloads.Payloads {
+		ret[i] = rawValue{payload}
+	}
+	return ret, nil
+}
+
+func (p *PayloadInputOptions) buildRawInputPayloads() (*common.Payloads, error) {
 	// Get input strings
 	var inData [][]byte
 	for _, in := range p.Input {
@@ -300,8 +313,8 @@ func (p *PayloadInputOptions) buildRawInput() ([]any, error) {
 		metadata[metaPieces[0]] = []byte(metaPieces[1])
 	}
 
-	// Convert to raw values
-	ret := make([]any, len(inData))
+	// Create payloads
+	ret := &common.Payloads{Payloads: make([]*common.Payload, len(inData))}
 	for i, in := range inData {
 		// First, if it's JSON, validate that it is accurate
 		if strings.HasPrefix(string(metadata["encoding"]), "json/") && !json.Valid(in) {
@@ -314,7 +327,7 @@ func (p *PayloadInputOptions) buildRawInput() ([]any, error) {
 				return nil, fmt.Errorf("input #%v is not valid base64", i+1)
 			}
 		}
-		ret[i] = rawValue{payload: &common.Payload{Data: in, Metadata: metadata}}
+		ret.Payloads[i] = &common.Payload{Data: in, Metadata: metadata}
 	}
 	return ret, nil
 }

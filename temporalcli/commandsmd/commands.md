@@ -232,10 +232,13 @@ Output can be shown as printed ('raw') or formatted to only show the Workflow Ex
 
 Use the command options below to change the information returned by this command.
 
-#### Options
+#### Options set for workflow reference
 
 * `--workflow-id`, `-w` (string) - Workflow Id. Required.
 * `--run-id`, `-r` (string) - Run Id.
+
+#### Options
+
 * `--reset-points` (bool) - Only show auto-reset points.
 * `--raw` (bool) - Print properties without changing their format.
 
@@ -304,14 +307,31 @@ Use the options listed below to change the command's behavior.
 
 #### Options
 
-* `--workflow-id`, `-w` (string) - Workflow Id. Required.
-* `--run-id`, `-r` (string) - Run Id.
 * `--reset-points` (bool) - Only show auto-reset points.
 * `--follow` (bool) - Follow the progress of a Workflow Execution if it goes to a new run.
 
-### temporal workflow signal: Signal Workflow Execution by Id or List Filter.
+Includes options set for [workflow reference](#options-set-for-workflow-reference).
 
-TODO
+### temporal workflow signal: Signal Workflow Execution by Id.
+
+The `temporal workflow signal` command is used to [Signal](/concepts/what-is-a-signal) a
+[Workflow Execution](/concepts/what-is-a-workflow-execution) by [ID](/concepts/what-is-a-workflow-id).
+
+```
+temporal workflow signal \
+		--workflow-id MyWorkflowId \
+		--name MySignal \
+		--input '{"Input": "As-JSON"}'
+```
+
+Use the options listed below to change the command's behavior.
+
+#### Options
+
+* `--name` (string) - Signal Name. Required.
+
+Includes options set for [workflow reference](#options-set-for-workflow-reference).
+Includes options set for [payload input](#options-set-for-payload-input).
 
 ### temporal workflow stack: Query a Workflow Execution with __stack_trace as the query type.
 
