@@ -39,6 +39,8 @@ linters-settings:
         disabled: true
       - name: file-header
         disabled: true
+      - name: flag-parameter
+        disabled: true
       - name: function-length
         disabled: true
       - name: imports-blacklist

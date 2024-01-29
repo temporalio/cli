@@ -22,7 +22,6 @@ const (
 
 //revive:disable:cognitive-complexity
 //revive:disable:cyclomatic
-//revive:disable:flag-parameter
 func AnyToString(val interface{}, printFully bool, maxFieldLength int) string {
 	dc := converter.GetDefaultDataConverter()
 	v := reflect.ValueOf(val)
@@ -172,7 +171,6 @@ func AnyToString(val interface{}, printFully bool, maxFieldLength int) string {
 	}
 }
 
-//revive:disable:flag-parameter
 func sliceToString(slice reflect.Value, printFully bool, maxFieldLength int) string {
 	var b strings.Builder
 	b.WriteRune('[')
