@@ -10,7 +10,6 @@ import (
 	"github.com/pborman/uuid"
 	"github.com/temporalio/cli/client"
 	"github.com/temporalio/cli/common"
-	"github.com/temporalio/cli/dataconverter"
 	"github.com/temporalio/cli/workflow"
 	"github.com/temporalio/tctl-kit/pkg/color"
 	"github.com/temporalio/tctl-kit/pkg/output"
@@ -22,6 +21,7 @@ import (
 	"go.temporal.io/api/taskqueue/v1"
 	workflowpb "go.temporal.io/api/workflow/v1"
 	"go.temporal.io/api/workflowservice/v1"
+	"go.temporal.io/sdk/converter"
 	"go.temporal.io/server/common/collection"
 	"go.temporal.io/server/common/primitives/timestamp"
 )
@@ -459,7 +459,7 @@ func DescribeSchedule(c *cli.Context) error {
 	if sw := s.Action.GetStartWorkflow(); sw != nil {
 		item.StartWorkflow = sw
 		item.WorkflowType = sw.WorkflowType.GetName()
-		item.Input = dataconverter.CustomDataConverter().ToStrings(sw.Input)
+		item.Input = converter.GetDefaultDataConverter().ToStrings(sw.Input)
 	}
 	item.Policies = s.Policies
 	if item.Policies.OverlapPolicy == enumspb.SCHEDULE_OVERLAP_POLICY_UNSPECIFIED {
@@ -479,13 +479,13 @@ func DescribeSchedule(c *cli.Context) error {
 	if fields := resp.Memo.GetFields(); len(fields) > 0 {
 		item.Memo = make(map[string]string, len(fields))
 		for k, payload := range fields {
-			item.Memo[k] = dataconverter.CustomDataConverter().ToString(payload)
+			item.Memo[k] = converter.GetDefaultDataConverter().ToString(payload)
 		}
 	}
 	if fields := resp.SearchAttributes.GetIndexedFields(); len(fields) > 0 {
 		item.SearchAttributes = make(map[string]string, len(fields))
 		for k, payload := range fields {
-			item.SearchAttributes[k] = dataconverter.DefaultDataConverter().ToString(payload)
+			item.SearchAttributes[k] = converter.GetDefaultDataConverter().ToString(payload)
 		}
 	}
 
@@ -656,7 +656,7 @@ func encodeMemo(memo map[string]interface{}) (*commonpb.Memo, error) {
 	if len(memo) == 0 {
 		return nil, nil
 	}
-	dc := dataconverter.CustomDataConverter()
+	dc := converter.GetDefaultDataConverter()
 	fields := make(map[string]*commonpb.Payload, len(memo))
 	var err error
 	for k, v := range memo {
@@ -672,7 +672,7 @@ func encodeSearchAttributes(sa map[string]interface{}) (*commonpb.SearchAttribut
 	if len(sa) == 0 {
 		return nil, nil
 	}
-	dc := dataconverter.DefaultDataConverter()
+	dc := converter.GetDefaultDataConverter()
 	fields := make(map[string]*commonpb.Payload, len(sa))
 	var err error
 	for k, v := range sa {

@@ -5,11 +5,11 @@ import (
 
 	"github.com/temporalio/cli/client"
 	"github.com/temporalio/cli/common"
-	"github.com/temporalio/cli/dataconverter"
 	"github.com/temporalio/tctl-kit/pkg/color"
 	"github.com/urfave/cli/v2"
 	failurepb "go.temporal.io/api/failure/v1"
 	"go.temporal.io/api/workflowservice/v1"
+	"go.temporal.io/sdk/converter"
 )
 
 // CompleteActivity completes an Activity
@@ -27,9 +27,7 @@ func CompleteActivity(c *cli.Context) error {
 	ctx, cancel := common.NewContext(c)
 	defer cancel()
 
-	// TODO: This should use common.CustomDataConverter once the plugin interface
-	// supports the full DataConverter API.
-	resultPayloads, _ := dataconverter.DefaultDataConverter().ToPayloads(result)
+	resultPayloads, _ := converter.GetDefaultDataConverter().ToPayloads(result)
 
 	frontendClient := client.Factory(c.App).FrontendClient(c)
 	_, err = frontendClient.RespondActivityTaskCompletedById(ctx, &workflowservice.RespondActivityTaskCompletedByIdRequest{
@@ -68,7 +66,7 @@ func FailActivity(c *cli.Context) error {
 	ctx, cancel := common.NewContext(c)
 	defer cancel()
 
-	detailsPayloads, _ := dataconverter.DefaultDataConverter().ToPayloads(detail)
+	detailsPayloads, _ := converter.GetDefaultDataConverter().ToPayloads(detail)
 
 	frontendClient := client.Factory(c.App).FrontendClient(c)
 	_, err = frontendClient.RespondActivityTaskFailedById(ctx, &workflowservice.RespondActivityTaskFailedByIdRequest{
