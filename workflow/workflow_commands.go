@@ -1574,6 +1574,8 @@ func findWorkflowStatusValue(name string) (enumspb.WorkflowExecutionStatus, bool
 }
 
 // historyEventToString convert HistoryEvent to string
+//
+//revive:disable:flag-parameter
 func historyEventToString(e *historypb.HistoryEvent, printFully bool, maxFieldLength int) string {
 	data := getEventAttributes(e)
 	return stringify.AnyToString(data, printFully, maxFieldLength)
