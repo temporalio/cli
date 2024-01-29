@@ -30,7 +30,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 
 	"github.com/gogo/protobuf/jsonpb"
 	commonpb "go.temporal.io/api/common/v1"
@@ -111,94 +110,4 @@ func (pc *remotePayloadCodec) encodeOrDecode(endpoint string, payloads []*common
 
 	message, _ := io.ReadAll(response.Body)
 	return payloads, fmt.Errorf("%s: %s", http.StatusText(response.StatusCode), message)
-}
-
-type remoteDataConverter struct {
-	parent       converter.DataConverter
-	payloadCodec converter.PayloadCodec
-}
-
-// NewRemoteDataConverter wraps the given parent DataConverter and performs
-// encoding/decoding on the payload via the remote endpoint.
-func NewRemoteDataConverter(parent converter.DataConverter, options converter.RemoteDataConverterOptions) converter.DataConverter {
-	options.Endpoint = strings.TrimSuffix(options.Endpoint, "/")
-	payloadCodec := NewRemotePayloadCodec(RemotePayloadCodecOptions(options))
-	return &remoteDataConverter{parent, payloadCodec}
-}
-
-// ToPayload implements DataConverter.ToPayload performing remote encoding on the
-// result of the parent's ToPayload call.
-func (rdc *remoteDataConverter) ToPayload(value interface{}) (*commonpb.Payload, error) {
-	payload, err := rdc.parent.ToPayload(value)
-	if payload == nil || err != nil {
-		return payload, err
-	}
-	encodedPayloads, err := rdc.payloadCodec.Encode([]*commonpb.Payload{payload})
-	if err != nil {
-		return payload, err
-	}
-	return encodedPayloads[0], err
-}
-
-// ToPayloads implements DataConverter.ToPayloads performing remote encoding on the
-// result of the parent's ToPayloads call.
-func (rdc *remoteDataConverter) ToPayloads(value ...interface{}) (*commonpb.Payloads, error) {
-	payloads, err := rdc.parent.ToPayloads(value...)
-	if payloads == nil || err != nil {
-		return payloads, err
-	}
-	encodedPayloads, err := rdc.payloadCodec.Encode(payloads.Payloads)
-	return &commonpb.Payloads{Payloads: encodedPayloads}, err
-}
-
-// FromPayload implements DataConverter.FromPayload performing remote decoding on the
-// given payload before sending to the parent FromPayload.
-func (rdc *remoteDataConverter) FromPayload(payload *commonpb.Payload, valuePtr interface{}) error {
-	decodedPayloads, err := rdc.payloadCodec.Decode([]*commonpb.Payload{payload})
-	if err != nil {
-		return err
-	}
-	return rdc.parent.FromPayload(decodedPayloads[0], valuePtr)
-}
-
-// FromPayloads implements DataConverter.FromPayloads performing remote decoding on the
-// given payloads before sending to the parent FromPayloads.
-func (rdc *remoteDataConverter) FromPayloads(payloads *commonpb.Payloads, valuePtrs ...interface{}) error {
-	if payloads == nil {
-		return rdc.parent.FromPayloads(payloads, valuePtrs...)
-	}
-
-	decodedPayloads, err := rdc.payloadCodec.Decode(payloads.Payloads)
-	if err != nil {
-		return err
-	}
-	return rdc.parent.FromPayloads(&commonpb.Payloads{Payloads: decodedPayloads}, valuePtrs...)
-}
-
-// ToString implements DataConverter.ToString performing remote decoding on the given
-// payload before sending to the parent ToString.
-func (rdc *remoteDataConverter) ToString(payload *commonpb.Payload) string {
-	if payload == nil {
-		return rdc.parent.ToString(payload)
-	}
-
-	decodedPayloads, err := rdc.payloadCodec.Decode([]*commonpb.Payload{payload})
-	if err != nil {
-		return err.Error()
-	}
-	return rdc.parent.ToString(decodedPayloads[0])
-}
-
-// ToStrings implements DataConverter.ToStrings using ToString for each value.
-func (rdc *remoteDataConverter) ToStrings(payloads *commonpb.Payloads) []string {
-	if payloads == nil {
-		return nil
-	}
-
-	strs := make([]string, len(payloads.Payloads))
-	// Perform decoding one by one here so that we return individual errors
-	for i, payload := range payloads.Payloads {
-		strs[i] = rdc.ToString(payload)
-	}
-	return strs
 }
