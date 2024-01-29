@@ -7,6 +7,9 @@ import (
 	// Load sqlite storage driver
 	_ "go.temporal.io/server/common/persistence/sql/sqlplugin/sqlite"
 
+	// Embed time zone database as a fallback if platform database can't be found
+	_ "time/tzdata"
+
 	"github.com/temporalio/cli/app"
 )
 

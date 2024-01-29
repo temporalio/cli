@@ -79,6 +79,7 @@ var (
 	FlagOverlapPolicy              = "overlap-policy"
 	FlagOwnerEmail                 = "email"
 	FlagParallelism                = "input-parallelism"
+	FlagPartitions                 = "partitions"
 	FlagPause                      = "pause"
 	FlagPauseOnFailure             = "pause-on-failure"
 	FlagPort                       = "port"
@@ -104,6 +105,7 @@ var (
 	FlagSkipBaseIsNotCurrent       = "skip-base-is-not-current"
 	FlagSkipCurrentOpen            = "skip-current-open"
 	FlagStartTime                  = "start-time"
+	FlagStartDelay                 = "start-delay"
 	FlagTaskQueue                  = "task-queue"
 	FlagTaskQueueAlias             = []string{"t"}
 	FlagTaskQueueType              = "task-queue-type"
@@ -362,6 +364,11 @@ var FlagsForStartWorkflowT = []cli.Flag{
 	&cli.StringFlag{
 		Name:     FlagMemoFile,
 		Usage:    FlagMemoFileDefinition,
+		Category: CategoryMain,
+	},
+	&cli.StringFlag{
+		Name:     FlagStartDelay,
+		Usage:    FlagStartDelayDefinition,
 		Category: CategoryMain,
 	},
 }
