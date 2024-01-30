@@ -645,7 +645,7 @@ func (v *SingleWorkflowOrBatchOptions) buildFlags(cctx *CommandContext, f *pflag
 	f.StringVarP(&v.WorkflowId, "workflow-id", "w", "", "Workflow Id. Either this or query must be set.")
 	f.StringVarP(&v.RunId, "run-id", "r", "", "Run Id. Cannot be set when query is set.")
 	f.StringVarP(&v.Query, "query", "q", "", "Start a batch to Signal Workflow Executions with given List Filter. Either this or Workflow Id must be set.")
-	f.StringVar(&v.Reason, "reason", "", "Reason to perform batch. Only allowed, and required if query is present.")
+	f.StringVar(&v.Reason, "reason", "", "Reason to perform batch. Only allowed if query is present. Defaults to message with user name and time.")
 	f.BoolVarP(&v.Yes, "yes", "y", false, "Confirm prompt to perform batch. Only allowed if query is present.")
 }
 

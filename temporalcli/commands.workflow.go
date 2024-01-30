@@ -2,6 +2,7 @@ package temporalcli
 
 import (
 	"fmt"
+	"os/user"
 
 	"github.com/google/uuid"
 	"github.com/temporalio/cli/temporalcli/internal/printer"
@@ -119,8 +120,6 @@ func (s *SingleWorkflowOrBatchOptions) workflowExecOrBatch(
 		return nil, nil, fmt.Errorf("cannot set workflow ID when query is set")
 	} else if s.RunId != "" {
 		return nil, nil, fmt.Errorf("cannot set run ID when query is set")
-	} else if s.Reason == "" {
-		return nil, nil, fmt.Errorf("reason required when query is set")
 	}
 
 	// Count the workflows that will be affected
@@ -136,11 +135,22 @@ func (s *SingleWorkflowOrBatchOptions) workflowExecOrBatch(
 		// We consider this a command failure
 		return nil, nil, fmt.Errorf("user denied confirmation")
 	}
+
+	// Default the reason if not set
+	reason := s.Reason
+	if reason == "" {
+		username := "<unknown-user>"
+		if u, err := user.Current(); err != nil && u.Username != "" {
+			username = u.Username
+		}
+		reason = "Requested from CLI by " + username
+	}
+
 	return nil, &workflowservice.StartBatchOperationRequest{
 		Namespace:       namespace,
 		JobId:           uuid.NewString(),
 		VisibilityQuery: s.Query,
-		Reason:          s.Reason,
+		Reason:          reason,
 	}, nil
 }
 

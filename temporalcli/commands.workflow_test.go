@@ -96,7 +96,6 @@ func (s *SharedServerSuite) testSignalBatchWorkflow(json bool) *CommandResult {
 		"workflow", "signal",
 		"--address", s.Address(),
 		"--query", "CustomKeywordField = '" + searchAttr + "'",
-		"--reason", "for a test",
 		"--name", "my-signal",
 		"-i", `{"key": "val"}`,
 	}

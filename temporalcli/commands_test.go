@@ -72,6 +72,25 @@ func (h *CommandHarness) ContainsOnSameLine(text string, pieces ...string) {
 	h.Fail("Pieces not found in order on any line together")
 }
 
+func (h *CommandHarness) Eventually(
+	condition func() bool,
+	waitFor time.Duration,
+	tick time.Duration,
+	msgAndArgs ...interface{},
+) {
+	// We cannot use require.Eventually because it was poorly developed to run the
+	// condition function in a goroutine which means it can run after complete or
+	// have other race conditions. Don't even need a complicated ticker because it
+	// doesn't need to be interruptible.
+	for start := time.Now(); time.Since(start) < waitFor; {
+		if condition() {
+			return
+		}
+		time.Sleep(tick)
+	}
+	h.Fail("condition did not evaluate to true within timeout", msgAndArgs...)
+}
+
 func (h *CommandHarness) T() *testing.T {
 	return h.t
 }
