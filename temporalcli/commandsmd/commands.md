@@ -330,8 +330,16 @@ Use the options listed below to change the command's behavior.
 
 * `--name` (string) - Signal Name. Required.
 
-Includes options set for [workflow reference](#options-set-for-workflow-reference).
 Includes options set for [payload input](#options-set-for-payload-input).
+
+#### Options set for single workflow or batch:
+
+* `--workflow-id`, `-w` (string) - Workflow Id. Either this or query must be set.
+* `--run-id`, `-r` (string) - Run Id. Cannot be set when query is set.
+* `--query`, `-q` (string) - Start a batch to Signal Workflow Executions with given List Filter. Either this or
+  Workflow Id must be set.
+* `--reason` (string) - Reason to perform batch. Only allowed, and required if query is present.
+* `--yes`, `-y` (bool) - Confirm prompt to perform batch. Only allowed if query is present.
 
 ### temporal workflow stack: Query a Workflow Execution with __stack_trace as the query type.
 

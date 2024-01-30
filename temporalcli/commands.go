@@ -1,6 +1,7 @@
 package temporalcli
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -59,7 +60,8 @@ type CommandOptions struct {
 	// related to env config stuff above.
 	LookupEnv func(string) (string, bool)
 
-	// These two fields below default to OS values
+	// These three fields below default to OS values
+	Stdin  io.Reader
 	Stdout io.Writer
 	Stderr io.Writer
 
@@ -87,6 +89,9 @@ func (c *CommandContext) preprocessOptions() error {
 		c.Options.LookupEnv = os.LookupEnv
 	}
 
+	if c.Options.Stdin == nil {
+		c.Options.Stdin = os.Stdin
+	}
 	if c.Options.Stdout == nil {
 		c.Options.Stdout = os.Stdout
 	}
@@ -247,6 +252,21 @@ func (c *CommandContext) populateFlagsFromEnv(flags *pflag.FlagSet) error {
 		}
 	})
 	return flagErr
+}
+
+// Returns error if JSON output enabled
+func (c *CommandContext) promptYes(message string, autoConfirm bool) (bool, error) {
+	if c.JSONOutput && !autoConfirm {
+		return false, fmt.Errorf("must bypass prompts when using JSON output")
+	}
+	c.Printer.Print(message, " ")
+	if autoConfirm {
+		c.Printer.Println("yes")
+		return true, nil
+	}
+	line, _ := bufio.NewReader(c.Options.Stdin).ReadString('\n')
+	line = strings.TrimSpace(strings.ToLower(line))
+	return line == "y" || line == "yes", nil
 }
 
 // Execute runs the Temporal CLI with the given context and options. This

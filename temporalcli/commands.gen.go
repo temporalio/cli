@@ -633,12 +633,28 @@ func NewTemporalWorkflowShowCommand(cctx *CommandContext, parent *TemporalWorkfl
 	return &s
 }
 
+type SingleWorkflowOrBatchOptions struct {
+	WorkflowId string
+	RunId      string
+	Query      string
+	Reason     string
+	Yes        bool
+}
+
+func (v *SingleWorkflowOrBatchOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
+	f.StringVarP(&v.WorkflowId, "workflow-id", "w", "", "Workflow Id. Either this or query must be set.")
+	f.StringVarP(&v.RunId, "run-id", "r", "", "Run Id. Cannot be set when query is set.")
+	f.StringVarP(&v.Query, "query", "q", "", "Start a batch to Signal Workflow Executions with given List Filter. Either this or Workflow Id must be set.")
+	f.StringVar(&v.Reason, "reason", "", "Reason to perform batch. Only allowed, and required if query is present.")
+	f.BoolVarP(&v.Yes, "yes", "y", false, "Confirm prompt to perform batch. Only allowed if query is present.")
+}
+
 type TemporalWorkflowSignalCommand struct {
 	Parent  *TemporalWorkflowCommand
 	Command cobra.Command
-	WorkflowReferenceOptions
 	PayloadInputOptions
 	Name string
+	SingleWorkflowOrBatchOptions
 }
 
 func NewTemporalWorkflowSignalCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowSignalCommand {
@@ -653,10 +669,10 @@ func NewTemporalWorkflowSignalCommand(cctx *CommandContext, parent *TemporalWork
 		s.Command.Long = "The `temporal workflow signal` command is used to Signal a\nWorkflow Execution by ID.\n\n```\ntemporal workflow signal \\\n\t\t--workflow-id MyWorkflowId \\\n\t\t--name MySignal \\\n\t\t--input '{\"Input\": \"As-JSON\"}'\n```\n\nUse the options listed below to change the command's behavior."
 	}
 	s.Command.Args = cobra.NoArgs
-	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
 	s.PayloadInputOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Flags().StringVar(&s.Name, "name", "", "Signal Name.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
+	s.SingleWorkflowOrBatchOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

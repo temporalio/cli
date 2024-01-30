@@ -17,6 +17,8 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/temporalio/cli/temporalcli"
 	"github.com/temporalio/cli/temporalcli/devserver"
+	"go.temporal.io/api/enums/v1"
+	"go.temporal.io/api/operatorservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
@@ -30,6 +32,7 @@ type CommandHarness struct {
 	Context context.Context
 	// Can be used to cancel context given to commands (simulating interrupt)
 	CancelContext context.CancelFunc
+	Stdin         bytes.Buffer
 }
 
 func NewCommandHarness(t *testing.T) *CommandHarness {
@@ -47,13 +50,17 @@ func (h *CommandHarness) Close() {
 	}
 }
 
+// Pieces must appear in order on the line
 func (h *CommandHarness) ContainsOnSameLine(text string, pieces ...string) {
 	// Split into lines, then check each piece is present
 	lines := strings.Split(text, "\n")
 	for _, line := range lines {
 		foundAll := true
+		lastFoundPieceIndex := -1
 		for _, piece := range pieces {
-			if !strings.Contains(line, piece) {
+			if index := strings.Index(line, piece); index > lastFoundPieceIndex {
+				lastFoundPieceIndex = index
+			} else {
 				foundAll = false
 				break
 			}
@@ -62,7 +69,7 @@ func (h *CommandHarness) ContainsOnSameLine(text string, pieces ...string) {
 			return
 		}
 	}
-	h.Fail("Pieces not found on any line together")
+	h.Fail("Pieces not found in order on any line together")
 }
 
 func (h *CommandHarness) T() *testing.T {
@@ -80,7 +87,9 @@ func (h *CommandHarness) Execute(args ...string) *CommandResult {
 	res := &CommandResult{}
 	options := h.Options
 	// Set stdio
-	options.Stdout, options.Stderr = &res.Stdout, &res.Stderr
+	options.Stdin = &h.Stdin
+	options.Stdout = &res.Stdout
+	options.Stderr = &res.Stderr
 	// Set args
 	options.Args = args
 	// Disable env if no env file and no --env-file arg
@@ -219,6 +228,10 @@ func StartDevServer(t *testing.T, options DevServerOptions) *DevServer {
 	if d.Options.ClientOptions.Identity == "" {
 		d.Options.ClientOptions.Identity = "cli-test-client"
 	}
+	if d.Options.DynamicConfigValues == nil {
+		d.Options.DynamicConfigValues = map[string]any{}
+	}
+	d.Options.DynamicConfigValues["system.forceSearchAttributesCacheRefreshOnRead"] = true
 
 	// Start
 	var err error
@@ -233,6 +246,26 @@ func StartDevServer(t *testing.T, options DevServerOptions) *DevServer {
 	// Dial client
 	d.Client, err = client.Dial(d.Options.ClientOptions)
 	require.NoError(t, err)
+	defer func() {
+		if !success {
+			d.Client.Close()
+		}
+	}()
+
+	// Create search attribute if not there
+	ctx := context.Background()
+	saResp, err := d.Client.OperatorService().ListSearchAttributes(ctx, &operatorservice.ListSearchAttributesRequest{
+		Namespace: d.Options.ClientOptions.Namespace,
+	})
+	require.NoError(t, err)
+	if _, ok := saResp.CustomAttributes["CustomKeywordField"]; !ok {
+		_, err = d.Client.OperatorService().AddSearchAttributes(ctx, &operatorservice.AddSearchAttributesRequest{
+			Namespace:        d.Options.ClientOptions.Namespace,
+			SearchAttributes: map[string]enums.IndexedValueType{"CustomKeywordField": enums.INDEXED_VALUE_TYPE_KEYWORD},
+		})
+		require.NoError(t, err)
+	}
+
 	success = true
 	return d
 }
