@@ -343,7 +343,7 @@ temporal workflow start \
   AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate, TerminateIfRunning.
 * `--search-attribute` (string[]) - Passes Search Attribute in key=value format. Use valid JSON formats for value.
 * `--memo` (string[]) - Passes Memo in key=value format. Use valid JSON formats for value.
-* `--allow-existing` (bool) - Do not fail if the workflow already exists.
+* `--fail-existing` (bool) - Fail if the workflow already exists.
 
 #### Options set for payload input:
 

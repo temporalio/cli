@@ -681,7 +681,7 @@ type WorkflowStartOptions struct {
 	IdReusePolicy    string
 	SearchAttribute  []string
 	Memo             []string
-	AllowExisting    bool
+	FailExisting     bool
 }
 
 func (v *WorkflowStartOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
@@ -697,7 +697,7 @@ func (v *WorkflowStartOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet
 	f.StringVar(&v.IdReusePolicy, "id-reuse-policy", "", "Allows the same Workflow Id to be used in a new Workflow Execution.")
 	f.StringArrayVar(&v.SearchAttribute, "search-attribute", nil, "Passes Search Attribute in key=value format. Use valid JSON formats for value.")
 	f.StringArrayVar(&v.Memo, "memo", nil, "Passes Memo in key=value format. Use valid JSON formats for value.")
-	f.BoolVar(&v.AllowExisting, "allow-existing", false, "Do not fail if the workflow already exists.")
+	f.BoolVar(&v.FailExisting, "fail-existing", false, "Fail if the workflow already exists.")
 }
 
 type PayloadInputOptions struct {
