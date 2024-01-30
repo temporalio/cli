@@ -1,0 +1,53 @@
+name: Continuous Integration
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-test:
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            checkGenCodeTarget: true
+            cloudTestTarget: true
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: Test
+        run: go test -v ./...
+
+      - name: Regen code, confirm unchanged
+        if: ${{ matrix.checkGenCodeTarget }}
+        run: |
+          go run ./temporalcli/internal/cmd/gen-commands
+          git diff --exit-code
+
+      - name: Test cloud
+        # Only supported in non-fork runs, since secrets are not available in forks
+        if: ${{ matrix.cloudTestTarget && (github.event.pull_request.head.repo.full_name == '' || github.event.pull_request.head.repo.full_name == 'temporalio/cli') }}
+        env:
+          TEMPORAL_ADDRESS: ${{ vars.TEMPORAL_CLIENT_NAMESPACE }}.tmprl.cloud:7233
+          TEMPORAL_NAMESPACE: ${{ vars.TEMPORAL_CLIENT_NAMESPACE }}
+          TEMPORAL_TLS_CERT: client.crt
+          TEMPORAL_TLS_CERT_CONTENT: ${{ secrets.TEMPORAL_CLIENT_CERT }}
+          TEMPORAL_TLS_KEY: client.key
+          TEMPORAL_TLS_KEY_CONTENT: ${{ secrets.TEMPORAL_CLIENT_KEY }}
+        shell: bash
+        run: |
+          printf '%s\n' "$TEMPORAL_TLS_CERT_CONTENT" >> client.crt
+          printf '%s\n' "$TEMPORAL_TLS_KEY_CONTENT" >> client.key
+          go run ./cmd/temporal workflow list --limit 2
