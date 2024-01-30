@@ -248,7 +248,7 @@ func (w *WorkflowStartOptions) buildStartOptions() (client.StartWorkflowOptions,
 		WorkflowExecutionTimeout:                 w.ExecutionTimeout,
 		WorkflowTaskTimeout:                      w.TaskTimeout,
 		CronSchedule:                             w.Cron,
-		WorkflowExecutionErrorWhenAlreadyStarted: !w.AllowExisting,
+		WorkflowExecutionErrorWhenAlreadyStarted: w.FailExisting,
 	}
 	if w.IdReusePolicy != "" {
 		var err error
