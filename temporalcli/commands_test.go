@@ -50,16 +50,16 @@ func (h *CommandHarness) Close() {
 	}
 }
 
-// Pieces must appear in order on the line
+// Pieces must appear in order on the line and not overlap
 func (h *CommandHarness) ContainsOnSameLine(text string, pieces ...string) {
 	// Split into lines, then check each piece is present
 	lines := strings.Split(text, "\n")
 	for _, line := range lines {
 		foundAll := true
-		lastFoundPieceIndex := -1
+		lastEndIndex := -1
 		for _, piece := range pieces {
-			if index := strings.Index(line, piece); index > lastFoundPieceIndex {
-				lastFoundPieceIndex = index
+			if index := strings.Index(line, piece); index > lastEndIndex {
+				lastEndIndex = index + len(piece)
 			} else {
 				foundAll = false
 				break
