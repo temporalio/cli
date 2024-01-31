@@ -14,13 +14,13 @@ import (
 
 	"github.com/gogo/status"
 	"github.com/temporalio/cli/common"
-	"github.com/temporalio/cli/dataconverter"
 	"github.com/temporalio/cli/headersprovider"
 	"github.com/urfave/cli/v2"
 	"go.temporal.io/api/operatorservice/v1"
 	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/api/workflowservice/v1"
 	sdkclient "go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/converter"
 	"go.temporal.io/server/common/auth"
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -125,13 +125,23 @@ func (b *clientFactory) SDKClient(c *cli.Context, namespace string) sdkclient.Cl
 		b.logger.Fatal("Failed to configure TLS for SDK client", tag.Error(err))
 	}
 
+	dialOptions := []grpc.DialOption{}
+	if codecEndpoint := c.String(common.FlagCodecEndpoint); codecEndpoint != "" {
+		interceptor, err := newPayloadCodecGRPCClientInterceptor(c, codecEndpoint)
+		if err != nil {
+			b.logger.Fatal("Failed to configure payload codec interceptor", tag.Error(err))
+		}
+		dialOptions = append(dialOptions, grpc.WithChainUnaryInterceptor(interceptor))
+	}
+
 	sdkClient, err := sdkclient.Dial(sdkclient.Options{
 		HostPort:  hostPort,
 		Namespace: namespace,
 		Logger:    log.NewSdkLogger(b.logger),
 		Identity:  common.GetCliIdentity(),
 		ConnectionOptions: sdkclient.ConnectionOptions{
-			TLS: tlsConfig,
+			DialOptions: dialOptions,
+			TLS:         tlsConfig,
 		},
 		HeadersProvider: headersprovider.GetCurrent(),
 	})
@@ -142,6 +152,31 @@ func (b *clientFactory) SDKClient(c *cli.Context, namespace string) sdkclient.Cl
 	return sdkClient
 }
 
+func newPayloadCodecGRPCClientInterceptor(c *cli.Context, codecEndpoint string) (grpc.UnaryClientInterceptor, error) {
+	namespace := c.String(common.FlagNamespace)
+	codecAuth := c.String(common.FlagCodecAuth)
+	codecEndpoint = strings.ReplaceAll(codecEndpoint, "{namespace}", namespace)
+
+	payloadCodec := NewRemotePayloadCodec(
+		RemotePayloadCodecOptions{
+			Endpoint: codecEndpoint,
+			ModifyRequest: func(req *http.Request) error {
+				req.Header.Set("X-Namespace", namespace)
+				if codecAuth != "" {
+					req.Header.Set("Authorization", codecAuth)
+				}
+
+				return nil
+			},
+		},
+	)
+	return converter.NewPayloadCodecGRPCClientInterceptor(
+		converter.PayloadCodecGRPCClientInterceptorOptions{
+			Codecs: []converter.PayloadCodec{payloadCodec},
+		},
+	)
+}
+
 // HealthClient builds a health client.
 func (b *clientFactory) HealthClient(c *cli.Context) healthpb.HealthClient {
 	connection, _ := b.createGRPCConnection(c)
@@ -150,15 +185,6 @@ func (b *clientFactory) HealthClient(c *cli.Context) healthpb.HealthClient {
 }
 
 func configureSDK(ctx *cli.Context) error {
-	endpoint := ctx.String(common.FlagCodecEndpoint)
-	if endpoint != "" {
-		dataconverter.SetRemoteEndpoint(
-			endpoint,
-			ctx.String(common.FlagNamespace),
-			ctx.String(common.FlagCodecAuth),
-		)
-	}
-
 	md, err := common.SplitKeyValuePairs(ctx.StringSlice(common.FlagMetadata))
 	if err != nil {
 		return err
@@ -210,6 +236,13 @@ func (b *clientFactory) createGRPCConnection(c *cli.Context) (*grpc.ClientConn, 
 	interceptors := []grpc.UnaryClientInterceptor{
 		errorInterceptor(),
 		headersProviderInterceptor(headersprovider.GetCurrent()),
+	}
+	if codecEndpoint := c.String(common.FlagCodecEndpoint); codecEndpoint != "" {
+		interceptor, err := newPayloadCodecGRPCClientInterceptor(c, codecEndpoint)
+		if err != nil {
+			b.logger.Fatal("Failed to configure payload codec interceptor", tag.Error(err))
+		}
+		interceptors = append(interceptors, interceptor)
 	}
 
 	dialOpts := []grpc.DialOption{

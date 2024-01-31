@@ -20,7 +20,10 @@ const (
 	maxWordLength = 120 // if text length is larger than maxWordLength, it will be inserted spaces
 )
 
-func AnyToString(val interface{}, printFully bool, maxFieldLength int, dc converter.DataConverter) string {
+//revive:disable:cognitive-complexity
+//revive:disable:cyclomatic
+func AnyToString(val interface{}, printFully bool, maxFieldLength int) string {
+	dc := converter.GetDefaultDataConverter()
 	v := reflect.ValueOf(val)
 	if val == nil || (v.Kind() == reflect.Ptr && v.IsNil()) {
 		return ""
@@ -65,9 +68,9 @@ func AnyToString(val interface{}, printFully bool, maxFieldLength int, dc conver
 		return ""
 	case reflect.Slice:
 		// All but []byte which is already handled.
-		return sliceToString(v, printFully, maxFieldLength, dc)
+		return sliceToString(v, printFully, maxFieldLength)
 	case reflect.Ptr:
-		return AnyToString(v.Elem().Interface(), printFully, maxFieldLength, dc)
+		return AnyToString(v.Elem().Interface(), printFully, maxFieldLength)
 	case reflect.Map:
 		type keyValuePair struct {
 			key   string
@@ -82,11 +85,11 @@ func AnyToString(val interface{}, printFully bool, maxFieldLength int, dc conver
 			if !mapKey.CanInterface() || !mapVal.CanInterface() {
 				continue
 			}
-			mapKeyStr := AnyToString(mapKey.Interface(), true, 0, dc)
+			mapKeyStr := AnyToString(mapKey.Interface(), true, 0)
 			if mapKeyStr == "" {
 				continue
 			}
-			mapValStr := AnyToString(mapVal.Interface(), true, 0, dc)
+			mapValStr := AnyToString(mapVal.Interface(), true, 0)
 			if mapValStr == "" {
 				continue
 			}
@@ -127,7 +130,7 @@ func AnyToString(val interface{}, printFully bool, maxFieldLength int, dc conver
 			}
 
 			fieldName := t.Field(i).Name
-			fieldStr := AnyToString(f.Interface(), printFully, maxFieldLength, dc)
+			fieldStr := AnyToString(f.Interface(), printFully, maxFieldLength)
 			if fieldStr == "" {
 				continue
 			}
@@ -168,17 +171,17 @@ func AnyToString(val interface{}, printFully bool, maxFieldLength int, dc conver
 	}
 }
 
-func sliceToString(slice reflect.Value, printFully bool, maxFieldLength int, dc converter.DataConverter) string {
+func sliceToString(slice reflect.Value, printFully bool, maxFieldLength int) string {
 	var b strings.Builder
 	b.WriteRune('[')
 	for i := 0; i < slice.Len(); i++ {
 		if i == 0 || printFully {
-			b.WriteString(AnyToString(slice.Index(i).Interface(), printFully, maxFieldLength, dc))
+			_, _ = b.WriteString(AnyToString(slice.Index(i).Interface(), printFully, maxFieldLength))
 			if i < slice.Len()-1 {
 				b.WriteRune(',')
 			}
 			if !printFully && slice.Len() > 1 {
-				b.WriteString(fmt.Sprintf("...%d more]", slice.Len()-1))
+				_, _ = b.WriteString(fmt.Sprintf("...%d more]", slice.Len()-1))
 				return b.String()
 			}
 		}

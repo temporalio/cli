@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"os"
 	"os/user"
@@ -416,25 +417,27 @@ func readJSONInputs(c *cli.Context) ([][]byte, error) {
 	if c.IsSet(FlagInput) {
 		inputsG := c.Generic(FlagInput)
 
-		var inputs *cli.StringSlice
-		var ok bool
-		if inputs, ok = inputsG.(*cli.StringSlice); !ok {
-			// input could be provided as StringFlag instead of StringSliceFlag
-			ss := cli.StringSlice{}
-			ss.Set(fmt.Sprintf("%v", inputsG))
-			inputs = &ss
-		}
-
-		var inputsRaw [][]byte
-		for _, i := range inputs.Value() {
-			if strings.EqualFold(i, "null") {
-				inputsRaw = append(inputsRaw, []byte(nil))
-			} else {
-				inputsRaw = append(inputsRaw, []byte(i))
+		if inputs, ok := inputsG.(*cli.StringSlice); ok {
+			// The --input flag can be specified multiple times with strings
+			var inputsRaw [][]byte
+			for _, i := range inputs.Value() {
+				if strings.EqualFold(i, "null") {
+					inputsRaw = append(inputsRaw, []byte(nil))
+				} else {
+					inputsRaw = append(inputsRaw, []byte(i))
+				}
 			}
+
+			return inputsRaw, nil
 		}
 
-		return inputsRaw, nil
+		if input, ok := inputsG.(flag.Value); ok {
+			// The --input flag accepts only a single string
+			return [][]byte{[]byte(input.String())}, nil
+		}
+
+		return nil, fmt.Errorf("BUG: Don't know what the type of the --input flag should be")
+
 	} else if c.IsSet(FlagInputFile) {
 		inputFiles := c.StringSlice(FlagInputFile)
 

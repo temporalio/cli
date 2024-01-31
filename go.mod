@@ -8,7 +8,6 @@ require (
 	github.com/gogo/protobuf v1.3.2
 	github.com/gogo/status v1.1.1
 	github.com/golang/mock v1.7.0-rc.1
-	github.com/gorilla/websocket v1.5.1
 	github.com/mattn/go-isatty v0.0.20
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/pborman/uuid v1.2.1
@@ -19,7 +18,7 @@ require (
 	go.temporal.io/api v1.26.0
 	go.temporal.io/sdk v1.25.1
 	go.temporal.io/sdk/contrib/tools/workflowcheck v0.1.0
-	go.temporal.io/server v1.22.2
+	go.temporal.io/server v1.22.4
 	go.uber.org/zap v1.26.0
 	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1
 	google.golang.org/grpc v1.59.0
