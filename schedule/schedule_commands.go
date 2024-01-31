@@ -476,18 +476,8 @@ func DescribeSchedule(c *cli.Context) error {
 		item.LastRunActualTime = ra.ActualTime
 		item.LastRunExecution = ra.StartWorkflowResult
 	}
-	if fields := resp.Memo.GetFields(); len(fields) > 0 {
-		item.Memo = make(map[string]string, len(fields))
-		for k, payload := range fields {
-			item.Memo[k] = converter.GetDefaultDataConverter().ToString(payload)
-		}
-	}
-	if fields := resp.SearchAttributes.GetIndexedFields(); len(fields) > 0 {
-		item.SearchAttributes = make(map[string]string, len(fields))
-		for k, payload := range fields {
-			item.SearchAttributes[k] = converter.GetDefaultDataConverter().ToString(payload)
-		}
-	}
+	item.Memo = extractFieldsToStrings(resp.Memo.GetFields())
+	item.SearchAttributes = extractFieldsToStrings(resp.SearchAttributes.GetIndexedFields())
 
 	opts := &output.PrintOptions{
 		Fields: []string{
@@ -579,6 +569,8 @@ func ListSchedules(c *cli.Context) error {
 					LastRunExecution  *commonpb.WorkflowExecution
 					LastRunActualTime *time.Time
 				}
+				Memo             map[string]string // json only
+				SearchAttributes map[string]string // json only
 			}
 			info := sch.GetInfo()
 			if info == nil {
@@ -599,6 +591,8 @@ func ListSchedules(c *cli.Context) error {
 			}
 			item.Specification = info.GetSpec()
 			uncanonicalizeSpec(item.Specification)
+			item.Memo = extractFieldsToStrings(sch.Memo.GetFields())
+			item.SearchAttributes = extractFieldsToStrings(sch.SearchAttributes.GetIndexedFields())
 			items[i] = item
 		}
 		return items, resp.NextPageToken, nil
@@ -682,4 +676,15 @@ func encodeSearchAttributes(sa map[string]interface{}) (*commonpb.SearchAttribut
 		}
 	}
 	return &commonpb.SearchAttributes{IndexedFields: fields}, nil
+}
+
+func extractFieldsToStrings(fields map[string]*commonpb.Payload) map[string]string {
+	if len(fields) == 0 {
+		return nil
+	}
+	out := make(map[string]string, len(fields))
+	for k, payload := range fields {
+		out[k] = converter.GetDefaultDataConverter().ToString(payload)
+	}
+	return out
 }
