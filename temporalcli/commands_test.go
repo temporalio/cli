@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"regexp"
 	"slices"
 	"strings"
 	"sync"
@@ -52,24 +53,39 @@ func (h *CommandHarness) Close() {
 
 // Pieces must appear in order on the line and not overlap
 func (h *CommandHarness) ContainsOnSameLine(text string, pieces ...string) {
+	h.NoError(AssertContainsOnSameLine(text, pieces...))
+}
+
+func AssertContainsOnSameLine(text string, pieces ...string) error {
+	// Build regex pattern based on pieces
+	pattern := ""
+	for _, piece := range pieces {
+		if pattern != "" {
+			pattern += ".*"
+		}
+		pattern += regexp.QuoteMeta(piece)
+	}
+	regex, err := regexp.Compile(pattern)
+	if err != nil {
+		return err
+	}
 	// Split into lines, then check each piece is present
 	lines := strings.Split(text, "\n")
 	for _, line := range lines {
-		foundAll := true
-		lastEndIndex := -1
-		for _, piece := range pieces {
-			if index := strings.Index(line, piece); index > lastEndIndex {
-				lastEndIndex = index + len(piece)
-			} else {
-				foundAll = false
-				break
-			}
-		}
-		if foundAll {
-			return
+		if regex.MatchString(line) {
+			return nil
 		}
 	}
-	h.Fail("Pieces not found in order on any line together")
+	return fmt.Errorf("pieces not found in order on any line together")
+}
+
+func TestAssertContainsOnSameLine(t *testing.T) {
+	require.Error(t, AssertContainsOnSameLine("a b c", "b", "a"))
+	require.Error(t, AssertContainsOnSameLine("a\nb c", "a", "b"))
+	require.NoError(t, AssertContainsOnSameLine("aba", "b", "a"))
+	require.NoError(t, AssertContainsOnSameLine("a b a", "b", "a"))
+	require.NoError(t, AssertContainsOnSameLine("axb", "a", "b"))
+	require.NoError(t, AssertContainsOnSameLine("a a", "a", "a"))
 }
 
 func (h *CommandHarness) Eventually(

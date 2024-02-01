@@ -159,7 +159,6 @@ func startBatchJob(cctx *CommandContext, cl client.Client, req *workflowservice.
 	if err != nil {
 		return fmt.Errorf("failed starting batch operation: %w", err)
 	}
-	cctx.Logger.Info("Started batch", "jobId", req.JobId)
 	if cctx.JSONOutput {
 		return cctx.Printer.PrintStructured(
 			struct {
@@ -167,5 +166,6 @@ func startBatchJob(cctx *CommandContext, cl client.Client, req *workflowservice.
 			}{BatchJobID: req.JobId},
 			printer.StructuredOptions{})
 	}
+	cctx.Printer.Printlnf("Started batch for job ID: %v", req.JobId)
 	return nil
 }

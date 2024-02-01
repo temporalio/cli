@@ -46,12 +46,11 @@ func (s *SharedServerSuite) TestWorkflow_Signal_SingleWorkflowSuccess() {
 func (s *SharedServerSuite) TestWorkflow_Signal_BatchWorkflowSuccess() {
 	res := s.testSignalBatchWorkflow(false)
 	s.Contains(res.Stdout.String(), "approximately 5 workflow(s)")
-	s.ContainsOnSameLine(res.Stderr.String(), "Started batch", "jobId")
+	s.Contains(res.Stdout.String(), "Started batch")
 }
 
 func (s *SharedServerSuite) TestWorkflow_Signal_BatchWorkflowSuccessJSON() {
 	res := s.testSignalBatchWorkflow(true)
-	s.ContainsOnSameLine(res.Stderr.String(), "Started batch", "jobId")
 	var jsonRes map[string]any
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonRes))
 	s.NotEmpty(jsonRes["batchJobId"])
