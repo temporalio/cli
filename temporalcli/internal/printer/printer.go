@@ -32,13 +32,17 @@ type Printer struct {
 }
 
 // Ignored during JSON output
-func (p *Printer) Println(s ...string) {
+func (p *Printer) Print(s ...string) {
 	if !p.JSON {
 		for _, v := range s {
 			p.writeStr(v)
 		}
-		p.writeStr("\n")
 	}
+}
+
+// Ignored during JSON output
+func (p *Printer) Println(s ...string) {
+	p.Print(append(append([]string{}, s...), "\n")...)
 }
 
 // Ignored during JSON output

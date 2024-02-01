@@ -435,11 +435,21 @@ func NewTemporalWorkflowDeleteCommand(cctx *CommandContext, parent *TemporalWork
 	return &s
 }
 
+type WorkflowReferenceOptions struct {
+	WorkflowId string
+	RunId      string
+}
+
+func (v *WorkflowReferenceOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
+	f.StringVarP(&v.WorkflowId, "workflow-id", "w", "", "Workflow Id.")
+	_ = cobra.MarkFlagRequired(f, "workflow-id")
+	f.StringVarP(&v.RunId, "run-id", "r", "", "Run Id.")
+}
+
 type TemporalWorkflowDescribeCommand struct {
-	Parent      *TemporalWorkflowCommand
-	Command     cobra.Command
-	WorkflowId  string
-	RunId       string
+	Parent  *TemporalWorkflowCommand
+	Command cobra.Command
+	WorkflowReferenceOptions
 	ResetPoints bool
 	Raw         bool
 }
@@ -456,9 +466,7 @@ func NewTemporalWorkflowDescribeCommand(cctx *CommandContext, parent *TemporalWo
 		s.Command.Long = "The `temporal workflow describe` command shows information about a given\nWorkflow Execution.\n\nThis information can be used to locate Workflow Executions that weren't able to run successfully.\n\n`temporal workflow describe --workflow-id=meaningful-business-id`\n\nOutput can be shown as printed ('raw') or formatted to only show the Workflow Execution's auto-reset points.\n\n`temporal workflow describe --workflow-id=meaningful-business-id --raw=true --reset-points=true`\n\nUse the command options below to change the information returned by this command."
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVarP(&s.WorkflowId, "workflow-id", "w", "", "Workflow Id.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "workflow-id")
-	s.Command.Flags().StringVarP(&s.RunId, "run-id", "r", "", "Run Id.")
+	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Flags().BoolVar(&s.ResetPoints, "reset-points", false, "Only show auto-reset points.")
 	s.Command.Flags().BoolVar(&s.Raw, "raw", false, "Print properties without changing their format.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -595,10 +603,9 @@ func NewTemporalWorkflowResetBatchCommand(cctx *CommandContext, parent *Temporal
 }
 
 type TemporalWorkflowShowCommand struct {
-	Parent      *TemporalWorkflowCommand
-	Command     cobra.Command
-	WorkflowId  string
-	RunId       string
+	Parent  *TemporalWorkflowCommand
+	Command cobra.Command
+	WorkflowReferenceOptions
 	ResetPoints bool
 	Follow      bool
 }
@@ -615,9 +622,7 @@ func NewTemporalWorkflowShowCommand(cctx *CommandContext, parent *TemporalWorkfl
 		s.Command.Long = "The `temporal workflow show` command provides the Event History for a\nWorkflow Execution.\n\nUse the options listed below to change the command's behavior."
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVarP(&s.WorkflowId, "workflow-id", "w", "", "Workflow Id.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "workflow-id")
-	s.Command.Flags().StringVarP(&s.RunId, "run-id", "r", "", "Run Id.")
+	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Flags().BoolVar(&s.ResetPoints, "reset-points", false, "Only show auto-reset points.")
 	s.Command.Flags().BoolVar(&s.Follow, "follow", false, "Follow the progress of a Workflow Execution if it goes to a new run.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -628,9 +633,28 @@ func NewTemporalWorkflowShowCommand(cctx *CommandContext, parent *TemporalWorkfl
 	return &s
 }
 
+type SingleWorkflowOrBatchOptions struct {
+	WorkflowId string
+	RunId      string
+	Query      string
+	Reason     string
+	Yes        bool
+}
+
+func (v *SingleWorkflowOrBatchOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
+	f.StringVarP(&v.WorkflowId, "workflow-id", "w", "", "Workflow Id. Either this or query must be set.")
+	f.StringVarP(&v.RunId, "run-id", "r", "", "Run Id. Cannot be set when query is set.")
+	f.StringVarP(&v.Query, "query", "q", "", "Start a batch to Signal Workflow Executions with given List Filter. Either this or Workflow Id must be set.")
+	f.StringVar(&v.Reason, "reason", "", "Reason to perform batch. Only allowed if query is present. Defaults to message with user name and time.")
+	f.BoolVarP(&v.Yes, "yes", "y", false, "Confirm prompt to perform batch. Only allowed if query is present.")
+}
+
 type TemporalWorkflowSignalCommand struct {
 	Parent  *TemporalWorkflowCommand
 	Command cobra.Command
+	PayloadInputOptions
+	Name string
+	SingleWorkflowOrBatchOptions
 }
 
 func NewTemporalWorkflowSignalCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowSignalCommand {
@@ -638,9 +662,17 @@ func NewTemporalWorkflowSignalCommand(cctx *CommandContext, parent *TemporalWork
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "signal [flags]"
-	s.Command.Short = "Signal Workflow Execution by Id or List Filter."
-	s.Command.Long = "TODO"
+	s.Command.Short = "Signal Workflow Execution by Id."
+	if hasHighlighting {
+		s.Command.Long = "The \x1b[1mtemporal workflow signal\x1b[0m command is used to Signal a\nWorkflow Execution by ID.\n\n\x1b[1mtemporal workflow signal \\\n\t\t--workflow-id MyWorkflowId \\\n\t\t--name MySignal \\\n\t\t--input '{\"Input\": \"As-JSON\"}'\x1b[0m\n\nUse the options listed below to change the command's behavior."
+	} else {
+		s.Command.Long = "The `temporal workflow signal` command is used to Signal a\nWorkflow Execution by ID.\n\n```\ntemporal workflow signal \\\n\t\t--workflow-id MyWorkflowId \\\n\t\t--name MySignal \\\n\t\t--input '{\"Input\": \"As-JSON\"}'\n```\n\nUse the options listed below to change the command's behavior."
+	}
 	s.Command.Args = cobra.NoArgs
+	s.PayloadInputOptions.buildFlags(cctx, s.Command.Flags())
+	s.Command.Flags().StringVar(&s.Name, "name", "", "Signal Name.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
+	s.SingleWorkflowOrBatchOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
