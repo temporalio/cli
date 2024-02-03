@@ -26,13 +26,14 @@ package trace
 
 import (
 	"fmt"
+	"strconv"
+	"sync"
+	"time"
+
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/failure/v1"
 	"go.temporal.io/api/history/v1"
-	"strconv"
-	"sync"
-	"time"
 )
 
 // ExecutionState provides a common interface to any execution (Workflows, Activities and Timers in this case) updated through HistoryEvents.

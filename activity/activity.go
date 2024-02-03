@@ -8,8 +8,8 @@ import (
 func NewActivityCommands() []*cli.Command {
 	return []*cli.Command{
 		{
-			Name:  "complete",
-			Usage: common.CompleteActivityDefinition,
+			Name:      "complete",
+			Usage:     common.CompleteActivityDefinition,
 			UsageText: common.CompleteActivityUsageText,
 			Flags: []cli.Flag{
 				&cli.StringFlag{
@@ -50,8 +50,8 @@ func NewActivityCommands() []*cli.Command {
 			},
 		},
 		{
-			Name:  "fail",
-			Usage: common.FailActivityDefinition,
+			Name:      "fail",
+			Usage:     common.FailActivityDefinition,
 			UsageText: common.FailActivityUsageText,
 			Flags: []cli.Flag{
 				&cli.StringFlag{

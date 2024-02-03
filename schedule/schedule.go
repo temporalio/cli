@@ -124,7 +124,7 @@ func NewScheduleCommands() []*cli.Command {
 		{
 			Name:        "create",
 			Usage:       common.ScheduleCreateDefinition,
-			UsageText: common.ScheduleCreateUsageText,
+			UsageText:   common.ScheduleCreateUsageText,
 			Description: common.ScheduleCreateDescription,
 			Flags:       createFlags,
 			Action:      CreateSchedule,
@@ -133,15 +133,15 @@ func NewScheduleCommands() []*cli.Command {
 		{
 			Name:        "update",
 			Usage:       common.ScheduleUpdateDefinition,
-			UsageText: common.ScheduleUpdateUsageText,
+			UsageText:   common.ScheduleUpdateUsageText,
 			Description: common.ScheduleUpdateDescription,
 			Flags:       createFlags,
 			Action:      UpdateSchedule,
 			Category:    common.CategoryMain,
 		},
 		{
-			Name:  "toggle",
-			Usage: common.ScheduleToggleDefinition,
+			Name:      "toggle",
+			Usage:     common.ScheduleToggleDefinition,
 			UsageText: common.ScheduleToggleUsageText,
 			Flags: []cli.Flag{
 				sid,
@@ -165,8 +165,8 @@ func NewScheduleCommands() []*cli.Command {
 			Action: ToggleSchedule,
 		},
 		{
-			Name:  "trigger",
-			Usage: common.ScheduleTriggerDefinition,
+			Name:      "trigger",
+			Usage:     common.ScheduleTriggerDefinition,
 			UsageText: common.ScheduleTriggerUsageText,
 			Flags: []cli.Flag{
 				sid,
@@ -175,8 +175,8 @@ func NewScheduleCommands() []*cli.Command {
 			Action: TriggerSchedule,
 		},
 		{
-			Name:  "backfill",
-			Usage: common.ScheduleBackfillDefinition,
+			Name:      "backfill",
+			Usage:     common.ScheduleBackfillDefinition,
 			UsageText: common.ScheduleBackfillUsageText,
 			Flags: []cli.Flag{
 				sid,
@@ -197,8 +197,8 @@ func NewScheduleCommands() []*cli.Command {
 			Action: BackfillSchedule,
 		},
 		{
-			Name:  "describe",
-			Usage: common.ScheduleDescribeDefinition,
+			Name:      "describe",
+			Usage:     common.ScheduleDescribeDefinition,
 			UsageText: common.ScheduleDescribeUsageText,
 			Flags: append([]cli.Flag{
 				sid,
@@ -211,8 +211,8 @@ func NewScheduleCommands() []*cli.Command {
 			Action: DescribeSchedule,
 		},
 		{
-			Name:  "delete",
-			Usage: common.ScheduleDeleteDefinition,
+			Name:      "delete",
+			Usage:     common.ScheduleDeleteDefinition,
 			UsageText: common.ScheduleDeleteUsageText,
 			Flags: []cli.Flag{
 				sid,
@@ -220,11 +220,11 @@ func NewScheduleCommands() []*cli.Command {
 			Action: DeleteSchedule,
 		},
 		{
-			Name:   "list",
-			Usage:  common.ScheduleListDefinition,
+			Name:      "list",
+			Usage:     common.ScheduleListDefinition,
 			UsageText: common.ScheduleListUsageText,
-			Flags:  common.FlagsForPaginationAndRendering,
-			Action: ListSchedules,
+			Flags:     common.FlagsForPaginationAndRendering,
+			Action:    ListSchedules,
 		},
 	}
 }

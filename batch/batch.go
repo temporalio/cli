@@ -8,8 +8,8 @@ import (
 func NewBatchCommands() []*cli.Command {
 	return []*cli.Command{
 		{
-			Name:  "describe",
-			Usage: common.DescribeBatchJobDefinition,
+			Name:      "describe",
+			Usage:     common.DescribeBatchJobDefinition,
 			UsageText: common.DescribeBatchUsageText,
 			Flags: append([]cli.Flag{
 				&cli.StringFlag{
@@ -34,8 +34,8 @@ func NewBatchCommands() []*cli.Command {
 			},
 		},
 		{
-			Name:  "terminate",
-			Usage: common.TerminateBatchJobDefinition,
+			Name:      "terminate",
+			Usage:     common.TerminateBatchJobDefinition,
 			UsageText: common.TerminateBatchUsageText,
 			Flags: []cli.Flag{
 				&cli.StringFlag{
