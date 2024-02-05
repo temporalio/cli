@@ -386,7 +386,24 @@ temporal workflow start \
 
 ### temporal workflow terminate: Terminate Workflow Execution by ID or List Filter.
 
-TODO
+The `temporal workflow terminate` command is used to terminate a [Workflow Execution](/concepts/what-is-a-workflow-execution). Canceling a running Workflow Execution records a `WorkflowExecutionTerminated` event as the closing Event in the workflow's Event History. No further command tasks may be scheduled after running this command.
+
+Executions may be terminated by [ID](/concepts/what-is-a-workflow-id):
+```
+temporal workflow terminate --workflow-id MyWorkflowId
+```
+
+...or in bulk via a visibility query [list filter](/concepts/what-is-a-list-filter):
+
+```
+temporal workflow terminate --query=MyQuery
+```
+
+Use the options listed below to change the behavior of this command.
+
+#### Options
+
+Includes options set for [single workflow or batch](#options-set-single-workflow-or-batch)
 
 ### temporal workflow trace: Trace progress of a Workflow Execution and its children.
 
