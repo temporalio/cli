@@ -135,6 +135,8 @@ func (s *SharedServerSuite) TestWorkflow_Terminate_SingleWorkflowSuccess() {
 		"workflow", "terminate",
 		"--address", s.Address(),
 		"-w", run.GetID(),
+		// Ensure that we can provide a reason
+		"--reason", "terminate-test",
 	)
 	s.NoError(res.Err)
 
