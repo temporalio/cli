@@ -275,3 +275,99 @@ func (s *SharedServerSuite) testTerminateBatchWorkflow(json bool) *CommandResult
 	}
 	return res
 }
+
+func (s *SharedServerSuite) TestWorkflow_Cancel_SingleWorkflowSuccess() {
+	// Make workflow wait for cancel and then return the context's error
+	s.Worker.OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
+		ctx.Done().Receive(ctx, nil)
+		return nil, ctx.Err()
+	})
+
+	// Start the workflow
+	run, err := s.Client.ExecuteWorkflow(
+		s.Context,
+		client.StartWorkflowOptions{TaskQueue: s.Worker.Options.TaskQueue},
+		DevWorkflow,
+		"ignored",
+	)
+	s.NoError(err)
+
+	// Send cancel
+	res := s.Execute(
+		"workflow", "cancel",
+		"--address", s.Address(),
+		"-w", run.GetID(),
+	)
+	s.NoError(res.Err)
+
+	// Confirm workflow was cancelled
+	s.Error(workflow.ErrCanceled, run.Get(s.Context, nil))
+}
+
+func (s *SharedServerSuite) TestWorkflow_Cancel_BatchWorkflowSuccess() {
+	res := s.testCancelBatchWorkflow(false)
+	s.Contains(res.Stdout.String(), "approximately 5 workflow(s)")
+	s.Contains(res.Stdout.String(), "Started batch")
+}
+
+func (s *SharedServerSuite) TestWorkflow_Cancel_BatchWorkflowSuccessJSON() {
+	res := s.testCancelBatchWorkflow(true)
+	var jsonRes map[string]any
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonRes))
+	s.NotEmpty(jsonRes["batchJobId"])
+}
+
+func (s *SharedServerSuite) testCancelBatchWorkflow(json bool) *CommandResult {
+	// Make workflow wait for cancel and then return the context's error
+	s.Worker.OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
+		ctx.Done().Receive(ctx, nil)
+		return nil, ctx.Err()
+	})
+
+	// Start 5 workflows
+	runs := make([]client.WorkflowRun, 5)
+	searchAttr := "keyword-" + uuid.NewString()
+	for i := range runs {
+		run, err := s.Client.ExecuteWorkflow(
+			s.Context,
+			client.StartWorkflowOptions{
+				TaskQueue:        s.Worker.Options.TaskQueue,
+				SearchAttributes: map[string]any{"CustomKeywordField": searchAttr},
+			},
+			DevWorkflow,
+			"ignored",
+		)
+		s.NoError(err)
+		runs[i] = run
+	}
+
+	// Wait for all to appear in list
+	s.Eventually(func() bool {
+		resp, err := s.Client.ListWorkflow(s.Context, &workflowservice.ListWorkflowExecutionsRequest{
+			Query: "CustomKeywordField = '" + searchAttr + "'",
+		})
+		s.NoError(err)
+		return len(resp.Executions) == len(runs)
+	}, 3*time.Second, 100*time.Millisecond)
+
+	// Send batch cancel with a "y" for non-json or "--yes" for json
+	args := []string{
+		"workflow", "cancel",
+		"--address", s.Address(),
+		"--query", "CustomKeywordField = '" + searchAttr + "'",
+		"--reason", "cancellation-test",
+	}
+	if json {
+		args = append(args, "--yes", "-o", "json")
+	} else {
+		s.CommandHarness.Stdin.WriteString("y\n")
+	}
+	res := s.Execute(args...)
+	s.NoError(res.Err)
+
+	// Confirm that all workflows fail with ErrCanceled
+	for _, run := range runs {
+		s.Error(workflow.ErrCanceled, run.Get(s.Context, nil))
+	}
+	return res
+}

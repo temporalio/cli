@@ -12,8 +12,37 @@ import (
 	"go.temporal.io/sdk/client"
 )
 
-func (*TemporalWorkflowCancelCommand) run(*CommandContext, []string) error {
-	return fmt.Errorf("TODO")
+func (c *TemporalWorkflowCancelCommand) run(cctx *CommandContext, args []string) error {
+	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	exec, batchReq, err := c.workflowExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{})
+	if err != nil {
+		return err
+	}
+
+	// Run single or batch
+	if exec != nil {
+		err = cl.CancelWorkflow(cctx, exec.WorkflowId, exec.RunId)
+		if err != nil {
+			return fmt.Errorf("failed to cancel workflow: %w", err)
+		}
+		cctx.Printer.Println("Canceled workflow")
+	} else if batchReq != nil {
+		batchReq.Operation = &workflowservice.StartBatchOperationRequest_CancellationOperation{
+			CancellationOperation: &batch.BatchOperationCancellation{
+				Identity: clientIdentity(),
+			},
+		}
+		if err := startBatchJob(cctx, cl, batchReq); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (*TemporalWorkflowDeleteCommand) run(*CommandContext, []string) error {
