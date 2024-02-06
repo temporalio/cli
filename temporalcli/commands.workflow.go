@@ -45,7 +45,7 @@ func (c *TemporalWorkflowSignalCommand) run(cctx *CommandContext, args []string)
 		return err
 	}
 
-	exec, batchReq, err := c.workflowExecOrBatch(cctx, c.Parent.Namespace, cl)
+	exec, batchReq, err := c.workflowExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{})
 	if err != nil {
 		return err
 	}
@@ -91,9 +91,9 @@ func (c *TemporalWorkflowTerminateCommand) run(cctx *CommandContext, _ []string)
 	}
 	defer cl.Close()
 
-	exec, batchReq, err := c.workflowExecOrBatch(cctx, c.Parent.Namespace, cl, func(p *singleOrBatchParams) {
+	exec, batchReq, err := c.workflowExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{
 		// You're allowed to specify a reason when terminating a workflow
-		p.AllowReasonWithWorkflowID = true
+		AllowReasonWithWorkflowID: true,
 	})
 	if err != nil {
 		return err
@@ -128,7 +128,7 @@ func (*TemporalWorkflowUpdateCommand) run(*CommandContext, []string) error {
 	return fmt.Errorf("TODO")
 }
 
-type singleOrBatchParams struct {
+type singleOrBatchOverrides struct {
 	AllowReasonWithWorkflowID bool
 }
 
@@ -136,18 +136,13 @@ func (s *SingleWorkflowOrBatchOptions) workflowExecOrBatch(
 	cctx *CommandContext,
 	namespace string,
 	cl client.Client,
-	options ...func(*singleOrBatchParams),
+	overrides singleOrBatchOverrides,
 ) (*common.WorkflowExecution, *workflowservice.StartBatchOperationRequest, error) {
-	var p singleOrBatchParams
-	for _, opt := range options {
-		opt(&p)
-	}
-
 	// If workflow is set, we return single execution
 	if s.WorkflowId != "" {
 		if s.Query != "" {
 			return nil, nil, fmt.Errorf("cannot set query when workflow ID is set")
-		} else if !p.AllowReasonWithWorkflowID && s.Reason != "" {
+		} else if s.Reason != "" && !overrides.AllowReasonWithWorkflowID {
 			return nil, nil, fmt.Errorf("cannot set reason when workflow ID is set")
 		} else if s.Yes {
 			return nil, nil, fmt.Errorf("cannot set 'yes' when workflow ID is set")
