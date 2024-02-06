@@ -101,7 +101,11 @@ func (c *TemporalWorkflowTerminateCommand) run(cctx *CommandContext, _ []string)
 
 	// Run single or batch
 	if exec != nil {
-		err = cl.TerminateWorkflow(cctx, exec.WorkflowId, exec.RunId, c.Reason)
+		reason := c.Reason
+		if reason == "" {
+			reason = defaultReason()
+		}
+		err = cl.TerminateWorkflow(cctx, exec.WorkflowId, exec.RunId, reason)
 		if err != nil {
 			return fmt.Errorf("failed to terminate workflow: %w", err)
 		}
@@ -126,6 +130,14 @@ func (*TemporalWorkflowTraceCommand) run(*CommandContext, []string) error {
 
 func (*TemporalWorkflowUpdateCommand) run(*CommandContext, []string) error {
 	return fmt.Errorf("TODO")
+}
+
+func defaultReason() string {
+	username := "<unknown-user>"
+	if u, err := user.Current(); err != nil && u.Username != "" {
+		username = u.Username
+	}
+	return "Requested from CLI by " + username
 }
 
 type singleOrBatchOverrides struct {
@@ -176,11 +188,7 @@ func (s *SingleWorkflowOrBatchOptions) workflowExecOrBatch(
 	// Default the reason if not set
 	reason := s.Reason
 	if reason == "" {
-		username := "<unknown-user>"
-		if u, err := user.Current(); err != nil && u.Username != "" {
-			username = u.Username
-		}
-		reason = "Requested from CLI by " + username
+		reason = defaultReason()
 	}
 
 	return nil, &workflowservice.StartBatchOperationRequest{

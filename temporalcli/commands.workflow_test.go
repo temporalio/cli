@@ -141,6 +141,19 @@ func (s *SharedServerSuite) TestWorkflow_Terminate_SingleWorkflowSuccess_Without
 
 	// Confirm workflow was terminated
 	s.Contains(run.Get(s.Context, nil).Error(), "terminated")
+	// Ensure the termination reason was recorded
+	iter := s.Client.GetWorkflowHistory(s.Context, run.GetID(), run.GetRunID(), false, enums.HISTORY_EVENT_FILTER_TYPE_CLOSE_EVENT)
+	var foundReason bool
+	for iter.HasNext() {
+		event, err := iter.Next()
+		s.NoError(err)
+		if term := event.GetWorkflowExecutionTerminatedEventAttributes(); term != nil {
+			foundReason = true
+			// We're not going to check the value here so we don't pin ourselves to our particular default, but there _should_ be a default reason
+			s.NotEmpty(term.Reason)
+		}
+	}
+	s.True(foundReason)
 }
 
 func (s *SharedServerSuite) TestWorkflow_Terminate_SingleWorkflowSuccess_WithReason() {
