@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/workflow"
@@ -114,8 +115,8 @@ func (s *SharedServerSuite) testSignalBatchWorkflow(json bool) *CommandResult {
 	}
 	return res
 }
-func (s *SharedServerSuite) TestWorkflow_Terminate_SingleWorkflowSuccess() {
-	// Make workflow wait for termination and then return the context's error
+
+func (s *SharedServerSuite) TestWorkflow_Terminate_SingleWorkflowSuccess_WithoutReason() {
 	s.Worker.OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
 		ctx.Done().Receive(ctx, nil)
 		return nil, ctx.Err()
@@ -135,13 +136,52 @@ func (s *SharedServerSuite) TestWorkflow_Terminate_SingleWorkflowSuccess() {
 		"workflow", "terminate",
 		"--address", s.Address(),
 		"-w", run.GetID(),
-		// Ensure that we can provide a reason
+	)
+	s.NoError(res.Err)
+
+	// Confirm workflow was terminated
+	s.Contains(run.Get(s.Context, nil).Error(), "terminated")
+}
+
+func (s *SharedServerSuite) TestWorkflow_Terminate_SingleWorkflowSuccess_WithReason() {
+	s.Worker.OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
+		ctx.Done().Receive(ctx, nil)
+		return nil, ctx.Err()
+	})
+
+	// Start the workflow
+	run, err := s.Client.ExecuteWorkflow(
+		s.Context,
+		client.StartWorkflowOptions{TaskQueue: s.Worker.Options.TaskQueue},
+		DevWorkflow,
+		"ignored",
+	)
+	s.NoError(err)
+
+	// Send terminate
+	res := s.Execute(
+		"workflow", "terminate",
+		"--address", s.Address(),
+		"-w", run.GetID(),
 		"--reason", "terminate-test",
 	)
 	s.NoError(res.Err)
 
 	// Confirm workflow was terminated
 	s.Contains(run.Get(s.Context, nil).Error(), "terminated")
+
+	// Ensure the termination reason was recorded
+	iter := s.Client.GetWorkflowHistory(s.Context, run.GetID(), run.GetRunID(), false, enums.HISTORY_EVENT_FILTER_TYPE_CLOSE_EVENT)
+	var foundReason bool
+	for iter.HasNext() {
+		event, err := iter.Next()
+		s.NoError(err)
+		if term := event.GetWorkflowExecutionTerminatedEventAttributes(); term != nil {
+			foundReason = true
+			s.Equal("terminate-test", term.Reason)
+		}
+	}
+	s.True(foundReason)
 }
 
 func (s *SharedServerSuite) TestWorkflow_Terminate_BatchWorkflowSuccess() {
@@ -158,7 +198,6 @@ func (s *SharedServerSuite) TestWorkflow_Terminate_BatchWorkflowSuccessJSON() {
 }
 
 func (s *SharedServerSuite) testTerminateBatchWorkflow(json bool) *CommandResult {
-	// Make workflow wait for terminate and then return the context's error
 	s.Worker.OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
 		ctx.Done().Receive(ctx, nil)
 		return nil, ctx.Err()
@@ -208,6 +247,18 @@ func (s *SharedServerSuite) testTerminateBatchWorkflow(json bool) *CommandResult
 	// Confirm that all workflows are terminated
 	for _, run := range runs {
 		s.Contains(run.Get(s.Context, nil).Error(), "terminated")
+		// Ensure the termination reason was recorded
+		iter := s.Client.GetWorkflowHistory(s.Context, run.GetID(), run.GetRunID(), false, enums.HISTORY_EVENT_FILTER_TYPE_CLOSE_EVENT)
+		var foundReason bool
+		for iter.HasNext() {
+			event, err := iter.Next()
+			s.NoError(err)
+			if term := event.GetWorkflowExecutionTerminatedEventAttributes(); term != nil {
+				foundReason = true
+				s.Equal("terminate-test", term.Reason)
+			}
+		}
+		s.True(foundReason)
 	}
 	return res
 }

@@ -338,7 +338,7 @@ Includes options set for [payload input](#options-set-for-payload-input).
 * `--run-id`, `-r` (string) - Run Id. Cannot be set when query is set.
 * `--query`, `-q` (string) - Start a batch to Signal Workflow Executions with given List Filter. Either this or
   Workflow Id must be set.
-* `--reason` (string) - Reason to perform batch. Only allowed if query is present. Defaults to message with user name
+* `--reason` (string) - Reason to perform batch. Only allowed if query is present unless the command specifies otherwise. Defaults to message with user name
   and time.
 * `--yes`, `-y` (bool) - Confirm prompt to perform batch. Only allowed if query is present.
 
@@ -386,11 +386,11 @@ temporal workflow start \
 
 ### temporal workflow terminate: Terminate Workflow Execution by ID or List Filter.
 
-The `temporal workflow terminate` command is used to terminate a [Workflow Execution](/concepts/what-is-a-workflow-execution). Canceling a running Workflow Execution records a `WorkflowExecutionTerminated` event as the closing Event in the workflow's Event History. No further command tasks may be scheduled after running this command.
+The `temporal workflow terminate` command is used to terminate a [Workflow Execution](/concepts/what-is-a-workflow-execution). Canceling a running Workflow Execution records a `WorkflowExecutionTerminated` event as the closing Event in the workflow's Event History. Workflow code is oblivious to termination. Use `temporal workflow cancel` if you need to perform cleanup in your workflow.
 
-Executions may be terminated by [ID](/concepts/what-is-a-workflow-id):
+Executions may be terminated by [ID](/concepts/what-is-a-workflow-id) with an optional reason:
 ```
-temporal workflow terminate --workflow-id MyWorkflowId
+temporal workflow terminate [--reason my-reason] --workflow-id MyWorkflowId
 ```
 
 ...or in bulk via a visibility query [list filter](/concepts/what-is-a-list-filter):
