@@ -91,7 +91,16 @@ func (c *TemporalWorkflowTerminateCommand) run(cctx *CommandContext, _ []string)
 	}
 	defer cl.Close()
 
-	exec, batchReq, err := c.workflowExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{
+	// We create a faux SingleWorkflowOrBatchOptions to use the shared logic
+	opts := SingleWorkflowOrBatchOptions{
+		WorkflowId: c.WorkflowId,
+		RunId:      c.RunId,
+		Query:      c.Query,
+		Reason:     c.Reason,
+		Yes:        c.Yes,
+	}
+
+	exec, batchReq, err := opts.workflowExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{
 		// You're allowed to specify a reason when terminating a workflow
 		AllowReasonWithWorkflowID: true,
 	})
