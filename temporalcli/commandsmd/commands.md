@@ -405,8 +405,8 @@ Use the options listed below to change the behavior of this command.
 
 * `--workflow-id`, `-w` (string) - Workflow Id. Either this or query must be set.
 * `--run-id`, `-r` (string) - Run Id. Cannot be set when query is set.
-* `--query`, `-q` (string) - Start a batch to Signal Workflow Executions with given List Filter. Either this or Workflow Id must be set.
-* `--reason` (string) - Reason to terminate this workflow. Defaults to message with the current user's name.
+* `--query`, `-q` (string) - Start a batch to terminate Workflow Executions with given List Filter. Either this or Workflow Id must be set.
+* `--reason` (string) - Reason for termination. Defaults to message with the current user's name.
 * `--yes`, `-y` (bool) - Confirm prompt to perform batch. Only allowed if query is present.
 
 ### temporal workflow trace: Trace progress of a Workflow Execution and its children.
