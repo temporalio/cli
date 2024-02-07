@@ -217,7 +217,6 @@ temporal workflow cancel --workflow-id MyWorkflowId
 ```
 
 ...or in bulk via a visibility query [list filter](/concepts/what-is-a-list-filter):
-
 ```
 temporal workflow cancel --query=MyQuery
 ```
@@ -355,7 +354,7 @@ Includes options set for [payload input](#options-set-for-payload-input).
 
 * `--workflow-id`, `-w` (string) - Workflow Id. Either this or query must be set.
 * `--run-id`, `-r` (string) - Run Id. Cannot be set when query is set.
-* `--query`, `-q` (string) - Start a batch to Signal Workflow Executions with given List Filter. Either this or
+* `--query`, `-q` (string) - Start a batch to operate on Workflow Executions with given List Filter. Either this or
   Workflow Id must be set.
 * `--reason` (string) - Reason to perform batch. Only allowed if query is present unless the command specifies otherwise. Defaults to message with the current user's name.
 * `--yes`, `-y` (bool) - Confirm prompt to perform batch. Only allowed if query is present.
