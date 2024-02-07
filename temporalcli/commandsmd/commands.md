@@ -338,8 +338,7 @@ Includes options set for [payload input](#options-set-for-payload-input).
 * `--run-id`, `-r` (string) - Run Id. Cannot be set when query is set.
 * `--query`, `-q` (string) - Start a batch to Signal Workflow Executions with given List Filter. Either this or
   Workflow Id must be set.
-* `--reason` (string) - Reason to perform batch. Only allowed if query is present. Defaults to message with user name
-  and time.
+* `--reason` (string) - Reason to perform batch. Only allowed if query is present unless the command specifies otherwise. Defaults to message with the current user's name.
 * `--yes`, `-y` (bool) - Confirm prompt to perform batch. Only allowed if query is present.
 
 ### temporal workflow stack: Query a Workflow Execution with __stack_trace as the query type.
@@ -386,7 +385,29 @@ temporal workflow start \
 
 ### temporal workflow terminate: Terminate Workflow Execution by ID or List Filter.
 
-TODO
+The `temporal workflow terminate` command is used to terminate a [Workflow Execution](/concepts/what-is-a-workflow-execution). 
+Canceling a running Workflow Execution records a `WorkflowExecutionTerminated` event as the closing Event in the workflow's Event History. 
+Workflow code is oblivious to termination. Use `temporal workflow cancel` if you need to perform cleanup in your workflow.
+
+Executions may be terminated by [ID](/concepts/what-is-a-workflow-id) with an optional reason:
+```
+temporal workflow terminate [--reason my-reason] --workflow-id MyWorkflowId
+```
+
+...or in bulk via a visibility query [list filter](/concepts/what-is-a-list-filter):
+```
+temporal workflow terminate --query=MyQuery
+```
+
+Use the options listed below to change the behavior of this command.
+
+#### Options
+
+* `--workflow-id`, `-w` (string) - Workflow Id. Either this or query must be set.
+* `--run-id`, `-r` (string) - Run Id. Cannot be set when query is set.
+* `--query`, `-q` (string) - Start a batch to terminate Workflow Executions with given List Filter. Either this or Workflow Id must be set.
+* `--reason` (string) - Reason for termination. Defaults to message with the current user's name.
+* `--yes`, `-y` (bool) - Confirm prompt to perform batch. Only allowed if query is present.
 
 ### temporal workflow trace: Trace progress of a Workflow Execution and its children.
 

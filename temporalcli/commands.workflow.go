@@ -45,7 +45,7 @@ func (c *TemporalWorkflowSignalCommand) run(cctx *CommandContext, args []string)
 		return err
 	}
 
-	exec, batchReq, err := c.workflowExecOrBatch(cctx, c.Parent.Namespace, cl)
+	exec, batchReq, err := c.workflowExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{})
 	if err != nil {
 		return err
 	}
@@ -84,8 +84,53 @@ func (*TemporalWorkflowStackCommand) run(*CommandContext, []string) error {
 	return fmt.Errorf("TODO")
 }
 
-func (*TemporalWorkflowTerminateCommand) run(*CommandContext, []string) error {
-	return fmt.Errorf("TODO")
+func (c *TemporalWorkflowTerminateCommand) run(cctx *CommandContext, _ []string) error {
+	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	// We create a faux SingleWorkflowOrBatchOptions to use the shared logic
+	opts := SingleWorkflowOrBatchOptions{
+		WorkflowId: c.WorkflowId,
+		RunId:      c.RunId,
+		Query:      c.Query,
+		Reason:     c.Reason,
+		Yes:        c.Yes,
+	}
+
+	exec, batchReq, err := opts.workflowExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{
+		// You're allowed to specify a reason when terminating a workflow
+		AllowReasonWithWorkflowID: true,
+	})
+	if err != nil {
+		return err
+	}
+
+	// Run single or batch
+	if exec != nil {
+		reason := c.Reason
+		if reason == "" {
+			reason = defaultReason()
+		}
+		err = cl.TerminateWorkflow(cctx, exec.WorkflowId, exec.RunId, reason)
+		if err != nil {
+			return fmt.Errorf("failed to terminate workflow: %w", err)
+		}
+		cctx.Printer.Println("Workflow terminated")
+	} else if batchReq != nil {
+		batchReq.Operation = &workflowservice.StartBatchOperationRequest_TerminationOperation{
+			TerminationOperation: &batch.BatchOperationTermination{
+				Identity: clientIdentity(),
+			},
+		}
+		if err := startBatchJob(cctx, cl, batchReq); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (*TemporalWorkflowTraceCommand) run(*CommandContext, []string) error {
@@ -96,16 +141,29 @@ func (*TemporalWorkflowUpdateCommand) run(*CommandContext, []string) error {
 	return fmt.Errorf("TODO")
 }
 
+func defaultReason() string {
+	username := "<unknown-user>"
+	if u, err := user.Current(); err != nil && u.Username != "" {
+		username = u.Username
+	}
+	return "Requested from CLI by " + username
+}
+
+type singleOrBatchOverrides struct {
+	AllowReasonWithWorkflowID bool
+}
+
 func (s *SingleWorkflowOrBatchOptions) workflowExecOrBatch(
 	cctx *CommandContext,
 	namespace string,
 	cl client.Client,
+	overrides singleOrBatchOverrides,
 ) (*common.WorkflowExecution, *workflowservice.StartBatchOperationRequest, error) {
 	// If workflow is set, we return single execution
 	if s.WorkflowId != "" {
 		if s.Query != "" {
 			return nil, nil, fmt.Errorf("cannot set query when workflow ID is set")
-		} else if s.Reason != "" {
+		} else if s.Reason != "" && !overrides.AllowReasonWithWorkflowID {
 			return nil, nil, fmt.Errorf("cannot set reason when workflow ID is set")
 		} else if s.Yes {
 			return nil, nil, fmt.Errorf("cannot set 'yes' when workflow ID is set")
@@ -139,11 +197,7 @@ func (s *SingleWorkflowOrBatchOptions) workflowExecOrBatch(
 	// Default the reason if not set
 	reason := s.Reason
 	if reason == "" {
-		username := "<unknown-user>"
-		if u, err := user.Current(); err != nil && u.Username != "" {
-			username = u.Username
-		}
-		reason = "Requested from CLI by " + username
+		reason = defaultReason()
 	}
 
 	return nil, &workflowservice.StartBatchOperationRequest{
