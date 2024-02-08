@@ -163,6 +163,26 @@ Includes options set for [client](#options-set-for-client).
 
 ### temporal schedule backfill: Backfills a past time range of actions.
 
+ The `temporal schedule backfill` command runs the Actions that would have been run in a given time
+interval, all at once.
+
+ You can use backfill to fill in Workflow Runs from a time period when the Schedule was paused, from
+before the Schedule was created, from the future, or to re-process an interval that was processed.
+
+Schedule backfills require a Schedule ID, along with the time in which to run the Schedule. You can
+optionally override the overlap policy. It usually only makes sense to run backfills with either
+`BufferAll` or `AllowAll` (other policies will only let one or two runs actually happen).
+
+Example:
+
+```
+  temporal schedule backfill           \
+    --schedule-id 'your-schedule-id'   \
+    --overlap-policy BufferAll         \
+    --start-time 2022-05-01T00:00:00Z  \
+    --end-time   2022-05-31T23:59:59Z
+```
+
 #### Options set for overlap policy:
 
 * `--overlap-policy` (string-enum) - Overlap policy. Options: Skip, BufferOne, BufferAll, CancelOther, TerminateOther, AllowAll.
@@ -171,14 +191,43 @@ Includes options set for [client](#options-set-for-client).
 
 * `--schedule-id`, `-s` (string) - Schedule id. Required.
 
+#### Options
+
+* `--end-time` (string) - Backfill end time. Required.
+* `--start-time` (string) - Backfill start time. Required.
+
 ### temporal schedule create: Create a new Schedule.
 
+The `temporal schedule create` command creates a new Schedule.
+
+Example:
+
+```
+  temporal schedule create                               \
+    --schedule-id 'your-schedule-id'                     \
+    --cal '{"dayOfWeek":"Fri","hour":"3","minute":"11"}' \
+    --workflow-id 'your-base-workflow-id'                \
+    --task-queue 'your-task-queue'                       \
+    --workflow-type 'YourWorkflowType'
+```
+
+Any combination of `--cal`, `--interval`, and `--cron` is supported.
+Actions will be executed at any time specified in the Schedule.
+
 #### Options
+
+* `--FIXME` (string) - asdf.
 
 Includes options set for [schedule-id](#options-set-for-schedule-id).
 Includes options set for [overlap-policy](#options-set-for-overlap-policy).
 
 ### temporal schedule delete: Deletes a Schedule.
+
+The `temporal schedule delete` command deletes a Schedule.
+Deleting a Schedule does not affect any Workflows started by the Schedule.
+
+If you do also want to cancel or terminate Workflows started by a Schedule, consider using `temporal
+workflow delete` with the `TemporalScheduledById` Search Attribute.
 
 #### Options
 
@@ -186,18 +235,33 @@ Includes options set for [schedule-id](#options-set-for-schedule-id).
 
 ### temporal schedule describe: Get Schedule configuration and current state.
 
+The `temporal schedule describe` command shows the current configuration of one Schedule,
+including information about past, current, and future Workflow Runs.
+
 #### Options
 
 Includes options set for [schedule-id](#options-set-for-schedule-id).
 
 ### temporal schedule list: Lists Schedules.
 
+The `temporal schedule list` command lists all Schedules in a namespace.
+
 ### temporal schedule toggle: Pauses or unpauses a Schedule.
+
+The `temporal schedule toggle` command can pause and unpause a Schedule.
+
+Toggling a Schedule takes a reason. The reason will be set as the `notes` field of the Schedule,
+to help with operations communication.
+
+Examples:
+
+* `temporal schedule toggle --schedule-id 'your-schedule-id' --pause --reason "paused because the database is down"`
+* `temporal schedule toggle --schedule-id 'your-schedule-id' --unpause --reason "the database is back up"`
 
 #### Options
 
 * `--pause` (bool) - Pauses the schedule.
-* `--reason` (string) - Reason for pausing/unpausing. Will end up in Schedule `notes`. Default: "(no reason provided)".
+* `--reason` (string) - Reason for pausing/unpausing. Default: "(no reason provided)".
 * `--unpause` (bool) - Pauses the schedule.
 
 Includes options set for [schedule-id](#options-set-for-schedule-id).
