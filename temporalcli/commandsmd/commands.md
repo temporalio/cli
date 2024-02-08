@@ -57,6 +57,43 @@ This document has a specific structure used by a parser. Here are the rules:
 * `--color` (string-enum) - Set coloring. Options: always, never, auto. Default: auto.
 * `--no-json-shorthand-payloads` (bool) - Always all payloads as raw payloads even if they are JSON.
 
+### temporal activity: Complete or fail an activity.
+
+#### Options
+
+Includes options set for [client](#options-set-for-client).
+
+
+### temporal activity complete: Complete an activity.
+
+Complete an Activity Execution.
+
+`temporal activity complete --activity-id=MyActivityId --workflow-id=MyWorkflowId --result='{"MyResultKey": "MyResultVal"}'`
+
+#### Options
+
+* `--activity-id` (string) - The Activity to be completed. Required.
+* `--identity` (string) - Identity of operator.
+* `--result` (string) - The result with which to complete the Activity (JSON). Required.
+
+Includes options set for [workflow reference](#options-set-for-workflow-reference).
+
+### temporal activity fail: Fail an activity.
+
+Fail an Activity Execution.
+
+`temporal activity fail --activity-id=MyActivityId --workflow-id=MyWorkflowId`
+
+#### Options
+
+* `--activity-id` (string) - The Activity to be failed. Required.
+* `--detail` (string) - JSON data describing reason for failing the Activity.
+* `--identity` (string) - Identity of user submitting this request.
+* `--reason` (string) - Reason for failing the Activity.
+
+Includes options set for [workflow reference](#options-set-for-workflow-reference).
+
+
 ### temporal env: Manage environments.
 
 Use the '--env <env name>' option with other commands to point the CLI at a different Temporal Server instance. If --env

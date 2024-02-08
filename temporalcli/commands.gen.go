@@ -34,6 +34,7 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	s.Command.Short = "Temporal command-line interface and development server."
 	s.Command.Long = ""
 	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalActivityCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalEnvCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalServerCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalTaskQueueCommand(cctx, &s).Command)
@@ -53,6 +54,96 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	s.Command.PersistentFlags().Var(&s.Color, "color", "Set coloring. Accepted values: always, never, auto.")
 	s.Command.PersistentFlags().BoolVar(&s.NoJsonShorthandPayloads, "no-json-shorthand-payloads", false, "Always all payloads as raw payloads even if they are JSON.")
 	s.initCommand(cctx)
+	return &s
+}
+
+type TemporalActivityCommand struct {
+	Parent  *TemporalCommand
+	Command cobra.Command
+	ClientOptions
+}
+
+func NewTemporalActivityCommand(cctx *CommandContext, parent *TemporalCommand) *TemporalActivityCommand {
+	var s TemporalActivityCommand
+	s.Parent = parent
+	s.Command.Use = "activity"
+	s.Command.Short = "Complete or fail an activity."
+	s.Command.Long = ""
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalActivityCompleteCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalActivityFailCommand(cctx, &s).Command)
+	s.ClientOptions.buildFlags(cctx, s.Command.PersistentFlags())
+	return &s
+}
+
+type TemporalActivityCompleteCommand struct {
+	Parent  *TemporalActivityCommand
+	Command cobra.Command
+	WorkflowReferenceOptions
+	ActivityId string
+	Identity   string
+	Result     string
+}
+
+func NewTemporalActivityCompleteCommand(cctx *CommandContext, parent *TemporalActivityCommand) *TemporalActivityCompleteCommand {
+	var s TemporalActivityCompleteCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "complete [flags]"
+	s.Command.Short = "Complete an activity."
+	if hasHighlighting {
+		s.Command.Long = "Complete an Activity Execution.\n\n\x1b[1mtemporal activity complete --activity-id=MyActivityId --workflow-id=MyWorkflowId --result='{\"MyResultKey\": \"MyResultVal\"}'\x1b[0m"
+	} else {
+		s.Command.Long = "Complete an Activity Execution.\n\n`temporal activity complete --activity-id=MyActivityId --workflow-id=MyWorkflowId --result='{\"MyResultKey\": \"MyResultVal\"}'`"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
+	s.Command.Flags().StringVar(&s.ActivityId, "activity-id", "", "The Activity to be completed.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "activity-id")
+	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of operator.")
+	s.Command.Flags().StringVar(&s.Result, "result", "", "The result with which to complete the Activity (JSON).")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "result")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalActivityFailCommand struct {
+	Parent  *TemporalActivityCommand
+	Command cobra.Command
+	WorkflowReferenceOptions
+	ActivityId string
+	Detail     string
+	Identity   string
+	Reason     string
+}
+
+func NewTemporalActivityFailCommand(cctx *CommandContext, parent *TemporalActivityCommand) *TemporalActivityFailCommand {
+	var s TemporalActivityFailCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "fail [flags]"
+	s.Command.Short = "Fail an activity."
+	if hasHighlighting {
+		s.Command.Long = "Fail an Activity Execution.\n\n\x1b[1mtemporal activity fail --activity-id=MyActivityId --workflow-id=MyWorkflowId\x1b[0m"
+	} else {
+		s.Command.Long = "Fail an Activity Execution.\n\n`temporal activity fail --activity-id=MyActivityId --workflow-id=MyWorkflowId`"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
+	s.Command.Flags().StringVar(&s.ActivityId, "activity-id", "", "The Activity to be failed.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "activity-id")
+	s.Command.Flags().StringVar(&s.Detail, "detail", "", "JSON data describing reason for failing the Activity.")
+	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of user submitting this request.")
+	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for failing the Activity.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
 	return &s
 }
 
