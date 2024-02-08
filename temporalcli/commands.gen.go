@@ -36,6 +36,7 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalActivityCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalEnvCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalScheduleCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalServerCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalTaskQueueCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowCommand(cctx, &s).Command)
@@ -254,6 +255,245 @@ func NewTemporalEnvSetCommand(cctx *CommandContext, parent *TemporalEnvCommand) 
 		s.Command.Long = "`temporal env set [environment.property name] [property value]`\n\nProperty names match CLI option names, for example '--address' and '--tls-cert-path':\n\n`temporal env set prod.address 127.0.0.1:7233`\n`temporal env set prod.tls-cert-path  /home/my-user/certs/cluster.cert`"
 	}
 	s.Command.Args = cobra.ExactArgs(2)
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalScheduleCommand struct {
+	Parent  *TemporalCommand
+	Command cobra.Command
+	ClientOptions
+}
+
+func NewTemporalScheduleCommand(cctx *CommandContext, parent *TemporalCommand) *TemporalScheduleCommand {
+	var s TemporalScheduleCommand
+	s.Parent = parent
+	s.Command.Use = "schedule"
+	s.Command.Short = "Perform operations on Schedules."
+	s.Command.Long = "Schedule commands allow the user to create, use, and update Schedules.\nSchedules allow starting Workflow Execution at regular times."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalScheduleBackfillCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalScheduleCreateCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalScheduleDeleteCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalScheduleDescribeCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalScheduleListCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalScheduleToggleCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalScheduleTriggerCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalScheduleUpdateCommand(cctx, &s).Command)
+	s.ClientOptions.buildFlags(cctx, s.Command.PersistentFlags())
+	return &s
+}
+
+type OverlapPolicyOptions struct {
+	OverlapPolicy StringEnum
+}
+
+func (v *OverlapPolicyOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
+	v.OverlapPolicy = NewStringEnum([]string{"Skip", "BufferOne", "BufferAll", "CancelOther", "TerminateOther", "AllowAll"}, "")
+	f.Var(&v.OverlapPolicy, "overlap-policy", "Overlap policy.")
+}
+
+type ScheduleIdOptions struct {
+	ScheduleId string
+}
+
+func (v *ScheduleIdOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
+	f.StringVarP(&v.ScheduleId, "schedule-id", "s", "", "Schedule id.")
+	_ = cobra.MarkFlagRequired(f, "schedule-id")
+}
+
+type TemporalScheduleBackfillCommand struct {
+	Parent  *TemporalScheduleCommand
+	Command cobra.Command
+	OverlapPolicyOptions
+	ScheduleIdOptions
+}
+
+func NewTemporalScheduleBackfillCommand(cctx *CommandContext, parent *TemporalScheduleCommand) *TemporalScheduleBackfillCommand {
+	var s TemporalScheduleBackfillCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "backfill [flags]"
+	s.Command.Short = "Backfills a past time range of actions."
+	s.Command.Long = ""
+	s.Command.Args = cobra.NoArgs
+	s.OverlapPolicyOptions.buildFlags(cctx, s.Command.Flags())
+	s.ScheduleIdOptions.buildFlags(cctx, s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalScheduleCreateCommand struct {
+	Parent  *TemporalScheduleCommand
+	Command cobra.Command
+	ScheduleIdOptions
+	OverlapPolicyOptions
+}
+
+func NewTemporalScheduleCreateCommand(cctx *CommandContext, parent *TemporalScheduleCommand) *TemporalScheduleCreateCommand {
+	var s TemporalScheduleCreateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "create [flags]"
+	s.Command.Short = "Create a new Schedule."
+	s.Command.Long = ""
+	s.Command.Args = cobra.NoArgs
+	s.ScheduleIdOptions.buildFlags(cctx, s.Command.Flags())
+	s.OverlapPolicyOptions.buildFlags(cctx, s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalScheduleDeleteCommand struct {
+	Parent  *TemporalScheduleCommand
+	Command cobra.Command
+	ScheduleIdOptions
+}
+
+func NewTemporalScheduleDeleteCommand(cctx *CommandContext, parent *TemporalScheduleCommand) *TemporalScheduleDeleteCommand {
+	var s TemporalScheduleDeleteCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "delete [flags]"
+	s.Command.Short = "Deletes a Schedule."
+	s.Command.Long = ""
+	s.Command.Args = cobra.NoArgs
+	s.ScheduleIdOptions.buildFlags(cctx, s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalScheduleDescribeCommand struct {
+	Parent  *TemporalScheduleCommand
+	Command cobra.Command
+	ScheduleIdOptions
+}
+
+func NewTemporalScheduleDescribeCommand(cctx *CommandContext, parent *TemporalScheduleCommand) *TemporalScheduleDescribeCommand {
+	var s TemporalScheduleDescribeCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "describe [flags]"
+	s.Command.Short = "Get Schedule configuration and current state."
+	s.Command.Long = ""
+	s.Command.Args = cobra.NoArgs
+	s.ScheduleIdOptions.buildFlags(cctx, s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalScheduleListCommand struct {
+	Parent  *TemporalScheduleCommand
+	Command cobra.Command
+}
+
+func NewTemporalScheduleListCommand(cctx *CommandContext, parent *TemporalScheduleCommand) *TemporalScheduleListCommand {
+	var s TemporalScheduleListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "Lists Schedules."
+	s.Command.Long = ""
+	s.Command.Args = cobra.NoArgs
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalScheduleToggleCommand struct {
+	Parent  *TemporalScheduleCommand
+	Command cobra.Command
+	ScheduleIdOptions
+	Pause   bool
+	Reason  string
+	Unpause bool
+}
+
+func NewTemporalScheduleToggleCommand(cctx *CommandContext, parent *TemporalScheduleCommand) *TemporalScheduleToggleCommand {
+	var s TemporalScheduleToggleCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "toggle [flags]"
+	s.Command.Short = "Pauses or unpauses a Schedule."
+	s.Command.Long = ""
+	s.Command.Args = cobra.NoArgs
+	s.ScheduleIdOptions.buildFlags(cctx, s.Command.Flags())
+	s.Command.Flags().BoolVar(&s.Pause, "pause", false, "Pauses the schedule.")
+	s.Command.Flags().StringVar(&s.Reason, "reason", "\"(no reason provided)\"", "Reason for pausing/unpausing. Will end up in Schedule `notes`.")
+	s.Command.Flags().BoolVar(&s.Unpause, "unpause", false, "Pauses the schedule.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalScheduleTriggerCommand struct {
+	Parent  *TemporalScheduleCommand
+	Command cobra.Command
+	ScheduleIdOptions
+	OverlapPolicyOptions
+}
+
+func NewTemporalScheduleTriggerCommand(cctx *CommandContext, parent *TemporalScheduleCommand) *TemporalScheduleTriggerCommand {
+	var s TemporalScheduleTriggerCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "trigger [flags]"
+	s.Command.Short = "Triggers a schedule to take an action immediately."
+	s.Command.Long = ""
+	s.Command.Args = cobra.NoArgs
+	s.ScheduleIdOptions.buildFlags(cctx, s.Command.Flags())
+	s.OverlapPolicyOptions.buildFlags(cctx, s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalScheduleUpdateCommand struct {
+	Parent  *TemporalScheduleCommand
+	Command cobra.Command
+	ScheduleIdOptions
+	OverlapPolicyOptions
+}
+
+func NewTemporalScheduleUpdateCommand(cctx *CommandContext, parent *TemporalScheduleCommand) *TemporalScheduleUpdateCommand {
+	var s TemporalScheduleUpdateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "update [flags]"
+	s.Command.Short = "Updates a Schedule with a new definition (full replacement)."
+	s.Command.Long = ""
+	s.Command.Args = cobra.NoArgs
+	s.ScheduleIdOptions.buildFlags(cctx, s.Command.Flags())
+	s.OverlapPolicyOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

@@ -152,6 +152,71 @@ Property names match CLI option names, for example '--address' and '--tls-cert-p
 * exact-args=2
 -->
 
+### temporal schedule: Perform operations on Schedules.
+
+Schedule commands allow the user to create, use, and update Schedules.
+Schedules allow starting Workflow Execution at regular times.
+
+#### Options
+
+Includes options set for [client](#options-set-for-client).
+
+### temporal schedule backfill: Backfills a past time range of actions.
+
+#### Options set for overlap policy:
+
+* `--overlap-policy` (string-enum) - Overlap policy. Options: Skip, BufferOne, BufferAll, CancelOther, TerminateOther, AllowAll.
+
+#### Options set for schedule id:
+
+* `--schedule-id`, `-s` (string) - Schedule id. Required.
+
+### temporal schedule create: Create a new Schedule.
+
+#### Options
+
+Includes options set for [schedule-id](#options-set-for-schedule-id).
+Includes options set for [overlap-policy](#options-set-for-overlap-policy).
+
+### temporal schedule delete: Deletes a Schedule.
+
+#### Options
+
+Includes options set for [schedule-id](#options-set-for-schedule-id).
+
+### temporal schedule describe: Get Schedule configuration and current state.
+
+#### Options
+
+Includes options set for [schedule-id](#options-set-for-schedule-id).
+
+### temporal schedule list: Lists Schedules.
+
+### temporal schedule toggle: Pauses or unpauses a Schedule.
+
+#### Options
+
+* `--pause` (bool) - Pauses the schedule.
+* `--reason` (string) - Reason for pausing/unpausing. Will end up in Schedule `notes`. Default: "(no reason provided)".
+* `--unpause` (bool) - Pauses the schedule.
+
+Includes options set for [schedule-id](#options-set-for-schedule-id).
+
+### temporal schedule trigger: Triggers a schedule to take an action immediately.
+
+#### Options
+
+Includes options set for [schedule-id](#options-set-for-schedule-id).
+Includes options set for [overlap-policy](#options-set-for-overlap-policy).
+
+### temporal schedule update: Updates a Schedule with a new definition (full replacement).
+
+#### Options
+
+Includes options set for [schedule-id](#options-set-for-schedule-id).
+Includes options set for [overlap-policy](#options-set-for-overlap-policy).
+
+
 ### temporal server: Run Temporal Server.
 
 Start a development version of [Temporal Server](/concepts/what-is-the-temporal-server):
