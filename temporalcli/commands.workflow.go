@@ -1,7 +1,9 @@
 package temporalcli
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os/user"
 
@@ -14,6 +16,19 @@ import (
 	"go.temporal.io/api/query/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
+)
+
+var (
+	resetTypesMap = map[string]interface{}{
+		"FirstWorkflowTask":  "",
+		"LastWorkflowTask":   "",
+		"LastContinuedAsNew": "",
+	}
+	resetReapplyTypesMap = map[string]interface{}{
+		"":       enums.RESET_REAPPLY_TYPE_SIGNAL, // default value
+		"Signal": enums.RESET_REAPPLY_TYPE_SIGNAL,
+		"None":   enums.RESET_REAPPLY_TYPE_NONE,
+	}
 )
 
 func (c *TemporalWorkflowCancelCommand) run(cctx *CommandContext, args []string) error {
@@ -110,8 +125,56 @@ func (c *TemporalWorkflowQueryCommand) run(cctx *CommandContext, args []string) 
 	return cctx.Printer.PrintStructured(output, printer.StructuredOptions{})
 }
 
-func (*TemporalWorkflowResetCommand) run(*CommandContext, []string) error {
-	return fmt.Errorf("TODO")
+func (c *TemporalWorkflowResetCommand) run(cctx *CommandContext, _ []string) error {
+	if c.Type.Value == "" && c.EventId <= 0 {
+		return errors.New("specify either valid event id or reset type")
+	}
+	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	conn, err := c.Parent.ClientOptions.dialGRPC(cctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	wfsvc := workflowservice.NewWorkflowServiceClient(conn)
+	resetBaseRunID := c.RunId
+	workflowTaskFinishID := int64(c.EventId)
+	if c.Type.Value != "" {
+		resetBaseRunID, workflowTaskFinishID, err = getResetEventIDByType(cctx, c.Type.Value, c.Parent.Namespace, c.WorkflowId, c.RunId, wfsvc)
+		if err != nil {
+			return fmt.Errorf("getting reset event ID by type failed: %w", err)
+		}
+	}
+	username := "<unknown-user>"
+	if u, err := user.Current(); err != nil && u.Username != "" {
+		username = u.Username
+	}
+	resp, err := cl.ResetWorkflowExecution(cctx, &workflowservice.ResetWorkflowExecutionRequest{
+		Namespace: c.Parent.Namespace,
+		WorkflowExecution: &common.WorkflowExecution{
+			WorkflowId: c.WorkflowId,
+			RunId:      resetBaseRunID,
+		},
+		Reason:                    fmt.Sprintf("%s: %s", username, c.Reason),
+		WorkflowTaskFinishEventId: workflowTaskFinishID,
+		RequestId:                 uuid.NewString(),
+		ResetReapplyType:          resetReapplyTypesMap[c.Type.Value].(enums.ResetReapplyType),
+	})
+	if err != nil {
+		return fmt.Errorf("reset failed: %w", err)
+	}
+
+	if cctx.JSONOutput {
+		return cctx.Printer.PrintStructured(
+			resp,
+			printer.StructuredOptions{})
+	}
+	return nil
 }
 
 func (*TemporalWorkflowResetBatchCommand) run(*CommandContext, []string) error {
@@ -308,4 +371,148 @@ func startBatchJob(cctx *CommandContext, cl client.Client, req *workflowservice.
 	}
 	cctx.Printer.Printlnf("Started batch for job ID: %v", req.JobId)
 	return nil
+}
+
+func getResetEventIDByType(ctx context.Context, resetType, namespace, wid, rid string, wfsvc workflowservice.WorkflowServiceClient) (string, int64, error) {
+	switch resetType {
+	case "LastWorkflowTask":
+		return getLastWorkflowTaskEventID(ctx, namespace, wid, rid, wfsvc)
+	case "LastContinuedAsNew":
+		return getLastContinueAsNewID(ctx, namespace, wid, rid, wfsvc)
+	case "FirstWorkflowTask":
+		return getFirstWorkflowTaskEventID(ctx, namespace, wid, rid, wfsvc)
+	default:
+		return "", -1, fmt.Errorf("invalid reset type: %s", resetType)
+	}
+}
+
+// Returns event id of the last completed task or id of the next event after scheduled task.
+func getLastWorkflowTaskEventID(ctx context.Context, namespace, wid, rid string, wfsvc workflowservice.WorkflowServiceClient) (resetBaseRunID string, workflowTaskEventID int64, err error) {
+	resetBaseRunID = rid
+	req := workflowservice.GetWorkflowExecutionHistoryReverseRequest{
+		Namespace: namespace,
+		Execution: &common.WorkflowExecution{
+			WorkflowId: wid,
+			RunId:      rid,
+		},
+		MaximumPageSize: 1000,
+		NextPageToken:   nil,
+	}
+
+	for {
+		resp, err := wfsvc.GetWorkflowExecutionHistoryReverse(ctx, &req)
+		if err != nil {
+			return "", 0, fmt.Errorf("failed to get workflow execution history: %w", err)
+		}
+		for _, e := range resp.GetHistory().GetEvents() {
+			if e.GetEventType() == enums.EVENT_TYPE_WORKFLOW_TASK_COMPLETED {
+				workflowTaskEventID = e.GetEventId()
+				break
+			} else if e.GetEventType() == enums.EVENT_TYPE_WORKFLOW_TASK_SCHEDULED {
+				// if there is no task completed event, set it to first scheduled event + 1
+				workflowTaskEventID = e.GetEventId() + 1
+			}
+		}
+		if len(resp.NextPageToken) != 0 {
+			req.NextPageToken = resp.NextPageToken
+		} else {
+			break
+		}
+	}
+	if workflowTaskEventID == 0 {
+		return "", 0, errors.New("unable to find any scheduled or completed task")
+	}
+	return
+}
+
+// Returns id of the first workflow task completed event or if it doesn't exist then id of the event after task scheduled event.
+func getFirstWorkflowTaskEventID(ctx context.Context, namespace, wid, rid string, wfsvc workflowservice.WorkflowServiceClient) (resetBaseRunID string, workflowTaskEventID int64, err error) {
+	resetBaseRunID = rid
+	req := workflowservice.GetWorkflowExecutionHistoryRequest{
+		Namespace: namespace,
+		Execution: &common.WorkflowExecution{
+			WorkflowId: wid,
+			RunId:      rid,
+		},
+		MaximumPageSize: 1000,
+		NextPageToken:   nil,
+	}
+	for {
+		resp, err := wfsvc.GetWorkflowExecutionHistory(ctx, &req)
+		if err != nil {
+			return "", 0, fmt.Errorf("failed to get workflow execution history: %w", err)
+		}
+		for _, e := range resp.GetHistory().GetEvents() {
+			if e.GetEventType() == enums.EVENT_TYPE_WORKFLOW_TASK_COMPLETED {
+				workflowTaskEventID = e.GetEventId()
+				return resetBaseRunID, workflowTaskEventID, nil
+			}
+			if e.GetEventType() == enums.EVENT_TYPE_WORKFLOW_TASK_SCHEDULED {
+				if workflowTaskEventID == 0 {
+					workflowTaskEventID = e.GetEventId() + 1
+				}
+			}
+		}
+		if len(resp.NextPageToken) != 0 {
+			req.NextPageToken = resp.NextPageToken
+		} else {
+			break
+		}
+	}
+	if workflowTaskEventID == 0 {
+		return "", 0, errors.New("unable to find any scheduled or completed task")
+	}
+	return
+}
+
+func getLastContinueAsNewID(ctx context.Context, namespace, wid, rid string, wfsvc workflowservice.WorkflowServiceClient) (resetBaseRunID string, workflowTaskCompletedID int64, err error) {
+	// get first event
+	req := &workflowservice.GetWorkflowExecutionHistoryRequest{
+		Namespace: namespace,
+		Execution: &common.WorkflowExecution{
+			WorkflowId: wid,
+			RunId:      rid,
+		},
+		MaximumPageSize: 1,
+		NextPageToken:   nil,
+	}
+	resp, err := wfsvc.GetWorkflowExecutionHistory(ctx, req)
+	if err != nil {
+		return "", 0, fmt.Errorf("failed to get workflow execution history: %w", err)
+	}
+	firstEvent := resp.History.Events[0]
+	resetBaseRunID = firstEvent.GetWorkflowExecutionStartedEventAttributes().GetContinuedExecutionRunId()
+	if resetBaseRunID == "" {
+		return "", 0, errors.New("cannot use LastContinuedAsNew for workflow; workflow was not continued from another")
+	}
+
+	req = &workflowservice.GetWorkflowExecutionHistoryRequest{
+		Namespace: namespace,
+		Execution: &common.WorkflowExecution{
+			WorkflowId: wid,
+			RunId:      resetBaseRunID,
+		},
+		MaximumPageSize: 1000,
+		NextPageToken:   nil,
+	}
+	for {
+		resp, err := wfsvc.GetWorkflowExecutionHistory(ctx, req)
+		if err != nil {
+			return "", 0, fmt.Errorf("failed to get workflow execution history of original execution (run id %s): %w", resetBaseRunID, err)
+		}
+		for _, e := range resp.GetHistory().GetEvents() {
+			if e.GetEventType() == enums.EVENT_TYPE_WORKFLOW_TASK_COMPLETED {
+				workflowTaskCompletedID = e.GetEventId()
+			}
+		}
+		if len(resp.NextPageToken) != 0 {
+			req.NextPageToken = resp.NextPageToken
+		} else {
+			break
+		}
+	}
+	if workflowTaskCompletedID == 0 {
+		return "", 0, errors.New("unable to find WorkflowTaskCompleted event for original workflow")
+	}
+	return
 }

@@ -11,12 +11,19 @@ import (
 	"strings"
 
 	"go.temporal.io/api/common/v1"
+	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/log"
+
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
+
+const localHostPort = "127.0.0.1:7233"
 
 func (c *ClientOptions) dialClient(cctx *CommandContext) (client.Client, error) {
 	clientOptions := client.Options{
@@ -32,16 +39,10 @@ func (c *ClientOptions) dialClient(cctx *CommandContext) (client.Client, error) 
 	}
 
 	// Headers
-	if len(c.GrpcMeta) > 0 {
-		headers := make(stringMapHeadersProvider, len(c.GrpcMeta))
-		for _, kv := range c.GrpcMeta {
-			pieces := strings.SplitN(kv, "=", 2)
-			if len(pieces) != 2 {
-				return nil, fmt.Errorf("gRPC meta of %q does not have '='", kv)
-			}
-			headers[pieces[0]] = pieces[1]
-		}
-		clientOptions.HeadersProvider = headers
+	var err error
+	clientOptions.HeadersProvider, err = c.headers()
+	if err != nil {
+		return nil, err
 	}
 
 	// Remote codec
@@ -63,12 +64,57 @@ func (c *ClientOptions) dialClient(cctx *CommandContext) (client.Client, error) 
 		clientOptions.ConnectionOptions.DialOptions, cctx.Options.AdditionalClientGRPCDialOptions...)
 
 	// TLS
-	var err error
 	if clientOptions.ConnectionOptions.TLS, err = c.tlsConfig(); err != nil {
 		return nil, err
 	}
 
 	return client.Dial(clientOptions)
+}
+
+func (c *ClientOptions) dialGRPC(cctx *CommandContext) (*grpc.ClientConn, error) {
+	hostPort := c.Address
+	if hostPort == "" {
+		hostPort = localHostPort
+	}
+
+	tlsConfig, err := c.tlsConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	grpcSecurityOptions := grpc.WithTransportCredentials(insecure.NewCredentials())
+	if tlsConfig != nil {
+		grpcSecurityOptions = grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig))
+	}
+
+	interceptors := []grpc.UnaryClientInterceptor{
+		errorInterceptor(),
+	}
+	headerProvider, err := c.headers()
+	if err != nil {
+		return nil, err
+	} else if headerProvider != nil {
+		interceptors = append(interceptors, headersProviderInterceptor(headerProvider))
+	}
+
+	if c.CodecEndpoint != "" {
+		interceptor, err := payloadCodecInterceptor(c.Namespace, c.CodecEndpoint, c.CodecAuth)
+		if err != nil {
+			return nil, fmt.Errorf("failed creating payload codec interceptor: %w", err)
+		}
+		interceptors = append(interceptors, interceptor)
+	}
+
+	dialOpts := []grpc.DialOption{
+		grpcSecurityOptions,
+		grpc.WithChainUnaryInterceptor(interceptors...),
+	}
+
+	connection, err := grpc.Dial(hostPort, dialOpts...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to %s: %w", hostPort, err)
+	}
+	return connection, nil
 }
 
 func (c *ClientOptions) tlsConfig() (*tls.Config, error) {
@@ -120,6 +166,21 @@ func fixedHeaderOverrideInterceptor(
 	return invoker(ctx, method, req, reply, cc, opts...)
 }
 
+func (c *ClientOptions) headers() (stringMapHeadersProvider, error) {
+	if len(c.GrpcMeta) > 0 {
+		headers := make(stringMapHeadersProvider, len(c.GrpcMeta))
+		for _, kv := range c.GrpcMeta {
+			pieces := strings.SplitN(kv, "=", 2)
+			if len(pieces) != 2 {
+				return nil, fmt.Errorf("gRPC meta of %q does not have '='", kv)
+			}
+			headers[pieces[0]] = pieces[1]
+		}
+		return headers, nil
+	}
+	return nil, nil
+}
+
 func payloadCodecInterceptor(namespace, codecEndpoint, codecAuth string) (grpc.UnaryClientInterceptor, error) {
 	codecEndpoint = strings.ReplaceAll(codecEndpoint, "{namespace}", namespace)
 
@@ -140,6 +201,27 @@ func payloadCodecInterceptor(namespace, codecEndpoint, codecAuth string) (grpc.U
 			Codecs: []converter.PayloadCodec{payloadCodec},
 		},
 	)
+}
+
+func errorInterceptor() grpc.UnaryClientInterceptor {
+	return func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+		err := invoker(ctx, method, req, reply, cc, opts...)
+		err = serviceerror.FromStatus(status.Convert(err))
+		return err
+	}
+}
+
+func headersProviderInterceptor(provider stringMapHeadersProvider) grpc.UnaryClientInterceptor {
+	return func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+		headers, err := provider.GetHeaders(ctx)
+		if err != nil {
+			return err
+		}
+		for k, v := range headers {
+			ctx = metadata.AppendToOutgoingContext(ctx, k, v)
+		}
+		return invoker(ctx, method, req, reply, cc, opts...)
+	}
 }
 
 func clientIdentity() string {
