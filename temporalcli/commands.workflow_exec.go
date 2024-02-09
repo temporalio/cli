@@ -25,7 +25,7 @@ func (c *TemporalWorkflowStartCommand) run(cctx *CommandContext, args []string) 
 		return err
 	}
 	defer cl.Close()
-	_, err = c.Parent.startWorkflow(cctx, cl, &c.WorkflowStartOptions, &c.PayloadInputOptions, true)
+	_, err = c.Parent.startWorkflow(cctx, cl, &c.SharedWorkflowStartOptions, &c.WorkflowStartOptions, &c.PayloadInputOptions, true)
 	return err
 }
 
@@ -36,7 +36,7 @@ func (c *TemporalWorkflowExecuteCommand) run(cctx *CommandContext, args []string
 	}
 	defer cl.Close()
 	startTime := time.Now()
-	run, err := c.Parent.startWorkflow(cctx, cl, &c.WorkflowStartOptions, &c.PayloadInputOptions, false)
+	run, err := c.Parent.startWorkflow(cctx, cl, &c.SharedWorkflowStartOptions, &c.WorkflowStartOptions, &c.PayloadInputOptions, false)
 	if err != nil {
 		return err
 	}
@@ -111,9 +111,9 @@ func (c *TemporalWorkflowExecuteCommand) printJSONResult(
 	}{
 		WorkflowId:     run.GetID(),
 		RunId:          run.GetRunID(),
-		Type:           c.WorkflowStartOptions.Type,
+		Type:           c.SharedWorkflowStartOptions.Type,
 		Namespace:      c.Parent.Namespace,
-		TaskQueue:      c.WorkflowStartOptions.TaskQueue,
+		TaskQueue:      c.SharedWorkflowStartOptions.TaskQueue,
 		DurationMillis: int64(duration / time.Millisecond),
 		Status:         "<unknown>",
 		CloseEvent:     json.RawMessage("null"),
@@ -199,11 +199,12 @@ func printTextResult(
 func (c *TemporalWorkflowCommand) startWorkflow(
 	cctx *CommandContext,
 	cl client.Client,
+	sharedWorkflowOpts *SharedWorkflowStartOptions,
 	workflowOpts *WorkflowStartOptions,
 	inputOpts *PayloadInputOptions,
 	printRunningExecutionEvenWithJSON bool,
 ) (client.WorkflowRun, error) {
-	startOpts, err := workflowOpts.buildStartOptions()
+	startOpts, err := buildStartOptions(sharedWorkflowOpts, workflowOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -211,7 +212,7 @@ func (c *TemporalWorkflowCommand) startWorkflow(
 	if err != nil {
 		return nil, err
 	}
-	run, err := cl.ExecuteWorkflow(cctx, startOpts, workflowOpts.Type, input...)
+	run, err := cl.ExecuteWorkflow(cctx, startOpts, sharedWorkflowOpts.Type, input...)
 	if err != nil {
 		return nil, fmt.Errorf("failed starting workflow: %w", err)
 	}
@@ -228,9 +229,9 @@ func (c *TemporalWorkflowCommand) startWorkflow(
 		}{
 			WorkflowId: run.GetID(),
 			RunId:      run.GetRunID(),
-			Type:       workflowOpts.Type,
+			Type:       sharedWorkflowOpts.Type,
 			Namespace:  c.Namespace,
-			TaskQueue:  workflowOpts.TaskQueue,
+			TaskQueue:  sharedWorkflowOpts.TaskQueue,
 		}, printer.StructuredOptions{})
 		if err != nil {
 			return nil, fmt.Errorf("failed printing: %w", err)
@@ -239,13 +240,13 @@ func (c *TemporalWorkflowCommand) startWorkflow(
 	return run, nil
 }
 
-func (w *WorkflowStartOptions) buildStartOptions() (client.StartWorkflowOptions, error) {
+func buildStartOptions(sw *SharedWorkflowStartOptions, w *WorkflowStartOptions) (client.StartWorkflowOptions, error) {
 	o := client.StartWorkflowOptions{
-		ID:                                       w.WorkflowId,
-		TaskQueue:                                w.TaskQueue,
-		WorkflowRunTimeout:                       w.RunTimeout,
-		WorkflowExecutionTimeout:                 w.ExecutionTimeout,
-		WorkflowTaskTimeout:                      w.TaskTimeout,
+		ID:                                       sw.WorkflowId,
+		TaskQueue:                                sw.TaskQueue,
+		WorkflowRunTimeout:                       sw.RunTimeout,
+		WorkflowExecutionTimeout:                 sw.ExecutionTimeout,
+		WorkflowTaskTimeout:                      sw.TaskTimeout,
 		CronSchedule:                             w.Cron,
 		WorkflowExecutionErrorWhenAlreadyStarted: w.FailExisting,
 		StartDelay:                               w.StartDelay,
@@ -258,15 +259,15 @@ func (w *WorkflowStartOptions) buildStartOptions() (client.StartWorkflowOptions,
 			return o, fmt.Errorf("invalid workflow ID reuse policy: %w", err)
 		}
 	}
-	if len(w.Memo) > 0 {
+	if len(sw.Memo) > 0 {
 		var err error
-		if o.Memo, err = stringKeysJSONValues(w.Memo); err != nil {
+		if o.Memo, err = stringKeysJSONValues(sw.Memo); err != nil {
 			return o, fmt.Errorf("invalid memo values: %w", err)
 		}
 	}
-	if len(w.SearchAttribute) > 0 {
+	if len(sw.SearchAttribute) > 0 {
 		var err error
-		if o.SearchAttributes, err = stringKeysJSONValues(w.SearchAttribute); err != nil {
+		if o.SearchAttributes, err = stringKeysJSONValues(sw.SearchAttribute); err != nil {
 			return o, fmt.Errorf("invalid search attribute values: %w", err)
 		}
 	}
