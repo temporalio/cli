@@ -24,6 +24,7 @@ import (
 	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 type CommandHarness struct {
@@ -219,6 +220,8 @@ type DevServer struct {
 	Options DevServerOptions
 	// For first namespace in options
 	Client client.Client
+	// For other services, like the WorkflowService
+	GRPCConn *grpc.ClientConn
 
 	logOutput     bytes.Buffer
 	logOutputLock sync.RWMutex
@@ -236,6 +239,7 @@ type DevServerOptions struct {
 
 func StartDevServer(t *testing.T, options DevServerOptions) *DevServer {
 	success := false
+
 	// Build options
 	d := &DevServer{Options: options}
 	if d.Options.FrontendIP == "" {
@@ -294,12 +298,21 @@ func StartDevServer(t *testing.T, options DevServerOptions) *DevServer {
 		}
 	}()
 
-	// Dial client
+	// Dial sdk client
 	d.Client, err = client.Dial(d.Options.ClientOptions)
 	require.NoError(t, err)
 	defer func() {
 		if !success {
 			d.Client.Close()
+		}
+	}()
+
+	// Dial workflowservice client
+	d.GRPCConn, err = grpc.Dial(d.Options.ClientOptions.HostPort, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	require.NoError(t, err)
+	defer func() {
+		if !success {
+			d.GRPCConn.Close()
 		}
 	}()
 
@@ -323,6 +336,7 @@ func StartDevServer(t *testing.T, options DevServerOptions) *DevServer {
 
 func (d *DevServer) Stop() {
 	d.Client.Close()
+	d.GRPCConn.Close()
 	d.Server.Stop()
 }
 

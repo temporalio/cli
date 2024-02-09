@@ -127,7 +127,7 @@ func (c *TemporalWorkflowQueryCommand) run(cctx *CommandContext, args []string) 
 
 func (c *TemporalWorkflowResetCommand) run(cctx *CommandContext, _ []string) error {
 	if c.Type.Value == "" && c.EventId <= 0 {
-		return errors.New("specify either valid event id or reset type")
+		return errors.New("must specify either valid event id or reset type")
 	}
 	cl, err := c.Parent.ClientOptions.dialClient(cctx)
 	if err != nil {
@@ -143,9 +143,9 @@ func (c *TemporalWorkflowResetCommand) run(cctx *CommandContext, _ []string) err
 
 	wfsvc := workflowservice.NewWorkflowServiceClient(conn)
 	resetBaseRunID := c.RunId
-	workflowTaskFinishID := int64(c.EventId)
+	eventID := int64(c.EventId)
 	if c.Type.Value != "" {
-		resetBaseRunID, workflowTaskFinishID, err = getResetEventIDByType(cctx, c.Type.Value, c.Parent.Namespace, c.WorkflowId, c.RunId, wfsvc)
+		resetBaseRunID, eventID, err = getResetEventIDByType(cctx, c.Type.Value, c.Parent.Namespace, c.WorkflowId, c.RunId, wfsvc)
 		if err != nil {
 			return fmt.Errorf("getting reset event ID by type failed: %w", err)
 		}
@@ -154,6 +154,14 @@ func (c *TemporalWorkflowResetCommand) run(cctx *CommandContext, _ []string) err
 	if u, err := user.Current(); err != nil && u.Username != "" {
 		username = u.Username
 	}
+	reapplyType := enums.RESET_REAPPLY_TYPE_SIGNAL
+	if c.ReapplyType.Value != "All" {
+		reapplyType, err = enums.ResetReapplyTypeFromString(c.ReapplyType.Value)
+		if err != nil {
+			return err
+		}
+	}
+
 	resp, err := cl.ResetWorkflowExecution(cctx, &workflowservice.ResetWorkflowExecutionRequest{
 		Namespace: c.Parent.Namespace,
 		WorkflowExecution: &common.WorkflowExecution{
@@ -161,9 +169,9 @@ func (c *TemporalWorkflowResetCommand) run(cctx *CommandContext, _ []string) err
 			RunId:      resetBaseRunID,
 		},
 		Reason:                    fmt.Sprintf("%s: %s", username, c.Reason),
-		WorkflowTaskFinishEventId: workflowTaskFinishID,
+		WorkflowTaskFinishEventId: eventID,
 		RequestId:                 uuid.NewString(),
-		ResetReapplyType:          resetReapplyTypesMap[c.Type.Value].(enums.ResetReapplyType),
+		ResetReapplyType:          reapplyType,
 	})
 	if err != nil {
 		return fmt.Errorf("reset failed: %w", err)
