@@ -9,6 +9,7 @@ import (
 	"github.com/temporalio/cli/temporalcli"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/workflow"
 )
 
 // TODO(cretz): To test:
@@ -19,6 +20,15 @@ func (s *SharedServerSuite) TestWorkflow_Describe_ActivityFailing() {
 	// Set activity to just continually error
 	s.Worker.OnDevActivity(func(ctx context.Context, a any) (any, error) {
 		return nil, fmt.Errorf("intentional error")
+	})
+
+	s.Worker.OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
+		ctx = workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
+			StartToCloseTimeout: 10 * time.Second,
+		})
+		var res any
+		err := workflow.ExecuteActivity(ctx, DevActivity, input).Get(ctx, &res)
+		return res, err
 	})
 
 	// Start the workflow and wait until it has at least reached activity failure

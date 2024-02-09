@@ -162,6 +162,10 @@ func (c *TemporalWorkflowResetCommand) run(cctx *CommandContext, _ []string) err
 		}
 	}
 
+	if eventID > 0 {
+		cctx.Printer.Printlnf("Resetting workflow %s to event ID %d", c.WorkflowId, eventID)
+	}
+
 	resp, err := cl.ResetWorkflowExecution(cctx, &workflowservice.ResetWorkflowExecutionRequest{
 		Namespace: c.Parent.Namespace,
 		WorkflowExecution: &common.WorkflowExecution{

@@ -21,6 +21,7 @@ import (
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/operatorservice/v1"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
 	"google.golang.org/grpc"
@@ -467,13 +468,17 @@ func (d *devOperations) DevWorkflow(ctx workflow.Context, input any) (any, error
 	d.worker.devWorkflowLastInput = input
 	callback := d.worker.devWorkflowCallback
 	d.worker.devOpsLock.Unlock()
+	// Set a default retry policy so that logical errors in your test don't hang forever
+	ctx = workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
+		ActivityID:          "dev-activity-id",
+		StartToCloseTimeout: 10 * time.Second,
+		RetryPolicy: &temporal.RetryPolicy{
+			MaximumAttempts: 1,
+		},
+	})
 	if callback != nil {
 		return callback(ctx, input)
 	}
-	ctx = workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
-		StartToCloseTimeout: 10 * time.Second,
-		ActivityID:          "dev-activity-id",
-	})
 	var res any
 	err := workflow.ExecuteActivity(ctx, DevActivity, input).Get(ctx, &res)
 	return res, err
