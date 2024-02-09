@@ -2,6 +2,12 @@ package temporalcli
 
 import (
 	"fmt"
+	"reflect"
+	"time"
+
+	"github.com/temporalio/cli/temporalcli/internal/printer"
+	enumspb "go.temporal.io/api/enums/v1"
+	"go.temporal.io/sdk/client"
 )
 
 // func scheduleBaseArgs(c *cli.Context) (
@@ -193,54 +199,44 @@ import (
 // 	}
 // }
 
-func (*TemporalScheduleBackfillCommand) run(cctx *CommandContext, args []string) error {
-	// frontendClient, namespace, scheduleID, err := scheduleBaseArgs(c)
-	// if err != nil {
-	// 	return err
-	// }
-	// ctx, cancel := common.NewContext(c)
-	// defer cancel()
+func (c *TemporalScheduleBackfillCommand) run(cctx *CommandContext, args []string) error {
+	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+	sch := cl.ScheduleClient().GetHandle(cctx, c.ScheduleId)
 
-	// now := time.Now()
-	// startTime, err := common.ParseTime(c.String(common.FlagStartTime), time.Time{}, now)
-	// if err != nil {
-	// 	return err
-	// }
-	// endTime, err := common.ParseTime(c.String(common.FlagEndTime), time.Time{}, now)
-	// if err != nil {
-	// 	return err
-	// }
-	// overlap, err := getOverlapPolicy(c)
-	// if err != nil {
-	// 	return err
-	// }
+	startTime, err := time.Parse(time.RFC3339, c.StartTime)
+	if err != nil {
+		return err
+	}
+	endTime, err := time.Parse(time.RFC3339, c.EndTime)
+	if err != nil {
+		return err
+	}
+	overlap, err := enumspb.ScheduleOverlapPolicyFromString(c.OverlapPolicy.Value)
+	if err != nil {
+		return err
+	}
 
-	// req := &workflowservice.PatchScheduleRequest{
-	// 	Namespace:  namespace,
-	// 	ScheduleId: scheduleID,
-	// 	Patch: &schedpb.SchedulePatch{
-	// 		BackfillRequest: []*schedpb.BackfillRequest{
-	// 			{
-	// 				StartTime:     timestamp.TimePtr(startTime),
-	// 				EndTime:       timestamp.TimePtr(endTime),
-	// 				OverlapPolicy: overlap,
-	// 			},
-	// 		},
-	// 	},
-	// 	Identity:  common.GetCliIdentity(),
-	// 	RequestId: uuid.New(),
-	// }
-	// _, err = frontendClient.PatchSchedule(ctx, req)
-	// if err != nil {
-	// 	return fmt.Errorf("unable to backfill schedule: %w", err)
-	// }
-
-	// fmt.Println(color.Green(c, "Backfill request sent"))
-	// return nil
-	return fmt.Errorf("TODO")
+	err = sch.Backfill(cctx, client.ScheduleBackfillOptions{
+		Backfill: []client.ScheduleBackfill{
+			{
+				Start:   startTime,
+				End:     endTime,
+				Overlap: overlap,
+			},
+		},
+	})
+	if err != nil {
+		return err
+	}
+	cctx.Printer.Println("Backfill request sent")
+	return nil
 }
 
-func (*TemporalScheduleCreateCommand) run(cctx *CommandContext, args []string) error {
+func (c *TemporalScheduleCreateCommand) run(cctx *CommandContext, args []string) error {
 	// frontendClient, namespace, scheduleID, err := scheduleBaseArgs(c)
 	// if err != nil {
 	// 	return err
@@ -276,44 +272,32 @@ func (*TemporalScheduleCreateCommand) run(cctx *CommandContext, args []string) e
 	return fmt.Errorf("TODO")
 }
 
-func (*TemporalScheduleDeleteCommand) run(cctx *CommandContext, args []string) error {
-	// frontendClient, namespace, scheduleID, err := scheduleBaseArgs(c)
-	// if err != nil {
-	// 	return err
-	// }
-	// ctx, cancel := common.NewContext(c)
-	// defer cancel()
-
-	// req := &workflowservice.DeleteScheduleRequest{
-	// 	Namespace:  namespace,
-	// 	ScheduleId: scheduleID,
-	// 	Identity:   common.GetCliIdentity(),
-	// }
-	// _, err = frontendClient.DeleteSchedule(ctx, req)
-	// if err != nil {
-	// 	return fmt.Errorf("unable to delete schedule: %w", err)
-	// }
-
-	// fmt.Println(color.Green(c, "Schedule deleted"))
-	return fmt.Errorf("TODO")
+func (c *TemporalScheduleDeleteCommand) run(cctx *CommandContext, args []string) error {
+	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+	sch := cl.ScheduleClient().GetHandle(cctx, c.ScheduleId)
+	err := sch.Delete(cctx)
+	if err != nil {
+		return err
+	}
+	cctx.Printer.Println("Schedule deleted")
+	return nil
 }
 
-func (*TemporalScheduleDescribeCommand) run(cctx *CommandContext, args []string) error {
-	// frontendClient, namespace, scheduleID, err := scheduleBaseArgs(c)
-	// if err != nil {
-	// 	return err
-	// }
-	// ctx, cancel := common.NewContext(c)
-	// defer cancel()
-
-	// req := &workflowservice.DescribeScheduleRequest{
-	// 	Namespace:  namespace,
-	// 	ScheduleId: scheduleID,
-	// }
-	// resp, err := frontendClient.DescribeSchedule(ctx, req)
-	// if err != nil {
-	// 	return fmt.Errorf("unable to describe schedule: %w", err)
-	// }
+func (c *TemporalScheduleDescribeCommand) run(cctx *CommandContext, args []string) error {
+	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+	sch := cl.ScheduleClient().GetHandle(cctx, c.ScheduleId)
+	res, err := sch.Describe(cctx)
+	if err != nil {
+		return err
+	}
 
 	// if c.Bool(common.FlagPrintRaw) {
 	// 	common.PrettyPrintJSONObject(c, resp)
@@ -421,8 +405,40 @@ func (*TemporalScheduleDescribeCommand) run(cctx *CommandContext, args []string)
 	return fmt.Errorf("TODO")
 }
 
-func (*TemporalScheduleListCommand) run(cctx *CommandContext, args []string) error {
-	// frontendClient := client.Factory(c.App).FrontendClient(c)
+type scheduleListEntry struct {
+}
+
+type scheduleListEntryIterAdapter struct {
+	i client.ScheduleListIterator
+}
+
+func (i scheduleListEntryIterAdapter) Next() (any, error) {
+	if !i.HasNext() {
+		return nil, nil
+	}
+	next, err := i.i.Next()
+	if err != nil {
+		return nil, err
+	}
+	return next, err
+}
+
+func (c *TemporalScheduleListCommand) run(cctx *CommandContext, args []string) error {
+	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+	res, err := cl.ScheduleClient().List(cctx, client.ScheduleListOptions{})
+	if err != nil {
+		return err
+	}
+
+	typ := reflect.TypeOf(client.ScheduleListEntry{})
+	iter := scheduleListEntryIterAdapter{i: res}
+
+	return cctx.Printer.PrintStructuredIter(typ, iter, printer.StructuredOptions{})
+
 	// namespace, err := common.RequiredFlag(c, common.FlagNamespace)
 	// if err != nil {
 	// 	return err
@@ -498,7 +514,7 @@ func (*TemporalScheduleListCommand) run(cctx *CommandContext, args []string) err
 	return fmt.Errorf("TODO")
 }
 
-func (*TemporalScheduleToggleCommand) run(cctx *CommandContext, args []string) error {
+func (c *TemporalScheduleToggleCommand) run(cctx *CommandContext, args []string) error {
 	// frontendClient, namespace, scheduleID, err := scheduleBaseArgs(c)
 	// if err != nil {
 	// 	return err
@@ -535,7 +551,7 @@ func (*TemporalScheduleToggleCommand) run(cctx *CommandContext, args []string) e
 	return fmt.Errorf("TODO")
 }
 
-func (*TemporalScheduleTriggerCommand) run(cctx *CommandContext, args []string) error {
+func (c *TemporalScheduleTriggerCommand) run(cctx *CommandContext, args []string) error {
 	// frontendClient, namespace, scheduleID, err := scheduleBaseArgs(c)
 	// if err != nil {
 	// 	return err
@@ -568,7 +584,7 @@ func (*TemporalScheduleTriggerCommand) run(cctx *CommandContext, args []string) 
 	return fmt.Errorf("TODO")
 }
 
-func (*TemporalScheduleUpdateCommand) run(cctx *CommandContext, args []string) error {
+func (c *TemporalScheduleUpdateCommand) run(cctx *CommandContext, args []string) error {
 	// frontendClient, namespace, scheduleID, err := scheduleBaseArgs(c)
 	// if err != nil {
 	// 	return err
