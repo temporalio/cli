@@ -203,23 +203,38 @@ The `temporal schedule create` command creates a new Schedule.
 Example:
 
 ```
-  temporal schedule create                               \
-    --schedule-id 'your-schedule-id'                     \
-    --cal '{"dayOfWeek":"Fri","hour":"3","minute":"11"}' \
-    --workflow-id 'your-base-workflow-id'                \
-    --task-queue 'your-task-queue'                       \
+  temporal schedule create                                    \
+    --schedule-id 'your-schedule-id'                          \
+    --calendar '{"dayOfWeek":"Fri","hour":"3","minute":"11"}' \
+    --workflow-id 'your-base-workflow-id'                     \
+    --task-queue 'your-task-queue'                            \
     --workflow-type 'YourWorkflowType'
 ```
 
-Any combination of `--cal`, `--interval`, and `--cron` is supported.
+Any combination of `--calendar`, `--interval`, and `--cron` is supported.
 Actions will be executed at any time specified in the Schedule.
+
+#### Options set for schedule configuration:
+
+* `--calendar` (string) - Calendar specification in JSON, e.g. `{"dayOfWeek":"Fri","hour":"17","minute":"5"}`.
+* `--catchup-window` (duration) - Maximum allowed catch-up time if server is down.
+* `--cron` (string) - Calendar spec in cron string format, e.g. `3 11 * * Fri`.
+* `--end-time` (string) - Overall schedule end time.
+* `--interval` (string) - Interval duration, e.g. 90m, or 90m/13m to include phase offset.
+* `--jitter` (duration) - Per-action jitter range.
+* `--notes` (string) - Initial value of notes field.
+* `--pause` (bool) - Initial value of paused state.
+* `--pause-on-failure` (bool) - Pause schedule after any workflow failure.
+* `--remaining-actions` (int) - Total number of actions allowed. Zero (default) means unlimited.
+* `--start-time` (string) - Overall schedule start time.
+* `--time-zone` (string) - Time zone to interpret all calendar specs in (IANA name).
 
 #### Options
 
-* `--FIXME` (string) - asdf.
-
 Includes options set for [schedule-id](#options-set-for-schedule-id).
 Includes options set for [overlap-policy](#options-set-for-overlap-policy).
+Includes options set for [shared-workflow-start](#options-set-for-shared-workflow-start).
+Includes options set for [payload-input](#options-set-for-payload-input).
 
 ### temporal schedule delete: Deletes a Schedule.
 
@@ -273,13 +288,18 @@ Includes options set for [schedule-id](#options-set-for-schedule-id).
 Includes options set for [schedule-id](#options-set-for-schedule-id).
 Includes options set for [overlap-policy](#options-set-for-overlap-policy).
 
-### temporal schedule update: Updates a Schedule with a new definition (full replacement).
+### temporal schedule update: Updates a Schedule with a new definition.
+
+The temporal schedule update command updates an existing Schedule. It replaces the entire
+configuration of the schedule, including spec, action, and policies.
 
 #### Options
 
+Includes options set for [schedule-configuration](#options-set-for-schedule-configuration).
 Includes options set for [schedule-id](#options-set-for-schedule-id).
 Includes options set for [overlap-policy](#options-set-for-overlap-policy).
-
+Includes options set for [shared-workflow-start](#options-set-for-shared-workflow-start).
+Includes options set for [payload-input](#options-set-for-payload-input).
 
 ### temporal server: Run Temporal Server.
 
@@ -449,6 +469,7 @@ temporal workflow execute
   during workflow progress. If set when using JSON output, this will include the entire "history" JSON key of the
   started run (does not follow runs).
 
+Includes options set for [shared workflow start](#options-set-for-shared-workflow-start).
 Includes options set for [workflow start](#options-set-for-workflow-start).
 Includes options set for [payload input](#options-set-for-payload-input).
 
@@ -565,7 +586,7 @@ temporal workflow start \
 		--input '{"Input": "As-JSON"}'
 ```
 
-#### Options set for workflow start:
+#### Options set for shared workflow start:
 
 * `--workflow-id`, `-w` (string) - Workflow Id.
 * `--type` (string) - Workflow Type name. Required.
@@ -573,14 +594,17 @@ temporal workflow start \
 * `--run-timeout` (duration) - Timeout of a Workflow Run.
 * `--execution-timeout` (duration) - Timeout for a WorkflowExecution, including retries and ContinueAsNew tasks.
 * `--task-timeout` (duration) - Start-to-close timeout for a Workflow Task. Default: 10s.
-* `--cron` (string) - Cron schedule for the workflow. Deprecated - use schedules instead.
-* `--id-reuse-policy` (string) - Allows the same Workflow Id to be used in a new Workflow Execution. Options:
-  AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate, TerminateIfRunning.
 * `--search-attribute` (string[]) - Passes Search Attribute in key=value format. Use valid JSON formats for value.
 * `--memo` (string[]) - Passes Memo in key=value format. Use valid JSON formats for value.
+
+#### Options set for workflow start:
+
+* `--cron` (string) - Cron schedule for the workflow. Deprecated - use schedules instead.
 * `--fail-existing` (bool) - Fail if the workflow already exists.
 * `--start-delay` (duration) - Specify a delay before the workflow starts. Cannot be used with a cron schedule. If the
   workflow receives a signal or update before the delay has elapsed, it will begin immediately.
+* `--id-reuse-policy` (string) - Allows the same Workflow Id to be used in a new Workflow Execution. Options:
+  AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate, TerminateIfRunning.
 
 #### Options set for payload input:
 
