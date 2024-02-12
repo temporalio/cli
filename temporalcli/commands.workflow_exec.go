@@ -2,7 +2,6 @@ package temporalcli
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -312,24 +311,7 @@ func (p *PayloadInputOptions) buildRawInputPayloads() (*common.Payloads, error) 
 		}
 		metadata[metaPieces[0]] = []byte(metaPieces[1])
 	}
-
-	// Create payloads
-	ret := &common.Payloads{Payloads: make([]*common.Payload, len(inData))}
-	for i, in := range inData {
-		// First, if it's JSON, validate that it is accurate
-		if strings.HasPrefix(string(metadata["encoding"]), "json/") && !json.Valid(in) {
-			return nil, fmt.Errorf("input #%v is not valid JSON", i+1)
-		}
-		// Decode base64 if base64'd (std encoding only for now)
-		if p.InputBase64 {
-			var err error
-			if in, err = base64.StdEncoding.DecodeString(string(in)); err != nil {
-				return nil, fmt.Errorf("input #%v is not valid base64", i+1)
-			}
-		}
-		ret.Payloads[i] = &common.Payload{Data: in, Metadata: metadata}
-	}
-	return ret, nil
+	return CreatePayloads(inData, metadata, p.InputBase64)
 }
 
 // Rules:

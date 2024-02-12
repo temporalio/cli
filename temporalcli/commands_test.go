@@ -434,7 +434,10 @@ func (d *devOperations) DevWorkflow(ctx workflow.Context, input any) (any, error
 	if callback != nil {
 		return callback(ctx, input)
 	}
-	ctx = workflow.WithActivityOptions(ctx, workflow.ActivityOptions{StartToCloseTimeout: 10 * time.Second})
+	ctx = workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
+		StartToCloseTimeout: 10 * time.Second,
+		ActivityID:          "dev-activity-id",
+	})
 	var res any
 	err := workflow.ExecuteActivity(ctx, DevActivity, input).Get(ctx, &res)
 	return res, err
