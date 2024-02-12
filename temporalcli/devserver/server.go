@@ -138,8 +138,7 @@ func (s *StartOptions) buildUIServer() *uiserver.Server {
 		EnableUI:            true,
 		UIAssetPath:         s.UIAssetPath,
 		Codec:               uiconfig.Codec{Endpoint: s.UICodecEndpoint},
-		// TODO(cretz): Pending https://github.com/temporalio/ui/pull/1858
-		// HideLogs:            true,
+		HideLogs:            true,
 	}))
 }
 
