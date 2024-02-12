@@ -22,7 +22,7 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 		MetricsPort:      t.MetricsPort,
 		FrontendHTTPPort: t.HttpPort,
 	}
-	if t.LogLevelServer.Value == "off" {
+	if t.LogLevelServer.Value == "never" {
 		opts.LogLevel = 100
 	} else if err := opts.LogLevel.UnmarshalText([]byte(t.LogLevelServer.Value)); err != nil {
 		return fmt.Errorf("invalid log level %q: %w", t.LogLevelServer.Value, err)

@@ -315,8 +315,8 @@ func (c *TemporalCommand) initCommand(cctx *CommandContext) {
 func (c *TemporalCommand) preRun(cctx *CommandContext) error {
 	// Configure logger if not already on context
 	if cctx.Logger == nil {
-		// If level is off, make noop logger
-		if c.LogLevel.Value == "off" {
+		// If level is never, make noop logger
+		if c.LogLevel.Value == "never" {
 			cctx.Logger = newNopLogger()
 		} else {
 			var level slog.Level

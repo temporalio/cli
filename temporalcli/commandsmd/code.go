@@ -319,12 +319,26 @@ func (c *CommandOption) writeFlagBuilding(selfVar, flagVar string, w *codeWriter
 	default:
 		return fmt.Errorf("unrecognized data type %v", c.DataType)
 	}
+
+	// If there are enums, append to desc
+	desc := c.Desc
+	if len(c.EnumValues) > 0 {
+		desc += " Accepted values: "
+		for i, enumVal := range c.EnumValues {
+			if i > 0 {
+				desc += ", "
+			}
+			desc += enumVal
+		}
+		desc += "."
+	}
+
 	if c.Alias == "" {
 		w.writeLinef("%v.%v(&%v.%v, %q%v, %q)",
-			flagVar, flagMeth, selfVar, c.fieldName(), c.Name, defaultLit, c.Desc)
+			flagVar, flagMeth, selfVar, c.fieldName(), c.Name, defaultLit, desc)
 	} else {
 		w.writeLinef("%v.%vP(&%v.%v, %q, %q%v, %q)",
-			flagVar, flagMeth, selfVar, c.fieldName(), c.Name, c.Alias, defaultLit, c.Desc)
+			flagVar, flagMeth, selfVar, c.fieldName(), c.Name, c.Alias, defaultLit, desc)
 	}
 	if c.Required {
 		w.writeLinef("_ = %v.MarkFlagRequired(%v, %q)", w.importCobra(), flagVar, c.Name)
