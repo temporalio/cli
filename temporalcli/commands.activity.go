@@ -42,10 +42,9 @@ func (c *TemporalActivityFailCommand) run(cctx *CommandContext, args []string) e
 	}
 	defer cl.Close()
 
-	metadata := map[string][]byte{"encoding": []byte("json/plain")}
 	var detailPayloads *common.Payloads
-	detailPayloads = nil
 	if len(c.Detail) > 0 {
+		metadata := map[string][]byte{"encoding": []byte("json/plain")}
 		detailPayloads, err = CreatePayloads([][]byte{[]byte(c.Detail)}, metadata, false)
 		if err != nil {
 			return err
