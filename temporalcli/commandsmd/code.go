@@ -323,14 +323,7 @@ func (c *CommandOption) writeFlagBuilding(selfVar, flagVar string, w *codeWriter
 	// If there are enums, append to desc
 	desc := c.Desc
 	if len(c.EnumValues) > 0 {
-		desc += " Accepted values: "
-		for i, enumVal := range c.EnumValues {
-			if i > 0 {
-				desc += ", "
-			}
-			desc += enumVal
-		}
-		desc += "."
+		desc += fmt.Sprintf(" Accepted values: %s.", strings.Join(c.EnumValues, ", "))
 	}
 
 	if c.Alias == "" {
