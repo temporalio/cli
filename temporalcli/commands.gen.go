@@ -208,6 +208,7 @@ type TemporalServerStartDevCommand struct {
 	SqlitePragma       []string
 	DynamicConfigValue []string
 	LogConfig          bool
+	LogLevelServer     StringEnum
 }
 
 func NewTemporalServerStartDevCommand(cctx *CommandContext, parent *TemporalServerCommand) *TemporalServerStartDevCommand {
@@ -229,13 +230,15 @@ func NewTemporalServerStartDevCommand(cctx *CommandContext, parent *TemporalServ
 	s.Command.Flags().IntVar(&s.MetricsPort, "metrics-port", 0, "Port for /metrics. Default is off.")
 	s.Command.Flags().IntVar(&s.UiPort, "ui-port", 0, "Port for the Web UI. Default is --port + 1000.")
 	s.Command.Flags().BoolVar(&s.Headless, "headless", false, "Disable the Web UI.")
-	s.Command.Flags().StringVar(&s.Ip, "ip", "127.0.0.1", "IP address to bind the frontend service to.")
+	s.Command.Flags().StringVar(&s.Ip, "ip", "localhost", "IP address to bind the frontend service to.")
 	s.Command.Flags().StringVar(&s.UiIp, "ui-ip", "", "IP address to bind the Web UI to. Default is same as --ip.")
 	s.Command.Flags().StringVar(&s.UiAssetPath, "ui-asset-path", "", "UI custom assets path.")
 	s.Command.Flags().StringVar(&s.UiCodecEndpoint, "ui-codec-endpoint", "", "UI remote codec HTTP endpoint.")
 	s.Command.Flags().StringArrayVar(&s.SqlitePragma, "sqlite-pragma", nil, "Specify SQLite pragma statements in pragma=value format.")
 	s.Command.Flags().StringArrayVar(&s.DynamicConfigValue, "dynamic-config-value", nil, "Dynamic config value, as KEY=JSON_VALUE (string values need quotes).")
 	s.Command.Flags().BoolVar(&s.LogConfig, "log-config", false, "Log the server config being used in stderr.")
+	s.LogLevelServer = NewStringEnum([]string{"debug", "info", "warn", "error", "off"}, "warn")
+	s.Command.Flags().Var(&s.LogLevelServer, "log-level-server", "Log level for the server only.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

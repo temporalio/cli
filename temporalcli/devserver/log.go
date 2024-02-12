@@ -8,7 +8,10 @@ import (
 	"go.temporal.io/server/common/log/tag"
 )
 
-type slogLogger struct{ log *slog.Logger }
+type slogLogger struct {
+	log   *slog.Logger
+	level slog.Level
+}
 
 var _ log.Logger
 
@@ -23,7 +26,7 @@ func (s slogLogger) Panic(msg string, tags ...tag.Tag)  { s.Log(slog.LevelError,
 func (s slogLogger) Fatal(msg string, tags ...tag.Tag)  { s.Log(slog.LevelError, msg, tags) }
 
 func (s slogLogger) Log(level slog.Level, msg string, tags []tag.Tag) {
-	if s.log.Enabled(context.Background(), level) {
+	if level >= s.level && s.log.Enabled(context.Background(), level) {
 		s.log.LogAttrs(context.Background(), level, msg, logTagsToAttrs(tags)...)
 	}
 }

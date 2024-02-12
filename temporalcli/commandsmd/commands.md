@@ -144,13 +144,15 @@ To persist Workflows across runs, use:
 * `--metrics-port` (int) - Port for /metrics. Default is off.
 * `--ui-port` (int) - Port for the Web UI. Default is --port + 1000.
 * `--headless` (bool) - Disable the Web UI.
-* `--ip` (string) - IP address to bind the frontend service to. Default: 127.0.0.1.
+* `--ip` (string) - IP address to bind the frontend service to. Default: localhost.
 * `--ui-ip` (string) - IP address to bind the Web UI to. Default is same as --ip.
 * `--ui-asset-path` (string) - UI custom assets path.
 * `--ui-codec-endpoint` (string) - UI remote codec HTTP endpoint.
 * `--sqlite-pragma` (string[]) - Specify SQLite pragma statements in pragma=value format.
 * `--dynamic-config-value` (string[]) - Dynamic config value, as KEY=JSON_VALUE (string values need quotes).
 * `--log-config` (bool) - Log the server config being used in stderr.
+* `--log-level-server` (string-enum) - Log level for the server only. Options: debug, info, warn, error, off. Default:
+  warn.
 
 ### temporal task-queue: Manage Task Queues.
 

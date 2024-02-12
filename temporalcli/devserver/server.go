@@ -56,6 +56,7 @@ type StartOptions struct {
 	FrontendPort int
 	Namespaces   []string
 	Logger       *slog.Logger
+	LogLevel     slog.Level
 
 	// Optional fields
 	UIIP                string // Empty means no UI
@@ -137,6 +138,7 @@ func (s *StartOptions) buildUIServer() *uiserver.Server {
 		EnableUI:            true,
 		UIAssetPath:         s.UIAssetPath,
 		Codec:               uiconfig.Codec{Endpoint: s.UICodecEndpoint},
+		HideLogs:            true,
 	}))
 }
 
@@ -163,7 +165,10 @@ func (s *StartOptions) buildServerOptions() ([]temporal.ServerOption, error) {
 	}
 
 	// Build common opts
-	logger := slogLogger{s.Logger}
+	logger := slogLogger{
+		log:   s.Logger,
+		level: s.LogLevel,
+	}
 	authorizer, err := authorization.GetAuthorizerFromConfig(&conf.Global.Authorization)
 	if err != nil {
 		return nil, fmt.Errorf("failed creating authorizer: %w", err)
