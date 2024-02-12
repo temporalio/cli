@@ -50,7 +50,7 @@ This document has a specific structure used by a parser. Here are the rules:
 
 * `--env` (string) - Environment to read environment-specific flags from. Default: default. Env: TEMPORAL_ENV.
 * `--env-file` (string) - File to read all environments (defaults to `$HOME/.config/temporalio/temporal.yaml`).
-* `--log-level` (string-enum) - Log level. Options: debug, info, warn, error, off. Default: info.
+* `--log-level` (string-enum) - Log level. Options: debug, info, warn, error, never. Default: info.
 * `--log-format` (string-enum) - Log format. Options: text, json. Default: text.
 * `--output`, `-o` (string-enum) - Data output format. Options: text, json. Default: text.
 * `--time-format` (string-enum) - Time format. Options: relative, iso, raw. Default: relative.
@@ -151,7 +151,7 @@ To persist Workflows across runs, use:
 * `--sqlite-pragma` (string[]) - Specify SQLite pragma statements in pragma=value format.
 * `--dynamic-config-value` (string[]) - Dynamic config value, as KEY=JSON_VALUE (string values need quotes).
 * `--log-config` (bool) - Log the server config being used in stderr.
-* `--log-level-server` (string-enum) - Log level for the server only. Options: debug, info, warn, error, off. Default:
+* `--log-level-server` (string-enum) - Log level for the server only. Options: debug, info, warn, error, never. Default:
   warn.
 
 ### temporal task-queue: Manage Task Queues.
