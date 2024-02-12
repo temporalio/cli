@@ -209,7 +209,23 @@ Workflow commands use this syntax:`temporal workflow COMMAND [ARGS]`.
 
 ### temporal workflow cancel: Cancel a Workflow Execution.
 
-TODO
+The `temporal workflow cancel` command is used to cancel a [Workflow Execution](/concepts/what-is-a-workflow-execution). Canceling a running Workflow Execution records a `WorkflowExecutionCancelRequested` event in the Event History. A new Command Task will be scheduled, and the Workflow Execution will perform cleanup work.
+
+Executions may be cancelled by [ID](/concepts/what-is-a-workflow-id):
+```
+temporal workflow cancel --workflow-id MyWorkflowId
+```
+
+...or in bulk via a visibility query [list filter](/concepts/what-is-a-list-filter):
+```
+temporal workflow cancel --query=MyQuery
+```
+
+Use the options listed below to change the behavior of this command.
+
+#### Options
+
+Includes options set for [single workflow or batch](#options-set-single-workflow-or-batch)
 
 ### temporal workflow count: Count Workflow Executions.
 
@@ -338,7 +354,7 @@ Includes options set for [payload input](#options-set-for-payload-input).
 
 * `--workflow-id`, `-w` (string) - Workflow Id. Either this or query must be set.
 * `--run-id`, `-r` (string) - Run Id. Cannot be set when query is set.
-* `--query`, `-q` (string) - Start a batch to Signal Workflow Executions with given List Filter. Either this or
+* `--query`, `-q` (string) - Start a batch to operate on Workflow Executions with given List Filter. Either this or
   Workflow Id must be set.
 * `--reason` (string) - Reason to perform batch. Only allowed if query is present unless the command specifies otherwise. Defaults to message with the current user's name.
 * `--yes`, `-y` (bool) - Confirm prompt to perform batch. Only allowed if query is present.
