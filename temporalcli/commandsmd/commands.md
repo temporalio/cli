@@ -57,30 +57,30 @@ This document has a specific structure used by a parser. Here are the rules:
 * `--color` (string-enum) - Set coloring. Options: always, never, auto. Default: auto.
 * `--no-json-shorthand-payloads` (bool) - Always all payloads as raw payloads even if they are JSON.
 
-### temporal activity: Complete or fail an activity.
+### temporal activity: Complete or fail an Activity.
 
 #### Options
 
 Includes options set for [client](#options-set-for-client).
 
 
-### temporal activity complete: Complete an activity.
+### temporal activity complete: Complete an Activity.
 
-Complete an Activity Execution.
+Complete an Activity.
 
 `temporal activity complete --activity-id=MyActivityId --workflow-id=MyWorkflowId --result='{"MyResultKey": "MyResultVal"}'`
 
 #### Options
 
 * `--activity-id` (string) - The Activity to be completed. Required.
-* `--identity` (string) - Identity of operator.
+* `--identity` (string) - Identity of user submitting this request.
 * `--result` (string) - The result with which to complete the Activity (JSON). Required.
 
 Includes options set for [workflow reference](#options-set-for-workflow-reference).
 
-### temporal activity fail: Fail an activity.
+### temporal activity fail: Fail an Activity.
 
-Fail an Activity Execution.
+Fail an Activity.
 
 `temporal activity fail --activity-id=MyActivityId --workflow-id=MyWorkflowId`
 
