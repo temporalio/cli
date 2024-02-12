@@ -510,7 +510,7 @@ func getLastContinueAsNewID(ctx context.Context, namespace, wid, rid string, wfs
 	for {
 		resp, err := wfsvc.GetWorkflowExecutionHistory(ctx, req)
 		if err != nil {
-			return "", 0, fmt.Errorf("failed to get workflow execution history of original execution (run id %s): %w", resetBaseRunID, err)
+			return "", 0, fmt.Errorf("failed to get workflow execution history of previous execution (run id %s): %w", resetBaseRunID, err)
 		}
 		for _, e := range resp.GetHistory().GetEvents() {
 			if e.GetEventType() == enums.EVENT_TYPE_WORKFLOW_TASK_COMPLETED {
@@ -524,7 +524,7 @@ func getLastContinueAsNewID(ctx context.Context, namespace, wid, rid string, wfs
 		}
 	}
 	if workflowTaskCompletedID == 0 {
-		return "", 0, errors.New("unable to find WorkflowTaskCompleted event for original workflow")
+		return "", 0, errors.New("unable to find WorkflowTaskCompleted event for previous execution")
 	}
 	return
 }

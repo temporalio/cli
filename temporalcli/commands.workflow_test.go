@@ -579,13 +579,14 @@ func (s *SharedServerSuite) TestWorkflow_Reset_ToLastContinuedAsNew() {
 	s.NoError(err)
 	var junk any
 	s.NoError(run.Get(s.Context, &junk))
+	// let the CAN finish
+	s.awaitNextWorkflow(searchAttr)
 	iter := s.Client.GetWorkflowHistory(s.Context, run.GetID(), run.GetRunID(), false, enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
 	for iter.HasNext() {
 		event, err := iter.Next()
 		s.NoError(err)
 		s.T().Logf("Event: %d %s", event.GetEventId(), event.GetEventType())
 	}
-	s.awaitNextWorkflow(searchAttr)
 	s.Equal(float64(2), lastInput, "Workflow should have continued as new")
 	lastInput = 0
 
