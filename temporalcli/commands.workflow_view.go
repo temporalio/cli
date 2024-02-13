@@ -212,7 +212,7 @@ func (c *TemporalWorkflowListCommand) run(cctx *CommandContext, args []string) e
 			execsProcessed++
 			// For JSON we are going to dump one line of JSON per execution
 			if cctx.JSONOutput {
-				_ = cctx.Printer.PrintStructured(exec, printer.StructuredOptions{})
+				_ = cctx.Printer.PrintJSON(exec, "", printer.StructuredOptions{})
 			} else {
 				// For non-JSON, we are doing a table for each page
 				textTable = append(textTable, map[string]any{
