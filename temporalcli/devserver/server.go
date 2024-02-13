@@ -47,6 +47,7 @@ import (
 	"go.temporal.io/server/schema/sqlite"
 	sqliteschema "go.temporal.io/server/schema/sqlite"
 	"go.temporal.io/server/temporal"
+	"google.golang.org/grpc"
 	"gopkg.in/yaml.v3"
 )
 
@@ -71,6 +72,7 @@ type StartOptions struct {
 	FrontendHTTPPort    int
 	DynamicConfigValues map[string]any
 	LogConfig           func([]byte)
+	GRPCInterceptors    []grpc.UnaryServerInterceptor
 }
 
 type Server struct {
@@ -193,6 +195,12 @@ func (s *StartOptions) buildServerOptions() ([]temporal.ServerOption, error) {
 		}
 		opts = append(opts, temporal.WithDynamicConfigClient(dynConf))
 	}
+
+	// gRPC interceptors if set
+	if len(s.GRPCInterceptors) > 0 {
+		opts = append(opts, temporal.WithChainedFrontendGrpcInterceptors(s.GRPCInterceptors...))
+	}
+
 	return opts, nil
 }
 
