@@ -10,10 +10,12 @@ import (
 	"os"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
+	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/worker"
@@ -70,6 +72,40 @@ func (s *SharedServerSuite) TestWorkflow_Start_SimpleSuccess() {
 	s.Equal(s.Worker.Options.TaskQueue, jsonOut["taskQueue"])
 	s.Equal("DevWorkflow", jsonOut["type"])
 	s.Equal("default", jsonOut["namespace"])
+}
+
+func (s *SharedServerSuite) TestWorkflow_Start_StartDelay() {
+	// Capture request
+	var lastRequest any
+	var lastRequestLock sync.Mutex
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string, req, reply any,
+			cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption,
+		) error {
+			lastRequestLock.Lock()
+			lastRequest = req
+			lastRequestLock.Unlock()
+			return invoker(ctx, method, req, reply, cc, opts...)
+		}),
+	)
+
+	res := s.Execute(
+		"workflow", "start",
+		"--address", s.Address(),
+		"--task-queue", s.Worker.Options.TaskQueue,
+		"--type", "DevWorkflow",
+		"--workflow-id", "my-id1",
+		"-i", `["val1", "val2"]`,
+		"--start-delay", "1ms",
+	)
+	s.NoError(res.Err)
+	s.Equal(
+		1*time.Millisecond,
+		lastRequest.(*workflowservice.StartWorkflowExecutionRequest).WorkflowStartDelay.AsDuration(),
+	)
 }
 
 func (s *SharedServerSuite) TestWorkflow_Execute_SimpleSuccess() {
