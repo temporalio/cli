@@ -23,6 +23,7 @@ import (
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
+	"google.golang.org/grpc"
 )
 
 type CommandHarness struct {
@@ -221,6 +222,9 @@ type DevServer struct {
 
 	logOutput     bytes.Buffer
 	logOutputLock sync.RWMutex
+
+	serverInterceptor     grpc.UnaryServerInterceptor
+	serverInterceptorLock sync.RWMutex
 }
 
 type DevServerOptions struct {
@@ -267,6 +271,18 @@ func StartDevServer(t *testing.T, options DevServerOptions) *DevServer {
 		d.Options.DynamicConfigValues = map[string]any{}
 	}
 	d.Options.DynamicConfigValues["system.forceSearchAttributesCacheRefreshOnRead"] = true
+	d.Options.GRPCInterceptors = append(
+		d.Options.GRPCInterceptors,
+		func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
+			d.serverInterceptorLock.RLock()
+			serverInterceptor := d.serverInterceptor
+			d.serverInterceptorLock.RUnlock()
+			if serverInterceptor != nil {
+				return serverInterceptor(ctx, req, info, handler)
+			}
+			return handler(ctx, req)
+		},
+	)
 
 	// Start
 	var err error
@@ -334,6 +350,12 @@ func (d *DevServer) Address() string {
 // Shortcut for d.Options.ClientOptions.Namespace
 func (d *DevServer) Namespace() string {
 	return d.Options.ClientOptions.Namespace
+}
+
+func (d *DevServer) SetServerInterceptor(serverInterceptor grpc.UnaryServerInterceptor) {
+	d.serverInterceptorLock.Lock()
+	defer d.serverInterceptorLock.Unlock()
+	d.serverInterceptor = serverInterceptor
 }
 
 type DevWorker struct {
