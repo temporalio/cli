@@ -684,6 +684,7 @@ func NewTemporalWorkflowResetCommand(cctx *CommandContext, parent *TemporalWorkf
 type TemporalWorkflowResetBatchCommand struct {
 	Parent  *TemporalWorkflowCommand
 	Command cobra.Command
+	Query   string
 }
 
 func NewTemporalWorkflowResetBatchCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowResetBatchCommand {
@@ -692,8 +693,9 @@ func NewTemporalWorkflowResetBatchCommand(cctx *CommandContext, parent *Temporal
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "reset-batch [flags]"
 	s.Command.Short = "Reset a batch of Workflow Executions by reset type."
-	s.Command.Long = "TODO"
+	s.Command.Long = "Batch commands change multiple Workflow Executions by providing a \nList Filter and the type of Batch Job to execute. \nThe List Filter identifies the \nWorkflow Executions in the Batch Job; the Batch \ntype determines what will happen to the Workflow Executions."
 	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Filter results using a SQL-like query.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
