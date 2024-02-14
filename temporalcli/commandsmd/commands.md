@@ -419,9 +419,24 @@ Includes options set for [payload input](#options-set-for-payload-input).
   otherwise. Defaults to message with the current user's name.
 * `--yes`, `-y` (bool) - Confirm prompt to perform batch. Only allowed if query is present.
 
-### temporal workflow stack: Query a Workflow Execution with __stack_trace as the query type.
+### temporal workflow stack: Query a Workflow Execution for its stack trace.
 
-TODO
+The `temporal workflow stack` command [Queries](/concepts/what-is-a-query) a
+[Workflow Execution](/concepts/what-is-a-workflow-execution) with `__stack_trace` as the query type.
+This returns a stack trace of all the threads or routines currently used by the workflow, and is
+useful for troubleshooting.
+
+```
+temporal workflow stack --workflow-id MyWorkflowId
+```
+
+Use the options listed below to change the command's behavior.
+
+#### Options
+
+* `--reject-condition` (string-enum) - Optional flag for rejecting Queries based on Workflow state.
+  Options: not_open, not_completed_cleanly.
+  Includes options set for [workflow reference](#options-set-for-workflow-reference).
 
 ### temporal workflow start: Starts a new Workflow Execution.
 
