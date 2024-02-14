@@ -353,7 +353,7 @@ by [ID](/concepts/what-is-a-workflow-id).
 temporal workflow query \
 		--workflow-id MyWorkflowId \
 		--name MyQuery \
-		--input '{"Input": "As-JSON"}'
+		--input '{"MyInputKey": "MyInputValue"}'
 ```
 
 Use the options listed below to change the command's behavior.
@@ -398,7 +398,7 @@ The `temporal workflow signal` command is used to [Signal](/concepts/what-is-a-s
 temporal workflow signal \
 		--workflow-id MyWorkflowId \
 		--name MySignal \
-		--input '{"Input": "As-JSON"}'
+		--input '{"MyInputKey": "MyInputValue"}'
 ```
 
 Use the options listed below to change the command's behavior.
