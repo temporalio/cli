@@ -479,9 +479,9 @@ func NewTemporalWorkflowCancelCommand(cctx *CommandContext, parent *TemporalWork
 	s.Command.Use = "cancel [flags]"
 	s.Command.Short = "Cancel a Workflow Execution."
 	if hasHighlighting {
-		s.Command.Long = "The \x1b[1mtemporal workflow cancel\x1b[0m command is used to cancel a Workflow Execution. Canceling a running Workflow Execution records a \x1b[1mWorkflowExecutionCancelRequested\x1b[0m event in the Event History. A new Command Task will be scheduled, and the Workflow Execution will perform cleanup work.\n\nExecutions may be cancelled by ID:\n\x1b[1mtemporal workflow cancel --workflow-id MyWorkflowId\x1b[0m\n\n...or in bulk via a visibility query list filter:\n\x1b[1mtemporal workflow cancel --query=MyQuery\x1b[0m\n\nUse the options listed below to change the behavior of this command."
+		s.Command.Long = "The \x1b[1mtemporal workflow cancel\x1b[0m command is used to cancel a Workflow Execution.\nCanceling a running Workflow Execution records a \x1b[1mWorkflowExecutionCancelRequested\x1b[0m event in the Event History. A new\nCommand Task will be scheduled, and the Workflow Execution will perform cleanup work.\n\nExecutions may be cancelled by ID:\n\x1b[1mtemporal workflow cancel --workflow-id MyWorkflowId\x1b[0m\n\n...or in bulk via a visibility query list filter:\n\x1b[1mtemporal workflow cancel --query=MyQuery\x1b[0m\n\nUse the options listed below to change the behavior of this command."
 	} else {
-		s.Command.Long = "The `temporal workflow cancel` command is used to cancel a Workflow Execution. Canceling a running Workflow Execution records a `WorkflowExecutionCancelRequested` event in the Event History. A new Command Task will be scheduled, and the Workflow Execution will perform cleanup work.\n\nExecutions may be cancelled by ID:\n```\ntemporal workflow cancel --workflow-id MyWorkflowId\n```\n\n...or in bulk via a visibility query list filter:\n```\ntemporal workflow cancel --query=MyQuery\n```\n\nUse the options listed below to change the behavior of this command."
+		s.Command.Long = "The `temporal workflow cancel` command is used to cancel a Workflow Execution.\nCanceling a running Workflow Execution records a `WorkflowExecutionCancelRequested` event in the Event History. A new\nCommand Task will be scheduled, and the Workflow Execution will perform cleanup work.\n\nExecutions may be cancelled by ID:\n```\ntemporal workflow cancel --workflow-id MyWorkflowId\n```\n\n...or in bulk via a visibility query list filter:\n```\ntemporal workflow cancel --query=MyQuery\n```\n\nUse the options listed below to change the behavior of this command."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.SingleWorkflowOrBatchOptions.buildFlags(cctx, s.Command.Flags())
@@ -814,6 +814,7 @@ type WorkflowStartOptions struct {
 	SearchAttribute  []string
 	Memo             []string
 	FailExisting     bool
+	StartDelay       time.Duration
 }
 
 func (v *WorkflowStartOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
@@ -830,6 +831,7 @@ func (v *WorkflowStartOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet
 	f.StringArrayVar(&v.SearchAttribute, "search-attribute", nil, "Passes Search Attribute in key=value format. Use valid JSON formats for value.")
 	f.StringArrayVar(&v.Memo, "memo", nil, "Passes Memo in key=value format. Use valid JSON formats for value.")
 	f.BoolVar(&v.FailExisting, "fail-existing", false, "Fail if the workflow already exists.")
+	f.DurationVar(&v.StartDelay, "start-delay", 0, "Specify a delay before the workflow starts. Cannot be used with a cron schedule. If the workflow receives a signal or update before the delay has elapsed, it will begin immediately.")
 }
 
 type PayloadInputOptions struct {
@@ -892,9 +894,9 @@ func NewTemporalWorkflowTerminateCommand(cctx *CommandContext, parent *TemporalW
 	s.Command.Use = "terminate [flags]"
 	s.Command.Short = "Terminate Workflow Execution by ID or List Filter."
 	if hasHighlighting {
-		s.Command.Long = "The \x1b[1mtemporal workflow terminate\x1b[0m command is used to terminate a Workflow Execution. \nCanceling a running Workflow Execution records a \x1b[1mWorkflowExecutionTerminated\x1b[0m event as the closing Event in the workflow's Event History. \nWorkflow code is oblivious to termination. Use \x1b[1mtemporal workflow cancel\x1b[0m if you need to perform cleanup in your workflow.\n\nExecutions may be terminated by ID with an optional reason:\n\x1b[1mtemporal workflow terminate [--reason my-reason] --workflow-id MyWorkflowId\x1b[0m\n\n...or in bulk via a visibility query list filter:\n\x1b[1mtemporal workflow terminate --query=MyQuery\x1b[0m\n\nUse the options listed below to change the behavior of this command."
+		s.Command.Long = "The \x1b[1mtemporal workflow terminate\x1b[0m command is used to terminate a\nWorkflow Execution. Canceling a running Workflow Execution records a\n\x1b[1mWorkflowExecutionTerminated\x1b[0m event as the closing Event in the workflow's Event History. Workflow code is oblivious to\ntermination. Use \x1b[1mtemporal workflow cancel\x1b[0m if you need to perform cleanup in your workflow.\n\nExecutions may be terminated by ID with an optional reason:\n\x1b[1mtemporal workflow terminate [--reason my-reason] --workflow-id MyWorkflowId\x1b[0m\n\n...or in bulk via a visibility query list filter:\n\x1b[1mtemporal workflow terminate --query=MyQuery\x1b[0m\n\nUse the options listed below to change the behavior of this command."
 	} else {
-		s.Command.Long = "The `temporal workflow terminate` command is used to terminate a Workflow Execution. \nCanceling a running Workflow Execution records a `WorkflowExecutionTerminated` event as the closing Event in the workflow's Event History. \nWorkflow code is oblivious to termination. Use `temporal workflow cancel` if you need to perform cleanup in your workflow.\n\nExecutions may be terminated by ID with an optional reason:\n```\ntemporal workflow terminate [--reason my-reason] --workflow-id MyWorkflowId\n```\n\n...or in bulk via a visibility query list filter:\n```\ntemporal workflow terminate --query=MyQuery\n```\n\nUse the options listed below to change the behavior of this command."
+		s.Command.Long = "The `temporal workflow terminate` command is used to terminate a\nWorkflow Execution. Canceling a running Workflow Execution records a\n`WorkflowExecutionTerminated` event as the closing Event in the workflow's Event History. Workflow code is oblivious to\ntermination. Use `temporal workflow cancel` if you need to perform cleanup in your workflow.\n\nExecutions may be terminated by ID with an optional reason:\n```\ntemporal workflow terminate [--reason my-reason] --workflow-id MyWorkflowId\n```\n\n...or in bulk via a visibility query list filter:\n```\ntemporal workflow terminate --query=MyQuery\n```\n\nUse the options listed below to change the behavior of this command."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.WorkflowId, "workflow-id", "w", "", "Workflow Id. Either this or query must be set.")
