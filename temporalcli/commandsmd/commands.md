@@ -246,7 +246,9 @@ Workflow commands use this syntax:`temporal workflow COMMAND [ARGS]`.
 
 ### temporal workflow cancel: Cancel a Workflow Execution.
 
-The `temporal workflow cancel` command is used to cancel a [Workflow Execution](/concepts/what-is-a-workflow-execution). Canceling a running Workflow Execution records a `WorkflowExecutionCancelRequested` event in the Event History. A new Command Task will be scheduled, and the Workflow Execution will perform cleanup work.
+The `temporal workflow cancel` command is used to cancel a [Workflow Execution](/concepts/what-is-a-workflow-execution).
+Canceling a running Workflow Execution records a `WorkflowExecutionCancelRequested` event in the Event History. A new
+Command Task will be scheduled, and the Workflow Execution will perform cleanup work.
 
 Executions may be cancelled by [ID](/concepts/what-is-a-workflow-id):
 ```
@@ -393,7 +395,8 @@ Includes options set for [payload input](#options-set-for-payload-input).
 * `--run-id`, `-r` (string) - Run Id. Cannot be set when query is set.
 * `--query`, `-q` (string) - Start a batch to operate on Workflow Executions with given List Filter. Either this or
   Workflow Id must be set.
-* `--reason` (string) - Reason to perform batch. Only allowed if query is present unless the command specifies otherwise. Defaults to message with the current user's name.
+* `--reason` (string) - Reason to perform batch. Only allowed if query is present unless the command specifies
+  otherwise. Defaults to message with the current user's name.
 * `--yes`, `-y` (bool) - Confirm prompt to perform batch. Only allowed if query is present.
 
 ### temporal workflow stack: Query a Workflow Execution with __stack_trace as the query type.
@@ -427,6 +430,8 @@ temporal workflow start \
 * `--search-attribute` (string[]) - Passes Search Attribute in key=value format. Use valid JSON formats for value.
 * `--memo` (string[]) - Passes Memo in key=value format. Use valid JSON formats for value.
 * `--fail-existing` (bool) - Fail if the workflow already exists.
+* `--start-delay` (duration) - Specify a delay before the workflow starts. Cannot be used with a cron schedule. If the
+  workflow receives a signal or update before the delay has elapsed, it will begin immediately.
 
 #### Options set for payload input:
 
@@ -440,9 +445,10 @@ temporal workflow start \
 
 ### temporal workflow terminate: Terminate Workflow Execution by ID or List Filter.
 
-The `temporal workflow terminate` command is used to terminate a [Workflow Execution](/concepts/what-is-a-workflow-execution). 
-Canceling a running Workflow Execution records a `WorkflowExecutionTerminated` event as the closing Event in the workflow's Event History. 
-Workflow code is oblivious to termination. Use `temporal workflow cancel` if you need to perform cleanup in your workflow.
+The `temporal workflow terminate` command is used to terminate a
+[Workflow Execution](/concepts/what-is-a-workflow-execution). Canceling a running Workflow Execution records a
+`WorkflowExecutionTerminated` event as the closing Event in the workflow's Event History. Workflow code is oblivious to
+termination. Use `temporal workflow cancel` if you need to perform cleanup in your workflow.
 
 Executions may be terminated by [ID](/concepts/what-is-a-workflow-id) with an optional reason:
 ```
@@ -460,7 +466,8 @@ Use the options listed below to change the behavior of this command.
 
 * `--workflow-id`, `-w` (string) - Workflow Id. Either this or query must be set.
 * `--run-id`, `-r` (string) - Run Id. Cannot be set when query is set.
-* `--query`, `-q` (string) - Start a batch to terminate Workflow Executions with given List Filter. Either this or Workflow Id must be set.
+* `--query`, `-q` (string) - Start a batch to terminate Workflow Executions with given List Filter. Either this or
+  Workflow Id must be set.
 * `--reason` (string) - Reason for termination. Defaults to message with the current user's name.
 * `--yes`, `-y` (bool) - Confirm prompt to perform batch. Only allowed if query is present.
 
