@@ -360,9 +360,9 @@ Use the options listed below to change the command's behavior.
 
 #### Options
 
-* `--name` (string) - Query Name. Required.
-* `--reject-condition` (string) - Optional flag for rejecting Queries based on Workflow state. Valid
-  values are "not_open" and "not_completed_cleanly".
+* `--type` (string) - Query Type/Name. Required.
+* `--reject-condition` (string-enum) - Optional flag for rejecting Queries based on Workflow state.
+  Options: not_open, not_completed_cleanly.
 
 Includes options set for [payload input](#options-set-for-payload-input).
 Includes options set for [workflow reference](#options-set-for-workflow-reference).

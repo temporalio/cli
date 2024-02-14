@@ -411,7 +411,7 @@ func (s *SharedServerSuite) testQueryWorkflow(json bool) {
 		"workflow", "query",
 		"--address", s.Address(),
 		"-w", run.GetID(),
-		"--name", "my-query",
+		"--type", "my-query",
 		"-i", `"hi"`,
 	}
 	if json {
@@ -435,7 +435,7 @@ func (s *SharedServerSuite) testQueryWorkflow(json bool) {
 		"workflow", "query",
 		"--address", s.Address(),
 		"-w", run.GetID(),
-		"--name", "my-query",
+		"--type", "my-query",
 		"-i", `"hi"`,
 		"--reject-condition", "not_open",
 	}
@@ -444,5 +444,5 @@ func (s *SharedServerSuite) testQueryWorkflow(json bool) {
 	}
 	res = s.Execute(args...)
 	s.Error(res.Err)
-	s.Contains(res.Err.Error(), "Query was rejected, workflow has status: Completed")
+	s.Contains(res.Err.Error(), "query was rejected, workflow has status: Completed")
 }

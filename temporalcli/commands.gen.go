@@ -644,8 +644,8 @@ type TemporalWorkflowQueryCommand struct {
 	Command cobra.Command
 	PayloadInputOptions
 	WorkflowReferenceOptions
-	Name            string
-	RejectCondition string
+	Type            string
+	RejectCondition StringEnum
 }
 
 func NewTemporalWorkflowQueryCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowQueryCommand {
@@ -662,9 +662,10 @@ func NewTemporalWorkflowQueryCommand(cctx *CommandContext, parent *TemporalWorkf
 	s.Command.Args = cobra.NoArgs
 	s.PayloadInputOptions.buildFlags(cctx, s.Command.Flags())
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
-	s.Command.Flags().StringVar(&s.Name, "name", "", "Query Name.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
-	s.Command.Flags().StringVar(&s.RejectCondition, "reject-condition", "", "Optional flag for rejecting Queries based on Workflow state. Valid values are \"not_open\" and \"not_completed_cleanly\".")
+	s.Command.Flags().StringVar(&s.Type, "type", "", "Query Type/Name.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "type")
+	s.RejectCondition = NewStringEnum([]string{"not_open", "not_completed_cleanly"}, "")
+	s.Command.Flags().Var(&s.RejectCondition, "reject-condition", "Optional flag for rejecting Queries based on Workflow state. Accepted values: not_open, not_completed_cleanly.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

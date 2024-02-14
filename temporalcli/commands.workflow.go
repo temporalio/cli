@@ -67,7 +67,7 @@ func (c *TemporalWorkflowQueryCommand) run(cctx *CommandContext, args []string) 
 	}
 
 	queryRejectCond := enums.QUERY_REJECT_CONDITION_UNSPECIFIED
-	switch c.RejectCondition {
+	switch c.RejectCondition.Value {
 	case "":
 	case "not_open":
 		queryRejectCond = enums.QUERY_REJECT_CONDITION_NOT_OPEN
@@ -75,16 +75,14 @@ func (c *TemporalWorkflowQueryCommand) run(cctx *CommandContext, args []string) 
 		queryRejectCond = enums.QUERY_REJECT_CONDITION_NOT_COMPLETED_CLEANLY
 	default:
 		return fmt.Errorf("invalid query reject condition: %v, valid values are: 'not_open', 'not_completed_cleanly'", c.RejectCondition)
-
 	}
 
 	result, err := cl.WorkflowService().QueryWorkflow(cctx, &workflowservice.QueryWorkflowRequest{
 		Namespace: c.Parent.Namespace,
 		Execution: &common.WorkflowExecution{WorkflowId: c.WorkflowId, RunId: c.RunId},
 		Query: &query.WorkflowQuery{
-			QueryType: c.Name,
+			QueryType: c.Type,
 			QueryArgs: input,
-			Header:    nil,
 		},
 		QueryRejectCondition: queryRejectCond,
 	})
@@ -94,7 +92,7 @@ func (c *TemporalWorkflowQueryCommand) run(cctx *CommandContext, args []string) 
 	}
 
 	if result.QueryRejected != nil {
-		return fmt.Errorf("Query was rejected, workflow has status: %v\n", result.QueryRejected.GetStatus())
+		return fmt.Errorf("query was rejected, workflow has status: %v\n", result.QueryRejected.GetStatus())
 	}
 
 	if cctx.JSONOutput {
