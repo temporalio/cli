@@ -642,6 +642,10 @@ func NewTemporalWorkflowListCommand(cctx *CommandContext, parent *TemporalWorkfl
 type TemporalWorkflowQueryCommand struct {
 	Parent  *TemporalWorkflowCommand
 	Command cobra.Command
+	PayloadInputOptions
+	WorkflowReferenceOptions
+	Name            string
+	RejectCondition string
 }
 
 func NewTemporalWorkflowQueryCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowQueryCommand {
@@ -650,8 +654,17 @@ func NewTemporalWorkflowQueryCommand(cctx *CommandContext, parent *TemporalWorkf
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "query [flags]"
 	s.Command.Short = "Query a Workflow Execution."
-	s.Command.Long = "TODO"
+	if hasHighlighting {
+		s.Command.Long = "The \x1b[1mtemporal workflow query\x1b[0m command is used to Query a\nWorkflow Execution by ID.\n\n\x1b[1mtemporal workflow query \\\n\t\t--workflow-id MyWorkflowId \\\n\t\t--name MyQuery \\\n\t\t--input '{\"Input\": \"As-JSON\"}'\x1b[0m\n\nUse the options listed below to change the command's behavior."
+	} else {
+		s.Command.Long = "The `temporal workflow query` command is used to Query a\nWorkflow Execution by ID.\n\n```\ntemporal workflow query \\\n\t\t--workflow-id MyWorkflowId \\\n\t\t--name MyQuery \\\n\t\t--input '{\"Input\": \"As-JSON\"}'\n```\n\nUse the options listed below to change the command's behavior."
+	}
 	s.Command.Args = cobra.NoArgs
+	s.PayloadInputOptions.buildFlags(cctx, s.Command.Flags())
+	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
+	s.Command.Flags().StringVar(&s.Name, "name", "", "Query Name.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
+	s.Command.Flags().StringVar(&s.RejectCondition, "reject-condition", "", "Optional flag for rejecting Queries based on Workflow state. Valid values are \"not_open\" and \"not_completed_cleanly\".")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

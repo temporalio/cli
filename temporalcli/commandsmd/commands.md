@@ -345,7 +345,27 @@ Use the command options below to change the information returned by this command
 
 ### temporal workflow query: Query a Workflow Execution.
 
-TODO
+The `temporal workflow query` command is used to [Query](/concepts/what-is-a-query) a
+[Workflow Execution](/concepts/what-is-a-workflow-execution)
+by [ID](/concepts/what-is-a-workflow-id).
+
+```
+temporal workflow query \
+		--workflow-id MyWorkflowId \
+		--name MyQuery \
+		--input '{"Input": "As-JSON"}'
+```
+
+Use the options listed below to change the command's behavior.
+
+#### Options
+
+* `--name` (string) - Query Name. Required.
+* `--reject-condition` (string) - Optional flag for rejecting Queries based on Workflow state. Valid
+  values are "not_open" and "not_completed_cleanly".
+
+Includes options set for [payload input](#options-set-for-payload-input).
+Includes options set for [workflow reference](#options-set-for-workflow-reference).
 
 ### temporal workflow reset: Resets a Workflow Execution by Event ID or reset type.
 

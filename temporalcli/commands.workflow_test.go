@@ -371,3 +371,78 @@ func (s *SharedServerSuite) testCancelBatchWorkflow(json bool) *CommandResult {
 	}
 	return res
 }
+
+func (s *SharedServerSuite) TestWorkflow_Query_SingleWorkflowSuccess() {
+	s.testQueryWorkflow(false)
+}
+
+func (s *SharedServerSuite) TestWorkflow_Query_SingleWorkflowSuccessJSON() {
+	s.testQueryWorkflow(true)
+}
+
+func (s *SharedServerSuite) testQueryWorkflow(json bool) {
+	// Make workflow wait for signal and then return it
+	s.Worker.OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
+		err := workflow.SetQueryHandler(ctx, "my-query", func(arg string) (any, error) {
+			retme := struct {
+				Echo  string `json:"input"`
+				Other string `json:"other"`
+			}{}
+			retme.Echo = arg
+			retme.Other = "yoyo"
+			return retme, nil
+		})
+		if err != nil {
+			return nil, err
+		}
+		return "done", nil
+	})
+
+	// Start the workflow
+	run, err := s.Client.ExecuteWorkflow(
+		s.Context,
+		client.StartWorkflowOptions{TaskQueue: s.Worker.Options.TaskQueue},
+		DevWorkflow,
+		"ignored",
+	)
+	s.NoError(err)
+
+	args := []string{
+		"workflow", "query",
+		"--address", s.Address(),
+		"-w", run.GetID(),
+		"--name", "my-query",
+		"-i", `"hi"`,
+	}
+	if json {
+		args = append(args, "-o", "json")
+	}
+	// Do the query
+	res := s.Execute(args...)
+	s.NoError(res.Err)
+	if json {
+		s.Contains(res.Stdout.String(), `"queryResult"`)
+		s.Contains(res.Stdout.String(), `"input": "hi"`)
+		s.Contains(res.Stdout.String(), `"other": "yoyo"`)
+	} else {
+		s.Contains(res.Stdout.String(), `{"input":"hi","other":"yoyo"}`)
+	}
+
+	s.NoError(run.Get(s.Context, nil))
+
+	// Ensure query is rejected when using not open rejection condition
+	args = []string{
+		"workflow", "query",
+		"--address", s.Address(),
+		"-w", run.GetID(),
+		"--name", "my-query",
+		"-i", `"hi"`,
+		"--reject-condition", "not_open",
+	}
+	if json {
+		args = append(args, "-o", "json")
+	}
+	res = s.Execute(args...)
+	s.Error(res.Err)
+	s.Contains(res.Err.Error(), "Query was rejected, workflow has status: Completed")
+}
