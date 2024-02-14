@@ -345,7 +345,27 @@ Use the command options below to change the information returned by this command
 
 ### temporal workflow query: Query a Workflow Execution.
 
-TODO
+The `temporal workflow query` command is used to [Query](/concepts/what-is-a-query) a
+[Workflow Execution](/concepts/what-is-a-workflow-execution)
+by [ID](/concepts/what-is-a-workflow-id).
+
+```
+temporal workflow query \
+		--workflow-id MyWorkflowId \
+		--name MyQuery \
+		--input '{"MyInputKey": "MyInputValue"}'
+```
+
+Use the options listed below to change the command's behavior.
+
+#### Options
+
+* `--type` (string) - Query Type/Name. Required.
+* `--reject-condition` (string-enum) - Optional flag for rejecting Queries based on Workflow state.
+  Options: not_open, not_completed_cleanly.
+
+Includes options set for [payload input](#options-set-for-payload-input).
+Includes options set for [workflow reference](#options-set-for-workflow-reference).
 
 ### temporal workflow reset: Resets a Workflow Execution by Event ID or reset type.
 
@@ -378,7 +398,7 @@ The `temporal workflow signal` command is used to [Signal](/concepts/what-is-a-s
 temporal workflow signal \
 		--workflow-id MyWorkflowId \
 		--name MySignal \
-		--input '{"Input": "As-JSON"}'
+		--input '{"MyInputKey": "MyInputValue"}'
 ```
 
 Use the options listed below to change the command's behavior.
