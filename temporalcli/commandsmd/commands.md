@@ -436,7 +436,8 @@ Use the options listed below to change the command's behavior.
 
 * `--reject-condition` (string-enum) - Optional flag for rejecting Queries based on Workflow state.
   Options: not_open, not_completed_cleanly.
-  Includes options set for [workflow reference](#options-set-for-workflow-reference).
+
+Includes options set for [workflow reference](#options-set-for-workflow-reference).
 
 ### temporal workflow start: Starts a new Workflow Execution.
 
