@@ -3,16 +3,17 @@ package temporalcli
 import (
 	"encoding/json"
 	"fmt"
-  "os/user"
+	"os/user"
+
 	"github.com/fatih/color"
 	"github.com/google/uuid"
-  "github.com/temporalio/cli/temporalcli/internal/printer"
+	"github.com/temporalio/cli/temporalcli/internal/printer"
 	"go.temporal.io/api/batch/v1"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/query/v1"
 	"go.temporal.io/api/workflowservice/v1"
-	"go.temporal.io/sdk/client"	
+	"go.temporal.io/sdk/client"
 )
 
 func (c *TemporalWorkflowCancelCommand) run(cctx *CommandContext, args []string) error {
