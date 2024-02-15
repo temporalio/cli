@@ -152,6 +152,38 @@ Property names match CLI option names, for example '--address' and '--tls-cert-p
 * exact-args=2
 -->
 
+### temporal operator: Manage a Temporal deployment.
+
+Operator commands enable actions on Namespaces, Search Attributes, and Temporal Clusters. These actions are performed through subcommands.
+
+To run an Operator command, `run temporal operator [command] [subcommand] [command options]`
+
+#### Options
+
+Includes options set for [client](#options-set-for-client).
+
+### temporal operator cluster: Operations for running a Temporal Cluster.
+
+Cluster commands enable actions on Temporal Clusters.
+
+Cluster commands follow this syntax: `temporal operator cluster [command] [command options]`
+
+### temporal operator cluster describe: Describe a cluster
+
+`temporal operator cluster describe` command shows information about the Cluster. 
+
+#### Options
+
+* `--detail` (bool) - Prints extra details.
+
+### temporal operator cluster health: Checks the health of a cluster
+
+`temporal operator cluster health` command checks the health of the Frontend Service.
+
+### temporal operator cluster system: Provide system info
+
+`temporal operator cluster system` command provides information about the system the Cluster is running on. This information can be used to diagnose problems occurring in the Temporal Server.
+
 ### temporal server: Run Temporal Server.
 
 Start a development version of [Temporal Server](/concepts/what-is-the-temporal-server):
