@@ -384,8 +384,8 @@ Use the options listed below to change the command's behavior.
 
 #### Options
 
-* `--reset-points` (bool) - Only show auto-reset points.
-* `--follow` (bool) - Follow the progress of a Workflow Execution if it goes to a new run.
+* `--follow`, `-f` (bool) - Follow the progress of a Workflow Execution in real time (does not apply
+  to JSON output).
 
 Includes options set for [workflow reference](#options-set-for-workflow-reference).
 

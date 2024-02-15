@@ -265,6 +265,51 @@ func (*TemporalWorkflowCountCommand) run(*CommandContext, []string) error {
 	return fmt.Errorf("TODO")
 }
 
-func (*TemporalWorkflowShowCommand) run(*CommandContext, []string) error {
-	return fmt.Errorf("TODO")
+func (c *TemporalWorkflowShowCommand) run(cctx *CommandContext, args []string) error {
+	// Call describe
+	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	// Print history
+	iter := &structuredHistoryIter{
+		ctx:            cctx,
+		client:         cl,
+		workflowID:     c.WorkflowId,
+		runID:          c.RunId,
+		includeDetails: true,
+		follow:         c.Follow,
+		color:          !cctx.JSONOutput && !color.NoColor,
+	}
+	if !cctx.JSONOutput {
+		cctx.Printer.Println(color.MagentaString("Progress:"))
+		// TODO: Do we need to do the "time elapsed" thing? Also needs some redoing to print
+		//   result at the end, since final event is not accessible from here.
+		if err := iter.print(cctx.Printer); err != nil {
+			return fmt.Errorf("displaying history failed: %w", err)
+		}
+	} else {
+		events := make([]structuredHistoryEvent, 0)
+		for {
+			e, err := iter.Next()
+			if err != nil {
+				return fmt.Errorf("failed getting next history event: %w", err)
+			}
+			if e == nil {
+				break
+			}
+			events = append(events, e.(structuredHistoryEvent))
+		}
+		outStruct := struct {
+			Events []structuredHistoryEvent
+		}{
+			Events: events,
+		}
+		if err := cctx.Printer.PrintStructured(outStruct, printer.StructuredOptions{}); err != nil {
+			return fmt.Errorf("failed printing structured output: %w", err)
+		}
+	}
+	return nil
 }

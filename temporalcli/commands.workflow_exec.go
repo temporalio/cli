@@ -52,6 +52,8 @@ func (c *TemporalWorkflowExecuteCommand) run(cctx *CommandContext, args []string
 			workflowID:     run.GetID(),
 			runID:          run.GetRunID(),
 			includeDetails: c.EventDetails,
+			follow: true,
+			color:  !color.NoColor,
 		}
 		if err := iter.print(cctx.Printer); err != nil && cctx.Err() == nil {
 			return fmt.Errorf("displaying history failed: %w", err)
@@ -359,6 +361,10 @@ type structuredHistoryIter struct {
 	workflowID     string
 	runID          string
 	includeDetails bool
+	// If set true, long poll the history for updates
+	follow bool
+	// If set true, color event types
+	color bool
 
 	// Internal
 	iter client.HistoryEventIterator
@@ -390,7 +396,8 @@ var structuredHistoryEventType = reflect.TypeOf(structuredHistoryEvent{})
 func (s *structuredHistoryIter) Next() (any, error) {
 	// Load iter
 	if s.iter == nil {
-		s.iter = s.client.GetWorkflowHistory(s.ctx, s.workflowID, s.runID, true, enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
+		s.iter = s.client.GetWorkflowHistory(
+			s.ctx, s.workflowID, s.runID, s.follow, enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
 	}
 	if !s.iter.HasNext() {
 		return nil, nil
@@ -404,7 +411,13 @@ func (s *structuredHistoryIter) Next() (any, error) {
 	data := structuredHistoryEvent{
 		ID:   event.EventId,
 		Time: event.EventTime.AsTime().Format(time.RFC3339),
-		Type: coloredEventType(event.EventType),
+	}
+	// TODO: This is pretty wrong - the printer should be able to determine if color should be used
+	//   or not, but that would mean adding typed color information to the structured data.
+	if s.color {
+		data.Type = coloredEventType(event.EventType)
+	} else {
+		data.Type = event.EventType.String()
 	}
 	if s.includeDetails {
 		// First field in the attributes
