@@ -24,6 +24,8 @@ import (
 
 	"github.com/temporalio/cli/temporalcli"
 	"github.com/temporalio/cli/temporalcli/devserver"
+
+	"google.golang.org/grpc"
 )
 
 type CommandHarness struct {
@@ -222,6 +224,9 @@ type DevServer struct {
 
 	logOutput     bytes.Buffer
 	logOutputLock sync.RWMutex
+
+	serverInterceptor     grpc.UnaryServerInterceptor
+	serverInterceptorLock sync.RWMutex
 }
 
 type DevServerOptions struct {
@@ -269,6 +274,19 @@ func StartDevServer(t *testing.T, options DevServerOptions) *DevServer {
 	}
 	d.Options.DynamicConfigValues["system.forceSearchAttributesCacheRefreshOnRead"] = true
 	d.Options.DynamicConfigValues["frontend.enableUpdateWorkflowExecution"] = true
+
+	d.Options.GRPCInterceptors = append(
+		d.Options.GRPCInterceptors,
+		func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
+			d.serverInterceptorLock.RLock()
+			serverInterceptor := d.serverInterceptor
+			d.serverInterceptorLock.RUnlock()
+			if serverInterceptor != nil {
+				return serverInterceptor(ctx, req, info, handler)
+			}
+			return handler(ctx, req)
+		},
+	)
 
 	// Start
 	var err error
@@ -336,6 +354,12 @@ func (d *DevServer) Address() string {
 // Shortcut for d.Options.ClientOptions.Namespace
 func (d *DevServer) Namespace() string {
 	return d.Options.ClientOptions.Namespace
+}
+
+func (d *DevServer) SetServerInterceptor(serverInterceptor grpc.UnaryServerInterceptor) {
+	d.serverInterceptorLock.Lock()
+	defer d.serverInterceptorLock.Unlock()
+	d.serverInterceptor = serverInterceptor
 }
 
 type DevWorker struct {
@@ -436,7 +460,10 @@ func (d *devOperations) DevWorkflow(ctx workflow.Context, input any) (any, error
 	if callback != nil {
 		return callback(ctx, input)
 	}
-	ctx = workflow.WithActivityOptions(ctx, workflow.ActivityOptions{StartToCloseTimeout: 10 * time.Second})
+	ctx = workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
+		StartToCloseTimeout: 10 * time.Second,
+		ActivityID:          "dev-activity-id",
+	})
 	var res any
 	err := workflow.ExecuteActivity(ctx, DevActivity, input).Get(ctx, &res)
 	return res, err

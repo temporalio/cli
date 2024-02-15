@@ -47,6 +47,7 @@ import (
 	"go.temporal.io/server/schema/sqlite"
 	sqliteschema "go.temporal.io/server/schema/sqlite"
 	"go.temporal.io/server/temporal"
+	"google.golang.org/grpc"
 	"gopkg.in/yaml.v3"
 )
 
@@ -56,6 +57,7 @@ type StartOptions struct {
 	FrontendPort int
 	Namespaces   []string
 	Logger       *slog.Logger
+	LogLevel     slog.Level
 
 	// Optional fields
 	UIIP                string // Empty means no UI
@@ -70,6 +72,7 @@ type StartOptions struct {
 	FrontendHTTPPort    int
 	DynamicConfigValues map[string]any
 	LogConfig           func([]byte)
+	GRPCInterceptors    []grpc.UnaryServerInterceptor
 }
 
 type Server struct {
@@ -137,6 +140,7 @@ func (s *StartOptions) buildUIServer() *uiserver.Server {
 		EnableUI:            true,
 		UIAssetPath:         s.UIAssetPath,
 		Codec:               uiconfig.Codec{Endpoint: s.UICodecEndpoint},
+		HideLogs:            true,
 	}))
 }
 
@@ -163,7 +167,10 @@ func (s *StartOptions) buildServerOptions() ([]temporal.ServerOption, error) {
 	}
 
 	// Build common opts
-	logger := slogLogger{s.Logger}
+	logger := slogLogger{
+		log:   s.Logger,
+		level: s.LogLevel,
+	}
 	authorizer, err := authorization.GetAuthorizerFromConfig(&conf.Global.Authorization)
 	if err != nil {
 		return nil, fmt.Errorf("failed creating authorizer: %w", err)
@@ -188,6 +195,12 @@ func (s *StartOptions) buildServerOptions() ([]temporal.ServerOption, error) {
 		}
 		opts = append(opts, temporal.WithDynamicConfigClient(dynConf))
 	}
+
+	// gRPC interceptors if set
+	if len(s.GRPCInterceptors) > 0 {
+		opts = append(opts, temporal.WithChainedFrontendGrpcInterceptors(s.GRPCInterceptors...))
+	}
+
 	return opts, nil
 }
 

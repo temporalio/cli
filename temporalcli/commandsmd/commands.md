@@ -50,12 +50,49 @@ This document has a specific structure used by a parser. Here are the rules:
 
 * `--env` (string) - Environment to read environment-specific flags from. Default: default. Env: TEMPORAL_ENV.
 * `--env-file` (string) - File to read all environments (defaults to `$HOME/.config/temporalio/temporal.yaml`).
-* `--log-level` (string-enum) - Log level. Options: debug, info, warn, error, off. Default: info.
+* `--log-level` (string-enum) - Log level. Options: debug, info, warn, error, never. Default: info.
 * `--log-format` (string-enum) - Log format. Options: text, json. Default: text.
 * `--output`, `-o` (string-enum) - Data output format. Options: text, json. Default: text.
 * `--time-format` (string-enum) - Time format. Options: relative, iso, raw. Default: relative.
 * `--color` (string-enum) - Set coloring. Options: always, never, auto. Default: auto.
 * `--no-json-shorthand-payloads` (bool) - Always all payloads as raw payloads even if they are JSON.
+
+### temporal activity: Complete or fail an Activity.
+
+#### Options
+
+Includes options set for [client](#options-set-for-client).
+
+
+### temporal activity complete: Complete an Activity.
+
+Complete an Activity.
+
+`temporal activity complete --activity-id=MyActivityId --workflow-id=MyWorkflowId --result='{"MyResultKey": "MyResultVal"}'`
+
+#### Options
+
+* `--activity-id` (string) - The Activity to be completed. Required.
+* `--identity` (string) - Identity of user submitting this request.
+* `--result` (string) - The result with which to complete the Activity (JSON). Required.
+
+Includes options set for [workflow reference](#options-set-for-workflow-reference).
+
+### temporal activity fail: Fail an Activity.
+
+Fail an Activity.
+
+`temporal activity fail --activity-id=MyActivityId --workflow-id=MyWorkflowId`
+
+#### Options
+
+* `--activity-id` (string) - The Activity to be failed. Required.
+* `--detail` (string) - JSON data describing reason for failing the Activity.
+* `--identity` (string) - Identity of user submitting this request.
+* `--reason` (string) - Reason for failing the Activity.
+
+Includes options set for [workflow reference](#options-set-for-workflow-reference).
+
 
 ### temporal env: Manage environments.
 
@@ -144,13 +181,15 @@ To persist Workflows across runs, use:
 * `--metrics-port` (int) - Port for /metrics. Default is off.
 * `--ui-port` (int) - Port for the Web UI. Default is --port + 1000.
 * `--headless` (bool) - Disable the Web UI.
-* `--ip` (string) - IP address to bind the frontend service to. Default: 127.0.0.1.
+* `--ip` (string) - IP address to bind the frontend service to. Default: localhost.
 * `--ui-ip` (string) - IP address to bind the Web UI to. Default is same as --ip.
 * `--ui-asset-path` (string) - UI custom assets path.
 * `--ui-codec-endpoint` (string) - UI remote codec HTTP endpoint.
 * `--sqlite-pragma` (string[]) - Specify SQLite pragma statements in pragma=value format.
 * `--dynamic-config-value` (string[]) - Dynamic config value, as KEY=JSON_VALUE (string values need quotes).
 * `--log-config` (bool) - Log the server config being used in stderr.
+* `--log-level-server` (string-enum) - Log level for the server only. Options: debug, info, warn, error, never. Default:
+  warn.
 
 ### temporal task-queue: Manage Task Queues.
 
@@ -207,7 +246,25 @@ Workflow commands use this syntax:`temporal workflow COMMAND [ARGS]`.
 
 ### temporal workflow cancel: Cancel a Workflow Execution.
 
-TODO
+The `temporal workflow cancel` command is used to cancel a [Workflow Execution](/concepts/what-is-a-workflow-execution).
+Canceling a running Workflow Execution records a `WorkflowExecutionCancelRequested` event in the Event History. A new
+Command Task will be scheduled, and the Workflow Execution will perform cleanup work.
+
+Executions may be cancelled by [ID](/concepts/what-is-a-workflow-id):
+```
+temporal workflow cancel --workflow-id MyWorkflowId
+```
+
+...or in bulk via a visibility query [list filter](/concepts/what-is-a-list-filter):
+```
+temporal workflow cancel --query=MyQuery
+```
+
+Use the options listed below to change the behavior of this command.
+
+#### Options
+
+Includes options set for [single workflow or batch](#options-set-single-workflow-or-batch)
 
 ### temporal workflow count: Count Workflow Executions.
 
@@ -288,7 +345,27 @@ Use the command options below to change the information returned by this command
 
 ### temporal workflow query: Query a Workflow Execution.
 
-TODO
+The `temporal workflow query` command is used to [Query](/concepts/what-is-a-query) a
+[Workflow Execution](/concepts/what-is-a-workflow-execution)
+by [ID](/concepts/what-is-a-workflow-id).
+
+```
+temporal workflow query \
+		--workflow-id MyWorkflowId \
+		--name MyQuery \
+		--input '{"MyInputKey": "MyInputValue"}'
+```
+
+Use the options listed below to change the command's behavior.
+
+#### Options
+
+* `--type` (string) - Query Type/Name. Required.
+* `--reject-condition` (string-enum) - Optional flag for rejecting Queries based on Workflow state.
+  Options: not_open, not_completed_cleanly.
+
+Includes options set for [payload input](#options-set-for-payload-input).
+Includes options set for [workflow reference](#options-set-for-workflow-reference).
 
 ### temporal workflow reset: Resets a Workflow Execution by Event ID or reset type.
 
@@ -321,7 +398,7 @@ The `temporal workflow signal` command is used to [Signal](/concepts/what-is-a-s
 temporal workflow signal \
 		--workflow-id MyWorkflowId \
 		--name MySignal \
-		--input '{"Input": "As-JSON"}'
+		--input '{"MyInputKey": "MyInputValue"}'
 ```
 
 Use the options listed below to change the command's behavior.
@@ -336,9 +413,10 @@ Includes options set for [payload input](#options-set-for-payload-input).
 
 * `--workflow-id`, `-w` (string) - Workflow Id. Either this or query must be set.
 * `--run-id`, `-r` (string) - Run Id. Cannot be set when query is set.
-* `--query`, `-q` (string) - Start a batch to Signal Workflow Executions with given List Filter. Either this or
+* `--query`, `-q` (string) - Start a batch to operate on Workflow Executions with given List Filter. Either this or
   Workflow Id must be set.
-* `--reason` (string) - Reason to perform batch. Only allowed if query is present unless the command specifies otherwise. Defaults to message with the current user's name.
+* `--reason` (string) - Reason to perform batch. Only allowed if query is present unless the command specifies
+  otherwise. Defaults to message with the current user's name.
 * `--yes`, `-y` (bool) - Confirm prompt to perform batch. Only allowed if query is present.
 
 ### temporal workflow stack: Query a Workflow Execution with __stack_trace as the query type.
@@ -372,6 +450,8 @@ temporal workflow start \
 * `--search-attribute` (string[]) - Passes Search Attribute in key=value format. Use valid JSON formats for value.
 * `--memo` (string[]) - Passes Memo in key=value format. Use valid JSON formats for value.
 * `--fail-existing` (bool) - Fail if the workflow already exists.
+* `--start-delay` (duration) - Specify a delay before the workflow starts. Cannot be used with a cron schedule. If the
+  workflow receives a signal or update before the delay has elapsed, it will begin immediately.
 
 #### Options set for payload input:
 
@@ -385,9 +465,10 @@ temporal workflow start \
 
 ### temporal workflow terminate: Terminate Workflow Execution by ID or List Filter.
 
-The `temporal workflow terminate` command is used to terminate a [Workflow Execution](/concepts/what-is-a-workflow-execution). 
-Canceling a running Workflow Execution records a `WorkflowExecutionTerminated` event as the closing Event in the workflow's Event History. 
-Workflow code is oblivious to termination. Use `temporal workflow cancel` if you need to perform cleanup in your workflow.
+The `temporal workflow terminate` command is used to terminate a
+[Workflow Execution](/concepts/what-is-a-workflow-execution). Canceling a running Workflow Execution records a
+`WorkflowExecutionTerminated` event as the closing Event in the workflow's Event History. Workflow code is oblivious to
+termination. Use `temporal workflow cancel` if you need to perform cleanup in your workflow.
 
 Executions may be terminated by [ID](/concepts/what-is-a-workflow-id) with an optional reason:
 ```
@@ -405,7 +486,8 @@ Use the options listed below to change the behavior of this command.
 
 * `--workflow-id`, `-w` (string) - Workflow Id. Either this or query must be set.
 * `--run-id`, `-r` (string) - Run Id. Cannot be set when query is set.
-* `--query`, `-q` (string) - Start a batch to terminate Workflow Executions with given List Filter. Either this or Workflow Id must be set.
+* `--query`, `-q` (string) - Start a batch to terminate Workflow Executions with given List Filter. Either this or
+  Workflow Id must be set.
 * `--reason` (string) - Reason for termination. Defaults to message with the current user's name.
 * `--yes`, `-y` (bool) - Confirm prompt to perform batch. Only allowed if query is present.
 

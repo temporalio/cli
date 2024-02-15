@@ -2,20 +2,26 @@ package temporalcli_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http/httptest"
 	"os"
 	"strconv"
+	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
+	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -66,6 +72,40 @@ func (s *SharedServerSuite) TestWorkflow_Start_SimpleSuccess() {
 	s.Equal(s.Worker.Options.TaskQueue, jsonOut["taskQueue"])
 	s.Equal("DevWorkflow", jsonOut["type"])
 	s.Equal("default", jsonOut["namespace"])
+}
+
+func (s *SharedServerSuite) TestWorkflow_Start_StartDelay() {
+	// Capture request
+	var lastRequest any
+	var lastRequestLock sync.Mutex
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string, req, reply any,
+			cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption,
+		) error {
+			lastRequestLock.Lock()
+			lastRequest = req
+			lastRequestLock.Unlock()
+			return invoker(ctx, method, req, reply, cc, opts...)
+		}),
+	)
+
+	res := s.Execute(
+		"workflow", "start",
+		"--address", s.Address(),
+		"--task-queue", s.Worker.Options.TaskQueue,
+		"--type", "DevWorkflow",
+		"--workflow-id", "my-id1",
+		"-i", `["val1", "val2"]`,
+		"--start-delay", "1ms",
+	)
+	s.NoError(res.Err)
+	s.Equal(
+		1*time.Millisecond,
+		lastRequest.(*workflowservice.StartWorkflowExecutionRequest).WorkflowStartDelay.AsDuration(),
+	)
 }
 
 func (s *SharedServerSuite) TestWorkflow_Execute_SimpleSuccess() {
@@ -147,6 +187,52 @@ func (s *SharedServerSuite) TestWorkflow_Execute_SimpleFailure() {
 	s.Equal("FAILED", jsonOut["status"])
 	s.Equal("intentional failure",
 		jsonPath(jsonOut, "closeEvent", "workflowExecutionFailedEventAttributes", "failure", "message"))
+}
+
+func (s *SharedServerSuite) TestWorkflow_Execute_ClientHeaders() {
+	// Capture headers
+	var lastHeadersClient metadata.MD
+	var lastHeadersLock sync.Mutex
+	// Capture from client
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string, req, reply any,
+			cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption,
+		) error {
+			lastHeadersLock.Lock()
+			lastHeadersClient, _ = metadata.FromOutgoingContext(ctx)
+			lastHeadersLock.Unlock()
+			return invoker(ctx, method, req, reply, cc, opts...)
+		}),
+	)
+
+	// Capture from server
+	// TODO(cretz): Pending fix on server for gRPC interceptors
+	// var lastHeadersServer metadata.MD
+	// s.SetServerInterceptor(
+	// 	func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
+	// 		lastHeadersLock.Lock()
+	// 		lastHeadersServer, _ = metadata.FromIncomingContext(ctx)
+	// 		lastHeadersLock.Unlock()
+	// 		return handler(ctx, req)
+	// 	},
+	// )
+
+	// Exec workflow
+	res := s.Execute(
+		"workflow", "execute",
+		"--address", s.Address(),
+		"--task-queue", s.Worker.Options.TaskQueue,
+		"--type", "DevWorkflow",
+		"--workflow-id", "my-id1",
+		"-i", `["val1", "val2"]`,
+	)
+	s.NoError(res.Err)
+
+	// Check that the client name is there
+	s.Equal("temporal-cli", lastHeadersClient["client-name"][0])
 }
 
 func (s *SharedServerSuite) TestWorkflow_Execute_EnvVars() {

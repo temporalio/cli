@@ -34,6 +34,7 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	s.Command.Short = "Temporal command-line interface and development server."
 	s.Command.Long = ""
 	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalActivityCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalEnvCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalServerCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalTaskQueueCommand(cctx, &s).Command)
@@ -41,18 +42,108 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	s.Command.PersistentFlags().StringVar(&s.Env, "env", "default", "Environment to read environment-specific flags from.")
 	cctx.BindFlagEnvVar(s.Command.PersistentFlags().Lookup("env"), "TEMPORAL_ENV")
 	s.Command.PersistentFlags().StringVar(&s.EnvFile, "env-file", "", "File to read all environments (defaults to `$HOME/.config/temporalio/temporal.yaml`).")
-	s.LogLevel = NewStringEnum([]string{"debug", "info", "warn", "error", "off"}, "info")
-	s.Command.PersistentFlags().Var(&s.LogLevel, "log-level", "Log level.")
+	s.LogLevel = NewStringEnum([]string{"debug", "info", "warn", "error", "never"}, "info")
+	s.Command.PersistentFlags().Var(&s.LogLevel, "log-level", "Log level. Accepted values: debug, info, warn, error, never.")
 	s.LogFormat = NewStringEnum([]string{"text", "json"}, "text")
-	s.Command.PersistentFlags().Var(&s.LogFormat, "log-format", "Log format.")
+	s.Command.PersistentFlags().Var(&s.LogFormat, "log-format", "Log format. Accepted values: text, json.")
 	s.Output = NewStringEnum([]string{"text", "json"}, "text")
-	s.Command.PersistentFlags().VarP(&s.Output, "output", "o", "Data output format.")
+	s.Command.PersistentFlags().VarP(&s.Output, "output", "o", "Data output format. Accepted values: text, json.")
 	s.TimeFormat = NewStringEnum([]string{"relative", "iso", "raw"}, "relative")
-	s.Command.PersistentFlags().Var(&s.TimeFormat, "time-format", "Time format.")
+	s.Command.PersistentFlags().Var(&s.TimeFormat, "time-format", "Time format. Accepted values: relative, iso, raw.")
 	s.Color = NewStringEnum([]string{"always", "never", "auto"}, "auto")
-	s.Command.PersistentFlags().Var(&s.Color, "color", "Set coloring.")
+	s.Command.PersistentFlags().Var(&s.Color, "color", "Set coloring. Accepted values: always, never, auto.")
 	s.Command.PersistentFlags().BoolVar(&s.NoJsonShorthandPayloads, "no-json-shorthand-payloads", false, "Always all payloads as raw payloads even if they are JSON.")
 	s.initCommand(cctx)
+	return &s
+}
+
+type TemporalActivityCommand struct {
+	Parent  *TemporalCommand
+	Command cobra.Command
+	ClientOptions
+}
+
+func NewTemporalActivityCommand(cctx *CommandContext, parent *TemporalCommand) *TemporalActivityCommand {
+	var s TemporalActivityCommand
+	s.Parent = parent
+	s.Command.Use = "activity"
+	s.Command.Short = "Complete or fail an Activity."
+	s.Command.Long = ""
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalActivityCompleteCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalActivityFailCommand(cctx, &s).Command)
+	s.ClientOptions.buildFlags(cctx, s.Command.PersistentFlags())
+	return &s
+}
+
+type TemporalActivityCompleteCommand struct {
+	Parent  *TemporalActivityCommand
+	Command cobra.Command
+	WorkflowReferenceOptions
+	ActivityId string
+	Identity   string
+	Result     string
+}
+
+func NewTemporalActivityCompleteCommand(cctx *CommandContext, parent *TemporalActivityCommand) *TemporalActivityCompleteCommand {
+	var s TemporalActivityCompleteCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "complete [flags]"
+	s.Command.Short = "Complete an Activity."
+	if hasHighlighting {
+		s.Command.Long = "Complete an Activity.\n\n\x1b[1mtemporal activity complete --activity-id=MyActivityId --workflow-id=MyWorkflowId --result='{\"MyResultKey\": \"MyResultVal\"}'\x1b[0m"
+	} else {
+		s.Command.Long = "Complete an Activity.\n\n`temporal activity complete --activity-id=MyActivityId --workflow-id=MyWorkflowId --result='{\"MyResultKey\": \"MyResultVal\"}'`"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
+	s.Command.Flags().StringVar(&s.ActivityId, "activity-id", "", "The Activity to be completed.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "activity-id")
+	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of user submitting this request.")
+	s.Command.Flags().StringVar(&s.Result, "result", "", "The result with which to complete the Activity (JSON).")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "result")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalActivityFailCommand struct {
+	Parent  *TemporalActivityCommand
+	Command cobra.Command
+	WorkflowReferenceOptions
+	ActivityId string
+	Detail     string
+	Identity   string
+	Reason     string
+}
+
+func NewTemporalActivityFailCommand(cctx *CommandContext, parent *TemporalActivityCommand) *TemporalActivityFailCommand {
+	var s TemporalActivityFailCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "fail [flags]"
+	s.Command.Short = "Fail an Activity."
+	if hasHighlighting {
+		s.Command.Long = "Fail an Activity.\n\n\x1b[1mtemporal activity fail --activity-id=MyActivityId --workflow-id=MyWorkflowId\x1b[0m"
+	} else {
+		s.Command.Long = "Fail an Activity.\n\n`temporal activity fail --activity-id=MyActivityId --workflow-id=MyWorkflowId`"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
+	s.Command.Flags().StringVar(&s.ActivityId, "activity-id", "", "The Activity to be failed.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "activity-id")
+	s.Command.Flags().StringVar(&s.Detail, "detail", "", "JSON data describing reason for failing the Activity.")
+	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of user submitting this request.")
+	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for failing the Activity.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
 	return &s
 }
 
@@ -208,6 +299,7 @@ type TemporalServerStartDevCommand struct {
 	SqlitePragma       []string
 	DynamicConfigValue []string
 	LogConfig          bool
+	LogLevelServer     StringEnum
 }
 
 func NewTemporalServerStartDevCommand(cctx *CommandContext, parent *TemporalServerCommand) *TemporalServerStartDevCommand {
@@ -229,13 +321,15 @@ func NewTemporalServerStartDevCommand(cctx *CommandContext, parent *TemporalServ
 	s.Command.Flags().IntVar(&s.MetricsPort, "metrics-port", 0, "Port for /metrics. Default is off.")
 	s.Command.Flags().IntVar(&s.UiPort, "ui-port", 0, "Port for the Web UI. Default is --port + 1000.")
 	s.Command.Flags().BoolVar(&s.Headless, "headless", false, "Disable the Web UI.")
-	s.Command.Flags().StringVar(&s.Ip, "ip", "127.0.0.1", "IP address to bind the frontend service to.")
+	s.Command.Flags().StringVar(&s.Ip, "ip", "localhost", "IP address to bind the frontend service to.")
 	s.Command.Flags().StringVar(&s.UiIp, "ui-ip", "", "IP address to bind the Web UI to. Default is same as --ip.")
 	s.Command.Flags().StringVar(&s.UiAssetPath, "ui-asset-path", "", "UI custom assets path.")
 	s.Command.Flags().StringVar(&s.UiCodecEndpoint, "ui-codec-endpoint", "", "UI remote codec HTTP endpoint.")
 	s.Command.Flags().StringArrayVar(&s.SqlitePragma, "sqlite-pragma", nil, "Specify SQLite pragma statements in pragma=value format.")
 	s.Command.Flags().StringArrayVar(&s.DynamicConfigValue, "dynamic-config-value", nil, "Dynamic config value, as KEY=JSON_VALUE (string values need quotes).")
 	s.Command.Flags().BoolVar(&s.LogConfig, "log-config", false, "Log the server config being used in stderr.")
+	s.LogLevelServer = NewStringEnum([]string{"debug", "info", "warn", "error", "never"}, "warn")
+	s.Command.Flags().Var(&s.LogLevelServer, "log-level-server", "Log level for the server only. Accepted values: debug, info, warn, error, never.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -288,7 +382,7 @@ func NewTemporalTaskQueueDescribeCommand(cctx *CommandContext, parent *TemporalT
 	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task queue name.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
 	s.TaskQueueType = NewStringEnum([]string{"workflow", "activity"}, "workflow")
-	s.Command.Flags().Var(&s.TaskQueueType, "task-queue-type", "Task Queue type.")
+	s.Command.Flags().Var(&s.TaskQueueType, "task-queue-type", "Task Queue type. Accepted values: workflow, activity.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -375,6 +469,7 @@ func NewTemporalWorkflowCommand(cctx *CommandContext, parent *TemporalCommand) *
 type TemporalWorkflowCancelCommand struct {
 	Parent  *TemporalWorkflowCommand
 	Command cobra.Command
+	SingleWorkflowOrBatchOptions
 }
 
 func NewTemporalWorkflowCancelCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowCancelCommand {
@@ -383,8 +478,13 @@ func NewTemporalWorkflowCancelCommand(cctx *CommandContext, parent *TemporalWork
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "cancel [flags]"
 	s.Command.Short = "Cancel a Workflow Execution."
-	s.Command.Long = "TODO"
+	if hasHighlighting {
+		s.Command.Long = "The \x1b[1mtemporal workflow cancel\x1b[0m command is used to cancel a Workflow Execution.\nCanceling a running Workflow Execution records a \x1b[1mWorkflowExecutionCancelRequested\x1b[0m event in the Event History. A new\nCommand Task will be scheduled, and the Workflow Execution will perform cleanup work.\n\nExecutions may be cancelled by ID:\n\x1b[1mtemporal workflow cancel --workflow-id MyWorkflowId\x1b[0m\n\n...or in bulk via a visibility query list filter:\n\x1b[1mtemporal workflow cancel --query=MyQuery\x1b[0m\n\nUse the options listed below to change the behavior of this command."
+	} else {
+		s.Command.Long = "The `temporal workflow cancel` command is used to cancel a Workflow Execution.\nCanceling a running Workflow Execution records a `WorkflowExecutionCancelRequested` event in the Event History. A new\nCommand Task will be scheduled, and the Workflow Execution will perform cleanup work.\n\nExecutions may be cancelled by ID:\n```\ntemporal workflow cancel --workflow-id MyWorkflowId\n```\n\n...or in bulk via a visibility query list filter:\n```\ntemporal workflow cancel --query=MyQuery\n```\n\nUse the options listed below to change the behavior of this command."
+	}
 	s.Command.Args = cobra.NoArgs
+	s.SingleWorkflowOrBatchOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -542,6 +642,10 @@ func NewTemporalWorkflowListCommand(cctx *CommandContext, parent *TemporalWorkfl
 type TemporalWorkflowQueryCommand struct {
 	Parent  *TemporalWorkflowCommand
 	Command cobra.Command
+	PayloadInputOptions
+	WorkflowReferenceOptions
+	Type            string
+	RejectCondition StringEnum
 }
 
 func NewTemporalWorkflowQueryCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowQueryCommand {
@@ -550,8 +654,18 @@ func NewTemporalWorkflowQueryCommand(cctx *CommandContext, parent *TemporalWorkf
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "query [flags]"
 	s.Command.Short = "Query a Workflow Execution."
-	s.Command.Long = "TODO"
+	if hasHighlighting {
+		s.Command.Long = "The \x1b[1mtemporal workflow query\x1b[0m command is used to Query a\nWorkflow Execution\nby ID.\n\n\x1b[1mtemporal workflow query \\\n\t\t--workflow-id MyWorkflowId \\\n\t\t--name MyQuery \\\n\t\t--input '{\"MyInputKey\": \"MyInputValue\"}'\x1b[0m\n\nUse the options listed below to change the command's behavior."
+	} else {
+		s.Command.Long = "The `temporal workflow query` command is used to Query a\nWorkflow Execution\nby ID.\n\n```\ntemporal workflow query \\\n\t\t--workflow-id MyWorkflowId \\\n\t\t--name MyQuery \\\n\t\t--input '{\"MyInputKey\": \"MyInputValue\"}'\n```\n\nUse the options listed below to change the command's behavior."
+	}
 	s.Command.Args = cobra.NoArgs
+	s.PayloadInputOptions.buildFlags(cctx, s.Command.Flags())
+	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
+	s.Command.Flags().StringVar(&s.Type, "type", "", "Query Type/Name.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "type")
+	s.RejectCondition = NewStringEnum([]string{"not_open", "not_completed_cleanly"}, "")
+	s.Command.Flags().Var(&s.RejectCondition, "reject-condition", "Optional flag for rejecting Queries based on Workflow state. Accepted values: not_open, not_completed_cleanly.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -644,7 +758,7 @@ type SingleWorkflowOrBatchOptions struct {
 func (v *SingleWorkflowOrBatchOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
 	f.StringVarP(&v.WorkflowId, "workflow-id", "w", "", "Workflow Id. Either this or query must be set.")
 	f.StringVarP(&v.RunId, "run-id", "r", "", "Run Id. Cannot be set when query is set.")
-	f.StringVarP(&v.Query, "query", "q", "", "Start a batch to Signal Workflow Executions with given List Filter. Either this or Workflow Id must be set.")
+	f.StringVarP(&v.Query, "query", "q", "", "Start a batch to operate on Workflow Executions with given List Filter. Either this or Workflow Id must be set.")
 	f.StringVar(&v.Reason, "reason", "", "Reason to perform batch. Only allowed if query is present unless the command specifies otherwise. Defaults to message with the current user's name.")
 	f.BoolVarP(&v.Yes, "yes", "y", false, "Confirm prompt to perform batch. Only allowed if query is present.")
 }
@@ -664,9 +778,9 @@ func NewTemporalWorkflowSignalCommand(cctx *CommandContext, parent *TemporalWork
 	s.Command.Use = "signal [flags]"
 	s.Command.Short = "Signal Workflow Execution by Id."
 	if hasHighlighting {
-		s.Command.Long = "The \x1b[1mtemporal workflow signal\x1b[0m command is used to Signal a\nWorkflow Execution by ID.\n\n\x1b[1mtemporal workflow signal \\\n\t\t--workflow-id MyWorkflowId \\\n\t\t--name MySignal \\\n\t\t--input '{\"Input\": \"As-JSON\"}'\x1b[0m\n\nUse the options listed below to change the command's behavior."
+		s.Command.Long = "The \x1b[1mtemporal workflow signal\x1b[0m command is used to Signal a\nWorkflow Execution by ID.\n\n\x1b[1mtemporal workflow signal \\\n\t\t--workflow-id MyWorkflowId \\\n\t\t--name MySignal \\\n\t\t--input '{\"MyInputKey\": \"MyInputValue\"}'\x1b[0m\n\nUse the options listed below to change the command's behavior."
 	} else {
-		s.Command.Long = "The `temporal workflow signal` command is used to Signal a\nWorkflow Execution by ID.\n\n```\ntemporal workflow signal \\\n\t\t--workflow-id MyWorkflowId \\\n\t\t--name MySignal \\\n\t\t--input '{\"Input\": \"As-JSON\"}'\n```\n\nUse the options listed below to change the command's behavior."
+		s.Command.Long = "The `temporal workflow signal` command is used to Signal a\nWorkflow Execution by ID.\n\n```\ntemporal workflow signal \\\n\t\t--workflow-id MyWorkflowId \\\n\t\t--name MySignal \\\n\t\t--input '{\"MyInputKey\": \"MyInputValue\"}'\n```\n\nUse the options listed below to change the command's behavior."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.PayloadInputOptions.buildFlags(cctx, s.Command.Flags())
@@ -714,6 +828,7 @@ type WorkflowStartOptions struct {
 	SearchAttribute  []string
 	Memo             []string
 	FailExisting     bool
+	StartDelay       time.Duration
 }
 
 func (v *WorkflowStartOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
@@ -726,10 +841,11 @@ func (v *WorkflowStartOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet
 	f.DurationVar(&v.ExecutionTimeout, "execution-timeout", 0, "Timeout for a WorkflowExecution, including retries and ContinueAsNew tasks.")
 	f.DurationVar(&v.TaskTimeout, "task-timeout", 10000*time.Millisecond, "Start-to-close timeout for a Workflow Task.")
 	f.StringVar(&v.Cron, "cron", "", "Cron schedule for the workflow. Deprecated - use schedules instead.")
-	f.StringVar(&v.IdReusePolicy, "id-reuse-policy", "", "Allows the same Workflow Id to be used in a new Workflow Execution.")
+	f.StringVar(&v.IdReusePolicy, "id-reuse-policy", "", "Allows the same Workflow Id to be used in a new Workflow Execution. Accepted values: AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate, TerminateIfRunning.")
 	f.StringArrayVar(&v.SearchAttribute, "search-attribute", nil, "Passes Search Attribute in key=value format. Use valid JSON formats for value.")
 	f.StringArrayVar(&v.Memo, "memo", nil, "Passes Memo in key=value format. Use valid JSON formats for value.")
 	f.BoolVar(&v.FailExisting, "fail-existing", false, "Fail if the workflow already exists.")
+	f.DurationVar(&v.StartDelay, "start-delay", 0, "Specify a delay before the workflow starts. Cannot be used with a cron schedule. If the workflow receives a signal or update before the delay has elapsed, it will begin immediately.")
 }
 
 type PayloadInputOptions struct {
@@ -792,9 +908,9 @@ func NewTemporalWorkflowTerminateCommand(cctx *CommandContext, parent *TemporalW
 	s.Command.Use = "terminate [flags]"
 	s.Command.Short = "Terminate Workflow Execution by ID or List Filter."
 	if hasHighlighting {
-		s.Command.Long = "The \x1b[1mtemporal workflow terminate\x1b[0m command is used to terminate a Workflow Execution. \nCanceling a running Workflow Execution records a \x1b[1mWorkflowExecutionTerminated\x1b[0m event as the closing Event in the workflow's Event History. \nWorkflow code is oblivious to termination. Use \x1b[1mtemporal workflow cancel\x1b[0m if you need to perform cleanup in your workflow.\n\nExecutions may be terminated by ID with an optional reason:\n\x1b[1mtemporal workflow terminate [--reason my-reason] --workflow-id MyWorkflowId\x1b[0m\n\n...or in bulk via a visibility query list filter:\n\x1b[1mtemporal workflow terminate --query=MyQuery\x1b[0m\n\nUse the options listed below to change the behavior of this command."
+		s.Command.Long = "The \x1b[1mtemporal workflow terminate\x1b[0m command is used to terminate a\nWorkflow Execution. Canceling a running Workflow Execution records a\n\x1b[1mWorkflowExecutionTerminated\x1b[0m event as the closing Event in the workflow's Event History. Workflow code is oblivious to\ntermination. Use \x1b[1mtemporal workflow cancel\x1b[0m if you need to perform cleanup in your workflow.\n\nExecutions may be terminated by ID with an optional reason:\n\x1b[1mtemporal workflow terminate [--reason my-reason] --workflow-id MyWorkflowId\x1b[0m\n\n...or in bulk via a visibility query list filter:\n\x1b[1mtemporal workflow terminate --query=MyQuery\x1b[0m\n\nUse the options listed below to change the behavior of this command."
 	} else {
-		s.Command.Long = "The `temporal workflow terminate` command is used to terminate a Workflow Execution. \nCanceling a running Workflow Execution records a `WorkflowExecutionTerminated` event as the closing Event in the workflow's Event History. \nWorkflow code is oblivious to termination. Use `temporal workflow cancel` if you need to perform cleanup in your workflow.\n\nExecutions may be terminated by ID with an optional reason:\n```\ntemporal workflow terminate [--reason my-reason] --workflow-id MyWorkflowId\n```\n\n...or in bulk via a visibility query list filter:\n```\ntemporal workflow terminate --query=MyQuery\n```\n\nUse the options listed below to change the behavior of this command."
+		s.Command.Long = "The `temporal workflow terminate` command is used to terminate a\nWorkflow Execution. Canceling a running Workflow Execution records a\n`WorkflowExecutionTerminated` event as the closing Event in the workflow's Event History. Workflow code is oblivious to\ntermination. Use `temporal workflow cancel` if you need to perform cleanup in your workflow.\n\nExecutions may be terminated by ID with an optional reason:\n```\ntemporal workflow terminate [--reason my-reason] --workflow-id MyWorkflowId\n```\n\n...or in bulk via a visibility query list filter:\n```\ntemporal workflow terminate --query=MyQuery\n```\n\nUse the options listed below to change the behavior of this command."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.WorkflowId, "workflow-id", "w", "", "Workflow Id. Either this or query must be set.")

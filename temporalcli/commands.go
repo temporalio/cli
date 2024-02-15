@@ -24,6 +24,7 @@ import (
 	"go.temporal.io/api/failure/v1"
 	"go.temporal.io/api/temporalproto"
 	"go.temporal.io/server/common/headers"
+	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"gopkg.in/yaml.v3"
@@ -67,6 +68,8 @@ type CommandOptions struct {
 
 	// Defaults to logging error then os.Exit(1)
 	Fail func(error)
+
+	AdditionalClientGRPCDialOptions []grpc.DialOption
 }
 
 func NewCommandContext(ctx context.Context, options CommandOptions) (*CommandContext, context.CancelFunc, error) {
@@ -315,8 +318,8 @@ func (c *TemporalCommand) initCommand(cctx *CommandContext) {
 func (c *TemporalCommand) preRun(cctx *CommandContext) error {
 	// Configure logger if not already on context
 	if cctx.Logger == nil {
-		// If level is off, make noop logger
-		if c.LogLevel.Value == "off" {
+		// If level is never, make noop logger
+		if c.LogLevel.Value == "never" {
 			cctx.Logger = newNopLogger()
 		} else {
 			var level slog.Level

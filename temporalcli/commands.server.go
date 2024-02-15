@@ -8,6 +8,10 @@ import (
 )
 
 func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string) error {
+	// Have to assume "localhost" is 127.0.0.1 for server to work (it expects IP)
+	if t.Ip == "localhost" {
+		t.Ip = "127.0.0.1"
+	}
 	// Prepare options
 	opts := devserver.StartOptions{
 		FrontendIP:       t.Ip,
@@ -17,6 +21,11 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 		DatabaseFile:     t.DbFilename,
 		MetricsPort:      t.MetricsPort,
 		FrontendHTTPPort: t.HttpPort,
+	}
+	if t.LogLevelServer.Value == "never" {
+		opts.LogLevel = 100
+	} else if err := opts.LogLevel.UnmarshalText([]byte(t.LogLevelServer.Value)); err != nil {
+		return fmt.Errorf("invalid log level %q: %w", t.LogLevelServer.Value, err)
 	}
 	// Setup UI
 	if !t.Headless {
@@ -49,14 +58,22 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 	}
 
 	// Start, wait for context complete, then stop
-	cctx.Logger.Info("Starting dev server...")
 	s, err := devserver.Start(opts)
 	if err != nil {
 		return fmt.Errorf("failed starting server: %w", err)
 	}
 	defer s.Stop()
+
+	friendlyIP := t.Ip
+	if friendlyIP == "127.0.0.1" {
+		friendlyIP = "localhost"
+	}
+	cctx.Printer.Printlnf("Temporal server is running at: %v:%v", friendlyIP, t.Port)
+	if !t.Headless {
+		cctx.Printer.Printlnf("Web UI is running at: http://%v:%v", friendlyIP, opts.UIPort)
+	}
 	<-cctx.Done()
-	cctx.Logger.Info("Stopping dev server...")
+	cctx.Printer.Println("Stopping server...")
 	return nil
 }
 
