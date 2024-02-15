@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"go.temporal.io/sdk/workflow"
 	"time"
 
 	"github.com/temporalio/cli/temporalcli"
