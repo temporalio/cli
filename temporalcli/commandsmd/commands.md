@@ -152,6 +152,38 @@ Property names match CLI option names, for example '--address' and '--tls-cert-p
 * exact-args=2
 -->
 
+### temporal operator: Manage a Temporal deployment.
+
+Operator commands enable actions on Namespaces, Search Attributes, and Temporal Clusters. These actions are performed through subcommands.
+
+To run an Operator command, `run temporal operator [command] [subcommand] [command options]`
+
+#### Options
+
+Includes options set for [client](#options-set-for-client).
+
+### temporal operator cluster: Operations for running a Temporal Cluster.
+
+Cluster commands enable actions on Temporal Clusters.
+
+Cluster commands follow this syntax: `temporal operator cluster [command] [command options]`
+
+### temporal operator cluster describe: Describe a cluster
+
+`temporal operator cluster describe` command shows information about the Cluster. 
+
+#### Options
+
+* `--detail` (bool) - Prints extra details.
+
+### temporal operator cluster health: Checks the health of a cluster
+
+`temporal operator cluster health` command checks the health of the Frontend Service.
+
+### temporal operator cluster system: Provide system info
+
+`temporal operator cluster system` command provides information about the system the Cluster is running on. This information can be used to diagnose problems occurring in the Temporal Server.
+
 ### temporal server: Run Temporal Server.
 
 Start a development version of [Temporal Server](/concepts/what-is-the-temporal-server):
@@ -369,7 +401,29 @@ Includes options set for [workflow reference](#options-set-for-workflow-referenc
 
 ### temporal workflow reset: Resets a Workflow Execution by Event ID or reset type.
 
-TODO
+The temporal workflow reset command resets a [Workflow Execution](/concepts/what-is-a-workflow-execution).
+A reset allows the Workflow to resume from a certain point without losing its parameters or [Event History](/concepts/what-is-an-event-history).
+
+The Workflow Execution can be set to a given [Event Type](/concepts/what-is-an-event):
+```
+temporal workflow reset --workflow-id=meaningful-business-id --type=LastContinuedAsNew
+```
+
+...or a specific any Event after `WorkflowTaskStarted`.
+```
+temporal workflow reset --workflow-id=meaningful-business-id --event-id=MyLastEvent
+```
+
+Use the options listed below to change reset behavior.
+
+#### Options
+
+* `--workflow-id`, `-w` (string) - Workflow Id. Required.
+* `--run-id`, `-r` (string) - Run Id.
+* `--event-id`, `-e` (int) - The Event Id for any Event after `WorkflowTaskStarted` you want to reset to (exclusive). It can be `WorkflowTaskCompleted`, `WorkflowTaskFailed` or others.
+* `--reason` (string) - The reason why this workflow is being reset. Required.
+* `--reapply-type` (string-enum) - Event types to reapply after the reset point. Options: All, Signal, None. Default: All.
+* `--type`, `-t` (string-enum) - Event type to which you want to reset. Options: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew.
 
 ### temporal workflow reset-batch: Reset a batch of Workflow Executions by reset type.
 
@@ -419,9 +473,25 @@ Includes options set for [payload input](#options-set-for-payload-input).
   otherwise. Defaults to message with the current user's name.
 * `--yes`, `-y` (bool) - Confirm prompt to perform batch. Only allowed if query is present.
 
-### temporal workflow stack: Query a Workflow Execution with __stack_trace as the query type.
+### temporal workflow stack: Query a Workflow Execution for its stack trace.
 
-TODO
+The `temporal workflow stack` command [Queries](/concepts/what-is-a-query) a
+[Workflow Execution](/concepts/what-is-a-workflow-execution) with `__stack_trace` as the query type.
+This returns a stack trace of all the threads or routines currently used by the workflow, and is
+useful for troubleshooting.
+
+```
+temporal workflow stack --workflow-id MyWorkflowId
+```
+
+Use the options listed below to change the command's behavior.
+
+#### Options
+
+* `--reject-condition` (string-enum) - Optional flag for rejecting Queries based on Workflow state.
+  Options: not_open, not_completed_cleanly.
+
+Includes options set for [workflow reference](#options-set-for-workflow-reference).
 
 ### temporal workflow start: Starts a new Workflow Execution.
 
@@ -497,4 +567,24 @@ TODO
 
 ### temporal workflow update: Updates a running workflow synchronously.
 
-TODO
+The `temporal workflow update` command is used to synchronously [Update](/concepts/what-is-an-update) a 
+[WorkflowExecution](/concepts/what-is-a-workflow-execution) by [ID](/concepts/what-is-a-workflow-id).
+
+```
+temporal workflow update \
+		--workflow-id MyWorkflowId \
+		--name MyUpdate \
+		--input '{"Input": "As-JSON"}'
+```
+
+Use the options listed below to change the command's behavior.
+
+#### Options
+
+* `--name` (string) - Update Name. Required.
+* `--workflow-id`, `-w` (string) - Workflow Id. Required.
+* `--run-id`, `-r` (string) - Run Id. If unset, the currently running Workflow Execution receives the Update.
+* `--first-execution-run-id` (string) - Send the Update to the last Workflow Execution in the chain that started 
+  with this Run Id.
+
+Includes options set for [payload input](#options-set-for-payload-input).
