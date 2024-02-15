@@ -12,14 +12,6 @@ import (
 	"go.temporal.io/sdk/client"
 )
 
-var (
-	resetTypesMap = map[string]interface{}{
-		"FirstWorkflowTask":  "",
-		"LastWorkflowTask":   "",
-		"LastContinuedAsNew": "",
-	}
-)
-
 func (c *TemporalWorkflowResetCommand) run(cctx *CommandContext, _ []string) error {
 	if c.Type.Value == "" && c.EventId <= 0 {
 		return errors.New("must specify either valid event id or reset type")
