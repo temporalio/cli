@@ -14,6 +14,7 @@ import (
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/log"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
