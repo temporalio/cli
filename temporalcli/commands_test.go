@@ -170,23 +170,9 @@ type SharedServerSuite struct {
 func (s *SharedServerSuite) SetupSuite() {
 	s.DevServer = StartDevServer(s.Suite.T(), DevServerOptions{})
 	// Stop server if we fail later
-	success := false
-	defer func() {
-		if !success {
-			s.Server.Stop()
-		}
-	}()
+	s.T().Cleanup(s.Server.Stop)
+
 	s.Worker = s.DevServer.StartDevWorker(s.Suite.T(), DevWorkerOptions{})
-	success = true
-}
-
-func (s *SharedServerSuite) TearDownSuite() {
-	s.Stop()
-}
-
-func (s *SharedServerSuite) Stop() {
-	s.Worker.Stop()
-	s.DevServer.Stop()
 }
 
 func (s *SharedServerSuite) SetupTest() {
@@ -235,7 +221,6 @@ type DevServerOptions struct {
 }
 
 func StartDevServer(t *testing.T, options DevServerOptions) *DevServer {
-	success := false
 	// Build options
 	d := &DevServer{Options: options}
 	if d.Options.FrontendIP == "" {
@@ -250,14 +235,13 @@ func StartDevServer(t *testing.T, options DevServerOptions) *DevServer {
 	if d.Options.Logger == nil {
 		w := &concurrentWriter{w: &d.logOutput, wLock: &d.logOutputLock}
 		d.Options.Logger = slog.New(slog.NewTextHandler(w, &slog.HandlerOptions{AddSource: true}))
-		// If this fails, we want to dump logs
-		defer func() {
-			if !success {
+		t.Cleanup(func() {
+			if t.Failed() {
 				if b := d.LogOutput(); len(b) > 0 {
 					t.Logf("Server/SDK Log Output:\n-----\n%s-----", b)
 				}
 			}
-		}()
+		})
 	}
 	if d.Options.ClientOptions.Logger == nil {
 		d.Options.ClientOptions.Logger = d.Options.Logger
@@ -288,20 +272,12 @@ func StartDevServer(t *testing.T, options DevServerOptions) *DevServer {
 	var err error
 	d.Server, err = devserver.Start(d.Options.StartOptions)
 	require.NoError(t, err)
-	defer func() {
-		if !success {
-			d.Server.Stop()
-		}
-	}()
+	t.Cleanup(d.Server.Stop)
 
 	// Dial client
 	d.Client, err = client.Dial(d.Options.ClientOptions)
 	require.NoError(t, err)
-	defer func() {
-		if !success {
-			d.Client.Close()
-		}
-	}()
+	t.Cleanup(d.Client.Close)
 
 	// Create search attribute if not there
 	ctx := context.Background()
@@ -317,13 +293,7 @@ func StartDevServer(t *testing.T, options DevServerOptions) *DevServer {
 		require.NoError(t, err)
 	}
 
-	success = true
 	return d
-}
-
-func (d *DevServer) Stop() {
-	d.Client.Close()
-	d.Server.Stop()
 }
 
 func (d *DevServer) LogOutput() []byte {
@@ -411,11 +381,8 @@ func (d *DevServer) StartDevWorker(t *testing.T, options DevWorkerOptions) *DevW
 	w.Worker.RegisterActivity(ops.DevActivity)
 	// Start worker or fail
 	require.NoError(t, w.Worker.Start(), "failed starting worker")
+	t.Cleanup(w.Worker.Stop)
 	return w
-}
-
-func (d *DevWorker) Stop() {
-	d.Worker.Stop()
 }
 
 // Default is just to return DevActivity result
