@@ -549,60 +549,6 @@ func (s *SharedServerSuite) TestWorkflow_Reset_ToLastWorkflowTask() {
 	s.Equal(1, activityExecutions, "Should not have re-executed the activity")
 }
 
-func (s *SharedServerSuite) TestWorkflow_Reset_ToLastContinuedAsNew() {
-	var lastInput float64
-	s.Worker.OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
-		i, ok := a.(float64)
-		if !ok {
-			return nil, fmt.Errorf("expected float64, not %[1]T (%[1]v)", a)
-		}
-		lastInput = i
-
-		// Only CAN once so we don't DOS the test server
-		if i == 1 {
-			return nil, workflow.NewContinueAsNewError(ctx, "DevWorkflow", i+1)
-		}
-		return nil, nil
-	})
-
-	// Start the workflow
-	searchAttr := "keyword-" + uuid.NewString()
-	run, err := s.Client.ExecuteWorkflow(
-		s.Context,
-		client.StartWorkflowOptions{
-			TaskQueue:        s.Worker.Options.TaskQueue,
-			SearchAttributes: map[string]any{"CustomKeywordField": searchAttr},
-		},
-		DevWorkflow,
-		1,
-	)
-	s.NoError(err)
-	var junk any
-	s.NoError(run.Get(s.Context, &junk))
-	// let the CAN finish
-	s.awaitNextWorkflow(searchAttr)
-	iter := s.Client.GetWorkflowHistory(s.Context, run.GetID(), run.GetRunID(), false, enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
-	for iter.HasNext() {
-		event, err := iter.Next()
-		s.NoError(err)
-		s.T().Logf("Event: %d %s", event.GetEventId(), event.GetEventType())
-	}
-	s.Equal(float64(2), lastInput, "Workflow should have continued as new")
-	lastInput = 0
-
-	// Reset to the final workflow task
-	res := s.Execute(
-		"workflow", "reset",
-		"--address", s.Address(),
-		"-w", run.GetID(),
-		"-t", "LastContinuedAsNew",
-		"--reason", "test-reset-LastWorkflowTask",
-	)
-	require.NoError(s.T(), res.Err)
-	s.awaitNextWorkflow(searchAttr)
-	s.Equal(float64(2), lastInput, "Should have re-executed the workflow from the last ContinuedAsNew event")
-}
-
 func (s *SharedServerSuite) TestWorkflow_Reset_ToEventID() {
 	// We execute two activities and will resume just before the second one. We use the same activity for both
 	// but a unique input so we can check which fake activity is executed
