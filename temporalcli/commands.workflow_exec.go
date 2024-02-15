@@ -391,19 +391,10 @@ type structuredHistoryEvent struct {
 var structuredHistoryEventType = reflect.TypeOf(structuredHistoryEvent{})
 
 func (s *structuredHistoryIter) Next() (any, error) {
-	// Load iter
-	if s.iter == nil {
-		s.iter = s.client.GetWorkflowHistory(
-			s.ctx, s.workflowID, s.runID, s.follow, enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
-	}
-	if !s.iter.HasNext() {
-		return nil, nil
-	}
-	event, err := s.iter.Next()
+	event, err := s.NextRawEvent()
 	if err != nil {
 		return nil, err
 	}
-
 	// Build data
 	data := structuredHistoryEvent{
 		ID:   event.EventId,
@@ -426,4 +417,20 @@ func (s *structuredHistoryIter) Next() (any, error) {
 		s.iter = nil
 	}
 	return data, nil
+}
+
+func (s *structuredHistoryIter) NextRawEvent() (*history.HistoryEvent, error) {
+	// Load iter
+	if s.iter == nil {
+		s.iter = s.client.GetWorkflowHistory(
+			s.ctx, s.workflowID, s.runID, s.follow, enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
+	}
+	if !s.iter.HasNext() {
+		return nil, nil
+	}
+	event, err := s.iter.Next()
+	if err != nil {
+		return nil, err
+	}
+	return event, nil
 }

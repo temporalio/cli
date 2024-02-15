@@ -290,23 +290,20 @@ func (c *TemporalWorkflowShowCommand) run(cctx *CommandContext, args []string) e
 			return fmt.Errorf("displaying history failed: %w", err)
 		}
 	} else {
-		events := make([]structuredHistoryEvent, 0)
+		events := make([]*history.HistoryEvent, 0)
 		for {
-			e, err := iter.Next()
+			e, err := iter.NextRawEvent()
 			if err != nil {
 				return fmt.Errorf("failed getting next history event: %w", err)
 			}
 			if e == nil {
 				break
 			}
-			events = append(events, e.(structuredHistoryEvent))
+			events = append(events, e)
 		}
-		outStruct := struct {
-			Events []structuredHistoryEvent
-		}{
-			Events: events,
-		}
-		if err := cctx.Printer.PrintStructured(outStruct, printer.StructuredOptions{}); err != nil {
+		outStruct := history.History{}
+		outStruct.Events = events
+		if err := cctx.Printer.PrintStructured(&outStruct, printer.StructuredOptions{}); err != nil {
 			return fmt.Errorf("failed printing structured output: %w", err)
 		}
 	}
