@@ -25,7 +25,6 @@ import (
 	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 type CommandHarness struct {
@@ -222,7 +221,6 @@ type DevServer struct {
 	// For first namespace in options
 	Client client.Client
 	// For other services, like the WorkflowService
-	GRPCConn *grpc.ClientConn
 
 	logOutput     bytes.Buffer
 	logOutputLock sync.RWMutex
@@ -308,15 +306,6 @@ func StartDevServer(t *testing.T, options DevServerOptions) *DevServer {
 		}
 	}()
 
-	// Dial workflowservice client
-	d.GRPCConn, err = grpc.Dial(d.Options.ClientOptions.HostPort, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	require.NoError(t, err)
-	defer func() {
-		if !success {
-			d.GRPCConn.Close()
-		}
-	}()
-
 	// Create search attribute if not there
 	ctx := context.Background()
 	saResp, err := d.Client.OperatorService().ListSearchAttributes(ctx, &operatorservice.ListSearchAttributesRequest{
@@ -337,7 +326,6 @@ func StartDevServer(t *testing.T, options DevServerOptions) *DevServer {
 
 func (d *DevServer) Stop() {
 	d.Client.Close()
-	d.GRPCConn.Close()
 	d.Server.Stop()
 }
 

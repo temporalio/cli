@@ -11,17 +11,13 @@ import (
 	"strings"
 
 	"go.temporal.io/api/common/v1"
-	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/log"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
 )
-
-const localHostPort = "127.0.0.1:7233"
 
 func (c *ClientOptions) dialClient(cctx *CommandContext) (client.Client, error) {
 	clientOptions := client.Options{
@@ -145,27 +141,6 @@ func payloadCodecInterceptor(namespace, codecEndpoint, codecAuth string) (grpc.U
 			Codecs: []converter.PayloadCodec{payloadCodec},
 		},
 	)
-}
-
-func errorInterceptor() grpc.UnaryClientInterceptor {
-	return func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
-		err := invoker(ctx, method, req, reply, cc, opts...)
-		err = serviceerror.FromStatus(status.Convert(err))
-		return err
-	}
-}
-
-func headersProviderInterceptor(provider stringMapHeadersProvider) grpc.UnaryClientInterceptor {
-	return func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
-		headers, err := provider.GetHeaders(ctx)
-		if err != nil {
-			return err
-		}
-		for k, v := range headers {
-			ctx = metadata.AppendToOutgoingContext(ctx, k, v)
-		}
-		return invoker(ctx, method, req, reply, cc, opts...)
-	}
 }
 
 func clientIdentity() string {
