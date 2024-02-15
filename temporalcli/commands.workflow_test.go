@@ -524,3 +524,69 @@ func (s *SharedServerSuite) testQueryWorkflow(json bool) {
 	s.Error(res.Err)
 	s.Contains(res.Err.Error(), "query was rejected, workflow has status: Completed")
 }
+
+func (s *SharedServerSuite) TestWorkflow_Stack_SingleWorkflowSuccess() {
+	s.testStackWorkflow(false)
+}
+
+func (s *SharedServerSuite) TestWorkflow_Stack_SingleWorkflowSuccessJSON() {
+	s.testStackWorkflow(true)
+}
+
+func (s *SharedServerSuite) testStackWorkflow(json bool) {
+	// Make workflow wait for signal and then return it
+	s.Worker.OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
+		done := false
+		workflow.Go(ctx, func(ctx workflow.Context) {
+			_ = workflow.Await(ctx, func() bool {
+				return done
+			})
+		})
+		workflow.GetSignalChannel(ctx, "my-signal").Receive(ctx, nil)
+		done = true
+		return nil, nil
+
+	})
+
+	// Start the workflow
+	run, err := s.Client.ExecuteWorkflow(
+		s.Context,
+		client.StartWorkflowOptions{TaskQueue: s.Worker.Options.TaskQueue},
+		DevWorkflow,
+		"ignored",
+	)
+	s.NoError(err)
+
+	args := []string{
+		"workflow", "stack",
+		"--address", s.Address(),
+		"-w", run.GetID(),
+	}
+	if json {
+		args = append(args, "-o", "json")
+	}
+	// Do the query
+	res := s.Execute(args...)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "coroutine root")
+	s.Contains(res.Stdout.String(), "coroutine 2")
+
+	// Unblock the workflow with a signal
+	s.NoError(s.Client.SignalWorkflow(s.Context, run.GetID(), "", "my-signal", nil))
+
+	s.NoError(run.Get(s.Context, nil))
+
+	// Ensure query is rejected when using not open rejection condition
+	args = []string{
+		"workflow", "stack",
+		"--address", s.Address(),
+		"-w", run.GetID(),
+		"--reject-condition", "not_open",
+	}
+	if json {
+		args = append(args, "-o", "json")
+	}
+	res = s.Execute(args...)
+	s.Error(res.Err)
+	s.Contains(res.Err.Error(), "query was rejected, workflow has status: Completed")
+}
