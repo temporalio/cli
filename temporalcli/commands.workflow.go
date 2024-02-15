@@ -258,20 +258,13 @@ func startBatchJob(cctx *CommandContext, cl client.Client, req *workflowservice.
 	return nil
 }
 
-type QueryLikeCommand struct {
-	Parent *TemporalWorkflowCommand
-	PayloadInputOptions
-	WorkflowReferenceOptions
-	Type            string
-	RejectCondition StringEnum
-}
-
 func queryHelper(cctx *CommandContext,
 	parent *TemporalWorkflowCommand,
 	inputOpts PayloadInputOptions,
 	queryType string,
 	rejectCondition StringEnum,
-	execution WorkflowReferenceOptions) error {
+	execution WorkflowReferenceOptions,
+) error {
 	cl, err := parent.ClientOptions.dialClient(cctx)
 	if err != nil {
 		return err
@@ -310,7 +303,7 @@ func queryHelper(cctx *CommandContext,
 	}
 
 	if result.QueryRejected != nil {
-		return fmt.Errorf("query was rejected, workflow has status: %v\n", result.QueryRejected.GetStatus())
+		return fmt.Errorf("query was rejected, workflow has status: %v", result.QueryRejected.GetStatus())
 	}
 
 	if cctx.JSONOutput {
