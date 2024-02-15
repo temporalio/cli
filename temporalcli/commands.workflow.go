@@ -135,17 +135,10 @@ func (c *TemporalWorkflowResetCommand) run(cctx *CommandContext, _ []string) err
 	}
 	defer cl.Close()
 
-	conn, err := c.Parent.ClientOptions.dialGRPC(cctx)
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-
-	wfsvc := workflowservice.NewWorkflowServiceClient(conn)
 	resetBaseRunID := c.RunId
 	eventID := int64(c.EventId)
 	if c.Type.Value != "" {
-		resetBaseRunID, eventID, err = getResetEventIDByType(cctx, c.Type.Value, c.Parent.Namespace, c.WorkflowId, c.RunId, wfsvc)
+		resetBaseRunID, eventID, err = getResetEventIDByType(cctx, c.Type.Value, c.Parent.Namespace, c.WorkflowId, c.RunId, cl.WorkflowService())
 		if err != nil {
 			return fmt.Errorf("getting reset event ID by type failed: %w", err)
 		}
