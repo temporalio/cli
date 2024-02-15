@@ -3,16 +3,16 @@ package temporalcli
 import (
 	"encoding/json"
 	"fmt"
+  "os/user"
 	"github.com/fatih/color"
 	"github.com/google/uuid"
-	"github.com/temporalio/cli/temporalcli/internal/printer"
+  "github.com/temporalio/cli/temporalcli/internal/printer"
 	"go.temporal.io/api/batch/v1"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/query/v1"
 	"go.temporal.io/api/workflowservice/v1"
-	"go.temporal.io/sdk/client"
-	"os/user"
+	"go.temporal.io/sdk/client"	
 )
 
 func (c *TemporalWorkflowCancelCommand) run(cctx *CommandContext, args []string) error {
@@ -55,10 +55,6 @@ func (*TemporalWorkflowDeleteCommand) run(*CommandContext, []string) error {
 func (c *TemporalWorkflowQueryCommand) run(cctx *CommandContext, args []string) error {
 	return queryHelper(cctx, c.Parent, c.PayloadInputOptions,
 		c.Type, c.RejectCondition, c.WorkflowReferenceOptions)
-}
-
-func (*TemporalWorkflowResetCommand) run(*CommandContext, []string) error {
-	return fmt.Errorf("TODO")
 }
 
 func (*TemporalWorkflowResetBatchCommand) run(*CommandContext, []string) error {
@@ -171,16 +167,57 @@ func (*TemporalWorkflowTraceCommand) run(*CommandContext, []string) error {
 	return fmt.Errorf("TODO")
 }
 
-func (*TemporalWorkflowUpdateCommand) run(*CommandContext, []string) error {
-	return fmt.Errorf("TODO")
+func (c *TemporalWorkflowUpdateCommand) run(cctx *CommandContext, args []string) error {
+	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	// Get raw input
+	input, err := c.buildRawInput()
+	if err != nil {
+		return err
+	}
+
+	request := &client.UpdateWorkflowWithOptionsRequest{
+		WorkflowID:          c.WorkflowId,
+		RunID:               c.RunId,
+		UpdateName:          c.Name,
+		FirstExecutionRunID: c.FirstExecutionRunId,
+		Args:                input,
+	}
+
+	updateHandle, err := cl.UpdateWorkflowWithOptions(cctx, request)
+	if err != nil {
+		return fmt.Errorf("unable to update workflow: %w", err)
+	}
+
+	var valuePtr interface{}
+	err = updateHandle.Get(cctx, &valuePtr)
+	if err != nil {
+		return fmt.Errorf("unable to update workflow: %w", err)
+	}
+
+	return cctx.Printer.PrintStructured(
+		struct {
+			Name     string      `json:"name"`
+			UpdateID string      `json:"updateId"`
+			Result   interface{} `json:"result"`
+		}{Name: c.Name, UpdateID: updateHandle.UpdateID(), Result: valuePtr},
+		printer.StructuredOptions{})
 }
 
-func defaultReason() string {
+func username() string {
 	username := "<unknown-user>"
 	if u, err := user.Current(); err != nil && u.Username != "" {
 		username = u.Username
 	}
-	return "Requested from CLI by " + username
+	return username
+}
+
+func defaultReason() string {
+	return "Requested from CLI by " + username()
 }
 
 type singleOrBatchOverrides struct {
