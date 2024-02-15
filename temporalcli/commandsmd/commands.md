@@ -519,4 +519,24 @@ TODO
 
 ### temporal workflow update: Updates a running workflow synchronously.
 
-TODO
+The `temporal workflow update` command is used to synchronously [Update](/concepts/what-is-an-update) a 
+[WorkflowExecution](/concepts/what-is-a-workflow-execution) by [ID](/concepts/what-is-a-workflow-id).
+
+```
+temporal workflow update \
+		--workflow-id MyWorkflowId \
+		--name MyUpdate \
+		--input '{"Input": "As-JSON"}'
+```
+
+Use the options listed below to change the command's behavior.
+
+#### Options
+
+* `--name` (string) - Update Name. Required.
+* `--workflow-id`, `-w` (string) - Workflow Id. Required.
+* `--run-id`, `-r` (string) - Run Id. If unset, the currently running Workflow Execution receives the Update.
+* `--first-execution-run-id` (string) - Send the Update to the last Workflow Execution in the chain that started 
+  with this Run Id.
+
+Includes options set for [payload input](#options-set-for-payload-input).
