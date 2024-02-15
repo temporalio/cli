@@ -284,10 +284,11 @@ func (c *TemporalWorkflowShowCommand) run(cctx *CommandContext, args []string) e
 	}
 	if !cctx.JSONOutput {
 		cctx.Printer.Println(color.MagentaString("Progress:"))
-		// TODO: Do we need to do the "time elapsed" thing? Also needs some redoing to print
-		//   result at the end, since final event is not accessible from here.
 		if err := iter.print(cctx.Printer); err != nil {
 			return fmt.Errorf("displaying history failed: %w", err)
+		}
+		if err := printTextResult(cctx, iter.wfResult, 0); err != nil {
+			return err
 		}
 	} else {
 		events := make([]*history.HistoryEvent, 0)
