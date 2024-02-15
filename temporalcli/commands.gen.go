@@ -36,6 +36,7 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalActivityCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalEnvCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalOperatorCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalServerCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalTaskQueueCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowCommand(cctx, &s).Command)
@@ -254,6 +255,127 @@ func NewTemporalEnvSetCommand(cctx *CommandContext, parent *TemporalEnvCommand) 
 		s.Command.Long = "`temporal env set [environment.property name] [property value]`\n\nProperty names match CLI option names, for example '--address' and '--tls-cert-path':\n\n`temporal env set prod.address 127.0.0.1:7233`\n`temporal env set prod.tls-cert-path  /home/my-user/certs/cluster.cert`"
 	}
 	s.Command.Args = cobra.ExactArgs(2)
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalOperatorCommand struct {
+	Parent  *TemporalCommand
+	Command cobra.Command
+	ClientOptions
+}
+
+func NewTemporalOperatorCommand(cctx *CommandContext, parent *TemporalCommand) *TemporalOperatorCommand {
+	var s TemporalOperatorCommand
+	s.Parent = parent
+	s.Command.Use = "operator"
+	s.Command.Short = "Manage a Temporal deployment."
+	if hasHighlighting {
+		s.Command.Long = "Operator commands enable actions on Namespaces, Search Attributes, and Temporal Clusters. These actions are performed through subcommands.\n\nTo run an Operator command, \x1b[1mrun temporal operator [command] [subcommand] [command options]\x1b[0m"
+	} else {
+		s.Command.Long = "Operator commands enable actions on Namespaces, Search Attributes, and Temporal Clusters. These actions are performed through subcommands.\n\nTo run an Operator command, `run temporal operator [command] [subcommand] [command options]`"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalOperatorClusterCommand(cctx, &s).Command)
+	s.ClientOptions.buildFlags(cctx, s.Command.PersistentFlags())
+	return &s
+}
+
+type TemporalOperatorClusterCommand struct {
+	Parent  *TemporalOperatorCommand
+	Command cobra.Command
+}
+
+func NewTemporalOperatorClusterCommand(cctx *CommandContext, parent *TemporalOperatorCommand) *TemporalOperatorClusterCommand {
+	var s TemporalOperatorClusterCommand
+	s.Parent = parent
+	s.Command.Use = "cluster"
+	s.Command.Short = "Operations for running a Temporal Cluster."
+	if hasHighlighting {
+		s.Command.Long = "Cluster commands enable actions on Temporal Clusters.\n\nCluster commands follow this syntax: \x1b[1mtemporal operator cluster [command] [command options]\x1b[0m"
+	} else {
+		s.Command.Long = "Cluster commands enable actions on Temporal Clusters.\n\nCluster commands follow this syntax: `temporal operator cluster [command] [command options]`"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalOperatorClusterDescribeCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalOperatorClusterHealthCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalOperatorClusterSystemCommand(cctx, &s).Command)
+	return &s
+}
+
+type TemporalOperatorClusterDescribeCommand struct {
+	Parent  *TemporalOperatorClusterCommand
+	Command cobra.Command
+	Detail  bool
+}
+
+func NewTemporalOperatorClusterDescribeCommand(cctx *CommandContext, parent *TemporalOperatorClusterCommand) *TemporalOperatorClusterDescribeCommand {
+	var s TemporalOperatorClusterDescribeCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "describe [flags]"
+	s.Command.Short = "Describe a cluster"
+	if hasHighlighting {
+		s.Command.Long = "\x1b[1mtemporal operator cluster describe\x1b[0m command shows information about the Cluster."
+	} else {
+		s.Command.Long = "`temporal operator cluster describe` command shows information about the Cluster."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().BoolVar(&s.Detail, "detail", false, "Prints extra details.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalOperatorClusterHealthCommand struct {
+	Parent  *TemporalOperatorClusterCommand
+	Command cobra.Command
+}
+
+func NewTemporalOperatorClusterHealthCommand(cctx *CommandContext, parent *TemporalOperatorClusterCommand) *TemporalOperatorClusterHealthCommand {
+	var s TemporalOperatorClusterHealthCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "health [flags]"
+	s.Command.Short = "Checks the health of a cluster"
+	if hasHighlighting {
+		s.Command.Long = "\x1b[1mtemporal operator cluster health\x1b[0m command checks the health of the Frontend Service."
+	} else {
+		s.Command.Long = "`temporal operator cluster health` command checks the health of the Frontend Service."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalOperatorClusterSystemCommand struct {
+	Parent  *TemporalOperatorClusterCommand
+	Command cobra.Command
+}
+
+func NewTemporalOperatorClusterSystemCommand(cctx *CommandContext, parent *TemporalOperatorClusterCommand) *TemporalOperatorClusterSystemCommand {
+	var s TemporalOperatorClusterSystemCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "system [flags]"
+	s.Command.Short = "Provide system info"
+	if hasHighlighting {
+		s.Command.Long = "\x1b[1mtemporal operator cluster system\x1b[0m command provides information about the system the Cluster is running on. This information can be used to diagnose problems occurring in the Temporal Server."
+	} else {
+		s.Command.Long = "`temporal operator cluster system` command provides information about the system the Cluster is running on. This information can be used to diagnose problems occurring in the Temporal Server."
+	}
+	s.Command.Args = cobra.NoArgs
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
