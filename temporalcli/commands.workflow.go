@@ -143,10 +143,6 @@ func (c *TemporalWorkflowResetCommand) run(cctx *CommandContext, _ []string) err
 			return fmt.Errorf("getting reset event ID by type failed: %w", err)
 		}
 	}
-	username := "<unknown-user>"
-	if u, err := user.Current(); err != nil && u.Username != "" {
-		username = u.Username
-	}
 	reapplyType := enums.RESET_REAPPLY_TYPE_SIGNAL
 	if c.ReapplyType.Value != "All" {
 		reapplyType, err = enums.ResetReapplyTypeFromString(c.ReapplyType.Value)
@@ -165,7 +161,7 @@ func (c *TemporalWorkflowResetCommand) run(cctx *CommandContext, _ []string) err
 			WorkflowId: c.WorkflowId,
 			RunId:      resetBaseRunID,
 		},
-		Reason:                    fmt.Sprintf("%s: %s", username, c.Reason),
+		Reason:                    fmt.Sprintf("%s: %s", username(), c.Reason),
 		WorkflowTaskFinishEventId: eventID,
 		RequestId:                 uuid.NewString(),
 		ResetReapplyType:          reapplyType,
@@ -295,12 +291,16 @@ func (*TemporalWorkflowUpdateCommand) run(*CommandContext, []string) error {
 	return fmt.Errorf("TODO")
 }
 
-func defaultReason() string {
+func username() string {
 	username := "<unknown-user>"
 	if u, err := user.Current(); err != nil && u.Username != "" {
 		username = u.Username
 	}
-	return "Requested from CLI by " + username
+	return username
+}
+
+func defaultReason() string {
+	return "Requested from CLI by " + username()
 }
 
 type singleOrBatchOverrides struct {
