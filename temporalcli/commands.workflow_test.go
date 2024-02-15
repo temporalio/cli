@@ -381,7 +381,6 @@ func (s *SharedServerSuite) TestWorkflow_Query_SingleWorkflowSuccessJSON() {
 }
 
 func (s *SharedServerSuite) testQueryWorkflow(json bool) {
-	// Make workflow wait for signal and then return it
 	s.Worker.OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
 		err := workflow.SetQueryHandler(ctx, "my-query", func(arg string) (any, error) {
 			retme := struct {

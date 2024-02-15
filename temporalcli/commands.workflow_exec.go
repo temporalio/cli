@@ -166,6 +166,9 @@ func printTextResult(
 	closeEvent *history.HistoryEvent,
 	duration time.Duration,
 ) error {
+	if closeEvent == nil {
+		return nil
+	}
 	cctx.Printer.Println(color.MagentaString("Results:"))
 	result := struct {
 		RunTime string `cli:",cardOmitEmpty"`
@@ -362,6 +365,8 @@ type structuredHistoryIter struct {
 	includeDetails bool
 	// If set true, long poll the history for updates
 	follow bool
+	// If and when the iterator encounters a workflow-terminating event, it will store it here
+	wfResult *history.HistoryEvent
 
 	// Internal
 	iter client.HistoryEventIterator
@@ -394,6 +399,9 @@ func (s *structuredHistoryIter) Next() (any, error) {
 	event, err := s.NextRawEvent()
 	if err != nil {
 		return nil, err
+	}
+	if event == nil {
+		return nil, nil
 	}
 	// Build data
 	data := structuredHistoryEvent{
@@ -432,5 +440,19 @@ func (s *structuredHistoryIter) NextRawEvent() (*history.HistoryEvent, error) {
 	if err != nil {
 		return nil, err
 	}
+	if isWorkflowTerminatingEvent(event.EventType) {
+		s.wfResult = event
+	}
 	return event, nil
+}
+
+func isWorkflowTerminatingEvent(t enums.EventType) bool {
+	switch t {
+	case enums.EVENT_TYPE_WORKFLOW_EXECUTION_COMPLETED,
+		enums.EVENT_TYPE_WORKFLOW_EXECUTION_FAILED,
+		enums.EVENT_TYPE_WORKFLOW_EXECUTION_TIMED_OUT,
+		enums.EVENT_TYPE_WORKFLOW_EXECUTION_CANCELED:
+		return true
+	}
+	return false
 }
