@@ -16,13 +16,14 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"github.com/temporalio/cli/temporalcli"
-	"github.com/temporalio/cli/temporalcli/devserver"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/operatorservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
+
+	"github.com/temporalio/cli/temporalcli"
+	"github.com/temporalio/cli/temporalcli/devserver"
 )
 
 type CommandHarness struct {
@@ -267,6 +268,7 @@ func StartDevServer(t *testing.T, options DevServerOptions) *DevServer {
 		d.Options.DynamicConfigValues = map[string]any{}
 	}
 	d.Options.DynamicConfigValues["system.forceSearchAttributesCacheRefreshOnRead"] = true
+	d.Options.DynamicConfigValues["frontend.enableUpdateWorkflowExecution"] = true
 
 	// Start
 	var err error

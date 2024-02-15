@@ -834,6 +834,11 @@ func NewTemporalWorkflowTraceCommand(cctx *CommandContext, parent *TemporalWorkf
 type TemporalWorkflowUpdateCommand struct {
 	Parent  *TemporalWorkflowCommand
 	Command cobra.Command
+	PayloadInputOptions
+	Name                string
+	WorkflowId          string
+	RunId               string
+	FirstExecutionRunId string
 }
 
 func NewTemporalWorkflowUpdateCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowUpdateCommand {
@@ -842,8 +847,19 @@ func NewTemporalWorkflowUpdateCommand(cctx *CommandContext, parent *TemporalWork
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "update [flags]"
 	s.Command.Short = "Updates a running workflow synchronously."
-	s.Command.Long = "TODO"
+	if hasHighlighting {
+		s.Command.Long = "The \x1b[1mtemporal workflow update\x1b[0m command is used to synchronously Update a \nWorkflowExecution by ID.\n\n\x1b[1mtemporal workflow update \\\n\t\t--workflow-id MyWorkflowId \\\n\t\t--name MyUpdate \\\n\t\t--input '{\"Input\": \"As-JSON\"}'\x1b[0m\n\nUse the options listed below to change the command's behavior."
+	} else {
+		s.Command.Long = "The `temporal workflow update` command is used to synchronously Update a \nWorkflowExecution by ID.\n\n```\ntemporal workflow update \\\n\t\t--workflow-id MyWorkflowId \\\n\t\t--name MyUpdate \\\n\t\t--input '{\"Input\": \"As-JSON\"}'\n```\n\nUse the options listed below to change the command's behavior."
+	}
 	s.Command.Args = cobra.NoArgs
+	s.PayloadInputOptions.buildFlags(cctx, s.Command.Flags())
+	s.Command.Flags().StringVar(&s.Name, "name", "", "Update Name.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
+	s.Command.Flags().StringVarP(&s.WorkflowId, "workflow-id", "w", "", "Workflow Id.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "workflow-id")
+	s.Command.Flags().StringVarP(&s.RunId, "run-id", "r", "", "Run Id. If unset, the currently running Workflow Execution receives the Update.")
+	s.Command.Flags().StringVar(&s.FirstExecutionRunId, "first-execution-run-id", "", "Send the Update to the last Workflow Execution in the chain that started with this Run Id.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

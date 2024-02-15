@@ -2,6 +2,9 @@ package temporalcli_test
 
 import (
 	"encoding/json"
+	"fmt"
+	"math/rand"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -274,4 +277,79 @@ func (s *SharedServerSuite) testTerminateBatchWorkflow(json bool) *CommandResult
 		s.True(foundReason)
 	}
 	return res
+}
+
+func (s *SharedServerSuite) TestWorkflow_Update() {
+	updateName := "test-update"
+
+	s.Worker.OnDevWorkflow(func(ctx workflow.Context, val any) (any, error) {
+		// setup a simple workflow which receives non-negative floats in updates and adds them to a running counter
+		counter, ok := val.(float64)
+		if !ok {
+			return nil, fmt.Errorf("update workflow received non-float input")
+		}
+		err := workflow.SetUpdateHandlerWithOptions(
+			ctx,
+			updateName,
+			func(ctx workflow.Context, i float64) (float64, error) {
+				tmp := counter
+				counter += i
+				workflow.GetLogger(ctx).Info("counter updated", "added", i, "new-value", counter)
+				return tmp, nil
+			},
+			workflow.UpdateHandlerOptions{
+				Validator: func(ctx workflow.Context, i float64) error {
+					if i < 0 {
+						return fmt.Errorf("add value must be non-negative (%v)", i)
+					}
+					return nil
+				}},
+		)
+		if err != nil {
+			return 0, err
+		}
+
+		// wait on a signal to indicate the test is complete
+		if ok := workflow.GetSignalChannel(ctx, "updates-done").Receive(ctx, nil); !ok {
+			return 0, fmt.Errorf("signal channel was closed")
+		}
+		return counter, nil
+	})
+
+	// Start the workflow
+	input := rand.Intn(100)
+	run, err := s.Client.ExecuteWorkflow(
+		s.Context,
+		client.StartWorkflowOptions{TaskQueue: s.Worker.Options.TaskQueue},
+		DevWorkflow,
+		input,
+	)
+	s.NoError(err)
+
+	// Stop the workflow when the test is complete
+	defer func() {
+		err := s.Client.SignalWorkflow(s.Context, run.GetID(), run.GetRunID(), "updates-done", nil)
+		s.NoError(err)
+	}()
+
+	// successful update, should show the result
+	res := s.Execute("workflow", "update", "--address", s.Address(), "-w", run.GetID(), "--name", updateName, "-i", strconv.Itoa(input))
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), strconv.Itoa(input))
+
+	// successful update passing first-execution-run-id
+	res = s.Execute("workflow", "update", "--address", s.Address(), "-w", run.GetID(), "--name", updateName, "-i", strconv.Itoa(input), "--first-execution-run-id", run.GetRunID())
+	s.NoError(res.Err)
+
+	// update rejected, when name is not available
+	res = s.Execute("workflow", "update", "--address", s.Address(), "-w", run.GetID(), "-i", strconv.Itoa(input))
+	s.ErrorContains(res.Err, "required flag(s) \"name\" not set")
+
+	// update rejected, wrong workflowID
+	res = s.Execute("workflow", "update", "--address", s.Address(), "-w", "nonexistent-wf-id", "--name", updateName, "-i", strconv.Itoa(input))
+	s.ErrorContains(res.Err, "unable to update workflow")
+
+	// update rejected, wrong update name
+	res = s.Execute("workflow", "update", "--address", s.Address(), "-w", run.GetID(), "--name", "nonexistent-update-name", "-i", strconv.Itoa(input))
+	s.ErrorContains(res.Err, "unable to update workflow")
 }
