@@ -404,7 +404,7 @@ func getLastWorkflowTaskEventID(ctx context.Context, namespace, wid, rid string,
 		NextPageToken:   nil,
 	}
 
-	for {
+	for more := true; more; more = len(req.NextPageToken) != 0 {
 		resp, err := wfsvc.GetWorkflowExecutionHistoryReverse(ctx, &req)
 		if err != nil {
 			return "", 0, fmt.Errorf("failed to get workflow execution history: %w", err)
@@ -418,11 +418,7 @@ func getLastWorkflowTaskEventID(ctx context.Context, namespace, wid, rid string,
 				workflowTaskEventID = e.GetEventId() + 1
 			}
 		}
-		if len(resp.NextPageToken) != 0 {
-			req.NextPageToken = resp.NextPageToken
-		} else {
-			break
-		}
+		req.NextPageToken = resp.NextPageToken
 	}
 	if workflowTaskEventID == 0 {
 		return "", 0, errors.New("unable to find any scheduled or completed task")
@@ -442,7 +438,7 @@ func getFirstWorkflowTaskEventID(ctx context.Context, namespace, wid, rid string
 		MaximumPageSize: 250,
 		NextPageToken:   nil,
 	}
-	for {
+	for more := true; more; more = len(req.NextPageToken) != 0 {
 		resp, err := wfsvc.GetWorkflowExecutionHistory(ctx, &req)
 		if err != nil {
 			return "", 0, fmt.Errorf("failed to get workflow execution history: %w", err)
@@ -458,11 +454,7 @@ func getFirstWorkflowTaskEventID(ctx context.Context, namespace, wid, rid string
 				}
 			}
 		}
-		if len(resp.NextPageToken) != 0 {
-			req.NextPageToken = resp.NextPageToken
-		} else {
-			break
-		}
+		req.NextPageToken = resp.NextPageToken
 	}
 	if workflowTaskEventID == 0 {
 		return "", 0, errors.New("unable to find any scheduled or completed task")
@@ -500,7 +492,7 @@ func getLastContinueAsNewID(ctx context.Context, namespace, wid, rid string, wfs
 		MaximumPageSize: 250,
 		NextPageToken:   nil,
 	}
-	for {
+	for more := true; more; more = len(req.NextPageToken) != 0 {
 		resp, err := wfsvc.GetWorkflowExecutionHistory(ctx, req)
 		if err != nil {
 			return "", 0, fmt.Errorf("failed to get workflow execution history of previous execution (run id %s): %w", resetBaseRunID, err)
@@ -510,11 +502,7 @@ func getLastContinueAsNewID(ctx context.Context, namespace, wid, rid string, wfs
 				workflowTaskCompletedID = e.GetEventId()
 			}
 		}
-		if len(resp.NextPageToken) != 0 {
-			req.NextPageToken = resp.NextPageToken
-		} else {
-			break
-		}
+		req.NextPageToken = resp.NextPageToken
 	}
 	if workflowTaskCompletedID == 0 {
 		return "", 0, errors.New("unable to find WorkflowTaskCompleted event for previous execution")
