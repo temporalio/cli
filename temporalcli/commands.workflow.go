@@ -110,10 +110,6 @@ func (c *TemporalWorkflowQueryCommand) run(cctx *CommandContext, args []string) 
 	return cctx.Printer.PrintStructured(output, printer.StructuredOptions{})
 }
 
-func (*TemporalWorkflowResetCommand) run(*CommandContext, []string) error {
-	return fmt.Errorf("TODO")
-}
-
 func (*TemporalWorkflowResetBatchCommand) run(*CommandContext, []string) error {
 	return fmt.Errorf("TODO")
 }
@@ -227,12 +223,16 @@ func (*TemporalWorkflowUpdateCommand) run(*CommandContext, []string) error {
 	return fmt.Errorf("TODO")
 }
 
-func defaultReason() string {
+func username() string {
 	username := "<unknown-user>"
 	if u, err := user.Current(); err != nil && u.Username != "" {
 		username = u.Username
 	}
-	return "Requested from CLI by " + username
+	return username
+}
+
+func defaultReason() string {
+	return "Requested from CLI by " + username()
 }
 
 type singleOrBatchOverrides struct {

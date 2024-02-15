@@ -369,7 +369,29 @@ Includes options set for [workflow reference](#options-set-for-workflow-referenc
 
 ### temporal workflow reset: Resets a Workflow Execution by Event ID or reset type.
 
-TODO
+The temporal workflow reset command resets a [Workflow Execution](/concepts/what-is-a-workflow-execution).
+A reset allows the Workflow to resume from a certain point without losing its parameters or [Event History](/concepts/what-is-an-event-history).
+
+The Workflow Execution can be set to a given [Event Type](/concepts/what-is-an-event):
+```
+temporal workflow reset --workflow-id=meaningful-business-id --type=LastContinuedAsNew
+```
+
+...or a specific any Event after `WorkflowTaskStarted`.
+```
+temporal workflow reset --workflow-id=meaningful-business-id --event-id=MyLastEvent
+```
+
+Use the options listed below to change reset behavior.
+
+#### Options
+
+* `--workflow-id`, `-w` (string) - Workflow Id. Required.
+* `--run-id`, `-r` (string) - Run Id.
+* `--event-id`, `-e` (int) - The Event Id for any Event after `WorkflowTaskStarted` you want to reset to (exclusive). It can be `WorkflowTaskCompleted`, `WorkflowTaskFailed` or others.
+* `--reason` (string) - The reason why this workflow is being reset. Required.
+* `--reapply-type` (string-enum) - Event types to reapply after the reset point. Options: All, Signal, None. Default: All.
+* `--type`, `-t` (string-enum) - Event type to which you want to reset. Options: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew.
 
 ### temporal workflow reset-batch: Reset a batch of Workflow Executions by reset type.
 
