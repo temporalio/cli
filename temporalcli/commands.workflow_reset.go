@@ -9,6 +9,7 @@ import (
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/workflowservice/v1"
+	"go.temporal.io/sdk/client"
 )
 
 var (
@@ -32,7 +33,7 @@ func (c *TemporalWorkflowResetCommand) run(cctx *CommandContext, _ []string) err
 	resetBaseRunID := c.RunId
 	eventID := int64(c.EventId)
 	if c.Type.Value != "" {
-		resetBaseRunID, eventID, err = getResetEventIDByType(cctx, c.Type.Value, c.Parent.Namespace, c.WorkflowId, c.RunId, cl.WorkflowService())
+		resetBaseRunID, eventID, err = c.getResetEventIDByType(cctx, cl)
 		if err != nil {
 			return fmt.Errorf("getting reset event ID by type failed: %w", err)
 		}
@@ -69,7 +70,9 @@ func (c *TemporalWorkflowResetCommand) run(cctx *CommandContext, _ []string) err
 	return nil
 }
 
-func getResetEventIDByType(ctx context.Context, resetType, namespace, wid, rid string, wfsvc workflowservice.WorkflowServiceClient) (string, int64, error) {
+func (c *TemporalWorkflowResetCommand) getResetEventIDByType(ctx context.Context, cl client.Client) (string, int64, error) {
+	resetType, namespace, wid, rid := c.Type.Value, c.Parent.Namespace, c.WorkflowId, c.RunId
+	wfsvc := cl.WorkflowService()
 	switch resetType {
 	case "LastWorkflowTask":
 		return getLastWorkflowTaskEventID(ctx, namespace, wid, rid, wfsvc)
