@@ -281,7 +281,6 @@ func (c *TemporalWorkflowShowCommand) run(cctx *CommandContext, args []string) e
 		runID:          c.RunId,
 		includeDetails: true,
 		follow:         c.Follow,
-		color:          !cctx.JSONOutput && !color.NoColor,
 	}
 	if !cctx.JSONOutput {
 		cctx.Printer.Println(color.MagentaString("Progress:"))
