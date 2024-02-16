@@ -255,8 +255,7 @@ Use the options listed below to modify what this command returns.
 
 ### temporal workflow: Start, list, and operate on Workflows.
 
-[Workflow](/concepts/what-is-a-workflow) commands perform operations
-on [Workflow Executions](/concepts/what-is-a-workflow-execution).
+[Workflow](/concepts/what-is-a-workflow) commands perform operations on [Workflow Executions](/concepts/what-is-a-workflow-execution).
 
 Workflow commands use this syntax: `temporal workflow COMMAND [ARGS]`.
 
