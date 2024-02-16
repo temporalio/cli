@@ -250,7 +250,10 @@ func StartDevServer(t *testing.T, options DevServerOptions) *DevServer {
 		d.Options.FrontendPort = devserver.MustGetFreePort()
 	}
 	if len(d.Options.Namespaces) == 0 {
-		d.Options.Namespaces = []string{"default"}
+		d.Options.Namespaces = []string{
+			"default",
+			"batch-empty", // for test `TestBatchJob_List
+		}
 	}
 	if d.Options.Logger == nil {
 		w := &concurrentWriter{w: &d.logOutput, wLock: &d.logOutputLock}
@@ -277,6 +280,7 @@ func StartDevServer(t *testing.T, options DevServerOptions) *DevServer {
 	}
 	d.Options.DynamicConfigValues["system.forceSearchAttributesCacheRefreshOnRead"] = true
 	d.Options.DynamicConfigValues["frontend.enableUpdateWorkflowExecution"] = true
+	d.Options.DynamicConfigValues["frontend.MaxConcurrentBatchOperationPerNamespace"] = 1000
 
 	d.Options.GRPCInterceptors = append(
 		d.Options.GRPCInterceptors,
