@@ -308,7 +308,14 @@ func (c *TemporalCommand) initCommand(cctx *CommandContext) {
 		if c.Color.Value == "never" || c.Color.Value == "always" {
 			color.NoColor = c.Color.Value == "never"
 		}
-		return c.preRun(cctx)
+
+		res := c.preRun(cctx)
+
+		// Always disable color if JSON output is on (must be run after preRun so JSONOutput is set)
+		if cctx.JSONOutput {
+			color.NoColor = true
+		}
+		return res
 	}
 	c.Command.PersistentPostRun = func(*cobra.Command, []string) {
 		color.NoColor = origNoColor
