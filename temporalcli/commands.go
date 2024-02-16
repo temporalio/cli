@@ -46,6 +46,10 @@ type CommandContext struct {
 	Logger                *slog.Logger
 	JSONOutput            bool
 	JSONShorthandPayloads bool
+
+	// Is set to true if any command actually started running. This is a hack to workaround the fact
+	// that cobra does not properly exit nonzero if an unknown command/subcommand is given.
+	ActuallyRanCommand bool
 }
 
 type CommandOptions struct {
@@ -289,6 +293,10 @@ func Execute(ctx context.Context, options CommandOptions) {
 	if err != nil {
 		cctx.Options.Fail(err)
 	}
+	// If no command ever actually got run, exit nonzero
+	if !cctx.ActuallyRanCommand {
+		cctx.Options.Fail(fmt.Errorf("unknown command"))
+	}
 }
 
 func (c *TemporalCommand) initCommand(cctx *CommandContext) {
@@ -315,6 +323,7 @@ func (c *TemporalCommand) initCommand(cctx *CommandContext) {
 		if cctx.JSONOutput {
 			color.NoColor = true
 		}
+		cctx.ActuallyRanCommand = true
 		return res
 	}
 	c.Command.PersistentPostRun = func(*cobra.Command, []string) {

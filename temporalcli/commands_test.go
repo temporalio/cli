@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"go.temporal.io/api/enums/v1"
@@ -495,4 +496,10 @@ func (w *concurrentWriter) Write(p []byte) (n int, err error) {
 	w.wLock.Lock()
 	defer w.wLock.Unlock()
 	return w.w.Write(p)
+}
+
+func TestUnknownCommandExitsNonzero(t *testing.T) {
+	commandHarness := NewCommandHarness(t)
+	res := commandHarness.Execute("blerkflow")
+	assert.Contains(t, res.Err.Error(), "unknown command")
 }

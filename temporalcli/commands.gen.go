@@ -563,9 +563,9 @@ func NewTemporalWorkflowCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.Use = "workflow"
 	s.Command.Short = "Start, list, and operate on Workflows."
 	if hasHighlighting {
-		s.Command.Long = "Workflow commands perform operations on \nWorkflow Executions.\n\nWorkflow commands use this syntax:\x1b[1mtemporal workflow COMMAND [ARGS]\x1b[0m."
+		s.Command.Long = "Workflow commands perform operations on Workflow Executions.\n\nWorkflow commands use this syntax: \x1b[1mtemporal workflow COMMAND [ARGS]\x1b[0m."
 	} else {
-		s.Command.Long = "Workflow commands perform operations on \nWorkflow Executions.\n\nWorkflow commands use this syntax:`temporal workflow COMMAND [ARGS]`."
+		s.Command.Long = "Workflow commands perform operations on Workflow Executions.\n\nWorkflow commands use this syntax: `temporal workflow COMMAND [ARGS]`."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalWorkflowCancelCommand(cctx, &s).Command)
