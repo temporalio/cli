@@ -39,11 +39,23 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
 	)
 	s.NoError(res.Err)
 	var jsonOut struct {
-		Pollers []map[string]any `json:"pollers"`
+		Pollers    []map[string]any `json:"pollers"`
 		TaskQueues []map[string]any `json:"taskQueues"`
 	}
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
-	s.GreaterOrEqual(1, len(jsonOut.TaskQueues))
+	s.Equal(1, len(jsonOut.TaskQueues))
 	// Check identity in the output
 	s.Equal(s.DevServer.Options.ClientOptions.Identity, jsonOut.Pollers[0]["identity"])
+
+	// Multiple partitions
+	res = s.Execute(
+		"task-queue", "describe",
+		"-o", "json",
+		"--address", s.Address(),
+		"--task-queue", s.Worker.Options.TaskQueue,
+		"--partitions", "10",
+	)
+	s.NoError(res.Err)
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	s.GreaterOrEqual(10, len(jsonOut.TaskQueues))
 }
