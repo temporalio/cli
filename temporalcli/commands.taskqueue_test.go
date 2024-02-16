@@ -40,8 +40,10 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
 	s.NoError(res.Err)
 	var jsonOut struct {
 		Pollers []map[string]any `json:"pollers"`
+		TaskQueues []map[string]any `json:"taskQueues"`
 	}
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	s.GreaterOrEqual(1, len(jsonOut.TaskQueues))
 	// Check identity in the output
 	s.Equal(s.DevServer.Options.ClientOptions.Identity, jsonOut.Pollers[0]["identity"])
 }
