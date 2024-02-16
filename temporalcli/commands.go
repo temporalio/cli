@@ -293,9 +293,9 @@ func Execute(ctx context.Context, options CommandOptions) {
 	if err != nil {
 		cctx.Options.Fail(err)
 	}
-	// If no command ever actually got run, exit 1
+	// If no command ever actually got run, exit nonzero
 	if !cctx.ActuallyRanCommand {
-		os.Exit(1)
+		cctx.Options.Fail(fmt.Errorf("unknown command"))
 	}
 }
 
