@@ -53,26 +53,30 @@ import (
 
 type StartOptions struct {
 	// Required fields
-	FrontendIP   string
-	FrontendPort int
-	Namespaces   []string
-	Logger       *slog.Logger
-	LogLevel     slog.Level
+	FrontendIP             string
+	FrontendPort           int
+	Namespaces             []string
+	ClusterID              string
+	MasterClusterName      string
+	CurrentClusterName     string
+	InitialFailoverVersion int
+	Logger                 *slog.Logger
+	LogLevel               slog.Level
 
 	// Optional fields
-	UIIP                string // Empty means no UI
-	UIPort              int    // Required if UIIP is non-empty
-	UIAssetPath         string
-	UICodecEndpoint     string
-	DatabaseFile        string
-	MetricsPort         int
-	PProfPort           int
-	SqlitePragmas       map[string]string
-	ClusterID           string
-	FrontendHTTPPort    int
-	DynamicConfigValues map[string]any
-	LogConfig           func([]byte)
-	GRPCInterceptors    []grpc.UnaryServerInterceptor
+	UIIP                  string // Empty means no UI
+	UIPort                int    // Required if UIIP is non-empty
+	UIAssetPath           string
+	UICodecEndpoint       string
+	DatabaseFile          string
+	MetricsPort           int
+	PProfPort             int
+	SqlitePragmas         map[string]string
+	FrontendHTTPPort      int
+	EnableGlobalNamespace bool
+	DynamicConfigValues   map[string]any
+	LogConfig             func([]byte)
+	GRPCInterceptors      []grpc.UnaryServerInterceptor
 }
 
 type Server struct {
@@ -92,6 +96,14 @@ func Start(options StartOptions) (*Server, error) {
 		return nil, fmt.Errorf("missing logger")
 	} else if options.UIIP != "" && options.UIPort == 0 {
 		return nil, fmt.Errorf("must provide UI port if UI IP is provided")
+	} else if options.ClusterID == "" {
+		return nil, fmt.Errorf("missing cluster ID")
+	} else if options.MasterClusterName == "" {
+		return nil, fmt.Errorf("missing master cluster name")
+	} else if options.CurrentClusterName == "" {
+		return nil, fmt.Errorf("missing current cluster name")
+	} else if options.InitialFailoverVersion == 0 {
+		return nil, fmt.Errorf("missing initial failover version")
 	}
 
 	// Build servers
@@ -232,13 +244,14 @@ func (s *StartOptions) buildServerConfig() (*config.Config, error) {
 	// Other config
 	if conf.ClusterMetadata == nil {
 		conf.ClusterMetadata = &cluster.Config{
+			EnableGlobalNamespace:    s.EnableGlobalNamespace,
 			FailoverVersionIncrement: 10,
-			MasterClusterName:        "active",
-			CurrentClusterName:       "active",
+			MasterClusterName:        s.MasterClusterName,
+			CurrentClusterName:       s.CurrentClusterName,
 			ClusterInformation: map[string]cluster.ClusterInformation{
-				"active": {
+				s.CurrentClusterName: {
 					Enabled:                true,
-					InitialFailoverVersion: 1,
+					InitialFailoverVersion: int64(s.InitialFailoverVersion),
 					RPCAddress:             fmt.Sprintf("127.0.0.1:%v", s.FrontendPort),
 					ClusterID:              s.ClusterID,
 				},
@@ -297,7 +310,7 @@ func (s *StartOptions) buildSQLConfig() (*config.SQL, error) {
 	// Create namespaces
 	namespaces := make([]*sqliteschema.NamespaceConfig, len(s.Namespaces))
 	for i, ns := range s.Namespaces {
-		namespaces[i] = sqlite.NewNamespaceConfig("active", ns, false)
+		namespaces[i] = sqlite.NewNamespaceConfig(s.CurrentClusterName, ns, false)
 	}
 	if err := sqliteschema.CreateNamespaces(&conf, namespaces...); err != nil {
 		return nil, fmt.Errorf("failed creating namespaces: %w", err)

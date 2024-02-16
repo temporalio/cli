@@ -171,7 +171,12 @@ type SharedServerSuite struct {
 }
 
 func (s *SharedServerSuite) SetupSuite() {
-	s.DevServer = StartDevServer(s.Suite.T(), DevServerOptions{})
+	s.DevServer = StartDevServer(s.Suite.T(), DevServerOptions{
+		StartOptions: devserver.StartOptions{
+			// Enable for operator cluster commands
+			EnableGlobalNamespace: true,
+		},
+	})
 	// Stop server if we fail later
 	success := false
 	defer func() {
@@ -252,6 +257,19 @@ func StartDevServer(t *testing.T, options DevServerOptions) *DevServer {
 	if len(d.Options.Namespaces) == 0 {
 		d.Options.Namespaces = []string{"default"}
 	}
+	if d.Options.MasterClusterName == "" {
+		d.Options.MasterClusterName = "active"
+	}
+	if d.Options.CurrentClusterName == "" {
+		d.Options.CurrentClusterName = "active"
+	}
+	if d.Options.ClusterID == "" {
+		d.Options.ClusterID = uuid.New().String()
+	}
+	if d.Options.InitialFailoverVersion == 0 {
+		d.Options.InitialFailoverVersion = 1
+	}
+
 	if d.Options.Logger == nil {
 		w := &concurrentWriter{w: &d.logOutput, wLock: &d.logOutputLock}
 		d.Options.Logger = slog.New(slog.NewTextHandler(w, &slog.HandlerOptions{AddSource: true}))
