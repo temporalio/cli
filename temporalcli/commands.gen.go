@@ -356,6 +356,9 @@ func NewTemporalTaskQueueCommand(cctx *CommandContext, parent *TemporalCommand) 
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalTaskQueueDescribeCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalTaskQueueGetBuildIdReachabilityCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalTaskQueueGetBuildIdsCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalTaskQueueUpdateBuildIdsCommand(cctx, &s).Command)
 	s.ClientOptions.buildFlags(cctx, s.Command.PersistentFlags())
 	return &s
 }
@@ -383,6 +386,192 @@ func NewTemporalTaskQueueDescribeCommand(cctx *CommandContext, parent *TemporalT
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
 	s.TaskQueueType = NewStringEnum([]string{"workflow", "activity"}, "workflow")
 	s.Command.Flags().Var(&s.TaskQueueType, "task-queue-type", "Task Queue type. Accepted values: workflow, activity.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalTaskQueueGetBuildIdReachabilityCommand struct {
+	Parent           *TemporalTaskQueueCommand
+	Command          cobra.Command
+	BuildId          []string
+	ReachabilityType StringEnum
+	TaskQueue        []string
+}
+
+func NewTemporalTaskQueueGetBuildIdReachabilityCommand(cctx *CommandContext, parent *TemporalTaskQueueCommand) *TemporalTaskQueueGetBuildIdReachabilityCommand {
+	var s TemporalTaskQueueGetBuildIdReachabilityCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "get-build-id-reachability [flags]"
+	s.Command.Short = "Retrieves information about the reachability of Build IDs on one or more Task Queues."
+	s.Command.Long = "This command can tell you whether or not Build IDs may be used for for new, existing, or closed workflows. Both the '--build-id' and '--task-queue' flags may be specified multiple times. If you do not provide a task queue, reachability for the provided Build IDs will be checked against all task queues."
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringArrayVar(&s.BuildId, "build-id", nil, "Which Build ID to get reachability information for. May be specified multiple times.")
+	s.ReachabilityType = NewStringEnum([]string{"open", "closed", "existing"}, "existing")
+	s.Command.Flags().Var(&s.ReachabilityType, "reachability-type", "Specify how you'd like to filter the reachability of Build IDs. Valid choices are `open` (reachable by one or more open workflows), `closed` (reachable by one or more closed workflows), or `existing` (reachable by either). If a Build ID is reachable by new workflows, that is always reported. Accepted values: open, closed, existing.")
+	s.Command.Flags().StringArrayVarP(&s.TaskQueue, "task-queue", "t", nil, "Which Task Queue(s) to constrain the reachability search to. May be specified multiple times.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalTaskQueueGetBuildIdsCommand struct {
+	Parent    *TemporalTaskQueueCommand
+	Command   cobra.Command
+	TaskQueue string
+	MaxSets   int
+}
+
+func NewTemporalTaskQueueGetBuildIdsCommand(cctx *CommandContext, parent *TemporalTaskQueueCommand) *TemporalTaskQueueGetBuildIdsCommand {
+	var s TemporalTaskQueueGetBuildIdsCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "get-build-ids [flags]"
+	s.Command.Short = "Fetch the sets of worker Build ID versions on the Task Queue."
+	s.Command.Long = "Fetch the sets of compatible build IDs associated with a Task Queue and associated information."
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task queue name.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
+	s.Command.Flags().IntVar(&s.MaxSets, "max-sets", 0, "Limits how many compatible sets will be returned. Specify 1 to only return the current default major version set. 0 returns all sets. (default: 0).")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalTaskQueueUpdateBuildIdsCommand struct {
+	Parent  *TemporalTaskQueueCommand
+	Command cobra.Command
+}
+
+func NewTemporalTaskQueueUpdateBuildIdsCommand(cctx *CommandContext, parent *TemporalTaskQueueCommand) *TemporalTaskQueueUpdateBuildIdsCommand {
+	var s TemporalTaskQueueUpdateBuildIdsCommand
+	s.Parent = parent
+	s.Command.Use = "update-build-ids"
+	s.Command.Short = "Operations to update the sets of worker Build ID versions on the Task Queue."
+	s.Command.Long = "Provides various commands for adding or changing the sets of compatible build IDs associated with a Task Queue. See the help of each sub-command for more."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalTaskQueueUpdateBuildIdsAddNewCompatibleCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalTaskQueueUpdateBuildIdsAddNewDefaultCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalTaskQueueUpdateBuildIdsPromoteIdInSetCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalTaskQueueUpdateBuildIdsPromoteSetCommand(cctx, &s).Command)
+	return &s
+}
+
+type TemporalTaskQueueUpdateBuildIdsAddNewCompatibleCommand struct {
+	Parent                    *TemporalTaskQueueUpdateBuildIdsCommand
+	Command                   cobra.Command
+	BuildId                   string
+	TaskQueue                 string
+	ExistingCompatibleBuildId string
+	SetAsDefault              bool
+}
+
+func NewTemporalTaskQueueUpdateBuildIdsAddNewCompatibleCommand(cctx *CommandContext, parent *TemporalTaskQueueUpdateBuildIdsCommand) *TemporalTaskQueueUpdateBuildIdsAddNewCompatibleCommand {
+	var s TemporalTaskQueueUpdateBuildIdsAddNewCompatibleCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "add-new-compatible [flags]"
+	s.Command.Short = "Add a new build ID compatible with an existing ID to the Task Queue version sets."
+	s.Command.Long = "The new build ID will become the default for the set containing the existing ID. See per-flag help for more."
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "The new build id to be added.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "build-id")
+	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Name of the Task Queue.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
+	s.Command.Flags().StringVar(&s.ExistingCompatibleBuildId, "existing-compatible-build-id", "", "A build id which must already exist in the version sets known by the task queue. The new id will be stored in the set containing this id, marking it as compatible with the versions within.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "existing-compatible-build-id")
+	s.Command.Flags().BoolVar(&s.SetAsDefault, "set-as-default", false, "When set, establishes the compatible set being targeted as the overall default for the queue. If a different set was the current default, the targeted set will replace it as the new default. Defaults to false.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalTaskQueueUpdateBuildIdsAddNewDefaultCommand struct {
+	Parent    *TemporalTaskQueueUpdateBuildIdsCommand
+	Command   cobra.Command
+	BuildId   string
+	TaskQueue string
+}
+
+func NewTemporalTaskQueueUpdateBuildIdsAddNewDefaultCommand(cctx *CommandContext, parent *TemporalTaskQueueUpdateBuildIdsCommand) *TemporalTaskQueueUpdateBuildIdsAddNewDefaultCommand {
+	var s TemporalTaskQueueUpdateBuildIdsAddNewDefaultCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "add-new-default [flags]"
+	s.Command.Short = "Add a new default (incompatible) build ID to the Task Queue version sets."
+	s.Command.Long = "Creates a new build id set which will become the new overall default for the queue with the provided build id as its only member. This new set is incompatible with all previous sets/versions."
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "The new build id to be added.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "build-id")
+	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Name of the Task Queue.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalTaskQueueUpdateBuildIdsPromoteIdInSetCommand struct {
+	Parent    *TemporalTaskQueueUpdateBuildIdsCommand
+	Command   cobra.Command
+	BuildId   string
+	TaskQueue string
+}
+
+func NewTemporalTaskQueueUpdateBuildIdsPromoteIdInSetCommand(cctx *CommandContext, parent *TemporalTaskQueueUpdateBuildIdsCommand) *TemporalTaskQueueUpdateBuildIdsPromoteIdInSetCommand {
+	var s TemporalTaskQueueUpdateBuildIdsPromoteIdInSetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "promote-id-in-set [flags]"
+	s.Command.Short = "Promote an existing build ID to become the default for its containing set."
+	s.Command.Long = "New tasks compatible with the the set will be dispatched to the default id."
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "An existing build id which will be promoted to be the default inside its containing set.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "build-id")
+	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Name of the Task Queue.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalTaskQueueUpdateBuildIdsPromoteSetCommand struct {
+	Parent    *TemporalTaskQueueUpdateBuildIdsCommand
+	Command   cobra.Command
+	BuildId   string
+	TaskQueue string
+}
+
+func NewTemporalTaskQueueUpdateBuildIdsPromoteSetCommand(cctx *CommandContext, parent *TemporalTaskQueueUpdateBuildIdsCommand) *TemporalTaskQueueUpdateBuildIdsPromoteSetCommand {
+	var s TemporalTaskQueueUpdateBuildIdsPromoteSetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "promote-set [flags]"
+	s.Command.Short = "Promote an existing build ID set to become the default for the Task Queue."
+	s.Command.Long = "If the set is already the default, this command has no effect."
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "An existing build id whose containing set will be promoted.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "build-id")
+	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Name of the Task Queue.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

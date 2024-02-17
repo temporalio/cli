@@ -221,6 +221,68 @@ Use the options listed below to modify what this command returns.
 * `--task-queue`, `-t` (string) - Task queue name. Required.
 * `--task-queue-type` (string-enum) - Task Queue type. Options: workflow, activity. Default: workflow.
 
+### temporal task-queue get-build-id-reachability: Retrieves information about the reachability of Build IDs on one or more Task Queues.
+
+This command can tell you whether or not Build IDs may be used for for new, existing, or closed workflows. Both the '--build-id' and '--task-queue' flags may be specified multiple times. If you do not provide a task queue, reachability for the provided Build IDs will be checked against all task queues.
+
+#### Options
+
+* `--build-id` (string[]) - Which Build ID to get reachability information for. May be specified multiple times.
+* `--reachability-type` (string-enum) - Specify how you'd like to filter the reachability of Build IDs. Valid choices are `open` (reachable by one or more open workflows), `closed` (reachable by one or more closed workflows), or `existing` (reachable by either). If a Build ID is reachable by new workflows, that is always reported. Options: open, closed, existing. Default: existing.
+* `--task-queue`, `-t` (string[]) - Which Task Queue(s) to constrain the reachability search to. May be specified multiple times.
+
+### temporal task-queue get-build-ids: Fetch the sets of worker Build ID versions on the Task Queue.
+
+Fetch the sets of compatible build IDs associated with a Task Queue and associated information.
+
+#### Options
+
+* `--task-queue`, `-t` (string) - Task queue name. Required.
+* `--max-sets` (int) - Limits how many compatible sets will be returned. Specify 1 to only return the current default major version set. 0 returns all sets. (default: 0). Default: 0.
+
+### temporal task-queue update-build-ids: Operations to update the sets of worker Build ID versions on the Task Queue.
+
+Provides various commands for adding or changing the sets of compatible build IDs associated with a Task Queue. See the help of each sub-command for more.
+
+### temporal task-queue update-build-ids add-new-compatible: Add a new build ID compatible with an existing ID to the Task Queue version sets.
+
+The new build ID will become the default for the set containing the existing ID. See per-flag help for more.
+
+#### Options
+
+* `--build-id` (string) - The new build id to be added. Required.
+* `--task-queue`, `-t` (string) - Name of the Task Queue. Required.
+* `--existing-compatible-build-id` (string) - A build id which must already exist in the version sets known by the task queue. The new id will be stored in the set containing this id, marking it as compatible with the versions within. Required.
+* `--set-as-default` (bool) - When set, establishes the compatible set being targeted as the overall default for the queue. If a different set was the current default, the targeted set will replace it as the new default. Defaults to false.
+
+### temporal task-queue update-build-ids add-new-default: Add a new default (incompatible) build ID to the Task Queue version sets.
+
+Creates a new build id set which will become the new overall default for the queue with the provided build id as its only member. This new set is incompatible with all previous sets/versions.
+
+#### Options
+
+* `--build-id` (string) - The new build id to be added. Required.
+* `--task-queue`, `-t` (string) - Name of the Task Queue. Required.
+
+### temporal task-queue update-build-ids promote-id-in-set: Promote an existing build ID to become the default for its containing set.
+
+New tasks compatible with the the set will be dispatched to the default id.
+
+#### Options
+
+* `--build-id` (string) - An existing build id which will be promoted to be the default inside its containing set. Required.
+* `--task-queue`, `-t` (string) - Name of the Task Queue. Required.
+
+### temporal task-queue update-build-ids promote-set: Promote an existing build ID set to become the default for the Task Queue.
+
+If the set is already the default, this command has no effect.
+
+#### Options
+
+* `--build-id` (string) - An existing build id whose containing set will be promoted. Required.
+* `--task-queue`, `-t` (string) - Name of the Task Queue. Required.
+
+
 ### temporal workflow: Start, list, and operate on Workflows.
 
 [Workflow](/concepts/what-is-a-workflow) commands perform operations on 
