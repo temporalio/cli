@@ -2,11 +2,15 @@ package temporalcli
 
 import (
 	"fmt"
+	commonpb "go.temporal.io/api/common/v1"
 	"time"
 
 	"github.com/fatih/color"
 	"github.com/temporalio/cli/temporalcli/internal/printer"
 	"go.temporal.io/api/enums/v1"
+	"go.temporal.io/api/taskqueue/v1"
+	"go.temporal.io/api/workflowservice/v1"
+	"go.temporal.io/server/common/tqname"
 )
 
 func (c *TemporalTaskQueueDescribeCommand) run(cctx *CommandContext, args []string) error {
@@ -25,14 +29,60 @@ func (c *TemporalTaskQueueDescribeCommand) run(cctx *CommandContext, args []stri
 	default:
 		return fmt.Errorf("unrecognized task queue type: %q", c.TaskQueueType.Value)
 	}
-	resp, err := cl.DescribeTaskQueue(cctx, c.TaskQueue, taskQueueType)
+
+	taskQueueName, err := tqname.FromBaseName(c.TaskQueue)
 	if err != nil {
-		return fmt.Errorf("failed describing task queue")
+		return fmt.Errorf("failed to parse task queue name: %w", err)
+	}
+	partitions := c.Partitions
+
+	type statusWithPartition struct {
+		Partition int `json:"partition"`
+		taskqueue.TaskQueueStatus
+	}
+	type pollerWithPartition struct {
+		Partition int `json:"partition"`
+		taskqueue.PollerInfo
+		// copy this out to display nicer in table or card, but not json
+		Versioning *commonpb.WorkerVersionCapabilities `json:"-"`
+	}
+
+	var statuses []*statusWithPartition
+	var pollers []*pollerWithPartition
+
+	// TODO: remove this when the server does partition fan-out
+	for p := 0; p < partitions; p++ {
+		resp, err := cl.WorkflowService().DescribeTaskQueue(cctx, &workflowservice.DescribeTaskQueueRequest{
+			Namespace: c.Parent.Namespace,
+			TaskQueue: &taskqueue.TaskQueue{
+				Name: taskQueueName.WithPartition(p).FullName(),
+				Kind: enums.TASK_QUEUE_KIND_NORMAL,
+			},
+			TaskQueueType:          taskQueueType,
+			IncludeTaskQueueStatus: true,
+		})
+		if err != nil {
+			return fmt.Errorf("unable to describe task queue: %w", err)
+		}
+		statuses = append(statuses, &statusWithPartition{
+			Partition:       p,
+			TaskQueueStatus: *resp.TaskQueueStatus,
+		})
+		for _, pi := range resp.Pollers {
+			pollers = append(pollers, &pollerWithPartition{
+				Partition:  p,
+				PollerInfo: *pi,
+				Versioning: pi.WorkerVersionCapabilities,
+			})
+		}
 	}
 
 	// For JSON, we'll just dump the proto
 	if cctx.JSONOutput {
-		return cctx.Printer.PrintStructured(resp, printer.StructuredOptions{})
+		return cctx.Printer.PrintStructured(map[string]any{
+			"taskQueues": statuses,
+			"pollers":    pollers,
+		}, printer.StructuredOptions{})
 	}
 
 	// For text, we will use a table for pollers
@@ -41,8 +91,8 @@ func (c *TemporalTaskQueueDescribeCommand) run(cctx *CommandContext, args []stri
 		Identity       string
 		LastAccessTime time.Time
 		RatePerSecond  float64
-	}, len(resp.Pollers))
-	for i, poller := range resp.Pollers {
+	}, len(pollers))
+	for i, poller := range pollers {
 		items[i].Identity = poller.Identity
 		items[i].LastAccessTime = poller.LastAccessTime.AsTime()
 		items[i].RatePerSecond = poller.RatePerSecond

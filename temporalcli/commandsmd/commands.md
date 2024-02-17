@@ -252,6 +252,7 @@ Use the options listed below to modify what this command returns.
 
 * `--task-queue`, `-t` (string) - Task queue name. Required.
 * `--task-queue-type` (string-enum) - Task Queue type. Options: workflow, activity. Default: workflow.
+* `--partitions` (int) - Query for all partitions up to this number (experimental+temporary feature). Default: 1.
 
 ### temporal task-queue get-build-id-reachability: Retrieves information about the reachability of Build IDs on one or more Task Queues.
 
