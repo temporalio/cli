@@ -2,6 +2,9 @@ package temporalcli_test
 
 import (
 	"encoding/json"
+	"fmt"
+	"math/rand"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -304,6 +307,81 @@ func (s *SharedServerSuite) TestWorkflow_Cancel_SingleWorkflowSuccess() {
 	s.Error(workflow.ErrCanceled, run.Get(s.Context, nil))
 }
 
+func (s *SharedServerSuite) TestWorkflow_Update() {
+	updateName := "test-update"
+
+	s.Worker.OnDevWorkflow(func(ctx workflow.Context, val any) (any, error) {
+		// setup a simple workflow which receives non-negative floats in updates and adds them to a running counter
+		counter, ok := val.(float64)
+		if !ok {
+			return nil, fmt.Errorf("update workflow received non-float input")
+		}
+		err := workflow.SetUpdateHandlerWithOptions(
+			ctx,
+			updateName,
+			func(ctx workflow.Context, i float64) (float64, error) {
+				tmp := counter
+				counter += i
+				workflow.GetLogger(ctx).Info("counter updated", "added", i, "new-value", counter)
+				return tmp, nil
+			},
+			workflow.UpdateHandlerOptions{
+				Validator: func(ctx workflow.Context, i float64) error {
+					if i < 0 {
+						return fmt.Errorf("add value must be non-negative (%v)", i)
+					}
+					return nil
+				}},
+		)
+		if err != nil {
+			return 0, err
+		}
+
+		// wait on a signal to indicate the test is complete
+		if ok := workflow.GetSignalChannel(ctx, "updates-done").Receive(ctx, nil); !ok {
+			return 0, fmt.Errorf("signal channel was closed")
+		}
+		return counter, nil
+	})
+
+	// Start the workflow
+	input := rand.Intn(100)
+	run, err := s.Client.ExecuteWorkflow(
+		s.Context,
+		client.StartWorkflowOptions{TaskQueue: s.Worker.Options.TaskQueue},
+		DevWorkflow,
+		input,
+	)
+	s.NoError(err)
+
+	// Stop the workflow when the test is complete
+	defer func() {
+		err := s.Client.SignalWorkflow(s.Context, run.GetID(), run.GetRunID(), "updates-done", nil)
+		s.NoError(err)
+	}()
+
+	// successful update, should show the result
+	res := s.Execute("workflow", "update", "--address", s.Address(), "-w", run.GetID(), "--name", updateName, "-i", strconv.Itoa(input))
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), strconv.Itoa(input))
+
+	// successful update passing first-execution-run-id
+	res = s.Execute("workflow", "update", "--address", s.Address(), "-w", run.GetID(), "--name", updateName, "-i", strconv.Itoa(input), "--first-execution-run-id", run.GetRunID())
+	s.NoError(res.Err)
+
+	// update rejected, when name is not available
+	res = s.Execute("workflow", "update", "--address", s.Address(), "-w", run.GetID(), "-i", strconv.Itoa(input))
+	s.ErrorContains(res.Err, "required flag(s) \"name\" not set")
+
+	// update rejected, wrong workflowID
+	res = s.Execute("workflow", "update", "--address", s.Address(), "-w", "nonexistent-wf-id", "--name", updateName, "-i", strconv.Itoa(input))
+	s.ErrorContains(res.Err, "unable to update workflow")
+
+	// update rejected, wrong update name
+	res = s.Execute("workflow", "update", "--address", s.Address(), "-w", run.GetID(), "--name", "nonexistent-update-name", "-i", strconv.Itoa(input))
+	s.ErrorContains(res.Err, "unable to update workflow")
+}
+
 func (s *SharedServerSuite) TestWorkflow_Cancel_BatchWorkflowSuccess() {
 	res := s.testCancelBatchWorkflow(false)
 	s.Contains(res.Stdout.String(), "approximately 5 workflow(s)")
@@ -370,4 +448,144 @@ func (s *SharedServerSuite) testCancelBatchWorkflow(json bool) *CommandResult {
 		s.Error(workflow.ErrCanceled, run.Get(s.Context, nil))
 	}
 	return res
+}
+
+func (s *SharedServerSuite) TestWorkflow_Query_SingleWorkflowSuccess() {
+	s.testQueryWorkflow(false)
+}
+
+func (s *SharedServerSuite) TestWorkflow_Query_SingleWorkflowSuccessJSON() {
+	s.testQueryWorkflow(true)
+}
+
+func (s *SharedServerSuite) testQueryWorkflow(json bool) {
+	s.Worker.OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
+		err := workflow.SetQueryHandler(ctx, "my-query", func(arg string) (any, error) {
+			retme := struct {
+				Echo  string `json:"input"`
+				Other string `json:"other"`
+			}{}
+			retme.Echo = arg
+			retme.Other = "yoyo"
+			return retme, nil
+		})
+		if err != nil {
+			return nil, err
+		}
+		return "done", nil
+	})
+
+	// Start the workflow
+	run, err := s.Client.ExecuteWorkflow(
+		s.Context,
+		client.StartWorkflowOptions{TaskQueue: s.Worker.Options.TaskQueue},
+		DevWorkflow,
+		"ignored",
+	)
+	s.NoError(err)
+
+	args := []string{
+		"workflow", "query",
+		"--address", s.Address(),
+		"-w", run.GetID(),
+		"--type", "my-query",
+		"-i", `"hi"`,
+	}
+	if json {
+		args = append(args, "-o", "json")
+	}
+	// Do the query
+	res := s.Execute(args...)
+	s.NoError(res.Err)
+	if json {
+		s.Contains(res.Stdout.String(), `"queryResult"`)
+		s.Contains(res.Stdout.String(), `"input": "hi"`)
+		s.Contains(res.Stdout.String(), `"other": "yoyo"`)
+	} else {
+		s.Contains(res.Stdout.String(), `{"input":"hi","other":"yoyo"}`)
+	}
+
+	s.NoError(run.Get(s.Context, nil))
+
+	// Ensure query is rejected when using not open rejection condition
+	args = []string{
+		"workflow", "query",
+		"--address", s.Address(),
+		"-w", run.GetID(),
+		"--type", "my-query",
+		"-i", `"hi"`,
+		"--reject-condition", "not_open",
+	}
+	if json {
+		args = append(args, "-o", "json")
+	}
+	res = s.Execute(args...)
+	s.Error(res.Err)
+	s.Contains(res.Err.Error(), "query was rejected, workflow has status: Completed")
+}
+
+func (s *SharedServerSuite) TestWorkflow_Stack_SingleWorkflowSuccess() {
+	s.testStackWorkflow(false)
+}
+
+func (s *SharedServerSuite) TestWorkflow_Stack_SingleWorkflowSuccessJSON() {
+	s.testStackWorkflow(true)
+}
+
+func (s *SharedServerSuite) testStackWorkflow(json bool) {
+	// Make workflow wait for signal and then return it
+	s.Worker.OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
+		done := false
+		workflow.Go(ctx, func(ctx workflow.Context) {
+			_ = workflow.Await(ctx, func() bool {
+				return done
+			})
+		})
+		workflow.GetSignalChannel(ctx, "my-signal").Receive(ctx, nil)
+		done = true
+		return nil, nil
+
+	})
+
+	// Start the workflow
+	run, err := s.Client.ExecuteWorkflow(
+		s.Context,
+		client.StartWorkflowOptions{TaskQueue: s.Worker.Options.TaskQueue},
+		DevWorkflow,
+		"ignored",
+	)
+	s.NoError(err)
+
+	args := []string{
+		"workflow", "stack",
+		"--address", s.Address(),
+		"-w", run.GetID(),
+	}
+	if json {
+		args = append(args, "-o", "json")
+	}
+	// Do the query
+	res := s.Execute(args...)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "coroutine root")
+	s.Contains(res.Stdout.String(), "coroutine 2")
+
+	// Unblock the workflow with a signal
+	s.NoError(s.Client.SignalWorkflow(s.Context, run.GetID(), "", "my-signal", nil))
+
+	s.NoError(run.Get(s.Context, nil))
+
+	// Ensure query is rejected when using not open rejection condition
+	args = []string{
+		"workflow", "stack",
+		"--address", s.Address(),
+		"-w", run.GetID(),
+		"--reject-condition", "not_open",
+	}
+	if json {
+		args = append(args, "-o", "json")
+	}
+	res = s.Execute(args...)
+	s.Error(res.Err)
+	s.Contains(res.Err.Error(), "query was rejected, workflow has status: Completed")
 }

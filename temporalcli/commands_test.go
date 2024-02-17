@@ -14,15 +14,20 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"github.com/temporalio/cli/temporalcli"
-	"github.com/temporalio/cli/temporalcli/devserver"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/operatorservice/v1"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
+
+	"github.com/temporalio/cli/temporalcli"
+	"github.com/temporalio/cli/temporalcli/devserver"
+
+	"google.golang.org/grpc"
 )
 
 type CommandHarness struct {
@@ -218,9 +223,13 @@ type DevServer struct {
 	Options DevServerOptions
 	// For first namespace in options
 	Client client.Client
+	// For other services, like the WorkflowService
 
 	logOutput     bytes.Buffer
 	logOutputLock sync.RWMutex
+
+	serverInterceptor     grpc.UnaryServerInterceptor
+	serverInterceptorLock sync.RWMutex
 }
 
 type DevServerOptions struct {
@@ -232,6 +241,7 @@ type DevServerOptions struct {
 
 func StartDevServer(t *testing.T, options DevServerOptions) *DevServer {
 	success := false
+
 	// Build options
 	d := &DevServer{Options: options}
 	if d.Options.FrontendIP == "" {
@@ -270,6 +280,20 @@ func StartDevServer(t *testing.T, options DevServerOptions) *DevServer {
 	d.Options.DynamicConfigValues["frontend.workerVersioningDataAPIs"] = true
 	d.Options.DynamicConfigValues["frontend.workerVersioningWorkflowAPIs"] = true
 	d.Options.DynamicConfigValues["worker.buildIdScavengerEnabled"] = true
+	d.Options.DynamicConfigValues["frontend.enableUpdateWorkflowExecution"] = true
+
+	d.Options.GRPCInterceptors = append(
+		d.Options.GRPCInterceptors,
+		func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
+			d.serverInterceptorLock.RLock()
+			serverInterceptor := d.serverInterceptor
+			d.serverInterceptorLock.RUnlock()
+			if serverInterceptor != nil {
+				return serverInterceptor(ctx, req, info, handler)
+			}
+			return handler(ctx, req)
+		},
+	)
 
 	// Start
 	var err error
@@ -281,7 +305,7 @@ func StartDevServer(t *testing.T, options DevServerOptions) *DevServer {
 		}
 	}()
 
-	// Dial client
+	// Dial sdk client
 	d.Client, err = client.Dial(d.Options.ClientOptions)
 	require.NoError(t, err)
 	defer func() {
@@ -337,6 +361,12 @@ func (d *DevServer) Address() string {
 // Shortcut for d.Options.ClientOptions.Namespace
 func (d *DevServer) Namespace() string {
 	return d.Options.ClientOptions.Namespace
+}
+
+func (d *DevServer) SetServerInterceptor(serverInterceptor grpc.UnaryServerInterceptor) {
+	d.serverInterceptorLock.Lock()
+	defer d.serverInterceptorLock.Unlock()
+	d.serverInterceptor = serverInterceptor
 }
 
 type DevWorker struct {
@@ -434,13 +464,17 @@ func (d *devOperations) DevWorkflow(ctx workflow.Context, input any) (any, error
 	d.worker.devWorkflowLastInput = input
 	callback := d.worker.devWorkflowCallback
 	d.worker.devOpsLock.Unlock()
+	// Set a default retry policy so that logical errors in your test don't hang forever
+	ctx = workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
+		ActivityID:          "dev-activity-id",
+		StartToCloseTimeout: 10 * time.Second,
+		RetryPolicy: &temporal.RetryPolicy{
+			MaximumAttempts: 1,
+		},
+	})
 	if callback != nil {
 		return callback(ctx, input)
 	}
-	ctx = workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
-		StartToCloseTimeout: 10 * time.Second,
-		ActivityID:          "dev-activity-id",
-	})
 	var res any
 	err := workflow.ExecuteActivity(ctx, DevActivity, input).Get(ctx, &res)
 	return res, err
@@ -465,4 +499,10 @@ func (w *concurrentWriter) Write(p []byte) (n int, err error) {
 	w.wLock.Lock()
 	defer w.wLock.Unlock()
 	return w.w.Write(p)
+}
+
+func TestUnknownCommandExitsNonzero(t *testing.T) {
+	commandHarness := NewCommandHarness(t)
+	res := commandHarness.Execute("blerkflow")
+	assert.Contains(t, res.Err.Error(), "unknown command")
 }

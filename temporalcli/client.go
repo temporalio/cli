@@ -14,7 +14,9 @@ import (
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/log"
+
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
 func (c *ClientOptions) dialClient(cctx *CommandContext) (client.Client, error) {
@@ -53,6 +55,14 @@ func (c *ClientOptions) dialClient(cctx *CommandContext) (client.Client, error) 
 			clientOptions.ConnectionOptions.DialOptions, grpc.WithChainUnaryInterceptor(interceptor))
 	}
 
+	// Fixed header overrides
+	clientOptions.ConnectionOptions.DialOptions = append(
+		clientOptions.ConnectionOptions.DialOptions, grpc.WithChainUnaryInterceptor(fixedHeaderOverrideInterceptor))
+
+	// Additional gRPC options
+	clientOptions.ConnectionOptions.DialOptions = append(
+		clientOptions.ConnectionOptions.DialOptions, cctx.Options.AdditionalClientGRPCDialOptions...)
+
 	// TLS
 	var err error
 	if clientOptions.ConnectionOptions.TLS, err = c.tlsConfig(); err != nil {
@@ -90,6 +100,25 @@ func (c *ClientOptions) tlsConfig() (*tls.Config, error) {
 		}
 	}
 	return conf, nil
+}
+
+func fixedHeaderOverrideInterceptor(
+	ctx context.Context,
+	method string, req, reply any,
+	cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption,
+) error {
+	// The SDK sets some values on the outgoing metadata that we can't override
+	// via normal headers, so we have to replace directly on the metadata
+	md, _ := metadata.FromOutgoingContext(ctx)
+	if md == nil {
+		md = metadata.MD{}
+	}
+	md.Set("client-name", "temporal-cli")
+	md.Set("client-version", Version)
+	md.Set("supported-server-versions", ">=1.0.0 <2.0.0")
+	md.Set("caller-type", "operator")
+	ctx = metadata.NewOutgoingContext(ctx, md)
+	return invoker(ctx, method, req, reply, cc, opts...)
 }
 
 func payloadCodecInterceptor(namespace, codecEndpoint, codecAuth string) (grpc.UnaryClientInterceptor, error) {

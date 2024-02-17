@@ -24,6 +24,7 @@ import (
 	"go.temporal.io/api/failure/v1"
 	"go.temporal.io/api/temporalproto"
 	"go.temporal.io/server/common/headers"
+	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"gopkg.in/yaml.v3"
@@ -45,6 +46,10 @@ type CommandContext struct {
 	Logger                *slog.Logger
 	JSONOutput            bool
 	JSONShorthandPayloads bool
+
+	// Is set to true if any command actually started running. This is a hack to workaround the fact
+	// that cobra does not properly exit nonzero if an unknown command/subcommand is given.
+	ActuallyRanCommand bool
 }
 
 type CommandOptions struct {
@@ -67,6 +72,8 @@ type CommandOptions struct {
 
 	// Defaults to logging error then os.Exit(1)
 	Fail func(error)
+
+	AdditionalClientGRPCDialOptions []grpc.DialOption
 }
 
 func NewCommandContext(ctx context.Context, options CommandOptions) (*CommandContext, context.CancelFunc, error) {
@@ -286,6 +293,10 @@ func Execute(ctx context.Context, options CommandOptions) {
 	if err != nil {
 		cctx.Options.Fail(err)
 	}
+	// If no command ever actually got run, exit nonzero
+	if !cctx.ActuallyRanCommand {
+		cctx.Options.Fail(fmt.Errorf("unknown command"))
+	}
 }
 
 func (c *TemporalCommand) initCommand(cctx *CommandContext) {
@@ -305,7 +316,15 @@ func (c *TemporalCommand) initCommand(cctx *CommandContext) {
 		if c.Color.Value == "never" || c.Color.Value == "always" {
 			color.NoColor = c.Color.Value == "never"
 		}
-		return c.preRun(cctx)
+
+		res := c.preRun(cctx)
+
+		// Always disable color if JSON output is on (must be run after preRun so JSONOutput is set)
+		if cctx.JSONOutput {
+			color.NoColor = true
+		}
+		cctx.ActuallyRanCommand = true
+		return res
 	}
 	c.Command.PersistentPostRun = func(*cobra.Command, []string) {
 		color.NoColor = origNoColor

@@ -52,6 +52,7 @@ func (c *TemporalWorkflowExecuteCommand) run(cctx *CommandContext, args []string
 			workflowID:     run.GetID(),
 			runID:          run.GetRunID(),
 			includeDetails: c.EventDetails,
+			follow: true,
 		}
 		if err := iter.print(cctx.Printer); err != nil && cctx.Err() == nil {
 			return fmt.Errorf("displaying history failed: %w", err)
@@ -165,6 +166,9 @@ func printTextResult(
 	closeEvent *history.HistoryEvent,
 	duration time.Duration,
 ) error {
+	if closeEvent == nil {
+		return nil
+	}
 	cctx.Printer.Println(color.MagentaString("Results:"))
 	result := struct {
 		RunTime string `cli:",cardOmitEmpty"`
@@ -248,6 +252,7 @@ func (w *WorkflowStartOptions) buildStartOptions() (client.StartWorkflowOptions,
 		WorkflowTaskTimeout:                      w.TaskTimeout,
 		CronSchedule:                             w.Cron,
 		WorkflowExecutionErrorWhenAlreadyStarted: w.FailExisting,
+		StartDelay:                               w.StartDelay,
 	}
 	if w.IdReusePolicy != "" {
 		var err error
@@ -358,6 +363,10 @@ type structuredHistoryIter struct {
 	workflowID     string
 	runID          string
 	includeDetails bool
+	// If set true, long poll the history for updates
+	follow bool
+	// If and when the iterator encounters a workflow-terminating event, it will store it here
+	wfResult *history.HistoryEvent
 
 	// Internal
 	iter client.HistoryEventIterator
@@ -387,18 +396,13 @@ type structuredHistoryEvent struct {
 var structuredHistoryEventType = reflect.TypeOf(structuredHistoryEvent{})
 
 func (s *structuredHistoryIter) Next() (any, error) {
-	// Load iter
-	if s.iter == nil {
-		s.iter = s.client.GetWorkflowHistory(s.ctx, s.workflowID, s.runID, true, enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
-	}
-	if !s.iter.HasNext() {
-		return nil, nil
-	}
-	event, err := s.iter.Next()
+	event, err := s.NextRawEvent()
 	if err != nil {
 		return nil, err
 	}
-
+	if event == nil {
+		return nil, nil
+	}
 	// Build data
 	data := structuredHistoryEvent{
 		ID:   event.EventId,
@@ -421,4 +425,34 @@ func (s *structuredHistoryIter) Next() (any, error) {
 		s.iter = nil
 	}
 	return data, nil
+}
+
+func (s *structuredHistoryIter) NextRawEvent() (*history.HistoryEvent, error) {
+	// Load iter
+	if s.iter == nil {
+		s.iter = s.client.GetWorkflowHistory(
+			s.ctx, s.workflowID, s.runID, s.follow, enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
+	}
+	if !s.iter.HasNext() {
+		return nil, nil
+	}
+	event, err := s.iter.Next()
+	if err != nil {
+		return nil, err
+	}
+	if isWorkflowTerminatingEvent(event.EventType) {
+		s.wfResult = event
+	}
+	return event, nil
+}
+
+func isWorkflowTerminatingEvent(t enums.EventType) bool {
+	switch t {
+	case enums.EVENT_TYPE_WORKFLOW_EXECUTION_COMPLETED,
+		enums.EVENT_TYPE_WORKFLOW_EXECUTION_FAILED,
+		enums.EVENT_TYPE_WORKFLOW_EXECUTION_TIMED_OUT,
+		enums.EVENT_TYPE_WORKFLOW_EXECUTION_CANCELED:
+		return true
+	}
+	return false
 }
