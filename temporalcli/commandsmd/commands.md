@@ -209,6 +209,32 @@ Cluster commands follow this syntax: `temporal operator cluster [command] [comma
 * `--frontend-address` (string) - IP address to bind the frontend service to. Required.
 * `--enable-connection` (bool) - enable cross cluster connection.
 
+### temporal operator search-attribute: Operations applying to Search Attributes
+
+Search Attribute commands enable operations for the creation, listing, and removal of Search Attributes.
+
+### temporal operator search-attribute create: Adds one or more custom Search Attributes
+
+`temporal operator search-attribute create` command adds one or more custom Search Attributes.
+
+#### Options
+
+* `--name` (string[]) - Search Attribute name. Required.
+* `--type` (string[]) - Search Attribute type. Options: Text, Keyword, Int, Double, Bool, Datetime, KeywordList. Required.
+
+### temporal operator search-attribute list: Lists all Search Attributes that can be used in list Workflow Queries
+
+`temporal operator search-attribute list` displays a list of all Search Attributes.
+
+### temporal operator search-attribute remove: Removes custom search attribute metadata only
+
+`temporal operator search-attribute remove` command removes custom Search Attribute metadata.
+
+#### Options
+
+* `--name` (string[]) - Search Attribute name. Required.
+* `--yes`, `-y` (bool) - Confirm prompt to perform deletion.
+
 ### temporal server: Run Temporal Server.
 
 Start a development version of [Temporal Server](/concepts/what-is-the-temporal-server):
