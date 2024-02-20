@@ -14,13 +14,17 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 	}
 	// Prepare options
 	opts := devserver.StartOptions{
-		FrontendIP:       t.Ip,
-		FrontendPort:     t.Port,
-		Namespaces:       append([]string{"default"}, t.Namespace...),
-		Logger:           cctx.Logger,
-		DatabaseFile:     t.DbFilename,
-		MetricsPort:      t.MetricsPort,
-		FrontendHTTPPort: t.HttpPort,
+		FrontendIP:             t.Ip,
+		FrontendPort:           t.Port,
+		Namespaces:             append([]string{"default"}, t.Namespace...),
+		Logger:                 cctx.Logger,
+		DatabaseFile:           t.DbFilename,
+		MetricsPort:            t.MetricsPort,
+		FrontendHTTPPort:       t.HttpPort,
+		ClusterID:              uuid.NewString(),
+		MasterClusterName:      "active",
+		CurrentClusterName:     "active",
+		InitialFailoverVersion: 1,
 	}
 	if t.LogLevelServer.Value == "never" {
 		opts.LogLevel = 100

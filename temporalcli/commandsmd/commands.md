@@ -180,9 +180,34 @@ Cluster commands follow this syntax: `temporal operator cluster [command] [comma
 
 `temporal operator cluster health` command checks the health of the Frontend Service.
 
+### temporal operator cluster list: List all clusters
+
+`temporal operator cluster list` command prints a list of all remote Clusters on the system.
+
+#### Options
+
+* `--limit` (int) - Limit the number of items to print.
+
+### temporal operator cluster remove: Remove a cluster
+
+`temporal operator cluster remove` command removes a remote Cluster from the system.
+
+#### Options
+
+* `--name` (string) - Name of cluster. Required.
+
 ### temporal operator cluster system: Provide system info
 
 `temporal operator cluster system` command provides information about the system the Cluster is running on. This information can be used to diagnose problems occurring in the Temporal Server.
+
+### temporal operator cluster upsert: Add a remote
+
+`temporal operator cluster upsert` command allows the user to add or update a remote Cluster. 
+
+#### Options
+
+* `--frontend-address` (string) - IP address to bind the frontend service to. Required.
+* `--enable-connection` (bool) - enable cross cluster connection.
 
 ### temporal server: Run Temporal Server.
 
