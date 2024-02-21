@@ -6,12 +6,13 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"google.golang.org/protobuf/encoding/protojson"
 	"net/http/httptest"
 	"os"
 	"strconv"
 	"sync"
 	"time"
+
+	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/google/uuid"
 	"go.temporal.io/api/common/v1"
@@ -366,9 +367,7 @@ func (s *SharedServerSuite) TestWorkflow_Execute_ProtoJSON_Input() {
 	)
 	out := res.Stdout.String()
 	s.ContainsOnSameLine(out, "Status", "COMPLETED")
-	// TODO: Currently the workflow result fails to get stringified properly. Looks to be some issue
-	//   in the protojson marshaller from the api-go repo not understanding `json/protobuf` encoding
-	//s.Contains(out, "enchi")
+	s.Contains(out, "enchi")
 }
 
 func (s *SharedServerSuite) TestWorkflow_Failure_On_Start() {
