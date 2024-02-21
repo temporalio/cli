@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/temporalio/cli/temporalcli"
@@ -11,10 +12,6 @@ import (
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/workflow"
 )
-
-// TODO(cretz): To test:
-// * Workflow list
-// * Workflow describe with just auto-reset points
 
 func (s *SharedServerSuite) TestWorkflow_Describe_ActivityFailing() {
 	// Set activity to just continually error
@@ -105,6 +102,45 @@ func (s *SharedServerSuite) TestWorkflow_Describe_Completed() {
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
 	s.NotNil(jsonOut["closeEvent"])
 	s.Equal(map[string]any{"foo": "bar"}, jsonOut["result"])
+}
+
+func (s *SharedServerSuite) TestWorkflow_Describe_ResetPoints() {
+	// Start the workflow and wait until it has at least reached activity failure
+	run, err := s.Client.ExecuteWorkflow(
+		s.Context,
+		client.StartWorkflowOptions{TaskQueue: s.Worker.Options.TaskQueue},
+		DevWorkflow,
+		map[string]string{"foo": "bar"},
+	)
+	s.NoError(err)
+	s.NoError(run.Get(s.Context, nil))
+
+	// Text
+	res := s.Execute(
+		"workflow", "describe",
+		"--address", s.Address(),
+		"-w", run.GetID(),
+		"--reset-points",
+	)
+	s.NoError(res.Err)
+	out := res.Stdout.String()
+	s.NotContains(out, "Status")
+	s.NotContains(out, "Result")
+	s.Contains(out, "Auto Reset Points")
+
+	// JSON
+	res = s.Execute(
+		"workflow", "describe",
+		"-o", "json",
+		"--address", s.Address(),
+		"-w", run.GetID(),
+		"--reset-points",
+	)
+	s.NoError(res.Err)
+	var jsonOut []map[string]any
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	s.NotNil(jsonOut[0])
+	s.NotNil(jsonOut[0]["EventId"])
 }
 
 func (s *SharedServerSuite) TestWorkflow_Show_Follow() {
@@ -251,4 +287,44 @@ func (s *SharedServerSuite) TestWorkflow_Show_JSON() {
 	s.Contains(out, `"events": [`)
 	s.Contains(out, `"signalName": "my-signal"`)
 	s.NotContains(out, "Results:")
+}
+
+func (s *SharedServerSuite) TestWorkflow_List() {
+	s.Worker.OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
+		return a, nil
+	})
+
+	// Start the workflow
+	for i := 0; i < 3; i++ {
+		run, err := s.Client.ExecuteWorkflow(
+			s.Context,
+			client.StartWorkflowOptions{TaskQueue: s.Worker.Options.TaskQueue},
+			DevWorkflow,
+			strconv.Itoa(i),
+		)
+		s.NoError(err)
+		s.NoError(run.Get(s.Context, nil))
+	}
+
+	res := s.Execute(
+		"workflow", "list",
+		"--address", s.Address(),
+		"--query", fmt.Sprintf(`TaskQueue="%s"`, s.Worker.Options.TaskQueue),
+	)
+	s.NoError(res.Err)
+	out := res.Stdout.String()
+	s.ContainsOnSameLine(out, "Completed", "DevWorkflow")
+
+	// JSON
+	res = s.Execute(
+		"workflow", "list",
+		"--address", s.Address(),
+		"--query", fmt.Sprintf(`TaskQueue="%s"`, s.Worker.Options.TaskQueue),
+		"-o", "json",
+	)
+	s.NoError(res.Err)
+	// Output is currently a series of JSON objects
+	out = res.Stdout.String()
+	s.ContainsOnSameLine(out, "name", "DevWorkflow")
+	s.ContainsOnSameLine(out, "status", "WORKFLOW_EXECUTION_STATUS_COMPLETED")
 }
