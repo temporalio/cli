@@ -192,7 +192,7 @@ func (s *SharedServerSuite) TestBatchJob_Terminate() {
 				"--reason", "testing")
 			s.NoError(res.Err)
 			s.Empty(res.Stderr.String())
-			s.Equal("terminated Batch Job '"+jobId+"'\n", res.Stdout.String())
+			s.Equal("Terminated Batch Job '"+jobId+"'\n", res.Stdout.String())
 		})
 
 		t.Run("as json", func(t *testing.T) {
