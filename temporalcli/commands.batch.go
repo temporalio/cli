@@ -151,7 +151,7 @@ func (c TemporalBatchTerminateCommand) run(cctx *CommandContext, args []string) 
 		return fmt.Errorf("failed to terminate batch job: %w", err)
 	}
 
-	cctx.Printer.Printlnf("terminated Batch Job '%v'", c.JobId)
+	cctx.Printer.Printlnf("Terminated Batch Job '%v'", c.JobId)
 
 	return nil
 }
