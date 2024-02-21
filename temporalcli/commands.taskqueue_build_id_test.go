@@ -1,7 +1,9 @@
 package temporalcli_test
 
 import (
+	"cmp"
 	"encoding/json"
+	"slices"
 
 	"github.com/google/uuid"
 )
@@ -154,6 +156,11 @@ func (s *SharedServerSuite) TestTaskQueue_BuildId() {
 
 	var jsonReachOut []rowReachType
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonReachOut))
+
+	// Output ordering does not need to match `build-id` input array order
+	slices.SortFunc(jsonReachOut, func(a, b rowReachType) int {
+		return cmp.Compare(a.BuildId, b.BuildId)
+	})
 
 	s.Equal([]rowReachType{
 		rowReachType{
