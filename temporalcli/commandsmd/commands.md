@@ -464,21 +464,23 @@ temporal workflow reset --workflow-id=meaningful-business-id --type=LastContinue
 ```
 temporal workflow reset --workflow-id=meaningful-business-id --event-id=MyLastEvent
 ```
-
+For batch reset only FirstWorkflowTask, LastWorkflowTask or BuildId can be used. Workflow Id, run Id and event Id 
+should not be set.
 Use the options listed below to change reset behavior.
 
 #### Options
 
-* `--workflow-id`, `-w` (string) - Workflow Id. Required.
+* `--workflow-id`, `-w` (string) - Workflow Id.
 * `--run-id`, `-r` (string) - Run Id.
 * `--event-id`, `-e` (int) - The Event Id for any Event after `WorkflowTaskStarted` you want to reset to (exclusive). It can be `WorkflowTaskCompleted`, `WorkflowTaskFailed` or others.
 * `--reason` (string) - The reason why this workflow is being reset. Required.
 * `--reapply-type` (string-enum) - Event types to reapply after the reset point. Options: All, Signal, None. Default: All.
-* `--type`, `-t` (string-enum) - Event type to which you want to reset. Options: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew.
+* `--type`, `-t` (string-enum) - Event type to which you want to reset. Options: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew, BuildId.
+* `--build-id` (string) - Only used if type is BuildId. Reset the first workflow task processed by this build id. Note that by default, this reset is allowed to be to a prior run in a chain of continue-as-new.
+* `--query`, `-q` (string) - Start a batch reset to operate on Workflow Executions with given List Filter.
+* `--yes`, `-y` (bool) - Confirm prompt to perform batch. Only allowed if query is present.
 
-### temporal workflow reset-batch: Reset a batch of Workflow Executions by reset type.
 
-TODO
 
 ### temporal workflow show: Show Event History for a Workflow Execution.
 

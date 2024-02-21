@@ -5,23 +5,68 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/temporalio/cli/temporalcli/internal/printer"
+	"github.com/google/uuid"
+	"go.temporal.io/api/batch/v1"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
+
+	"github.com/temporalio/cli/temporalcli/internal/printer"
 )
 
 func (c *TemporalWorkflowResetCommand) run(cctx *CommandContext, _ []string) error {
-	if c.Type.Value == "" && c.EventId <= 0 {
-		return errors.New("must specify either valid event id or reset type")
+	validateArguments, doReset := c.getResetOperations()
+	if err := validateArguments(); err != nil {
+		return err
 	}
 	cl, err := c.Parent.ClientOptions.dialClient(cctx)
 	if err != nil {
 		return err
 	}
 	defer cl.Close()
+	return doReset(cctx, cl)
+}
 
+func (c *TemporalWorkflowResetCommand) getResetOperations() (validate func() error, doReset func(*CommandContext, client.Client) error) {
+	if c.WorkflowId != "" {
+		validate = c.validateWorkflowResetArguments
+		doReset = c.doWorkflowReset
+	} else {
+		validate = c.validateBatchResetArguments
+		doReset = c.runBatchReset
+	}
+	return validate, doReset
+}
+
+func (c *TemporalWorkflowResetCommand) validateWorkflowResetArguments() error {
+	if c.Type.Value == "" && c.EventId <= 0 {
+		return errors.New("must specify either valid event id or reset type")
+	}
+	if c.WorkflowId == "" {
+		return errors.New("must specify workflow id")
+	}
+	return nil
+}
+
+func (c *TemporalWorkflowResetCommand) validateBatchResetArguments() error {
+	if c.Type.Value == "" {
+		return errors.New("must specify reset type")
+	}
+	if c.RunId != "" {
+		return errors.New("must not specify run Id")
+	}
+	if c.EventId != 0 {
+		return errors.New("must not specify event Id")
+	}
+	if c.Type.Value == "BuildId" && c.BuildId == "" {
+		return errors.New("must specify build Id for BuildId based batch reset")
+	}
+	return nil
+}
+func (c *TemporalWorkflowResetCommand) doWorkflowReset(cctx *CommandContext, cl client.Client) error {
+
+	var err error
 	resetBaseRunID := c.RunId
 	eventID := int64(c.EventId)
 	if c.Type.Value != "" {
@@ -60,6 +105,56 @@ func (c *TemporalWorkflowResetCommand) run(cctx *CommandContext, _ []string) err
 			printer.StructuredOptions{})
 	}
 	return nil
+}
+
+func (c *TemporalWorkflowResetCommand) runBatchReset(cctx *CommandContext, cl client.Client) error {
+	request := workflowservice.StartBatchOperationRequest{
+		Namespace:       c.Parent.Namespace,
+		JobId:           uuid.NewString(),
+		VisibilityQuery: c.Query,
+		Reason:          c.Reason,
+	}
+	request.Operation = &workflowservice.StartBatchOperationRequest_ResetOperation{
+		ResetOperation: &batch.BatchOperationReset{
+			Identity: clientIdentity(),
+			Options:  c.batchResetOptions(c.Type.Value),
+		},
+	}
+	count, err := cl.CountWorkflow(cctx, &workflowservice.CountWorkflowExecutionsRequest{Query: c.Query})
+	if err != nil {
+		return fmt.Errorf("failed counting workflows from query: %w", err)
+	}
+	yes, err := cctx.promptYes(
+		fmt.Sprintf("Start batch against approximately %v workflow(s)? y/N", count.Count), c.Yes)
+	if err != nil {
+		return err
+	}
+	if !yes {
+		return fmt.Errorf("user denied confirmation")
+	}
+
+	return startBatchJob(cctx, cl, &request)
+}
+
+func (c *TemporalWorkflowResetCommand) batchResetOptions(resetType string) *common.ResetOptions {
+	switch resetType {
+	case "FirstWorkflowTask":
+		return &common.ResetOptions{
+			Target: &common.ResetOptions_FirstWorkflowTask{},
+		}
+	case "LastWorkflowTask":
+		return &common.ResetOptions{
+			Target: &common.ResetOptions_LastWorkflowTask{},
+		}
+	case "BuildId":
+		return &common.ResetOptions{
+			Target: &common.ResetOptions_BuildId{
+				BuildId: c.BuildId,
+			},
+		}
+	default:
+		panic("unsupported operation type was filtered by cli framework")
+	}
 }
 
 func (c *TemporalWorkflowResetCommand) getResetEventIDByType(ctx context.Context, cl client.Client) (string, int64, error) {

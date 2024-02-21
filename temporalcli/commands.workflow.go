@@ -7,13 +7,14 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/google/uuid"
-	"github.com/temporalio/cli/temporalcli/internal/printer"
 	"go.temporal.io/api/batch/v1"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/query/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
+
+	"github.com/temporalio/cli/temporalcli/internal/printer"
 )
 
 func (c *TemporalWorkflowCancelCommand) run(cctx *CommandContext, args []string) error {
@@ -56,10 +57,6 @@ func (*TemporalWorkflowDeleteCommand) run(*CommandContext, []string) error {
 func (c *TemporalWorkflowQueryCommand) run(cctx *CommandContext, args []string) error {
 	return queryHelper(cctx, c.Parent, c.PayloadInputOptions,
 		c.Type, c.RejectCondition, c.WorkflowReferenceOptions)
-}
-
-func (*TemporalWorkflowResetBatchCommand) run(*CommandContext, []string) error {
-	return fmt.Errorf("TODO")
 }
 
 func (c *TemporalWorkflowSignalCommand) run(cctx *CommandContext, args []string) error {
