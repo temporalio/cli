@@ -2,6 +2,8 @@ module github.com/temporalio/cli
 
 go 1.21
 
+replace go.temporal.io/api => go.temporal.io/api v1.26.1-0.20240123194300-5b253c84a3cc
+
 require (
 	github.com/dustin/go-humanize v1.0.1
 	github.com/fatih/color v1.16.0
@@ -13,8 +15,8 @@ require (
 	github.com/stretchr/testify v1.8.4
 	github.com/temporalio/ui-server/v2 v2.23.1-0.20240212143757-2e990617b977
 	go.temporal.io/api v1.26.2-0.20231129165614-630d88440548
-	go.temporal.io/sdk v1.25.2-0.20231204212658-5fdbecc56c8c
-	go.temporal.io/server v1.23.0-rc2.0.20231212000105-51ea367f9f37
+	go.temporal.io/sdk v1.25.2-0.20240108174654-c1744ee2c8cb
+	go.temporal.io/server v1.23.0-rc9
 	google.golang.org/grpc v1.61.0
 	google.golang.org/protobuf v1.32.0
 	gopkg.in/yaml.v3 v3.0.1
