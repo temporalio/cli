@@ -3,7 +3,6 @@ package temporalcli_test
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -21,7 +20,7 @@ func (s *SharedServerSuite) TestBatchJob_Describe() {
 				"batch", "describe",
 				"--address", s.Address(),
 				"--job-id", "not-found")
-			s.Error(res.Err, errors.New("could not find Batch Job 'not-found'"))
+			s.EqualError(res.Err, "could not find Batch Job 'not-found'")
 		})
 
 		t.Run("as json", func(t *testing.T) {
@@ -30,7 +29,7 @@ func (s *SharedServerSuite) TestBatchJob_Describe() {
 				"--address", s.Address(),
 				"--job-id", "not-found",
 				"-o", "json")
-			s.Error(res.Err, errors.New("could not find Batch Job 'not-found'"))
+			s.EqualError(res.Err, "could not find Batch Job 'not-found'")
 		})
 	})
 
@@ -167,7 +166,7 @@ func (s *SharedServerSuite) TestBatchJob_Terminate() {
 				"--address", s.Address(),
 				"--job-id", "not-found",
 				"--reason", "testing")
-			s.Error(res.Err, errors.New("could not find Batch Job 'not-found'"))
+			s.EqualError(res.Err, "could not find Batch Job 'not-found'")
 		})
 
 		t.Run("as json", func(t *testing.T) {
@@ -177,7 +176,7 @@ func (s *SharedServerSuite) TestBatchJob_Terminate() {
 				"--job-id", "not-found",
 				"--reason", "testing",
 				"-o", "json")
-			s.Error(res.Err, errors.New("could not find Batch Job 'not-found'"))
+			s.EqualError(res.Err, "could not find Batch Job 'not-found'")
 		})
 	})
 
