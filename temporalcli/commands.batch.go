@@ -9,6 +9,7 @@ import (
 	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type (
@@ -16,7 +17,7 @@ type (
 		State          string
 		Type           string
 		StartTime      time.Time
-		CloseTime      time.Time
+		CloseTime      time.Time `cli:",cardOmitEmpty"`
 		CompletedCount string
 		FailureCount   string
 	}
@@ -53,8 +54,8 @@ func (c TemporalBatchDescribeCommand) run(cctx *CommandContext, args []string) e
 	_ = cctx.Printer.PrintStructured(batchDescribe{
 		Type:           resp.OperationType.String(),
 		State:          resp.State.String(),
-		StartTime:      resp.StartTime.AsTime(),
-		CloseTime:      resp.CloseTime.AsTime(),
+		StartTime:      toTime(resp.StartTime),
+		CloseTime:      toTime(resp.CloseTime),
 		CompletedCount: fmt.Sprintf("%d/%d", resp.CompleteOperationCount, resp.TotalOperationCount),
 		FailureCount:   fmt.Sprintf("%d/%d", resp.FailureOperationCount, resp.TotalOperationCount),
 	}, printer.StructuredOptions{})
@@ -99,8 +100,8 @@ func (c TemporalBatchListCommand) run(cctx *CommandContext, args []string) error
 				textTable = append(textTable, batchTableRow{
 					JobId:     job.JobId,
 					State:     job.State.String(),
-					StartTime: job.StartTime.AsTime(),
-					CloseTime: job.CloseTime.AsTime(),
+					StartTime: toTime(job.StartTime),
+					CloseTime: toTime(job.CloseTime),
 				})
 			}
 		}
@@ -154,4 +155,13 @@ func (c TemporalBatchTerminateCommand) run(cctx *CommandContext, args []string) 
 	cctx.Printer.Printlnf("Terminated Batch Job '%v'", c.JobId)
 
 	return nil
+}
+
+// Converts the timestamp to Go's native time.Time.
+// Returns the zero time.Time value for nil timestamp.
+func toTime(timestamp *timestamppb.Timestamp) (t time.Time) {
+	if timestamp != nil {
+		t = timestamp.AsTime()
+	}
+	return
 }
