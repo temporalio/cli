@@ -6,8 +6,8 @@ import (
 	"go.temporal.io/sdk/client"
 )
 
-func updateBuildIds(cctx *CommandContext, parent *TemporalTaskQueueCommand, options *client.UpdateWorkerBuildIdCompatibilityOptions) error {
-	cl, err := parent.ClientOptions.dialClient(cctx)
+func (c *TemporalTaskQueueUpdateBuildIdsCommand) updateBuildIds(cctx *CommandContext, options *client.UpdateWorkerBuildIdCompatibilityOptions) error {
+	cl, err := c.Parent.ClientOptions.dialClient(cctx)
 	if err != nil {
 		return err
 	}
@@ -28,7 +28,7 @@ func (c *TemporalTaskQueueUpdateBuildIdsAddNewDefaultCommand) run(cctx *CommandC
 			BuildID: c.BuildId,
 		},
 	}
-	err := updateBuildIds(cctx, c.Parent.Parent, options)
+	err := c.Parent.updateBuildIds(cctx, options)
 	if err != nil {
 		return err
 	}
@@ -44,7 +44,7 @@ func (c *TemporalTaskQueueUpdateBuildIdsAddNewCompatibleCommand) run(cctx *Comma
 			MakeSetDefault:            c.SetAsDefault,
 		},
 	}
-	err := updateBuildIds(cctx, c.Parent.Parent, options)
+	err := c.Parent.updateBuildIds(cctx, options)
 	if err != nil {
 		return err
 	}
@@ -58,7 +58,7 @@ func (c *TemporalTaskQueueUpdateBuildIdsPromoteSetCommand) run(cctx *CommandCont
 			BuildID: c.BuildId,
 		},
 	}
-	err := updateBuildIds(cctx, c.Parent.Parent, options)
+	err := c.Parent.updateBuildIds(cctx, options)
 	if err != nil {
 		return err
 	}
@@ -72,7 +72,7 @@ func (c *TemporalTaskQueueUpdateBuildIdsPromoteIdInSetCommand) run(cctx *Command
 			BuildID: c.BuildId,
 		},
 	}
-	err := updateBuildIds(cctx, c.Parent.Parent, options)
+	err := c.Parent.updateBuildIds(cctx, options)
 	if err != nil {
 		return err
 	}

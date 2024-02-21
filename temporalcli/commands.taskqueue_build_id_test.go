@@ -52,9 +52,9 @@ func (s *SharedServerSuite) TestTaskQueue_BuildId() {
 	)
 	s.NoError(res.Err)
 	type rowType struct {
-		BuildIds      []string
-		DefaultForSet string
-		IsDefaultSet  bool
+		BuildIds      []string `json:"buildIds"`
+		DefaultForSet string   `json:"defaultForSet"`
+		IsDefaultSet  bool     `json:"isDefaultSet"`
 	}
 	var jsonOut []rowType
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
@@ -147,9 +147,9 @@ func (s *SharedServerSuite) TestTaskQueue_BuildId() {
 
 	s.NoError(res.Err)
 	type rowReachType struct {
-		BuildId      string
-		TaskQueue    string
-		Reachability []string
+		BuildId      string   `json:"buildId"`
+		TaskQueue    string   `json:"taskQueue"`
+		Reachability []string `json:"reachability"`
 	}
 
 	var jsonReachOut []rowReachType

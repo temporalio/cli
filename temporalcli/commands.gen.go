@@ -281,6 +281,7 @@ func NewTemporalOperatorCommand(cctx *CommandContext, parent *TemporalCommand) *
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalOperatorClusterCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalOperatorSearchAttributeCommand(cctx, &s).Command)
 	s.ClientOptions.buildFlags(cctx, s.Command.PersistentFlags())
 	return &s
 }
@@ -303,7 +304,10 @@ func NewTemporalOperatorClusterCommand(cctx *CommandContext, parent *TemporalOpe
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalOperatorClusterDescribeCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalOperatorClusterHealthCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalOperatorClusterListCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalOperatorClusterRemoveCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalOperatorClusterSystemCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalOperatorClusterUpsertCommand(cctx, &s).Command)
 	return &s
 }
 
@@ -359,6 +363,61 @@ func NewTemporalOperatorClusterHealthCommand(cctx *CommandContext, parent *Tempo
 	return &s
 }
 
+type TemporalOperatorClusterListCommand struct {
+	Parent  *TemporalOperatorClusterCommand
+	Command cobra.Command
+	Limit   int
+}
+
+func NewTemporalOperatorClusterListCommand(cctx *CommandContext, parent *TemporalOperatorClusterCommand) *TemporalOperatorClusterListCommand {
+	var s TemporalOperatorClusterListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "List all clusters"
+	if hasHighlighting {
+		s.Command.Long = "\x1b[1mtemporal operator cluster list\x1b[0m command prints a list of all remote Clusters on the system."
+	} else {
+		s.Command.Long = "`temporal operator cluster list` command prints a list of all remote Clusters on the system."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().IntVar(&s.Limit, "limit", 0, "Limit the number of items to print.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalOperatorClusterRemoveCommand struct {
+	Parent  *TemporalOperatorClusterCommand
+	Command cobra.Command
+	Name    string
+}
+
+func NewTemporalOperatorClusterRemoveCommand(cctx *CommandContext, parent *TemporalOperatorClusterCommand) *TemporalOperatorClusterRemoveCommand {
+	var s TemporalOperatorClusterRemoveCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "remove [flags]"
+	s.Command.Short = "Remove a cluster"
+	if hasHighlighting {
+		s.Command.Long = "\x1b[1mtemporal operator cluster remove\x1b[0m command removes a remote Cluster from the system."
+	} else {
+		s.Command.Long = "`temporal operator cluster remove` command removes a remote Cluster from the system."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Name, "name", "", "Name of cluster.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
 type TemporalOperatorClusterSystemCommand struct {
 	Parent  *TemporalOperatorClusterCommand
 	Command cobra.Command
@@ -376,6 +435,140 @@ func NewTemporalOperatorClusterSystemCommand(cctx *CommandContext, parent *Tempo
 		s.Command.Long = "`temporal operator cluster system` command provides information about the system the Cluster is running on. This information can be used to diagnose problems occurring in the Temporal Server."
 	}
 	s.Command.Args = cobra.NoArgs
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalOperatorClusterUpsertCommand struct {
+	Parent           *TemporalOperatorClusterCommand
+	Command          cobra.Command
+	FrontendAddress  string
+	EnableConnection bool
+}
+
+func NewTemporalOperatorClusterUpsertCommand(cctx *CommandContext, parent *TemporalOperatorClusterCommand) *TemporalOperatorClusterUpsertCommand {
+	var s TemporalOperatorClusterUpsertCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "upsert [flags]"
+	s.Command.Short = "Add a remote"
+	if hasHighlighting {
+		s.Command.Long = "\x1b[1mtemporal operator cluster upsert\x1b[0m command allows the user to add or update a remote Cluster."
+	} else {
+		s.Command.Long = "`temporal operator cluster upsert` command allows the user to add or update a remote Cluster."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.FrontendAddress, "frontend-address", "", "IP address to bind the frontend service to.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "frontend-address")
+	s.Command.Flags().BoolVar(&s.EnableConnection, "enable-connection", false, "enable cross cluster connection.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalOperatorSearchAttributeCommand struct {
+	Parent  *TemporalOperatorCommand
+	Command cobra.Command
+}
+
+func NewTemporalOperatorSearchAttributeCommand(cctx *CommandContext, parent *TemporalOperatorCommand) *TemporalOperatorSearchAttributeCommand {
+	var s TemporalOperatorSearchAttributeCommand
+	s.Parent = parent
+	s.Command.Use = "search-attribute"
+	s.Command.Short = "Operations applying to Search Attributes"
+	s.Command.Long = "Search Attribute commands enable operations for the creation, listing, and removal of Search Attributes."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalOperatorSearchAttributeCreateCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalOperatorSearchAttributeListCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalOperatorSearchAttributeRemoveCommand(cctx, &s).Command)
+	return &s
+}
+
+type TemporalOperatorSearchAttributeCreateCommand struct {
+	Parent  *TemporalOperatorSearchAttributeCommand
+	Command cobra.Command
+	Name    []string
+	Type    []string
+}
+
+func NewTemporalOperatorSearchAttributeCreateCommand(cctx *CommandContext, parent *TemporalOperatorSearchAttributeCommand) *TemporalOperatorSearchAttributeCreateCommand {
+	var s TemporalOperatorSearchAttributeCreateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "create [flags]"
+	s.Command.Short = "Adds one or more custom Search Attributes"
+	if hasHighlighting {
+		s.Command.Long = "\x1b[1mtemporal operator search-attribute create\x1b[0m command adds one or more custom Search Attributes."
+	} else {
+		s.Command.Long = "`temporal operator search-attribute create` command adds one or more custom Search Attributes."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringArrayVar(&s.Name, "name", nil, "Search Attribute name.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
+	s.Command.Flags().StringArrayVar(&s.Type, "type", nil, "Search Attribute type. Accepted values: Text, Keyword, Int, Double, Bool, Datetime, KeywordList.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "type")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalOperatorSearchAttributeListCommand struct {
+	Parent  *TemporalOperatorSearchAttributeCommand
+	Command cobra.Command
+}
+
+func NewTemporalOperatorSearchAttributeListCommand(cctx *CommandContext, parent *TemporalOperatorSearchAttributeCommand) *TemporalOperatorSearchAttributeListCommand {
+	var s TemporalOperatorSearchAttributeListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "Lists all Search Attributes that can be used in list Workflow Queries"
+	if hasHighlighting {
+		s.Command.Long = "\x1b[1mtemporal operator search-attribute list\x1b[0m displays a list of all Search Attributes."
+	} else {
+		s.Command.Long = "`temporal operator search-attribute list` displays a list of all Search Attributes."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalOperatorSearchAttributeRemoveCommand struct {
+	Parent  *TemporalOperatorSearchAttributeCommand
+	Command cobra.Command
+	Name    []string
+	Yes     bool
+}
+
+func NewTemporalOperatorSearchAttributeRemoveCommand(cctx *CommandContext, parent *TemporalOperatorSearchAttributeCommand) *TemporalOperatorSearchAttributeRemoveCommand {
+	var s TemporalOperatorSearchAttributeRemoveCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "remove [flags]"
+	s.Command.Short = "Removes custom search attribute metadata only"
+	if hasHighlighting {
+		s.Command.Long = "\x1b[1mtemporal operator search-attribute remove\x1b[0m command removes custom Search Attribute metadata."
+	} else {
+		s.Command.Long = "`temporal operator search-attribute remove` command removes custom Search Attribute metadata."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringArrayVar(&s.Name, "name", nil, "Search Attribute name.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
+	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Confirm prompt to perform deletion.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

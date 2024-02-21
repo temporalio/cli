@@ -14,6 +14,10 @@ Uses normal `go test`, e.g.:
 
 See other tests for how to leverage things like the command harness and dev server suite.
 
+Example to run a single test case:
+
+    go test ./... -run TestSharedServerSuite/TestOperator_SearchAttribute
+
 ## Adding/updating commands
 
 First, update [commands.md](temporalcli/commandsmd/commands.md) following the rules in that file. Then to regenerate the

@@ -180,9 +180,60 @@ Cluster commands follow this syntax: `temporal operator cluster [command] [comma
 
 `temporal operator cluster health` command checks the health of the Frontend Service.
 
+### temporal operator cluster list: List all clusters
+
+`temporal operator cluster list` command prints a list of all remote Clusters on the system.
+
+#### Options
+
+* `--limit` (int) - Limit the number of items to print.
+
+### temporal operator cluster remove: Remove a cluster
+
+`temporal operator cluster remove` command removes a remote Cluster from the system.
+
+#### Options
+
+* `--name` (string) - Name of cluster. Required.
+
 ### temporal operator cluster system: Provide system info
 
 `temporal operator cluster system` command provides information about the system the Cluster is running on. This information can be used to diagnose problems occurring in the Temporal Server.
+
+### temporal operator cluster upsert: Add a remote
+
+`temporal operator cluster upsert` command allows the user to add or update a remote Cluster. 
+
+#### Options
+
+* `--frontend-address` (string) - IP address to bind the frontend service to. Required.
+* `--enable-connection` (bool) - enable cross cluster connection.
+
+### temporal operator search-attribute: Operations applying to Search Attributes
+
+Search Attribute commands enable operations for the creation, listing, and removal of Search Attributes.
+
+### temporal operator search-attribute create: Adds one or more custom Search Attributes
+
+`temporal operator search-attribute create` command adds one or more custom Search Attributes.
+
+#### Options
+
+* `--name` (string[]) - Search Attribute name. Required.
+* `--type` (string[]) - Search Attribute type. Options: Text, Keyword, Int, Double, Bool, Datetime, KeywordList. Required.
+
+### temporal operator search-attribute list: Lists all Search Attributes that can be used in list Workflow Queries
+
+`temporal operator search-attribute list` displays a list of all Search Attributes.
+
+### temporal operator search-attribute remove: Removes custom search attribute metadata only
+
+`temporal operator search-attribute remove` command removes custom Search Attribute metadata.
+
+#### Options
+
+* `--name` (string[]) - Search Attribute name. Required.
+* `--yes`, `-y` (bool) - Confirm prompt to perform deletion.
 
 ### temporal server: Run Temporal Server.
 

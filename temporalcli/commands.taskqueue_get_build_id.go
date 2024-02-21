@@ -25,9 +25,9 @@ func (c *TemporalTaskQueueGetBuildIdsCommand) run(cctx *CommandContext, args []s
 	}
 
 	type rowtype struct {
-		BuildIds      []string
-		DefaultForSet string
-		IsDefaultSet  bool
+		BuildIds      []string `json:"buildIds"`
+		DefaultForSet string   `json:"defaultForSet"`
+		IsDefaultSet  bool     `json:"isDefaultSet"`
 	}
 	var items []rowtype
 	for ix, s := range sets.Sets {
@@ -37,10 +37,6 @@ func (c *TemporalTaskQueueGetBuildIdsCommand) run(cctx *CommandContext, args []s
 			DefaultForSet: s.BuildIDs[len(s.BuildIDs)-1],
 		}
 		items = append(items, row)
-	}
-
-	if cctx.JSONOutput {
-		return cctx.Printer.PrintStructured(items, printer.StructuredOptions{})
 	}
 
 	cctx.Printer.Println(color.MagentaString("Version Sets:"))
@@ -95,9 +91,9 @@ func (c *TemporalTaskQueueGetBuildIdReachabilityCommand) run(cctx *CommandContex
 	}
 
 	type rowtype struct {
-		BuildId      string
-		TaskQueue    string
-		Reachability []string
+		BuildId      string   `json:"buildId"`
+		TaskQueue    string   `json:"taskQueue"`
+		Reachability []string `json:"reachability"`
 	}
 
 	var items []rowtype
@@ -115,10 +111,6 @@ func (c *TemporalTaskQueueGetBuildIdReachabilityCommand) run(cctx *CommandContex
 			}
 			items = append(items, row)
 		}
-	}
-
-	if cctx.JSONOutput {
-		return cctx.Printer.PrintStructured(items, printer.StructuredOptions{})
 	}
 
 	cctx.Printer.Println(color.MagentaString("Reachability:"))
