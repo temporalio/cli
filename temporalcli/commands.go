@@ -206,11 +206,11 @@ func (c *CommandContext) MarshalFriendlyFailureBodyText(f *failure.Failure, inde
 // Takes payload shorthand into account, can use
 // MarshalProtoJSONNoPayloadShorthand if needed
 func (c *CommandContext) MarshalProtoJSON(m proto.Message) ([]byte, error) {
-	return MarshalProtoJSONWithOptions(m, c.JSONShorthandPayloads)
+	return c.MarshalProtoJSONWithOptions(m, c.JSONShorthandPayloads)
 }
 
-func MarshalProtoJSONWithOptions(m proto.Message, jsonShorthandPayloads bool) ([]byte, error) {
-	opts := temporalproto.CustomJSONMarshalOptions{Indent: "  "}
+func (c *CommandContext) MarshalProtoJSONWithOptions(m proto.Message, jsonShorthandPayloads bool) ([]byte, error) {
+	opts := temporalproto.CustomJSONMarshalOptions{Indent: c.Printer.JSONIndent}
 	if jsonShorthandPayloads {
 		opts.Metadata = map[string]any{common.EnablePayloadShorthandMetadataKey: true}
 	}

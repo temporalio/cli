@@ -52,7 +52,7 @@ func (c *TemporalWorkflowExecuteCommand) run(cctx *CommandContext, args []string
 			workflowID:     run.GetID(),
 			runID:          run.GetRunID(),
 			includeDetails: c.EventDetails,
-			follow: true,
+			follow:         true,
 		}
 		if err := iter.print(cctx.Printer); err != nil && cctx.Err() == nil {
 			return fmt.Errorf("displaying history failed: %w", err)
@@ -152,7 +152,7 @@ func (c *TemporalWorkflowExecuteCommand) printJSONResult(
 		}
 		// Do proto serialization here that would never do shorthand (i.e.
 		// auto-lift JSON) payloads
-		if result.History, err = MarshalProtoJSONWithOptions(&histProto, false); err != nil {
+		if result.History, err = cctx.MarshalProtoJSONWithOptions(&histProto, false); err != nil {
 			return fmt.Errorf("failed marshaling history: %w", err)
 		}
 	}
