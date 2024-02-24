@@ -478,8 +478,16 @@ Use the options listed below to change reset behavior.
 
 ### temporal workflow reset-batch: Reset a batch of Workflow Executions by reset type.
 
-TODO
+Batch commands change multiple [Workflow Executions](/concepts/what-is-a-workflow-execution) by providing a 
+[List Filter](/concepts/what-is-visibility) and the type of Batch Job to execute. 
+The [List Filter](/concepts/what-is-visibility) identifies the 
+[Workflow Executions](/concepts/what-is-a-workflow-execution) in the Batch Job; the Batch 
+type determines what will happen to the Workflow Executions.
 
+#### Options
+
+* `--query`, `-q` (string) - Filter results using a SQL-like query.
+ 
 ### temporal workflow show: Show Event History for a Workflow Execution.
 
 The `temporal workflow show` command provides the [Event History](/concepts/what-is-an-event-history) for a
