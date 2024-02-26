@@ -12,6 +12,8 @@ import (
 	"sync"
 	"time"
 
+	"google.golang.org/protobuf/encoding/protojson"
+
 	"github.com/google/uuid"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
@@ -23,16 +25,8 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/durationpb"
 )
-
-// TODO(cretz): To test:
-// * Start failure
-// * Execute failure on start
-// * Execute workflow failure (including nested failures)
-// * Execute workflow cancel
-// * Execute workflow timeout
-// * Execute workflow continue as new
-// * Workflow with proto JSON input
 
 func (s *SharedServerSuite) TestWorkflow_Start_SimpleSuccess() {
 	// Text
@@ -187,6 +181,208 @@ func (s *SharedServerSuite) TestWorkflow_Execute_SimpleFailure() {
 	s.Equal("FAILED", jsonOut["status"])
 	s.Equal("intentional failure",
 		jsonPath(jsonOut, "closeEvent", "workflowExecutionFailedEventAttributes", "failure", "message"))
+}
+
+func (s *SharedServerSuite) TestWorkflow_Execute_NestedFailure() {
+	// Text
+	s.Worker.OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
+		err := workflow.ExecuteActivity(ctx, DevActivity).Get(ctx, nil)
+		return nil, err
+	})
+	s.Worker.OnDevActivity(func(ctx context.Context, input any) (any, error) {
+		return nil, fmt.Errorf("intentional activity failure")
+	})
+	res := s.Execute(
+		"workflow", "execute",
+		"--address", s.Address(),
+		"--task-queue", s.Worker.Options.TaskQueue,
+		"--type", "DevWorkflow",
+		"--workflow-id", "my-id1",
+	)
+	s.ErrorContains(res.Err, "workflow failed")
+	out := res.Stdout.String()
+	// Confirm failure
+	s.ContainsOnSameLine(out, "Status", "FAILED")
+	s.Contains(out, "Failure")
+	s.ContainsOnSameLine(out, "Message", "intentional activity failure")
+
+	// JSON
+	res = s.Execute(
+		"workflow", "execute",
+		"-o", "json",
+		"--address", s.Address(),
+		"--task-queue", s.Worker.Options.TaskQueue,
+		"--type", "DevWorkflow",
+		"--workflow-id", "my-id2",
+	)
+	s.ErrorContains(res.Err, "workflow failed")
+	var jsonOut map[string]any
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	s.Equal("FAILED", jsonOut["status"])
+	s.Equal("activity error",
+		jsonPath(jsonOut, "closeEvent", "workflowExecutionFailedEventAttributes", "failure", "message"))
+	s.Equal("intentional activity failure",
+		jsonPath(jsonOut, "closeEvent", "workflowExecutionFailedEventAttributes", "failure", "cause", "message"))
+}
+
+func (s *SharedServerSuite) TestWorkflow_Execute_Cancel() {
+	// Very bad™️ channel tricks
+	doCancelChan := make(chan struct{})
+	s.Worker.OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
+		doCancelChan <- struct{}{}
+		err := workflow.Await(ctx, func() bool {
+			return false
+		})
+		return nil, err
+	})
+
+	// Text
+	go func() {
+		<-doCancelChan
+		_ = s.Client.CancelWorkflow(s.Context, "my-id1", "")
+	}()
+	res := s.Execute(
+		"workflow", "execute",
+		"--address", s.Address(),
+		"--task-queue", s.Worker.Options.TaskQueue,
+		"--type", "DevWorkflow",
+		"--workflow-id", "my-id1",
+	)
+	s.ErrorContains(res.Err, "workflow failed")
+	out := res.Stdout.String()
+	s.ContainsOnSameLine(out, "Status", "CANCELED")
+
+	// JSON
+	go func() {
+		<-doCancelChan
+		_ = s.Client.CancelWorkflow(s.Context, "my-id2", "")
+	}()
+	res = s.Execute(
+		"workflow", "execute",
+		"-o", "json",
+		"--address", s.Address(),
+		"--task-queue", s.Worker.Options.TaskQueue,
+		"--type", "DevWorkflow",
+		"--workflow-id", "my-id2",
+	)
+	s.ErrorContains(res.Err, "workflow failed")
+	var jsonOut map[string]any
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	s.Equal("CANCELED", jsonOut["status"])
+}
+
+func (s *SharedServerSuite) TestWorkflow_Execute_Timeout() {
+	s.Worker.OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
+		err := workflow.Await(ctx, func() bool {
+			return false
+		})
+		return nil, err
+	})
+
+	// Text
+	res := s.Execute(
+		"workflow", "execute",
+		"--address", s.Address(),
+		"--task-queue", s.Worker.Options.TaskQueue,
+		"--type", "DevWorkflow",
+		"--execution-timeout", "1ms",
+		"--workflow-id", "my-id1",
+	)
+	s.ErrorContains(res.Err, "workflow failed")
+	out := res.Stdout.String()
+	s.ContainsOnSameLine(out, "Status", "TIMEOUT")
+
+	// JSON
+	res = s.Execute(
+		"workflow", "execute",
+		"-o", "json",
+		"--address", s.Address(),
+		"--task-queue", s.Worker.Options.TaskQueue,
+		"--type", "DevWorkflow",
+		"--execution-timeout", "1ms",
+		"--workflow-id", "my-id2",
+	)
+	s.ErrorContains(res.Err, "workflow failed")
+	var jsonOut map[string]any
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	s.Equal("TIMEOUT", jsonOut["status"])
+}
+
+func (s *SharedServerSuite) TestWorkflow_Execute_ContinueAsNew() {
+	s.Worker.OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
+		if input.(float64) < 2 {
+			return nil, workflow.NewContinueAsNewError(ctx, "DevWorkflow", input.(float64)+1)
+		}
+		return nil, nil
+	})
+
+	// Text
+	res := s.Execute(
+		"workflow", "execute",
+		"--address", s.Address(),
+		"--task-queue", s.Worker.Options.TaskQueue,
+		"--type", "DevWorkflow",
+		"-i", "1",
+		"--workflow-id", "my-id1",
+	)
+	out := res.Stdout.String()
+	s.ContainsOnSameLine(out, "Status", "COMPLETED")
+	s.Contains(out, "WorkflowExecutionContinuedAsNew")
+}
+
+func (s *SharedServerSuite) TestWorkflow_Execute_ProtoJSON_Input() {
+	// Very meta, use a start workflow request proto as the input to the workflow.
+	startWorkflowReq := &workflowservice.StartWorkflowExecutionRequest{
+		// Just fill in a few different types of fields to make sure everything is [de]serialized
+		WorkflowId: "enchi-cat",
+		WorkflowRunTimeout: &durationpb.Duration{
+			Seconds: 1,
+			Nanos:   2,
+		},
+		Input: &common.Payloads{
+			Payloads: []*common.Payload{
+				{Data: []byte("meow")},
+			},
+		},
+	}
+	startWorkflowReqSerialized, err := protojson.Marshal(startWorkflowReq)
+	s.NoError(err)
+
+	s.Worker.Worker.RegisterWorkflowWithOptions(func(
+		ctx workflow.Context,
+		input *workflowservice.StartWorkflowExecutionRequest,
+	) (*workflowservice.StartWorkflowExecutionRequest, error) {
+		return input, nil
+	}, workflow.RegisterOptions{Name: "ProtoJSONWorkflow"})
+
+	// Text
+	res := s.Execute(
+		"workflow", "execute",
+		"--address", s.Address(),
+		"--task-queue", s.Worker.Options.TaskQueue,
+		"--type", "ProtoJSONWorkflow",
+		"--input-meta", "encoding=json/protobuf",
+		"-i", string(startWorkflowReqSerialized),
+		"--workflow-id", "my-id1",
+	)
+	out := res.Stdout.String()
+	s.ContainsOnSameLine(out, "Status", "COMPLETED")
+	s.Contains(out, "enchi")
+}
+
+func (s *SharedServerSuite) TestWorkflow_Failure_On_Start() {
+	// Use too-long of an ID to force a failure on start
+	veryLongID := string(bytes.Repeat([]byte("a"), 1024))
+	for _, cmd := range []string{"start", "execute"} {
+		res := s.Execute(
+			"workflow", cmd,
+			"--address", s.Address(),
+			"--task-queue", s.Worker.Options.TaskQueue,
+			"--type", "DevWorkflow",
+			"--workflow-id", veryLongID,
+		)
+		s.ErrorContains(res.Err, "failed starting workflow")
+	}
 }
 
 func (s *SharedServerSuite) TestWorkflow_Execute_ClientHeaders() {
