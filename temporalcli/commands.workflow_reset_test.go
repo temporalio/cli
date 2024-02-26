@@ -268,7 +268,7 @@ type batchResetTestData struct {
 	assert      assertions
 	client      client.Client
 	tq          string
-	counters    []atomic.Int32
+	counters    []*atomic.Int32
 	run         client.WorkflowRun
 	ctx         context.Context
 	ctxCancelF  context.CancelFunc
@@ -276,23 +276,22 @@ type batchResetTestData struct {
 	namespace   string
 }
 
-func newSystemUnderTest(suite *SharedServerSuite) batchResetTestData {
-	counters := make([]atomic.Int32, 4)
+func newSystemUnderTest(suite *SharedServerSuite) *batchResetTestData {
 	sut := batchResetTestData{
-		t:         suite.T(),
-		counters:  counters,
-		assert:    suite,
-		client:    suite.Client,
-		namespace: suite.Namespace(),
+		t:           suite.T(),
+		counters:    []*atomic.Int32{&atomic.Int32{}, &atomic.Int32{}, &atomic.Int32{}, &atomic.Int32{}},
+		assert:      suite,
+		client:      suite.Client,
+		namespace:   suite.Namespace(),
+		buildPrefix: uuid.NewString()[:6] + "-",
+		tq:          suite.T().Name(),
+		workers:     make(map[string]worker.Worker),
 	}
-	sut.tq = suite.T().Name()
-	sut.buildPrefix = uuid.NewString()[:6] + "-"
 
-	sut.workers = make(map[string]worker.Worker)
 	suite.T().Cleanup(func() { sut.stopAllWorkers() })
 
 	sut.ctx, sut.ctxCancelF = context.WithTimeout(context.Background(), 30*time.Second)
-	return sut
+	return &sut
 }
 
 func (sut *batchResetTestData) internalVersionFor(v string) string {
@@ -300,23 +299,22 @@ func (sut *batchResetTestData) internalVersionFor(v string) string {
 }
 
 func (sut *batchResetTestData) firstActivity() error {
-	return increment(&sut.counters[firstActivity])
+	sut.counters[firstActivity].Add(1)
+	return nil
 }
 
 func (sut *batchResetTestData) secondActivity() error {
-	return increment(&sut.counters[secondActivity])
+	sut.counters[secondActivity].Add(1)
+	return nil
 }
 
 func (sut *batchResetTestData) thirdActivity() error {
-	return increment(&sut.counters[thirdActivity])
+	sut.counters[thirdActivity].Add(1)
+	return nil
 }
 
 func (sut *batchResetTestData) badActivity() error {
-	return increment(&sut.counters[badActivity])
-}
-
-func increment(i *atomic.Int32) error {
-	i.Add(1)
+	sut.counters[badActivity].Add(1)
 	return nil
 }
 

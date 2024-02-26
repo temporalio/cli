@@ -470,7 +470,7 @@ Use the options listed below to change reset behavior.
 
 #### Options
 
-* `--workflow-id`, `-w` (string) - Workflow Id.
+* `--workflow-id`, `-w` (string) - Workflow Id. Required for non-batch reset operations.
 * `--run-id`, `-r` (string) - Run Id.
 * `--event-id`, `-e` (int) - The Event Id for any Event after `WorkflowTaskStarted` you want to reset to (exclusive). It can be `WorkflowTaskCompleted`, `WorkflowTaskFailed` or others.
 * `--reason` (string) - The reason why this workflow is being reset. Required.
