@@ -281,6 +281,7 @@ func NewTemporalOperatorCommand(cctx *CommandContext, parent *TemporalCommand) *
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalOperatorClusterCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalOperatorNamespaceCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalOperatorSearchAttributeCommand(cctx, &s).Command)
 	s.ClientOptions.buildFlags(cctx, s.Command.PersistentFlags())
 	return &s
@@ -465,6 +466,193 @@ func NewTemporalOperatorClusterUpsertCommand(cctx *CommandContext, parent *Tempo
 	s.Command.Flags().StringVar(&s.FrontendAddress, "frontend-address", "", "IP address to bind the frontend service to.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "frontend-address")
 	s.Command.Flags().BoolVar(&s.EnableConnection, "enable-connection", false, "enable cross cluster connection.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalOperatorNamespaceCommand struct {
+	Parent  *TemporalOperatorCommand
+	Command cobra.Command
+}
+
+func NewTemporalOperatorNamespaceCommand(cctx *CommandContext, parent *TemporalOperatorCommand) *TemporalOperatorNamespaceCommand {
+	var s TemporalOperatorNamespaceCommand
+	s.Parent = parent
+	s.Command.Use = "namespace"
+	s.Command.Short = "Operations performed on Namespaces."
+	if hasHighlighting {
+		s.Command.Long = "Namespace commands perform operations on Namespaces contained in the Temporal Cluster.\n\nCluster commands follow this syntax: \x1b[1mtemporal operator namespace [command] [command options]\x1b[0m"
+	} else {
+		s.Command.Long = "Namespace commands perform operations on Namespaces contained in the Temporal Cluster.\n\nCluster commands follow this syntax: `temporal operator namespace [command] [command options]`"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalOperatorNamespaceCreateCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalOperatorNamespaceDeleteCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalOperatorNamespaceDescribeCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalOperatorNamespaceListCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalOperatorNamespaceUpdateCommand(cctx, &s).Command)
+	return &s
+}
+
+type TemporalOperatorNamespaceCreateCommand struct {
+	Parent                  *TemporalOperatorNamespaceCommand
+	Command                 cobra.Command
+	ActiveCluster           string
+	Cluster                 []string
+	Data                    string
+	Description             string
+	Email                   string
+	Global                  bool
+	HistoryArchivalState    StringEnum
+	HistoryUri              string
+	Retention               string
+	VisibilityArchivalState StringEnum
+	VisibilityUri           string
+}
+
+func NewTemporalOperatorNamespaceCreateCommand(cctx *CommandContext, parent *TemporalOperatorNamespaceCommand) *TemporalOperatorNamespaceCreateCommand {
+	var s TemporalOperatorNamespaceCreateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "create [flags] [namespace]"
+	s.Command.Short = "Registers a new Namespace."
+	if hasHighlighting {
+		s.Command.Long = "The temporal operator namespace create command creates a new Namespace on the Server.\nNamespaces can be created on the active Cluster, or any named Cluster.\n\x1b[1mtemporal operator namespace create --cluster=MyCluster example-1\x1b[0m\n\nGlobal Namespaces can also be created.\n\x1b[1mtemporal operator namespace create --global example-2\x1b[0m\n\nOther settings, such as retention and Visibility Archival State, can be configured as needed.\nFor example, the Visibility Archive can be set on a separate URI.\n\x1b[1mtemporal operator namespace create --retention=5 --visibility-archival-state=enabled --visibility-uri=some-uri example-3\x1b[0m"
+	} else {
+		s.Command.Long = "The temporal operator namespace create command creates a new Namespace on the Server.\nNamespaces can be created on the active Cluster, or any named Cluster.\n`temporal operator namespace create --cluster=MyCluster example-1`\n\nGlobal Namespaces can also be created.\n`temporal operator namespace create --global example-2`\n\nOther settings, such as retention and Visibility Archival State, can be configured as needed.\nFor example, the Visibility Archive can be set on a separate URI.\n`temporal operator namespace create --retention=5 --visibility-archival-state=enabled --visibility-uri=some-uri example-3`"
+	}
+	s.Command.Args = cobra.ExactArgs(1)
+	s.Command.Flags().StringVar(&s.ActiveCluster, "active-cluster", "", "Active cluster name.")
+	s.Command.Flags().StringArrayVar(&s.Cluster, "cluster", nil, "Cluster names.")
+	s.Command.Flags().StringVar(&s.Data, "data", "", "Namespace data in key=value format. Use JSON for values.")
+	s.Command.Flags().StringVar(&s.Description, "description", "", "Namespace description.")
+	s.Command.Flags().StringVar(&s.Email, "email", "", "Owner email.")
+	s.Command.Flags().BoolVar(&s.Global, "global", false, "Whether the namespace is a global namespace.")
+	s.HistoryArchivalState = NewStringEnum([]string{"disabled", "enabled"}, "disabled")
+	s.Command.Flags().Var(&s.HistoryArchivalState, "history-archival-state", "History archival state. Accepted values: disabled, enabled.")
+	s.Command.Flags().StringVar(&s.HistoryUri, "history-uri", "", "Optionally specify history archival URI (cannot be changed after first time archival is enabled).")
+	s.Command.Flags().StringVar(&s.Retention, "retention", "3", "Length of time (in days) a closed Workflow is preserved before deletion.")
+	s.VisibilityArchivalState = NewStringEnum([]string{"disabled", "enabled"}, "disabled")
+	s.Command.Flags().Var(&s.VisibilityArchivalState, "visibility-archival-state", "Visibility archival state. Accepted values: disabled, enabled.")
+	s.Command.Flags().StringVar(&s.VisibilityUri, "visibility-uri", "", "Optionally specify visibility archival URI (cannot be changed after first time archival is enabled).")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalOperatorNamespaceDeleteCommand struct {
+	Parent  *TemporalOperatorNamespaceCommand
+	Command cobra.Command
+}
+
+func NewTemporalOperatorNamespaceDeleteCommand(cctx *CommandContext, parent *TemporalOperatorNamespaceCommand) *TemporalOperatorNamespaceDeleteCommand {
+	var s TemporalOperatorNamespaceDeleteCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "delete [flags] [namespace]"
+	s.Command.Short = "Deletes an existing Namespace."
+	s.Command.Long = "The temporal operator namespace delete command deletes a given Namespace from the system."
+	s.Command.Args = cobra.ExactArgs(1)
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalOperatorNamespaceDescribeCommand struct {
+	Parent      *TemporalOperatorNamespaceCommand
+	Command     cobra.Command
+	NamespaceId string
+}
+
+func NewTemporalOperatorNamespaceDescribeCommand(cctx *CommandContext, parent *TemporalOperatorNamespaceCommand) *TemporalOperatorNamespaceDescribeCommand {
+	var s TemporalOperatorNamespaceDescribeCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "describe [flags] [namespace]"
+	s.Command.Short = "Describe a Namespace by its name or ID."
+	if hasHighlighting {
+		s.Command.Long = "The temporal operator namespace describe command provides Namespace information.\nNamespaces are identified by Namespace ID.\n\n\x1b[1mtemporal operator namespace describe --namespace-id=some-namespace-id\x1b[0m\n\x1b[1mtemporal operator namespace describe example-namespace-name\x1b[0m"
+	} else {
+		s.Command.Long = "The temporal operator namespace describe command provides Namespace information.\nNamespaces are identified by Namespace ID.\n\n`temporal operator namespace describe --namespace-id=some-namespace-id`\n`temporal operator namespace describe example-namespace-name`"
+	}
+	s.Command.Args = cobra.MaximumNArgs(1)
+	s.Command.Flags().StringVar(&s.NamespaceId, "namespace-id", "", "Namespace ID.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalOperatorNamespaceListCommand struct {
+	Parent  *TemporalOperatorNamespaceCommand
+	Command cobra.Command
+}
+
+func NewTemporalOperatorNamespaceListCommand(cctx *CommandContext, parent *TemporalOperatorNamespaceCommand) *TemporalOperatorNamespaceListCommand {
+	var s TemporalOperatorNamespaceListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "List all Namespaces."
+	s.Command.Long = "The temporal operator namespace list command lists all Namespaces on the Server."
+	s.Command.Args = cobra.NoArgs
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalOperatorNamespaceUpdateCommand struct {
+	Parent                  *TemporalOperatorNamespaceCommand
+	Command                 cobra.Command
+	ActiveCluster           string
+	Cluster                 []string
+	Data                    string
+	Description             string
+	Email                   string
+	PromoteGlobal           bool
+	HistoryArchivalState    StringEnum
+	HistoryUri              string
+	Retention               string
+	VisibilityArchivalState StringEnum
+	VisibilityUri           string
+}
+
+func NewTemporalOperatorNamespaceUpdateCommand(cctx *CommandContext, parent *TemporalOperatorNamespaceCommand) *TemporalOperatorNamespaceUpdateCommand {
+	var s TemporalOperatorNamespaceUpdateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "update [flags] [namespace]"
+	s.Command.Short = "Updates a Namespace."
+	s.Command.Long = "The temporal operator namespace update command updates a Namespace.\n\nNamespaces can be assigned a different active Cluster.\ntemporal operator namespace update --active-cluster=NewActiveCluster.\n\nNamespaces can also be promoted to global Namespaces.\ntemporal operator namespace --promote-global=true.\n\nAny Archives that were previously enabled or disabled can be changed through this command.\nHowever, URI values for archival states cannot be changed after the states are enabled.\ntemporal operator namespace update --history-archival-state=\"enabled\" --visibility-archival-state=\"disabled\"."
+	s.Command.Args = cobra.ExactArgs(1)
+	s.Command.Flags().StringVar(&s.ActiveCluster, "active-cluster", "", "Active cluster name.")
+	s.Command.Flags().StringArrayVar(&s.Cluster, "cluster", nil, "Cluster names.")
+	s.Command.Flags().StringVar(&s.Data, "data", "", "Namespace data in key=value format. Use JSON for values.")
+	s.Command.Flags().StringVar(&s.Description, "description", "", "Namespace description.")
+	s.Command.Flags().StringVar(&s.Email, "email", "", "Owner email.")
+	s.Command.Flags().BoolVar(&s.PromoteGlobal, "promote-global", false, "Promote local namespace to global namespace.")
+	s.HistoryArchivalState = NewStringEnum([]string{"disabled", "enabled"}, "disabled")
+	s.Command.Flags().Var(&s.HistoryArchivalState, "history-archival-state", "History archival state. Accepted values: disabled, enabled.")
+	s.Command.Flags().StringVar(&s.HistoryUri, "history-uri", "", "Optionally specify history archival URI (cannot be changed after first time archival is enabled).")
+	s.Command.Flags().StringVar(&s.Retention, "retention", "3", "Length of time (in days) a closed Workflow is preserved before deletion.")
+	s.VisibilityArchivalState = NewStringEnum([]string{"disabled", "enabled"}, "disabled")
+	s.Command.Flags().Var(&s.VisibilityArchivalState, "visibility-archival-state", "Visibility archival state. Accepted values: disabled, enabled.")
+	s.Command.Flags().StringVar(&s.VisibilityUri, "visibility-uri", "", "Optionally specify visibility archival URI (cannot be changed after first time archival is enabled).")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

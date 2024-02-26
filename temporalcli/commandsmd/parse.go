@@ -25,6 +25,7 @@ type Command struct {
 	OptionsSets     []CommandOptions
 	HasInit         bool
 	ExactArgs       int
+	MaximumArgs     int
 }
 
 type CommandOptions struct {
@@ -111,9 +112,17 @@ func (c *Command) parseSection(section string) error {
 				if c.ExactArgs, err = strconv.Atoi(strings.TrimPrefix(bullet, "* exact-args=")); err != nil {
 					return fmt.Errorf("invalid exact-args: %w", err)
 				}
+			case strings.HasPrefix(bullet, "* maximum-args="):
+				var err error
+				if c.MaximumArgs, err = strconv.Atoi(strings.TrimPrefix(bullet, "* maximum-args=")); err != nil {
+					return fmt.Errorf("invalid maximum-args: %w", err)
+				}
 			default:
 				return fmt.Errorf("unrecognized attribute bullet: %q", bullet)
 			}
+		}
+		if c.MaximumArgs != 0 && c.ExactArgs != 0 {
+			return fmt.Errorf("cannot have both maximum-args and exact-args")
 		}
 	}
 

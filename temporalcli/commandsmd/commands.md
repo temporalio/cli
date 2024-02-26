@@ -15,6 +15,7 @@ This document has a specific structure used by a parser. Here are the rules:
     * End of long description can have XML comment section that has `*` bulleted attributes (one line per bullet):
       * `* has-init` - Will assume an `initCommand` method is on the command
       * `* exact-args=<number>` - Require this exact number of args
+      * `* maximum-args=<number>` - Require this maximum number of args
   * Can have `#### Options` or `#### Options set for <options-set-name>` which can have options.
     * Can have bullets
       * Each bullet is `* <option-names> (<data-type>) - <short-description>. <extra-attributes>`.
@@ -208,6 +209,101 @@ Cluster commands follow this syntax: `temporal operator cluster [command] [comma
 
 * `--frontend-address` (string) - IP address to bind the frontend service to. Required.
 * `--enable-connection` (bool) - enable cross cluster connection.
+
+### temporal operator namespace: Operations performed on Namespaces.
+
+Namespace commands perform operations on Namespaces contained in the Temporal Cluster.
+
+Cluster commands follow this syntax: `temporal operator namespace [command] [command options]`
+
+### temporal operator namespace create [namespace]: Registers a new Namespace.
+
+The temporal operator namespace create command creates a new Namespace on the Server.
+Namespaces can be created on the active Cluster, or any named Cluster.
+`temporal operator namespace create --cluster=MyCluster example-1`
+
+Global Namespaces can also be created.
+`temporal operator namespace create --global example-2`
+
+Other settings, such as retention and Visibility Archival State, can be configured as needed.
+For example, the Visibility Archive can be set on a separate URI.
+`temporal operator namespace create --retention=5 --visibility-archival-state=enabled --visibility-uri=some-uri example-3`
+
+<!--
+* exact-args=1
+-->
+
+#### Options
+* `--active-cluster` (string) - Active cluster name.
+* `--cluster` (string[]) - Cluster names.
+* `--data` (string) - Namespace data in key=value format. Use JSON for values.
+* `--description` (string) - Namespace description.
+* `--email` (string) - Owner email.
+* `--global` (bool) - Whether the namespace is a global namespace.
+* `--history-archival-state` (string-enum) - History archival state. Options: disabled, enabled. Default: disabled.
+* `--history-uri` (string) - Optionally specify history archival URI (cannot be changed after first time archival is enabled).
+* `--retention` (string) - Length of time (in days) a closed Workflow is preserved before deletion. Default: 3.
+* `--visibility-archival-state` (string-enum) - Visibility archival state. Options: disabled, enabled. Default: disabled.
+* `--visibility-uri` (string) - Optionally specify visibility archival URI (cannot be changed after first time archival is enabled).
+
+### temporal operator namespace delete [namespace]: Deletes an existing Namespace.
+
+The temporal operator namespace delete command deletes a given Namespace from the system.
+
+<!--
+* exact-args=1
+-->
+ 
+### temporal operator namespace describe [namespace]: Describe a Namespace by its name or ID.
+
+The temporal operator namespace describe command provides Namespace information.
+Namespaces are identified by Namespace ID.
+
+`temporal operator namespace describe --namespace-id=some-namespace-id`
+`temporal operator namespace describe example-namespace-name`
+
+<!--
+* maximum-args=1
+-->
+
+#### Options
+
+* `--namespace-id` (string) -  Namespace ID.
+
+### temporal operator namespace list:  List all Namespaces.
+
+The temporal operator namespace list command lists all Namespaces on the Server.
+
+### temporal operator namespace update [namespace]: Updates a Namespace.
+
+The temporal operator namespace update command updates a Namespace.
+
+Namespaces can be assigned a different active Cluster.
+`temporal operator namespace update --active-cluster=NewActiveCluster`
+
+Namespaces can also be promoted to global Namespaces.
+`temporal operator namespace --promote-global`
+
+Any Archives that were previously enabled or disabled can be changed through this command.
+However, URI values for archival states cannot be changed after the states are enabled.
+`temporal operator namespace update --history-archival-state=enabled --visibility-archival-state=disabled`
+
+<!--
+* exact-args=1
+-->
+
+#### Options
+* `--active-cluster` (string) - Active cluster name.
+* `--cluster` (string[]) - Cluster names.
+* `--data` (string) - Namespace data in key=value format. Use JSON for values.
+* `--description` (string) - Namespace description.
+* `--email` (string) - Owner email.
+* `--promote-global` (bool) - Promote local namespace to global namespace.
+* `--history-archival-state` (string-enum) - History archival state. Options: disabled, enabled. Default: disabled.
+* `--history-uri` (string) - Optionally specify history archival URI (cannot be changed after first time archival is enabled).
+* `--retention` (string) - Length of time (in days) a closed Workflow is preserved before deletion. Default: 3.
+* `--visibility-archival-state` (string-enum) - Visibility archival state. Options: disabled, enabled. Default: disabled.
+* `--visibility-uri` (string) - Optionally specify visibility archival URI (cannot be changed after first time archival is enabled).
 
 ### temporal operator search-attribute: Operations applying to Search Attributes
 
