@@ -5,3 +5,5 @@
 # Used by IDE
 /.idea
 /.vscode
+*~
+
