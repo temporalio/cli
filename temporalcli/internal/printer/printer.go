@@ -347,18 +347,22 @@ func (p *Printer) printCard(cols []*col, row map[string]colVal) {
 var jsonMarshalerType = reflect.TypeOf((*json.Marshaler)(nil)).Elem()
 
 func (p *Printer) textVal(v any) string {
-	ref := reflect.Indirect(reflect.ValueOf(v))
-	if ref.IsValid() && !ref.IsZero() && ref.Type() == reflect.TypeOf(time.Time{}) {
-		if p.FormatTime == nil {
-			return ref.Interface().(time.Time).Format(time.RFC3339)
+	if ref := reflect.Indirect(reflect.ValueOf(v)); ref.IsValid() {
+		if ref.Type() == reflect.TypeOf(time.Time{}) {
+			if ref.IsZero() {
+				return ""
+			}
+			if p.FormatTime == nil {
+				return ref.Interface().(time.Time).Format(time.RFC3339)
+			}
+			return p.FormatTime(ref.Interface().(time.Time))
+		} else if (ref.Kind() == reflect.Struct && ref.CanInterface()) || ref.Type().Implements(jsonMarshalerType) {
+			b, err := p.jsonVal(v, "", true)
+			if err != nil {
+				return fmt.Sprintf("<failed converting to string: %v>", err)
+			}
+			return string(b)
 		}
-		return p.FormatTime(ref.Interface().(time.Time))
-	} else if ref.IsValid() && ((ref.Kind() == reflect.Struct && ref.CanInterface()) || ref.Type().Implements(jsonMarshalerType)) {
-		b, err := p.jsonVal(v, "", true)
-		if err != nil {
-			return fmt.Sprintf("<failed converting to string: %v>", err)
-		}
-		return string(b)
 	}
 	return fmt.Sprintf("%v", v)
 }
