@@ -17,7 +17,7 @@ import (
 )
 
 func (c *TemporalOperatorNamespaceCreateCommand) run(cctx *CommandContext, args []string) error {
-	namespaceName := args[0]
+	nsName := args[0]
 	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
 	if err != nil {
 		return err
@@ -42,7 +42,7 @@ func (c *TemporalOperatorNamespaceCreateCommand) run(cctx *CommandContext, args 
 	}
 
 	_, err = cl.WorkflowService().RegisterNamespace(cctx, &workflowservice.RegisterNamespaceRequest{
-		Namespace:                        namespaceName,
+		Namespace:                        nsName,
 		Description:                      c.Description,
 		OwnerEmail:                       c.Email,
 		WorkflowExecutionRetentionPeriod: durationpb.New(retention),
@@ -58,42 +58,46 @@ func (c *TemporalOperatorNamespaceCreateCommand) run(cctx *CommandContext, args 
 	if err != nil {
 		return fmt.Errorf("unable to create namespace: %w", err)
 	}
-	cctx.Printer.Println(color.GreenString("Namespace %s successfully registered.", namespaceName))
+	cctx.Printer.Println(color.GreenString("Namespace %s successfully registered.", nsName))
 	return nil
 }
 
 func (c *TemporalOperatorNamespaceDeleteCommand) run(cctx *CommandContext, args []string) error {
-	namespaceName := args[0]
+	nsName := args[0]
 	yes, err := cctx.promptString(
-		color.RedString("Are you sure you want to delete namespace %s? Type namespace name to confirm:", namespaceName),
-		namespaceName,
+		color.RedString("Are you sure you want to delete namespace %s? Type namespace name to confirm:", nsName),
+		nsName,
 		c.Yes)
 	if err != nil {
 		return err
 	}
+
 	if !yes {
 		return fmt.Errorf("user denied confirmation")
 	}
+
 	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
 	if err != nil {
 		return err
 	}
 	defer cl.Close()
+
 	resp, err := cl.OperatorService().DeleteNamespace(cctx, &operatorservice.DeleteNamespaceRequest{
-		Namespace: namespaceName,
+		Namespace: nsName,
 	})
 	if err != nil {
 		return fmt.Errorf("unable to delete namespace: %w", err)
 	}
+
 	if cctx.JSONOutput {
 		return cctx.Printer.PrintStructured(resp, printer.StructuredOptions{})
 	}
-	cctx.Printer.Println(color.GreenString("Namespace %s has been deleted.", namespaceName))
+	cctx.Printer.Println(color.GreenString("Namespace %s has been deleted.", nsName))
 	return nil
 }
 
 func (c *TemporalOperatorNamespaceDescribeCommand) run(cctx *CommandContext, args []string) error {
-	namespaceName, namespaceID, err := getNamespaceFromIDArgs(cctx, c.NamespaceId, args)
+	nsName, nsID, err := getNamespaceFromIDArgs(cctx, c.NamespaceId, args)
 	if err != nil {
 		return err
 	}
@@ -103,13 +107,15 @@ func (c *TemporalOperatorNamespaceDescribeCommand) run(cctx *CommandContext, arg
 		return err
 	}
 	defer cl.Close()
+
 	resp, err := cl.WorkflowService().DescribeNamespace(cctx, &workflowservice.DescribeNamespaceRequest{
-		Namespace: namespaceName,
-		Id:        namespaceID,
+		Namespace: nsName,
+		Id:        nsID,
 	})
 	if err != nil {
 		return fmt.Errorf("unable to describe namespace: %w", err)
 	}
+
 	if cctx.JSONOutput {
 		return cctx.Printer.PrintStructured(resp, printer.StructuredOptions{})
 	}
@@ -131,12 +137,14 @@ func (c *TemporalOperatorNamespaceListCommand) run(cctx *CommandContext, args []
 		if err != nil {
 			return fmt.Errorf("failed listing namespaces: %w", err)
 		}
+
 		if cctx.JSONOutput {
 			// For JSON we are going to dump one line of JSON per execution
 			_ = cctx.Printer.PrintStructured(resp.Namespaces, printer.StructuredOptions{})
 		} else {
 			_ = printNamespaces(cctx, resp.Namespaces...)
 		}
+
 		nextPageToken = resp.GetNextPageToken()
 		if len(nextPageToken) == 0 {
 			return nil
@@ -145,7 +153,7 @@ func (c *TemporalOperatorNamespaceListCommand) run(cctx *CommandContext, args []
 }
 
 func (c *TemporalOperatorNamespaceUpdateCommand) run(cctx *CommandContext, args []string) error {
-	ns := args[0]
+	nsName := args[0]
 	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
 	if err != nil {
 		return err
@@ -156,9 +164,9 @@ func (c *TemporalOperatorNamespaceUpdateCommand) run(cctx *CommandContext, args 
 
 	if c.PromoteGlobal {
 		fmt.Printf("Will promote local namespace to global namespace for:%s, other flag will be omitted. "+
-			"If it is already global namespace, this will be no-op.\n", ns)
+			"If it is already global namespace, this will be no-op.\n", nsName)
 		updateRequest = &workflowservice.UpdateNamespaceRequest{
-			Namespace:        ns,
+			Namespace:        nsName,
 			PromoteNamespace: true,
 		}
 	} else if len(c.ActiveCluster) > 0 {
@@ -167,12 +175,12 @@ func (c *TemporalOperatorNamespaceUpdateCommand) run(cctx *CommandContext, args 
 			ActiveClusterName: c.ActiveCluster,
 		}
 		updateRequest = &workflowservice.UpdateNamespaceRequest{
-			Namespace:         ns,
+			Namespace:         nsName,
 			ReplicationConfig: replicationConfig,
 		}
 	} else {
 		resp, err := cl.WorkflowService().DescribeNamespace(cctx, &workflowservice.DescribeNamespaceRequest{
-			Namespace: ns,
+			Namespace: nsName,
 		})
 		if err != nil {
 			switch err.(type) {
@@ -193,6 +201,7 @@ func (c *TemporalOperatorNamespaceUpdateCommand) run(cctx *CommandContext, args 
 		if len(c.Email) > 0 {
 			ownerEmail = c.Email
 		}
+
 		data := map[string]string{}
 		if len(c.Data) > 0 {
 			data, err = stringKeysValues(c.Data)
@@ -200,6 +209,7 @@ func (c *TemporalOperatorNamespaceUpdateCommand) run(cctx *CommandContext, args 
 				return err
 			}
 		}
+
 		if len(c.Retention) > 0 {
 			ret, err := timestamp.ParseDurationDefaultDays(c.Retention)
 			if err != nil {
@@ -207,6 +217,7 @@ func (c *TemporalOperatorNamespaceUpdateCommand) run(cctx *CommandContext, args 
 			}
 			retention = durationpb.New(ret)
 		}
+
 		var clusters []*replication.ClusterReplicationConfig
 		if len(c.Cluster) > 0 {
 			for _, clusterName := range c.Cluster {
@@ -215,6 +226,7 @@ func (c *TemporalOperatorNamespaceUpdateCommand) run(cctx *CommandContext, args 
 				})
 			}
 		}
+
 		updateInfo := &namespace.UpdateNamespaceInfo{
 			Description: description,
 			OwnerEmail:  ownerEmail,
@@ -232,7 +244,7 @@ func (c *TemporalOperatorNamespaceUpdateCommand) run(cctx *CommandContext, args 
 			Clusters: clusters,
 		}
 		updateRequest = &workflowservice.UpdateNamespaceRequest{
-			Namespace:         ns,
+			Namespace:         nsName,
 			UpdateInfo:        updateInfo,
 			Config:            updateConfig,
 			ReplicationConfig: replicationConfig,
@@ -252,7 +264,7 @@ func (c *TemporalOperatorNamespaceUpdateCommand) run(cctx *CommandContext, args 
 			return fmt.Errorf("namespace update failed: %w", err)
 		}
 	} else {
-		cctx.Printer.Println(color.GreenString("namespace %s update succeeded.", ns))
+		cctx.Printer.Println(color.GreenString("namespace %s update succeeded.", nsName))
 	}
 	return nil
 }
@@ -275,6 +287,8 @@ func printNamespaces(cctx *CommandContext, responses ...*workflowservice.Describ
 			"IsGlobalNamespace":                    resp.IsGlobalNamespace,
 			"FailoverVersion":                      resp.FailoverVersion,
 			"FailoverHistory":                      resp.FailoverHistory,
+			"Config.HistoryArchivalUri":            resp.Config.HistoryArchivalUri,
+			"Config.VisibilityArchivalUri":         resp.Config.VisibilityArchivalUri,
 		}
 	}
 
@@ -286,7 +300,8 @@ func printNamespaces(cctx *CommandContext, responses ...*workflowservice.Describ
 				"NamespaceInfo.OwnerEmail", "NamespaceInfo.State", "NamespaceInfo.Data",
 				"Config.WorkflowExecutionRetentionTtl", "ReplicationConfig.ActiveClusterName",
 				"ReplicationConfig.Clusters", "Config.HistoryArchivalState", "Config.VisibilityArchivalState",
-				"IsGlobalNamespace", "FailoverVersion", "FailoverHistory",
+				"IsGlobalNamespace", "FailoverVersion", "FailoverHistory", "Config.HistoryArchivalUri",
+				"Config.VisibilityArchivalUri",
 			},
 		},
 	)
