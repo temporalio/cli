@@ -94,6 +94,47 @@ Fail an Activity.
 Includes options set for [workflow reference](#options-set-for-workflow-reference).
 
 
+### temporal batch: Manage Batch Jobs
+
+Batch commands change multiple Workflow Executions.
+
+#### Options
+
+Includes options set for [client](#options-set-for-client).
+
+### temporal batch describe: Show Batch Job progress.
+
+The temporal batch describe command shows the progress of an ongoing Batch Job.
+
+`temporal batch describe --job-id=MyJobId`
+
+#### Options
+
+* `--job-id` (string) - The Batch Job Id to describe. Required.
+
+### temporal batch list: List all Batch Jobs
+
+The temporal batch list command returns all Batch Jobs.
+Batch Jobs can be returned for an entire Cluster or a single Namespace.
+
+`temporal batch list --namespace=MyNamespace`
+
+#### Options
+
+* `--limit` (int) - Limit the number of items to print.
+
+### temporal batch terminate: Terminate a Batch Job
+
+The temporal batch terminate command terminates a Batch Job with the provided Job Id.
+For future reference, provide a reason for terminating the Batch Job.
+
+`temporal batch terminate --job-id=MyJobId --reason=JobReason`
+
+#### Options
+
+* `--job-id` (string) - The Batch Job Id to terminate. Required.
+* `--reason` (string) - Reason for terminating the Batch Job. Required.
+
 ### temporal env: Manage environments.
 
 Use the '--env <env name>' option with other commands to point the CLI at a different Temporal Server instance. If --env

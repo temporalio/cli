@@ -35,6 +35,7 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	s.Command.Long = ""
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalActivityCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalBatchCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalEnvCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalOperatorCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalServerCommand(cctx, &s).Command)
@@ -140,6 +141,112 @@ func NewTemporalActivityFailCommand(cctx *CommandContext, parent *TemporalActivi
 	s.Command.Flags().StringVar(&s.Detail, "detail", "", "JSON data describing reason for failing the Activity.")
 	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of user submitting this request.")
 	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for failing the Activity.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalBatchCommand struct {
+	Parent  *TemporalCommand
+	Command cobra.Command
+	ClientOptions
+}
+
+func NewTemporalBatchCommand(cctx *CommandContext, parent *TemporalCommand) *TemporalBatchCommand {
+	var s TemporalBatchCommand
+	s.Parent = parent
+	s.Command.Use = "batch"
+	s.Command.Short = "Manage Batch Jobs"
+	s.Command.Long = "Batch commands change multiple Workflow Executions."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalBatchDescribeCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalBatchListCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalBatchTerminateCommand(cctx, &s).Command)
+	s.ClientOptions.buildFlags(cctx, s.Command.PersistentFlags())
+	return &s
+}
+
+type TemporalBatchDescribeCommand struct {
+	Parent  *TemporalBatchCommand
+	Command cobra.Command
+	JobId   string
+}
+
+func NewTemporalBatchDescribeCommand(cctx *CommandContext, parent *TemporalBatchCommand) *TemporalBatchDescribeCommand {
+	var s TemporalBatchDescribeCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "describe [flags]"
+	s.Command.Short = "Show Batch Job progress."
+	if hasHighlighting {
+		s.Command.Long = "The temporal batch describe command shows the progress of an ongoing Batch Job.\n\n\x1b[1mtemporal batch describe --job-id=MyJobId\x1b[0m"
+	} else {
+		s.Command.Long = "The temporal batch describe command shows the progress of an ongoing Batch Job.\n\n`temporal batch describe --job-id=MyJobId`"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.JobId, "job-id", "", "The Batch Job Id to describe.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "job-id")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalBatchListCommand struct {
+	Parent  *TemporalBatchCommand
+	Command cobra.Command
+	Limit   int
+}
+
+func NewTemporalBatchListCommand(cctx *CommandContext, parent *TemporalBatchCommand) *TemporalBatchListCommand {
+	var s TemporalBatchListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "List all Batch Jobs"
+	if hasHighlighting {
+		s.Command.Long = "The temporal batch list command returns all Batch Jobs.\nBatch Jobs can be returned for an entire Cluster or a single Namespace.\n\n\x1b[1mtemporal batch list --namespace=MyNamespace\x1b[0m"
+	} else {
+		s.Command.Long = "The temporal batch list command returns all Batch Jobs.\nBatch Jobs can be returned for an entire Cluster or a single Namespace.\n\n`temporal batch list --namespace=MyNamespace`"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().IntVar(&s.Limit, "limit", 0, "Limit the number of items to print.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalBatchTerminateCommand struct {
+	Parent  *TemporalBatchCommand
+	Command cobra.Command
+	JobId   string
+	Reason  string
+}
+
+func NewTemporalBatchTerminateCommand(cctx *CommandContext, parent *TemporalBatchCommand) *TemporalBatchTerminateCommand {
+	var s TemporalBatchTerminateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "terminate [flags]"
+	s.Command.Short = "Terminate a Batch Job"
+	if hasHighlighting {
+		s.Command.Long = "The temporal batch terminate command terminates a Batch Job with the provided Job Id.\nFor future reference, provide a reason for terminating the Batch Job.\n\n\x1b[1mtemporal batch terminate --job-id=MyJobId --reason=JobReason\x1b[0m"
+	} else {
+		s.Command.Long = "The temporal batch terminate command terminates a Batch Job with the provided Job Id.\nFor future reference, provide a reason for terminating the Batch Job.\n\n`temporal batch terminate --job-id=MyJobId --reason=JobReason`"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.JobId, "job-id", "", "The Batch Job Id to terminate.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "job-id")
+	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for terminating the Batch Job.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "reason")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
