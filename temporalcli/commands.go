@@ -283,7 +283,7 @@ func (c *CommandContext) promptString(message string, expected string, autoConfi
 	}
 	c.Printer.Print(message, " ")
 	if autoConfirm {
-		c.Printer.Println("yes")
+		c.Printer.Println(expected)
 		return true, nil
 	}
 	line, _ := bufio.NewReader(c.Options.Stdin).ReadString('\n')

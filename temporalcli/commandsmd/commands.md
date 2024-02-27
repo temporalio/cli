@@ -234,6 +234,7 @@ For example, the Visibility Archive can be set on a separate URI.
 -->
 
 #### Options
+
 * `--active-cluster` (string) - Active cluster name.
 * `--cluster` (string[]) - Cluster names.
 * `--data` (string) - Namespace data in key=value format. Use JSON for values.
@@ -253,7 +254,11 @@ The temporal operator namespace delete command deletes a given Namespace from th
 <!--
 * exact-args=1
 -->
- 
+
+#### Options
+
+* `--yes`, `-y` (bool) - Confirm prompt to perform deletion.
+
 ### temporal operator namespace describe [namespace]: Describe a Namespace by its name or ID.
 
 The temporal operator namespace describe command provides Namespace information.
@@ -295,7 +300,7 @@ However, URI values for archival states cannot be changed after the states are e
 #### Options
 * `--active-cluster` (string) - Active cluster name.
 * `--cluster` (string[]) - Cluster names.
-* `--data` (string) - Namespace data in key=value format. Use JSON for values.
+* `--data` (string[]) - Namespace data in key=value format. Use JSON for values.
 * `--description` (string) - Namespace description.
 * `--email` (string) - Owner email.
 * `--promote-global` (bool) - Promote local namespace to global namespace.
@@ -304,6 +309,7 @@ However, URI values for archival states cannot be changed after the states are e
 * `--retention` (string) - Length of time (in days) a closed Workflow is preserved before deletion. Default: 3.
 * `--visibility-archival-state` (string-enum) - Visibility archival state. Options: disabled, enabled. Default: disabled.
 * `--visibility-uri` (string) - Optionally specify visibility archival URI (cannot be changed after first time archival is enabled).
+* `--verbose`, `-v` (bool) - Print applied namespace changes.
 
 ### temporal operator search-attribute: Operations applying to Search Attributes
 

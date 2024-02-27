@@ -67,7 +67,7 @@ func (c *TemporalOperatorNamespaceDeleteCommand) run(cctx *CommandContext, args 
 	yes, err := cctx.promptString(
 		color.RedString("Are you sure you want to delete namespace %s? Type namespace name to confirm:", namespaceName),
 		namespaceName,
-		false)
+		c.Yes)
 	if err != nil {
 		return err
 	}
@@ -195,7 +195,7 @@ func (c *TemporalOperatorNamespaceUpdateCommand) run(cctx *CommandContext, args 
 		}
 		data := map[string]string{}
 		if len(c.Data) > 0 {
-			data, err = stringKeysValues(strings.Split(c.Data, ","))
+			data, err = stringKeysValues(c.Data)
 			if err != nil {
 				return err
 			}
@@ -237,6 +237,10 @@ func (c *TemporalOperatorNamespaceUpdateCommand) run(cctx *CommandContext, args 
 			Config:            updateConfig,
 			ReplicationConfig: replicationConfig,
 		}
+	}
+
+	if c.Verbose {
+		_ = cctx.Printer.PrintStructured(updateRequest, printer.StructuredOptions{})
 	}
 
 	_, err = cl.WorkflowService().UpdateNamespace(cctx, updateRequest)
