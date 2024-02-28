@@ -229,8 +229,8 @@ func UnmarshalProtoJSONWithOptions(b []byte, m proto.Message, jsonShorthandPaylo
 	return opts.Unmarshal(b, m)
 }
 
-// Set flag values from environment file & variables. Returns a map of flags->values which were
-// overridden by environment variables.
+// Set flag values from environment file & variables. Returns a callback to log anything interesting
+// since logging will not yet be initialized when this runs.
 func (c *CommandContext) populateFlagsFromEnv(flags *pflag.FlagSet) (func(*slog.Logger), error) {
 	if flags == nil {
 		return func(logger *slog.Logger) {}, nil
@@ -259,7 +259,7 @@ func (c *CommandContext) populateFlagsFromEnv(flags *pflag.FlagSet) (func(*slog.
 				}
 				if flag.Changed {
 					logCalls = append(logCalls, func(l *slog.Logger) {
-						l.Info("Env var overrode --env setting", "env_var", anns[0], "flag", flag.Name, "value", envVal)
+						l.Info("Env var overrode --env setting", "env_var", anns[0], "flag", flag.Name)
 					})
 				}
 				flag.Changed = true
