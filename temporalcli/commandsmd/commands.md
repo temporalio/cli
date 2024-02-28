@@ -95,6 +95,47 @@ Fail an Activity.
 Includes options set for [workflow reference](#options-set-for-workflow-reference).
 
 
+### temporal batch: Manage Batch Jobs
+
+Batch commands change multiple Workflow Executions.
+
+#### Options
+
+Includes options set for [client](#options-set-for-client).
+
+### temporal batch describe: Show Batch Job progress.
+
+The temporal batch describe command shows the progress of an ongoing Batch Job.
+
+`temporal batch describe --job-id=MyJobId`
+
+#### Options
+
+* `--job-id` (string) - The Batch Job Id to describe. Required.
+
+### temporal batch list: List all Batch Jobs
+
+The temporal batch list command returns all Batch Jobs.
+Batch Jobs can be returned for an entire Cluster or a single Namespace.
+
+`temporal batch list --namespace=MyNamespace`
+
+#### Options
+
+* `--limit` (int) - Limit the number of items to print.
+
+### temporal batch terminate: Terminate a Batch Job
+
+The temporal batch terminate command terminates a Batch Job with the provided Job Id.
+For future reference, provide a reason for terminating the Batch Job.
+
+`temporal batch terminate --job-id=MyJobId --reason=JobReason`
+
+#### Options
+
+* `--job-id` (string) - The Batch Job Id to terminate. Required.
+* `--reason` (string) - Reason for terminating the Batch Job. Required.
+
 ### temporal env: Manage environments.
 
 Use the '--env <env name>' option with other commands to point the CLI at a different Temporal Server instance. If --env
@@ -406,6 +447,68 @@ Use the options listed below to modify what this command returns.
 * `--task-queue-type` (string-enum) - Task Queue type. Options: workflow, activity. Default: workflow.
 * `--partitions` (int) - Query for all partitions up to this number (experimental+temporary feature). Default: 1.
 
+### temporal task-queue get-build-id-reachability: Retrieves information about the reachability of Build IDs on one or more Task Queues.
+
+This command can tell you whether or not Build IDs may be used for for new, existing, or closed workflows. Both the '--build-id' and '--task-queue' flags may be specified multiple times. If you do not provide a task queue, reachability for the provided Build IDs will be checked against all task queues.
+
+#### Options
+
+* `--build-id` (string[]) - Which Build ID to get reachability information for. May be specified multiple times.
+* `--reachability-type` (string-enum) - Specify how you'd like to filter the reachability of Build IDs. Valid choices are `open` (reachable by one or more open workflows), `closed` (reachable by one or more closed workflows), or `existing` (reachable by either). If a Build ID is reachable by new workflows, that is always reported. Options: open, closed, existing. Default: existing.
+* `--task-queue`, `-t` (string[]) - Which Task Queue(s) to constrain the reachability search to. May be specified multiple times.
+
+### temporal task-queue get-build-ids: Fetch the sets of worker Build ID versions on the Task Queue.
+
+Fetch the sets of compatible build IDs associated with a Task Queue and associated information.
+
+#### Options
+
+* `--task-queue`, `-t` (string) - Task queue name. Required.
+* `--max-sets` (int) - Limits how many compatible sets will be returned. Specify 1 to only return the current default major version set. 0 returns all sets. (default: 0). Default: 0.
+
+### temporal task-queue update-build-ids: Operations to update the sets of worker Build ID versions on the Task Queue.
+
+Provides various commands for adding or changing the sets of compatible build IDs associated with a Task Queue. See the help of each sub-command for more.
+
+### temporal task-queue update-build-ids add-new-compatible: Add a new build ID compatible with an existing ID to the Task Queue version sets.
+
+The new build ID will become the default for the set containing the existing ID. See per-flag help for more.
+
+#### Options
+
+* `--build-id` (string) - The new build id to be added. Required.
+* `--task-queue`, `-t` (string) - Name of the Task Queue. Required.
+* `--existing-compatible-build-id` (string) - A build id which must already exist in the version sets known by the task queue. The new id will be stored in the set containing this id, marking it as compatible with the versions within. Required.
+* `--set-as-default` (bool) - When set, establishes the compatible set being targeted as the overall default for the queue. If a different set was the current default, the targeted set will replace it as the new default. Defaults to false.
+
+### temporal task-queue update-build-ids add-new-default: Add a new default (incompatible) build ID to the Task Queue version sets.
+
+Creates a new build id set which will become the new overall default for the queue with the provided build id as its only member. This new set is incompatible with all previous sets/versions.
+
+#### Options
+
+* `--build-id` (string) - The new build id to be added. Required.
+* `--task-queue`, `-t` (string) - Name of the Task Queue. Required.
+
+### temporal task-queue update-build-ids promote-id-in-set: Promote an existing build ID to become the default for its containing set.
+
+New tasks compatible with the the set will be dispatched to the default id.
+
+#### Options
+
+* `--build-id` (string) - An existing build id which will be promoted to be the default inside its containing set. Required.
+* `--task-queue`, `-t` (string) - Name of the Task Queue. Required.
+
+### temporal task-queue update-build-ids promote-set: Promote an existing build ID set to become the default for the Task Queue.
+
+If the set is already the default, this command has no effect.
+
+#### Options
+
+* `--build-id` (string) - An existing build id whose containing set will be promoted. Required.
+* `--task-queue`, `-t` (string) - Name of the Task Queue. Required.
+
+
 ### temporal workflow: Start, list, and operate on Workflows.
 
 [Workflow](/concepts/what-is-a-workflow) commands perform operations on [Workflow Executions](/concepts/what-is-a-workflow-execution).
@@ -565,21 +668,23 @@ temporal workflow reset --workflow-id=meaningful-business-id --type=LastContinue
 ```
 temporal workflow reset --workflow-id=meaningful-business-id --event-id=MyLastEvent
 ```
-
+For batch reset only FirstWorkflowTask, LastWorkflowTask or BuildId can be used. Workflow Id, run Id and event Id 
+should not be set.
 Use the options listed below to change reset behavior.
 
 #### Options
 
-* `--workflow-id`, `-w` (string) - Workflow Id. Required.
+* `--workflow-id`, `-w` (string) - Workflow Id. Required for non-batch reset operations.
 * `--run-id`, `-r` (string) - Run Id.
 * `--event-id`, `-e` (int) - The Event Id for any Event after `WorkflowTaskStarted` you want to reset to (exclusive). It can be `WorkflowTaskCompleted`, `WorkflowTaskFailed` or others.
 * `--reason` (string) - The reason why this workflow is being reset. Required.
 * `--reapply-type` (string-enum) - Event types to reapply after the reset point. Options: All, Signal, None. Default: All.
-* `--type`, `-t` (string-enum) - Event type to which you want to reset. Options: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew.
+* `--type`, `-t` (string-enum) - Event type to which you want to reset. Options: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew, BuildId.
+* `--build-id` (string) - Only used if type is BuildId. Reset the first workflow task processed by this build id. Note that by default, this reset is allowed to be to a prior run in a chain of continue-as-new.
+* `--query`, `-q` (string) - Start a batch reset to operate on Workflow Executions with given List Filter.
+* `--yes`, `-y` (bool) - Confirm prompt to perform batch. Only allowed if query is present.
 
-### temporal workflow reset-batch: Reset a batch of Workflow Executions by reset type.
 
-TODO
 
 ### temporal workflow show: Show Event History for a Workflow Execution.
 

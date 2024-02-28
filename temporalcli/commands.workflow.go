@@ -58,10 +58,6 @@ func (c *TemporalWorkflowQueryCommand) run(cctx *CommandContext, args []string) 
 		c.Type, c.RejectCondition, c.WorkflowReferenceOptions)
 }
 
-func (*TemporalWorkflowResetBatchCommand) run(*CommandContext, []string) error {
-	return fmt.Errorf("TODO")
-}
-
 func (c *TemporalWorkflowSignalCommand) run(cctx *CommandContext, args []string) error {
 	cl, err := c.Parent.ClientOptions.dialClient(cctx)
 	if err != nil {
