@@ -509,7 +509,7 @@ type TemporalOperatorNamespaceCreateCommand struct {
 	Global                  bool
 	HistoryArchivalState    StringEnum
 	HistoryUri              string
-	Retention               string
+	Retention               time.Duration
 	VisibilityArchivalState StringEnum
 	VisibilityUri           string
 }
@@ -535,7 +535,7 @@ func NewTemporalOperatorNamespaceCreateCommand(cctx *CommandContext, parent *Tem
 	s.HistoryArchivalState = NewStringEnum([]string{"disabled", "enabled"}, "disabled")
 	s.Command.Flags().Var(&s.HistoryArchivalState, "history-archival-state", "History archival state. Accepted values: disabled, enabled.")
 	s.Command.Flags().StringVar(&s.HistoryUri, "history-uri", "", "Optionally specify history archival URI (cannot be changed after first time archival is enabled).")
-	s.Command.Flags().StringVar(&s.Retention, "retention", "3", "Length of time (in days) a closed Workflow is preserved before deletion.")
+	s.Command.Flags().DurationVar(&s.Retention, "retention", 259200000*time.Millisecond, "Length of time a closed Workflow is preserved before deletion.")
 	s.VisibilityArchivalState = NewStringEnum([]string{"disabled", "enabled"}, "disabled")
 	s.Command.Flags().Var(&s.VisibilityArchivalState, "visibility-archival-state", "Visibility archival state. Accepted values: disabled, enabled.")
 	s.Command.Flags().StringVar(&s.VisibilityUri, "visibility-uri", "", "Optionally specify visibility archival URI (cannot be changed after first time archival is enabled).")
@@ -629,10 +629,9 @@ type TemporalOperatorNamespaceUpdateCommand struct {
 	PromoteGlobal           bool
 	HistoryArchivalState    StringEnum
 	HistoryUri              string
-	Retention               string
+	Retention               time.Duration
 	VisibilityArchivalState StringEnum
 	VisibilityUri           string
-	Verbose                 bool
 }
 
 func NewTemporalOperatorNamespaceUpdateCommand(cctx *CommandContext, parent *TemporalOperatorNamespaceCommand) *TemporalOperatorNamespaceUpdateCommand {
@@ -642,9 +641,9 @@ func NewTemporalOperatorNamespaceUpdateCommand(cctx *CommandContext, parent *Tem
 	s.Command.Use = "update [flags] [namespace]"
 	s.Command.Short = "Updates a Namespace."
 	if hasHighlighting {
-		s.Command.Long = "The temporal operator namespace update command updates a Namespace.\n\nNamespaces can be assigned a different active Cluster.\n\x1b[1mtemporal operator namespace update --active-cluster=NewActiveCluster\x1b[0m\n\nNamespaces can also be promoted to global Namespaces.\n\x1b[1mtemporal operator namespace --promote-global\x1b[0m\n\nAny Archives that were previously enabled or disabled can be changed through this command.\nHowever, URI values for archival states cannot be changed after the states are enabled.\n\x1b[1mtemporal operator namespace update --history-archival-state=enabled --visibility-archival-state=disabled\x1b[0m"
+		s.Command.Long = "The temporal operator namespace update command updates a Namespace.\n\nNamespaces can be assigned a different active Cluster.\n\x1b[1mtemporal operator namespace update --active-cluster=NewActiveCluster\x1b[0m\n\nNamespaces can also be promoted to global Namespaces.\n\x1b[1mtemporal operator namespace update --promote-global\x1b[0m\n\nAny Archives that were previously enabled or disabled can be changed through this command.\nHowever, URI values for archival states cannot be changed after the states are enabled.\n\x1b[1mtemporal operator namespace update --history-archival-state=enabled --visibility-archival-state=disabled\x1b[0m"
 	} else {
-		s.Command.Long = "The temporal operator namespace update command updates a Namespace.\n\nNamespaces can be assigned a different active Cluster.\n`temporal operator namespace update --active-cluster=NewActiveCluster`\n\nNamespaces can also be promoted to global Namespaces.\n`temporal operator namespace --promote-global`\n\nAny Archives that were previously enabled or disabled can be changed through this command.\nHowever, URI values for archival states cannot be changed after the states are enabled.\n`temporal operator namespace update --history-archival-state=enabled --visibility-archival-state=disabled`"
+		s.Command.Long = "The temporal operator namespace update command updates a Namespace.\n\nNamespaces can be assigned a different active Cluster.\n`temporal operator namespace update --active-cluster=NewActiveCluster`\n\nNamespaces can also be promoted to global Namespaces.\n`temporal operator namespace update --promote-global`\n\nAny Archives that were previously enabled or disabled can be changed through this command.\nHowever, URI values for archival states cannot be changed after the states are enabled.\n`temporal operator namespace update --history-archival-state=enabled --visibility-archival-state=disabled`"
 	}
 	s.Command.Args = cobra.ExactArgs(1)
 	s.Command.Flags().StringVar(&s.ActiveCluster, "active-cluster", "", "Active cluster name.")
@@ -656,11 +655,10 @@ func NewTemporalOperatorNamespaceUpdateCommand(cctx *CommandContext, parent *Tem
 	s.HistoryArchivalState = NewStringEnum([]string{"disabled", "enabled"}, "disabled")
 	s.Command.Flags().Var(&s.HistoryArchivalState, "history-archival-state", "History archival state. Accepted values: disabled, enabled.")
 	s.Command.Flags().StringVar(&s.HistoryUri, "history-uri", "", "Optionally specify history archival URI (cannot be changed after first time archival is enabled).")
-	s.Command.Flags().StringVar(&s.Retention, "retention", "3", "Length of time (in days) a closed Workflow is preserved before deletion.")
+	s.Command.Flags().DurationVar(&s.Retention, "retention", 0, "Length of time a closed Workflow is preserved before deletion.")
 	s.VisibilityArchivalState = NewStringEnum([]string{"disabled", "enabled"}, "disabled")
 	s.Command.Flags().Var(&s.VisibilityArchivalState, "visibility-archival-state", "Visibility archival state. Accepted values: disabled, enabled.")
 	s.Command.Flags().StringVar(&s.VisibilityUri, "visibility-uri", "", "Optionally specify visibility archival URI (cannot be changed after first time archival is enabled).")
-	s.Command.Flags().BoolVarP(&s.Verbose, "verbose", "v", false, "Print applied namespace changes.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

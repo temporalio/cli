@@ -12,7 +12,6 @@ import (
 	"go.temporal.io/api/replication/v1"
 	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/api/workflowservice/v1"
-	"go.temporal.io/server/common/primitives/timestamp"
 	"google.golang.org/protobuf/types/known/durationpb"
 )
 
@@ -24,8 +23,6 @@ func (c *TemporalOperatorNamespaceCreateCommand) run(cctx *CommandContext, args 
 	}
 	defer cl.Close()
 
-	retention, err := timestamp.ParseDurationDefaultDays(c.Retention)
-
 	var clusters []*replication.ClusterReplicationConfig
 	for _, clusterName := range c.Cluster {
 		clusters = append(clusters, &replication.ClusterReplicationConfig{
@@ -33,7 +30,7 @@ func (c *TemporalOperatorNamespaceCreateCommand) run(cctx *CommandContext, args 
 		})
 	}
 
-	data := map[string]string{}
+	var data map[string]string
 	if len(c.Data) > 0 {
 		data, err = stringKeysValues(strings.Split(c.Data, ","))
 		if err != nil {
@@ -45,7 +42,7 @@ func (c *TemporalOperatorNamespaceCreateCommand) run(cctx *CommandContext, args 
 		Namespace:                        nsName,
 		Description:                      c.Description,
 		OwnerEmail:                       c.Email,
-		WorkflowExecutionRetentionPeriod: durationpb.New(retention),
+		WorkflowExecutionRetentionPeriod: durationpb.New(c.Retention),
 		Clusters:                         clusters,
 		ActiveClusterName:                c.ActiveCluster,
 		Data:                             data,
@@ -210,12 +207,8 @@ func (c *TemporalOperatorNamespaceUpdateCommand) run(cctx *CommandContext, args 
 			}
 		}
 
-		if len(c.Retention) > 0 {
-			ret, err := timestamp.ParseDurationDefaultDays(c.Retention)
-			if err != nil {
-				return fmt.Errorf("option retention format is invalid: %w", err)
-			}
-			retention = durationpb.New(ret)
+		if c.Retention > 0 {
+			retention = durationpb.New(c.Retention)
 		}
 
 		var clusters []*replication.ClusterReplicationConfig
@@ -251,11 +244,7 @@ func (c *TemporalOperatorNamespaceUpdateCommand) run(cctx *CommandContext, args 
 		}
 	}
 
-	if c.Verbose {
-		_ = cctx.Printer.PrintStructured(updateRequest, printer.StructuredOptions{})
-	}
-
-	_, err = cl.WorkflowService().UpdateNamespace(cctx, updateRequest)
+	resp, err := cl.WorkflowService().UpdateNamespace(cctx, updateRequest)
 	if err != nil {
 		switch err.(type) {
 		case *serviceerror.NamespaceNotFound:
@@ -263,9 +252,12 @@ func (c *TemporalOperatorNamespaceUpdateCommand) run(cctx *CommandContext, args 
 		default:
 			return fmt.Errorf("namespace update failed: %w", err)
 		}
-	} else {
-		cctx.Printer.Println(color.GreenString("namespace %s update succeeded.", nsName))
 	}
+	if cctx.JSONOutput {
+		_ = cctx.Printer.PrintStructured(resp, printer.StructuredOptions{})
+	}
+	cctx.Printer.Println(color.GreenString("Namespace %s update succeeded.", nsName))
+
 	return nil
 }
 

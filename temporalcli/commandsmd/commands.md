@@ -243,7 +243,7 @@ For example, the Visibility Archive can be set on a separate URI.
 * `--global` (bool) - Whether the namespace is a global namespace.
 * `--history-archival-state` (string-enum) - History archival state. Options: disabled, enabled. Default: disabled.
 * `--history-uri` (string) - Optionally specify history archival URI (cannot be changed after first time archival is enabled).
-* `--retention` (string) - Length of time (in days) a closed Workflow is preserved before deletion. Default: 3.
+* `--retention` (duration) - Length of time a closed Workflow is preserved before deletion. Default: 72h.
 * `--visibility-archival-state` (string-enum) - Visibility archival state. Options: disabled, enabled. Default: disabled.
 * `--visibility-uri` (string) - Optionally specify visibility archival URI (cannot be changed after first time archival is enabled).
 
@@ -287,7 +287,7 @@ Namespaces can be assigned a different active Cluster.
 `temporal operator namespace update --active-cluster=NewActiveCluster`
 
 Namespaces can also be promoted to global Namespaces.
-`temporal operator namespace --promote-global`
+`temporal operator namespace update --promote-global`
 
 Any Archives that were previously enabled or disabled can be changed through this command.
 However, URI values for archival states cannot be changed after the states are enabled.
@@ -306,10 +306,9 @@ However, URI values for archival states cannot be changed after the states are e
 * `--promote-global` (bool) - Promote local namespace to global namespace.
 * `--history-archival-state` (string-enum) - History archival state. Options: disabled, enabled. Default: disabled.
 * `--history-uri` (string) - Optionally specify history archival URI (cannot be changed after first time archival is enabled).
-* `--retention` (string) - Length of time (in days) a closed Workflow is preserved before deletion. Default: 3.
+* `--retention` (duration) - Length of time a closed Workflow is preserved before deletion.
 * `--visibility-archival-state` (string-enum) - Visibility archival state. Options: disabled, enabled. Default: disabled.
 * `--visibility-uri` (string) - Optionally specify visibility archival URI (cannot be changed after first time archival is enabled).
-* `--verbose`, `-v` (bool) - Print applied namespace changes.
 
 ### temporal operator search-attribute: Operations applying to Search Attributes
 

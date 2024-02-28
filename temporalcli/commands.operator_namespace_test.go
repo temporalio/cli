@@ -9,7 +9,7 @@ import (
 	"go.temporal.io/api/workflowservice/v1"
 )
 
-func (s *SharedServerSuite) TestOperator_Namespace_Create_List_And_Describe() {
+func (s *SharedServerSuite) TestOperator_NamespaceCreateListAndDescribe() {
 	nsName := "test_namespace"
 	res := s.Execute(
 		"operator", "namespace", "create",
@@ -59,7 +59,7 @@ func (s *SharedServerSuite) TestOperator_Namespace_Create_List_And_Describe() {
 	s.Len(describeResp.Config.VisibilityArchivalUri, 0)
 }
 
-func (s *SharedServerSuite) TestNamespaceUpdate_Verbose() {
+func (s *SharedServerSuite) TestNamespaceUpdate() {
 	nsName := "test-namespace-update-verbose"
 
 	res := s.Execute(
@@ -67,7 +67,7 @@ func (s *SharedServerSuite) TestNamespaceUpdate_Verbose() {
 		"--address", s.Address(),
 		"--description", "description before",
 		"--email", "email@before",
-		"--retention", "1",
+		"--retention", "24h",
 		nsName,
 	)
 	s.NoError(res.Err)
@@ -77,15 +77,13 @@ func (s *SharedServerSuite) TestNamespaceUpdate_Verbose() {
 		"--address", s.Address(),
 		"--description", "description after",
 		"--email", "email@after",
-		"--retention", "2",
+		"--retention", "48h",
+		"--data", "k1=v1",
+		"--data", "k2=v2",
 		"--output", "json",
-		"--verbose",
 		nsName,
 	)
 	s.NoError(res.Err)
-	s.ContainsOnSameLine(res.Stdout.String(), "workflowExecutionRetentionTtl", "172800s")
-	s.ContainsOnSameLine(res.Stdout.String(), "description", "description after")
-	s.ContainsOnSameLine(res.Stdout.String(), "ownerEmail", "email@after")
 
 	res = s.Execute(
 		"operator", "namespace", "describe",
@@ -100,29 +98,6 @@ func (s *SharedServerSuite) TestNamespaceUpdate_Verbose() {
 	s.Equal("description after", describeResp.NamespaceInfo.Description)
 	s.Equal("email@after", describeResp.NamespaceInfo.OwnerEmail)
 	s.Equal(48*time.Hour, describeResp.Config.WorkflowExecutionRetentionTtl.AsDuration())
-}
-
-func (s *SharedServerSuite) TestNamespaceUpdate_Data() {
-	nsName := "default"
-	res := s.Execute(
-		"operator", "namespace", "update",
-		"--address", s.Address(),
-		"--data", "k1=v1",
-		"--data", "k2=v2",
-		nsName,
-	)
-	s.NoError(res.Err)
-
-	res = s.Execute(
-		"operator", "namespace", "describe",
-		"--address", s.Address(),
-		"--output", "json",
-		nsName,
-	)
-	s.NoError(res.Err)
-	var describeResp workflowservice.DescribeNamespaceResponse
-	s.NoError(temporalcli.UnmarshalProtoJSONWithOptions(res.Stdout.Bytes(), &describeResp, true))
-
 	s.Equal("v1", describeResp.NamespaceInfo.Data["k1"])
 	s.Equal("v2", describeResp.NamespaceInfo.Data["k2"])
 }
