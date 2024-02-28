@@ -74,7 +74,9 @@ func (c *ClientOptions) dialClient(cctx *CommandContext) (client.Client, error) 
 
 func (c *ClientOptions) tlsConfig() (*tls.Config, error) {
 	// We need TLS if any of these TLS options are set
-	if !c.Tls && c.TlsCaPath == "" && c.TlsCertPath == "" && c.TlsKeyPath == "" {
+	if !c.Tls &&
+		c.TlsCaPath == "" && c.TlsCertPath == "" && c.TlsKeyPath == "" &&
+		c.TlsCaData == "" && c.TlsCertData == "" && c.TlsKeyData == "" {
 		return nil, nil
 	}
 
@@ -84,7 +86,16 @@ func (c *ClientOptions) tlsConfig() (*tls.Config, error) {
 	}
 
 	if c.TlsCertPath != "" {
+		if c.TlsCertData != "" {
+			return nil, fmt.Errorf("cannot specify both --tls-cert-path and --tls-cert-data")
+		}
 		clientCert, err := tls.LoadX509KeyPair(c.TlsCertPath, c.TlsKeyPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed loading client cert key pair: %w", err)
+		}
+		conf.Certificates = append(conf.Certificates, clientCert)
+	} else if c.TlsCertData != "" {
+		clientCert, err := tls.X509KeyPair([]byte(c.TlsCertData), []byte(c.TlsKeyData))
 		if err != nil {
 			return nil, fmt.Errorf("failed loading client cert key pair: %w", err)
 		}
@@ -92,11 +103,19 @@ func (c *ClientOptions) tlsConfig() (*tls.Config, error) {
 	}
 
 	if c.TlsCaPath != "" {
+		if c.TlsCaData != "" {
+			return nil, fmt.Errorf("cannot specify both --tls-ca-path and --tls-ca-data")
+		}
 		conf.RootCAs = x509.NewCertPool()
 		if b, err := os.ReadFile(c.TlsCaPath); err != nil {
 			return nil, fmt.Errorf("failed reading CA cert from %v: %w", c.TlsCaPath, err)
 		} else if !conf.RootCAs.AppendCertsFromPEM(b) {
 			return nil, fmt.Errorf("invalid CA cert from %v", c.TlsCaPath)
+		}
+	} else if c.TlsCaData != "" {
+		conf.RootCAs = x509.NewCertPool()
+		if !conf.RootCAs.AppendCertsFromPEM([]byte(c.TlsCaData)) {
+			return nil, fmt.Errorf("invalid CA cert data")
 		}
 	}
 	return conf, nil
