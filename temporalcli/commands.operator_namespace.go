@@ -10,7 +10,6 @@ import (
 	"go.temporal.io/api/namespace/v1"
 	"go.temporal.io/api/operatorservice/v1"
 	"go.temporal.io/api/replication/v1"
-	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/api/workflowservice/v1"
 	"google.golang.org/protobuf/types/known/durationpb"
 )
@@ -70,7 +69,7 @@ func (c *TemporalOperatorNamespaceDeleteCommand) run(cctx *CommandContext, args 
 	}
 
 	if !yes {
-		return fmt.Errorf("user denied confirmation")
+		return fmt.Errorf("user denied confirmation or mistyped the namespace name")
 	}
 
 	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
@@ -94,9 +93,16 @@ func (c *TemporalOperatorNamespaceDeleteCommand) run(cctx *CommandContext, args 
 }
 
 func (c *TemporalOperatorNamespaceDescribeCommand) run(cctx *CommandContext, args []string) error {
-	nsName, nsID, err := getNamespaceFromIDArgs(cctx, c.NamespaceId, args)
-	if err != nil {
-		return err
+	nsID := c.NamespaceId
+	var nsName string
+	if nsID == "" && len(args) == 0 {
+		return fmt.Errorf("provide either namespace-id flag or namespace as an argument")
+	}
+	if nsID != "" && len(args) > 0 {
+		cctx.Printer.Println(color.YellowString("Both namespace-id flag and namespace are provided. Will use namespace Id to describe namespace"))
+	}
+	if nsID == "" {
+		nsName = args[0]
 	}
 
 	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
@@ -116,7 +122,7 @@ func (c *TemporalOperatorNamespaceDescribeCommand) run(cctx *CommandContext, arg
 	if cctx.JSONOutput {
 		return cctx.Printer.PrintStructured(resp, printer.StructuredOptions{})
 	}
-	return printNamespaces(cctx, resp)
+	return printNamespaceDescriptions(cctx, resp)
 }
 
 func (c *TemporalOperatorNamespaceListCommand) run(cctx *CommandContext, args []string) error {
@@ -139,7 +145,7 @@ func (c *TemporalOperatorNamespaceListCommand) run(cctx *CommandContext, args []
 			// For JSON we are going to dump one line of JSON per execution
 			_ = cctx.Printer.PrintStructured(resp.Namespaces, printer.StructuredOptions{})
 		} else {
-			_ = printNamespaces(cctx, resp.Namespaces...)
+			_ = printNamespaceDescriptions(cctx, resp.Namespaces...)
 		}
 
 		nextPageToken = resp.GetNextPageToken()
@@ -159,15 +165,19 @@ func (c *TemporalOperatorNamespaceUpdateCommand) run(cctx *CommandContext, args 
 
 	var updateRequest *workflowservice.UpdateNamespaceRequest
 
+	if c.PromoteGlobal && len(c.ActiveCluster) > 0 {
+		return fmt.Errorf("both --promote-global and --active-cluster flags cannot be set together")
+	}
+
 	if c.PromoteGlobal {
-		fmt.Printf("Will promote local namespace to global namespace for:%s, other flag will be omitted. "+
+		cctx.Printer.Printlnf("Will promote local namespace to global namespace for:%s, other flag will be omitted. "+
 			"If it is already global namespace, this will be no-op.\n", nsName)
 		updateRequest = &workflowservice.UpdateNamespaceRequest{
 			Namespace:        nsName,
 			PromoteNamespace: true,
 		}
 	} else if len(c.ActiveCluster) > 0 {
-		fmt.Printf("Will set active cluster name to: %s, other flag will be omitted.\n", c.ActiveCluster)
+		cctx.Printer.Printlnf("Will set active cluster name to: %s, other flag will be omitted.\n", c.ActiveCluster)
 		replicationConfig := &replication.NamespaceReplicationConfig{
 			ActiveClusterName: c.ActiveCluster,
 		}
@@ -180,12 +190,7 @@ func (c *TemporalOperatorNamespaceUpdateCommand) run(cctx *CommandContext, args 
 			Namespace: nsName,
 		})
 		if err != nil {
-			switch err.(type) {
-			case *serviceerror.NamespaceNotFound:
-				return err
-			default:
-				return fmt.Errorf("namespace update failed: %w", err)
-			}
+			return fmt.Errorf("namespace update failed: %w", err)
 		}
 
 		description := resp.NamespaceInfo.GetDescription()
@@ -246,13 +251,9 @@ func (c *TemporalOperatorNamespaceUpdateCommand) run(cctx *CommandContext, args 
 
 	resp, err := cl.WorkflowService().UpdateNamespace(cctx, updateRequest)
 	if err != nil {
-		switch err.(type) {
-		case *serviceerror.NamespaceNotFound:
-			return err
-		default:
-			return fmt.Errorf("namespace update failed: %w", err)
-		}
+		return fmt.Errorf("namespace update failed: %w", err)
 	}
+
 	if cctx.JSONOutput {
 		_ = cctx.Printer.PrintStructured(resp, printer.StructuredOptions{})
 	}
@@ -261,7 +262,7 @@ func (c *TemporalOperatorNamespaceUpdateCommand) run(cctx *CommandContext, args 
 	return nil
 }
 
-func printNamespaces(cctx *CommandContext, responses ...*workflowservice.DescribeNamespaceResponse) error {
+func printNamespaceDescriptions(cctx *CommandContext, responses ...*workflowservice.DescribeNamespaceResponse) error {
 	namespaces := make([]map[string]any, len(responses))
 	for i, resp := range responses {
 		namespaces[i] = map[string]any{
@@ -307,21 +308,4 @@ func archivalState(input string) enums.ArchivalState {
 		return enums.ARCHIVAL_STATE_ENABLED
 	}
 	return enums.ARCHIVAL_STATE_UNSPECIFIED
-}
-
-func getNamespaceFromIDArgs(cctx *CommandContext, nsID string, args []string) (string, string, error) {
-	if nsID == "" && len(args) == 0 {
-		return "", "", fmt.Errorf("provide either namespace-id flag or namespace as an argument")
-	}
-
-	if nsID != "" && len(args) > 0 {
-		cctx.Printer.Println(color.YellowString("Both namespace-id flag and namespace are provided. Will use namespace Id to describe namespace"))
-		return "", nsID, nil
-	}
-
-	if nsID != "" {
-		return "", nsID, nil
-	}
-
-	return args[0], "", nil
 }

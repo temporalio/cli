@@ -304,10 +304,10 @@ However, URI values for archival states cannot be changed after the states are e
 * `--description` (string) - Namespace description.
 * `--email` (string) - Owner email.
 * `--promote-global` (bool) - Promote local namespace to global namespace.
-* `--history-archival-state` (string-enum) - History archival state. Options: disabled, enabled. Default: disabled.
+* `--history-archival-state` (string-enum) - History archival state. Options: disabled, enabled.
 * `--history-uri` (string) - Optionally specify history archival URI (cannot be changed after first time archival is enabled).
 * `--retention` (duration) - Length of time a closed Workflow is preserved before deletion.
-* `--visibility-archival-state` (string-enum) - Visibility archival state. Options: disabled, enabled. Default: disabled.
+* `--visibility-archival-state` (string-enum) - Visibility archival state. Options: disabled, enabled.
 * `--visibility-uri` (string) - Optionally specify visibility archival URI (cannot be changed after first time archival is enabled).
 
 ### temporal operator search-attribute: Operations applying to Search Attributes
