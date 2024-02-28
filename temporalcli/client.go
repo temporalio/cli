@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"maps"
 	"net/http"
 	"os"
 	"os/user"
@@ -34,14 +33,14 @@ func (c *ClientOptions) dialClient(cctx *CommandContext) (client.Client, error) 
 	}
 
 	// Headers
-	headers := &headersProvider{setByArgs: make(map[string]string)}
+	headers := newStringMapHeadersProvider()
 	if len(c.GrpcMeta) > 0 {
 		for _, kv := range c.GrpcMeta {
 			pieces := strings.SplitN(kv, "=", 2)
 			if len(pieces) != 2 {
 				return nil, fmt.Errorf("gRPC meta of %q does not have '='", kv)
 			}
-			headers.setByArgs[pieces[0]] = pieces[1]
+			headers[pieces[0]] = pieces[1]
 		}
 	}
 	clientOptions.HeadersProvider = headers
@@ -156,19 +155,18 @@ func clientIdentity() string {
 	return "temporal-cli:" + username + "@" + hostname
 }
 
-type headersProvider struct {
-	setByArgs map[string]string
+type stringMapHeadersProvider map[string]string
+
+func newStringMapHeadersProvider() stringMapHeadersProvider {
+	rmap := make(map[string]string)
+	if authHeader := os.Getenv(`TEMPORAL_CLI_AUTHORIZATION_TOKEN`); authHeader != "" {
+		rmap["Authorization"] = authHeader
+	}
+	return rmap
 }
 
-func (h *headersProvider) GetHeaders(context.Context) (map[string]string, error) {
-	retme := make(map[string]string)
-	maps.Copy(retme, h.setByArgs)
-	if _, ok := retme["Authorization"]; !ok {
-		if authHeader := os.Getenv(`TEMPORAL_CLI_AUTHORIZATION_TOKEN`); authHeader != "" {
-			retme["Authorization"] = authHeader
-		}
-	}
-	return retme, nil
+func (s stringMapHeadersProvider) GetHeaders(context.Context) (map[string]string, error) {
+	return s, nil
 }
 
 var dataConverter = converter.NewCompositeDataConverter(
