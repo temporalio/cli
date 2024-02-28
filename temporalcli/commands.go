@@ -229,10 +229,13 @@ func UnmarshalProtoJSONWithOptions(b []byte, m proto.Message, jsonShorthandPaylo
 	return opts.Unmarshal(b, m)
 }
 
-func (c *CommandContext) populateFlagsFromEnv(flags *pflag.FlagSet) error {
+// Set flag values from environment file & variables. Returns a callback to log anything interesting
+// since logging will not yet be initialized when this runs.
+func (c *CommandContext) populateFlagsFromEnv(flags *pflag.FlagSet) (func(*slog.Logger), error) {
 	if flags == nil {
-		return nil
+		return func(logger *slog.Logger) {}, nil
 	}
+	var logCalls []func(*slog.Logger)
 	var flagErr error
 	flags.VisitAll(func(flag *pflag.Flag) {
 		// If the flag was already changed by the user, we don't overwrite
@@ -254,11 +257,21 @@ func (c *CommandContext) populateFlagsFromEnv(flags *pflag.FlagSet) error {
 						flag.Name, anns[0], envVal, err)
 					return
 				}
+				if flag.Changed {
+					logCalls = append(logCalls, func(l *slog.Logger) {
+						l.Info("Env var overrode --env setting", "env_var", anns[0], "flag", flag.Name)
+					})
+				}
 				flag.Changed = true
 			}
 		}
 	})
-	return flagErr
+	logFn := func(logger *slog.Logger) {
+		for _, call := range logCalls {
+			call(logger)
+		}
+	}
+	return logFn, flagErr
 }
 
 // Returns error if JSON output enabled
@@ -307,7 +320,8 @@ func (c *TemporalCommand) initCommand(cctx *CommandContext) {
 	c.Command.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
 		// Populate environ. We will make the error return here which will cause
 		// usage to be printed.
-		if err := cctx.populateFlagsFromEnv(cmd.Flags()); err != nil {
+		logCalls, err := cctx.populateFlagsFromEnv(cmd.Flags())
+		if err != nil {
 			return err
 		}
 
@@ -318,6 +332,8 @@ func (c *TemporalCommand) initCommand(cctx *CommandContext) {
 		}
 
 		res := c.preRun(cctx)
+
+		logCalls(cctx.Logger)
 
 		// Always disable color if JSON output is on (must be run after preRun so JSONOutput is set)
 		if cctx.JSONOutput {
