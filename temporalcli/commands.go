@@ -287,7 +287,7 @@ func (c *CommandContext) promptString(message string, expected string, autoConfi
 		return true, nil
 	}
 	line, _ := bufio.NewReader(c.Options.Stdin).ReadString('\n')
-	line = strings.TrimSpace(strings.ToLower(line))
+	line = strings.TrimSpace(line)
 	return line == expected, nil
 }
 
