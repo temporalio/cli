@@ -227,7 +227,7 @@ A reset allows the Workflow to resume from a certain point without losing its pa
 The Workflow Execution can be set to a given [Event Type](/concepts/what-is-an-event).
 ` + "`" + `temporal workflow reset --workflow-id=meaningful-business-id --type=LastContinuedAsNew` + "`" + `
 
-The Workflow Execution can also be reset to any Event after []` + "`" + `WorkflowTaskStarted` + "`" + `](/references/events#workflowtaskstarted).
+The Workflow Execution can also be reset to any Event after [` + "`" + `WorkflowTaskStarted` + "`" + `](/references/events#workflowtaskstarted).
 ` + "`" + `temporal workflow reset --workflow-id=meaningful-business-id --event-id=MyLastEvent` + "`" + `
 
 Use the options listed below to change reset behavior.`
