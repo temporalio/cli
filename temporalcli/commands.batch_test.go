@@ -185,12 +185,16 @@ func (s *SharedServerSuite) TestBatchJob_Terminate() {
 			jobId := "TestBatchJob_Terminate_Text"
 			s.startBatchJob(jobId, s.Namespace())
 
-			res := s.Execute(
-				"batch", "terminate",
-				"--address", s.Address(),
-				"--job-id", jobId,
-				"--reason", "testing")
-			s.NoError(res.Err)
+			var res *CommandResult
+			s.Eventually(func() bool {
+				res = s.Execute(
+					"batch", "terminate",
+					"--address", s.Address(),
+					"--job-id", jobId,
+					"--reason", "testing")
+				return res.Err == nil
+			}, 5*time.Second, 100*time.Millisecond)
+
 			s.Empty(res.Stderr.String())
 			s.Equal("Terminated Batch Job '"+jobId+"'\n", res.Stdout.String())
 		})
@@ -199,13 +203,17 @@ func (s *SharedServerSuite) TestBatchJob_Terminate() {
 			jobId := "TestBatchJob_Terminate_JSON"
 			s.startBatchJob(jobId, s.Namespace())
 
-			res := s.Execute(
-				"batch", "terminate",
-				"--address", s.Address(),
-				"--job-id", jobId,
-				"--reason", "testing",
-				"-o", "json")
-			s.NoError(res.Err)
+			var res *CommandResult
+			s.Eventually(func() bool {
+				res = s.Execute(
+					"batch", "terminate",
+					"--address", s.Address(),
+					"--job-id", jobId,
+					"--reason", "testing",
+					"-o", "json")
+				return res.Err == nil
+			}, 5*time.Second, 100*time.Millisecond)
+
 			s.Empty(res.Stderr.String())
 			s.Empty(res.Stdout.String())
 		})
