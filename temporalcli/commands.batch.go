@@ -70,6 +70,10 @@ func (c TemporalBatchListCommand) run(cctx *CommandContext, args []string) error
 	}
 	defer cl.Close()
 
+	// This is a listing command subject to json vs jsonl rules
+	cctx.Printer.StartList()
+	defer cctx.Printer.EndList()
+
 	pageFetcher := c.pageFetcher(cctx, cl)
 	var nextPageToken []byte
 	var jobsProcessed int
@@ -80,9 +84,6 @@ func (c TemporalBatchListCommand) run(cctx *CommandContext, args []string) error
 		}
 
 		if pageIndex == 0 && len(page.GetOperationInfo()) == 0 {
-			if cctx.JSONOutput {
-				_ = cctx.Printer.PrintStructured([]any{}, printer.StructuredOptions{})
-			}
 			return nil
 		}
 

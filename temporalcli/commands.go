@@ -381,12 +381,17 @@ func (c *TemporalCommand) preRun(cctx *CommandContext) error {
 	}
 
 	// Configure printer if not already on context
-	cctx.JSONOutput = c.Output.Value == "json"
+	cctx.JSONOutput = c.Output.Value == "json" || c.Output.Value == "jsonl"
+	// Only indent JSON if not jsonl
+	var jsonIndent string
+	if c.Output.Value == "json" {
+		jsonIndent = "  "
+	}
 	if cctx.Printer == nil {
 		cctx.Printer = &printer.Printer{
 			Output:               cctx.Options.Stdout,
 			JSON:                 cctx.JSONOutput,
-			JSONIndent:           "  ",
+			JSONIndent:           jsonIndent,
 			JSONPayloadShorthand: !c.NoJsonShorthandPayloads,
 		}
 		switch c.TimeFormat.Value {
