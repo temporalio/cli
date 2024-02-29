@@ -81,9 +81,8 @@ type TableOptions struct {
 
 // For JSON, if v is a proto message, protojson encoding is used
 func (p *Printer) PrintStructured(v any, options StructuredOptions) error {
-	// JSON
 	if p.JSON {
-		return p.printJSON(v, options)
+		return p.PrintJSON(v, p.JSONIndent, options)
 	}
 
 	// Get data
@@ -170,12 +169,12 @@ func (p *Printer) writef(s string, v ...any) {
 	}
 }
 
-func (p *Printer) printJSON(v any, options StructuredOptions) error {
+func (p *Printer) PrintJSON(v any, indent string, options StructuredOptions) error {
 	shorthandPayloads := p.JSONPayloadShorthand
 	if options.OverrideJSONPayloadShorthand != nil {
 		shorthandPayloads = *options.OverrideJSONPayloadShorthand
 	}
-	b, err := p.jsonVal(v, p.JSONIndent, shorthandPayloads)
+	b, err := p.jsonVal(v, indent, shorthandPayloads)
 	if err != nil {
 		return err
 	}
