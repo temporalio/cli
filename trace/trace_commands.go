@@ -1,10 +1,8 @@
 package trace
 
 import (
-	"context"
 	"fmt"
 	"os"
-	"os/signal"
 	"strings"
 	"syscall"
 	"time"
@@ -59,118 +57,32 @@ func PrintWorkflowTrace(c *cli.Context, sdkClient sdkclient.Client, wid, rid str
 	tcCtx, cancel := common.NewIndefiniteContext(c)
 	defer cancel()
 
-	// Capture interrupt signals to do a last print
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
-
-	doneChan, errChan, update := setupUpdateChannels(tcCtx, sdkClient, wid, rid, noFold, foldStatus, childWfsDepth, concurrency)
-
 	// Load templates
-	writer := NewTermWriter().WithTerminalSize()
-	tmpl, err := NewExecutionTemplate(writer, foldStatus, noFold)
+	tmpl, err := NewExecutionTemplate(foldStatus, noFold)
+	if err != nil {
+		return 1, err
+	}
+
+	opts := WorkflowTracerOptions{
+		NoFold:        noFold,
+		FoldStatus:    foldStatus,
+		ChildWfsDepth: childWfsDepth,
+		Concurrency:   concurrency,
+		UpdatePeriod:  time.Second,
+	}
+	tracer, err := NewWorkflowTracer(sdkClient,
+		WithOptions(opts),
+		WithInterrupts(os.Interrupt, syscall.SIGTERM, syscall.SIGINT),
+	)
+	if err != nil {
+		return 1, err
+	}
+
+	err = tracer.GetExecutionUpdates(tcCtx, wid, rid)
 	if err != nil {
 		return 1, err
 	}
 
 	_, _ = title.Println("Progress:")
-	return monitorUpdates(writer, tmpl, update, doneChan, sigChan, errChan)
-}
-
-func setupUpdateChannels(tcCtx context.Context, sdkClient sdkclient.Client, wid, rid string, noFold bool, foldStatus []enums.WorkflowExecutionStatus, childWfsDepth, concurrency int) (chan bool, chan error, *WorkflowExecutionUpdate) {
-	doneChan := make(chan bool)
-	errChan := make(chan error)
-	var update *WorkflowExecutionUpdate
-	go func() {
-		iter, err := GetWorkflowExecutionUpdates(tcCtx, sdkClient, wid, rid, noFold, foldStatus, childWfsDepth, concurrency)
-		if err != nil {
-			errChan <- err
-			return
-		}
-		for iter.HasNext() {
-			if update, err = iter.Next(); err != nil {
-				errChan <- err
-			}
-		}
-		doneChan <- true
-	}()
-	return doneChan, errChan, update
-}
-
-func monitorUpdates(writer *TermWriter, tmpl *ExecutionTemplate, update *WorkflowExecutionUpdate, doneChan chan bool, sigChan chan os.Signal, errChan chan error) (int, error) {
-	var currentEvents int64
-	var totalEvents int64
-	var isUpToDate bool
-	ticker := time.NewTicker(time.Second).C
-
-	for {
-		select {
-		case <-ticker:
-			state := update.GetState()
-			if state == nil {
-				_, _ = writer.WriteString(ProgressString(currentEvents, totalEvents))
-				writer.Flush(true)
-				continue
-			}
-
-			if !isUpToDate {
-				currentEvents, totalEvents = state.GetNumberOfEvents()
-				isUpToDate = totalEvents > 0 && currentEvents >= totalEvents && !state.IsArchived
-			}
-
-			if isUpToDate {
-				if err := tmpl.Execute(update.GetState(), 0); err != nil {
-					_, _ = writer.WriteString(fmt.Sprintf("%s %s", color.RedString("Error:"), err.Error()))
-				}
-			} else {
-				_, _ = writer.WriteString(ProgressString(currentEvents, totalEvents))
-			}
-			if err := writer.Flush(true); err != nil {
-				return 1, err
-			}
-		case <-doneChan:
-			return PrintAndExit(writer, tmpl, update)
-		case <-sigChan:
-			return PrintAndExit(writer, tmpl, update)
-		case err := <-errChan:
-			return 1, err
-		}
-	}
-}
-
-func ProgressString(currentEvents int64, totalEvents int64) string {
-	if totalEvents == 0 {
-		if currentEvents == 0 {
-			return "Processing HistoryEvents"
-		}
-		return fmt.Sprintf("Processing HistoryEvents (%d)", currentEvents)
-	} else {
-		return fmt.Sprintf("Processing HistoryEvents (%d/%d)", currentEvents, totalEvents)
-	}
-}
-
-func PrintAndExit(writer *TermWriter, tmpl *ExecutionTemplate, update *WorkflowExecutionUpdate) (int, error) {
-	if err := tmpl.Execute(update.GetState(), 0); err != nil {
-		return 1, err
-	}
-	if err := writer.Flush(false); err != nil {
-		return 1, err
-	}
-	return GetExitCode(update.GetState()), nil
-}
-
-// GetExitCode returns the exit code for a given workflow execution status.
-func GetExitCode(exec *WorkflowExecutionState) int {
-	if exec == nil {
-		// Don't panic if the state is missing.
-		return 0
-	}
-	switch exec.Status {
-	case enums.WORKFLOW_EXECUTION_STATUS_FAILED:
-		return 2
-	case enums.WORKFLOW_EXECUTION_STATUS_TIMED_OUT:
-		return 3
-	case enums.WORKFLOW_EXECUTION_STATUS_UNSPECIFIED:
-		return 4
-	}
-	return 0
+	return tracer.PrintUpdates(tmpl, time.Second)
 }

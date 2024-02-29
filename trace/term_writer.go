@@ -44,16 +44,16 @@ func (w *TermWriter) WithWriter(out io.Writer) *TermWriter {
 }
 
 // WithSize sets the size of TermWriter to the desired width and height.
-func (w *TermWriter) WithSize(width, height int) *TermWriter {
+func (w *TermWriter) WithSize(width, height int) (*TermWriter, error) {
 	if width <= 0 {
-		panic(fmt.Errorf("TermWriter cannot have width %d", width))
+		return nil, fmt.Errorf("cannot have width %d", width)
 	}
 	if height <= 0 {
-		panic(fmt.Errorf("TermWriter cannot have height %d", width))
+		return nil, fmt.Errorf("cannot have height %d", width)
 	}
 	w.termHeight = height
 	w.termWidth = width
-	return w
+	return w, nil
 }
 
 func (w *TermWriter) GetSize() (int, int) {
@@ -61,7 +61,7 @@ func (w *TermWriter) GetSize() (int, int) {
 }
 
 // WithTerminalSize sets the size of TermWriter to that of the terminal.
-func (w *TermWriter) WithTerminalSize() *TermWriter {
+func (w *TermWriter) WithTerminalSize() (*TermWriter, error) {
 	termWidth, termHeight := getTerminalSize()
 	return w.WithSize(termWidth, termHeight)
 }
@@ -74,9 +74,10 @@ func (w *TermWriter) Write(buf []byte) (n int, err error) {
 	return w.buf.Write(buf)
 }
 
-// WriteString writes a string into TermWriter.
-func (w *TermWriter) WriteString(s string) (n int, err error) {
-	return w.Write([]byte(s))
+// WriteLine writes a string into TermWriter.
+func (w *TermWriter) WriteLine(s string) (n int, err error) {
+	b := append([]byte(s), '\n')
+	return w.Write(b)
 }
 
 // clearLines prints the ansi codes to clear a given number of lines.

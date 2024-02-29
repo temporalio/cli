@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestTermWriter_OneFlush(t *testing.T) {
+func TestTermWriter_WriteLine(t *testing.T) {
 	tests := map[string]struct {
 		width   int
 		height  int
@@ -21,21 +21,21 @@ func TestTermWriter_OneFlush(t *testing.T) {
 			height:  10,
 			trim:    true,
 			content: "foobarbaz",
-			want:    "foobarbaz",
+			want:    "foobarbaz\n",
 		},
 		"tail trimmed content": {
 			width:   10,
-			height:  1,
+			height:  2,
 			trim:    true,
 			content: "foo\nbar",
-			want:    "bar",
+			want:    "bar\n",
 		},
 		"trim wide content": {
 			width:   3,
 			height:  2,
 			trim:    true,
 			content: "foo\nbarbaz",
-			want:    "barbaz",
+			want:    "",
 		},
 		"trimmed content doesn't cut through a line": {
 			width:   3,
@@ -49,19 +49,20 @@ func TestTermWriter_OneFlush(t *testing.T) {
 			height:  2,
 			trim:    false,
 			content: "foobarbaz",
-			want:    "foobarbaz",
+			want:    "foobarbaz\n",
 		},
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			b := bytes.NewBufferString("") // Start with an empty string so we can test no content being written
-			w := NewTermWriter().WithWriter(b).WithSize(tt.width, tt.height)
+			w, err := NewTermWriter().WithWriter(b).WithSize(tt.width, tt.height)
+			require.NoError(t, err)
 
-			_, _ = w.WriteString(tt.content)
-			err := w.Flush(tt.trim)
+			_, _ = w.WriteLine(tt.content)
+			err = w.Flush(tt.trim)
 
 			require.NoError(t, err)
-			require.Equalf(t, b, bytes.NewBufferString(tt.want), "flushed message doesn't match expected message")
+			require.Equalf(t, bytes.NewBufferString(tt.want), b, "flushed message doesn't match expected message")
 		})
 	}
 }
@@ -79,35 +80,36 @@ func TestTermWriter_MultipleFlushes(t *testing.T) {
 			height:  10,
 			trim:    true,
 			content: []string{"foobarbaz"},
-			want:    "foobarbaz",
+			want:    "foobarbaz\n",
 		},
 		"write two single lines": {
 			width:   10,
 			height:  10,
 			trim:    true,
 			content: []string{"foo", "bar"},
-			want:    fmt.Sprintf("foo%s%sbar", AnsiMoveCursorStartLine, AnsiEraseToEnd),
+			want:    fmt.Sprintf("foo\n%s%s%sbar\n", MoveCursorUp(1), AnsiMoveCursorStartLine, AnsiEraseToEnd),
 		},
 		"write two double lines": {
 			width:   10,
 			height:  10,
 			trim:    true,
 			content: []string{"foo\nfoo", "bar\nbar"},
-			want:    fmt.Sprintf("foo\nfoo%s%s%sbar\nbar", MoveCursorUp(1), AnsiMoveCursorStartLine, AnsiEraseToEnd),
+			want:    fmt.Sprintf("foo\nfoo\n%s%s%sbar\nbar\n", MoveCursorUp(2), AnsiMoveCursorStartLine, AnsiEraseToEnd),
 		},
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			b := bytes.NewBufferString("") // Start with an empty string so we can test no content being written
-			w := NewTermWriter().WithWriter(b).WithSize(tt.width, tt.height)
+			w, err := NewTermWriter().WithWriter(b).WithSize(tt.width, tt.height)
+			require.NoError(t, err)
 
 			for _, s := range tt.content {
-				_, _ = w.WriteString(s)
+				_, _ = w.WriteLine(s)
 				err := w.Flush(tt.trim)
 				require.NoError(t, err)
 			}
 
-			require.Equalf(t, b, bytes.NewBufferString(tt.want), "flushed message doesn't match expected message")
+			require.Equalf(t, bytes.NewBufferString(tt.want), b, "flushed message doesn't match expected message")
 		})
 	}
 }

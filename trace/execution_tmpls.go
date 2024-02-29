@@ -25,13 +25,12 @@ var (
 
 // ExecutionTemplate contains the necessary templates and utilities to render WorkflowExecutionState and its child states.
 type ExecutionTemplate struct {
-	w          io.Writer
 	tmpl       *template.Template
 	shouldFold func(*WorkflowExecutionState, int) bool
 }
 
 // NewExecutionTemplate initializes the templates with the necessary functions.
-func NewExecutionTemplate(w io.Writer, foldStatus []enums.WorkflowExecutionStatus, noFold bool) (*ExecutionTemplate, error) {
+func NewExecutionTemplate(foldStatus []enums.WorkflowExecutionStatus, noFold bool) (*ExecutionTemplate, error) {
 	shouldFold := ShouldFoldStatus(foldStatus, noFold)
 	templateFunctions := template.FuncMap{
 		"statusIcon": ExecutionStatus,
@@ -59,7 +58,6 @@ func NewExecutionTemplate(w io.Writer, foldStatus []enums.WorkflowExecutionStatu
 	}
 
 	return &ExecutionTemplate{
-		w:          w,
 		tmpl:       tmpl,
 		shouldFold: shouldFold,
 	}, nil
@@ -71,7 +69,7 @@ type StateTemplate struct {
 }
 
 // Execute executes the templates for a given Execution state and writes it into the ExecutionTemplate's writer.
-func (t *ExecutionTemplate) Execute(state ExecutionState, depth int) error {
+func (t *ExecutionTemplate) Execute(writer io.Writer, state ExecutionState, depth int) error {
 	if state == nil {
 		return nil
 	}
@@ -88,7 +86,7 @@ func (t *ExecutionTemplate) Execute(state ExecutionState, depth int) error {
 		return fmt.Errorf("no template available for %s", state)
 	}
 
-	if err := t.tmpl.ExecuteTemplate(t.w, templateName, &StateTemplate{
+	if err := t.tmpl.ExecuteTemplate(writer, templateName, &StateTemplate{
 		State: state,
 		Depth: depth,
 	}); err != nil {
@@ -97,7 +95,7 @@ func (t *ExecutionTemplate) Execute(state ExecutionState, depth int) error {
 
 	if workflow, isWorkflow := state.(*WorkflowExecutionState); isWorkflow && !t.shouldFold(workflow, depth) {
 		for _, child := range workflow.ChildStates {
-			if err := t.Execute(child, depth+1); err != nil {
+			if err := t.Execute(writer, child, depth+1); err != nil {
 				return err
 			}
 

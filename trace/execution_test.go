@@ -125,10 +125,10 @@ func TestExecuteWorkflowTemplate(t *testing.T) {
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			b := new(bytes.Buffer)
-			tmpl, err := NewExecutionTemplate(b, foldStatus, false)
+			tmpl, err := NewExecutionTemplate(foldStatus, false)
 			require.NoError(t, err)
 
-			require.NoError(t, tmpl.Execute(tt.state, tt.depth))
+			require.NoError(t, tmpl.Execute(b, tt.state, tt.depth))
 
 			if runtime.GOOS == "windows" {
 				tt.want = strings.ReplaceAll(tt.want, "\n", "\r\n")
