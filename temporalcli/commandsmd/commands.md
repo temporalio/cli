@@ -52,7 +52,7 @@ This document has a specific structure used by a parser. Here are the rules:
 * `--env-file` (string) - File to read all environments (defaults to `$HOME/.config/temporalio/temporal.yaml`).
 * `--log-level` (string-enum) - Log level. Options: debug, info, warn, error, never. Default: info.
 * `--log-format` (string-enum) - Log format. Options: text, json. Default: text.
-* `--output`, `-o` (string-enum) - Data output format. Options: text, json. Default: text.
+* `--output`, `-o` (string-enum) - Data output format. Options: text, json, jsonl. Default: text.
 * `--time-format` (string-enum) - Time format. Options: relative, iso, raw. Default: relative.
 * `--color` (string-enum) - Set coloring. Options: always, never, auto. Default: auto.
 * `--no-json-shorthand-payloads` (bool) - Always all payloads as raw payloads even if they are JSON.

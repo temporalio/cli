@@ -97,7 +97,7 @@ func (s *SharedServerSuite) TestBatchJob_List() {
 			)
 			s.NoError(res.Err)
 			s.Empty(res.Stderr.String())
-			s.Equal("[]\n", res.Stdout.String())
+			s.Equal("[\n]\n", res.Stdout.String())
 		})
 	})
 
