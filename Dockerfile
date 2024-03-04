@@ -6,7 +6,7 @@ WORKDIR /app
 COPY . ./
 
 # Build
-RUN go build ./cmd/temporal
+RUN go build -tags protolegacy ./cmd/temporal
 
 # Use slim container for running
 FROM debian:bookworm-slim

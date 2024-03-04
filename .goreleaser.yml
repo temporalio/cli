@@ -37,6 +37,8 @@ builds:
   - <<: &build_defaults
       dir: cmd/temporal
       binary: temporal
+      flags:
+        - -tags=protolegacy
       ldflags:
         - -s -w -X github.com/temporalio/cli/temporalcli.Version={{.Version}}
       goarch:

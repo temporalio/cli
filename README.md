@@ -29,7 +29,7 @@ Reference [the documentation](https://docs.temporal.io/cli) for detailed install
 
 1. Install [Go](https://go.dev/)
 2. Clone repository
-3. Switch to cloned directory, and run `go build ./cmd/temporal`
+3. Switch to cloned directory, and run `go build -tags protolegacy ./cmd/temporal`
 
 The executable will be at `temporal` (`temporal.exe` for Windows).
 
