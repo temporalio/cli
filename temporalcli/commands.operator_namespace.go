@@ -147,7 +147,6 @@ func (c *TemporalOperatorNamespaceListCommand) run(cctx *CommandContext, args []
 
 		for _, ns := range resp.GetNamespaces() {
 			if cctx.JSONOutput {
-				// For JSON we are going to dump one line of JSON per execution
 				_ = cctx.Printer.PrintStructured(ns, printer.StructuredOptions{})
 			}
 		}
