@@ -122,7 +122,7 @@ func (c *TemporalOperatorNamespaceDescribeCommand) run(cctx *CommandContext, arg
 	if cctx.JSONOutput {
 		return cctx.Printer.PrintStructured(resp, printer.StructuredOptions{})
 	}
-	return printNamespaceDescriptions(cctx, resp)
+	return printNamespaceDescription(cctx, resp)
 }
 
 func (c *TemporalOperatorNamespaceListCommand) run(cctx *CommandContext, args []string) error {
@@ -130,6 +130,10 @@ func (c *TemporalOperatorNamespaceListCommand) run(cctx *CommandContext, args []
 	if err != nil {
 		return err
 	}
+
+	// This is a listing command subject to json vs jsonl rules
+	cctx.Printer.StartList()
+	defer cctx.Printer.EndList()
 
 	var nextPageToken []byte
 	for {
@@ -141,11 +145,14 @@ func (c *TemporalOperatorNamespaceListCommand) run(cctx *CommandContext, args []
 			return fmt.Errorf("failed listing namespaces: %w", err)
 		}
 
-		if cctx.JSONOutput {
-			// For JSON we are going to dump one line of JSON per execution
-			_ = cctx.Printer.PrintStructured(resp.Namespaces, printer.StructuredOptions{})
-		} else {
-			_ = printNamespaceDescriptions(cctx, resp.Namespaces...)
+		for _, ns := range resp.GetNamespaces() {
+			if cctx.JSONOutput {
+				// For JSON we are going to dump one line of JSON per execution
+				_ = cctx.Printer.PrintStructured(ns, printer.StructuredOptions{})
+			} else {
+				_ = printNamespaceDescription(cctx, ns)
+				cctx.Printer.Println()
+			}
 		}
 
 		nextPageToken = resp.GetNextPageToken()
@@ -262,31 +269,28 @@ func (c *TemporalOperatorNamespaceUpdateCommand) run(cctx *CommandContext, args 
 	return nil
 }
 
-func printNamespaceDescriptions(cctx *CommandContext, responses ...*workflowservice.DescribeNamespaceResponse) error {
-	namespaces := make([]map[string]any, len(responses))
-	for i, resp := range responses {
-		namespaces[i] = map[string]any{
-			"NamespaceInfo.Name":                   resp.NamespaceInfo.Name,
-			"NamespaceInfo.Id":                     resp.NamespaceInfo.Id,
-			"NamespaceInfo.Description":            resp.NamespaceInfo.Description,
-			"NamespaceInfo.OwnerEmail":             resp.NamespaceInfo.OwnerEmail,
-			"NamespaceInfo.State":                  resp.NamespaceInfo.State,
-			"NamespaceInfo.Data":                   resp.NamespaceInfo.Data,
-			"Config.WorkflowExecutionRetentionTtl": resp.Config.WorkflowExecutionRetentionTtl.AsDuration(),
-			"ReplicationConfig.ActiveClusterName":  resp.ReplicationConfig.ActiveClusterName,
-			"ReplicationConfig.Clusters":           resp.ReplicationConfig.Clusters,
-			"Config.HistoryArchivalState":          resp.Config.HistoryArchivalState,
-			"Config.VisibilityArchivalState":       resp.Config.VisibilityArchivalState,
-			"IsGlobalNamespace":                    resp.IsGlobalNamespace,
-			"FailoverVersion":                      resp.FailoverVersion,
-			"FailoverHistory":                      resp.FailoverHistory,
-			"Config.HistoryArchivalUri":            resp.Config.HistoryArchivalUri,
-			"Config.VisibilityArchivalUri":         resp.Config.VisibilityArchivalUri,
-		}
+func printNamespaceDescription(cctx *CommandContext, resp *workflowservice.DescribeNamespaceResponse) error {
+	ns := map[string]any{
+		"NamespaceInfo.Name":                   resp.NamespaceInfo.Name,
+		"NamespaceInfo.Id":                     resp.NamespaceInfo.Id,
+		"NamespaceInfo.Description":            resp.NamespaceInfo.Description,
+		"NamespaceInfo.OwnerEmail":             resp.NamespaceInfo.OwnerEmail,
+		"NamespaceInfo.State":                  resp.NamespaceInfo.State,
+		"NamespaceInfo.Data":                   resp.NamespaceInfo.Data,
+		"Config.WorkflowExecutionRetentionTtl": resp.Config.WorkflowExecutionRetentionTtl.AsDuration(),
+		"ReplicationConfig.ActiveClusterName":  resp.ReplicationConfig.ActiveClusterName,
+		"ReplicationConfig.Clusters":           resp.ReplicationConfig.Clusters,
+		"Config.HistoryArchivalState":          resp.Config.HistoryArchivalState,
+		"Config.VisibilityArchivalState":       resp.Config.VisibilityArchivalState,
+		"IsGlobalNamespace":                    resp.IsGlobalNamespace,
+		"FailoverVersion":                      resp.FailoverVersion,
+		"FailoverHistory":                      resp.FailoverHistory,
+		"Config.HistoryArchivalUri":            resp.Config.HistoryArchivalUri,
+		"Config.VisibilityArchivalUri":         resp.Config.VisibilityArchivalUri,
 	}
 
 	return cctx.Printer.PrintStructured(
-		namespaces,
+		ns,
 		printer.StructuredOptions{
 			Fields: []string{
 				"NamespaceInfo.Name", "NamespaceInfo.Id", "NamespaceInfo.Description",
