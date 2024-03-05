@@ -289,6 +289,21 @@ func (c *CommandContext) promptYes(message string, autoConfirm bool) (bool, erro
 	return line == "y" || line == "yes", nil
 }
 
+// Returns error if JSON output enabled
+func (c *CommandContext) promptString(message string, expected string, autoConfirm bool) (bool, error) {
+	if c.JSONOutput && !autoConfirm {
+		return false, fmt.Errorf("must bypass prompts when using JSON output")
+	}
+	c.Printer.Print(message, " ")
+	if autoConfirm {
+		c.Printer.Println(expected)
+		return true, nil
+	}
+	line, _ := bufio.NewReader(c.Options.Stdin).ReadString('\n')
+	line = strings.TrimSpace(line)
+	return line == expected, nil
+}
+
 // Execute runs the Temporal CLI with the given context and options. This
 // intentionally does not return an error but rather invokes Fail on the
 // options.
