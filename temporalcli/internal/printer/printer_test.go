@@ -15,7 +15,7 @@ import (
 // * Text printer specific and non-specific fields and all sorts of table options
 // * JSON printer
 
-func TestTextPrinter(t *testing.T) {
+func TestPrinter_Text(t *testing.T) {
 	type MyStruct struct {
 		Foo              string
 		Bar              bool
@@ -72,4 +72,71 @@ func normalizeMultiline(s string) string {
 		}
 	}
 	return ret
+}
+
+func TestPrinter_JSON(t *testing.T) {
+	var buf bytes.Buffer
+
+	// With indentation
+	p := printer.Printer{Output: &buf, JSON: true, JSONIndent: "  "}
+	p.Println("should not print")
+	require.NoError(t, p.PrintStructured(map[string]string{"foo": "bar"}, printer.StructuredOptions{}))
+	require.Equal(t, `{
+  "foo": "bar"
+}
+`, buf.String())
+
+	// Without indentation
+	buf.Reset()
+	p = printer.Printer{Output: &buf, JSON: true}
+	p.Println("should not print")
+	require.NoError(t, p.PrintStructured(map[string]string{"foo": "bar"}, printer.StructuredOptions{}))
+	require.Equal(t, "{\"foo\":\"bar\"}\n", buf.String())
+}
+
+func TestPrinter_JSONList(t *testing.T) {
+	var buf bytes.Buffer
+
+	// With indentation
+	p := printer.Printer{Output: &buf, JSON: true, JSONIndent: "  "}
+	p.StartList()
+	p.Println("should not print")
+	require.NoError(t, p.PrintStructured(map[string]string{"foo": "bar"}, printer.StructuredOptions{}))
+	require.NoError(t, p.PrintStructured(map[string]string{"baz": "qux"}, printer.StructuredOptions{}))
+	p.EndList()
+	require.Equal(t, `[
+{
+  "foo": "bar"
+},
+{
+  "baz": "qux"
+}
+]
+`, buf.String())
+
+	// Without indentation
+	buf.Reset()
+	p = printer.Printer{Output: &buf, JSON: true}
+	p.StartList()
+	p.Println("should not print")
+	require.NoError(t, p.PrintStructured(map[string]string{"foo": "bar"}, printer.StructuredOptions{}))
+	require.NoError(t, p.PrintStructured(map[string]string{"baz": "qux"}, printer.StructuredOptions{}))
+	p.EndList()
+	require.Equal(t, "{\"foo\":\"bar\"}\n{\"baz\":\"qux\"}\n", buf.String())
+
+	// Empty with indentation
+	buf.Reset()
+	p = printer.Printer{Output: &buf, JSON: true, JSONIndent: "  "}
+	p.StartList()
+	p.Println("should not print")
+	p.EndList()
+	require.Equal(t, "[\n]\n", buf.String())
+
+	// Empty without indentation
+	buf.Reset()
+	p = printer.Printer{Output: &buf, JSON: true}
+	p.StartList()
+	p.Println("should not print")
+	p.EndList()
+	require.Equal(t, "", buf.String())
 }

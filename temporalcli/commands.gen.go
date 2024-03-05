@@ -48,8 +48,8 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	s.Command.PersistentFlags().Var(&s.LogLevel, "log-level", "Log level. Accepted values: debug, info, warn, error, never.")
 	s.LogFormat = NewStringEnum([]string{"text", "json"}, "text")
 	s.Command.PersistentFlags().Var(&s.LogFormat, "log-format", "Log format. Accepted values: text, json.")
-	s.Output = NewStringEnum([]string{"text", "json"}, "text")
-	s.Command.PersistentFlags().VarP(&s.Output, "output", "o", "Data output format. Accepted values: text, json.")
+	s.Output = NewStringEnum([]string{"text", "json", "jsonl"}, "text")
+	s.Command.PersistentFlags().VarP(&s.Output, "output", "o", "Data output format. Accepted values: text, json, jsonl.")
 	s.TimeFormat = NewStringEnum([]string{"relative", "iso", "raw"}, "relative")
 	s.Command.PersistentFlags().Var(&s.TimeFormat, "time-format", "Time format. Accepted values: relative, iso, raw.")
 	s.Color = NewStringEnum([]string{"always", "never", "auto"}, "auto")
@@ -1206,6 +1206,9 @@ type ClientOptions struct {
 	TlsCertPath                string
 	TlsKeyPath                 string
 	TlsCaPath                  string
+	TlsCertData                string
+	TlsKeyData                 string
+	TlsCaData                  string
 	TlsDisableHostVerification bool
 	TlsServerName              string
 	CodecEndpoint              string
@@ -1226,6 +1229,12 @@ func (v *ClientOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
 	cctx.BindFlagEnvVar(f.Lookup("tls-key-path"), "TEMPORAL_TLS_KEY")
 	f.StringVar(&v.TlsCaPath, "tls-ca-path", "", "Path to server CA certificate.")
 	cctx.BindFlagEnvVar(f.Lookup("tls-ca-path"), "TEMPORAL_TLS_CA")
+	f.StringVar(&v.TlsCertData, "tls-cert-data", "", "Data for x509 certificate. Exclusive with -path variant.")
+	cctx.BindFlagEnvVar(f.Lookup("tls-cert-data"), "TEMPORAL_TLS_CERT_DATA")
+	f.StringVar(&v.TlsKeyData, "tls-key-data", "", "Data for private certificate key. Exclusive with -path variant.")
+	cctx.BindFlagEnvVar(f.Lookup("tls-key-data"), "TEMPORAL_TLS_KEY_DATA")
+	f.StringVar(&v.TlsCaData, "tls-ca-data", "", "Data for server CA certificate. Exclusive with -path variant.")
+	cctx.BindFlagEnvVar(f.Lookup("tls-ca-data"), "TEMPORAL_TLS_CA_DATA")
 	f.BoolVar(&v.TlsDisableHostVerification, "tls-disable-host-verification", false, "Disables TLS host-name verification.")
 	cctx.BindFlagEnvVar(f.Lookup("tls-disable-host-verification"), "TEMPORAL_TLS_DISABLE_HOST_VERIFICATION")
 	f.StringVar(&v.TlsServerName, "tls-server-name", "", "Overrides target TLS server name.")

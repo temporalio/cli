@@ -95,6 +95,10 @@ func (c *TemporalOperatorClusterListCommand) run(cctx *CommandContext, args []st
 	}
 	defer cl.Close()
 
+	// This is a listing command subject to json vs jsonl rules
+	cctx.Printer.StartList()
+	defer cctx.Printer.EndList()
+
 	var nextPageToken []byte
 	var execsProcessed int
 	for pageIndex := 0; ; pageIndex++ {

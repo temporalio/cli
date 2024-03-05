@@ -193,6 +193,10 @@ func (c *TemporalWorkflowListCommand) run(cctx *CommandContext, args []string) e
 	}
 	defer cl.Close()
 
+	// This is a listing command subject to json vs jsonl rules
+	cctx.Printer.StartList()
+	defer cctx.Printer.EndList()
+
 	// Build request and start looping. We always use default page size regardless
 	// of user-defined limit, because we're ok w/ extra page data and the default
 	// is not clearly defined.

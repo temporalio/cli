@@ -53,7 +53,7 @@ This document has a specific structure used by a parser. Here are the rules:
 * `--env-file` (string) - File to read all environments (defaults to `$HOME/.config/temporalio/temporal.yaml`).
 * `--log-level` (string-enum) - Log level. Options: debug, info, warn, error, never. Default: info.
 * `--log-format` (string-enum) - Log format. Options: text, json. Default: text.
-* `--output`, `-o` (string-enum) - Data output format. Options: text, json. Default: text.
+* `--output`, `-o` (string-enum) - Data output format. Options: text, json, jsonl. Default: text.
 * `--time-format` (string-enum) - Time format. Options: relative, iso, raw. Default: relative.
 * `--color` (string-enum) - Set coloring. Options: always, never, auto. Default: auto.
 * `--no-json-shorthand-payloads` (bool) - Always all payloads as raw payloads even if they are JSON.
@@ -525,6 +525,9 @@ Workflow commands use this syntax: `temporal workflow COMMAND [ARGS]`.
 * `--tls-cert-path` (string) - Path to x509 certificate. Env: TEMPORAL_TLS_CERT.
 * `--tls-key-path` (string) - Path to private certificate key. Env: TEMPORAL_TLS_KEY.
 * `--tls-ca-path` (string) - Path to server CA certificate. Env: TEMPORAL_TLS_CA.
+* `--tls-cert-data` (string) - Data for x509 certificate. Exclusive with -path variant. Env: TEMPORAL_TLS_CERT_DATA.
+* `--tls-key-data` (string) - Data for private certificate key. Exclusive with -path variant. Env: TEMPORAL_TLS_KEY_DATA.
+* `--tls-ca-data` (string) - Data for server CA certificate. Exclusive with -path variant. Env: TEMPORAL_TLS_CA_DATA.
 * `--tls-disable-host-verification` (bool) - Disables TLS host-name verification. Env:
   TEMPORAL_TLS_DISABLE_HOST_VERIFICATION.
 * `--tls-server-name` (string) - Overrides target TLS server name. Env: TEMPORAL_TLS_SERVER_NAME.

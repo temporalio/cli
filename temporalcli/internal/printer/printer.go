@@ -21,14 +21,18 @@ type Colorer func(string, ...interface{}) string
 
 type Printer struct {
 	// Must always be present
-	Output               io.Writer
-	JSON                 bool
+	Output io.Writer
+	JSON   bool
+	// This is unset/empty in JSONL mode
 	JSONIndent           string
 	JSONPayloadShorthand bool
 	// Only used for non-JSON, defaults to RFC3339
 	FormatTime func(time.Time) string
 	// Only used for non-JSON, defaults to color.Magenta
 	TableHeaderColorer Colorer
+
+	listMode          bool
+	listModeFirstJSON bool // True until first JSON printed
 }
 
 // Ignored during JSON output
@@ -48,6 +52,42 @@ func (p *Printer) Println(s ...string) {
 // Ignored during JSON output
 func (p *Printer) Printlnf(s string, v ...any) {
 	p.Println(fmt.Sprintf(s, v...))
+}
+
+// When called for JSON with indent, this will create an initial bracket and
+// make sure all [Printer.PrintStructured] calls get commas properly to appear
+// as a list (but the indention and multiline posture of the JSON remains). When
+// called for JSON without indent, this will make sure all
+// [Printer.PrintStructured] is on its own line (i.e. JSONL mode). When called
+// for non-JSON, this is a no-op.
+//
+// [Printer.EndList] must be called at the end. If this is called twice it will
+// panic. This and the end call are not safe for concurrent use.
+func (p *Printer) StartList() {
+	if p.listMode {
+		panic("already in list mode")
+	}
+	p.listMode, p.listModeFirstJSON = true, true
+	// Write initial bracket when non-jsonl
+	if p.JSON && p.JSONIndent != "" {
+		// Don't need newline, we count on initial object to do that
+		p.Output.Write([]byte("["))
+	}
+}
+
+// Must be called after [Printer.StartList] or will panic. See Godoc on that
+// function for more details.
+func (p *Printer) EndList() {
+	if !p.listMode {
+		panic("not in list mode")
+	}
+	p.listMode, p.listModeFirstJSON = false, false
+	// Write ending bracket when non-jsonl
+	if p.JSON && p.JSONIndent != "" {
+		// We prepend a newline because non-jsonl list mode doesn't do so after each
+		// line to help with commas
+		p.Output.Write([]byte("\n]\n"))
+	}
 }
 
 type StructuredOptions struct {
@@ -171,19 +211,40 @@ func (p *Printer) writef(s string, v ...any) {
 }
 
 func (p *Printer) printJSON(v any, options StructuredOptions) error {
+	// Before printing, if we're in non-jsonl list mode, we must append a comma
+	// and a newline if we're not the first JSON seen.
+	nonJSONLListMode := p.listMode && p.JSON && p.JSONIndent != ""
+	if nonJSONLListMode {
+		var prepend string
+		if p.listModeFirstJSON {
+			p.listModeFirstJSON = false
+			prepend = "\n"
+		} else {
+			prepend = ",\n"
+		}
+		if _, err := p.Output.Write([]byte(prepend)); err != nil {
+			return err
+		}
+	}
+
+	// Print JSON
 	shorthandPayloads := p.JSONPayloadShorthand
 	if options.OverrideJSONPayloadShorthand != nil {
 		shorthandPayloads = *options.OverrideJSONPayloadShorthand
 	}
-	b, err := p.jsonVal(v, p.JSONIndent, shorthandPayloads)
-	if err != nil {
+	if b, err := p.jsonVal(v, p.JSONIndent, shorthandPayloads); err != nil {
+		return err
+	} else if _, err := p.Output.Write(b); err != nil {
 		return err
 	}
-	_, err = p.Output.Write(b)
-	if err == nil {
-		_, err = p.Output.Write([]byte("\n"))
+
+	// Do not print a newline if in non-jsonl list mode
+	if !nonJSONLListMode {
+		if _, err := p.Output.Write([]byte("\n")); err != nil {
+			return err
+		}
 	}
-	return err
+	return nil
 }
 
 func (p *Printer) jsonVal(v any, indent string, shorthandPayloads bool) ([]byte, error) {
