@@ -1,7 +1,7 @@
 package temporalcli_test
 
 import (
-	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/temporalio/cli/temporalcli"
@@ -24,10 +24,11 @@ func (s *SharedServerSuite) TestOperator_NamespaceCreateListAndDescribe() {
 		"--output", "json",
 	)
 	s.NoError(res.Err)
-	var listResp []workflowservice.DescribeNamespaceResponse
-	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &listResp))
+	output := fmt.Sprintf("{\"namespaces\": %s}", res.Stdout.String())
+	var listResp workflowservice.ListNamespacesResponse
+	s.NoError(temporalcli.UnmarshalProtoJSONWithOptions([]byte(output), &listResp, true))
 	var uuid string
-	for _, ns := range listResp {
+	for _, ns := range listResp.Namespaces {
 		if ns.NamespaceInfo.Name == nsName {
 			uuid = ns.NamespaceInfo.Id
 		}
