@@ -466,7 +466,7 @@ Fetch the sets of compatible build IDs associated with a Task Queue and associat
 * `--task-queue`, `-t` (string) - Task queue name. Required.
 * `--max-sets` (int) - Limits how many compatible sets will be returned. Specify 1 to only return the current default major version set. 0 returns all sets. (default: 0). Default: 0.
 
-###  temporal task-queue list-partition: Lists the Task Queue's partitions and the matching nodes they are assigned to.
+### temporal task-queue list-partition: Lists the Task Queue's partitions and the matching nodes they are assigned to.
 
 The temporal task-queue list-partition command displays the partitions of a Task Queue, along with the matching node they are assigned to.
 
