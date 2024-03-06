@@ -16,6 +16,7 @@ func (c *TemporalTaskQueueListPartitionCommand) run(cctx *CommandContext, args [
 		return err
 	}
 	defer cl.Close()
+
 	request := &workflowservice.ListTaskQueuePartitionsRequest{
 		Namespace: c.Parent.Namespace,
 		TaskQueue: &taskqueue.TaskQueue{
@@ -40,7 +41,7 @@ func (c *TemporalTaskQueueListPartitionCommand) run(cctx *CommandContext, args [
 	}
 	_ = cctx.Printer.PrintStructured(items, printer.StructuredOptions{Table: &printer.TableOptions{}})
 
-	items = items[:0]
+	items = nil
 	cctx.Printer.Println(color.MagentaString("\nActivity Task Queue Partitions\n"))
 	for _, e := range resp.ActivityTaskQueuePartitions {
 		items = append(items, e)
