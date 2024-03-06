@@ -131,7 +131,7 @@ func (c *TemporalTaskQueueListPartitionCommand) run(cctx *CommandContext, args [
 	}
 	_ = cctx.Printer.PrintStructured(items, printer.StructuredOptions{Table: &printer.TableOptions{}})
 
-	items = nil
+	items = items[:0]
 	cctx.Printer.Println(color.MagentaString("\nActivity Task Queue Partitions\n"))
 	for _, e := range resp.ActivityTaskQueuePartitions {
 		items = append(items, e)
