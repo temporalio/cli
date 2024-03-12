@@ -168,6 +168,7 @@ func (s *SharedServerSuite) TestWorkflow_Delete_BatchWorkflowSuccess() {
 	s.Eventually(func() bool {
 		wfs, err := s.Client.ListWorkflow(s.Context, &workflowservice.ListWorkflowExecutionsRequest{
 			Namespace: s.Namespace(),
+			Query:     "TaskQueue = 'delete-test'",
 		})
 		s.NoError(err)
 
@@ -181,7 +182,7 @@ func (s *SharedServerSuite) TestWorkflow_Delete_BatchWorkflowSuccess() {
 		}
 
 		return false
-	}, 10*time.Second, 100*time.Millisecond, "timed out awaiting for workflows termination")
+	}, 5*time.Second, 100*time.Millisecond, "timed out awaiting for workflows termination")
 }
 
 func (s *SharedServerSuite) TestWorkflow_Terminate_SingleWorkflowSuccess_WithoutReason() {
