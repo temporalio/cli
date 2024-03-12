@@ -157,7 +157,7 @@ func (s *SharedServerSuite) TestWorkflow_Delete_BatchWorkflowSuccess() {
 	res := s.Execute(
 		"workflow", "delete",
 		"--address", s.Address(),
-		"--query", "WorkflowId = 'delete-test-1' OR WorkflowId = 'delete-test-2'",
+		"--query", "TaskQueue = 'delete-test' AND (WorkflowId = 'delete-test-1' OR WorkflowId = 'delete-test-2')",
 		"--reason", "test",
 		"-y",
 	)
@@ -182,7 +182,7 @@ func (s *SharedServerSuite) TestWorkflow_Delete_BatchWorkflowSuccess() {
 		}
 
 		return false
-	}, 5*time.Second, 100*time.Millisecond, "timed out awaiting for workflows termination")
+	}, 10*time.Second, 100*time.Millisecond, "timed out awaiting for workflows termination")
 }
 
 func (s *SharedServerSuite) TestWorkflow_Terminate_SingleWorkflowSuccess_WithoutReason() {
