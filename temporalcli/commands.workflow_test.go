@@ -126,22 +126,38 @@ func (s *SharedServerSuite) TestWorkflow_Delete_BatchWorkflowSuccess() {
 	})
 
 	// Start some workflows
-	ids := []string{"1", "2", "3"}
+	prefix := "delete-test-"
+	ids := []string{prefix + "1", prefix + "2", prefix + "3"}
 	for _, id := range ids {
 		_, err := s.Client.ExecuteWorkflow(
 			s.Context,
-			client.StartWorkflowOptions{ID: id, TaskQueue: s.Worker.Options.TaskQueue},
+			client.StartWorkflowOptions{ID: id, TaskQueue: "delete-test"},
 			DevWorkflow,
 			"ignored",
 		)
 		s.NoError(err)
 	}
 
+	// Confirm workflows exist in visibility
+	s.Eventually(func() bool {
+		wfs, err := s.Client.ListWorkflow(s.Context, &workflowservice.ListWorkflowExecutionsRequest{
+			Namespace: s.Namespace(),
+			Query:     "TaskQueue = 'delete-test'",
+		})
+		s.NoError(err)
+
+		if len(wfs.GetExecutions()) == 3 {
+			return true
+		}
+
+		return false
+	}, 5*time.Second, 100*time.Millisecond, "timed out awaiting for workflows to exist in visibility")
+
 	// Send delete
 	res := s.Execute(
 		"workflow", "delete",
 		"--address", s.Address(),
-		"--query", "WorkflowId = '1' OR WorkflowId = '2'",
+		"--query", "WorkflowId = 'delete-test-1' OR WorkflowId = 'delete-test-2'",
 		"--reason", "test",
 		"-y",
 	)
@@ -154,12 +170,12 @@ func (s *SharedServerSuite) TestWorkflow_Delete_BatchWorkflowSuccess() {
 		})
 		s.NoError(err)
 
-		if len(wfs.GetExecutions()) == 1 && wfs.GetExecutions()[0].GetExecution().GetWorkflowId() == "3" {
+		if len(wfs.GetExecutions()) == 1 && wfs.GetExecutions()[0].GetExecution().GetWorkflowId() == "delete-test-3" {
 			return true
 		}
 
 		return false
-	}, 5*time.Second, 100 * time.Millisecond, "timed out awaiting for workflows termination")
+	}, 5*time.Second, 100*time.Millisecond, "timed out awaiting for workflows termination")
 }
 
 func (s *SharedServerSuite) TestWorkflow_Terminate_SingleWorkflowSuccess_WithoutReason() {
