@@ -24,18 +24,17 @@ func (c *TemporalWorkflowCancelCommand) run(cctx *CommandContext, args []string)
 	defer cl.Close()
 
 	exec, batchReq, err := c.workflowExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{})
-	if err != nil {
-		return err
-	}
 
 	// Run single or batch
-	if exec != nil {
+	if err != nil {
+		return err
+	} else if exec != nil {
 		err = cl.CancelWorkflow(cctx, exec.WorkflowId, exec.RunId)
 		if err != nil {
 			return fmt.Errorf("failed to cancel workflow: %w", err)
 		}
 		cctx.Printer.Println("Canceled workflow")
-	} else if batchReq != nil {
+	} else { // batchReq != nil
 		batchReq.Operation = &workflowservice.StartBatchOperationRequest_CancellationOperation{
 			CancellationOperation: &batch.BatchOperationCancellation{
 				Identity: clientIdentity(),
@@ -49,8 +48,38 @@ func (c *TemporalWorkflowCancelCommand) run(cctx *CommandContext, args []string)
 	return nil
 }
 
-func (*TemporalWorkflowDeleteCommand) run(*CommandContext, []string) error {
-	return fmt.Errorf("TODO")
+func (c *TemporalWorkflowDeleteCommand) run(cctx *CommandContext, args []string) error {
+	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	exec, batchReq, err := c.workflowExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{})
+
+	// Run single or batch
+	if err != nil {
+		return err
+	} else if exec != nil {
+		_, err := cl.WorkflowService().DeleteWorkflowExecution(cctx, &workflowservice.DeleteWorkflowExecutionRequest{
+			Namespace:         c.Parent.Namespace,
+			WorkflowExecution: &common.WorkflowExecution{WorkflowId: c.WorkflowId, RunId: c.RunId},
+		})
+		if err != nil {
+			return fmt.Errorf("failed to delete workflow: %w", err)
+		}
+		cctx.Printer.Println("Delete workflow succeeded")
+	} else { // batchReq != nil
+		batchReq.Operation = &workflowservice.StartBatchOperationRequest_DeletionOperation{
+			DeletionOperation: &batch.BatchOperationDeletion{
+				Identity: clientIdentity(),
+			},
+		}
+		if err := startBatchJob(cctx, cl, batchReq); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (c *TemporalWorkflowQueryCommand) run(cctx *CommandContext, args []string) error {
@@ -72,12 +101,11 @@ func (c *TemporalWorkflowSignalCommand) run(cctx *CommandContext, args []string)
 	}
 
 	exec, batchReq, err := c.workflowExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{})
-	if err != nil {
-		return err
-	}
 
 	// Run single or batch
-	if exec != nil {
+	if err != nil {
+		return err
+	} else if exec != nil {
 		// We have to use the raw signal service call here because the Go SDK's
 		// signal call doesn't accept multiple arguments.
 		_, err = cl.WorkflowService().SignalWorkflowExecution(cctx, &workflowservice.SignalWorkflowExecutionRequest{
@@ -91,7 +119,7 @@ func (c *TemporalWorkflowSignalCommand) run(cctx *CommandContext, args []string)
 			return fmt.Errorf("failed signalling workflow: %w", err)
 		}
 		cctx.Printer.Println("Signal workflow succeeded")
-	} else if batchReq != nil {
+	} else { // batchReq != nil
 		batchReq.Operation = &workflowservice.StartBatchOperationRequest_SignalOperation{
 			SignalOperation: &batch.BatchOperationSignal{
 				Signal:   c.Name,
@@ -131,12 +159,11 @@ func (c *TemporalWorkflowTerminateCommand) run(cctx *CommandContext, _ []string)
 		// You're allowed to specify a reason when terminating a workflow
 		AllowReasonWithWorkflowID: true,
 	})
-	if err != nil {
-		return err
-	}
 
 	// Run single or batch
-	if exec != nil {
+	if err != nil {
+		return err
+	} else if exec != nil {
 		reason := c.Reason
 		if reason == "" {
 			reason = defaultReason()
@@ -146,7 +173,7 @@ func (c *TemporalWorkflowTerminateCommand) run(cctx *CommandContext, _ []string)
 			return fmt.Errorf("failed to terminate workflow: %w", err)
 		}
 		cctx.Printer.Println("Workflow terminated")
-	} else if batchReq != nil {
+	} else { // batchReq != nil
 		batchReq.Operation = &workflowservice.StartBatchOperationRequest_TerminationOperation{
 			TerminationOperation: &batch.BatchOperationTermination{
 				Identity: clientIdentity(),

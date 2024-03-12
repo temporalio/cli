@@ -570,7 +570,20 @@ TODO
 
 ### temporal workflow delete: Deletes a Workflow Execution.
 
-TODO
+The `temporal workflow delete` command is used to delete a specific [Workflow Execution](/concepts/what-is-a-workflow-execution).
+This asynchronously deletes a workflow's [Event History](/concepts/what-is-an-event-history).
+If the [Workflow Execution](/concepts/what-is-a-workflow-execution) is Running, it will be terminated before deletion.
+
+```
+temporal workflow delete \
+		--workflow-id MyWorkflowId \
+```
+
+Use the options listed below to change the command's behavior.
+
+#### Options
+
+Includes options set for [single workflow or batch](#options-set-single-workflow-or-batch)
 
 ### temporal workflow describe: Show information about a Workflow Execution.
 

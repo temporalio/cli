@@ -1357,6 +1357,7 @@ func NewTemporalWorkflowCountCommand(cctx *CommandContext, parent *TemporalWorkf
 type TemporalWorkflowDeleteCommand struct {
 	Parent  *TemporalWorkflowCommand
 	Command cobra.Command
+	SingleWorkflowOrBatchOptions
 }
 
 func NewTemporalWorkflowDeleteCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowDeleteCommand {
@@ -1365,8 +1366,13 @@ func NewTemporalWorkflowDeleteCommand(cctx *CommandContext, parent *TemporalWork
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "delete [flags]"
 	s.Command.Short = "Deletes a Workflow Execution."
-	s.Command.Long = "TODO"
+	if hasHighlighting {
+		s.Command.Long = "The \x1b[1mtemporal workflow delete\x1b[0m command is used to delete a specific Workflow Execution.\nThis asynchronously deletes a workflow's Event History.\nIf the Workflow Execution is Running, it will be terminated before deletion.\n\n\x1b[1mtemporal workflow delete \\\n\t\t--workflow-id MyWorkflowId \\\x1b[0m\n\nUse the options listed below to change the command's behavior."
+	} else {
+		s.Command.Long = "The `temporal workflow delete` command is used to delete a specific Workflow Execution.\nThis asynchronously deletes a workflow's Event History.\nIf the Workflow Execution is Running, it will be terminated before deletion.\n\n```\ntemporal workflow delete \\\n\t\t--workflow-id MyWorkflowId \\\n```\n\nUse the options listed below to change the command's behavior."
+	}
 	s.Command.Args = cobra.NoArgs
+	s.SingleWorkflowOrBatchOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

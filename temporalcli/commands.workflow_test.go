@@ -119,6 +119,66 @@ func (s *SharedServerSuite) testSignalBatchWorkflow(json bool) *CommandResult {
 	return res
 }
 
+func (s *SharedServerSuite) TestWorkflow_Delete_BatchWorkflowSuccess() {
+	s.Worker.OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
+		ctx.Done().Receive(ctx, nil)
+		return nil, ctx.Err()
+	})
+
+	// Start some workflows
+	prefix := "delete-test-"
+	ids := []string{prefix + "1", prefix + "2", prefix + "3"}
+	for _, id := range ids {
+		_, err := s.Client.ExecuteWorkflow(
+			s.Context,
+			client.StartWorkflowOptions{ID: id, TaskQueue: "delete-test"},
+			DevWorkflow,
+			"ignored",
+		)
+		s.NoError(err)
+	}
+
+	// Confirm workflows exist in visibility
+	s.Eventually(func() bool {
+		wfs, err := s.Client.ListWorkflow(s.Context, &workflowservice.ListWorkflowExecutionsRequest{
+			Namespace: s.Namespace(),
+			Query:     "TaskQueue = 'delete-test'",
+		})
+		s.NoError(err)
+
+		if len(wfs.GetExecutions()) == 3 {
+			return true
+		}
+
+		return false
+	}, 5*time.Second, 100*time.Millisecond, "timed out awaiting for workflows to exist in visibility")
+
+	// Send delete
+	res := s.Execute(
+		"workflow", "delete",
+		"--address", s.Address(),
+		"--query", "TaskQueue = 'delete-test' AND (WorkflowId = 'delete-test-1' OR WorkflowId = 'delete-test-2')",
+		"--reason", "test",
+		"-y",
+	)
+	s.NoError(res.Err)
+
+	// Confirm workflows were deleted
+	s.Eventually(func() bool {
+		wfs, err := s.Client.ListWorkflow(s.Context, &workflowservice.ListWorkflowExecutionsRequest{
+			Namespace: s.Namespace(),
+			Query:     "TaskQueue = 'delete-test'",
+		})
+		s.NoError(err)
+
+		if len(wfs.GetExecutions()) == 1 && wfs.GetExecutions()[0].GetExecution().GetWorkflowId() == "delete-test-3" {
+			return true
+		}
+
+		return false
+	}, 8*time.Second, 100*time.Millisecond, "timed out awaiting for workflows termination")
+}
+
 func (s *SharedServerSuite) TestWorkflow_Terminate_SingleWorkflowSuccess_WithoutReason() {
 	s.Worker.OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
 		ctx.Done().Receive(ctx, nil)
