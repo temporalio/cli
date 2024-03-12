@@ -159,7 +159,7 @@ func (s *SharedServerSuite) TestWorkflow_Delete_BatchWorkflowSuccess() {
 		}
 
 		return false
-	}, 10*time.Second, time.Second, "timed out awaiting for workflows termination")
+	}, 5*time.Second, 100 * time.Millisecond, "timed out awaiting for workflows termination")
 }
 
 func (s *SharedServerSuite) TestWorkflow_Terminate_SingleWorkflowSuccess_WithoutReason() {
