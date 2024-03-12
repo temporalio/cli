@@ -159,12 +159,11 @@ func (c *TemporalWorkflowTerminateCommand) run(cctx *CommandContext, _ []string)
 		// You're allowed to specify a reason when terminating a workflow
 		AllowReasonWithWorkflowID: true,
 	})
-	if err != nil {
-		return err
-	}
 
 	// Run single or batch
-	if exec != nil {
+	if err != nil {
+		return err
+	} else if exec != nil {
 		reason := c.Reason
 		if reason == "" {
 			reason = defaultReason()
@@ -174,7 +173,7 @@ func (c *TemporalWorkflowTerminateCommand) run(cctx *CommandContext, _ []string)
 			return fmt.Errorf("failed to terminate workflow: %w", err)
 		}
 		cctx.Printer.Println("Workflow terminated")
-	} else if batchReq != nil {
+	} else { // batchReq != nil
 		batchReq.Operation = &workflowservice.StartBatchOperationRequest_TerminationOperation{
 			TerminationOperation: &batch.BatchOperationTermination{
 				Identity: clientIdentity(),
