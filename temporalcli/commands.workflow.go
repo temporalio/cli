@@ -24,18 +24,17 @@ func (c *TemporalWorkflowCancelCommand) run(cctx *CommandContext, args []string)
 	defer cl.Close()
 
 	exec, batchReq, err := c.workflowExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{})
-	if err != nil {
-		return err
-	}
 
 	// Run single or batch
-	if exec != nil {
+	if err != nil {
+		return err
+	} else if exec != nil {
 		err = cl.CancelWorkflow(cctx, exec.WorkflowId, exec.RunId)
 		if err != nil {
 			return fmt.Errorf("failed to cancel workflow: %w", err)
 		}
 		cctx.Printer.Println("Canceled workflow")
-	} else if batchReq != nil {
+	} else { // batchReq != nil
 		batchReq.Operation = &workflowservice.StartBatchOperationRequest_CancellationOperation{
 			CancellationOperation: &batch.BatchOperationCancellation{
 				Identity: clientIdentity(),
@@ -57,12 +56,11 @@ func (c *TemporalWorkflowDeleteCommand) run(cctx *CommandContext, args []string)
 	defer cl.Close()
 
 	exec, batchReq, err := c.workflowExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{})
-	if err != nil {
-		return err
-	}
 
 	// Run single or batch
-	if exec != nil {
+	if err != nil {
+		return err
+	} else if exec != nil {
 		_, err := cl.WorkflowService().DeleteWorkflowExecution(cctx, &workflowservice.DeleteWorkflowExecutionRequest{
 			Namespace:         c.Parent.Namespace,
 			WorkflowExecution: &common.WorkflowExecution{WorkflowId: c.WorkflowId, RunId: c.RunId},
@@ -71,7 +69,7 @@ func (c *TemporalWorkflowDeleteCommand) run(cctx *CommandContext, args []string)
 			return fmt.Errorf("failed to delete workflow: %w", err)
 		}
 		cctx.Printer.Println("Delete workflow succeeded")
-	} else if batchReq != nil {
+	} else { // batchReq != nil
 		batchReq.Operation = &workflowservice.StartBatchOperationRequest_DeletionOperation{
 			DeletionOperation: &batch.BatchOperationDeletion{
 				Identity: clientIdentity(),
