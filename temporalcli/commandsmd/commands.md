@@ -581,15 +581,9 @@ temporal workflow delete \
 
 Use the options listed below to change the command's behavior.
 
-#### Options set for single workflow or batch:
+#### Options
 
-* `--workflow-id`, `-w` (string) - Workflow Id. Either this or query must be set.
-* `--run-id`, `-r` (string) - Run Id. Cannot be set when query is set.
-* `--query`, `-q` (string) - Start a batch to operate on Workflow Executions with given List Filter. Either this or
-  Workflow Id must be set.
-* `--reason` (string) - Reason to perform batch. Only allowed if query is present unless the command specifies
-  otherwise. Defaults to message with the current user's name.
-* `--yes`, `-y` (bool) - Confirm prompt to perform batch. Only allowed if query is present.
+Includes options set for [single workflow or batch](#options-set-single-workflow-or-batch)
 
 ### temporal workflow describe: Show information about a Workflow Execution.
 
