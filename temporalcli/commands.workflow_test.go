@@ -164,7 +164,6 @@ func (s *SharedServerSuite) TestWorkflow_Delete_BatchWorkflowSuccess() {
 	s.NoError(res.Err)
 
 	// Confirm workflows were deleted
-	i := 0
 	s.Eventually(func() bool {
 		wfs, err := s.Client.ListWorkflow(s.Context, &workflowservice.ListWorkflowExecutionsRequest{
 			Namespace: s.Namespace(),
@@ -172,17 +171,12 @@ func (s *SharedServerSuite) TestWorkflow_Delete_BatchWorkflowSuccess() {
 		})
 		s.NoError(err)
 
-		for _, e := range wfs.GetExecutions() {
-			fmt.Printf("check %d, wf %+v\n", i, e.GetExecution().GetWorkflowId())
-		}
-		i++
-
 		if len(wfs.GetExecutions()) == 1 && wfs.GetExecutions()[0].GetExecution().GetWorkflowId() == "delete-test-3" {
 			return true
 		}
 
 		return false
-	}, 10*time.Second, 100*time.Millisecond, "timed out awaiting for workflows termination")
+	}, 5*time.Second, 100*time.Millisecond, "timed out awaiting for workflows termination")
 }
 
 func (s *SharedServerSuite) TestWorkflow_Terminate_SingleWorkflowSuccess_WithoutReason() {
