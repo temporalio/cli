@@ -1373,7 +1373,7 @@ func NewTemporalWorkflowDeleteCommand(cctx *CommandContext, parent *TemporalWork
 		start = "\x1b[1m"
 		end = "\x1b[0m"
 	}
-	s.Command.Long = fmt.Sprintf("The %stemporal workflow delete%s command is used to delete a specific Workflow Execution \n(when WorkflowExecution.run_id is provided) or the latest Workflow Execution \n(when WorkflowExecution.run_id is not provided). \nIf the Workflow Execution is Running, it will be terminated before deletion.", start, end)
+	s.Command.Long = fmt.Sprintf("The %stemporal workflow delete%s command is used to delete a specific Workflow Execution. \nThis asynchronously deletes a workflow's [Event History](/concepts/what-is-an-event-history). \nIf the Workflow Execution is Running, it will be terminated before deletion.", start, end)
 	s.Command.Args = cobra.NoArgs
 	s.SingleWorkflowOrBatchOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
