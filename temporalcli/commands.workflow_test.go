@@ -119,6 +119,49 @@ func (s *SharedServerSuite) testSignalBatchWorkflow(json bool) *CommandResult {
 	return res
 }
 
+func (s *SharedServerSuite) TestWorkflow_Delete_BatchWorkflowSuccess() {
+	s.Worker.OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
+		ctx.Done().Receive(ctx, nil)
+		return nil, ctx.Err()
+	})
+
+	// Start some workflows
+	ids := []string{"1", "2", "3"}
+	for _, id := range ids {
+		_, err := s.Client.ExecuteWorkflow(
+			s.Context,
+			client.StartWorkflowOptions{ID: id, TaskQueue: s.Worker.Options.TaskQueue},
+			DevWorkflow,
+			"ignored",
+		)
+		s.NoError(err)
+	}
+
+	// Send delete
+	res := s.Execute(
+		"workflow", "delete",
+		"--address", s.Address(),
+		"--query", "WorkflowId = '1' OR WorkflowId = '2'",
+		"--reason", "test",
+		"-y",
+	)
+	s.NoError(res.Err)
+
+	// Confirm workflows were deleted
+	s.Eventually(func() bool {
+		wfs, err := s.Client.ListWorkflow(s.Context, &workflowservice.ListWorkflowExecutionsRequest{
+			Namespace: s.Namespace(),
+		})
+		s.NoError(err)
+
+		if len(wfs.GetExecutions()) == 1 && wfs.GetExecutions()[0].GetExecution().GetWorkflowId() == "3" {
+			return true
+		}
+
+		return false
+	}, 10*time.Second, time.Second, "timed out awaiting for workflows termination")
+}
+
 func (s *SharedServerSuite) TestWorkflow_Terminate_SingleWorkflowSuccess_WithoutReason() {
 	s.Worker.OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
 		ctx.Done().Receive(ctx, nil)

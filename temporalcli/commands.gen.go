@@ -3,6 +3,7 @@
 package temporalcli
 
 import (
+	"fmt"
 	"github.com/mattn/go-isatty"
 
 	"github.com/spf13/cobra"
@@ -1357,6 +1358,7 @@ func NewTemporalWorkflowCountCommand(cctx *CommandContext, parent *TemporalWorkf
 type TemporalWorkflowDeleteCommand struct {
 	Parent  *TemporalWorkflowCommand
 	Command cobra.Command
+	SingleWorkflowOrBatchOptions
 }
 
 func NewTemporalWorkflowDeleteCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowDeleteCommand {
@@ -1365,8 +1367,15 @@ func NewTemporalWorkflowDeleteCommand(cctx *CommandContext, parent *TemporalWork
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "delete [flags]"
 	s.Command.Short = "Deletes a Workflow Execution."
-	s.Command.Long = "TODO"
+	start := "`"
+	end := "`"
+	if hasHighlighting {
+		start = "\x1b[1m"
+		end = "\x1b[0m"
+	}
+	s.Command.Long = fmt.Sprintf("The %stemporal workflow delete%s command is used to delete a specific Workflow Execution \n(when WorkflowExecution.run_id is provided) or the latest Workflow Execution \n(when WorkflowExecution.run_id is not provided). \nIf the Workflow Execution is Running, it will be terminated before deletion.", start, end)
 	s.Command.Args = cobra.NoArgs
+	s.SingleWorkflowOrBatchOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

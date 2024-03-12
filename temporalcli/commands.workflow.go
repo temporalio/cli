@@ -49,8 +49,39 @@ func (c *TemporalWorkflowCancelCommand) run(cctx *CommandContext, args []string)
 	return nil
 }
 
-func (*TemporalWorkflowDeleteCommand) run(*CommandContext, []string) error {
-	return fmt.Errorf("TODO")
+func (c *TemporalWorkflowDeleteCommand) run(cctx *CommandContext, args []string) error {
+	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	exec, batchReq, err := c.workflowExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{})
+	if err != nil {
+		return err
+	}
+
+	// Run single or batch
+	if exec != nil {
+		_, err := cl.WorkflowService().DeleteWorkflowExecution(cctx, &workflowservice.DeleteWorkflowExecutionRequest{
+			Namespace:         c.Parent.Namespace,
+			WorkflowExecution: &common.WorkflowExecution{WorkflowId: c.WorkflowId, RunId: c.RunId},
+		})
+		if err != nil {
+			return fmt.Errorf("failed to delete workflow: %w", err)
+		}
+		cctx.Printer.Println("Delete workflow succeeded")
+	} else if batchReq != nil {
+		batchReq.Operation = &workflowservice.StartBatchOperationRequest_DeletionOperation{
+			DeletionOperation: &batch.BatchOperationDeletion{
+				Identity: clientIdentity(),
+			},
+		}
+		if err := startBatchJob(cctx, cl, batchReq); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (c *TemporalWorkflowQueryCommand) run(cctx *CommandContext, args []string) error {
@@ -72,12 +103,11 @@ func (c *TemporalWorkflowSignalCommand) run(cctx *CommandContext, args []string)
 	}
 
 	exec, batchReq, err := c.workflowExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{})
-	if err != nil {
-		return err
-	}
 
 	// Run single or batch
-	if exec != nil {
+	if err != nil {
+		return err
+	} else if exec != nil {
 		// We have to use the raw signal service call here because the Go SDK's
 		// signal call doesn't accept multiple arguments.
 		_, err = cl.WorkflowService().SignalWorkflowExecution(cctx, &workflowservice.SignalWorkflowExecutionRequest{
@@ -91,7 +121,7 @@ func (c *TemporalWorkflowSignalCommand) run(cctx *CommandContext, args []string)
 			return fmt.Errorf("failed signalling workflow: %w", err)
 		}
 		cctx.Printer.Println("Signal workflow succeeded")
-	} else if batchReq != nil {
+	} else { // batchReq != nil
 		batchReq.Operation = &workflowservice.StartBatchOperationRequest_SignalOperation{
 			SignalOperation: &batch.BatchOperationSignal{
 				Signal:   c.Name,
