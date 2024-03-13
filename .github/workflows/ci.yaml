@@ -17,7 +17,7 @@ jobs:
             cloudTestTarget: true
           - os: ubuntu-arm
             runsOn: buildjet-4vcpu-ubuntu-2204-arm
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.runsOn || matrix.os }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
