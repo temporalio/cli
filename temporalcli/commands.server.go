@@ -14,13 +14,17 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 	}
 	// Prepare options
 	opts := devserver.StartOptions{
-		FrontendIP:       t.Ip,
-		FrontendPort:     t.Port,
-		Namespaces:       append([]string{"default"}, t.Namespace...),
-		Logger:           cctx.Logger,
-		DatabaseFile:     t.DbFilename,
-		MetricsPort:      t.MetricsPort,
-		FrontendHTTPPort: t.HttpPort,
+		FrontendIP:             t.Ip,
+		FrontendPort:           t.Port,
+		Namespaces:             append([]string{"default"}, t.Namespace...),
+		Logger:                 cctx.Logger,
+		DatabaseFile:           t.DbFilename,
+		MetricsPort:            t.MetricsPort,
+		FrontendHTTPPort:       t.HttpPort,
+		ClusterID:              uuid.NewString(),
+		MasterClusterName:      "active",
+		CurrentClusterName:     "active",
+		InitialFailoverVersion: 1,
 	}
 	if t.LogLevelServer.Value == "never" {
 		opts.LogLevel = 100
@@ -56,6 +60,10 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 			_, _ = cctx.Options.Stderr.Write(b)
 		}
 	}
+	// Grab a free port for metrics ahead-of-time so we know what port is selected
+	if opts.MetricsPort == 0 {
+		opts.MetricsPort = devserver.MustGetFreePort()
+	}
 
 	// Start, wait for context complete, then stop
 	s, err := devserver.Start(opts)
@@ -72,6 +80,7 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 	if !t.Headless {
 		cctx.Printer.Printlnf("Web UI is running at: http://%v:%v", friendlyIP, opts.UIPort)
 	}
+	cctx.Printer.Printlnf("Metrics available at: http://%v:%v/metrics", friendlyIP, opts.MetricsPort)
 	<-cctx.Done()
 	cctx.Printer.Println("Stopping server...")
 	return nil

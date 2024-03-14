@@ -193,6 +193,10 @@ func (c *TemporalWorkflowListCommand) run(cctx *CommandContext, args []string) e
 	}
 	defer cl.Close()
 
+	// This is a listing command subject to json vs jsonl rules
+	cctx.Printer.StartList()
+	defer cctx.Printer.EndList()
+
 	// Build request and start looping. We always use default page size regardless
 	// of user-defined limit, because we're ok w/ extra page data and the default
 	// is not clearly defined.
@@ -265,6 +269,48 @@ func (*TemporalWorkflowCountCommand) run(*CommandContext, []string) error {
 	return fmt.Errorf("TODO")
 }
 
-func (*TemporalWorkflowShowCommand) run(*CommandContext, []string) error {
-	return fmt.Errorf("TODO")
+func (c *TemporalWorkflowShowCommand) run(cctx *CommandContext, args []string) error {
+	// Call describe
+	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	// Print history
+	iter := &structuredHistoryIter{
+		ctx:            cctx,
+		client:         cl,
+		workflowID:     c.WorkflowId,
+		runID:          c.RunId,
+		includeDetails: true,
+		follow:         c.Follow,
+	}
+	if !cctx.JSONOutput {
+		cctx.Printer.Println(color.MagentaString("Progress:"))
+		if err := iter.print(cctx.Printer); err != nil {
+			return fmt.Errorf("displaying history failed: %w", err)
+		}
+		if err := printTextResult(cctx, iter.wfResult, 0); err != nil {
+			return err
+		}
+	} else {
+		events := make([]*history.HistoryEvent, 0)
+		for {
+			e, err := iter.NextRawEvent()
+			if err != nil {
+				return fmt.Errorf("failed getting next history event: %w", err)
+			}
+			if e == nil {
+				break
+			}
+			events = append(events, e)
+		}
+		outStruct := history.History{}
+		outStruct.Events = events
+		if err := cctx.Printer.PrintStructured(&outStruct, printer.StructuredOptions{}); err != nil {
+			return fmt.Errorf("failed printing structured output: %w", err)
+		}
+	}
+	return nil
 }

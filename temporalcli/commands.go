@@ -46,6 +46,10 @@ type CommandContext struct {
 	Logger                *slog.Logger
 	JSONOutput            bool
 	JSONShorthandPayloads bool
+
+	// Is set to true if any command actually started running. This is a hack to workaround the fact
+	// that cobra does not properly exit nonzero if an unknown command/subcommand is given.
+	ActuallyRanCommand bool
 }
 
 type CommandOptions struct {
@@ -202,11 +206,11 @@ func (c *CommandContext) MarshalFriendlyFailureBodyText(f *failure.Failure, inde
 // Takes payload shorthand into account, can use
 // MarshalProtoJSONNoPayloadShorthand if needed
 func (c *CommandContext) MarshalProtoJSON(m proto.Message) ([]byte, error) {
-	return MarshalProtoJSONWithOptions(m, c.JSONShorthandPayloads)
+	return c.MarshalProtoJSONWithOptions(m, c.JSONShorthandPayloads)
 }
 
-func MarshalProtoJSONWithOptions(m proto.Message, jsonShorthandPayloads bool) ([]byte, error) {
-	opts := temporalproto.CustomJSONMarshalOptions{Indent: "  "}
+func (c *CommandContext) MarshalProtoJSONWithOptions(m proto.Message, jsonShorthandPayloads bool) ([]byte, error) {
+	opts := temporalproto.CustomJSONMarshalOptions{Indent: c.Printer.JSONIndent}
 	if jsonShorthandPayloads {
 		opts.Metadata = map[string]any{common.EnablePayloadShorthandMetadataKey: true}
 	}
@@ -225,10 +229,13 @@ func UnmarshalProtoJSONWithOptions(b []byte, m proto.Message, jsonShorthandPaylo
 	return opts.Unmarshal(b, m)
 }
 
-func (c *CommandContext) populateFlagsFromEnv(flags *pflag.FlagSet) error {
+// Set flag values from environment file & variables. Returns a callback to log anything interesting
+// since logging will not yet be initialized when this runs.
+func (c *CommandContext) populateFlagsFromEnv(flags *pflag.FlagSet) (func(*slog.Logger), error) {
 	if flags == nil {
-		return nil
+		return func(logger *slog.Logger) {}, nil
 	}
+	var logCalls []func(*slog.Logger)
 	var flagErr error
 	flags.VisitAll(func(flag *pflag.Flag) {
 		// If the flag was already changed by the user, we don't overwrite
@@ -250,11 +257,21 @@ func (c *CommandContext) populateFlagsFromEnv(flags *pflag.FlagSet) error {
 						flag.Name, anns[0], envVal, err)
 					return
 				}
+				if flag.Changed {
+					logCalls = append(logCalls, func(l *slog.Logger) {
+						l.Info("Env var overrode --env setting", "env_var", anns[0], "flag", flag.Name)
+					})
+				}
 				flag.Changed = true
 			}
 		}
 	})
-	return flagErr
+	logFn := func(logger *slog.Logger) {
+		for _, call := range logCalls {
+			call(logger)
+		}
+	}
+	return logFn, flagErr
 }
 
 // Returns error if JSON output enabled
@@ -270,6 +287,21 @@ func (c *CommandContext) promptYes(message string, autoConfirm bool) (bool, erro
 	line, _ := bufio.NewReader(c.Options.Stdin).ReadString('\n')
 	line = strings.TrimSpace(strings.ToLower(line))
 	return line == "y" || line == "yes", nil
+}
+
+// Returns error if JSON output enabled
+func (c *CommandContext) promptString(message string, expected string, autoConfirm bool) (bool, error) {
+	if c.JSONOutput && !autoConfirm {
+		return false, fmt.Errorf("must bypass prompts when using JSON output")
+	}
+	c.Printer.Print(message, " ")
+	if autoConfirm {
+		c.Printer.Println(expected)
+		return true, nil
+	}
+	line, _ := bufio.NewReader(c.Options.Stdin).ReadString('\n')
+	line = strings.TrimSpace(line)
+	return line == expected, nil
 }
 
 // Execute runs the Temporal CLI with the given context and options. This
@@ -289,6 +321,10 @@ func Execute(ctx context.Context, options CommandOptions) {
 	if err != nil {
 		cctx.Options.Fail(err)
 	}
+	// If no command ever actually got run, exit nonzero
+	if !cctx.ActuallyRanCommand {
+		cctx.Options.Fail(fmt.Errorf("unknown command"))
+	}
 }
 
 func (c *TemporalCommand) initCommand(cctx *CommandContext) {
@@ -299,7 +335,8 @@ func (c *TemporalCommand) initCommand(cctx *CommandContext) {
 	c.Command.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
 		// Populate environ. We will make the error return here which will cause
 		// usage to be printed.
-		if err := cctx.populateFlagsFromEnv(cmd.Flags()); err != nil {
+		logCalls, err := cctx.populateFlagsFromEnv(cmd.Flags())
+		if err != nil {
 			return err
 		}
 
@@ -308,7 +345,17 @@ func (c *TemporalCommand) initCommand(cctx *CommandContext) {
 		if c.Color.Value == "never" || c.Color.Value == "always" {
 			color.NoColor = c.Color.Value == "never"
 		}
-		return c.preRun(cctx)
+
+		res := c.preRun(cctx)
+
+		logCalls(cctx.Logger)
+
+		// Always disable color if JSON output is on (must be run after preRun so JSONOutput is set)
+		if cctx.JSONOutput {
+			color.NoColor = true
+		}
+		cctx.ActuallyRanCommand = true
+		return res
 	}
 	c.Command.PersistentPostRun = func(*cobra.Command, []string) {
 		color.NoColor = origNoColor
@@ -349,12 +396,17 @@ func (c *TemporalCommand) preRun(cctx *CommandContext) error {
 	}
 
 	// Configure printer if not already on context
-	cctx.JSONOutput = c.Output.Value == "json"
+	cctx.JSONOutput = c.Output.Value == "json" || c.Output.Value == "jsonl"
+	// Only indent JSON if not jsonl
+	var jsonIndent string
+	if c.Output.Value == "json" {
+		jsonIndent = "  "
+	}
 	if cctx.Printer == nil {
 		cctx.Printer = &printer.Printer{
 			Output:               cctx.Options.Stdout,
 			JSON:                 cctx.JSONOutput,
-			JSONIndent:           "  ",
+			JSONIndent:           jsonIndent,
 			JSONPayloadShorthand: !c.NoJsonShorthandPayloads,
 		}
 		switch c.TimeFormat.Value {

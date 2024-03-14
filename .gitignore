@@ -1,0 +1,9 @@
+# Binaries for programs and plugins
+/temporal
+/temporal.exe
+
+# Used by IDE
+/.idea
+/.vscode
+*~
+

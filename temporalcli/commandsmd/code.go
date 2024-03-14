@@ -186,7 +186,9 @@ func (c *Command) writeCode(w *codeWriter) error {
 	} else {
 		w.writeLinef("s.Command.Long = %q", c.LongPlain)
 	}
-	if c.ExactArgs > 0 {
+	if c.MaximumArgs > 0 {
+		w.writeLinef("s.Command.Args = %v.MaximumNArgs(%v)", w.importCobra(), c.MaximumArgs)
+	} else if c.ExactArgs > 0 {
 		w.writeLinef("s.Command.Args = %v.ExactArgs(%v)", w.importCobra(), c.ExactArgs)
 	} else {
 		w.writeLinef("s.Command.Args = %v.NoArgs", w.importCobra())
