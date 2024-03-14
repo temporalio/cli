@@ -14,6 +14,81 @@ import (
 	"go.temporal.io/sdk/client"
 )
 
+type printableSchedule struct {
+	ScheduleId       any
+	CalendarSpecs    []any `cli:",cardOmitEmpty"`
+	IntervalSpecs    []any `cli:",cardOmitEmpty"`
+	WorkflowId       any
+	WorkflowType     any
+	Paused           any
+	Notes            any `cli:",cardOmitEmpty"`
+	NextRunTime      any
+	LastRunTime      any
+	RunningWorkflows []any
+}
+
+func describeResultToPrintable(id string, desc *client.ScheduleDescription) *printableSchedule {
+	// TODO: should we include any other fields here, e.g. jitter, time zone, start/end time
+	out := &printableSchedule{
+		ScheduleId: id,
+		Paused:     desc.Schedule.State.Paused,
+		Notes:      desc.Schedule.State.Note,
+	}
+	specToPrintable(out, desc.Schedule.Spec)
+	if workflowAction, ok := desc.Schedule.Action.(*client.ScheduleWorkflowAction); ok {
+		out.WorkflowId = workflowAction.ID
+		out.WorkflowType = workflowAction.Workflow
+	}
+	if len(desc.Info.NextActionTimes) > 0 {
+		out.NextRunTime = desc.Info.NextActionTimes[0]
+	}
+	if l := len(desc.Info.RecentActions); l > 0 {
+		last := desc.Info.RecentActions[l-1]
+		out.LastRunTime = last.ScheduleTime
+	}
+	for _, w := range desc.Info.RunningWorkflows {
+		out.RunningWorkflows = append(out.RunningWorkflows, w.WorkflowID)
+	}
+	return out
+}
+
+func listResultToPrintable(ent *client.ScheduleListEntry) *printableSchedule {
+	out := &printableSchedule{
+		ScheduleId:   ent.ID,
+		Paused:       ent.Paused,
+		Notes:        ent.Note,
+		WorkflowType: ent.WorkflowType,
+	}
+	specToPrintable(out, ent.Spec)
+	if len(ent.NextActionTimes) > 0 {
+		out.NextRunTime = ent.NextActionTimes[0]
+	}
+	if l := len(ent.RecentActions); l > 0 {
+		last := ent.RecentActions[l-1]
+		out.LastRunTime = last.ScheduleTime
+	}
+	return out
+}
+
+func specToPrintable(out *printableSchedule, spec *client.ScheduleSpec) {
+	for _, cal := range spec.Calendars {
+		// TODO: This is not quite right for either json or text:
+		// For json: this doesn't come out as proper protojson, the field names are
+		// day_of_month instead of dayOfMonth.
+		// For text: this looks fine when there's only one, but there are no {} around each
+		// element, so if there's more than one it's confusing.
+		out.CalendarSpecs = append(out.CalendarSpecs, formatCalendarSpec(cal))
+	}
+	for _, int := range spec.Intervals {
+		if int.Offset > 0 {
+			out.IntervalSpecs = append(out.IntervalSpecs, int)
+		} else {
+			// hide offset if not present
+			out.IntervalSpecs = append(out.IntervalSpecs, struct{ Every time.Duration }{Every: int.Every})
+		}
+	}
+}
+
 func (c *TemporalScheduleBackfillCommand) run(cctx *CommandContext, args []string) error {
 	cl, err := c.Parent.ClientOptions.dialClient(cctx)
 	if err != nil {
@@ -98,67 +173,8 @@ func (c *TemporalScheduleDescribeCommand) run(cctx *CommandContext, args []strin
 		return err
 	}
 
-	var out struct {
-		ScheduleId       any
-		CalendarSpecs    any
-		IntervalSpecs    any
-		WorkflowId       any
-		WorkflowType     any
-		Paused           any
-		Notes            any
-		NextRunTime      any
-		LastRunTime      any
-		RunningWorkflows any
-	}
-
-	out.ScheduleId = c.ScheduleId
-
-	var calendarSpecs, intervalSpecs []any
-	for _, cal := range res.Schedule.Spec.Calendars {
-		// TODO: This is not quite right for either json or text:
-		// For json: this doesn't come out as proper protojson, the field names are day_of_month instead of dayOfMonth
-		// For text: this looks fine when there's only one, but there are no {} around each
-		// element, so more than one is confusing.
-		calendarSpecs = append(calendarSpecs, formatCalendarSpec(cal))
-	}
-	for _, int := range res.Schedule.Spec.Intervals {
-		if int.Offset > 0 {
-			intervalSpecs = append(intervalSpecs, int)
-		} else {
-			// hide offset if not present
-			intervalSpecs = append(intervalSpecs, struct{ Every time.Duration }{Every: int.Every})
-		}
-	}
-	out.CalendarSpecs = calendarSpecs
-	out.IntervalSpecs = intervalSpecs
-
-	if workflowAction, ok := res.Schedule.Action.(*client.ScheduleWorkflowAction); ok {
-		out.WorkflowId = workflowAction.ID
-		out.WorkflowType = workflowAction.Workflow
-	}
-	out.Paused = res.Schedule.State.Paused
-	out.Notes = res.Schedule.State.Note
-	if len(res.Info.NextActionTimes) > 0 {
-		out.NextRunTime = res.Info.NextActionTimes[0]
-	}
-	if l := len(res.Info.RecentActions); l > 0 {
-		last := res.Info.RecentActions[l-1]
-		out.LastRunTime = last.ScheduleTime
-	}
-	var runningWorkflowIds []string
-	for _, w := range res.Info.RunningWorkflows {
-		runningWorkflowIds = append(runningWorkflowIds, w.WorkflowID)
-	}
-	out.RunningWorkflows = runningWorkflowIds
-
-	cctx.Printer.PrintStructured(out, printer.StructuredOptions{})
-
-	return nil
-}
-
-type scheduleListEntry struct {
-	ID string
-	// TODO: more fields here
+	printable := describeResultToPrintable(c.ScheduleId, res)
+	return cctx.Printer.PrintStructured(printable, printer.StructuredOptions{})
 }
 
 type scheduleListEntryIterAdapter struct {
@@ -173,10 +189,7 @@ func (i scheduleListEntryIterAdapter) Next() (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &scheduleListEntry{
-		ID: next.ID,
-		// TODO: copy more fields from next into here
-	}, nil
+	return listResultToPrintable(next), nil
 }
 
 func (c *TemporalScheduleListCommand) run(cctx *CommandContext, args []string) error {
@@ -185,6 +198,11 @@ func (c *TemporalScheduleListCommand) run(cctx *CommandContext, args []string) e
 		return err
 	}
 	defer cl.Close()
+
+	// // This is a listing command subject to json vs jsonl rules
+	// cctx.Printer.StartList()
+	// defer cctx.Printer.EndList()
+
 	res, err := cl.ScheduleClient().List(cctx, client.ScheduleListOptions{})
 	if err != nil {
 		return err
@@ -193,7 +211,17 @@ func (c *TemporalScheduleListCommand) run(cctx *CommandContext, args []string) e
 	typ := reflect.TypeOf(client.ScheduleListEntry{})
 	iter := scheduleListEntryIterAdapter{i: res}
 
-	return cctx.Printer.PrintStructuredIter(typ, iter, printer.StructuredOptions{})
+	fields := []string{
+		"ScheduleId",
+		"CalendarSpecs",
+		"IntervalSpecs",
+		"WorkflowType",
+		"Paused",
+		"Notes",
+		"NextRunTime",
+		"LastRunTime",
+	}
+	return cctx.Printer.PrintStructuredIter(typ, iter, printer.StructuredOptions{Fields: fields})
 }
 
 func (c *TemporalScheduleToggleCommand) run(cctx *CommandContext, args []string) error {
