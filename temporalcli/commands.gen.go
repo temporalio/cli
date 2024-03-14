@@ -1081,6 +1081,7 @@ func NewTemporalScheduleDescribeCommand(cctx *CommandContext, parent *TemporalSc
 type TemporalScheduleListCommand struct {
 	Parent  *TemporalScheduleCommand
 	Command cobra.Command
+	Long    bool
 }
 
 func NewTemporalScheduleListCommand(cctx *CommandContext, parent *TemporalScheduleCommand) *TemporalScheduleListCommand {
@@ -1095,6 +1096,7 @@ func NewTemporalScheduleListCommand(cctx *CommandContext, parent *TemporalSchedu
 		s.Command.Long = "The `temporal schedule list` command lists all Schedules in a namespace."
 	}
 	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().BoolVarP(&s.Long, "long", "l", false, "Include detailed information.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

@@ -3,7 +3,6 @@ package temporalcli
 import (
 	"errors"
 	"fmt"
-	"reflect"
 	"strings"
 	"time"
 
@@ -52,12 +51,12 @@ func describeResultToPrintable(id string, desc *client.ScheduleDescription) *pri
 	return out
 }
 
-func listResultToPrintable(ent *client.ScheduleListEntry) *printableSchedule {
+func listEntryToPrintable(ent *client.ScheduleListEntry) *printableSchedule {
 	out := &printableSchedule{
 		ScheduleId:   ent.ID,
 		Paused:       ent.Paused,
 		Notes:        ent.Note,
-		WorkflowType: ent.WorkflowType,
+		WorkflowType: ent.WorkflowType.Name,
 	}
 	specToPrintable(out, ent.Spec)
 	if len(ent.NextActionTimes) > 0 {
@@ -177,21 +176,6 @@ func (c *TemporalScheduleDescribeCommand) run(cctx *CommandContext, args []strin
 	return cctx.Printer.PrintStructured(printable, printer.StructuredOptions{})
 }
 
-type scheduleListEntryIterAdapter struct {
-	i client.ScheduleListIterator
-}
-
-func (i scheduleListEntryIterAdapter) Next() (any, error) {
-	if !i.i.HasNext() {
-		return nil, nil
-	}
-	next, err := i.i.Next()
-	if err != nil {
-		return nil, err
-	}
-	return listResultToPrintable(next), nil
-}
-
 func (c *TemporalScheduleListCommand) run(cctx *CommandContext, args []string) error {
 	cl, err := c.Parent.ClientOptions.dialClient(cctx)
 	if err != nil {
@@ -199,29 +183,57 @@ func (c *TemporalScheduleListCommand) run(cctx *CommandContext, args []string) e
 	}
 	defer cl.Close()
 
-	// // This is a listing command subject to json vs jsonl rules
-	// cctx.Printer.StartList()
-	// defer cctx.Printer.EndList()
-
 	res, err := cl.ScheduleClient().List(cctx, client.ScheduleListOptions{})
 	if err != nil {
 		return err
 	}
 
-	typ := reflect.TypeOf(client.ScheduleListEntry{})
-	iter := scheduleListEntryIterAdapter{i: res}
+	// This is a listing command subject to json vs jsonl rules
+	cctx.Printer.StartList()
+	defer cctx.Printer.EndList()
 
-	fields := []string{
-		"ScheduleId",
-		"CalendarSpecs",
-		"IntervalSpecs",
-		"WorkflowType",
-		"Paused",
-		"Notes",
-		"NextRunTime",
-		"LastRunTime",
+	printOpts := printer.StructuredOptions{
+		ExcludeFields: []string{
+			// These aren't available in list results
+			"WorkflowId",
+			"RunningWorkflows",
+		},
+		Table: &printer.TableOptions{},
 	}
-	return cctx.Printer.PrintStructuredIter(typ, iter, printer.StructuredOptions{Fields: fields})
+
+	if !c.Long {
+		printOpts.ExcludeFields = append(printOpts.ExcludeFields,
+			"CalendarSpecs",
+			"IntervalSpecs",
+			"Notes",
+		)
+	}
+
+	// make artificial "pages" so we get better aligned columns
+	page := make([]*printableSchedule, 0, 100)
+
+	for res.HasNext() {
+		ent, err := res.Next()
+		if err != nil {
+			return err
+		}
+		printable := listEntryToPrintable(ent)
+		if cctx.JSONOutput {
+			cctx.Printer.PrintStructured(printable, printOpts)
+		} else {
+			page = append(page, printable)
+			if len(page) == cap(page) {
+				cctx.Printer.PrintStructured(page, printOpts)
+				page = page[:0]
+				printOpts.Table.NoHeader = true
+			}
+		}
+	}
+	if !cctx.JSONOutput {
+		cctx.Printer.PrintStructured(page, printOpts)
+	}
+
+	return nil
 }
 
 func (c *TemporalScheduleToggleCommand) run(cctx *CommandContext, args []string) error {

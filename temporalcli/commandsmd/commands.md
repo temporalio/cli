@@ -488,6 +488,10 @@ Includes options set for [schedule-id](#options-set-for-schedule-id).
 
 The `temporal schedule list` command lists all Schedules in a namespace.
 
+#### Options
+
+* `--long`, `-l` (bool) - Include detailed information.
+
 ### temporal schedule toggle: Pauses or unpauses a Schedule.
 
 The `temporal schedule toggle` command can pause and unpause a Schedule.
