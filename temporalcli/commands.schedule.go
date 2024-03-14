@@ -1,6 +1,7 @@
 package temporalcli
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"time"
@@ -125,11 +126,49 @@ func (c *TemporalScheduleListCommand) run(cctx *CommandContext, args []string) e
 }
 
 func (c *TemporalScheduleToggleCommand) run(cctx *CommandContext, args []string) error {
-	return fmt.Errorf("TODO")
+	if c.Pause == c.Unpause {
+		return errors.New("exactly one of --pause or --unpause is required")
+	}
+
+	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+	sch := cl.ScheduleClient().GetHandle(cctx, c.ScheduleId)
+
+	if c.Pause {
+		return sch.Pause(cctx, client.SchedulePauseOptions{
+			Note: c.Reason,
+		})
+	} else {
+		return sch.Unpause(cctx, client.ScheduleUnpauseOptions{
+			Note: c.Reason,
+		})
+	}
 }
 
 func (c *TemporalScheduleTriggerCommand) run(cctx *CommandContext, args []string) error {
-	return fmt.Errorf("TODO")
+	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+	sch := cl.ScheduleClient().GetHandle(cctx, c.ScheduleId)
+
+	overlap, err := enumspb.ScheduleOverlapPolicyFromString(c.OverlapPolicy.Value)
+	if err != nil {
+		return err
+	}
+
+	err = sch.Trigger(cctx, client.ScheduleTriggerOptions{
+		Overlap: overlap,
+	})
+	if err != nil {
+		return err
+	}
+	cctx.Printer.Println("Trigger request sent")
+	return nil
 }
 
 func (c *TemporalScheduleUpdateCommand) run(cctx *CommandContext, args []string) error {
