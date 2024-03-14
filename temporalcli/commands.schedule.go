@@ -24,14 +24,18 @@ type printableSchedule struct {
 	NextRunTime      any
 	LastRunTime      any
 	RunningWorkflows []any
+	SearchAttributes any `cli:",cardOmitEmpty"`
+	Memo             any `cli:",cardOmitEmpty"`
 }
 
 func describeResultToPrintable(id string, desc *client.ScheduleDescription) *printableSchedule {
 	// TODO: should we include any other fields here, e.g. jitter, time zone, start/end time
 	out := &printableSchedule{
-		ScheduleId: id,
-		Paused:     desc.Schedule.State.Paused,
-		Notes:      desc.Schedule.State.Note,
+		ScheduleId:       id,
+		Paused:           desc.Schedule.State.Paused,
+		Notes:            desc.Schedule.State.Note,
+		SearchAttributes: desc.SearchAttributes,
+		Memo:             desc.Memo,
 	}
 	specToPrintable(out, desc.Schedule.Spec)
 	if workflowAction, ok := desc.Schedule.Action.(*client.ScheduleWorkflowAction); ok {
@@ -53,10 +57,12 @@ func describeResultToPrintable(id string, desc *client.ScheduleDescription) *pri
 
 func listEntryToPrintable(ent *client.ScheduleListEntry) *printableSchedule {
 	out := &printableSchedule{
-		ScheduleId:   ent.ID,
-		Paused:       ent.Paused,
-		Notes:        ent.Note,
-		WorkflowType: ent.WorkflowType.Name,
+		ScheduleId:       ent.ID,
+		Paused:           ent.Paused,
+		Notes:            ent.Note,
+		WorkflowType:     ent.WorkflowType.Name,
+		SearchAttributes: ent.SearchAttributes,
+		Memo:             ent.Memo,
 	}
 	specToPrintable(out, ent.Spec)
 	if len(ent.NextActionTimes) > 0 {
@@ -206,6 +212,8 @@ func (c *TemporalScheduleListCommand) run(cctx *CommandContext, args []string) e
 			"CalendarSpecs",
 			"IntervalSpecs",
 			"Notes",
+			"SearchAttributes",
+			"Memo",
 		)
 	}
 
