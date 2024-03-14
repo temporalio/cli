@@ -927,8 +927,8 @@ type TemporalScheduleBackfillCommand struct {
 	Command cobra.Command
 	OverlapPolicyOptions
 	ScheduleIdOptions
-	EndTime   string
-	StartTime string
+	EndTime   Timestamp
+	StartTime Timestamp
 }
 
 func NewTemporalScheduleBackfillCommand(cctx *CommandContext, parent *TemporalScheduleCommand) *TemporalScheduleBackfillCommand {
@@ -945,9 +945,9 @@ func NewTemporalScheduleBackfillCommand(cctx *CommandContext, parent *TemporalSc
 	s.Command.Args = cobra.NoArgs
 	s.OverlapPolicyOptions.buildFlags(cctx, s.Command.Flags())
 	s.ScheduleIdOptions.buildFlags(cctx, s.Command.Flags())
-	s.Command.Flags().StringVar(&s.EndTime, "end-time", "", "Backfill end time.")
+	s.Command.Flags().Var(&s.EndTime, "end-time", "Backfill end time.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "end-time")
-	s.Command.Flags().StringVar(&s.StartTime, "start-time", "", "Backfill start time.")
+	s.Command.Flags().Var(&s.StartTime, "start-time", "Backfill start time.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "start-time")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -961,14 +961,14 @@ type ScheduleConfigurationOptions struct {
 	Calendar                []string
 	CatchupWindow           time.Duration
 	Cron                    []string
-	EndTime                 string
+	EndTime                 Timestamp
 	Interval                []string
 	Jitter                  time.Duration
 	Notes                   string
 	Paused                  bool
 	PauseOnFailure          bool
 	RemainingActions        int
-	StartTime               string
+	StartTime               Timestamp
 	TimeZone                string
 	ScheduleSearchAttribute []string
 	ScheduleMemo            []string
@@ -978,14 +978,14 @@ func (v *ScheduleConfigurationOptions) buildFlags(cctx *CommandContext, f *pflag
 	f.StringArrayVar(&v.Calendar, "calendar", nil, "Calendar specification in JSON, e.g. `{\"dayOfWeek\":\"Fri\",\"hour\":\"17\",\"minute\":\"5\"}`.")
 	f.DurationVar(&v.CatchupWindow, "catchup-window", 0, "Maximum allowed catch-up time if server is down.")
 	f.StringArrayVar(&v.Cron, "cron", nil, "Calendar spec in cron string format, e.g. `3 11 * * Fri`.")
-	f.StringVar(&v.EndTime, "end-time", "", "Overall schedule end time.")
+	f.Var(&v.EndTime, "end-time", "Overall schedule end time.")
 	f.StringArrayVar(&v.Interval, "interval", nil, "Interval duration, e.g. 90m, or 90m/13m to include phase offset.")
 	f.DurationVar(&v.Jitter, "jitter", 0, "Per-action jitter range.")
 	f.StringVar(&v.Notes, "notes", "", "Initial value of notes field.")
 	f.BoolVar(&v.Paused, "paused", false, "Initial value of paused state.")
 	f.BoolVar(&v.PauseOnFailure, "pause-on-failure", false, "Pause schedule after any workflow failure.")
 	f.IntVar(&v.RemainingActions, "remaining-actions", 0, "Total number of actions allowed. Zero (default) means unlimited.")
-	f.StringVar(&v.StartTime, "start-time", "", "Overall schedule start time.")
+	f.Var(&v.StartTime, "start-time", "Overall schedule start time.")
 	f.StringVar(&v.TimeZone, "time-zone", "", "Time zone to interpret all calendar specs in (IANA name).")
 	f.StringArrayVar(&v.ScheduleSearchAttribute, "schedule-search-attribute", nil, "Search Attribute for the _schedule_ in key=value format. Use valid JSON formats for value.")
 	f.StringArrayVar(&v.ScheduleMemo, "schedule-memo", nil, "Memo for the _schedule_ in key=value format. Use valid JSON formats for value.")

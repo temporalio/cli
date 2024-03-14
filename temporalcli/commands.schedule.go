@@ -104,14 +104,6 @@ func (c *TemporalScheduleBackfillCommand) run(cctx *CommandContext, args []strin
 	defer cl.Close()
 	sch := cl.ScheduleClient().GetHandle(cctx, c.ScheduleId)
 
-	startTime, err := time.Parse(time.RFC3339, c.StartTime)
-	if err != nil {
-		return err
-	}
-	endTime, err := time.Parse(time.RFC3339, c.EndTime)
-	if err != nil {
-		return err
-	}
 	overlap, err := enumspb.ScheduleOverlapPolicyFromString(c.OverlapPolicy.Value)
 	if err != nil {
 		return err
@@ -120,8 +112,8 @@ func (c *TemporalScheduleBackfillCommand) run(cctx *CommandContext, args []strin
 	err = sch.Backfill(cctx, client.ScheduleBackfillOptions{
 		Backfill: []client.ScheduleBackfill{
 			{
-				Start:   startTime,
-				End:     endTime,
+				Start:   c.StartTime.Time(),
+				End:     c.EndTime.Time(),
 				Overlap: overlap,
 			},
 		},
@@ -160,20 +152,11 @@ func (c *ScheduleConfigurationOptions) toScheduleSpec() (client.ScheduleSpec, er
 		// Skip not supported
 		Jitter:       c.Jitter,
 		TimeZoneName: c.TimeZone,
+		StartAt:      c.StartTime.Time(),
+		EndAt:        c.EndTime.Time(),
 	}
 
 	var err error
-	if c.StartTime != "" {
-		if spec.StartAt, err = time.Parse(time.RFC3339, c.StartTime); err != nil {
-			return spec, err
-		}
-	}
-	if c.EndTime != "" {
-		if spec.EndAt, err = time.Parse(time.RFC3339, c.EndTime); err != nil {
-			return spec, err
-		}
-	}
-
 	for _, calPbStr := range c.Calendar {
 		var calPb schedpb.CalendarSpec
 		if err = protojson.Unmarshal([]byte(calPbStr), &calPb); err != nil {
