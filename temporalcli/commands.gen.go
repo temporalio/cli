@@ -958,33 +958,37 @@ func NewTemporalScheduleBackfillCommand(cctx *CommandContext, parent *TemporalSc
 }
 
 type ScheduleConfigurationOptions struct {
-	Calendar         string
-	CatchupWindow    time.Duration
-	Cron             string
-	EndTime          string
-	Interval         string
-	Jitter           time.Duration
-	Notes            string
-	Pause            bool
-	PauseOnFailure   bool
-	RemainingActions int
-	StartTime        string
-	TimeZone         string
+	Calendar                []string
+	CatchupWindow           time.Duration
+	Cron                    []string
+	EndTime                 string
+	Interval                []string
+	Jitter                  time.Duration
+	Notes                   string
+	Paused                  bool
+	PauseOnFailure          bool
+	RemainingActions        int
+	StartTime               string
+	TimeZone                string
+	ScheduleSearchAttribute []string
+	ScheduleMemo            []string
 }
 
 func (v *ScheduleConfigurationOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
-	f.StringVar(&v.Calendar, "calendar", "", "Calendar specification in JSON, e.g. `{\"dayOfWeek\":\"Fri\",\"hour\":\"17\",\"minute\":\"5\"}`.")
+	f.StringArrayVar(&v.Calendar, "calendar", nil, "Calendar specification in JSON, e.g. `{\"dayOfWeek\":\"Fri\",\"hour\":\"17\",\"minute\":\"5\"}`.")
 	f.DurationVar(&v.CatchupWindow, "catchup-window", 0, "Maximum allowed catch-up time if server is down.")
-	f.StringVar(&v.Cron, "cron", "", "Calendar spec in cron string format, e.g. `3 11 * * Fri`.")
+	f.StringArrayVar(&v.Cron, "cron", nil, "Calendar spec in cron string format, e.g. `3 11 * * Fri`.")
 	f.StringVar(&v.EndTime, "end-time", "", "Overall schedule end time.")
-	f.StringVar(&v.Interval, "interval", "", "Interval duration, e.g. 90m, or 90m/13m to include phase offset.")
+	f.StringArrayVar(&v.Interval, "interval", nil, "Interval duration, e.g. 90m, or 90m/13m to include phase offset.")
 	f.DurationVar(&v.Jitter, "jitter", 0, "Per-action jitter range.")
 	f.StringVar(&v.Notes, "notes", "", "Initial value of notes field.")
-	f.BoolVar(&v.Pause, "pause", false, "Initial value of paused state.")
+	f.BoolVar(&v.Paused, "paused", false, "Initial value of paused state.")
 	f.BoolVar(&v.PauseOnFailure, "pause-on-failure", false, "Pause schedule after any workflow failure.")
 	f.IntVar(&v.RemainingActions, "remaining-actions", 0, "Total number of actions allowed. Zero (default) means unlimited.")
 	f.StringVar(&v.StartTime, "start-time", "", "Overall schedule start time.")
 	f.StringVar(&v.TimeZone, "time-zone", "", "Time zone to interpret all calendar specs in (IANA name).")
+	f.StringArrayVar(&v.ScheduleSearchAttribute, "schedule-search-attribute", nil, "Search Attribute for the _schedule_ in key=value format. Use valid JSON formats for value.")
+	f.StringArrayVar(&v.ScheduleMemo, "schedule-memo", nil, "Memo for the _schedule_ in key=value format. Use valid JSON formats for value.")
 }
 
 type TemporalScheduleCreateCommand struct {

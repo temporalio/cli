@@ -11,6 +11,8 @@ import (
 	schedpb "go.temporal.io/api/schedule/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/server/common/primitives/timestamp"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 type printableSchedule struct {
@@ -131,8 +133,123 @@ func (c *TemporalScheduleBackfillCommand) run(cctx *CommandContext, args []strin
 	return nil
 }
 
+func toCalendarSpec(pb *schedpb.CalendarSpec) (client.ScheduleCalendarSpec, error) {
+	return client.ScheduleCalendarSpec{}, nil //FIXME
+}
+
+func toIntervalSpec(str string) (client.ScheduleIntervalSpec, error) {
+	var spec client.ScheduleIntervalSpec
+	var err error
+	parts := strings.Split(str, "/")
+	if len(parts) > 2 {
+		return spec, errors.New("invalid interval string")
+	} else if len(parts) == 2 {
+		if spec.Offset, err = timestamp.ParseDuration(parts[1]); err != nil {
+			return spec, fmt.Errorf("invalid interval string: %w", err)
+		}
+	}
+	if spec.Every, err = timestamp.ParseDuration(parts[0]); err != nil {
+		return spec, fmt.Errorf("invalid interval string: %w", err)
+	}
+	return spec, nil
+}
+
+func (c *ScheduleConfigurationOptions) toScheduleSpec() (client.ScheduleSpec, error) {
+	spec := client.ScheduleSpec{
+		CronExpressions: c.Cron,
+		// Skip not supported
+		Jitter:       c.Jitter,
+		TimeZoneName: c.TimeZone,
+	}
+
+	var err error
+	if c.StartTime != "" {
+		if spec.StartAt, err = time.Parse(time.RFC3339, c.StartTime); err != nil {
+			return spec, err
+		}
+	}
+	if c.EndTime != "" {
+		if spec.EndAt, err = time.Parse(time.RFC3339, c.EndTime); err != nil {
+			return spec, err
+		}
+	}
+
+	for _, calPbStr := range c.Calendar {
+		var calPb schedpb.CalendarSpec
+		if err = protojson.Unmarshal([]byte(calPbStr), &calPb); err != nil {
+			return spec, fmt.Errorf("failed to parse json calendar spec: %w", err)
+		}
+		cal, err := toCalendarSpec(&calPb)
+		if err != nil {
+			return spec, err
+		}
+		spec.Calendars = append(spec.Calendars, cal)
+	}
+	for _, intStr := range c.Interval {
+		int, err := toIntervalSpec(intStr)
+		if err != nil {
+			return spec, err
+		}
+		spec.Intervals = append(spec.Intervals, int)
+	}
+
+	return spec, nil
+}
+
+func toScheduleAction(sw *SharedWorkflowStartOptions, i *PayloadInputOptions) (client.ScheduleAction, error) {
+	opts, err := buildStartOptions(sw, &WorkflowStartOptions{})
+	if err != nil {
+		return nil, err
+	}
+	action := &client.ScheduleWorkflowAction{
+		ID:                       opts.ID,
+		Workflow:                 sw.Type,
+		TaskQueue:                opts.TaskQueue,
+		WorkflowExecutionTimeout: opts.WorkflowExecutionTimeout,
+		WorkflowRunTimeout:       opts.WorkflowRunTimeout,
+		WorkflowTaskTimeout:      opts.WorkflowTaskTimeout,
+		// RetryPolicy not supported yet
+		SearchAttributes: opts.SearchAttributes,
+		Memo:             opts.Memo,
+	}
+	if action.Args, err = i.buildRawInput(); err != nil {
+		return action, nil
+	}
+	return action, nil
+}
+
 func (c *TemporalScheduleCreateCommand) run(cctx *CommandContext, args []string) error {
-	return fmt.Errorf("TODO")
+	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	opts := client.ScheduleOptions{
+		ID:               c.ScheduleId,
+		PauseOnFailure:   c.PauseOnFailure,
+		Note:             c.Notes,
+		Paused:           c.Paused,
+		CatchupWindow:    c.CatchupWindow,
+		RemainingActions: c.RemainingActions,
+		// TriggerImmediately not supported
+		// ScheduleBackfill not supported
+	}
+
+	if opts.Spec, err = c.toScheduleSpec(); err != nil {
+		return err
+	} else if opts.Action, err = toScheduleAction(&c.SharedWorkflowStartOptions, &c.PayloadInputOptions); err != nil {
+		return err
+	} else if opts.Overlap, err = enumspb.ScheduleOverlapPolicyFromString(c.OverlapPolicy.Value); err != nil {
+		return err
+	} else if opts.Memo, err = stringKeysJSONValues(c.ScheduleMemo); err != nil {
+		return fmt.Errorf("invalid memo values: %w", err)
+	} else if opts.SearchAttributes, err = stringKeysJSONValues(c.ScheduleSearchAttribute); err != nil {
+		return fmt.Errorf("invalid search attribute values: %w", err)
+	}
+
+	_, err = cl.ScheduleClient().Create(cctx, opts)
+	return err
 }
 
 func (c *TemporalScheduleDeleteCommand) run(cctx *CommandContext, args []string) error {

@@ -441,18 +441,20 @@ Actions will be executed at any time specified in the Schedule.
 
 #### Options set for schedule configuration:
 
-* `--calendar` (string) - Calendar specification in JSON, e.g. `{"dayOfWeek":"Fri","hour":"17","minute":"5"}`.
+* `--calendar` (string[]) - Calendar specification in JSON, e.g. `{"dayOfWeek":"Fri","hour":"17","minute":"5"}`.
 * `--catchup-window` (duration) - Maximum allowed catch-up time if server is down.
-* `--cron` (string) - Calendar spec in cron string format, e.g. `3 11 * * Fri`.
+* `--cron` (string[]) - Calendar spec in cron string format, e.g. `3 11 * * Fri`.
 * `--end-time` (string) - Overall schedule end time.
-* `--interval` (string) - Interval duration, e.g. 90m, or 90m/13m to include phase offset.
+* `--interval` (string[]) - Interval duration, e.g. 90m, or 90m/13m to include phase offset.
 * `--jitter` (duration) - Per-action jitter range.
 * `--notes` (string) - Initial value of notes field.
-* `--pause` (bool) - Initial value of paused state.
+* `--paused` (bool) - Initial value of paused state.
 * `--pause-on-failure` (bool) - Pause schedule after any workflow failure.
 * `--remaining-actions` (int) - Total number of actions allowed. Zero (default) means unlimited.
 * `--start-time` (string) - Overall schedule start time.
 * `--time-zone` (string) - Time zone to interpret all calendar specs in (IANA name).
+* `--schedule-search-attribute` (string[]) - Search Attribute for the _schedule_ in key=value format. Use valid JSON formats for value.
+* `--schedule-memo` (string[]) - Memo for the _schedule_ in key=value format. Use valid JSON formats for value.
 
 #### Options
 
