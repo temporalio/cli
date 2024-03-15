@@ -169,37 +169,35 @@ func toIntervalSpec(str string) (client.ScheduleIntervalSpec, error) {
 	return spec, nil
 }
 
-func (c *ScheduleConfigurationOptions) toScheduleSpec() (client.ScheduleSpec, error) {
-	spec := client.ScheduleSpec{
-		CronExpressions: c.Cron,
-		// Skip not supported
-		Jitter:       c.Jitter,
-		TimeZoneName: c.TimeZone,
-		StartAt:      c.StartTime.Time(),
-		EndAt:        c.EndTime.Time(),
-	}
+func (c *ScheduleConfigurationOptions) toScheduleSpec(spec *client.ScheduleSpec) error {
+	spec.CronExpressions = c.Cron
+	// Skip not supported
+	spec.Jitter = c.Jitter
+	spec.TimeZoneName = c.TimeZone
+	spec.StartAt = c.StartTime.Time()
+	spec.EndAt = c.EndTime.Time()
 
 	var err error
 	for _, calPbStr := range c.Calendar {
 		var calPb schedpb.CalendarSpec
 		if err = protojson.Unmarshal([]byte(calPbStr), &calPb); err != nil {
-			return spec, fmt.Errorf("failed to parse json calendar spec: %w", err)
+			return fmt.Errorf("failed to parse json calendar spec: %w", err)
 		}
 		cron, err := toCronString(&calPb)
 		if err != nil {
-			return spec, err
+			return err
 		}
 		spec.CronExpressions = append(spec.CronExpressions, cron)
 	}
 	for _, intStr := range c.Interval {
 		int, err := toIntervalSpec(intStr)
 		if err != nil {
-			return spec, err
+			return err
 		}
 		spec.Intervals = append(spec.Intervals, int)
 	}
 
-	return spec, nil
+	return nil
 }
 
 func toScheduleAction(sw *SharedWorkflowStartOptions, i *PayloadInputOptions) (client.ScheduleAction, error) {
@@ -242,7 +240,7 @@ func (c *TemporalScheduleCreateCommand) run(cctx *CommandContext, args []string)
 		// ScheduleBackfill not supported
 	}
 
-	if opts.Spec, err = c.toScheduleSpec(); err != nil {
+	if err = c.toScheduleSpec(&opts.Spec); err != nil {
 		return err
 	} else if opts.Action, err = toScheduleAction(&c.SharedWorkflowStartOptions, &c.PayloadInputOptions); err != nil {
 		return err
@@ -420,32 +418,30 @@ func (c *TemporalScheduleUpdateCommand) run(cctx *CommandContext, args []string)
 	}
 	defer cl.Close()
 
-	var newSchedule client.Schedule
-
-	newSchedule.Policy = &client.SchedulePolicies{
-		CatchupWindow:  c.CatchupWindow,
-		PauseOnFailure: c.PauseOnFailure,
+	newSchedule := client.Schedule{
+		Spec: &client.ScheduleSpec{},
+		Policy: &client.SchedulePolicies{
+			CatchupWindow:  c.CatchupWindow,
+			PauseOnFailure: c.PauseOnFailure,
+		},
+		State: &client.ScheduleState{
+			Note:   c.Notes,
+			Paused: c.Paused,
+		},
 	}
+
 	if newSchedule.Policy.Overlap, err = enumspb.ScheduleOverlapPolicyFromString(c.OverlapPolicy.Value); err != nil {
 		return err
 	}
 
-	newSchedule.State = &client.ScheduleState{
-		Note:   c.Notes,
-		Paused: c.Paused,
-	}
 	if c.RemainingActions > 0 {
 		newSchedule.State.LimitedActions = true
 		newSchedule.State.RemainingActions = c.RemainingActions
 	}
 
-	spec, err := c.toScheduleSpec()
-	if err != nil {
+	if err = c.toScheduleSpec(newSchedule.Spec); err != nil {
 		return err
-	}
-	newSchedule.Spec = &spec
-
-	if newSchedule.Action, err = toScheduleAction(&c.SharedWorkflowStartOptions, &c.PayloadInputOptions); err != nil {
+	} else if newSchedule.Action, err = toScheduleAction(&c.SharedWorkflowStartOptions, &c.PayloadInputOptions); err != nil {
 		return err
 	}
 
