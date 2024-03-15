@@ -125,8 +125,31 @@ func (c *TemporalScheduleBackfillCommand) run(cctx *CommandContext, args []strin
 	return nil
 }
 
-func toCalendarSpec(pb *schedpb.CalendarSpec) (client.ScheduleCalendarSpec, error) {
-	return client.ScheduleCalendarSpec{}, nil //FIXME
+func toCronString(pb *schedpb.CalendarSpec) (string, error) {
+	def := func(a, b string) string {
+		if a != "" {
+			return a
+		}
+		return b
+	}
+	fields := []string{
+		def(pb.Second, "0"),
+		def(pb.Minute, "0"),
+		def(pb.Hour, "0"),
+		def(pb.DayOfMonth, "*"),
+		def(pb.Month, "*"),
+		def(pb.DayOfWeek, "*"),
+		def(pb.Year, "*"),
+	}
+	for _, f := range fields {
+		if len(strings.Fields(f)) != 1 {
+			return "", fmt.Errorf("invalid CalendarSpec")
+		}
+	}
+	if pb.Comment != "" {
+		fields = append(fields, "#", pb.Comment)
+	}
+	return strings.Join(fields, " "), nil
 }
 
 func toIntervalSpec(str string) (client.ScheduleIntervalSpec, error) {
@@ -162,11 +185,11 @@ func (c *ScheduleConfigurationOptions) toScheduleSpec() (client.ScheduleSpec, er
 		if err = protojson.Unmarshal([]byte(calPbStr), &calPb); err != nil {
 			return spec, fmt.Errorf("failed to parse json calendar spec: %w", err)
 		}
-		cal, err := toCalendarSpec(&calPb)
+		cron, err := toCronString(&calPb)
 		if err != nil {
 			return spec, err
 		}
-		spec.Calendars = append(spec.Calendars, cal)
+		spec.CronExpressions = append(spec.CronExpressions, cron)
 	}
 	for _, intStr := range c.Interval {
 		int, err := toIntervalSpec(intStr)
