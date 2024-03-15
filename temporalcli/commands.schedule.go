@@ -414,7 +414,50 @@ func (c *TemporalScheduleTriggerCommand) run(cctx *CommandContext, args []string
 }
 
 func (c *TemporalScheduleUpdateCommand) run(cctx *CommandContext, args []string) error {
-	return fmt.Errorf("TODO")
+	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	var newSchedule client.Schedule
+
+	newSchedule.Policy = &client.SchedulePolicies{
+		CatchupWindow:  c.CatchupWindow,
+		PauseOnFailure: c.PauseOnFailure,
+	}
+	if newSchedule.Policy.Overlap, err = enumspb.ScheduleOverlapPolicyFromString(c.OverlapPolicy.Value); err != nil {
+		return err
+	}
+
+	newSchedule.State = &client.ScheduleState{
+		Note:   c.Notes,
+		Paused: c.Paused,
+	}
+	if c.RemainingActions > 0 {
+		newSchedule.State.LimitedActions = true
+		newSchedule.State.RemainingActions = c.RemainingActions
+	}
+
+	spec, err := c.toScheduleSpec()
+	if err != nil {
+		return err
+	}
+	newSchedule.Spec = &spec
+
+	if newSchedule.Action, err = toScheduleAction(&c.SharedWorkflowStartOptions, &c.PayloadInputOptions); err != nil {
+		return err
+	}
+
+	sch := cl.ScheduleClient().GetHandle(cctx, c.ScheduleId)
+	return sch.Update(cctx, client.ScheduleUpdateOptions{
+		DoUpdate: func(u client.ScheduleUpdateInput) (*client.ScheduleUpdate, error) {
+			// replace whole schedule
+			return &client.ScheduleUpdate{
+				Schedule: &newSchedule,
+			}, nil
+		},
+	})
 }
 
 func formatCalendarSpec(spec client.ScheduleCalendarSpec) *schedpb.CalendarSpec {

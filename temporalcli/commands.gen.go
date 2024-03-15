@@ -909,7 +909,7 @@ type OverlapPolicyOptions struct {
 }
 
 func (v *OverlapPolicyOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
-	v.OverlapPolicy = NewStringEnum([]string{"Skip", "BufferOne", "BufferAll", "CancelOther", "TerminateOther", "AllowAll"}, "")
+	v.OverlapPolicy = NewStringEnum([]string{"Skip", "BufferOne", "BufferAll", "CancelOther", "TerminateOther", "AllowAll"}, "Skip")
 	f.Var(&v.OverlapPolicy, "overlap-policy", "Overlap policy. Accepted values: Skip, BufferOne, BufferAll, CancelOther, TerminateOther, AllowAll.")
 }
 

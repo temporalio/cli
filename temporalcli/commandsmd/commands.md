@@ -410,7 +410,7 @@ Example:
 
 #### Options set for overlap policy:
 
-* `--overlap-policy` (string-enum) - Overlap policy. Options: Skip, BufferOne, BufferAll, CancelOther, TerminateOther, AllowAll.
+* `--overlap-policy` (string-enum) - Overlap policy. Options: Skip, BufferOne, BufferAll, CancelOther, TerminateOther, AllowAll. Default: Skip.
 
 #### Options set for schedule id:
 
