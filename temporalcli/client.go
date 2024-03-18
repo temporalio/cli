@@ -32,6 +32,11 @@ func (c *ClientOptions) dialClient(cctx *CommandContext) (client.Client, error) 
 		DataConverter: dataConverter,
 	}
 
+	// API key
+	if c.ApiKey != "" {
+		clientOptions.Credentials = client.NewAPIKeyStaticCredentials(c.ApiKey)
+	}
+
 	// Headers
 	if len(c.GrpcMeta) > 0 {
 		headers := make(stringMapHeadersProvider, len(c.GrpcMeta))
