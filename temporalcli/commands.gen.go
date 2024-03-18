@@ -36,6 +36,7 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalActivityCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalBatchCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalCloudCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalEnvCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalOperatorCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalServerCommand(cctx, &s).Command)
@@ -247,6 +248,87 @@ func NewTemporalBatchTerminateCommand(cctx *CommandContext, parent *TemporalBatc
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "job-id")
 	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for terminating the Batch Job.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "reason")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalCloudCommand struct {
+	Parent  *TemporalCommand
+	Command cobra.Command
+}
+
+func NewTemporalCloudCommand(cctx *CommandContext, parent *TemporalCommand) *TemporalCloudCommand {
+	var s TemporalCloudCommand
+	s.Parent = parent
+	s.Command.Use = "cloud"
+	s.Command.Short = "Manage Temporal Cloud."
+	s.Command.Long = "Commands to manage Temporal cloud."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalCloudLoginCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalCloudLogoutCommand(cctx, &s).Command)
+	return &s
+}
+
+type TemporalCloudLoginCommand struct {
+	Parent       *TemporalCloudCommand
+	Command      cobra.Command
+	Domain       string
+	Audience     string
+	ClientId     string
+	DisablePopUp bool
+	NoPersist    bool
+}
+
+func NewTemporalCloudLoginCommand(cctx *CommandContext, parent *TemporalCloudCommand) *TemporalCloudLoginCommand {
+	var s TemporalCloudLoginCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "login [flags]"
+	s.Command.Short = "Login as a cloud user."
+	if hasHighlighting {
+		s.Command.Long = "Login as a cloud user. This will open a browser to allow login. The token will then be used for all \x1b[1m--cloud\x1b[0m calls that\ndon't otherwise specify a \x1b[1m--api-key\x1b[0m or \x1b[1m--tls-*\x1b[0m options."
+	} else {
+		s.Command.Long = "Login as a cloud user. This will open a browser to allow login. The token will then be used for all `--cloud` calls that\ndon't otherwise specify a `--api-key` or `--tls-*` options."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Domain, "domain", "", "Domain for login.")
+	s.Command.Flags().Lookup("domain").Hidden = true
+	s.Command.Flags().StringVar(&s.Audience, "audience", "", "Audience for login.")
+	s.Command.Flags().Lookup("audience").Hidden = true
+	s.Command.Flags().StringVar(&s.ClientId, "client-id", "", "Client ID for login.")
+	s.Command.Flags().Lookup("client-id").Hidden = true
+	s.Command.Flags().BoolVar(&s.DisablePopUp, "disable-pop-up", false, "Disable the browser pop-up.")
+	s.Command.Flags().BoolVar(&s.NoPersist, "no-persist", false, "Show the generated token in output and do not persist to a config.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalCloudLogoutCommand struct {
+	Parent       *TemporalCloudCommand
+	Command      cobra.Command
+	Domain       string
+	DisablePopUp bool
+}
+
+func NewTemporalCloudLogoutCommand(cctx *CommandContext, parent *TemporalCloudCommand) *TemporalCloudLogoutCommand {
+	var s TemporalCloudLogoutCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "logout [flags]"
+	s.Command.Short = "Logout a cloud user."
+	s.Command.Long = "Logout a cloud user. This will open a browser to allow logout even if a login may not be present."
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Domain, "domain", "", "Domain for login.")
+	s.Command.Flags().Lookup("domain").Hidden = true
+	s.Command.Flags().BoolVar(&s.DisablePopUp, "disable-pop-up", false, "Disable the browser pop-up.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -1224,6 +1306,7 @@ func NewTemporalTaskQueueUpdateBuildIdsPromoteSetCommand(cctx *CommandContext, p
 }
 
 type ClientOptions struct {
+	Cloud                      bool
 	Address                    string
 	Namespace                  string
 	GrpcMeta                   []string
@@ -1241,6 +1324,7 @@ type ClientOptions struct {
 }
 
 func (v *ClientOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
+	f.BoolVar(&v.Cloud, "cloud", false, "Use Temporal Cloud. If present, namespace must be provided, address cannot be provided, TLS is assumed, and will use `cloud login` token unless API key or mTLS option present.")
 	f.StringVar(&v.Address, "address", "127.0.0.1:7233", "Temporal server address.")
 	cctx.BindFlagEnvVar(f.Lookup("address"), "TEMPORAL_ADDRESS")
 	f.StringVarP(&v.Namespace, "namespace", "n", "default", "Temporal server namespace.")

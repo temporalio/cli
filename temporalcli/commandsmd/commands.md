@@ -28,6 +28,7 @@ This document has a specific structure used by a parser. Here are the rules:
         * `Default: <default-value>.` - Sets the default value of the option. No default means zero value of the type.
         * `Options: <option>, <option>.` - Sets the possible options for a string enum type.
         * `Env: <env-var>.` - Binds the environment variable to this flag.
+        * `Hidden.` - Marks the option as hidden in the help text.
       * Options should be in order of most commonly used.
     * Also can have single lines below options that say
       `Includes options set for [<options-set-name>](#options-set-for-<options-set-link-name>).` which is the equivalent
@@ -135,6 +136,32 @@ For future reference, provide a reason for terminating the Batch Job.
 
 * `--job-id` (string) - The Batch Job Id to terminate. Required.
 * `--reason` (string) - Reason for terminating the Batch Job. Required.
+
+### temporal cloud: Manage Temporal Cloud.
+
+Commands to manage Temporal cloud.
+
+### temporal cloud login: Login as a cloud user.
+
+Login as a cloud user. This will open a browser to allow login. The token will then be used for all `--cloud` calls that
+don't otherwise specify a `--api-key` or `--tls-*` options.
+
+#### Options
+
+* `--domain` (string) - Domain for login. Hidden.
+* `--audience` (string) - Audience for login. Hidden.
+* `--client-id` (string) - Client ID for login. Hidden.
+* `--disable-pop-up` (bool) - Disable the browser pop-up.
+* `--no-persist` (bool) - Show the generated token in output and do not persist to a config.
+
+### temporal cloud logout: Logout a cloud user.
+
+Logout a cloud user. This will open a browser to allow logout even if a login may not be present.
+
+#### Options
+
+* `--domain` (string) - Domain for login. Hidden.
+* `--disable-pop-up` (bool) - Disable the browser pop-up.
 
 ### temporal env: Manage environments.
 
@@ -525,6 +552,8 @@ Workflow commands use this syntax: `temporal workflow COMMAND [ARGS]`.
 
 #### Options set for client:
 
+* `--cloud` (bool) - Use Temporal Cloud. If present, namespace must be provided, address cannot be provided, TLS is
+  assumed, and will use `cloud login` token unless API key or mTLS option present.
 * `--address` (string) - Temporal server address. Default: 127.0.0.1:7233. Env: TEMPORAL_ADDRESS.
 * `--namespace`, `-n` (string) - Temporal server namespace. Default: default. Env: TEMPORAL_NAMESPACE.
 * `--grpc-meta` (string[]) - HTTP headers to send with requests (formatted as key=value).
