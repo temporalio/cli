@@ -6,13 +6,14 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
 	"github.com/temporalio/cli/temporalcli/internal/printer"
 )
 
-func (c *TemporalCloudLoginCommand) run(cctx *CommandContext, args []string) error {
+func (c *TemporalCloudLoginCommand) run(cctx *CommandContext, _ []string) error {
 	// Set defaults
 	if c.Domain == "" {
 		c.Domain = "https://login.tmprl.cloud"
@@ -28,7 +29,7 @@ func (c *TemporalCloudLoginCommand) run(cctx *CommandContext, args []string) err
 	var codeResp CloudOAuthDeviceCodeResponse
 	err := c.postToLogin(
 		cctx,
-		"oauth/device/code",
+		"/oauth/device/code",
 		url.Values{"client_id": {c.ClientId}, "scope": {"openid profile user"}, "audience": {c.Audience}},
 		&codeResp,
 	)
@@ -47,10 +48,10 @@ func (c *TemporalCloudLoginCommand) run(cctx *CommandContext, args []string) err
 	}
 
 	if c.DisablePopUp {
-		cctx.Printer.Printlnf("Login via this URL: %v", codeResp.VerificationURI)
+		cctx.Printer.Printlnf("Login via this URL: %v", codeResp.VerificationURIComplete)
 	} else {
-		cctx.Printer.Printlnf("Attempting to open browser to: %v", codeResp.VerificationURI)
-		if err := cctx.openBrowser(codeResp.VerificationURI); err != nil {
+		cctx.Printer.Printlnf("Attempting to open browser to: %v", codeResp.VerificationURIComplete)
+		if err := cctx.openBrowser(codeResp.VerificationURIComplete); err != nil {
 			cctx.Logger.Debug("Failed opening browser", "error", err)
 			cctx.Printer.Println("Failed opening browser, visit URL manually")
 		}
@@ -69,18 +70,25 @@ func (c *TemporalCloudLoginCommand) run(cctx *CommandContext, args []string) err
 	}
 	if c.NoPersist {
 		return cctx.Printer.PrintStructured(tokenResp, printer.StructuredOptions{})
-	}
-	if err := writeCloudLoginTokenFile(defaultCloudLoginTokenFile(), tokenResp); err != nil {
+	} else if file := defaultCloudLoginTokenFile(); file == "" {
+		return fmt.Errorf("unable to find home directory for token file")
+	} else if err := writeCloudLoginTokenFile(file, tokenResp); err != nil {
 		return fmt.Errorf("failed writing token file: %w", err)
 	}
 	cctx.Printer.Println("Login successful")
 	return nil
 }
 
-func (c *TemporalCloudLogoutCommand) run(cctx *CommandContext, args []string) error {
+func (c *TemporalCloudLogoutCommand) run(cctx *CommandContext, _ []string) error {
 	// Set defaults
 	if c.Domain == "" {
 		c.Domain = "https://login.tmprl.cloud"
+	}
+	// Delete file then do browser logout
+	if file := defaultCloudLoginTokenFile(); file != "" {
+		if err := deleteCloudLoginTokenFile(file); err != nil {
+			return fmt.Errorf("failed deleting cloud token: %w", err)
+		}
 	}
 	logoutURL := c.Domain + "/v2/logout"
 	if c.DisablePopUp {
@@ -112,12 +120,21 @@ type CloudOAuthTokenResponse struct {
 	ExpiresIn    int    `json:"expires_in"`
 }
 
-func (c *TemporalCloudLoginCommand) postToLogin(cctx *CommandContext, path string, form url.Values, resJSON any) error {
-	req, err := http.NewRequestWithContext(cctx, "POST", c.Domain, strings.NewReader(form.Encode()))
+func (c *TemporalCloudLoginCommand) postToLogin(
+	cctx *CommandContext,
+	path string,
+	form url.Values,
+	resJSON any,
+	allowedStatusCodes ...int,
+) error {
+	req, err := http.NewRequestWithContext(
+		cctx,
+		"POST",
+		strings.TrimRight(c.Domain, "/")+"/"+strings.TrimLeft(path, "/"),
+		strings.NewReader(form.Encode()))
 	if err != nil {
 		return err
 	}
-	req.URL = req.URL.JoinPath(path)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -127,7 +144,7 @@ func (c *TemporalCloudLoginCommand) postToLogin(cctx *CommandContext, path strin
 	b, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
-	} else if resp.StatusCode < 200 || resp.StatusCode > 299 {
+	} else if resp.StatusCode != 200 && !slices.Contains(allowedStatusCodes, resp.StatusCode) {
 		return fmt.Errorf("HTTP call failed, status: %v, body: %s", resp.StatusCode, b)
 	}
 	return json.Unmarshal(b, resJSON)
@@ -149,13 +166,15 @@ func (c *TemporalCloudLoginCommand) pollForToken(
 		}
 		err := c.postToLogin(
 			cctx,
-			"oauth/token",
+			"/oauth/token",
 			url.Values{
 				"grant_type":  {"urn:ietf:params:oauth:grant-type:device_code"},
 				"device_code": {deviceCode},
 				"client_id":   {c.ClientId},
 			},
 			&tokenResp,
+			// 403 is returned while polling
+			http.StatusForbidden,
 		)
 		if err != nil {
 			return nil, err

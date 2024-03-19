@@ -475,6 +475,7 @@ func writeEnvConfigFile(file string, env map[string]map[string]string) error {
 	return nil
 }
 
+// This can be empty if no user HOME dir found
 func defaultCloudLoginTokenFile() string {
 	// No env file if no $HOME
 	if dir, err := os.UserHomeDir(); err == nil {
@@ -509,6 +510,7 @@ func writeCloudLoginTokenFile(file string, resp *CloudOAuthTokenResponse) error 
 	return os.WriteFile(file, b, 0600)
 }
 
+// Does not error if file does not exist
 func deleteCloudLoginTokenFile(file string) error {
 	if _, err := os.Stat(file); os.IsNotExist(err) {
 		return nil
