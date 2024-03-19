@@ -1309,6 +1309,7 @@ type ClientOptions struct {
 	Cloud                      bool
 	Address                    string
 	Namespace                  string
+	ApiKey                     string
 	GrpcMeta                   []string
 	Tls                        bool
 	TlsCertPath                string
@@ -1329,6 +1330,8 @@ func (v *ClientOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
 	cctx.BindFlagEnvVar(f.Lookup("address"), "TEMPORAL_ADDRESS")
 	f.StringVarP(&v.Namespace, "namespace", "n", "default", "Temporal server namespace.")
 	cctx.BindFlagEnvVar(f.Lookup("namespace"), "TEMPORAL_NAMESPACE")
+	f.StringVar(&v.ApiKey, "api-key", "", "Sets the API key on requests.")
+	cctx.BindFlagEnvVar(f.Lookup("api-key"), "TEMPORAL_API_KEY")
 	f.StringArrayVar(&v.GrpcMeta, "grpc-meta", nil, "HTTP headers to send with requests (formatted as key=value).")
 	f.BoolVar(&v.Tls, "tls", false, "Enable TLS encryption without additional options such as mTLS or client certificates.")
 	cctx.BindFlagEnvVar(f.Lookup("tls"), "TEMPORAL_TLS")

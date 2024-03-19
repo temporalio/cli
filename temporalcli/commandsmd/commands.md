@@ -556,6 +556,7 @@ Workflow commands use this syntax: `temporal workflow COMMAND [ARGS]`.
   assumed, and will use `cloud login` token unless API key or mTLS option present.
 * `--address` (string) - Temporal server address. Default: 127.0.0.1:7233. Env: TEMPORAL_ADDRESS.
 * `--namespace`, `-n` (string) - Temporal server namespace. Default: default. Env: TEMPORAL_NAMESPACE.
+* `--api-key` (string) - Sets the API key on requests. Env: TEMPORAL_API_KEY.
 * `--grpc-meta` (string[]) - HTTP headers to send with requests (formatted as key=value).
 * `--tls` (bool) - Enable TLS encryption without additional options such as mTLS or client certificates. Env:
   TEMPORAL_TLS.
