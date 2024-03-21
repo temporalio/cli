@@ -337,7 +337,10 @@ func (c *TemporalScheduleDescribeCommand) run(cctx *CommandContext, args []strin
 		if err != nil {
 			return err
 		}
-		cctx.Printer.PrintStructured(res, printer.StructuredOptions{})
+		noShorthand := false
+		cctx.Printer.PrintStructured(res, printer.StructuredOptions{
+			OverrideJSONPayloadShorthand: &noShorthand,
+		})
 		return nil
 	}
 
@@ -373,8 +376,11 @@ func (c *TemporalScheduleListCommand) run(cctx *CommandContext, args []string) e
 			if err != nil {
 				return err
 			}
+			noShorthand := false
 			for _, entry := range res.Schedules {
-				cctx.Printer.PrintStructured(entry, printer.StructuredOptions{})
+				cctx.Printer.PrintStructured(entry, printer.StructuredOptions{
+					OverrideJSONPayloadShorthand: &noShorthand,
+				})
 			}
 			if token = res.NextPageToken; len(token) == 0 {
 				break

@@ -75,10 +75,16 @@ func (s *SharedServerSuite) TestSchedule_Describe() {
 	)
 	s.NoError(res.Err)
 	var j struct {
-		ScheduleId string
+		Schedule struct {
+			Action struct {
+				StartWorkflow struct {
+					Id string `json:"workflowId"`
+				} `json:"startWorkflow"`
+			} `json:"action"`
+		} `json:"schedule"`
 	}
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &j))
-	s.Equal("mysched", j.ScheduleId)
+	s.Equal("my-id", j.Schedule.Action.StartWorkflow.Id)
 }
 
 func (s *SharedServerSuite) TestSchedule_List() {
@@ -104,7 +110,18 @@ func (s *SharedServerSuite) TestSchedule_List() {
 	)
 	s.NoError(res.Err)
 	out = res.Stdout.String()
-	s.ContainsOnSameLine(out, "mysched", "DevWorkflow", "false", "nil", "nil")
+	s.ContainsOnSameLine(out, "mysched", "DevWorkflow", "false")
+
+	// table really-long
+
+	res = s.Execute(
+		"schedule", "list",
+		"--address", s.Address(),
+		"--really-long",
+	)
+	s.NoError(res.Err)
+	out = res.Stdout.String()
+	s.ContainsOnSameLine(out, "mysched", "DevWorkflow", "0s" /*jitter*/, "false", "nil" /*memo*/)
 
 	// json
 
