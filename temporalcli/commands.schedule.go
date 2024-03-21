@@ -263,8 +263,9 @@ func toScheduleAction(sw *SharedWorkflowStartOptions, i *PayloadInputOptions) (c
 		WorkflowRunTimeout:       opts.WorkflowRunTimeout,
 		WorkflowTaskTimeout:      opts.WorkflowTaskTimeout,
 		// RetryPolicy not supported yet
-		SearchAttributes: opts.SearchAttributes,
-		Memo:             opts.Memo,
+		// TODO: buildStartOptions doesn't fill in TypedSearchAttributes, this doesn't work yet:
+		TypedSearchAttributes: opts.TypedSearchAttributes,
+		Memo:                  opts.Memo,
 	}
 	if action.Args, err = i.buildRawInput(); err != nil {
 		return action, nil
