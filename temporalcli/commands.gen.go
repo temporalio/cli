@@ -1081,9 +1081,10 @@ func NewTemporalScheduleDescribeCommand(cctx *CommandContext, parent *TemporalSc
 }
 
 type TemporalScheduleListCommand struct {
-	Parent  *TemporalScheduleCommand
-	Command cobra.Command
-	Long    bool
+	Parent     *TemporalScheduleCommand
+	Command    cobra.Command
+	Long       bool
+	ReallyLong bool
 }
 
 func NewTemporalScheduleListCommand(cctx *CommandContext, parent *TemporalScheduleCommand) *TemporalScheduleListCommand {
@@ -1099,6 +1100,7 @@ func NewTemporalScheduleListCommand(cctx *CommandContext, parent *TemporalSchedu
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().BoolVarP(&s.Long, "long", "l", false, "Include detailed information.")
+	s.Command.Flags().BoolVar(&s.ReallyLong, "really-long", false, "Include even more detailed information that's not really usable in table form.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

@@ -491,6 +491,7 @@ The `temporal schedule list` command lists all Schedules in a namespace.
 #### Options
 
 * `--long`, `-l` (bool) - Include detailed information.
+* `--really-long` (bool) - Include even more detailed information that's not really usable in table form.
 
 ### temporal schedule toggle: Pauses or unpauses a Schedule.
 

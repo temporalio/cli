@@ -19,18 +19,41 @@ import (
 )
 
 type printableSchedule struct {
-	ScheduleId       string
-	CalendarSpecs    []any  `cli:",cardOmitEmpty"`
-	IntervalSpecs    []any  `cli:",cardOmitEmpty"`
-	WorkflowId       string // describe only
-	WorkflowType     any
-	Paused           bool
+	ScheduleId string
+	// Schedule.Action
+	Action any // list has Workflow only
+	// Schedule.Spec
+	Spec         []any     `cli:",cardOmitEmpty"` // can contain *schedpb.CalendarSpec or printableInterval
+	SkipSpec     []any     `cli:",cardOmitEmpty"`
+	StartAt      time.Time `cli:",cardOmitEmpty"`
+	EndAt        time.Time `cli:",cardOmitEmpty"`
+	Jitter       string    `cli:",cardOmitEmpty"`
+	TimeZoneName string    `cli:",cardOmitEmpty"`
+	// Schedule.Policy
+	OverlapPolicy  enumspb.ScheduleOverlapPolicy // describe only
+	CatchupWindow  string                        // describe only
+	PauseOnFailure bool                          // describe only
+	// Schedule.State
 	Notes            string `cli:",cardOmitEmpty"`
+	Paused           bool
+	LimitedActions   bool   `cli:",cardOmitEmpty"` // describe only
+	RemainingActions string `cli:",cardOmitEmpty"` // describe only; string so we can hide it
+	// Info
 	NextRunTime      time.Time
 	LastRunTime      time.Time
-	RunningWorkflows []string                   // describe only
+	RunningWorkflows []string      // describe only
+	CreatedAt        time.Time     `cli:",cardOmitEmpty"` // describe only
+	LastUpdateAt     time.Time     `cli:",cardOmitEmpty"` // describe only
+	ActionCounts     *actionCounts `cli:",cardOmitEmpty"` // describe only
+	// SearchAttributes, Memo
 	SearchAttributes *commonpb.SearchAttributes `cli:",cardOmitEmpty"`
 	Memo             *commonpb.Memo             `cli:",cardOmitEmpty"`
+}
+
+type actionCounts struct {
+	Total               int
+	MissedCatchupWindow int
+	SkippedOverlap      int
 }
 
 // Neither protojson nor fmt print structs containing time.Durations nicely, so do it manually
@@ -41,19 +64,27 @@ type printableInterval struct {
 }
 
 func describeResultToPrintable(id string, desc *client.ScheduleDescription) *printableSchedule {
-	// TODO: should we include any other fields here, e.g. jitter, time zone, start/end time
+	// ID, SearchAttributes, Memo
 	out := &printableSchedule{
 		ScheduleId:       id,
-		Paused:           desc.Schedule.State.Paused,
-		Notes:            desc.Schedule.State.Note,
 		SearchAttributes: desc.SearchAttributes,
 		Memo:             desc.Memo,
 	}
+	// Schedule.Action
+	out.Action = desc.Schedule.Action
+	// Schedule.Spec
 	specToPrintable(out, desc.Schedule.Spec)
-	if workflowAction, ok := desc.Schedule.Action.(*client.ScheduleWorkflowAction); ok {
-		out.WorkflowId = workflowAction.ID
-		out.WorkflowType = workflowAction.Workflow
+	// Schedule.Policy
+	out.OverlapPolicy = desc.Schedule.Policy.Overlap
+	out.CatchupWindow = formatDuration(desc.Schedule.Policy.CatchupWindow)
+	out.PauseOnFailure = desc.Schedule.Policy.PauseOnFailure
+	// Schedule.State
+	out.Notes = desc.Schedule.State.Note
+	out.Paused = desc.Schedule.State.Paused
+	if out.LimitedActions = desc.Schedule.State.LimitedActions; out.LimitedActions {
+		out.RemainingActions = strconv.Itoa(desc.Schedule.State.RemainingActions)
 	}
+	// Info
 	if len(desc.Info.NextActionTimes) > 0 {
 		out.NextRunTime = desc.Info.NextActionTimes[0]
 	}
@@ -64,6 +95,14 @@ func describeResultToPrintable(id string, desc *client.ScheduleDescription) *pri
 	for _, w := range desc.Info.RunningWorkflows {
 		out.RunningWorkflows = append(out.RunningWorkflows, w.WorkflowID)
 	}
+	out.CreatedAt = desc.Info.CreatedAt
+	out.LastUpdateAt = desc.Info.LastUpdateAt
+	out.ActionCounts = &actionCounts{
+		Total:               desc.Info.NumActions,
+		MissedCatchupWindow: desc.Info.NumActionsMissedCatchupWindow,
+		SkippedOverlap:      desc.Info.NumActionsSkippedOverlap,
+	}
+
 	return out
 }
 
@@ -72,7 +111,7 @@ func listEntryToPrintable(ent *client.ScheduleListEntry) *printableSchedule {
 		ScheduleId:       ent.ID,
 		Paused:           ent.Paused,
 		Notes:            ent.Note,
-		WorkflowType:     ent.WorkflowType.Name,
+		Action:           struct{ Workflow string }{Workflow: ent.WorkflowType.Name},
 		SearchAttributes: ent.SearchAttributes,
 		Memo:             ent.Memo,
 	}
@@ -89,15 +128,22 @@ func listEntryToPrintable(ent *client.ScheduleListEntry) *printableSchedule {
 
 func specToPrintable(out *printableSchedule, spec *client.ScheduleSpec) {
 	for _, cal := range spec.Calendars {
-		out.CalendarSpecs = append(out.CalendarSpecs, formatCalendarSpec(cal))
+		out.Spec = append(out.Spec, formatCalendarSpec(cal))
+	}
+	for _, cal := range spec.Skip {
+		out.SkipSpec = append(out.SkipSpec, formatCalendarSpec(cal))
 	}
 	for _, int := range spec.Intervals {
 		pInt := printableInterval{Every: formatDuration(int.Every)}
 		if int.Offset > 0 {
 			pInt.Offset = formatDuration(int.Offset)
 		}
-		out.IntervalSpecs = append(out.IntervalSpecs, pInt)
+		out.Spec = append(out.Spec, pInt)
 	}
+	out.StartAt = spec.StartAt
+	out.EndAt = spec.EndAt
+	out.Jitter = formatDuration(spec.Jitter)
+	out.TimeZoneName = spec.TimeZoneName
 }
 
 func (c *TemporalScheduleBackfillCommand) run(cctx *CommandContext, args []string) error {
@@ -350,17 +396,33 @@ func (c *TemporalScheduleListCommand) run(cctx *CommandContext, args []string) e
 	printOpts := printer.StructuredOptions{
 		ExcludeFields: []string{
 			// These aren't available in list results
-			"WorkflowId",
+			"OverlapPolicy",
+			"CatchupWindow",
+			"PauseOnFailure",
+			"LimitedActions",
+			"RemainingActions",
 			"RunningWorkflows",
+			"CreatedAt",
+			"LastUpdateAt",
+			"ActionCounts",
 		},
 		Table: &printer.TableOptions{},
 	}
 
-	if !c.Long {
+	if !c.Long && !c.ReallyLong {
 		printOpts.ExcludeFields = append(printOpts.ExcludeFields,
-			"CalendarSpecs",
-			"IntervalSpecs",
+			"Spec",
 			"Notes",
+		)
+	}
+
+	if !c.ReallyLong {
+		printOpts.ExcludeFields = append(printOpts.ExcludeFields,
+			"SkipSpec",
+			"StartAt",
+			"EndAt",
+			"Jitter",
+			"TimeZoneName",
 			"SearchAttributes",
 			"Memo",
 		)
@@ -381,9 +443,7 @@ func (c *TemporalScheduleListCommand) run(cctx *CommandContext, args []string) e
 			printOpts.Table.NoHeader = true
 		}
 	}
-	if !cctx.JSONOutput {
-		cctx.Printer.PrintStructured(page, printOpts)
-	}
+	cctx.Printer.PrintStructured(page, printOpts)
 
 	return nil
 }

@@ -62,7 +62,7 @@ func (s *SharedServerSuite) TestSchedule_Describe() {
 	s.NoError(res.Err)
 	out := res.Stdout.String()
 	s.ContainsOnSameLine(out, "ScheduleId", "mysched")
-	s.ContainsOnSameLine(out, "IntervalSpecs", "2s")
+	s.ContainsOnSameLine(out, "Spec", "2s")
 	s.ContainsOnSameLine(out, "RunningWorkflows", "my-id-")
 
 	// json
@@ -115,7 +115,7 @@ func (s *SharedServerSuite) TestSchedule_List() {
 	)
 	s.NoError(res.Err)
 	var j []struct {
-		ScheduleId string
+		ScheduleId string `json:"scheduleId"`
 	}
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &j))
 	ok := false
@@ -139,7 +139,7 @@ func (s *SharedServerSuite) TestSchedule_List() {
 			continue
 		}
 		var j struct {
-			ScheduleId string
+			ScheduleId string `json:"scheduleId"`
 		}
 		s.NoError(json.Unmarshal(line, &j))
 		ok = ok || j.ScheduleId == "mysched"
