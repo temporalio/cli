@@ -1057,7 +1057,6 @@ type TemporalScheduleDescribeCommand struct {
 	Parent  *TemporalScheduleCommand
 	Command cobra.Command
 	ScheduleIdOptions
-	Raw bool
 }
 
 func NewTemporalScheduleDescribeCommand(cctx *CommandContext, parent *TemporalScheduleCommand) *TemporalScheduleDescribeCommand {
@@ -1073,7 +1072,6 @@ func NewTemporalScheduleDescribeCommand(cctx *CommandContext, parent *TemporalSc
 	}
 	s.Command.Args = cobra.NoArgs
 	s.ScheduleIdOptions.buildFlags(cctx, s.Command.Flags())
-	s.Command.Flags().BoolVar(&s.Raw, "raw", false, "Print raw data in JSON format. Recommended to use this over -o json for scripting.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

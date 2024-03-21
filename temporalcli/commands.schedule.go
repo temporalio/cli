@@ -278,7 +278,7 @@ func (c *TemporalScheduleDescribeCommand) run(cctx *CommandContext, args []strin
 	}
 	defer cl.Close()
 
-	if c.Raw {
+	if cctx.JSONOutput {
 		res, err := cl.WorkflowService().DescribeSchedule(cctx, &workflowservice.DescribeScheduleRequest{
 			Namespace:  c.Parent.Namespace,
 			ScheduleId: c.ScheduleId,
@@ -286,9 +286,6 @@ func (c *TemporalScheduleDescribeCommand) run(cctx *CommandContext, args []strin
 		if err != nil {
 			return err
 		}
-		// force JSON output
-		cctx.Printer.JSON = true
-		cctx.Printer.JSONIndent = "  "
 		cctx.Printer.PrintStructured(res, printer.StructuredOptions{})
 		return nil
 	}

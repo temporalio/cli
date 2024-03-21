@@ -484,8 +484,6 @@ including information about past, current, and future Workflow Runs.
 
 Includes options set for [schedule-id](#options-set-for-schedule-id).
 
-* `--raw` (bool) - Print raw data in JSON format. Recommended to use this over -o json for scripting.
-
 ### temporal schedule list: Lists Schedules.
 
 The `temporal schedule list` command lists all Schedules in a namespace.
