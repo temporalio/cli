@@ -20,7 +20,7 @@ This document has a specific structure used by a parser. Here are the rules:
     * Can have bullets
       * Each bullet is `* <option-names> (<data-type>) - <short-description>. <extra-attributes>`.
       * `<option-names>` is `` `--<option-name>` `` and can optionally be followed by ``, `-<short-name>` ``.
-      * `<data-type>` must be one of `bool`, `duration`, `int`, `string`, `string[]`, `string-enum`, TODO: more
+      * `<data-type>` must be one of `bool`, `duration`, `int`, `string`, `string[]`, `string-enum`, `timestamp`, TODO: more
       * `<short-description>` can be just about anything so long as it doesn't match trailing attributes. Any wrap
         around to newlines + two-space indention is trimmed to a single space.
       * `<extra-attributes>` can be:

@@ -3,10 +3,13 @@ package temporalcli
 import (
 	"errors"
 	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/temporalio/cli/temporalcli/internal/printer"
+	commonpb "go.temporal.io/api/common/v1"
 	enumspb "go.temporal.io/api/enums/v1"
 	schedpb "go.temporal.io/api/schedule/v1"
 	"go.temporal.io/api/workflowservice/v1"
@@ -16,18 +19,25 @@ import (
 )
 
 type printableSchedule struct {
-	ScheduleId       any
-	CalendarSpecs    []any `cli:",cardOmitEmpty"`
-	IntervalSpecs    []any `cli:",cardOmitEmpty"`
-	WorkflowId       any
+	ScheduleId       string
+	CalendarSpecs    []any  `cli:",cardOmitEmpty"`
+	IntervalSpecs    []any  `cli:",cardOmitEmpty"`
+	WorkflowId       string // describe only
 	WorkflowType     any
-	Paused           any
-	Notes            any `cli:",cardOmitEmpty"`
-	NextRunTime      any
-	LastRunTime      any
-	RunningWorkflows []any
-	SearchAttributes any `cli:",cardOmitEmpty"`
-	Memo             any `cli:",cardOmitEmpty"`
+	Paused           bool
+	Notes            string `cli:",cardOmitEmpty"`
+	NextRunTime      time.Time
+	LastRunTime      time.Time
+	RunningWorkflows []string                   // describe only
+	SearchAttributes *commonpb.SearchAttributes `cli:",cardOmitEmpty"`
+	Memo             *commonpb.Memo             `cli:",cardOmitEmpty"`
+}
+
+// Neither protojson nor fmt print structs containing time.Durations nicely, so do it manually
+// using a struct of strings.
+type printableInterval struct {
+	Every  string `json:"every"`
+	Offset string `json:"offset,omitempty"`
 }
 
 func describeResultToPrintable(id string, desc *client.ScheduleDescription) *printableSchedule {
@@ -79,20 +89,14 @@ func listEntryToPrintable(ent *client.ScheduleListEntry) *printableSchedule {
 
 func specToPrintable(out *printableSchedule, spec *client.ScheduleSpec) {
 	for _, cal := range spec.Calendars {
-		// TODO: This is not quite right for either json or text:
-		// For json: this doesn't come out as proper protojson, the field names are
-		// day_of_month instead of dayOfMonth.
-		// For text: this looks fine when there's only one, but there are no {} around each
-		// element, so if there's more than one it's confusing.
 		out.CalendarSpecs = append(out.CalendarSpecs, formatCalendarSpec(cal))
 	}
 	for _, int := range spec.Intervals {
+		pInt := printableInterval{Every: formatDuration(int.Every)}
 		if int.Offset > 0 {
-			out.IntervalSpecs = append(out.IntervalSpecs, int)
-		} else {
-			// hide offset if not present
-			out.IntervalSpecs = append(out.IntervalSpecs, struct{ Every time.Duration }{Every: int.Every})
+			pInt.Offset = formatDuration(int.Offset)
 		}
+		out.IntervalSpecs = append(out.IntervalSpecs, pInt)
 	}
 }
 
@@ -157,14 +161,14 @@ func toIntervalSpec(str string) (client.ScheduleIntervalSpec, error) {
 	var err error
 	parts := strings.Split(str, "/")
 	if len(parts) > 2 {
-		return spec, errors.New("invalid interval string")
+		return spec, fmt.Errorf(`invalid interval: must be "<duration>" or "<duration>/<duration>"`)
 	} else if len(parts) == 2 {
 		if spec.Offset, err = timestamp.ParseDuration(parts[1]); err != nil {
-			return spec, fmt.Errorf("invalid interval string: %w", err)
+			return spec, fmt.Errorf("invalid interval: %w", err)
 		}
 	}
 	if spec.Every, err = timestamp.ParseDuration(parts[0]); err != nil {
-		return spec, fmt.Errorf("invalid interval string: %w", err)
+		return spec, fmt.Errorf("invalid interval: %w", err)
 	}
 	return spec, nil
 }
@@ -478,4 +482,27 @@ func formatCalendarSpec(spec client.ScheduleCalendarSpec) *schedpb.CalendarSpec 
 		DayOfWeek:  processField(spec.DayOfWeek),
 		Comment:    spec.Comment,
 	}
+}
+
+var reHours = regexp.MustCompile(`\d+h`)
+var reLetters = regexp.MustCompile(`[a-z]`)
+
+func formatDuration(d time.Duration) string {
+	// Start with time.Duration standard formatting
+	s := d.String()
+	// Turn "72h" into "3d"
+	s = reHours.ReplaceAllStringFunc(s, func(v string) string {
+		hours, err := strconv.ParseInt(strings.TrimSuffix(v, "h"), 10, 64)
+		if err != nil || hours < 24 {
+			return v
+		}
+		days := hours / 24
+		hours -= days * 24
+		return fmt.Sprintf("%dd%dh", days, hours)
+	})
+	// Insert spaces between fields for readability
+	s = reLetters.ReplaceAllString(s, "$0 ")
+	// Remove last space
+	s = strings.TrimSpace(s)
+	return s
 }
