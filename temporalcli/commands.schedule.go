@@ -283,6 +283,7 @@ func (c *TemporalScheduleDescribeCommand) run(cctx *CommandContext, args []strin
 	defer cl.Close()
 
 	if cctx.JSONOutput {
+		// Use raw gRPC for stability
 		res, err := cl.WorkflowService().DescribeSchedule(cctx, &workflowservice.DescribeScheduleRequest{
 			Namespace:  c.Parent.Namespace,
 			ScheduleId: c.ScheduleId,
@@ -310,6 +311,32 @@ func (c *TemporalScheduleListCommand) run(cctx *CommandContext, args []string) e
 		return err
 	}
 	defer cl.Close()
+
+	if cctx.JSONOutput {
+		// Use raw gRPC for stability
+		// This is a listing command subject to json vs jsonl rules
+		cctx.Printer.StartList()
+		defer cctx.Printer.EndList()
+
+		var token []byte
+		for {
+			res, err := cl.WorkflowService().ListSchedules(cctx, &workflowservice.ListSchedulesRequest{
+				Namespace:     c.Parent.Namespace,
+				NextPageToken: token,
+			})
+			if err != nil {
+				return err
+			}
+			for _, entry := range res.Schedules {
+				cctx.Printer.PrintStructured(entry, printer.StructuredOptions{})
+			}
+			if token = res.NextPageToken; len(token) == 0 {
+				break
+			}
+		}
+
+		return nil
+	}
 
 	res, err := cl.ScheduleClient().List(cctx, client.ScheduleListOptions{})
 	if err != nil {
@@ -347,16 +374,11 @@ func (c *TemporalScheduleListCommand) run(cctx *CommandContext, args []string) e
 		if err != nil {
 			return err
 		}
-		printable := listEntryToPrintable(ent)
-		if cctx.JSONOutput {
-			cctx.Printer.PrintStructured(printable, printOpts)
-		} else {
-			page = append(page, printable)
-			if len(page) == cap(page) {
-				cctx.Printer.PrintStructured(page, printOpts)
-				page = page[:0]
-				printOpts.Table.NoHeader = true
-			}
+		page = append(page, listEntryToPrintable(ent))
+		if len(page) == cap(page) {
+			cctx.Printer.PrintStructured(page, printOpts)
+			page = page[:0]
+			printOpts.Table.NoHeader = true
 		}
 	}
 	if !cctx.JSONOutput {
