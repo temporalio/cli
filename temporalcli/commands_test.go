@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"math/rand"
 	"regexp"
 	"slices"
 	"strings"
@@ -165,6 +166,7 @@ func TestSharedServerSuite(t *testing.T) {
 type SharedServerSuite struct {
 	// Replaced each test
 	*CommandHarness
+	testVars map[string]string
 
 	*DevServer
 	Worker *DevWorker
@@ -216,11 +218,22 @@ func (s *SharedServerSuite) TearDownTest() {
 		s.CommandHarness.Close()
 	}
 	s.CommandHarness = nil
+	s.testVars = nil
 }
 
 func (s *SharedServerSuite) T() *testing.T                 { return s.Suite.T() }
 func (s *SharedServerSuite) SetT(t *testing.T)             { s.Suite.SetT(t) }
 func (s *SharedServerSuite) SetS(suite suite.TestingSuite) { s.Suite.SetS(suite) }
+
+func (s *SharedServerSuite) testVar(key string) string {
+	if s.testVars == nil {
+		s.testVars = make(map[string]string)
+	}
+	if s.testVars[key] == "" {
+		s.testVars[key] = fmt.Sprintf("%s-%x", key, rand.Uint32())
+	}
+	return s.testVars[key]
+}
 
 type DevServer struct {
 	Server *devserver.Server
