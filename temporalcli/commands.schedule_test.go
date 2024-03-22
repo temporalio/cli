@@ -83,20 +83,28 @@ func (s *SharedServerSuite) TestSchedule_Describe() {
 	res := s.createSchedule("--interval", "2s")
 	s.NoError(res.Err)
 
-	time.Sleep(4 * time.Second) // run at least once
-
-	// text
+	// run once manually so we see a running workflow
 
 	res = s.Execute(
-		"schedule", "describe",
+		"schedule", "trigger",
 		"--address", s.Address(),
 		"-s", s.schedId(),
 	)
-	s.NoError(res.Err)
-	out := res.Stdout.String()
-	s.ContainsOnSameLine(out, "ScheduleId", s.schedId())
-	s.ContainsOnSameLine(out, "Spec", "2s")
-	s.ContainsOnSameLine(out, "RunningWorkflows", s.schedWfId()+"-")
+
+	// text
+
+	s.Eventually(func() bool {
+		res = s.Execute(
+			"schedule", "describe",
+			"--address", s.Address(),
+			"-s", s.schedId(),
+		)
+		s.NoError(res.Err)
+		out := res.Stdout.String()
+		s.ContainsOnSameLine(out, "ScheduleId", s.schedId())
+		s.ContainsOnSameLine(out, "Spec", "2s")
+		return AssertContainsOnSameLine(out, "RunningWorkflows", s.schedWfId()+"-") == nil
+	}, 10*time.Second, 100*time.Millisecond)
 
 	// json
 
@@ -281,7 +289,7 @@ func (s *SharedServerSuite) TestSchedule_Trigger() {
 		s.NoError(res.Err)
 		out := res.Stdout.String()
 		return AssertContainsOnSameLine(out, s.schedWfId()) == nil
-	}, 10*time.Second, time.Second)
+	}, 10*time.Second, 100*time.Millisecond)
 }
 
 func (s *SharedServerSuite) TestSchedule_Backfill() {
@@ -308,7 +316,7 @@ func (s *SharedServerSuite) TestSchedule_Backfill() {
 		out := res.Stdout.String()
 		re := regexp.MustCompile(regexp.QuoteMeta(s.schedWfId() + "-2022-02"))
 		return len(re.FindAllString(out, -1)) == 3
-	}, 10*time.Second, time.Second)
+	}, 10*time.Second, 100*time.Millisecond)
 }
 
 func (s *SharedServerSuite) TestSchedule_Update() {
@@ -357,5 +365,5 @@ func (s *SharedServerSuite) TestSchedule_Update() {
 		return j.Schedule.Action.StartWorkflow.WorkflowType.Name == "SomeOtherWf" &&
 			j.Schedule.Action.StartWorkflow.TaskQueue.Name == "SomeOtherTq" &&
 			j.Schedule.Spec.Interval[0].Interval == "3600s"
-	}, 10*time.Second, time.Second)
+	}, 10*time.Second, 100*time.Millisecond)
 }
