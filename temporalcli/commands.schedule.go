@@ -268,7 +268,7 @@ func toScheduleAction(sw *SharedWorkflowStartOptions, i *PayloadInputOptions) (c
 		Memo:                  opts.Memo,
 	}
 	if action.Args, err = i.buildRawInput(); err != nil {
-		return action, nil
+		return nil, err
 	}
 	return action, nil
 }
@@ -338,6 +338,7 @@ func (c *TemporalScheduleDescribeCommand) run(cctx *CommandContext, args []strin
 		if err != nil {
 			return err
 		}
+		// TODO: remove this after https://github.com/temporalio/api-go/pull/154
 		noShorthand := false
 		cctx.Printer.PrintStructured(res, printer.StructuredOptions{
 			OverrideJSONPayloadShorthand: &noShorthand,
@@ -377,6 +378,7 @@ func (c *TemporalScheduleListCommand) run(cctx *CommandContext, args []string) e
 			if err != nil {
 				return err
 			}
+			// TODO: remove this after https://github.com/temporalio/api-go/pull/154
 			noShorthand := false
 			for _, entry := range res.Schedules {
 				cctx.Printer.PrintStructured(entry, printer.StructuredOptions{
