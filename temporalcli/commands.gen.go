@@ -1295,6 +1295,7 @@ func NewTemporalWorkflowCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.AddCommand(&NewTemporalWorkflowDeleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowDescribeCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowExecuteCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkflowHistoryCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowListCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowQueryCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowResetCommand(cctx, &s).Command)
@@ -1449,6 +1450,62 @@ func NewTemporalWorkflowExecuteCommand(cctx *CommandContext, parent *TemporalWor
 	s.WorkflowStartOptions.buildFlags(cctx, s.Command.Flags())
 	s.PayloadInputOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Flags().BoolVar(&s.EventDetails, "event-details", false, "If set when using text output, this will print the event details instead of just the event during workflow progress. If set when using JSON output, this will include the entire \"history\" JSON key of the started run (does not follow runs).")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalWorkflowHistoryCommand struct {
+	Parent  *TemporalWorkflowCommand
+	Command cobra.Command
+}
+
+func NewTemporalWorkflowHistoryCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowHistoryCommand {
+	var s TemporalWorkflowHistoryCommand
+	s.Parent = parent
+	s.Command.Use = "history"
+	s.Command.Short = "Interact directly with a workflow's event history."
+	if hasHighlighting {
+		s.Command.Long = "Workflow history commands use this syntax: \x1b[1mtemporal workflow history COMMAND [ARGS]\x1b[0m."
+	} else {
+		s.Command.Long = "Workflow history commands use this syntax: `temporal workflow history COMMAND [ARGS]`."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalWorkflowHistoryConvertCommand(cctx, &s).Command)
+	return &s
+}
+
+type TemporalWorkflowHistoryConvertCommand struct {
+	Parent       *TemporalWorkflowHistoryCommand
+	Command      cobra.Command
+	SourceFormat StringEnum
+	SourceFile   string
+	TargetFormat StringEnum
+	TargetFile   string
+}
+
+func NewTemporalWorkflowHistoryConvertCommand(cctx *CommandContext, parent *TemporalWorkflowHistoryCommand) *TemporalWorkflowHistoryConvertCommand {
+	var s TemporalWorkflowHistoryConvertCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "convert [flags]"
+	s.Command.Short = "Converts an event history between formats."
+	if hasHighlighting {
+		s.Command.Long = "\x1b[1mtemporal workflow history convert \\\n                --input-format json \\\n\t\t--input-file original.json \\\n                --output-format json \\\n\t\t--output-file reserialized.json\x1b[0m\n\nUse the options listed below to change the command's behavior."
+	} else {
+		s.Command.Long = "```\ntemporal workflow history convert \\\n                --input-format json \\\n\t\t--input-file original.json \\\n                --output-format json \\\n\t\t--output-file reserialized.json\n```\n\nUse the options listed below to change the command's behavior."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.SourceFormat = NewStringEnum([]string{"json", "proto", "pb", "prototext", "pbtxt"}, "json")
+	s.Command.Flags().Var(&s.SourceFormat, "source-format", "Format of the input file. Accepted values: json, proto, pb, prototext, pbtxt.")
+	s.Command.Flags().StringVar(&s.SourceFile, "source-file", "", "Path to the input file.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "source-file")
+	s.TargetFormat = NewStringEnum([]string{"json", "proto", "pb", "prototext", "pbtxt"}, "json")
+	s.Command.Flags().Var(&s.TargetFormat, "target-format", "Format of the output file. Accepted values: json, proto, pb, prototext, pbtxt.")
+	s.Command.Flags().StringVar(&s.TargetFile, "target-file", "", "Path to the output file, or standard output if not set.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
