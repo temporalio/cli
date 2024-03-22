@@ -265,6 +265,8 @@ func (c *CommandOption) writeStructField(w *codeWriter) error {
 		goDataType = c.DataType
 	case "duration":
 		goDataType = w.importPkg("time") + ".Duration"
+	case "timestamp":
+		goDataType = "Timestamp"
 	case "string[]":
 		goDataType = "[]string"
 	case "string-enum":
@@ -294,6 +296,11 @@ func (c *CommandOption) writeFlagBuilding(selfVar, flagVar string, w *codeWriter
 			// We round to the nearest ms
 			defaultLit = fmt.Sprintf(", %v * %v.Millisecond", int64(dur/time.Millisecond), w.importPkg("time"))
 		}
+	case "timestamp":
+		if c.DefaultValue != "" {
+			return fmt.Errorf("default value not allowed for timestamp")
+		}
+		flagMeth, defaultLit = "Var", ""
 	case "int":
 		flagMeth, defaultLit = "IntVar", ", "+c.DefaultValue
 		if c.DefaultValue == "" {

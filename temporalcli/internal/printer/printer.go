@@ -423,6 +423,19 @@ func (p *Printer) textVal(v any) string {
 				return fmt.Sprintf("<failed converting to string: %v>", err)
 			}
 			return string(b)
+		} else if ref.Kind() == reflect.Slice {
+			// We don't want to reimplement all of fmt.Sprintf, but expanding one level of
+			// slice helps format lists more consistently.
+			var sb strings.Builder
+			sb.WriteString("[")
+			for i := 0; i < ref.Len(); i++ {
+				if i > 0 {
+					sb.WriteString(", ")
+				}
+				sb.WriteString(p.textVal(ref.Index(i).Interface()))
+			}
+			sb.WriteString("]")
+			return sb.String()
 		}
 	}
 	return fmt.Sprintf("%v", v)

@@ -20,7 +20,7 @@ This document has a specific structure used by a parser. Here are the rules:
     * Can have bullets
       * Each bullet is `* <option-names> (<data-type>) - <short-description>. <extra-attributes>`.
       * `<option-names>` is `` `--<option-name>` `` and can optionally be followed by ``, `-<short-name>` ``.
-      * `<data-type>` must be one of `bool`, `duration`, `int`, `string`, `string[]`, `string-enum`, TODO: more
+      * `<data-type>` must be one of `bool`, `duration`, `int`, `string`, `string[]`, `string-enum`, `timestamp`, TODO: more
       * `<short-description>` can be just about anything so long as it doesn't match trailing attributes. Any wrap
         around to newlines + two-space indention is trimmed to a single space.
       * `<extra-attributes>` can be:
@@ -377,6 +377,162 @@ Search Attribute commands enable operations for the creation, listing, and remov
 * `--name` (string[]) - Search Attribute name. Required.
 * `--yes`, `-y` (bool) - Confirm prompt to perform deletion.
 
+### temporal schedule: Perform operations on Schedules.
+
+Schedule commands allow the user to create, use, and update Schedules.
+Schedules allow starting Workflow Execution at regular times.
+
+#### Options
+
+Includes options set for [client](#options-set-for-client).
+
+### temporal schedule backfill: Backfills a past time range of actions.
+
+ The `temporal schedule backfill` command runs the Actions that would have been run in a given time
+interval, all at once.
+
+ You can use backfill to fill in Workflow Runs from a time period when the Schedule was paused, from
+before the Schedule was created, from the future, or to re-process an interval that was processed.
+
+Schedule backfills require a Schedule ID, along with the time in which to run the Schedule. You can
+optionally override the overlap policy. It usually only makes sense to run backfills with either
+`BufferAll` or `AllowAll` (other policies will only let one or two runs actually happen).
+
+Example:
+
+```
+  temporal schedule backfill           \
+    --schedule-id 'your-schedule-id'   \
+    --overlap-policy BufferAll         \
+    --start-time 2022-05-01T00:00:00Z  \
+    --end-time   2022-05-31T23:59:59Z
+```
+
+#### Options set for overlap policy:
+
+* `--overlap-policy` (string-enum) - Overlap policy. Options: Skip, BufferOne, BufferAll, CancelOther, TerminateOther, AllowAll. Default: Skip.
+
+#### Options set for schedule id:
+
+* `--schedule-id`, `-s` (string) - Schedule id. Required.
+
+#### Options
+
+* `--end-time` (timestamp) - Backfill end time. Required.
+* `--start-time` (timestamp) - Backfill start time. Required.
+
+### temporal schedule create: Create a new Schedule.
+
+The `temporal schedule create` command creates a new Schedule.
+
+Example:
+
+```
+  temporal schedule create                                    \
+    --schedule-id 'your-schedule-id'                          \
+    --calendar '{"dayOfWeek":"Fri","hour":"3","minute":"11"}' \
+    --workflow-id 'your-base-workflow-id'                     \
+    --task-queue 'your-task-queue'                            \
+    --workflow-type 'YourWorkflowType'
+```
+
+Any combination of `--calendar`, `--interval`, and `--cron` is supported.
+Actions will be executed at any time specified in the Schedule.
+
+#### Options set for schedule configuration:
+
+* `--calendar` (string[]) - Calendar specification in JSON, e.g. `{"dayOfWeek":"Fri","hour":"17","minute":"5"}`.
+* `--catchup-window` (duration) - Maximum allowed catch-up time if server is down.
+* `--cron` (string[]) - Calendar spec in cron string format, e.g. `3 11 * * Fri`.
+* `--end-time` (timestamp) - Overall schedule end time.
+* `--interval` (string[]) - Interval duration, e.g. 90m, or 90m/13m to include phase offset.
+* `--jitter` (duration) - Per-action jitter range.
+* `--notes` (string) - Initial value of notes field.
+* `--paused` (bool) - Initial value of paused state.
+* `--pause-on-failure` (bool) - Pause schedule after any workflow failure.
+* `--remaining-actions` (int) - Total number of actions allowed. Zero (default) means unlimited.
+* `--start-time` (timestamp) - Overall schedule start time.
+* `--time-zone` (string) - Time zone to interpret all calendar specs in (IANA name).
+* `--schedule-search-attribute` (string[]) - Search Attribute for the _schedule_ in key=value format. Use valid JSON formats for value.
+* `--schedule-memo` (string[]) - Memo for the _schedule_ in key=value format. Use valid JSON formats for value.
+
+#### Options
+
+Includes options set for [schedule-id](#options-set-for-schedule-id).
+Includes options set for [overlap-policy](#options-set-for-overlap-policy).
+Includes options set for [shared-workflow-start](#options-set-for-shared-workflow-start).
+Includes options set for [payload-input](#options-set-for-payload-input).
+
+### temporal schedule delete: Deletes a Schedule.
+
+The `temporal schedule delete` command deletes a Schedule.
+Deleting a Schedule does not affect any Workflows started by the Schedule.
+
+If you do also want to cancel or terminate Workflows started by a Schedule, consider using `temporal
+workflow delete` with the `TemporalScheduledById` Search Attribute.
+
+#### Options
+
+Includes options set for [schedule-id](#options-set-for-schedule-id).
+
+### temporal schedule describe: Get Schedule configuration and current state.
+
+The `temporal schedule describe` command shows the current configuration of one Schedule,
+including information about past, current, and future Workflow Runs.
+
+#### Options
+
+Includes options set for [schedule-id](#options-set-for-schedule-id).
+
+### temporal schedule list: Lists Schedules.
+
+The `temporal schedule list` command lists all Schedules in a namespace.
+
+#### Options
+
+* `--long`, `-l` (bool) - Include detailed information.
+* `--really-long` (bool) - Include even more detailed information that's not really usable in table form.
+
+### temporal schedule toggle: Pauses or unpauses a Schedule.
+
+The `temporal schedule toggle` command can pause and unpause a Schedule.
+
+Toggling a Schedule takes a reason. The reason will be set as the `notes` field of the Schedule,
+to help with operations communication.
+
+Examples:
+
+* `temporal schedule toggle --schedule-id 'your-schedule-id' --pause --reason "paused because the database is down"`
+* `temporal schedule toggle --schedule-id 'your-schedule-id' --unpause --reason "the database is back up"`
+
+#### Options
+
+* `--pause` (bool) - Pauses the schedule.
+* `--reason` (string) - Reason for pausing/unpausing. Default: "(no reason provided)".
+* `--unpause` (bool) - Pauses the schedule.
+
+Includes options set for [schedule-id](#options-set-for-schedule-id).
+
+### temporal schedule trigger: Triggers a schedule to take an action immediately.
+
+#### Options
+
+Includes options set for [schedule-id](#options-set-for-schedule-id).
+Includes options set for [overlap-policy](#options-set-for-overlap-policy).
+
+### temporal schedule update: Updates a Schedule with a new definition.
+
+The temporal schedule update command updates an existing Schedule. It replaces the entire
+configuration of the schedule, including spec, action, and policies.
+
+#### Options
+
+Includes options set for [schedule-configuration](#options-set-for-schedule-configuration).
+Includes options set for [schedule-id](#options-set-for-schedule-id).
+Includes options set for [overlap-policy](#options-set-for-overlap-policy).
+Includes options set for [shared-workflow-start](#options-set-for-shared-workflow-start).
+Includes options set for [payload-input](#options-set-for-payload-input).
+
 ### temporal server: Run Temporal Server.
 
 Start a development version of [Temporal Server](/concepts/what-is-the-temporal-server):
@@ -632,6 +788,7 @@ temporal workflow execute
   during workflow progress. If set when using JSON output, this will include the entire "history" JSON key of the
   started run (does not follow runs).
 
+Includes options set for [shared workflow start](#options-set-for-shared-workflow-start).
 Includes options set for [workflow start](#options-set-for-workflow-start).
 Includes options set for [payload input](#options-set-for-payload-input).
 
@@ -803,7 +960,7 @@ temporal workflow start \
 		--input '{"Input": "As-JSON"}'
 ```
 
-#### Options set for workflow start:
+#### Options set for shared workflow start:
 
 * `--workflow-id`, `-w` (string) - Workflow Id.
 * `--type` (string) - Workflow Type name. Required.
@@ -811,14 +968,17 @@ temporal workflow start \
 * `--run-timeout` (duration) - Timeout of a Workflow Run.
 * `--execution-timeout` (duration) - Timeout for a WorkflowExecution, including retries and ContinueAsNew tasks.
 * `--task-timeout` (duration) - Start-to-close timeout for a Workflow Task. Default: 10s.
-* `--cron` (string) - Cron schedule for the workflow. Deprecated - use schedules instead.
-* `--id-reuse-policy` (string) - Allows the same Workflow Id to be used in a new Workflow Execution. Options:
-  AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate, TerminateIfRunning.
 * `--search-attribute` (string[]) - Passes Search Attribute in key=value format. Use valid JSON formats for value.
 * `--memo` (string[]) - Passes Memo in key=value format. Use valid JSON formats for value.
+
+#### Options set for workflow start:
+
+* `--cron` (string) - Cron schedule for the workflow. Deprecated - use schedules instead.
 * `--fail-existing` (bool) - Fail if the workflow already exists.
 * `--start-delay` (duration) - Specify a delay before the workflow starts. Cannot be used with a cron schedule. If the
   workflow receives a signal or update before the delay has elapsed, it will begin immediately.
+* `--id-reuse-policy` (string) - Allows the same Workflow Id to be used in a new Workflow Execution. Options:
+  AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate, TerminateIfRunning.
 
 #### Options set for payload input:
 

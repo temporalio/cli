@@ -61,6 +61,9 @@ func stringKeysValues(s []string) (map[string]string, error) {
 }
 
 func stringKeysJSONValues(s []string) (map[string]any, error) {
+	if len(s) == 0 {
+		return nil, nil
+	}
 	ret := make(map[string]any, len(s))
 	for _, item := range s {
 		pieces := strings.SplitN(item, "=", 2)

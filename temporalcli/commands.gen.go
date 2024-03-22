@@ -38,6 +38,7 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	s.Command.AddCommand(&NewTemporalBatchCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalEnvCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalOperatorCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalScheduleCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalServerCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalTaskQueueCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowCommand(cctx, &s).Command)
@@ -878,6 +879,325 @@ func NewTemporalOperatorSearchAttributeRemoveCommand(cctx *CommandContext, paren
 	return &s
 }
 
+type TemporalScheduleCommand struct {
+	Parent  *TemporalCommand
+	Command cobra.Command
+	ClientOptions
+}
+
+func NewTemporalScheduleCommand(cctx *CommandContext, parent *TemporalCommand) *TemporalScheduleCommand {
+	var s TemporalScheduleCommand
+	s.Parent = parent
+	s.Command.Use = "schedule"
+	s.Command.Short = "Perform operations on Schedules."
+	s.Command.Long = "Schedule commands allow the user to create, use, and update Schedules.\nSchedules allow starting Workflow Execution at regular times."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalScheduleBackfillCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalScheduleCreateCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalScheduleDeleteCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalScheduleDescribeCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalScheduleListCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalScheduleToggleCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalScheduleTriggerCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalScheduleUpdateCommand(cctx, &s).Command)
+	s.ClientOptions.buildFlags(cctx, s.Command.PersistentFlags())
+	return &s
+}
+
+type OverlapPolicyOptions struct {
+	OverlapPolicy StringEnum
+}
+
+func (v *OverlapPolicyOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
+	v.OverlapPolicy = NewStringEnum([]string{"Skip", "BufferOne", "BufferAll", "CancelOther", "TerminateOther", "AllowAll"}, "Skip")
+	f.Var(&v.OverlapPolicy, "overlap-policy", "Overlap policy. Accepted values: Skip, BufferOne, BufferAll, CancelOther, TerminateOther, AllowAll.")
+}
+
+type ScheduleIdOptions struct {
+	ScheduleId string
+}
+
+func (v *ScheduleIdOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
+	f.StringVarP(&v.ScheduleId, "schedule-id", "s", "", "Schedule id.")
+	_ = cobra.MarkFlagRequired(f, "schedule-id")
+}
+
+type TemporalScheduleBackfillCommand struct {
+	Parent  *TemporalScheduleCommand
+	Command cobra.Command
+	OverlapPolicyOptions
+	ScheduleIdOptions
+	EndTime   Timestamp
+	StartTime Timestamp
+}
+
+func NewTemporalScheduleBackfillCommand(cctx *CommandContext, parent *TemporalScheduleCommand) *TemporalScheduleBackfillCommand {
+	var s TemporalScheduleBackfillCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "backfill [flags]"
+	s.Command.Short = "Backfills a past time range of actions."
+	if hasHighlighting {
+		s.Command.Long = "The \x1b[1mtemporal schedule backfill\x1b[0m command runs the Actions that would have been run in a given time\ninterval, all at once.\n\n You can use backfill to fill in Workflow Runs from a time period when the Schedule was paused, from\nbefore the Schedule was created, from the future, or to re-process an interval that was processed.\n\nSchedule backfills require a Schedule ID, along with the time in which to run the Schedule. You can\noptionally override the overlap policy. It usually only makes sense to run backfills with either\n\x1b[1mBufferAll\x1b[0m or \x1b[1mAllowAll\x1b[0m (other policies will only let one or two runs actually happen).\n\nExample:\n\n\x1b[1m  temporal schedule backfill           \\\n    --schedule-id 'your-schedule-id'   \\\n    --overlap-policy BufferAll         \\\n    --start-time 2022-05-01T00:00:00Z  \\\n    --end-time   2022-05-31T23:59:59Z\x1b[0m"
+	} else {
+		s.Command.Long = "The `temporal schedule backfill` command runs the Actions that would have been run in a given time\ninterval, all at once.\n\n You can use backfill to fill in Workflow Runs from a time period when the Schedule was paused, from\nbefore the Schedule was created, from the future, or to re-process an interval that was processed.\n\nSchedule backfills require a Schedule ID, along with the time in which to run the Schedule. You can\noptionally override the overlap policy. It usually only makes sense to run backfills with either\n`BufferAll` or `AllowAll` (other policies will only let one or two runs actually happen).\n\nExample:\n\n```\n  temporal schedule backfill           \\\n    --schedule-id 'your-schedule-id'   \\\n    --overlap-policy BufferAll         \\\n    --start-time 2022-05-01T00:00:00Z  \\\n    --end-time   2022-05-31T23:59:59Z\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.OverlapPolicyOptions.buildFlags(cctx, s.Command.Flags())
+	s.ScheduleIdOptions.buildFlags(cctx, s.Command.Flags())
+	s.Command.Flags().Var(&s.EndTime, "end-time", "Backfill end time.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "end-time")
+	s.Command.Flags().Var(&s.StartTime, "start-time", "Backfill start time.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "start-time")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type ScheduleConfigurationOptions struct {
+	Calendar                []string
+	CatchupWindow           time.Duration
+	Cron                    []string
+	EndTime                 Timestamp
+	Interval                []string
+	Jitter                  time.Duration
+	Notes                   string
+	Paused                  bool
+	PauseOnFailure          bool
+	RemainingActions        int
+	StartTime               Timestamp
+	TimeZone                string
+	ScheduleSearchAttribute []string
+	ScheduleMemo            []string
+}
+
+func (v *ScheduleConfigurationOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
+	f.StringArrayVar(&v.Calendar, "calendar", nil, "Calendar specification in JSON, e.g. `{\"dayOfWeek\":\"Fri\",\"hour\":\"17\",\"minute\":\"5\"}`.")
+	f.DurationVar(&v.CatchupWindow, "catchup-window", 0, "Maximum allowed catch-up time if server is down.")
+	f.StringArrayVar(&v.Cron, "cron", nil, "Calendar spec in cron string format, e.g. `3 11 * * Fri`.")
+	f.Var(&v.EndTime, "end-time", "Overall schedule end time.")
+	f.StringArrayVar(&v.Interval, "interval", nil, "Interval duration, e.g. 90m, or 90m/13m to include phase offset.")
+	f.DurationVar(&v.Jitter, "jitter", 0, "Per-action jitter range.")
+	f.StringVar(&v.Notes, "notes", "", "Initial value of notes field.")
+	f.BoolVar(&v.Paused, "paused", false, "Initial value of paused state.")
+	f.BoolVar(&v.PauseOnFailure, "pause-on-failure", false, "Pause schedule after any workflow failure.")
+	f.IntVar(&v.RemainingActions, "remaining-actions", 0, "Total number of actions allowed. Zero (default) means unlimited.")
+	f.Var(&v.StartTime, "start-time", "Overall schedule start time.")
+	f.StringVar(&v.TimeZone, "time-zone", "", "Time zone to interpret all calendar specs in (IANA name).")
+	f.StringArrayVar(&v.ScheduleSearchAttribute, "schedule-search-attribute", nil, "Search Attribute for the _schedule_ in key=value format. Use valid JSON formats for value.")
+	f.StringArrayVar(&v.ScheduleMemo, "schedule-memo", nil, "Memo for the _schedule_ in key=value format. Use valid JSON formats for value.")
+}
+
+type TemporalScheduleCreateCommand struct {
+	Parent  *TemporalScheduleCommand
+	Command cobra.Command
+	ScheduleConfigurationOptions
+	ScheduleIdOptions
+	OverlapPolicyOptions
+	SharedWorkflowStartOptions
+	PayloadInputOptions
+}
+
+func NewTemporalScheduleCreateCommand(cctx *CommandContext, parent *TemporalScheduleCommand) *TemporalScheduleCreateCommand {
+	var s TemporalScheduleCreateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "create [flags]"
+	s.Command.Short = "Create a new Schedule."
+	if hasHighlighting {
+		s.Command.Long = "The \x1b[1mtemporal schedule create\x1b[0m command creates a new Schedule.\n\nExample:\n\n\x1b[1m  temporal schedule create                                    \\\n    --schedule-id 'your-schedule-id'                          \\\n    --calendar '{\"dayOfWeek\":\"Fri\",\"hour\":\"3\",\"minute\":\"11\"}' \\\n    --workflow-id 'your-base-workflow-id'                     \\\n    --task-queue 'your-task-queue'                            \\\n    --workflow-type 'YourWorkflowType'\x1b[0m\n\nAny combination of \x1b[1m--calendar\x1b[0m, \x1b[1m--interval\x1b[0m, and \x1b[1m--cron\x1b[0m is supported.\nActions will be executed at any time specified in the Schedule."
+	} else {
+		s.Command.Long = "The `temporal schedule create` command creates a new Schedule.\n\nExample:\n\n```\n  temporal schedule create                                    \\\n    --schedule-id 'your-schedule-id'                          \\\n    --calendar '{\"dayOfWeek\":\"Fri\",\"hour\":\"3\",\"minute\":\"11\"}' \\\n    --workflow-id 'your-base-workflow-id'                     \\\n    --task-queue 'your-task-queue'                            \\\n    --workflow-type 'YourWorkflowType'\n```\n\nAny combination of `--calendar`, `--interval`, and `--cron` is supported.\nActions will be executed at any time specified in the Schedule."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ScheduleConfigurationOptions.buildFlags(cctx, s.Command.Flags())
+	s.ScheduleIdOptions.buildFlags(cctx, s.Command.Flags())
+	s.OverlapPolicyOptions.buildFlags(cctx, s.Command.Flags())
+	s.SharedWorkflowStartOptions.buildFlags(cctx, s.Command.Flags())
+	s.PayloadInputOptions.buildFlags(cctx, s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalScheduleDeleteCommand struct {
+	Parent  *TemporalScheduleCommand
+	Command cobra.Command
+	ScheduleIdOptions
+}
+
+func NewTemporalScheduleDeleteCommand(cctx *CommandContext, parent *TemporalScheduleCommand) *TemporalScheduleDeleteCommand {
+	var s TemporalScheduleDeleteCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "delete [flags]"
+	s.Command.Short = "Deletes a Schedule."
+	if hasHighlighting {
+		s.Command.Long = "The \x1b[1mtemporal schedule delete\x1b[0m command deletes a Schedule.\nDeleting a Schedule does not affect any Workflows started by the Schedule.\n\nIf you do also want to cancel or terminate Workflows started by a Schedule, consider using \x1b[1mtemporal\nworkflow delete\x1b[0m with the \x1b[1mTemporalScheduledById\x1b[0m Search Attribute."
+	} else {
+		s.Command.Long = "The `temporal schedule delete` command deletes a Schedule.\nDeleting a Schedule does not affect any Workflows started by the Schedule.\n\nIf you do also want to cancel or terminate Workflows started by a Schedule, consider using `temporal\nworkflow delete` with the `TemporalScheduledById` Search Attribute."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ScheduleIdOptions.buildFlags(cctx, s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalScheduleDescribeCommand struct {
+	Parent  *TemporalScheduleCommand
+	Command cobra.Command
+	ScheduleIdOptions
+}
+
+func NewTemporalScheduleDescribeCommand(cctx *CommandContext, parent *TemporalScheduleCommand) *TemporalScheduleDescribeCommand {
+	var s TemporalScheduleDescribeCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "describe [flags]"
+	s.Command.Short = "Get Schedule configuration and current state."
+	if hasHighlighting {
+		s.Command.Long = "The \x1b[1mtemporal schedule describe\x1b[0m command shows the current configuration of one Schedule,\nincluding information about past, current, and future Workflow Runs."
+	} else {
+		s.Command.Long = "The `temporal schedule describe` command shows the current configuration of one Schedule,\nincluding information about past, current, and future Workflow Runs."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ScheduleIdOptions.buildFlags(cctx, s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalScheduleListCommand struct {
+	Parent     *TemporalScheduleCommand
+	Command    cobra.Command
+	Long       bool
+	ReallyLong bool
+}
+
+func NewTemporalScheduleListCommand(cctx *CommandContext, parent *TemporalScheduleCommand) *TemporalScheduleListCommand {
+	var s TemporalScheduleListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "Lists Schedules."
+	if hasHighlighting {
+		s.Command.Long = "The \x1b[1mtemporal schedule list\x1b[0m command lists all Schedules in a namespace."
+	} else {
+		s.Command.Long = "The `temporal schedule list` command lists all Schedules in a namespace."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().BoolVarP(&s.Long, "long", "l", false, "Include detailed information.")
+	s.Command.Flags().BoolVar(&s.ReallyLong, "really-long", false, "Include even more detailed information that's not really usable in table form.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalScheduleToggleCommand struct {
+	Parent  *TemporalScheduleCommand
+	Command cobra.Command
+	ScheduleIdOptions
+	Pause   bool
+	Reason  string
+	Unpause bool
+}
+
+func NewTemporalScheduleToggleCommand(cctx *CommandContext, parent *TemporalScheduleCommand) *TemporalScheduleToggleCommand {
+	var s TemporalScheduleToggleCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "toggle [flags]"
+	s.Command.Short = "Pauses or unpauses a Schedule."
+	if hasHighlighting {
+		s.Command.Long = "The \x1b[1mtemporal schedule toggle\x1b[0m command can pause and unpause a Schedule.\n\nToggling a Schedule takes a reason. The reason will be set as the \x1b[1mnotes\x1b[0m field of the Schedule,\nto help with operations communication.\n\nExamples:\n\n* \x1b[1mtemporal schedule toggle --schedule-id 'your-schedule-id' --pause --reason \"paused because the database is down\"\x1b[0m\n* \x1b[1mtemporal schedule toggle --schedule-id 'your-schedule-id' --unpause --reason \"the database is back up\"\x1b[0m"
+	} else {
+		s.Command.Long = "The `temporal schedule toggle` command can pause and unpause a Schedule.\n\nToggling a Schedule takes a reason. The reason will be set as the `notes` field of the Schedule,\nto help with operations communication.\n\nExamples:\n\n* `temporal schedule toggle --schedule-id 'your-schedule-id' --pause --reason \"paused because the database is down\"`\n* `temporal schedule toggle --schedule-id 'your-schedule-id' --unpause --reason \"the database is back up\"`"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ScheduleIdOptions.buildFlags(cctx, s.Command.Flags())
+	s.Command.Flags().BoolVar(&s.Pause, "pause", false, "Pauses the schedule.")
+	s.Command.Flags().StringVar(&s.Reason, "reason", "\"(no reason provided)\"", "Reason for pausing/unpausing.")
+	s.Command.Flags().BoolVar(&s.Unpause, "unpause", false, "Pauses the schedule.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalScheduleTriggerCommand struct {
+	Parent  *TemporalScheduleCommand
+	Command cobra.Command
+	ScheduleIdOptions
+	OverlapPolicyOptions
+}
+
+func NewTemporalScheduleTriggerCommand(cctx *CommandContext, parent *TemporalScheduleCommand) *TemporalScheduleTriggerCommand {
+	var s TemporalScheduleTriggerCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "trigger [flags]"
+	s.Command.Short = "Triggers a schedule to take an action immediately."
+	s.Command.Long = ""
+	s.Command.Args = cobra.NoArgs
+	s.ScheduleIdOptions.buildFlags(cctx, s.Command.Flags())
+	s.OverlapPolicyOptions.buildFlags(cctx, s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalScheduleUpdateCommand struct {
+	Parent  *TemporalScheduleCommand
+	Command cobra.Command
+	ScheduleConfigurationOptions
+	ScheduleIdOptions
+	OverlapPolicyOptions
+	SharedWorkflowStartOptions
+	PayloadInputOptions
+}
+
+func NewTemporalScheduleUpdateCommand(cctx *CommandContext, parent *TemporalScheduleCommand) *TemporalScheduleUpdateCommand {
+	var s TemporalScheduleUpdateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "update [flags]"
+	s.Command.Short = "Updates a Schedule with a new definition."
+	s.Command.Long = "The temporal schedule update command updates an existing Schedule. It replaces the entire\nconfiguration of the schedule, including spec, action, and policies."
+	s.Command.Args = cobra.NoArgs
+	s.ScheduleConfigurationOptions.buildFlags(cctx, s.Command.Flags())
+	s.ScheduleIdOptions.buildFlags(cctx, s.Command.Flags())
+	s.OverlapPolicyOptions.buildFlags(cctx, s.Command.Flags())
+	s.SharedWorkflowStartOptions.buildFlags(cctx, s.Command.Flags())
+	s.PayloadInputOptions.buildFlags(cctx, s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
 type TemporalServerCommand struct {
 	Parent  *TemporalCommand
 	Command cobra.Command
@@ -1430,6 +1750,7 @@ func NewTemporalWorkflowDescribeCommand(cctx *CommandContext, parent *TemporalWo
 type TemporalWorkflowExecuteCommand struct {
 	Parent  *TemporalWorkflowCommand
 	Command cobra.Command
+	SharedWorkflowStartOptions
 	WorkflowStartOptions
 	PayloadInputOptions
 	EventDetails bool
@@ -1447,6 +1768,7 @@ func NewTemporalWorkflowExecuteCommand(cctx *CommandContext, parent *TemporalWor
 		s.Command.Long = "The `temporal workflow execute` command starts a new Workflow Execution and\nprints its progress. The command completes when the Workflow Execution completes.\n\nSingle quotes('') are used to wrap input as JSON.\n\n```\ntemporal workflow execute\n\t\t--workflow-id meaningful-business-id \\\n\t\t--type MyWorkflow \\\n\t\t--task-queue MyTaskQueue \\\n\t\t--input '{\"Input\": \"As-JSON\"}'\n```"
 	}
 	s.Command.Args = cobra.NoArgs
+	s.SharedWorkflowStartOptions.buildFlags(cctx, s.Command.Flags())
 	s.WorkflowStartOptions.buildFlags(cctx, s.Command.Flags())
 	s.PayloadInputOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Flags().BoolVar(&s.EventDetails, "event-details", false, "If set when using text output, this will print the event details instead of just the event during workflow progress. If set when using JSON output, this will include the entire \"history\" JSON key of the started run (does not follow runs).")
@@ -1707,22 +2029,18 @@ func NewTemporalWorkflowStackCommand(cctx *CommandContext, parent *TemporalWorkf
 	return &s
 }
 
-type WorkflowStartOptions struct {
+type SharedWorkflowStartOptions struct {
 	WorkflowId       string
 	Type             string
 	TaskQueue        string
 	RunTimeout       time.Duration
 	ExecutionTimeout time.Duration
 	TaskTimeout      time.Duration
-	Cron             string
-	IdReusePolicy    string
 	SearchAttribute  []string
 	Memo             []string
-	FailExisting     bool
-	StartDelay       time.Duration
 }
 
-func (v *WorkflowStartOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
+func (v *SharedWorkflowStartOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
 	f.StringVarP(&v.WorkflowId, "workflow-id", "w", "", "Workflow Id.")
 	f.StringVar(&v.Type, "type", "", "Workflow Type name.")
 	_ = cobra.MarkFlagRequired(f, "type")
@@ -1731,12 +2049,22 @@ func (v *WorkflowStartOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet
 	f.DurationVar(&v.RunTimeout, "run-timeout", 0, "Timeout of a Workflow Run.")
 	f.DurationVar(&v.ExecutionTimeout, "execution-timeout", 0, "Timeout for a WorkflowExecution, including retries and ContinueAsNew tasks.")
 	f.DurationVar(&v.TaskTimeout, "task-timeout", 10000*time.Millisecond, "Start-to-close timeout for a Workflow Task.")
-	f.StringVar(&v.Cron, "cron", "", "Cron schedule for the workflow. Deprecated - use schedules instead.")
-	f.StringVar(&v.IdReusePolicy, "id-reuse-policy", "", "Allows the same Workflow Id to be used in a new Workflow Execution. Accepted values: AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate, TerminateIfRunning.")
 	f.StringArrayVar(&v.SearchAttribute, "search-attribute", nil, "Passes Search Attribute in key=value format. Use valid JSON formats for value.")
 	f.StringArrayVar(&v.Memo, "memo", nil, "Passes Memo in key=value format. Use valid JSON formats for value.")
+}
+
+type WorkflowStartOptions struct {
+	Cron          string
+	FailExisting  bool
+	StartDelay    time.Duration
+	IdReusePolicy string
+}
+
+func (v *WorkflowStartOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
+	f.StringVar(&v.Cron, "cron", "", "Cron schedule for the workflow. Deprecated - use schedules instead.")
 	f.BoolVar(&v.FailExisting, "fail-existing", false, "Fail if the workflow already exists.")
 	f.DurationVar(&v.StartDelay, "start-delay", 0, "Specify a delay before the workflow starts. Cannot be used with a cron schedule. If the workflow receives a signal or update before the delay has elapsed, it will begin immediately.")
+	f.StringVar(&v.IdReusePolicy, "id-reuse-policy", "", "Allows the same Workflow Id to be used in a new Workflow Execution. Accepted values: AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate, TerminateIfRunning.")
 }
 
 type PayloadInputOptions struct {
@@ -1756,6 +2084,7 @@ func (v *PayloadInputOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet)
 type TemporalWorkflowStartCommand struct {
 	Parent  *TemporalWorkflowCommand
 	Command cobra.Command
+	SharedWorkflowStartOptions
 	WorkflowStartOptions
 	PayloadInputOptions
 }
@@ -1772,6 +2101,7 @@ func NewTemporalWorkflowStartCommand(cctx *CommandContext, parent *TemporalWorkf
 		s.Command.Long = "The `temporal workflow start` command starts a new Workflow Execution. The\nWorkflow and Run IDs are returned after starting the Workflow.\n\n```\ntemporal workflow start \\\n\t\t--workflow-id meaningful-business-id \\\n\t\t--type MyWorkflow \\\n\t\t--task-queue MyTaskQueue \\\n\t\t--input '{\"Input\": \"As-JSON\"}'\n```"
 	}
 	s.Command.Args = cobra.NoArgs
+	s.SharedWorkflowStartOptions.buildFlags(cctx, s.Command.Flags())
 	s.WorkflowStartOptions.buildFlags(cctx, s.Command.Flags())
 	s.PayloadInputOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
