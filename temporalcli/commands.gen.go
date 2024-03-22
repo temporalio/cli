@@ -1295,6 +1295,7 @@ func NewTemporalWorkflowCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.AddCommand(&NewTemporalWorkflowDeleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowDescribeCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowExecuteCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkflowFixHistoryJsonCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowListCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowQueryCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowResetCommand(cctx, &s).Command)
@@ -1449,6 +1450,36 @@ func NewTemporalWorkflowExecuteCommand(cctx *CommandContext, parent *TemporalWor
 	s.WorkflowStartOptions.buildFlags(cctx, s.Command.Flags())
 	s.PayloadInputOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Flags().BoolVar(&s.EventDetails, "event-details", false, "If set when using text output, this will print the event details instead of just the event during workflow progress. If set when using JSON output, this will include the entire \"history\" JSON key of the started run (does not follow runs).")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalWorkflowFixHistoryJsonCommand struct {
+	Parent  *TemporalWorkflowCommand
+	Command cobra.Command
+	Source  string
+	Target  string
+}
+
+func NewTemporalWorkflowFixHistoryJsonCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowFixHistoryJsonCommand {
+	var s TemporalWorkflowFixHistoryJsonCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "fix-history-json [flags]"
+	s.Command.Short = "Updates an event history JSON file to the current format."
+	if hasHighlighting {
+		s.Command.Long = "\x1b[1mtemporal workflow fix-history-json \\\n\t--source original.json \\\n\t--target reserialized.json\x1b[0m\n\nUse the options listed below to change the command's behavior."
+	} else {
+		s.Command.Long = "```\ntemporal workflow fix-history-json \\\n\t--source original.json \\\n\t--target reserialized.json\n```\n\nUse the options listed below to change the command's behavior."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVarP(&s.Source, "source", "s", "", "Path to the input file.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "source")
+	s.Command.Flags().StringVarP(&s.Target, "target", "t", "", "Path to the output file, or standard output if not set.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

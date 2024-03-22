@@ -635,6 +635,21 @@ temporal workflow execute
 Includes options set for [workflow start](#options-set-for-workflow-start).
 Includes options set for [payload input](#options-set-for-payload-input).
 
+### temporal workflow fix-history-json: Updates an event history JSON file to the current format.
+
+```
+temporal workflow fix-history-json \
+	--source original.json \
+	--target reserialized.json
+```
+
+Use the options listed below to change the command's behavior.
+
+#### Options
+
+* `--source`, `-s` (string) - Path to the input file. Required.
+* `--target`, `-t` (string) - Path to the output file, or standard output if not set.
+
 ### temporal workflow list: List Workflow Executions based on a Query.
 
 The `temporal workflow list` command provides a list of [Workflow Executions](/concepts/what-is-a-workflow-execution)
