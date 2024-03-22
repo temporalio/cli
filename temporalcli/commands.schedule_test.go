@@ -3,6 +3,7 @@ package temporalcli_test
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -141,6 +142,31 @@ func (s *SharedServerSuite) TestSchedule_CreateDescribeCalendar() {
 	out := res.Stdout.String()
 	s.ContainsOnSameLine(out, "ScheduleId", s.schedId())
 	s.ContainsOnSameLine(out, "Spec", "dayOfWeek")
+}
+
+func (s *SharedServerSuite) TestSchedule_CreateDescribe_SearchAttributes_Memo() {
+	res := s.createSchedule("--interval", "10d",
+		"--schedule-search-attribute", `CustomKeywordField="schedule-string-val"`,
+		"--search-attribute", `CustomKeywordField="workflow-string-val"`,
+		"--schedule-memo", `schedMemo="data here"`,
+		"--memo", `wfMemo="other data"`,
+	)
+	s.NoError(res.Err)
+
+	res = s.Execute(
+		"schedule", "describe",
+		"--address", s.Address(),
+		"-s", s.schedId(),
+	)
+	s.NoError(res.Err)
+	out := res.Stdout.String()
+	// TODO: We have to disable shorthand payload encoding for now so these come out as base64.
+	// After https://github.com/temporalio/api-go/pull/154, ensure these come out as nice strings.
+	b64 := func(s string) string { return base64.StdEncoding.EncodeToString([]byte(s)) }
+	s.ContainsOnSameLine(out, "SearchAttributes", "CustomKeywordField", b64(`"schedule-string-val"`))
+	s.ContainsOnSameLine(out, "Memo", "schedMemo", `"data here"`) // somehow this one comes out as a string anyway
+	s.ContainsOnSameLine(out, "Action", "CustomKeywordField", b64(`"workflow-string-val"`))
+	s.ContainsOnSameLine(out, "Action", "wfMemo", b64(`"other data"`))
 }
 
 func (s *SharedServerSuite) TestSchedule_List() {

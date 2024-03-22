@@ -14,6 +14,7 @@ import (
 	schedpb "go.temporal.io/api/schedule/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/converter"
 	"go.temporal.io/server/common/primitives/timestamp"
 	"google.golang.org/protobuf/encoding/protojson"
 )
@@ -255,6 +256,10 @@ func toScheduleAction(sw *SharedWorkflowStartOptions, i *PayloadInputOptions) (c
 	if err != nil {
 		return nil, err
 	}
+	untypedSearchAttributes, err := encodeSearchAttributesToPayloads(opts.SearchAttributes)
+	if err != nil {
+		return nil, err
+	}
 	action := &client.ScheduleWorkflowAction{
 		ID:                       opts.ID,
 		Workflow:                 sw.Type,
@@ -263,9 +268,8 @@ func toScheduleAction(sw *SharedWorkflowStartOptions, i *PayloadInputOptions) (c
 		WorkflowRunTimeout:       opts.WorkflowRunTimeout,
 		WorkflowTaskTimeout:      opts.WorkflowTaskTimeout,
 		// RetryPolicy not supported yet
-		// TODO: buildStartOptions doesn't fill in TypedSearchAttributes, this doesn't work yet:
-		TypedSearchAttributes: opts.TypedSearchAttributes,
-		Memo:                  opts.Memo,
+		UntypedSearchAttributes: untypedSearchAttributes,
+		Memo:                    opts.Memo,
 	}
 	if action.Args, err = i.buildRawInput(); err != nil {
 		return nil, err
@@ -596,4 +600,21 @@ func formatDuration(d time.Duration) string {
 	// Remove last space
 	s = strings.TrimSpace(s)
 	return s
+}
+
+func encodeSearchAttributesToPayloads(in map[string]any) (map[string]*commonpb.Payload, error) {
+	if len(in) == 0 {
+		return nil, nil
+	}
+	// search attributes always use default dataconverter
+	dc := converter.GetDefaultDataConverter()
+	out := make(map[string]*commonpb.Payload, len(in))
+	for key, val := range in {
+		payload, err := dc.ToPayload(val)
+		if err != nil {
+			return nil, err
+		}
+		out[key] = payload
+	}
+	return out, nil
 }
