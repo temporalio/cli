@@ -42,7 +42,7 @@ func (s *SharedServerSuite) TestTaskQueue_BuildId() {
 		"--task-queue", buildIdTaskQueue,
 	)
 	s.NoError(res.Err)
-	s.ContainsOnSameLine(res.Stdout.String(), "[1.0 1.1]", "1.1", "false")
+	s.ContainsOnSameLine(res.Stdout.String(), "[1.0, 1.1]", "1.1", "false")
 	s.ContainsOnSameLine(res.Stdout.String(), "[2.0]", "2.0", "true")
 
 	// json
@@ -98,7 +98,7 @@ func (s *SharedServerSuite) TestTaskQueue_BuildId() {
 	)
 	s.NoError(res.Err)
 	s.ContainsOnSameLine(res.Stdout.String(), "[2.0]", "2.0", "false")
-	s.ContainsOnSameLine(res.Stdout.String(), "[1.1 1.0]", "1.0", "true")
+	s.ContainsOnSameLine(res.Stdout.String(), "[1.1, 1.0]", "1.0", "true")
 
 	// json
 	res = s.Execute(
