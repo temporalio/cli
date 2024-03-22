@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/rand"
 	"regexp"
 	"time"
 
@@ -14,10 +15,9 @@ import (
 	"go.temporal.io/sdk/workflow"
 )
 
-func (s *SharedServerSuite) schedId() string   { return s.testVar("sched") }
-func (s *SharedServerSuite) schedWfId() string { return s.testVar("my-wf-id") }
-
-func (s *SharedServerSuite) createSchedule(args ...string) *CommandResult {
+func (s *SharedServerSuite) createSchedule(args ...string) (schedId, schedWfId string, res *CommandResult) {
+	schedId = fmt.Sprintf("sched-%x", rand.Uint32())
+	schedWfId = fmt.Sprintf("my-wf-id-%x", rand.Uint32())
 	s.Worker.OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
 		return nil, workflow.Sleep(ctx, 10*time.Second)
 	})
@@ -30,44 +30,45 @@ func (s *SharedServerSuite) createSchedule(args ...string) *CommandResult {
 			Args: []string{
 				"schedule", "delete",
 				"--address", s.Address(),
-				"-s", s.schedId(),
+				"-s", schedId,
 			},
 			Fail: func(error) {},
 		}
 		temporalcli.Execute(ctx, options)
 	})
-	return s.Execute(append([]string{
+	res = s.Execute(append([]string{
 		"schedule", "create",
 		"--address", s.Address(),
-		"-s", s.schedId(),
+		"-s", schedId,
 		"--task-queue", s.Worker.Options.TaskQueue,
 		"--type", "DevWorkflow",
-		"--workflow-id", s.schedWfId(),
+		"--workflow-id", schedWfId,
 	}, args...)...,
 	)
+	return
 }
 
 func (s *SharedServerSuite) TestSchedule_Create() {
-	res := s.createSchedule("--interval", "10d")
+	_, _, res := s.createSchedule("--interval", "10d")
 	s.NoError(res.Err)
 }
 
 func (s *SharedServerSuite) TestSchedule_Delete() {
-	res := s.createSchedule("--interval", "10d")
+	schedId, _, res := s.createSchedule("--interval", "10d")
 	s.NoError(res.Err)
 
 	// check exists
 	res = s.Execute(
 		"schedule", "describe",
 		"--address", s.Address(),
-		"-s", s.schedId(),
+		"-s", schedId,
 	)
 	s.NoError(res.Err)
 
 	res = s.Execute(
 		"schedule", "delete",
 		"--address", s.Address(),
-		"-s", s.schedId(),
+		"-s", schedId,
 	)
 	s.NoError(res.Err)
 
@@ -75,13 +76,13 @@ func (s *SharedServerSuite) TestSchedule_Delete() {
 	res = s.Execute(
 		"schedule", "describe",
 		"--address", s.Address(),
-		"-s", s.schedId(),
+		"-s", schedId,
 	)
 	s.Error(res.Err)
 }
 
 func (s *SharedServerSuite) TestSchedule_Describe() {
-	res := s.createSchedule("--interval", "2s")
+	schedId, schedWfId, res := s.createSchedule("--interval", "2s")
 	s.NoError(res.Err)
 
 	// run once manually so we see a running workflow
@@ -89,7 +90,7 @@ func (s *SharedServerSuite) TestSchedule_Describe() {
 	res = s.Execute(
 		"schedule", "trigger",
 		"--address", s.Address(),
-		"-s", s.schedId(),
+		"-s", schedId,
 	)
 
 	// text
@@ -98,13 +99,13 @@ func (s *SharedServerSuite) TestSchedule_Describe() {
 		res = s.Execute(
 			"schedule", "describe",
 			"--address", s.Address(),
-			"-s", s.schedId(),
+			"-s", schedId,
 		)
 		s.NoError(res.Err)
 		out := res.Stdout.String()
-		s.ContainsOnSameLine(out, "ScheduleId", s.schedId())
+		s.ContainsOnSameLine(out, "ScheduleId", schedId)
 		s.ContainsOnSameLine(out, "Spec", "2s")
-		return AssertContainsOnSameLine(out, "RunningWorkflows", s.schedWfId()+"-") == nil
+		return AssertContainsOnSameLine(out, "RunningWorkflows", schedWfId+"-") == nil
 	}, 10*time.Second, 100*time.Millisecond)
 
 	// json
@@ -112,7 +113,7 @@ func (s *SharedServerSuite) TestSchedule_Describe() {
 	res = s.Execute(
 		"schedule", "describe",
 		"--address", s.Address(),
-		"-s", s.schedId(),
+		"-s", schedId,
 		"-o", "json",
 	)
 	s.NoError(res.Err)
@@ -126,26 +127,26 @@ func (s *SharedServerSuite) TestSchedule_Describe() {
 		} `json:"schedule"`
 	}
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &j))
-	s.Equal(s.schedWfId(), j.Schedule.Action.StartWorkflow.Id)
+	s.Equal(schedWfId, j.Schedule.Action.StartWorkflow.Id)
 }
 
 func (s *SharedServerSuite) TestSchedule_CreateDescribeCalendar() {
-	res := s.createSchedule("--calendar", `{"hour":"2,4","dayOfWeek":"thu,fri"}`)
+	schedId, _, res := s.createSchedule("--calendar", `{"hour":"2,4","dayOfWeek":"thu,fri"}`)
 	s.NoError(res.Err)
 
 	res = s.Execute(
 		"schedule", "describe",
 		"--address", s.Address(),
-		"-s", s.schedId(),
+		"-s", schedId,
 	)
 	s.NoError(res.Err)
 	out := res.Stdout.String()
-	s.ContainsOnSameLine(out, "ScheduleId", s.schedId())
+	s.ContainsOnSameLine(out, "ScheduleId", schedId)
 	s.ContainsOnSameLine(out, "Spec", "dayOfWeek")
 }
 
 func (s *SharedServerSuite) TestSchedule_CreateDescribe_SearchAttributes_Memo() {
-	res := s.createSchedule("--interval", "10d",
+	schedId, _, res := s.createSchedule("--interval", "10d",
 		"--schedule-search-attribute", `CustomKeywordField="schedule-string-val"`,
 		"--search-attribute", `CustomKeywordField="workflow-string-val"`,
 		"--schedule-memo", `schedMemo="data here"`,
@@ -156,7 +157,7 @@ func (s *SharedServerSuite) TestSchedule_CreateDescribe_SearchAttributes_Memo() 
 	res = s.Execute(
 		"schedule", "describe",
 		"--address", s.Address(),
-		"-s", s.schedId(),
+		"-s", schedId,
 	)
 	s.NoError(res.Err)
 	out := res.Stdout.String()
@@ -170,7 +171,7 @@ func (s *SharedServerSuite) TestSchedule_CreateDescribe_SearchAttributes_Memo() 
 }
 
 func (s *SharedServerSuite) TestSchedule_List() {
-	res := s.createSchedule("--interval", "10d")
+	schedId, _, res := s.createSchedule("--interval", "10d")
 	s.NoError(res.Err)
 
 	// table
@@ -182,7 +183,7 @@ func (s *SharedServerSuite) TestSchedule_List() {
 		)
 		s.NoError(res.Err)
 		out := res.Stdout.String()
-		return AssertContainsOnSameLine(out, s.schedId(), "DevWorkflow", "false") == nil
+		return AssertContainsOnSameLine(out, schedId, "DevWorkflow", "false") == nil
 	}, 10*time.Second, time.Second)
 
 	// table long
@@ -194,7 +195,7 @@ func (s *SharedServerSuite) TestSchedule_List() {
 	)
 	s.NoError(res.Err)
 	out := res.Stdout.String()
-	s.ContainsOnSameLine(out, s.schedId(), "DevWorkflow", "false")
+	s.ContainsOnSameLine(out, schedId, "DevWorkflow", "false")
 
 	// table really-long
 
@@ -205,7 +206,7 @@ func (s *SharedServerSuite) TestSchedule_List() {
 	)
 	s.NoError(res.Err)
 	out = res.Stdout.String()
-	s.ContainsOnSameLine(out, s.schedId(), "DevWorkflow", "0s" /*jitter*/, "false", "nil" /*memo*/)
+	s.ContainsOnSameLine(out, schedId, "DevWorkflow", "0s" /*jitter*/, "false", "nil" /*memo*/)
 
 	// json
 
@@ -221,7 +222,7 @@ func (s *SharedServerSuite) TestSchedule_List() {
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &j))
 	ok := false
 	for _, entry := range j {
-		ok = ok || entry.ScheduleId == s.schedId()
+		ok = ok || entry.ScheduleId == schedId
 	}
 	s.True(ok, "schedule not found in json result")
 
@@ -243,13 +244,13 @@ func (s *SharedServerSuite) TestSchedule_List() {
 			ScheduleId string `json:"scheduleId"`
 		}
 		s.NoError(json.Unmarshal(line, &j))
-		ok = ok || j.ScheduleId == s.schedId()
+		ok = ok || j.ScheduleId == schedId
 	}
 	s.True(ok, "schedule not found in jsonl result")
 }
 
 func (s *SharedServerSuite) TestSchedule_Toggle() {
-	res := s.createSchedule("--interval", "10d")
+	schedId, _, res := s.createSchedule("--interval", "10d")
 	s.NoError(res.Err)
 
 	// pause
@@ -257,7 +258,7 @@ func (s *SharedServerSuite) TestSchedule_Toggle() {
 	res = s.Execute(
 		"schedule", "toggle",
 		"--address", s.Address(),
-		"-s", s.schedId(),
+		"-s", schedId,
 		"--pause",
 		"--reason", "testing",
 	)
@@ -266,7 +267,7 @@ func (s *SharedServerSuite) TestSchedule_Toggle() {
 	res = s.Execute(
 		"schedule", "describe",
 		"--address", s.Address(),
-		"-s", s.schedId(),
+		"-s", schedId,
 	)
 	s.NoError(res.Err)
 	out := res.Stdout.String()
@@ -278,7 +279,7 @@ func (s *SharedServerSuite) TestSchedule_Toggle() {
 	res = s.Execute(
 		"schedule", "toggle",
 		"--address", s.Address(),
-		"-s", s.schedId(),
+		"-s", schedId,
 		"--unpause",
 		"--reason", "we're done testing",
 	)
@@ -287,7 +288,7 @@ func (s *SharedServerSuite) TestSchedule_Toggle() {
 	res = s.Execute(
 		"schedule", "describe",
 		"--address", s.Address(),
-		"-s", s.schedId(),
+		"-s", schedId,
 	)
 	s.NoError(res.Err)
 	out = res.Stdout.String()
@@ -296,13 +297,13 @@ func (s *SharedServerSuite) TestSchedule_Toggle() {
 }
 
 func (s *SharedServerSuite) TestSchedule_Trigger() {
-	res := s.createSchedule("--interval", "10d")
+	schedId, schedWfId, res := s.createSchedule("--interval", "10d")
 	s.NoError(res.Err)
 
 	res = s.Execute(
 		"schedule", "trigger",
 		"--address", s.Address(),
-		"-s", s.schedId(),
+		"-s", schedId,
 	)
 	s.NoError(res.Err)
 
@@ -310,22 +311,22 @@ func (s *SharedServerSuite) TestSchedule_Trigger() {
 		res = s.Execute(
 			"workflow", "list",
 			"--address", s.Address(),
-			"-q", fmt.Sprintf(`TemporalScheduledById = "%s"`, s.schedId()),
+			"-q", fmt.Sprintf(`TemporalScheduledById = "%s"`, schedId),
 		)
 		s.NoError(res.Err)
 		out := res.Stdout.String()
-		return AssertContainsOnSameLine(out, s.schedWfId()) == nil
+		return AssertContainsOnSameLine(out, schedWfId) == nil
 	}, 10*time.Second, 100*time.Millisecond)
 }
 
 func (s *SharedServerSuite) TestSchedule_Backfill() {
-	res := s.createSchedule("--interval", "10d/5h")
+	schedId, schedWfId, res := s.createSchedule("--interval", "10d/5h")
 	s.NoError(res.Err)
 
 	res = s.Execute(
 		"schedule", "backfill",
 		"--address", s.Address(),
-		"-s", s.schedId(),
+		"-s", schedId,
 		"--start-time", "2022-02-02T00:00:00Z",
 		"--end-time", "2022-02-28T00:00:00Z",
 		"--overlap-policy", "AllowAll",
@@ -336,26 +337,26 @@ func (s *SharedServerSuite) TestSchedule_Backfill() {
 		res = s.Execute(
 			"workflow", "list",
 			"--address", s.Address(),
-			"-q", fmt.Sprintf(`TemporalScheduledById = "%s"`, s.schedId()),
+			"-q", fmt.Sprintf(`TemporalScheduledById = "%s"`, schedId),
 		)
 		s.NoError(res.Err)
 		out := res.Stdout.String()
-		re := regexp.MustCompile(regexp.QuoteMeta(s.schedWfId() + "-2022-02"))
+		re := regexp.MustCompile(regexp.QuoteMeta(schedWfId + "-2022-02"))
 		return len(re.FindAllString(out, -1)) == 3
 	}, 10*time.Second, 100*time.Millisecond)
 }
 
 func (s *SharedServerSuite) TestSchedule_Update() {
-	res := s.createSchedule("--interval", "10d")
+	schedId, schedWfId, res := s.createSchedule("--interval", "10d")
 	s.NoError(res.Err)
 
 	res = s.Execute(
 		"schedule", "update",
 		"--address", s.Address(),
-		"-s", s.schedId(),
+		"-s", schedId,
 		"--task-queue", "SomeOtherTq",
 		"--type", "SomeOtherWf",
-		"--workflow-id", s.schedWfId(),
+		"--workflow-id", schedWfId,
 		"--interval", "1h",
 	)
 	s.NoError(res.Err)
@@ -364,7 +365,7 @@ func (s *SharedServerSuite) TestSchedule_Update() {
 		res = s.Execute(
 			"schedule", "describe",
 			"--address", s.Address(),
-			"-s", s.schedId(),
+			"-s", schedId,
 			"-o", "json",
 		)
 		s.NoError(res.Err)
