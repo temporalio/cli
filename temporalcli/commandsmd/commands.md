@@ -635,28 +635,20 @@ temporal workflow execute
 Includes options set for [workflow start](#options-set-for-workflow-start).
 Includes options set for [payload input](#options-set-for-payload-input).
 
-### temporal workflow history: Interact directly with a workflow's event history.
-
-Workflow history commands use this syntax: `temporal workflow history COMMAND [ARGS]`.
-
-### temporal workflow history convert: Converts an event history between formats.
+### temporal workflow fix-history-json: Updates an event history JSON file to the current format.
 
 ```
-temporal workflow history convert \
-                --input-format json \
-		--input-file original.json \
-                --output-format json \
-		--output-file reserialized.json
+temporal workflow fix-history-json \
+	--source original.json \
+	--target reserialized.json
 ```
 
 Use the options listed below to change the command's behavior.
 
 #### Options
 
-* `--source-format` (string-enum) - Format of the input file.  Options: json, proto, pb, prototext, pbtxt.  Default: json.
-* `--source-file` (string) - Path to the input file.  Required.
-* `--target-format` (string-enum) - Format of the output file.  Options: json, proto, pb, prototext, pbtxt.  Default: json.
-* `--target-file` (string) - Path to the output file, or standard output if not set.
+* `--source`, `-s` (string) - Path to the input file. Required.
+* `--target`, `-t` (string) - Path to the output file, or standard output if not set.
 
 ### temporal workflow list: List Workflow Executions based on a Query.
 
