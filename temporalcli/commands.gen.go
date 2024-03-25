@@ -1936,9 +1936,9 @@ func NewTemporalWorkflowShowCommand(cctx *CommandContext, parent *TemporalWorkfl
 	s.Command.Use = "show [flags]"
 	s.Command.Short = "Show Event History for a Workflow Execution."
 	if hasHighlighting {
-		s.Command.Long = "The \x1b[1mtemporal workflow show\x1b[0m command provides the Event History for a\nWorkflow Execution.\n\nUse the options listed below to change the command's behavior."
+		s.Command.Long = "The \x1b[1mtemporal workflow show\x1b[0m command provides the Event History for a\nWorkflow Execution. With JSON output specified, this output can be given to\nan SDK to perform a replay.\n\nUse the options listed below to change the command's behavior."
 	} else {
-		s.Command.Long = "The `temporal workflow show` command provides the Event History for a\nWorkflow Execution.\n\nUse the options listed below to change the command's behavior."
+		s.Command.Long = "The `temporal workflow show` command provides the Event History for a\nWorkflow Execution. With JSON output specified, this output can be given to\nan SDK to perform a replay.\n\nUse the options listed below to change the command's behavior."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())

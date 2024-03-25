@@ -2,6 +2,7 @@ package temporalcli_test
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -256,7 +257,7 @@ func (s *SharedServerSuite) TestWorkflow_Show_JSON() {
 		s.Context,
 		client.StartWorkflowOptions{TaskQueue: s.Worker.Options.TaskQueue},
 		DevWorkflow,
-		"ignored",
+		"workflow-param",
 	)
 	s.NoError(err)
 
@@ -270,6 +271,8 @@ func (s *SharedServerSuite) TestWorkflow_Show_JSON() {
 	out := res.Stdout.String()
 	s.Contains(out, `"events": [`)
 	s.Contains(out, `"eventType": "EVENT_TYPE_WORKFLOW_EXECUTION_STARTED"`)
+	// Make sure payloads are still encoded non-shorthand
+	s.Contains(out, base64.StdEncoding.EncodeToString([]byte(`"workflow-param"`)))
 
 	// Send signals to complete
 	s.NoError(s.Client.SignalWorkflow(s.Context, run.GetID(), "", "my-signal", nil))
