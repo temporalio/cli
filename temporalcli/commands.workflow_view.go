@@ -269,7 +269,7 @@ func (*TemporalWorkflowCountCommand) run(*CommandContext, []string) error {
 	return fmt.Errorf("TODO")
 }
 
-func (c *TemporalWorkflowShowCommand) run(cctx *CommandContext, args []string) error {
+func (c *TemporalWorkflowShowCommand) run(cctx *CommandContext, _ []string) error {
 	// Call describe
 	cl, err := c.Parent.ClientOptions.dialClient(cctx)
 	if err != nil {
@@ -308,7 +308,13 @@ func (c *TemporalWorkflowShowCommand) run(cctx *CommandContext, args []string) e
 		}
 		outStruct := history.History{}
 		outStruct.Events = events
-		if err := cctx.Printer.PrintStructured(&outStruct, printer.StructuredOptions{}); err != nil {
+		// We intentionally disable shorthand because "workflow show" for JSON needs
+		// to support SDK replayers which do not work with shorthand
+		jsonPayloadShorthand := false
+		err = cctx.Printer.PrintStructured(&outStruct, printer.StructuredOptions{
+			OverrideJSONPayloadShorthand: &jsonPayloadShorthand,
+		})
+		if err != nil {
 			return fmt.Errorf("failed printing structured output: %w", err)
 		}
 	}
