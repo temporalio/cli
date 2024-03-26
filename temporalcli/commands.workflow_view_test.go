@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/temporalio/cli/temporalcli"
+	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/workflow"
@@ -327,4 +329,91 @@ func (s *SharedServerSuite) TestWorkflow_List() {
 	out = res.Stdout.String()
 	s.ContainsOnSameLine(out, "name", "DevWorkflow")
 	s.ContainsOnSameLine(out, "status", "WORKFLOW_EXECUTION_STATUS_COMPLETED")
+}
+
+func (s *SharedServerSuite) TestWorkflow_Count() {
+	s.Worker.OnDevWorkflow(func(ctx workflow.Context, shouldComplete any) (any, error) {
+		// Only complete if shouldComplete is a true bool
+		shouldCompleteBool, _ := shouldComplete.(bool)
+		return nil, workflow.Await(ctx, func() bool { return shouldCompleteBool })
+	})
+
+	// Create 3 that complete and 2 that don't
+	for i := 0; i < 5; i++ {
+		_, err := s.Client.ExecuteWorkflow(
+			s.Context,
+			client.StartWorkflowOptions{TaskQueue: s.Worker.Options.TaskQueue},
+			DevWorkflow,
+			i < 3,
+		)
+		s.NoError(err)
+	}
+
+	// List and confirm they are all there in expected statuses
+	s.Eventually(
+		func() bool {
+			resp, err := s.Client.ListWorkflow(s.Context, &workflowservice.ListWorkflowExecutionsRequest{
+				Query: "TaskQueue = '" + s.Worker.Options.TaskQueue + "'",
+			})
+			s.NoError(err)
+			var completed, running int
+			for _, exec := range resp.Executions {
+				if exec.Status == enums.WORKFLOW_EXECUTION_STATUS_COMPLETED {
+					completed++
+				} else if exec.Status == enums.WORKFLOW_EXECUTION_STATUS_RUNNING {
+					running++
+				}
+			}
+			return completed == 3 && running == 2
+		},
+		10*time.Second,
+		100*time.Millisecond,
+	)
+
+	// Simple count w/out grouping
+	res := s.Execute(
+		"workflow", "count",
+		"--address", s.Address(),
+		"--query", "TaskQueue = '"+s.Worker.Options.TaskQueue+"'",
+	)
+	s.NoError(res.Err)
+	out := res.Stdout.String()
+	s.Equal("Total: 5", strings.TrimSpace(out))
+
+	// Grouped
+	res = s.Execute(
+		"workflow", "count",
+		"--address", s.Address(),
+		"--query", "TaskQueue = '"+s.Worker.Options.TaskQueue+"' GROUP BY ExecutionStatus",
+	)
+	s.NoError(res.Err)
+	out = res.Stdout.String()
+	s.Contains(out, "Total: 5")
+	s.Contains(out, "Group total: 2, values: Running")
+	s.Contains(out, "Group total: 3, values: Completed")
+
+	// Simple count w/out grouping JSON
+	res = s.Execute(
+		"workflow", "count",
+		"--address", s.Address(),
+		"--query", "TaskQueue = '"+s.Worker.Options.TaskQueue+"'",
+		"-o", "json",
+	)
+	s.NoError(res.Err)
+	out = res.Stdout.String()
+	// Proto JSON makes this count a string
+	s.Contains(out, `"count": "5"`)
+
+	// Grouped JSON
+	res = s.Execute(
+		"workflow", "count",
+		"--address", s.Address(),
+		"--query", "TaskQueue = '"+s.Worker.Options.TaskQueue+"' GROUP BY ExecutionStatus",
+		"-o", "jsonl",
+	)
+	s.NoError(res.Err)
+	out = res.Stdout.String()
+	s.Contains(out, `"count":"5"`)
+	s.Contains(out, `{"groupValues":["Running"],"count":"2"}`)
+	s.Contains(out, `{"groupValues":["Completed"],"count":"3"}`)
 }

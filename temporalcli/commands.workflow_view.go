@@ -14,6 +14,7 @@ import (
 	"go.temporal.io/api/workflow/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/converter"
 )
 
 func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []string) error {
@@ -265,8 +266,51 @@ func (c *TemporalWorkflowListCommand) pageFetcher(
 	}
 }
 
-func (*TemporalWorkflowCountCommand) run(*CommandContext, []string) error {
-	return fmt.Errorf("TODO")
+func (c *TemporalWorkflowCountCommand) run(cctx *CommandContext, _ []string) error {
+	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	resp, err := cl.WorkflowService().CountWorkflowExecutions(cctx, &workflowservice.CountWorkflowExecutionsRequest{
+		Namespace: c.Parent.Namespace,
+		Query:     c.Query,
+	})
+	if err != nil {
+		return err
+	}
+
+	// Just dump response on JSON, otherwise print total and groups
+	if cctx.JSONOutput {
+		// Shorthand does not apply to search attributes currently, so we're going
+		// to remove the "type" from the metadata encoding on group values to make
+		// it apply
+		for _, group := range resp.Groups {
+			for _, payload := range group.GroupValues {
+				delete(payload.GetMetadata(), "type")
+			}
+		}
+		return cctx.Printer.PrintStructured(resp, printer.StructuredOptions{})
+	}
+
+	cctx.Printer.Printlnf("Total: %v", resp.Count)
+	for _, group := range resp.Groups {
+		// Payload values are search attributes, so we can use the default converter
+		var valueStr string
+		for _, payload := range group.GroupValues {
+			var value any
+			if err := converter.GetDefaultDataConverter().FromPayload(payload, &value); err != nil {
+				value = fmt.Sprintf("<failed converting: %v>", err)
+			}
+			if valueStr != "" {
+				valueStr += ", "
+			}
+			valueStr += fmt.Sprintf("%v", value)
+		}
+		cctx.Printer.Printlnf("Group total: %v, values: %v", group.Count, valueStr)
+	}
+	return nil
 }
 
 func (c *TemporalWorkflowShowCommand) run(cctx *CommandContext, args []string) error {
