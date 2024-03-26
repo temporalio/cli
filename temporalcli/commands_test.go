@@ -167,8 +167,10 @@ type SharedServerSuite struct {
 	*CommandHarness
 
 	*DevServer
-	Worker *DevWorker
-	Suite  suite.Suite
+	Suite suite.Suite
+
+	lazyWorker     *DevWorker
+	lazyWorkerLock sync.Mutex
 }
 
 func (s *SharedServerSuite) SetupSuite() {
@@ -185,7 +187,6 @@ func (s *SharedServerSuite) SetupSuite() {
 			s.Server.Stop()
 		}
 	}()
-	s.Worker = s.DevServer.StartDevWorker(s.Suite.T(), DevWorkerOptions{})
 	success = true
 }
 
@@ -194,7 +195,6 @@ func (s *SharedServerSuite) TearDownSuite() {
 }
 
 func (s *SharedServerSuite) Stop() {
-	s.Worker.Stop()
 	s.DevServer.Stop()
 }
 
@@ -202,7 +202,9 @@ func (s *SharedServerSuite) SetupTest() {
 	// Clear log buffer
 	s.ResetLogOutput()
 	// Reset worker
-	s.Worker.Reset()
+	s.lazyWorkerLock.Lock()
+	s.lazyWorker = nil
+	s.lazyWorkerLock.Unlock()
 	// Create new command harness
 	s.CommandHarness = NewCommandHarness(s.Suite.T())
 }
@@ -216,6 +218,24 @@ func (s *SharedServerSuite) TearDownTest() {
 		s.CommandHarness.Close()
 	}
 	s.CommandHarness = nil
+	// Stop worker
+	s.lazyWorkerLock.Lock()
+	defer s.lazyWorkerLock.Unlock()
+	if s.lazyWorker != nil {
+		s.lazyWorker.Stop()
+		s.lazyWorker = nil
+	}
+}
+
+// Worker gets a worker specific to this test (starting lazily if needed).
+func (s *SharedServerSuite) Worker() *DevWorker {
+	// Start lazily
+	s.lazyWorkerLock.Lock()
+	defer s.lazyWorkerLock.Unlock()
+	if s.lazyWorker == nil {
+		s.lazyWorker = s.DevServer.StartDevWorker(s.Suite.T(), DevWorkerOptions{})
+	}
+	return s.lazyWorker
 }
 
 func (s *SharedServerSuite) T() *testing.T                 { return s.Suite.T() }

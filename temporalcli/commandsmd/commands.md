@@ -723,7 +723,13 @@ Includes options set for [single workflow or batch](#options-set-single-workflow
 
 ### temporal workflow count: Count Workflow Executions.
 
-TODO
+The `temporal workflow count` command returns a count of [Workflow Executions](/concepts/what-is-a-workflow-execution).
+
+Use the options listed below to change the command's behavior.
+
+#### Options
+
+* `--query`, `-q` (string) - Filter results using a SQL-like query.
 
 ### temporal workflow delete: Deletes a Workflow Execution.
 
@@ -1018,10 +1024,6 @@ Use the options listed below to change the behavior of this command.
   Workflow Id must be set.
 * `--reason` (string) - Reason for termination. Defaults to message with the current user's name.
 * `--yes`, `-y` (bool) - Confirm prompt to perform batch. Only allowed if query is present.
-
-### temporal workflow trace: Trace progress of a Workflow Execution and its children.
-
-TODO
 
 ### temporal workflow update: Updates a running workflow synchronously.
 

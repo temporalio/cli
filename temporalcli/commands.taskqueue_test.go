@@ -13,7 +13,7 @@ import (
 func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
 	// Wait until the poller appears
 	s.Eventually(func() bool {
-		desc, err := s.Client.DescribeTaskQueue(s.Context, s.Worker.Options.TaskQueue, enums.TASK_QUEUE_TYPE_WORKFLOW)
+		desc, err := s.Client.DescribeTaskQueue(s.Context, s.Worker().Options.TaskQueue, enums.TASK_QUEUE_TYPE_WORKFLOW)
 		s.NoError(err)
 		for _, poller := range desc.Pollers {
 			if poller.Identity == s.DevServer.Options.ClientOptions.Identity {
@@ -27,7 +27,7 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
 	res := s.Execute(
 		"task-queue", "describe",
 		"--address", s.Address(),
-		"--task-queue", s.Worker.Options.TaskQueue,
+		"--task-queue", s.Worker().Options.TaskQueue,
 	)
 	s.NoError(res.Err)
 	// For text, just making sure our client identity is present is good enough
@@ -38,7 +38,7 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
 		"task-queue", "describe",
 		"-o", "json",
 		"--address", s.Address(),
-		"--task-queue", s.Worker.Options.TaskQueue,
+		"--task-queue", s.Worker().Options.TaskQueue,
 	)
 	s.NoError(res.Err)
 	var jsonOut struct {
@@ -55,7 +55,7 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
 		"task-queue", "describe",
 		"-o", "json",
 		"--address", s.Address(),
-		"--task-queue", s.Worker.Options.TaskQueue,
+		"--task-queue", s.Worker().Options.TaskQueue,
 		"--partitions", "10",
 	)
 	s.NoError(res.Err)

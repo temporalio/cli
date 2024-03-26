@@ -18,7 +18,7 @@ import (
 func (s *SharedServerSuite) createSchedule(args ...string) (schedId, schedWfId string, res *CommandResult) {
 	schedId = fmt.Sprintf("sched-%x", rand.Uint32())
 	schedWfId = fmt.Sprintf("my-wf-id-%x", rand.Uint32())
-	s.Worker.OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
 		return nil, workflow.Sleep(ctx, 10*time.Second)
 	})
 	s.T().Cleanup(func() {
@@ -40,7 +40,7 @@ func (s *SharedServerSuite) createSchedule(args ...string) (schedId, schedWfId s
 		"schedule", "create",
 		"--address", s.Address(),
 		"-s", schedId,
-		"--task-queue", s.Worker.Options.TaskQueue,
+		"--task-queue", s.Worker().Options.TaskQueue,
 		"--type", "DevWorkflow",
 		"--workflow-id", schedWfId,
 	}, args...)...,

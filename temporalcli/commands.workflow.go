@@ -187,10 +187,6 @@ func (c *TemporalWorkflowTerminateCommand) run(cctx *CommandContext, _ []string)
 	return nil
 }
 
-func (*TemporalWorkflowTraceCommand) run(*CommandContext, []string) error {
-	return fmt.Errorf("TODO")
-}
-
 func (c *TemporalWorkflowUpdateCommand) run(cctx *CommandContext, args []string) error {
 	cl, err := c.Parent.ClientOptions.dialClient(cctx)
 	if err != nil {

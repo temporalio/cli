@@ -30,13 +30,13 @@ import (
 
 func (s *SharedServerSuite) TestWorkflow_Start_SimpleSuccess() {
 	// Text
-	s.Worker.OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
 		return map[string]string{"foo": "bar"}, nil
 	})
 	res := s.Execute(
 		"workflow", "start",
 		"--address", s.Address(),
-		"--task-queue", s.Worker.Options.TaskQueue,
+		"--task-queue", s.Worker().Options.TaskQueue,
 		"--type", "DevWorkflow",
 		"--workflow-id", "my-id1",
 	)
@@ -45,7 +45,7 @@ func (s *SharedServerSuite) TestWorkflow_Start_SimpleSuccess() {
 	out := res.Stdout.String()
 	s.ContainsOnSameLine(out, "WorkflowId", "my-id1")
 	s.Contains(out, "RunId")
-	s.ContainsOnSameLine(out, "TaskQueue", s.Worker.Options.TaskQueue)
+	s.ContainsOnSameLine(out, "TaskQueue", s.Worker().Options.TaskQueue)
 	s.ContainsOnSameLine(out, "Type", "DevWorkflow")
 	s.ContainsOnSameLine(out, "Namespace", "default")
 
@@ -54,7 +54,7 @@ func (s *SharedServerSuite) TestWorkflow_Start_SimpleSuccess() {
 		"workflow", "start",
 		"-o", "json",
 		"--address", s.Address(),
-		"--task-queue", s.Worker.Options.TaskQueue,
+		"--task-queue", s.Worker().Options.TaskQueue,
 		"--type", "DevWorkflow",
 		"--workflow-id", "my-id2",
 	)
@@ -63,7 +63,7 @@ func (s *SharedServerSuite) TestWorkflow_Start_SimpleSuccess() {
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
 	s.Equal("my-id2", jsonOut["workflowId"])
 	s.NotEmpty(jsonOut["runId"])
-	s.Equal(s.Worker.Options.TaskQueue, jsonOut["taskQueue"])
+	s.Equal(s.Worker().Options.TaskQueue, jsonOut["taskQueue"])
 	s.Equal("DevWorkflow", jsonOut["type"])
 	s.Equal("default", jsonOut["namespace"])
 }
@@ -89,7 +89,7 @@ func (s *SharedServerSuite) TestWorkflow_Start_StartDelay() {
 	res := s.Execute(
 		"workflow", "start",
 		"--address", s.Address(),
-		"--task-queue", s.Worker.Options.TaskQueue,
+		"--task-queue", s.Worker().Options.TaskQueue,
 		"--type", "DevWorkflow",
 		"--workflow-id", "my-id1",
 		"-i", `["val1", "val2"]`,
@@ -104,13 +104,13 @@ func (s *SharedServerSuite) TestWorkflow_Start_StartDelay() {
 
 func (s *SharedServerSuite) TestWorkflow_Execute_SimpleSuccess() {
 	// Text
-	s.Worker.OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
 		return map[string]string{"foo": "bar"}, nil
 	})
 	res := s.Execute(
 		"workflow", "execute",
 		"--address", s.Address(),
-		"--task-queue", s.Worker.Options.TaskQueue,
+		"--task-queue", s.Worker().Options.TaskQueue,
 		"--type", "DevWorkflow",
 		"--workflow-id", "my-id1",
 		"-i", `["val1", "val2"]`,
@@ -119,7 +119,7 @@ func (s *SharedServerSuite) TestWorkflow_Execute_SimpleSuccess() {
 	out := res.Stdout.String()
 	// Confirm running (most of this check is done on start test)
 	s.ContainsOnSameLine(out, "WorkflowId", "my-id1")
-	s.Equal([]any{"val1", "val2"}, s.Worker.DevWorkflowLastInput())
+	s.Equal([]any{"val1", "val2"}, s.Worker().DevWorkflowLastInput())
 	// Confirm we have some events
 	s.ContainsOnSameLine(out, "1", "WorkflowExecutionStarted")
 	s.ContainsOnSameLine(out, "2", "WorkflowTaskScheduled")
@@ -134,7 +134,7 @@ func (s *SharedServerSuite) TestWorkflow_Execute_SimpleSuccess() {
 		"workflow", "execute",
 		"-o", "json",
 		"--address", s.Address(),
-		"--task-queue", s.Worker.Options.TaskQueue,
+		"--task-queue", s.Worker().Options.TaskQueue,
 		"--type", "DevWorkflow",
 		"--workflow-id", "my-id2",
 	)
@@ -149,13 +149,13 @@ func (s *SharedServerSuite) TestWorkflow_Execute_SimpleSuccess() {
 
 func (s *SharedServerSuite) TestWorkflow_Execute_SimpleFailure() {
 	// Text
-	s.Worker.OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
 		return nil, fmt.Errorf("intentional failure")
 	})
 	res := s.Execute(
 		"workflow", "execute",
 		"--address", s.Address(),
-		"--task-queue", s.Worker.Options.TaskQueue,
+		"--task-queue", s.Worker().Options.TaskQueue,
 		"--type", "DevWorkflow",
 		"--workflow-id", "my-id1",
 	)
@@ -171,7 +171,7 @@ func (s *SharedServerSuite) TestWorkflow_Execute_SimpleFailure() {
 		"workflow", "execute",
 		"-o", "json",
 		"--address", s.Address(),
-		"--task-queue", s.Worker.Options.TaskQueue,
+		"--task-queue", s.Worker().Options.TaskQueue,
 		"--type", "DevWorkflow",
 		"--workflow-id", "my-id2",
 	)
@@ -185,17 +185,17 @@ func (s *SharedServerSuite) TestWorkflow_Execute_SimpleFailure() {
 
 func (s *SharedServerSuite) TestWorkflow_Execute_NestedFailure() {
 	// Text
-	s.Worker.OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
 		err := workflow.ExecuteActivity(ctx, DevActivity).Get(ctx, nil)
 		return nil, err
 	})
-	s.Worker.OnDevActivity(func(ctx context.Context, input any) (any, error) {
+	s.Worker().OnDevActivity(func(ctx context.Context, input any) (any, error) {
 		return nil, fmt.Errorf("intentional activity failure")
 	})
 	res := s.Execute(
 		"workflow", "execute",
 		"--address", s.Address(),
-		"--task-queue", s.Worker.Options.TaskQueue,
+		"--task-queue", s.Worker().Options.TaskQueue,
 		"--type", "DevWorkflow",
 		"--workflow-id", "my-id1",
 	)
@@ -211,7 +211,7 @@ func (s *SharedServerSuite) TestWorkflow_Execute_NestedFailure() {
 		"workflow", "execute",
 		"-o", "json",
 		"--address", s.Address(),
-		"--task-queue", s.Worker.Options.TaskQueue,
+		"--task-queue", s.Worker().Options.TaskQueue,
 		"--type", "DevWorkflow",
 		"--workflow-id", "my-id2",
 	)
@@ -228,7 +228,7 @@ func (s *SharedServerSuite) TestWorkflow_Execute_NestedFailure() {
 func (s *SharedServerSuite) TestWorkflow_Execute_Cancel() {
 	// Very bad™️ channel tricks
 	doCancelChan := make(chan struct{})
-	s.Worker.OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
 		doCancelChan <- struct{}{}
 		err := workflow.Await(ctx, func() bool {
 			return false
@@ -244,7 +244,7 @@ func (s *SharedServerSuite) TestWorkflow_Execute_Cancel() {
 	res := s.Execute(
 		"workflow", "execute",
 		"--address", s.Address(),
-		"--task-queue", s.Worker.Options.TaskQueue,
+		"--task-queue", s.Worker().Options.TaskQueue,
 		"--type", "DevWorkflow",
 		"--workflow-id", "my-id1",
 	)
@@ -261,7 +261,7 @@ func (s *SharedServerSuite) TestWorkflow_Execute_Cancel() {
 		"workflow", "execute",
 		"-o", "json",
 		"--address", s.Address(),
-		"--task-queue", s.Worker.Options.TaskQueue,
+		"--task-queue", s.Worker().Options.TaskQueue,
 		"--type", "DevWorkflow",
 		"--workflow-id", "my-id2",
 	)
@@ -272,7 +272,7 @@ func (s *SharedServerSuite) TestWorkflow_Execute_Cancel() {
 }
 
 func (s *SharedServerSuite) TestWorkflow_Execute_Timeout() {
-	s.Worker.OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
 		err := workflow.Await(ctx, func() bool {
 			return false
 		})
@@ -283,7 +283,7 @@ func (s *SharedServerSuite) TestWorkflow_Execute_Timeout() {
 	res := s.Execute(
 		"workflow", "execute",
 		"--address", s.Address(),
-		"--task-queue", s.Worker.Options.TaskQueue,
+		"--task-queue", s.Worker().Options.TaskQueue,
 		"--type", "DevWorkflow",
 		"--execution-timeout", "1ms",
 		"--workflow-id", "my-id1",
@@ -297,7 +297,7 @@ func (s *SharedServerSuite) TestWorkflow_Execute_Timeout() {
 		"workflow", "execute",
 		"-o", "json",
 		"--address", s.Address(),
-		"--task-queue", s.Worker.Options.TaskQueue,
+		"--task-queue", s.Worker().Options.TaskQueue,
 		"--type", "DevWorkflow",
 		"--execution-timeout", "1ms",
 		"--workflow-id", "my-id2",
@@ -309,7 +309,7 @@ func (s *SharedServerSuite) TestWorkflow_Execute_Timeout() {
 }
 
 func (s *SharedServerSuite) TestWorkflow_Execute_ContinueAsNew() {
-	s.Worker.OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
 		if input.(float64) < 2 {
 			return nil, workflow.NewContinueAsNewError(ctx, "DevWorkflow", input.(float64)+1)
 		}
@@ -320,7 +320,7 @@ func (s *SharedServerSuite) TestWorkflow_Execute_ContinueAsNew() {
 	res := s.Execute(
 		"workflow", "execute",
 		"--address", s.Address(),
-		"--task-queue", s.Worker.Options.TaskQueue,
+		"--task-queue", s.Worker().Options.TaskQueue,
 		"--type", "DevWorkflow",
 		"-i", "1",
 		"--workflow-id", "my-id1",
@@ -348,7 +348,7 @@ func (s *SharedServerSuite) TestWorkflow_Execute_ProtoJSON_Input() {
 	startWorkflowReqSerialized, err := protojson.Marshal(startWorkflowReq)
 	s.NoError(err)
 
-	s.Worker.Worker.RegisterWorkflowWithOptions(func(
+	s.Worker().Worker.RegisterWorkflowWithOptions(func(
 		ctx workflow.Context,
 		input *workflowservice.StartWorkflowExecutionRequest,
 	) (*workflowservice.StartWorkflowExecutionRequest, error) {
@@ -359,7 +359,7 @@ func (s *SharedServerSuite) TestWorkflow_Execute_ProtoJSON_Input() {
 	res := s.Execute(
 		"workflow", "execute",
 		"--address", s.Address(),
-		"--task-queue", s.Worker.Options.TaskQueue,
+		"--task-queue", s.Worker().Options.TaskQueue,
 		"--type", "ProtoJSONWorkflow",
 		"--input-meta", "encoding=json/protobuf",
 		"-i", string(startWorkflowReqSerialized),
@@ -377,7 +377,7 @@ func (s *SharedServerSuite) TestWorkflow_Failure_On_Start() {
 		res := s.Execute(
 			"workflow", cmd,
 			"--address", s.Address(),
-			"--task-queue", s.Worker.Options.TaskQueue,
+			"--task-queue", s.Worker().Options.TaskQueue,
 			"--type", "DevWorkflow",
 			"--workflow-id", veryLongID,
 		)
@@ -420,7 +420,7 @@ func (s *SharedServerSuite) TestWorkflow_Execute_ClientHeaders() {
 	res := s.Execute(
 		"workflow", "execute",
 		"--address", s.Address(),
-		"--task-queue", s.Worker.Options.TaskQueue,
+		"--task-queue", s.Worker().Options.TaskQueue,
 		"--type", "DevWorkflow",
 		"--workflow-id", "my-id1",
 		"-i", `["val1", "val2"]`,
@@ -440,7 +440,7 @@ func (s *SharedServerSuite) TestWorkflow_Execute_EnvVars() {
 	}
 	res := s.Execute(
 		"workflow", "execute",
-		"--task-queue", s.Worker.Options.TaskQueue,
+		"--task-queue", s.Worker().Options.TaskQueue,
 		"--type", "DevWorkflow",
 		"--workflow-id", "my-id1",
 	)
@@ -469,7 +469,7 @@ func (s *SharedServerSuite) TestWorkflow_Execute_EnvConfig() {
 		"--env", "myenv",
 		"--env-file", tmpFile.Name(),
 		"--address", s.Address(),
-		"--task-queue", s.Worker.Options.TaskQueue,
+		"--task-queue", s.Worker().Options.TaskQueue,
 		"--type", "DevWorkflow",
 		"--workflow-id", "my-id1",
 		"--input", `"cli-input"`,
@@ -483,7 +483,7 @@ func (s *SharedServerSuite) TestWorkflow_Execute_EnvConfig() {
 		"--env", "myenv",
 		"--env-file", tmpFile.Name(),
 		"--address", s.Address(),
-		"--task-queue", s.Worker.Options.TaskQueue,
+		"--task-queue", s.Worker().Options.TaskQueue,
 		"--type", "DevWorkflow",
 		"--workflow-id", "my-id2",
 	)

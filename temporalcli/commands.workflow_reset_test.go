@@ -37,11 +37,11 @@ func (s *SharedServerSuite) awaitNextWorkflow(searchAttr string) {
 
 func (s *SharedServerSuite) TestWorkflow_Reset_ToFirstWorkflowTask() {
 	var wfExecutions, activityExecutions int
-	s.Worker.OnDevActivity(func(ctx context.Context, a any) (any, error) {
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
 		activityExecutions++
 		return nil, nil
 	})
-	s.Worker.OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
 		workflow.ExecuteActivity(ctx, DevActivity, 1).Get(ctx, nil)
 		wfExecutions++
 		return nil, nil
@@ -52,7 +52,7 @@ func (s *SharedServerSuite) TestWorkflow_Reset_ToFirstWorkflowTask() {
 	run, err := s.Client.ExecuteWorkflow(
 		s.Context,
 		client.StartWorkflowOptions{
-			TaskQueue:        s.Worker.Options.TaskQueue,
+			TaskQueue:        s.Worker().Options.TaskQueue,
 			SearchAttributes: map[string]any{"CustomKeywordField": searchAttr},
 		},
 		DevWorkflow,
@@ -79,11 +79,11 @@ func (s *SharedServerSuite) TestWorkflow_Reset_ToFirstWorkflowTask() {
 
 func (s *SharedServerSuite) TestWorkflow_Reset_ToLastWorkflowTask() {
 	var wfExecutions, activityExecutions int
-	s.Worker.OnDevActivity(func(ctx context.Context, a any) (any, error) {
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
 		activityExecutions++
 		return nil, nil
 	})
-	s.Worker.OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
 		workflow.ExecuteActivity(ctx, DevActivity, 1).Get(ctx, nil)
 		wfExecutions++
 		return nil, nil
@@ -94,7 +94,7 @@ func (s *SharedServerSuite) TestWorkflow_Reset_ToLastWorkflowTask() {
 	run, err := s.Client.ExecuteWorkflow(
 		s.Context,
 		client.StartWorkflowOptions{
-			TaskQueue:        s.Worker.Options.TaskQueue,
+			TaskQueue:        s.Worker().Options.TaskQueue,
 			SearchAttributes: map[string]any{"CustomKeywordField": searchAttr},
 		},
 		DevWorkflow,
@@ -123,7 +123,7 @@ func (s *SharedServerSuite) TestWorkflow_Reset_ToEventID() {
 	// We execute two activities and will resume just before the second one. We use the same activity for both
 	// but a unique input so we can check which fake activity is executed
 	var oneExecutions, twoExecutions int
-	s.Worker.OnDevActivity(func(ctx context.Context, a any) (any, error) {
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
 		n, ok := a.(float64)
 		if !ok {
 			return nil, fmt.Errorf("expected float64, not %T (%v)", a, a)
@@ -139,7 +139,7 @@ func (s *SharedServerSuite) TestWorkflow_Reset_ToEventID() {
 		return n, nil
 	})
 
-	s.Worker.OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
 		var res any
 		if err := workflow.ExecuteActivity(ctx, DevActivity, 1).Get(ctx, &res); err != nil {
 			return res, err
@@ -153,7 +153,7 @@ func (s *SharedServerSuite) TestWorkflow_Reset_ToEventID() {
 	run, err := s.Client.ExecuteWorkflow(
 		s.Context,
 		client.StartWorkflowOptions{
-			TaskQueue:        s.Worker.Options.TaskQueue,
+			TaskQueue:        s.Worker().Options.TaskQueue,
 			SearchAttributes: map[string]any{"CustomKeywordField": searchAttr},
 		},
 		DevWorkflow,
