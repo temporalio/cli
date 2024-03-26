@@ -16,7 +16,7 @@ import (
 
 func (s *SharedServerSuite) TestWorkflow_Signal_SingleWorkflowSuccess() {
 	// Make workflow wait for signal and then return it
-	s.Worker.OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
 		var ret any
 		workflow.GetSignalChannel(ctx, "my-signal").Receive(ctx, &ret)
 		return ret, nil
@@ -25,7 +25,7 @@ func (s *SharedServerSuite) TestWorkflow_Signal_SingleWorkflowSuccess() {
 	// Start the workflow
 	run, err := s.Client.ExecuteWorkflow(
 		s.Context,
-		client.StartWorkflowOptions{TaskQueue: s.Worker.Options.TaskQueue},
+		client.StartWorkflowOptions{TaskQueue: s.Worker().Options.TaskQueue},
 		DevWorkflow,
 		"ignored",
 	)
@@ -62,7 +62,7 @@ func (s *SharedServerSuite) TestWorkflow_Signal_BatchWorkflowSuccessJSON() {
 
 func (s *SharedServerSuite) testSignalBatchWorkflow(json bool) *CommandResult {
 	// Make workflow wait for signal and then return it
-	s.Worker.OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
 		var ret any
 		workflow.GetSignalChannel(ctx, "my-signal").Receive(ctx, &ret)
 		return ret, nil
@@ -75,7 +75,7 @@ func (s *SharedServerSuite) testSignalBatchWorkflow(json bool) *CommandResult {
 		run, err := s.Client.ExecuteWorkflow(
 			s.Context,
 			client.StartWorkflowOptions{
-				TaskQueue:        s.Worker.Options.TaskQueue,
+				TaskQueue:        s.Worker().Options.TaskQueue,
 				SearchAttributes: map[string]any{"CustomKeywordField": searchAttr},
 			},
 			DevWorkflow,
@@ -120,7 +120,7 @@ func (s *SharedServerSuite) testSignalBatchWorkflow(json bool) *CommandResult {
 }
 
 func (s *SharedServerSuite) TestWorkflow_Delete_BatchWorkflowSuccess() {
-	s.Worker.OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
 		ctx.Done().Receive(ctx, nil)
 		return nil, ctx.Err()
 	})
@@ -180,7 +180,7 @@ func (s *SharedServerSuite) TestWorkflow_Delete_BatchWorkflowSuccess() {
 }
 
 func (s *SharedServerSuite) TestWorkflow_Terminate_SingleWorkflowSuccess_WithoutReason() {
-	s.Worker.OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
 		ctx.Done().Receive(ctx, nil)
 		return nil, ctx.Err()
 	})
@@ -188,7 +188,7 @@ func (s *SharedServerSuite) TestWorkflow_Terminate_SingleWorkflowSuccess_Without
 	// Start the workflow
 	run, err := s.Client.ExecuteWorkflow(
 		s.Context,
-		client.StartWorkflowOptions{TaskQueue: s.Worker.Options.TaskQueue},
+		client.StartWorkflowOptions{TaskQueue: s.Worker().Options.TaskQueue},
 		DevWorkflow,
 		"ignored",
 	)
@@ -220,7 +220,7 @@ func (s *SharedServerSuite) TestWorkflow_Terminate_SingleWorkflowSuccess_Without
 }
 
 func (s *SharedServerSuite) TestWorkflow_Terminate_SingleWorkflowSuccess_WithReason() {
-	s.Worker.OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
 		ctx.Done().Receive(ctx, nil)
 		return nil, ctx.Err()
 	})
@@ -228,7 +228,7 @@ func (s *SharedServerSuite) TestWorkflow_Terminate_SingleWorkflowSuccess_WithRea
 	// Start the workflow
 	run, err := s.Client.ExecuteWorkflow(
 		s.Context,
-		client.StartWorkflowOptions{TaskQueue: s.Worker.Options.TaskQueue},
+		client.StartWorkflowOptions{TaskQueue: s.Worker().Options.TaskQueue},
 		DevWorkflow,
 		"ignored",
 	)
@@ -274,7 +274,7 @@ func (s *SharedServerSuite) TestWorkflow_Terminate_BatchWorkflowSuccessJSON() {
 }
 
 func (s *SharedServerSuite) testTerminateBatchWorkflow(json bool) *CommandResult {
-	s.Worker.OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
 		ctx.Done().Receive(ctx, nil)
 		return nil, ctx.Err()
 	})
@@ -286,7 +286,7 @@ func (s *SharedServerSuite) testTerminateBatchWorkflow(json bool) *CommandResult
 		run, err := s.Client.ExecuteWorkflow(
 			s.Context,
 			client.StartWorkflowOptions{
-				TaskQueue:        s.Worker.Options.TaskQueue,
+				TaskQueue:        s.Worker().Options.TaskQueue,
 				SearchAttributes: map[string]any{"CustomKeywordField": searchAttr},
 			},
 			DevWorkflow,
@@ -341,7 +341,7 @@ func (s *SharedServerSuite) testTerminateBatchWorkflow(json bool) *CommandResult
 
 func (s *SharedServerSuite) TestWorkflow_Cancel_SingleWorkflowSuccess() {
 	// Make workflow wait for cancel and then return the context's error
-	s.Worker.OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
 		ctx.Done().Receive(ctx, nil)
 		return nil, ctx.Err()
 	})
@@ -349,7 +349,7 @@ func (s *SharedServerSuite) TestWorkflow_Cancel_SingleWorkflowSuccess() {
 	// Start the workflow
 	run, err := s.Client.ExecuteWorkflow(
 		s.Context,
-		client.StartWorkflowOptions{TaskQueue: s.Worker.Options.TaskQueue},
+		client.StartWorkflowOptions{TaskQueue: s.Worker().Options.TaskQueue},
 		DevWorkflow,
 		"ignored",
 	)
@@ -370,7 +370,7 @@ func (s *SharedServerSuite) TestWorkflow_Cancel_SingleWorkflowSuccess() {
 func (s *SharedServerSuite) TestWorkflow_Update() {
 	updateName := "test-update"
 
-	s.Worker.OnDevWorkflow(func(ctx workflow.Context, val any) (any, error) {
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, val any) (any, error) {
 		// setup a simple workflow which receives non-negative floats in updates and adds them to a running counter
 		counter, ok := val.(float64)
 		if !ok {
@@ -408,7 +408,7 @@ func (s *SharedServerSuite) TestWorkflow_Update() {
 	input := rand.Intn(100)
 	run, err := s.Client.ExecuteWorkflow(
 		s.Context,
-		client.StartWorkflowOptions{TaskQueue: s.Worker.Options.TaskQueue},
+		client.StartWorkflowOptions{TaskQueue: s.Worker().Options.TaskQueue},
 		DevWorkflow,
 		input,
 	)
@@ -457,7 +457,7 @@ func (s *SharedServerSuite) TestWorkflow_Cancel_BatchWorkflowSuccessJSON() {
 
 func (s *SharedServerSuite) testCancelBatchWorkflow(json bool) *CommandResult {
 	// Make workflow wait for cancel and then return the context's error
-	s.Worker.OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
 		ctx.Done().Receive(ctx, nil)
 		return nil, ctx.Err()
 	})
@@ -469,7 +469,7 @@ func (s *SharedServerSuite) testCancelBatchWorkflow(json bool) *CommandResult {
 		run, err := s.Client.ExecuteWorkflow(
 			s.Context,
 			client.StartWorkflowOptions{
-				TaskQueue:        s.Worker.Options.TaskQueue,
+				TaskQueue:        s.Worker().Options.TaskQueue,
 				SearchAttributes: map[string]any{"CustomKeywordField": searchAttr},
 			},
 			DevWorkflow,
@@ -519,7 +519,7 @@ func (s *SharedServerSuite) TestWorkflow_Query_SingleWorkflowSuccessJSON() {
 }
 
 func (s *SharedServerSuite) testQueryWorkflow(json bool) {
-	s.Worker.OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
 		err := workflow.SetQueryHandler(ctx, "my-query", func(arg string) (any, error) {
 			retme := struct {
 				Echo  string `json:"input"`
@@ -538,7 +538,7 @@ func (s *SharedServerSuite) testQueryWorkflow(json bool) {
 	// Start the workflow
 	run, err := s.Client.ExecuteWorkflow(
 		s.Context,
-		client.StartWorkflowOptions{TaskQueue: s.Worker.Options.TaskQueue},
+		client.StartWorkflowOptions{TaskQueue: s.Worker().Options.TaskQueue},
 		DevWorkflow,
 		"ignored",
 	)
@@ -594,7 +594,7 @@ func (s *SharedServerSuite) TestWorkflow_Stack_SingleWorkflowSuccessJSON() {
 
 func (s *SharedServerSuite) testStackWorkflow(json bool) {
 	// Make workflow wait for signal and then return it
-	s.Worker.OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
 		done := false
 		workflow.Go(ctx, func(ctx workflow.Context) {
 			_ = workflow.Await(ctx, func() bool {
@@ -610,7 +610,7 @@ func (s *SharedServerSuite) testStackWorkflow(json bool) {
 	// Start the workflow
 	run, err := s.Client.ExecuteWorkflow(
 		s.Context,
-		client.StartWorkflowOptions{TaskQueue: s.Worker.Options.TaskQueue},
+		client.StartWorkflowOptions{TaskQueue: s.Worker().Options.TaskQueue},
 		DevWorkflow,
 		"ignored",
 	)

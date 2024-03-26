@@ -109,13 +109,13 @@ func (s *SharedServerSuite) TestActivity_Fail_InvalidDetail() {
 // Test helpers
 
 func (s *SharedServerSuite) waitActivityStarted() client.WorkflowRun {
-	s.Worker.OnDevActivity(func(ctx context.Context, a any) (any, error) {
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
 		time.Sleep(0xFFFF * time.Hour)
 		return nil, nil
 	})
 	run, err := s.Client.ExecuteWorkflow(
 		s.Context,
-		client.StartWorkflowOptions{TaskQueue: s.Worker.Options.TaskQueue},
+		client.StartWorkflowOptions{TaskQueue: s.Worker().Options.TaskQueue},
 		DevWorkflow,
 		"ignored",
 	)

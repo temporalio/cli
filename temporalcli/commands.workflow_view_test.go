@@ -17,11 +17,11 @@ import (
 
 func (s *SharedServerSuite) TestWorkflow_Describe_ActivityFailing() {
 	// Set activity to just continually error
-	s.Worker.OnDevActivity(func(ctx context.Context, a any) (any, error) {
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
 		return nil, fmt.Errorf("intentional error")
 	})
 
-	s.Worker.OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
 		ctx = workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
 			StartToCloseTimeout: 10 * time.Second,
 		})
@@ -33,7 +33,7 @@ func (s *SharedServerSuite) TestWorkflow_Describe_ActivityFailing() {
 	// Start the workflow and wait until it has at least reached activity failure
 	run, err := s.Client.ExecuteWorkflow(
 		s.Context,
-		client.StartWorkflowOptions{TaskQueue: s.Worker.Options.TaskQueue},
+		client.StartWorkflowOptions{TaskQueue: s.Worker().Options.TaskQueue},
 		DevWorkflow,
 		"ignored",
 	)
@@ -74,7 +74,7 @@ func (s *SharedServerSuite) TestWorkflow_Describe_Completed() {
 	// Start the workflow and wait until it has at least reached activity failure
 	run, err := s.Client.ExecuteWorkflow(
 		s.Context,
-		client.StartWorkflowOptions{TaskQueue: s.Worker.Options.TaskQueue},
+		client.StartWorkflowOptions{TaskQueue: s.Worker().Options.TaskQueue},
 		DevWorkflow,
 		map[string]string{"foo": "bar"},
 	)
@@ -110,7 +110,7 @@ func (s *SharedServerSuite) TestWorkflow_Describe_ResetPoints() {
 	// Start the workflow and wait until it has at least reached activity failure
 	run, err := s.Client.ExecuteWorkflow(
 		s.Context,
-		client.StartWorkflowOptions{TaskQueue: s.Worker.Options.TaskQueue},
+		client.StartWorkflowOptions{TaskQueue: s.Worker().Options.TaskQueue},
 		DevWorkflow,
 		map[string]string{"foo": "bar"},
 	)
@@ -146,7 +146,7 @@ func (s *SharedServerSuite) TestWorkflow_Describe_ResetPoints() {
 }
 
 func (s *SharedServerSuite) TestWorkflow_Show_Follow() {
-	s.Worker.OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
 		sigs := 0
 		for {
 			workflow.GetSignalChannel(ctx, "my-signal").Receive(ctx, nil)
@@ -161,7 +161,7 @@ func (s *SharedServerSuite) TestWorkflow_Show_Follow() {
 	// Start the workflow
 	run, err := s.Client.ExecuteWorkflow(
 		s.Context,
-		client.StartWorkflowOptions{TaskQueue: s.Worker.Options.TaskQueue},
+		client.StartWorkflowOptions{TaskQueue: s.Worker().Options.TaskQueue},
 		DevWorkflow,
 		"ignored",
 	)
@@ -193,7 +193,7 @@ func (s *SharedServerSuite) TestWorkflow_Show_Follow() {
 }
 
 func (s *SharedServerSuite) TestWorkflow_Show_NoFollow() {
-	s.Worker.OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
 		sigs := 0
 		for {
 			workflow.GetSignalChannel(ctx, "my-signal").Receive(ctx, nil)
@@ -208,7 +208,7 @@ func (s *SharedServerSuite) TestWorkflow_Show_NoFollow() {
 	// Start the workflow
 	run, err := s.Client.ExecuteWorkflow(
 		s.Context,
-		client.StartWorkflowOptions{TaskQueue: s.Worker.Options.TaskQueue},
+		client.StartWorkflowOptions{TaskQueue: s.Worker().Options.TaskQueue},
 		DevWorkflow,
 		"ignored",
 	)
@@ -241,7 +241,7 @@ func (s *SharedServerSuite) TestWorkflow_Show_NoFollow() {
 }
 
 func (s *SharedServerSuite) TestWorkflow_Show_JSON() {
-	s.Worker.OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
 		sigs := 0
 		for {
 			workflow.GetSignalChannel(ctx, "my-signal").Receive(ctx, nil)
@@ -256,7 +256,7 @@ func (s *SharedServerSuite) TestWorkflow_Show_JSON() {
 	// Start the workflow
 	run, err := s.Client.ExecuteWorkflow(
 		s.Context,
-		client.StartWorkflowOptions{TaskQueue: s.Worker.Options.TaskQueue},
+		client.StartWorkflowOptions{TaskQueue: s.Worker().Options.TaskQueue},
 		DevWorkflow,
 		"ignored",
 	)
@@ -292,7 +292,7 @@ func (s *SharedServerSuite) TestWorkflow_Show_JSON() {
 }
 
 func (s *SharedServerSuite) TestWorkflow_List() {
-	s.Worker.OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
 		return a, nil
 	})
 
@@ -300,7 +300,7 @@ func (s *SharedServerSuite) TestWorkflow_List() {
 	for i := 0; i < 3; i++ {
 		run, err := s.Client.ExecuteWorkflow(
 			s.Context,
-			client.StartWorkflowOptions{TaskQueue: s.Worker.Options.TaskQueue},
+			client.StartWorkflowOptions{TaskQueue: s.Worker().Options.TaskQueue},
 			DevWorkflow,
 			strconv.Itoa(i),
 		)
@@ -311,7 +311,7 @@ func (s *SharedServerSuite) TestWorkflow_List() {
 	res := s.Execute(
 		"workflow", "list",
 		"--address", s.Address(),
-		"--query", fmt.Sprintf(`TaskQueue="%s"`, s.Worker.Options.TaskQueue),
+		"--query", fmt.Sprintf(`TaskQueue="%s"`, s.Worker().Options.TaskQueue),
 	)
 	s.NoError(res.Err)
 	out := res.Stdout.String()
@@ -321,7 +321,7 @@ func (s *SharedServerSuite) TestWorkflow_List() {
 	res = s.Execute(
 		"workflow", "list",
 		"--address", s.Address(),
-		"--query", fmt.Sprintf(`TaskQueue="%s"`, s.Worker.Options.TaskQueue),
+		"--query", fmt.Sprintf(`TaskQueue="%s"`, s.Worker().Options.TaskQueue),
 		"-o", "json",
 	)
 	s.NoError(res.Err)
@@ -332,7 +332,7 @@ func (s *SharedServerSuite) TestWorkflow_List() {
 }
 
 func (s *SharedServerSuite) TestWorkflow_Count() {
-	s.Worker.OnDevWorkflow(func(ctx workflow.Context, shouldComplete any) (any, error) {
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, shouldComplete any) (any, error) {
 		// Only complete if shouldComplete is a true bool
 		shouldCompleteBool, _ := shouldComplete.(bool)
 		return nil, workflow.Await(ctx, func() bool { return shouldCompleteBool })
@@ -342,7 +342,7 @@ func (s *SharedServerSuite) TestWorkflow_Count() {
 	for i := 0; i < 5; i++ {
 		_, err := s.Client.ExecuteWorkflow(
 			s.Context,
-			client.StartWorkflowOptions{TaskQueue: s.Worker.Options.TaskQueue},
+			client.StartWorkflowOptions{TaskQueue: s.Worker().Options.TaskQueue},
 			DevWorkflow,
 			i < 3,
 		)
@@ -353,7 +353,7 @@ func (s *SharedServerSuite) TestWorkflow_Count() {
 	s.Eventually(
 		func() bool {
 			resp, err := s.Client.ListWorkflow(s.Context, &workflowservice.ListWorkflowExecutionsRequest{
-				Query: "TaskQueue = '" + s.Worker.Options.TaskQueue + "'",
+				Query: "TaskQueue = '" + s.Worker().Options.TaskQueue + "'",
 			})
 			s.NoError(err)
 			var completed, running int
@@ -374,7 +374,7 @@ func (s *SharedServerSuite) TestWorkflow_Count() {
 	res := s.Execute(
 		"workflow", "count",
 		"--address", s.Address(),
-		"--query", "TaskQueue = '"+s.Worker.Options.TaskQueue+"'",
+		"--query", "TaskQueue = '"+s.Worker().Options.TaskQueue+"'",
 	)
 	s.NoError(res.Err)
 	out := res.Stdout.String()
@@ -384,7 +384,7 @@ func (s *SharedServerSuite) TestWorkflow_Count() {
 	res = s.Execute(
 		"workflow", "count",
 		"--address", s.Address(),
-		"--query", "TaskQueue = '"+s.Worker.Options.TaskQueue+"' GROUP BY ExecutionStatus",
+		"--query", "TaskQueue = '"+s.Worker().Options.TaskQueue+"' GROUP BY ExecutionStatus",
 	)
 	s.NoError(res.Err)
 	out = res.Stdout.String()
@@ -396,7 +396,7 @@ func (s *SharedServerSuite) TestWorkflow_Count() {
 	res = s.Execute(
 		"workflow", "count",
 		"--address", s.Address(),
-		"--query", "TaskQueue = '"+s.Worker.Options.TaskQueue+"'",
+		"--query", "TaskQueue = '"+s.Worker().Options.TaskQueue+"'",
 		"-o", "json",
 	)
 	s.NoError(res.Err)
@@ -408,7 +408,7 @@ func (s *SharedServerSuite) TestWorkflow_Count() {
 	res = s.Execute(
 		"workflow", "count",
 		"--address", s.Address(),
-		"--query", "TaskQueue = '"+s.Worker.Options.TaskQueue+"' GROUP BY ExecutionStatus",
+		"--query", "TaskQueue = '"+s.Worker().Options.TaskQueue+"' GROUP BY ExecutionStatus",
 		"-o", "jsonl",
 	)
 	s.NoError(res.Err)
