@@ -8,8 +8,10 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -33,6 +35,29 @@ import (
 // Version is the value put as the default command version. This is often
 // replaced at build time via ldflags.
 var Version = "0.0.0-DEV"
+
+// Execute runs the Temporal CLI with the given context and options. This
+// intentionally does not return an error but rather invokes Fail on the
+// options.
+func Execute(ctx context.Context, options CommandOptions) {
+	// Create context and run
+	cctx, cancel, err := NewCommandContext(ctx, options)
+	if err == nil {
+		defer cancel()
+		cmd := NewTemporalCommand(cctx)
+		cmd.Command.SetArgs(cctx.Options.Args)
+		err = cmd.Command.ExecuteContext(cctx)
+	}
+
+	// Use failure handler, but can still return
+	if err != nil {
+		cctx.Options.Fail(err)
+	}
+	// If no command ever actually got run, exit nonzero
+	if !cctx.ActuallyRanCommand {
+		cctx.Options.Fail(fmt.Errorf("unknown command"))
+	}
+}
 
 type CommandContext struct {
 	// This context is closed on interrupt
@@ -304,27 +329,16 @@ func (c *CommandContext) promptString(message string, expected string, autoConfi
 	return line == expected, nil
 }
 
-// Execute runs the Temporal CLI with the given context and options. This
-// intentionally does not return an error but rather invokes Fail on the
-// options.
-func Execute(ctx context.Context, options CommandOptions) {
-	// Create context and run
-	cctx, cancel, err := NewCommandContext(ctx, options)
-	if err == nil {
-		defer cancel()
-		cmd := NewTemporalCommand(cctx)
-		cmd.Command.SetArgs(cctx.Options.Args)
-		err = cmd.Command.ExecuteContext(cctx)
+func (c *CommandContext) openBrowser(url string) error {
+	switch runtime.GOOS {
+	case "linux":
+		return exec.Command("xdg-open", url).Start()
+	case "windows":
+		return exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
+	case "darwin":
+		return exec.Command("open", url).Start()
 	}
-
-	// Use failure handler, but can still return
-	if err != nil {
-		cctx.Options.Fail(err)
-	}
-	// If no command ever actually got run, exit nonzero
-	if !cctx.ActuallyRanCommand {
-		cctx.Options.Fail(fmt.Errorf("unknown command"))
-	}
+	return fmt.Errorf("unrecognized OS")
 }
 
 func (c *TemporalCommand) initCommand(cctx *CommandContext) {
@@ -459,6 +473,51 @@ func writeEnvConfigFile(file string, env map[string]map[string]string) error {
 		return fmt.Errorf("failed writing env file: %w", err)
 	}
 	return nil
+}
+
+// This can be empty if no user HOME dir found
+func defaultCloudLoginTokenFile() string {
+	// No env file if no $HOME
+	if dir, err := os.UserHomeDir(); err == nil {
+		return filepath.Join(dir, ".config/temporalio/cloud-token.json")
+	}
+	return ""
+}
+
+// Both response and error can be nil if none found
+func readCloudLoginTokenFile(file string) (*CloudOAuthTokenResponse, error) {
+	var resp CloudOAuthTokenResponse
+	if _, err := os.Stat(file); os.IsNotExist(err) {
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	} else if b, err := os.ReadFile(file); err != nil {
+		return nil, err
+	} else if err := json.Unmarshal(b, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+func writeCloudLoginTokenFile(file string, resp *CloudOAuthTokenResponse) error {
+	// Make parent directories as needed
+	b, err := json.MarshalIndent(resp, "", "  ")
+	if err != nil {
+		return err
+	} else if err := os.MkdirAll(filepath.Dir(file), 0700); err != nil {
+		return err
+	}
+	return os.WriteFile(file, b, 0600)
+}
+
+// Does not error if file does not exist
+func deleteCloudLoginTokenFile(file string) error {
+	if _, err := os.Stat(file); os.IsNotExist(err) {
+		return nil
+	} else if err != nil {
+		return err
+	}
+	return os.Remove(file)
 }
 
 func newNopLogger() *slog.Logger { return slog.New(discardLogHandler{}) }

@@ -4,11 +4,14 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
 	"os/user"
 	"strings"
+	"time"
 
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/sdk/client"
@@ -35,6 +38,13 @@ func (c *ClientOptions) dialClient(cctx *CommandContext) (client.Client, error) 
 	// API key
 	if c.ApiKey != "" {
 		clientOptions.Credentials = client.NewAPIKeyStaticCredentials(c.ApiKey)
+	}
+
+	// Cloud options
+	if c.Cloud {
+		if err := c.applyCloudOptions(cctx, &clientOptions); err != nil {
+			return nil, err
+		}
 	}
 
 	// Headers
@@ -77,9 +87,62 @@ func (c *ClientOptions) dialClient(cctx *CommandContext) (client.Client, error) 
 	return client.Dial(clientOptions)
 }
 
+func (c *ClientOptions) applyCloudOptions(cctx *CommandContext, clientOptions *client.Options) error {
+	// Must have non-default namespace with single dot
+	if strings.Count(c.Namespace, ".") != 1 {
+		return fmt.Errorf("namespace must be provided and be a cloud namespace")
+	}
+	// Address must have been left at default or be expected address
+	// TODO(cretz): This endpoint is not currently working
+	clientOptions.HostPort = c.Namespace + ".tmprl.cloud:7233"
+	if c.Address != "127.0.0.1:7233" && c.Address != clientOptions.HostPort {
+		return fmt.Errorf("address should not be provided for cloud")
+	}
+	// If there is no API key and no TLS auth, try to use login token or fail
+	if c.ApiKey == "" && c.TlsCertData == "" && c.TlsCertPath == "" {
+		file := defaultCloudLoginTokenFile()
+		if file == "" {
+			return fmt.Errorf("no auth provided and unable to find home dir for cloud token file")
+		}
+		resp, err := readCloudLoginTokenFile(file)
+		if err != nil {
+			return fmt.Errorf("failed reading cloud token file: %w", err)
+		} else if resp == nil {
+			return fmt.Errorf("no auth provided and no cloud token present")
+		}
+		// Help the user out with a simple expiration check, but never fail if
+		// unable to parse
+		if t := getJWTExpiry(resp.AccessToken); !t.IsZero() {
+			if t.Before(time.Now()) {
+				cctx.Logger.Warn("Cloud token expired", "expiration", t)
+			} else {
+				cctx.Logger.Debug("Cloud token expires", "expiration", t)
+			}
+		}
+		// TODO(cretz): Use gRPC OAuth creds with refresh token
+		clientOptions.Credentials = client.NewAPIKeyStaticCredentials(resp.AccessToken)
+	}
+	return nil
+}
+
+// Zero time if unable to get
+func getJWTExpiry(token string) time.Time {
+	if tokenPieces := strings.Split(token, "."); len(tokenPieces) == 3 {
+		if b, err := base64.RawURLEncoding.DecodeString(tokenPieces[1]); err == nil {
+			var withExp struct {
+				Exp int64 `json:"exp"`
+			}
+			if json.Unmarshal(b, &withExp) == nil && withExp.Exp > 0 {
+				return time.Unix(withExp.Exp, 0)
+			}
+		}
+	}
+	return time.Time{}
+}
+
 func (c *ClientOptions) tlsConfig() (*tls.Config, error) {
 	// We need TLS if any of these TLS options are set
-	if !c.Tls &&
+	if !c.Cloud && !c.Tls &&
 		c.TlsCaPath == "" && c.TlsCertPath == "" && c.TlsKeyPath == "" &&
 		c.TlsCaData == "" && c.TlsCertData == "" && c.TlsKeyData == "" {
 		return nil, nil

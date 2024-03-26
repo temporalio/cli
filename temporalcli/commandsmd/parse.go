@@ -43,6 +43,7 @@ type CommandOption struct {
 	DefaultValue string
 	EnumValues   []string
 	EnvVar       string
+	Hidden       bool
 }
 
 func ParseMarkdownCommands() ([]*Command, error) {
@@ -273,6 +274,8 @@ func (c *CommandOption) parseBulletLine(bullet string) error {
 			c.EnumValues = strings.Split(strings.TrimPrefix(lastSentence, "Options: "), ", ")
 		case strings.HasPrefix(lastSentence, "Env: "):
 			c.EnvVar = strings.TrimPrefix(lastSentence, "Env: ")
+		case lastSentence == "Hidden":
+			c.Hidden = true
 		default:
 			return nil
 		}

@@ -348,5 +348,8 @@ func (c *CommandOption) writeFlagBuilding(selfVar, flagVar string, w *codeWriter
 	if c.EnvVar != "" {
 		w.writeLinef("cctx.BindFlagEnvVar(%v.Lookup(%q), %q)", flagVar, c.Name, c.EnvVar)
 	}
+	if c.Hidden {
+		w.writeLinef("%v.Lookup(%q).Hidden = true", flagVar, c.Name)
+	}
 	return nil
 }
