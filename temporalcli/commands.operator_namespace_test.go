@@ -39,7 +39,7 @@ func (s *SharedServerSuite) TestOperator_NamespaceCreateListAndDescribe() {
 		"operator", "namespace", "describe",
 		"--address", s.Address(),
 		"--output", "json",
-		nsName,
+		"-n", nsName,
 	)
 	s.NoError(res.Err)
 	var describeResp workflowservice.DescribeNamespaceResponse
@@ -69,7 +69,7 @@ func (s *SharedServerSuite) TestNamespaceUpdate() {
 		"--description", "description before",
 		"--email", "email@before",
 		"--retention", "24h",
-		nsName,
+		"-n", nsName,
 	)
 	s.NoError(res.Err)
 
@@ -82,7 +82,7 @@ func (s *SharedServerSuite) TestNamespaceUpdate() {
 		"--data", "k1=v1",
 		"--data", "k2=v2",
 		"--output", "json",
-		nsName,
+		"-n", nsName,
 	)
 	s.NoError(res.Err)
 
@@ -90,7 +90,7 @@ func (s *SharedServerSuite) TestNamespaceUpdate() {
 		"operator", "namespace", "describe",
 		"--address", s.Address(),
 		"--output", "json",
-		nsName,
+		"-n", nsName,
 	)
 	s.NoError(res.Err)
 	var describeResp workflowservice.DescribeNamespaceResponse
@@ -109,7 +109,7 @@ func (s *SharedServerSuite) TestNamespaceUpdate_NamespaceDontExist() {
 		"operator", "namespace", "update",
 		"--email", "email@after",
 		"--address", s.Address(),
-		nsName,
+		"-n", nsName,
 	)
 	s.Error(res.Err)
 	s.Contains(res.Err.Error(), "Namespace missing-namespace is not found")
@@ -128,7 +128,7 @@ func (s *SharedServerSuite) TestDeleteNamespace() {
 		"operator", "namespace", "describe",
 		"--address", s.Address(),
 		"--output", "json",
-		nsName,
+		"-n", nsName,
 	)
 	s.NoError(res.Err)
 	var describeResp workflowservice.DescribeNamespaceResponse
@@ -139,7 +139,7 @@ func (s *SharedServerSuite) TestDeleteNamespace() {
 		"operator", "namespace", "delete",
 		"--address", s.Address(),
 		"--yes",
-		nsName,
+		"-n", nsName,
 	)
 	s.NoError(res.Err)
 
@@ -147,7 +147,7 @@ func (s *SharedServerSuite) TestDeleteNamespace() {
 		"operator", "namespace", "describe",
 		"--address", s.Address(),
 		"--output", "json",
-		nsName,
+		"-n", nsName,
 	)
 	s.Error(res.Err)
 	s.Contains(res.Err.Error(), "Namespace test-namespace is not found")
@@ -158,7 +158,7 @@ func (s *SharedServerSuite) TestDescribeWithID() {
 		"operator", "namespace", "describe",
 		"--address", s.Address(),
 		"--output", "json",
-		"default",
+		"-n", "default",
 	)
 	s.NoError(res.Err)
 
@@ -177,4 +177,29 @@ func (s *SharedServerSuite) TestDescribeWithID() {
 
 	s.NoError(temporalcli.UnmarshalProtoJSONWithOptions(res.Stdout.Bytes(), &describeResp2, true))
 	s.Equal(describeResp1.NamespaceInfo, describeResp2.NamespaceInfo)
+}
+
+func (s *SharedServerSuite) TestDescribeBothNameAndID() {
+	res := s.Execute(
+		"operator", "namespace", "describe",
+		"--address", s.Address(),
+		"--output", "json",
+		"-n", "asdf",
+		"--namespace-id=ad7ef0ce-7139-4333-b8ee-60a79c8fda1d",
+	)
+	s.Error(res.Err)
+	s.ContainsOnSameLine(res.Err.Error(), "provide one of", "but not both")
+}
+
+func (s *SharedServerSuite) TestUpdateOldAndNewNSArgs() {
+	res := s.Execute(
+		"operator", "namespace", "update",
+		"--address", s.Address(),
+		"--output", "json",
+		"--email", "foo@bar",
+		"-n", "asdf",
+		"asdf",
+	)
+	s.Error(res.Err)
+	s.ContainsOnSameLine(res.Err.Error(), "namespace was provided as both an argument", "and a flag")
 }

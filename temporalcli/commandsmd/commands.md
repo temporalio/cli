@@ -49,7 +49,7 @@ This document has a specific structure used by a parser. Here are the rules:
 
 #### Options
 
-* `--env` (string) - Environment to read environment-specific flags from. Default: default. Env: TEMPORAL_ENV.
+* `--env`, `-E` (string) - Environment to read environment-specific flags from. Default: default. Env: TEMPORAL_ENV.
 * `--env-file` (string) - File to read all environments (defaults to `$HOME/.config/temporalio/temporal.yaml`).
 * `--log-level` (string-enum) - Log level. Options: debug, info, warn, error, never. Default: info.
 * `--log-format` (string-enum) - Log format. Options: text, json. Default: text.
@@ -139,60 +139,85 @@ For future reference, provide a reason for terminating the Batch Job.
 ### temporal env: Manage environments.
 
 Use the '--env <env name>' option with other commands to point the CLI at a different Temporal Server instance. If --env
-is not passed, the 'default' environment is used.
+is not passed, the 'default' environment is used.  (You can also use `-E` as a shorthand for `--env`.)
 
-### temporal env delete [environment or property]: Delete an environment or environment property.
+### temporal env delete: Delete an environment or environment property.
 
-`temporal env delete [environment or property]`
+`temporal env delete -E environment [-k property]`
 
 Delete an environment or just a single property:
 
-`temporal env delete prod`
-`temporal env delete prod.tls-cert-path`
+`temporal env delete -E prod`
+`temporal env delete -E prod -k tls-cert-path`
+
+If the environment is not specified, the `default` environment is deleted:
+
+`temporal env delete -k tls-cert-path`
 
 <!--
-* exact-args=1
+* maximum-args=1
 -->
 
-### temporal env get [environment or property]: Print environment properties.
+#### Options
 
-`temporal env get [environment or property]`
+* `--key`, `-k` (string) - The name of the property.
+
+### temporal env get: Print environment properties.
+
+`temporal env get -E environment`
 
 Print all properties of the 'prod' environment:
 
 `temporal env get prod`
 
+```
 tls-cert-path  /home/my-user/certs/client.cert
 tls-key-path   /home/my-user/certs/client.key
 address        temporal.example.com:7233
 namespace      someNamespace
+```
 
 Print a single property:
 
-`temporal env get prod.tls-key-path`
+`temporal env get -E prod -k tls-key-path`
 
+```
 tls-key-path  /home/my-user/certs/cluster.key
+```
+
+If the environment is not specified, the `default` environment is used.
 
 <!--
-* exact-args=1
+* maximum-args=1
 -->
+
+#### Options
+
+* `--key`, `-k` (string) - The name of the property.
 
 ### temporal env list: Print all environments.
 
 List all environments.
 
-### temporal env set [environment.property name] [property value]: Set environment properties.
+### temporal env set: Set environment properties.
 
-`temporal env set [environment.property name] [property value]`
+`temporal env set -E environment -k property -v value`
 
 Property names match CLI option names, for example '--address' and '--tls-cert-path':
 
-`temporal env set prod.address 127.0.0.1:7233`
-`temporal env set prod.tls-cert-path  /home/my-user/certs/cluster.cert`
+`temporal env set -E prod -k address -v 127.0.0.1:7233`
+`temporal env set -E prod -k tls-cert-path -v /home/my-user/certs/cluster.cert`
+
+If the environment is not specified, the `default` environment is used.
 
 <!--
-* exact-args=2
+* maximum-args=2
 -->
+
+#### Options
+
+* `--key`, `-k` (string) - The name of the property.
+* `--value`, `-v` (string) - The value to set the property to.
 
 ### temporal operator: Manage a Temporal deployment.
 
@@ -212,7 +237,7 @@ Cluster commands follow this syntax: `temporal operator cluster [command] [comma
 
 ### temporal operator cluster describe: Describe a cluster
 
-`temporal operator cluster describe` command shows information about the Cluster. 
+`temporal operator cluster describe` command shows information about the Cluster.
 
 #### Options
 
@@ -244,7 +269,7 @@ Cluster commands follow this syntax: `temporal operator cluster [command] [comma
 
 ### temporal operator cluster upsert: Add a remote
 
-`temporal operator cluster upsert` command allows the user to add or update a remote Cluster. 
+`temporal operator cluster upsert` command allows the user to add or update a remote Cluster.
 
 #### Options
 
@@ -257,21 +282,21 @@ Namespace commands perform operations on Namespaces contained in the Temporal Cl
 
 Cluster commands follow this syntax: `temporal operator namespace [command] [command options]`
 
-### temporal operator namespace create [namespace]: Registers a new Namespace.
+### temporal operator namespace create: Registers a new Namespace.
 
 The temporal operator namespace create command creates a new Namespace on the Server.
 Namespaces can be created on the active Cluster, or any named Cluster.
-`temporal operator namespace create --cluster=MyCluster example-1`
+`temporal operator namespace create --cluster=MyCluster -n example-1`
 
 Global Namespaces can also be created.
-`temporal operator namespace create --global example-2`
+`temporal operator namespace create --global -n example-2`
 
 Other settings, such as retention and Visibility Archival State, can be configured as needed.
 For example, the Visibility Archive can be set on a separate URI.
-`temporal operator namespace create --retention=5 --visibility-archival-state=enabled --visibility-uri=some-uri example-3`
+`temporal operator namespace create --retention=5 --visibility-archival-state=enabled --visibility-uri=some-uri -n example-3`
 
 <!--
-* exact-args=1
+* maximum-args=1
 -->
 
 #### Options
@@ -293,7 +318,7 @@ For example, the Visibility Archive can be set on a separate URI.
 The temporal operator namespace delete command deletes a given Namespace from the system.
 
 <!--
-* exact-args=1
+* maximum-args=1
 -->
 
 #### Options
@@ -303,10 +328,10 @@ The temporal operator namespace delete command deletes a given Namespace from th
 ### temporal operator namespace describe [namespace]: Describe a Namespace by its name or ID.
 
 The temporal operator namespace describe command provides Namespace information.
-Namespaces are identified by Namespace ID.
+Namespaces are identified either by Namespace ID or by name.
 
 `temporal operator namespace describe --namespace-id=some-namespace-id`
-`temporal operator namespace describe example-namespace-name`
+`temporal operator namespace describe -n example-namespace-name`
 
 <!--
 * maximum-args=1
@@ -320,22 +345,22 @@ Namespaces are identified by Namespace ID.
 
 The temporal operator namespace list command lists all Namespaces on the Server.
 
-### temporal operator namespace update [namespace]: Updates a Namespace.
+### temporal operator namespace update: Updates a Namespace.
 
 The temporal operator namespace update command updates a Namespace.
 
 Namespaces can be assigned a different active Cluster.
-`temporal operator namespace update --active-cluster=NewActiveCluster`
+`temporal operator namespace update -n namespace --active-cluster=NewActiveCluster`
 
 Namespaces can also be promoted to global Namespaces.
-`temporal operator namespace update --promote-global`
+`temporal operator namespace update -n namespace --promote-global`
 
 Any Archives that were previously enabled or disabled can be changed through this command.
 However, URI values for archival states cannot be changed after the states are enabled.
-`temporal operator namespace update --history-archival-state=enabled --visibility-archival-state=disabled`
+`temporal operator namespace update -n namespace --history-archival-state=enabled --visibility-archival-state=disabled`
 
 <!--
-* exact-args=1
+* maximum-args=1
 -->
 
 #### Options
@@ -871,7 +896,7 @@ temporal workflow reset --workflow-id=meaningful-business-id --type=LastContinue
 ```
 temporal workflow reset --workflow-id=meaningful-business-id --event-id=MyLastEvent
 ```
-For batch reset only FirstWorkflowTask, LastWorkflowTask or BuildId can be used. Workflow Id, run Id and event Id 
+For batch reset only FirstWorkflowTask, LastWorkflowTask or BuildId can be used. Workflow Id, run Id and event Id
 should not be set.
 Use the options listed below to change reset behavior.
 
@@ -1027,7 +1052,7 @@ Use the options listed below to change the behavior of this command.
 
 ### temporal workflow update: Updates a running workflow synchronously.
 
-The `temporal workflow update` command is used to synchronously [Update](/concepts/what-is-an-update) a 
+The `temporal workflow update` command is used to synchronously [Update](/concepts/what-is-an-update) a
 [WorkflowExecution](/concepts/what-is-a-workflow-execution) by [ID](/concepts/what-is-a-workflow-id).
 
 ```
@@ -1044,7 +1069,7 @@ Use the options listed below to change the command's behavior.
 * `--name` (string) - Update Name. Required.
 * `--workflow-id`, `-w` (string) - Workflow Id. Required.
 * `--run-id`, `-r` (string) - Run Id. If unset, the currently running Workflow Execution receives the Update.
-* `--first-execution-run-id` (string) - Send the Update to the last Workflow Execution in the chain that started 
+* `--first-execution-run-id` (string) - Send the Update to the last Workflow Execution in the chain that started
   with this Run Id.
 
 Includes options set for [payload input](#options-set-for-payload-input).
