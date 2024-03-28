@@ -13,7 +13,7 @@ func (c *TemporalEnvCommand) envNameAndKey(cctx *CommandContext, args[] string, 
 		cctx.Logger.Warn("Arguments to env commands are deprecated; please use -E and/or -k instead.")
 
 		if (c.Parent.Env != "default" || keyFlag != "") {
-			return "", "", fmt.Errorf("cannot specify both an argument and -E/-k; please use -e and/or -k")
+			return "", "", fmt.Errorf("cannot specify both an argument and -E/-k; please use -E and/or -k")
 		}
 
 		keyPieces := strings.Split(args[0], ".")
