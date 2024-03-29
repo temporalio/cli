@@ -55,7 +55,7 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	s.Command.PersistentFlags().Var(&s.TimeFormat, "time-format", "Time format. Accepted values: relative, iso, raw.")
 	s.Color = NewStringEnum([]string{"always", "never", "auto"}, "auto")
 	s.Command.PersistentFlags().Var(&s.Color, "color", "Set coloring. Accepted values: always, never, auto.")
-	s.Command.PersistentFlags().BoolVar(&s.NoJsonShorthandPayloads, "no-json-shorthand-payloads", false, "Always all payloads as raw payloads even if they are JSON.")
+	s.Command.PersistentFlags().BoolVar(&s.NoJsonShorthandPayloads, "no-json-shorthand-payloads", false, "Always show all payloads as raw payloads even if they are JSON.")
 	s.initCommand(cctx)
 	return &s
 }
@@ -1271,7 +1271,7 @@ func NewTemporalServerStartDevCommand(cctx *CommandContext, parent *TemporalServ
 	s.Command.Flags().StringVar(&s.UiCodecEndpoint, "ui-codec-endpoint", "", "UI remote codec HTTP endpoint.")
 	s.Command.Flags().StringArrayVar(&s.SqlitePragma, "sqlite-pragma", nil, "Specify SQLite pragma statements in pragma=value format.")
 	s.Command.Flags().StringArrayVar(&s.DynamicConfigValue, "dynamic-config-value", nil, "Dynamic config value, as KEY=JSON_VALUE (string values need quotes).")
-	s.Command.Flags().BoolVar(&s.LogConfig, "log-config", false, "Log the server config being used in stderr.")
+	s.Command.Flags().BoolVar(&s.LogConfig, "log-config", false, "Log the server config being used to stderr.")
 	s.LogLevelServer = NewStringEnum([]string{"debug", "info", "warn", "error", "never"}, "warn")
 	s.Command.Flags().Var(&s.LogLevelServer, "log-level-server", "Log level for the server only. Accepted values: debug, info, warn, error, never.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -1355,7 +1355,7 @@ func NewTemporalTaskQueueGetBuildIdReachabilityCommand(cctx *CommandContext, par
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "get-build-id-reachability [flags]"
 	s.Command.Short = "Retrieves information about the reachability of Build IDs on one or more Task Queues."
-	s.Command.Long = "This command can tell you whether or not Build IDs may be used for for new, existing, or closed workflows. Both the '--build-id' and '--task-queue' flags may be specified multiple times. If you do not provide a task queue, reachability for the provided Build IDs will be checked against all task queues."
+	s.Command.Long = "This command can tell you whether or not Build IDs may be used for new, existing, or closed workflows. Both the '--build-id' and '--task-queue' flags may be specified multiple times. If you do not provide a task queue, reachability for the provided Build IDs will be checked against all task queues."
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringArrayVar(&s.BuildId, "build-id", nil, "Which Build ID to get reachability information for. May be specified multiple times.")
 	s.ReachabilityType = NewStringEnum([]string{"open", "closed", "existing"}, "existing")
@@ -1510,7 +1510,7 @@ func NewTemporalTaskQueueUpdateBuildIdsPromoteIdInSetCommand(cctx *CommandContex
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "promote-id-in-set [flags]"
 	s.Command.Short = "Promote an existing build ID to become the default for its containing set."
-	s.Command.Long = "New tasks compatible with the the set will be dispatched to the default id."
+	s.Command.Long = "New tasks compatible with the set will be dispatched to the default id."
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "An existing build id which will be promoted to be the default inside its containing set.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "build-id")
