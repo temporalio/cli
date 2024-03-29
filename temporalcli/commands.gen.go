@@ -42,7 +42,7 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	s.Command.AddCommand(&NewTemporalServerCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalTaskQueueCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowCommand(cctx, &s).Command)
-	s.Command.PersistentFlags().StringVarP(&s.Env, "env", "E", "default", "Environment to read environment-specific flags from.")
+	s.Command.PersistentFlags().StringVar(&s.Env, "env", "default", "Environment to read environment-specific flags from.")
 	cctx.BindFlagEnvVar(s.Command.PersistentFlags().Lookup("env"), "TEMPORAL_ENV")
 	s.Command.PersistentFlags().StringVar(&s.EnvFile, "env-file", "", "File to read all environments (defaults to `$HOME/.config/temporalio/temporal.yaml`).")
 	s.LogLevel = NewStringEnum([]string{"debug", "info", "warn", "error", "never"}, "info")
@@ -266,11 +266,7 @@ func NewTemporalEnvCommand(cctx *CommandContext, parent *TemporalCommand) *Tempo
 	s.Parent = parent
 	s.Command.Use = "env"
 	s.Command.Short = "Manage environments."
-	if hasHighlighting {
-		s.Command.Long = "Use the '--env <env name>' option with other commands to point the CLI at a different Temporal Server instance. If --env\nis not passed, the 'default' environment is used.  (You can also use \x1b[1m-E\x1b[0m as a shorthand for \x1b[1m--env\x1b[0m.)"
-	} else {
-		s.Command.Long = "Use the '--env <env name>' option with other commands to point the CLI at a different Temporal Server instance. If --env\nis not passed, the 'default' environment is used.  (You can also use `-E` as a shorthand for `--env`.)"
-	}
+	s.Command.Long = "Use the '--env <env name>' option with other commands to point the CLI at a different Temporal Server instance. If --env\nis not passed, the 'default' environment is used."
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalEnvDeleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalEnvGetCommand(cctx, &s).Command)
@@ -292,9 +288,9 @@ func NewTemporalEnvDeleteCommand(cctx *CommandContext, parent *TemporalEnvComman
 	s.Command.Use = "delete [flags]"
 	s.Command.Short = "Delete an environment or environment property."
 	if hasHighlighting {
-		s.Command.Long = "\x1b[1mtemporal env delete -E environment [-k property]\x1b[0m\n\nDelete an environment or just a single property:\n\n\x1b[1mtemporal env delete -E prod\x1b[0m\n\x1b[1mtemporal env delete -E prod -k tls-cert-path\x1b[0m\n\nIf the environment is not specified, the \x1b[1mdefault\x1b[0m environment is deleted:\n\n\x1b[1mtemporal env delete -k tls-cert-path\x1b[0m"
+		s.Command.Long = "\x1b[1mtemporal env delete --env environment [-k property]\x1b[0m\n\nDelete an environment or just a single property:\n\n\x1b[1mtemporal env delete --env prod\x1b[0m\n\x1b[1mtemporal env delete --env prod -k tls-cert-path\x1b[0m\n\nIf the environment is not specified, the \x1b[1mdefault\x1b[0m environment is deleted:\n\n\x1b[1mtemporal env delete -k tls-cert-path\x1b[0m"
 	} else {
-		s.Command.Long = "`temporal env delete -E environment [-k property]`\n\nDelete an environment or just a single property:\n\n`temporal env delete -E prod`\n`temporal env delete -E prod -k tls-cert-path`\n\nIf the environment is not specified, the `default` environment is deleted:\n\n`temporal env delete -k tls-cert-path`"
+		s.Command.Long = "`temporal env delete --env environment [-k property]`\n\nDelete an environment or just a single property:\n\n`temporal env delete --env prod`\n`temporal env delete --env prod -k tls-cert-path`\n\nIf the environment is not specified, the `default` environment is deleted:\n\n`temporal env delete -k tls-cert-path`"
 	}
 	s.Command.Args = cobra.MaximumNArgs(1)
 	s.Command.Flags().StringVarP(&s.Key, "key", "k", "", "The name of the property.")
@@ -319,9 +315,9 @@ func NewTemporalEnvGetCommand(cctx *CommandContext, parent *TemporalEnvCommand) 
 	s.Command.Use = "get [flags]"
 	s.Command.Short = "Print environment properties."
 	if hasHighlighting {
-		s.Command.Long = "\x1b[1mtemporal env get -E environment\x1b[0m\n\nPrint all properties of the 'prod' environment:\n\n\x1b[1mtemporal env get prod\x1b[0m\n\n\x1b[1mtls-cert-path  /home/my-user/certs/client.cert\ntls-key-path   /home/my-user/certs/client.key\naddress        temporal.example.com:7233\nnamespace      someNamespace\x1b[0m\n\nPrint a single property:\n\n\x1b[1mtemporal env get -E prod -k tls-key-path\x1b[0m\n\n\x1b[1mtls-key-path  /home/my-user/certs/cluster.key\x1b[0m\n\nIf the environment is not specified, the \x1b[1mdefault\x1b[0m environment is used."
+		s.Command.Long = "\x1b[1mtemporal env get --env environment\x1b[0m\n\nPrint all properties of the 'prod' environment:\n\n\x1b[1mtemporal env get prod\x1b[0m\n\n\x1b[1mtls-cert-path  /home/my-user/certs/client.cert\ntls-key-path   /home/my-user/certs/client.key\naddress        temporal.example.com:7233\nnamespace      someNamespace\x1b[0m\n\nPrint a single property:\n\n\x1b[1mtemporal env get --env prod -k tls-key-path\x1b[0m\n\n\x1b[1mtls-key-path  /home/my-user/certs/cluster.key\x1b[0m\n\nIf the environment is not specified, the \x1b[1mdefault\x1b[0m environment is used."
 	} else {
-		s.Command.Long = "`temporal env get -E environment`\n\nPrint all properties of the 'prod' environment:\n\n`temporal env get prod`\n\n```\ntls-cert-path  /home/my-user/certs/client.cert\ntls-key-path   /home/my-user/certs/client.key\naddress        temporal.example.com:7233\nnamespace      someNamespace\n```\n\nPrint a single property:\n\n`temporal env get -E prod -k tls-key-path`\n\n```\ntls-key-path  /home/my-user/certs/cluster.key\n```\n\nIf the environment is not specified, the `default` environment is used."
+		s.Command.Long = "`temporal env get --env environment`\n\nPrint all properties of the 'prod' environment:\n\n`temporal env get prod`\n\n```\ntls-cert-path  /home/my-user/certs/client.cert\ntls-key-path   /home/my-user/certs/client.key\naddress        temporal.example.com:7233\nnamespace      someNamespace\n```\n\nPrint a single property:\n\n`temporal env get --env prod -k tls-key-path`\n\n```\ntls-key-path  /home/my-user/certs/cluster.key\n```\n\nIf the environment is not specified, the `default` environment is used."
 	}
 	s.Command.Args = cobra.MaximumNArgs(1)
 	s.Command.Flags().StringVarP(&s.Key, "key", "k", "", "The name of the property.")
@@ -368,9 +364,9 @@ func NewTemporalEnvSetCommand(cctx *CommandContext, parent *TemporalEnvCommand) 
 	s.Command.Use = "set [flags]"
 	s.Command.Short = "Set environment properties."
 	if hasHighlighting {
-		s.Command.Long = "\x1b[1mtemporal env set -E environment -k property -v value\x1b[0m\n\nProperty names match CLI option names, for example '--address' and '--tls-cert-path':\n\n\x1b[1mtemporal env set -E prod -k address -v 127.0.0.1:7233\x1b[0m\n\x1b[1mtemporal env set -E prod -k tls-cert-path -v /home/my-user/certs/cluster.cert\x1b[0m\n\nIf the environment is not specified, the \x1b[1mdefault\x1b[0m environment is used."
+		s.Command.Long = "\x1b[1mtemporal env set --env environment -k property -v value\x1b[0m\n\nProperty names match CLI option names, for example '--address' and '--tls-cert-path':\n\n\x1b[1mtemporal env set --env prod -k address -v 127.0.0.1:7233\x1b[0m\n\x1b[1mtemporal env set --env prod -k tls-cert-path -v /home/my-user/certs/cluster.cert\x1b[0m\n\nIf the environment is not specified, the \x1b[1mdefault\x1b[0m environment is used."
 	} else {
-		s.Command.Long = "`temporal env set -E environment -k property -v value`\n\nProperty names match CLI option names, for example '--address' and '--tls-cert-path':\n\n`temporal env set -E prod -k address -v 127.0.0.1:7233`\n`temporal env set -E prod -k tls-cert-path -v /home/my-user/certs/cluster.cert`\n\nIf the environment is not specified, the `default` environment is used."
+		s.Command.Long = "`temporal env set --env environment -k property -v value`\n\nProperty names match CLI option names, for example '--address' and '--tls-cert-path':\n\n`temporal env set --env prod -k address -v 127.0.0.1:7233`\n`temporal env set --env prod -k tls-cert-path -v /home/my-user/certs/cluster.cert`\n\nIf the environment is not specified, the `default` environment is used."
 	}
 	s.Command.Args = cobra.MaximumNArgs(2)
 	s.Command.Flags().StringVarP(&s.Key, "key", "k", "", "The name of the property.")

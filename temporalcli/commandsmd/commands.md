@@ -49,7 +49,7 @@ This document has a specific structure used by a parser. Here are the rules:
 
 #### Options
 
-* `--env`, `-E` (string) - Environment to read environment-specific flags from. Default: default. Env: TEMPORAL_ENV.
+* `--env` (string) - Environment to read environment-specific flags from. Default: default. Env: TEMPORAL_ENV.
 * `--env-file` (string) - File to read all environments (defaults to `$HOME/.config/temporalio/temporal.yaml`).
 * `--log-level` (string-enum) - Log level. Options: debug, info, warn, error, never. Default: info.
 * `--log-format` (string-enum) - Log format. Options: text, json. Default: text.
@@ -139,16 +139,16 @@ For future reference, provide a reason for terminating the Batch Job.
 ### temporal env: Manage environments.
 
 Use the '--env <env name>' option with other commands to point the CLI at a different Temporal Server instance. If --env
-is not passed, the 'default' environment is used.  (You can also use `-E` as a shorthand for `--env`.)
+is not passed, the 'default' environment is used.
 
 ### temporal env delete: Delete an environment or environment property.
 
-`temporal env delete -E environment [-k property]`
+`temporal env delete --env environment [-k property]`
 
 Delete an environment or just a single property:
 
-`temporal env delete -E prod`
-`temporal env delete -E prod -k tls-cert-path`
+`temporal env delete --env prod`
+`temporal env delete --env prod -k tls-cert-path`
 
 If the environment is not specified, the `default` environment is deleted:
 
@@ -164,7 +164,7 @@ If the environment is not specified, the `default` environment is deleted:
 
 ### temporal env get: Print environment properties.
 
-`temporal env get -E environment`
+`temporal env get --env environment`
 
 Print all properties of the 'prod' environment:
 
@@ -179,7 +179,7 @@ namespace      someNamespace
 
 Print a single property:
 
-`temporal env get -E prod -k tls-key-path`
+`temporal env get --env prod -k tls-key-path`
 
 ```
 tls-key-path  /home/my-user/certs/cluster.key
@@ -201,12 +201,12 @@ List all environments.
 
 ### temporal env set: Set environment properties.
 
-`temporal env set -E environment -k property -v value`
+`temporal env set --env environment -k property -v value`
 
 Property names match CLI option names, for example '--address' and '--tls-cert-path':
 
-`temporal env set -E prod -k address -v 127.0.0.1:7233`
-`temporal env set -E prod -k tls-cert-path -v /home/my-user/certs/cluster.cert`
+`temporal env set --env prod -k address -v 127.0.0.1:7233`
+`temporal env set --env prod -k tls-cert-path -v /home/my-user/certs/cluster.cert`
 
 If the environment is not specified, the `default` environment is used.
 

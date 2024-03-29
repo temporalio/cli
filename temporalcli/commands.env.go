@@ -10,10 +10,10 @@ import (
 
 func (c *TemporalEnvCommand) envNameAndKey(cctx *CommandContext, args[] string, keyFlag string) (string, string, error) {
 	if len(args) > 0 {
-		cctx.Logger.Warn("Arguments to env commands are deprecated; please use -E and/or -k instead.")
+		cctx.Logger.Warn("Arguments to env commands are deprecated; please use --env and --key (or -k) instead")
 
 		if (c.Parent.Env != "default" || keyFlag != "") {
-			return "", "", fmt.Errorf("cannot specify both an argument and -E/-k; please use -E and/or -k")
+			return "", "", fmt.Errorf("cannot specify both an argument and flags; please use flags instead")
 		}
 
 		keyPieces := strings.Split(args[0], ".")
