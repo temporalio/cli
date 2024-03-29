@@ -56,7 +56,7 @@ This document has a specific structure used by a parser. Here are the rules:
 * `--output`, `-o` (string-enum) - Data output format. Options: text, json, jsonl. Default: text.
 * `--time-format` (string-enum) - Time format. Options: relative, iso, raw. Default: relative.
 * `--color` (string-enum) - Set coloring. Options: always, never, auto. Default: auto.
-* `--no-json-shorthand-payloads` (bool) - Always all payloads as raw payloads even if they are JSON.
+* `--no-json-shorthand-payloads` (bool) - Always show all payloads as raw payloads even if they are JSON.
 
 ### temporal activity: Complete or fail an Activity.
 
@@ -568,7 +568,7 @@ To persist Workflows across runs, use:
 * `--ui-codec-endpoint` (string) - UI remote codec HTTP endpoint.
 * `--sqlite-pragma` (string[]) - Specify SQLite pragma statements in pragma=value format.
 * `--dynamic-config-value` (string[]) - Dynamic config value, as KEY=JSON_VALUE (string values need quotes).
-* `--log-config` (bool) - Log the server config being used in stderr.
+* `--log-config` (bool) - Log the server config being used to stderr.
 * `--log-level-server` (string-enum) - Log level for the server only. Options: debug, info, warn, error, never. Default:
   warn.
 
@@ -605,7 +605,7 @@ Use the options listed below to modify what this command returns.
 
 ### temporal task-queue get-build-id-reachability: Retrieves information about the reachability of Build IDs on one or more Task Queues.
 
-This command can tell you whether or not Build IDs may be used for for new, existing, or closed workflows. Both the '--build-id' and '--task-queue' flags may be specified multiple times. If you do not provide a task queue, reachability for the provided Build IDs will be checked against all task queues.
+This command can tell you whether or not Build IDs may be used for new, existing, or closed workflows. Both the '--build-id' and '--task-queue' flags may be specified multiple times. If you do not provide a task queue, reachability for the provided Build IDs will be checked against all task queues.
 
 #### Options
 
@@ -656,7 +656,7 @@ Creates a new build id set which will become the new overall default for the que
 
 ### temporal task-queue update-build-ids promote-id-in-set: Promote an existing build ID to become the default for its containing set.
 
-New tasks compatible with the the set will be dispatched to the default id.
+New tasks compatible with the set will be dispatched to the default id.
 
 #### Options
 
