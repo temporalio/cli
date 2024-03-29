@@ -14,8 +14,24 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 )
 
+func (c *TemporalOperatorCommand) getNSFromFlagOrArg0(cctx *CommandContext, args []string) (string, error) {
+	if len(args) > 0 && c.Namespace != "default" {
+		return "", fmt.Errorf("namespace was provided as both an argument (%s) and a flag (-n %s); please specify namespace only with -n", args[0], c.Namespace)
+	}
+
+	if len(args) > 0 {
+		cctx.Logger.Warn("Passing the namespace as an argument is now deprecated; please switch to using -n instead")
+		return args[0], nil
+	}
+	return c.Namespace, nil
+}
+
 func (c *TemporalOperatorNamespaceCreateCommand) run(cctx *CommandContext, args []string) error {
-	nsName := args[0]
+	nsName, err := c.Parent.Parent.getNSFromFlagOrArg0(cctx, args)
+	if err != nil {
+		return err
+	}
+
 	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
 	if err != nil {
 		return err
@@ -52,14 +68,18 @@ func (c *TemporalOperatorNamespaceCreateCommand) run(cctx *CommandContext, args 
 		VisibilityArchivalUri:            c.VisibilityUri,
 	})
 	if err != nil {
-		return fmt.Errorf("unable to create namespace: %w", err)
+		return fmt.Errorf("unable to create namespace %s: %w", nsName, err)
 	}
 	cctx.Printer.Println(color.GreenString("Namespace %s successfully registered.", nsName))
 	return nil
 }
 
 func (c *TemporalOperatorNamespaceDeleteCommand) run(cctx *CommandContext, args []string) error {
-	nsName := args[0]
+	nsName, err := c.Parent.Parent.getNSFromFlagOrArg0(cctx, args)
+	if err != nil {
+		return err
+	}
+
 	yes, err := cctx.promptString(
 		color.RedString("Are you sure you want to delete namespace %s? Type namespace name to confirm:", nsName),
 		nsName,
@@ -82,7 +102,7 @@ func (c *TemporalOperatorNamespaceDeleteCommand) run(cctx *CommandContext, args 
 		Namespace: nsName,
 	})
 	if err != nil {
-		return fmt.Errorf("unable to delete namespace: %w", err)
+		return fmt.Errorf("unable to delete namespace %s: %w", nsName, err)
 	}
 
 	if cctx.JSONOutput {
@@ -94,15 +114,22 @@ func (c *TemporalOperatorNamespaceDeleteCommand) run(cctx *CommandContext, args 
 
 func (c *TemporalOperatorNamespaceDescribeCommand) run(cctx *CommandContext, args []string) error {
 	nsID := c.NamespaceId
-	var nsName string
-	if nsID == "" && len(args) == 0 {
-		return fmt.Errorf("provide either namespace-id flag or namespace as an argument")
+
+	nsName, err := c.Parent.Parent.getNSFromFlagOrArg0(cctx, args)
+	if err != nil {
+		return err
 	}
-	if nsID != "" && len(args) > 0 {
-		cctx.Printer.Println(color.YellowString("Both namespace-id flag and namespace are provided. Will use namespace Id to describe namespace"))
+
+	// Bleh, special case: if the nsName is "default", it may not have been
+	// supplied at all, and nsID should take precedence. This won't catch the
+	// user explicitly specifying "default" for the name AND a UUID, but we
+	// can't help that without some way to know why nsName is "default".
+	if nsName == "default" && nsID != "" {
+		nsName = ""
 	}
-	if nsID == "" {
-		nsName = args[0]
+
+	if (nsID == "" && nsName == "") || (nsID != "" && nsName != "") {
+		return fmt.Errorf("provide one of --namespace-id=<uuid> or -n name, but not both")
 	}
 
 	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
@@ -116,7 +143,11 @@ func (c *TemporalOperatorNamespaceDescribeCommand) run(cctx *CommandContext, arg
 		Id:        nsID,
 	})
 	if err != nil {
-		return fmt.Errorf("unable to describe namespace: %w", err)
+		nsNameOrID := nsName
+		if nsNameOrID == "" {
+			nsNameOrID = nsID
+		}
+		return fmt.Errorf("unable to describe namespace %s: %w", nsNameOrID, err)
 	}
 
 	if cctx.JSONOutput {
@@ -163,7 +194,11 @@ func (c *TemporalOperatorNamespaceListCommand) run(cctx *CommandContext, args []
 }
 
 func (c *TemporalOperatorNamespaceUpdateCommand) run(cctx *CommandContext, args []string) error {
-	nsName := args[0]
+	nsName, err := c.Parent.Parent.getNSFromFlagOrArg0(cctx, args)
+	if err != nil {
+		return err
+	}
+
 	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
 	if err != nil {
 		return err

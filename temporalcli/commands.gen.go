@@ -278,20 +278,22 @@ func NewTemporalEnvCommand(cctx *CommandContext, parent *TemporalCommand) *Tempo
 type TemporalEnvDeleteCommand struct {
 	Parent  *TemporalEnvCommand
 	Command cobra.Command
+	Key     string
 }
 
 func NewTemporalEnvDeleteCommand(cctx *CommandContext, parent *TemporalEnvCommand) *TemporalEnvDeleteCommand {
 	var s TemporalEnvDeleteCommand
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
-	s.Command.Use = "delete [flags] [environment or property]"
+	s.Command.Use = "delete [flags]"
 	s.Command.Short = "Delete an environment or environment property."
 	if hasHighlighting {
-		s.Command.Long = "\x1b[1mtemporal env delete [environment or property]\x1b[0m\n\nDelete an environment or just a single property:\n\n\x1b[1mtemporal env delete prod\x1b[0m\n\x1b[1mtemporal env delete prod.tls-cert-path\x1b[0m"
+		s.Command.Long = "\x1b[1mtemporal env delete --env environment [-k property]\x1b[0m\n\nDelete an environment or just a single property:\n\n\x1b[1mtemporal env delete --env prod\x1b[0m\n\x1b[1mtemporal env delete --env prod -k tls-cert-path\x1b[0m\n\nIf the environment is not specified, the \x1b[1mdefault\x1b[0m environment is deleted:\n\n\x1b[1mtemporal env delete -k tls-cert-path\x1b[0m"
 	} else {
-		s.Command.Long = "`temporal env delete [environment or property]`\n\nDelete an environment or just a single property:\n\n`temporal env delete prod`\n`temporal env delete prod.tls-cert-path`"
+		s.Command.Long = "`temporal env delete --env environment [-k property]`\n\nDelete an environment or just a single property:\n\n`temporal env delete --env prod`\n`temporal env delete --env prod -k tls-cert-path`\n\nIf the environment is not specified, the `default` environment is deleted:\n\n`temporal env delete -k tls-cert-path`"
 	}
-	s.Command.Args = cobra.ExactArgs(1)
+	s.Command.Args = cobra.MaximumNArgs(1)
+	s.Command.Flags().StringVarP(&s.Key, "key", "k", "", "The name of the property.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -303,20 +305,22 @@ func NewTemporalEnvDeleteCommand(cctx *CommandContext, parent *TemporalEnvComman
 type TemporalEnvGetCommand struct {
 	Parent  *TemporalEnvCommand
 	Command cobra.Command
+	Key     string
 }
 
 func NewTemporalEnvGetCommand(cctx *CommandContext, parent *TemporalEnvCommand) *TemporalEnvGetCommand {
 	var s TemporalEnvGetCommand
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
-	s.Command.Use = "get [flags] [environment or property]"
+	s.Command.Use = "get [flags]"
 	s.Command.Short = "Print environment properties."
 	if hasHighlighting {
-		s.Command.Long = "\x1b[1mtemporal env get [environment or property]\x1b[0m\n\nPrint all properties of the 'prod' environment:\n\n\x1b[1mtemporal env get prod\x1b[0m\n\ntls-cert-path  /home/my-user/certs/client.cert\ntls-key-path   /home/my-user/certs/client.key\naddress        temporal.example.com:7233\nnamespace      someNamespace\n\nPrint a single property:\n\n\x1b[1mtemporal env get prod.tls-key-path\x1b[0m\n\ntls-key-path  /home/my-user/certs/cluster.key"
+		s.Command.Long = "\x1b[1mtemporal env get --env environment\x1b[0m\n\nPrint all properties of the 'prod' environment:\n\n\x1b[1mtemporal env get prod\x1b[0m\n\n\x1b[1mtls-cert-path  /home/my-user/certs/client.cert\ntls-key-path   /home/my-user/certs/client.key\naddress        temporal.example.com:7233\nnamespace      someNamespace\x1b[0m\n\nPrint a single property:\n\n\x1b[1mtemporal env get --env prod -k tls-key-path\x1b[0m\n\n\x1b[1mtls-key-path  /home/my-user/certs/cluster.key\x1b[0m\n\nIf the environment is not specified, the \x1b[1mdefault\x1b[0m environment is used."
 	} else {
-		s.Command.Long = "`temporal env get [environment or property]`\n\nPrint all properties of the 'prod' environment:\n\n`temporal env get prod`\n\ntls-cert-path  /home/my-user/certs/client.cert\ntls-key-path   /home/my-user/certs/client.key\naddress        temporal.example.com:7233\nnamespace      someNamespace\n\nPrint a single property:\n\n`temporal env get prod.tls-key-path`\n\ntls-key-path  /home/my-user/certs/cluster.key"
+		s.Command.Long = "`temporal env get --env environment`\n\nPrint all properties of the 'prod' environment:\n\n`temporal env get prod`\n\n```\ntls-cert-path  /home/my-user/certs/client.cert\ntls-key-path   /home/my-user/certs/client.key\naddress        temporal.example.com:7233\nnamespace      someNamespace\n```\n\nPrint a single property:\n\n`temporal env get --env prod -k tls-key-path`\n\n```\ntls-key-path  /home/my-user/certs/cluster.key\n```\n\nIf the environment is not specified, the `default` environment is used."
 	}
-	s.Command.Args = cobra.ExactArgs(1)
+	s.Command.Args = cobra.MaximumNArgs(1)
+	s.Command.Flags().StringVarP(&s.Key, "key", "k", "", "The name of the property.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -349,20 +353,24 @@ func NewTemporalEnvListCommand(cctx *CommandContext, parent *TemporalEnvCommand)
 type TemporalEnvSetCommand struct {
 	Parent  *TemporalEnvCommand
 	Command cobra.Command
+	Key     string
+	Value   string
 }
 
 func NewTemporalEnvSetCommand(cctx *CommandContext, parent *TemporalEnvCommand) *TemporalEnvSetCommand {
 	var s TemporalEnvSetCommand
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
-	s.Command.Use = "set [flags] [environment.property name] [property value]"
+	s.Command.Use = "set [flags]"
 	s.Command.Short = "Set environment properties."
 	if hasHighlighting {
-		s.Command.Long = "\x1b[1mtemporal env set [environment.property name] [property value]\x1b[0m\n\nProperty names match CLI option names, for example '--address' and '--tls-cert-path':\n\n\x1b[1mtemporal env set prod.address 127.0.0.1:7233\x1b[0m\n\x1b[1mtemporal env set prod.tls-cert-path  /home/my-user/certs/cluster.cert\x1b[0m"
+		s.Command.Long = "\x1b[1mtemporal env set --env environment -k property -v value\x1b[0m\n\nProperty names match CLI option names, for example '--address' and '--tls-cert-path':\n\n\x1b[1mtemporal env set --env prod -k address -v 127.0.0.1:7233\x1b[0m\n\x1b[1mtemporal env set --env prod -k tls-cert-path -v /home/my-user/certs/cluster.cert\x1b[0m\n\nIf the environment is not specified, the \x1b[1mdefault\x1b[0m environment is used."
 	} else {
-		s.Command.Long = "`temporal env set [environment.property name] [property value]`\n\nProperty names match CLI option names, for example '--address' and '--tls-cert-path':\n\n`temporal env set prod.address 127.0.0.1:7233`\n`temporal env set prod.tls-cert-path  /home/my-user/certs/cluster.cert`"
+		s.Command.Long = "`temporal env set --env environment -k property -v value`\n\nProperty names match CLI option names, for example '--address' and '--tls-cert-path':\n\n`temporal env set --env prod -k address -v 127.0.0.1:7233`\n`temporal env set --env prod -k tls-cert-path -v /home/my-user/certs/cluster.cert`\n\nIf the environment is not specified, the `default` environment is used."
 	}
-	s.Command.Args = cobra.ExactArgs(2)
+	s.Command.Args = cobra.MaximumNArgs(2)
+	s.Command.Flags().StringVarP(&s.Key, "key", "k", "", "The name of the property.")
+	s.Command.Flags().StringVarP(&s.Value, "value", "v", "", "The value to set the property to.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -626,14 +634,14 @@ func NewTemporalOperatorNamespaceCreateCommand(cctx *CommandContext, parent *Tem
 	var s TemporalOperatorNamespaceCreateCommand
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
-	s.Command.Use = "create [flags] [namespace]"
+	s.Command.Use = "create [flags]"
 	s.Command.Short = "Registers a new Namespace."
 	if hasHighlighting {
-		s.Command.Long = "The temporal operator namespace create command creates a new Namespace on the Server.\nNamespaces can be created on the active Cluster, or any named Cluster.\n\x1b[1mtemporal operator namespace create --cluster=MyCluster example-1\x1b[0m\n\nGlobal Namespaces can also be created.\n\x1b[1mtemporal operator namespace create --global example-2\x1b[0m\n\nOther settings, such as retention and Visibility Archival State, can be configured as needed.\nFor example, the Visibility Archive can be set on a separate URI.\n\x1b[1mtemporal operator namespace create --retention=5 --visibility-archival-state=enabled --visibility-uri=some-uri example-3\x1b[0m"
+		s.Command.Long = "The temporal operator namespace create command creates a new Namespace on the Server.\nNamespaces can be created on the active Cluster, or any named Cluster.\n\x1b[1mtemporal operator namespace create --cluster=MyCluster -n example-1\x1b[0m\n\nGlobal Namespaces can also be created.\n\x1b[1mtemporal operator namespace create --global -n example-2\x1b[0m\n\nOther settings, such as retention and Visibility Archival State, can be configured as needed.\nFor example, the Visibility Archive can be set on a separate URI.\n\x1b[1mtemporal operator namespace create --retention=5 --visibility-archival-state=enabled --visibility-uri=some-uri -n example-3\x1b[0m"
 	} else {
-		s.Command.Long = "The temporal operator namespace create command creates a new Namespace on the Server.\nNamespaces can be created on the active Cluster, or any named Cluster.\n`temporal operator namespace create --cluster=MyCluster example-1`\n\nGlobal Namespaces can also be created.\n`temporal operator namespace create --global example-2`\n\nOther settings, such as retention and Visibility Archival State, can be configured as needed.\nFor example, the Visibility Archive can be set on a separate URI.\n`temporal operator namespace create --retention=5 --visibility-archival-state=enabled --visibility-uri=some-uri example-3`"
+		s.Command.Long = "The temporal operator namespace create command creates a new Namespace on the Server.\nNamespaces can be created on the active Cluster, or any named Cluster.\n`temporal operator namespace create --cluster=MyCluster -n example-1`\n\nGlobal Namespaces can also be created.\n`temporal operator namespace create --global -n example-2`\n\nOther settings, such as retention and Visibility Archival State, can be configured as needed.\nFor example, the Visibility Archive can be set on a separate URI.\n`temporal operator namespace create --retention=5 --visibility-archival-state=enabled --visibility-uri=some-uri -n example-3`"
 	}
-	s.Command.Args = cobra.ExactArgs(1)
+	s.Command.Args = cobra.MaximumNArgs(1)
 	s.Command.Flags().StringVar(&s.ActiveCluster, "active-cluster", "", "Active cluster name.")
 	s.Command.Flags().StringArrayVar(&s.Cluster, "cluster", nil, "Cluster names.")
 	s.Command.Flags().StringVar(&s.Data, "data", "", "Namespace data in key=value format. Use JSON for values.")
@@ -668,7 +676,7 @@ func NewTemporalOperatorNamespaceDeleteCommand(cctx *CommandContext, parent *Tem
 	s.Command.Use = "delete [flags] [namespace]"
 	s.Command.Short = "Deletes an existing Namespace."
 	s.Command.Long = "The temporal operator namespace delete command deletes a given Namespace from the system."
-	s.Command.Args = cobra.ExactArgs(1)
+	s.Command.Args = cobra.MaximumNArgs(1)
 	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Confirm prompt to perform deletion.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -691,9 +699,9 @@ func NewTemporalOperatorNamespaceDescribeCommand(cctx *CommandContext, parent *T
 	s.Command.Use = "describe [flags] [namespace]"
 	s.Command.Short = "Describe a Namespace by its name or ID."
 	if hasHighlighting {
-		s.Command.Long = "The temporal operator namespace describe command provides Namespace information.\nNamespaces are identified by Namespace ID.\n\n\x1b[1mtemporal operator namespace describe --namespace-id=some-namespace-id\x1b[0m\n\x1b[1mtemporal operator namespace describe example-namespace-name\x1b[0m"
+		s.Command.Long = "The temporal operator namespace describe command provides Namespace information.\nNamespaces are identified either by Namespace ID or by name.\n\n\x1b[1mtemporal operator namespace describe --namespace-id=some-namespace-id\x1b[0m\n\x1b[1mtemporal operator namespace describe -n example-namespace-name\x1b[0m"
 	} else {
-		s.Command.Long = "The temporal operator namespace describe command provides Namespace information.\nNamespaces are identified by Namespace ID.\n\n`temporal operator namespace describe --namespace-id=some-namespace-id`\n`temporal operator namespace describe example-namespace-name`"
+		s.Command.Long = "The temporal operator namespace describe command provides Namespace information.\nNamespaces are identified either by Namespace ID or by name.\n\n`temporal operator namespace describe --namespace-id=some-namespace-id`\n`temporal operator namespace describe -n example-namespace-name`"
 	}
 	s.Command.Args = cobra.MaximumNArgs(1)
 	s.Command.Flags().StringVar(&s.NamespaceId, "namespace-id", "", "Namespace ID.")
@@ -746,14 +754,14 @@ func NewTemporalOperatorNamespaceUpdateCommand(cctx *CommandContext, parent *Tem
 	var s TemporalOperatorNamespaceUpdateCommand
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
-	s.Command.Use = "update [flags] [namespace]"
+	s.Command.Use = "update [flags]"
 	s.Command.Short = "Updates a Namespace."
 	if hasHighlighting {
-		s.Command.Long = "The temporal operator namespace update command updates a Namespace.\n\nNamespaces can be assigned a different active Cluster.\n\x1b[1mtemporal operator namespace update --active-cluster=NewActiveCluster\x1b[0m\n\nNamespaces can also be promoted to global Namespaces.\n\x1b[1mtemporal operator namespace update --promote-global\x1b[0m\n\nAny Archives that were previously enabled or disabled can be changed through this command.\nHowever, URI values for archival states cannot be changed after the states are enabled.\n\x1b[1mtemporal operator namespace update --history-archival-state=enabled --visibility-archival-state=disabled\x1b[0m"
+		s.Command.Long = "The temporal operator namespace update command updates a Namespace.\n\nNamespaces can be assigned a different active Cluster.\n\x1b[1mtemporal operator namespace update -n namespace --active-cluster=NewActiveCluster\x1b[0m\n\nNamespaces can also be promoted to global Namespaces.\n\x1b[1mtemporal operator namespace update -n namespace --promote-global\x1b[0m\n\nAny Archives that were previously enabled or disabled can be changed through this command.\nHowever, URI values for archival states cannot be changed after the states are enabled.\n\x1b[1mtemporal operator namespace update -n namespace --history-archival-state=enabled --visibility-archival-state=disabled\x1b[0m"
 	} else {
-		s.Command.Long = "The temporal operator namespace update command updates a Namespace.\n\nNamespaces can be assigned a different active Cluster.\n`temporal operator namespace update --active-cluster=NewActiveCluster`\n\nNamespaces can also be promoted to global Namespaces.\n`temporal operator namespace update --promote-global`\n\nAny Archives that were previously enabled or disabled can be changed through this command.\nHowever, URI values for archival states cannot be changed after the states are enabled.\n`temporal operator namespace update --history-archival-state=enabled --visibility-archival-state=disabled`"
+		s.Command.Long = "The temporal operator namespace update command updates a Namespace.\n\nNamespaces can be assigned a different active Cluster.\n`temporal operator namespace update -n namespace --active-cluster=NewActiveCluster`\n\nNamespaces can also be promoted to global Namespaces.\n`temporal operator namespace update -n namespace --promote-global`\n\nAny Archives that were previously enabled or disabled can be changed through this command.\nHowever, URI values for archival states cannot be changed after the states are enabled.\n`temporal operator namespace update -n namespace --history-archival-state=enabled --visibility-archival-state=disabled`"
 	}
-	s.Command.Args = cobra.ExactArgs(1)
+	s.Command.Args = cobra.MaximumNArgs(1)
 	s.Command.Flags().StringVar(&s.ActiveCluster, "active-cluster", "", "Active cluster name.")
 	s.Command.Flags().StringArrayVar(&s.Cluster, "cluster", nil, "Cluster names.")
 	s.Command.Flags().StringArrayVar(&s.Data, "data", nil, "Namespace data in key=value format. Use JSON for values.")
@@ -1902,9 +1910,9 @@ func NewTemporalWorkflowResetCommand(cctx *CommandContext, parent *TemporalWorkf
 	s.Command.Use = "reset [flags]"
 	s.Command.Short = "Resets a Workflow Execution by Event ID or reset type."
 	if hasHighlighting {
-		s.Command.Long = "The temporal workflow reset command resets a Workflow Execution.\nA reset allows the Workflow to resume from a certain point without losing its parameters or Event History.\n\nThe Workflow Execution can be set to a given Event Type:\n\x1b[1mtemporal workflow reset --workflow-id=meaningful-business-id --type=LastContinuedAsNew\x1b[0m\n\n...or a specific any Event after \x1b[1mWorkflowTaskStarted\x1b[0m.\n\x1b[1mtemporal workflow reset --workflow-id=meaningful-business-id --event-id=MyLastEvent\x1b[0m\nFor batch reset only FirstWorkflowTask, LastWorkflowTask or BuildId can be used. Workflow Id, run Id and event Id \nshould not be set.\nUse the options listed below to change reset behavior."
+		s.Command.Long = "The temporal workflow reset command resets a Workflow Execution.\nA reset allows the Workflow to resume from a certain point without losing its parameters or Event History.\n\nThe Workflow Execution can be set to a given Event Type:\n\x1b[1mtemporal workflow reset --workflow-id=meaningful-business-id --type=LastContinuedAsNew\x1b[0m\n\n...or a specific any Event after \x1b[1mWorkflowTaskStarted\x1b[0m.\n\x1b[1mtemporal workflow reset --workflow-id=meaningful-business-id --event-id=MyLastEvent\x1b[0m\nFor batch reset only FirstWorkflowTask, LastWorkflowTask or BuildId can be used. Workflow Id, run Id and event Id\nshould not be set.\nUse the options listed below to change reset behavior."
 	} else {
-		s.Command.Long = "The temporal workflow reset command resets a Workflow Execution.\nA reset allows the Workflow to resume from a certain point without losing its parameters or Event History.\n\nThe Workflow Execution can be set to a given Event Type:\n```\ntemporal workflow reset --workflow-id=meaningful-business-id --type=LastContinuedAsNew\n```\n\n...or a specific any Event after `WorkflowTaskStarted`.\n```\ntemporal workflow reset --workflow-id=meaningful-business-id --event-id=MyLastEvent\n```\nFor batch reset only FirstWorkflowTask, LastWorkflowTask or BuildId can be used. Workflow Id, run Id and event Id \nshould not be set.\nUse the options listed below to change reset behavior."
+		s.Command.Long = "The temporal workflow reset command resets a Workflow Execution.\nA reset allows the Workflow to resume from a certain point without losing its parameters or Event History.\n\nThe Workflow Execution can be set to a given Event Type:\n```\ntemporal workflow reset --workflow-id=meaningful-business-id --type=LastContinuedAsNew\n```\n\n...or a specific any Event after `WorkflowTaskStarted`.\n```\ntemporal workflow reset --workflow-id=meaningful-business-id --event-id=MyLastEvent\n```\nFor batch reset only FirstWorkflowTask, LastWorkflowTask or BuildId can be used. Workflow Id, run Id and event Id\nshould not be set.\nUse the options listed below to change reset behavior."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.WorkflowId, "workflow-id", "w", "", "Workflow Id. Required for non-batch reset operations.")
@@ -2169,9 +2177,9 @@ func NewTemporalWorkflowUpdateCommand(cctx *CommandContext, parent *TemporalWork
 	s.Command.Use = "update [flags]"
 	s.Command.Short = "Updates a running workflow synchronously."
 	if hasHighlighting {
-		s.Command.Long = "The \x1b[1mtemporal workflow update\x1b[0m command is used to synchronously Update a \nWorkflowExecution by ID.\n\n\x1b[1mtemporal workflow update \\\n\t\t--workflow-id MyWorkflowId \\\n\t\t--name MyUpdate \\\n\t\t--input '{\"Input\": \"As-JSON\"}'\x1b[0m\n\nUse the options listed below to change the command's behavior."
+		s.Command.Long = "The \x1b[1mtemporal workflow update\x1b[0m command is used to synchronously Update a\nWorkflowExecution by ID.\n\n\x1b[1mtemporal workflow update \\\n\t\t--workflow-id MyWorkflowId \\\n\t\t--name MyUpdate \\\n\t\t--input '{\"Input\": \"As-JSON\"}'\x1b[0m\n\nUse the options listed below to change the command's behavior."
 	} else {
-		s.Command.Long = "The `temporal workflow update` command is used to synchronously Update a \nWorkflowExecution by ID.\n\n```\ntemporal workflow update \\\n\t\t--workflow-id MyWorkflowId \\\n\t\t--name MyUpdate \\\n\t\t--input '{\"Input\": \"As-JSON\"}'\n```\n\nUse the options listed below to change the command's behavior."
+		s.Command.Long = "The `temporal workflow update` command is used to synchronously Update a\nWorkflowExecution by ID.\n\n```\ntemporal workflow update \\\n\t\t--workflow-id MyWorkflowId \\\n\t\t--name MyUpdate \\\n\t\t--input '{\"Input\": \"As-JSON\"}'\n```\n\nUse the options listed below to change the command's behavior."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.PayloadInputOptions.buildFlags(cctx, s.Command.Flags())
