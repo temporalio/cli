@@ -1068,6 +1068,7 @@ Use the options listed below to change the command's behavior.
 
 * `--name` (string) - Update Name. Required.
 * `--workflow-id`, `-w` (string) - Workflow Id. Required.
+* `--update-id` (string) - Update ID. If unset, default to a UUID.
 * `--run-id`, `-r` (string) - Run Id. If unset, the currently running Workflow Execution receives the Update.
 * `--first-execution-run-id` (string) - Send the Update to the last Workflow Execution in the chain that started
   with this Run Id.

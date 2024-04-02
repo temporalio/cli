@@ -429,6 +429,15 @@ func (s *SharedServerSuite) TestWorkflow_Update() {
 	res = s.Execute("workflow", "update", "--address", s.Address(), "-w", run.GetID(), "--name", updateName, "-i", strconv.Itoa(input), "--first-execution-run-id", run.GetRunID())
 	s.NoError(res.Err)
 
+	// successful update passing update-id
+	updateID := uuid.NewString()
+	res = s.Execute("workflow", "update", "--address", s.Address(), "--update-id", updateID, "-w", run.GetID(), "--name", updateName, "-i", updateID)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), strconv.Itoa(input))
+	res = s.Execute("workflow", "update", "--address", s.Address(), "--update-id", updateID, "-w", run.GetID(), "--name", updateName)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), strconv.Itoa(input))
+
 	// update rejected, when name is not available
 	res = s.Execute("workflow", "update", "--address", s.Address(), "-w", run.GetID(), "-i", strconv.Itoa(input))
 	s.ErrorContains(res.Err, "required flag(s) \"name\" not set")
