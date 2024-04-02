@@ -61,6 +61,10 @@ func (h *CommandHarness) ContainsOnSameLine(text string, pieces ...string) {
 	h.NoError(AssertContainsOnSameLine(text, pieces...))
 }
 
+func (h *CommandHarness) AnyLineMatchesRegexp(text string, pattern string) {
+	h.NoError(AssertAnyLineMatchesRegexp(text, pattern))
+}
+
 func AssertContainsOnSameLine(text string, pieces ...string) error {
 	// Build regex pattern based on pieces
 	pattern := ""
@@ -70,6 +74,11 @@ func AssertContainsOnSameLine(text string, pieces ...string) error {
 		}
 		pattern += regexp.QuoteMeta(piece)
 	}
+
+	return AssertAnyLineMatchesRegexp(text, pattern)
+}
+
+func AssertAnyLineMatchesRegexp(text string, pattern string) error {
 	regex, err := regexp.Compile(pattern)
 	if err != nil {
 		return err
@@ -81,7 +90,7 @@ func AssertContainsOnSameLine(text string, pieces ...string) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("pieces not found in order on any line together")
+	return fmt.Errorf("no line matches the expected pattern: %v", pattern)
 }
 
 func TestAssertContainsOnSameLine(t *testing.T) {
