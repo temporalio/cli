@@ -430,11 +430,10 @@ func (s *SharedServerSuite) TestWorkflow_Update() {
 	s.NoError(res.Err)
 
 	// successful update passing update-id
-	updateID := uuid.NewString()
-	res = s.Execute("workflow", "update", "--address", s.Address(), "--update-id", updateID, "-w", run.GetID(), "--name", updateName, "-i", updateID)
+	res = s.Execute("workflow", "update", "--address", s.Address(), "--update-id", strconv.Itoa(input), "-w", run.GetID(), "--name", updateName, "-i", strconv.Itoa(input))
 	s.NoError(res.Err)
 	s.Contains(res.Stdout.String(), strconv.Itoa(input))
-	res = s.Execute("workflow", "update", "--address", s.Address(), "--update-id", updateID, "-w", run.GetID(), "--name", updateName)
+	res = s.Execute("workflow", "update", "--address", s.Address(), "--update-id", strconv.Itoa(input), "-w", run.GetID(), "--name", updateName)
 	s.NoError(res.Err)
 	s.Contains(res.Stdout.String(), strconv.Itoa(input))
 
