@@ -152,6 +152,7 @@ func (s *StartOptions) buildUIServer() *uiserver.Server {
 		EnableUI:            true,
 		UIAssetPath:         s.UIAssetPath,
 		Codec:               uiconfig.Codec{Endpoint: s.UICodecEndpoint},
+		CORS:                uiconfig.CORS{CookieInsecure: true},
 		HideLogs:            true,
 	}))
 }
