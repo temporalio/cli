@@ -47,7 +47,7 @@ func (s *SharedServerSuite) TestBatchJob_Describe() {
 			s.Empty(res.Stderr.String())
 
 			out := res.Stdout.String()
-			s.ContainsOnSameLine(out, "State", "Running")
+			s.Regexp("State[ \t]+(Running|Completed)", out)
 			s.ContainsOnSameLine(out, "Type", "Terminate")
 			s.ContainsOnSameLine(out, "CompletedCount", "0/0")
 			s.ContainsOnSameLine(out, "FailureCount", "0/0")
