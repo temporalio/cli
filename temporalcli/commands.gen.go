@@ -2166,6 +2166,7 @@ type TemporalWorkflowUpdateCommand struct {
 	PayloadInputOptions
 	Name                string
 	WorkflowId          string
+	UpdateId            string
 	RunId               string
 	FirstExecutionRunId string
 }
@@ -2187,6 +2188,7 @@ func NewTemporalWorkflowUpdateCommand(cctx *CommandContext, parent *TemporalWork
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
 	s.Command.Flags().StringVarP(&s.WorkflowId, "workflow-id", "w", "", "Workflow Id.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "workflow-id")
+	s.Command.Flags().StringVar(&s.UpdateId, "update-id", "", "Update ID. If unset, default to a UUID.")
 	s.Command.Flags().StringVarP(&s.RunId, "run-id", "r", "", "Run Id. If unset, the currently running Workflow Execution receives the Update.")
 	s.Command.Flags().StringVar(&s.FirstExecutionRunId, "first-execution-run-id", "", "Send the Update to the last Workflow Execution in the chain that started with this Run Id.")
 	s.Command.Run = func(c *cobra.Command, args []string) {

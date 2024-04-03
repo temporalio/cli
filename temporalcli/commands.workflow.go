@@ -204,6 +204,7 @@ func (c *TemporalWorkflowUpdateCommand) run(cctx *CommandContext, args []string)
 		WorkflowID:          c.WorkflowId,
 		RunID:               c.RunId,
 		UpdateName:          c.Name,
+		UpdateID:            c.UpdateId,
 		FirstExecutionRunID: c.FirstExecutionRunId,
 		Args:                input,
 	}
