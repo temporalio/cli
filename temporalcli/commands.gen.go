@@ -1624,8 +1624,8 @@ func NewTemporalWorkflowCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.AddCommand(&NewTemporalWorkflowStackCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowStartCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowTerminateCommand(cctx, &s).Command)
-	s.Command.AddCommand(&NewTemporalWorkflowUpdateCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowTraceCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkflowUpdateCommand(cctx, &s).Command)
 	s.ClientOptions.buildFlags(cctx, s.Command.PersistentFlags())
 	return &s
 }
@@ -2153,6 +2153,43 @@ func NewTemporalWorkflowTerminateCommand(cctx *CommandContext, parent *TemporalW
 	return &s
 }
 
+type TemporalWorkflowTraceCommand struct {
+	Parent  *TemporalWorkflowCommand
+	Command cobra.Command
+	WorkflowReferenceOptions
+	ClientOptions
+	Fold        string
+	NoFold      bool
+	Depth       int
+	Concurrency int
+}
+
+func NewTemporalWorkflowTraceCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowTraceCommand {
+	var s TemporalWorkflowTraceCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "trace [flags]"
+	s.Command.Short = "Terminate Workflow Execution by ID or List Filter."
+	if hasHighlighting {
+		s.Command.Long = "The \x1b[1mtemporal workflow trace\x1b[0m command display the progress of a Workflow Execution and its child workflows with a trace.\nThis view provides a great way to understand the flow of a workflow.\n\nUse the options listed below to change the behavior of this command."
+	} else {
+		s.Command.Long = "The `temporal workflow trace` command display the progress of a Workflow Execution and its child workflows with a trace.\nThis view provides a great way to understand the flow of a workflow.\n\nUse the options listed below to change the behavior of this command."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
+	s.ClientOptions.buildFlags(cctx, s.Command.Flags())
+	s.Command.Flags().StringVar(&s.Fold, "fold", "completed,canceled,terminated", "Statuses for which Child Workflows will be folded in (this will reduce the number of information fetched and displayed). Case-insensitive and ignored if no-fold supplied. Available values: running, completed, failed, canceled, terminated, timedout, continueasnew.")
+	s.Command.Flags().BoolVar(&s.NoFold, "no-fold", false, "Disable folding. All Child Workflows within the set depth will be fetched and displayed.")
+	s.Command.Flags().IntVar(&s.Depth, "depth", -1, "Depth of child workflows to fetch. Use -1 to fetch child workflows at any depth.")
+	s.Command.Flags().IntVar(&s.Concurrency, "concurrency", 10, "Number of concurrent workflow histories that will be requested at any given time.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
 type TemporalWorkflowUpdateCommand struct {
 	Parent  *TemporalWorkflowCommand
 	Command cobra.Command
@@ -2182,44 +2219,6 @@ func NewTemporalWorkflowUpdateCommand(cctx *CommandContext, parent *TemporalWork
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "workflow-id")
 	s.Command.Flags().StringVarP(&s.RunId, "run-id", "r", "", "Run Id. If unset, the currently running Workflow Execution receives the Update.")
 	s.Command.Flags().StringVar(&s.FirstExecutionRunId, "first-execution-run-id", "", "Send the Update to the last Workflow Execution in the chain that started with this Run Id.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
-	}
-	return &s
-}
-
-type TemporalWorkflowTraceCommand struct {
-	Parent  *TemporalWorkflowCommand
-	Command cobra.Command
-	WorkflowReferenceOptions
-	ClientOptions
-
-	FlagFold        string
-	FlagNoFold      bool
-	FlagConcurrency int
-	FlagDepth       int
-}
-
-func NewTemporalWorkflowTraceCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowTraceCommand {
-	var s TemporalWorkflowTraceCommand
-	s.Parent = parent
-	s.Command.Use = "trace [flags]"
-	s.Command.Short = "Trace progress of a Workflow Execution and its children."
-	if hasHighlighting {
-		s.Command.Long = "The \u001B[1mtemporal workflow trace\u001B[0m command tracks the progress of a Workflow Execution and any Child Workflows it generates.\n\nUse the options listed below to change the command's behavior."
-	} else {
-		s.Command.Long = "The `temporal workflow trace` command tracks the progress of a Workflow Execution and any Child Workflows it generates.\n\nUse the options listed below to change the command's behavior."
-	}
-
-	s.Command.Args = cobra.NoArgs
-	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
-	s.Command.Flags().StringVar(&s.FlagFold, "fold", "completed,canceled,terminated", "Statuses for which Child Workflows will be folded in (this will reduce the number of information fetched and displayed). Case-insensitive and ignored if no-fold supplied. Available values: running, completed, failed, canceled, terminated, timedout, continueasnew.")
-	s.Command.Flags().BoolVar(&s.FlagNoFold, "no-fold", false, "Disable folding. All Child Workflows within the set depth will be fetched and displayed.")
-	s.Command.Flags().IntVar(&s.FlagDepth, "depth", -1, "Depth of child workflows to fetch. Use -1 to fetch child workflows at any depth.")
-	s.Command.Flags().IntVar(&s.FlagConcurrency, "concurrency", 10, "Number of concurrent requests to make when fetching child workflows.")
-
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

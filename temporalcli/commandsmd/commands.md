@@ -1025,6 +1025,23 @@ Use the options listed below to change the behavior of this command.
 * `--reason` (string) - Reason for termination. Defaults to message with the current user's name.
 * `--yes`, `-y` (bool) - Confirm prompt to perform batch. Only allowed if query is present.
 
+### temporal workflow trace: Terminate Workflow Execution by ID or List Filter.
+
+The `temporal workflow trace` command display the progress of a [Workflow Execution](/concepts/what-is-a-workflow-execution) and its child workflows with a trace.
+This view provides a great way to understand the flow of a workflow.
+
+Use the options listed below to change the behavior of this command.
+
+#### Options
+
+* `--fold` (string) - Statuses for which Child Workflows will be folded in (this will reduce the number of information fetched and displayed). Case-insensitive and ignored if no-fold supplied. Available values: running, completed, failed, canceled, terminated, timedout, continueasnew. Default: completed,canceled,terminated.
+* `--no-fold` (bool) - Disable folding. All Child Workflows within the set depth will be fetched and displayed. 
+* `--depth` (int) - Depth of child workflows to fetch. Use -1 to fetch child workflows at any depth. Default: -1.
+* `--concurrency` (int) - Number of concurrent workflow histories that will be requested at any given time. Default: 10.
+
+Includes options set for [workflow reference](#options-set-for-workflow-reference).
+Includes options set for [client](#options-set-for-client).
+
 ### temporal workflow update: Updates a running workflow synchronously.
 
 The `temporal workflow update` command is used to synchronously [Update](/concepts/what-is-an-update) a 
