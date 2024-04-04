@@ -67,7 +67,6 @@ func PrintWorkflowTrace(ctx context.Context, sdkClient sdkclient.Client, wid, ri
 	tracer, err := NewWorkflowTracer(sdkClient,
 		WithOptions(opts),
 		WithInterrupts(os.Interrupt, syscall.SIGTERM, syscall.SIGINT),
-		// WithWriter(NewTermWriter().WithTerminalSize()),
 	)
 	if err != nil {
 		return 1, err

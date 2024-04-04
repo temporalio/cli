@@ -38,7 +38,7 @@ func (c *TemporalWorkflowTraceCommand) run(cctx *CommandContext, _ []string) err
 type workflowSummary struct {
 	WorkflowId string `json:"workflowId"`
 	RunId      string `json:"runId"`
-	Type       string `json:"uype"`
+	Type       string `json:"type"`
 	Namespace  string `json:"namespace"`
 	TaskQueue  string `json:"taskQueue"`
 }

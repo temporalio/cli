@@ -44,12 +44,6 @@ func NewWorkflowTracer(client client.Client, options ...func(tracer *WorkflowTra
 	return tracer, nil
 }
 
-func WithWriter(writer *TermWriter) func(*WorkflowTracer) {
-	return func(t *WorkflowTracer) {
-		t.writer = writer
-	}
-}
-
 // WithInterrupts sets the signals that will interrupt the tracer
 func WithInterrupts(signals ...os.Signal) func(*WorkflowTracer) {
 	return func(t *WorkflowTracer) {
