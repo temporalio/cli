@@ -9,6 +9,9 @@ import (
 )
 
 func (c *TemporalWorkflowTraceCommand) run(cctx *CommandContext, _ []string) error {
+	if cctx.JSONOutput {
+		return fmt.Errorf("JSON output not supported for trace command")
+	}
 	cl, err := c.Parent.ClientOptions.dialClient(cctx)
 	if err != nil {
 		return err
