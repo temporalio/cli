@@ -2,6 +2,7 @@ package temporalcli
 
 import (
 	"fmt"
+
 	"github.com/fatih/color"
 	"github.com/temporalio/cli/temporalcli/internal/printer"
 	"github.com/temporalio/cli/temporalcli/internal/trace"
@@ -18,14 +19,12 @@ func (c *TemporalWorkflowTraceCommand) run(cctx *CommandContext, _ []string) err
 	}
 	defer cl.Close()
 
-	ctx := cctx.Context
-
 	opts := trace.WorkflowTraceOptions{
-		Depth:       c.FlagDepth,
-		Concurrency: c.FlagConcurrency,
-		NoFold:      c.FlagNoFold,
+		Depth:       c.Depth,
+		Concurrency: c.Concurrency,
+		NoFold:      c.NoFold,
 	}
-	opts.FoldStatus, err = trace.GetFoldStatus(c.FlagFold)
+	opts.FoldStatus, err = trace.GetFoldStatus(c.Fold)
 	if err != nil {
 		return err
 	}
@@ -33,12 +32,12 @@ func (c *TemporalWorkflowTraceCommand) run(cctx *CommandContext, _ []string) err
 	if err = c.printWorkflowSummary(cctx, cl, c.WorkflowId, c.RunId); err != nil {
 		return err
 	}
-	_, err = trace.PrintWorkflowTrace(ctx, cl, c.WorkflowId, c.RunId, opts)
+	_, err = trace.PrintWorkflowTrace(cctx, cl, c.WorkflowId, c.RunId, opts)
 
 	return err
 }
 
-type workflowSummary struct {
+type workflowTraceSummary struct {
 	WorkflowId string `json:"workflowId"`
 	RunId      string `json:"runId"`
 	Type       string `json:"type"`
@@ -57,14 +56,14 @@ func (c *TemporalWorkflowTraceCommand) printWorkflowSummary(cctx *CommandContext
 
 	cctx.Printer.Println(color.MagentaString("Execution summary:"))
 
-	_ = cctx.Printer.PrintStructured(workflowSummary{
+	_ = cctx.Printer.PrintStructured(workflowTraceSummary{
 		WorkflowId: info.GetExecution().GetWorkflowId(),
 		RunId:      info.GetExecution().GetRunId(),
 		Type:       info.GetType().GetName(),
 		Namespace:  c.Parent.Namespace,
 		TaskQueue:  info.GetTaskQueue(),
 	}, printer.StructuredOptions{})
-	_, _ = fmt.Println()
+	cctx.Printer.Println()
 
 	return err
 }
