@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"slices"
 	"strings"
 	"syscall"
 	"time"
@@ -360,6 +361,25 @@ func (c *TemporalCommand) initCommand(cctx *CommandContext) {
 	c.Command.PersistentPostRun = func(*cobra.Command, []string) {
 		color.NoColor = origNoColor
 	}
+
+	// Ugly hack to make sure that iff the user explicitly asked for help, we
+	// exit with a zero error code.  (The other situation in which help is
+	// printed is when the user invokes an unknown command--we still want a
+	// non-zero exit in that case.)  We should revisit this if/when the
+	// following Cobra issues get fixed:
+	//
+	// - https://github.com/spf13/cobra/issues/1156
+	// - https://github.com/spf13/cobra/issues/706
+	inner_help := c.Command.HelpFunc()
+	c.Command.SetHelpFunc(func(c *cobra.Command, args []string) {
+		if slices.ContainsFunc(args, func(a string) bool {
+			return a == "--help" || a == "-h" || a == "help"
+		}) {
+			cctx.ActuallyRanCommand = true
+		}
+
+		inner_help(c, args)
+	})
 }
 
 func (c *TemporalCommand) preRun(cctx *CommandContext) error {
