@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"slices"
 	"strings"
 	"syscall"
 	"time"
@@ -321,8 +322,23 @@ func Execute(ctx context.Context, options CommandOptions) {
 	if err != nil {
 		cctx.Options.Fail(err)
 	}
-	// If no command ever actually got run, exit nonzero
+
+	// If no command ever actually got run, exit nonzero with an error.  This is
+	// an ugly hack to make sure that iff the user explicitly asked for help, we
+	// exit with a zero error code.  (The other situation in which help is
+	// printed is when the user invokes an unknown command--we still want a
+	// non-zero exit in that case.)  We should revisit this if/when the
+	// following Cobra issues get fixed:
+	//
+	// - https://github.com/spf13/cobra/issues/1156
+	// - https://github.com/spf13/cobra/issues/706
 	if !cctx.ActuallyRanCommand {
+		zeroExitArgs := []string{"--help", "-h", "--version", "-v", "help"}
+		if slices.ContainsFunc(cctx.Options.Args, func(a string) bool {
+			return slices.Contains(zeroExitArgs, a)
+		}) {
+			return
+		}
 		cctx.Options.Fail(fmt.Errorf("unknown command"))
 	}
 }
