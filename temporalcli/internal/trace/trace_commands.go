@@ -1,14 +1,9 @@
 package trace
 
 import (
-	"context"
 	"fmt"
-	"os"
 	"strings"
-	"syscall"
 	"time"
-
-	sdkclient "go.temporal.io/sdk/client"
 
 	"github.com/fatih/color"
 	"go.temporal.io/api/enums/v1"
@@ -54,29 +49,4 @@ type WorkflowTraceOptions struct {
 	Concurrency int
 
 	UpdatePeriod time.Duration
-}
-
-// PrintWorkflowTrace prints and updates a workflow trace following printWorkflowProgress pattern
-func PrintWorkflowTrace(ctx context.Context, sdkClient sdkclient.Client, wid, rid string, opts WorkflowTraceOptions) (int, error) {
-	// Load templates
-	tmpl, err := NewExecutionTemplate(opts.FoldStatus, opts.NoFold)
-	if err != nil {
-		return 1, err
-	}
-
-	tracer, err := NewWorkflowTracer(sdkClient,
-		WithOptions(opts),
-		WithInterrupts(os.Interrupt, syscall.SIGTERM, syscall.SIGINT),
-	)
-	if err != nil {
-		return 1, err
-	}
-
-	err = tracer.GetExecutionUpdates(ctx, wid, rid)
-	if err != nil {
-		return 1, err
-	}
-
-	_, _ = title.Println("Progress:")
-	return tracer.PrintUpdates(tmpl, time.Second)
 }

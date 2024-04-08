@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"os"
 	"sync"
 )
 
@@ -32,28 +31,24 @@ type TermWriter struct {
 
 // NewTermWriter returns a new TermWriter set to output to Stdout.
 // TermWriter is a stateful writer designed to print into a terminal window by limiting the number of lines printed what fits and clearing them on new outputs.
-func NewTermWriter() *TermWriter {
-	w := &TermWriter{buf: new(bytes.Buffer)}
-	return w.WithWriter(io.Writer(os.Stdout))
-}
-
-// WithWriter sets the writer for TermWriter.
-func (w *TermWriter) WithWriter(out io.Writer) *TermWriter {
-	w.out = out
-	return w
+func NewTermWriter(out io.Writer) *TermWriter {
+	tw := &TermWriter{buf: new(bytes.Buffer), out: out}
+	return tw.WithTerminalSize()
 }
 
 // WithSize sets the size of TermWriter to the desired width and height.
-func (w *TermWriter) WithSize(width, height int) (*TermWriter, error) {
+func (w *TermWriter) WithSize(width, height int) *TermWriter {
 	if width <= 0 {
-		return nil, fmt.Errorf("cannot have width %d", width)
+		// width is unknown and we should not limit the output.
+		width = 0
 	}
 	if height <= 0 {
-		return nil, fmt.Errorf("cannot have height %d", width)
+		// height is unknown and we should not limit the output.
+		height = 0
 	}
 	w.termHeight = height
 	w.termWidth = width
-	return w, nil
+	return w
 }
 
 func (w *TermWriter) GetSize() (int, int) {
@@ -61,7 +56,7 @@ func (w *TermWriter) GetSize() (int, int) {
 }
 
 // WithTerminalSize sets the size of TermWriter to that of the terminal.
-func (w *TermWriter) WithTerminalSize() (*TermWriter, error) {
+func (w *TermWriter) WithTerminalSize() *TermWriter {
 	termWidth, termHeight := getTerminalSize()
 	return w.WithSize(termWidth, termHeight)
 }
@@ -99,7 +94,7 @@ func (w *TermWriter) clearLines() error {
 // Any incomplete escape sequence at the end is considered complete for formatting purposes.
 // An error is returned if the contents of the buffer cannot be written to the underlying output stream.
 func (w *TermWriter) Flush(trim bool) error {
-	if w.termWidth <= 0 {
+	if w.termWidth < 0 {
 		return fmt.Errorf("TermWriter cannot flush without a valid width (current: %d)", w.termWidth)
 	}
 

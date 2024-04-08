@@ -1040,7 +1040,6 @@ Use the options listed below to change the behavior of this command.
 * `--concurrency` (int) - Number of concurrent workflow histories that will be requested at any given time. Default: 10.
 
 Includes options set for [workflow reference](#options-set-for-workflow-reference).
-Includes options set for [client](#options-set-for-client).
 
 ### temporal workflow update: Updates a running workflow synchronously.
 

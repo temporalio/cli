@@ -2,6 +2,9 @@ package temporalcli
 
 import (
 	"fmt"
+	"os"
+	"syscall"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/temporalio/cli/temporalcli/internal/printer"
@@ -32,7 +35,7 @@ func (c *TemporalWorkflowTraceCommand) run(cctx *CommandContext, _ []string) err
 	if err = c.printWorkflowSummary(cctx, cl, c.WorkflowId, c.RunId); err != nil {
 		return err
 	}
-	_, err = trace.PrintWorkflowTrace(cctx, cl, c.WorkflowId, c.RunId, opts)
+	_, err = c.printWorkflowTrace(cctx, cl, c.WorkflowId, c.RunId, opts)
 
 	return err
 }
@@ -66,4 +69,30 @@ func (c *TemporalWorkflowTraceCommand) printWorkflowSummary(cctx *CommandContext
 	cctx.Printer.Println()
 
 	return err
+}
+
+// PrintWorkflowTrace prints and updates a workflow trace following printWorkflowProgress pattern
+func (c *TemporalWorkflowTraceCommand) printWorkflowTrace(cctx *CommandContext, cl client.Client, wid, rid string, opts trace.WorkflowTraceOptions) (int, error) {
+	// Load templates
+	tmpl, err := trace.NewExecutionTemplate(opts.FoldStatus, opts.NoFold)
+	if err != nil {
+		return 1, err
+	}
+
+	tracer, err := trace.NewWorkflowTracer(cl,
+		trace.WithOptions(opts),
+		trace.WithOutput(cctx.Printer.Output),
+		trace.WithInterrupts(os.Interrupt, syscall.SIGTERM, syscall.SIGINT),
+	)
+	if err != nil {
+		return 1, err
+	}
+
+	err = tracer.GetExecutionUpdates(cctx, wid, rid)
+	if err != nil {
+		return 1, err
+	}
+
+	cctx.Printer.Println(color.MagentaString("Progress:"))
+	return tracer.PrintUpdates(tmpl, time.Second)
 }

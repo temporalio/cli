@@ -55,11 +55,10 @@ func TestTermWriter_WriteLine(t *testing.T) {
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			b := bytes.NewBufferString("") // Start with an empty string so we can test no content being written
-			w, err := NewTermWriter().WithWriter(b).WithSize(tt.width, tt.height)
-			require.NoError(t, err)
+			w := NewTermWriter(b).WithSize(tt.width, tt.height)
 
 			_, _ = w.WriteLine(tt.content)
-			err = w.Flush(tt.trim)
+			err := w.Flush(tt.trim)
 
 			require.NoError(t, err)
 			require.Equalf(t, bytes.NewBufferString(tt.want), b, "flushed message doesn't match expected message")
@@ -100,8 +99,7 @@ func TestTermWriter_MultipleFlushes(t *testing.T) {
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			b := bytes.NewBufferString("") // Start with an empty string so we can test no content being written
-			w, err := NewTermWriter().WithWriter(b).WithSize(tt.width, tt.height)
-			require.NoError(t, err)
+			w := NewTermWriter(b).WithSize(tt.width, tt.height)
 
 			for _, s := range tt.content {
 				_, _ = w.WriteLine(s)

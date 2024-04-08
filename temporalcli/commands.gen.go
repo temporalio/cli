@@ -2157,7 +2157,6 @@ type TemporalWorkflowTraceCommand struct {
 	Parent  *TemporalWorkflowCommand
 	Command cobra.Command
 	WorkflowReferenceOptions
-	ClientOptions
 	Fold        string
 	NoFold      bool
 	Depth       int
@@ -2177,7 +2176,6 @@ func NewTemporalWorkflowTraceCommand(cctx *CommandContext, parent *TemporalWorkf
 	}
 	s.Command.Args = cobra.NoArgs
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
-	s.ClientOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Flags().StringVar(&s.Fold, "fold", "completed,canceled,terminated", "Statuses for which Child Workflows will be folded in (this will reduce the number of information fetched and displayed). Case-insensitive and ignored if no-fold supplied. Available values: running, completed, failed, canceled, terminated, timedout, continueasnew.")
 	s.Command.Flags().BoolVar(&s.NoFold, "no-fold", false, "Disable folding. All Child Workflows within the set depth will be fetched and displayed.")
 	s.Command.Flags().IntVar(&s.Depth, "depth", -1, "Depth of child workflows to fetch. Use -1 to fetch child workflows at any depth.")

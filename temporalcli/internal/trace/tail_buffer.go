@@ -45,7 +45,11 @@ func NewTailBoxBoundBuffer(buf *bytes.Buffer, maxLines int, maxWidth int) (*byte
 	lines := 0
 
 	for _, line := range ReverseLinesBuffer(buf) {
-		lineHeight := LineHeight(line, maxWidth)
+		lineHeight := 1
+		// If we have a max width, we need to calculate the height of the line
+		if maxWidth > 0 {
+			lineHeight = LineHeight(line, maxWidth)
+		}
 		if lineHeight+lines > maxLines && maxLines > 0 {
 			break
 		} else {

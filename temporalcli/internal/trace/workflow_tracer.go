@@ -3,6 +3,7 @@ package trace
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"time"
@@ -16,6 +17,7 @@ type WorkflowTracer struct {
 	update *WorkflowExecutionUpdate
 	opts   WorkflowTraceOptions
 	writer *TermWriter
+	output io.Writer
 
 	interruptSignals []os.Signal
 
@@ -25,20 +27,20 @@ type WorkflowTracer struct {
 }
 
 func NewWorkflowTracer(client client.Client, options ...func(tracer *WorkflowTracer)) (*WorkflowTracer, error) {
-	writer, err := NewTermWriter().WithTerminalSize()
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize terminal writer: %w", err)
-	}
 	tracer := &WorkflowTracer{
 		client:   client,
 		doneChan: make(chan bool),
 		errChan:  make(chan error),
 		sigChan:  make(chan os.Signal, 1),
-		writer:   writer,
+		output:   os.Stdout,
 	}
 	for _, opt := range options {
 		opt(tracer)
 	}
+
+	// Add terminal writer, which we'll to print and clear updates to the terminal
+	tracer.writer = NewTermWriter(tracer.output)
+
 	signal.Notify(tracer.sigChan, tracer.interruptSignals...)
 
 	return tracer, nil
@@ -55,6 +57,12 @@ func WithInterrupts(signals ...os.Signal) func(*WorkflowTracer) {
 func WithOptions(opts WorkflowTraceOptions) func(*WorkflowTracer) {
 	return func(t *WorkflowTracer) {
 		t.opts = opts
+	}
+}
+
+func WithOutput(w io.Writer) func(*WorkflowTracer) {
+	return func(t *WorkflowTracer) {
+		t.output = w
 	}
 }
 
