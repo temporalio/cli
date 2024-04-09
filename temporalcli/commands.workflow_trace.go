@@ -15,7 +15,7 @@ import (
 	"go.temporal.io/sdk/client"
 )
 
-var foldFlag = map[string]enums.WorkflowExecutionStatus{
+var workflowTraceFoldFlags = map[string]enums.WorkflowExecutionStatus{
 	"running":       enums.WORKFLOW_EXECUTION_STATUS_RUNNING,
 	"completed":     enums.WORKFLOW_EXECUTION_STATUS_COMPLETED,
 	"failed":        enums.WORKFLOW_EXECUTION_STATUS_FAILED,
