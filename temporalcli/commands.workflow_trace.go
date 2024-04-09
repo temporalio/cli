@@ -40,7 +40,7 @@ func getFoldStatuses(foldFlags []string) ([]enums.WorkflowExecutionStatus, error
 	for _, flag := range foldFlags {
 		status, ok := foldFlag[flag]
 		if !ok {
-			return nil, fmt.Errorf("fold status \"%s\" not recognized", flag)
+			return nil, fmt.Errorf("fold status %q not recognized", flag)
 		}
 		values = append(values, status)
 	}
