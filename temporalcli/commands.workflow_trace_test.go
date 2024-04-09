@@ -6,10 +6,8 @@ import (
 	"time"
 
 	"go.temporal.io/api/enums/v1"
-
-	"go.temporal.io/sdk/workflow"
-
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/workflow"
 )
 
 func (s *SharedServerSuite) TestWorkflow_Trace_Summary() {

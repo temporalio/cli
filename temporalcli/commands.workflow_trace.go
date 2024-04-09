@@ -6,12 +6,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/temporalio/cli/temporalcli/internal/tracer"
-
-	"go.temporal.io/api/enums/v1"
-
 	"github.com/fatih/color"
 	"github.com/temporalio/cli/temporalcli/internal/printer"
+	"github.com/temporalio/cli/temporalcli/internal/tracer"
+	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/sdk/client"
 )
 
@@ -27,7 +25,7 @@ var workflowTraceFoldFlags = map[string]enums.WorkflowExecutionStatus{
 
 func (c *TemporalWorkflowTraceCommand) getFoldStatuses() ([]enums.WorkflowExecutionStatus, error) {
 	// defaults
-	if len(foldFlags) == 0 {
+	if len(c.Fold) == 0 {
 		return []enums.WorkflowExecutionStatus{
 			enums.WORKFLOW_EXECUTION_STATUS_COMPLETED,
 			enums.WORKFLOW_EXECUTION_STATUS_CANCELED,
@@ -37,8 +35,8 @@ func (c *TemporalWorkflowTraceCommand) getFoldStatuses() ([]enums.WorkflowExecut
 
 	// parse flags
 	var values []enums.WorkflowExecutionStatus
-	for _, flag := range foldFlags {
-		status, ok := foldFlag[flag]
+	for _, flag := range c.Fold {
+		status, ok := workflowTraceFoldFlags[flag]
 		if !ok {
 			return nil, fmt.Errorf("fold status %q not recognized", flag)
 		}
@@ -62,7 +60,7 @@ func (c *TemporalWorkflowTraceCommand) run(cctx *CommandContext, _ []string) err
 		Concurrency: c.Concurrency,
 		NoFold:      c.NoFold,
 	}
-	opts.FoldStatuses, err = getFoldStatuses(c.Fold)
+	opts.FoldStatuses, err = c.getFoldStatuses()
 	if err != nil {
 		return err
 	}
