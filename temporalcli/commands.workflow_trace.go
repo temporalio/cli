@@ -25,7 +25,7 @@ var foldFlag = map[string]enums.WorkflowExecutionStatus{
 	"continueasnew": enums.WORKFLOW_EXECUTION_STATUS_CONTINUED_AS_NEW,
 }
 
-func getFoldStatuses(foldFlags []string) ([]enums.WorkflowExecutionStatus, error) {
+func (c *TemporalWorkflowTraceCommand) getFoldStatuses() ([]enums.WorkflowExecutionStatus, error) {
 	// defaults
 	if len(foldFlags) == 0 {
 		return []enums.WorkflowExecutionStatus{
