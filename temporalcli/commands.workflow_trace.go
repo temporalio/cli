@@ -6,11 +6,46 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/temporalio/cli/temporalcli/internal/tracer"
+
+	"go.temporal.io/api/enums/v1"
+
 	"github.com/fatih/color"
 	"github.com/temporalio/cli/temporalcli/internal/printer"
-	"github.com/temporalio/cli/temporalcli/internal/trace"
 	"go.temporal.io/sdk/client"
 )
+
+var foldFlag = map[string]enums.WorkflowExecutionStatus{
+	"running":       enums.WORKFLOW_EXECUTION_STATUS_RUNNING,
+	"completed":     enums.WORKFLOW_EXECUTION_STATUS_COMPLETED,
+	"failed":        enums.WORKFLOW_EXECUTION_STATUS_FAILED,
+	"canceled":      enums.WORKFLOW_EXECUTION_STATUS_CANCELED,
+	"terminated":    enums.WORKFLOW_EXECUTION_STATUS_TERMINATED,
+	"timedout":      enums.WORKFLOW_EXECUTION_STATUS_TIMED_OUT,
+	"continueasnew": enums.WORKFLOW_EXECUTION_STATUS_CONTINUED_AS_NEW,
+}
+
+func getFoldStatuses(foldFlags []string) ([]enums.WorkflowExecutionStatus, error) {
+	// defaults
+	if len(foldFlags) == 0 {
+		return []enums.WorkflowExecutionStatus{
+			enums.WORKFLOW_EXECUTION_STATUS_COMPLETED,
+			enums.WORKFLOW_EXECUTION_STATUS_CANCELED,
+			enums.WORKFLOW_EXECUTION_STATUS_TERMINATED,
+		}, nil
+	}
+
+	// parse flags
+	var values []enums.WorkflowExecutionStatus
+	for _, flag := range foldFlags {
+		status, ok := foldFlag[flag]
+		if !ok {
+			return nil, fmt.Errorf("fold status \"%s\" not recognized", flag)
+		}
+		values = append(values, status)
+	}
+	return values, nil
+}
 
 func (c *TemporalWorkflowTraceCommand) run(cctx *CommandContext, _ []string) error {
 	if cctx.JSONOutput {
@@ -22,12 +57,12 @@ func (c *TemporalWorkflowTraceCommand) run(cctx *CommandContext, _ []string) err
 	}
 	defer cl.Close()
 
-	opts := trace.WorkflowTraceOptions{
+	opts := tracer.WorkflowTracerOptions{
 		Depth:       c.Depth,
 		Concurrency: c.Concurrency,
 		NoFold:      c.NoFold,
 	}
-	opts.FoldStatus, err = trace.GetFoldStatus(c.Fold)
+	opts.FoldStatuses, err = getFoldStatuses(c.Fold)
 	if err != nil {
 		return err
 	}
@@ -72,27 +107,27 @@ func (c *TemporalWorkflowTraceCommand) printWorkflowSummary(cctx *CommandContext
 }
 
 // PrintWorkflowTrace prints and updates a workflow trace following printWorkflowProgress pattern
-func (c *TemporalWorkflowTraceCommand) printWorkflowTrace(cctx *CommandContext, cl client.Client, wid, rid string, opts trace.WorkflowTraceOptions) (int, error) {
+func (c *TemporalWorkflowTraceCommand) printWorkflowTrace(cctx *CommandContext, cl client.Client, wid, rid string, opts tracer.WorkflowTracerOptions) (int, error) {
 	// Load templates
-	tmpl, err := trace.NewExecutionTemplate(opts.FoldStatus, opts.NoFold)
+	tmpl, err := tracer.NewExecutionTemplate(opts.FoldStatuses, opts.NoFold)
 	if err != nil {
 		return 1, err
 	}
 
-	tracer, err := trace.NewWorkflowTracer(cl,
-		trace.WithOptions(opts),
-		trace.WithOutput(cctx.Printer.Output),
-		trace.WithInterrupts(os.Interrupt, syscall.SIGTERM, syscall.SIGINT),
+	workflowTracer, err := tracer.NewWorkflowTracer(cl,
+		tracer.WithOptions(opts),
+		tracer.WithOutput(cctx.Printer.Output),
+		tracer.WithInterrupts(os.Interrupt, syscall.SIGTERM, syscall.SIGINT),
 	)
 	if err != nil {
 		return 1, err
 	}
 
-	err = tracer.GetExecutionUpdates(cctx, wid, rid)
+	err = workflowTracer.GetExecutionUpdates(cctx, wid, rid)
 	if err != nil {
 		return 1, err
 	}
 
 	cctx.Printer.Println(color.MagentaString("Progress:"))
-	return tracer.PrintUpdates(tmpl, time.Second)
+	return workflowTracer.PrintUpdates(tmpl, time.Second)
 }

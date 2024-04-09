@@ -1,6 +1,6 @@
 //go:build !windows
 
-package trace
+package tracer
 
 import (
 	"syscall"

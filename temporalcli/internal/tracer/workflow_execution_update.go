@@ -1,8 +1,9 @@
-package trace
+package tracer
 
 import (
 	"context"
 	"fmt"
+
 	"github.com/alitto/pond"
 	"go.temporal.io/api/enums/v1"
 	sdkclient "go.temporal.io/sdk/client"

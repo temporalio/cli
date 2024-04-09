@@ -1,13 +1,14 @@
-package trace
+package tracer
 
 import (
 	"bytes"
-	"google.golang.org/protobuf/types/known/durationpb"
-	"google.golang.org/protobuf/types/known/timestamppb"
 	"runtime"
 	"strings"
 	"testing"
 	"time"
+
+	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/stretchr/testify/require"
 	"go.temporal.io/api/common/v1"

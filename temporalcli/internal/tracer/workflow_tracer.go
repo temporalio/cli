@@ -1,4 +1,4 @@
-package trace
+package tracer
 
 import (
 	"context"
@@ -12,10 +12,19 @@ import (
 	"go.temporal.io/sdk/client"
 )
 
+type WorkflowTracerOptions struct {
+	NoFold       bool
+	FoldStatuses []enums.WorkflowExecutionStatus
+	Depth        int
+	Concurrency  int
+
+	UpdatePeriod time.Duration
+}
+
 type WorkflowTracer struct {
 	client client.Client
 	update *WorkflowExecutionUpdate
-	opts   WorkflowTraceOptions
+	opts   WorkflowTracerOptions
 	writer *TermWriter
 	output io.Writer
 
@@ -54,7 +63,7 @@ func WithInterrupts(signals ...os.Signal) func(*WorkflowTracer) {
 }
 
 // WithOptions sets the view options for the tracer
-func WithOptions(opts WorkflowTraceOptions) func(*WorkflowTracer) {
+func WithOptions(opts WorkflowTracerOptions) func(*WorkflowTracer) {
 	return func(t *WorkflowTracer) {
 		t.opts = opts
 	}
@@ -68,7 +77,7 @@ func WithOutput(w io.Writer) func(*WorkflowTracer) {
 
 // GetExecutionUpdates gets workflow execution updates for a particular workflow
 func (t *WorkflowTracer) GetExecutionUpdates(ctx context.Context, wid, rid string) error {
-	iter, err := GetWorkflowExecutionUpdates(ctx, t.client, wid, rid, t.opts.NoFold, t.opts.FoldStatus, t.opts.Depth, t.opts.Concurrency)
+	iter, err := GetWorkflowExecutionUpdates(ctx, t.client, wid, rid, t.opts.NoFold, t.opts.FoldStatuses, t.opts.Depth, t.opts.Concurrency)
 	if err != nil {
 		return err
 	}

@@ -1034,7 +1034,7 @@ Use the options listed below to change the behavior of this command.
 
 #### Options
 
-* `--fold` (string) - Statuses for which Child Workflows will be folded in (this will reduce the number of information fetched and displayed). Case-insensitive and ignored if no-fold supplied. Available values: running, completed, failed, canceled, terminated, timedout, continueasnew. Default: completed,canceled,terminated.
+* `--fold` (string[]) - Statuses for which Child Workflows will be folded in (this will reduce the number of information fetched and displayed). Case-insensitive and ignored if no-fold supplied. Available values: running, completed, failed, canceled, terminated, timedout, continueasnew.
 * `--no-fold` (bool) - Disable folding. All Child Workflows within the set depth will be fetched and displayed. 
 * `--depth` (int) - Depth of child workflows to fetch. Use -1 to fetch child workflows at any depth. Default: -1.
 * `--concurrency` (int) - Number of concurrent workflow histories that will be requested at any given time. Default: 10.
