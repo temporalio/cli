@@ -1,0 +1,3 @@
+{{ indent .Depth }} {{ faint "┼" }} {{ statusIcon .State }} {{ .State.GetName }} {{ template "extras" . }}
+{{ template "failure" . -}}
+{{ template "retry" . -}}
