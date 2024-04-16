@@ -24,6 +24,7 @@ import (
 	"go.temporal.io/sdk/converter"
 	"go.temporal.io/server/common/collection"
 	"go.temporal.io/server/common/primitives/timestamp"
+	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 func scheduleBaseArgs(c *cli.Context) (
@@ -67,7 +68,7 @@ func buildIntervalSpec(s string) (*schedpb.IntervalSpec, error) {
 	if interval, err = timestamp.ParseDuration(parts[0]); err != nil {
 		return nil, err
 	}
-	return &schedpb.IntervalSpec{Interval: &interval, Phase: &phase}, nil
+	return &schedpb.IntervalSpec{Interval: durationpb.New(interval), Phase: durationpb.New(phase)}, nil
 }
 
 func buildScheduleSpec(c *cli.Context) (*schedpb.ScheduleSpec, error) {
@@ -468,12 +469,15 @@ func DescribeSchedule(c *cli.Context) error {
 	item.State = s.State
 	item.Info = i
 	if fas := i.FutureActionTimes; len(fas) > 0 {
-		item.NextRunTime = fas[0]
+		tmpNextRunTime := fas[0].AsTime()
+		item.NextRunTime = &tmpNextRunTime
 	}
 	if ras := i.RecentActions; len(ras) > 0 {
 		ra := ras[len(ras)-1]
-		item.LastRunTime = ra.ScheduleTime
-		item.LastRunActualTime = ra.ActualTime
+		tmpScheduleTime := ra.ScheduleTime.AsTime()
+		tmpActualTime := ra.ActualTime.AsTime()
+		item.LastRunTime = &tmpScheduleTime
+		item.LastRunActualTime = &tmpActualTime
 		item.LastRunExecution = ra.StartWorkflowResult
 	}
 	if fields := resp.Memo.GetFields(); len(fields) > 0 {
@@ -589,12 +593,15 @@ func ListSchedules(c *cli.Context) error {
 			item.State.Paused = info.GetPaused()
 			item.State.Notes = info.GetNotes()
 			if fas := info.GetFutureActionTimes(); len(fas) > 0 {
-				item.Info.NextRunTime = fas[0]
+				tmpNextRunTime := fas[0].AsTime()
+				item.Info.NextRunTime = &tmpNextRunTime
 			}
 			if ras := info.GetRecentActions(); len(ras) > 0 {
 				ra := ras[len(ras)-1]
-				item.Info.LastRunTime = ra.ScheduleTime
-				item.Info.LastRunActualTime = ra.ActualTime
+				tmpScheduleTime := ra.ScheduleTime.AsTime()
+				tmpActualTime := ra.ActualTime.AsTime()
+				item.Info.LastRunTime = &tmpScheduleTime
+				item.Info.LastRunActualTime = &tmpActualTime
 				item.Info.LastRunExecution = ra.StartWorkflowResult
 			}
 			item.Specification = info.GetSpec()

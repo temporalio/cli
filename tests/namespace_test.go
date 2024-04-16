@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"go.temporal.io/api/workflowservice/v1"
+	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 func (s *e2eSuite) TestNamespaceUpdate_Verbose() {
@@ -26,7 +27,7 @@ func (s *e2eSuite) TestNamespaceUpdate_Verbose() {
 			Namespace:                        nsName,
 			Description:                      "description test",
 			OwnerEmail:                       "email@test",
-			WorkflowExecutionRetentionPeriod: &retentionBefore,
+			WorkflowExecutionRetentionPeriod: durationpb.New(retentionBefore),
 		},
 	)
 	s.NoError(err)
@@ -47,7 +48,7 @@ func (s *e2eSuite) TestNamespaceUpdate_Verbose() {
 	s.NoError(err)
 	s.Equal("description after", nsAfter.GetNamespaceInfo().GetDescription())
 	s.Equal("email@after", nsAfter.GetNamespaceInfo().GetOwnerEmail())
-	s.Equal(float64(48*60*60), nsAfter.GetConfig().GetWorkflowExecutionRetentionTtl().Seconds())
+	s.Equal(float64(48*60*60), nsAfter.GetConfig().GetWorkflowExecutionRetentionTtl())
 }
 
 func (s *e2eSuite) TestNamespaceUpdate_NonVerbose() {
@@ -68,7 +69,7 @@ func (s *e2eSuite) TestNamespaceUpdate_NonVerbose() {
 			Namespace:                        nsName,
 			Description:                      "description test",
 			OwnerEmail:                       "email@test",
-			WorkflowExecutionRetentionPeriod: &retentionBefore,
+			WorkflowExecutionRetentionPeriod: durationpb.New(retentionBefore),
 		},
 	)
 	s.NoError(err)
@@ -89,7 +90,7 @@ func (s *e2eSuite) TestNamespaceUpdate_NonVerbose() {
 	s.NoError(err)
 	s.Equal("description after", nsAfter.GetNamespaceInfo().GetDescription())
 	s.Equal("email@after", nsAfter.GetNamespaceInfo().GetOwnerEmail())
-	s.Equal(float64(48*60*60), nsAfter.GetConfig().GetWorkflowExecutionRetentionTtl().Seconds())
+	s.Equal(float64(48*60*60), nsAfter.GetConfig().GetWorkflowExecutionRetentionTtl())
 }
 
 func (s *e2eSuite) TestNamespaceUpdate_Data() {

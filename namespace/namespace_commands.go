@@ -16,6 +16,7 @@ import (
 	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/server/common/primitives/timestamp"
+	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 // createNamespace register a namespace
@@ -87,7 +88,7 @@ func createNamespace(c *cli.Context) error {
 		Description:                      description,
 		OwnerEmail:                       ownerEmail,
 		Data:                             data,
-		WorkflowExecutionRetentionPeriod: &retention,
+		WorkflowExecutionRetentionPeriod: durationpb.New(retention),
 		Clusters:                         clusters,
 		ActiveClusterName:                activeCluster,
 		HistoryArchivalState:             archState,
@@ -205,7 +206,7 @@ func UpdateNamespace(c *cli.Context) error {
 			return err
 		}
 		updateConfig := &namespacepb.NamespaceConfig{
-			WorkflowExecutionRetentionTtl: &retention,
+			WorkflowExecutionRetentionTtl: durationpb.New(retention),
 			HistoryArchivalState:          archState,
 			HistoryArchivalUri:            c.String(common.FlagHistoryArchivalURI),
 			VisibilityArchivalState:       archVisState,

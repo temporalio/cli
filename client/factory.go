@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gogo/status"
+	"google.golang.org/grpc/status"
 	"github.com/temporalio/cli/common"
 	"github.com/temporalio/cli/headersprovider"
 	"github.com/urfave/cli/v2"

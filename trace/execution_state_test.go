@@ -34,6 +34,7 @@ import (
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/failure/v1"
 	"go.temporal.io/api/history/v1"
+	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 var events = map[string]*history.HistoryEvent{
@@ -277,7 +278,7 @@ var events = map[string]*history.HistoryEvent{
 		Attributes: &history.HistoryEvent_TimerStartedEventAttributes{
 			TimerStartedEventAttributes: &history.TimerStartedEventAttributes{
 				TimerId:            "20", // If TimerId is not set it'll be the same as EventId
-				StartToFireTimeout: NewDuration(time.Hour),
+				StartToFireTimeout: durationpb.New(*NewDuration(time.Hour)),
 			},
 		},
 	},
