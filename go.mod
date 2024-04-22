@@ -13,10 +13,10 @@ require (
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.9.0
-	github.com/temporalio/ui-server/v2 v2.25.0
+	github.com/temporalio/ui-server/v2 v2.26.2
 	go.temporal.io/api v1.29.2
 	go.temporal.io/sdk v1.26.0
-	go.temporal.io/server v1.23.0-rc15
+	go.temporal.io/server v1.23.0
 	google.golang.org/grpc v1.62.1
 	google.golang.org/protobuf v1.33.0
 	gopkg.in/yaml.v3 v3.0.1
