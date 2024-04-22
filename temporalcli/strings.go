@@ -8,8 +8,9 @@ import (
 )
 
 type StringEnum struct {
-	Allowed []string
-	Value   string
+	Allowed            []string
+	Value              string
+	ChangedFromDefault bool
 }
 
 func NewStringEnum(allowed []string, value string) StringEnum {
@@ -22,6 +23,7 @@ func (s *StringEnum) Set(p string) error {
 	for _, allowed := range s.Allowed {
 		if p == allowed {
 			s.Value = p
+			s.ChangedFromDefault = true
 			return nil
 		}
 	}

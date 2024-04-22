@@ -26,10 +26,18 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 		CurrentClusterName:     "active",
 		InitialFailoverVersion: 1,
 	}
-	if t.LogLevelServer.Value == "never" {
+	// Set the log level value of the server to the overall log level given to the
+	// CLI. But if it is "never" we have to do a special value, and if it was
+	// never changed, we have to use the default of "warn" instead of the CLI
+	// default of "info" since server is noisier.
+	logLevel := t.Parent.Parent.LogLevel.Value
+	if !t.Parent.Parent.LogLevel.ChangedFromDefault {
+		logLevel = "warn"
+	}
+	if logLevel == "never" {
 		opts.LogLevel = 100
-	} else if err := opts.LogLevel.UnmarshalText([]byte(t.LogLevelServer.Value)); err != nil {
-		return fmt.Errorf("invalid log level %q: %w", t.LogLevelServer.Value, err)
+	} else if err := opts.LogLevel.UnmarshalText([]byte(logLevel)); err != nil {
+		return fmt.Errorf("invalid log level %q: %w", logLevel, err)
 	}
 	// Setup UI
 	if !t.Headless {

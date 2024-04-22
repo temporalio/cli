@@ -390,8 +390,9 @@ func (c *TemporalCommand) preRun(cctx *CommandContext) error {
 				return fmt.Errorf("invalid log level %q: %w", c.LogLevel.Value, err)
 			}
 			var handler slog.Handler
-			switch c.LogFormat.Value {
-			case "text":
+			switch c.LogFormat {
+			// We have a "pretty" alias for compatibility
+			case "", "text", "pretty":
 				handler = slog.NewTextHandler(cctx.Options.Stderr, &slog.HandlerOptions{
 					Level: level,
 					// Remove the TZ
@@ -405,7 +406,7 @@ func (c *TemporalCommand) preRun(cctx *CommandContext) error {
 			case "json":
 				handler = slog.NewJSONHandler(cctx.Options.Stderr, &slog.HandlerOptions{Level: level})
 			default:
-				return fmt.Errorf("invalid log format %q", c.LogFormat.Value)
+				return fmt.Errorf("invalid log format %q", c.LogFormat)
 			}
 			cctx.Logger = slog.New(handler)
 		}
@@ -419,8 +420,13 @@ func (c *TemporalCommand) preRun(cctx *CommandContext) error {
 		jsonIndent = "  "
 	}
 	if cctx.Printer == nil {
+		printerOutput := cctx.Options.Stdout
+		// Disable printer by making writer noop if "none" chosen
+		if c.Output.Value == "none" {
+			printerOutput = nopWriter{}
+		}
 		cctx.Printer = &printer.Printer{
-			Output:               cctx.Options.Stdout,
+			Output:               printerOutput,
 			JSON:                 cctx.JSONOutput,
 			JSONIndent:           jsonIndent,
 			JSONPayloadShorthand: !c.NoJsonShorthandPayloads,
@@ -492,3 +498,7 @@ func timestampToTime(t *timestamppb.Timestamp) time.Time {
 	}
 	return t.AsTime()
 }
+
+type nopWriter struct{}
+
+func (nopWriter) Write(b []byte) (int, error) { return len(b), nil }
