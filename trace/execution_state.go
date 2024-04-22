@@ -26,13 +26,14 @@ package trace
 
 import (
 	"fmt"
+	"strconv"
+	"sync"
+	"time"
+
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/failure/v1"
 	"go.temporal.io/api/history/v1"
-	"strconv"
-	"sync"
-	"time"
 )
 
 // ExecutionState provides a common interface to any execution (Workflows, Activities and Timers in this case) updated through HistoryEvents.
@@ -236,6 +237,8 @@ func (state *WorkflowExecutionState) Update(event *history.HistoryEvent) {
 		return
 	}
 
+	time := event.EventTime.AsTime()
+
 	state.LastEventId = event.EventId
 	switch event.EventType {
 	case enums.EVENT_TYPE_WORKFLOW_EXECUTION_STARTED:
@@ -243,7 +246,8 @@ func (state *WorkflowExecutionState) Update(event *history.HistoryEvent) {
 		state.Status = enums.WORKFLOW_EXECUTION_STATUS_RUNNING
 
 		attrs := event.GetWorkflowExecutionStartedEventAttributes()
-		state.StartTime = event.EventTime
+		start := event.EventTime.AsTime()
+		state.StartTime = &start
 		state.Attempt = attrs.GetAttempt()
 		state.Type = attrs.GetWorkflowType()
 		if state.Execution.GetRunId() == "" {
@@ -258,7 +262,8 @@ func (state *WorkflowExecutionState) Update(event *history.HistoryEvent) {
 		state.Termination = nil
 
 		// Get timeout and max retry info
-		state.WorkflowExecutionTimeout = attrs.WorkflowExecutionTimeout
+		duration := attrs.WorkflowExecutionTimeout.AsDuration()
+		state.WorkflowExecutionTimeout = &duration
 		if attrs.RetryPolicy != nil {
 			state.MaximumAttempts = attrs.RetryPolicy.MaximumAttempts
 		} else {
@@ -267,7 +272,7 @@ func (state *WorkflowExecutionState) Update(event *history.HistoryEvent) {
 
 	case enums.EVENT_TYPE_WORKFLOW_EXECUTION_COMPLETED:
 		state.Status = enums.WORKFLOW_EXECUTION_STATUS_COMPLETED
-		state.CloseTime = event.EventTime
+		state.CloseTime = &time
 
 	case enums.EVENT_TYPE_WORKFLOW_EXECUTION_FAILED:
 		state.Status = enums.WORKFLOW_EXECUTION_STATUS_FAILED
@@ -275,28 +280,28 @@ func (state *WorkflowExecutionState) Update(event *history.HistoryEvent) {
 		attrs := event.GetWorkflowExecutionFailedEventAttributes()
 		state.Failure = attrs.GetFailure()
 		state.RetryState = attrs.GetRetryState()
-		state.CloseTime = event.EventTime
+		state.CloseTime = &time
 
 	case enums.EVENT_TYPE_WORKFLOW_EXECUTION_TERMINATED:
 		state.Status = enums.WORKFLOW_EXECUTION_STATUS_TERMINATED
 		state.Termination = event.GetWorkflowExecutionTerminatedEventAttributes()
-		state.CloseTime = event.EventTime
+		state.CloseTime = &time
 
 	case enums.EVENT_TYPE_WORKFLOW_EXECUTION_CANCEL_REQUESTED:
 		state.CancelRequest = event.GetWorkflowExecutionCancelRequestedEventAttributes()
 
 	case enums.EVENT_TYPE_WORKFLOW_EXECUTION_CANCELED:
 		state.Status = enums.WORKFLOW_EXECUTION_STATUS_CANCELED
-		state.CloseTime = event.EventTime
+		state.CloseTime = &time
 
 	case enums.EVENT_TYPE_WORKFLOW_EXECUTION_CONTINUED_AS_NEW:
 		state.Status = enums.WORKFLOW_EXECUTION_STATUS_CONTINUED_AS_NEW
-		state.CloseTime = event.EventTime
+		state.CloseTime = &time
 
 	case enums.EVENT_TYPE_WORKFLOW_EXECUTION_TIMED_OUT:
 		attrs := event.GetWorkflowExecutionTimedOutEventAttributes()
 		state.Status = enums.WORKFLOW_EXECUTION_STATUS_TIMED_OUT
-		state.CloseTime = event.EventTime
+		state.CloseTime = &time
 		state.RetryState = attrs.GetRetryState()
 
 	// ACTIVITY EVENTS
@@ -332,7 +337,7 @@ func (state *WorkflowExecutionState) Update(event *history.HistoryEvent) {
 			child.Status = enums.WORKFLOW_EXECUTION_STATUS_RUNNING
 			child.Execution = attrs.GetWorkflowExecution()
 			if child.StartTime == nil {
-				child.StartTime = event.EventTime
+				child.StartTime = &time
 			}
 		}
 	case enums.EVENT_TYPE_CHILD_WORKFLOW_EXECUTION_COMPLETED:
@@ -340,7 +345,7 @@ func (state *WorkflowExecutionState) Update(event *history.HistoryEvent) {
 		if child, ok := state.GetChildWorkflowByEventId(attrs.InitiatedEventId); ok {
 			child.Status = enums.WORKFLOW_EXECUTION_STATUS_COMPLETED
 			if child.CloseTime == nil {
-				child.CloseTime = event.EventTime
+				child.CloseTime = &time
 			}
 		}
 	case enums.EVENT_TYPE_CHILD_WORKFLOW_EXECUTION_FAILED:
@@ -350,7 +355,7 @@ func (state *WorkflowExecutionState) Update(event *history.HistoryEvent) {
 			child.Failure = attrs.GetFailure()
 			child.RetryState = attrs.GetRetryState()
 			if child.CloseTime == nil {
-				child.CloseTime = event.EventTime
+				child.CloseTime = &time
 			}
 		}
 	case enums.EVENT_TYPE_CHILD_WORKFLOW_EXECUTION_TERMINATED:
@@ -359,7 +364,7 @@ func (state *WorkflowExecutionState) Update(event *history.HistoryEvent) {
 		if child, ok := state.GetChildWorkflowByEventId(attrs.InitiatedEventId); ok {
 			child.Status = enums.WORKFLOW_EXECUTION_STATUS_TERMINATED
 			if child.CloseTime == nil {
-				child.CloseTime = event.EventTime
+				child.CloseTime = &time
 			}
 		}
 	case enums.EVENT_TYPE_CHILD_WORKFLOW_EXECUTION_CANCELED:
@@ -367,7 +372,7 @@ func (state *WorkflowExecutionState) Update(event *history.HistoryEvent) {
 		if child, ok := state.GetChildWorkflowByEventId(attrs.InitiatedEventId); ok {
 			child.Status = enums.WORKFLOW_EXECUTION_STATUS_CANCELED
 			if child.CloseTime == nil {
-				child.CloseTime = event.EventTime
+				child.CloseTime = &time
 			}
 		}
 	case enums.EVENT_TYPE_CHILD_WORKFLOW_EXECUTION_TIMED_OUT:
@@ -375,7 +380,7 @@ func (state *WorkflowExecutionState) Update(event *history.HistoryEvent) {
 		if child, ok := state.GetChildWorkflowByEventId(attrs.InitiatedEventId); ok {
 			child.Status = enums.WORKFLOW_EXECUTION_STATUS_TIMED_OUT
 			if child.CloseTime == nil {
-				child.CloseTime = event.EventTime
+				child.CloseTime = &time
 			}
 		}
 
@@ -476,6 +481,8 @@ func (state *ActivityExecutionState) GetDuration() *time.Duration {
 
 // Update updates the ActivityExecutionState with a HistoryEvent.
 func (state *ActivityExecutionState) Update(event *history.HistoryEvent) {
+	time := event.EventTime.AsTime()
+
 	switch event.EventType {
 	case enums.EVENT_TYPE_ACTIVITY_TASK_SCHEDULED:
 		state.Status = ACTIVITY_EXECUTION_STATUS_SCHEDULED
@@ -491,7 +498,7 @@ func (state *ActivityExecutionState) Update(event *history.HistoryEvent) {
 		state.Attempt = attrs.GetAttempt()
 
 		// This is the best guess we have for when the activity was started
-		state.StartTime = event.EventTime
+		state.StartTime = &time
 
 		// Clear failures
 		state.Failure = nil
@@ -502,18 +509,18 @@ func (state *ActivityExecutionState) Update(event *history.HistoryEvent) {
 		attrs := event.GetActivityTaskFailedEventAttributes()
 		state.Failure = attrs.GetFailure()
 		state.RetryState = attrs.GetRetryState()
-		state.CloseTime = event.EventTime
+		state.CloseTime = &time
 
 	case enums.EVENT_TYPE_ACTIVITY_TASK_COMPLETED:
 		state.Status = ACTIVITY_EXECUTION_STATUS_COMPLETED
-		state.CloseTime = event.EventTime
+		state.CloseTime = &time
 
 	case enums.EVENT_TYPE_ACTIVITY_TASK_CANCEL_REQUESTED:
 		state.Status = ACTIVITY_EXECUTION_STATUS_CANCEL_REQUESTED
 
 	case enums.EVENT_TYPE_ACTIVITY_TASK_CANCELED:
 		state.Status = ACTIVITY_EXECUTION_STATUS_CANCELED
-		state.CloseTime = event.EventTime
+		state.CloseTime = &time
 
 	case enums.EVENT_TYPE_ACTIVITY_TASK_TIMED_OUT:
 		state.Status = ACTIVITY_EXECUTION_STATUS_TIMED_OUT
@@ -521,7 +528,7 @@ func (state *ActivityExecutionState) Update(event *history.HistoryEvent) {
 		attrs := event.GetActivityTaskTimedOutEventAttributes()
 		state.Failure = attrs.GetFailure()
 		state.RetryState = attrs.GetRetryState()
-		state.CloseTime = event.EventTime
+		state.CloseTime = &time
 	}
 }
 
@@ -552,11 +559,14 @@ var (
 
 // Update updates the TimerExecutionState with a HistoryEvent.
 func (t *TimerExecutionState) Update(event *history.HistoryEvent) {
+	time := event.EventTime.AsTime()
 	switch event.EventType {
 	case enums.EVENT_TYPE_TIMER_STARTED:
 		attrs := event.GetTimerStartedEventAttributes()
 
-		t.StartToFireTimeout = attrs.StartToFireTimeout
+		stfTimeout := attrs.StartToFireTimeout.AsDuration()
+
+		t.StartToFireTimeout = &stfTimeout
 		t.TimerId = attrs.TimerId
 		if attrs.TimerId != strconv.FormatInt(event.EventId, 10) {
 			// If the user has set a custom id, we can use it for the name
@@ -565,13 +575,13 @@ func (t *TimerExecutionState) Update(event *history.HistoryEvent) {
 			t.Name = fmt.Sprintf("Timer (%s)", t.StartToFireTimeout.String())
 		}
 		t.Status = TIMER_STATUS_WAITING
-		t.StartTime = event.EventTime
+		t.StartTime = &time
 	case enums.EVENT_TYPE_TIMER_FIRED:
 		t.Status = TIMER_STATUS_FIRED
-		t.CloseTime = event.EventTime
+		t.CloseTime = &time
 	case enums.EVENT_TYPE_TIMER_CANCELED:
 		t.Status = TIMER_STATUS_CANCELED
-		t.CloseTime = event.EventTime
+		t.CloseTime = &time
 	}
 }
 

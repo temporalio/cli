@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gogo/protobuf/jsonpb"
 	"github.com/pborman/uuid"
 	"github.com/temporalio/cli/client"
 	"github.com/temporalio/cli/common"
@@ -24,6 +23,8 @@ import (
 	"go.temporal.io/sdk/converter"
 	"go.temporal.io/server/common/collection"
 	"go.temporal.io/server/common/primitives/timestamp"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 func scheduleBaseArgs(c *cli.Context) (
@@ -46,7 +47,7 @@ func scheduleBaseArgs(c *cli.Context) (
 
 func buildCalendarSpec(s string) (*schedpb.CalendarSpec, error) {
 	var cal schedpb.CalendarSpec
-	err := jsonpb.UnmarshalString(s, &cal)
+	err := protojson.Unmarshal([]byte(s), &cal)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +68,10 @@ func buildIntervalSpec(s string) (*schedpb.IntervalSpec, error) {
 	if interval, err = timestamp.ParseDuration(parts[0]); err != nil {
 		return nil, err
 	}
-	return &schedpb.IntervalSpec{Interval: &interval, Phase: &phase}, nil
+	return &schedpb.IntervalSpec{
+		Interval: durationpb.New(interval),
+		Phase: durationpb.New(phase),
+	}, nil
 }
 
 func buildScheduleSpec(c *cli.Context) (*schedpb.ScheduleSpec, error) {
@@ -468,12 +472,15 @@ func DescribeSchedule(c *cli.Context) error {
 	item.State = s.State
 	item.Info = i
 	if fas := i.FutureActionTimes; len(fas) > 0 {
-		item.NextRunTime = fas[0]
+		nrt := fas[0].AsTime()
+		item.NextRunTime = &nrt
 	}
 	if ras := i.RecentActions; len(ras) > 0 {
 		ra := ras[len(ras)-1]
-		item.LastRunTime = ra.ScheduleTime
-		item.LastRunActualTime = ra.ActualTime
+		schedTime := ra.ScheduleTime.AsTime()
+		actualTime := ra.ActualTime.AsTime()
+		item.LastRunTime = &schedTime
+		item.LastRunActualTime = &actualTime
 		item.LastRunExecution = ra.StartWorkflowResult
 	}
 	if fields := resp.Memo.GetFields(); len(fields) > 0 {
@@ -589,12 +596,15 @@ func ListSchedules(c *cli.Context) error {
 			item.State.Paused = info.GetPaused()
 			item.State.Notes = info.GetNotes()
 			if fas := info.GetFutureActionTimes(); len(fas) > 0 {
-				item.Info.NextRunTime = fas[0]
+				nrt := fas[0].AsTime()
+				item.Info.NextRunTime = &nrt
 			}
 			if ras := info.GetRecentActions(); len(ras) > 0 {
 				ra := ras[len(ras)-1]
-				item.Info.LastRunTime = ra.ScheduleTime
-				item.Info.LastRunActualTime = ra.ActualTime
+				schedTime := ra.ScheduleTime.AsTime()
+				actualTime := ra.ActualTime.AsTime()
+				item.Info.LastRunTime = &schedTime
+				item.Info.LastRunActualTime = &actualTime
 				item.Info.LastRunExecution = ra.StartWorkflowResult
 			}
 			item.Specification = info.GetSpec()

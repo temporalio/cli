@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/fatih/color"
-	"github.com/gogo/protobuf/proto"
 	"github.com/temporalio/cli/headers"
 	tColor "github.com/temporalio/tctl-kit/pkg/color"
 	"github.com/urfave/cli/v2"
@@ -25,6 +24,7 @@ import (
 	historypb "go.temporal.io/api/history/v1"
 	"go.temporal.io/server/common/codec"
 	"go.temporal.io/server/common/payloads"
+	"google.golang.org/protobuf/proto"
 )
 
 // ColorEvent takes an event and return string with color

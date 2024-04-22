@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gogo/status"
 	"github.com/temporalio/cli/common"
 	"github.com/temporalio/cli/headersprovider"
 	"github.com/urfave/cli/v2"
@@ -29,6 +28,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 const factoryKey = "clientFactory"

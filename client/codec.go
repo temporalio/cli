@@ -31,9 +31,9 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/gogo/protobuf/jsonpb"
 	commonpb "go.temporal.io/api/common/v1"
 	"go.temporal.io/sdk/converter"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 // RemotePayloadCodecOptions are options for RemotePayloadCodec.
@@ -98,7 +98,7 @@ func (pc *remotePayloadCodec) encodeOrDecode(endpoint string, payloads []*common
 			return payloads, fmt.Errorf("failed to read response body: %w", err)
 		}
 		var resultPayloads commonpb.Payloads
-		err = jsonpb.UnmarshalString(string(bs), &resultPayloads)
+		err = protojson.Unmarshal(bs, &resultPayloads)
 		if err != nil {
 			return payloads, fmt.Errorf("unable to unmarshal payloads: %w", err)
 		}
