@@ -1,6 +1,7 @@
 package temporalcli
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -62,7 +63,7 @@ func stringKeysValues(s []string) (map[string]string, error) {
 	return ret, nil
 }
 
-func stringKeysJSONValues(s []string) (map[string]any, error) {
+func stringKeysJSONValues(s []string, useJSONNumber bool) (map[string]any, error) {
 	if len(s) == 0 {
 		return nil, nil
 	}
@@ -72,9 +73,15 @@ func stringKeysJSONValues(s []string) (map[string]any, error) {
 		if len(pieces) != 2 {
 			return nil, fmt.Errorf("missing expected '=' in %q", item)
 		}
+		dec := json.NewDecoder(bytes.NewReader([]byte(pieces[1])))
+		if useJSONNumber {
+			dec.UseNumber()
+		}
 		var v any
-		if err := json.Unmarshal([]byte(pieces[1]), &v); err != nil {
+		if err := dec.Decode(&v); err != nil {
 			return nil, fmt.Errorf("invalid JSON value for key %q: %w", pieces[0], err)
+		} else if dec.InputOffset() != int64(len(pieces[1])) {
+			return nil, fmt.Errorf("invalid JSON value for key %q: unexpected trailing data", pieces[0])
 		}
 		ret[pieces[0]] = v
 	}

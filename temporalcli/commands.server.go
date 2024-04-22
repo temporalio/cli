@@ -1,6 +1,7 @@
 package temporalcli
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -54,9 +55,25 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 	var err error
 	if opts.SqlitePragmas, err = stringKeysValues(t.SqlitePragma); err != nil {
 		return fmt.Errorf("invalid pragma: %w", err)
-	} else if opts.DynamicConfigValues, err = stringKeysJSONValues(t.DynamicConfigValue); err != nil {
+	} else if opts.DynamicConfigValues, err = stringKeysJSONValues(t.DynamicConfigValue, true); err != nil {
 		return fmt.Errorf("invalid dynamic config values: %w", err)
 	}
+	// We have to convert all dynamic config values that JSON number to int if we
+	// can because server dynamic config expecting int won't work with the default
+	// float JSON unmarshal uses
+	for k, v := range opts.DynamicConfigValues {
+		if num, ok := v.(json.Number); ok {
+			if newV, err := num.Int64(); err == nil {
+				// Dynamic config only accepts int type, not int32 nor int64
+				opts.DynamicConfigValues[k] = int(newV)
+			} else if newV, err := num.Float64(); err == nil {
+				opts.DynamicConfigValues[k] = newV
+			} else {
+				return fmt.Errorf("invalid JSON value for key %q", k)
+			}
+		}
+	}
+
 	// If not using DB file, set persistent cluster ID
 	if t.DbFilename == "" {
 		opts.ClusterID = persistentClusterID()
