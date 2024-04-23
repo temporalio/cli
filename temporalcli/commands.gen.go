@@ -21,7 +21,7 @@ type TemporalCommand struct {
 	Env                     string
 	EnvFile                 string
 	LogLevel                StringEnum
-	LogFormat               StringEnum
+	LogFormat               string
 	Output                  StringEnum
 	TimeFormat              StringEnum
 	Color                   StringEnum
@@ -46,11 +46,10 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	cctx.BindFlagEnvVar(s.Command.PersistentFlags().Lookup("env"), "TEMPORAL_ENV")
 	s.Command.PersistentFlags().StringVar(&s.EnvFile, "env-file", "", "File to read all environments (defaults to `$HOME/.config/temporalio/temporal.yaml`).")
 	s.LogLevel = NewStringEnum([]string{"debug", "info", "warn", "error", "never"}, "info")
-	s.Command.PersistentFlags().Var(&s.LogLevel, "log-level", "Log level. Accepted values: debug, info, warn, error, never.")
-	s.LogFormat = NewStringEnum([]string{"text", "json"}, "text")
-	s.Command.PersistentFlags().Var(&s.LogFormat, "log-format", "Log format. Accepted values: text, json.")
-	s.Output = NewStringEnum([]string{"text", "json", "jsonl"}, "text")
-	s.Command.PersistentFlags().VarP(&s.Output, "output", "o", "Data output format. Accepted values: text, json, jsonl.")
+	s.Command.PersistentFlags().Var(&s.LogLevel, "log-level", "Log level. Default is \"info\" for most commands and \"warn\" for `server start-dev`. Accepted values: debug, info, warn, error, never.")
+	s.Command.PersistentFlags().StringVar(&s.LogFormat, "log-format", "", "Log format. Options are \"text\" and \"json\". Default is \"text\".")
+	s.Output = NewStringEnum([]string{"text", "json", "jsonl", "none"}, "text")
+	s.Command.PersistentFlags().VarP(&s.Output, "output", "o", "Data output format. Note, this does not affect logging. Accepted values: text, json, jsonl, none.")
 	s.TimeFormat = NewStringEnum([]string{"relative", "iso", "raw"}, "relative")
 	s.Command.PersistentFlags().Var(&s.TimeFormat, "time-format", "Time format. Accepted values: relative, iso, raw.")
 	s.Color = NewStringEnum([]string{"always", "never", "auto"}, "auto")
@@ -1243,7 +1242,6 @@ type TemporalServerStartDevCommand struct {
 	SqlitePragma       []string
 	DynamicConfigValue []string
 	LogConfig          bool
-	LogLevelServer     StringEnum
 }
 
 func NewTemporalServerStartDevCommand(cctx *CommandContext, parent *TemporalServerCommand) *TemporalServerStartDevCommand {
@@ -1272,8 +1270,6 @@ func NewTemporalServerStartDevCommand(cctx *CommandContext, parent *TemporalServ
 	s.Command.Flags().StringArrayVar(&s.SqlitePragma, "sqlite-pragma", nil, "Specify SQLite pragma statements in pragma=value format.")
 	s.Command.Flags().StringArrayVar(&s.DynamicConfigValue, "dynamic-config-value", nil, "Dynamic config value, as KEY=JSON_VALUE (string values need quotes).")
 	s.Command.Flags().BoolVar(&s.LogConfig, "log-config", false, "Log the server config being used to stderr.")
-	s.LogLevelServer = NewStringEnum([]string{"debug", "info", "warn", "error", "never"}, "warn")
-	s.Command.Flags().Var(&s.LogLevelServer, "log-level-server", "Log level for the server only. Accepted values: debug, info, warn, error, never.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

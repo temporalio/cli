@@ -1,6 +1,7 @@
 package temporalcli
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -26,10 +27,18 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 		CurrentClusterName:     "active",
 		InitialFailoverVersion: 1,
 	}
-	if t.LogLevelServer.Value == "never" {
+	// Set the log level value of the server to the overall log level given to the
+	// CLI. But if it is "never" we have to do a special value, and if it was
+	// never changed, we have to use the default of "warn" instead of the CLI
+	// default of "info" since server is noisier.
+	logLevel := t.Parent.Parent.LogLevel.Value
+	if !t.Parent.Parent.LogLevel.ChangedFromDefault {
+		logLevel = "warn"
+	}
+	if logLevel == "never" {
 		opts.LogLevel = 100
-	} else if err := opts.LogLevel.UnmarshalText([]byte(t.LogLevelServer.Value)); err != nil {
-		return fmt.Errorf("invalid log level %q: %w", t.LogLevelServer.Value, err)
+	} else if err := opts.LogLevel.UnmarshalText([]byte(logLevel)); err != nil {
+		return fmt.Errorf("invalid log level %q: %w", logLevel, err)
 	}
 	// Setup UI
 	if !t.Headless {
@@ -46,9 +55,25 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 	var err error
 	if opts.SqlitePragmas, err = stringKeysValues(t.SqlitePragma); err != nil {
 		return fmt.Errorf("invalid pragma: %w", err)
-	} else if opts.DynamicConfigValues, err = stringKeysJSONValues(t.DynamicConfigValue); err != nil {
+	} else if opts.DynamicConfigValues, err = stringKeysJSONValues(t.DynamicConfigValue, true); err != nil {
 		return fmt.Errorf("invalid dynamic config values: %w", err)
 	}
+	// We have to convert all dynamic config values that JSON number to int if we
+	// can because server dynamic config expecting int won't work with the default
+	// float JSON unmarshal uses
+	for k, v := range opts.DynamicConfigValues {
+		if num, ok := v.(json.Number); ok {
+			if newV, err := num.Int64(); err == nil {
+				// Dynamic config only accepts int type, not int32 nor int64
+				opts.DynamicConfigValues[k] = int(newV)
+			} else if newV, err := num.Float64(); err == nil {
+				opts.DynamicConfigValues[k] = newV
+			} else {
+				return fmt.Errorf("invalid JSON value for key %q", k)
+			}
+		}
+	}
+
 	// If not using DB file, set persistent cluster ID
 	if t.DbFilename == "" {
 		opts.ClusterID = persistentClusterID()

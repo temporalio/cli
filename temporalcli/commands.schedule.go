@@ -301,9 +301,9 @@ func (c *TemporalScheduleCreateCommand) run(cctx *CommandContext, args []string)
 		return err
 	} else if opts.Overlap, err = enumspb.ScheduleOverlapPolicyFromString(c.OverlapPolicy.Value); err != nil {
 		return err
-	} else if opts.Memo, err = stringKeysJSONValues(c.ScheduleMemo); err != nil {
+	} else if opts.Memo, err = stringKeysJSONValues(c.ScheduleMemo, false); err != nil {
 		return fmt.Errorf("invalid memo values: %w", err)
-	} else if opts.SearchAttributes, err = stringKeysJSONValues(c.ScheduleSearchAttribute); err != nil {
+	} else if opts.SearchAttributes, err = stringKeysJSONValues(c.ScheduleSearchAttribute, false); err != nil {
 		return fmt.Errorf("invalid search attribute values: %w", err)
 	}
 

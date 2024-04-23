@@ -265,13 +265,13 @@ func buildStartOptions(sw *SharedWorkflowStartOptions, w *WorkflowStartOptions) 
 	}
 	if len(sw.Memo) > 0 {
 		var err error
-		if o.Memo, err = stringKeysJSONValues(sw.Memo); err != nil {
+		if o.Memo, err = stringKeysJSONValues(sw.Memo, false); err != nil {
 			return o, fmt.Errorf("invalid memo values: %w", err)
 		}
 	}
 	if len(sw.SearchAttribute) > 0 {
 		var err error
-		if o.SearchAttributes, err = stringKeysJSONValues(sw.SearchAttribute); err != nil {
+		if o.SearchAttributes, err = stringKeysJSONValues(sw.SearchAttribute, false); err != nil {
 			return o, fmt.Errorf("invalid search attribute values: %w", err)
 		}
 	}
