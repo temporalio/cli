@@ -56,6 +56,8 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	s.Command.PersistentFlags().Var(&s.Color, "color", "Set coloring. Accepted values: always, never, auto.")
 	s.Command.PersistentFlags().BoolVar(&s.NoJsonShorthandPayloads, "no-json-shorthand-payloads", false, "Always show all payloads as raw payloads even if they are JSON.")
 	s.initCommand(cctx)
+	aiCmd := InitializeAICommands()
+	s.Command.AddCommand(aiCmd)
 	return &s
 }
 
