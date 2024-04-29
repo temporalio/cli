@@ -1,36 +1,9 @@
 # Binaries for programs and plugins
 /temporal
-test-temporal
-/temporal-doc-gen
-*.exe
-*.exe~
-*.dll
-*.so
-*.dylib
-__debug_bin
+/temporal.exe
 
-# sqlite databases
-*.db
+# Used by IDE
+/.idea
+/.vscode
+*~
 
-# Test binary, built with `go test -c`
-*.test
-
-# Output of the go coverage tool, specifically when used with LiteIDE
-*.out
-
-# ./cmd/docs output
-docs
-
-# Dependency directories (remove the comment below to include it)
-# vendor/
-
-# Editors
-.idea
-.vscode/settings.json
-.vscode/*.log
-*.code-workspace
-.DS_Store
-
-
-# Goreleaser
-/dist

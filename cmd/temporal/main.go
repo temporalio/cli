@@ -1,20 +1,16 @@
 package main
 
 import (
-	goLog "log"
-	"os"
+	"context"
 
-	// Load sqlite storage driver
-	_ "go.temporal.io/server/common/persistence/sql/sqlplugin/sqlite"
+	"github.com/temporalio/cli/temporalcli"
 
 	// Embed time zone database as a fallback if platform database can't be found
 	_ "time/tzdata"
-
-	"github.com/temporalio/cli/app"
 )
 
 func main() {
-	if err := app.BuildApp().Run(os.Args); err != nil {
-		goLog.Fatal(err)
-	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	temporalcli.Execute(ctx, temporalcli.CommandOptions{})
 }

@@ -1,7 +1,6 @@
 before:
   hooks:
     - go mod download
-    - go run ./cmd/docgen
 
 release:
   prerelease: auto
@@ -34,21 +33,12 @@ archives:
     files:
       - LICENSE
 
-  - id: docgen
-    builds:
-      - docgen
-    name_template: "temporal_cli_documentation_{{ .Version }}"
-    wrap_in_directory: false
-    files:
-      - LICENSE
-      - docs/*
-
 builds:
   - <<: &build_defaults
       dir: cmd/temporal
       binary: temporal
       ldflags:
-        - -s -w -X github.com/temporalio/cli/headers.Version={{.Version}}
+        - -s -w -X github.com/temporalio/cli/temporalcli.Version={{.Version}}
       goarch:
         - amd64
         - arm64
@@ -65,14 +55,6 @@ builds:
       - windows
     hooks:
       post: # TODO sign Windows release
-
-  - id: docgen
-    dir: cmd/docgen
-    binary: docgen
-    goos:
-      - linux
-    goarch:
-      - amd64
 
 checksum:
   name_template: "checksums.txt"
