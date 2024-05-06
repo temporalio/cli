@@ -153,6 +153,7 @@ func (c *TemporalWorkflowTerminateCommand) run(cctx *CommandContext, _ []string)
 		Query:      c.Query,
 		Reason:     c.Reason,
 		Yes:        c.Yes,
+		Rps:        c.Rps,
 	}
 
 	exec, batchReq, err := opts.workflowExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{
@@ -292,11 +293,17 @@ func (s *SingleWorkflowOrBatchOptions) workflowExecOrBatch(
 		reason = defaultReason()
 	}
 
+	// Check rps is used together with query
+	if s.Rps != 0 && s.Query == "" {
+		return nil, nil, fmt.Errorf("rps requires query to be set")
+	}
+
 	return nil, &workflowservice.StartBatchOperationRequest{
-		Namespace:       namespace,
-		JobId:           uuid.NewString(),
-		VisibilityQuery: s.Query,
-		Reason:          reason,
+		MaxOperationsPerSecond: s.Rps,
+		Namespace:              namespace,
+		JobId:                  uuid.NewString(),
+		VisibilityQuery:        s.Query,
+		Reason:                 reason,
 	}, nil
 }
 

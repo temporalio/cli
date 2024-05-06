@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"go.temporal.io/api/enums/v1"
+	"go.temporal.io/api/history/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/workflow"
@@ -261,26 +262,41 @@ func (s *SharedServerSuite) TestWorkflow_Terminate_SingleWorkflowSuccess_WithRea
 }
 
 func (s *SharedServerSuite) TestWorkflow_Terminate_BatchWorkflowSuccess() {
-	res := s.testTerminateBatchWorkflow(false)
+	_, res := s.testTerminateBatchWorkflow(5, 0, false)
 	s.Contains(res.Stdout.String(), "approximately 5 workflow(s)")
 	s.Contains(res.Stdout.String(), "Started batch")
 }
 
-func (s *SharedServerSuite) TestWorkflow_Terminate_BatchWorkflowSuccessJSON() {
-	res := s.testTerminateBatchWorkflow(true)
+func (s *SharedServerSuite) TestWorkflow_Terminate_BatchWorkflow_Ratelimit_MissingQuery() {
+	res := s.Execute(
+		"workflow", "terminate",
+		"--address", s.Address(),
+		"--rps", "5",
+	)
+	s.Error(res.Err, "must set either workflow ID or query")
+}
+
+func (s *SharedServerSuite) TestWorkflow_Terminate_BatchWorkflowSuccess_Ratelimit() {
+	events, _ := s.testTerminateBatchWorkflow(2, 1, false)
+	delay := events[1].EventTime.AsTime().Sub(events[0].EventTime.AsTime()).Abs()
+	s.InDelta(delay, 1*time.Second, float64(100*time.Millisecond))
+}
+
+func (s *SharedServerSuite) TestWorkflow_Terminate_BatchWorkflowSuccess_JSON() {
+	_, res := s.testTerminateBatchWorkflow(5, 0, true)
 	var jsonRes map[string]any
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonRes))
 	s.NotEmpty(jsonRes["batchJobId"])
 }
 
-func (s *SharedServerSuite) testTerminateBatchWorkflow(json bool) *CommandResult {
+func (s *SharedServerSuite) testTerminateBatchWorkflow(total int, rps float32, json bool) ([]*history.HistoryEvent, *CommandResult) {
 	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
 		ctx.Done().Receive(ctx, nil)
 		return nil, ctx.Err()
 	})
 
-	// Start 5 workflows
-	runs := make([]client.WorkflowRun, 5)
+	// Start workflows
+	runs := make([]client.WorkflowRun, total)
 	searchAttr := "keyword-" + uuid.NewString()
 	for i := range runs {
 		run, err := s.Client.ExecuteWorkflow(
@@ -308,6 +324,7 @@ func (s *SharedServerSuite) testTerminateBatchWorkflow(json bool) *CommandResult
 	// Send batch terminate with a "y" for non-json or "--yes" for json
 	args := []string{
 		"workflow", "terminate",
+		"--rps", fmt.Sprint(rps),
 		"--address", s.Address(),
 		"--query", "CustomKeywordField = '" + searchAttr + "'",
 		"--reason", "terminate-test",
@@ -321,6 +338,7 @@ func (s *SharedServerSuite) testTerminateBatchWorkflow(json bool) *CommandResult
 	s.NoError(res.Err)
 
 	// Confirm that all workflows are terminated
+	var events []*history.HistoryEvent
 	for _, run := range runs {
 		s.Contains(run.Get(s.Context, nil).Error(), "terminated")
 		// Ensure the termination reason was recorded
@@ -332,11 +350,12 @@ func (s *SharedServerSuite) testTerminateBatchWorkflow(json bool) *CommandResult
 			if term := event.GetWorkflowExecutionTerminatedEventAttributes(); term != nil {
 				foundReason = true
 				s.Equal("terminate-test", term.Reason)
+				events = append(events, event)
 			}
 		}
 		s.True(foundReason)
 	}
-	return res
+	return events, res
 }
 
 func (s *SharedServerSuite) TestWorkflow_Cancel_SingleWorkflowSuccess() {
