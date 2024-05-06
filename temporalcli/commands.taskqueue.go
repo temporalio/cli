@@ -8,9 +8,10 @@ import (
 	"github.com/temporalio/cli/temporalcli/internal/printer"
 	commonpb "go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
+	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/taskqueue/v1"
 	"go.temporal.io/api/workflowservice/v1"
-	"go.temporal.io/server/common/tqname"
+	"go.temporal.io/server/common/tqid"
 )
 
 func (c *TemporalTaskQueueDescribeCommand) run(cctx *CommandContext, args []string) error {
@@ -30,7 +31,7 @@ func (c *TemporalTaskQueueDescribeCommand) run(cctx *CommandContext, args []stri
 		return fmt.Errorf("unrecognized task queue type: %q", c.TaskQueueType.Value)
 	}
 
-	taskQueueName, err := tqname.FromBaseName(c.TaskQueue)
+	taskQueueName, err := tqid.NewTaskQueueFamily("", c.TaskQueue)
 	if err != nil {
 		return fmt.Errorf("failed to parse task queue name: %w", err)
 	}
@@ -55,7 +56,7 @@ func (c *TemporalTaskQueueDescribeCommand) run(cctx *CommandContext, args []stri
 		resp, err := cl.WorkflowService().DescribeTaskQueue(cctx, &workflowservice.DescribeTaskQueueRequest{
 			Namespace: c.Parent.Namespace,
 			TaskQueue: &taskqueue.TaskQueue{
-				Name: taskQueueName.WithPartition(p).FullName(),
+				Name: taskQueueName.TaskQueue(enumspb.TASK_QUEUE_TYPE_WORKFLOW).NormalPartition(p).RpcName(),
 				Kind: enums.TASK_QUEUE_KIND_NORMAL,
 			},
 			TaskQueueType:          taskQueueType,
