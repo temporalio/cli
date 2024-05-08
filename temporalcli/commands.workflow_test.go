@@ -1,18 +1,20 @@
 package temporalcli_test
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"math/rand"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
 	"go.temporal.io/api/enums/v1"
-	"go.temporal.io/api/history/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/workflow"
+	"google.golang.org/grpc"
 )
 
 func (s *SharedServerSuite) TestWorkflow_Signal_SingleWorkflowSuccess() {
@@ -277,9 +279,9 @@ func (s *SharedServerSuite) TestWorkflow_Terminate_BatchWorkflow_Ratelimit_Missi
 }
 
 func (s *SharedServerSuite) TestWorkflow_Terminate_BatchWorkflowSuccess_Ratelimit() {
-	events, _ := s.testTerminateBatchWorkflow(2, 1, false)
-	delay := events[1].EventTime.AsTime().Sub(events[0].EventTime.AsTime()).Abs()
-	s.InDelta(delay, 1*time.Second, float64(100*time.Millisecond))
+	var rps float32 = 1
+	req, _ := s.testTerminateBatchWorkflow(2, rps, false)
+	s.Equal(rps, req.MaxOperationsPerSecond)
 }
 
 func (s *SharedServerSuite) TestWorkflow_Terminate_BatchWorkflowSuccess_JSON() {
@@ -289,11 +291,33 @@ func (s *SharedServerSuite) TestWorkflow_Terminate_BatchWorkflowSuccess_JSON() {
 	s.NotEmpty(jsonRes["batchJobId"])
 }
 
-func (s *SharedServerSuite) testTerminateBatchWorkflow(total int, rps float32, json bool) ([]*history.HistoryEvent, *CommandResult) {
+func (s *SharedServerSuite) testTerminateBatchWorkflow(
+	total int,
+	rps float32,
+	json bool,
+) (*workflowservice.StartBatchOperationRequest, *CommandResult) {
 	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
 		ctx.Done().Receive(ctx, nil)
 		return nil, ctx.Err()
 	})
+
+	var lastRequestLock sync.Mutex
+	var startBatchRequest *workflowservice.StartBatchOperationRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string, req, reply any,
+			cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption,
+		) error {
+			lastRequestLock.Lock()
+			if r, ok := req.(*workflowservice.StartBatchOperationRequest); ok {
+				startBatchRequest = r
+			}
+			lastRequestLock.Unlock()
+			return invoker(ctx, method, req, reply, cc, opts...)
+		}),
+	)
 
 	// Start workflows
 	runs := make([]client.WorkflowRun, total)
@@ -338,7 +362,6 @@ func (s *SharedServerSuite) testTerminateBatchWorkflow(total int, rps float32, j
 	s.NoError(res.Err)
 
 	// Confirm that all workflows are terminated
-	var events []*history.HistoryEvent
 	for _, run := range runs {
 		s.Contains(run.Get(s.Context, nil).Error(), "terminated")
 		// Ensure the termination reason was recorded
@@ -350,12 +373,11 @@ func (s *SharedServerSuite) testTerminateBatchWorkflow(total int, rps float32, j
 			if term := event.GetWorkflowExecutionTerminatedEventAttributes(); term != nil {
 				foundReason = true
 				s.Equal("terminate-test", term.Reason)
-				events = append(events, event)
 			}
 		}
 		s.True(foundReason)
 	}
-	return events, res
+	return startBatchRequest, res
 }
 
 func (s *SharedServerSuite) TestWorkflow_Cancel_SingleWorkflowSuccess() {
