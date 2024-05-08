@@ -20,7 +20,7 @@ This document has a specific structure used by a parser. Here are the rules:
     * Can have bullets
       * Each bullet is `* <option-names> (<data-type>) - <short-description>. <extra-attributes>`.
       * `<option-names>` is `` `--<option-name>` `` and can optionally be followed by ``, `-<short-name>` ``.
-      * `<data-type>` must be one of `bool`, `duration`, `int`, `string`, `string[]`, `string-enum`, `timestamp`, TODO: more
+      * `<data-type>` must be one of `bool`, `duration`, `int`, `string`, `string[]`, `string-enum`, `timestamp`, `float`
       * `<short-description>` can be just about anything so long as it doesn't match trailing attributes. Any wrap
         around to newlines + two-space indention is trimmed to a single space.
       * `<extra-attributes>` can be:
@@ -911,6 +911,7 @@ Use the options listed below to change reset behavior.
 * `--build-id` (string) - Only used if type is BuildId. Reset the first workflow task processed by this build id. Note that by default, this reset is allowed to be to a prior run in a chain of continue-as-new.
 * `--query`, `-q` (string) - Start a batch reset to operate on Workflow Executions with given List Filter.
 * `--yes`, `-y` (bool) - Confirm prompt to perform batch. Only allowed if query is present.
+* `--rps` (float) - Limit batch's requests per second. Only allowed if query is present.
 
 
 
@@ -958,6 +959,7 @@ Includes options set for [payload input](#options-set-for-payload-input).
 * `--reason` (string) - Reason to perform batch. Only allowed if query is present unless the command specifies
   otherwise. Defaults to message with the current user's name.
 * `--yes`, `-y` (bool) - Confirm prompt to perform batch. Only allowed if query is present.
+* `--rps` (float) - Limit batch's requests per second. Only allowed if query is present.
 
 ### temporal workflow stack: Query a Workflow Execution for its stack trace.
 
@@ -1049,6 +1051,7 @@ Use the options listed below to change the behavior of this command.
   Workflow Id must be set.
 * `--reason` (string) - Reason for termination. Defaults to message with the current user's name.
 * `--yes`, `-y` (bool) - Confirm prompt to perform batch. Only allowed if query is present.
+* `--rps` (float) - Limit batch's requests per second. Only allowed if query is present.
 
 ### temporal workflow trace: Terminate Workflow Execution by ID or List Filter.
 
