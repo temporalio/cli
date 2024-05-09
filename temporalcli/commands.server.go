@@ -101,11 +101,11 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 	if friendlyIP == "127.0.0.1" {
 		friendlyIP = "localhost"
 	}
-	cctx.Printer.Printlnf("Temporal server is running at: %v:%v", friendlyIP, t.Port)
+	cctx.Printer.Printlnf("%-16s %v:%v", "Temporal server:", friendlyIP, t.Port)
 	if !t.Headless {
-		cctx.Printer.Printlnf("Web UI is running at: http://%v:%v", friendlyIP, opts.UIPort)
+		cctx.Printer.Printlnf("%-16s http://%v:%v", "Web UI:", friendlyIP, opts.UIPort)
 	}
-	cctx.Printer.Printlnf("Metrics available at: http://%v:%v/metrics", friendlyIP, opts.MetricsPort)
+	cctx.Printer.Printlnf("%-16s http://%v:%v/metrics", "Metrics:", friendlyIP, opts.MetricsPort)
 	<-cctx.Done()
 	cctx.Printer.Println("Stopping server...")
 	return nil
