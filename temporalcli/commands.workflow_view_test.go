@@ -147,6 +147,11 @@ func (s *SharedServerSuite) TestWorkflow_Describe_ResetPoints() {
 }
 
 func (s *SharedServerSuite) TestWorkflow_Show_Follow() {
+	s.testWorkflowShowFollow(true)
+	s.testWorkflowShowFollow(false)
+}
+
+func (s *SharedServerSuite) testWorkflowShowFollow(eventDetails bool) {
 	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
 		sigs := 0
 		for {
@@ -171,15 +176,19 @@ func (s *SharedServerSuite) TestWorkflow_Show_Follow() {
 	doneFollowingCh := make(chan struct{})
 	// Follow the workflow
 	go func() {
-		res := s.Execute(
-			"workflow", "show",
+		args := []string{"workflow", "show",
 			"--address", s.Address(),
 			"-w", run.GetID(),
-			"--follow",
-		)
+			"--follow"}
+		if eventDetails {
+			args = append(args, "--event-details")
+		}
+		res := s.Execute(args...)
 		s.NoError(res.Err)
 		out := res.Stdout.String()
-		s.Contains(out, "my-signal")
+		if eventDetails {
+			s.Contains(out, "my-signal")
+		}
 		s.Contains(out, "Result  \"hi!\"")
 		close(doneFollowingCh)
 	}()
@@ -194,6 +203,10 @@ func (s *SharedServerSuite) TestWorkflow_Show_Follow() {
 }
 
 func (s *SharedServerSuite) TestWorkflow_Show_NoFollow() {
+	s.testWorkflowShowNoFollow(true)
+	s.testWorkflowShowNoFollow(false)
+}
+func (s *SharedServerSuite) testWorkflowShowNoFollow(eventDetails bool) {
 	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
 		sigs := 0
 		for {
@@ -215,11 +228,13 @@ func (s *SharedServerSuite) TestWorkflow_Show_NoFollow() {
 	)
 	s.NoError(err)
 
-	res := s.Execute(
-		"workflow", "show",
+	args := []string{"workflow", "show",
 		"--address", s.Address(),
-		"-w", run.GetID(),
-	)
+		"-w", run.GetID()}
+	if eventDetails {
+		args = append(args, "--event-details")
+	}
+	res := s.Execute(args...)
 	s.NoError(res.Err)
 	out := res.Stdout.String()
 	s.NotContains(out, "my-signal")
@@ -230,14 +245,12 @@ func (s *SharedServerSuite) TestWorkflow_Show_NoFollow() {
 	s.NoError(s.Client.SignalWorkflow(s.Context, run.GetID(), "", "my-signal", nil))
 	s.NoError(run.Get(s.Context, nil))
 
-	res = s.Execute(
-		"workflow", "show",
-		"--address", s.Address(),
-		"-w", run.GetID(),
-	)
+	res = s.Execute(args...)
 	s.NoError(res.Err)
 	out = res.Stdout.String()
-	s.Contains(out, "my-signal")
+	if eventDetails {
+		s.Contains(out, "my-signal")
+	}
 	s.Contains(out, "Result  \"hi!\"")
 }
 
