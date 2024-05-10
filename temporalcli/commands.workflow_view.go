@@ -327,7 +327,7 @@ func (c *TemporalWorkflowShowCommand) run(cctx *CommandContext, _ []string) erro
 		client:         cl,
 		workflowID:     c.WorkflowId,
 		runID:          c.RunId,
-		includeDetails: true,
+		includeDetails: c.EventDetails,
 		follow:         c.Follow,
 	}
 	if !cctx.JSONOutput {
