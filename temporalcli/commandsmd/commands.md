@@ -628,7 +628,7 @@ Use the options listed below to modify what this command returns.
 * `--task-queue-type` (string-enum) - Task Queue type. Options: workflow, activity. Default: workflow.
 * `--partitions` (int) - Query for all partitions up to this number (experimental+temporary feature). Default: 1.
 
-### temporal task-queue get-build-id-reachability: Retrieves information about the reachability of Build IDs on one or more Task Queues.
+### temporal task-queue get-build-id-reachability: Retrieves information about the reachability of Build IDs on one or more Task Queues (Deprecated).
 
 This command can tell you whether or not Build IDs may be used for new, existing, or closed workflows. Both the '--build-id' and '--task-queue' flags may be specified multiple times. If you do not provide a task queue, reachability for the provided Build IDs will be checked against all task queues.
 
@@ -646,7 +646,7 @@ Fetch the worker build ID assignment and redirect rules associated with a Task Q
 
 * `--task-queue`, `-t` (string) - Task queue name. Required.
 
-### temporal task-queue get-build-ids: Fetch the sets of worker Build ID versions on the Task Queue.
+### temporal task-queue get-build-ids: Fetch the sets of worker Build ID versions on the Task Queue (Deprecated).
 
 Fetch the sets of compatible build IDs associated with a Task Queue and associated information.
 
@@ -763,7 +763,7 @@ Replaces the redirect rule with the given source build ID for this Task Queue.
 * `--task-queue`, `-t` (string) - Name of the Task Queue. Required.
 * `--yes`, `-y` (bool) - Skip confirmation.
 
-### temporal task-queue update-build-ids: Operations to update the sets of worker Build ID versions on the Task Queue.
+### temporal task-queue update-build-ids: Operations to update the sets of worker Build ID versions on the Task Queue (Deprecated).
 
 Provides various commands for adding or changing the sets of compatible build IDs associated with a Task Queue. See the help of each sub-command for more.
 

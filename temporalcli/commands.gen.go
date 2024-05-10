@@ -1352,7 +1352,7 @@ func NewTemporalTaskQueueGetBuildIdReachabilityCommand(cctx *CommandContext, par
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "get-build-id-reachability [flags]"
-	s.Command.Short = "Retrieves information about the reachability of Build IDs on one or more Task Queues."
+	s.Command.Short = "Retrieves information about the reachability of Build IDs on one or more Task Queues (Deprecated)."
 	s.Command.Long = "This command can tell you whether or not Build IDs may be used for new, existing, or closed workflows. Both the '--build-id' and '--task-queue' flags may be specified multiple times. If you do not provide a task queue, reachability for the provided Build IDs will be checked against all task queues."
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringArrayVar(&s.BuildId, "build-id", nil, "Which Build ID to get reachability information for. May be specified multiple times.")
@@ -1403,7 +1403,7 @@ func NewTemporalTaskQueueGetBuildIdsCommand(cctx *CommandContext, parent *Tempor
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "get-build-ids [flags]"
-	s.Command.Short = "Fetch the sets of worker Build ID versions on the Task Queue."
+	s.Command.Short = "Fetch the sets of worker Build ID versions on the Task Queue (Deprecated)."
 	s.Command.Long = "Fetch the sets of compatible build IDs associated with a Task Queue and associated information."
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task queue name.")
@@ -1546,9 +1546,9 @@ func NewTemporalTaskQueueUpdateBuildIdRulesDeleteAssignmentRuleCommand(cctx *Com
 	s.Command.Use = "delete-assignment-rule [flags]"
 	s.Command.Short = "Deletes the rule at a given index in the list of assignment rules for this Task Queue."
 	if hasHighlighting {
-		s.Command.Long = "Deletes an assignment rule for this Task Queue. By default presence of one\nunconditional rule, i.e., no hint filter or percentage, is enforced, otherwise \nthe delete operation will be rejected. Set \x1b[1mforce\x1b[0m to true to bypass this\nvalidation."
+		s.Command.Long = "Deletes an assignment rule for this Task Queue. By default presence of one\nunconditional rule, i.e., no hint filter or percentage, is enforced, otherwise\nthe delete operation will be rejected. Set \x1b[1mforce\x1b[0m to true to bypass this\nvalidation."
 	} else {
-		s.Command.Long = "Deletes an assignment rule for this Task Queue. By default presence of one\nunconditional rule, i.e., no hint filter or percentage, is enforced, otherwise \nthe delete operation will be rejected. Set `force` to true to bypass this\nvalidation."
+		s.Command.Long = "Deletes an assignment rule for this Task Queue. By default presence of one\nunconditional rule, i.e., no hint filter or percentage, is enforced, otherwise\nthe delete operation will be rejected. Set `force` to true to bypass this\nvalidation."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Name of the Task Queue.")
@@ -1645,9 +1645,9 @@ func NewTemporalTaskQueueUpdateBuildIdRulesReplaceAssignmentRuleCommand(cctx *Co
 	s.Command.Use = "replace-assignment-rule [flags]"
 	s.Command.Short = "Replaces the rule at a given index in the list of assignment rules for this Task Queue."
 	if hasHighlighting {
-		s.Command.Long = "Replaces an assignment rule for this Task Queue. By default presence of one\nunconditional rule, i.e., no hint filter or percentage, is enforced, otherwise \nthe delete operation will be rejected. Set \x1b[1mforce\x1b[0m to true to bypass this\nvalidation."
+		s.Command.Long = "Replaces an assignment rule for this Task Queue. By default presence of one\nunconditional rule, i.e., no hint filter or percentage, is enforced, otherwise\nthe delete operation will be rejected. Set \x1b[1mforce\x1b[0m to true to bypass this\nvalidation."
 	} else {
-		s.Command.Long = "Replaces an assignment rule for this Task Queue. By default presence of one\nunconditional rule, i.e., no hint filter or percentage, is enforced, otherwise \nthe delete operation will be rejected. Set `force` to true to bypass this\nvalidation."
+		s.Command.Long = "Replaces an assignment rule for this Task Queue. By default presence of one\nunconditional rule, i.e., no hint filter or percentage, is enforced, otherwise\nthe delete operation will be rejected. Set `force` to true to bypass this\nvalidation."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "The target build ID for this assignment rule.")
@@ -1708,7 +1708,7 @@ func NewTemporalTaskQueueUpdateBuildIdsCommand(cctx *CommandContext, parent *Tem
 	var s TemporalTaskQueueUpdateBuildIdsCommand
 	s.Parent = parent
 	s.Command.Use = "update-build-ids"
-	s.Command.Short = "Operations to update the sets of worker Build ID versions on the Task Queue."
+	s.Command.Short = "Operations to update the sets of worker Build ID versions on the Task Queue (Deprecated)."
 	s.Command.Long = "Provides various commands for adding or changing the sets of compatible build IDs associated with a Task Queue. See the help of each sub-command for more."
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalTaskQueueUpdateBuildIdsAddNewCompatibleCommand(cctx, &s).Command)

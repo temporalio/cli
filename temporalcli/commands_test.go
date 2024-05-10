@@ -318,6 +318,7 @@ func StartDevServer(t *testing.T, options DevServerOptions) *DevServer {
 		d.Options.DynamicConfigValues = map[string]any{}
 	}
 	d.Options.DynamicConfigValues["system.forceSearchAttributesCacheRefreshOnRead"] = true
+	d.Options.DynamicConfigValues["frontend.workerVersioningRuleAPIs"] = true
 	d.Options.DynamicConfigValues["frontend.workerVersioningDataAPIs"] = true
 	d.Options.DynamicConfigValues["frontend.workerVersioningWorkflowAPIs"] = true
 	d.Options.DynamicConfigValues["worker.buildIdScavengerEnabled"] = true
