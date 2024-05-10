@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/temporalio/cli/temporalcli"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/workflowservice/v1"
@@ -105,6 +106,58 @@ func (s *SharedServerSuite) TestWorkflow_Describe_Completed() {
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
 	s.NotNil(jsonOut["closeEvent"])
 	s.Equal(map[string]any{"foo": "bar"}, jsonOut["result"])
+}
+
+func (s *SharedServerSuite) TestWorkflow_Describe_Versioned() {
+	buildIdTaskQueue := uuid.NewString()
+
+	buildId := "id1"
+	res := s.Execute(
+		"task-queue", "update-build-id-rules", "insert-assignment-rule",
+		"--build-id", buildId,
+		"-y",
+		"--address", s.Address(),
+		"--task-queue", buildIdTaskQueue,
+		"--output", "json",
+	)
+	s.NoError(res.Err)
+
+	var run client.WorkflowRun
+	var err error
+	s.Eventually(
+		func() bool {
+			run, err = s.Client.ExecuteWorkflow(
+				s.Context,
+				client.StartWorkflowOptions{TaskQueue: buildIdTaskQueue},
+				DevWorkflow,
+				map[string]string{"foo": "bar"},
+			)
+			s.NoError(err)
+
+			// Text
+			res = s.Execute(
+				"workflow", "describe",
+				"--address", s.Address(),
+				"-w", run.GetID(),
+			)
+			s.NoError(res.Err)
+			out := res.Stdout.String()
+			return AssertContainsOnSameLine(out, "AssignedBuildId", buildId) != nil
+		}, 10 * time.Second, 100 * time.Millisecond)
+
+		// JSON
+		res = s.Execute(
+			"workflow", "describe",
+			"-o", "json",
+			"--address", s.Address(),
+			"-w", run.GetID(),
+		)
+		s.NoError(res.Err)
+		var jsonOut map[string]any
+		s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+		execInfo, ok := jsonOut["workflowExecutionInfo"].(map[string]any)
+		s.True(ok)
+		s.Equal(buildId, execInfo["assignedBuildId"])
 }
 
 func (s *SharedServerSuite) TestWorkflow_Describe_ResetPoints() {
