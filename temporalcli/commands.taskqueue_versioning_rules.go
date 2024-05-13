@@ -2,11 +2,81 @@ package temporalcli
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/temporalio/cli/temporalcli/internal/printer"
 	"go.temporal.io/sdk/client"
 )
+
+type assignmentRowType struct {
+	Index          int       `json:"-"` // omit index with JSON
+	TargetBuildID  string    `json:"targetBuildID"`
+	RampPercentage float32   `json:"rampPercentage"`
+	CreateTime     time.Time `json:"createTime"`
+}
+
+type redirectRowType struct {
+	SourceBuildID string    `json:"sourceBuildID"`
+	TargetBuildID string    `json:"targetBuildID"`
+	CreateTime    time.Time `json:"createTime"`
+}
+
+type formattedRulesType struct {
+	AssignmentRules []assignmentRowType `json:"assignmentRules"`
+	RedirectRules   []redirectRowType   `json:"redirectRules"`
+}
+
+func versioningRulesToRows(rules *client.WorkerVersioningRules) *formattedRulesType {
+	var aRules []assignmentRowType
+	for i, r := range rules.AssignmentRules {
+		var percentage float32 = 100.0
+		switch ramp := r.Rule.Ramp.(type) {
+		case *client.VersioningRampByPercentage:
+			percentage = ramp.Percentage
+		}
+		row := assignmentRowType{
+			Index:          i,
+			TargetBuildID:  r.Rule.TargetBuildID,
+			RampPercentage: percentage,
+			CreateTime:     r.CreateTime,
+		}
+		aRules = append(aRules, row)
+	}
+
+	var rRules []redirectRowType
+	for _, r := range rules.RedirectRules {
+		row := redirectRowType{
+			SourceBuildID: r.Rule.SourceBuildID,
+			TargetBuildID: r.Rule.TargetBuildID,
+			CreateTime:    r.CreateTime,
+		}
+		rRules = append(rRules, row)
+	}
+
+	return &formattedRulesType{
+		AssignmentRules: aRules,
+		RedirectRules:   rRules,
+	}
+}
+
+func printBuildIdRules(cctx *CommandContext, rules *client.WorkerVersioningRules) error {
+	fRules := versioningRulesToRows(rules)
+
+	if !cctx.JSONOutput {
+		cctx.Printer.Println(color.MagentaString("Assignment Rules:"))
+		err := cctx.Printer.PrintStructured(fRules.AssignmentRules, printer.StructuredOptions{Table: &printer.TableOptions{}})
+		if err != nil {
+			return fmt.Errorf("displaying rules failed: %w", err)
+		}
+		// Separate newline
+		cctx.Printer.Println()
+		cctx.Printer.Println(color.MagentaString("Redirection Rules:"))
+		return cctx.Printer.PrintStructured(fRules.RedirectRules, printer.StructuredOptions{Table: &printer.TableOptions{}})
+	}
+	// json output
+	return cctx.Printer.PrintStructured(fRules, printer.StructuredOptions{})
+}
 
 type getConflictTokenOptions struct {
 	safeMode        bool
@@ -15,7 +85,7 @@ type getConflictTokenOptions struct {
 	showAssignment  bool
 }
 
-func (c *TemporalTaskQueueUpdateBuildIdRulesCommand) getConflictToken(cctx *CommandContext, options *getConflictTokenOptions) (client.VersioningConflictToken, error) {
+func (c *TemporalTaskQueueVersioningCommand) getConflictToken(cctx *CommandContext, options *getConflictTokenOptions) (client.VersioningConflictToken, error) {
 	cl, err := c.Parent.ClientOptions.dialClient(cctx)
 	if err != nil {
 		return client.VersioningConflictToken{}, err
@@ -60,7 +130,7 @@ func (c *TemporalTaskQueueUpdateBuildIdRulesCommand) getConflictToken(cctx *Comm
 	return rules.ConflictToken, nil
 }
 
-func (c *TemporalTaskQueueUpdateBuildIdRulesCommand) updateBuildIdRules(cctx *CommandContext, options *client.UpdateWorkerVersioningRulesOptions) error {
+func (c *TemporalTaskQueueVersioningCommand) updateBuildIdRules(cctx *CommandContext, options *client.UpdateWorkerVersioningRulesOptions) error {
 	cl, err := c.Parent.ClientOptions.dialClient(cctx)
 	if err != nil {
 		return err
@@ -81,11 +151,11 @@ func (c *TemporalTaskQueueUpdateBuildIdRulesCommand) updateBuildIdRules(cctx *Co
 	return nil
 }
 
-func (c *TemporalTaskQueueUpdateBuildIdRulesAddRedirectRuleCommand) run(cctx *CommandContext, args []string) error {
+func (c *TemporalTaskQueueVersioningAddRedirectRuleCommand) run(cctx *CommandContext, args []string) error {
 	token, err := c.Parent.getConflictToken(cctx, &getConflictTokenOptions{
 		safeMode:        !c.Yes,
 		safeModeMessage: "adding a redirect rule",
-		taskQueue:       c.TaskQueue,
+		taskQueue:       c.Parent.TaskQueue,
 		showAssignment:  false,
 	})
 	if err != nil {
@@ -93,7 +163,7 @@ func (c *TemporalTaskQueueUpdateBuildIdRulesAddRedirectRuleCommand) run(cctx *Co
 	}
 
 	return c.Parent.updateBuildIdRules(cctx, &client.UpdateWorkerVersioningRulesOptions{
-		TaskQueue:     c.TaskQueue,
+		TaskQueue:     c.Parent.TaskQueue,
 		ConflictToken: token,
 		Operation: &client.VersioningOpAddRedirectRule{
 			Rule: client.VersioningRedirectRule{
@@ -104,11 +174,11 @@ func (c *TemporalTaskQueueUpdateBuildIdRulesAddRedirectRuleCommand) run(cctx *Co
 	})
 }
 
-func (c *TemporalTaskQueueUpdateBuildIdRulesCommitBuildIdCommand) run(cctx *CommandContext, args []string) error {
+func (c *TemporalTaskQueueVersioningCommitBuildIdCommand) run(cctx *CommandContext, args []string) error {
 	token, err := c.Parent.getConflictToken(cctx, &getConflictTokenOptions{
 		safeMode:        !c.Yes,
 		safeModeMessage: "commiting a redirect rule",
-		taskQueue:       c.TaskQueue,
+		taskQueue:       c.Parent.TaskQueue,
 		showAssignment:  true,
 	})
 	if err != nil {
@@ -116,7 +186,7 @@ func (c *TemporalTaskQueueUpdateBuildIdRulesCommitBuildIdCommand) run(cctx *Comm
 	}
 
 	return c.Parent.updateBuildIdRules(cctx, &client.UpdateWorkerVersioningRulesOptions{
-		TaskQueue:     c.TaskQueue,
+		TaskQueue:     c.Parent.TaskQueue,
 		ConflictToken: token,
 		Operation: &client.VersioningOpCommitBuildID{
 			TargetBuildID: c.BuildId,
@@ -125,11 +195,11 @@ func (c *TemporalTaskQueueUpdateBuildIdRulesCommitBuildIdCommand) run(cctx *Comm
 	})
 }
 
-func (c *TemporalTaskQueueUpdateBuildIdRulesDeleteAssignmentRuleCommand) run(cctx *CommandContext, args []string) error {
+func (c *TemporalTaskQueueVersioningDeleteAssignmentRuleCommand) run(cctx *CommandContext, args []string) error {
 	token, err := c.Parent.getConflictToken(cctx, &getConflictTokenOptions{
 		safeMode:        !c.Yes,
 		safeModeMessage: "deleting an assignment rule",
-		taskQueue:       c.TaskQueue,
+		taskQueue:       c.Parent.TaskQueue,
 		showAssignment:  true,
 	})
 	if err != nil {
@@ -137,7 +207,7 @@ func (c *TemporalTaskQueueUpdateBuildIdRulesDeleteAssignmentRuleCommand) run(cct
 	}
 
 	return c.Parent.updateBuildIdRules(cctx, &client.UpdateWorkerVersioningRulesOptions{
-		TaskQueue:     c.TaskQueue,
+		TaskQueue:     c.Parent.TaskQueue,
 		ConflictToken: token,
 		Operation: &client.VersioningOpDeleteAssignmentRule{
 			RuleIndex: int32(c.RuleIndex),
@@ -146,11 +216,11 @@ func (c *TemporalTaskQueueUpdateBuildIdRulesDeleteAssignmentRuleCommand) run(cct
 	})
 }
 
-func (c *TemporalTaskQueueUpdateBuildIdRulesDeleteRedirectRuleCommand) run(cctx *CommandContext, args []string) error {
+func (c *TemporalTaskQueueVersioningDeleteRedirectRuleCommand) run(cctx *CommandContext, args []string) error {
 	token, err := c.Parent.getConflictToken(cctx, &getConflictTokenOptions{
 		safeMode:        !c.Yes,
 		safeModeMessage: "deleting a redirect rule",
-		taskQueue:       c.TaskQueue,
+		taskQueue:       c.Parent.TaskQueue,
 		showAssignment:  false,
 	})
 	if err != nil {
@@ -158,7 +228,7 @@ func (c *TemporalTaskQueueUpdateBuildIdRulesDeleteRedirectRuleCommand) run(cctx 
 	}
 
 	return c.Parent.updateBuildIdRules(cctx, &client.UpdateWorkerVersioningRulesOptions{
-		TaskQueue:     c.TaskQueue,
+		TaskQueue:     c.Parent.TaskQueue,
 		ConflictToken: token,
 		Operation: &client.VersioningOpDeleteRedirectRule{
 			SourceBuildID: c.SourceBuildId,
@@ -166,11 +236,11 @@ func (c *TemporalTaskQueueUpdateBuildIdRulesDeleteRedirectRuleCommand) run(cctx 
 	})
 }
 
-func (c *TemporalTaskQueueUpdateBuildIdRulesInsertAssignmentRuleCommand) run(cctx *CommandContext, args []string) error {
+func (c *TemporalTaskQueueVersioningInsertAssignmentRuleCommand) run(cctx *CommandContext, args []string) error {
 	token, err := c.Parent.getConflictToken(cctx, &getConflictTokenOptions{
 		safeMode:        !c.Yes,
 		safeModeMessage: "inserting an assignment rule",
-		taskQueue:       c.TaskQueue,
+		taskQueue:       c.Parent.TaskQueue,
 		showAssignment:  true,
 	})
 	if err != nil {
@@ -187,7 +257,7 @@ func (c *TemporalTaskQueueUpdateBuildIdRulesInsertAssignmentRuleCommand) run(cct
 	}
 
 	return c.Parent.updateBuildIdRules(cctx, &client.UpdateWorkerVersioningRulesOptions{
-		TaskQueue:     c.TaskQueue,
+		TaskQueue:     c.Parent.TaskQueue,
 		ConflictToken: token,
 		Operation: &client.VersioningOpInsertAssignmentRule{
 			RuleIndex: int32(c.RuleIndex),
@@ -196,11 +266,11 @@ func (c *TemporalTaskQueueUpdateBuildIdRulesInsertAssignmentRuleCommand) run(cct
 	})
 }
 
-func (c *TemporalTaskQueueUpdateBuildIdRulesReplaceAssignmentRuleCommand) run(cctx *CommandContext, args []string) error {
+func (c *TemporalTaskQueueVersioningReplaceAssignmentRuleCommand) run(cctx *CommandContext, args []string) error {
 	token, err := c.Parent.getConflictToken(cctx, &getConflictTokenOptions{
 		safeMode:        !c.Yes,
 		safeModeMessage: "replacing an assignment rule",
-		taskQueue:       c.TaskQueue,
+		taskQueue:       c.Parent.TaskQueue,
 		showAssignment:  true,
 	})
 	if err != nil {
@@ -217,7 +287,7 @@ func (c *TemporalTaskQueueUpdateBuildIdRulesReplaceAssignmentRuleCommand) run(cc
 	}
 
 	return c.Parent.updateBuildIdRules(cctx, &client.UpdateWorkerVersioningRulesOptions{
-		TaskQueue:     c.TaskQueue,
+		TaskQueue:     c.Parent.TaskQueue,
 		ConflictToken: token,
 		Operation: &client.VersioningOpReplaceAssignmentRule{
 			RuleIndex: int32(c.RuleIndex),
@@ -227,11 +297,11 @@ func (c *TemporalTaskQueueUpdateBuildIdRulesReplaceAssignmentRuleCommand) run(cc
 	})
 }
 
-func (c *TemporalTaskQueueUpdateBuildIdRulesReplaceRedirectRuleCommand) run(cctx *CommandContext, args []string) error {
+func (c *TemporalTaskQueueVersioningReplaceRedirectRuleCommand) run(cctx *CommandContext, args []string) error {
 	token, err := c.Parent.getConflictToken(cctx, &getConflictTokenOptions{
 		safeMode:        !c.Yes,
 		safeModeMessage: "replacing a redirect rule",
-		taskQueue:       c.TaskQueue,
+		taskQueue:       c.Parent.TaskQueue,
 		showAssignment:  false,
 	})
 	if err != nil {
@@ -239,7 +309,7 @@ func (c *TemporalTaskQueueUpdateBuildIdRulesReplaceRedirectRuleCommand) run(cctx
 	}
 
 	return c.Parent.updateBuildIdRules(cctx, &client.UpdateWorkerVersioningRulesOptions{
-		TaskQueue:     c.TaskQueue,
+		TaskQueue:     c.Parent.TaskQueue,
 		ConflictToken: token,
 		Operation: &client.VersioningOpReplaceRedirectRule{
 			Rule: client.VersioningRedirectRule{
@@ -248,4 +318,21 @@ func (c *TemporalTaskQueueUpdateBuildIdRulesReplaceRedirectRuleCommand) run(cctx
 			},
 		},
 	})
+}
+
+func (c *TemporalTaskQueueVersioningGetRulesCommand) run(cctx *CommandContext, args []string) error {
+	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	rules, err := cl.GetWorkerVersioningRules(cctx, &client.GetWorkerVersioningOptions{
+		TaskQueue: c.Parent.TaskQueue,
+	})
+	if err != nil {
+		return fmt.Errorf("unable to get task queue build ID rules: %w", err)
+	}
+
+	return printBuildIdRules(cctx, rules)
 }

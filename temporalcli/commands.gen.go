@@ -1297,11 +1297,10 @@ func NewTemporalTaskQueueCommand(cctx *CommandContext, parent *TemporalCommand) 
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalTaskQueueDescribeCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalTaskQueueGetBuildIdReachabilityCommand(cctx, &s).Command)
-	s.Command.AddCommand(&NewTemporalTaskQueueGetBuildIdRulesCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalTaskQueueGetBuildIdsCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalTaskQueueListPartitionCommand(cctx, &s).Command)
-	s.Command.AddCommand(&NewTemporalTaskQueueUpdateBuildIdRulesCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalTaskQueueUpdateBuildIdsCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalTaskQueueVersioningCommand(cctx, &s).Command)
 	s.ClientOptions.buildFlags(cctx, s.Command.PersistentFlags())
 	return &s
 }
@@ -1367,30 +1366,6 @@ func NewTemporalTaskQueueGetBuildIdReachabilityCommand(cctx *CommandContext, par
 	return &s
 }
 
-type TemporalTaskQueueGetBuildIdRulesCommand struct {
-	Parent    *TemporalTaskQueueCommand
-	Command   cobra.Command
-	TaskQueue string
-}
-
-func NewTemporalTaskQueueGetBuildIdRulesCommand(cctx *CommandContext, parent *TemporalTaskQueueCommand) *TemporalTaskQueueGetBuildIdRulesCommand {
-	var s TemporalTaskQueueGetBuildIdRulesCommand
-	s.Parent = parent
-	s.Command.DisableFlagsInUseLine = true
-	s.Command.Use = "get-build-id-rules [flags]"
-	s.Command.Short = "Retrieves the worker Build ID assignment and redirect rules on the Task Queue."
-	s.Command.Long = "Fetch the worker build ID assignment and redirect rules associated with a Task Queue."
-	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task queue name.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
-	}
-	return &s
-}
-
 type TemporalTaskQueueGetBuildIdsCommand struct {
 	Parent    *TemporalTaskQueueCommand
 	Command   cobra.Command
@@ -1433,264 +1408,6 @@ func NewTemporalTaskQueueListPartitionCommand(cctx *CommandContext, parent *Temp
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task queue name.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
-	}
-	return &s
-}
-
-type TemporalTaskQueueUpdateBuildIdRulesCommand struct {
-	Parent  *TemporalTaskQueueCommand
-	Command cobra.Command
-}
-
-func NewTemporalTaskQueueUpdateBuildIdRulesCommand(cctx *CommandContext, parent *TemporalTaskQueueCommand) *TemporalTaskQueueUpdateBuildIdRulesCommand {
-	var s TemporalTaskQueueUpdateBuildIdRulesCommand
-	s.Parent = parent
-	s.Command.Use = "update-build-id-rules"
-	s.Command.Short = "Updates the worker Build ID assignment and redirect rules on the Task Queue."
-	s.Command.Long = "Provides various commands for adding, removing, or replacing worker Build ID assignment and redirect rules associated with a Task Queue. See the help of each sub-command for more."
-	s.Command.Args = cobra.NoArgs
-	s.Command.AddCommand(&NewTemporalTaskQueueUpdateBuildIdRulesAddRedirectRuleCommand(cctx, &s).Command)
-	s.Command.AddCommand(&NewTemporalTaskQueueUpdateBuildIdRulesCommitBuildIdCommand(cctx, &s).Command)
-	s.Command.AddCommand(&NewTemporalTaskQueueUpdateBuildIdRulesDeleteAssignmentRuleCommand(cctx, &s).Command)
-	s.Command.AddCommand(&NewTemporalTaskQueueUpdateBuildIdRulesDeleteRedirectRuleCommand(cctx, &s).Command)
-	s.Command.AddCommand(&NewTemporalTaskQueueUpdateBuildIdRulesInsertAssignmentRuleCommand(cctx, &s).Command)
-	s.Command.AddCommand(&NewTemporalTaskQueueUpdateBuildIdRulesReplaceAssignmentRuleCommand(cctx, &s).Command)
-	s.Command.AddCommand(&NewTemporalTaskQueueUpdateBuildIdRulesReplaceRedirectRuleCommand(cctx, &s).Command)
-	return &s
-}
-
-type TemporalTaskQueueUpdateBuildIdRulesAddRedirectRuleCommand struct {
-	Parent        *TemporalTaskQueueUpdateBuildIdRulesCommand
-	Command       cobra.Command
-	SourceBuildId string
-	TargetBuildId string
-	TaskQueue     string
-	Yes           bool
-}
-
-func NewTemporalTaskQueueUpdateBuildIdRulesAddRedirectRuleCommand(cctx *CommandContext, parent *TemporalTaskQueueUpdateBuildIdRulesCommand) *TemporalTaskQueueUpdateBuildIdRulesAddRedirectRuleCommand {
-	var s TemporalTaskQueueUpdateBuildIdRulesAddRedirectRuleCommand
-	s.Parent = parent
-	s.Command.DisableFlagsInUseLine = true
-	s.Command.Use = "add-redirect-rule [flags]"
-	s.Command.Short = "Adds the rule to the list of redirect rules for this Task Queue."
-	s.Command.Long = "Adds a new redirect rule for this Task Queue. There can be at most one redirect rule for each distinct source build ID."
-	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.SourceBuildId, "source-build-id", "", "The source build ID for this redirect rule.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "source-build-id")
-	s.Command.Flags().StringVar(&s.TargetBuildId, "target-build-id", "", "The target build ID for this redirect rule.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "target-build-id")
-	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Name of the Task Queue.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
-	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Skip confirmation.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
-	}
-	return &s
-}
-
-type TemporalTaskQueueUpdateBuildIdRulesCommitBuildIdCommand struct {
-	Parent    *TemporalTaskQueueUpdateBuildIdRulesCommand
-	Command   cobra.Command
-	BuildId   string
-	TaskQueue string
-	Force     bool
-	Yes       bool
-}
-
-func NewTemporalTaskQueueUpdateBuildIdRulesCommitBuildIdCommand(cctx *CommandContext, parent *TemporalTaskQueueUpdateBuildIdRulesCommand) *TemporalTaskQueueUpdateBuildIdRulesCommitBuildIdCommand {
-	var s TemporalTaskQueueUpdateBuildIdRulesCommitBuildIdCommand
-	s.Parent = parent
-	s.Command.DisableFlagsInUseLine = true
-	s.Command.Use = "commit-build-id [flags]"
-	s.Command.Short = "Completes the rollout of a Build ID for this Task Queue."
-	if hasHighlighting {
-		s.Command.Long = "Completes  the rollout of a BuildID and cleanup unnecessary rules possibly\ncreated during a gradual rollout. Specifically, this command will make the\nfollowing changes atomically:\n\t1. Adds an unconditional assignment rule for the target Build ID at the end of the list.\n\t2. Removes all previously added assignment rules to the given target Build ID.\n\t3. Removes any unconditional assignment rules for other Build IDs.\n\nTo prevent committing invalid Build IDs, we reject the request if no pollers\nhave been seen recently for this Build ID. Use the \x1b[1mforce\x1b[0m option to disable this validation."
-	} else {
-		s.Command.Long = "Completes  the rollout of a BuildID and cleanup unnecessary rules possibly\ncreated during a gradual rollout. Specifically, this command will make the\nfollowing changes atomically:\n\t1. Adds an unconditional assignment rule for the target Build ID at the end of the list.\n\t2. Removes all previously added assignment rules to the given target Build ID.\n\t3. Removes any unconditional assignment rules for other Build IDs.\n\nTo prevent committing invalid Build IDs, we reject the request if no pollers\nhave been seen recently for this Build ID. Use the `force` option to disable this validation."
-	}
-	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "The target build ID to be committed.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "build-id")
-	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Name of the Task Queue.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
-	s.Command.Flags().BoolVar(&s.Force, "force", false, "Bypass the validation that pollers have been recently seen for this build ID.")
-	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Skip confirmation.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
-	}
-	return &s
-}
-
-type TemporalTaskQueueUpdateBuildIdRulesDeleteAssignmentRuleCommand struct {
-	Parent    *TemporalTaskQueueUpdateBuildIdRulesCommand
-	Command   cobra.Command
-	TaskQueue string
-	RuleIndex int
-	Yes       bool
-	Force     bool
-}
-
-func NewTemporalTaskQueueUpdateBuildIdRulesDeleteAssignmentRuleCommand(cctx *CommandContext, parent *TemporalTaskQueueUpdateBuildIdRulesCommand) *TemporalTaskQueueUpdateBuildIdRulesDeleteAssignmentRuleCommand {
-	var s TemporalTaskQueueUpdateBuildIdRulesDeleteAssignmentRuleCommand
-	s.Parent = parent
-	s.Command.DisableFlagsInUseLine = true
-	s.Command.Use = "delete-assignment-rule [flags]"
-	s.Command.Short = "Deletes the rule at a given index in the list of assignment rules for this Task Queue."
-	if hasHighlighting {
-		s.Command.Long = "Deletes an assignment rule for this Task Queue. By default presence of one\nunconditional rule, i.e., no hint filter or percentage, is enforced, otherwise\nthe delete operation will be rejected. Set \x1b[1mforce\x1b[0m to true to bypass this\nvalidation."
-	} else {
-		s.Command.Long = "Deletes an assignment rule for this Task Queue. By default presence of one\nunconditional rule, i.e., no hint filter or percentage, is enforced, otherwise\nthe delete operation will be rejected. Set `force` to true to bypass this\nvalidation."
-	}
-	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Name of the Task Queue.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
-	s.Command.Flags().IntVarP(&s.RuleIndex, "rule-index", "i", 0, "Position of the assignment rule to be replaced.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "rule-index")
-	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Skip confirmation.")
-	s.Command.Flags().BoolVar(&s.Force, "force", false, "Bypass the validation that one unconditional rule remains.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
-	}
-	return &s
-}
-
-type TemporalTaskQueueUpdateBuildIdRulesDeleteRedirectRuleCommand struct {
-	Parent        *TemporalTaskQueueUpdateBuildIdRulesCommand
-	Command       cobra.Command
-	SourceBuildId string
-	TaskQueue     string
-	Yes           bool
-}
-
-func NewTemporalTaskQueueUpdateBuildIdRulesDeleteRedirectRuleCommand(cctx *CommandContext, parent *TemporalTaskQueueUpdateBuildIdRulesCommand) *TemporalTaskQueueUpdateBuildIdRulesDeleteRedirectRuleCommand {
-	var s TemporalTaskQueueUpdateBuildIdRulesDeleteRedirectRuleCommand
-	s.Parent = parent
-	s.Command.DisableFlagsInUseLine = true
-	s.Command.Use = "delete-redirect-rule [flags]"
-	s.Command.Short = "Deletes the rule with the given build ID for this Task Queue."
-	s.Command.Long = "Deletes the routing rule with the given source Build ID."
-	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.SourceBuildId, "source-build-id", "", "The source build ID for this redirect rule.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "source-build-id")
-	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Name of the Task Queue.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
-	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Skip confirmation.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
-	}
-	return &s
-}
-
-type TemporalTaskQueueUpdateBuildIdRulesInsertAssignmentRuleCommand struct {
-	Parent     *TemporalTaskQueueUpdateBuildIdRulesCommand
-	Command    cobra.Command
-	BuildId    string
-	TaskQueue  string
-	RuleIndex  int
-	Percentage int
-	Yes        bool
-}
-
-func NewTemporalTaskQueueUpdateBuildIdRulesInsertAssignmentRuleCommand(cctx *CommandContext, parent *TemporalTaskQueueUpdateBuildIdRulesCommand) *TemporalTaskQueueUpdateBuildIdRulesInsertAssignmentRuleCommand {
-	var s TemporalTaskQueueUpdateBuildIdRulesInsertAssignmentRuleCommand
-	s.Parent = parent
-	s.Command.DisableFlagsInUseLine = true
-	s.Command.Use = "insert-assignment-rule [flags]"
-	s.Command.Short = "Inserts the rule to the list of assignment rules for this Task Queue."
-	s.Command.Long = "Inserts a new assignment rule for this Task Queue. The rules are evaluated in order, starting from index 0. The first applicable rule will be applied and the rest will be ignored."
-	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "The target build ID for this assignment rule.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "build-id")
-	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Name of the Task Queue.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
-	s.Command.Flags().IntVarP(&s.RuleIndex, "rule-index", "i", 0, "Insertion position in the assignment rule list. An index 0 means insert at the beginning of the list. If the given index is larger than the list size, the rule will be appended at the end of the list.")
-	s.Command.Flags().IntVar(&s.Percentage, "percentage", 100, "Percentage of traffic sent to the target build ID.")
-	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Skip confirmation.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
-	}
-	return &s
-}
-
-type TemporalTaskQueueUpdateBuildIdRulesReplaceAssignmentRuleCommand struct {
-	Parent     *TemporalTaskQueueUpdateBuildIdRulesCommand
-	Command    cobra.Command
-	BuildId    string
-	TaskQueue  string
-	RuleIndex  int
-	Percentage int
-	Yes        bool
-	Force      bool
-}
-
-func NewTemporalTaskQueueUpdateBuildIdRulesReplaceAssignmentRuleCommand(cctx *CommandContext, parent *TemporalTaskQueueUpdateBuildIdRulesCommand) *TemporalTaskQueueUpdateBuildIdRulesReplaceAssignmentRuleCommand {
-	var s TemporalTaskQueueUpdateBuildIdRulesReplaceAssignmentRuleCommand
-	s.Parent = parent
-	s.Command.DisableFlagsInUseLine = true
-	s.Command.Use = "replace-assignment-rule [flags]"
-	s.Command.Short = "Replaces the rule at a given index in the list of assignment rules for this Task Queue."
-	if hasHighlighting {
-		s.Command.Long = "Replaces an assignment rule for this Task Queue. By default presence of one\nunconditional rule, i.e., no hint filter or percentage, is enforced, otherwise\nthe delete operation will be rejected. Set \x1b[1mforce\x1b[0m to true to bypass this\nvalidation."
-	} else {
-		s.Command.Long = "Replaces an assignment rule for this Task Queue. By default presence of one\nunconditional rule, i.e., no hint filter or percentage, is enforced, otherwise\nthe delete operation will be rejected. Set `force` to true to bypass this\nvalidation."
-	}
-	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "The target build ID for this assignment rule.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "build-id")
-	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Name of the Task Queue.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
-	s.Command.Flags().IntVarP(&s.RuleIndex, "rule-index", "i", 0, "Position of the assignment rule to be replaced.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "rule-index")
-	s.Command.Flags().IntVar(&s.Percentage, "percentage", 100, "Percentage of traffic sent to the target build ID.")
-	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Skip confirmation.")
-	s.Command.Flags().BoolVar(&s.Force, "force", false, "Bypass the validation that one unconditional rule remains.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
-	}
-	return &s
-}
-
-type TemporalTaskQueueUpdateBuildIdRulesReplaceRedirectRuleCommand struct {
-	Parent        *TemporalTaskQueueUpdateBuildIdRulesCommand
-	Command       cobra.Command
-	SourceBuildId string
-	TargetBuildId string
-	TaskQueue     string
-	Yes           bool
-}
-
-func NewTemporalTaskQueueUpdateBuildIdRulesReplaceRedirectRuleCommand(cctx *CommandContext, parent *TemporalTaskQueueUpdateBuildIdRulesCommand) *TemporalTaskQueueUpdateBuildIdRulesReplaceRedirectRuleCommand {
-	var s TemporalTaskQueueUpdateBuildIdRulesReplaceRedirectRuleCommand
-	s.Parent = parent
-	s.Command.DisableFlagsInUseLine = true
-	s.Command.Use = "replace-redirect-rule [flags]"
-	s.Command.Short = "Replaces the redirect rule with the given source build ID for this Task Queue."
-	s.Command.Long = "Replaces the redirect rule with the given source build ID for this Task Queue."
-	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.SourceBuildId, "source-build-id", "", "The source build ID for this redirect rule.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "source-build-id")
-	s.Command.Flags().StringVar(&s.TargetBuildId, "target-build-id", "", "The target build ID for this redirect rule.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "target-build-id")
-	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Name of the Task Queue.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
-	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Skip confirmation.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -1823,6 +1540,268 @@ func NewTemporalTaskQueueUpdateBuildIdsPromoteSetCommand(cctx *CommandContext, p
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "build-id")
 	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Name of the Task Queue.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalTaskQueueVersioningCommand struct {
+	Parent    *TemporalTaskQueueCommand
+	Command   cobra.Command
+	TaskQueue string
+}
+
+func NewTemporalTaskQueueVersioningCommand(cctx *CommandContext, parent *TemporalTaskQueueCommand) *TemporalTaskQueueVersioningCommand {
+	var s TemporalTaskQueueVersioningCommand
+	s.Parent = parent
+	s.Command.Use = "versioning"
+	s.Command.Short = "Updates or retrieves the worker Build ID assignment and redirect rules on the Task Queue."
+	s.Command.Long = "Provides various commands for adding, listing, removing, or replacing worker Build ID assignment and redirect rules associated with a Task Queue. See the help of each sub-command for more."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalTaskQueueVersioningAddRedirectRuleCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalTaskQueueVersioningCommitBuildIdCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalTaskQueueVersioningDeleteAssignmentRuleCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalTaskQueueVersioningDeleteRedirectRuleCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalTaskQueueVersioningGetRulesCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalTaskQueueVersioningInsertAssignmentRuleCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalTaskQueueVersioningReplaceAssignmentRuleCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalTaskQueueVersioningReplaceRedirectRuleCommand(cctx, &s).Command)
+	s.Command.PersistentFlags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task queue name.")
+	_ = cobra.MarkFlagRequired(s.Command.PersistentFlags(), "task-queue")
+	return &s
+}
+
+type TemporalTaskQueueVersioningAddRedirectRuleCommand struct {
+	Parent        *TemporalTaskQueueVersioningCommand
+	Command       cobra.Command
+	SourceBuildId string
+	TargetBuildId string
+	Yes           bool
+}
+
+func NewTemporalTaskQueueVersioningAddRedirectRuleCommand(cctx *CommandContext, parent *TemporalTaskQueueVersioningCommand) *TemporalTaskQueueVersioningAddRedirectRuleCommand {
+	var s TemporalTaskQueueVersioningAddRedirectRuleCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "add-redirect-rule [flags]"
+	s.Command.Short = "Adds the rule to the list of redirect rules for this Task Queue."
+	s.Command.Long = "Adds a new redirect rule for this Task Queue. There can be at most one redirect rule for each distinct source build ID."
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.SourceBuildId, "source-build-id", "", "The source build ID for this redirect rule.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "source-build-id")
+	s.Command.Flags().StringVar(&s.TargetBuildId, "target-build-id", "", "The target build ID for this redirect rule.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "target-build-id")
+	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Skip confirmation.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalTaskQueueVersioningCommitBuildIdCommand struct {
+	Parent  *TemporalTaskQueueVersioningCommand
+	Command cobra.Command
+	BuildId string
+	Force   bool
+	Yes     bool
+}
+
+func NewTemporalTaskQueueVersioningCommitBuildIdCommand(cctx *CommandContext, parent *TemporalTaskQueueVersioningCommand) *TemporalTaskQueueVersioningCommitBuildIdCommand {
+	var s TemporalTaskQueueVersioningCommitBuildIdCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "commit-build-id [flags]"
+	s.Command.Short = "Completes the rollout of a Build ID for this Task Queue."
+	if hasHighlighting {
+		s.Command.Long = "Completes  the rollout of a BuildID and cleanup unnecessary rules possibly\ncreated during a gradual rollout. Specifically, this command will make the\nfollowing changes atomically:\n\t1. Adds an unconditional assignment rule for the target Build ID at the end of the list.\n\t2. Removes all previously added assignment rules to the given target Build ID.\n\t3. Removes any unconditional assignment rules for other Build IDs.\n\nTo prevent committing invalid Build IDs, we reject the request if no pollers\nhave been seen recently for this Build ID. Use the \x1b[1mforce\x1b[0m option to disable this validation."
+	} else {
+		s.Command.Long = "Completes  the rollout of a BuildID and cleanup unnecessary rules possibly\ncreated during a gradual rollout. Specifically, this command will make the\nfollowing changes atomically:\n\t1. Adds an unconditional assignment rule for the target Build ID at the end of the list.\n\t2. Removes all previously added assignment rules to the given target Build ID.\n\t3. Removes any unconditional assignment rules for other Build IDs.\n\nTo prevent committing invalid Build IDs, we reject the request if no pollers\nhave been seen recently for this Build ID. Use the `force` option to disable this validation."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "The target build ID to be committed.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "build-id")
+	s.Command.Flags().BoolVar(&s.Force, "force", false, "Bypass the validation that pollers have been recently seen for this build ID.")
+	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Skip confirmation.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalTaskQueueVersioningDeleteAssignmentRuleCommand struct {
+	Parent    *TemporalTaskQueueVersioningCommand
+	Command   cobra.Command
+	RuleIndex int
+	Yes       bool
+	Force     bool
+}
+
+func NewTemporalTaskQueueVersioningDeleteAssignmentRuleCommand(cctx *CommandContext, parent *TemporalTaskQueueVersioningCommand) *TemporalTaskQueueVersioningDeleteAssignmentRuleCommand {
+	var s TemporalTaskQueueVersioningDeleteAssignmentRuleCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "delete-assignment-rule [flags]"
+	s.Command.Short = "Deletes the rule at a given index in the list of assignment rules for this Task Queue."
+	if hasHighlighting {
+		s.Command.Long = "Deletes an assignment rule for this Task Queue. By default presence of one\nunconditional rule, i.e., no hint filter or percentage, is enforced, otherwise\nthe delete operation will be rejected. Set \x1b[1mforce\x1b[0m to true to bypass this\nvalidation."
+	} else {
+		s.Command.Long = "Deletes an assignment rule for this Task Queue. By default presence of one\nunconditional rule, i.e., no hint filter or percentage, is enforced, otherwise\nthe delete operation will be rejected. Set `force` to true to bypass this\nvalidation."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().IntVarP(&s.RuleIndex, "rule-index", "i", 0, "Position of the assignment rule to be replaced.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "rule-index")
+	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Skip confirmation.")
+	s.Command.Flags().BoolVar(&s.Force, "force", false, "Bypass the validation that one unconditional rule remains.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalTaskQueueVersioningDeleteRedirectRuleCommand struct {
+	Parent        *TemporalTaskQueueVersioningCommand
+	Command       cobra.Command
+	SourceBuildId string
+	Yes           bool
+}
+
+func NewTemporalTaskQueueVersioningDeleteRedirectRuleCommand(cctx *CommandContext, parent *TemporalTaskQueueVersioningCommand) *TemporalTaskQueueVersioningDeleteRedirectRuleCommand {
+	var s TemporalTaskQueueVersioningDeleteRedirectRuleCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "delete-redirect-rule [flags]"
+	s.Command.Short = "Deletes the rule with the given build ID for this Task Queue."
+	s.Command.Long = "Deletes the routing rule with the given source Build ID."
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.SourceBuildId, "source-build-id", "", "The source build ID for this redirect rule.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "source-build-id")
+	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Skip confirmation.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalTaskQueueVersioningGetRulesCommand struct {
+	Parent  *TemporalTaskQueueVersioningCommand
+	Command cobra.Command
+}
+
+func NewTemporalTaskQueueVersioningGetRulesCommand(cctx *CommandContext, parent *TemporalTaskQueueVersioningCommand) *TemporalTaskQueueVersioningGetRulesCommand {
+	var s TemporalTaskQueueVersioningGetRulesCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "get-rules [flags]"
+	s.Command.Short = "Retrieves the worker Build ID assignment and redirect rules on the Task Queue."
+	s.Command.Long = "Fetch the worker build ID assignment and redirect rules associated with a Task Queue."
+	s.Command.Args = cobra.NoArgs
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalTaskQueueVersioningInsertAssignmentRuleCommand struct {
+	Parent     *TemporalTaskQueueVersioningCommand
+	Command    cobra.Command
+	BuildId    string
+	RuleIndex  int
+	Percentage int
+	Yes        bool
+}
+
+func NewTemporalTaskQueueVersioningInsertAssignmentRuleCommand(cctx *CommandContext, parent *TemporalTaskQueueVersioningCommand) *TemporalTaskQueueVersioningInsertAssignmentRuleCommand {
+	var s TemporalTaskQueueVersioningInsertAssignmentRuleCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "insert-assignment-rule [flags]"
+	s.Command.Short = "Inserts the rule to the list of assignment rules for this Task Queue."
+	s.Command.Long = "Inserts a new assignment rule for this Task Queue. The rules are evaluated in order, starting from index 0. The first applicable rule will be applied and the rest will be ignored."
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "The target build ID for this assignment rule.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "build-id")
+	s.Command.Flags().IntVarP(&s.RuleIndex, "rule-index", "i", 0, "Insertion position in the assignment rule list. An index 0 means insert at the beginning of the list. If the given index is larger than the list size, the rule will be appended at the end of the list.")
+	s.Command.Flags().IntVar(&s.Percentage, "percentage", 100, "Percentage of traffic sent to the target build ID.")
+	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Skip confirmation.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalTaskQueueVersioningReplaceAssignmentRuleCommand struct {
+	Parent     *TemporalTaskQueueVersioningCommand
+	Command    cobra.Command
+	BuildId    string
+	RuleIndex  int
+	Percentage int
+	Yes        bool
+	Force      bool
+}
+
+func NewTemporalTaskQueueVersioningReplaceAssignmentRuleCommand(cctx *CommandContext, parent *TemporalTaskQueueVersioningCommand) *TemporalTaskQueueVersioningReplaceAssignmentRuleCommand {
+	var s TemporalTaskQueueVersioningReplaceAssignmentRuleCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "replace-assignment-rule [flags]"
+	s.Command.Short = "Replaces the rule at a given index in the list of assignment rules for this Task Queue."
+	if hasHighlighting {
+		s.Command.Long = "Replaces an assignment rule for this Task Queue. By default presence of one\nunconditional rule, i.e., no hint filter or percentage, is enforced, otherwise\nthe delete operation will be rejected. Set \x1b[1mforce\x1b[0m to true to bypass this\nvalidation."
+	} else {
+		s.Command.Long = "Replaces an assignment rule for this Task Queue. By default presence of one\nunconditional rule, i.e., no hint filter or percentage, is enforced, otherwise\nthe delete operation will be rejected. Set `force` to true to bypass this\nvalidation."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "The target build ID for this assignment rule.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "build-id")
+	s.Command.Flags().IntVarP(&s.RuleIndex, "rule-index", "i", 0, "Position of the assignment rule to be replaced.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "rule-index")
+	s.Command.Flags().IntVar(&s.Percentage, "percentage", 100, "Percentage of traffic sent to the target build ID.")
+	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Skip confirmation.")
+	s.Command.Flags().BoolVar(&s.Force, "force", false, "Bypass the validation that one unconditional rule remains.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalTaskQueueVersioningReplaceRedirectRuleCommand struct {
+	Parent        *TemporalTaskQueueVersioningCommand
+	Command       cobra.Command
+	SourceBuildId string
+	TargetBuildId string
+	Yes           bool
+}
+
+func NewTemporalTaskQueueVersioningReplaceRedirectRuleCommand(cctx *CommandContext, parent *TemporalTaskQueueVersioningCommand) *TemporalTaskQueueVersioningReplaceRedirectRuleCommand {
+	var s TemporalTaskQueueVersioningReplaceRedirectRuleCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "replace-redirect-rule [flags]"
+	s.Command.Short = "Replaces the redirect rule with the given source build ID for this Task Queue."
+	s.Command.Long = "Replaces the redirect rule with the given source build ID for this Task Queue."
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.SourceBuildId, "source-build-id", "", "The source build ID for this redirect rule.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "source-build-id")
+	s.Command.Flags().StringVar(&s.TargetBuildId, "target-build-id", "", "The target build ID for this redirect rule.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "target-build-id")
+	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Skip confirmation.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

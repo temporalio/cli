@@ -9,9 +9,9 @@ import (
 
 func (s *SharedServerSuite) TestTaskQueue_Rules_BuildId() {
 	type assignmentRowType struct {
-		TargetBuildID string    `json:"targetBuildID"`
-		Percentage    float32   `json:"percentage"`
-		CreateTime    time.Time `json:"-"`
+		TargetBuildID  string    `json:"targetBuildID"`
+		RampPercentage float32   `json:"rampPercentage"`
+		CreateTime     time.Time `json:"-"`
 	}
 
 	type redirectRowType struct {
@@ -28,7 +28,7 @@ func (s *SharedServerSuite) TestTaskQueue_Rules_BuildId() {
 	buildIdTaskQueue := uuid.NewString()
 
 	res := s.Execute(
-		"task-queue", "get-build-id-rules",
+		"task-queue", "versioning", "get-rules",
 		"--address", s.Address(),
 		"--task-queue", buildIdTaskQueue,
 		"--output", "json",
@@ -40,7 +40,7 @@ func (s *SharedServerSuite) TestTaskQueue_Rules_BuildId() {
 	s.Equal(formattedRulesType{}, jsonOut)
 
 	res = s.Execute(
-		"task-queue", "update-build-id-rules", "insert-assignment-rule",
+		"task-queue", "versioning", "insert-assignment-rule",
 		"--build-id", "id1",
 		"-y",
 		"--address", s.Address(),
@@ -50,7 +50,7 @@ func (s *SharedServerSuite) TestTaskQueue_Rules_BuildId() {
 	s.NoError(res.Err)
 
 	res = s.Execute(
-		"task-queue", "update-build-id-rules", "insert-assignment-rule",
+		"task-queue", "versioning", "insert-assignment-rule",
 		"--build-id", "id2",
 		"--percentage", "10",
 		"--rule-index", "0",
@@ -62,7 +62,7 @@ func (s *SharedServerSuite) TestTaskQueue_Rules_BuildId() {
 	s.NoError(res.Err)
 
 	res = s.Execute(
-		"task-queue", "update-build-id-rules", "replace-assignment-rule",
+		"task-queue", "versioning", "replace-assignment-rule",
 		"--build-id", "id2",
 		"--percentage", "40",
 		"--rule-index", "0",
@@ -74,7 +74,7 @@ func (s *SharedServerSuite) TestTaskQueue_Rules_BuildId() {
 	s.NoError(res.Err)
 
 	res = s.Execute(
-		"task-queue", "update-build-id-rules", "insert-assignment-rule",
+		"task-queue", "versioning", "insert-assignment-rule",
 		"--build-id", "id3",
 		"--percentage", "10",
 		"--rule-index", "100",
@@ -86,7 +86,7 @@ func (s *SharedServerSuite) TestTaskQueue_Rules_BuildId() {
 	s.NoError(res.Err)
 
 	res = s.Execute(
-		"task-queue", "update-build-id-rules", "delete-assignment-rule",
+		"task-queue", "versioning", "delete-assignment-rule",
 		"--rule-index", "2",
 		"-y",
 		"--address", s.Address(),
@@ -95,7 +95,7 @@ func (s *SharedServerSuite) TestTaskQueue_Rules_BuildId() {
 	s.NoError(res.Err)
 
 	res = s.Execute(
-		"task-queue", "update-build-id-rules", "add-redirect-rule",
+		"task-queue", "versioning", "add-redirect-rule",
 		"--source-build-id", "id1",
 		"--target-build-id", "id3",
 		"-y",
@@ -106,7 +106,7 @@ func (s *SharedServerSuite) TestTaskQueue_Rules_BuildId() {
 	s.NoError(res.Err)
 
 	res = s.Execute(
-		"task-queue", "update-build-id-rules", "add-redirect-rule",
+		"task-queue", "versioning", "add-redirect-rule",
 		"--source-build-id", "id3",
 		"--target-build-id", "id4",
 		"-y",
@@ -116,7 +116,7 @@ func (s *SharedServerSuite) TestTaskQueue_Rules_BuildId() {
 	s.NoError(res.Err)
 
 	res = s.Execute(
-		"task-queue", "update-build-id-rules", "replace-redirect-rule",
+		"task-queue", "versioning", "replace-redirect-rule",
 		"--source-build-id", "id3",
 		"--target-build-id", "id5",
 		"-y",
@@ -127,7 +127,7 @@ func (s *SharedServerSuite) TestTaskQueue_Rules_BuildId() {
 	s.NoError(res.Err)
 
 	res = s.Execute(
-		"task-queue", "update-build-id-rules", "delete-redirect-rule",
+		"task-queue", "versioning", "delete-redirect-rule",
 		"--source-build-id", "id1",
 		"-y",
 		"--address", s.Address(),
@@ -140,12 +140,12 @@ func (s *SharedServerSuite) TestTaskQueue_Rules_BuildId() {
 	s.Equal(formattedRulesType{
 		AssignmentRules: []assignmentRowType{
 			{
-				TargetBuildID: "id2",
-				Percentage:    40.0,
+				TargetBuildID:  "id2",
+				RampPercentage: 40.0,
 			},
 			{
-				TargetBuildID: "id1",
-				Percentage:    100.0,
+				TargetBuildID:  "id1",
+				RampPercentage: 100.0,
 			},
 		},
 		RedirectRules: []redirectRowType{
@@ -159,7 +159,7 @@ func (s *SharedServerSuite) TestTaskQueue_Rules_BuildId() {
 	// Plain output
 
 	res = s.Execute(
-		"task-queue", "get-build-id-rules",
+		"task-queue", "versioning", "get-rules",
 		"--address", s.Address(),
 		"--task-queue", buildIdTaskQueue,
 	)
@@ -173,7 +173,7 @@ func (s *SharedServerSuite) TestTaskQueue_Rules_BuildId() {
 
 	s.CommandHarness.Stdin.WriteString("y\n")
 	res = s.Execute(
-		"task-queue", "update-build-id-rules", "replace-redirect-rule",
+		"task-queue", "versioning", "replace-redirect-rule",
 		"--source-build-id", "id3",
 		"--target-build-id", "id9",
 		"--address", s.Address(),
@@ -184,7 +184,7 @@ func (s *SharedServerSuite) TestTaskQueue_Rules_BuildId() {
 
 	s.CommandHarness.Stdin.WriteString("y\n")
 	res = s.Execute(
-		"task-queue", "update-build-id-rules", "replace-redirect-rule",
+		"task-queue", "versioning", "replace-redirect-rule",
 		"--source-build-id", "id3",
 		"--target-build-id", "id9",
 		"--address", s.Address(),
@@ -199,7 +199,7 @@ func (s *SharedServerSuite) TestTaskQueue_Rules_BuildId() {
 	// Commit
 
 	res = s.Execute(
-		"task-queue", "update-build-id-rules", "commit-build-id",
+		"task-queue", "versioning", "commit-build-id",
 		"--build-id", "id2",
 		"--force",
 		"-y",
@@ -212,8 +212,8 @@ func (s *SharedServerSuite) TestTaskQueue_Rules_BuildId() {
 	s.Equal(formattedRulesType{
 		AssignmentRules: []assignmentRowType{
 			{
-				TargetBuildID: "id2",
-				Percentage:    100.0,
+				TargetBuildID:  "id2",
+				RampPercentage: 100.0,
 			},
 		},
 		RedirectRules: []redirectRowType{
