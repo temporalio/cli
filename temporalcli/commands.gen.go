@@ -32,7 +32,7 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	var s TemporalCommand
 	s.Command.Use = "temporal"
 	s.Command.Short = "Temporal command-line interface and development server"
-	s.Command.Long = ""
+	s.Command.Long = "The Temporal CLI (Command Line Interface) is a powerful tool for managing, \nmonitoring, and debugging Temporal Applications. It provides developers with \ndirect access to a Temporal Service from their terminal. With the Temporal CLI,\ndevelopers can start their applications, pass messages, cancel application\nsteps, and more."
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalActivityCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalBatchCommand(cctx, &s).Command)
@@ -70,7 +70,7 @@ func NewTemporalActivityCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Parent = parent
 	s.Command.Use = "activity"
 	s.Command.Short = "Complete or fail an Activity"
-	s.Command.Long = ""
+	s.Command.Long = "Update an Activity to report that it has completed or failed. This process\nmarks an activity as successfully finished or as having encountered an error\nduring execution."
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalActivityCompleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalActivityFailCommand(cctx, &s).Command)
@@ -94,9 +94,9 @@ func NewTemporalActivityCompleteCommand(cctx *CommandContext, parent *TemporalAc
 	s.Command.Use = "complete [flags]"
 	s.Command.Short = "Complete an Activity"
 	if hasHighlighting {
-		s.Command.Long = "Complete an Activity.\n\n\x1b[1mtemporal activity complete --activity-id=MyActivityId --workflow-id=MyWorkflowId --result='{\"MyResultKey\": \"MyResultVal\"}'\x1b[0m"
+		s.Command.Long = "Complete an Activity, marking it as successfully finished.\n\n\x1b[1mtemporal activity complete --activity-id=MyActivityId --workflow-id=MyWorkflowId --result='{\"MyResultKey\": \"MyResultVal\"}'\x1b[0m"
 	} else {
-		s.Command.Long = "Complete an Activity.\n\n`temporal activity complete --activity-id=MyActivityId --workflow-id=MyWorkflowId --result='{\"MyResultKey\": \"MyResultVal\"}'`"
+		s.Command.Long = "Complete an Activity, marking it as successfully finished.\n\n`temporal activity complete --activity-id=MyActivityId --workflow-id=MyWorkflowId --result='{\"MyResultKey\": \"MyResultVal\"}'`"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
@@ -130,9 +130,9 @@ func NewTemporalActivityFailCommand(cctx *CommandContext, parent *TemporalActivi
 	s.Command.Use = "fail [flags]"
 	s.Command.Short = "Fail an Activity"
 	if hasHighlighting {
-		s.Command.Long = "Fail an Activity.\n\n\x1b[1mtemporal activity fail --activity-id=MyActivityId --workflow-id=MyWorkflowId\x1b[0m"
+		s.Command.Long = "Fail an Activity, marking it as having encountered an error during execution.\n\n\x1b[1mtemporal activity fail --activity-id=MyActivityId --workflow-id=MyWorkflowId\x1b[0m"
 	} else {
-		s.Command.Long = "Fail an Activity.\n\n`temporal activity fail --activity-id=MyActivityId --workflow-id=MyWorkflowId`"
+		s.Command.Long = "Fail an Activity, marking it as having encountered an error during execution.\n\n`temporal activity fail --activity-id=MyActivityId --workflow-id=MyWorkflowId`"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())

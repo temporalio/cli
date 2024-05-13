@@ -4,70 +4,151 @@ Commands for the Temporal CLI.
 
 <!--
 
-This document has a specific structure used by a parser. Here are the rules:
+This document is automatically parsed.
+Follow these rules.
 
-* Each command is a `### <command>: <short-description>` heading. Command is full command path including parent
-  commands.
-  * Heading must be a single line.
-  * <command> will have all words up to the leading "[" as the full command name. The remaining content between "[" and ": " (if any) is shown as part of the example usage.
-  * Contents of each command section up to `#### Options` is the long description of the command.
-    * End of long description can have XML comment section that has `*` bulleted attributes (one line per bullet):
-      * `* has-init` - Will assume an `initCommand` method is on the command
-      * `* exact-args=<number>` - Require this exact number of args
-      * `* maximum-args=<number>` - Require this maximum number of args
-  * Can have `#### Options` or `#### Options set for <options-set-name>` which can have options.
-    * Can have bullets
-      * Each bullet is `* <option-names> (<data-type>) - <short-description>. <extra-attributes>`.
-      * `<option-names>` is `` `--<option-name>` `` and can optionally be followed by ``, `-<short-name>` ``.
-      * `<data-type>` must be one of `bool`, `duration`, `int`, `string`, `string[]`, `string-enum`, `timestamp`, TODO: more
-      * `<short-description>` can be just about anything, but note the following:
-        * It must not match trailing attributes.
-        * Any wraparound to newlines + two-space indention is trimmed to a single space.
-        * Using `code spans` will cause Cobra to assume the `code span` is the option's metavariable. For example, `ENV` is the metavariable in the following:
-          * `--env (string) - Read additional flags from the \`ENV\` environment.`
-          * In the above, Cobra will print: `--env ENV   Read additional flags from the ENV environment`
-      * `<extra-attributes>` can be:
-        * `Required.` - Marks the option as required.
-        * `Default: <default-value>.` - Sets the default value of the option. No default means zero value of the type.
-        * `Options: <option>, <option>.` - Sets the possible options for a string enum type.
-        * `Env: <env-var>.` - Binds the environment variable to this flag.
-      * Options should be in order of most commonly used.
-    * Also can have single lines below options that say
-      `Includes options set for [<options-set-name>](#options-set-for-<options-set-link-name>).` which is the equivalent
-      of just having them appended to the bulleted list.
-      * Just because a command may have a couple of similar options with another doesn't mean you _have_ to make a
-        shareable options set. Copy/paste is acceptable.
-* Keep commands in alphabetical order.
-* Commands that have subcommands cannot be run on their own.
+IN-HOUSE STYLE
 
-Editorial standards for writing help text:
-
-* A command's short description must not end in a period.
-* A command's long description should show example usages of the command.
-* Use imperative-form verbs whereever possible:
+* Use alphabetical order for commands.
+* Commands with subcommands cannot be run on their own.
+* Line length: 120 characters max.
+* Add punctuation consistently, even at the end of phrases.
+* Short descriptions do not end with a period.
+* Every long description demonstrates at an example use of the command.
+* Use imperative-form verbs:
   * Good: `Pause or unpause a Schedule.`
   * Bad: `This command pauses or unpauses a Schedule.`
 
-For options/flags, these additional standards apply:
+For options and flags:
 
-* Verb tense/sentence structure:
-* For optional flags, use complete sentences with imperative-form verbs. (Prefer them for required flags, as well.)
-* If a flag can be passed multiple times, say this explicitly in the usage text.
-* Do not rely on the flag type (e.g. `string`, `bool`, etc.) being shown to the user. It is hidden if a `META-VARIABLE` is used.
-* Where possible, a `META-VARIABLE` in all caps and wrapped in `\``s should be used to describe/reference the content to be passed to a particular flag.
-* Use `code spans` only for meta-variables. To reference other options or specify literal values, use double quotes.
+* For optional and required flags, use complete sentences with imperative-form verbs. 
+* When flags can be passed multiple times, say so explicitly in the usage text.
+* Do not rely on the flag type (e.g. `string`, `bool`, etc.) being shown to the user.
+  It is hidden if a `META-VARIABLE` is used.
+* Where possible, use a `META-VARIABLE` (all caps and wrapped in `\``s) to describe/reference content passed to an option.
+* Limit `code spans` to meta-variables. 
+  To reference other options or specify literal values, use double quotes.
 * Avoid parentheticals unless absolutely necessary.
 
-Examples showing correct/incorrect usage text for the optional `--history-uri` flag:
-* Good: `Archive history at \`URI\`. Cannot be changed after archival is enabled.`
-* Bad: Incomplete sentence: `History archival \`URI\`. Cannot be changed after archival is enabled.`
-* Bad: Wrong verb tense: `Archives history at \`URI\`. Cannot be changed after archival is enabled.`
-* Bad: No metavariable: `Archive history at the specified URI. Cannot be changed after archival is enabled.`
-* Bad: Unnecessary parenthetical: `Archive history at \`URI\` (note: cannot be changed after archival is enabled).`
+Examples: 
+
+These show correct/incorrect usage text for the optional `--history-uri` flag:
+
+* Preferred: "Archive history at \`URI\`. Cannot be changed after archival is enabled."
+* Avoid incomplete sentences: "_History archival \`URI\`_. Cannot be changed after archival is enabled."
+* Avoid wrong verb tenses: "_Archives history at \`URI\`_. Cannot be changed after archival is enabled."
+* Avoid missing metavariables: "Archive history at _the specified URI_. Cannot be changed after archival is enabled."
+* Avoid unnecessary parenthetical: `Archive history at \`URI\` _(note: cannot be changed after archival is enabled)_.`
+
+
+COMMAND ENTRY OVERVIEW
+
+A Command entry uses the following format:
+
+    ### <command>: <short-description>
+    
+    <long description>
+
+    (optional command implementation configuration)
+
+    #### Options
+
+    * `--<long-option>`( , `-<short option>`) (data-type) - <short-description>( <extra-attributes>)
+    * `--<long-option>`( , `-<short option>`) (data-type) - <short-description>( <extra-attributes>)
+    * `--<long-option>`( , `-<short option>`) (data-type) - <short-description>( <extra-attributes>)
+
+    ...
+
+    optional: Includes options set for [<options-set-name>](#options-set-for-<options-set-link-name>)
+
+COMMAND LISTING
+
+* Use H3 `### <command>: <short-description>` headings for each command.
+  * One line only. Use the complete command path with parent commands.
+  * Use square-bracked delimited arguments to document positional arguments.
+    For example `temporal operator namespace delete [namespace]`.
+  * Everything up to ':' or '[' is the command. 
+    Square-bracketed positional arguments are not part of the command.
+  * Everything following the ':' or '[' is used for the short-description, a concise command explanation.
+* A command's long description continues until encountering the H4 (`#### Options`) header.
+* At the end of the long description, an optional XML comment configures the command implementation.
+  Use one asterisk-delimited bullet per line.
+  * `* has-init` - invokes `initCommand` method.
+  * `* exact-args=<number>` - Require this exact number of args.
+  * `* maximum-args=<number>` - Require this maximum number of args.
+
+  
+LONG DESCRIPTION SECTION
+
+* Your text format is preserved literally, so be careful with line lengths.
+  Use manual wrapping as needed.
+
+OPTIONS SECTION
+
+* Start the optional Options section with an H4 `#### Options` header line.
+* To configure option inclusion, add ` set for <options-set-name>` after `#### Options`.
+  For example: `Options set for client:`.
+  End every `set for` line with a trailing colon.
+* Follow the header declaration with a list of options.
+* In the current implementation, you must include at least one option. 
+  Although `gen-commands` will complete, the CLI utility will not run.
+* To incorporate an existing options set, add a single line below options saying:
+
+  ```
+  Includes options set for [<options-set-name>](#options-set-for-<options-set-link-name>).
+  ```
+    
+  For example:
+  
+  ```
+  Includes options set for [client](#options-set-for-client).
+  ```
+    
+  An options set declaration is the equivalent of pasting those options into the bulleted options list.
+
+  Note: Command overlap or similarity does not require option sets.
+  Reserve option sets for parallel functionality.
+  Copy/paste is fine, otherwise.
+
+OPTION LISTING
+
+* List one option per line, using asterisk-delimited bullets.
+* Order the options with most commonly used options first.
+* Use this format:
+
+  ```
+  `--<long-option>`( , `-<short option>`) (data-type) - <short-description>( <extra-attributes>)
+  ```
+
+* Each option listing includes a long option with a double dash and a meaningful name.
+* [Optional] A short option uses a single dash and a short string.
+  When used, separate the long and short option with a comma and a space.
+* Backtick every option and short description. 
+  Include the dash or dashes within the ticks.
+  For example: `` `--workflow-id`, `-w` ``
+* A data type follows option names indicating the required value type for the option.
+  The type is `bool`, `duration`, `int`, `string`, `string[]`, `string-enum`, or `timestamp`. (_TODO: more_.)
+  Always parenthesize data types.
+  For example: `` `--raw` (bool) ``
+* A dash follows the data type, with a space on either side. 
+* The short description is free-form text and follows the dash.
+  Take care not to match trailing attributes. 
+  Newline wrapping and/or two-space indention condenses to a single space.
+* [Optional] extra attributes include:
+  * `Required.` - Marks the option as required.
+  * `Default: <default-value>.` - Sets the default value of the option. No default means zero value of the type.
+  * `Options: <option>, <option>.` - Sets the possible options for a string enum type.
+  * `Env: <env-var>.` - Binds the environment variable to this flag. For example: `Env: TEMPORAL_ADDRESS`.
 
 -->
 
 ### temporal: Temporal command-line interface and development server
+
+The Temporal CLI (Command Line Interface) is a powerful tool for managing, 
+monitoring, and debugging Temporal Applications. It provides developers with 
+direct access to a Temporal Service from their terminal. With the Temporal CLI,
+developers can start their applications, pass messages, cancel application
+steps, and more.
 
 <!--
 * has-init
@@ -88,6 +169,10 @@ Examples showing correct/incorrect usage text for the optional `--history-uri` f
 
 ### temporal activity: Complete or fail an Activity
 
+Update an Activity to report that it has completed or failed. This process
+marks an activity as successfully finished or as having encountered an error
+during execution.
+
 #### Options
 
 Includes options set for [client](#options-set-for-client).
@@ -95,7 +180,7 @@ Includes options set for [client](#options-set-for-client).
 
 ### temporal activity complete: Complete an Activity
 
-Complete an Activity.
+Complete an Activity, marking it as successfully finished.
 
 `temporal activity complete --activity-id=MyActivityId --workflow-id=MyWorkflowId --result='{"MyResultKey": "MyResultVal"}'`
 
@@ -109,7 +194,7 @@ Includes options set for [workflow reference](#options-set-for-workflow-referenc
 
 ### temporal activity fail: Fail an Activity
 
-Fail an Activity.
+Fail an Activity, marking it as having encountered an error during execution.
 
 `temporal activity fail --activity-id=MyActivityId --workflow-id=MyWorkflowId`
 
