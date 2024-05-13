@@ -2,14 +2,12 @@ package printer
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"reflect"
 	"slices"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/fatih/color"
@@ -198,9 +196,7 @@ func (p *Printer) PrintStructuredIter(typ reflect.Type, iter PrintStructuredIter
 
 func (p *Printer) write(b []byte) {
 	if _, err := p.Output.Write(b); err != nil {
-		if !errors.Is(err, syscall.EBADF) && !errors.Is(err, syscall.ENOTTY) && !errors.Is(err, syscall.ENXIO) {
-			panic(err)
-		}
+		panic(err)
 	}
 }
 
@@ -210,9 +206,7 @@ func (p *Printer) writeStr(s string) {
 
 func (p *Printer) writef(s string, v ...any) {
 	if _, err := fmt.Fprintf(p.Output, s, v...); err != nil {
-		if !errors.Is(err, syscall.EBADF) && !errors.Is(err, syscall.ENOTTY) && !errors.Is(err, syscall.ENXIO) {
-			panic(err)
-		}
+		panic(err)
 	}
 }
 

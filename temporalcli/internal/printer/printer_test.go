@@ -2,6 +2,9 @@ package printer_test
 
 import (
 	"bytes"
+	"fmt"
+	"os"
+	"os/exec"
 	"strings"
 	"testing"
 	"unicode"
@@ -139,4 +142,30 @@ func TestPrinter_JSONList(t *testing.T) {
 	p.Println("should not print")
 	p.EndList()
 	require.Equal(t, "", buf.String())
+}
+
+func TestPrinter_NoPanicIfNoStdout(t *testing.T) {
+	fmt.Println("$$$ TEST v30")
+
+	goPath, err := exec.LookPath("go")
+	if err != nil {
+		t.Fatalf("Error finding go executable: %v", err)
+	}
+	p, err := os.StartProcess(
+		goPath,
+		[]string{"go", "run", "./test/main.go"},
+		&os.ProcAttr{
+			Files: []*os.File{os.Stdin, nil, os.Stderr},
+		},
+	)
+	if err != nil {
+		t.Fatalf("Error running command: %v", err)
+	}
+	state, err := p.Wait()
+	if err != nil {
+		t.Fatalf("Error running command: %v", err)
+	}
+	if state.ExitCode() != 0 {
+		t.Fatalf("Error running command; exit code = %d", state.ExitCode())
+	}
 }
