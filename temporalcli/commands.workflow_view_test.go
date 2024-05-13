@@ -113,7 +113,7 @@ func (s *SharedServerSuite) TestWorkflow_Describe_Versioned() {
 
 	buildId := "id1"
 	res := s.Execute(
-		"task-queue", "update-build-id-rules", "insert-assignment-rule",
+		"task-queue", "versioning", "insert-assignment-rule",
 		"--build-id", buildId,
 		"-y",
 		"--address", s.Address(),
