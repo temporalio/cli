@@ -628,7 +628,7 @@ Use the options listed below to modify what this command returns.
 * `--task-queue-type` (string-enum) - Task Queue type. Options: workflow, activity. Default: workflow.
 * `--partitions` (int) - Query for all partitions up to this number (experimental+temporary feature). Default: 1.
 
-### temporal task-queue get-build-id-reachability: Retrieves information about the reachability of Build IDs on one or more Task Queues.
+### temporal task-queue get-build-id-reachability: Retrieves information about the reachability of Build IDs on one or more Task Queues (Deprecated).
 
 This command can tell you whether or not Build IDs may be used for new, existing, or closed workflows. Both the '--build-id' and '--task-queue' flags may be specified multiple times. If you do not provide a task queue, reachability for the provided Build IDs will be checked against all task queues.
 
@@ -638,7 +638,7 @@ This command can tell you whether or not Build IDs may be used for new, existing
 * `--reachability-type` (string-enum) - Specify how you'd like to filter the reachability of Build IDs. Valid choices are `open` (reachable by one or more open workflows), `closed` (reachable by one or more closed workflows), or `existing` (reachable by either). If a Build ID is reachable by new workflows, that is always reported. Options: open, closed, existing. Default: existing.
 * `--task-queue`, `-t` (string[]) - Which Task Queue(s) to constrain the reachability search to. May be specified multiple times.
 
-### temporal task-queue get-build-ids: Fetch the sets of worker Build ID versions on the Task Queue.
+### temporal task-queue get-build-ids: Fetch the sets of worker Build ID versions on the Task Queue (Deprecated).
 
 Fetch the sets of compatible build IDs associated with a Task Queue and associated information.
 
@@ -655,7 +655,7 @@ The temporal task-queue list-partition command displays the partitions of a Task
 
 * `--task-queue`, `-t` (string) - Task queue name. Required.
 
-### temporal task-queue update-build-ids: Operations to update the sets of worker Build ID versions on the Task Queue.
+### temporal task-queue update-build-ids: Operations to update the sets of worker Build ID versions on the Task Queue (Deprecated).
 
 Provides various commands for adding or changing the sets of compatible build IDs associated with a Task Queue. See the help of each sub-command for more.
 
@@ -697,6 +697,104 @@ If the set is already the default, this command has no effect.
 * `--build-id` (string) - An existing build id whose containing set will be promoted. Required.
 * `--task-queue`, `-t` (string) - Name of the Task Queue. Required.
 
+### temporal task-queue versioning: Updates or retrieves the worker Build ID assignment and redirect rules on the Task Queue.
+
+Provides various commands for adding, listing, removing, or replacing worker Build ID assignment and redirect rules associated with a Task Queue. See the help of each sub-command for more.
+
+#### Options
+
+* `--task-queue`, `-t` (string) - Task queue name. Required.
+
+### temporal task-queue versioning add-redirect-rule: Adds the rule to the list of redirect rules for this Task Queue.
+
+Adds a new redirect rule for this Task Queue. There can be at most one redirect rule for each distinct source build ID.
+
+#### Options
+
+* `--source-build-id` (string) - The source build ID for this redirect rule. Required.
+* `--target-build-id` (string) - The target build ID for this redirect rule. Required.
+* `--yes`, `-y` (bool) - Skip confirmation.
+
+### temporal task-queue versioning commit-build-id: Completes the rollout of a Build ID for this Task Queue.
+
+Completes  the rollout of a BuildID and cleanup unnecessary rules possibly
+created during a gradual rollout. Specifically, this command will make the
+following changes atomically:
+	1. Adds an unconditional assignment rule for the target Build ID at the end of the list.
+	2. Removes all previously added assignment rules to the given target Build ID.
+	3. Removes any unconditional assignment rules for other Build IDs.
+
+To prevent committing invalid Build IDs, we reject the request if no pollers
+have been seen recently for this Build ID. Use the `force` option to disable this validation.
+
+
+#### Options
+
+* `--build-id` (string) - The target build ID to be committed. Required.
+* `--force` (bool) - Bypass the validation that pollers have been recently seen for this build ID.
+* `--yes`, `-y` (bool) - Skip confirmation.
+
+### temporal task-queue versioning delete-assignment-rule: Deletes the rule at a given index in the list of assignment rules for this Task Queue.
+
+Deletes an assignment rule for this Task Queue. By default presence of one
+unconditional rule, i.e., no hint filter or percentage, is enforced, otherwise
+the delete operation will be rejected. Set `force` to true to bypass this
+validation.
+
+#### Options
+
+* `--rule-index`, `-i` (int) - Position of the assignment rule to be replaced. Required.
+* `--yes`, `-y` (bool) - Skip confirmation.
+* `--force` (bool) - Bypass the validation that one unconditional rule remains.
+
+### temporal task-queue versioning delete-redirect-rule: Deletes the rule with the given build ID for this Task Queue.
+
+Deletes the routing rule with the given source Build ID.
+
+#### Options
+
+* `--source-build-id` (string) - The source build ID for this redirect rule. Required.
+* `--yes`, `-y` (bool) - Skip confirmation.
+
+### temporal task-queue versioning get-rules: Retrieves the worker Build ID assignment and redirect rules on the Task Queue.
+
+Fetch the worker build ID assignment and redirect rules associated with a Task Queue.
+
+### temporal task-queue versioning insert-assignment-rule: Inserts the rule to the list of assignment rules for this Task Queue.
+
+Inserts a new assignment rule for this Task Queue. The rules are evaluated in order, starting from index 0. The first applicable rule will be applied and the rest will be ignored.
+
+#### Options
+
+* `--build-id` (string) - The target build ID for this assignment rule. Required.
+* `--rule-index`, `-i` (int) - Insertion position in the assignment rule list. An index 0 means insert at the beginning of the list. If the given index is larger than the list size, the rule will be appended at the end of the list. Default: 0.
+* `--percentage` (int) - Percentage of traffic sent to the target build ID. Default: 100.
+* `--yes`, `-y` (bool) - Skip confirmation.
+
+### temporal task-queue versioning replace-assignment-rule: Replaces the rule at a given index in the list of assignment rules for this Task Queue.
+
+Replaces an assignment rule for this Task Queue. By default presence of one
+unconditional rule, i.e., no hint filter or percentage, is enforced, otherwise
+the delete operation will be rejected. Set `force` to true to bypass this
+validation.
+
+#### Options
+
+* `--build-id` (string) - The target build ID for this assignment rule. Required.
+* `--rule-index`, `-i` (int) - Position of the assignment rule to be replaced. Required.
+* `--percentage` (int) - Percentage of traffic sent to the target build ID. Default: 100.
+* `--yes`, `-y` (bool) - Skip confirmation.
+* `--force` (bool) - Bypass the validation that one unconditional rule remains.
+
+### temporal task-queue versioning replace-redirect-rule: Replaces the redirect rule with the given source build ID for this Task Queue.
+
+Replaces the redirect rule with the given source build ID for this Task Queue.
+
+#### Options
+
+* `--source-build-id` (string) - The source build ID for this redirect rule. Required.
+* `--target-build-id` (string) - The target build ID for this redirect rule. Required.
+* `--yes`, `-y` (bool) - Skip confirmation.
 
 ### temporal workflow: Start, list, and operate on Workflows.
 
