@@ -14,7 +14,7 @@ IN-HOUSE STYLE
 * Line length: 120 characters max.
 * Add punctuation consistently, even at the end of phrases.
 * Short descriptions do not end with a period.
-* Every long description demonstrates at an example use of the command.
+* Every long description demonstrates at least one example use of the command.
 * Use imperative-form verbs:
   * Good: `Pause or unpause a Schedule.`
   * Bad: `This command pauses or unpauses a Schedule.`
