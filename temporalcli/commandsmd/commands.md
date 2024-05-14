@@ -56,7 +56,6 @@ A Command entry uses the following format:
     * `--<long-option>`( , `-<short option>`) (data-type) - <short-description>( <extra-attributes>)
     * `--<long-option>`( , `-<short option>`) (data-type) - <short-description>( <extra-attributes>)
     * `--<long-option>`( , `-<short option>`) (data-type) - <short-description>( <extra-attributes>)
-
     ...
 
     optional: Includes options set for [<options-set-name>](#options-set-for-<options-set-link-name>)
