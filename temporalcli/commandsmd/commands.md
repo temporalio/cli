@@ -357,7 +357,7 @@ temporal env delete --env prod
 temporal env delete --env prod --key tls-cert-path
 ```
 
-If you don't specify an environment, you'll delete the `default` environment:
+If you don't specify an environment, the deletion affects the `default` environment:
 
 ```
 temporal env delete --key tls-cert-path
