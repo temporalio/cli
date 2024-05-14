@@ -201,7 +201,7 @@ Read more: https://docs.temporal.io/cli/activity#complete
 #### Options
 
 * `--activity-id` (string) - Activity `ID` to complete. Required.
-* `--result` (string) - Result `JSON` for completing the Activity. Required.
+* `--result` (string) - Result JSON for completing the Activity. Required.
 * `--identity` (string) - Identity of the user submitting this request
 
 Includes options set for [workflow reference](#options-set-for-workflow-reference).
@@ -222,7 +222,7 @@ Read more: https://docs.temporal.io/cli/activity#fail
 #### Options
 
 * `--activity-id` (string) - `ID` of the Activity to be failed. Required.
-* `--detail` (string) - `JSON` data describing the reason for failing the Activity
+* `--detail` (string) - JSON data describing the reason for failing the Activity
 * `--identity` (string) - Identity of the user submitting this request
 * `--reason` (string) - Reason for failing the Activity
 
