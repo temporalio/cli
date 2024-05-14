@@ -11,21 +11,25 @@ IN-HOUSE STYLE
 
 * Use alphabetical order for commands.
 * Commands with subcommands cannot be run on their own.
-* Line length: 120 characters max.
+* User-visible line length: 80 characters max.
 * Add punctuation consistently, even at the end of phrases.
 * Short descriptions do not end with a period.
 * Every long description demonstrates at least one example use of the command.
+* When presenting options use a space rather than equal to set them.
+  This is more universally supported and consistent with POSIX guidelines.
+  * Yes: `temporal command --namespace YourNamespace`
+  * No: `temporal command --namespace=YourNamespace`
 * Use imperative-form verbs:
-  * Good: `Pause or unpause a Schedule.`
-  * Bad: `This command pauses or unpauses a Schedule.`
+  * Yes: `Pause or unpause a Schedule.`
+  * No: `This command pauses or unpauses a Schedule.`
 
 For options and flags:
 
-* For optional and required flags, use complete sentences with imperative-form verbs. 
 * When flags can be passed multiple times, say so explicitly in the usage text.
 * Do not rely on the flag type (e.g. `string`, `bool`, etc.) being shown to the user.
   It is hidden if a `META-VARIABLE` is used.
-* Where possible, use a `META-VARIABLE` (all caps and wrapped in `\``s) to describe/reference content passed to an option.
+* Where possible, use a `META-VARIABLE` (all caps and wrapped in `\``s) 
+  to describe/reference content passed to an option.
 * Limit `code spans` to meta-variables. 
   To reference other options or specify literal values, use double quotes.
 * Avoid parentheticals unless absolutely necessary.
@@ -75,7 +79,6 @@ COMMAND LISTING
   * `* has-init` - invokes `initCommand` method.
   * `* exact-args=<number>` - Require this exact number of args.
   * `* maximum-args=<number>` - Require this maximum number of args.
-
   
 LONG DESCRIPTION SECTION
 
@@ -85,13 +88,11 @@ LONG DESCRIPTION SECTION
 OPTIONS SECTION
 
 * Start the optional Options section with an H4 `#### Options` header line.
-* To configure option inclusion, add ` set for <options-set-name>` after `#### Options`.
-  For example: `Options set for client:`.
-  End every `set for` line with a trailing colon.
 * Follow the header declaration with a list of options.
 * In the current implementation, you must include at least one option. 
-  Although `gen-commands` will complete, the CLI utility will not run.
-* To incorporate an existing options set, add a single line below options saying:
+  Otherwise, although `gen-commands` will complete, the CLI utility will not run.
+* To incorporate an existing options set, add a single line below options like this.
+  End every `Include options set for` line with a period.
 
   ```
   Includes options set for [<options-set-name>](#options-set-for-<options-set-link-name>).
@@ -105,18 +106,25 @@ OPTIONS SECTION
     
   An options set declaration is the equivalent of pasting those options into the bulleted options list.
 
-  Note: Command overlap or similarity does not require option sets.
-  Reserve option sets for parallel functionality.
+  Note: Options that are similar but slightly different don't need to be in option sets.
+  Reserve option sets for when the behavior of the option is the same across commands.
   Copy/paste is fine, otherwise.
 
-OPTION LISTING
+DEFINING AN OPTION
 
 * List one option per line, using asterisk-delimited bullets.
-* Order the options with most commonly used options first.
+* Order the most commonly used options first.
 * Use this format:
 
   ```
   `--<long-option>`( , `-<short option>`) <data-type> - <short-description>( <extra-attributes>)
+  ```
+  
+  This contrived example uses all these features. 
+  In reality, the short option `-a` does not actually exist alongside `--address`:
+  
+  ```
+  * `--address`, `-a` (string) - Connect to the Temporal Service at `HOST:PORT`. Default: 127.0.0.1:7233. Env: TEMPORAL_ADDRESS.
   ```
 
 * Each option listing includes a long option with a double dash and a meaningful name.
@@ -132,7 +140,7 @@ OPTION LISTING
 * A dash follows the data type, with a space on either side. 
 * The short description is free-form text and follows the dash.
   Take care not to match trailing attributes. 
-  Newline wrapping and/or two-space indention condenses to a single space.
+  Newline wrapping and/or two-space indentation condenses to a single space.
 * [Optional] extra attributes include:
   * `Required.` - Marks the option as required.
   * `Default: <default-value>.` - Sets the default value of the option. No default means zero value of the type.
@@ -191,9 +199,9 @@ the ID and include a JSON result to use for the returned value.
 
 ```
 temporal activity complete \
-    --activity-id=YourActivityId \
-    --workflow-id=YourWorkflowId \
-    --result='{"YourResultKey": "YourResultVal"}'
+    --activity-id YourActivityId \
+    --workflow-id YourWorkflowId \
+    --result '{"YourResultKey": "YourResultVal"}'
 ```
 
 Read more: https://docs.temporal.io/cli/activity#complete
@@ -201,7 +209,7 @@ Read more: https://docs.temporal.io/cli/activity#complete
 #### Options
 
 * `--activity-id` (string) - Activity `ID` to complete. Required.
-* `--result` (string) - Result JSON for completing the Activity. Required.
+* `--result` (string) - Result `JSON` for completing the Activity. Required.
 * `--identity` (string) - Identity of the user submitting this request
 
 Includes options set for [workflow reference](#options-set-for-workflow-reference).
@@ -213,8 +221,8 @@ Specify the Activity and Workflow Ids.
 
 ```
 temporal activity fail \
-    --activity-id=YourActivityId \
-    --workflow-id=YourWorkflowId
+    --activity-id YourActivityId \
+    --workflow-id YourWorkflowId
 ```
 
 Read more: https://docs.temporal.io/cli/activity#fail
@@ -258,7 +266,7 @@ Show the progress of an ongoing Batch Job. Pass a valid Job ID
 to return the job's information:
 
 ```
-temporal batch describe --job-id=YourJobId
+temporal batch describe --job-id YourJobId
 ```
 
 Read more: https://docs.temporal.io/cli/batch
@@ -273,7 +281,7 @@ Return a list of Batch jobs, for the entire Service or a single Namespace:
 
 
 ```
-temporal batch list --namespace=YourNamespace
+temporal batch list --namespace YourNamespace
 ```
 
 Read more: https://docs.temporal.io/cli/batch#list
@@ -289,7 +297,7 @@ a reason motivating the termination, which is stored with the Service
 for later reference.
 
 ```
-temporal batch terminate --job-id=YourJobId --reason=YourTerminationReason
+temporal batch terminate --job-id YourJobId --reason YourTerminationReason
 ```
 
 Read more: https://docs.temporal.io/cli/batch#terminate
@@ -313,13 +321,13 @@ name as part of your assignment, as in this example, which configures the
 "prod" environment:
 
 ```
-temporal env set prod.namespace production.f45a2  
-temporal env set prod.address production.f45a2.tmprl.cloud:7233  
-temporal env set prod.tls-cert-path /temporal/certs/prod.pem  
-temporal env set prod.tls-key-path /temporal/certs/prod.key
+temporal env set --env prod --key namespace --value production.f45a2  
+temporal env set --env prod --key address --value production.f45a2.tmprl.cloud:7233  
+temporal env set --env prod --key tls-cert-path --value /temporal/certs/prod.pem  
+temporal env set --env prod --key tls-key-path --value /temporal/certs/prod.key
 ```
 
-Check your "prod" presets with `temporal env get prod`:
+Check your "prod" presets with `temporal env get --env prod`:
 
 ```  
 address production.f45a2.tmprl.cloud:7233  
@@ -344,20 +352,33 @@ Read more: https://docs.temporal.io/cli/env
 ### temporal env delete: Delete an environment or environment property
 
 Remove an environment entirely or remove a key-value pair within an
-environment:
+environment.
+
+Remove an environment:
 
 ```
-temporal env delete [environment or property]
+temporal env delete --env YourEnvironment
+```
+
+Remove a key-value pair from an environment:
+
+```
+temporal env delete --env YourEnvironment  --key YourKey
 ```
 
 For example:
 
 ```
 temporal env delete --env prod
+```
+
+and
+
+```
 temporal env delete --env prod --key tls-cert-path
 ```
 
-If you don't specify an environment, the deletion affects the `default` environment:
+If you don't specify an environment, your deletion updates the `default` environment:
 
 ```
 temporal env delete --key tls-cert-path
@@ -375,7 +396,7 @@ Read more: https://docs.temporal.io/cli/env#delete
 
 ### temporal env get: Print environment properties
 
-Prints the environmental properties for a given environment.
+Prints the environmental properties for a given environment:
 
 ```
 temporal env get --env environment-name
@@ -384,7 +405,7 @@ temporal env get --env environment-name
 Print all properties of the "prod" environment:
 
 ```
-temporal env get prod
+temporal env get --env prod
 ```
 
 might produce these results:
@@ -511,14 +532,14 @@ Cluster commands follow this syntax: `temporal operator namespace [command] [com
 
 The temporal operator namespace create command creates a new Namespace on the Server.
 Namespaces can be created on the active Cluster, or any named Cluster.
-`temporal operator namespace create --cluster=YourCluster -n example-1`
+`temporal operator namespace create --cluster YourCluster -n example-1`
 
 Global Namespaces can also be created.
 `temporal operator namespace create --global -n example-2`
 
 Other settings, such as retention and Visibility Archival State, can be configured as needed.
 For example, the Visibility Archive can be set on a separate URI.
-`temporal operator namespace create --retention=5 --visibility-archival-state=enabled --visibility-uri=some-uri -n example-3`
+`temporal operator namespace create --retention 5 --visibility-archival-state enabled --visibility-uri some-uri -n example-3`
 
 <!--
 * maximum-args=1
@@ -555,7 +576,7 @@ The temporal operator namespace delete command deletes a given Namespace from th
 The temporal operator namespace describe command provides Namespace information.
 Namespaces are identified either by Namespace ID or by name.
 
-`temporal operator namespace describe --namespace-id=some-namespace-id`
+`temporal operator namespace describe --namespace-id some-namespace-id`
 `temporal operator namespace describe -n example-namespace-name`
 
 <!--
@@ -575,14 +596,14 @@ The temporal operator namespace list command lists all Namespaces on the Server.
 The temporal operator namespace update command updates a Namespace.
 
 Namespaces can be assigned a different active Cluster.
-`temporal operator namespace update -n namespace --active-cluster=NewActiveCluster`
+`temporal operator namespace update -n namespace --active-cluster NewActiveCluster`
 
 Namespaces can also be promoted to global Namespaces.
 `temporal operator namespace update -n namespace --promote-global`
 
 Any Archives that were previously enabled or disabled can be changed through this command.
 However, URI values for archival states cannot be changed after the states are enabled.
-`temporal operator namespace update -n namespace --history-archival-state=enabled --visibility-archival-state=disabled`
+`temporal operator namespace update -n namespace --history-archival-state enabled --visibility-archival-state disabled`
 
 <!--
 * maximum-args=1
@@ -841,7 +862,7 @@ request.
 
 Information about the Task Queue can be returned to troubleshoot server issues.
 
-`temporal task-queue describe --task-queue=YourTaskQueue --task-queue-type="activity"`
+`temporal task-queue describe --task-queue YourTaskQueue --task-queue-type "activity"`
 
 Use the options listed below to modify what this command returns.
 
@@ -960,7 +981,7 @@ temporal workflow cancel --workflow-id YourWorkflowId
 
 ...or in bulk via a visibility query [list filter](/concepts/what-is-a-list-filter):
 ```
-temporal workflow cancel --query=YourQuery
+temporal workflow cancel --query YourQuery
 ```
 
 Use the options listed below to change the behavior of this command.
@@ -1003,11 +1024,11 @@ The `temporal workflow describe` command shows information about a given
 
 This information can be used to locate Workflow Executions that weren't able to run successfully.
 
-`temporal workflow describe --workflow-id=meaningful-business-id`
+`temporal workflow describe --workflow-id meaningful-business-id`
 
 Output can be shown as printed ('raw') or formatted to only show the Workflow Execution's auto-reset points.
 
-`temporal workflow describe --workflow-id=meaningful-business-id --raw=true --reset-points=true`
+`temporal workflow describe --workflow-id meaningful-business-id --raw true --reset-points true`
 
 Use the command options below to change the information returned by this command.
 
@@ -1067,7 +1088,7 @@ The `temporal workflow list` command provides a list of [Workflow Executions](/c
 that meet the criteria of a given [Query](/concepts/what-is-a-query).
 By default, this command returns up to 10 closed Workflow Executions.
 
-`temporal workflow list --query=YourQuery`
+`temporal workflow list --query YourQuery`
 
 The command can also return a list of archived Workflow Executions.
 
@@ -1112,12 +1133,12 @@ A reset allows the Workflow to resume from a certain point without losing its pa
 
 The Workflow Execution can be set to a given [Event Type](/concepts/what-is-an-event):
 ```
-temporal workflow reset --workflow-id=meaningful-business-id --type=LastContinuedAsNew
+temporal workflow reset --workflow-id meaningful-business-id --type LastContinuedAsNew
 ```
 
 ...or a specific any Event after `WorkflowTaskStarted`.
 ```
-temporal workflow reset --workflow-id=meaningful-business-id --event-id=YourLastEvent
+temporal workflow reset --workflow-id meaningful-business-id --event-id YourLastEvent
 ```
 For batch reset only FirstWorkflowTask, LastWorkflowTask or BuildId can be used. Workflow Id, run Id and event Id
 should not be set.
@@ -1258,7 +1279,7 @@ temporal workflow terminate [--reason my-reason] --workflow-id YourWorkflowId
 
 ...or in bulk via a visibility query [list filter](/concepts/what-is-a-list-filter):
 ```
-temporal workflow terminate --query=YourQuery
+temporal workflow terminate --query YourQuery
 ```
 
 Use the options listed below to change the behavior of this command.
