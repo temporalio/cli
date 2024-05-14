@@ -53,7 +53,7 @@ A Command entry uses the following format:
 
     #### Options
 
-    * `--<long-option>`( , `-<short option>`) (data-type) - <short-description>( <extra-attributes>)
+    * `--<long-option>`( , `-<short option>`) <data-type> - <short-description>( <extra-attributes>)
     * `--<long-option>`( , `-<short option>`) (data-type) - <short-description>( <extra-attributes>)
     * `--<long-option>`( , `-<short option>`) (data-type) - <short-description>( <extra-attributes>)
     ...
