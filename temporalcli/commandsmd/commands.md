@@ -299,17 +299,17 @@ Read more: https://docs.temporal.io/cli/batch#terminate
 * `--reason` (string) - Reason for terminating the Batch Job. Required.
 
 ### temporal env: Manage environments
+Environments help you create and manage grouped key-value presets for Options.
+They provide easy set-up for separate environments, such as "dev" and 
+"prod" work.
 
-Environments enable you to create and manage groups of option presets.
-They help automate your command configuration. This provides easy set-up
-for separate environments, like "dev" and "prod" work. 
+For example, you might set an endpoint preset for the `--address` option.
+You won't have to enter it each time you use the Temporal CLI utility. Env 
+presets let you configure distinct setups for Temporal Services and Namespaces.
 
-You might set an endpoint preset for the `--address` option. 
-This enables you to select distinct Temporal Services 
-and Namespaces for your commands.
-
-All environments are named so you can refer to them together.
-Each environment stores a list of key-value pairs:
+Environment names compartmentalize each key-value store. Use the environment
+name as part of your assignment, as in this example, which configures the 
+"prod" environment:
 
 ```
 temporal env set prod.namespace production.f45a2  
@@ -327,20 +327,23 @@ tls-cert-path /temporal/certs/prod.pem
 tls-key-path /temporal/certs/prod.key
 ```
 
-To use the environment with a command, pass `--env` followed by the
-environment name. For example, to list workflows in the "prod" environment:
+To use the environment with a command, pass `--env` followed by the environment
+name. For example, to list workflows in the "prod" environment:
 
 ```
 $ temporal workflow list --env prod
 ```
 
-You specify an active environment using the `TEMPORAL_ENV` environment variable. If no environment is specified, the 'default' environment is used.
+Specify an active environment by setting the `TEMPORAL_ENV` environment
+variable in your shell. The Temporal CLI uses the "default" environment when a
+specific environment was not named.
 
 Read more: https://docs.temporal.io/cli/env
 
 ### temporal env delete: Delete an environment or environment property
 
-Remove an environment or a key-value pair within that environment:
+Remove an environment entirely or remove a key-value pair within an
+environment:
 
 ```
 temporal env delete [environment or property]
@@ -353,7 +356,7 @@ temporal env delete --env prod
 temporal env delete --env prod --key tls-cert-path
 ```
 
-If you don't specify an environment, you delete the `default` environment:
+If you don't specify an environment, you'll delete the `default` environment:
 
 ```
 temporal env delete --key tls-cert-path
@@ -379,7 +382,11 @@ temporal env get --env environment-name
 
 Print all properties of the "prod" environment:
 
-`temporal env get prod`
+```
+temporal env get prod
+```
+
+might produce these results:
 
 ```
 tls-cert-path  /home/my-user/certs/client.cert
@@ -390,13 +397,17 @@ namespace      someNamespace
 
 Print a single property:
 
-`temporal env get --env prod --key tls-key-path`
+```
+temporal env get --env prod --key tls-key-path
+```
+
+might produce this result:
 
 ```
 tls-key-path  /home/my-user/certs/cluster.key
 ```
 
-If you do not specify an environment name, you list the `default`
+When you do not specify an environment name, you list the `default`
 environment properties.
 
 Read more: https://docs.temporal.io/cli/env#get
@@ -411,7 +422,7 @@ Read more: https://docs.temporal.io/cli/env#get
 
 ### temporal env list: Print all environments
 
-STOPPED HERE
+STOPPED HERE FOR SANITY CHECK AND REVIEW BY JOSH BEFORE CONTINUING OR REDIRECTING
 
 List the environments you have set up on your local computer with
 `temporal env list`. For example:
