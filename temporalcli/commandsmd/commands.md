@@ -269,7 +269,8 @@ Read more: https://docs.temporal.io/cli/batch
 
 ### temporal batch list: List all Batch Jobs
 
-Return a list of Batch jobs, for the entire Service or a single Namespace.
+Return a list of Batch jobs, for the entire Service or a single Namespace:
+
 
 ```
 temporal batch list --namespace=YourNamespace
