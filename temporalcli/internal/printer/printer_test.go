@@ -2,6 +2,9 @@ package printer_test
 
 import (
 	"bytes"
+	"os"
+	"os/exec"
+	"runtime"
 	"strings"
 	"testing"
 	"unicode"
@@ -139,4 +142,41 @@ func TestPrinter_JSONList(t *testing.T) {
 	p.Println("should not print")
 	p.EndList()
 	require.Equal(t, "", buf.String())
+}
+
+// Asserts the printer package don't panic if the CLI is run without a STDOUT.
+// This is a tricky thing to validate, as it must be done in a subprocess and as
+// `go test` has its own internal fix for improper STDOUT. This was fixed in
+// Go 1.22, but keeping this here as a regression test.
+// See https://github.com/temporalio/cli/issues/544.
+func TestPrinter_NoPanicIfNoStdout(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipped on Windows")
+		return
+	}
+
+	goPath, err := exec.LookPath("go")
+	if err != nil {
+		t.Fatalf("Error finding go executable: %v", err)
+	}
+	// Don't use exec.Command here, as it silently replace nil file descriptors
+	// with /dev/null on the parent side. We specifically want to test what
+	// happens when stdout is nil.
+	p, err := os.StartProcess(
+		goPath,
+		[]string{"go", "run", "./test/main.go"},
+		&os.ProcAttr{
+			Files: []*os.File{os.Stdin, nil, os.Stderr},
+		},
+	)
+	if err != nil {
+		t.Fatalf("Error running command: %v", err)
+	}
+	state, err := p.Wait()
+	if err != nil {
+		t.Fatalf("Error running command: %v", err)
+	}
+	if state.ExitCode() != 0 {
+		t.Fatalf("Error running command; exit code = %d", state.ExitCode())
+	}
 }
