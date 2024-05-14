@@ -116,7 +116,7 @@ OPTION LISTING
 * Use this format:
 
   ```
-  `--<long-option>`( , `-<short option>`) (data-type) - <short-description>( <extra-attributes>)
+  `--<long-option>`( , `-<short option>`) <data-type> - <short-description>( <extra-attributes>)
   ```
 
 * Each option listing includes a long option with a double dash and a meaningful name.
