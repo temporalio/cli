@@ -170,7 +170,7 @@ Read more: https://docs.temporal.io/cli
   none. Default: text.
 * `--time-format` (string-enum) - Time format. Options: relative, iso, raw. Default: relative.
 * `--color` (string-enum) - Output coloring. Options: always, never, auto. Default: auto.
-* `--no-json-shorthand-payloads` (bool) - Show all payloads as raw, even if they are JSON.
+* `--no-json-shorthand-payloads` (bool) - Raw payload output, even if they are JSON.
 
 ### temporal activity: Complete or fail an Activity
 
