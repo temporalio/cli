@@ -230,14 +230,14 @@ Includes options set for [workflow reference](#options-set-for-workflow-referenc
 
 ### temporal batch: Manage Batch Jobs
 
-A batch job will execute a single command affecting multiple Workflow 
-Executions in tandem. These commands include:
+A batch job executes a single command affecting multiple Workflow 
+Executions in tandem. Available commands:
 
 * Cancel: Cancel the Workflow Executions specified by the List Filter.
 * Signal: Signal the Workflow Executions specified by the List Filter.
 * Terminate: Terminates the Workflow Executions specified by the List Filter.
 
-You specify which Workflow Executions to include and the kind of batch 
+You select the Workflow Executions to include and the kind of batch 
 job to apply. For example, cancel all the running 'YourWorkflow' Workflows:
 
 ```
