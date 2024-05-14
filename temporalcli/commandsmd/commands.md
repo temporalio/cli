@@ -144,11 +144,17 @@ OPTION LISTING
 
 ### temporal: Temporal command-line interface and development server
 
-The Temporal CLI (Command Line Interface) is a powerful tool for managing, 
-monitoring, and debugging Temporal Applications. It provides developers with 
-direct access to a Temporal Service from their terminal. With the Temporal CLI,
-developers can start their applications, pass messages, cancel application
-steps, and more.
+The Temporal CLI (Command Line Interface) provide a powerful tool to manage, 
+monitor, and debug your Temporal applications. It also lets you run a local
+Temporal Service directly from your terminal. With this CLI, you can 
+start Workflows, pass messages, cancel application steps, and more.
+
+* Start a local development service: 
+      `temporal server start-dev` 
+* Help messages: pass --help for any command
+      `temporal activity complete --help`
+
+Read more: https://docs.temporal.io/cli
 
 <!--
 * has-init
@@ -156,16 +162,16 @@ steps, and more.
 
 #### Options
 
-* `--env` (string) - Read additional options from the `ENV` environment. (See "temporal env --help" for more about environments.) Default: default. Env: TEMPORAL_ENV.
-* `--env-file` (string) - Read/store per-environment configuration in `PATH` (defaults to "$HOME/.config/temporalio/temporal.yaml").
-* `--log-level` (string-enum) - Log level. Default is "info" for most commands and "warn" for the development server.
+* `--env` (string) - Active environment name. Default: default. Env: TEMPORAL_ENV.
+* `--env-file` (string) - Path to environment settings file (defaults to `$HOME/.config/temporalio/temporal.yaml`).
+* `--log-level` (string-enum) - Log level. Default is "info" for most commands and "warn" for `server start-dev`.
   Options: debug, info, warn, error, never. Default: info.
-* `--log-format` (string) - Emit log messages in "text" or "json" format. Default is "text".
-* `--output`, `-o` (string-enum) - Emit output in the `FMT` format. Does not affect logs; use --log-format instead. Options: text, json, jsonl,
+* `--log-format` (string) - Log format. Options are "text" and "json". Default is "text".
+* `--output`, `-o` (string-enum) - Non-logging data output format. Options: text, json, jsonl,
   none. Default: text.
-* `--time-format` (string-enum) - Emit timestamps in the `FMT` format. Options: relative, iso, raw. Default: relative.
-* `--color` (string-enum) - Colorize output. Does not affect logs. Options: always, never, auto. Default: auto.
-* `--no-json-shorthand-payloads` (bool) - Show all payloads as raw payloads even if they are JSON.
+* `--time-format` (string-enum) - Time format. Options: relative, iso, raw. Default: relative.
+* `--color` (string-enum) - Output coloring. Options: always, never, auto. Default: auto.
+* `--no-json-shorthand-payloads` (bool) - Show all payloads as raw, even if they are JSON.
 
 ### temporal activity: Complete or fail an Activity
 
@@ -173,21 +179,30 @@ Update an Activity to report that it has completed or failed. This process
 marks an activity as successfully finished or as having encountered an error
 during execution.
 
+Read more: https://docs.temporal.io/cli/activity
+
 #### Options
 
 Includes options set for [client](#options-set-for-client).
 
-
 ### temporal activity complete: Complete an Activity
 
-Complete an Activity, marking it as successfully finished.
+Complete an Activity, marking it as successfully finished. Specify 
+the ID and include a JSON result to use for the returned value.
 
-`temporal activity complete --activity-id=MyActivityId --workflow-id=MyWorkflowId --result='{"MyResultKey": "MyResultVal"}'`
+```
+temporal activity complete \
+    --activity-id=YourActivityId \
+    --workflow-id=YourWorkflowId \
+    --result='{"YourResultKey": "YourResultVal"}'
+```
+
+Read more: https://docs.temporal.io/cli/activity#complete
 
 #### Options
 
-* `--activity-id` (string) - `ID` of the Activity to be completed. Required.
-* `--result` (string) - Result `JSON` with which to complete the Activity. Required.
+* `--activity-id` (string) - Activity `ID` to complete. Required.
+* `--result` (string) - Result `JSON` for completing the Activity. Required.
 * `--identity` (string) - Identity of the user submitting this request
 
 Includes options set for [workflow reference](#options-set-for-workflow-reference).
@@ -195,8 +210,15 @@ Includes options set for [workflow reference](#options-set-for-workflow-referenc
 ### temporal activity fail: Fail an Activity
 
 Fail an Activity, marking it as having encountered an error during execution.
+Specify the Activity and Workflow Ids.
 
-`temporal activity fail --activity-id=MyActivityId --workflow-id=MyWorkflowId`
+```
+temporal activity fail \
+    --activity-id=YourActivityId \
+    --workflow-id=YourWorkflowId
+```
+
+Read more: https://docs.temporal.io/cli/activity#fail
 
 #### Options
 
@@ -207,10 +229,25 @@ Fail an Activity, marking it as having encountered an error during execution.
 
 Includes options set for [workflow reference](#options-set-for-workflow-reference).
 
-
 ### temporal batch: Manage Batch Jobs
 
-Batch commands change multiple Workflow Executions at once.
+A batch job will execute a single command affecting multiple Workflow 
+Executions in tandem. These commands include:
+
+* Cancel: Cancel the Workflow Executions specified by the List Filter.
+* Signal: Signal the Workflow Executions specified by the List Filter.
+* Terminate: Terminates the Workflow Executions specified by the List Filter.
+
+You specify which Workflow Executions to include and the kind of batch 
+job to apply. For example, cancel all the running 'YourWorkflow' Workflows:
+
+```
+temporal workflow cancel \
+  --query 'ExecutionStatus = "Running" AND WorkflowType="YourWorkflow"' \
+  --reason "Testing"
+ ```
+
+Read more: https://docs.temporal.io/cli/batch
 
 #### Options
 
@@ -218,9 +255,14 @@ Includes options set for [client](#options-set-for-client).
 
 ### temporal batch describe: Show Batch Job progress
 
-Show the progress of an ongoing Batch Job.
+Show the progress of an ongoing Batch Job. Pass a valid Job ID
+to return the job's information:
 
-`temporal batch describe --job-id=MyJobId`
+```
+temporal batch describe --job-id=YourJobId
+```
+
+Read more: https://docs.temporal.io/cli/batch
 
 #### Options
 
@@ -228,9 +270,13 @@ Show the progress of an ongoing Batch Job.
 
 ### temporal batch list: List all Batch Jobs
 
-List all Batch Jobs.  Batch Jobs can be returned for an entire Cluster or a single Namespace.
+Return a list of Batch jobs, for the entire Service or a single Namespace.
 
-`temporal batch list --namespace=MyNamespace`
+```
+temporal batch list --namespace=YourNamespace
+```
+
+Read more: https://docs.temporal.io/cli/batch#list
 
 #### Options
 
@@ -238,10 +284,15 @@ List all Batch Jobs.  Batch Jobs can be returned for an entire Cluster or a sing
 
 ### temporal batch terminate: Terminate a Batch Job
 
-The temporal batch terminate command terminates a Batch Job with the provided Job Id.
-You must provide a reason for terminating the Batch Job, which is stored for future reference.
+Terminate the Batch job with the provided Job Id. You must provide
+a reason motivating the termination, which is stored with the Service
+for later reference.
 
-`temporal batch terminate --job-id=MyJobId --reason=JobReason`
+```
+temporal batch terminate --job-id=YourJobId --reason=YourTerminationReason
+```
+
+Read more: https://docs.temporal.io/cli/batch#terminate
 
 #### Options
 
@@ -250,22 +301,66 @@ You must provide a reason for terminating the Batch Job, which is stored for fut
 
 ### temporal env: Manage environments
 
-Environments allow you to specify named sets of flags to apply by default. Most commonly, environments are used to override the `--address` flag to point to different Temporal Server instances (for example, having different "dev" and "prod" environments).
+Environments enable you to create and manage groups of option presets.
+They help automate your command configuration. This provides easy set-up
+for separate environments, like "dev" and "prod" work. 
 
-Use the `--env` option with any `temporal` command to choose the environment. You can also specify the environment using the `TEMPORAL_ENV` environment variable. If no environment is specified, the 'default' environment is used.
+You might set an endpoint preset for the `--address` option. 
+This enables you to select distinct Temporal Services 
+and Namespaces for your commands.
+
+All environments are named so you can refer to them together.
+Each environment stores a list of key-value pairs:
+
+```
+temporal env set prod.namespace production.f45a2  
+temporal env set prod.address production.f45a2.tmprl.cloud:7233  
+temporal env set prod.tls-cert-path /temporal/certs/prod.pem  
+temporal env set prod.tls-key-path /temporal/certs/prod.key
+```
+
+Check your "prod" presets with `temporal env get prod`:
+
+```  
+address production.f45a2.tmprl.cloud:7233  
+namespace production.f45a2  
+tls-cert-path /temporal/certs/prod.pem  
+tls-key-path /temporal/certs/prod.key
+```
+
+To use the environment with a command, pass `--env` followed by the
+environment name. For example, to list workflows in the "prod" environment:
+
+```
+$ temporal workflow list --env prod
+```
+
+You specify an active environment using the `TEMPORAL_ENV` environment variable. If no environment is specified, the 'default' environment is used.
+
+Read more: https://docs.temporal.io/cli/env
 
 ### temporal env delete: Delete an environment or environment property
 
-`temporal env delete --env environment [-k property]`
+Remove an environment or a key-value pair within that environment:
 
-Delete an environment or just a single property:
+```
+temporal env delete [environment or property]
+```
 
-`temporal env delete --env prod`
-`temporal env delete --env prod -k tls-cert-path`
+For example:
 
-If the environment is not specified, the `default` environment is deleted:
+```
+temporal env delete --env prod
+temporal env delete --env prod --key tls-cert-path
+```
 
-`temporal env delete -k tls-cert-path`
+If you don't specify an environment, you delete the `default` environment:
+
+```
+temporal env delete --key tls-cert-path
+```
+
+Read more: https://docs.temporal.io/cli/env#delete
 
 <!--
 * maximum-args=1
@@ -277,9 +372,13 @@ If the environment is not specified, the `default` environment is deleted:
 
 ### temporal env get: Print environment properties
 
-`temporal env get --env environment`
+Prints the environmental properties for a given environment.
 
-Print all properties of the 'prod' environment:
+```
+temporal env get --env environment-name
+```
+
+Print all properties of the "prod" environment:
 
 `temporal env get prod`
 
@@ -292,13 +391,16 @@ namespace      someNamespace
 
 Print a single property:
 
-`temporal env get --env prod -k tls-key-path`
+`temporal env get --env prod --key tls-key-path`
 
 ```
 tls-key-path  /home/my-user/certs/cluster.key
 ```
 
-If the environment is not specified, the `default` environment is used.
+If you do not specify an environment name, you list the `default`
+environment properties.
+
+Read more: https://docs.temporal.io/cli/env#get
 
 <!--
 * maximum-args=1
@@ -310,16 +412,27 @@ If the environment is not specified, the `default` environment is used.
 
 ### temporal env list: Print all environments
 
-List all environments.
+STOPPED HERE
+
+List the environments you have set up on your local computer with
+`temporal env list`. For example:
+
+```
+default 
+prod
+dev
+```
+
+Read more: https://docs.temporal.io/cli/env#list
 
 ### temporal env set: Set environment properties
 
-`temporal env set --env environment -k property -v value`
+`temporal env set --env environment --key property --value value`
 
 Property names match CLI option names, for example '--address' and '--tls-cert-path':
 
-`temporal env set --env prod -k address -v 127.0.0.1:7233`
-`temporal env set --env prod -k tls-cert-path -v /home/my-user/certs/cluster.cert`
+`temporal env set --env prod --key address --value 127.0.0.1:7233`
+`temporal env set --env prod --key tls-cert-path --value /home/my-user/certs/cluster.cert`
 
 If the environment is not specified, the `default` environment is used.
 
@@ -387,7 +500,7 @@ Cluster commands follow this syntax: `temporal operator namespace [command] [com
 
 The temporal operator namespace create command creates a new Namespace on the Server.
 Namespaces can be created on the active Cluster, or any named Cluster.
-`temporal operator namespace create --cluster=MyCluster -n example-1`
+`temporal operator namespace create --cluster=YourCluster -n example-1`
 
 Global Namespaces can also be created.
 `temporal operator namespace create --global -n example-2`
@@ -717,7 +830,7 @@ request.
 
 Information about the Task Queue can be returned to troubleshoot server issues.
 
-`temporal task-queue describe --task-queue=MyTaskQueue --task-queue-type="activity"`
+`temporal task-queue describe --task-queue=YourTaskQueue --task-queue-type="activity"`
 
 Use the options listed below to modify what this command returns.
 
@@ -831,12 +944,12 @@ Command Task will be scheduled, and the Workflow Execution will perform cleanup 
 
 Executions may be cancelled by [ID](/concepts/what-is-a-workflow-id):
 ```
-temporal workflow cancel --workflow-id MyWorkflowId
+temporal workflow cancel --workflow-id YourWorkflowId
 ```
 
 ...or in bulk via a visibility query [list filter](/concepts/what-is-a-list-filter):
 ```
-temporal workflow cancel --query=MyQuery
+temporal workflow cancel --query=YourQuery
 ```
 
 Use the options listed below to change the behavior of this command.
@@ -863,7 +976,7 @@ If the [Workflow Execution](/concepts/what-is-a-workflow-execution) is Running, 
 
 ```
 temporal workflow delete \
-		--workflow-id MyWorkflowId \
+		--workflow-id YourWorkflowId \
 ```
 
 Use the options listed below to change the command's behavior.
@@ -907,8 +1020,8 @@ Single quotes('') are used to wrap input as JSON.
 ```
 temporal workflow execute
 		--workflow-id meaningful-business-id \
-		--type MyWorkflow \
-		--task-queue MyTaskQueue \
+		--type YourWorkflow \
+		--task-queue YourTaskQueue \
 		--input '{"Input": "As-JSON"}'
 ```
 
@@ -943,7 +1056,7 @@ The `temporal workflow list` command provides a list of [Workflow Executions](/c
 that meet the criteria of a given [Query](/concepts/what-is-a-query).
 By default, this command returns up to 10 closed Workflow Executions.
 
-`temporal workflow list --query=MyQuery`
+`temporal workflow list --query=YourQuery`
 
 The command can also return a list of archived Workflow Executions.
 
@@ -965,9 +1078,9 @@ by [ID](/concepts/what-is-a-workflow-id).
 
 ```
 temporal workflow query \
-		--workflow-id MyWorkflowId \
-		--name MyQuery \
-		--input '{"MyInputKey": "MyInputValue"}'
+		--workflow-id YourWorkflowId \
+		--name YourQuery \
+		--input '{"YourInputKey": "YourInputValue"}'
 ```
 
 Use the options listed below to change the command's behavior.
@@ -993,7 +1106,7 @@ temporal workflow reset --workflow-id=meaningful-business-id --type=LastContinue
 
 ...or a specific any Event after `WorkflowTaskStarted`.
 ```
-temporal workflow reset --workflow-id=meaningful-business-id --event-id=MyLastEvent
+temporal workflow reset --workflow-id=meaningful-business-id --event-id=YourLastEvent
 ```
 For batch reset only FirstWorkflowTask, LastWorkflowTask or BuildId can be used. Workflow Id, run Id and event Id
 should not be set.
@@ -1035,9 +1148,9 @@ The `temporal workflow signal` command is used to [Signal](/concepts/what-is-a-s
 
 ```
 temporal workflow signal \
-		--workflow-id MyWorkflowId \
-		--name MySignal \
-		--input '{"MyInputKey": "MyInputValue"}'
+		--workflow-id YourWorkflowId \
+		--name YourSignal \
+		--input '{"YourInputKey": "YourInputValue"}'
 ```
 
 Use the options listed below to change the command's behavior.
@@ -1065,7 +1178,7 @@ This returns a stack trace of all the threads or routines currently used by the 
 useful for troubleshooting.
 
 ```
-temporal workflow stack --workflow-id MyWorkflowId
+temporal workflow stack --workflow-id YourWorkflowId
 ```
 
 Use the options listed below to change the command's behavior.
@@ -1085,8 +1198,8 @@ Workflow and Run IDs are returned after starting the [Workflow](/concepts/what-i
 ```
 temporal workflow start \
 		--workflow-id meaningful-business-id \
-		--type MyWorkflow \
-		--task-queue MyTaskQueue \
+		--type YourWorkflow \
+		--task-queue YourTaskQueue \
 		--input '{"Input": "As-JSON"}'
 ```
 
@@ -1129,12 +1242,12 @@ termination. Use `temporal workflow cancel` if you need to perform cleanup in yo
 
 Executions may be terminated by [ID](/concepts/what-is-a-workflow-id) with an optional reason:
 ```
-temporal workflow terminate [--reason my-reason] --workflow-id MyWorkflowId
+temporal workflow terminate [--reason my-reason] --workflow-id YourWorkflowId
 ```
 
 ...or in bulk via a visibility query [list filter](/concepts/what-is-a-list-filter):
 ```
-temporal workflow terminate --query=MyQuery
+temporal workflow terminate --query=YourQuery
 ```
 
 Use the options listed below to change the behavior of this command.
@@ -1171,8 +1284,8 @@ The `temporal workflow update` command is used to synchronously [Update](/concep
 
 ```
 temporal workflow update \
-		--workflow-id MyWorkflowId \
-		--name MyUpdate \
+		--workflow-id YourWorkflowId \
+		--name YourUpdate \
 		--input '{"Input": "As-JSON"}'
 ```
 

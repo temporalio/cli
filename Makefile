@@ -1,4 +1,4 @@
-.PHONY: all gen build edit
+.PHONY: all gen build edit open
 
 all: gen build
 
@@ -11,4 +11,7 @@ build:
 	go build ./cmd/temporal
 
 edit:
-	open temporalcli/commandsmd/commands.md
+	open ./temporalcli/commandsmd/commands.md
+
+open:
+	open ./temporalcli/commandsmd/commands.md
