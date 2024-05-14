@@ -151,7 +151,7 @@ start Workflows, pass messages, cancel application steps, and more.
 
 * Start a local development service: 
       `temporal server start-dev` 
-* Help messages: pass --help for any command
+* Help messages: pass --help for any command:
       `temporal activity complete --help`
 
 Read more: https://docs.temporal.io/cli
