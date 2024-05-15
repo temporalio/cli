@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/temporalio/cli/temporalcli/devserver"
+	"github.com/temporalio/cli/temporalcli/internal/freeport"
 	"go.temporal.io/sdk/client"
 )
 
@@ -21,7 +21,7 @@ func TestServer_StartDev_Simple(t *testing.T) {
 	defer h.Close()
 
 	// Start in background, then wait for client to be able to connect
-	port := strconv.Itoa(devserver.MustGetFreePort())
+	port := strconv.Itoa(freeport.MustGetFreePort("127.0.0.1"))
 	resCh := make(chan *CommandResult, 1)
 	// TODO(cretz): Remove --headless when
 	// https://github.com/temporalio/ui/issues/1773 fixed

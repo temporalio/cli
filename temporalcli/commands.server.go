@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/temporalio/cli/temporalcli/devserver"
+	"github.com/temporalio/cli/temporalcli/internal/freeport"
 )
 
 func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string) error {
@@ -87,7 +88,7 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 	}
 	// Grab a free port for metrics ahead-of-time so we know what port is selected
 	if opts.MetricsPort == 0 {
-		opts.MetricsPort = devserver.MustGetFreePort()
+		opts.MetricsPort = freeport.MustGetFreePort(t.Ip)
 	}
 
 	// Start, wait for context complete, then stop
