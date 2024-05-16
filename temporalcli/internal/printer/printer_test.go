@@ -159,7 +159,7 @@ func TestPrinter_NoPanicIfNoStdout(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error finding go executable: %v", err)
 	}
-	// Don't use exec.Command here, as it silently replace nil file descriptors
+	// Don't use exec.Command here, as it silently replaces nil file descriptors
 	// with /dev/null on the parent side. We specifically want to test what
 	// happens when stdout is nil.
 	p, err := os.StartProcess(
