@@ -1,6 +1,6 @@
 module github.com/temporalio/cli
 
-go 1.22
+go 1.22.3
 
 require (
 	github.com/alitto/pond v1.8.3
