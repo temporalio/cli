@@ -6,7 +6,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/temporalio/cli/temporalcli/devserver"
-	"github.com/temporalio/cli/temporalcli/internal/freeport"
 )
 
 func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string) error {
@@ -41,10 +40,10 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 	} else if err := opts.LogLevel.UnmarshalText([]byte(logLevel)); err != nil {
 		return fmt.Errorf("invalid log level %q: %w", logLevel, err)
 	}
-	if err := freeport.CheckPortFree(opts.FrontendIP, opts.FrontendPort); err != nil {
+	if err := devserver.CheckPortFree(opts.FrontendIP, opts.FrontendPort); err != nil {
 		return fmt.Errorf("can't set frontend port %d: %w", opts.FrontendPort, err)
 	}
-	if err := freeport.CheckPortFree(opts.FrontendIP, opts.FrontendHTTPPort); err != nil {
+	if err := devserver.CheckPortFree(opts.FrontendIP, opts.FrontendHTTPPort); err != nil {
 		return fmt.Errorf("can't set frontend HTTP port %d: %w", opts.FrontendHTTPPort, err)
 	}
 	// Setup UI
@@ -55,11 +54,11 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 		}
 		if opts.UIPort == 0 {
 			opts.UIPort = t.Port + 1000
-			if err := freeport.CheckPortFree(opts.UIIP, opts.UIPort); err != nil {
+			if err := devserver.CheckPortFree(opts.UIIP, opts.UIPort); err != nil {
 				return fmt.Errorf("can't use default UI port %d (%d + 1000): %w", opts.UIPort, t.Port, err)
 			}
 		} else {
-			if err := freeport.CheckPortFree(opts.UIIP, t.Port); err != nil {
+			if err := devserver.CheckPortFree(opts.UIIP, t.Port); err != nil {
 				return fmt.Errorf("can't set UI port %d: %w", opts.UIPort, err)
 			}
 		}
@@ -101,9 +100,9 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 	}
 	// Grab a free port for metrics ahead-of-time so we know what port is selected
 	if opts.MetricsPort == 0 {
-		opts.MetricsPort = freeport.MustGetFreePort(t.Ip)
+		opts.MetricsPort = devserver.MustGetFreePort(t.Ip)
 	} else {
-		if err := freeport.CheckPortFree(t.Ip, opts.MetricsPort); err != nil {
+		if err := devserver.CheckPortFree(t.Ip, opts.MetricsPort); err != nil {
 			return fmt.Errorf("can't set metrics port %d: %w", opts.MetricsPort, err)
 		}
 	}

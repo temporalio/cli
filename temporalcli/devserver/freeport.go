@@ -1,4 +1,4 @@
-package freeport
+package devserver
 
 import (
 	"fmt"
@@ -6,22 +6,20 @@ import (
 	"runtime"
 )
 
-/**
- * Returns a TCP port that is available to listen on, for the given (local) host.
- *
- * This works by binding a new TCP socket on port 0, which requests the OS to
- * allocate a free port. There is no strict guarantee that the port will remain
- * available after this function returns, but it should be safe to assume that
- * a given port will not be allocated again to any process on this machine
- * within a few seconds.
- *
- * On Unix-based systems, binding to the port returned by this function requires
- * setting the `SO_REUSEADDR` socket option (Go already does that by default,
- * but other languages may not); otherwise, the OS may fail with a message such
- * as "address already in use". Windows default behavior is already appropriate
- * in this regard; on that platform, `SO_REUSEADDR` has a different meaning and
- * should not be set (setting it may have unpredictable consequences).
- */
+// Returns a TCP port that is available to listen on, for the given (local) host.
+//
+// This works by binding a new TCP socket on port 0, which requests the OS to
+// allocate a free port. There is no strict guarantee that the port will remain
+// available after this function returns, but it should be safe to assume that
+// a given port will not be allocated again to any process on this machine
+// within a few seconds.
+//
+// On Unix-based systems, binding to the port returned by this function requires
+// setting the `SO_REUSEADDR` socket option (Go already does that by default,
+// but other languages may not); otherwise, the OS may fail with a message such
+// as "address already in use". Windows default behavior is already appropriate
+// in this regard; on that platform, `SO_REUSEADDR` has a different meaning and
+// should not be set (setting it may have unpredictable consequences).
 func GetFreePort(host string) (int, error) {
 	l, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -62,23 +60,21 @@ func GetFreePort(host string) (int, error) {
 	return port, nil
 }
 
-/**
- * Returns a TCP port that is available to listen on, for the given (local)
- * host; panics if no port is available.
- *
- * This works by binding a new TCP socket on port 0, which requests the OS to
- * allocate a free port. There is no strict guarantee that the port will remain
- * available after this function returns, but it should be safe to assume that
- * a given port will not be allocated again to any process on this machine
- * within a few seconds.
- *
- * On Unix-based systems, binding to the port returned by this function requires
- * setting the `SO_REUSEADDR` socket option (Go already does that by default,
- * but other languages may not); otherwise, the OS may fail with a message such
- * as "address already in use". Windows default behavior is already appropriate
- * in this regard; on that platform, `SO_REUSEADDR` has a different meaning and
- * should not be set (setting it may have unpredictable consequences).
- */
+// Returns a TCP port that is available to listen on, for the given (local)
+// host; panics if no port is available.
+//
+// This works by binding a new TCP socket on port 0, which requests the OS to
+// allocate a free port. There is no strict guarantee that the port will remain
+// available after this function returns, but it should be safe to assume that
+// a given port will not be allocated again to any process on this machine
+// within a few seconds.
+//
+// On Unix-based systems, binding to the port returned by this function requires
+// setting the `SO_REUSEADDR` socket option (Go already does that by default,
+// but other languages may not); otherwise, the OS may fail with a message such
+// as "address already in use". Windows default behavior is already appropriate
+// in this regard; on that platform, `SO_REUSEADDR` has a different meaning and
+// should not be set (setting it may have unpredictable consequences).
 func MustGetFreePort(host string) int {
 	port, err := GetFreePort(host)
 	if err != nil {
@@ -87,10 +83,8 @@ func MustGetFreePort(host string) int {
 	return port
 }
 
-/**
- * Asserts that the given TCP port is available to listen on, for the given
- * (local) host; return an error if it is not.
- */
+// Asserts that the given TCP port is available to listen on, for the given
+// (local) host; return an error if it is not.
 func CheckPortFree(host string, port int) error {
 	l, err := net.Listen("tcp", fmt.Sprintf("%s:%d", host, port))
 	if err != nil {

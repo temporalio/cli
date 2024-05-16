@@ -35,7 +35,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/temporalio/cli/temporalcli/internal/freeport"
 	uiserver "github.com/temporalio/ui-server/v2/server"
 	uiconfig "github.com/temporalio/ui-server/v2/server/config"
 	uiserveroptions "github.com/temporalio/ui-server/v2/server/server_options"
@@ -327,9 +326,9 @@ func (s *StartOptions) buildServiceConfig(frontend bool) config.Service {
 			conf.RPC.HTTPPort = s.FrontendHTTPPort
 		}
 	} else {
-		conf.RPC.GRPCPort = freeport.MustGetFreePort("127.0.0.1")
+		conf.RPC.GRPCPort = MustGetFreePort("127.0.0.1")
 		conf.RPC.BindOnLocalHost = true
 	}
-	conf.RPC.MembershipPort = freeport.MustGetFreePort("127.0.0.1")
+	conf.RPC.MembershipPort = MustGetFreePort("127.0.0.1")
 	return conf
 }

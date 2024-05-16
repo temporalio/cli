@@ -1,11 +1,11 @@
-package freeport_test
+package devserver_test
 
 import (
 	"fmt"
 	"net"
 	"testing"
 
-	"github.com/temporalio/cli/temporalcli/internal/freeport"
+	"github.com/temporalio/cli/temporalcli/devserver"
 )
 
 func TestFreePort_NoDouble(t *testing.T) {
@@ -13,7 +13,7 @@ func TestFreePort_NoDouble(t *testing.T) {
 	portSet := make(map[int]bool)
 
 	for i := 0; i < 2000; i++ {
-		p, err := freeport.GetFreePort(host)
+		p, err := devserver.GetFreePort(host)
 		if err != nil {
 			t.Fatalf("Error: %s", err)
 			break
@@ -32,7 +32,7 @@ func TestFreePort_CanBindImmediatelySameProcess(t *testing.T) {
 	host := "127.0.0.1"
 
 	for i := 0; i < 500; i++ {
-		p, err := freeport.GetFreePort(host)
+		p, err := devserver.GetFreePort(host)
 		if err != nil {
 			t.Fatalf("Error: %s", err)
 			break
