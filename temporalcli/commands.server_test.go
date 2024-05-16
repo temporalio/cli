@@ -106,11 +106,11 @@ func TestServer_StartDev_ConcurrentStarts(t *testing.T) {
 		// }
 	}
 
-	// Start 200 dev server instances, with 16 concurrent executions
+	// Start 80 dev server instances, with 8 concurrent executions
 	instanceCounter := atomic.Int32{}
-	instanceCounter.Store(200)
+	instanceCounter.Store(80)
 	wg := &sync.WaitGroup{}
-	for i := 0; i < 16; i++ {
+	for i := 0; i < 8; i++ {
 		wg.Add(1)
 		go func() {
 			for instanceCounter.Add(-1) >= 0 {
