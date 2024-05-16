@@ -60,10 +60,10 @@ func tryListenAndDialOn(host string, port int) error {
 	defer r.Close()
 
 	c, err := l.Accept()
-	defer c.Close()
 	if err != nil {
 		panic(err)
 	}
+	defer c.Close()
 
 	return nil
 }

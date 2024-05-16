@@ -1,4 +1,4 @@
-//go:build unix
+//go:build unix || windows
 
 package freeport
 
@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"runtime"
 	"syscall"
 )
 
@@ -34,12 +35,18 @@ func GetFreePort(host string) (int, error) {
 	defer l.Close()
 	port := l.Addr().(*net.TCPAddr).Port
 
-	// On Linux, we need to ensure that the port is actually free by connecting to it
+	// On Linux and some BSD variants, ephemeral ports are randomized, and may
+	// consequently repeat within a short time frame after the listenning end
+	// has been closed. To avoid this, we make a connection to the port, then
+	// close that connection from the server's side (this is very important),
+	// which puts the connection in TIME_WAIT state for some time (by default,
+	// 60s on Linux). While it remains in that state, the OS will not reallocate
+	// that port number for bind(:0) syscalls, yet we are not prevented from
+	// explicitly binding to it (thanks to SO_REUSEADDR).
 	r, err := net.DialTCP("tcp", nil, l.Addr().(*net.TCPAddr))
 	if err != nil {
 		return 0, fmt.Errorf("failed to assign a free port: %v", err)
 	}
-
 	c, err := l.Accept()
 	if err != nil {
 		return 0, fmt.Errorf("failed to assign a free port: %v", err)
@@ -53,6 +60,8 @@ func GetFreePort(host string) (int, error) {
 
 func reuseAddress(network, address string, conn syscall.RawConn) error {
 	return conn.Control(func(descriptor uintptr) {
-		syscall.SetsockoptInt(int(descriptor), syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1)
+		if runtime.GOOS != "windows" {
+			syscall.SetsockoptInt(int(descriptor), syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1)
+		}
 	})
 }
