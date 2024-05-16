@@ -1306,11 +1306,16 @@ func NewTemporalTaskQueueCommand(cctx *CommandContext, parent *TemporalCommand) 
 }
 
 type TemporalTaskQueueDescribeCommand struct {
-	Parent        *TemporalTaskQueueCommand
-	Command       cobra.Command
-	TaskQueue     string
-	TaskQueueType StringEnum
-	Partitions    int
+	Parent              *TemporalTaskQueueCommand
+	Command             cobra.Command
+	TaskQueue           string
+	TaskQueueType       []string
+	SelectBuildId       []string
+	SelectUnversioned   bool
+	SelectAllActive     bool
+	LegacyMode          bool
+	TaskQueueTypeLegacy StringEnum
+	PartitionsLegacy    int
 }
 
 func NewTemporalTaskQueueDescribeCommand(cctx *CommandContext, parent *TemporalTaskQueueCommand) *TemporalTaskQueueDescribeCommand {
@@ -1318,18 +1323,23 @@ func NewTemporalTaskQueueDescribeCommand(cctx *CommandContext, parent *TemporalT
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "describe [flags]"
-	s.Command.Short = "Provides information for Workers that have recently polled on this Task Queue."
+	s.Command.Short = "Provides task reachability and pollers information for Workers on this Task Queue."
 	if hasHighlighting {
-		s.Command.Long = "The \x1b[1mtemporal task-queue describe\x1b[0m command provides poller\ninformation for a given Task Queue.\n\nThe Server records the last time of each poll request. A \x1b[1mLastAccessTime\x1b[0m value\nin excess of one minute can indicate the Worker is at capacity (all Workflow and Activity slots are full) or that the\nWorker has shut down. Workers are removed if 5 minutes have passed since the last poll\nrequest.\n\nInformation about the Task Queue can be returned to troubleshoot server issues.\n\n\x1b[1mtemporal task-queue describe --task-queue=MyTaskQueue --task-queue-type=\"activity\"\x1b[0m\n\nUse the options listed below to modify what this command returns."
+		s.Command.Long = "The \x1b[1mtemporal task-queue describe\x1b[0m command provides task reachability information for the requested versions and all task types,\nwhich can be used to safely retire Workers with old code versions, provided that they were assigned a Build ID. \n\nThe reachability states of a Build ID are:\n    - \x1b[1mReachable\x1b[0m: the Build ID may be used by new workflows or activities\n(based on versioning rules), or there are open workflows or backlogged activities assigned to it.\n    - \x1b[1mClosedWorkflowsOnly\x1b[0m: the Build ID does not have open workflows, and is not reachable by new workflows, but MAY have closed workflows within the namespace retention period.\n    - \x1b[1mUnreachable\x1b[0m: indicates that this Build ID is not used for new executions, nor has been used by any existing execution within the retention period.\n\nThis command also provides poller\ninformation for a given Task Queue.\n\nThe Server records the last time of each poll request. A \x1b[1mLastAccessTime\x1b[0m value\nin excess of one minute can indicate the Worker is at capacity (all Workflow and Activity slots are full) or that the\nWorker has shut down. Workers are removed if 5 minutes have passed since the last poll\nrequest.\n\nInformation about the Task Queue can be returned to troubleshoot server issues.\n\nUse the options listed below to modify what this command returns.\n\nNote that without a \x1b[1m--select-*\x1b[0m option the result for the default Build ID will be returned.\nThe default Build ID is the one mentioned in the first unconditional Assignment Rule.\nIf there is no default Build ID, the result for the unversioned queue will be returned."
 	} else {
-		s.Command.Long = "The `temporal task-queue describe` command provides poller\ninformation for a given Task Queue.\n\nThe Server records the last time of each poll request. A `LastAccessTime` value\nin excess of one minute can indicate the Worker is at capacity (all Workflow and Activity slots are full) or that the\nWorker has shut down. Workers are removed if 5 minutes have passed since the last poll\nrequest.\n\nInformation about the Task Queue can be returned to troubleshoot server issues.\n\n`temporal task-queue describe --task-queue=MyTaskQueue --task-queue-type=\"activity\"`\n\nUse the options listed below to modify what this command returns."
+		s.Command.Long = "The `temporal task-queue describe` command provides task reachability information for the requested versions and all task types,\nwhich can be used to safely retire Workers with old code versions, provided that they were assigned a Build ID. \n\nThe reachability states of a Build ID are:\n    - `Reachable`: the Build ID may be used by new workflows or activities\n(based on versioning rules), or there are open workflows or backlogged activities assigned to it.\n    - `ClosedWorkflowsOnly`: the Build ID does not have open workflows, and is not reachable by new workflows, but MAY have closed workflows within the namespace retention period.\n    - `Unreachable`: indicates that this Build ID is not used for new executions, nor has been used by any existing execution within the retention period.\n\nThis command also provides poller\ninformation for a given Task Queue.\n\nThe Server records the last time of each poll request. A `LastAccessTime` value\nin excess of one minute can indicate the Worker is at capacity (all Workflow and Activity slots are full) or that the\nWorker has shut down. Workers are removed if 5 minutes have passed since the last poll\nrequest.\n\nInformation about the Task Queue can be returned to troubleshoot server issues.\n\nUse the options listed below to modify what this command returns.\n\nNote that without a `--select-*` option the result for the default Build ID will be returned.\nThe default Build ID is the one mentioned in the first unconditional Assignment Rule.\nIf there is no default Build ID, the result for the unversioned queue will be returned."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task queue name.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
-	s.TaskQueueType = NewStringEnum([]string{"workflow", "activity"}, "workflow")
-	s.Command.Flags().Var(&s.TaskQueueType, "task-queue-type", "Task Queue type. Accepted values: workflow, activity.")
-	s.Command.Flags().IntVar(&s.Partitions, "partitions", 1, "Query for all partitions up to this number (experimental+temporary feature).")
+	s.Command.Flags().StringArrayVar(&s.TaskQueueType, "task-queue-type", nil, "Task queue types considered. If not specified, all types are reported. The current valid queue types are workflow, activity, or nexus.")
+	s.Command.Flags().StringArrayVar(&s.SelectBuildId, "select-build-id", nil, "Task queue filter based on Build ID.")
+	s.Command.Flags().BoolVar(&s.SelectUnversioned, "select-unversioned", false, "Include the unversioned queue.")
+	s.Command.Flags().BoolVar(&s.SelectAllActive, "select-all-active", false, "Include all active versions. A version is active if it had new tasks or polls recently.")
+	s.Command.Flags().BoolVar(&s.LegacyMode, "legacy-mode", false, "Enable a legacy mode for servers that do not support rules-based worker versioning. This mode only provides pollers info.")
+	s.TaskQueueTypeLegacy = NewStringEnum([]string{"workflow", "activity"}, "workflow")
+	s.Command.Flags().Var(&s.TaskQueueTypeLegacy, "task-queue-type-legacy", "Task Queue type (legacy mode only). Accepted values: workflow, activity.")
+	s.Command.Flags().IntVar(&s.PartitionsLegacy, "partitions-legacy", 1, "Query for all partitions up to this number (experimental+temporary feature) (legacy mode only).")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

@@ -606,9 +606,18 @@ Queue command, run `temporal task-queue [command] [command options]`.
 
 Includes options set for [client](#options-set-for-client).
 
-### temporal task-queue describe: Provides information for Workers that have recently polled on this Task Queue.
+### temporal task-queue describe: Provides task reachability and pollers information for Workers on this Task Queue.
 
-The `temporal task-queue describe` command provides [poller](/application-development/worker-performance#poller-count)
+The `temporal task-queue describe` command provides task reachability information for the requested versions and all task types,
+which can be used to safely retire Workers with old code versions, provided that they were assigned a Build ID.
+
+The reachability states of a Build ID are:
+    - `Reachable`: the Build ID may be used by new workflows or activities
+(based on versioning rules), or there are open workflows or backlogged activities assigned to it.
+    - `ClosedWorkflowsOnly`: the Build ID does not have open workflows, and is not reachable by new workflows, but MAY have closed workflows within the namespace retention period.
+    - `Unreachable`: indicates that this Build ID is not used for new executions, nor has been used by any existing execution within the retention period.
+
+This command also provides [poller](/application-development/worker-performance#poller-count)
 information for a given [Task Queue](/concepts/what-is-a-task-queue).
 
 The [Server](/concepts/what-is-the-temporal-server) records the last time of each poll request. A `LastAccessTime` value
@@ -618,15 +627,22 @@ request.
 
 Information about the Task Queue can be returned to troubleshoot server issues.
 
-`temporal task-queue describe --task-queue=MyTaskQueue --task-queue-type="activity"`
-
 Use the options listed below to modify what this command returns.
+
+Note that without a `--select-*` option the result for the default Build ID will be returned.
+The default Build ID is the one mentioned in the first unconditional Assignment Rule.
+If there is no default Build ID, the result for the unversioned queue will be returned.
 
 #### Options
 
 * `--task-queue`, `-t` (string) - Task queue name. Required.
-* `--task-queue-type` (string-enum) - Task Queue type. Options: workflow, activity. Default: workflow.
-* `--partitions` (int) - Query for all partitions up to this number (experimental+temporary feature). Default: 1.
+* `--task-queue-type` (string[]) - Task queue types considered. If not specified, all types are reported. The current valid queue types are workflow, activity, or nexus.
+* `--select-build-id` (string[]) - Task queue filter based on Build ID.
+* `--select-unversioned` (bool) - Include the unversioned queue.
+* `--select-all-active` (bool) - Include all active versions. A version is active if it had new tasks or polls recently.
+* `--legacy-mode` (bool) - Enable a legacy mode for servers that do not support rules-based worker versioning. This mode only provides pollers info.
+* `--task-queue-type-legacy` (string-enum) - Task Queue type (legacy mode only). Options: workflow, activity. Default: workflow.
+* `--partitions-legacy` (int) - Query for all partitions up to this number (experimental+temporary feature) (legacy mode only). Default: 1.
 
 ### temporal task-queue get-build-id-reachability: Retrieves information about the reachability of Build IDs on one or more Task Queues (Deprecated).
 
