@@ -4,6 +4,38 @@ Commands for the Temporal CLI.
 
 <!--
 
+NOTES FOR ERICA
+
+* Word wrapping to 80 chars. 
+    * What about options? they tend to run long
+    * Could the text go to a second line after the spaced-dash?
+* Key-value space vs equal (I want space)
+* imperative vs descriptive for options. It's not a command, it's a setting.
+  (Flags may be different but flags aren't used, only options)
+* using period-delineated vs proper -- version. (Update docs?)
+* Remove "read more globally".
+  Can links be automated? Can content be shared from pages?
+  What about docs errors, such as ?prod.key?
+* Options punctuation. I suggest nothing at end, periods to separate.
+* -h, -o, -v are wonky:
+Flags:
+      --color string                                      Output coloring. Accepted values: always, never, auto. (default "auto")
+      --env string                                        Active environment name. (default "default")
+      --env-file $HOME/.config/temporalio/temporal.yaml   Path to environment settings file (defaults to $HOME/.config/temporalio/temporal.yaml).
+  -h, --help                                              help for temporal
+      --log-format string                                 Log format. Options are "text" and "json". Default is "text".
+      --log-level server start-dev                        Log level. Default is "info" for most commands and "warn" for server start-dev. Accepted values: debug, info, warn, error, never. (default "info")
+      --no-json-shorthand-payloads                        Raw payload output, even if they are JSON.
+  -o, --output string                                     Non-logging data output format. Accepted values: text, json, jsonl, none. (default "text")
+      --time-format string                                Time format. Accepted values: relative, iso, raw. (default "relative")
+  -v, --version                                           version for temporal
+
+Non-discussion
+Josh: "The available subcommands are already listed by the help output, 
+so you don't have to include them here"
+
+-----
+
 This document is automatically parsed.
 Follow these rules.
 
@@ -26,7 +58,8 @@ IN-HOUSE STYLE
 For options and flags:
 
 * When flags can be passed multiple times, say so explicitly in the usage text.
-* Do not rely on the flag type (e.g. `string`, `bool`, etc.) being shown to the user.
+* Do not rely on the flag type (e.g. `string`, `bool`, etc.) 
+  being shown to the user.
   It is hidden if a `META-VARIABLE` is used.
 * Where possible, use a `META-VARIABLE` (all caps and wrapped in `\``s) 
   to describe/reference content passed to an option.
@@ -38,11 +71,16 @@ Examples:
 
 These show correct/incorrect usage text for the optional `--history-uri` flag:
 
-* Preferred: "Archive history at \`URI\`. Cannot be changed after archival is enabled."
-* Avoid incomplete sentences: "_History archival \`URI\`_. Cannot be changed after archival is enabled."
-* Avoid wrong verb tenses: "_Archives history at \`URI\`_. Cannot be changed after archival is enabled."
-* Avoid missing metavariables: "Archive history at _the specified URI_. Cannot be changed after archival is enabled."
-* Avoid unnecessary parenthetical: `Archive history at \`URI\` _(note: cannot be changed after archival is enabled)_.`
+* Preferred:
+    "Archive history at \`URI\`. <explanation>"
+* Avoid incomplete sentences: 
+    "_History archival \`URI\`_. <explanation>"
+* Avoid wrong verb tenses: 
+    "_Archives history at \`URI\`_. <explanation>"
+* Avoid missing metavariables:
+    "Archive history at _the specified URI_. <explanation>"
+* Avoid unnecessary parenthetical: 
+    `Archive history at \`URI\` _(note: <explanation>)_.`
 
 
 COMMAND ENTRY OVERVIEW
@@ -72,9 +110,12 @@ COMMAND LISTING
     For example `temporal operator namespace delete [namespace]`.
   * Everything up to ':' or '[' is the command. 
     Square-bracketed positional arguments are not part of the command.
-  * Everything following the ':' or '[' is used for the short-description, a concise command explanation.
-* A command's long description continues until encountering the H4 (`#### Options`) header.
-* At the end of the long description, an optional XML comment configures the command implementation.
+  * Everything following the ':' or '[' is used for the short-description, 
+    a concise command explanation.
+* A command's long description continues until encountering the H4 
+  (`#### Options`) header.
+* At the end of the long description, an optional XML comment configures 
+  the command implementation.
   Use one asterisk-delimited bullet per line.
   * `* has-init` - invokes `initCommand` method.
   * `* exact-args=<number>` - Require this exact number of args.
@@ -90,9 +131,11 @@ OPTIONS SECTION
 * Start the optional Options section with an H4 `#### Options` header line.
 * Follow the header declaration with a list of options.
 * In the current implementation, you must include at least one option. 
-  Otherwise, although `gen-commands` will complete, the CLI utility will not run.
-* To incorporate an existing options set, add a single line below options like this.
-  End every `Include options set for` line with a period.
+  Otherwise, although `gen-commands` will complete, the CLI utility will 
+  not run.
+* To incorporate an existing options set, add a single line below options 
+  like this, remembering to end every `Include options set for` line with a 
+  period.
 
   ```
   Includes options set for [<options-set-name>](#options-set-for-<options-set-link-name>).
@@ -104,10 +147,13 @@ OPTIONS SECTION
   Includes options set for [client](#options-set-for-client).
   ```
     
-  An options set declaration is the equivalent of pasting those options into the bulleted options list.
+  An options set declaration is the equivalent of pasting those options into 
+  the bulleted options list.
 
-  Note: Options that are similar but slightly different don't need to be in option sets.
-  Reserve option sets for when the behavior of the option is the same across commands.
+  Note: Options that are similar but slightly different don't need to be in 
+  option sets.
+  Reserve option sets for when the behavior of the option is the same across 
+  commands.
   Copy/paste is fine, otherwise.
 
 DEFINING AN OPTION
@@ -121,20 +167,24 @@ DEFINING AN OPTION
   ```
   
   This contrived example uses all these features. 
-  In reality, the short option `-a` does not actually exist alongside `--address`:
+  In reality, the short option `-a` does not actually exist alongside 
+  `--address`:
   
   ```
   * `--address`, `-a` (string) - Connect to the Temporal Service at `HOST:PORT`. Default: 127.0.0.1:7233. Env: TEMPORAL_ADDRESS.
   ```
 
-* Each option listing includes a long option with a double dash and a meaningful name.
+* Each option listing includes a long option with a double dash and a 
+  meaningful name.
 * [Optional] A short option uses a single dash and a short string.
   When used, separate the long and short option with a comma and a space.
 * Backtick every option and short description. 
   Include the dash or dashes within the ticks.
   For example: `` `--workflow-id`, `-w` ``
-* A data type follows option names indicating the required value type for the option.
-  The type is `bool`, `duration`, `int`, `string`, `string[]`, `string-enum`, or `timestamp`. (_TODO: more_.)
+* A data type follows option names indicating the required value type for the
+  option.
+  The type is `bool`, `duration`, `int`, `string`, `string[]`, `string-enum`, 
+  or `timestamp`. (_TODO: more_.)
   Always parenthesize data types.
   For example: `` `--raw` (bool) ``
 * A dash follows the data type, with a space on either side. 
@@ -143,25 +193,27 @@ DEFINING AN OPTION
   Newline wrapping and/or two-space indentation condenses to a single space.
 * [Optional] extra attributes include:
   * `Required.` - Marks the option as required.
-  * `Default: <default-value>.` - Sets the default value of the option. No default means zero value of the type.
-  * `Options: <option>, <option>.` - Sets the possible options for a string enum type.
-  * `Env: <env-var>.` - Binds the environment variable to this flag. For example: `Env: TEMPORAL_ADDRESS`.
+  * `Default: <default-value>.` - Sets the default value of the option. 
+     No default means zero value of the type.
+  * `Options: <option>, <option>.` - Sets the possible options for a string 
+     enum type.
+  * `Env: <env-var>.` - Binds the environment variable to this flag.
+    For example: `Env: TEMPORAL_ADDRESS`.
+    Use the variable name without dollar signs, etc.
 
 -->
 
 ### temporal: Temporal command-line interface and development server
 
-The Temporal CLI (Command Line Interface) provide a powerful tool to manage, 
+The Temporal CLI (Command Line Interface) provide a powerful tool to manage,
 monitor, and debug your Temporal applications. It also lets you run a local
-Temporal Service directly from your terminal. With this CLI, you can 
-start Workflows, pass messages, cancel application steps, and more.
+Temporal Service directly from your terminal. With this CLI, you can start
+Workflows, pass messages, cancel application steps, and more.
 
 * Start a local development service: 
       `temporal server start-dev` 
 * Help messages: pass --help for any command:
       `temporal activity complete --help`
-
-Read more: https://docs.temporal.io/cli
 
 <!--
 * has-init
@@ -169,24 +221,31 @@ Read more: https://docs.temporal.io/cli
 
 #### Options
 
-* `--env` (string) - Active environment name. Default: default. Env: TEMPORAL_ENV.
-* `--env-file` (string) - Path to environment settings file (defaults to `$HOME/.config/temporalio/temporal.yaml`).
-* `--log-level` (string-enum) - Log level. Default is "info" for most commands and "warn" for `server start-dev`.
-  Options: debug, info, warn, error, never. Default: info.
-* `--log-format` (string) - Log format. Options are "text" and "json". Default is "text".
-* `--output`, `-o` (string-enum) - Non-logging data output format. Options: text, json, jsonl,
-  none. Default: text.
-* `--time-format` (string-enum) - Time format. Options: relative, iso, raw. Default: relative.
-* `--color` (string-enum) - Output coloring. Options: always, never, auto. Default: auto.
-* `--no-json-shorthand-payloads` (bool) - Raw payload output, even if they are JSON.
+* `--env` (string) - Active environment name.
+   Default: default.
+   Env: TEMPORAL_ENV.
+* `--env-file` (string) - 
+   Path to environment settings file
+   (defaults to `$HOME/.config/temporalio/temporal.yaml`).
+* `--log-level` (string-enum) - Log level.
+   Default is "info" for most commands and "warn" for `server start-dev`.
+   Options: debug, info, warn, error, never. Default: info.
+* `--log-format` (string) - Log format. 
+  Options are "text" and "json". Default is "text".
+* `--output`, `-o` (string-enum) - Non-logging data output format.
+  Options: text, json, jsonl, none. Default: text.
+* `--time-format` (string-enum) - Time format.
+  Options: relative, iso, raw. Default: relative.
+* `--color` (string-enum) - Output coloring.
+  Options: always, never, auto. Default: auto.
+* `--no-json-shorthand-payloads` (bool) - 
+  Raw payload output, even if they are JSON.
 
 ### temporal activity: Complete or fail an Activity
 
 Update an Activity to report that it has completed or failed. This process
 marks an activity as successfully finished or as having encountered an error
 during execution.
-
-Read more: https://docs.temporal.io/cli/activity
 
 #### Options
 
@@ -203,8 +262,6 @@ temporal activity complete \
     --workflow-id YourWorkflowId \
     --result '{"YourResultKey": "YourResultVal"}'
 ```
-
-Read more: https://docs.temporal.io/cli/activity#complete
 
 #### Options
 
@@ -225,12 +282,10 @@ temporal activity fail \
     --workflow-id YourWorkflowId
 ```
 
-Read more: https://docs.temporal.io/cli/activity#fail
-
 #### Options
 
 * `--activity-id` (string) - `ID` of the Activity to be failed. Required.
-* `--detail` (string) - JSON data describing the reason for failing the Activity
+* `--detail` (string) - JSON data with the reason for failing the Activity
 * `--identity` (string) - Identity of the user submitting this request
 * `--reason` (string) - Reason for failing the Activity
 
@@ -239,11 +294,7 @@ Includes options set for [workflow reference](#options-set-for-workflow-referenc
 ### temporal batch: Manage Batch Jobs
 
 A batch job executes a single command affecting multiple Workflow 
-Executions in tandem. Available commands:
-
-* Cancel: Cancel the Workflow Executions specified by the List Filter.
-* Signal: Signal the Workflow Executions specified by the List Filter.
-* Terminate: Terminates the Workflow Executions specified by the List Filter.
+Executions in tandem. You specify the Workflow Execution
 
 You select the Workflow Executions to include and the kind of batch 
 job to apply. For example, cancel all the running 'YourWorkflow' Workflows:
@@ -252,9 +303,7 @@ job to apply. For example, cancel all the running 'YourWorkflow' Workflows:
 temporal workflow cancel \
   --query 'ExecutionStatus = "Running" AND WorkflowType="YourWorkflow"' \
   --reason "Testing"
- ```
-
-Read more: https://docs.temporal.io/cli/batch
+```
 
 #### Options
 
@@ -269,8 +318,6 @@ to return the job's information:
 temporal batch describe --job-id YourJobId
 ```
 
-Read more: https://docs.temporal.io/cli/batch
-
 #### Options
 
 * `--job-id` (string) - The Batch Job Id to describe. Required.
@@ -283,8 +330,6 @@ Return a list of Batch jobs, for the entire Service or a single Namespace:
 ```
 temporal batch list --namespace YourNamespace
 ```
-
-Read more: https://docs.temporal.io/cli/batch#list
 
 #### Options
 
@@ -300,14 +345,13 @@ for later reference.
 temporal batch terminate --job-id YourJobId --reason YourTerminationReason
 ```
 
-Read more: https://docs.temporal.io/cli/batch#terminate
-
 #### Options
 
 * `--job-id` (string) - The Batch Job Id to terminate. Required.
 * `--reason` (string) - Reason for terminating the Batch Job. Required.
 
 ### temporal env: Manage environments
+
 Environments help you create and manage grouped key-value presets for Options.
 They provide easy set-up for separate environments, such as "dev" and 
 "prod" work.
@@ -321,10 +365,14 @@ name as part of your assignment, as in this example, which configures the
 "prod" environment:
 
 ```
-temporal env set --env prod --key namespace --value production.f45a2  
-temporal env set --env prod --key address --value production.f45a2.tmprl.cloud:7233  
-temporal env set --env prod --key tls-cert-path --value /temporal/certs/prod.pem  
-temporal env set --env prod --key tls-key-path --value /temporal/certs/prod.key
+temporal env set --env prod --key namespace \
+    --value production.f45a2  
+temporal env set --env prod --key address \
+    --value production.f45a2.tmprl.cloud:7233  
+temporal env set --env prod --key tls-cert-path \
+    --value /temporal/certs/prod.pem  
+temporal env set --env prod --key tls-key-path \
+    --value /temporal/certs/prod.key
 ```
 
 Check your "prod" presets with `temporal env get --env prod`:
@@ -346,8 +394,6 @@ $ temporal workflow list --env prod
 Specify an active environment by setting the `TEMPORAL_ENV` environment
 variable in your shell. The Temporal CLI uses the "default" environment when a
 specific environment was not named.
-
-Read more: https://docs.temporal.io/cli/env
 
 ### temporal env delete: Delete an environment or environment property
 
@@ -378,13 +424,12 @@ and
 temporal env delete --env prod --key tls-cert-path
 ```
 
-If you don't specify an environment, your deletion updates the `default` environment:
+If you don't specify an environment, your deletion updates the `default`
+environment:
 
 ```
 temporal env delete --key tls-cert-path
 ```
-
-Read more: https://docs.temporal.io/cli/env#delete
 
 <!--
 * maximum-args=1
@@ -392,7 +437,7 @@ Read more: https://docs.temporal.io/cli/env#delete
 
 #### Options
 
-* `--key`, `-k` (string) - The name of the property
+* `--key`, `-k` (string) - Property name
 
 ### temporal env get: Print environment properties
 
@@ -432,15 +477,13 @@ tls-key-path  /home/my-user/certs/cluster.key
 When you do not specify an environment name, you list the `default`
 environment properties.
 
-Read more: https://docs.temporal.io/cli/env#get
-
 <!--
 * maximum-args=1
 -->
 
 #### Options
 
-* `--key`, `-k` (string) - The name of the property
+* `--key`, `-k` (string) - Property name
 
 ### temporal env list: Print all environments
 
@@ -454,8 +497,6 @@ default
 prod
 dev
 ```
-
-Read more: https://docs.temporal.io/cli/env#list
 
 ### temporal env set: Set environment properties
 
@@ -474,8 +515,8 @@ If the environment is not specified, the `default` environment is used.
 
 #### Options
 
-* `--key`, `-k` (string) - The name of the property (required)
-* `--value`, `-v` (string) - The value to set the property to (required)
+* `--key`, `-k` (string) - Property name (required)
+* `--value`, `-v` (string) - Property value (required)
 
 ### temporal operator: Manage a Temporal deployment
 
@@ -914,7 +955,7 @@ The new build ID will become the default for the set containing the existing ID.
 * `--existing-compatible-build-id` (string) - A build id which must already exist in the version sets known by the task queue. The new id will be stored in the set containing this id, marking it as compatible with the versions within. Required.
 * `--set-as-default` (bool) - When set, establishes the compatible set being targeted as the overall default for the queue. If a different set was the current default, the targeted set will replace it as the new default. Defaults to false.
 
-### temporal task-queue update-build-ids add-new-default: Add a new default (incompatible) build ID to a Task Queue's version sets
+### temporal task-queue update-build-ids add-new-default: Add a new default (incompatible) build ID to a Task Queue's 7 sets
 
 Creates a new build id set which will become the new overall default for the queue with the provided build id as its only member. This new set is incompatible with all previous sets/versions.
 
