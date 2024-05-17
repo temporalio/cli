@@ -142,7 +142,7 @@ func (s *SharedServerSuite) TestWorkflow_Describe_Versioned() {
 			)
 			s.NoError(res.Err)
 			out := res.Stdout.String()
-			return AssertContainsOnSameLine(out, "AssignedBuildId", buildId) != nil
+			return AssertContainsOnSameLine(out, "AssignedBuildId", buildId) == nil
 		}, 10 * time.Second, 100 * time.Millisecond)
 
 		// JSON
