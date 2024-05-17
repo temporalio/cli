@@ -273,7 +273,7 @@ func StartDevServer(t *testing.T, options DevServerOptions) *DevServer {
 		d.Options.FrontendIP = "127.0.0.1"
 	}
 	if d.Options.FrontendPort == 0 {
-		d.Options.FrontendPort = devserver.MustGetFreePort()
+		d.Options.FrontendPort = devserver.MustGetFreePort(d.Options.FrontendIP)
 	}
 	if len(d.Options.Namespaces) == 0 {
 		d.Options.Namespaces = []string{
