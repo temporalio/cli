@@ -21,7 +21,7 @@ import (
 // in this regard; on that platform, `SO_REUSEADDR` has a different meaning and
 // should not be set (setting it may have unpredictable consequences).
 func GetFreePort(host string) (int, error) {
-	l, err := net.Listen("tcp", "127.0.0.1:0")
+	l, err := net.Listen("tcp", host+":0")
 	if err != nil {
 		return 0, fmt.Errorf("failed to assign a free port: %v", err)
 	}
