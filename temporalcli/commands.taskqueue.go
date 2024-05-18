@@ -15,7 +15,7 @@ import (
 	"go.temporal.io/server/common/tqid"
 )
 
-const unversioned = "UNVERSIONED"
+const taskQueueUnversioned = "UNVERSIONED"
 
 type reachabilityRowType struct {
 	BuildID      string `json:"buildID"`
@@ -60,7 +60,7 @@ func descriptionToReachabilityRows(taskQueueDescription client.TaskQueueDescript
 			return nil, err
 		}
 		rRows = append(rRows, reachabilityRowType{
-			BuildID:      unversioned,
+			BuildID:      taskQueueUnversioned,
 			Reachability: reachability,
 		})
 	}
@@ -119,7 +119,7 @@ func descriptionToPollerRows(taskQueueDescription client.TaskQueueDescription) (
 	// Unversioned queue first
 	val, ok := taskQueueDescription.VersionsInfo[client.UnversionedBuildID]
 	if ok {
-		pRows, err = buildIDToPollerRows(pRows, unversioned, val.TypesInfo)
+		pRows, err = buildIDToPollerRows(pRows, taskQueueUnversioned, val.TypesInfo)
 		if err != nil {
 			return nil, err
 		}
