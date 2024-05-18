@@ -489,6 +489,21 @@ func (s *SharedServerSuite) TestWorkflow_Execute_EnvConfig() {
 	)
 	s.NoError(res.Err)
 	s.ContainsOnSameLine(res.Stdout.String(), "Result", `"env-conf-input"`)
+
+	// And we can specify `env` with a property
+	s.NoError(os.Setenv("TEMPORAL_ENV", "myenv"))
+	defer os.Unsetenv("TEMPORAL_ENV")
+	res = s.Execute(
+		"workflow", "execute",
+		"--env-file", tmpFile.Name(),
+		"--address", s.Address(),
+		"--task-queue", s.Worker().Options.TaskQueue,
+		"--type", "DevWorkflow",
+		"--workflow-id", "my-id3",
+	)
+	s.NoError(res.Err)
+	s.ContainsOnSameLine(res.Stdout.String(), "Result", `"env-conf-input"`)
+
 }
 
 func (s *SharedServerSuite) TestWorkflow_Execute_CodecEndpoint() {
