@@ -8,7 +8,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
-	"time"
+
+	"go.temporal.io/server/common/primitives/timestamp"
 )
 
 func GenerateCommandsCode(pkg string, commands []*Command) ([]byte, error) {
@@ -264,7 +265,7 @@ func (c *CommandOption) writeStructField(w *codeWriter) error {
 	case "bool", "int", "string":
 		goDataType = c.DataType
 	case "duration":
-		goDataType = w.importPkg("time") + ".Duration"
+		goDataType = "Duration"
 	case "timestamp":
 		goDataType = "Timestamp"
 	case "string[]":
@@ -279,7 +280,7 @@ func (c *CommandOption) writeStructField(w *codeWriter) error {
 }
 
 func (c *CommandOption) writeFlagBuilding(selfVar, flagVar string, w *codeWriter) error {
-	var flagMeth, defaultLit string
+	var flagMeth, defaultLit, setDefault string
 	switch c.DataType {
 	case "bool":
 		flagMeth, defaultLit = "BoolVar", ", false"
@@ -287,14 +288,14 @@ func (c *CommandOption) writeFlagBuilding(selfVar, flagVar string, w *codeWriter
 			return fmt.Errorf("cannot have default for bool var")
 		}
 	case "duration":
-		flagMeth, defaultLit = "DurationVar", ", 0"
+		flagMeth, setDefault = "Var", "0"
 		if c.DefaultValue != "" {
-			dur, err := time.ParseDuration(c.DefaultValue)
+			dur, err := timestamp.ParseDuration(c.DefaultValue)
 			if err != nil {
 				return fmt.Errorf("invalid default: %w", err)
 			}
 			// We round to the nearest ms
-			defaultLit = fmt.Sprintf(", %v * %v.Millisecond", int64(dur/time.Millisecond), w.importPkg("time"))
+			setDefault = fmt.Sprintf("Duration(%v * %v.Millisecond)", dur.Milliseconds(), w.importPkg("time"))
 		}
 	case "timestamp":
 		if c.DefaultValue != "" {
@@ -341,6 +342,9 @@ func (c *CommandOption) writeFlagBuilding(selfVar, flagVar string, w *codeWriter
 	} else {
 		w.writeLinef("%v.%vP(&%v.%v, %q, %q%v, %q)",
 			flagVar, flagMeth, selfVar, c.fieldName(), c.Name, c.Alias, defaultLit, desc)
+	}
+	if setDefault != "" {
+		w.writeLinef("%v.%v = %v", selfVar, c.fieldName(), setDefault)
 	}
 	if c.Required {
 		w.writeLinef("_ = %v.MarkFlagRequired(%v, %q)", w.importCobra(), flagVar, c.Name)

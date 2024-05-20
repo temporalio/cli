@@ -223,7 +223,7 @@ func toIntervalSpec(str string) (client.ScheduleIntervalSpec, error) {
 func (c *ScheduleConfigurationOptions) toScheduleSpec(spec *client.ScheduleSpec) error {
 	spec.CronExpressions = c.Cron
 	// Skip not supported
-	spec.Jitter = c.Jitter
+	spec.Jitter = c.Jitter.Duration()
 	spec.TimeZoneName = c.TimeZone
 	spec.StartAt = c.StartTime.Time()
 	spec.EndAt = c.EndTime.Time()
@@ -289,7 +289,7 @@ func (c *TemporalScheduleCreateCommand) run(cctx *CommandContext, args []string)
 		PauseOnFailure:   c.PauseOnFailure,
 		Note:             c.Notes,
 		Paused:           c.Paused,
-		CatchupWindow:    c.CatchupWindow,
+		CatchupWindow:    c.CatchupWindow.Duration(),
 		RemainingActions: c.RemainingActions,
 		// TriggerImmediately not supported
 		// ScheduleBackfill not supported
@@ -517,7 +517,7 @@ func (c *TemporalScheduleUpdateCommand) run(cctx *CommandContext, args []string)
 	newSchedule := client.Schedule{
 		Spec: &client.ScheduleSpec{},
 		Policy: &client.SchedulePolicies{
-			CatchupWindow:  c.CatchupWindow,
+			CatchupWindow:  c.CatchupWindow.Duration(),
 			PauseOnFailure: c.PauseOnFailure,
 		},
 		State: &client.ScheduleState{
