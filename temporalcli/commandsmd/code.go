@@ -336,15 +336,16 @@ func (c *CommandOption) writeFlagBuilding(selfVar, flagVar string, w *codeWriter
 		desc += fmt.Sprintf(" Accepted values: %s.", strings.Join(c.EnumValues, ", "))
 	}
 
+	if setDefault != "" {
+		// set default before calling Var so that it stores thedefault value into the flag
+		w.writeLinef("%v.%v = %v", selfVar, c.fieldName(), setDefault)
+	}
 	if c.Alias == "" {
 		w.writeLinef("%v.%v(&%v.%v, %q%v, %q)",
 			flagVar, flagMeth, selfVar, c.fieldName(), c.Name, defaultLit, desc)
 	} else {
 		w.writeLinef("%v.%vP(&%v.%v, %q, %q%v, %q)",
 			flagVar, flagMeth, selfVar, c.fieldName(), c.Name, c.Alias, defaultLit, desc)
-	}
-	if setDefault != "" {
-		w.writeLinef("%v.%v = %v", selfVar, c.fieldName(), setDefault)
 	}
 	if c.Required {
 		w.writeLinef("_ = %v.MarkFlagRequired(%v, %q)", w.importCobra(), flagVar, c.Name)

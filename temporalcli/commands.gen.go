@@ -650,8 +650,8 @@ func NewTemporalOperatorNamespaceCreateCommand(cctx *CommandContext, parent *Tem
 	s.HistoryArchivalState = NewStringEnum([]string{"disabled", "enabled"}, "disabled")
 	s.Command.Flags().Var(&s.HistoryArchivalState, "history-archival-state", "History archival state. Accepted values: disabled, enabled.")
 	s.Command.Flags().StringVar(&s.HistoryUri, "history-uri", "", "Optionally specify history archival URI (cannot be changed after first time archival is enabled).")
-	s.Command.Flags().Var(&s.Retention, "retention", "Length of time a closed Workflow is preserved before deletion.")
 	s.Retention = Duration(259200000 * time.Millisecond)
+	s.Command.Flags().Var(&s.Retention, "retention", "Length of time a closed Workflow is preserved before deletion.")
 	s.VisibilityArchivalState = NewStringEnum([]string{"disabled", "enabled"}, "disabled")
 	s.Command.Flags().Var(&s.VisibilityArchivalState, "visibility-archival-state", "Visibility archival state. Accepted values: disabled, enabled.")
 	s.Command.Flags().StringVar(&s.VisibilityUri, "visibility-uri", "", "Optionally specify visibility archival URI (cannot be changed after first time archival is enabled).")
@@ -771,8 +771,8 @@ func NewTemporalOperatorNamespaceUpdateCommand(cctx *CommandContext, parent *Tem
 	s.HistoryArchivalState = NewStringEnum([]string{"disabled", "enabled"}, "")
 	s.Command.Flags().Var(&s.HistoryArchivalState, "history-archival-state", "History archival state. Accepted values: disabled, enabled.")
 	s.Command.Flags().StringVar(&s.HistoryUri, "history-uri", "", "Optionally specify history archival URI (cannot be changed after first time archival is enabled).")
-	s.Command.Flags().Var(&s.Retention, "retention", "Length of time a closed Workflow is preserved before deletion.")
 	s.Retention = 0
+	s.Command.Flags().Var(&s.Retention, "retention", "Length of time a closed Workflow is preserved before deletion.")
 	s.VisibilityArchivalState = NewStringEnum([]string{"disabled", "enabled"}, "")
 	s.Command.Flags().Var(&s.VisibilityArchivalState, "visibility-archival-state", "Visibility archival state. Accepted values: disabled, enabled.")
 	s.Command.Flags().StringVar(&s.VisibilityUri, "visibility-uri", "", "Optionally specify visibility archival URI (cannot be changed after first time archival is enabled).")
@@ -985,13 +985,13 @@ type ScheduleConfigurationOptions struct {
 
 func (v *ScheduleConfigurationOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
 	f.StringArrayVar(&v.Calendar, "calendar", nil, "Calendar specification in JSON, e.g. `{\"dayOfWeek\":\"Fri\",\"hour\":\"17\",\"minute\":\"5\"}`.")
-	f.Var(&v.CatchupWindow, "catchup-window", "Maximum allowed catch-up time if server is down.")
 	v.CatchupWindow = 0
+	f.Var(&v.CatchupWindow, "catchup-window", "Maximum allowed catch-up time if server is down.")
 	f.StringArrayVar(&v.Cron, "cron", nil, "Calendar spec in cron string format, e.g. `3 11 * * Fri`.")
 	f.Var(&v.EndTime, "end-time", "Overall schedule end time.")
 	f.StringArrayVar(&v.Interval, "interval", nil, "Interval duration, e.g. 90m, or 90m/13m to include phase offset.")
-	f.Var(&v.Jitter, "jitter", "Per-action jitter range.")
 	v.Jitter = 0
+	f.Var(&v.Jitter, "jitter", "Per-action jitter range.")
 	f.StringVar(&v.Notes, "notes", "", "Initial value of notes field.")
 	f.BoolVar(&v.Paused, "paused", false, "Initial value of paused state.")
 	f.BoolVar(&v.PauseOnFailure, "pause-on-failure", false, "Pause schedule after any workflow failure.")
@@ -2062,12 +2062,12 @@ func (v *SharedWorkflowStartOptions) buildFlags(cctx *CommandContext, f *pflag.F
 	_ = cobra.MarkFlagRequired(f, "type")
 	f.StringVarP(&v.TaskQueue, "task-queue", "t", "", "Workflow Task queue.")
 	_ = cobra.MarkFlagRequired(f, "task-queue")
-	f.Var(&v.RunTimeout, "run-timeout", "Timeout of a Workflow Run.")
 	v.RunTimeout = 0
-	f.Var(&v.ExecutionTimeout, "execution-timeout", "Timeout for a WorkflowExecution, including retries and ContinueAsNew tasks.")
+	f.Var(&v.RunTimeout, "run-timeout", "Timeout of a Workflow Run.")
 	v.ExecutionTimeout = 0
-	f.Var(&v.TaskTimeout, "task-timeout", "Start-to-close timeout for a Workflow Task.")
+	f.Var(&v.ExecutionTimeout, "execution-timeout", "Timeout for a WorkflowExecution, including retries and ContinueAsNew tasks.")
 	v.TaskTimeout = Duration(10000 * time.Millisecond)
+	f.Var(&v.TaskTimeout, "task-timeout", "Start-to-close timeout for a Workflow Task.")
 	f.StringArrayVar(&v.SearchAttribute, "search-attribute", nil, "Passes Search Attribute in key=value format. Use valid JSON formats for value.")
 	f.StringArrayVar(&v.Memo, "memo", nil, "Passes Memo in key=value format. Use valid JSON formats for value.")
 }
@@ -2082,8 +2082,8 @@ type WorkflowStartOptions struct {
 func (v *WorkflowStartOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
 	f.StringVar(&v.Cron, "cron", "", "Cron schedule for the workflow. Deprecated - use schedules instead.")
 	f.BoolVar(&v.FailExisting, "fail-existing", false, "Fail if the workflow already exists.")
-	f.Var(&v.StartDelay, "start-delay", "Specify a delay before the workflow starts. Cannot be used with a cron schedule. If the workflow receives a signal or update before the delay has elapsed, it will begin immediately.")
 	v.StartDelay = 0
+	f.Var(&v.StartDelay, "start-delay", "Specify a delay before the workflow starts. Cannot be used with a cron schedule. If the workflow receives a signal or update before the delay has elapsed, it will begin immediately.")
 	f.StringVar(&v.IdReusePolicy, "id-reuse-policy", "", "Allows the same Workflow Id to be used in a new Workflow Execution. Accepted values: AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate, TerminateIfRunning.")
 }
 
