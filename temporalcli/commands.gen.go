@@ -33,9 +33,9 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	s.Command.Use = "temporal"
 	s.Command.Short = "Temporal command-line interface and development server"
 	if hasHighlighting {
-		s.Command.Long = "The Temporal CLI (Command Line Interface) provide a powerful tool to manage,\nmonitor, and debug your Temporal applications. It also lets you run a local\nTemporal Service directly from your terminal. With this CLI, you can start\nWorkflows, pass messages, cancel application steps, and more.\n\n* Start a local development service: \n      \x1b[1mtemporal server start-dev\x1b[0m \n* Help messages: pass --help for any command:\n      \x1b[1mtemporal activity complete --help\x1b[0m"
+		s.Command.Long = "The Temporal CLI (Command Line Interface) is a powerful tool that manages,\nmonitors, and helps you debug your Temporal applications. With it, you can\nrun a local Temporal Service directly from your terminal. This CLI tool helps\nyou start Workflows, pass messages, cancel application steps, and more.\n\n* Start a local development service:\n      \x1b[1mtemporal server start-dev\x1b[0m\n* Help messages: pass --help for any command for how-to details:\n      \x1b[1mtemporal activity complete --help\x1b[0m"
 	} else {
-		s.Command.Long = "The Temporal CLI (Command Line Interface) provide a powerful tool to manage,\nmonitor, and debug your Temporal applications. It also lets you run a local\nTemporal Service directly from your terminal. With this CLI, you can start\nWorkflows, pass messages, cancel application steps, and more.\n\n* Start a local development service: \n      `temporal server start-dev` \n* Help messages: pass --help for any command:\n      `temporal activity complete --help`"
+		s.Command.Long = "The Temporal CLI (Command Line Interface) is a powerful tool that manages,\nmonitors, and helps you debug your Temporal applications. With it, you can\nrun a local Temporal Service directly from your terminal. This CLI tool helps\nyou start Workflows, pass messages, cancel application steps, and more.\n\n* Start a local development service:\n      `temporal server start-dev`\n* Help messages: pass --help for any command for how-to details:\n      `temporal activity complete --help`"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalActivityCommand(cctx, &s).Command)
@@ -48,7 +48,7 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	s.Command.AddCommand(&NewTemporalWorkflowCommand(cctx, &s).Command)
 	s.Command.PersistentFlags().StringVar(&s.Env, "env", "default", "Active environment name.")
 	cctx.BindFlagEnvVar(s.Command.PersistentFlags().Lookup("env"), "TEMPORAL_ENV")
-	s.Command.PersistentFlags().StringVar(&s.EnvFile, "env-file", "", "Path to environment settings file (defaults to `$HOME/.config/temporalio/temporal.yaml`).")
+	s.Command.PersistentFlags().StringVar(&s.EnvFile, "env-file", "", "Path to environment settings file. (defaults to `$HOME/.config/temporalio/temporal.yaml`).")
 	s.LogLevel = NewStringEnum([]string{"debug", "info", "warn", "error", "never"}, "info")
 	s.Command.PersistentFlags().Var(&s.LogLevel, "log-level", "Log level. Default is \"info\" for most commands and \"warn\" for `server start-dev`. Accepted values: debug, info, warn, error, never.")
 	s.Command.PersistentFlags().StringVar(&s.LogFormat, "log-format", "", "Log format. Options are \"text\" and \"json\". Default is \"text\".")
@@ -74,7 +74,7 @@ func NewTemporalActivityCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Parent = parent
 	s.Command.Use = "activity"
 	s.Command.Short = "Complete or fail an Activity"
-	s.Command.Long = "Update an Activity to report that it has completed or failed. This process\nmarks an activity as successfully finished or as having encountered an error\nduring execution."
+	s.Command.Long = "Update an Activity to report that it has completed or failed. This command\nmarks an activity as successfully finished or as having encountered an error\nduring execution."
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalActivityCompleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalActivityFailCommand(cctx, &s).Command)
@@ -98,9 +98,9 @@ func NewTemporalActivityCompleteCommand(cctx *CommandContext, parent *TemporalAc
 	s.Command.Use = "complete [flags]"
 	s.Command.Short = "Complete an Activity"
 	if hasHighlighting {
-		s.Command.Long = "Complete an Activity, marking it as successfully finished. Specify \nthe ID and include a JSON result to use for the returned value.\n\n\x1b[1mtemporal activity complete \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --result '{\"YourResultKey\": \"YourResultVal\"}'\x1b[0m"
+		s.Command.Long = "Complete an Activity, marking it as successfully finished. Specify\nthe ID and include a JSON result to use for the returned value.\n\n\x1b[1mtemporal activity complete \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --result '{\"YourResultKey\": \"YourResultVal\"}'\x1b[0m"
 	} else {
-		s.Command.Long = "Complete an Activity, marking it as successfully finished. Specify \nthe ID and include a JSON result to use for the returned value.\n\n```\ntemporal activity complete \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --result '{\"YourResultKey\": \"YourResultVal\"}'\n```"
+		s.Command.Long = "Complete an Activity, marking it as successfully finished. Specify\nthe ID and include a JSON result to use for the returned value.\n\n```\ntemporal activity complete \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --result '{\"YourResultKey\": \"YourResultVal\"}'\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
@@ -108,7 +108,7 @@ func NewTemporalActivityCompleteCommand(cctx *CommandContext, parent *TemporalAc
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "activity-id")
 	s.Command.Flags().StringVar(&s.Result, "result", "", "Result `JSON` for completing the Activity.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "result")
-	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of the user submitting this request")
+	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of the user submitting this request.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -142,9 +142,9 @@ func NewTemporalActivityFailCommand(cctx *CommandContext, parent *TemporalActivi
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Flags().StringVar(&s.ActivityId, "activity-id", "", "`ID` of the Activity to be failed.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "activity-id")
-	s.Command.Flags().StringVar(&s.Detail, "detail", "", "JSON data with the reason for failing the Activity")
-	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of the user submitting this request")
-	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for failing the Activity")
+	s.Command.Flags().StringVar(&s.Detail, "detail", "", "JSON data with the reason for failing the Activity.")
+	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of the user submitting this request.")
+	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for failing the Activity.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -165,9 +165,9 @@ func NewTemporalBatchCommand(cctx *CommandContext, parent *TemporalCommand) *Tem
 	s.Command.Use = "batch"
 	s.Command.Short = "Manage Batch Jobs"
 	if hasHighlighting {
-		s.Command.Long = "A batch job executes a single command affecting multiple Workflow \nExecutions in tandem. You specify the Workflow Execution\n\nYou select the Workflow Executions to include and the kind of batch \njob to apply. For example, cancel all the running 'YourWorkflow' Workflows:\n\n\x1b[1mtemporal workflow cancel \\\n  --query 'ExecutionStatus = \"Running\" AND WorkflowType=\"YourWorkflow\"' \\\n  --reason \"Testing\"\x1b[0m"
+		s.Command.Long = "A batch job executes a single command affecting multiple Workflow\nExecutions in tandem. You specify the Workflow Execution\n\nYou select the Workflow Executions to include and the kind of batch\njob to apply. For example, cancel all the running 'YourWorkflow' Workflows:\n\n\x1b[1mtemporal workflow cancel \\\n  --query 'ExecutionStatus = \"Running\" AND WorkflowType=\"YourWorkflow\"' \\\n  --reason \"Testing\"\x1b[0m"
 	} else {
-		s.Command.Long = "A batch job executes a single command affecting multiple Workflow \nExecutions in tandem. You specify the Workflow Execution\n\nYou select the Workflow Executions to include and the kind of batch \njob to apply. For example, cancel all the running 'YourWorkflow' Workflows:\n\n```\ntemporal workflow cancel \\\n  --query 'ExecutionStatus = \"Running\" AND WorkflowType=\"YourWorkflow\"' \\\n  --reason \"Testing\"\n```"
+		s.Command.Long = "A batch job executes a single command affecting multiple Workflow\nExecutions in tandem. You specify the Workflow Execution\n\nYou select the Workflow Executions to include and the kind of batch\njob to apply. For example, cancel all the running 'YourWorkflow' Workflows:\n\n```\ntemporal workflow cancel \\\n  --query 'ExecutionStatus = \"Running\" AND WorkflowType=\"YourWorkflow\"' \\\n  --reason \"Testing\"\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalBatchDescribeCommand(cctx, &s).Command)
@@ -218,9 +218,9 @@ func NewTemporalBatchListCommand(cctx *CommandContext, parent *TemporalBatchComm
 	s.Command.Use = "list [flags]"
 	s.Command.Short = "List all Batch Jobs"
 	if hasHighlighting {
-		s.Command.Long = "Return a list of Batch jobs, for the entire Service or a single Namespace:\n\n\n\x1b[1mtemporal batch list --namespace YourNamespace\x1b[0m"
+		s.Command.Long = "Return a list of Batch jobs, for the entire Service or, optionally,\na single Namespace. This example lists the batch jobs for \"YourNamespace\".\n\n\n\x1b[1mtemporal batch list --namespace YourNamespace\x1b[0m"
 	} else {
-		s.Command.Long = "Return a list of Batch jobs, for the entire Service or a single Namespace:\n\n\n```\ntemporal batch list --namespace YourNamespace\n```"
+		s.Command.Long = "Return a list of Batch jobs, for the entire Service or, optionally,\na single Namespace. This example lists the batch jobs for \"YourNamespace\".\n\n\n```\ntemporal batch list --namespace YourNamespace\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().IntVar(&s.Limit, "limit", 0, "Show only the first `N` Batch Jobs in the list.")
@@ -246,9 +246,9 @@ func NewTemporalBatchTerminateCommand(cctx *CommandContext, parent *TemporalBatc
 	s.Command.Use = "terminate [flags]"
 	s.Command.Short = "Terminate a Batch Job"
 	if hasHighlighting {
-		s.Command.Long = "Terminate the Batch job with the provided Job Id. You must provide\na reason motivating the termination, which is stored with the Service\nfor later reference.\n\n\x1b[1mtemporal batch terminate --job-id YourJobId --reason YourTerminationReason\x1b[0m"
+		s.Command.Long = "Terminate the Batch job with the provided Job Id. You must provide\na reason motivating the termination. This reason is stored with the Service\nfor later reference. For example:\n\n\x1b[1mtemporal batch terminate --job-id YourJobId --reason YourTerminationReason\x1b[0m"
 	} else {
-		s.Command.Long = "Terminate the Batch job with the provided Job Id. You must provide\na reason motivating the termination, which is stored with the Service\nfor later reference.\n\n```\ntemporal batch terminate --job-id YourJobId --reason YourTerminationReason\n```"
+		s.Command.Long = "Terminate the Batch job with the provided Job Id. You must provide\na reason motivating the termination. This reason is stored with the Service\nfor later reference. For example:\n\n```\ntemporal batch terminate --job-id YourJobId --reason YourTerminationReason\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.JobId, "job-id", "", "The Batch Job Id to terminate.")
@@ -274,9 +274,9 @@ func NewTemporalEnvCommand(cctx *CommandContext, parent *TemporalCommand) *Tempo
 	s.Command.Use = "env"
 	s.Command.Short = "Manage environments"
 	if hasHighlighting {
-		s.Command.Long = "Environments help you create and manage grouped key-value presets for Options.\nThey provide easy set-up for separate environments, such as \"dev\" and \n\"prod\" work.\n\nFor example, you might set an endpoint preset for the \x1b[1m--address\x1b[0m option.\nYou won't have to enter it each time you use the Temporal CLI utility. Env \npresets let you configure distinct setups for Temporal Services and Namespaces.\n\nEnvironment names compartmentalize each key-value store. Use the environment\nname as part of your assignment, as in this example, which configures the \n\"prod\" environment:\n\n\x1b[1mtemporal env set --env prod --key namespace \\\n    --value production.f45a2  \ntemporal env set --env prod --key address \\\n    --value production.f45a2.tmprl.cloud:7233  \ntemporal env set --env prod --key tls-cert-path \\\n    --value /temporal/certs/prod.pem  \ntemporal env set --env prod --key tls-key-path \\\n    --value /temporal/certs/prod.key\x1b[0m\n\nCheck your \"prod\" presets with \x1b[1mtemporal env get --env prod\x1b[0m:\n\n\x1b[1maddress production.f45a2.tmprl.cloud:7233  \nnamespace production.f45a2  \ntls-cert-path /temporal/certs/prod.pem  \ntls-key-path /temporal/certs/prod.key\x1b[0m\n\nTo use the environment with a command, pass \x1b[1m--env\x1b[0m followed by the environment\nname. For example, to list workflows in the \"prod\" environment:\n\n\x1b[1m$ temporal workflow list --env prod\x1b[0m\n\nSpecify an active environment by setting the \x1b[1mTEMPORAL_ENV\x1b[0m environment\nvariable in your shell. The Temporal CLI uses the \"default\" environment when a\nspecific environment was not named."
+		s.Command.Long = "Environments create and manage groups of key-value presets. These presets\nconfigure options for your CLI commands so you don't have to type them in\neach time. Use them for easy set-up for distinct environments, such as \"dev\"\nand \"prod\" work.\n\nFor example, you might set an endpoint preset for the \x1b[1m--address\x1b[0m option\nfor each environment. Supply the \x1b[1m--env\x1b[0m name and the CLI configures the\noptions for you.\n\nEnvironments compartmentalize each of your key-value stores. Changes to\nyour \"prod\" environment do not affect your \"dev\" environment.\n\nConfiguration examples:\n\n\x1b[1mtemporal env set --env prod --key namespace \\\n    --value production.f45a2\ntemporal env set --env prod --key address \\\n    --value production.f45a2.tmprl.cloud:7233\ntemporal env set --env prod --key tls-cert-path \\\n    --value /temporal/certs/prod.pem\ntemporal env set --env prod --key tls-key-path \\\n    --value /temporal/certs/prod.key\x1b[0m\n\nCheck your \"prod\" presets using \x1b[1mtemporal env get --env prod\x1b[0m:\n\n\x1b[1maddress production.f45a2.tmprl.cloud:7233\nnamespace production.f45a2\ntls-cert-path /temporal/certs/prod.pem\ntls-key-path /temporal/certs/prod.key\x1b[0m\n\nTo use an environment with any command, pass \x1b[1m--env\x1b[0m followed by the\nenvironment name. For example, to list workflows in the \"prod\" environment:\n\n\x1b[1m$ temporal workflow list --env prod\x1b[0m\n\nFor even easier use, specify your active environment as an environment\nvariable in your shell by setting the \x1b[1mTEMPORAL_ENV\x1b[0m environment variable.\nThe Temporal CLI uses the \"default\" environment when a specific environment\nwas not named in the command or set as an environment variable."
 	} else {
-		s.Command.Long = "Environments help you create and manage grouped key-value presets for Options.\nThey provide easy set-up for separate environments, such as \"dev\" and \n\"prod\" work.\n\nFor example, you might set an endpoint preset for the `--address` option.\nYou won't have to enter it each time you use the Temporal CLI utility. Env \npresets let you configure distinct setups for Temporal Services and Namespaces.\n\nEnvironment names compartmentalize each key-value store. Use the environment\nname as part of your assignment, as in this example, which configures the \n\"prod\" environment:\n\n```\ntemporal env set --env prod --key namespace \\\n    --value production.f45a2  \ntemporal env set --env prod --key address \\\n    --value production.f45a2.tmprl.cloud:7233  \ntemporal env set --env prod --key tls-cert-path \\\n    --value /temporal/certs/prod.pem  \ntemporal env set --env prod --key tls-key-path \\\n    --value /temporal/certs/prod.key\n```\n\nCheck your \"prod\" presets with `temporal env get --env prod`:\n\n```  \naddress production.f45a2.tmprl.cloud:7233  \nnamespace production.f45a2  \ntls-cert-path /temporal/certs/prod.pem  \ntls-key-path /temporal/certs/prod.key\n```\n\nTo use the environment with a command, pass `--env` followed by the environment\nname. For example, to list workflows in the \"prod\" environment:\n\n```\n$ temporal workflow list --env prod\n```\n\nSpecify an active environment by setting the `TEMPORAL_ENV` environment\nvariable in your shell. The Temporal CLI uses the \"default\" environment when a\nspecific environment was not named."
+		s.Command.Long = "Environments create and manage groups of key-value presets. These presets\nconfigure options for your CLI commands so you don't have to type them in\neach time. Use them for easy set-up for distinct environments, such as \"dev\"\nand \"prod\" work.\n\nFor example, you might set an endpoint preset for the `--address` option\nfor each environment. Supply the `--env` name and the CLI configures the\noptions for you.\n\nEnvironments compartmentalize each of your key-value stores. Changes to\nyour \"prod\" environment do not affect your \"dev\" environment.\n\nConfiguration examples:\n\n```\ntemporal env set --env prod --key namespace \\\n    --value production.f45a2\ntemporal env set --env prod --key address \\\n    --value production.f45a2.tmprl.cloud:7233\ntemporal env set --env prod --key tls-cert-path \\\n    --value /temporal/certs/prod.pem\ntemporal env set --env prod --key tls-key-path \\\n    --value /temporal/certs/prod.key\n```\n\nCheck your \"prod\" presets using `temporal env get --env prod`:\n\n```\naddress production.f45a2.tmprl.cloud:7233\nnamespace production.f45a2\ntls-cert-path /temporal/certs/prod.pem\ntls-key-path /temporal/certs/prod.key\n```\n\nTo use an environment with any command, pass `--env` followed by the\nenvironment name. For example, to list workflows in the \"prod\" environment:\n\n```\n$ temporal workflow list --env prod\n```\n\nFor even easier use, specify your active environment as an environment\nvariable in your shell by setting the `TEMPORAL_ENV` environment variable.\nThe Temporal CLI uses the \"default\" environment when a specific environment\nwas not named in the command or set as an environment variable."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalEnvDeleteCommand(cctx, &s).Command)
@@ -299,12 +299,12 @@ func NewTemporalEnvDeleteCommand(cctx *CommandContext, parent *TemporalEnvComman
 	s.Command.Use = "delete [flags]"
 	s.Command.Short = "Delete an environment or environment property"
 	if hasHighlighting {
-		s.Command.Long = "Remove an environment entirely or remove a key-value pair within an\nenvironment.\n\nRemove an environment:\n\n\x1b[1mtemporal env delete --env YourEnvironment\x1b[0m\n\nRemove a key-value pair from an environment:\n\n\x1b[1mtemporal env delete --env YourEnvironment  --key YourKey\x1b[0m\n\nFor example:\n\n\x1b[1mtemporal env delete --env prod\x1b[0m\n\nand\n\n\x1b[1mtemporal env delete --env prod --key tls-cert-path\x1b[0m\n\nIf you don't specify an environment, your deletion updates the \x1b[1mdefault\x1b[0m environment:\n\n\x1b[1mtemporal env delete --key tls-cert-path\x1b[0m"
+		s.Command.Long = "Remove an environment entirely or remove a key-value pair within an\nenvironment. When you don't specify an environment (with \x1b[1m--env\x1b[0m or by\nsetting the \x1b[1mTEMPORAL_ENV\x1b[0m environment variable), you update the \x1b[1mdefault\x1b[0m\nenvironment.\n\n\x1b[1mtemporal env delete --env YourEnvironment\x1b[0m\n\nor\n\n\x1b[1mtemporal env delete --env prod  --key tls-key-path\x1b[0m"
 	} else {
-		s.Command.Long = "Remove an environment entirely or remove a key-value pair within an\nenvironment.\n\nRemove an environment:\n\n```\ntemporal env delete --env YourEnvironment\n```\n\nRemove a key-value pair from an environment:\n\n```\ntemporal env delete --env YourEnvironment  --key YourKey\n```\n\nFor example:\n\n```\ntemporal env delete --env prod\n```\n\nand\n\n```\ntemporal env delete --env prod --key tls-cert-path\n```\n\nIf you don't specify an environment, your deletion updates the `default` environment:\n\n```\ntemporal env delete --key tls-cert-path\n```"
+		s.Command.Long = "Remove an environment entirely or remove a key-value pair within an\nenvironment. When you don't specify an environment (with `--env` or by\nsetting the `TEMPORAL_ENV` environment variable), you update the `default`\nenvironment.\n\n```\ntemporal env delete --env YourEnvironment\n```\n\nor\n\n```\ntemporal env delete --env prod  --key tls-key-path\n```"
 	}
 	s.Command.Args = cobra.MaximumNArgs(1)
-	s.Command.Flags().StringVarP(&s.Key, "key", "k", "", "The name of the property")
+	s.Command.Flags().StringVarP(&s.Key, "key", "k", "", "Property name.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -326,12 +326,12 @@ func NewTemporalEnvGetCommand(cctx *CommandContext, parent *TemporalEnvCommand) 
 	s.Command.Use = "get [flags]"
 	s.Command.Short = "Print environment properties"
 	if hasHighlighting {
-		s.Command.Long = "Prints the environmental properties for a given environment:\n\n\x1b[1mtemporal env get --env environment-name\x1b[0m\n\nPrint all properties of the \"prod\" environment:\n\n\x1b[1mtemporal env get --env prod\x1b[0m\n\nmight produce these results:\n\n\x1b[1mtls-cert-path  /home/my-user/certs/client.cert\ntls-key-path   /home/my-user/certs/client.key\naddress        temporal.example.com:7233\nnamespace      someNamespace\x1b[0m\n\nPrint a single property:\n\n\x1b[1mtemporal env get --env prod --key tls-key-path\x1b[0m\n\nmight produce this result:\n\n\x1b[1mtls-key-path  /home/my-user/certs/cluster.key\x1b[0m\n\nWhen you do not specify an environment name, you list the \x1b[1mdefault\x1b[0m\nenvironment properties."
+		s.Command.Long = "Print the environmental properties for a given environment:\n\n\x1b[1mtemporal env get --env YourEnvironment\x1b[0m\n\nFor example, invoking:\n\n\x1b[1mtemporal env get --env prod\x1b[0m\n\nmight produce these results:\n\n\x1b[1mtls-cert-path  /home/my-user/certs/client.cert\ntls-key-path   /home/my-user/certs/client.key\naddress        temporal.example.com:7233\nnamespace      someNamespace\x1b[0m\n\nPrint a single property:\n\n\x1b[1mtemporal env get --env prod --key tls-key-path\x1b[0m\n\nmight produce this result:\n\n\x1b[1mtls-key-path  /home/my-user/certs/cluster.key\x1b[0m\n\nIf you do not specify an environment name, either directly with the \x1b[1m--env\x1b[0m\noption or indirectly by setting the \x1b[1mTEMPORAL_ENV\x1b[0m environmental variable,\nyou list the \x1b[1mdefault\x1b[0m environment properties."
 	} else {
-		s.Command.Long = "Prints the environmental properties for a given environment:\n\n```\ntemporal env get --env environment-name\n```\n\nPrint all properties of the \"prod\" environment:\n\n```\ntemporal env get --env prod\n```\n\nmight produce these results:\n\n```\ntls-cert-path  /home/my-user/certs/client.cert\ntls-key-path   /home/my-user/certs/client.key\naddress        temporal.example.com:7233\nnamespace      someNamespace\n```\n\nPrint a single property:\n\n```\ntemporal env get --env prod --key tls-key-path\n```\n\nmight produce this result:\n\n```\ntls-key-path  /home/my-user/certs/cluster.key\n```\n\nWhen you do not specify an environment name, you list the `default`\nenvironment properties."
+		s.Command.Long = "Print the environmental properties for a given environment:\n\n```\ntemporal env get --env YourEnvironment\n```\n\nFor example, invoking:\n\n```\ntemporal env get --env prod\n```\n\nmight produce these results:\n\n```\ntls-cert-path  /home/my-user/certs/client.cert\ntls-key-path   /home/my-user/certs/client.key\naddress        temporal.example.com:7233\nnamespace      someNamespace\n```\n\nPrint a single property:\n\n```\ntemporal env get --env prod --key tls-key-path\n```\n\nmight produce this result:\n\n```\ntls-key-path  /home/my-user/certs/cluster.key\n```\n\nIf you do not specify an environment name, either directly with the `--env`\noption or indirectly by setting the `TEMPORAL_ENV` environmental variable,\nyou list the `default` environment properties."
 	}
 	s.Command.Args = cobra.MaximumNArgs(1)
-	s.Command.Flags().StringVarP(&s.Key, "key", "k", "", "The name of the property")
+	s.Command.Flags().StringVarP(&s.Key, "key", "k", "", "Property name.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -352,9 +352,9 @@ func NewTemporalEnvListCommand(cctx *CommandContext, parent *TemporalEnvCommand)
 	s.Command.Use = "list [flags]"
 	s.Command.Short = "Print all environments"
 	if hasHighlighting {
-		s.Command.Long = "STOPPED HERE FOR SANITY CHECK AND REVIEW BY JOSH BEFORE CONTINUING OR REDIRECTING\n\nList the environments you have set up on your local computer with\n\x1b[1mtemporal env list\x1b[0m. For example:\n\n\x1b[1mdefault \nprod\ndev\x1b[0m"
+		s.Command.Long = "List the environments you have previously set up on your local computer\nby issuing \x1b[1mtemporal env list\x1b[0m. Your output shows all environment names\ncurrently stored in your \"$HOME/.config/temporalio/temporal.yaml\" file.\n\n\x1b[1mdefault\nprod\ndev\x1b[0m"
 	} else {
-		s.Command.Long = "STOPPED HERE FOR SANITY CHECK AND REVIEW BY JOSH BEFORE CONTINUING OR REDIRECTING\n\nList the environments you have set up on your local computer with\n`temporal env list`. For example:\n\n```\ndefault \nprod\ndev\n```"
+		s.Command.Long = "List the environments you have previously set up on your local computer\nby issuing `temporal env list`. Your output shows all environment names\ncurrently stored in your \"$HOME/.config/temporalio/temporal.yaml\" file.\n\n```\ndefault\nprod\ndev\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -379,13 +379,13 @@ func NewTemporalEnvSetCommand(cctx *CommandContext, parent *TemporalEnvCommand) 
 	s.Command.Use = "set [flags]"
 	s.Command.Short = "Set environment properties"
 	if hasHighlighting {
-		s.Command.Long = "\x1b[1mtemporal env set --env environment --key property --value value\x1b[0m\n\nProperty names match CLI option names, for example '--address' and '--tls-cert-path':\n\n\x1b[1mtemporal env set --env prod --key address --value 127.0.0.1:7233\x1b[0m\n\x1b[1mtemporal env set --env prod --key tls-cert-path --value /home/my-user/certs/cluster.cert\x1b[0m\n\nIf the environment is not specified, the \x1b[1mdefault\x1b[0m environment is used."
+		s.Command.Long = "Associate a value with a property key and store it in the environment you\nspecify with the \x1b[1m--env\x1b[0m flag or have set with the \x1b[1mTEMPORAL_ENV\x1b[0m\nenvironmental variable.\n\n\x1b[1mtemporal env set --env environment --key property --value value\x1b[0m\n\nProperty names match should match CLI option names. This enables\nthem to be automatically retrieved for the active environment. Setting\nproperty values in advance reduces the effort required to issue CLI commands\nand helps avoid typos.\n\nFor example, '--address' and '--tls-cert-path':\n\n\x1b[1mtemporal env set --env prod --key address --value 127.0.0.1:7233\ntemporal env set \\\n    --env prod --key tls-cert-path \\\n    --value /home/my-user/certs/cluster.cert\x1b[0m\n\nWhen an environment is not specified, the CLI tool uses the \x1b[1mdefault\x1b[0m\nenvironment."
 	} else {
-		s.Command.Long = "`temporal env set --env environment --key property --value value`\n\nProperty names match CLI option names, for example '--address' and '--tls-cert-path':\n\n`temporal env set --env prod --key address --value 127.0.0.1:7233`\n`temporal env set --env prod --key tls-cert-path --value /home/my-user/certs/cluster.cert`\n\nIf the environment is not specified, the `default` environment is used."
+		s.Command.Long = "Associate a value with a property key and store it in the environment you\nspecify with the `--env` flag or have set with the `TEMPORAL_ENV`\nenvironmental variable.\n\n```\ntemporal env set --env environment --key property --value value\n```\n\nProperty names match should match CLI option names. This enables\nthem to be automatically retrieved for the active environment. Setting\nproperty values in advance reduces the effort required to issue CLI commands\nand helps avoid typos.\n\nFor example, '--address' and '--tls-cert-path':\n\n```\ntemporal env set --env prod --key address --value 127.0.0.1:7233\ntemporal env set \\\n    --env prod --key tls-cert-path \\\n    --value /home/my-user/certs/cluster.cert\n```\n\nWhen an environment is not specified, the CLI tool uses the `default`\nenvironment."
 	}
 	s.Command.Args = cobra.MaximumNArgs(2)
-	s.Command.Flags().StringVarP(&s.Key, "key", "k", "", "The name of the property (required)")
-	s.Command.Flags().StringVarP(&s.Value, "value", "v", "", "The value to set the property to (required)")
+	s.Command.Flags().StringVarP(&s.Key, "key", "k", "", "Property name Required.")
+	s.Command.Flags().StringVarP(&s.Value, "value", "v", "", "Property value Required.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -405,7 +405,11 @@ func NewTemporalOperatorCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Parent = parent
 	s.Command.Use = "operator"
 	s.Command.Short = "Manage a Temporal deployment"
-	s.Command.Long = "Operator commands perform actions on Namespaces, Search Attributes, and Temporal Clusters."
+	if hasHighlighting {
+		s.Command.Long = "Operator commands perform actions on and retrieve information about\nNamespaces, Search Attributes, and Temporal Clusters.\n\nTo run an Operator command, issue:\n\n\x1b[1mtemporal operator [command] [subcommand] [options]\x1b[0m"
+	} else {
+		s.Command.Long = "Operator commands perform actions on and retrieve information about\nNamespaces, Search Attributes, and Temporal Clusters.\n\nTo run an Operator command, issue:\n\n```\ntemporal operator [command] [subcommand] [options]\n```"
+	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalOperatorClusterCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalOperatorNamespaceCommand(cctx, &s).Command)
@@ -424,7 +428,11 @@ func NewTemporalOperatorClusterCommand(cctx *CommandContext, parent *TemporalOpe
 	s.Parent = parent
 	s.Command.Use = "cluster"
 	s.Command.Short = "Operations for running a Temporal Cluster"
-	s.Command.Long = "Cluster commands perform actions on Temporal Clusters."
+	if hasHighlighting {
+		s.Command.Long = "Perform actions on Temporal Clusters.\n\n\x1b[1mtemporal operator cluster [subcommand] [options]\x1b[0m"
+	} else {
+		s.Command.Long = "Perform actions on Temporal Clusters.\n\n```\ntemporal operator cluster [subcommand] [options]\n```"
+	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalOperatorClusterDescribeCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalOperatorClusterHealthCommand(cctx, &s).Command)
@@ -447,9 +455,13 @@ func NewTemporalOperatorClusterDescribeCommand(cctx *CommandContext, parent *Tem
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "describe [flags]"
 	s.Command.Short = "Describe a cluster"
-	s.Command.Long = ""
+	if hasHighlighting {
+		s.Command.Long = "View information about a cluster.\n\n\x1b[1mtemporal operator cluster describe [options]\x1b[0m"
+	} else {
+		s.Command.Long = "View information about a cluster.\n\n```\ntemporal operator cluster describe [options]\n```"
+	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().BoolVar(&s.Detail, "detail", false, "Show extra details")
+	s.Command.Flags().BoolVar(&s.Detail, "detail", false, "Include high-detail output.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -469,7 +481,11 @@ func NewTemporalOperatorClusterHealthCommand(cctx *CommandContext, parent *Tempo
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "health [flags]"
 	s.Command.Short = "Check the health of a cluster"
-	s.Command.Long = ""
+	if hasHighlighting {
+		s.Command.Long = "View information about the health of the Frontend Service.\n\n\x1b[1mtemporal operator cluster health\x1b[0m"
+	} else {
+		s.Command.Long = "View information about the health of the Frontend Service.\n\n```\ntemporal operator cluster health\n```"
+	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -491,9 +507,13 @@ func NewTemporalOperatorClusterListCommand(cctx *CommandContext, parent *Tempora
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "list [flags]"
 	s.Command.Short = "List all remote clusters"
-	s.Command.Long = ""
+	if hasHighlighting {
+		s.Command.Long = "Print a list of the remote Clusters on this system.\n\n\x1b[1mtemporal operator cluster list [--limit N]\x1b[0m"
+	} else {
+		s.Command.Long = "Print a list of the remote Clusters on this system.\n\n```\ntemporal operator cluster list [--limit N]\n```"
+	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().IntVar(&s.Limit, "limit", 0, "Show only the first `N` clusters in the list.")
+	s.Command.Flags().IntVar(&s.Limit, "limit", 0, "Show the first `N` clusters from the list.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -514,7 +534,11 @@ func NewTemporalOperatorClusterRemoveCommand(cctx *CommandContext, parent *Tempo
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "remove [flags]"
 	s.Command.Short = "Remove a remote cluster"
-	s.Command.Long = ""
+	if hasHighlighting {
+		s.Command.Long = "Remove a remote cluster from this system.\n\n\x1b[1mtemporal operator cluster remove --name YourClusterName\x1b[0m"
+	} else {
+		s.Command.Long = "Remove a remote cluster from this system.\n\n```\ntemporal operator cluster remove --name YourClusterName\n```"
+	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Name, "name", "", "Name of cluster.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
@@ -536,7 +560,7 @@ func NewTemporalOperatorClusterSystemCommand(cctx *CommandContext, parent *Tempo
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "system [flags]"
-	s.Command.Short = "Provide system info"
+	s.Command.Short = "Provide system info TAKING A BREAK HERE WEFWEF"
 	if hasHighlighting {
 		s.Command.Long = "\x1b[1mtemporal operator cluster system\x1b[0m command provides information about the system the Cluster is running on. This information can be used to diagnose problems occurring in the Temporal Server."
 	} else {
@@ -633,11 +657,11 @@ func NewTemporalOperatorNamespaceCreateCommand(cctx *CommandContext, parent *Tem
 		s.Command.Long = "The temporal operator namespace create command creates a new Namespace on the Server.\nNamespaces can be created on the active Cluster, or any named Cluster.\n`temporal operator namespace create --cluster YourCluster -n example-1`\n\nGlobal Namespaces can also be created.\n`temporal operator namespace create --global -n example-2`\n\nOther settings, such as retention and Visibility Archival State, can be configured as needed.\nFor example, the Visibility Archive can be set on a separate URI.\n`temporal operator namespace create --retention 5 --visibility-archival-state enabled --visibility-uri some-uri -n example-3`"
 	}
 	s.Command.Args = cobra.MaximumNArgs(1)
-	s.Command.Flags().StringVar(&s.ActiveCluster, "active-cluster", "", "Active cluster name")
+	s.Command.Flags().StringVar(&s.ActiveCluster, "active-cluster", "", "Active cluster name.")
 	s.Command.Flags().StringArrayVar(&s.Cluster, "cluster", nil, "Cluster names. \"--cluster\" may be passed multiple times to specify multiple clusters.")
 	s.Command.Flags().StringVar(&s.Data, "data", "", "Namespace data in `KEY=VALUE` format, separated by commas. `KEY` and `VALUE` may be arbitrary strings.")
-	s.Command.Flags().StringVar(&s.Description, "description", "", "Namespace description")
-	s.Command.Flags().StringVar(&s.Email, "email", "", "Owner email")
+	s.Command.Flags().StringVar(&s.Description, "description", "", "Namespace description.")
+	s.Command.Flags().StringVar(&s.Email, "email", "", "Owner email.")
 	s.Command.Flags().BoolVar(&s.Global, "global", false, "Enable cross-region replication for this namespace.")
 	s.HistoryArchivalState = NewStringEnum([]string{"disabled", "enabled"}, "disabled")
 	s.Command.Flags().Var(&s.HistoryArchivalState, "history-archival-state", "History archival state. Accepted values: disabled, enabled.")
@@ -753,8 +777,8 @@ func NewTemporalOperatorNamespaceUpdateCommand(cctx *CommandContext, parent *Tem
 		s.Command.Long = "The temporal operator namespace update command updates a Namespace.\n\nNamespaces can be assigned a different active Cluster.\n`temporal operator namespace update -n namespace --active-cluster NewActiveCluster`\n\nNamespaces can also be promoted to global Namespaces.\n`temporal operator namespace update -n namespace --promote-global`\n\nAny Archives that were previously enabled or disabled can be changed through this command.\nHowever, URI values for archival states cannot be changed after the states are enabled.\n`temporal operator namespace update -n namespace --history-archival-state enabled --visibility-archival-state disabled`"
 	}
 	s.Command.Args = cobra.MaximumNArgs(1)
-	s.Command.Flags().StringVar(&s.ActiveCluster, "active-cluster", "", "Active cluster name")
-	s.Command.Flags().StringArrayVar(&s.Cluster, "cluster", nil, "Cluster names")
+	s.Command.Flags().StringVar(&s.ActiveCluster, "active-cluster", "", "Active cluster name.")
+	s.Command.Flags().StringArrayVar(&s.Cluster, "cluster", nil, "Cluster names.")
 	s.Command.Flags().StringArrayVar(&s.Data, "data", nil, "Set a `KEY=VALUE` pair in namespace data. `KEY` and `VALUE` may be arbitrary strings, but JSON is recommended for `VALUE`. May be used multiple times to set multiple pairs.")
 	s.Command.Flags().StringVar(&s.Description, "description", "", "Namespace description")
 	s.Command.Flags().StringVar(&s.Email, "email", "", "Owner email")
