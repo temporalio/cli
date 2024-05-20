@@ -4,44 +4,224 @@ Commands for the Temporal CLI.
 
 <!--
 
-This document has a specific structure used by a parser. Here are the rules:
+NOTES FOR ERICA
 
-* Each command is a `### <command>: <short-description>` heading. Command is full command path including parent
+* Word wrapping to 80 chars.
+    * What about options? they tend to run long
+    * Could the text go to a second line after the spaced-dash?
+* Key-value space vs equal (I want space)
+* imperative vs descriptive for options. It's not a command, it's a setting.
+  (Flags may be different but flags aren't used, only options)
+* using period-delineated vs proper -- version. (Update docs?)
+* Remove "read more globally".
+  Can links be automated? Can content be shared from pages?
+  What about docs errors, such as ?prod.key?
+* Options punctuation. I suggest nothing at end, periods to separate.
+* -h, -o, -v are wonky:
+Flags:
+      --color string                                      Output coloring. Accepted values: always, never, auto. (default "auto")
+      --env string                                        Active environment name. (default "default")
+      --env-file $HOME/.config/temporalio/temporal.yaml   Path to environment settings file (defaults to $HOME/.config/temporalio/temporal.yaml).
+  -h, --help                                              help for temporal
+      --log-format string                                 Log format. Options are "text" and "json". Default is "text".
+      --log-level server start-dev                        Log level. Default is "info" for most commands and "warn" for server start-dev. Accepted values: debug, info, warn, error, never. (default "info")
+      --no-json-shorthand-payloads                        Raw payload output, even if they are JSON.
+  -o, --output string                                     Non-logging data output format. Accepted values: text, json, jsonl, none. (default "text")
+      --time-format string                                Time format. Accepted values: relative, iso, raw. (default "relative")
+  -v, --version                                           version for temporal
+
+Non-discussion
+Josh: "The available subcommands are already listed by the help output,
+so you don't have to include them here"
+
+-----
+
+This document is automatically parsed.
+Follow these rules.
+
+IN-HOUSE STYLE
+
+* User-visible line length: 80 characters max.
+* Use alphabetical order for commands.
+* Short descriptions do not end with a period.
+* Use punctuation consistently in long descriptions,
+  even at the end of phrases.
+* Every long description demonstrates at least one
+  example use of the command.
+  * Use YourEnvironment, YourNamespace, etc as metasyntactic stand-ins.
+* Commands with subcommands cannot be run on their own.
+  * Use full command examples that do not imply otherwise.
+* When presenting options use a space rather than equal to set them.
+  This is more universally supported and consistent with
+  POSIX guidelines.
+  * Yes: `temporal command --namespace YourNamespace`
+  * No: `temporal command --namespace=YourNamespace`
+* Use imperative-form verbs:
+  * Yes: `Pause or unpause a Schedule.`
+  * No: `This command pauses or unpauses a Schedule.`
+
+For options and flags:
+
+* When flags can be passed multiple times, say so explicitly in
+  the usage text.
+* Do not rely on the flag type (e.g. `string`, `bool`, etc.) being
+  shown to the user.
+  It is hidden if a `META-VARIABLE` is used.
+* Where possible, use a `META-VARIABLE` (all caps and wrapped in `\``s)
+  to describe/reference content passed to an option.
+* Limit `code spans` to meta-variables.
+  To reference other options or specify literal values, use double quotes.
+* Avoid parentheticals unless absolutely necessary.
+
+Examples:
+
+These show correct/incorrect usage text for the optional `--history-uri` flag:
+
+* Preferred:
+    "Archive history at \`URI\`. <explanation>"
+* Avoid incomplete sentences:
+    "_History archival \`URI\`_. <explanation>"
+* Avoid wrong verb tenses:
+    "_Archives history at \`URI\`_. <explanation>"
+* Avoid missing metavariables:
+    "Archive history at _the specified URI_. <explanation>"
+* Avoid unnecessary parenthetical:
+    `Archive history at \`URI\` _(note: <explanation>)_.`
+
+
+COMMAND ENTRY OVERVIEW
+
+A Command entry uses the following format:
+
+    ### <command>: <short-description>
+
+    <long description>
+
+    (optional command implementation configuration)
+
+    #### Options
+
+    * `--<long-option>`( , `-<short option>`) <data-type> - <short-description>( <extra-attributes>)
+    * `--<long-option>`( , `-<short option>`) <data-type> - <short-description>( <extra-attributes>)
+    * `--<long-option>`( , `-<short option>`) <data-type> - <short-description>( <extra-attributes>)
+    * ...
+
+    optional: Includes options set for [<options-set-name>](#options-set-for-<options-set-link-name>)
+
+COMMAND LISTING
+
+* Use H3 `### <command>: <short-description>` headings for each command.
+  * One line only. Use the complete command path with parent commands.
+  * Use square-bracked delimited arguments to document positional arguments.
+    For example `temporal operator namespace delete [namespace]`.
+  * Everything up to ':' or '[' is the command.
+    Square-bracketed positional arguments are not part of the command.
+  * Everything following the ':' or '[' is used for the short-description,
+    a concise command explanation.
+* A command's long description continues until encountering the H4
+  (`#### Options`) header.
+* At the end of the long description, an optional XML comment configures
+  the command implementation.
+  Use one asterisk-delimited bullet per line.
+  * `* has-init` - invokes `initCommand` method.
+  * `* exact-args=<number>` - Require this exact number of args.
+  * `* maximum-args=<number>` - Require this maximum number of args.
+
+LONG DESCRIPTION SECTION
+
+* Your text format is preserved literally, so be careful with line lengths.
+  Use manual wrapping as needed.
+
+OPTIONS SECTION
+
+* Start the optional Options section with an H4 `#### Options` header line.
+* Follow the header declaration with a list of options.
+* In the current implementation, you must include at least one option.
+  Otherwise, although `gen-commands` will complete, the CLI utility will
+  not run.
+* To incorporate an existing options set, add a single line below options
+  like this, remembering to end every `Include options set for` line with a
+  period.
+
+  ```
+  Includes options set for [<options-set-name>](#options-set-for-<options-set-link-name>).
+  ```
+
+  For example:
+
+  ```
+  Includes options set for [client](#options-set-for-client).
+  ```
+
+  An options set declaration is the equivalent of pasting those options into
+  the bulleted options list.
+
+  Note: Options that are similar but slightly different don't need to be in
+  option sets.
+  Reserve option sets for when the behavior of the option is the same across
   commands.
-  * Heading must be a single line.
-  * <command> will have all up until the leading "[" as the name and the bracket-and-post-bracket content as just
-    additional "use" info. This would be used to document positional arguments.
-  * Contents of each command section up to `#### Options` is the long description of the command.
-    * End of long description can have XML comment section that has `*` bulleted attributes (one line per bullet):
-      * `* has-init` - Will assume an `initCommand` method is on the command
-      * `* exact-args=<number>` - Require this exact number of args
-      * `* maximum-args=<number>` - Require this maximum number of args
-  * Can have `#### Options` or `#### Options set for <options-set-name>` which can have options.
-    * Can have bullets
-      * Each bullet is `* <option-names> (<data-type>) - <short-description>. <extra-attributes>`.
-      * `<option-names>` is `` `--<option-name>` `` and can optionally be followed by ``, `-<short-name>` ``.
-      * `<data-type>` must be one of `bool`, `duration`, `int`, `string`, `string[]`, `string-enum`, `timestamp`, TODO: more
-      * `<short-description>` can be just about anything so long as it doesn't match trailing attributes. Any wrap
-        around to newlines + two-space indention is trimmed to a single space.
-      * `<extra-attributes>` can be:
-        * `Required.` - Marks the option as required.
-        * `Default: <default-value>.` - Sets the default value of the option. No default means zero value of the type.
-        * `Options: <option>, <option>.` - Sets the possible options for a string enum type.
-        * `Env: <env-var>.` - Binds the environment variable to this flag.
-      * Options should be in order of most commonly used.
-    * Also can have single lines below options that say
-      `Includes options set for [<options-set-name>](#options-set-for-<options-set-link-name>).` which is the equivalent
-      of just having them appended to the bulleted list.
-      * Just because a command may have a couple of similar options with another doesn't mean you _have_ to make a
-        shareable options set. Copy/paste is acceptable.
-* Keep commands in alphabetical order.
-* Commands that have subcommands cannot be run on their own.
-* Keep lines at 120 chars if possible.
-* Add punctuation even at the end of phrases.
+  Copy/paste is fine, otherwise.
+
+DEFINING AN OPTION
+
+* List one option per line, using asterisk-delimited bullets.
+* Order the most commonly used options first.
+* Use this format:
+
+  ```
+  `--<long-option>`( , `-<short option>`) <data-type> - <short-description>( <extra-attributes>)
+  ```
+
+  This contrived example uses all these features.
+  In reality, the short option `-a` does not actually exist alongside
+  `--address`:
+
+  ```
+  * `--address`, `-a` (string) -
+    Connect to the Temporal Service at `HOST:PORT`.
+    Default: 127.0.0.1:7233. Env: TEMPORAL_ADDRESS.
+  ```
+
+* Each option listing includes a long option with a double dash and a
+  meaningful name.
+* [Optional] A short option uses a single dash and a short string.
+  When used, separate the long and short option with a comma and a space.
+* Backtick every option and short description.
+  Include the dash or dashes within the ticks.
+  For example: `` `--workflow-id`, `-w` ``
+* A data type follows option names indicating the required value type for the
+  option.
+  The type is `bool`, `duration`, `int`, `string`, `string[]`, `string-enum`,
+  or `timestamp`. (_TODO: more_.)
+  Always parenthesize data types.
+  For example: `` `--raw` (bool) ``
+* A dash follows the data type, with a space on either side.
+* The short description is free-form text and follows the dash.
+  Take care not to match trailing attributes.
+  Newline wrapping and/or two-space indentation condenses to a single space.
+* [Optional] extra attributes include:
+  * `Required.` - Marks the option as required.
+  * `Default: <default-value>.` - Sets the default value of the option.
+     No default means zero value of the type.
+  * `Options: <option>, <option>.` - Sets the possible options for a string
+     enum type.
+  * `Env: <env-var>.` - Binds the environment variable to this flag.
+    For example: `Env: TEMPORAL_ADDRESS`.
+    Use the variable name without dollar signs, etc.
 
 -->
 
-### temporal: Temporal command-line interface and development server.
+### temporal: Temporal command-line interface and development server
+
+The Temporal CLI (Command Line Interface) is a powerful tool that manages,
+monitors, and helps you debug your Temporal applications. With it, you can
+run a local Temporal Service directly from your terminal. This CLI tool helps
+you start Workflows, pass messages, cancel application steps, and more.
+
+* Start a local development service:
+      `temporal server start-dev`
+* Help messages: pass --help for any command for how-to details:
+      `temporal activity complete --help`
 
 <!--
 * has-init
@@ -49,67 +229,118 @@ This document has a specific structure used by a parser. Here are the rules:
 
 #### Options
 
-* `--env` (string) - Environment to read environment-specific flags from. Default: default. Env: TEMPORAL_ENV.
-* `--env-file` (string) - File to read all environments (defaults to `$HOME/.config/temporalio/temporal.yaml`).
-* `--log-level` (string-enum) - Log level. Default is "info" for most commands and "warn" for `server start-dev`.
-  Options: debug, info, warn, error, never. Default: info.
-* `--log-format` (string) - Log format. Options are "text" and "json". Default is "text".
-* `--output`, `-o` (string-enum) - Data output format. Note, this does not affect logging. Options: text, json, jsonl,
-  none. Default: text.
-* `--time-format` (string-enum) - Time format. Options: relative, iso, raw. Default: relative.
-* `--color` (string-enum) - Set coloring. Options: always, never, auto. Default: auto.
-* `--no-json-shorthand-payloads` (bool) - Always show all payloads as raw payloads even if they are JSON.
+* `--env` (string) -
+   Active environment name.
+   Default: default.
+   Env: TEMPORAL_ENV.
+* `--env-file` (string) -
+   Path to environment settings file.
+   (defaults to `$HOME/.config/temporalio/temporal.yaml`).
+* `--log-level` (string-enum) -
+   Log level.
+   Default is "info" for most commands and "warn" for `server start-dev`.
+   Options: debug, info, warn, error, never. Default: info.
+* `--log-format` (string) -
+  Log format.
+  Options are "text" and "json". Default is "text".
+* `--output`, `-o` (string-enum) -
+  Non-logging data output format.
+  Options: text, json, jsonl, none. Default: text.
+* `--time-format` (string-enum) -
+  Time format.
+  Options: relative, iso, raw. Default: relative.
+* `--color` (string-enum) -
+  Output coloring.
+  Options: always, never, auto. Default: auto.
+* `--no-json-shorthand-payloads` (bool) -
+  Raw payload output, even if they are JSON.
 
-### temporal activity: Complete or fail an Activity.
+### temporal activity: Complete or fail an Activity
+
+Update an Activity to report that it has completed or failed. This command
+marks an activity as successfully finished or as having encountered an error
+during execution.
 
 #### Options
 
 Includes options set for [client](#options-set-for-client).
 
+### temporal activity complete: Complete an Activity
 
-### temporal activity complete: Complete an Activity.
+Complete an Activity, marking it as successfully finished. Specify
+the ID and include a JSON result to use for the returned value.
 
-Complete an Activity.
-
-`temporal activity complete --activity-id=MyActivityId --workflow-id=MyWorkflowId --result='{"MyResultKey": "MyResultVal"}'`
-
-#### Options
-
-* `--activity-id` (string) - The Activity to be completed. Required.
-* `--identity` (string) - Identity of user submitting this request.
-* `--result` (string) - The result with which to complete the Activity (JSON). Required.
-
-Includes options set for [workflow reference](#options-set-for-workflow-reference).
-
-### temporal activity fail: Fail an Activity.
-
-Fail an Activity.
-
-`temporal activity fail --activity-id=MyActivityId --workflow-id=MyWorkflowId`
+```
+temporal activity complete \
+    --activity-id YourActivityId \
+    --workflow-id YourWorkflowId \
+    --result '{"YourResultKey": "YourResultVal"}'
+```
 
 #### Options
 
-* `--activity-id` (string) - The Activity to be failed. Required.
-* `--detail` (string) - JSON data describing reason for failing the Activity.
-* `--identity` (string) - Identity of user submitting this request.
-* `--reason` (string) - Reason for failing the Activity.
+* `--activity-id` (string) -
+  Activity `ID` to complete.
+  Required.
+* `--result` (string) -
+  Result `JSON` for completing the Activity.
+  Required.
+* `--identity` (string) -
+  Identity of the user submitting this request.
 
 Includes options set for [workflow reference](#options-set-for-workflow-reference).
 
+### temporal activity fail: Fail an Activity
+
+Fail an Activity, marking it as having encountered an error during execution.
+Specify the Activity and Workflow Ids.
+
+```
+temporal activity fail \
+    --activity-id YourActivityId \
+    --workflow-id YourWorkflowId
+```
+
+#### Options
+
+* `--activity-id` (string) -
+  `ID` of the Activity to be failed.
+  Required.
+* `--detail` (string) -
+  JSON data with the reason for failing the Activity.
+* `--identity` (string) -
+  Identity of the user submitting this request.
+* `--reason` (string) -
+  Reason for failing the Activity.
+
+Includes options set for [workflow reference](#options-set-for-workflow-reference).
 
 ### temporal batch: Manage Batch Jobs
 
-Batch commands change multiple Workflow Executions.
+A batch job executes a single command affecting multiple Workflow
+Executions in tandem. You specify the Workflow Execution
+
+You select the Workflow Executions to include and the kind of batch
+job to apply. For example, cancel all the running 'YourWorkflow' Workflows:
+
+```
+temporal workflow cancel \
+  --query 'ExecutionStatus = "Running" AND WorkflowType="YourWorkflow"' \
+  --reason "Testing"
+```
 
 #### Options
 
 Includes options set for [client](#options-set-for-client).
 
-### temporal batch describe: Show Batch Job progress.
+### temporal batch describe: Show Batch Job progress
 
-The temporal batch describe command shows the progress of an ongoing Batch Job.
+Show the progress of an ongoing Batch Job. Pass a valid Job ID
+to return the job's information:
 
-`temporal batch describe --job-id=MyJobId`
+```
+temporal batch describe --job-id YourJobId
+```
 
 #### Options
 
@@ -117,44 +348,102 @@ The temporal batch describe command shows the progress of an ongoing Batch Job.
 
 ### temporal batch list: List all Batch Jobs
 
-The temporal batch list command returns all Batch Jobs.
-Batch Jobs can be returned for an entire Cluster or a single Namespace.
+Return a list of Batch jobs, for the entire Service or, optionally,
+a single Namespace. This example lists the batch jobs for "YourNamespace".
 
-`temporal batch list --namespace=MyNamespace`
+
+```
+temporal batch list --namespace YourNamespace
+```
 
 #### Options
 
-* `--limit` (int) - Limit the number of items to print.
+* `--limit` (int) -
+  Show only the first `N` Batch Jobs in the list.
 
 ### temporal batch terminate: Terminate a Batch Job
 
-The temporal batch terminate command terminates a Batch Job with the provided Job Id.
-For future reference, provide a reason for terminating the Batch Job.
+Terminate the Batch job with the provided Job Id. You must provide
+a reason motivating the termination. This reason is stored with the Service
+for later reference. For example:
 
-`temporal batch terminate --job-id=MyJobId --reason=JobReason`
+```
+temporal batch terminate --job-id YourJobId --reason YourTerminationReason
+```
 
 #### Options
 
-* `--job-id` (string) - The Batch Job Id to terminate. Required.
-* `--reason` (string) - Reason for terminating the Batch Job. Required.
+* `--job-id` (string) -
+  The Batch Job Id to terminate.
+  Required.
+* `--reason` (string) -
+  Reason for terminating the Batch Job.
+  Required.
 
-### temporal env: Manage environments.
+### temporal env: Manage environments
 
-Use the '--env <env name>' option with other commands to point the CLI at a different Temporal Server instance. If --env
-is not passed, the 'default' environment is used.
+Environments create and manage groups of key-value presets. These presets
+configure options for your CLI commands so you don't have to type them in
+each time. Use them for easy set-up for distinct environments, such as "dev"
+and "prod" work.
 
-### temporal env delete: Delete an environment or environment property.
+For example, you might set an endpoint preset for the `--address` option
+for each environment. Supply the `--env` name and the CLI configures the
+options for you.
 
-`temporal env delete --env environment [-k property]`
+Environments compartmentalize each of your key-value stores. Changes to
+your "prod" environment do not affect your "dev" environment.
 
-Delete an environment or just a single property:
+Configuration examples:
 
-`temporal env delete --env prod`
-`temporal env delete --env prod -k tls-cert-path`
+```
+temporal env set --env prod --key namespace \
+    --value production.f45a2
+temporal env set --env prod --key address \
+    --value production.f45a2.tmprl.cloud:7233
+temporal env set --env prod --key tls-cert-path \
+    --value /temporal/certs/prod.pem
+temporal env set --env prod --key tls-key-path \
+    --value /temporal/certs/prod.key
+```
 
-If the environment is not specified, the `default` environment is deleted:
+Check your "prod" presets using `temporal env get --env prod`:
 
-`temporal env delete -k tls-cert-path`
+```
+address production.f45a2.tmprl.cloud:7233
+namespace production.f45a2
+tls-cert-path /temporal/certs/prod.pem
+tls-key-path /temporal/certs/prod.key
+```
+
+To use an environment with any command, pass `--env` followed by the
+environment name. For example, to list workflows in the "prod" environment:
+
+```
+$ temporal workflow list --env prod
+```
+
+For even easier use, specify your active environment as an environment
+variable in your shell by setting the `TEMPORAL_ENV` environment variable.
+The Temporal CLI uses the "default" environment when a specific environment
+was not named in the command or set as an environment variable.
+
+### temporal env delete: Delete an environment or environment property
+
+Remove an environment entirely or remove a key-value pair within an
+environment. When you don't specify an environment (with `--env` or by
+setting the `TEMPORAL_ENV` environment variable), you update the `default`
+environment.
+
+```
+temporal env delete --env YourEnvironment
+```
+
+or
+
+```
+temporal env delete --env prod  --key tls-key-path
+```
 
 <!--
 * maximum-args=1
@@ -162,15 +451,24 @@ If the environment is not specified, the `default` environment is deleted:
 
 #### Options
 
-* `--key`, `-k` (string) - The name of the property.
+* `--key`, `-k` (string) -
+  Property name.
 
-### temporal env get: Print environment properties.
+### temporal env get: Print environment properties
 
-`temporal env get --env environment`
+Print the environmental properties for a given environment:
 
-Print all properties of the 'prod' environment:
+```
+temporal env get --env YourEnvironment
+```
 
-`temporal env get prod`
+For example, invoking:
+
+```
+temporal env get --env prod
+```
+
+might produce these results:
 
 ```
 tls-cert-path  /home/my-user/certs/client.cert
@@ -181,13 +479,19 @@ namespace      someNamespace
 
 Print a single property:
 
-`temporal env get --env prod -k tls-key-path`
+```
+temporal env get --env prod --key tls-key-path
+```
+
+might produce this result:
 
 ```
 tls-key-path  /home/my-user/certs/cluster.key
 ```
 
-If the environment is not specified, the `default` environment is used.
+If you do not specify an environment name, either directly with the `--env`
+option or indirectly by setting the `TEMPORAL_ENV` environmental variable,
+you list the `default` environment properties.
 
 <!--
 * maximum-args=1
@@ -195,22 +499,47 @@ If the environment is not specified, the `default` environment is used.
 
 #### Options
 
-* `--key`, `-k` (string) - The name of the property.
+* `--key`, `-k` (string) -
+  Property name.
 
-### temporal env list: Print all environments.
+### temporal env list: Print all environments
 
-List all environments.
+List the environments you have previously set up on your local computer
+by issuing `temporal env list`. Your output shows all environment names
+currently stored in your "$HOME/.config/temporalio/temporal.yaml" file.
 
-### temporal env set: Set environment properties.
+```
+default
+prod
+dev
+```
 
-`temporal env set --env environment -k property -v value`
+### temporal env set: Set environment properties
 
-Property names match CLI option names, for example '--address' and '--tls-cert-path':
+Associate a value with a property key and store it in the environment you
+specify with the `--env` flag or have set with the `TEMPORAL_ENV`
+environmental variable.
 
-`temporal env set --env prod -k address -v 127.0.0.1:7233`
-`temporal env set --env prod -k tls-cert-path -v /home/my-user/certs/cluster.cert`
+```
+temporal env set --env environment --key property --value value
+```
 
-If the environment is not specified, the `default` environment is used.
+Property names match should match CLI option names. This enables
+them to be automatically retrieved for the active environment. Setting
+property values in advance reduces the effort required to issue CLI commands
+and helps avoid typos.
+
+For example, '--address' and '--tls-cert-path':
+
+```
+temporal env set --env prod --key address --value 127.0.0.1:7233
+temporal env set \
+    --env prod --key tls-cert-path \
+    --value /home/my-user/certs/cluster.cert
+```
+
+When an environment is not specified, the CLI tool uses the `default`
+environment.
 
 <!--
 * maximum-args=2
@@ -218,84 +547,116 @@ If the environment is not specified, the `default` environment is used.
 
 #### Options
 
-* `--key`, `-k` (string) - The name of the property.
-* `--value`, `-v` (string) - The value to set the property to.
+* `--key`, `-k` (string) -
+  Property name
+  Required.
+* `--value`, `-v` (string) -
+  Property value
+  Required.
 
-### temporal operator: Manage a Temporal deployment.
+### temporal operator: Manage a Temporal deployment
 
-Operator commands enable actions on Namespaces, Search Attributes, and Temporal Clusters. These actions are performed through subcommands.
+Operator commands perform actions on and retrieve information about
+Namespaces, Search Attributes, and Temporal Clusters.
 
-To run an Operator command, `run temporal operator [command] [subcommand] [command options]`
+To run an Operator command, issue:
+
+```
+temporal operator [command] [subcommand] [options]
+```
 
 #### Options
 
 Includes options set for [client](#options-set-for-client).
 
-### temporal operator cluster: Operations for running a Temporal Cluster.
+### temporal operator cluster: Operations for running a Temporal Cluster
 
-Cluster commands enable actions on Temporal Clusters.
+Perform actions on Temporal Clusters.
 
-Cluster commands follow this syntax: `temporal operator cluster [command] [command options]`
+```
+temporal operator cluster [subcommand] [options]
+```
+
 
 ### temporal operator cluster describe: Describe a cluster
 
-`temporal operator cluster describe` command shows information about the Cluster.
+View information about a cluster.
+
+```
+temporal operator cluster describe [options]
+```
 
 #### Options
 
-* `--detail` (bool) - Prints extra details.
+* `--detail` (bool) -
+  Include high-detail output.
 
-### temporal operator cluster health: Checks the health of a cluster
+### temporal operator cluster health: Check the health of a cluster
 
-`temporal operator cluster health` command checks the health of the Frontend Service.
+View information about the health of the Frontend Service.
 
-### temporal operator cluster list: List all clusters
+```
+temporal operator cluster health
+```
 
-`temporal operator cluster list` command prints a list of all remote Clusters on the system.
+### temporal operator cluster list: List all remote clusters
+
+Print a list of the remote Clusters on this system.
+
+```
+temporal operator cluster list [--limit N]
+```
 
 #### Options
 
-* `--limit` (int) - Limit the number of items to print.
+* `--limit` (int) -
+  Show the first `N` clusters from the list.
 
-### temporal operator cluster remove: Remove a cluster
+### temporal operator cluster remove: Remove a remote cluster
 
-`temporal operator cluster remove` command removes a remote Cluster from the system.
+Remove a remote cluster from this system.
+
+```
+temporal operator cluster remove --name YourClusterName
+```
 
 #### Options
 
-* `--name` (string) - Name of cluster. Required.
+* `--name` (string) - 
+  Name of cluster. 
+  Required.
 
-### temporal operator cluster system: Provide system info
+### temporal operator cluster system: Provide system info TAKING A BREAK HERE WEFWEF
 
 `temporal operator cluster system` command provides information about the system the Cluster is running on. This information can be used to diagnose problems occurring in the Temporal Server.
 
-### temporal operator cluster upsert: Add a remote
+### temporal operator cluster upsert: Add a remote cluster
 
 `temporal operator cluster upsert` command allows the user to add or update a remote Cluster.
 
 #### Options
 
-* `--frontend-address` (string) - IP address to bind the frontend service to. Required.
-* `--enable-connection` (bool) - enable cross cluster connection.
+* `--frontend-address` (string) - `IP` address to bind the frontend service to. Required.
+* `--enable-connection` (bool) - Enable cross-cluster connection.
 
-### temporal operator namespace: Operations performed on Namespaces.
+### temporal operator namespace: Operations on Namespaces
 
 Namespace commands perform operations on Namespaces contained in the Temporal Cluster.
 
 Cluster commands follow this syntax: `temporal operator namespace [command] [command options]`
 
-### temporal operator namespace create: Registers a new Namespace.
+### temporal operator namespace create: Register a new Namespace
 
 The temporal operator namespace create command creates a new Namespace on the Server.
 Namespaces can be created on the active Cluster, or any named Cluster.
-`temporal operator namespace create --cluster=MyCluster -n example-1`
+`temporal operator namespace create --cluster YourCluster -n example-1`
 
 Global Namespaces can also be created.
 `temporal operator namespace create --global -n example-2`
 
 Other settings, such as retention and Visibility Archival State, can be configured as needed.
 For example, the Visibility Archive can be set on a separate URI.
-`temporal operator namespace create --retention=5 --visibility-archival-state=enabled --visibility-uri=some-uri -n example-3`
+`temporal operator namespace create --retention 5 --visibility-archival-state enabled --visibility-uri some-uri -n example-3`
 
 <!--
 * maximum-args=1
@@ -304,18 +665,18 @@ For example, the Visibility Archive can be set on a separate URI.
 #### Options
 
 * `--active-cluster` (string) - Active cluster name.
-* `--cluster` (string[]) - Cluster names.
-* `--data` (string) - Namespace data in key=value format. Use JSON for values.
+* `--cluster` (string[]) - Cluster names. "--cluster" may be passed multiple times to specify multiple clusters.
+* `--data` (string) - Namespace data in `KEY=VALUE` format, separated by commas. `KEY` and `VALUE` may be arbitrary strings.
 * `--description` (string) - Namespace description.
 * `--email` (string) - Owner email.
-* `--global` (bool) - Whether the namespace is a global namespace.
+* `--global` (bool) - Enable cross-region replication for this namespace.
 * `--history-archival-state` (string-enum) - History archival state. Options: disabled, enabled. Default: disabled.
-* `--history-uri` (string) - Optionally specify history archival URI (cannot be changed after first time archival is enabled).
+* `--history-uri` (string) - `URI` at which to archive history. Cannot be changed after archival is first enabled.
 * `--retention` (duration) - Length of time a closed Workflow is preserved before deletion. Default: 72h.
 * `--visibility-archival-state` (string-enum) - Visibility archival state. Options: disabled, enabled. Default: disabled.
-* `--visibility-uri` (string) - Optionally specify visibility archival URI (cannot be changed after first time archival is enabled).
+* `--visibility-uri` (string) - `URI` at which to archive visibility data. Cannot be changed after archival is first enabled.
 
-### temporal operator namespace delete [namespace]: Deletes an existing Namespace.
+### temporal operator namespace delete [namespace]: Delete an existing Namespace
 
 The temporal operator namespace delete command deletes a given Namespace from the system.
 
@@ -325,14 +686,14 @@ The temporal operator namespace delete command deletes a given Namespace from th
 
 #### Options
 
-* `--yes`, `-y` (bool) - Confirm prompt to perform deletion.
+* `--yes`, `-y` (bool) - Don't ask for confirmation.
 
-### temporal operator namespace describe [namespace]: Describe a Namespace by its name or ID.
+### temporal operator namespace describe [namespace]: Describe a Namespace by its name or ID
 
 The temporal operator namespace describe command provides Namespace information.
 Namespaces are identified either by Namespace ID or by name.
 
-`temporal operator namespace describe --namespace-id=some-namespace-id`
+`temporal operator namespace describe --namespace-id some-namespace-id`
 `temporal operator namespace describe -n example-namespace-name`
 
 <!--
@@ -341,25 +702,25 @@ Namespaces are identified either by Namespace ID or by name.
 
 #### Options
 
-* `--namespace-id` (string) -  Namespace ID.
+* `--namespace-id` (string) - Namespace ID
 
-### temporal operator namespace list:  List all Namespaces.
+### temporal operator namespace list: List all Namespaces
 
 The temporal operator namespace list command lists all Namespaces on the Server.
 
-### temporal operator namespace update: Updates a Namespace.
+### temporal operator namespace update: Update a Namespace
 
 The temporal operator namespace update command updates a Namespace.
 
 Namespaces can be assigned a different active Cluster.
-`temporal operator namespace update -n namespace --active-cluster=NewActiveCluster`
+`temporal operator namespace update -n namespace --active-cluster NewActiveCluster`
 
 Namespaces can also be promoted to global Namespaces.
 `temporal operator namespace update -n namespace --promote-global`
 
 Any Archives that were previously enabled or disabled can be changed through this command.
 However, URI values for archival states cannot be changed after the states are enabled.
-`temporal operator namespace update -n namespace --history-archival-state=enabled --visibility-archival-state=disabled`
+`temporal operator namespace update -n namespace --history-archival-state enabled --visibility-archival-state disabled`
 
 <!--
 * maximum-args=1
@@ -368,21 +729,21 @@ However, URI values for archival states cannot be changed after the states are e
 #### Options
 * `--active-cluster` (string) - Active cluster name.
 * `--cluster` (string[]) - Cluster names.
-* `--data` (string[]) - Namespace data in key=value format. Use JSON for values.
-* `--description` (string) - Namespace description.
-* `--email` (string) - Owner email.
-* `--promote-global` (bool) - Promote local namespace to global namespace.
+* `--data` (string[]) - Set a `KEY=VALUE` pair in namespace data. `KEY` and `VALUE` may be arbitrary strings, but JSON is recommended for `VALUE`. May be used multiple times to set multiple pairs.
+* `--description` (string) - Namespace description
+* `--email` (string) - Owner email
+* `--promote-global` (bool) - Enable cross-region replication on this namespace.
 * `--history-archival-state` (string-enum) - History archival state. Options: disabled, enabled.
-* `--history-uri` (string) - Optionally specify history archival URI (cannot be changed after first time archival is enabled).
-* `--retention` (duration) - Length of time a closed Workflow is preserved before deletion.
+* `--history-uri` (string) - Archive history to this `URI`. Cannot be changed after archival is first enabled.
+* `--retention` (duration) - Length of time a closed Workflow is preserved before deletion
 * `--visibility-archival-state` (string-enum) - Visibility archival state. Options: disabled, enabled.
-* `--visibility-uri` (string) - Optionally specify visibility archival URI (cannot be changed after first time archival is enabled).
+* `--visibility-uri` (string) - Archive visibility information to this `URI`. Cannot be changed after archival is first enabled.
 
-### temporal operator search-attribute: Operations applying to Search Attributes
+### temporal operator search-attribute: Operations for Search Attributes
 
 Search Attribute commands enable operations for the creation, listing, and removal of Search Attributes.
 
-### temporal operator search-attribute create: Adds one or more custom Search Attributes
+### temporal operator search-attribute create: Add custom Search Attributes
 
 `temporal operator search-attribute create` command adds one or more custom Search Attributes.
 
@@ -391,20 +752,20 @@ Search Attribute commands enable operations for the creation, listing, and remov
 * `--name` (string[]) - Search Attribute name. Required.
 * `--type` (string[]) - Search Attribute type. Options: Text, Keyword, Int, Double, Bool, Datetime, KeywordList. Required.
 
-### temporal operator search-attribute list: Lists all Search Attributes that can be used in list Workflow Queries
+### temporal operator search-attribute list: List all Search Attributes
 
-`temporal operator search-attribute list` displays a list of all Search Attributes.
+`temporal operator search-attribute list` displays a list of all Search Attributes that can be used in list Workflow Queries.
 
-### temporal operator search-attribute remove: Removes custom search attribute metadata only
+### temporal operator search-attribute remove: Remove custom search attribute metadata
 
 `temporal operator search-attribute remove` command removes custom Search Attribute metadata.
 
 #### Options
 
 * `--name` (string[]) - Search Attribute name. Required.
-* `--yes`, `-y` (bool) - Confirm prompt to perform deletion.
+* `--yes`, `-y` (bool) - Don't ask for confirmation.
 
-### temporal schedule: Perform operations on Schedules.
+### temporal schedule: Perform operations on Schedules
 
 Schedule commands allow the user to create, use, and update Schedules.
 Schedules allow starting Workflow Execution at regular times.
@@ -413,7 +774,7 @@ Schedules allow starting Workflow Execution at regular times.
 
 Includes options set for [client](#options-set-for-client).
 
-### temporal schedule backfill: Backfills a past time range of actions.
+### temporal schedule backfill: Backfill a past time range of actions
 
  The `temporal schedule backfill` command runs the Actions that would have been run in a given time
 interval, all at once.
@@ -448,7 +809,7 @@ Example:
 * `--end-time` (timestamp) - Backfill end time. Required.
 * `--start-time` (timestamp) - Backfill start time. Required.
 
-### temporal schedule create: Create a new Schedule.
+### temporal schedule create: Create a new Schedule
 
 The `temporal schedule create` command creates a new Schedule.
 
@@ -468,20 +829,20 @@ Actions will be executed at any time specified in the Schedule.
 
 #### Options set for schedule configuration:
 
-* `--calendar` (string[]) - Calendar specification in JSON, e.g. `{"dayOfWeek":"Fri","hour":"17","minute":"5"}`.
-* `--catchup-window` (duration) - Maximum allowed catch-up time if server is down.
-* `--cron` (string[]) - Calendar spec in cron string format, e.g. `3 11 * * Fri`.
-* `--end-time` (timestamp) - Overall schedule end time.
+* `--calendar` (string[]) - Calendar specification in JSON, e.g. `{"dayOfWeek":"Fri","hour":"17","minute":"5"}`
+* `--catchup-window` (duration) - Maximum allowed catch-up time if server is down
+* `--cron` (string[]) - Calendar spec in cron string format, e.g. `3 11 * * Fri`
+* `--end-time` (timestamp) - Overall schedule end time
 * `--interval` (string[]) - Interval duration, e.g. 90m, or 90m/13m to include phase offset.
-* `--jitter` (duration) - Per-action jitter range.
-* `--notes` (string) - Initial value of notes field.
-* `--paused` (bool) - Initial value of paused state.
+* `--jitter` (duration) - Per-action jitter range
+* `--notes` (string) - Initial value of notes field
+* `--paused` (bool) - Initial value of paused state
 * `--pause-on-failure` (bool) - Pause schedule after any workflow failure.
 * `--remaining-actions` (int) - Total number of actions allowed. Zero (default) means unlimited.
-* `--start-time` (timestamp) - Overall schedule start time.
-* `--time-zone` (string) - Time zone to interpret all calendar specs in (IANA name).
-* `--schedule-search-attribute` (string[]) - Search Attribute for the _schedule_ in key=value format. Use valid JSON formats for value.
-* `--schedule-memo` (string[]) - Memo for the _schedule_ in key=value format. Use valid JSON formats for value.
+* `--start-time` (timestamp) - Overall schedule start time
+* `--time-zone` (string) - Interpret all calendar specs in the `TZ` time zone. For a list of time zones, see: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+* `--schedule-search-attribute` (string[]) - Set a Search Attribute for the schedule in `KEY=VALUE` format. `KEY` must be a string identifier (no quotes) and `VALUE` must be a JSON value. May be passed multiple times to set multiple Search Attributes.
+* `--schedule-memo` (string[]) - Set a memo for the schedule in `KEY=VALUE` format. `KEY` must be a string identifier (no quotes) and `VALUE` must be a JSON value. May be passed multiple times to set multiple memo values.
 
 #### Options
 
@@ -490,7 +851,7 @@ Includes options set for [overlap-policy](#options-set-for-overlap-policy).
 Includes options set for [shared-workflow-start](#options-set-for-shared-workflow-start).
 Includes options set for [payload-input](#options-set-for-payload-input).
 
-### temporal schedule delete: Deletes a Schedule.
+### temporal schedule delete: Delete a Schedule
 
 The `temporal schedule delete` command deletes a Schedule.
 Deleting a Schedule does not affect any Workflows started by the Schedule.
@@ -502,7 +863,7 @@ workflow delete` with the `TemporalScheduledById` Search Attribute.
 
 Includes options set for [schedule-id](#options-set-for-schedule-id).
 
-### temporal schedule describe: Get Schedule configuration and current state.
+### temporal schedule describe: Get Schedule configuration and current state
 
 The `temporal schedule describe` command shows the current configuration of one Schedule,
 including information about past, current, and future Workflow Runs.
@@ -511,16 +872,16 @@ including information about past, current, and future Workflow Runs.
 
 Includes options set for [schedule-id](#options-set-for-schedule-id).
 
-### temporal schedule list: Lists Schedules.
+### temporal schedule list: List all Schedules
 
 The `temporal schedule list` command lists all Schedules in a namespace.
 
 #### Options
 
-* `--long`, `-l` (bool) - Include detailed information.
-* `--really-long` (bool) - Include even more detailed information that's not really usable in table form.
+* `--long`, `-l` (bool) - Emit detailed information.
+* `--really-long` (bool) - Emit even more detailed information that's not usable in table form.
 
-### temporal schedule toggle: Pauses or unpauses a Schedule.
+### temporal schedule toggle: Pause or unpause a Schedule
 
 The `temporal schedule toggle` command can pause and unpause a Schedule.
 
@@ -536,18 +897,18 @@ Examples:
 
 * `--pause` (bool) - Pauses the schedule.
 * `--reason` (string) - Reason for pausing/unpausing. Default: "(no reason provided)".
-* `--unpause` (bool) - Pauses the schedule.
+* `--unpause` (bool) - Unpauses the schedule.
 
 Includes options set for [schedule-id](#options-set-for-schedule-id).
 
-### temporal schedule trigger: Triggers a schedule to take an action immediately.
+### temporal schedule trigger: Trigger a schedule to run immediately
 
 #### Options
 
 Includes options set for [schedule-id](#options-set-for-schedule-id).
 Includes options set for [overlap-policy](#options-set-for-overlap-policy).
 
-### temporal schedule update: Updates a Schedule with a new definition.
+### temporal schedule update: Update a Schedule with a new definition
 
 The temporal schedule update command updates an existing Schedule. It replaces the entire
 configuration of the schedule, including spec, action, and policies.
@@ -560,13 +921,13 @@ Includes options set for [overlap-policy](#options-set-for-overlap-policy).
 Includes options set for [shared-workflow-start](#options-set-for-shared-workflow-start).
 Includes options set for [payload-input](#options-set-for-payload-input).
 
-### temporal server: Run Temporal Server.
+### temporal server: Run Temporal Server
 
 Start a development version of [Temporal Server](/concepts/what-is-the-temporal-server):
 
 `temporal server start-dev`
 
-### temporal server start-dev: Start Temporal development server.
+### temporal server start-dev: Start Temporal development server
 
 Start [Temporal Server](/concepts/what-is-the-temporal-server) on `localhost:7233` with:
 
@@ -597,7 +958,7 @@ To persist Workflows across runs, use:
 * `--dynamic-config-value` (string[]) - Dynamic config value, as KEY=JSON_VALUE (string values need quotes).
 * `--log-config` (bool) - Log the server config being used to stderr.
 
-### temporal task-queue: Manage Task Queues.
+### temporal task-queue: Manage Task Queues
 
 Task Queue commands allow operations to be performed on [Task Queues](/concepts/what-is-a-task-queue). To run a Task
 Queue command, run `temporal task-queue [command] [command options]`.
@@ -606,7 +967,7 @@ Queue command, run `temporal task-queue [command] [command options]`.
 
 Includes options set for [client](#options-set-for-client).
 
-### temporal task-queue describe: Provides information for Workers that have recently polled on this Task Queue.
+### temporal task-queue describe: Show Workers that have recently polled on a Task Queue
 
 The `temporal task-queue describe` command provides [poller](/application-development/worker-performance#poller-count)
 information for a given [Task Queue](/concepts/what-is-a-task-queue).
@@ -618,7 +979,7 @@ request.
 
 Information about the Task Queue can be returned to troubleshoot server issues.
 
-`temporal task-queue describe --task-queue=MyTaskQueue --task-queue-type="activity"`
+`temporal task-queue describe --task-queue YourTaskQueue --task-queue-type "activity"`
 
 Use the options listed below to modify what this command returns.
 
@@ -628,7 +989,7 @@ Use the options listed below to modify what this command returns.
 * `--task-queue-type` (string-enum) - Task Queue type. Options: workflow, activity. Default: workflow.
 * `--partitions` (int) - Query for all partitions up to this number (experimental+temporary feature). Default: 1.
 
-### temporal task-queue get-build-id-reachability: Retrieves information about the reachability of Build IDs on one or more Task Queues.
+### temporal task-queue get-build-id-reachability: Show which Build IDs are available on a Task Queue
 
 This command can tell you whether or not Build IDs may be used for new, existing, or closed workflows. Both the '--build-id' and '--task-queue' flags may be specified multiple times. If you do not provide a task queue, reachability for the provided Build IDs will be checked against all task queues.
 
@@ -638,7 +999,7 @@ This command can tell you whether or not Build IDs may be used for new, existing
 * `--reachability-type` (string-enum) - Specify how you'd like to filter the reachability of Build IDs. Valid choices are `open` (reachable by one or more open workflows), `closed` (reachable by one or more closed workflows), or `existing` (reachable by either). If a Build ID is reachable by new workflows, that is always reported. Options: open, closed, existing. Default: existing.
 * `--task-queue`, `-t` (string[]) - Which Task Queue(s) to constrain the reachability search to. May be specified multiple times.
 
-### temporal task-queue get-build-ids: Fetch the sets of worker Build ID versions on the Task Queue.
+### temporal task-queue get-build-ids: Show worker Build ID versions on a Task Queue
 
 Fetch the sets of compatible build IDs associated with a Task Queue and associated information.
 
@@ -647,7 +1008,7 @@ Fetch the sets of compatible build IDs associated with a Task Queue and associat
 * `--task-queue`, `-t` (string) - Task queue name. Required.
 * `--max-sets` (int) - Limits how many compatible sets will be returned. Specify 1 to only return the current default major version set. 0 returns all sets. (default: 0). Default: 0.
 
-### temporal task-queue list-partition: Lists the Task Queue's partitions and the matching nodes they are assigned to.
+### temporal task-queue list-partition: List a Task Queue's partitions
 
 The temporal task-queue list-partition command displays the partitions of a Task Queue, along with the matching node they are assigned to.
 
@@ -655,11 +1016,11 @@ The temporal task-queue list-partition command displays the partitions of a Task
 
 * `--task-queue`, `-t` (string) - Task queue name. Required.
 
-### temporal task-queue update-build-ids: Operations to update the sets of worker Build ID versions on the Task Queue.
+### temporal task-queue update-build-ids: Operations to manage Build ID versions on a Task Queue
 
 Provides various commands for adding or changing the sets of compatible build IDs associated with a Task Queue. See the help of each sub-command for more.
 
-### temporal task-queue update-build-ids add-new-compatible: Add a new build ID compatible with an existing ID to the Task Queue version sets.
+### temporal task-queue update-build-ids add-new-compatible: Add a new build ID compatible with an existing ID to a Task Queue's version sets
 
 The new build ID will become the default for the set containing the existing ID. See per-flag help for more.
 
@@ -670,7 +1031,7 @@ The new build ID will become the default for the set containing the existing ID.
 * `--existing-compatible-build-id` (string) - A build id which must already exist in the version sets known by the task queue. The new id will be stored in the set containing this id, marking it as compatible with the versions within. Required.
 * `--set-as-default` (bool) - When set, establishes the compatible set being targeted as the overall default for the queue. If a different set was the current default, the targeted set will replace it as the new default. Defaults to false.
 
-### temporal task-queue update-build-ids add-new-default: Add a new default (incompatible) build ID to the Task Queue version sets.
+### temporal task-queue update-build-ids add-new-default: Add a new default (incompatible) build ID to a Task Queue's 7 sets
 
 Creates a new build id set which will become the new overall default for the queue with the provided build id as its only member. This new set is incompatible with all previous sets/versions.
 
@@ -679,7 +1040,7 @@ Creates a new build id set which will become the new overall default for the que
 * `--build-id` (string) - The new build id to be added. Required.
 * `--task-queue`, `-t` (string) - Name of the Task Queue. Required.
 
-### temporal task-queue update-build-ids promote-id-in-set: Promote an existing build ID to become the default for its containing set.
+### temporal task-queue update-build-ids promote-id-in-set: Promote a build ID to become the default for its containing set
 
 New tasks compatible with the set will be dispatched to the default id.
 
@@ -688,7 +1049,7 @@ New tasks compatible with the set will be dispatched to the default id.
 * `--build-id` (string) - An existing build id which will be promoted to be the default inside its containing set. Required.
 * `--task-queue`, `-t` (string) - Name of the Task Queue. Required.
 
-### temporal task-queue update-build-ids promote-set: Promote an existing build ID set to become the default for the Task Queue.
+### temporal task-queue update-build-ids promote-set: Promote a build ID set to become the default for a Task Queue
 
 If the set is already the default, this command has no effect.
 
@@ -698,7 +1059,7 @@ If the set is already the default, this command has no effect.
 * `--task-queue`, `-t` (string) - Name of the Task Queue. Required.
 
 
-### temporal workflow: Start, list, and operate on Workflows.
+### temporal workflow: Start, list, and operate on Workflows
 
 [Workflow](/concepts/what-is-a-workflow) commands perform operations on [Workflow Executions](/concepts/what-is-a-workflow-execution).
 
@@ -724,7 +1085,7 @@ Workflow commands use this syntax: `temporal workflow COMMAND [ARGS]`.
 * `--codec-endpoint` (string) - Endpoint for a remote Codec Server. Env: TEMPORAL_CODEC_ENDPOINT.
 * `--codec-auth` (string) - Sets the authorization header on requests to the Codec Server. Env: TEMPORAL_CODEC_AUTH.
 
-### temporal workflow cancel: Cancel a Workflow Execution.
+### temporal workflow cancel: Cancel a Workflow Execution
 
 The `temporal workflow cancel` command is used to cancel a [Workflow Execution](/concepts/what-is-a-workflow-execution).
 Canceling a running Workflow Execution records a `WorkflowExecutionCancelRequested` event in the Event History. A new
@@ -732,12 +1093,12 @@ Command Task will be scheduled, and the Workflow Execution will perform cleanup 
 
 Executions may be cancelled by [ID](/concepts/what-is-a-workflow-id):
 ```
-temporal workflow cancel --workflow-id MyWorkflowId
+temporal workflow cancel --workflow-id YourWorkflowId
 ```
 
 ...or in bulk via a visibility query [list filter](/concepts/what-is-a-list-filter):
 ```
-temporal workflow cancel --query=MyQuery
+temporal workflow cancel --query YourQuery
 ```
 
 Use the options listed below to change the behavior of this command.
@@ -746,7 +1107,7 @@ Use the options listed below to change the behavior of this command.
 
 Includes options set for [single workflow or batch](#options-set-single-workflow-or-batch)
 
-### temporal workflow count: Count Workflow Executions.
+### temporal workflow count: Count Workflow Executions
 
 The `temporal workflow count` command returns a count of [Workflow Executions](/concepts/what-is-a-workflow-execution).
 
@@ -756,7 +1117,7 @@ Use the options listed below to change the command's behavior.
 
 * `--query`, `-q` (string) - Filter results using a SQL-like query.
 
-### temporal workflow delete: Deletes a Workflow Execution.
+### temporal workflow delete: Delete a Workflow Execution
 
 The `temporal workflow delete` command is used to delete a specific [Workflow Execution](/concepts/what-is-a-workflow-execution).
 This asynchronously deletes a workflow's [Event History](/concepts/what-is-an-event-history).
@@ -764,7 +1125,7 @@ If the [Workflow Execution](/concepts/what-is-a-workflow-execution) is Running, 
 
 ```
 temporal workflow delete \
-		--workflow-id MyWorkflowId \
+		--workflow-id YourWorkflowId \
 ```
 
 Use the options listed below to change the command's behavior.
@@ -773,18 +1134,18 @@ Use the options listed below to change the command's behavior.
 
 Includes options set for [single workflow or batch](#options-set-single-workflow-or-batch)
 
-### temporal workflow describe: Show information about a Workflow Execution.
+### temporal workflow describe: Show information about a Workflow Execution
 
 The `temporal workflow describe` command shows information about a given
 [Workflow Execution](/concepts/what-is-a-workflow-execution).
 
 This information can be used to locate Workflow Executions that weren't able to run successfully.
 
-`temporal workflow describe --workflow-id=meaningful-business-id`
+`temporal workflow describe --workflow-id meaningful-business-id`
 
 Output can be shown as printed ('raw') or formatted to only show the Workflow Execution's auto-reset points.
 
-`temporal workflow describe --workflow-id=meaningful-business-id --raw=true --reset-points=true`
+`temporal workflow describe --workflow-id meaningful-business-id --raw true --reset-points true`
 
 Use the command options below to change the information returned by this command.
 
@@ -798,7 +1159,7 @@ Use the command options below to change the information returned by this command
 * `--reset-points` (bool) - Only show auto-reset points.
 * `--raw` (bool) - Print properties without changing their format.
 
-### temporal workflow execute: Start a new Workflow Execution and prints its progress.
+### temporal workflow execute: Start a new Workflow Execution and prints its progress
 
 The `temporal workflow execute` command starts a new [Workflow Execution](/concepts/what-is-a-workflow-execution) and
 prints its progress. The command completes when the Workflow Execution completes.
@@ -808,8 +1169,8 @@ Single quotes('') are used to wrap input as JSON.
 ```
 temporal workflow execute
 		--workflow-id meaningful-business-id \
-		--type MyWorkflow \
-		--task-queue MyTaskQueue \
+		--type YourWorkflow \
+		--task-queue YourTaskQueue \
 		--input '{"Input": "As-JSON"}'
 ```
 
@@ -822,7 +1183,7 @@ Includes options set for [shared workflow start](#options-set-for-shared-workflo
 Includes options set for [workflow start](#options-set-for-workflow-start).
 Includes options set for [payload input](#options-set-for-payload-input).
 
-### temporal workflow fix-history-json: Updates an event history JSON file to the current format.
+### temporal workflow fix-history-json: Updates an event history JSON file to the current format
 
 ```
 temporal workflow fix-history-json \
@@ -837,13 +1198,13 @@ Use the options listed below to change the command's behavior.
 * `--source`, `-s` (string) - Path to the input file. Required.
 * `--target`, `-t` (string) - Path to the output file, or standard output if not set.
 
-### temporal workflow list: List Workflow Executions based on a Query.
+### temporal workflow list: List Workflow Executions based on a Query
 
 The `temporal workflow list` command provides a list of [Workflow Executions](/concepts/what-is-a-workflow-execution)
 that meet the criteria of a given [Query](/concepts/what-is-a-query).
 By default, this command returns up to 10 closed Workflow Executions.
 
-`temporal workflow list --query=MyQuery`
+`temporal workflow list --query YourQuery`
 
 The command can also return a list of archived Workflow Executions.
 
@@ -857,7 +1218,7 @@ Use the command options below to change the information returned by this command
 * `--archived` (bool) - If set, will only query and list archived workflows instead of regular workflows.
 * `--limit` (int) - Limit the number of items to print.
 
-### temporal workflow query: Query a Workflow Execution.
+### temporal workflow query: Query a Workflow Execution
 
 The `temporal workflow query` command is used to [Query](/concepts/what-is-a-query) a
 [Workflow Execution](/concepts/what-is-a-workflow-execution)
@@ -865,9 +1226,9 @@ by [ID](/concepts/what-is-a-workflow-id).
 
 ```
 temporal workflow query \
-		--workflow-id MyWorkflowId \
-		--name MyQuery \
-		--input '{"MyInputKey": "MyInputValue"}'
+		--workflow-id YourWorkflowId \
+		--name YourQuery \
+		--input '{"YourInputKey": "YourInputValue"}'
 ```
 
 Use the options listed below to change the command's behavior.
@@ -881,19 +1242,19 @@ Use the options listed below to change the command's behavior.
 Includes options set for [payload input](#options-set-for-payload-input).
 Includes options set for [workflow reference](#options-set-for-workflow-reference).
 
-### temporal workflow reset: Resets a Workflow Execution by Event ID or reset type.
+### temporal workflow reset: Reset a Workflow Execution to an older point in history
 
 The temporal workflow reset command resets a [Workflow Execution](/concepts/what-is-a-workflow-execution).
 A reset allows the Workflow to resume from a certain point without losing its parameters or [Event History](/concepts/what-is-an-event-history).
 
 The Workflow Execution can be set to a given [Event Type](/concepts/what-is-an-event):
 ```
-temporal workflow reset --workflow-id=meaningful-business-id --type=LastContinuedAsNew
+temporal workflow reset --workflow-id meaningful-business-id --type LastContinuedAsNew
 ```
 
 ...or a specific any Event after `WorkflowTaskStarted`.
 ```
-temporal workflow reset --workflow-id=meaningful-business-id --event-id=MyLastEvent
+temporal workflow reset --workflow-id meaningful-business-id --event-id YourLastEvent
 ```
 For batch reset only FirstWorkflowTask, LastWorkflowTask or BuildId can be used. Workflow Id, run Id and event Id
 should not be set.
@@ -909,11 +1270,11 @@ Use the options listed below to change reset behavior.
 * `--type`, `-t` (string-enum) - Event type to which you want to reset. Options: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew, BuildId.
 * `--build-id` (string) - Only used if type is BuildId. Reset the first workflow task processed by this build id. Note that by default, this reset is allowed to be to a prior run in a chain of continue-as-new.
 * `--query`, `-q` (string) - Start a batch reset to operate on Workflow Executions with given List Filter.
-* `--yes`, `-y` (bool) - Confirm prompt to perform batch. Only allowed if query is present.
+* `--yes`, `-y` (bool) - Don't ask for confirmation. (Note: Only allowed if --query is present)
 
 
 
-### temporal workflow show: Show Event History for a Workflow Execution.
+### temporal workflow show: Show Event History for a Workflow Execution
 
 The `temporal workflow show` command provides the [Event History](/concepts/what-is-an-event-history) for a
 [Workflow Execution](/concepts/what-is-a-workflow-execution). With JSON output specified, this output can be given to
@@ -929,16 +1290,16 @@ Use the options listed below to change the command's behavior.
 
 Includes options set for [workflow reference](#options-set-for-workflow-reference).
 
-### temporal workflow signal: Signal Workflow Execution by Id.
+### temporal workflow signal: Signal a Workflow Execution
 
 The `temporal workflow signal` command is used to [Signal](/concepts/what-is-a-signal) a
 [Workflow Execution](/concepts/what-is-a-workflow-execution) by [ID](/concepts/what-is-a-workflow-id).
 
 ```
 temporal workflow signal \
-		--workflow-id MyWorkflowId \
-		--name MySignal \
-		--input '{"MyInputKey": "MyInputValue"}'
+		--workflow-id YourWorkflowId \
+		--name YourSignal \
+		--input '{"YourInputKey": "YourInputValue"}'
 ```
 
 Use the options listed below to change the command's behavior.
@@ -951,15 +1312,14 @@ Includes options set for [payload input](#options-set-for-payload-input).
 
 #### Options set for single workflow or batch:
 
-* `--workflow-id`, `-w` (string) - Workflow Id. Either this or query must be set.
-* `--run-id`, `-r` (string) - Run Id. Cannot be set when query is set.
-* `--query`, `-q` (string) - Start a batch to operate on Workflow Executions with given List Filter. Either this or
-  Workflow Id must be set.
+* `--workflow-id`, `-w` (string) - Workflow Id. Either this or --query must be set.
+* `--run-id`, `-r` (string) - Run Id. Cannot be set when --query is set.
+* `--query`, `-q` (string) - Start a batch to operate on Workflow Executions with given List Filter. Either --query or --workflow-id must be set.
 * `--reason` (string) - Reason to perform batch. Only allowed if query is present unless the command specifies
   otherwise. Defaults to message with the current user's name.
-* `--yes`, `-y` (bool) - Confirm prompt to perform batch. Only allowed if query is present.
+* `--yes`, `-y` (bool) - Don't ask for confirmation. (Note: Only allowed if --query is present)
 
-### temporal workflow stack: Query a Workflow Execution for its stack trace.
+### temporal workflow stack: Show the stack trace of a Workflow Execution
 
 The `temporal workflow stack` command [Queries](/concepts/what-is-a-query) a
 [Workflow Execution](/concepts/what-is-a-workflow-execution) with `__stack_trace` as the query type.
@@ -967,7 +1327,7 @@ This returns a stack trace of all the threads or routines currently used by the 
 useful for troubleshooting.
 
 ```
-temporal workflow stack --workflow-id MyWorkflowId
+temporal workflow stack --workflow-id YourWorkflowId
 ```
 
 Use the options listed below to change the command's behavior.
@@ -979,7 +1339,7 @@ Use the options listed below to change the command's behavior.
 
 Includes options set for [workflow reference](#options-set-for-workflow-reference).
 
-### temporal workflow start: Starts a new Workflow Execution.
+### temporal workflow start: Start a new Workflow Execution
 
 The `temporal workflow start` command starts a new [Workflow Execution](/concepts/what-is-a-workflow-execution). The
 Workflow and Run IDs are returned after starting the [Workflow](/concepts/what-is-a-workflow).
@@ -987,42 +1347,42 @@ Workflow and Run IDs are returned after starting the [Workflow](/concepts/what-i
 ```
 temporal workflow start \
 		--workflow-id meaningful-business-id \
-		--type MyWorkflow \
-		--task-queue MyTaskQueue \
+		--type YourWorkflow \
+		--task-queue YourTaskQueue \
 		--input '{"Input": "As-JSON"}'
 ```
 
 #### Options set for shared workflow start:
 
-* `--workflow-id`, `-w` (string) - Workflow Id.
+* `--workflow-id`, `-w` (string) - Workflow Id
 * `--type` (string) - Workflow Type name. Required.
 * `--task-queue`, `-t` (string) - Workflow Task queue. Required.
-* `--run-timeout` (duration) - Timeout of a Workflow Run.
-* `--execution-timeout` (duration) - Timeout for a WorkflowExecution, including retries and ContinueAsNew tasks.
-* `--task-timeout` (duration) - Start-to-close timeout for a Workflow Task. Default: 10s.
+* `--run-timeout` (duration) - Fail a Workflow Run if it takes longer than `DURATION`.
+* `--execution-timeout` (duration) - Fail a WorkflowExecution if it takes longer than `DURATION`, including retries and ContinueAsNew tasks.
+* `--task-timeout` (duration) - Fail a Workflow Task if it takes longer than `DURATION`. (Start-to-close timeout for a Workflow Task.) Default: 10s.
 * `--search-attribute` (string[]) - Passes Search Attribute in key=value format. Use valid JSON formats for value.
 * `--memo` (string[]) - Passes Memo in key=value format. Use valid JSON formats for value.
 
 #### Options set for workflow start:
 
-* `--cron` (string) - Cron schedule for the workflow. Deprecated - use schedules instead.
-* `--fail-existing` (bool) - Fail if the workflow already exists.
-* `--start-delay` (duration) - Specify a delay before the workflow starts. Cannot be used with a cron schedule. If the
-  workflow receives a signal or update before the delay has elapsed, it will begin immediately.
-* `--id-reuse-policy` (string) - Allows the same Workflow Id to be used in a new Workflow Execution. Options:
+* `--cron` (string) - Cron schedule for the Workflow. Deprecated - use schedules instead.
+* `--fail-existing` (bool) - Fail if the Workflow already exists.
+* `--start-delay` (duration) - Wait before starting the Workflow. Cannot be used with a cron schedule. If the
+  Workflow receives a signal or update before the delay has elapsed, it will start immediately.
+* `--id-reuse-policy` (string) - Allow the same Workflow Id to be used in a new Workflow Execution. Options:
   AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate, TerminateIfRunning.
 
 #### Options set for payload input:
 
-* `--input`, `-i` (string[]) - Input value (default JSON unless --input-payload-meta is non-JSON encoding). Can
-  be given multiple times for multiple arguments. Cannot be combined with --input-file.
-* `--input-file` (string[]) - Reads a file as the input (JSON by default unless --input-payload-meta is non-JSON
-  encoding). Can be given multiple times for multiple arguments. Cannot be combined with --input.
-* `--input-meta` (string[]) - Metadata for the input payload. Expected as key=value. If key is encoding, overrides the
-  default of json/plain.
-* `--input-base64` (bool) - If set, assumes --input or --input-file are base64 encoded and attempts to decode.
+* `--input`, `-i` (string[]) - Input value (default JSON unless --input-meta is non-JSON encoding). Can
+  be passed multiple times for multiple arguments. Cannot be combined with --input-file.
+* `--input-file` (string[]) - Read `PATH` as the input value (JSON by default unless --input-meta is non-JSON
+  encoding). Can be passed multiple times for multiple arguments. Cannot be combined with --input.
+* `--input-meta` (string[]) - Metadata for the input payload, specified as a `KEY=VALUE` pair. If KEY is "encoding", overrides the
+  default of "json/plain". Pass multiple --input-meta options to set multiple pairs.
+* `--input-base64` (bool) - Assume inputs are base64-encoded and attempt to decode them.
 
-### temporal workflow terminate: Terminate Workflow Execution by ID or List Filter.
+### temporal workflow terminate: Terminate a Workflow Execution
 
 The `temporal workflow terminate` command is used to terminate a
 [Workflow Execution](/concepts/what-is-a-workflow-execution). Canceling a running Workflow Execution records a
@@ -1031,12 +1391,12 @@ termination. Use `temporal workflow cancel` if you need to perform cleanup in yo
 
 Executions may be terminated by [ID](/concepts/what-is-a-workflow-id) with an optional reason:
 ```
-temporal workflow terminate [--reason my-reason] --workflow-id MyWorkflowId
+temporal workflow terminate [--reason my-reason] --workflow-id YourWorkflowId
 ```
 
 ...or in bulk via a visibility query [list filter](/concepts/what-is-a-list-filter):
 ```
-temporal workflow terminate --query=MyQuery
+temporal workflow terminate --query YourQuery
 ```
 
 Use the options listed below to change the behavior of this command.
@@ -1045,36 +1405,36 @@ Use the options listed below to change the behavior of this command.
 
 * `--workflow-id`, `-w` (string) - Workflow Id. Either this or query must be set.
 * `--run-id`, `-r` (string) - Run Id. Cannot be set when query is set.
-* `--query`, `-q` (string) - Start a batch to terminate Workflow Executions with given List Filter. Either this or
+* `--query`, `-q` (string) - Start a batch to terminate Workflow Executions with the `QUERY` List Filter. Either this or
   Workflow Id must be set.
 * `--reason` (string) - Reason for termination. Defaults to message with the current user's name.
 * `--yes`, `-y` (bool) - Confirm prompt to perform batch. Only allowed if query is present.
 
-### temporal workflow trace: Terminate Workflow Execution by ID or List Filter.
+### temporal workflow trace: Interactively show the progress of a Workflow Execution
 
-The `temporal workflow trace` command display the progress of a [Workflow Execution](/concepts/what-is-a-workflow-execution) and its child workflows with a trace.
+The `temporal workflow trace` command displays the progress of a [Workflow Execution](/concepts/what-is-a-workflow-execution) and its child workflows with a real-time trace.
 This view provides a great way to understand the flow of a workflow.
 
 Use the options listed below to change the behavior of this command.
 
 #### Options
 
-* `--fold` (string[]) - Statuses for which Child Workflows will be folded in (this will reduce the number of information fetched and displayed). Case-insensitive and ignored if no-fold supplied. Available values: running, completed, failed, canceled, terminated, timedout, continueasnew.
-* `--no-fold` (bool) - Disable folding. All Child Workflows within the set depth will be fetched and displayed. 
-* `--depth` (int) - Depth of child workflows to fetch. Use -1 to fetch child workflows at any depth. Default: -1.
-* `--concurrency` (int) - Number of concurrent workflow histories that will be requested at any given time. Default: 10.
+* `--fold` (string[]) - Fold Child Workflows with the specified `STATUS`. To specify multiple statuses, pass --fold multiple times. This will reduce the amount of information fetched and displayed. Case-insensitive. Ignored if --no-fold supplied. Available values: running, completed, failed, canceled, terminated, timedout, continueasnew.
+* `--no-fold` (bool) - Disable folding. All Child Workflows within the set depth will be fetched and displayed.
+* `--depth` (int) - Fetch up to N Child Workflows deep. Use -1 to fetch child workflows at any depth. Default: -1.
+* `--concurrency` (int) - Fetch up to N Workflow Histories at a time. Default: 10.
 
 Includes options set for [workflow reference](#options-set-for-workflow-reference).
 
-### temporal workflow update: Updates a running workflow synchronously.
+### temporal workflow update: Update a running workflow synchronously
 
 The `temporal workflow update` command is used to synchronously [Update](/concepts/what-is-an-update) a
 [WorkflowExecution](/concepts/what-is-a-workflow-execution) by [ID](/concepts/what-is-a-workflow-id).
 
 ```
 temporal workflow update \
-		--workflow-id MyWorkflowId \
-		--name MyUpdate \
+		--workflow-id YourWorkflowId \
+		--name YourUpdate \
 		--input '{"Input": "As-JSON"}'
 ```
 
@@ -1083,10 +1443,10 @@ Use the options listed below to change the command's behavior.
 #### Options
 
 * `--name` (string) - Update Name. Required.
-* `--workflow-id`, `-w` (string) - Workflow Id. Required.
-* `--update-id` (string) - Update ID. If unset, default to a UUID.
-* `--run-id`, `-r` (string) - Run Id. If unset, the currently running Workflow Execution receives the Update.
+* `--workflow-id`, `-w` (string) - Workflow `ID`. Required.
+* `--update-id` (string) - Update `ID`. If unset, default to a UUID.
+* `--run-id`, `-r` (string) - Run `ID`. If unset, the currently running Workflow Execution receives the Update.
 * `--first-execution-run-id` (string) - Send the Update to the last Workflow Execution in the chain that started
-  with this Run Id.
+  with `ID`.
 
 Includes options set for [payload input](#options-set-for-payload-input).
