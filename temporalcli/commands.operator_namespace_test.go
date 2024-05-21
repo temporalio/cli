@@ -78,7 +78,7 @@ func (s *SharedServerSuite) TestNamespaceUpdate() {
 		"--address", s.Address(),
 		"--description", "description after",
 		"--email", "email@after",
-		"--retention", "48h",
+		"--retention", "2d",
 		"--data", "k1=v1",
 		"--data", "k2=v2",
 		"--output", "json",

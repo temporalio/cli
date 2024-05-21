@@ -248,12 +248,12 @@ func buildStartOptions(sw *SharedWorkflowStartOptions, w *WorkflowStartOptions) 
 	o := client.StartWorkflowOptions{
 		ID:                                       sw.WorkflowId,
 		TaskQueue:                                sw.TaskQueue,
-		WorkflowRunTimeout:                       sw.RunTimeout,
-		WorkflowExecutionTimeout:                 sw.ExecutionTimeout,
-		WorkflowTaskTimeout:                      sw.TaskTimeout,
+		WorkflowRunTimeout:                       sw.RunTimeout.Duration(),
+		WorkflowExecutionTimeout:                 sw.ExecutionTimeout.Duration(),
+		WorkflowTaskTimeout:                      sw.TaskTimeout.Duration(),
 		CronSchedule:                             w.Cron,
 		WorkflowExecutionErrorWhenAlreadyStarted: w.FailExisting,
-		StartDelay:                               w.StartDelay,
+		StartDelay:                               w.StartDelay.Duration(),
 	}
 	if w.IdReusePolicy != "" {
 		var err error

@@ -57,7 +57,7 @@ func (c *TemporalOperatorNamespaceCreateCommand) run(cctx *CommandContext, args 
 		Namespace:                        nsName,
 		Description:                      c.Description,
 		OwnerEmail:                       c.Email,
-		WorkflowExecutionRetentionPeriod: durationpb.New(c.Retention),
+		WorkflowExecutionRetentionPeriod: durationpb.New(c.Retention.Duration()),
 		Clusters:                         clusters,
 		ActiveClusterName:                c.ActiveCluster,
 		Data:                             data,
@@ -255,7 +255,7 @@ func (c *TemporalOperatorNamespaceUpdateCommand) run(cctx *CommandContext, args 
 		}
 
 		if c.Retention > 0 {
-			retention = durationpb.New(c.Retention)
+			retention = durationpb.New(c.Retention.Duration())
 		}
 
 		var clusters []*replication.ClusterReplicationConfig
