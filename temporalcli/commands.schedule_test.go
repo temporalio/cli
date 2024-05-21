@@ -394,3 +394,47 @@ func (s *SharedServerSuite) TestSchedule_Update() {
 			j.Schedule.Spec.Interval[0].Interval == "3600s"
 	}, 10*time.Second, 100*time.Millisecond)
 }
+
+func (s *SharedServerSuite) TestSchedule_Memo_Update() {
+	schedId, schedWfId, res := s.createSchedule("--memo", "bar=1")
+	s.NoError(res.Err)
+	res = s.Execute(
+		"schedule", "update",
+		"--address", s.Address(),
+		"-s", schedId,
+		"--task-queue", s.Worker().Options.TaskQueue,
+		"--type", "DevWorkflow",
+		"--workflow-id", schedWfId,
+		"--memo", "bar=2",
+	)
+	s.NoError(res.Err)
+	s.Eventually(func() bool {
+		res = s.Execute(
+			"schedule", "describe",
+			"--address", s.Address(),
+			"-s", schedId,
+			"-o", "json",
+		)
+		s.NoError(res.Err)
+
+		var j struct {
+			Schedule struct {
+				Action struct {
+					StartWorkflow struct {
+						Memo struct {
+							Fields struct {
+								Bar struct {
+									Data string `json:"data"`
+								} `json:"bar"`
+							} `json:"fields"`
+						} `json:"memo"`
+					} `json:"startWorkflow"`
+				} `json:"action"`
+			} `json:"schedule"`
+		}
+		s.NoError(json.Unmarshal(res.Stdout.Bytes(), &j))
+
+		// Decoded 'Mg==' is 2
+		return j.Schedule.Action.StartWorkflow.Memo.Fields.Bar.Data == "Mg=="
+	}, 10*time.Second, 100*time.Millisecond)
+}
