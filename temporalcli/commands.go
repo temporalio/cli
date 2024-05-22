@@ -89,6 +89,8 @@ func NewCommandContext(ctx context.Context, options CommandOptions) (*CommandCon
 	return cctx, stop, nil
 }
 
+const temporalEnv = "TEMPORAL_ENV"
+
 func (c *CommandContext) preprocessOptions() error {
 	if len(c.Options.Args) == 0 {
 		c.Options.Args = os.Args[1:]
@@ -123,6 +125,9 @@ func (c *CommandContext) preprocessOptions() error {
 
 		if c.Options.EnvConfigName == "" {
 			c.Options.EnvConfigName = "default"
+			if envVal, ok := c.Options.LookupEnv(temporalEnv); ok {
+				c.Options.EnvConfigName = envVal
+			}
 			// Default to --env, prefetched from CLI args
 			for i, arg := range c.Options.Args {
 				if arg == "--env" && i+1 < len(c.Options.Args) {
