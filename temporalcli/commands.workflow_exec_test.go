@@ -491,8 +491,12 @@ func (s *SharedServerSuite) TestWorkflow_Execute_EnvConfig() {
 	s.ContainsOnSameLine(res.Stdout.String(), "Result", `"env-conf-input"`)
 
 	// And we can specify `env` with a property
-	s.NoError(os.Setenv("TEMPORAL_ENV", "myenv"))
-	defer os.Unsetenv("TEMPORAL_ENV")
+	s.CommandHarness.Options.LookupEnv = func(key string) (string, bool) {
+		if key == "TEMPORAL_ENV" {
+			return "myenv", true
+		}
+		return "", false
+	}
 	res = s.Execute(
 		"workflow", "execute",
 		"--env-file", tmpFile.Name(),
