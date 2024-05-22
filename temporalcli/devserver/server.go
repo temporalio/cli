@@ -200,14 +200,15 @@ func (s *StartOptions) buildServerOptions() ([]temporal.ServerOption, error) {
 		temporal.WithClaimMapper(func(*config.Config) authorization.ClaimMapper { return claimMapper }),
 	}
 
+	// Setting host level mutable state cache size to 8k.
+	dynConf := make(dynamicconfig.StaticClient, len(s.DynamicConfigValues)+1)
+	dynConf[dynamicconfig.HistoryCacheHostLevelMaxSize] = 8096
+
 	// Dynamic config if set
-	if len(s.DynamicConfigValues) > 0 {
-		dynConf := make(dynamicconfig.StaticClient, len(s.DynamicConfigValues))
-		for k, v := range s.DynamicConfigValues {
-			dynConf[dynamicconfig.Key(k)] = v
-		}
-		opts = append(opts, temporal.WithDynamicConfigClient(dynConf))
+	for k, v := range s.DynamicConfigValues {
+		dynConf[dynamicconfig.Key(k)] = v
 	}
+	opts = append(opts, temporal.WithDynamicConfigClient(dynConf))
 
 	// gRPC interceptors if set
 	if len(s.GRPCInterceptors) > 0 {
