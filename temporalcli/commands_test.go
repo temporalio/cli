@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/nexus-rpc/sdk-go/nexus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -284,6 +285,9 @@ func StartDevServer(t *testing.T, options DevServerOptions) *DevServer {
 	if d.Options.FrontendPort == 0 {
 		d.Options.FrontendPort = devserver.MustGetFreePort(d.Options.FrontendIP)
 	}
+	if d.Options.FrontendHTTPPort == 0 {
+		d.Options.FrontendHTTPPort = devserver.MustGetFreePort(d.Options.FrontendIP)
+	}
 	if len(d.Options.Namespaces) == 0 {
 		d.Options.Namespaces = []string{
 			"default",
@@ -336,6 +340,11 @@ func StartDevServer(t *testing.T, options DevServerOptions) *DevServer {
 	d.Options.DynamicConfigValues["system.enableNexus"] = true
 	d.Options.DynamicConfigValues["frontend.MaxConcurrentBatchOperationPerNamespace"] = 1000
 	d.Options.DynamicConfigValues["frontend.namespaceRPS.visibility"] = 100
+	d.Options.DynamicConfigValues["component.nexusoperations.callback.endpoint.template"] = fmt.Sprintf(
+		"http://%s:%d/namespaces/{{.NamespaceName}}/nexus/callback",
+		d.Options.FrontendIP,
+		d.Options.FrontendHTTPPort,
+	)
 
 	d.Options.GRPCInterceptors = append(
 		d.Options.GRPCInterceptors,
@@ -444,6 +453,8 @@ type DevWorkerOptions struct {
 	Workflows []any
 	// Optional, no default, but DevActivity is always registered
 	Activities []any
+	// Optional, no default
+	NexusServices []*nexus.Service
 }
 
 // Simply a stub for client use
@@ -475,6 +486,9 @@ func (d *DevServer) StartDevWorker(t *testing.T, options DevWorkerOptions) *DevW
 	ops := &devOperations{w}
 	w.Worker.RegisterWorkflowWithOptions(ops.DevWorkflow, workflow.RegisterOptions{Name: "DevWorkflow"})
 	w.Worker.RegisterActivity(ops.DevActivity)
+	for _, s := range options.NexusServices {
+		w.Worker.RegisterNexusService(s)
+	}
 	// Start worker or fail
 	require.NoError(t, w.Worker.Start(), "failed starting worker")
 	return w

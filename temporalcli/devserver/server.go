@@ -257,6 +257,7 @@ func (s *StartOptions) buildServerConfig() (*config.Config, error) {
 					Enabled:                true,
 					InitialFailoverVersion: int64(s.InitialFailoverVersion),
 					RPCAddress:             fmt.Sprintf("%v:%v", MaybeEscapeIPv6(s.FrontendIP), s.FrontendPort),
+					HTTPAddress:            fmt.Sprintf("%v:%v", MaybeEscapeIPv6(s.FrontendIP), s.FrontendHTTPPort),
 					ClusterID:              s.ClusterID,
 				},
 			},
