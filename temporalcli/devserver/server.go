@@ -257,6 +257,7 @@ func (s *StartOptions) buildServerConfig() (*config.Config, error) {
 					Enabled:                true,
 					InitialFailoverVersion: int64(s.InitialFailoverVersion),
 					RPCAddress:             fmt.Sprintf("127.0.0.1:%v", s.FrontendPort),
+					HTTPAddress:            fmt.Sprintf("127.0.0.1:%v", s.FrontendHTTPPort),
 					ClusterID:              s.ClusterID,
 				},
 			},
