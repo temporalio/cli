@@ -134,6 +134,10 @@ func (h *CommandHarness) Execute(args ...string) *CommandResult {
 	options.Args = args
 	// Disable env if no env file and no --env-file arg
 	options.DisableEnvConfig = options.EnvConfigFile == "" && !slices.Contains(args, "--env-file")
+	// Set default env name if disabled, otherwise we'll fail with missing environment
+	if options.DisableEnvConfig {
+		options.EnvConfigName = "default"
+	}
 	// Capture error
 	options.Fail = func(err error) {
 		if res.Err != nil {
