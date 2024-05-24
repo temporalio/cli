@@ -1,6 +1,6 @@
 module github.com/temporalio/cli
 
-go 1.21
+go 1.22.3
 
 require (
 	github.com/alitto/pond v1.8.3
@@ -14,11 +14,11 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.9.0
 	github.com/temporalio/ui-server/v2 v2.26.2
-	go.temporal.io/api v1.32.1-0.20240425235436-fa9b9c7c3dc8
+	go.temporal.io/api v1.34.0
 	go.temporal.io/sdk v1.26.2-0.20240503235745-e8147ac49434
-	go.temporal.io/server v1.24.0-m3.0.0.20240507004956-bb8443023e7c
-	google.golang.org/grpc v1.63.2
-	google.golang.org/protobuf v1.33.0
+	go.temporal.io/server v1.25.0-113.0.0.20240524000238-c5cb97940d8e
+	google.golang.org/grpc v1.64.0
+	google.golang.org/protobuf v1.34.1
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -60,7 +60,7 @@ require (
 	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/gorilla/securecookie v1.1.1 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0 // indirect
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.19.1 // indirect
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.20.0 // indirect
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
 	github.com/iancoleman/strcase v0.3.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
@@ -78,8 +78,9 @@ require (
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
+	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
-	github.com/nexus-rpc/sdk-go v0.0.7 // indirect
+	github.com/nexus-rpc/sdk-go v0.0.8-0.20240502185337-2b47041a2cc2 // indirect
 	github.com/olivere/elastic/v7 v7.0.32 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/pborman/uuid v1.2.1 // indirect
@@ -124,20 +125,20 @@ require (
 	go.uber.org/fx v1.21.1 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
-	golang.org/x/crypto v0.22.0 // indirect
+	golang.org/x/crypto v0.23.0 // indirect
 	golang.org/x/exp v0.0.0-20240416160154-fe59bbe5cc7f // indirect
 	golang.org/x/mod v0.17.0 // indirect
-	golang.org/x/net v0.24.0 // indirect
-	golang.org/x/oauth2 v0.19.0 // indirect
+	golang.org/x/net v0.25.0 // indirect
+	golang.org/x/oauth2 v0.20.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
-	golang.org/x/sys v0.19.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
+	golang.org/x/sys v0.20.0 // indirect
+	golang.org/x/text v0.15.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	golang.org/x/tools v0.20.0 // indirect
 	google.golang.org/api v0.176.1 // indirect
 	google.golang.org/genproto v0.0.0-20240415180920-8c6c420018be // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20240415180920-8c6c420018be // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240415180920-8c6c420018be // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20240521202816-d264139d666e // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240521202816-d264139d666e // indirect
 	gopkg.in/go-jose/go-jose.v2 v2.6.3 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
