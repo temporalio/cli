@@ -137,7 +137,7 @@ func (h *CommandHarness) Execute(args ...string) *CommandResult {
 	// Capture error
 	options.Fail = func(err error) {
 		if res.Err != nil {
-			panic("fail called twice")
+			panic("fail called twice, just failed with " + err.Error())
 		}
 		res.Err = err
 	}

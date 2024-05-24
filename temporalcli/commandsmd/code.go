@@ -194,6 +194,10 @@ func (c *Command) writeCode(w *codeWriter) error {
 	} else {
 		w.writeLinef("s.Command.Args = %v.NoArgs", w.importCobra())
 	}
+	if c.IgnoreMissingEnv {
+		w.writeLinef("s.Command.Annotations = make(map[string]string)")
+		w.writeLinef("s.Command.Annotations[\"ignoresMissingEnv\"] = \"true\"")
+	}
 	// Add subcommands
 	for _, subCommand := range subCommands {
 		w.writeLinef("s.Command.AddCommand(&New%v(cctx, &s).Command)", subCommand.structName())

@@ -341,6 +341,8 @@ func NewTemporalEnvListCommand(cctx *CommandContext, parent *TemporalEnvCommand)
 	s.Command.Short = "Print all environments."
 	s.Command.Long = "List all environments."
 	s.Command.Args = cobra.NoArgs
+	s.Command.Annotations = make(map[string]string)
+	s.Command.Annotations["ignoresMissingEnv"] = "true"
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -368,6 +370,8 @@ func NewTemporalEnvSetCommand(cctx *CommandContext, parent *TemporalEnvCommand) 
 		s.Command.Long = "`temporal env set --env environment -k property -v value`\n\nProperty names match CLI option names, for example '--address' and '--tls-cert-path':\n\n`temporal env set --env prod -k address -v 127.0.0.1:7233`\n`temporal env set --env prod -k tls-cert-path -v /home/my-user/certs/cluster.cert`\n\nIf the environment is not specified, the `default` environment is used."
 	}
 	s.Command.Args = cobra.MaximumNArgs(2)
+	s.Command.Annotations = make(map[string]string)
+	s.Command.Annotations["ignoresMissingEnv"] = "true"
 	s.Command.Flags().StringVarP(&s.Key, "key", "k", "", "The name of the property.")
 	s.Command.Flags().StringVarP(&s.Value, "value", "v", "", "The value to set the property to.")
 	s.Command.Run = func(c *cobra.Command, args []string) {

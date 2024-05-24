@@ -8,11 +8,11 @@ import (
 	"github.com/temporalio/cli/temporalcli/internal/printer"
 )
 
-func (c *TemporalEnvCommand) envNameAndKey(cctx *CommandContext, args[] string, keyFlag string) (string, string, error) {
+func (c *TemporalEnvCommand) envNameAndKey(cctx *CommandContext, args []string, keyFlag string) (string, string, error) {
 	if len(args) > 0 {
 		cctx.Logger.Warn("Arguments to env commands are deprecated; please use --env and --key (or -k) instead")
 
-		if (c.Parent.Env != "default" || keyFlag != "") {
+		if c.Parent.Env != "default" || keyFlag != "" {
 			return "", "", fmt.Errorf("cannot specify both an argument and flags; please use flags instead")
 		}
 
@@ -42,11 +42,8 @@ func (c *TemporalEnvDeleteCommand) run(cctx *CommandContext, args []string) erro
 		return err
 	}
 
-	// Env must be present
-	env, ok := cctx.EnvConfigValues[envName]
-	if !ok {
-		return fmt.Errorf("env %q not found", envName)
-	}
+	// Env is guaranteed to already be present
+	env, _ := cctx.EnvConfigValues[envName]
 	// User can remove single flag or all in env
 	if key != "" {
 		cctx.Logger.Info("Deleting env property", "env", envName, "property", key)
@@ -64,11 +61,8 @@ func (c *TemporalEnvGetCommand) run(cctx *CommandContext, args []string) error {
 		return err
 	}
 
-	// Env must be present
-	env, ok := cctx.EnvConfigValues[envName]
-	if !ok {
-		return fmt.Errorf("env %q not found", envName)
-	}
+	// Env is guaranteed to already be present
+	env, _ := cctx.EnvConfigValues[envName]
 	type prop struct {
 		Property string `json:"property"`
 		Value    string `json:"value"`

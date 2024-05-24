@@ -201,6 +201,10 @@ If the environment is not specified, the `default` environment is used.
 
 List all environments.
 
+<!--
+* ignores-missing-env
+-->
+
 ### temporal env set: Set environment properties.
 
 `temporal env set --env environment -k property -v value`
@@ -214,6 +218,7 @@ If the environment is not specified, the `default` environment is used.
 
 <!--
 * maximum-args=2
+* ignores-missing-env
 -->
 
 #### Options

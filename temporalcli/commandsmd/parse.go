@@ -15,17 +15,18 @@ import (
 var CommandsMarkdown []byte
 
 type Command struct {
-	FullName        string
-	NamePath        []string
-	UseSuffix       string
-	Short           string
-	LongPlain       string
-	LongHighlighted string
-	LongMarkdown    string
-	OptionsSets     []CommandOptions
-	HasInit         bool
-	ExactArgs       int
-	MaximumArgs     int
+	FullName         string
+	NamePath         []string
+	UseSuffix        string
+	Short            string
+	LongPlain        string
+	LongHighlighted  string
+	LongMarkdown     string
+	OptionsSets      []CommandOptions
+	HasInit          bool
+	ExactArgs        int
+	MaximumArgs      int
+	IgnoreMissingEnv bool
 }
 
 type CommandOptions struct {
@@ -117,6 +118,8 @@ func (c *Command) parseSection(section string) error {
 				if c.MaximumArgs, err = strconv.Atoi(strings.TrimPrefix(bullet, "* maximum-args=")); err != nil {
 					return fmt.Errorf("invalid maximum-args: %w", err)
 				}
+			case strings.HasPrefix(bullet, "* ignores-missing-env"):
+				c.IgnoreMissingEnv = true
 			default:
 				return fmt.Errorf("unrecognized attribute bullet: %q", bullet)
 			}
