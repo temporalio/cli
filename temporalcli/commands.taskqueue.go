@@ -135,10 +135,14 @@ func descriptionToPollerRows(taskQueueDescription client.TaskQueueDescription) (
 	return pRows, nil
 }
 
-func descriptionToRows(taskQueueDescription client.TaskQueueDescription) (taskQueueDescriptionType, error) {
-	rRows, err := descriptionToReachabilityRows(taskQueueDescription)
-	if err != nil {
-		return taskQueueDescriptionType{}, err
+func descriptionToRows(taskQueueDescription client.TaskQueueDescription, reportReachability bool) (taskQueueDescriptionType, error) {
+	var rRows []reachabilityRowType
+	if reportReachability {
+		var err error
+		rRows, err = descriptionToReachabilityRows(taskQueueDescription)
+		if err != nil {
+			return taskQueueDescriptionType{}, err
+		}
 	}
 	pRows, err := descriptionToPollerRows(taskQueueDescription)
 	if err != nil {
@@ -151,17 +155,19 @@ func descriptionToRows(taskQueueDescription client.TaskQueueDescription) (taskQu
 	}, nil
 }
 
-func printTaskQueueDescription(cctx *CommandContext, taskQueueDescription client.TaskQueueDescription) error {
-	descRows, err := descriptionToRows(taskQueueDescription)
+func printTaskQueueDescription(cctx *CommandContext, taskQueueDescription client.TaskQueueDescription, reportReachability bool) error {
+	descRows, err := descriptionToRows(taskQueueDescription, reportReachability)
 	if err != nil {
 		return fmt.Errorf("creating task queue description rows failed: %w", err)
 	}
 
 	if !cctx.JSONOutput {
-		cctx.Printer.Println(color.MagentaString("Task Reachability:"))
-		err = cctx.Printer.PrintStructured(descRows.Reachability, printer.StructuredOptions{Table: &printer.TableOptions{}})
-		if err != nil {
-			return fmt.Errorf("displaying reachability failed: %w", err)
+		if reportReachability {
+			cctx.Printer.Println(color.MagentaString("Task Reachability:"))
+			err = cctx.Printer.PrintStructured(descRows.Reachability, printer.StructuredOptions{Table: &printer.TableOptions{}})
+			if err != nil {
+				return fmt.Errorf("displaying reachability failed: %w", err)
+			}
 		}
 
 		cctx.Printer.Println(color.MagentaString("Pollers:"))
@@ -212,12 +218,12 @@ func (c *TemporalTaskQueueDescribeCommand) run(cctx *CommandContext, args []stri
 		Versions:               selection,
 		TaskQueueTypes:         taskQueueTypes,
 		ReportPollers:          true,
-		ReportTaskReachability: true,
+		ReportTaskReachability: c.ReportReachability,
 	})
 	if err != nil {
 		return fmt.Errorf("unable to describe task queue: %w", err)
 	}
-	return printTaskQueueDescription(cctx, resp)
+	return printTaskQueueDescription(cctx, resp, c.ReportReachability)
 }
 
 func (c *TemporalTaskQueueDescribeCommand) runLegacy(cctx *CommandContext, args []string) error {

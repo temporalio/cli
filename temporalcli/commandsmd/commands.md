@@ -617,6 +617,12 @@ The reachability states of a Build ID are:
     - `ClosedWorkflowsOnly`: the Build ID does not have open workflows, and is not reachable by new workflows, but MAY have closed workflows within the namespace retention period.
     - `Unreachable`: indicates that this Build ID is not used for new executions, nor has been used by any existing execution within the retention period.
 
+Task reachability is eventually consistent; there may be a delay until it converges to the most
+accurate value but it is designed in a way to take the more conservative side until it converges.
+For example, `Reachable` is more conservative than `ClosedWorkflowsOnly`.
+
+There is a non-trivial cost of computing task reachability, use the flag `--report-reachability` to enable it.
+
 This command also provides [poller](/application-development/worker-performance#poller-count)
 information for a given [Task Queue](/concepts/what-is-a-task-queue).
 
@@ -640,6 +646,7 @@ If there is no default Build ID, the result for the unversioned queue will be re
 * `--select-build-id` (string[]) - Task queue filter based on Build ID.
 * `--select-unversioned` (bool) - Include the unversioned queue.
 * `--select-all-active` (bool) - Include all active versions. A version is active if it had new tasks or polls recently.
+* `--report-reachability` (bool) - Display task reachability information.
 * `--legacy-mode` (bool) - Enable a legacy mode for servers that do not support rules-based worker versioning. This mode only provides pollers info.
 * `--task-queue-type-legacy` (string-enum) - Task Queue type (legacy mode only). Options: workflow, activity. Default: workflow.
 * `--partitions-legacy` (int) - Query for all partitions up to this number (experimental+temporary feature) (legacy mode only). Default: 1.

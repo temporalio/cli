@@ -42,9 +42,24 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
 	}, 5*time.Second, 100*time.Millisecond, "Worker never appeared")
 
 	// Text
+
+	// No task reachability info
 	res := s.Execute(
 		"task-queue", "describe",
 		"--address", s.Address(),
+		"--task-queue", s.Worker().Options.TaskQueue,
+	)
+	s.NoError(res.Err)
+
+	s.NotContains(res.Stdout.String(), "reachable")
+	s.ContainsOnSameLine(res.Stdout.String(), "UNVERSIONED", "workflow", s.DevServer.Options.ClientOptions.Identity, "now", "100000")
+	s.ContainsOnSameLine(res.Stdout.String(), "UNVERSIONED", "activity", s.DevServer.Options.ClientOptions.Identity, "now", "100000")
+
+	// With task reachability info
+	res = s.Execute(
+		"task-queue", "describe",
+		"--address", s.Address(),
+		"--report-reachability",
 		"--task-queue", s.Worker().Options.TaskQueue,
 	)
 	s.NoError(res.Err)
@@ -57,6 +72,7 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
 	res = s.Execute(
 		"task-queue", "describe",
 		"--address", s.Address(),
+		"--report-reachability",
 		"--task-queue", s.Worker().Options.TaskQueue,
 		"-o", "json",
 	)
@@ -93,6 +109,7 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
 	res = s.Execute(
 		"task-queue", "describe",
 		"--address", s.Address(),
+		"--report-reachability",
 		"--task-queue", s.Worker().Options.TaskQueue,
 	)
 	s.NoError(res.Err)
@@ -105,6 +122,7 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
 		"task-queue", "describe",
 		"--select-unversioned",
 		"--address", s.Address(),
+		"--report-reachability",
 		"--task-queue", s.Worker().Options.TaskQueue,
 	)
 	s.NoError(res.Err)
@@ -117,6 +135,7 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
 		"task-queue", "describe",
 		"--select-build-id", "id2",
 		"--address", s.Address(),
+		"--report-reachability",
 		"--task-queue", s.Worker().Options.TaskQueue,
 	)
 	s.NoError(res.Err)
@@ -129,6 +148,7 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
 		"task-queue", "describe",
 		"--select-all-active",
 		"--address", s.Address(),
+		"--report-reachability",
 		"--task-queue", s.Worker().Options.TaskQueue,
 	)
 	s.NoError(res.Err)
