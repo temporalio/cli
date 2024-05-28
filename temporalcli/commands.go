@@ -376,6 +376,17 @@ func (c *TemporalCommand) initCommand(cctx *CommandContext) {
 			color.NoColor = true
 		}
 		cctx.ActuallyRanCommand = true
+
+		if cctx.Options.EnvConfigName != "default" {
+			if _, ok := cctx.EnvConfigValues[cctx.Options.EnvConfigName]; !ok {
+				if _, ok := cmd.Annotations["ignoresMissingEnv"]; !ok {
+					// stfu about help output
+					cmd.SilenceErrors = true
+					cmd.SilenceUsage = true
+					return fmt.Errorf("environment %q not found", cctx.Options.EnvConfigName)
+				}
+			}
+		}
 		return res
 	}
 	c.Command.PersistentPostRun = func(*cobra.Command, []string) {
