@@ -108,7 +108,6 @@ func (s *SharedServerSuite) TestWorkflow_Describe_Completed() {
 	s.Equal(map[string]any{"foo": "bar"}, jsonOut["result"])
 }
 
-
 func (s *SharedServerSuite) TestWorkflow_Describe_NotDecodable() {
 	s.Worker().OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
 		return temporalcli.RawValue{
@@ -139,6 +138,9 @@ func (s *SharedServerSuite) TestWorkflow_Describe_NotDecodable() {
 	s.ContainsOnSameLine(out, "Status", "COMPLETED")
 	s.ContainsOnSameLine(out, "ResultEncoding", "some-encoding")
 
+	// TODO: The below fails seemingly due to a marshalling bug in api-go. The conversion of the
+	//   returned raw payload in to JSON bytes is invalid json, and breaks the printing on this
+	//   side.
 	// JSON
 	//res = s.Execute(
 	//	"workflow", "describe",
