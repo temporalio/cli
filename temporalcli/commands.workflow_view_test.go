@@ -138,9 +138,7 @@ func (s *SharedServerSuite) TestWorkflow_Describe_NotDecodable() {
 	s.ContainsOnSameLine(out, "Status", "COMPLETED")
 	s.ContainsOnSameLine(out, "ResultEncoding", "some-encoding")
 
-	// TODO: The below fails seemingly due to a marshalling bug in api-go. The conversion of the
-	//   returned raw payload in to JSON bytes is invalid json, and breaks the printing on this
-	//   side.
+	// TODO: Enable once updated to api-go >= 1.33
 	// JSON
 	//res = s.Execute(
 	//	"workflow", "describe",
