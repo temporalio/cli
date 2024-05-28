@@ -318,6 +318,7 @@ func StartDevServer(t *testing.T, options DevServerOptions) *DevServer {
 	if d.Options.ClientOptions.Identity == "" {
 		d.Options.ClientOptions.Identity = "cli-test-client"
 	}
+	d.Options.ClientOptions.DataConverter = temporalcli.DataConverterWithRawValue
 	if d.Options.DynamicConfigValues == nil {
 		d.Options.DynamicConfigValues = map[string]any{}
 	}

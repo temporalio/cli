@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"go.temporal.io/api/common/v1"
 	"strconv"
 	"strings"
 	"time"
@@ -78,6 +79,50 @@ func (s *SharedServerSuite) TestWorkflow_Describe_Completed() {
 		client.StartWorkflowOptions{TaskQueue: s.Worker().Options.TaskQueue},
 		DevWorkflow,
 		map[string]string{"foo": "bar"},
+	)
+	s.NoError(err)
+	s.NoError(run.Get(s.Context, nil))
+
+	// Text
+	res := s.Execute(
+		"workflow", "describe",
+		"--address", s.Address(),
+		"-w", run.GetID(),
+	)
+	s.NoError(res.Err)
+	out := res.Stdout.String()
+	s.ContainsOnSameLine(out, "Status", "COMPLETED")
+	s.ContainsOnSameLine(out, "Result", `{"foo":"bar"}`)
+
+	// JSON
+	res = s.Execute(
+		"workflow", "describe",
+		"-o", "json",
+		"--address", s.Address(),
+		"-w", run.GetID(),
+	)
+	s.NoError(res.Err)
+	var jsonOut map[string]any
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	s.NotNil(jsonOut["closeEvent"])
+	s.Equal(map[string]any{"foo": "bar"}, jsonOut["result"])
+}
+
+func (s *SharedServerSuite) TestWorkflow_Describe_NotDecodable() {
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
+		return temporalcli.RawValue{
+			Payload: &common.Payload{
+				Metadata: map[string][]byte{"encoding": []byte("some-encoding")},
+				Data:    []byte("some-data"),
+			},
+		}, nil
+	})
+	// Start the workflow and wait until it has at least reached activity failure
+	run, err := s.Client.ExecuteWorkflow(
+		s.Context,
+		client.StartWorkflowOptions{TaskQueue: s.Worker().Options.TaskQueue},
+		DevWorkflow,
+		nil, // input is irrelevant
 	)
 	s.NoError(err)
 	s.NoError(run.Get(s.Context, nil))

@@ -286,7 +286,7 @@ func (p *PayloadInputOptions) buildRawInput() ([]any, error) {
 	// Convert to raw values that our special data converter understands
 	ret := make([]any, len(payloads.Payloads))
 	for i, payload := range payloads.Payloads {
-		ret[i] = rawValue{payload}
+		ret[i] = RawValue{payload}
 	}
 	return ret, nil
 }
