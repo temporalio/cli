@@ -190,8 +190,11 @@ func printTextResult(
 			return fmt.Errorf("failed marshaling result: %w", err)
 		}
 		if resultPayloads != nil && len(resultPayloads.Payloads) > 0 {
-			if enc, ok := resultPayloads.Payloads[0].GetMetadata()["encoding"]; ok {
-				result.ResultEncoding = string(enc)
+			metadata := resultPayloads.Payloads[0].GetMetadata()
+			if metadata != nil {
+				if enc, ok := metadata["encoding"]; ok {
+					result.ResultEncoding = string(enc)
+				}
 			}
 		}
 	case enums.EVENT_TYPE_WORKFLOW_EXECUTION_FAILED:

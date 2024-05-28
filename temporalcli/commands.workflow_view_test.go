@@ -108,6 +108,7 @@ func (s *SharedServerSuite) TestWorkflow_Describe_Completed() {
 	s.Equal(map[string]any{"foo": "bar"}, jsonOut["result"])
 }
 
+
 func (s *SharedServerSuite) TestWorkflow_Describe_NotDecodable() {
 	s.Worker().OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
 		return temporalcli.RawValue{
@@ -218,7 +219,7 @@ func (s *SharedServerSuite) testWorkflowShowFollow(eventDetails bool) {
 	)
 	s.NoError(err)
 
-	doneFollowingCh := make(chan struct{})
+	outputCh := make(chan *CommandResult)
 	// Follow the workflow
 	go func() {
 		args := []string{"workflow", "show",
@@ -229,13 +230,8 @@ func (s *SharedServerSuite) testWorkflowShowFollow(eventDetails bool) {
 			args = append(args, "--event-details")
 		}
 		res := s.Execute(args...)
-		s.NoError(res.Err)
-		out := res.Stdout.String()
-		if eventDetails {
-			s.Contains(out, "my-signal")
-		}
-		s.Contains(out, "Result  \"hi!\"")
-		close(doneFollowingCh)
+		outputCh <- res
+		close(outputCh)
 	}()
 
 	// Send signals to complete
@@ -243,7 +239,13 @@ func (s *SharedServerSuite) testWorkflowShowFollow(eventDetails bool) {
 	s.NoError(s.Client.SignalWorkflow(s.Context, run.GetID(), "", "my-signal", nil))
 
 	// Ensure following completes
-	<-doneFollowingCh
+	res := <-outputCh
+	s.NoError(res.Err)
+	output := res.Stdout.String()
+	if eventDetails {
+		s.Contains(output, "my-signal")
+	}
+	s.ContainsOnSameLine(output, "Result", `"hi!"`)
 	s.NoError(run.Get(s.Context, nil))
 }
 
@@ -296,7 +298,7 @@ func (s *SharedServerSuite) testWorkflowShowNoFollow(eventDetails bool) {
 	if eventDetails {
 		s.Contains(out, "my-signal")
 	}
-	s.Contains(out, "Result  \"hi!\"")
+	s.ContainsOnSameLine(out, "Result", `"hi!"`)
 }
 
 func (s *SharedServerSuite) TestWorkflow_Show_JSON() {
