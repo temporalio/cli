@@ -383,7 +383,7 @@ func (c *TemporalCommand) initCommand(cctx *CommandContext) {
 					// stfu about help output
 					cmd.SilenceErrors = true
 					cmd.SilenceUsage = true
-					return fmt.Errorf("env %q not found", cctx.Options.EnvConfigName)
+					return fmt.Errorf("environment %q not found", cctx.Options.EnvConfigName)
 				}
 			}
 		}

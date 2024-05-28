@@ -14,7 +14,7 @@ func TestEnv_Simple(t *testing.T) {
 	// Non-existent file, no env found for get
 	h.Options.EnvConfigFile = "does-not-exist"
 	res := h.Execute("env", "get", "--env", "myenv1")
-	h.ErrorContains(res.Err, `env "myenv1" not found`)
+	h.ErrorContains(res.Err, `environment "myenv1" not found`)
 
 	// Temp file for env
 	tmpFile, err := os.CreateTemp("", "")
