@@ -46,7 +46,7 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	s.Command.AddCommand(&NewTemporalServerCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalTaskQueueCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowCommand(cctx, &s).Command)
-	s.Command.PersistentFlags().StringVar(&s.Env, "env", "default", "Active environment name.")
+	s.Command.PersistentFlags().StringVar(&s.Env, "env", "default", "Active environment name (`ENVIRONMENT_NAME`).")
 	cctx.BindFlagEnvVar(s.Command.PersistentFlags().Lookup("env"), "TEMPORAL_ENV")
 	s.Command.PersistentFlags().StringVar(&s.EnvFile, "env-file", "", "Path to environment settings file. (defaults to `$HOME/.config/temporalio/temporal.yaml`).")
 	s.LogLevel = NewStringEnum([]string{"debug", "info", "warn", "error", "never"}, "info")
