@@ -171,10 +171,11 @@ func printTextResult(
 	}
 	cctx.Printer.Println(color.MagentaString("Results:"))
 	result := struct {
-		RunTime string `cli:",cardOmitEmpty"`
-		Status  string
-		Result  json.RawMessage `cli:",cardOmitEmpty"`
-		Failure string          `cli:",cardOmitEmpty"`
+		RunTime        string `cli:",cardOmitEmpty"`
+		Status         string
+		Result         json.RawMessage `cli:",cardOmitEmpty"`
+		ResultEncoding string          `cli:",cardOmitEmpty"`
+		Failure        string          `cli:",cardOmitEmpty"`
 	}{}
 	if duration > 0 {
 		result.RunTime = duration.Truncate(10 * time.Millisecond).String()
@@ -183,10 +184,18 @@ func printTextResult(
 	case enums.EVENT_TYPE_WORKFLOW_EXECUTION_COMPLETED:
 		result.Status = color.GreenString("COMPLETED")
 		var err error
-		result.Result, err = cctx.MarshalFriendlyJSONPayloads(
-			closeEvent.GetWorkflowExecutionCompletedEventAttributes().GetResult())
+		resultPayloads := closeEvent.GetWorkflowExecutionCompletedEventAttributes().GetResult()
+		result.Result, err = cctx.MarshalFriendlyJSONPayloads(resultPayloads)
 		if err != nil {
 			return fmt.Errorf("failed marshaling result: %w", err)
+		}
+		if resultPayloads != nil && len(resultPayloads.Payloads) > 0 {
+			metadata := resultPayloads.Payloads[0].GetMetadata()
+			if metadata != nil {
+				if enc, ok := metadata["encoding"]; ok {
+					result.ResultEncoding = string(enc)
+				}
+			}
 		}
 	case enums.EVENT_TYPE_WORKFLOW_EXECUTION_FAILED:
 		result.Status = color.RedString("FAILED")
@@ -286,7 +295,7 @@ func (p *PayloadInputOptions) buildRawInput() ([]any, error) {
 	// Convert to raw values that our special data converter understands
 	ret := make([]any, len(payloads.Payloads))
 	for i, payload := range payloads.Payloads {
-		ret[i] = rawValue{payload}
+		ret[i] = RawValue{payload}
 	}
 	return ret, nil
 }

@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"go.temporal.io/api/common/v1"
 	"strconv"
 	"strings"
 	"time"
@@ -107,6 +108,51 @@ func (s *SharedServerSuite) TestWorkflow_Describe_Completed() {
 	s.Equal(map[string]any{"foo": "bar"}, jsonOut["result"])
 }
 
+func (s *SharedServerSuite) TestWorkflow_Describe_NotDecodable() {
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
+		return temporalcli.RawValue{
+			Payload: &common.Payload{
+				Metadata: map[string][]byte{"encoding": []byte("some-encoding")},
+				Data:     []byte("some-data"),
+			},
+		}, nil
+	})
+	// Start the workflow and wait until it has at least reached activity failure
+	run, err := s.Client.ExecuteWorkflow(
+		s.Context,
+		client.StartWorkflowOptions{TaskQueue: s.Worker().Options.TaskQueue},
+		DevWorkflow,
+		nil, // input is irrelevant
+	)
+	s.NoError(err)
+	s.NoError(run.Get(s.Context, nil))
+
+	// Text
+	res := s.Execute(
+		"workflow", "describe",
+		"--address", s.Address(),
+		"-w", run.GetID(),
+	)
+	s.NoError(res.Err)
+	out := res.Stdout.String()
+	s.ContainsOnSameLine(out, "Status", "COMPLETED")
+	s.ContainsOnSameLine(out, "ResultEncoding", "some-encoding")
+
+	// TODO: Enable once updated to api-go >= 1.33
+	// JSON
+	//res = s.Execute(
+	//	"workflow", "describe",
+	//	"-o", "json",
+	//	"--address", s.Address(),
+	//	"-w", run.GetID(),
+	//)
+	//s.NoError(res.Err)
+	//var jsonOut map[string]any
+	//s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	//s.NotNil(jsonOut["closeEvent"])
+	//s.Equal("some-encoding", jsonOut["resultEncoding"])
+}
+
 func (s *SharedServerSuite) TestWorkflow_Describe_ResetPoints() {
 	// Start the workflow and wait until it has at least reached activity failure
 	run, err := s.Client.ExecuteWorkflow(
@@ -173,7 +219,7 @@ func (s *SharedServerSuite) testWorkflowShowFollow(eventDetails bool) {
 	)
 	s.NoError(err)
 
-	doneFollowingCh := make(chan struct{})
+	outputCh := make(chan *CommandResult)
 	// Follow the workflow
 	go func() {
 		args := []string{"workflow", "show",
@@ -184,13 +230,8 @@ func (s *SharedServerSuite) testWorkflowShowFollow(eventDetails bool) {
 			args = append(args, "--event-details")
 		}
 		res := s.Execute(args...)
-		s.NoError(res.Err)
-		out := res.Stdout.String()
-		if eventDetails {
-			s.Contains(out, "my-signal")
-		}
-		s.Contains(out, "Result  \"hi!\"")
-		close(doneFollowingCh)
+		outputCh <- res
+		close(outputCh)
 	}()
 
 	// Send signals to complete
@@ -198,7 +239,13 @@ func (s *SharedServerSuite) testWorkflowShowFollow(eventDetails bool) {
 	s.NoError(s.Client.SignalWorkflow(s.Context, run.GetID(), "", "my-signal", nil))
 
 	// Ensure following completes
-	<-doneFollowingCh
+	res := <-outputCh
+	s.NoError(res.Err)
+	output := res.Stdout.String()
+	if eventDetails {
+		s.Contains(output, "my-signal")
+	}
+	s.ContainsOnSameLine(output, "Result", `"hi!"`)
 	s.NoError(run.Get(s.Context, nil))
 }
 
@@ -251,7 +298,7 @@ func (s *SharedServerSuite) testWorkflowShowNoFollow(eventDetails bool) {
 	if eventDetails {
 		s.Contains(out, "my-signal")
 	}
-	s.Contains(out, "Result  \"hi!\"")
+	s.ContainsOnSameLine(out, "Result", `"hi!"`)
 }
 
 func (s *SharedServerSuite) TestWorkflow_Show_JSON() {

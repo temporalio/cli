@@ -28,8 +28,8 @@ func (c *ClientOptions) dialClient(cctx *CommandContext) (client.Client, error) 
 		// We do not put codec on data converter here, it is applied via
 		// interceptor. Same for failure conversion.
 		// XXX: If this is altered to be more dynamic, have to also update
-		// everywhere dataConverter is used.
-		DataConverter: dataConverter,
+		// everywhere DataConverterWithRawValue is used.
+		DataConverter: DataConverterWithRawValue,
 	}
 
 	// API key
@@ -185,7 +185,7 @@ func (s stringMapHeadersProvider) GetHeaders(context.Context) (map[string]string
 	return s, nil
 }
 
-var dataConverter = converter.NewCompositeDataConverter(
+var DataConverterWithRawValue = converter.NewCompositeDataConverter(
 	rawValuePayloadConverter{},
 	converter.NewNilPayloadConverter(),
 	converter.NewByteSlicePayloadConverter(),
@@ -194,14 +194,14 @@ var dataConverter = converter.NewCompositeDataConverter(
 	converter.NewJSONPayloadConverter(),
 )
 
-type rawValue struct{ payload *common.Payload }
+type RawValue struct{ Payload *common.Payload }
 
 type rawValuePayloadConverter struct{}
 
 func (rawValuePayloadConverter) ToPayload(value any) (*common.Payload, error) {
 	// Only convert if value is a raw value
-	if r, ok := value.(rawValue); ok {
-		return r.payload, nil
+	if r, ok := value.(RawValue); ok {
+		return r.Payload, nil
 	}
 	return nil, nil
 }
