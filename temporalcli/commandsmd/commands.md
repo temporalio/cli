@@ -28,6 +28,7 @@ This document has a specific structure used by a parser. Here are the rules:
         * `Default: <default-value>.` - Sets the default value of the option. No default means zero value of the type.
         * `Options: <option>, <option>.` - Sets the possible options for a string enum type.
         * `Env: <env-var>.` - Binds the environment variable to this flag.
+        * ``Alias: `--<alias>`.`` - Sets a flag as an alias of this one. The flag should not be separately defined.
       * Options should be in order of most commonly used.
     * Also can have single lines below options that say
       `Includes options set for [<options-set-name>](#options-set-for-<options-set-link-name>).` which is the equivalent
@@ -879,7 +880,7 @@ Use the options listed below to change the command's behavior.
 
 #### Options
 
-* `--type` (string) - Query Type/Name. Required.
+* `--name` (string) - Query Type/Name. Required. Alias: `--type`.
 * `--reject-condition` (string-enum) - Optional flag for rejecting Queries based on Workflow state.
   Options: not_open, not_completed_cleanly.
 
@@ -950,7 +951,7 @@ Use the options listed below to change the command's behavior.
 
 #### Options
 
-* `--name` (string) - Signal Name. Required.
+* `--name` (string) - Signal Name. Required. Alias: `--type`.
 
 Includes options set for [payload input](#options-set-for-payload-input).
 
@@ -1000,7 +1001,7 @@ temporal workflow start \
 #### Options set for shared workflow start:
 
 * `--workflow-id`, `-w` (string) - Workflow Id.
-* `--type` (string) - Workflow Type name. Required.
+* `--type` (string) - Workflow Type name. Required. Alias: `--name`.
 * `--task-queue`, `-t` (string) - Workflow Task queue. Required.
 * `--run-timeout` (duration) - Timeout of a Workflow Run.
 * `--execution-timeout` (duration) - Timeout for a WorkflowExecution, including retries and ContinueAsNew tasks.
@@ -1087,7 +1088,7 @@ Use the options listed below to change the command's behavior.
 
 #### Options
 
-* `--name` (string) - Update Name. Required.
+* `--name` (string) - Update Name. Required. Alias: `--type`.
 * `--workflow-id`, `-w` (string) - Workflow Id. Required.
 * `--update-id` (string) - Update ID. If unset, default to a UUID.
 * `--run-id`, `-r` (string) - Run Id. If unset, the currently running Workflow Execution receives the Update.

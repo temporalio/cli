@@ -100,10 +100,10 @@ func NewTemporalActivityCompleteCommand(cctx *CommandContext, parent *TemporalAc
 	}
 	s.Command.Args = cobra.NoArgs
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
-	s.Command.Flags().StringVar(&s.ActivityId, "activity-id", "", "The Activity to be completed.")
+	s.Command.Flags().StringVar(&s.ActivityId, "activity-id", "", "The Activity to be completed. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "activity-id")
 	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of user submitting this request.")
-	s.Command.Flags().StringVar(&s.Result, "result", "", "The result with which to complete the Activity (JSON).")
+	s.Command.Flags().StringVar(&s.Result, "result", "", "The result with which to complete the Activity (JSON). Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "result")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -136,7 +136,7 @@ func NewTemporalActivityFailCommand(cctx *CommandContext, parent *TemporalActivi
 	}
 	s.Command.Args = cobra.NoArgs
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
-	s.Command.Flags().StringVar(&s.ActivityId, "activity-id", "", "The Activity to be failed.")
+	s.Command.Flags().StringVar(&s.ActivityId, "activity-id", "", "The Activity to be failed. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "activity-id")
 	s.Command.Flags().StringVar(&s.Detail, "detail", "", "JSON data describing reason for failing the Activity.")
 	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of user submitting this request.")
@@ -187,7 +187,7 @@ func NewTemporalBatchDescribeCommand(cctx *CommandContext, parent *TemporalBatch
 		s.Command.Long = "The temporal batch describe command shows the progress of an ongoing Batch Job.\n\n`temporal batch describe --job-id=MyJobId`"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.JobId, "job-id", "", "The Batch Job Id to describe.")
+	s.Command.Flags().StringVar(&s.JobId, "job-id", "", "The Batch Job Id to describe. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "job-id")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -243,9 +243,9 @@ func NewTemporalBatchTerminateCommand(cctx *CommandContext, parent *TemporalBatc
 		s.Command.Long = "The temporal batch terminate command terminates a Batch Job with the provided Job Id.\nFor future reference, provide a reason for terminating the Batch Job.\n\n`temporal batch terminate --job-id=MyJobId --reason=JobReason`"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.JobId, "job-id", "", "The Batch Job Id to terminate.")
+	s.Command.Flags().StringVar(&s.JobId, "job-id", "", "The Batch Job Id to terminate. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "job-id")
-	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for terminating the Batch Job.")
+	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for terminating the Batch Job. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "reason")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -528,7 +528,7 @@ func NewTemporalOperatorClusterRemoveCommand(cctx *CommandContext, parent *Tempo
 		s.Command.Long = "`temporal operator cluster remove` command removes a remote Cluster from the system."
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.Name, "name", "", "Name of cluster.")
+	s.Command.Flags().StringVar(&s.Name, "name", "", "Name of cluster. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -582,7 +582,7 @@ func NewTemporalOperatorClusterUpsertCommand(cctx *CommandContext, parent *Tempo
 		s.Command.Long = "`temporal operator cluster upsert` command allows the user to add or update a remote Cluster."
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.FrontendAddress, "frontend-address", "", "IP address to bind the frontend service to.")
+	s.Command.Flags().StringVar(&s.FrontendAddress, "frontend-address", "", "IP address to bind the frontend service to. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "frontend-address")
 	s.Command.Flags().BoolVar(&s.EnableConnection, "enable-connection", false, "enable cross cluster connection.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -825,9 +825,9 @@ func NewTemporalOperatorSearchAttributeCreateCommand(cctx *CommandContext, paren
 		s.Command.Long = "`temporal operator search-attribute create` command adds one or more custom Search Attributes."
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringArrayVar(&s.Name, "name", nil, "Search Attribute name.")
+	s.Command.Flags().StringArrayVar(&s.Name, "name", nil, "Search Attribute name. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
-	s.Command.Flags().StringArrayVar(&s.Type, "type", nil, "Search Attribute type. Accepted values: Text, Keyword, Int, Double, Bool, Datetime, KeywordList.")
+	s.Command.Flags().StringArrayVar(&s.Type, "type", nil, "Search Attribute type. Accepted values: Text, Keyword, Int, Double, Bool, Datetime, KeywordList. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "type")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -881,7 +881,7 @@ func NewTemporalOperatorSearchAttributeRemoveCommand(cctx *CommandContext, paren
 		s.Command.Long = "`temporal operator search-attribute remove` command removes custom Search Attribute metadata."
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringArrayVar(&s.Name, "name", nil, "Search Attribute name.")
+	s.Command.Flags().StringArrayVar(&s.Name, "name", nil, "Search Attribute name. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
 	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Confirm prompt to perform deletion.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -931,7 +931,7 @@ type ScheduleIdOptions struct {
 }
 
 func (v *ScheduleIdOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
-	f.StringVarP(&v.ScheduleId, "schedule-id", "s", "", "Schedule id.")
+	f.StringVarP(&v.ScheduleId, "schedule-id", "s", "", "Schedule id. Required.")
 	_ = cobra.MarkFlagRequired(f, "schedule-id")
 }
 
@@ -958,9 +958,9 @@ func NewTemporalScheduleBackfillCommand(cctx *CommandContext, parent *TemporalSc
 	s.Command.Args = cobra.NoArgs
 	s.OverlapPolicyOptions.buildFlags(cctx, s.Command.Flags())
 	s.ScheduleIdOptions.buildFlags(cctx, s.Command.Flags())
-	s.Command.Flags().Var(&s.EndTime, "end-time", "Backfill end time.")
+	s.Command.Flags().Var(&s.EndTime, "end-time", "Backfill end time. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "end-time")
-	s.Command.Flags().Var(&s.StartTime, "start-time", "Backfill start time.")
+	s.Command.Flags().Var(&s.StartTime, "start-time", "Backfill start time. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "start-time")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -1332,7 +1332,7 @@ func NewTemporalTaskQueueDescribeCommand(cctx *CommandContext, parent *TemporalT
 		s.Command.Long = "The `temporal task-queue describe` command provides poller\ninformation for a given Task Queue.\n\nThe Server records the last time of each poll request. A `LastAccessTime` value\nin excess of one minute can indicate the Worker is at capacity (all Workflow and Activity slots are full) or that the\nWorker has shut down. Workers are removed if 5 minutes have passed since the last poll\nrequest.\n\nInformation about the Task Queue can be returned to troubleshoot server issues.\n\n`temporal task-queue describe --task-queue=MyTaskQueue --task-queue-type=\"activity\"`\n\nUse the options listed below to modify what this command returns."
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task queue name.")
+	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task queue name. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
 	s.TaskQueueType = NewStringEnum([]string{"workflow", "activity"}, "workflow")
 	s.Command.Flags().Var(&s.TaskQueueType, "task-queue-type", "Task Queue type. Accepted values: workflow, activity.")
@@ -1388,7 +1388,7 @@ func NewTemporalTaskQueueGetBuildIdsCommand(cctx *CommandContext, parent *Tempor
 	s.Command.Short = "Fetch the sets of worker Build ID versions on the Task Queue."
 	s.Command.Long = "Fetch the sets of compatible build IDs associated with a Task Queue and associated information."
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task queue name.")
+	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task queue name. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
 	s.Command.Flags().IntVar(&s.MaxSets, "max-sets", 0, "Limits how many compatible sets will be returned. Specify 1 to only return the current default major version set. 0 returns all sets. (default: 0).")
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -1413,7 +1413,7 @@ func NewTemporalTaskQueueListPartitionCommand(cctx *CommandContext, parent *Temp
 	s.Command.Short = "Lists the Task Queue's partitions and the matching nodes they are assigned to."
 	s.Command.Long = "The temporal task-queue list-partition command displays the partitions of a Task Queue, along with the matching node they are assigned to."
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task queue name.")
+	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task queue name. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -1459,11 +1459,11 @@ func NewTemporalTaskQueueUpdateBuildIdsAddNewCompatibleCommand(cctx *CommandCont
 	s.Command.Short = "Add a new build ID compatible with an existing ID to the Task Queue version sets."
 	s.Command.Long = "The new build ID will become the default for the set containing the existing ID. See per-flag help for more."
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "The new build id to be added.")
+	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "The new build id to be added. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "build-id")
-	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Name of the Task Queue.")
+	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Name of the Task Queue. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
-	s.Command.Flags().StringVar(&s.ExistingCompatibleBuildId, "existing-compatible-build-id", "", "A build id which must already exist in the version sets known by the task queue. The new id will be stored in the set containing this id, marking it as compatible with the versions within.")
+	s.Command.Flags().StringVar(&s.ExistingCompatibleBuildId, "existing-compatible-build-id", "", "A build id which must already exist in the version sets known by the task queue. The new id will be stored in the set containing this id, marking it as compatible with the versions within. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "existing-compatible-build-id")
 	s.Command.Flags().BoolVar(&s.SetAsDefault, "set-as-default", false, "When set, establishes the compatible set being targeted as the overall default for the queue. If a different set was the current default, the targeted set will replace it as the new default. Defaults to false.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -1489,9 +1489,9 @@ func NewTemporalTaskQueueUpdateBuildIdsAddNewDefaultCommand(cctx *CommandContext
 	s.Command.Short = "Add a new default (incompatible) build ID to the Task Queue version sets."
 	s.Command.Long = "Creates a new build id set which will become the new overall default for the queue with the provided build id as its only member. This new set is incompatible with all previous sets/versions."
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "The new build id to be added.")
+	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "The new build id to be added. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "build-id")
-	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Name of the Task Queue.")
+	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Name of the Task Queue. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -1516,9 +1516,9 @@ func NewTemporalTaskQueueUpdateBuildIdsPromoteIdInSetCommand(cctx *CommandContex
 	s.Command.Short = "Promote an existing build ID to become the default for its containing set."
 	s.Command.Long = "New tasks compatible with the set will be dispatched to the default id."
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "An existing build id which will be promoted to be the default inside its containing set.")
+	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "An existing build id which will be promoted to be the default inside its containing set. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "build-id")
-	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Name of the Task Queue.")
+	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Name of the Task Queue. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -1543,9 +1543,9 @@ func NewTemporalTaskQueueUpdateBuildIdsPromoteSetCommand(cctx *CommandContext, p
 	s.Command.Short = "Promote an existing build ID set to become the default for the Task Queue."
 	s.Command.Long = "If the set is already the default, this command has no effect."
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "An existing build id whose containing set will be promoted.")
+	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "An existing build id whose containing set will be promoted. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "build-id")
-	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Name of the Task Queue.")
+	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Name of the Task Queue. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -1729,7 +1729,7 @@ type WorkflowReferenceOptions struct {
 }
 
 func (v *WorkflowReferenceOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
-	f.StringVarP(&v.WorkflowId, "workflow-id", "w", "", "Workflow Id.")
+	f.StringVarP(&v.WorkflowId, "workflow-id", "w", "", "Workflow Id. Required.")
 	_ = cobra.MarkFlagRequired(f, "workflow-id")
 	f.StringVarP(&v.RunId, "run-id", "r", "", "Run Id.")
 }
@@ -1817,7 +1817,7 @@ func NewTemporalWorkflowFixHistoryJsonCommand(cctx *CommandContext, parent *Temp
 		s.Command.Long = "```\ntemporal workflow fix-history-json \\\n\t--source original.json \\\n\t--target reserialized.json\n```\n\nUse the options listed below to change the command's behavior."
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVarP(&s.Source, "source", "s", "", "Path to the input file.")
+	s.Command.Flags().StringVarP(&s.Source, "source", "s", "", "Path to the input file. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "source")
 	s.Command.Flags().StringVarP(&s.Target, "target", "t", "", "Path to the output file, or standard output if not set.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -1864,7 +1864,7 @@ type TemporalWorkflowQueryCommand struct {
 	Command cobra.Command
 	PayloadInputOptions
 	WorkflowReferenceOptions
-	Type            string
+	Name            string
 	RejectCondition StringEnum
 }
 
@@ -1882,10 +1882,13 @@ func NewTemporalWorkflowQueryCommand(cctx *CommandContext, parent *TemporalWorkf
 	s.Command.Args = cobra.NoArgs
 	s.PayloadInputOptions.buildFlags(cctx, s.Command.Flags())
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
-	s.Command.Flags().StringVar(&s.Type, "type", "", "Query Type/Name.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "type")
+	s.Command.Flags().StringVar(&s.Name, "name", "", "Query Type/Name. Required. Aliased as \"--type\".")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
 	s.RejectCondition = NewStringEnum([]string{"not_open", "not_completed_cleanly"}, "")
 	s.Command.Flags().Var(&s.RejectCondition, "reject-condition", "Optional flag for rejecting Queries based on Workflow state. Accepted values: not_open, not_completed_cleanly.")
+	s.Command.Flags().SetNormalizeFunc(aliasNormalizer(map[string]string{
+		"type": "name",
+	}))
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -1923,7 +1926,7 @@ func NewTemporalWorkflowResetCommand(cctx *CommandContext, parent *TemporalWorkf
 	s.Command.Flags().StringVarP(&s.WorkflowId, "workflow-id", "w", "", "Workflow Id. Required for non-batch reset operations.")
 	s.Command.Flags().StringVarP(&s.RunId, "run-id", "r", "", "Run Id.")
 	s.Command.Flags().IntVarP(&s.EventId, "event-id", "e", 0, "The Event Id for any Event after `WorkflowTaskStarted` you want to reset to (exclusive). It can be `WorkflowTaskCompleted`, `WorkflowTaskFailed` or others.")
-	s.Command.Flags().StringVar(&s.Reason, "reason", "", "The reason why this workflow is being reset.")
+	s.Command.Flags().StringVar(&s.Reason, "reason", "", "The reason why this workflow is being reset. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "reason")
 	s.ReapplyType = NewStringEnum([]string{"All", "Signal", "None"}, "All")
 	s.Command.Flags().Var(&s.ReapplyType, "reapply-type", "Event types to reapply after the reset point. Accepted values: All, Signal, None.")
@@ -2008,9 +2011,12 @@ func NewTemporalWorkflowSignalCommand(cctx *CommandContext, parent *TemporalWork
 	}
 	s.Command.Args = cobra.NoArgs
 	s.PayloadInputOptions.buildFlags(cctx, s.Command.Flags())
-	s.Command.Flags().StringVar(&s.Name, "name", "", "Signal Name.")
+	s.Command.Flags().StringVar(&s.Name, "name", "", "Signal Name. Required. Aliased as \"--type\".")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
 	s.SingleWorkflowOrBatchOptions.buildFlags(cctx, s.Command.Flags())
+	s.Command.Flags().SetNormalizeFunc(aliasNormalizer(map[string]string{
+		"type": "name",
+	}))
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -2062,9 +2068,9 @@ type SharedWorkflowStartOptions struct {
 
 func (v *SharedWorkflowStartOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
 	f.StringVarP(&v.WorkflowId, "workflow-id", "w", "", "Workflow Id.")
-	f.StringVar(&v.Type, "type", "", "Workflow Type name.")
+	f.StringVar(&v.Type, "type", "", "Workflow Type name. Required. Aliased as \"--name\".")
 	_ = cobra.MarkFlagRequired(f, "type")
-	f.StringVarP(&v.TaskQueue, "task-queue", "t", "", "Workflow Task queue.")
+	f.StringVarP(&v.TaskQueue, "task-queue", "t", "", "Workflow Task queue. Required.")
 	_ = cobra.MarkFlagRequired(f, "task-queue")
 	v.RunTimeout = 0
 	f.Var(&v.RunTimeout, "run-timeout", "Timeout of a Workflow Run.")
@@ -2230,13 +2236,16 @@ func NewTemporalWorkflowUpdateCommand(cctx *CommandContext, parent *TemporalWork
 	}
 	s.Command.Args = cobra.NoArgs
 	s.PayloadInputOptions.buildFlags(cctx, s.Command.Flags())
-	s.Command.Flags().StringVar(&s.Name, "name", "", "Update Name.")
+	s.Command.Flags().StringVar(&s.Name, "name", "", "Update Name. Required. Aliased as \"--type\".")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
-	s.Command.Flags().StringVarP(&s.WorkflowId, "workflow-id", "w", "", "Workflow Id.")
+	s.Command.Flags().StringVarP(&s.WorkflowId, "workflow-id", "w", "", "Workflow Id. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "workflow-id")
 	s.Command.Flags().StringVar(&s.UpdateId, "update-id", "", "Update ID. If unset, default to a UUID.")
 	s.Command.Flags().StringVarP(&s.RunId, "run-id", "r", "", "Run Id. If unset, the currently running Workflow Execution receives the Update.")
 	s.Command.Flags().StringVar(&s.FirstExecutionRunId, "first-execution-run-id", "", "Send the Update to the last Workflow Execution in the chain that started with this Run Id.")
+	s.Command.Flags().SetNormalizeFunc(aliasNormalizer(map[string]string{
+		"type": "name",
+	}))
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

@@ -99,7 +99,8 @@ func (s *SharedServerSuite) testSignalBatchWorkflow(json bool) *CommandResult {
 		"workflow", "signal",
 		"--address", s.Address(),
 		"--query", "CustomKeywordField = '" + searchAttr + "'",
-		"--name", "my-signal",
+		// Use --type here to make sure the alias works
+		"--type", "my-signal",
 		"-i", `{"key": "val"}`,
 	}
 	if json {
@@ -421,12 +422,15 @@ func (s *SharedServerSuite) TestWorkflow_Update() {
 	}()
 
 	// successful update, should show the result
-	res := s.Execute("workflow", "update", "--address", s.Address(), "-w", run.GetID(), "--name", updateName, "-i", strconv.Itoa(input))
+	res := s.Execute("workflow", "update", "--address", s.Address(), "-w", run.GetID(),
+		"--name", updateName, "-i", strconv.Itoa(input))
 	s.NoError(res.Err)
 	s.Contains(res.Stdout.String(), strconv.Itoa(input))
 
 	// successful update passing first-execution-run-id
-	res = s.Execute("workflow", "update", "--address", s.Address(), "-w", run.GetID(), "--name", updateName, "-i", strconv.Itoa(input), "--first-execution-run-id", run.GetRunID())
+	res = s.Execute("workflow", "update", "--address", s.Address(), "-w", run.GetID(),
+		// Use --type here to make sure the alias works
+		"--type", updateName, "-i", strconv.Itoa(input), "--first-execution-run-id", run.GetRunID())
 	s.NoError(res.Err)
 
 	// successful update passing update-id
@@ -556,7 +560,7 @@ func (s *SharedServerSuite) testQueryWorkflow(json bool) {
 		"workflow", "query",
 		"--address", s.Address(),
 		"-w", run.GetID(),
-		"--type", "my-query",
+		"--name", "my-query",
 		"-i", `"hi"`,
 	}
 	if json {
@@ -580,6 +584,7 @@ func (s *SharedServerSuite) testQueryWorkflow(json bool) {
 		"workflow", "query",
 		"--address", s.Address(),
 		"-w", run.GetID(),
+		// Use --type here to make sure the alias works
 		"--type", "my-query",
 		"-i", `"hi"`,
 		"--reject-condition", "not_open",
