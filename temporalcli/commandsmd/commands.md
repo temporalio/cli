@@ -840,7 +840,8 @@ temporal operator namespace update \
   Cluster names.
 * `--data` (string[]) -
   Set a `KEY=VALUE` string pair in Namespace data.
-  JSON is recommended for the `VALUE`.
+  KEY is an unquoted string identifier.
+  Unquoted JSON is recommended for the VALUE.
   Can be passed multiple times.
 * `--description` (string) -
   Namespace description.
@@ -1044,13 +1045,14 @@ and `--cron`.
   Interpret calendar specs with the `TZ` time zone.
   For a list of time zones, see: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones.
 * `--schedule-search-attribute` (string[]) -
-  Set schedule Search Attributes using a `KEY=VALUE` format.
-  KEY must be an unquoted string identifier.
-  VALUE must be an unquoted JSON string.
+  Set schedule Search Attributes using `KEY=VALUE` format.
+  KEY is an unquoted string identifier.
+  VALUE is an unquoted JSON string.
   Can be passed multiple times.
-  WEFWEF LEFT OFF HERE
-* `--schedule-memo` (string[]) -
-  Set a memo for the schedule in `KEY=VALUE` format. `KEY` must be a string identifier (no quotes) and `VALUE` must be a JSON value. May be passed multiple times to set multiple memo values
+  * `--schedule-memo` (string[]) -
+  Set a schedule memo using `KEY=VALUE` format.
+  KEY is an unquoted string identifier.
+  VALUE is an unquoted JSON string.
   Can be passed multiple times.
 
 #### Options
@@ -1060,7 +1062,7 @@ Includes options set for [overlap-policy](#options-set-for-overlap-policy).
 Includes options set for [shared-workflow-start](#options-set-for-shared-workflow-start).
 Includes options set for [payload-input](#options-set-for-payload-input).
 
-### temporal schedule delete: Delete a Schedule
+### temporal schedule delete: Delete a Schedule WEFWEF CLOSING UP SHOP FOR THE DAY HERE
 
 The `temporal schedule delete` command deletes a Schedule
 Deleting a Schedule does not affect any Workflows started by the Schedule
