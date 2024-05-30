@@ -2,7 +2,7 @@
 
 Commands for the Temporal CLI
 
-<--
+<!-- 
 
 NOTES FOR ERICA
 
@@ -775,15 +775,11 @@ as needed. For example, the Visibility Archive can be set on a separate URI:
 
 ```
 temporal operator namespace create \
-    --retention 5 \
+    --retention 5d \
     --visibility-archival-state enabled \
     --visibility-uri YourURI \
     --namespace YourNewNamespaceName
 ```
-
-* Specify extra clusters by passing `--cluster` multiple times.
-* To pass Namespace data, pass comma-separated `KEY=VALUE` pairs.
-  Both KEY and VALUE can be arbitrary strings.
 
 <!--
 * maximum-args=1
@@ -794,21 +790,68 @@ temporal operator namespace create \
 * `--active-cluster` (string) -
   Active cluster name.
 * `--cluster` (string[]) -
-  Cluster name. 
+  Cluster names.
+  Can also be passed multiple times.
 * `--data` (string) -
   Namespace data.
-* `--description` (string) - Namespace description
-* `--email` (string) - Owner email
-* `--global` (bool) - Enable cross-region replication for this namespace
-* `--history-archival-state` (string-enum) - History archival state. Options: disabled, enabled. Default: disabled
-* `--history-uri` (string) - `URI` at which to archive history. Cannot be changed after archival is first enabled
-* `--retention` (duration) - Length of time a closed Workflow is preserved before deletion. Default: 72h.
-* `--visibility-archival-state` (string-enum) - Visibility archival state. Options: disabled, enabled. Default: disabled
-* `--visibility-uri` (string) - `URI` at which to archive visibility data. Cannot be changed after archival is first enabled
+* `--description` (string) -
+  Namespace description.
+  Comma-separated `KEY=VALUE` pairs made up of arbitrary strings.
+* `--email` (string) -
+  Owner email.
+* `--global` (bool) -
+  Enable/disable cross-region replication.
+* `--history-archival-state` (string-enum) -
+  History archival state.
+  Options: disabled, enabled.
+  Default: disabled.
+* `--history-uri` (string) -
+  `URI` at which to archive history.
+  Cannot be changed after archival is first enabled.
+* `--retention` (duration) -
+  Time to preserve closed Workflows before deletion.
+  Default: 72h.
+* `--visibility-archival-state` (string-enum) -
+  Visibility archival state.
+  Options: disabled, enabled.
+  Default: disabled
+* `--visibility-uri` (string) -
+  `URI` at which to archive visibility data.
+  Cannot be changed after archival is first enabled.
 
-### temporal operator namespace delete [namespace]: Delete an existing Namespace
+### temporal operator namespace delete [namespace]: Delete existing Namespace
 
-The temporal operator namespace delete command deletes a given Namespace from the system
+Deletes a Namespace from the Service.
+
+```
+temporal operator namespace delete [options]
+``` 
+
+This example requests confirmation before deletion:
+
+```
+temporal operator namespace delete \
+    --namespace YourNamespaceName \
+    --yes
+```
+
+<!--
+* maximum-args=1
+-->
+
+#### Options
+
+* `--yes`, `-y` (bool) -
+  Request confirmation before deletion.
+
+### temporal operator namespace describe [namespace]: Describe Namespace
+
+Provide information for a Namespace identified by its ID or name:
+
+```
+temporal operator namespace describe --namespace-id YourNamespaceId
+temporal operator namespace describe --namespace YourNamespaceName
+```
 
 <!--
 * maximum-args=1
@@ -816,58 +859,70 @@ The temporal operator namespace delete command deletes a given Namespace from th
 
 #### Options
 
-* `--yes`, `-y` (bool) - Don't ask for confirmation
+* `--namespace-id` (string) -
+  Namespace ID.
 
-### temporal operator namespace describe [namespace]: Describe a Namespace by its name or ID
+### temporal operator namespace list: List Namespaces
 
-The temporal operator namespace describe command provides Namespace information
-Namespaces are identified either by Namespace ID or by name
+Provide long-form listing for all Namespaces on the Service. 
 
-`temporal operator namespace describe --namespace-id some-namespace-id`
-`temporal operator namespace describe -n example-namespace-name`
+### temporal operator namespace update: Update Namespace
+
+Update a Namespace with the properties you specify. For example:
+
+Assign a Namespace's active Cluster:
+```
+temporal operator namespace update \
+    --namespace YourNamespaceName \
+    --active-cluster NewActiveCluster
+```
+
+Promote a Namespace to be global:
+
+```
+temporal operator namespace update \
+    --namespace YourNamespaceName \
+    --promote-global
+```
+
+Archives that were previously enabled or disabled can be changed with
+this command. However, URI values for archival states can't' be changed
+after the states are enabled:
+
+```
+temporal operator namespace update \
+    --namespace YourNamespaceName \
+    --history-archival-state enabled \
+    --visibility-archival-state disabled
+```
 
 <!--
 * maximum-args=1
 -->
 
 #### Options
-
-* `--namespace-id` (string) - Namespace ID
-
-### temporal operator namespace list: List all Namespaces
-
-The temporal operator namespace list command lists all Namespaces on the Server
-
-### temporal operator namespace update: Update a Namespace
-
-The temporal operator namespace update command updates a Namespace
-
-Namespaces can be assigned a different active Cluster
-`temporal operator namespace update -n namespace --active-cluster NewActiveCluster`
-
-Namespaces can also be promoted to global Namespaces
-`temporal operator namespace update -n namespace --promote-global`
-
-Any Archives that were previously enabled or disabled can be changed through this command
-However, URI values for archival states cannot be changed after the states are enabled
-`temporal operator namespace update -n namespace --history-archival-state enabled --visibility-archival-state disabled`
-
-<!--
-* maximum-args=1
--->
-
-#### Options
-* `--active-cluster` (string) - Active cluster name
-* `--cluster` (string[]) - Cluster names
-* `--data` (string[]) - Set a `KEY=VALUE` pair in namespace data. `KEY` and `VALUE` may be arbitrary strings, but JSON is recommended for `VALUE`. May be used multiple times to set multiple pairs
-* `--description` (string) - Namespace description
-* `--email` (string) - Owner email
-* `--promote-global` (bool) - Enable cross-region replication on this namespace
-* `--history-archival-state` (string-enum) - History archival state. Options: disabled, enabled
-* `--history-uri` (string) - Archive history to this `URI`. Cannot be changed after archival is first enabled
-* `--retention` (duration) - Length of time a closed Workflow is preserved before deletion
-* `--visibility-archival-state` (string-enum) - Visibility archival state. Options: disabled, enabled
-* `--visibility-uri` (string) - Archive visibility information to this `URI`. Cannot be changed after archival is first enabled
+* `--active-cluster` (string) -
+  Active cluster name
+* `--cluster` (string[]) -
+  Cluster names
+* `--data` (string[]) -
+  Set a `KEY=VALUE` pair in namespace data. `KEY` and `VALUE` may be arbitrary strings, but JSON is recommended for `VALUE`. May be used multiple times to set multiple pairs
+* `--description` (string) -
+  Namespace description
+* `--email` (string) -
+  Owner email
+* `--promote-global` (bool) -
+  Enable cross-region replication on this namespace
+* `--history-archival-state` (string-enum) -
+  History archival state. Options: disabled, enabled
+* `--history-uri` (string) -
+  Archive history to this `URI`. Cannot be changed after archival is first enabled
+* `--retention` (duration) -
+  Length of time a closed Workflow is preserved before deletion
+* `--visibility-archival-state` (string-enum) -
+  Visibility archival state. Options: disabled, enabled
+* `--visibility-uri` (string) -
+  Archive visibility information to this `URI`. Cannot be changed after archival is first enabled
 
 ### temporal operator search-attribute: Operations for Search Attributes
 
@@ -879,8 +934,10 @@ Search Attribute commands enable operations for the creation, listing, and remov
 
 #### Options
 
-* `--name` (string[]) - Search Attribute name. Required
-* `--type` (string[]) - Search Attribute type. Options: Text, Keyword, Int, Double, Bool, Datetime, KeywordList. Required
+* `--name` (string[]) -
+  Search Attribute name. Required
+* `--type` (string[]) -
+  Search Attribute type. Options: Text, Keyword, Int, Double, Bool, Datetime, KeywordList. Required
 
 ### temporal operator search-attribute list: List all Search Attributes
 
@@ -892,8 +949,10 @@ Search Attribute commands enable operations for the creation, listing, and remov
 
 #### Options
 
-* `--name` (string[]) - Search Attribute name. Required
-* `--yes`, `-y` (bool) - Don't ask for confirmation
+* `--name` (string[]) -
+  Search Attribute name. Required
+* `--yes`, `-y` (bool) -
+  Don't ask for confirmation
 
 ### temporal schedule: Perform operations on Schedules
 
@@ -928,16 +987,23 @@ Example:
 
 #### Options set for overlap policy:
 
-* `--overlap-policy` (string-enum) - Overlap policy. Options: Skip, BufferOne, BufferAll, CancelOther, TerminateOther, AllowAll. Default: Skip
+* `--overlap-policy` (string-enum) -
+  Overlap policy. Options: Skip, BufferOne, BufferAll, CancelOther, TerminateOther, AllowAll. Default: Skip.
 
-#### Options set for schedule ID:
+#### Options set for schedule id:
 
-* `--schedule-id`, `-s` (string) - Schedule ID. Required
+* `--schedule-id`, `-s` (string) -
+  Schedule ID.
+  Required.
 
 #### Options
 
-* `--end-time` (timestamp) - Backfill end time. Required
-* `--start-time` (timestamp) - Backfill start time. Required
+* `--end-time` (timestamp) -
+  Backfill end time.
+  Required.
+* `--start-time` (timestamp) -
+  Backfill start time.
+  Required.
 
 ### temporal schedule create: Create a new Schedule
 
@@ -954,25 +1020,39 @@ Example:
     --workflow-type 'YourWorkflowType'
 ```
 
-Any combination of `--calendar`, `--interval`, and `--cron` is supported
-Actions will be executed at any time specified in the Schedule
+Any combination of `--calendar`, `--interval`, and `--cron` is supported.
+Actions will be executed at any time specified in the Schedule.
 
 #### Options set for schedule configuration:
 
-* `--calendar` (string[]) - Calendar specification in JSON, e.g. `{"dayOfWeek":"Fri","hour":"17","minute":"5"}`
-* `--catchup-window` (duration) - Maximum allowed catch-up time if server is down
-* `--cron` (string[]) - Calendar spec in cron string format, e.g. `3 11 * * Fri`
-* `--end-time` (timestamp) - Overall schedule end time
-* `--interval` (string[]) - Interval duration, e.g. 90m, or 90m/13m to include phase offset
-* `--jitter` (duration) - Per-action jitter range
-* `--notes` (string) - Initial value of notes field
-* `--paused` (bool) - Initial value of paused state
-* `--pause-on-failure` (bool) - Pause schedule after any workflow failure
-* `--remaining-actions` (int) - Total number of actions allowed. Zero (default) means unlimited
-* `--start-time` (timestamp) - Overall schedule start time
-* `--time-zone` (string) - Interpret all calendar specs in the `TZ` time zone. For a list of time zones, see: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
-* `--schedule-search-attribute` (string[]) - Set a Search Attribute for the schedule in `KEY=VALUE` format. `KEY` must be a string identifier (no quotes) and `VALUE` must be a JSON value. May be passed multiple times to set multiple Search Attributes
-* `--schedule-memo` (string[]) - Set a memo for the schedule in `KEY=VALUE` format. `KEY` must be a string identifier (no quotes) and `VALUE` must be a JSON value. May be passed multiple times to set multiple memo values
+* `--calendar` (string[]) -
+  Calendar specification in JSON, e.g. `{"dayOfWeek":"Fri","hour":"17","minute":"5"}`
+* `--catchup-window` (duration) -
+  Maximum allowed catch-up time if server is down
+* `--cron` (string[]) -
+  Calendar spec in cron string format, e.g. `3 11 * * Fri`
+* `--end-time` (timestamp) -
+  Overall schedule end time
+* `--interval` (string[]) -
+  Interval duration, e.g. 90m, or 90m/13m to include phase offset
+* `--jitter` (duration) -
+  Per-action jitter range
+* `--notes` (string) -
+  Initial value of notes field
+* `--paused` (bool) -
+  Initial value of paused state
+* `--pause-on-failure` (bool) -
+  Pause schedule after any workflow failure
+* `--remaining-actions` (int) -
+  Total number of actions allowed. Zero (default) means unlimited
+* `--start-time` (timestamp) -
+  Overall schedule start time
+* `--time-zone` (string) -
+  Interpret all calendar specs in the `TZ` time zone. For a list of time zones, see: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+* `--schedule-search-attribute` (string[]) -
+  Set a Search Attribute for the schedule in `KEY=VALUE` format. `KEY` must be a string identifier (no quotes) and `VALUE` must be a JSON value. May be passed multiple times to set multiple Search Attributes
+* `--schedule-memo` (string[]) -
+  Set a memo for the schedule in `KEY=VALUE` format. `KEY` must be a string identifier (no quotes) and `VALUE` must be a JSON value. May be passed multiple times to set multiple memo values
 
 #### Options
 
@@ -1008,8 +1088,10 @@ The `temporal schedule list` command lists all Schedules in a namespace
 
 #### Options
 
-* `--long`, `-l` (bool) - Emit detailed information
-* `--really-long` (bool) - Emit even more detailed information that's not usable in table form
+* `--long`, `-l` (bool) -
+  Emit detailed information
+* `--really-long` (bool) -
+  Emit even more detailed information that's not usable in table form
 
 ### temporal schedule toggle: Pause or unpause a Schedule
 
@@ -1025,9 +1107,12 @@ Examples:
 
 #### Options
 
-* `--pause` (bool) - Pauses the schedule
-* `--reason` (string) - Reason for pausing/unpausing. Default: "(no reason provided)"
-* `--unpause` (bool) - Unpauses the schedule
+* `--pause` (bool) -
+  Pauses the schedule
+* `--reason` (string) -
+  Reason for pausing/unpausing. Default: "(no reason provided)"
+* `--unpause` (bool) -
+  Unpauses the schedule
 
 Includes options set for [schedule-id](#options-set-for-schedule-id).
 
@@ -1071,22 +1156,36 @@ To persist Workflows across runs, use:
 
 #### Options
 
-* `--db-filename`, `-f` (string) - File in which to persist Temporal state (by default, Workflows are lost when the
+* `--db-filename`, `-f` (string) -
+  File in which to persist Temporal state (by default, Workflows are lost when the
   process dies)
-* `--namespace`, `-n` (string[]) - Specify namespaces that should be pre-created (namespace "default" is always
+* `--namespace`, `-n` (string[]) -
+  Specify namespaces that should be pre-created (namespace "default" is always
   created)
-* `--port`, `-p` (int) - Port for the frontend gRPC service. Default: 7233
-* `--http-port` (int) - Port for the frontend HTTP API service. Default is off
-* `--metrics-port` (int) - Port for /metrics. Default is off
-* `--ui-port` (int) - Port for the Web UI. Default is --port + 1000
-* `--headless` (bool) - Disable the Web UI
-* `--ip` (string) - IP address to bind the frontend service to. Default: localhost
-* `--ui-ip` (string) - IP address to bind the Web UI to. Default is same as --ip
-* `--ui-asset-path` (string) - UI custom assets path
-* `--ui-codec-endpoint` (string) - UI remote codec HTTP endpoint
-* `--sqlite-pragma` (string[]) - Specify SQLite pragma statements in pragma=value format
-* `--dynamic-config-value` (string[]) - Dynamic config value, as KEY=JSON_VALUE (string values need quotes)
-* `--log-config` (bool) - Log the server config being used to stderr
+* `--port`, `-p` (int) -
+  Port for the frontend gRPC service. Default: 7233
+* `--http-port` (int) -
+  Port for the frontend HTTP API service. Default is off
+* `--metrics-port` (int) -
+  Port for /metrics. Default is off
+* `--ui-port` (int) -
+  Port for the Web UI. Default is --port + 1000
+* `--headless` (bool) -
+  Disable the Web UI
+* `--ip` (string) -
+  IP address to bind the frontend service to. Default: localhost
+* `--ui-ip` (string) -
+  IP address to bind the Web UI to. Default is same as --ip
+* `--ui-asset-path` (string) -
+  UI custom assets path
+* `--ui-codec-endpoint` (string) -
+  UI remote codec HTTP endpoint
+* `--sqlite-pragma` (string[]) -
+  Specify SQLite pragma statements in pragma=value format
+* `--dynamic-config-value` (string[]) -
+  Dynamic config value, as KEY=JSON_VALUE (string values need quotes)
+* `--log-config` (bool) -
+  Log the server config being used to stderr
 
 ### temporal task-queue: Manage Task Queues
 
@@ -1115,9 +1214,12 @@ Use the options listed below to modify what this command returns
 
 #### Options
 
-* `--task-queue`, `-t` (string) - Task queue name. Required
-* `--task-queue-type` (string-enum) - Task Queue type. Options: workflow, activity. Default: workflow
-* `--partitions` (int) - Query for all partitions up to this number (experimental+temporary feature). Default: 1
+* `--task-queue`, `-t` (string) -
+  Task queue name. Required
+* `--task-queue-type` (string-enum) -
+  Task Queue type. Options: workflow, activity. Default: workflow
+* `--partitions` (int) -
+  Query for all partitions up to this number (experimental+temporary feature). Default: 1
 
 ### temporal task-queue get-build-id-reachability: Show which Build IDs are available on a Task Queue
 
@@ -1125,9 +1227,12 @@ This command can tell you whether or not Build IDs may be used for new, existing
 
 #### Options
 
-* `--build-id` (string[]) - Which Build ID to get reachability information for. May be specified multiple times
-* `--reachability-type` (string-enum) - Specify how you'd like to filter the reachability of Build IDs. Valid choices are `open` (reachable by one or more open workflows), `closed` (reachable by one or more closed workflows), or `existing` (reachable by either). If a Build ID is reachable by new workflows, that is always reported. Options: open, closed, existing. Default: existing
-* `--task-queue`, `-t` (string[]) - Which Task Queue(s) to constrain the reachability search to. May be specified multiple times
+* `--build-id` (string[]) -
+  Which Build ID to get reachability information for. May be specified multiple times
+* `--reachability-type` (string-enum) -
+  Specify how you'd like to filter the reachability of Build IDs. Valid choices are `open` (reachable by one or more open workflows), `closed` (reachable by one or more closed workflows), or `existing` (reachable by either). If a Build ID is reachable by new workflows, that is always reported. Options: open, closed, existing. Default: existing
+* `--task-queue`, `-t` (string[]) -
+  Which Task Queue(s) to constrain the reachability search to. May be specified multiple times
 
 ### temporal task-queue get-build-ids: Show worker Build ID versions on a Task Queue
 
@@ -1135,8 +1240,10 @@ Fetch the sets of compatible build IDs associated with a Task Queue and associat
 
 #### Options
 
-* `--task-queue`, `-t` (string) - Task queue name. Required
-* `--max-sets` (int) - Limits how many compatible sets will be returned. Specify 1 to only return the current default major version set. 0 returns all sets. (default: 0). Default: 0
+* `--task-queue`, `-t` (string) -
+  Task queue name. Required
+* `--max-sets` (int) -
+  Limits how many compatible sets will be returned. Specify 1 to only return the current default major version set. 0 returns all sets. (default: 0). Default: 0
 
 ### temporal task-queue list-partition: List a Task Queue's partitions
 
@@ -1144,7 +1251,8 @@ The temporal task-queue list-partition command displays the partitions of a Task
 
 #### Options
 
-* `--task-queue`, `-t` (string) - Task queue name. Required
+* `--task-queue`, `-t` (string) -
+  Task queue name. Required
 
 ### temporal task-queue update-build-ids: Operations to manage Build ID versions on a Task Queue
 
@@ -1156,10 +1264,14 @@ The new build ID will become the default for the set containing the existing ID.
 
 #### Options
 
-* `--build-id` (string) - The new build ID to be added. Required
-* `--task-queue`, `-t` (string) - Name of the Task Queue. Required
-* `--existing-compatible-build-id` (string) - A build ID which must already exist in the version sets known by the task queue. The new ID will be stored in the set containing this ID, marking it as compatible with the versions within. Required
-* `--set-as-default` (bool) - When set, establishes the compatible set being targeted as the overall default for the queue. If a different set was the current default, the targeted set will replace it as the new default. Defaults to false
+* `--build-id` (string) -
+  The new build ID to be added. Required
+* `--task-queue`, `-t` (string) -
+  Name of the Task Queue. Required
+* `--existing-compatible-build-id` (string) -
+  A build ID which must already exist in the version sets known by the task queue. The new ID will be stored in the set containing this ID, marking it as compatible with the versions within. Required
+* `--set-as-default` (bool) -
+  When set, establishes the compatible set being targeted as the overall default for the queue. If a different set was the current default, the targeted set will replace it as the new default. Defaults to false
 
 ### temporal task-queue update-build-ids add-new-default: Add a new default (incompatible) build ID to a Task Queue's 7 sets
 
@@ -1167,8 +1279,10 @@ Creates a new build ID set which will become the new overall default for the que
 
 #### Options
 
-* `--build-id` (string) - The new build ID to be added. Required
-* `--task-queue`, `-t` (string) - Name of the Task Queue. Required
+* `--build-id` (string) -
+  The new build ID to be added. Required
+* `--task-queue`, `-t` (string) -
+  Name of the Task Queue. Required
 
 ### temporal task-queue update-build-ids promote-id-in-set: Promote a build ID to become the default for its containing set
 
@@ -1176,8 +1290,10 @@ New tasks compatible with the set will be dispatched to the default ID
 
 #### Options
 
-* `--build-id` (string) - An existing build ID which will be promoted to be the default inside its containing set. Required
-* `--task-queue`, `-t` (string) - Name of the Task Queue. Required
+* `--build-id` (string) -
+  An existing build ID which will be promoted to be the default inside its containing set. Required
+* `--task-queue`, `-t` (string) -
+  Name of the Task Queue. Required
 
 ### temporal task-queue update-build-ids promote-set: Promote a build ID set to become the default for a Task Queue
 
@@ -1185,8 +1301,10 @@ If the set is already the default, this command has no effect
 
 #### Options
 
-* `--build-id` (string) - An existing build ID whose containing set will be promoted. Required
-* `--task-queue`, `-t` (string) - Name of the Task Queue. Required
+* `--build-id` (string) -
+  An existing build ID whose containing set will be promoted. Required
+* `--task-queue`, `-t` (string) -
+  Name of the Task Queue. Required
 
 
 ### temporal workflow: Start, list, and operate on Workflows
@@ -1197,23 +1315,38 @@ Workflow commands use this syntax: `temporal workflow COMMAND [ARGS]`
 
 #### Options set for client:
 
-* `--address` (string) - Temporal server address. Default: 127.0.0.1:7233. Env: TEMPORAL_ADDRESS
-* `--namespace`, `-n` (string) - Temporal server namespace. Default: default. Env: TEMPORAL_NAMESPACE
-* `--api-key` (string) - Sets the API key on requests. Env: TEMPORAL_API_KEY
-* `--grpc-meta` (string[]) - HTTP headers to send with requests (formatted as key=value)
-* `--tls` (bool) - Enable TLS encryption without additional options such as mTLS or client certificates. Env:
+* `--address` (string) -
+  Temporal server address. Default: 127.0.0.1:7233. Env: TEMPORAL_ADDRESS
+* `--namespace`, `-n` (string) -
+  Temporal server namespace. Default: default. Env: TEMPORAL_NAMESPACE
+* `--api-key` (string) -
+  Sets the API key on requests. Env: TEMPORAL_API_KEY
+* `--grpc-meta` (string[]) -
+  HTTP headers to send with requests (formatted as key=value)
+* `--tls` (bool) -
+  Enable TLS encryption without additional options such as mTLS or client certificates. Env:
   TEMPORAL_TLS
-* `--tls-cert-path` (string) - Path to x509 certificate. Env: TEMPORAL_TLS_CERT
-* `--tls-key-path` (string) - Path to private certificate key. Env: TEMPORAL_TLS_KEY
-* `--tls-ca-path` (string) - Path to server CA certificate. Env: TEMPORAL_TLS_CA
-* `--tls-cert-data` (string) - Data for x509 certificate. Exclusive with -path variant. Env: TEMPORAL_TLS_CERT_DATA
-* `--tls-key-data` (string) - Data for private certificate key. Exclusive with -path variant. Env: TEMPORAL_TLS_KEY_DATA
-* `--tls-ca-data` (string) - Data for server CA certificate. Exclusive with -path variant. Env: TEMPORAL_TLS_CA_DATA
-* `--tls-disable-host-verification` (bool) - Disables TLS host-name verification. Env:
+* `--tls-cert-path` (string) -
+  Path to x509 certificate. Env: TEMPORAL_TLS_CERT
+* `--tls-key-path` (string) -
+  Path to private certificate key. Env: TEMPORAL_TLS_KEY
+* `--tls-ca-path` (string) -
+  Path to server CA certificate. Env: TEMPORAL_TLS_CA
+* `--tls-cert-data` (string) -
+  Data for x509 certificate. Exclusive with -path variant. Env: TEMPORAL_TLS_CERT_DATA
+* `--tls-key-data` (string) -
+  Data for private certificate key. Exclusive with -path variant. Env: TEMPORAL_TLS_KEY_DATA
+* `--tls-ca-data` (string) -
+  Data for server CA certificate. Exclusive with -path variant. Env: TEMPORAL_TLS_CA_DATA
+* `--tls-disable-host-verification` (bool) -
+  Disables TLS host-name verification. Env:
   TEMPORAL_TLS_DISABLE_HOST_VERIFICATION
-* `--tls-server-name` (string) - Overrides target TLS server name. Env: TEMPORAL_TLS_SERVER_NAME
-* `--codec-endpoint` (string) - Endpoint for a remote Codec Server. Env: TEMPORAL_CODEC_ENDPOINT
-* `--codec-auth` (string) - Sets the authorization header on requests to the Codec Server. Env: TEMPORAL_CODEC_AUTH
+* `--tls-server-name` (string) -
+  Overrides target TLS server name. Env: TEMPORAL_TLS_SERVER_NAME
+* `--codec-endpoint` (string) -
+  Endpoint for a remote Codec Server. Env: TEMPORAL_CODEC_ENDPOINT
+* `--codec-auth` (string) -
+  Sets the authorization header on requests to the Codec Server. Env: TEMPORAL_CODEC_AUTH
 
 ### temporal workflow cancel: Cancel a Workflow Execution
 
@@ -1245,7 +1378,8 @@ Use the options listed below to change the command's behavior
 
 #### Options
 
-* `--query`, `-q` (string) - Filter results using a SQL-like query
+* `--query`, `-q` (string) -
+  Filter results using a SQL-like query.
 
 ### temporal workflow delete: Delete a Workflow Execution
 
@@ -1281,20 +1415,25 @@ Use the command options below to change the information returned by this command
 
 #### Options set for workflow reference
 
-* `--workflow-id`, `-w` (string) - Workflow ID. Required
-* `--run-id`, `-r` (string) - Run ID
+* `--workflow-id`, `-w` (string) -
+  Workflow ID.
+  Required.
+* `--run-id`, `-r` (string) -
+  Run ID.
 
 #### Options
 
-* `--reset-points` (bool) - Only show auto-reset points
-* `--raw` (bool) - Print properties without changing their format
+* `--reset-points` (bool) -
+  Only show auto-reset points.
+* `--raw` (bool) -
+  Print properties without changing their format.
 
 ### temporal workflow execute: Start a new Workflow Execution and prints its progress
 
 The `temporal workflow execute` command starts a new [Workflow Execution](/concepts/what-is-a-workflow-execution) and
 prints its progress. The command completes when the Workflow Execution completes
 
-Single quotes('') are used to wrap input as JSON
+Single quotes('') are used to wrap input as JSON.
 
 ```
 temporal workflow execute
@@ -1306,9 +1445,10 @@ temporal workflow execute
 
 #### Options
 
-* `--event-details` (bool) - If set when using text output, this will print the event details instead of just the event
+* `--event-details` (bool) -
+  If set when using text output, this will print the event details instead of just the event
   during workflow progress. If set when using JSON output, this will include the entire "history" JSON key of the
-  started run (does not follow runs)
+  started run (does not follow runs).
 
 Includes options set for [shared workflow start](#options-set-for-shared-workflow-start).
 Includes options set for [workflow start](#options-set-for-workflow-start).
@@ -1326,8 +1466,11 @@ Use the options listed below to change the command's behavior
 
 #### Options
 
-* `--source`, `-s` (string) - Path to the input file. Required
-* `--target`, `-t` (string) - Path to the output file, or standard output if not set
+* `--source`, `-s` (string) -
+  Path to the input file.
+  Required.
+* `--target`, `-t` (string) -
+  Path to the output file, or standard output if not set.
 
 ### temporal workflow list: List Workflow Executions based on a Query
 
@@ -1345,8 +1488,10 @@ Use the command options below to change the information returned by this command
 
 #### Options
 
-* `--query`, `-q` (string) - Filter results using a SQL-like query
-* `--archived` (bool) - If set, will only query and list archived workflows instead of regular workflows
+* `--query`, `-q` (string) -
+  Filter results using a SQL-like query.
+* `--archived` (bool) -
+  If set, will only query and list archived workflows instead of regular workflows.
 * `--limit` (int) -
   Max count to list.
 
@@ -1367,9 +1512,12 @@ Use the options listed below to change the command's behavior
 
 #### Options
 
-* `--type` (string) - Query Type/Name. Required.
-* `--reject-condition` (string-enum) - Optional flag for rejecting Queries based on Workflow state.
-  Options: not_open, not_completed_cleanly
+* `--type` (string) -
+  Query Type/Name.
+  Required.
+* `--reject-condition` (string-enum) -
+  Optional flag for rejecting Queries based on Workflow state.
+  Options: not_open, not_completed_cleanly.
 
 Includes options set for [payload input](#options-set-for-payload-input).
 Includes options set for [workflow reference](#options-set-for-workflow-reference).
@@ -1394,17 +1542,25 @@ Use the options listed below to change reset behavior
 
 #### Options
 
-* `--workflow-id`, `-w` (string) - Workflow ID. Required for non-batch reset operations
-* `--run-id`, `-r` (string) - Run ID
-* `--event-id`, `-e` (int) - The Event ID for any Event after `WorkflowTaskStarted` you want to reset to (exclusive). It can be `WorkflowTaskCompleted`, `WorkflowTaskFailed` or others
-* `--reason` (string) - The reason why this workflow is being reset. Required
-* `--reapply-type` (string-enum) - Event types to reapply after the reset point. Options: All, Signal, None. Default: All
-* `--type`, `-t` (string-enum) - Event type to which you want to reset. Options: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew, BuildId
-* `--build-id` (string) - Only used if type is BuildId. Reset the first workflow task processed by this build ID. Note that by default, this reset is allowed to be to a prior run in a chain of continue-as-new
-* `--query`, `-q` (string) - Start a batch reset to operate on Workflow Executions with given List Filter
-* `--yes`, `-y` (bool) - Don't ask for confirmation. (Note: Only allowed if --query is present)
-
-
+* `--workflow-id`, `-w` (string) -
+  Workflow ID. Required for non-batch reset operations.
+* `--run-id`, `-r` (string) -
+  Run ID.
+* `--event-id`, `-e` (int) -
+  The Event ID for any Event after `WorkflowTaskStarted` you want to reset to (exclusive). It can be `WorkflowTaskCompleted`, `WorkflowTaskFailed` or others.
+* `--reason` (string) -
+  The reason why this workflow is being reset.
+  Required.
+* `--reapply-type` (string-enum) -
+  Event types to reapply after the reset point. Options: All, Signal, None. Default: All.
+* `--type`, `-t` (string-enum) -
+  Event type to which you want to reset. Options: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew, BuildId.
+* `--build-id` (string) -
+  Only used if type is BuildId. Reset the first workflow task processed by this build ID. Note that by default, this reset is allowed to be to a prior run in a chain of continue-as-new.
+* `--query`, `-q` (string) -
+  Start a batch reset to operate on Workflow Executions with given List Filter.
+* `--yes`, `-y` (bool) -
+  Don't ask for confirmation. (Note: Only allowed if --query is present).
 
 ### temporal workflow show: Show Event History for a Workflow Execution
 
@@ -1416,8 +1572,9 @@ Use the options listed below to change the command's behavior
 
 #### Options
 
-* `--follow`, `-f` (bool) - Follow the progress of a Workflow Execution in real time (does not apply
-  to JSON output)
+* `--follow`, `-f` (bool) -
+  Follow the progress of a Workflow Execution in real time (does not apply
+  to JSON output).
 
 Includes options set for [workflow reference](#options-set-for-workflow-reference).
 
@@ -1437,18 +1594,24 @@ Use the options listed below to change the command's behavior
 
 #### Options
 
-* `--name` (string) - Signal Name. Required
+* `--name` (string) -
+  Signal Name. Required
 
 Includes options set for [payload input](#options-set-for-payload-input).
 
 #### Options set for single workflow or batch:
 
-* `--workflow-id`, `-w` (string) - Workflow ID. Either this or --query must be set
-* `--run-id`, `-r` (string) - Run ID. Cannot be set when --query is set
-* `--query`, `-q` (string) - Start a batch to operate on Workflow Executions with given List Filter. Either --query or --workflow-id must be set
-* `--reason` (string) - Reason to perform batch. Only allowed if query is present unless the command specifies
-  otherwise. Defaults to message with the current user's name
-* `--yes`, `-y` (bool) - Don't ask for confirmation. (Note: Only allowed if --query is present)
+* `--workflow-id`, `-w` (string) -
+  Workflow ID. Either this or --query must be set.
+* `--run-id`, `-r` (string) -
+  Run ID. Cannot be set when --query is set.
+* `--query`, `-q` (string) -
+  Start a batch to operate on Workflow Executions with given List Filter. Either --query or --workflow-id must be set.
+* `--reason` (string) -
+  Reason to perform batch. Only allowed if query is present unless the command specifies
+  otherwise. Defaults to message with the current user's name.
+* `--yes`, `-y` (bool) -
+  Don't ask for confirmation. (Note: Only allowed if --query is present).
 
 ### temporal workflow stack: Show the stack trace of a Workflow Execution
 
@@ -1465,8 +1628,9 @@ Use the options listed below to change the command's behavior
 
 #### Options
 
-* `--reject-condition` (string-enum) - Optional flag for rejecting Queries based on Workflow state
-  Options: not_open, not_completed_cleanly
+* `--reject-condition` (string-enum) -
+  Optional flag for rejecting Queries based on Workflow state.
+  Options: not_open, not_completed_cleanly.
 
 Includes options set for [workflow reference](#options-set-for-workflow-reference).
 
@@ -1485,33 +1649,52 @@ temporal workflow start \
 
 #### Options set for shared workflow start:
 
-* `--workflow-id`, `-w` (string) - Workflow ID
-* `--type` (string) - Workflow Type name. Required
-* `--task-queue`, `-t` (string) - Workflow Task queue. Required
-* `--run-timeout` (duration) - Fail a Workflow Run if it takes longer than `DURATION`
-* `--execution-timeout` (duration) - Fail a WorkflowExecution if it takes longer than `DURATION`, including retries and ContinueAsNew tasks
-* `--task-timeout` (duration) - Fail a Workflow Task if it takes longer than `DURATION`. (Start-to-close timeout for a Workflow Task.) Default: 10s
-* `--search-attribute` (string[]) - Passes Search Attribute in key=value format. Use valid JSON formats for value
-* `--memo` (string[]) - Passes Memo in key=value format. Use valid JSON formats for value
+* `--workflow-id`, `-w` (string) -
+  Workflow ID.
+* `--type` (string) -
+  Workflow Type name.
+  Required.
+* `--task-queue`, `-t` (string) -
+  Workflow Task queue.
+  Required.
+* `--run-timeout` (duration) -
+  Fail a Workflow Run if it takes longer than `DURATION`.
+* `--execution-timeout` (duration) -
+  Fail a WorkflowExecution if it takes longer than `DURATION`, including retries and ContinueAsNew tasks.
+* `--task-timeout` (duration) -
+  Fail a Workflow Task if it takes longer than `DURATION`. (Start-to-close timeout for a Workflow Task.) Default: 10s.
+* `--search-attribute` (string[]) -
+  Passes Search Attribute in key=value format. Use valid JSON formats for value.
+* `--memo` (string[]) -
+  Passes Memo in key=value format. Use valid JSON formats for value.
 
 #### Options set for workflow start:
 
-* `--cron` (string) - Cron schedule for the Workflow. Deprecated - use schedules instead
-* `--fail-existing` (bool) - Fail if the Workflow already exists
-* `--start-delay` (duration) - Wait before starting the Workflow. Cannot be used with a cron schedule. If the
-  Workflow receives a signal or update before the delay has elapsed, it will start immediately
-* `--id-reuse-policy` (string) - Allow the same Workflow ID to be used in a new Workflow Execution. Options:
-  AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate, TerminateIfRunning
+* `--cron` (string) -
+  Cron schedule for the Workflow. Deprecated -
+  use schedules instead.
+* `--fail-existing` (bool) -
+  Fail if the Workflow already exists.
+* `--start-delay` (duration) -
+  Wait before starting the Workflow. Cannot be used with a cron schedule. If the
+  Workflow receives a signal or update before the delay has elapsed, it will start immediately.
+* `--id-reuse-policy` (string) -
+  Allow the same Workflow ID to be used in a new Workflow Execution. Options:
+  AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate, TerminateIfRunning.
 
 #### Options set for payload input:
 
-* `--input`, `-i` (string[]) - Input value (default JSON unless --input-meta is non-JSON encoding). Can
-  be passed multiple times for multiple arguments. Cannot be combined with --input-file
-* `--input-file` (string[]) - Read `PATH` as the input value (JSON by default unless --input-meta is non-JSON
-  encoding). Can be passed multiple times for multiple arguments. Cannot be combined with --input
-* `--input-meta` (string[]) - Metadata for the input payload, specified as a `KEY=VALUE` pair. If KEY is "encoding", overrides the
-  default of "json/plain". Pass multiple --input-meta options to set multiple pairs
-* `--input-base64` (bool) - Assume inputs are base64-encoded and attempt to decode them
+* `--input`, `-i` (string[]) -
+  Input value (default JSON unless --input-meta is non-JSON encoding). Can
+  be passed multiple times for multiple arguments. Cannot be combined with --input-file.
+* `--input-file` (string[]) -
+  Read `PATH` as the input value (JSON by default unless --input-meta is non-JSON
+  encoding). Can be passed multiple times for multiple arguments. Cannot be combined with --input.
+* `--input-meta` (string[]) -
+  Metadata for the input payload, specified as a `KEY=VALUE` pair. If KEY is "encoding", overrides the
+  default of "json/plain". Pass multiple --input-meta options to set multiple pairs.
+* `--input-base64` (bool) -
+  Assume inputs are base64-encoded and attempt to decode them.
 
 ### temporal workflow terminate: Terminate a Workflow Execution
 
@@ -1530,30 +1713,39 @@ temporal workflow terminate [--reason my-reason] --workflow-id YourWorkflowId
 temporal workflow terminate --query YourQuery
 ```
 
-Use the options listed below to change the behavior of this command
+Use the options listed below to change the behavior of this command.
 
 #### Options
 
-* `--workflow-id`, `-w` (string) - Workflow ID. Either this or query must be set
-* `--run-id`, `-r` (string) - Run ID. Cannot be set when query is set
-* `--query`, `-q` (string) - Start a batch to terminate Workflow Executions with the `QUERY` List Filter. Either this or
-  Workflow ID must be set
-* `--reason` (string) - Reason for termination. Defaults to message with the current user's name
-* `--yes`, `-y` (bool) - Confirm prompt to perform batch. Only allowed if query is present
+* `--workflow-id`, `-w` (string) -
+  Workflow ID. Either this or query must be set.
+* `--run-id`, `-r` (string) -
+  Run ID. Cannot be set when query is set.
+* `--query`, `-q` (string) -
+  Start a batch to terminate Workflow Executions with the `QUERY` List Filter. Either this or
+  Workflow ID must be set.
+* `--reason` (string) -
+  Reason for termination. Defaults to message with the current user's name.
+* `--yes`, `-y` (bool) -
+  Confirm prompt to perform batch. Only allowed if query is present.
 
 ### temporal workflow trace: Interactively show the progress of a Workflow Execution
 
-The `temporal workflow trace` command displays the progress of a [Workflow Execution](/concepts/what-is-a-workflow-execution) and its child workflows with a real-time trace
-This view provides a great way to understand the flow of a workflow
+The `temporal workflow trace` command displays the progress of a [Workflow Execution](/concepts/what-is-a-workflow-execution) and its child workflows with a real-time trace.
+This view provides a great way to understand the flow of a workflow.
 
-Use the options listed below to change the behavior of this command
+Use the options listed below to change the behavior of this command.
 
 #### Options
 
-* `--fold` (string[]) - Fold Child Workflows with the specified `STATUS`. To specify multiple statuses, pass --fold multiple times. This will reduce the amount of information fetched and displayed. Case-insensitive. Ignored if --no-fold supplied. Available values: running, completed, failed, canceled, terminated, timedout, continueasnew
-* `--no-fold` (bool) - Disable folding. All Child Workflows within the set depth will be fetched and displayed
-* `--depth` (int) - Fetch up to N Child Workflows deep. Use -1 to fetch child workflows at any depth. Default: -1
-* `--concurrency` (int) - Fetch up to N Workflow Histories at a time. Default: 10
+* `--fold` (string[]) -
+  Fold Child Workflows with the specified `STATUS`. To specify multiple statuses, pass --fold multiple times. This will reduce the amount of information fetched and displayed. Case-insensitive. Ignored if --no-fold supplied. Available values: running, completed, failed, canceled, terminated, timedout, continueasnew.
+* `--no-fold` (bool) -
+  Disable folding. All Child Workflows within the set depth will be fetched and displayed.
+* `--depth` (int) -
+  Fetch up to N Child Workflows deep. Use -1 to fetch child workflows at any depth. Default: -1.
+* `--concurrency` (int) -
+  Fetch up to N Workflow Histories at a time. Default: 10.
 
 Includes options set for [workflow reference](#options-set-for-workflow-reference).
 
@@ -1573,11 +1765,18 @@ Use the options listed below to change the command's behavior
 
 #### Options
 
-* `--name` (string) - Update Name. Required
-* `--workflow-id`, `-w` (string) - Workflow `ID`. Required
-* `--update-id` (string) - Update `ID`. If unset, default to a UUID
-* `--run-id`, `-r` (string) - Run `ID`. If unset, the currently running Workflow Execution receives the Update
-* `--first-execution-run-id` (string) - Send the Update to the last Workflow Execution in the chain that started
-  with `ID`
+* `--name` (string) -
+  Update Name.
+  Required.
+* `--workflow-id`, `-w` (string) -
+  Workflow `ID`.
+  Required.
+* `--update-id` (string) -
+  Update `ID`. If unset, default to a UUID.
+* `--run-id`, `-r` (string) -
+  Run `ID`. If unset, the currently running Workflow Execution receives the Update.
+* `--first-execution-run-id` (string) -
+  Send the Update to the last Workflow Execution in the chain that started
+  with `ID`.
 
 Includes options set for [payload input](#options-set-for-payload-input).
