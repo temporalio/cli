@@ -210,22 +210,41 @@ func (c *Command) writeCode(w *codeWriter) error {
 	}
 	var flagAliases [][]string
 	for _, optSet := range c.OptionsSets {
-		// If there's a name, this is done in the method
-		if optSet.SetName != "" {
-			w.writeLinef("s.%v.buildFlags(cctx, %v)", optSet.setStructName(), flagVar)
-			continue
-		}
-		// Each field
-		if err := optSet.writeFlagBuilding("s", flagVar, w); err != nil {
-			return fmt.Errorf("failed building option flags: %w", err)
-		}
+		// Add aliases
 		for _, opt := range optSet.Options {
 			for _, alias := range opt.Aliases {
 				flagAliases = append(flagAliases, []string{alias, opt.Name})
 			}
 		}
+		for _, include := range optSet.IncludeOptionsSets {
+			// Find include
+		cmdLoop:
+			for _, cmd := range w.allCommands {
+				for _, optSet := range cmd.OptionsSets {
+					if optSet.SetName == include {
+						for _, opt := range optSet.Options {
+							for _, alias := range opt.Aliases {
+								flagAliases = append(flagAliases, []string{alias, opt.Name})
+							}
+						}
+						break cmdLoop
+					}
+				}
+			}
+		}
+
+		// If there's a name, this is done in the method
+		if optSet.SetName != "" {
+			w.writeLinef("s.%v.buildFlags(cctx, %v)", optSet.setStructName(), flagVar)
+			continue
+		}
+
+		// Each field
+		if err := optSet.writeFlagBuilding("s", flagVar, w); err != nil {
+			return fmt.Errorf("failed building option flags: %w", err)
+		}
 	}
-	// Generate normalize
+	// Generate normalize for aliases
 	if len(flagAliases) > 0 {
 		sort.Slice(flagAliases, func(i, j int) bool { return flagAliases[i][0] < flagAliases[j][0] })
 		w.writeLinef("%v.SetNormalizeFunc(aliasNormalizer(map[string]string{", flagVar)
