@@ -239,14 +239,13 @@ DEFINING AN OPTION
 
 ### temporal: Temporal command-line interface and development server
 
-The Temporal CLI (Command Line Interface) is a powerful tool that manages,
-monitors, and helps you debug your Temporal applications. With it, you can
-run a local Temporal Service directly from your terminal. This CLI tool helps
-you start Workflows, pass messages, cancel application steps, and more.
+The Temporal CLI manages, monitors, and debugs Temporal apps. It lets you
+run a local Temporal Service, start Workflow Executions, pass messages to
+running Workflows, inspects state, and more.
 
 * Start a local development service:
       `temporal server start-dev`
-* Help messages: pass --help for any command for how-to details:
+* View help: pass --help to any command:
       `temporal activity complete --help`
 
 <!--
@@ -256,16 +255,16 @@ you start Workflows, pass messages, cancel application steps, and more.
 #### Options
 
 * `--env` (string) -
-   Active environment name (`ENV`).
-   Default: default.
-   Env: TEMPORAL_ENV.
+  Active environment name (`ENV`).
+  Default: default.
+  Env: TEMPORAL_ENV.
 * `--env-file` (string) -
-   Path to environment settings file.
-   (defaults to `$HOME/.config/temporalio/temporal.yaml`).
+  Path to environment settings file.
+  (defaults to `$HOME/.config/temporalio/temporal.yaml`).
 * `--log-level` (string-enum) -
-   Log level.
-   Default is "info" for most commands and "warn" for `server start-dev`.
-   Options: debug, info, warn, error, never. Default: info.
+  Log level.
+  Default is "info" for most commands and "warn" for `server start-dev`.
+  Options: debug, info, warn, error, never. Default: info.
 * `--log-format` (string) -
   Log format.
   Options: text, json. Default: text.
@@ -283,9 +282,8 @@ you start Workflows, pass messages, cancel application steps, and more.
 
 ### temporal activity: Complete or fail an Activity
 
-Update an Activity to report that it has completed or failed. This command
-marks an activity as successfully finished or as having encountered an error
-during execution.
+Update Activity state to report completion or failure. This command marks
+an Activity as successfully finished or as having encountered an error.
 
 #### Options
 
@@ -293,8 +291,8 @@ Includes options set for [client](#options-set-for-client).
 
 ### temporal activity complete: Complete an Activity
 
-Complete an Activity, marking it as successfully finished. Specify
-the ID and include a JSON result to use for the returned value.
+Complete an Activity, marking it as successfully finished. Specify the ID
+and include a JSON result for the returned value:
 
 ```
 temporal activity complete \
@@ -318,8 +316,8 @@ Includes options set for [workflow reference](#options-set-for-workflow-referenc
 
 ### temporal activity fail: Fail an Activity
 
-Fail an Activity, marking it as having encountered an error during execution.
-Specify the Activity and Workflow IDs.
+Fail an Activity, marking it as having encountered an error. Specify the
+Activity and Workflow IDs:
 
 ```
 temporal activity fail \
@@ -343,10 +341,10 @@ Includes options set for [workflow reference](#options-set-for-workflow-referenc
 
 ### temporal batch: Manage batch jobs
 
-A batch job executes a single command affecting multiple Workflow.
-Executions in tandem. You specify the Workflow Execution to include
-and the kind of batch job to apply. For example, to cancel all the running
-'YourWorkflow' Workflows:
+
+A batch job executes a command affecting multiple Workflow Executions at once.
+Specify the Workflow Executions to include and the type of batch job to apply.
+For example, to cancel all running 'YourWorkflow' Workflows:
 
 ```
 temporal batch workflow cancel \
@@ -354,8 +352,8 @@ temporal batch workflow cancel \
   --reason "Testing"
 ```
 
-The `batch` command keyword can be omitted when a `--query` is supplied
-to produce the same results:
+The `batch` command keyword is optional when you supply a `--query`. This
+invocation is identical to the previous one:
 
 ```
 temporal workflow cancel \
@@ -369,8 +367,8 @@ Includes options set for [client](#options-set-for-client).
 
 ### temporal batch describe: Show batch job progress
 
-Show the progress of an ongoing batch job. Pass a valid job ID
-to return the job's information:
+Show the progress of an ongoing batch job. Pass a valid job ID to display
+its information:
 
 ```
 temporal batch describe --job-id YourJobId
@@ -379,14 +377,13 @@ temporal batch describe --job-id YourJobId
 #### Options
 
 * `--job-id` (string) -
-  Batch job ID to describe.
+  Batch job ID.
   Required.
 
 ### temporal batch list: List all batch jobs
 
-Return a list of batch jobs, for the entire Service or, optionally, a single
-Namespace. For example, to list the batch jobs for "YourNamespace":
-
+Return a list of batch jobs on the Service or within a single Namespace.
+For example, list the batch jobs for "YourNamespace":
 ```
 temporal batch list --namespace YourNamespace
 ```
@@ -394,13 +391,13 @@ temporal batch list --namespace YourNamespace
 #### Options
 
 * `--limit` (int) -
-  Max count to list.
+  Max output count.
 
 ### temporal batch terminate: Terminate a batch job
 
-Terminate the batch job with the provided job ID. You must provide a reason
-motivating the termination. This reason is stored with the Service for later
-reference. For example, to terminate 'YourJobId':
+Terminate a batch job with the provided job ID. Provide a reason for the
+termination. This explanation is stored with the Service for later reference.
+For example:
 
 ```
 temporal batch terminate \
@@ -411,7 +408,7 @@ temporal batch terminate \
 #### Options
 
 * `--job-id` (string) -
-  Job id to terminate.
+  Job Id to terminate.
   Required.
 * `--reason` (string) -
   Reason for terminating the batch job.
@@ -419,64 +416,31 @@ temporal batch terminate \
 
 ### temporal env: Manage environments
 
-Environments create and manage groups of key-value presets. These presets
-configure options for your CLI commands so you don't have to type them in
-each time. Use them for easy set-up for distinct environments, such as "dev"
-and "prod" work.
-
-For example, you might set an endpoint preset for the `--address` option
-for each environment. Supply the `--env` name and the CLI configures the
-options for you:
+Environments manage key-value presets, auto-configuring Temporal CLI options
+for you. Set up distinct environments like "dev" and "prod" for convenience.
+For example:
 
 ```
-temporal env set --env prod --key address \
+temporal env set \
+    --env prod \
+    --key address \
     --value production.f45a2.tmprl.cloud:7233
 ```
 
-Environments compartmentalize your key-value stores. Changes to
-your "prod" environment won't affect your "dev" environment:
+Each environment is isolated. Changes to "prod" presets won't affect "dev".
 
-```
-temporal env set --env prod --key namespace \
-    --value production.f45a2
-temporal env set --env prod --key tls-cert-path \
-    --value /temporal/certs/prod.pem
-temporal env set --env prod --key tls-key-path \
-    --value /temporal/certs/prod.key
-```
-
-Check your "prod" presets using `temporal env get --env prod`:
-
-```
-address production.f45a2.tmprl.cloud:7233
-namespace production.f45a2
-tls-cert-path /temporal/certs/prod.pem
-tls-key-path /temporal/certs/prod.key
-```
-
-To use an environment with any command, pass `--env` followed by the
-environment name. For example, to list workflows in the "prod" environment:
-
-```
-temporal workflow list --env prod
-```
-
-For easier use, specify your active environment as an environment
-variable in your shell with the `TEMPORAL_ENV` environment variable.
-Otherwise, the Temporal CLI uses the "default" environment when a
-specific environment is not named in the command or set as an environment
-variable:
-
-```
-temporal workflow list --env prod
-```
+For easiest use, set a `TEMPORAL_ENV` environmental variable in your shell.
+The Temporal CLI checks for an `--env` option first, then checks the shell.
+If neither is set, most commands use `default` environmental presets if
+they are available.
 
 ### temporal env delete: Delete an environment or environment property
 
+
 Remove an environment entirely or remove a key-value pair within an
-environment. If you don't specify an environment (with `--env` or by
-setting the `TEMPORAL_ENV` environment variable), this updates the `default`
-environment. For example:
+environment. If you don't specify an environment (with --env or by setting
+the TEMPORAL_ENV variable), this updates the default environment. 
+For example:
 
 ```
 temporal env delete --env YourEnvironment
@@ -497,44 +461,23 @@ temporal env delete --env prod  --key tls-key-path
 * `--key`, `-k` (string) -
   Property name.
 
-### temporal env get: Print environment properties
+### temporal env get: Show environment properties
 
-Print the environmental properties for a given environment:
+List the properties for a given environment:
 
 ```
 temporal env get --env YourEnvironment
 ```
 
-For example, invoking:
-
-```
-temporal env get --env prod
-```
-
-might produce these results:
-
-```
-tls-cert-path  /home/my-user/certs/client.cert
-tls-key-path   /home/my-user/certs/client.key
-address        temporal.example.com:7233
-namespace      someNamespace
-```
-
 Print a single property:
 
 ```
-temporal env get --env prod --key tls-key-path
+temporal env get --env YourEnvironment --key YourPropertyKey
 ```
 
-might produce this result:
-
-```
-tls-key-path  /home/my-user/certs/cluster.key
-```
-
-If you don't specify an environment name, either directly with the `--env`
-option or indirectly by setting the `TEMPORAL_ENV` environmental variable,
-the utility lists the `default` environment properties.
+If you don't specify an environment name, with `--env` or by setting
+`TEMPORAL_ENV` as an environmental variable in your shell, this command
+lists properties in the `default` environment.
 
 <!--
 * maximum-args=1
@@ -545,24 +488,15 @@ the utility lists the `default` environment properties.
 * `--key`, `-k` (string) -
   Property name.
 
-### temporal env list: Print all environments
+### temporal env list: List environments
 
-List the environments you have previously set up on your local computer
-by issuing `temporal env list`. Your output shows all environment names
-currently stored in your "$HOME/.config/temporalio/temporal.yaml" file.
-For example, the output might include:
-
-```
-default
-prod
-dev
-```
+List the environments you have set up on your local computer. The output 
+enumerates the environments stored in the Temporal environment file on
+your computer ("$HOME/.config/temporalio/temporal.yaml").
 
 ### temporal env set: Set environment properties
 
-Associate a value with a property key and store it in the environment you
-specify with the `--env` flag or have set with the `TEMPORAL_ENV`
-environmental variable.
+Assign a value to a property key and store it to an environment:
 
 ```
 temporal env set \
@@ -571,23 +505,13 @@ temporal env set \
     --value value
 ```
 
-Property names match should match CLI option names. This enables
-them to be automatically retrieved for the active environment. Setting
-property values in advance reduces the effort required to issue CLI
-commands and helps avoid typos.
+If you don't specify an environment name, with `--env` or by setting
+`TEMPORAL_ENV` as an environmental variable in your shell, this command
+sets properties in the `default` environment.
 
-For example, to set '--address' and '--tls-cert-path' for 'prod':
-
-```
-temporal env set --env prod --key address --value 127.0.0.1:7233
-temporal env set \
-    --env prod \
-    --key tls-cert-path \
-    --value /home/my-user/certs/cluster.cert
-```
-
-When an environment is not specified or set as an environmental variable,
-the CLI tool uses the `default` environment.
+Setting property names lets the CLI automatically set options on your behalf.
+Storing these property values in advance reduces the effort required to 
+issue CLI commands and helps avoid typos.
 
 <!--
 * maximum-args=2
