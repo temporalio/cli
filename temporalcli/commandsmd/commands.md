@@ -13,6 +13,7 @@ NOTES FOR ERICA
 * Word wrapping to 80 chars
     * What about options? they tend to run long
     * Could the text go to a second line after the spaced-dash?
+    * Could long descriptions be autowrapped outside code examples? -- NEW Q
 * --help, --long-help, --full-help to provide progressive support?
 * --long, --extra-long/--full and not --really-long
   * `--long`, `-l` (bool) -
@@ -33,6 +34,33 @@ NOTES FOR ERICA
   * `--follow`, `-f` (bool) -
   * `--reset-points` (bool) - ? --show-reset-points?
 
+(NEW) Inconsistent use of identical items
+
+* `--build-id` (string) -
+* `--build-id` (string[]) -
+* `--cron` (string) -
+* `--cron` (string[]) -
+* `--data` (string) -
+* `--data` (string[]) -
+* `--detail` (bool) -
+* `--detail` (string) -
+* `--name` (string) -
+* `--name` (string[]) -
+* `--namespace`, `-n` (string) -
+* `--namespace`, `-n` (string[]) -
+* `--task-queue`, `-t` (string) -
+* `--task-queue`, `-t` (string[]) -
+* `--tls-ca-data` (string) -
+* `--tls-ca-path` (string) -
+* `--tls-cert-data` (string) -
+* `--tls-cert-path` (string) -
+* `--tls-key-data` (string) -
+* `--tls-key-path` (string) -
+* `--type` (string) -
+* `--type` (string[]) -
+* `--type`, `-t` (string-enum) -
+
+
 * Consistency?
   * `--pause` (bool) -
   * `--unpause` (bool) -
@@ -42,7 +70,7 @@ NOTES FOR ERICA
 * `--global` (bool) -
 * `--promote-global` (bool) -
 
-* `--enable-connection` (bool) - ? --connected?
+* `--enable-connection` (bool) - ? --connected? --set-connected?
 * `--fail-existing` (bool) - ? --fail-current?
 
 * `--archived` (bool) - ? --set-archived?
