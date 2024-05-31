@@ -1472,8 +1472,8 @@ func NewTemporalTaskQueueUpdateBuildIdsCommand(cctx *CommandContext, parent *Tem
 	var s TemporalTaskQueueUpdateBuildIdsCommand
 	s.Parent = parent
 	s.Command.Use = "update-build-ids"
-	s.Command.Short = "Operations to manage Build ID versions on a Task Queue"
-	s.Command.Long = "Provides various commands for adding or changing the sets of compatible build IDs associated with a Task Queue. See the help of each sub-command for more"
+	s.Command.Short = "Manage build ID versions"
+	s.Command.Long = "STOPPING HERE FOR BREAK WEFWEF\n\nProvides various commands for adding or changing the sets of compatible build IDs associated with a Task Queue. See the help of each sub-command for more"
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalTaskQueueUpdateBuildIdsAddNewCompatibleCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalTaskQueueUpdateBuildIdsAddNewDefaultCommand(cctx, &s).Command)

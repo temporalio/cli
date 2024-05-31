@@ -10,6 +10,13 @@ NOTES FOR ERICA
 * What changes have been introduced asynchronously. I've seen stuff on Slack.
 * What's the best way to do async conversations other than PRs?
 
+NEW: 
+* `--set-as-default` (bool) -
+This is super confusing. When you add the new Build ID, it becomes the default
+for the set it is inserted into. This command makes the set become the Task
+Queue default, and the option defaults to false. Suggestion: --promote-set-as-default-set
+or something like that because mind blown.
+
 * Word wrapping to 80 chars
     * What about options? they tend to run long
     * Could the text go to a second line after the spaced-dash?
@@ -1453,14 +1460,15 @@ temporal task-queue describe \
 
 ### temporal task-queue get-build-id-reachability: Build ID availability
 
-Shows if a given Build ID can be used for new, existing, or closed workflows.
-You can specify the '--build-id' and '--task-queue' flags multiple times.
-When '--task-queue' is omitted, checks Build ID reachability against all
-task queues. For example:
+Shows if a given Build ID can be used for new, existing, or closed workflows
+in Namespaces that support Worker versioning:
 
 ```
 temporal task-queue get-build-id-reachability --build-id "2.0"
 ```
+You can specify the '--build-id' and '--task-queue' flags multiple times.
+When '--task-queue' is omitted, checks Build ID reachability against all
+task queues.
 
 #### Options
 
@@ -1490,6 +1498,8 @@ temporal task-queue get-build-ids \
     --task-queue "YourTaskQueue"
 ```
 
+Limited to Namespaces that enable Worker versioning.
+
 #### Options
 
 * `--task-queue`, `-t` (string) -
@@ -1516,80 +1526,144 @@ temporal task-queue list-partition \
   Task Queue name.
   Required
 
-### temporal task-queue update-build-ids: Manage build ID versions
-STOPPING HERE FOR BREAK WEFWEF
+### temporal task-queue update-build-ids: Manage build IDs
 
-Provides various commands for adding or changing the sets of compatible build IDs associated with a Task Queue. See the help of each sub-command for more
+Add or change a Task Queue's compatible build IDs for Namespaces using
+Worker versioning.
 
-### temporal task-queue update-build-ids add-new-compatible: Add a new build ID compatible with an existing ID to a Task Queue's version sets
+### temporal task-queue update-build-ids add-new-compatible: Add compatible build ID
 
-The new build ID will become the default for the set containing the existing ID. See per-flag help for more
+Adds a compatible Build ID to a Task Queue's existing version set. You 
+supply an existing Build ID and a new Build ID:
+
+```
+temporal task-queue update-build-ids add-new-compatible \
+    --task-queue YourTaskQueue
+    --existing-compatible-build-id YourExistingBuildId
+    --build-id YourNewBuildId
+)
+```
+
+The new ID is stored in the set containing the existing ID and becomes the
+new default for that set. 
+
+This command is limited to Namespaces that support Worker versioning.
 
 #### Options
 
 * `--build-id` (string) -
-  The new build ID to be added. Required
+  Build Id to be added.
+  Required
 * `--task-queue`, `-t` (string) -
-  Name of the Task Queue. Required
+  Task Queue name.
+  Required.
 * `--existing-compatible-build-id` (string) -
-  A build ID which must already exist in the version sets known by the task queue. The new ID will be stored in the set containing this ID, marking it as compatible with the versions within. Required
+  Pre-existing Build Id in this Task Queue.
 * `--set-as-default` (bool) -
-  When set, establishes the compatible set being targeted as the overall default for the queue. If a different set was the current default, the targeted set will replace it as the new default.
+  Set the expanded Build Id set as the Task Queue default.
   Defaults to false.
 
-### temporal task-queue update-build-ids add-new-default: Add a new default (incompatible) build ID to a Task Queue's 7 sets
+### temporal task-queue update-build-ids add-new-default: Establish new default BuildID set.
 
-Creates a new build ID set which will become the new overall default for the queue with the provided build ID as its only member. This new set is incompatible with all previous sets/versions
+Create a new Task Queue Build ID set, add a Build ID to it, and make it the
+overall Task Queue default:
 
-#### Options
+```
+temporal task-queue update-build-ids add-new-default \
+    --task-queue YourTaskQueue \
+    --build-id YourNewBuildId
+```
 
-* `--build-id` (string) -
-  The new build ID to be added. Required
-* `--task-queue`, `-t` (string) -
-  Name of the Task Queue. Required
+The new set is incompatible with all previous sets/versions.
 
-### temporal task-queue update-build-ids promote-id-in-set: Promote a build ID to become the default for its containing set
-
-New tasks compatible with the set will be dispatched to the default ID
-
-#### Options
-
-* `--build-id` (string) -
-  An existing build ID which will be promoted to be the default inside its containing set. Required
-* `--task-queue`, `-t` (string) -
-  Name of the Task Queue. Required
-
-### temporal task-queue update-build-ids promote-set: Promote a build ID set to become the default for a Task Queue
-
-If the set is already the default, this command has no effect
+This command is limited to Namespaces that support Worker versioning.
 
 #### Options
 
 * `--build-id` (string) -
-  An existing build ID whose containing set will be promoted. Required
+  Build Id to be added.
+  Required
 * `--task-queue`, `-t` (string) -
-  Name of the Task Queue. Required
+  Task Queue name.
+  Required.
 
+### temporal task-queue update-build-ids promote-id-in-set: promote Build ID
+
+Establish an existing Build ID as the default in its Task Queue set. 
+New tasks compatible with this set will now be dispatched to this ID:
+
+```
+temporal task-queue update-build-ids promote-id-in-set \
+    --task-queue YourTaskQueue \
+    --build-id YourBuildId
+```
+
+This command is limited to Namespaces that support Worker versioning.
+
+#### Options
+
+* `--build-id` (string) -
+  Build Id to set as default.
+  Required
+* `--task-queue`, `-t` (string) -
+  Task Queue name.
+  Required.
+
+### temporal task-queue update-build-ids promote-set: Promote Build ID set
+
+Promote a Build ID set to become the default set on a Task Queue.
+You identify the set by providing a Build ID that exists within the set.
+If the set is already the default, this command has no effect:
+
+```
+temporal task-queue update-build-ids promote-set \
+    --task-queue YourTaskQueue \
+    --build-id YourBuildId
+```
+
+This command is limited to Namespaces that support Worker versioning.
+
+#### Options
+
+* `--build-id` (string) -
+  Build Id within the promoted set.
+  Required
+* `--task-queue`, `-t` (string) -
+  Task Queue name.
+  Required.
 
 ### temporal workflow: Start, list, and operate on Workflows
 
-[Workflow](/workflows) commands perform operations on [Workflow Executions](/workflows#workflow-execution)
+[Workflow](/workflows) commands perform operations on [Workflow Executions](/workflows#workflow-execution):
 
-Workflow commands use this syntax: `temporal workflow COMMAND [ARGS]`
+```
+temporal workflow [command] [options]
+```
+
+For example:
+
+```
+temporal workflow list
+```
 
 #### Options set for client:
 
 * `--address` (string) -
-  Temporal server address.
-  Default: 127.0.0.1:7233. Env: TEMPORAL_ADDRESS.
+  Temporal Service gRPC endpoint.
+  Default: 127.0.0.1:7233.
+  Env: TEMPORAL_ADDRESS.
 * `--namespace`, `-n` (string) -
-  Temporal server namespace.
-  Default: default. Env: TEMPORAL_NAMESPACE
+  Temporal Service Namespace.
+  Default: default.
+  Env: TEMPORAL_NAMESPACE.
 * `--api-key` (string) -
-  Sets the API key on requests. Env: TEMPORAL_API_KEY
+  API key for request.
+  Env: TEMPORAL_API_KEY
 * `--grpc-meta` (string[]) -
-  HTTP headers to send with requests (formatted as "KEY=VALUE")
+  HTTP headers for requests.
+  Format as "KEY=VALUE" pairs.
 * `--tls` (bool) -
+  STOPPED HERE WEFWEF
   Enable TLS encryption without additional options such as mTLS or client certificates. Env:
   TEMPORAL_TLS
 * `--tls-cert-path` (string) -
