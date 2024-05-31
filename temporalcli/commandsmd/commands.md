@@ -6,9 +6,69 @@ Commands for the Temporal CLI
 
 NOTES FOR ERICA
 
+* All URLs are borked due to Info Arch re-org
 * Word wrapping to 80 chars
     * What about options? they tend to run long
     * Could the text go to a second line after the spaced-dash?
+* --help, --long-help, --full-help to provide progressive support?
+* --long, --extra-long/--full and not --really-long
+  * `--long`, `-l` (bool) -
+  * `--really-long` (bool) - 
+* Auditing confirmation elements, especially bools
+  * `--yes`, `-y` (bool) - has multiple meanings based on use
+    (default true, false varies)
+* Payloads
+  * `--no-json-shorthand-payloads` (bool) - Shorter? --literal-payload? --string-payload?
+  * `--input-base64` (bool) - --data-base64?
+
+* These all seem to do with presentation
+  * `--detail` (bool) -
+  * `--event-details` (bool) -
+  * `--log-config` (bool) -
+  * `--no-fold` (bool) -
+  * `--raw` (bool) -
+  * `--follow`, `-f` (bool) -
+  * `--reset-points` (bool) - ? --show-reset-points?
+
+* Consistency?
+  * `--pause` (bool) -
+  * `--unpause` (bool) -
+  * `--pause-on-failure` (bool) -
+  * `--paused` (bool) - Perhaps: set-paused? set-paused-state?
+
+* `--global` (bool) -
+* `--promote-global` (bool) -
+
+* `--enable-connection` (bool) - ? --connected?
+* `--fail-existing` (bool) - ? --fail-current?
+
+* `--archived` (bool) - ? --set-archived?
+
+* `--headless` (bool) -
+
+* `--set-as-default` (bool) -
+ 
+* `--tls-disable-host-verification` (bool) -
+* `--tls` (bool) -
+
+cat `make path` | egrep '\]\(' | grep -v options-set | grep "/concepts" | open -f | sort
+
+[Temporal Server](/clusters)
+[Task Queue](/workers#task-queue)
+[poller](/dev-guide/worker-performance#poller-count)
+Temporal [Workers](/workers)
+[Workflow](/workflows)
+[Workflow Executions](/workflows#workflow-execution)
+[Workflow Execution](/workflows#workflow-execution)
+[Workflow ID](/workflows#workflow-id)
+[list filter](/visibility#list-filter)
+[Event History](/workflows#event-history)
+[Query](workflows#query)
+[Queries](/workflows#query)
+[Event Type](/workflows#event)
+[Signal](/workflows#signal)
+[Update](/workflows#update)
+
 * -h, -o, -v are wonky:
 Flags:
       --color string                                      Output coloring. Accepted values: always, never, auto. (default "auto")
@@ -117,20 +177,26 @@ A Command entry uses the following format:
 
     (optional command implementation configuration)
 
-    #### Options
+    #### Options 
+    (or)
+    #### Options set for options set name
 
-    * `--<long-option>`( , `-<short option>`) <data-type> -
+    * `--<long-option>`( , `-<short-option>`) <data-type> -
       <short-description>.
       ( <extra-attributes>. )
-    * `--<long-option>`( , `-<short option>`) <data-type> -
+    * `--<long-option>`( , `-<short-option>`) <data-type> -
       <short-description>.
       ( <extra-attributes>. )
-    * `--<long-option>`( , `-<short option>`) <data-type> -
+    * `--<long-option>`( , `-<short-option>`) <data-type> -
       <short-description>.
       ( <extra-attributes>. )
     * ...
 
     optional: Includes options set for [<options-set-name>](#options-set-for-<options-set-link-name>).
+
+Note:
+* option-set-name is the text after "for " in "#### Options set for ".
+* option-set-link-name is the same text with spaces replaced with hyphens.
 
 COMMAND LISTING
 
@@ -164,7 +230,7 @@ OPTIONS SECTION
 * You must include at least one option.
   Otherwise, `gen-commands` will complete but the CLI utility will not run.
 * To incorporate an existing options set, add a single line below options
-  like this, remembering to end every `Include options set for` line with a
+  like this, remembering to end every `Includes options set for` line with a
   period:
 
   ```
@@ -717,7 +783,7 @@ Note: URI values for archival states can't be changed after being enabled.
   Namespace data.
 * `--description` (string) -
   Namespace description.
-  Comma-separated `KEY=VALUE` string pairs.
+  Comma-separated "KEY=VALUE" string pairs.
 * `--email` (string) -
   Owner email.
 * `--global` (bool) -
@@ -839,7 +905,7 @@ temporal operator namespace update \
 * `--cluster` (string[]) -
   Cluster names.
 * `--data` (string[]) -
-  Set a `KEY=VALUE` string pair in Namespace data.
+  Set a "KEY=VALUE" string pair in Namespace data.
   KEY is an unquoted string identifier.
   Unquoted JSON is recommended for the VALUE.
   Can be passed multiple times.
@@ -1045,14 +1111,14 @@ and `--cron`.
   Interpret calendar specs with the `TZ` time zone.
   For a list of time zones, see: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones.
 * `--schedule-search-attribute` (string[]) -
-  Set schedule Search Attributes using `KEY=VALUE` format.
+  Set schedule Search Attributes using "KEY=VALUE" format.
   KEY is an unquoted string identifier.
-  VALUE is an unquoted JSON string.
+  VALUE is a JSON string.
   Can be passed multiple times.
-  * `--schedule-memo` (string[]) -
-  Set a schedule memo using `KEY=VALUE` format.
+* `--schedule-memo` (string[]) -
+  Set a schedule memo using "KEY=VALUE" format.
   KEY is an unquoted string identifier.
-  VALUE is an unquoted JSON string.
+  VALUE is a JSON string.
   Can be passed multiple times.
 
 #### Options
@@ -1062,73 +1128,109 @@ Includes options set for [overlap-policy](#options-set-for-overlap-policy).
 Includes options set for [shared-workflow-start](#options-set-for-shared-workflow-start).
 Includes options set for [payload-input](#options-set-for-payload-input).
 
-### temporal schedule delete: Delete a Schedule WEFWEF CLOSING UP SHOP FOR THE DAY HERE
+### temporal schedule delete: Delete a Schedule
 
-The `temporal schedule delete` command deletes a Schedule
-Deleting a Schedule does not affect any Workflows started by the Schedule
+Deletes a Schedule on the front end Service:
 
-If you do also want to cancel or terminate Workflows started by a Schedule, consider using `temporal
-workflow delete` with the `TemporalScheduledById` Search Attribute
+```
+temporal schedule delete --schedule-id YourScheduleId
+``` 
 
+Removing a schedule won't affect the Workflow Executions it started that
+are still running. To cancel or terminate these Workflow Executions, use 
+`temporal workflow delete` with the `TemporalScheduledById` Search Attribute.
+ 
 #### Options
 
 Includes options set for [schedule-id](#options-set-for-schedule-id).
 
 ### temporal schedule describe: Get Schedule configuration and current state
 
-The `temporal schedule describe` command shows the current configuration of one Schedule,
-including information about past, current, and future Workflow Runs
+Show a Schedule configuration including information about past, current, 
+and future Workflow runs:
+
+```
+temporal schedule describe --schedule-id YourScheduleId
+```
 
 #### Options
 
 Includes options set for [schedule-id](#options-set-for-schedule-id).
 
-### temporal schedule list: List all Schedules
+### temporal schedule list: List Schedules
 
-The `temporal schedule list` command lists all Schedules in a namespace
+Lists the Schedules hosted by a Namespace:
+
+```
+temporal schedule list --namespace YourNamespace
+```
 
 #### Options
 
 * `--long`, `-l` (bool) -
-  Emit detailed information
+  Show detailed information
 * `--really-long` (bool) -
-  Emit even more detailed information that's not usable in table form
+  Show extensive information in non-table form.
 
 ### temporal schedule toggle: Pause or unpause a Schedule
 
-The `temporal schedule toggle` command can pause and unpause a Schedule
+Pause or unpause a Schedule:
 
-Toggling a Schedule takes a reason. The reason will be set as the `notes` field of the Schedule,
-to help with operations communication
+```
+temporal schedule toggle \
+    --schedule-id "YourScheduleId" \
+    --pause \
+    --reason "YourReason"
+```
 
-Examples:
+and
 
-* `temporal schedule toggle --schedule-id 'your-schedule-id' --pause --reason "paused because the database is down"`
-* `temporal schedule toggle --schedule-id 'your-schedule-id' --unpause --reason "the database is back up"`
+```
+temporal schedule toggle
+    --schedule-id "YourScheduleId" \
+    --unpause \
+    --reason "YourReason"
+```
+
+The reason updates the Schedule's `notes` field to support operations
+communication. It defaults to "(no reason provided)" when omitted.
 
 #### Options
 
 * `--pause` (bool) -
-  Pauses the schedule
+  Pause the schedule.
 * `--reason` (string) -
   Reason for pausing/unpausing.
   Default: "(no reason provided)"
 * `--unpause` (bool) -
-  Unpauses the schedule
+  Unpause the schedule.
 
 Includes options set for [schedule-id](#options-set-for-schedule-id).
 
-### temporal schedule trigger: Trigger a schedule to run immediately
+### temporal schedule trigger: Immediately run a Schedule
+
+Trigger a Schedule to run immediately:
+
+```
+temporal schedule trigger --schedule-id "YourScheduleId"
+```
 
 #### Options
 
 Includes options set for [schedule-id](#options-set-for-schedule-id).
 Includes options set for [overlap-policy](#options-set-for-overlap-policy).
 
-### temporal schedule update: Update a Schedule with a new definition
+### temporal schedule update: Update Schedule details
 
-The temporal schedule update command updates an existing Schedule. It replaces the entire
-configuration of the schedule, including spec, action, and policies
+Update an existing Schedule with new configuration details, including
+spec, action, and policies:
+
+```
+temporal schedule update 
+temporal schedule update \  
+ --schedule-id "YourScheduleId"   
+ --workflow-type "NewWorkflowType"
+```
 
 #### Options
 
@@ -1140,65 +1242,122 @@ Includes options set for [payload-input](#options-set-for-payload-input).
 
 ### temporal server: Run Temporal Server
 
-Start a development version of [Temporal Server](/concepts/what-is-the-temporal-server):
+Run a development [Temporal Server](/clusters) on your local system.
+View the Web UI for the default configuration at http://localhost:8233:
 
-`temporal server start-dev`
+```
+temporal server start-dev
+```
+
+Add persistence for Workflow Executions across runs:
+
+```
+temporal server start-dev \
+    --db-filename path-to-your-local-persistent-store
+```
+
+Set the port from the front-end gRPC Service (7233 default):
+
+```
+temporal server start-dev \
+    --port 7000
+```
+
+Use a custom port for the Web UI. The default is the gRPC port (7233 default)
+plus 1000 (8233):
+
+```
+temporal server start-dev \
+    --ui-port 3000
+```
 
 ### temporal server start-dev: Start Temporal development server
 
-Start [Temporal Server](/concepts/what-is-the-temporal-server) on `localhost:7233` with:
+Run a development [Temporal Server](/clusters) on your local system.
+View the Web UI for the default configuration at http://localhost:8233:
 
-`temporal server start-dev`
+```
+temporal server start-dev
+```
 
-View the UI at http://localhost:8233
+Add persistence for Workflow Executions across runs:
 
-To persist Workflows across runs, use:
+```
+temporal server start-dev \
+    --db-filename path-to-your-local-persistent-store
+```
 
-`temporal server start-dev --db-filename temporal.db`
+Set the port from the front-end gRPC Service (7233 default):
+
+```
+temporal server start-dev \
+    --port 7000
+```
+
+Use a custom port for the Web UI. The default is the gRPC port (7233 default)
+plus 1000 (8233):
+
+```
+temporal server start-dev \
+    --ui-port 3000
+```
 
 #### Options
 
 * `--db-filename`, `-f` (string) -
-  File in which to persist Temporal state (by default, Workflows are lost when the
-  process dies)
+  Path to file for persistent Temporal state store.
+  By default, Workflow Executions are lost when the server process dies.
 * `--namespace`, `-n` (string[]) -
-  Specify namespaces that should be pre-created (namespace "default" is always
-  created)
+  Namespaces to be created at launch.
+  The "default" Namespace is always created automatically.
 * `--port`, `-p` (int) -
-  Port for the frontend gRPC service.
-  Default: 7233
+  Port for the frontend gRPC Service.
+  Default: 7233.
 * `--http-port` (int) -
   Port for the frontend HTTP API service.
-  Default is off
+  Default is off.
 * `--metrics-port` (int) -
-  Port for /metrics.
-  Default is off
+  Port for '/metrics'.
+  Default is off.
 * `--ui-port` (int) -
   Port for the Web UI.
-  Default is --port + 1000
+  Default is '--port' value + 1000.
 * `--headless` (bool) -
-  Disable the Web UI
+  Disable the Web UI.
 * `--ip` (string) -
-  IP address to bind the frontend service to.
-  Default: localhost
+  IP address bound to the frontend Service.
+  Default: localhost.
 * `--ui-ip` (string) -
-  IP address to bind the Web UI to.
-  Default is same as --ip
+  IP address bound to the WebUI.
+  Default is same as '--ip' value.
 * `--ui-asset-path` (string) -
-  UI custom assets path
+  UI custom assets path.
 * `--ui-codec-endpoint` (string) -
-  UI remote codec HTTP endpoint
+  UI remote codec HTTP endpoint.
 * `--sqlite-pragma` (string[]) -
-  Specify SQLite pragma statements in pragma=value format
+  SQLite pragma statements in "PRAGMA=VALUE" format.
 * `--dynamic-config-value` (string[]) -
-  Dynamic config value, as KEY=JSON_VALUE (string values need quotes)
+  Dynamic configuration value in "KEY=VALUE" format.
+  KEY is an unquoted string identifier.
+  VALUE is a JSON string.
+  For example, "YourKey=\"YourStringValue\"".
 * `--log-config` (bool) -
-  Log the server config being used to stderr
+  Log the server config to stderr.
 
 ### temporal task-queue: Manage Task Queues
 
-Task Queue commands allow operations to be performed on [Task Queues](/concepts/what-is-a-task-queue). To run a Task
-Queue command, run `temporal task-queue [command] [command options]`
+Inspect and update [Task Queues](/workers#task-queue), the queues that Worker entities poll for
+Workflow and Activity tasks:
+
+```
+temporal task-queue [command] [command options]
+```
+
+For example:
+
+```
+temporal task-queue describe --task-queue "YourTaskQueueName"
+```
 
 #### Options
 
@@ -1206,12 +1365,12 @@ Includes options set for [client](#options-set-for-client).
 
 ### temporal task-queue describe: Show Workers that have recently polled on a Task Queue
 
-The `temporal task-queue describe` command provides [poller](/application-development/worker-performance#poller-count)
-information for a given [Task Queue](/concepts/what-is-a-task-queue)
+The `temporal task-queue describe` command provides [poller](/dev-guide/worker-performance#poller-count)
+information for a given [Task Queue](/workers#task-queue).
 
-The [Server](/concepts/what-is-the-temporal-server) records the last time of each poll request. A `LastAccessTime` value
+The [Temporal Server](/clusters) records the last time of each poll request. A `LastAccessTime` value
 in excess of one minute can indicate the Worker is at capacity (all Workflow and Activity slots are full) or that the
-Worker has shut down. [Workers](/concepts/what-is-a-worker) are removed if 5 minutes have passed since the last poll
+Worker has shut down. Temporal [Workers](/workers) are removed if 5 minutes have passed since the last poll
 request
 
 Information about the Task Queue can be returned to troubleshoot server issues
@@ -1327,7 +1486,7 @@ If the set is already the default, this command has no effect
 
 ### temporal workflow: Start, list, and operate on Workflows
 
-[Workflow](/concepts/what-is-a-workflow) commands perform operations on [Workflow Executions](/concepts/what-is-a-workflow-execution)
+[Workflow](/workflows) commands perform operations on [Workflow Executions](/workflows#workflow-execution)
 
 Workflow commands use this syntax: `temporal workflow COMMAND [ARGS]`
 
@@ -1342,7 +1501,7 @@ Workflow commands use this syntax: `temporal workflow COMMAND [ARGS]`
 * `--api-key` (string) -
   Sets the API key on requests. Env: TEMPORAL_API_KEY
 * `--grpc-meta` (string[]) -
-  HTTP headers to send with requests (formatted as KEY=VALUE)
+  HTTP headers to send with requests (formatted as "KEY=VALUE")
 * `--tls` (bool) -
   Enable TLS encryption without additional options such as mTLS or client certificates. Env:
   TEMPORAL_TLS
@@ -1370,16 +1529,16 @@ Workflow commands use this syntax: `temporal workflow COMMAND [ARGS]`
 
 ### temporal workflow cancel: Cancel a Workflow Execution
 
-The `temporal workflow cancel` command is used to cancel a [Workflow Execution](/concepts/what-is-a-workflow-execution)
+The `temporal workflow cancel` command is used to cancel a [Workflow Execution]([Workflow Executions](/workflows#workflow-execution))
 Canceling a running Workflow Execution records a `WorkflowExecutionCancelRequested` event in the Event History. A new
 Command Task will be scheduled, and the Workflow Execution will perform cleanup work
 
-Executions may be cancelled by [ID](/concepts/what-is-a-workflow-id):
+Executions may be cancelled by [Workflow ID](/workflows#workflow-id):
 ```
 temporal workflow cancel --workflow-id YourWorkflowId
 ```
 
-...or in bulk via a visibility query [list filter](/concepts/what-is-a-list-filter):
+...or in bulk via a visibility query [list filter](/visibility#list-filter):
 ```
 temporal workflow cancel --query YourQuery
 ```
@@ -1392,7 +1551,7 @@ Includes options set for [single workflow or batch](#options-set-single-workflow
 
 ### temporal workflow count: Count Workflow Executions
 
-The `temporal workflow count` command returns a count of [Workflow Executions](/concepts/what-is-a-workflow-execution)
+The `temporal workflow count` command returns a count of [Workflow Executions](/workflows#workflow-execution).
 
 Use the options listed below to change the command's behavior
 
@@ -1403,9 +1562,9 @@ Use the options listed below to change the command's behavior
 
 ### temporal workflow delete: Delete a Workflow Execution
 
-The `temporal workflow delete` command is used to delete a specific [Workflow Execution](/concepts/what-is-a-workflow-execution)
-This asynchronously deletes a workflow's [Event History](/concepts/what-is-an-event-history)
-If the [Workflow Execution](/concepts/what-is-a-workflow-execution) is Running, it will be terminated before deletion
+The `temporal workflow delete` command is used to delete a specific [Workflow Executions](/workflows#workflow-execution).
+This asynchronously deletes a workflow's [Event History](/workflows#event-history).
+If the [Workflow Executions](/workflows#workflow-execution) is Running, it will be terminated before deletion.
 
 ```
 temporal workflow delete \
@@ -1421,7 +1580,7 @@ Includes options set for [single workflow or batch](#options-set-single-workflow
 ### temporal workflow describe: Show information about a Workflow Execution
 
 The `temporal workflow describe` command shows information about a given
-[Workflow Execution](/concepts/what-is-a-workflow-execution)
+[Workflow Executions](/workflows#workflow-execution).
 
 This information can be used to locate Workflow Executions that weren't able to run successfully
 
@@ -1433,7 +1592,7 @@ Output can be shown as printed ('raw') or formatted to only show the Workflow Ex
 
 Use the command options below to change the information returned by this command
 
-#### Options set for workflow reference
+#### Options set for workflow reference:
 
 * `--workflow-id`, `-w` (string) -
   Workflow ID.
@@ -1450,7 +1609,7 @@ Use the command options below to change the information returned by this command
 
 ### temporal workflow execute: Start a new Workflow Execution and prints its progress
 
-The `temporal workflow execute` command starts a new [Workflow Execution](/concepts/what-is-a-workflow-execution) and
+The `temporal workflow execute` command starts a new [Workflow Executions](/workflows#workflow-execution) and
 prints its progress. The command completes when the Workflow Execution completes
 
 Single quotes('') are used to wrap input as JSON.
@@ -1494,8 +1653,8 @@ Use the options listed below to change the command's behavior
 
 ### temporal workflow list: List Workflow Executions based on a Query
 
-The `temporal workflow list` command provides a list of [Workflow Executions](/concepts/what-is-a-workflow-execution)
-that meet the criteria of a given [Query](/concepts/what-is-a-query)
+The `temporal workflow list` command provides a list of [Workflow Executions](/workflows#workflow-execution)
+that meet the criteria of a given [Query](/workflows#query).
 By default, this command returns up to 10 closed Workflow Executions
 
 `temporal workflow list --query YourQuery`
@@ -1517,9 +1676,9 @@ Use the command options below to change the information returned by this command
 
 ### temporal workflow query: Query a Workflow Execution
 
-The `temporal workflow query` command is used to [Query](/concepts/what-is-a-query) a
-[Workflow Execution](/concepts/what-is-a-workflow-execution)
-by [ID](/concepts/what-is-a-workflow-id)
+The `temporal workflow query` command is used to [Query](/workflows#query) a
+[Workflow Execution](/workflows#workflow-execution)
+by [Workflow ID](/workflows#workflow-id).
 
 ```
 temporal workflow query \
@@ -1544,10 +1703,10 @@ Includes options set for [workflow reference](#options-set-for-workflow-referenc
 
 ### temporal workflow reset: Reset a Workflow Execution to an older point in history
 
-The temporal workflow reset command resets a [Workflow Execution](/concepts/what-is-a-workflow-execution)
-A reset allows the Workflow to resume from a certain point without losing its parameters or [Event History](/concepts/what-is-an-event-history)
+The temporal workflow reset command resets a [Workflow Execution](/workflows#workflow-execution)
+A reset allows the Workflow to resume from a certain point without losing its parameters or [Event History](/workflows#event-history)
 
-The Workflow Execution can be set to a given [Event Type](/concepts/what-is-an-event):
+The Workflow Execution can be set to a given [Event Type](/workflows#event):
 ```
 temporal workflow reset --workflow-id meaningful-business-id --type LastContinuedAsNew
 ```
@@ -1586,8 +1745,8 @@ Use the options listed below to change reset behavior
 
 ### temporal workflow show: Show Event History for a Workflow Execution
 
-The `temporal workflow show` command provides the [Event History](/concepts/what-is-an-event-history) for a
-[Workflow Execution](/concepts/what-is-a-workflow-execution). With JSON output specified, this output can be given to
+The `temporal workflow show` command provides the [Event History](/workflows#event-history) for a
+[Workflow Execution](/workflows#workflow-execution). With JSON output specified, this output can be given to
 an SDK to perform a replay
 
 Use the options listed below to change the command's behavior
@@ -1602,8 +1761,8 @@ Includes options set for [workflow reference](#options-set-for-workflow-referenc
 
 ### temporal workflow signal: Signal a Workflow Execution
 
-The `temporal workflow signal` command is used to [Signal](/concepts/what-is-a-signal) a
-[Workflow Execution](/concepts/what-is-a-workflow-execution) by [ID](/concepts/what-is-a-workflow-id)
+The `temporal workflow signal` command is used to [Signal](/workflows#signal) a
+[Workflow Execution](/workflows#workflow-execution) by [Workflow ID](/workflows#workflow-id)
 
 ```
 temporal workflow signal \
@@ -1639,8 +1798,8 @@ Includes options set for [payload input](#options-set-for-payload-input).
 
 ### temporal workflow stack: Show the stack trace of a Workflow Execution
 
-The `temporal workflow stack` command [Queries](/concepts/what-is-a-query) a
-[Workflow Execution](/concepts/what-is-a-workflow-execution) with `__stack_trace` as the query type
+The `temporal workflow stack` command [Queries](/workflows#query) a
+[Workflow Execution](/workflows#workflow-execution) with `__stack_trace` as the query type
 This returns a stack trace of all the threads or routines currently used by the workflow, and is
 useful for troubleshooting
 
@@ -1660,8 +1819,9 @@ Includes options set for [workflow reference](#options-set-for-workflow-referenc
 
 ### temporal workflow start: Start a new Workflow Execution
 
-The `temporal workflow start` command starts a new [Workflow Execution](/concepts/what-is-a-workflow-execution). The
-Workflow and Run IDs are returned after starting the [Workflow](/concepts/what-is-a-workflow)
+The `temporal workflow start` command starts a new [Workflow Execution](/workflows#workflow-execution). The
+Workflow and Run IDs are returned after starting the [Workflow](/workflows).
+
 
 ```
 temporal workflow start \
@@ -1688,9 +1848,9 @@ temporal workflow start \
 * `--task-timeout` (duration) -
   Fail a Workflow Task if it takes longer than `DURATION`. (Start-to-close timeout for a Workflow Task.) Default: 10s.
 * `--search-attribute` (string[]) -
-  Passes Search Attribute in KEY=VALUE format. Use valid JSON formats for value.
+  Passes Search Attribute in "KEY=VALUE" format. Use valid JSON formats for value.
 * `--memo` (string[]) -
-  Passes Memo in KEY=VALUE format. Use valid JSON formats for value.
+  Passes Memo in "KEY=VALUE" format. Use valid JSON formats for value.
 
 #### Options set for workflow start:
 
@@ -1717,7 +1877,7 @@ temporal workflow start \
   encoding). Can be passed multiple times for multiple arguments. Cannot be combined with --input.
   Can be passed multiple times.
 * `--input-meta` (string[]) -
-  Metadata for the input payload, specified as a `KEY=VALUE` pair. If KEY is "encoding", overrides the
+  Metadata for the input payload, specified as a "KEY=VALUE" pair. If KEY is "encoding", overrides the
   default of "json/plain". Pass multiple --input-meta options to set multiple pairs.
   Can be passed multiple times.
 * `--input-base64` (bool) -
@@ -1726,16 +1886,16 @@ temporal workflow start \
 ### temporal workflow terminate: Terminate a Workflow Execution
 
 The `temporal workflow terminate` command is used to terminate a
-[Workflow Execution](/concepts/what-is-a-workflow-execution). Canceling a running Workflow Execution records a
+[Workflow Execution](/workflows#workflow-execution). Canceling a running Workflow Execution records a
 `WorkflowExecutionTerminated` event as the closing Event in the workflow's Event History. Workflow code is oblivious to
 termination. Use `temporal workflow cancel` if you need to perform cleanup in your workflow
 
-Executions may be terminated by [ID](/concepts/what-is-a-workflow-id) with an optional reason:
+Executions may be terminated by [Workflow ID](/workflows#workflow-id) with an optional reason:
 ```
 temporal workflow terminate [--reason my-reason] --workflow-id YourWorkflowId
 ```
 
-...or in bulk via a visibility query [list filter](/concepts/what-is-a-list-filter):
+...or in bulk via a visibility query [list filter](/visibility#list-filter):
 ```
 temporal workflow terminate --query YourQuery
 ```
@@ -1760,7 +1920,7 @@ Use the options listed below to change the behavior of this command.
 
 ### temporal workflow trace: Interactively show the progress of a Workflow Execution
 
-The `temporal workflow trace` command displays the progress of a [Workflow Execution](/concepts/what-is-a-workflow-execution) and its child workflows with a real-time trace.
+The `temporal workflow trace` command displays the progress of a [Workflow Execution](/workflows#workflow-execution) and its child workflows with a real-time trace.
 This view provides a great way to understand the flow of a workflow.
 
 Use the options listed below to change the behavior of this command.
@@ -1783,8 +1943,8 @@ Includes options set for [workflow reference](#options-set-for-workflow-referenc
 
 ### temporal workflow update: Update a running workflow synchronously
 
-The `temporal workflow update` command is used to synchronously [Update](/concepts/what-is-an-update) a
-[WorkflowExecution](/concepts/what-is-a-workflow-execution) by [ID](/concepts/what-is-a-workflow-id)
+The `temporal workflow update` command is used to synchronously [Update](/workflows#update) a
+[Workflow Execution](/workflows#workflow-execution) by [Workflow ID](/workflows#workflow-id)
 
 ```
 temporal workflow update \

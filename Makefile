@@ -19,3 +19,6 @@ edit:
 
 open:
 	open ./temporalcli/commandsmd/commands.md
+
+path:
+	@echo $(shell readlink -f './temporalcli/commandsmd/commands.md')
