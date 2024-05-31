@@ -6,7 +6,10 @@ Commands for the Temporal CLI
 
 NOTES FOR ERICA
 
-* All URLs are borked due to Info Arch re-org
+* All URLs are borked due to Info Arch re-org (fixed for now)
+* What changes have been introduced asynchronously. I've seen stuff on Slack.
+* What's the best way to do async conversations other than PRs?
+
 * Word wrapping to 80 chars
     * What about options? they tend to run long
     * Could the text go to a second line after the spaced-dash?
@@ -51,7 +54,29 @@ NOTES FOR ERICA
 * `--tls-disable-host-verification` (bool) -
 * `--tls` (bool) -
 
+----
+
+Limiting returns
+* `--limit` (int) -
+* `--max-sets` (int) - ?? Could be limit also
+* `--depth` (int) -
+
+* `--concurrency` (int) -
+* `--event-id`, `-e` (int) -
+* `--partitions` (int) -
+* `--remaining-actions` (int) -
+
+Ports (looks good)
+* `--http-port` (int) -
+* `--metrics-port` (int) -
+* `--port`, `-p` (int) -
+* `--ui-port` (int) -
+
+
+----
+
 cat `make path` | egrep '\]\(' | grep -v options-set | grep "/concepts" | open -f | sort
+Ticket: https://temporalio.atlassian.net/browse/EDU-2596
 
 [Temporal Server](/clusters)
 [Task Queue](/workers#task-queue)
@@ -1363,74 +1388,108 @@ temporal task-queue describe --task-queue "YourTaskQueueName"
 
 Includes options set for [client](#options-set-for-client).
 
-### temporal task-queue describe: Show Workers that have recently polled on a Task Queue
+### temporal task-queue describe: Show active Workers
 
-The `temporal task-queue describe` command provides [poller](/dev-guide/worker-performance#poller-count)
-information for a given [Task Queue](/workers#task-queue).
+Display a list of active Workers that have recently [polled](/dev-guide/worker-performance#poller-count) a 
+[Task Queue](/workers#task-queue). The [Temporal Server](/clusters) records each poll
+request time. A `LastAccessTime` over one minute may indicate the Worker is at 
+capacity or has shut down. Temporal [Workers](/workers) are removed if 5 minutes 
+have passed since the last poll request:
 
-The [Temporal Server](/clusters) records the last time of each poll request. A `LastAccessTime` value
-in excess of one minute can indicate the Worker is at capacity (all Workflow and Activity slots are full) or that the
-Worker has shut down. Temporal [Workers](/workers) are removed if 5 minutes have passed since the last poll
-request
+```
+temporal task-queue describe \
+   --task-queue "YourTaskQueueName"
+```
 
-Information about the Task Queue can be returned to troubleshoot server issues
+Workflow and Activity polling use separate Task Queues:
 
-`temporal task-queue describe --task-queue YourTaskQueue --task-queue-type "activity"`
-
-Use the options listed below to modify what this command returns
+```
+temporal task-queue describe \
+    --task-queue YourTaskQueue \
+    --task-queue-type "activity"`
+```
 
 #### Options
 
 * `--task-queue`, `-t` (string) -
-  Task queue name. Required
+  Task queue name.
+  Required.
 * `--task-queue-type` (string-enum) -
-  Task Queue type. Options: workflow, activity.
-  Default: workflow
+  Task Queue type.
+  Options: workflow, activity.
+  Default: workflow.
 * `--partitions` (int) -
-  Query for all partitions up to this number (experimental+temporary feature).
+  Query partitions 1 through `N`.
+  Experimental/Temporary feature.
   Default: 1
 
-### temporal task-queue get-build-id-reachability: Show which Build IDs are available on a Task Queue
+### temporal task-queue get-build-id-reachability: Build ID availability
 
-This command can tell you whether or not Build IDs may be used for new, existing, or closed workflows. Both the '--build-id' and '--task-queue' flags may be specified multiple times. If you do not provide a task queue, reachability for the provided Build IDs will be checked against all task queues
-  Can be passed multiple times.
+Shows if a given Build ID can be used for new, existing, or closed workflows.
+You can specify the '--build-id' and '--task-queue' flags multiple times.
+When '--task-queue' is omitted, checks Build ID reachability against all
+task queues. For example:
 
+```
+temporal task-queue get-build-id-reachability --build-id "2.0"
+```
 
 #### Options
 
 * `--build-id` (string[]) -
-  Which Build ID to get reachability information for. May be specified multiple times
+  One or more Build ID strings.
   Can be passed multiple times.
-
 * `--reachability-type` (string-enum) -
-  Specify how you'd like to filter the reachability of Build IDs. Valid choices are `open` (reachable by one or more open workflows), `closed` (reachable by one or more closed workflows), or `existing` (reachable by either). If a Build ID is reachable by new workflows, that is always reported. Options: open, closed, existing.
-  Default: existing
+  Reachability filter.
+  `open`: reachable by one or more open workflows.
+  `closed`: reachable by one or more closed workflows.
+  `existing`: reachable by either.
+  New Workflow Executions reachable by a Build ID are always reported.
+  Options: open, closed, existing.
+  Default: existing.
 * `--task-queue`, `-t` (string[]) -
-  Which Task Queue(s) to constrain the reachability search to. May be specified multiple times
+  List of Task Queues.
+  Constrains the reachability search.
   Can be passed multiple times.
 
-### temporal task-queue get-build-ids: Show worker Build ID versions on a Task Queue
+### temporal task-queue get-build-ids: Build ID versions
 
-Fetch the sets of compatible build IDs associated with a Task Queue and associated information
+Fetches sets of compatible Build IDs for specified Task Queues and displays
+their information:
+
+```
+temporal task-queue get-build-ids \
+    --task-queue "YourTaskQueue"
+```
 
 #### Options
 
 * `--task-queue`, `-t` (string) -
-  Task queue name. Required
+  Task queue name.
+  Required.
 * `--max-sets` (int) -
-  Limits how many compatible sets will be returned. Specify 1 to only return the current default major version set. 0 returns all sets. (default: 0).
+  Max return count.
+  Use 1 for default [major-version](https://en.wikipedia.org/wiki/Software_versioning) set.
+  Use 0 for all sets.
   Default: 0.
 
-### temporal task-queue list-partition: List a Task Queue's partitions
+### temporal task-queue list-partition: List partitions
 
-The temporal task-queue list-partition command displays the partitions of a Task Queue, along with the matching node they are assigned to
+Display a Task Queue's partition list with assigned matching nodes:
+
+```
+temporal task-queue list-partition \
+    --task-queue "YourTaskQueue"
+```
 
 #### Options
 
 * `--task-queue`, `-t` (string) -
-  Task queue name. Required
+  Task Queue name.
+  Required
 
-### temporal task-queue update-build-ids: Operations to manage Build ID versions on a Task Queue
+### temporal task-queue update-build-ids: Manage build ID versions
+STOPPING HERE FOR BREAK WEFWEF
 
 Provides various commands for adding or changing the sets of compatible build IDs associated with a Task Queue. See the help of each sub-command for more
 
