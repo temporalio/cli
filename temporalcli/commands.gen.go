@@ -622,7 +622,7 @@ type TemporalOperatorNamespaceCreateCommand struct {
 	Command                 cobra.Command
 	ActiveCluster           string
 	Cluster                 []string
-	Data                    string
+	Data                    []string
 	Description             string
 	Email                   string
 	Global                  bool
@@ -647,7 +647,7 @@ func NewTemporalOperatorNamespaceCreateCommand(cctx *CommandContext, parent *Tem
 	s.Command.Args = cobra.MaximumNArgs(1)
 	s.Command.Flags().StringVar(&s.ActiveCluster, "active-cluster", "", "Active cluster name.")
 	s.Command.Flags().StringArrayVar(&s.Cluster, "cluster", nil, "Cluster names.")
-	s.Command.Flags().StringVar(&s.Data, "data", "", "Namespace data in key=value format. Use JSON for values.")
+	s.Command.Flags().StringArrayVar(&s.Data, "data", nil, "Namespace data in key=value format. Use JSON for values.")
 	s.Command.Flags().StringVar(&s.Description, "description", "", "Namespace description.")
 	s.Command.Flags().StringVar(&s.Email, "email", "", "Owner email.")
 	s.Command.Flags().BoolVar(&s.Global, "global", false, "Whether the namespace is a global namespace.")

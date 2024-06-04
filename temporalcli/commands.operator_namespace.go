@@ -2,7 +2,6 @@ package temporalcli
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/fatih/color"
 	"github.com/temporalio/cli/temporalcli/internal/printer"
@@ -47,7 +46,7 @@ func (c *TemporalOperatorNamespaceCreateCommand) run(cctx *CommandContext, args 
 
 	var data map[string]string
 	if len(c.Data) > 0 {
-		data, err = stringKeysValues(strings.Split(c.Data, ","))
+		data, err = stringKeysValues(c.Data)
 		if err != nil {
 			return err
 		}
