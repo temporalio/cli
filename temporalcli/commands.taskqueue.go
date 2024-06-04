@@ -56,7 +56,7 @@ func (c *TemporalTaskQueueDescribeCommand) run(cctx *CommandContext, args []stri
 		resp, err := cl.WorkflowService().DescribeTaskQueue(cctx, &workflowservice.DescribeTaskQueueRequest{
 			Namespace: c.Parent.Namespace,
 			TaskQueue: &taskqueue.TaskQueue{
-				Name: taskQueue.Name(),
+				Name: taskQueue.TaskQueue(taskQueueType).NormalPartition(p).RpcName(),
 				Kind: enums.TASK_QUEUE_KIND_NORMAL,
 			},
 			TaskQueueType:          taskQueueType,
