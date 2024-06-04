@@ -4,146 +4,6 @@ Commands for the Temporal CLI
 
 <!-- 
 
-NOTES FOR ERICA
-
-* All URLs are borked due to Info Arch re-org (fixed for now)
-* What changes have been introduced asynchronously. I've seen stuff on Slack.
-* What's the best way to do async conversations other than PRs?
-
-NEW: 
-* `--set-as-default` (bool) -
-This is super confusing. When you add the new Build ID, it becomes the default
-for the set it is inserted into. This command makes the set become the Task
-Queue default, and the option defaults to false. Suggestion: --promote-set-as-default-set
-or something like that because mind blown.
-
-* Word wrapping to 80 chars
-    * What about options? they tend to run long
-    * Could the text go to a second line after the spaced-dash?
-    * Could long descriptions be autowrapped outside code examples? -- NEW Q
-* --help, --long-help, --full-help to provide progressive support?
-* --long, --extra-long/--full and not --really-long
-  * `--long`, `-l` (bool) -
-  * `--really-long` (bool) - 
-* Auditing confirmation elements, especially bools
-  * `--yes`, `-y` (bool) - has multiple meanings based on use
-    (default true, false varies)
-* Payloads
-  * `--no-json-shorthand-payloads` (bool) - Shorter? --literal-payload? --string-payload?
-  * `--input-base64` (bool) - --data-base64?
-
-* These all seem to do with presentation
-  * `--detail` (bool) -
-  * `--event-details` (bool) -
-  * `--log-config` (bool) -
-  * `--no-fold` (bool) -
-  * `--raw` (bool) -
-  * `--follow`, `-f` (bool) -
-  * `--reset-points` (bool) - ? --show-reset-points?
-
-(NEW) Inconsistent use of identical items
-
-* `--build-id` (string) -
-* `--build-id` (string[]) -
-* `--cron` (string) -
-* `--cron` (string[]) -
-* `--data` (string) -
-* `--data` (string[]) -
-* `--detail` (bool) -
-* `--detail` (string) -
-* `--name` (string) -
-* `--name` (string[]) -
-* `--namespace`, `-n` (string) -
-* `--namespace`, `-n` (string[]) -
-* `--task-queue`, `-t` (string) -
-* `--task-queue`, `-t` (string[]) -
-* `--tls-ca-data` (string) -
-* `--tls-ca-path` (string) -
-* `--tls-cert-data` (string) -
-* `--tls-cert-path` (string) -
-* `--tls-key-data` (string) -
-* `--tls-key-path` (string) -
-* `--type` (string) -
-* `--type` (string[]) -
-* `--type`, `-t` (string-enum) -
-
-
-* Consistency?
-  * `--pause` (bool) -
-  * `--unpause` (bool) -
-  * `--pause-on-failure` (bool) -
-  * `--paused` (bool) - Perhaps: set-paused? set-paused-state?
-
-* `--global` (bool) -
-* `--promote-global` (bool) -
-
-* `--enable-connection` (bool) - ? --connected? --set-connected?
-* `--fail-existing` (bool) - ? --fail-current?
-
-* `--archived` (bool) - ? --set-archived?
-
-* `--headless` (bool) -
-
-* `--set-as-default` (bool) -
- 
-* `--tls-disable-host-verification` (bool) -
-* `--tls` (bool) -
-
-----
-
-Limiting returns
-* `--limit` (int) -
-* `--max-sets` (int) - ?? Could be limit also
-* `--depth` (int) -
-
-* `--concurrency` (int) -
-* `--event-id`, `-e` (int) -
-* `--partitions` (int) -
-* `--remaining-actions` (int) -
-
-Ports (looks good)
-* `--http-port` (int) -
-* `--metrics-port` (int) -
-* `--port`, `-p` (int) -
-* `--ui-port` (int) -
-
-
-----
-
-cat `make path` | egrep '\]\(' | grep -v options-set | grep "/concepts" | open -f | sort
-Ticket: https://temporalio.atlassian.net/browse/EDU-2596
-
-[Temporal Server](/clusters)
-[Task Queue](/workers#task-queue)
-[poller](/dev-guide/worker-performance#poller-count)
-Temporal [Workers](/workers)
-[Workflow](/workflows)
-[Workflow Executions](/workflows#workflow-execution)
-[Workflow Execution](/workflows#workflow-execution)
-[Workflow ID](/workflows#workflow-id)
-[list filter](/visibility#list-filter)
-[Event History](/workflows#event-history)
-[Query](workflows#query)
-[Queries](/workflows#query)
-[Event Type](/workflows#event)
-[Signal](/workflows#signal)
-[Update](/workflows#update)
-
-* -h, -o, -v are wonky:
-Flags:
-      --color string                                      Output coloring. Accepted values: always, never, auto. (default "auto")
-      --env string                                        Active environment name. (default "default")
-      --env-file $HOME/.config/temporalio/temporal.yaml   Path to environment settings file (defaults to $HOME/.config/temporalio/temporal.yaml)
-  -h, --help                                              help for temporal // WONKY
-      --log-format string                                 Log format. Options are "text" and "json". Default is "text"
-      --log-level server start-dev                        Log level. Default is "info" for most commands and "warn" for server start-dev. Accepted values: debug, info, warn, error, never. (default "info")
-      --no-json-shorthand-payloads                        Raw payload output, even if they are JSON
-  -o, --output string                                     Non-logging data output format. Accepted values: text, json, jsonl, none. (default "text") // WONKY
-      --time-format string                                Time format. Accepted values: relative, iso, raw. (default "relative")
-  -v, --version                                           version for temporal // WONKY
-
------
-
 This document is automatically parsed.
 Follow these rules.
 
@@ -475,7 +335,6 @@ Includes options set for [workflow reference](#options-set-for-workflow-referenc
 
 ### temporal batch: Manage batch jobs
 
-
 A batch job executes a command affecting multiple Workflow Executions at once.
 Specify the Workflow Executions to include and the type of batch job to apply.
 For example, to cancel all running 'YourWorkflow' Workflows:
@@ -525,13 +384,13 @@ temporal batch list --namespace YourNamespace
 #### Options
 
 * `--limit` (int) -
-  Max output count.
+  Maximum number of batch jobs to display.
 
 ### temporal batch terminate: Terminate a batch job
 
-Terminate a batch job with the provided job ID. Provide a reason for the
-termination. This explanation is stored with the Service for later reference.
-For example:
+Terminate a batch job with the provided job ID. You must provide a reason
+for the termination. This explanation is stored with the Service for 
+later reference. For example:
 
 ```
 temporal batch terminate \
@@ -551,8 +410,8 @@ temporal batch terminate \
 ### temporal env: Manage environments
 
 Environments manage key-value presets, auto-configuring Temporal CLI options
-for you. Set up distinct environments like "dev" and "prod" for convenience.
-For example:
+for you. You can set up distinct environments like "dev" and "prod" for
+convenience. For example:
 
 ```
 temporal env set \
@@ -563,9 +422,9 @@ temporal env set \
 
 Each environment is isolated. Changes to "prod" presets won't affect "dev".
 
-For easiest use, set a `TEMPORAL_ENV` environmental variable in your shell.
+For easiest use, set a `TEMPORAL_ENV` environment variable in your shell.
 The Temporal CLI checks for an `--env` option first, then checks the shell.
-If neither is set, most commands use `default` environmental presets if
+If neither is set, most commands use `default` environment presets if
 they are available.
 
 ### temporal env delete: Delete an environment or environment property
@@ -583,7 +442,7 @@ temporal env delete --env YourEnvironment
 or
 
 ```
-temporal env delete --env prod  --key tls-key-path
+temporal env delete --env prod --key tls-key-path
 ```
 
 <!--
@@ -610,7 +469,7 @@ temporal env get --env YourEnvironment --key YourPropertyKey
 ```
 
 If you don't specify an environment name, with `--env` or by setting
-`TEMPORAL_ENV` as an environmental variable in your shell, this command
+`TEMPORAL_ENV` as an environment variable in your shell, this command
 lists properties in the `default` environment.
 
 <!--
@@ -624,9 +483,12 @@ lists properties in the `default` environment.
 
 ### temporal env list: List environments
 
-List the environments you have set up on your local computer. The output 
-enumerates the environments stored in the Temporal environment file on
-your computer ("$HOME/.config/temporalio/temporal.yaml").
+List the environments you have set up on your local computer. Environments 
+are stored in "$HOME/.config/temporalio/temporal.yaml".
+
+<!--
+* ignores-missing-env
+-->
 
 ### temporal env set: Set environment properties
 
@@ -640,7 +502,7 @@ temporal env set \
 ```
 
 If you don't specify an environment name, with `--env` or by setting
-`TEMPORAL_ENV` as an environmental variable in your shell, this command
+`TEMPORAL_ENV` as an environment variable in your shell, this command
 sets properties in the `default` environment.
 
 Setting property names lets the CLI automatically set options on your behalf.
@@ -649,6 +511,7 @@ issue CLI commands and helps avoid typos.
 
 <!--
 * maximum-args=2
+* ignores-missing-env
 -->
 
 #### Options
@@ -669,7 +532,8 @@ Search Attributes, and Temporal Clusters:
 temporal operator [command] [subcommand] [options]
 ```
 
-For example, to view a cluster-by-cluster overview:
+For example, to show information about the Temporal Cluster at the
+default address (localhost):
 
 ```
 temporal operator cluster describe
@@ -693,7 +557,7 @@ For example to check Cluster health:
 temporal operator cluster health
 ```
 
-### temporal operator cluster describe: Describe a Temporal Cluster
+### temporal operator cluster describe: Show Temporal Cluster information
 
 View information about a Temporal Cluster, including Cluster Name,
 persistence store, and visibility store. Add `--detail` for additional
@@ -706,11 +570,11 @@ temporal operator cluster describe [--detail]
 #### Options
 
 * `--detail` (bool) -
-  High-detail output.
+  Show history shard count and cluster version information.
 
-### temporal operator cluster health: Check Frontend Service health
+### temporal operator cluster health: Check Temporal Service health
 
-View information about the health of a Frontend Service:
+View information about the health of a Temporal Service:
 
 ```
 temporal operator cluster health
@@ -729,7 +593,7 @@ temporal operator cluster list [--limit max-count]
 #### Options
 
 * `--limit` (int) -
-  Max count to list.
+    Maximum number of Clusters to display.
 
 ### temporal operator cluster remove: Remove a Temporal Cluster
 
@@ -755,7 +619,7 @@ use the `--frontend-address` option to specify a Cluster endpoint.
 
 ```
 temporal operator cluster system \ 
-    --frontend-address "your_remote_endpoint:your_remote_port"
+    --frontend-address "YourRemoteEndpoint:YourRemotePort"
 ``` 
 
 ### temporal operator cluster upsert: Add/update a Temporal Cluster
@@ -770,8 +634,8 @@ For example:
 
 ```
 temporal operator cluster upsert \
-    --frontend_address "your_remote_endpoint:your_remote_port"
-    --enable_connection false
+    --frontend-address "YourRemoteEndpoint:YourRemotePort"
+    --enable-connection false
 ```
 
 #### Options
@@ -780,7 +644,7 @@ temporal operator cluster upsert \
   Remote endpoint.
   Required.
 * `--enable-connection` (bool) -
-  Enabled/disabled connection.
+  Set the connection to "enabled".
 
 ### temporal operator namespace: Namespace operations
 
@@ -847,7 +711,7 @@ Note: URI values for archival states can't be changed after being enabled.
 * `--email` (string) -
   Owner email.
 * `--global` (bool) -
-  Enable/disable cross-region data replication.
+  Enable cross-region data replication.
 * `--history-archival-state` (string-enum) -
   History archival state.
   Options: disabled, enabled.
@@ -974,7 +838,7 @@ temporal operator namespace update \
 * `--email` (string) -
   Owner email.
 * `--promote-global` (bool) -
-  Enable/disable cross-region data replication.
+  Enable cross-region data replication.
 * `--history-archival-state` (string-enum) -
   History archival state.
   Options: disabled, enabled.
@@ -1046,7 +910,7 @@ Remove without confirmation:
 ```
 temporal operator search-attribute remove \
     --name YourAttributeName \
-    --yes false
+    --yes
 ```
 
 #### Options
@@ -1055,7 +919,8 @@ temporal operator search-attribute remove \
   Search Attribute name.
   Required.
 * `--yes`, `-y` (bool) -
-  Override confirmation request before removal.
+  Don't prompt to confirm removal.
+  
 
 ### temporal schedule: Perform operations on Schedules
 
@@ -1086,7 +951,9 @@ from before a Schedule was created, from the future, or to re-process an
 interval that was previously executed.
 
 Backfills require a Schedule ID and the time period covered by the request. 
-It's best to use the `BufferAll` or `AllowAll` policies.
+It's best to use the `BufferAll` or `AllowAll` policies as they are the 
+most suitable for backfilling without conflict and without skipping and
+therefore losing Workflow Executions.
 
 For example:
 
@@ -1097,6 +964,24 @@ For example:
     --end-time "2022-05-31T23:59:59Z" \
     --overlap-policy BufferAll
 ```
+
+The policies include:
+
+* AllowAll: Allow unlimited concurrent Workflow Executions. This
+  significantly speeds up the backfilling process on systems that
+  support concurrency. Make sure running Workflow Executions will not
+  interfere with each other.
+* BufferAll: Buffer all incoming Workflow Executions while waiting 
+  for the running Workflow Execution to complete.
+* Skip: If a previous Workflow Execution is still running, discard
+  new Workflow Executions.
+* BufferOne: Same as 'Skip' but buffer a single Workflow Execution
+  to be run after the previous Execution completes. Discard other
+  Workflow Executions.
+* CancelOther: Cancel the running Workflow Execution and replace it
+  with the incoming new Workflow Execution.
+* TerminateOther: Terminate the running Workflow Execution and replace it
+  with the incoming new Workflow Execution.
 
 #### Options set for overlap policy:
 
@@ -1122,8 +1007,8 @@ For example:
 
 ### temporal schedule create: Create a new Schedule
 
-Create a new Schedule on the Frontend Service. A Schedule will
-automatically start new Workflow Executions at the times you specify.
+Create a new Schedule on the Temporal Service. A Schedule automatically 
+starts new Workflow Executions at the times you specify.
 
 For example:
 
@@ -1137,29 +1022,40 @@ For example:
 ```
 
 Schedules support any combination of `--calendar`, `--interval`, 
-and `--cron`.
+and `--cron`:
+
+* Shorthand [`--interval`](https://docs.temporal.io/workflows#spec) strings.
+    For example: 45m (every 45 minutes) or 6h/5h (every 6 hours, at the
+    top of the 5th hour). 
+* JSON [`--calendar`](https://docs.temporal.io/workflows#spec), as in the
+  preceding example.
+* Unix-style [`--cron`](https://docs.temporal.io/workflows#cron-schedules) strings and [robfig](https://pkg.go.dev/github.com/robfig/cron/v3) 
+  declarations (@daily/@weekly/@every X/etc). For example, every Friday
+  at 12:30P: `30 12 * * Fri`.
+     
 
 #### Options set for schedule configuration:
 
 * `--calendar` (string[]) -
-  Calendar specification in JSON.
+  [Calendar specification](https://docs.temporal.io/workflows#spec) in JSON.
   For example: `{"dayOfWeek":"Fri","hour":"17","minute":"5"}`.
 * `--catchup-window` (duration) -
   Maximum catch-up time for when the Service is unavailable.
 * `--cron` (string[]) -
-  Calendar specification in cron string format.
-  For example: `"3 11 * * Fri"`.
+  Calendar specification in [cron string format](https://docs.temporal.io/workflows#cron-schedules).
+  For example: `"30 12 * * Fri"`.
 * `--end-time` (timestamp) -
   Schedule end time
 * `--interval` (string[]) -
-  Interval duration.
-  For example, 90m, or 90m/13m to include phase offset.
+  [Interval duration](https://docs.temporal.io/workflows#spec).
+  For example, 90m, or 60m/15m to include phase offset.
 * `--jitter` (duration) -
-  Per-action jitter range.
+  Max difference in time from the specification.
+  Vary the start time randomly within this amount.
 * `--notes` (string) -
   Initial notes field value.
 * `--paused` (bool) -
-  Initial value for paused state.
+  Pause the Schedule immediately on creation.
 * `--pause-on-failure` (bool) -
   Pause schedule after Workflow failures.
 * `--remaining-actions` (int) -
@@ -1374,7 +1270,7 @@ temporal server start-dev \
   Port for the frontend gRPC Service.
   Default: 7233.
 * `--http-port` (int) -
-  Port for the frontend HTTP API service.
+  Port for the HTTP API service.
   Default is off.
 * `--metrics-port` (int) -
   Port for '/metrics'.
@@ -1786,9 +1682,8 @@ temporal workflow execute
 #### Options
 
 * `--event-details` (bool) -
-  If set when using text output, this will print the event details instead of just the event
-  during workflow progress. If set when using JSON output, this will include the entire "history" JSON key of the
-  started run (does not follow runs).
+  If set when using text output, include event details JSON in printed output. If set when
++  using JSON output, this will include the entire "history" JSON key of the started run (does not follow runs).
 
 Includes options set for [shared workflow start](#options-set-for-shared-workflow-start).
 Includes options set for [workflow start](#options-set-for-workflow-start).
@@ -1833,7 +1728,7 @@ Use the command options below to change the information returned by this command
 * `--archived` (bool) -
   If set, will only query and list archived workflows instead of regular workflows.
 * `--limit` (int) -
-  Max count to list.
+  Maximum number of Workflow Executions to display.
 
 ### temporal workflow query: Query a Workflow Execution
 
@@ -1901,7 +1796,7 @@ Use the options listed below to change reset behavior
 * `--query`, `-q` (string) -
   Start a batch reset to operate on Workflow Executions with given List Filter.
 * `--yes`, `-y` (bool) -
-  Override confirmation request before reset.
+  Don't prompt to confirm.
   Only allowed when `--query` is present.
 
 ### temporal workflow show: Show Event History for a Workflow Execution
@@ -1917,6 +1812,7 @@ Use the options listed below to change the command's behavior
 * `--follow`, `-f` (bool) -
   Follow the progress of a Workflow Execution in real time (does not apply
   to JSON output).
+* `--event-details` (bool) - If set when using text output, include event details JSON in printed output.
 
 Includes options set for [workflow reference](#options-set-for-workflow-reference).
 
@@ -1954,7 +1850,7 @@ Includes options set for [payload input](#options-set-for-payload-input).
   otherwise.
   Defaults to message with the current user's name.
 * `--yes`, `-y` (bool) -
-  Override confirmation request before signalling.
+  Don't prompt to confirm signalling.
   Only allowed when `--query` is present.
 
 ### temporal workflow stack: Show the stack trace of a Workflow Execution
@@ -2076,7 +1972,7 @@ Use the options listed below to change the behavior of this command.
   Reason for termination.
   Defaults to message with the current user's name.
 * `--yes`, `-y` (bool) -
-  Override confirmation request before termination.
+  Don't prompt to confirm termination.
   Only allowed when `--query` is present.
 
 ### temporal workflow trace: Interactively show the progress of a Workflow Execution
