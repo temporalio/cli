@@ -182,6 +182,11 @@ func (s *SharedServerSuite) SetupSuite() {
 		StartOptions: devserver.StartOptions{
 			// Enable for operator cluster commands
 			EnableGlobalNamespace: true,
+			DynamicConfigValues: map[string]any{
+				// Allow a high rate of change to namespaces, particularly
+				// for the task-queue command tests.
+				"frontend.namespaceRPS.visibility": 10000,
+			},
 		},
 	})
 	// Stop server if we fail later
