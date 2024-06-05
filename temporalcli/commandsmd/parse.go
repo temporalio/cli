@@ -37,13 +37,14 @@ type CommandOptions struct {
 
 type CommandOption struct {
 	Name         string
-	Alias        string
+	Shorthand    string
 	DataType     string
 	Desc         string
 	Required     bool
 	DefaultValue string
 	EnumValues   []string
 	EnvVar       string
+	Aliases      []string
 }
 
 func ParseMarkdownCommands() ([]*Command, error) {
@@ -229,16 +230,16 @@ func (c *CommandOption) parseBulletLine(bullet string) error {
 	c.Name = strings.TrimPrefix(bullet[:tickEnd], "--")
 	bullet = strings.TrimSpace(bullet[tickEnd+1:])
 
-	// Alias
+	// Shorthand
 	if strings.HasPrefix(bullet, ", `") {
 		bullet = strings.TrimPrefix(bullet, ", `")
 		tickEnd = strings.Index(bullet, "`")
 		if tickEnd == -1 {
 			return fmt.Errorf("missing ending backtick")
 		} else if !strings.HasPrefix(bullet, "-") {
-			return fmt.Errorf("option alias %q does not have leading '-'", bullet[:tickEnd])
+			return fmt.Errorf("option shorthand %q does not have leading '-'", bullet[:tickEnd])
 		}
-		c.Alias = strings.TrimPrefix(bullet[:tickEnd], "-")
+		c.Shorthand = strings.TrimPrefix(bullet[:tickEnd], "-")
 		bullet = strings.TrimSpace(bullet[tickEnd+1:])
 	}
 
@@ -276,6 +277,8 @@ func (c *CommandOption) parseBulletLine(bullet string) error {
 			c.EnumValues = strings.Split(strings.TrimPrefix(lastSentence, "Options: "), ", ")
 		case strings.HasPrefix(lastSentence, "Env: "):
 			c.EnvVar = strings.TrimPrefix(lastSentence, "Env: ")
+		case strings.HasPrefix(lastSentence, "Alias: `--"):
+			c.Aliases = append(c.Aliases, strings.TrimSuffix(strings.TrimPrefix(lastSentence, "Alias: `--"), "`"))
 		default:
 			return nil
 		}

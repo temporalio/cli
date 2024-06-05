@@ -208,16 +208,50 @@ func (c *Command) writeCode(w *codeWriter) error {
 		// If there are subcommands, this needs to be persistent flags
 		flagVar = "s.Command.PersistentFlags()"
 	}
+	var flagAliases [][]string
 	for _, optSet := range c.OptionsSets {
+		// Add aliases
+		for _, opt := range optSet.Options {
+			for _, alias := range opt.Aliases {
+				flagAliases = append(flagAliases, []string{alias, opt.Name})
+			}
+		}
+		for _, include := range optSet.IncludeOptionsSets {
+			// Find include
+		cmdLoop:
+			for _, cmd := range w.allCommands {
+				for _, optSet := range cmd.OptionsSets {
+					if optSet.SetName == include {
+						for _, opt := range optSet.Options {
+							for _, alias := range opt.Aliases {
+								flagAliases = append(flagAliases, []string{alias, opt.Name})
+							}
+						}
+						break cmdLoop
+					}
+				}
+			}
+		}
+
 		// If there's a name, this is done in the method
 		if optSet.SetName != "" {
 			w.writeLinef("s.%v.buildFlags(cctx, %v)", optSet.setStructName(), flagVar)
 			continue
 		}
+
 		// Each field
 		if err := optSet.writeFlagBuilding("s", flagVar, w); err != nil {
 			return fmt.Errorf("failed building option flags: %w", err)
 		}
+	}
+	// Generate normalize for aliases
+	if len(flagAliases) > 0 {
+		sort.Slice(flagAliases, func(i, j int) bool { return flagAliases[i][0] < flagAliases[j][0] })
+		w.writeLinef("%v.SetNormalizeFunc(aliasNormalizer(map[string]string{", flagVar)
+		for _, aliases := range flagAliases {
+			w.writeLinef("%q: %q,", aliases[0], aliases[1])
+		}
+		w.writeLinef("}))")
 	}
 	// If there are no subcommands, we need a run function
 	if len(subCommands) == 0 {
@@ -339,17 +373,25 @@ func (c *CommandOption) writeFlagBuilding(selfVar, flagVar string, w *codeWriter
 	if len(c.EnumValues) > 0 {
 		desc += fmt.Sprintf(" Accepted values: %s.", strings.Join(c.EnumValues, ", "))
 	}
+	// If required, append to desc
+	if c.Required {
+		desc += " Required."
+	}
+	// If there are aliases, append to desc
+	for _, alias := range c.Aliases {
+		desc += fmt.Sprintf(` Aliased as "--%v".`, alias)
+	}
 
 	if setDefault != "" {
 		// set default before calling Var so that it stores thedefault value into the flag
 		w.writeLinef("%v.%v = %v", selfVar, c.fieldName(), setDefault)
 	}
-	if c.Alias == "" {
+	if c.Shorthand == "" {
 		w.writeLinef("%v.%v(&%v.%v, %q%v, %q)",
 			flagVar, flagMeth, selfVar, c.fieldName(), c.Name, defaultLit, desc)
 	} else {
 		w.writeLinef("%v.%vP(&%v.%v, %q, %q%v, %q)",
-			flagVar, flagMeth, selfVar, c.fieldName(), c.Name, c.Alias, defaultLit, desc)
+			flagVar, flagMeth, selfVar, c.fieldName(), c.Name, c.Shorthand, defaultLit, desc)
 	}
 	if c.Required {
 		w.writeLinef("_ = %v.MarkFlagRequired(%v, %q)", w.importCobra(), flagVar, c.Name)

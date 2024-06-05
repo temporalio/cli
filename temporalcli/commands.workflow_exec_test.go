@@ -55,7 +55,8 @@ func (s *SharedServerSuite) TestWorkflow_Start_SimpleSuccess() {
 		"-o", "json",
 		"--address", s.Address(),
 		"--task-queue", s.Worker().Options.TaskQueue,
-		"--type", "DevWorkflow",
+		// Use --name here to make sure the alias works
+		"--name", "DevWorkflow",
 		"--workflow-id", "my-id2",
 	)
 	s.NoError(res.Err)

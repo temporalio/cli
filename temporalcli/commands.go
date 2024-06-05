@@ -499,6 +499,15 @@ func writeEnvConfigFile(file string, env map[string]map[string]string) error {
 	return nil
 }
 
+func aliasNormalizer(aliases map[string]string) func(f *pflag.FlagSet, name string) pflag.NormalizedName {
+	return func(f *pflag.FlagSet, name string) pflag.NormalizedName {
+		if actual := aliases[name]; actual != "" {
+			name = actual
+		}
+		return pflag.NormalizedName(name)
+	}
+}
+
 func newNopLogger() *slog.Logger { return slog.New(discardLogHandler{}) }
 
 type discardLogHandler struct{}
