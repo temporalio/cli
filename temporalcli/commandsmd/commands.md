@@ -486,10 +486,6 @@ lists properties in the `default` environment.
 List the environments you have set up on your local computer. Environments 
 are stored in "$HOME/.config/temporalio/temporal.yaml".
 
-<!--
-* ignores-missing-env
--->
-
 ### temporal env set: Set environment properties
 
 Assign a value to a property key and store it to an environment:
@@ -511,7 +507,6 @@ issue CLI commands and helps avoid typos.
 
 <!--
 * maximum-args=2
-* ignores-missing-env
 -->
 
 #### Options
@@ -1864,6 +1859,10 @@ temporal workflow show \
 
 #### Options
 
+* `--follow`, `-f` (bool) -
+  Direct Workflow Execution progress to stdout in real time.
+  Does not apply when JSON output is selected.
+
 Includes options set for [workflow reference](#options-set-for-workflow-reference).
 
 ### temporal workflow signal: Send a message to a Workflow Execution
@@ -1888,26 +1887,27 @@ temporal workflow signal \
 
 Includes options set for [payload input](#options-set-for-payload-input).
 
-STOPPING AGAIN. WEFWEF
 #### Options set for single workflow or batch:
-
 * `--workflow-id`, `-w` (string) -
-  Workflow ID. Either this or --query must be set.
+  Workflow ID.
+  Must set either this or --query.
+* `--query`, `-q` (string) -
+  List Filter to select a batch.
+  Must set either this or --workflow-id.
 * `--run-id`, `-r` (string) -
   Run ID.
-  Can't be set when --query is set.
-* `--query`, `-q` (string) -
-  Start a batch to operate on Workflow Executions with given List Filter. Either --query or --workflow-id must be set.
+  Only use with --workflow-id.
+  Cannot use with --query.
 * `--reason` (string) -
-  Reason to perform batch. Only allowed if query is present unless the command specifies
-  otherwise.
-  Defaults to message with the current user's name.
+  Reason to perform batch.
+  Only use with --query.
+  Defaults to user name.
 * `--yes`, `-y` (bool) -
   Don't prompt to confirm signalling.
   Only allowed when `--query` is present.
 
-### temporal workflow stack: Show the stack trace of a Workflow Execution
-
+### temporal workflow stack: Trace a Workflow Execution
+wefwef
 The `temporal workflow stack` command [Queries](/workflows#query) a
 [Workflow Execution](/workflows#workflow-execution) with `__stack_trace` as the query type
 This returns a stack trace of all the threads or routines currently used by the workflow, and is
