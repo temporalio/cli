@@ -1859,6 +1859,8 @@ temporal workflow show \
 
 #### Options
 
+* `--event-details` (bool) -
+  Show event details during run.
 * `--follow`, `-f` (bool) -
   Direct Workflow Execution progress to stdout in real time.
   Does not apply when JSON output is selected.
@@ -1907,35 +1909,32 @@ Includes options set for [payload input](#options-set-for-payload-input).
   Only allowed when `--query` is present.
 
 ### temporal workflow stack: Trace a Workflow Execution
-wefwef
-The `temporal workflow stack` command [Queries](/workflows#query) a
-[Workflow Execution](/workflows#workflow-execution) with `__stack_trace` as the query type
-This returns a stack trace of all the threads or routines currently used by the workflow, and is
-useful for troubleshooting
+
+Performs a [Query](/workflows#query) on a [Workflow Execution](/workflows#workflow-execution) using
+a `__stack_trace`-type query. Shows a stack trace of the threads and routines
+in current use by the Workflow to support troubleshooting:
 
 ```
-temporal workflow stack --workflow-id YourWorkflowId
+temporal workflow stack \
+    --workflow-id YourWorkflowId
 ```
-
-Use the options listed below to change the command's behavior
 
 #### Options
 
 * `--reject-condition` (string-enum) -
-  Optional flag for rejecting Queries based on Workflow state.
+  Optional flag to reject Queries based on Workflow state.
   Options: not_open, not_completed_cleanly.
 
 Includes options set for [workflow reference](#options-set-for-workflow-reference).
 
-### temporal workflow start: Start a new Workflow Execution
+### temporal workflow start: Initiate a Workflow Execution
 
-The `temporal workflow start` command starts a new [Workflow Execution](/workflows#workflow-execution). The
-Workflow and Run IDs are returned after starting the [Workflow](/workflows).
-
+Start a new [Workflow Execution](/workflows#workflow-execution). Returns the Workflow-
+and Run-IDs.
 
 ```
 temporal workflow start \
-		--workflow-id meaningful-business-id \
+		--workflow-id YourWorkflowId \
 		--type YourWorkflow \
 		--task-queue YourTaskQueue \
 		--input '{"Input": "As-JSON"}'
@@ -1945,6 +1944,7 @@ temporal workflow start \
 
 * `--workflow-id`, `-w` (string) -
   Workflow ID.
+  If not supply, the Service generates a unique ID.
 * `--type` (string) -
   Workflow Type name.
   Required.
@@ -1954,48 +1954,56 @@ temporal workflow start \
 * `--run-timeout` (duration) -
   Fail a Workflow Run if it takes longer than `DURATION`.
 * `--execution-timeout` (duration) -
-  Fail a WorkflowExecution if it takes longer than `DURATION`, including retries and ContinueAsNew tasks.
+  Fail a WorkflowExecution if it takes longer than `DURATION`.
+  This time-out includes retries and ContinueAsNew tasks.
 * `--task-timeout` (duration) -
-  Fail a Workflow Task if it takes longer than `DURATION`. (Start-to-close timeout for a Workflow Task.) Default: 10s.
+  Fail a Workflow Task if it takes longer than `DURATION`.
+  This is the Start-to-close timeout for a Workflow Task.
+  Default: 10s.
 * `--search-attribute` (string[]) -
-  Passes Search Attribute in "KEY='VALUE'" format.
+  Search Attribute in "KEY='VALUE'" format.
   KEY is a string, VALUE is JSON.
 * `--memo` (string[]) -
-  Passes Memo in 'KEY="VALUE"' format.
+  Memo in 'KEY="VALUE"' format.
   KEY is a string, VALUE is JSON. 
 
 #### Options set for workflow start:
 
 * `--cron` (string) -
-  Cron schedule for the Workflow. Deprecated -
-  use schedules instead.
+  Cron schedule for the Workflow.
+  Deprecated. 
+  Use Schedules instead.
 * `--fail-existing` (bool) -
   Fail if the Workflow already exists.
 * `--start-delay` (duration) -
-  Wait before starting the Workflow. Can't be used with a cron schedule. If the
-  Workflow receives a signal or update before the delay has elapsed, it will start immediately.
+  Delay before starting the Workflow Execution.
+  Can't be used with cron schedules.
+  If the Workflow receives a signal or update prior to this time, the Workflow
+  Execution starts immediately.
 * `--id-reuse-policy` (string) -
-  Allow the same Workflow ID to be used in a new Workflow Execution. Options:
-  AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate, TerminateIfRunning.
+  Re-use policy for the Workflow ID in new Workflow Executions.
+  Options: AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate, TerminateIfRunning.
 
 #### Options set for payload input:
 
 * `--input`, `-i` (string[]) -
-  Input value (default JSON unless --input-meta is non-JSON encoding). Can
-  be passed multiple times for multiple arguments. Can't be combined with --input-file.
+  Input value.
+  Use JSON content or set --input-meta to override.
+  Can't be combined with --input-file.
   Can be passed multiple times. 
 * `--input-file` (string[]) -
-  Read `PATH` as the input value (JSON by default unless --input-meta is non-JSON
-  encoding). Can be passed multiple times for multiple arguments. Can't be combined with --input.
-  Can be passed multiple times.
+  A path or paths for input file(s).
+  Use JSON content or set --input-meta to override.
+  Can't be combined with --input.
+  Can be passed multiple times to concatenate the file contents.
 * `--input-meta` (string[]) -
-  Metadata for the input payload, specified as a "KEY=VALUE" pair. If KEY is "encoding", overrides the
-  default of "json/plain". Pass multiple --input-meta options to set multiple pairs.
+  Input payload metadata as a "KEY=VALUE" pair.
+  When the KEY is "encoding", this overrides the default ("json/plain").
   Can be passed multiple times.
 * `--input-base64` (bool) -
   Assume inputs are base64-encoded and attempt to decode them.
 
-### temporal workflow terminate: Terminate a Workflow Execution
+### temporal workflow terminate: Terminate a Workflow Executionwefwef
 
 The `temporal workflow terminate` command is used to terminate a
 [Workflow Execution](/workflows#workflow-execution). Canceling a running Workflow Execution records a
