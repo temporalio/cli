@@ -39,7 +39,7 @@ IN-HOUSE STYLE
     Use square brackets to highlight its optional nature if the long
     description would suffer from two very similar command invocations.
   * Use YourEnvironment, YourNamespace, etc as metasyntactic stand-ins.
-  * Commands with subcommands cannot be run on their own.
+  * Commands with subcommands can't be run on their own.
     Because of this, always use full command examples.
   * Prefer double quotes to single quotes for sample input
   * Use long options and flags for examples (`--namespace`), not short options
@@ -671,7 +671,7 @@ temporal operator namespace create \
     [options]
 ````
 
-To create a global Namespace, for cross-region data replication:
+Create a Namespace with multi-region data replication:
 
 ```
 temporal operator namespace create \
@@ -707,18 +707,18 @@ Note: URI values for archival states can't be changed after being enabled.
   Namespace data.
 * `--description` (string) -
   Namespace description.
-  Comma-separated "KEY=VALUE" string pairs.
+  Comma-separated 'KEY="VALUE"' string pairs.
 * `--email` (string) -
   Owner email.
 * `--global` (bool) -
-  Enable cross-region data replication.
+  Enable multi-region data replication.
 * `--history-archival-state` (string-enum) -
   History archival state.
   Options: disabled, enabled.
   Default: disabled.
 * `--history-uri` (string) -
   Archive history to this `URI`.
-  Once enabled, cannot be changed.
+  Once enabled, can't be changed.
 * `--retention` (duration) -
   Time to preserve closed Workflows before deletion.
   Default: 72h.
@@ -728,7 +728,7 @@ Note: URI values for archival states can't be changed after being enabled.
   Default: disabled
 * `--visibility-uri` (string) -
   Archive visibility data to this `URI`.
-  Once enabled, cannot be changed.
+  Once enabled, can't be changed.
 
 ### temporal operator namespace delete [namespace]: Delete Namespace
 
@@ -801,7 +801,7 @@ temporal operator namespace update \
     --active-cluster NewActiveCluster
 ```
 
-Promote a Namespace for data replication:
+Promote a Namespace for multi-region data replication:
 
 ```
 temporal operator namespace update \
@@ -829,29 +829,28 @@ temporal operator namespace update \
 * `--cluster` (string[]) -
   Cluster names.
 * `--data` (string[]) -
-  Set a "KEY=VALUE" string pair in Namespace data.
-  KEY is an unquoted string identifier.
-  Unquoted JSON is recommended for the VALUE.
+  Set a 'KEY="VALUE"' string pair in Namespace data.
+  KEY is a string, VALUE is JSON.
   Can be passed multiple times.
 * `--description` (string) -
   Namespace description.
 * `--email` (string) -
   Owner email.
 * `--promote-global` (bool) -
-  Enable cross-region data replication.
+  Enable multi-region data replication.
 * `--history-archival-state` (string-enum) -
   History archival state.
   Options: disabled, enabled.
 * `--history-uri` (string) -
   Archive history to this `URI`.
-  Once enabled, cannot be changed.
+  Once enabled, can't be changed.
 * `--retention` (duration) -
   Length of time a closed Workflow is preserved before deletion
 * `--visibility-archival-state` (string-enum) -
   Visibility archival state. Options: disabled, enabled
 * `--visibility-uri` (string) -
   Archive visibility data to this `URI`.
-  Once enabled, cannot be changed.
+  Once enabled, can't be changed.
 
 ### temporal operator search-attribute: Search Attribute operations
 
@@ -1067,14 +1066,12 @@ and `--cron`:
   Interpret calendar specs with the `TZ` time zone.
   For a list of time zones, see: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones.
 * `--schedule-search-attribute` (string[]) -
-  Set schedule Search Attributes using "KEY=VALUE" format.
-  KEY is an unquoted string identifier.
-  VALUE is a JSON string.
+  Set schedule Search Attributes using 'KEY="VALUE"' format.
+  KEY is a string, VALUE is JSON.
   Can be passed multiple times.
 * `--schedule-memo` (string[]) -
-  Set a schedule memo using "KEY=VALUE" format.
-  KEY is an unquoted string identifier.
-  VALUE is a JSON string.
+  Set a schedule memo using 'KEY="VALUE"' format.
+  KEY is a string, VALUE is JSON.
   Can be passed multiple times.
 
 #### Options
@@ -1148,7 +1145,7 @@ temporal schedule toggle
     --reason "YourReason"
 ```
 
-The reason updates the Schedule's `notes` field to support operations
+The `--reason` text updates the Schedule's `notes` field for operations 
 communication. It defaults to "(no reason provided)" when omitted.
 
 #### Options
@@ -1216,7 +1213,9 @@ Set the port from the front-end gRPC Service (7233 default):
 
 ```
 temporal server start-dev \
-    --port 7000
+    --port 7234 \
+    --ui-port 8234 \
+    --metrics-port 57271
 ```
 
 Use a custom port for the Web UI. The default is the gRPC port (7233 default)
@@ -1293,9 +1292,8 @@ temporal server start-dev \
 * `--sqlite-pragma` (string[]) -
   SQLite pragma statements in "PRAGMA=VALUE" format.
 * `--dynamic-config-value` (string[]) -
-  Dynamic configuration value in "KEY=VALUE" format.
-  KEY is an unquoted string identifier.
-  VALUE is a JSON string.
+  Dynamic configuration value in 'KEY="VALUE"' format.
+  KEY is a string, VALUE is JSON.
   For example, "YourKey=\"YourStringValue\"".
 * `--log-config` (bool) -
   Log the server config to stderr.
@@ -1380,8 +1378,7 @@ task queues.
   Options: open, closed, existing.
   Default: existing.
 * `--task-queue`, `-t` (string[]) -
-  List of Task Queues.
-  Constrains the reachability search.
+  Search only the specified task queue(s).
   Can be passed multiple times.
 
 ### temporal task-queue get-build-ids: Build ID versions
@@ -1403,7 +1400,7 @@ Limited to Namespaces that enable Worker versioning.
   Required.
 * `--max-sets` (int) -
   Max return count.
-  Use 1 for default [major-version](https://en.wikipedia.org/wiki/Software_versioning) set.
+  Use 1 for default major version.
   Use 0 for all sets.
   Default: 0.
 
@@ -1455,6 +1452,7 @@ This command is limited to Namespaces that support Worker versioning.
   Required.
 * `--existing-compatible-build-id` (string) -
   Pre-existing Build Id in this Task Queue.
+  Required.
 * `--set-as-default` (bool) -
   Set the expanded Build Id set as the Task Queue default.
   Defaults to false.
@@ -1483,7 +1481,7 @@ This command is limited to Namespaces that support Worker versioning.
   Task Queue name.
   Required.
 
-### temporal task-queue update-build-ids promote-id-in-set: promote Build ID
+### temporal task-queue update-build-ids promote-id-in-set: use Build ID as set default
 
 Establish an existing Build ID as the default in its Task Queue set. 
 New tasks compatible with this set will now be dispatched to this ID:
@@ -1557,95 +1555,121 @@ temporal workflow list
   Env: TEMPORAL_API_KEY
 * `--grpc-meta` (string[]) -
   HTTP headers for requests.
-  Format as "KEY=VALUE" pairs.
+  Format as comma-separated "KEY=VALUE" pairs.
 * `--tls` (bool) -
-  STOPPED HERE WEFWEF
-  Enable TLS encryption without additional options such as mTLS or client certificates. Env:
-  TEMPORAL_TLS
+  Enable base TLS encryption.
+  Does not have additional options like mTLS or client certs. 
+  Env: TEMPORAL_TLS.
 * `--tls-cert-path` (string) -
-  Path to x509 certificate. Env: TEMPORAL_TLS_CERT
-* `--tls-key-path` (string) -
-  Path to private certificate key. Env: TEMPORAL_TLS_KEY
-* `--tls-ca-path` (string) -
-  Path to server CA certificate. Env: TEMPORAL_TLS_CA
+  Path to x509 certificate.
+  Can't be used with --tls-cert-data.
+  Env: TEMPORAL_TLS_CERT.
 * `--tls-cert-data` (string) -
-  Data for x509 certificate. Exclusive with -path variant. Env: TEMPORAL_TLS_CERT_DATA
+  Data for x509 certificate.
+  Can't be used with --tls-cert-path.
+  Env: TEMPORAL_TLS_CERT_DATA.
+* `--tls-key-path` (string) -
+  Path to x509 private key.
+  Can't be used with --tls-key-data.
+  Env: TEMPORAL_TLS_KEY.
 * `--tls-key-data` (string) -
-  Data for private certificate key. Exclusive with -path variant. Env: TEMPORAL_TLS_KEY_DATA
+  Private certificate key data.
+  Can't be used with --tls-key-path.
+  Env: TEMPORAL_TLS_KEY_DATA.
+* `--tls-ca-path` (string) -
+  Path to server CA certificate.
+  Can't be used with --tls-ca-data.
+  Env: TEMPORAL_TLS_CA.
 * `--tls-ca-data` (string) -
-  Data for server CA certificate. Exclusive with -path variant. Env: TEMPORAL_TLS_CA_DATA
+  Data for server CA certificate.
+  Can't be used with --tls-ca-path.
+  Env: TEMPORAL_TLS_CA_DATA.
 * `--tls-disable-host-verification` (bool) -
-  Disables TLS host-name verification. Env:
-  TEMPORAL_TLS_DISABLE_HOST_VERIFICATION
+  Disable TLS host-name verification.
+  Env: TEMPORAL_TLS_DISABLE_HOST_VERIFICATION.
 * `--tls-server-name` (string) -
-  Overrides target TLS server name. Env: TEMPORAL_TLS_SERVER_NAME
+  Override target TLS server name.
+  Env: TEMPORAL_TLS_SERVER_NAME.
 * `--codec-endpoint` (string) -
-  Endpoint for a remote Codec Server. Env: TEMPORAL_CODEC_ENDPOINT
+  Remote Codec Server endpoint.
+  Env: TEMPORAL_CODEC_ENDPOINT.
 * `--codec-auth` (string) -
-  Sets the authorization header on requests to the Codec Server. Env: TEMPORAL_CODEC_AUTH
+  Authorization header for Codec Server requests.
+  Env: TEMPORAL_CODEC_AUTH.
 
-### temporal workflow cancel: Cancel a Workflow Execution
+### temporal workflow cancel: Send cancellation to Workflow Execution
 
-The `temporal workflow cancel` command is used to cancel a [Workflow Execution]([Workflow Executions](/workflows#workflow-execution))
-Canceling a running Workflow Execution records a `WorkflowExecutionCancelRequested` event in the Event History. A new
-Command Task will be scheduled, and the Workflow Execution will perform cleanup work
+Canceling a running [Workflow Execution]([Workflow Executions](/workflows#workflow-execution)) records a `WorkflowExecutionCancelRequested`
+event in the Event History. The Service scheules a new Command Task
+and the Workflow Execution performs any cleanup work supported by
+its implementation. 
 
-Executions may be cancelled by [Workflow ID](/workflows#workflow-id):
+Use the [Workflow ID](/workflows#workflow-id) to cancel an Execution:
+
 ```
-temporal workflow cancel --workflow-id YourWorkflowId
+temporal workflow cancel \
+    --workflow-id YourWorkflowId
 ```
 
-...or in bulk via a visibility query [list filter](/visibility#list-filter):
+A visiblity query lets you send bulk cancellations to Workflow Executions
+matching the results:
+
 ```
 temporal workflow cancel --query YourQuery
 ```
 
-Use the options listed below to change the behavior of this command
-
 #### Options
 
 Includes options set for [single workflow or batch](#options-set-single-workflow-or-batch).
 
-### temporal workflow count: Count Workflow Executions
+### temporal workflow count: Number of Workflow Executions
 
-The `temporal workflow count` command returns a count of [Workflow Executions](/workflows#workflow-execution).
+Show a count of [Workflow Executions](/workflows#workflow-execution), regardless
+of excution state (running, terminated, etc). Use `--query` to select a 
+subset of Workflow Executions.
 
-Use the options listed below to change the command's behavior
+```
+temporal workflow count \
+    --query YourQuery
+```
 
 #### Options
 
 * `--query`, `-q` (string) -
-  Filter results using a SQL-like query.
+  SQL-like query to filter results for count.
 
-### temporal workflow delete: Delete a Workflow Execution
+### temporal workflow delete: Remove Workflow Execution
 
-The `temporal workflow delete` command is used to delete a specific [Workflow Executions](/workflows#workflow-execution).
-This asynchronously deletes a workflow's [Event History](/workflows#event-history).
-If the [Workflow Executions](/workflows#workflow-execution) is Running, it will be terminated before deletion.
+Delete a [Workflow Executions](/workflows#workflow-execution) and its [Event History](/workflows#event-history):
 
 ```
 temporal workflow delete \
-		--workflow-id YourWorkflowId \
+    --workflow-id YourWorkflowId
 ```
 
-Use the options listed below to change the command's behavior
+The removal executes asynchronously. If the Execution is Running, the Service
+terminates it before deletion.
 
 #### Options
 
 Includes options set for [single workflow or batch](#options-set-single-workflow-or-batch).
 
-### temporal workflow describe: Show information about a Workflow Execution
+### temporal workflow describe: Show Workflow Execution info
 
-The `temporal workflow describe` command shows information about a given
-[Workflow Executions](/workflows#workflow-execution).
+Present information about a given [Workflow Executions](/workflows#workflow-execution):
 
-This information can be used to locate Workflow Executions that weren't able to run successfully
+```
+temporal workflow describe \
+    --workflow-id YourWorkflowId
+```
 
-`temporal workflow describe --workflow-id meaningful-business-id`
+Show the Workflow Execution's auto-reset points:
 
-Output can be shown as printed ('raw') or formatted to only show the Workflow Execution's auto-reset points
-
-`temporal workflow describe --workflow-id meaningful-business-id --raw true --reset-points true`
+```
+temporal workflow describe \
+    --workflow-id YourWorkflowId \
+    --reset-points true
+```
 
 Use the command options below to change the information returned by this command
 
@@ -1660,90 +1684,103 @@ Use the command options below to change the information returned by this command
 #### Options
 
 * `--reset-points` (bool) -
-  Only show auto-reset points.
+  Show auto-reset points only.
 * `--raw` (bool) -
   Print properties without changing their format.
+  Defaults to true.
 
-### temporal workflow execute: Start a new Workflow Execution and prints its progress
+### temporal workflow execute: Start a new Workflow Execution
 
-The `temporal workflow execute` command starts a new [Workflow Executions](/workflows#workflow-execution) and
-prints its progress. The command completes when the Workflow Execution completes
-
-Single quotes('') are used to wrap input as JSON.
+Establish a new [Workflow Executions](/workflows#workflow-execution) and
+show its progress from stdout. The command blocks, returning when the Workflow
+Execution completes. If your Workflow requires input, pass valid JSON:
 
 ```
 temporal workflow execute
-		--workflow-id meaningful-business-id \
+		--workflow-id YourWorkflowId \
 		--type YourWorkflow \
 		--task-queue YourTaskQueue \
 		--input '{"Input": "As-JSON"}'
 ```
 
+Use `--event-details` to relay updates to the command-line output in JSON
+format. When using JSON output (`--output json`), this includes the entire
+"history" JSON key for the run.
+
+
 #### Options
 
 * `--event-details` (bool) -
-  If set when using text output, include event details JSON in printed output. If set when
-+  using JSON output, this will include the entire "history" JSON key of the started run (does not follow runs).
+  Show event details during run.
 
 Includes options set for [shared workflow start](#options-set-for-shared-workflow-start).
 Includes options set for [workflow start](#options-set-for-workflow-start).
 Includes options set for [payload input](#options-set-for-payload-input).
 
-### temporal workflow fix-history-json: Updates an event history JSON file to the current format
+### temporal workflow fix-history-json: Updates an event history JSON file
+
+Reserialize an [Event History](/workflows#event-history) JSON file:
 
 ```
 temporal workflow fix-history-json \
-	--source original.json \
-	--target reserialized.json
+	--source /path/to/original.json \
+	--target /path/to/reserialized.json
 ```
-
-Use the options listed below to change the command's behavior
 
 #### Options
 
 * `--source`, `-s` (string) -
-  Path to the input file.
+  Path to the original file.
   Required.
 * `--target`, `-t` (string) -
-  Path to the output file, or standard output if not set.
+  Path to the results file.
+  When omitted, output is sent to stdout.
 
-### temporal workflow list: List Workflow Executions based on a Query
+### temporal workflow list: Show Workflow Executions
 
-The `temporal workflow list` command provides a list of [Workflow Executions](/workflows#workflow-execution)
-that meet the criteria of a given [Query](/workflows#query).
-By default, this command returns up to 10 closed Workflow Executions
+List [Workflow Executions](/workflows#workflow-execution). By default, this command returns up
+to 10 closed Workflow Executions. The optional `--query` limits the output to
+Workflows matching a [Query](/workflows#query):
 
-`temporal workflow list --query YourQuery`
+```
+temporal workflow list \
+    --query YourQuery`
+```
 
-The command can also return a list of archived Workflow Executions
+View a list of archived Workflow Executions:
 
-`temporal workflow list --archived`
-
-Use the command options below to change the information returned by this command
+```
+temporal workflow list \
+    --archived
+```
 
 #### Options
 
 * `--query`, `-q` (string) -
-  Filter results using a SQL-like query.
+  SQL-like query string for filtering results.
 * `--archived` (bool) -
-  If set, will only query and list archived workflows instead of regular workflows.
+  Limit output to archived Workflow Executions.
 * `--limit` (int) -
   Maximum number of Workflow Executions to display.
 
-### temporal workflow query: Query a Workflow Execution
+### temporal workflow query: Synchronously retrieve Workflow Execution state
 
-The `temporal workflow query` command is used to [Query](/workflows#query) a
-[Workflow Execution](/workflows#workflow-execution)
-by [Workflow ID](/workflows#workflow-id).
+Send a [Query](/workflows#query) to a [Workflow Execution](/workflows#workflow-execution) by
+[Workflow ID](/workflows#workflow-id) to retrieve its state. This is a 
+synchronous operation. A running Workflow Execution's internal state
+constantly changes. Use Queries to expose that state. You can Query both
+running and completed Workflow Executions:
 
 ```
 temporal workflow query \
-		--workflow-id YourWorkflowId \
-		--name YourQuery \
-		--input '{"YourInputKey": "YourInputValue"}'
+    --workflow-id=YourWorkflowId
+    --type=YourQueryType
+    --input '{"YourInputKey": "YourInputValue"}'
 ```
 
-Use the options listed below to change the command's behavior
+Query must never mutate the state of the Workflow Execution and must not
+contain blocking code.
+
 
 #### Options
 
@@ -1751,75 +1788,90 @@ Use the options listed below to change the command's behavior
   Query Type/Name.
   Required.
 * `--reject-condition` (string-enum) -
-  Optional flag for rejecting Queries based on Workflow state.
+  Optional flag to reject Queries based on Workflow state.
   Options: not_open, not_completed_cleanly.
 
 Includes options set for [payload input](#options-set-for-payload-input).
 Includes options set for [workflow reference](#options-set-for-workflow-reference).
 
-### temporal workflow reset: Reset a Workflow Execution to an older point in history
+### temporal workflow reset: Move a Workflow Execution to an older history point
 
-The temporal workflow reset command resets a [Workflow Execution](/workflows#workflow-execution)
-A reset allows the Workflow to resume from a certain point without losing its parameters or [Event History](/workflows#event-history)
+Reset a [Workflow Execution](/workflows#workflow-execution) so it can resume
+from a point in its [Event History](/workflows#event-history) without losing its
+progress up to that point: 
 
-The Workflow Execution can be set to a given [Event Type](/workflows#event):
 ```
-temporal workflow reset --workflow-id meaningful-business-id --type LastContinuedAsNew
+temporal workflow reset \
+    --workflow-id YourWorkflowId
+    --event-id YourLastEvent
 ```
 
-...or a specific any Event after `WorkflowTaskStarted`
+Start from where the Workflow Execution last continued as new:
+
 ```
-temporal workflow reset --workflow-id meaningful-business-id --event-id YourLastEvent
+temporal workflow reset \
+    --workflow-id YourWorkflowId \
+    --type LastContinuedAsNew
 ```
-For batch reset only FirstWorkflowTask, LastWorkflowTask or BuildId can be used. Workflow ID, run ID and event ID
-should not be set
-Use the options listed below to change reset behavior
+
+For batch resets, limit your resets to FirstWorkflowTask, LastWorkflowTask 
+or BuildId. Do not use Workflow ID, run ID or event ID.
 
 #### Options
 
 * `--workflow-id`, `-w` (string) -
-  Workflow ID. Required for non-batch reset operations.
+  Workflow ID.
+  Required for non-batch reset operations.
 * `--run-id`, `-r` (string) -
   Run ID.
 * `--event-id`, `-e` (int) -
-  The Event ID for any Event after `WorkflowTaskStarted` you want to reset to (exclusive). It can be `WorkflowTaskCompleted`, `WorkflowTaskFailed` or others.
+  Event ID to reset to. 
+  Event must occur after `WorkflowTaskStarted`.
+  `WorkflowTaskCompleted`, `WorkflowTaskFailed`, etc are valid.
 * `--reason` (string) -
-  The reason why this workflow is being reset.
+  Reason for reset.
   Required.
 * `--reapply-type` (string-enum) -
-  Event types to reapply after the reset point. Options: All, Signal, None.
+  Types of events to re-apply after reset point.
+  Options: All, Signal, None.
   Default: All.
 * `--type`, `-t` (string-enum) -
-  Event type to which you want to reset. Options: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew, BuildId.
+  The event type for the reset. 
+  Options: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew, BuildId.
 * `--build-id` (string) -
-  Only used if type is BuildId. Reset the first workflow task processed by this build ID. Note that by default, this reset is allowed to be to a prior run in a chain of continue-as-new.
+  A Build ID.
+  Use only with the BuildId `--type`. 
+  Resets the first Workflow task processed by this ID.
+  By default, this reset may be in a prior run, earlier than a Continue
+  as New point.
 * `--query`, `-q` (string) -
-  Start a batch reset to operate on Workflow Executions with given List Filter.
+  Filter to select Workflow Executions in a batch.
 * `--yes`, `-y` (bool) -
   Don't prompt to confirm.
   Only allowed when `--query` is present.
 
-### temporal workflow show: Show Event History for a Workflow Execution
+### temporal workflow show: Display Event History
 
-The `temporal workflow show` command provides the [Event History](/workflows#event-history) for a
-[Workflow Execution](/workflows#workflow-execution). With JSON output specified, this output can be given to
-an SDK to perform a replay
+Show a [Workflow Execution](/workflows#workflow-execution)'s [Event History](/workflows#event-history).
+When you output to JSON (`--output JSON`), you may pass the results to an
+SDK to perform a replay:
 
-Use the options listed below to change the command's behavior
+```
+temporal workflow show \
+    --workflow-id YourWorkflowId
+    --output json
+```
 
 #### Options
 
-* `--follow`, `-f` (bool) -
-  Follow the progress of a Workflow Execution in real time (does not apply
-  to JSON output).
-* `--event-details` (bool) - If set when using text output, include event details JSON in printed output.
-
 Includes options set for [workflow reference](#options-set-for-workflow-reference).
 
-### temporal workflow signal: Signal a Workflow Execution
+### temporal workflow signal: Send a message to a Workflow Execution
 
-The `temporal workflow signal` command is used to [Signal](/workflows#signal) a
-[Workflow Execution](/workflows#workflow-execution) by [Workflow ID](/workflows#workflow-id)
+Send an asynchonous notification to a running [Workflow Execution](/workflows#workflow-execution)
+specified by its [Workflow ID](/workflows#workflow-id). A [Signal](/workflows#signal) is written
+to the History. If `--input` is passed with the Signal, that data is available
+for the Workflow Execution to consume: 
 
 ```
 temporal workflow signal \
@@ -1828,21 +1880,22 @@ temporal workflow signal \
 		--input '{"YourInputKey": "YourInputValue"}'
 ```
 
-Use the options listed below to change the command's behavior
-
 #### Options
 
 * `--name` (string) -
-  Signal Name. Required
+  Signal name.
+  Required.
 
 Includes options set for [payload input](#options-set-for-payload-input).
 
+STOPPING AGAIN. WEFWEF
 #### Options set for single workflow or batch:
 
 * `--workflow-id`, `-w` (string) -
   Workflow ID. Either this or --query must be set.
 * `--run-id`, `-r` (string) -
-  Run ID. Cannot be set when --query is set.
+  Run ID.
+  Can't be set when --query is set.
 * `--query`, `-q` (string) -
   Start a batch to operate on Workflow Executions with given List Filter. Either --query or --workflow-id must be set.
 * `--reason` (string) -
@@ -1905,9 +1958,11 @@ temporal workflow start \
 * `--task-timeout` (duration) -
   Fail a Workflow Task if it takes longer than `DURATION`. (Start-to-close timeout for a Workflow Task.) Default: 10s.
 * `--search-attribute` (string[]) -
-  Passes Search Attribute in "KEY=VALUE" format. Use valid JSON formats for value.
+  Passes Search Attribute in "KEY='VALUE'" format.
+  KEY is a string, VALUE is JSON.
 * `--memo` (string[]) -
-  Passes Memo in "KEY=VALUE" format. Use valid JSON formats for value.
+  Passes Memo in 'KEY="VALUE"' format.
+  KEY is a string, VALUE is JSON. 
 
 #### Options set for workflow start:
 
@@ -1917,7 +1972,7 @@ temporal workflow start \
 * `--fail-existing` (bool) -
   Fail if the Workflow already exists.
 * `--start-delay` (duration) -
-  Wait before starting the Workflow. Cannot be used with a cron schedule. If the
+  Wait before starting the Workflow. Can't be used with a cron schedule. If the
   Workflow receives a signal or update before the delay has elapsed, it will start immediately.
 * `--id-reuse-policy` (string) -
   Allow the same Workflow ID to be used in a new Workflow Execution. Options:
@@ -1927,11 +1982,11 @@ temporal workflow start \
 
 * `--input`, `-i` (string[]) -
   Input value (default JSON unless --input-meta is non-JSON encoding). Can
-  be passed multiple times for multiple arguments. Cannot be combined with --input-file.
+  be passed multiple times for multiple arguments. Can't be combined with --input-file.
   Can be passed multiple times. 
 * `--input-file` (string[]) -
   Read `PATH` as the input value (JSON by default unless --input-meta is non-JSON
-  encoding). Can be passed multiple times for multiple arguments. Cannot be combined with --input.
+  encoding). Can be passed multiple times for multiple arguments. Can't be combined with --input.
   Can be passed multiple times.
 * `--input-meta` (string[]) -
   Metadata for the input payload, specified as a "KEY=VALUE" pair. If KEY is "encoding", overrides the
@@ -1964,7 +2019,7 @@ Use the options listed below to change the behavior of this command.
 * `--workflow-id`, `-w` (string) -
   Workflow ID. Either this or query must be set.
 * `--run-id`, `-r` (string) -
-  Run ID. Cannot be set when query is set.
+  Run ID. Can't be set when query is set.
 * `--query`, `-q` (string) -
   Start a batch to terminate Workflow Executions with the `QUERY` List Filter. Either this or
   Workflow ID must be set.
