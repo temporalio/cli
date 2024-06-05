@@ -15,7 +15,6 @@ import (
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/converter"
-	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/server/common/primitives/timestamp"
 	"google.golang.org/protobuf/encoding/protojson"
 )
@@ -73,16 +72,6 @@ func describeResultToPrintable(id string, desc *client.ScheduleDescription) *pri
 		Memo:             desc.Memo,
 	}
 	// Schedule.Action
-	if startWf, ok := desc.Schedule.Action.(*client.ScheduleWorkflowAction); ok {
-		// convert typed back into untyped for printing
-		untyped := make(map[string]any)
-		for k, v := range startWf.TypedSearchAttributes.GetUntypedValues() {
-			untyped[k.GetName()] = v
-		}
-		// ignore errors
-		startWf.UntypedSearchAttributes, _ = encodeSearchAttributesToPayloads(untyped)
-		startWf.TypedSearchAttributes = temporal.SearchAttributes{}
-	}
 	out.Action = desc.Schedule.Action
 	// Schedule.Spec
 	specToPrintable(out, desc.Schedule.Spec)
