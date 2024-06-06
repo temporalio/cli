@@ -301,6 +301,20 @@ func (s *SharedServerSuite) TestWorkflow_Reset_ReapplyExclude() {
 	s.Equal(2, timesSignalSeen, "Should only see original signals and not after reset")
 }
 
+func (s *SharedServerSuite) TestWorkflow_Reset_DoesNotAllowBothApplyKinds() {
+	res := s.Execute(
+		"workflow", "reset",
+		"--address", s.Address(),
+		"-w", "whatever",
+		"--event-id", "3",
+		"--reason", "test-reset-FirstWorkflowTask",
+		"--reapply-exclude", "Signal",
+		"--reapply-type", "Signal",
+	)
+	require.Error(s.T(), res.Err)
+	s.Contains(res.Err.Error(), "cannot specify --reapply-type and --reapply-exclude")
+}
+
 const (
 	badActivity = iota
 	firstActivity
