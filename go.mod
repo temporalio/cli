@@ -93,7 +93,7 @@ require (
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/temporalio/ringpop-go v0.0.0-20230606200434-b5c079f412d3 // indirect
 	github.com/temporalio/sqlparser v0.0.0-20231115171017-f4060bcfa6cb // indirect
-	github.com/temporalio/tchannel-go v1.22.1-0.20231116015023-bd4fb7678499 // indirect
+	github.com/temporalio/tchannel-go v1.22.1-0.20240528171429-1db37fdea938 // indirect
 	github.com/twmb/murmur3 v1.1.8 // indirect
 	github.com/uber-common/bark v1.3.0 // indirect
 	github.com/uber-go/tally/v4 v4.1.7 // indirect
