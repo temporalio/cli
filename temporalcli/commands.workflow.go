@@ -84,7 +84,7 @@ func (c *TemporalWorkflowDeleteCommand) run(cctx *CommandContext, args []string)
 
 func (c *TemporalWorkflowQueryCommand) run(cctx *CommandContext, args []string) error {
 	return queryHelper(cctx, c.Parent, c.PayloadInputOptions,
-		c.Type, c.RejectCondition, c.WorkflowReferenceOptions)
+		c.Name, c.RejectCondition, c.WorkflowReferenceOptions)
 }
 
 func (c *TemporalWorkflowSignalCommand) run(cctx *CommandContext, args []string) error {
