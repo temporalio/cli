@@ -200,9 +200,11 @@ func (s *StartOptions) buildServerOptions() ([]temporal.ServerOption, error) {
 		temporal.WithClaimMapper(func(*config.Config) authorization.ClaimMapper { return claimMapper }),
 	}
 
-	// Setting host level mutable state cache size to 8k.
 	dynConf := make(dynamicconfig.StaticClient, len(s.DynamicConfigValues)+1)
+	// Setting host level mutable state cache size to 8k.
 	dynConf[dynamicconfig.HistoryCacheHostLevelMaxSize] = 8096
+	// Up default visibility RPS
+	dynConf[dynamicconfig.FrontendMaxNamespaceVisibilityRPSPerInstance] = 100
 
 	// Dynamic config if set
 	for k, v := range s.DynamicConfigValues {
