@@ -1901,17 +1901,18 @@ func NewTemporalWorkflowQueryCommand(cctx *CommandContext, parent *TemporalWorkf
 }
 
 type TemporalWorkflowResetCommand struct {
-	Parent      *TemporalWorkflowCommand
-	Command     cobra.Command
-	WorkflowId  string
-	RunId       string
-	EventId     int
-	Reason      string
-	ReapplyType StringEnum
-	Type        StringEnum
-	BuildId     string
-	Query       string
-	Yes         bool
+	Parent         *TemporalWorkflowCommand
+	Command        cobra.Command
+	WorkflowId     string
+	RunId          string
+	EventId        int
+	Reason         string
+	ReapplyType    StringEnum
+	ReapplyExclude []string
+	Type           StringEnum
+	BuildId        string
+	Query          string
+	Yes            bool
 }
 
 func NewTemporalWorkflowResetCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowResetCommand {
@@ -1932,7 +1933,8 @@ func NewTemporalWorkflowResetCommand(cctx *CommandContext, parent *TemporalWorkf
 	s.Command.Flags().StringVar(&s.Reason, "reason", "", "The reason why this workflow is being reset. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "reason")
 	s.ReapplyType = NewStringEnum([]string{"All", "Signal", "None"}, "All")
-	s.Command.Flags().Var(&s.ReapplyType, "reapply-type", "Event types to reapply after the reset point. Accepted values: All, Signal, None.")
+	s.Command.Flags().Var(&s.ReapplyType, "reapply-type", "*DEPRECATED* Use --reapply-exclude. Event types to reapply after the reset point. Accepted values: All, Signal, None.")
+	s.Command.Flags().StringArrayVar(&s.ReapplyExclude, "reapply-exclude", nil, "Event types to exclude from reapplication. Accepted values: All, Signal, Update.")
 	s.Type = NewStringEnum([]string{"FirstWorkflowTask", "LastWorkflowTask", "LastContinuedAsNew", "BuildId"}, "")
 	s.Command.Flags().VarP(&s.Type, "type", "t", "Event type to which you want to reset. Accepted values: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew, BuildId.")
 	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "Only used if type is BuildId. Reset the first workflow task processed by this build id. Note that by default, this reset is allowed to be to a prior run in a chain of continue-as-new.")

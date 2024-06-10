@@ -911,7 +911,8 @@ Use the options listed below to change reset behavior.
 * `--run-id`, `-r` (string) - Run Id.
 * `--event-id`, `-e` (int) - The Event Id for any Event after `WorkflowTaskStarted` you want to reset to (exclusive). It can be `WorkflowTaskCompleted`, `WorkflowTaskFailed` or others.
 * `--reason` (string) - The reason why this workflow is being reset. Required.
-* `--reapply-type` (string-enum) - Event types to reapply after the reset point. Options: All, Signal, None. Default: All.
+* `--reapply-type` (string-enum) - *DEPRECATED* Use --reapply-exclude. Event types to reapply after the reset point. Options: All, Signal, None. Default: All.
+* `--reapply-exclude` (string[]) - Event types to exclude from reapplication. Options: All, Signal, Update.
 * `--type`, `-t` (string-enum) - Event type to which you want to reset. Options: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew, BuildId.
 * `--build-id` (string) - Only used if type is BuildId. Reset the first workflow task processed by this build id. Note that by default, this reset is allowed to be to a prior run in a chain of continue-as-new.
 * `--query`, `-q` (string) - Start a batch reset to operate on Workflow Executions with given List Filter.
