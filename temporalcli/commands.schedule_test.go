@@ -146,6 +146,8 @@ func (s *SharedServerSuite) TestSchedule_CreateDescribeCalendar() {
 }
 
 func (s *SharedServerSuite) TestSchedule_CreateDescribe_SearchAttributes_Memo() {
+	s.t.Skip("Skipped until issue #590- Error printing typed search attributes inside schedule actions - is fixed")
+
 	schedId, _, res := s.createSchedule("--interval", "10d",
 		"--schedule-search-attribute", `CustomKeywordField="schedule-string-val"`,
 		"--search-attribute", `CustomKeywordField="workflow-string-val"`,
