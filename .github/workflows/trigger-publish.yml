@@ -1,6 +1,7 @@
 name: 'Trigger Docker image build'
 
 on:
+  workflow_dispatch:
   release:
     types: [published]
 
