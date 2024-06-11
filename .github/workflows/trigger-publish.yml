@@ -34,7 +34,7 @@ jobs:
           PARENT_BRANCH: ${{ toJSON('main') }}
           WORKFLOW_ID: update-submodules.yml
           REPO: ${{ toJSON('cli') }}
-          BRANCH: ${{ toJSON('v0.13.0-rc.2') }}
+          BRANCH: ${{ toJSON('main') }}
           COMMIT: ${{ toJSON('05d5c040e5a443d5d50476c86654105ef54f070d') }}
         run: |
           curl -fL -X POST -H "Accept: application/vnd.github.v3+json" -H "Authorization: token $PAT" "https://api.github.com/repos/$PARENT_REPO/actions/workflows/$WORKFLOW_ID/dispatches" -d '{"ref":'"$PARENT_BRANCH"', "inputs": { "repo":'"$REPO"', "branch":'"$BRANCH"', "commit": '"$COMMIT"' }}'
