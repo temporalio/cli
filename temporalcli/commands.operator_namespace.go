@@ -2,7 +2,6 @@ package temporalcli
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/fatih/color"
 	"github.com/temporalio/cli/temporalcli/internal/printer"
@@ -47,7 +46,7 @@ func (c *TemporalOperatorNamespaceCreateCommand) run(cctx *CommandContext, args 
 
 	var data map[string]string
 	if len(c.Data) > 0 {
-		data, err = stringKeysValues(strings.Split(c.Data, ","))
+		data, err = stringKeysValues(c.Data)
 		if err != nil {
 			return err
 		}
@@ -57,7 +56,7 @@ func (c *TemporalOperatorNamespaceCreateCommand) run(cctx *CommandContext, args 
 		Namespace:                        nsName,
 		Description:                      c.Description,
 		OwnerEmail:                       c.Email,
-		WorkflowExecutionRetentionPeriod: durationpb.New(c.Retention),
+		WorkflowExecutionRetentionPeriod: durationpb.New(c.Retention.Duration()),
 		Clusters:                         clusters,
 		ActiveClusterName:                c.ActiveCluster,
 		Data:                             data,
@@ -255,7 +254,7 @@ func (c *TemporalOperatorNamespaceUpdateCommand) run(cctx *CommandContext, args 
 		}
 
 		if c.Retention > 0 {
-			retention = durationpb.New(c.Retention)
+			retention = durationpb.New(c.Retention.Duration())
 		}
 
 		var clusters []*replication.ClusterReplicationConfig

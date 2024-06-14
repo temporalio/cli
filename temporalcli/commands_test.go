@@ -134,10 +134,14 @@ func (h *CommandHarness) Execute(args ...string) *CommandResult {
 	options.Args = args
 	// Disable env if no env file and no --env-file arg
 	options.DisableEnvConfig = options.EnvConfigFile == "" && !slices.Contains(args, "--env-file")
+	// Set default env name if disabled, otherwise we'll fail with missing environment
+	if options.DisableEnvConfig {
+		options.EnvConfigName = "default"
+	}
 	// Capture error
 	options.Fail = func(err error) {
 		if res.Err != nil {
-			panic("fail called twice")
+			panic("fail called twice, just failed with " + err.Error())
 		}
 		res.Err = err
 	}
@@ -178,6 +182,11 @@ func (s *SharedServerSuite) SetupSuite() {
 		StartOptions: devserver.StartOptions{
 			// Enable for operator cluster commands
 			EnableGlobalNamespace: true,
+			DynamicConfigValues: map[string]any{
+				// Allow a high rate of change to namespaces, particularly
+				// for the task-queue command tests.
+				"frontend.namespaceRPS.visibility": 10000,
+			},
 		},
 	})
 	// Stop server if we fail later
@@ -273,7 +282,7 @@ func StartDevServer(t *testing.T, options DevServerOptions) *DevServer {
 		d.Options.FrontendIP = "127.0.0.1"
 	}
 	if d.Options.FrontendPort == 0 {
-		d.Options.FrontendPort = devserver.MustGetFreePort()
+		d.Options.FrontendPort = devserver.MustGetFreePort(d.Options.FrontendIP)
 	}
 	if len(d.Options.Namespaces) == 0 {
 		d.Options.Namespaces = []string{
@@ -314,6 +323,7 @@ func StartDevServer(t *testing.T, options DevServerOptions) *DevServer {
 	if d.Options.ClientOptions.Identity == "" {
 		d.Options.ClientOptions.Identity = "cli-test-client"
 	}
+	d.Options.ClientOptions.DataConverter = temporalcli.DataConverterWithRawValue
 	if d.Options.DynamicConfigValues == nil {
 		d.Options.DynamicConfigValues = map[string]any{}
 	}
@@ -324,7 +334,7 @@ func StartDevServer(t *testing.T, options DevServerOptions) *DevServer {
 	d.Options.DynamicConfigValues["worker.buildIdScavengerEnabled"] = true
 	d.Options.DynamicConfigValues["frontend.enableUpdateWorkflowExecution"] = true
 	d.Options.DynamicConfigValues["frontend.MaxConcurrentBatchOperationPerNamespace"] = 1000
-	d.Options.DynamicConfigValues["frontend.namespaceRPS.visibility"] = 100000
+	d.Options.DynamicConfigValues["frontend.namespaceRPS.visibility"] = 100
 
 	d.Options.GRPCInterceptors = append(
 		d.Options.GRPCInterceptors,

@@ -92,7 +92,7 @@ func (c *TemporalTaskQueueVersioningCommand) getConflictToken(cctx *CommandConte
 	}
 	defer cl.Close()
 
-	rules, err := cl.GetWorkerVersioningRules(cctx, &client.GetWorkerVersioningOptions{
+	rules, err := cl.GetWorkerVersioningRules(cctx, client.GetWorkerVersioningOptions{
 		TaskQueue: options.taskQueue,
 	})
 	if err != nil {
@@ -130,7 +130,7 @@ func (c *TemporalTaskQueueVersioningCommand) getConflictToken(cctx *CommandConte
 	return rules.ConflictToken, nil
 }
 
-func (c *TemporalTaskQueueVersioningCommand) updateBuildIdRules(cctx *CommandContext, options *client.UpdateWorkerVersioningRulesOptions) error {
+func (c *TemporalTaskQueueVersioningCommand) updateBuildIdRules(cctx *CommandContext, options client.UpdateWorkerVersioningRulesOptions) error {
 	cl, err := c.Parent.ClientOptions.dialClient(cctx)
 	if err != nil {
 		return err
@@ -162,10 +162,10 @@ func (c *TemporalTaskQueueVersioningAddRedirectRuleCommand) run(cctx *CommandCon
 		return err
 	}
 
-	return c.Parent.updateBuildIdRules(cctx, &client.UpdateWorkerVersioningRulesOptions{
+	return c.Parent.updateBuildIdRules(cctx, client.UpdateWorkerVersioningRulesOptions{
 		TaskQueue:     c.Parent.TaskQueue,
 		ConflictToken: token,
-		Operation: &client.VersioningOpAddRedirectRule{
+		Operation: &client.VersioningOperationAddRedirectRule{
 			Rule: client.VersioningRedirectRule{
 				SourceBuildID: c.SourceBuildId,
 				TargetBuildID: c.TargetBuildId,
@@ -185,10 +185,10 @@ func (c *TemporalTaskQueueVersioningCommitBuildIdCommand) run(cctx *CommandConte
 		return err
 	}
 
-	return c.Parent.updateBuildIdRules(cctx, &client.UpdateWorkerVersioningRulesOptions{
+	return c.Parent.updateBuildIdRules(cctx, client.UpdateWorkerVersioningRulesOptions{
 		TaskQueue:     c.Parent.TaskQueue,
 		ConflictToken: token,
-		Operation: &client.VersioningOpCommitBuildID{
+		Operation: &client.VersioningOperationCommitBuildID{
 			TargetBuildID: c.BuildId,
 			Force:         c.Force,
 		},
@@ -206,10 +206,10 @@ func (c *TemporalTaskQueueVersioningDeleteAssignmentRuleCommand) run(cctx *Comma
 		return err
 	}
 
-	return c.Parent.updateBuildIdRules(cctx, &client.UpdateWorkerVersioningRulesOptions{
+	return c.Parent.updateBuildIdRules(cctx, client.UpdateWorkerVersioningRulesOptions{
 		TaskQueue:     c.Parent.TaskQueue,
 		ConflictToken: token,
-		Operation: &client.VersioningOpDeleteAssignmentRule{
+		Operation: &client.VersioningOperationDeleteAssignmentRule{
 			RuleIndex: int32(c.RuleIndex),
 			Force:     c.Force,
 		},
@@ -227,10 +227,10 @@ func (c *TemporalTaskQueueVersioningDeleteRedirectRuleCommand) run(cctx *Command
 		return err
 	}
 
-	return c.Parent.updateBuildIdRules(cctx, &client.UpdateWorkerVersioningRulesOptions{
+	return c.Parent.updateBuildIdRules(cctx, client.UpdateWorkerVersioningRulesOptions{
 		TaskQueue:     c.Parent.TaskQueue,
 		ConflictToken: token,
-		Operation: &client.VersioningOpDeleteRedirectRule{
+		Operation: &client.VersioningOperationDeleteRedirectRule{
 			SourceBuildID: c.SourceBuildId,
 		},
 	})
@@ -256,10 +256,10 @@ func (c *TemporalTaskQueueVersioningInsertAssignmentRuleCommand) run(cctx *Comma
 		}
 	}
 
-	return c.Parent.updateBuildIdRules(cctx, &client.UpdateWorkerVersioningRulesOptions{
+	return c.Parent.updateBuildIdRules(cctx, client.UpdateWorkerVersioningRulesOptions{
 		TaskQueue:     c.Parent.TaskQueue,
 		ConflictToken: token,
-		Operation: &client.VersioningOpInsertAssignmentRule{
+		Operation: &client.VersioningOperationInsertAssignmentRule{
 			RuleIndex: int32(c.RuleIndex),
 			Rule:      rule,
 		},
@@ -286,10 +286,10 @@ func (c *TemporalTaskQueueVersioningReplaceAssignmentRuleCommand) run(cctx *Comm
 		}
 	}
 
-	return c.Parent.updateBuildIdRules(cctx, &client.UpdateWorkerVersioningRulesOptions{
+	return c.Parent.updateBuildIdRules(cctx, client.UpdateWorkerVersioningRulesOptions{
 		TaskQueue:     c.Parent.TaskQueue,
 		ConflictToken: token,
-		Operation: &client.VersioningOpReplaceAssignmentRule{
+		Operation: &client.VersioningOperationReplaceAssignmentRule{
 			RuleIndex: int32(c.RuleIndex),
 			Rule:      rule,
 			Force:     c.Force,
@@ -308,10 +308,10 @@ func (c *TemporalTaskQueueVersioningReplaceRedirectRuleCommand) run(cctx *Comman
 		return err
 	}
 
-	return c.Parent.updateBuildIdRules(cctx, &client.UpdateWorkerVersioningRulesOptions{
+	return c.Parent.updateBuildIdRules(cctx, client.UpdateWorkerVersioningRulesOptions{
 		TaskQueue:     c.Parent.TaskQueue,
 		ConflictToken: token,
-		Operation: &client.VersioningOpReplaceRedirectRule{
+		Operation: &client.VersioningOperationReplaceRedirectRule{
 			Rule: client.VersioningRedirectRule{
 				SourceBuildID: c.SourceBuildId,
 				TargetBuildID: c.TargetBuildId,
@@ -327,7 +327,7 @@ func (c *TemporalTaskQueueVersioningGetRulesCommand) run(cctx *CommandContext, a
 	}
 	defer cl.Close()
 
-	rules, err := cl.GetWorkerVersioningRules(cctx, &client.GetWorkerVersioningOptions{
+	rules, err := cl.GetWorkerVersioningRules(cctx, client.GetWorkerVersioningOptions{
 		TaskQueue: c.Parent.TaskQueue,
 	})
 	if err != nil {

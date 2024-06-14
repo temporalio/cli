@@ -40,6 +40,12 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 	} else if err := opts.LogLevel.UnmarshalText([]byte(logLevel)); err != nil {
 		return fmt.Errorf("invalid log level %q: %w", logLevel, err)
 	}
+	if err := devserver.CheckPortFree(opts.FrontendIP, opts.FrontendPort); err != nil {
+		return fmt.Errorf("can't set frontend port %d: %w", opts.FrontendPort, err)
+	}
+	if err := devserver.CheckPortFree(opts.FrontendIP, opts.FrontendHTTPPort); err != nil {
+		return fmt.Errorf("can't set frontend HTTP port %d: %w", opts.FrontendHTTPPort, err)
+	}
 	// Setup UI
 	if !t.Headless {
 		opts.UIIP, opts.UIPort = t.Ip, t.UiPort
@@ -48,6 +54,13 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 		}
 		if opts.UIPort == 0 {
 			opts.UIPort = t.Port + 1000
+			if err := devserver.CheckPortFree(opts.UIIP, opts.UIPort); err != nil {
+				return fmt.Errorf("can't use default UI port %d (%d + 1000): %w", opts.UIPort, t.Port, err)
+			}
+		} else {
+			if err := devserver.CheckPortFree(opts.UIIP, t.Port); err != nil {
+				return fmt.Errorf("can't set UI port %d: %w", opts.UIPort, err)
+			}
 		}
 		opts.UIAssetPath, opts.UICodecEndpoint = t.UiAssetPath, t.UiCodecEndpoint
 	}
@@ -87,7 +100,11 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 	}
 	// Grab a free port for metrics ahead-of-time so we know what port is selected
 	if opts.MetricsPort == 0 {
-		opts.MetricsPort = devserver.MustGetFreePort()
+		opts.MetricsPort = devserver.MustGetFreePort(t.Ip)
+	} else {
+		if err := devserver.CheckPortFree(t.Ip, opts.MetricsPort); err != nil {
+			return fmt.Errorf("can't set metrics port %d: %w", opts.MetricsPort, err)
+		}
 	}
 
 	// Start, wait for context complete, then stop
@@ -101,11 +118,11 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 	if friendlyIP == "127.0.0.1" {
 		friendlyIP = "localhost"
 	}
-	cctx.Printer.Printlnf("Temporal server is running at: %v:%v", friendlyIP, t.Port)
+	cctx.Printer.Printlnf("%-16s %v:%v", "Temporal server:", friendlyIP, t.Port)
 	if !t.Headless {
-		cctx.Printer.Printlnf("Web UI is running at: http://%v:%v", friendlyIP, opts.UIPort)
+		cctx.Printer.Printlnf("%-16s http://%v:%v", "Web UI:", friendlyIP, opts.UIPort)
 	}
-	cctx.Printer.Printlnf("Metrics available at: http://%v:%v/metrics", friendlyIP, opts.MetricsPort)
+	cctx.Printer.Printlnf("%-16s http://%v:%v/metrics", "Metrics:", friendlyIP, opts.MetricsPort)
 	<-cctx.Done()
 	cctx.Printer.Println("Stopping server...")
 	return nil

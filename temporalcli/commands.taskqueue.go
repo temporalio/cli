@@ -8,7 +8,6 @@ import (
 	"github.com/temporalio/cli/temporalcli/internal/printer"
 	commonpb "go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
-	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/taskqueue/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
@@ -213,7 +212,7 @@ func (c *TemporalTaskQueueDescribeCommand) run(cctx *CommandContext, args []stri
 		taskQueueTypes = append(taskQueueTypes, taskQueueType)
 	}
 
-	resp, err := cl.DescribeTaskQueueEnhanced(cctx, &client.DescribeTaskQueueEnhancedOptions{
+	resp, err := cl.DescribeTaskQueueEnhanced(cctx, client.DescribeTaskQueueEnhancedOptions{
 		TaskQueue:              c.TaskQueue,
 		Versions:               selection,
 		TaskQueueTypes:         taskQueueTypes,
@@ -243,7 +242,7 @@ func (c *TemporalTaskQueueDescribeCommand) runLegacy(cctx *CommandContext, args 
 		return fmt.Errorf("unrecognized task queue type: %q", c.TaskQueueTypeLegacy.Value)
 	}
 
-	taskQueueName, err := tqid.NewTaskQueueFamily("", c.TaskQueue)
+	taskQueue, err := tqid.NewTaskQueueFamily(c.Parent.Namespace, c.TaskQueue)
 	if err != nil {
 		return fmt.Errorf("failed to parse task queue name: %w", err)
 	}
@@ -268,7 +267,7 @@ func (c *TemporalTaskQueueDescribeCommand) runLegacy(cctx *CommandContext, args 
 		resp, err := cl.WorkflowService().DescribeTaskQueue(cctx, &workflowservice.DescribeTaskQueueRequest{
 			Namespace: c.Parent.Namespace,
 			TaskQueue: &taskqueue.TaskQueue{
-				Name: taskQueueName.TaskQueue(enumspb.TASK_QUEUE_TYPE_WORKFLOW).NormalPartition(p).RpcName(),
+				Name: taskQueue.TaskQueue(taskQueueType).NormalPartition(p).RpcName(),
 				Kind: enums.TASK_QUEUE_KIND_NORMAL,
 			},
 			TaskQueueType:          taskQueueType,

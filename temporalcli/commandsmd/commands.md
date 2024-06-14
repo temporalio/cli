@@ -28,6 +28,7 @@ This document has a specific structure used by a parser. Here are the rules:
         * `Default: <default-value>.` - Sets the default value of the option. No default means zero value of the type.
         * `Options: <option>, <option>.` - Sets the possible options for a string enum type.
         * `Env: <env-var>.` - Binds the environment variable to this flag.
+        * ``Alias: `--<alias>`.`` - Sets a flag as an alias of this one. The flag should not be separately defined.
       * Options should be in order of most commonly used.
     * Also can have single lines below options that say
       `Includes options set for [<options-set-name>](#options-set-for-<options-set-link-name>).` which is the equivalent
@@ -201,6 +202,10 @@ If the environment is not specified, the `default` environment is used.
 
 List all environments.
 
+<!--
+* ignores-missing-env
+-->
+
 ### temporal env set: Set environment properties.
 
 `temporal env set --env environment -k property -v value`
@@ -214,6 +219,7 @@ If the environment is not specified, the `default` environment is used.
 
 <!--
 * maximum-args=2
+* ignores-missing-env
 -->
 
 #### Options
@@ -305,7 +311,7 @@ For example, the Visibility Archive can be set on a separate URI.
 
 * `--active-cluster` (string) - Active cluster name.
 * `--cluster` (string[]) - Cluster names.
-* `--data` (string) - Namespace data in key=value format. Use JSON for values.
+* `--data` (string[]) - Namespace data in key=value format. Use JSON for values.
 * `--description` (string) - Namespace description.
 * `--email` (string) - Owner email.
 * `--global` (bool) - Whether the namespace is a global namespace.
@@ -936,9 +942,8 @@ temporal workflow execute
 
 #### Options
 
-* `--event-details` (bool) - If set when using text output, this will print the event details instead of just the event
-  during workflow progress. If set when using JSON output, this will include the entire "history" JSON key of the
-  started run (does not follow runs).
+* `--event-details` (bool) - If set when using text output, include event details JSON in printed output. If set when
+  using JSON output, this will include the entire "history" JSON key of the started run (does not follow runs).
 
 Includes options set for [shared workflow start](#options-set-for-shared-workflow-start).
 Includes options set for [workflow start](#options-set-for-workflow-start).
@@ -996,7 +1001,7 @@ Use the options listed below to change the command's behavior.
 
 #### Options
 
-* `--type` (string) - Query Type/Name. Required.
+* `--name` (string) - Query Type/Name. Required. Alias: `--type`.
 * `--reject-condition` (string-enum) - Optional flag for rejecting Queries based on Workflow state.
   Options: not_open, not_completed_cleanly.
 
@@ -1027,7 +1032,8 @@ Use the options listed below to change reset behavior.
 * `--run-id`, `-r` (string) - Run Id.
 * `--event-id`, `-e` (int) - The Event Id for any Event after `WorkflowTaskStarted` you want to reset to (exclusive). It can be `WorkflowTaskCompleted`, `WorkflowTaskFailed` or others.
 * `--reason` (string) - The reason why this workflow is being reset. Required.
-* `--reapply-type` (string-enum) - Event types to reapply after the reset point. Options: All, Signal, None. Default: All.
+* `--reapply-type` (string-enum) - *DEPRECATED* Use --reapply-exclude. Event types to reapply after the reset point. Options: All, Signal, None. Default: All.
+* `--reapply-exclude` (string[]) - Event types to exclude from reapplication. Options: All, Signal, Update.
 * `--type`, `-t` (string-enum) - Event type to which you want to reset. Options: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew, BuildId.
 * `--build-id` (string) - Only used if type is BuildId. Reset the first workflow task processed by this build id. Note that by default, this reset is allowed to be to a prior run in a chain of continue-as-new.
 * `--query`, `-q` (string) - Start a batch reset to operate on Workflow Executions with given List Filter.
@@ -1047,6 +1053,7 @@ Use the options listed below to change the command's behavior.
 
 * `--follow`, `-f` (bool) - Follow the progress of a Workflow Execution in real time (does not apply
   to JSON output).
+* `--event-details` (bool) - If set when using text output, include event details JSON in printed output.
 
 Includes options set for [workflow reference](#options-set-for-workflow-reference).
 
@@ -1066,7 +1073,7 @@ Use the options listed below to change the command's behavior.
 
 #### Options
 
-* `--name` (string) - Signal Name. Required.
+* `--name` (string) - Signal Name. Required. Alias: `--type`.
 
 Includes options set for [payload input](#options-set-for-payload-input).
 
@@ -1116,7 +1123,7 @@ temporal workflow start \
 #### Options set for shared workflow start:
 
 * `--workflow-id`, `-w` (string) - Workflow Id.
-* `--type` (string) - Workflow Type name. Required.
+* `--type` (string) - Workflow Type name. Required. Alias: `--name`.
 * `--task-queue`, `-t` (string) - Workflow Task queue. Required.
 * `--run-timeout` (duration) - Timeout of a Workflow Run.
 * `--execution-timeout` (duration) - Timeout for a WorkflowExecution, including retries and ContinueAsNew tasks.
@@ -1181,7 +1188,7 @@ Use the options listed below to change the behavior of this command.
 #### Options
 
 * `--fold` (string[]) - Statuses for which Child Workflows will be folded in (this will reduce the number of information fetched and displayed). Case-insensitive and ignored if no-fold supplied. Available values: running, completed, failed, canceled, terminated, timedout, continueasnew.
-* `--no-fold` (bool) - Disable folding. All Child Workflows within the set depth will be fetched and displayed. 
+* `--no-fold` (bool) - Disable folding. All Child Workflows within the set depth will be fetched and displayed.
 * `--depth` (int) - Depth of child workflows to fetch. Use -1 to fetch child workflows at any depth. Default: -1.
 * `--concurrency` (int) - Number of concurrent workflow histories that will be requested at any given time. Default: 10.
 
@@ -1203,7 +1210,7 @@ Use the options listed below to change the command's behavior.
 
 #### Options
 
-* `--name` (string) - Update Name. Required.
+* `--name` (string) - Update Name. Required. Alias: `--type`.
 * `--workflow-id`, `-w` (string) - Workflow Id. Required.
 * `--update-id` (string) - Update ID. If unset, default to a UUID.
 * `--run-id`, `-r` (string) - Run Id. If unset, the currently running Workflow Execution receives the Update.

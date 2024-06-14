@@ -100,10 +100,10 @@ func NewTemporalActivityCompleteCommand(cctx *CommandContext, parent *TemporalAc
 	}
 	s.Command.Args = cobra.NoArgs
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
-	s.Command.Flags().StringVar(&s.ActivityId, "activity-id", "", "The Activity to be completed.")
+	s.Command.Flags().StringVar(&s.ActivityId, "activity-id", "", "The Activity to be completed. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "activity-id")
 	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of user submitting this request.")
-	s.Command.Flags().StringVar(&s.Result, "result", "", "The result with which to complete the Activity (JSON).")
+	s.Command.Flags().StringVar(&s.Result, "result", "", "The result with which to complete the Activity (JSON). Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "result")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -136,7 +136,7 @@ func NewTemporalActivityFailCommand(cctx *CommandContext, parent *TemporalActivi
 	}
 	s.Command.Args = cobra.NoArgs
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
-	s.Command.Flags().StringVar(&s.ActivityId, "activity-id", "", "The Activity to be failed.")
+	s.Command.Flags().StringVar(&s.ActivityId, "activity-id", "", "The Activity to be failed. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "activity-id")
 	s.Command.Flags().StringVar(&s.Detail, "detail", "", "JSON data describing reason for failing the Activity.")
 	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of user submitting this request.")
@@ -187,7 +187,7 @@ func NewTemporalBatchDescribeCommand(cctx *CommandContext, parent *TemporalBatch
 		s.Command.Long = "The temporal batch describe command shows the progress of an ongoing Batch Job.\n\n`temporal batch describe --job-id=MyJobId`"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.JobId, "job-id", "", "The Batch Job Id to describe.")
+	s.Command.Flags().StringVar(&s.JobId, "job-id", "", "The Batch Job Id to describe. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "job-id")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -243,9 +243,9 @@ func NewTemporalBatchTerminateCommand(cctx *CommandContext, parent *TemporalBatc
 		s.Command.Long = "The temporal batch terminate command terminates a Batch Job with the provided Job Id.\nFor future reference, provide a reason for terminating the Batch Job.\n\n`temporal batch terminate --job-id=MyJobId --reason=JobReason`"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.JobId, "job-id", "", "The Batch Job Id to terminate.")
+	s.Command.Flags().StringVar(&s.JobId, "job-id", "", "The Batch Job Id to terminate. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "job-id")
-	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for terminating the Batch Job.")
+	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for terminating the Batch Job. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "reason")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -341,6 +341,8 @@ func NewTemporalEnvListCommand(cctx *CommandContext, parent *TemporalEnvCommand)
 	s.Command.Short = "Print all environments."
 	s.Command.Long = "List all environments."
 	s.Command.Args = cobra.NoArgs
+	s.Command.Annotations = make(map[string]string)
+	s.Command.Annotations["ignoresMissingEnv"] = "true"
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -368,6 +370,8 @@ func NewTemporalEnvSetCommand(cctx *CommandContext, parent *TemporalEnvCommand) 
 		s.Command.Long = "`temporal env set --env environment -k property -v value`\n\nProperty names match CLI option names, for example '--address' and '--tls-cert-path':\n\n`temporal env set --env prod -k address -v 127.0.0.1:7233`\n`temporal env set --env prod -k tls-cert-path -v /home/my-user/certs/cluster.cert`\n\nIf the environment is not specified, the `default` environment is used."
 	}
 	s.Command.Args = cobra.MaximumNArgs(2)
+	s.Command.Annotations = make(map[string]string)
+	s.Command.Annotations["ignoresMissingEnv"] = "true"
 	s.Command.Flags().StringVarP(&s.Key, "key", "k", "", "The name of the property.")
 	s.Command.Flags().StringVarP(&s.Value, "value", "v", "", "The value to set the property to.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -524,7 +528,7 @@ func NewTemporalOperatorClusterRemoveCommand(cctx *CommandContext, parent *Tempo
 		s.Command.Long = "`temporal operator cluster remove` command removes a remote Cluster from the system."
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.Name, "name", "", "Name of cluster.")
+	s.Command.Flags().StringVar(&s.Name, "name", "", "Name of cluster. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -578,7 +582,7 @@ func NewTemporalOperatorClusterUpsertCommand(cctx *CommandContext, parent *Tempo
 		s.Command.Long = "`temporal operator cluster upsert` command allows the user to add or update a remote Cluster."
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.FrontendAddress, "frontend-address", "", "IP address to bind the frontend service to.")
+	s.Command.Flags().StringVar(&s.FrontendAddress, "frontend-address", "", "IP address to bind the frontend service to. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "frontend-address")
 	s.Command.Flags().BoolVar(&s.EnableConnection, "enable-connection", false, "enable cross cluster connection.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -618,13 +622,13 @@ type TemporalOperatorNamespaceCreateCommand struct {
 	Command                 cobra.Command
 	ActiveCluster           string
 	Cluster                 []string
-	Data                    string
+	Data                    []string
 	Description             string
 	Email                   string
 	Global                  bool
 	HistoryArchivalState    StringEnum
 	HistoryUri              string
-	Retention               time.Duration
+	Retention               Duration
 	VisibilityArchivalState StringEnum
 	VisibilityUri           string
 }
@@ -643,14 +647,15 @@ func NewTemporalOperatorNamespaceCreateCommand(cctx *CommandContext, parent *Tem
 	s.Command.Args = cobra.MaximumNArgs(1)
 	s.Command.Flags().StringVar(&s.ActiveCluster, "active-cluster", "", "Active cluster name.")
 	s.Command.Flags().StringArrayVar(&s.Cluster, "cluster", nil, "Cluster names.")
-	s.Command.Flags().StringVar(&s.Data, "data", "", "Namespace data in key=value format. Use JSON for values.")
+	s.Command.Flags().StringArrayVar(&s.Data, "data", nil, "Namespace data in key=value format. Use JSON for values.")
 	s.Command.Flags().StringVar(&s.Description, "description", "", "Namespace description.")
 	s.Command.Flags().StringVar(&s.Email, "email", "", "Owner email.")
 	s.Command.Flags().BoolVar(&s.Global, "global", false, "Whether the namespace is a global namespace.")
 	s.HistoryArchivalState = NewStringEnum([]string{"disabled", "enabled"}, "disabled")
 	s.Command.Flags().Var(&s.HistoryArchivalState, "history-archival-state", "History archival state. Accepted values: disabled, enabled.")
 	s.Command.Flags().StringVar(&s.HistoryUri, "history-uri", "", "Optionally specify history archival URI (cannot be changed after first time archival is enabled).")
-	s.Command.Flags().DurationVar(&s.Retention, "retention", 259200000*time.Millisecond, "Length of time a closed Workflow is preserved before deletion.")
+	s.Retention = Duration(259200000 * time.Millisecond)
+	s.Command.Flags().Var(&s.Retention, "retention", "Length of time a closed Workflow is preserved before deletion.")
 	s.VisibilityArchivalState = NewStringEnum([]string{"disabled", "enabled"}, "disabled")
 	s.Command.Flags().Var(&s.VisibilityArchivalState, "visibility-archival-state", "Visibility archival state. Accepted values: disabled, enabled.")
 	s.Command.Flags().StringVar(&s.VisibilityUri, "visibility-uri", "", "Optionally specify visibility archival URI (cannot be changed after first time archival is enabled).")
@@ -744,7 +749,7 @@ type TemporalOperatorNamespaceUpdateCommand struct {
 	PromoteGlobal           bool
 	HistoryArchivalState    StringEnum
 	HistoryUri              string
-	Retention               time.Duration
+	Retention               Duration
 	VisibilityArchivalState StringEnum
 	VisibilityUri           string
 }
@@ -770,7 +775,8 @@ func NewTemporalOperatorNamespaceUpdateCommand(cctx *CommandContext, parent *Tem
 	s.HistoryArchivalState = NewStringEnum([]string{"disabled", "enabled"}, "")
 	s.Command.Flags().Var(&s.HistoryArchivalState, "history-archival-state", "History archival state. Accepted values: disabled, enabled.")
 	s.Command.Flags().StringVar(&s.HistoryUri, "history-uri", "", "Optionally specify history archival URI (cannot be changed after first time archival is enabled).")
-	s.Command.Flags().DurationVar(&s.Retention, "retention", 0, "Length of time a closed Workflow is preserved before deletion.")
+	s.Retention = 0
+	s.Command.Flags().Var(&s.Retention, "retention", "Length of time a closed Workflow is preserved before deletion.")
 	s.VisibilityArchivalState = NewStringEnum([]string{"disabled", "enabled"}, "")
 	s.Command.Flags().Var(&s.VisibilityArchivalState, "visibility-archival-state", "Visibility archival state. Accepted values: disabled, enabled.")
 	s.Command.Flags().StringVar(&s.VisibilityUri, "visibility-uri", "", "Optionally specify visibility archival URI (cannot be changed after first time archival is enabled).")
@@ -819,9 +825,9 @@ func NewTemporalOperatorSearchAttributeCreateCommand(cctx *CommandContext, paren
 		s.Command.Long = "`temporal operator search-attribute create` command adds one or more custom Search Attributes."
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringArrayVar(&s.Name, "name", nil, "Search Attribute name.")
+	s.Command.Flags().StringArrayVar(&s.Name, "name", nil, "Search Attribute name. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
-	s.Command.Flags().StringArrayVar(&s.Type, "type", nil, "Search Attribute type. Accepted values: Text, Keyword, Int, Double, Bool, Datetime, KeywordList.")
+	s.Command.Flags().StringArrayVar(&s.Type, "type", nil, "Search Attribute type. Accepted values: Text, Keyword, Int, Double, Bool, Datetime, KeywordList. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "type")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -875,7 +881,7 @@ func NewTemporalOperatorSearchAttributeRemoveCommand(cctx *CommandContext, paren
 		s.Command.Long = "`temporal operator search-attribute remove` command removes custom Search Attribute metadata."
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringArrayVar(&s.Name, "name", nil, "Search Attribute name.")
+	s.Command.Flags().StringArrayVar(&s.Name, "name", nil, "Search Attribute name. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
 	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Confirm prompt to perform deletion.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -925,7 +931,7 @@ type ScheduleIdOptions struct {
 }
 
 func (v *ScheduleIdOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
-	f.StringVarP(&v.ScheduleId, "schedule-id", "s", "", "Schedule id.")
+	f.StringVarP(&v.ScheduleId, "schedule-id", "s", "", "Schedule id. Required.")
 	_ = cobra.MarkFlagRequired(f, "schedule-id")
 }
 
@@ -952,9 +958,9 @@ func NewTemporalScheduleBackfillCommand(cctx *CommandContext, parent *TemporalSc
 	s.Command.Args = cobra.NoArgs
 	s.OverlapPolicyOptions.buildFlags(cctx, s.Command.Flags())
 	s.ScheduleIdOptions.buildFlags(cctx, s.Command.Flags())
-	s.Command.Flags().Var(&s.EndTime, "end-time", "Backfill end time.")
+	s.Command.Flags().Var(&s.EndTime, "end-time", "Backfill end time. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "end-time")
-	s.Command.Flags().Var(&s.StartTime, "start-time", "Backfill start time.")
+	s.Command.Flags().Var(&s.StartTime, "start-time", "Backfill start time. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "start-time")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -966,11 +972,11 @@ func NewTemporalScheduleBackfillCommand(cctx *CommandContext, parent *TemporalSc
 
 type ScheduleConfigurationOptions struct {
 	Calendar                []string
-	CatchupWindow           time.Duration
+	CatchupWindow           Duration
 	Cron                    []string
 	EndTime                 Timestamp
 	Interval                []string
-	Jitter                  time.Duration
+	Jitter                  Duration
 	Notes                   string
 	Paused                  bool
 	PauseOnFailure          bool
@@ -983,11 +989,13 @@ type ScheduleConfigurationOptions struct {
 
 func (v *ScheduleConfigurationOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
 	f.StringArrayVar(&v.Calendar, "calendar", nil, "Calendar specification in JSON, e.g. `{\"dayOfWeek\":\"Fri\",\"hour\":\"17\",\"minute\":\"5\"}`.")
-	f.DurationVar(&v.CatchupWindow, "catchup-window", 0, "Maximum allowed catch-up time if server is down.")
+	v.CatchupWindow = 0
+	f.Var(&v.CatchupWindow, "catchup-window", "Maximum allowed catch-up time if server is down.")
 	f.StringArrayVar(&v.Cron, "cron", nil, "Calendar spec in cron string format, e.g. `3 11 * * Fri`.")
 	f.Var(&v.EndTime, "end-time", "Overall schedule end time.")
 	f.StringArrayVar(&v.Interval, "interval", nil, "Interval duration, e.g. 90m, or 90m/13m to include phase offset.")
-	f.DurationVar(&v.Jitter, "jitter", 0, "Per-action jitter range.")
+	v.Jitter = 0
+	f.Var(&v.Jitter, "jitter", "Per-action jitter range.")
 	f.StringVar(&v.Notes, "notes", "", "Initial value of notes field.")
 	f.BoolVar(&v.Paused, "paused", false, "Initial value of paused state.")
 	f.BoolVar(&v.PauseOnFailure, "pause-on-failure", false, "Pause schedule after any workflow failure.")
@@ -1331,7 +1339,7 @@ func NewTemporalTaskQueueDescribeCommand(cctx *CommandContext, parent *TemporalT
 		s.Command.Long = "The `temporal task-queue describe` command provides task reachability information for the requested versions and all task types,\nwhich can be used to safely retire Workers with old code versions, provided that they were assigned a Build ID.\n\nThe reachability states of a Build ID are:\n    - `Reachable`: the Build ID may be used by new workflows or activities\n(based on versioning rules), or there are open workflows or backlogged activities assigned to it.\n    - `ClosedWorkflowsOnly`: the Build ID does not have open workflows, and is not reachable by new workflows, but MAY have closed workflows within the namespace retention period.\n    - `Unreachable`: indicates that this Build ID is not used for new executions, nor has been used by any existing execution within the retention period.\n\nTask reachability is eventually consistent; there may be a delay until it converges to the most\naccurate value but it is designed in a way to take the more conservative side until it converges.\nFor example, `Reachable` is more conservative than `ClosedWorkflowsOnly`.\n\nThere is a non-trivial cost of computing task reachability, use the flag `--report-reachability` to enable it.\n\nThis command also provides poller\ninformation for a given Task Queue.\n\nThe Server records the last time of each poll request. A `LastAccessTime` value\nin excess of one minute can indicate the Worker is at capacity (all Workflow and Activity slots are full) or that the\nWorker has shut down. Workers are removed if 5 minutes have passed since the last poll\nrequest.\n\nInformation about the Task Queue can be returned to troubleshoot server issues.\n\nUse the options listed below to modify what this command returns.\n\nNote that without a `--select-*` option the result for the default Build ID will be returned.\nThe default Build ID is the one mentioned in the first unconditional Assignment Rule.\nIf there is no default Build ID, the result for the unversioned queue will be returned."
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task queue name.")
+	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task queue name. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
 	s.Command.Flags().StringArrayVar(&s.TaskQueueType, "task-queue-type", nil, "Task queue types considered. If not specified, all types are reported. The current valid queue types are workflow, activity, or nexus.")
 	s.Command.Flags().StringArrayVar(&s.SelectBuildId, "select-build-id", nil, "Task queue filter based on Build ID.")
@@ -1393,7 +1401,7 @@ func NewTemporalTaskQueueGetBuildIdsCommand(cctx *CommandContext, parent *Tempor
 	s.Command.Short = "Fetch the sets of worker Build ID versions on the Task Queue (Deprecated)."
 	s.Command.Long = "Fetch the sets of compatible build IDs associated with a Task Queue and associated information."
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task queue name.")
+	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task queue name. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
 	s.Command.Flags().IntVar(&s.MaxSets, "max-sets", 0, "Limits how many compatible sets will be returned. Specify 1 to only return the current default major version set. 0 returns all sets. (default: 0).")
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -1418,7 +1426,7 @@ func NewTemporalTaskQueueListPartitionCommand(cctx *CommandContext, parent *Temp
 	s.Command.Short = "Lists the Task Queue's partitions and the matching nodes they are assigned to."
 	s.Command.Long = "The temporal task-queue list-partition command displays the partitions of a Task Queue, along with the matching node they are assigned to."
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task queue name.")
+	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task queue name. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -1464,11 +1472,11 @@ func NewTemporalTaskQueueUpdateBuildIdsAddNewCompatibleCommand(cctx *CommandCont
 	s.Command.Short = "Add a new build ID compatible with an existing ID to the Task Queue version sets."
 	s.Command.Long = "The new build ID will become the default for the set containing the existing ID. See per-flag help for more."
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "The new build id to be added.")
+	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "The new build id to be added. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "build-id")
-	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Name of the Task Queue.")
+	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Name of the Task Queue. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
-	s.Command.Flags().StringVar(&s.ExistingCompatibleBuildId, "existing-compatible-build-id", "", "A build id which must already exist in the version sets known by the task queue. The new id will be stored in the set containing this id, marking it as compatible with the versions within.")
+	s.Command.Flags().StringVar(&s.ExistingCompatibleBuildId, "existing-compatible-build-id", "", "A build id which must already exist in the version sets known by the task queue. The new id will be stored in the set containing this id, marking it as compatible with the versions within. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "existing-compatible-build-id")
 	s.Command.Flags().BoolVar(&s.SetAsDefault, "set-as-default", false, "When set, establishes the compatible set being targeted as the overall default for the queue. If a different set was the current default, the targeted set will replace it as the new default. Defaults to false.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -1494,9 +1502,9 @@ func NewTemporalTaskQueueUpdateBuildIdsAddNewDefaultCommand(cctx *CommandContext
 	s.Command.Short = "Add a new default (incompatible) build ID to the Task Queue version sets."
 	s.Command.Long = "Creates a new build id set which will become the new overall default for the queue with the provided build id as its only member. This new set is incompatible with all previous sets/versions."
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "The new build id to be added.")
+	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "The new build id to be added. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "build-id")
-	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Name of the Task Queue.")
+	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Name of the Task Queue. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -1521,9 +1529,9 @@ func NewTemporalTaskQueueUpdateBuildIdsPromoteIdInSetCommand(cctx *CommandContex
 	s.Command.Short = "Promote an existing build ID to become the default for its containing set."
 	s.Command.Long = "New tasks compatible with the set will be dispatched to the default id."
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "An existing build id which will be promoted to be the default inside its containing set.")
+	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "An existing build id which will be promoted to be the default inside its containing set. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "build-id")
-	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Name of the Task Queue.")
+	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Name of the Task Queue. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -1548,9 +1556,9 @@ func NewTemporalTaskQueueUpdateBuildIdsPromoteSetCommand(cctx *CommandContext, p
 	s.Command.Short = "Promote an existing build ID set to become the default for the Task Queue."
 	s.Command.Long = "If the set is already the default, this command has no effect."
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "An existing build id whose containing set will be promoted.")
+	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "An existing build id whose containing set will be promoted. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "build-id")
-	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Name of the Task Queue.")
+	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Name of the Task Queue. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -1581,7 +1589,7 @@ func NewTemporalTaskQueueVersioningCommand(cctx *CommandContext, parent *Tempora
 	s.Command.AddCommand(&NewTemporalTaskQueueVersioningInsertAssignmentRuleCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalTaskQueueVersioningReplaceAssignmentRuleCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalTaskQueueVersioningReplaceRedirectRuleCommand(cctx, &s).Command)
-	s.Command.PersistentFlags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task queue name.")
+	s.Command.PersistentFlags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task queue name. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.PersistentFlags(), "task-queue")
 	return &s
 }
@@ -1602,9 +1610,9 @@ func NewTemporalTaskQueueVersioningAddRedirectRuleCommand(cctx *CommandContext, 
 	s.Command.Short = "Adds the rule to the list of redirect rules for this Task Queue."
 	s.Command.Long = "Adds a new redirect rule for this Task Queue. There can be at most one redirect rule for each distinct source build ID."
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.SourceBuildId, "source-build-id", "", "The source build ID for this redirect rule.")
+	s.Command.Flags().StringVar(&s.SourceBuildId, "source-build-id", "", "The source build ID for this redirect rule. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "source-build-id")
-	s.Command.Flags().StringVar(&s.TargetBuildId, "target-build-id", "", "The target build ID for this redirect rule.")
+	s.Command.Flags().StringVar(&s.TargetBuildId, "target-build-id", "", "The target build ID for this redirect rule. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "target-build-id")
 	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Skip confirmation.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -1635,7 +1643,7 @@ func NewTemporalTaskQueueVersioningCommitBuildIdCommand(cctx *CommandContext, pa
 		s.Command.Long = "Completes  the rollout of a BuildID and cleanup unnecessary rules possibly\ncreated during a gradual rollout. Specifically, this command will make the\nfollowing changes atomically:\n\t1. Adds an unconditional assignment rule for the target Build ID at the end of the list.\n\t2. Removes all previously added assignment rules to the given target Build ID.\n\t3. Removes any unconditional assignment rules for other Build IDs.\n\nTo prevent committing invalid Build IDs, we reject the request if no pollers\nhave been seen recently for this Build ID. Use the `force` option to disable this validation."
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "The target build ID to be committed.")
+	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "The target build ID to be committed. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "build-id")
 	s.Command.Flags().BoolVar(&s.Force, "force", false, "Bypass the validation that pollers have been recently seen for this build ID.")
 	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Skip confirmation.")
@@ -1667,7 +1675,7 @@ func NewTemporalTaskQueueVersioningDeleteAssignmentRuleCommand(cctx *CommandCont
 		s.Command.Long = "Deletes an assignment rule for this Task Queue. By default presence of one\nunconditional rule, i.e., no hint filter or percentage, is enforced, otherwise\nthe delete operation will be rejected. Set `force` to true to bypass this\nvalidation."
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().IntVarP(&s.RuleIndex, "rule-index", "i", 0, "Position of the assignment rule to be replaced.")
+	s.Command.Flags().IntVarP(&s.RuleIndex, "rule-index", "i", 0, "Position of the assignment rule to be replaced. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "rule-index")
 	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Skip confirmation.")
 	s.Command.Flags().BoolVar(&s.Force, "force", false, "Bypass the validation that one unconditional rule remains.")
@@ -1694,7 +1702,7 @@ func NewTemporalTaskQueueVersioningDeleteRedirectRuleCommand(cctx *CommandContex
 	s.Command.Short = "Deletes the rule with the given build ID for this Task Queue."
 	s.Command.Long = "Deletes the routing rule with the given source Build ID."
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.SourceBuildId, "source-build-id", "", "The source build ID for this redirect rule.")
+	s.Command.Flags().StringVar(&s.SourceBuildId, "source-build-id", "", "The source build ID for this redirect rule. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "source-build-id")
 	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Skip confirmation.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -1743,7 +1751,7 @@ func NewTemporalTaskQueueVersioningInsertAssignmentRuleCommand(cctx *CommandCont
 	s.Command.Short = "Inserts the rule to the list of assignment rules for this Task Queue."
 	s.Command.Long = "Inserts a new assignment rule for this Task Queue. The rules are evaluated in order, starting from index 0. The first applicable rule will be applied and the rest will be ignored."
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "The target build ID for this assignment rule.")
+	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "The target build ID for this assignment rule. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "build-id")
 	s.Command.Flags().IntVarP(&s.RuleIndex, "rule-index", "i", 0, "Insertion position in the assignment rule list. An index 0 means insert at the beginning of the list. If the given index is larger than the list size, the rule will be appended at the end of the list.")
 	s.Command.Flags().IntVar(&s.Percentage, "percentage", 100, "Percentage of traffic sent to the target build ID.")
@@ -1778,9 +1786,9 @@ func NewTemporalTaskQueueVersioningReplaceAssignmentRuleCommand(cctx *CommandCon
 		s.Command.Long = "Replaces an assignment rule for this Task Queue. By default presence of one\nunconditional rule, i.e., no hint filter or percentage, is enforced, otherwise\nthe delete operation will be rejected. Set `force` to true to bypass this\nvalidation."
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "The target build ID for this assignment rule.")
+	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "The target build ID for this assignment rule. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "build-id")
-	s.Command.Flags().IntVarP(&s.RuleIndex, "rule-index", "i", 0, "Position of the assignment rule to be replaced.")
+	s.Command.Flags().IntVarP(&s.RuleIndex, "rule-index", "i", 0, "Position of the assignment rule to be replaced. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "rule-index")
 	s.Command.Flags().IntVar(&s.Percentage, "percentage", 100, "Percentage of traffic sent to the target build ID.")
 	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Skip confirmation.")
@@ -1809,9 +1817,9 @@ func NewTemporalTaskQueueVersioningReplaceRedirectRuleCommand(cctx *CommandConte
 	s.Command.Short = "Replaces the redirect rule with the given source build ID for this Task Queue."
 	s.Command.Long = "Replaces the redirect rule with the given source build ID for this Task Queue."
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.SourceBuildId, "source-build-id", "", "The source build ID for this redirect rule.")
+	s.Command.Flags().StringVar(&s.SourceBuildId, "source-build-id", "", "The source build ID for this redirect rule. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "source-build-id")
-	s.Command.Flags().StringVar(&s.TargetBuildId, "target-build-id", "", "The target build ID for this redirect rule.")
+	s.Command.Flags().StringVar(&s.TargetBuildId, "target-build-id", "", "The target build ID for this redirect rule. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "target-build-id")
 	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Skip confirmation.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -1996,7 +2004,7 @@ type WorkflowReferenceOptions struct {
 }
 
 func (v *WorkflowReferenceOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
-	f.StringVarP(&v.WorkflowId, "workflow-id", "w", "", "Workflow Id.")
+	f.StringVarP(&v.WorkflowId, "workflow-id", "w", "", "Workflow Id. Required.")
 	_ = cobra.MarkFlagRequired(f, "workflow-id")
 	f.StringVarP(&v.RunId, "run-id", "r", "", "Run Id.")
 }
@@ -2056,7 +2064,10 @@ func NewTemporalWorkflowExecuteCommand(cctx *CommandContext, parent *TemporalWor
 	s.SharedWorkflowStartOptions.buildFlags(cctx, s.Command.Flags())
 	s.WorkflowStartOptions.buildFlags(cctx, s.Command.Flags())
 	s.PayloadInputOptions.buildFlags(cctx, s.Command.Flags())
-	s.Command.Flags().BoolVar(&s.EventDetails, "event-details", false, "If set when using text output, this will print the event details instead of just the event during workflow progress. If set when using JSON output, this will include the entire \"history\" JSON key of the started run (does not follow runs).")
+	s.Command.Flags().BoolVar(&s.EventDetails, "event-details", false, "If set when using text output, include event details JSON in printed output. If set when using JSON output, this will include the entire \"history\" JSON key of the started run (does not follow runs).")
+	s.Command.Flags().SetNormalizeFunc(aliasNormalizer(map[string]string{
+		"name": "type",
+	}))
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -2084,7 +2095,7 @@ func NewTemporalWorkflowFixHistoryJsonCommand(cctx *CommandContext, parent *Temp
 		s.Command.Long = "```\ntemporal workflow fix-history-json \\\n\t--source original.json \\\n\t--target reserialized.json\n```\n\nUse the options listed below to change the command's behavior."
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVarP(&s.Source, "source", "s", "", "Path to the input file.")
+	s.Command.Flags().StringVarP(&s.Source, "source", "s", "", "Path to the input file. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "source")
 	s.Command.Flags().StringVarP(&s.Target, "target", "t", "", "Path to the output file, or standard output if not set.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -2131,7 +2142,7 @@ type TemporalWorkflowQueryCommand struct {
 	Command cobra.Command
 	PayloadInputOptions
 	WorkflowReferenceOptions
-	Type            string
+	Name            string
 	RejectCondition StringEnum
 }
 
@@ -2149,10 +2160,13 @@ func NewTemporalWorkflowQueryCommand(cctx *CommandContext, parent *TemporalWorkf
 	s.Command.Args = cobra.NoArgs
 	s.PayloadInputOptions.buildFlags(cctx, s.Command.Flags())
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
-	s.Command.Flags().StringVar(&s.Type, "type", "", "Query Type/Name.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "type")
+	s.Command.Flags().StringVar(&s.Name, "name", "", "Query Type/Name. Required. Aliased as \"--type\".")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
 	s.RejectCondition = NewStringEnum([]string{"not_open", "not_completed_cleanly"}, "")
 	s.Command.Flags().Var(&s.RejectCondition, "reject-condition", "Optional flag for rejecting Queries based on Workflow state. Accepted values: not_open, not_completed_cleanly.")
+	s.Command.Flags().SetNormalizeFunc(aliasNormalizer(map[string]string{
+		"type": "name",
+	}))
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -2162,17 +2176,18 @@ func NewTemporalWorkflowQueryCommand(cctx *CommandContext, parent *TemporalWorkf
 }
 
 type TemporalWorkflowResetCommand struct {
-	Parent      *TemporalWorkflowCommand
-	Command     cobra.Command
-	WorkflowId  string
-	RunId       string
-	EventId     int
-	Reason      string
-	ReapplyType StringEnum
-	Type        StringEnum
-	BuildId     string
-	Query       string
-	Yes         bool
+	Parent         *TemporalWorkflowCommand
+	Command        cobra.Command
+	WorkflowId     string
+	RunId          string
+	EventId        int
+	Reason         string
+	ReapplyType    StringEnum
+	ReapplyExclude []string
+	Type           StringEnum
+	BuildId        string
+	Query          string
+	Yes            bool
 }
 
 func NewTemporalWorkflowResetCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowResetCommand {
@@ -2190,10 +2205,11 @@ func NewTemporalWorkflowResetCommand(cctx *CommandContext, parent *TemporalWorkf
 	s.Command.Flags().StringVarP(&s.WorkflowId, "workflow-id", "w", "", "Workflow Id. Required for non-batch reset operations.")
 	s.Command.Flags().StringVarP(&s.RunId, "run-id", "r", "", "Run Id.")
 	s.Command.Flags().IntVarP(&s.EventId, "event-id", "e", 0, "The Event Id for any Event after `WorkflowTaskStarted` you want to reset to (exclusive). It can be `WorkflowTaskCompleted`, `WorkflowTaskFailed` or others.")
-	s.Command.Flags().StringVar(&s.Reason, "reason", "", "The reason why this workflow is being reset.")
+	s.Command.Flags().StringVar(&s.Reason, "reason", "", "The reason why this workflow is being reset. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "reason")
 	s.ReapplyType = NewStringEnum([]string{"All", "Signal", "None"}, "All")
-	s.Command.Flags().Var(&s.ReapplyType, "reapply-type", "Event types to reapply after the reset point. Accepted values: All, Signal, None.")
+	s.Command.Flags().Var(&s.ReapplyType, "reapply-type", "*DEPRECATED* Use --reapply-exclude. Event types to reapply after the reset point. Accepted values: All, Signal, None.")
+	s.Command.Flags().StringArrayVar(&s.ReapplyExclude, "reapply-exclude", nil, "Event types to exclude from reapplication. Accepted values: All, Signal, Update.")
 	s.Type = NewStringEnum([]string{"FirstWorkflowTask", "LastWorkflowTask", "LastContinuedAsNew", "BuildId"}, "")
 	s.Command.Flags().VarP(&s.Type, "type", "t", "Event type to which you want to reset. Accepted values: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew, BuildId.")
 	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "Only used if type is BuildId. Reset the first workflow task processed by this build id. Note that by default, this reset is allowed to be to a prior run in a chain of continue-as-new.")
@@ -2211,7 +2227,8 @@ type TemporalWorkflowShowCommand struct {
 	Parent  *TemporalWorkflowCommand
 	Command cobra.Command
 	WorkflowReferenceOptions
-	Follow bool
+	Follow       bool
+	EventDetails bool
 }
 
 func NewTemporalWorkflowShowCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowShowCommand {
@@ -2228,6 +2245,7 @@ func NewTemporalWorkflowShowCommand(cctx *CommandContext, parent *TemporalWorkfl
 	s.Command.Args = cobra.NoArgs
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Flags().BoolVarP(&s.Follow, "follow", "f", false, "Follow the progress of a Workflow Execution in real time (does not apply to JSON output).")
+	s.Command.Flags().BoolVar(&s.EventDetails, "event-details", false, "If set when using text output, include event details JSON in printed output.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -2273,9 +2291,12 @@ func NewTemporalWorkflowSignalCommand(cctx *CommandContext, parent *TemporalWork
 	}
 	s.Command.Args = cobra.NoArgs
 	s.PayloadInputOptions.buildFlags(cctx, s.Command.Flags())
-	s.Command.Flags().StringVar(&s.Name, "name", "", "Signal Name.")
+	s.Command.Flags().StringVar(&s.Name, "name", "", "Signal Name. Required. Aliased as \"--type\".")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
 	s.SingleWorkflowOrBatchOptions.buildFlags(cctx, s.Command.Flags())
+	s.Command.Flags().SetNormalizeFunc(aliasNormalizer(map[string]string{
+		"type": "name",
+	}))
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -2318,22 +2339,25 @@ type SharedWorkflowStartOptions struct {
 	WorkflowId       string
 	Type             string
 	TaskQueue        string
-	RunTimeout       time.Duration
-	ExecutionTimeout time.Duration
-	TaskTimeout      time.Duration
+	RunTimeout       Duration
+	ExecutionTimeout Duration
+	TaskTimeout      Duration
 	SearchAttribute  []string
 	Memo             []string
 }
 
 func (v *SharedWorkflowStartOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
 	f.StringVarP(&v.WorkflowId, "workflow-id", "w", "", "Workflow Id.")
-	f.StringVar(&v.Type, "type", "", "Workflow Type name.")
+	f.StringVar(&v.Type, "type", "", "Workflow Type name. Required. Aliased as \"--name\".")
 	_ = cobra.MarkFlagRequired(f, "type")
-	f.StringVarP(&v.TaskQueue, "task-queue", "t", "", "Workflow Task queue.")
+	f.StringVarP(&v.TaskQueue, "task-queue", "t", "", "Workflow Task queue. Required.")
 	_ = cobra.MarkFlagRequired(f, "task-queue")
-	f.DurationVar(&v.RunTimeout, "run-timeout", 0, "Timeout of a Workflow Run.")
-	f.DurationVar(&v.ExecutionTimeout, "execution-timeout", 0, "Timeout for a WorkflowExecution, including retries and ContinueAsNew tasks.")
-	f.DurationVar(&v.TaskTimeout, "task-timeout", 10000*time.Millisecond, "Start-to-close timeout for a Workflow Task.")
+	v.RunTimeout = 0
+	f.Var(&v.RunTimeout, "run-timeout", "Timeout of a Workflow Run.")
+	v.ExecutionTimeout = 0
+	f.Var(&v.ExecutionTimeout, "execution-timeout", "Timeout for a WorkflowExecution, including retries and ContinueAsNew tasks.")
+	v.TaskTimeout = Duration(10000 * time.Millisecond)
+	f.Var(&v.TaskTimeout, "task-timeout", "Start-to-close timeout for a Workflow Task.")
 	f.StringArrayVar(&v.SearchAttribute, "search-attribute", nil, "Passes Search Attribute in key=value format. Use valid JSON formats for value.")
 	f.StringArrayVar(&v.Memo, "memo", nil, "Passes Memo in key=value format. Use valid JSON formats for value.")
 }
@@ -2341,14 +2365,15 @@ func (v *SharedWorkflowStartOptions) buildFlags(cctx *CommandContext, f *pflag.F
 type WorkflowStartOptions struct {
 	Cron          string
 	FailExisting  bool
-	StartDelay    time.Duration
+	StartDelay    Duration
 	IdReusePolicy string
 }
 
 func (v *WorkflowStartOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
 	f.StringVar(&v.Cron, "cron", "", "Cron schedule for the workflow. Deprecated - use schedules instead.")
 	f.BoolVar(&v.FailExisting, "fail-existing", false, "Fail if the workflow already exists.")
-	f.DurationVar(&v.StartDelay, "start-delay", 0, "Specify a delay before the workflow starts. Cannot be used with a cron schedule. If the workflow receives a signal or update before the delay has elapsed, it will begin immediately.")
+	v.StartDelay = 0
+	f.Var(&v.StartDelay, "start-delay", "Specify a delay before the workflow starts. Cannot be used with a cron schedule. If the workflow receives a signal or update before the delay has elapsed, it will begin immediately.")
 	f.StringVar(&v.IdReusePolicy, "id-reuse-policy", "", "Allows the same Workflow Id to be used in a new Workflow Execution. Accepted values: AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate, TerminateIfRunning.")
 }
 
@@ -2389,6 +2414,9 @@ func NewTemporalWorkflowStartCommand(cctx *CommandContext, parent *TemporalWorkf
 	s.SharedWorkflowStartOptions.buildFlags(cctx, s.Command.Flags())
 	s.WorkflowStartOptions.buildFlags(cctx, s.Command.Flags())
 	s.PayloadInputOptions.buildFlags(cctx, s.Command.Flags())
+	s.Command.Flags().SetNormalizeFunc(aliasNormalizer(map[string]string{
+		"name": "type",
+	}))
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -2491,13 +2519,16 @@ func NewTemporalWorkflowUpdateCommand(cctx *CommandContext, parent *TemporalWork
 	}
 	s.Command.Args = cobra.NoArgs
 	s.PayloadInputOptions.buildFlags(cctx, s.Command.Flags())
-	s.Command.Flags().StringVar(&s.Name, "name", "", "Update Name.")
+	s.Command.Flags().StringVar(&s.Name, "name", "", "Update Name. Required. Aliased as \"--type\".")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
-	s.Command.Flags().StringVarP(&s.WorkflowId, "workflow-id", "w", "", "Workflow Id.")
+	s.Command.Flags().StringVarP(&s.WorkflowId, "workflow-id", "w", "", "Workflow Id. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "workflow-id")
 	s.Command.Flags().StringVar(&s.UpdateId, "update-id", "", "Update ID. If unset, default to a UUID.")
 	s.Command.Flags().StringVarP(&s.RunId, "run-id", "r", "", "Run Id. If unset, the currently running Workflow Execution receives the Update.")
 	s.Command.Flags().StringVar(&s.FirstExecutionRunId, "first-execution-run-id", "", "Send the Update to the last Workflow Execution in the chain that started with this Run Id.")
+	s.Command.Flags().SetNormalizeFunc(aliasNormalizer(map[string]string{
+		"type": "name",
+	}))
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

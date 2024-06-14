@@ -13,10 +13,10 @@ require (
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.9.0
-	github.com/temporalio/ui-server/v2 v2.26.2
+	github.com/temporalio/ui-server/v2 v2.27.3
 	go.temporal.io/api v1.34.0
-	go.temporal.io/sdk v1.26.2-0.20240503235745-e8147ac49434
-	go.temporal.io/server v1.25.0-113.0.0.20240524000238-c5cb97940d8e
+	go.temporal.io/sdk v1.27.0
+	go.temporal.io/server v1.24.1
 	google.golang.org/grpc v1.64.0
 	google.golang.org/protobuf v1.34.1
 	gopkg.in/yaml.v3 v3.0.1
@@ -45,7 +45,7 @@ require (
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
-	github.com/go-sql-driver/mysql v1.5.0 // indirect
+	github.com/go-sql-driver/mysql v1.7.1 // indirect
 	github.com/gocql/gocql v1.6.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
@@ -78,7 +78,6 @@ require (
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
-	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
 	github.com/nexus-rpc/sdk-go v0.0.8-0.20240502185337-2b47041a2cc2 // indirect
 	github.com/olivere/elastic/v7 v7.0.32 // indirect
@@ -154,3 +153,7 @@ require (
 	modernc.org/strutil v1.2.0 // indirect
 	modernc.org/token v1.1.0 // indirect
 )
+
+replace go.temporal.io/api v1.34.0 => go.temporal.io/api v1.32.1
+
+replace github.com/nexus-rpc/sdk-go v0.0.8-0.20240502185337-2b47041a2cc2 => github.com/nexus-rpc/sdk-go v0.0.7

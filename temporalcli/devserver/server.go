@@ -200,14 +200,17 @@ func (s *StartOptions) buildServerOptions() ([]temporal.ServerOption, error) {
 		temporal.WithClaimMapper(func(*config.Config) authorization.ClaimMapper { return claimMapper }),
 	}
 
+	dynConf := make(dynamicconfig.StaticClient, len(s.DynamicConfigValues)+1)
+	// Setting host level mutable state cache size to 8k.
+	dynConf[dynamicconfig.HistoryCacheHostLevelMaxSize] = 8096
+	// Up default visibility RPS
+	dynConf[dynamicconfig.FrontendMaxNamespaceVisibilityRPSPerInstance] = 100
+
 	// Dynamic config if set
-	if len(s.DynamicConfigValues) > 0 {
-		dynConf := make(dynamicconfig.StaticClient, len(s.DynamicConfigValues))
-		for k, v := range s.DynamicConfigValues {
-			dynConf[dynamicconfig.Key(k)] = v
-		}
-		opts = append(opts, temporal.WithDynamicConfigClient(dynConf))
+	for k, v := range s.DynamicConfigValues {
+		dynConf[dynamicconfig.Key(k)] = v
 	}
+	opts = append(opts, temporal.WithDynamicConfigClient(dynConf))
 
 	// gRPC interceptors if set
 	if len(s.GRPCInterceptors) > 0 {
@@ -260,13 +263,11 @@ func (s *StartOptions) buildServerConfig() (*config.Config, error) {
 		}
 	}
 	conf.DCRedirectionPolicy.Policy = "noop"
-	portProvider := NewPortProvider()
-	defer portProvider.Close()
 	conf.Services = map[string]config.Service{
-		"frontend": s.buildServiceConfig(portProvider, true),
-		"history":  s.buildServiceConfig(portProvider, false),
-		"matching": s.buildServiceConfig(portProvider, false),
-		"worker":   s.buildServiceConfig(portProvider, false),
+		"frontend": s.buildServiceConfig(true),
+		"history":  s.buildServiceConfig(false),
+		"matching": s.buildServiceConfig(false),
+		"worker":   s.buildServiceConfig(false),
 	}
 	conf.Archival.History.State = "disabled"
 	conf.Archival.Visibility.State = "disabled"
@@ -319,7 +320,7 @@ func (s *StartOptions) buildSQLConfig() (*config.SQL, error) {
 	return &conf, nil
 }
 
-func (s *StartOptions) buildServiceConfig(p *PortProvider, frontend bool) config.Service {
+func (s *StartOptions) buildServiceConfig(frontend bool) config.Service {
 	var conf config.Service
 	if frontend {
 		conf.RPC.GRPCPort = s.FrontendPort
@@ -328,9 +329,9 @@ func (s *StartOptions) buildServiceConfig(p *PortProvider, frontend bool) config
 			conf.RPC.HTTPPort = s.FrontendHTTPPort
 		}
 	} else {
-		conf.RPC.GRPCPort = p.MustGetFreePort()
+		conf.RPC.GRPCPort = MustGetFreePort("127.0.0.1")
 		conf.RPC.BindOnLocalHost = true
 	}
-	conf.RPC.MembershipPort = p.MustGetFreePort()
+	conf.RPC.MembershipPort = MustGetFreePort("127.0.0.1")
 	return conf
 }

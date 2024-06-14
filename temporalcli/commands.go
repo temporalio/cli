@@ -89,6 +89,8 @@ func NewCommandContext(ctx context.Context, options CommandOptions) (*CommandCon
 	return cctx, stop, nil
 }
 
+const temporalEnv = "TEMPORAL_ENV"
+
 func (c *CommandContext) preprocessOptions() error {
 	if len(c.Options.Args) == 0 {
 		c.Options.Args = os.Args[1:]
@@ -123,6 +125,9 @@ func (c *CommandContext) preprocessOptions() error {
 
 		if c.Options.EnvConfigName == "" {
 			c.Options.EnvConfigName = "default"
+			if envVal, ok := c.Options.LookupEnv(temporalEnv); ok {
+				c.Options.EnvConfigName = envVal
+			}
 			// Default to --env, prefetched from CLI args
 			for i, arg := range c.Options.Args {
 				if arg == "--env" && i+1 < len(c.Options.Args) {
@@ -371,6 +376,17 @@ func (c *TemporalCommand) initCommand(cctx *CommandContext) {
 			color.NoColor = true
 		}
 		cctx.ActuallyRanCommand = true
+
+		if cctx.Options.EnvConfigName != "default" {
+			if _, ok := cctx.EnvConfigValues[cctx.Options.EnvConfigName]; !ok {
+				if _, ok := cmd.Annotations["ignoresMissingEnv"]; !ok {
+					// stfu about help output
+					cmd.SilenceErrors = true
+					cmd.SilenceUsage = true
+					return fmt.Errorf("environment %q not found", cctx.Options.EnvConfigName)
+				}
+			}
+		}
 		return res
 	}
 	c.Command.PersistentPostRun = func(*cobra.Command, []string) {
@@ -481,6 +497,15 @@ func writeEnvConfigFile(file string, env map[string]map[string]string) error {
 		return fmt.Errorf("failed writing env file: %w", err)
 	}
 	return nil
+}
+
+func aliasNormalizer(aliases map[string]string) func(f *pflag.FlagSet, name string) pflag.NormalizedName {
+	return func(f *pflag.FlagSet, name string) pflag.NormalizedName {
+		if actual := aliases[name]; actual != "" {
+			name = actual
+		}
+		return pflag.NormalizedName(name)
+	}
 }
 
 func newNopLogger() *slog.Logger { return slog.New(discardLogHandler{}) }
