@@ -12,12 +12,12 @@ import (
 
 func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
 	type reachabilityRowType struct {
-		BuildID      string `json:"buildID"`
+		BuildID      string `json:"buildId"`
 		Reachability string `json:"reachability"`
 	}
 
 	type pollerRowType struct {
-		BuildID        string    `json:"buildID"`
+		BuildID        string    `json:"buildId"`
 		TaskQueueType  string    `json:"taskQueueType"`
 		Identity       string    `json:"identity"`
 		LastAccessTime time.Time `json:"-"`

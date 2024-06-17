@@ -16,13 +16,13 @@ import (
 
 const taskQueueUnversioned = "UNVERSIONED"
 
-type reachabilityRowType struct {
-	BuildID      string `json:"buildID"`
+type taskQueueReachabilityRowType struct {
+	BuildID      string `json:"buildId"`
 	Reachability string `json:"reachability"`
 }
 
 type pollerRowType struct {
-	BuildID        string    `json:"buildID"`
+	BuildID        string    `json:"buildId"`
 	TaskQueueType  string    `json:"taskQueueType"`
 	Identity       string    `json:"identity"`
 	LastAccessTime time.Time `json:"lastAccessTime"`
@@ -30,8 +30,8 @@ type pollerRowType struct {
 }
 
 type taskQueueDescriptionType struct {
-	Reachability []reachabilityRowType `json:"reachability"`
-	Pollers      []pollerRowType       `json:"pollers"`
+	Reachability []taskQueueReachabilityRowType `json:"reachability"`
+	Pollers      []pollerRowType                `json:"pollers"`
 }
 
 func reachabilityToStr(reachability client.BuildIDTaskReachability) (string, error) {
@@ -49,8 +49,8 @@ func reachabilityToStr(reachability client.BuildIDTaskReachability) (string, err
 	}
 }
 
-func descriptionToReachabilityRows(taskQueueDescription client.TaskQueueDescription) ([]reachabilityRowType, error) {
-	var rRows []reachabilityRowType
+func descriptionToReachabilityRows(taskQueueDescription client.TaskQueueDescription) ([]taskQueueReachabilityRowType, error) {
+	var rRows []taskQueueReachabilityRowType
 	// Unversioned queue first
 	val, ok := taskQueueDescription.VersionsInfo[client.UnversionedBuildID]
 	if ok {
@@ -58,7 +58,7 @@ func descriptionToReachabilityRows(taskQueueDescription client.TaskQueueDescript
 		if err != nil {
 			return nil, err
 		}
-		rRows = append(rRows, reachabilityRowType{
+		rRows = append(rRows, taskQueueReachabilityRowType{
 			BuildID:      taskQueueUnversioned,
 			Reachability: reachability,
 		})
@@ -69,7 +69,7 @@ func descriptionToReachabilityRows(taskQueueDescription client.TaskQueueDescript
 			if err != nil {
 				return nil, err
 			}
-			rRows = append(rRows, reachabilityRowType{
+			rRows = append(rRows, taskQueueReachabilityRowType{
 				BuildID:      k,
 				Reachability: reachability,
 			})
@@ -134,8 +134,8 @@ func descriptionToPollerRows(taskQueueDescription client.TaskQueueDescription) (
 	return pRows, nil
 }
 
-func descriptionToRows(taskQueueDescription client.TaskQueueDescription, reportReachability bool) (taskQueueDescriptionType, error) {
-	var rRows []reachabilityRowType
+func taskQueueDescriptionToRows(taskQueueDescription client.TaskQueueDescription, reportReachability bool) (taskQueueDescriptionType, error) {
+	var rRows []taskQueueReachabilityRowType
 	if reportReachability {
 		var err error
 		rRows, err = descriptionToReachabilityRows(taskQueueDescription)
@@ -155,7 +155,7 @@ func descriptionToRows(taskQueueDescription client.TaskQueueDescription, reportR
 }
 
 func printTaskQueueDescription(cctx *CommandContext, taskQueueDescription client.TaskQueueDescription, reportReachability bool) error {
-	descRows, err := descriptionToRows(taskQueueDescription, reportReachability)
+	descRows, err := taskQueueDescriptionToRows(taskQueueDescription, reportReachability)
 	if err != nil {
 		return fmt.Errorf("creating task queue description rows failed: %w", err)
 	}
