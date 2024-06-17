@@ -602,6 +602,7 @@ To persist Workflows across runs, use:
 * `--sqlite-pragma` (string[]) - Specify SQLite pragma statements in pragma=value format.
 * `--dynamic-config-value` (string[]) - Dynamic config value, as KEY=JSON_VALUE (string values need quotes).
 * `--log-config` (bool) - Log the server config being used to stderr.
+* `--search-attribute` (string[]) - Search attributes to register, in key=type format.
 
 ### temporal task-queue: Manage Task Queues.
 
