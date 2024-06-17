@@ -3,10 +3,19 @@ package temporalcli
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/temporalio/cli/temporalcli/devserver"
+	"go.temporal.io/api/enums/v1"
+	"go.temporal.io/api/operatorservice/v1"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
+
+var defaultDynamicConfigValues = map[string]any{
+	"system.forceSearchAttributesCacheRefreshOnRead": true,
+}
 
 func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string) error {
 	// Have to assume "localhost" is 127.0.0.1 for server to work (it expects IP)
@@ -87,6 +96,22 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 		}
 	}
 
+	// Apply set of default dynamic config values if not already present
+	for k, v := range defaultDynamicConfigValues {
+		if _, ok := opts.DynamicConfigValues[k]; !ok {
+			if opts.DynamicConfigValues == nil {
+				opts.DynamicConfigValues = map[string]any{}
+			}
+			opts.DynamicConfigValues[k] = v
+		}
+	}
+
+	// Prepare search attributes for adding before starting server
+	searchAttrs, err := t.prepareSearchAttributes()
+	if err != nil {
+		return err
+	}
+
 	// If not using DB file, set persistent cluster ID
 	if t.DbFilename == "" {
 		opts.ClusterID = persistentClusterID()
@@ -113,6 +138,11 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 		return fmt.Errorf("failed starting server: %w", err)
 	}
 	defer s.Stop()
+
+	// Register search attributes
+	if err := t.registerSearchAttributes(cctx, searchAttrs, opts.Namespaces); err != nil {
+		return err
+	}
 
 	friendlyIP := t.Ip
 	if friendlyIP == "127.0.0.1" {
@@ -146,4 +176,58 @@ func persistentClusterID() string {
 	id := uuid.NewString()
 	_ = writeEnvConfigFile(file, map[string]map[string]string{"default": {"cluster-id": id}})
 	return id
+}
+
+func (t *TemporalServerStartDevCommand) prepareSearchAttributes() (map[string]enums.IndexedValueType, error) {
+	opts, err := stringKeysValues(t.SearchAttribute)
+	if err != nil {
+		return nil, fmt.Errorf("invalid search attributes: %w", err)
+	}
+	attrs := make(map[string]enums.IndexedValueType, len(opts))
+	for k, v := range opts {
+		// Case-insensitive index type lookup
+		var valType enums.IndexedValueType
+		for valTypeName, valTypeOrd := range enums.IndexedValueType_shorthandValue {
+			if strings.EqualFold(v, valTypeName) {
+				valType = enums.IndexedValueType(valTypeOrd)
+				break
+			}
+		}
+		if valType == 0 {
+			return nil, fmt.Errorf("invalid search attribute value type %q", v)
+		}
+		attrs[k] = valType
+	}
+	return attrs, nil
+}
+
+func (t *TemporalServerStartDevCommand) registerSearchAttributes(
+	cctx *CommandContext,
+	attrs map[string]enums.IndexedValueType,
+	namespaces []string,
+) error {
+	if len(attrs) == 0 {
+		return nil
+	}
+
+	conn, err := grpc.NewClient(
+		fmt.Sprintf("%v:%v", t.Ip, t.Port),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		return fmt.Errorf("failed creating client to register search attributes: %w", err)
+	}
+	defer conn.Close()
+	client := operatorservice.NewOperatorServiceClient(conn)
+	// Call for each namespace
+	for _, ns := range namespaces {
+		_, err := client.AddSearchAttributes(cctx, &operatorservice.AddSearchAttributesRequest{
+			Namespace:        ns,
+			SearchAttributes: attrs,
+		})
+		if err != nil {
+			return fmt.Errorf("failed registering search attributes: %w", err)
+		}
+	}
+	return nil
 }
