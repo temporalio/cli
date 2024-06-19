@@ -200,16 +200,17 @@ func (c *TemporalWorkflowUpdateCommand) run(cctx *CommandContext, args []string)
 		return err
 	}
 
-	request := &client.UpdateWorkflowWithOptionsRequest{
+	request := client.UpdateWorkflowOptions{
 		WorkflowID:          c.WorkflowId,
 		RunID:               c.RunId,
 		UpdateName:          c.Name,
 		UpdateID:            c.UpdateId,
 		FirstExecutionRunID: c.FirstExecutionRunId,
 		Args:                input,
+		WaitForStage:        client.WorkflowUpdateStageCompleted,
 	}
 
-	updateHandle, err := cl.UpdateWorkflowWithOptions(cctx, request)
+	updateHandle, err := cl.UpdateWorkflow(cctx, request)
 	if err != nil {
 		return fmt.Errorf("unable to update workflow: %w", err)
 	}

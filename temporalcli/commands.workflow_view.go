@@ -108,6 +108,7 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 		Type                 string
 		Namespace            string
 		TaskQueue            string
+		AssignedBuildId      string
 		StartTime            time.Time
 		CloseTime            time.Time                  `cli:",cardOmitEmpty"`
 		ExecutionTime        time.Time                  `cli:",cardOmitEmpty"`
@@ -122,6 +123,7 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 		Type:                 info.Type.GetName(),
 		Namespace:            c.Parent.Namespace,
 		TaskQueue:            info.TaskQueue,
+		AssignedBuildId:      info.GetAssignedBuildId(),
 		StartTime:            timestampToTime(info.StartTime),
 		CloseTime:            timestampToTime(info.CloseTime),
 		ExecutionTime:        timestampToTime(info.ExecutionTime),
