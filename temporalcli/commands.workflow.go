@@ -199,34 +199,36 @@ func (c *TemporalWorkflowUpdateCommand) run(cctx *CommandContext, args []string)
 	if err != nil {
 		return err
 	}
+	_ = input
+	return nil
 
-	request := &client.UpdateWorkflowWithOptionsRequest{
-		WorkflowID:          c.WorkflowId,
-		RunID:               c.RunId,
-		UpdateName:          c.Name,
-		UpdateID:            c.UpdateId,
-		FirstExecutionRunID: c.FirstExecutionRunId,
-		Args:                input,
-	}
-
-	updateHandle, err := cl.UpdateWorkflowWithOptions(cctx, request)
-	if err != nil {
-		return fmt.Errorf("unable to update workflow: %w", err)
-	}
-
-	var valuePtr interface{}
-	err = updateHandle.Get(cctx, &valuePtr)
-	if err != nil {
-		return fmt.Errorf("unable to update workflow: %w", err)
-	}
-
-	return cctx.Printer.PrintStructured(
-		struct {
-			Name     string      `json:"name"`
-			UpdateID string      `json:"updateId"`
-			Result   interface{} `json:"result"`
-		}{Name: c.Name, UpdateID: updateHandle.UpdateID(), Result: valuePtr},
-		printer.StructuredOptions{})
+	// request := &client.UpdateWorkflowWithOptionsRequest{
+	// 	WorkflowID:          c.WorkflowId,
+	// 	RunID:               c.RunId,
+	// 	UpdateName:          c.Name,
+	// 	UpdateID:            c.UpdateId,
+	// 	FirstExecutionRunID: c.FirstExecutionRunId,
+	// 	Args:                input,
+	// }
+	//
+	// updateHandle, err := cl.UpdateWorkflowWithOptions(cctx, request)
+	// if err != nil {
+	// 	return fmt.Errorf("unable to update workflow: %w", err)
+	// }
+	//
+	// var valuePtr interface{}
+	// err = updateHandle.Get(cctx, &valuePtr)
+	// if err != nil {
+	// 	return fmt.Errorf("unable to update workflow: %w", err)
+	// }
+	//
+	// return cctx.Printer.PrintStructured(
+	// 	struct {
+	// 		Name     string      `json:"name"`
+	// 		UpdateID string      `json:"updateId"`
+	// 		Result   interface{} `json:"result"`
+	// 	}{Name: c.Name, UpdateID: updateHandle.UpdateID(), Result: valuePtr},
+	// 	printer.StructuredOptions{})
 }
 
 func username() string {
