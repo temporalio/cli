@@ -340,11 +340,6 @@ func StartDevServer(t *testing.T, options DevServerOptions) *DevServer {
 	d.Options.DynamicConfigValues["system.enableNexus"] = true
 	d.Options.DynamicConfigValues["frontend.MaxConcurrentBatchOperationPerNamespace"] = 1000
 	d.Options.DynamicConfigValues["frontend.namespaceRPS.visibility"] = 100
-	d.Options.DynamicConfigValues["component.nexusoperations.callback.endpoint.template"] = fmt.Sprintf(
-		"http://%s:%d/namespaces/{{.NamespaceName}}/nexus/callback",
-		d.Options.FrontendIP,
-		d.Options.FrontendHTTPPort,
-	)
 
 	d.Options.GRPCInterceptors = append(
 		d.Options.GRPCInterceptors,
