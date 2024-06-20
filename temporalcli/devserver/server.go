@@ -44,6 +44,7 @@ import (
 	"go.temporal.io/server/common/dynamicconfig"
 	"go.temporal.io/server/common/metrics"
 	sqliteplugin "go.temporal.io/server/common/persistence/sql/sqlplugin/sqlite"
+	"go.temporal.io/server/components/nexusoperations"
 	"go.temporal.io/server/schema/sqlite"
 	sqliteschema "go.temporal.io/server/schema/sqlite"
 	"go.temporal.io/server/temporal"
@@ -205,6 +206,10 @@ func (s *StartOptions) buildServerOptions() ([]temporal.ServerOption, error) {
 	dynConf[dynamicconfig.HistoryCacheHostLevelMaxSize.Key()] = 8096
 	// Up default visibility RPS
 	dynConf[dynamicconfig.FrontendMaxNamespaceVisibilityRPSPerInstance.Key()] = 100
+	// This doesn't enable Nexus but it is required for Nexus to work and simplifies the experience.
+	// NOTE that the URL scheme is fixed to HTTP since the dev server doesn't support TLS at the time of writing.
+	dynConf[nexusoperations.CallbackURLTemplate.Key()] = fmt.Sprintf(
+		"http://%s:%d/namespaces/{{.NamespaceName}}/nexus/callback", s.FrontendIP, s.FrontendHTTPPort)
 
 	// Dynamic config if set
 	for k, v := range s.DynamicConfigValues {
