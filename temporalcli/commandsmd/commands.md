@@ -67,7 +67,7 @@ IN-HOUSE STYLE
     Because of this, always use full command examples.
   * Use square brackets to highlight optional elements, especially when long descriptions would suffer from two very similar command invocations.
     * Yes: temporal operator cluster describe [--detail]
-  * Use YourEnvironment, YourNamespace, etc as unquoted metasyntactic variable stand-ins.
+  * Use YourEnvironment, YourNamespace, etc. as unquoted metasyntactic variable stand-ins.
     Respectful metasyntax describes the role of the stand-in.
     * Yes: --workflow-id YourWorkflowId
     * No: --workflow-id your-work-id, --workflow-id "
@@ -1852,7 +1852,7 @@ Attributes and Query creation.
 * `--event-id`, `-e` (int) -
   Event ID to reset to. 
   Event must occur after `WorkflowTaskStarted`.
-  `WorkflowTaskCompleted`, `WorkflowTaskFailed`, etc are valid.
+  `WorkflowTaskCompleted`, `WorkflowTaskFailed`, etc. are valid.
 * `--reason` (string) -
   Reason for reset.
   Required.
@@ -1878,7 +1878,7 @@ Attributes and Query creation.
 ### temporal workflow show: Display Event History
 
 Show a Workflow Execution's Event History. 
-When using JSON output (`--output JSON`), you may pass the results to an SDK
+When using JSON output (`--output json`), you may pass the results to an SDK
 to perform a replay:
 
 ```
