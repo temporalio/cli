@@ -478,7 +478,7 @@ temporal env get \
 ```
 
 If you don't specify an environment (with `--env` or by setting the 
-`TEMPORAL_ENV` variable), this command lists properties of the default 
+`TEMPORAL_ENV` variable), this command lists properties of the "default"
 environment.
 
 <!--
