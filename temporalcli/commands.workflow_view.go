@@ -337,6 +337,7 @@ func (c *TemporalWorkflowShowCommand) run(cctx *CommandContext, _ []string) erro
 		if err := iter.print(cctx.Printer); err != nil {
 			return fmt.Errorf("displaying history failed: %w", err)
 		}
+		cctx.Printer.Println()
 		if err := printTextResult(cctx, iter.wfResult, 0); err != nil {
 			return err
 		}
