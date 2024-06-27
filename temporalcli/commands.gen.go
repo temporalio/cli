@@ -1344,7 +1344,7 @@ func NewTemporalTaskQueueDescribeCommand(cctx *CommandContext, parent *TemporalT
 	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task queue name. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
 	s.Command.Flags().StringArrayVar(&s.TaskQueueType, "task-queue-type", nil, "Task queue types considered. If not specified, all types are reported. The current valid queue types are workflow, activity, or nexus.")
-	s.Command.Flags().StringArrayVar(&s.SelectBuildId, "select-build-id", nil, "Task queue filter based on Build ID.")
+	s.Command.Flags().StringArrayVar(&s.SelectBuildId, "select-build-id", nil, "Task queue filter based on Build ID. If not specified, the default Build ID will be used.")
 	s.Command.Flags().BoolVar(&s.SelectUnversioned, "select-unversioned", false, "Include the unversioned queue.")
 	s.Command.Flags().BoolVar(&s.SelectAllActive, "select-all-active", false, "Include all active versions. A version is active if it had new tasks or polls recently.")
 	s.Command.Flags().BoolVar(&s.ReportReachability, "report-reachability", false, "Display task reachability information.")
