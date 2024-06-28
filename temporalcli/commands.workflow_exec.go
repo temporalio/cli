@@ -1,6 +1,7 @@
 package temporalcli
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -425,7 +426,13 @@ func (s *structuredHistoryIter) Next() (any, error) {
 		if b, err := protojson.Marshal(attrs); err != nil {
 			data.Details = "<failed serializing details>"
 		} else {
-			data.Details = string(b)
+			var out bytes.Buffer
+			err := json.Indent(&out, b, "", "  ")
+			if err != nil {
+					data.Details = "<failed json formatting details>"
+			} else {
+				data.Details = "\n" + out.String() + "\n----------------------------"
+			}
 		}
 	}
 

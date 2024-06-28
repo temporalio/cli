@@ -177,7 +177,7 @@ func (c *TemporalTaskQueueVersioningAddRedirectRuleCommand) run(cctx *CommandCon
 func (c *TemporalTaskQueueVersioningCommitBuildIdCommand) run(cctx *CommandContext, args []string) error {
 	token, err := c.Parent.getConflictToken(cctx, &getConflictTokenOptions{
 		safeMode:        !c.Yes,
-		safeModeMessage: "commiting a redirect rule",
+		safeModeMessage: "committing a Build ID",
 		taskQueue:       c.Parent.TaskQueue,
 		showAssignment:  true,
 	})
