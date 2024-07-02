@@ -146,9 +146,9 @@ func (s *Server) Stop() {
 
 func (s *StartOptions) buildUIServer() *uiserver.Server {
 	return uiserver.NewServer(uiserveroptions.WithConfigProvider(&uiconfig.Config{
-		Host:                s.UIIP,
+		Host:                MaybeEscapeIpv6(s.UIIP),
 		Port:                s.UIPort,
-		TemporalGRPCAddress: fmt.Sprintf("%v:%v", s.FrontendIP, s.FrontendPort),
+		TemporalGRPCAddress: fmt.Sprintf("%v:%v", MaybeEscapeIpv6(s.FrontendIP), s.FrontendPort),
 		EnableUI:            true,
 		UIAssetPath:         s.UIAssetPath,
 		Codec:               uiconfig.Codec{Endpoint: s.UICodecEndpoint},
@@ -224,11 +224,11 @@ func (s *StartOptions) buildServerConfig() (*config.Config, error) {
 	var conf config.Config
 	// Global config
 	conf.Global.Membership.MaxJoinDuration = 30 * time.Second
-	conf.Global.Membership.BroadcastAddress = "127.0.0.1"
+	conf.Global.Membership.BroadcastAddress = s.FrontendIP
 	if conf.Global.Metrics == nil && s.MetricsPort > 0 {
 		conf.Global.Metrics = &metrics.Config{
 			Prometheus: &metrics.PrometheusConfig{
-				ListenAddress: fmt.Sprintf("%v:%v", s.FrontendIP, s.MetricsPort),
+				ListenAddress: fmt.Sprintf("%v:%v", MaybeEscapeIpv6(s.FrontendIP), s.MetricsPort),
 				HandlerPath:   "/metrics",
 			},
 		}
@@ -256,7 +256,7 @@ func (s *StartOptions) buildServerConfig() (*config.Config, error) {
 				s.CurrentClusterName: {
 					Enabled:                true,
 					InitialFailoverVersion: int64(s.InitialFailoverVersion),
-					RPCAddress:             fmt.Sprintf("127.0.0.1:%v", s.FrontendPort),
+					RPCAddress:             fmt.Sprintf("%v:%v", MaybeEscapeIpv6(s.FrontendIP), s.FrontendPort),
 					ClusterID:              s.ClusterID,
 				},
 			},
@@ -273,7 +273,7 @@ func (s *StartOptions) buildServerConfig() (*config.Config, error) {
 	conf.Archival.Visibility.State = "disabled"
 	conf.NamespaceDefaults.Archival.History.State = "disabled"
 	conf.NamespaceDefaults.Archival.Visibility.State = "disabled"
-	conf.PublicClient.HostPort = fmt.Sprintf("127.0.0.1:%v", s.FrontendPort)
+	conf.PublicClient.HostPort = fmt.Sprintf("%v:%v", MaybeEscapeIpv6(s.FrontendIP), s.FrontendPort)
 	return &conf, nil
 }
 
@@ -329,9 +329,9 @@ func (s *StartOptions) buildServiceConfig(frontend bool) config.Service {
 			conf.RPC.HTTPPort = s.FrontendHTTPPort
 		}
 	} else {
-		conf.RPC.GRPCPort = MustGetFreePort("127.0.0.1")
-		conf.RPC.BindOnLocalHost = true
+		conf.RPC.GRPCPort = MustGetFreePort(s.FrontendIP)
+		conf.RPC.BindOnIP = s.FrontendIP
 	}
-	conf.RPC.MembershipPort = MustGetFreePort("127.0.0.1")
+	conf.RPC.MembershipPort = MustGetFreePort(s.FrontendIP)
 	return conf
 }
