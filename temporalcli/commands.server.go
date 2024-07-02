@@ -57,7 +57,7 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 	}
 	// Setup UI
 	if !t.Headless {
-		opts.UIIP, opts.UIPort = t.Ip, t.UiPort
+		opts.UIIP, opts.UIPort = t.UiIp, t.UiPort
 		if opts.UIIP == "" {
 			opts.UIIP = t.Ip
 		}
@@ -67,7 +67,7 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 				return fmt.Errorf("can't use default UI port %d (%d + 1000): %w", opts.UIPort, t.Port, err)
 			}
 		} else {
-			if err := devserver.CheckPortFree(opts.UIIP, t.Port); err != nil {
+			if err := devserver.CheckPortFree(opts.UIIP, opts.UIPort); err != nil {
 				return fmt.Errorf("can't set UI port %d: %w", opts.UIPort, err)
 			}
 		}
@@ -125,9 +125,9 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 	}
 	// Grab a free port for metrics ahead-of-time so we know what port is selected
 	if opts.MetricsPort == 0 {
-		opts.MetricsPort = devserver.MustGetFreePort(t.Ip)
+		opts.MetricsPort = devserver.MustGetFreePort(opts.FrontendIP)
 	} else {
-		if err := devserver.CheckPortFree(t.Ip, opts.MetricsPort); err != nil {
+		if err := devserver.CheckPortFree(opts.FrontendIP, opts.MetricsPort); err != nil {
 			return fmt.Errorf("can't set metrics port %d: %w", opts.MetricsPort, err)
 		}
 	}
@@ -144,18 +144,21 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 		return err
 	}
 
-	friendlyIP := t.Ip
-	if friendlyIP == "127.0.0.1" {
-		friendlyIP = "localhost"
-	}
-	cctx.Printer.Printlnf("%-16s %v:%v", "Temporal server:", friendlyIP, t.Port)
+	cctx.Printer.Printlnf("%-16s %v:%v", "Temporal server:", toFriendlyIp(opts.FrontendIP), opts.FrontendPort)
 	if !t.Headless {
-		cctx.Printer.Printlnf("%-16s http://%v:%v", "Web UI:", friendlyIP, opts.UIPort)
+		cctx.Printer.Printlnf("%-16s http://%v:%v", "Web UI:", toFriendlyIp(opts.UIIP), opts.UIPort)
 	}
-	cctx.Printer.Printlnf("%-16s http://%v:%v/metrics", "Metrics:", friendlyIP, opts.MetricsPort)
+	cctx.Printer.Printlnf("%-16s http://%v:%v/metrics", "Metrics:", toFriendlyIp(opts.FrontendIP), opts.MetricsPort)
 	<-cctx.Done()
 	cctx.Printer.Println("Stopping server...")
 	return nil
+}
+
+func toFriendlyIp(host string) string {
+	if host == "127.0.0.1" || host == "::1" {
+		return "localhost"
+	}
+	return devserver.MaybeEscapeIpv6(host)
 }
 
 func persistentClusterID() string {

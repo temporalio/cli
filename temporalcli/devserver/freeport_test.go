@@ -53,7 +53,11 @@ func tryListenAndDialOn(host string, port int) error {
 	}
 	defer l.Close()
 
-	r, err := net.DialTCP("tcp", nil, l.Addr().(*net.TCPAddr))
+	tcpAddr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%d", host, port))
+	if err != nil {
+		panic(err)
+	}
+	r, err := net.DialTCP("tcp", nil, tcpAddr)
 	if err != nil {
 		panic(err)
 	}
