@@ -2048,7 +2048,7 @@ type TemporalWorkflowExecuteCommand struct {
 	SharedWorkflowStartOptions
 	WorkflowStartOptions
 	PayloadInputOptions
-	EventDetails bool
+	Detailed bool
 }
 
 func NewTemporalWorkflowExecuteCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowExecuteCommand {
@@ -2066,7 +2066,7 @@ func NewTemporalWorkflowExecuteCommand(cctx *CommandContext, parent *TemporalWor
 	s.SharedWorkflowStartOptions.buildFlags(cctx, s.Command.Flags())
 	s.WorkflowStartOptions.buildFlags(cctx, s.Command.Flags())
 	s.PayloadInputOptions.buildFlags(cctx, s.Command.Flags())
-	s.Command.Flags().BoolVar(&s.EventDetails, "event-details", false, "If set when using text output, include event details JSON in printed output. If set when using JSON output, this will include the entire \"history\" JSON key of the started run (does not follow runs).")
+	s.Command.Flags().BoolVar(&s.Detailed, "detailed", false, "If set when using text output, display events as sections with detail instead of simple table. If set when using JSON output, this will include the entire \"history\" JSON key of the started run (does not follow runs).")
 	s.Command.Flags().SetNormalizeFunc(aliasNormalizer(map[string]string{
 		"name": "type",
 	}))
@@ -2229,8 +2229,8 @@ type TemporalWorkflowShowCommand struct {
 	Parent  *TemporalWorkflowCommand
 	Command cobra.Command
 	WorkflowReferenceOptions
-	Follow       bool
-	EventDetails bool
+	Follow   bool
+	Detailed bool
 }
 
 func NewTemporalWorkflowShowCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowShowCommand {
@@ -2247,7 +2247,7 @@ func NewTemporalWorkflowShowCommand(cctx *CommandContext, parent *TemporalWorkfl
 	s.Command.Args = cobra.NoArgs
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Flags().BoolVarP(&s.Follow, "follow", "f", false, "Follow the progress of a Workflow Execution in real time (does not apply to JSON output).")
-	s.Command.Flags().BoolVar(&s.EventDetails, "event-details", false, "If set when using text output, include event details JSON in printed output.")
+	s.Command.Flags().BoolVar(&s.Detailed, "detailed", false, "If set when using text output, display events as sections with detail instead of simple table.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

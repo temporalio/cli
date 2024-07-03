@@ -570,7 +570,7 @@ func (s *SharedServerSuite) TestWorkflow_Execute_CodecEndpoint() {
 	// actually decoded for the user
 	res = s.Execute(
 		"workflow", "execute",
-		"-o", "json", "--event-details",
+		"-o", "json", "--detailed",
 		"--codec-endpoint", "http://"+srv.Listener.Addr().String(),
 		"--address", s.Address(),
 		"--task-queue", taskQueue,

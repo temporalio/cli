@@ -189,7 +189,7 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 	return nil
 }
 
-func (c *TemporalWorkflowListCommand) run(cctx *CommandContext, args []string) error {
+func (c *TemporalWorkflowListCommand) run(cctx *CommandContext, _ []string) error {
 	cl, err := c.Parent.ClientOptions.dialClient(cctx)
 	if err != nil {
 		return err
@@ -268,7 +268,7 @@ func (c *TemporalWorkflowListCommand) pageFetcher(
 	}
 }
 
-func (c *TemporalWorkflowCountCommand) run(cctx *CommandContext, _ []string) error {
+func (c *TemporalWorkflowCountCommand) run(cctx *CommandContext, args []string) error {
 	cl, err := c.Parent.ClientOptions.dialClient(cctx)
 	if err != nil {
 		return err
@@ -329,12 +329,12 @@ func (c *TemporalWorkflowShowCommand) run(cctx *CommandContext, _ []string) erro
 		client:         cl,
 		workflowID:     c.WorkflowId,
 		runID:          c.RunId,
-		includeDetails: c.EventDetails,
+		includeDetails: c.Detailed,
 		follow:         c.Follow,
 	}
 	if !cctx.JSONOutput {
 		cctx.Printer.Println(color.MagentaString("Progress:"))
-		if err := iter.print(cctx.Printer); err != nil {
+		if err := iter.print(cctx); err != nil {
 			return fmt.Errorf("displaying history failed: %w", err)
 		}
 		cctx.Printer.Println()

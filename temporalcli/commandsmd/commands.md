@@ -943,8 +943,9 @@ temporal workflow execute
 
 #### Options
 
-* `--event-details` (bool) - If set when using text output, include event details JSON in printed output. If set when
-  using JSON output, this will include the entire "history" JSON key of the started run (does not follow runs).
+* `--detailed` (bool) - If set when using text output, display events as sections with detail instead of simple table.
+  If set when using JSON output, this will include the entire "history" JSON key of the started run (does not follow
+  runs).
 
 Includes options set for [shared workflow start](#options-set-for-shared-workflow-start).
 Includes options set for [workflow start](#options-set-for-workflow-start).
@@ -1054,7 +1055,7 @@ Use the options listed below to change the command's behavior.
 
 * `--follow`, `-f` (bool) - Follow the progress of a Workflow Execution in real time (does not apply
   to JSON output).
-* `--event-details` (bool) - If set when using text output, include event details JSON in printed output.
+* `--detailed` (bool) - If set when using text output, display events as sections with detail instead of simple table.
 
 Includes options set for [workflow reference](#options-set-for-workflow-reference).
 
