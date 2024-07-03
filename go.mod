@@ -13,7 +13,7 @@ require (
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.9.0
-	github.com/temporalio/ui-server/v2 v2.27.3
+	github.com/temporalio/ui-server/v2 v2.28.0
 	go.temporal.io/api v1.34.0
 	go.temporal.io/sdk v1.27.0
 	go.temporal.io/server v1.24.1
