@@ -21,7 +21,7 @@ import (
 // in this regard; on that platform, `SO_REUSEADDR` has a different meaning and
 // should not be set (setting it may have unpredictable consequences).
 func GetFreePort(host string) (int, error) {
-	host = MaybeEscapeIpv6(host)
+	host = MaybeEscapeIPv6(host)
 	l, err := net.Listen("tcp", host+":0")
 	if err != nil {
 		return 0, fmt.Errorf("failed to assign a free port: %v", err)
@@ -94,7 +94,7 @@ func MustGetFreePort(host string) int {
 // Asserts that the given TCP port is available to listen on, for the given
 // (local) host; return an error if it is not.
 func CheckPortFree(host string, port int) error {
-	l, err := net.Listen("tcp", fmt.Sprintf("%s:%d", MaybeEscapeIpv6(host), port))
+	l, err := net.Listen("tcp", fmt.Sprintf("%s:%d", MaybeEscapeIPv6(host), port))
 	if err != nil {
 		return err
 	}
@@ -103,7 +103,7 @@ func CheckPortFree(host string, port int) error {
 }
 
 // Escapes an IPv6 address with square brackets, if it is an IPv6 address.
-func MaybeEscapeIpv6(host string) string {
+func MaybeEscapeIPv6(host string) string {
 	if ip := net.ParseIP(host); ip != nil && ip.To4() == nil {
 		return "[" + host + "]"
 	}

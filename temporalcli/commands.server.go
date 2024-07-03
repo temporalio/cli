@@ -158,7 +158,7 @@ func toFriendlyIp(host string) string {
 	if host == "127.0.0.1" || host == "::1" {
 		return "localhost"
 	}
-	return devserver.MaybeEscapeIpv6(host)
+	return devserver.MaybeEscapeIPv6(host)
 }
 
 func persistentClusterID() string {

@@ -146,9 +146,9 @@ func (s *Server) Stop() {
 
 func (s *StartOptions) buildUIServer() *uiserver.Server {
 	return uiserver.NewServer(uiserveroptions.WithConfigProvider(&uiconfig.Config{
-		Host:                MaybeEscapeIpv6(s.UIIP),
+		Host:                MaybeEscapeIPv6(s.UIIP),
 		Port:                s.UIPort,
-		TemporalGRPCAddress: fmt.Sprintf("%v:%v", MaybeEscapeIpv6(s.FrontendIP), s.FrontendPort),
+		TemporalGRPCAddress: fmt.Sprintf("%v:%v", MaybeEscapeIPv6(s.FrontendIP), s.FrontendPort),
 		EnableUI:            true,
 		UIAssetPath:         s.UIAssetPath,
 		Codec:               uiconfig.Codec{Endpoint: s.UICodecEndpoint},
@@ -228,7 +228,7 @@ func (s *StartOptions) buildServerConfig() (*config.Config, error) {
 	if conf.Global.Metrics == nil && s.MetricsPort > 0 {
 		conf.Global.Metrics = &metrics.Config{
 			Prometheus: &metrics.PrometheusConfig{
-				ListenAddress: fmt.Sprintf("%v:%v", MaybeEscapeIpv6(s.FrontendIP), s.MetricsPort),
+				ListenAddress: fmt.Sprintf("%v:%v", MaybeEscapeIPv6(s.FrontendIP), s.MetricsPort),
 				HandlerPath:   "/metrics",
 			},
 		}
@@ -256,7 +256,7 @@ func (s *StartOptions) buildServerConfig() (*config.Config, error) {
 				s.CurrentClusterName: {
 					Enabled:                true,
 					InitialFailoverVersion: int64(s.InitialFailoverVersion),
-					RPCAddress:             fmt.Sprintf("%v:%v", MaybeEscapeIpv6(s.FrontendIP), s.FrontendPort),
+					RPCAddress:             fmt.Sprintf("%v:%v", MaybeEscapeIPv6(s.FrontendIP), s.FrontendPort),
 					ClusterID:              s.ClusterID,
 				},
 			},
@@ -273,7 +273,7 @@ func (s *StartOptions) buildServerConfig() (*config.Config, error) {
 	conf.Archival.Visibility.State = "disabled"
 	conf.NamespaceDefaults.Archival.History.State = "disabled"
 	conf.NamespaceDefaults.Archival.Visibility.State = "disabled"
-	conf.PublicClient.HostPort = fmt.Sprintf("%v:%v", MaybeEscapeIpv6(s.FrontendIP), s.FrontendPort)
+	conf.PublicClient.HostPort = fmt.Sprintf("%v:%v", MaybeEscapeIPv6(s.FrontendIP), s.FrontendPort)
 	return &conf, nil
 }
 

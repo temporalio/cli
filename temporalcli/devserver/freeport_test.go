@@ -11,7 +11,6 @@ import (
 func TestFreePort_NoDouble(t *testing.T) {
 	host := "127.0.0.1"
 	portSet := make(map[int]bool)
-
 	for i := 0; i < 2000; i++ {
 		p, err := devserver.GetFreePort(host)
 		if err != nil {
@@ -30,7 +29,6 @@ func TestFreePort_NoDouble(t *testing.T) {
 
 func TestFreePort_CanBindImmediatelySameProcess(t *testing.T) {
 	host := "127.0.0.1"
-
 	for i := 0; i < 500; i++ {
 		p, err := devserver.GetFreePort(host)
 		if err != nil {
@@ -45,8 +43,37 @@ func TestFreePort_CanBindImmediatelySameProcess(t *testing.T) {
 	}
 }
 
+func TestFreePort_IPv4Unspecified(t *testing.T) {
+	host := "0.0.0.0"
+	p, err := devserver.GetFreePort(host)
+	if err != nil {
+		t.Fatalf("Error: %s", err)
+		return
+	}
+	err = tryListenAndDialOn(host, p)
+	if err != nil {
+		t.Fatalf("Error: %s", err)
+		return
+	}
+}
+
+func TestFreePort_IPv6Unspecified(t *testing.T) {
+	host := "::"
+	p, err := devserver.GetFreePort(host)
+	if err != nil {
+		t.Fatalf("Error: %s", err)
+		return
+	}
+	err = tryListenAndDialOn(host, p)
+	if err != nil {
+		t.Fatalf("Error: %s", err)
+		return
+	}
+}
+
 // This function is used as part of unit tests, to ensure that the port
 func tryListenAndDialOn(host string, port int) error {
+	host = devserver.MaybeEscapeIPv6(host)
 	l, err := net.Listen("tcp", fmt.Sprintf("%s:%d", host, port))
 	if err != nil {
 		return err

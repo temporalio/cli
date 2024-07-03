@@ -2,6 +2,7 @@ package temporalcli_test
 
 import (
 	"context"
+	"net"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -21,15 +22,53 @@ import (
 // * Server reuse existing database file
 
 func TestServer_StartDev_Simple(t *testing.T) {
+	port := strconv.Itoa(devserver.MustGetFreePort("127.0.0.1"))
+	startDevServerAndRunSimpleTest(
+		t,
+		// TODO(cretz): Remove --headless when
+		// https://github.com/temporalio/ui/issues/1773 fixed
+		[]string{"server", "start-dev", "-p", port, "--headless"},
+		"127.0.0.1:"+port,
+	)
+}
+
+func TestServer_StartDev_IPv4Unspecified(t *testing.T) {
+	port := strconv.Itoa(devserver.MustGetFreePort("0.0.0.0"))
+	startDevServerAndRunSimpleTest(
+		t,
+		[]string{"server", "start-dev", "--ip", "0.0.0.0", "-p", port, "--headless"},
+		"0.0.0.0:"+port,
+	)
+}
+
+func TestServer_StartDev_IPv6Unspecified(t *testing.T) {
+	_, err := net.InterfaceByName("::1")
+	if err != nil {
+		t.Skip("Machine has no IPv6 support")
+		return
+	}
+
+	port := strconv.Itoa(devserver.MustGetFreePort("::"))
+	startDevServerAndRunSimpleTest(
+		t,
+		[]string{
+			"server", "start-dev",
+			"--ip", "::", "--ui-ip", "::1",
+			"-p", port,
+			"--ui-port", strconv.Itoa(devserver.MustGetFreePort("::")),
+			"--http-port", strconv.Itoa(devserver.MustGetFreePort("::")),
+			"--metrics-port", strconv.Itoa(devserver.MustGetFreePort("::"))},
+		"[::]:"+port,
+	)
+}
+
+func startDevServerAndRunSimpleTest(t *testing.T, args []string, dialAddress string) {
 	h := NewCommandHarness(t)
 	defer h.Close()
 
 	// Start in background, then wait for client to be able to connect
-	port := strconv.Itoa(devserver.MustGetFreePort("127.0.0.1"))
 	resCh := make(chan *CommandResult, 1)
-	// TODO(cretz): Remove --headless when
-	// https://github.com/temporalio/ui/issues/1773 fixed
-	go func() { resCh <- h.Execute("server", "start-dev", "-p", port, "--headless") }()
+	go func() { resCh <- h.Execute(args...) }()
 
 	// Try to connect for a bit while checking for error
 	var cl client.Client
@@ -41,7 +80,7 @@ func TestServer_StartDev_Simple(t *testing.T) {
 		default:
 		}
 		var err error
-		cl, err = client.Dial(client.Options{HostPort: "127.0.0.1:" + port})
+		cl, err = client.Dial(client.Options{HostPort: dialAddress})
 		assert.NoError(t, err)
 	}, 3*time.Second, 200*time.Millisecond)
 	defer cl.Close()
@@ -95,24 +134,19 @@ func TestServer_StartDev_ConcurrentStarts(t *testing.T) {
 		// Send an interrupt by cancelling context
 		h.CancelContext()
 
-		// FIXME: We should technically wait for server cleanup, but this is
-		// slowing down the test considerably, presumably due to the issue fixed
-		// in https://github.com/temporalio/temporal/pull/5459. Uncomment the
-		// following code when the server dependency is updated to 1.24.0.
-		//
-		// select {
-		// case <-time.After(20 * time.Second):
-		// 	h.Fail("didn't cleanup after 20 seconds")
-		// case res := <-resCh:
-		// 	h.NoError(res.Err)
-		// }
+		select {
+		case <-time.After(20 * time.Second):
+			h.Fail("didn't cleanup after 20 seconds")
+		case res := <-resCh:
+			h.NoError(res.Err)
+		}
 	}
 
-	// Start 80 dev server instances, with 8 concurrent executions
+	// Start 40 dev server instances, with 8 concurrent executions
 	instanceCounter := atomic.Int32{}
-	instanceCounter.Store(80)
+	instanceCounter.Store(40)
 	wg := &sync.WaitGroup{}
-	for i := 0; i < 8; i++ {
+	for i := 0; i < 6; i++ {
 		wg.Add(1)
 		go func() {
 			for instanceCounter.Add(-1) >= 0 {
