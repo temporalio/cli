@@ -646,3 +646,21 @@ func jsonPath(v any, path ...string) any {
 	}
 	return jsonPath(v, path[1:]...)
 }
+
+func (s *SharedServerSuite) TestWorkflow_Execute_NullValue() {
+	// Regression test: see https://github.com/temporalio/cli/pull/617
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
+		return map[string]any{"foo": nil}, nil
+	})
+	res := s.Execute(
+		"workflow", "execute",
+		"--address", s.Address(),
+		"--task-queue", s.Worker().Options.TaskQueue,
+		"--type", "DevWorkflow",
+		"--workflow-id", "my-id",
+	)
+	s.NoError(res.Err)
+	out := res.Stdout.String()
+	s.ContainsOnSameLine(out, "Status", "COMPLETED")
+	s.ContainsOnSameLine(out, "Result", `{"foo":null}`)
+}
