@@ -223,9 +223,9 @@ DEFINING AN OPTION
 
 ### temporal: Temporal command-line interface and development server
 
-The Temporal CLI manages, monitors, and debugs Temporal apps. It lets you
-run a local Temporal Service, start Workflow Executions, pass messages to
-running Workflows, inspects state, and more.
+The Temporal CLI manages, monitors, and debugs Temporal apps. It lets you run
+a local Temporal Service, start Workflow Executions, pass messages to running
+Workflows, inspects state, and more.
 
 * Start a local development service:
       `temporal server start-dev`
@@ -270,8 +270,8 @@ running Workflows, inspects state, and more.
 
 ### temporal activity: Complete or fail an Activity
 
-Update an Activity's state to as completed or failed. This marks an
-Activity as successfully finished or as having encountered an error:
+Update an Activity's state to as completed or failed. This marks an Activity
+as successfully finished or as having encountered an error:
 
 ```
 temporal activity complete \
@@ -286,7 +286,7 @@ Includes options set for [client](#options-set-for-client).
 
 ### temporal activity complete: Complete an Activity
 
-Complete an Activity, marking it as successfully finished. Specify the 
+Complete an Activity, marking it as successfully finished. Specify the
 Activity ID and include a JSON result for the returned value:
 
 ```
@@ -336,8 +336,8 @@ Includes options set for [workflow reference](#options-set-for-workflow-referenc
 
 ### temporal batch: Manage batch jobs
 
-A batch job executes a command on multiple Workflow Executions at once. 
-Use an SQL-like `--query` to select which Workflow Executions to include:
+A batch job executes a command on multiple Workflow Executions at once. Use
+an SQL-like `--query` to select which Workflow Executions to include:
 
 ```
 temporal batch workflow cancel \
@@ -354,8 +354,8 @@ temporal workflow cancel \
   --reason "Testing"
 ```
 
-Visit https://docs.temporal.io/visibility to read more about Search
-Attributes and Query creation.
+Visit https://docs.temporal.io/visibility to read more about Search Attributes
+and Query creation.
 
 #### Options
 
@@ -363,8 +363,8 @@ Includes options set for [client](#options-set-for-client).
 
 ### temporal batch describe: Show batch job progress
 
-Show the progress of an ongoing batch job. Pass a valid job ID to display
-its information:
+Show the progress of an ongoing batch job. Pass a valid job ID to display its
+information:
 
 ```
 temporal batch describe \
@@ -379,9 +379,8 @@ temporal batch describe \
 
 ### temporal batch list: List all batch jobs
 
-Return a list of batch jobs on the Service or within a 
-single Namespace. For example, list the batch jobs for
-"YourNamespace":
+Return a list of batch jobs on the Service or within a single Namespace. For
+example, list the batch jobs for "YourNamespace":
 
 ```
 temporal batch list \
@@ -395,9 +394,9 @@ temporal batch list \
 
 ### temporal batch terminate: Forcefully end a batch job
 
-Terminate a batch job with the provided job ID. You must provide a reason
-for the termination. The Service stores this explanation as
-metadata for the termination event for later reference:
+Terminate a batch job with the provided job ID. You must provide a reason for
+the termination. The Service stores this explanation as metadata for the
+termination event for later reference:
 
 ```
 temporal batch terminate \
@@ -417,7 +416,7 @@ temporal batch terminate \
 ### temporal env: Manage environments
 
 Environments manage key-value presets, auto-configuring Temporal CLI options
-for you. You can set up distinct environments like "dev" and "prod" for 
+for you. You can set up distinct environments like "dev" and "prod" for
 convenience:
 
 ```
@@ -429,17 +428,15 @@ temporal env set \
 
 Each environment is isolated. Changes to "prod" presets won't affect "dev".
 
-For easiest use, set a `TEMPORAL_ENV` environment variable in your shell.
-The Temporal CLI checks for an `--env` option first, then checks the shell.
-If neither is set, most commands use `default` environment presets if
-available.
+For easiest use, set a `TEMPORAL_ENV` environment variable in your shell. The
+Temporal CLI checks for an `--env` option first, then checks the shell. If
+neither is set, most commands use `default` environment presets if available.
 
 ### temporal env delete: Delete an environment or environment property
 
-Remove a presets environment entirely _or_ remove a key-value pair within
-an environment. If you don't specify an environment (with `--env` or by
-setting the `TEMPORAL_ENV` variable), this command updates the "default" 
-environment:
+Remove a presets environment entirely _or_ remove a key-value pair within an
+environment. If you don't specify an environment (with `--env` or by setting
+the `TEMPORAL_ENV` variable), this command updates the "default" environment:
 
 ```
 temporal env delete \
@@ -480,8 +477,8 @@ temporal env get \
     --key YourPropertyKey
 ```
 
-If you don't specify an environment (with `--env` or by setting the 
-`TEMPORAL_ENV` variable), this command lists properties of the "default" 
+If you don't specify an environment (with `--env` or by setting the
+`TEMPORAL_ENV` variable), this command lists properties of the "default"
 environment.
 
 <!--
@@ -495,8 +492,8 @@ environment.
 
 ### temporal env list: Show environment names
 
-List the environments you have set up on your local computer. Environments 
-are stored in "$HOME/.config/temporalio/temporal.yaml".
+List the environments you have set up on your local computer. Environments are
+stored in "$HOME/.config/temporalio/temporal.yaml".
 
 ### temporal env set: Set environment properties
 
@@ -509,8 +506,8 @@ temporal env set \
     --value value
 ```
 
-If you don't specify an environment (with `--env` or by setting the 
-`TEMPORAL_ENV` variable), this command sets properties in the "default" 
+If you don't specify an environment (with `--env` or by setting the
+`TEMPORAL_ENV` variable), this command sets properties in the "default"
 environment.
 
 Storing keys with CLI option names lets the CLI automatically set those
@@ -532,15 +529,15 @@ commands.
 
 ### temporal operator: Manage Temporal deployments
 
-Operator commands manage and fetch information about Namespace, 
-Search Attributes, and Temporal Services:
+Operator commands manage and fetch information about Namespace, Search
+Attributes, and Temporal Services:
 
 ```
 temporal operator [command] [subcommand] [options]
 ```
 
-For example, to show information about the Temporal Service at the
-default address (localhost):
+For example, to show information about the Temporal Service at the default
+address (localhost):
 
 ```
 temporal operator cluster describe
@@ -588,9 +585,9 @@ temporal operator cluster health
 
 ### temporal operator cluster list: Show Temporal Clusters
 
-Print a list of Temporal Clusters (Services) registered to this
-system. Report details include the Cluster's name, ID, address, History Shard
-count, Failover version, and availability:
+Print a list of Temporal Clusters (Services) registered to this system. Report
+details include the Cluster's name, ID, address, History Shard count, Failover
+version, and availability:
 
 ```
 temporal operator cluster list [--limit max-count]
@@ -618,12 +615,11 @@ temporal operator cluster remove \
 
 ### temporal operator cluster system: Show Temporal Cluster info
 
-
-Show Temporal Server information for Temporal Clusters (Service):
-Server version, scheduling support, and more. This information helps diagnose
+Show Temporal Server information for Temporal Clusters (Service): Server
+version, scheduling support, and more. This information helps diagnose
 problems with the Temporal Server.
 
-The command defaults to the local Service. Otherwise, use the 
+The command defaults to the local Service. Otherwise, use the
 `--frontend-address` option to specify a Cluster (Service) endpoint:
 
 ```
@@ -820,8 +816,8 @@ temporal operator namespace update \
     --promote-global
 ```
 
-You may update archives that were previously enabled or disabled.
-Note: URI values for archival states can't be changed once enabled.
+You may update archives that were previously enabled or disabled. Note: URI
+values for archival states can't be changed once enabled.
 
 ```
 temporal operator namespace update \
@@ -865,8 +861,8 @@ temporal operator namespace update \
 
 ### temporal operator search-attribute: Search Attribute operations
 
-Create, list, or remove Search Attributes
-fields stored in a Workflow Execution's metadata:
+Create, list, or remove Search Attributes fields stored in a Workflow
+Execution's metadata:
 
 ```
 temporal operator search-attribute create \
@@ -898,9 +894,8 @@ temporal operator search-attribute create \
 
 ### temporal operator search-attribute list: List Search Attributes
 
-Display a list of active Search Attributes that can be 
-assigned or used with Workflow Queries. You can manage this list and add
-attributes as needed:
+Display a list of active Search Attributes that can be assigned or used with
+Workflow Queries. You can manage this list and add attributes as needed:
 
 ```
 temporal operator search-attribute list
@@ -908,8 +903,8 @@ temporal operator search-attribute list
 
 ### temporal operator search-attribute remove: Remove custom Search Attributes
 
-Remove custom Search Attributes from the options that can be
-assigned or used with Workflow Queries.
+Remove custom Search Attributes from the options that can be assigned or used
+with Workflow Queries.
 
 ```
 temporal operator search-attribute remove \
@@ -935,8 +930,8 @@ temporal operator search-attribute remove \
 
 ### temporal schedule: Perform operations on Schedules
 
-Create, use, and update Schedules that allow 
-Workflow Executions to be created at specified times:
+Create, use, and update Schedules that allow Workflow Executions to be created
+at specified times:
 
 ```
 temporal schedule [commands] [options]
@@ -956,14 +951,13 @@ Includes options set for [client](#options-set-for-client).
 ### temporal schedule backfill: Backfill past actions
 
 Batch-execute actions that would have run during a specified time interval.
-Use this command to fill in Workflow runs from when a Schedule
-was paused, before a Schedule was created, from the future, or to re-process a
-previously executed interval.
+Use this command to fill in Workflow runs from when a Schedule was paused,
+before a Schedule was created, from the future, or to re-process a previously
+executed interval.
 
 Backfills require a Schedule ID and the time period covered by the request.
 It's best to use the `BufferAll` or `AllowAll` policies to avoid conflicts
-and ensure no Workflow Executions are
-skipped.
+and ensure no Workflow Executions are skipped.
 
 For example:
 
@@ -979,14 +973,15 @@ The policies include:
 
 * **AllowAll**: Allow unlimited concurrent Workflow Executions. This
   significantly speeds up the backfilling process on systems that support
-  concurrency. Ensure running Workflow Executions do not interfere with each
-  other.
-* **BufferAll**: Buffer all incoming Workflow Executions while waiting for the
-  running Workflow Execution to complete.
+  concurrency. Ensure running Workflow Executions do not interfere with
+  each other.
+* **BufferAll**: Buffer all incoming Workflow Executions while waiting for
+  the running Workflow Execution to complete.
 * **Skip**: If a previous Workflow Execution is still running, discard new
   Workflow Executions.
 * **BufferOne**: Same as 'Skip' but buffer a single Workflow Execution to be
-  run after the previous Execution completes. Discard other Workflow Executions.
+  run after the previous Execution completes. Discard other Workflow
+  Executions.
 * **CancelOther**: Cancel the running Workflow Execution and replace it with
   the incoming new Workflow Execution.
 * **TerminateOther**: Terminate the running Workflow Execution and replace
@@ -1016,8 +1011,8 @@ The policies include:
 
 ### temporal schedule create: Create a new Schedule
 
-Create a new Schedule on the Temporal Service. A Schedule automatically
-starts new Workflow Executions at the times you specify.
+Create a new Schedule on the Temporal Service. A Schedule automatically starts
+new Workflow Executions at the times you specify.
 
 For example:
 
@@ -1071,7 +1066,8 @@ Schedules support any combination of `--calendar`, `--interval`, and `--cron`:
   Schedule start time.
 * `--time-zone` (string) -
   Interpret calendar specs with the `TZ` time zone.
-  For a list of time zones, see: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones.
+  For a list of time zones, see:
+  https://en.wikipedia.org/wiki/List_of_tz_database_time_zones.
 * `--schedule-search-attribute` (string[]) -
   Set schedule Search Attributes using 'KEY="VALUE"' format.
   KEY is a string, VALUE is JSON.
@@ -1097,9 +1093,9 @@ temporal schedule delete \
     --schedule-id YourScheduleId
 ```
 
-Removing a Schedule won't affect the Workflow Executions it started
-that are still running. To cancel or terminate these Workflow Executions, use 
-`temporal workflow delete` with the `TemporalScheduledById` Search Attribute instead.
+Removing a Schedule won't affect the Workflow Executions it started that are
+still running. To cancel or terminate these Workflow Executions, use `temporal
+workflow delete` with the `TemporalScheduledById` Search Attribute instead.
  
 #### Options
 
@@ -1107,8 +1103,8 @@ Includes options set for [schedule-id](#options-set-for-schedule-id).
 
 ### temporal schedule describe: Display Schedule state
 
-Show a Schedule configuration, including information about past,
-current, and future Workflow runs:
+Show a Schedule configuration, including information about past, current, and
+future Workflow runs:
 
 ```
 temporal schedule describe \
@@ -1137,8 +1133,7 @@ temporal schedule list \
 
 ### temporal schedule toggle: Pause or unpause a Schedule
 
-Pause or unpause a Schedule by passing a flag with your
-desired state:
+Pause or unpause a Schedule by passing a flag with your desired state:
 
 ```
 temporal schedule toggle \
@@ -1156,9 +1151,9 @@ temporal schedule toggle
     --reason "YourReason"
 ```
 
-The `--reason` text updates the Schedule's `notes` field for operations 
-communication. It defaults to "(no reason provided)" if omitted. This field
-is also visible on the Service Web UI. 
+The `--reason` text updates the Schedule's `notes` field for operations
+communication. It defaults to "(no reason provided)" if omitted. This field is
+also visible on the Service Web UI.
 
 #### Options
 
@@ -1188,8 +1183,8 @@ Includes options set for [overlap-policy](#options-set-for-overlap-policy).
 
 ### temporal schedule update: Update Schedule details
 
-Update an existing Schedule with new configuration details, including
-spec, action, and policies:
+Update an existing Schedule with new configuration details, including spec,
+action, and policies:
 
 ```
 temporal schedule update 
@@ -1208,8 +1203,8 @@ Includes options set for [payload-input](#options-set-for-payload-input).
 
 ### temporal server: Run Temporal Server
 
-Run a development Temporal Server on your local system.
-View the Web UI for the default configuration at http://localhost:8233:
+Run a development Temporal Server on your local system. View the Web UI for
+the default configuration at http://localhost:8233:
 
 ```
 temporal server start-dev
@@ -1241,8 +1236,8 @@ temporal server start-dev \
 
 ### temporal server start-dev: Start Temporal development server
 
-Run a development Temporal Server on your local system.
-View the Web UI for the default configuration at http://localhost:8233:
+Run a development Temporal Server on your local system. View the Web UI for
+the default configuration at http://localhost:8233:
 
 ```
 temporal server start-dev
@@ -1313,8 +1308,8 @@ temporal server start-dev \
 
 ### temporal task-queue: Manage Task Queues
 
-Inspect and update Task Queues, the queues that
-Workers poll for Workflow and Activity tasks:
+Inspect and update Task Queues, the queues that Workers poll for Workflow and
+Activity tasks:
 
 ```
 temporal task-queue [command] [command options]
@@ -1333,10 +1328,10 @@ Includes options set for [client](#options-set-for-client).
 
 ### temporal task-queue describe: Show active Workers
 
-Display a list of active Workers that have recently polled a Task Queue. The Temporal Server records each poll
-request time. A `LastAccessTime` over one minute may indicate the Worker is
-at capacity or has shut down. Temporal Workers are removed if 5 minutes
-have passed since the last poll request:
+Display a list of active Workers that have recently polled a Task Queue. The
+Temporal Server records each poll request time. A `LastAccessTime` over one
+minute may indicate the Worker is at capacity or has shut down. Temporal
+Workers are removed if 5 minutes have passed since the last poll request:
 
 ```
 temporal task-queue describe \
@@ -1367,7 +1362,7 @@ temporal task-queue describe \
 
 ### temporal task-queue get-build-id-reachability: Show Build ID availability
 
-Show if a given Build ID can be used for new, existing, or closed workflows
+Show if a given Build ID can be used for new, existing, or closed Workflows
 in Namespaces that support Worker versioning:
 
 ```
@@ -1375,9 +1370,9 @@ temporal task-queue get-build-id-reachability \
     --build-id "2.0"
 ```
 
-You can specify the `--build-id` and `--task-queue` flags multiple times.
-If `--task-queue` is omitted, the command checks Build ID reachability
-against all Task Queues.
+You can specify the `--build-id` and `--task-queue` flags multiple times. If
+`--task-queue` is omitted, the command checks Build ID reachability against
+all Task Queues.
 
 #### Options
 
@@ -1398,8 +1393,8 @@ against all Task Queues.
 
 ### temporal task-queue get-build-ids: Fetch Build ID versions
 
-Fetch sets of compatible Build IDs for specified Task Queues and
-display their information:
+Fetch sets of compatible Build IDs for specified Task Queues and display their
+information:
 
 ```
 temporal task-queue get-build-ids \
@@ -1436,13 +1431,13 @@ temporal task-queue list-partition \
 
 ### temporal task-queue update-build-ids: Manage Build IDs
 
-Add or change a Task Queue's compatible Build IDs for Namespaces using
-Worker versioning.
+Add or change a Task Queue's compatible Build IDs for Namespaces using Worker
+versioning.
 
 ### temporal task-queue update-build-ids add-new-compatible: Add compatible Build ID
 
-Add a compatible Build ID to a Task Queue's existing version set.
-Provide an existing Build ID and a new Build ID:
+Add a compatible Build ID to a Task Queue's existing version set. Provide an
+existing Build ID and a new Build ID:
 
 ```
 temporal task-queue update-build-ids add-new-compatible \
@@ -1451,8 +1446,8 @@ temporal task-queue update-build-ids add-new-compatible \
     --build-id YourNewBuildId
 ```
 
-The new ID is stored in the set containing the existing ID and becomes the
-new default for that set.
+The new ID is stored in the set containing the existing ID and becomes the new
+default for that set.
 
 This command is limited to Namespaces that support Worker versioning.
 
@@ -1474,7 +1469,7 @@ This command is limited to Namespaces that support Worker versioning.
 ### temporal task-queue update-build-ids add-new-default: Set new default Build ID set
 
 Create a new Task Queue Build ID set, add a Build ID to it, and make it the
-overall Task Queue default. The new set will be incompatible with previous 
+overall Task Queue default. The new set will be incompatible with previous
 sets and versions.
 
 ```
@@ -1496,8 +1491,8 @@ This command is limited to Namespaces that support Worker versioning.
 
 ### temporal task-queue update-build-ids promote-id-in-set: Set Build ID as set default
 
-Establish an existing Build ID as the default in its Task Queue set. New
-tasks compatible with this set will now be dispatched to this ID:
+Establish an existing Build ID as the default in its Task Queue set. New tasks
+compatible with this set will now be dispatched to this ID:
 
 ```
 temporal task-queue update-build-ids promote-id-in-set \
@@ -1518,9 +1513,9 @@ This command is limited to Namespaces that support Worker versioning.
 
 ### temporal task-queue update-build-ids promote-set: Promote Build ID set
 
-Promote a Build ID set to be the default on a Task Queue. Identify the
-set by providing a Build ID within it. If the set is already the default,
-this command has no effect:
+Promote a Build ID set to be the default on a Task Queue. Identify the set by
+providing a Build ID within it. If the set is already the default, this
+command has no effect:
 
 ```
 temporal task-queue update-build-ids promote-set \
@@ -1612,7 +1607,7 @@ temporal workflow list
 
 ### temporal workflow cancel: Send cancellation to Workflow Execution
 
-Canceling a running Workflow Execution records a 
+Canceling a running Workflow Execution records a
 `WorkflowExecutionCancelRequested` event in the Event History. The Service
 schedules a new Command Task, and the Workflow Execution performs any cleanup
 work supported by its implementation.
@@ -1632,8 +1627,8 @@ temporal workflow cancel \
     --query YourQuery
 ```
 
-Visit https://docs.temporal.io/visibility to read more about Search
-Attributes and Query creation.
+Visit https://docs.temporal.io/visibility to read more about Search Attributes
+and Query creation.
 
 #### Options
 
@@ -1641,17 +1636,16 @@ Includes options set for [single workflow or batch](#options-set-single-workflow
 
 ### temporal workflow count: Number of Workflow Executions
 
-Show a count of Workflow Executions, regardless of execution
-state (running, terminated, etc). Use `--query` to select a subset of Workflow
-Executions:
+Show a count of Workflow Executions, regardless of execution state (running,
+terminated, etc). Use `--query` to select a subset of Workflow Executions:
 
 ```
 temporal workflow count \
     --query YourQuery
 ```
 
-Visit https://docs.temporal.io/visibility to read more about Search
-Attributes and Query creation.
+Visit https://docs.temporal.io/visibility to read more about Search Attributes
+and Query creation.
 
 #### Options
 
@@ -1670,8 +1664,8 @@ temporal workflow delete \
 The removal executes asynchronously. If the Execution is Running, the Service
 terminates it before deletion.
 
-Visit https://docs.temporal.io/visibility to read more about Search
-Attributes and Query creation.
+Visit https://docs.temporal.io/visibility to read more about Search Attributes
+and Query creation.
 
 #### Options
 
@@ -1712,9 +1706,9 @@ temporal workflow describe \
 
 ### temporal workflow execute: Start new Workflow Execution
 
-Establish a new Workflow Execution and direct its
-progress to stdout. The command blocks and returns when the Workflow Execution
-completes. If your Workflow requires input, pass valid JSON:
+Establish a new Workflow Execution and direct its progress to stdout. The
+command blocks and returns when the Workflow Execution completes. If your
+Workflow requires input, pass valid JSON:
 
 ```
 temporal workflow execute
@@ -1758,17 +1752,17 @@ temporal workflow fix-history-json \
 
 ### temporal workflow list: Show Workflow Executions
 
-List Workflow Executions. By default, this command returns
-up to 10 closed Workflow Executions. The optional `--query` limits the output
-to Workflows matching a Query:
+List Workflow Executions. By default, this command returns up to 10 closed
+Workflow Executions. The optional `--query` limits the output to Workflows
+matching a Query:
 
 ```
 temporal workflow list \
     --query YourQuery`
 ```
 
-Visit https://docs.temporal.io/visibility to read more about Search
-Attributes and Query creation.
+Visit https://docs.temporal.io/visibility to read more about Search Attributes
+and Query creation.
 
 View a list of archived Workflow Executions:
 
@@ -1788,11 +1782,10 @@ temporal workflow list \
 
 ### temporal workflow query: Retrieve Workflow Execution state
 
-Send a Query to a Workflow Execution by
-Workflow ID to retrieve its state. This synchronous
-operation exposes the internal state of a running Workflow Execution, which
-constantly changes. You can query both running and completed Workflow
-Executions:
+Send a Query to a Workflow Execution by Workflow ID to retrieve its state.
+This synchronous operation exposes the internal state of a running Workflow
+Execution, which constantly changes. You can query both running and completed
+Workflow Executions:
 
 ```
 temporal workflow query \
@@ -1818,8 +1811,8 @@ Includes options set for [workflow reference](#options-set-for-workflow-referenc
 
 ### temporal workflow reset: Move Workflow Execution history point
 
-Reset a Workflow Execution so it can resume from a point in
-its Event History without losing its progress up to that point:
+Reset a Workflow Execution so it can resume from a point in its Event History
+without losing its progress up to that point:
 
 ```
 temporal workflow reset \
@@ -1835,9 +1828,8 @@ temporal workflow reset \
     --type LastContinuedAsNew
 ```
 
-For batch resets, limit your resets to FirstWorkflowTask, LastWorkflowTask,
-or BuildId. Do not use Workflow IDs, run IDs, or event IDs with this
-command.
+For batch resets, limit your resets to FirstWorkflowTask, LastWorkflowTask, or
+BuildId. Do not use Workflow IDs, run IDs, or event IDs with this command.
 
 Visit https://docs.temporal.io/visibility to read more about Search
 Attributes and Query creation.
@@ -1899,10 +1891,9 @@ Includes options set for [workflow reference](#options-set-for-workflow-referenc
 
 ### temporal workflow signal: Send a message to a Workflow Execution
 
-Send an asynchronous notification (Signal) to a running Workflow Execution 
-by its Workflow ID. The Signal is written to the
-History. When you include `--input`, that data is available for the Workflow
-Execution to consume:
+Send an asynchronous notification (Signal) to a running Workflow Execution by
+its Workflow ID. The Signal is written to the History. When you include
+`--input`, that data is available for the Workflow Execution to consume:
 
 ```
 temporal workflow signal \
@@ -1911,8 +1902,8 @@ temporal workflow signal \
 		--input '{"YourInputKey": "YourInputValue"}'
 ```
 
-Visit https://docs.temporal.io/visibility to read more about Search
-Attributes and Query creation.
+Visit https://docs.temporal.io/visibility to read more about Search Attributes
+and Query creation.
 
 #### Options
 
@@ -1943,17 +1934,17 @@ Includes options set for [payload input](#options-set-for-payload-input).
 
 ### temporal workflow stack: Trace a Workflow Execution
 
-Perform a Query on a Workflow Execution using a `__stack_trace`-type
-Query. Display a stack trace of the threads and routines currently in use
-by the Workflow for troubleshooting:
+Perform a Query on a Workflow Execution using a `__stack_trace`-type Query.
+Display a stack trace of the threads and routines currently in use by the
+Workflow for troubleshooting:
 
 ```
 temporal workflow stack \
     --workflow-id YourWorkflowId
 ```
 
-Visit https://docs.temporal.io/visibility to read more about Search
-Attributes and Query creation.
+Visit https://docs.temporal.io/visibility to read more about Search Attributes
+and Query creation.
 
 #### Options
 
@@ -1965,8 +1956,7 @@ Includes options set for [workflow reference](#options-set-for-workflow-referenc
 
 ### temporal workflow start: Initiate a Workflow Execution
 
-Start a new Workflow Execution. Returns the Workflow-
-and Run-IDs.
+Start a new Workflow Execution. Returns the Workflow- and Run-IDs.
 
 ```
 temporal workflow start \
@@ -2064,8 +2054,8 @@ temporal workflow terminate \
 Workflow code cannot see or respond to terminations. To perform clean-up work
 in your Workflow code, use `temporal workflow cancel` instead.
 
-Visit https://docs.temporal.io/visibility to read more about Search
-Attributes and Query creation.
+Visit https://docs.temporal.io/visibility to read more about Search Attributes
+and Query creation.
 
 #### Options
 
@@ -2088,9 +2078,8 @@ Attributes and Query creation.
 
 ### temporal workflow trace: Workflow Execution live progress
 
-Display the progress of a Workflow Execution and its child
-workflows with a real-time trace. This view helps you understand how Workflows
-are proceeding:
+Display the progress of a Workflow Execution and its child workflows with a
+real-time trace. This view helps you understand how Workflows are proceeding:
 
 ```
 temporal workflow trace \
@@ -2121,9 +2110,8 @@ Includes options set for [workflow reference](#options-set-for-workflow-referenc
 
 ### temporal workflow update: Synchronously run a Workflow update handler
 
-Send a message to a Workflow Execution to invoke an
-update handler. An update can change the
-state of a Workflow Execution and return a response:
+Send a message to a Workflow Execution to invoke an update handler. An update
+can change the state of a Workflow Execution and return a response:
 
 ```
 temporal workflow update \
