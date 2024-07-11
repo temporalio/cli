@@ -495,6 +495,10 @@ environment.
 List the environments you have set up on your local computer. Environments are
 stored in "$HOME/.config/temporalio/temporal.yaml".
 
+<!--
+* ignores-missing-env
+-->
+
 ### temporal env set: Set environment properties
 
 Assign a value to a property key and store it to an environment:
@@ -516,6 +520,7 @@ commands.
 
 <!--
 * maximum-args=2
+* ignores-missing-env
 -->
 
 #### Options
