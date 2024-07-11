@@ -33,9 +33,9 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	s.Command.Use = "temporal"
 	s.Command.Short = "Temporal command-line interface and development server"
 	if hasHighlighting {
-		s.Command.Long = "The Temporal CLI manages, monitors, and debugs Temporal apps. It lets you\nrun a local Temporal Service, start Workflow Executions, pass messages to\nrunning Workflows, inspects state, and more.\n\n* Start a local development service:\n      \x1b[1mtemporal server start-dev\x1b[0m\n* View help: pass --help to any command:\n      \x1b[1mtemporal activity complete --help\x1b[0m"
+		s.Command.Long = "The Temporal CLI manages, monitors, and debugs Temporal apps. It lets you run\na local Temporal Service, start Workflow Executions, pass messages to running\nWorkflows, inspects state, and more.\n\n* Start a local development service:\n      \x1b[1mtemporal server start-dev\x1b[0m\n* View help: pass --help to any command:\n      \x1b[1mtemporal activity complete --help\x1b[0m"
 	} else {
-		s.Command.Long = "The Temporal CLI manages, monitors, and debugs Temporal apps. It lets you\nrun a local Temporal Service, start Workflow Executions, pass messages to\nrunning Workflows, inspects state, and more.\n\n* Start a local development service:\n      `temporal server start-dev`\n* View help: pass --help to any command:\n      `temporal activity complete --help`"
+		s.Command.Long = "The Temporal CLI manages, monitors, and debugs Temporal apps. It lets you run\na local Temporal Service, start Workflow Executions, pass messages to running\nWorkflows, inspects state, and more.\n\n* Start a local development service:\n      `temporal server start-dev`\n* View help: pass --help to any command:\n      `temporal activity complete --help`"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalActivityCommand(cctx, &s).Command)
@@ -75,9 +75,9 @@ func NewTemporalActivityCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.Use = "activity"
 	s.Command.Short = "Complete or fail an Activity"
 	if hasHighlighting {
-		s.Command.Long = "Update an Activity's state to as completed or failed. This marks an\nActivity as successfully finished or as having encountered an error:\n\n\x1b[1mtemporal activity complete \\\n    --activity-id=YourActivityId \\\n    --workflow-id=YourWorkflowId \\\n    --result='{\"YourResultKey\": \"YourResultValue\"}'\x1b[0m"
+		s.Command.Long = "Update an Activity's state to as completed or failed. This marks an Activity\nas successfully finished or as having encountered an error:\n\n\x1b[1mtemporal activity complete \\\n    --activity-id=YourActivityId \\\n    --workflow-id=YourWorkflowId \\\n    --result='{\"YourResultKey\": \"YourResultValue\"}'\x1b[0m"
 	} else {
-		s.Command.Long = "Update an Activity's state to as completed or failed. This marks an\nActivity as successfully finished or as having encountered an error:\n\n```\ntemporal activity complete \\\n    --activity-id=YourActivityId \\\n    --workflow-id=YourWorkflowId \\\n    --result='{\"YourResultKey\": \"YourResultValue\"}'\n```"
+		s.Command.Long = "Update an Activity's state to as completed or failed. This marks an Activity\nas successfully finished or as having encountered an error:\n\n```\ntemporal activity complete \\\n    --activity-id=YourActivityId \\\n    --workflow-id=YourWorkflowId \\\n    --result='{\"YourResultKey\": \"YourResultValue\"}'\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalActivityCompleteCommand(cctx, &s).Command)
@@ -102,9 +102,9 @@ func NewTemporalActivityCompleteCommand(cctx *CommandContext, parent *TemporalAc
 	s.Command.Use = "complete [flags]"
 	s.Command.Short = "Complete an Activity"
 	if hasHighlighting {
-		s.Command.Long = "Complete an Activity, marking it as successfully finished. Specify the \nActivity ID and include a JSON result for the returned value:\n\n\x1b[1mtemporal activity complete \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --result '{\"YourResultKey\": \"YourResultVal\"}'\x1b[0m"
+		s.Command.Long = "Complete an Activity, marking it as successfully finished. Specify the\nActivity ID and include a JSON result for the returned value:\n\n\x1b[1mtemporal activity complete \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --result '{\"YourResultKey\": \"YourResultVal\"}'\x1b[0m"
 	} else {
-		s.Command.Long = "Complete an Activity, marking it as successfully finished. Specify the \nActivity ID and include a JSON result for the returned value:\n\n```\ntemporal activity complete \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --result '{\"YourResultKey\": \"YourResultVal\"}'\n```"
+		s.Command.Long = "Complete an Activity, marking it as successfully finished. Specify the\nActivity ID and include a JSON result for the returned value:\n\n```\ntemporal activity complete \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --result '{\"YourResultKey\": \"YourResultVal\"}'\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
@@ -169,9 +169,9 @@ func NewTemporalBatchCommand(cctx *CommandContext, parent *TemporalCommand) *Tem
 	s.Command.Use = "batch"
 	s.Command.Short = "Manage batch jobs"
 	if hasHighlighting {
-		s.Command.Long = "A batch job executes a command on multiple Workflow Executions at once. \nUse an SQL-like \x1b[1m--query\x1b[0m to select which Workflow Executions to include:\n\n\x1b[1mtemporal batch workflow cancel \\\n  --query 'ExecutionStatus = \"Running\" AND WorkflowType=\"YourWorkflow\"' \\\n  --reason \"Testing\"\x1b[0m\n\nThe \x1b[1mbatch\x1b[0m keyword is optional when using a \x1b[1m--query\x1b[0m. The following command\nis functionally identical to the previous one:\n\n\x1b[1mtemporal workflow cancel \\\n  --query 'ExecutionStatus = \"Running\" AND WorkflowType=\"YourWorkflow\"' \\\n  --reason \"Testing\"\x1b[0m"
+		s.Command.Long = "A batch job executes a command on multiple Workflow Executions at once. Use\nan SQL-like \x1b[1m--query\x1b[0m to select which Workflow Executions to include:\n\n\x1b[1mtemporal batch workflow cancel \\\n  --query 'ExecutionStatus = \"Running\" AND WorkflowType=\"YourWorkflow\"' \\\n  --reason \"Testing\"\x1b[0m\n\nThe \x1b[1mbatch\x1b[0m keyword is optional when using a \x1b[1m--query\x1b[0m. The following command\nis functionally identical to the previous one:\n\n\x1b[1mtemporal workflow cancel \\\n  --query 'ExecutionStatus = \"Running\" AND WorkflowType=\"YourWorkflow\"' \\\n  --reason \"Testing\"\x1b[0m\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation."
 	} else {
-		s.Command.Long = "A batch job executes a command on multiple Workflow Executions at once. \nUse an SQL-like `--query` to select which Workflow Executions to include:\n\n```\ntemporal batch workflow cancel \\\n  --query 'ExecutionStatus = \"Running\" AND WorkflowType=\"YourWorkflow\"' \\\n  --reason \"Testing\"\n```\n\nThe `batch` keyword is optional when using a `--query`. The following command\nis functionally identical to the previous one:\n\n```\ntemporal workflow cancel \\\n  --query 'ExecutionStatus = \"Running\" AND WorkflowType=\"YourWorkflow\"' \\\n  --reason \"Testing\"\n```"
+		s.Command.Long = "A batch job executes a command on multiple Workflow Executions at once. Use\nan SQL-like `--query` to select which Workflow Executions to include:\n\n```\ntemporal batch workflow cancel \\\n  --query 'ExecutionStatus = \"Running\" AND WorkflowType=\"YourWorkflow\"' \\\n  --reason \"Testing\"\n```\n\nThe `batch` keyword is optional when using a `--query`. The following command\nis functionally identical to the previous one:\n\n```\ntemporal workflow cancel \\\n  --query 'ExecutionStatus = \"Running\" AND WorkflowType=\"YourWorkflow\"' \\\n  --reason \"Testing\"\n```\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalBatchDescribeCommand(cctx, &s).Command)
@@ -194,9 +194,9 @@ func NewTemporalBatchDescribeCommand(cctx *CommandContext, parent *TemporalBatch
 	s.Command.Use = "describe [flags]"
 	s.Command.Short = "Show batch job progress"
 	if hasHighlighting {
-		s.Command.Long = "Show the progress of an ongoing batch job. Pass a valid job ID to display\nits information:\n\n\x1b[1mtemporal batch describe \\\n    --job-id YourJobId\x1b[0m"
+		s.Command.Long = "Show the progress of an ongoing batch job. Pass a valid job ID to display its\ninformation:\n\n\x1b[1mtemporal batch describe \\\n    --job-id YourJobId\x1b[0m"
 	} else {
-		s.Command.Long = "Show the progress of an ongoing batch job. Pass a valid job ID to display\nits information:\n\n```\ntemporal batch describe \\\n    --job-id YourJobId\n```"
+		s.Command.Long = "Show the progress of an ongoing batch job. Pass a valid job ID to display its\ninformation:\n\n```\ntemporal batch describe \\\n    --job-id YourJobId\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.JobId, "job-id", "", "Batch job ID.")
@@ -222,9 +222,9 @@ func NewTemporalBatchListCommand(cctx *CommandContext, parent *TemporalBatchComm
 	s.Command.Use = "list [flags]"
 	s.Command.Short = "List all batch jobs"
 	if hasHighlighting {
-		s.Command.Long = "Return a list of batch jobs on the Service or within a \nsingle Namespace. For example, list the batch jobs for\n\"YourNamespace\":\n\n\x1b[1mtemporal batch list \\\n    --namespace YourNamespace\x1b[0m"
+		s.Command.Long = "Return a list of batch jobs on the Service or within a single Namespace. For\nexample, list the batch jobs for \"YourNamespace\":\n\n\x1b[1mtemporal batch list \\\n    --namespace YourNamespace\x1b[0m"
 	} else {
-		s.Command.Long = "Return a list of batch jobs on the Service or within a \nsingle Namespace. For example, list the batch jobs for\n\"YourNamespace\":\n\n```\ntemporal batch list \\\n    --namespace YourNamespace\n```"
+		s.Command.Long = "Return a list of batch jobs on the Service or within a single Namespace. For\nexample, list the batch jobs for \"YourNamespace\":\n\n```\ntemporal batch list \\\n    --namespace YourNamespace\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().IntVar(&s.Limit, "limit", 0, "Maximum number of batch jobs to display.")
@@ -250,9 +250,9 @@ func NewTemporalBatchTerminateCommand(cctx *CommandContext, parent *TemporalBatc
 	s.Command.Use = "terminate [flags]"
 	s.Command.Short = "Forcefully end a batch job"
 	if hasHighlighting {
-		s.Command.Long = "Terminate a batch job with the provided job ID. You must provide a reason\nfor the termination. The Service stores this explanation as\nmetadata for the termination event for later reference:\n\n\x1b[1mtemporal batch terminate \\\n    --job-id YourJobId \\\n    --reason YourTerminationReason\x1b[0m"
+		s.Command.Long = "Terminate a batch job with the provided job ID. You must provide a reason for\nthe termination. The Service stores this explanation as metadata for the\ntermination event for later reference:\n\n\x1b[1mtemporal batch terminate \\\n    --job-id YourJobId \\\n    --reason YourTerminationReason\x1b[0m"
 	} else {
-		s.Command.Long = "Terminate a batch job with the provided job ID. You must provide a reason\nfor the termination. The Service stores this explanation as\nmetadata for the termination event for later reference:\n\n```\ntemporal batch terminate \\\n    --job-id YourJobId \\\n    --reason YourTerminationReason\n```"
+		s.Command.Long = "Terminate a batch job with the provided job ID. You must provide a reason for\nthe termination. The Service stores this explanation as metadata for the\ntermination event for later reference:\n\n```\ntemporal batch terminate \\\n    --job-id YourJobId \\\n    --reason YourTerminationReason\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.JobId, "job-id", "", "Job Id to terminate.")
@@ -278,9 +278,9 @@ func NewTemporalEnvCommand(cctx *CommandContext, parent *TemporalCommand) *Tempo
 	s.Command.Use = "env"
 	s.Command.Short = "Manage environments"
 	if hasHighlighting {
-		s.Command.Long = "Environments manage key-value presets, auto-configuring Temporal CLI options\nfor you. You can set up distinct environments like \"dev\" and \"prod\" for \nconvenience:\n\n\x1b[1mtemporal env set \\\n    --env prod \\\n    --key address \\\n    --value production.f45a2.tmprl.cloud:7233\x1b[0m\n\nEach environment is isolated. Changes to \"prod\" presets won't affect \"dev\".\n\nFor easiest use, set a \x1b[1mTEMPORAL_ENV\x1b[0m environment variable in your shell.\nThe Temporal CLI checks for an \x1b[1m--env\x1b[0m option first, then checks the shell.\nIf neither is set, most commands use \x1b[1mdefault\x1b[0m environment presets if\navailable."
+		s.Command.Long = "Environments manage key-value presets, auto-configuring Temporal CLI options\nfor you. You can set up distinct environments like \"dev\" and \"prod\" for\nconvenience:\n\n\x1b[1mtemporal env set \\\n    --env prod \\\n    --key address \\\n    --value production.f45a2.tmprl.cloud:7233\x1b[0m\n\nEach environment is isolated. Changes to \"prod\" presets won't affect \"dev\".\n\nFor easiest use, set a \x1b[1mTEMPORAL_ENV\x1b[0m environment variable in your shell. The\nTemporal CLI checks for an \x1b[1m--env\x1b[0m option first, then checks the shell. If\nneither is set, most commands use \x1b[1mdefault\x1b[0m environment presets if available."
 	} else {
-		s.Command.Long = "Environments manage key-value presets, auto-configuring Temporal CLI options\nfor you. You can set up distinct environments like \"dev\" and \"prod\" for \nconvenience:\n\n```\ntemporal env set \\\n    --env prod \\\n    --key address \\\n    --value production.f45a2.tmprl.cloud:7233\n```\n\nEach environment is isolated. Changes to \"prod\" presets won't affect \"dev\".\n\nFor easiest use, set a `TEMPORAL_ENV` environment variable in your shell.\nThe Temporal CLI checks for an `--env` option first, then checks the shell.\nIf neither is set, most commands use `default` environment presets if\navailable."
+		s.Command.Long = "Environments manage key-value presets, auto-configuring Temporal CLI options\nfor you. You can set up distinct environments like \"dev\" and \"prod\" for\nconvenience:\n\n```\ntemporal env set \\\n    --env prod \\\n    --key address \\\n    --value production.f45a2.tmprl.cloud:7233\n```\n\nEach environment is isolated. Changes to \"prod\" presets won't affect \"dev\".\n\nFor easiest use, set a `TEMPORAL_ENV` environment variable in your shell. The\nTemporal CLI checks for an `--env` option first, then checks the shell. If\nneither is set, most commands use `default` environment presets if available."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalEnvDeleteCommand(cctx, &s).Command)
@@ -303,9 +303,9 @@ func NewTemporalEnvDeleteCommand(cctx *CommandContext, parent *TemporalEnvComman
 	s.Command.Use = "delete [flags]"
 	s.Command.Short = "Delete an environment or environment property"
 	if hasHighlighting {
-		s.Command.Long = "Remove a presets environment entirely _or_ remove a key-value pair within\nan environment. If you don't specify an environment (with \x1b[1m--env\x1b[0m or by\nsetting the \x1b[1mTEMPORAL_ENV\x1b[0m variable), this command updates the default \nenvironment:\n\n\x1b[1mtemporal env delete \\\n    --env YourEnvironment\x1b[0m\n\nor\n\n\x1b[1mtemporal env delete \\\n    --env prod \\\n    --key tls-key-path\x1b[0m"
+		s.Command.Long = "Remove a presets environment entirely _or_ remove a key-value pair within an\nenvironment. If you don't specify an environment (with \x1b[1m--env\x1b[0m or by setting\nthe \x1b[1mTEMPORAL_ENV\x1b[0m variable), this command updates the \"default\" environment:\n\n\x1b[1mtemporal env delete \\\n    --env YourEnvironment\x1b[0m\n\nor\n\n\x1b[1mtemporal env delete \\\n    --env prod \\\n    --key tls-key-path\x1b[0m"
 	} else {
-		s.Command.Long = "Remove a presets environment entirely _or_ remove a key-value pair within\nan environment. If you don't specify an environment (with `--env` or by\nsetting the `TEMPORAL_ENV` variable), this command updates the default \nenvironment:\n\n```\ntemporal env delete \\\n    --env YourEnvironment\n```\n\nor\n\n```\ntemporal env delete \\\n    --env prod \\\n    --key tls-key-path\n```"
+		s.Command.Long = "Remove a presets environment entirely _or_ remove a key-value pair within an\nenvironment. If you don't specify an environment (with `--env` or by setting\nthe `TEMPORAL_ENV` variable), this command updates the \"default\" environment:\n\n```\ntemporal env delete \\\n    --env YourEnvironment\n```\n\nor\n\n```\ntemporal env delete \\\n    --env prod \\\n    --key tls-key-path\n```"
 	}
 	s.Command.Args = cobra.MaximumNArgs(1)
 	s.Command.Flags().StringVarP(&s.Key, "key", "k", "", "Property name.")
@@ -330,9 +330,9 @@ func NewTemporalEnvGetCommand(cctx *CommandContext, parent *TemporalEnvCommand) 
 	s.Command.Use = "get [flags]"
 	s.Command.Short = "Show environment properties"
 	if hasHighlighting {
-		s.Command.Long = "List the properties for a given environment:\n\n\x1b[1mtemporal env get \\\n    --env YourEnvironment\x1b[0m\n\nPrint a single property:\n\n\x1b[1mtemporal env get \\\n    --env YourEnvironment \\\n    --key YourPropertyKey\x1b[0m\n\nIf you don't specify an environment (with \x1b[1m--env\x1b[0m or by setting the \n\x1b[1mTEMPORAL_ENV\x1b[0m variable), this command lists properties of the default \nenvironment."
+		s.Command.Long = "List the properties for a given environment:\n\n\x1b[1mtemporal env get \\\n    --env YourEnvironment\x1b[0m\n\nPrint a single property:\n\n\x1b[1mtemporal env get \\\n    --env YourEnvironment \\\n    --key YourPropertyKey\x1b[0m\n\nIf you don't specify an environment (with \x1b[1m--env\x1b[0m or by setting the\n\x1b[1mTEMPORAL_ENV\x1b[0m variable), this command lists properties of the \"default\"\nenvironment."
 	} else {
-		s.Command.Long = "List the properties for a given environment:\n\n```\ntemporal env get \\\n    --env YourEnvironment\n```\n\nPrint a single property:\n\n```\ntemporal env get \\\n    --env YourEnvironment \\\n    --key YourPropertyKey\n```\n\nIf you don't specify an environment (with `--env` or by setting the \n`TEMPORAL_ENV` variable), this command lists properties of the default \nenvironment."
+		s.Command.Long = "List the properties for a given environment:\n\n```\ntemporal env get \\\n    --env YourEnvironment\n```\n\nPrint a single property:\n\n```\ntemporal env get \\\n    --env YourEnvironment \\\n    --key YourPropertyKey\n```\n\nIf you don't specify an environment (with `--env` or by setting the\n`TEMPORAL_ENV` variable), this command lists properties of the \"default\"\nenvironment."
 	}
 	s.Command.Args = cobra.MaximumNArgs(1)
 	s.Command.Flags().StringVarP(&s.Key, "key", "k", "", "Property name.")
@@ -355,7 +355,7 @@ func NewTemporalEnvListCommand(cctx *CommandContext, parent *TemporalEnvCommand)
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "list [flags]"
 	s.Command.Short = "Show environment names"
-	s.Command.Long = "List the environments you have set up on your local computer. Environments \nare stored in \"$HOME/.config/temporalio/temporal.yaml\"."
+	s.Command.Long = "List the environments you have set up on your local computer. Environments are\nstored in \"$HOME/.config/temporalio/temporal.yaml\"."
 	s.Command.Args = cobra.NoArgs
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -379,9 +379,9 @@ func NewTemporalEnvSetCommand(cctx *CommandContext, parent *TemporalEnvCommand) 
 	s.Command.Use = "set [flags]"
 	s.Command.Short = "Set environment properties"
 	if hasHighlighting {
-		s.Command.Long = "Assign a value to a property key and store it to an environment:\n\n\x1b[1mtemporal env set \\\n    --env environment \\\n    --key property \\\n    --value value\x1b[0m\n\nIf you don't specify an environment (with \x1b[1m--env\x1b[0m or by setting the \n\x1b[1mTEMPORAL_ENV\x1b[0m variable), this command sets properties in the default \nenvironment.\n\nStoring keys with CLI option names lets the CLI automatically set those\noptions for you. This reduces effort and helps avoid typos when issuing\ncommands."
+		s.Command.Long = "Assign a value to a property key and store it to an environment:\n\n\x1b[1mtemporal env set \\\n    --env environment \\\n    --key property \\\n    --value value\x1b[0m\n\nIf you don't specify an environment (with \x1b[1m--env\x1b[0m or by setting the\n\x1b[1mTEMPORAL_ENV\x1b[0m variable), this command sets properties in the \"default\"\nenvironment.\n\nStoring keys with CLI option names lets the CLI automatically set those\noptions for you. This reduces effort and helps avoid typos when issuing\ncommands."
 	} else {
-		s.Command.Long = "Assign a value to a property key and store it to an environment:\n\n```\ntemporal env set \\\n    --env environment \\\n    --key property \\\n    --value value\n```\n\nIf you don't specify an environment (with `--env` or by setting the \n`TEMPORAL_ENV` variable), this command sets properties in the default \nenvironment.\n\nStoring keys with CLI option names lets the CLI automatically set those\noptions for you. This reduces effort and helps avoid typos when issuing\ncommands."
+		s.Command.Long = "Assign a value to a property key and store it to an environment:\n\n```\ntemporal env set \\\n    --env environment \\\n    --key property \\\n    --value value\n```\n\nIf you don't specify an environment (with `--env` or by setting the\n`TEMPORAL_ENV` variable), this command sets properties in the \"default\"\nenvironment.\n\nStoring keys with CLI option names lets the CLI automatically set those\noptions for you. This reduces effort and helps avoid typos when issuing\ncommands."
 	}
 	s.Command.Args = cobra.MaximumNArgs(2)
 	s.Command.Flags().StringVarP(&s.Key, "key", "k", "", "Property name.")
@@ -408,9 +408,9 @@ func NewTemporalOperatorCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.Use = "operator"
 	s.Command.Short = "Manage Temporal deployments"
 	if hasHighlighting {
-		s.Command.Long = "Operator commands manage and fetch information about Namespace, \nSearch Attributes, and Temporal Services:\n\n\x1b[1mtemporal operator [command] [subcommand] [options]\x1b[0m\n\nFor example, to show information about the Temporal Service at the\ndefault address (localhost):\n\n\x1b[1mtemporal operator cluster describe\x1b[0m"
+		s.Command.Long = "Operator commands manage and fetch information about Namespace, Search\nAttributes, and Temporal Services:\n\n\x1b[1mtemporal operator [command] [subcommand] [options]\x1b[0m\n\nFor example, to show information about the Temporal Service at the default\naddress (localhost):\n\n\x1b[1mtemporal operator cluster describe\x1b[0m"
 	} else {
-		s.Command.Long = "Operator commands manage and fetch information about Namespace, \nSearch Attributes, and Temporal Services:\n\n```\ntemporal operator [command] [subcommand] [options]\n```\n\nFor example, to show information about the Temporal Service at the\ndefault address (localhost):\n\n```\ntemporal operator cluster describe\n```"
+		s.Command.Long = "Operator commands manage and fetch information about Namespace, Search\nAttributes, and Temporal Services:\n\n```\ntemporal operator [command] [subcommand] [options]\n```\n\nFor example, to show information about the Temporal Service at the default\naddress (localhost):\n\n```\ntemporal operator cluster describe\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalOperatorClusterCommand(cctx, &s).Command)
@@ -510,9 +510,9 @@ func NewTemporalOperatorClusterListCommand(cctx *CommandContext, parent *Tempora
 	s.Command.Use = "list [flags]"
 	s.Command.Short = "Show Temporal Clusters"
 	if hasHighlighting {
-		s.Command.Long = "Print a list of Temporal Clusters (Services) registered to this\nsystem. Report details include the Cluster's name, ID, address, History Shard\ncount, Failover version, and availability:\n\n\x1b[1mtemporal operator cluster list [--limit max-count]\x1b[0m"
+		s.Command.Long = "Print a list of Temporal Clusters (Services) registered to this system. Report\ndetails include the Cluster's name, ID, address, History Shard count, Failover\nversion, and availability:\n\n\x1b[1mtemporal operator cluster list [--limit max-count]\x1b[0m"
 	} else {
-		s.Command.Long = "Print a list of Temporal Clusters (Services) registered to this\nsystem. Report details include the Cluster's name, ID, address, History Shard\ncount, Failover version, and availability:\n\n```\ntemporal operator cluster list [--limit max-count]\n```"
+		s.Command.Long = "Print a list of Temporal Clusters (Services) registered to this system. Report\ndetails include the Cluster's name, ID, address, History Shard count, Failover\nversion, and availability:\n\n```\ntemporal operator cluster list [--limit max-count]\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().IntVar(&s.Limit, "limit", 0, "Maximum number of Clusters to display.")
@@ -564,9 +564,9 @@ func NewTemporalOperatorClusterSystemCommand(cctx *CommandContext, parent *Tempo
 	s.Command.Use = "system [flags]"
 	s.Command.Short = "Show Temporal Cluster info"
 	if hasHighlighting {
-		s.Command.Long = "Show Temporal Server information for Temporal Clusters (Service):\nServer version, scheduling support, and more. This information helps diagnose\nproblems with the Temporal Server.\n\nThe command defaults to the local Service. Otherwise, use the \n\x1b[1m--frontend-address\x1b[0m option to specify a Cluster (Service) endpoint:\n\n\x1b[1mtemporal operator cluster system \\ \n    --frontend-address \"YourRemoteEndpoint:YourRemotePort\"\x1b[0m"
+		s.Command.Long = "Show Temporal Server information for Temporal Clusters (Service): Server\nversion, scheduling support, and more. This information helps diagnose\nproblems with the Temporal Server.\n\nThe command defaults to the local Service. Otherwise, use the\n\x1b[1m--frontend-address\x1b[0m option to specify a Cluster (Service) endpoint:\n\n\x1b[1mtemporal operator cluster system \\ \n    --frontend-address \"YourRemoteEndpoint:YourRemotePort\"\x1b[0m"
 	} else {
-		s.Command.Long = "Show Temporal Server information for Temporal Clusters (Service):\nServer version, scheduling support, and more. This information helps diagnose\nproblems with the Temporal Server.\n\nThe command defaults to the local Service. Otherwise, use the \n`--frontend-address` option to specify a Cluster (Service) endpoint:\n\n```\ntemporal operator cluster system \\ \n    --frontend-address \"YourRemoteEndpoint:YourRemotePort\"\n```"
+		s.Command.Long = "Show Temporal Server information for Temporal Clusters (Service): Server\nversion, scheduling support, and more. This information helps diagnose\nproblems with the Temporal Server.\n\nThe command defaults to the local Service. Otherwise, use the\n`--frontend-address` option to specify a Cluster (Service) endpoint:\n\n```\ntemporal operator cluster system \\ \n    --frontend-address \"YourRemoteEndpoint:YourRemotePort\"\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -669,7 +669,7 @@ func NewTemporalOperatorNamespaceCreateCommand(cctx *CommandContext, parent *Tem
 	s.Command.Flags().Var(&s.HistoryArchivalState, "history-archival-state", "History archival state. Accepted values: disabled, enabled.")
 	s.Command.Flags().StringVar(&s.HistoryUri, "history-uri", "", "Archive history to this `URI`. Once enabled, can't be changed.")
 	s.Command.Flags().DurationVar(&s.Retention, "retention", 259200000*time.Millisecond, "Time to preserve closed Workflows before deletion.")
-	s.VisibilityArchivalState = NewStringEnum([]string{"disabled", "enabled"}, "disable")
+	s.VisibilityArchivalState = NewStringEnum([]string{"disabled", "enabled"}, "disabled")
 	s.Command.Flags().Var(&s.VisibilityArchivalState, "visibility-archival-state", "Visibility archival state. Accepted values: disabled, enabled.")
 	s.Command.Flags().StringVar(&s.VisibilityUri, "visibility-uri", "", "Archive visibility data to this `URI`. Once enabled, can't be changed.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -691,7 +691,7 @@ func NewTemporalOperatorNamespaceDeleteCommand(cctx *CommandContext, parent *Tem
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "delete [flags] [namespace]"
-	s.Command.Short = "Delete Namespace"
+	s.Command.Short = "Delete a Namespace"
 	if hasHighlighting {
 		s.Command.Long = "Removes a Namespace from the Service.\n\n\x1b[1mtemporal operator namespace delete [options]\x1b[0m\n\nFor example:\n\n\x1b[1mtemporal operator namespace delete \\\n    --namespace YourNamespaceName\x1b[0m"
 	} else {
@@ -780,14 +780,14 @@ func NewTemporalOperatorNamespaceUpdateCommand(cctx *CommandContext, parent *Tem
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "update [flags]"
-	s.Command.Short = "Update Namespace"
+	s.Command.Short = "Update a Namespace"
 	if hasHighlighting {
-		s.Command.Long = "Update a Namespace using properties you specify.\n\n\x1b[1mtemporal operator namespace update [options]\x1b[0m \n\nAssign a Namespace's active Cluster (Service):\n\n\x1b[1mtemporal operator namespace update \\\n    --namespace YourNamespaceName \\\n    --active-cluster NewActiveCluster\x1b[0m\n\nPromote a Namespace for multi-region data replication:\n\n\x1b[1mtemporal operator namespace update \\\n    --namespace YourNamespaceName \\\n    --promote-global\x1b[0m\n\nYou may update archives that were previously enabled or disabled.\nNote: URI values for archival states can't be changed once enabled.\n\n\x1b[1mtemporal operator namespace update \\\n    --namespace YourNamespaceName \\\n    --history-archival-state enabled \\\n    --visibility-archival-state disabled\x1b[0m"
+		s.Command.Long = "Update a Namespace using properties you specify.\n\n\x1b[1mtemporal operator namespace update [options]\x1b[0m \n\nAssign a Namespace's active Cluster (Service):\n\n\x1b[1mtemporal operator namespace update \\\n    --namespace YourNamespaceName \\\n    --active-cluster NewActiveCluster\x1b[0m\n\nPromote a Namespace for multi-region data replication:\n\n\x1b[1mtemporal operator namespace update \\\n    --namespace YourNamespaceName \\\n    --promote-global\x1b[0m\n\nYou may update archives that were previously enabled or disabled. Note: URI\nvalues for archival states can't be changed once enabled.\n\n\x1b[1mtemporal operator namespace update \\\n    --namespace YourNamespaceName \\\n    --history-archival-state enabled \\\n    --visibility-archival-state disabled\x1b[0m"
 	} else {
-		s.Command.Long = "Update a Namespace using properties you specify.\n\n```\ntemporal operator namespace update [options]\n``` \n\nAssign a Namespace's active Cluster (Service):\n\n```\ntemporal operator namespace update \\\n    --namespace YourNamespaceName \\\n    --active-cluster NewActiveCluster\n```\n\nPromote a Namespace for multi-region data replication:\n\n```\ntemporal operator namespace update \\\n    --namespace YourNamespaceName \\\n    --promote-global\n```\n\nYou may update archives that were previously enabled or disabled.\nNote: URI values for archival states can't be changed once enabled.\n\n```\ntemporal operator namespace update \\\n    --namespace YourNamespaceName \\\n    --history-archival-state enabled \\\n    --visibility-archival-state disabled\n```"
+		s.Command.Long = "Update a Namespace using properties you specify.\n\n```\ntemporal operator namespace update [options]\n``` \n\nAssign a Namespace's active Cluster (Service):\n\n```\ntemporal operator namespace update \\\n    --namespace YourNamespaceName \\\n    --active-cluster NewActiveCluster\n```\n\nPromote a Namespace for multi-region data replication:\n\n```\ntemporal operator namespace update \\\n    --namespace YourNamespaceName \\\n    --promote-global\n```\n\nYou may update archives that were previously enabled or disabled. Note: URI\nvalues for archival states can't be changed once enabled.\n\n```\ntemporal operator namespace update \\\n    --namespace YourNamespaceName \\\n    --history-archival-state enabled \\\n    --visibility-archival-state disabled\n```"
 	}
 	s.Command.Args = cobra.MaximumNArgs(1)
-	s.Command.Flags().StringVar(&s.ActiveCluster, "active-cluster", "", "Active Cluster (S) name.")
+	s.Command.Flags().StringVar(&s.ActiveCluster, "active-cluster", "", "Active Cluster (Service) name.")
 	s.Command.Flags().StringArrayVar(&s.Cluster, "cluster", nil, "Cluster names.")
 	s.Command.Flags().StringArrayVar(&s.Data, "data", nil, "Set a 'KEY=\"VALUE\"' string pair in Namespace data. KEY is a string, VALUE is JSON. Can be passed multiple times.")
 	s.Command.Flags().StringVar(&s.Description, "description", "", "Namespace description.")
@@ -797,8 +797,8 @@ func NewTemporalOperatorNamespaceUpdateCommand(cctx *CommandContext, parent *Tem
 	s.Command.Flags().Var(&s.HistoryArchivalState, "history-archival-state", "History archival state. Accepted values: disabled, enabled.")
 	s.Command.Flags().StringVar(&s.HistoryUri, "history-uri", "", "Archive history to this `URI`. Once enabled, can't be changed.")
 	s.Command.Flags().DurationVar(&s.Retention, "retention", 0, "Length of time a closed Workflow is preserved before deletion")
-	s.VisibilityArchivalState = NewStringEnum([]string{"disabled", "enable"}, "")
-	s.Command.Flags().Var(&s.VisibilityArchivalState, "visibility-archival-state", "Visibility archival state. Accepted values: disabled, enable.")
+	s.VisibilityArchivalState = NewStringEnum([]string{"disabled", "enabled"}, "")
+	s.Command.Flags().Var(&s.VisibilityArchivalState, "visibility-archival-state", "Visibility archival state. Accepted values: disabled, enabled.")
 	s.Command.Flags().StringVar(&s.VisibilityUri, "visibility-uri", "", "Archive visibility data to this `URI`. Once enabled, can't be changed.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -819,9 +819,9 @@ func NewTemporalOperatorSearchAttributeCommand(cctx *CommandContext, parent *Tem
 	s.Command.Use = "search-attribute"
 	s.Command.Short = "Search Attribute operations"
 	if hasHighlighting {
-		s.Command.Long = "Create, list, or remove Search Attributes\nfields stored in a Workflow Execution's metadata:\n\n\x1b[1mtemporal operator search-attribute create \\\n    --name YourAttributeName \\\n    --type Keyword\x1b[0m\n\nSupported types include: Text, Keyword, Int, Double, Bool, Datetime, and\nKeywordList."
+		s.Command.Long = "Create, list, or remove Search Attributes fields stored in a Workflow\nExecution's metadata:\n\n\x1b[1mtemporal operator search-attribute create \\\n    --name YourAttributeName \\\n    --type Keyword\x1b[0m\n\nSupported types include: Text, Keyword, Int, Double, Bool, Datetime, and\nKeywordList."
 	} else {
-		s.Command.Long = "Create, list, or remove Search Attributes\nfields stored in a Workflow Execution's metadata:\n\n```\ntemporal operator search-attribute create \\\n    --name YourAttributeName \\\n    --type Keyword\n```\n\nSupported types include: Text, Keyword, Int, Double, Bool, Datetime, and\nKeywordList."
+		s.Command.Long = "Create, list, or remove Search Attributes fields stored in a Workflow\nExecution's metadata:\n\n```\ntemporal operator search-attribute create \\\n    --name YourAttributeName \\\n    --type Keyword\n```\n\nSupported types include: Text, Keyword, Int, Double, Bool, Datetime, and\nKeywordList."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalOperatorSearchAttributeCreateCommand(cctx, &s).Command)
@@ -849,7 +849,8 @@ func NewTemporalOperatorSearchAttributeCreateCommand(cctx *CommandContext, paren
 		s.Command.Long = "Add one or more custom Search Attributes:\n\n```\ntemporal operator search-attribute create \\\n    --name YourAttributeName \\\n    --type Keyword\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringArrayVar(&s.Name, "name", nil, "Search Attribute name. Required")
+	s.Command.Flags().StringArrayVar(&s.Name, "name", nil, "Search Attribute name.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
 	s.Command.Flags().StringArrayVar(&s.Type, "type", nil, "Search Attribute type. Accepted values: Text, Keyword, Int, Double, Bool, Datetime, KeywordList.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "type")
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -872,9 +873,9 @@ func NewTemporalOperatorSearchAttributeListCommand(cctx *CommandContext, parent 
 	s.Command.Use = "list [flags]"
 	s.Command.Short = "List Search Attributes"
 	if hasHighlighting {
-		s.Command.Long = "Display a list of active Search Attributes that can be \nassigned or used with Workflow Queries. You can manage this list and add\nattributes as needed:\n\n\x1b[1mtemporal operator search-attribute list\x1b[0m"
+		s.Command.Long = "Display a list of active Search Attributes that can be assigned or used with\nWorkflow Queries. You can manage this list and add attributes as needed:\n\n\x1b[1mtemporal operator search-attribute list\x1b[0m"
 	} else {
-		s.Command.Long = "Display a list of active Search Attributes that can be \nassigned or used with Workflow Queries. You can manage this list and add\nattributes as needed:\n\n```\ntemporal operator search-attribute list\n```"
+		s.Command.Long = "Display a list of active Search Attributes that can be assigned or used with\nWorkflow Queries. You can manage this list and add attributes as needed:\n\n```\ntemporal operator search-attribute list\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -899,9 +900,9 @@ func NewTemporalOperatorSearchAttributeRemoveCommand(cctx *CommandContext, paren
 	s.Command.Use = "remove [flags]"
 	s.Command.Short = "Remove custom Search Attributes"
 	if hasHighlighting {
-		s.Command.Long = "Remove custom Search Attributes from the options that can be\nassigned or used with Workflow Queries.\n\n\x1b[1mtemporal operator search-attribute remove \\\n    --name YourAttributeName\x1b[0m\n\nRemove attributes without confirmation:\n\n\x1b[1mtemporal operator search-attribute remove \\\n    --name YourAttributeName \\\n    --yes\x1b[0m"
+		s.Command.Long = "Remove custom Search Attributes from the options that can be assigned or used\nwith Workflow Queries.\n\n\x1b[1mtemporal operator search-attribute remove \\\n    --name YourAttributeName\x1b[0m\n\nRemove attributes without confirmation:\n\n\x1b[1mtemporal operator search-attribute remove \\\n    --name YourAttributeName \\\n    --yes\x1b[0m"
 	} else {
-		s.Command.Long = "Remove custom Search Attributes from the options that can be\nassigned or used with Workflow Queries.\n\n```\ntemporal operator search-attribute remove \\\n    --name YourAttributeName\n```\n\nRemove attributes without confirmation:\n\n```\ntemporal operator search-attribute remove \\\n    --name YourAttributeName \\\n    --yes\n```"
+		s.Command.Long = "Remove custom Search Attributes from the options that can be assigned or used\nwith Workflow Queries.\n\n```\ntemporal operator search-attribute remove \\\n    --name YourAttributeName\n```\n\nRemove attributes without confirmation:\n\n```\ntemporal operator search-attribute remove \\\n    --name YourAttributeName \\\n    --yes\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringArrayVar(&s.Name, "name", nil, "Search Attribute name.")
@@ -927,9 +928,9 @@ func NewTemporalScheduleCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.Use = "schedule"
 	s.Command.Short = "Perform operations on Schedules"
 	if hasHighlighting {
-		s.Command.Long = "Create, use, and update Schedules that allow \nWorkflow Executions to be created at specified times:\n\n\x1b[1mtemporal schedule [commands] [options]\x1b[0m\n\nFor example:\n\n\x1b[1mtemporal schedule describe \\\n    --schedule-id \"YourScheduleId\"\x1b[0m"
+		s.Command.Long = "Create, use, and update Schedules that allow Workflow Executions to be created\nat specified times:\n\n\x1b[1mtemporal schedule [commands] [options]\x1b[0m\n\nFor example:\n\n\x1b[1mtemporal schedule describe \\\n    --schedule-id \"YourScheduleId\"\x1b[0m"
 	} else {
-		s.Command.Long = "Create, use, and update Schedules that allow \nWorkflow Executions to be created at specified times:\n\n```\ntemporal schedule [commands] [options]\n```\n\nFor example:\n\n```\ntemporal schedule describe \\\n    --schedule-id \"YourScheduleId\"\n```"
+		s.Command.Long = "Create, use, and update Schedules that allow Workflow Executions to be created\nat specified times:\n\n```\ntemporal schedule [commands] [options]\n```\n\nFor example:\n\n```\ntemporal schedule describe \\\n    --schedule-id \"YourScheduleId\"\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalScheduleBackfillCommand(cctx, &s).Command)
@@ -978,9 +979,9 @@ func NewTemporalScheduleBackfillCommand(cctx *CommandContext, parent *TemporalSc
 	s.Command.Use = "backfill [flags]"
 	s.Command.Short = "Backfill past actions"
 	if hasHighlighting {
-		s.Command.Long = "Batch-execute actions that would have run during a specified time interval.\nUse this command to fill in Workflow Runs from when a Schedule\nwas paused, before a Schedule was created, from the future, or to re-process a\npreviously executed interval.\n\nBackfills require a Schedule ID and the time period covered by the request.\nIt's best to use the \x1b[1mBufferAll\x1b[0m or \x1b[1mAllowAll\x1b[0m policies to avoid conflicts\nand ensure no Workflow Executions are\nskipped.\n\nFor example:\n\n\x1b[1m  temporal schedule backfill \\\n    --schedule-id \"YourScheduleId\" \\\n    --start-time \"2022-05-01T00:00:00Z\" \\\n    --end-time \"2022-05-31T23:59:59Z\" \\\n    --overlap-policy BufferAll\x1b[0m\n\nThe policies include:\n\n* **AllowAll**: Allow unlimited concurrent Workflow Executions. This\n  significantly speeds up the backfilling process on systems that support\n  concurrency. Ensure running Workflow Executions do not interfere with each\n  other.\n* **BufferAll**: Buffer all incoming Workflow Executions while waiting for the\n  running Workflow Execution to complete.\n* **Skip**: If a previous Workflow Execution is still running, discard new\n  Workflow Executions.\n* **BufferOne**: Same as 'Skip' but buffer a single Workflow Execution to be\n  run after the previous Execution completes. Discard other Workflow Executions.\n* **CancelOther**: Cancel the running Workflow Execution and replace it with\n  the incoming new Workflow Execution.\n* **TerminateOther**: Terminate the running Workflow Execution and replace\n  it with the incoming new Workflow Execution."
+		s.Command.Long = "Batch-execute actions that would have run during a specified time interval.\nUse this command to fill in Workflow runs from when a Schedule was paused,\nbefore a Schedule was created, from the future, or to re-process a previously\nexecuted interval.\n\nBackfills require a Schedule ID and the time period covered by the request.\nIt's best to use the \x1b[1mBufferAll\x1b[0m or \x1b[1mAllowAll\x1b[0m policies to avoid conflicts\nand ensure no Workflow Executions are skipped.\n\nFor example:\n\n\x1b[1m  temporal schedule backfill \\\n    --schedule-id \"YourScheduleId\" \\\n    --start-time \"2022-05-01T00:00:00Z\" \\\n    --end-time \"2022-05-31T23:59:59Z\" \\\n    --overlap-policy BufferAll\x1b[0m\n\nThe policies include:\n\n* **AllowAll**: Allow unlimited concurrent Workflow Executions. This\n  significantly speeds up the backfilling process on systems that support\n  concurrency. Ensure running Workflow Executions do not interfere with\n  each other.\n* **BufferAll**: Buffer all incoming Workflow Executions while waiting for\n  the running Workflow Execution to complete.\n* **Skip**: If a previous Workflow Execution is still running, discard new\n  Workflow Executions.\n* **BufferOne**: Same as 'Skip' but buffer a single Workflow Execution to be\n  run after the previous Execution completes. Discard other Workflow\n  Executions.\n* **CancelOther**: Cancel the running Workflow Execution and replace it with\n  the incoming new Workflow Execution.\n* **TerminateOther**: Terminate the running Workflow Execution and replace\n  it with the incoming new Workflow Execution."
 	} else {
-		s.Command.Long = "Batch-execute actions that would have run during a specified time interval.\nUse this command to fill in Workflow Runs from when a Schedule\nwas paused, before a Schedule was created, from the future, or to re-process a\npreviously executed interval.\n\nBackfills require a Schedule ID and the time period covered by the request.\nIt's best to use the `BufferAll` or `AllowAll` policies to avoid conflicts\nand ensure no Workflow Executions are\nskipped.\n\nFor example:\n\n```\n  temporal schedule backfill \\\n    --schedule-id \"YourScheduleId\" \\\n    --start-time \"2022-05-01T00:00:00Z\" \\\n    --end-time \"2022-05-31T23:59:59Z\" \\\n    --overlap-policy BufferAll\n```\n\nThe policies include:\n\n* **AllowAll**: Allow unlimited concurrent Workflow Executions. This\n  significantly speeds up the backfilling process on systems that support\n  concurrency. Ensure running Workflow Executions do not interfere with each\n  other.\n* **BufferAll**: Buffer all incoming Workflow Executions while waiting for the\n  running Workflow Execution to complete.\n* **Skip**: If a previous Workflow Execution is still running, discard new\n  Workflow Executions.\n* **BufferOne**: Same as 'Skip' but buffer a single Workflow Execution to be\n  run after the previous Execution completes. Discard other Workflow Executions.\n* **CancelOther**: Cancel the running Workflow Execution and replace it with\n  the incoming new Workflow Execution.\n* **TerminateOther**: Terminate the running Workflow Execution and replace\n  it with the incoming new Workflow Execution."
+		s.Command.Long = "Batch-execute actions that would have run during a specified time interval.\nUse this command to fill in Workflow runs from when a Schedule was paused,\nbefore a Schedule was created, from the future, or to re-process a previously\nexecuted interval.\n\nBackfills require a Schedule ID and the time period covered by the request.\nIt's best to use the `BufferAll` or `AllowAll` policies to avoid conflicts\nand ensure no Workflow Executions are skipped.\n\nFor example:\n\n```\n  temporal schedule backfill \\\n    --schedule-id \"YourScheduleId\" \\\n    --start-time \"2022-05-01T00:00:00Z\" \\\n    --end-time \"2022-05-31T23:59:59Z\" \\\n    --overlap-policy BufferAll\n```\n\nThe policies include:\n\n* **AllowAll**: Allow unlimited concurrent Workflow Executions. This\n  significantly speeds up the backfilling process on systems that support\n  concurrency. Ensure running Workflow Executions do not interfere with\n  each other.\n* **BufferAll**: Buffer all incoming Workflow Executions while waiting for\n  the running Workflow Execution to complete.\n* **Skip**: If a previous Workflow Execution is still running, discard new\n  Workflow Executions.\n* **BufferOne**: Same as 'Skip' but buffer a single Workflow Execution to be\n  run after the previous Execution completes. Discard other Workflow\n  Executions.\n* **CancelOther**: Cancel the running Workflow Execution and replace it with\n  the incoming new Workflow Execution.\n* **TerminateOther**: Terminate the running Workflow Execution and replace\n  it with the incoming new Workflow Execution."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.OverlapPolicyOptions.buildFlags(cctx, s.Command.Flags())
@@ -1015,11 +1016,11 @@ type ScheduleConfigurationOptions struct {
 }
 
 func (v *ScheduleConfigurationOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
-	f.StringArrayVar(&v.Calendar, "calendar", nil, "[Calendar specification](https://docs.temporal.io/workflows#spec) in JSON. For example: `{\"dayOfWeek\":\"Fri\",\"hour\":\"17\",\"minute\":\"5\"}`.")
+	f.StringArrayVar(&v.Calendar, "calendar", nil, "Calendar specification in JSON. For example: `{\"dayOfWeek\":\"Fri\",\"hour\":\"17\",\"minute\":\"5\"}`.")
 	f.DurationVar(&v.CatchupWindow, "catchup-window", 0, "Maximum catch-up time for when the Service is unavailable.")
-	f.StringArrayVar(&v.Cron, "cron", nil, "Calendar specification in [cron string format](https://docs.temporal.io/workflows#cron-schedules). For example: `\"30 12 * * Fri\"`.")
+	f.StringArrayVar(&v.Cron, "cron", nil, "Calendar specification in cron string format. For example: `\"30 12 * * Fri\"`.")
 	f.Var(&v.EndTime, "end-time", "Schedule end time")
-	f.StringArrayVar(&v.Interval, "interval", nil, "[Interval duration](https://docs.temporal.io/workflows#spec). For example, 90m, or 60m/15m to include phase offset.")
+	f.StringArrayVar(&v.Interval, "interval", nil, "Interval duration. For example, 90m, or 60m/15m to include phase offset.")
 	f.DurationVar(&v.Jitter, "jitter", 0, "Max difference in time from the specification. Vary the start time randomly within this amount.")
 	f.StringVar(&v.Notes, "notes", "", "Initial notes field value.")
 	f.BoolVar(&v.Paused, "paused", false, "Pause the Schedule immediately on creation.")
@@ -1048,9 +1049,9 @@ func NewTemporalScheduleCreateCommand(cctx *CommandContext, parent *TemporalSche
 	s.Command.Use = "create [flags]"
 	s.Command.Short = "Create a new Schedule"
 	if hasHighlighting {
-		s.Command.Long = "Create a new Schedule on the Temporal Service. A Schedule automatically\nstarts new Workflow Executions at the times you specify.\n\nFor example:\n\n\x1b[1m  temporal schedule create \\\n    --schedule-id \"YourScheduleId\" \\\n    --calendar '{\"dayOfWeek\":\"Fri\",\"hour\":\"3\",\"minute\":\"30\"}' \\\n    --workflow-id \"YourBaseWorkflowId\" \\\n    --task-queue \"YourTaskQueue\" \\\n    --workflow-type \"YourWorkflowType\"\x1b[0m\n\nSchedules support any combination of \x1b[1m--calendar\x1b[0m, \x1b[1m--interval\x1b[0m, and \x1b[1m--cron\x1b[0m:\n\n* Shorthand \x1b[1m--interval\x1b[0m strings.\n  For example: 45m (every 45 minutes) or 6h/5h (every 6 hours, at the top of\n  the 5th hour).\n* JSON \x1b[1m--calendar\x1b[0m, as in the\n  preceding example.\n* Unix-style \x1b[1m--cron\x1b[0m strings and robfig\n  declarations (@daily/@weekly/@every X/etc). For example, every Friday at \n  12:30 PM: \x1b[1m30 12 * * Fri\x1b[0m."
+		s.Command.Long = "Create a new Schedule on the Temporal Service. A Schedule automatically starts\nnew Workflow Executions at the times you specify.\n\nFor example:\n\n\x1b[1m  temporal schedule create \\\n    --schedule-id \"YourScheduleId\" \\\n    --calendar '{\"dayOfWeek\":\"Fri\",\"hour\":\"3\",\"minute\":\"30\"}' \\\n    --workflow-id \"YourBaseWorkflowId\" \\\n    --task-queue \"YourTaskQueue\" \\\n    --workflow-type \"YourWorkflowType\"\x1b[0m\n\nSchedules support any combination of \x1b[1m--calendar\x1b[0m, \x1b[1m--interval\x1b[0m, and \x1b[1m--cron\x1b[0m:\n\n* Shorthand \x1b[1m--interval\x1b[0m strings.\n  For example: 45m (every 45 minutes) or 6h/5h (every 6 hours, at the top of\n  the 5th hour).\n* JSON \x1b[1m--calendar\x1b[0m, as in the preceding example.\n* Unix-style \x1b[1m--cron\x1b[0m strings and robfig declarations \n  (@daily/@weekly/@every X/etc).\n  For example, every Friday at 12:30 PM: \x1b[1m30 12 * * Fri\x1b[0m."
 	} else {
-		s.Command.Long = "Create a new Schedule on the Temporal Service. A Schedule automatically\nstarts new Workflow Executions at the times you specify.\n\nFor example:\n\n```\n  temporal schedule create \\\n    --schedule-id \"YourScheduleId\" \\\n    --calendar '{\"dayOfWeek\":\"Fri\",\"hour\":\"3\",\"minute\":\"30\"}' \\\n    --workflow-id \"YourBaseWorkflowId\" \\\n    --task-queue \"YourTaskQueue\" \\\n    --workflow-type \"YourWorkflowType\"\n```\n\nSchedules support any combination of `--calendar`, `--interval`, and `--cron`:\n\n* Shorthand `--interval` strings.\n  For example: 45m (every 45 minutes) or 6h/5h (every 6 hours, at the top of\n  the 5th hour).\n* JSON `--calendar`, as in the\n  preceding example.\n* Unix-style `--cron` strings and robfig\n  declarations (@daily/@weekly/@every X/etc). For example, every Friday at \n  12:30 PM: `30 12 * * Fri`."
+		s.Command.Long = "Create a new Schedule on the Temporal Service. A Schedule automatically starts\nnew Workflow Executions at the times you specify.\n\nFor example:\n\n```\n  temporal schedule create \\\n    --schedule-id \"YourScheduleId\" \\\n    --calendar '{\"dayOfWeek\":\"Fri\",\"hour\":\"3\",\"minute\":\"30\"}' \\\n    --workflow-id \"YourBaseWorkflowId\" \\\n    --task-queue \"YourTaskQueue\" \\\n    --workflow-type \"YourWorkflowType\"\n```\n\nSchedules support any combination of `--calendar`, `--interval`, and `--cron`:\n\n* Shorthand `--interval` strings.\n  For example: 45m (every 45 minutes) or 6h/5h (every 6 hours, at the top of\n  the 5th hour).\n* JSON `--calendar`, as in the preceding example.\n* Unix-style `--cron` strings and robfig declarations \n  (@daily/@weekly/@every X/etc).\n  For example, every Friday at 12:30 PM: `30 12 * * Fri`."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.ScheduleConfigurationOptions.buildFlags(cctx, s.Command.Flags())
@@ -1079,9 +1080,9 @@ func NewTemporalScheduleDeleteCommand(cctx *CommandContext, parent *TemporalSche
 	s.Command.Use = "delete [flags]"
 	s.Command.Short = "Remove a Schedule"
 	if hasHighlighting {
-		s.Command.Long = "Deletes a Schedule on the front end Service:\n\n\x1b[1mtemporal schedule delete \\\n    --schedule-id YourScheduleId\x1b[0m\n\nRemoving a Schedule won't affect the Workflow Executions it started\nthat are still running. To cancel or terminate these Workflow Executions, use \n\x1b[1mtemporal workflow delete\x1b[0m with the \x1b[1mTemporalScheduledById\x1b[0m Search Attribute instead."
+		s.Command.Long = "Deletes a Schedule on the front end Service:\n\n\x1b[1mtemporal schedule delete \\\n    --schedule-id YourScheduleId\x1b[0m\n\nRemoving a Schedule won't affect the Workflow Executions it started that are\nstill running. To cancel or terminate these Workflow Executions, use \x1b[1mtemporal\nworkflow delete\x1b[0m with the \x1b[1mTemporalScheduledById\x1b[0m Search Attribute instead."
 	} else {
-		s.Command.Long = "Deletes a Schedule on the front end Service:\n\n```\ntemporal schedule delete \\\n    --schedule-id YourScheduleId\n```\n\nRemoving a Schedule won't affect the Workflow Executions it started\nthat are still running. To cancel or terminate these Workflow Executions, use \n`temporal workflow delete` with the `TemporalScheduledById` Search Attribute instead."
+		s.Command.Long = "Deletes a Schedule on the front end Service:\n\n```\ntemporal schedule delete \\\n    --schedule-id YourScheduleId\n```\n\nRemoving a Schedule won't affect the Workflow Executions it started that are\nstill running. To cancel or terminate these Workflow Executions, use `temporal\nworkflow delete` with the `TemporalScheduledById` Search Attribute instead."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.ScheduleIdOptions.buildFlags(cctx, s.Command.Flags())
@@ -1104,11 +1105,11 @@ func NewTemporalScheduleDescribeCommand(cctx *CommandContext, parent *TemporalSc
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "describe [flags]"
-	s.Command.Short = "Get Schedule configuration and current state"
+	s.Command.Short = "Display Schedule state"
 	if hasHighlighting {
-		s.Command.Long = "Show a Schedule configuration, including information about past,\ncurrent, and future Workflow runs:\n\n\x1b[1mtemporal schedule describe \\\n    --schedule-id YourScheduleId\x1b[0m"
+		s.Command.Long = "Show a Schedule configuration, including information about past, current, and\nfuture Workflow runs:\n\n\x1b[1mtemporal schedule describe \\\n    --schedule-id YourScheduleId\x1b[0m"
 	} else {
-		s.Command.Long = "Show a Schedule configuration, including information about past,\ncurrent, and future Workflow runs:\n\n```\ntemporal schedule describe \\\n    --schedule-id YourScheduleId\n```"
+		s.Command.Long = "Show a Schedule configuration, including information about past, current, and\nfuture Workflow runs:\n\n```\ntemporal schedule describe \\\n    --schedule-id YourScheduleId\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.ScheduleIdOptions.buildFlags(cctx, s.Command.Flags())
@@ -1165,14 +1166,14 @@ func NewTemporalScheduleToggleCommand(cctx *CommandContext, parent *TemporalSche
 	s.Command.Use = "toggle [flags]"
 	s.Command.Short = "Pause or unpause a Schedule"
 	if hasHighlighting {
-		s.Command.Long = "Pause or unpause a Schedule by passing a flag with your\ndesired state:\n\n\x1b[1mtemporal schedule toggle \\\n    --schedule-id \"YourScheduleId\" \\\n    --pause \\\n    --reason \"YourReason\"\x1b[0m\n\nand\n\n\x1b[1mtemporal schedule toggle\n    --schedule-id \"YourScheduleId\" \\\n    --unpause \\\n    --reason \"YourReason\"\x1b[0m\n\nThe \x1b[1m--reason\x1b[0m text updates the Schedule's \x1b[1mnotes\x1b[0m field for operations \ncommunication. It defaults to \"(no reason provided)\" if omitted. This field\nis also visible on the Service Web UI."
+		s.Command.Long = "Pause or unpause a Schedule by passing a flag with your desired state:\n\n\x1b[1mtemporal schedule toggle \\\n    --schedule-id \"YourScheduleId\" \\\n    --pause \\\n    --reason \"YourReason\"\x1b[0m\n\nand\n\n\x1b[1mtemporal schedule toggle\n    --schedule-id \"YourScheduleId\" \\\n    --unpause \\\n    --reason \"YourReason\"\x1b[0m\n\nThe \x1b[1m--reason\x1b[0m text updates the Schedule's \x1b[1mnotes\x1b[0m field for operations\ncommunication. It defaults to \"(no reason provided)\" if omitted. This field is\nalso visible on the Service Web UI."
 	} else {
-		s.Command.Long = "Pause or unpause a Schedule by passing a flag with your\ndesired state:\n\n```\ntemporal schedule toggle \\\n    --schedule-id \"YourScheduleId\" \\\n    --pause \\\n    --reason \"YourReason\"\n```\n\nand\n\n```\ntemporal schedule toggle\n    --schedule-id \"YourScheduleId\" \\\n    --unpause \\\n    --reason \"YourReason\"\n```\n\nThe `--reason` text updates the Schedule's `notes` field for operations \ncommunication. It defaults to \"(no reason provided)\" if omitted. This field\nis also visible on the Service Web UI."
+		s.Command.Long = "Pause or unpause a Schedule by passing a flag with your desired state:\n\n```\ntemporal schedule toggle \\\n    --schedule-id \"YourScheduleId\" \\\n    --pause \\\n    --reason \"YourReason\"\n```\n\nand\n\n```\ntemporal schedule toggle\n    --schedule-id \"YourScheduleId\" \\\n    --unpause \\\n    --reason \"YourReason\"\n```\n\nThe `--reason` text updates the Schedule's `notes` field for operations\ncommunication. It defaults to \"(no reason provided)\" if omitted. This field is\nalso visible on the Service Web UI."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.ScheduleIdOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Flags().BoolVar(&s.Pause, "pause", false, "Pause the schedule.")
-	s.Command.Flags().StringVar(&s.Reason, "reason", "\"(no reason provided)", "Reason for pausing or unpausing a Schedule.")
+	s.Command.Flags().StringVar(&s.Reason, "reason", "\"(no reason provided)\"", "Reason for pausing or unpausing a Schedule.")
 	s.Command.Flags().BoolVar(&s.Unpause, "unpause", false, "Unpause the schedule.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -1228,9 +1229,9 @@ func NewTemporalScheduleUpdateCommand(cctx *CommandContext, parent *TemporalSche
 	s.Command.Use = "update [flags]"
 	s.Command.Short = "Update Schedule details"
 	if hasHighlighting {
-		s.Command.Long = "Update an existing Schedule with new configuration details, including\nspec, action, and policies:\n\n\x1b[1mtemporal schedule update \ntemporal schedule update \\  \n --schedule-id \"YourScheduleId\"   \n --workflow-type \"NewWorkflowType\"\x1b[0m"
+		s.Command.Long = "Update an existing Schedule with new configuration details, including spec,\naction, and policies:\n\n\x1b[1mtemporal schedule update \ntemporal schedule update \\  \n --schedule-id \"YourScheduleId\"   \n --workflow-type \"NewWorkflowType\"\x1b[0m"
 	} else {
-		s.Command.Long = "Update an existing Schedule with new configuration details, including\nspec, action, and policies:\n\n```\ntemporal schedule update \ntemporal schedule update \\  \n --schedule-id \"YourScheduleId\"   \n --workflow-type \"NewWorkflowType\"\n```"
+		s.Command.Long = "Update an existing Schedule with new configuration details, including spec,\naction, and policies:\n\n```\ntemporal schedule update \ntemporal schedule update \\  \n --schedule-id \"YourScheduleId\"   \n --workflow-type \"NewWorkflowType\"\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.ScheduleConfigurationOptions.buildFlags(cctx, s.Command.Flags())
@@ -1257,9 +1258,9 @@ func NewTemporalServerCommand(cctx *CommandContext, parent *TemporalCommand) *Te
 	s.Command.Use = "server"
 	s.Command.Short = "Run Temporal Server"
 	if hasHighlighting {
-		s.Command.Long = "Run a development Temporal Server on your local system.\nView the Web UI for the default configuration at http://localhost:8233:\n\n\x1b[1mtemporal server start-dev\x1b[0m\n\nAdd persistence for Workflow Executions across runs:\n\n\x1b[1mtemporal server start-dev \\\n    --db-filename path-to-your-local-persistent-store\x1b[0m\n\nSet the port from the front-end gRPC Service (7233 default):\n\n\x1b[1mtemporal server start-dev \\\n    --port 7234 \\\n    --ui-port 8234 \\\n    --metrics-port 57271\x1b[0m\n\nUse a custom port for the Web UI. The default is the gRPC port (7233 default)\nplus 1000 (8233):\n\n\x1b[1mtemporal server start-dev \\\n    --ui-port 3000\x1b[0m"
+		s.Command.Long = "Run a development Temporal Server on your local system. View the Web UI for\nthe default configuration at http://localhost:8233:\n\n\x1b[1mtemporal server start-dev\x1b[0m\n\nAdd persistence for Workflow Executions across runs:\n\n\x1b[1mtemporal server start-dev \\\n    --db-filename path-to-your-local-persistent-store\x1b[0m\n\nSet the port from the front-end gRPC Service (7233 default):\n\n\x1b[1mtemporal server start-dev \\\n    --port 7234 \\\n    --ui-port 8234 \\\n    --metrics-port 57271\x1b[0m\n\nUse a custom port for the Web UI. The default is the gRPC port (7233 default)\nplus 1000 (8233):\n\n\x1b[1mtemporal server start-dev \\\n    --ui-port 3000\x1b[0m"
 	} else {
-		s.Command.Long = "Run a development Temporal Server on your local system.\nView the Web UI for the default configuration at http://localhost:8233:\n\n```\ntemporal server start-dev\n```\n\nAdd persistence for Workflow Executions across runs:\n\n```\ntemporal server start-dev \\\n    --db-filename path-to-your-local-persistent-store\n```\n\nSet the port from the front-end gRPC Service (7233 default):\n\n```\ntemporal server start-dev \\\n    --port 7234 \\\n    --ui-port 8234 \\\n    --metrics-port 57271\n```\n\nUse a custom port for the Web UI. The default is the gRPC port (7233 default)\nplus 1000 (8233):\n\n```\ntemporal server start-dev \\\n    --ui-port 3000\n```"
+		s.Command.Long = "Run a development Temporal Server on your local system. View the Web UI for\nthe default configuration at http://localhost:8233:\n\n```\ntemporal server start-dev\n```\n\nAdd persistence for Workflow Executions across runs:\n\n```\ntemporal server start-dev \\\n    --db-filename path-to-your-local-persistent-store\n```\n\nSet the port from the front-end gRPC Service (7233 default):\n\n```\ntemporal server start-dev \\\n    --port 7234 \\\n    --ui-port 8234 \\\n    --metrics-port 57271\n```\n\nUse a custom port for the Web UI. The default is the gRPC port (7233 default)\nplus 1000 (8233):\n\n```\ntemporal server start-dev \\\n    --ui-port 3000\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalServerStartDevCommand(cctx, &s).Command)
@@ -1292,9 +1293,9 @@ func NewTemporalServerStartDevCommand(cctx *CommandContext, parent *TemporalServ
 	s.Command.Use = "start-dev [flags]"
 	s.Command.Short = "Start Temporal development server"
 	if hasHighlighting {
-		s.Command.Long = "Run a development Temporal Server on your local system.\nView the Web UI for the default configuration at http://localhost:8233:\n\n\x1b[1mtemporal server start-dev\x1b[0m\n\nAdd persistence for Workflow Executions across runs:\n\n\x1b[1mtemporal server start-dev \\\n    --db-filename path-to-your-local-persistent-store\x1b[0m\n\nSet the port from the front-end gRPC Service (7233 default):\n\n\x1b[1mtemporal server start-dev \\\n    --port 7000\x1b[0m\n\nUse a custom port for the Web UI. The default is the gRPC port (7233 default)\nplus 1000 (8233):\n\n\x1b[1mtemporal server start-dev \\\n    --ui-port 3000\x1b[0m"
+		s.Command.Long = "Run a development Temporal Server on your local system. View the Web UI for\nthe default configuration at http://localhost:8233:\n\n\x1b[1mtemporal server start-dev\x1b[0m\n\nAdd persistence for Workflow Executions across runs:\n\n\x1b[1mtemporal server start-dev \\\n    --db-filename path-to-your-local-persistent-store\x1b[0m\n\nSet the port from the front-end gRPC Service (7233 default):\n\n\x1b[1mtemporal server start-dev \\\n    --port 7000\x1b[0m\n\nUse a custom port for the Web UI. The default is the gRPC port (7233 default)\nplus 1000 (8233):\n\n\x1b[1mtemporal server start-dev \\\n    --ui-port 3000\x1b[0m"
 	} else {
-		s.Command.Long = "Run a development Temporal Server on your local system.\nView the Web UI for the default configuration at http://localhost:8233:\n\n```\ntemporal server start-dev\n```\n\nAdd persistence for Workflow Executions across runs:\n\n```\ntemporal server start-dev \\\n    --db-filename path-to-your-local-persistent-store\n```\n\nSet the port from the front-end gRPC Service (7233 default):\n\n```\ntemporal server start-dev \\\n    --port 7000\n```\n\nUse a custom port for the Web UI. The default is the gRPC port (7233 default)\nplus 1000 (8233):\n\n```\ntemporal server start-dev \\\n    --ui-port 3000\n```"
+		s.Command.Long = "Run a development Temporal Server on your local system. View the Web UI for\nthe default configuration at http://localhost:8233:\n\n```\ntemporal server start-dev\n```\n\nAdd persistence for Workflow Executions across runs:\n\n```\ntemporal server start-dev \\\n    --db-filename path-to-your-local-persistent-store\n```\n\nSet the port from the front-end gRPC Service (7233 default):\n\n```\ntemporal server start-dev \\\n    --port 7000\n```\n\nUse a custom port for the Web UI. The default is the gRPC port (7233 default)\nplus 1000 (8233):\n\n```\ntemporal server start-dev \\\n    --ui-port 3000\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.DbFilename, "db-filename", "f", "", "Path to file for persistent Temporal state store. By default, Workflow Executions are lost when the server process dies.")
@@ -1331,9 +1332,9 @@ func NewTemporalTaskQueueCommand(cctx *CommandContext, parent *TemporalCommand) 
 	s.Command.Use = "task-queue"
 	s.Command.Short = "Manage Task Queues"
 	if hasHighlighting {
-		s.Command.Long = "Inspect and update Task Queues, the queues that\nWorkers poll for Workflow and Activity tasks:\n\n\x1b[1mtemporal task-queue [command] [command options]\x1b[0m\n\nFor example:\n\n\x1b[1mtemporal task-queue describe \\\n    --task-queue \"YourTaskQueueName\"\x1b[0m"
+		s.Command.Long = "Inspect and update Task Queues, the queues that Workers poll for Workflow and\nActivity tasks:\n\n\x1b[1mtemporal task-queue [command] [command options]\x1b[0m\n\nFor example:\n\n\x1b[1mtemporal task-queue describe \\\n    --task-queue \"YourTaskQueueName\"\x1b[0m"
 	} else {
-		s.Command.Long = "Inspect and update Task Queues, the queues that\nWorkers poll for Workflow and Activity tasks:\n\n```\ntemporal task-queue [command] [command options]\n```\n\nFor example:\n\n```\ntemporal task-queue describe \\\n    --task-queue \"YourTaskQueueName\"\n```"
+		s.Command.Long = "Inspect and update Task Queues, the queues that Workers poll for Workflow and\nActivity tasks:\n\n```\ntemporal task-queue [command] [command options]\n```\n\nFor example:\n\n```\ntemporal task-queue describe \\\n    --task-queue \"YourTaskQueueName\"\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalTaskQueueDescribeCommand(cctx, &s).Command)
@@ -1360,16 +1361,16 @@ func NewTemporalTaskQueueDescribeCommand(cctx *CommandContext, parent *TemporalT
 	s.Command.Use = "describe [flags]"
 	s.Command.Short = "Show active Workers"
 	if hasHighlighting {
-		s.Command.Long = "Display a list of active Workers that have recently polled\na Task Queue. The Temporal Server records each poll\nrequest time. A \x1b[1mLastAccessTime\x1b[0m over one minute may indicate the Worker is\nat capacity or has shut down. Temporal Workers are removed if 5 minutes\nhave passed since the last poll request:\n\n\x1b[1mtemporal task-queue describe \\\n   --task-queue \"YourTaskQueueName\"\x1b[0m\n\nWorkflow and Activity polling use separate Task Queues:\n\n\x1b[1mtemporal task-queue describe \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type \"activity\"`\x1b[0m"
+		s.Command.Long = "Display a list of active Workers that have recently polled a Task Queue. The\nTemporal Server records each poll request time. A \x1b[1mLastAccessTime\x1b[0m over one\nminute may indicate the Worker is at capacity or has shut down. Temporal\nWorkers are removed if 5 minutes have passed since the last poll request:\n\n\x1b[1mtemporal task-queue describe \\\n   --task-queue \"YourTaskQueueName\"\x1b[0m\n\nWorkflow and Activity polling use separate Task Queues:\n\n\x1b[1mtemporal task-queue describe \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type \"activity\"`\x1b[0m"
 	} else {
-		s.Command.Long = "Display a list of active Workers that have recently polled\na Task Queue. The Temporal Server records each poll\nrequest time. A `LastAccessTime` over one minute may indicate the Worker is\nat capacity or has shut down. Temporal Workers are removed if 5 minutes\nhave passed since the last poll request:\n\n```\ntemporal task-queue describe \\\n   --task-queue \"YourTaskQueueName\"\n```\n\nWorkflow and Activity polling use separate Task Queues:\n\n```\ntemporal task-queue describe \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type \"activity\"`\n```"
+		s.Command.Long = "Display a list of active Workers that have recently polled a Task Queue. The\nTemporal Server records each poll request time. A `LastAccessTime` over one\nminute may indicate the Worker is at capacity or has shut down. Temporal\nWorkers are removed if 5 minutes have passed since the last poll request:\n\n```\ntemporal task-queue describe \\\n   --task-queue \"YourTaskQueueName\"\n```\n\nWorkflow and Activity polling use separate Task Queues:\n\n```\ntemporal task-queue describe \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type \"activity\"`\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task queue name.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
 	s.TaskQueueType = NewStringEnum([]string{"workflow", "activity"}, "workflow")
 	s.Command.Flags().Var(&s.TaskQueueType, "task-queue-type", "Task Queue type. Accepted values: workflow, activity.")
-	s.Command.Flags().IntVar(&s.Partitions, "partitions", 0, "Query partitions 1 through `N`. Experimental/Temporary feature. Default: 1")
+	s.Command.Flags().IntVar(&s.Partitions, "partitions", 1, "Query partitions 1 through `N`. Experimental/Temporary feature.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -1391,11 +1392,11 @@ func NewTemporalTaskQueueGetBuildIdReachabilityCommand(cctx *CommandContext, par
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "get-build-id-reachability [flags]"
-	s.Command.Short = "Build ID availability"
+	s.Command.Short = "Show Build ID availability"
 	if hasHighlighting {
-		s.Command.Long = "Show if a given Build ID can be used for new, existing, or closed workflows\nin Namespaces that support Worker versioning:\n\n\x1b[1mtemporal task-queue get-build-id-reachability \\\n    --build-id \"2.0\"\x1b[0m\n\nYou can specify the \x1b[1m--build-id\x1b[0m and \x1b[1m--task-queue\x1b[0m flags multiple times.\nIf \x1b[1m--task-queue\x1b[0m is omitted, the command checks Build ID reachability\nagainst all Task Queues."
+		s.Command.Long = "Show if a given Build ID can be used for new, existing, or closed Workflows\nin Namespaces that support Worker versioning:\n\n\x1b[1mtemporal task-queue get-build-id-reachability \\\n    --build-id \"2.0\"\x1b[0m\n\nYou can specify the \x1b[1m--build-id\x1b[0m and \x1b[1m--task-queue\x1b[0m flags multiple times. If\n\x1b[1m--task-queue\x1b[0m is omitted, the command checks Build ID reachability against\nall Task Queues."
 	} else {
-		s.Command.Long = "Show if a given Build ID can be used for new, existing, or closed workflows\nin Namespaces that support Worker versioning:\n\n```\ntemporal task-queue get-build-id-reachability \\\n    --build-id \"2.0\"\n```\n\nYou can specify the `--build-id` and `--task-queue` flags multiple times.\nIf `--task-queue` is omitted, the command checks Build ID reachability\nagainst all Task Queues."
+		s.Command.Long = "Show if a given Build ID can be used for new, existing, or closed Workflows\nin Namespaces that support Worker versioning:\n\n```\ntemporal task-queue get-build-id-reachability \\\n    --build-id \"2.0\"\n```\n\nYou can specify the `--build-id` and `--task-queue` flags multiple times. If\n`--task-queue` is omitted, the command checks Build ID reachability against\nall Task Queues."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringArrayVar(&s.BuildId, "build-id", nil, "One or more Build ID strings. Can be passed multiple times.")
@@ -1422,11 +1423,11 @@ func NewTemporalTaskQueueGetBuildIdsCommand(cctx *CommandContext, parent *Tempor
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "get-build-ids [flags]"
-	s.Command.Short = "Build ID versions"
+	s.Command.Short = "Fetch Build ID versions"
 	if hasHighlighting {
-		s.Command.Long = "Fetch sets of compatible Build IDs for specified Task Queues and\ndisplay their information:\n\n\x1b[1mtemporal task-queue get-build-ids \\\n    --task-queue \"YourTaskQueue\"\x1b[0m\n\nThis command is limited to Namespaces that enable Worker versioning."
+		s.Command.Long = "Fetch sets of compatible Build IDs for specified Task Queues and display their\ninformation:\n\n\x1b[1mtemporal task-queue get-build-ids \\\n    --task-queue \"YourTaskQueue\"\x1b[0m\n\nThis command is limited to Namespaces that enable Worker versioning."
 	} else {
-		s.Command.Long = "Fetch sets of compatible Build IDs for specified Task Queues and\ndisplay their information:\n\n```\ntemporal task-queue get-build-ids \\\n    --task-queue \"YourTaskQueue\"\n```\n\nThis command is limited to Namespaces that enable Worker versioning."
+		s.Command.Long = "Fetch sets of compatible Build IDs for specified Task Queues and display their\ninformation:\n\n```\ntemporal task-queue get-build-ids \\\n    --task-queue \"YourTaskQueue\"\n```\n\nThis command is limited to Namespaces that enable Worker versioning."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task queue name.")
@@ -1451,14 +1452,15 @@ func NewTemporalTaskQueueListPartitionCommand(cctx *CommandContext, parent *Temp
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "list-partition [flags]"
-	s.Command.Short = "List partitions"
+	s.Command.Short = "List Task Queue partitions"
 	if hasHighlighting {
 		s.Command.Long = "Display a Task Queue's partition list with assigned matching nodes:\n\n\x1b[1mtemporal task-queue list-partition \\\n    --task-queue \"YourTaskQueue\"\x1b[0m"
 	} else {
 		s.Command.Long = "Display a Task Queue's partition list with assigned matching nodes:\n\n```\ntemporal task-queue list-partition \\\n    --task-queue \"YourTaskQueue\"\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task Queue name. Required")
+	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task Queue name.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -1476,8 +1478,8 @@ func NewTemporalTaskQueueUpdateBuildIdsCommand(cctx *CommandContext, parent *Tem
 	var s TemporalTaskQueueUpdateBuildIdsCommand
 	s.Parent = parent
 	s.Command.Use = "update-build-ids"
-	s.Command.Short = "Manage build IDs"
-	s.Command.Long = "Add or change a Task Queue's compatible Build IDs for Namespaces using\nWorker versioning."
+	s.Command.Short = "Manage Build IDs"
+	s.Command.Long = "Add or change a Task Queue's compatible Build IDs for Namespaces using Worker\nversioning."
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalTaskQueueUpdateBuildIdsAddNewCompatibleCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalTaskQueueUpdateBuildIdsAddNewDefaultCommand(cctx, &s).Command)
@@ -1500,19 +1502,20 @@ func NewTemporalTaskQueueUpdateBuildIdsAddNewCompatibleCommand(cctx *CommandCont
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "add-new-compatible [flags]"
-	s.Command.Short = "Add compatible build ID"
+	s.Command.Short = "Add compatible Build ID"
 	if hasHighlighting {
-		s.Command.Long = "Add a compatible Build ID to a Task Queue's existing version set.\nProvide an existing Build ID and a new Build ID:\n\n\x1b[1mtemporal task-queue update-build-ids add-new-compatible \\\n    --task-queue YourTaskQueue \\\n    --existing-compatible-build-id YourExistingBuildId \\\n    --build-id YourNewBuildId\x1b[0m\n\nThe new ID is stored in the set containing the existing ID and becomes the\nnew default for that set.\n\nThis command is limited to Namespaces that support Worker versioning."
+		s.Command.Long = "Add a compatible Build ID to a Task Queue's existing version set. Provide an\nexisting Build ID and a new Build ID:\n\n\x1b[1mtemporal task-queue update-build-ids add-new-compatible \\\n    --task-queue YourTaskQueue \\\n    --existing-compatible-build-id YourExistingBuildId \\\n    --build-id YourNewBuildId\x1b[0m\n\nThe new ID is stored in the set containing the existing ID and becomes the new\ndefault for that set.\n\nThis command is limited to Namespaces that support Worker versioning."
 	} else {
-		s.Command.Long = "Add a compatible Build ID to a Task Queue's existing version set.\nProvide an existing Build ID and a new Build ID:\n\n```\ntemporal task-queue update-build-ids add-new-compatible \\\n    --task-queue YourTaskQueue \\\n    --existing-compatible-build-id YourExistingBuildId \\\n    --build-id YourNewBuildId\n```\n\nThe new ID is stored in the set containing the existing ID and becomes the\nnew default for that set.\n\nThis command is limited to Namespaces that support Worker versioning."
+		s.Command.Long = "Add a compatible Build ID to a Task Queue's existing version set. Provide an\nexisting Build ID and a new Build ID:\n\n```\ntemporal task-queue update-build-ids add-new-compatible \\\n    --task-queue YourTaskQueue \\\n    --existing-compatible-build-id YourExistingBuildId \\\n    --build-id YourNewBuildId\n```\n\nThe new ID is stored in the set containing the existing ID and becomes the new\ndefault for that set.\n\nThis command is limited to Namespaces that support Worker versioning."
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "Build Id to be added. Required")
+	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "Build ID to be added.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "build-id")
 	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task Queue name.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
-	s.Command.Flags().StringVar(&s.ExistingCompatibleBuildId, "existing-compatible-build-id", "", "Pre-existing Build Id in this Task Queue.")
+	s.Command.Flags().StringVar(&s.ExistingCompatibleBuildId, "existing-compatible-build-id", "", "Pre-existing Build ID in this Task Queue.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "existing-compatible-build-id")
-	s.Command.Flags().BoolVar(&s.SetAsDefault, "set-as-default", false, "Set the expanded Build Id set as the Task Queue default. Defaults to false.")
+	s.Command.Flags().BoolVar(&s.SetAsDefault, "set-as-default", false, "Set the expanded Build ID set as the Task Queue default. Defaults to false.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -1533,14 +1536,15 @@ func NewTemporalTaskQueueUpdateBuildIdsAddNewDefaultCommand(cctx *CommandContext
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "add-new-default [flags]"
-	s.Command.Short = "Establish new default BuildID set."
+	s.Command.Short = "Set new default Build ID set"
 	if hasHighlighting {
-		s.Command.Long = "Create a new Task Queue Build ID set, add a Build ID to it, and make it the\noverall Task Queue default. The new set will be incompatible with previous \nsets and versions.\n\n\x1b[1mtemporal task-queue update-build-ids add-new-default \\\n    --task-queue YourTaskQueue \\\n    --build-id YourNewBuildId\x1b[0m\n\nThis command is limited to Namespaces that support Worker versioning."
+		s.Command.Long = "Create a new Task Queue Build ID set, add a Build ID to it, and make it the\noverall Task Queue default. The new set will be incompatible with previous\nsets and versions.\n\n\x1b[1mtemporal task-queue update-build-ids add-new-default \\\n    --task-queue YourTaskQueue \\\n    --build-id YourNewBuildId\x1b[0m\n\nThis command is limited to Namespaces that support Worker versioning."
 	} else {
-		s.Command.Long = "Create a new Task Queue Build ID set, add a Build ID to it, and make it the\noverall Task Queue default. The new set will be incompatible with previous \nsets and versions.\n\n```\ntemporal task-queue update-build-ids add-new-default \\\n    --task-queue YourTaskQueue \\\n    --build-id YourNewBuildId\n```\n\nThis command is limited to Namespaces that support Worker versioning."
+		s.Command.Long = "Create a new Task Queue Build ID set, add a Build ID to it, and make it the\noverall Task Queue default. The new set will be incompatible with previous\nsets and versions.\n\n```\ntemporal task-queue update-build-ids add-new-default \\\n    --task-queue YourTaskQueue \\\n    --build-id YourNewBuildId\n```\n\nThis command is limited to Namespaces that support Worker versioning."
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "Build Id to be added. Required")
+	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "Build ID to be added.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "build-id")
 	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task Queue name.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -1563,14 +1567,15 @@ func NewTemporalTaskQueueUpdateBuildIdsPromoteIdInSetCommand(cctx *CommandContex
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "promote-id-in-set [flags]"
-	s.Command.Short = "use Build ID as set default"
+	s.Command.Short = "Set Build ID as set default"
 	if hasHighlighting {
-		s.Command.Long = "Establish an existing Build ID as the default in its Task Queue set. New\ntasks compatible with this set will now be dispatched to this ID:\n\n\x1b[1mtemporal task-queue update-build-ids promote-id-in-set \\\n    --task-queue YourTaskQueue \\\n    --build-id YourBuildId\x1b[0m\n\nThis command is limited to Namespaces that support Worker versioning."
+		s.Command.Long = "Establish an existing Build ID as the default in its Task Queue set. New tasks\ncompatible with this set will now be dispatched to this ID:\n\n\x1b[1mtemporal task-queue update-build-ids promote-id-in-set \\\n    --task-queue YourTaskQueue \\\n    --build-id YourBuildId\x1b[0m\n\nThis command is limited to Namespaces that support Worker versioning."
 	} else {
-		s.Command.Long = "Establish an existing Build ID as the default in its Task Queue set. New\ntasks compatible with this set will now be dispatched to this ID:\n\n```\ntemporal task-queue update-build-ids promote-id-in-set \\\n    --task-queue YourTaskQueue \\\n    --build-id YourBuildId\n```\n\nThis command is limited to Namespaces that support Worker versioning."
+		s.Command.Long = "Establish an existing Build ID as the default in its Task Queue set. New tasks\ncompatible with this set will now be dispatched to this ID:\n\n```\ntemporal task-queue update-build-ids promote-id-in-set \\\n    --task-queue YourTaskQueue \\\n    --build-id YourBuildId\n```\n\nThis command is limited to Namespaces that support Worker versioning."
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "Build Id to set as default. Required")
+	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "Build ID to set as default.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "build-id")
 	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task Queue name.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -1595,12 +1600,13 @@ func NewTemporalTaskQueueUpdateBuildIdsPromoteSetCommand(cctx *CommandContext, p
 	s.Command.Use = "promote-set [flags]"
 	s.Command.Short = "Promote Build ID set"
 	if hasHighlighting {
-		s.Command.Long = "Promote a Build ID set to be the default on a Task Queue. Identify the\nset by providing a Build ID within it. If the set is already the default,\nthis command has no effect:\n\n\x1b[1mtemporal task-queue update-build-ids promote-set \\\n    --task-queue YourTaskQueue \\\n    --build-id YourBuildId\x1b[0m\n\nThis command is limited to Namespaces that support Worker versioning."
+		s.Command.Long = "Promote a Build ID set to be the default on a Task Queue. Identify the set by\nproviding a Build ID within it. If the set is already the default, this\ncommand has no effect:\n\n\x1b[1mtemporal task-queue update-build-ids promote-set \\\n    --task-queue YourTaskQueue \\\n    --build-id YourBuildId\x1b[0m\n\nThis command is limited to Namespaces that support Worker versioning."
 	} else {
-		s.Command.Long = "Promote a Build ID set to be the default on a Task Queue. Identify the\nset by providing a Build ID within it. If the set is already the default,\nthis command has no effect:\n\n```\ntemporal task-queue update-build-ids promote-set \\\n    --task-queue YourTaskQueue \\\n    --build-id YourBuildId\n```\n\nThis command is limited to Namespaces that support Worker versioning."
+		s.Command.Long = "Promote a Build ID set to be the default on a Task Queue. Identify the set by\nproviding a Build ID within it. If the set is already the default, this\ncommand has no effect:\n\n```\ntemporal task-queue update-build-ids promote-set \\\n    --task-queue YourTaskQueue \\\n    --build-id YourBuildId\n```\n\nThis command is limited to Namespaces that support Worker versioning."
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "Build Id within the promoted set. Required")
+	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "Build ID within the promoted set.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "build-id")
 	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task Queue name.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -1635,7 +1641,7 @@ func (v *ClientOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
 	f.StringVarP(&v.Namespace, "namespace", "n", "default", "Temporal Service Namespace.")
 	cctx.BindFlagEnvVar(f.Lookup("namespace"), "TEMPORAL_NAMESPACE")
 	f.StringVar(&v.ApiKey, "api-key", "", "API key for request.")
-	cctx.BindFlagEnvVar(f.Lookup("api-key"), "TEMPORAL_API_KE")
+	cctx.BindFlagEnvVar(f.Lookup("api-key"), "TEMPORAL_API_KEY")
 	f.StringArrayVar(&v.GrpcMeta, "grpc-meta", nil, "HTTP headers for requests. Format as comma-separated \"KEY=VALUE\" pairs.")
 	f.BoolVar(&v.Tls, "tls", false, "Enable base TLS encryption. Does not have additional options like mTLS or client certs.")
 	cctx.BindFlagEnvVar(f.Lookup("tls"), "TEMPORAL_TLS")
@@ -1711,9 +1717,9 @@ func NewTemporalWorkflowCancelCommand(cctx *CommandContext, parent *TemporalWork
 	s.Command.Use = "cancel [flags]"
 	s.Command.Short = "Send cancellation to Workflow Execution"
 	if hasHighlighting {
-		s.Command.Long = "Canceling a running Workflow Execution records a \n\x1b[1mWorkflowExecutionCancelRequested\x1b[0m event in the Event History. The Service\nschedules a new Command Task, and the Workflow Execution performs any cleanup\nwork supported by its implementation.\n\nUse the Workflow ID to cancel an Execution:\n\n\x1b[1mtemporal workflow cancel \\\n    --workflow-id YourWorkflowId\x1b[0m\n\nA visibility query lets you send bulk cancellations to Workflow Executions\nmatching the results:\n\n\x1b[1mtemporal workflow cancel \\\n    --query YourQuery\x1b[0m"
+		s.Command.Long = "Canceling a running Workflow Execution records a\n\x1b[1mWorkflowExecutionCancelRequested\x1b[0m event in the Event History. The Service\nschedules a new Command Task, and the Workflow Execution performs any cleanup\nwork supported by its implementation.\n\nUse the Workflow ID to cancel an Execution:\n\n\x1b[1mtemporal workflow cancel \\\n    --workflow-id YourWorkflowId\x1b[0m\n\nA visibility Query lets you send bulk cancellations to Workflow Executions\nmatching the results:\n\n\x1b[1mtemporal workflow cancel \\\n    --query YourQuery\x1b[0m\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation."
 	} else {
-		s.Command.Long = "Canceling a running Workflow Execution records a \n`WorkflowExecutionCancelRequested` event in the Event History. The Service\nschedules a new Command Task, and the Workflow Execution performs any cleanup\nwork supported by its implementation.\n\nUse the Workflow ID to cancel an Execution:\n\n```\ntemporal workflow cancel \\\n    --workflow-id YourWorkflowId\n```\n\nA visibility query lets you send bulk cancellations to Workflow Executions\nmatching the results:\n\n```\ntemporal workflow cancel \\\n    --query YourQuery\n```"
+		s.Command.Long = "Canceling a running Workflow Execution records a\n`WorkflowExecutionCancelRequested` event in the Event History. The Service\nschedules a new Command Task, and the Workflow Execution performs any cleanup\nwork supported by its implementation.\n\nUse the Workflow ID to cancel an Execution:\n\n```\ntemporal workflow cancel \\\n    --workflow-id YourWorkflowId\n```\n\nA visibility Query lets you send bulk cancellations to Workflow Executions\nmatching the results:\n\n```\ntemporal workflow cancel \\\n    --query YourQuery\n```\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.SingleWorkflowOrBatchOptions.buildFlags(cctx, s.Command.Flags())
@@ -1738,9 +1744,9 @@ func NewTemporalWorkflowCountCommand(cctx *CommandContext, parent *TemporalWorkf
 	s.Command.Use = "count [flags]"
 	s.Command.Short = "Number of Workflow Executions"
 	if hasHighlighting {
-		s.Command.Long = "Show a count of Workflow Executions, regardless of execution\nstate (running, terminated, etc). Use \x1b[1m--query\x1b[0m to select a subset of Workflow\nExecutions:\n\n\x1b[1mtemporal workflow count \\\n    --query YourQuery\x1b[0m"
+		s.Command.Long = "Show a count of Workflow Executions, regardless of execution state (running,\nterminated, etc). Use \x1b[1m--query\x1b[0m to select a subset of Workflow Executions:\n\n\x1b[1mtemporal workflow count \\\n    --query YourQuery\x1b[0m\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation."
 	} else {
-		s.Command.Long = "Show a count of Workflow Executions, regardless of execution\nstate (running, terminated, etc). Use `--query` to select a subset of Workflow\nExecutions:\n\n```\ntemporal workflow count \\\n    --query YourQuery\n```"
+		s.Command.Long = "Show a count of Workflow Executions, regardless of execution state (running,\nterminated, etc). Use `--query` to select a subset of Workflow Executions:\n\n```\ntemporal workflow count \\\n    --query YourQuery\n```\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Content for an SQL-like `QUERY` List Filter.")
@@ -1765,9 +1771,9 @@ func NewTemporalWorkflowDeleteCommand(cctx *CommandContext, parent *TemporalWork
 	s.Command.Use = "delete [flags]"
 	s.Command.Short = "Remove Workflow Execution"
 	if hasHighlighting {
-		s.Command.Long = "Delete a Workflow Executions and its Event History:\n\n\x1b[1mtemporal workflow delete \\\n    --workflow-id YourWorkflowId\x1b[0m\n\nThe removal executes asynchronously. If the Execution is Running, the Service\nterminates it before deletion."
+		s.Command.Long = "Delete a Workflow Executions and its Event History:\n\n\x1b[1mtemporal workflow delete \\\n    --workflow-id YourWorkflowId\x1b[0m\n\nThe removal executes asynchronously. If the Execution is Running, the Service\nterminates it before deletion.\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation."
 	} else {
-		s.Command.Long = "Delete a Workflow Executions and its Event History:\n\n```\ntemporal workflow delete \\\n    --workflow-id YourWorkflowId\n```\n\nThe removal executes asynchronously. If the Execution is Running, the Service\nterminates it before deletion."
+		s.Command.Long = "Delete a Workflow Executions and its Event History:\n\n```\ntemporal workflow delete \\\n    --workflow-id YourWorkflowId\n```\n\nThe removal executes asynchronously. If the Execution is Running, the Service\nterminates it before deletion.\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.SingleWorkflowOrBatchOptions.buildFlags(cctx, s.Command.Flags())
@@ -1835,11 +1841,11 @@ func NewTemporalWorkflowExecuteCommand(cctx *CommandContext, parent *TemporalWor
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "execute [flags]"
-	s.Command.Short = "Start a new Workflow Execution"
+	s.Command.Short = "Start new Workflow Execution"
 	if hasHighlighting {
-		s.Command.Long = "Establish a new Workflow Execution and direct its\nprogress to stdout. The command blocks and returns when the Workflow Execution\ncompletes. If your Workflow requires input, pass valid JSON:\n\n\x1b[1mtemporal workflow execute\n\t\t--workflow-id YourWorkflowId \\\n\t\t--type YourWorkflow \\\n\t\t--task-queue YourTaskQueue \\\n\t\t--input '{\"Input\": \"As-JSON\"}'\x1b[0m\n\nUse \x1b[1m--event-details\x1b[0m to relay updates to the command-line output in JSON\nformat. When using JSON output (\x1b[1m--output json\x1b[0m), this includes the entire\n\"history\" JSON key for the run."
+		s.Command.Long = "Establish a new Workflow Execution and direct its progress to stdout. The\ncommand blocks and returns when the Workflow Execution completes. If your\nWorkflow requires input, pass valid JSON:\n\n\x1b[1mtemporal workflow execute\n\t\t--workflow-id YourWorkflowId \\\n\t\t--type YourWorkflow \\\n\t\t--task-queue YourTaskQueue \\\n\t\t--input '{\"Input\": \"As-JSON\"}'\x1b[0m\n\nUse \x1b[1m--event-details\x1b[0m to relay updates to the command-line output in JSON\nformat. When using JSON output (\x1b[1m--output json\x1b[0m), this includes the entire\n\"history\" JSON key for the run."
 	} else {
-		s.Command.Long = "Establish a new Workflow Execution and direct its\nprogress to stdout. The command blocks and returns when the Workflow Execution\ncompletes. If your Workflow requires input, pass valid JSON:\n\n```\ntemporal workflow execute\n\t\t--workflow-id YourWorkflowId \\\n\t\t--type YourWorkflow \\\n\t\t--task-queue YourTaskQueue \\\n\t\t--input '{\"Input\": \"As-JSON\"}'\n```\n\nUse `--event-details` to relay updates to the command-line output in JSON\nformat. When using JSON output (`--output json`), this includes the entire\n\"history\" JSON key for the run."
+		s.Command.Long = "Establish a new Workflow Execution and direct its progress to stdout. The\ncommand blocks and returns when the Workflow Execution completes. If your\nWorkflow requires input, pass valid JSON:\n\n```\ntemporal workflow execute\n\t\t--workflow-id YourWorkflowId \\\n\t\t--type YourWorkflow \\\n\t\t--task-queue YourTaskQueue \\\n\t\t--input '{\"Input\": \"As-JSON\"}'\n```\n\nUse `--event-details` to relay updates to the command-line output in JSON\nformat. When using JSON output (`--output json`), this includes the entire\n\"history\" JSON key for the run."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.SharedWorkflowStartOptions.buildFlags(cctx, s.Command.Flags())
@@ -1899,9 +1905,9 @@ func NewTemporalWorkflowListCommand(cctx *CommandContext, parent *TemporalWorkfl
 	s.Command.Use = "list [flags]"
 	s.Command.Short = "Show Workflow Executions"
 	if hasHighlighting {
-		s.Command.Long = "List Workflow Executions. By default, this command returns\nup to 10 closed Workflow Executions. The optional \x1b[1m--query\x1b[0m limits the output\nto Workflows matching a Query:\n\n\x1b[1mtemporal workflow list \\\n    --query YourQuery`\x1b[0m\n\nView a list of archived Workflow Executions:\n\n\x1b[1mtemporal workflow list \\\n    --archived\x1b[0m"
+		s.Command.Long = "List Workflow Executions. By default, this command returns up to 10 closed\nWorkflow Executions. The optional \x1b[1m--query\x1b[0m limits the output to Workflows\nmatching a Query:\n\n\x1b[1mtemporal workflow list \\\n    --query YourQuery`\x1b[0m\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation.\n\nView a list of archived Workflow Executions:\n\n\x1b[1mtemporal workflow list \\\n    --archived\x1b[0m"
 	} else {
-		s.Command.Long = "List Workflow Executions. By default, this command returns\nup to 10 closed Workflow Executions. The optional `--query` limits the output\nto Workflows matching a Query:\n\n```\ntemporal workflow list \\\n    --query YourQuery`\n```\n\nView a list of archived Workflow Executions:\n\n```\ntemporal workflow list \\\n    --archived\n```"
+		s.Command.Long = "List Workflow Executions. By default, this command returns up to 10 closed\nWorkflow Executions. The optional `--query` limits the output to Workflows\nmatching a Query:\n\n```\ntemporal workflow list \\\n    --query YourQuery`\n```\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation.\n\nView a list of archived Workflow Executions:\n\n```\ntemporal workflow list \\\n    --archived\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Content for an SQL-like `QUERY` List Filter.")
@@ -1929,11 +1935,11 @@ func NewTemporalWorkflowQueryCommand(cctx *CommandContext, parent *TemporalWorkf
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "query [flags]"
-	s.Command.Short = "Synchronously retrieve Workflow Execution state"
+	s.Command.Short = "Retrieve Workflow Execution state"
 	if hasHighlighting {
-		s.Command.Long = "Send a Query to a Workflow Execution by\nWorkflow ID to retrieve its state. This synchronous\noperation exposes the internal state of a running Workflow Execution, which\nconstantly changes. You can query both running and completed Workflow\nExecutions:\n\n\x1b[1mtemporal workflow query \\\n    --workflow-id YourWorkflowId\n    --type YourQueryType\n    --input '{\"YourInputKey\": \"YourInputValue\"}'\x1b[0m\n\nQuery implementations must never mutate Workflow Execution state and must\nnot contain blocking code."
+		s.Command.Long = "Send a Query to a Workflow Execution by Workflow ID to retrieve its state.\nThis synchronous operation exposes the internal state of a running Workflow\nExecution, which constantly changes. You can query both running and completed\nWorkflow Executions:\n\n\x1b[1mtemporal workflow query \\\n    --workflow-id YourWorkflowId\n    --type YourQueryType\n    --input '{\"YourInputKey\": \"YourInputValue\"}'\x1b[0m\n\nQuery implementations must never mutate Workflow Execution state and must\nnot contain blocking code."
 	} else {
-		s.Command.Long = "Send a Query to a Workflow Execution by\nWorkflow ID to retrieve its state. This synchronous\noperation exposes the internal state of a running Workflow Execution, which\nconstantly changes. You can query both running and completed Workflow\nExecutions:\n\n```\ntemporal workflow query \\\n    --workflow-id YourWorkflowId\n    --type YourQueryType\n    --input '{\"YourInputKey\": \"YourInputValue\"}'\n```\n\nQuery implementations must never mutate Workflow Execution state and must\nnot contain blocking code."
+		s.Command.Long = "Send a Query to a Workflow Execution by Workflow ID to retrieve its state.\nThis synchronous operation exposes the internal state of a running Workflow\nExecution, which constantly changes. You can query both running and completed\nWorkflow Executions:\n\n```\ntemporal workflow query \\\n    --workflow-id YourWorkflowId\n    --type YourQueryType\n    --input '{\"YourInputKey\": \"YourInputValue\"}'\n```\n\nQuery implementations must never mutate Workflow Execution state and must\nnot contain blocking code."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.PayloadInputOptions.buildFlags(cctx, s.Command.Flags())
@@ -1969,16 +1975,16 @@ func NewTemporalWorkflowResetCommand(cctx *CommandContext, parent *TemporalWorkf
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "reset [flags]"
-	s.Command.Short = "Move a Workflow Execution to an older history point"
+	s.Command.Short = "Move Workflow Execution history point"
 	if hasHighlighting {
-		s.Command.Long = "Reset a Workflow Execution so it can resume from a point in\nits Event History without losing its progress up to that point:\n\n\x1b[1mtemporal workflow reset \\\n    --workflow-id YourWorkflowId\n    --event-id YourLastEvent\x1b[0m\n\nStart from where the Workflow Execution last continued as new:\n\n\x1b[1mtemporal workflow reset \\\n    --workflow-id YourWorkflowId \\\n    --type LastContinuedAsNew\x1b[0m\n\nFor batch resets, limit your resets to FirstWorkflowTask, LastWorkflowTask,\nor BuildId. Do not use Workflow IDs, run IDs, or event IDs with this\ncommand."
+		s.Command.Long = "Reset a Workflow Execution so it can resume from a point in its Event History\nwithout losing its progress up to that point:\n\n\x1b[1mtemporal workflow reset \\\n    --workflow-id YourWorkflowId\n    --event-id YourLastEvent\x1b[0m\n\nStart from where the Workflow Execution last continued as new:\n\n\x1b[1mtemporal workflow reset \\\n    --workflow-id YourWorkflowId \\\n    --type LastContinuedAsNew\x1b[0m\n\nFor batch resets, limit your resets to FirstWorkflowTask, LastWorkflowTask, or\nBuildId. Do not use Workflow IDs, run IDs, or event IDs with this command.\n\nVisit https://docs.temporal.io/visibility to read more about Search\nAttributes and Query creation."
 	} else {
-		s.Command.Long = "Reset a Workflow Execution so it can resume from a point in\nits Event History without losing its progress up to that point:\n\n```\ntemporal workflow reset \\\n    --workflow-id YourWorkflowId\n    --event-id YourLastEvent\n```\n\nStart from where the Workflow Execution last continued as new:\n\n```\ntemporal workflow reset \\\n    --workflow-id YourWorkflowId \\\n    --type LastContinuedAsNew\n```\n\nFor batch resets, limit your resets to FirstWorkflowTask, LastWorkflowTask,\nor BuildId. Do not use Workflow IDs, run IDs, or event IDs with this\ncommand."
+		s.Command.Long = "Reset a Workflow Execution so it can resume from a point in its Event History\nwithout losing its progress up to that point:\n\n```\ntemporal workflow reset \\\n    --workflow-id YourWorkflowId\n    --event-id YourLastEvent\n```\n\nStart from where the Workflow Execution last continued as new:\n\n```\ntemporal workflow reset \\\n    --workflow-id YourWorkflowId \\\n    --type LastContinuedAsNew\n```\n\nFor batch resets, limit your resets to FirstWorkflowTask, LastWorkflowTask, or\nBuildId. Do not use Workflow IDs, run IDs, or event IDs with this command.\n\nVisit https://docs.temporal.io/visibility to read more about Search\nAttributes and Query creation."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.WorkflowId, "workflow-id", "w", "", "Workflow ID. Required for non-batch reset operations.")
 	s.Command.Flags().StringVarP(&s.RunId, "run-id", "r", "", "Run ID.")
-	s.Command.Flags().IntVarP(&s.EventId, "event-id", "e", 0, "Event ID to reset to. Event must occur after `WorkflowTaskStarted`. `WorkflowTaskCompleted`, `WorkflowTaskFailed`, etc are valid.")
+	s.Command.Flags().IntVarP(&s.EventId, "event-id", "e", 0, "Event ID to reset to. Event must occur after `WorkflowTaskStarted`. `WorkflowTaskCompleted`, `WorkflowTaskFailed`, etc. are valid.")
 	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for reset.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "reason")
 	s.ReapplyType = NewStringEnum([]string{"All", "Signal", "None"}, "All")
@@ -2011,9 +2017,9 @@ func NewTemporalWorkflowShowCommand(cctx *CommandContext, parent *TemporalWorkfl
 	s.Command.Use = "show [flags]"
 	s.Command.Short = "Display Event History"
 	if hasHighlighting {
-		s.Command.Long = "Show a Workflow Execution's Event History. \nWhen using JSON output (\x1b[1m--output JSON\x1b[0m), you may pass the results to an SDK\nto perform a replay:\n\n\x1b[1mtemporal workflow show \\\n    --workflow-id YourWorkflowId\n    --output json\x1b[0m"
+		s.Command.Long = "Show a Workflow Execution's Event History. \nWhen using JSON output (\x1b[1m--output json\x1b[0m), you may pass the results to an SDK\nto perform a replay:\n\n\x1b[1mtemporal workflow show \\\n    --workflow-id YourWorkflowId\n    --output json\x1b[0m"
 	} else {
-		s.Command.Long = "Show a Workflow Execution's Event History. \nWhen using JSON output (`--output JSON`), you may pass the results to an SDK\nto perform a replay:\n\n```\ntemporal workflow show \\\n    --workflow-id YourWorkflowId\n    --output json\n```"
+		s.Command.Long = "Show a Workflow Execution's Event History. \nWhen using JSON output (`--output json`), you may pass the results to an SDK\nto perform a replay:\n\n```\ntemporal workflow show \\\n    --workflow-id YourWorkflowId\n    --output json\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
@@ -2040,7 +2046,7 @@ func (v *SingleWorkflowOrBatchOptions) buildFlags(cctx *CommandContext, f *pflag
 	f.StringVarP(&v.Query, "query", "q", "", "Content for an SQL-like `QUERY` List Filter. You must set either --workflow-id or --query.")
 	f.StringVarP(&v.RunId, "run-id", "r", "", "Run ID. Only use with --workflow-id. Cannot use with --query.")
 	f.StringVar(&v.Reason, "reason", "", "Reason to perform batch. Only use with --query. Defaults to user name.")
-	f.BoolVarP(&v.Yes, "yes", "y", false, "Don't prompt to confirm signalling. Only allowed when --query is present.")
+	f.BoolVarP(&v.Yes, "yes", "y", false, "Don't prompt to confirm signaling. Only allowed when --query is present.")
 }
 
 type TemporalWorkflowSignalCommand struct {
@@ -2058,9 +2064,9 @@ func NewTemporalWorkflowSignalCommand(cctx *CommandContext, parent *TemporalWork
 	s.Command.Use = "signal [flags]"
 	s.Command.Short = "Send a message to a Workflow Execution"
 	if hasHighlighting {
-		s.Command.Long = "Send an asynchronous notification (Signal) to a running Workflow Execution \nby its Workflow ID. The Signal is written to the\nHistory. When you include \x1b[1m--input\x1b[0m, that data is available for the Workflow\nExecution to consume:\n\n\x1b[1mtemporal workflow signal \\\n\t\t--workflow-id YourWorkflowId \\\n\t\t--name YourSignal \\\n\t\t--input '{\"YourInputKey\": \"YourInputValue\"}'\x1b[0m"
+		s.Command.Long = "Send an asynchronous notification (Signal) to a running Workflow Execution by\nits Workflow ID. The Signal is written to the History. When you include\n\x1b[1m--input\x1b[0m, that data is available for the Workflow Execution to consume:\n\n\x1b[1mtemporal workflow signal \\\n\t\t--workflow-id YourWorkflowId \\\n\t\t--name YourSignal \\\n\t\t--input '{\"YourInputKey\": \"YourInputValue\"}'\x1b[0m\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation."
 	} else {
-		s.Command.Long = "Send an asynchronous notification (Signal) to a running Workflow Execution \nby its Workflow ID. The Signal is written to the\nHistory. When you include `--input`, that data is available for the Workflow\nExecution to consume:\n\n```\ntemporal workflow signal \\\n\t\t--workflow-id YourWorkflowId \\\n\t\t--name YourSignal \\\n\t\t--input '{\"YourInputKey\": \"YourInputValue\"}'\n```"
+		s.Command.Long = "Send an asynchronous notification (Signal) to a running Workflow Execution by\nits Workflow ID. The Signal is written to the History. When you include\n`--input`, that data is available for the Workflow Execution to consume:\n\n```\ntemporal workflow signal \\\n\t\t--workflow-id YourWorkflowId \\\n\t\t--name YourSignal \\\n\t\t--input '{\"YourInputKey\": \"YourInputValue\"}'\n```\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.PayloadInputOptions.buildFlags(cctx, s.Command.Flags())
@@ -2089,9 +2095,9 @@ func NewTemporalWorkflowStackCommand(cctx *CommandContext, parent *TemporalWorkf
 	s.Command.Use = "stack [flags]"
 	s.Command.Short = "Trace a Workflow Execution"
 	if hasHighlighting {
-		s.Command.Long = "Perform a Query on a Workflow Execution using a \x1b[1m__stack_trace\x1b[0m-type\nQuery. Display a stack trace of the threads and routines currently in use\nby the Workflow for troubleshooting:\n\n\x1b[1mtemporal workflow stack \\\n    --workflow-id YourWorkflowId\x1b[0m"
+		s.Command.Long = "Perform a Query on a Workflow Execution using a \x1b[1m__stack_trace\x1b[0m-type Query.\nDisplay a stack trace of the threads and routines currently in use by the\nWorkflow for troubleshooting:\n\n\x1b[1mtemporal workflow stack \\\n    --workflow-id YourWorkflowId\x1b[0m\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation."
 	} else {
-		s.Command.Long = "Perform a Query on a Workflow Execution using a `__stack_trace`-type\nQuery. Display a stack trace of the threads and routines currently in use\nby the Workflow for troubleshooting:\n\n```\ntemporal workflow stack \\\n    --workflow-id YourWorkflowId\n```"
+		s.Command.Long = "Perform a Query on a Workflow Execution using a `__stack_trace`-type Query.\nDisplay a stack trace of the threads and routines currently in use by the\nWorkflow for troubleshooting:\n\n```\ntemporal workflow stack \\\n    --workflow-id YourWorkflowId\n```\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
@@ -2172,9 +2178,9 @@ func NewTemporalWorkflowStartCommand(cctx *CommandContext, parent *TemporalWorkf
 	s.Command.Use = "start [flags]"
 	s.Command.Short = "Initiate a Workflow Execution"
 	if hasHighlighting {
-		s.Command.Long = "Start a new Workflow Execution. Returns the Workflow-\nand Run-IDs.\n\n\x1b[1mtemporal workflow start \\\n\t\t--workflow-id YourWorkflowId \\\n\t\t--type YourWorkflow \\\n\t\t--task-queue YourTaskQueue \\\n\t\t--input '{\"Input\": \"As-JSON\"}'\x1b[0m"
+		s.Command.Long = "Start a new Workflow Execution. Returns the Workflow- and Run-IDs.\n\n\x1b[1mtemporal workflow start \\\n\t\t--workflow-id YourWorkflowId \\\n\t\t--type YourWorkflow \\\n\t\t--task-queue YourTaskQueue \\\n\t\t--input '{\"Input\": \"As-JSON\"}'\x1b[0m"
 	} else {
-		s.Command.Long = "Start a new Workflow Execution. Returns the Workflow-\nand Run-IDs.\n\n```\ntemporal workflow start \\\n\t\t--workflow-id YourWorkflowId \\\n\t\t--type YourWorkflow \\\n\t\t--task-queue YourTaskQueue \\\n\t\t--input '{\"Input\": \"As-JSON\"}'\n```"
+		s.Command.Long = "Start a new Workflow Execution. Returns the Workflow- and Run-IDs.\n\n```\ntemporal workflow start \\\n\t\t--workflow-id YourWorkflowId \\\n\t\t--type YourWorkflow \\\n\t\t--task-queue YourTaskQueue \\\n\t\t--input '{\"Input\": \"As-JSON\"}'\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.SharedWorkflowStartOptions.buildFlags(cctx, s.Command.Flags())
@@ -2205,9 +2211,9 @@ func NewTemporalWorkflowTerminateCommand(cctx *CommandContext, parent *TemporalW
 	s.Command.Use = "terminate [flags]"
 	s.Command.Short = "Forcefully end a Workflow Execution"
 	if hasHighlighting {
-		s.Command.Long = "Terminate a Workflow Execution:\n\n\x1b[1mtemporal workflow terminate \\\n    --reason YourReasonForTermination \\\n    --workflow-id YourWorkflowId\x1b[0m\n\nThe reason is optional and defaults to the current user's name. The reason\nis stored in the Event History as part of the \x1b[1mWorkflowExecutionTerminated\x1b[0m\nevent. This becomes the closing Event in the Workflow Execution's history.\n\nExecutions may be terminated in bulk via a visibility query list filter:\n\n\x1b[1mtemporal workflow terminate \\\n    --query YourQuery \\\n    --reason YourReasonForTermination\x1b[0m\n\nWorkflow code cannot see or respond to terminations. To perform clean-up work\nin your Workflow code, use \x1b[1mtemporal workflow cancel\x1b[0m instead."
+		s.Command.Long = "Terminate a Workflow Execution:\n\n\x1b[1mtemporal workflow terminate \\\n    --reason YourReasonForTermination \\\n    --workflow-id YourWorkflowId\x1b[0m\n\nThe reason is optional and defaults to the current user's name. The reason\nis stored in the Event History as part of the \x1b[1mWorkflowExecutionTerminated\x1b[0m\nevent. This becomes the closing Event in the Workflow Execution's history.\n\nExecutions may be terminated in bulk via a visibility Query list filter:\n\n\x1b[1mtemporal workflow terminate \\\n    --query YourQuery \\\n    --reason YourReasonForTermination\x1b[0m\n\nWorkflow code cannot see or respond to terminations. To perform clean-up work\nin your Workflow code, use \x1b[1mtemporal workflow cancel\x1b[0m instead.\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation."
 	} else {
-		s.Command.Long = "Terminate a Workflow Execution:\n\n```\ntemporal workflow terminate \\\n    --reason YourReasonForTermination \\\n    --workflow-id YourWorkflowId\n```\n\nThe reason is optional and defaults to the current user's name. The reason\nis stored in the Event History as part of the `WorkflowExecutionTerminated`\nevent. This becomes the closing Event in the Workflow Execution's history.\n\nExecutions may be terminated in bulk via a visibility query list filter:\n\n```\ntemporal workflow terminate \\\n    --query YourQuery \\\n    --reason YourReasonForTermination\n```\n\nWorkflow code cannot see or respond to terminations. To perform clean-up work\nin your Workflow code, use `temporal workflow cancel` instead."
+		s.Command.Long = "Terminate a Workflow Execution:\n\n```\ntemporal workflow terminate \\\n    --reason YourReasonForTermination \\\n    --workflow-id YourWorkflowId\n```\n\nThe reason is optional and defaults to the current user's name. The reason\nis stored in the Event History as part of the `WorkflowExecutionTerminated`\nevent. This becomes the closing Event in the Workflow Execution's history.\n\nExecutions may be terminated in bulk via a visibility Query list filter:\n\n```\ntemporal workflow terminate \\\n    --query YourQuery \\\n    --reason YourReasonForTermination\n```\n\nWorkflow code cannot see or respond to terminations. To perform clean-up work\nin your Workflow code, use `temporal workflow cancel` instead.\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.WorkflowId, "workflow-id", "w", "", "Workflow ID. You must set either --workflow-id or --query.")
@@ -2240,9 +2246,9 @@ func NewTemporalWorkflowTraceCommand(cctx *CommandContext, parent *TemporalWorkf
 	s.Command.Use = "trace [flags]"
 	s.Command.Short = "Workflow Execution live progress"
 	if hasHighlighting {
-		s.Command.Long = "Display the progress of a Workflow Execution and its child\nworkflows with a real-time trace. This view helps you understand how Workflows\nare proceeding:\n\n\x1b[1mtemporal workflow trace \\\n    --workflow-id YourWorkflowId\x1b[0m"
+		s.Command.Long = "Display the progress of a Workflow Execution and its child workflows with a\nreal-time trace. This view helps you understand how Workflows are proceeding:\n\n\x1b[1mtemporal workflow trace \\\n    --workflow-id YourWorkflowId\x1b[0m"
 	} else {
-		s.Command.Long = "Display the progress of a Workflow Execution and its child\nworkflows with a real-time trace. This view helps you understand how Workflows\nare proceeding:\n\n```\ntemporal workflow trace \\\n    --workflow-id YourWorkflowId\n```"
+		s.Command.Long = "Display the progress of a Workflow Execution and its child workflows with a\nreal-time trace. This view helps you understand how Workflows are proceeding:\n\n```\ntemporal workflow trace \\\n    --workflow-id YourWorkflowId\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
@@ -2276,9 +2282,9 @@ func NewTemporalWorkflowUpdateCommand(cctx *CommandContext, parent *TemporalWork
 	s.Command.Use = "update [flags]"
 	s.Command.Short = "Synchronously run a Workflow update handler"
 	if hasHighlighting {
-		s.Command.Long = "Send a message to a Workflow Execution to invoke an\nupdate handler. An update can change the\nstate of a Workflow Execution and return a response:\n\n\x1b[1mtemporal workflow update \\\n\t\t--workflow-id YourWorkflowId \\\n\t\t--name YourUpdate \\\n\t\t--input '{\"Input\": \"As-JSON\"}'\x1b[0m"
+		s.Command.Long = "Send a message to a Workflow Execution to invoke an update handler. An update\ncan change the state of a Workflow Execution and return a response:\n\n\x1b[1mtemporal workflow update \\\n\t\t--workflow-id YourWorkflowId \\\n\t\t--name YourUpdate \\\n\t\t--input '{\"Input\": \"As-JSON\"}'\x1b[0m"
 	} else {
-		s.Command.Long = "Send a message to a Workflow Execution to invoke an\nupdate handler. An update can change the\nstate of a Workflow Execution and return a response:\n\n```\ntemporal workflow update \\\n\t\t--workflow-id YourWorkflowId \\\n\t\t--name YourUpdate \\\n\t\t--input '{\"Input\": \"As-JSON\"}'\n```"
+		s.Command.Long = "Send a message to a Workflow Execution to invoke an update handler. An update\ncan change the state of a Workflow Execution and return a response:\n\n```\ntemporal workflow update \\\n\t\t--workflow-id YourWorkflowId \\\n\t\t--name YourUpdate \\\n\t\t--input '{\"Input\": \"As-JSON\"}'\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.PayloadInputOptions.buildFlags(cctx, s.Command.Flags())

@@ -730,7 +730,7 @@ Note: URI values for archival states can't be changed once enabled.
 * `--visibility-archival-state` (string-enum) -
   Visibility archival state.
   Options: disabled, enabled.
-  Default: disabled
+  Default: disabled.
 * `--visibility-uri` (string) -
   Archive visibility data to this `URI`.
   Once enabled, can't be changed.
@@ -832,7 +832,7 @@ temporal operator namespace update \
 
 #### Options
 * `--active-cluster` (string) -
-  Active Cluster (S) name.
+  Active Cluster (Service) name.
 * `--cluster` (string[]) -
   Cluster names.
 * `--data` (string[]) -
@@ -854,7 +854,8 @@ temporal operator namespace update \
 * `--retention` (duration) -
   Length of time a closed Workflow is preserved before deletion
 * `--visibility-archival-state` (string-enum) -
-  Visibility archival state. Options: disabled, enabled
+  Visibility archival state.
+  Options: disabled, enabled.
 * `--visibility-uri` (string) -
   Archive visibility data to this `URI`.
   Once enabled, can't be changed.
@@ -886,7 +887,8 @@ temporal operator search-attribute create \
 #### Options
 
 * `--name` (string[]) -
-  Search Attribute name. Required
+  Search Attribute name.
+  Required.
 * `--type` (string[]) -
   Search Attribute type.
   Options: Text, Keyword, Int, Double, Bool, Datetime, KeywordList.
@@ -1161,7 +1163,7 @@ also visible on the Service Web UI.
   Pause the schedule.
 * `--reason` (string) -
   Reason for pausing or unpausing a Schedule.
-  Default: "(no reason provided)"
+  Default: "(no reason provided)".
 * `--unpause` (bool) -
   Unpause the schedule.
 
@@ -1358,7 +1360,7 @@ temporal task-queue describe \
 * `--partitions` (int) -
   Query partitions 1 through `N`.
   Experimental/Temporary feature.
-  Default: 1
+  Default: 1.
 
 ### temporal task-queue get-build-id-reachability: Show Build ID availability
 
@@ -1427,7 +1429,7 @@ temporal task-queue list-partition \
 
 * `--task-queue`, `-t` (string) -
   Task Queue name.
-  Required
+  Required.
 
 ### temporal task-queue update-build-ids: Manage Build IDs
 
@@ -1455,7 +1457,7 @@ This command is limited to Namespaces that support Worker versioning.
 
 * `--build-id` (string) -
   Build ID to be added.
-  Required
+  Required.
 * `--task-queue`, `-t` (string) -
   Task Queue name.
   Required.
@@ -1484,7 +1486,7 @@ This command is limited to Namespaces that support Worker versioning.
 
 * `--build-id` (string) -
   Build ID to be added.
-  Required
+  Required.
 * `--task-queue`, `-t` (string) -
   Task Queue name.
   Required.
@@ -1506,7 +1508,7 @@ This command is limited to Namespaces that support Worker versioning.
 
 * `--build-id` (string) -
   Build ID to set as default.
-  Required
+  Required.
 * `--task-queue`, `-t` (string) -
   Task Queue name.
   Required.
@@ -1529,7 +1531,7 @@ This command is limited to Namespaces that support Worker versioning.
 
 * `--build-id` (string) -
   Build ID within the promoted set.
-  Required
+  Required.
 * `--task-queue`, `-t` (string) -
   Task Queue name.
   Required.
@@ -1560,7 +1562,7 @@ temporal workflow list
   Env: TEMPORAL_NAMESPACE.
 * `--api-key` (string) -
   API key for request.
-  Env: TEMPORAL_API_KEY
+  Env: TEMPORAL_API_KEY.
 * `--grpc-meta` (string[]) -
   HTTP headers for requests.
   Format as comma-separated "KEY=VALUE" pairs.

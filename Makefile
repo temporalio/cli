@@ -1,4 +1,4 @@
-.PHONY: all gen build edit open
+.PHONY: all gen build
 
 all: gen build
 
@@ -9,16 +9,3 @@ temporalcli/commands.gen.go: temporalcli/commandsmd/commands.md
 
 build:
 	go build ./cmd/temporal
-
-# For my convenience. And an alias so I don't have to remember
-# which one is right. Intention: remove Makefile or remove
-# these lines.
-
-edit:
-	open ./temporalcli/commandsmd/commands.md
-
-open:
-	open -a Xcode ./temporalcli/commandsmd/commands.md
-
-path:
-	@echo $(shell readlink -f './temporalcli/commandsmd/commands.md')
