@@ -152,45 +152,35 @@ type PrintStructuredIter interface {
 }
 
 // Fields must be present for table
-func (p *Printer) PrintStructuredIter(typ reflect.Type, iter PrintStructuredIter, options StructuredOptions) error {
+func (p *Printer) PrintStructuredTableIter(
+	typ reflect.Type,
+	iter PrintStructuredIter,
+	options StructuredOptions,
+) error {
+	if options.Table == nil {
+		return fmt.Errorf("must be table")
+	}
 	cols := options.toPredefinedCols()
-	if !p.JSON {
-		if len(cols) == 0 {
-			var err error
-			if cols, err = deriveCols(typ); err != nil {
-				return fmt.Errorf("unable to derive columns: %w", err)
-			}
-		}
-		cols = adjustColsToOptions(cols, options)
-		// We're intentionally not calculating field lengths and only accepting them
-		// since this is streaming
-		if options.Table != nil {
-			p.printHeader(cols)
+	if len(cols) == 0 {
+		var err error
+		if cols, err = deriveCols(typ); err != nil {
+			return fmt.Errorf("unable to derive columns: %w", err)
 		}
 	}
+	cols = adjustColsToOptions(cols, options)
+	// We're intentionally not calculating field lengths and only accepting them
+	// since this is streaming
+	p.printHeader(cols)
 	for {
 		v, err := iter.Next()
 		if v == nil || err != nil {
 			return err
 		}
-		if p.JSON {
-			b, err := json.Marshal(v)
-			if err != nil {
-				return err
-			}
-			p.write(b)
-			p.writeStr("\n")
-		} else {
-			row, err := p.tableRowData(cols, v)
-			if err != nil {
-				return err
-			}
-			if options.Table != nil {
-				p.printRow(cols, row)
-			} else {
-				p.printCard(cols, row)
-			}
+		row, err := p.tableRowData(cols, v)
+		if err != nil {
+			return err
 		}
+		p.printRow(cols, row)
 	}
 }
 

@@ -251,7 +251,7 @@ func (s *SharedServerSuite) TestWorkflow_Show_Follow() {
 	s.testWorkflowShowFollow(false)
 }
 
-func (s *SharedServerSuite) testWorkflowShowFollow(eventDetails bool) {
+func (s *SharedServerSuite) testWorkflowShowFollow(detailed bool) {
 	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
 		sigs := 0
 		for {
@@ -280,8 +280,8 @@ func (s *SharedServerSuite) testWorkflowShowFollow(eventDetails bool) {
 			"--address", s.Address(),
 			"-w", run.GetID(),
 			"--follow"}
-		if eventDetails {
-			args = append(args, "--event-details")
+		if detailed {
+			args = append(args, "--detailed")
 		}
 		res := s.Execute(args...)
 		outputCh <- res
@@ -296,18 +296,24 @@ func (s *SharedServerSuite) testWorkflowShowFollow(eventDetails bool) {
 	res := <-outputCh
 	s.NoError(res.Err)
 	output := res.Stdout.String()
-	if eventDetails {
-		s.Contains(output, "my-signal")
-	}
+	// Confirm result present
 	s.ContainsOnSameLine(output, "Result", `"hi!"`)
 	s.NoError(run.Get(s.Context, nil))
+
+	// Detailed uses sections, non-detailed uses table
+	if detailed {
+		s.Contains(output, "input[0]: ignored")
+		s.Contains(output, "signalName: my-signal")
+	} else {
+		s.Contains(output, "WorkflowExecutionSignaled")
+	}
 }
 
 func (s *SharedServerSuite) TestWorkflow_Show_NoFollow() {
 	s.testWorkflowShowNoFollow(true)
 	s.testWorkflowShowNoFollow(false)
 }
-func (s *SharedServerSuite) testWorkflowShowNoFollow(eventDetails bool) {
+func (s *SharedServerSuite) testWorkflowShowNoFollow(detailed bool) {
 	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
 		sigs := 0
 		for {
@@ -332,8 +338,8 @@ func (s *SharedServerSuite) testWorkflowShowNoFollow(eventDetails bool) {
 	args := []string{"workflow", "show",
 		"--address", s.Address(),
 		"-w", run.GetID()}
-	if eventDetails {
-		args = append(args, "--event-details")
+	if detailed {
+		args = append(args, "--detailed")
 	}
 	res := s.Execute(args...)
 	s.NoError(res.Err)
@@ -349,7 +355,7 @@ func (s *SharedServerSuite) testWorkflowShowNoFollow(eventDetails bool) {
 	res = s.Execute(args...)
 	s.NoError(res.Err)
 	out = res.Stdout.String()
-	if eventDetails {
+	if detailed {
 		s.Contains(out, "my-signal")
 	}
 	s.ContainsOnSameLine(out, "Result", `"hi!"`)
