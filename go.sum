@@ -300,8 +300,8 @@ github.com/temporalio/sqlparser v0.0.0-20231115171017-f4060bcfa6cb/go.mod h1:143
 github.com/temporalio/tchannel-go v1.22.1-0.20220818200552-1be8d8cffa5b/go.mod h1:c+V9Z/ZgkzAdyGvHrvC5AsXgN+M9Qwey04cBdKYzV7U=
 github.com/temporalio/tchannel-go v1.22.1-0.20231116015023-bd4fb7678499 h1:PUclzwrSQgakQIiEvvgVdcfulynpX0JM1f716pEcCTU=
 github.com/temporalio/tchannel-go v1.22.1-0.20231116015023-bd4fb7678499/go.mod h1:ezRQRwu9KQXy8Wuuv1aaFFxoCNz5CeNbVOOkh3xctbY=
-github.com/temporalio/ui-server/v2 v2.27.3 h1:FKMIswm3zzpmekvSm0uXpSJO4ouH6BrEGtkuS0oUpVo=
-github.com/temporalio/ui-server/v2 v2.27.3/go.mod h1:ttZpCFyLQmLyIbuaP8Zqu6kkoqSM7X4tefAXwF4NcqY=
+github.com/temporalio/ui-server/v2 v2.28.0 h1:irtPsMqu5kxwL+jORqdmvco1d8MhUOO6pncZDaZnao4=
+github.com/temporalio/ui-server/v2 v2.28.0/go.mod h1:ttZpCFyLQmLyIbuaP8Zqu6kkoqSM7X4tefAXwF4NcqY=
 github.com/twmb/murmur3 v1.1.8 h1:8Yt9taO/WN3l08xErzjeschgZU2QSrwm1kclYq+0aRg=
 github.com/twmb/murmur3 v1.1.8/go.mod h1:Qq/R7NUyOfr65zD+6Q5IHKsJLwP7exErjN6lyyq3OSQ=
 github.com/uber-common/bark v1.0.0/go.mod h1:g0ZuPcD7XiExKHynr93Q742G/sbrdVQkghrqLGOoFuY=
@@ -349,8 +349,8 @@ go.opentelemetry.io/otel/trace v1.26.0 h1:1ieeAUb4y0TE26jUFrCIXKpTuVK7uJGN9/Z/2L
 go.opentelemetry.io/otel/trace v1.26.0/go.mod h1:4iDxvGDQuUkHve82hJJ8UqrwswHYsZuWCBllGV2U2y0=
 go.opentelemetry.io/proto/otlp v1.2.0 h1:pVeZGk7nXDC9O2hncA6nHldxEjm6LByfA2aN8IOkz94=
 go.opentelemetry.io/proto/otlp v1.2.0/go.mod h1:gGpR8txAl5M03pDhMC79G6SdqNV26naRm/KDsgaHD8A=
-go.temporal.io/api v1.32.1 h1:jivpWVuxUya9XkmJTcLLcb2kFqkwrknXpx13HlaQR0Y=
-go.temporal.io/api v1.32.1/go.mod h1:DATVgu+KiAYVjFvOSXB9AVoYZT1yjGt6IPbb7bDw8Qs=
+go.temporal.io/api v1.32.1-cherry-pick-for-cli-tag h1:4dQtGBBa+VTubnrKgCBB7QwTb0l4omuB/J/C263i7HU=
+go.temporal.io/api v1.32.1-cherry-pick-for-cli-tag/go.mod h1:DATVgu+KiAYVjFvOSXB9AVoYZT1yjGt6IPbb7bDw8Qs=
 go.temporal.io/sdk v1.27.0 h1:C5oOE/IRyLcZaFoB13kEHsjvSHEnGcwT6bNys0HFFHk=
 go.temporal.io/sdk v1.27.0/go.mod h1:PnOq5f3dWuU2NAbY+yczXkIeycsIIdBtoCO62ZE0aak=
 go.temporal.io/server v1.24.1 h1:PfLwLNZKFPUFYXDpHvi7fqQC94VAHI3Ssn7bSqYzzCU=

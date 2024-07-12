@@ -13,7 +13,7 @@ require (
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.9.0
-	github.com/temporalio/ui-server/v2 v2.27.3
+	github.com/temporalio/ui-server/v2 v2.28.0
 	go.temporal.io/api v1.34.0
 	go.temporal.io/sdk v1.27.0
 	go.temporal.io/server v1.24.1
@@ -154,6 +154,8 @@ require (
 	modernc.org/token v1.1.0 // indirect
 )
 
-replace go.temporal.io/api v1.34.0 => go.temporal.io/api v1.32.1
+// See https://github.com/temporalio/cli/pull/596#discussion_r1666988960
+// #596 downgraded api to 1.32.1, but there are required bug fixes that came after 1.32.1.
+replace go.temporal.io/api v1.34.0 => go.temporal.io/api v1.32.1-cherry-pick-for-cli-tag
 
 replace github.com/nexus-rpc/sdk-go v0.0.8-0.20240502185337-2b47041a2cc2 => github.com/nexus-rpc/sdk-go v0.0.7
