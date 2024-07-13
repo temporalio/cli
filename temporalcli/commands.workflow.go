@@ -116,7 +116,7 @@ func (c *TemporalWorkflowSignalCommand) run(cctx *CommandContext, args []string)
 			Identity:          clientIdentity(),
 		})
 		if err != nil {
-			return fmt.Errorf("failed signalling workflow: %w", err)
+			return fmt.Errorf("failed signaling workflow: %w", err)
 		}
 		cctx.Printer.Println("Signal workflow succeeded")
 	} else { // batchReq != nil
