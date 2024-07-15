@@ -349,7 +349,7 @@ func Execute(ctx context.Context, options CommandOptions) {
 }
 
 func (c *TemporalCommand) initCommand(cctx *CommandContext) {
-	c.Command.Version = fmt.Sprintf("%s (server %s) (ui %s)", Version, headers.ServerVersion, version.UIVersion)
+	c.Command.Version = VersionString()
 	// Unfortunately color is a global option, so we can set in pre-run but we
 	// must unset in post-run
 	origNoColor := color.NoColor
@@ -392,6 +392,10 @@ func (c *TemporalCommand) initCommand(cctx *CommandContext) {
 	c.Command.PersistentPostRun = func(*cobra.Command, []string) {
 		color.NoColor = origNoColor
 	}
+}
+
+func VersionString() string {
+	return fmt.Sprintf("CLI %s (Server %s, UI %s)", Version, headers.ServerVersion, version.UIVersion)
 }
 
 func (c *TemporalCommand) preRun(cctx *CommandContext) error {
