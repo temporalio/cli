@@ -395,7 +395,7 @@ func (c *TemporalCommand) initCommand(cctx *CommandContext) {
 }
 
 func VersionString() string {
-	return fmt.Sprintf("CLI %s (Server %s, UI %s)", Version, headers.ServerVersion, version.UIVersion)
+	return fmt.Sprintf("%s (Server %s, UI %s)", Version, headers.ServerVersion, version.UIVersion)
 }
 
 func (c *TemporalCommand) preRun(cctx *CommandContext) error {
