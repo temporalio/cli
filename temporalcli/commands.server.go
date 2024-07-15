@@ -144,11 +144,12 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 		return err
 	}
 
-	cctx.Printer.Printlnf("%-16s %v:%v", "Temporal server:", toFriendlyIp(opts.FrontendIP), opts.FrontendPort)
+	cctx.Printer.Printlnf("CLI %v\n", VersionString())
+	cctx.Printer.Printlnf("%-8s %v:%v", "Server:", toFriendlyIp(opts.FrontendIP), opts.FrontendPort)
 	if !t.Headless {
-		cctx.Printer.Printlnf("%-16s http://%v:%v", "Web UI:", toFriendlyIp(opts.UIIP), opts.UIPort)
+		cctx.Printer.Printlnf("%-8s http://%v:%v", "UI:", toFriendlyIp(opts.UIIP), opts.UIPort)
 	}
-	cctx.Printer.Printlnf("%-16s http://%v:%v/metrics", "Metrics:", toFriendlyIp(opts.FrontendIP), opts.MetricsPort)
+	cctx.Printer.Printlnf("%-8s http://%v:%v/metrics", "Metrics:", toFriendlyIp(opts.FrontendIP), opts.MetricsPort)
 	<-cctx.Done()
 	cctx.Printer.Println("Stopping server...")
 	return nil
