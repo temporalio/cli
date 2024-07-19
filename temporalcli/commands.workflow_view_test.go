@@ -564,7 +564,7 @@ func (s *SharedServerSuite) TestWorkflow_Describe_NexusOperationAndCallback() {
 
 	// Call the operation from this workflow.
 	callerWorkflow := func(ctx workflow.Context) error {
-		client := workflow.NewNexusClient("test-endpoint", service.Name)
+		client := workflow.NewNexusClient("test_endpoint", service.Name)
 		opCtx, cancel := workflow.WithCancel(ctx)
 		fut := client.ExecuteOperation(opCtx, op, nil, workflow.NexusOperationOptions{})
 		var exec workflow.NexusOperationExecution
@@ -588,7 +588,7 @@ func (s *SharedServerSuite) TestWorkflow_Describe_NexusOperationAndCallback() {
 	// Create an endpoint for this test.
 	_, err := s.Client.OperatorService().CreateNexusEndpoint(s.Context, &operatorservice.CreateNexusEndpointRequest{
 		Spec: &nexuspb.EndpointSpec{
-			Name: "test-endpoint",
+			Name: "test_endpoint",
 			Target: &nexuspb.EndpointTarget{
 				Variant: &nexuspb.EndpointTarget_Worker_{
 					Worker: &nexuspb.EndpointTarget_Worker{
@@ -626,7 +626,7 @@ func (s *SharedServerSuite) TestWorkflow_Describe_NexusOperationAndCallback() {
 	out := res.Stdout.String()
 	s.ContainsOnSameLine(out, "WorkflowId", run.GetID())
 	s.Contains(out, "Pending Nexus Operations: 1")
-	s.ContainsOnSameLine(out, "Endpoint", "test-endpoint")
+	s.ContainsOnSameLine(out, "Endpoint", "test_endpoint")
 	s.ContainsOnSameLine(out, "Service", "test-service")
 	s.ContainsOnSameLine(out, "Operation", "test-op")
 
@@ -640,7 +640,7 @@ func (s *SharedServerSuite) TestWorkflow_Describe_NexusOperationAndCallback() {
 	s.NoError(res.Err)
 	var callerDesc workflowservice.DescribeWorkflowExecutionResponse
 	s.NoError(temporalcli.UnmarshalProtoJSONWithOptions(res.Stdout.Bytes(), &callerDesc, true))
-	s.Equal("test-endpoint", callerDesc.PendingNexusOperations[0].Endpoint)
+	s.Equal("test_endpoint", callerDesc.PendingNexusOperations[0].Endpoint)
 	s.Equal("test-service", callerDesc.PendingNexusOperations[0].Service)
 	s.Equal("test-op", callerDesc.PendingNexusOperations[0].Operation)
 
