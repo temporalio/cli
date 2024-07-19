@@ -284,6 +284,9 @@ func StartDevServer(t *testing.T, options DevServerOptions) *DevServer {
 	if d.Options.FrontendPort == 0 {
 		d.Options.FrontendPort = devserver.MustGetFreePort(d.Options.FrontendIP)
 	}
+	if d.Options.FrontendHTTPPort == 0 {
+		d.Options.FrontendHTTPPort = devserver.MustGetFreePort(d.Options.FrontendIP)
+	}
 	if len(d.Options.Namespaces) == 0 {
 		d.Options.Namespaces = []string{
 			"default",
@@ -333,6 +336,7 @@ func StartDevServer(t *testing.T, options DevServerOptions) *DevServer {
 	d.Options.DynamicConfigValues["frontend.workerVersioningWorkflowAPIs"] = true
 	d.Options.DynamicConfigValues["worker.buildIdScavengerEnabled"] = true
 	d.Options.DynamicConfigValues["frontend.enableUpdateWorkflowExecution"] = true
+	d.Options.DynamicConfigValues["system.enableNexus"] = true
 	d.Options.DynamicConfigValues["frontend.MaxConcurrentBatchOperationPerNamespace"] = 1000
 	d.Options.DynamicConfigValues["frontend.namespaceRPS.visibility"] = 100
 
