@@ -856,7 +856,7 @@ func NewTemporalOperatorNexusEndpointCreateCommand(cctx *CommandContext, parent 
 		s.Command.Long = "The temporal operator nexus endpoint create command creates a new Nexus Endpoint on the Server.\n\nAn endpoint name is used by in workflow code to invoke Nexus operations.\nThe endpoint target may either be a worker, in which case `--target-namespace` and `--target-task-queue` must both be\nprovided, or an external URL, in which case `--target-url` must be provided.\n\nThis will fail if an endpoint with the same name is already registered.\n\n```\ntemporal operator nexus endpoint create \\\n  --name my-endpoint \\\n  --target-namespace my-namespace \\\n  --target-task-queue my-task-queue \\\n  --description-file DESCRIPTION.md\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.Name, "name", "", "Endpoint name.")
+	s.Command.Flags().StringVar(&s.Name, "name", "", "Endpoint name. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
 	s.Command.Flags().StringVar(&s.Description, "description", "", "Endpoint description in markdown format (encoded using the configured codec server).")
 	s.Command.Flags().StringVar(&s.DescriptionFile, "description-file", "", "Endpoint description file in markdown format (encoded using the configured codec server).")
@@ -889,7 +889,7 @@ func NewTemporalOperatorNexusEndpointDeleteCommand(cctx *CommandContext, parent 
 		s.Command.Long = "The temporal operator nexus endpoint delete deletes a Nexus Endpoint configuration from the Server.\n\n```\ntemporal operator nexus endpoint delete --name my-endpoint\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.Name, "name", "", "Endpoint name.")
+	s.Command.Flags().StringVar(&s.Name, "name", "", "Endpoint name. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -917,7 +917,7 @@ func NewTemporalOperatorNexusEndpointGetCommand(cctx *CommandContext, parent *Te
 		s.Command.Long = "The temporal operator nexus endpoint get gets a Nexus Endpoint configuration by name from the Server.\n\n```\ntemporal operator nexus endpoint get --name my-endpoint\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.Name, "name", "", "Endpoint name.")
+	s.Command.Flags().StringVar(&s.Name, "name", "", "Endpoint name. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -976,7 +976,7 @@ func NewTemporalOperatorNexusEndpointUpdateCommand(cctx *CommandContext, parent 
 		s.Command.Long = "The temporal operator nexus endpoint update command updates an existing Nexus Endpoint on the Server.\n\nAn endpoint name is used by in workflow code to invoke Nexus operations.\nThe endpoint target may either be a worker, in which case `--target-namespace` and `--target-task-queue` must both be\nprovided, or an external URL, in which case `--target-url` must be provided.\n\nThe endpoint is patched leaving any existing fields for which flags are not provided as they were.\n\n**Update only the target task queue**:\n\n```\ntemporal operator nexus endpoint update \\\n  --name my-endpoint \\\n  --target-task-queue my-other-queue\n```\n\n**Update only the description**:\n\n```\ntemporal operator nexus endpoint update \\\n  --name my-endpoint \\\n  --description-file DESCRIPTION.md\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.Name, "name", "", "Endpoint name.")
+	s.Command.Flags().StringVar(&s.Name, "name", "", "Endpoint name. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
 	s.Command.Flags().StringVar(&s.Description, "description", "", "Endpoint description in markdown format (encoded using the configured codec server).")
 	s.Command.Flags().StringVar(&s.DescriptionFile, "description-file", "", "Endpoint description file in markdown format (encoded using the configured codec server).")
