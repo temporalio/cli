@@ -44,6 +44,7 @@ import (
 	"go.temporal.io/server/common/dynamicconfig"
 	"go.temporal.io/server/common/metrics"
 	sqliteplugin "go.temporal.io/server/common/persistence/sql/sqlplugin/sqlite"
+	"go.temporal.io/server/components/callbacks"
 	"go.temporal.io/server/components/nexusoperations"
 	"go.temporal.io/server/schema/sqlite"
 	sqliteschema "go.temporal.io/server/schema/sqlite"
@@ -209,7 +210,16 @@ func (s *StartOptions) buildServerOptions() ([]temporal.ServerOption, error) {
 	// This doesn't enable Nexus but it is required for Nexus to work and simplifies the experience.
 	// NOTE that the URL scheme is fixed to HTTP since the dev server doesn't support TLS at the time of writing.
 	dynConf[nexusoperations.CallbackURLTemplate.Key()] = fmt.Sprintf(
-		"http://%s:%d/namespaces/{{.NamespaceName}}/nexus/callback", s.FrontendIP, s.FrontendHTTPPort)
+		"http://%s:%d/namespaces/{{.NamespaceName}}/nexus/callback", MaybeEscapeIPv6(s.FrontendIP), s.FrontendHTTPPort)
+	dynConf[callbacks.AllowedAddresses.Key()] = []struct {
+		Pattern       string
+		AllowInsecure bool
+	}{
+		{
+			Pattern:       fmt.Sprintf("%s:%d", MaybeEscapeIPv6(s.FrontendIP), s.FrontendHTTPPort),
+			AllowInsecure: true,
+		},
+	}
 
 	// Dynamic config if set
 	for k, v := range s.DynamicConfigValues {
