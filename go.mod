@@ -16,7 +16,7 @@ require (
 	github.com/stretchr/testify v1.9.0
 	github.com/temporalio/ui-server/v2 v2.29.1
 	go.temporal.io/api v1.36.0
-	// nexus SDK tag
+	// `nexus` SDK branch - revert to an official release before cutting an official CLI release.
 	go.temporal.io/sdk v1.27.1-0.20240712163241-723907c2a57c
 	go.temporal.io/server v1.25.0-rc.0
 	google.golang.org/grpc v1.65.0
