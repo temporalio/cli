@@ -199,8 +199,6 @@ func (c *TemporalWorkflowUpdateCommand) run(cctx *CommandContext, args []string)
 	if err != nil {
 		return err
 	}
-	_ = input
-	return nil
 
 	request := client.UpdateWorkflowOptions{
 		WorkflowID:          c.WorkflowId,
