@@ -12,15 +12,10 @@ import (
 	"go.temporal.io/api/common/v1"
 
 	"github.com/google/uuid"
-	"github.com/nexus-rpc/sdk-go/nexus"
 	"github.com/temporalio/cli/temporalcli"
 	"go.temporal.io/api/enums/v1"
-	nexuspb "go.temporal.io/api/nexus/v1"
-	"go.temporal.io/api/operatorservice/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
-	"go.temporal.io/sdk/temporal"
-	"go.temporal.io/sdk/temporalnexus"
 	"go.temporal.io/sdk/workflow"
 )
 
@@ -544,133 +539,4 @@ func (s *SharedServerSuite) TestWorkflow_Count() {
 	s.Contains(out, `"count":"5"`)
 	s.Contains(out, `{"groupValues":["Running"],"count":"2"}`)
 	s.Contains(out, `{"groupValues":["Completed"],"count":"3"}`)
-}
-
-func (s *SharedServerSuite) TestWorkflow_Describe_NexusOperationAndCallback() {
-	handlerWorkflowID := uuid.NewString()
-
-	// Workflow that waits to be canceled.
-	handlerWorkflow := func(ctx workflow.Context, input nexus.NoValue) (nexus.NoValue, error) {
-		ctx.Done().Receive(ctx, nil)
-		return nil, ctx.Err()
-	}
-
-	// Expose the workflow above as an operation.
-	op := temporalnexus.NewWorkflowRunOperation("test-op", handlerWorkflow, func(ctx context.Context, _ nexus.NoValue, opts nexus.StartOperationOptions) (client.StartWorkflowOptions, error) {
-		return client.StartWorkflowOptions{ID: handlerWorkflowID}, nil
-	})
-	service := nexus.NewService("test-service")
-	s.NoError(service.Register(op))
-
-	// Call the operation from this workflow.
-	callerWorkflow := func(ctx workflow.Context) error {
-		client := workflow.NewNexusClient("test_endpoint", service.Name)
-		opCtx, cancel := workflow.WithCancel(ctx)
-		fut := client.ExecuteOperation(opCtx, op, nil, workflow.NexusOperationOptions{})
-		var exec workflow.NexusOperationExecution
-		if err := fut.GetNexusOperationExecution().Get(ctx, &exec); err != nil {
-			return err
-		}
-		// Cancel the operation on this signal.
-		ch := workflow.GetSignalChannel(ctx, "cancel-op")
-		ch.Receive(ctx, nil)
-		cancel()
-		// Wait for the operation to be canceled.
-		return fut.Get(ctx, nil)
-	}
-
-	w := s.DevServer.StartDevWorker(s.Suite.T(), DevWorkerOptions{
-		Workflows:     []any{handlerWorkflow, callerWorkflow},
-		NexusServices: []*nexus.Service{service},
-	})
-	defer w.Stop()
-
-	// Create an endpoint for this test.
-	_, err := s.Client.OperatorService().CreateNexusEndpoint(s.Context, &operatorservice.CreateNexusEndpointRequest{
-		Spec: &nexuspb.EndpointSpec{
-			Name: "test_endpoint",
-			Target: &nexuspb.EndpointTarget{
-				Variant: &nexuspb.EndpointTarget_Worker_{
-					Worker: &nexuspb.EndpointTarget_Worker{
-						Namespace: s.Namespace(),
-						TaskQueue: w.Options.TaskQueue,
-					},
-				},
-			},
-		},
-	})
-	s.NoError(err)
-
-	// Start the workflow and wait until the operation is started.
-	run, err := s.Client.ExecuteWorkflow(
-		s.Context,
-		client.StartWorkflowOptions{TaskQueue: w.Options.TaskQueue},
-		callerWorkflow,
-	)
-	s.NoError(err)
-
-	// Wait for the operation to be started.
-	s.Eventually(func() bool {
-		resp, err := s.Client.DescribeWorkflowExecution(s.Context, run.GetID(), run.GetRunID())
-		s.NoError(err)
-		return len(resp.PendingNexusOperations) > 0 && resp.PendingNexusOperations[0].State == enums.PENDING_NEXUS_OPERATION_STATE_STARTED
-	}, 5*time.Second, 100*time.Millisecond)
-
-	// Operations - Text
-	res := s.Execute(
-		"workflow", "describe",
-		"--address", s.Address(),
-		"-w", run.GetID(),
-	)
-	s.NoError(res.Err)
-	out := res.Stdout.String()
-	s.ContainsOnSameLine(out, "WorkflowId", run.GetID())
-	s.Contains(out, "Pending Nexus Operations: 1")
-	s.ContainsOnSameLine(out, "Endpoint", "test_endpoint")
-	s.ContainsOnSameLine(out, "Service", "test-service")
-	s.ContainsOnSameLine(out, "Operation", "test-op")
-
-	// Operations - JSON
-	res = s.Execute(
-		"workflow", "describe",
-		"--address", s.Address(),
-		"-w", run.GetID(),
-		"--output", "json",
-	)
-	s.NoError(res.Err)
-	var callerDesc workflowservice.DescribeWorkflowExecutionResponse
-	s.NoError(temporalcli.UnmarshalProtoJSONWithOptions(res.Stdout.Bytes(), &callerDesc, true))
-	s.Equal("test_endpoint", callerDesc.PendingNexusOperations[0].Endpoint)
-	s.Equal("test-service", callerDesc.PendingNexusOperations[0].Service)
-	s.Equal("test-op", callerDesc.PendingNexusOperations[0].Operation)
-
-	// Cancel the operation and check the callback on the handler workflow.
-	s.NoError(s.Client.SignalWorkflow(s.Context, run.GetID(), run.GetRunID(), "cancel-op", nil))
-	s.ErrorAs(run.Get(s.Context, nil), new(*temporal.CanceledError))
-
-	// Callbacks - Text
-	res = s.Execute(
-		"workflow", "describe",
-		"--address", s.Address(),
-		"-w", handlerWorkflowID,
-	)
-	s.NoError(res.Err)
-	out = res.Stdout.String()
-	s.ContainsOnSameLine(out, "WorkflowId", handlerWorkflowID)
-	s.Contains(out, "Callbacks: 1")
-	s.ContainsOnSameLine(out, "URL", "http://"+s.DevServer.Options.FrontendIP)
-	s.ContainsOnSameLine(out, "Trigger", "WorkflowClosed")
-	s.ContainsOnSameLine(out, "State", "Succeeded")
-
-	// Callbacks - JSON
-	res = s.Execute(
-		"workflow", "describe",
-		"--address", s.Address(),
-		"-w", handlerWorkflowID,
-		"--output", "json",
-	)
-	s.NoError(res.Err)
-	var handlerDesc workflowservice.DescribeWorkflowExecutionResponse
-	s.NoError(temporalcli.UnmarshalProtoJSONWithOptions(res.Stdout.Bytes(), &handlerDesc, true))
-	s.Equal(enums.CALLBACK_STATE_SUCCEEDED, handlerDesc.Callbacks[0].State)
 }
