@@ -1439,7 +1439,12 @@ temporal task-queue list-partition \
 ### temporal task-queue update-build-ids: Manage Build IDs
 
 Add or change a Task Queue's compatible Build IDs for Namespaces using Worker
-versioning.
+versioning:
+
+
+```
+temporal task-queue update-build-ids [subcommands] [options]
+```
 
 ### temporal task-queue update-build-ids add-new-compatible: Add compatible Build ID
 
