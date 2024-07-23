@@ -244,7 +244,8 @@ Workflows, inspects state, and more.
 * `--log-level` (string-enum) -
   Log level.
   Default is "info" for most commands and "warn" for `server start-dev`.
-  Options: debug, info, warn, error, never. Default: info.
+  Options: debug, info, warn, error, never.
+  Default: info.
 * `--log-format` (string) -
   Log format.
   Options: text, json.
@@ -709,11 +710,11 @@ Note: URI values for archival states can't be changed once enabled.
 * `--cluster` (string[]) -
   Cluster (Service) names for Namespace creation.
   Can be passed multiple times.
-* `--data` (string) -
-  Namespace data.
+* `--data` (string[]) -
+  Namespace data using 'KEY="VALUE"' string pairs.
+  Use JSON values.
 * `--description` (string) -
   Namespace description.
-  Comma-separated 'KEY="VALUE"' string pairs.
 * `--email` (string) -
   Owner email.
 * `--global` (bool) -
@@ -835,10 +836,10 @@ temporal operator namespace update \
 * `--active-cluster` (string) -
   Active Cluster (Service) name.
 * `--cluster` (string[]) -
-  Cluster names.
+  Cluster (Service) names.
 * `--data` (string[]) -
-  Set a 'KEY="VALUE"' string pair in Namespace data.
-  KEY is a string, VALUE is JSON.
+  Namespace data using 'KEY="VALUE"' string pairs.
+  Use JSON values.
   Can be passed multiple times.
 * `--description` (string) -
   Namespace description.
@@ -1071,12 +1072,12 @@ Schedules support any combination of `--calendar`, `--interval`, and `--cron`:
   For a list of time zones, see:
   https://en.wikipedia.org/wiki/List_of_tz_database_time_zones.
 * `--schedule-search-attribute` (string[]) -
-  Set schedule Search Attributes using 'KEY="VALUE"' format.
-  KEY is a string, VALUE is JSON.
+  Set schedule Search Attributes using 'KEY="VALUE"' pairs.
+  Use JSON values.
   Can be passed multiple times.
 * `--schedule-memo` (string[]) -
-  Set a schedule memo using 'KEY="VALUE"' format.
-  KEY is a string, VALUE is JSON.
+  Set a schedule memo using 'KEY="VALUE"' pairs.
+  Use JSON values.
   Can be passed multiple times.
 
 #### Options
@@ -1302,13 +1303,13 @@ temporal server start-dev \
 * `--sqlite-pragma` (string[]) -
   SQLite pragma statements in "PRAGMA=VALUE" format.
 * `--dynamic-config-value` (string[]) -
-  Dynamic configuration value in 'KEY="VALUE"' format.
-  KEY is a string, VALUE is JSON.
+  Dynamic configuration value using 'KEY="VALUE"' pairs.
+  Use JSON values.
   For example, "YourKey=\"YourStringValue\"".
 * `--log-config` (bool) -
   Log the server config to stderr.
 * `--search-attribute` (string[]) -
-  Search attributes to register in 'KEY="VALUE"' format.
+  Search attributes to register using 'KEY="VALUE"' pairs.
 
 ### temporal task-queue: Manage Task Queues
 
@@ -1393,10 +1394,18 @@ more conservative than `ClosedWorkflowsOnly`.
   Filter the Task Queue based on Build ID.
 * `--select-unversioned` (bool) -
   Include the unversioned queue.
-* `--select-all-active` (bool) - Include all active versions. A version is active if it had new tasks or polls recently.
-* `--report-reachability` (bool) - Display task reachability information.
-* `--legacy-mode` (bool) - Enable a legacy mode for servers that do not support rules-based worker versioning. This mode only provides pollers info.
-* `--task-queue-type-legacy` (string-enum) - Task Queue type (legacy mode only). Options: workflow, activity. Default: workflow.
+* `--select-all-active` (bool) - 
+  Include all active versions.
+  A version is active if it had new tasks or polls recently.
+* `--report-reachability` (bool) -
+  Display task reachability information.
+* `--legacy-mode` (bool) -
+  Enable a legacy mode for servers that do not support rules-based
+  worker versioning.
+  This mode only provides pollers info.
+* `--task-queue-type-legacy` (string-enum) - Task Queue type (legacy mode only).
+  Options: workflow, activity.
+  Default: workflow.
 * `--partitions-legacy` (int) -
   Query partitions 1 through `N`.
   Experimental/Temporary feature.
@@ -1404,6 +1413,10 @@ more conservative than `ClosedWorkflowsOnly`.
   Default: 1.
 
 ### temporal task-queue get-build-id-reachability: Show Build ID availability (Deprecated)
+
++-----------------------------------------------------------------------------+
+| CAUTION: This command is deprecated and will be removed in a later release. |
++-----------------------------------------------------------------------------+
 
 Show if a given Build ID can be used for new, existing, or closed Workflows
 in Namespaces that support Worker versioning:
@@ -1436,6 +1449,10 @@ all Task Queues.
   Can be passed multiple times.
 
 ### temporal task-queue get-build-ids: Fetch Build ID versions (Deprecated)
+
++-----------------------------------------------------------------------------+
+| CAUTION: This command is deprecated and will be removed in a later release. |
++-----------------------------------------------------------------------------+
 
 Fetch sets of compatible Build IDs for specified Task Queues and display their
 information:
@@ -1474,6 +1491,10 @@ temporal task-queue list-partition \
   Required.
 
 ### temporal task-queue update-build-ids: Manage Build IDs (Deprecated)
+
++-----------------------------------------------------------------------------+
+| CAUTION: This command is deprecated and will be removed in a later release. |
++-----------------------------------------------------------------------------+
 
 Add or change a Task Queue's compatible Build IDs for Namespaces using Worker
 versioning:
@@ -2206,7 +2227,7 @@ Attributes and Query creation.
   Types of events to re-apply after reset point.
   Deprecated.
   Use --reapply-exclude instead.
-  Options: All, Signal, None.
+  Options: Options: All, Signal, None.
   Default: All.
 * `--reapply-exclude` (string[]) -
   Exclude these event types from re-application.
@@ -2347,10 +2368,10 @@ temporal workflow start \
   Default: 10s.
 * `--search-attribute` (string[]) -
   Search Attribute in "KEY='VALUE'" format.
-  KEY is a string, VALUE is JSON.
+  Use JSON values.
 * `--memo` (string[]) -
-  Memo in 'KEY="VALUE"' format.
-  KEY is a string, VALUE is JSON.
+  Memo using 'KEY="VALUE"' pairs.
+  Use JSON values.
 
 #### Options set for workflow start:
 
