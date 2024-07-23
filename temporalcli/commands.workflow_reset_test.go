@@ -248,6 +248,73 @@ func (s *SharedServerSuite) TestBatchResetByBuildId() {
 	sut.stopWorkerFor("v3")
 }
 
+func (s *SharedServerSuite) TestWorkflow_Reset_ReapplyExclude() {
+	var wfExecutions, timesSignalSeen int
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
+		sigChan := workflow.GetSignalChannel(ctx, "sig")
+		workflow.Go(ctx, func(ctx workflow.Context) {
+			for {
+				sigChan.Receive(ctx, nil)
+				fmt.Println("saw signal", workflow.GetInfo(ctx).WorkflowExecution)
+				timesSignalSeen++
+			}
+		})
+		err := workflow.Sleep(ctx, 1*time.Second)
+		if err != nil {
+			return nil, err
+		}
+		wfExecutions++
+		return nil, nil
+	})
+
+	// Start the workflow
+	searchAttr := "keyword-" + uuid.NewString()
+	run, err := s.Client.ExecuteWorkflow(
+		s.Context,
+		client.StartWorkflowOptions{
+			TaskQueue:        s.Worker().Options.TaskQueue,
+			SearchAttributes: map[string]any{"CustomKeywordField": searchAttr},
+		},
+		DevWorkflow,
+		"ignored",
+	)
+	s.NoError(err)
+
+	// Send a couple signals
+	s.NoError(s.Client.SignalWorkflow(s.Context, run.GetID(), run.GetRunID(), "sig", "1"))
+	s.NoError(s.Client.SignalWorkflow(s.Context, run.GetID(), run.GetRunID(), "sig", "2"))
+
+	s.NoError(run.Get(s.Context, nil))
+	s.Equal(1, wfExecutions)
+
+	// Reset to the beginning, exclude signals
+	res := s.Execute(
+		"workflow", "reset",
+		"--address", s.Address(),
+		"-w", run.GetID(),
+		"--event-id", "3",
+		"--reason", "test-reset-FirstWorkflowTask",
+		"--reapply-exclude", "Signal",
+	)
+	require.NoError(s.T(), res.Err)
+	s.awaitNextWorkflow(searchAttr)
+	s.Equal(2, timesSignalSeen, "Should only see original signals and not after reset")
+}
+
+func (s *SharedServerSuite) TestWorkflow_Reset_DoesNotAllowBothApplyKinds() {
+	res := s.Execute(
+		"workflow", "reset",
+		"--address", s.Address(),
+		"-w", "whatever",
+		"--event-id", "3",
+		"--reason", "test-reset-FirstWorkflowTask",
+		"--reapply-exclude", "Signal",
+		"--reapply-type", "Signal",
+	)
+	require.Error(s.T(), res.Err)
+	s.Contains(res.Err.Error(), "cannot specify --reapply-type and --reapply-exclude")
+}
+
 const (
 	badActivity = iota
 	firstActivity

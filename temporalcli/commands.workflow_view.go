@@ -108,6 +108,7 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 		Type                 string
 		Namespace            string
 		TaskQueue            string
+		AssignedBuildId      string
 		StartTime            time.Time
 		CloseTime            time.Time                  `cli:",cardOmitEmpty"`
 		ExecutionTime        time.Time                  `cli:",cardOmitEmpty"`
@@ -122,6 +123,7 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 		Type:                 info.Type.GetName(),
 		Namespace:            c.Parent.Namespace,
 		TaskQueue:            info.TaskQueue,
+		AssignedBuildId:      info.GetAssignedBuildId(),
 		StartTime:            timestampToTime(info.StartTime),
 		CloseTime:            timestampToTime(info.CloseTime),
 		ExecutionTime:        timestampToTime(info.ExecutionTime),
@@ -187,7 +189,7 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 	return nil
 }
 
-func (c *TemporalWorkflowListCommand) run(cctx *CommandContext, args []string) error {
+func (c *TemporalWorkflowListCommand) run(cctx *CommandContext, _ []string) error {
 	cl, err := c.Parent.ClientOptions.dialClient(cctx)
 	if err != nil {
 		return err
@@ -266,7 +268,7 @@ func (c *TemporalWorkflowListCommand) pageFetcher(
 	}
 }
 
-func (c *TemporalWorkflowCountCommand) run(cctx *CommandContext, _ []string) error {
+func (c *TemporalWorkflowCountCommand) run(cctx *CommandContext, args []string) error {
 	cl, err := c.Parent.ClientOptions.dialClient(cctx)
 	if err != nil {
 		return err
@@ -327,14 +329,15 @@ func (c *TemporalWorkflowShowCommand) run(cctx *CommandContext, _ []string) erro
 		client:         cl,
 		workflowID:     c.WorkflowId,
 		runID:          c.RunId,
-		includeDetails: true,
+		includeDetails: c.Detailed,
 		follow:         c.Follow,
 	}
 	if !cctx.JSONOutput {
 		cctx.Printer.Println(color.MagentaString("Progress:"))
-		if err := iter.print(cctx.Printer); err != nil {
+		if err := iter.print(cctx); err != nil {
 			return fmt.Errorf("displaying history failed: %w", err)
 		}
+		cctx.Printer.Println()
 		if err := printTextResult(cctx, iter.wfResult, 0); err != nil {
 			return err
 		}

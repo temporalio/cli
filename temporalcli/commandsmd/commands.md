@@ -22,12 +22,10 @@ IN-HOUSE STYLE
 * Avoid parentheticals unless absolutely necessary.
 
 * Wrapping:
-  * Assume a user-visible line length of 80 characters max.
-  * When declaring Options follow the wrapping style in this file.
-    Splitting the items into multiple lines like this improves maintainability.
-    It provides clearer diffs for changes.
-  * Hand-wrap your long descriptions as they appear for users.
-    NOTE: this may change in the future with automatic wrapping.
+  * Assume a user-visible line length of 80 characters max. `fmt -w 78` can help.
+    * Long descriptions must be pre-wrapped.
+  * When declaring Options follow the wrapping style used elsewhere in this file.
+    Splitting the items into multiple lines improves maintainability with clearer diffs.
 
 * Ordering:
   * Commands: Use alphabetical order for commands.
@@ -101,7 +99,7 @@ A Command entry uses the following format:
 
     (optional command implementation configuration)
 
-    #### Options 
+    #### Options
     (or)
     #### Options set for options set name:
 
@@ -159,14 +157,12 @@ OPTIONS SECTION
   ```
   Includes options set for [client](#options-set-for-client).
   ```
-  
-  You may include multiple option sets.
 
-  An options set declaration is the equivalent of pasting those options into the bulleted options list.
-
+  * You may include multiple option sets for a single command.
+  * An options set declaration is the equivalent of pasting those options into the bulleted options list.
   * Options that are similar but slightly different don't need to be in option sets.
+    Reserve option sets for when the behavior of the option is the same across commands.
   * Every "Option Set for" declaration links to the H4 entry that supplies the inherited options.
-  * Reserve option sets for when the behavior of the option is the same across commands.
     Otherwise, just use copy/paste.
 
 DEFINING AN OPTION
@@ -628,9 +624,9 @@ The command defaults to the local Service. Otherwise, use the
 `--frontend-address` option to specify a Cluster (Service) endpoint:
 
 ```
-temporal operator cluster system \ 
+temporal operator cluster system \
     --frontend-address "YourRemoteEndpoint:YourRemotePort"
-``` 
+```
 
 ### temporal operator cluster upsert: Add/update a Temporal Cluster
 
@@ -795,7 +791,7 @@ Display a detailed listing for all Namespaces on the Service:
 
 ```
 temporal operator namespace list
-``` 
+```
 
 ### temporal operator namespace update: Update a Namespace
 
@@ -803,7 +799,7 @@ Update a Namespace using properties you specify.
 
 ```
 temporal operator namespace update [options]
-``` 
+```
 
 Assign a Namespace's active Cluster (Service):
 
@@ -933,7 +929,6 @@ temporal operator search-attribute remove \
   Required.
 * `--yes`, `-y` (bool) -
   Don't prompt to confirm removal.
-  
 
 ### temporal schedule: Perform operations on Schedules
 
@@ -1027,9 +1022,9 @@ For example:
   temporal schedule create \
     --schedule-id "YourScheduleId" \
     --calendar '{"dayOfWeek":"Fri","hour":"3","minute":"30"}' \
-    --workflow-id "YourBaseWorkflowId" \
-    --task-queue "YourTaskQueue" \
-    --workflow-type "YourWorkflowType"
+    --workflow-id YourBaseWorkflowIdName \
+    --task-queue YourTaskQueue \
+    --workflow-type YourWorkflowType
 ```
 
 Schedules support any combination of `--calendar`, `--interval`, and `--cron`:
@@ -1038,7 +1033,7 @@ Schedules support any combination of `--calendar`, `--interval`, and `--cron`:
   For example: 45m (every 45 minutes) or 6h/5h (every 6 hours, at the top of
   the 5th hour).
 * JSON `--calendar`, as in the preceding example.
-* Unix-style `--cron` strings and robfig declarations 
+* Unix-style `--cron` strings and robfig declarations
   (@daily/@weekly/@every X/etc).
   For example, every Friday at 12:30 PM: `30 12 * * Fri`.
 
@@ -1067,7 +1062,7 @@ Schedules support any combination of `--calendar`, `--interval`, and `--cron`:
 * `--pause-on-failure` (bool) -
   Pause schedule after Workflow failures.
 * `--remaining-actions` (int) -
-  Total allowed actions. 
+  Total allowed actions.
   Default is zero (unlimited).
 * `--start-time` (timestamp) -
   Schedule start time.
@@ -1103,7 +1098,7 @@ temporal schedule delete \
 Removing a Schedule won't affect the Workflow Executions it started that are
 still running. To cancel or terminate these Workflow Executions, use `temporal
 workflow delete` with the `TemporalScheduledById` Search Attribute instead.
- 
+
 #### Options
 
 Includes options set for [schedule-id](#options-set-for-schedule-id).
@@ -1194,9 +1189,9 @@ Update an existing Schedule with new configuration details, including spec,
 action, and policies:
 
 ```
-temporal schedule update 
-temporal schedule update \  
- --schedule-id "YourScheduleId"   
+temporal schedule update
+temporal schedule update \
+ --schedule-id "YourScheduleId"
  --workflow-type "NewWorkflowType"
 ```
 
@@ -1312,6 +1307,8 @@ temporal server start-dev \
   For example, "YourKey=\"YourStringValue\"".
 * `--log-config` (bool) -
   Log the server config to stderr.
+* `--search-attribute` (string[]) -
+  Search attributes to register in 'KEY="VALUE"' format.
 
 ### temporal task-queue: Manage Task Queues
 
@@ -1319,14 +1316,15 @@ Inspect and update Task Queues, the queues that Workers poll for Workflow and
 Activity tasks:
 
 ```
-temporal task-queue [command] [command options]
+temporal task-queue [command] [command options] \
+    --task-queue YourTaskQueue
 ```
 
 For example:
 
 ```
 temporal task-queue describe \
-    --task-queue "YourTaskQueueName"
+    --task-queue YourTaskQueue
 ```
 
 #### Options
@@ -1338,13 +1336,14 @@ Includes options set for [client](#options-set-for-client).
 Display a list of active Workers that have recently polled a Task Queue. The
 Temporal Server records each poll request time. A `LastAccessTime` over one
 minute may indicate the Worker is at capacity or has shut down. Temporal
-Workers are removed if 5 minutes have passed since the last poll request:
+Workers are removed if 5 minutes have passed since the last poll request.
 
 ```
 temporal task-queue describe \
-   --task-queue "YourTaskQueueName"
+   --task-queue YourTaskQueue
 ```
 
+This command provides poller information for a given Task Queue.
 Workflow and Activity polling use separate Task Queues:
 
 ```
@@ -1352,6 +1351,34 @@ temporal task-queue describe \
     --task-queue YourTaskQueue \
     --task-queue-type "activity"`
 ```
+
+Safely retire Workers assigned a Build ID by checking reachability across
+all task types. Use the flag `--report-reachability`:
+
+```
+temporal task-queue describe \
+   --task-queue YourTaskQueue \
+   --build-id "YourBuildId" \
+   --report-reachability
+```
+
+Computing task reachability incurs a non-trivial computing cost.
+
+Build ID reachability states include:
+
+- `Reachable`: using the current versioning rules, the Build ID may be used
+   by new Workflow Executions or Activities OR there are currently open
+   Workflow or backlogged Activity tasks assigned to the queue.
+- `ClosedWorkflowsOnly`: the Build ID does not have open Workflow Executions
+   and can't be reached by new Workflow Executions. It MAY have closed
+   Workflow Executions within the Namespace retention period.
+- `Unreachable`: this Build ID is not used for new Workflow Executions and
+  isn't used by any existing Workflow Execution within the retention period.
+
+Task reachability is eventually consistent. You may experience a delay until
+reachability converges to the most accurate value. This is designed to act
+in the most conservative way until convergence. For example, `Reachable` is
+more conservative than `ClosedWorkflowsOnly`.
 
 #### Options
 
@@ -1362,19 +1389,29 @@ temporal task-queue describe \
   Task Queue type.
   Options: workflow, activity.
   Default: workflow.
-* `--partitions` (int) -
+* `--select-build-id` (string[]) -
+  Filter the Task Queue based on Build ID.
+* `--select-unversioned` (bool) -
+  Include the unversioned queue.
+* `--select-all-active` (bool) - Include all active versions. A version is active if it had new tasks or polls recently.
+* `--report-reachability` (bool) - Display task reachability information.
+* `--legacy-mode` (bool) - Enable a legacy mode for servers that do not support rules-based worker versioning. This mode only provides pollers info.
+* `--task-queue-type-legacy` (string-enum) - Task Queue type (legacy mode only). Options: workflow, activity. Default: workflow.
+* `--partitions-legacy` (int) -
   Query partitions 1 through `N`.
   Experimental/Temporary feature.
+  Legacy mode only.
   Default: 1.
 
-### temporal task-queue get-build-id-reachability: Show Build ID availability
+### temporal task-queue get-build-id-reachability: Show Build ID availability (Deprecated)
 
 Show if a given Build ID can be used for new, existing, or closed Workflows
 in Namespaces that support Worker versioning:
 
 ```
 temporal task-queue get-build-id-reachability \
-    --build-id "2.0"
+    --task-queue YourTaskQueue \
+    --build-id "YourBuildId"
 ```
 
 You can specify the `--build-id` and `--task-queue` flags multiple times. If
@@ -1398,14 +1435,14 @@ all Task Queues.
   Search only the specified task queue(s).
   Can be passed multiple times.
 
-### temporal task-queue get-build-ids: Fetch Build ID versions
+### temporal task-queue get-build-ids: Fetch Build ID versions (Deprecated)
 
 Fetch sets of compatible Build IDs for specified Task Queues and display their
 information:
 
 ```
 temporal task-queue get-build-ids \
-    --task-queue "YourTaskQueue"
+    --task-queue YourTaskQueue
 ```
 
 This command is limited to Namespaces that enable Worker versioning.
@@ -1427,7 +1464,7 @@ Display a Task Queue's partition list with assigned matching nodes:
 
 ```
 temporal task-queue list-partition \
-    --task-queue "YourTaskQueue"
+    --task-queue YourTaskQueue
 ```
 
 #### Options
@@ -1436,14 +1473,14 @@ temporal task-queue list-partition \
   Task Queue name.
   Required.
 
-### temporal task-queue update-build-ids: Manage Build IDs
+### temporal task-queue update-build-ids: Manage Build IDs (Deprecated)
 
 Add or change a Task Queue's compatible Build IDs for Namespaces using Worker
 versioning:
 
-
 ```
-temporal task-queue update-build-ids [subcommands] [options]
+temporal task-queue update-build-ids [subcommands] [options] \
+    --task-queue YourTaskQueue
 ```
 
 ### temporal task-queue update-build-ids add-new-compatible: Add compatible Build ID
@@ -1454,14 +1491,15 @@ existing Build ID and a new Build ID:
 ```
 temporal task-queue update-build-ids add-new-compatible \
     --task-queue YourTaskQueue \
-    --existing-compatible-build-id YourExistingBuildId \
-    --build-id YourNewBuildId
+    --existing-compatible-build-id "YourExistingBuildId" \
+    --build-id "YourNewBuildId"
 ```
 
 The new ID is stored in the set containing the existing ID and becomes the new
 default for that set.
 
 This command is limited to Namespaces that support Worker versioning.
+NOTICE: Worker versioning is experimental. This command is subject to change.
 
 #### Options
 
@@ -1487,10 +1525,11 @@ sets and versions.
 ```
 temporal task-queue update-build-ids add-new-default \
     --task-queue YourTaskQueue \
-    --build-id YourNewBuildId
+    --build-id "YourNewBuildId"
 ```
 
 This command is limited to Namespaces that support Worker versioning.
+NOTICE: Worker versioning is experimental. This command is subject to change.
 
 #### Options
 
@@ -1509,10 +1548,11 @@ compatible with this set will now be dispatched to this ID:
 ```
 temporal task-queue update-build-ids promote-id-in-set \
     --task-queue YourTaskQueue \
-    --build-id YourBuildId
+    --build-id "YourBuildId"
 ```
 
 This command is limited to Namespaces that support Worker versioning.
+NOTICE: Worker versioning is experimental. This command is subject to change.
 
 #### Options
 
@@ -1532,10 +1572,11 @@ command has no effect:
 ```
 temporal task-queue update-build-ids promote-set \
     --task-queue YourTaskQueue \
-    --build-id YourBuildId
+    --build-id "YourBuildId"
 ```
 
 This command is limited to Namespaces that support Worker versioning.
+NOTICE: Worker versioning is experimental. This command is subject to change.
 
 #### Options
 
@@ -1545,6 +1586,270 @@ This command is limited to Namespaces that support Worker versioning.
 * `--task-queue`, `-t` (string) -
   Task Queue name.
   Required.
+
+### temporal task-queue versioning: manage Task Queue Build ID handling
+
+NOTICE: Worker versioning is experimental. This command is subject to change.
+
+Provides commands to add, list, remove, or replace Worker Build ID assignment
+and redirect rules associated with Task Queues:
+
+```
+temporal task-queue versioning [subcommands] [options] \
+    --task-queue YourTaskQueue
+```
+
+Task Queues support the following versioning rules and policies:
+
+- Assignment Rules: manage how new executions are assigned to run on specific
+  Worker Build IDs. Each Task Queue stores a list of ordered Assignment Rules,
+  which are evaluated from first to last. Assignment Rules also allow for
+  gradual rollout of new Build IDs by setting ramp percentage.
+- Redirect Rules: automatically assign work for a source Build ID to a target
+  Build ID. You may add at most one redirect rule for each source Build ID.
+  Redirect rules require that a target Build ID is fully compatible with
+  the source Build ID.
+
+#### Options
+
+* `--task-queue`, `-t` (string) -
+  Task queue name.
+  Required.
+
+### temporal task-queue versioning add-redirect-rule: Add Task Queue redirect rules
+
+NOTICE: Worker versioning is experimental. This command is subject to change.
+
+Add a new redirect rule for a given Task Queue. You may add at most one
+redirect rule for each distinct source build ID:
+
+```
+temporal task-queue versioning add-redirect-rule \
+    --task-queue YourTaskQueue \
+    --source-build-id "YourSourceBuildID" \
+    --target-build-id "YourTargetBuildID"
+```
+
+#### Options
+
+* `--source-build-id` (string) -
+  Source build ID.
+  Required.
+* `--target-build-id` (string) -
+  Target build ID.
+  Required.
+* `--yes`, `-y` (bool) -
+  Don't prompt to confirm.
+
+### temporal task-queue versioning commit-build-id: Complete Build ID rollout
+
+NOTICE: Worker versioning is experimental. This command is subject to change.
+
+Complete a Build ID's rollout and clean up unnecessary rules that might have
+been created during a gradual rollout:
+
+```
+temporal task-queue versioning commit-build-id \
+    --task-queue YourTaskQueue
+    --build-id "YourBuildId"
+```
+
+This command automatically applies the following atomic changes:
+
+- Adds an unconditional assignment rule for the target Build ID at the
+  end of the list.
+- Removes all previously added assignment rules to the given target
+  Build ID.
+- Removes any unconditional assignment rules for other Build IDs.
+
+Rejects requests when there have been no recent pollers for this Build ID.
+This prevents committing invalid Build IDs. Use the `--force` option to
+override this validation.
+
+#### Options
+
+* `--build-id` (string) -
+  Target build ID.
+  Required.
+* `--force` (bool) -
+  Bypass recent-poller validation.
+* `--yes`, `-y` (bool) -
+  Don't prompt to confirm.
+
+### temporal task-queue versioning delete-assignment-rule: Removes a Task Queue assignment rule
+
+NOTICE: Worker versioning is experimental. This command is subject to change.
+
+Deletes a rule identified by its index in the Task Queue's list of assignment
+rules.
+
+```
+temporal task-queue versioning delete-assignment-rule \
+    --task-queue YourTaskQueue \
+    --rule-index YourIntegerRuleIndex
+```
+
+By default, the Task Queue must retain one unconditional rule, such as "no
+hint filter" or "percentage". Otherwise, the delete operation is rejected.
+Use the `--force` option to override this validation.
+
+#### Options
+
+* `--rule-index`, `-i` (int) -
+  Position of the assignment rule to be replaced.
+  Requests for invalid indices will fail.
+  Required.
+* `--force` (bool) -
+  Bypass one-unconditional-rule validation.
+* `--yes`, `-y` (bool) -
+  Don't prompt to confirm.
+
+### temporal task-queue versioning delete-redirect-rule: Removes Build-ID routing rule
+
+NOTICE: Worker versioning is experimental. This command is subject to change.
+
+Deletes the routing rule for the given source Build ID.
+
+```
+temporal task-queue versioning delete-redirect-rule \
+    --task-queue YourTaskQueue \
+    --source-build-id "YourBuildId"
+```
+
+#### Options
+
+* `--source-build-id` (string) -
+  Source Build ID.
+  Required.
+* `--yes`, `-y` (bool) -
+  Don't prompt to confirm.
+
+### temporal task-queue versioning get-rules: Fetch Worker Build ID assignments and redirect rules
+
+NOTICE: Worker versioning is experimental. This command is subject to change.
+
+Retrieve all the Worker Build ID assignments and redirect rules associated
+with a Task Queue.
+
+```
+temporal task-queue versioning get-rules \
+    --task-queue YourTaskQueue
+```
+
+Task Queues support the following versioning rules:
+
+- Assignment Rules: manage how new executions are assigned to run on specific
+  Worker Build IDs. Each Task Queue stores a list of ordered Assignment Rules,
+  which are evaluated from first to last. Assignment Rules also allow for
+  gradual rollout of new Build IDs by setting ramp percentage.
+- Redirect Rules: automatically assign work for a source Build ID to a target
+  Build ID. You may add at most one redirect rule for each source Build ID.
+  Redirect rules require that a target Build ID is fully compatible with
+  the source Build ID.
+
+### temporal task-queue versioning insert-assignment-rule: Add an assignment rule at a index
+
+NOTICE: Worker versioning is experimental. This command is subject to change.
+
+Inserts a new assignment rule for this Task Queue. Rules are evaluated in
+order, starting from index 0. The first applicable rule is applied, and the
+rest ignored:
+
+```
+temporal task-queue versioning insert-assignment-rule \
+    --task-queue YourTaskQueue \
+    --build-id "YourBuildId"
+```
+
+If you do not specify a `--rule-index`, this command inserts at index 0.
+
+#### Options
+
+* `--build-id` (string) -
+  Target Build ID.
+  Required.
+* `--rule-index`, `-i` (int) -
+  Insertion position.
+  Ranges from 0 (insert at start) to count (append).
+  Any number greater than the count is treated as "append".
+  Default: 0.
+* `--percentage` (int) -
+  Traffice percent to send to target Build ID.
+  Default: 100.
+* `--yes`, `-y` (bool) -
+  Don't prompt to confirm.
+
+### temporal task-queue versioning replace-assignment-rule: Update assignment rule at index
+
+NOTICE: Worker versioning is experimental. This command is subject to change.
+
+Change an assignment rule for this Task Queue. By default, this enforces one
+unconditional rule (no hint filter or percentage). Otherwise, the operation
+will be rejected. Set `force` to true to bypass this validation.
+
+```
+temporal task-queue versioning replace-assignment-rule
+    --task-queue YourTaskQueue \
+    --rule-index AnIntegerIndex \
+    --build-id "YourBuildId"
+```
+
+To assign multiple assignment rules to a single Build ID, use
+'insert-assignment-rule'.
+
+To update the percent:
+
+```
+temporal task-queue versioning replace-assignment-rule
+    --task-queue YourTaskQueue \
+    --rule-index AnIntegerIndex \
+    --build-id "YourBuildId" \
+    --percentage AnIntegerPercent
+```
+
+Percent may vary between 0 and 100 (default).
+
+#### Options
+
+* `--build-id` (string) -
+  Target Build ID.
+  Required.
+* `--rule-index`, `-i` (int) -
+  Position of the assignment rule to be replaced.
+  Requests for invalid indices will fail.
+  Required.
+* `--percentage` (int) -
+  Divert percent of traffic to target Build ID.
+  Default: 100.
+* `--yes`, `-y` (bool) -
+  Don't prompt to confirm.
+* `--force` (bool) -
+  Bypass the validation that one unconditional rule remains.
+
+### temporal task-queue versioning replace-redirect-rule: Change the target for a Build ID's redirect
+
+NOTICE: Worker versioning is experimental. This command is subject to change.
+
+Updates a Build ID's redirect rule on a Task Queue by replacing its target
+Build ID.
+
+```
+temporal task-queue versioning replace-redirect-rule
+    --task-queue YourTaskQueue \
+    --source-build-id YourSourceBuildId \
+    --target-build-id YourNewTargetBuildId
+```
+
+#### Options
+
+* `--source-build-id` (string) -
+  Source Build ID.
+  Required.
+* `--target-build-id` (string) -
+  Target Build ID.
+  Required.
+* `--yes`, `-y` (bool) -
+  Don't prompt to confirm.
 
 ### temporal workflow: Start, list, and operate on Workflows
 
@@ -1578,7 +1883,7 @@ temporal workflow list
   Format as comma-separated "KEY=VALUE" pairs.
 * `--tls` (bool) -
   Enable base TLS encryption.
-  Does not have additional options like mTLS or client certs. 
+  Does not have additional options like mTLS or client certs.
   Env: TEMPORAL_TLS.
 * `--tls-cert-path` (string) -
   Path to x509 certificate.
@@ -1724,10 +2029,10 @@ Workflow requires input, pass valid JSON:
 
 ```
 temporal workflow execute
-		--workflow-id YourWorkflowId \
-		--type YourWorkflow \
-		--task-queue YourTaskQueue \
-		--input '{"Input": "As-JSON"}'
+    --workflow-id YourWorkflowId \
+    --type YourWorkflow \
+    --task-queue YourTaskQueue \
+    --input '{"Input": "As-JSON"}'
 ```
 
 Use `--event-details` to relay updates to the command-line output in JSON
@@ -1736,8 +2041,9 @@ format. When using JSON output (`--output json`), this includes the entire
 
 #### Options
 
-* `--event-details` (bool) -
-  Show event details during run.
+* `--detailed` (bool) -
+  Display events as sections instead of table.
+  Does not apply to JSON output.
 
 Includes options set for [shared workflow start](#options-set-for-shared-workflow-start).
 Includes options set for [workflow start](#options-set-for-workflow-start).
@@ -1811,11 +2117,12 @@ not contain blocking code.
 
 #### Options
 
-* `--type` (string) -
+* `--name` (string) -
   Query Type/Name.
   Required.
+  Alias: `--type`.
 * `--reject-condition` (string-enum) -
-  Optional flag to reject Queries based on Workflow state.
+  Optional flag for rejecting Queries based on Workflow state.
   Options: not_open, not_completed_cleanly.
 
 Includes options set for [payload input](#options-set-for-payload-input).
@@ -1854,7 +2161,7 @@ Attributes and Query creation.
 * `--run-id`, `-r` (string) -
   Run ID.
 * `--event-id`, `-e` (int) -
-  Event ID to reset to. 
+  Event ID to reset to.
   Event must occur after `WorkflowTaskStarted`.
   `WorkflowTaskCompleted`, `WorkflowTaskFailed`, etc. are valid.
 * `--reason` (string) -
@@ -1862,14 +2169,19 @@ Attributes and Query creation.
   Required.
 * `--reapply-type` (string-enum) -
   Types of events to re-apply after reset point.
+  Deprecated.
+  Use --reapply-exclude instead.
   Options: All, Signal, None.
   Default: All.
+* `--reapply-exclude` (string[]) -
+  Exclude these event types from re-application.
+  Options: All, Signal, Update.
 * `--type`, `-t` (string-enum) -
-  The event type for the reset. 
+  The event type for the reset.
   Options: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew, BuildId.
 * `--build-id` (string) -
   A Build ID.
-  Use only with the BuildId `--type`. 
+  Use only with the BuildId `--type`.
   Resets the first Workflow task processed by this ID.
   By default, this reset may be in a prior run, earlier than a Continue
   as New point.
@@ -1881,7 +2193,7 @@ Attributes and Query creation.
 
 ### temporal workflow show: Display Event History
 
-Show a Workflow Execution's Event History. 
+Show a Workflow Execution's Event History.
 When using JSON output (`--output json`), you may pass the results to an SDK
 to perform a replay:
 
@@ -1893,11 +2205,12 @@ temporal workflow show \
 
 #### Options
 
-* `--event-details` (bool) -
-  Show event details during run.
 * `--follow`, `-f` (bool) -
-  Direct Workflow Execution progress to stdout in real time.
-  Does not apply when JSON output is selected.
+  Follow the Workflow Execution progress in real time.
+  Does not apply to JSON output.
+* `--detailed` (bool) -
+  Display events as detailed sections instead of table.
+  Does not apply to JSON output.
 
 Includes options set for [workflow reference](#options-set-for-workflow-reference).
 
@@ -1917,11 +2230,10 @@ temporal workflow signal \
 Visit https://docs.temporal.io/visibility to read more about Search Attributes
 and Query creation.
 
-#### Options
-
 * `--name` (string) -
   Signal name.
   Required.
+  Alias: `--type`.
 
 Includes options set for [payload input](#options-set-for-payload-input).
 
@@ -1990,12 +2302,12 @@ temporal workflow start \
   Workflow Task queue.
   Required.
 * `--run-timeout` (duration) -
-  Fail a Workflow Run if it takes longer than `DURATION`.
+  Fail a Workflow Run if it lasts longer than `DURATION`.
 * `--execution-timeout` (duration) -
-  Fail a WorkflowExecution if it takes longer than `DURATION`.
+  Fail a WorkflowExecution if it lasts longer than `DURATION`.
   This time-out includes retries and ContinueAsNew tasks.
 * `--task-timeout` (duration) -
-  Fail a Workflow Task if it takes longer than `DURATION`.
+  Fail a Workflow Task if it lasts longer than `DURATION`.
   This is the Start-to-close timeout for a Workflow Task.
   Default: 10s.
 * `--search-attribute` (string[]) -
@@ -2003,13 +2315,13 @@ temporal workflow start \
   KEY is a string, VALUE is JSON.
 * `--memo` (string[]) -
   Memo in 'KEY="VALUE"' format.
-  KEY is a string, VALUE is JSON. 
+  KEY is a string, VALUE is JSON.
 
 #### Options set for workflow start:
 
 * `--cron` (string) -
   Cron schedule for the Workflow.
-  Deprecated. 
+  Deprecated.
   Use Schedules instead.
 * `--fail-existing` (bool) -
   Fail if the Workflow already exists.
@@ -2028,7 +2340,7 @@ temporal workflow start \
   Input value.
   Use JSON content or set --input-meta to override.
   Can't be combined with --input-file.
-  Can be passed multiple times. 
+  Can be passed multiple times.
 * `--input-file` (string[]) -
   A path or paths for input file(s).
   Use JSON content or set --input-meta to override.
@@ -2101,17 +2413,19 @@ temporal workflow trace \
 #### Options
 
 * `--fold` (string[]) -
-  Status for folding away Child Workflows.
+  Statuses for folding away Child Workflows.
+  This reduces info fetched and displayed.
   Case-insensitive.
   Ignored if --no-fold supplied.
-  Available values: running, completed, failed, canceled, terminated, timedout, continueasnew.
+  Available values: running, completed, failed, canceled, terminated,
+  timedout, continueasnew.
   Can be passed multiple times.
   Each fold reduces the amount of information fetched and displayed.
 * `--no-fold` (bool) -
   Disable folding.
-  Fetch and display Child Workflows within set depth.
+  Fetch and display Child Workflows within the set depth.
 * `--depth` (int) -
-  Set depth for Child Workflow fetches.
+  Set depth for your Child Workflow fetches.
   Pass -1 to fetch child workflows at any depth.
   Default: -1.
 * `--concurrency` (int) -
@@ -2127,9 +2441,9 @@ can change the state of a Workflow Execution and return a response:
 
 ```
 temporal workflow update \
-		--workflow-id YourWorkflowId \
-		--name YourUpdate \
-		--input '{"Input": "As-JSON"}'
+    --workflow-id YourWorkflowId \
+    --name YourUpdate \
+    --input '{"Input": "As-JSON"}'
 ```
 
 #### Options
@@ -2137,6 +2451,7 @@ temporal workflow update \
 * `--name` (string) -
   Handler method name.
   Required.
+  Alias: `--type`.
 * `--workflow-id`, `-w` (string) -
   Workflow ID.
   Required.

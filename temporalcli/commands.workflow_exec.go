@@ -1,11 +1,13 @@
 package temporalcli
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"reflect"
+	"sort"
 	"strings"
 	"time"
 
@@ -14,9 +16,8 @@ import (
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/history/v1"
+	"go.temporal.io/api/temporalproto"
 	"go.temporal.io/sdk/client"
-	"google.golang.org/protobuf/encoding/protojson"
-	"google.golang.org/protobuf/proto"
 )
 
 func (c *TemporalWorkflowStartCommand) run(cctx *CommandContext, args []string) error {
@@ -51,10 +52,10 @@ func (c *TemporalWorkflowExecuteCommand) run(cctx *CommandContext, args []string
 			client:         cl,
 			workflowID:     run.GetID(),
 			runID:          run.GetRunID(),
-			includeDetails: c.EventDetails,
+			includeDetails: c.Detailed,
 			follow:         true,
 		}
-		if err := iter.print(cctx.Printer); err != nil && cctx.Err() == nil {
+		if err := iter.print(cctx); err != nil && cctx.Err() == nil {
 			return fmt.Errorf("displaying history failed: %w", err)
 		}
 		// Separate newline
@@ -140,7 +141,7 @@ func (c *TemporalWorkflowExecuteCommand) printJSONResult(
 	}
 
 	// Build history if requested
-	if c.EventDetails {
+	if c.Detailed {
 		var histProto history.History
 		iter := client.GetWorkflowHistory(cctx, run.GetID(), run.GetRunID(), false, enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
 		for iter.HasNext() {
@@ -171,10 +172,11 @@ func printTextResult(
 	}
 	cctx.Printer.Println(color.MagentaString("Results:"))
 	result := struct {
-		RunTime string `cli:",cardOmitEmpty"`
-		Status  string
-		Result  json.RawMessage `cli:",cardOmitEmpty"`
-		Failure string          `cli:",cardOmitEmpty"`
+		RunTime        string `cli:",cardOmitEmpty"`
+		Status         string
+		Result         json.RawMessage `cli:",cardOmitEmpty"`
+		ResultEncoding string          `cli:",cardOmitEmpty"`
+		Failure        string          `cli:",cardOmitEmpty"`
 	}{}
 	if duration > 0 {
 		result.RunTime = duration.Truncate(10 * time.Millisecond).String()
@@ -183,10 +185,18 @@ func printTextResult(
 	case enums.EVENT_TYPE_WORKFLOW_EXECUTION_COMPLETED:
 		result.Status = color.GreenString("COMPLETED")
 		var err error
-		result.Result, err = cctx.MarshalFriendlyJSONPayloads(
-			closeEvent.GetWorkflowExecutionCompletedEventAttributes().GetResult())
+		resultPayloads := closeEvent.GetWorkflowExecutionCompletedEventAttributes().GetResult()
+		result.Result, err = cctx.MarshalFriendlyJSONPayloads(resultPayloads)
 		if err != nil {
 			return fmt.Errorf("failed marshaling result: %w", err)
+		}
+		if resultPayloads != nil && len(resultPayloads.Payloads) > 0 {
+			metadata := resultPayloads.Payloads[0].GetMetadata()
+			if metadata != nil {
+				if enc, ok := metadata["encoding"]; ok {
+					result.ResultEncoding = string(enc)
+				}
+			}
 		}
 	case enums.EVENT_TYPE_WORKFLOW_EXECUTION_FAILED:
 		result.Status = color.RedString("FAILED")
@@ -248,12 +258,12 @@ func buildStartOptions(sw *SharedWorkflowStartOptions, w *WorkflowStartOptions) 
 	o := client.StartWorkflowOptions{
 		ID:                                       sw.WorkflowId,
 		TaskQueue:                                sw.TaskQueue,
-		WorkflowRunTimeout:                       sw.RunTimeout,
-		WorkflowExecutionTimeout:                 sw.ExecutionTimeout,
-		WorkflowTaskTimeout:                      sw.TaskTimeout,
+		WorkflowRunTimeout:                       sw.RunTimeout.Duration(),
+		WorkflowExecutionTimeout:                 sw.ExecutionTimeout.Duration(),
+		WorkflowTaskTimeout:                      sw.TaskTimeout.Duration(),
 		CronSchedule:                             w.Cron,
 		WorkflowExecutionErrorWhenAlreadyStarted: w.FailExisting,
-		StartDelay:                               w.StartDelay,
+		StartDelay:                               w.StartDelay.Duration(),
 	}
 	if w.IdReusePolicy != "" {
 		var err error
@@ -286,7 +296,7 @@ func (p *PayloadInputOptions) buildRawInput() ([]any, error) {
 	// Convert to raw values that our special data converter understands
 	ret := make([]any, len(payloads.Payloads))
 	for i, payload := range payloads.Payloads {
-		ret[i] = rawValue{payload}
+		ret[i] = RawValue{payload}
 	}
 	return ret, nil
 }
@@ -373,12 +383,40 @@ type structuredHistoryIter struct {
 	iter client.HistoryEventIterator
 }
 
-func (s *structuredHistoryIter) print(p *printer.Printer) error {
-	options := printer.StructuredOptions{Table: &printer.TableOptions{}}
+func (s *structuredHistoryIter) print(cctx *CommandContext) error {
+	// If we're not including details, just print the streaming table
 	if !s.includeDetails {
-		options.ExcludeFields = []string{"Details"}
+		return cctx.Printer.PrintStructuredTableIter(
+			structuredHistoryEventType,
+			s,
+			printer.StructuredOptions{Table: &printer.TableOptions{}},
+		)
 	}
-	return p.PrintStructuredIter(structuredHistoryEventType, s, options)
+
+	// Since details are wanted, we are going to do each event as a section
+	first := true
+	for {
+		event, err := s.NextRawEvent()
+		if event == nil || err != nil {
+			return err
+		}
+		// Add blank line if not first
+		if !first {
+			cctx.Printer.Println()
+		}
+		first = false
+
+		// Print section heading
+		cctx.Printer.Printlnf("--------------- [%v] %v ---------------", event.EventId, event.EventType)
+		// Convert the event to dot-delimited-field/value and print one per line
+		fields, err := s.flattenFields(cctx, event)
+		if err != nil {
+			return fmt.Errorf("failed flattening event fields: %w", err)
+		}
+		for _, field := range fields {
+			cctx.Printer.Printlnf("%v: %v", field.field, field.value)
+		}
+	}
 }
 
 type structuredHistoryEvent struct {
@@ -390,8 +428,7 @@ type structuredHistoryEvent struct {
 	Time string `cli:",width=20"`
 	// We're going to set width to a semi-reasonable number for good header
 	// placement, but we expect it to extend past for larger
-	Type    string `cli:",width=26"`
-	Details string `cli:",width=20"`
+	Type string `cli:",width=26"`
 }
 
 var structuredHistoryEventType = reflect.TypeOf(structuredHistoryEvent{})
@@ -409,15 +446,6 @@ func (s *structuredHistoryIter) Next() (any, error) {
 		ID:   event.EventId,
 		Time: event.EventTime.AsTime().Format(time.RFC3339),
 		Type: coloredEventType(event.EventType),
-	}
-	if s.includeDetails {
-		// First field in the attributes
-		attrs := reflect.ValueOf(event.Attributes).Elem().Field(0).Interface().(proto.Message)
-		if b, err := protojson.Marshal(attrs); err != nil {
-			data.Details = "<failed serializing details>"
-		} else {
-			data.Details = string(b)
-		}
 	}
 
 	// Follow continue as new
@@ -445,6 +473,91 @@ func (s *structuredHistoryIter) NextRawEvent() (*history.HistoryEvent, error) {
 		s.wfResult = event
 	}
 	return event, nil
+}
+
+type eventFieldValue struct {
+	field string
+	value string
+}
+
+func (s *structuredHistoryIter) flattenFields(
+	cctx *CommandContext,
+	event *history.HistoryEvent,
+) ([]eventFieldValue, error) {
+	// We want all event fields and all attribute fields converted to the same
+	// top-level JSON object. First do the proto conversion.
+	opts := temporalproto.CustomJSONMarshalOptions{}
+	if cctx.JSONShorthandPayloads {
+		opts.Metadata = map[string]any{common.EnablePayloadShorthandMetadataKey: true}
+	}
+	protoJSON, err := opts.Marshal(event)
+	if err != nil {
+		return nil, fmt.Errorf("failed marshaling event: %w", err)
+	}
+	// Convert from string back to JSON
+	dec := json.NewDecoder(bytes.NewReader(protoJSON))
+	// We want json.Number
+	dec.UseNumber()
+	fieldsMap := map[string]any{}
+	if err := dec.Decode(&fieldsMap); err != nil {
+		return nil, fmt.Errorf("failed unmarshaling event proto: %w", err)
+	}
+	// Exclude eventId and eventType
+	delete(fieldsMap, "eventId")
+	delete(fieldsMap, "eventType")
+	// Lift any "Attributes"-suffixed fields up to the top level
+	for k, v := range fieldsMap {
+		if strings.HasSuffix(k, "Attributes") {
+			subMap, ok := v.(map[string]any)
+			if !ok {
+				return nil, fmt.Errorf("unexpectedly invalid attribute map")
+			}
+			for subK, subV := range subMap {
+				fieldsMap[subK] = subV
+			}
+			delete(fieldsMap, k)
+		}
+	}
+	// Flatten JSON map and sort
+	fields, err := s.flattenJSONValue(nil, "", fieldsMap)
+	if err != nil {
+		return nil, err
+	}
+	sort.Slice(fields, func(i, j int) bool { return fields[i].field < fields[j].field })
+	return fields, nil
+}
+
+func (s *structuredHistoryIter) flattenJSONValue(
+	to []eventFieldValue,
+	field string,
+	value any,
+) ([]eventFieldValue, error) {
+	var err error
+	switch value := value.(type) {
+	case bool, string, json.Number, nil:
+		// Note, empty values should not occur
+		to = append(to, eventFieldValue{field, fmt.Sprintf("%v", value)})
+	case []any:
+		for i, subValue := range value {
+			if to, err = s.flattenJSONValue(to, fmt.Sprintf("%v[%v]", field, i), subValue); err != nil {
+				return nil, err
+			}
+		}
+	case map[string]any:
+		// Only add a dot if existing field not empty (i.e. not first)
+		prefix := field
+		if prefix != "" {
+			prefix += "."
+		}
+		for subField, subValue := range value {
+			if to, err = s.flattenJSONValue(to, prefix+subField, subValue); err != nil {
+				return nil, err
+			}
+		}
+	default:
+		return nil, fmt.Errorf("failed converting field %v, unknown type %T", field, value)
+	}
+	return to, nil
 }
 
 func isWorkflowTerminatingEvent(t enums.EventType) bool {

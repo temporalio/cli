@@ -3,10 +3,29 @@ package temporalcli
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/temporalio/cli/temporalcli/devserver"
+	"go.temporal.io/api/enums/v1"
+	"go.temporal.io/api/operatorservice/v1"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
+
+var defaultDynamicConfigValues = map[string]any{
+	// Make search attributes immediately visible on creation, so users don't
+	// have to wait for eventual consistency to happen when testing against the
+	// dev-server.  Since it's a very rare thing to create search attributes,
+	// we're comfortable that this is very unlikely to mask bugs in user code.
+	"system.forceSearchAttributesCacheRefreshOnRead": true,
+
+	// Since we disable the SA cache, we need to bump max QPS accordingly.
+	// These numbers were chosen to maintain the ratio between the two that's
+	// established in the defaults.
+	"frontend.persistenceMaxQPS": 10000,
+	"history.persistenceMaxQPS": 45000,
+}
 
 func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string) error {
 	// Have to assume "localhost" is 127.0.0.1 for server to work (it expects IP)
@@ -40,14 +59,27 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 	} else if err := opts.LogLevel.UnmarshalText([]byte(logLevel)); err != nil {
 		return fmt.Errorf("invalid log level %q: %w", logLevel, err)
 	}
+	if err := devserver.CheckPortFree(opts.FrontendIP, opts.FrontendPort); err != nil {
+		return fmt.Errorf("can't set frontend port %d: %w", opts.FrontendPort, err)
+	}
+	if err := devserver.CheckPortFree(opts.FrontendIP, opts.FrontendHTTPPort); err != nil {
+		return fmt.Errorf("can't set frontend HTTP port %d: %w", opts.FrontendHTTPPort, err)
+	}
 	// Setup UI
 	if !t.Headless {
-		opts.UIIP, opts.UIPort = t.Ip, t.UiPort
+		opts.UIIP, opts.UIPort = t.UiIp, t.UiPort
 		if opts.UIIP == "" {
 			opts.UIIP = t.Ip
 		}
 		if opts.UIPort == 0 {
 			opts.UIPort = t.Port + 1000
+			if err := devserver.CheckPortFree(opts.UIIP, opts.UIPort); err != nil {
+				return fmt.Errorf("can't use default UI port %d (%d + 1000): %w", opts.UIPort, t.Port, err)
+			}
+		} else {
+			if err := devserver.CheckPortFree(opts.UIIP, opts.UIPort); err != nil {
+				return fmt.Errorf("can't set UI port %d: %w", opts.UIPort, err)
+			}
 		}
 		opts.UIAssetPath, opts.UICodecEndpoint = t.UiAssetPath, t.UiCodecEndpoint
 	}
@@ -74,6 +106,22 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 		}
 	}
 
+	// Apply set of default dynamic config values if not already present
+	for k, v := range defaultDynamicConfigValues {
+		if _, ok := opts.DynamicConfigValues[k]; !ok {
+			if opts.DynamicConfigValues == nil {
+				opts.DynamicConfigValues = map[string]any{}
+			}
+			opts.DynamicConfigValues[k] = v
+		}
+	}
+
+	// Prepare search attributes for adding before starting server
+	searchAttrs, err := t.prepareSearchAttributes()
+	if err != nil {
+		return err
+	}
+
 	// If not using DB file, set persistent cluster ID
 	if t.DbFilename == "" {
 		opts.ClusterID = persistentClusterID()
@@ -87,7 +135,11 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 	}
 	// Grab a free port for metrics ahead-of-time so we know what port is selected
 	if opts.MetricsPort == 0 {
-		opts.MetricsPort = devserver.MustGetFreePort()
+		opts.MetricsPort = devserver.MustGetFreePort(opts.FrontendIP)
+	} else {
+		if err := devserver.CheckPortFree(opts.FrontendIP, opts.MetricsPort); err != nil {
+			return fmt.Errorf("can't set metrics port %d: %w", opts.MetricsPort, err)
+		}
 	}
 
 	// Start, wait for context complete, then stop
@@ -97,18 +149,27 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 	}
 	defer s.Stop()
 
-	friendlyIP := t.Ip
-	if friendlyIP == "127.0.0.1" {
-		friendlyIP = "localhost"
+	// Register search attributes
+	if err := t.registerSearchAttributes(cctx, searchAttrs, opts.Namespaces); err != nil {
+		return err
 	}
-	cctx.Printer.Printlnf("Temporal server is running at: %v:%v", friendlyIP, t.Port)
+
+	cctx.Printer.Printlnf("CLI %v\n", VersionString())
+	cctx.Printer.Printlnf("%-8s %v:%v", "Server:", toFriendlyIp(opts.FrontendIP), opts.FrontendPort)
 	if !t.Headless {
-		cctx.Printer.Printlnf("Web UI is running at: http://%v:%v", friendlyIP, opts.UIPort)
+		cctx.Printer.Printlnf("%-8s http://%v:%v", "UI:", toFriendlyIp(opts.UIIP), opts.UIPort)
 	}
-	cctx.Printer.Printlnf("Metrics available at: http://%v:%v/metrics", friendlyIP, opts.MetricsPort)
+	cctx.Printer.Printlnf("%-8s http://%v:%v/metrics", "Metrics:", toFriendlyIp(opts.FrontendIP), opts.MetricsPort)
 	<-cctx.Done()
 	cctx.Printer.Println("Stopping server...")
 	return nil
+}
+
+func toFriendlyIp(host string) string {
+	if host == "127.0.0.1" || host == "::1" {
+		return "localhost"
+	}
+	return devserver.MaybeEscapeIPv6(host)
 }
 
 func persistentClusterID() string {
@@ -129,4 +190,58 @@ func persistentClusterID() string {
 	id := uuid.NewString()
 	_ = writeEnvConfigFile(file, map[string]map[string]string{"default": {"cluster-id": id}})
 	return id
+}
+
+func (t *TemporalServerStartDevCommand) prepareSearchAttributes() (map[string]enums.IndexedValueType, error) {
+	opts, err := stringKeysValues(t.SearchAttribute)
+	if err != nil {
+		return nil, fmt.Errorf("invalid search attributes: %w", err)
+	}
+	attrs := make(map[string]enums.IndexedValueType, len(opts))
+	for k, v := range opts {
+		// Case-insensitive index type lookup
+		var valType enums.IndexedValueType
+		for valTypeName, valTypeOrd := range enums.IndexedValueType_shorthandValue {
+			if strings.EqualFold(v, valTypeName) {
+				valType = enums.IndexedValueType(valTypeOrd)
+				break
+			}
+		}
+		if valType == 0 {
+			return nil, fmt.Errorf("invalid search attribute value type %q", v)
+		}
+		attrs[k] = valType
+	}
+	return attrs, nil
+}
+
+func (t *TemporalServerStartDevCommand) registerSearchAttributes(
+	cctx *CommandContext,
+	attrs map[string]enums.IndexedValueType,
+	namespaces []string,
+) error {
+	if len(attrs) == 0 {
+		return nil
+	}
+
+	conn, err := grpc.NewClient(
+		fmt.Sprintf("%v:%v", t.Ip, t.Port),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		return fmt.Errorf("failed creating client to register search attributes: %w", err)
+	}
+	defer conn.Close()
+	client := operatorservice.NewOperatorServiceClient(conn)
+	// Call for each namespace
+	for _, ns := range namespaces {
+		_, err := client.AddSearchAttributes(cctx, &operatorservice.AddSearchAttributesRequest{
+			Namespace:        ns,
+			SearchAttributes: attrs,
+		})
+		if err != nil {
+			return fmt.Errorf("failed registering search attributes: %w", err)
+		}
+	}
+	return nil
 }

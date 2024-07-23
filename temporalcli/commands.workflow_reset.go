@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"go.temporal.io/api/batch/v1"
@@ -75,8 +76,30 @@ func (c *TemporalWorkflowResetCommand) doWorkflowReset(cctx *CommandContext, cl 
 			return fmt.Errorf("getting reset event ID by type failed: %w", err)
 		}
 	}
+
+	reapplyExcludes := make([]enums.ResetReapplyExcludeType, 0)
+	for _, exclude := range c.ReapplyExclude {
+		if strings.ToLower(exclude) == "all" {
+			for _, excludeType := range enums.ResetReapplyExcludeType_value {
+				if excludeType == 0 {
+					continue
+				}
+				reapplyExcludes = append(reapplyExcludes, enums.ResetReapplyExcludeType(excludeType))
+			}
+			break
+		}
+		excludeType, err := enums.ResetReapplyExcludeTypeFromString(exclude)
+		if err != nil {
+			return err
+		}
+		reapplyExcludes = append(reapplyExcludes, excludeType)
+	}
+
 	reapplyType := enums.RESET_REAPPLY_TYPE_SIGNAL
 	if c.ReapplyType.Value != "All" {
+		if len(c.ReapplyExclude) > 0 {
+			return errors.New("cannot specify --reapply-type and --reapply-exclude at the same time")
+		}
 		reapplyType, err = enums.ResetReapplyTypeFromString(c.ReapplyType.Value)
 		if err != nil {
 			return err
@@ -94,6 +117,7 @@ func (c *TemporalWorkflowResetCommand) doWorkflowReset(cctx *CommandContext, cl 
 		Reason:                    fmt.Sprintf("%s: %s", username(), c.Reason),
 		WorkflowTaskFinishEventId: eventID,
 		ResetReapplyType:          reapplyType,
+		ResetReapplyExcludeTypes:  reapplyExcludes,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to reset workflow: %w", err)

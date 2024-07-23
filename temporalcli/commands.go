@@ -77,10 +77,17 @@ type CommandOptions struct {
 	AdditionalClientGRPCDialOptions []grpc.DialOption
 }
 
+// NewCommandContext creates a CommandContext for use by the rest of the CLI.
+// Among other things, this parses the env config file and modifies
+// options/flags according to the parameters set there.
+//
+// A CommandContext and CancelFunc are always returned, even in the event of an
+// error; this is so the CommandContext can be used to print an appropriate
+// error message.
 func NewCommandContext(ctx context.Context, options CommandOptions) (*CommandContext, context.CancelFunc, error) {
 	cctx := &CommandContext{Context: ctx, Options: options}
 	if err := cctx.preprocessOptions(); err != nil {
-		return nil, nil, err
+		return cctx, func(){}, err
 	}
 
 	// Setup interrupt handler
@@ -88,6 +95,8 @@ func NewCommandContext(ctx context.Context, options CommandOptions) (*CommandCon
 	cctx.Context = ctx
 	return cctx, stop, nil
 }
+
+const temporalEnv = "TEMPORAL_ENV"
 
 func (c *CommandContext) preprocessOptions() error {
 	if len(c.Options.Args) == 0 {
@@ -107,6 +116,28 @@ func (c *CommandContext) preprocessOptions() error {
 		c.Options.Stderr = os.Stderr
 	}
 
+	// Setup default fail callback
+	if c.Options.Fail == nil {
+		c.Options.Fail = func(err error) {
+			// If context is closed, say that the program was interrupted and ignore
+			// the actual error
+			if c.Err() != nil {
+				err = fmt.Errorf("program interrupted")
+			}
+			if c.Logger != nil {
+				c.Logger.Error(err.Error())
+			} else {
+				fmt.Fprintln(os.Stderr, err)
+			}
+			os.Exit(1)
+		}
+	}
+
+	// Update options according to the env file. MUST BE DONE LAST.
+	//
+	// Why last?  Callers need the CommandContext to be usable no matter what,
+	// because they rely on it to print errors even if env parsing fails.  In
+	// that situation, we will return both the CommandContext AND an error.
 	if !c.Options.DisableEnvConfig {
 		if c.Options.EnvConfigFile == "" {
 			// Default to --env-file, prefetched from CLI args
@@ -123,6 +154,9 @@ func (c *CommandContext) preprocessOptions() error {
 
 		if c.Options.EnvConfigName == "" {
 			c.Options.EnvConfigName = "default"
+			if envVal, ok := c.Options.LookupEnv(temporalEnv); ok {
+				c.Options.EnvConfigName = envVal
+			}
 			// Default to --env, prefetched from CLI args
 			for i, arg := range c.Options.Args {
 				if arg == "--env" && i+1 < len(c.Options.Args) {
@@ -140,22 +174,6 @@ func (c *CommandContext) preprocessOptions() error {
 		}
 	}
 
-	// Setup default fail callback
-	if c.Options.Fail == nil {
-		c.Options.Fail = func(err error) {
-			// If context is closed, say that the program was interrupted and ignore
-			// the actual error
-			if c.Err() != nil {
-				err = fmt.Errorf("program interrupted")
-			}
-			if c.Logger != nil {
-				c.Logger.Error(err.Error())
-			} else {
-				fmt.Fprintln(os.Stderr, err)
-			}
-			os.Exit(1)
-		}
-	}
 	return nil
 }
 
@@ -309,17 +327,26 @@ func (c *CommandContext) promptString(message string, expected string, autoConfi
 // intentionally does not return an error but rather invokes Fail on the
 // options.
 func Execute(ctx context.Context, options CommandOptions) {
-	// Create context and run
+	// Create context and run. We always get a context and cancel func back even
+	// if an error was returned. This is so we can use the context to print an
+	// error message using the appropriate Fail() method, regardless of why the
+	// failure occurred.
+	//
+	// (In most cases, an error here likely means a problem with the user's env
+	// config file, or some other issue in their environment.)
 	cctx, cancel, err := NewCommandContext(ctx, options)
+	defer cancel()
+
 	if err == nil {
-		defer cancel()
+		// We have a context; let's actually run the command.
 		cmd := NewTemporalCommand(cctx)
 		cmd.Command.SetArgs(cctx.Options.Args)
 		err = cmd.Command.ExecuteContext(cctx)
 	}
 
-	// Use failure handler, but can still return
 	if err != nil {
+		// Either we failed to create the context, OR the command itself failed.
+		// Either way, we need to print an error message.
 		cctx.Options.Fail(err)
 	}
 
@@ -344,7 +371,7 @@ func Execute(ctx context.Context, options CommandOptions) {
 }
 
 func (c *TemporalCommand) initCommand(cctx *CommandContext) {
-	c.Command.Version = fmt.Sprintf("%s (server %s) (ui %s)", Version, headers.ServerVersion, version.UIVersion)
+	c.Command.Version = VersionString()
 	// Unfortunately color is a global option, so we can set in pre-run but we
 	// must unset in post-run
 	origNoColor := color.NoColor
@@ -371,11 +398,26 @@ func (c *TemporalCommand) initCommand(cctx *CommandContext) {
 			color.NoColor = true
 		}
 		cctx.ActuallyRanCommand = true
+
+		if cctx.Options.EnvConfigName != "default" {
+			if _, ok := cctx.EnvConfigValues[cctx.Options.EnvConfigName]; !ok {
+				if _, ok := cmd.Annotations["ignoresMissingEnv"]; !ok {
+					// stfu about help output
+					cmd.SilenceErrors = true
+					cmd.SilenceUsage = true
+					return fmt.Errorf("environment %q not found", cctx.Options.EnvConfigName)
+				}
+			}
+		}
 		return res
 	}
 	c.Command.PersistentPostRun = func(*cobra.Command, []string) {
 		color.NoColor = origNoColor
 	}
+}
+
+func VersionString() string {
+	return fmt.Sprintf("%s (Server %s, UI %s)", Version, headers.ServerVersion, version.UIVersion)
 }
 
 func (c *TemporalCommand) preRun(cctx *CommandContext) error {
@@ -481,6 +523,15 @@ func writeEnvConfigFile(file string, env map[string]map[string]string) error {
 		return fmt.Errorf("failed writing env file: %w", err)
 	}
 	return nil
+}
+
+func aliasNormalizer(aliases map[string]string) func(f *pflag.FlagSet, name string) pflag.NormalizedName {
+	return func(f *pflag.FlagSet, name string) pflag.NormalizedName {
+		if actual := aliases[name]; actual != "" {
+			name = actual
+		}
+		return pflag.NormalizedName(name)
+	}
 }
 
 func newNopLogger() *slog.Logger { return slog.New(discardLogHandler{}) }

@@ -69,6 +69,8 @@ func (s *SharedServerSuite) TestNamespaceUpdate() {
 		"--description", "description before",
 		"--email", "email@before",
 		"--retention", "24h",
+		"--data", "k1=v0",
+		"--data", "k3=v3",
 		"-n", nsName,
 	)
 	s.NoError(res.Err)
@@ -78,7 +80,7 @@ func (s *SharedServerSuite) TestNamespaceUpdate() {
 		"--address", s.Address(),
 		"--description", "description after",
 		"--email", "email@after",
-		"--retention", "48h",
+		"--retention", "2d",
 		"--data", "k1=v1",
 		"--data", "k2=v2",
 		"--output", "json",
@@ -101,6 +103,7 @@ func (s *SharedServerSuite) TestNamespaceUpdate() {
 	s.Equal(48*time.Hour, describeResp.Config.WorkflowExecutionRetentionTtl.AsDuration())
 	s.Equal("v1", describeResp.NamespaceInfo.Data["k1"])
 	s.Equal("v2", describeResp.NamespaceInfo.Data["k2"])
+	s.Equal("v3", describeResp.NamespaceInfo.Data["k3"])
 }
 
 func (s *SharedServerSuite) TestNamespaceUpdate_NamespaceDontExist() {

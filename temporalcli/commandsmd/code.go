@@ -8,7 +8,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
-	"time"
+
+	"go.temporal.io/server/common/primitives/timestamp"
 )
 
 func GenerateCommandsCode(pkg string, commands []*Command) ([]byte, error) {
@@ -193,6 +194,10 @@ func (c *Command) writeCode(w *codeWriter) error {
 	} else {
 		w.writeLinef("s.Command.Args = %v.NoArgs", w.importCobra())
 	}
+	if c.IgnoreMissingEnv {
+		w.writeLinef("s.Command.Annotations = make(map[string]string)")
+		w.writeLinef("s.Command.Annotations[\"ignoresMissingEnv\"] = \"true\"")
+	}
 	// Add subcommands
 	for _, subCommand := range subCommands {
 		w.writeLinef("s.Command.AddCommand(&New%v(cctx, &s).Command)", subCommand.structName())
@@ -203,16 +208,50 @@ func (c *Command) writeCode(w *codeWriter) error {
 		// If there are subcommands, this needs to be persistent flags
 		flagVar = "s.Command.PersistentFlags()"
 	}
+	var flagAliases [][]string
 	for _, optSet := range c.OptionsSets {
+		// Add aliases
+		for _, opt := range optSet.Options {
+			for _, alias := range opt.Aliases {
+				flagAliases = append(flagAliases, []string{alias, opt.Name})
+			}
+		}
+		for _, include := range optSet.IncludeOptionsSets {
+			// Find include
+		cmdLoop:
+			for _, cmd := range w.allCommands {
+				for _, optSet := range cmd.OptionsSets {
+					if optSet.SetName == include {
+						for _, opt := range optSet.Options {
+							for _, alias := range opt.Aliases {
+								flagAliases = append(flagAliases, []string{alias, opt.Name})
+							}
+						}
+						break cmdLoop
+					}
+				}
+			}
+		}
+
 		// If there's a name, this is done in the method
 		if optSet.SetName != "" {
 			w.writeLinef("s.%v.buildFlags(cctx, %v)", optSet.setStructName(), flagVar)
 			continue
 		}
+
 		// Each field
 		if err := optSet.writeFlagBuilding("s", flagVar, w); err != nil {
 			return fmt.Errorf("failed building option flags: %w", err)
 		}
+	}
+	// Generate normalize for aliases
+	if len(flagAliases) > 0 {
+		sort.Slice(flagAliases, func(i, j int) bool { return flagAliases[i][0] < flagAliases[j][0] })
+		w.writeLinef("%v.SetNormalizeFunc(aliasNormalizer(map[string]string{", flagVar)
+		for _, aliases := range flagAliases {
+			w.writeLinef("%q: %q,", aliases[0], aliases[1])
+		}
+		w.writeLinef("}))")
 	}
 	// If there are no subcommands, we need a run function
 	if len(subCommands) == 0 {
@@ -264,7 +303,7 @@ func (c *CommandOption) writeStructField(w *codeWriter) error {
 	case "bool", "int", "string":
 		goDataType = c.DataType
 	case "duration":
-		goDataType = w.importPkg("time") + ".Duration"
+		goDataType = "Duration"
 	case "timestamp":
 		goDataType = "Timestamp"
 	case "string[]":
@@ -279,7 +318,7 @@ func (c *CommandOption) writeStructField(w *codeWriter) error {
 }
 
 func (c *CommandOption) writeFlagBuilding(selfVar, flagVar string, w *codeWriter) error {
-	var flagMeth, defaultLit string
+	var flagMeth, defaultLit, setDefault string
 	switch c.DataType {
 	case "bool":
 		flagMeth, defaultLit = "BoolVar", ", false"
@@ -287,14 +326,14 @@ func (c *CommandOption) writeFlagBuilding(selfVar, flagVar string, w *codeWriter
 			return fmt.Errorf("cannot have default for bool var")
 		}
 	case "duration":
-		flagMeth, defaultLit = "DurationVar", ", 0"
+		flagMeth, setDefault = "Var", "0"
 		if c.DefaultValue != "" {
-			dur, err := time.ParseDuration(c.DefaultValue)
+			dur, err := timestamp.ParseDuration(c.DefaultValue)
 			if err != nil {
 				return fmt.Errorf("invalid default: %w", err)
 			}
 			// We round to the nearest ms
-			defaultLit = fmt.Sprintf(", %v * %v.Millisecond", int64(dur/time.Millisecond), w.importPkg("time"))
+			setDefault = fmt.Sprintf("Duration(%v * %v.Millisecond)", dur.Milliseconds(), w.importPkg("time"))
 		}
 	case "timestamp":
 		if c.DefaultValue != "" {
@@ -334,13 +373,25 @@ func (c *CommandOption) writeFlagBuilding(selfVar, flagVar string, w *codeWriter
 	if len(c.EnumValues) > 0 {
 		desc += fmt.Sprintf(" Accepted values: %s.", strings.Join(c.EnumValues, ", "))
 	}
+	// If required, append to desc
+	if c.Required {
+		desc += " Required."
+	}
+	// If there are aliases, append to desc
+	for _, alias := range c.Aliases {
+		desc += fmt.Sprintf(` Aliased as "--%v".`, alias)
+	}
 
-	if c.Alias == "" {
+	if setDefault != "" {
+		// set default before calling Var so that it stores thedefault value into the flag
+		w.writeLinef("%v.%v = %v", selfVar, c.fieldName(), setDefault)
+	}
+	if c.Shorthand == "" {
 		w.writeLinef("%v.%v(&%v.%v, %q%v, %q)",
 			flagVar, flagMeth, selfVar, c.fieldName(), c.Name, defaultLit, desc)
 	} else {
 		w.writeLinef("%v.%vP(&%v.%v, %q, %q%v, %q)",
-			flagVar, flagMeth, selfVar, c.fieldName(), c.Name, c.Alias, defaultLit, desc)
+			flagVar, flagMeth, selfVar, c.fieldName(), c.Name, c.Shorthand, defaultLit, desc)
 	}
 	if c.Required {
 		w.writeLinef("_ = %v.MarkFlagRequired(%v, %q)", w.importCobra(), flagVar, c.Name)

@@ -146,9 +146,9 @@ func (s *Server) Stop() {
 
 func (s *StartOptions) buildUIServer() *uiserver.Server {
 	return uiserver.NewServer(uiserveroptions.WithConfigProvider(&uiconfig.Config{
-		Host:                s.UIIP,
+		Host:                MaybeEscapeIPv6(s.UIIP),
 		Port:                s.UIPort,
-		TemporalGRPCAddress: fmt.Sprintf("%v:%v", s.FrontendIP, s.FrontendPort),
+		TemporalGRPCAddress: fmt.Sprintf("%v:%v", MaybeEscapeIPv6(s.FrontendIP), s.FrontendPort),
 		EnableUI:            true,
 		UIAssetPath:         s.UIAssetPath,
 		Codec:               uiconfig.Codec{Endpoint: s.UICodecEndpoint},
@@ -200,14 +200,17 @@ func (s *StartOptions) buildServerOptions() ([]temporal.ServerOption, error) {
 		temporal.WithClaimMapper(func(*config.Config) authorization.ClaimMapper { return claimMapper }),
 	}
 
+	dynConf := make(dynamicconfig.StaticClient, len(s.DynamicConfigValues)+1)
+	// Setting host level mutable state cache size to 8k.
+	dynConf[dynamicconfig.HistoryCacheHostLevelMaxSize] = 8096
+	// Up default visibility RPS
+	dynConf[dynamicconfig.FrontendMaxNamespaceVisibilityRPSPerInstance] = 100
+
 	// Dynamic config if set
-	if len(s.DynamicConfigValues) > 0 {
-		dynConf := make(dynamicconfig.StaticClient, len(s.DynamicConfigValues))
-		for k, v := range s.DynamicConfigValues {
-			dynConf[dynamicconfig.Key(k)] = v
-		}
-		opts = append(opts, temporal.WithDynamicConfigClient(dynConf))
+	for k, v := range s.DynamicConfigValues {
+		dynConf[dynamicconfig.Key(k)] = v
 	}
+	opts = append(opts, temporal.WithDynamicConfigClient(dynConf))
 
 	// gRPC interceptors if set
 	if len(s.GRPCInterceptors) > 0 {
@@ -221,11 +224,11 @@ func (s *StartOptions) buildServerConfig() (*config.Config, error) {
 	var conf config.Config
 	// Global config
 	conf.Global.Membership.MaxJoinDuration = 30 * time.Second
-	conf.Global.Membership.BroadcastAddress = "127.0.0.1"
+	conf.Global.Membership.BroadcastAddress = s.FrontendIP
 	if conf.Global.Metrics == nil && s.MetricsPort > 0 {
 		conf.Global.Metrics = &metrics.Config{
 			Prometheus: &metrics.PrometheusConfig{
-				ListenAddress: fmt.Sprintf("%v:%v", s.FrontendIP, s.MetricsPort),
+				ListenAddress: fmt.Sprintf("%v:%v", MaybeEscapeIPv6(s.FrontendIP), s.MetricsPort),
 				HandlerPath:   "/metrics",
 			},
 		}
@@ -253,26 +256,24 @@ func (s *StartOptions) buildServerConfig() (*config.Config, error) {
 				s.CurrentClusterName: {
 					Enabled:                true,
 					InitialFailoverVersion: int64(s.InitialFailoverVersion),
-					RPCAddress:             fmt.Sprintf("127.0.0.1:%v", s.FrontendPort),
+					RPCAddress:             fmt.Sprintf("%v:%v", MaybeEscapeIPv6(s.FrontendIP), s.FrontendPort),
 					ClusterID:              s.ClusterID,
 				},
 			},
 		}
 	}
 	conf.DCRedirectionPolicy.Policy = "noop"
-	portProvider := NewPortProvider()
-	defer portProvider.Close()
 	conf.Services = map[string]config.Service{
-		"frontend": s.buildServiceConfig(portProvider, true),
-		"history":  s.buildServiceConfig(portProvider, false),
-		"matching": s.buildServiceConfig(portProvider, false),
-		"worker":   s.buildServiceConfig(portProvider, false),
+		"frontend": s.buildServiceConfig(true),
+		"history":  s.buildServiceConfig(false),
+		"matching": s.buildServiceConfig(false),
+		"worker":   s.buildServiceConfig(false),
 	}
 	conf.Archival.History.State = "disabled"
 	conf.Archival.Visibility.State = "disabled"
 	conf.NamespaceDefaults.Archival.History.State = "disabled"
 	conf.NamespaceDefaults.Archival.Visibility.State = "disabled"
-	conf.PublicClient.HostPort = fmt.Sprintf("127.0.0.1:%v", s.FrontendPort)
+	conf.PublicClient.HostPort = fmt.Sprintf("%v:%v", MaybeEscapeIPv6(s.FrontendIP), s.FrontendPort)
 	return &conf, nil
 }
 
@@ -319,7 +320,7 @@ func (s *StartOptions) buildSQLConfig() (*config.SQL, error) {
 	return &conf, nil
 }
 
-func (s *StartOptions) buildServiceConfig(p *PortProvider, frontend bool) config.Service {
+func (s *StartOptions) buildServiceConfig(frontend bool) config.Service {
 	var conf config.Service
 	if frontend {
 		conf.RPC.GRPCPort = s.FrontendPort
@@ -328,9 +329,9 @@ func (s *StartOptions) buildServiceConfig(p *PortProvider, frontend bool) config
 			conf.RPC.HTTPPort = s.FrontendHTTPPort
 		}
 	} else {
-		conf.RPC.GRPCPort = p.MustGetFreePort()
-		conf.RPC.BindOnLocalHost = true
+		conf.RPC.GRPCPort = MustGetFreePort(s.FrontendIP)
+		conf.RPC.BindOnIP = s.FrontendIP
 	}
-	conf.RPC.MembershipPort = p.MustGetFreePort()
+	conf.RPC.MembershipPort = MustGetFreePort(s.FrontendIP)
 	return conf
 }

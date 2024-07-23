@@ -14,7 +14,7 @@ func TestEnv_Simple(t *testing.T) {
 	// Non-existent file, no env found for get
 	h.Options.EnvConfigFile = "does-not-exist"
 	res := h.Execute("env", "get", "--env", "myenv1")
-	h.ErrorContains(res.Err, `env "myenv1" not found`)
+	h.ErrorContains(res.Err, `environment "myenv1" not found`)
 
 	// Temp file for env
 	tmpFile, err := os.CreateTemp("", "")
@@ -83,7 +83,15 @@ func TestEnv_InputValidation(t *testing.T) {
 	h := NewCommandHarness(t)
 	defer h.Close()
 
-	res := h.Execute("env", "get", "--env", "myenv1", "foo.bar")
+	// myenv1 needs to exist
+	tmpFile, err := os.CreateTemp("", "")
+	h.NoError(err)
+	h.Options.EnvConfigFile = tmpFile.Name()
+	defer os.Remove(h.Options.EnvConfigFile)
+	res := h.Execute("env", "set", "--env", "myenv1", "-k", "foo", "-v", "bar")
+	h.NoError(res.Err)
+
+	res = h.Execute("env", "get", "--env", "myenv1", "foo.bar")
 	h.ErrorContains(res.Err, `cannot specify both`)
 
 	res = h.Execute("env", "get", "-k", "key", "foo.bar")
