@@ -214,6 +214,8 @@ DEFINING AN OPTION
   * `Env: <env-var>.` - Binds the environment variable to this flag.
     For example: `Env: TEMPORAL_ADDRESS`.
     Use the variable name without dollar signs, etc.
+  * ``Alias: `--<alias>`.`` - Sets a flag as an alias of this one.
+    The flag should not be separately defined.
 
 -->
 
@@ -2354,6 +2356,7 @@ temporal workflow start \
 * `--type` (string) -
   Workflow Type name.
   Required.
+  Alias: `--name`.
 * `--task-queue`, `-t` (string) -
   Workflow Task queue.
   Required.
