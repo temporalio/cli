@@ -223,11 +223,11 @@ DEFINING AN OPTION
 
 The Temporal CLI manages, monitors, and debugs Temporal apps. It lets you run
 a local Temporal Service, start Workflow Executions, pass messages to running
-Workflows, inspects state, and more.
+Workflows, inspect state, and more.
 
 * Start a local development service:
       `temporal server start-dev`
-* View help: pass --help to any command:
+* View help: pass `--help` to any command:
       `temporal activity complete --help`
 
 <!--
@@ -269,7 +269,7 @@ Workflows, inspects state, and more.
 
 ### temporal activity: Complete or fail an Activity
 
-Update an Activity's state to as completed or failed. This marks an Activity
+Update an Activity's state to completed or failed. This marks an Activity
 as successfully finished or as having encountered an error:
 
 ```
@@ -344,7 +344,7 @@ temporal batch workflow cancel \
   --reason "Testing"
 ```
 
-The `batch` keyword is optional when using a `--query`. The following command
+The `batch` keyword is optional when using `--query`. The following command
 is functionally identical to the previous one:
 
 ```
@@ -353,8 +353,24 @@ temporal workflow cancel \
   --reason "Testing"
 ```
 
++----------------------------------------------------------------------------+
+| Query Quick Reference:                                                     |
+|                                                                            |
+| Composition:                                                               |
+| - Values: strings (use single or double quotes), numbers, Booleans         |
+| - Comparison: '=', '!=', '>', '>=', '<', '<='                              |
+| - Operations: 'IN array', 'BETWEEN value AND VALUE', 'STARTS_WITH string', |
+|   'IS NULL', 'IS NOT NULL', 'expr AND expr', 'expr OR expr', '( expr )'    |
+| - Array: '( comma-separated-values )'                                      |
+|                                                                            |
+| Info:                                                                      |
+| - Wrap the attribute with backticks if it contains characters not in       |
+|  `[a-zA-Z0-9]`.                                                            |
+| - `STARTS_WITH` is only available for Keyword search attributes.           |
++----------------------------------------------------------------------------+
+
 Visit https://docs.temporal.io/visibility to read more about Search Attributes
-and Query creation.
+and Query creation. See `temporal batch --help` for a quick reference.
 
 #### Options
 
@@ -1643,7 +1659,7 @@ Task Queues support the following versioning rules and policies:
   Build ID. You may add at most one redirect rule for each source Build ID.
   Redirect rules require that a target Build ID is fully compatible with
   the source Build ID.
-
+  
 #### Options
 
 * `--task-queue`, `-t` (string) -
@@ -1826,7 +1842,7 @@ If you do not specify a `--rule-index`, this command inserts at index 0.
   Any number greater than the count is treated as "append".
   Default: 0.
 * `--percentage` (int) -
-  Traffice percent to send to target Build ID.
+  Traffic percent to send to target Build ID.
   Default: 100.
 * `--yes`, `-y` (bool) -
   Don't prompt to confirm.
@@ -2003,7 +2019,7 @@ temporal workflow cancel \
 ```
 
 Visit https://docs.temporal.io/visibility to read more about Search Attributes
-and Query creation.
+and Query creation. See `temporal batch --help` for a quick reference.
 
 #### Options
 
@@ -2020,7 +2036,7 @@ temporal workflow count \
 ```
 
 Visit https://docs.temporal.io/visibility to read more about Search Attributes
-and Query creation.
+and Query creation. See `temporal batch --help` for a quick reference.
 
 #### Options
 
@@ -2040,7 +2056,7 @@ The removal executes asynchronously. If the Execution is Running, the Service
 terminates it before deletion.
 
 Visit https://docs.temporal.io/visibility to read more about Search Attributes
-and Query creation.
+and Query creation. See `temporal batch --help` for a quick reference.
 
 #### Options
 
@@ -2138,7 +2154,7 @@ temporal workflow list \
 ```
 
 Visit https://docs.temporal.io/visibility to read more about Search Attributes
-and Query creation.
+and Query creation. See `temporal batch --help` for a quick reference.
 
 View a list of archived Workflow Executions:
 
@@ -2286,7 +2302,7 @@ temporal workflow signal \
 ```
 
 Visit https://docs.temporal.io/visibility to read more about Search Attributes
-and Query creation.
+and Query creation. See `temporal batch --help` for a quick reference.
 
 * `--name` (string) -
   Signal name.
@@ -2326,7 +2342,7 @@ temporal workflow stack \
 ```
 
 Visit https://docs.temporal.io/visibility to read more about Search Attributes
-and Query creation.
+and Query creation. See `temporal batch --help` for a quick reference.
 
 #### Options
 
@@ -2438,7 +2454,7 @@ Workflow code cannot see or respond to terminations. To perform clean-up work
 in your Workflow code, use `temporal workflow cancel` instead.
 
 Visit https://docs.temporal.io/visibility to read more about Search Attributes
-and Query creation.
+and Query creation. See `temporal batch --help` for a quick reference.
 
 #### Options
 
