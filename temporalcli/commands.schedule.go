@@ -378,6 +378,7 @@ func (c *TemporalScheduleListCommand) run(cctx *CommandContext, args []string) e
 			res, err := cl.WorkflowService().ListSchedules(cctx, &workflowservice.ListSchedulesRequest{
 				Namespace:     c.Parent.Namespace,
 				NextPageToken: token,
+				Query:         c.Query,
 			})
 			if err != nil {
 				return err
