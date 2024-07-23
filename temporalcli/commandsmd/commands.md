@@ -1445,7 +1445,7 @@ temporal task-queue get-build-ids \
     --task-queue YourTaskQueue
 ```
 
-This command is limited to Namespaces that enable Worker versioning.
+This command is limited to Namespaces that support Worker versioning.
 
 #### Options
 
@@ -1499,7 +1499,6 @@ The new ID is stored in the set containing the existing ID and becomes the new
 default for that set.
 
 This command is limited to Namespaces that support Worker versioning.
-NOTICE: Worker versioning is experimental. This command is subject to change.
 
 #### Options
 
@@ -1528,8 +1527,11 @@ temporal task-queue update-build-ids add-new-default \
     --build-id "YourNewBuildId"
 ```
 
-This command is limited to Namespaces that support Worker versioning.
-NOTICE: Worker versioning is experimental. This command is subject to change.
++------------------------------------------------------------------------+
+| NOTICE: This command is limited to Namespaces that support Worker      |
+| versioning. Worker versioning is experimental. Versioning commands are |
+| subject to change.                                                     |
++------------------------------------------------------------------------+
 
 #### Options
 
@@ -1551,8 +1553,11 @@ temporal task-queue update-build-ids promote-id-in-set \
     --build-id "YourBuildId"
 ```
 
-This command is limited to Namespaces that support Worker versioning.
-NOTICE: Worker versioning is experimental. This command is subject to change.
++------------------------------------------------------------------------+
+| NOTICE: This command is limited to Namespaces that support Worker      |
+| versioning. Worker versioning is experimental. Versioning commands are |
+| subject to change.                                                     |
++------------------------------------------------------------------------+
 
 #### Options
 
@@ -1575,8 +1580,11 @@ temporal task-queue update-build-ids promote-set \
     --build-id "YourBuildId"
 ```
 
-This command is limited to Namespaces that support Worker versioning.
-NOTICE: Worker versioning is experimental. This command is subject to change.
++------------------------------------------------------------------------+
+| NOTICE: This command is limited to Namespaces that support Worker      |
+| versioning. Worker versioning is experimental. Versioning commands are |
+| subject to change.                                                     |
++------------------------------------------------------------------------+
 
 #### Options
 
@@ -1589,7 +1597,10 @@ NOTICE: Worker versioning is experimental. This command is subject to change.
 
 ### temporal task-queue versioning: manage Task Queue Build ID handling
 
-NOTICE: Worker versioning is experimental. This command is subject to change.
++---------------------------------------------------------------------+
+| CAUTION: Worker versioning is experimental. Versioning commands are |
+| subject to change.                                                  |
++---------------------------------------------------------------------+
 
 Provides commands to add, list, remove, or replace Worker Build ID assignment
 and redirect rules associated with Task Queues:
@@ -1618,8 +1629,6 @@ Task Queues support the following versioning rules and policies:
 
 ### temporal task-queue versioning add-redirect-rule: Add Task Queue redirect rules
 
-NOTICE: Worker versioning is experimental. This command is subject to change.
-
 Add a new redirect rule for a given Task Queue. You may add at most one
 redirect rule for each distinct source build ID:
 
@@ -1629,6 +1638,11 @@ temporal task-queue versioning add-redirect-rule \
     --source-build-id "YourSourceBuildID" \
     --target-build-id "YourTargetBuildID"
 ```
+
++---------------------------------------------------------------------+
+| CAUTION: Worker versioning is experimental. Versioning commands are |
+| subject to change.                                                  |
++---------------------------------------------------------------------+
 
 #### Options
 
@@ -1642,8 +1656,6 @@ temporal task-queue versioning add-redirect-rule \
   Don't prompt to confirm.
 
 ### temporal task-queue versioning commit-build-id: Complete Build ID rollout
-
-NOTICE: Worker versioning is experimental. This command is subject to change.
 
 Complete a Build ID's rollout and clean up unnecessary rules that might have
 been created during a gradual rollout:
@@ -1666,6 +1678,11 @@ Rejects requests when there have been no recent pollers for this Build ID.
 This prevents committing invalid Build IDs. Use the `--force` option to
 override this validation.
 
++---------------------------------------------------------------------+
+| CAUTION: Worker versioning is experimental. Versioning commands are |
+| subject to change.                                                  |
++---------------------------------------------------------------------+
+
 #### Options
 
 * `--build-id` (string) -
@@ -1677,8 +1694,6 @@ override this validation.
   Don't prompt to confirm.
 
 ### temporal task-queue versioning delete-assignment-rule: Removes a Task Queue assignment rule
-
-NOTICE: Worker versioning is experimental. This command is subject to change.
 
 Deletes a rule identified by its index in the Task Queue's list of assignment
 rules.
@@ -1693,6 +1708,11 @@ By default, the Task Queue must retain one unconditional rule, such as "no
 hint filter" or "percentage". Otherwise, the delete operation is rejected.
 Use the `--force` option to override this validation.
 
++---------------------------------------------------------------------+
+| CAUTION: Worker versioning is experimental. Versioning commands are |
+| subject to change.                                                  |
++---------------------------------------------------------------------+
+
 #### Options
 
 * `--rule-index`, `-i` (int) -
@@ -1706,8 +1726,6 @@ Use the `--force` option to override this validation.
 
 ### temporal task-queue versioning delete-redirect-rule: Removes Build-ID routing rule
 
-NOTICE: Worker versioning is experimental. This command is subject to change.
-
 Deletes the routing rule for the given source Build ID.
 
 ```
@@ -1715,6 +1733,11 @@ temporal task-queue versioning delete-redirect-rule \
     --task-queue YourTaskQueue \
     --source-build-id "YourBuildId"
 ```
+
++---------------------------------------------------------------------+
+| CAUTION: Worker versioning is experimental. Versioning commands are |
+| subject to change.                                                  |
++---------------------------------------------------------------------+
 
 #### Options
 
@@ -1725,8 +1748,6 @@ temporal task-queue versioning delete-redirect-rule \
   Don't prompt to confirm.
 
 ### temporal task-queue versioning get-rules: Fetch Worker Build ID assignments and redirect rules
-
-NOTICE: Worker versioning is experimental. This command is subject to change.
 
 Retrieve all the Worker Build ID assignments and redirect rules associated
 with a Task Queue.
@@ -1747,9 +1768,12 @@ Task Queues support the following versioning rules:
   Redirect rules require that a target Build ID is fully compatible with
   the source Build ID.
 
-### temporal task-queue versioning insert-assignment-rule: Add an assignment rule at a index
++---------------------------------------------------------------------+
+| CAUTION: Worker versioning is experimental. Versioning commands are |
+| subject to change.                                                  |
++---------------------------------------------------------------------+
 
-NOTICE: Worker versioning is experimental. This command is subject to change.
+### temporal task-queue versioning insert-assignment-rule: Add an assignment rule at a index
 
 Inserts a new assignment rule for this Task Queue. Rules are evaluated in
 order, starting from index 0. The first applicable rule is applied, and the
@@ -1762,6 +1786,11 @@ temporal task-queue versioning insert-assignment-rule \
 ```
 
 If you do not specify a `--rule-index`, this command inserts at index 0.
+
++---------------------------------------------------------------------+
+| CAUTION: Worker versioning is experimental. Versioning commands are |
+| subject to change.                                                  |
++---------------------------------------------------------------------+
 
 #### Options
 
@@ -1780,8 +1809,6 @@ If you do not specify a `--rule-index`, this command inserts at index 0.
   Don't prompt to confirm.
 
 ### temporal task-queue versioning replace-assignment-rule: Update assignment rule at index
-
-NOTICE: Worker versioning is experimental. This command is subject to change.
 
 Change an assignment rule for this Task Queue. By default, this enforces one
 unconditional rule (no hint filter or percentage). Otherwise, the operation
@@ -1809,6 +1836,11 @@ temporal task-queue versioning replace-assignment-rule
 
 Percent may vary between 0 and 100 (default).
 
++---------------------------------------------------------------------+
+| CAUTION: Worker versioning is experimental. Versioning commands are |
+| subject to change.                                                  |
++---------------------------------------------------------------------+
+
 #### Options
 
 * `--build-id` (string) -
@@ -1828,8 +1860,6 @@ Percent may vary between 0 and 100 (default).
 
 ### temporal task-queue versioning replace-redirect-rule: Change the target for a Build ID's redirect
 
-NOTICE: Worker versioning is experimental. This command is subject to change.
-
 Updates a Build ID's redirect rule on a Task Queue by replacing its target
 Build ID.
 
@@ -1839,6 +1869,11 @@ temporal task-queue versioning replace-redirect-rule
     --source-build-id YourSourceBuildId \
     --target-build-id YourNewTargetBuildId
 ```
+
++---------------------------------------------------------------------+
+| CAUTION: Worker versioning is experimental. Versioning commands are |
+| subject to change.                                                  |
++---------------------------------------------------------------------+
 
 #### Options
 
