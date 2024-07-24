@@ -27,10 +27,6 @@ IN-HOUSE STYLE
   * When declaring Options follow the wrapping style used elsewhere in this file.
     Splitting the items into multiple lines improves maintainability with clearer diffs.
 
-* Ordering:
-  * Commands: Use alphabetical order for commands.
-  * Options: Most commonly used options first.
-
 * Punctuation:
   * With the exception of short descriptions and triple-quoted code-fenced samples, end everything with a period.
     Do _not_ use periods for short descriptions.
@@ -353,24 +349,28 @@ temporal workflow cancel \
   --reason "Testing"
 ```
 
+Query Quick Reference:
+
+```
 +----------------------------------------------------------------------------+
-| Query Quick Reference:                                                     |
-|                                                                            |
 | Composition:                                                               |
-| - Values: strings (use single or double quotes), numbers, Booleans         |
+| - Data types: String literals with single or double quotes,                |
+|   Numbers (integer and floating point), Booleans                           |
 | - Comparison: '=', '!=', '>', '>=', '<', '<='                              |
-| - Operations: 'IN array', 'BETWEEN value AND VALUE', 'STARTS_WITH string', |
-|   'IS NULL', 'IS NOT NULL', 'expr AND expr', 'expr OR expr', '( expr )'    |
+| - Expressions/Operators:  'IN array', 'BETWEEN value AND value',           |
+|   'STARTS_WITH string', 'IS NULL', 'IS NOT NULL', 'expr AND expr',         |
+|   'expr OR expr', '( expr )'                                               |
 | - Array: '( comma-separated-values )'                                      |
 |                                                                            |
-| Info:                                                                      |
-| - Wrap the attribute with backticks if it contains characters not in       |
-|  `[a-zA-Z0-9]`.                                                            |
+| Please note:                                                               |
+| - Wrap attributes with backticks if it contains characters not in          |
+|   `[a-zA-Z0-9]`.                                                           |
 | - `STARTS_WITH` is only available for Keyword search attributes.           |
 +----------------------------------------------------------------------------+
+```
 
 Visit https://docs.temporal.io/visibility to read more about Search Attributes
-and Query creation. See `temporal batch --help` for a quick reference.
+and Query creation.
 
 #### Options
 
@@ -1204,13 +1204,12 @@ Includes options set for [overlap-policy](#options-set-for-overlap-policy).
 
 ### temporal schedule update: Update Schedule details
 
-Update an existing Schedule with new configuration details, including spec,
-action, and policies:
+Update an existing Schedule with new configuration details, including time
+specifications, action, and policies:
 
 ```
-temporal schedule update
 temporal schedule update \
- --schedule-id "YourScheduleId"
+ --schedule-id "YourScheduleId" \
  --workflow-type "NewWorkflowType"
 ```
 
@@ -1412,7 +1411,7 @@ more conservative than `ClosedWorkflowsOnly`.
   Filter the Task Queue based on Build ID.
 * `--select-unversioned` (bool) -
   Include the unversioned queue.
-* `--select-all-active` (bool) - 
+* `--select-all-active` (bool) -
   Include all active versions.
   A version is active if it had new tasks or polls recently.
 * `--report-reachability` (bool) -
@@ -1659,7 +1658,7 @@ Task Queues support the following versioning rules and policies:
   Build ID. You may add at most one redirect rule for each source Build ID.
   Redirect rules require that a target Build ID is fully compatible with
   the source Build ID.
-  
+
 #### Options
 
 * `--task-queue`, `-t` (string) -
@@ -2488,14 +2487,12 @@ temporal workflow trace \
 #### Options
 
 * `--fold` (string[]) -
-  Statuses for folding away Child Workflows.
-  This reduces info fetched and displayed.
+  Fold away Child Workflows with the specified statuses.
   Case-insensitive.
   Ignored if --no-fold supplied.
   Available values: running, completed, failed, canceled, terminated,
   timedout, continueasnew.
   Can be passed multiple times.
-  Each fold reduces the amount of information fetched and displayed.
 * `--no-fold` (bool) -
   Disable folding.
   Fetch and display Child Workflows within the set depth.
