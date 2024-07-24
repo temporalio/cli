@@ -541,11 +541,9 @@ commands.
 #### Options
 
 * `--key`, `-k` (string) -
-  Property name.
-  Required.
+  Property name (required).
 * `--value`, `-v` (string) -
-  Property value.
-  Required.
+  Property value (required).
 
 ### temporal operator: Manage Temporal deployments
 
