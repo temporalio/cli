@@ -245,8 +245,8 @@ Workflows, inspect state, and more.
   Options: debug, info, warn, error, never.
   Default: info.
 * `--log-format` (string) -
-  Log format.
-  Options: text, json.
+  Log format. (Note: the "pretty" format is deprecated, use "text" instead.)
+  Options: text, json, pretty.
   Default: text.
 * `--output`, `-o` (string-enum) -
   Non-logging data output format.
