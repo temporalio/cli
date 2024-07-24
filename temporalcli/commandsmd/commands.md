@@ -245,9 +245,9 @@ Workflows, inspect state, and more.
   Options: debug, info, warn, error, never.
   Default: info.
 * `--log-format` (string) -
-  Log format. (Note: the "pretty" format is deprecated, use "text" instead.)
-  Options: text, json, pretty.
-  Default: text.
+  Log format.
+  Options are "text", or "json".
+  Defaults to "text".
 * `--output`, `-o` (string-enum) -
   Non-logging data output format.
   Options: text, json, jsonl, none.
@@ -329,19 +329,14 @@ temporal activity fail \
 
 Includes options set for [workflow reference](#options-set-for-workflow-reference).
 
-### temporal batch: Manage batch jobs
+### temporal batch: Manage running batch jobs
 
-A batch job executes a command on multiple Workflow Executions at once. Use
-an SQL-like `--query` to select which Workflow Executions to include:
+List or terminate running batch jobs.
 
-```
-temporal batch workflow cancel \
-  --query 'ExecutionStatus = "Running" AND WorkflowType="YourWorkflow"' \
-  --reason "Testing"
-```
-
-The `batch` keyword is optional when using `--query`. The following command
-is functionally identical to the previous one:
+A batch job executes a command on multiple Workflow Executions at once. Batch
+Jobs may be created in several context, usually as the result of passing
+`--query` to another command. For example, you can use an SQL-like `--query` to
+select which Workflow Executions to include:
 
 ```
 temporal workflow cancel \
@@ -444,8 +439,9 @@ temporal env set \
 Each environment is isolated. Changes to "prod" presets won't affect "dev".
 
 For easiest use, set a `TEMPORAL_ENV` environment variable in your shell. The
-Temporal CLI checks for an `--env` option first, then checks the shell. If
-neither is set, most commands use `default` environment presets if available.
+Temporal CLI checks for an `--env` option first, then checks for the
+`TEMPORAL_ENV` environment variable. If neither is set, the "default"
+environment is used.
 
 ### temporal env delete: Delete an environment or environment property
 
@@ -547,7 +543,7 @@ commands.
 
 ### temporal operator: Manage Temporal deployments
 
-Operator commands manage and fetch information about Namespace, Search
+Operator commands manage and fetch information about Namespaces, Search
 Attributes, and Temporal Services:
 
 ```
@@ -603,9 +599,9 @@ temporal operator cluster health
 
 ### temporal operator cluster list: Show Temporal Clusters
 
-Print a list of Temporal Clusters (Services) registered to this system. Report
-details include the Cluster's name, ID, address, History Shard count, Failover
-version, and availability:
+Print a list of remote Temporal Clusters (Services) registered to the local
+Service. Report details include the Cluster's name, ID, address, History Shard
+count, Failover version, and availability:
 
 ```
 temporal operator cluster list [--limit max-count]
@@ -618,7 +614,7 @@ temporal operator cluster list [--limit max-count]
 
 ### temporal operator cluster remove: Remove a Temporal Cluster
 
-Remove a registered Temporal Cluster (Service) from this system.
+Remove a registered remote Temporal Cluster (Service) from the local Service.
 
 ```
 temporal operator cluster remove \
@@ -727,8 +723,10 @@ Note: URI values for archival states can't be changed once enabled.
   Cluster (Service) names for Namespace creation.
   Can be passed multiple times.
 * `--data` (string[]) -
-  Namespace data using 'KEY="VALUE"' string pairs.
-  Use JSON values.
+  Namespace data as `KEY=VALUE` pairs.
+  Keys must be identifiers, and values must be JSON values.
+  For example: 'YourKey={"your": "value"}'.
+  Can be passed multiple times.
 * `--description` (string) -
   Namespace description.
 * `--email` (string) -
@@ -854,8 +852,9 @@ temporal operator namespace update \
 * `--cluster` (string[]) -
   Cluster (Service) names.
 * `--data` (string[]) -
-  Namespace data using 'KEY="VALUE"' string pairs.
-  Use JSON values.
+  Namespace data as `KEY=VALUE` pairs.
+  Keys must be identifiers, and values must be JSON values.
+  For example: 'YourKey={"your": "value"}'.
   Can be passed multiple times.
 * `--description` (string) -
   Namespace description.
@@ -992,8 +991,8 @@ The policies include:
 
 * **AllowAll**: Allow unlimited concurrent Workflow Executions. This
   significantly speeds up the backfilling process on systems that support
-  concurrency. Ensure running Workflow Executions do not interfere with
-  each other.
+  concurrency. You must ensure running Workflow Executions do not interfere
+  with each other.
 * **BufferAll**: Buffer all incoming Workflow Executions while waiting for
   the running Workflow Execution to complete.
 * **Skip**: If a previous Workflow Execution is still running, discard new
@@ -1088,12 +1087,14 @@ Schedules support any combination of `--calendar`, `--interval`, and `--cron`:
   For a list of time zones, see:
   https://en.wikipedia.org/wiki/List_of_tz_database_time_zones.
 * `--schedule-search-attribute` (string[]) -
-  Set schedule Search Attributes using 'KEY="VALUE"' pairs.
-  Use JSON values.
+  Set schedule Search Attributes using `KEY="VALUE` pairs.
+  Keys must be identifiers, and values must be JSON values.
+  For example: 'YourKey={"your": "value"}'.
   Can be passed multiple times.
 * `--schedule-memo` (string[]) -
-  Set a schedule memo using 'KEY="VALUE"' pairs.
-  Use JSON values.
+  Set a schedule memo using `KEY=VALUE` pairs.
+  Keys must be identifiers, and values must be JSON values.
+  For example: 'YourKey={"your": "value"}'.
   Can be passed multiple times.
 
 #### Options
@@ -1318,13 +1319,17 @@ temporal server start-dev \
 * `--sqlite-pragma` (string[]) -
   SQLite pragma statements in "PRAGMA=VALUE" format.
 * `--dynamic-config-value` (string[]) -
-  Dynamic configuration value using 'KEY="VALUE"' pairs.
-  Use JSON values.
-  For example, "YourKey=\"YourStringValue\"".
+  Dynamic configuration value using `KEY=VALUE` pairs.
+  Keys must be identifiers, and values must be JSON values.
+  For example: 'YourKey="YourString"'.
+  Can be passed multiple times.
 * `--log-config` (bool) -
   Log the server config to stderr.
 * `--search-attribute` (string[]) -
-  Search attributes to register using 'KEY="VALUE"' pairs.
+  Search attributes to register using `KEY=VALUE` pairs.
+  Keys must be identifiers, and values must be JSON values.
+  For example: 'YourKey={"your": "value"}'.
+  Can be passed multiple times.
 
 ### temporal task-queue: Manage Task Queues
 
@@ -1401,10 +1406,9 @@ more conservative than `ClosedWorkflowsOnly`.
 * `--task-queue`, `-t` (string) -
   Task queue name.
   Required.
-* `--task-queue-type` (string-enum) -
+* `--task-queue-type` (string[]) -
   Task Queue type.
-  Options: workflow, activity.
-  Default: workflow.
+  Options are "workflow", "activity", or "nexus".
 * `--select-build-id` (string[]) -
   Filter the Task Queue based on Build ID.
 * `--select-unversioned` (bool) -
@@ -1551,7 +1555,11 @@ This command is limited to Namespaces that support Worker versioning.
   Set the expanded Build ID set as the Task Queue default.
   Defaults to false.
 
-### temporal task-queue update-build-ids add-new-default: Set new default Build ID set
+### temporal task-queue update-build-ids add-new-default: Set new default Build ID set (Deprecated)
+
++-----------------------------------------------------------------------------+
+| CAUTION: This command is deprecated and will be removed in a later release. |
++-----------------------------------------------------------------------------+
 
 Create a new Task Queue Build ID set, add a Build ID to it, and make it the
 overall Task Queue default. The new set will be incompatible with previous
@@ -1578,7 +1586,11 @@ temporal task-queue update-build-ids add-new-default \
   Task Queue name.
   Required.
 
-### temporal task-queue update-build-ids promote-id-in-set: Set Build ID as set default
+### temporal task-queue update-build-ids promote-id-in-set: Set Build ID as set default (Deprecated)
+
++-----------------------------------------------------------------------------+
+| CAUTION: This command is deprecated and will be removed in a later release. |
++-----------------------------------------------------------------------------+
 
 Establish an existing Build ID as the default in its Task Queue set. New tasks
 compatible with this set will now be dispatched to this ID:
@@ -1604,7 +1616,11 @@ temporal task-queue update-build-ids promote-id-in-set \
   Task Queue name.
   Required.
 
-### temporal task-queue update-build-ids promote-set: Promote Build ID set
+### temporal task-queue update-build-ids promote-set: Promote Build ID set (Deprecated)
+
++-----------------------------------------------------------------------------+
+| CAUTION: This command is deprecated and will be removed in a later release. |
++-----------------------------------------------------------------------------+
 
 Promote a Build ID set to be the default on a Task Queue. Identify the set by
 providing a Build ID within it. If the set is already the default, this
@@ -1631,7 +1647,7 @@ temporal task-queue update-build-ids promote-set \
   Task Queue name.
   Required.
 
-### temporal task-queue versioning: manage Task Queue Build ID handling
+### temporal task-queue versioning: manage Task Queue Build ID handling (Experimental)
 
 +---------------------------------------------------------------------+
 | CAUTION: Worker versioning is experimental. Versioning commands are |
@@ -1663,7 +1679,7 @@ Task Queues support the following versioning rules and policies:
   Task queue name.
   Required.
 
-### temporal task-queue versioning add-redirect-rule: Add Task Queue redirect rules
+### temporal task-queue versioning add-redirect-rule: Add Task Queue redirect rules (Experimental)
 
 Add a new redirect rule for a given Task Queue. You may add at most one
 redirect rule for each distinct source build ID:
@@ -1691,7 +1707,7 @@ temporal task-queue versioning add-redirect-rule \
 * `--yes`, `-y` (bool) -
   Don't prompt to confirm.
 
-### temporal task-queue versioning commit-build-id: Complete Build ID rollout
+### temporal task-queue versioning commit-build-id: Complete Build ID rollout (Experimental)
 
 Complete a Build ID's rollout and clean up unnecessary rules that might have
 been created during a gradual rollout:
@@ -1729,7 +1745,7 @@ override this validation.
 * `--yes`, `-y` (bool) -
   Don't prompt to confirm.
 
-### temporal task-queue versioning delete-assignment-rule: Removes a Task Queue assignment rule
+### temporal task-queue versioning delete-assignment-rule: Removes a Task Queue assignment rule (Experimental)
 
 Deletes a rule identified by its index in the Task Queue's list of assignment
 rules.
@@ -1760,7 +1776,7 @@ Use the `--force` option to override this validation.
 * `--yes`, `-y` (bool) -
   Don't prompt to confirm.
 
-### temporal task-queue versioning delete-redirect-rule: Removes Build-ID routing rule
+### temporal task-queue versioning delete-redirect-rule: Removes Build-ID routing rule (Experimental)
 
 Deletes the routing rule for the given source Build ID.
 
@@ -1783,7 +1799,7 @@ temporal task-queue versioning delete-redirect-rule \
 * `--yes`, `-y` (bool) -
   Don't prompt to confirm.
 
-### temporal task-queue versioning get-rules: Fetch Worker Build ID assignments and redirect rules
+### temporal task-queue versioning get-rules: Fetch Worker Build ID assignments and redirect rules (Experimental)
 
 Retrieve all the Worker Build ID assignments and redirect rules associated
 with a Task Queue.
@@ -1809,7 +1825,7 @@ Task Queues support the following versioning rules:
 | subject to change.                                                  |
 +---------------------------------------------------------------------+
 
-### temporal task-queue versioning insert-assignment-rule: Add an assignment rule at a index
+### temporal task-queue versioning insert-assignment-rule: Add an assignment rule at a index (Experimental)
 
 Inserts a new assignment rule for this Task Queue. Rules are evaluated in
 order, starting from index 0. The first applicable rule is applied, and the
@@ -1844,7 +1860,7 @@ If you do not specify a `--rule-index`, this command inserts at index 0.
 * `--yes`, `-y` (bool) -
   Don't prompt to confirm.
 
-### temporal task-queue versioning replace-assignment-rule: Update assignment rule at index
+### temporal task-queue versioning replace-assignment-rule: Update assignment rule at index (Experimental)
 
 Change an assignment rule for this Task Queue. By default, this enforces one
 unconditional rule (no hint filter or percentage). Otherwise, the operation
@@ -1894,7 +1910,7 @@ Percent may vary between 0 and 100 (default).
 * `--force` (bool) -
   Bypass the validation that one unconditional rule remains.
 
-### temporal task-queue versioning replace-redirect-rule: Change the target for a Build ID's redirect
+### temporal task-queue versioning replace-redirect-rule: Change the target for a Build ID's redirect (Experimental)
 
 Updates a Build ID's redirect rule on a Task Queue by replacing its target
 Build ID.
@@ -1951,7 +1967,8 @@ temporal workflow list
   Env: TEMPORAL_API_KEY.
 * `--grpc-meta` (string[]) -
   HTTP headers for requests.
-  Format as comma-separated "KEY=VALUE" pairs.
+  Format as a `KEY=VALUE` pair.
+  May be passed multiple times to set multiple headers.
 * `--tls` (bool) -
   Enable base TLS encryption.
   Does not have additional options like mTLS or client certs.
@@ -2183,9 +2200,6 @@ temporal workflow query \
     --input '{"YourInputKey": "YourInputValue"}'
 ```
 
-Query implementations must never mutate Workflow Execution state and must
-not contain blocking code.
-
 #### Options
 
 * `--name` (string) -
@@ -2301,6 +2315,8 @@ temporal workflow signal \
 Visit https://docs.temporal.io/visibility to read more about Search Attributes
 and Query creation. See `temporal batch --help` for a quick reference.
 
+#### Options
+
 * `--name` (string) -
   Signal name.
   Required.
@@ -2338,9 +2354,6 @@ temporal workflow stack \
     --workflow-id YourWorkflowId
 ```
 
-Visit https://docs.temporal.io/visibility to read more about Search Attributes
-and Query creation. See `temporal batch --help` for a quick reference.
-
 #### Options
 
 * `--reject-condition` (string-enum) -
@@ -2365,7 +2378,7 @@ temporal workflow start \
 
 * `--workflow-id`, `-w` (string) -
   Workflow ID.
-  If not supply, the Service generates a unique ID.
+  If not supplied, the Service generates a unique ID.
 * `--type` (string) -
   Workflow Type name.
   Required.
@@ -2383,8 +2396,10 @@ temporal workflow start \
   This is the Start-to-close timeout for a Workflow Task.
   Default: 10s.
 * `--search-attribute` (string[]) -
-  Search Attribute in "KEY='VALUE'" format.
-  Use JSON values.
+  Search Attribute in `KEY=VALUE` format.
+  Keys must be identifiers, and values must be JSON values.
+  For example: 'YourKey={"your": "value"}'.
+  Can be passed multiple times.
 * `--memo` (string[]) -
   Memo using 'KEY="VALUE"' pairs.
   Use JSON values.
@@ -2412,14 +2427,14 @@ temporal workflow start \
   Input value.
   Use JSON content or set --input-meta to override.
   Can't be combined with --input-file.
-  Can be passed multiple times.
+  Can be passed multiple times to pass multiple arguments.
 * `--input-file` (string[]) -
   A path or paths for input file(s).
   Use JSON content or set --input-meta to override.
   Can't be combined with --input.
-  Can be passed multiple times to concatenate the file contents.
+  Can be passed multiple times to pass multiple arguments.
 * `--input-meta` (string[]) -
-  Input payload metadata as a "KEY=VALUE" pair.
+  Input payload metadata as a `KEY=VALUE` pair.
   When the KEY is "encoding", this overrides the default ("json/plain").
   Can be passed multiple times.
 * `--input-base64` (bool) -
