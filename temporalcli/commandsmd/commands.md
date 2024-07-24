@@ -2244,7 +2244,7 @@ Attributes and Query creation.
   Types of events to re-apply after reset point.
   Deprecated.
   Use --reapply-exclude instead.
-  Options: Options: All, Signal, None.
+  Options: All, Signal, None.
   Default: All.
 * `--reapply-exclude` (string[]) -
   Exclude these event types from re-application.
