@@ -246,8 +246,8 @@ Workflows, inspect state, and more.
   Default: info.
 * `--log-format` (string) -
   Log format.
-  Options are "text", or "json".
-  Defaults to "text".
+  Options are: text, json.
+  Defaults to: text.
 * `--output`, `-o` (string-enum) -
   Non-logging data output format.
   Options: text, json, jsonl, none.
@@ -333,10 +333,9 @@ Includes options set for [workflow reference](#options-set-for-workflow-referenc
 
 List or terminate running batch jobs.
 
-A batch job executes a command on multiple Workflow Executions at once. Batch
-Jobs may be created in several context, usually as the result of passing
-`--query` to another command. For example, you can use an SQL-like `--query` to
-select which Workflow Executions to include:
+A batch job executes a command on multiple Workflow Executions at once. Create
+batch jobs by passing `--query` to commands that support it. For example, to
+create a batch job to cancel a set of Workflow Executions:
 
 ```
 temporal workflow cancel \
@@ -440,8 +439,8 @@ Each environment is isolated. Changes to "prod" presets won't affect "dev".
 
 For easiest use, set a `TEMPORAL_ENV` environment variable in your shell. The
 Temporal CLI checks for an `--env` option first, then checks for the
-`TEMPORAL_ENV` environment variable. If neither is set, the "default"
-environment is used.
+`TEMPORAL_ENV` environment variable. If neither is set, the CLI uses the
+"default" environment.
 
 ### temporal env delete: Delete an environment or environment property
 
@@ -1408,7 +1407,7 @@ more conservative than `ClosedWorkflowsOnly`.
   Required.
 * `--task-queue-type` (string[]) -
   Task Queue type.
-  Options are "workflow", "activity", or "nexus".
+  Options are: workflow, activity, nexus.
 * `--select-build-id` (string[]) -
   Filter the Task Queue based on Build ID.
 * `--select-unversioned` (bool) -
