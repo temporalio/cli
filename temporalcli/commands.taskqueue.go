@@ -29,9 +29,20 @@ type pollerRowType struct {
 	RatePerSecond  float64   `json:"ratePerSecond"`
 }
 
+type statsRowType struct {
+	BuildID                 string        `json:"buildId"`
+	TaskQueueType           string        `json:"taskQueueType"`
+	ApproximateBacklogCount int64         `json:"approximateBacklogCount"`
+	ApproximateBacklogAge   time.Duration `json:"approximateBacklogAge"`
+	BacklogIncreaseRate     float32       `json:"backlogIncreaseRate"`
+	TasksAddRate            float32       `json:"tasksAddRate"`
+	TasksDispatchRate       float32       `json:"tasksDispatchRate"`
+}
+
 type taskQueueDescriptionType struct {
 	Reachability []taskQueueReachabilityRowType `json:"reachability"`
 	Pollers      []pollerRowType                `json:"pollers"`
+	Stats        []statsRowType                 `json:"stats"`
 }
 
 func reachabilityToStr(reachability client.BuildIDTaskReachability) (string, error) {
@@ -134,11 +145,60 @@ func descriptionToPollerRows(taskQueueDescription client.TaskQueueDescription) (
 	return pRows, nil
 }
 
-func taskQueueDescriptionToRows(taskQueueDescription client.TaskQueueDescription, reportReachability bool) (taskQueueDescriptionType, error) {
+func buildIDToStatsRows(statsRows []statsRowType, buildID string, typesInfo map[client.TaskQueueType]client.TaskQueueTypeInfo) ([]statsRowType, error) {
+	for t, info := range typesInfo {
+		taskQueueType, err := taskQueueTypeToStr(t)
+		if err != nil {
+			return statsRows, err
+		}
+		statsRows = append(statsRows, statsRowType{
+			BuildID:                 buildID,
+			TaskQueueType:           taskQueueType,
+			ApproximateBacklogCount: info.Stats.ApproximateBacklogCount,
+			ApproximateBacklogAge:   info.Stats.ApproximateBacklogAge,
+			BacklogIncreaseRate:     info.Stats.BacklogIncreaseRate,
+			TasksAddRate:            info.Stats.TasksAddRate,
+			TasksDispatchRate:       info.Stats.TasksDispatchRate,
+		})
+	}
+	return statsRows, nil
+}
+func descriptionToStatsRows(taskQueueDescription client.TaskQueueDescription) ([]statsRowType, error) {
+	var statsRows []statsRowType
+	var err error
+	// Unversioned queue first
+	val, ok := taskQueueDescription.VersionsInfo[client.UnversionedBuildID]
+	if ok {
+		statsRows, err = buildIDToStatsRows(statsRows, taskQueueUnversioned, val.TypesInfo)
+		if err != nil {
+			return nil, err
+		}
+	}
+	// Versioned queues
+	for k, val := range taskQueueDescription.VersionsInfo {
+		if k != client.UnversionedBuildID {
+			statsRows, err = buildIDToStatsRows(statsRows, k, val.TypesInfo)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	return statsRows, nil
+}
+
+func taskQueueDescriptionToRows(taskQueueDescription client.TaskQueueDescription, reportReachability bool, reportStats bool) (taskQueueDescriptionType, error) {
 	var rRows []taskQueueReachabilityRowType
+	var statsRows []statsRowType
 	if reportReachability {
 		var err error
 		rRows, err = descriptionToReachabilityRows(taskQueueDescription)
+		if err != nil {
+			return taskQueueDescriptionType{}, err
+		}
+	}
+	if reportStats {
+		var err error
+		statsRows, err = descriptionToStatsRows(taskQueueDescription)
 		if err != nil {
 			return taskQueueDescriptionType{}, err
 		}
@@ -151,11 +211,12 @@ func taskQueueDescriptionToRows(taskQueueDescription client.TaskQueueDescription
 	return taskQueueDescriptionType{
 		Reachability: rRows,
 		Pollers:      pRows,
+		Stats:        statsRows,
 	}, nil
 }
 
-func printTaskQueueDescription(cctx *CommandContext, taskQueueDescription client.TaskQueueDescription, reportReachability bool) error {
-	descRows, err := taskQueueDescriptionToRows(taskQueueDescription, reportReachability)
+func printTaskQueueDescription(cctx *CommandContext, taskQueueDescription client.TaskQueueDescription, reportReachability bool, reportStats bool) error {
+	descRows, err := taskQueueDescriptionToRows(taskQueueDescription, reportReachability, reportStats)
 	if err != nil {
 		return fmt.Errorf("creating task queue description rows failed: %w", err)
 	}
@@ -166,6 +227,16 @@ func printTaskQueueDescription(cctx *CommandContext, taskQueueDescription client
 			err = cctx.Printer.PrintStructured(descRows.Reachability, printer.StructuredOptions{Table: &printer.TableOptions{}})
 			if err != nil {
 				return fmt.Errorf("displaying reachability failed: %w", err)
+			}
+		}
+
+		if !cctx.JSONOutput {
+			if reportStats {
+				cctx.Printer.Println(color.MagentaString("Task Queue Statistics:"))
+				err = cctx.Printer.PrintStructured(descRows.Stats, printer.StructuredOptions{Table: &printer.TableOptions{}})
+				if err != nil {
+					return fmt.Errorf("displaying task queue statistics failed: %w", err)
+				}
 			}
 		}
 
@@ -218,11 +289,12 @@ func (c *TemporalTaskQueueDescribeCommand) run(cctx *CommandContext, args []stri
 		TaskQueueTypes:         taskQueueTypes,
 		ReportPollers:          true,
 		ReportTaskReachability: c.ReportReachability,
+		ReportStats:            c.ReportStats,
 	})
 	if err != nil {
 		return fmt.Errorf("unable to describe task queue: %w", err)
 	}
-	return printTaskQueueDescription(cctx, resp, c.ReportReachability)
+	return printTaskQueueDescription(cctx, resp, c.ReportReachability, c.ReportStats)
 }
 
 func (c *TemporalTaskQueueDescribeCommand) runLegacy(cctx *CommandContext, args []string) error {

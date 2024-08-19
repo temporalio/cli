@@ -24,9 +24,20 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
 		RatePerSecond  float64   `json:"ratePerSecond"`
 	}
 
+	type statsRowType struct {
+		BuildID                 string        `json:"buildId"`
+		TaskQueueType           string        `json:"taskQueueType"`
+		ApproximateBacklogCount int64         `json:"approximateBacklogCount"`
+		ApproximateBacklogAge   time.Duration `json:"approximateBacklogAge"`
+		BacklogIncreaseRate     float32       `json:"backlogIncreaseRate"`
+		TasksAddRate            float32       `json:"tasksAddRate"`
+		TasksDispatchRate       float32       `json:"tasksDispatchRate"`
+	}
+
 	type taskQueueDescriptionType struct {
 		Reachability []reachabilityRowType `json:"reachability"`
 		Pollers      []pollerRowType       `json:"pollers"`
+		Stats        []statsRowType        `json:"stats"`
 	}
 
 	// Wait until the poller appears
@@ -43,7 +54,7 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
 
 	// Text
 
-	// No task reachability info
+	// No task reachability and no task queue statistics info
 	res := s.Execute(
 		"task-queue", "describe",
 		"--address", s.Address(),
@@ -68,11 +79,26 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
 	s.ContainsOnSameLine(res.Stdout.String(), "UNVERSIONED", "workflow", s.DevServer.Options.ClientOptions.Identity, "now", "100000")
 	s.ContainsOnSameLine(res.Stdout.String(), "UNVERSIONED", "activity", s.DevServer.Options.ClientOptions.Identity, "now", "100000")
 
+	// With task queue statistics info
+	res = s.Execute(
+		"task-queue", "describe",
+		"--address", s.Address(),
+		"--report-stats",
+		"--task-queue", s.Worker().Options.TaskQueue)
+	s.NoError(res.Err)
+
+	s.NotContains(res.Stdout.String(), "reachable")
+	s.ContainsOnSameLine(res.Stdout.String(), "UNVERSIONED", "workflow", "0", "0s", "0", "0", "0")
+	s.ContainsOnSameLine(res.Stdout.String(), "UNVERSIONED", "activity", "0", "0s", "0", "0", "0")
+	s.ContainsOnSameLine(res.Stdout.String(), "UNVERSIONED", "workflow", s.DevServer.Options.ClientOptions.Identity, "now", "100000")
+	s.ContainsOnSameLine(res.Stdout.String(), "UNVERSIONED", "activity", s.DevServer.Options.ClientOptions.Identity, "now", "100000")
+
 	// json
 	res = s.Execute(
 		"task-queue", "describe",
 		"--address", s.Address(),
 		"--report-reachability",
+		"--report-stats",
 		"--task-queue", s.Worker().Options.TaskQueue,
 		"-o", "json",
 	)

@@ -765,6 +765,7 @@ If there is no default Build ID, the result for the unversioned queue will be re
 * `--legacy-mode` (bool) - Enable a legacy mode for servers that do not support rules-based worker versioning. This mode only provides pollers info.
 * `--task-queue-type-legacy` (string-enum) - Task Queue type (legacy mode only). Options: workflow, activity. Default: workflow.
 * `--partitions-legacy` (int) - Query for all partitions up to this number (experimental+temporary feature) (legacy mode only). Default: 1.
+* `--report-stats` (bool) - Display task queue statistics.
 
 ### temporal task-queue get-build-id-reachability: Retrieves information about the reachability of Build IDs on one or more Task Queues (Deprecated).
 
