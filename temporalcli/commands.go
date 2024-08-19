@@ -416,8 +416,16 @@ func (c *TemporalCommand) initCommand(cctx *CommandContext) {
 	}
 }
 
+var buildInfo string
+
 func VersionString() string {
-	return fmt.Sprintf("%s (Server %s, UI %s)", Version, headers.ServerVersion, version.UIVersion)
+	// To add build-time information to the version string, use
+	// go build -ldflags "-X github.com/temporalio/cli/temporalcli.buildInfo=<MyString>"
+	var bi = buildInfo
+	if bi != "" {
+		bi = fmt.Sprintf(", %s", bi)
+	}
+	return fmt.Sprintf("%s (Server %s, UI %s%s)", Version, headers.ServerVersion, version.UIVersion, bi)
 }
 
 func (c *TemporalCommand) preRun(cctx *CommandContext) error {
