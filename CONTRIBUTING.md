@@ -31,10 +31,10 @@ This will expect every non-parent command to have a `run` method, so for new com
 ## Inject additional build-time information
 To add build-time information to the version string printed by the binary, use
 
-    go build -ldflags "-X github.com/temporalio/cli/temporalcli.buildInfo=<MyString>"
+    go build -ldflags "-X github.com/temporalio/cli/temporalcli.BuildInfo=<MyString>"
 
 This can be useful if, for example, you've used a `replace` statement in go.mod pointing to a local directory.
 Note that inclusion of space characters in the value supplied via `-ldflags` is tricky.
 Here's an example that adds branch info from a local repo to the version string, and includes a space character:
 
-    go build -ldflags "-X 'github.com/temporalio/cli/temporalcli.buildInfo=ServerBranch $(cd ../temporal && git rev-parse --abbrev-ref HEAD)'" -o temporal ./cmd/temporal/main.go
+    go build -ldflags "-X 'github.com/temporalio/cli/temporalcli.BuildInfo=ServerBranch $(cd ../temporal && git rev-parse --abbrev-ref HEAD)'" -o temporal ./cmd/temporal/main.go

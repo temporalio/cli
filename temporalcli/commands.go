@@ -416,12 +416,12 @@ func (c *TemporalCommand) initCommand(cctx *CommandContext) {
 	}
 }
 
-var buildInfo string
+var BuildInfo string
 
 func VersionString() string {
 	// To add build-time information to the version string, use
-	// go build -ldflags "-X github.com/temporalio/cli/temporalcli.buildInfo=<MyString>"
-	var bi = buildInfo
+	// go build -ldflags "-X github.com/temporalio/cli/temporalcli.BuildInfo=<MyString>"
+	var bi = BuildInfo
 	if bi != "" {
 		bi = fmt.Sprintf(", %s", bi)
 	}
