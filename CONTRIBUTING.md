@@ -37,4 +37,4 @@ This can be useful if, for example, you've used a `replace` statement in go.mod 
 Note that inclusion of space characters in the value supplied via `-ldflags` is tricky.
 Here's an example that adds branch info from a local repo to the version string, and includes a space character:
 
-    go build -ldflags "-X 'github.com/temporalio/cli/temporalcli.buildInfo=ServerBranch $(cd ../temporal && git rev-parse --abbrev-ref HEAD)'" -o temporal ./cmd/temporal/main.go
+    go build -ldflags "-X 'github.com/temporalio/cli/temporalcli.buildInfo=ServerBranch $(git -C ../temporal rev-parse --abbrev-ref HEAD)'" -o temporal ./cmd/temporal/main.go
