@@ -1039,7 +1039,7 @@ For example:
     --calendar '{"dayOfWeek":"Fri","hour":"3","minute":"30"}' \
     --workflow-id YourBaseWorkflowIdName \
     --task-queue YourTaskQueue \
-    --workflow-type YourWorkflowType
+    --type YourWorkflowType
 ```
 
 Schedules support any combination of `--calendar`, `--interval`, and `--cron`:
