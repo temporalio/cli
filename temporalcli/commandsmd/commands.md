@@ -1326,9 +1326,9 @@ temporal server start-dev \
   Log the server config to stderr.
 * `--search-attribute` (string[]) -
   Search attributes to register using `KEY=VALUE` pairs.
-  Keys must be identifiers, and values must be JSON values.
-  For example: 'YourKey={"your": "value"}'.
-  Can be passed multiple times.
+  Keys must be identifiers, and values must be the search
+  attribute type, which is one of the following:
+  Text, Keyword, Int, Double, Bool, Datetime, KeywordList.
 
 ### temporal task-queue: Manage Task Queues
 
