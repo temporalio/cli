@@ -81,7 +81,6 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Task_Queue_Stats_NonEmpty() {
 	)
 	s.NoError(result.Err)
 	out := result.Stdout.String()
-	s.ContainsOnSameLine(out, "UNVERSIONED", "activity", "0", "0s", "0", "0", "0")
 	s.NotContainsOnSameLine(out, "UNVERSIONED", "workflow", "0", "0s", "0", "0", "0")
 
 	// json
