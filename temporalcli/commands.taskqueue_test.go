@@ -26,6 +26,18 @@ type taskQueueStatsType struct {
 }
 
 func (s *SharedServerSuite) TestTaskQueue_Describe_Task_Queue_Stats_Empty() {
+	// Wait until the poller appears
+	s.Eventually(func() bool {
+		desc, err := s.Client.DescribeTaskQueue(s.Context, s.Worker().Options.TaskQueue, enums.TASK_QUEUE_TYPE_WORKFLOW)
+		s.NoError(err)
+		for _, poller := range desc.Pollers {
+			if poller.Identity == s.DevServer.Options.ClientOptions.Identity {
+				return true
+			}
+		}
+		return false
+	}, 5*time.Second, 100*time.Millisecond, "Worker never appeared")
+
 	// text
 	res := s.Execute(
 		"task-queue", "describe",
@@ -35,6 +47,8 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Task_Queue_Stats_Empty() {
 	s.NoError(res.Err)
 	s.ContainsOnSameLine(res.Stdout.String(), "UNVERSIONED", "workflow", "0", "0s", "0", "0", "0")
 	s.ContainsOnSameLine(res.Stdout.String(), "UNVERSIONED", "activity", "0", "0s", "0", "0", "0")
+	s.ContainsOnSameLine(res.Stdout.String(), "UNVERSIONED", "workflow", s.DevServer.Options.ClientOptions.Identity, "now", "100000")
+	s.ContainsOnSameLine(res.Stdout.String(), "UNVERSIONED", "activity", s.DevServer.Options.ClientOptions.Identity, "now", "100000")
 
 	// json
 	res = s.Execute(
