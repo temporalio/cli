@@ -1531,7 +1531,7 @@ type TemporalTaskQueueDescribeCommand struct {
 	LegacyMode          bool
 	TaskQueueTypeLegacy StringEnum
 	PartitionsLegacy    int
-	ReportStats         bool
+	DisableStats        bool
 }
 
 func NewTemporalTaskQueueDescribeCommand(cctx *CommandContext, parent *TemporalTaskQueueCommand) *TemporalTaskQueueDescribeCommand {
@@ -1557,7 +1557,7 @@ func NewTemporalTaskQueueDescribeCommand(cctx *CommandContext, parent *TemporalT
 	s.TaskQueueTypeLegacy = NewStringEnum([]string{"workflow", "activity"}, "workflow")
 	s.Command.Flags().Var(&s.TaskQueueTypeLegacy, "task-queue-type-legacy", "Task Queue type (legacy mode only). Accepted values: workflow, activity.")
 	s.Command.Flags().IntVar(&s.PartitionsLegacy, "partitions-legacy", 1, "Query for all partitions up to this number (experimental+temporary feature) (legacy mode only).")
-	s.Command.Flags().BoolVar(&s.ReportStats, "report-stats", false, "Display task queue statistics.")
+	s.Command.Flags().BoolVar(&s.DisableStats, "disable-stats", false, "Disable task queue statistics.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

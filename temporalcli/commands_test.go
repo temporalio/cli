@@ -61,9 +61,32 @@ func (h *CommandHarness) ContainsOnSameLine(text string, pieces ...string) {
 	h.NoError(AssertContainsOnSameLine(text, pieces...))
 }
 
-// Pieces must *not* appear in order on the line and not overlap
 func (h *CommandHarness) NotContainsOnSameLine(text string, pieces ...string) {
-	h.Error(AssertContainsOnSameLine(text, pieces...))
+	h.Error(AssertStrictContainsOnSameLine(text, pieces...))
+}
+
+func AssertStrictContainsOnSameLine(text string, pieces ...string) error {
+	// Build a strict regex pattern based on pieces
+	pattern := "^"
+	for i, piece := range pieces {
+		if i > 0 {
+			pattern += "\\s+" // Match one or more whitespace characters
+		}
+		pattern += regexp.QuoteMeta(piece)
+	}
+	pattern += "$"
+	regex, err := regexp.Compile(pattern)
+	if err != nil {
+		return err
+	}
+	// Split into lines, then check each piece is present
+	lines := strings.Split(text, "\n")
+	for _, line := range lines {
+		if regex.MatchString(line) {
+			return nil
+		}
+	}
+	return fmt.Errorf("pieces not found in a strict order on any line together")
 }
 
 func AssertContainsOnSameLine(text string, pieces ...string) error {

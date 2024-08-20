@@ -2,6 +2,7 @@ package temporalcli_test
 
 import (
 	"encoding/json"
+	"go.temporal.io/sdk/workflow"
 	"time"
 
 	"github.com/google/uuid"
@@ -10,21 +11,58 @@ import (
 	"go.temporal.io/api/workflowservice/v1"
 )
 
+type statsRowType struct {
+	BuildID                 string        `json:"buildId"`
+	TaskQueueType           string        `json:"taskQueueType"`
+	ApproximateBacklogCount int64         `json:"approximateBacklogCount"`
+	ApproximateBacklogAge   time.Duration `json:"approximateBacklogAge"`
+	BacklogIncreaseRate     float32       `json:"backlogIncreaseRate"`
+	TasksAddRate            float32       `json:"tasksAddRate"`
+	TasksDispatchRate       float32       `json:"tasksDispatchRate"`
+}
+
+type taskQueueStatsType struct {
+	Stats []statsRowType `json:"stats"`
+}
+
 func (s *SharedServerSuite) TestTaskQueue_Describe_Task_Queue_Stats_Empty() {
+	// text
 	res := s.Execute(
 		"task-queue", "describe",
 		"--address", s.Address(),
-		"--report-stats",
 		"--task-queue", s.Worker().Options.TaskQueue,
 	)
 	s.NoError(res.Err)
 	s.ContainsOnSameLine(res.Stdout.String(), "UNVERSIONED", "workflow", "0", "0s", "0", "0", "0")
 	s.ContainsOnSameLine(res.Stdout.String(), "UNVERSIONED", "activity", "0", "0s", "0", "0", "0")
+
+	// json
+	res = s.Execute(
+		"task-queue", "describe",
+		"--address", s.Address(),
+		"--task-queue", s.Worker().Options.TaskQueue,
+		"-o", "json",
+	)
+	s.NoError(res.Err)
+
+	var jsonOut taskQueueStatsType
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	s.Equal(statsRowType{
+		BuildID: "UNVERSIONED",
+		// ordering of workflow/activity pollers is random
+		TaskQueueType:           jsonOut.Stats[0].TaskQueueType,
+		ApproximateBacklogCount: 0,
+		ApproximateBacklogAge:   0,
+		BacklogIncreaseRate:     0,
+		TasksAddRate:            0,
+		TasksDispatchRate:       0,
+	}, jsonOut.Stats[0])
 }
 
 func (s *SharedServerSuite) TestTaskQueue_Describe_Task_Queue_Stats_NonEmpty() {
-	// stopping the worker to increase the backlog for workflow tasks
-	s.Worker().Stop()
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
+		return map[string]string{"foo": "bar"}, nil
+	})
 
 	// starting a new workflow execution
 	res := s.Execute(
@@ -39,13 +77,40 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Task_Queue_Stats_NonEmpty() {
 	result := s.Execute(
 		"task-queue", "describe",
 		"--address", s.Address(),
-		"--report-stats",
 		"--task-queue", s.Worker().Options.TaskQueue,
 	)
 	s.NoError(result.Err)
 	out := result.Stdout.String()
 	s.ContainsOnSameLine(out, "UNVERSIONED", "activity", "0", "0s", "0", "0", "0")
 	s.NotContainsOnSameLine(out, "UNVERSIONED", "workflow", "0", "0s", "0", "0", "0")
+
+	// json
+	res = s.Execute(
+		"task-queue", "describe",
+		"--address", s.Address(),
+		"--task-queue", s.Worker().Options.TaskQueue,
+		"-o", "json",
+	)
+	s.NoError(res.Err)
+
+	var jsonOut taskQueueStatsType
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	nullStatsRow := statsRowType{
+		BuildID:                 "UNVERSIONED",
+		TaskQueueType:           jsonOut.Stats[0].TaskQueueType,
+		ApproximateBacklogCount: 0,
+		ApproximateBacklogAge:   0,
+		BacklogIncreaseRate:     0,
+		TasksAddRate:            0,
+		TasksDispatchRate:       0,
+	}
+
+	// The workflow queue should have non-zero task queue statistics
+	if jsonOut.Stats[0].TaskQueueType == "workflow" {
+		s.NotEqual(nullStatsRow, jsonOut.Stats[0])
+	} else {
+		s.NotEqual(nullStatsRow, jsonOut.Stats[1])
+	}
 }
 
 func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
@@ -85,6 +150,7 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
 	res := s.Execute(
 		"task-queue", "describe",
 		"--address", s.Address(),
+		"--disable-stats",
 		"--task-queue", s.Worker().Options.TaskQueue,
 	)
 	s.NoError(res.Err)
@@ -98,6 +164,7 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
 		"task-queue", "describe",
 		"--address", s.Address(),
 		"--report-reachability",
+		"--disable-stats",
 		"--task-queue", s.Worker().Options.TaskQueue,
 	)
 	s.NoError(res.Err)
@@ -106,23 +173,12 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
 	s.ContainsOnSameLine(res.Stdout.String(), "UNVERSIONED", "workflow", s.DevServer.Options.ClientOptions.Identity, "now", "100000")
 	s.ContainsOnSameLine(res.Stdout.String(), "UNVERSIONED", "activity", s.DevServer.Options.ClientOptions.Identity, "now", "100000")
 
-	// With task queue statistics info
-	res = s.Execute(
-		"task-queue", "describe",
-		"--address", s.Address(),
-		"--report-stats",
-		"--task-queue", s.Worker().Options.TaskQueue)
-	s.NoError(res.Err)
-
-	s.NotContains(res.Stdout.String(), "reachable")
-	s.ContainsOnSameLine(res.Stdout.String(), "UNVERSIONED", "workflow", s.DevServer.Options.ClientOptions.Identity, "now", "100000")
-	s.ContainsOnSameLine(res.Stdout.String(), "UNVERSIONED", "activity", s.DevServer.Options.ClientOptions.Identity, "now", "100000")
-
 	// json
 	res = s.Execute(
 		"task-queue", "describe",
 		"--address", s.Address(),
 		"--report-reachability",
+		"--disable-stats",
 		"--task-queue", s.Worker().Options.TaskQueue,
 		"-o", "json",
 	)
@@ -160,6 +216,7 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
 		"task-queue", "describe",
 		"--address", s.Address(),
 		"--report-reachability",
+		"--disable-stats",
 		"--task-queue", s.Worker().Options.TaskQueue,
 	)
 	s.NoError(res.Err)
@@ -173,6 +230,7 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
 		"--select-unversioned",
 		"--address", s.Address(),
 		"--report-reachability",
+		"--disable-stats",
 		"--task-queue", s.Worker().Options.TaskQueue,
 	)
 	s.NoError(res.Err)
@@ -186,6 +244,7 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
 		"--select-build-id", "id2",
 		"--address", s.Address(),
 		"--report-reachability",
+		"--disable-stats",
 		"--task-queue", s.Worker().Options.TaskQueue,
 	)
 	s.NoError(res.Err)
@@ -199,6 +258,7 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
 		"--select-all-active",
 		"--address", s.Address(),
 		"--report-reachability",
+		"--disable-stats",
 		"--task-queue", s.Worker().Options.TaskQueue,
 	)
 	s.NoError(res.Err)
