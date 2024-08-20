@@ -61,6 +61,11 @@ func (h *CommandHarness) ContainsOnSameLine(text string, pieces ...string) {
 	h.NoError(AssertContainsOnSameLine(text, pieces...))
 }
 
+// Pieces must *not* appear in order on the line and not overlap
+func (h *CommandHarness) NotContainsOnSameLine(text string, pieces ...string) {
+	h.Error(AssertContainsOnSameLine(text, pieces...))
+}
+
 func AssertContainsOnSameLine(text string, pieces ...string) error {
 	// Build regex pattern based on pieces
 	pattern := ""

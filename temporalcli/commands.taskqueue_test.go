@@ -10,6 +10,44 @@ import (
 	"go.temporal.io/api/workflowservice/v1"
 )
 
+func (s *SharedServerSuite) TestTaskQueue_Describe_Task_Queue_Stats_Empty() {
+	res := s.Execute(
+		"task-queue", "describe",
+		"--address", s.Address(),
+		"--report-stats",
+		"--task-queue", s.Worker().Options.TaskQueue,
+	)
+	s.NoError(res.Err)
+	s.ContainsOnSameLine(res.Stdout.String(), "UNVERSIONED", "workflow", "0", "0s", "0", "0", "0")
+	s.ContainsOnSameLine(res.Stdout.String(), "UNVERSIONED", "activity", "0", "0s", "0", "0", "0")
+}
+
+func (s *SharedServerSuite) TestTaskQueue_Describe_Task_Queue_Stats_NonEmpty() {
+	// stopping the worker to increase the backlog for workflow tasks
+	s.Worker().Stop()
+
+	// starting a new workflow execution
+	res := s.Execute(
+		"workflow", "start",
+		"--address", s.Address(),
+		"--task-queue", s.Worker().Options.TaskQueue,
+		"--type", "DevWorkflow",
+		"--workflow-id", "my-id1",
+	)
+	s.NoError(res.Err)
+
+	result := s.Execute(
+		"task-queue", "describe",
+		"--address", s.Address(),
+		"--report-stats",
+		"--task-queue", s.Worker().Options.TaskQueue,
+	)
+	s.NoError(result.Err)
+	out := result.Stdout.String()
+	s.ContainsOnSameLine(out, "UNVERSIONED", "activity", "0", "0s", "0", "0", "0")
+	s.NotContainsOnSameLine(out, "UNVERSIONED", "workflow", "0", "0s", "0", "0", "0")
+}
+
 func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
 	type reachabilityRowType struct {
 		BuildID      string `json:"buildId"`
@@ -24,20 +62,9 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
 		RatePerSecond  float64   `json:"ratePerSecond"`
 	}
 
-	type statsRowType struct {
-		BuildID                 string        `json:"buildId"`
-		TaskQueueType           string        `json:"taskQueueType"`
-		ApproximateBacklogCount int64         `json:"approximateBacklogCount"`
-		ApproximateBacklogAge   time.Duration `json:"approximateBacklogAge"`
-		BacklogIncreaseRate     float32       `json:"backlogIncreaseRate"`
-		TasksAddRate            float32       `json:"tasksAddRate"`
-		TasksDispatchRate       float32       `json:"tasksDispatchRate"`
-	}
-
 	type taskQueueDescriptionType struct {
 		Reachability []reachabilityRowType `json:"reachability"`
 		Pollers      []pollerRowType       `json:"pollers"`
-		Stats        []statsRowType        `json:"stats"`
 	}
 
 	// Wait until the poller appears
@@ -54,7 +81,7 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
 
 	// Text
 
-	// No task reachability and no task queue statistics info
+	// No task reachability
 	res := s.Execute(
 		"task-queue", "describe",
 		"--address", s.Address(),
@@ -88,8 +115,6 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
 	s.NoError(res.Err)
 
 	s.NotContains(res.Stdout.String(), "reachable")
-	s.ContainsOnSameLine(res.Stdout.String(), "UNVERSIONED", "workflow", "0", "0s", "0", "0", "0")
-	s.ContainsOnSameLine(res.Stdout.String(), "UNVERSIONED", "activity", "0", "0s", "0", "0", "0")
 	s.ContainsOnSameLine(res.Stdout.String(), "UNVERSIONED", "workflow", s.DevServer.Options.ClientOptions.Identity, "now", "100000")
 	s.ContainsOnSameLine(res.Stdout.String(), "UNVERSIONED", "activity", s.DevServer.Options.ClientOptions.Identity, "now", "100000")
 
@@ -98,7 +123,6 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
 		"task-queue", "describe",
 		"--address", s.Address(),
 		"--report-reachability",
-		"--report-stats",
 		"--task-queue", s.Worker().Options.TaskQueue,
 		"-o", "json",
 	)

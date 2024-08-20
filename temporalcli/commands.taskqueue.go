@@ -163,6 +163,7 @@ func buildIDToStatsRows(statsRows []statsRowType, buildID string, typesInfo map[
 	}
 	return statsRows, nil
 }
+
 func descriptionToStatsRows(taskQueueDescription client.TaskQueueDescription) ([]statsRowType, error) {
 	var statsRows []statsRowType
 	var err error
