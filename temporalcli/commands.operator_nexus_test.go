@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
-	"strings"
 	"testing"
 	"time"
 
@@ -331,7 +331,7 @@ func (s *SharedServerSuite) TestListNexusEndpoints() {
 	// Create a couple of endpoints.
 	res := s.Execute("operator", "nexus", "endpoint", "create",
 		"--address", s.Address(),
-		"--name", validEndpointName(s.T())+"_1",
+		"--name", validEndpointName(s.T())+"-1",
 		"--description", "markdown-1",
 		"--target-namespace", "default",
 		"--target-task-queue", "tq-1")
@@ -339,7 +339,7 @@ func (s *SharedServerSuite) TestListNexusEndpoints() {
 
 	res = s.Execute("operator", "nexus", "endpoint", "create",
 		"--address", s.Address(),
-		"--name", validEndpointName(s.T())+"_2",
+		"--name", validEndpointName(s.T())+"-2",
 		"--description", "markdown-2",
 		"--target-namespace", "default",
 		"--target-task-queue", "tq-2")
@@ -349,12 +349,12 @@ func (s *SharedServerSuite) TestListNexusEndpoints() {
 		res = s.Execute("operator", "nexus", "endpoint", "list", "--address", s.Address())
 		require.NoError(t, res.Err)
 
-		require.NoError(t, AssertContainsOnSameLine(res.Stdout.String(), "Name", validEndpointName(s.T())+"_1"))
+		require.NoError(t, AssertContainsOnSameLine(res.Stdout.String(), "Name", validEndpointName(s.T())+"-1"))
 		require.NoError(t, AssertContainsOnSameLine(res.Stdout.String(), "Target.Worker.Namespace", "default"))
 		require.NoError(t, AssertContainsOnSameLine(res.Stdout.String(), "Target.Worker.TaskQueue", "tq-1"))
 		require.NoError(t, AssertContainsOnSameLine(res.Stdout.String(), "Description", "markdown-1"))
 
-		require.NoError(t, AssertContainsOnSameLine(res.Stdout.String(), "Name", validEndpointName(s.T())+"_2"))
+		require.NoError(t, AssertContainsOnSameLine(res.Stdout.String(), "Name", validEndpointName(s.T())+"-2"))
 		require.NoError(t, AssertContainsOnSameLine(res.Stdout.String(), "Target.Worker.Namespace", "default"))
 		require.NoError(t, AssertContainsOnSameLine(res.Stdout.String(), "Target.Worker.TaskQueue", "tq-2"))
 		require.NoError(t, AssertContainsOnSameLine(res.Stdout.String(), "Description", "markdown-2"))
@@ -374,10 +374,10 @@ func (s *SharedServerSuite) TestListNexusEndpoints() {
 		require.GreaterOrEqual(t, len(endpoints), 2)
 
 		ep1Idx := slices.IndexFunc(endpoints, func(e *nexus.Endpoint) bool {
-			return e.Spec.Name == validEndpointName(s.T())+"_1"
+			return e.Spec.Name == validEndpointName(s.T())+"-1"
 		})
 		ep2Idx := slices.IndexFunc(endpoints, func(e *nexus.Endpoint) bool {
-			return e.Spec.Name == validEndpointName(s.T())+"_2"
+			return e.Spec.Name == validEndpointName(s.T())+"-2"
 		})
 		require.Equal(t, "default", endpoints[ep1Idx].Spec.Target.GetWorker().Namespace)
 		require.Equal(t, "tq-1", endpoints[ep1Idx].Spec.Target.GetWorker().TaskQueue)
@@ -403,5 +403,6 @@ func (s *SharedServerSuite) getNexusEndpointByName(name string) *nexus.Endpoint 
 }
 
 func validEndpointName(t *testing.T) string {
-	return strings.ReplaceAll(t.Name(), "/", "_")
+	re := regexp.MustCompile("[/_]")
+	return re.ReplaceAllString(t.Name(), "-")
 }
