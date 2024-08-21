@@ -2122,7 +2122,7 @@ temporal workflow execute
     --workflow-id YourWorkflowId \
     --type YourWorkflow \
     --task-queue YourTaskQueue \
-    --input '{"Input": "As-JSON"}'
+    --input '{"some-key": "some-value"}'
 ```
 
 Use `--event-details` to relay updates to the command-line output in JSON
@@ -2373,7 +2373,7 @@ temporal workflow start \
 		--workflow-id YourWorkflowId \
 		--type YourWorkflow \
 		--task-queue YourTaskQueue \
-		--input '{"Input": "As-JSON"}'
+		--input '{"some-key": "some-value"}'
 ```
 
 #### Options set for shared workflow start:
@@ -2521,19 +2521,23 @@ temporal workflow trace \
 
 Includes options set for [workflow reference](#options-set-for-workflow-reference).
 
-### temporal workflow update: Synchronously run a Workflow update handler
+### temporal workflow update: Start and wait for Updates
+An Update is a synchronous call to a Workflow Execution that can change its
+state, control its flow, and return a result.
 
-Send a message to a Workflow Execution to invoke an update handler. An update
-can change the state of a Workflow Execution and return a response:
+### temporal workflow update execute: Send an Update and wait for it to complete
+Send a message to a Workflow Execution to invoke an Update handler, and wait for
+the update to complete or fail. You can also use this to wait for an existing
+update to complete, by submitting an existing update ID.
 
 ```
-temporal workflow update \
+temporal workflow update execute \
     --workflow-id YourWorkflowId \
     --name YourUpdate \
-    --input '{"Input": "As-JSON"}'
+    --input '{"some-key": "some-value"}'
 ```
 
-#### Options
+#### Options set for update
 
 * `--name` (string) -
   Handler method name.
@@ -2554,4 +2558,23 @@ temporal workflow update \
   The update is sent to the last Workflow Execution in the chain started
   with this Run ID.
 
+#### Options
+
+Includes options set for [payload input](#options-set-for-payload-input).
+
+### temporal workflow update start: Send an Update and wait for it to be accepted or rejected
+Send a message to a Workflow Execution to invoke an Update handler, and wait for
+the update to be accepted or rejected. You can subsequently wait for the update
+to complete by using `temporal workflow update execute`.
+
+```
+temporal workflow update start \
+    --workflow-id YourWorkflowId \
+    --name YourUpdate \
+    --input '{"some-key": "some-value"}'
+```
+
+#### Options
+
+Includes options set for [update](#options-set-for-update).
 Includes options set for [payload input](#options-set-for-payload-input).
