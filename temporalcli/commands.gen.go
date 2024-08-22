@@ -1285,6 +1285,7 @@ type TemporalServerStartDevCommand struct {
 	Headless           bool
 	Ip                 string
 	UiIp               string
+	UiPublicPath       string
 	UiAssetPath        string
 	UiCodecEndpoint    string
 	SqlitePragma       []string
@@ -1314,6 +1315,7 @@ func NewTemporalServerStartDevCommand(cctx *CommandContext, parent *TemporalServ
 	s.Command.Flags().BoolVar(&s.Headless, "headless", false, "Disable the Web UI.")
 	s.Command.Flags().StringVar(&s.Ip, "ip", "localhost", "IP address bound to the frontend Service.")
 	s.Command.Flags().StringVar(&s.UiIp, "ui-ip", "", "IP address bound to the WebUI. Default is same as '--ip' value.")
+	s.Command.Flags().StringVar(&s.UiPublicPath, "ui-public-path", "", "The public base path for the Web UI. Default is `/`.")
 	s.Command.Flags().StringVar(&s.UiAssetPath, "ui-asset-path", "", "UI custom assets path.")
 	s.Command.Flags().StringVar(&s.UiCodecEndpoint, "ui-codec-endpoint", "", "UI remote codec HTTP endpoint.")
 	s.Command.Flags().StringArrayVar(&s.SqlitePragma, "sqlite-pragma", nil, "SQLite pragma statements in \"PRAGMA=VALUE\" format.")

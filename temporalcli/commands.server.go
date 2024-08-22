@@ -81,7 +81,7 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 				return fmt.Errorf("can't set UI port %d: %w", opts.UIPort, err)
 			}
 		}
-		opts.UIAssetPath, opts.UICodecEndpoint = t.UiAssetPath, t.UiCodecEndpoint
+		opts.UIAssetPath, opts.UICodecEndpoint, opts.PublicPath = t.UiAssetPath, t.UiCodecEndpoint, t.UiPublicPath
 	}
 	// Pragmas and dyn config
 	var err error
@@ -157,7 +157,7 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 	cctx.Printer.Printlnf("CLI %v\n", VersionString())
 	cctx.Printer.Printlnf("%-8s %v:%v", "Server:", toFriendlyIp(opts.FrontendIP), opts.FrontendPort)
 	if !t.Headless {
-		cctx.Printer.Printlnf("%-8s http://%v:%v", "UI:", toFriendlyIp(opts.UIIP), opts.UIPort)
+		cctx.Printer.Printlnf("%-8s http://%v:%v%v", "UI:", toFriendlyIp(opts.UIIP), opts.UIPort, opts.PublicPath)
 	}
 	cctx.Printer.Printlnf("%-8s http://%v:%v/metrics", "Metrics:", toFriendlyIp(opts.FrontendIP), opts.MetricsPort)
 	<-cctx.Done()

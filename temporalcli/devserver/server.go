@@ -74,6 +74,7 @@ type StartOptions struct {
 	UIPort                int    // Required if UIIP is non-empty
 	UIAssetPath           string
 	UICodecEndpoint       string
+	PublicPath            string
 	DatabaseFile          string
 	MetricsPort           int
 	PProfPort             int
@@ -156,6 +157,7 @@ func (s *StartOptions) buildUIServer() *uiserver.Server {
 		Port:                s.UIPort,
 		TemporalGRPCAddress: fmt.Sprintf("%v:%v", MaybeEscapeIPv6(s.FrontendIP), s.FrontendPort),
 		EnableUI:            true,
+		PublicPath:          s.PublicPath,
 		UIAssetPath:         s.UIAssetPath,
 		Codec:               uiconfig.Codec{Endpoint: s.UICodecEndpoint},
 		CORS:                uiconfig.CORS{CookieInsecure: true},

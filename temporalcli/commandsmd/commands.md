@@ -1311,6 +1311,9 @@ temporal server start-dev \
 * `--ui-ip` (string) -
   IP address bound to the WebUI.
   Default is same as '--ip' value.
+* `--ui-public-path` (string) -
+  The public base path for the Web UI.
+  Default is `/`.
 * `--ui-asset-path` (string) -
   UI custom assets path.
 * `--ui-codec-endpoint` (string) -
