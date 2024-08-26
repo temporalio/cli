@@ -101,7 +101,7 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Task_Queue_Stats_NonEmpty() {
 						tqMetricsValidator = false
 					}
 				}
-			} else {
+			} else if tqType == "workflow" {
 				backlogIncreaseRate := fields[4]
 				tasksAddRate := fields[5]
 				tasksDispatchRate := fields[6]
