@@ -192,7 +192,7 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
 
 	// Text
 
-	// No task reachability
+	// No task reachability info
 	res := s.Execute(
 		"task-queue", "describe",
 		"--address", s.Address(),
