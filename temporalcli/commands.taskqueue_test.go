@@ -89,8 +89,7 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Task_Queue_Stats_NonEmpty() {
 		for _, line := range lines {
 			fields := strings.Fields(line)
 			if len(fields) < 7 {
-				// lesser fields than expected in the output
-				tqMetricsValidator = false
+				// lesser fields than expected in the output, skip this line
 				continue
 			}
 
@@ -103,10 +102,10 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Task_Queue_Stats_NonEmpty() {
 					}
 				}
 			} else {
-				backlogIncreaseRate := fields[3]
-				tasksAddRate := fields[4]
-				tasksDispatchRate := fields[5]
-				if backlogIncreaseRate != "0" && tasksAddRate != "0" && tasksDispatchRate != "0" {
+				backlogIncreaseRate := fields[4]
+				tasksAddRate := fields[5]
+				tasksDispatchRate := fields[6]
+				if backlogIncreaseRate == "0" || tasksAddRate == "0" || tasksDispatchRate == "0" {
 					// ApproximateBacklogCount and ApproximateBacklogAge will still be 0 due to a poller sync matching
 					// on creation of these tasks
 					tqMetricsValidator = false
