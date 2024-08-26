@@ -2,7 +2,9 @@ package temporalcli_test
 
 import (
 	"encoding/json"
+	"github.com/stretchr/testify/assert"
 	"go.temporal.io/sdk/workflow"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -81,7 +83,38 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Task_Queue_Stats_NonEmpty() {
 	)
 	s.NoError(result.Err)
 	out := result.Stdout.String()
-	s.NotContainsOnSameLine(out, "UNVERSIONED", "workflow", "0", "0s", "0", "0", "0")
+	tqMetricsValidator := true
+	s.EventuallyWithT(func(collect *assert.CollectT) {
+		lines := strings.Split(out, "\n")
+		for _, line := range lines {
+			fields := strings.Fields(line)
+			if len(fields) < 7 {
+				// lesser fields than expected in the output
+				tqMetricsValidator = false
+				continue
+			}
+
+			tqType := fields[1]
+			if tqType == "activity" {
+				// all metrics should be 0
+				for _, metric := range fields[2:] {
+					if metric != "0" && metric != "0s" {
+						tqMetricsValidator = false
+					}
+				}
+			} else {
+				backlogIncreaseRate := fields[3]
+				tasksAddRate := fields[4]
+				tasksDispatchRate := fields[5]
+				if backlogIncreaseRate != "0" && tasksAddRate != "0" && tasksDispatchRate != "0" {
+					// ApproximateBacklogCount and ApproximateBacklogAge will still be 0 due to a poller sync matching
+					// on creation of these tasks
+					tqMetricsValidator = false
+				}
+			}
+		}
+		assert.True(collect, tqMetricsValidator, "expected 'tqMetricsValidator' to be true")
+	}, time.Second*5, time.Millisecond*200)
 
 	// json
 	res = s.Execute(

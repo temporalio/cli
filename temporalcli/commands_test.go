@@ -61,32 +61,32 @@ func (h *CommandHarness) ContainsOnSameLine(text string, pieces ...string) {
 	h.NoError(AssertContainsOnSameLine(text, pieces...))
 }
 
-func (h *CommandHarness) NotContainsOnSameLine(text string, pieces ...string) {
-	h.Error(AssertStrictContainsOnSameLine(text, pieces...))
-}
-
-func AssertStrictContainsOnSameLine(text string, pieces ...string) error {
-	// Build a strict regex pattern based on pieces
-	pattern := "^"
-	for i, piece := range pieces {
-		if i > 0 {
-			pattern += "\\s+" // Match one or more whitespace characters
-		}
-		pattern += regexp.QuoteMeta(piece)
-	}
-	pattern += "$"
-	regex, err := regexp.Compile(pattern)
-	if err != nil {
-		return err
-	}
-	// Split into lines, then check each piece is present
+func (h *CommandHarness) CheckTaskQueueMetrics(text string) bool {
 	lines := strings.Split(text, "\n")
 	for _, line := range lines {
-		if regex.MatchString(line) {
-			return nil
+		fields := strings.Fields(line)
+		if len(fields) < 7 {
+			return false // lesser fields than expected in the output
+		}
+
+		tqType := fields[1]
+		if tqType == "activity" {
+			// all metrics should be 0
+			for _, metric := range fields[2:] {
+				if metric != "0" && metric != "0s" {
+					return false
+				}
+			}
+		} else {
+			backlogIncreaseRate := fields[3]
+			tasksAddRate := fields[4]
+			tasksDispatchRate := fields[5]
+			if backlogIncreaseRate != "0" && tasksAddRate != "0" && tasksDispatchRate != "0" {
+				return false
+			}
 		}
 	}
-	return fmt.Errorf("pieces not found in a strict order on any line together")
+	return true
 }
 
 func AssertContainsOnSameLine(text string, pieces ...string) error {
