@@ -86,28 +86,44 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Task_Queue_Stats_NonEmpty() {
 	tqMetricsValidator := true
 	s.EventuallyWithT(func(collect *assert.CollectT) {
 		lines := strings.Split(out, "\n")
+		tqStat := false
 		for _, line := range lines {
-			fields := strings.Fields(line)
-			if len(fields) < 7 {
-				// lesser fields than expected in the output, skip this line
+			// Separating Task Queue Statistics output from Pollers output since they are similar
+			if strings.Contains(line, "Task Queue Statistics:") {
+				tqStat = true
 				continue
+			} else {
+				tqStat = false
 			}
 
-			tqType := fields[1]
-			if tqType == "activity" {
-				// all metrics should be 0
-				for _, metric := range fields[2:] {
-					if metric != "0" && metric != "0s" {
+			if tqStat {
+				fields := strings.Fields(line)
+				if len(fields) < 7 {
+					// lesser fields than expected in the output, skip this line
+					continue
+				}
+
+				tqType := fields[1]
+				if tqType == "activity" {
+					// all metrics should be 0
+					for _, metric := range fields[2:] {
+						if metric != "0" && metric != "0s" {
+							tqMetricsValidator = false
+						}
+					}
+				} else if tqType == "workflow" {
+					backlogIncreaseRate := fields[4]
+					tasksAddRate := fields[5]
+					tasksDispatchRate := fields[6]
+					if tasksAddRate == "0" && tasksDispatchRate == "0" && backlogIncreaseRate == "0" {
+						// instead of checking each individual attribute, the following check has been added since:
+
+						// 1. backlogIncreaseRate can be 0 when tasksAddRate and tasksDispatchRate is the same
+						// 2. tasksDispatchRate can be 0
+
+						// however, there won't be a case when all three of these metrics in this test have the null value
 						tqMetricsValidator = false
 					}
-				}
-			} else if tqType == "workflow" {
-				tasksAddRate := fields[5]
-				tasksDispatchRate := fields[6]
-				if tasksAddRate == "0" || tasksDispatchRate == "0" {
-					// ApproximateBacklogCount, ApproximateBacklogAge and BacklogIncreaseRate *can* still be 0 due to a poller sync matching
-					// on creation of these tasks
-					tqMetricsValidator = false
 				}
 			}
 		}
