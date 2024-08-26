@@ -102,11 +102,10 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Task_Queue_Stats_NonEmpty() {
 					}
 				}
 			} else if tqType == "workflow" {
-				backlogIncreaseRate := fields[4]
 				tasksAddRate := fields[5]
 				tasksDispatchRate := fields[6]
-				if backlogIncreaseRate == "0" || tasksAddRate == "0" || tasksDispatchRate == "0" {
-					// ApproximateBacklogCount and ApproximateBacklogAge will still be 0 due to a poller sync matching
+				if tasksAddRate == "0" || tasksDispatchRate == "0" {
+					// ApproximateBacklogCount, ApproximateBacklogAge and BacklogIncreaseRate *can* still be 0 due to a poller sync matching
 					// on creation of these tasks
 					tqMetricsValidator = false
 				}
