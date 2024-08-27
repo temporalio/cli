@@ -30,13 +30,13 @@ type pollerRowType struct {
 }
 
 type statsRowType struct {
-	BuildID                 string        `json:"buildId"`
-	TaskQueueType           string        `json:"taskQueueType"`
-	ApproximateBacklogCount int64         `json:"approximateBacklogCount"`
-	ApproximateBacklogAge   time.Duration `json:"approximateBacklogAge"`
-	BacklogIncreaseRate     float32       `json:"backlogIncreaseRate"`
-	TasksAddRate            float32       `json:"tasksAddRate"`
-	TasksDispatchRate       float32       `json:"tasksDispatchRate"`
+	BuildID                 string  `json:"buildId"`
+	TaskQueueType           string  `json:"taskQueueType"`
+	ApproximateBacklogCount int64   `json:"approximateBacklogCount"`
+	ApproximateBacklogAge   string  `json:"approximateBacklogAge"`
+	BacklogIncreaseRate     float32 `json:"backlogIncreaseRate"`
+	TasksAddRate            float32 `json:"tasksAddRate"`
+	TasksDispatchRate       float32 `json:"tasksDispatchRate"`
 }
 
 type taskQueueDescriptionType struct {
@@ -155,7 +155,7 @@ func buildIDToStatsRows(statsRows []statsRowType, buildID string, typesInfo map[
 			BuildID:                 buildID,
 			TaskQueueType:           taskQueueType,
 			ApproximateBacklogCount: info.Stats.ApproximateBacklogCount,
-			ApproximateBacklogAge:   info.Stats.ApproximateBacklogAge,
+			ApproximateBacklogAge:   formatDuration(info.Stats.ApproximateBacklogAge),
 			BacklogIncreaseRate:     info.Stats.BacklogIncreaseRate,
 			TasksAddRate:            info.Stats.TasksAddRate,
 			TasksDispatchRate:       info.Stats.TasksDispatchRate,

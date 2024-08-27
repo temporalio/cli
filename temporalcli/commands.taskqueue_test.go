@@ -14,13 +14,13 @@ import (
 )
 
 type statsRowType struct {
-	BuildID                 string        `json:"buildId"`
-	TaskQueueType           string        `json:"taskQueueType"`
-	ApproximateBacklogCount int64         `json:"approximateBacklogCount"`
-	ApproximateBacklogAge   time.Duration `json:"approximateBacklogAge"`
-	BacklogIncreaseRate     float32       `json:"backlogIncreaseRate"`
-	TasksAddRate            float32       `json:"tasksAddRate"`
-	TasksDispatchRate       float32       `json:"tasksDispatchRate"`
+	BuildID                 string  `json:"buildId"`
+	TaskQueueType           string  `json:"taskQueueType"`
+	ApproximateBacklogCount int64   `json:"approximateBacklogCount"`
+	ApproximateBacklogAge   string  `json:"approximateBacklogAge"`
+	BacklogIncreaseRate     float32 `json:"backlogIncreaseRate"`
+	TasksAddRate            float32 `json:"tasksAddRate"`
+	TasksDispatchRate       float32 `json:"tasksDispatchRate"`
 }
 
 type taskQueueStatsType struct {
@@ -49,16 +49,18 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Task_Queue_Stats_Empty() {
 
 	var jsonOut taskQueueStatsType
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
-	s.Equal(statsRowType{
-		BuildID: "UNVERSIONED",
-		// ordering of workflow/activity pollers is random
-		TaskQueueType:           jsonOut.Stats[0].TaskQueueType,
+	nullStatsRowType := statsRowType{
+		BuildID:                 "UNVERSIONED",
 		ApproximateBacklogCount: 0,
-		ApproximateBacklogAge:   0,
+		ApproximateBacklogAge:   "0s",
 		BacklogIncreaseRate:     0,
 		TasksAddRate:            0,
 		TasksDispatchRate:       0,
-	}, jsonOut.Stats[0])
+	}
+	for _, statsRow := range jsonOut.Stats {
+		nullStatsRowType.TaskQueueType = statsRow.TaskQueueType
+		s.Equal(nullStatsRowType, statsRow)
+	}
 }
 
 func (s *SharedServerSuite) TestTaskQueue_Describe_Task_Queue_Stats_NonEmpty() {
@@ -143,9 +145,9 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Task_Queue_Stats_NonEmpty() {
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
 	nullStatsRow := statsRowType{
 		BuildID:                 "UNVERSIONED",
-		TaskQueueType:           jsonOut.Stats[0].TaskQueueType,
+		TaskQueueType:           "activity",
 		ApproximateBacklogCount: 0,
-		ApproximateBacklogAge:   0,
+		ApproximateBacklogAge:   "0s",
 		BacklogIncreaseRate:     0,
 		TasksAddRate:            0,
 		TasksDispatchRate:       0,
@@ -154,8 +156,10 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Task_Queue_Stats_NonEmpty() {
 	// The workflow queue should have non-zero task queue statistics
 	if jsonOut.Stats[0].TaskQueueType == "workflow" {
 		s.NotEqual(nullStatsRow, jsonOut.Stats[0])
+		s.Equal(nullStatsRow, jsonOut.Stats[1])
 	} else {
 		s.NotEqual(nullStatsRow, jsonOut.Stats[1])
+		s.Equal(nullStatsRow, jsonOut.Stats[0])
 	}
 }
 
