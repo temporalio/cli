@@ -2576,5 +2576,12 @@ temporal workflow update start \
 
 #### Options
 
+* `--wait-for-stage` (string-enum) - 
+  Update stage to wait for.
+  The only option is `accepted`, but this option is  required. This is to allow
+  a future version of the CLI to choose a default value.
+  Options: accepted.
+  Required.
+
 Includes options set for [update](#options-set-for-update).
 Includes options set for [payload input](#options-set-for-payload-input).

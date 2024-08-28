@@ -2667,6 +2667,7 @@ type TemporalWorkflowUpdateStartCommand struct {
 	Command cobra.Command
 	UpdateOptions
 	PayloadInputOptions
+	WaitForStage StringEnum
 }
 
 func NewTemporalWorkflowUpdateStartCommand(cctx *CommandContext, parent *TemporalWorkflowUpdateCommand) *TemporalWorkflowUpdateStartCommand {
@@ -2674,7 +2675,7 @@ func NewTemporalWorkflowUpdateStartCommand(cctx *CommandContext, parent *Tempora
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "start [flags]"
-	s.Command.Short = "Send an Update and wait for it to be accepted"
+	s.Command.Short = "Send an Update and wait for it to be accepted or rejected"
 	if hasHighlighting {
 		s.Command.Long = "Send a message to a Workflow Execution to invoke an Update handler, and wait for\nthe update to be accepted or rejected. You can subsequently wait for the update\nto complete by using \x1b[1mtemporal workflow update execute\x1b[0m.\n\n\x1b[1mtemporal workflow update start \\\n    --workflow-id YourWorkflowId \\\n    --name YourUpdate \\\n    --input '{\"some-key\": \"some-value\"}'\x1b[0m"
 	} else {
@@ -2683,6 +2684,9 @@ func NewTemporalWorkflowUpdateStartCommand(cctx *CommandContext, parent *Tempora
 	s.Command.Args = cobra.NoArgs
 	s.UpdateOptions.buildFlags(cctx, s.Command.Flags())
 	s.PayloadInputOptions.buildFlags(cctx, s.Command.Flags())
+	s.WaitForStage = NewStringEnum([]string{"accepted"}, "")
+	s.Command.Flags().Var(&s.WaitForStage, "wait-for-stage", "Update stage to wait for. The only option is `accepted`, but this option is  required. This is to allow a future version of the CLI to choose a default value. Accepted values: accepted. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "wait-for-stage")
 	s.Command.Flags().SetNormalizeFunc(aliasNormalizer(map[string]string{
 		"type": "name",
 	}))

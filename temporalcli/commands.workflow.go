@@ -187,7 +187,15 @@ func (c *TemporalWorkflowTerminateCommand) run(cctx *CommandContext, _ []string)
 }
 
 func (c *TemporalWorkflowUpdateStartCommand) run(cctx *CommandContext, args []string) error {
-	return workflowUpdateHelper(cctx, c.Parent.Parent.ClientOptions, c.PayloadInputOptions, c.UpdateOptions, client.WorkflowUpdateStageAccepted)
+	waitForStage := client.WorkflowUpdateStageUnspecified
+	switch c.WaitForStage.Value {
+	case "accepted":
+		waitForStage = client.WorkflowUpdateStageAccepted
+	}
+	if waitForStage != client.WorkflowUpdateStageAccepted {
+		return fmt.Errorf("invalid wait for stage: %v, valid values are: 'accepted'", c.WaitForStage)
+	}
+	return workflowUpdateHelper(cctx, c.Parent.Parent.ClientOptions, c.PayloadInputOptions, c.UpdateOptions, waitForStage)
 }
 
 func (c *TemporalWorkflowUpdateExecuteCommand) run(cctx *CommandContext, args []string) error {
