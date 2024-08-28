@@ -724,8 +724,7 @@ Includes options set for [client](#options-set-for-client).
 ### temporal task-queue describe: Provides pollers information, backlog statistics, and task reachability (experimental) for Workers on this Task Queue.
 
 The `temporal task-queue describe` command provides poller information, backlog statistics and task reachability (experimental) 
-information for the requested versions and all task types, which can be used to safely retire Workers with old code versions, 
-provided that they were assigned a Build ID.
+information for the requested versions and task types.
 
 This command provides [poller](/application-development/worker-performance#poller-count) information for a given [Task Queue](/concepts/what-is-a-task-queue)
 in the following manner:
@@ -750,6 +749,10 @@ Includes tasks whether or not they were dispatched from the backlog or those tha
 going to the backlog (sync-matched).
     -  `Backlog Increase Rate`: Approximate net tasks per second added to the backlog, averaging the last 30 seconds.
 This is calculated as `TasksAddRate` - `TasksDispatchRate`.
+
+Task reachability information is returned for the requested versions and all task types, which can be used to safely retire Workers with old code versions, provided that they were assigned a Build ID.
+
+Note that task reachability status is experimental and may significantly change or be removed in a future release.
 
 The reachability states of a Build ID are:
     - `Reachable`: the Build ID may be used by new workflows or activities
