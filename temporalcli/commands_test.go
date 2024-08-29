@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/nexus-rpc/sdk-go/nexus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -475,6 +476,8 @@ type DevWorkerOptions struct {
 	Workflows []any
 	// Optional, no default, but DevActivity is always registered
 	Activities []any
+	// Optional, no default
+	NexusServices []*nexus.Service
 }
 
 // Simply a stub for client use
@@ -506,6 +509,9 @@ func (d *DevServer) StartDevWorker(t *testing.T, options DevWorkerOptions) *DevW
 	ops := &devOperations{w}
 	w.Worker.RegisterWorkflowWithOptions(ops.DevWorkflow, workflow.RegisterOptions{Name: "DevWorkflow"})
 	w.Worker.RegisterActivity(ops.DevActivity)
+	for _, s := range options.NexusServices {
+		w.Worker.RegisterNexusService(s)
+	}
 	// Start worker or fail
 	require.NoError(t, w.Worker.Start(), "failed starting worker")
 	return w
