@@ -724,7 +724,7 @@ Includes options set for [client](#options-set-for-client).
 ### temporal task-queue describe: Provides pollers information, backlog statistics, and task reachability (experimental) for Workers on this Task Queue.
 
 The `temporal task-queue describe` command provides poller information, backlog statistics and task reachability (experimental) 
-information for the requested versions and task types.
+for the requested versions and task types.
 
 This command provides [poller](/application-development/worker-performance#poller-count) information for a given [Task Queue](/concepts/what-is-a-task-queue)
 in the following manner:
