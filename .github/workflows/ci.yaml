@@ -35,6 +35,7 @@ jobs:
       - run: mkdir junit-xml
 
       - name: Test
+        shell: bash
         run: go test ./... 2>&1 | tee >(go-junit-report -set-exit-code > junit-xml/${{matrix.os}}.xml)
 
       - name: 'Upload junit-xml artifacts'
