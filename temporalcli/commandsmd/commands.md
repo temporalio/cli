@@ -2521,14 +2521,19 @@ temporal workflow trace \
 
 Includes options set for [workflow reference](#options-set-for-workflow-reference).
 
-### temporal workflow update: Start and wait for Updates
+### temporal workflow update: Start and wait for Updates (Experimental)
 An Update is a synchronous call to a Workflow Execution that can change its
 state, control its flow, and return a result.
 
-### temporal workflow update execute: Send an Update and wait for it to complete
+Experimental.
+
+
+### temporal workflow update execute: Send an Update and wait for it to complete (Experimental)
 Send a message to a Workflow Execution to invoke an Update handler, and wait for
 the update to complete or fail. You can also use this to wait for an existing
 update to complete, by submitting an existing update ID.
+
+Experimental.
 
 ```
 temporal workflow update execute \
@@ -2562,10 +2567,12 @@ temporal workflow update execute \
 
 Includes options set for [payload input](#options-set-for-payload-input).
 
-### temporal workflow update start: Send an Update and wait for it to be accepted or rejected
+### temporal workflow update start: Send an Update and wait for it to be accepted or rejected (Experimental)
 Send a message to a Workflow Execution to invoke an Update handler, and wait for
 the update to be accepted or rejected. You can subsequently wait for the update
 to complete by using `temporal workflow update execute`.
+
+Experimental.
 
 ```
 temporal workflow update start \
