@@ -35,8 +35,14 @@ jobs:
       - run: mkdir junit-xml
 
       - name: Test
+        if: runner.os != 'Windows'
         shell: bash
         run: go test ./... 2>&1 | tee >(go-junit-report -set-exit-code > junit-xml/${{matrix.os}}.xml)
+
+      - name: Test (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: go test ./... 2>&1 | Tee-Object output.log; go-junit-report -set-exit-code < output.log > junit-xml/${{matrix.os}}.xml
 
       - name: 'Upload junit-xml artifacts'
         uses: actions/upload-artifact@v4
