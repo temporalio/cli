@@ -1,7 +1,9 @@
 package temporalcli
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os/user"
 
@@ -234,6 +236,14 @@ func workflowUpdateHelper(cctx *CommandContext,
 		return fmt.Errorf("unable to update workflow: %w", err)
 	}
 	if waitForStage == client.WorkflowUpdateStageAccepted {
+		// Use a canceled context to check whether the initial server response
+		// shows that the update has _already_ failed, without issuing a second request.
+		ctx, cancel := context.WithCancel(cctx)
+		cancel()
+		err = updateHandle.Get(ctx, nil)
+		if err != nil && !errors.Is(err, context.Canceled) {
+			return fmt.Errorf("unable to update workflow: %w", err)
+		}
 		return cctx.Printer.PrintStructured(
 			struct {
 				Name     string `json:"name"`
