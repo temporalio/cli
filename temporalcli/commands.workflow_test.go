@@ -473,7 +473,9 @@ func (t workflowUpdateTest) testWorkflowUpdateHelper() {
 		res = t.s.Execute("workflow", "update", "start", "--wait-for-stage", "accepted", "--address", t.s.Address(), "-w", "nonexistent-wf-id", "--name", updateName, "-i", strconv.Itoa(input))
 		t.s.ErrorContains(res.Err, "unable to update workflow")
 
-		// TODO: wrong update name is not currently an error when using `update start` (?!)
+		// update rejected, wrong update name
+		res = t.s.Execute("workflow", "update", "start", "--wait-for-stage", "accepted", "--address", t.s.Address(), "-w", run.GetID(), "--name", "nonexistent-update-name", "-i", strconv.Itoa(input))
+		t.s.ErrorContains(res.Err, "unable to update workflow")
 	} else {
 		// update rejected, name not supplied
 		res = t.s.Execute("workflow", "update", "execute", "--address", t.s.Address(), "-w", run.GetID(), "-i", strconv.Itoa(input))
@@ -484,7 +486,6 @@ func (t workflowUpdateTest) testWorkflowUpdateHelper() {
 		t.s.ErrorContains(res.Err, "unable to update workflow")
 
 		// update rejected, wrong update name
-		// This is not currently an error when using `update start`: the SDK accepts the update before checking whether a handler exists.
 		res = t.s.Execute("workflow", "update", "execute", "--address", t.s.Address(), "-w", run.GetID(), "--name", "nonexistent-update-name", "-i", strconv.Itoa(input))
 		t.s.ErrorContains(res.Err, "unable to update workflow")
 	}
