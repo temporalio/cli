@@ -721,10 +721,38 @@ Queue command, run `temporal task-queue [command] [command options]`.
 
 Includes options set for [client](#options-set-for-client).
 
-### temporal task-queue describe: Provides task reachability and pollers information for Workers on this Task Queue.
+### temporal task-queue describe: Provides pollers information, backlog statistics, and task reachability (experimental) for Workers on this Task Queue.
 
-The `temporal task-queue describe` command provides task reachability information for the requested versions and all task types,
-which can be used to safely retire Workers with old code versions, provided that they were assigned a Build ID.
+The `temporal task-queue describe` command provides poller information, backlog statistics and task reachability (experimental) 
+for the requested versions and task types.
+
+This command provides [poller](/application-development/worker-performance#poller-count) information for a given [Task Queue](/concepts/what-is-a-task-queue)
+in the following manner:
+
+The [Server](/concepts/what-is-the-temporal-server) records the last time of each poll request. A `LastAccessTime` value
+in excess of one minute can indicate the Worker is at capacity (all Workflow and Activity slots are full) or that the
+Worker has shut down. [Workers](/concepts/what-is-a-worker) are removed if 5 minutes have passed since the last poll
+request.
+
+Information about the Task Queue can be returned to troubleshoot server issues.
+
+This command provides the following task queue statistics for better worker fleet management:
+    - `ApproximateBacklogCount`: The approximate number of tasks backlogged in this task queue. 
+May count expired tasks but eventually converges to the right value.
+    - `ApproximateBacklogAge`: Approximate age of the oldest task in the backlog based on the creation time of 
+the task at the head of the queue, measured in seconds.
+    - `TasksAddRate`: Approximate tasks per second added to the task queue, averaging over the last 30 seconds.
+Includes tasks whether or not they were added from the backlog or those that were dispatched immediately without
+going to the backlog (sync-matched).
+    - `TasksDispatchRate`: Approximate tasks per second dispatched to the task queue, averaging over the last 30 seconds.
+Includes tasks whether or not they were dispatched from the backlog or those that were dispatched immediately without
+going to the backlog (sync-matched).
+    -  `Backlog Increase Rate`: Approximate net tasks per second added to the backlog, averaging the last 30 seconds.
+This is calculated as `TasksAddRate` - `TasksDispatchRate`.
+
+Task reachability information is returned for the requested versions and all task types, which can be used to safely retire Workers with old code versions, provided that they were assigned a Build ID.
+
+Note that task reachability status is experimental and may significantly change or be removed in a future release.
 
 The reachability states of a Build ID are:
     - `Reachable`: the Build ID may be used by new workflows or activities
@@ -738,15 +766,6 @@ For example, `Reachable` is more conservative than `ClosedWorkflowsOnly`.
 
 There is a non-trivial cost of computing task reachability, use the flag `--report-reachability` to enable it.
 
-This command also provides [poller](/application-development/worker-performance#poller-count)
-information for a given [Task Queue](/concepts/what-is-a-task-queue).
-
-The [Server](/concepts/what-is-the-temporal-server) records the last time of each poll request. A `LastAccessTime` value
-in excess of one minute can indicate the Worker is at capacity (all Workflow and Activity slots are full) or that the
-Worker has shut down. [Workers](/concepts/what-is-a-worker) are removed if 5 minutes have passed since the last poll
-request.
-
-Information about the Task Queue can be returned to troubleshoot server issues.
 
 Use the options listed below to modify what this command returns.
 
@@ -765,6 +784,7 @@ If there is no default Build ID, the result for the unversioned queue will be re
 * `--legacy-mode` (bool) - Enable a legacy mode for servers that do not support rules-based worker versioning. This mode only provides pollers info.
 * `--task-queue-type-legacy` (string-enum) - Task Queue type (legacy mode only). Options: workflow, activity. Default: workflow.
 * `--partitions-legacy` (int) - Query for all partitions up to this number (experimental+temporary feature) (legacy mode only). Default: 1.
+* `--disable-stats` (bool) - Disable task queue statistics.
 
 ### temporal task-queue get-build-id-reachability: Retrieves information about the reachability of Build IDs on one or more Task Queues (Deprecated).
 

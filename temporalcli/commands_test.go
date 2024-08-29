@@ -61,6 +61,34 @@ func (h *CommandHarness) ContainsOnSameLine(text string, pieces ...string) {
 	h.NoError(AssertContainsOnSameLine(text, pieces...))
 }
 
+func (h *CommandHarness) CheckTaskQueueMetrics(text string) bool {
+	lines := strings.Split(text, "\n")
+	for _, line := range lines {
+		fields := strings.Fields(line)
+		if len(fields) < 7 {
+			return false // lesser fields than expected in the output
+		}
+
+		tqType := fields[1]
+		if tqType == "activity" {
+			// all metrics should be 0
+			for _, metric := range fields[2:] {
+				if metric != "0" && metric != "0s" {
+					return false
+				}
+			}
+		} else {
+			backlogIncreaseRate := fields[3]
+			tasksAddRate := fields[4]
+			tasksDispatchRate := fields[5]
+			if backlogIncreaseRate != "0" && tasksAddRate != "0" && tasksDispatchRate != "0" {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 func AssertContainsOnSameLine(text string, pieces ...string) error {
 	// Build regex pattern based on pieces
 	pattern := ""
