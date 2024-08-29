@@ -29,14 +29,13 @@ jobs:
         with:
           go-version: '1.22'
 
-      - name: Install go-junit-report
-        run: go install github.com/jstemmer/go-junit-report/v2@latest
+      - name: Install gotestsum
+        run: go install gotest.tools/gotestsum@latest
 
       - run: mkdir junit-xml
 
       - name: Test
-        shell: bash
-        run: go test ./... 2>&1 | tee >(go-junit-report -set-exit-code > junit-xml/${{matrix.os}}.xml)
+        run: gotestsum --junitfile junit-xml/${{matrix.os}}.xml -- ./...
 
       - name: 'Upload junit-xml artifacts'
         uses: actions/upload-artifact@v4
