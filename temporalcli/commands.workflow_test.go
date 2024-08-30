@@ -444,7 +444,7 @@ func (t workflowUpdateTest) testWorkflowUpdateHelper() {
 	// successful update, output should contain the result
 	res := t.execute("workflow", "update", "execute", "--address", t.s.Address(), "-w", run.GetID(), "--name", updateName, "-i", strconv.Itoa(input))
 	t.s.NoError(res.Err)
-	t.s.ContainsOnSameLine(res.Stdout.String(), "Result", strconv.Itoa(1*input))
+	t.s.ContainsOnSameLine(res.Stdout.String(), "Resultx", strconv.Itoa(1*input))
 
 	// successful update passing first-execution-run-id
 	// Use --type here to make sure the alias works
