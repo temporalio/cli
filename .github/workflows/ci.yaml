@@ -32,7 +32,8 @@ jobs:
       - name: Install gotestsum
         run: go install gotest.tools/gotestsum@latest
 
-      - run: mkdir junit-xml
+      - name: Create junit-xml directory
+        run: mkdir junit-xml
 
       - name: Test
         run: gotestsum --junitfile junit-xml/${{matrix.os}}.xml -- ./...
