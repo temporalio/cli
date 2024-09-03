@@ -389,6 +389,10 @@ func (c *TemporalWorkflowCountCommand) run(cctx *CommandContext, args []string) 
 	return nil
 }
 
+func (c *TemporalWorkflowResultCommand) run(cctx *CommandContext, _ []string) error {
+	return nil
+}
+
 func (c *TemporalWorkflowShowCommand) run(cctx *CommandContext, _ []string) error {
 	// Call describe
 	cl, err := c.Parent.ClientOptions.dialClient(cctx)

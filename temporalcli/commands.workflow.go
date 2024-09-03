@@ -197,17 +197,26 @@ func (c *TemporalWorkflowUpdateStartCommand) run(cctx *CommandContext, args []st
 	if waitForStage != client.WorkflowUpdateStageAccepted {
 		return fmt.Errorf("invalid wait for stage: %v, valid values are: 'accepted'", c.WaitForStage)
 	}
-	return workflowUpdateHelper(cctx, c.Parent.Parent.ClientOptions, c.PayloadInputOptions, c.UpdateOptions, waitForStage)
+	return workflowUpdateHelper(cctx, c.Parent.Parent.ClientOptions, c.PayloadInputOptions, c.UpdateTargetingOptions, c.UpdateStartingOptions, waitForStage)
 }
 
 func (c *TemporalWorkflowUpdateExecuteCommand) run(cctx *CommandContext, args []string) error {
-	return workflowUpdateHelper(cctx, c.Parent.Parent.ClientOptions, c.PayloadInputOptions, c.UpdateOptions, client.WorkflowUpdateStageCompleted)
+	return workflowUpdateHelper(cctx, c.Parent.Parent.ClientOptions, c.PayloadInputOptions, c.UpdateTargetingOptions, c.UpdateStartingOptions, client.WorkflowUpdateStageCompleted)
+}
+
+func (c *TemporalWorkflowUpdateResultCommand) run(cctx *CommandContext, args []string) error {
+	return nil
+}
+
+func (c *TemporalWorkflowUpdateDescribeCommand) run(cctx *CommandContext, args []string) error {
+	return nil
 }
 
 func workflowUpdateHelper(cctx *CommandContext,
 	clientOpts ClientOptions,
 	inputOpts PayloadInputOptions,
-	updateOpts UpdateOptions,
+	updateTargetOpts UpdateTargetingOptions,
+	updateStartOpts UpdateStartingOptions,
 	waitForStage client.WorkflowUpdateStage,
 ) error {
 	cl, err := clientOpts.dialClient(cctx)
@@ -222,11 +231,11 @@ func workflowUpdateHelper(cctx *CommandContext,
 	}
 
 	request := client.UpdateWorkflowOptions{
-		WorkflowID:          updateOpts.WorkflowId,
-		RunID:               updateOpts.RunId,
-		UpdateName:          updateOpts.Name,
-		UpdateID:            updateOpts.UpdateId,
-		FirstExecutionRunID: updateOpts.FirstExecutionRunId,
+		WorkflowID:          updateTargetOpts.WorkflowId,
+		RunID:               updateTargetOpts.RunId,
+		UpdateName:          updateStartOpts.Name,
+		UpdateID:            updateTargetOpts.UpdateId,
+		FirstExecutionRunID: updateStartOpts.FirstExecutionRunId,
 		Args:                input,
 		WaitForStage:        waitForStage,
 	}
@@ -249,7 +258,7 @@ func workflowUpdateHelper(cctx *CommandContext,
 			struct {
 				Name     string `json:"name"`
 				UpdateID string `json:"updateId"`
-			}{Name: updateOpts.Name, UpdateID: updateHandle.UpdateID()},
+			}{Name: updateStartOpts.Name, UpdateID: updateHandle.UpdateID()},
 			printer.StructuredOptions{})
 	}
 
@@ -264,7 +273,7 @@ func workflowUpdateHelper(cctx *CommandContext,
 			Name     string      `json:"name"`
 			UpdateID string      `json:"updateId"`
 			Result   interface{} `json:"result"`
-		}{Name: updateOpts.Name, UpdateID: updateHandle.UpdateID(), Result: valuePtr},
+		}{Name: updateStartOpts.Name, UpdateID: updateHandle.UpdateID(), Result: valuePtr},
 		printer.StructuredOptions{})
 }
 
