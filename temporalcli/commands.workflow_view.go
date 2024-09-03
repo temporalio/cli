@@ -390,7 +390,54 @@ func (c *TemporalWorkflowCountCommand) run(cctx *CommandContext, args []string) 
 }
 
 func (c *TemporalWorkflowResultCommand) run(cctx *CommandContext, _ []string) error {
-	return nil
+	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	run := cl.GetWorkflow(cctx, c.WorkflowId, c.RunId)
+
+	// Get the close event, following continue as new
+	var closeEvent *history.HistoryEvent
+	for runID := c.RunId; closeEvent == nil; {
+		iter := cl.GetWorkflowHistory(cctx, c.WorkflowId, runID, true, enums.HISTORY_EVENT_FILTER_TYPE_CLOSE_EVENT)
+		if !iter.HasNext() {
+			return fmt.Errorf("missing close event")
+		} else if closeEvent, err = iter.Next(); err != nil {
+			return fmt.Errorf("failed getting close event: %w", err)
+		} else if canAttr := closeEvent.GetWorkflowExecutionContinuedAsNewEventAttributes(); canAttr != nil {
+			closeEvent, runID = nil, canAttr.NewExecutionRunId
+		}
+	}
+
+	// Print result
+	if cctx.JSONOutput {
+		result := &workflowJSONResult{
+			WorkflowId:     run.GetID(),
+			RunId:          run.GetRunID(),
+			Type:           "",
+			Namespace:      c.Parent.Namespace,
+			TaskQueue:      "",
+			DurationMillis: 0,
+			Status:         "<unknown>",
+			CloseEvent:     json.RawMessage("null"),
+		}
+		if err := result.setCloseEvent(cctx, closeEvent); err != nil {
+			return err
+		}
+		err = cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
+	} else {
+		err = printTextResult(cctx, closeEvent, 0)
+	}
+	// Log print failure and return workflow failure if workflow failed
+	if closeEvent.EventType != enums.EVENT_TYPE_WORKFLOW_EXECUTION_COMPLETED {
+		if err != nil {
+			cctx.Logger.Error("Workflow failed, and printing the output also failed", "error", err)
+		}
+		err = fmt.Errorf("workflow failed")
+	}
+	return err
 }
 
 func (c *TemporalWorkflowShowCommand) run(cctx *CommandContext, _ []string) error {
