@@ -1132,6 +1132,7 @@ type TemporalScheduleListCommand struct {
 	Command    cobra.Command
 	Long       bool
 	ReallyLong bool
+	Query      string
 }
 
 func NewTemporalScheduleListCommand(cctx *CommandContext, parent *TemporalScheduleCommand) *TemporalScheduleListCommand {
@@ -1148,6 +1149,7 @@ func NewTemporalScheduleListCommand(cctx *CommandContext, parent *TemporalSchedu
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().BoolVarP(&s.Long, "long", "l", false, "Show detailed information")
 	s.Command.Flags().BoolVar(&s.ReallyLong, "really-long", false, "Show extensive information in non-table form.")
+	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Filter results using a SQL-like query.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
