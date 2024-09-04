@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/temporalio/cli/temporalcli/internal/printer"
+	"google.golang.org/protobuf/encoding/protojson"
+
 	commonpb "go.temporal.io/api/common/v1"
 	enumspb "go.temporal.io/api/enums/v1"
 	schedpb "go.temporal.io/api/schedule/v1"
@@ -16,7 +18,6 @@ import (
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/converter"
 	"go.temporal.io/server/common/primitives/timestamp"
-	"google.golang.org/protobuf/encoding/protojson"
 )
 
 type printableSchedule struct {
@@ -378,6 +379,7 @@ func (c *TemporalScheduleListCommand) run(cctx *CommandContext, args []string) e
 			res, err := cl.WorkflowService().ListSchedules(cctx, &workflowservice.ListSchedulesRequest{
 				Namespace:     c.Parent.Namespace,
 				NextPageToken: token,
+				Query:         c.Query,
 			})
 			if err != nil {
 				return err

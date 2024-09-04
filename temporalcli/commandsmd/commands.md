@@ -633,6 +633,7 @@ The `temporal schedule list` command lists all Schedules in a namespace.
 
 * `--long`, `-l` (bool) - Include detailed information.
 * `--really-long` (bool) - Include even more detailed information that's not really usable in table form.
+* `--query`, `-q` (string) - Filter results using a SQL-like query.
 
 ### temporal schedule toggle: Pauses or unpauses a Schedule.
 

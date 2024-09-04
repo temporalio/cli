@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/temporalio/cli/temporalcli"
+
 	"go.temporal.io/sdk/workflow"
 )
 
@@ -173,7 +174,19 @@ func (s *SharedServerSuite) TestSchedule_CreateDescribe_SearchAttributes_Memo() 
 }
 
 func (s *SharedServerSuite) TestSchedule_List() {
-	schedId, _, res := s.createSchedule("--interval", "10d")
+	res := s.Execute(
+		"operator", "search-attribute", "create",
+		"--address", s.Address(),
+		"--name", "TestSchedule_List",
+		"--type", "keyword",
+	)
+	s.NoError(res.Err)
+
+	schedId, _, res := s.createSchedule(
+		"--interval",
+		"10d",
+		"--schedule-search-attribute", `TestSchedule_List="here"`,
+	)
 	s.NoError(res.Err)
 
 	// table
@@ -249,6 +262,69 @@ func (s *SharedServerSuite) TestSchedule_List() {
 		ok = ok || j.ScheduleId == schedId
 	}
 	s.True(ok, "schedule not found in jsonl result")
+
+	// JSON query (match)
+
+	res = s.Execute(
+		"schedule", "list",
+		"--address", s.Address(),
+		"--query", "TestSchedule_List = 'here'",
+		"-o", "json",
+	)
+	s.NoError(res.Err)
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &j))
+	ok = false
+	for _, entry := range j {
+		ok = ok || entry.ScheduleId == schedId
+	}
+	s.True(ok, "schedule not found in json result")
+
+	// query (match)
+
+	res = s.Execute(
+		"schedule", "list",
+		"--address", s.Address(),
+		"--query", "TestSchedule_List = 'here'",
+	)
+	s.NoError(res.Err)
+	out = res.Stdout.String()
+	s.ContainsOnSameLine(out, schedId, "DevWorkflow", "false")
+
+	// JSON query (no matches)
+
+	res = s.Execute(
+		"schedule", "list",
+		"--address", s.Address(),
+		"--query", "TestSchedule_List = 'notHere'",
+		"-o", "json",
+	)
+	s.NoError(res.Err)
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &j))
+	ok = false
+	for _, entry := range j {
+		ok = ok || entry.ScheduleId == schedId
+	}
+	s.False(ok, "schedule found in json result, but should not be found")
+
+	// query (no matches)
+
+	res = s.Execute(
+		"schedule", "list",
+		"--address", s.Address(),
+		"--query", "TestSchedule_List = 'notHere'",
+	)
+	s.NoError(res.Err)
+	out = res.Stdout.String()
+	s.NotContainsf(out, schedId, "schedule found, but should not be found")
+
+	// query (invalid query field)
+
+	res = s.Execute(
+		"schedule", "list",
+		"--address", s.Address(),
+		"--query", "unknownField = 'notHere'",
+	)
+	s.Error(res.Err)
 }
 
 func (s *SharedServerSuite) TestSchedule_Toggle() {
