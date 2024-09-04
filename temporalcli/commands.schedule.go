@@ -399,7 +399,9 @@ func (c *TemporalScheduleListCommand) run(cctx *CommandContext, args []string) e
 		return nil
 	}
 
-	res, err := cl.ScheduleClient().List(cctx, client.ScheduleListOptions{})
+	res, err := cl.ScheduleClient().List(cctx, client.ScheduleListOptions{
+		Query: c.Query,
+	})
 	if err != nil {
 		return err
 	}

@@ -189,17 +189,30 @@ func (s *SharedServerSuite) TestSchedule_List() {
 	)
 	s.NoError(res.Err)
 
-	// table
+	// table really-long
 
 	s.Eventually(func() bool {
 		res = s.Execute(
 			"schedule", "list",
 			"--address", s.Address(),
+			"--really-long",
 		)
 		s.NoError(res.Err)
 		out := res.Stdout.String()
-		return AssertContainsOnSameLine(out, schedId, "DevWorkflow", "false") == nil
+		s.ContainsOnSameLine(out, schedId, "DevWorkflow", "0s" /*jitter*/, "false", "nil" /*memo*/)
+		return AssertContainsOnSameLine(out, "TestSchedule_List") == nil
 	}, 10*time.Second, time.Second)
+
+	// table
+
+	res = s.Execute(
+		"schedule", "list",
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	out := res.Stdout.String()
+
+	s.ContainsOnSameLine(out, schedId, "DevWorkflow", "false")
 
 	// table long
 
@@ -209,19 +222,8 @@ func (s *SharedServerSuite) TestSchedule_List() {
 		"--long",
 	)
 	s.NoError(res.Err)
-	out := res.Stdout.String()
-	s.ContainsOnSameLine(out, schedId, "DevWorkflow", "false")
-
-	// table really-long
-
-	res = s.Execute(
-		"schedule", "list",
-		"--address", s.Address(),
-		"--really-long",
-	)
-	s.NoError(res.Err)
 	out = res.Stdout.String()
-	s.ContainsOnSameLine(out, schedId, "DevWorkflow", "0s" /*jitter*/, "false", "nil" /*memo*/)
+	s.ContainsOnSameLine(out, schedId, "DevWorkflow", "false")
 
 	// json
 
