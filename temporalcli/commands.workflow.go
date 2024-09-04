@@ -1,7 +1,9 @@
 package temporalcli
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os/user"
 
@@ -94,7 +96,6 @@ func (c *TemporalWorkflowSignalCommand) run(cctx *CommandContext, args []string)
 	}
 	defer cl.Close()
 
-	// Get input payloads
 	input, err := c.buildRawInputPayloads()
 	if err != nil {
 		return err
@@ -187,32 +188,68 @@ func (c *TemporalWorkflowTerminateCommand) run(cctx *CommandContext, _ []string)
 	return nil
 }
 
-func (c *TemporalWorkflowUpdateCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+func (c *TemporalWorkflowUpdateStartCommand) run(cctx *CommandContext, args []string) error {
+	waitForStage := client.WorkflowUpdateStageUnspecified
+	switch c.WaitForStage.Value {
+	case "accepted":
+		waitForStage = client.WorkflowUpdateStageAccepted
+	}
+	if waitForStage != client.WorkflowUpdateStageAccepted {
+		return fmt.Errorf("invalid wait for stage: %v, valid values are: 'accepted'", c.WaitForStage)
+	}
+	return workflowUpdateHelper(cctx, c.Parent.Parent.ClientOptions, c.PayloadInputOptions, c.UpdateOptions, waitForStage)
+}
+
+func (c *TemporalWorkflowUpdateExecuteCommand) run(cctx *CommandContext, args []string) error {
+	return workflowUpdateHelper(cctx, c.Parent.Parent.ClientOptions, c.PayloadInputOptions, c.UpdateOptions, client.WorkflowUpdateStageCompleted)
+}
+
+func workflowUpdateHelper(cctx *CommandContext,
+	clientOpts ClientOptions,
+	inputOpts PayloadInputOptions,
+	updateOpts UpdateOptions,
+	waitForStage client.WorkflowUpdateStage,
+) error {
+	cl, err := clientOpts.dialClient(cctx)
 	if err != nil {
 		return err
 	}
 	defer cl.Close()
 
-	// Get raw input
-	input, err := c.buildRawInput()
+	input, err := inputOpts.buildRawInput()
 	if err != nil {
 		return err
 	}
 
 	request := client.UpdateWorkflowOptions{
-		WorkflowID:          c.WorkflowId,
-		RunID:               c.RunId,
-		UpdateName:          c.Name,
-		UpdateID:            c.UpdateId,
-		FirstExecutionRunID: c.FirstExecutionRunId,
+		WorkflowID:          updateOpts.WorkflowId,
+		RunID:               updateOpts.RunId,
+		UpdateName:          updateOpts.Name,
+		UpdateID:            updateOpts.UpdateId,
+		FirstExecutionRunID: updateOpts.FirstExecutionRunId,
 		Args:                input,
-		WaitForStage:        client.WorkflowUpdateStageCompleted,
+		WaitForStage:        waitForStage,
 	}
 
 	updateHandle, err := cl.UpdateWorkflow(cctx, request)
 	if err != nil {
 		return fmt.Errorf("unable to update workflow: %w", err)
+	}
+	if waitForStage == client.WorkflowUpdateStageAccepted {
+		// Use a canceled context to check whether the initial server response
+		// shows that the update has _already_ failed, without issuing a second request.
+		ctx, cancel := context.WithCancel(cctx)
+		cancel()
+		err = updateHandle.Get(ctx, nil)
+		if err != nil && !errors.Is(err, context.Canceled) {
+			return fmt.Errorf("unable to update workflow: %w", err)
+		}
+		return cctx.Printer.PrintStructured(
+			struct {
+				Name     string `json:"name"`
+				UpdateID string `json:"updateId"`
+			}{Name: updateOpts.Name, UpdateID: updateHandle.UpdateID()},
+			printer.StructuredOptions{})
 	}
 
 	var valuePtr interface{}
@@ -226,7 +263,7 @@ func (c *TemporalWorkflowUpdateCommand) run(cctx *CommandContext, args []string)
 			Name     string      `json:"name"`
 			UpdateID string      `json:"updateId"`
 			Result   interface{} `json:"result"`
-		}{Name: c.Name, UpdateID: updateHandle.UpdateID(), Result: valuePtr},
+		}{Name: updateOpts.Name, UpdateID: updateHandle.UpdateID(), Result: valuePtr},
 		printer.StructuredOptions{})
 }
 
@@ -330,7 +367,6 @@ func queryHelper(cctx *CommandContext,
 	}
 	defer cl.Close()
 
-	// Get input payloads
 	input, err := inputOpts.buildRawInputPayloads()
 	if err != nil {
 		return err

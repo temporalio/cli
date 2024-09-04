@@ -42,13 +42,19 @@ import (
 	"go.temporal.io/server/common/cluster"
 	"go.temporal.io/server/common/config"
 	"go.temporal.io/server/common/dynamicconfig"
+	"go.temporal.io/server/common/membership/static"
 	"go.temporal.io/server/common/metrics"
 	sqliteplugin "go.temporal.io/server/common/persistence/sql/sqlplugin/sqlite"
+	"go.temporal.io/server/common/primitives"
 	"go.temporal.io/server/schema/sqlite"
 	sqliteschema "go.temporal.io/server/schema/sqlite"
 	"go.temporal.io/server/temporal"
 	"google.golang.org/grpc"
 	"gopkg.in/yaml.v3"
+)
+
+const (
+	localhost = "127.0.0.1"
 )
 
 type StartOptions struct {
@@ -68,6 +74,7 @@ type StartOptions struct {
 	UIPort                int    // Required if UIIP is non-empty
 	UIAssetPath           string
 	UICodecEndpoint       string
+	PublicPath            string
 	DatabaseFile          string
 	MetricsPort           int
 	PProfPort             int
@@ -150,6 +157,7 @@ func (s *StartOptions) buildUIServer() *uiserver.Server {
 		Port:                s.UIPort,
 		TemporalGRPCAddress: fmt.Sprintf("%v:%v", MaybeEscapeIPv6(s.FrontendIP), s.FrontendPort),
 		EnableUI:            true,
+		PublicPath:          s.PublicPath,
 		UIAssetPath:         s.UIAssetPath,
 		Codec:               uiconfig.Codec{Endpoint: s.UICodecEndpoint},
 		CORS:                uiconfig.CORS{CookieInsecure: true},
@@ -195,6 +203,16 @@ func (s *StartOptions) buildServerOptions() ([]temporal.ServerOption, error) {
 	opts := []temporal.ServerOption{
 		temporal.WithConfig(conf),
 		temporal.ForServices(temporal.DefaultServices),
+		temporal.WithStaticHosts(map[primitives.ServiceName]static.Hosts{
+			primitives.FrontendService: static.SingleLocalHost(
+				fmt.Sprintf("%v:%v", localhost, conf.Services[string(primitives.FrontendService)].RPC.GRPCPort)),
+			primitives.MatchingService: static.SingleLocalHost(
+				fmt.Sprintf("%v:%v", localhost, conf.Services[string(primitives.MatchingService)].RPC.GRPCPort)),
+			primitives.HistoryService: static.SingleLocalHost(
+				fmt.Sprintf("%v:%v", localhost, conf.Services[string(primitives.HistoryService)].RPC.GRPCPort)),
+			primitives.WorkerService: static.SingleLocalHost(
+				fmt.Sprintf("%v:%v", localhost, conf.Services[string(primitives.WorkerService)].RPC.GRPCPort)),
+		}),
 		temporal.WithLogger(logger),
 		temporal.WithAuthorizer(authorizer),
 		temporal.WithClaimMapper(func(*config.Config) authorization.ClaimMapper { return claimMapper }),
@@ -332,6 +350,5 @@ func (s *StartOptions) buildServiceConfig(frontend bool) config.Service {
 		conf.RPC.GRPCPort = MustGetFreePort(s.FrontendIP)
 		conf.RPC.BindOnIP = s.FrontendIP
 	}
-	conf.RPC.MembershipPort = MustGetFreePort(s.FrontendIP)
 	return conf
 }
