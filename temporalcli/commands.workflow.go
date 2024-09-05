@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"go.temporal.io/sdk/temporal"
 	"os/user"
 
 	"github.com/fatih/color"
@@ -205,7 +206,44 @@ func (c *TemporalWorkflowUpdateExecuteCommand) run(cctx *CommandContext, args []
 }
 
 func (c *TemporalWorkflowUpdateResultCommand) run(cctx *CommandContext, args []string) error {
-	return nil
+	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	updateHandle := cl.GetWorkflowUpdateHandle(client.GetWorkflowUpdateHandleOptions{
+		WorkflowID: c.WorkflowId,
+		RunID:      c.RunId,
+		UpdateID:   c.UpdateId,
+	})
+	var valuePtr any
+	err = updateHandle.Get(cctx, &valuePtr)
+	printMe := struct {
+		UpdateID string `json:"updateId"`
+		Result   any    `json:"result,omitempty"`
+		Failure  any    `json:"failure,omitempty"`
+	}{UpdateID: updateHandle.UpdateID()}
+
+	if err != nil {
+		// Genuine update failure, so, include that in output rather than saying we couldn't fetch
+		appErr := &temporal.ApplicationError{}
+		if errors.As(err, &appErr) {
+			if cctx.JSONOutput {
+				printMe.Failure = fromApplicationError(appErr)
+			} else {
+				printMe.Failure = appErr.Error()
+			}
+			if err := cctx.Printer.PrintStructured(printMe, printer.StructuredOptions{}); err != nil {
+				return err
+			}
+			return errors.New("update is failed")
+		}
+		return fmt.Errorf("unable to fetch update result: %w", err)
+	}
+
+	printMe.Result = valuePtr
+	return cctx.Printer.PrintStructured(printMe, printer.StructuredOptions{})
 }
 
 func (c *TemporalWorkflowUpdateDescribeCommand) run(cctx *CommandContext, args []string) error {
