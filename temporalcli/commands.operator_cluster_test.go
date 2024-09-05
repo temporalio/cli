@@ -159,7 +159,7 @@ func (s *SharedServerSuite) TestOperator_Cluster_Operations() {
 	s.ContainsOnSameLine(out, fmt.Sprintf("\"clusterId\": \"%s\"", standbyCluster2.Options.ClusterID))
 
 	// Need to wait for the cluster cache to be updated
-	time.Sleep(90 * time.Second)
+	time.Sleep(1 * time.Second)
 
 	// Remove the clusters
 
@@ -182,4 +182,5 @@ func (s *SharedServerSuite) TestOperator_Cluster_Operations() {
 	jsonOut = make(map[string]string)
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
 	s.Equal(jsonOut["clusterName"], standbyCluster2.Options.CurrentClusterName)
+	// assert.Equal(t, 1, 2)
 }
