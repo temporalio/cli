@@ -159,9 +159,9 @@ func (s *SharedServerSuite) TestOperator_Cluster_Operations() {
 	s.ContainsOnSameLine(out, fmt.Sprintf("\"clusterId\": \"%s\"", standbyCluster2.Options.ClusterID))
 
 	// Need to wait for the cluster cache to be updated
-	// clusterMetadataRefreshInterval is 1 millisecond, waiting
-	// 5 milliseconds should allow for a sufficient buffer
-	time.Sleep(5 * time.Millisecond)
+	// clusterMetadataRefreshInterval is 100 millisecond, waiting
+	// 200 milliseconds should allow for a sufficient buffer
+	time.Sleep(200 * time.Millisecond)
 
 	// Remove the clusters
 
