@@ -779,7 +779,7 @@ If there is no default Build ID, the result for the unversioned queue will be re
 * `--task-queue-type` (string[]) - Task queue types considered. If not specified, all types are reported. The current valid queue types are workflow, activity, or nexus.
 * `--select-build-id` (string[]) - Task queue filter based on Build ID.
 * `--select-unversioned` (bool) - Include the unversioned queue.
-* `--select-all-active` (bool) - Include all active versions. A version is active if it had new tasks or polls recently.
+* `--select-all-active` (bool) - Include all active versions. A version is considered active if, in the last few minutes, it has had new tasks or polls, or it has been the subject of certain task queue API calls.
 * `--report-reachability` (bool) - Display task reachability information.
 * `--legacy-mode` (bool) - Enable a legacy mode for servers that do not support rules-based worker versioning. This mode only provides pollers info.
 * `--task-queue-type-legacy` (string-enum) - Task Queue type (legacy mode only). Options: workflow, activity. Default: workflow.
