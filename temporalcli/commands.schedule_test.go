@@ -11,8 +11,11 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/temporalio/cli/temporalcli"
 
+	"go.temporal.io/api/enums/v1"
+	"go.temporal.io/api/operatorservice/v1"
 	"go.temporal.io/sdk/workflow"
 )
 
@@ -182,6 +185,18 @@ func (s *SharedServerSuite) TestSchedule_List() {
 	)
 	s.NoError(res.Err)
 
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res = s.Execute(
+			"operator", "search-attribute", "list",
+			"--address", s.Address(),
+			"-o", "json",
+		)
+		assert.NoError(t, res.Err)
+		var jsonOut operatorservice.ListSearchAttributesResponse
+		assert.NoError(t, temporalcli.UnmarshalProtoJSONWithOptions(res.Stdout.Bytes(), &jsonOut, true))
+		assert.Equal(t, enums.INDEXED_VALUE_TYPE_KEYWORD, jsonOut.CustomAttributes["TestSchedule_List"])
+	}, 10*time.Second, time.Second)
+
 	schedId, _, res := s.createSchedule(
 		"--interval",
 		"10d",
@@ -191,17 +206,15 @@ func (s *SharedServerSuite) TestSchedule_List() {
 
 	// table really-long
 
-	s.Eventually(func() bool {
-		res = s.Execute(
-			"schedule", "list",
-			"--address", s.Address(),
-			"--really-long",
-		)
-		s.NoError(res.Err)
-		out := res.Stdout.String()
-		s.ContainsOnSameLine(out, schedId, "DevWorkflow", "0s" /*jitter*/, "false", "nil" /*memo*/)
-		return AssertContainsOnSameLine(out, "TestSchedule_List") == nil
-	}, 10*time.Second, time.Second)
+	res = s.Execute(
+		"schedule", "list",
+		"--address", s.Address(),
+		"--really-long",
+	)
+	s.NoError(res.Err)
+	out := res.Stdout.String()
+	s.ContainsOnSameLine(out, schedId, "DevWorkflow", "0s" /*jitter*/, "false", "nil" /*memo*/)
+	s.ContainsOnSameLine(out, "TestSchedule_List")
 
 	// table
 
@@ -210,7 +223,7 @@ func (s *SharedServerSuite) TestSchedule_List() {
 		"--address", s.Address(),
 	)
 	s.NoError(res.Err)
-	out := res.Stdout.String()
+	out = res.Stdout.String()
 
 	s.ContainsOnSameLine(out, schedId, "DevWorkflow", "false")
 
