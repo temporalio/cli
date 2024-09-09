@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"go.temporal.io/sdk/temporal"
+	"go.temporal.io/sdk/converter"
 	"os/user"
 
 	"github.com/fatih/color"
@@ -15,8 +15,10 @@ import (
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/query/v1"
+	"go.temporal.io/api/update/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/temporal"
 )
 
 func (c *TemporalWorkflowCancelCommand) run(cctx *CommandContext, args []string) error {
@@ -247,7 +249,55 @@ func (c *TemporalWorkflowUpdateResultCommand) run(cctx *CommandContext, args []s
 }
 
 func (c *TemporalWorkflowUpdateDescribeCommand) run(cctx *CommandContext, args []string) error {
-	return nil
+	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	// TODO: Ideally workflow update handle's Get would allow a nonblocking option and we'd use that
+	pollReq := &workflowservice.PollWorkflowExecutionUpdateRequest{
+		Namespace: c.Parent.Parent.Namespace,
+		UpdateRef: &update.UpdateRef{
+			WorkflowExecution: &common.WorkflowExecution{
+				WorkflowId: c.WorkflowId,
+				RunId:      c.RunId,
+			},
+			UpdateId: c.UpdateId,
+		},
+		Identity: clientIdentity(),
+		// WaitPolicy omitted intentionally for nonblocking
+	}
+	resp, err := cl.WorkflowService().PollWorkflowExecutionUpdate(cctx, pollReq)
+	if err != nil {
+		return fmt.Errorf("failed to describe update: %w", err)
+	}
+
+	printMe := struct {
+		UpdateID string `json:"updateId"`
+		Result   any    `json:"result,omitempty"`
+		Failure  any    `json:"failure,omitempty"`
+		Stage    string `json:"stage"`
+	}{UpdateID: c.UpdateId, Stage: resp.GetStage().String()}
+
+	switch v := resp.GetOutcome().GetValue().(type) {
+	case *update.Outcome_Failure:
+		// TODO: This doesn't exactly match update result, but it's hard to make it do so w/o higher
+		//   level poll api
+		if cctx.JSONOutput {
+			printMe.Failure = v.Failure
+		} else {
+			printMe.Failure = v.Failure.GetMessage()
+		}
+	case *update.Outcome_Success:
+		var value any
+		if err := converter.GetDefaultDataConverter().FromPayloads(v.Success, &value); err != nil {
+			value = fmt.Sprintf("<failed converting: %v>", err)
+		}
+		printMe.Result = value
+	}
+
+	return cctx.Printer.PrintStructured(printMe, printer.StructuredOptions{})
 }
 
 func workflowUpdateHelper(cctx *CommandContext,
