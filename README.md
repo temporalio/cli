@@ -2,8 +2,6 @@
 
 Temporal command-line interface and development server.
 
-⚠️ Under active development and inputs/outputs may change ⚠️
-
 **[DOCUMENTATION](https://docs.temporal.io/cli)**
 
 ## Quick Install
