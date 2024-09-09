@@ -2736,7 +2736,7 @@ temporal workflow update describe \
 
 #### Options
 
-Includes options set for [update-targeting](#options-set-for-update-targeting).
+Includes options set for [update targeting](#options-set-for-update-targeting).
 
 ### temporal workflow update execute: Send an Update and wait for it to complete (Experimental)
 Send a message to a Workflow Execution to invoke an Update handler, and wait for
@@ -2765,7 +2765,7 @@ temporal workflow update execute \
 
 #### Options
 
-Includes options set for [update-targeting](#options-set-for-update-targeting).
+Includes options set for [update targeting](#options-set-for-update-targeting).
 Includes options set for [payload input](#options-set-for-payload-input).
 
 ### temporal workflow update result: Wait for a specific Update to complete (Experimental)
@@ -2816,7 +2816,7 @@ temporal workflow update start \
   Options: accepted.
   Required.
 
-Includes options set for [update-starting](#options-set-for-update-starting).
-Includes options set for [update-targeting](#options-set-for-update-targeting).
+Includes options set for [update starting](#options-set-for-update-starting).
+Includes options set for [update targeting](#options-set-for-update-targeting).
 Includes options set for [payload input](#options-set-for-payload-input).
 
