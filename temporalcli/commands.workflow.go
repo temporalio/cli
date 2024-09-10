@@ -242,7 +242,11 @@ func (c *TemporalWorkflowUpdateResultCommand) run(cctx *CommandContext, args []s
 		appErr := &temporal.ApplicationError{}
 		if errors.As(err, &appErr) {
 			if cctx.JSONOutput {
-				printMe.Failure = fromApplicationError(appErr)
+				fromAppErr, err := fromApplicationError(appErr)
+				if err != nil {
+					return fmt.Errorf("unable to fetch update result: %w", err)
+				}
+				printMe.Failure = fromAppErr
 			} else {
 				printMe.Failure = appErr.Error()
 			}

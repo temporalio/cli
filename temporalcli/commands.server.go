@@ -24,7 +24,7 @@ var defaultDynamicConfigValues = map[string]any{
 	// These numbers were chosen to maintain the ratio between the two that's
 	// established in the defaults.
 	"frontend.persistenceMaxQPS": 10000,
-	"history.persistenceMaxQPS": 45000,
+	"history.persistenceMaxQPS":  45000,
 }
 
 func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string) error {
