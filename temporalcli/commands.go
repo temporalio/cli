@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"go.temporal.io/sdk/temporal"
 	"io"
 	"log/slog"
 	"os"
@@ -561,3 +562,17 @@ func timestampToTime(t *timestamppb.Timestamp) time.Time {
 type nopWriter struct{}
 
 func (nopWriter) Write(b []byte) (int, error) { return len(b), nil }
+
+type structuredError struct {
+	Message string `json:"message"`
+	Type    string `json:"type,omitempty"`
+	Details any    `json:"details,omitempty"`
+}
+
+func fromApplicationError(err *temporal.ApplicationError) *structuredError {
+	return &structuredError{
+		Message: err.Error(),
+		Type:    err.Type(),
+		Details: err.Details(),
+	}
+}

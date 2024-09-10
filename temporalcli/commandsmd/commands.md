@@ -2709,19 +2709,6 @@ state, control its flow, and return a result.
 
 Experimental.
 
-#### Options set for update targeting
-* `--workflow-id`, `-w` (string) -
-  Workflow ID.
-  Required.
-* `--update-id` (string) -
-  Update ID.
-  If unset, defaults to a UUID.
-  Must be unique per Workflow Execution.
-* `--run-id`, `-r` (string) -
-  Run ID.
-  If unset, updates the currently-running Workflow Execution.
-
-
 ### temporal workflow update describe: Obtain status info about a specific Update (Experimental)
 Given a Workflow Execution and an Update ID, return information about its current status, including
 a result if it has finished.
@@ -2734,9 +2721,17 @@ temporal workflow update describe \
     --update-id YourUpdateId
 ```
 
-#### Options
-
-Includes options set for [update targeting](#options-set-for-update-targeting).
+#### Options set for update targeting
+* `--workflow-id`, `-w` (string) -
+  Workflow ID.
+  Required.
+* `--update-id` (string) -
+  Update ID.
+  Must be unique per Workflow Execution.
+  Required.
+* `--run-id`, `-r` (string) -
+  Run ID.
+  If unset, updates the currently-running Workflow Execution.
 
 ### temporal workflow update execute: Send an Update and wait for it to complete (Experimental)
 Send a message to a Workflow Execution to invoke an Update handler, and wait for
@@ -2752,6 +2747,10 @@ temporal workflow update execute \
     --input '{"some-key": "some-value"}'
 ```
 
+#### Options
+
+Includes options set for [payload input](#options-set-for-payload-input).
+
 #### Options set for update starting
 
 * `--name` (string) -
@@ -2762,11 +2761,15 @@ temporal workflow update execute \
   Parent Run ID.
   The update is sent to the last Workflow Execution in the chain started
   with this Run ID.
-
-#### Options
-
-Includes options set for [update targeting](#options-set-for-update-targeting).
-Includes options set for [payload input](#options-set-for-payload-input).
+* `--workflow-id`, `-w` (string) -
+  Workflow ID.
+  Required.
+* `--update-id` (string) -
+  Update ID.
+  If unset, defaults to a UUID.
+* `--run-id`, `-r` (string) -
+  Run ID.
+  If unset, looks for an Update against the currently-running Workflow Execution.
 
 ### temporal workflow update result: Wait for a specific Update to complete (Experimental)
 Given a Workflow Execution and an Update ID, wait for the Update to complete or fail and
@@ -2782,15 +2785,7 @@ temporal workflow update result \
 
 #### Options
 
-* `--workflow-id`, `-w` (string) -
-  Workflow ID.
-  Required.
-* `--update-id` (string) -
-  Update ID.
-  Required.
-* `--run-id`, `-r` (string) -
-  Run ID.
-  If unset, looks for an Update against the currently-running Workflow Execution.
+Includes options set for [update targeting](#options-set-for-update-targeting).
 
 
 ### temporal workflow update start: Send an Update and wait for it to be accepted or rejected (Experimental)
@@ -2817,6 +2812,5 @@ temporal workflow update start \
   Required.
 
 Includes options set for [update starting](#options-set-for-update-starting).
-Includes options set for [update targeting](#options-set-for-update-targeting).
 Includes options set for [payload input](#options-set-for-payload-input).
 
