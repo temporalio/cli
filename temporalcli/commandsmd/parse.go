@@ -260,9 +260,6 @@ func (c *CommandOption) parseBulletLine(bullet string) error {
 	// Go over trailing sentences in description to see if they're attributes and
 	// take them off if they are.
 	for {
-		if !strings.HasSuffix(c.Desc, ".") {
-			return fmt.Errorf("description doesn't end with period")
-		}
 		dot := strings.LastIndex(c.Desc[:len(c.Desc)-1], ". ")
 		if dot == -1 {
 			return nil
