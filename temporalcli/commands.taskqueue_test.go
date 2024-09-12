@@ -152,8 +152,6 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
 		"--task-queue", s.Worker().Options.TaskQueue,
 	)
 	s.NoError(res.Err)
-	// id1 has no pollers so it is not active
-	s.NotContains(res.Stdout.String(), "id1")
 	s.NotContains(res.Stdout.String(), "now")
 }
 

@@ -241,7 +241,8 @@ func workflowUpdateHelper(cctx *CommandContext,
 		ctx, cancel := context.WithCancel(cctx)
 		cancel()
 		err = updateHandle.Get(ctx, nil)
-		if err != nil && !errors.Is(err, context.Canceled) {
+		var timeoutOrCanceledErr *client.WorkflowUpdateServiceTimeoutOrCanceledError
+		if err != nil && !errors.As(err, &timeoutOrCanceledErr) {
 			return fmt.Errorf("unable to update workflow: %w", err)
 		}
 		return cctx.Printer.PrintStructured(
