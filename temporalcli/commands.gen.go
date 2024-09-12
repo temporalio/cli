@@ -410,13 +410,14 @@ func NewTemporalOperatorCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.Use = "operator"
 	s.Command.Short = "Manage Temporal deployments"
 	if hasHighlighting {
-		s.Command.Long = "Operator commands manage and fetch information about Namespaces, Search\nAttributes, and Temporal Services:\n\n\x1b[1mtemporal operator [command] [subcommand] [options]\x1b[0m\n\nFor example, to show information about the Temporal Service at the default\naddress (localhost):\n\n\x1b[1mtemporal operator cluster describe\x1b[0m"
+		s.Command.Long = "Operator commands manage and fetch information about Namespaces, Search\nAttributes, Nexus Endpoints, and Temporal Services:\n\n\x1b[1mtemporal operator [command] [subcommand] [options]\x1b[0m\n\nFor example, to show information about the Temporal Service at the default\naddress (localhost):\n\n\x1b[1mtemporal operator cluster describe\x1b[0m"
 	} else {
-		s.Command.Long = "Operator commands manage and fetch information about Namespaces, Search\nAttributes, and Temporal Services:\n\n```\ntemporal operator [command] [subcommand] [options]\n```\n\nFor example, to show information about the Temporal Service at the default\naddress (localhost):\n\n```\ntemporal operator cluster describe\n```"
+		s.Command.Long = "Operator commands manage and fetch information about Namespaces, Search\nAttributes, Nexus Endpoints, and Temporal Services:\n\n```\ntemporal operator [command] [subcommand] [options]\n```\n\nFor example, to show information about the Temporal Service at the default\naddress (localhost):\n\n```\ntemporal operator cluster describe\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalOperatorClusterCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalOperatorNamespaceCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalOperatorNexusCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalOperatorSearchAttributeCommand(cctx, &s).Command)
 	s.ClientOptions.buildFlags(cctx, s.Command.PersistentFlags())
 	return &s
@@ -812,6 +813,209 @@ func NewTemporalOperatorNamespaceUpdateCommand(cctx *CommandContext, parent *Tem
 	return &s
 }
 
+type TemporalOperatorNexusCommand struct {
+	Parent  *TemporalOperatorCommand
+	Command cobra.Command
+}
+
+func NewTemporalOperatorNexusCommand(cctx *CommandContext, parent *TemporalOperatorCommand) *TemporalOperatorNexusCommand {
+	var s TemporalOperatorNexusCommand
+	s.Parent = parent
+	s.Command.Use = "nexus"
+	s.Command.Short = "Commands for managing Nexus resources (EXPERIMENTAL)"
+	if hasHighlighting {
+		s.Command.Long = "Nexus commands enable managing Nexus resources.\n\nNexus commands follow this syntax:\n\n\x1b[1mtemporal operator nexus [command] [command] [command options]\x1b[0m"
+	} else {
+		s.Command.Long = "Nexus commands enable managing Nexus resources.\n\nNexus commands follow this syntax:\n\n```\ntemporal operator nexus [command] [command] [command options]\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalOperatorNexusEndpointCommand(cctx, &s).Command)
+	return &s
+}
+
+type TemporalOperatorNexusEndpointCommand struct {
+	Parent  *TemporalOperatorNexusCommand
+	Command cobra.Command
+}
+
+func NewTemporalOperatorNexusEndpointCommand(cctx *CommandContext, parent *TemporalOperatorNexusCommand) *TemporalOperatorNexusEndpointCommand {
+	var s TemporalOperatorNexusEndpointCommand
+	s.Parent = parent
+	s.Command.Use = "endpoint"
+	s.Command.Short = "Commands for managing Nexus Endpoints (EXPERIMENTAL)"
+	if hasHighlighting {
+		s.Command.Long = "Endpoint commands enable managing Nexus Endpoints.\n\nEndpoint commands follow this syntax:\n\n\x1b[1mtemporal operator nexus endpoint [command] [command options]\x1b[0m"
+	} else {
+		s.Command.Long = "Endpoint commands enable managing Nexus Endpoints.\n\nEndpoint commands follow this syntax:\n\n```\ntemporal operator nexus endpoint [command] [command options]\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalOperatorNexusEndpointCreateCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalOperatorNexusEndpointDeleteCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalOperatorNexusEndpointGetCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalOperatorNexusEndpointListCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalOperatorNexusEndpointUpdateCommand(cctx, &s).Command)
+	return &s
+}
+
+type TemporalOperatorNexusEndpointCreateCommand struct {
+	Parent          *TemporalOperatorNexusEndpointCommand
+	Command         cobra.Command
+	Name            string
+	Description     string
+	DescriptionFile string
+	TargetNamespace string
+	TargetTaskQueue string
+	TargetUrl       string
+}
+
+func NewTemporalOperatorNexusEndpointCreateCommand(cctx *CommandContext, parent *TemporalOperatorNexusEndpointCommand) *TemporalOperatorNexusEndpointCreateCommand {
+	var s TemporalOperatorNexusEndpointCreateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "create [flags]"
+	s.Command.Short = "Create a new Nexus Endpoint (EXPERIMENTAL)"
+	if hasHighlighting {
+		s.Command.Long = "Create a new Nexus Endpoint on the Server.\n\nAn endpoint name is used in workflow code to invoke Nexus operations.  The\nendpoint target may either be a worker, in which case \x1b[1m--target-namespace\x1b[0m and\n\x1b[1m--target-task-queue\x1b[0m must both be provided, or an external URL, in which case\n\x1b[1m--target-url\x1b[0m must be provided.\n\nThis command will fail if an endpoint with the same name is already registered.\n\n\x1b[1mtemporal operator nexus endpoint create \\\n  --name your-endpoint \\\n  --target-namespace your-namespace \\\n  --target-task-queue your-task-queue \\\n  --description-file DESCRIPTION.md\x1b[0m"
+	} else {
+		s.Command.Long = "Create a new Nexus Endpoint on the Server.\n\nAn endpoint name is used in workflow code to invoke Nexus operations.  The\nendpoint target may either be a worker, in which case `--target-namespace` and\n`--target-task-queue` must both be provided, or an external URL, in which case\n`--target-url` must be provided.\n\nThis command will fail if an endpoint with the same name is already registered.\n\n```\ntemporal operator nexus endpoint create \\\n  --name your-endpoint \\\n  --target-namespace your-namespace \\\n  --target-task-queue your-task-queue \\\n  --description-file DESCRIPTION.md\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Name, "name", "", "Endpoint name. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
+	s.Command.Flags().StringVar(&s.Description, "description", "", "Endpoint description in markdown format (encoded using the configured codec server).")
+	s.Command.Flags().StringVar(&s.DescriptionFile, "description-file", "", "Endpoint description file in markdown format (encoded using the configured codec server).")
+	s.Command.Flags().StringVar(&s.TargetNamespace, "target-namespace", "", "Namespace in which a handler worker will be polling for Nexus tasks on.")
+	s.Command.Flags().StringVar(&s.TargetTaskQueue, "target-task-queue", "", "Task Queue in which a handler worker will be polling for Nexus tasks on.")
+	s.Command.Flags().StringVar(&s.TargetUrl, "target-url", "", "URL to direct Nexus requests to.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalOperatorNexusEndpointDeleteCommand struct {
+	Parent  *TemporalOperatorNexusEndpointCommand
+	Command cobra.Command
+	Name    string
+}
+
+func NewTemporalOperatorNexusEndpointDeleteCommand(cctx *CommandContext, parent *TemporalOperatorNexusEndpointCommand) *TemporalOperatorNexusEndpointDeleteCommand {
+	var s TemporalOperatorNexusEndpointDeleteCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "delete [flags]"
+	s.Command.Short = "Delete a Nexus Endpoint (EXPERIMENTAL)"
+	if hasHighlighting {
+		s.Command.Long = "Delete a Nexus Endpoint configuration from the Server.\n\n\x1b[1mtemporal operator nexus endpoint delete --name your-endpoint\x1b[0m"
+	} else {
+		s.Command.Long = "Delete a Nexus Endpoint configuration from the Server.\n\n```\ntemporal operator nexus endpoint delete --name your-endpoint\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Name, "name", "", "Endpoint name. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalOperatorNexusEndpointGetCommand struct {
+	Parent  *TemporalOperatorNexusEndpointCommand
+	Command cobra.Command
+	Name    string
+}
+
+func NewTemporalOperatorNexusEndpointGetCommand(cctx *CommandContext, parent *TemporalOperatorNexusEndpointCommand) *TemporalOperatorNexusEndpointGetCommand {
+	var s TemporalOperatorNexusEndpointGetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "get [flags]"
+	s.Command.Short = "Get a Nexus Endpoint by name (EXPERIMENTAL)"
+	if hasHighlighting {
+		s.Command.Long = "Get a Nexus Endpoint configuration by name from the Server.\n\n\x1b[1mtemporal operator nexus endpoint get --name your-endpoint\x1b[0m"
+	} else {
+		s.Command.Long = "Get a Nexus Endpoint configuration by name from the Server.\n\n```\ntemporal operator nexus endpoint get --name your-endpoint\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Name, "name", "", "Endpoint name. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalOperatorNexusEndpointListCommand struct {
+	Parent  *TemporalOperatorNexusEndpointCommand
+	Command cobra.Command
+}
+
+func NewTemporalOperatorNexusEndpointListCommand(cctx *CommandContext, parent *TemporalOperatorNexusEndpointCommand) *TemporalOperatorNexusEndpointListCommand {
+	var s TemporalOperatorNexusEndpointListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "List Nexus Endpoints (EXPERIMENTAL)"
+	if hasHighlighting {
+		s.Command.Long = "List all Nexus Endpoint configurations on the Server.\n\n\x1b[1mtemporal operator nexus endpoint list\x1b[0m"
+	} else {
+		s.Command.Long = "List all Nexus Endpoint configurations on the Server.\n\n```\ntemporal operator nexus endpoint list\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalOperatorNexusEndpointUpdateCommand struct {
+	Parent           *TemporalOperatorNexusEndpointCommand
+	Command          cobra.Command
+	Name             string
+	Description      string
+	DescriptionFile  string
+	UnsetDescription bool
+	TargetNamespace  string
+	TargetTaskQueue  string
+	TargetUrl        string
+}
+
+func NewTemporalOperatorNexusEndpointUpdateCommand(cctx *CommandContext, parent *TemporalOperatorNexusEndpointCommand) *TemporalOperatorNexusEndpointUpdateCommand {
+	var s TemporalOperatorNexusEndpointUpdateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "update [flags]"
+	s.Command.Short = "Update an existing Nexus Endpoint (EXPERIMENTAL)"
+	if hasHighlighting {
+		s.Command.Long = "Update an existing Nexus Endpoint on the Server.\n\nAn endpoint name is used in workflow code to invoke Nexus operations.  The\nendpoint target may either be a worker, in which case \x1b[1m--target-namespace\x1b[0m and\n\x1b[1m--target-task-queue\x1b[0m must both be provided, or an external URL, in which case\n\x1b[1m--target-url\x1b[0m must be provided.\n\nThe endpoint is patched; existing fields for which flags are not provided are\nleft as they were.\n\nUpdate only the target task queue:\n\n\x1b[1mtemporal operator nexus endpoint update \\\n  --name your-endpoint \\\n  --target-task-queue your-other-queue\x1b[0m\n\nUpdate only the description:\n\n\x1b[1mtemporal operator nexus endpoint update \\\n  --name your-endpoint \\\n  --description-file DESCRIPTION.md\x1b[0m"
+	} else {
+		s.Command.Long = "Update an existing Nexus Endpoint on the Server.\n\nAn endpoint name is used in workflow code to invoke Nexus operations.  The\nendpoint target may either be a worker, in which case `--target-namespace` and\n`--target-task-queue` must both be provided, or an external URL, in which case\n`--target-url` must be provided.\n\nThe endpoint is patched; existing fields for which flags are not provided are\nleft as they were.\n\nUpdate only the target task queue:\n\n```\ntemporal operator nexus endpoint update \\\n  --name your-endpoint \\\n  --target-task-queue your-other-queue\n```\n\nUpdate only the description:\n\n```\ntemporal operator nexus endpoint update \\\n  --name your-endpoint \\\n  --description-file DESCRIPTION.md\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Name, "name", "", "Endpoint name. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
+	s.Command.Flags().StringVar(&s.Description, "description", "", "Endpoint description in markdown format (encoded using the configured codec server).")
+	s.Command.Flags().StringVar(&s.DescriptionFile, "description-file", "", "Endpoint description file in markdown format (encoded using the configured codec server).")
+	s.Command.Flags().BoolVar(&s.UnsetDescription, "unset-description", false, "Unset the description.")
+	s.Command.Flags().StringVar(&s.TargetNamespace, "target-namespace", "", "Namespace in which a handler worker will be polling for Nexus tasks on.")
+	s.Command.Flags().StringVar(&s.TargetTaskQueue, "target-task-queue", "", "Task Queue in which a handler worker will be polling for Nexus tasks on.")
+	s.Command.Flags().StringVar(&s.TargetUrl, "target-url", "", "URL to direct Nexus requests to.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
 type TemporalOperatorSearchAttributeCommand struct {
 	Parent  *TemporalOperatorCommand
 	Command cobra.Command
@@ -1132,6 +1336,7 @@ type TemporalScheduleListCommand struct {
 	Command    cobra.Command
 	Long       bool
 	ReallyLong bool
+	Query      string
 }
 
 func NewTemporalScheduleListCommand(cctx *CommandContext, parent *TemporalScheduleCommand) *TemporalScheduleListCommand {
@@ -1148,6 +1353,7 @@ func NewTemporalScheduleListCommand(cctx *CommandContext, parent *TemporalSchedu
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().BoolVarP(&s.Long, "long", "l", false, "Show detailed information")
 	s.Command.Flags().BoolVar(&s.ReallyLong, "really-long", false, "Show extensive information in non-table form.")
+	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Filter results using given List Filter.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -1369,6 +1575,7 @@ type TemporalTaskQueueDescribeCommand struct {
 	LegacyMode          bool
 	TaskQueueTypeLegacy StringEnum
 	PartitionsLegacy    int
+	DisableStats        bool
 }
 
 func NewTemporalTaskQueueDescribeCommand(cctx *CommandContext, parent *TemporalTaskQueueCommand) *TemporalTaskQueueDescribeCommand {
@@ -1378,14 +1585,14 @@ func NewTemporalTaskQueueDescribeCommand(cctx *CommandContext, parent *TemporalT
 	s.Command.Use = "describe [flags]"
 	s.Command.Short = "Show active Workers"
 	if hasHighlighting {
-		s.Command.Long = "Display a list of active Workers that have recently polled a Task Queue. The\nTemporal Server records each poll request time. A \x1b[1mLastAccessTime\x1b[0m over one\nminute may indicate the Worker is at capacity or has shut down. Temporal\nWorkers are removed if 5 minutes have passed since the last poll request.\n\n\x1b[1mtemporal task-queue describe \\\n   --task-queue YourTaskQueue\x1b[0m\n\nThis command provides poller information for a given Task Queue.\nWorkflow and Activity polling use separate Task Queues:\n\n\x1b[1mtemporal task-queue describe \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type \"activity\"\x1b[1m\x1b[0m\n\nSafely retire Workers assigned a Build ID by checking reachability across\nall task types. Use the flag \x1b[0m--report-reachability\x1b[1m:\n\n\x1b[1mtemporal task-queue describe \\\n   --task-queue YourTaskQueue \\\n   --build-id \"YourBuildId\" \\\n   --report-reachability\x1b[0m\n\nComputing task reachability incurs a non-trivial computing cost.\n\nBuild ID reachability states include:\n\n- \x1b[0mReachable\x1b[1m: using the current versioning rules, the Build ID may be used\n   by new Workflow Executions or Activities OR there are currently open\n   Workflow or backlogged Activity tasks assigned to the queue.\n- \x1b[0mClosedWorkflowsOnly\x1b[1m: the Build ID does not have open Workflow Executions\n   and can't be reached by new Workflow Executions. It MAY have closed\n   Workflow Executions within the Namespace retention period.\n- \x1b[0mUnreachable\x1b[1m: this Build ID is not used for new Workflow Executions and\n  isn't used by any existing Workflow Execution within the retention period.\n\nTask reachability is eventually consistent. You may experience a delay until\nreachability converges to the most accurate value. This is designed to act\nin the most conservative way until convergence. For example, \x1b[0mReachable\x1b[1m is\nmore conservative than \x1b[0mClosedWorkflowsOnly`."
+		s.Command.Long = "Display a list of active Workers that have recently polled a Task Queue. The\nTemporal Server records each poll request time. A \x1b[1mLastAccessTime\x1b[0m over one\nminute may indicate the Worker is at capacity or has shut down. Temporal\nWorkers are removed if 5 minutes have passed since the last poll request.\n\nInformation about the Task Queue can be returned to troubleshoot server issues.\n\n\x1b[1mtemporal task-queue describe \\\n   --task-queue YourTaskQueue\x1b[0m\n\nThis command provides poller information for a given Task Queue.\nWorkflow and Activity polling use separate Task Queues:\n\n\x1b[1mtemporal task-queue describe \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type \"activity\"\x1b[1m\x1b[0m\n\nThis command provides the following task queue statistics:\n- \x1b[0mApproximateBacklogCount\x1b[1m: The approximate number of tasks backlogged in this\n  task queue.  May count expired tasks but eventually converges to the right\n  value.\n- \x1b[0mApproximateBacklogAge\x1b[1m: How far \"behind\" the task queue is running. This is\n  the difference in age between the oldest and newest tasks in the backlog,\n  measured in seconds.\n- \x1b[0mTasksAddRate\x1b[1m: Approximate rate at which tasks are being added to the task\n  queue, measured in tasks per second, averaged over the last 30 seconds.\n  Includes tasks dispatched immediately without going to the backlog\n  (sync-matched tasks), as well as tasks added to the backlog.\n- \x1b[0mTasksDispatchRate\x1b[1m: Approximate rate at which tasks are being dispatched from\n  the task queue, measured in tasks per second, averaged over the last 30\n  seconds.  Includes tasks dispatched immediately without going to the backlog\n  (sync-matched tasks), as well as tasks added to the backlog.\n- \x1b[0mBacklog Increase Rate\x1b[1m: Approximate rate at which the backlog size is\n  increasing (if positive) or decreasing (if negative), measured in tasks per\n  second, averaged over the last 30 seconds.  This is equivalent to:\n  \x1b[0mTasksAddRate\x1b[1m - \x1b[0mTasksDispatchRate\x1b[1m.\n\nSafely retire Workers assigned a Build ID by checking reachability across\nall task types. Use the flag \x1b[0m--report-reachability\x1b[1m:\n\n\x1b[1mtemporal task-queue describe \\\n   --task-queue YourTaskQueue \\\n   --build-id \"YourBuildId\" \\\n   --report-reachability\x1b[0m\n\nTask reachability information is returned for the requested versions and all\ntask types, which can be used to safely retire Workers with old code versions,\nprovided that they were assigned a Build ID.\n\nNote that task reachability status is experimental and may significantly change\nor be removed in a future release. Also, determining task reachability incurs a\nnon-trivial computing cost.\n\nTask reachability states are reported per build ID. The state may be one of the\nfollowing:\n\n- \x1b[0mReachable\x1b[1m: using the current versioning rules, the Build ID may be used\n   by new Workflow Executions or Activities OR there are currently open\n   Workflow or backlogged Activity tasks assigned to the queue.\n- \x1b[0mClosedWorkflowsOnly\x1b[1m: the Build ID does not have open Workflow Executions\n   and can't be reached by new Workflow Executions. It MAY have closed\n   Workflow Executions within the Namespace retention period.\n- \x1b[0mUnreachable\x1b[1m: this Build ID is not used for new Workflow Executions and\n  isn't used by any existing Workflow Execution within the retention period.\n\nTask reachability is eventually consistent. You may experience a delay until\nreachability converges to the most accurate value. This is designed to act\nin the most conservative way until convergence. For example, \x1b[0mReachable\x1b[1m is\nmore conservative than \x1b[0mClosedWorkflowsOnly`."
 	} else {
-		s.Command.Long = "Display a list of active Workers that have recently polled a Task Queue. The\nTemporal Server records each poll request time. A `LastAccessTime` over one\nminute may indicate the Worker is at capacity or has shut down. Temporal\nWorkers are removed if 5 minutes have passed since the last poll request.\n\n```\ntemporal task-queue describe \\\n   --task-queue YourTaskQueue\n```\n\nThis command provides poller information for a given Task Queue.\nWorkflow and Activity polling use separate Task Queues:\n\n```\ntemporal task-queue describe \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type \"activity\"`\n```\n\nSafely retire Workers assigned a Build ID by checking reachability across\nall task types. Use the flag `--report-reachability`:\n\n```\ntemporal task-queue describe \\\n   --task-queue YourTaskQueue \\\n   --build-id \"YourBuildId\" \\\n   --report-reachability\n```\n\nComputing task reachability incurs a non-trivial computing cost.\n\nBuild ID reachability states include:\n\n- `Reachable`: using the current versioning rules, the Build ID may be used\n   by new Workflow Executions or Activities OR there are currently open\n   Workflow or backlogged Activity tasks assigned to the queue.\n- `ClosedWorkflowsOnly`: the Build ID does not have open Workflow Executions\n   and can't be reached by new Workflow Executions. It MAY have closed\n   Workflow Executions within the Namespace retention period.\n- `Unreachable`: this Build ID is not used for new Workflow Executions and\n  isn't used by any existing Workflow Execution within the retention period.\n\nTask reachability is eventually consistent. You may experience a delay until\nreachability converges to the most accurate value. This is designed to act\nin the most conservative way until convergence. For example, `Reachable` is\nmore conservative than `ClosedWorkflowsOnly`."
+		s.Command.Long = "Display a list of active Workers that have recently polled a Task Queue. The\nTemporal Server records each poll request time. A `LastAccessTime` over one\nminute may indicate the Worker is at capacity or has shut down. Temporal\nWorkers are removed if 5 minutes have passed since the last poll request.\n\nInformation about the Task Queue can be returned to troubleshoot server issues.\n\n```\ntemporal task-queue describe \\\n   --task-queue YourTaskQueue\n```\n\nThis command provides poller information for a given Task Queue.\nWorkflow and Activity polling use separate Task Queues:\n\n```\ntemporal task-queue describe \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type \"activity\"`\n```\n\nThis command provides the following task queue statistics:\n- `ApproximateBacklogCount`: The approximate number of tasks backlogged in this\n  task queue.  May count expired tasks but eventually converges to the right\n  value.\n- `ApproximateBacklogAge`: How far \"behind\" the task queue is running. This is\n  the difference in age between the oldest and newest tasks in the backlog,\n  measured in seconds.\n- `TasksAddRate`: Approximate rate at which tasks are being added to the task\n  queue, measured in tasks per second, averaged over the last 30 seconds.\n  Includes tasks dispatched immediately without going to the backlog\n  (sync-matched tasks), as well as tasks added to the backlog.\n- `TasksDispatchRate`: Approximate rate at which tasks are being dispatched from\n  the task queue, measured in tasks per second, averaged over the last 30\n  seconds.  Includes tasks dispatched immediately without going to the backlog\n  (sync-matched tasks), as well as tasks added to the backlog.\n- `Backlog Increase Rate`: Approximate rate at which the backlog size is\n  increasing (if positive) or decreasing (if negative), measured in tasks per\n  second, averaged over the last 30 seconds.  This is equivalent to:\n  `TasksAddRate` - `TasksDispatchRate`.\n\nSafely retire Workers assigned a Build ID by checking reachability across\nall task types. Use the flag `--report-reachability`:\n\n```\ntemporal task-queue describe \\\n   --task-queue YourTaskQueue \\\n   --build-id \"YourBuildId\" \\\n   --report-reachability\n```\n\nTask reachability information is returned for the requested versions and all\ntask types, which can be used to safely retire Workers with old code versions,\nprovided that they were assigned a Build ID.\n\nNote that task reachability status is experimental and may significantly change\nor be removed in a future release. Also, determining task reachability incurs a\nnon-trivial computing cost.\n\nTask reachability states are reported per build ID. The state may be one of the\nfollowing:\n\n- `Reachable`: using the current versioning rules, the Build ID may be used\n   by new Workflow Executions or Activities OR there are currently open\n   Workflow or backlogged Activity tasks assigned to the queue.\n- `ClosedWorkflowsOnly`: the Build ID does not have open Workflow Executions\n   and can't be reached by new Workflow Executions. It MAY have closed\n   Workflow Executions within the Namespace retention period.\n- `Unreachable`: this Build ID is not used for new Workflow Executions and\n  isn't used by any existing Workflow Execution within the retention period.\n\nTask reachability is eventually consistent. You may experience a delay until\nreachability converges to the most accurate value. This is designed to act\nin the most conservative way until convergence. For example, `Reachable` is\nmore conservative than `ClosedWorkflowsOnly`."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task queue name. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
-	s.Command.Flags().StringArrayVar(&s.TaskQueueType, "task-queue-type", nil, "Task Queue type. Options are: workflow, activity, nexus.")
+	s.Command.Flags().StringArrayVar(&s.TaskQueueType, "task-queue-type", nil, "Task Queue type. If not specified, all types are reported. Options are: workflow, activity, nexus.")
 	s.Command.Flags().StringArrayVar(&s.SelectBuildId, "select-build-id", nil, "Filter the Task Queue based on Build ID.")
 	s.Command.Flags().BoolVar(&s.SelectUnversioned, "select-unversioned", false, "Include the unversioned queue.")
 	s.Command.Flags().BoolVar(&s.SelectAllActive, "select-all-active", false, "Include all active versions. A version is active if it had new tasks or polls recently.")
@@ -1394,6 +1601,7 @@ func NewTemporalTaskQueueDescribeCommand(cctx *CommandContext, parent *TemporalT
 	s.TaskQueueTypeLegacy = NewStringEnum([]string{"workflow", "activity"}, "workflow")
 	s.Command.Flags().Var(&s.TaskQueueTypeLegacy, "task-queue-type-legacy", "Task Queue type (legacy mode only). Accepted values: workflow, activity.")
 	s.Command.Flags().IntVar(&s.PartitionsLegacy, "partitions-legacy", 1, "Query partitions 1 through `N`. Experimental/Temporary feature. Legacy mode only.")
+	s.Command.Flags().BoolVar(&s.DisableStats, "disable-stats", false, "Disable task queue statistics.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

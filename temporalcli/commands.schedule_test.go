@@ -11,7 +11,11 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/temporalio/cli/temporalcli"
+
+	"go.temporal.io/api/enums/v1"
+	"go.temporal.io/api/operatorservice/v1"
 	"go.temporal.io/sdk/workflow"
 )
 
@@ -173,31 +177,32 @@ func (s *SharedServerSuite) TestSchedule_CreateDescribe_SearchAttributes_Memo() 
 }
 
 func (s *SharedServerSuite) TestSchedule_List() {
-	schedId, _, res := s.createSchedule("--interval", "10d")
-	s.NoError(res.Err)
-
-	// table
-
-	s.Eventually(func() bool {
-		res = s.Execute(
-			"schedule", "list",
-			"--address", s.Address(),
-		)
-		s.NoError(res.Err)
-		out := res.Stdout.String()
-		return AssertContainsOnSameLine(out, schedId, "DevWorkflow", "false") == nil
-	}, 10*time.Second, time.Second)
-
-	// table long
-
-	res = s.Execute(
-		"schedule", "list",
+	res := s.Execute(
+		"operator", "search-attribute", "create",
 		"--address", s.Address(),
-		"--long",
+		"--name", "TestSchedule_List",
+		"--type", "keyword",
 	)
 	s.NoError(res.Err)
-	out := res.Stdout.String()
-	s.ContainsOnSameLine(out, schedId, "DevWorkflow", "false")
+
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res = s.Execute(
+			"operator", "search-attribute", "list",
+			"--address", s.Address(),
+			"-o", "json",
+		)
+		assert.NoError(t, res.Err)
+		var jsonOut operatorservice.ListSearchAttributesResponse
+		assert.NoError(t, temporalcli.UnmarshalProtoJSONWithOptions(res.Stdout.Bytes(), &jsonOut, true))
+		assert.Equal(t, enums.INDEXED_VALUE_TYPE_KEYWORD, jsonOut.CustomAttributes["TestSchedule_List"])
+	}, 10*time.Second, time.Second)
+
+	schedId, _, res := s.createSchedule(
+		"--interval",
+		"10d",
+		"--schedule-search-attribute", `TestSchedule_List="here"`,
+	)
+	s.NoError(res.Err)
 
 	// table really-long
 
@@ -207,8 +212,31 @@ func (s *SharedServerSuite) TestSchedule_List() {
 		"--really-long",
 	)
 	s.NoError(res.Err)
-	out = res.Stdout.String()
+	out := res.Stdout.String()
 	s.ContainsOnSameLine(out, schedId, "DevWorkflow", "0s" /*jitter*/, "false", "nil" /*memo*/)
+	s.ContainsOnSameLine(out, "TestSchedule_List")
+
+	// table
+
+	res = s.Execute(
+		"schedule", "list",
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	out = res.Stdout.String()
+
+	s.ContainsOnSameLine(out, schedId, "DevWorkflow", "false")
+
+	// table long
+
+	res = s.Execute(
+		"schedule", "list",
+		"--address", s.Address(),
+		"--long",
+	)
+	s.NoError(res.Err)
+	out = res.Stdout.String()
+	s.ContainsOnSameLine(out, schedId, "DevWorkflow", "false")
 
 	// json
 
@@ -249,6 +277,69 @@ func (s *SharedServerSuite) TestSchedule_List() {
 		ok = ok || j.ScheduleId == schedId
 	}
 	s.True(ok, "schedule not found in jsonl result")
+
+	// JSON query (match)
+
+	res = s.Execute(
+		"schedule", "list",
+		"--address", s.Address(),
+		"--query", "TestSchedule_List = 'here'",
+		"-o", "json",
+	)
+	s.NoError(res.Err)
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &j))
+	ok = false
+	for _, entry := range j {
+		ok = ok || entry.ScheduleId == schedId
+	}
+	s.True(ok, "schedule not found in json result")
+
+	// query (match)
+
+	res = s.Execute(
+		"schedule", "list",
+		"--address", s.Address(),
+		"--query", "TestSchedule_List = 'here'",
+	)
+	s.NoError(res.Err)
+	out = res.Stdout.String()
+	s.ContainsOnSameLine(out, schedId, "DevWorkflow", "false")
+
+	// JSON query (no matches)
+
+	res = s.Execute(
+		"schedule", "list",
+		"--address", s.Address(),
+		"--query", "TestSchedule_List = 'notHere'",
+		"-o", "json",
+	)
+	s.NoError(res.Err)
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &j))
+	ok = false
+	for _, entry := range j {
+		ok = ok || entry.ScheduleId == schedId
+	}
+	s.False(ok, "schedule found in json result, but should not be found")
+
+	// query (no matches)
+
+	res = s.Execute(
+		"schedule", "list",
+		"--address", s.Address(),
+		"--query", "TestSchedule_List = 'notHere'",
+	)
+	s.NoError(res.Err)
+	out = res.Stdout.String()
+	s.NotContainsf(out, schedId, "schedule found, but should not be found")
+
+	// query (invalid query field)
+
+	res = s.Execute(
+		"schedule", "list",
+		"--address", s.Address(),
+		"--query", "unknownField = 'notHere'",
+	)
+	s.Error(res.Err)
 }
 
 func (s *SharedServerSuite) TestSchedule_Toggle() {
