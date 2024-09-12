@@ -3,7 +3,7 @@ module github.com/temporalio/cli
 go 1.22.3
 
 require (
-	github.com/alitto/pond v1.8.3
+	github.com/alitto/pond v1.9.1
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/dustin/go-humanize v1.0.1
 	github.com/fatih/color v1.17.0
@@ -11,10 +11,10 @@ require (
 	github.com/mattn/go-isatty v0.0.20
 	github.com/nexus-rpc/sdk-go v0.0.10
 	github.com/olekukonko/tablewriter v0.0.5
-	github.com/spf13/cobra v1.8.0
+	github.com/spf13/cobra v1.8.1
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.9.0
-	github.com/temporalio/ui-server/v2 v2.30.2
+	github.com/temporalio/ui-server/v2 v2.30.3
 	go.temporal.io/api v1.38.0
 	go.temporal.io/sdk v1.29.0
 	go.temporal.io/server v1.25.0
@@ -81,6 +81,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.15 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
+	github.com/nexus-rpc/sdk-go v0.0.10 // indirect
 	github.com/olivere/elastic/v7 v7.0.32 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/pborman/uuid v1.2.1 // indirect

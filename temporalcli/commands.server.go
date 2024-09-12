@@ -14,7 +14,17 @@ import (
 )
 
 var defaultDynamicConfigValues = map[string]any{
+	// Make search attributes immediately visible on creation, so users don't
+	// have to wait for eventual consistency to happen when testing against the
+	// dev-server.  Since it's a very rare thing to create search attributes,
+	// we're comfortable that this is very unlikely to mask bugs in user code.
 	"system.forceSearchAttributesCacheRefreshOnRead": true,
+
+	// Since we disable the SA cache, we need to bump max QPS accordingly.
+	// These numbers were chosen to maintain the ratio between the two that's
+	// established in the defaults.
+	"frontend.persistenceMaxQPS": 10000,
+	"history.persistenceMaxQPS": 45000,
 }
 
 func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string) error {
@@ -71,7 +81,7 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 				return fmt.Errorf("can't set UI port %d: %w", opts.UIPort, err)
 			}
 		}
-		opts.UIAssetPath, opts.UICodecEndpoint = t.UiAssetPath, t.UiCodecEndpoint
+		opts.UIAssetPath, opts.UICodecEndpoint, opts.PublicPath = t.UiAssetPath, t.UiCodecEndpoint, t.UiPublicPath
 	}
 	// Pragmas and dyn config
 	var err error
@@ -147,7 +157,7 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 	cctx.Printer.Printlnf("CLI %v\n", VersionString())
 	cctx.Printer.Printlnf("%-8s %v:%v", "Server:", toFriendlyIp(opts.FrontendIP), opts.FrontendPort)
 	if !t.Headless {
-		cctx.Printer.Printlnf("%-8s http://%v:%v", "UI:", toFriendlyIp(opts.UIIP), opts.UIPort)
+		cctx.Printer.Printlnf("%-8s http://%v:%v%v", "UI:", toFriendlyIp(opts.UIIP), opts.UIPort, opts.PublicPath)
 	}
 	cctx.Printer.Printlnf("%-8s http://%v:%v/metrics", "Metrics:", toFriendlyIp(opts.FrontendIP), opts.MetricsPort)
 	<-cctx.Done()
