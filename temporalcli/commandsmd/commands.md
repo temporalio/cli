@@ -876,112 +876,141 @@ temporal operator namespace update \
   Archive visibility data to this `URI`.
   Once enabled, can't be changed.
 
-### temporal operator nexus: Commands for managing Nexus resources (EXPERIMENTAL).
+### temporal operator nexus: Commands for managing Nexus resources (EXPERIMENTAL)
 
 Nexus commands enable managing Nexus resources.
 
-Nexus commands follow this syntax: `temporal operator nexus [command] [command] [command options]`
+Nexus commands follow this syntax:
 
-### temporal operator nexus endpoint: Commands for managing Nexus Endpoints (EXPERIMENTAL).
+```
+temporal operator nexus [command] [command] [command options]
+```
+
+### temporal operator nexus endpoint: Commands for managing Nexus Endpoints (EXPERIMENTAL)
 
 Endpoint commands enable managing Nexus Endpoints.
 
-Endpoint commands follow this syntax: `temporal operator nexus endpoint [command] [command options]`
+Endpoint commands follow this syntax:
 
-### temporal operator nexus endpoint create: Create a new Nexus Endpoint (EXPERIMENTAL).
+```
+temporal operator nexus endpoint [command] [command options]
+```
 
-The temporal operator nexus endpoint create command creates a new Nexus Endpoint on the Server.
+### temporal operator nexus endpoint create: Create a new Nexus Endpoint (EXPERIMENTAL)
 
-An endpoint name is used by in workflow code to invoke Nexus operations.
-The endpoint target may either be a worker, in which case `--target-namespace` and `--target-task-queue` must both be
-provided, or an external URL, in which case `--target-url` must be provided.
+Create a new Nexus Endpoint on the Server.
 
-This will fail if an endpoint with the same name is already registered.
+An endpoint name is used in workflow code to invoke Nexus operations.  The
+endpoint target may either be a worker, in which case `--target-namespace` and
+`--target-task-queue` must both be provided, or an external URL, in which case
+`--target-url` must be provided.
+
+This command will fail if an endpoint with the same name is already registered.
 
 ```
 temporal operator nexus endpoint create \
-  --name my-endpoint \
-  --target-namespace my-namespace \
-  --target-task-queue my-task-queue \
+  --name your-endpoint \
+  --target-namespace your-namespace \
+  --target-task-queue your-task-queue \
   --description-file DESCRIPTION.md
 ```
 
 #### Options
 
-* `--name` (string) - Endpoint name. Required.
-* `--description` (string) - Endpoint description in markdown format (encoded using the configured codec server).
-* `--description-file` (string) - Endpoint description file in markdown format (encoded using the configured codec server).
-* `--target-namespace` (string) - Namespace in which a handler worker will be polling for Nexus tasks on.
-* `--target-task-queue` (string) - Task Queue in which a handler worker will be polling for Nexus tasks on.
-* `--target-url` (string) - URL to direct Nexus requests to.
+* `--name` (string) -
+  Endpoint name. Required.
+* `--description` (string) -
+  Endpoint description in markdown format (encoded using the configured codec server).
+* `--description-file` (string) -
+  Endpoint description file in markdown format (encoded using the configured codec server).
+* `--target-namespace` (string) -
+  Namespace in which a handler worker will be polling for Nexus tasks on.
+* `--target-task-queue` (string) -
+  Task Queue in which a handler worker will be polling for Nexus tasks on.
+* `--target-url` (string) -
+  URL to direct Nexus requests to.
 
-### temporal operator nexus endpoint delete: Delete a Nexus Endpoint (EXPERIMENTAL).
+### temporal operator nexus endpoint delete: Delete a Nexus Endpoint (EXPERIMENTAL)
 
-The temporal operator nexus endpoint delete deletes a Nexus Endpoint configuration from the Server.
-
-```
-temporal operator nexus endpoint delete --name my-endpoint
-```
-
-#### Options
-
-* `--name` (string) - Endpoint name. Required.
-
-### temporal operator nexus endpoint get: Get a Nexus Endpoint by name (EXPERIMENTAL).
-
-The temporal operator nexus endpoint get gets a Nexus Endpoint configuration by name from the Server.
+Delete a Nexus Endpoint configuration from the Server.
 
 ```
-temporal operator nexus endpoint get --name my-endpoint
+temporal operator nexus endpoint delete --name your-endpoint
 ```
 
 #### Options
 
-* `--name` (string) - Endpoint name. Required.
+* `--name` (string) -
+  Endpoint name.
+  Required.
 
-### temporal operator nexus endpoint list: List Nexus Endpoints (EXPERIMENTAL).
+### temporal operator nexus endpoint get: Get a Nexus Endpoint by name (EXPERIMENTAL)
 
-The temporal operator nexus endpoint list lists all Nexus Endpoint configurations on the Server.
+Get a Nexus Endpoint configuration by name from the Server.
+
+```
+temporal operator nexus endpoint get --name your-endpoint
+```
+
+#### Options
+
+* `--name` (string) -
+  Endpoint name.
+  Required.
+
+### temporal operator nexus endpoint list: List Nexus Endpoints (EXPERIMENTAL)
+
+List all Nexus Endpoint configurations on the Server.
 
 ```
 temporal operator nexus endpoint list
 ```
 
-### temporal operator nexus endpoint update: Update an existing Nexus Endpoint (EXPERIMENTAL).
+### temporal operator nexus endpoint update: Update an existing Nexus Endpoint (EXPERIMENTAL)
 
-The temporal operator nexus endpoint update command updates an existing Nexus Endpoint on the Server.
+Update an existing Nexus Endpoint on the Server.
 
-An endpoint name is used by in workflow code to invoke Nexus operations.
-The endpoint target may either be a worker, in which case `--target-namespace` and `--target-task-queue` must both be
-provided, or an external URL, in which case `--target-url` must be provided.
+An endpoint name is used in workflow code to invoke Nexus operations.  The
+endpoint target may either be a worker, in which case `--target-namespace` and
+`--target-task-queue` must both be provided, or an external URL, in which case
+`--target-url` must be provided.
 
-The endpoint is patched leaving any existing fields for which flags are not provided as they were.
+The endpoint is patched; existing fields for which flags are not provided are
+left as they were.
 
-**Update only the target task queue**:
-
-```
-temporal operator nexus endpoint update \
-  --name my-endpoint \
-  --target-task-queue my-other-queue
-```
-
-**Update only the description**:
+Update only the target task queue:
 
 ```
 temporal operator nexus endpoint update \
-  --name my-endpoint \
+  --name your-endpoint \
+  --target-task-queue your-other-queue
+```
+
+Update only the description:
+
+```
+temporal operator nexus endpoint update \
+  --name your-endpoint \
   --description-file DESCRIPTION.md
 ```
 
 #### Options
 
-* `--name` (string) - Endpoint name. Required.
-* `--description` (string) - Endpoint description in markdown format (encoded using the configured codec server).
-* `--description-file` (string) - Endpoint description file in markdown format (encoded using the configured codec server).
-* `--unset-description` (bool) - Unset the description.
-* `--target-namespace` (string) - Namespace in which a handler worker will be polling for Nexus tasks on.
-* `--target-task-queue` (string) - Task Queue in which a handler worker will be polling for Nexus tasks on.
-* `--target-url` (string) - URL to direct Nexus requests to.
+* `--name` (string) -
+  Endpoint name.
+  Required.
+* `--description` (string) -
+  Endpoint description in markdown format (encoded using the configured codec server).
+* `--description-file` (string) -
+  Endpoint description file in markdown format (encoded using the configured codec server).
+* `--unset-description` (bool) -
+  Unset the description.
+* `--target-namespace` (string) -
+  Namespace in which a handler worker will be polling for Nexus tasks on.
+* `--target-task-queue` (string) -
+  Task Queue in which a handler worker will be polling for Nexus tasks on.
+* `--target-url` (string) -
+  URL to direct Nexus requests to.
 
 ### temporal operator search-attribute: Search Attribute operations
 
@@ -1490,19 +1519,20 @@ This command provides the following task queue statistics:
 - `ApproximateBacklogCount`: The approximate number of tasks backlogged in this
   task queue.  May count expired tasks but eventually converges to the right
   value.
-- `ApproximateBacklogAge`: Approximate age of the oldest task in the backlog
-  based on the creation time of the task at the head of the queue, measured in
-  seconds.
-- `TasksAddRate`: Approximate tasks per second added to the task queue,
-  averaging over the last 30 seconds.  Includes tasks whether or not they were
-  added from the backlog or those that were dispatched immediately without going
-  to the backlog (sync-matched).
-- `TasksDispatchRate`: Approximate tasks per second dispatched to the task
-  queue, averaging over the last 30 seconds.  Includes tasks whether or not they
-  were dispatched from the backlog or those that were dispatched immediately
-  without going to the backlog (sync-matched).
-- `Backlog Increase Rate`: Approximate net tasks per second added to the
-  backlog, averaging the last 30 seconds.  This is calculated as
+- `ApproximateBacklogAge`: How far "behind" the task queue is running. This is
+  the difference in age between the oldest and newest tasks in the backlog,
+  measured in seconds.
+- `TasksAddRate`: Approximate rate at which tasks are being added to the task
+  queue, measured in tasks per second, averaged over the last 30 seconds.
+  Includes tasks dispatched immediately without going to the backlog
+  (sync-matched tasks), as well as tasks added to the backlog.
+- `TasksDispatchRate`: Approximate rate at which tasks are being dispatched from
+  the task queue, measured in tasks per second, averaged over the last 30
+  seconds.  Includes tasks dispatched immediately without going to the backlog
+  (sync-matched tasks), as well as tasks added to the backlog.
+- `Backlog Increase Rate`: Approximate rate at which the backlog size is
+  increasing (if positive) or decreasing (if negative), measured in tasks per
+  second, averaged over the last 30 seconds.  This is equivalent to:
   `TasksAddRate` - `TasksDispatchRate`.
 
 Safely retire Workers assigned a Build ID by checking reachability across
