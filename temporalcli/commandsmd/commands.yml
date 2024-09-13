@@ -554,7 +554,7 @@ commands:
         description: |
           Archive visibility data to this `URI`.
           Once enabled, can't be changed.
-  - name: temporal operator namespace delete # TODO: [namespace]
+  - name: temporal operator namespace delete
     summary: Delete a Namespace
     description: |
       ```
@@ -567,13 +567,15 @@ commands:
       temporal operator namespace delete \
           --namespace YourNamespaceName
       ```
-    maximum-args: 1
     options:
       - name: yes
         short: y
         type: bool
         description: Request confirmation before deletion.
-  - name: temporal operator namespace describe # TODO: [namespace]
+      - name: namespace
+        type: string
+        description: Namespace name. If left blank, the default Namespace is deleted.
+  - name: temporal operator namespace describe
     summary: Describe a Namespace
     description: |
       Provide long-form information about a Namespace identified by its ID or name:
@@ -594,6 +596,9 @@ commands:
       - name: namespace-id
         type: string
         description: Namespace ID.
+      - name: namespace
+        type: string
+        description: Namespace name.
   - name: temporal operator namespace list
     summary: List Namespaces
     description: |
