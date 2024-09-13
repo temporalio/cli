@@ -543,7 +543,7 @@ commands.
 ### temporal operator: Manage Temporal deployments
 
 Operator commands manage and fetch information about Namespaces, Search
-Attributes, and Temporal Services:
+Attributes, Nexus Endpoints, and Temporal Services:
 
 ```
 temporal operator [command] [subcommand] [options]
@@ -876,6 +876,142 @@ temporal operator namespace update \
   Archive visibility data to this `URI`.
   Once enabled, can't be changed.
 
+### temporal operator nexus: Commands for managing Nexus resources (EXPERIMENTAL)
+
+Nexus commands enable managing Nexus resources.
+
+Nexus commands follow this syntax:
+
+```
+temporal operator nexus [command] [command] [command options]
+```
+
+### temporal operator nexus endpoint: Commands for managing Nexus Endpoints (EXPERIMENTAL)
+
+Endpoint commands enable managing Nexus Endpoints.
+
+Endpoint commands follow this syntax:
+
+```
+temporal operator nexus endpoint [command] [command options]
+```
+
+### temporal operator nexus endpoint create: Create a new Nexus Endpoint (EXPERIMENTAL)
+
+Create a new Nexus Endpoint on the Server.
+
+An endpoint name is used in workflow code to invoke Nexus operations.  The
+endpoint target may either be a worker, in which case `--target-namespace` and
+`--target-task-queue` must both be provided, or an external URL, in which case
+`--target-url` must be provided.
+
+This command will fail if an endpoint with the same name is already registered.
+
+```
+temporal operator nexus endpoint create \
+  --name your-endpoint \
+  --target-namespace your-namespace \
+  --target-task-queue your-task-queue \
+  --description-file DESCRIPTION.md
+```
+
+#### Options
+
+* `--name` (string) -
+  Endpoint name. Required.
+* `--description` (string) -
+  Endpoint description in markdown format (encoded using the configured codec server).
+* `--description-file` (string) -
+  Endpoint description file in markdown format (encoded using the configured codec server).
+* `--target-namespace` (string) -
+  Namespace in which a handler worker will be polling for Nexus tasks on.
+* `--target-task-queue` (string) -
+  Task Queue in which a handler worker will be polling for Nexus tasks on.
+* `--target-url` (string) -
+  URL to direct Nexus requests to.
+
+### temporal operator nexus endpoint delete: Delete a Nexus Endpoint (EXPERIMENTAL)
+
+Delete a Nexus Endpoint configuration from the Server.
+
+```
+temporal operator nexus endpoint delete --name your-endpoint
+```
+
+#### Options
+
+* `--name` (string) -
+  Endpoint name.
+  Required.
+
+### temporal operator nexus endpoint get: Get a Nexus Endpoint by name (EXPERIMENTAL)
+
+Get a Nexus Endpoint configuration by name from the Server.
+
+```
+temporal operator nexus endpoint get --name your-endpoint
+```
+
+#### Options
+
+* `--name` (string) -
+  Endpoint name.
+  Required.
+
+### temporal operator nexus endpoint list: List Nexus Endpoints (EXPERIMENTAL)
+
+List all Nexus Endpoint configurations on the Server.
+
+```
+temporal operator nexus endpoint list
+```
+
+### temporal operator nexus endpoint update: Update an existing Nexus Endpoint (EXPERIMENTAL)
+
+Update an existing Nexus Endpoint on the Server.
+
+An endpoint name is used in workflow code to invoke Nexus operations.  The
+endpoint target may either be a worker, in which case `--target-namespace` and
+`--target-task-queue` must both be provided, or an external URL, in which case
+`--target-url` must be provided.
+
+The endpoint is patched; existing fields for which flags are not provided are
+left as they were.
+
+Update only the target task queue:
+
+```
+temporal operator nexus endpoint update \
+  --name your-endpoint \
+  --target-task-queue your-other-queue
+```
+
+Update only the description:
+
+```
+temporal operator nexus endpoint update \
+  --name your-endpoint \
+  --description-file DESCRIPTION.md
+```
+
+#### Options
+
+* `--name` (string) -
+  Endpoint name.
+  Required.
+* `--description` (string) -
+  Endpoint description in markdown format (encoded using the configured codec server).
+* `--description-file` (string) -
+  Endpoint description file in markdown format (encoded using the configured codec server).
+* `--unset-description` (bool) -
+  Unset the description.
+* `--target-namespace` (string) -
+  Namespace in which a handler worker will be polling for Nexus tasks on.
+* `--target-task-queue` (string) -
+  Task Queue in which a handler worker will be polling for Nexus tasks on.
+* `--target-url` (string) -
+  URL to direct Nexus requests to.
+
 ### temporal operator search-attribute: Search Attribute operations
 
 Create, list, or remove Search Attributes fields stored in a Workflow
@@ -1149,6 +1285,8 @@ temporal schedule list \
   Show detailed information
 * `--really-long` (bool) -
   Show extensive information in non-table form.
+* `--query`, `-q` (string) -
+  Filter results using given List Filter.
 
 ### temporal schedule toggle: Pause or unpause a Schedule
 
@@ -1361,6 +1499,8 @@ Temporal Server records each poll request time. A `LastAccessTime` over one
 minute may indicate the Worker is at capacity or has shut down. Temporal
 Workers are removed if 5 minutes have passed since the last poll request.
 
+Information about the Task Queue can be returned to troubleshoot server issues.
+
 ```
 temporal task-queue describe \
    --task-queue YourTaskQueue
@@ -1375,6 +1515,26 @@ temporal task-queue describe \
     --task-queue-type "activity"`
 ```
 
+This command provides the following task queue statistics:
+- `ApproximateBacklogCount`: The approximate number of tasks backlogged in this
+  task queue.  May count expired tasks but eventually converges to the right
+  value.
+- `ApproximateBacklogAge`: How far "behind" the task queue is running. This is
+  the difference in age between the oldest and newest tasks in the backlog,
+  measured in seconds.
+- `TasksAddRate`: Approximate rate at which tasks are being added to the task
+  queue, measured in tasks per second, averaged over the last 30 seconds.
+  Includes tasks dispatched immediately without going to the backlog
+  (sync-matched tasks), as well as tasks added to the backlog.
+- `TasksDispatchRate`: Approximate rate at which tasks are being dispatched from
+  the task queue, measured in tasks per second, averaged over the last 30
+  seconds.  Includes tasks dispatched immediately without going to the backlog
+  (sync-matched tasks), as well as tasks added to the backlog.
+- `Backlog Increase Rate`: Approximate rate at which the backlog size is
+  increasing (if positive) or decreasing (if negative), measured in tasks per
+  second, averaged over the last 30 seconds.  This is equivalent to:
+  `TasksAddRate` - `TasksDispatchRate`.
+
 Safely retire Workers assigned a Build ID by checking reachability across
 all task types. Use the flag `--report-reachability`:
 
@@ -1385,9 +1545,16 @@ temporal task-queue describe \
    --report-reachability
 ```
 
-Computing task reachability incurs a non-trivial computing cost.
+Task reachability information is returned for the requested versions and all
+task types, which can be used to safely retire Workers with old code versions,
+provided that they were assigned a Build ID.
 
-Build ID reachability states include:
+Note that task reachability status is experimental and may significantly change
+or be removed in a future release. Also, determining task reachability incurs a
+non-trivial computing cost.
+
+Task reachability states are reported per build ID. The state may be one of the
+following:
 
 - `Reachable`: using the current versioning rules, the Build ID may be used
    by new Workflow Executions or Activities OR there are currently open
@@ -1409,7 +1576,7 @@ more conservative than `ClosedWorkflowsOnly`.
   Task queue name.
   Required.
 * `--task-queue-type` (string[]) -
-  Task Queue type.
+  Task Queue type. If not specified, all types are reported.
   Options are: workflow, activity, nexus.
 * `--select-build-id` (string[]) -
   Filter the Task Queue based on Build ID.
@@ -1432,6 +1599,8 @@ more conservative than `ClosedWorkflowsOnly`.
   Experimental/Temporary feature.
   Legacy mode only.
   Default: 1.
+* `--disable-stats` (bool) -
+  Disable task queue statistics.
 
 ### temporal task-queue get-build-id-reachability: Show Build ID availability (Deprecated)
 
@@ -2583,7 +2752,7 @@ temporal workflow update start \
 
 #### Options
 
-* `--wait-for-stage` (string-enum) - 
+* `--wait-for-stage` (string-enum) -
   Update stage to wait for.
   The only option is `accepted`, but this option is  required. This is to allow
   a future version of the CLI to choose a default value.

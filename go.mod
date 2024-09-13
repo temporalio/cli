@@ -9,6 +9,7 @@ require (
 	github.com/fatih/color v1.17.0
 	github.com/google/uuid v1.6.0
 	github.com/mattn/go-isatty v0.0.20
+	github.com/nexus-rpc/sdk-go v0.0.10
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/pflag v1.0.5
@@ -149,9 +150,3 @@ require (
 	modernc.org/strutil v1.2.0 // indirect
 	modernc.org/token v1.1.0 // indirect
 )
-
-// See https://github.com/temporalio/cli/pull/596#discussion_r1666988960
-// #596 downgraded api to 1.32.1, but there are required bug fixes that came after 1.32.1.
-replace go.temporal.io/api v1.34.0 => go.temporal.io/api v1.32.1-cherry-pick-for-cli-tag
-
-replace github.com/nexus-rpc/sdk-go v0.0.8-0.20240502185337-2b47041a2cc2 => github.com/nexus-rpc/sdk-go v0.0.7

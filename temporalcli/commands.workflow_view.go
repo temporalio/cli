@@ -134,6 +134,37 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 		HistorySize:          info.HistorySizeBytes,
 	}, printer.StructuredOptions{})
 
+	if len(resp.Callbacks) > 0 {
+		cctx.Printer.Println()
+		cctx.Printer.Println(color.MagentaString("Callbacks: %v", len(resp.Callbacks)))
+		cctx.Printer.Println()
+		cbs := make([]struct {
+			URL                     string
+			Trigger                 string
+			State                   enums.CallbackState
+			Attempt                 int32
+			RegistrationTime        time.Time        `cli:",cardOmitEmpty"`
+			NextAttemptScheduleTime time.Time        `cli:",cardOmitEmpty"`
+			LastAttemptCompleteTime time.Time        `cli:",cardOmitEmpty"`
+			LastAttemptFailure      *failure.Failure `cli:",cardOmitEmpty"`
+		}, len(resp.Callbacks))
+		for i, cb := range resp.Callbacks {
+			cbs[i].URL = cb.GetCallback().GetNexus().GetUrl()
+			cbs[i].State = cb.GetState()
+			cbs[i].Attempt = cb.GetAttempt()
+			cbs[i].LastAttemptFailure = cb.LastAttemptFailure
+			cbs[i].LastAttemptCompleteTime = timestampToTime(cb.LastAttemptCompleteTime)
+			cbs[i].NextAttemptScheduleTime = timestampToTime(cb.NextAttemptScheduleTime)
+			cbs[i].RegistrationTime = timestampToTime(cb.RegistrationTime)
+			cbs[i].Trigger = "Unknown"
+			if cb.GetTrigger().GetWorkflowClosed() != nil {
+				cbs[i].Trigger = "WorkflowClosed"
+			}
+		}
+		_ = cctx.Printer.PrintStructured(cbs, printer.StructuredOptions{})
+		cctx.Printer.Println()
+	}
+
 	if running {
 		cctx.Printer.Println()
 		cctx.Printer.Println(color.MagentaString("Pending Activities: %v", len(resp.PendingActivities)))
@@ -175,6 +206,49 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 		if len(resp.PendingChildren) > 0 {
 			cctx.Printer.Println()
 			_ = cctx.Printer.PrintStructured(resp.PendingChildren, printer.StructuredOptions{})
+		}
+
+		cctx.Printer.Println(color.MagentaString("Pending Nexus Operations: %v", len(resp.PendingNexusOperations)))
+		if len(resp.PendingNexusOperations) > 0 {
+			cctx.Printer.Println()
+			ops := make([]struct {
+				Endpoint                           string
+				Service                            string
+				Operation                          string
+				OperationID                        string
+				State                              enums.PendingNexusOperationState
+				Attempt                            int32
+				ScheduleToCloseTimeout             string                                `cli:",cardOmitEmpty"`
+				NextAttemptScheduleTime            time.Time                             `cli:",cardOmitEmpty"`
+				LastAttemptCompleteTime            time.Time                             `cli:",cardOmitEmpty"`
+				LastAttemptFailure                 *failure.Failure                      `cli:",cardOmitEmpty"`
+				CancelationState                   enums.NexusOperationCancellationState `cli:",cardOmitEmpty"`
+				CancelationAttempt                 int32                                 `cli:",cardOmitEmpty"`
+				CancelationRequestedTime           time.Time                             `cli:",cardOmitEmpty"`
+				CancelationNextAttemptScheduleTime time.Time                             `cli:",cardOmitEmpty"`
+				CancelationLastAttemptCompleteTime time.Time                             `cli:",cardOmitEmpty"`
+				CancelationLastAttemptFailure      *failure.Failure                      `cli:",cardOmitEmpty"`
+			}, len(resp.PendingNexusOperations))
+			for i, op := range resp.PendingNexusOperations {
+				ops[i].Endpoint = op.GetEndpoint()
+				ops[i].Service = op.GetService()
+				ops[i].Operation = op.GetOperation()
+				ops[i].OperationID = op.GetOperationId()
+				ops[i].State = op.GetState()
+				ops[i].Attempt = op.GetAttempt()
+				ops[i].LastAttemptFailure = op.LastAttemptFailure
+				ops[i].LastAttemptCompleteTime = timestampToTime(op.LastAttemptCompleteTime)
+				ops[i].NextAttemptScheduleTime = timestampToTime(op.NextAttemptScheduleTime)
+				ops[i].ScheduleToCloseTimeout = formatDuration(op.GetScheduleToCloseTimeout().AsDuration())
+				ops[i].CancelationState = op.GetCancellationInfo().GetState()
+				ops[i].CancelationAttempt = op.GetCancellationInfo().GetAttempt()
+				ops[i].CancelationLastAttemptFailure = op.GetCancellationInfo().GetLastAttemptFailure()
+				ops[i].CancelationLastAttemptCompleteTime = timestampToTime(op.GetCancellationInfo().GetLastAttemptCompleteTime())
+				ops[i].CancelationNextAttemptScheduleTime = timestampToTime(op.GetCancellationInfo().GetNextAttemptScheduleTime())
+				ops[i].CancelationRequestedTime = timestampToTime(op.GetCancellationInfo().GetRequestedTime())
+			}
+			_ = cctx.Printer.PrintStructured(ops, printer.StructuredOptions{})
+			cctx.Printer.Println()
 		}
 	} else if closeEvent != nil {
 		cctx.Printer.Println()
