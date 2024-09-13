@@ -378,7 +378,8 @@ func (p *Printer) printCards(cols []*col, rows []map[string]colVal) {
 func (p *Printer) printCard(cols []*col, row map[string]colVal) {
 	nameValueRows := make([]map[string]colVal, 0, len(cols))
 	for _, col := range cols {
-		if !col.cardOmitEmpty || !reflect.ValueOf(row[col.name].val).IsZero() {
+		rowVal := row[col.name].val
+		if !col.cardOmitEmpty || (rowVal != nil && !reflect.ValueOf(row[col.name].val).IsZero()) {
 			nameValueRows = append(nameValueRows, map[string]colVal{
 				"Name":  {val: col.name, text: col.name},
 				"Value": row[col.name],
@@ -579,6 +580,13 @@ func deriveColFromField(f reflect.StructField) *col {
 			}
 		default:
 			panic("unrecognized CLI tag: " + tagPart)
+		}
+	}
+	// Also consider json tags to allow omitting empty cards if the json field would also be omitted
+	for _, tagPart := range strings.Split(f.Tag.Get("json"), ",") {
+		switch tagPart {
+		case "omitempty":
+			col.cardOmitEmpty = true
 		}
 	}
 	return col

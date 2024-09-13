@@ -2447,6 +2447,19 @@ Attributes and Query creation.
   Don't prompt to confirm.
   Only allowed when `--query` is present.
 
+### temporal workflow result: Wait for and show the result of a Workflow Execution
+
+Wait for and print the result of a Workflow Execution:
+
+```
+temporal workflow result \
+    --workflow-id YourWorkflowId
+```
+
+#### Options
+
+Includes options set for [workflow reference](#options-set-for-workflow-reference).
+
 ### temporal workflow show: Display Event History
 
 Show a Workflow Execution's Event History.
@@ -2690,12 +2703,35 @@ temporal workflow trace \
 
 Includes options set for [workflow reference](#options-set-for-workflow-reference).
 
-### temporal workflow update: Start and wait for Updates (Experimental)
+### temporal workflow update: Updates (Experimental)
 An Update is a synchronous call to a Workflow Execution that can change its
 state, control its flow, and return a result.
 
 Experimental.
 
+### temporal workflow update describe: Obtain status info about a specific Update (Experimental)
+Given a Workflow Execution and an Update ID, return information about its current status, including
+a result if it has finished.
+
+Experimental.
+
+```
+temporal workflow update describe \
+    --workflow-id YourWorkflowId \
+    --update-id YourUpdateId
+```
+
+#### Options set for update targeting
+* `--workflow-id`, `-w` (string) -
+  Workflow ID.
+  Required.
+* `--update-id` (string) -
+  Update ID.
+  Must be unique per Workflow Execution.
+  Required.
+* `--run-id`, `-r` (string) -
+  Run ID.
+  If unset, updates the currently-running Workflow Execution.
 
 ### temporal workflow update execute: Send an Update and wait for it to complete (Experimental)
 Send a message to a Workflow Execution to invoke an Update handler, and wait for
@@ -2711,30 +2747,46 @@ temporal workflow update execute \
     --input '{"some-key": "some-value"}'
 ```
 
-#### Options set for update
+#### Options
+
+Includes options set for [payload input](#options-set-for-payload-input).
+
+#### Options set for update starting
 
 * `--name` (string) -
   Handler method name.
   Required.
   Alias: `--type`.
+* `--first-execution-run-id` (string) -
+  Parent Run ID.
+  The update is sent to the last Workflow Execution in the chain started
+  with this Run ID.
 * `--workflow-id`, `-w` (string) -
   Workflow ID.
   Required.
 * `--update-id` (string) -
   Update ID.
   If unset, defaults to a UUID.
-  Must be unique per Workflow Execution.
 * `--run-id`, `-r` (string) -
   Run ID.
-  If unset, updates the currently-running Workflow Execution.
-* `--first-execution-run-id` (string) -
-  Parent Run ID.
-  The update is sent to the last Workflow Execution in the chain started
-  with this Run ID.
+  If unset, looks for an Update against the currently-running Workflow Execution.
+
+### temporal workflow update result: Wait for a specific Update to complete (Experimental)
+Given a Workflow Execution and an Update ID, wait for the Update to complete or fail and
+print the result.
+
+Experimental.
+
+```
+temporal workflow update result \
+    --workflow-id YourWorkflowId \
+    --update-id YourUpdateId
+```
 
 #### Options
 
-Includes options set for [payload input](#options-set-for-payload-input).
+Includes options set for [update targeting](#options-set-for-update-targeting).
+
 
 ### temporal workflow update start: Send an Update and wait for it to be accepted or rejected (Experimental)
 Send a message to a Workflow Execution to invoke an Update handler, and wait for
@@ -2759,5 +2811,6 @@ temporal workflow update start \
   Options: accepted.
   Required.
 
-Includes options set for [update](#options-set-for-update).
+Includes options set for [update starting](#options-set-for-update-starting).
 Includes options set for [payload input](#options-set-for-payload-input).
+

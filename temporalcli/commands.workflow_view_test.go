@@ -675,3 +675,93 @@ func (s *SharedServerSuite) TestWorkflow_Describe_NexusOperationAndCallback() {
 	s.NoError(temporalcli.UnmarshalProtoJSONWithOptions(res.Stdout.Bytes(), &handlerDesc, true))
 	s.Equal(enums.CALLBACK_STATE_SUCCEEDED, handlerDesc.Callbacks[0].State)
 }
+
+func (s *SharedServerSuite) Test_WorkflowResult() {
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
+		sigs := 0
+		for {
+			var val string
+			workflow.GetSignalChannel(ctx, "my-signal").Receive(ctx, &val)
+			if val == "fail" {
+				return nil, fmt.Errorf("failed on purpose")
+			}
+			sigs += 1
+			if sigs == 2 {
+				break
+			}
+		}
+		return "hi!", nil
+	})
+
+	// Start the workflow
+	run, err := s.Client.ExecuteWorkflow(
+		s.Context,
+		client.StartWorkflowOptions{TaskQueue: s.Worker().Options.TaskQueue},
+		DevWorkflow,
+		"ignored",
+	)
+	s.NoError(err)
+	// Send signals to complete
+	s.NoError(s.Client.SignalWorkflow(s.Context, run.GetID(), "", "my-signal", nil))
+	s.NoError(s.Client.SignalWorkflow(s.Context, run.GetID(), "", "my-signal", nil))
+
+	args := []string{"workflow", "result",
+		"--address", s.Address(),
+		"-w", run.GetID()}
+	res := s.Execute(args...)
+	s.NoError(res.Err)
+	output := res.Stdout.String()
+	// Confirm result present
+	s.ContainsOnSameLine(output, "Status", "COMPLETED")
+	s.ContainsOnSameLine(output, "Result", `"hi!"`)
+
+	s.NoError(run.Get(s.Context, nil))
+
+	// JSON
+	args = []string{"workflow", "result",
+		"--address", s.Address(),
+		"-w", run.GetID(),
+		"-o", "json"}
+	res = s.Execute(args...)
+	s.NoError(res.Err)
+	output = res.Stdout.String()
+	// Confirm result present
+	s.Contains(output, `"status": "COMPLETED"`)
+	s.Contains(output, `"result": "hi!"`)
+	s.Contains(output, "workflowExecutionCompletedEventAttributes")
+
+	// Failed version
+	run, err = s.Client.ExecuteWorkflow(
+		s.Context,
+		client.StartWorkflowOptions{TaskQueue: s.Worker().Options.TaskQueue},
+		DevWorkflow,
+		"ignored",
+	)
+	s.NoError(err)
+	s.NoError(s.Client.SignalWorkflow(s.Context, run.GetID(), "", "my-signal", "fail"))
+
+	args = []string{"workflow", "result",
+		"--address", s.Address(),
+		"-w", run.GetID()}
+	res = s.Execute(args...)
+	s.Error(res.Err)
+	output = res.Stdout.String()
+	// Confirm result present
+	s.ContainsOnSameLine(output, "Status", "FAILED")
+	s.ContainsOnSameLine(output, "Message", "failed on purpose")
+
+	s.Error(run.Get(s.Context, nil))
+
+	// JSON
+	args = []string{"workflow", "result",
+		"--address", s.Address(),
+		"-w", run.GetID(),
+		"-o", "json"}
+	res = s.Execute(args...)
+	s.Error(res.Err)
+	output = res.Stdout.String()
+	// Confirm result present
+	s.Contains(output, `"status": "FAILED"`)
+	s.Contains(output, `"message": "failed on purpose"`)
+	s.Contains(output, "workflowExecutionFailedEventAttributes")
+}

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"go.temporal.io/sdk/converter"
 	"os/user"
 
 	"github.com/fatih/color"
@@ -14,8 +15,10 @@ import (
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/query/v1"
+	"go.temporal.io/api/update/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/temporal"
 )
 
 func (c *TemporalWorkflowCancelCommand) run(cctx *CommandContext, args []string) error {
@@ -197,17 +200,125 @@ func (c *TemporalWorkflowUpdateStartCommand) run(cctx *CommandContext, args []st
 	if waitForStage != client.WorkflowUpdateStageAccepted {
 		return fmt.Errorf("invalid wait for stage: %v, valid values are: 'accepted'", c.WaitForStage)
 	}
-	return workflowUpdateHelper(cctx, c.Parent.Parent.ClientOptions, c.PayloadInputOptions, c.UpdateOptions, waitForStage)
+	return workflowUpdateHelper(cctx, c.Parent.Parent.ClientOptions, c.PayloadInputOptions,
+		UpdateTargetingOptions{
+			WorkflowId: c.WorkflowId,
+			UpdateId:   c.UpdateId,
+			RunId:      c.RunId,
+		}, c.UpdateStartingOptions, waitForStage)
 }
 
 func (c *TemporalWorkflowUpdateExecuteCommand) run(cctx *CommandContext, args []string) error {
-	return workflowUpdateHelper(cctx, c.Parent.Parent.ClientOptions, c.PayloadInputOptions, c.UpdateOptions, client.WorkflowUpdateStageCompleted)
+	return workflowUpdateHelper(cctx, c.Parent.Parent.ClientOptions, c.PayloadInputOptions,
+		UpdateTargetingOptions{
+			WorkflowId: c.WorkflowId,
+			UpdateId:   c.UpdateId,
+			RunId:      c.RunId,
+		}, c.UpdateStartingOptions, client.WorkflowUpdateStageCompleted)
+}
+
+func (c *TemporalWorkflowUpdateResultCommand) run(cctx *CommandContext, args []string) error {
+	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	updateHandle := cl.GetWorkflowUpdateHandle(client.GetWorkflowUpdateHandleOptions{
+		WorkflowID: c.WorkflowId,
+		RunID:      c.RunId,
+		UpdateID:   c.UpdateId,
+	})
+	var valuePtr any
+	err = updateHandle.Get(cctx, &valuePtr)
+	printMe := struct {
+		UpdateID string `json:"updateId"`
+		Result   any    `json:"result,omitempty"`
+		Failure  any    `json:"failure,omitempty"`
+	}{UpdateID: updateHandle.UpdateID()}
+
+	if err != nil {
+		// Genuine update failure, so, include that in output rather than saying we couldn't fetch
+		appErr := &temporal.ApplicationError{}
+		if errors.As(err, &appErr) {
+			if cctx.JSONOutput {
+				fromAppErr, err := fromApplicationError(appErr)
+				if err != nil {
+					return fmt.Errorf("unable to fetch update result: %w", err)
+				}
+				printMe.Failure = fromAppErr
+			} else {
+				printMe.Failure = appErr.Error()
+			}
+			if err := cctx.Printer.PrintStructured(printMe, printer.StructuredOptions{}); err != nil {
+				return err
+			}
+			return errors.New("update is failed")
+		}
+		return fmt.Errorf("unable to fetch update result: %w", err)
+	}
+
+	printMe.Result = valuePtr
+	return cctx.Printer.PrintStructured(printMe, printer.StructuredOptions{})
+}
+
+func (c *TemporalWorkflowUpdateDescribeCommand) run(cctx *CommandContext, args []string) error {
+	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	// TODO: Ideally workflow update handle's Get would allow a nonblocking option and we'd use that
+	pollReq := &workflowservice.PollWorkflowExecutionUpdateRequest{
+		Namespace: c.Parent.Parent.Namespace,
+		UpdateRef: &update.UpdateRef{
+			WorkflowExecution: &common.WorkflowExecution{
+				WorkflowId: c.WorkflowId,
+				RunId:      c.RunId,
+			},
+			UpdateId: c.UpdateId,
+		},
+		Identity: clientIdentity(),
+		// WaitPolicy omitted intentionally for nonblocking
+	}
+	resp, err := cl.WorkflowService().PollWorkflowExecutionUpdate(cctx, pollReq)
+	if err != nil {
+		return fmt.Errorf("failed to describe update: %w", err)
+	}
+
+	printMe := struct {
+		UpdateID string `json:"updateId"`
+		Result   any    `json:"result,omitempty"`
+		Failure  any    `json:"failure,omitempty"`
+		Stage    string `json:"stage"`
+	}{UpdateID: c.UpdateId, Stage: resp.GetStage().String()}
+
+	switch v := resp.GetOutcome().GetValue().(type) {
+	case *update.Outcome_Failure:
+		// TODO: This doesn't exactly match update result, but it's hard to make it do so w/o higher
+		//   level poll api
+		if cctx.JSONOutput {
+			printMe.Failure = v.Failure
+		} else {
+			printMe.Failure = v.Failure.GetMessage()
+		}
+	case *update.Outcome_Success:
+		var value any
+		if err := converter.GetDefaultDataConverter().FromPayloads(v.Success, &value); err != nil {
+			value = fmt.Sprintf("<failed converting: %v>", err)
+		}
+		printMe.Result = value
+	}
+
+	return cctx.Printer.PrintStructured(printMe, printer.StructuredOptions{})
 }
 
 func workflowUpdateHelper(cctx *CommandContext,
 	clientOpts ClientOptions,
 	inputOpts PayloadInputOptions,
-	updateOpts UpdateOptions,
+	updateTargetOpts UpdateTargetingOptions,
+	updateStartOpts UpdateStartingOptions,
 	waitForStage client.WorkflowUpdateStage,
 ) error {
 	cl, err := clientOpts.dialClient(cctx)
@@ -222,11 +333,11 @@ func workflowUpdateHelper(cctx *CommandContext,
 	}
 
 	request := client.UpdateWorkflowOptions{
-		WorkflowID:          updateOpts.WorkflowId,
-		RunID:               updateOpts.RunId,
-		UpdateName:          updateOpts.Name,
-		UpdateID:            updateOpts.UpdateId,
-		FirstExecutionRunID: updateOpts.FirstExecutionRunId,
+		WorkflowID:          updateTargetOpts.WorkflowId,
+		RunID:               updateTargetOpts.RunId,
+		UpdateName:          updateStartOpts.Name,
+		UpdateID:            updateTargetOpts.UpdateId,
+		FirstExecutionRunID: updateStartOpts.FirstExecutionRunId,
 		Args:                input,
 		WaitForStage:        waitForStage,
 	}
@@ -249,7 +360,7 @@ func workflowUpdateHelper(cctx *CommandContext,
 			struct {
 				Name     string `json:"name"`
 				UpdateID string `json:"updateId"`
-			}{Name: updateOpts.Name, UpdateID: updateHandle.UpdateID()},
+			}{Name: updateStartOpts.Name, UpdateID: updateHandle.UpdateID()},
 			printer.StructuredOptions{})
 	}
 
@@ -264,7 +375,7 @@ func workflowUpdateHelper(cctx *CommandContext,
 			Name     string      `json:"name"`
 			UpdateID string      `json:"updateId"`
 			Result   interface{} `json:"result"`
-		}{Name: updateOpts.Name, UpdateID: updateHandle.UpdateID(), Result: valuePtr},
+		}{Name: updateStartOpts.Name, UpdateID: updateHandle.UpdateID(), Result: valuePtr},
 		printer.StructuredOptions{})
 }
 

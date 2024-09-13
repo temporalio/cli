@@ -2214,6 +2214,7 @@ func NewTemporalWorkflowCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.AddCommand(&NewTemporalWorkflowListCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowQueryCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowResetCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkflowResultCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowShowCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowSignalCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowStackCommand(cctx, &s).Command)
@@ -2531,6 +2532,33 @@ func NewTemporalWorkflowResetCommand(cctx *CommandContext, parent *TemporalWorkf
 	return &s
 }
 
+type TemporalWorkflowResultCommand struct {
+	Parent  *TemporalWorkflowCommand
+	Command cobra.Command
+	WorkflowReferenceOptions
+}
+
+func NewTemporalWorkflowResultCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowResultCommand {
+	var s TemporalWorkflowResultCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "result [flags]"
+	s.Command.Short = "Wait for and show the result of a Workflow Execution"
+	if hasHighlighting {
+		s.Command.Long = "Wait for and print the result of a Workflow Execution:\n\n\x1b[1mtemporal workflow result \\\n    --workflow-id YourWorkflowId\x1b[0m"
+	} else {
+		s.Command.Long = "Wait for and print the result of a Workflow Execution:\n\n```\ntemporal workflow result \\\n    --workflow-id YourWorkflowId\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
 type TemporalWorkflowShowCommand struct {
 	Parent  *TemporalWorkflowCommand
 	Command cobra.Command
@@ -2812,37 +2840,80 @@ func NewTemporalWorkflowUpdateCommand(cctx *CommandContext, parent *TemporalWork
 	var s TemporalWorkflowUpdateCommand
 	s.Parent = parent
 	s.Command.Use = "update"
-	s.Command.Short = "Start and wait for Updates (Experimental)"
+	s.Command.Short = "Updates (Experimental)"
 	s.Command.Long = "An Update is a synchronous call to a Workflow Execution that can change its\nstate, control its flow, and return a result.\n\nExperimental."
 	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalWorkflowUpdateDescribeCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowUpdateExecuteCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkflowUpdateResultCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowUpdateStartCommand(cctx, &s).Command)
 	return &s
 }
 
-type UpdateOptions struct {
+type UpdateTargetingOptions struct {
+	WorkflowId string
+	UpdateId   string
+	RunId      string
+}
+
+func (v *UpdateTargetingOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
+	f.StringVarP(&v.WorkflowId, "workflow-id", "w", "", "Workflow ID. Required.")
+	_ = cobra.MarkFlagRequired(f, "workflow-id")
+	f.StringVar(&v.UpdateId, "update-id", "", "Update ID. Must be unique per Workflow Execution. Required.")
+	_ = cobra.MarkFlagRequired(f, "update-id")
+	f.StringVarP(&v.RunId, "run-id", "r", "", "Run ID. If unset, updates the currently-running Workflow Execution.")
+}
+
+type TemporalWorkflowUpdateDescribeCommand struct {
+	Parent  *TemporalWorkflowUpdateCommand
+	Command cobra.Command
+	UpdateTargetingOptions
+}
+
+func NewTemporalWorkflowUpdateDescribeCommand(cctx *CommandContext, parent *TemporalWorkflowUpdateCommand) *TemporalWorkflowUpdateDescribeCommand {
+	var s TemporalWorkflowUpdateDescribeCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "describe [flags]"
+	s.Command.Short = "Obtain status info about a specific Update (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Given a Workflow Execution and an Update ID, return information about its current status, including\na result if it has finished.\n\nExperimental.\n\n\x1b[1mtemporal workflow update describe \\\n    --workflow-id YourWorkflowId \\\n    --update-id YourUpdateId\x1b[0m"
+	} else {
+		s.Command.Long = "Given a Workflow Execution and an Update ID, return information about its current status, including\na result if it has finished.\n\nExperimental.\n\n```\ntemporal workflow update describe \\\n    --workflow-id YourWorkflowId \\\n    --update-id YourUpdateId\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.UpdateTargetingOptions.buildFlags(cctx, s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type UpdateStartingOptions struct {
 	Name                string
+	FirstExecutionRunId string
 	WorkflowId          string
 	UpdateId            string
 	RunId               string
-	FirstExecutionRunId string
 }
 
-func (v *UpdateOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
+func (v *UpdateStartingOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
 	f.StringVar(&v.Name, "name", "", "Handler method name. Required. Aliased as \"--type\".")
 	_ = cobra.MarkFlagRequired(f, "name")
+	f.StringVar(&v.FirstExecutionRunId, "first-execution-run-id", "", "Parent Run ID. The update is sent to the last Workflow Execution in the chain started with this Run ID.")
 	f.StringVarP(&v.WorkflowId, "workflow-id", "w", "", "Workflow ID. Required.")
 	_ = cobra.MarkFlagRequired(f, "workflow-id")
-	f.StringVar(&v.UpdateId, "update-id", "", "Update ID. If unset, defaults to a UUID. Must be unique per Workflow Execution.")
-	f.StringVarP(&v.RunId, "run-id", "r", "", "Run ID. If unset, updates the currently-running Workflow Execution.")
-	f.StringVar(&v.FirstExecutionRunId, "first-execution-run-id", "", "Parent Run ID. The update is sent to the last Workflow Execution in the chain started with this Run ID.")
+	f.StringVar(&v.UpdateId, "update-id", "", "Update ID. If unset, defaults to a UUID.")
+	f.StringVarP(&v.RunId, "run-id", "r", "", "Run ID. If unset, looks for an Update against the currently-running Workflow Execution.")
 }
 
 type TemporalWorkflowUpdateExecuteCommand struct {
 	Parent  *TemporalWorkflowUpdateCommand
 	Command cobra.Command
-	UpdateOptions
 	PayloadInputOptions
+	UpdateStartingOptions
 }
 
 func NewTemporalWorkflowUpdateExecuteCommand(cctx *CommandContext, parent *TemporalWorkflowUpdateCommand) *TemporalWorkflowUpdateExecuteCommand {
@@ -2857,8 +2928,8 @@ func NewTemporalWorkflowUpdateExecuteCommand(cctx *CommandContext, parent *Tempo
 		s.Command.Long = "Send a message to a Workflow Execution to invoke an Update handler, and wait for\nthe update to complete or fail. You can also use this to wait for an existing\nupdate to complete, by submitting an existing update ID.\n\nExperimental.\n\n```\ntemporal workflow update execute \\\n    --workflow-id YourWorkflowId \\\n    --name YourUpdate \\\n    --input '{\"some-key\": \"some-value\"}'\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.UpdateOptions.buildFlags(cctx, s.Command.Flags())
 	s.PayloadInputOptions.buildFlags(cctx, s.Command.Flags())
+	s.UpdateStartingOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Flags().SetNormalizeFunc(aliasNormalizer(map[string]string{
 		"type": "name",
 	}))
@@ -2870,10 +2941,37 @@ func NewTemporalWorkflowUpdateExecuteCommand(cctx *CommandContext, parent *Tempo
 	return &s
 }
 
+type TemporalWorkflowUpdateResultCommand struct {
+	Parent  *TemporalWorkflowUpdateCommand
+	Command cobra.Command
+	UpdateTargetingOptions
+}
+
+func NewTemporalWorkflowUpdateResultCommand(cctx *CommandContext, parent *TemporalWorkflowUpdateCommand) *TemporalWorkflowUpdateResultCommand {
+	var s TemporalWorkflowUpdateResultCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "result [flags]"
+	s.Command.Short = "Wait for a specific Update to complete (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Given a Workflow Execution and an Update ID, wait for the Update to complete or fail and\nprint the result.\n\nExperimental.\n\n\x1b[1mtemporal workflow update result \\\n    --workflow-id YourWorkflowId \\\n    --update-id YourUpdateId\x1b[0m"
+	} else {
+		s.Command.Long = "Given a Workflow Execution and an Update ID, wait for the Update to complete or fail and\nprint the result.\n\nExperimental.\n\n```\ntemporal workflow update result \\\n    --workflow-id YourWorkflowId \\\n    --update-id YourUpdateId\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.UpdateTargetingOptions.buildFlags(cctx, s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
 type TemporalWorkflowUpdateStartCommand struct {
 	Parent  *TemporalWorkflowUpdateCommand
 	Command cobra.Command
-	UpdateOptions
+	UpdateStartingOptions
 	PayloadInputOptions
 	WaitForStage StringEnum
 }
@@ -2890,7 +2988,7 @@ func NewTemporalWorkflowUpdateStartCommand(cctx *CommandContext, parent *Tempora
 		s.Command.Long = "Send a message to a Workflow Execution to invoke an Update handler, and wait for\nthe update to be accepted or rejected. You can subsequently wait for the update\nto complete by using `temporal workflow update execute`.\n\nExperimental.\n\n```\ntemporal workflow update start \\\n    --workflow-id YourWorkflowId \\\n    --name YourUpdate \\\n    --input '{\"some-key\": \"some-value\"}'\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.UpdateOptions.buildFlags(cctx, s.Command.Flags())
+	s.UpdateStartingOptions.buildFlags(cctx, s.Command.Flags())
 	s.PayloadInputOptions.buildFlags(cctx, s.Command.Flags())
 	s.WaitForStage = NewStringEnum([]string{"accepted"}, "")
 	s.Command.Flags().Var(&s.WaitForStage, "wait-for-stage", "Update stage to wait for. The only option is `accepted`, but this option is  required. This is to allow a future version of the CLI to choose a default value. Accepted values: accepted. Required.")
