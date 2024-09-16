@@ -1535,8 +1535,9 @@ This command provides the following task queue statistics:
   `TasksAddRate` - `TasksDispatchRate`.
 
 NOTE: The `TasksAddRate` and `TasksDispatchRate` metrics may differ from the
-actual rate of add/dispatch due to Eager dispatch and tasks going to sticky queues.
-See [documentation](https://github.com/temporalio/api/blob/b4bdd8035cd1883aa96cbad5bb0e582850feea5f/temporal/api/taskqueue/v1/message.proto#L116.) for more details.
+actual rate of add/dispatch, because tasks may be dispatched eagerly to an
+available worker, or may apply only to specific workers (they are "sticky").
+Such tasks are not counted by these metrics.
 
 Safely retire Workers assigned a Build ID by checking reachability across
 all task types. Use the flag `--report-reachability`:
