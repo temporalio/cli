@@ -1512,28 +1512,32 @@ Workflow and Activity polling use separate Task Queues:
 ```
 temporal task-queue describe \
     --task-queue YourTaskQueue \
-    --task-queue-type "activity"`
+    --task-queue-type "activity"
 ```
 
 This command provides the following task queue statistics:
 - `ApproximateBacklogCount`: The approximate number of tasks backlogged in this
-  task queue.  May count expired tasks but eventually converges to the right
+  task queue. May count expired tasks but eventually converges to the right
   value.
-- `ApproximateBacklogAge`: How far "behind" the task queue is running. This is
-  the difference in age between the oldest and newest tasks in the backlog,
-  measured in seconds.
+- `ApproximateBacklogAge`: Approximate age of the oldest task in the backlog,
+  based on its creation time, measured in seconds.
 - `TasksAddRate`: Approximate rate at which tasks are being added to the task
   queue, measured in tasks per second, averaged over the last 30 seconds.
   Includes tasks dispatched immediately without going to the backlog
-  (sync-matched tasks), as well as tasks added to the backlog.
+  (sync-matched tasks), as well as tasks added to the backlog. (See note below.)
 - `TasksDispatchRate`: Approximate rate at which tasks are being dispatched from
   the task queue, measured in tasks per second, averaged over the last 30
   seconds.  Includes tasks dispatched immediately without going to the backlog
-  (sync-matched tasks), as well as tasks added to the backlog.
+  (sync-matched tasks), as well as tasks added to the backlog. (See note below.)
 - `Backlog Increase Rate`: Approximate rate at which the backlog size is
   increasing (if positive) or decreasing (if negative), measured in tasks per
   second, averaged over the last 30 seconds.  This is equivalent to:
   `TasksAddRate` - `TasksDispatchRate`.
+
+NOTE: The `TasksAddRate` and `TasksDispatchRate` metrics may differ from the
+actual rate of add/dispatch, because tasks may be dispatched eagerly to an
+available worker, or may apply only to specific workers (they are "sticky").
+Such tasks are not counted by these metrics.
 
 Safely retire Workers assigned a Build ID by checking reachability across
 all task types. Use the flag `--report-reachability`:
@@ -1557,11 +1561,11 @@ Task reachability states are reported per build ID. The state may be one of the
 following:
 
 - `Reachable`: using the current versioning rules, the Build ID may be used
-   by new Workflow Executions or Activities OR there are currently open
-   Workflow or backlogged Activity tasks assigned to the queue.
+  by new Workflow Executions or Activities OR there are currently open
+  Workflow or backlogged Activity tasks assigned to the queue.
 - `ClosedWorkflowsOnly`: the Build ID does not have open Workflow Executions
-   and can't be reached by new Workflow Executions. It MAY have closed
-   Workflow Executions within the Namespace retention period.
+  and can't be reached by new Workflow Executions. It MAY have closed
+  Workflow Executions within the Namespace retention period.
 - `Unreachable`: this Build ID is not used for new Workflow Executions and
   isn't used by any existing Workflow Execution within the retention period.
 
@@ -2813,4 +2817,3 @@ temporal workflow update start \
 
 Includes options set for [update starting](#options-set-for-update-starting).
 Includes options set for [payload input](#options-set-for-payload-input).
-
