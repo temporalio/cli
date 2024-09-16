@@ -1529,7 +1529,7 @@ This command provides the following task queue statistics:
   the task queue, measured in tasks per second, averaged over the last 30
   seconds.  Includes tasks dispatched immediately without going to the backlog
   (sync-matched tasks), as well as tasks added to the backlog. (See note below.)
-- `Backlog Increase Rate`: Approximate rate at which the backlog size is
+- `BacklogIncreaseRate`: Approximate rate at which the backlog size is
   increasing (if positive) or decreasing (if negative), measured in tasks per
   second, averaged over the last 30 seconds.  This is equivalent to:
   `TasksAddRate` - `TasksDispatchRate`.
@@ -1537,7 +1537,9 @@ This command provides the following task queue statistics:
 NOTE: The `TasksAddRate` and `TasksDispatchRate` metrics may differ from the
 actual rate of add/dispatch, because tasks may be dispatched eagerly to an
 available worker, or may apply only to specific workers (they are "sticky").
-Such tasks are not counted by these metrics.
+Such tasks are not counted by these metrics. Despite the inaccuracy of 
+these two metrics, the derived metric of BacklogIncreaseRate is accurate 
+for backlogs older than few seconds.
 
 Safely retire Workers assigned a Build ID by checking reachability across
 all task types. Use the flag `--report-reachability`:
