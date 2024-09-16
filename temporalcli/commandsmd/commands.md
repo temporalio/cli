@@ -1520,20 +1520,23 @@ This command provides the following task queue statistics:
   task queue.  May count expired tasks but eventually converges to the right
   value.
 - `ApproximateBacklogAge`: How far "behind" the task queue is running. This is
-  the difference in age between the oldest and newest tasks in the backlog,
-  measured in seconds.
+  the age of the oldest task in the backlog, measured in seconds.
 - `TasksAddRate`: Approximate rate at which tasks are being added to the task
   queue, measured in tasks per second, averaged over the last 30 seconds.
   Includes tasks dispatched immediately without going to the backlog
-  (sync-matched tasks), as well as tasks added to the backlog.
+  (sync-matched tasks), as well as tasks added to the backlog. (See note below.)
 - `TasksDispatchRate`: Approximate rate at which tasks are being dispatched from
   the task queue, measured in tasks per second, averaged over the last 30
   seconds.  Includes tasks dispatched immediately without going to the backlog
-  (sync-matched tasks), as well as tasks added to the backlog.
+  (sync-matched tasks), as well as tasks added to the backlog. (See note below.)
 - `Backlog Increase Rate`: Approximate rate at which the backlog size is
   increasing (if positive) or decreasing (if negative), measured in tasks per
   second, averaged over the last 30 seconds.  This is equivalent to:
   `TasksAddRate` - `TasksDispatchRate`.
+
+NOTE: The `TasksAddRate` and `TasksDispatchRate` metrics may differ from the
+actual rate of add/dispatch due to eager tasks [such as?] and sticky queues
+[why?]. See documentation for more details: [link?]
 
 Safely retire Workers assigned a Build ID by checking reachability across
 all task types. Use the flag `--report-reachability`:
@@ -2813,4 +2816,3 @@ temporal workflow update start \
 
 Includes options set for [update starting](#options-set-for-update-starting).
 Includes options set for [payload input](#options-set-for-payload-input).
-
