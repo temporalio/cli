@@ -1517,21 +1517,26 @@ temporal task-queue describe \
 
 This command provides the following task queue statistics:
 - `ApproximateBacklogCount`: The approximate number of tasks backlogged in this
-  task queue.  May count expired tasks but eventually converges to the right
+  task queue. May count expired tasks but eventually converges to the right
   value.
-- `ApproximateBacklogAge`: Approximate age of the oldest task in the backlog, based on its creation time, measured in seconds.
+- `ApproximateBacklogAge`: Approximate age of the oldest task in the backlog, 
+  based on its creation time, measured in seconds.
 - `TasksAddRate`: Approximate rate at which tasks are being added to the task
   queue, measured in tasks per second, averaged over the last 30 seconds.
   Includes tasks dispatched immediately without going to the backlog
-  (sync-matched tasks), as well as tasks added to the backlog. However, not all tasks dispatched to the workers are counted in this metric. For more information please see [docs](https://github.com/temporalio/api/blob/b4bdd8035cd1883aa96cbad5bb0e582850feea5f/temporal/api/taskqueue/v1/message.proto#L116).
+  (sync-matched tasks), as well as tasks added to the backlog. (See note below.)
 - `TasksDispatchRate`: Approximate rate at which tasks are being dispatched from
   the task queue, measured in tasks per second, averaged over the last 30
   seconds.  Includes tasks dispatched immediately without going to the backlog
-  (sync-matched tasks), as well as tasks added to the backlog. However, not all tasks dispatched to the workers are counted in this metric. For more information please see [docs](https://github.com/temporalio/api/blob/b4bdd8035cd1883aa96cbad5bb0e582850feea5f/temporal/api/taskqueue/v1/message.proto#L116).
+  (sync-matched tasks), as well as tasks added to the backlog. (See note below.)
 - `Backlog Increase Rate`: Approximate rate at which the backlog size is
   increasing (if positive) or decreasing (if negative), measured in tasks per
   second, averaged over the last 30 seconds.  This is equivalent to:
   `TasksAddRate` - `TasksDispatchRate`.
+
+NOTE: The `TasksAddRate` and `TasksDispatchRate` metrics may differ from the
+actual rate of add/dispatch due to Eager dispatch and tasks going to sticky queues.
+See [documentation](https://github.com/temporalio/api/blob/b4bdd8035cd1883aa96cbad5bb0e582850feea5f/temporal/api/taskqueue/v1/message.proto#L116.) for more details.
 
 Safely retire Workers assigned a Build ID by checking reachability across
 all task types. Use the flag `--report-reachability`:
