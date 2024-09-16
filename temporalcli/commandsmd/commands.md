@@ -1512,14 +1512,14 @@ Workflow and Activity polling use separate Task Queues:
 ```
 temporal task-queue describe \
     --task-queue YourTaskQueue \
-    --task-queue-type "activity"`
+    --task-queue-type "activity"
 ```
 
 This command provides the following task queue statistics:
 - `ApproximateBacklogCount`: The approximate number of tasks backlogged in this
   task queue. May count expired tasks but eventually converges to the right
   value.
-- `ApproximateBacklogAge`: Approximate age of the oldest task in the backlog, 
+- `ApproximateBacklogAge`: Approximate age of the oldest task in the backlog,
   based on its creation time, measured in seconds.
 - `TasksAddRate`: Approximate rate at which tasks are being added to the task
   queue, measured in tasks per second, averaged over the last 30 seconds.
@@ -1561,11 +1561,11 @@ Task reachability states are reported per build ID. The state may be one of the
 following:
 
 - `Reachable`: using the current versioning rules, the Build ID may be used
-   by new Workflow Executions or Activities OR there are currently open
-   Workflow or backlogged Activity tasks assigned to the queue.
+  by new Workflow Executions or Activities OR there are currently open
+  Workflow or backlogged Activity tasks assigned to the queue.
 - `ClosedWorkflowsOnly`: the Build ID does not have open Workflow Executions
-   and can't be reached by new Workflow Executions. It MAY have closed
-   Workflow Executions within the Namespace retention period.
+  and can't be reached by new Workflow Executions. It MAY have closed
+  Workflow Executions within the Namespace retention period.
 - `Unreachable`: this Build ID is not used for new Workflow Executions and
   isn't used by any existing Workflow Execution within the retention period.
 
@@ -2817,4 +2817,3 @@ temporal workflow update start \
 
 Includes options set for [update starting](#options-set-for-update-starting).
 Includes options set for [payload input](#options-set-for-payload-input).
-
