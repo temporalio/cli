@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/nexus-rpc/sdk-go/nexus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -59,6 +60,34 @@ func (h *CommandHarness) Close() {
 // Pieces must appear in order on the line and not overlap
 func (h *CommandHarness) ContainsOnSameLine(text string, pieces ...string) {
 	h.NoError(AssertContainsOnSameLine(text, pieces...))
+}
+
+func (h *CommandHarness) CheckTaskQueueMetrics(text string) bool {
+	lines := strings.Split(text, "\n")
+	for _, line := range lines {
+		fields := strings.Fields(line)
+		if len(fields) < 7 {
+			return false // lesser fields than expected in the output
+		}
+
+		tqType := fields[1]
+		if tqType == "activity" {
+			// all metrics should be 0
+			for _, metric := range fields[2:] {
+				if metric != "0" && metric != "0s" {
+					return false
+				}
+			}
+		} else {
+			backlogIncreaseRate := fields[3]
+			tasksAddRate := fields[4]
+			tasksDispatchRate := fields[5]
+			if backlogIncreaseRate != "0" && tasksAddRate != "0" && tasksDispatchRate != "0" {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 func AssertContainsOnSameLine(text string, pieces ...string) error {
@@ -285,6 +314,9 @@ func StartDevServer(t *testing.T, options DevServerOptions) *DevServer {
 	if d.Options.FrontendPort == 0 {
 		d.Options.FrontendPort = devserver.MustGetFreePort(d.Options.FrontendIP)
 	}
+	if d.Options.FrontendHTTPPort == 0 {
+		d.Options.FrontendHTTPPort = devserver.MustGetFreePort(d.Options.FrontendIP)
+	}
 	if len(d.Options.Namespaces) == 0 {
 		d.Options.Namespaces = []string{
 			"default",
@@ -334,6 +366,7 @@ func StartDevServer(t *testing.T, options DevServerOptions) *DevServer {
 	d.Options.DynamicConfigValues["frontend.workerVersioningWorkflowAPIs"] = true
 	d.Options.DynamicConfigValues["worker.buildIdScavengerEnabled"] = true
 	d.Options.DynamicConfigValues["frontend.enableUpdateWorkflowExecution"] = true
+	d.Options.DynamicConfigValues["system.enableNexus"] = true
 	d.Options.DynamicConfigValues["frontend.MaxConcurrentBatchOperationPerNamespace"] = 1000
 	d.Options.DynamicConfigValues["frontend.namespaceRPS.visibility"] = 100
 	d.Options.DynamicConfigValues["system.clusterMetadataRefreshInterval"] = 100 * time.Millisecond
@@ -445,6 +478,8 @@ type DevWorkerOptions struct {
 	Workflows []any
 	// Optional, no default, but DevActivity is always registered
 	Activities []any
+	// Optional, no default
+	NexusServices []*nexus.Service
 }
 
 // Simply a stub for client use
@@ -476,6 +511,9 @@ func (d *DevServer) StartDevWorker(t *testing.T, options DevWorkerOptions) *DevW
 	ops := &devOperations{w}
 	w.Worker.RegisterWorkflowWithOptions(ops.DevWorkflow, workflow.RegisterOptions{Name: "DevWorkflow"})
 	w.Worker.RegisterActivity(ops.DevActivity)
+	for _, s := range options.NexusServices {
+		w.Worker.RegisterNexusService(s)
+	}
 	// Start worker or fail
 	require.NoError(t, w.Worker.Start(), "failed starting worker")
 	return w

@@ -92,6 +92,42 @@ func (c *TemporalWorkflowExecuteCommand) run(cctx *CommandContext, args []string
 	return err
 }
 
+type workflowJSONResult struct {
+	WorkflowId     string          `json:"workflowId"`
+	RunId          string          `json:"runId"`
+	Type           string          `json:"type,omitempty"`
+	Namespace      string          `json:"namespace,omitempty"`
+	TaskQueue      string          `json:"taskQueue,omitempty"`
+	DurationMillis int64           `json:"durationMillis,omitempty"`
+	Status         string          `json:"status"`
+	CloseEvent     json.RawMessage `json:"closeEvent"`
+	Result         json.RawMessage `json:"result,omitempty"`
+	History        json.RawMessage `json:"history,omitempty"`
+}
+
+func (r *workflowJSONResult) setCloseEvent(cctx *CommandContext, closeEvent *history.HistoryEvent) error {
+	// Build status, result, and close event
+	var err error
+	switch closeEvent.EventType {
+	case enums.EVENT_TYPE_WORKFLOW_EXECUTION_COMPLETED:
+		r.Status = "COMPLETED"
+		if r.Result, err = cctx.MarshalFriendlyJSONPayloads(
+			closeEvent.GetWorkflowExecutionCompletedEventAttributes().GetResult()); err != nil {
+			return fmt.Errorf("failed marshaling result: %w", err)
+		}
+	case enums.EVENT_TYPE_WORKFLOW_EXECUTION_FAILED:
+		r.Status = "FAILED"
+	case enums.EVENT_TYPE_WORKFLOW_EXECUTION_TIMED_OUT:
+		r.Status = "TIMEOUT"
+	case enums.EVENT_TYPE_WORKFLOW_EXECUTION_CANCELED:
+		r.Status = "CANCELED"
+	}
+	if r.CloseEvent, err = cctx.MarshalProtoJSON(closeEvent); err != nil {
+		return fmt.Errorf("failed marshaling status detail: %w", err)
+	}
+	return nil
+}
+
 func (c *TemporalWorkflowExecuteCommand) printJSONResult(
 	cctx *CommandContext,
 	client client.Client,
@@ -99,18 +135,7 @@ func (c *TemporalWorkflowExecuteCommand) printJSONResult(
 	closeEvent *history.HistoryEvent,
 	duration time.Duration,
 ) error {
-	result := struct {
-		WorkflowId     string          `json:"workflowId"`
-		RunId          string          `json:"runId"`
-		Type           string          `json:"type"`
-		Namespace      string          `json:"namespace"`
-		TaskQueue      string          `json:"taskQueue"`
-		DurationMillis int64           `json:"durationMillis"`
-		Status         string          `json:"status"`
-		CloseEvent     json.RawMessage `json:"closeEvent"`
-		Result         json.RawMessage `json:"result,omitempty"`
-		History        json.RawMessage `json:"history,omitempty"`
-	}{
+	result := &workflowJSONResult{
 		WorkflowId:     run.GetID(),
 		RunId:          run.GetRunID(),
 		Type:           c.SharedWorkflowStartOptions.Type,
@@ -120,24 +145,8 @@ func (c *TemporalWorkflowExecuteCommand) printJSONResult(
 		Status:         "<unknown>",
 		CloseEvent:     json.RawMessage("null"),
 	}
-	// Build status, result, and close event
-	var err error
-	switch closeEvent.EventType {
-	case enums.EVENT_TYPE_WORKFLOW_EXECUTION_COMPLETED:
-		result.Status = "COMPLETED"
-		if result.Result, err = cctx.MarshalFriendlyJSONPayloads(
-			closeEvent.GetWorkflowExecutionCompletedEventAttributes().GetResult()); err != nil {
-			return fmt.Errorf("failed marshaling result: %w", err)
-		}
-	case enums.EVENT_TYPE_WORKFLOW_EXECUTION_FAILED:
-		result.Status = "FAILED"
-	case enums.EVENT_TYPE_WORKFLOW_EXECUTION_TIMED_OUT:
-		result.Status = "TIMEOUT"
-	case enums.EVENT_TYPE_WORKFLOW_EXECUTION_CANCELED:
-		result.Status = "CANCELED"
-	}
-	if result.CloseEvent, err = cctx.MarshalProtoJSON(closeEvent); err != nil {
-		return fmt.Errorf("failed marshaling status detail: %w", err)
+	if err := result.setCloseEvent(cctx, closeEvent); err != nil {
+		return err
 	}
 
 	// Build history if requested
@@ -153,6 +162,7 @@ func (c *TemporalWorkflowExecuteCommand) printJSONResult(
 		}
 		// Do proto serialization here that would never do shorthand (i.e.
 		// auto-lift JSON) payloads
+		var err error
 		if result.History, err = cctx.MarshalProtoJSONWithOptions(&histProto, false); err != nil {
 			return fmt.Errorf("failed marshaling history: %w", err)
 		}

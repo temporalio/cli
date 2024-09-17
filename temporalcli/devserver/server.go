@@ -46,6 +46,8 @@ import (
 	"go.temporal.io/server/common/metrics"
 	sqliteplugin "go.temporal.io/server/common/persistence/sql/sqlplugin/sqlite"
 	"go.temporal.io/server/common/primitives"
+	"go.temporal.io/server/components/callbacks"
+	"go.temporal.io/server/components/nexusoperations"
 	"go.temporal.io/server/schema/sqlite"
 	sqliteschema "go.temporal.io/server/schema/sqlite"
 	"go.temporal.io/server/temporal"
@@ -220,9 +222,22 @@ func (s *StartOptions) buildServerOptions() ([]temporal.ServerOption, error) {
 
 	dynConf := make(dynamicconfig.StaticClient, len(s.DynamicConfigValues)+1)
 	// Setting host level mutable state cache size to 8k.
-	dynConf[dynamicconfig.HistoryCacheHostLevelMaxSize] = 8096
+	dynConf[dynamicconfig.HistoryCacheHostLevelMaxSize.Key()] = 8096
 	// Up default visibility RPS
-	dynConf[dynamicconfig.FrontendMaxNamespaceVisibilityRPSPerInstance] = 100
+	dynConf[dynamicconfig.FrontendMaxNamespaceVisibilityRPSPerInstance.Key()] = 100
+	// This doesn't enable Nexus but it is required for Nexus to work and simplifies the experience.
+	// NOTE that the URL scheme is fixed to HTTP since the dev server doesn't support TLS at the time of writing.
+	dynConf[nexusoperations.CallbackURLTemplate.Key()] = fmt.Sprintf(
+		"http://%s:%d/namespaces/{{.NamespaceName}}/nexus/callback", MaybeEscapeIPv6(s.FrontendIP), s.FrontendHTTPPort)
+	dynConf[callbacks.AllowedAddresses.Key()] = []struct {
+		Pattern       string
+		AllowInsecure bool
+	}{
+		{
+			Pattern:       fmt.Sprintf("%s:%d", MaybeEscapeIPv6(s.FrontendIP), s.FrontendHTTPPort),
+			AllowInsecure: true,
+		},
+	}
 
 	// Dynamic config if set
 	for k, v := range s.DynamicConfigValues {
@@ -275,6 +290,7 @@ func (s *StartOptions) buildServerConfig() (*config.Config, error) {
 					Enabled:                true,
 					InitialFailoverVersion: int64(s.InitialFailoverVersion),
 					RPCAddress:             fmt.Sprintf("%v:%v", MaybeEscapeIPv6(s.FrontendIP), s.FrontendPort),
+					HTTPAddress:            fmt.Sprintf("%v:%v", MaybeEscapeIPv6(s.FrontendIP), s.FrontendHTTPPort),
 					ClusterID:              s.ClusterID,
 				},
 			},

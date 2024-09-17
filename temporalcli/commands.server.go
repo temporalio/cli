@@ -24,7 +24,7 @@ var defaultDynamicConfigValues = map[string]any{
 	// These numbers were chosen to maintain the ratio between the two that's
 	// established in the defaults.
 	"frontend.persistenceMaxQPS": 10000,
-	"history.persistenceMaxQPS": 45000,
+	"history.persistenceMaxQPS":  45000,
 }
 
 func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string) error {
@@ -73,6 +73,9 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 		}
 		if opts.UIPort == 0 {
 			opts.UIPort = t.Port + 1000
+			if opts.UIPort > 65535 {
+				opts.UIPort = 65535
+			}
 			if err := devserver.CheckPortFree(opts.UIIP, opts.UIPort); err != nil {
 				return fmt.Errorf("can't use default UI port %d (%d + 1000): %w", opts.UIPort, t.Port, err)
 			}

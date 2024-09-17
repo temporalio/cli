@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -24,6 +25,7 @@ import (
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/failure/v1"
 	"go.temporal.io/api/temporalproto"
+	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/server/common/headers"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
@@ -87,7 +89,7 @@ type CommandOptions struct {
 func NewCommandContext(ctx context.Context, options CommandOptions) (*CommandContext, context.CancelFunc, error) {
 	cctx := &CommandContext{Context: ctx, Options: options}
 	if err := cctx.preprocessOptions(); err != nil {
-		return cctx, func(){}, err
+		return cctx, func() {}, err
 	}
 
 	// Setup interrupt handler
@@ -561,3 +563,21 @@ func timestampToTime(t *timestamppb.Timestamp) time.Time {
 type nopWriter struct{}
 
 func (nopWriter) Write(b []byte) (int, error) { return len(b), nil }
+
+type structuredError struct {
+	Message string `json:"message"`
+	Type    string `json:"type,omitempty"`
+	Details any    `json:"details,omitempty"`
+}
+
+func fromApplicationError(err *temporal.ApplicationError) (*structuredError, error) {
+	var deets any
+	if err := err.Details(&deets); err != nil && !errors.Is(err, temporal.ErrNoData) {
+		return nil, err
+	}
+	return &structuredError{
+		Message: err.Error(),
+		Type:    err.Type(),
+		Details: deets,
+	}, nil
+}

@@ -344,7 +344,7 @@ commands:
     summary: Manage Temporal deployments
     description: |
       Operator commands manage and fetch information about Namespaces, Search
-      Attributes, and Temporal Services:
+      Attributes, Nexus Endpoints, and Temporal Services:
 
       ```
       temporal operator [command] [subcommand] [options]
@@ -690,6 +690,138 @@ commands:
         description: |
           Archive visibility data to this `URI`.
           Once enabled, can't be changed.
+  - name: temporal operator nexus
+    summary: Commands for managing Nexus resources (EXPIRIMENTAL)
+    description: |
+      Nexus commands enable managing Nexus resources.
+
+      Nexus commands follow this syntax:
+
+      ```
+      temporal operator nexus [command] [command] [command options]
+      ```
+  - name: temporal operator nexus endpoint
+    summary: Commands for managing Nexus Endpoints (EXPERIMENTAL)
+    description: |
+      Endpoint commands enable managing Nexus Endpoints.
+
+      Endpoint commands follow this syntax:
+
+      ```
+      temporal operator nexus endpoint [command] [command options]
+      ```
+  - name: temporal operator nexus endpoint create
+    summary: Create a new Nexus Endpoint (EXPERIMENTAL)
+    description: |
+      Create a new Nexus Endpoint on the Server.
+
+      An endpoint name is used in workflow code to invoke Nexus operations.  The
+      endpoint target may either be a worker, in which case `--target-namespace` and
+      `--target-task-queue` must both be provided, or an external URL, in which case
+      `--target-url` must be provided.
+
+      This command will fail if an endpoint with the same name is already registered.
+
+      ```
+      temporal operator nexus endpoint create \
+        --name your-endpoint \
+        --target-namespace your-namespace \
+        --target-task-queue your-task-queue \
+        --description-file DESCRIPTION.md
+      ```
+    options:
+      - name: name
+        type: string
+        description: Endpoint name.
+        required: true
+      - name: description
+        type: string
+        description: |
+          Endpoint description in markdown format (encoded using the configured codec server).
+      - name: description-file
+        type: string
+        description: |
+          Endpoint description file in markdown format (encoded using the configured codec server).
+      - name: target-namespace
+        type: string
+        description: Namespace in which a handler worker will be polling for Nexus tasks on.
+      - name: target-task-queue
+        type: string
+        description: Task Queue in which a handler worker will be polling for Nexus tasks on.
+      - name: target-url
+        type: string
+        description: URL to direct Nexus requests to.
+  - name: temporal operator nexus endpoint delete
+    summary: Delete a Nexus Endpoint (EXPERIMENTAL)
+    description: |
+      Delete a Nexus Endpoint configuration from the Server.
+
+      ```
+      temporal operator nexus endpoint delete --name your-endpoint
+      ```
+    options:
+      - name: name
+        type: string
+        description: Endpoint name.
+        required: true
+  - name: temporal operator nexus endpoint get
+    summary: Get a Nexus Endpoint by name (EXPERIMENTAL)
+    description: |
+      Get a Nexus Endpoint configuration by name from the Server.
+
+      ```
+      temporal operator nexus endpoint get --name your-endpoint
+      ```
+    options:
+      - name: name
+        type: string
+        description: Endpoint name.
+        required: true
+  - name: temporal operator nexus endpoint list
+    summary: List Nexus Endpoints (EXPERIMENTAL)
+    description: |
+      List all Nexus Endpoint configurations on the Server.
+
+      ```
+      temporal operator nexus endpoint list
+      ```
+  - name: temporal operator nexus endpoint update
+    summary: Update an existing Nexus Endpoint (EXPERIMENTAL)
+    description: |
+      Update a Nexus Endpoint configuration on the Server.
+
+      ```
+      temporal operator nexus endpoint update \
+        --name your-endpoint \
+        --target-namespace your-namespace \
+        --target-task-queue your-task-queue \
+        --description-file DESCRIPTION.md
+      ```
+    options:
+      - name: name
+        type: string
+        description: Endpoint name.
+        required: true
+      - name: description
+        type: string
+        description: |
+          Endpoint description in markdown format (encoded using the configured codec server).
+      - name: description-file
+        type: string
+        description: |
+          Endpoint description file in markdown format (encoded using the configured codec server).
+      - name: unset-description
+        type: bool
+        description: Unset the description.
+      - name: target-namespace
+        type: string
+        description: Namespace in which a handler worker will be polling for Nexus tasks on.
+      - name: target-task-queue
+        type: string
+        description: Task Queue in which a handler worker will be polling for Nexus tasks on.
+      - name: target-url
+        type: string
+        description: URL to direct Nexus requests to.
   - name: temporal operator search-attribute
     summary: Search Attribute operations
     description: |
@@ -905,6 +1037,10 @@ commands:
       - name: really-long
         type: bool
         description: Show extensive information in non-table form.
+      - name: query
+        short: q
+        type: string
+        description: Filter results using given List Filter.
   - name: temporal schedule toggle
     summary: Pause or unpause a Schedule
     description: |
@@ -1149,8 +1285,32 @@ commands:
       ```
       temporal task-queue describe \
           --task-queue YourTaskQueue \
-          --task-queue-type "activity"`
+          --task-queue-type "activity"
       ```
+
+      This command provides the following task queue statistics:
+      - `ApproximateBacklogCount`: The approximate number of tasks backlogged in this
+        task queue. May count expired tasks but eventually converges to the right
+        value.
+      - `ApproximateBacklogAge`: Approximate age of the oldest task in the backlog,
+        based on its creation time, measured in seconds.
+      - `TasksAddRate`: Approximate rate at which tasks are being added to the task
+        queue, measured in tasks per second, averaged over the last 30 seconds.
+        Includes tasks dispatched immediately without going to the backlog
+        (sync-matched tasks), as well as tasks added to the backlog. (See note below.)
+      - `TasksDispatchRate`: Approximate rate at which tasks are being dispatched from
+        the task queue, measured in tasks per second, averaged over the last 30
+        seconds.  Includes tasks dispatched immediately without going to the backlog
+        (sync-matched tasks), as well as tasks added to the backlog. (See note below.)
+      - `Backlog Increase Rate`: Approximate rate at which the backlog size is
+        increasing (if positive) or decreasing (if negative), measured in tasks per
+        second, averaged over the last 30 seconds.  This is equivalent to:
+        `TasksAddRate` - `TasksDispatchRate`.
+
+      NOTE: The `TasksAddRate` and `TasksDispatchRate` metrics may differ from the
+      actual rate of add/dispatch, because tasks may be dispatched eagerly to an
+      available worker, or may apply only to specific workers (they are "sticky").
+      Such tasks are not counted by these metrics.
 
       Safely retire Workers assigned a Build ID by checking reachability across
       all task types. Use the flag `--report-reachability`:
@@ -1162,9 +1322,16 @@ commands:
         --report-reachability
       ```
 
-      Computing task reachability incurs a non-trivial computing cost.
+      Task reachability information is returned for the requested versions and all
+      task types, which can be used to safely retire Workers with old code versions,
+      provided that they were assigned a Build ID.
 
-      Build ID reachability states include:
+      Note that task reachability status is experimental and may significantly change
+      or be removed in a future release. Also, determining task reachability incurs a
+      non-trivial computing cost.
+
+      Task reachability states are reported per build ID. The state may be one of the
+      following:
 
       - `Reachable`: using the current versioning rules, the Build ID may be used
         by new Workflow Executions or Activities OR there are currently open
@@ -1188,7 +1355,7 @@ commands:
       - name: task-queue-type
         type: string[]
         description: |
-          Task Queue type.
+          Task Queue type. If not specified, all types are reported.
           Options are: workflow, activity, nexus.
       - name: select-build-id
         type: string[]
@@ -1224,6 +1391,9 @@ commands:
           Experimental/Temporary feature.
           Legacy mode only.
         default: 1
+      - name: disable-stats
+        type: bool
+        description: Disable task queue statistics.
   - name: temporal task-queue get-build-id-reachability
     summary: Show Build ID availability (Deprecated)
     description: |
@@ -2078,6 +2248,17 @@ commands:
         description: |
           Don't prompt to confirm.
           Only allowed when `--query` is present.
+  - name: temporal workflow result
+    summary: Wait for and show the result of a Workflow Execution
+    description: |
+      Wait for and print the result of a Workflow Execution:
+
+      ```
+      temporal workflow result \
+          --workflow-id YourWorkflowId
+      ```
+    option-sets:
+      - workflow-reference
   - name: temporal workflow show
     summary: Display Event History
     description: |
@@ -2263,12 +2444,27 @@ commands:
     option-sets:
       - workflow-reference
   - name: temporal workflow update
-    summary: Start and wait for Updates (Experimental)
+    summary: Updates (Experimental)
     description: |
       An Update is a synchronous call to a Workflow Execution that can change its
       state, control its flow, and return a result.
 
       Experimental.
+  - name: temporal workflow update describe
+    summary: Obtain status info about a specific Update (Experimental)
+    description: |
+      Given a Workflow Execution and an Update ID, return information about its current status, including
+      a result if it has finished.
+
+      Experimental.
+
+      ```
+      temporal workflow update describe \
+          --workflow-id YourWorkflowId \
+          --update-id YourUpdateId
+      ```
+    option-sets:
+      - update-targeting
   - name: temporal workflow update execute
     summary: Send an Update and wait for it to complete (Experimental)
     description: |
@@ -2285,8 +2481,23 @@ commands:
           --input '{"some-key": "some-value"}'
       ```
     option-sets:
-      - update
+      - update-starting
       - payload-input
+  - name: temporal workflow update result
+    summary: Wait for a specific Update to complete (Experimental)
+    description: |
+      Given a Workflow Execution and an Update ID, wait for the Update to complete or fail and
+      print the result.
+
+      Experimental.
+
+      ```
+      temporal workflow update result \
+          --workflow-id YourWorkflowId \
+          --update-id YourUpdateId
+      ```
+    option-sets:
+      - update-targeting
   - name: temporal workflow update start
     summary: Send an Update and wait for it to be accepted or rejected (Experimental)
     description: |
@@ -2303,7 +2514,7 @@ commands:
           --input '{"some-key": "some-value"}'
       ```
     option-sets:
-      - update
+      - update-starting
       - payload-input
     options:
       - name: wait-for-stage
@@ -2622,13 +2833,19 @@ option-sets:
         type: bool
         description: |
           Assume inputs are base64-encoded and attempt to decode them.
-  - name: update
+  - name: update-starting
     options:
       - name: name
         type: string
         description: Handler method name.
         required: true
         alias: type
+      - name: first-execution-run-id
+        type: string
+        description: |
+          Parent Run ID.
+          The update is sent to the last Workflow Execution in the chain started
+          with this Run ID.
       - name: workflow-id
         type: string
         short: w
@@ -2639,16 +2856,28 @@ option-sets:
         description: |
           Update ID.
           If unset, defaults to a UUID.
+      - name: run-id
+        type: string
+        short: r
+        description: |
+          Run ID.
+          If unset, looks for an Update against the currently-running Workflow Execution.
+  - name: update-targeting
+    options:
+      - name: workflow-id
+        short: w
+        type: string
+        description: Workflow ID.
+        required: true
+      - name: update-id
+        type: string
+        description: |
+          Update ID.
           Must be unique per Workflow Execution.
+        required: true
       - name: run-id
         type: string
         short: r
         description: |
           Run ID.
           If unset, updates the currently-running Workflow Execution.
-      - name: first-execution-run-id
-        type: string
-        description: |
-          Parent Run ID.
-          The update is sent to the last Workflow Execution in the chain started
-          with this Run ID.

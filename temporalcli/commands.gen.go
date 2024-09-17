@@ -203,22 +203,36 @@ func (v *PayloadInputOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet)
 	f.BoolVarP(&v.InputBase64, "input-base64", "Assume inputs are base64-encoded and attempt to decode them.\n", false, "Assume inputs are base64-encoded and attempt to decode them.\n")
 }
 
-type UpdateOptions struct {
+type UpdateStartingOptions struct {
 	Name                string
+	FirstExecutionRunId string
 	WorkflowId          string
 	UpdateId            string
 	RunId               string
-	FirstExecutionRunId string
 }
 
-func (v *UpdateOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
+func (v *UpdateStartingOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
 	f.StringVarP(&v.Name, "name", "Handler method name.", "", "Handler method name. Required.")
 	_ = cobra.MarkFlagRequired(f, "name")
+	f.StringVarP(&v.FirstExecutionRunId, "first-execution-run-id", "Parent Run ID.\nThe update is sent to the last Workflow Execution in the chain started\nwith this Run ID.\n", "", "Parent Run ID.\nThe update is sent to the last Workflow Execution in the chain started\nwith this Run ID.\n")
 	f.StringVarP(&v.WorkflowId, "workflow-id", "Workflow ID.", "", "Workflow ID. Required.")
 	_ = cobra.MarkFlagRequired(f, "workflow-id")
-	f.StringVarP(&v.UpdateId, "update-id", "Update ID.\nIf unset, defaults to a UUID.\nMust be unique per Workflow Execution.\n", "", "Update ID.\nIf unset, defaults to a UUID.\nMust be unique per Workflow Execution.\n")
+	f.StringVarP(&v.UpdateId, "update-id", "Update ID.\nIf unset, defaults to a UUID.\n", "", "Update ID.\nIf unset, defaults to a UUID.\n")
+	f.StringVarP(&v.RunId, "run-id", "Run ID.\nIf unset, looks for an Update against the currently-running Workflow Execution.\n", "", "Run ID.\nIf unset, looks for an Update against the currently-running Workflow Execution.\n")
+}
+
+type UpdateTargetingOptions struct {
+	WorkflowId string
+	UpdateId   string
+	RunId      string
+}
+
+func (v *UpdateTargetingOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
+	f.StringVarP(&v.WorkflowId, "workflow-id", "Workflow ID.", "", "Workflow ID. Required.")
+	_ = cobra.MarkFlagRequired(f, "workflow-id")
+	f.StringVarP(&v.UpdateId, "update-id", "Update ID.\nMust be unique per Workflow Execution.\n", "", "Update ID.\nMust be unique per Workflow Execution.\n Required.")
+	_ = cobra.MarkFlagRequired(f, "update-id")
 	f.StringVarP(&v.RunId, "run-id", "Run ID.\nIf unset, updates the currently-running Workflow Execution.\n", "", "Run ID.\nIf unset, updates the currently-running Workflow Execution.\n")
-	f.StringVarP(&v.FirstExecutionRunId, "first-execution-run-id", "Parent Run ID.\nThe update is sent to the last Workflow Execution in the chain started\nwith this Run ID.\n", "", "Parent Run ID.\nThe update is sent to the last Workflow Execution in the chain started\nwith this Run ID.\n")
 }
 
 type TemporalCommand struct {
@@ -573,13 +587,14 @@ func NewTemporalOperatorCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.Use = "operator"
 	s.Command.Short = "Manage Temporal deployments"
 	if hasHighlighting {
-		s.Command.Long = "Operator commands manage and fetch information about Namespaces, Search\nAttributes, and Temporal Services:\n\n\x1b[1mtemporal operator [command] [subcommand] [options]\x1b[0m\n\nFor example, to show information about the Temporal Service at the default\naddress (localhost):\n\n\x1b[1mtemporal operator cluster describe\x1b[0m\n"
+		s.Command.Long = "Operator commands manage and fetch information about Namespaces, Search\nAttributes, Nexus Endpoints, and Temporal Services:\n\n\x1b[1mtemporal operator [command] [subcommand] [options]\x1b[0m\n\nFor example, to show information about the Temporal Service at the default\naddress (localhost):\n\n\x1b[1mtemporal operator cluster describe\x1b[0m\n"
 	} else {
-		s.Command.Long = "Operator commands manage and fetch information about Namespaces, Search\nAttributes, and Temporal Services:\n\n```\ntemporal operator [command] [subcommand] [options]\n```\n\nFor example, to show information about the Temporal Service at the default\naddress (localhost):\n\n```\ntemporal operator cluster describe\n```\n"
+		s.Command.Long = "Operator commands manage and fetch information about Namespaces, Search\nAttributes, Nexus Endpoints, and Temporal Services:\n\n```\ntemporal operator [command] [subcommand] [options]\n```\n\nFor example, to show information about the Temporal Service at the default\naddress (localhost):\n\n```\ntemporal operator cluster describe\n```\n"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalOperatorClusterCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalOperatorNamespaceCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalOperatorNexusCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalOperatorSearchAttributeCommand(cctx, &s).Command)
 	return &s
 }
@@ -937,6 +952,190 @@ func NewTemporalOperatorNamespaceUpdateCommand(cctx *CommandContext, parent *Tem
 	return &s
 }
 
+type TemporalOperatorNexusCommand struct {
+	Parent  *TemporalOperatorCommand
+	Command cobra.Command
+}
+
+func NewTemporalOperatorNexusCommand(cctx *CommandContext, parent *TemporalOperatorCommand) *TemporalOperatorNexusCommand {
+	var s TemporalOperatorNexusCommand
+	s.Parent = parent
+	s.Command.Use = "nexus"
+	s.Command.Short = "Commands for managing Nexus resources (EXPIRIMENTAL)"
+	if hasHighlighting {
+		s.Command.Long = "Nexus commands enable managing Nexus resources.\n\nNexus commands follow this syntax:\n\n\x1b[1mtemporal operator nexus [command] [command] [command options]\x1b[0m\n"
+	} else {
+		s.Command.Long = "Nexus commands enable managing Nexus resources.\n\nNexus commands follow this syntax:\n\n```\ntemporal operator nexus [command] [command] [command options]\n```\n"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalOperatorNexusEndpointCommand(cctx, &s).Command)
+	return &s
+}
+
+type TemporalOperatorNexusEndpointCommand struct {
+	Parent  *TemporalOperatorNexusCommand
+	Command cobra.Command
+}
+
+func NewTemporalOperatorNexusEndpointCommand(cctx *CommandContext, parent *TemporalOperatorNexusCommand) *TemporalOperatorNexusEndpointCommand {
+	var s TemporalOperatorNexusEndpointCommand
+	s.Parent = parent
+	s.Command.Use = "endpoint"
+	s.Command.Short = "Commands for managing Nexus Endpoints (EXPERIMENTAL)"
+	if hasHighlighting {
+		s.Command.Long = "Endpoint commands enable managing Nexus Endpoints.\n\nEndpoint commands follow this syntax:\n\n\x1b[1mtemporal operator nexus endpoint [command] [command options]\x1b[0m\n"
+	} else {
+		s.Command.Long = "Endpoint commands enable managing Nexus Endpoints.\n\nEndpoint commands follow this syntax:\n\n```\ntemporal operator nexus endpoint [command] [command options]\n```\n"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalOperatorNexusEndpointCreateCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalOperatorNexusEndpointDeleteCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalOperatorNexusEndpointGetCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalOperatorNexusEndpointListCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalOperatorNexusEndpointUpdateCommand(cctx, &s).Command)
+	return &s
+}
+
+type TemporalOperatorNexusEndpointCreateCommand struct {
+	Parent          *TemporalOperatorNexusEndpointCommand
+	Command         cobra.Command
+	Name            string
+	Description     string
+	DescriptionFile string
+	TargetNamespace string
+	TargetTaskQueue string
+	TargetUrl       string
+}
+
+func NewTemporalOperatorNexusEndpointCreateCommand(cctx *CommandContext, parent *TemporalOperatorNexusEndpointCommand) *TemporalOperatorNexusEndpointCreateCommand {
+	var s TemporalOperatorNexusEndpointCreateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "create [flags]"
+	s.Command.Short = "Create a new Nexus Endpoint (EXPERIMENTAL)"
+	if hasHighlighting {
+		s.Command.Long = "Create a new Nexus Endpoint on the Server.\n\nAn endpoint name is used in workflow code to invoke Nexus operations.  The\nendpoint target may either be a worker, in which case \x1b[1m--target-namespace\x1b[0m and\n\x1b[1m--target-task-queue\x1b[0m must both be provided, or an external URL, in which case\n\x1b[1m--target-url\x1b[0m must be provided.\n\nThis command will fail if an endpoint with the same name is already registered.\n\n\x1b[1mtemporal operator nexus endpoint create \\\n  --name your-endpoint \\\n  --target-namespace your-namespace \\\n  --target-task-queue your-task-queue \\\n  --description-file DESCRIPTION.md\x1b[0m\n"
+	} else {
+		s.Command.Long = "Create a new Nexus Endpoint on the Server.\n\nAn endpoint name is used in workflow code to invoke Nexus operations.  The\nendpoint target may either be a worker, in which case `--target-namespace` and\n`--target-task-queue` must both be provided, or an external URL, in which case\n`--target-url` must be provided.\n\nThis command will fail if an endpoint with the same name is already registered.\n\n```\ntemporal operator nexus endpoint create \\\n  --name your-endpoint \\\n  --target-namespace your-namespace \\\n  --target-task-queue your-task-queue \\\n  --description-file DESCRIPTION.md\n```\n"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalOperatorNexusEndpointDeleteCommand struct {
+	Parent  *TemporalOperatorNexusEndpointCommand
+	Command cobra.Command
+	Name    string
+}
+
+func NewTemporalOperatorNexusEndpointDeleteCommand(cctx *CommandContext, parent *TemporalOperatorNexusEndpointCommand) *TemporalOperatorNexusEndpointDeleteCommand {
+	var s TemporalOperatorNexusEndpointDeleteCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "delete [flags]"
+	s.Command.Short = "Delete a Nexus Endpoint (EXPERIMENTAL)"
+	if hasHighlighting {
+		s.Command.Long = "Delete a Nexus Endpoint configuration from the Server.\n\n\x1b[1mtemporal operator nexus endpoint delete --name your-endpoint\x1b[0m\n"
+	} else {
+		s.Command.Long = "Delete a Nexus Endpoint configuration from the Server.\n\n```\ntemporal operator nexus endpoint delete --name your-endpoint\n```\n"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalOperatorNexusEndpointGetCommand struct {
+	Parent  *TemporalOperatorNexusEndpointCommand
+	Command cobra.Command
+	Name    string
+}
+
+func NewTemporalOperatorNexusEndpointGetCommand(cctx *CommandContext, parent *TemporalOperatorNexusEndpointCommand) *TemporalOperatorNexusEndpointGetCommand {
+	var s TemporalOperatorNexusEndpointGetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "get [flags]"
+	s.Command.Short = "Get a Nexus Endpoint by name (EXPERIMENTAL)"
+	if hasHighlighting {
+		s.Command.Long = "Get a Nexus Endpoint configuration by name from the Server.\n\n\x1b[1mtemporal operator nexus endpoint get --name your-endpoint\x1b[0m\n"
+	} else {
+		s.Command.Long = "Get a Nexus Endpoint configuration by name from the Server.\n\n```\ntemporal operator nexus endpoint get --name your-endpoint\n```\n"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalOperatorNexusEndpointListCommand struct {
+	Parent  *TemporalOperatorNexusEndpointCommand
+	Command cobra.Command
+}
+
+func NewTemporalOperatorNexusEndpointListCommand(cctx *CommandContext, parent *TemporalOperatorNexusEndpointCommand) *TemporalOperatorNexusEndpointListCommand {
+	var s TemporalOperatorNexusEndpointListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "List Nexus Endpoints (EXPERIMENTAL)"
+	if hasHighlighting {
+		s.Command.Long = "List all Nexus Endpoint configurations on the Server.\n\n\x1b[1mtemporal operator nexus endpoint list\x1b[0m\n"
+	} else {
+		s.Command.Long = "List all Nexus Endpoint configurations on the Server.\n\n```\ntemporal operator nexus endpoint list\n```\n"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalOperatorNexusEndpointUpdateCommand struct {
+	Parent           *TemporalOperatorNexusEndpointCommand
+	Command          cobra.Command
+	Name             string
+	Description      string
+	DescriptionFile  string
+	UnsetDescription bool
+	TargetNamespace  string
+	TargetTaskQueue  string
+	TargetUrl        string
+}
+
+func NewTemporalOperatorNexusEndpointUpdateCommand(cctx *CommandContext, parent *TemporalOperatorNexusEndpointCommand) *TemporalOperatorNexusEndpointUpdateCommand {
+	var s TemporalOperatorNexusEndpointUpdateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "update [flags]"
+	s.Command.Short = "Update an existing Nexus Endpoint (EXPERIMENTAL)"
+	if hasHighlighting {
+		s.Command.Long = "Update a Nexus Endpoint configuration on the Server.\n\n\x1b[1mtemporal operator nexus endpoint update \\\n  --name your-endpoint \\\n  --target-namespace your-namespace \\\n  --target-task-queue your-task-queue \\\n  --description-file DESCRIPTION.md\x1b[0m\n"
+	} else {
+		s.Command.Long = "Update a Nexus Endpoint configuration on the Server.\n\n```\ntemporal operator nexus endpoint update \\\n  --name your-endpoint \\\n  --target-namespace your-namespace \\\n  --target-task-queue your-task-queue \\\n  --description-file DESCRIPTION.md\n```\n"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
 type TemporalOperatorSearchAttributeCommand struct {
 	Parent  *TemporalOperatorCommand
 	Command cobra.Command
@@ -1182,6 +1381,7 @@ type TemporalScheduleListCommand struct {
 	Command    cobra.Command
 	Long       bool
 	ReallyLong bool
+	Query      string
 }
 
 func NewTemporalScheduleListCommand(cctx *CommandContext, parent *TemporalScheduleCommand) *TemporalScheduleListCommand {
@@ -1389,6 +1589,7 @@ type TemporalTaskQueueDescribeCommand struct {
 	LegacyMode          bool
 	TaskQueueTypeLegacy StringEnum
 	PartitionsLegacy    int
+	DisableStats        bool
 }
 
 func NewTemporalTaskQueueDescribeCommand(cctx *CommandContext, parent *TemporalTaskQueueCommand) *TemporalTaskQueueDescribeCommand {
@@ -1398,9 +1599,9 @@ func NewTemporalTaskQueueDescribeCommand(cctx *CommandContext, parent *TemporalT
 	s.Command.Use = "describe [flags]"
 	s.Command.Short = "Show active Workers"
 	if hasHighlighting {
-		s.Command.Long = "Display a list of active Workers that have recently polled a Task Queue. The\nTemporal Server records each poll request time. A \x1b[1mLastAccessTime\x1b[0m over one\nminute may indicate the Worker is at capacity or has shut down. Temporal\nWorkers are removed if 5 minutes have passed since the last poll request.\n\n\x1b[1mtemporal task-queue describe \\\n  --task-queue YourTaskQueue\x1b[0m\n\nThis command provides poller information for a given Task Queue.\nWorkflow and Activity polling use separate Task Queues:\n\n\x1b[1mtemporal task-queue describe \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type \"activity\"\x1b[1m\x1b[0m\n\nSafely retire Workers assigned a Build ID by checking reachability across\nall task types. Use the flag \x1b[0m--report-reachability\x1b[1m:\n\n\x1b[1mtemporal task-queue describe \\\n  --task-queue YourTaskQueue \\\n  --build-id \"YourBuildId\" \\\n  --report-reachability\x1b[0m\n\nComputing task reachability incurs a non-trivial computing cost.\n\nBuild ID reachability states include:\n\n- \x1b[0mReachable\x1b[1m: using the current versioning rules, the Build ID may be used\n  by new Workflow Executions or Activities OR there are currently open\n  Workflow or backlogged Activity tasks assigned to the queue.\n- \x1b[0mClosedWorkflowsOnly\x1b[1m: the Build ID does not have open Workflow Executions\n  and can't be reached by new Workflow Executions. It MAY have closed\n  Workflow Executions within the Namespace retention period.\n- \x1b[0mUnreachable\x1b[1m: this Build ID is not used for new Workflow Executions and\n  isn't used by any existing Workflow Execution within the retention period.\n\nTask reachability is eventually consistent. You may experience a delay until\nreachability converges to the most accurate value. This is designed to act\nin the most conservative way until convergence. For example, \x1b[0mReachable\x1b[1m is\nmore conservative than \x1b[0mClosedWorkflowsOnly`.\n"
+		s.Command.Long = "Display a list of active Workers that have recently polled a Task Queue. The\nTemporal Server records each poll request time. A \x1b[1mLastAccessTime\x1b[0m over one\nminute may indicate the Worker is at capacity or has shut down. Temporal\nWorkers are removed if 5 minutes have passed since the last poll request.\n\n\x1b[1mtemporal task-queue describe \\\n  --task-queue YourTaskQueue\x1b[0m\n\nThis command provides poller information for a given Task Queue.\nWorkflow and Activity polling use separate Task Queues:\n\n\x1b[1mtemporal task-queue describe \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type \"activity\"\x1b[0m\n\nThis command provides the following task queue statistics:\n- \x1b[1mApproximateBacklogCount\x1b[0m: The approximate number of tasks backlogged in this\n  task queue. May count expired tasks but eventually converges to the right\n  value.\n- \x1b[1mApproximateBacklogAge\x1b[0m: Approximate age of the oldest task in the backlog,\n  based on its creation time, measured in seconds.\n- \x1b[1mTasksAddRate\x1b[0m: Approximate rate at which tasks are being added to the task\n  queue, measured in tasks per second, averaged over the last 30 seconds.\n  Includes tasks dispatched immediately without going to the backlog\n  (sync-matched tasks), as well as tasks added to the backlog. (See note below.)\n- \x1b[1mTasksDispatchRate\x1b[0m: Approximate rate at which tasks are being dispatched from\n  the task queue, measured in tasks per second, averaged over the last 30\n  seconds.  Includes tasks dispatched immediately without going to the backlog\n  (sync-matched tasks), as well as tasks added to the backlog. (See note below.)\n- \x1b[1mBacklog Increase Rate\x1b[0m: Approximate rate at which the backlog size is\n  increasing (if positive) or decreasing (if negative), measured in tasks per\n  second, averaged over the last 30 seconds.  This is equivalent to:\n  \x1b[1mTasksAddRate\x1b[0m - \x1b[1mTasksDispatchRate\x1b[0m.\n\nNOTE: The \x1b[1mTasksAddRate\x1b[0m and \x1b[1mTasksDispatchRate\x1b[0m metrics may differ from the\nactual rate of add/dispatch, because tasks may be dispatched eagerly to an\navailable worker, or may apply only to specific workers (they are \"sticky\").\nSuch tasks are not counted by these metrics.\n\nSafely retire Workers assigned a Build ID by checking reachability across\nall task types. Use the flag \x1b[1m--report-reachability\x1b[0m:\n\n\x1b[1mtemporal task-queue describe \\\n  --task-queue YourTaskQueue \\\n  --build-id \"YourBuildId\" \\\n  --report-reachability\x1b[0m\n\nTask reachability information is returned for the requested versions and all\ntask types, which can be used to safely retire Workers with old code versions,\nprovided that they were assigned a Build ID.\n\nNote that task reachability status is experimental and may significantly change\nor be removed in a future release. Also, determining task reachability incurs a\nnon-trivial computing cost.\n\nTask reachability states are reported per build ID. The state may be one of the\nfollowing:\n\n- \x1b[1mReachable\x1b[0m: using the current versioning rules, the Build ID may be used\n  by new Workflow Executions or Activities OR there are currently open\n  Workflow or backlogged Activity tasks assigned to the queue.\n- \x1b[1mClosedWorkflowsOnly\x1b[0m: the Build ID does not have open Workflow Executions\n  and can't be reached by new Workflow Executions. It MAY have closed\n  Workflow Executions within the Namespace retention period.\n- \x1b[1mUnreachable\x1b[0m: this Build ID is not used for new Workflow Executions and\n  isn't used by any existing Workflow Execution within the retention period.\n\nTask reachability is eventually consistent. You may experience a delay until\nreachability converges to the most accurate value. This is designed to act\nin the most conservative way until convergence. For example, \x1b[1mReachable\x1b[0m is\nmore conservative than \x1b[1mClosedWorkflowsOnly\x1b[0m.\n"
 	} else {
-		s.Command.Long = "Display a list of active Workers that have recently polled a Task Queue. The\nTemporal Server records each poll request time. A `LastAccessTime` over one\nminute may indicate the Worker is at capacity or has shut down. Temporal\nWorkers are removed if 5 minutes have passed since the last poll request.\n\n```\ntemporal task-queue describe \\\n  --task-queue YourTaskQueue\n```\n\nThis command provides poller information for a given Task Queue.\nWorkflow and Activity polling use separate Task Queues:\n\n```\ntemporal task-queue describe \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type \"activity\"`\n```\n\nSafely retire Workers assigned a Build ID by checking reachability across\nall task types. Use the flag `--report-reachability`:\n\n```\ntemporal task-queue describe \\\n  --task-queue YourTaskQueue \\\n  --build-id \"YourBuildId\" \\\n  --report-reachability\n```\n\nComputing task reachability incurs a non-trivial computing cost.\n\nBuild ID reachability states include:\n\n- `Reachable`: using the current versioning rules, the Build ID may be used\n  by new Workflow Executions or Activities OR there are currently open\n  Workflow or backlogged Activity tasks assigned to the queue.\n- `ClosedWorkflowsOnly`: the Build ID does not have open Workflow Executions\n  and can't be reached by new Workflow Executions. It MAY have closed\n  Workflow Executions within the Namespace retention period.\n- `Unreachable`: this Build ID is not used for new Workflow Executions and\n  isn't used by any existing Workflow Execution within the retention period.\n\nTask reachability is eventually consistent. You may experience a delay until\nreachability converges to the most accurate value. This is designed to act\nin the most conservative way until convergence. For example, `Reachable` is\nmore conservative than `ClosedWorkflowsOnly`.\n"
+		s.Command.Long = "Display a list of active Workers that have recently polled a Task Queue. The\nTemporal Server records each poll request time. A `LastAccessTime` over one\nminute may indicate the Worker is at capacity or has shut down. Temporal\nWorkers are removed if 5 minutes have passed since the last poll request.\n\n```\ntemporal task-queue describe \\\n  --task-queue YourTaskQueue\n```\n\nThis command provides poller information for a given Task Queue.\nWorkflow and Activity polling use separate Task Queues:\n\n```\ntemporal task-queue describe \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type \"activity\"\n```\n\nThis command provides the following task queue statistics:\n- `ApproximateBacklogCount`: The approximate number of tasks backlogged in this\n  task queue. May count expired tasks but eventually converges to the right\n  value.\n- `ApproximateBacklogAge`: Approximate age of the oldest task in the backlog,\n  based on its creation time, measured in seconds.\n- `TasksAddRate`: Approximate rate at which tasks are being added to the task\n  queue, measured in tasks per second, averaged over the last 30 seconds.\n  Includes tasks dispatched immediately without going to the backlog\n  (sync-matched tasks), as well as tasks added to the backlog. (See note below.)\n- `TasksDispatchRate`: Approximate rate at which tasks are being dispatched from\n  the task queue, measured in tasks per second, averaged over the last 30\n  seconds.  Includes tasks dispatched immediately without going to the backlog\n  (sync-matched tasks), as well as tasks added to the backlog. (See note below.)\n- `Backlog Increase Rate`: Approximate rate at which the backlog size is\n  increasing (if positive) or decreasing (if negative), measured in tasks per\n  second, averaged over the last 30 seconds.  This is equivalent to:\n  `TasksAddRate` - `TasksDispatchRate`.\n\nNOTE: The `TasksAddRate` and `TasksDispatchRate` metrics may differ from the\nactual rate of add/dispatch, because tasks may be dispatched eagerly to an\navailable worker, or may apply only to specific workers (they are \"sticky\").\nSuch tasks are not counted by these metrics.\n\nSafely retire Workers assigned a Build ID by checking reachability across\nall task types. Use the flag `--report-reachability`:\n\n```\ntemporal task-queue describe \\\n  --task-queue YourTaskQueue \\\n  --build-id \"YourBuildId\" \\\n  --report-reachability\n```\n\nTask reachability information is returned for the requested versions and all\ntask types, which can be used to safely retire Workers with old code versions,\nprovided that they were assigned a Build ID.\n\nNote that task reachability status is experimental and may significantly change\nor be removed in a future release. Also, determining task reachability incurs a\nnon-trivial computing cost.\n\nTask reachability states are reported per build ID. The state may be one of the\nfollowing:\n\n- `Reachable`: using the current versioning rules, the Build ID may be used\n  by new Workflow Executions or Activities OR there are currently open\n  Workflow or backlogged Activity tasks assigned to the queue.\n- `ClosedWorkflowsOnly`: the Build ID does not have open Workflow Executions\n  and can't be reached by new Workflow Executions. It MAY have closed\n  Workflow Executions within the Namespace retention period.\n- `Unreachable`: this Build ID is not used for new Workflow Executions and\n  isn't used by any existing Workflow Execution within the retention period.\n\nTask reachability is eventually consistent. You may experience a delay until\nreachability converges to the most accurate value. This is designed to act\nin the most conservative way until convergence. For example, `Reachable` is\nmore conservative than `ClosedWorkflowsOnly`.\n"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -1902,6 +2103,7 @@ func NewTemporalWorkflowCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.AddCommand(&NewTemporalWorkflowListCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowQueryCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowResetCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkflowResultCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowShowCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowSignalCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowStackCommand(cctx, &s).Command)
@@ -2166,6 +2368,32 @@ func NewTemporalWorkflowResetCommand(cctx *CommandContext, parent *TemporalWorkf
 	return &s
 }
 
+type TemporalWorkflowResultCommand struct {
+	Parent  *TemporalWorkflowCommand
+	Command cobra.Command
+	WorkflowReferenceOptions
+}
+
+func NewTemporalWorkflowResultCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowResultCommand {
+	var s TemporalWorkflowResultCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "result [flags]"
+	s.Command.Short = "Wait for and show the result of a Workflow Execution"
+	if hasHighlighting {
+		s.Command.Long = "Wait for and print the result of a Workflow Execution:\n\n\x1b[1mtemporal workflow result \\\n    --workflow-id YourWorkflowId\x1b[0m\n"
+	} else {
+		s.Command.Long = "Wait for and print the result of a Workflow Execution:\n\n```\ntemporal workflow result \\\n    --workflow-id YourWorkflowId\n```\n"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
 type TemporalWorkflowShowCommand struct {
 	Parent  *TemporalWorkflowCommand
 	Command cobra.Command
@@ -2346,18 +2574,46 @@ func NewTemporalWorkflowUpdateCommand(cctx *CommandContext, parent *TemporalWork
 	var s TemporalWorkflowUpdateCommand
 	s.Parent = parent
 	s.Command.Use = "update"
-	s.Command.Short = "Start and wait for Updates (Experimental)"
+	s.Command.Short = "Updates (Experimental)"
 	s.Command.Long = "An Update is a synchronous call to a Workflow Execution that can change its\nstate, control its flow, and return a result.\n\nExperimental.\n"
 	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalWorkflowUpdateDescribeCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowUpdateExecuteCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkflowUpdateResultCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowUpdateStartCommand(cctx, &s).Command)
+	return &s
+}
+
+type TemporalWorkflowUpdateDescribeCommand struct {
+	Parent  *TemporalWorkflowUpdateCommand
+	Command cobra.Command
+	UpdateTargetingOptions
+}
+
+func NewTemporalWorkflowUpdateDescribeCommand(cctx *CommandContext, parent *TemporalWorkflowUpdateCommand) *TemporalWorkflowUpdateDescribeCommand {
+	var s TemporalWorkflowUpdateDescribeCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "describe [flags]"
+	s.Command.Short = "Obtain status info about a specific Update (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Given a Workflow Execution and an Update ID, return information about its current status, including\na result if it has finished.\n\nExperimental.\n\n\x1b[1mtemporal workflow update describe \\\n    --workflow-id YourWorkflowId \\\n    --update-id YourUpdateId\x1b[0m\n"
+	} else {
+		s.Command.Long = "Given a Workflow Execution and an Update ID, return information about its current status, including\na result if it has finished.\n\nExperimental.\n\n```\ntemporal workflow update describe \\\n    --workflow-id YourWorkflowId \\\n    --update-id YourUpdateId\n```\n"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
 	return &s
 }
 
 type TemporalWorkflowUpdateExecuteCommand struct {
 	Parent  *TemporalWorkflowUpdateCommand
 	Command cobra.Command
-	UpdateOptions
+	UpdateStartingOptions
 	PayloadInputOptions
 }
 
@@ -2381,10 +2637,36 @@ func NewTemporalWorkflowUpdateExecuteCommand(cctx *CommandContext, parent *Tempo
 	return &s
 }
 
+type TemporalWorkflowUpdateResultCommand struct {
+	Parent  *TemporalWorkflowUpdateCommand
+	Command cobra.Command
+	UpdateTargetingOptions
+}
+
+func NewTemporalWorkflowUpdateResultCommand(cctx *CommandContext, parent *TemporalWorkflowUpdateCommand) *TemporalWorkflowUpdateResultCommand {
+	var s TemporalWorkflowUpdateResultCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "result [flags]"
+	s.Command.Short = "Wait for a specific Update to complete (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Given a Workflow Execution and an Update ID, wait for the Update to complete or fail and\nprint the result.\n\nExperimental.\n\n\x1b[1mtemporal workflow update result \\\n    --workflow-id YourWorkflowId \\\n    --update-id YourUpdateId\x1b[0m\n"
+	} else {
+		s.Command.Long = "Given a Workflow Execution and an Update ID, wait for the Update to complete or fail and\nprint the result.\n\nExperimental.\n\n```\ntemporal workflow update result \\\n    --workflow-id YourWorkflowId \\\n    --update-id YourUpdateId\n```\n"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
 type TemporalWorkflowUpdateStartCommand struct {
 	Parent  *TemporalWorkflowUpdateCommand
 	Command cobra.Command
-	UpdateOptions
+	UpdateStartingOptions
 	PayloadInputOptions
 	WaitForStage StringEnum
 }

@@ -90,8 +90,6 @@ var markdownInlineCodeRegex = regexp.MustCompile("`([^`]+)`")
 const ansiReset = "\033[0m"
 const ansiBold = "\033[1m"
 
-// var optionTypes = []string{"string", "string[]", "string-enum", "bool", "duration", "int", "string-enum", "timestamp"}
-
 func (o OptionSets) parseSection() error {
 	if o.Name == "" {
 		return fmt.Errorf("missing option set name")

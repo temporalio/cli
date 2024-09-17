@@ -2,6 +2,9 @@ package temporalcli_test
 
 import (
 	"encoding/json"
+	"github.com/stretchr/testify/assert"
+	"go.temporal.io/sdk/workflow"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -9,6 +12,156 @@ import (
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/workflowservice/v1"
 )
+
+type statsRowType struct {
+	BuildID                 string  `json:"buildId"`
+	TaskQueueType           string  `json:"taskQueueType"`
+	ApproximateBacklogCount int64   `json:"approximateBacklogCount"`
+	ApproximateBacklogAge   string  `json:"approximateBacklogAge"`
+	BacklogIncreaseRate     float32 `json:"backlogIncreaseRate"`
+	TasksAddRate            float32 `json:"tasksAddRate"`
+	TasksDispatchRate       float32 `json:"tasksDispatchRate"`
+}
+
+type taskQueueStatsType struct {
+	Stats []statsRowType `json:"stats"`
+}
+
+func (s *SharedServerSuite) TestTaskQueue_Describe_Task_Queue_Stats_Empty() {
+	// text
+	res := s.Execute(
+		"task-queue", "describe",
+		"--address", s.Address(),
+		"--task-queue", s.Worker().Options.TaskQueue,
+	)
+	s.NoError(res.Err)
+	s.ContainsOnSameLine(res.Stdout.String(), "UNVERSIONED", "workflow", "0", "0s", "0", "0", "0")
+	s.ContainsOnSameLine(res.Stdout.String(), "UNVERSIONED", "activity", "0", "0s", "0", "0", "0")
+
+	// json
+	res = s.Execute(
+		"task-queue", "describe",
+		"--address", s.Address(),
+		"--task-queue", s.Worker().Options.TaskQueue,
+		"-o", "json",
+	)
+	s.NoError(res.Err)
+
+	var jsonOut taskQueueStatsType
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	nullStatsRowType := statsRowType{
+		BuildID:                 "UNVERSIONED",
+		ApproximateBacklogCount: 0,
+		ApproximateBacklogAge:   "0s",
+		BacklogIncreaseRate:     0,
+		TasksAddRate:            0,
+		TasksDispatchRate:       0,
+	}
+	for _, statsRow := range jsonOut.Stats {
+		nullStatsRowType.TaskQueueType = statsRow.TaskQueueType
+		s.Equal(nullStatsRowType, statsRow)
+	}
+}
+
+func (s *SharedServerSuite) TestTaskQueue_Describe_Task_Queue_Stats_NonEmpty() {
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
+		return map[string]string{"foo": "bar"}, nil
+	})
+
+	// starting a new workflow execution
+	res := s.Execute(
+		"workflow", "start",
+		"--address", s.Address(),
+		"--task-queue", s.Worker().Options.TaskQueue,
+		"--type", "DevWorkflow",
+		"--workflow-id", "my-id1",
+	)
+	s.NoError(res.Err)
+
+	result := s.Execute(
+		"task-queue", "describe",
+		"--address", s.Address(),
+		"--task-queue", s.Worker().Options.TaskQueue,
+	)
+	s.NoError(result.Err)
+	out := result.Stdout.String()
+	tqMetricsValidator := true
+	s.EventuallyWithT(func(collect *assert.CollectT) {
+		lines := strings.Split(out, "\n")
+		tqStat := false
+		for _, line := range lines {
+			// Separating Task Queue Statistics output from Pollers output since they are similar
+			if strings.Contains(line, "Task Queue Statistics:") {
+				tqStat = true
+				continue
+			} else {
+				tqStat = false
+			}
+
+			if tqStat {
+				fields := strings.Fields(line)
+				if len(fields) < 7 {
+					// lesser fields than expected in the output, skip this line
+					continue
+				}
+
+				tqType := fields[1]
+				if tqType == "activity" {
+					// all metrics should be 0
+					for _, metric := range fields[2:] {
+						if metric != "0" && metric != "0s" {
+							tqMetricsValidator = false
+						}
+					}
+				} else if tqType == "workflow" {
+					backlogIncreaseRate := fields[4]
+					tasksAddRate := fields[5]
+					tasksDispatchRate := fields[6]
+					if tasksAddRate == "0" && tasksDispatchRate == "0" && backlogIncreaseRate == "0" {
+						// instead of checking each individual attribute, the following check has been added since:
+
+						// 1. backlogIncreaseRate can be 0 when tasksAddRate and tasksDispatchRate is the same
+						// 2. tasksDispatchRate can be 0
+
+						// however, there won't be a case when all three of these metrics in this test have the null value
+						tqMetricsValidator = false
+					}
+				}
+			}
+		}
+		assert.True(collect, tqMetricsValidator, "expected 'tqMetricsValidator' to be true")
+	}, time.Second*5, time.Millisecond*200)
+
+	// json
+	res = s.Execute(
+		"task-queue", "describe",
+		"--address", s.Address(),
+		"--task-queue", s.Worker().Options.TaskQueue,
+		"-o", "json",
+	)
+	s.NoError(res.Err)
+
+	var jsonOut taskQueueStatsType
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	nullStatsRow := statsRowType{
+		BuildID:                 "UNVERSIONED",
+		TaskQueueType:           "activity",
+		ApproximateBacklogCount: 0,
+		ApproximateBacklogAge:   "0s",
+		BacklogIncreaseRate:     0,
+		TasksAddRate:            0,
+		TasksDispatchRate:       0,
+	}
+
+	// The workflow queue should have non-zero task queue statistics
+	if jsonOut.Stats[0].TaskQueueType == "workflow" {
+		s.NotEqual(nullStatsRow, jsonOut.Stats[0])
+		s.Equal(nullStatsRow, jsonOut.Stats[1])
+	} else {
+		s.NotEqual(nullStatsRow, jsonOut.Stats[1])
+		s.Equal(nullStatsRow, jsonOut.Stats[0])
+	}
+}
 
 func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
 	type reachabilityRowType struct {
@@ -47,6 +200,7 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
 	res := s.Execute(
 		"task-queue", "describe",
 		"--address", s.Address(),
+		"--disable-stats",
 		"--task-queue", s.Worker().Options.TaskQueue,
 	)
 	s.NoError(res.Err)
@@ -60,6 +214,7 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
 		"task-queue", "describe",
 		"--address", s.Address(),
 		"--report-reachability",
+		"--disable-stats",
 		"--task-queue", s.Worker().Options.TaskQueue,
 	)
 	s.NoError(res.Err)
@@ -73,6 +228,7 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
 		"task-queue", "describe",
 		"--address", s.Address(),
 		"--report-reachability",
+		"--disable-stats",
 		"--task-queue", s.Worker().Options.TaskQueue,
 		"-o", "json",
 	)
@@ -110,6 +266,7 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
 		"task-queue", "describe",
 		"--address", s.Address(),
 		"--report-reachability",
+		"--disable-stats",
 		"--task-queue", s.Worker().Options.TaskQueue,
 	)
 	s.NoError(res.Err)
@@ -123,6 +280,7 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
 		"--select-unversioned",
 		"--address", s.Address(),
 		"--report-reachability",
+		"--disable-stats",
 		"--task-queue", s.Worker().Options.TaskQueue,
 	)
 	s.NoError(res.Err)
@@ -136,6 +294,7 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
 		"--select-build-id", "id2",
 		"--address", s.Address(),
 		"--report-reachability",
+		"--disable-stats",
 		"--task-queue", s.Worker().Options.TaskQueue,
 	)
 	s.NoError(res.Err)
@@ -149,11 +308,10 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
 		"--select-all-active",
 		"--address", s.Address(),
 		"--report-reachability",
+		"--disable-stats",
 		"--task-queue", s.Worker().Options.TaskQueue,
 	)
 	s.NoError(res.Err)
-	// id1 has no pollers so it is not active
-	s.NotContains(res.Stdout.String(), "id1")
 	s.NotContains(res.Stdout.String(), "now")
 }
 

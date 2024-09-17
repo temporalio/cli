@@ -532,6 +532,177 @@ func (t workflowUpdateTest) extractWorkflowIDUpdateIDAndUpdateName(args []string
 	return workflowID, updateID, name
 }
 
+func (s *SharedServerSuite) TestWorkflow_Update_Result() {
+	updateName := "test-update"
+
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, val any) (any, error) {
+		err := workflow.SetUpdateHandlerWithOptions(
+			ctx,
+			updateName,
+			func(ctx workflow.Context, val string) (string, error) {
+				if val == "fail" {
+					return "", fmt.Errorf("failing")
+				}
+				return "hi " + val, nil
+			},
+			workflow.UpdateHandlerOptions{
+				Validator: func(ctx workflow.Context, val string) error {
+					if val == "reject" {
+						return fmt.Errorf("rejecting")
+					}
+					return nil
+				}},
+		)
+		if err != nil {
+			return nil, err
+		}
+		if ok := workflow.GetSignalChannel(ctx, "updates-done").Receive(ctx, nil); !ok {
+			return nil, fmt.Errorf("signal channel was closed")
+		}
+		return "done", nil
+	})
+
+	run, err := s.Client.ExecuteWorkflow(
+		s.Context,
+		client.StartWorkflowOptions{TaskQueue: s.Worker().Options.TaskQueue},
+		DevWorkflow,
+		"ignored",
+	)
+	s.NoError(err)
+
+	passingUpdateId := "passing"
+	res := s.Execute("workflow", "update", "execute", "--address", s.Address(), "-w", run.GetID(),
+		"--name", updateName, "-i", `"pass"`, "--update-id", passingUpdateId)
+	s.NoError(res.Err)
+	res = s.Execute("workflow", "update", "result", "--address", s.Address(), "-w", run.GetID(),
+		"--update-id", passingUpdateId)
+	s.NoError(res.Err)
+	s.ContainsOnSameLine(res.Stdout.String(), "Result", "hi pass")
+	// JSON
+	res = s.Execute("workflow", "update", "result", "--address", s.Address(), "-w", run.GetID(),
+		"--update-id", passingUpdateId, "-o", "json")
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), `"result": "hi pass"`)
+
+	rejectedUpdateId := "rejected"
+	res = s.Execute("workflow", "update", "execute", "--address", s.Address(), "-w", run.GetID(),
+		"--name", updateName, "-i", `"reject"`, "--update-id", rejectedUpdateId)
+	s.Error(res.Err)
+	// Can't be found when rejected
+	res = s.Execute("workflow", "update", "result", "--address", s.Address(), "-w", run.GetID(),
+		"--update-id", rejectedUpdateId)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "not found")
+
+	failUpdateId := "fail"
+	res = s.Execute("workflow", "update", "execute", "--address", s.Address(), "-w", run.GetID(),
+		"--name", updateName, "-i", `"fail"`, "--update-id", failUpdateId)
+	s.Error(res.Err)
+	res = s.Execute("workflow", "update", "result", "--address", s.Address(), "-w", run.GetID(),
+		"--update-id", failUpdateId)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "update is failed")
+	s.ContainsOnSameLine(res.Stdout.String(), "Failure", "failing")
+	// JSON
+	res = s.Execute("workflow", "update", "result", "--address", s.Address(), "-w", run.GetID(),
+		"--update-id", failUpdateId, "-o", "json")
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "update is failed")
+	s.Contains(res.Stdout.String(), `"message": "failing"`)
+}
+
+func (s *SharedServerSuite) TestWorkflow_Update_Describe() {
+	updateName := "test-update"
+
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, val any) (any, error) {
+		updateProceed := workflow.GetSignalChannel(ctx, "update-proceed")
+		err := workflow.SetUpdateHandlerWithOptions(
+			ctx,
+			updateName,
+			func(ctx workflow.Context, val string) (string, error) {
+				if val == "fail" {
+					return "", fmt.Errorf("failing")
+				}
+				updateProceed.Receive(ctx, nil)
+				return "hi " + val, nil
+			},
+			workflow.UpdateHandlerOptions{
+				Validator: func(ctx workflow.Context, val string) error {
+					if val == "reject" {
+						return fmt.Errorf("rejecting")
+					}
+					return nil
+				}},
+		)
+		if err != nil {
+			return nil, err
+		}
+		if ok := workflow.GetSignalChannel(ctx, "updates-done").Receive(ctx, nil); !ok {
+			return nil, fmt.Errorf("signal channel was closed")
+		}
+		return "done", nil
+	})
+
+	run, err := s.Client.ExecuteWorkflow(
+		s.Context,
+		client.StartWorkflowOptions{TaskQueue: s.Worker().Options.TaskQueue},
+		DevWorkflow,
+		"ignored",
+	)
+	s.NoError(err)
+
+	passingUpdateId := "passing"
+	res := s.Execute("workflow", "update", "start", "--wait-for-stage", "accepted",
+		"--address", s.Address(), "-w", run.GetID(), "--name", updateName,
+		"-i", `"pass"`, "--update-id", passingUpdateId)
+	s.NoError(res.Err)
+	res = s.Execute("workflow", "update", "describe", "--address", s.Address(), "-w", run.GetID(),
+		"--update-id", passingUpdateId)
+	s.NoError(res.Err)
+	s.ContainsOnSameLine(res.Stdout.String(), "Stage", "Accepted")
+	// Unblock it
+	err = s.Client.SignalWorkflow(s.Context, run.GetID(), run.GetRunID(), "update-proceed", nil)
+	s.NoError(err)
+	s.Eventually(func() bool {
+		res = s.Execute("workflow", "update", "describe", "--address", s.Address(), "-w", run.GetID(),
+			"--update-id", passingUpdateId)
+		s.NoError(res.Err)
+		return AssertContainsOnSameLine(res.Stdout.String(), "Stage", "Completed") == nil
+	}, 3*time.Second, 100*time.Millisecond)
+	s.ContainsOnSameLine(res.Stdout.String(), "Result", "hi pass")
+	// JSON
+	res = s.Execute("workflow", "update", "describe", "--address", s.Address(), "-w", run.GetID(),
+		"--update-id", passingUpdateId, "-o", "json")
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), `"result": "hi pass"`)
+	s.Contains(res.Stdout.String(), `"stage": "Completed"`)
+
+	rejectedUpdateId := "rejected"
+	res = s.Execute("workflow", "update", "execute", "--address", s.Address(), "-w", run.GetID(),
+		"--name", updateName, "-i", `"reject"`, "--update-id", rejectedUpdateId)
+	s.Error(res.Err)
+	// Can't be found when rejected
+	res = s.Execute("workflow", "update", "describe", "--address", s.Address(), "-w", run.GetID(),
+		"--update-id", rejectedUpdateId)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "not found")
+
+	failUpdateId := "fail"
+	res = s.Execute("workflow", "update", "execute", "--address", s.Address(), "-w", run.GetID(),
+		"--name", updateName, "-i", `"fail"`, "--update-id", failUpdateId)
+	s.Error(res.Err)
+	res = s.Execute("workflow", "update", "describe", "--address", s.Address(), "-w", run.GetID(),
+		"--update-id", failUpdateId)
+	// Should *not* return nonzero here
+	s.NoError(res.Err)
+	s.ContainsOnSameLine(res.Stdout.String(), "Failure", "failing")
+	// JSON
+	res = s.Execute("workflow", "update", "describe", "--address", s.Address(), "-w", run.GetID(),
+		"--update-id", failUpdateId, "-o", "json")
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), `"message": "failing"`)
+}
+
 func (s *SharedServerSuite) TestWorkflow_Cancel_BatchWorkflowSuccess() {
 	res := s.testCancelBatchWorkflow(false)
 	s.Contains(res.Stdout.String(), "approximately 5 workflow(s)")
