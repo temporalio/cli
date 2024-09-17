@@ -42,12 +42,10 @@ commands:
           Log level.
           "info" for most commands and "warn" for `server start-dev`.
       - name: log-format
-        type: string-enum
-        enum-values:
-          - text
-          - json
+        type: string
         description: |
           Log format.
+          Options are: text, json.
         default: text
       - name: output
         type: string-enum
@@ -513,7 +511,7 @@ commands:
         type: string
         description: Active Cluster (Service) name.
       - name: cluster
-        type: string
+        type: string[]
         description: |
           Cluster (Service) names for Namespace creation.
           Can be passed multiple times.
@@ -649,7 +647,7 @@ commands:
         type: string
         description: Active Cluster (Service) name.
       - name: cluster
-        type: string
+        type: string[]
         description: Cluster (Service) names.
       - name: data
         type: string[]
@@ -722,16 +720,10 @@ commands:
         description: Search Attribute name.
         required: true
       - name: type
-        type: string-enum
-        description: Search Attribute type.
-        enum-values:
-          - Text
-          - Keyword
-          - Int
-          - Double
-          - Bool
-          - Datetime
-          - KeywordList
+        type: string[]
+        description: |
+          Search Attribute type.
+          Options: Text, Keyword, Int, Double, Bool, Datetime, KeywordList.
         required: true
   - name: temporal operator search-attribute list
     summary: List Search Attributes
@@ -2460,7 +2452,7 @@ option-sets:
       - name: paused
         type: bool
         description: Pause the Schedule immediately on creation.
-      - name: paused-on-failure
+      - name: pause-on-failure
         type: bool
         description: Pause schedule after Workflow failures.
       - name: remaining-actions
@@ -2471,7 +2463,7 @@ option-sets:
       - name: start-time
         type: timestamp
         description: Schedule start time.
-      - name: timezone
+      - name: time-zone
         type: string
         description: |
           Interpret calendar specs with the `TZ` time zone.
@@ -2599,14 +2591,10 @@ option-sets:
           If the Workflow receives a signal or update prior to this time, the Workflow
           Execution starts immediately.
       - name: id-reuse-policy
-        type: string-enum #changed to string-enum
+        type: string
         description: |
           Re-use policy for the Workflow ID in new Workflow Executions.
-        enum-values: 
-          - AllowDuplicate
-          - AllowDuplicateFailedOnly
-          - RejectDuplicate
-          - TerminateIfRunning
+          Options: AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate, TerminateIfRunning.
   - name: payload-input
     options:
       - name: input

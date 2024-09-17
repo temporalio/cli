@@ -93,10 +93,10 @@ type ScheduleConfigurationOptions struct {
 	Jitter                  Duration
 	Notes                   string
 	Paused                  bool
-	PausedOnFailure         bool
+	PauseOnFailure          bool
 	RemainingActions        int
 	StartTime               Timestamp
-	Timezone                string
+	TimeZone                string
 	ScheduleSearchAttribute []string
 	ScheduleMemo            []string
 }
@@ -112,10 +112,10 @@ func (v *ScheduleConfigurationOptions) buildFlags(cctx *CommandContext, f *pflag
 	f.VarP(&v.Jitter, "jitter", "Max difference in time from the specification.\nVary the start time randomly within this amount.\n", "Max difference in time from the specification.\nVary the start time randomly within this amount.\n")
 	f.StringVarP(&v.Notes, "notes", "Initial notes field value.", "", "Initial notes field value.")
 	f.BoolVarP(&v.Paused, "paused", "Pause the Schedule immediately on creation.", false, "Pause the Schedule immediately on creation.")
-	f.BoolVarP(&v.PausedOnFailure, "paused-on-failure", "Pause schedule after Workflow failures.", false, "Pause schedule after Workflow failures.")
+	f.BoolVarP(&v.PauseOnFailure, "pause-on-failure", "Pause schedule after Workflow failures.", false, "Pause schedule after Workflow failures.")
 	f.IntVarP(&v.RemainingActions, "remaining-actions", "Total allowed actions.\nDefault is zero (unlimited).\n", 0, "Total allowed actions.\nDefault is zero (unlimited).\n")
 	f.VarP(&v.StartTime, "start-time", "Schedule start time.", "Schedule start time.")
-	f.StringVarP(&v.Timezone, "timezone", "Interpret calendar specs with the `TZ` time zone.\nFor a list of time zones, see:\nhttps://en.wikipedia.org/wiki/List_of_tz_database_time_zones.\n", "", "Interpret calendar specs with the `TZ` time zone.\nFor a list of time zones, see:\nhttps://en.wikipedia.org/wiki/List_of_tz_database_time_zones.\n")
+	f.StringVarP(&v.TimeZone, "time-zone", "Interpret calendar specs with the `TZ` time zone.\nFor a list of time zones, see:\nhttps://en.wikipedia.org/wiki/List_of_tz_database_time_zones.\n", "", "Interpret calendar specs with the `TZ` time zone.\nFor a list of time zones, see:\nhttps://en.wikipedia.org/wiki/List_of_tz_database_time_zones.\n")
 	f.StringArrayVarP(&v.ScheduleSearchAttribute, "schedule-search-attribute", "Set schedule Search Attributes using `KEY=\"VALUE` pairs.\nKeys must be identifiers, and values must be JSON values.\nFor example: 'YourKey={\"your\": \"value\"}'.\nCan be passed multiple times.\n", nil, "Set schedule Search Attributes using `KEY=\"VALUE` pairs.\nKeys must be identifiers, and values must be JSON values.\nFor example: 'YourKey={\"your\": \"value\"}'.\nCan be passed multiple times.\n")
 	f.StringArrayVarP(&v.ScheduleMemo, "schedule-memo", "Set schedule memo using `KEY=\"VALUE` pairs.\nKeys must be identifiers, and values must be JSON values.\nFor example: 'YourKey={\"your\": \"value\"}'.\nCan be passed multiple times.\n", nil, "Set schedule memo using `KEY=\"VALUE` pairs.\nKeys must be identifiers, and values must be JSON values.\nFor example: 'YourKey={\"your\": \"value\"}'.\nCan be passed multiple times.\n")
 }
@@ -178,7 +178,7 @@ type WorkflowStartOptions struct {
 	Cron          string
 	FailExisting  bool
 	StartDelay    Duration
-	IdReusePolicy StringEnum
+	IdReusePolicy string
 }
 
 func (v *WorkflowStartOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
@@ -186,8 +186,7 @@ func (v *WorkflowStartOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet
 	f.BoolVarP(&v.FailExisting, "fail-existing", "Fail if the Workflow already exists.", false, "Fail if the Workflow already exists.")
 	v.StartDelay = 0
 	f.VarP(&v.StartDelay, "start-delay", "Delay before starting the Workflow Execution.\nCan't be used with cron schedules.\nIf the Workflow receives a signal or update prior to this time, the Workflow\nExecution starts immediately.\n", "Delay before starting the Workflow Execution.\nCan't be used with cron schedules.\nIf the Workflow receives a signal or update prior to this time, the Workflow\nExecution starts immediately.\n")
-	v.IdReusePolicy = NewStringEnum([]string{"AllowDuplicate", "AllowDuplicateFailedOnly", "RejectDuplicate", "TerminateIfRunning"}, "")
-	f.VarP(&v.IdReusePolicy, "id-reuse-policy", "Re-use policy for the Workflow ID in new Workflow Executions.\n", "Re-use policy for the Workflow ID in new Workflow Executions.\n Accepted values: AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate, TerminateIfRunning.")
+	f.StringVarP(&v.IdReusePolicy, "id-reuse-policy", "Re-use policy for the Workflow ID in new Workflow Executions.\nOptions: AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate, TerminateIfRunning.\n", "", "Re-use policy for the Workflow ID in new Workflow Executions.\nOptions: AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate, TerminateIfRunning.\n")
 }
 
 type PayloadInputOptions struct {
@@ -227,7 +226,7 @@ type TemporalCommand struct {
 	Env                     string
 	EnvFile                 string
 	LogLevel                StringEnum
-	LogFormat               StringEnum
+	LogFormat               string
 	Output                  StringEnum
 	TimeFormat              StringEnum
 	Color                   StringEnum
@@ -793,7 +792,7 @@ type TemporalOperatorNamespaceCreateCommand struct {
 	Parent                  *TemporalOperatorNamespaceCommand
 	Command                 cobra.Command
 	ActiveCluster           string
-	Cluster                 string
+	Cluster                 []string
 	Data                    []string
 	Description             string
 	Email                   string
@@ -906,7 +905,7 @@ type TemporalOperatorNamespaceUpdateCommand struct {
 	Parent                  *TemporalOperatorNamespaceCommand
 	Command                 cobra.Command
 	ActiveCluster           string
-	Cluster                 string
+	Cluster                 []string
 	Data                    []string
 	Description             string
 	Email                   string
@@ -964,7 +963,7 @@ type TemporalOperatorSearchAttributeCreateCommand struct {
 	Parent  *TemporalOperatorSearchAttributeCommand
 	Command cobra.Command
 	Name    []string
-	Type    StringEnum
+	Type    []string
 }
 
 func NewTemporalOperatorSearchAttributeCreateCommand(cctx *CommandContext, parent *TemporalOperatorSearchAttributeCommand) *TemporalOperatorSearchAttributeCreateCommand {
