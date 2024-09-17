@@ -32,11 +32,18 @@ commands:
           (defaults to `$HOME/.config/temporalio/temporal.yaml`).
       - name: log-level
         type: string-enum
-        options: debug, info, warn, error, never.
-        default: "'info' for most commands and 'warn' for 'server start-dev'"
+        enum-values:
+          - debug 
+          - info
+          - warn
+          - error
+          - never
+        description: |
+          Log level.
+          "info" for most commands and "warn" for `server start-dev`.
       - name: log-format
         type: string-enum
-        options: 
+        enum-values:
           - text
           - json
         description: |
@@ -46,7 +53,7 @@ commands:
         type: string-enum
         short: o
         description: Non-logging data output format.
-        options:
+        enum-values:
           - text
           - json
           - jsonl
@@ -55,7 +62,7 @@ commands:
       - name: time-format
         type: string-enum
         description: Time format.
-        options:
+        enum-values:
           - relative
           - iso
           - raw
@@ -63,7 +70,7 @@ commands:
       - name: color
         type: string-enum
         description: Output coloring.
-        options:
+        enum-values:
           - always
           - never
           - auto
@@ -110,7 +117,7 @@ commands:
         type: string
         description: Identity of the user submitting this request.
     option-sets:
-      - name: workflow reference
+      - workflow reference
   - name: temporal activity fail
     summary: Fail and Activity
     description: |
@@ -137,7 +144,7 @@ commands:
         type: string
         description: Reason for failing the Activity.
     option-sets:
-      - name: workflow reference
+      - workflow reference
   - name: temporal batch
     summary: Manage running batch jobs
     description: |
@@ -519,7 +526,7 @@ commands:
           Can be passed multiple times.
       - name: description
         type: string
-        descripton: Namespace description.
+        description: Namespace description.
       - name: email
         type: string
         description: Owner email.
@@ -529,7 +536,7 @@ commands:
       - name: history-archival-state
         type: string-enum
         description: History archival state.
-        options:
+        enum-values:
           - disabled
           - enabled
         default: disabled
@@ -545,7 +552,7 @@ commands:
       - name: visibility-archival-state
         type: string-enum
         description: Visibility archival state
-        options:
+        enum-values:
           - disabled
           - enabled
         default: disabled
@@ -567,14 +574,12 @@ commands:
       temporal operator namespace delete \
           --namespace YourNamespaceName
       ```
+    maximum-args: 1
     options:
       - name: yes
         short: y
         type: bool
         description: Request confirmation before deletion.
-      - name: namespace
-        type: string
-        description: Namespace name. If left blank, the default Namespace is deleted.
   - name: temporal operator namespace describe
     summary: Describe a Namespace
     description: |
@@ -596,9 +601,6 @@ commands:
       - name: namespace-id
         type: string
         description: Namespace ID.
-      - name: namespace
-        type: string
-        description: Namespace name.
   - name: temporal operator namespace list
     summary: List Namespaces
     description: |
@@ -668,7 +670,7 @@ commands:
       - name: history-archival-state
         type: string-enum
         description: History archival state.
-        options:
+        enum-values:
           - disabled
           - enabled
       - name: history-uri
@@ -682,7 +684,7 @@ commands:
       - name: visibility-archival-state
         type: string-enum
         description: Visibility archival state.
-        options:
+        enum-values:
           - disabled
           - enabled
       - name: visibility-uri
@@ -722,7 +724,7 @@ commands:
       - name: type
         type: string-enum
         description: Search Attribute type.
-        options:
+        enum-values:
           - Text
           - Keyword
           - Int
@@ -1193,11 +1195,9 @@ commands:
         required: true
       - name: task-queue-type
         type: string[]
-        description: Task Queue type.
-        options:
-          - workflow
-          - activity
-          - nexus
+        description: |
+          Task Queue type.
+          Options are: workflow, activity, nexus.
       - name: select-build-id
         type: string[]
         description: Filter the Task Queue based on Build ID.
@@ -1221,7 +1221,7 @@ commands:
       - name: task-queue-type-legacy
         type: string-enum
         description: Task Queue type (legacy mode only).
-        options:
+        enum-values:
           - workflow
           - activity
         default: workflow
@@ -1265,7 +1265,7 @@ commands:
           `closed`: reachable by one or more closed workflows.
           `existing`: reachable by either.
           New Workflow Executions reachable by a Build ID are always reported.
-        options:
+        enum-values:
           - open
           - closed
           - existing
@@ -1993,7 +1993,7 @@ commands:
         type: string-enum
         description: |
           Optional flag for rejecting Queries based on Workflow state.
-        options:
+        enum-values:
           - not_open
           - not_completed_cleanly
   - name: temporal workflow reset
@@ -2049,23 +2049,21 @@ commands:
           Types of events to re-apply after reset point.
           Deprecated.
           Use --reapply-exclude instead.
-        options:
+        enum-values:
           - All
           - Signal
           - None
         default: All
       - name: reapply-exclude
         type: string[]
-        description: Exclude these event types from re-application.
-        options:
-          - All
-          - Signal
-          - Update
+        description: |
+          Exclude these event types from re-application.
+          Options: All, Signal, Update.
       - name: type
         short: t
         type: string-enum
         description: The event type for the reset.
-        options:
+        enum-values:
           - FirstWorkflowTask
           - LastWorkflowTask
           - LastContinuedAsNew
@@ -2154,7 +2152,7 @@ commands:
       - name: reject-condition
         type: string-enum
         description: Optional flag to reject Queries based on Workflow state.
-        options:
+        enum-values:
           - not_open
           - not_completed_cleanly
     option-sets:
@@ -2322,7 +2320,7 @@ commands:
           Update stage to wait for.
           The only option is `accepted`, but this option is  required. This is to allow
           a future version of the CLI to choose a default value.
-        options:
+        enum-values:
           - accepted
         required: true
 
@@ -2413,7 +2411,7 @@ option-sets:
       - name: overlap-policy
         type: string-enum
         description: Policy for handling overlapping Workflow Executions. # copilot updated this
-        options:  
+        enum-values:  
           - Skip
           - BufferOne
           - BufferAll
@@ -2604,7 +2602,7 @@ option-sets:
         type: string-enum #changed to string-enum
         description: |
           Re-use policy for the Workflow ID in new Workflow Executions.
-        options: 
+        enum-values: 
           - AllowDuplicate
           - AllowDuplicateFailedOnly
           - RejectDuplicate

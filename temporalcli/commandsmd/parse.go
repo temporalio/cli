@@ -7,62 +7,80 @@ import (
 	_ "embed"
 	"fmt"
 	"regexp"
-	"strconv"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 )
 
-//go:embed commands.md
+//go:embed commands.yml
 var CommandsMarkdown []byte
 
-type Command struct {
-	FullName         string
-	NamePath         []string
-	UseSuffix        string
-	Short            string
-	LongPlain        string
-	LongHighlighted  string
-	LongMarkdown     string
-	OptionsSets      []CommandOptions
-	HasInit          bool
-	ExactArgs        int
-	MaximumArgs      int
-	IgnoreMissingEnv bool
-}
+type (
+	// Option represents the structure of an option within option sets.
+	Option struct {
+		Name        string   `yaml:"name"`
+		Type        string   `yaml:"type"`
+		Description string   `yaml:"description"`
+		Default     string   `yaml:"default,omitempty"`
+		Env         string   `yaml:"env,omitempty"`
+		Required    bool     `yaml:"required,omitempty"`
+		Aliases     []string `yaml:"aliases,omitempty"`
+		EnumValues  []string `yaml:"enum-values,omitempty"`
+	}
 
-type CommandOptions struct {
-	SetName            string
-	Options            []CommandOption
-	IncludeOptionsSets []string
-}
+	// Command represents the structure of each command in the commands map.
+	Command struct {
+		FullName               string `yaml:"name"`
+		NamePath               []string
+		Summary                string `yaml:"summary"`
+		Description            string `yaml:"description"`
+		DescriptionPlain       string
+		DescriptionHighlighted string
+		HasInit                bool     `yaml:"has-init"`
+		ExactArgs              int      `yaml:"exact-args"`
+		MaximumArgs            int      `yaml:"maximum-args"`
+		IgnoreMissingEnv       bool     `yaml:"ignores-missing-env:"`
+		Options                []Option `yaml:"options"`
+		OptionSets             []string `yaml:"option-sets"`
+	}
 
-type CommandOption struct {
-	Name         string
-	Shorthand    string
-	DataType     string
-	Desc         string
-	Required     bool
-	DefaultValue string
-	EnumValues   []string
-	EnvVar       string
-	Aliases      []string
-}
+	// OptionSets represents the structure of option sets.
+	OptionSets struct {
+		Name    string   `yaml:"name"`
+		Options []Option `yaml:"options"`
+	}
 
-func ParseMarkdownCommands() ([]*Command, error) {
+	// Commands represents the top-level structure holding commands and option sets.
+	Commands struct {
+		CommandList []Command    `yaml:"commands"`
+		OptionSets  []OptionSets `yaml:"option-sets"`
+	}
+)
+
+func ParseMarkdownCommands() (Commands, error) {
 	// Fix CRLF
 	md := bytes.ReplaceAll(CommandsMarkdown, []byte("\r\n"), []byte("\n"))
 
-	// Split on every "### " section, ignoring the first which is markdown header
-	sections := strings.Split(string(md), "\n### ")[1:]
-	commands := make([]*Command, len(sections))
-	for i, section := range sections {
-		commands[i] = &Command{}
-		if err := commands[i].parseSection(section); err != nil {
-			return nil, fmt.Errorf("failed parsing section %q: %w", section[:strings.Index(section, "\n")], err)
-		} else if i > 0 && commands[i-1].FullName > commands[i].FullName {
-			return nil, fmt.Errorf("command %q shouldn't come before %q", commands[i-1].FullName, commands[i].FullName)
+	var m Commands
+	err := yaml.Unmarshal(md, &m)
+	if err != nil {
+		return Commands{}, fmt.Errorf("failed unmarshalling yaml: %w", err)
+	}
+
+	for i, optionSet := range m.OptionSets {
+		if err := m.OptionSets[i].parseSection(); err != nil {
+			return Commands{}, fmt.Errorf("failed parsing option set section %q: %w", optionSet.Name, err)
 		}
 	}
-	return commands, nil
+
+	// I think this is making a copy?
+	for i, command := range m.CommandList {
+		if err := m.CommandList[i].parseSection(); err != nil {
+			return Commands{}, fmt.Errorf("failed parsing command section %q: %w", command.FullName, err)
+		}
+		// TODO: require alphabetized commands
+	}
+	return m, nil
 }
 
 var markdownLinkPattern = regexp.MustCompile(`\[(.*?)\]\((.*?)\)`)
@@ -72,213 +90,106 @@ var markdownInlineCodeRegex = regexp.MustCompile("`([^`]+)`")
 const ansiReset = "\033[0m"
 const ansiBold = "\033[1m"
 
-func (c *Command) parseSection(section string) error {
-	// Heading
-	headingEnd := strings.Index(section, "\n")
-	if headingEnd == -1 {
-		return fmt.Errorf("missing end of heading")
+// var optionTypes = []string{"string", "string[]", "string-enum", "bool", "duration", "int", "string-enum", "timestamp"}
+
+func (o OptionSets) parseSection() error {
+	if o.Name == "" {
+		return fmt.Errorf("missing option set name")
 	}
-	headingPieces := strings.SplitN(strings.TrimSpace(section[:headingEnd]), ":", 2)
-	if len(headingPieces) != 2 {
-		return fmt.Errorf("heading needs command name and short description")
+
+	for _, option := range o.Options {
+		if err := option.parseSection(); err != nil {
+			return fmt.Errorf("failed parsing option '%v': %w", option.Name, err)
+		}
 	}
-	c.FullName = strings.TrimSpace(headingPieces[0])
-	// If there's a bracket in the name, that needs to be removed and made the use
-	// suffix
-	if bracketIndex := strings.Index(c.FullName, "["); bracketIndex > 0 {
-		c.UseSuffix = " " + c.FullName[bracketIndex:]
-		c.FullName = strings.TrimSpace(c.FullName[:bracketIndex])
+
+	return nil
+}
+
+func (c *Command) parseSection() error {
+	if c.FullName == "" {
+		return fmt.Errorf("missing command name")
 	}
 	c.NamePath = strings.Split(c.FullName, " ")
-	c.Short = strings.TrimSpace(headingPieces[1])
 
-	// Split into initial long description and then each options set
-	subSections := strings.Split(strings.TrimSpace(section[headingEnd+1:]), "#### ")
-
-	// Get long description, but take comment bulleted attributes off end if there
-	c.LongMarkdown = strings.TrimSpace(subSections[0])
-	if strings.HasSuffix(c.LongMarkdown, "-->") {
-		commentStart := strings.LastIndex(c.LongMarkdown, "<!--")
-		if commentStart == -1 {
-			return fmt.Errorf("missing XML comment start")
-		}
-		bullets := strings.Split(strings.TrimSpace(strings.TrimSuffix(c.LongMarkdown[commentStart+4:], "-->")), "\n")
-		c.LongMarkdown = strings.TrimSpace(c.LongMarkdown[:commentStart])
-		for _, bullet := range bullets {
-			bullet = strings.TrimSpace(bullet)
-			switch {
-			case bullet == "* has-init":
-				c.HasInit = true
-			case strings.HasPrefix(bullet, "* exact-args="):
-				var err error
-				if c.ExactArgs, err = strconv.Atoi(strings.TrimPrefix(bullet, "* exact-args=")); err != nil {
-					return fmt.Errorf("invalid exact-args: %w", err)
-				}
-			case strings.HasPrefix(bullet, "* maximum-args="):
-				var err error
-				if c.MaximumArgs, err = strconv.Atoi(strings.TrimPrefix(bullet, "* maximum-args=")); err != nil {
-					return fmt.Errorf("invalid maximum-args: %w", err)
-				}
-			case strings.HasPrefix(bullet, "* ignores-missing-env"):
-				c.IgnoreMissingEnv = true
-			default:
-				return fmt.Errorf("unrecognized attribute bullet: %q", bullet)
-			}
-		}
-		if c.MaximumArgs != 0 && c.ExactArgs != 0 {
-			return fmt.Errorf("cannot have both maximum-args and exact-args")
-		}
+	if c.Summary == "" {
+		return fmt.Errorf("missing summary for command")
+	}
+	if c.Summary[len(c.Summary)-1] == '.' {
+		return fmt.Errorf("summary should not end in a '.'")
 	}
 
-	// Strip links for long plain/highlighted
-	c.LongPlain = markdownLinkPattern.ReplaceAllString(c.LongMarkdown, "$1")
-	c.LongHighlighted = c.LongPlain
-	// Highlight code for long highlighted
-	c.LongHighlighted = markdownBlockCodeRegex.ReplaceAllStringFunc(c.LongHighlighted, func(s string) string {
+	if c.MaximumArgs != 0 && c.ExactArgs != 0 {
+		return fmt.Errorf("cannot have both maximum-args and exact-args")
+	}
+
+	if c.Description == "" {
+		return fmt.Errorf("missing description for command: %s", c.FullName)
+	}
+
+	// // Strip links for long plain/highlighted
+	c.DescriptionPlain = markdownLinkPattern.ReplaceAllString(c.Description, "$1")
+	c.DescriptionHighlighted = c.DescriptionPlain
+	// // Highlight code for long highlighted
+	c.DescriptionHighlighted = markdownBlockCodeRegex.ReplaceAllStringFunc(c.DescriptionHighlighted, func(s string) string {
 		s = strings.Trim(s, "`")
 		s = strings.Trim(s, " ")
 		s = strings.Trim(s, "\n")
 		return ansiBold + s + ansiReset
 	})
-	c.LongHighlighted = markdownInlineCodeRegex.ReplaceAllStringFunc(c.LongHighlighted, func(s string) string {
+	c.DescriptionHighlighted = markdownInlineCodeRegex.ReplaceAllStringFunc(c.DescriptionHighlighted, func(s string) string {
 		s = strings.Trim(s, "`")
 		return ansiBold + s + ansiReset
 	})
 
+	// TODO: I don't think we need to parse option sets, if it's already a set of strings
 	// Each option set
-	c.OptionsSets = make([]CommandOptions, len(subSections)-1)
-	for i, subSection := range subSections[1:] {
-		if err := c.OptionsSets[i].parseSection(strings.TrimSpace(subSection)); err != nil {
-			return fmt.Errorf("failed parsing options section #%v: %w", i+1, err)
+	// optionSetsAvailable, err := parseOptionSets(c.OptionSets)
+	// if err != nil {
+	// 	return fmt.Errorf("failed parsing options set section #%v: %w", err)
+	// }
+
+	// Each option
+	for _, option := range c.Options {
+		if err := option.parseSection(); err != nil {
+			return fmt.Errorf("failed parsing option '%v': %w", option.Name, err)
 		}
+		// TODO: require alphabetized commands
 	}
+
 	return nil
 }
 
-func (c *CommandOptions) parseSection(section string) error {
-	// Heading
-	headingEnd := strings.Index(section, "\n")
-	if headingEnd == -1 {
-		return fmt.Errorf("missing end of heading")
-	}
-	heading := strings.TrimSpace(section[:headingEnd])
-	if strings.HasPrefix(heading, "Options set for ") {
-		c.SetName = strings.TrimPrefix(heading, "Options set for ")
-		c.SetName = strings.TrimSuffix(c.SetName, ":")
-	} else if heading != "Options" {
-		return fmt.Errorf("invalid options heading")
-	}
-	section = strings.TrimSpace(section[headingEnd+1:])
+// func parseOptionSets(optionSets []string) ([]string, error) {
+// 	for a, option := range optionSets
+// 	return []string{}, nil
+// }
 
-	// Option lines
-	lines := strings.Split(section, "\n")
-	endOfBullets := false
-	for lineIndex := 0; lineIndex < len(lines); lineIndex++ {
-		line := strings.TrimSpace(lines[lineIndex])
-		// Handle bullet
-		if strings.HasPrefix(line, "* `") {
-			if endOfBullets {
-				return fmt.Errorf("got new bullet after end of bullets")
-			}
-			// Append each successive indented line
-			for lineIndex+1 < len(lines) && strings.HasPrefix(lines[lineIndex+1], "  ") {
-				line += " " + strings.TrimSpace(lines[lineIndex+1])
-				lineIndex++
-			}
-			c.Options = append(c.Options, CommandOption{})
-			if err := c.Options[len(c.Options)-1].parseBulletLine(line); err != nil {
-				return fmt.Errorf("failed parsing options line end at %v: %w", lineIndex+1, err)
-			}
-			continue
-		}
-		// If we found any bullets but this isn't one, this means end of bullets
-		endOfBullets = len(c.Options) > 0
-		// Ignore empty
-		if line == "" {
-			continue
-		}
-		// Include
-		if strings.HasPrefix(line, "Includes options set for [") {
-			bracketEnd := strings.Index(line, "]")
-			if bracketEnd == -1 {
-				return fmt.Errorf("invalid include, missing end bracket")
-			}
-			c.IncludeOptionsSets = append(c.IncludeOptionsSets,
-				strings.TrimPrefix(line[:bracketEnd], "Includes options set for ["))
-			continue
-		}
-		return fmt.Errorf("unrecognized options line #%v", lineIndex+1)
-	}
+func (o *Option) parseSection() error {
+	// if o.Name == "" {
+	// 	return fmt.Errorf("missing option name")
+	// }
+
+	// if o.Type == "" {
+	// 	return fmt.Errorf("missing option type")
+	// }
+
+	// if o.Description == "" {
+	// 	return fmt.Errorf("missing description for option: %s", o.Name)
+	// }
+
+	// if o.Env != strings.ToUpper(o.Env) {
+	// 	return fmt.Errorf("env variables must be in all caps")
+	// }
+
+	// if len(o.EnumValues) != 0 {
+	// 	if o.Type != "string-enum" {
+	// 		return fmt.Errorf("enum-values can only specified for string-enum type")
+	// 	}
+	// 	// Check default enum values
+	// 	if o.Default != "" && !slices.Contains(o.EnumValues, o.Default) {
+	// 		return fmt.Errorf("default value '%s' must be one of the enum-values options %s", o.Default, o.EnumValues)
+	// 	}
+	// }
 	return nil
-}
-
-func (c *CommandOption) parseBulletLine(bullet string) error {
-	// Take off bullet
-	bullet = strings.TrimPrefix(bullet, "* ")
-
-	// Name
-	if !strings.HasPrefix(bullet, "`") {
-		return fmt.Errorf("missing opening backtick")
-	}
-	bullet = bullet[1:]
-	tickEnd := strings.Index(bullet, "`")
-	if tickEnd == -1 {
-		return fmt.Errorf("missing ending backtick")
-	} else if !strings.HasPrefix(bullet, "--") {
-		return fmt.Errorf("option name %q does not have leading '--'", bullet[:tickEnd])
-	}
-	c.Name = strings.TrimPrefix(bullet[:tickEnd], "--")
-	bullet = strings.TrimSpace(bullet[tickEnd+1:])
-
-	// Shorthand
-	if strings.HasPrefix(bullet, ", `") {
-		bullet = strings.TrimPrefix(bullet, ", `")
-		tickEnd = strings.Index(bullet, "`")
-		if tickEnd == -1 {
-			return fmt.Errorf("missing ending backtick")
-		} else if !strings.HasPrefix(bullet, "-") {
-			return fmt.Errorf("option shorthand %q does not have leading '-'", bullet[:tickEnd])
-		}
-		c.Shorthand = strings.TrimPrefix(bullet[:tickEnd], "-")
-		bullet = strings.TrimSpace(bullet[tickEnd+1:])
-	}
-
-	// Data type
-	if !strings.HasPrefix(bullet, "(") {
-		return fmt.Errorf("missing data type parens")
-	}
-	dataTypeEnd := strings.Index(bullet, ") - ")
-	if dataTypeEnd == -1 {
-		return fmt.Errorf("missing data type end")
-	}
-	c.DataType = bullet[1:dataTypeEnd]
-	bullet = strings.TrimSpace(bullet[dataTypeEnd+4:])
-
-	// Description
-	c.Desc = bullet
-
-	// Go over trailing sentences in description to see if they're attributes and
-	// take them off if they are.
-	for {
-		dot := strings.LastIndex(c.Desc[:len(c.Desc)-1], ". ")
-		if dot == -1 {
-			return nil
-		}
-		lastSentence := strings.TrimSpace(c.Desc[dot+1 : len(c.Desc)-1])
-		switch {
-		case lastSentence == "Required":
-			c.Required = true
-		case strings.HasPrefix(lastSentence, "Default: "):
-			c.DefaultValue = strings.TrimPrefix(lastSentence, "Default: ")
-		case strings.HasPrefix(lastSentence, "Options: "):
-			c.EnumValues = strings.Split(strings.TrimPrefix(lastSentence, "Options: "), ", ")
-		case strings.HasPrefix(lastSentence, "Env: "):
-			c.EnvVar = strings.TrimPrefix(lastSentence, "Env: ")
-		case strings.HasPrefix(lastSentence, "Alias: `--"):
-			c.Aliases = append(c.Aliases, strings.TrimSuffix(strings.TrimPrefix(lastSentence, "Alias: `--"), "`"))
-		default:
-			return nil
-		}
-		c.Desc = c.Desc[:dot+1]
-	}
 }

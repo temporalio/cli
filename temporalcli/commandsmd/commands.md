@@ -687,7 +687,7 @@ Create a new Namespace on the Temporal Service:
 temporal operator namespace create \
     --namespace YourNewNamespaceName \
     [options]
-````
+```
 
 Create a Namespace with multi-region data replication:
 
