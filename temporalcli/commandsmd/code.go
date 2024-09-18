@@ -13,7 +13,7 @@ import (
 )
 
 func GenerateCommandsCode(pkg string, commands Commands) ([]byte, error) {
-	w := &codeWriter{allCommands: commands.CommandList}
+	w := &codeWriter{allCommands: commands.CommandList, OptionSets: commands.OptionSets}
 	// Put terminal check at top
 	w.writeLinef("var hasHighlighting = %v.IsTerminal(%v.Stdout.Fd())", w.importIsatty(), w.importPkg("os"))
 
@@ -166,13 +166,6 @@ func (c *Command) writeCode(w *codeWriter) error {
 		}
 	}
 
-	// TODO: might need to debug this missing
-	// If there is a set name, it is treated as embedded because options sets
-	// // are different structs, so the fields are not set
-	// if optSet.SetName != "" {
-	// 	w.writeLinef("%v", optSet.setStructName())
-	// 	continue
-	// }
 	w.writeLinef("}\n")
 
 	// Constructor builds the struct and sets the flags
@@ -217,6 +210,9 @@ func (c *Command) writeCode(w *codeWriter) error {
 	} else {
 		w.writeLinef("s.Command.Args = %v.NoArgs", w.importCobra())
 	}
+	if c.FullName == "temporal env set" {
+		fmt.Println("IgnoreMissingEnv: ", c.IgnoreMissingEnv)
+	}
 	if c.IgnoreMissingEnv {
 		w.writeLinef("s.Command.Annotations = make(map[string]string)")
 		w.writeLinef("s.Command.Annotations[\"ignoresMissingEnv\"] = \"true\"")
@@ -232,18 +228,33 @@ func (c *Command) writeCode(w *codeWriter) error {
 		flagVar = "s.Command.PersistentFlags()"
 	}
 	var flagAliases [][]string
+	// Add aliases
 	for _, opt := range c.Options {
 		for _, alias := range opt.Aliases {
 			flagAliases = append(flagAliases, []string{alias, opt.Name})
 		}
+
+		// Each field
+		if err := opt.writeFlagBuilding("s", flagVar, w); err != nil {
+			return fmt.Errorf("failed building option flags: %w", err)
+		}
 	}
 
 	for _, include := range c.OptionSets {
+		if c.FullName == "temporal workflow update execute" {
+			// fmt.Println("include: ", include)
+		}
 		// Find include
 	cmdLoop:
 		for _, optSet := range w.OptionSets {
+			if c.FullName == "temporal workflow update execute" {
+				// fmt.Println("optSet.Name", optSet.Name)
+			}
 			if optSet.Name == include {
 				for _, opt := range optSet.Options {
+					if c.FullName == "temporal workflow update execute" {
+						// fmt.Println("options: ", opt)
+					}
 					for _, alias := range opt.Aliases {
 						flagAliases = append(flagAliases, []string{alias, opt.Name})
 					}
@@ -251,19 +262,16 @@ func (c *Command) writeCode(w *codeWriter) error {
 				break cmdLoop
 			}
 
-			// If there's a name, this is done in the method
-			if optSet.Name != "" {
-				w.writeLinef("s.%v.buildFlags(cctx, %v)", optSet.setStructName(), flagVar)
-				continue
-			}
-
-			// TODO: This never hits?
-			// Each field
-			if err := optSet.writeFlagBuilding("s", flagVar, w); err != nil {
-				return fmt.Errorf("failed building option flags: %w", err)
-			}
 		}
+
+		// If there's a name, this is done in the method
+		w.writeLinef("s.%v.buildFlags(cctx, %v)", setStructName(include), flagVar)
 	}
+
+	if c.FullName == "temporal workflow update execute" {
+		fmt.Println("temporal workflow update execute flagAliases", flagAliases)
+	}
+
 	// Generate normalize for aliases
 	if len(flagAliases) > 0 {
 		sort.Slice(flagAliases, func(i, j int) bool { return flagAliases[i][0] < flagAliases[j][0] })
@@ -291,6 +299,8 @@ func (c *Command) writeCode(w *codeWriter) error {
 }
 
 func (o *OptionSets) setStructName() string { return namify(o.Name, true) + "Options" }
+
+func setStructName(name string) string { return namify(name, true) + "Options" }
 
 func (o *OptionSets) writeFlagBuilding(selfVar, flagVar string, w *codeWriter) error {
 	// Embedded sets
@@ -333,10 +343,10 @@ func (o *Option) writeFlagBuilding(selfVar, flagVar string, w *codeWriter) error
 	var flagMeth, defaultLit, setDefault string
 	switch o.Type {
 	case "bool":
-		flagMeth, defaultLit = "BoolVar", ", false"
-		if o.Default != "" {
-			return fmt.Errorf("cannot have default for bool var")
-		}
+		flagMeth, defaultLit = "BoolVar", ", false" // TODO: fix this to grab from o.Default?
+		// if o.Default != "" {
+		// 	return fmt.Errorf("cannot have default for bool var")
+		// }
 	case "duration":
 		flagMeth, setDefault = "Var", "0"
 		if o.Default != "" {
@@ -398,12 +408,12 @@ func (o *Option) writeFlagBuilding(selfVar, flagVar string, w *codeWriter) error
 		// set default before calling Var so that it stores thedefault value into the flag
 		w.writeLinef("%v.%v = %v", selfVar, o.fieldName(), setDefault)
 	}
-	if o.Description == "" {
+	if o.Short != "" {
+		w.writeLinef("%v.%vP(&%v.%v, %q, %q%v, %q)",
+			flagVar, flagMeth, selfVar, o.fieldName(), o.Name, o.Short, defaultLit, desc)
+	} else {
 		w.writeLinef("%v.%v(&%v.%v, %q%v, %q)",
 			flagVar, flagMeth, selfVar, o.fieldName(), o.Name, defaultLit, desc)
-	} else {
-		w.writeLinef("%v.%vP(&%v.%v, %q, %q%v, %q)",
-			flagVar, flagMeth, selfVar, o.fieldName(), o.Name, o.Description, defaultLit, desc)
 	}
 	if o.Required {
 		w.writeLinef("_ = %v.MarkFlagRequired(%v, %q)", w.importCobra(), flagVar, o.Name)

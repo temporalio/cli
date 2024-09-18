@@ -21,6 +21,7 @@ type (
 		Name        string   `yaml:"name"`
 		Type        string   `yaml:"type"`
 		Description string   `yaml:"description"`
+		Short       string   `yaml:"short,omitempty"`
 		Default     string   `yaml:"default,omitempty"`
 		Env         string   `yaml:"env,omitempty"`
 		Required    bool     `yaml:"required,omitempty"`
@@ -39,7 +40,7 @@ type (
 		HasInit                bool     `yaml:"has-init"`
 		ExactArgs              int      `yaml:"exact-args"`
 		MaximumArgs            int      `yaml:"maximum-args"`
-		IgnoreMissingEnv       bool     `yaml:"ignores-missing-env:"`
+		IgnoreMissingEnv       bool     `yaml:"ignores-missing-env"`
 		Options                []Option `yaml:"options"`
 		OptionSets             []string `yaml:"option-sets"`
 	}

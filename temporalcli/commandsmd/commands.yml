@@ -23,7 +23,7 @@ commands:
       - name: env
         type: string
         description: Active environment name (`ENV`).
-        default: default # consciously only putting `.` at the end of description/summary
+        default: default
         env: TEMPORAL_ENV
       - name: env-file
         type: string
@@ -41,6 +41,7 @@ commands:
         description: |
           Log level.
           "info" for most commands and "warn" for `server start-dev`.
+        default: info
       - name: log-format
         type: string
         description: |
@@ -130,7 +131,7 @@ commands:
     options:
       - name: activity-id
         type: string
-        description: Activity ID to complete.
+        description: Activity ID to fail.
         required: true
       - name: detail
         type: string
@@ -274,6 +275,7 @@ commands:
     maximum-args: 1
     options:
       - name: key
+        short: k
         type: string
         description: Property name.
   - name: temporal env get
@@ -301,6 +303,7 @@ commands:
     options:
       - name: key
         type: string
+        short: k
         description: Property name.
   - name: temporal env list
     summary: Show environment names
@@ -333,13 +336,13 @@ commands:
       - name: key
         short: k
         type: string
-        description: Property name.
-        required: true
+        description: Property name (required).
+        # required: true
       - name: value
         short: v
         type: string
-        description: Property value.
-        required: true
+        description: Property value (required).
+        # required: true
   - name: temporal operator
     summary: Manage Temporal deployments
     description: |
@@ -2150,7 +2153,8 @@ commands:
         type: string
         description: Query Type/Name.
         required: true
-        alias: type
+        aliases:
+          - type
       - name: reject-condition
         type: string-enum
         description: |
@@ -2309,7 +2313,8 @@ commands:
         type: string
         description: Signal name.
         required: true
-        alias: type
+        aliases:
+          - type
   - name: temporal workflow stack
     summary: Trace a Workflow Execution
     description: |
@@ -2750,7 +2755,8 @@ option-sets:
         type: string
         description: Workflow Type name.
         required: true
-        alias: name
+        aliases: 
+          - name
       - name: task-queue
         type: string
         description: Workflow Task queue.
@@ -2839,7 +2845,8 @@ option-sets:
         type: string
         description: Handler method name.
         required: true
-        alias: type
+        aliases: 
+          - type
       - name: first-execution-run-id
         type: string
         description: |
