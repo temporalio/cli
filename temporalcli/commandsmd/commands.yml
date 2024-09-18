@@ -1363,7 +1363,7 @@ commands:
         description: UI custom assets path.
       - name: ui-codec-endpoint
         type: string
-        description: UI custom assets path.
+        description: UI remote codec HTTP end.
       - name: sqlite-pragma
         type: string[]
         description: SQLite pragma statements in "PRAGMA=VALUE" format.
