@@ -155,7 +155,7 @@ commands:
           - never
         description: |
           Log level.
-          "info" for most commands and "warn" for `server start-dev`.
+          Default is "info" for most commands and "warn" for `server start-dev`.
         default: info
       - name: log-format
         type: string
@@ -225,7 +225,7 @@ commands:
         required: true
       - name: result
         type: string
-        description: Return `JSON` to return.
+        description: Result `JSON` to return.
         required: true
       - name: identity
         type: string
@@ -233,7 +233,7 @@ commands:
     option-sets:
       - workflow reference
   - name: temporal activity fail
-    summary: Fail and Activity
+    summary: Fail an Activity
     description: |
       Fail an Activity, marking it as having encountered an error. Specify the
       Activity and Workflow IDs:
@@ -250,7 +250,7 @@ commands:
         required: true
       - name: detail
         type: string
-        description: Identity of the user submitting this request.
+        description: Reason for failing the Activity (JSON).
       - name: identity
         type: string
         description: Identity of the user submitting this request.
@@ -369,7 +369,7 @@ commands:
       `TEMPORAL_ENV` environment variable. If neither is set, the CLI uses the
       "default" environment.
   - name: temporal env delete
-    summary: Delete and environment or environment property
+    summary: Delete an environment or environment property
     description: |
       Remove a presets environment entirely _or_ remove a key-value pair within an
       environment. If you don't specify an environment (with `--env` or by setting
@@ -680,6 +680,8 @@ commands:
   - name: temporal operator namespace delete
     summary: Delete a Namespace
     description: |
+      Removes a Namespace from the Service.
+
       ```
       temporal operator namespace delete [options]
       ```
@@ -809,7 +811,7 @@ commands:
           Archive visibility data to this `URI`.
           Once enabled, can't be changed.
   - name: temporal operator nexus
-    summary: Commands for managing Nexus resources (EXPIRIMENTAL)
+    summary: Commands for managing Nexus resources (EXPERIMENTAL)
     description: |
       Nexus commands enable managing Nexus resources.
 
@@ -906,13 +908,29 @@ commands:
   - name: temporal operator nexus endpoint update
     summary: Update an existing Nexus Endpoint (EXPERIMENTAL)
     description: |
-      Update a Nexus Endpoint configuration on the Server.
+      Update an existing Nexus Endpoint on the Server.
+
+      An endpoint name is used in workflow code to invoke Nexus operations.  The
+      endpoint target may either be a worker, in which case `--target-namespace` and
+      `--target-task-queue` must both be provided, or an external URL, in which case
+      `--target-url` must be provided.
+
+      The endpoint is patched; existing fields for which flags are not provided are
+      left as they were.
+
+      Update only the target task queue:
 
       ```
       temporal operator nexus endpoint update \
         --name your-endpoint \
-        --target-namespace your-namespace \
-        --target-task-queue your-task-queue \
+        --target-task-queue your-other-queue
+      ```
+
+      Update only the description:
+
+      ```
+      temporal operator nexus endpoint update \
+        --name your-endpoint \
         --description-file DESCRIPTION.md
       ```
     options:
@@ -1301,7 +1319,7 @@ commands:
         short: n
         type: string[]
         description: |
-          Namespace to create at launch.
+          Namespaces to be created at launch.
           The "default" Namespace is always created automatically.
       - name: port
         type: int

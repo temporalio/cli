@@ -269,7 +269,7 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	cctx.BindFlagEnvVar(s.Command.PersistentFlags().Lookup("env"), "TEMPORAL_ENV")
 	s.Command.PersistentFlags().StringVar(&s.EnvFile, "env-file", "", "Path to environment settings file.\n(defaults to `$HOME/.config/temporalio/temporal.yaml`).\n")
 	s.LogLevel = NewStringEnum([]string{"debug", "info", "warn", "error", "never"}, "info")
-	s.Command.PersistentFlags().Var(&s.LogLevel, "log-level", "Log level.\n\"info\" for most commands and \"warn\" for `server start-dev`.\n Accepted values: debug, info, warn, error, never.")
+	s.Command.PersistentFlags().Var(&s.LogLevel, "log-level", "Log level.\nDefault is \"info\" for most commands and \"warn\" for `server start-dev`.\n Accepted values: debug, info, warn, error, never.")
 	s.Command.PersistentFlags().StringVar(&s.LogFormat, "log-format", "text", "Log format.\nOptions are: text, json.\n")
 	s.Output = NewStringEnum([]string{"text", "json", "jsonl", "none"}, "text")
 	s.Command.PersistentFlags().VarP(&s.Output, "output", "o", "Non-logging data output format. Accepted values: text, json, jsonl, none.")
@@ -328,7 +328,7 @@ func NewTemporalActivityCompleteCommand(cctx *CommandContext, parent *TemporalAc
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.ActivityId, "activity-id", "", "Activity ID to complete. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "activity-id")
-	s.Command.Flags().StringVar(&s.Result, "result", "", "Return `JSON` to return. Required.")
+	s.Command.Flags().StringVar(&s.Result, "result", "", "Result `JSON` to return. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "result")
 	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of the user submitting this request.")
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
@@ -355,7 +355,7 @@ func NewTemporalActivityFailCommand(cctx *CommandContext, parent *TemporalActivi
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "fail [flags]"
-	s.Command.Short = "Fail and Activity"
+	s.Command.Short = "Fail an Activity"
 	if hasHighlighting {
 		s.Command.Long = "Fail an Activity, marking it as having encountered an error. Specify the\nActivity and Workflow IDs:\n\n\x1b[1mtemporal activity fail \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\x1b[0m\n"
 	} else {
@@ -364,7 +364,7 @@ func NewTemporalActivityFailCommand(cctx *CommandContext, parent *TemporalActivi
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.ActivityId, "activity-id", "", "Activity ID to fail. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "activity-id")
-	s.Command.Flags().StringVar(&s.Detail, "detail", "", "Identity of the user submitting this request.")
+	s.Command.Flags().StringVar(&s.Detail, "detail", "", "Reason for failing the Activity (JSON).")
 	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of the user submitting this request.")
 	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for failing the Activity.")
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
@@ -520,7 +520,7 @@ func NewTemporalEnvDeleteCommand(cctx *CommandContext, parent *TemporalEnvComman
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "delete [flags]"
-	s.Command.Short = "Delete and environment or environment property"
+	s.Command.Short = "Delete an environment or environment property"
 	if hasHighlighting {
 		s.Command.Long = "Remove a presets environment entirely _or_ remove a key-value pair within an\nenvironment. If you don't specify an environment (with \x1b[1m--env\x1b[0m or by setting\nthe \x1b[1mTEMPORAL_ENV\x1b[0m variable), this command updates the \"default\" environment:\n\n\x1b[1mtemporal env delete \\\n    --env YourEnvironment\x1b[0m\n\nor\n\n\x1b[1mtemporal env delete \\\n    --env prod \\\n    --key tls-key-path\x1b[0m\n"
 	} else {
@@ -916,9 +916,9 @@ func NewTemporalOperatorNamespaceDeleteCommand(cctx *CommandContext, parent *Tem
 	s.Command.Use = "delete [flags]"
 	s.Command.Short = "Delete a Namespace"
 	if hasHighlighting {
-		s.Command.Long = "\x1b[1mtemporal operator namespace delete [options]\x1b[0m\n\nFor example:\n\n\x1b[1mtemporal operator namespace delete \\\n    --namespace YourNamespaceName\x1b[0m\n"
+		s.Command.Long = "Removes a Namespace from the Service.\n\n\x1b[1mtemporal operator namespace delete [options]\x1b[0m\n\nFor example:\n\n\x1b[1mtemporal operator namespace delete \\\n    --namespace YourNamespaceName\x1b[0m\n"
 	} else {
-		s.Command.Long = "```\ntemporal operator namespace delete [options]\n```\n\nFor example:\n\n```\ntemporal operator namespace delete \\\n    --namespace YourNamespaceName\n```\n"
+		s.Command.Long = "Removes a Namespace from the Service.\n\n```\ntemporal operator namespace delete [options]\n```\n\nFor example:\n\n```\ntemporal operator namespace delete \\\n    --namespace YourNamespaceName\n```\n"
 	}
 	s.Command.Args = cobra.MaximumNArgs(1)
 	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Request confirmation before deletion.")
@@ -1041,7 +1041,7 @@ func NewTemporalOperatorNexusCommand(cctx *CommandContext, parent *TemporalOpera
 	var s TemporalOperatorNexusCommand
 	s.Parent = parent
 	s.Command.Use = "nexus"
-	s.Command.Short = "Commands for managing Nexus resources (EXPIRIMENTAL)"
+	s.Command.Short = "Commands for managing Nexus resources (EXPERIMENTAL)"
 	if hasHighlighting {
 		s.Command.Long = "Nexus commands enable managing Nexus resources.\n\nNexus commands follow this syntax:\n\n\x1b[1mtemporal operator nexus [command] [command] [command options]\x1b[0m\n"
 	} else {
@@ -1214,9 +1214,9 @@ func NewTemporalOperatorNexusEndpointUpdateCommand(cctx *CommandContext, parent 
 	s.Command.Use = "update [flags]"
 	s.Command.Short = "Update an existing Nexus Endpoint (EXPERIMENTAL)"
 	if hasHighlighting {
-		s.Command.Long = "Update a Nexus Endpoint configuration on the Server.\n\n\x1b[1mtemporal operator nexus endpoint update \\\n  --name your-endpoint \\\n  --target-namespace your-namespace \\\n  --target-task-queue your-task-queue \\\n  --description-file DESCRIPTION.md\x1b[0m\n"
+		s.Command.Long = "Update an existing Nexus Endpoint on the Server.\n\nAn endpoint name is used in workflow code to invoke Nexus operations.  The\nendpoint target may either be a worker, in which case \x1b[1m--target-namespace\x1b[0m and\n\x1b[1m--target-task-queue\x1b[0m must both be provided, or an external URL, in which case\n\x1b[1m--target-url\x1b[0m must be provided.\n\nThe endpoint is patched; existing fields for which flags are not provided are\nleft as they were.\n\nUpdate only the target task queue:\n\n\x1b[1mtemporal operator nexus endpoint update \\\n  --name your-endpoint \\\n  --target-task-queue your-other-queue\x1b[0m\n\nUpdate only the description:\n\n\x1b[1mtemporal operator nexus endpoint update \\\n  --name your-endpoint \\\n  --description-file DESCRIPTION.md\x1b[0m\n"
 	} else {
-		s.Command.Long = "Update a Nexus Endpoint configuration on the Server.\n\n```\ntemporal operator nexus endpoint update \\\n  --name your-endpoint \\\n  --target-namespace your-namespace \\\n  --target-task-queue your-task-queue \\\n  --description-file DESCRIPTION.md\n```\n"
+		s.Command.Long = "Update an existing Nexus Endpoint on the Server.\n\nAn endpoint name is used in workflow code to invoke Nexus operations.  The\nendpoint target may either be a worker, in which case `--target-namespace` and\n`--target-task-queue` must both be provided, or an external URL, in which case\n`--target-url` must be provided.\n\nThe endpoint is patched; existing fields for which flags are not provided are\nleft as they were.\n\nUpdate only the target task queue:\n\n```\ntemporal operator nexus endpoint update \\\n  --name your-endpoint \\\n  --target-task-queue your-other-queue\n```\n\nUpdate only the description:\n\n```\ntemporal operator nexus endpoint update \\\n  --name your-endpoint \\\n  --description-file DESCRIPTION.md\n```\n"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Name, "name", "", "Endpoint name. Required.")
@@ -1684,7 +1684,7 @@ func NewTemporalServerStartDevCommand(cctx *CommandContext, parent *TemporalServ
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.DbFilename, "db-filename", "f", "", "Path to file for persistent Temporal state store.\nBy default, Workflow Executions are lost when the server process dies.\n")
-	s.Command.Flags().StringArrayVarP(&s.Namespace, "namespace", "n", nil, "Namespace to create at launch.\nThe \"default\" Namespace is always created automatically.\n")
+	s.Command.Flags().StringArrayVarP(&s.Namespace, "namespace", "n", nil, "Namespaces to be created at launch.\nThe \"default\" Namespace is always created automatically.\n")
 	s.Command.Flags().IntVarP(&s.Port, "port", "p", 7233, "Port for the front-end gRPC Service.")
 	s.Command.Flags().IntVar(&s.HttpPort, "http-port", 0, "Port for the HTTP API service.\nDefault is off.\n")
 	s.Command.Flags().IntVar(&s.MetricsPort, "metrics-port", 0, "Port for '/metrics'.\nDefault is off.\n")
