@@ -27,8 +27,8 @@ func (c *TemporalOperatorSearchAttributeCreateCommand) run(cctx *CommandContext,
 		return fmt.Errorf("unable to get existing search attributes: %w", err)
 	}
 
-	searchAttributes := make(map[string]enums.IndexedValueType, len(c.Type))
-	for i, saType := range c.Type {
+	searchAttributes := make(map[string]enums.IndexedValueType, len(c.Type.Values))
+	for i, saType := range c.Type.Values {
 		saName := c.Name[i]
 		typeInt, err := searchAttributeTypeStringToEnum(saType)
 		if err != nil {

@@ -169,8 +169,8 @@ func (o *Option) parseSection() error {
 	}
 
 	if len(o.EnumValues) != 0 {
-		if o.Type != "string-enum" {
-			return fmt.Errorf("enum-values can only specified for string-enum type")
+		if o.Type != "string-enum" && o.Type != "string-enum[]" {
+			return fmt.Errorf("enum-values can only specified for string-enum and string-enum[] types")
 		}
 		// Check default enum values
 		if o.Default != "" && !slices.Contains(o.EnumValues, o.Default) {

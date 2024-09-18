@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 )
@@ -32,6 +33,27 @@ func (s *StringEnum) Set(p string) error {
 }
 
 func (*StringEnum) Type() string { return "string" }
+
+type StringEnumArray struct {
+	Allowed []string
+	Values  []string
+}
+
+func NewStringEnumArray(allowed []string, values []string) StringEnumArray {
+	return StringEnumArray{Allowed: allowed, Values: values}
+}
+
+func (s *StringEnumArray) String() string { return strings.Join(s.Values, ",") }
+
+func (s *StringEnumArray) Set(p string) error {
+	if !slices.Contains(s.Allowed, p) {
+		return fmt.Errorf("invalid value: %s, allowed values are: %s", p, strings.Join(s.Allowed, ", "))
+	}
+	s.Values = append(s.Values, p)
+	return nil
+}
+
+func (*StringEnumArray) Type() string { return "string" }
 
 func stringToProtoEnum[T ~int32](s string, maps ...map[string]int32) (T, error) {
 	// Go over each map looking, if not there, use first map to build set of

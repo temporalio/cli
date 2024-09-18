@@ -108,7 +108,7 @@
 
 # * name, summary, and descrption are required fields. All other fields are optional.
 # * Available option types are `bool`, `duration`, `int`, `string`, `string[]`, 
-#   `string-enum`, or `timestamp`.
+#   `string-enum`, string-enum[], or `timestamp`.
 
 # OPTION SET OVERVIEW
 
@@ -158,10 +158,14 @@ commands:
           Default is "info" for most commands and "warn" for `server start-dev`.
         default: info
       - name: log-format
-        type: string
+        type: string-enum
         description: |
           Log format.
-          Options are: text, json.
+          "pretty" is an alias for "text". This is for compatibility reasons, please use "text".
+        enum-values:
+          - text
+          - json
+          - pretty
         default: text
       - name: output
         type: string-enum
@@ -988,10 +992,17 @@ commands:
         description: Search Attribute name.
         required: true
       - name: type
-        type: string[]
+        type: string-enum[]
         description: |
           Search Attribute type.
-          Options: Text, Keyword, Int, Double, Bool, Datetime, KeywordList.
+        enum-values:
+          - Text
+          - Keyword
+          - Int
+          - Double
+          - Bool
+          - Datetime
+          - KeywordList
         required: true
   - name: temporal operator search-attribute list
     summary: List Search Attributes
@@ -1490,10 +1501,13 @@ commands:
         description: Task Queue name.
         required: true
       - name: task-queue-type
-        type: string[]
+        type: string-enum[]
         description: |
           Task Queue type. If not specified, all types are reported.
-          Options are: workflow, activity, nexus.
+        enum-values:
+          - workflow
+          - activity
+          - nexus
       - name: select-build-id
         type: string[]
         description: Filter the Task Queue based on Build ID.
@@ -2354,10 +2368,13 @@ commands:
           - None
         default: All
       - name: reapply-exclude
-        type: string[]
+        type: string-enum[]
         description: |
           Exclude these event types from re-application.
-          Options: All, Signal, Update.
+        enum-values:
+          - All
+          - Signal
+          - Update
       - name: type
         short: t
         type: string-enum
@@ -2941,10 +2958,13 @@ option-sets:
           If the Workflow receives a signal or update prior to this time, the Workflow
           Execution starts immediately.
       - name: id-reuse-policy
-        type: string
-        description: |
-          Re-use policy for the Workflow ID in new Workflow Executions.
-          Options: AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate, TerminateIfRunning.
+        type: string-enum
+        description: Re-use policy for the Workflow ID in new Workflow Executions.
+        enum-values:
+          - AllowDuplicate
+          - AllowDuplicateFailedOnly
+          - RejectDuplicate
+          - TerminateIfRunning
   - name: payload-input
     options:
       - name: input

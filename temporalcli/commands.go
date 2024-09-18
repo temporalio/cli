@@ -442,9 +442,9 @@ func (c *TemporalCommand) preRun(cctx *CommandContext) error {
 				return fmt.Errorf("invalid log level %q: %w", c.LogLevel.Value, err)
 			}
 			var handler slog.Handler
-			switch c.LogFormat {
+			switch c.LogFormat.Value {
 			// We have a "pretty" alias for compatibility
-			case "", "text", "pretty":
+			case "text", "pretty":
 				handler = slog.NewTextHandler(cctx.Options.Stderr, &slog.HandlerOptions{
 					Level: level,
 					// Remove the TZ
@@ -458,7 +458,7 @@ func (c *TemporalCommand) preRun(cctx *CommandContext) error {
 			case "json":
 				handler = slog.NewJSONHandler(cctx.Options.Stderr, &slog.HandlerOptions{Level: level})
 			default:
-				return fmt.Errorf("invalid log format %q", c.LogFormat)
+				return fmt.Errorf("unreachable: invalid log format %q", c.LogFormat)
 			}
 			cctx.Logger = slog.New(handler)
 		}

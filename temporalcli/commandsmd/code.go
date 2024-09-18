@@ -307,6 +307,8 @@ func (o *Option) writeStructField(w *codeWriter) error {
 		goDataType = "[]string"
 	case "string-enum":
 		goDataType = "StringEnum"
+	case "string-enum[]":
+		goDataType = "StringEnumArray"
 	default:
 		return fmt.Errorf("unrecognized data type %v", o.Type)
 	}
@@ -360,6 +362,24 @@ func (o *Option) writeFlagBuilding(selfVar, flagVar string, w *codeWriter) error
 		}
 		w.writeLinef("%v.%v = NewStringEnum([]string{%v}, %q)",
 			selfVar, o.fieldName(), strings.Join(pieces, ", "), o.Default)
+		flagMeth = "Var"
+	case "string-enum[]":
+		if len(o.EnumValues) == 0 {
+			return fmt.Errorf("missing enum values")
+		}
+		// Create enum
+		pieces := make([]string, len(o.EnumValues))
+		for i, enumVal := range o.EnumValues {
+			pieces[i] = fmt.Sprintf("%q", enumVal)
+		}
+
+		if o.Default != "" {
+			w.writeLinef("%v.%v = NewStringEnumArray([]string{%v}, %q)", // TODO: if statement for if default is provided?
+				selfVar, o.fieldName(), strings.Join(pieces, ", "), o.Default)
+		} else {
+			w.writeLinef("%v.%v = NewStringEnumArray([]string{%v}, []string{})",
+				selfVar, o.fieldName(), strings.Join(pieces, ", "))
+		}
 		flagMeth = "Var"
 	default:
 		return fmt.Errorf("unrecognized data type %v", o.Type)
