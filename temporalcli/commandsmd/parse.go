@@ -7,6 +7,7 @@ import (
 	_ "embed"
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -74,12 +75,10 @@ func ParseMarkdownCommands() (Commands, error) {
 		}
 	}
 
-	// I think this is making a copy?
 	for i, command := range m.CommandList {
 		if err := m.CommandList[i].parseSection(); err != nil {
 			return Commands{}, fmt.Errorf("failed parsing command section %q: %w", command.FullName, err)
 		}
-		// TODO: require alphabetized commands
 	}
 	return m, nil
 }
@@ -126,10 +125,11 @@ func (c *Command) parseSection() error {
 		return fmt.Errorf("missing description for command: %s", c.FullName)
 	}
 
-	// // Strip links for long plain/highlighted
+	// Strip links for long plain/highlighted
 	c.DescriptionPlain = markdownLinkPattern.ReplaceAllString(c.Description, "$1")
 	c.DescriptionHighlighted = c.DescriptionPlain
-	// // Highlight code for long highlighted
+
+	// Highlight code for long highlighted
 	c.DescriptionHighlighted = markdownBlockCodeRegex.ReplaceAllStringFunc(c.DescriptionHighlighted, func(s string) string {
 		s = strings.Trim(s, "`")
 		s = strings.Trim(s, " ")
@@ -141,54 +141,41 @@ func (c *Command) parseSection() error {
 		return ansiBold + s + ansiReset
 	})
 
-	// TODO: I don't think we need to parse option sets, if it's already a set of strings
-	// Each option set
-	// optionSetsAvailable, err := parseOptionSets(c.OptionSets)
-	// if err != nil {
-	// 	return fmt.Errorf("failed parsing options set section #%v: %w", err)
-	// }
-
 	// Each option
 	for _, option := range c.Options {
 		if err := option.parseSection(); err != nil {
 			return fmt.Errorf("failed parsing option '%v': %w", option.Name, err)
 		}
-		// TODO: require alphabetized commands
 	}
 
 	return nil
 }
 
-// func parseOptionSets(optionSets []string) ([]string, error) {
-// 	for a, option := range optionSets
-// 	return []string{}, nil
-// }
-
 func (o *Option) parseSection() error {
-	// if o.Name == "" {
-	// 	return fmt.Errorf("missing option name")
-	// }
+	if o.Name == "" {
+		return fmt.Errorf("missing option name")
+	}
 
-	// if o.Type == "" {
-	// 	return fmt.Errorf("missing option type")
-	// }
+	if o.Type == "" {
+		return fmt.Errorf("missing option type")
+	}
 
-	// if o.Description == "" {
-	// 	return fmt.Errorf("missing description for option: %s", o.Name)
-	// }
+	if o.Description == "" {
+		return fmt.Errorf("missing description for option: %s", o.Name)
+	}
 
-	// if o.Env != strings.ToUpper(o.Env) {
-	// 	return fmt.Errorf("env variables must be in all caps")
-	// }
+	if o.Env != strings.ToUpper(o.Env) {
+		return fmt.Errorf("env variables must be in all caps")
+	}
 
-	// if len(o.EnumValues) != 0 {
-	// 	if o.Type != "string-enum" {
-	// 		return fmt.Errorf("enum-values can only specified for string-enum type")
-	// 	}
-	// 	// Check default enum values
-	// 	if o.Default != "" && !slices.Contains(o.EnumValues, o.Default) {
-	// 		return fmt.Errorf("default value '%s' must be one of the enum-values options %s", o.Default, o.EnumValues)
-	// 	}
-	// }
+	if len(o.EnumValues) != 0 {
+		if o.Type != "string-enum" {
+			return fmt.Errorf("enum-values can only specified for string-enum type")
+		}
+		// Check default enum values
+		if o.Default != "" && !slices.Contains(o.EnumValues, o.Default) {
+			return fmt.Errorf("default value '%s' must be one of the enum-values options %s", o.Default, o.EnumValues)
+		}
+	}
 	return nil
 }

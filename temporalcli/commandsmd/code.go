@@ -50,7 +50,6 @@ func GenerateCommandsCode(pkg string, commands Commands) ([]byte, error) {
 	// Format and return
 	b, err := format.Source(finalBuf.Bytes())
 	if err != nil {
-		// err = fmt.Errorf("failed generating code: %w", err)
 		err = fmt.Errorf("failed generating code: %w, code:\n-----\n%s\n-----", err, finalBuf.Bytes())
 	}
 	return b, err
@@ -105,7 +104,7 @@ func (c *codeWriter) importIsatty() string { return c.importPkg("github.com/matt
 
 func (c *Command) structName() string { return namify(c.FullName, true) + "Command" }
 
-func (c *Command) isSubCommand(maybeParent Command) bool {
+func (c *Command) isSubCommand(maybeParent *Command) bool {
 	return len(c.NamePath) == len(maybeParent.NamePath)+1 && strings.HasPrefix(c.FullName, maybeParent.FullName+" ")
 }
 
@@ -114,9 +113,8 @@ func (o *OptionSets) writeCode(w *codeWriter) error {
 		return fmt.Errorf("missing option set name")
 	}
 
-	// write struct fields
+	// write struct
 	w.writeLinef("type %v struct {", o.setStructName())
-
 	for _, opt := range o.Options {
 		if err := opt.writeStructField(w); err != nil {
 			return fmt.Errorf("failed writing option set %v: %w", opt.Name, err)
@@ -125,7 +123,7 @@ func (o *OptionSets) writeCode(w *codeWriter) error {
 	}
 	w.writeLinef("}\n")
 
-	// write flag building
+	// write flags
 	w.writeLinef("func (v *%v) buildFlags(cctx *CommandContext, f *%v.FlagSet) {",
 		o.setStructName(), w.importPflag())
 	o.writeFlagBuilding("v", "f", w)
@@ -139,7 +137,7 @@ func (c *Command) writeCode(w *codeWriter) error {
 	var parent Command
 	var hasParent bool
 	for _, maybeParent := range w.allCommands {
-		if c.isSubCommand(maybeParent) {
+		if c.isSubCommand(&maybeParent) {
 			parent = maybeParent
 			hasParent = true
 			break
@@ -154,18 +152,18 @@ func (c *Command) writeCode(w *codeWriter) error {
 	}
 	w.writeLinef("Command %v.Command", w.importCobra())
 
-	// Includes as embedded
+	// Include option sets
 	for _, opt := range c.OptionSets {
 		w.writeLinef("%vOptions", namify(opt, true))
 
 	}
 
+	// Each option
 	for _, opt := range c.Options {
 		if err := opt.writeStructField(w); err != nil {
 			return fmt.Errorf("failed writing options: %w", err)
 		}
 	}
-
 	w.writeLinef("}\n")
 
 	// Constructor builds the struct and sets the flags
@@ -182,7 +180,7 @@ func (c *Command) writeCode(w *codeWriter) error {
 	// Collect subcommands
 	var subCommands []Command
 	for _, maybeSubCmd := range w.allCommands {
-		if maybeSubCmd.isSubCommand(*c) {
+		if maybeSubCmd.isSubCommand(c) {
 			subCommands = append(subCommands, maybeSubCmd)
 		}
 	}
@@ -210,9 +208,6 @@ func (c *Command) writeCode(w *codeWriter) error {
 	} else {
 		w.writeLinef("s.Command.Args = %v.NoArgs", w.importCobra())
 	}
-	if c.FullName == "temporal env set" {
-		fmt.Println("IgnoreMissingEnv: ", c.IgnoreMissingEnv)
-	}
 	if c.IgnoreMissingEnv {
 		w.writeLinef("s.Command.Annotations = make(map[string]string)")
 		w.writeLinef("s.Command.Annotations[\"ignoresMissingEnv\"] = \"true\"")
@@ -228,33 +223,24 @@ func (c *Command) writeCode(w *codeWriter) error {
 		flagVar = "s.Command.PersistentFlags()"
 	}
 	var flagAliases [][]string
-	// Add aliases
+
 	for _, opt := range c.Options {
+		// Add aliases
 		for _, alias := range opt.Aliases {
 			flagAliases = append(flagAliases, []string{alias, opt.Name})
 		}
 
-		// Each field
 		if err := opt.writeFlagBuilding("s", flagVar, w); err != nil {
 			return fmt.Errorf("failed building option flags: %w", err)
 		}
 	}
 
 	for _, include := range c.OptionSets {
-		if c.FullName == "temporal workflow update execute" {
-			// fmt.Println("include: ", include)
-		}
 		// Find include
 	cmdLoop:
 		for _, optSet := range w.OptionSets {
-			if c.FullName == "temporal workflow update execute" {
-				// fmt.Println("optSet.Name", optSet.Name)
-			}
 			if optSet.Name == include {
 				for _, opt := range optSet.Options {
-					if c.FullName == "temporal workflow update execute" {
-						// fmt.Println("options: ", opt)
-					}
 					for _, alias := range opt.Aliases {
 						flagAliases = append(flagAliases, []string{alias, opt.Name})
 					}
@@ -264,12 +250,7 @@ func (c *Command) writeCode(w *codeWriter) error {
 
 		}
 
-		// If there's a name, this is done in the method
 		w.writeLinef("s.%v.buildFlags(cctx, %v)", setStructName(include), flagVar)
-	}
-
-	if c.FullName == "temporal workflow update execute" {
-		fmt.Println("temporal workflow update execute flagAliases", flagAliases)
 	}
 
 	// Generate normalize for aliases
@@ -303,12 +284,6 @@ func (o *OptionSets) setStructName() string { return namify(o.Name, true) + "Opt
 func setStructName(name string) string { return namify(name, true) + "Options" }
 
 func (o *OptionSets) writeFlagBuilding(selfVar, flagVar string, w *codeWriter) error {
-	// Embedded sets
-	// TODO: This doesn't belong here anymore
-	// for _, include := range o.IncludeOptionsSets {
-	// 	w.writeLinef("%v.%vOptions.buildFlags(cctx, %v)", selfVar, namify(include, true), flagVar)
-	// }
-	// Each direct option
 	for _, option := range o.Options {
 		if err := option.writeFlagBuilding(selfVar, flagVar, w); err != nil {
 			return fmt.Errorf("failed writing flag building for option %v: %w", option.Name, err)
@@ -343,7 +318,8 @@ func (o *Option) writeFlagBuilding(selfVar, flagVar string, w *codeWriter) error
 	var flagMeth, defaultLit, setDefault string
 	switch o.Type {
 	case "bool":
-		flagMeth, defaultLit = "BoolVar", ", false" // TODO: fix this to grab from o.Default?
+		setDefault = o.Default
+		flagMeth, defaultLit = "BoolVar", ", "+o.Default
 		// if o.Default != "" {
 		// 	return fmt.Errorf("cannot have default for bool var")
 		// }

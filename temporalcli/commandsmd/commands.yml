@@ -1,10 +1,125 @@
-# TODO: Should the tool manually insert `.` at the end of each option parameter, 
-# instead of having to have it ourselves?
+# This document is automatically parsed.
+# Follow these rules.
 
-# We can require the description field to have a period, or we can add it 
-# when we process the YAML if it's missing.
+# IN-HOUSE STYLE
 
-# TODO: change "Can be passed multiple times." to a `multiple: true` field?
+# * Wording and grammar.
+#   * Run a spell check.
+#   * Be clear and concise.
+#   * Don't reword the command in the summary. Use distinct supplementary language.
+#     * Yes: temporal workflow delete: Remove Workflow Execution
+#     * No: temporal workflow delete: Delete Workflow
+#   * Re-use and adapt existing wording and phrases wherever possible.
+#   * Word command summaries as if they began "This command will..."
+#     Use sentence casing for the summary.
+#   * ID is fully capitalized in text ("the Workflow ID") and Id in 
+#     [metasyntax](https://en.wikipedia.org/wiki/Metasyntactic_variable) (YourWorkflowId).
+# * Avoid parentheticals unless absolutely necessary.
+
+# * Wrapping:
+#   * Assume a user-visible line length of 80 characters max. `fmt -w 78` can help.
+#     * Long descriptions must be pre-wrapped.
+#   * When declaring Options follow the wrapping style used elsewhere in this file.
+#     Splitting the items into multiple lines improves maintainability with clearer diffs.
+
+# * Punctuation:
+#   * End description blocks with a period.
+#     Do _not_ use periods for summaries.
+#   * Introduce triple-quoted code-fenced samples with a colons.
+#     Avoid using 'for example' unless there's no other way to introduce code.
+
+# * Code, flags, and keys
+#   * Demonstrate at least one example invocation of the command in every long description.
+#   * Include the most commonly used patterns in long descriptions so users don't 
+#     have to call help at multiple invocation levels.
+#   * Avoid deprecated period-delineated versions of environment-specific keys.
+#     * Yes:
+#           ```
+#           temporal env set \
+#               --env prod \
+#               --key tls-cert-path \
+#               --value /home/my-user/certs/cluster.cert`
+#           ```
+#     * No: `temporal env set prod.tls-cert-path /home/my-user/certs/cluster.cert`.
+#   * Split invocation samples to multiple lines.
+#     Use one option or flag per line, as in the above example.
+#     Use a single space and a backslash to continue the invocation.
+#     Use 4-space indentation.
+#   * Always use long options and flags for invocation examples.
+#     * Yes: `--namespace`
+#     * No:  `-n`
+#   * When commands have a single command-level option, include it the mandatory example.
+#   * Use square bracket overviews to present how complex commands will be used.
+#     * Yes: temporal operator [command] [subcommand] [options]
+#     Commands with subcommands can't be run on their own.
+#     Because of this, always use full command examples.
+#   * Use square brackets to highlight optional elements, especially when long 
+#     descriptions would suffer from two very similar command invocations.
+#     * Yes: temporal operator cluster describe [--detail]
+#   * Use YourEnvironment, YourNamespace, etc. as unquoted metasyntactic variable 
+#     stand-ins.
+#     Respectful metasyntax describes the role of the stand-in.
+#     * Yes: --workflow-id YourWorkflowId
+#     * No: --workflow-id your-work-id, --workflow-id "
+#   * For JSON input, use single quotes to encase interior double quotes.
+#     Otherwise, in the rare case it is needed, prefer double quotes.
+#   * When presenting options use a space rather than equal to set them.
+#     This is more universally supported and consistent with POSIX guidelines.
+#     * Yes: `temporal command --namespace YourNamespace`.
+#     * No: `temporal command --namespace=YourNamespace`.
+#     Note: in this utility's current incarnation, Boolean options must be 
+#     set with an equal sign.
+#     Since Booleans can be treated like flags, avoid using assigned values in samples.
+#     * Yes: `--detail`
+#     * No: `--detail=true`
+
+# For options and flags:
+
+# * When options and flags can be passed multiple times, say so explicitly in 
+#   the usage text: "Can be passed multiple times."
+# * Never rely on the flag type (e.g. `string`, `bool`, etc.) being shown to the user.
+#   It is replaced/hidden when a `META-VARIABLE` is used.
+# * Where possible, use a `META-VARIABLE` (all caps and wrapped in `\``s) to 
+#   describe/reference content passed to an option.
+# * Limit `code spans` to meta-variables.
+#   To reference other options or specify literal values, use double quotes.
+
+# COMMAND ENTRY OVERVIEW
+
+# A Command entry uses the following format:
+# - name: The full command path with parent commands. (string)
+#   summary: A concise command explanation. (string)
+#   description: A detailed command explanation. (string)
+#   has-init: invokes `initCommand` method. (bool)
+#   exact-args: Require this exact number of args. (int)
+#   maximum-args: Require this maximum number of args. (int)
+#   ignores-missing-env: Ignore missing environment variables. (bool)
+#   options: A list of options. (Option[])
+#     - name: The option name. (string)
+#       type: The option type. (string)
+#       description: The option description. (string)
+#       required: Whether the option is required. (bool)
+#       short: The single letter short version of name (i.e. a for address). (string)
+#       env: Binds the environment variable to this flag. (string)
+#       default: The default value. No default means zero value of the type. (string)
+#       enum-values: A list of possible values for the string-enum type. (string[])
+#       aliases: A list of aliases for the option. (string[])
+#   option-sets: A list of option sets. (string[])
+
+# * name, summary, and descrption are required fields. All other fields are optional.
+# * Available option types are `bool`, `duration`, `int`, `string`, `string[]`, 
+#   `string-enum`, or `timestamp`.
+
+# OPTION SET OVERVIEW
+
+# An options set declaration is the equivalent of pasting those options into the 
+# bulleted options list.
+
+# - name: The name of the option set. (string)
+#   options: A list of options. Same template as Command options above (Option[])
+
+# Options that are similar but slightly different don't need to be in option sets.
+# Reserve option sets for when the behavior of the option is the same across commands.
 
 commands:
   - name: temporal
@@ -1035,6 +1150,7 @@ commands:
       ```
     options:
       - name: long
+        short: l
         type: bool
         description: Show detailed information.
       - name: really-long
@@ -1436,6 +1552,7 @@ commands:
           - existing
         default: existing
       - name: task-queue
+        short: t
         type: string[]
         description: |
           Search only the specified task queue(s).
