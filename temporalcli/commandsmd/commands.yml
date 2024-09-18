@@ -1650,7 +1650,6 @@ commands:
       - name: set-as-default
         type: bool
         description: Set the expanded Build ID set as the Task Queue default.
-        default: false
   - name: temporal task-queue update-build-ids add-new-default
     summary: Set new default Build ID set (Deprecated)
     description: |
@@ -2165,7 +2164,6 @@ commands:
       - name: raw
         type: bool
         description: Print properties without changing their format.
-        default: true
   - name: temporal workflow execute
     summary: Start new Workflow Execution
     description: |

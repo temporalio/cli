@@ -318,11 +318,10 @@ func (o *Option) writeFlagBuilding(selfVar, flagVar string, w *codeWriter) error
 	var flagMeth, defaultLit, setDefault string
 	switch o.Type {
 	case "bool":
-		setDefault = o.Default
-		flagMeth, defaultLit = "BoolVar", ", "+o.Default
-		// if o.Default != "" {
-		// 	return fmt.Errorf("cannot have default for bool var")
-		// }
+		flagMeth, defaultLit = "BoolVar", ", false"
+		if o.Default != "" {
+			return fmt.Errorf("cannot have default for bool var")
+		}
 	case "duration":
 		flagMeth, setDefault = "Var", "0"
 		if o.Default != "" {

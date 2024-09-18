@@ -1519,7 +1519,7 @@ func NewTemporalScheduleListCommand(cctx *CommandContext, parent *TemporalSchedu
 		s.Command.Long = "Lists the Schedules hosted by a Namespace:\n\n```\ntemporal schedule list \\\n    --namespace YourNamespace\n```\n"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().BoolVar(&s.Long, "long", false, "Show detailed information.")
+	s.Command.Flags().BoolVarP(&s.Long, "long", "l", false, "Show detailed information.")
 	s.Command.Flags().BoolVar(&s.ReallyLong, "really-long", false, "Show extensive information in non-table form.")
 	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Filter results using given List Filter.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -1804,7 +1804,7 @@ func NewTemporalTaskQueueGetBuildIdReachabilityCommand(cctx *CommandContext, par
 	s.Command.Flags().StringArrayVar(&s.BuildId, "build-id", nil, "One or more Build ID strings.\nCan be passed multiple times.\n")
 	s.ReachabilityType = NewStringEnum([]string{"open", "closed", "existing"}, "existing")
 	s.Command.Flags().Var(&s.ReachabilityType, "reachability-type", "Reachability filter.\n`open`: reachable by one or more open workflows.\n`closed`: reachable by one or more closed workflows.\n`existing`: reachable by either.\nNew Workflow Executions reachable by a Build ID are always reported.\n Accepted values: open, closed, existing.")
-	s.Command.Flags().StringArrayVar(&s.TaskQueue, "task-queue", nil, "Search only the specified task queue(s).\nCan be passed multiple times.\n")
+	s.Command.Flags().StringArrayVarP(&s.TaskQueue, "task-queue", "t", nil, "Search only the specified task queue(s).\nCan be passed multiple times.\n")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
