@@ -14,7 +14,7 @@ import (
 )
 
 //go:embed commands.yml
-var CommandsMarkdown []byte
+var CommandsYaml []byte
 
 type (
 	// Option represents the structure of an option within option sets.
@@ -59,9 +59,9 @@ type (
 	}
 )
 
-func ParseMarkdownCommands() (Commands, error) {
+func ParseCommands() (Commands, error) {
 	// Fix CRLF
-	md := bytes.ReplaceAll(CommandsMarkdown, []byte("\r\n"), []byte("\n"))
+	md := bytes.ReplaceAll(CommandsYaml, []byte("\r\n"), []byte("\n"))
 
 	var m Commands
 	err := yaml.Unmarshal(md, &m)
@@ -95,8 +95,8 @@ func (o OptionSets) parseSection() error {
 		return fmt.Errorf("missing option set name")
 	}
 
-	for _, option := range o.Options {
-		if err := option.parseSection(); err != nil {
+	for i, option := range o.Options {
+		if err := o.Options[i].parseSection(); err != nil {
 			return fmt.Errorf("failed parsing option '%v': %w", option.Name, err)
 		}
 	}
@@ -125,6 +125,9 @@ func (c *Command) parseSection() error {
 		return fmt.Errorf("missing description for command: %s", c.FullName)
 	}
 
+	// Strip trailing newline for description
+	c.Description = strings.TrimRight(c.Description, "\n")
+
 	// Strip links for long plain/highlighted
 	c.DescriptionPlain = markdownLinkPattern.ReplaceAllString(c.Description, "$1")
 	c.DescriptionHighlighted = c.DescriptionPlain
@@ -142,8 +145,8 @@ func (c *Command) parseSection() error {
 	})
 
 	// Each option
-	for _, option := range c.Options {
-		if err := option.parseSection(); err != nil {
+	for i, option := range c.Options {
+		if err := c.Options[i].parseSection(); err != nil {
 			return fmt.Errorf("failed parsing option '%v': %w", option.Name, err)
 		}
 	}
@@ -162,6 +165,14 @@ func (o *Option) parseSection() error {
 
 	if o.Description == "" {
 		return fmt.Errorf("missing description for option: %s", o.Name)
+	}
+	// Strip all newline for description and trailing whitespace
+	o.Description = strings.ReplaceAll(o.Description, "\n", " ")
+	o.Description = strings.TrimRight(o.Description, " ")
+
+	// Check that description ends in a "."
+	if o.Description[len(o.Description)-1] != '.' {
+		return fmt.Errorf("description should end in a '.'")
 	}
 
 	if o.Env != strings.ToUpper(o.Env) {

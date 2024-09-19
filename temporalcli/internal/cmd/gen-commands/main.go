@@ -22,7 +22,7 @@ func run() error {
 	commandsDir := filepath.Join(file, "../../../../")
 
 	// Parse markdown
-	cmds, err := commandsmd.ParseMarkdownCommands()
+	cmds, err := commandsmd.ParseCommands()
 	if err != nil {
 		return fmt.Errorf("failed parsing markdown: %w", err)
 	}

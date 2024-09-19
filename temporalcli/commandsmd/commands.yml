@@ -667,7 +667,7 @@ commands:
         default: 72h
       - name: visibility-archival-state
         type: string-enum
-        description: Visibility archival state
+        description: Visibility archival state.
         enum-values:
           - disabled
           - enabled
