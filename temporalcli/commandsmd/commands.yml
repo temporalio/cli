@@ -1062,7 +1062,7 @@ commands:
       For example:
 
       ```
-        temporal schedule backfill \
+      temporal schedule backfill \
           --schedule-id "YourScheduleId" \
           --start-time "2022-05-01T00:00:00Z" \
           --end-time "2022-05-31T23:59:59Z" \
@@ -1235,8 +1235,8 @@ commands:
 
       ```
       temporal schedule update \
-      --schedule-id "YourScheduleId" \
-      --workflow-type "NewWorkflowType"
+          --schedule-id "YourScheduleId" \
+          --workflow-type "NewWorkflowType"
       ```
     option-sets:
       - schedule-configuration
@@ -1346,7 +1346,7 @@ commands:
         description: Disable the Web UI.
       - name: ip
         type: string
-        description: IP address bound to the frontend Service.
+        description: IP address bound to the front-end Service.
         default: localhost
       - name: ui-ip
         type: string
@@ -1363,7 +1363,7 @@ commands:
         description: UI custom assets path.
       - name: ui-codec-endpoint
         type: string
-        description: UI remote codec HTTP end.
+        description: UI remote codec HTTP endpoint.
       - name: sqlite-pragma
         type: string[]
         description: SQLite pragma statements in "PRAGMA=VALUE" format.
@@ -1454,9 +1454,9 @@ commands:
 
       ```
       temporal task-queue describe \
-        --task-queue YourTaskQueue \
-        --build-id "YourBuildId" \
-        --report-reachability
+          --task-queue YourTaskQueue \
+          --build-id "YourBuildId" \
+          --report-reachability
       ```
 
       Task reachability information is returned for the requested versions and all
@@ -1511,7 +1511,7 @@ commands:
       - name: legacy-mode
         type: bool
         description: |
-          Enable a legacy mode for servers that do not support rules-based 
+          Enable a legacy mode for servers that do not support rules-based
           worker versioning.
           This mode only provides pollers info.
       - name: task-queue-type-legacy
@@ -1869,7 +1869,7 @@ commands:
     summary: Removes a Task Queue assignment rule (Experimental)
     description: |
       Deletes a rule identified by its index in the Task Queue's list of assignment
-      rules:
+      rules.
 
       ```
       temporal task-queue versioning delete-assignment-rule \
