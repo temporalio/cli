@@ -381,7 +381,7 @@ func (o *Option) writeFlagBuilding(selfVar, flagVar string, w *codeWriter) error
 		}
 
 		if o.Default != "" {
-			w.writeLinef("%v.%v = NewStringEnumArray([]string{%v}, %q)", // TODO: if statement for if default is provided?
+			w.writeLinef("%v.%v = NewStringEnumArray([]string{%v}, %q)",
 				selfVar, o.fieldName(), strings.Join(pieces, ", "), o.Default)
 		} else {
 			w.writeLinef("%v.%v = NewStringEnumArray([]string{%v}, []string{})",
