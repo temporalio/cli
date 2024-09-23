@@ -245,7 +245,7 @@ type TemporalCommand struct {
 	TimeFormat              StringEnum
 	Color                   StringEnum
 	NoJsonShorthandPayloads bool
-	ContextRpcTimeout       Duration
+	RpcTimeout              Duration
 }
 
 func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
@@ -279,8 +279,8 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	s.Color = NewStringEnum([]string{"always", "never", "auto"}, "auto")
 	s.Command.PersistentFlags().Var(&s.Color, "color", "Output coloring. Accepted values: always, never, auto.")
 	s.Command.PersistentFlags().BoolVar(&s.NoJsonShorthandPayloads, "no-json-shorthand-payloads", false, "Raw payload output, even if they are JSON.")
-	s.ContextRpcTimeout = Duration(20000 * time.Millisecond)
-	s.Command.PersistentFlags().Var(&s.ContextRpcTimeout, "context-rpc-timeout", "Timeout for the underlying RPC call for a context call.")
+	s.RpcTimeout = Duration(10000 * time.Millisecond)
+	s.Command.PersistentFlags().Var(&s.RpcTimeout, "rpc-timeout", "Timeout for the underlying RPC call for a context call.")
 	s.initCommand(cctx)
 	return &s
 }

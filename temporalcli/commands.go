@@ -52,7 +52,7 @@ type CommandContext struct {
 
 	// Cancel function that comes from manually adding a deadline for RPC
 	// timeout within a context call
-	ContextRpcTimeoutCancel context.CancelFunc
+	RpcTimeoutCancel context.CancelFunc
 
 	// Is set to true if any command actually started running. This is a hack to workaround the fact
 	// that cobra does not properly exit nonzero if an unknown command/subcommand is given.
@@ -357,8 +357,8 @@ func Execute(ctx context.Context, options CommandOptions) {
 	}
 
 	// Clean up resources from setting a context RPC timeout (context-rpc-timeout)
-	if cctx.ContextRpcTimeoutCancel != nil {
-		cctx.ContextRpcTimeoutCancel()
+	if cctx.RpcTimeoutCancel != nil {
+		cctx.RpcTimeoutCancel()
 	}
 
 	// If no command ever actually got run, exit nonzero with an error.  This is
@@ -505,7 +505,12 @@ func (c *TemporalCommand) preRun(cctx *CommandContext) error {
 	}
 	cctx.JSONShorthandPayloads = !c.NoJsonShorthandPayloads
 
-	cctx.Context, cctx.ContextRpcTimeoutCancel = context.WithDeadline(cctx.Context, time.Now().Add(c.ContextRpcTimeout.Duration()))
+	if c.RpcTimeout.Duration() != time.Second*10 {
+		// We multiply the timeout by 2 because the client SDK sets the RPC timeout
+		// to half of the Deadline
+		newDeadline := time.Now().Add(c.RpcTimeout.Duration() * 2)
+		cctx.Context, cctx.RpcTimeoutCancel = context.WithDeadline(cctx.Context, newDeadline)
+	}
 
 	return nil
 }
