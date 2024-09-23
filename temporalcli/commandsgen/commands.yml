@@ -107,7 +107,7 @@
 #   option-sets: A list of option sets. (string[])
 
 # * name, summary, and descrption are required fields. All other fields are optional.
-# * Available option types are `bool`, `duration`, `int`, `string`, `string[]`, 
+# * Available option types are `bool`, `duration`, `int`, `float`, `string`, `string[]`,
 #   `string-enum`, or `timestamp`.
 # * Include a new-line after each command entry.
 
@@ -2634,6 +2634,11 @@ commands:
         description: |
           Don't prompt to confirm termination.
           Can only be used with --query.
+      - name: rps
+        type: float
+        description: |
+          Limit batch's requests per second.
+          Only allowed if query is present.
 
   - name: temporal workflow trace
     summary: Workflow Execution live progress
@@ -2979,6 +2984,11 @@ option-sets:
         description: |
           Don't prompt to confirm signaling.
           Only allowed when --query is present.
+      - name: rps
+        type: float
+        description: |
+          Limit batch's requests per second.
+          Only allowed if query is present.
 
   - name: shared-workflow-start
     options:

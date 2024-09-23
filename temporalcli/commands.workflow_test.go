@@ -1,11 +1,13 @@
 package temporalcli_test
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"math/rand"
 	"regexp"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -13,6 +15,7 @@ import (
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/workflow"
+	"google.golang.org/grpc"
 )
 
 func (s *SharedServerSuite) TestWorkflow_Signal_SingleWorkflowSuccess() {
@@ -263,26 +266,71 @@ func (s *SharedServerSuite) TestWorkflow_Terminate_SingleWorkflowSuccess_WithRea
 }
 
 func (s *SharedServerSuite) TestWorkflow_Terminate_BatchWorkflowSuccess() {
-	res := s.testTerminateBatchWorkflow(false)
+	_, res := s.testTerminateBatchWorkflow(5, 0, false)
 	s.Contains(res.Stdout.String(), "approximately 5 workflow(s)")
 	s.Contains(res.Stdout.String(), "Started batch")
 }
 
-func (s *SharedServerSuite) TestWorkflow_Terminate_BatchWorkflowSuccessJSON() {
-	res := s.testTerminateBatchWorkflow(true)
+func (s *SharedServerSuite) TestWorkflow_Terminate_BatchWorkflow_Ratelimit_MissingQuery() {
+	res := s.Execute(
+		"workflow", "terminate",
+		"--address", s.Address(),
+		"--rps", "5",
+	)
+	s.EqualError(res.Err, "must set either workflow ID or query")
+
+	res = s.Execute(
+		"workflow", "terminate",
+		"-w", "some-workflow-id",
+		"--address", s.Address(),
+		"--rps", "5",
+	)
+	s.EqualError(res.Err, "cannot set rps when workflow ID is set")
+}
+
+func (s *SharedServerSuite) TestWorkflow_Terminate_BatchWorkflowSuccess_Ratelimit() {
+	var rps float32 = 1
+	req, _ := s.testTerminateBatchWorkflow(2, rps, false)
+	s.Equal(rps, req.MaxOperationsPerSecond)
+}
+
+func (s *SharedServerSuite) TestWorkflow_Terminate_BatchWorkflowSuccess_JSON() {
+	_, res := s.testTerminateBatchWorkflow(5, 0, true)
 	var jsonRes map[string]any
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonRes))
 	s.NotEmpty(jsonRes["batchJobId"])
 }
 
-func (s *SharedServerSuite) testTerminateBatchWorkflow(json bool) *CommandResult {
+func (s *SharedServerSuite) testTerminateBatchWorkflow(
+	total int,
+	rps float32,
+	json bool,
+) (*workflowservice.StartBatchOperationRequest, *CommandResult) {
 	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
 		ctx.Done().Receive(ctx, nil)
 		return nil, ctx.Err()
 	})
 
-	// Start 5 workflows
-	runs := make([]client.WorkflowRun, 5)
+	var lastRequestLock sync.Mutex
+	var startBatchRequest *workflowservice.StartBatchOperationRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string, req, reply any,
+			cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption,
+		) error {
+			lastRequestLock.Lock()
+			if r, ok := req.(*workflowservice.StartBatchOperationRequest); ok {
+				startBatchRequest = r
+			}
+			lastRequestLock.Unlock()
+			return invoker(ctx, method, req, reply, cc, opts...)
+		}),
+	)
+
+	// Start workflows
+	runs := make([]client.WorkflowRun, total)
 	searchAttr := "keyword-" + uuid.NewString()
 	for i := range runs {
 		run, err := s.Client.ExecuteWorkflow(
@@ -310,6 +358,7 @@ func (s *SharedServerSuite) testTerminateBatchWorkflow(json bool) *CommandResult
 	// Send batch terminate with a "y" for non-json or "--yes" for json
 	args := []string{
 		"workflow", "terminate",
+		"--rps", fmt.Sprint(rps),
 		"--address", s.Address(),
 		"--query", "CustomKeywordField = '" + searchAttr + "'",
 		"--reason", "terminate-test",
@@ -338,7 +387,7 @@ func (s *SharedServerSuite) testTerminateBatchWorkflow(json bool) *CommandResult
 		}
 		s.True(foundReason)
 	}
-	return res
+	return startBatchRequest, res
 }
 
 func (s *SharedServerSuite) TestWorkflow_Cancel_SingleWorkflowSuccess() {
