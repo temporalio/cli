@@ -280,7 +280,7 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	s.Command.PersistentFlags().Var(&s.Color, "color", "Output coloring. Accepted values: always, never, auto.")
 	s.Command.PersistentFlags().BoolVar(&s.NoJsonShorthandPayloads, "no-json-shorthand-payloads", false, "Raw payload output, even if they are JSON.")
 	s.RpcTimeout = Duration(10000 * time.Millisecond)
-	s.Command.PersistentFlags().Var(&s.RpcTimeout, "rpc-timeout", "Timeout for the underlying RPC call for a context call.")
+	s.Command.PersistentFlags().Var(&s.RpcTimeout, "rpc-timeout", "Timeout for all underlying RPC calls for the CLI.")
 	s.initCommand(cctx)
 	return &s
 }
