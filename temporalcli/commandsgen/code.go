@@ -1,4 +1,4 @@
-package commandsmd
+package commandsgen
 
 import (
 	"bytes"
@@ -12,13 +12,20 @@ import (
 	"go.temporal.io/server/common/primitives/timestamp"
 )
 
-func GenerateCommandsCode(pkg string, commands []*Command) ([]byte, error) {
-	w := &codeWriter{allCommands: commands}
+func GenerateCommandsCode(pkg string, commands Commands) ([]byte, error) {
+	w := &codeWriter{allCommands: commands.CommandList, OptionSets: commands.OptionSets}
 	// Put terminal check at top
 	w.writeLinef("var hasHighlighting = %v.IsTerminal(%v.Stdout.Fd())", w.importIsatty(), w.importPkg("os"))
 
+	// Write all option sets
+	for _, optSet := range commands.OptionSets {
+		if err := optSet.writeCode(w); err != nil {
+			return nil, fmt.Errorf("failed writing command %v: %w", optSet.Name, err)
+		}
+	}
+
 	// Write all commands, then come back and write package and imports
-	for _, cmd := range commands {
+	for _, cmd := range commands.CommandList {
 		if err := cmd.writeCode(w); err != nil {
 			return nil, fmt.Errorf("failed writing command %v: %w", cmd.FullName, err)
 		}
@@ -50,7 +57,8 @@ func GenerateCommandsCode(pkg string, commands []*Command) ([]byte, error) {
 
 type codeWriter struct {
 	buf         bytes.Buffer
-	allCommands []*Command
+	allCommands []Command
+	OptionSets  []OptionSets
 	// Key is short ref, value is full
 	imports map[string]string
 }
@@ -100,30 +108,38 @@ func (c *Command) isSubCommand(maybeParent *Command) bool {
 	return len(c.NamePath) == len(maybeParent.NamePath)+1 && strings.HasPrefix(c.FullName, maybeParent.FullName+" ")
 }
 
-func (c *Command) writeCode(w *codeWriter) error {
-	// Add every named options set as a separate struct
-	for _, optSet := range c.OptionsSets {
-		if optSet.SetName == "" {
-			continue
-		}
-		// Struct
-		w.writeLinef("type %v struct {", optSet.setStructName())
-		if err := optSet.writeStructFields(w); err != nil {
-			return fmt.Errorf("failed writing option set %v: %w", optSet.SetName, err)
-		}
-		w.writeLinef("}\n")
-		// Flag builder
-		w.writeLinef("func (v *%v) buildFlags(cctx *CommandContext, f *%v.FlagSet) {",
-			optSet.setStructName(), w.importPflag())
-		optSet.writeFlagBuilding("v", "f", w)
-		w.writeLinef("}\n")
+func (o *OptionSets) writeCode(w *codeWriter) error {
+	if o.Name == "" {
+		return fmt.Errorf("missing option set name")
 	}
 
+	// write struct
+	w.writeLinef("type %v struct {", o.setStructName())
+	for _, opt := range o.Options {
+		if err := opt.writeStructField(w); err != nil {
+			return fmt.Errorf("failed writing option set %v: %w", opt.Name, err)
+		}
+
+	}
+	w.writeLinef("}\n")
+
+	// write flags
+	w.writeLinef("func (v *%v) buildFlags(cctx *CommandContext, f *%v.FlagSet) {",
+		o.setStructName(), w.importPflag())
+	o.writeFlagBuilding("v", "f", w)
+	w.writeLinef("}\n")
+
+	return nil
+}
+
+func (c *Command) writeCode(w *codeWriter) error {
 	// Find parent command if it exists
-	var parent *Command
+	var parent Command
+	var hasParent bool
 	for _, maybeParent := range w.allCommands {
-		if c.isSubCommand(maybeParent) {
+		if c.isSubCommand(&maybeParent) {
 			parent = maybeParent
+			hasParent = true
 			break
 		}
 	}
@@ -131,40 +147,38 @@ func (c *Command) writeCode(w *codeWriter) error {
 	// Every command is an exposed struct with the cobra command field and each
 	// flag as a field on the struct
 	w.writeLinef("type %v struct {", c.structName())
-	if parent != nil {
+	if hasParent {
 		w.writeLinef("Parent *%v", parent.structName())
 	}
 	w.writeLinef("Command %v.Command", w.importCobra())
-	for _, optSet := range c.OptionsSets {
-		// Includes as embedded
-		for _, include := range optSet.IncludeOptionsSets {
-			w.writeLinef("%vOptions", namify(include, true))
-		}
-		// If there is a set name, it is treated as embedded because options sets
-		// are different structs, so the fields are not set
-		if optSet.SetName != "" {
-			w.writeLinef("%v", optSet.setStructName())
-			continue
-		}
-		if err := optSet.writeStructFields(w); err != nil {
+
+	// Include option sets
+	for _, opt := range c.OptionSets {
+		w.writeLinef("%vOptions", namify(opt, true))
+
+	}
+
+	// Each option
+	for _, opt := range c.Options {
+		if err := opt.writeStructField(w); err != nil {
 			return fmt.Errorf("failed writing options: %w", err)
 		}
 	}
 	w.writeLinef("}\n")
 
 	// Constructor builds the struct and sets the flags
-	if parent != nil {
+	if hasParent {
 		w.writeLinef("func New%v(cctx *CommandContext, parent *%v) *%v {",
 			c.structName(), parent.structName(), c.structName())
 	} else {
 		w.writeLinef("func New%v(cctx *CommandContext) *%v {", c.structName(), c.structName())
 	}
 	w.writeLinef("var s %v", c.structName())
-	if parent != nil {
+	if hasParent {
 		w.writeLinef("s.Parent = parent")
 	}
 	// Collect subcommands
-	var subCommands []*Command
+	var subCommands []Command
 	for _, maybeSubCmd := range w.allCommands {
 		if maybeSubCmd.isSubCommand(c) {
 			subCommands = append(subCommands, maybeSubCmd)
@@ -173,19 +187,19 @@ func (c *Command) writeCode(w *codeWriter) error {
 	// Set basic command values
 	if len(subCommands) == 0 {
 		w.writeLinef("s.Command.DisableFlagsInUseLine = true")
-		w.writeLinef("s.Command.Use = %q", c.NamePath[len(c.NamePath)-1]+" [flags]"+c.UseSuffix)
+		w.writeLinef("s.Command.Use = %q", c.NamePath[len(c.NamePath)-1]+" [flags]")
 	} else {
 		w.writeLinef("s.Command.Use = %q", c.NamePath[len(c.NamePath)-1])
 	}
-	w.writeLinef("s.Command.Short = %q", c.Short)
-	if c.LongHighlighted != c.LongPlain {
+	w.writeLinef("s.Command.Short = %q", c.Summary)
+	if c.DescriptionHighlighted != c.DescriptionPlain {
 		w.writeLinef("if hasHighlighting {")
-		w.writeLinef("s.Command.Long = %q", c.LongHighlighted)
+		w.writeLinef("s.Command.Long = %q", c.DescriptionHighlighted)
 		w.writeLinef("} else {")
-		w.writeLinef("s.Command.Long = %q", c.LongPlain)
+		w.writeLinef("s.Command.Long = %q", c.DescriptionPlain)
 		w.writeLinef("}")
 	} else {
-		w.writeLinef("s.Command.Long = %q", c.LongPlain)
+		w.writeLinef("s.Command.Long = %q", c.DescriptionPlain)
 	}
 	if c.MaximumArgs > 0 {
 		w.writeLinef("s.Command.Args = %v.MaximumNArgs(%v)", w.importCobra(), c.MaximumArgs)
@@ -209,41 +223,36 @@ func (c *Command) writeCode(w *codeWriter) error {
 		flagVar = "s.Command.PersistentFlags()"
 	}
 	var flagAliases [][]string
-	for _, optSet := range c.OptionsSets {
+
+	for _, opt := range c.Options {
 		// Add aliases
-		for _, opt := range optSet.Options {
-			for _, alias := range opt.Aliases {
-				flagAliases = append(flagAliases, []string{alias, opt.Name})
-			}
-		}
-		for _, include := range optSet.IncludeOptionsSets {
-			// Find include
-		cmdLoop:
-			for _, cmd := range w.allCommands {
-				for _, optSet := range cmd.OptionsSets {
-					if optSet.SetName == include {
-						for _, opt := range optSet.Options {
-							for _, alias := range opt.Aliases {
-								flagAliases = append(flagAliases, []string{alias, opt.Name})
-							}
-						}
-						break cmdLoop
-					}
-				}
-			}
+		for _, alias := range opt.Aliases {
+			flagAliases = append(flagAliases, []string{alias, opt.Name})
 		}
 
-		// If there's a name, this is done in the method
-		if optSet.SetName != "" {
-			w.writeLinef("s.%v.buildFlags(cctx, %v)", optSet.setStructName(), flagVar)
-			continue
-		}
-
-		// Each field
-		if err := optSet.writeFlagBuilding("s", flagVar, w); err != nil {
+		if err := opt.writeFlagBuilding("s", flagVar, w); err != nil {
 			return fmt.Errorf("failed building option flags: %w", err)
 		}
 	}
+
+	for _, include := range c.OptionSets {
+		// Find include
+	cmdLoop:
+		for _, optSet := range w.OptionSets {
+			if optSet.Name == include {
+				for _, opt := range optSet.Options {
+					for _, alias := range opt.Aliases {
+						flagAliases = append(flagAliases, []string{alias, opt.Name})
+					}
+				}
+				break cmdLoop
+			}
+
+		}
+
+		w.writeLinef("s.%v.buildFlags(cctx, %v)", setStructName(include), flagVar)
+	}
+
 	// Generate normalize for aliases
 	if len(flagAliases) > 0 {
 		sort.Slice(flagAliases, func(i, j int) bool { return flagAliases[i][0] < flagAliases[j][0] })
@@ -270,24 +279,12 @@ func (c *Command) writeCode(w *codeWriter) error {
 	return nil
 }
 
-func (c *CommandOptions) setStructName() string { return namify(c.SetName, true) + "Options" }
+func (o *OptionSets) setStructName() string { return namify(o.Name, true) + "Options" }
 
-func (c *CommandOptions) writeStructFields(w *codeWriter) error {
-	for _, option := range c.Options {
-		if err := option.writeStructField(w); err != nil {
-			return fmt.Errorf("failed writing struct field for option %v: %w", option.Name, err)
-		}
-	}
-	return nil
-}
+func setStructName(name string) string { return namify(name, true) + "Options" }
 
-func (c *CommandOptions) writeFlagBuilding(selfVar, flagVar string, w *codeWriter) error {
-	// Embedded sets
-	for _, include := range c.IncludeOptionsSets {
-		w.writeLinef("%v.%vOptions.buildFlags(cctx, %v)", selfVar, namify(include, true), flagVar)
-	}
-	// Each direct option
-	for _, option := range c.Options {
+func (o *OptionSets) writeFlagBuilding(selfVar, flagVar string, w *codeWriter) error {
+	for _, option := range o.Options {
 		if err := option.writeFlagBuilding(selfVar, flagVar, w); err != nil {
 			return fmt.Errorf("failed writing flag building for option %v: %w", option.Name, err)
 		}
@@ -295,13 +292,13 @@ func (c *CommandOptions) writeFlagBuilding(selfVar, flagVar string, w *codeWrite
 	return nil
 }
 
-func (c *CommandOption) fieldName() string { return namify(c.Name, true) }
+func (o *Option) fieldName() string { return namify(o.Name, true) }
 
-func (c *CommandOption) writeStructField(w *codeWriter) error {
+func (o *Option) writeStructField(w *codeWriter) error {
 	var goDataType string
-	switch c.DataType {
+	switch o.Type {
 	case "bool", "int", "string":
-		goDataType = c.DataType
+		goDataType = o.Type
 	case "duration":
 		goDataType = "Duration"
 	case "timestamp":
@@ -311,24 +308,24 @@ func (c *CommandOption) writeStructField(w *codeWriter) error {
 	case "string-enum":
 		goDataType = "StringEnum"
 	default:
-		return fmt.Errorf("unrecognized data type %v", c.DataType)
+		return fmt.Errorf("unrecognized data type %v", o.Type)
 	}
-	w.writeLinef("%v %v", c.fieldName(), goDataType)
+	w.writeLinef("%v %v", o.fieldName(), goDataType)
 	return nil
 }
 
-func (c *CommandOption) writeFlagBuilding(selfVar, flagVar string, w *codeWriter) error {
+func (o *Option) writeFlagBuilding(selfVar, flagVar string, w *codeWriter) error {
 	var flagMeth, defaultLit, setDefault string
-	switch c.DataType {
+	switch o.Type {
 	case "bool":
 		flagMeth, defaultLit = "BoolVar", ", false"
-		if c.DefaultValue != "" {
+		if o.Default != "" {
 			return fmt.Errorf("cannot have default for bool var")
 		}
 	case "duration":
 		flagMeth, setDefault = "Var", "0"
-		if c.DefaultValue != "" {
-			dur, err := timestamp.ParseDuration(c.DefaultValue)
+		if o.Default != "" {
+			dur, err := timestamp.ParseDuration(o.Default)
 			if err != nil {
 				return fmt.Errorf("invalid default: %w", err)
 			}
@@ -336,68 +333,68 @@ func (c *CommandOption) writeFlagBuilding(selfVar, flagVar string, w *codeWriter
 			setDefault = fmt.Sprintf("Duration(%v * %v.Millisecond)", dur.Milliseconds(), w.importPkg("time"))
 		}
 	case "timestamp":
-		if c.DefaultValue != "" {
+		if o.Default != "" {
 			return fmt.Errorf("default value not allowed for timestamp")
 		}
 		flagMeth, defaultLit = "Var", ""
 	case "int":
-		flagMeth, defaultLit = "IntVar", ", "+c.DefaultValue
-		if c.DefaultValue == "" {
+		flagMeth, defaultLit = "IntVar", ", "+o.Default
+		if o.Default == "" {
 			defaultLit = ", 0"
 		}
 	case "string":
-		flagMeth, defaultLit = "StringVar", fmt.Sprintf(", %q", c.DefaultValue)
+		flagMeth, defaultLit = "StringVar", fmt.Sprintf(", %q", o.Default)
 	case "string[]":
-		if c.DefaultValue != "" {
+		if o.Default != "" {
 			return fmt.Errorf("default value not allowed for string array")
 		}
 		flagMeth, defaultLit = "StringArrayVar", ", nil"
 	case "string-enum":
-		if len(c.EnumValues) == 0 {
+		if len(o.EnumValues) == 0 {
 			return fmt.Errorf("missing enum values")
 		}
 		// Create enum
-		pieces := make([]string, len(c.EnumValues))
-		for i, enumVal := range c.EnumValues {
+		pieces := make([]string, len(o.EnumValues))
+		for i, enumVal := range o.EnumValues {
 			pieces[i] = fmt.Sprintf("%q", enumVal)
 		}
 		w.writeLinef("%v.%v = NewStringEnum([]string{%v}, %q)",
-			selfVar, c.fieldName(), strings.Join(pieces, ", "), c.DefaultValue)
+			selfVar, o.fieldName(), strings.Join(pieces, ", "), o.Default)
 		flagMeth = "Var"
 	default:
-		return fmt.Errorf("unrecognized data type %v", c.DataType)
+		return fmt.Errorf("unrecognized data type %v", o.Type)
 	}
 
 	// If there are enums, append to desc
-	desc := c.Desc
-	if len(c.EnumValues) > 0 {
-		desc += fmt.Sprintf(" Accepted values: %s.", strings.Join(c.EnumValues, ", "))
+	desc := o.Description
+	if len(o.EnumValues) > 0 {
+		desc += fmt.Sprintf(" Accepted values: %s.", strings.Join(o.EnumValues, ", "))
 	}
 	// If required, append to desc
-	if c.Required {
+	if o.Required {
 		desc += " Required."
 	}
 	// If there are aliases, append to desc
-	for _, alias := range c.Aliases {
+	for _, alias := range o.Aliases {
 		desc += fmt.Sprintf(` Aliased as "--%v".`, alias)
 	}
 
 	if setDefault != "" {
 		// set default before calling Var so that it stores thedefault value into the flag
-		w.writeLinef("%v.%v = %v", selfVar, c.fieldName(), setDefault)
+		w.writeLinef("%v.%v = %v", selfVar, o.fieldName(), setDefault)
 	}
-	if c.Shorthand == "" {
-		w.writeLinef("%v.%v(&%v.%v, %q%v, %q)",
-			flagVar, flagMeth, selfVar, c.fieldName(), c.Name, defaultLit, desc)
-	} else {
+	if o.Short != "" {
 		w.writeLinef("%v.%vP(&%v.%v, %q, %q%v, %q)",
-			flagVar, flagMeth, selfVar, c.fieldName(), c.Name, c.Shorthand, defaultLit, desc)
+			flagVar, flagMeth, selfVar, o.fieldName(), o.Name, o.Short, defaultLit, desc)
+	} else {
+		w.writeLinef("%v.%v(&%v.%v, %q%v, %q)",
+			flagVar, flagMeth, selfVar, o.fieldName(), o.Name, defaultLit, desc)
 	}
-	if c.Required {
-		w.writeLinef("_ = %v.MarkFlagRequired(%v, %q)", w.importCobra(), flagVar, c.Name)
+	if o.Required {
+		w.writeLinef("_ = %v.MarkFlagRequired(%v, %q)", w.importCobra(), flagVar, o.Name)
 	}
-	if c.EnvVar != "" {
-		w.writeLinef("cctx.BindFlagEnvVar(%v.Lookup(%q), %q)", flagVar, c.Name, c.EnvVar)
+	if o.Env != "" {
+		w.writeLinef("cctx.BindFlagEnvVar(%v.Lookup(%q), %q)", flagVar, o.Name, o.Env)
 	}
 	return nil
 }

@@ -1,0 +1,3127 @@
+# This document is automatically parsed.
+# Follow these rules.
+
+# IN-HOUSE STYLE
+
+# * Wording and grammar:
+#   * Run a spell check.
+#   * Be clear and concise.
+#   * Don't reword the command in the summary. Use distinct supplementary language.
+#     * Yes: temporal workflow delete: Remove Workflow Execution
+#     * No: temporal workflow delete: Delete Workflow
+#   * Re-use and adapt existing wording and phrases wherever possible.
+#   * Word command summaries as if they began "This command will..."
+#     Use sentence casing for the summary.
+#   * ID is fully capitalized in text ("the Workflow ID") and Id in 
+#     [metasyntax](https://en.wikipedia.org/wiki/Metasyntactic_variable) (YourWorkflowId).
+# * Avoid parentheticals unless absolutely necessary.
+
+# * Wrapping:
+#   * Assume a user-visible line length of 80 characters max. `fmt -w 78` can help.
+#     * Long descriptions must be pre-wrapped.
+#   * When declaring Options follow the wrapping style used elsewhere in this file.
+#     Splitting the items into multiple lines improves maintainability with clearer diffs.
+
+# * Punctuation:
+#   * End description blocks with a period.
+#     Do _not_ use periods for summaries.
+#   * Introduce triple-quoted code-fenced samples with a colons.
+#     Avoid using 'for example' unless there's no other way to introduce code.
+
+# * Code, flags, and keys:
+#   * Demonstrate at least one example invocation of the command in every long description.
+#   * Include the most commonly used patterns in long descriptions so users don't 
+#     have to call help at multiple invocation levels.
+#   * Avoid deprecated period-delineated versions of environment-specific keys.
+#     * Yes:
+#           ```
+#           temporal env set \
+#               --env prod \
+#               --key tls-cert-path \
+#               --value /home/my-user/certs/cluster.cert`
+#           ```
+#     * No: `temporal env set prod.tls-cert-path /home/my-user/certs/cluster.cert`.
+#   * Split invocation samples to multiple lines.
+#     Use one option or flag per line, as in the above example.
+#     Use a single space and a backslash to continue the invocation.
+#     Use 4-space indentation.
+#   * Always use long options and flags for invocation examples.
+#     * Yes: `--namespace`
+#     * No:  `-n`
+#   * When commands have a single command-level option, include it the mandatory example.
+#   * Use square bracket overviews to present how complex commands will be used.
+#     * Yes: temporal operator [command] [subcommand] [options]
+#     Commands with subcommands can't be run on their own.
+#     Because of this, always use full command examples.
+#   * Use square brackets to highlight optional elements, especially when long 
+#     descriptions would suffer from two very similar command invocations.
+#     * Yes: temporal operator cluster describe [--detail]
+#   * Use YourEnvironment, YourNamespace, etc. as unquoted metasyntactic variable 
+#     stand-ins.
+#     Respectful metasyntax describes the role of the stand-in.
+#     * Yes: --workflow-id YourWorkflowId
+#     * No: --workflow-id your-work-id, --workflow-id "
+#   * For JSON input, use single quotes to encase interior double quotes.
+#     Otherwise, in the rare case it is needed, prefer double quotes.
+#   * When presenting options use a space rather than equal to set them.
+#     This is more universally supported and consistent with POSIX guidelines.
+#     * Yes: `temporal command --namespace YourNamespace`.
+#     * No: `temporal command --namespace=YourNamespace`.
+#     Note: in this utility's current incarnation, Boolean options must be 
+#     set with an equal sign.
+#     Since Booleans can be treated like flags, avoid using assigned values in samples.
+#     * Yes: `--detail`
+#     * No: `--detail=true`
+
+# For options and flags:
+
+# * When options and flags can be passed multiple times, say so explicitly in 
+#   the usage text: "Can be passed multiple times."
+# * Never rely on the flag type (e.g. `string`, `bool`, etc.) being shown to the user.
+#   It is replaced/hidden when a `META-VARIABLE` is used.
+# * Where possible, use a `META-VARIABLE` (all caps and wrapped in `\``s) to 
+#   describe/reference content passed to an option.
+# * Limit `code spans` to meta-variables.
+#   To reference other options or specify literal values, use double quotes.
+
+# COMMAND ENTRY OVERVIEW
+
+# A Command entry uses the following format:
+# - name: The full command path with parent commands. (string)
+#   summary: A concise command explanation. (string)
+#   description: A detailed command explanation. (string)
+#   has-init: invokes `initCommand` method. (bool)
+#   exact-args: Require this exact number of args. (int)
+#   maximum-args: Require this maximum number of args. (int)
+#   ignores-missing-env: Ignore missing environment variables. (bool)
+#   options: A list of options. (Option[])
+#     - name: The option name. (string)
+#       type: The option type. (string)
+#       description: The option description. (string)
+#       required: Whether the option is required. (bool)
+#       short: The single letter short version of name (i.e. a for address). (string)
+#       env: Binds the environment variable to this flag. (string)
+#       default: The default value. No default means zero value of the type. (string)
+#       enum-values: A list of possible values for the string-enum type. (string[])
+#       aliases: A list of aliases for the option. (string[])
+#   option-sets: A list of option sets. (string[])
+
+# * name, summary, and descrption are required fields. All other fields are optional.
+# * Available option types are `bool`, `duration`, `int`, `string`, `string[]`, 
+#   `string-enum`, or `timestamp`.
+# * Include a new-line after each command entry.
+
+# OPTION SET OVERVIEW
+
+# An options set declaration is the equivalent of pasting those options into the 
+# bulleted options list.
+
+# - name: The name of the option set. (string)
+#   options: A list of options. Same template as Command options above (Option[])
+
+# Options that are similar but slightly different don't need to be in option sets.
+# Reserve option sets for when the behavior of the option is the same across commands.
+
+# * Include a new-line after each option set.
+
+commands:
+  - name: temporal
+    summary: Temporal command-line interface and development server
+    description: |
+      The Temporal CLI manages, monitors, and debugs Temporal apps. It lets you run
+      a local Temporal Service, start Workflow Executions, pass messages to running
+      Workflows, inspect state, and more.
+
+      * Start a local development service:
+            `temporal server start-dev`
+      * View help: pass `--help` to any command:
+            `temporal activity complete --help`
+    has-init: true
+    options:
+      - name: env
+        type: string
+        description: Active environment name (`ENV`).
+        default: default
+        env: TEMPORAL_ENV
+      - name: env-file
+        type: string
+        description: |
+          Path to environment settings file.
+          (defaults to `$HOME/.config/temporalio/temporal.yaml`).
+      - name: log-level
+        type: string-enum
+        enum-values:
+          - debug 
+          - info
+          - warn
+          - error
+          - never
+        description: |
+          Log level.
+          Default is "info" for most commands and "warn" for `server start-dev`.
+        default: info
+      - name: log-format
+        type: string
+        description: |
+          Log format.
+          Options are: text, json.
+        default: text
+      - name: output
+        type: string-enum
+        short: o
+        description: Non-logging data output format.
+        enum-values:
+          - text
+          - json
+          - jsonl
+          - none
+        default: text
+      - name: time-format
+        type: string-enum
+        description: Time format.
+        enum-values:
+          - relative
+          - iso
+          - raw
+        default: relative
+      - name: color
+        type: string-enum
+        description: Output coloring.
+        enum-values:
+          - always
+          - never
+          - auto
+        default: auto
+      - name: no-json-shorthand-payloads
+        type: bool
+        description: Raw payload output, even if they are JSON.
+
+  - name: temporal activity
+    summary: Complete or fail an Activity
+    description: |
+      Update an Activity's state to completed or failed. This marks an Activity
+      as successfully finished or as having encountered an error:
+
+      ```
+      temporal activity complete \
+          --activity-id=YourActivityId \
+          --workflow-id=YourWorkflowId \
+          --result='{"YourResultKey": "YourResultValue"}'
+      ```
+    option-sets:
+      - client
+
+  - name: temporal activity complete
+    summary: Complete an Activity
+    description: |
+      Complete an Activity, marking it as successfully finished. Specify the
+      Activity ID and include a JSON result for the returned value:
+
+      ```
+      temporal activity complete \
+          --activity-id YourActivityId \
+          --workflow-id YourWorkflowId \
+          --result '{"YourResultKey": "YourResultVal"}'
+      ```
+    options:
+      - name: activity-id
+        type: string
+        description: Activity ID to complete.
+        required: true
+      - name: result
+        type: string
+        description: Result `JSON` to return.
+        required: true
+      - name: identity
+        type: string
+        description: Identity of the user submitting this request.
+    option-sets:
+      - workflow reference
+
+  - name: temporal activity fail
+    summary: Fail an Activity
+    description: |
+      Fail an Activity, marking it as having encountered an error. Specify the
+      Activity and Workflow IDs:
+
+      ```
+      temporal activity fail \
+          --activity-id YourActivityId \
+          --workflow-id YourWorkflowId
+      ```
+    options:
+      - name: activity-id
+        type: string
+        description: Activity ID to fail.
+        required: true
+      - name: detail
+        type: string
+        description: Reason for failing the Activity (JSON).
+      - name: identity
+        type: string
+        description: Identity of the user submitting this request.
+      - name: reason
+        type: string
+        description: Reason for failing the Activity.
+    option-sets:
+      - workflow reference
+
+  - name: temporal batch
+    summary: Manage running batch jobs
+    description: |
+      List or terminate running batch jobs.
+
+      A batch job executes a command on multiple Workflow Executions at once. Create
+      batch jobs by passing `--query` to commands that support it. For example, to
+      create a batch job to cancel a set of Workflow Executions:
+
+      ```
+      temporal workflow cancel \
+        --query 'ExecutionStatus = "Running" AND WorkflowType="YourWorkflow"' \
+        --reason "Testing"
+      ```
+
+      Query Quick Reference:
+
+      ```
+      +----------------------------------------------------------------------------+
+      | Composition:                                                               |
+      | - Data types: String literals with single or double quotes,                |
+      |   Numbers (integer and floating point), Booleans                           |
+      | - Comparison: '=', '!=', '>', '>=', '<', '<='                              |
+      | - Expressions/Operators:  'IN array', 'BETWEEN value AND value',           |
+      |   'STARTS_WITH string', 'IS NULL', 'IS NOT NULL', 'expr AND expr',         |
+      |   'expr OR expr', '( expr )'                                               |
+      | - Array: '( comma-separated-values )'                                      |
+      |                                                                            |
+      | Please note:                                                               |
+      | - Wrap attributes with backticks if it contains characters not in          |
+      |   `[a-zA-Z0-9]`.                                                           |
+      | - `STARTS_WITH` is only available for Keyword search attributes.           |
+      +----------------------------------------------------------------------------+
+      ```
+
+      Visit https://docs.temporal.io/visibility to read more about Search Attributes
+      and Query creation.
+    option-sets:
+      - client
+
+  - name: temporal batch describe
+    summary: Show batch job progress
+    description: |
+      Show the progress of an ongoing batch job. Pass a valid job ID to display its
+      information:
+
+      ```
+      temporal batch describe \
+          --job-id YourJobId
+      ```
+    options:
+      - name: job-id
+        type: string
+        description: Batch job ID.
+        required: true
+
+  - name: temporal batch list
+    summary: List all batch jobs
+    description: |
+      Return a list of batch jobs on the Service or within a single Namespace. For
+      example, list the batch jobs for "YourNamespace":
+
+      ```
+      temporal batch list \
+          --namespace YourNamespace
+      ```
+    options:
+      - name: limit
+        type: int
+        description: Maximum number of batch jobs to display.
+
+  - name: temporal batch terminate
+    summary: Forcefully end a batch job
+    description: |
+      Terminate a batch job with the provided job ID. You must provide a reason for
+      the termination. The Service stores this explanation as metadata for the
+      termination event for later reference:
+
+      ```
+      temporal batch terminate \
+          --job-id YourJobId \
+          --reason YourTerminationReason
+      ```
+    options:
+      - name: job-id
+        type: string
+        description: Job ID to terminate.
+        required: true
+      - name: reason
+        type: string
+        description: Reason for terminating the batch job.
+        required: true
+
+  - name: temporal env
+    summary: Manage environments
+    description: |
+      Environments manage key-value presets, auto-configuring Temporal CLI options
+      for you. You can set up distinct environments like "dev" and "prod" for
+      convenience:
+
+      ```
+      temporal env set \
+          --env prod \
+          --key address \
+          --value production.f45a2.tmprl.cloud:7233
+      ```
+
+      Each environment is isolated. Changes to "prod" presets won't affect "dev".
+
+      For easiest use, set a `TEMPORAL_ENV` environment variable in your shell. The
+      Temporal CLI checks for an `--env` option first, then checks for the
+      `TEMPORAL_ENV` environment variable. If neither is set, the CLI uses the
+      "default" environment.
+
+  - name: temporal env delete
+    summary: Delete an environment or environment property
+    description: |
+      Remove a presets environment entirely _or_ remove a key-value pair within an
+      environment. If you don't specify an environment (with `--env` or by setting
+      the `TEMPORAL_ENV` variable), this command updates the "default" environment:
+
+      ```
+      temporal env delete \
+          --env YourEnvironment
+      ```
+
+      or
+
+      ```
+      temporal env delete \
+          --env prod \
+          --key tls-key-path
+      ```
+    maximum-args: 1
+    options:
+      - name: key
+        short: k
+        type: string
+        description: Property name.
+
+  - name: temporal env get
+    summary: Show environment properties
+    description: |
+      List the properties for a given environment:
+
+      ```
+      temporal env get \
+          --env YourEnvironment
+      ```
+
+      Print a single property:
+
+      ```
+      temporal env get \
+          --env YourEnvironment \
+          --key YourPropertyKey
+      ```
+
+      If you don't specify an environment (with `--env` or by setting the
+      `TEMPORAL_ENV` variable), this command lists properties of the "default"
+      environment.
+    maximum-args: 1
+    options:
+      - name: key
+        type: string
+        short: k
+        description: Property name.
+
+  - name: temporal env list
+    summary: Show environment names
+    description: |
+      List the environments you have set up on your local computer. Environments are
+      stored in "$HOME/.config/temporalio/temporal.yaml".
+    ignores-missing-env: true
+
+  - name: temporal env set
+    summary: Set environment properties
+    description: |
+      Assign a value to a property key and store it to an environment:
+
+      ```
+      temporal env set \
+          --env environment \
+          --key property \
+          --value value
+      ```
+
+      If you don't specify an environment (with `--env` or by setting the
+      `TEMPORAL_ENV` variable), this command sets properties in the "default"
+      environment.
+
+      Storing keys with CLI option names lets the CLI automatically set those
+      options for you. This reduces effort and helps avoid typos when issuing
+      commands.
+    maximum-args: 2
+    ignores-missing-env: true
+    options:
+      - name: key
+        short: k
+        type: string
+        description: Property name (required).
+        # required: true
+      - name: value
+        short: v
+        type: string
+        description: Property value (required).
+        # required: true
+
+  - name: temporal operator
+    summary: Manage Temporal deployments
+    description: |
+      Operator commands manage and fetch information about Namespaces, Search
+      Attributes, Nexus Endpoints, and Temporal Services:
+
+      ```
+      temporal operator [command] [subcommand] [options]
+      ```
+
+      For example, to show information about the Temporal Service at the default
+      address (localhost):
+
+      ```
+      temporal operator cluster describe
+      ```
+    option-sets:
+      - client
+
+  - name: temporal operator cluster
+    summary: Manage a Temporal Cluster
+    description: |
+      Perform operator actions on Temporal Services (also known as Clusters).
+
+      ```
+      temporal operator cluster [subcommand] [options]
+      ```
+
+      For example to check Service/Cluster health:
+
+      ```
+      temporal operator cluster health
+      ```
+
+  - name: temporal operator cluster describe
+    summary: Show Temporal Cluster information
+    description: |
+      View information about a Temporal Cluster (Service), including Cluster Name,
+      persistence store, and visibility store. Add `--detail` for additional info:
+
+      ```
+      temporal operator cluster describe [--detail]
+      ```
+    options:
+      - name: detail
+        type: bool
+        description: Show history shard count and Cluster/Service version information.
+
+  - name: temporal operator cluster health
+    summary: Check Temporal Service health
+    description: |
+      View information about the health of a Temporal Service:
+
+      ```
+      temporal operator cluster health
+      ```
+
+  - name: temporal operator cluster list
+    summary: Show Temporal Clusters
+    description: |
+      Print a list of remote Temporal Clusters (Services) registered to the local
+      Service. Report details include the Cluster's name, ID, address, History Shard
+      count, Failover version, and availability:
+
+      ```
+      temporal operator cluster list [--limit max-count]
+      ```
+    options:
+      - name: limit
+        type: int
+        description: Maximum number of Clusters to display.
+
+  - name: temporal operator cluster remove
+    summary: Remove a Temporal Cluster
+    description: |
+      Remove a registered remote Temporal Cluster (Service) from the local Service.
+
+      ```
+      temporal operator cluster remove \
+          --name YourClusterName
+      ```
+    options:
+      - name: name
+        type: string
+        description: Cluster/Service name.
+        required: true
+
+  - name: temporal operator cluster system
+    summary: Show Temporal Cluster info
+    description: |
+      Show Temporal Server information for Temporal Clusters (Service): Server
+      version, scheduling support, and more. This information helps diagnose
+      problems with the Temporal Server.
+
+      The command defaults to the local Service. Otherwise, use the
+      `--frontend-address` option to specify a Cluster (Service) endpoint:
+
+      ```
+      temporal operator cluster system \
+          --frontend-address "YourRemoteEndpoint:YourRemotePort"
+      ```
+
+  - name: temporal operator cluster upsert
+    summary: Add/update a Temporal Cluster
+    description: |
+      Add, remove, or update a registered ("remote") Temporal Cluster (Service).
+
+      ```
+      temporal operator cluster upsert [options]
+      ```
+
+      For example:
+
+      ```
+      temporal operator cluster upsert \
+          --frontend-address "YourRemoteEndpoint:YourRemotePort"
+          --enable-connection false
+      ```
+    options:
+      - name: frontend-address
+        type: string
+        description: Remote endpoint.
+        required: true
+      - name: enable-connection
+        type: bool
+        description: Set the connection to "enabled".
+
+  - name: temporal operator namespace
+    summary: Namespace operations
+    description: |
+      Manage Temporal Cluster (Service) Namespaces:
+
+      ```
+      temporal operator namespace [command] [command options]
+      ```
+
+      For example:
+
+      ```
+      temporal operator namespace create \
+          --namespace YourNewNamespaceName
+      ```
+
+  - name: temporal operator namespace create
+    summary: Register a new Namespace
+    description: |
+      Create a new Namespace on the Temporal Service:
+
+      ```
+      temporal operator namespace create \
+          --namespace YourNewNamespaceName \
+          [options]
+      ````
+
+      Create a Namespace with multi-region data replication:
+
+      ```
+      temporal operator namespace create \
+          --global \
+          --namespace YourNewNamespaceName
+      ```
+
+      Configure settings like retention and Visibility Archival State as needed.
+      For example, the Visibility Archive can be set on a separate URI:
+
+      ```
+      temporal operator namespace create \
+          --retention 5d \
+          --visibility-archival-state enabled \
+          --visibility-uri YourURI \
+          --namespace YourNewNamespaceName
+      ```
+
+      Note: URI values for archival states can't be changed once enabled.
+    maximum-args: 1
+    options:
+      - name: active-cluster
+        type: string
+        description: Active Cluster (Service) name.
+      - name: cluster
+        type: string[]
+        description: |
+          Cluster (Service) names for Namespace creation.
+          Can be passed multiple times.
+      - name: data
+        type: string[]
+        description: |
+          Namespace data as `KEY=VALUE` pairs.
+          Keys must be identifiers, and values must be JSON values.
+          For example: 'YourKey={"your": "value"}'.
+          Can be passed multiple times.
+      - name: description
+        type: string
+        description: Namespace description.
+      - name: email
+        type: string
+        description: Owner email.
+      - name: global
+        type: bool
+        description: Enable multi-region data replication.
+      - name: history-archival-state
+        type: string-enum
+        description: History archival state.
+        enum-values:
+          - disabled
+          - enabled
+        default: disabled
+      - name: history-uri
+        type: string
+        description: |
+          Archive history to this `URI`.
+          Once enabled, can't be changed.
+      - name: retention
+        type: duration
+        description: Time to preserve closed Workflows before deletion.
+        default: 72h
+      - name: visibility-archival-state
+        type: string-enum
+        description: Visibility archival state.
+        enum-values:
+          - disabled
+          - enabled
+        default: disabled
+      - name: visibility-uri
+        type: string
+        description: |
+          Archive visibility data to this `URI`.
+          Once enabled, can't be changed.
+
+  - name: temporal operator namespace delete
+    summary: Delete a Namespace
+    description: |
+      Removes a Namespace from the Service.
+
+      ```
+      temporal operator namespace delete [options]
+      ```
+
+      For example:
+
+      ```
+      temporal operator namespace delete \
+          --namespace YourNamespaceName
+      ```
+    maximum-args: 1
+    options:
+      - name: yes
+        short: y
+        type: bool
+        description: Request confirmation before deletion.
+
+  - name: temporal operator namespace describe
+    summary: Describe a Namespace
+    description: |
+      Provide long-form information about a Namespace identified by its ID or name:
+
+      ```
+      temporal operator namespace describe \
+          --namespace-id YourNamespaceId
+      ```
+
+      or
+
+      ```
+      temporal operator namespace describe \
+          --namespace YourNamespaceName
+      ```
+    maximum-args: 1
+    options:
+      - name: namespace-id
+        type: string
+        description: Namespace ID.
+
+  - name: temporal operator namespace list
+    summary: List Namespaces
+    description: |
+      Display a detailed listing for all Namespaces on the Service:
+
+      ```
+      temporal operator namespace list
+      ```
+
+  - name: temporal operator namespace update
+    summary: Update a Namespace
+    description: |
+      Update a Namespace using properties you specify.
+
+      ```
+      temporal operator namespace update [options]
+      ```
+
+      Assign a Namespace's active Cluster (Service):
+
+      ```
+      temporal operator namespace update \
+          --namespace YourNamespaceName \
+          --active-cluster NewActiveCluster
+      ```
+
+      Promote a Namespace for multi-region data replication:
+
+      ```
+      temporal operator namespace update \
+          --namespace YourNamespaceName \
+          --promote-global
+      ```
+
+      You may update archives that were previously enabled or disabled. Note: URI
+      values for archival states can't be changed once enabled.
+
+      ```
+      temporal operator namespace update \
+          --namespace YourNamespaceName \
+          --history-archival-state enabled \
+          --visibility-archival-state disabled
+      ```
+    maximum-args: 1
+    options:
+      - name: active-cluster
+        type: string
+        description: Active Cluster (Service) name.
+      - name: cluster
+        type: string[]
+        description: Cluster (Service) names.
+      - name: data
+        type: string[]
+        description: |
+          Namespace data as `KEY=VALUE` pairs.
+          Keys must be identifiers, and values must be JSON values.
+          For example: 'YourKey={"your": "value"}'.
+          Can be passed multiple times.
+      - name: description
+        type: string
+        description: Namespace description.
+      - name: email
+        type: string
+        description: Owner email.
+      - name: promote-global
+        type: bool
+        description: Enable multi-region data replication.
+      - name: history-archival-state
+        type: string-enum
+        description: History archival state.
+        enum-values:
+          - disabled
+          - enabled
+      - name: history-uri
+        type: string
+        description: |
+          Archive history to this `URI`.
+          Once enabled, can't be changed.
+      - name: retention
+        type: duration
+        description: Length of time a closed Workflow is preserved before deletion.
+      - name: visibility-archival-state
+        type: string-enum
+        description: Visibility archival state.
+        enum-values:
+          - disabled
+          - enabled
+      - name: visibility-uri
+        type: string
+        description: |
+          Archive visibility data to this `URI`.
+          Once enabled, can't be changed.
+
+  - name: temporal operator nexus
+    summary: Commands for managing Nexus resources (EXPERIMENTAL)
+    description: |
+      Nexus commands enable managing Nexus resources.
+
+      Nexus commands follow this syntax:
+
+      ```
+      temporal operator nexus [command] [command] [command options]
+      ```
+
+  - name: temporal operator nexus endpoint
+    summary: Commands for managing Nexus Endpoints (EXPERIMENTAL)
+    description: |
+      Endpoint commands enable managing Nexus Endpoints.
+
+      Endpoint commands follow this syntax:
+
+      ```
+      temporal operator nexus endpoint [command] [command options]
+      ```
+
+  - name: temporal operator nexus endpoint create
+    summary: Create a new Nexus Endpoint (EXPERIMENTAL)
+    description: |
+      Create a new Nexus Endpoint on the Server.
+
+      An endpoint name is used in workflow code to invoke Nexus operations.  The
+      endpoint target may either be a worker, in which case `--target-namespace` and
+      `--target-task-queue` must both be provided, or an external URL, in which case
+      `--target-url` must be provided.
+
+      This command will fail if an endpoint with the same name is already registered.
+
+      ```
+      temporal operator nexus endpoint create \
+        --name your-endpoint \
+        --target-namespace your-namespace \
+        --target-task-queue your-task-queue \
+        --description-file DESCRIPTION.md
+      ```
+    options:
+      - name: name
+        type: string
+        description: Endpoint name.
+        required: true
+      - name: description
+        type: string
+        description: |
+          Endpoint description in markdown format (encoded using the configured codec server).
+      - name: description-file
+        type: string
+        description: |
+          Endpoint description file in markdown format (encoded using the configured codec server).
+      - name: target-namespace
+        type: string
+        description: Namespace in which a handler worker will be polling for Nexus tasks on.
+      - name: target-task-queue
+        type: string
+        description: Task Queue in which a handler worker will be polling for Nexus tasks on.
+      - name: target-url
+        type: string
+        description: URL to direct Nexus requests to.
+
+  - name: temporal operator nexus endpoint delete
+    summary: Delete a Nexus Endpoint (EXPERIMENTAL)
+    description: |
+      Delete a Nexus Endpoint configuration from the Server.
+
+      ```
+      temporal operator nexus endpoint delete --name your-endpoint
+      ```
+    options:
+      - name: name
+        type: string
+        description: Endpoint name.
+        required: true
+
+  - name: temporal operator nexus endpoint get
+    summary: Get a Nexus Endpoint by name (EXPERIMENTAL)
+    description: |
+      Get a Nexus Endpoint configuration by name from the Server.
+
+      ```
+      temporal operator nexus endpoint get --name your-endpoint
+      ```
+    options:
+      - name: name
+        type: string
+        description: Endpoint name.
+        required: true
+
+  - name: temporal operator nexus endpoint list
+    summary: List Nexus Endpoints (EXPERIMENTAL)
+    description: |
+      List all Nexus Endpoint configurations on the Server.
+
+      ```
+      temporal operator nexus endpoint list
+      ```
+
+  - name: temporal operator nexus endpoint update
+    summary: Update an existing Nexus Endpoint (EXPERIMENTAL)
+    description: |
+      Update an existing Nexus Endpoint on the Server.
+
+      An endpoint name is used in workflow code to invoke Nexus operations.  The
+      endpoint target may either be a worker, in which case `--target-namespace` and
+      `--target-task-queue` must both be provided, or an external URL, in which case
+      `--target-url` must be provided.
+
+      The endpoint is patched; existing fields for which flags are not provided are
+      left as they were.
+
+      Update only the target task queue:
+
+      ```
+      temporal operator nexus endpoint update \
+        --name your-endpoint \
+        --target-task-queue your-other-queue
+      ```
+
+      Update only the description:
+
+      ```
+      temporal operator nexus endpoint update \
+        --name your-endpoint \
+        --description-file DESCRIPTION.md
+      ```
+    options:
+      - name: name
+        type: string
+        description: Endpoint name.
+        required: true
+      - name: description
+        type: string
+        description: |
+          Endpoint description in markdown format (encoded using the configured codec server).
+      - name: description-file
+        type: string
+        description: |
+          Endpoint description file in markdown format (encoded using the configured codec server).
+      - name: unset-description
+        type: bool
+        description: Unset the description.
+      - name: target-namespace
+        type: string
+        description: Namespace in which a handler worker will be polling for Nexus tasks on.
+      - name: target-task-queue
+        type: string
+        description: Task Queue in which a handler worker will be polling for Nexus tasks on.
+      - name: target-url
+        type: string
+        description: URL to direct Nexus requests to.
+
+  - name: temporal operator search-attribute
+    summary: Search Attribute operations
+    description: |
+      Create, list, or remove Search Attributes fields stored in a Workflow
+      Execution's metadata:
+
+      ```
+      temporal operator search-attribute create \
+          --name YourAttributeName \
+          --type Keyword
+      ```
+
+      Supported types include: Text, Keyword, Int, Double, Bool, Datetime, and
+      KeywordList.
+
+  - name: temporal operator search-attribute create
+    summary: Add custom Search Attributes
+    description: |
+      Add one or more custom Search Attributes:
+
+      ```
+      temporal operator search-attribute create \
+          --name YourAttributeName \
+          --type Keyword
+      ```
+    options:
+      - name: name
+        type: string[]
+        description: Search Attribute name.
+        required: true
+      - name: type
+        type: string[]
+        description: |
+          Search Attribute type.
+          Options: Text, Keyword, Int, Double, Bool, Datetime, KeywordList.
+        required: true
+
+  - name: temporal operator search-attribute list
+    summary: List Search Attributes
+    description: |
+      Display a list of active Search Attributes that can be assigned or used with
+      Workflow Queries. You can manage this list and add attributes as needed:
+
+      ```
+      temporal operator search-attribute list
+      ```
+
+  - name: temporal operator search-attribute remove
+    summary: Remove custom Search Attributes
+    description: |
+      Remove custom Search Attributes from the options that can be assigned or used
+      with Workflow Queries.
+
+      ```
+      temporal operator search-attribute remove \
+          --name YourAttributeName
+      ```
+
+      Remove attributes without confirmation:
+
+      ```
+      temporal operator search-attribute remove \
+          --name YourAttributeName \
+          --yes
+      ```
+    options:
+      - name: name
+        type: string[]
+        description: Search Attribute name.
+        required: true
+      - name: yes
+        short: y
+        type: bool
+        description: Don't prompt to confirm removal.
+
+  - name: temporal schedule
+    summary: Perform operations on Schedules
+    description: |
+      Create, use, and update Schedules that allow Workflow Executions to be created
+      at specified times:
+
+      ```
+      temporal schedule [commands] [options]
+      ```
+
+      For example:
+
+      ```
+      temporal schedule describe \
+          --schedule-id "YourScheduleId"
+      ```
+    option-sets:
+      - client
+
+  - name: temporal schedule backfill
+    summary: Backfill past actions
+    description: |
+      Batch-execute actions that would have run during a specified time interval.
+      Use this command to fill in Workflow runs from when a Schedule was paused,
+      before a Schedule was created, from the future, or to re-process a previously
+      executed interval.
+
+      Backfills require a Schedule ID and the time period covered by the request.
+      It's best to use the `BufferAll` or `AllowAll` policies to avoid conflicts
+      and ensure no Workflow Executions are skipped.
+
+      For example:
+
+      ```
+      temporal schedule backfill \
+          --schedule-id "YourScheduleId" \
+          --start-time "2022-05-01T00:00:00Z" \
+          --end-time "2022-05-31T23:59:59Z" \
+          --overlap-policy BufferAll
+      ```
+
+      The policies include:
+
+      * **AllowAll**: Allow unlimited concurrent Workflow Executions. This
+        significantly speeds up the backfilling process on systems that support
+        concurrency. You must ensure running Workflow Executions do not interfere
+        with each other.
+      * **BufferAll**: Buffer all incoming Workflow Executions while waiting for
+        the running Workflow Execution to complete.
+      * **Skip**: If a previous Workflow Execution is still running, discard new
+        Workflow Executions.
+      * **BufferOne**: Same as 'Skip' but buffer a single Workflow Execution to be
+        run after the previous Execution completes. Discard other Workflow
+        Executions.
+      * **CancelOther**: Cancel the running Workflow Execution and replace it with
+        the incoming new Workflow Execution.
+      * **TerminateOther**: Terminate the running Workflow Execution and replace
+        it with the incoming new Workflow Execution.
+    options:
+      - name: end-time
+        type: timestamp
+        description: Backfill end time.
+        required: true
+      - name: start-time
+        type: timestamp
+        description: Backfill start time.
+        required: true
+    option-sets:
+      - overlap policy
+      - schedule id
+
+  - name: temporal schedule create
+    summary: Create a new Schedule
+    description: |
+      Create a new Schedule on the Temporal Service. A Schedule automatically starts
+      new Workflow Executions at the times you specify.
+
+      For example:
+
+      ```
+        temporal schedule create \
+          --schedule-id "YourScheduleId" \
+          --calendar '{"dayOfWeek":"Fri","hour":"3","minute":"30"}' \
+          --workflow-id YourBaseWorkflowIdName \
+          --task-queue YourTaskQueue \
+          --type YourWorkflowType
+      ```
+
+      Schedules support any combination of `--calendar`, `--interval`, and `--cron`:
+
+      * Shorthand `--interval` strings.
+        For example: 45m (every 45 minutes) or 6h/5h (every 6 hours, at the top of
+        the 5th hour).
+      * JSON `--calendar`, as in the preceding example.
+      * Unix-style `--cron` strings and robfig declarations
+        (@daily/@weekly/@every X/etc).
+        For example, every Friday at 12:30 PM: `30 12 * * Fri`.
+    option-sets:
+      - schedule-configuration
+      - schedule-id
+      - overlap-policy
+      - shared-workflow-start
+      - payload-input
+
+  - name: temporal schedule delete
+    summary: Remove a Schedule
+    description: |
+      Deletes a Schedule on the front end Service:
+
+      ```
+      temporal schedule delete \
+          --schedule-id YourScheduleId
+      ```
+
+      Removing a Schedule won't affect the Workflow Executions it started that are
+      still running. To cancel or terminate these Workflow Executions, use `temporal
+      workflow delete` with the `TemporalScheduledById` Search Attribute instead.
+    option-sets:
+      - schedule-id
+
+  - name: temporal schedule describe
+    summary: Display Schedule state
+    description: |
+      Show a Schedule configuration, including information about past, current, and
+      future Workflow runs:
+
+      ```
+      temporal schedule describe \
+          --schedule-id YourScheduleId
+      ```
+    option-sets:
+      - schedule-id
+
+  - name: temporal schedule list
+    summary: Display hosted Schedules
+    description: |
+      Lists the Schedules hosted by a Namespace:
+
+      ```
+      temporal schedule list \
+          --namespace YourNamespace
+      ```
+    options:
+      - name: long
+        short: l
+        type: bool
+        description: Show detailed information.
+      - name: really-long
+        type: bool
+        description: Show extensive information in non-table form.
+      - name: query
+        short: q
+        type: string
+        description: Filter results using given List Filter.
+
+  - name: temporal schedule toggle
+    summary: Pause or unpause a Schedule
+    description: |
+      Pause or unpause a Schedule by passing a flag with your desired state:
+
+      ```
+      temporal schedule toggle \
+          --schedule-id "YourScheduleId" \
+          --pause \
+          --reason "YourReason"
+      ```
+
+      and
+
+      ```
+      temporal schedule toggle
+          --schedule-id "YourScheduleId" \
+          --unpause \
+          --reason "YourReason"
+      ```
+
+      The `--reason` text updates the Schedule's `notes` field for operations
+      communication. It defaults to "(no reason provided)" if omitted. This field is
+      also visible on the Service Web UI.
+    options:
+      - name: pause
+        type: bool
+        description: Pause the Schedule.
+      - name: reason
+        type: string
+        description: Reason for pausing or unpausing the Schedule.
+        default: "(no reason provided)"
+      - name: unpause
+        type: bool
+        description: Unpause the Schedule.
+    option-sets:
+      - schedule-id
+
+  - name: temporal schedule trigger
+    summary: Immediately run a Schedule
+    description: |
+      Trigger a Schedule to run immediately:
+
+      ```
+      temporal schedule trigger \
+          --schedule-id "YourScheduleId"
+      ```
+    option-sets:
+      - schedule-id
+      - overlap-policy
+
+  - name: temporal schedule update
+    summary: Update Schedule details
+    description: |
+      Update an existing Schedule with new configuration details, including time
+      specifications, action, and policies:
+
+      ```
+      temporal schedule update \
+          --schedule-id "YourScheduleId" \
+          --workflow-type "NewWorkflowType"
+      ```
+    option-sets:
+      - schedule-configuration
+      - schedule-id
+      - overlap-policy
+      - shared-workflow-start
+      - payload-input
+
+  - name: temporal server
+    summary: Run Temporal Server
+    description: |
+      Run a development Temporal Server on your local system. View the Web UI for
+      the default configuration at http://localhost:8233:
+
+      ```
+      temporal server start-dev
+      ```
+
+      Add persistence for Workflow Executions across runs:
+
+      ```
+      temporal server start-dev \
+          --db-filename path-to-your-local-persistent-store
+      ```
+
+      Set the port from the front-end gRPC Service (7233 default):
+
+      ```
+      temporal server start-dev \
+          --port 7234 \
+          --ui-port 8234 \
+          --metrics-port 57271
+      ```
+
+      Use a custom port for the Web UI. The default is the gRPC port (7233 default)
+      plus 1000 (8233):
+
+      ```
+      temporal server start-dev \
+          --ui-port 3000
+      ```
+
+  - name: temporal server start-dev
+    summary: Start Temporal development server
+    description: |
+      Run a development Temporal Server on your local system. View the Web UI for
+      the default configuration at http://localhost:8233:
+
+      ```
+      temporal server start-dev
+      ```
+
+      Add persistence for Workflow Executions across runs:
+
+      ```
+      temporal server start-dev \
+          --db-filename path-to-your-local-persistent-store
+      ```
+
+      Set the port from the front-end gRPC Service (7233 default):
+
+      ```
+      temporal server start-dev \
+          --port 7000
+      ```
+
+      Use a custom port for the Web UI. The default is the gRPC port (7233 default)
+      plus 1000 (8233):
+
+      ```
+      temporal server start-dev \
+          --ui-port 3000
+      ```
+    options:
+      - name: db-filename
+        short: f
+        type: string
+        description: |
+          Path to file for persistent Temporal state store.
+          By default, Workflow Executions are lost when the server process dies.
+      - name: namespace
+        short: n
+        type: string[]
+        description: |
+          Namespaces to be created at launch.
+          The "default" Namespace is always created automatically.
+      - name: port
+        type: int
+        short: p
+        description: Port for the front-end gRPC Service.
+        default: 7233
+      - name: http-port
+        type: int
+        description: | 
+          Port for the HTTP API service.
+          Default is off.
+      - name: metrics-port
+        type: int
+        description: |
+          Port for '/metrics'.
+          Default is off.
+      - name: ui-port
+        type: int
+        description: | 
+          Port for the Web UI.
+          Default is '--port' value + 1000.
+      - name: headless
+        type: bool
+        description: Disable the Web UI.
+      - name: ip
+        type: string
+        description: IP address bound to the front-end Service.
+        default: localhost
+      - name: ui-ip
+        type: string
+        description: |
+          IP address bound to the Web UI.
+          Default is same as '--ip' value.
+      - name: ui-public-path
+        type: string
+        description: |
+          The public base path for the Web UI.
+          Default is `/`.
+      - name: ui-asset-path
+        type: string
+        description: UI custom assets path.
+      - name: ui-codec-endpoint
+        type: string
+        description: UI remote codec HTTP endpoint.
+      - name: sqlite-pragma
+        type: string[]
+        description: SQLite pragma statements in "PRAGMA=VALUE" format.
+      - name: dynamic-config-value
+        type: string[]
+        description: |
+          Dynamic configuration value using `KEY=VALUE` pairs.
+          Keys must be identifiers, and values must be JSON values.
+          For example: 'YourKey="YourString"'.
+          Can be passed multiple times.
+      - name: log-config
+        type: bool
+        description: Log the server config to stderr.
+      - name: search-attribute
+        type: string[]
+        description: |
+          Search attributes to register using `KEY=VALUE` pairs.
+          Keys must be identifiers, and values must be the search
+          attribute type, which is one of the following:
+          Text, Keyword, Int, Double, Bool, Datetime, KeywordList.
+
+  - name: temporal task-queue
+    summary: Manage Task Queues
+    description: |
+      Inspect and update Task Queues, the queues that Workers poll for Workflow and
+      Activity tasks:
+
+      ```
+      temporal task-queue [command] [command options] \
+          --task-queue YourTaskQueue
+      ```
+
+      For example:
+
+      ```
+      temporal task-queue describe \
+          --task-queue YourTaskQueue
+      ```
+    option-sets:
+      - client
+
+  - name: temporal task-queue describe
+    summary: Show active Workers
+    description: |
+      Display a list of active Workers that have recently polled a Task Queue. The
+      Temporal Server records each poll request time. A `LastAccessTime` over one
+      minute may indicate the Worker is at capacity or has shut down. Temporal
+      Workers are removed if 5 minutes have passed since the last poll request.
+
+      ```
+      temporal task-queue describe \
+        --task-queue YourTaskQueue
+      ```
+
+      This command provides poller information for a given Task Queue.
+      Workflow and Activity polling use separate Task Queues:
+
+      ```
+      temporal task-queue describe \
+          --task-queue YourTaskQueue \
+          --task-queue-type "activity"
+      ```
+
+      This command provides the following task queue statistics:
+      - `ApproximateBacklogCount`: The approximate number of tasks backlogged in this
+        task queue. May count expired tasks but eventually converges to the right
+        value.
+      - `ApproximateBacklogAge`: Approximate age of the oldest task in the backlog,
+        based on its creation time, measured in seconds.
+      - `TasksAddRate`: Approximate rate at which tasks are being added to the task
+        queue, measured in tasks per second, averaged over the last 30 seconds.
+        Includes tasks dispatched immediately without going to the backlog
+        (sync-matched tasks), as well as tasks added to the backlog. (See note below.)
+      - `TasksDispatchRate`: Approximate rate at which tasks are being dispatched from
+        the task queue, measured in tasks per second, averaged over the last 30
+        seconds.  Includes tasks dispatched immediately without going to the backlog
+        (sync-matched tasks), as well as tasks added to the backlog. (See note below.)
+      - `Backlog Increase Rate`: Approximate rate at which the backlog size is
+        increasing (if positive) or decreasing (if negative), measured in tasks per
+        second, averaged over the last 30 seconds.  This is equivalent to:
+        `TasksAddRate` - `TasksDispatchRate`.
+
+      NOTE: The `TasksAddRate` and `TasksDispatchRate` metrics may differ from the
+      actual rate of add/dispatch, because tasks may be dispatched eagerly to an
+      available worker, or may apply only to specific workers (they are "sticky").
+      Such tasks are not counted by these metrics.
+
+      Safely retire Workers assigned a Build ID by checking reachability across
+      all task types. Use the flag `--report-reachability`:
+
+      ```
+      temporal task-queue describe \
+          --task-queue YourTaskQueue \
+          --build-id "YourBuildId" \
+          --report-reachability
+      ```
+
+      Task reachability information is returned for the requested versions and all
+      task types, which can be used to safely retire Workers with old code versions,
+      provided that they were assigned a Build ID.
+
+      Note that task reachability status is experimental and may significantly change
+      or be removed in a future release. Also, determining task reachability incurs a
+      non-trivial computing cost.
+
+      Task reachability states are reported per build ID. The state may be one of the
+      following:
+
+      - `Reachable`: using the current versioning rules, the Build ID may be used
+        by new Workflow Executions or Activities OR there are currently open
+        Workflow or backlogged Activity tasks assigned to the queue.
+      - `ClosedWorkflowsOnly`: the Build ID does not have open Workflow Executions
+        and can't be reached by new Workflow Executions. It MAY have closed
+        Workflow Executions within the Namespace retention period.
+      - `Unreachable`: this Build ID is not used for new Workflow Executions and
+        isn't used by any existing Workflow Execution within the retention period.
+
+      Task reachability is eventually consistent. You may experience a delay until
+      reachability converges to the most accurate value. This is designed to act
+      in the most conservative way until convergence. For example, `Reachable` is
+      more conservative than `ClosedWorkflowsOnly`.
+    options:
+      - name: task-queue
+        type: string
+        short: t
+        description: Task Queue name.
+        required: true
+      - name: task-queue-type
+        type: string[]
+        description: |
+          Task Queue type. If not specified, all types are reported.
+          Options are: workflow, activity, nexus.
+      - name: select-build-id
+        type: string[]
+        description: Filter the Task Queue based on Build ID.
+      - name: select-unversioned
+        type: bool
+        description: Include the unversioned queue.
+      - name: select-all-active
+        type: bool
+        description: |
+          Include all active versions.
+          A version is active if it had new tasks or polls recently.
+      - name: report-reachability
+        type: bool
+        description: Display task reachability information.
+      - name: legacy-mode
+        type: bool
+        description: |
+          Enable a legacy mode for servers that do not support rules-based
+          worker versioning.
+          This mode only provides pollers info.
+      - name: task-queue-type-legacy
+        type: string-enum
+        description: Task Queue type (legacy mode only).
+        enum-values:
+          - workflow
+          - activity
+        default: workflow
+      - name: partitions-legacy
+        type: int
+        description: |
+          Query partitions 1 through `N`.
+          Experimental/Temporary feature.
+          Legacy mode only.
+        default: 1
+      - name: disable-stats
+        type: bool
+        description: Disable task queue statistics.
+
+  - name: temporal task-queue get-build-id-reachability
+    summary: Show Build ID availability (Deprecated)
+    description: |
+      +-----------------------------------------------------------------------------+
+      | CAUTION: This command is deprecated and will be removed in a later release. |
+      +-----------------------------------------------------------------------------+
+
+      Show if a given Build ID can be used for new, existing, or closed Workflows
+      in Namespaces that support Worker versioning:
+
+      ```
+      temporal task-queue get-build-id-reachability \
+          --task-queue YourTaskQueue \
+          --build-id "YourBuildId"
+      ```
+
+      You can specify the `--build-id` and `--task-queue` flags multiple times. If
+      `--task-queue` is omitted, the command checks Build ID reachability against
+      all Task Queues.
+    options:
+      - name: build-id
+        type: string[]
+        description: |
+          One or more Build ID strings.
+          Can be passed multiple times.
+      - name: reachability-type
+        type: string-enum
+        description: |
+          Reachability filter.
+          `open`: reachable by one or more open workflows.
+          `closed`: reachable by one or more closed workflows.
+          `existing`: reachable by either.
+          New Workflow Executions reachable by a Build ID are always reported.
+        enum-values:
+          - open
+          - closed
+          - existing
+        default: existing
+      - name: task-queue
+        short: t
+        type: string[]
+        description: |
+          Search only the specified task queue(s).
+          Can be passed multiple times.
+
+  - name: temporal task-queue get-build-ids
+    summary: Fetch Build ID versions (Deprecated)
+    description: |
+      +-----------------------------------------------------------------------------+
+      | CAUTION: This command is deprecated and will be removed in a later release. |
+      +-----------------------------------------------------------------------------+
+
+      Fetch sets of compatible Build IDs for specified Task Queues and display their
+      information:
+
+      ```
+      temporal task-queue get-build-ids \
+          --task-queue YourTaskQueue
+      ```
+
+      This command is limited to Namespaces that support Worker versioning.
+    options:
+      - name: task-queue
+        type: string
+        description: |
+          Task Queue name.
+        required: true
+        short: t
+      - name: max-sets
+        type: int
+        description: |
+          Max return count.
+          Use 1 for default major version.
+          Use 0 for all sets.
+        default: 0
+
+  - name: temporal task-queue list-partition
+    summary: List Task Queue partitions
+    description: |
+      Display a Task Queue's partition list with assigned matching nodes:
+
+      ```
+      temporal task-queue list-partition \
+          --task-queue YourTaskQueue
+      ```
+    options:
+      - name: task-queue
+        type: string
+        description: Task Queue name.
+        required: true
+        short: t
+
+  - name: temporal task-queue update-build-ids
+    summary: Manage Build IDs (Deprecated)
+    description: |
+      +-----------------------------------------------------------------------------+
+      | CAUTION: This command is deprecated and will be removed in a later release. |
+      +-----------------------------------------------------------------------------+
+
+      Add or change a Task Queue's compatible Build IDs for Namespaces using Worker
+      versioning:
+
+      ```
+      temporal task-queue update-build-ids [subcommands] [options] \
+          --task-queue YourTaskQueue
+      ```
+
+  - name: temporal task-queue update-build-ids add-new-compatible
+    summary: Add compatible Build ID
+    description: |
+      Add a compatible Build ID to a Task Queue's existing version set. Provide an
+      existing Build ID and a new Build ID:
+
+      ```
+      temporal task-queue update-build-ids add-new-compatible \
+          --task-queue YourTaskQueue \
+          --existing-compatible-build-id "YourExistingBuildId" \
+          --build-id "YourNewBuildId"
+      ```
+
+      The new ID is stored in the set containing the existing ID and becomes the new
+      default for that set.
+
+      This command is limited to Namespaces that support Worker versioning.
+    options:
+      - name: build-id
+        type: string
+        description: Build ID to be added.
+        required: true
+      - name: task-queue
+        type: string
+        description: Task Queue name.
+        required: true
+        short: t
+      - name: existing-compatible-build-id
+        type: string
+        description: Pre-existing Build ID in this Task Queue.
+        required: true
+      - name: set-as-default
+        type: bool
+        description: Set the expanded Build ID set as the Task Queue default.
+
+  - name: temporal task-queue update-build-ids add-new-default
+    summary: Set new default Build ID set (Deprecated)
+    description: |
+      +-----------------------------------------------------------------------------+
+      | CAUTION: This command is deprecated and will be removed in a later release. |
+      +-----------------------------------------------------------------------------+
+
+      Create a new Task Queue Build ID set, add a Build ID to it, and make it the
+      overall Task Queue default. The new set will be incompatible with previous
+      sets and versions.
+
+      ```
+      temporal task-queue update-build-ids add-new-default \
+          --task-queue YourTaskQueue \
+          --build-id "YourNewBuildId"
+      ```
+
+      +------------------------------------------------------------------------+
+      | NOTICE: This command is limited to Namespaces that support Worker      |
+      | versioning. Worker versioning is experimental. Versioning commands are |
+      | subject to change.                                                     |
+      +------------------------------------------------------------------------+
+    options:
+      - name: build-id
+        type: string
+        description: Build ID to be added.
+        required: true
+      - name: task-queue
+        type: string
+        description: Task Queue name.
+        required: true
+        short: t
+
+  - name: temporal task-queue update-build-ids promote-id-in-set
+    summary: Set Build ID as set default (Deprecated)
+    description: |
+      +-----------------------------------------------------------------------------+
+      | CAUTION: This command is deprecated and will be removed in a later release. |
+      +-----------------------------------------------------------------------------+
+
+      Establish an existing Build ID as the default in its Task Queue set. New tasks
+      compatible with this set will now be dispatched to this ID:
+
+      ```
+      temporal task-queue update-build-ids promote-id-in-set \
+          --task-queue YourTaskQueue \
+          --build-id "YourBuildId"
+      ```
+
+      +------------------------------------------------------------------------+
+      | NOTICE: This command is limited to Namespaces that support Worker      |
+      | versioning. Worker versioning is experimental. Versioning commands are |
+      | subject to change.                                                     |
+      +------------------------------------------------------------------------+
+    options:
+      - name: build-id
+        type: string
+        description: Build ID to set as default.
+        required: true
+      - name: task-queue
+        type: string
+        description: Task Queue name.
+        required: true
+        short: t
+
+  - name: temporal task-queue update-build-ids promote-set
+    summary: Promote Build ID set (Deprecated)
+    description: |
+      +-----------------------------------------------------------------------------+
+      | CAUTION: This command is deprecated and will be removed in a later release. |
+      +-----------------------------------------------------------------------------+
+
+      Promote a Build ID set to be the default on a Task Queue. Identify the set by
+      providing a Build ID within it. If the set is already the default, this
+      command has no effect:
+
+      ```
+      temporal task-queue update-build-ids promote-set \
+          --task-queue YourTaskQueue \
+          --build-id "YourBuildId"
+      ```
+
+      +------------------------------------------------------------------------+
+      | NOTICE: This command is limited to Namespaces that support Worker      |
+      | versioning. Worker versioning is experimental. Versioning commands are |
+      | subject to change.                                                     |
+      +------------------------------------------------------------------------+
+    options:
+      - name: build-id
+        type: string
+        description: Build ID within the promoted set.
+        required: true
+      - name: task-queue
+        type: string
+        description: Task Queue name.
+        required: true
+        short: t
+
+  - name: temporal task-queue versioning
+    summary: Manage Task Queue Build ID handling (Experimental)
+    description: |
+      +---------------------------------------------------------------------+
+      | CAUTION: Worker versioning is experimental. Versioning commands are |
+      | subject to change.                                                  |
+      +---------------------------------------------------------------------+
+
+      Provides commands to add, list, remove, or replace Worker Build ID assignment
+      and redirect rules associated with Task Queues:
+
+      ```
+      temporal task-queue versioning [subcommands] [options] \
+          --task-queue YourTaskQueue
+      ```
+
+      Task Queues support the following versioning rules and policies:
+
+      - Assignment Rules: manage how new executions are assigned to run on specific
+        Worker Build IDs. Each Task Queue stores a list of ordered Assignment Rules,
+        which are evaluated from first to last. Assignment Rules also allow for
+        gradual rollout of new Build IDs by setting ramp percentage.
+      - Redirect Rules: automatically assign work for a source Build ID to a target
+        Build ID. You may add at most one redirect rule for each source Build ID.
+        Redirect rules require that a target Build ID is fully compatible with
+        the source Build ID.
+    options:
+      - name: task-queue
+        type: string
+        short: t
+        description: Task queue name.
+        required: true
+
+  - name: temporal task-queue versioning add-redirect-rule
+    summary: Add Task Queue redirect rules (Experimental)
+    description: |
+      Add a new redirect rule for a given Task Queue. You may add at most one
+      redirect rule for each distinct source build ID:
+
+      ```
+      temporal task-queue versioning add-redirect-rule \
+          --task-queue YourTaskQueue \
+          --source-build-id "YourSourceBuildID" \
+          --target-build-id "YourTargetBuildID"
+      ```
+
+      +---------------------------------------------------------------------+
+      | CAUTION: Worker versioning is experimental. Versioning commands are |
+      | subject to change.                                                  |
+      +---------------------------------------------------------------------+
+    options:
+      - name: source-build-id
+        type: string
+        description: Source build ID.
+        required: true
+      - name: target-build-id
+        type: string
+        description: Target build ID.
+        required: true
+      - name: yes
+        short: y
+        type: bool
+        description: Don't prompt to confirm.
+
+  - name: temporal task-queue versioning commit-build-id
+    summary: Complete Build ID rollout (Experimental)
+    description: |
+      Complete a Build ID's rollout and clean up unnecessary rules that might have
+      been created during a gradual rollout:
+
+      ```
+      temporal task-queue versioning commit-build-id \
+          --task-queue YourTaskQueue
+          --build-id "YourBuildId"
+      ```
+
+      This command automatically applies the following atomic changes:
+
+      - Adds an unconditional assignment rule for the target Build ID at the
+        end of the list.
+      - Removes all previously added assignment rules to the given target
+        Build ID.
+      - Removes any unconditional assignment rules for other Build IDs.
+
+      Rejects requests when there have been no recent pollers for this Build ID.
+      This prevents committing invalid Build IDs. Use the `--force` option to
+      override this validation.
+
+      +---------------------------------------------------------------------+
+      | CAUTION: Worker versioning is experimental. Versioning commands are |
+      | subject to change.                                                  |
+      +---------------------------------------------------------------------+
+    options:
+      - name: build-id
+        type: string
+        description: Target build ID.
+        required: true
+      - name: force
+        type: bool
+        description: Bypass recent-poller validation.
+      - name: yes
+        short: y
+        type: bool
+        description: Don't prompt to confirm.
+
+  - name: temporal task-queue versioning delete-assignment-rule
+    summary: Removes a Task Queue assignment rule (Experimental)
+    description: |
+      Deletes a rule identified by its index in the Task Queue's list of assignment
+      rules.
+
+      ```
+      temporal task-queue versioning delete-assignment-rule \
+          --task-queue YourTaskQueue \
+          --rule-index YourIntegerRuleIndex
+      ```
+
+      By default, the Task Queue must retain one unconditional rule, such as "no
+      hint filter" or "percentage". Otherwise, the delete operation is rejected.
+      Use the `--force` option to override this validation.
+
+      +---------------------------------------------------------------------+
+      | CAUTION: Worker versioning is experimental. Versioning commands are |
+      | subject to change.                                                  |
+      +---------------------------------------------------------------------+
+    options:
+      - name: rule-index
+        type: int
+        short: i
+        description: |
+          Position of the assignment rule to be replaced.
+          Requests for invalid indices will fail.
+        required: true
+      - name: force
+        type: bool
+        description: Bypass one-unconditional-rule validation.
+      - name: yes
+        short: y
+        type: bool
+        description: Don't prompt to confirm.
+
+  - name: temporal task-queue versioning delete-redirect-rule
+    summary: Removes Build-ID routing rule (Experimental)
+    description: |
+      Deletes the routing rule for the given source Build ID.
+
+      ```
+      temporal task-queue versioning delete-redirect-rule \
+          --task-queue YourTaskQueue \
+          --source-build-id "YourBuildId"
+      ```
+
+      +---------------------------------------------------------------------+
+      | CAUTION: Worker versioning is experimental. Versioning commands are |
+      | subject to change.                                                  |
+      +---------------------------------------------------------------------+
+    options:
+      - name: source-build-id
+        type: string
+        description: Source Build ID.
+        required: true
+      - name: yes
+        short: y
+        type: bool
+        description: Don't prompt to confirm.
+
+  - name: temporal task-queue versioning get-rules
+    summary: Fetch Worker Build ID assignments and redirect rules (Experimental)
+    description: |
+      Retrieve all the Worker Build ID assignments and redirect rules associated
+      with a Task Queue:
+
+      ```
+      temporal task-queue versioning get-rules \
+          --task-queue YourTaskQueue
+      ```
+
+      Task Queues support the following versioning rules:
+
+      - Assignment Rules: manage how new executions are assigned to run on specific
+        Worker Build IDs. Each Task Queue stores a list of ordered Assignment Rules,
+        which are evaluated from first to last. Assignment Rules also allow for
+        gradual rollout of new Build IDs by setting ramp percentage.
+      - Redirect Rules: automatically assign work for a source Build ID to a target
+        Build ID. You may add at most one redirect rule for each source Build ID.
+        Redirect rules require that a target Build ID is fully compatible with
+        the source Build ID.
+
+      +---------------------------------------------------------------------+
+      | CAUTION: Worker versioning is experimental. Versioning commands are |
+      | subject to change.                                                  |
+      +---------------------------------------------------------------------+
+
+  - name: temporal task-queue versioning insert-assignment-rule
+    summary: Add an assignment rule at a index (Experimental)
+    description: |
+      Inserts a new assignment rule for this Task Queue. Rules are evaluated in
+      order, starting from index 0. The first applicable rule is applied, and the
+      rest ignored:
+
+      ```
+      temporal task-queue versioning insert-assignment-rule \
+          --task-queue YourTaskQueue \
+          --build-id "YourBuildId"
+      ```
+
+      If you do not specify a `--rule-index`, this command inserts at index 0.
+
+      +---------------------------------------------------------------------+
+      | CAUTION: Worker versioning is experimental. Versioning commands are |
+      | subject to change.                                                  |
+      +---------------------------------------------------------------------+
+    options:
+      - name: build-id
+        type: string
+        description: Target Build ID.
+        required: true
+      - name: rule-index
+        type: int
+        short: i
+        description: |
+          Insertion position.
+          Ranges from 0 (insert at start) to count (append).
+          Any number greater than the count is treated as "append".
+        default: 0
+      - name: percentage
+        type: int
+        description: |
+          Traffic percent to send to target Build ID.
+        default: 100
+      - name: yes
+        short: y
+        type: bool
+        description: Don't prompt to confirm.
+
+  - name: temporal task-queue versioning replace-assignment-rule
+    summary: Update assignment rule at index (Experimental)
+    description: |
+      Change an assignment rule for this Task Queue. By default, this enforces one
+      unconditional rule (no hint filter or percentage). Otherwise, the operation
+      will be rejected. Set `force` to true to bypass this validation.
+
+      ```
+      temporal task-queue versioning replace-assignment-rule \
+          --task-queue YourTaskQueue \
+          --rule-index AnIntegerIndex \
+          --build-id "YourBuildId"
+      ```
+
+      To assign multiple assignment rules to a single Build ID, use
+      'insert-assignment-rule'.
+
+      To update the percent:
+
+      ```
+      temporal task-queue versioning replace-assignment-rule \
+          --task-queue YourTaskQueue \
+          --rule-index AnIntegerIndex \
+          --build-id "YourBuildId" \
+          --percentage AnIntegerPercent
+      ```
+
+      Percent may vary between 0 and 100 (default).
+
+      +---------------------------------------------------------------------+
+      | CAUTION: Worker versioning is experimental. Versioning commands are |
+      | subject to change.                                                  |
+      +---------------------------------------------------------------------+
+    options:
+      - name: build-id
+        type: string
+        description: Target Build ID.
+        required: true
+      - name: rule-index
+        type: int
+        short: i
+        description: |
+          Position of the assignment rule to be replaced.
+          Requests for invalid indices will fail.
+        required: true
+      - name: percentage
+        type: int
+        description: |
+          Divert percent of traffic to target Build ID.
+        default: 100
+      - name: yes
+        short: y
+        type: bool
+        description: Don't prompt to confirm.
+      - name: force
+        type: bool
+        description: Bypass the validation that one unconditional rule remains.
+
+  - name: temporal task-queue versioning replace-redirect-rule
+    summary: Change the target for a Build ID's redirect (Experimental)
+    description: |
+      Updates a Build ID's redirect rule on a Task Queue by replacing its target
+      Build ID:
+
+      ```
+      temporal task-queue versioning replace-redirect-rule \
+          --task-queue YourTaskQueue \
+          --source-build-id YourSourceBuildId \
+          --target-build-id YourNewTargetBuildId
+      ```
+
+      +---------------------------------------------------------------------+
+      | CAUTION: Worker versioning is experimental. Versioning commands are |
+      | subject to change.                                                  |
+      +---------------------------------------------------------------------+
+    options:
+      - name: source-build-id
+        type: string
+        description: Source Build ID.
+        required: true
+      - name: target-build-id
+        type: string
+        description: Target Build ID.
+        required: true
+      - name: yes
+        short: y
+        type: bool
+        description: Don't prompt to confirm.
+
+  - name: temporal workflow
+    summary: Start, list, and operate on Workflows
+    description: |
+      Workflow commands perform operations on Workflow Executions:
+
+      ```
+      temporal workflow [command] [options]
+      ```
+
+      For example:
+
+      ```
+      temporal workflow list
+      ```
+    option-sets:
+      - client
+
+  - name: temporal workflow cancel
+    summary: Send cancellation to Workflow Execution
+    description: |
+      Canceling a running Workflow Execution records a
+      `WorkflowExecutionCancelRequested` event in the Event History. The Service
+      schedules a new Command Task, and the Workflow Execution performs any cleanup
+      work supported by its implementation.
+
+      Use the Workflow ID to cancel an Execution:
+
+      ```
+      temporal workflow cancel \
+          --workflow-id YourWorkflowId
+      ```
+
+      A visibility Query lets you send bulk cancellations to Workflow Executions
+      matching the results:
+
+      ```
+      temporal workflow cancel \
+          --query YourQuery
+      ```
+
+      Visit https://docs.temporal.io/visibility to read more about Search Attributes
+      and Query creation. See `temporal batch --help` for a quick reference.
+    option-sets:
+      - single-workflow-or-batch
+
+  - name: temporal workflow count
+    summary: Number of Workflow Executions
+    description: |
+      Show a count of Workflow Executions, regardless of execution state (running,
+      terminated, etc). Use `--query` to select a subset of Workflow Executions:
+
+      ```
+      temporal workflow count \
+          --query YourQuery
+      ```
+
+      Visit https://docs.temporal.io/visibility to read more about Search Attributes
+      and Query creation. See `temporal batch --help` for a quick reference.
+    options:
+      - name: query
+        type: string
+        short: q
+        description: Content for an SQL-like `QUERY` List Filter.
+
+  - name: temporal workflow delete
+    summary: Remove Workflow Execution
+    description: |
+      Delete a Workflow Executions and its Event History:
+
+      ```
+      temporal workflow delete \
+          --workflow-id YourWorkflowId
+      ```
+
+      The removal executes asynchronously. If the Execution is Running, the Service
+      terminates it before deletion.
+
+      Visit https://docs.temporal.io/visibility to read more about Search Attributes
+      and Query creation. See `temporal batch --help` for a quick reference.
+    option-sets:
+      - single-workflow-or-batch
+
+  - name: temporal workflow describe
+    summary: Show Workflow Execution info
+    description: |
+      Display information about a specific Workflow Execution:
+
+      ```
+      temporal workflow describe \
+          --workflow-id YourWorkflowId
+      ```
+
+      Show the Workflow Execution's auto-reset points:
+
+      ```
+      temporal workflow describe \
+          --workflow-id YourWorkflowId \
+          --reset-points true
+      ```
+    option-sets:
+      - workflow-reference
+    options:
+      - name: reset-points
+        type: bool
+        description: Show auto-reset points only.
+      - name: raw
+        type: bool
+        description: Print properties without changing their format.
+
+  - name: temporal workflow execute
+    summary: Start new Workflow Execution
+    description: |
+      Establish a new Workflow Execution and direct its progress to stdout. The
+      command blocks and returns when the Workflow Execution completes. If your
+      Workflow requires input, pass valid JSON:
+
+      ```
+      temporal workflow execute
+          --workflow-id YourWorkflowId \
+          --type YourWorkflow \
+          --task-queue YourTaskQueue \
+          --input '{"some-key": "some-value"}'
+      ```
+
+      Use `--event-details` to relay updates to the command-line output in JSON
+      format. When using JSON output (`--output json`), this includes the entire
+      "history" JSON key for the run.
+    option-sets:
+      - shared-workflow-start
+      - workflow-start
+      - payload-input
+    options:
+      - name: detailed
+        type: bool
+        description: | 
+          Display events as sections instead of table.
+          Does not apply to JSON output.
+
+  - name: temporal workflow fix-history-json
+    summary: Updates an event history JSON file
+    description: |
+      Reserialize an Event History JSON file:
+
+      ```
+      temporal workflow fix-history-json \
+          --source /path/to/original.json \
+          --target /path/to/reserialized.json
+      ```
+    options:
+      - name: source
+        short: s
+        type: string
+        description: Path to the original file.
+        required: true
+      - name: target
+        short: t
+        type: string
+        description: |
+          Path to the results file.
+          When omitted, output is sent to stdout.
+
+  - name: temporal workflow list
+    summary: Show Workflow Executions
+    description: |
+      List Workflow Executions. By default, this command returns up to 10 closed
+      Workflow Executions. The optional `--query` limits the output to Workflows
+      matching a Query:
+
+      ```
+      temporal workflow list \
+          --query YourQuery`
+      ```
+
+      Visit https://docs.temporal.io/visibility to read more about Search Attributes
+      and Query creation. See `temporal batch --help` for a quick reference.
+
+      View a list of archived Workflow Executions:
+
+      ```
+      temporal workflow list \
+          --archived
+      ```
+    options:
+      - name: query
+        short: q
+        type: string
+        description: Content for an SQL-like `QUERY` List Filter.
+      - name: archived
+        type: bool
+        description: Limit output to archived Workflow Executions.
+      - name: limit
+        type: int
+        description: Maximum number of Workflow Executions to display.
+
+  - name: temporal workflow query
+    summary: Retrieve Workflow Execution state
+    description: |
+      Send a Query to a Workflow Execution by Workflow ID to retrieve its state.
+      This synchronous operation exposes the internal state of a running Workflow
+      Execution, which constantly changes. You can query both running and completed
+      Workflow Executions:
+
+      ```
+      temporal workflow query \
+          --workflow-id YourWorkflowId
+          --type YourQueryType
+          --input '{"YourInputKey": "YourInputValue"}'
+      ```
+    option-sets:
+      - payload-input
+      - workflow-reference
+    options:
+      - name: name
+        type: string
+        description: Query Type/Name.
+        required: true
+        aliases:
+          - type
+      - name: reject-condition
+        type: string-enum
+        description: |
+          Optional flag for rejecting Queries based on Workflow state.
+        enum-values:
+          - not_open
+          - not_completed_cleanly
+
+
+  - name: temporal workflow reset
+    summary: Move Workflow Execution history point
+    description: |
+      Reset a Workflow Execution so it can resume from a point in its Event History
+      without losing its progress up to that point:
+
+      ```
+      temporal workflow reset \
+          --workflow-id YourWorkflowId \
+          --event-id YourLastEvent
+      ```
+
+      Start from where the Workflow Execution last continued as new:
+
+      ```
+      temporal workflow reset \
+          --workflow-id YourWorkflowId \
+          --type LastContinuedAsNew
+      ```
+
+      For batch resets, limit your resets to FirstWorkflowTask, LastWorkflowTask, or
+      BuildId. Do not use Workflow IDs, run IDs, or event IDs with this command.
+
+      Visit https://docs.temporal.io/visibility to read more about Search
+      Attributes and Query creation.
+    options:
+      - name: workflow-id
+        short: w
+        type: string
+        description: |
+          Workflow ID.
+          Required for non-batch reset operations.
+      - name: run-id
+        short: r
+        type: string
+        description: Run ID.
+      - name: event-id
+        short: e
+        type: int
+        description: |
+          Event ID to reset to.
+          Event must occur after `WorkflowTaskStarted`.
+          `WorkflowTaskCompleted`, `WorkflowTaskFailed`, etc. are valid.
+      - name: reason
+        type: string
+        description: Reason for reset.
+        required: true
+      - name: reapply-type
+        type: string-enum
+        description: |
+          Types of events to re-apply after reset point.
+          Deprecated.
+          Use --reapply-exclude instead.
+        enum-values:
+          - All
+          - Signal
+          - None
+        default: All
+      - name: reapply-exclude
+        type: string[]
+        description: |
+          Exclude these event types from re-application.
+          Options: All, Signal, Update.
+      - name: type
+        short: t
+        type: string-enum
+        description: The event type for the reset.
+        enum-values:
+          - FirstWorkflowTask
+          - LastWorkflowTask
+          - LastContinuedAsNew
+          - BuildId
+      - name: build-id
+        type: string
+        description: |
+          A Build ID.
+          Use only with the BuildId `--type`.
+          Resets the first Workflow task processed by this ID.
+          By default, this reset may be in a prior run, earlier than a Continue
+          as New point.
+      - name: query
+        short: q
+        type: string
+        description: Content for an SQL-like `QUERY` List Filter.
+      - name: yes
+        short: y
+        type: bool
+        description: |
+          Don't prompt to confirm.
+          Only allowed when `--query` is present.
+
+  - name: temporal workflow result
+    summary: Wait for and show the result of a Workflow Execution
+    description: |
+      Wait for and print the result of a Workflow Execution:
+
+      ```
+      temporal workflow result \
+          --workflow-id YourWorkflowId
+      ```
+    option-sets:
+      - workflow-reference
+
+  - name: temporal workflow show
+    summary: Display Event History
+    description: |
+      Show a Workflow Execution's Event History.
+      When using JSON output (`--output json`), you may pass the results to an SDK
+      to perform a replay:
+
+      ```
+      temporal workflow show \
+          --workflow-id YourWorkflowId
+          --output json
+      ```
+    options:
+      - name: follow
+        short: f
+        type: bool
+        description: |
+          Follow the Workflow Execution progress in real time.
+          Does not apply to JSON output.
+      - name: detailed
+        type: bool
+        description: |
+          Display events as detailed sections instead of table.
+          Does not apply to JSON output.
+    option-sets:
+      - workflow-reference
+
+  - name: temporal workflow signal
+    summary: Send a message to a Workflow Execution
+    description: |
+      Send an asynchronous notification (Signal) to a running Workflow Execution by
+      its Workflow ID. The Signal is written to the History. When you include
+      `--input`, that data is available for the Workflow Execution to consume:
+
+      ```
+      temporal workflow signal \
+          --workflow-id YourWorkflowId \
+          --name YourSignal \
+          --input '{"YourInputKey": "YourInputValue"}'
+      ```
+
+      Visit https://docs.temporal.io/visibility to read more about Search Attributes
+      and Query creation. See `temporal batch --help` for a quick reference.
+    option-sets:
+      - single-workflow-or-batch
+      - payload-input
+    options:
+      - name: name
+        type: string
+        description: Signal name.
+        required: true
+        aliases:
+          - type
+
+  - name: temporal workflow stack
+    summary: Trace a Workflow Execution
+    description: |
+      Perform a Query on a Workflow Execution using a `__stack_trace`-type Query.
+      Display a stack trace of the threads and routines currently in use by the
+      Workflow for troubleshooting:
+
+      ```
+      temporal workflow stack \
+          --workflow-id YourWorkflowId
+      ```
+    options:
+      - name: reject-condition
+        type: string-enum
+        description: Optional flag to reject Queries based on Workflow state.
+        enum-values:
+          - not_open
+          - not_completed_cleanly
+    option-sets:
+      - workflow-reference
+
+  - name: temporal workflow start
+    summary: Initiate a Workflow Execution
+    description: |
+      Start a new Workflow Execution. Returns the Workflow- and Run-IDs:
+
+      ```
+      temporal workflow start \
+          --workflow-id YourWorkflowId \
+          --type YourWorkflow \
+          --task-queue YourTaskQueue \
+          --input '{"some-key": "some-value"}'
+      ```
+    option-sets:
+      - shared-workflow-start
+      - workflow-start
+      - payload-input
+
+  - name: temporal workflow terminate
+    summary: Forcefully end a Workflow Execution
+    description: |
+      Terminate a Workflow Execution:
+
+      ```
+      temporal workflow terminate \
+          --reason YourReasonForTermination \
+          --workflow-id YourWorkflowId
+      ```
+
+      The reason is optional and defaults to the current user's name. The reason
+      is stored in the Event History as part of the `WorkflowExecutionTerminated`
+      event. This becomes the closing Event in the Workflow Execution's history.
+
+      Executions may be terminated in bulk via a visibility Query list filter:
+
+      ```
+      temporal workflow terminate \
+          --query YourQuery \
+          --reason YourReasonForTermination
+      ```
+
+      Workflow code cannot see or respond to terminations. To perform clean-up work
+      in your Workflow code, use `temporal workflow cancel` instead.
+
+      Visit https://docs.temporal.io/visibility to read more about Search Attributes
+      and Query creation. See `temporal batch --help` for a quick reference.
+    options:
+      - name: workflow-id
+        short: w
+        type: string
+        description: |
+          Workflow ID.
+          You must set either --workflow-id or --query.
+      - name: query
+        short: q
+        type: string
+        description: |
+          Content for an SQL-like `QUERY` List Filter.
+          You must set either --workflow-id or --query.
+      - name: run-id
+        short: r
+        type: string
+        description: |
+          Run ID.
+          Can only be set with --workflow-id.
+          Do not use with --query.
+      - name: reason
+        type: string
+        description: |
+          Reason for termination.
+          Defaults to message with the current user's name.
+      - name: yes
+        short: y
+        type: bool
+        description: |
+          Don't prompt to confirm termination.
+          Can only be used with --query.
+
+  - name: temporal workflow trace
+    summary: Workflow Execution live progress
+    description: |
+      Display the progress of a Workflow Execution and its child workflows with a
+      real-time trace. This view helps you understand how Workflows are proceeding:
+
+      ```
+      temporal workflow trace \
+          --workflow-id YourWorkflowId
+      ```
+    options:
+      - name: fold
+        type: string[]
+        description: |
+          Fold away Child Workflows with the specified statuses.
+          Case-insensitive.
+          Ignored if --no-fold supplied.
+          Available values: running, completed, failed, canceled, terminated,
+          timedout, continueasnew.
+          Can be passed multiple times.
+      - name: no-fold
+        type: bool
+        description: |
+          Disable folding.
+          Fetch and display Child Workflows within the set depth.
+      - name: depth
+        type: int
+        description: |
+          Set depth for your Child Workflow fetches.
+          Pass -1 to fetch child workflows at any depth.
+        default: -1
+      - name: concurrency
+        type: int
+        description: |
+          Number of Workflow Histories to fetch at a time.
+        default: 10
+    option-sets:
+      - workflow-reference
+
+  - name: temporal workflow update
+    summary: Updates (Experimental)
+    description: |
+      An Update is a synchronous call to a Workflow Execution that can change its
+      state, control its flow, and return a result.
+
+      Experimental.
+
+  - name: temporal workflow update describe
+    summary: Obtain status info about a specific Update (Experimental)
+    description: |
+      Given a Workflow Execution and an Update ID, return information about its current status, including
+      a result if it has finished.
+
+      Experimental.
+
+      ```
+      temporal workflow update describe \
+          --workflow-id YourWorkflowId \
+          --update-id YourUpdateId
+      ```
+    option-sets:
+      - update-targeting
+
+  - name: temporal workflow update execute
+    summary: Send an Update and wait for it to complete (Experimental)
+    description: |
+      Send a message to a Workflow Execution to invoke an Update handler, and wait for
+      the update to complete or fail. You can also use this to wait for an existing
+      update to complete, by submitting an existing update ID.
+
+      Experimental.
+
+      ```
+      temporal workflow update execute \
+          --workflow-id YourWorkflowId \
+          --name YourUpdate \
+          --input '{"some-key": "some-value"}'
+      ```
+    option-sets:
+      - update-starting
+      - payload-input
+
+  - name: temporal workflow update result
+    summary: Wait for a specific Update to complete (Experimental)
+    description: |
+      Given a Workflow Execution and an Update ID, wait for the Update to complete or fail and
+      print the result.
+
+      Experimental.
+
+      ```
+      temporal workflow update result \
+          --workflow-id YourWorkflowId \
+          --update-id YourUpdateId
+      ```
+    option-sets:
+      - update-targeting
+
+  - name: temporal workflow update start
+    summary: Send an Update and wait for it to be accepted or rejected (Experimental)
+    description: |
+      Send a message to a Workflow Execution to invoke an Update handler, and wait for
+      the update to be accepted or rejected. You can subsequently wait for the update
+      to complete by using `temporal workflow update execute`.
+
+      Experimental.
+
+      ```
+      temporal workflow update start \
+          --workflow-id YourWorkflowId \
+          --name YourUpdate \
+          --input '{"some-key": "some-value"}'
+      ```
+    option-sets:
+      - update-starting
+      - payload-input
+    options:
+      - name: wait-for-stage
+        type: string-enum
+        description: |
+          Update stage to wait for.
+          The only option is `accepted`, but this option is  required. This is to allow
+          a future version of the CLI to choose a default value.
+        enum-values:
+          - accepted
+        required: true
+
+option-sets:
+
+  - name: client
+    options:
+      - name: address
+        type: string
+        description: Temporal Service gRPC endpoint.
+        default: 127.0.0.1:7233
+        env: TEMPORAL_ADDRESS
+      - name: namespace
+        short: n
+        type: string
+        description: Temporal Service Namespace.
+        default: default
+        env: TEMPORAL_NAMESPACE
+      - name: api-key
+        type: string
+        description: API key for request.
+        env: TEMPORAL_API_KEY
+      - name: grpc-meta
+        type: string[]
+        description: |
+          HTTP headers for requests.
+          format as a `KEY=VALUE` pair
+          May be passed multiple times to set multiple headers.
+      - name: tls
+        type: bool
+        description: |
+          Enable base TLS encryption.
+          Does not have additional options like mTLS or client certs.
+        env: TEMPORAL_TLS
+      - name: tls-cert-path
+        type: string
+        description: |
+          Path to x509 certificate.
+          Can't be used with --tls-cert-data.
+        env: TEMPORAL_TLS_CERT
+      - name: tls-cert-data
+        type: string
+        description: |
+          Data for x509 certificate.
+          Can't be used with --tls-cert-path.
+        env: TEMPORAL_TLS_CERT_DATA
+      - name: tls-key-path
+        type: string
+        description: |
+          Path to x509 private key.
+          Can't be used with --tls-key-data.
+        env: TEMPORAL_TLS_KEY
+      - name: tls-key-data
+        type: string
+        description: |
+          Private certificate key data.
+          Can't be used with --tls-key-path.
+        env: TEMPORAL_TLS_KEY_DATA
+      - name: tls-ca-path
+        type: string
+        description: |
+          Path to server CA certificate.
+          Can't be used with --tls-ca-data.
+        env: TEMPORAL_TLS_CA
+      - name: tls-ca-data
+        type: string
+        description: |
+          Data for server CA certificate.
+          Can't be used with --tls-ca-path.
+        env: TEMPORAL_TLS_CA_DATA
+      - name: tls-disable-host-verification
+        type: bool
+        description: Disable TLS host-name verification.
+        env: TEMPORAL_TLS_DISABLE_HOST_VERIFICATION
+      - name: tls-server-name
+        type: string
+        description: Override target TLS server name.
+        env: TEMPORAL_TLS_SERVER_NAME
+      - name: codec-endpoint
+        type: string
+        description: Remote Codec Server endpoint.
+        env: TEMPORAL_CODEC_ENDPOINT
+      - name: codec-auth
+        type: string
+        description: Authorization header for Codec Server requests.
+        env: TEMPORAL_CODEC_AUTH
+
+  - name: overlap-policy
+    options:
+      - name: overlap-policy
+        type: string-enum
+        description: Policy for handling overlapping Workflow Executions. # copilot updated this
+        enum-values:  
+          - Skip
+          - BufferOne
+          - BufferAll
+          - CancelOther
+          - TerminateOther
+          - AllowAll
+        default: Skip
+
+  - name: schedule-id
+    options:
+      - name: schedule-id
+        type: string
+        description: Schedule ID.
+        required: true
+        short: s
+
+  - name: schedule-configuration
+    options:
+      - name: calendar
+        type: string[]
+        description: |
+          Calendar specification in JSON.
+          For example: `{"dayOfWeek":"Fri","hour":"17","minute":"5"}`.
+      - name: catchup-window
+        type: duration
+        description: Maximum catch-up time for when the Service is unavailable.
+      - name: cron
+        type: string[]
+        description: |
+          Calendar specification in cron string format.
+          For example: `"30 12 * * Fri"`.
+      - name: end-time
+        type: timestamp
+        description: Schedule end time.
+      - name: interval
+        type: string[]
+        description: |
+          Interval duration.
+          For example, 90m, or 60m/15m to include phase offset.
+      - name: jitter
+        type: duration
+        description: |
+          Max difference in time from the specification.
+          Vary the start time randomly within this amount.
+      - name: notes
+        type: string
+        description: Initial notes field value.
+      - name: paused
+        type: bool
+        description: Pause the Schedule immediately on creation.
+      - name: pause-on-failure
+        type: bool
+        description: Pause schedule after Workflow failures.
+      - name: remaining-actions
+        type: int
+        description: |
+          Total allowed actions.
+          Default is zero (unlimited).
+      - name: start-time
+        type: timestamp
+        description: Schedule start time.
+      - name: time-zone
+        type: string
+        description: |
+          Interpret calendar specs with the `TZ` time zone.
+          For a list of time zones, see:
+          https://en.wikipedia.org/wiki/List_of_tz_database_time_zones.
+      - name: schedule-search-attribute
+        type: string[]
+        description: |
+          Set schedule Search Attributes using `KEY="VALUE` pairs.
+          Keys must be identifiers, and values must be JSON values.
+          For example: 'YourKey={"your": "value"}'.
+          Can be passed multiple times.
+      - name: schedule-memo
+        type: string[]
+        description: |
+          Set schedule memo using `KEY="VALUE` pairs.
+          Keys must be identifiers, and values must be JSON values.
+          For example: 'YourKey={"your": "value"}'.
+          Can be passed multiple times.
+
+  - name: workflow-reference
+    options:
+      - name: workflow-id
+        type: string
+        short: w
+        description: Workflow ID.
+        required: true
+      - name: run-id
+        type: string
+        short: r
+        description: Run ID.
+
+  - name: single-workflow-or-batch
+    options:
+      - name: workflow-id
+        type: string
+        short: w
+        description: |
+          Workflow ID.
+          You must set either --workflow-id or --query.
+      - name: query
+        type: string
+        short: q
+        description: |
+          Content for an SQL-like `QUERY` List Filter.
+          You must set either --workflow-id or --query.
+      - name: run-id
+        type: string
+        short: r
+        description: |
+          Run ID.
+          Only use with --workflow-id.
+          Cannot use with --query.
+      - name: reason
+        type: string
+        description: |
+          Reason for batch operation.
+          Only use with --query.
+          Defaults to user name.
+      - name: yes
+        type: bool
+        short: y
+        description: |
+          Don't prompt to confirm signaling.
+          Only allowed when --query is present.
+
+  - name: shared-workflow-start
+    options:
+      - name: workflow-id
+        type: string
+        short: w
+        description: |
+          Workflow ID.
+          If not supplied, the Service generates a unique ID.
+      - name: type
+        type: string
+        description: Workflow Type name.
+        required: true
+        aliases: 
+          - name
+      - name: task-queue
+        type: string
+        description: Workflow Task queue.
+        required: true
+        short: t
+      - name: run-timeout
+        type: duration
+        description: |
+          Fail a Workflow Run if it lasts longer than `DURATION`.
+      - name: execution-timeout
+        type: duration
+        description: |
+          Fail a WorkflowExecution if it lasts longer than `DURATION`.
+          This time-out includes retries and ContinueAsNew tasks.
+      - name: task-timeout
+        type: duration
+        description: |
+          Fail a Workflow Task if it lasts longer than `DURATION`.
+          This is the Start-to-close timeout for a Workflow Task.
+        default: 10s
+      - name: search-attribute
+        type: string[]
+        description: |
+          Search Attribute in `KEY=VALUE` format.
+          Keys must be identifiers, and values must be JSON values.
+          For example: 'YourKey={"your": "value"}'.
+          Can be passed multiple times.
+      - name: memo
+        type: string[]
+        description: |
+          Memo using 'KEY="VALUE"' pairs.
+          Use JSON values.
+
+  - name: workflow-start
+    options:
+      - name: cron
+        type: string
+        description: |
+          Cron schedule for the Workflow.
+          Deprecated.
+          Use Schedules instead.
+      - name: fail-existing
+        type: bool
+        description: Fail if the Workflow already exists.
+      - name: start-delay
+        type: duration
+        description: |
+          Delay before starting the Workflow Execution.
+          Can't be used with cron schedules.
+          If the Workflow receives a signal or update prior to this time, the Workflow
+          Execution starts immediately.
+      - name: id-reuse-policy
+        type: string
+        description: |
+          Re-use policy for the Workflow ID in new Workflow Executions.
+          Options: AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate, TerminateIfRunning.
+
+  - name: payload-input
+    options:
+      - name: input
+        type: string[]
+        short: i
+        description: |
+          Input value.
+          Use JSON content or set --input-meta to override.
+          Can't be combined with --input-file.
+          Can be passed multiple times to pass multiple arguments.
+      - name: input-file
+        type: string[]
+        description: |
+          A path or paths for input file(s).
+          Use JSON content or set --input-meta to override.
+          Can't be combined with --input.
+          Can be passed multiple times to pass multiple arguments.
+      - name: input-meta
+        type: string[]
+        description: |
+          Input payload metadata as a `KEY=VALUE` pair.
+          When the KEY is "encoding", this overrides the default ("json/plain").
+          Can be passed multiple times.
+      - name: input-base64
+        type: bool
+        description: |
+          Assume inputs are base64-encoded and attempt to decode them.
+
+  - name: update-starting
+    options:
+      - name: name
+        type: string
+        description: Handler method name.
+        required: true
+        aliases: 
+          - type
+      - name: first-execution-run-id
+        type: string
+        description: |
+          Parent Run ID.
+          The update is sent to the last Workflow Execution in the chain started
+          with this Run ID.
+      - name: workflow-id
+        type: string
+        short: w
+        description: Workflow ID.
+        required: true
+      - name: update-id
+        type: string
+        description: |
+          Update ID.
+          If unset, defaults to a UUID.
+      - name: run-id
+        type: string
+        short: r
+        description: |
+          Run ID.
+          If unset, looks for an Update against the currently-running Workflow Execution.
+
+  - name: update-targeting
+    options:
+      - name: workflow-id
+        short: w
+        type: string
+        description: Workflow ID.
+        required: true
+      - name: update-id
+        type: string
+        description: |
+          Update ID.
+          Must be unique per Workflow Execution.
+        required: true
+      - name: run-id
+        type: string
+        short: r
+        description: |
+          Run ID.
+          If unset, updates the currently-running Workflow Execution.

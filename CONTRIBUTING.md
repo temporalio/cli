@@ -20,7 +20,7 @@ Example to run a single test case:
 
 ## Adding/updating commands
 
-First, update [commands.md](temporalcli/commandsmd/commands.md) following the rules in that file. Then to regenerate the
+First, update [commands.yml](temporalcli/commandsgen/commands.yml) following the rules in that file. Then to regenerate the
 [commands.gen.go](temporalcli/commands.gen.go) file from code, simply run:
 
     go run ./temporalcli/internal/cmd/gen-commands
