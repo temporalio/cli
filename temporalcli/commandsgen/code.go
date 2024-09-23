@@ -1,4 +1,4 @@
-package commandsmd
+package commandsgen
 
 import (
 	"bytes"

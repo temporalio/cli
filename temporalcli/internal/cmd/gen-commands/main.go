@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/temporalio/cli/temporalcli/commandsmd"
+	"github.com/temporalio/cli/temporalcli/commandsgen"
 )
 
 func main() {
@@ -22,13 +22,13 @@ func run() error {
 	commandsDir := filepath.Join(file, "../../../../")
 
 	// Parse markdown
-	cmds, err := commandsmd.ParseCommands()
+	cmds, err := commandsgen.ParseCommands()
 	if err != nil {
 		return fmt.Errorf("failed parsing markdown: %w", err)
 	}
 
 	// Generate code
-	b, err := commandsmd.GenerateCommandsCode("temporalcli", cmds)
+	b, err := commandsgen.GenerateCommandsCode("temporalcli", cmds)
 	if err != nil {
 		return fmt.Errorf("failed generating code: %w", err)
 	}

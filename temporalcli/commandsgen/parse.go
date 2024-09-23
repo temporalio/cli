@@ -1,6 +1,6 @@
-// Package commandsmd is built to read the markdown format described in
+// Package commandsgen is built to read the markdown format described in
 // temporalcli/commands.md and generate code from it.
-package commandsmd
+package commandsgen
 
 import (
 	"bytes"
@@ -14,7 +14,7 @@ import (
 )
 
 //go:embed commands.yml
-var CommandsYaml []byte
+var CommandsYAML []byte
 
 type (
 	// Option represents the structure of an option within option sets.
@@ -61,7 +61,7 @@ type (
 
 func ParseCommands() (Commands, error) {
 	// Fix CRLF
-	md := bytes.ReplaceAll(CommandsYaml, []byte("\r\n"), []byte("\n"))
+	md := bytes.ReplaceAll(CommandsYAML, []byte("\r\n"), []byte("\n"))
 
 	var m Commands
 	err := yaml.Unmarshal(md, &m)
@@ -70,13 +70,13 @@ func ParseCommands() (Commands, error) {
 	}
 
 	for i, optionSet := range m.OptionSets {
-		if err := m.OptionSets[i].parseSection(); err != nil {
+		if err := m.OptionSets[i].processSection(); err != nil {
 			return Commands{}, fmt.Errorf("failed parsing option set section %q: %w", optionSet.Name, err)
 		}
 	}
 
 	for i, command := range m.CommandList {
-		if err := m.CommandList[i].parseSection(); err != nil {
+		if err := m.CommandList[i].processSection(); err != nil {
 			return Commands{}, fmt.Errorf("failed parsing command section %q: %w", command.FullName, err)
 		}
 	}
@@ -90,13 +90,13 @@ var markdownInlineCodeRegex = regexp.MustCompile("`([^`]+)`")
 const ansiReset = "\033[0m"
 const ansiBold = "\033[1m"
 
-func (o OptionSets) parseSection() error {
+func (o OptionSets) processSection() error {
 	if o.Name == "" {
 		return fmt.Errorf("missing option set name")
 	}
 
 	for i, option := range o.Options {
-		if err := o.Options[i].parseSection(); err != nil {
+		if err := o.Options[i].processSection(); err != nil {
 			return fmt.Errorf("failed parsing option '%v': %w", option.Name, err)
 		}
 	}
@@ -104,7 +104,7 @@ func (o OptionSets) parseSection() error {
 	return nil
 }
 
-func (c *Command) parseSection() error {
+func (c *Command) processSection() error {
 	if c.FullName == "" {
 		return fmt.Errorf("missing command name")
 	}
@@ -146,7 +146,7 @@ func (c *Command) parseSection() error {
 
 	// Each option
 	for i, option := range c.Options {
-		if err := c.Options[i].parseSection(); err != nil {
+		if err := c.Options[i].processSection(); err != nil {
 			return fmt.Errorf("failed parsing option '%v': %w", option.Name, err)
 		}
 	}
@@ -154,7 +154,7 @@ func (c *Command) parseSection() error {
 	return nil
 }
 
-func (o *Option) parseSection() error {
+func (o *Option) processSection() error {
 	if o.Name == "" {
 		return fmt.Errorf("missing option name")
 	}

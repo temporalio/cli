@@ -3,7 +3,7 @@
 
 # IN-HOUSE STYLE
 
-# * Wording and grammar.
+# * Wording and grammar:
 #   * Run a spell check.
 #   * Be clear and concise.
 #   * Don't reword the command in the summary. Use distinct supplementary language.
@@ -28,7 +28,7 @@
 #   * Introduce triple-quoted code-fenced samples with a colons.
 #     Avoid using 'for example' unless there's no other way to introduce code.
 
-# * Code, flags, and keys
+# * Code, flags, and keys:
 #   * Demonstrate at least one example invocation of the command in every long description.
 #   * Include the most commonly used patterns in long descriptions so users don't 
 #     have to call help at multiple invocation levels.
@@ -109,6 +109,7 @@
 # * name, summary, and descrption are required fields. All other fields are optional.
 # * Available option types are `bool`, `duration`, `int`, `string`, `string[]`, 
 #   `string-enum`, or `timestamp`.
+# * Include a new-line after each command entry.
 
 # OPTION SET OVERVIEW
 
@@ -120,6 +121,8 @@
 
 # Options that are similar but slightly different don't need to be in option sets.
 # Reserve option sets for when the behavior of the option is the same across commands.
+
+# * Include a new-line after each command entry.
 
 commands:
   - name: temporal
@@ -192,6 +195,7 @@ commands:
       - name: no-json-shorthand-payloads
         type: bool
         description: Raw payload output, even if they are JSON.
+
   - name: temporal activity
     summary: Complete or fail an Activity
     description: |
@@ -206,6 +210,7 @@ commands:
       ```
     option-sets:
       - client
+
   - name: temporal activity complete
     summary: Complete an Activity
     description: |
@@ -232,6 +237,7 @@ commands:
         description: Identity of the user submitting this request.
     option-sets:
       - workflow reference
+
   - name: temporal activity fail
     summary: Fail an Activity
     description: |
@@ -259,6 +265,7 @@ commands:
         description: Reason for failing the Activity.
     option-sets:
       - workflow reference
+
   - name: temporal batch
     summary: Manage running batch jobs
     description: |
@@ -298,6 +305,7 @@ commands:
       and Query creation.
     option-sets:
       - client
+
   - name: temporal batch describe
     summary: Show batch job progress
     description: |
@@ -313,6 +321,7 @@ commands:
         type: string
         description: Batch job ID.
         required: true
+
   - name: temporal batch list
     summary: List all batch jobs
     description: |
@@ -327,6 +336,7 @@ commands:
       - name: limit
         type: int
         description: Maximum number of batch jobs to display.
+
   - name: temporal batch terminate
     summary: Forcefully end a batch job
     description: |
@@ -348,6 +358,7 @@ commands:
         type: string
         description: Reason for terminating the batch job.
         required: true
+
   - name: temporal env
     summary: Manage environments
     description: |
@@ -368,6 +379,7 @@ commands:
       Temporal CLI checks for an `--env` option first, then checks for the
       `TEMPORAL_ENV` environment variable. If neither is set, the CLI uses the
       "default" environment.
+
   - name: temporal env delete
     summary: Delete an environment or environment property
     description: |
@@ -393,6 +405,7 @@ commands:
         short: k
         type: string
         description: Property name.
+
   - name: temporal env get
     summary: Show environment properties
     description: |
@@ -420,12 +433,14 @@ commands:
         type: string
         short: k
         description: Property name.
+
   - name: temporal env list
     summary: Show environment names
     description: |
       List the environments you have set up on your local computer. Environments are
       stored in "$HOME/.config/temporalio/temporal.yaml".
     ignores-missing-env: true
+
   - name: temporal env set
     summary: Set environment properties
     description: |
@@ -458,6 +473,7 @@ commands:
         type: string
         description: Property value (required).
         # required: true
+
   - name: temporal operator
     summary: Manage Temporal deployments
     description: |
@@ -476,6 +492,7 @@ commands:
       ```
     option-sets:
       - client
+
   - name: temporal operator cluster
     summary: Manage a Temporal Cluster
     description: |
@@ -490,6 +507,7 @@ commands:
       ```
       temporal operator cluster health
       ```
+
   - name: temporal operator cluster describe
     summary: Show Temporal Cluster information
     description: |
@@ -503,6 +521,7 @@ commands:
       - name: detail
         type: bool
         description: Show history shard count and Cluster/Service version information.
+
   - name: temporal operator cluster health
     summary: Check Temporal Service health
     description: |
@@ -511,6 +530,7 @@ commands:
       ```
       temporal operator cluster health
       ```
+
   - name: temporal operator cluster list
     summary: Show Temporal Clusters
     description: |
@@ -525,6 +545,7 @@ commands:
       - name: limit
         type: int
         description: Maximum number of Clusters to display.
+
   - name: temporal operator cluster remove
     summary: Remove a Temporal Cluster
     description: |
@@ -539,6 +560,7 @@ commands:
         type: string
         description: Cluster/Service name.
         required: true
+
   - name: temporal operator cluster system
     summary: Show Temporal Cluster info
     description: |
@@ -553,6 +575,7 @@ commands:
       temporal operator cluster system \
           --frontend-address "YourRemoteEndpoint:YourRemotePort"
       ```
+
   - name: temporal operator cluster upsert
     summary: Add/update a Temporal Cluster
     description: |
@@ -577,6 +600,7 @@ commands:
       - name: enable-connection
         type: bool
         description: Set the connection to "enabled".
+
   - name: temporal operator namespace
     summary: Namespace operations
     description: |
@@ -592,6 +616,7 @@ commands:
       temporal operator namespace create \
           --namespace YourNewNamespaceName
       ```
+
   - name: temporal operator namespace create
     summary: Register a new Namespace
     description: |
@@ -677,6 +702,7 @@ commands:
         description: |
           Archive visibility data to this `URI`.
           Once enabled, can't be changed.
+
   - name: temporal operator namespace delete
     summary: Delete a Namespace
     description: |
@@ -698,6 +724,7 @@ commands:
         short: y
         type: bool
         description: Request confirmation before deletion.
+
   - name: temporal operator namespace describe
     summary: Describe a Namespace
     description: |
@@ -719,6 +746,7 @@ commands:
       - name: namespace-id
         type: string
         description: Namespace ID.
+
   - name: temporal operator namespace list
     summary: List Namespaces
     description: |
@@ -727,6 +755,7 @@ commands:
       ```
       temporal operator namespace list
       ```
+
   - name: temporal operator namespace update
     summary: Update a Namespace
     description: |
@@ -810,6 +839,7 @@ commands:
         description: |
           Archive visibility data to this `URI`.
           Once enabled, can't be changed.
+
   - name: temporal operator nexus
     summary: Commands for managing Nexus resources (EXPERIMENTAL)
     description: |
@@ -820,6 +850,7 @@ commands:
       ```
       temporal operator nexus [command] [command] [command options]
       ```
+
   - name: temporal operator nexus endpoint
     summary: Commands for managing Nexus Endpoints (EXPERIMENTAL)
     description: |
@@ -830,6 +861,7 @@ commands:
       ```
       temporal operator nexus endpoint [command] [command options]
       ```
+
   - name: temporal operator nexus endpoint create
     summary: Create a new Nexus Endpoint (EXPERIMENTAL)
     description: |
@@ -871,6 +903,7 @@ commands:
       - name: target-url
         type: string
         description: URL to direct Nexus requests to.
+
   - name: temporal operator nexus endpoint delete
     summary: Delete a Nexus Endpoint (EXPERIMENTAL)
     description: |
@@ -884,6 +917,7 @@ commands:
         type: string
         description: Endpoint name.
         required: true
+
   - name: temporal operator nexus endpoint get
     summary: Get a Nexus Endpoint by name (EXPERIMENTAL)
     description: |
@@ -897,6 +931,7 @@ commands:
         type: string
         description: Endpoint name.
         required: true
+
   - name: temporal operator nexus endpoint list
     summary: List Nexus Endpoints (EXPERIMENTAL)
     description: |
@@ -905,6 +940,7 @@ commands:
       ```
       temporal operator nexus endpoint list
       ```
+
   - name: temporal operator nexus endpoint update
     summary: Update an existing Nexus Endpoint (EXPERIMENTAL)
     description: |
@@ -958,6 +994,7 @@ commands:
       - name: target-url
         type: string
         description: URL to direct Nexus requests to.
+
   - name: temporal operator search-attribute
     summary: Search Attribute operations
     description: |
@@ -972,6 +1009,7 @@ commands:
 
       Supported types include: Text, Keyword, Int, Double, Bool, Datetime, and
       KeywordList.
+
   - name: temporal operator search-attribute create
     summary: Add custom Search Attributes
     description: |
@@ -993,6 +1031,7 @@ commands:
           Search Attribute type.
           Options: Text, Keyword, Int, Double, Bool, Datetime, KeywordList.
         required: true
+
   - name: temporal operator search-attribute list
     summary: List Search Attributes
     description: |
@@ -1002,6 +1041,7 @@ commands:
       ```
       temporal operator search-attribute list
       ```
+
   - name: temporal operator search-attribute remove
     summary: Remove custom Search Attributes
     description: |
@@ -1029,6 +1069,7 @@ commands:
         short: y
         type: bool
         description: Don't prompt to confirm removal.
+
   - name: temporal schedule
     summary: Perform operations on Schedules
     description: |
@@ -1047,6 +1088,7 @@ commands:
       ```
     option-sets:
       - client
+
   - name: temporal schedule backfill
     summary: Backfill past actions
     description: |
@@ -1098,6 +1140,7 @@ commands:
     option-sets:
       - overlap policy
       - schedule id
+
   - name: temporal schedule create
     summary: Create a new Schedule
     description: |
@@ -1130,6 +1173,7 @@ commands:
       - overlap-policy
       - shared-workflow-start
       - payload-input
+
   - name: temporal schedule delete
     summary: Remove a Schedule
     description: |
@@ -1145,6 +1189,7 @@ commands:
       workflow delete` with the `TemporalScheduledById` Search Attribute instead.
     option-sets:
       - schedule-id
+
   - name: temporal schedule describe
     summary: Display Schedule state
     description: |
@@ -1157,6 +1202,7 @@ commands:
       ```
     option-sets:
       - schedule-id
+
   - name: temporal schedule list
     summary: Display hosted Schedules
     description: |
@@ -1178,6 +1224,7 @@ commands:
         short: q
         type: string
         description: Filter results using given List Filter.
+
   - name: temporal schedule toggle
     summary: Pause or unpause a Schedule
     description: |
@@ -1215,6 +1262,7 @@ commands:
         description: Unpause the Schedule.
     option-sets:
       - schedule-id
+
   - name: temporal schedule trigger
     summary: Immediately run a Schedule
     description: |
@@ -1227,6 +1275,7 @@ commands:
     option-sets:
       - schedule-id
       - overlap-policy
+
   - name: temporal schedule update
     summary: Update Schedule details
     description: |
@@ -1244,6 +1293,7 @@ commands:
       - overlap-policy
       - shared-workflow-start
       - payload-input
+
   - name: temporal server
     summary: Run Temporal Server
     description: |
@@ -1277,6 +1327,7 @@ commands:
       temporal server start-dev \
           --ui-port 3000
       ```
+
   - name: temporal server start-dev
     summary: Start Temporal development server
     description: |
@@ -1384,6 +1435,7 @@ commands:
           Keys must be identifiers, and values must be the search
           attribute type, which is one of the following:
           Text, Keyword, Int, Double, Bool, Datetime, KeywordList.
+
   - name: temporal task-queue
     summary: Manage Task Queues
     description: |
@@ -1403,6 +1455,7 @@ commands:
       ```
     option-sets:
       - client
+
   - name: temporal task-queue describe
     summary: Show active Workers
     description: |
@@ -1531,6 +1584,7 @@ commands:
       - name: disable-stats
         type: bool
         description: Disable task queue statistics.
+
   - name: temporal task-queue get-build-id-reachability
     summary: Show Build ID availability (Deprecated)
     description: |
@@ -1575,6 +1629,7 @@ commands:
         description: |
           Search only the specified task queue(s).
           Can be passed multiple times.
+
   - name: temporal task-queue get-build-ids
     summary: Fetch Build ID versions (Deprecated)
     description: |
@@ -1605,6 +1660,7 @@ commands:
           Use 1 for default major version.
           Use 0 for all sets.
         default: 0
+
   - name: temporal task-queue list-partition
     summary: List Task Queue partitions
     description: |
@@ -1620,6 +1676,7 @@ commands:
         description: Task Queue name.
         required: true
         short: t
+
   - name: temporal task-queue update-build-ids
     summary: Manage Build IDs (Deprecated)
     description: |
@@ -1634,6 +1691,7 @@ commands:
       temporal task-queue update-build-ids [subcommands] [options] \
           --task-queue YourTaskQueue
       ```
+
   - name: temporal task-queue update-build-ids add-new-compatible
     summary: Add compatible Build ID
     description: |
@@ -1668,6 +1726,7 @@ commands:
       - name: set-as-default
         type: bool
         description: Set the expanded Build ID set as the Task Queue default.
+
   - name: temporal task-queue update-build-ids add-new-default
     summary: Set new default Build ID set (Deprecated)
     description: |
@@ -1700,6 +1759,7 @@ commands:
         description: Task Queue name.
         required: true
         short: t
+
   - name: temporal task-queue update-build-ids promote-id-in-set
     summary: Set Build ID as set default (Deprecated)
     description: |
@@ -1731,6 +1791,7 @@ commands:
         description: Task Queue name.
         required: true
         short: t
+
   - name: temporal task-queue update-build-ids promote-set
     summary: Promote Build ID set (Deprecated)
     description: |
@@ -1763,6 +1824,7 @@ commands:
         description: Task Queue name.
         required: true
         short: t
+
   - name: temporal task-queue versioning
     summary: Manage Task Queue Build ID handling (Experimental)
     description: |
@@ -1795,6 +1857,7 @@ commands:
         short: t
         description: Task queue name.
         required: true
+
   - name: temporal task-queue versioning add-redirect-rule
     summary: Add Task Queue redirect rules (Experimental)
     description: |
@@ -1825,6 +1888,7 @@ commands:
         short: y
         type: bool
         description: Don't prompt to confirm.
+
   - name: temporal task-queue versioning commit-build-id
     summary: Complete Build ID rollout (Experimental)
     description: |
@@ -1865,6 +1929,7 @@ commands:
         short: y
         type: bool
         description: Don't prompt to confirm.
+
   - name: temporal task-queue versioning delete-assignment-rule
     summary: Removes a Task Queue assignment rule (Experimental)
     description: |
@@ -1900,6 +1965,7 @@ commands:
         short: y
         type: bool
         description: Don't prompt to confirm.
+
   - name: temporal task-queue versioning delete-redirect-rule
     summary: Removes Build-ID routing rule (Experimental)
     description: |
@@ -1924,6 +1990,7 @@ commands:
         short: y
         type: bool
         description: Don't prompt to confirm.
+
   - name: temporal task-queue versioning get-rules
     summary: Fetch Worker Build ID assignments and redirect rules (Experimental)
     description: |
@@ -1950,6 +2017,7 @@ commands:
       | CAUTION: Worker versioning is experimental. Versioning commands are |
       | subject to change.                                                  |
       +---------------------------------------------------------------------+
+
   - name: temporal task-queue versioning insert-assignment-rule
     summary: Add an assignment rule at a index (Experimental)
     description: |
@@ -1991,6 +2059,7 @@ commands:
         short: y
         type: bool
         description: Don't prompt to confirm.
+
   - name: temporal task-queue versioning replace-assignment-rule
     summary: Update assignment rule at index (Experimental)
     description: |
@@ -2048,6 +2117,7 @@ commands:
       - name: force
         type: bool
         description: Bypass the validation that one unconditional rule remains.
+
   - name: temporal task-queue versioning replace-redirect-rule
     summary: Change the target for a Build ID's redirect (Experimental)
     description: |
@@ -2078,6 +2148,7 @@ commands:
         short: y
         type: bool
         description: Don't prompt to confirm.
+
   - name: temporal workflow
     summary: Start, list, and operate on Workflows
     description: |
@@ -2094,6 +2165,7 @@ commands:
       ```
     option-sets:
       - client
+
   - name: temporal workflow cancel
     summary: Send cancellation to Workflow Execution
     description: |
@@ -2121,6 +2193,7 @@ commands:
       and Query creation. See `temporal batch --help` for a quick reference.
     option-sets:
       - single-workflow-or-batch
+
   - name: temporal workflow count
     summary: Number of Workflow Executions
     description: |
@@ -2139,6 +2212,7 @@ commands:
         type: string
         short: q
         description: Content for an SQL-like `QUERY` List Filter.
+
   - name: temporal workflow delete
     summary: Remove Workflow Execution
     description: |
@@ -2156,6 +2230,7 @@ commands:
       and Query creation. See `temporal batch --help` for a quick reference.
     option-sets:
       - single-workflow-or-batch
+
   - name: temporal workflow describe
     summary: Show Workflow Execution info
     description: |
@@ -2182,6 +2257,7 @@ commands:
       - name: raw
         type: bool
         description: Print properties without changing their format.
+
   - name: temporal workflow execute
     summary: Start new Workflow Execution
     description: |
@@ -2210,6 +2286,7 @@ commands:
         description: | 
           Display events as sections instead of table.
           Does not apply to JSON output.
+
   - name: temporal workflow fix-history-json
     summary: Updates an event history JSON file
     description: |
@@ -2232,6 +2309,7 @@ commands:
         description: |
           Path to the results file.
           When omitted, output is sent to stdout.
+
   - name: temporal workflow list
     summary: Show Workflow Executions
     description: |
@@ -2264,6 +2342,7 @@ commands:
       - name: limit
         type: int
         description: Maximum number of Workflow Executions to display.
+
   - name: temporal workflow query
     summary: Retrieve Workflow Execution state
     description: |
@@ -2295,6 +2374,8 @@ commands:
         enum-values:
           - not_open
           - not_completed_cleanly
+
+
   - name: temporal workflow reset
     summary: Move Workflow Execution history point
     description: |
@@ -2385,6 +2466,7 @@ commands:
         description: |
           Don't prompt to confirm.
           Only allowed when `--query` is present.
+
   - name: temporal workflow result
     summary: Wait for and show the result of a Workflow Execution
     description: |
@@ -2396,6 +2478,7 @@ commands:
       ```
     option-sets:
       - workflow-reference
+
   - name: temporal workflow show
     summary: Display Event History
     description: |
@@ -2422,6 +2505,7 @@ commands:
           Does not apply to JSON output.
     option-sets:
       - workflow-reference
+
   - name: temporal workflow signal
     summary: Send a message to a Workflow Execution
     description: |
@@ -2448,6 +2532,7 @@ commands:
         required: true
         aliases:
           - type
+
   - name: temporal workflow stack
     summary: Trace a Workflow Execution
     description: |
@@ -2468,6 +2553,7 @@ commands:
           - not_completed_cleanly
     option-sets:
       - workflow-reference
+
   - name: temporal workflow start
     summary: Initiate a Workflow Execution
     description: |
@@ -2484,6 +2570,7 @@ commands:
       - shared-workflow-start
       - workflow-start
       - payload-input
+
   - name: temporal workflow terminate
     summary: Forcefully end a Workflow Execution
     description: |
@@ -2543,6 +2630,7 @@ commands:
         description: |
           Don't prompt to confirm termination.
           Can only be used with --query.
+
   - name: temporal workflow trace
     summary: Workflow Execution live progress
     description: |
@@ -2581,6 +2669,7 @@ commands:
         default: 10
     option-sets:
       - workflow-reference
+
   - name: temporal workflow update
     summary: Updates (Experimental)
     description: |
@@ -2588,6 +2677,7 @@ commands:
       state, control its flow, and return a result.
 
       Experimental.
+
   - name: temporal workflow update describe
     summary: Obtain status info about a specific Update (Experimental)
     description: |
@@ -2603,6 +2693,7 @@ commands:
       ```
     option-sets:
       - update-targeting
+
   - name: temporal workflow update execute
     summary: Send an Update and wait for it to complete (Experimental)
     description: |
@@ -2621,6 +2712,7 @@ commands:
     option-sets:
       - update-starting
       - payload-input
+
   - name: temporal workflow update result
     summary: Wait for a specific Update to complete (Experimental)
     description: |
@@ -2636,6 +2728,7 @@ commands:
       ```
     option-sets:
       - update-targeting
+
   - name: temporal workflow update start
     summary: Send an Update and wait for it to be accepted or rejected (Experimental)
     description: |
@@ -2666,6 +2759,7 @@ commands:
         required: true
 
 option-sets:
+
   - name: client
     options:
       - name: address
@@ -2747,6 +2841,7 @@ option-sets:
         type: string
         description: Authorization header for Codec Server requests.
         env: TEMPORAL_CODEC_AUTH
+
   - name: overlap-policy
     options:
       - name: overlap-policy
@@ -2760,6 +2855,7 @@ option-sets:
           - TerminateOther
           - AllowAll
         default: Skip
+
   - name: schedule-id
     options:
       - name: schedule-id
@@ -2767,6 +2863,7 @@ option-sets:
         description: Schedule ID.
         required: true
         short: s
+
   - name: schedule-configuration
     options:
       - name: calendar
@@ -2832,6 +2929,7 @@ option-sets:
           Keys must be identifiers, and values must be JSON values.
           For example: 'YourKey={"your": "value"}'.
           Can be passed multiple times.
+
   - name: workflow-reference
     options:
       - name: workflow-id
@@ -2843,6 +2941,7 @@ option-sets:
         type: string
         short: r
         description: Run ID.
+
   - name: single-workflow-or-batch
     options:
       - name: workflow-id
@@ -2876,6 +2975,7 @@ option-sets:
         description: |
           Don't prompt to confirm signaling.
           Only allowed when --query is present.
+
   - name: shared-workflow-start
     options:
       - name: workflow-id
@@ -2922,6 +3022,7 @@ option-sets:
         description: |
           Memo using 'KEY="VALUE"' pairs.
           Use JSON values.
+
   - name: workflow-start
     options:
       - name: cron
@@ -2945,6 +3046,7 @@ option-sets:
         description: |
           Re-use policy for the Workflow ID in new Workflow Executions.
           Options: AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate, TerminateIfRunning.
+
   - name: payload-input
     options:
       - name: input
@@ -2972,6 +3074,7 @@ option-sets:
         type: bool
         description: |
           Assume inputs are base64-encoded and attempt to decode them.
+
   - name: update-starting
     options:
       - name: name
@@ -3002,6 +3105,7 @@ option-sets:
         description: |
           Run ID.
           If unset, looks for an Update against the currently-running Workflow Execution.
+
   - name: update-targeting
     options:
       - name: workflow-id
