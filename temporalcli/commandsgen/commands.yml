@@ -195,6 +195,10 @@ commands:
       - name: no-json-shorthand-payloads
         type: bool
         description: Raw payload output, even if they are JSON.
+      - name: context-rpc-timeout
+        type: duration
+        description: Timeout for the underlying RPC call for a context call.
+        default: 20s
 
   - name: temporal activity
     summary: Complete or fail an Activity
@@ -2503,9 +2507,6 @@ commands:
         description: |
           Display events as detailed sections instead of table.
           Does not apply to JSON output.
-      - name: rpc-timeout
-        type: duration
-        description: Timeout for gRPC calls.
     option-sets:
       - workflow-reference
 

@@ -245,6 +245,7 @@ type TemporalCommand struct {
 	TimeFormat              StringEnum
 	Color                   StringEnum
 	NoJsonShorthandPayloads bool
+	ContextRpcTimeout       Duration
 }
 
 func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
@@ -278,6 +279,8 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	s.Color = NewStringEnum([]string{"always", "never", "auto"}, "auto")
 	s.Command.PersistentFlags().Var(&s.Color, "color", "Output coloring. Accepted values: always, never, auto.")
 	s.Command.PersistentFlags().BoolVar(&s.NoJsonShorthandPayloads, "no-json-shorthand-payloads", false, "Raw payload output, even if they are JSON.")
+	s.ContextRpcTimeout = Duration(20000 * time.Millisecond)
+	s.Command.PersistentFlags().Var(&s.ContextRpcTimeout, "context-rpc-timeout", "Timeout for the underlying RPC call for a context call.")
 	s.initCommand(cctx)
 	return &s
 }
@@ -2673,9 +2676,8 @@ type TemporalWorkflowShowCommand struct {
 	Parent  *TemporalWorkflowCommand
 	Command cobra.Command
 	WorkflowReferenceOptions
-	Follow     bool
-	Detailed   bool
-	RpcTimeout Duration
+	Follow   bool
+	Detailed bool
 }
 
 func NewTemporalWorkflowShowCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowShowCommand {
@@ -2692,8 +2694,6 @@ func NewTemporalWorkflowShowCommand(cctx *CommandContext, parent *TemporalWorkfl
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().BoolVarP(&s.Follow, "follow", "f", false, "Follow the Workflow Execution progress in real time. Does not apply to JSON output.")
 	s.Command.Flags().BoolVar(&s.Detailed, "detailed", false, "Display events as detailed sections instead of table. Does not apply to JSON output.")
-	s.RpcTimeout = 0
-	s.Command.Flags().Var(&s.RpcTimeout, "rpc-timeout", "Timeout for gRPC calls.")
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
