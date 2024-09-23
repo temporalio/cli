@@ -411,6 +411,8 @@ func (s *SingleWorkflowOrBatchOptions) workflowExecOrBatch(
 			return nil, nil, fmt.Errorf("cannot set reason when workflow ID is set")
 		} else if s.Yes {
 			return nil, nil, fmt.Errorf("cannot set 'yes' when workflow ID is set")
+		} else if s.Rps != 0 {
+			return nil, nil, fmt.Errorf("cannot set rps when workflow ID is set")
 		}
 		return &common.WorkflowExecution{WorkflowId: s.WorkflowId, RunId: s.RunId}, nil, nil
 	}
@@ -442,11 +444,6 @@ func (s *SingleWorkflowOrBatchOptions) workflowExecOrBatch(
 	reason := s.Reason
 	if reason == "" {
 		reason = defaultReason()
-	}
-
-	// Check rps is used together with query
-	if s.Rps != 0 && s.Query == "" {
-		return nil, nil, fmt.Errorf("rps requires query to be set")
 	}
 
 	return nil, &workflowservice.StartBatchOperationRequest{

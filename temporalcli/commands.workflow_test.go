@@ -277,7 +277,15 @@ func (s *SharedServerSuite) TestWorkflow_Terminate_BatchWorkflow_Ratelimit_Missi
 		"--address", s.Address(),
 		"--rps", "5",
 	)
-	s.Error(res.Err, "must set either workflow ID or query")
+	s.EqualError(res.Err, "must set either workflow ID or query")
+
+	res = s.Execute(
+		"workflow", "terminate",
+		"-w", "some-workflow-id",
+		"--address", s.Address(),
+		"--rps", "5",
+	)
+	s.EqualError(res.Err, "cannot set rps when workflow ID is set")
 }
 
 func (s *SharedServerSuite) TestWorkflow_Terminate_BatchWorkflowSuccess_Ratelimit() {
