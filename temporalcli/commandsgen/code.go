@@ -299,6 +299,8 @@ func (o *Option) writeStructField(w *codeWriter) error {
 	switch o.Type {
 	case "bool", "int", "string":
 		goDataType = o.Type
+	case "float":
+		goDataType = "float32"
 	case "duration":
 		goDataType = "Duration"
 	case "timestamp":
@@ -341,6 +343,11 @@ func (o *Option) writeFlagBuilding(selfVar, flagVar string, w *codeWriter) error
 		flagMeth, defaultLit = "Var", ""
 	case "int":
 		flagMeth, defaultLit = "IntVar", ", "+o.Default
+		if o.Default == "" {
+			defaultLit = ", 0"
+		}
+	case "float":
+		flagMeth, defaultLit = "Float32Var", ", "+o.Default
 		if o.Default == "" {
 			defaultLit = ", 0"
 		}
