@@ -1,5 +1,5 @@
-// Package commandsgen is built to read the markdown format described in
-// temporalcli/commands.md and generate code from it.
+// Package commandsgen is built to read the YAML format described in
+// temporalcli/commandsgen/commands.yml and generate code from it.
 package commandsgen
 
 import (
