@@ -107,7 +107,7 @@
 #   option-sets: A list of option sets. (string[])
 
 # * name, summary, and descrption are required fields. All other fields are optional.
-# * Available option types are `bool`, `duration`, `int`, `float`. `string`, `string[]`, 
+# * Available option types are `bool`, `duration`, `int`, `float`, `string`, `string[]`, 
 #   `string-enum`, string-enum[], or `timestamp`.
 # * Include a new-line after each command entry.
 
