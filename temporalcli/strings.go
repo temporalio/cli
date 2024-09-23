@@ -40,13 +40,18 @@ type StringEnumArray struct {
 }
 
 func NewStringEnumArray(allowed []string, values []string) StringEnumArray {
+	// store allowed values in lower case so we can do case-insensitive comparison
+	for i, str := range allowed {
+		allowed[i] = strings.ToLower(str)
+	}
+
 	return StringEnumArray{Allowed: allowed, Values: values}
 }
 
 func (s *StringEnumArray) String() string { return strings.Join(s.Values, ",") }
 
 func (s *StringEnumArray) Set(p string) error {
-	if !slices.Contains(s.Allowed, p) {
+	if !slices.Contains(s.Allowed, strings.ToLower(p)) {
 		return fmt.Errorf("invalid value: %s, allowed values are: %s", p, strings.Join(s.Allowed, ", "))
 	}
 	s.Values = append(s.Values, p)
