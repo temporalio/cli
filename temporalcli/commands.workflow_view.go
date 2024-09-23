@@ -1,6 +1,7 @@
 package temporalcli
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -447,6 +448,12 @@ func (c *TemporalWorkflowShowCommand) run(cctx *CommandContext, _ []string) erro
 		return err
 	}
 	defer cl.Close()
+
+	if c.RpcTimeout > 0 {
+		var cancel context.CancelFunc
+		cctx.Context, cancel = context.WithDeadline(cctx.Context, time.Now().Add(c.RpcTimeout.Duration()))
+		defer cancel()
+	}
 
 	// Print history
 	iter := &structuredHistoryIter{

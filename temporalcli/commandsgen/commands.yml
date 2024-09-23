@@ -2503,6 +2503,9 @@ commands:
         description: |
           Display events as detailed sections instead of table.
           Does not apply to JSON output.
+      - name: rpc-timeout
+        type: duration
+        description: Timeout for gRPC calls.
     option-sets:
       - workflow-reference
 
