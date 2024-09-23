@@ -5,8 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"go.temporal.io/sdk/converter"
 	"os/user"
+
+	"go.temporal.io/sdk/converter"
 
 	"github.com/fatih/color"
 	"github.com/google/uuid"
@@ -157,6 +158,7 @@ func (c *TemporalWorkflowTerminateCommand) run(cctx *CommandContext, _ []string)
 		Query:      c.Query,
 		Reason:     c.Reason,
 		Yes:        c.Yes,
+		Rps:        c.Rps,
 	}
 
 	exec, batchReq, err := opts.workflowExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{
@@ -409,6 +411,8 @@ func (s *SingleWorkflowOrBatchOptions) workflowExecOrBatch(
 			return nil, nil, fmt.Errorf("cannot set reason when workflow ID is set")
 		} else if s.Yes {
 			return nil, nil, fmt.Errorf("cannot set 'yes' when workflow ID is set")
+		} else if s.Rps != 0 {
+			return nil, nil, fmt.Errorf("cannot set rps when workflow ID is set")
 		}
 		return &common.WorkflowExecution{WorkflowId: s.WorkflowId, RunId: s.RunId}, nil, nil
 	}
@@ -443,10 +447,11 @@ func (s *SingleWorkflowOrBatchOptions) workflowExecOrBatch(
 	}
 
 	return nil, &workflowservice.StartBatchOperationRequest{
-		Namespace:       namespace,
-		JobId:           uuid.NewString(),
-		VisibilityQuery: s.Query,
-		Reason:          reason,
+		MaxOperationsPerSecond: s.Rps,
+		Namespace:              namespace,
+		JobId:                  uuid.NewString(),
+		VisibilityQuery:        s.Query,
+		Reason:                 reason,
 	}, nil
 }
 
