@@ -458,7 +458,7 @@ func (c *TemporalCommand) preRun(cctx *CommandContext) error {
 			case "json":
 				handler = slog.NewJSONHandler(cctx.Options.Stderr, &slog.HandlerOptions{Level: level})
 			default:
-				return fmt.Errorf("unreachable: invalid log format %q", c.LogFormat)
+				return fmt.Errorf("unreachable: invalid log format %q", c.LogFormat.Value)
 			}
 			cctx.Logger = slog.New(handler)
 		}
