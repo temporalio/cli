@@ -122,7 +122,7 @@
 # Options that are similar but slightly different don't need to be in option sets.
 # Reserve option sets for when the behavior of the option is the same across commands.
 
-# * Include a new-line after each command entry.
+# * Include a new-line after each option set.
 
 commands:
   - name: temporal
