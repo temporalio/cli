@@ -1041,6 +1041,7 @@ commands:
           - Datetime
           - KeywordList
         required: true
+
   - name: temporal operator search-attribute list
     summary: List Search Attributes
     description: |

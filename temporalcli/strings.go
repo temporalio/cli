@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"slices"
 	"sort"
 	"strings"
 )
@@ -35,26 +34,34 @@ func (s *StringEnum) Set(p string) error {
 func (*StringEnum) Type() string { return "string" }
 
 type StringEnumArray struct {
-	Allowed []string
-	Values  []string
+	// maps lower case value to original case
+	Allowed map[string]string
+	// values in original case
+	Values []string
 }
 
 func NewStringEnumArray(allowed []string, values []string) StringEnumArray {
 	// store allowed values in lower case so we can do case-insensitive comparison
-	for i, str := range allowed {
-		allowed[i] = strings.ToLower(str)
+	var allowedMap = make(map[string]string)
+	for _, str := range allowed {
+		allowedMap[strings.ToLower(str)] = str
 	}
 
-	return StringEnumArray{Allowed: allowed, Values: values}
+	return StringEnumArray{Allowed: allowedMap, Values: values}
 }
 
 func (s *StringEnumArray) String() string { return strings.Join(s.Values, ",") }
 
 func (s *StringEnumArray) Set(p string) error {
-	if !slices.Contains(s.Allowed, strings.ToLower(p)) {
-		return fmt.Errorf("invalid value: %s, allowed values are: %s", p, strings.Join(s.Allowed, ", "))
+	val, ok := s.Allowed[strings.ToLower(p)]
+	if !ok {
+		values := make([]string, 0, len(s.Allowed))
+		for _, v := range s.Allowed {
+			values = append(values, v)
+		}
+		return fmt.Errorf("invalid value: %s, allowed values are: %s", p, strings.Join(values, ", "))
 	}
-	s.Values = append(s.Values, p)
+	s.Values = append(s.Values, val)
 	return nil
 }
 
