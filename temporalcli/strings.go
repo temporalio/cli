@@ -56,7 +56,10 @@ func (s *StringEnumArray) String() string { return strings.Join(s.Values, ",") }
 func (s *StringEnumArray) Set(p string) error {
 	val, ok := s.Allowed[strings.ToLower(p)]
 	if !ok {
-		values := maps.Values(s.Allowed)
+		values := make([]string, 0, len(s.Allowed))
+		for _, v := range s.Allowed {
+			values = append(values, v)
+		}
 		return fmt.Errorf("invalid value: %s, allowed values are: %s", p, strings.Join(values, ", "))
 	}
 	s.Values = append(s.Values, val)
