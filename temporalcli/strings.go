@@ -41,7 +41,8 @@ type StringEnumArray struct {
 }
 
 func NewStringEnumArray(allowed []string, values []string) StringEnumArray {
-	// store allowed values in lower case so we can do case-insensitive comparison
+	// maps lower case value to original case so we can do case insensitive comparison,
+	// while maintaining original case
 	var allowedMap = make(map[string]string)
 	for _, str := range allowed {
 		allowedMap[strings.ToLower(str)] = str
