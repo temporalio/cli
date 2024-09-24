@@ -161,14 +161,10 @@ commands:
           Default is "info" for most commands and "warn" for `server start-dev`.
         default: info
       - name: log-format
-        type: string-enum
+        type: string
         description: |
           Log format.
-          "pretty" is an alias for "text". This is for compatibility reasons, please use "text".
-        enum-values:
-          - text
-          - json
-          - pretty
+          Options are: text, json.
         default: text
       - name: output
         type: string-enum

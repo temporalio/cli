@@ -243,7 +243,7 @@ type TemporalCommand struct {
 	Env                     string
 	EnvFile                 string
 	LogLevel                StringEnum
-	LogFormat               StringEnum
+	LogFormat               string
 	Output                  StringEnum
 	TimeFormat              StringEnum
 	Color                   StringEnum
@@ -273,8 +273,7 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	s.Command.PersistentFlags().StringVar(&s.EnvFile, "env-file", "", "Path to environment settings file. (defaults to `$HOME/.config/temporalio/temporal.yaml`).")
 	s.LogLevel = NewStringEnum([]string{"debug", "info", "warn", "error", "never"}, "info")
 	s.Command.PersistentFlags().Var(&s.LogLevel, "log-level", "Log level. Default is \"info\" for most commands and \"warn\" for `server start-dev`. Accepted values: debug, info, warn, error, never.")
-	s.LogFormat = NewStringEnum([]string{"text", "json", "pretty"}, "text")
-	s.Command.PersistentFlags().Var(&s.LogFormat, "log-format", "Log format. \"pretty\" is an alias for \"text\". This is for compatibility reasons, please use \"text\". Accepted values: text, json, pretty.")
+	s.Command.PersistentFlags().StringVar(&s.LogFormat, "log-format", "text", "Log format. Options are: text, json.")
 	s.Output = NewStringEnum([]string{"text", "json", "jsonl", "none"}, "text")
 	s.Command.PersistentFlags().VarP(&s.Output, "output", "o", "Non-logging data output format. Accepted values: text, json, jsonl, none.")
 	s.TimeFormat = NewStringEnum([]string{"relative", "iso", "raw"}, "relative")
