@@ -269,7 +269,7 @@ func (c *TemporalTaskQueueDescribeCommand) run(cctx *CommandContext, args []stri
 	}
 
 	var taskQueueTypes []client.TaskQueueType
-	for _, t := range c.TaskQueueType {
+	for _, t := range c.TaskQueueType.Values {
 		var taskQueueType client.TaskQueueType
 		switch t {
 		case "workflow":

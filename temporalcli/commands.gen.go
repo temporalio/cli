@@ -180,7 +180,7 @@ type WorkflowStartOptions struct {
 	Cron          string
 	FailExisting  bool
 	StartDelay    Duration
-	IdReusePolicy string
+	IdReusePolicy StringEnum
 }
 
 func (v *WorkflowStartOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
@@ -188,7 +188,8 @@ func (v *WorkflowStartOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet
 	f.BoolVar(&v.FailExisting, "fail-existing", false, "Fail if the Workflow already exists.")
 	v.StartDelay = 0
 	f.Var(&v.StartDelay, "start-delay", "Delay before starting the Workflow Execution. Can't be used with cron schedules. If the Workflow receives a signal or update prior to this time, the Workflow Execution starts immediately.")
-	f.StringVar(&v.IdReusePolicy, "id-reuse-policy", "", "Re-use policy for the Workflow ID in new Workflow Executions. Options: AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate, TerminateIfRunning.")
+	v.IdReusePolicy = NewStringEnum([]string{"AllowDuplicate", "AllowDuplicateFailedOnly", "RejectDuplicate", "TerminateIfRunning"}, "")
+	f.Var(&v.IdReusePolicy, "id-reuse-policy", "Re-use policy for the Workflow ID in new Workflow Executions. Accepted values: AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate, TerminateIfRunning.")
 }
 
 type PayloadInputOptions struct {
@@ -1263,7 +1264,7 @@ type TemporalOperatorSearchAttributeCreateCommand struct {
 	Parent  *TemporalOperatorSearchAttributeCommand
 	Command cobra.Command
 	Name    []string
-	Type    []string
+	Type    StringEnumArray
 }
 
 func NewTemporalOperatorSearchAttributeCreateCommand(cctx *CommandContext, parent *TemporalOperatorSearchAttributeCommand) *TemporalOperatorSearchAttributeCreateCommand {
@@ -1280,7 +1281,8 @@ func NewTemporalOperatorSearchAttributeCreateCommand(cctx *CommandContext, paren
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringArrayVar(&s.Name, "name", nil, "Search Attribute name. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
-	s.Command.Flags().StringArrayVar(&s.Type, "type", nil, "Search Attribute type. Options: Text, Keyword, Int, Double, Bool, Datetime, KeywordList. Required.")
+	s.Type = NewStringEnumArray([]string{"Text", "Keyword", "Int", "Double", "Bool", "Datetime", "KeywordList"}, []string{})
+	s.Command.Flags().Var(&s.Type, "type", "Search Attribute type. Accepted values: Text, Keyword, Int, Double, Bool, Datetime, KeywordList. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "type")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -1740,7 +1742,7 @@ type TemporalTaskQueueDescribeCommand struct {
 	Parent              *TemporalTaskQueueCommand
 	Command             cobra.Command
 	TaskQueue           string
-	TaskQueueType       []string
+	TaskQueueType       StringEnumArray
 	SelectBuildId       []string
 	SelectUnversioned   bool
 	SelectAllActive     bool
@@ -1765,7 +1767,8 @@ func NewTemporalTaskQueueDescribeCommand(cctx *CommandContext, parent *TemporalT
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task Queue name. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
-	s.Command.Flags().StringArrayVar(&s.TaskQueueType, "task-queue-type", nil, "Task Queue type. If not specified, all types are reported. Options are: workflow, activity, nexus.")
+	s.TaskQueueType = NewStringEnumArray([]string{"workflow", "activity", "nexus"}, []string{})
+	s.Command.Flags().Var(&s.TaskQueueType, "task-queue-type", "Task Queue type. If not specified, all types are reported. Accepted values: workflow, activity, nexus.")
 	s.Command.Flags().StringArrayVar(&s.SelectBuildId, "select-build-id", nil, "Filter the Task Queue based on Build ID.")
 	s.Command.Flags().BoolVar(&s.SelectUnversioned, "select-unversioned", false, "Include the unversioned queue.")
 	s.Command.Flags().BoolVar(&s.SelectAllActive, "select-all-active", false, "Include all active versions. A version is active if it had new tasks or polls recently.")
@@ -2604,7 +2607,7 @@ type TemporalWorkflowResetCommand struct {
 	EventId        int
 	Reason         string
 	ReapplyType    StringEnum
-	ReapplyExclude []string
+	ReapplyExclude StringEnumArray
 	Type           StringEnum
 	BuildId        string
 	Query          string
@@ -2630,7 +2633,8 @@ func NewTemporalWorkflowResetCommand(cctx *CommandContext, parent *TemporalWorkf
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "reason")
 	s.ReapplyType = NewStringEnum([]string{"All", "Signal", "None"}, "All")
 	s.Command.Flags().Var(&s.ReapplyType, "reapply-type", "Types of events to re-apply after reset point. Deprecated. Use --reapply-exclude instead. Accepted values: All, Signal, None.")
-	s.Command.Flags().StringArrayVar(&s.ReapplyExclude, "reapply-exclude", nil, "Exclude these event types from re-application. Options: All, Signal, Update.")
+	s.ReapplyExclude = NewStringEnumArray([]string{"All", "Signal", "Update"}, []string{})
+	s.Command.Flags().Var(&s.ReapplyExclude, "reapply-exclude", "Exclude these event types from re-application. Accepted values: All, Signal, Update.")
 	s.Type = NewStringEnum([]string{"FirstWorkflowTask", "LastWorkflowTask", "LastContinuedAsNew", "BuildId"}, "")
 	s.Command.Flags().VarP(&s.Type, "type", "t", "The event type for the reset. Accepted values: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew, BuildId.")
 	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "A Build ID. Use only with the BuildId `--type`. Resets the first Workflow task processed by this ID. By default, this reset may be in a prior run, earlier than a Continue as New point.")

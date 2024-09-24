@@ -275,10 +275,10 @@ func buildStartOptions(sw *SharedWorkflowStartOptions, w *WorkflowStartOptions) 
 		WorkflowExecutionErrorWhenAlreadyStarted: w.FailExisting,
 		StartDelay:                               w.StartDelay.Duration(),
 	}
-	if w.IdReusePolicy != "" {
+	if w.IdReusePolicy.Value != "" {
 		var err error
 		o.WorkflowIDReusePolicy, err = stringToProtoEnum[enums.WorkflowIdReusePolicy](
-			w.IdReusePolicy, enums.WorkflowIdReusePolicy_shorthandValue, enums.WorkflowIdReusePolicy_value)
+			w.IdReusePolicy.Value, enums.WorkflowIdReusePolicy_shorthandValue, enums.WorkflowIdReusePolicy_value)
 		if err != nil {
 			return o, fmt.Errorf("invalid workflow ID reuse policy: %w", err)
 		}
