@@ -248,6 +248,7 @@ type TemporalCommand struct {
 	TimeFormat              StringEnum
 	Color                   StringEnum
 	NoJsonShorthandPayloads bool
+	CommandTimeout          Duration
 }
 
 func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
@@ -281,6 +282,8 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	s.Color = NewStringEnum([]string{"always", "never", "auto"}, "auto")
 	s.Command.PersistentFlags().Var(&s.Color, "color", "Output coloring. Accepted values: always, never, auto.")
 	s.Command.PersistentFlags().BoolVar(&s.NoJsonShorthandPayloads, "no-json-shorthand-payloads", false, "Raw payload output, even if they are JSON.")
+	s.CommandTimeout = 0
+	s.Command.PersistentFlags().Var(&s.CommandTimeout, "command-timeout", "Timeout for the span of a command.")
 	s.initCommand(cctx)
 	return &s
 }
