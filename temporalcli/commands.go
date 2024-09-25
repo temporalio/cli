@@ -495,7 +495,6 @@ func (c *TemporalCommand) preRun(cctx *CommandContext) error {
 		}
 	}
 	cctx.JSONShorthandPayloads = !c.NoJsonShorthandPayloads
-	fmt.Println("rpcTimeout", c.CommandTimeout.Duration())
 	cctx.Context, _ = context.WithDeadline(cctx.Context, time.Now().Add(c.CommandTimeout.Duration()))
 
 	return nil
