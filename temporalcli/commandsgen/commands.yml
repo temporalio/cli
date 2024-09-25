@@ -195,10 +195,9 @@ commands:
       - name: no-json-shorthand-payloads
         type: bool
         description: Raw payload output, even if they are JSON.
-      - name: rpc-timeout
+      - name: command-timeout
         type: duration
-        description: Timeout for all underlying RPC calls for the CLI.
-        default: 10s
+        description: Timeout for the span of a command.
 
   - name: temporal activity
     summary: Complete or fail an Activity
