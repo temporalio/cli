@@ -78,7 +78,7 @@ func (c *TemporalWorkflowResetCommand) doWorkflowReset(cctx *CommandContext, cl 
 	}
 
 	reapplyExcludes := make([]enums.ResetReapplyExcludeType, 0)
-	for _, exclude := range c.ReapplyExclude {
+	for _, exclude := range c.ReapplyExclude.Values {
 		if strings.ToLower(exclude) == "all" {
 			for _, excludeType := range enums.ResetReapplyExcludeType_value {
 				if excludeType == 0 {
@@ -97,7 +97,7 @@ func (c *TemporalWorkflowResetCommand) doWorkflowReset(cctx *CommandContext, cl 
 
 	reapplyType := enums.RESET_REAPPLY_TYPE_SIGNAL
 	if c.ReapplyType.Value != "All" {
-		if len(c.ReapplyExclude) > 0 {
+		if len(c.ReapplyExclude.Values) > 0 {
 			return errors.New("cannot specify --reapply-type and --reapply-exclude at the same time")
 		}
 		reapplyType, err = enums.ResetReapplyTypeFromString(c.ReapplyType.Value)
