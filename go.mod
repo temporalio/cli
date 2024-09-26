@@ -23,6 +23,8 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 )
 
+require github.com/deckarep/golang-set/v2 v2.6.0 // indirect
+
 require (
 	cloud.google.com/go v0.114.0 // indirect
 	cloud.google.com/go/auth v0.5.0 // indirect

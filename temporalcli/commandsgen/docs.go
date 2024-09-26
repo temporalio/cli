@@ -7,17 +7,21 @@ import (
 	"strings"
 )
 
-// TODO: figure out how to generate each file:
-//
-//	activity, batch, cmd-options, env, index,
-//	operator, schedule, server, task-queue, workflow
-// cmd-options -
-//     - tags: not sure where this comes from
-
 // index doesn't need to be generated
 
 type DocsFile struct {
 	FileName string
+}
+
+// containsOption checks if an option is in the slice
+func containsOption(options []Option, option Option) bool {
+	for _, opt := range options {
+		// TODO: Print an error if there are duplicate names with different descriptions?
+		if opt.Name == option.Name {
+			return true
+		}
+	}
+	return false
 }
 
 func GenerateDocsFiles(commands Commands) (map[string][]byte, error) {
@@ -35,6 +39,9 @@ func GenerateDocsFiles(commands Commands) (map[string][]byte, error) {
 		}
 	}
 
+	// write cmd-options
+	w.writeCmdOptions()
+
 	// Write package and imports to final buf
 	// var finalBuf bytes.Buffer
 	// finalBuf.WriteString("// Code generated. DO NOT EDIT.\n\n")
@@ -51,6 +58,7 @@ type docWriter struct {
 	fileMap      map[string]*bytes.Buffer
 	optionSetMap map[string]OptionSets
 	optionsStack [][]Option
+	allOptions   []Option
 }
 
 // func (c *docWriter) writeLinef(s string, args ...any) {
@@ -71,7 +79,7 @@ func (c *Command) writeDoc(w *docWriter) error {
 	return nil
 }
 
-func (w *docWriter) writeCommand(c *Command) error {
+func (w *docWriter) writeCommand(c *Command) {
 	fileName := strings.Split(c.FullName, " ")[1]
 	w.fileMap[fileName] = &bytes.Buffer{}
 	w.fileMap[fileName].WriteString("---\n")
@@ -83,10 +91,9 @@ func (w *docWriter) writeCommand(c *Command) error {
 	w.fileMap[fileName].WriteString("keywords:\n") // TODO
 	w.fileMap[fileName].WriteString("tags:\n")     // TODO
 	w.fileMap[fileName].WriteString("---\n\n")
-	return nil
 }
 
-func (w *docWriter) writeSubcommand(c *Command) error {
+func (w *docWriter) writeSubcommand(c *Command) {
 	// TODO: write options from command, parent command, and global command
 	fileName := strings.Split(c.FullName, " ")[1]
 	subCommand := strings.Join(strings.Split(c.FullName, " ")[2:], "")
@@ -104,11 +111,13 @@ func (w *docWriter) writeSubcommand(c *Command) error {
 
 	for _, option := range allOptions {
 		w.fileMap[fileName].WriteString(fmt.Sprintf("- [--%s](cli/cmd-options#%s)\n\n", option.Name, option.Name))
+		if !containsOption(w.allOptions, option) {
+			w.allOptions = append(w.allOptions, option)
+		}
 	}
-	return nil
 }
 
-func (w *docWriter) processOptions(c *Command) error {
+func (w *docWriter) processOptions(c *Command) {
 	if len(w.optionsStack) >= len(strings.Split(c.FullName, " ")) {
 		w.optionsStack = w.optionsStack[:len(w.optionsStack)-1]
 	}
@@ -123,5 +132,24 @@ func (w *docWriter) processOptions(c *Command) error {
 	}
 
 	w.optionsStack = append(w.optionsStack, options)
-	return nil
+}
+
+// TODO: Do we even want this separate page anymore?
+// Or should we just generate this description whenever it's mentioned?
+// Our generator can just place this in-line on each page separately
+func (w *docWriter) writeCmdOptions() {
+	w.fileMap["cmd-options"] = &bytes.Buffer{}
+	w.fileMap["cmd-options"].WriteString("---\n")
+	w.fileMap["cmd-options"].WriteString("id: cmd-options\n")
+	w.fileMap["cmd-options"].WriteString("title: Temporal CLI command options reference\n")
+	w.fileMap["cmd-options"].WriteString("sidebar_label: cmd options\n")
+	w.fileMap["cmd-options"].WriteString("description: Discover how to manage Temporal Workflows, from Activity Execution to Workflow Ids, using clusters, cron schedules, dynamic configurations, and logging. Perfect for developers.\n")
+	w.fileMap["cmd-options"].WriteString("toc_max_heading_level: 4\n")
+	w.fileMap["cmd-options"].WriteString("keywords:\n") // TODO
+	w.fileMap["cmd-options"].WriteString("tags:\n")     // TODO
+	w.fileMap["cmd-options"].WriteString("---\n\n")
+	for _, option := range w.allOptions {
+		w.fileMap["cmd-options"].WriteString(fmt.Sprintf("## %s\n\n", option.Name))
+		w.fileMap["cmd-options"].WriteString(option.Description + "\n\n")
+	}
 }
