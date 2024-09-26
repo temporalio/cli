@@ -98,7 +98,7 @@ func (c *TemporalWorkflowResetCommand) doWorkflowReset(cctx *CommandContext, cl 
 	reapplyType := enums.RESET_REAPPLY_TYPE_SIGNAL
 	if c.ReapplyType.Value != "All" {
 		if len(c.ReapplyExclude.Values) > 0 {
-			return errors.New("cannot specify --reapply-type and --reapply-exclude at the same time")
+			return errors.New("--reapply-type cannot be used with --reapply-exclude. Use --reapply-exclude.")
 		}
 		reapplyType, err = enums.ResetReapplyTypeFromString(c.ReapplyType.Value)
 		if err != nil {

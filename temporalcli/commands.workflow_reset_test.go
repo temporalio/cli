@@ -248,67 +248,81 @@ func (s *SharedServerSuite) TestBatchResetByBuildId() {
 	sut.stopWorkerFor("v3")
 }
 
-func (s *SharedServerSuite) TestWorkflow_Reset_ReapplyExcludeSignal() {
-	var wfExecutions, timesSignalSeen int
+type WorkflowResetTest struct {
+	s                      *SharedServerSuite
+	reapplyType            string
+	reapplyExclude         []string
+	expectUpdatesReapplied bool
+	expectSignalsReapplied bool
+}
+
+func (s *SharedServerSuite) TestWorkflow_Reset_DefaultReappliesAll() {
+	t := WorkflowResetTest{
+		s:                      s,
+		expectUpdatesReapplied: true,
+		expectSignalsReapplied: true,
+	}
+	t.run()
+}
+
+func (s *SharedServerSuite) TestWorkflow_Reset_ExcludeUpdate() {
+	t := WorkflowResetTest{
+		s:                      s,
+		reapplyExclude:         []string{"Update"},
+		expectUpdatesReapplied: false,
+		expectSignalsReapplied: true,
+	}
+	t.run()
+}
+
+func (s *SharedServerSuite) TestWorkflow_Reset_ExcludeSignal() {
+	t := WorkflowResetTest{
+		s:                      s,
+		reapplyExclude:         []string{"Signal"},
+		expectUpdatesReapplied: true,
+		expectSignalsReapplied: false,
+	}
+	t.run()
+}
+
+func (s *SharedServerSuite) TestWorkflow_Reset_ExcludeSignalAndUpdate() {
+	t := WorkflowResetTest{
+		s:                      s,
+		reapplyExclude:         []string{"Signal", "Update"},
+		expectUpdatesReapplied: false,
+		expectSignalsReapplied: false,
+	}
+	t.run()
+}
+
+func (s *SharedServerSuite) TestWorkflow_Reset_ReapplySignalOnly() {
+	t := WorkflowResetTest{
+		s:                      s,
+		reapplyType:            "Signal",
+		expectUpdatesReapplied: false,
+		expectSignalsReapplied: true,
+	}
+	t.run()
+}
+
+func (t *WorkflowResetTest) run() {
+	s := t.s
+	var wfExecutions, updateHandlerExecutions, signalHandlerExecutions int
 	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
-		sigChan := workflow.GetSignalChannel(ctx, "sig")
+		// Handle signals
+		sigChan := workflow.GetSignalChannel(ctx, "mySignal")
 		workflow.Go(ctx, func(ctx workflow.Context) {
 			for {
 				sigChan.Receive(ctx, nil)
-				fmt.Println("saw signal", workflow.GetInfo(ctx).WorkflowExecution)
-				timesSignalSeen++
+				signalHandlerExecutions++
 			}
 		})
-		err := workflow.Sleep(ctx, 1*time.Second)
-		if err != nil {
-			return nil, err
-		}
-		wfExecutions++
-		return nil, nil
-	})
-
-	// Start the workflow
-	searchAttr := "keyword-" + uuid.NewString()
-	run, err := s.Client.ExecuteWorkflow(
-		s.Context,
-		client.StartWorkflowOptions{
-			TaskQueue:        s.Worker().Options.TaskQueue,
-			SearchAttributes: map[string]any{"CustomKeywordField": searchAttr},
-		},
-		DevWorkflow,
-		"ignored",
-	)
-	s.NoError(err)
-
-	// Send a couple signals
-	s.NoError(s.Client.SignalWorkflow(s.Context, run.GetID(), run.GetRunID(), "sig", "1"))
-	s.NoError(s.Client.SignalWorkflow(s.Context, run.GetID(), run.GetRunID(), "sig", "2"))
-
-	s.NoError(run.Get(s.Context, nil))
-	s.Equal(1, wfExecutions)
-
-	// Reset to the beginning, exclude signals
-	res := s.Execute(
-		"workflow", "reset",
-		"--address", s.Address(),
-		"-w", run.GetID(),
-		"--event-id", "3",
-		"--reason", "test-reset-FirstWorkflowTask",
-		"--reapply-exclude", "Signal",
-	)
-	require.NoError(s.T(), res.Err)
-	s.awaitNextWorkflow(searchAttr)
-	s.Equal(2, timesSignalSeen, "Should only see original signals and not after reset")
-}
-
-func (s *SharedServerSuite) TestWorkflow_Reset_ReapplyUpdate() {
-	var wfExecutions, timesUpdateSeen int
-	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
+		// Handle updates
 		workflow.SetUpdateHandler(ctx, "myUpdate", func(ctx workflow.Context) error {
-			timesUpdateSeen++
+			updateHandlerExecutions++
 			return nil
 		})
-		err := workflow.Sleep(ctx, 1*time.Second)
+		err := workflow.Sleep(ctx, 100*time.Millisecond)
 		if err != nil {
 			return nil, err
 		}
@@ -316,56 +330,82 @@ func (s *SharedServerSuite) TestWorkflow_Reset_ReapplyUpdate() {
 		return nil, nil
 	})
 
-	// Start the workflow
 	searchAttr := "keyword-" + uuid.NewString()
-	run, err := s.Client.ExecuteWorkflow(
-		s.Context,
-		client.StartWorkflowOptions{
-			TaskQueue:        s.Worker().Options.TaskQueue,
-			SearchAttributes: map[string]any{"CustomKeywordField": searchAttr},
-		},
-		DevWorkflow,
-		"ignored",
-	)
-	s.NoError(err)
-
-	// Send to updates
-	updateHandle1, err := s.Client.UpdateWorkflow(s.Context, client.UpdateWorkflowOptions{
-		WorkflowID:   run.GetID(),
-		RunID:        run.GetRunID(),
-		UpdateName:   "myUpdate",
-		WaitForStage: client.WorkflowUpdateStageAccepted,
-	})
-	s.NoError(err)
-	updateHandle2, err := s.Client.UpdateWorkflow(s.Context, client.UpdateWorkflowOptions{
-		WorkflowID:   run.GetID(),
-		RunID:        run.GetRunID(),
-		UpdateName:   "myUpdate",
-		WaitForStage: client.WorkflowUpdateStageAccepted,
-	})
-	s.NoError(err)
-
-	s.NoError(updateHandle1.Get(s.Context, nil))
-	s.NoError(updateHandle2.Get(s.Context, nil))
-	s.Equal(2, timesUpdateSeen)
-	s.NoError(run.Get(s.Context, nil))
+	run := t.startWorkflowAndSendTwoSignalsAndTwoUpdates(searchAttr)
+	s.Equal(2, updateHandlerExecutions)
 	s.Equal(1, wfExecutions)
 
-	// Reset to the beginning
-	res := s.Execute(
-		"workflow", "reset",
-		"--address", s.Address(),
-		"-w", run.GetID(),
-		"--event-id", "3",
-		"--reason", "test-reset-FirstWorkflowTask",
-	)
-	require.NoError(s.T(), res.Err)
+	t.resetWorkflow(run.GetID())
 	s.awaitNextWorkflow(searchAttr)
-	s.Equal(4, timesUpdateSeen, "Should only see original updates and not after reset")
+
+	if t.expectUpdatesReapplied {
+		s.Equal(4, updateHandlerExecutions)
+	} else {
+		s.Equal(2, updateHandlerExecutions)
+	}
+	if t.expectSignalsReapplied {
+		s.Equal(4, signalHandlerExecutions)
+	} else {
+		s.Equal(2, signalHandlerExecutions)
+	}
 	s.Equal(2, wfExecutions)
 }
 
-func (s *SharedServerSuite) TestWorkflow_Reset_DoesNotAllowBothApplyKinds() {
+func (t *WorkflowResetTest) startWorkflowAndSendTwoSignalsAndTwoUpdates(searchAttr string) client.WorkflowRun {
+	s := t.s
+	// Start the workflow
+	run, err := s.Client.ExecuteWorkflow(
+		s.Context,
+		client.StartWorkflowOptions{
+			TaskQueue:        s.Worker().Options.TaskQueue,
+			SearchAttributes: map[string]any{"CustomKeywordField": searchAttr},
+		},
+		DevWorkflow,
+		"ignored",
+	)
+	s.NoError(err)
+
+	for i := 1; i <= 2; i++ {
+		s.NoError(s.Client.SignalWorkflow(s.Context, run.GetID(), run.GetRunID(), "mySignal", fmt.Sprintf("%d", i)))
+		updateHandle, err := s.Client.UpdateWorkflow(s.Context, client.UpdateWorkflowOptions{
+			WorkflowID:   run.GetID(),
+			RunID:        run.GetRunID(),
+			UpdateName:   "myUpdate",
+			WaitForStage: client.WorkflowUpdateStageAccepted,
+		})
+		s.NoError(err)
+		s.NoError(updateHandle.Get(s.Context, nil))
+	}
+	s.NoError(run.Get(s.Context, nil))
+	return run
+}
+
+func (t *WorkflowResetTest) resetWorkflow(workflowID string) {
+	s := t.s
+	// Reset to the beginning
+	args := []string{
+		"workflow", "reset",
+		"--address", s.Address(),
+		"-w", workflowID,
+		"--event-id", "3",
+		"--reason", "test-workflow-reset",
+	}
+	if len(t.reapplyExclude) > 0 && t.reapplyType != "" {
+		panic("--reapply-type cannot be used with --reapply-exclude")
+	}
+	if t.reapplyType != "" {
+		args = append(args, "--reapply-type", t.reapplyType)
+	}
+	if len(t.reapplyExclude) > 0 {
+		for _, exclude := range t.reapplyExclude {
+			args = append(args, "--reapply-exclude", exclude)
+		}
+	}
+	res := s.Execute(args...)
+	require.NoError(s.T(), res.Err)
+}
+
+func (s *SharedServerSuite) TestWorkflow_Reset_DoesNotAllowBothReapplyOptions() {
 	res := s.Execute(
 		"workflow", "reset",
 		"--address", s.Address(),
@@ -376,7 +416,7 @@ func (s *SharedServerSuite) TestWorkflow_Reset_DoesNotAllowBothApplyKinds() {
 		"--reapply-type", "Signal",
 	)
 	require.Error(s.T(), res.Err)
-	s.Contains(res.Err.Error(), "cannot specify --reapply-type and --reapply-exclude")
+	s.Contains(res.Err.Error(), "--reapply-type cannot be used with --reapply-exclude")
 }
 
 const (
