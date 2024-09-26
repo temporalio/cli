@@ -248,7 +248,7 @@ func (s *SharedServerSuite) TestBatchResetByBuildId() {
 	sut.stopWorkerFor("v3")
 }
 
-func (s *SharedServerSuite) TestWorkflow_Reset_ReapplyExclude() {
+func (s *SharedServerSuite) TestWorkflow_Reset_ReapplyExcludeSignal() {
 	var wfExecutions, timesSignalSeen int
 	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
 		sigChan := workflow.GetSignalChannel(ctx, "sig")
@@ -299,6 +299,70 @@ func (s *SharedServerSuite) TestWorkflow_Reset_ReapplyExclude() {
 	require.NoError(s.T(), res.Err)
 	s.awaitNextWorkflow(searchAttr)
 	s.Equal(2, timesSignalSeen, "Should only see original signals and not after reset")
+}
+
+func (s *SharedServerSuite) TestWorkflow_Reset_ReapplyUpdate() {
+	var wfExecutions, timesUpdateSeen int
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
+		workflow.SetUpdateHandler(ctx, "myUpdate", func(ctx workflow.Context) error {
+			timesUpdateSeen++
+			return nil
+		})
+		err := workflow.Sleep(ctx, 1*time.Second)
+		if err != nil {
+			return nil, err
+		}
+		wfExecutions++
+		return nil, nil
+	})
+
+	// Start the workflow
+	searchAttr := "keyword-" + uuid.NewString()
+	run, err := s.Client.ExecuteWorkflow(
+		s.Context,
+		client.StartWorkflowOptions{
+			TaskQueue:        s.Worker().Options.TaskQueue,
+			SearchAttributes: map[string]any{"CustomKeywordField": searchAttr},
+		},
+		DevWorkflow,
+		"ignored",
+	)
+	s.NoError(err)
+
+	// Send to updates
+	updateHandle1, err := s.Client.UpdateWorkflow(s.Context, client.UpdateWorkflowOptions{
+		WorkflowID:   run.GetID(),
+		RunID:        run.GetRunID(),
+		UpdateName:   "myUpdate",
+		WaitForStage: client.WorkflowUpdateStageAccepted,
+	})
+	s.NoError(err)
+	updateHandle2, err := s.Client.UpdateWorkflow(s.Context, client.UpdateWorkflowOptions{
+		WorkflowID:   run.GetID(),
+		RunID:        run.GetRunID(),
+		UpdateName:   "myUpdate",
+		WaitForStage: client.WorkflowUpdateStageAccepted,
+	})
+	s.NoError(err)
+
+	s.NoError(updateHandle1.Get(s.Context, nil))
+	s.NoError(updateHandle2.Get(s.Context, nil))
+	s.Equal(2, timesUpdateSeen)
+	s.NoError(run.Get(s.Context, nil))
+	s.Equal(1, wfExecutions)
+
+	// Reset to the beginning
+	res := s.Execute(
+		"workflow", "reset",
+		"--address", s.Address(),
+		"-w", run.GetID(),
+		"--event-id", "3",
+		"--reason", "test-reset-FirstWorkflowTask",
+	)
+	require.NoError(s.T(), res.Err)
+	s.awaitNextWorkflow(searchAttr)
+	s.Equal(4, timesUpdateSeen, "Should only see original updates and not after reset")
+	s.Equal(2, wfExecutions)
 }
 
 func (s *SharedServerSuite) TestWorkflow_Reset_DoesNotAllowBothApplyKinds() {
