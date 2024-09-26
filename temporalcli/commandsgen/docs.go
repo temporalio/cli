@@ -3,6 +3,7 @@ package commandsgen
 import (
 	"bytes"
 	"fmt"
+	"sort"
 	"strings"
 )
 
@@ -20,15 +21,12 @@ type DocsFile struct {
 }
 
 func GenerateDocsFiles(commands Commands) (map[string][]byte, error) {
-	// Fix CRLF
-	// md := bytes.ReplaceAll(DocsYAML, []byte("\r\n"), []byte("\n"))
-	// var m Docs
-	// err := yaml.Unmarshal(md, &m)
-	// if err != nil {
-	// 	return Commands{}, fmt.Errorf("failed unmarshalling yaml: %w", err)
-	// }
+	optionSetMap := make(map[string]OptionSets)
+	for i, optionSet := range commands.OptionSets {
+		optionSetMap[optionSet.Name] = commands.OptionSets[i]
+	}
 
-	w := &docWriter{fileMap: make(map[string]*bytes.Buffer)}
+	w := &docWriter{fileMap: make(map[string]*bytes.Buffer), optionSetMap: optionSetMap}
 
 	// sort by parent command (activity, batch, etc)
 	for _, cmd := range commands.CommandList {
@@ -44,18 +42,15 @@ func GenerateDocsFiles(commands Commands) (map[string][]byte, error) {
 	// Format and return
 	var finalMap = make(map[string][]byte)
 	for key, buf := range w.fileMap {
-		// b, err := format.Source(buf.Bytes())
-		// if err != nil {
-		// 	return nil, fmt.Errorf("failed formatting docs: %w, docs:\n-----\n%s\n-----", err, buf.Bytes())
-		// }
-
 		finalMap[key] = buf.Bytes()
 	}
 	return finalMap, nil
 }
 
 type docWriter struct {
-	fileMap map[string]*bytes.Buffer
+	fileMap      map[string]*bytes.Buffer
+	optionSetMap map[string]OptionSets
+	optionsStack [][]Option
 }
 
 // func (c *docWriter) writeLinef(s string, args ...any) {
@@ -64,10 +59,13 @@ type docWriter struct {
 // }
 
 func (c *Command) writeDoc(w *docWriter) error {
+	commandLength := len(strings.Split(c.FullName, " "))
+	// process options
+	w.processOptions(c)
 	// If this is a root command, write a new file
-	if len(strings.Split(c.FullName, " ")) == 2 {
+	if commandLength == 2 {
 		w.writeCommand(c)
-	} else if len(strings.Split(c.FullName, " ")) > 2 {
+	} else if commandLength > 2 {
 		w.writeSubcommand(c)
 	}
 	return nil
@@ -92,6 +90,38 @@ func (w *docWriter) writeSubcommand(c *Command) error {
 	// TODO: write options from command, parent command, and global command
 	fileName := strings.Split(c.FullName, " ")[1]
 	subCommand := strings.Join(strings.Split(c.FullName, " ")[2:], "")
-	w.fileMap[fileName].WriteString("## " + subCommand + "\n")
+	w.fileMap[fileName].WriteString("## " + subCommand + "\n\n")
+	w.fileMap[fileName].WriteString(c.Description + "\n\n")
+	w.fileMap[fileName].WriteString("Use the following options to change the behavior of this command.\n\n")
+	var allOptions = make([]Option, 0)
+	for _, options := range w.optionsStack {
+		allOptions = append(allOptions, options...)
+	}
+
+	sort.Slice(allOptions, func(i, j int) bool {
+		return allOptions[i].Name < allOptions[j].Name
+	})
+
+	for _, option := range allOptions {
+		w.fileMap[fileName].WriteString(fmt.Sprintf("- [--%s](cli/cmd-options#%s)\n\n", option.Name, option.Name))
+	}
+	return nil
+}
+
+func (w *docWriter) processOptions(c *Command) error {
+	if len(w.optionsStack) >= len(strings.Split(c.FullName, " ")) {
+		w.optionsStack = w.optionsStack[:len(w.optionsStack)-1]
+	}
+	var options []Option
+	options = append(options, c.Options...)
+
+	// Add option sets
+	for _, set := range c.OptionSets {
+		// map into optionSet map
+		optionSetOptions := w.optionSetMap[set].Options
+		options = append(options, optionSetOptions...)
+	}
+
+	w.optionsStack = append(w.optionsStack, options)
 	return nil
 }

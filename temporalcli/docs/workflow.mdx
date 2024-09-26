@@ -1,0 +1,1607 @@
+---
+id: workflow
+title: temporal workflow
+sidebar_label: temporal workflow
+description: Workflow commands perform operations on Workflow Executions:
+
+```
+temporal workflow [command] [options]
+```
+
+For example:
+
+```
+temporal workflow list
+```
+toc_max_heading_level: 4
+keywords:
+tags:
+---
+
+## cancel
+
+Canceling a running Workflow Execution records a
+`WorkflowExecutionCancelRequested` event in the Event History. The Service
+schedules a new Command Task, and the Workflow Execution performs any cleanup
+work supported by its implementation.
+
+Use the Workflow ID to cancel an Execution:
+
+```
+temporal workflow cancel \
+    --workflow-id YourWorkflowId
+```
+
+A visibility Query lets you send bulk cancellations to Workflow Executions
+matching the results:
+
+```
+temporal workflow cancel \
+    --query YourQuery
+```
+
+Visit https://docs.temporal.io/visibility to read more about Search Attributes
+and Query creation. See `temporal batch --help` for a quick reference.
+
+Use the following options to change the behavior of this command.
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--query](cli/cmd-options#query)
+
+- [--reason](cli/cmd-options#reason)
+
+- [--rps](cli/cmd-options#rps)
+
+- [--run-id](cli/cmd-options#run-id)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+- [--workflow-id](cli/cmd-options#workflow-id)
+
+- [--yes](cli/cmd-options#yes)
+
+## count
+
+Show a count of Workflow Executions, regardless of execution state (running,
+terminated, etc). Use `--query` to select a subset of Workflow Executions:
+
+```
+temporal workflow count \
+    --query YourQuery
+```
+
+Visit https://docs.temporal.io/visibility to read more about Search Attributes
+and Query creation. See `temporal batch --help` for a quick reference.
+
+Use the following options to change the behavior of this command.
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--query](cli/cmd-options#query)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+## delete
+
+Delete a Workflow Executions and its Event History:
+
+```
+temporal workflow delete \
+    --workflow-id YourWorkflowId
+```
+
+The removal executes asynchronously. If the Execution is Running, the Service
+terminates it before deletion.
+
+Visit https://docs.temporal.io/visibility to read more about Search Attributes
+and Query creation. See `temporal batch --help` for a quick reference.
+
+Use the following options to change the behavior of this command.
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--query](cli/cmd-options#query)
+
+- [--reason](cli/cmd-options#reason)
+
+- [--rps](cli/cmd-options#rps)
+
+- [--run-id](cli/cmd-options#run-id)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+- [--workflow-id](cli/cmd-options#workflow-id)
+
+- [--yes](cli/cmd-options#yes)
+
+## describe
+
+Display information about a specific Workflow Execution:
+
+```
+temporal workflow describe \
+    --workflow-id YourWorkflowId
+```
+
+Show the Workflow Execution's auto-reset points:
+
+```
+temporal workflow describe \
+    --workflow-id YourWorkflowId \
+    --reset-points true
+```
+
+Use the following options to change the behavior of this command.
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--raw](cli/cmd-options#raw)
+
+- [--reset-points](cli/cmd-options#reset-points)
+
+- [--run-id](cli/cmd-options#run-id)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+- [--workflow-id](cli/cmd-options#workflow-id)
+
+## execute
+
+Establish a new Workflow Execution and direct its progress to stdout. The
+command blocks and returns when the Workflow Execution completes. If your
+Workflow requires input, pass valid JSON:
+
+```
+temporal workflow execute
+    --workflow-id YourWorkflowId \
+    --type YourWorkflow \
+    --task-queue YourTaskQueue \
+    --input '{"some-key": "some-value"}'
+```
+
+Use `--event-details` to relay updates to the command-line output in JSON
+format. When using JSON output (`--output json`), this includes the entire
+"history" JSON key for the run.
+
+Use the following options to change the behavior of this command.
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--cron](cli/cmd-options#cron)
+
+- [--detailed](cli/cmd-options#detailed)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--execution-timeout](cli/cmd-options#execution-timeout)
+
+- [--fail-existing](cli/cmd-options#fail-existing)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--id-reuse-policy](cli/cmd-options#id-reuse-policy)
+
+- [--input](cli/cmd-options#input)
+
+- [--input-base64](cli/cmd-options#input-base64)
+
+- [--input-file](cli/cmd-options#input-file)
+
+- [--input-meta](cli/cmd-options#input-meta)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--memo](cli/cmd-options#memo)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--run-timeout](cli/cmd-options#run-timeout)
+
+- [--search-attribute](cli/cmd-options#search-attribute)
+
+- [--start-delay](cli/cmd-options#start-delay)
+
+- [--task-queue](cli/cmd-options#task-queue)
+
+- [--task-timeout](cli/cmd-options#task-timeout)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+- [--type](cli/cmd-options#type)
+
+- [--workflow-id](cli/cmd-options#workflow-id)
+
+## fix-history-json
+
+Reserialize an Event History JSON file:
+
+```
+temporal workflow fix-history-json \
+    --source /path/to/original.json \
+    --target /path/to/reserialized.json
+```
+
+Use the following options to change the behavior of this command.
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--source](cli/cmd-options#source)
+
+- [--target](cli/cmd-options#target)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+## list
+
+List Workflow Executions. By default, this command returns up to 10 closed
+Workflow Executions. The optional `--query` limits the output to Workflows
+matching a Query:
+
+```
+temporal workflow list \
+    --query YourQuery`
+```
+
+Visit https://docs.temporal.io/visibility to read more about Search Attributes
+and Query creation. See `temporal batch --help` for a quick reference.
+
+View a list of archived Workflow Executions:
+
+```
+temporal workflow list \
+    --archived
+```
+
+Use the following options to change the behavior of this command.
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--archived](cli/cmd-options#archived)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--limit](cli/cmd-options#limit)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--query](cli/cmd-options#query)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+## query
+
+Send a Query to a Workflow Execution by Workflow ID to retrieve its state.
+This synchronous operation exposes the internal state of a running Workflow
+Execution, which constantly changes. You can query both running and completed
+Workflow Executions:
+
+```
+temporal workflow query \
+    --workflow-id YourWorkflowId
+    --type YourQueryType
+    --input '{"YourInputKey": "YourInputValue"}'
+```
+
+Use the following options to change the behavior of this command.
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--input](cli/cmd-options#input)
+
+- [--input-base64](cli/cmd-options#input-base64)
+
+- [--input-file](cli/cmd-options#input-file)
+
+- [--input-meta](cli/cmd-options#input-meta)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--name](cli/cmd-options#name)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--reject-condition](cli/cmd-options#reject-condition)
+
+- [--run-id](cli/cmd-options#run-id)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+- [--workflow-id](cli/cmd-options#workflow-id)
+
+## reset
+
+Reset a Workflow Execution so it can resume from a point in its Event History
+without losing its progress up to that point:
+
+```
+temporal workflow reset \
+    --workflow-id YourWorkflowId \
+    --event-id YourLastEvent
+```
+
+Start from where the Workflow Execution last continued as new:
+
+```
+temporal workflow reset \
+    --workflow-id YourWorkflowId \
+    --type LastContinuedAsNew
+```
+
+For batch resets, limit your resets to FirstWorkflowTask, LastWorkflowTask, or
+BuildId. Do not use Workflow IDs, run IDs, or event IDs with this command.
+
+Visit https://docs.temporal.io/visibility to read more about Search
+Attributes and Query creation.
+
+Use the following options to change the behavior of this command.
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--build-id](cli/cmd-options#build-id)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--event-id](cli/cmd-options#event-id)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--query](cli/cmd-options#query)
+
+- [--reapply-exclude](cli/cmd-options#reapply-exclude)
+
+- [--reapply-type](cli/cmd-options#reapply-type)
+
+- [--reason](cli/cmd-options#reason)
+
+- [--run-id](cli/cmd-options#run-id)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+- [--type](cli/cmd-options#type)
+
+- [--workflow-id](cli/cmd-options#workflow-id)
+
+- [--yes](cli/cmd-options#yes)
+
+## result
+
+Wait for and print the result of a Workflow Execution:
+
+```
+temporal workflow result \
+    --workflow-id YourWorkflowId
+```
+
+Use the following options to change the behavior of this command.
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--run-id](cli/cmd-options#run-id)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+- [--workflow-id](cli/cmd-options#workflow-id)
+
+## show
+
+Show a Workflow Execution's Event History.
+When using JSON output (`--output json`), you may pass the results to an SDK
+to perform a replay:
+
+```
+temporal workflow show \
+    --workflow-id YourWorkflowId
+    --output json
+```
+
+Use the following options to change the behavior of this command.
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--detailed](cli/cmd-options#detailed)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--follow](cli/cmd-options#follow)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--run-id](cli/cmd-options#run-id)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+- [--workflow-id](cli/cmd-options#workflow-id)
+
+## signal
+
+Send an asynchronous notification (Signal) to a running Workflow Execution by
+its Workflow ID. The Signal is written to the History. When you include
+`--input`, that data is available for the Workflow Execution to consume:
+
+```
+temporal workflow signal \
+    --workflow-id YourWorkflowId \
+    --name YourSignal \
+    --input '{"YourInputKey": "YourInputValue"}'
+```
+
+Visit https://docs.temporal.io/visibility to read more about Search Attributes
+and Query creation. See `temporal batch --help` for a quick reference.
+
+Use the following options to change the behavior of this command.
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--input](cli/cmd-options#input)
+
+- [--input-base64](cli/cmd-options#input-base64)
+
+- [--input-file](cli/cmd-options#input-file)
+
+- [--input-meta](cli/cmd-options#input-meta)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--name](cli/cmd-options#name)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--query](cli/cmd-options#query)
+
+- [--reason](cli/cmd-options#reason)
+
+- [--rps](cli/cmd-options#rps)
+
+- [--run-id](cli/cmd-options#run-id)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+- [--workflow-id](cli/cmd-options#workflow-id)
+
+- [--yes](cli/cmd-options#yes)
+
+## stack
+
+Perform a Query on a Workflow Execution using a `__stack_trace`-type Query.
+Display a stack trace of the threads and routines currently in use by the
+Workflow for troubleshooting:
+
+```
+temporal workflow stack \
+    --workflow-id YourWorkflowId
+```
+
+Use the following options to change the behavior of this command.
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--reject-condition](cli/cmd-options#reject-condition)
+
+- [--run-id](cli/cmd-options#run-id)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+- [--workflow-id](cli/cmd-options#workflow-id)
+
+## start
+
+Start a new Workflow Execution. Returns the Workflow- and Run-IDs:
+
+```
+temporal workflow start \
+    --workflow-id YourWorkflowId \
+    --type YourWorkflow \
+    --task-queue YourTaskQueue \
+    --input '{"some-key": "some-value"}'
+```
+
+Use the following options to change the behavior of this command.
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--cron](cli/cmd-options#cron)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--execution-timeout](cli/cmd-options#execution-timeout)
+
+- [--fail-existing](cli/cmd-options#fail-existing)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--id-reuse-policy](cli/cmd-options#id-reuse-policy)
+
+- [--input](cli/cmd-options#input)
+
+- [--input-base64](cli/cmd-options#input-base64)
+
+- [--input-file](cli/cmd-options#input-file)
+
+- [--input-meta](cli/cmd-options#input-meta)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--memo](cli/cmd-options#memo)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--run-timeout](cli/cmd-options#run-timeout)
+
+- [--search-attribute](cli/cmd-options#search-attribute)
+
+- [--start-delay](cli/cmd-options#start-delay)
+
+- [--task-queue](cli/cmd-options#task-queue)
+
+- [--task-timeout](cli/cmd-options#task-timeout)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+- [--type](cli/cmd-options#type)
+
+- [--workflow-id](cli/cmd-options#workflow-id)
+
+## terminate
+
+Terminate a Workflow Execution:
+
+```
+temporal workflow terminate \
+    --reason YourReasonForTermination \
+    --workflow-id YourWorkflowId
+```
+
+The reason is optional and defaults to the current user's name. The reason
+is stored in the Event History as part of the `WorkflowExecutionTerminated`
+event. This becomes the closing Event in the Workflow Execution's history.
+
+Executions may be terminated in bulk via a visibility Query list filter:
+
+```
+temporal workflow terminate \
+    --query YourQuery \
+    --reason YourReasonForTermination
+```
+
+Workflow code cannot see or respond to terminations. To perform clean-up work
+in your Workflow code, use `temporal workflow cancel` instead.
+
+Visit https://docs.temporal.io/visibility to read more about Search Attributes
+and Query creation. See `temporal batch --help` for a quick reference.
+
+Use the following options to change the behavior of this command.
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--query](cli/cmd-options#query)
+
+- [--reason](cli/cmd-options#reason)
+
+- [--rps](cli/cmd-options#rps)
+
+- [--run-id](cli/cmd-options#run-id)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+- [--workflow-id](cli/cmd-options#workflow-id)
+
+- [--yes](cli/cmd-options#yes)
+
+## trace
+
+Display the progress of a Workflow Execution and its child workflows with a
+real-time trace. This view helps you understand how Workflows are proceeding:
+
+```
+temporal workflow trace \
+    --workflow-id YourWorkflowId
+```
+
+Use the following options to change the behavior of this command.
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--concurrency](cli/cmd-options#concurrency)
+
+- [--depth](cli/cmd-options#depth)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--fold](cli/cmd-options#fold)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-fold](cli/cmd-options#no-fold)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--run-id](cli/cmd-options#run-id)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+- [--workflow-id](cli/cmd-options#workflow-id)
+
+## update
+
+An Update is a synchronous call to a Workflow Execution that can change its
+state, control its flow, and return a result.
+
+Experimental.
+
+Use the following options to change the behavior of this command.
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+## updatedescribe
+
+Given a Workflow Execution and an Update ID, return information about its current status, including
+a result if it has finished.
+
+Experimental.
+
+```
+temporal workflow update describe \
+    --workflow-id YourWorkflowId \
+    --update-id YourUpdateId
+```
+
+Use the following options to change the behavior of this command.
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--run-id](cli/cmd-options#run-id)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+- [--update-id](cli/cmd-options#update-id)
+
+- [--workflow-id](cli/cmd-options#workflow-id)
+
+## updateexecute
+
+Send a message to a Workflow Execution to invoke an Update handler, and wait for
+the update to complete or fail. You can also use this to wait for an existing
+update to complete, by submitting an existing update ID.
+
+Experimental.
+
+```
+temporal workflow update execute \
+    --workflow-id YourWorkflowId \
+    --name YourUpdate \
+    --input '{"some-key": "some-value"}'
+```
+
+Use the following options to change the behavior of this command.
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--first-execution-run-id](cli/cmd-options#first-execution-run-id)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--input](cli/cmd-options#input)
+
+- [--input-base64](cli/cmd-options#input-base64)
+
+- [--input-file](cli/cmd-options#input-file)
+
+- [--input-meta](cli/cmd-options#input-meta)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--name](cli/cmd-options#name)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--run-id](cli/cmd-options#run-id)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+- [--update-id](cli/cmd-options#update-id)
+
+- [--workflow-id](cli/cmd-options#workflow-id)
+
+## updateresult
+
+Given a Workflow Execution and an Update ID, wait for the Update to complete or fail and
+print the result.
+
+Experimental.
+
+```
+temporal workflow update result \
+    --workflow-id YourWorkflowId \
+    --update-id YourUpdateId
+```
+
+Use the following options to change the behavior of this command.
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--run-id](cli/cmd-options#run-id)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+- [--update-id](cli/cmd-options#update-id)
+
+- [--workflow-id](cli/cmd-options#workflow-id)
+
+## updatestart
+
+Send a message to a Workflow Execution to invoke an Update handler, and wait for
+the update to be accepted or rejected. You can subsequently wait for the update
+to complete by using `temporal workflow update execute`.
+
+Experimental.
+
+```
+temporal workflow update start \
+    --workflow-id YourWorkflowId \
+    --name YourUpdate \
+    --input '{"some-key": "some-value"}'
+```
+
+Use the following options to change the behavior of this command.
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--first-execution-run-id](cli/cmd-options#first-execution-run-id)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--input](cli/cmd-options#input)
+
+- [--input-base64](cli/cmd-options#input-base64)
+
+- [--input-file](cli/cmd-options#input-file)
+
+- [--input-meta](cli/cmd-options#input-meta)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--name](cli/cmd-options#name)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--run-id](cli/cmd-options#run-id)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+- [--update-id](cli/cmd-options#update-id)
+
+- [--wait-for-stage](cli/cmd-options#wait-for-stage)
+
+- [--workflow-id](cli/cmd-options#workflow-id)
+

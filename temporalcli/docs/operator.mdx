@@ -1,0 +1,1611 @@
+---
+id: operator
+title: temporal operator
+sidebar_label: temporal operator
+description: Operator commands manage and fetch information about Namespaces, Search
+Attributes, Nexus Endpoints, and Temporal Services:
+
+```
+temporal operator [command] [subcommand] [options]
+```
+
+For example, to show information about the Temporal Service at the default
+address (localhost):
+
+```
+temporal operator cluster describe
+```
+toc_max_heading_level: 4
+keywords:
+tags:
+---
+
+## cluster
+
+Perform operator actions on Temporal Services (also known as Clusters).
+
+```
+temporal operator cluster [subcommand] [options]
+```
+
+For example to check Service/Cluster health:
+
+```
+temporal operator cluster health
+```
+
+Use the following options to change the behavior of this command.
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+## clusterdescribe
+
+View information about a Temporal Cluster (Service), including Cluster Name,
+persistence store, and visibility store. Add `--detail` for additional info:
+
+```
+temporal operator cluster describe [--detail]
+```
+
+Use the following options to change the behavior of this command.
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--detail](cli/cmd-options#detail)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+## clusterhealth
+
+View information about the health of a Temporal Service:
+
+```
+temporal operator cluster health
+```
+
+Use the following options to change the behavior of this command.
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+## clusterlist
+
+Print a list of remote Temporal Clusters (Services) registered to the local
+Service. Report details include the Cluster's name, ID, address, History Shard
+count, Failover version, and availability:
+
+```
+temporal operator cluster list [--limit max-count]
+```
+
+Use the following options to change the behavior of this command.
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--limit](cli/cmd-options#limit)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+## clusterremove
+
+Remove a registered remote Temporal Cluster (Service) from the local Service.
+
+```
+temporal operator cluster remove \
+    --name YourClusterName
+```
+
+Use the following options to change the behavior of this command.
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--name](cli/cmd-options#name)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+## clustersystem
+
+Show Temporal Server information for Temporal Clusters (Service): Server
+version, scheduling support, and more. This information helps diagnose
+problems with the Temporal Server.
+
+The command defaults to the local Service. Otherwise, use the
+`--frontend-address` option to specify a Cluster (Service) endpoint:
+
+```
+temporal operator cluster system \
+    --frontend-address "YourRemoteEndpoint:YourRemotePort"
+```
+
+Use the following options to change the behavior of this command.
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+## clusterupsert
+
+Add, remove, or update a registered ("remote") Temporal Cluster (Service).
+
+```
+temporal operator cluster upsert [options]
+```
+
+For example:
+
+```
+temporal operator cluster upsert \
+    --frontend-address "YourRemoteEndpoint:YourRemotePort"
+    --enable-connection false
+```
+
+Use the following options to change the behavior of this command.
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--enable-connection](cli/cmd-options#enable-connection)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--frontend-address](cli/cmd-options#frontend-address)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+## namespace
+
+Manage Temporal Cluster (Service) Namespaces:
+
+```
+temporal operator namespace [command] [command options]
+```
+
+For example:
+
+```
+temporal operator namespace create \
+    --namespace YourNewNamespaceName
+```
+
+Use the following options to change the behavior of this command.
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+## namespacecreate
+
+Create a new Namespace on the Temporal Service:
+
+```
+temporal operator namespace create \
+    --namespace YourNewNamespaceName \
+    [options]
+````
+
+Create a Namespace with multi-region data replication:
+
+```
+temporal operator namespace create \
+    --global \
+    --namespace YourNewNamespaceName
+```
+
+Configure settings like retention and Visibility Archival State as needed.
+For example, the Visibility Archive can be set on a separate URI:
+
+```
+temporal operator namespace create \
+    --retention 5d \
+    --visibility-archival-state enabled \
+    --visibility-uri YourURI \
+    --namespace YourNewNamespaceName
+```
+
+Note: URI values for archival states can't be changed once enabled.
+
+Use the following options to change the behavior of this command.
+
+- [--active-cluster](cli/cmd-options#active-cluster)
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--cluster](cli/cmd-options#cluster)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--data](cli/cmd-options#data)
+
+- [--description](cli/cmd-options#description)
+
+- [--email](cli/cmd-options#email)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--global](cli/cmd-options#global)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--history-archival-state](cli/cmd-options#history-archival-state)
+
+- [--history-uri](cli/cmd-options#history-uri)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--retention](cli/cmd-options#retention)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+- [--visibility-archival-state](cli/cmd-options#visibility-archival-state)
+
+- [--visibility-uri](cli/cmd-options#visibility-uri)
+
+## namespacedelete
+
+Removes a Namespace from the Service.
+
+```
+temporal operator namespace delete [options]
+```
+
+For example:
+
+```
+temporal operator namespace delete \
+    --namespace YourNamespaceName
+```
+
+Use the following options to change the behavior of this command.
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+- [--yes](cli/cmd-options#yes)
+
+## namespacedescribe
+
+Provide long-form information about a Namespace identified by its ID or name:
+
+```
+temporal operator namespace describe \
+    --namespace-id YourNamespaceId
+```
+
+or
+
+```
+temporal operator namespace describe \
+    --namespace YourNamespaceName
+```
+
+Use the following options to change the behavior of this command.
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--namespace-id](cli/cmd-options#namespace-id)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+## namespacelist
+
+Display a detailed listing for all Namespaces on the Service:
+
+```
+temporal operator namespace list
+```
+
+Use the following options to change the behavior of this command.
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+## namespaceupdate
+
+Update a Namespace using properties you specify.
+
+```
+temporal operator namespace update [options]
+```
+
+Assign a Namespace's active Cluster (Service):
+
+```
+temporal operator namespace update \
+    --namespace YourNamespaceName \
+    --active-cluster NewActiveCluster
+```
+
+Promote a Namespace for multi-region data replication:
+
+```
+temporal operator namespace update \
+    --namespace YourNamespaceName \
+    --promote-global
+```
+
+You may update archives that were previously enabled or disabled. Note: URI
+values for archival states can't be changed once enabled.
+
+```
+temporal operator namespace update \
+    --namespace YourNamespaceName \
+    --history-archival-state enabled \
+    --visibility-archival-state disabled
+```
+
+Use the following options to change the behavior of this command.
+
+- [--active-cluster](cli/cmd-options#active-cluster)
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--cluster](cli/cmd-options#cluster)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--data](cli/cmd-options#data)
+
+- [--description](cli/cmd-options#description)
+
+- [--email](cli/cmd-options#email)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--history-archival-state](cli/cmd-options#history-archival-state)
+
+- [--history-uri](cli/cmd-options#history-uri)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--promote-global](cli/cmd-options#promote-global)
+
+- [--retention](cli/cmd-options#retention)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+- [--visibility-archival-state](cli/cmd-options#visibility-archival-state)
+
+- [--visibility-uri](cli/cmd-options#visibility-uri)
+
+## nexus
+
+Nexus commands enable managing Nexus resources.
+
+Nexus commands follow this syntax:
+
+```
+temporal operator nexus [command] [command] [command options]
+```
+
+Use the following options to change the behavior of this command.
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+## nexusendpoint
+
+Endpoint commands enable managing Nexus Endpoints.
+
+Endpoint commands follow this syntax:
+
+```
+temporal operator nexus endpoint [command] [command options]
+```
+
+Use the following options to change the behavior of this command.
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+## nexusendpointcreate
+
+Create a new Nexus Endpoint on the Server.
+
+An endpoint name is used in workflow code to invoke Nexus operations.  The
+endpoint target may either be a worker, in which case `--target-namespace` and
+`--target-task-queue` must both be provided, or an external URL, in which case
+`--target-url` must be provided.
+
+This command will fail if an endpoint with the same name is already registered.
+
+```
+temporal operator nexus endpoint create \
+  --name your-endpoint \
+  --target-namespace your-namespace \
+  --target-task-queue your-task-queue \
+  --description-file DESCRIPTION.md
+```
+
+Use the following options to change the behavior of this command.
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--description](cli/cmd-options#description)
+
+- [--description-file](cli/cmd-options#description-file)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--name](cli/cmd-options#name)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--target-namespace](cli/cmd-options#target-namespace)
+
+- [--target-task-queue](cli/cmd-options#target-task-queue)
+
+- [--target-url](cli/cmd-options#target-url)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+## nexusendpointdelete
+
+Delete a Nexus Endpoint configuration from the Server.
+
+```
+temporal operator nexus endpoint delete --name your-endpoint
+```
+
+Use the following options to change the behavior of this command.
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--name](cli/cmd-options#name)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+## nexusendpointget
+
+Get a Nexus Endpoint configuration by name from the Server.
+
+```
+temporal operator nexus endpoint get --name your-endpoint
+```
+
+Use the following options to change the behavior of this command.
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--name](cli/cmd-options#name)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+## nexusendpointlist
+
+List all Nexus Endpoint configurations on the Server.
+
+```
+temporal operator nexus endpoint list
+```
+
+Use the following options to change the behavior of this command.
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+## nexusendpointupdate
+
+Update an existing Nexus Endpoint on the Server.
+
+An endpoint name is used in workflow code to invoke Nexus operations.  The
+endpoint target may either be a worker, in which case `--target-namespace` and
+`--target-task-queue` must both be provided, or an external URL, in which case
+`--target-url` must be provided.
+
+The endpoint is patched; existing fields for which flags are not provided are
+left as they were.
+
+Update only the target task queue:
+
+```
+temporal operator nexus endpoint update \
+  --name your-endpoint \
+  --target-task-queue your-other-queue
+```
+
+Update only the description:
+
+```
+temporal operator nexus endpoint update \
+  --name your-endpoint \
+  --description-file DESCRIPTION.md
+```
+
+Use the following options to change the behavior of this command.
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--description](cli/cmd-options#description)
+
+- [--description-file](cli/cmd-options#description-file)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--name](cli/cmd-options#name)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--target-namespace](cli/cmd-options#target-namespace)
+
+- [--target-task-queue](cli/cmd-options#target-task-queue)
+
+- [--target-url](cli/cmd-options#target-url)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+- [--unset-description](cli/cmd-options#unset-description)
+
+## search-attribute
+
+Create, list, or remove Search Attributes fields stored in a Workflow
+Execution's metadata:
+
+```
+temporal operator search-attribute create \
+    --name YourAttributeName \
+    --type Keyword
+```
+
+Supported types include: Text, Keyword, Int, Double, Bool, Datetime, and
+KeywordList.
+
+Use the following options to change the behavior of this command.
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+## search-attributecreate
+
+Add one or more custom Search Attributes:
+
+```
+temporal operator search-attribute create \
+    --name YourAttributeName \
+    --type Keyword
+```
+
+Use the following options to change the behavior of this command.
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--name](cli/cmd-options#name)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+- [--type](cli/cmd-options#type)
+
+## search-attributelist
+
+Display a list of active Search Attributes that can be assigned or used with
+Workflow Queries. You can manage this list and add attributes as needed:
+
+```
+temporal operator search-attribute list
+```
+
+Use the following options to change the behavior of this command.
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+## search-attributeremove
+
+Remove custom Search Attributes from the options that can be assigned or used
+with Workflow Queries.
+
+```
+temporal operator search-attribute remove \
+    --name YourAttributeName
+```
+
+Remove attributes without confirmation:
+
+```
+temporal operator search-attribute remove \
+    --name YourAttributeName \
+    --yes
+```
+
+Use the following options to change the behavior of this command.
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--name](cli/cmd-options#name)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+- [--yes](cli/cmd-options#yes)
+

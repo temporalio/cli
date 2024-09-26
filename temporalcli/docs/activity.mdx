@@ -1,0 +1,151 @@
+---
+id: activity
+title: temporal activity
+sidebar_label: temporal activity
+description: Update an Activity's state to completed or failed. This marks an Activity
+as successfully finished or as having encountered an error:
+
+```
+temporal activity complete \
+    --activity-id=YourActivityId \
+    --workflow-id=YourWorkflowId \
+    --result='{"YourResultKey": "YourResultValue"}'
+```
+toc_max_heading_level: 4
+keywords:
+tags:
+---
+
+## complete
+
+Complete an Activity, marking it as successfully finished. Specify the
+Activity ID and include a JSON result for the returned value:
+
+```
+temporal activity complete \
+    --activity-id YourActivityId \
+    --workflow-id YourWorkflowId \
+    --result '{"YourResultKey": "YourResultVal"}'
+```
+
+Use the following options to change the behavior of this command.
+
+- [--activity-id](cli/cmd-options#activity-id)
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--identity](cli/cmd-options#identity)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--result](cli/cmd-options#result)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+## fail
+
+Fail an Activity, marking it as having encountered an error. Specify the
+Activity and Workflow IDs:
+
+```
+temporal activity fail \
+    --activity-id YourActivityId \
+    --workflow-id YourWorkflowId
+```
+
+Use the following options to change the behavior of this command.
+
+- [--activity-id](cli/cmd-options#activity-id)
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--detail](cli/cmd-options#detail)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--identity](cli/cmd-options#identity)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--reason](cli/cmd-options#reason)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+

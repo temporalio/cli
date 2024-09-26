@@ -1,0 +1,150 @@
+---
+id: server
+title: temporal server
+sidebar_label: temporal server
+description: Run a development Temporal Server on your local system. View the Web UI for
+the default configuration at http://localhost:8233:
+
+```
+temporal server start-dev
+```
+
+Add persistence for Workflow Executions across runs:
+
+```
+temporal server start-dev \
+    --db-filename path-to-your-local-persistent-store
+```
+
+Set the port from the front-end gRPC Service (7233 default):
+
+```
+temporal server start-dev \
+    --port 7234 \
+    --ui-port 8234 \
+    --metrics-port 57271
+```
+
+Use a custom port for the Web UI. The default is the gRPC port (7233 default)
+plus 1000 (8233):
+
+```
+temporal server start-dev \
+    --ui-port 3000
+```
+toc_max_heading_level: 4
+keywords:
+tags:
+---
+
+## start-dev
+
+Run a development Temporal Server on your local system. View the Web UI for
+the default configuration at http://localhost:8233:
+
+```
+temporal server start-dev
+```
+
+Add persistence for Workflow Executions across runs:
+
+```
+temporal server start-dev \
+    --db-filename path-to-your-local-persistent-store
+```
+
+Set the port from the front-end gRPC Service (7233 default):
+
+```
+temporal server start-dev \
+    --port 7000
+```
+
+Use a custom port for the Web UI. The default is the gRPC port (7233 default)
+plus 1000 (8233):
+
+```
+temporal server start-dev \
+    --ui-port 3000
+```
+
+Use the following options to change the behavior of this command.
+
+- [--address](cli/cmd-options#address)
+
+- [--api-key](cli/cmd-options#api-key)
+
+- [--codec-auth](cli/cmd-options#codec-auth)
+
+- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+
+- [--color](cli/cmd-options#color)
+
+- [--db-filename](cli/cmd-options#db-filename)
+
+- [--dynamic-config-value](cli/cmd-options#dynamic-config-value)
+
+- [--env](cli/cmd-options#env)
+
+- [--env-file](cli/cmd-options#env-file)
+
+- [--grpc-meta](cli/cmd-options#grpc-meta)
+
+- [--headless](cli/cmd-options#headless)
+
+- [--http-port](cli/cmd-options#http-port)
+
+- [--ip](cli/cmd-options#ip)
+
+- [--log-config](cli/cmd-options#log-config)
+
+- [--log-format](cli/cmd-options#log-format)
+
+- [--log-level](cli/cmd-options#log-level)
+
+- [--metrics-port](cli/cmd-options#metrics-port)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--namespace](cli/cmd-options#namespace)
+
+- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+
+- [--output](cli/cmd-options#output)
+
+- [--port](cli/cmd-options#port)
+
+- [--search-attribute](cli/cmd-options#search-attribute)
+
+- [--sqlite-pragma](cli/cmd-options#sqlite-pragma)
+
+- [--time-format](cli/cmd-options#time-format)
+
+- [--tls](cli/cmd-options#tls)
+
+- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+
+- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+
+- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+
+- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+
+- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+
+- [--tls-key-data](cli/cmd-options#tls-key-data)
+
+- [--tls-key-path](cli/cmd-options#tls-key-path)
+
+- [--tls-server-name](cli/cmd-options#tls-server-name)
+
+- [--ui-asset-path](cli/cmd-options#ui-asset-path)
+
+- [--ui-codec-endpoint](cli/cmd-options#ui-codec-endpoint)
+
+- [--ui-ip](cli/cmd-options#ui-ip)
+
+- [--ui-port](cli/cmd-options#ui-port)
+
+- [--ui-public-path](cli/cmd-options#ui-public-path)
+

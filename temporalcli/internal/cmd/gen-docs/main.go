@@ -36,19 +36,9 @@ func run() error {
 		return err
 	}
 
-	// Make directory
-	os.Mkdir(commandsDir, 0755)
-
 	// Write
 	for filename, content := range b {
-		fmt.Println("filename: ", filename)
-		// fmt.Println("content: ", string(content))
-		// create file
 		filePath := filepath.Join(commandsDir, filename+".mdx")
-		// if file, err := os.Create(filePath); err != nil {
-		// 	return fmt.Error("failed creating file: %w", err)
-		// }
-
 		if err := os.WriteFile(filePath, content, 0644); err != nil {
 			return fmt.Errorf("failed writing file: %w", err)
 		}
