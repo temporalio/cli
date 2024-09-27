@@ -1013,6 +1013,9 @@ commands:
       Supported types include: Text, Keyword, Int, Double, Bool, Datetime, and
       KeywordList.
 
+      If you wish to delete a Search Attribute, please contact support
+      at https://support.temporal.io.
+
   - name: temporal operator search-attribute create
     summary: Add custom Search Attributes
     description: |
