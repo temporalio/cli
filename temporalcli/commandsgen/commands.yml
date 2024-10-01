@@ -1512,8 +1512,10 @@ commands:
       NOTE: The `TasksAddRate` and `TasksDispatchRate` metrics may differ from the
       actual rate of add/dispatch, because tasks may be dispatched eagerly to an
       available worker, or may apply only to specific workers (they are "sticky").
-      Such tasks are not counted by these metrics.
-
+      Such tasks are not counted by these metrics. Despite the inaccuracy of 
+      these two metrics, the derived metric of `BacklogIncreaseRate` is accurate
+      for backlogs older than a few seconds.
+  
       Safely retire Workers assigned a Build ID by checking reachability across
       all task types. Use the flag `--report-reachability`:
 
