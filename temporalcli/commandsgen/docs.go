@@ -7,8 +7,6 @@ import (
 	"strings"
 )
 
-// index doesn't need to be generated
-
 type DocsFile struct {
 	FileName string
 }
@@ -38,7 +36,6 @@ func GenerateDocsFiles(commands Commands) (map[string][]byte, error) {
 		}
 	}
 
-	// write cmd-options
 	w.writeCmdOptions()
 
 	// Format and return
