@@ -36,7 +36,7 @@ func GenerateDocsFiles(commands Commands) (map[string][]byte, error) {
 		}
 	}
 
-	w.writeCmdOptions()
+	// w.writeCmdOptions()
 
 	// Format and return
 	var finalMap = make(map[string][]byte)
@@ -105,10 +105,9 @@ func (w *docWriter) writeSubcommand(c *Command) {
 
 	// add any options to the master option list for cmd-options.mdx
 	for _, option := range allOptions {
-		w.fileMap[fileName].WriteString(fmt.Sprintf("- [--%s](cli/cmd-options#%s)\n\n", option.Name, option.Name))
-		if !containsOption(w.allOptions, option) {
-			w.allOptions = append(w.allOptions, option)
-		}
+		w.fileMap[fileName].WriteString(fmt.Sprintf("## %s\n\n", option.Name))
+		w.fileMap[fileName].WriteString(option.Description + "\n\n")
+
 	}
 }
 
@@ -127,137 +126,4 @@ func (w *docWriter) processOptions(c *Command) {
 	}
 
 	w.optionsStack = append(w.optionsStack, options)
-}
-
-// TODO: Remove this page and throw inline with each command
-func (w *docWriter) writeCmdOptions() {
-	var items = []string{
-		"actions",
-		"active cluster",
-		"activity",
-		"activity execution",
-		"activity id",
-		"address",
-		"archival",
-		"backfill",
-		"batch job",
-		"build",
-		"build id",
-		"ca-certificate",
-		"calendar",
-		"certificate key",
-		"child workflows",
-		"cli reference",
-		"cluster",
-		"codec server",
-		"command-line-interface-cli",
-		"concurrency control",
-		"configuration",
-		"context",
-		"continue-as-new",
-		"cron",
-		"cross-cluster-connection",
-		"data converters",
-		"endpoint",
-		"environment",
-		"event",
-		"event id",
-		"event type",
-		"events",
-		"external temporal and state events",
-		"failures",
-		"frontend",
-		"frontend address",
-		"frontend service",
-		"goroutine",
-		"grpc",
-		"history",
-		"http",
-		"interval",
-		"ip address",
-		"job id",
-		"log-feature",
-		"logging",
-		"logging and metrics",
-		"memo",
-		"metrics",
-		"namespace",
-		"namespace description",
-		"namespace id",
-		"namespace management",
-		"nondeterministic",
-		"notes",
-		"operation",
-		"operator",
-		"options-feature",
-		"overlap policy",
-		"pager",
-		"port",
-		"pragma",
-		"queries-feature",
-		"query",
-		"requests",
-		"reset point",
-		"resets-feature",
-		"retention policy",
-		"retries",
-		"reuse policy",
-		"schedule",
-		"schedule backfill",
-		"schedule id",
-		"schedule pause",
-		"schedule unpause",
-		"schedules",
-		"search attribute",
-		"search attributes",
-		"server",
-		"server options and configurations",
-		"sqlite",
-		"start-to-close",
-		"task queue",
-		"task queue type",
-		"temporal cli",
-		"temporal ui",
-		"time",
-		"time zone",
-		"timeout",
-		"timeouts and heartbeats",
-		"tls",
-		"tls server",
-		"uri",
-		"verification",
-		"visibility",
-		"web ui",
-		"workflow",
-		"workflow execution",
-		"workflow id",
-		"workflow run",
-		"workflow state",
-		"workflow task",
-		"workflow task failure",
-		"workflow type",
-		"workflow visibility",
-		"x509-certificate",
-	}
-
-	w.fileMap["cmd-options"] = &bytes.Buffer{}
-	w.fileMap["cmd-options"].WriteString("---\n")
-	w.fileMap["cmd-options"].WriteString("id: cmd-options\n")
-	w.fileMap["cmd-options"].WriteString("title: Temporal CLI command options reference\n")
-	w.fileMap["cmd-options"].WriteString("sidebar_label: cmd options\n")
-	w.fileMap["cmd-options"].WriteString("description: Discover how to manage Temporal Workflows, from Activity Execution to Workflow Ids, using clusters, cron schedules, dynamic configurations, and logging. Perfect for developers.\n")
-	w.fileMap["cmd-options"].WriteString("toc_max_heading_level: 4\n")
-	w.fileMap["cmd-options"].WriteString("keywords:\n")
-	for _, item := range items {
-		w.fileMap["cmd-options"].WriteString(fmt.Sprintf("  - %s\n", item))
-	}
-	w.fileMap["cmd-options"].WriteString("tags:\n")
-	for _, item := range items {
-		w.fileMap["cmd-options"].WriteString(fmt.Sprintf("  - %s\n", strings.ReplaceAll(item, " ", "-")))
-	}
-	w.fileMap["cmd-options"].WriteString("---\n\n")
-	for _, option := range w.allOptions {
-		w.fileMap["cmd-options"].WriteString(fmt.Sprintf("## %s\n\n", option.Name))
-		w.fileMap["cmd-options"].WriteString(option.Description + "\n\n")
-	}
 }

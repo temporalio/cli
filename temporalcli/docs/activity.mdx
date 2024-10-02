@@ -38,59 +38,113 @@ temporal activity complete \
 
 Use the following options to change the behavior of this command.
 
-- [--activity-id](cli/cmd-options#activity-id)
+## activity-id
 
-- [--address](cli/cmd-options#address)
+Activity ID to complete.
 
-- [--api-key](cli/cmd-options#api-key)
+## address
 
-- [--codec-auth](cli/cmd-options#codec-auth)
+Temporal Service gRPC endpoint.
 
-- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+## api-key
 
-- [--color](cli/cmd-options#color)
+API key for request.
 
-- [--command-timeout](cli/cmd-options#command-timeout)
+## codec-auth
 
-- [--env](cli/cmd-options#env)
+Authorization header for Codec Server requests.
 
-- [--env-file](cli/cmd-options#env-file)
+## codec-endpoint
 
-- [--grpc-meta](cli/cmd-options#grpc-meta)
+Remote Codec Server endpoint.
 
-- [--identity](cli/cmd-options#identity)
+## color
 
-- [--log-format](cli/cmd-options#log-format)
+Output coloring.
 
-- [--log-level](cli/cmd-options#log-level)
+## command-timeout
 
-- [--namespace](cli/cmd-options#namespace)
+Timeout for the span of a command.
 
-- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+## env
 
-- [--output](cli/cmd-options#output)
+Active environment name (`ENV`).
 
-- [--result](cli/cmd-options#result)
+## env-file
 
-- [--time-format](cli/cmd-options#time-format)
+Path to environment settings file. (defaults to `$HOME/.config/temporalio/temporal.yaml`).
 
-- [--tls](cli/cmd-options#tls)
+## grpc-meta
 
-- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+HTTP headers for requests. format as a `KEY=VALUE` pair May be passed multiple times to set multiple headers.
 
-- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+## identity
 
-- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+Identity of the user submitting this request.
 
-- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+## log-format
 
-- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+Log format. Options are: text, json.
 
-- [--tls-key-data](cli/cmd-options#tls-key-data)
+## log-level
 
-- [--tls-key-path](cli/cmd-options#tls-key-path)
+Log level. Default is "info" for most commands and "warn" for `server start-dev`.
 
-- [--tls-server-name](cli/cmd-options#tls-server-name)
+## namespace
+
+Temporal Service Namespace.
+
+## no-json-shorthand-payloads
+
+Raw payload output, even if they are JSON.
+
+## output
+
+Non-logging data output format.
+
+## result
+
+Result `JSON` to return.
+
+## time-format
+
+Time format.
+
+## tls
+
+Enable base TLS encryption. Does not have additional options like mTLS or client certs.
+
+## tls-ca-data
+
+Data for server CA certificate. Can't be used with --tls-ca-path.
+
+## tls-ca-path
+
+Path to server CA certificate. Can't be used with --tls-ca-data.
+
+## tls-cert-data
+
+Data for x509 certificate. Can't be used with --tls-cert-path.
+
+## tls-cert-path
+
+Path to x509 certificate. Can't be used with --tls-cert-data.
+
+## tls-disable-host-verification
+
+Disable TLS host-name verification.
+
+## tls-key-data
+
+Private certificate key data. Can't be used with --tls-key-path.
+
+## tls-key-path
+
+Path to x509 private key. Can't be used with --tls-key-data.
+
+## tls-server-name
+
+Override target TLS server name.
 
 ## fail
 
@@ -105,59 +159,115 @@ temporal activity fail \
 
 Use the following options to change the behavior of this command.
 
-- [--activity-id](cli/cmd-options#activity-id)
+## activity-id
 
-- [--address](cli/cmd-options#address)
+Activity ID to fail.
 
-- [--api-key](cli/cmd-options#api-key)
+## address
 
-- [--codec-auth](cli/cmd-options#codec-auth)
+Temporal Service gRPC endpoint.
 
-- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+## api-key
 
-- [--color](cli/cmd-options#color)
+API key for request.
 
-- [--command-timeout](cli/cmd-options#command-timeout)
+## codec-auth
 
-- [--detail](cli/cmd-options#detail)
+Authorization header for Codec Server requests.
 
-- [--env](cli/cmd-options#env)
+## codec-endpoint
 
-- [--env-file](cli/cmd-options#env-file)
+Remote Codec Server endpoint.
 
-- [--grpc-meta](cli/cmd-options#grpc-meta)
+## color
 
-- [--identity](cli/cmd-options#identity)
+Output coloring.
 
-- [--log-format](cli/cmd-options#log-format)
+## command-timeout
 
-- [--log-level](cli/cmd-options#log-level)
+Timeout for the span of a command.
 
-- [--namespace](cli/cmd-options#namespace)
+## detail
 
-- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+Reason for failing the Activity (JSON).
 
-- [--output](cli/cmd-options#output)
+## env
 
-- [--reason](cli/cmd-options#reason)
+Active environment name (`ENV`).
 
-- [--time-format](cli/cmd-options#time-format)
+## env-file
 
-- [--tls](cli/cmd-options#tls)
+Path to environment settings file. (defaults to `$HOME/.config/temporalio/temporal.yaml`).
 
-- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+## grpc-meta
 
-- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+HTTP headers for requests. format as a `KEY=VALUE` pair May be passed multiple times to set multiple headers.
 
-- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+## identity
 
-- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+Identity of the user submitting this request.
 
-- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+## log-format
 
-- [--tls-key-data](cli/cmd-options#tls-key-data)
+Log format. Options are: text, json.
 
-- [--tls-key-path](cli/cmd-options#tls-key-path)
+## log-level
 
-- [--tls-server-name](cli/cmd-options#tls-server-name)
+Log level. Default is "info" for most commands and "warn" for `server start-dev`.
+
+## namespace
+
+Temporal Service Namespace.
+
+## no-json-shorthand-payloads
+
+Raw payload output, even if they are JSON.
+
+## output
+
+Non-logging data output format.
+
+## reason
+
+Reason for failing the Activity.
+
+## time-format
+
+Time format.
+
+## tls
+
+Enable base TLS encryption. Does not have additional options like mTLS or client certs.
+
+## tls-ca-data
+
+Data for server CA certificate. Can't be used with --tls-ca-path.
+
+## tls-ca-path
+
+Path to server CA certificate. Can't be used with --tls-ca-data.
+
+## tls-cert-data
+
+Data for x509 certificate. Can't be used with --tls-cert-path.
+
+## tls-cert-path
+
+Path to x509 certificate. Can't be used with --tls-cert-data.
+
+## tls-disable-host-verification
+
+Disable TLS host-name verification.
+
+## tls-key-data
+
+Private certificate key data. Can't be used with --tls-key-path.
+
+## tls-key-path
+
+Path to x509 private key. Can't be used with --tls-key-data.
+
+## tls-server-name
+
+Override target TLS server name.
 
