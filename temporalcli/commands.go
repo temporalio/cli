@@ -495,6 +495,14 @@ func (c *TemporalCommand) preRun(cctx *CommandContext) error {
 		}
 	}
 	cctx.JSONShorthandPayloads = !c.NoJsonShorthandPayloads
+	if c.CommandTimeout.Duration() > 0 {
+		cctx.Context, _ = context.WithTimeoutCause(
+			cctx.Context,
+			c.CommandTimeout.Duration(),
+			fmt.Errorf("command timed out after %v", c.CommandTimeout.Duration()),
+		)
+	}
+
 	return nil
 }
 

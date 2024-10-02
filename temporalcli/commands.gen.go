@@ -248,6 +248,7 @@ type TemporalCommand struct {
 	TimeFormat              StringEnum
 	Color                   StringEnum
 	NoJsonShorthandPayloads bool
+	CommandTimeout          Duration
 }
 
 func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
@@ -281,6 +282,8 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	s.Color = NewStringEnum([]string{"always", "never", "auto"}, "auto")
 	s.Command.PersistentFlags().Var(&s.Color, "color", "Output coloring. Accepted values: always, never, auto.")
 	s.Command.PersistentFlags().BoolVar(&s.NoJsonShorthandPayloads, "no-json-shorthand-payloads", false, "Raw payload output, even if they are JSON.")
+	s.CommandTimeout = 0
+	s.Command.PersistentFlags().Var(&s.CommandTimeout, "command-timeout", "Timeout for the span of a command.")
 	s.initCommand(cctx)
 	return &s
 }
@@ -1249,9 +1252,9 @@ func NewTemporalOperatorSearchAttributeCommand(cctx *CommandContext, parent *Tem
 	s.Command.Use = "search-attribute"
 	s.Command.Short = "Search Attribute operations"
 	if hasHighlighting {
-		s.Command.Long = "Create, list, or remove Search Attributes fields stored in a Workflow\nExecution's metadata:\n\n\x1b[1mtemporal operator search-attribute create \\\n    --name YourAttributeName \\\n    --type Keyword\x1b[0m\n\nSupported types include: Text, Keyword, Int, Double, Bool, Datetime, and\nKeywordList."
+		s.Command.Long = "Create, list, or remove Search Attributes fields stored in a Workflow\nExecution's metadata:\n\n\x1b[1mtemporal operator search-attribute create \\\n    --name YourAttributeName \\\n    --type Keyword\x1b[0m\n\nSupported types include: Text, Keyword, Int, Double, Bool, Datetime, and\nKeywordList.\n\nIf you wish to delete a Search Attribute, please contact support\nat https://support.temporal.io."
 	} else {
-		s.Command.Long = "Create, list, or remove Search Attributes fields stored in a Workflow\nExecution's metadata:\n\n```\ntemporal operator search-attribute create \\\n    --name YourAttributeName \\\n    --type Keyword\n```\n\nSupported types include: Text, Keyword, Int, Double, Bool, Datetime, and\nKeywordList."
+		s.Command.Long = "Create, list, or remove Search Attributes fields stored in a Workflow\nExecution's metadata:\n\n```\ntemporal operator search-attribute create \\\n    --name YourAttributeName \\\n    --type Keyword\n```\n\nSupported types include: Text, Keyword, Int, Double, Bool, Datetime, and\nKeywordList.\n\nIf you wish to delete a Search Attribute, please contact support\nat https://support.temporal.io."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalOperatorSearchAttributeCreateCommand(cctx, &s).Command)

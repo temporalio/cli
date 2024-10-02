@@ -3,6 +3,8 @@ package temporalcli_test
 import (
 	"context"
 	"net"
+	"os"
+	"path/filepath"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -39,6 +41,31 @@ func TestServer_StartDev_IPv4Unspecified(t *testing.T) {
 		[]string{"server", "start-dev", "--ip", "0.0.0.0", "-p", port, "--headless"},
 		"0.0.0.0:"+port,
 	)
+}
+
+func TestServer_StartDev_SQLitePragma(t *testing.T) {
+	port := strconv.Itoa(devserver.MustGetFreePort("0.0.0.0"))
+	dbFilename := filepath.Join(os.TempDir(), "devserver-sqlite-pragma.sqlite")
+	defer func() {
+		_ = os.Remove(dbFilename)
+		_ = os.Remove(dbFilename + "-shm")
+		_ = os.Remove(dbFilename + "-wal")
+	}()
+	startDevServerAndRunSimpleTest(
+		t,
+		[]string{
+			"server", "start-dev",
+			"-p", port, "--headless",
+			"--db-filename", dbFilename,
+			"--sqlite-pragma", "journal_mode=WAL",
+			"--sqlite-pragma", "synchronous=NORMAL",
+			"--sqlite-pragma", "busy_timeout=5000",
+		},
+		"0.0.0.0:"+port,
+	)
+	assert.FileExists(t, dbFilename, "sqlite database file not created")
+	assert.FileExists(t, dbFilename+"-shm", "sqlite shared memory file not created")
+	assert.FileExists(t, dbFilename+"-wal", "sqlite write-ahead log file not created")
 }
 
 func TestServer_StartDev_IPv6Unspecified(t *testing.T) {

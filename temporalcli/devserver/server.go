@@ -321,13 +321,7 @@ func (s *StartOptions) buildSQLConfig() (*config.SQL, error) {
 		conf.DatabaseName = s.DatabaseFile
 	}
 	for k, v := range s.SqlitePragmas {
-		// Only some pragmas allowed
-		switch k {
-		case "journal_mode", "synchronous":
-		default:
-			return nil, fmt.Errorf("unrecognized pragma %q, only 'journal_mode' and 'synchronous' allowed", k)
-		}
-		conf.ConnectAttributes["_"+k] = v
+		conf.ConnectAttributes[k] = v
 	}
 
 	// Apply migrations to sqlite if using file but it does not exist
