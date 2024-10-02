@@ -1,0 +1,794 @@
+---
+id: cmd-options
+title: Temporal CLI command options reference
+sidebar_label: cmd options
+description: Discover how to manage Temporal Workflows, from Activity Execution to Workflow Ids, using clusters, cron schedules, dynamic configurations, and logging. Perfect for developers.
+toc_max_heading_level: 4
+keywords:
+  - actions
+  - active cluster
+  - activity
+  - activity execution
+  - activity id
+  - address
+  - archival
+  - backfill
+  - batch job
+  - build
+  - build id
+  - ca-certificate
+  - calendar
+  - certificate key
+  - child workflows
+  - cli reference
+  - cluster
+  - codec server
+  - command-line-interface-cli
+  - concurrency control
+  - configuration
+  - context
+  - continue-as-new
+  - cron
+  - cross-cluster-connection
+  - data converters
+  - endpoint
+  - environment
+  - event
+  - event id
+  - event type
+  - events
+  - external temporal and state events
+  - failures
+  - frontend
+  - frontend address
+  - frontend service
+  - goroutine
+  - grpc
+  - history
+  - http
+  - interval
+  - ip address
+  - job id
+  - log-feature
+  - logging
+  - logging and metrics
+  - memo
+  - metrics
+  - namespace
+  - namespace description
+  - namespace id
+  - namespace management
+  - nondeterministic
+  - notes
+  - operation
+  - operator
+  - options-feature
+  - overlap policy
+  - pager
+  - port
+  - pragma
+  - queries-feature
+  - query
+  - requests
+  - reset point
+  - resets-feature
+  - retention policy
+  - retries
+  - reuse policy
+  - schedule
+  - schedule backfill
+  - schedule id
+  - schedule pause
+  - schedule unpause
+  - schedules
+  - search attribute
+  - search attributes
+  - server
+  - server options and configurations
+  - sqlite
+  - start-to-close
+  - task queue
+  - task queue type
+  - temporal cli
+  - temporal ui
+  - time
+  - time zone
+  - timeout
+  - timeouts and heartbeats
+  - tls
+  - tls server
+  - uri
+  - verification
+  - visibility
+  - web ui
+  - workflow
+  - workflow execution
+  - workflow id
+  - workflow run
+  - workflow state
+  - workflow task
+  - workflow task failure
+  - workflow type
+  - workflow visibility
+  - x509-certificate
+tags:
+  - actions
+  - active-cluster
+  - activity
+  - activity-execution
+  - activity-id
+  - address
+  - archival
+  - backfill
+  - batch-job
+  - build
+  - build-id
+  - ca-certificate
+  - calendar
+  - certificate-key
+  - child-workflows
+  - cli-reference
+  - cluster
+  - codec-server
+  - command-line-interface-cli
+  - concurrency-control
+  - configuration
+  - context
+  - continue-as-new
+  - cron
+  - cross-cluster-connection
+  - data-converters
+  - endpoint
+  - environment
+  - event
+  - event-id
+  - event-type
+  - events
+  - external-temporal-and-state-events
+  - failures
+  - frontend
+  - frontend-address
+  - frontend-service
+  - goroutine
+  - grpc
+  - history
+  - http
+  - interval
+  - ip-address
+  - job-id
+  - log-feature
+  - logging
+  - logging-and-metrics
+  - memo
+  - metrics
+  - namespace
+  - namespace-description
+  - namespace-id
+  - namespace-management
+  - nondeterministic
+  - notes
+  - operation
+  - operator
+  - options-feature
+  - overlap-policy
+  - pager
+  - port
+  - pragma
+  - queries-feature
+  - query
+  - requests
+  - reset-point
+  - resets-feature
+  - retention-policy
+  - retries
+  - reuse-policy
+  - schedule
+  - schedule-backfill
+  - schedule-id
+  - schedule-pause
+  - schedule-unpause
+  - schedules
+  - search-attribute
+  - search-attributes
+  - server
+  - server-options-and-configurations
+  - sqlite
+  - start-to-close
+  - task-queue
+  - task-queue-type
+  - temporal-cli
+  - temporal-ui
+  - time
+  - time-zone
+  - timeout
+  - timeouts-and-heartbeats
+  - tls
+  - tls-server
+  - uri
+  - verification
+  - visibility
+  - web-ui
+  - workflow
+  - workflow-execution
+  - workflow-id
+  - workflow-run
+  - workflow-state
+  - workflow-task
+  - workflow-task-failure
+  - workflow-type
+  - workflow-visibility
+  - x509-certificate
+---
+
+## activity-id
+
+Activity ID to complete.
+
+## address
+
+Temporal Service gRPC endpoint.
+
+## api-key
+
+API key for request.
+
+## codec-auth
+
+Authorization header for Codec Server requests.
+
+## codec-endpoint
+
+Remote Codec Server endpoint.
+
+## color
+
+Output coloring.
+
+## env
+
+Active environment name (`ENV`).
+
+## env-file
+
+Path to environment settings file. (defaults to `$HOME/.config/temporalio/temporal.yaml`).
+
+## grpc-meta
+
+HTTP headers for requests. format as a `KEY=VALUE` pair May be passed multiple times to set multiple headers.
+
+## identity
+
+Identity of the user submitting this request.
+
+## log-format
+
+Log format. Options are: text, json.
+
+## log-level
+
+Log level. Default is "info" for most commands and "warn" for `server start-dev`.
+
+## namespace
+
+Temporal Service Namespace.
+
+## no-json-shorthand-payloads
+
+Raw payload output, even if they are JSON.
+
+## output
+
+Non-logging data output format.
+
+## result
+
+Result `JSON` to return.
+
+## time-format
+
+Time format.
+
+## tls
+
+Enable base TLS encryption. Does not have additional options like mTLS or client certs.
+
+## tls-ca-data
+
+Data for server CA certificate. Can't be used with --tls-ca-path.
+
+## tls-ca-path
+
+Path to server CA certificate. Can't be used with --tls-ca-data.
+
+## tls-cert-data
+
+Data for x509 certificate. Can't be used with --tls-cert-path.
+
+## tls-cert-path
+
+Path to x509 certificate. Can't be used with --tls-cert-data.
+
+## tls-disable-host-verification
+
+Disable TLS host-name verification.
+
+## tls-key-data
+
+Private certificate key data. Can't be used with --tls-key-path.
+
+## tls-key-path
+
+Path to x509 private key. Can't be used with --tls-key-data.
+
+## tls-server-name
+
+Override target TLS server name.
+
+## detail
+
+Reason for failing the Activity (JSON).
+
+## reason
+
+Reason for failing the Activity.
+
+## job-id
+
+Batch job ID.
+
+## limit
+
+Maximum number of batch jobs to display.
+
+## key
+
+Property name.
+
+## value
+
+Property value (required).
+
+## name
+
+Cluster/Service name.
+
+## enable-connection
+
+Set the connection to "enabled".
+
+## frontend-address
+
+Remote endpoint.
+
+## active-cluster
+
+Active Cluster (Service) name.
+
+## cluster
+
+Cluster (Service) names for Namespace creation. Can be passed multiple times.
+
+## data
+
+Namespace data as `KEY=VALUE` pairs. Keys must be identifiers, and values must be JSON values. For example: 'YourKey={"your": "value"}'. Can be passed multiple times.
+
+## description
+
+Namespace description.
+
+## email
+
+Owner email.
+
+## global
+
+Enable multi-region data replication.
+
+## history-archival-state
+
+History archival state.
+
+## history-uri
+
+Archive history to this `URI`. Once enabled, can't be changed.
+
+## retention
+
+Time to preserve closed Workflows before deletion.
+
+## visibility-archival-state
+
+Visibility archival state.
+
+## visibility-uri
+
+Archive visibility data to this `URI`. Once enabled, can't be changed.
+
+## yes
+
+Request confirmation before deletion.
+
+## namespace-id
+
+Namespace ID.
+
+## promote-global
+
+Enable multi-region data replication.
+
+## description-file
+
+Endpoint description file in markdown format (encoded using the configured codec server).
+
+## target-namespace
+
+Namespace in which a handler worker will be polling for Nexus tasks on.
+
+## target-task-queue
+
+Task Queue in which a handler worker will be polling for Nexus tasks on.
+
+## target-url
+
+URL to direct Nexus requests to.
+
+## unset-description
+
+Unset the description.
+
+## type
+
+Search Attribute type.
+
+## end-time
+
+Backfill end time.
+
+## start-time
+
+Backfill start time.
+
+## calendar
+
+Calendar specification in JSON. For example: `{"dayOfWeek":"Fri","hour":"17","minute":"5"}`.
+
+## catchup-window
+
+Maximum catch-up time for when the Service is unavailable.
+
+## cron
+
+Calendar specification in cron string format. For example: `"30 12 * * Fri"`.
+
+## execution-timeout
+
+Fail a WorkflowExecution if it lasts longer than `DURATION`. This time-out includes retries and ContinueAsNew tasks.
+
+## input
+
+Input value. Use JSON content or set --input-meta to override. Can't be combined with --input-file. Can be passed multiple times to pass multiple arguments.
+
+## input-base64
+
+Assume inputs are base64-encoded and attempt to decode them.
+
+## input-file
+
+A path or paths for input file(s). Use JSON content or set --input-meta to override. Can't be combined with --input. Can be passed multiple times to pass multiple arguments.
+
+## input-meta
+
+Input payload metadata as a `KEY=VALUE` pair. When the KEY is "encoding", this overrides the default ("json/plain"). Can be passed multiple times.
+
+## interval
+
+Interval duration. For example, 90m, or 60m/15m to include phase offset.
+
+## jitter
+
+Max difference in time from the specification. Vary the start time randomly within this amount.
+
+## memo
+
+Memo using 'KEY="VALUE"' pairs. Use JSON values.
+
+## notes
+
+Initial notes field value.
+
+## overlap-policy
+
+Policy for handling overlapping Workflow Executions.
+
+## pause-on-failure
+
+Pause schedule after Workflow failures.
+
+## paused
+
+Pause the Schedule immediately on creation.
+
+## remaining-actions
+
+Total allowed actions. Default is zero (unlimited).
+
+## run-timeout
+
+Fail a Workflow Run if it lasts longer than `DURATION`.
+
+## schedule-id
+
+Schedule ID.
+
+## schedule-memo
+
+Set schedule memo using `KEY="VALUE` pairs. Keys must be identifiers, and values must be JSON values. For example: 'YourKey={"your": "value"}'. Can be passed multiple times.
+
+## schedule-search-attribute
+
+Set schedule Search Attributes using `KEY="VALUE` pairs. Keys must be identifiers, and values must be JSON values. For example: 'YourKey={"your": "value"}'. Can be passed multiple times.
+
+## search-attribute
+
+Search Attribute in `KEY=VALUE` format. Keys must be identifiers, and values must be JSON values. For example: 'YourKey={"your": "value"}'. Can be passed multiple times.
+
+## task-queue
+
+Workflow Task queue.
+
+## task-timeout
+
+Fail a Workflow Task if it lasts longer than `DURATION`. This is the Start-to-close timeout for a Workflow Task.
+
+## time-zone
+
+Interpret calendar specs with the `TZ` time zone. For a list of time zones, see: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones.
+
+## workflow-id
+
+Workflow ID. If not supplied, the Service generates a unique ID.
+
+## long
+
+Show detailed information.
+
+## query
+
+Filter results using given List Filter.
+
+## really-long
+
+Show extensive information in non-table form.
+
+## pause
+
+Pause the Schedule.
+
+## unpause
+
+Unpause the Schedule.
+
+## db-filename
+
+Path to file for persistent Temporal state store. By default, Workflow Executions are lost when the server process dies.
+
+## dynamic-config-value
+
+Dynamic configuration value using `KEY=VALUE` pairs. Keys must be identifiers, and values must be JSON values. For example: 'YourKey="YourString"'. Can be passed multiple times.
+
+## headless
+
+Disable the Web UI.
+
+## http-port
+
+Port for the HTTP API service. Default is off.
+
+## ip
+
+IP address bound to the front-end Service.
+
+## log-config
+
+Log the server config to stderr.
+
+## metrics-port
+
+Port for '/metrics'. Default is off.
+
+## port
+
+Port for the front-end gRPC Service.
+
+## sqlite-pragma
+
+SQLite pragma statements in "PRAGMA=VALUE" format.
+
+## ui-asset-path
+
+UI custom assets path.
+
+## ui-codec-endpoint
+
+UI remote codec HTTP endpoint.
+
+## ui-ip
+
+IP address bound to the Web UI. Default is same as '--ip' value.
+
+## ui-port
+
+Port for the Web UI. Default is '--port' value + 1000.
+
+## ui-public-path
+
+The public base path for the Web UI. Default is `/`.
+
+## disable-stats
+
+Disable task queue statistics.
+
+## legacy-mode
+
+Enable a legacy mode for servers that do not support rules-based worker versioning. This mode only provides pollers info.
+
+## partitions-legacy
+
+Query partitions 1 through `N`. Experimental/Temporary feature. Legacy mode only.
+
+## report-reachability
+
+Display task reachability information.
+
+## select-all-active
+
+Include all active versions. A version is active if it had new tasks or polls recently.
+
+## select-build-id
+
+Filter the Task Queue based on Build ID.
+
+## select-unversioned
+
+Include the unversioned queue.
+
+## task-queue-type
+
+Task Queue type. If not specified, all types are reported.
+
+## task-queue-type-legacy
+
+Task Queue type (legacy mode only).
+
+## build-id
+
+One or more Build ID strings. Can be passed multiple times.
+
+## reachability-type
+
+Reachability filter. `open`: reachable by one or more open workflows. `closed`: reachable by one or more closed workflows. `existing`: reachable by either. New Workflow Executions reachable by a Build ID are always reported.
+
+## max-sets
+
+Max return count. Use 1 for default major version. Use 0 for all sets.
+
+## existing-compatible-build-id
+
+Pre-existing Build ID in this Task Queue.
+
+## set-as-default
+
+Set the expanded Build ID set as the Task Queue default.
+
+## source-build-id
+
+Source build ID.
+
+## target-build-id
+
+Target build ID.
+
+## force
+
+Bypass recent-poller validation.
+
+## rule-index
+
+Position of the assignment rule to be replaced. Requests for invalid indices will fail.
+
+## percentage
+
+Traffic percent to send to target Build ID.
+
+## rps
+
+Limit batch's requests per second. Only allowed if query is present.
+
+## run-id
+
+Run ID. Only use with --workflow-id. Cannot use with --query.
+
+## raw
+
+Print properties without changing their format.
+
+## reset-points
+
+Show auto-reset points only.
+
+## detailed
+
+Display events as sections instead of table. Does not apply to JSON output.
+
+## fail-existing
+
+Fail if the Workflow already exists.
+
+## id-reuse-policy
+
+Re-use policy for the Workflow ID in new Workflow Executions.
+
+## start-delay
+
+Delay before starting the Workflow Execution. Can't be used with cron schedules. If the Workflow receives a signal or update prior to this time, the Workflow Execution starts immediately.
+
+## source
+
+Path to the original file.
+
+## target
+
+Path to the results file. When omitted, output is sent to stdout.
+
+## archived
+
+Limit output to archived Workflow Executions.
+
+## reject-condition
+
+Optional flag for rejecting Queries based on Workflow state.
+
+## event-id
+
+Event ID to reset to. Event must occur after `WorkflowTaskStarted`. `WorkflowTaskCompleted`, `WorkflowTaskFailed`, etc. are valid.
+
+## reapply-exclude
+
+Exclude these event types from re-application.
+
+## reapply-type
+
+Types of events to re-apply after reset point. Deprecated. Use --reapply-exclude instead.
+
+## follow
+
+Follow the Workflow Execution progress in real time. Does not apply to JSON output.
+
+## concurrency
+
+Number of Workflow Histories to fetch at a time.
+
+## depth
+
+Set depth for your Child Workflow fetches. Pass -1 to fetch child workflows at any depth.
+
+## fold
+
+Fold away Child Workflows with the specified statuses. Case-insensitive. Ignored if --no-fold supplied. Available values: running, completed, failed, canceled, terminated, timedout, continueasnew. Can be passed multiple times.
+
+## no-fold
+
+Disable folding. Fetch and display Child Workflows within the set depth.
+
+## update-id
+
+Update ID. Must be unique per Workflow Execution.
+
+## first-execution-run-id
+
+Parent Run ID. The update is sent to the last Workflow Execution in the chain started with this Run ID.
+
+## wait-for-stage
+
+Update stage to wait for. The only option is `accepted`, but this option is  required. This is to allow a future version of the CLI to choose a default value.
+

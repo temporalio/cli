@@ -44,6 +44,14 @@ type (
 		IgnoreMissingEnv       bool     `yaml:"ignores-missing-env"`
 		Options                []Option `yaml:"options"`
 		OptionSets             []string `yaml:"option-sets"`
+		Docs                   Docs     `yaml:"docs"`
+	}
+
+	// Docs represents docs-only information that is not used in CLI generation.
+	Docs struct {
+		// Tags are the same as Keywords, but with `-` instead of ` `.
+		Keywords    []string `yaml:"keywords-tags"`
+		Description string   `yaml:"description"`
 	}
 
 	// OptionSets represents the structure of option sets.
@@ -123,6 +131,17 @@ func (c *Command) processSection() error {
 
 	if c.Description == "" {
 		return fmt.Errorf("missing description for command: %s", c.FullName)
+	}
+
+	if len(c.NamePath) == 2 {
+		if c.Docs.Keywords == nil {
+			return fmt.Errorf("missing keywords-tags for root command: %s", c.FullName)
+		}
+		if c.Docs.Description == "" {
+			return fmt.Errorf("missing description for root command: %s", c.FullName)
+		}
+		// remove all newlines from description
+		c.Docs.Description = strings.ReplaceAll(c.Docs.Description, "\n", " ")
 	}
 
 	// Strip trailing newline for description

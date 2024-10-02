@@ -2,39 +2,20 @@
 id: server
 title: temporal server
 sidebar_label: temporal server
-description: Run a development Temporal Server on your local system. View the Web UI for
-the default configuration at http://localhost:8233:
-
-```
-temporal server start-dev
-```
-
-Add persistence for Workflow Executions across runs:
-
-```
-temporal server start-dev \
-    --db-filename path-to-your-local-persistent-store
-```
-
-Set the port from the front-end gRPC Service (7233 default):
-
-```
-temporal server start-dev \
-    --port 7234 \
-    --ui-port 8234 \
-    --metrics-port 57271
-```
-
-Use a custom port for the Web UI. The default is the gRPC port (7233 default)
-plus 1000 (8233):
-
-```
-temporal server start-dev \
-    --ui-port 3000
-```
+description: Manage your Temporal Server easily with CLI commands. Start a local server using `temporal server start-dev` and access the Web UI at http://localhost:8233. Customize with multiple options. 
 toc_max_heading_level: 4
 keywords:
+  - cli reference
+  - command-line-interface-cli
+  - server
+  - server start-dev
+  - temporal cli
 tags:
+  - cli-reference
+  - command-line-interface-cli
+  - server
+  - server-start-dev
+  - temporal-cli
 ---
 
 ## start-dev

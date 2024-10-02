@@ -16,7 +16,6 @@ type DocsFile struct {
 // containsOption checks if an option is in the slice
 func containsOption(options []Option, option Option) bool {
 	for _, opt := range options {
-		// TODO: Print an error if there are duplicate names with different descriptions?
 		if opt.Name == option.Name {
 			return true
 		}
@@ -42,10 +41,6 @@ func GenerateDocsFiles(commands Commands) (map[string][]byte, error) {
 	// write cmd-options
 	w.writeCmdOptions()
 
-	// Write package and imports to final buf
-	// var finalBuf bytes.Buffer
-	// finalBuf.WriteString("// Code generated. DO NOT EDIT.\n\n")
-
 	// Format and return
 	var finalMap = make(map[string][]byte)
 	for key, buf := range w.fileMap {
@@ -61,15 +56,10 @@ type docWriter struct {
 	allOptions   []Option
 }
 
-// func (c *docWriter) writeLinef(s string, args ...any) {
-// 	// Ignore errors
-// 	_, _ = c.buf.WriteString(fmt.Sprintf(s, args...) + "\n")
-// }
-
 func (c *Command) writeDoc(w *docWriter) error {
 	commandLength := len(strings.Split(c.FullName, " "))
-	// process options
 	w.processOptions(c)
+
 	// If this is a root command, write a new file
 	if commandLength == 2 {
 		w.writeCommand(c)
@@ -86,15 +76,21 @@ func (w *docWriter) writeCommand(c *Command) {
 	w.fileMap[fileName].WriteString("id: " + fileName + "\n")
 	w.fileMap[fileName].WriteString("title: " + c.FullName + "\n")
 	w.fileMap[fileName].WriteString("sidebar_label: " + c.FullName + "\n")
-	w.fileMap[fileName].WriteString("description: " + c.Description + "\n")
+	w.fileMap[fileName].WriteString("description: " + c.Docs.Description + "\n")
 	w.fileMap[fileName].WriteString("toc_max_heading_level: 4\n")
-	w.fileMap[fileName].WriteString("keywords:\n") // TODO
-	w.fileMap[fileName].WriteString("tags:\n")     // TODO
+	w.fileMap[fileName].WriteString("keywords:\n")
+	for _, keyword := range c.Docs.Keywords {
+		w.fileMap[fileName].WriteString("  - " + keyword + "\n")
+	}
+	w.fileMap[fileName].WriteString("tags:\n")
+	for _, keyword := range c.Docs.Keywords {
+		w.fileMap[fileName].WriteString("  - " + strings.ReplaceAll(keyword, " ", "-") + "\n")
+	}
 	w.fileMap[fileName].WriteString("---\n\n")
 }
 
 func (w *docWriter) writeSubcommand(c *Command) {
-	// TODO: write options from command, parent command, and global command
+	// write options from command, parent command, and global command
 	fileName := strings.Split(c.FullName, " ")[1]
 	subCommand := strings.Join(strings.Split(c.FullName, " ")[2:], "")
 	w.fileMap[fileName].WriteString("## " + subCommand + "\n\n")
@@ -105,10 +101,12 @@ func (w *docWriter) writeSubcommand(c *Command) {
 		allOptions = append(allOptions, options...)
 	}
 
+	// alphabetize options
 	sort.Slice(allOptions, func(i, j int) bool {
 		return allOptions[i].Name < allOptions[j].Name
 	})
 
+	// add any options to the master option list for cmd-options.mdx
 	for _, option := range allOptions {
 		w.fileMap[fileName].WriteString(fmt.Sprintf("- [--%s](cli/cmd-options#%s)\n\n", option.Name, option.Name))
 		if !containsOption(w.allOptions, option) {
@@ -134,10 +132,117 @@ func (w *docWriter) processOptions(c *Command) {
 	w.optionsStack = append(w.optionsStack, options)
 }
 
-// TODO: Do we even want this separate page anymore?
-// Or should we just generate this description whenever it's mentioned?
-// Our generator can just place this in-line on each page separately
+// TODO: Remove this page and throw inline with each command
 func (w *docWriter) writeCmdOptions() {
+	var items = []string{
+		"actions",
+		"active cluster",
+		"activity",
+		"activity execution",
+		"activity id",
+		"address",
+		"archival",
+		"backfill",
+		"batch job",
+		"build",
+		"build id",
+		"ca-certificate",
+		"calendar",
+		"certificate key",
+		"child workflows",
+		"cli reference",
+		"cluster",
+		"codec server",
+		"command-line-interface-cli",
+		"concurrency control",
+		"configuration",
+		"context",
+		"continue-as-new",
+		"cron",
+		"cross-cluster-connection",
+		"data converters",
+		"endpoint",
+		"environment",
+		"event",
+		"event id",
+		"event type",
+		"events",
+		"external temporal and state events",
+		"failures",
+		"frontend",
+		"frontend address",
+		"frontend service",
+		"goroutine",
+		"grpc",
+		"history",
+		"http",
+		"interval",
+		"ip address",
+		"job id",
+		"log-feature",
+		"logging",
+		"logging and metrics",
+		"memo",
+		"metrics",
+		"namespace",
+		"namespace description",
+		"namespace id",
+		"namespace management",
+		"nondeterministic",
+		"notes",
+		"operation",
+		"operator",
+		"options-feature",
+		"overlap policy",
+		"pager",
+		"port",
+		"pragma",
+		"queries-feature",
+		"query",
+		"requests",
+		"reset point",
+		"resets-feature",
+		"retention policy",
+		"retries",
+		"reuse policy",
+		"schedule",
+		"schedule backfill",
+		"schedule id",
+		"schedule pause",
+		"schedule unpause",
+		"schedules",
+		"search attribute",
+		"search attributes",
+		"server",
+		"server options and configurations",
+		"sqlite",
+		"start-to-close",
+		"task queue",
+		"task queue type",
+		"temporal cli",
+		"temporal ui",
+		"time",
+		"time zone",
+		"timeout",
+		"timeouts and heartbeats",
+		"tls",
+		"tls server",
+		"uri",
+		"verification",
+		"visibility",
+		"web ui",
+		"workflow",
+		"workflow execution",
+		"workflow id",
+		"workflow run",
+		"workflow state",
+		"workflow task",
+		"workflow task failure",
+		"workflow type",
+		"workflow visibility",
+		"x509-certificate",
+	}
+
 	w.fileMap["cmd-options"] = &bytes.Buffer{}
 	w.fileMap["cmd-options"].WriteString("---\n")
 	w.fileMap["cmd-options"].WriteString("id: cmd-options\n")
@@ -145,8 +250,14 @@ func (w *docWriter) writeCmdOptions() {
 	w.fileMap["cmd-options"].WriteString("sidebar_label: cmd options\n")
 	w.fileMap["cmd-options"].WriteString("description: Discover how to manage Temporal Workflows, from Activity Execution to Workflow Ids, using clusters, cron schedules, dynamic configurations, and logging. Perfect for developers.\n")
 	w.fileMap["cmd-options"].WriteString("toc_max_heading_level: 4\n")
-	w.fileMap["cmd-options"].WriteString("keywords:\n") // TODO
-	w.fileMap["cmd-options"].WriteString("tags:\n")     // TODO
+	w.fileMap["cmd-options"].WriteString("keywords:\n")
+	for _, item := range items {
+		w.fileMap["cmd-options"].WriteString(fmt.Sprintf("  - %s\n", item))
+	}
+	w.fileMap["cmd-options"].WriteString("tags:\n")
+	for _, item := range items {
+		w.fileMap["cmd-options"].WriteString(fmt.Sprintf("  - %s\n", strings.ReplaceAll(item, " ", "-")))
+	}
 	w.fileMap["cmd-options"].WriteString("---\n\n")
 	for _, option := range w.allOptions {
 		w.fileMap["cmd-options"].WriteString(fmt.Sprintf("## %s\n\n", option.Name))

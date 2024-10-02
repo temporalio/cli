@@ -2,43 +2,26 @@
 id: batch
 title: temporal batch
 sidebar_label: temporal batch
-description: List or terminate running batch jobs.
-
-A batch job executes a command on multiple Workflow Executions at once. Create
-batch jobs by passing `--query` to commands that support it. For example, to
-create a batch job to cancel a set of Workflow Executions:
-
-```
-temporal workflow cancel \
-  --query 'ExecutionStatus = "Running" AND WorkflowType="YourWorkflow"' \
-  --reason "Testing"
-```
-
-Query Quick Reference:
-
-```
-+----------------------------------------------------------------------------+
-| Composition:                                                               |
-| - Data types: String literals with single or double quotes,                |
-|   Numbers (integer and floating point), Booleans                           |
-| - Comparison: '=', '!=', '>', '>=', '<', '<='                              |
-| - Expressions/Operators:  'IN array', 'BETWEEN value AND value',           |
-|   'STARTS_WITH string', 'IS NULL', 'IS NOT NULL', 'expr AND expr',         |
-|   'expr OR expr', '( expr )'                                               |
-| - Array: '( comma-separated-values )'                                      |
-|                                                                            |
-| Please note:                                                               |
-| - Wrap attributes with backticks if it contains characters not in          |
-|   `[a-zA-Z0-9]`.                                                           |
-| - `STARTS_WITH` is only available for Keyword search attributes.           |
-+----------------------------------------------------------------------------+
-```
-
-Visit https://docs.temporal.io/visibility to read more about Search Attributes
-and Query creation.
+description: Use Temporal CLI to manage multiple Workflow Executions with Batch Jobs that can Cancel, Signal, or Terminate Workflows. Filter and monitor Batch Jobs effectively. 
 toc_max_heading_level: 4
 keywords:
+  - batch
+  - batch describe
+  - batch list
+  - batch terminate
+  - cli reference
+  - cli-feature
+  - command-line-interface-cli
+  - temporal cli
 tags:
+  - batch
+  - batch-describe
+  - batch-list
+  - batch-terminate
+  - cli-reference
+  - cli-feature
+  - command-line-interface-cli
+  - temporal-cli
 ---
 
 ## describe
