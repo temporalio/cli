@@ -36,6 +36,7 @@ This will auto-generate a new set of docs to `temporalcli/docs/`. If a new root 
 be sure to add it to git tracking, as each doc file represents a top level command, like `temporal activity`.
 
 ## Inject additional build-time information
+
 To add build-time information to the version string printed by the binary, use
 
     go build -ldflags "-X github.com/temporalio/cli/temporalcli.buildInfo=<MyString>"

@@ -11,16 +11,6 @@ type DocsFile struct {
 	FileName string
 }
 
-// containsOption checks if an option is in the slice
-func containsOption(options []Option, option Option) bool {
-	for _, opt := range options {
-		if opt.Name == option.Name {
-			return true
-		}
-	}
-	return false
-}
-
 func GenerateDocsFiles(commands Commands) (map[string][]byte, error) {
 	optionSetMap := make(map[string]OptionSets)
 	for i, optionSet := range commands.OptionSets {
@@ -36,8 +26,6 @@ func GenerateDocsFiles(commands Commands) (map[string][]byte, error) {
 		}
 	}
 
-	// w.writeCmdOptions()
-
 	// Format and return
 	var finalMap = make(map[string][]byte)
 	for key, buf := range w.fileMap {
@@ -50,7 +38,6 @@ type docWriter struct {
 	fileMap      map[string]*bytes.Buffer
 	optionSetMap map[string]OptionSets
 	optionsStack [][]Option
-	allOptions   []Option
 }
 
 func (c *Command) writeDoc(w *docWriter) error {
@@ -88,12 +75,13 @@ func (w *docWriter) writeCommand(c *Command) {
 }
 
 func (w *docWriter) writeSubcommand(c *Command) {
-	// write options from command, parent command, and global command
 	fileName := strings.Split(c.FullName, " ")[1]
 	subCommand := strings.Join(strings.Split(c.FullName, " ")[2:], "")
 	w.fileMap[fileName].WriteString("## " + subCommand + "\n\n")
 	w.fileMap[fileName].WriteString(c.Description + "\n\n")
 	w.fileMap[fileName].WriteString("Use the following options to change the behavior of this command.\n\n")
+
+	// gather options from command and all options aviailable from parent commands
 	var allOptions = make([]Option, 0)
 	for _, options := range w.optionsStack {
 		allOptions = append(allOptions, options...)
@@ -104,7 +92,6 @@ func (w *docWriter) writeSubcommand(c *Command) {
 		return allOptions[i].Name < allOptions[j].Name
 	})
 
-	// add any options to the master option list for cmd-options.mdx
 	for _, option := range allOptions {
 		w.fileMap[fileName].WriteString(fmt.Sprintf("## %s\n\n", option.Name))
 		w.fileMap[fileName].WriteString(option.Description + "\n\n")
@@ -113,15 +100,15 @@ func (w *docWriter) writeSubcommand(c *Command) {
 }
 
 func (w *docWriter) processOptions(c *Command) {
+	// Pop options from stack if we are moving up a level
 	if len(w.optionsStack) >= len(strings.Split(c.FullName, " ")) {
 		w.optionsStack = w.optionsStack[:len(w.optionsStack)-1]
 	}
 	var options []Option
 	options = append(options, c.Options...)
 
-	// Add option sets
+	// Maintain stack of options available from parent commands
 	for _, set := range c.OptionSets {
-		// map into optionSet map
 		optionSetOptions := w.optionSetMap[set].Options
 		options = append(options, optionSetOptions...)
 	}
