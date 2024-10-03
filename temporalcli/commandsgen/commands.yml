@@ -214,11 +214,11 @@ commands:
     option-sets:
       - client
     docs:
-      description: |
+      description: >-
         Learn how to use Temporal Activity commands for completing or failing
         Activity Executions in your Workflow. Optimize your Temporal Workflow
         management effectively.
-      keywords-tags:
+      keywords:
         - activity
         - activity complete
         - activity execution 
@@ -323,11 +323,11 @@ commands:
     option-sets:
       - client
     docs:
-      description: |
+      description: >-
         Use Temporal CLI to manage multiple Workflow Executions with Batch
         Jobs that can Cancel, Signal, or Terminate Workflows. Filter and monitor
         Batch Jobs effectively.
-      keywords-tags:
+      keywords:
         - batch
         - batch describe
         - batch list
@@ -411,11 +411,11 @@ commands:
       `TEMPORAL_ENV` environment variable. If neither is set, the CLI uses the
       "default" environment.
     docs:
-      description: |
+      description: >-
         Temporal CLI 'env' commands allow the configuration, setting, deleting,
         and listing of environmental properties, making it easy to manage Temporal
         Server instances.
-      keywords-tags:
+      keywords:
         - cli reference
         - command-line-interface-cli
         - configuration
@@ -540,11 +540,11 @@ commands:
     option-sets:
       - client
     docs:
-      description: |
+      description: >-
         Operator commands in Temporal allow actions on Namespaces, Search Attributes,
         and Clusters using specific subcommands. Execute with
         "temporal operator [command] [subcommand] [options]".
-      keywords-tags:
+      keywords:
         - cli reference
         - cluster
         - cluster health
@@ -1172,11 +1172,11 @@ commands:
     option-sets:
       - client
     docs:
-      description: |
+      description: >-
         Temporal's Schedule commands allow users to create, update, and manage
         Workflow Executions seamlessly for automation, supporting commands for
         creation, backfill, deletion, and more.
-      keywords-tags:
+      keywords:
         - backfill
         - cli reference
         - command-line-interface-cli
@@ -1431,11 +1431,11 @@ commands:
           --ui-port 3000
       ```
     docs:
-      description: |
+      description: >-
         Manage your Temporal Server easily with CLI commands. Start a local
         server using `temporal server start-dev` and access the Web UI at
         http://localhost:8233. Customize with multiple options.
-      keywords-tags:
+      keywords:
         - cli reference
         - command-line-interface-cli
         - server
@@ -1570,12 +1570,12 @@ commands:
     option-sets:
       - client
     docs:
-      description: |
+      description: >-
         Temporal Task Queue commands facilitate operations like describing
         poller info, displaying partitions, fetching compatible Build IDs,
         and determining Build ID reachability for effective Workflow and
         Activity management.
-      keywords-tags:
+      keywords:
         - cli reference
         - command-line-interface-cli
         - list partitions
@@ -2295,12 +2295,12 @@ commands:
     option-sets:
       - client
     docs:
-      description: |
+      description: >-
         Temporal Workflow commands enable operations on Workflow Executions,
         such as cancel, count, delete, describe, execute, list, query, reset,
         reset-batch, show, signal, stack, start, terminate, trace, and update,
         enhancing efficiency and control.
-      keywords-tags:
+      keywords:
         - call stack
         - cancellation
         - child workflows

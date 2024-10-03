@@ -49,9 +49,8 @@ type (
 
 	// Docs represents docs-only information that is not used in CLI generation.
 	Docs struct {
-		// Tags are the same as Keywords, but with `-` instead of ` `.
-		Keywords    []string `yaml:"keywords-tags"`
-		Description string   `yaml:"description"`
+		Keywords          []string `yaml:"keywords"`
+		DescriptionHeader string   `yaml:"description"`
 	}
 
 	// OptionSets represents the structure of option sets.
@@ -137,11 +136,9 @@ func (c *Command) processSection() error {
 		if c.Docs.Keywords == nil {
 			return fmt.Errorf("missing keywords-tags for root command: %s", c.FullName)
 		}
-		if c.Docs.Description == "" {
+		if c.Docs.DescriptionHeader == "" {
 			return fmt.Errorf("missing description for root command: %s", c.FullName)
 		}
-		// remove all newlines from description
-		c.Docs.Description = strings.ReplaceAll(c.Docs.Description, "\n", " ")
 	}
 
 	// Strip trailing newline for description

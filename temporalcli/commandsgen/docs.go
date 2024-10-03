@@ -73,12 +73,13 @@ func (w *docWriter) writeCommand(c *Command) {
 	w.fileMap[fileName].WriteString("id: " + fileName + "\n")
 	w.fileMap[fileName].WriteString("title: " + c.FullName + "\n")
 	w.fileMap[fileName].WriteString("sidebar_label: " + c.FullName + "\n")
-	w.fileMap[fileName].WriteString("description: " + c.Docs.Description + "\n")
+	w.fileMap[fileName].WriteString("description: " + c.Docs.DescriptionHeader + "\n")
 	w.fileMap[fileName].WriteString("toc_max_heading_level: 4\n")
 	w.fileMap[fileName].WriteString("keywords:\n")
 	for _, keyword := range c.Docs.Keywords {
 		w.fileMap[fileName].WriteString("  - " + keyword + "\n")
 	}
+	// tags are the same as Keywords, but with `-` instead of ` `
 	w.fileMap[fileName].WriteString("tags:\n")
 	for _, keyword := range c.Docs.Keywords {
 		w.fileMap[fileName].WriteString("  - " + strings.ReplaceAll(keyword, " ", "-") + "\n")
