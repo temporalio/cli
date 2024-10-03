@@ -35,7 +35,7 @@ func run() error {
 
 	// Write
 	for filename, content := range b {
-		filePath := filepath.Join(commandsDir, filename+".md")
+		filePath := filepath.Join(commandsDir, filename+".mdx")
 		if err := os.WriteFile(filePath, content, 0644); err != nil {
 			return fmt.Errorf("failed writing file: %w", err)
 		}
