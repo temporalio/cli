@@ -50,7 +50,7 @@ type (
 	// Docs represents docs-only information that is not used in CLI generation.
 	Docs struct {
 		Keywords          []string `yaml:"keywords"`
-		DescriptionHeader string   `yaml:"description"`
+		DescriptionHeader string   `yaml:"description-header"`
 	}
 
 	// OptionSets represents the structure of option sets.
