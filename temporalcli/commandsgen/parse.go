@@ -134,7 +134,7 @@ func (c *Command) processSection() error {
 
 	if len(c.NamePath) == 2 {
 		if c.Docs.Keywords == nil {
-			return fmt.Errorf("missing keywords-tags for root command: %s", c.FullName)
+			return fmt.Errorf("missing keywords for root command: %s", c.FullName)
 		}
 		if c.Docs.DescriptionHeader == "" {
 			return fmt.Errorf("missing description for root command: %s", c.FullName)
