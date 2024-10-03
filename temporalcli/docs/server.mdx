@@ -51,83 +51,163 @@ temporal server start-dev \
 
 Use the following options to change the behavior of this command.
 
-- [--address](cli/cmd-options#address)
+## address
 
-- [--api-key](cli/cmd-options#api-key)
+Temporal Service gRPC endpoint.
 
-- [--codec-auth](cli/cmd-options#codec-auth)
+## api-key
 
-- [--codec-endpoint](cli/cmd-options#codec-endpoint)
+API key for request.
 
-- [--color](cli/cmd-options#color)
+## codec-auth
 
-- [--command-timeout](cli/cmd-options#command-timeout)
+Authorization header for Codec Server requests.
 
-- [--db-filename](cli/cmd-options#db-filename)
+## codec-endpoint
 
-- [--dynamic-config-value](cli/cmd-options#dynamic-config-value)
+Remote Codec Server endpoint.
 
-- [--env](cli/cmd-options#env)
+## color
 
-- [--env-file](cli/cmd-options#env-file)
+Output coloring.
 
-- [--grpc-meta](cli/cmd-options#grpc-meta)
+## command-timeout
 
-- [--headless](cli/cmd-options#headless)
+Timeout for the span of a command.
 
-- [--http-port](cli/cmd-options#http-port)
+## db-filename
 
-- [--ip](cli/cmd-options#ip)
+Path to file for persistent Temporal state store. By default, Workflow Executions are lost when the server process dies.
 
-- [--log-config](cli/cmd-options#log-config)
+## dynamic-config-value
 
-- [--log-format](cli/cmd-options#log-format)
+Dynamic configuration value using `KEY=VALUE` pairs. Keys must be identifiers, and values must be JSON values. For example: 'YourKey="YourString"'. Can be passed multiple times.
 
-- [--log-level](cli/cmd-options#log-level)
+## env
 
-- [--metrics-port](cli/cmd-options#metrics-port)
+Active environment name (`ENV`).
 
-- [--namespace](cli/cmd-options#namespace)
+## env-file
 
-- [--namespace](cli/cmd-options#namespace)
+Path to environment settings file. (defaults to `$HOME/.config/temporalio/temporal.yaml`).
 
-- [--no-json-shorthand-payloads](cli/cmd-options#no-json-shorthand-payloads)
+## grpc-meta
 
-- [--output](cli/cmd-options#output)
+HTTP headers for requests. format as a `KEY=VALUE` pair May be passed multiple times to set multiple headers.
 
-- [--port](cli/cmd-options#port)
+## headless
 
-- [--search-attribute](cli/cmd-options#search-attribute)
+Disable the Web UI.
 
-- [--sqlite-pragma](cli/cmd-options#sqlite-pragma)
+## http-port
 
-- [--time-format](cli/cmd-options#time-format)
+Port for the HTTP API service. Default is off.
 
-- [--tls](cli/cmd-options#tls)
+## ip
 
-- [--tls-ca-data](cli/cmd-options#tls-ca-data)
+IP address bound to the front-end Service.
 
-- [--tls-ca-path](cli/cmd-options#tls-ca-path)
+## log-config
 
-- [--tls-cert-data](cli/cmd-options#tls-cert-data)
+Log the server config to stderr.
 
-- [--tls-cert-path](cli/cmd-options#tls-cert-path)
+## log-format
 
-- [--tls-disable-host-verification](cli/cmd-options#tls-disable-host-verification)
+Log format. Options are: text, json.
 
-- [--tls-key-data](cli/cmd-options#tls-key-data)
+## log-level
 
-- [--tls-key-path](cli/cmd-options#tls-key-path)
+Log level. Default is "info" for most commands and "warn" for `server start-dev`.
 
-- [--tls-server-name](cli/cmd-options#tls-server-name)
+## metrics-port
 
-- [--ui-asset-path](cli/cmd-options#ui-asset-path)
+Port for '/metrics'. Default is off.
 
-- [--ui-codec-endpoint](cli/cmd-options#ui-codec-endpoint)
+## namespace
 
-- [--ui-ip](cli/cmd-options#ui-ip)
+Temporal Service Namespace.
 
-- [--ui-port](cli/cmd-options#ui-port)
+## namespace
 
-- [--ui-public-path](cli/cmd-options#ui-public-path)
+Namespaces to be created at launch. The "default" Namespace is always created automatically.
+
+## no-json-shorthand-payloads
+
+Raw payload output, even if they are JSON.
+
+## output
+
+Non-logging data output format.
+
+## port
+
+Port for the front-end gRPC Service.
+
+## search-attribute
+
+Search attributes to register using `KEY=VALUE` pairs. Keys must be identifiers, and values must be the search attribute type, which is one of the following: Text, Keyword, Int, Double, Bool, Datetime, KeywordList.
+
+## sqlite-pragma
+
+SQLite pragma statements in "PRAGMA=VALUE" format.
+
+## time-format
+
+Time format.
+
+## tls
+
+Enable base TLS encryption. Does not have additional options like mTLS or client certs.
+
+## tls-ca-data
+
+Data for server CA certificate. Can't be used with --tls-ca-path.
+
+## tls-ca-path
+
+Path to server CA certificate. Can't be used with --tls-ca-data.
+
+## tls-cert-data
+
+Data for x509 certificate. Can't be used with --tls-cert-path.
+
+## tls-cert-path
+
+Path to x509 certificate. Can't be used with --tls-cert-data.
+
+## tls-disable-host-verification
+
+Disable TLS host-name verification.
+
+## tls-key-data
+
+Private certificate key data. Can't be used with --tls-key-path.
+
+## tls-key-path
+
+Path to x509 private key. Can't be used with --tls-key-data.
+
+## tls-server-name
+
+Override target TLS server name.
+
+## ui-asset-path
+
+UI custom assets path.
+
+## ui-codec-endpoint
+
+UI remote codec HTTP endpoint.
+
+## ui-ip
+
+IP address bound to the Web UI. Default is same as '--ip' value.
+
+## ui-port
+
+Port for the Web UI. Default is '--port' value + 1000.
+
+## ui-public-path
+
+The public base path for the Web UI. Default is `/`.
 
