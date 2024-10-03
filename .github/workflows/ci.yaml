@@ -50,7 +50,19 @@ jobs:
         if: ${{ matrix.checkGenCodeTarget }}
         run: |
           go run ./temporalcli/internal/cmd/gen-commands
+          go run ./temporalcli/internal/cmd/gen-docs
           git diff --exit-code
+
+      - name: Check for untracked doc files
+        if: ${{ matrix.checkGenCodeTarget }}
+        run: |
+          cd temporalcli/docs
+          # Check for untracked files
+          untracked_files=$(git ls-files --others --exclude-standard)
+          if [ -n "$untracked_files" ]; then
+            echo "Untracked files found in docs directory: $untracked_files"
+            exit 1
+          fi
 
       - name: Test cloud
         # Only supported in non-fork runs, since secrets are not available in forks
