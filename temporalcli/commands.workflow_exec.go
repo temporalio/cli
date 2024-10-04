@@ -283,6 +283,14 @@ func buildStartOptions(sw *SharedWorkflowStartOptions, w *WorkflowStartOptions) 
 			return o, fmt.Errorf("invalid workflow ID reuse policy: %w", err)
 		}
 	}
+	if w.IdConflictPolicy.Value != "" {
+		var err error
+		o.WorkflowIDConflictPolicy, err = stringToProtoEnum[enums.WorkflowIdConflictPolicy](
+			w.IdConflictPolicy.Value, enums.WorkflowIdConflictPolicy_shorthandValue, enums.WorkflowIdConflictPolicy_value)
+		if err != nil {
+			return o, fmt.Errorf("invalid workflow ID conflict policy: %w", err)
+		}
+	}
 	if len(sw.Memo) > 0 {
 		var err error
 		if o.Memo, err = stringKeysJSONValues(sw.Memo, false); err != nil {

@@ -3076,6 +3076,15 @@ option-sets:
           - AllowDuplicateFailedOnly
           - RejectDuplicate
           - TerminateIfRunning
+      - name: id-conflict-policy
+        type: string-enum
+        description: |
+          Determines how to resolve a conflict when spawning a new Workflow Execution
+          with a particular Workflow Id used by an existing Open Workflow Execution.
+        enum-values:
+          - Fail
+          - UseExisting
+          - TerminateExisting
   - name: payload-input
     options:
       - name: input
