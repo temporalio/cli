@@ -19,7 +19,12 @@ func main() {
 func run() error {
 	// Get commands dir
 	_, file, _, _ := runtime.Caller(0)
-	commandsDir := filepath.Join(file, "../../../../docs/")
+	docsDir := filepath.Join(file, "../../../../docs/")
+
+	err := os.MkdirAll(docsDir, os.ModePerm)
+	if err != nil {
+		log.Fatalf("Error creating directory: %v", err)
+	}
 
 	// Parse markdown
 	cmds, err := commandsgen.ParseCommands()
@@ -35,7 +40,7 @@ func run() error {
 
 	// Write
 	for filename, content := range b {
-		filePath := filepath.Join(commandsDir, filename+".mdx")
+		filePath := filepath.Join(docsDir, filename+".mdx")
 		if err := os.WriteFile(filePath, content, 0644); err != nil {
 			return fmt.Errorf("failed writing file: %w", err)
 		}

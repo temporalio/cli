@@ -28,12 +28,12 @@ First, update [commands.yml](temporalcli/commandsgen/commands.yml) following the
 This will expect every non-parent command to have a `run` method, so for new commands developers will have to implement
 `run` on the new command in a separate file before it will compile.
 
-Once a command is updated, new docs must also be generated:
+Once a command is updated, the CI will automatically generate new docs
+and create a PR in the Documentation repo with the corresponding updates. To generate these docs locally, run:
 
     go run ./temporalcli/internal/cmd/gen-docs
 
-This will auto-generate a new set of docs to `temporalcli/docs/`. If a new root command is added,
-be sure to add it to git tracking, as each doc file represents a top level command, like `temporal activity`.
+This will auto-generate a new set of docs to `temporalcli/docs/`. If a new root command is added, a new file will be automatically generated, like `temporal activity` and `activity.mdx`.
 
 ## Inject additional build-time information
 
