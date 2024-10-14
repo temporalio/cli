@@ -1400,8 +1400,17 @@ commands:
   - name: temporal server
     summary: Run Temporal Server
     description: |
-      Run a development Temporal Server on your local system. View the Web UI for
-      the default configuration at http://localhost:8233:
+      Run a development Temporal Server on your local system.
+
+      +------------------------------------------------------------------------+
+      | WARNING: The development server is not intended for use in production. |
+      | HTTP security checks have been relaxed to allow for easier local use.  |
+      |                                                                        |
+      | If you need a production-quality Temporal Service, please see:         |
+      | https://docs.temporal.io/production-deployment                         |
+      +------------------------------------------------------------------------+
+
+      View the Web UI for the default configuration at http://localhost:8233:
 
       ```
       temporal server start-dev
@@ -1445,8 +1454,17 @@ commands:
   - name: temporal server start-dev
     summary: Start Temporal development server
     description: |
-      Run a development Temporal Server on your local system. View the Web UI for
-      the default configuration at http://localhost:8233:
+      Run a development Temporal Server on your local system.
+
+      +------------------------------------------------------------------------+
+      | WARNING: The development server is not intended for use in production. |
+      | HTTP security checks have been relaxed to allow for easier local use.  |
+      |                                                                        |
+      | If you need a production-quality Temporal Service, please see:         |
+      | https://docs.temporal.io/production-deployment                         |
+      +------------------------------------------------------------------------+
+
+      View the Web UI for the default configuration at http://localhost:8233:
 
       ```
       temporal server start-dev
