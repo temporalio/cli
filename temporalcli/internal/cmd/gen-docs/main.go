@@ -32,6 +32,11 @@ func run() error {
 		return fmt.Errorf("failed parsing markdown: %w", err)
 	}
 
+	cmds, err = commandsgen.EnrichCommands(cmds)
+	if err != nil {
+		return fmt.Errorf("failed enriching commands: %w", err)
+	}
+
 	// Generate docs
 	b, err := commandsgen.GenerateDocsFiles(cmds)
 	if err != nil {
