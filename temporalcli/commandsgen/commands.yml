@@ -195,10 +195,9 @@ commands:
       - name: no-json-shorthand-payloads
         type: bool
         description: Raw payload output, even if the JSON option was used.
-      # not yet supported
-      #- name: command-timeout
-      #  type: duration
-      #  description: Timeout for the span of a command.
+      - name: command-timeout
+        type: duration
+        description: Timeout for the span of a command.
 
   - name: temporal activity
     summary: Complete or fail an Activity
