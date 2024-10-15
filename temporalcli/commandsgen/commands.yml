@@ -195,9 +195,10 @@ commands:
       - name: no-json-shorthand-payloads
         type: bool
         description: Raw payload output, even if the JSON option was used.
-      - name: command-timeout
-        type: duration
-        description: Timeout for the span of a command.
+      # not yet supported
+      #- name: command-timeout
+      #  type: duration
+      #  description: Timeout for the span of a command.
 
   - name: temporal activity
     summary: Complete or fail an Activity
@@ -948,8 +949,8 @@ commands:
     description: |
       Create a Nexus Endpoint on the Server.
 
-      An endpoint name is used in workflow code to invoke Nexus operations.  The
-      endpoint target may either be a worker, in which case `--target-namespace` and
+      A Nexus Endpoint name is used in Workflow code to invoke Nexus Operations.  The
+      endpoint target may either be a Worker, in which case `--target-namespace` and
       `--target-task-queue` must both be provided, or an external URL, in which case
       `--target-url` must be provided.
 
@@ -1001,8 +1002,8 @@ commands:
     description: |
       Update an existing Nexus Endpoint on the Server.
 
-      An endpoint name is used in workflow code to invoke Nexus operations.  The
-      endpoint target may either be a worker, in which case `--target-namespace` and
+      A Nexus Endpoint name is used in Workflow code to invoke Nexus Operations.  The
+      endpoint target may either be a Worker, in which case `--target-namespace` and
       `--target-task-queue` must both be provided, or an external URL, in which case
       `--target-url` must be provided.
 
@@ -3324,15 +3325,15 @@ option-sets:
         type: string
         description: |
           Nexus Endpoint description.
-          You may use Markdown formatting in the description.
+          You may use Markdown formatting in the Nexus Endpoint description.
       - name: description-file
         type: string
         description: |
           Path to the Nexus Endpoint description file.
-          Contents of the description file may use Markdown formatting.
+          The contents of the description file may use Markdown formatting.
       - name: target-namespace
         type: string
-        description: Namespace in which a handler Worker will be poll for Nexus tasks.
+        description: Namespace in which a handler Worker will poll for Nexus tasks.
       - name: target-task-queue
         type: string
         description: Task Queue in which a handler Worker will poll for Nexus tasks.
