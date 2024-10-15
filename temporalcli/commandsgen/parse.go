@@ -19,15 +19,16 @@ var CommandsYAML []byte
 type (
 	// Option represents the structure of an option within option sets.
 	Option struct {
-		Name        string   `yaml:"name"`
-		Type        string   `yaml:"type"`
-		Description string   `yaml:"description"`
-		Short       string   `yaml:"short,omitempty"`
-		Default     string   `yaml:"default,omitempty"`
-		Env         string   `yaml:"env,omitempty"`
-		Required    bool     `yaml:"required,omitempty"`
-		Aliases     []string `yaml:"aliases,omitempty"`
-		EnumValues  []string `yaml:"enum-values,omitempty"`
+		Name         string   `yaml:"name"`
+		Type         string   `yaml:"type"`
+		Description  string   `yaml:"description"`
+		Short        string   `yaml:"short,omitempty"`
+		Default      string   `yaml:"default,omitempty"`
+		Env          string   `yaml:"env,omitempty"`
+		Required     bool     `yaml:"required,omitempty"`
+		Aliases      []string `yaml:"aliases,omitempty"`
+		EnumValues   []string `yaml:"enum-values,omitempty"`
+		Experimental bool     `yaml:"experimental,omitempty"`
 	}
 
 	// Command represents the structure of each command in the commands map.
@@ -45,6 +46,15 @@ type (
 		Options                []Option `yaml:"options"`
 		OptionSets             []string `yaml:"option-sets"`
 		Docs                   Docs     `yaml:"docs"`
+		Index                  int
+		Base                   *Command
+		Parent                 *Command
+		Children               []*Command
+		Depth                  int
+		FileName               string
+		SubCommandName         string
+		LeafName               string
+		MaxChildDepth          int
 	}
 
 	// Docs represents docs-only information that is not used in CLI generation.
@@ -55,15 +65,50 @@ type (
 
 	// OptionSets represents the structure of option sets.
 	OptionSets struct {
-		Name    string   `yaml:"name"`
-		Options []Option `yaml:"options"`
+		Name        string   `yaml:"name"`
+		Description string   `yaml:"description"`
+		Options     []Option `yaml:"options"`
 	}
 
 	// Commands represents the top-level structure holding commands and option sets.
 	Commands struct {
 		CommandList []Command    `yaml:"commands"`
 		OptionSets  []OptionSets `yaml:"option-sets"`
+		Usages      Usages
 	}
+
+	Usages struct {
+		OptionUsages                    []OptionUsages
+		OptionUsagesByOptionDescription []OptionUsagesByOptionDescription
+	}
+
+	OptionUsages struct {
+		OptionName string
+		UsageSites []OptionUsageSite
+	}
+
+	OptionUsageSite struct {
+		Option               Option
+		UsageSiteDescription string
+		UsageSiteType        UsageSiteType
+	}
+
+	UsageSiteType string
+
+	OptionUsagesByOptionDescription struct {
+		OptionName string
+		Usages     []OptionUsageByOptionDescription
+	}
+
+	OptionUsageByOptionDescription struct {
+		OptionDescription string
+		UsageSites        []OptionUsageSite
+	}
+)
+
+const (
+	UsageTypeCommand   UsageSiteType = "command"
+	UsageTypeOptionSet UsageSiteType = "optionset"
 )
 
 func ParseCommands() (Commands, error) {
@@ -87,6 +132,7 @@ func ParseCommands() (Commands, error) {
 			return Commands{}, fmt.Errorf("failed parsing command section %q: %w", command.FullName, err)
 		}
 	}
+
 	return m, nil
 }
 
