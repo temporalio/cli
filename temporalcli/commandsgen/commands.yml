@@ -147,7 +147,7 @@ commands:
         type: string
         description: |
           Path to environment settings file.
-          (defaults to `$HOME/.config/temporalio/temporal.yaml`).
+          Defaults to `$HOME/.config/temporalio/temporal.yaml`.
       - name: log-level
         type: string-enum
         enum-values:
@@ -194,7 +194,7 @@ commands:
         default: auto
       - name: no-json-shorthand-payloads
         type: bool
-        description: Raw payload output, even if they are JSON.
+        description: Raw payload output, even if the JSON option was used.
       - name: command-timeout
         type: duration
         description: Timeout for the span of a command.
@@ -542,7 +542,7 @@ commands:
     docs:
       description-header: >-
         Operator commands in Temporal allow actions on Namespaces, Search Attributes,
-        and Clusters using specific subcommands. Execute with
+        Clusters and Nexus Endpoints using specific subcommands. Execute with
         "temporal operator [command] [subcommand] [options]".
       keywords:
         - cli reference
@@ -558,6 +558,13 @@ commands:
         - namespace delete
         - namespace describe
         - namespace list
+        - nexus
+        - nexus endpoint
+        - nexus endpoint create
+        - nexus endpoint delete
+        - nexus endpoint get
+        - nexus endpoint list
+        - nexus endpoint update
         - operator
         - search attribute
         - search attribute create
@@ -737,7 +744,7 @@ commands:
         description: |
           Namespace data as `KEY=VALUE` pairs.
           Keys must be identifiers, and values must be JSON values.
-          For example: 'YourKey={"your": "value"}'.
+          For example: `'YourKey={"your": "value"}'`.
           Can be passed multiple times.
       - name: description
         type: string
@@ -877,7 +884,7 @@ commands:
         description: |
           Namespace data as `KEY=VALUE` pairs.
           Keys must be identifiers, and values must be JSON values.
-          For example: 'YourKey={"your": "value"}'.
+          For example: `'YourKey={"your": "value"}'`.
           Can be passed multiple times.
       - name: description
         type: string
@@ -917,29 +924,29 @@ commands:
   - name: temporal operator nexus
     summary: Commands for managing Nexus resources (EXPERIMENTAL)
     description: |
-      Nexus commands enable managing Nexus resources.
+      These commands manage Nexus resources.
 
-      Nexus commands follow this syntax:
+      nexus commands follow this syntax:
 
       ```
-      temporal operator nexus [command] [command] [command options]
+      temporal operator nexus [command] [subcommand] [options]
       ```
 
   - name: temporal operator nexus endpoint
     summary: Commands for managing Nexus Endpoints (EXPERIMENTAL)
     description: |
-      Endpoint commands enable managing Nexus Endpoints.
+      These commands manage Nexus Endpoints.
 
-      Endpoint commands follow this syntax:
+      Nexus Endpoint commands follow this syntax:
 
       ```
-      temporal operator nexus endpoint [command] [command options]
+      temporal operator nexus endpoint [command] [options]
       ```
 
   - name: temporal operator nexus endpoint create
-    summary: Create a new Nexus Endpoint (EXPERIMENTAL)
+    summary: Create a Nexus Endpoint (EXPERIMENTAL)
     description: |
-      Create a new Nexus Endpoint on the Server.
+      Create a Nexus Endpoint on the Server.
 
       An endpoint name is used in workflow code to invoke Nexus operations.  The
       endpoint target may either be a worker, in which case `--target-namespace` and
@@ -955,61 +962,35 @@ commands:
         --target-task-queue your-task-queue \
         --description-file DESCRIPTION.md
       ```
-    options:
-      - name: name
-        type: string
-        description: Endpoint name.
-        required: true
-      - name: description
-        type: string
-        description: |
-          Endpoint description in markdown format (encoded using the configured codec server).
-      - name: description-file
-        type: string
-        description: |
-          Endpoint description file in markdown format (encoded using the configured codec server).
-      - name: target-namespace
-        type: string
-        description: Namespace in which a handler worker will be polling for Nexus tasks on.
-      - name: target-task-queue
-        type: string
-        description: Task Queue in which a handler worker will be polling for Nexus tasks on.
-      - name: target-url
-        type: string
-        description: URL to direct Nexus requests to.
-
+    option-sets:
+      - nexus-endpoint-identity
+      - nexus-endpoint-config
   - name: temporal operator nexus endpoint delete
     summary: Delete a Nexus Endpoint (EXPERIMENTAL)
     description: |
-      Delete a Nexus Endpoint configuration from the Server.
+      Delete a Nexus Endpoint from the Server.
 
       ```
       temporal operator nexus endpoint delete --name your-endpoint
       ```
-    options:
-      - name: name
-        type: string
-        description: Endpoint name.
-        required: true
+    option-sets:
+      - nexus-endpoint-identity
 
   - name: temporal operator nexus endpoint get
     summary: Get a Nexus Endpoint by name (EXPERIMENTAL)
     description: |
-      Get a Nexus Endpoint configuration by name from the Server.
+      Get a Nexus Endpoint by name from the Server.
 
       ```
       temporal operator nexus endpoint get --name your-endpoint
       ```
-    options:
-      - name: name
-        type: string
-        description: Endpoint name.
-        required: true
+    option-sets:
+      - nexus-endpoint-identity
 
   - name: temporal operator nexus endpoint list
     summary: List Nexus Endpoints (EXPERIMENTAL)
     description: |
-      List all Nexus Endpoint configurations on the Server.
+      List all Nexus Endpoints on the Server.
 
       ```
       temporal operator nexus endpoint list
@@ -1043,31 +1024,13 @@ commands:
         --name your-endpoint \
         --description-file DESCRIPTION.md
       ```
+    option-sets:
+      - nexus-endpoint-identity
+      - nexus-endpoint-config
     options:
-      - name: name
-        type: string
-        description: Endpoint name.
-        required: true
-      - name: description
-        type: string
-        description: |
-          Endpoint description in markdown format (encoded using the configured codec server).
-      - name: description-file
-        type: string
-        description: |
-          Endpoint description file in markdown format (encoded using the configured codec server).
       - name: unset-description
         type: bool
         description: Unset the description.
-      - name: target-namespace
-        type: string
-        description: Namespace in which a handler worker will be polling for Nexus tasks on.
-      - name: target-task-queue
-        type: string
-        description: Task Queue in which a handler worker will be polling for Nexus tasks on.
-      - name: target-url
-        type: string
-        description: URL to direct Nexus requests to.
 
   - name: temporal operator search-attribute
     summary: Search Attribute operations
@@ -1555,7 +1518,7 @@ commands:
         description: |
           Dynamic configuration value using `KEY=VALUE` pairs.
           Keys must be identifiers, and values must be JSON values.
-          For example: 'YourKey="YourString"'.
+          For example: `'YourKey="YourString"'`.
           Can be passed multiple times.
       - name: log-config
         type: bool
@@ -2524,6 +2487,7 @@ commands:
         description: Content for an SQL-like `QUERY` List Filter.
       - name: archived
         type: bool
+        experimental: true
         description: Limit output to archived Workflow Executions.
       - name: limit
         type: int
@@ -2953,6 +2917,7 @@ commands:
 option-sets:
 
   - name: client
+    description: Commands that connect to a Temporal Service
     options:
       - name: address
         type: string
@@ -3035,6 +3000,7 @@ option-sets:
         env: TEMPORAL_CODEC_AUTH
 
   - name: overlap-policy
+    description: Schedule commands
     options:
       - name: overlap-policy
         type: string-enum
@@ -3049,6 +3015,7 @@ option-sets:
         default: Skip
 
   - name: schedule-id
+    description: Schedule commands
     options:
       - name: schedule-id
         type: string
@@ -3057,6 +3024,7 @@ option-sets:
         short: s
 
   - name: schedule-configuration
+    description: Schedule commands
     options:
       - name: calendar
         type: string[]
@@ -3112,17 +3080,18 @@ option-sets:
         description: |
           Set schedule Search Attributes using `KEY="VALUE` pairs.
           Keys must be identifiers, and values must be JSON values.
-          For example: 'YourKey={"your": "value"}'.
+          For example: `'YourKey={"your": "value"}'`.
           Can be passed multiple times.
       - name: schedule-memo
         type: string[]
         description: |
           Set schedule memo using `KEY="VALUE` pairs.
           Keys must be identifiers, and values must be JSON values.
-          For example: 'YourKey={"your": "value"}'.
+          For example: `'YourKey={"your": "value"}'`.
           Can be passed multiple times.
 
   - name: workflow-reference
+    description: Commands that reference a Workflow
     options:
       - name: workflow-id
         type: string
@@ -3135,6 +3104,7 @@ option-sets:
         description: Run ID.
 
   - name: single-workflow-or-batch
+    description: Commands that may use a Batch Job
     options:
       - name: workflow-id
         type: string
@@ -3174,6 +3144,7 @@ option-sets:
           Only allowed if query is present.
 
   - name: shared-workflow-start
+    description: Commands that start a workflow
     options:
       - name: workflow-id
         type: string
@@ -3212,7 +3183,7 @@ option-sets:
         description: |
           Search Attribute in `KEY=VALUE` format.
           Keys must be identifiers, and values must be JSON values.
-          For example: 'YourKey={"your": "value"}'.
+          For example: `'YourKey={"your": "value"}'`.
           Can be passed multiple times.
       - name: memo
         type: string[]
@@ -3221,6 +3192,7 @@ option-sets:
           Use JSON values.
 
   - name: workflow-start
+    description: Commands that start a workflow
     options:
       - name: cron
         type: string
@@ -3256,6 +3228,7 @@ option-sets:
           - UseExisting
           - TerminateExisting
   - name: payload-input
+    description: Commands accepting an input payload
     options:
       - name: input
         type: string[]
@@ -3284,6 +3257,7 @@ option-sets:
           Assume inputs are base64-encoded and attempt to decode them.
 
   - name: update-starting
+    description: Workflow update commands
     options:
       - name: name
         type: string
@@ -3315,6 +3289,7 @@ option-sets:
           If unset, looks for an Update against the currently-running Workflow Execution.
 
   - name: update-targeting
+    description: Workflow update commands
     options:
       - name: workflow-id
         short: w
@@ -3333,3 +3308,37 @@ option-sets:
         description: |
           Run ID.
           If unset, updates the currently-running Workflow Execution.
+
+  - name: nexus-endpoint-identity
+    description: Nexus endpoint commands
+    options:
+      - name: name
+        type: string
+        description: Endpoint name.
+        required: true
+
+  - name: nexus-endpoint-config
+    description: Nexus endpoint commands
+    options:
+      - name: description
+        type: string
+        description: |
+          Nexus Endpoint description.
+          You may use Markdown formatting in the description.
+      - name: description-file
+        type: string
+        description: |
+          Path to the Nexus Endpoint description file.
+          Contents of the description file may use Markdown formatting.
+      - name: target-namespace
+        type: string
+        description: Namespace in which a handler Worker will be poll for Nexus tasks.
+      - name: target-task-queue
+        type: string
+        description: Task Queue in which a handler Worker will poll for Nexus tasks.
+      - name: target-url
+        type: string
+        experimental: true
+        description: |
+          An external Nexus Endpoint where Nexus requests are forwarded to.
+          May be used as an alternative to `--target-namespace` and `--target-task-queue`.
