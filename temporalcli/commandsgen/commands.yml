@@ -744,7 +744,7 @@ commands:
         description: |
           Namespace data as `KEY=VALUE` pairs.
           Keys must be identifiers, and values must be JSON values.
-          For example: `'YourKey={"your": "value"}'`.
+          For example: 'YourKey={"your": "value"}'.
           Can be passed multiple times.
       - name: description
         type: string
@@ -884,7 +884,7 @@ commands:
         description: |
           Namespace data as `KEY=VALUE` pairs.
           Keys must be identifiers, and values must be JSON values.
-          For example: `'YourKey={"your": "value"}'`.
+          For example: 'YourKey={"your": "value"}'.
           Can be passed multiple times.
       - name: description
         type: string
@@ -1519,7 +1519,7 @@ commands:
         description: |
           Dynamic configuration value using `KEY=VALUE` pairs.
           Keys must be identifiers, and values must be JSON values.
-          For example: `'YourKey="YourString"'`.
+          For example: 'YourKey="YourString"'.
           Can be passed multiple times.
       - name: log-config
         type: bool
@@ -3078,14 +3078,14 @@ option-sets:
         description: |
           Set schedule Search Attributes using `KEY="VALUE` pairs.
           Keys must be identifiers, and values must be JSON values.
-          For example: `'YourKey={"your": "value"}'`.
+          For example: 'YourKey={"your": "value"}'.
           Can be passed multiple times.
       - name: schedule-memo
         type: string[]
         description: |
           Set schedule memo using `KEY="VALUE` pairs.
           Keys must be identifiers, and values must be JSON values.
-          For example: `'YourKey={"your": "value"}'`.
+          For example: 'YourKey={"your": "value"}'.
           Can be passed multiple times.
 
   - name: workflow-reference
@@ -3178,7 +3178,7 @@ option-sets:
         description: |
           Search Attribute in `KEY=VALUE` format.
           Keys must be identifiers, and values must be JSON values.
-          For example: `'YourKey={"your": "value"}'`.
+          For example: 'YourKey={"your": "value"}'.
           Can be passed multiple times.
       - name: memo
         type: string[]
