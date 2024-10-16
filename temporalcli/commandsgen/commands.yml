@@ -541,9 +541,9 @@ commands:
       - client
     docs:
       description-header: >-
-        Operator commands in Temporal allow actions on Namespaces, Search Attributes,
-        Clusters and Nexus Endpoints using specific subcommands. Execute with
-        "temporal operator [command] [subcommand] [options]".
+        Operator commands in Temporal allow actions on Namespaces, Search
+        Attributes, Clusters and Nexus Endpoints using specific subcommands.
+        Execute with "temporal operator [command] [subcommand] [options]".
       keywords:
         - cli reference
         - cluster
@@ -949,9 +949,12 @@ commands:
       Create a Nexus Endpoint on the Server.
 
       A Nexus Endpoint name is used in Workflow code to invoke Nexus Operations.
-      The endpoint target may either be a Worker, in which case `--target-namespace` and `--target-task-queue` must both be provided, or an external URL, in which case `--target-url` must be provided.
-
-      This command will fail if an Endpoint with the same name is already registered.
+      The endpoint target may either be a Worker, in which case
+      `--target-namespace` and `--target-task-queue` must both be provided, or
+      an external URL, in which case `--target-url` must be provided.
+      
+      This command will fail if an Endpoint with the same name is already
+      registered.
 
       ```
       temporal operator nexus endpoint create \
@@ -998,11 +1001,14 @@ commands:
     summary: Update an existing Nexus Endpoint (EXPERIMENTAL)
     description: |
       Update an existing Nexus Endpoint on the Server.
-
+      
       A Nexus Endpoint name is used in Workflow code to invoke Nexus Operations.
-      The Endpoint target may either be a Worker, in which case `--target-namespace` and `--target-task-queue` must both be provided, or an external URL, in which case `--target-url` must be provided.
-
-      The Endpoint is patched; existing fields for which flags are not provided are left as they were.
+      The Endpoint target may either be a Worker, in which case
+      `--target-namespace` and `--target-task-queue` must both be provided, or
+      an external URL, in which case `--target-url` must be provided.
+      
+      The Endpoint is patched; existing fields for which flags are not provided
+      are left as they were.
 
       Update only the target task queue:
 
@@ -3324,4 +3330,5 @@ option-sets:
         experimental: true
         description: |
           An external Nexus Endpoint that receives forwarded Nexus requests.
-          May be used as an alternative to `--target-namespace` and `--target-task-queue`.
+          May be used as an alternative to `--target-namespace` and
+          `--target-task-queue`.
