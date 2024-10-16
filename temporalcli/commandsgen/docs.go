@@ -3,6 +3,7 @@ package commandsgen
 import (
 	"bytes"
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 )
@@ -151,7 +152,7 @@ func (w *docWriter) writeCommandOptions() {
 		if len(option.Usages) == 1 {
 			usageDescription := option.Usages[0]
 			usage := usageDescription.UsageSites[0]
-			w.fileMap[fileName].WriteString(usage.Option.Description + "\n\n")
+			w.fileMap[fileName].WriteString(encodeJSONExample(usage.Option.Description) + "\n\n")
 
 			if usage.Option.Experimental {
 				w.fileMap[fileName].WriteString(":::note" + "\n\n")
@@ -164,7 +165,7 @@ func (w *docWriter) writeCommandOptions() {
 					w.fileMap[fileName].WriteString("\n")
 
 				}
-				w.fileMap[fileName].WriteString(usageDescription.OptionDescription + "\n\n")
+				w.fileMap[fileName].WriteString(encodeJSONExample(usageDescription.OptionDescription) + "\n\n")
 
 				for _, usage := range usageDescription.UsageSites {
 					experimentalDescr := ""
@@ -212,4 +213,11 @@ func (w *docWriter) writeCommandOptions() {
 			}
 		}
 	*/
+}
+
+func encodeJSONExample(v string) string {
+	// example: `'YourKey={"your": "value"}'`
+	re := regexp.MustCompile(`('[a-zA-Z0-9]*={.*}')`)
+	v = re.ReplaceAllString(v, "`$1`")
+	return v
 }
