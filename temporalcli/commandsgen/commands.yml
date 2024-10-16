@@ -147,7 +147,7 @@ commands:
         type: string
         description: |
           Path to environment settings file.
-          (defaults to `$HOME/.config/temporalio/temporal.yaml`).
+          Defaults to `$HOME/.config/temporalio/temporal.yaml`.
       - name: log-level
         type: string-enum
         enum-values:
@@ -194,7 +194,7 @@ commands:
         default: auto
       - name: no-json-shorthand-payloads
         type: bool
-        description: Raw payload output, even if they are JSON.
+        description: Raw payload output, even if the JSON option was used.
       - name: command-timeout
         type: duration
         description: Timeout for the span of a command.
@@ -541,9 +541,9 @@ commands:
       - client
     docs:
       description-header: >-
-        Operator commands in Temporal allow actions on Namespaces, Search Attributes,
-        and Clusters using specific subcommands. Execute with
-        "temporal operator [command] [subcommand] [options]".
+        Operator commands in Temporal allow actions on Namespaces, Search
+        Attributes, Clusters and Nexus Endpoints using specific subcommands.
+        Execute with "temporal operator [command] [subcommand] [options]".
       keywords:
         - cli reference
         - cluster
@@ -558,6 +558,13 @@ commands:
         - namespace delete
         - namespace describe
         - namespace list
+        - nexus
+        - nexus endpoint
+        - nexus endpoint create
+        - nexus endpoint delete
+        - nexus endpoint get
+        - nexus endpoint list
+        - nexus endpoint update
         - operator
         - search attribute
         - search attribute create
@@ -917,36 +924,37 @@ commands:
   - name: temporal operator nexus
     summary: Commands for managing Nexus resources (EXPERIMENTAL)
     description: |
-      Nexus commands enable managing Nexus resources.
+      These commands manage Nexus resources.
 
       Nexus commands follow this syntax:
 
       ```
-      temporal operator nexus [command] [command] [command options]
+      temporal operator nexus [command] [subcommand] [options]
       ```
 
   - name: temporal operator nexus endpoint
     summary: Commands for managing Nexus Endpoints (EXPERIMENTAL)
     description: |
-      Endpoint commands enable managing Nexus Endpoints.
+      These commands manage Nexus Endpoints.
 
-      Endpoint commands follow this syntax:
+      Nexus Endpoint commands follow this syntax:
 
       ```
-      temporal operator nexus endpoint [command] [command options]
+      temporal operator nexus endpoint [command] [options]
       ```
 
   - name: temporal operator nexus endpoint create
-    summary: Create a new Nexus Endpoint (EXPERIMENTAL)
+    summary: Create a Nexus Endpoint (EXPERIMENTAL)
     description: |
-      Create a new Nexus Endpoint on the Server.
+      Create a Nexus Endpoint on the Server.
 
-      An endpoint name is used in workflow code to invoke Nexus operations.  The
-      endpoint target may either be a worker, in which case `--target-namespace` and
-      `--target-task-queue` must both be provided, or an external URL, in which case
-      `--target-url` must be provided.
-
-      This command will fail if an endpoint with the same name is already registered.
+      A Nexus Endpoint name is used in Workflow code to invoke Nexus Operations.
+      The endpoint target may either be a Worker, in which case
+      `--target-namespace` and `--target-task-queue` must both be provided, or
+      an external URL, in which case `--target-url` must be provided.
+      
+      This command will fail if an Endpoint with the same name is already
+      registered.
 
       ```
       temporal operator nexus endpoint create \
@@ -955,61 +963,35 @@ commands:
         --target-task-queue your-task-queue \
         --description-file DESCRIPTION.md
       ```
-    options:
-      - name: name
-        type: string
-        description: Endpoint name.
-        required: true
-      - name: description
-        type: string
-        description: |
-          Endpoint description in markdown format (encoded using the configured codec server).
-      - name: description-file
-        type: string
-        description: |
-          Endpoint description file in markdown format (encoded using the configured codec server).
-      - name: target-namespace
-        type: string
-        description: Namespace in which a handler worker will be polling for Nexus tasks on.
-      - name: target-task-queue
-        type: string
-        description: Task Queue in which a handler worker will be polling for Nexus tasks on.
-      - name: target-url
-        type: string
-        description: URL to direct Nexus requests to.
-
+    option-sets:
+      - nexus-endpoint-identity
+      - nexus-endpoint-config
   - name: temporal operator nexus endpoint delete
     summary: Delete a Nexus Endpoint (EXPERIMENTAL)
     description: |
-      Delete a Nexus Endpoint configuration from the Server.
+      Delete a Nexus Endpoint from the Server.
 
       ```
       temporal operator nexus endpoint delete --name your-endpoint
       ```
-    options:
-      - name: name
-        type: string
-        description: Endpoint name.
-        required: true
+    option-sets:
+      - nexus-endpoint-identity
 
   - name: temporal operator nexus endpoint get
     summary: Get a Nexus Endpoint by name (EXPERIMENTAL)
     description: |
-      Get a Nexus Endpoint configuration by name from the Server.
+      Get a Nexus Endpoint by name from the Server.
 
       ```
       temporal operator nexus endpoint get --name your-endpoint
       ```
-    options:
-      - name: name
-        type: string
-        description: Endpoint name.
-        required: true
+    option-sets:
+      - nexus-endpoint-identity
 
   - name: temporal operator nexus endpoint list
     summary: List Nexus Endpoints (EXPERIMENTAL)
     description: |
-      List all Nexus Endpoint configurations on the Server.
+      List all Nexus Endpoints on the Server.
 
       ```
       temporal operator nexus endpoint list
@@ -1019,14 +1001,14 @@ commands:
     summary: Update an existing Nexus Endpoint (EXPERIMENTAL)
     description: |
       Update an existing Nexus Endpoint on the Server.
-
-      An endpoint name is used in workflow code to invoke Nexus operations.  The
-      endpoint target may either be a worker, in which case `--target-namespace` and
-      `--target-task-queue` must both be provided, or an external URL, in which case
-      `--target-url` must be provided.
-
-      The endpoint is patched; existing fields for which flags are not provided are
-      left as they were.
+     
+      A Nexus Endpoint name is used in Workflow code to invoke Nexus Operations.
+      The Endpoint target may either be a Worker, in which case
+      `--target-namespace` and `--target-task-queue` must both be provided, or
+      an external URL, in which case `--target-url` must be provided.
+      
+      The Endpoint is patched; existing fields for which flags are not provided
+      are left as they were.
 
       Update only the target task queue:
 
@@ -1043,31 +1025,13 @@ commands:
         --name your-endpoint \
         --description-file DESCRIPTION.md
       ```
+    option-sets:
+      - nexus-endpoint-identity
+      - nexus-endpoint-config
     options:
-      - name: name
-        type: string
-        description: Endpoint name.
-        required: true
-      - name: description
-        type: string
-        description: |
-          Endpoint description in markdown format (encoded using the configured codec server).
-      - name: description-file
-        type: string
-        description: |
-          Endpoint description file in markdown format (encoded using the configured codec server).
       - name: unset-description
         type: bool
         description: Unset the description.
-      - name: target-namespace
-        type: string
-        description: Namespace in which a handler worker will be polling for Nexus tasks on.
-      - name: target-task-queue
-        type: string
-        description: Task Queue in which a handler worker will be polling for Nexus tasks on.
-      - name: target-url
-        type: string
-        description: URL to direct Nexus requests to.
 
   - name: temporal operator search-attribute
     summary: Search Attribute operations
@@ -2524,6 +2488,7 @@ commands:
         description: Content for an SQL-like `QUERY` List Filter.
       - name: archived
         type: bool
+        experimental: true
         description: Limit output to archived Workflow Executions.
       - name: limit
         type: int
@@ -3333,3 +3298,36 @@ option-sets:
         description: |
           Run ID.
           If unset, updates the currently-running Workflow Execution.
+
+  - name: nexus-endpoint-identity
+    options:
+      - name: name
+        type: string
+        description: Endpoint name.
+        required: true
+
+  - name: nexus-endpoint-config
+    options:
+      - name: description
+        type: string
+        description: |
+          Nexus Endpoint description.
+          You may use Markdown formatting in the Nexus Endpoint description.
+      - name: description-file
+        type: string
+        description: |
+          Path to the Nexus Endpoint description file.
+          The contents of the description file may use Markdown formatting.
+      - name: target-namespace
+        type: string
+        description: Namespace where a handler Worker polls for Nexus tasks.
+      - name: target-task-queue
+        type: string
+        description: Task Queue that a handler Worker polls for Nexus tasks.
+      - name: target-url
+        type: string
+        experimental: true
+        description: |
+          An external Nexus Endpoint that receives forwarded Nexus requests.
+          May be used as an alternative to `--target-namespace` and
+          `--target-task-queue`.
