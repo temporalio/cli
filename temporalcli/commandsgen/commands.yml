@@ -951,7 +951,7 @@ commands:
       A Nexus Endpoint name is used in Workflow code to invoke Nexus Operations.
       The endpoint target may either be a Worker, in which case `--target-namespace` and `--target-task-queue` must both be provided, or an external URL, in which case `--target-url` must be provided.
 
-      This command will fail if an endpoint with the same name is already registered.
+      This command will fail if an Endpoint with the same name is already registered.
 
       ```
       temporal operator nexus endpoint create \
@@ -1000,10 +1000,9 @@ commands:
       Update an existing Nexus Endpoint on the Server.
 
       A Nexus Endpoint name is used in Workflow code to invoke Nexus Operations.
-      The endpoint target may either be a Worker, in which case `--target-namespace` and `--target-task-queue` must both be provided, or an external URL, in which case `--target-url` must be provided.
+      The Endpoint target may either be a Worker, in which case `--target-namespace` and `--target-task-queue` must both be provided, or an external URL, in which case `--target-url` must be provided.
 
-      The endpoint is patched; existing fields for which flags are not provided are
-      left as they were.
+      The Endpoint is patched; existing fields for which flags are not provided are left as they were.
 
       Update only the target task queue:
 
@@ -2996,7 +2995,6 @@ option-sets:
         env: TEMPORAL_CODEC_AUTH
 
   - name: overlap-policy
-    description: Schedule commands
     options:
       - name: overlap-policy
         type: string-enum
@@ -3011,7 +3009,6 @@ option-sets:
         default: Skip
 
   - name: schedule-id
-    description: Schedule commands
     options:
       - name: schedule-id
         type: string
@@ -3020,7 +3017,6 @@ option-sets:
         short: s
 
   - name: schedule-configuration
-    description: Schedule commands
     options:
       - name: calendar
         type: string[]
@@ -3087,7 +3083,6 @@ option-sets:
           Can be passed multiple times.
 
   - name: workflow-reference
-    description: Commands that reference a Workflow
     options:
       - name: workflow-id
         type: string
@@ -3100,7 +3095,6 @@ option-sets:
         description: Run ID.
 
   - name: single-workflow-or-batch
-    description: Commands that may use a Batch Job
     options:
       - name: workflow-id
         type: string
@@ -3140,7 +3134,6 @@ option-sets:
           Only allowed if query is present.
 
   - name: shared-workflow-start
-    description: Commands that start a workflow
     options:
       - name: workflow-id
         type: string
@@ -3188,7 +3181,6 @@ option-sets:
           Use JSON values.
 
   - name: workflow-start
-    description: Commands that start a workflow
     options:
       - name: cron
         type: string
@@ -3224,7 +3216,6 @@ option-sets:
           - UseExisting
           - TerminateExisting
   - name: payload-input
-    description: Commands accepting an input payload
     options:
       - name: input
         type: string[]
@@ -3253,7 +3244,6 @@ option-sets:
           Assume inputs are base64-encoded and attempt to decode them.
 
   - name: update-starting
-    description: Workflow update commands
     options:
       - name: name
         type: string
@@ -3285,7 +3275,6 @@ option-sets:
           If unset, looks for an Update against the currently-running Workflow Execution.
 
   - name: update-targeting
-    description: Workflow update commands
     options:
       - name: workflow-id
         short: w
@@ -3306,7 +3295,6 @@ option-sets:
           If unset, updates the currently-running Workflow Execution.
 
   - name: nexus-endpoint-identity
-    description: Nexus endpoint commands
     options:
       - name: name
         type: string
@@ -3314,7 +3302,6 @@ option-sets:
         required: true
 
   - name: nexus-endpoint-config
-    description: Nexus endpoint commands
     options:
       - name: description
         type: string
@@ -3328,13 +3315,13 @@ option-sets:
           The contents of the description file may use Markdown formatting.
       - name: target-namespace
         type: string
-        description: Namespace in which a handler Worker will poll for Nexus tasks.
+        description: Namespace where a handler Worker polls for Nexus tasks.
       - name: target-task-queue
         type: string
-        description: Task Queue in which a handler Worker will poll for Nexus tasks.
+        description: Task Queue that a handler Worker polls for Nexus tasks.
       - name: target-url
         type: string
         experimental: true
         description: |
-          An external Nexus Endpoint where Nexus requests are forwarded to.
+          An external Nexus Endpoint that receives forwarded Nexus requests.
           May be used as an alternative to `--target-namespace` and `--target-task-queue`.
