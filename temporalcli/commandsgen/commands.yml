@@ -1001,7 +1001,7 @@ commands:
     summary: Update an existing Nexus Endpoint (EXPERIMENTAL)
     description: |
       Update an existing Nexus Endpoint on the Server.
-      
+     
       A Nexus Endpoint name is used in Workflow code to invoke Nexus Operations.
       The Endpoint target may either be a Worker, in which case
       `--target-namespace` and `--target-task-queue` must both be provided, or
