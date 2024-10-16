@@ -2918,7 +2918,6 @@ commands:
 option-sets:
 
   - name: client
-    description: Commands that connect to a Temporal Service
     options:
       - name: address
         type: string
