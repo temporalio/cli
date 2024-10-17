@@ -8,6 +8,9 @@ import (
 	"strings"
 )
 
+// EnrichCommands populates additional fields on Commands
+// beyond those read from commands.yml to make it easier
+// for docs.go to generate docs
 func EnrichCommands(m Commands) (Commands, error) {
 	commandLookup := make(map[string]*Command)
 
@@ -41,7 +44,6 @@ func EnrichCommands(m Commands) (Commands, error) {
 			continue
 		}
 
-		//fmt.Printf("add child: %s\n", m.CommandList[c.Index].FullName)
 		m.CommandList[c.Parent.Index].Children = append(m.CommandList[c.Parent.Index].Children, &m.CommandList[c.Index])
 
 		base := &c
@@ -105,13 +107,6 @@ func collectCommandVisitor(c Command, m *Commands) {
 
 func sortChildrenVisitor(c *Command) {
 	sort.Slice(c.Children, func(i, j int) bool {
-		//option to put nested commands at end of the list
-		/*
-			if c.Children[i].MaxChildDepth != c.Children[j].MaxChildDepth {
-				return c.Children[i].MaxChildDepth < c.Children[j].MaxChildDepth
-			}
-		*/
-
 		return c.Children[i].FullName < c.Children[j].FullName
 	})
 	for _, command := range c.Children {
@@ -136,7 +131,6 @@ func setMaxChildDepthVisitor(c Command, commands *Commands) int {
 }
 
 func getAllOptionUsages(commands Commands) []OptionUsages {
-	// map[optionName]map[usageSite]OptionUsageSite
 	var optionUsageSitesMap = make(map[string]map[string]OptionUsageSite)
 
 	// option sets
@@ -221,7 +215,6 @@ func getOptionUsagesByOptionDescription(allOptionUsages []OptionUsages) []Option
 			continue
 		}
 
-		// map[optionDescription]OptionUsageByOptionDescription
 		optionUsageByOptionDescriptionMap := make(map[string]OptionUsageByOptionDescription)
 
 		// collate on option description in each usage site
