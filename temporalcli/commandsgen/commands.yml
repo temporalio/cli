@@ -198,7 +198,7 @@ commands:
       - name: command-timeout
         type: duration
         description: |
-          The command execution timeout in seconds. 0 means no timeout.
+          The command execution timeout. 0s means no timeout.
 
   - name: temporal activity
     summary: Complete or fail an Activity
