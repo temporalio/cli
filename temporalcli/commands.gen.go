@@ -311,7 +311,7 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	s.Command.PersistentFlags().Var(&s.Color, "color", "Output coloring. Accepted values: always, never, auto.")
 	s.Command.PersistentFlags().BoolVar(&s.NoJsonShorthandPayloads, "no-json-shorthand-payloads", false, "Raw payload output, even if the JSON option was used.")
 	s.CommandTimeout = 0
-	s.Command.PersistentFlags().Var(&s.CommandTimeout, "command-timeout", "Timeout for the span of a command.")
+	s.Command.PersistentFlags().Var(&s.CommandTimeout, "command-timeout", "The command execution timeout. 0s means no timeout.")
 	s.initCommand(cctx)
 	return &s
 }
