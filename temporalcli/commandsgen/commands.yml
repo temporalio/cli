@@ -197,7 +197,8 @@ commands:
         description: Raw payload output, even if the JSON option was used.
       - name: command-timeout
         type: duration
-        description: Timeout for the span of a command.
+        description: |
+          The command execution timeout in seconds. 0 means no timeout.
 
   - name: temporal activity
     summary: Complete or fail an Activity
