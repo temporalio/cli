@@ -200,10 +200,10 @@ commands:
         description: Timeout for the span of a command.
 
   - name: temporal activity
-    summary: Complete or fail an Activity
+    summary: Complete, update or fail an Activity
     description: |
-      Update an Activity's state to completed or failed. This marks an Activity
-      as successfully finished or as having encountered an error:
+      Update an Activity's options or update an Activity's state to completed or failed. 
+      Updating activity state marks an Activity as successfully finished or as having encountered an error,
 
       ```
       temporal activity complete \
@@ -221,6 +221,7 @@ commands:
       keywords:
         - activity
         - activity complete
+        - activity update
         - activity execution 
         - activity fail
         - cli reference
@@ -282,6 +283,82 @@ commands:
         description: Reason for failing the Activity.
     option-sets:
       - workflow reference
+
+  - name: temporal activity update
+    summary: Update Activity options
+    description: |
+      Update Activity options. Specify the Activity and Workflow IDs, and options you want to update. 
+      Updates are incremental, only changing the specified options. 
+
+      ```
+      temporal activity update \
+          --activity-id YourActivityId \
+          --workflow-id YourWorkflowId \
+          --task-queue NewTaskQueueName \
+          --schedule-to-close-timeout DURATION\
+          --schedule-to-start-timeout DURATION\
+          --start-to-close-timeout DURATION\
+          --heartbeat-timeout DURATION\
+          --retry-initial-interval DURATION\
+          --retry-maximum-interval DURATION\
+          --retry-backoff-coefficient NewBackoffCoefficient\
+          --retry-maximum-attempts NewMaximumAttempts"
+      
+      ```
+    options:
+      - name: activity-id
+        type: string
+        description: Activity ID.
+        required: true
+      - name: task-queue
+        type: string
+        description: Name of the task queue for the Activity.
+      - name: schedule-to-close-timeout
+        type: duration
+        description: |
+          Indicates how long the caller is willing to wait for an activity completion. 
+          Limits how long retries will be attempted.
+      - name: schedule-to-start-timeout
+        type: duration
+        description: |
+          Limits time an activity task can stay in a task queue before a worker picks it up. 
+          This timeout is always non retryable, as all a retry would achieve is to put it back into the same
+          queue. Defaults to `schedule_to_close_timeout` or workflow execution timeout if not specified.
+      - name: start-to-close-timeout
+        type: duration
+        description: |
+          Maximum time an activity is allowed to execute after being picked up by a worker. This timeout is always retryable.
+      - name: heartbeat-timeout
+        type: duration
+        description: |
+          Maximum permitted time between successful worker heartbeats.
+      - name: retry-initial-interval
+        type: duration
+        description: |
+          Interval of the first retry. If retryBackoffCoefficient is 1.0 then it is used for all retries.
+      - name: retry-maximum-interval
+        type: duration
+        description: |
+          Maximum interval between retries. Exponential backoff leads to interval increase.
+          This value is the cap of the increase.
+      - name: retry-backoff-coefficient
+        type: float
+        description: |
+          Coefficient used to calculate the next retry interval.
+          The next retry interval is previous interval multiplied by the coefficient.
+          Must be 1 or larger.
+      - name: retry-maximum-attempts
+        type: int
+        description: |
+          Maximum number of attempts. When exceeded the retries stop even if not expired yet.
+          Setting this value to 1 disables retries. Setting this value to 0 means unlimited attempts(up to the timeouts).
+      - name: identity
+        type: string
+        description: Identity of the user submitting this request.
+    option-sets:
+      - workflow reference
+
+
 
   - name: temporal batch
     summary: Manage running batch jobs

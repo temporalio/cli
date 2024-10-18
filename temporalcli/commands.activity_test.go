@@ -106,6 +106,32 @@ func (s *SharedServerSuite) TestActivity_Fail_InvalidDetail() {
 	s.Nil(failed)
 }
 
+func (s *SharedServerSuite) TestActivityOptionsUpdate_Accept() {
+	run := s.waitActivityStarted()
+	wid := run.GetID()
+	aid := "dev-activity-id"
+	identity := "MyIdentity"
+
+	res := s.Execute(
+		"activity", "update",
+		"--activity-id", aid,
+		"--workflow-id", wid,
+		"--run-id", run.GetRunID(),
+		"--identity", identity,
+		"--task-queue", "new-task-queue",
+		"--schedule-to-close-timeout", "60",
+		"--schedule-to-start-timeout", "5",
+		"--start-to-close-timeout", "10",
+		"--heartbeat-timeout", "20",
+		"--retry-initial-interval", "5",
+		"--retry-maximum-interval", "60",
+		"--retry-backoff-coefficient", "2",
+		"--retry-maximum-attempts", "5",
+	)
+	// atm, the command is not implemented
+	s.Error(res.Err)
+}
+
 // Test helpers
 
 func (s *SharedServerSuite) waitActivityStarted() client.WorkflowRun {
