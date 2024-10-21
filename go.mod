@@ -1,6 +1,8 @@
 module github.com/temporalio/cli
 
-go 1.22.3
+go 1.23
+
+toolchain go1.23.2
 
 require (
 	github.com/alitto/pond v1.9.1
@@ -14,10 +16,10 @@ require (
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.9.0
-	github.com/temporalio/ui-server/v2 v2.30.3
+	github.com/temporalio/ui-server/v2 v2.31.2
 	go.temporal.io/api v1.38.0
-	go.temporal.io/sdk v1.29.0
-	go.temporal.io/server v1.25.0
+	go.temporal.io/sdk v1.29.1
+	go.temporal.io/server v1.25.1
 	google.golang.org/grpc v1.65.0
 	google.golang.org/protobuf v1.34.2
 	gopkg.in/yaml.v3 v3.0.1
@@ -81,7 +83,6 @@ require (
 	github.com/mattn/go-runewidth v0.0.15 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
-	github.com/nexus-rpc/sdk-go v0.0.10 // indirect
 	github.com/olivere/elastic/v7 v7.0.32 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/pborman/uuid v1.2.1 // indirect

@@ -300,8 +300,8 @@ github.com/temporalio/sqlparser v0.0.0-20231115171017-f4060bcfa6cb/go.mod h1:143
 github.com/temporalio/tchannel-go v1.22.1-0.20220818200552-1be8d8cffa5b/go.mod h1:c+V9Z/ZgkzAdyGvHrvC5AsXgN+M9Qwey04cBdKYzV7U=
 github.com/temporalio/tchannel-go v1.22.1-0.20240528171429-1db37fdea938 h1:sEJGhmDo+0FaPWM6f0v8Tjia0H5pR6/Baj6+kS78B+M=
 github.com/temporalio/tchannel-go v1.22.1-0.20240528171429-1db37fdea938/go.mod h1:ezRQRwu9KQXy8Wuuv1aaFFxoCNz5CeNbVOOkh3xctbY=
-github.com/temporalio/ui-server/v2 v2.30.3 h1:e+coIp2yEVyU/YCNb1NU+mmEW9hmexlFqduLVYQwtx8=
-github.com/temporalio/ui-server/v2 v2.30.3/go.mod h1:UM2JEQQYjG1ASUmmXk21OT5Vl1B3WXKAFinbsTaoi3Y=
+github.com/temporalio/ui-server/v2 v2.31.2 h1:36PQMk7OdmPcNphyMZixvOB0n87L8mvaRgCxXO0HoDg=
+github.com/temporalio/ui-server/v2 v2.31.2/go.mod h1:cl/5FOXh4Hp5SdqrgOGtl2UfNwROUryaUV8q/WJYA4I=
 github.com/twmb/murmur3 v1.1.8 h1:8Yt9taO/WN3l08xErzjeschgZU2QSrwm1kclYq+0aRg=
 github.com/twmb/murmur3 v1.1.8/go.mod h1:Qq/R7NUyOfr65zD+6Q5IHKsJLwP7exErjN6lyyq3OSQ=
 github.com/uber-common/bark v1.0.0/go.mod h1:g0ZuPcD7XiExKHynr93Q742G/sbrdVQkghrqLGOoFuY=
@@ -350,10 +350,10 @@ go.opentelemetry.io/proto/otlp v1.2.0 h1:pVeZGk7nXDC9O2hncA6nHldxEjm6LByfA2aN8IO
 go.opentelemetry.io/proto/otlp v1.2.0/go.mod h1:gGpR8txAl5M03pDhMC79G6SdqNV26naRm/KDsgaHD8A=
 go.temporal.io/api v1.38.0 h1:L5i+Ai7UoBa2Gq/goVHLY32064AgawxPDLkKm4I7fu4=
 go.temporal.io/api v1.38.0/go.mod h1:fmh06EjstyrPp6SHbjJo7yYHBfHamPE4SytM+2NRejc=
-go.temporal.io/sdk v1.29.0 h1:AHObeNFFxVlnaj7jql3Bjd4B0bMBaXkywJU0uVIPgJo=
-go.temporal.io/sdk v1.29.0/go.mod h1:kp//DRvn3CqQVBCtjL51Oicp9wrZYB2s6row1UgzcKQ=
-go.temporal.io/server v1.25.0 h1:HwP7musDblTbobv8727t5riWB5T1UKqUZBLmIrWFwF8=
-go.temporal.io/server v1.25.0/go.mod h1:+8eYt3bSdHzPDMyEW3RgtsbAJRblhUEH0PVRSPiMyUs=
+go.temporal.io/sdk v1.29.1 h1:y+sUMbUhTU9rj50mwIZAPmcXCtgUdOWS9xHDYRYSgZ0=
+go.temporal.io/sdk v1.29.1/go.mod h1:kp//DRvn3CqQVBCtjL51Oicp9wrZYB2s6row1UgzcKQ=
+go.temporal.io/server v1.25.1 h1:iDkzzDMdmOPZUctLegF5kWY/h1W/MTbMZ8hsBkHBIV4=
+go.temporal.io/server v1.25.1/go.mod h1:I/6PLZkyhCC9OyNfuBCYfmSEi7DCxanzC2378Pojlf0=
 go.temporal.io/version v0.3.0 h1:dMrei9l9NyHt8nG6EB8vAwDLLTwx2SvRyucCSumAiig=
 go.temporal.io/version v0.3.0/go.mod h1:UA9S8/1LaKYae6TyD9NaPMJTZb911JcbqghI2CBSP78=
 go.uber.org/atomic v1.5.0/go.mod h1:sABNBOSYdrvTF6hTgEIbc7YasKWGhgEQZyfxyTvoXHQ=
