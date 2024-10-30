@@ -73,13 +73,13 @@ func (c *TemporalWorkflowResetCommand) doWorkflowReset(cctx *CommandContext, cl 
 	if c.Type.Value != "" {
 		resetBaseRunID, eventID, err = c.getResetEventIDByType(cctx, cl)
 		if err != nil {
-			return fmt.Errorf("getting reset event ID by type failed: %w", err)
+			return err
 		}
 	}
 
 	reapplyExcludes, reapplyType, err := getResetReapplyAndExcludeTypes(c.ReapplyExclude.Values, c.ReapplyType.Value)
 	if err != nil {
-		return fmt.Errorf("getting reset reapply and exclude types failed: %w", err)
+		return err
 	}
 
 	cctx.Printer.Printlnf("Resetting workflow %s to event ID %d", c.WorkflowId, eventID)
@@ -323,7 +323,7 @@ func getResetReapplyAndExcludeTypes(resetReapplyExclude []string, resetReapplyTy
 		}
 		excludeType, err := enums.ResetReapplyExcludeTypeFromString(exclude)
 		if err != nil {
-			return nil, 0, err
+			return nil, enums.RESET_REAPPLY_TYPE_UNSPECIFIED, err
 		}
 		reapplyExcludes = append(reapplyExcludes, excludeType)
 	}
@@ -331,11 +331,11 @@ func getResetReapplyAndExcludeTypes(resetReapplyExclude []string, resetReapplyTy
 	returnReapplyType := enums.RESET_REAPPLY_TYPE_ALL_ELIGIBLE
 	if resetReapplyType != "All" {
 		if len(resetReapplyExclude) > 0 {
-			return nil, 0, errors.New("--reapply-type cannot be used with --reapply-exclude. Use --reapply-exclude")
+			return nil, enums.RESET_REAPPLY_TYPE_UNSPECIFIED, errors.New("--reapply-type cannot be used with --reapply-exclude. Use --reapply-exclude")
 		}
 		returnReapplyType, err = enums.ResetReapplyTypeFromString(resetReapplyType)
 		if err != nil {
-			return nil, 0, err
+			return nil, enums.RESET_REAPPLY_TYPE_UNSPECIFIED, err
 		}
 	}
 
