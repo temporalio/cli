@@ -48,15 +48,11 @@ type (
 		OptionSets             []string `yaml:"option-sets"`
 		Docs                   Docs     `yaml:"docs"`
 		Index                  int
-		Base                   *Command
 		Parent                 *Command
 		Children               []*Command
 		Depth                  int
 		FileName               string
-		SubCommandName         string
-		IsLeafCommand          bool
 		LeafName               string
-		MaxChildDepth          int
 	}
 
 	// Docs represents docs-only information that is not used in CLI generation.
@@ -258,42 +254,6 @@ func enrichCommands(m Commands) (Commands, error) {
 		}
 
 		m.CommandList[c.Parent.Index].Children = append(m.CommandList[c.Parent.Index].Children, &m.CommandList[c.Index])
-
-		base := &c
-		for base.Depth > 1 {
-			base = base.Parent
-		}
-		m.CommandList[c.Index].Base = &m.CommandList[base.Index]
-	}
-
-	setMaxChildDepthVisitor(*rootCommand, &m)
-
-	for i, c := range m.CommandList {
-		if c.Parent == nil {
-			continue
-		}
-
-		subCommandStartDepth := 1
-		if c.Base.MaxChildDepth > 2 {
-			subCommandStartDepth = 2
-		}
-
-		subCommandName := ""
-		if c.Depth >= subCommandStartDepth {
-			subCommandName = strings.Join(strings.Split(c.FullName, " ")[subCommandStartDepth:], " ")
-		}
-
-		if len(subCommandName) == 0 && c.Depth == 1 {
-			// for operator base command to show up in tags, keywords, etc.
-			subCommandName = c.LeafName
-		}
-
-		m.CommandList[i].SubCommandName = subCommandName
-
-		if len(c.Children) == 0 {
-			m.CommandList[i].IsLeafCommand = true
-		}
-
 	}
 
 	// sorted ascending by full name of command (activity complete, batch list, etc)
@@ -322,20 +282,4 @@ func sortChildrenVisitor(c *Command) {
 	for _, command := range c.Children {
 		sortChildrenVisitor(command)
 	}
-}
-
-func setMaxChildDepthVisitor(c Command, commands *Commands) int {
-	maxChildDepth := 0
-	children := commands.CommandList[c.Index].Children
-	if len(children) > 0 {
-		for _, child := range children {
-			depth := setMaxChildDepthVisitor(*child, commands)
-			if depth > maxChildDepth {
-				maxChildDepth = depth
-			}
-		}
-	}
-
-	commands.CommandList[c.Index].MaxChildDepth = maxChildDepth
-	return maxChildDepth + 1
 }

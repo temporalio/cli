@@ -81,7 +81,7 @@ func (w *docWriter) writeSubcommand(c *Command) {
 	w.fileMap[fileName].WriteString(prefix + " " + c.LeafName + "\n\n")
 	w.fileMap[fileName].WriteString(c.Description + "\n\n")
 
-	if c.IsLeafCommand {
+	if isLeafCommand(c) {
 		w.fileMap[fileName].WriteString("Use the following options to change the behavior of this command.\n\n")
 
 		// gather options from command and all options aviailable from parent commands
@@ -100,6 +100,12 @@ func (w *docWriter) writeSubcommand(c *Command) {
 			w.fileMap[c.FileName].WriteString(encodeJSONExample(option.Description) + "\n\n")
 			if len(option.Short) > 0 {
 				w.fileMap[c.FileName].WriteString("Alias: `" + option.Short + "`\n\n")
+			}
+
+			if option.Experimental {
+				w.fileMap[fileName].WriteString(":::note" + "\n\n")
+				w.fileMap[fileName].WriteString("Option is experimental." + "\n\n")
+				w.fileMap[fileName].WriteString(":::" + "\n\n")
 			}
 		}
 	}
@@ -129,4 +135,8 @@ func encodeJSONExample(v string) string {
 	re := regexp.MustCompile(`('[a-zA-Z0-9]*={.*}')`)
 	v = re.ReplaceAllString(v, "`$1`")
 	return v
+}
+
+func isLeafCommand(c *Command) bool {
+	return len(c.Children) == 0
 }
