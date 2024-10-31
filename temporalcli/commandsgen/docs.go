@@ -18,6 +18,7 @@ func GenerateDocsFiles(commands Commands) (map[string][]byte, error) {
 	w := &docWriter{
 		fileMap:      make(map[string]*bytes.Buffer),
 		optionSetMap: optionSetMap,
+		allCommands:  commands.CommandList,
 	}
 
 	// sorted ascending by full name of command (activity complete, batch list, etc)
@@ -36,6 +37,7 @@ func GenerateDocsFiles(commands Commands) (map[string][]byte, error) {
 }
 
 type docWriter struct {
+	allCommands  []Command
 	fileMap      map[string]*bytes.Buffer
 	optionSetMap map[string]OptionSets
 	optionsStack [][]Option
@@ -45,16 +47,17 @@ func (c *Command) writeDoc(w *docWriter) error {
 	w.processOptions(c)
 
 	// If this is a root command, write a new file
-	if c.Depth == 1 {
+	depth := c.depth()
+	if depth == 1 {
 		w.writeCommand(c)
-	} else if c.Depth > 1 {
+	} else if depth > 1 {
 		w.writeSubcommand(c)
 	}
 	return nil
 }
 
 func (w *docWriter) writeCommand(c *Command) {
-	fileName := c.FileName
+	fileName := c.fileName()
 	w.fileMap[fileName] = &bytes.Buffer{}
 	w.fileMap[fileName].WriteString("---\n")
 	w.fileMap[fileName].WriteString("id: " + fileName + "\n")
@@ -76,12 +79,13 @@ func (w *docWriter) writeCommand(c *Command) {
 }
 
 func (w *docWriter) writeSubcommand(c *Command) {
-	prefix := strings.Repeat("#", c.Depth)
-	w.fileMap[c.FileName].WriteString(prefix + " " + c.LeafName + "\n\n")
-	w.fileMap[c.FileName].WriteString(c.Description + "\n\n")
+	fileName := c.fileName()
+	prefix := strings.Repeat("#", c.depth())
+	w.fileMap[fileName].WriteString(prefix + " " + c.leafName() + "\n\n")
+	w.fileMap[fileName].WriteString(c.Description + "\n\n")
 
-	if isLeafCommand(c) {
-		w.fileMap[c.FileName].WriteString("Use the following options to change the behavior of this command.\n\n")
+	if w.isLeafCommand(c) {
+		w.fileMap[fileName].WriteString("Use the following options to change the behavior of this command.\n\n")
 
 		// gather options from command and all options aviailable from parent commands
 		var options = make([]Option, 0)
@@ -110,34 +114,39 @@ func (w *docWriter) writeSubcommand(c *Command) {
 }
 
 func (w *docWriter) writeOptions(prefix string, options []Option, c *Command) {
+	if len(options) == 0 {
+		return
+	}
 
-	w.fileMap[c.FileName].WriteString(fmt.Sprintf("**%s:**\n\n", prefix))
+	fileName := c.fileName()
+
+	w.fileMap[fileName].WriteString(fmt.Sprintf("**%s:**\n\n", prefix))
 
 	for _, o := range options {
 		// option name and alias
-		w.fileMap[c.FileName].WriteString(fmt.Sprintf("**--%s** _%s_", o.Name, o.Type))
+		w.fileMap[fileName].WriteString(fmt.Sprintf("**--%s** _%s_", o.Name, o.Type))
 		if len(o.Short) > 0 {
-			w.fileMap[c.FileName].WriteString(fmt.Sprintf(", **-%s** _%s_", o.Short, o.Type))
+			w.fileMap[fileName].WriteString(fmt.Sprintf(", **-%s** _%s_", o.Short, o.Type))
 		}
-		w.fileMap[c.FileName].WriteString("\n\n")
+		w.fileMap[fileName].WriteString("\n\n")
 
 		// description
-		w.fileMap[c.FileName].WriteString(encodeJSONExample(o.Description))
+		w.fileMap[fileName].WriteString(encodeJSONExample(o.Description))
 		if o.Required {
-			w.fileMap[c.FileName].WriteString(" Required.")
+			w.fileMap[fileName].WriteString(" Required.")
 		}
 		if len(o.EnumValues) > 0 {
-			w.fileMap[c.FileName].WriteString(fmt.Sprintf(" Accepted values: %s.", strings.Join(o.EnumValues, ", ")))
+			w.fileMap[fileName].WriteString(fmt.Sprintf(" Accepted values: %s.", strings.Join(o.EnumValues, ", ")))
 		}
 		if len(o.Default) > 0 {
-			w.fileMap[c.FileName].WriteString(fmt.Sprintf(` (default "%s")`, o.Default))
+			w.fileMap[fileName].WriteString(fmt.Sprintf(` (default "%s")`, o.Default))
 		}
-		w.fileMap[c.FileName].WriteString("\n\n")
+		w.fileMap[fileName].WriteString("\n\n")
 
 		if o.Experimental {
-			w.fileMap[c.FileName].WriteString(":::note" + "\n\n")
-			w.fileMap[c.FileName].WriteString("Option is experimental." + "\n\n")
-			w.fileMap[c.FileName].WriteString(":::" + "\n\n")
+			w.fileMap[fileName].WriteString(":::note" + "\n\n")
+			w.fileMap[fileName].WriteString("Option is experimental." + "\n\n")
+			w.fileMap[fileName].WriteString(":::" + "\n\n")
 		}
 	}
 }
@@ -159,6 +168,15 @@ func (w *docWriter) processOptions(c *Command) {
 	w.optionsStack = append(w.optionsStack, options)
 }
 
+func (w *docWriter) isLeafCommand(c *Command) bool {
+	for _, maybeSubCmd := range w.allCommands {
+		if maybeSubCmd.isSubCommand(c) {
+			return false
+		}
+	}
+	return true
+}
+
 func encodeJSONExample(v string) string {
 	// example: 'YourKey={"your": "value"}'
 	// results in an mdx acorn rendering error
@@ -166,8 +184,4 @@ func encodeJSONExample(v string) string {
 	re := regexp.MustCompile(`('[a-zA-Z0-9]*={.*}')`)
 	v = re.ReplaceAllString(v, "`$1`")
 	return v
-}
-
-func isLeafCommand(c *Command) bool {
-	return len(c.Children) == 0
 }

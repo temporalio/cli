@@ -47,12 +47,6 @@ type (
 		Options                []Option `yaml:"options"`
 		OptionSets             []string `yaml:"option-sets"`
 		Docs                   Docs     `yaml:"docs"`
-		Index                  int
-		Parent                 *Command
-		Children               []*Command
-		Depth                  int
-		FileName               string
-		LeafName               string
 	}
 
 	// Docs represents docs-only information that is not used in CLI generation.
@@ -97,7 +91,12 @@ func ParseCommands() (Commands, error) {
 		}
 	}
 
-	return enrichCommands(m)
+	// alphabetize commands
+	sort.Slice(m.CommandList, func(i, j int) bool {
+		return m.CommandList[i].FullName < m.CommandList[j].FullName
+	})
+
+	return m, nil
 }
 
 var markdownLinkPattern = regexp.MustCompile(`\[(.*?)\]\((.*?)\)`)
@@ -180,6 +179,25 @@ func (c *Command) processSection() error {
 	return nil
 }
 
+func (c *Command) isSubCommand(maybeParent *Command) bool {
+	return len(c.NamePath) == len(maybeParent.NamePath)+1 && strings.HasPrefix(c.FullName, maybeParent.FullName+" ")
+}
+
+func (c *Command) leafName() string {
+	return strings.Join(strings.Split(c.FullName, " ")[c.depth():], "")
+}
+
+func (c *Command) fileName() string {
+	if c.depth() <= 0 {
+		return ""
+	}
+	return strings.Split(c.FullName, " ")[1]
+}
+
+func (c *Command) depth() int {
+	return len(strings.Split(c.FullName, " ")) - 1
+}
+
 func (o *Option) processSection() error {
 	if o.Name == "" {
 		return fmt.Errorf("missing option name")
@@ -215,71 +233,4 @@ func (o *Option) processSection() error {
 		}
 	}
 	return nil
-}
-
-// enrichCommands populates additional fields on Commands
-// beyond those read from commands.yml to make it easier
-// for docs.go to generate docs
-func enrichCommands(m Commands) (Commands, error) {
-	commandLookup := make(map[string]*Command)
-
-	for i, command := range m.CommandList {
-		m.CommandList[i].Index = i
-		commandLookup[command.FullName] = &m.CommandList[i]
-	}
-
-	var rootCommand *Command
-
-	//populate parent and basic meta
-	for i, c := range m.CommandList {
-		commandLength := len(strings.Split(c.FullName, " "))
-		if commandLength == 1 {
-			rootCommand = &m.CommandList[i]
-			continue
-		}
-		parentName := strings.Join(strings.Split(c.FullName, " ")[:commandLength-1], " ")
-		parent, ok := commandLookup[parentName]
-		if ok {
-			m.CommandList[i].Parent = &m.CommandList[parent.Index]
-			m.CommandList[i].Depth = len(strings.Split(c.FullName, " ")) - 1
-			m.CommandList[i].FileName = strings.Split(c.FullName, " ")[1]
-			m.CommandList[i].LeafName = strings.Join(strings.Split(c.FullName, " ")[m.CommandList[i].Depth:], "")
-		}
-	}
-
-	//populate children and base command
-	for _, c := range m.CommandList {
-		if c.Parent == nil {
-			continue
-		}
-
-		m.CommandList[c.Parent.Index].Children = append(m.CommandList[c.Parent.Index].Children, &m.CommandList[c.Index])
-	}
-
-	// sorted ascending by full name of command (activity complete, batch list, etc)
-	sortChildrenVisitor(rootCommand)
-
-	// pull flat list in same order as sorted children
-	m.CommandList = make([]Command, 0)
-	collectCommandVisitor(*rootCommand, &m)
-
-	return m, nil
-}
-
-func collectCommandVisitor(c Command, m *Commands) {
-
-	m.CommandList = append(m.CommandList, c)
-
-	for _, child := range c.Children {
-		collectCommandVisitor(*child, m)
-	}
-}
-
-func sortChildrenVisitor(c *Command) {
-	sort.Slice(c.Children, func(i, j int) bool {
-		return c.Children[i].FullName < c.Children[j].FullName
-	})
-	for _, command := range c.Children {
-		sortChildrenVisitor(command)
-	}
 }

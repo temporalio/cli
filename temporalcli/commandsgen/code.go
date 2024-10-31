@@ -104,10 +104,6 @@ func (c *codeWriter) importIsatty() string { return c.importPkg("github.com/matt
 
 func (c *Command) structName() string { return namify(c.FullName, true) + "Command" }
 
-func (c *Command) isSubCommand(maybeParent *Command) bool {
-	return len(c.NamePath) == len(maybeParent.NamePath)+1 && strings.HasPrefix(c.FullName, maybeParent.FullName+" ")
-}
-
 func (o *OptionSets) writeCode(w *codeWriter) error {
 	if o.Name == "" {
 		return fmt.Errorf("missing option set name")
