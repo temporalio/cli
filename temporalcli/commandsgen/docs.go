@@ -76,37 +76,68 @@ func (w *docWriter) writeCommand(c *Command) {
 }
 
 func (w *docWriter) writeSubcommand(c *Command) {
-	fileName := c.FileName
 	prefix := strings.Repeat("#", c.Depth)
-	w.fileMap[fileName].WriteString(prefix + " " + c.LeafName + "\n\n")
-	w.fileMap[fileName].WriteString(c.Description + "\n\n")
+	w.fileMap[c.FileName].WriteString(prefix + " " + c.LeafName + "\n\n")
+	w.fileMap[c.FileName].WriteString(c.Description + "\n\n")
 
 	if isLeafCommand(c) {
-		w.fileMap[fileName].WriteString("Use the following options to change the behavior of this command.\n\n")
+		w.fileMap[c.FileName].WriteString("Use the following options to change the behavior of this command.\n\n")
 
 		// gather options from command and all options aviailable from parent commands
-		var allOptions = make([]Option, 0)
-		for _, options := range w.optionsStack {
-			allOptions = append(allOptions, options...)
+		var options = make([]Option, 0)
+		var globalOptions = make([]Option, 0)
+		for i, o := range w.optionsStack {
+			if i == len(w.optionsStack)-1 {
+				options = append(options, o...)
+			} else {
+				globalOptions = append(globalOptions, o...)
+			}
 		}
 
 		// alphabetize options
-		sort.Slice(allOptions, func(i, j int) bool {
-			return allOptions[i].Name < allOptions[j].Name
+		sort.Slice(options, func(i, j int) bool {
+			return options[i].Name < options[j].Name
 		})
 
-		for _, option := range allOptions {
-			w.fileMap[c.FileName].WriteString(fmt.Sprintf("**--%s**\n\n", option.Name))
-			w.fileMap[c.FileName].WriteString(encodeJSONExample(option.Description) + "\n\n")
-			if len(option.Short) > 0 {
-				w.fileMap[c.FileName].WriteString("Alias: `" + option.Short + "`\n\n")
-			}
+		sort.Slice(globalOptions, func(i, j int) bool {
+			return globalOptions[i].Name < globalOptions[j].Name
+		})
 
-			if option.Experimental {
-				w.fileMap[fileName].WriteString(":::note" + "\n\n")
-				w.fileMap[fileName].WriteString("Option is experimental." + "\n\n")
-				w.fileMap[fileName].WriteString(":::" + "\n\n")
-			}
+		w.writeOptions("Flags", options, c)
+		w.writeOptions("Global Flags", globalOptions, c)
+
+	}
+}
+
+func (w *docWriter) writeOptions(prefix string, options []Option, c *Command) {
+
+	w.fileMap[c.FileName].WriteString(fmt.Sprintf("**%s:**\n\n", prefix))
+
+	for _, o := range options {
+		// option name and alias
+		w.fileMap[c.FileName].WriteString(fmt.Sprintf("**--%s** _%s_", o.Name, o.Type))
+		if len(o.Short) > 0 {
+			w.fileMap[c.FileName].WriteString(fmt.Sprintf(", **-%s** _%s_", o.Short, o.Type))
+		}
+		w.fileMap[c.FileName].WriteString("\n\n")
+
+		// description
+		w.fileMap[c.FileName].WriteString(encodeJSONExample(o.Description))
+		if o.Required {
+			w.fileMap[c.FileName].WriteString(" Required.")
+		}
+		if len(o.EnumValues) > 0 {
+			w.fileMap[c.FileName].WriteString(fmt.Sprintf(" Accepted values: %s.", strings.Join(o.EnumValues, ", ")))
+		}
+		if len(o.Default) > 0 {
+			w.fileMap[c.FileName].WriteString(fmt.Sprintf(` (default "%s")`, o.Default))
+		}
+		w.fileMap[c.FileName].WriteString("\n\n")
+
+		if o.Experimental {
+			w.fileMap[c.FileName].WriteString(":::note" + "\n\n")
+			w.fileMap[c.FileName].WriteString("Option is experimental." + "\n\n")
+			w.fileMap[c.FileName].WriteString(":::" + "\n\n")
 		}
 	}
 }
