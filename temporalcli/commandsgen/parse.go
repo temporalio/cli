@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"regexp"
 	"slices"
+	"sort"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -19,15 +20,16 @@ var CommandsYAML []byte
 type (
 	// Option represents the structure of an option within option sets.
 	Option struct {
-		Name        string   `yaml:"name"`
-		Type        string   `yaml:"type"`
-		Description string   `yaml:"description"`
-		Short       string   `yaml:"short,omitempty"`
-		Default     string   `yaml:"default,omitempty"`
-		Env         string   `yaml:"env,omitempty"`
-		Required    bool     `yaml:"required,omitempty"`
-		Aliases     []string `yaml:"aliases,omitempty"`
-		EnumValues  []string `yaml:"enum-values,omitempty"`
+		Name         string   `yaml:"name"`
+		Type         string   `yaml:"type"`
+		Description  string   `yaml:"description"`
+		Short        string   `yaml:"short,omitempty"`
+		Default      string   `yaml:"default,omitempty"`
+		Env          string   `yaml:"env,omitempty"`
+		Required     bool     `yaml:"required,omitempty"`
+		Aliases      []string `yaml:"aliases,omitempty"`
+		EnumValues   []string `yaml:"enum-values,omitempty"`
+		Experimental bool     `yaml:"experimental,omitempty"`
 	}
 
 	// Command represents the structure of each command in the commands map.
@@ -55,8 +57,9 @@ type (
 
 	// OptionSets represents the structure of option sets.
 	OptionSets struct {
-		Name    string   `yaml:"name"`
-		Options []Option `yaml:"options"`
+		Name        string   `yaml:"name"`
+		Description string   `yaml:"description"`
+		Options     []Option `yaml:"options"`
 	}
 
 	// Commands represents the top-level structure holding commands and option sets.
@@ -87,6 +90,12 @@ func ParseCommands() (Commands, error) {
 			return Commands{}, fmt.Errorf("failed parsing command section %q: %w", command.FullName, err)
 		}
 	}
+
+	// alphabetize commands
+	sort.Slice(m.CommandList, func(i, j int) bool {
+		return m.CommandList[i].FullName < m.CommandList[j].FullName
+	})
+
 	return m, nil
 }
 
@@ -168,6 +177,25 @@ func (c *Command) processSection() error {
 	}
 
 	return nil
+}
+
+func (c *Command) isSubCommand(maybeParent *Command) bool {
+	return len(c.NamePath) == len(maybeParent.NamePath)+1 && strings.HasPrefix(c.FullName, maybeParent.FullName+" ")
+}
+
+func (c *Command) leafName() string {
+	return strings.Join(strings.Split(c.FullName, " ")[c.depth():], "")
+}
+
+func (c *Command) fileName() string {
+	if c.depth() <= 0 {
+		return ""
+	}
+	return strings.Split(c.FullName, " ")[1]
+}
+
+func (c *Command) depth() int {
+	return len(strings.Split(c.FullName, " ")) - 1
 }
 
 func (o *Option) processSection() error {
