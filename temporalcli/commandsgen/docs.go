@@ -124,11 +124,11 @@ func (w *docWriter) writeOptions(prefix string, options []Option, c *Command) {
 
 	for _, o := range options {
 		// option name and alias
-		w.fileMap[fileName].WriteString(fmt.Sprintf("**--%s** _%s_", o.Name, o.Type))
+		w.fileMap[fileName].WriteString(fmt.Sprintf("**--%s**", o.Name))
 		if len(o.Short) > 0 {
-			w.fileMap[fileName].WriteString(fmt.Sprintf(", **-%s** _%s_", o.Short, o.Type))
+			w.fileMap[fileName].WriteString(fmt.Sprintf(", **-%s**", o.Short))
 		}
-		w.fileMap[fileName].WriteString("\n\n")
+		w.fileMap[fileName].WriteString(fmt.Sprintf(" _%s_\n\n", o.Type))
 
 		// description
 		w.fileMap[fileName].WriteString(encodeJSONExample(o.Description))
