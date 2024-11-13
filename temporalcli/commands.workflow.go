@@ -492,12 +492,12 @@ func queryHelper(cctx *CommandContext,
 	queryRejectCond := enums.QUERY_REJECT_CONDITION_UNSPECIFIED
 	switch rejectCondition.Value {
 	case "":
-	case "not_open":
+	case "not_open", "not-open":
 		queryRejectCond = enums.QUERY_REJECT_CONDITION_NOT_OPEN
-	case "not_completed_cleanly":
+	case "not_completed_cleanly", "not-completed-cleanly":
 		queryRejectCond = enums.QUERY_REJECT_CONDITION_NOT_COMPLETED_CLEANLY
 	default:
-		return fmt.Errorf("invalid query reject condition: %v, valid values are: 'not_open', 'not_completed_cleanly'", rejectCondition)
+		return fmt.Errorf("invalid query reject condition: %v, valid values are: 'not-open', 'not-completed-cleanly'", rejectCondition)
 	}
 
 	result, err := cl.WorkflowService().QueryWorkflow(cctx, &workflowservice.QueryWorkflowRequest{

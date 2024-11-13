@@ -161,10 +161,13 @@ commands:
           Default is "info" for most commands and "warn" for `server start-dev`.
         default: info
       - name: log-format
-        type: string
-        description: |
-          Log format.
-          Options are: text, json.
+        type: string-enum
+        description: Log format.
+        enum-values:
+          - text
+          - json
+        hidden-legacy-values:
+          - pretty
         default: text
       - name: output
         type: string-enum
@@ -1166,7 +1169,7 @@ commands:
       executed interval.
 
       Backfills require a Schedule ID and the time period covered by the request.
-      It's best to use the `BufferAll` or `AllowAll` policies to avoid conflicts
+      It's best to use the `buffer-all` or `allow-all` policies to avoid conflicts
       and ensure no Workflow Executions are skipped.
 
       For example:
@@ -1176,25 +1179,25 @@ commands:
           --schedule-id "YourScheduleId" \
           --start-time "2022-05-01T00:00:00Z" \
           --end-time "2022-05-31T23:59:59Z" \
-          --overlap-policy BufferAll
+          --overlap-policy buffer-all
       ```
 
       The policies include:
 
-      * **AllowAll**: Allow unlimited concurrent Workflow Executions. This
+      * **allow-all**: Allow unlimited concurrent Workflow Executions. This
         significantly speeds up the backfilling process on systems that support
         concurrency. You must ensure running Workflow Executions do not interfere
         with each other.
-      * **BufferAll**: Buffer all incoming Workflow Executions while waiting for
+      * **buffer-all**: Buffer all incoming Workflow Executions while waiting for
         the running Workflow Execution to complete.
-      * **Skip**: If a previous Workflow Execution is still running, discard new
+      * **skip**: If a previous Workflow Execution is still running, discard new
         Workflow Executions.
-      * **BufferOne**: Same as 'Skip' but buffer a single Workflow Execution to be
+      * **buffer-one**: Same as 'Skip' but buffer a single Workflow Execution to be
         run after the previous Execution completes. Discard other Workflow
         Executions.
-      * **CancelOther**: Cancel the running Workflow Execution and replace it with
+      * **cancel-other**: Cancel the running Workflow Execution and replace it with
         the incoming new Workflow Execution.
-      * **TerminateOther**: Terminate the running Workflow Execution and replace
+      * **terminate-other**: Terminate the running Workflow Execution and replace
         it with the incoming new Workflow Execution.
     options:
       - name: end-time
@@ -3015,7 +3018,7 @@ option-sets:
     options:
       - name: overlap-policy
         type: string-enum
-        description: Policy for handling overlapping Workflow Executions. # copilot updated this
+        description: Policy for handling overlapping Workflow Executions.
         enum-values:  
           - skip
           - buffer-one

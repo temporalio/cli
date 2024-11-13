@@ -71,8 +71,8 @@ type OverlapPolicyOptions struct {
 }
 
 func (v *OverlapPolicyOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
-	v.OverlapPolicy = NewStringEnum([]string{"Skip", "BufferOne", "BufferAll", "CancelOther", "TerminateOther", "AllowAll"}, "Skip")
-	f.Var(&v.OverlapPolicy, "overlap-policy", "Policy for handling overlapping Workflow Executions. Accepted values: Skip, BufferOne, BufferAll, CancelOther, TerminateOther, AllowAll.")
+	v.OverlapPolicy = NewStringEnum([]string{"skip", "buffer-one", "buffer-all", "cancel-other", "terminate-other", "allow-all", "Skip", "BufferOne", "BufferAll", "CancelOther", "TerminateOther", "AllowAll"}, "skip")
+	f.Var(&v.OverlapPolicy, "overlap-policy", "Policy for handling overlapping Workflow Executions. Accepted values: skip, buffer-one, buffer-all, cancel-other, terminate-other, allow-all.")
 }
 
 type ScheduleIdOptions struct {
@@ -189,10 +189,10 @@ func (v *WorkflowStartOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet
 	f.BoolVar(&v.FailExisting, "fail-existing", false, "Fail if the Workflow already exists.")
 	v.StartDelay = 0
 	f.Var(&v.StartDelay, "start-delay", "Delay before starting the Workflow Execution. Can't be used with cron schedules. If the Workflow receives a signal or update prior to this time, the Workflow Execution starts immediately.")
-	v.IdReusePolicy = NewStringEnum([]string{"AllowDuplicate", "AllowDuplicateFailedOnly", "RejectDuplicate", "TerminateIfRunning"}, "")
-	f.Var(&v.IdReusePolicy, "id-reuse-policy", "Re-use policy for the Workflow ID in new Workflow Executions. Accepted values: AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate, TerminateIfRunning.")
-	v.IdConflictPolicy = NewStringEnum([]string{"Fail", "UseExisting", "TerminateExisting"}, "")
-	f.Var(&v.IdConflictPolicy, "id-conflict-policy", "Determines how to resolve a conflict when spawning a new Workflow Execution with a particular Workflow Id used by an existing Open Workflow Execution. Accepted values: Fail, UseExisting, TerminateExisting.")
+	v.IdReusePolicy = NewStringEnum([]string{"allow-duplicate", "allow-duplicate-failed-only", "reject-duplicate", "terminate-if-running", "AllowDuplicate", "AllowDuplicateFailedOnly", "RejectDuplicate", "TerminateIfRunning"}, "")
+	f.Var(&v.IdReusePolicy, "id-reuse-policy", "Re-use policy for the Workflow ID in new Workflow Executions. Accepted values: allow-duplicate, allow-duplicate-failed-only, reject-duplicate, terminate-if-running.")
+	v.IdConflictPolicy = NewStringEnum([]string{"fail", "use-existing", "terminate-existing", "Fail", "UseExisting", "TerminateExisting"}, "")
+	f.Var(&v.IdConflictPolicy, "id-conflict-policy", "Determines how to resolve a conflict when spawning a new Workflow Execution with a particular Workflow Id used by an existing Open Workflow Execution. Accepted values: fail, use-existing, terminate-existing.")
 }
 
 type PayloadInputOptions struct {
@@ -271,7 +271,7 @@ type TemporalCommand struct {
 	Env                     string
 	EnvFile                 string
 	LogLevel                StringEnum
-	LogFormat               string
+	LogFormat               StringEnum
 	Output                  StringEnum
 	TimeFormat              StringEnum
 	Color                   StringEnum
@@ -302,7 +302,8 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	s.Command.PersistentFlags().StringVar(&s.EnvFile, "env-file", "", "Path to environment settings file. Defaults to `$HOME/.config/temporalio/temporal.yaml`.")
 	s.LogLevel = NewStringEnum([]string{"debug", "info", "warn", "error", "never"}, "info")
 	s.Command.PersistentFlags().Var(&s.LogLevel, "log-level", "Log level. Default is \"info\" for most commands and \"warn\" for `server start-dev`. Accepted values: debug, info, warn, error, never.")
-	s.Command.PersistentFlags().StringVar(&s.LogFormat, "log-format", "text", "Log format. Options are: text, json.")
+	s.LogFormat = NewStringEnum([]string{"text", "json", "pretty"}, "text")
+	s.Command.PersistentFlags().Var(&s.LogFormat, "log-format", "Log format. Accepted values: text, json.")
 	s.Output = NewStringEnum([]string{"text", "json", "jsonl", "none"}, "text")
 	s.Command.PersistentFlags().VarP(&s.Output, "output", "o", "Non-logging data output format. Accepted values: text, json, jsonl, none.")
 	s.TimeFormat = NewStringEnum([]string{"relative", "iso", "raw"}, "relative")
@@ -1292,8 +1293,8 @@ func NewTemporalOperatorSearchAttributeCreateCommand(cctx *CommandContext, paren
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringArrayVar(&s.Name, "name", nil, "Search Attribute name. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
-	s.Type = NewStringEnumArray([]string{"Text", "Keyword", "Int", "Double", "Bool", "Datetime", "KeywordList"}, []string{})
-	s.Command.Flags().Var(&s.Type, "type", "Search Attribute type. Accepted values: Text, Keyword, Int, Double, Bool, Datetime, KeywordList. Required.")
+	s.Type = NewStringEnumArray([]string{"text", "keyword", "int", "double", "bool", "datetime", "keyword-list"}, []string{})
+	s.Command.Flags().Var(&s.Type, "type", "Search Attribute type. Accepted values: text, keyword, int, double, bool, datetime, keyword-list. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "type")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -1403,9 +1404,9 @@ func NewTemporalScheduleBackfillCommand(cctx *CommandContext, parent *TemporalSc
 	s.Command.Use = "backfill [flags]"
 	s.Command.Short = "Backfill past actions"
 	if hasHighlighting {
-		s.Command.Long = "Batch-execute actions that would have run during a specified time interval.\nUse this command to fill in Workflow runs from when a Schedule was paused,\nbefore a Schedule was created, from the future, or to re-process a previously\nexecuted interval.\n\nBackfills require a Schedule ID and the time period covered by the request.\nIt's best to use the \x1b[1mBufferAll\x1b[0m or \x1b[1mAllowAll\x1b[0m policies to avoid conflicts\nand ensure no Workflow Executions are skipped.\n\nFor example:\n\n\x1b[1mtemporal schedule backfill \\\n    --schedule-id \"YourScheduleId\" \\\n    --start-time \"2022-05-01T00:00:00Z\" \\\n    --end-time \"2022-05-31T23:59:59Z\" \\\n    --overlap-policy BufferAll\x1b[0m\n\nThe policies include:\n\n* **AllowAll**: Allow unlimited concurrent Workflow Executions. This\n  significantly speeds up the backfilling process on systems that support\n  concurrency. You must ensure running Workflow Executions do not interfere\n  with each other.\n* **BufferAll**: Buffer all incoming Workflow Executions while waiting for\n  the running Workflow Execution to complete.\n* **Skip**: If a previous Workflow Execution is still running, discard new\n  Workflow Executions.\n* **BufferOne**: Same as 'Skip' but buffer a single Workflow Execution to be\n  run after the previous Execution completes. Discard other Workflow\n  Executions.\n* **CancelOther**: Cancel the running Workflow Execution and replace it with\n  the incoming new Workflow Execution.\n* **TerminateOther**: Terminate the running Workflow Execution and replace\n  it with the incoming new Workflow Execution."
+		s.Command.Long = "Batch-execute actions that would have run during a specified time interval.\nUse this command to fill in Workflow runs from when a Schedule was paused,\nbefore a Schedule was created, from the future, or to re-process a previously\nexecuted interval.\n\nBackfills require a Schedule ID and the time period covered by the request.\nIt's best to use the \x1b[1mbuffer-all\x1b[0m or \x1b[1mallow-all\x1b[0m policies to avoid conflicts\nand ensure no Workflow Executions are skipped.\n\nFor example:\n\n\x1b[1mtemporal schedule backfill \\\n    --schedule-id \"YourScheduleId\" \\\n    --start-time \"2022-05-01T00:00:00Z\" \\\n    --end-time \"2022-05-31T23:59:59Z\" \\\n    --overlap-policy buffer-all\x1b[0m\n\nThe policies include:\n\n* **allow-all**: Allow unlimited concurrent Workflow Executions. This\n  significantly speeds up the backfilling process on systems that support\n  concurrency. You must ensure running Workflow Executions do not interfere\n  with each other.\n* **buffer-all**: Buffer all incoming Workflow Executions while waiting for\n  the running Workflow Execution to complete.\n* **skip**: If a previous Workflow Execution is still running, discard new\n  Workflow Executions.\n* **buffer-one**: Same as 'Skip' but buffer a single Workflow Execution to be\n  run after the previous Execution completes. Discard other Workflow\n  Executions.\n* **cancel-other**: Cancel the running Workflow Execution and replace it with\n  the incoming new Workflow Execution.\n* **terminate-other**: Terminate the running Workflow Execution and replace\n  it with the incoming new Workflow Execution."
 	} else {
-		s.Command.Long = "Batch-execute actions that would have run during a specified time interval.\nUse this command to fill in Workflow runs from when a Schedule was paused,\nbefore a Schedule was created, from the future, or to re-process a previously\nexecuted interval.\n\nBackfills require a Schedule ID and the time period covered by the request.\nIt's best to use the `BufferAll` or `AllowAll` policies to avoid conflicts\nand ensure no Workflow Executions are skipped.\n\nFor example:\n\n```\ntemporal schedule backfill \\\n    --schedule-id \"YourScheduleId\" \\\n    --start-time \"2022-05-01T00:00:00Z\" \\\n    --end-time \"2022-05-31T23:59:59Z\" \\\n    --overlap-policy BufferAll\n```\n\nThe policies include:\n\n* **AllowAll**: Allow unlimited concurrent Workflow Executions. This\n  significantly speeds up the backfilling process on systems that support\n  concurrency. You must ensure running Workflow Executions do not interfere\n  with each other.\n* **BufferAll**: Buffer all incoming Workflow Executions while waiting for\n  the running Workflow Execution to complete.\n* **Skip**: If a previous Workflow Execution is still running, discard new\n  Workflow Executions.\n* **BufferOne**: Same as 'Skip' but buffer a single Workflow Execution to be\n  run after the previous Execution completes. Discard other Workflow\n  Executions.\n* **CancelOther**: Cancel the running Workflow Execution and replace it with\n  the incoming new Workflow Execution.\n* **TerminateOther**: Terminate the running Workflow Execution and replace\n  it with the incoming new Workflow Execution."
+		s.Command.Long = "Batch-execute actions that would have run during a specified time interval.\nUse this command to fill in Workflow runs from when a Schedule was paused,\nbefore a Schedule was created, from the future, or to re-process a previously\nexecuted interval.\n\nBackfills require a Schedule ID and the time period covered by the request.\nIt's best to use the `buffer-all` or `allow-all` policies to avoid conflicts\nand ensure no Workflow Executions are skipped.\n\nFor example:\n\n```\ntemporal schedule backfill \\\n    --schedule-id \"YourScheduleId\" \\\n    --start-time \"2022-05-01T00:00:00Z\" \\\n    --end-time \"2022-05-31T23:59:59Z\" \\\n    --overlap-policy buffer-all\n```\n\nThe policies include:\n\n* **allow-all**: Allow unlimited concurrent Workflow Executions. This\n  significantly speeds up the backfilling process on systems that support\n  concurrency. You must ensure running Workflow Executions do not interfere\n  with each other.\n* **buffer-all**: Buffer all incoming Workflow Executions while waiting for\n  the running Workflow Execution to complete.\n* **skip**: If a previous Workflow Execution is still running, discard new\n  Workflow Executions.\n* **buffer-one**: Same as 'Skip' but buffer a single Workflow Execution to be\n  run after the previous Execution completes. Discard other Workflow\n  Executions.\n* **cancel-other**: Cancel the running Workflow Execution and replace it with\n  the incoming new Workflow Execution.\n* **terminate-other**: Terminate the running Workflow Execution and replace\n  it with the incoming new Workflow Execution."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().Var(&s.EndTime, "end-time", "Backfill end time. Required.")
@@ -2595,8 +2596,8 @@ func NewTemporalWorkflowQueryCommand(cctx *CommandContext, parent *TemporalWorkf
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Name, "name", "", "Query Type/Name. Required. Aliased as \"--type\".")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
-	s.RejectCondition = NewStringEnum([]string{"not_open", "not_completed_cleanly"}, "")
-	s.Command.Flags().Var(&s.RejectCondition, "reject-condition", "Optional flag for rejecting Queries based on Workflow state. Accepted values: not_open, not_completed_cleanly.")
+	s.RejectCondition = NewStringEnum([]string{"not-open", "not-completed-cleanly", "not_open", "not_completed_cleanly"}, "")
+	s.Command.Flags().Var(&s.RejectCondition, "reject-condition", "Optional flag for rejecting Queries based on Workflow state. Accepted values: not-open, not-completed-cleanly.")
 	s.PayloadInputOptions.buildFlags(cctx, s.Command.Flags())
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Flags().SetNormalizeFunc(aliasNormalizer(map[string]string{
@@ -2642,12 +2643,12 @@ func NewTemporalWorkflowResetCommand(cctx *CommandContext, parent *TemporalWorkf
 	s.Command.Flags().IntVarP(&s.EventId, "event-id", "e", 0, "Event ID to reset to. Event must occur after `WorkflowTaskStarted`. `WorkflowTaskCompleted`, `WorkflowTaskFailed`, etc. are valid.")
 	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for reset. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "reason")
-	s.ReapplyType = NewStringEnum([]string{"All", "Signal", "None"}, "All")
-	s.Command.Flags().Var(&s.ReapplyType, "reapply-type", "Types of events to re-apply after reset point. Deprecated. Use --reapply-exclude instead. Accepted values: All, Signal, None.")
-	s.ReapplyExclude = NewStringEnumArray([]string{"All", "Signal", "Update"}, []string{})
-	s.Command.Flags().Var(&s.ReapplyExclude, "reapply-exclude", "Exclude these event types from re-application. Accepted values: All, Signal, Update.")
-	s.Type = NewStringEnum([]string{"FirstWorkflowTask", "LastWorkflowTask", "LastContinuedAsNew", "BuildId"}, "")
-	s.Command.Flags().VarP(&s.Type, "type", "t", "The event type for the reset. Accepted values: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew, BuildId.")
+	s.ReapplyType = NewStringEnum([]string{"all", "signal", "none"}, "all")
+	s.Command.Flags().Var(&s.ReapplyType, "reapply-type", "Types of events to re-apply after reset point. Deprecated. Use --reapply-exclude instead. Accepted values: all, signal, none.")
+	s.ReapplyExclude = NewStringEnumArray([]string{"all", "signal", "update"}, []string{})
+	s.Command.Flags().Var(&s.ReapplyExclude, "reapply-exclude", "Exclude these event types from re-application. Accepted values: all, signal, update.")
+	s.Type = NewStringEnum([]string{"first-workflow-task", "last-workflow-task", "last-continued-as-new", "build-id", "FirstWorkflowTask", "LastWorkflowTask", "LastContinuedAsNew", "BuildId"}, "")
+	s.Command.Flags().VarP(&s.Type, "type", "t", "The event type for the reset. Accepted values: first-workflow-task, last-workflow-task, last-continued-as-new, build-id.")
 	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "A Build ID. Use only with the BuildId `--type`. Resets the first Workflow task processed by this ID. By default, this reset may be in a prior run, earlier than a Continue as New point.")
 	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Content for an SQL-like `QUERY` List Filter.")
 	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm. Only allowed when `--query` is present.")
@@ -2771,8 +2772,8 @@ func NewTemporalWorkflowStackCommand(cctx *CommandContext, parent *TemporalWorkf
 		s.Command.Long = "Perform a Query on a Workflow Execution using a `__stack_trace`-type Query.\nDisplay a stack trace of the threads and routines currently in use by the\nWorkflow for troubleshooting:\n\n```\ntemporal workflow stack \\\n    --workflow-id YourWorkflowId\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.RejectCondition = NewStringEnum([]string{"not_open", "not_completed_cleanly"}, "")
-	s.Command.Flags().Var(&s.RejectCondition, "reject-condition", "Optional flag to reject Queries based on Workflow state. Accepted values: not_open, not_completed_cleanly.")
+	s.RejectCondition = NewStringEnum([]string{"not-open", "not-completed-cleanly", "not_open", "not_completed_cleanly"}, "")
+	s.Command.Flags().Var(&s.RejectCondition, "reject-condition", "Optional flag to reject Queries based on Workflow state. Accepted values: not-open, not-completed-cleanly.")
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
