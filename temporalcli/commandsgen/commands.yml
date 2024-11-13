@@ -2592,6 +2592,10 @@ commands:
           - all
           - signal
           - none
+        hidden-legacy-values:
+          - All
+          - Signal
+          - None
         default: all
       - name: reapply-exclude
         type: string-enum[]
@@ -2600,6 +2604,10 @@ commands:
           - all
           - signal
           - update
+        hidden-legacy-values:
+          - All
+          - Signal
+          - Update
       - name: type
         short: t
         type: string-enum

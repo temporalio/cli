@@ -60,7 +60,8 @@ func (c *TemporalWorkflowResetCommand) validateBatchResetArguments() error {
 	if c.EventId != 0 {
 		return errors.New("must not specify event Id")
 	}
-	if c.Type.Value == "BuildId" && c.BuildId == "" {
+	typeValue := convertTypeValue(c.Type.Value)
+	if typeValue == "BuildId" && c.BuildId == "" {
 		return errors.New("must specify build Id for BuildId based batch reset")
 	}
 	return nil
@@ -98,7 +99,7 @@ func (c *TemporalWorkflowResetCommand) doWorkflowReset(cctx *CommandContext, cl 
 	reapplyType := enums.RESET_REAPPLY_TYPE_ALL_ELIGIBLE
 	if strings.ToLower(c.ReapplyType.Value) != "all" {
 		if len(c.ReapplyExclude.Values) > 0 {
-			return errors.New("--reapply-type cannot be used with --reapply-exclude. Use --reapply-exclude.")
+			return errors.New("--reapply-type cannot be used with --reapply-exclude. Use --reapply-exclude")
 		}
 		reapplyType, err = enums.ResetReapplyTypeFromString(c.ReapplyType.Value)
 		if err != nil {
@@ -141,7 +142,7 @@ func (c *TemporalWorkflowResetCommand) runBatchReset(cctx *CommandContext, cl cl
 	request.Operation = &workflowservice.StartBatchOperationRequest_ResetOperation{
 		ResetOperation: &batch.BatchOperationReset{
 			Identity: clientIdentity(),
-			Options:  c.batchResetOptions(c.Type.Value),
+			Options:  c.batchResetOptions(convertTypeValue(c.Type.Value)),
 		},
 	}
 	count, err := cl.CountWorkflow(cctx, &workflowservice.CountWorkflowExecutionsRequest{Query: c.Query})
@@ -162,16 +163,16 @@ func (c *TemporalWorkflowResetCommand) runBatchReset(cctx *CommandContext, cl cl
 
 func (c *TemporalWorkflowResetCommand) batchResetOptions(resetType string) *common.ResetOptions {
 
-	switch strings.ToLower(resetType) {
-	case "firstworkflowtask", "first-workflow-task":
+	switch resetType {
+	case "FirstWorkflowTask", "first-workflow-task":
 		return &common.ResetOptions{
 			Target: &common.ResetOptions_FirstWorkflowTask{},
 		}
-	case "lastworkflowtask", "last-workflow-task":
+	case "LastWorkflowTask", "last-workflow-task":
 		return &common.ResetOptions{
 			Target: &common.ResetOptions_LastWorkflowTask{},
 		}
-	case "buildid", "build-id":
+	case "BuildId", "build-id":
 		return &common.ResetOptions{
 			Target: &common.ResetOptions_BuildId{
 				BuildId: c.BuildId,
@@ -183,14 +184,14 @@ func (c *TemporalWorkflowResetCommand) batchResetOptions(resetType string) *comm
 }
 
 func (c *TemporalWorkflowResetCommand) getResetEventIDByType(ctx context.Context, cl client.Client) (string, int64, error) {
-	resetType, namespace, wid, rid := c.Type.Value, c.Parent.Namespace, c.WorkflowId, c.RunId
+	resetType, namespace, wid, rid := convertTypeValue(c.Type.Value), c.Parent.Namespace, c.WorkflowId, c.RunId
 	wfsvc := cl.WorkflowService()
-	switch strings.ToLower(resetType) {
-	case "lastworkflowtask", "last-workflow-task":
+	switch resetType {
+	case "LastWorkflowTask":
 		return getLastWorkflowTaskEventID(ctx, namespace, wid, rid, wfsvc)
-	case "lastcontinuedasnew", "last-continued-as-new":
+	case "LastContinuedAsNew":
 		return getLastContinueAsNewID(ctx, namespace, wid, rid, wfsvc)
-	case "firstworkflowtask", "first-workflow-task":
+	case "FirstWorkflowTask":
 		return getFirstWorkflowTaskEventID(ctx, namespace, wid, rid, wfsvc)
 	default:
 		return "", -1, fmt.Errorf("invalid reset type: %s", resetType)
@@ -314,4 +315,18 @@ func getLastContinueAsNewID(ctx context.Context, namespace, wid, rid string, wfs
 		return "", 0, errors.New("unable to find WorkflowTaskCompleted event for previous execution")
 	}
 	return
+}
+
+func convertTypeValue(s string) string {
+	switch strings.ToLower(s) {
+	case "lastworkflowtask", "last-workflow-task":
+		return "LastWorkflowTask"
+	case "lastcontinuedasnew", "last-continued-as-new":
+		return "LastContinuedAsNew"
+	case "firstworkflowtask", "first-workflow-task":
+		return "FirstWorkflowTask"
+	case "buildid", "build-id":
+		return "BuildId"
+	}
+	return s
 }
