@@ -1071,13 +1071,13 @@ commands:
         type: string-enum[]
         description: Search Attribute type.
         enum-values:
-          - Text
-          - Keyword
-          - Int
-          - Double
-          - Bool
-          - Datetime
-          - KeywordList
+          - text
+          - keyword
+          - int
+          - double
+          - bool
+          - datetime
+          - keyword-list
         required: true
 
   - name: temporal operator search-attribute list
@@ -2524,6 +2524,9 @@ commands:
         description: |
           Optional flag for rejecting Queries based on Workflow state.
         enum-values:
+          - not-open
+          - not-completed-cleanly
+        hidden-legacy-values:
           - not_open
           - not_completed_cleanly
 
@@ -2581,22 +2584,27 @@ commands:
           Deprecated.
           Use --reapply-exclude instead.
         enum-values:
-          - All
-          - Signal
-          - None
-        default: All
+          - all
+          - signal
+          - none
+        default: all
       - name: reapply-exclude
         type: string-enum[]
         description: Exclude these event types from re-application.
         enum-values:
-          - All
-          - Signal
-          - Update
+          - all
+          - signal
+          - update
       - name: type
         short: t
         type: string-enum
         description: The event type for the reset.
         enum-values:
+          - first-workflow-task
+          - last-workflow-task
+          - last-continued-as-new
+          - build-id
+        hidden-legacy-values:
           - FirstWorkflowTask
           - LastWorkflowTask
           - LastContinuedAsNew
@@ -2702,6 +2710,9 @@ commands:
         type: string-enum
         description: Optional flag to reject Queries based on Workflow state.
         enum-values:
+          - not-open
+          - not-completed-cleanly
+        hidden-legacy-values:
           - not_open
           - not_completed_cleanly
     option-sets:
@@ -3006,13 +3017,20 @@ option-sets:
         type: string-enum
         description: Policy for handling overlapping Workflow Executions. # copilot updated this
         enum-values:  
+          - skip
+          - buffer-one
+          - buffer-all
+          - cancel-other
+          - terminate-other
+          - allow-all
+        hidden-legacy-values:
           - Skip
           - BufferOne
           - BufferAll
           - CancelOther
           - TerminateOther
           - AllowAll
-        default: Skip
+        default: skip
 
   - name: schedule-id
     options:
@@ -3208,6 +3226,11 @@ option-sets:
         type: string-enum
         description: Re-use policy for the Workflow ID in new Workflow Executions.
         enum-values:
+          - allow-duplicate
+          - allow-duplicate-failed-only
+          - reject-duplicate
+          - terminate-if-running
+        hidden-legacy-values:
           - AllowDuplicate
           - AllowDuplicateFailedOnly
           - RejectDuplicate
@@ -3218,6 +3241,10 @@ option-sets:
           Determines how to resolve a conflict when spawning a new Workflow Execution
           with a particular Workflow Id used by an existing Open Workflow Execution.
         enum-values:
+          - fail
+          - use-existing
+          - terminate-existing
+        hidden-legacy-values:
           - Fail
           - UseExisting
           - TerminateExisting

@@ -20,16 +20,17 @@ var CommandsYAML []byte
 type (
 	// Option represents the structure of an option within option sets.
 	Option struct {
-		Name         string   `yaml:"name"`
-		Type         string   `yaml:"type"`
-		Description  string   `yaml:"description"`
-		Short        string   `yaml:"short,omitempty"`
-		Default      string   `yaml:"default,omitempty"`
-		Env          string   `yaml:"env,omitempty"`
-		Required     bool     `yaml:"required,omitempty"`
-		Aliases      []string `yaml:"aliases,omitempty"`
-		EnumValues   []string `yaml:"enum-values,omitempty"`
-		Experimental bool     `yaml:"experimental,omitempty"`
+		Name               string   `yaml:"name"`
+		Type               string   `yaml:"type"`
+		Description        string   `yaml:"description"`
+		Short              string   `yaml:"short,omitempty"`
+		Default            string   `yaml:"default,omitempty"`
+		Env                string   `yaml:"env,omitempty"`
+		Required           bool     `yaml:"required,omitempty"`
+		Aliases            []string `yaml:"aliases,omitempty"`
+		EnumValues         []string `yaml:"enum-values,omitempty"`
+		HiddenLegacyValues []string `yaml:"hidden-legacy-values,omitempty"`
+		Experimental       bool     `yaml:"experimental,omitempty"`
 	}
 
 	// Command represents the structure of each command in the commands map.

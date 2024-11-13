@@ -359,9 +359,12 @@ func (o *Option) writeFlagBuilding(selfVar, flagVar string, w *codeWriter) error
 			return fmt.Errorf("missing enum values")
 		}
 		// Create enum
-		pieces := make([]string, len(o.EnumValues))
+		pieces := make([]string, len(o.EnumValues)+len(o.HiddenLegacyValues))
 		for i, enumVal := range o.EnumValues {
 			pieces[i] = fmt.Sprintf("%q", enumVal)
+		}
+		for i, legacyVal := range o.HiddenLegacyValues {
+			pieces[i+len(o.EnumValues)] = fmt.Sprintf("%q", legacyVal)
 		}
 		w.writeLinef("%v.%v = NewStringEnum([]string{%v}, %q)",
 			selfVar, o.fieldName(), strings.Join(pieces, ", "), o.Default)
@@ -371,9 +374,13 @@ func (o *Option) writeFlagBuilding(selfVar, flagVar string, w *codeWriter) error
 			return fmt.Errorf("missing enum values")
 		}
 		// Create enum
-		pieces := make([]string, len(o.EnumValues))
+		pieces := make([]string, len(o.EnumValues)+len(o.HiddenLegacyValues))
 		for i, enumVal := range o.EnumValues {
 			pieces[i] = fmt.Sprintf("%q", enumVal)
+		}
+
+		for i, legacyVal := range o.HiddenLegacyValues {
+			pieces[i+len(o.EnumValues)] = fmt.Sprintf("%q", legacyVal)
 		}
 
 		if o.Default != "" {
