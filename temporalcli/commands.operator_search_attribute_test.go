@@ -98,3 +98,21 @@ func (s *SharedServerSuite) TestOperator_SearchAttribute() {
 	s.Equal(enums.INDEXED_VALUE_TYPE_DATETIME, jsonOut.SystemAttributes["StartTime"])
 	s.Equal(enums.INDEXED_VALUE_TYPE_KEYWORD, jsonOut.SystemAttributes["WorkflowId"])
 }
+
+func (s *SharedServerSuite) TestOperator_SearchAttribute_LegacyType() {
+	res := s.Execute(
+		"operator", "search-attribute", "create",
+		"--address", s.Address(),
+		"--name", "RandomKeywordField",
+		"--type", "keyword-list",
+	)
+	s.NoError(res.Err)
+
+	res = s.Execute(
+		"operator", "search-attribute", "create",
+		"--address", s.Address(),
+		"--name", "OtherRandomKeywordField",
+		"--type", "keywordlist",
+	)
+	s.NoError(res.Err)
+}

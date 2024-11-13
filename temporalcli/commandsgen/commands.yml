@@ -1049,8 +1049,8 @@ commands:
           --type Keyword
       ```
 
-      Supported types include: Text, Keyword, Int, Double, Bool, Datetime, and
-      KeywordList.
+      Supported types include: text, keyword, int, double, bool, datetime, and
+      keyword-list.
 
       If you wish to delete a Search Attribute, please contact support
       at https://support.temporal.io.
@@ -1081,6 +1081,8 @@ commands:
           - bool
           - datetime
           - keyword-list
+        hidden-legacy-values:
+          - KeywordList
         required: true
 
   - name: temporal operator search-attribute list
@@ -1534,7 +1536,7 @@ commands:
           Search attributes to register using `KEY=VALUE` pairs.
           Keys must be identifiers, and values must be the search
           attribute type, which is one of the following:
-          Text, Keyword, Int, Double, Bool, Datetime, KeywordList.
+          text, keyword, int, double, bool, datetime, keyword-list.
 
   - name: temporal task-queue
     summary: Manage Task Queues

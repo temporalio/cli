@@ -439,6 +439,33 @@ func (s *SharedServerSuite) TestSchedule_Backfill() {
 	}, 10*time.Second, 100*time.Millisecond)
 }
 
+func (s *SharedServerSuite) TestSchedule_Backfill_New_OverlapPolicy() {
+	schedId, schedWfId, res := s.createSchedule("--interval", "10d/5h")
+	s.NoError(res.Err)
+
+	res = s.Execute(
+		"schedule", "backfill",
+		"--address", s.Address(),
+		"-s", schedId,
+		"--start-time", "2022-02-02T00:00:00Z",
+		"--end-time", "2022-02-28T00:00:00Z",
+		"--overlap-policy", "allow-all",
+	)
+	s.NoError(res.Err)
+
+	s.Eventually(func() bool {
+		res = s.Execute(
+			"workflow", "list",
+			"--address", s.Address(),
+			"-q", fmt.Sprintf(`TemporalScheduledById = "%s"`, schedId),
+		)
+		s.NoError(res.Err)
+		out := res.Stdout.String()
+		re := regexp.MustCompile(regexp.QuoteMeta(schedWfId + "-2022-02"))
+		return len(re.FindAllString(out, -1)) == 3
+	}, 10*time.Second, 100*time.Millisecond)
+}
+
 func (s *SharedServerSuite) TestSchedule_Update() {
 	schedId, schedWfId, res := s.createSchedule("--interval", "10d")
 	s.NoError(res.Err)

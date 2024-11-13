@@ -276,17 +276,19 @@ func buildStartOptions(sw *SharedWorkflowStartOptions, w *WorkflowStartOptions) 
 		StartDelay:                               w.StartDelay.Duration(),
 	}
 	if w.IdReusePolicy.Value != "" {
+		idReusePolicy := convertReusePolicy(w.IdReusePolicy.Value)
 		var err error
 		o.WorkflowIDReusePolicy, err = stringToProtoEnum[enums.WorkflowIdReusePolicy](
-			w.IdReusePolicy.Value, enums.WorkflowIdReusePolicy_shorthandValue, enums.WorkflowIdReusePolicy_value)
+			idReusePolicy, enums.WorkflowIdReusePolicy_shorthandValue, enums.WorkflowIdReusePolicy_value)
 		if err != nil {
 			return o, fmt.Errorf("invalid workflow ID reuse policy: %w", err)
 		}
 	}
 	if w.IdConflictPolicy.Value != "" {
+		idConflictPolicy := convertConflictPolicy(w.IdConflictPolicy.Value)
 		var err error
 		o.WorkflowIDConflictPolicy, err = stringToProtoEnum[enums.WorkflowIdConflictPolicy](
-			w.IdConflictPolicy.Value, enums.WorkflowIdConflictPolicy_shorthandValue, enums.WorkflowIdConflictPolicy_value)
+			idConflictPolicy, enums.WorkflowIdConflictPolicy_shorthandValue, enums.WorkflowIdConflictPolicy_value)
 		if err != nil {
 			return o, fmt.Errorf("invalid workflow ID conflict policy: %w", err)
 		}
@@ -587,4 +589,30 @@ func isWorkflowTerminatingEvent(t enums.EventType) bool {
 		return true
 	}
 	return false
+}
+
+func convertReusePolicy(s string) string {
+	switch strings.ToLower(s) {
+	case "allow-duplicate":
+		return "AllowDuplicate"
+	case "allow-duplicate-failed-only":
+		return "AllowDuplicateFailedOnly"
+	case "reject-duplicate":
+		return "RejectDuplicate"
+	case "terminate-if-running":
+		return "TerminateIfRunning"
+	}
+	return s
+}
+
+func convertConflictPolicy(s string) string {
+	switch strings.ToLower(s) {
+	case "fail":
+		return "Fail"
+	case "use-existing":
+		return "UseExisting"
+	case "terminate-existing":
+		return "TerminateExisting"
+	}
+	return s
 }

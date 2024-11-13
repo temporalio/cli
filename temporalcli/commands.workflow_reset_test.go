@@ -77,6 +77,48 @@ func (s *SharedServerSuite) TestWorkflow_Reset_ToFirstWorkflowTask() {
 	s.Greater(activityExecutions, 1, "Should have re-executed the workflow from the beginning")
 }
 
+func (s *SharedServerSuite) TestWorkflow_Reset_ToFirstWorkflowTask_New_Type() {
+	var wfExecutions, activityExecutions int
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		activityExecutions++
+		return nil, nil
+	})
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
+		workflow.ExecuteActivity(ctx, DevActivity, 1).Get(ctx, nil)
+		wfExecutions++
+		return nil, nil
+	})
+
+	// Start the workflow
+	searchAttr := "keyword-" + uuid.NewString()
+	run, err := s.Client.ExecuteWorkflow(
+		s.Context,
+		client.StartWorkflowOptions{
+			TaskQueue:        s.Worker().Options.TaskQueue,
+			SearchAttributes: map[string]any{"CustomKeywordField": searchAttr},
+		},
+		DevWorkflow,
+		"ignored",
+	)
+	s.NoError(err)
+	var junk any
+	s.NoError(run.Get(s.Context, &junk))
+	s.Equal(1, wfExecutions)
+
+	// Reset to the first workflow task
+	res := s.Execute(
+		"workflow", "reset",
+		"--address", s.Address(),
+		"-w", run.GetID(),
+		"-t", "first-workflow-task",
+		"--reason", "test-reset-FirstWorkflowTask",
+	)
+	require.NoError(s.T(), res.Err)
+	s.awaitNextWorkflow(searchAttr)
+	s.Equal(2, wfExecutions, "Should have re-executed the workflow from the beginning")
+	s.Greater(activityExecutions, 1, "Should have re-executed the workflow from the beginning")
+}
+
 func (s *SharedServerSuite) TestWorkflow_Reset_ToLastWorkflowTask() {
 	var wfExecutions, activityExecutions int
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {

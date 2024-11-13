@@ -29,6 +29,9 @@ func (c *TemporalOperatorSearchAttributeCreateCommand) run(cctx *CommandContext,
 
 	searchAttributes := make(map[string]enums.IndexedValueType, len(c.Type.Values))
 	for i, saType := range c.Type.Values {
+		if strings.EqualFold(saType, "keyword-list") {
+			saType = "KeywordList"
+		}
 		saName := c.Name[i]
 		typeInt, err := searchAttributeTypeStringToEnum(saType)
 		if err != nil {

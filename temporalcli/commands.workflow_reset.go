@@ -96,7 +96,7 @@ func (c *TemporalWorkflowResetCommand) doWorkflowReset(cctx *CommandContext, cl 
 	}
 
 	reapplyType := enums.RESET_REAPPLY_TYPE_ALL_ELIGIBLE
-	if c.ReapplyType.Value != "All" {
+	if strings.ToLower(c.ReapplyType.Value) != "all" {
 		if len(c.ReapplyExclude.Values) > 0 {
 			return errors.New("--reapply-type cannot be used with --reapply-exclude. Use --reapply-exclude.")
 		}
@@ -161,16 +161,17 @@ func (c *TemporalWorkflowResetCommand) runBatchReset(cctx *CommandContext, cl cl
 }
 
 func (c *TemporalWorkflowResetCommand) batchResetOptions(resetType string) *common.ResetOptions {
-	switch resetType {
-	case "FirstWorkflowTask":
+
+	switch strings.ToLower(resetType) {
+	case "firstworkflowtask", "first-workflow-task":
 		return &common.ResetOptions{
 			Target: &common.ResetOptions_FirstWorkflowTask{},
 		}
-	case "LastWorkflowTask":
+	case "lastworkflowtask", "last-workflow-task":
 		return &common.ResetOptions{
 			Target: &common.ResetOptions_LastWorkflowTask{},
 		}
-	case "BuildId":
+	case "buildid", "build-id":
 		return &common.ResetOptions{
 			Target: &common.ResetOptions_BuildId{
 				BuildId: c.BuildId,
@@ -184,12 +185,12 @@ func (c *TemporalWorkflowResetCommand) batchResetOptions(resetType string) *comm
 func (c *TemporalWorkflowResetCommand) getResetEventIDByType(ctx context.Context, cl client.Client) (string, int64, error) {
 	resetType, namespace, wid, rid := c.Type.Value, c.Parent.Namespace, c.WorkflowId, c.RunId
 	wfsvc := cl.WorkflowService()
-	switch resetType {
-	case "LastWorkflowTask":
+	switch strings.ToLower(resetType) {
+	case "lastworkflowtask", "last-workflow-task":
 		return getLastWorkflowTaskEventID(ctx, namespace, wid, rid, wfsvc)
-	case "LastContinuedAsNew":
+	case "lastcontinuedasnew", "last-continued-as-new":
 		return getLastContinueAsNewID(ctx, namespace, wid, rid, wfsvc)
-	case "FirstWorkflowTask":
+	case "firstworkflowtask", "first-workflow-task":
 		return getFirstWorkflowTaskEventID(ctx, namespace, wid, rid, wfsvc)
 	default:
 		return "", -1, fmt.Errorf("invalid reset type: %s", resetType)

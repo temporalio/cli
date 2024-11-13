@@ -156,7 +156,11 @@ func (c *TemporalScheduleBackfillCommand) run(cctx *CommandContext, args []strin
 	defer cl.Close()
 	sch := cl.ScheduleClient().GetHandle(cctx, c.ScheduleId)
 
-	overlap, err := enumspb.ScheduleOverlapPolicyFromString(c.OverlapPolicy.Value)
+	overlapPolicy, err := mapLegacyOverlapPolicy(c.OverlapPolicy.Value)
+	if err != nil {
+		return err
+	}
+	overlap, err := enumspb.ScheduleOverlapPolicyFromString(overlapPolicy)
 	if err != nil {
 		return err
 	}
@@ -296,11 +300,15 @@ func (c *TemporalScheduleCreateCommand) run(cctx *CommandContext, args []string)
 		// ScheduleBackfill not supported
 	}
 
+	overlapPolicy, err := mapLegacyOverlapPolicy(c.OverlapPolicy.Value)
+	if err != nil {
+		return err
+	}
 	if err = c.toScheduleSpec(&opts.Spec); err != nil {
 		return err
 	} else if opts.Action, err = toScheduleAction(&c.SharedWorkflowStartOptions, &c.PayloadInputOptions); err != nil {
 		return err
-	} else if opts.Overlap, err = enumspb.ScheduleOverlapPolicyFromString(c.OverlapPolicy.Value); err != nil {
+	} else if opts.Overlap, err = enumspb.ScheduleOverlapPolicyFromString(overlapPolicy); err != nil {
 		return err
 	} else if opts.Memo, err = stringKeysJSONValues(c.ScheduleMemo, false); err != nil {
 		return fmt.Errorf("invalid memo values: %w", err)
@@ -496,7 +504,11 @@ func (c *TemporalScheduleTriggerCommand) run(cctx *CommandContext, args []string
 	defer cl.Close()
 	sch := cl.ScheduleClient().GetHandle(cctx, c.ScheduleId)
 
-	overlap, err := enumspb.ScheduleOverlapPolicyFromString(c.OverlapPolicy.Value)
+	overlapPolicy, err := mapLegacyOverlapPolicy(c.OverlapPolicy.Value)
+	if err != nil {
+		return err
+	}
+	overlap, err := enumspb.ScheduleOverlapPolicyFromString(overlapPolicy)
 	if err != nil {
 		return err
 	}
@@ -530,7 +542,11 @@ func (c *TemporalScheduleUpdateCommand) run(cctx *CommandContext, args []string)
 		},
 	}
 
-	if newSchedule.Policy.Overlap, err = enumspb.ScheduleOverlapPolicyFromString(c.OverlapPolicy.Value); err != nil {
+	overlapPolicy, err := mapLegacyOverlapPolicy(c.OverlapPolicy.Value)
+	if err != nil {
+		return err
+	}
+	if newSchedule.Policy.Overlap, err = enumspb.ScheduleOverlapPolicyFromString(overlapPolicy); err != nil {
 		return err
 	}
 
@@ -621,4 +637,23 @@ func encodeSearchAttributesToPayloads(in map[string]any) (map[string]*commonpb.P
 		out[key] = payload
 	}
 	return out, nil
+}
+
+func mapLegacyOverlapPolicy(in string) (string, error) {
+	switch strings.ToLower(in) {
+	case "skip":
+		return "Skip", nil
+	case "buffer-one", "bufferone":
+		return "BufferOne", nil
+	case "buffer-all", "bufferall":
+		return "BufferAll", nil
+	case "cancel-other", "cancelother":
+		return "CancelOther", nil
+	case "terminate-other", "terminateother":
+		return "TerminateOther", nil
+	case "allow-all", "allowall":
+		return "AllowAll", nil
+	default:
+		return "", fmt.Errorf("invalid overlap policy: %q", in)
+	}
 }
