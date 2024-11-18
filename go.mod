@@ -15,9 +15,9 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.9.0
 	github.com/temporalio/ui-server/v2 v2.31.2
-	go.temporal.io/api v1.39.1-0.20241009135124-c02089051a35
+	go.temporal.io/api v1.41.1-0.20241106230151-fd920b39031f
 	go.temporal.io/sdk v1.29.2-0.20241008230001-c82a8ac11cc6
-	go.temporal.io/server v1.26.2-123.0
+	go.temporal.io/server v1.26.2-124.0
 	google.golang.org/grpc v1.67.1
 	google.golang.org/protobuf v1.35.1
 	gopkg.in/yaml.v3 v3.0.1
@@ -50,7 +50,7 @@ require (
 	github.com/gocql/gocql v1.6.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
-	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
+	github.com/golang-jwt/jwt/v4 v4.5.1 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/mock v1.7.0-rc.1 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
