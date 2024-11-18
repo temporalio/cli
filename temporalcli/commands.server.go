@@ -8,9 +8,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/temporalio/cli/temporalcli/devserver"
 	"go.temporal.io/api/enums/v1"
-	"go.temporal.io/api/operatorservice/v1"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 var defaultDynamicConfigValues = map[string]any{
@@ -124,6 +121,7 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 	if err != nil {
 		return err
 	}
+	opts.SearchAttributes = searchAttrs
 
 	// If not using DB file, set persistent cluster ID
 	if t.DbFilename == "" {
@@ -151,11 +149,6 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 		return fmt.Errorf("failed starting server: %w", err)
 	}
 	defer s.Stop()
-
-	// Register search attributes
-	if err := t.registerSearchAttributes(cctx, searchAttrs, opts.Namespaces); err != nil {
-		return err
-	}
 
 	cctx.Printer.Printlnf("CLI %v\n", VersionString())
 	cctx.Printer.Printlnf("%-8s %v:%v", "Server:", toFriendlyIp(opts.FrontendIP), opts.FrontendPort)
@@ -216,35 +209,4 @@ func (t *TemporalServerStartDevCommand) prepareSearchAttributes() (map[string]en
 		attrs[k] = valType
 	}
 	return attrs, nil
-}
-
-func (t *TemporalServerStartDevCommand) registerSearchAttributes(
-	cctx *CommandContext,
-	attrs map[string]enums.IndexedValueType,
-	namespaces []string,
-) error {
-	if len(attrs) == 0 {
-		return nil
-	}
-
-	conn, err := grpc.NewClient(
-		fmt.Sprintf("%v:%v", t.Ip, t.Port),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	if err != nil {
-		return fmt.Errorf("failed creating client to register search attributes: %w", err)
-	}
-	defer conn.Close()
-	client := operatorservice.NewOperatorServiceClient(conn)
-	// Call for each namespace
-	for _, ns := range namespaces {
-		_, err := client.AddSearchAttributes(cctx, &operatorservice.AddSearchAttributesRequest{
-			Namespace:        ns,
-			SearchAttributes: attrs,
-		})
-		if err != nil {
-			return fmt.Errorf("failed registering search attributes: %w", err)
-		}
-	}
-	return nil
 }
