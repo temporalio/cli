@@ -73,37 +73,13 @@ func (c *TemporalWorkflowResetCommand) doWorkflowReset(cctx *CommandContext, cl 
 	if c.Type.Value != "" {
 		resetBaseRunID, eventID, err = c.getResetEventIDByType(cctx, cl)
 		if err != nil {
-			return fmt.Errorf("getting reset event ID by type failed: %w", err)
+			return err
 		}
 	}
 
-	reapplyExcludes := make([]enums.ResetReapplyExcludeType, 0)
-	for _, exclude := range c.ReapplyExclude.Values {
-		if strings.ToLower(exclude) == "all" {
-			for _, excludeType := range enums.ResetReapplyExcludeType_value {
-				if excludeType == 0 {
-					continue
-				}
-				reapplyExcludes = append(reapplyExcludes, enums.ResetReapplyExcludeType(excludeType))
-			}
-			break
-		}
-		excludeType, err := enums.ResetReapplyExcludeTypeFromString(exclude)
-		if err != nil {
-			return err
-		}
-		reapplyExcludes = append(reapplyExcludes, excludeType)
-	}
-
-	reapplyType := enums.RESET_REAPPLY_TYPE_ALL_ELIGIBLE
-	if c.ReapplyType.Value != "All" {
-		if len(c.ReapplyExclude.Values) > 0 {
-			return errors.New("--reapply-type cannot be used with --reapply-exclude. Use --reapply-exclude.")
-		}
-		reapplyType, err = enums.ResetReapplyTypeFromString(c.ReapplyType.Value)
-		if err != nil {
-			return err
-		}
+	reapplyExcludes, reapplyType, err := getResetReapplyAndExcludeTypes(c.ReapplyExclude.Values, c.ReapplyType.Value)
+	if err != nil {
+		return err
 	}
 
 	cctx.Printer.Printlnf("Resetting workflow %s to event ID %d", c.WorkflowId, eventID)
@@ -138,10 +114,15 @@ func (c *TemporalWorkflowResetCommand) runBatchReset(cctx *CommandContext, cl cl
 		VisibilityQuery: c.Query,
 		Reason:          c.Reason,
 	}
+
+	batchResetOptions, err := c.batchResetOptions()
+	if err != nil {
+		return err
+	}
 	request.Operation = &workflowservice.StartBatchOperationRequest_ResetOperation{
 		ResetOperation: &batch.BatchOperationReset{
 			Identity: clientIdentity(),
-			Options:  c.batchResetOptions(c.Type.Value),
+			Options:  batchResetOptions,
 		},
 	}
 	count, err := cl.CountWorkflow(cctx, &workflowservice.CountWorkflowExecutionsRequest{Query: c.Query})
@@ -160,22 +141,33 @@ func (c *TemporalWorkflowResetCommand) runBatchReset(cctx *CommandContext, cl cl
 	return startBatchJob(cctx, cl, &request)
 }
 
-func (c *TemporalWorkflowResetCommand) batchResetOptions(resetType string) *common.ResetOptions {
-	switch resetType {
+func (c *TemporalWorkflowResetCommand) batchResetOptions() (*common.ResetOptions, error) {
+	reapplyExcludes, reapplyType, err := getResetReapplyAndExcludeTypes(c.ReapplyExclude.Values, c.ReapplyType.Value)
+	if err != nil {
+		return nil, err
+	}
+
+	switch c.Type.Value {
 	case "FirstWorkflowTask":
 		return &common.ResetOptions{
-			Target: &common.ResetOptions_FirstWorkflowTask{},
-		}
+			Target:                   &common.ResetOptions_FirstWorkflowTask{},
+			ResetReapplyExcludeTypes: reapplyExcludes,
+			ResetReapplyType:         reapplyType,
+		}, nil
 	case "LastWorkflowTask":
 		return &common.ResetOptions{
-			Target: &common.ResetOptions_LastWorkflowTask{},
-		}
+			Target:                   &common.ResetOptions_LastWorkflowTask{},
+			ResetReapplyExcludeTypes: reapplyExcludes,
+			ResetReapplyType:         reapplyType,
+		}, nil
 	case "BuildId":
 		return &common.ResetOptions{
 			Target: &common.ResetOptions_BuildId{
 				BuildId: c.BuildId,
 			},
-		}
+			ResetReapplyExcludeTypes: reapplyExcludes,
+			ResetReapplyType:         reapplyType,
+		}, nil
 	default:
 		panic("unsupported operation type was filtered by cli framework")
 	}
@@ -313,4 +305,39 @@ func getLastContinueAsNewID(ctx context.Context, namespace, wid, rid string, wfs
 		return "", 0, errors.New("unable to find WorkflowTaskCompleted event for previous execution")
 	}
 	return
+}
+
+func getResetReapplyAndExcludeTypes(resetReapplyExclude []string, resetReapplyType string) ([]enums.ResetReapplyExcludeType, enums.ResetReapplyType, error) {
+	var err error
+
+	var reapplyExcludes []enums.ResetReapplyExcludeType
+	for _, exclude := range resetReapplyExclude {
+		if strings.ToLower(exclude) == "all" {
+			for _, excludeType := range enums.ResetReapplyExcludeType_value {
+				if excludeType == int32(enums.RESET_REAPPLY_EXCLUDE_TYPE_UNSPECIFIED) {
+					continue
+				}
+				reapplyExcludes = append(reapplyExcludes, enums.ResetReapplyExcludeType(excludeType))
+			}
+			break
+		}
+		excludeType, err := enums.ResetReapplyExcludeTypeFromString(exclude)
+		if err != nil {
+			return nil, enums.RESET_REAPPLY_TYPE_UNSPECIFIED, err
+		}
+		reapplyExcludes = append(reapplyExcludes, excludeType)
+	}
+
+	returnReapplyType := enums.RESET_REAPPLY_TYPE_ALL_ELIGIBLE
+	if resetReapplyType != "All" {
+		if len(resetReapplyExclude) > 0 {
+			return nil, enums.RESET_REAPPLY_TYPE_UNSPECIFIED, errors.New("--reapply-type cannot be used with --reapply-exclude. Use --reapply-exclude")
+		}
+		returnReapplyType, err = enums.ResetReapplyTypeFromString(resetReapplyType)
+		if err != nil {
+			return nil, enums.RESET_REAPPLY_TYPE_UNSPECIFIED, err
+		}
+	}
+
+	return reapplyExcludes, returnReapplyType, nil
 }
