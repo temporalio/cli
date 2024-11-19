@@ -676,6 +676,99 @@ func (s *SharedServerSuite) TestWorkflow_Describe_NexusOperationAndCallback() {
 	s.Equal(enums.CALLBACK_STATE_SUCCEEDED, handlerDesc.Callbacks[0].State)
 }
 
+func (s *SharedServerSuite) TestWorkflow_Describe_NexusOperationBlocked() {
+	endpointName := validEndpointName(s.T())
+
+	// Call an unreachable operation from this workflow.
+	callerWorkflow := func(ctx workflow.Context) error {
+		client := workflow.NewNexusClient(endpointName, "test-service")
+		fut := client.ExecuteOperation(ctx, "test-op", nil, workflow.NexusOperationOptions{})
+		// Destination is unreachable, the future will never complete.
+		return fut.GetNexusOperationExecution().Get(ctx, nil)
+	}
+
+	w := s.DevServer.StartDevWorker(s.Suite.T(), DevWorkerOptions{
+		Workflows: []any{callerWorkflow},
+	})
+	defer w.Stop()
+
+	// Create an endpoint for this test.
+	_, err := s.Client.OperatorService().CreateNexusEndpoint(
+		s.Context,
+		&operatorservice.CreateNexusEndpointRequest{
+			Spec: &nexuspb.EndpointSpec{
+				Name: endpointName,
+				Target: &nexuspb.EndpointTarget{
+					Variant: &nexuspb.EndpointTarget_External_{
+						External: &nexuspb.EndpointTarget_External{
+							Url: "http://localhost:12345", // unreachable destination
+						},
+					},
+				},
+			},
+		},
+	)
+	s.NoError(err)
+
+	// Start the workflow and wait until the operation is started.
+	run, err := s.Client.ExecuteWorkflow(
+		s.Context,
+		client.StartWorkflowOptions{TaskQueue: w.Options.TaskQueue},
+		callerWorkflow,
+	)
+	s.NoError(err)
+
+	// Start another workflow so it will trigger the circuit breaker faster.
+	dummyRun, err := s.Client.ExecuteWorkflow(
+		s.Context,
+		client.StartWorkflowOptions{TaskQueue: w.Options.TaskQueue},
+		callerWorkflow,
+	)
+	s.NoError(err)
+
+	// Wait for the operation to be blocked
+	s.Eventually(func() bool {
+		resp, err := s.Client.DescribeWorkflowExecution(s.Context, run.GetID(), run.GetRunID())
+		s.NoError(err)
+		return len(resp.PendingNexusOperations) > 0 &&
+			resp.PendingNexusOperations[0].State == enums.PENDING_NEXUS_OPERATION_STATE_BLOCKED
+	}, 30*time.Second, 100*time.Millisecond)
+
+	// Operations - Text
+	res := s.Execute(
+		"workflow", "describe",
+		"--address", s.Address(),
+		"-w", run.GetID(),
+	)
+	s.NoError(res.Err)
+	out := res.Stdout.String()
+	s.ContainsOnSameLine(out, "WorkflowId", run.GetID())
+	s.Contains(out, "Pending Nexus Operations: 1")
+	s.ContainsOnSameLine(out, "Endpoint", endpointName)
+	s.ContainsOnSameLine(out, "Service", "test-service")
+	s.ContainsOnSameLine(out, "Operation", "test-op")
+	s.ContainsOnSameLine(out, "BlockedReason", "The circuit breaker is open.")
+
+	// Operations - JSON
+	res = s.Execute(
+		"workflow", "describe",
+		"--address", s.Address(),
+		"-w", run.GetID(),
+		"--output", "json",
+	)
+	s.NoError(res.Err)
+	var callerDesc workflowservice.DescribeWorkflowExecutionResponse
+	s.NoError(temporalcli.UnmarshalProtoJSONWithOptions(res.Stdout.Bytes(), &callerDesc, true))
+	s.Equal(endpointName, callerDesc.PendingNexusOperations[0].Endpoint)
+	s.Equal("test-service", callerDesc.PendingNexusOperations[0].Service)
+	s.Equal("test-op", callerDesc.PendingNexusOperations[0].Operation)
+	s.Equal(enums.PENDING_NEXUS_OPERATION_STATE_BLOCKED, callerDesc.PendingNexusOperations[0].State)
+	s.Equal("The circuit breaker is open.", callerDesc.PendingNexusOperations[0].BlockedReason)
+
+	s.NoError(s.Client.TerminateWorkflow(s.Context, run.GetID(), run.GetRunID(), ""))
+	s.NoError(s.Client.TerminateWorkflow(s.Context, dummyRun.GetID(), dummyRun.GetRunID(), ""))
+}
+
 func (s *SharedServerSuite) Test_WorkflowResult() {
 	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
 		sigs := 0
