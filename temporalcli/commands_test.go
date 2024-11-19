@@ -600,3 +600,9 @@ func TestUnknownCommandExitsNonzero(t *testing.T) {
 	res := commandHarness.Execute("blerkflow")
 	assert.Contains(t, res.Err.Error(), "unknown command")
 }
+
+func TestHiddenAliasLogFormat(t *testing.T) {
+	commandHarness := NewCommandHarness(t)
+	res := commandHarness.Execute("workflow", "list", "--log-format", "pretty")
+	assert.NoError(t, res.Err)
+}
