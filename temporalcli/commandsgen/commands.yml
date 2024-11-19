@@ -161,10 +161,13 @@ commands:
           Default is "info" for most commands and "warn" for `server start-dev`.
         default: info
       - name: log-format
-        type: string
-        description: |
-          Log format.
-          Options are: text, json.
+        type: string-enum
+        description: Log format.
+        enum-values:
+          - text
+          - json
+        hidden-legacy-values:
+          - pretty
         default: text
       - name: output
         type: string-enum
