@@ -600,21 +600,11 @@ func (t *WorkflowResetTest) startWorkflowAndSendTwoSignalsAndTwoUpdates(searchAt
 	)
 	s.NoError(err)
 
-	// Wait for the workflow to start before sending signals/updates.
-	// This has to be done, as batch reset with type `FirstWorkflowTask`, will reset to first workflow task completed, so the first signal
-	// sent before the workflow starts, will be reapplied, as the reset point is later in the history.
-	// The same would happen with single reset to eventId 4.
-	s.Eventually(func() bool {
-		resp, err := s.Client.ListWorkflow(s.Context, &workflowservice.ListWorkflowExecutionsRequest{
-			Query: "CustomKeywordField = '" + searchAttr + "'",
-		})
-		s.NoError(err)
-		return len(resp.Executions) > 0
-	}, 3*time.Second, 100*time.Millisecond, "Workflow failed to start")
-
-	// before sending signals, we wait for the workflow to execute the activity
+	// We send the updates before the signals in order to ensure that no signal
+	// enters history before the first WorkflowTaskCompleted. This is necessary
+	// because there are tests that reset to FirstWorkflowTask, and assume that
+	// all signals are received after that event.
 	for i := 1; i <= 2; i++ {
-		s.NoError(s.Client.SignalWorkflow(s.Context, run.GetID(), run.GetRunID(), "mySignal", fmt.Sprintf("%d", i)))
 		updateHandle, err := s.Client.UpdateWorkflow(s.Context, client.UpdateWorkflowOptions{
 			WorkflowID:   run.GetID(),
 			RunID:        run.GetRunID(),
@@ -623,6 +613,7 @@ func (t *WorkflowResetTest) startWorkflowAndSendTwoSignalsAndTwoUpdates(searchAt
 		})
 		s.NoError(err)
 		s.NoError(updateHandle.Get(s.Context, nil))
+		s.NoError(s.Client.SignalWorkflow(s.Context, run.GetID(), run.GetRunID(), "mySignal", fmt.Sprintf("%d", i)))
 	}
 	s.NoError(run.Get(s.Context, nil))
 	return run
