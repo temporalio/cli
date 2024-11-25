@@ -28,6 +28,7 @@ package devserver
 
 import (
 	"fmt"
+	"go.temporal.io/api/enums/v1"
 	"log/slog"
 	"math/rand"
 	"os"
@@ -70,6 +71,7 @@ type StartOptions struct {
 	InitialFailoverVersion int
 	Logger                 *slog.Logger
 	LogLevel               slog.Level
+	SearchAttributes       map[string]enums.IndexedValueType
 
 	// Optional fields
 	UIIP                  string // Empty means no UI
@@ -340,7 +342,11 @@ func (s *StartOptions) buildSQLConfig() (*config.SQL, error) {
 	// Create namespaces
 	namespaces := make([]*sqliteschema.NamespaceConfig, len(s.Namespaces))
 	for i, ns := range s.Namespaces {
-		namespaces[i] = sqlite.NewNamespaceConfig(s.CurrentClusterName, ns, false)
+		var err error
+		namespaces[i], err = sqlite.NewNamespaceConfig(s.CurrentClusterName, ns, false, s.SearchAttributes)
+		if err != nil {
+			return nil, fmt.Errorf("failed creating namespace config: %w", err)
+		}
 	}
 	if err := sqliteschema.CreateNamespaces(&conf, namespaces...); err != nil {
 		return nil, fmt.Errorf("failed creating namespaces: %w", err)
