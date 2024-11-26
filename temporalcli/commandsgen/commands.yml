@@ -12,7 +12,7 @@
 #   * Re-use and adapt existing wording and phrases wherever possible.
 #   * Word command summaries as if they began "This command will..."
 #     Use sentence casing for the summary.
-#   * ID is fully capitalized in text ("the Workflow ID") and Id in 
+#   * ID is fully capitalized in text ("the Workflow ID") and Id in
 #     [metasyntax](https://en.wikipedia.org/wiki/Metasyntactic_variable) (YourWorkflowId).
 # * Avoid parentheticals unless absolutely necessary.
 
@@ -30,7 +30,7 @@
 
 # * Code, flags, and keys:
 #   * Demonstrate at least one example invocation of the command in every long description.
-#   * Include the most commonly used patterns in long descriptions so users don't 
+#   * Include the most commonly used patterns in long descriptions so users don't
 #     have to call help at multiple invocation levels.
 #   * Avoid deprecated period-delineated versions of environment-specific keys.
 #     * Yes:
@@ -53,10 +53,10 @@
 #     * Yes: temporal operator [command] [subcommand] [options]
 #     Commands with subcommands can't be run on their own.
 #     Because of this, always use full command examples.
-#   * Use square brackets to highlight optional elements, especially when long 
+#   * Use square brackets to highlight optional elements, especially when long
 #     descriptions would suffer from two very similar command invocations.
 #     * Yes: temporal operator cluster describe [--detail]
-#   * Use YourEnvironment, YourNamespace, etc. as unquoted metasyntactic variable 
+#   * Use YourEnvironment, YourNamespace, etc. as unquoted metasyntactic variable
 #     stand-ins.
 #     Respectful metasyntax describes the role of the stand-in.
 #     * Yes: --workflow-id YourWorkflowId
@@ -67,7 +67,7 @@
 #     This is more universally supported and consistent with POSIX guidelines.
 #     * Yes: `temporal command --namespace YourNamespace`.
 #     * No: `temporal command --namespace=YourNamespace`.
-#     Note: in this utility's current incarnation, Boolean options must be 
+#     Note: in this utility's current incarnation, Boolean options must be
 #     set with an equal sign.
 #     Since Booleans can be treated like flags, avoid using assigned values in samples.
 #     * Yes: `--detail`
@@ -75,11 +75,11 @@
 
 # For options and flags:
 
-# * When options and flags can be passed multiple times, say so explicitly in 
+# * When options and flags can be passed multiple times, say so explicitly in
 #   the usage text: "Can be passed multiple times."
 # * Never rely on the flag type (e.g. `string`, `bool`, etc.) being shown to the user.
 #   It is replaced/hidden when a `META-VARIABLE` is used.
-# * Where possible, use a `META-VARIABLE` (all caps and wrapped in `\``s) to 
+# * Where possible, use a `META-VARIABLE` (all caps and wrapped in `\``s) to
 #   describe/reference content passed to an option.
 # * Limit `code spans` to meta-variables.
 #   To reference other options or specify literal values, use double quotes.
@@ -107,13 +107,13 @@
 #   option-sets: A list of option sets. (string[])
 
 # * name, summary, and descrption are required fields. All other fields are optional.
-# * Available option types are `bool`, `duration`, `int`, `float`, `string`, `string[]`, 
+# * Available option types are `bool`, `duration`, `int`, `float`, `string`, `string[]`,
 #   `string-enum`, string-enum[], or `timestamp`.
 # * Include a new-line after each command entry.
 
 # OPTION SET OVERVIEW
 
-# An options set declaration is the equivalent of pasting those options into the 
+# An options set declaration is the equivalent of pasting those options into the
 # bulleted options list.
 
 # - name: The name of the option set. (string)
@@ -151,7 +151,7 @@ commands:
       - name: log-level
         type: string-enum
         enum-values:
-          - debug 
+          - debug
           - info
           - warn
           - error
@@ -225,7 +225,7 @@ commands:
       keywords:
         - activity
         - activity complete
-        - activity execution 
+        - activity execution
         - activity fail
         - cli reference
         - cli-feature
@@ -956,7 +956,7 @@ commands:
       The endpoint target may either be a Worker, in which case
       `--target-namespace` and `--target-task-queue` must both be provided, or
       an external URL, in which case `--target-url` must be provided.
-      
+
       This command will fail if an Endpoint with the same name is already
       registered.
 
@@ -1005,12 +1005,12 @@ commands:
     summary: Update an existing Nexus Endpoint (EXPERIMENTAL)
     description: |
       Update an existing Nexus Endpoint on the Server.
-     
+
       A Nexus Endpoint name is used in Workflow code to invoke Nexus Operations.
       The Endpoint target may either be a Worker, in which case
       `--target-namespace` and `--target-task-queue` must both be provided, or
       an external URL, in which case `--target-url` must be provided.
-      
+
       The Endpoint is patched; existing fields for which flags are not provided
       are left as they were.
 
@@ -1479,7 +1479,7 @@ commands:
         default: 7233
       - name: http-port
         type: int
-        description: | 
+        description: |
           Port for the HTTP API service.
           Default is off.
       - name: metrics-port
@@ -1489,7 +1489,7 @@ commands:
           Default is off.
       - name: ui-port
         type: int
-        description: | 
+        description: |
           Port for the Web UI.
           Default is '--port' value + 1000.
       - name: headless
@@ -1613,10 +1613,10 @@ commands:
       NOTE: The `TasksAddRate` and `TasksDispatchRate` metrics may differ from the
       actual rate of add/dispatch, because tasks may be dispatched eagerly to an
       available worker, or may apply only to specific workers (they are "sticky").
-      Such tasks are not counted by these metrics. Despite the inaccuracy of 
+      Such tasks are not counted by these metrics. Despite the inaccuracy of
       these two metrics, the derived metric of `BacklogIncreaseRate` is accurate
       for backlogs older than a few seconds.
-  
+
       Safely retire Workers assigned a Build ID by checking reachability across
       all task types. Use the flag `--report-reachability`:
 
@@ -2437,7 +2437,7 @@ commands:
     options:
       - name: detailed
         type: bool
-        description: | 
+        description: |
           Display events as sections instead of table.
           Does not apply to JSON output.
 
@@ -2467,9 +2467,8 @@ commands:
   - name: temporal workflow list
     summary: Show Workflow Executions
     description: |
-      List Workflow Executions. By default, this command returns up to 10 closed
-      Workflow Executions. The optional `--query` limits the output to Workflows
-      matching a Query:
+      List Workflow Executions. The optional `--query` limits the output to
+      Workflows matching a Query:
 
       ```
       temporal workflow list \
@@ -3008,7 +3007,7 @@ option-sets:
       - name: overlap-policy
         type: string-enum
         description: Policy for handling overlapping Workflow Executions. # copilot updated this
-        enum-values:  
+        enum-values:
           - Skip
           - BufferOne
           - BufferAll
@@ -3154,7 +3153,7 @@ option-sets:
         type: string
         description: Workflow Type name.
         required: true
-        aliases: 
+        aliases:
           - name
       - name: task-queue
         type: string
@@ -3258,7 +3257,7 @@ option-sets:
         type: string
         description: Handler method name.
         required: true
-        aliases: 
+        aliases:
           - type
       - name: first-execution-run-id
         type: string
