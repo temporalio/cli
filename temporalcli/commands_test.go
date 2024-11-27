@@ -600,3 +600,9 @@ func TestUnknownCommandExitsNonzero(t *testing.T) {
 	res := commandHarness.Execute("blerkflow")
 	assert.Contains(t, res.Err.Error(), "unknown command")
 }
+
+func (s *SharedServerSuite) TestHiddenAliasLogFormat() {
+	_ = s.waitActivityStarted().GetID()
+	res := s.Execute("workflow", "list", "--log-format", "pretty", "--address", s.Address())
+	s.NoError(res.Err)
+}
