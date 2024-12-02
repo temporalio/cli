@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        os: [ubuntu-latest, macos-latest, macos-14, windows-latest, ubuntu-arm]
+        os: [ubuntu-latest, macos-latest, macos-13, windows-latest, ubuntu-arm]
         include:
           - os: ubuntu-latest
             checkGenCodeTarget: true
@@ -20,14 +20,14 @@ jobs:
     runs-on: ${{ matrix.runsOn || matrix.os }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           submodules: recursive
 
       - name: Setup Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version-file: 'go.mod'
 
       - name: Install gotestsum
         run: go install gotest.tools/gotestsum@latest
