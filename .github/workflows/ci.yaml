@@ -33,7 +33,17 @@ jobs:
         run: |
           pwd
           echo "$pwd"
-          go run ./temporalcli/internal/cmd/gen-docs
+          ls
+          ls temporalcli
+          ls temporalcli/internal
+          ls temporalcli/internal/cmd
+          ls temporalcli/internal/cmd/gen-docs
+          cd temporalcli
+          cd internal
+          cd cmd
+          cd gen-docs
+          
+          go run .
 
       - name: Copy files over and generate PR
         run: |
