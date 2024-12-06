@@ -30,7 +30,7 @@ jobs:
 
       - name: Generate CLI docs
         run: |
-          pwd
+          echo "$pwd"
           go run ./temporalcli/internal/cmd/gen-docs
 
       - name: Copy files over and generate PR
