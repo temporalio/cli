@@ -30,7 +30,10 @@ jobs:
           go-version: '1.22'
 
       - name: Generate CLI docs
-        run: go run ./cli/temporalcli/internal/cmd/gen-docs
+        run: |
+          pwd
+          echo "$pwd"
+          go run ./temporalcli/internal/cmd/gen-docs
 
       - name: Copy files over and generate PR
         run: |
