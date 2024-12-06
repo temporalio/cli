@@ -17,6 +17,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           path: cli
+          submodules: recursive
 
       - name: Checkout tools repo
         uses: actions/checkout@v4
@@ -35,10 +36,10 @@ jobs:
           pwd
           echo "$pwd"
           ls
-          ls temporalcli
-          ls temporalcli/internal
-          ls temporalcli/internal/cmd
-          ls temporalcli/internal/cmd/gen-docs
+          ls cli/temporalcli
+          ls cli/temporalcli/internal
+          ls cli/temporalcli/internal/cmd
+          ls cli/temporalcli/internal/cmd/gen-docs
           cd cli
           cd temporalcli
           cd internal
@@ -46,6 +47,7 @@ jobs:
           cd gen-docs
           
           go run .
+          go run ./cli/temporalcli/internal/cmd/gen-docs
 
       - name: Copy files over and generate PR
         run: |
