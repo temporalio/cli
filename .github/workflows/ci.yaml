@@ -37,6 +37,7 @@ jobs:
 
       - name: Copy files over and generate PR
         run: |
+          set -x
           BRANCH_NAME="cli-update-docs-${{ github.ref_name }}"
           
           cd docs
@@ -59,8 +60,8 @@ jobs:
           
           
           # Setup the committers identity.
-          git config user.email "$EMAIL"
-          git config user.name "${{ github.event.release.author.login }}"
+          git config --global user.email "$EMAIL"
+          git config --global user.name "${{ github.event.release.author.login }}"
           
           git checkout -b $BRANCH_NAME
           cp ../cli/temporalcli/docs/*.mdx docs/cli/
