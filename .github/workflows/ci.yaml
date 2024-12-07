@@ -39,6 +39,8 @@ jobs:
         run: |
           BRANCH_NAME="cli-update-docs-${{ github.ref_name }}"
           
+          cd docs
+          
           # TEMP
           echo "Release published by: ${{ github.event.release.author.login }}"
           
@@ -60,7 +62,6 @@ jobs:
           git config user.email "$EMAIL"
           git config user.name "${{ github.event.release.author.login }}"
           
-          cd docs
           git checkout -b $BRANCH_NAME
           cp ../cli/temporalcli/docs/*.mdx docs/cli/
           git add .
