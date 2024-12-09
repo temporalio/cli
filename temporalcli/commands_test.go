@@ -216,6 +216,9 @@ func (s *SharedServerSuite) SetupSuite() {
 				// Allow a high rate of change to namespaces, particularly
 				// for the task-queue command tests.
 				"frontend.namespaceRPS.visibility": 10000,
+				// this is overridden since we don't want caching to be enabled while testing DescribeTaskQueue
+				// behaviour related to versioning
+				"matching.TaskQueueInfoByBuildIdTTL": 0 * time.Second,
 			},
 		},
 	})
