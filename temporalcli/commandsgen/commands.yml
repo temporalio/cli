@@ -289,7 +289,7 @@ commands:
       - workflow reference
 
 
-  - name: temporal activity update
+  - name: temporal activity update-options
     summary: Update Activity options
     description: |
       Update Activity options. Specify the Activity and Workflow IDs, and options you want to update. 
