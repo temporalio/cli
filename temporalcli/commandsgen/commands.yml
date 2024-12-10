@@ -328,7 +328,7 @@ commands:
         description: |
           Limits time an activity task can stay in a task queue before a worker picks it up. 
           This timeout is always non retryable, as all a retry would achieve is to put it back into the same
-          queue. Defaults to `schedule_to_close_timeout` or workflow execution timeout if not specified.
+          queue. Defaults to the schedule-to-close timeout or workflow execution timeout if not specified.
       - name: start-to-close-timeout
         type: duration
         description: |
