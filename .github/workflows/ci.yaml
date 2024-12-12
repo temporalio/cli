@@ -18,6 +18,10 @@ jobs:
           - os: ubuntu-arm
             runsOn: buildjet-4vcpu-ubuntu-2204-arm
     runs-on: ${{ matrix.runsOn || matrix.os }}
+    env:
+      # We can't check this directly in the cloud test's `if:` condition below,
+      # so we have to check it here and report it in an env variable.
+      HAS_SECRETS: ${{ secrets.TEMPORAL_CLIENT_CERT != '' && secrets.TEMPORAL_CLIENT_KEY != '' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -53,8 +57,7 @@ jobs:
           git diff --exit-code
 
       - name: Test cloud
-        # Only supported in non-fork runs, since secrets are not available in forks
-        if: ${{ matrix.cloudTestTarget && (github.event.pull_request.head.repo.full_name == '' || github.event.pull_request.head.repo.full_name == 'temporalio/cli') }}
+        if: ${{ matrix.cloudTestTarget && env.HAS_SECRETS == 'true' }}
         env:
           TEMPORAL_ADDRESS: ${{ vars.TEMPORAL_CLIENT_NAMESPACE }}.tmprl.cloud:7233
           TEMPORAL_NAMESPACE: ${{ vars.TEMPORAL_CLIENT_NAMESPACE }}
