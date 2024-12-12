@@ -2,10 +2,11 @@ package temporalcli_test
 
 import (
 	"encoding/json"
-	"github.com/stretchr/testify/assert"
-	"go.temporal.io/sdk/workflow"
 	"strings"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"go.temporal.io/sdk/workflow"
 
 	"github.com/google/uuid"
 	"github.com/temporalio/cli/temporalcli"
@@ -261,6 +262,9 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
 	)
 	s.NoError(res.Err)
 
+	// TODO(antlai-temporal): Delete when a server caching bug in 1.26.2 is fixed
+	time.Sleep(1 * time.Second)
+
 	// Text
 	res = s.Execute(
 		"task-queue", "describe",
@@ -270,10 +274,12 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
 		"--task-queue", s.Worker().Options.TaskQueue,
 	)
 	s.NoError(res.Err)
-
 	s.ContainsOnSameLine(res.Stdout.String(), "id1", "reachable")
 	// No pollers on id1
 	s.NotContains(res.Stdout.String(), "now")
+
+	// TODO(antlai-temporal): Delete when a server caching bug in 1.26.2 is fixed
+	time.Sleep(1 * time.Second)
 
 	res = s.Execute(
 		"task-queue", "describe",
@@ -286,8 +292,11 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
 	s.NoError(res.Err)
 
 	s.ContainsOnSameLine(res.Stdout.String(), "UNVERSIONED", "unreachable")
-	s.ContainsOnSameLine(res.Stdout.String(), "UNVERSIONED", "workflow", s.DevServer.Options.ClientOptions.Identity, "now", "100000")
-	s.ContainsOnSameLine(res.Stdout.String(), "UNVERSIONED", "activity", s.DevServer.Options.ClientOptions.Identity, "now", "100000")
+	s.ContainsOnSameLine(res.Stdout.String(), "UNVERSIONED", "workflow", s.DevServer.Options.ClientOptions.Identity, "2 seconds ago", "100000")
+	s.ContainsOnSameLine(res.Stdout.String(), "UNVERSIONED", "activity", s.DevServer.Options.ClientOptions.Identity, "2 seconds ago", "100000")
+
+	// TODO(antlai-temporal): Delete when a server caching bug in 1.26.2 is fixed
+	time.Sleep(1 * time.Second)
 
 	res = s.Execute(
 		"task-queue", "describe",
@@ -302,6 +311,9 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
 	s.ContainsOnSameLine(res.Stdout.String(), "id2", "unreachable")
 	// No pollers on id2
 	s.NotContains(res.Stdout.String(), "now")
+
+	// TODO(antlai-temporal): Delete when a server caching bug in 1.26.2 is fixed
+	time.Sleep(1 * time.Second)
 
 	res = s.Execute(
 		"task-queue", "describe",
