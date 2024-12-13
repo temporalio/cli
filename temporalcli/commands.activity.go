@@ -174,27 +174,18 @@ func (c *TemporalActivityUpdateOptionsCommand) run(cctx *CommandContext, args []
 	updatedOptions := updateOptionsDescribe{
 		TaskQueue: result.GetActivityOptions().TaskQueue.GetName(),
 
-		ScheduleToCloseTimeout: toDuration(result.GetActivityOptions().ScheduleToCloseTimeout),
-		ScheduleToStartTimeout: toDuration(result.GetActivityOptions().ScheduleToStartTimeout),
-		StartToCloseTimeout:    toDuration(result.GetActivityOptions().StartToCloseTimeout),
-		HeartbeatTimeout:       toDuration(result.GetActivityOptions().HeartbeatTimeout),
+		ScheduleToCloseTimeout: result.GetActivityOptions().ScheduleToCloseTimeout.AsDuration(),
+		ScheduleToStartTimeout: result.GetActivityOptions().ScheduleToStartTimeout.AsDuration(),
+		StartToCloseTimeout:    result.GetActivityOptions().StartToCloseTimeout.AsDuration(),
+		HeartbeatTimeout:       result.GetActivityOptions().HeartbeatTimeout.AsDuration(),
 
-		InitialInterval:    toDuration(result.GetActivityOptions().RetryPolicy.InitialInterval),
+		InitialInterval:    result.GetActivityOptions().RetryPolicy.InitialInterval.AsDuration(),
 		BackoffCoefficient: result.GetActivityOptions().RetryPolicy.BackoffCoefficient,
-		MaximumInterval:    toDuration(result.GetActivityOptions().RetryPolicy.MaximumInterval),
+		MaximumInterval:    result.GetActivityOptions().RetryPolicy.MaximumInterval.AsDuration(),
 		MaximumAttempts:    result.GetActivityOptions().RetryPolicy.MaximumAttempts,
 	}
 
 	_ = cctx.Printer.PrintStructured(updatedOptions, printer.StructuredOptions{})
 
 	return nil
-}
-
-// Converts the duration to Go's native time.Duration.
-// Returns the zero time.Duration value for nil duration.
-func toDuration(duration *durationpb.Duration) (d time.Duration) {
-	if duration != nil {
-		d = duration.AsDuration()
-	}
-	return
 }
