@@ -174,7 +174,7 @@ func (s *SharedServerSuite) TestActivityOptionsUpdate_Partial() {
 
 	// old value
 	// note - this is a snapshot of current values
-	//if this test fails, check the default values of activity options
+	// if this test fails, check the default values of activity options
 	s.ContainsOnSameLine(out, "StartToCloseTimeout", "10s")
 	s.ContainsOnSameLine(out, "HeartbeatTimeout", "0s")
 	s.ContainsOnSameLine(out, "MaximumInterval", "1m40s")
