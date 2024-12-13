@@ -217,7 +217,10 @@ func (s *SharedServerSuite) SetupSuite() {
 				// for the task-queue command tests.
 				"frontend.namespaceRPS.visibility": 10000,
 				// Disable DescribeTaskQueue cache.
-				"matching.TaskQueueInfoByBuildIdTTL": 0,
+				"frontend.activityAPIsEnabled": true,
+				// this is overridden since we don't want caching to be enabled
+				// while testing DescribeTaskQueue behaviour related to versioning
+				"matching.TaskQueueInfoByBuildIdTTL": 0 * time.Second,
 			},
 		},
 	})
