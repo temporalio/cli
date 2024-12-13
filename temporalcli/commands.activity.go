@@ -2,7 +2,9 @@ package temporalcli
 
 import (
 	"fmt"
+	"time"
 
+	"github.com/temporalio/cli/temporalcli/internal/printer"
 	activitypb "go.temporal.io/api/activity/v1"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/failure/v1"
@@ -10,6 +12,22 @@ import (
 	"go.temporal.io/api/workflowservice/v1"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
+)
+
+type (
+	updateOptionsDescribe struct {
+		TaskQueue string
+
+		ScheduleToCloseTimeout time.Duration
+		ScheduleToStartTimeout time.Duration
+		StartToCloseTimeout    time.Duration
+		HeartbeatTimeout       time.Duration
+
+		InitialInterval    time.Duration
+		BackoffCoefficient float64
+		MaximumInterval    time.Duration
+		MaximumAttempts    int32
+	}
 )
 
 func (c *TemporalActivityCompleteCommand) run(cctx *CommandContext, args []string) error {
@@ -75,7 +93,7 @@ func (c *TemporalActivityFailCommand) run(cctx *CommandContext, args []string) e
 	return nil
 }
 
-func (c *TemporalActivityUpdateCommand) run(cctx *CommandContext, args []string) error {
+func (c *TemporalActivityUpdateOptionsCommand) run(cctx *CommandContext, args []string) error {
 	cl, err := c.Parent.ClientOptions.dialClient(cctx)
 	if err != nil {
 		return err
@@ -137,7 +155,7 @@ func (c *TemporalActivityUpdateCommand) run(cctx *CommandContext, args []string)
 		updatePath = append(updatePath, "retry_policy.maximum_attempts")
 	}
 
-	_, err = cl.WorkflowService().UpdateActivityOptionsById(cctx, &workflowservice.UpdateActivityOptionsByIdRequest{
+	result, err := cl.WorkflowService().UpdateActivityOptionsById(cctx, &workflowservice.UpdateActivityOptionsByIdRequest{
 		Namespace:       c.Parent.Namespace,
 		WorkflowId:      c.WorkflowId,
 		RunId:           c.RunId,
@@ -152,5 +170,31 @@ func (c *TemporalActivityUpdateCommand) run(cctx *CommandContext, args []string)
 	if err != nil {
 		return fmt.Errorf("unable to update Activity options: %w", err)
 	}
+
+	updatedOptions := updateOptionsDescribe{
+		TaskQueue: result.GetActivityOptions().TaskQueue.GetName(),
+
+		ScheduleToCloseTimeout: toDuration(result.GetActivityOptions().ScheduleToCloseTimeout),
+		ScheduleToStartTimeout: toDuration(result.GetActivityOptions().ScheduleToStartTimeout),
+		StartToCloseTimeout:    toDuration(result.GetActivityOptions().StartToCloseTimeout),
+		HeartbeatTimeout:       toDuration(result.GetActivityOptions().HeartbeatTimeout),
+
+		InitialInterval:    toDuration(result.GetActivityOptions().RetryPolicy.InitialInterval),
+		BackoffCoefficient: result.GetActivityOptions().RetryPolicy.BackoffCoefficient,
+		MaximumInterval:    toDuration(result.GetActivityOptions().RetryPolicy.MaximumInterval),
+		MaximumAttempts:    result.GetActivityOptions().RetryPolicy.MaximumAttempts,
+	}
+
+	_ = cctx.Printer.PrintStructured(updatedOptions, printer.StructuredOptions{})
+
 	return nil
+}
+
+// Converts the duration to Go's native time.Duration.
+// Returns the zero time.Duration value for nil duration.
+func toDuration(duration *durationpb.Duration) (d time.Duration) {
+	if duration != nil {
+		d = duration.AsDuration()
+	}
+	return
 }

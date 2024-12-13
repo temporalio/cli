@@ -113,7 +113,7 @@ func (s *SharedServerSuite) TestActivityOptionsUpdate_Accept() {
 	identity := "MyIdentity"
 
 	res := s.Execute(
-		"activity", "update",
+		"activity", "update-options",
 		"--activity-id", aid,
 		"--workflow-id", wid,
 		"--run-id", run.GetRunID(),
@@ -127,9 +127,58 @@ func (s *SharedServerSuite) TestActivityOptionsUpdate_Accept() {
 		"--retry-maximum-interval", "60s",
 		"--retry-backoff-coefficient", "2",
 		"--retry-maximum-attempts", "5",
+		"--address", s.Address(),
 	)
-	// atm, the command is not enabled
-	s.Error(res.Err)
+
+	s.NoError(res.Err)
+	out := res.Stdout.String()
+	s.ContainsOnSameLine(out, "ScheduleToCloseTimeout", "1m0s")
+	s.ContainsOnSameLine(out, "ScheduleToStartTimeout", "5s")
+	s.ContainsOnSameLine(out, "StartToCloseTimeout", "10s")
+	s.ContainsOnSameLine(out, "HeartbeatTimeout", "10s")
+	s.ContainsOnSameLine(out, "InitialInterval", "5s")
+	s.ContainsOnSameLine(out, "MaximumInterval", "1m0s")
+	s.ContainsOnSameLine(out, "BackoffCoefficient", "2")
+	s.ContainsOnSameLine(out, "MaximumAttempts", "5")
+}
+
+func (s *SharedServerSuite) TestActivityOptionsUpdate_Partial() {
+	run := s.waitActivityStarted()
+	wid := run.GetID()
+	aid := "dev-activity-id"
+	identity := "MyIdentity"
+
+	res := s.Execute(
+		"activity", "update-options",
+		"--activity-id", aid,
+		"--workflow-id", wid,
+		"--run-id", run.GetRunID(),
+		"--identity", identity,
+		"--task-queue", "new-task-queue",
+		"--schedule-to-close-timeout", "41s",
+		"--schedule-to-start-timeout", "11s",
+		"--retry-initial-interval", "4s",
+		"--retry-maximum-attempts", "10",
+		"--address", s.Address(),
+	)
+
+	s.NoError(res.Err)
+	out := res.Stdout.String()
+
+	// updated
+	s.ContainsOnSameLine(out, "ScheduleToCloseTimeout", "41s")
+	s.ContainsOnSameLine(out, "ScheduleToStartTimeout", "11s")
+	s.ContainsOnSameLine(out, "StartToCloseTimeout", "10s")
+	s.ContainsOnSameLine(out, "InitialInterval", "4s")
+	s.ContainsOnSameLine(out, "MaximumAttempts", "10")
+
+	// old value
+	// note - this is a snapshot of current values
+	//if this test fails, check the default values of activity options
+	s.ContainsOnSameLine(out, "StartToCloseTimeout", "10s")
+	s.ContainsOnSameLine(out, "HeartbeatTimeout", "0s")
+	s.ContainsOnSameLine(out, "MaximumInterval", "1m40s")
+	s.ContainsOnSameLine(out, "BackoffCoefficient", "2")
 }
 
 // Test helpers

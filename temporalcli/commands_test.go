@@ -370,6 +370,7 @@ func StartDevServer(t *testing.T, options DevServerOptions) *DevServer {
 	d.Options.DynamicConfigValues["frontend.MaxConcurrentBatchOperationPerNamespace"] = 1000
 	d.Options.DynamicConfigValues["frontend.namespaceRPS.visibility"] = 100
 	d.Options.DynamicConfigValues["system.clusterMetadataRefreshInterval"] = 100 * time.Millisecond
+	d.Options.DynamicConfigValues["frontend.activityAPIsEnabled"] = true
 
 	d.Options.GRPCInterceptors = append(
 		d.Options.GRPCInterceptors,

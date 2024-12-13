@@ -206,8 +206,10 @@ commands:
   - name: temporal activity
     summary: Complete, update or fail an Activity
     description: |
-      Update an Activity's options or update an Activity's state to completed or failed.
-      Updating activity state marks an Activity as successfully finished or as having encountered an error.      
+      Update an Activity's options or update an Activity's state 
+      to completed or failed.
+      Updating activity state marks an Activity as successfully finished or as 
+      having encountered an error.      
 
       ```
       temporal activity complete \
@@ -292,22 +294,23 @@ commands:
   - name: temporal activity update-options
     summary: Update Activity options
     description: |
-      Update Activity options. Specify the Activity and Workflow IDs, and options you want to update. 
+      Update Activity options. Specify the Activity and Workflow IDs, and 
+      options you want to update. 
       Updates are incremental, only changing the specified options. 
 
       ```
-      temporal activity update \
+      temporal activity update-options \
           --activity-id YourActivityId \
           --workflow-id YourWorkflowId \
           --task-queue NewTaskQueueName \
-          --schedule-to-close-timeout DURATION\
-          --schedule-to-start-timeout DURATION\
-          --start-to-close-timeout DURATION\
-          --heartbeat-timeout DURATION\
-          --retry-initial-interval DURATION\
-          --retry-maximum-interval DURATION\
-          --retry-backoff-coefficient NewBackoffCoefficient\
-          --retry-maximum-attempts NewMaximumAttempts"
+          --schedule-to-close-timeout DURATION \
+          --schedule-to-start-timeout DURATION \
+          --start-to-close-timeout DURATION \
+          --heartbeat-timeout DURATION \
+          --retry-initial-interval DURATION \
+          --retry-maximum-interval DURATION \
+          --retry-backoff-coefficient NewBackoffCoefficient \
+          --retry-maximum-attempts NewMaximumAttempts
       
       ```
     options:
@@ -321,18 +324,23 @@ commands:
       - name: schedule-to-close-timeout
         type: duration
         description: |
-          Indicates how long the caller is willing to wait for an activity completion. 
+          Indicates how long the caller is willing to wait for an activity 
+          completion. 
           Limits how long retries will be attempted.
       - name: schedule-to-start-timeout
         type: duration
         description: |
-          Limits time an activity task can stay in a task queue before a worker picks it up. 
-          This timeout is always non retryable, as all a retry would achieve is to put it back into the same
-          queue. Defaults to the schedule-to-close timeout or workflow execution timeout if not specified.
+          Limits time an activity task can stay in a task queue before a worker 
+          picks it up. 
+          This timeout is always non retryable, as all a retry would achieve is 
+          to put it back into the same
+          queue. Defaults to the schedule-to-close timeout or workflow execution
+          timeout if not specified.
       - name: start-to-close-timeout
         type: duration
         description: |
-          Maximum time an activity is allowed to execute after being picked up by a worker. This timeout is always retryable.
+          Maximum time an activity is allowed to execute after being picked up 
+          by a worker. This timeout is always retryable.
       - name: heartbeat-timeout
         type: duration
         description: |
@@ -340,23 +348,28 @@ commands:
       - name: retry-initial-interval
         type: duration
         description: |
-          Interval of the first retry. If retryBackoffCoefficient is 1.0 then it is used for all retries.
+          Interval of the first retry. If retryBackoffCoefficient is 1.0 then it
+          is used for all retries.
       - name: retry-maximum-interval
         type: duration
         description: |
-          Maximum interval between retries. Exponential backoff leads to interval increase.
+          Maximum interval between retries. Exponential backoff leads to 
+          interval increase.
           This value is the cap of the increase.
       - name: retry-backoff-coefficient
         type: float
         description: |
           Coefficient used to calculate the next retry interval.
-          The next retry interval is previous interval multiplied by the coefficient.
+          The next retry interval is previous interval multiplied by the backoff
+          coefficient.
           Must be 1 or larger.
       - name: retry-maximum-attempts
         type: int
         description: |
-          Maximum number of attempts. When exceeded the retries stop even if not expired yet.
-          Setting this value to 1 disables retries. Setting this value to 0 means unlimited attempts(up to the timeouts).
+          Maximum number of attempts. When exceeded the retries stop even if not
+          expired yet.
+          Setting this value to 1 disables retries. Setting this value to 0 
+          means unlimited attempts(up to the timeouts).
       - name: identity
         type: string
         description: Identity of the user submitting this request.

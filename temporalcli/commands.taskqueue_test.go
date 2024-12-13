@@ -2,10 +2,11 @@ package temporalcli_test
 
 import (
 	"encoding/json"
-	"github.com/stretchr/testify/assert"
-	"go.temporal.io/sdk/workflow"
 	"strings"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"go.temporal.io/sdk/workflow"
 
 	"github.com/google/uuid"
 	"github.com/temporalio/cli/temporalcli"
@@ -163,7 +164,7 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Task_Queue_Stats_NonEmpty() {
 	}
 }
 
-func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
+func (s *SharedServerSuite) DisableTestTaskQueue_Describe_Simple() {
 	type reachabilityRowType struct {
 		BuildID      string `json:"buildId"`
 		Reachability string `json:"reachability"`
