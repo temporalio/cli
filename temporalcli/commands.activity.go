@@ -189,3 +189,62 @@ func (c *TemporalActivityUpdateOptionsCommand) run(cctx *CommandContext, args []
 
 	return nil
 }
+
+func (c *TemporalActivityPauseCommand) run(cctx *CommandContext, args []string) error {
+	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	_, err = cl.WorkflowService().PauseActivityById(cctx, &workflowservice.PauseActivityByIdRequest{
+		Namespace:  c.Parent.Namespace,
+		WorkflowId: c.WorkflowId,
+		RunId:      c.RunId,
+		ActivityId: c.ActivityId,
+
+		Identity: c.Identity,
+	})
+	if err != nil {
+		return fmt.Errorf("unable to update Activity options: %w", err)
+	}
+
+	return nil
+}
+
+func (c *TemporalActivityUnpauseCommand) run(cctx *CommandContext, args []string) error {
+	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	request := &workflowservice.UnpauseActivityByIdRequest{
+		Namespace:  c.Parent.Namespace,
+		WorkflowId: c.WorkflowId,
+		RunId:      c.RunId,
+		ActivityId: c.ActivityId,
+		Identity:   c.Identity,
+	}
+	if c.Reset {
+		request.Operation = &workflowservice.UnpauseActivityByIdRequest_Reset_{
+			Reset_: &workflowservice.UnpauseActivityByIdRequest_ResetOperation{
+				NoWait:         c.NoWait,
+				ResetHeartbeat: c.ResetHeartbeats,
+			},
+		}
+	} else {
+		request.Operation = &workflowservice.UnpauseActivityByIdRequest_Resume{
+			Resume: &workflowservice.UnpauseActivityByIdRequest_ResumeOperation{
+				NoWait: c.NoWait,
+			},
+		}
+	}
+
+	_, err = cl.WorkflowService().UnpauseActivityById(cctx, request)
+	if err != nil {
+		return fmt.Errorf("unable to update Activity options: %w", err)
+	}
+
+	return nil
+}

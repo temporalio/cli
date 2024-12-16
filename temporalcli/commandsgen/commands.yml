@@ -201,10 +201,11 @@ commands:
           The command execution timeout. 0s means no timeout.
 
   - name: temporal activity
-    summary: Complete, update or fail an Activity
+    summary: Complete, update, pause, unpause or fail an Activity
     description: |
       Update an Activity's options or update an Activity's state to completed 
       or failed.
+      Pause or unpause an Activity.
       Updating activity state marks an Activity as successfully finished or as
       having encountered an error.
     
@@ -225,6 +226,8 @@ commands:
         - activity
         - activity complete
         - activity update-options
+        - activity pause
+        - activity unpause
         - activity execution 
         - activity fail
         - cli reference
@@ -286,8 +289,6 @@ commands:
         description: Reason for failing the Activity.
     option-sets:
       - workflow reference
-
-
 
   - name: temporal activity update-options
     summary: Update Activity options
@@ -373,6 +374,99 @@ commands:
         description: Identity of the user submitting this request.
     option-sets:
       - workflow reference
+
+  - name: temporal activity pause
+    summary: Pause an Activity
+    description: |
+      Pausing an activity means:
+        - If the activity is currently waiting for a retry or is running 
+      and subsequently fails, it will not be rescheduled until it is unpaused.
+      - If the activity is paused, calling this method will have no effect.
+      - If the activity is running and finishes successfully, 
+        the activity will be completed.
+      - If the activity is running and finishes with failure:
+        * if there is no retry left - the activity will be completed.
+        * if there are more retries left - the activity will be paused.
+      
+      Specify the
+      Activity and Workflow IDs:
+
+      ```
+      temporal activity pause \
+          --activity-id YourActivityId \
+          --workflow-id YourWorkflowId
+      ```
+    options:
+      - name: activity-id
+        short: a
+        type: string
+        description: Activity ID to pause.
+        required: true
+      - name: identity
+        type: string
+        description: Identity of the user submitting this request.
+    option-sets:
+      - workflow reference
+
+  - name: temporal activity unpause
+    summary: Unpause an Activity
+    description: |
+      Unpauses the execution of an activity specified by its ID.
+      Returns a `NotFound` error if there is no pending activity 
+      with the provided ID.
+      There are two 'modes' of unpausing an activity:
+        'resume' - Default. If the activity is paused, it will be resumed 
+        and scheduled for execution.
+        * If the activity is currently running Unpause with 'resume' has 
+          no effect.
+        * if 'no_wait' flag is set and the activity is waiting, the activity 
+          will be scheduled immediately.
+        'reset' - If the activity is paused, it will be reset to its initial 
+        state and (depending on parameters) scheduled for execution.
+        * If the activity is currently running, Unpause with 'reset' will reset 
+          the number of attempts.
+        * if 'no_wait' flag is set, the activity will be scheduled immediately.
+        * if 'reset_heartbeats' flag is set, the activity heartbeat timer 
+          and heartbeats will be reset.
+      If the activity is in waiting for retry and past it retry timeout, 
+      it will be scheduled immediately.
+      Once the activity is unpaused, all timeout timers will be regenerated.
+
+      Specify the
+      Activity and Workflow IDs:
+
+      ```
+      temporal activity unpause \
+          --activity-id YourActivityId \
+          --workflow-id YourWorkflowId
+          --reset
+          --no-wait
+          --reset-heartbeats
+      ```
+    options:
+      - name: activity-id
+        short: a
+        type: string
+        description: Activity ID to pause.
+        required: true
+      - name: identity
+        type: string
+        description: Identity of the user submitting this request.
+      - name: reset
+        type: bool
+        description: Also reset the activity.
+      - name: no-wait
+        type: bool
+        description: |
+          If reset flag is provided, the activity will be scheduled immediately.
+          If reset flag is not provided, the activity will be scheduled if 
+          it is waiting for retry.
+      - name: reset-heartbeats
+        type: bool
+        description: I reset flag is provided - reset the activity heartbeats.
+    option-sets:
+      - workflow reference
+
 
   - name: temporal batch
     summary: Manage running batch jobs
