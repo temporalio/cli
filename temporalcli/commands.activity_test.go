@@ -142,6 +142,45 @@ func (s *SharedServerSuite) TestActivityOptionsUpdate_Accept() {
 	s.ContainsOnSameLine(out, "MaximumAttempts", "5")
 }
 
+func (s *SharedServerSuite) TestActivityOptionsUpdate_Partial() {
+	run := s.waitActivityStarted()
+	wid := run.GetID()
+	aid := "dev-activity-id"
+	identity := "MyIdentity"
+
+	res := s.Execute(
+		"activity", "update-options",
+		"--activity-id", aid,
+		"--workflow-id", wid,
+		"--run-id", run.GetRunID(),
+		"--identity", identity,
+		"--task-queue", "new-task-queue",
+		"--schedule-to-close-timeout", "41s",
+		"--schedule-to-start-timeout", "11s",
+		"--retry-initial-interval", "4s",
+		"--retry-maximum-attempts", "10",
+		"--address", s.Address(),
+	)
+
+	s.NoError(res.Err)
+	out := res.Stdout.String()
+
+	// updated
+	s.ContainsOnSameLine(out, "ScheduleToCloseTimeout", "41s")
+	s.ContainsOnSameLine(out, "ScheduleToStartTimeout", "11s")
+	s.ContainsOnSameLine(out, "StartToCloseTimeout", "10s")
+	s.ContainsOnSameLine(out, "InitialInterval", "4s")
+	s.ContainsOnSameLine(out, "MaximumAttempts", "10")
+
+	// old value
+	// note - this is a snapshot of current values
+	// if this test fails, check the default values of activity options
+	s.ContainsOnSameLine(out, "StartToCloseTimeout", "10s")
+	s.ContainsOnSameLine(out, "HeartbeatTimeout", "0s")
+	s.ContainsOnSameLine(out, "MaximumInterval", "1m40s")
+	s.ContainsOnSameLine(out, "BackoffCoefficient", "2")
+}
+
 func (s *SharedServerSuite) TestActivityPauseUnpause() {
 	run := s.waitActivityStarted()
 	wid := run.GetID()
@@ -170,6 +209,26 @@ func (s *SharedServerSuite) TestActivityPauseUnpause() {
 	)
 
 	s.NoError(res.Err)
+}
+
+func (s *SharedServerSuite) TestActivityUnPause_Failed() {
+	run := s.waitActivityStarted()
+	wid := run.GetID()
+	aid := "dev-activity-id"
+	identity := "MyIdentity"
+
+	// should fail because --reset-heartbeat is provided, but --reset flag is missing
+	res := s.Execute(
+		"activity", "unpause",
+		"--activity-id", aid,
+		"--workflow-id", wid,
+		"--run-id", run.GetRunID(),
+		"--identity", identity,
+		"--address", s.Address(),
+		"--reset-heartbeats",
+	)
+
+	s.Error(res.Err)
 }
 
 // Test helpers

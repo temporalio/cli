@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/temporalio/cli/temporalcli/internal/printer"
 	activitypb "go.temporal.io/api/activity/v1"
 	"go.temporal.io/api/common/v1"
@@ -165,7 +166,8 @@ func (c *TemporalActivityUpdateOptionsCommand) run(cctx *CommandContext, args []
 			Paths: updatePath,
 		},
 
-		Identity: c.Identity,
+		Identity:  c.Identity,
+		RequestId: uuid.NewString(),
 	})
 	if err != nil {
 		return fmt.Errorf("unable to update Activity options: %w", err)
@@ -202,7 +204,8 @@ func (c *TemporalActivityPauseCommand) run(cctx *CommandContext, args []string) 
 		WorkflowId: c.WorkflowId,
 		RunId:      c.RunId,
 		ActivityId: c.ActivityId,
-		Identity: c.Identity,
+		Identity:   c.Identity,
+		RequestId:  uuid.NewString(),
 	})
 	if err != nil {
 		return fmt.Errorf("unable to update Activity options: %w", err)
@@ -233,6 +236,9 @@ func (c *TemporalActivityUnpauseCommand) run(cctx *CommandContext, args []string
 			},
 		}
 	} else {
+		if c.ResetHeartbeats {
+			return fmt.Errorf("reset-heartbeats flag can only be used with reset flag")
+		}
 		request.Operation = &workflowservice.UnpauseActivityByIdRequest_Resume{
 			Resume: &workflowservice.UnpauseActivityByIdRequest_ResumeOperation{
 				NoWait: c.NoWait,
@@ -242,7 +248,7 @@ func (c *TemporalActivityUnpauseCommand) run(cctx *CommandContext, args []string
 
 	_, err = cl.WorkflowService().UnpauseActivityById(cctx, request)
 	if err != nil {
-		return fmt.Errorf("unable to update Activity options: %w", err)
+		return fmt.Errorf("unable to uppause an Activity: %w", err)
 	}
 
 	return nil
