@@ -389,8 +389,7 @@ commands:
       If the Activity is on its last retry attempt and fails, the failure will
       be returned to the caller, just as if the Activity had not been paused.
       
-      Specify the
-      Activity and Workflow IDs:
+      Specify the Activity and Workflow IDs:
 
       ```
       temporal activity pause \
