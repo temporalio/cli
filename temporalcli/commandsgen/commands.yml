@@ -459,9 +459,7 @@ commands:
       - name: no-wait
         type: bool
         description: |
-          If reset flag is provided, the activity will be scheduled immediately.
-          If reset flag is not provided, the activity will be scheduled if 
-          it is waiting for retry.
+          Schedule the Activity immediately, even if its retry timeout has not expired.
       - name: reset-heartbeats
         type: bool
         description: I reset flag is provided - reset the activity heartbeats.
