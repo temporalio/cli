@@ -380,15 +380,14 @@ commands:
   - name: temporal activity pause
     summary: Pause an Activity
     description: |
-      Pausing an activity means:
-        - If the activity is currently waiting for a retry or is running 
-      and subsequently fails, it will not be rescheduled until it is unpaused.
-      - If the activity is paused, calling this method will have no effect.
-      - If the activity is running and finishes successfully, 
-        the activity will be completed.
-      - If the activity is running and finishes with failure:
-        * if there is no retry left - the activity will be completed.
-        * if there are more retries left - the activity will be paused.
+      Pause an Activity.
+
+      If the Activity is not currently running (e.g. because it previously
+      failed), it will not be run again until it is unpaused.
+
+      However, if the Activity is currently running, it will run to completion.
+      If the Activity is on its last retry attempt and fails, the failure will
+      be returned to the caller, just as if the Activity had not been paused.
       
       Specify the
       Activity and Workflow IDs:
