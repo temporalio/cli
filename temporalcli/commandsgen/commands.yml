@@ -205,7 +205,9 @@ commands:
     description: |
       Update an Activity's options or update an Activity's state to completed 
       or failed.
+
       Pause or unpause an Activity.
+
       Updating activity state marks an Activity as successfully finished or as
       having encountered an error.
     
