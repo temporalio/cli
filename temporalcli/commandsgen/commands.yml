@@ -462,7 +462,7 @@ commands:
           Schedule the Activity immediately, even if its retry timeout has not expired.
       - name: reset-heartbeats
         type: bool
-        description: I reset flag is provided - reset the activity heartbeats.
+        description: Reset the Activity's heartbeat timeout. Only works with --reset.
     option-sets:
       - workflow reference
 
