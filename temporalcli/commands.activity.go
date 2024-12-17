@@ -202,7 +202,6 @@ func (c *TemporalActivityPauseCommand) run(cctx *CommandContext, args []string) 
 		WorkflowId: c.WorkflowId,
 		RunId:      c.RunId,
 		ActivityId: c.ActivityId,
-
 		Identity: c.Identity,
 	})
 	if err != nil {
