@@ -9,15 +9,15 @@ require (
 	github.com/fatih/color v1.17.0
 	github.com/google/uuid v1.6.0
 	github.com/mattn/go-isatty v0.0.20
-	github.com/nexus-rpc/sdk-go v0.0.12
+	github.com/nexus-rpc/sdk-go v0.1.0
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/pflag v1.0.5
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	github.com/temporalio/ui-server/v2 v2.31.2
 	go.temporal.io/api v1.43.0
-	go.temporal.io/sdk v1.30.1
-	go.temporal.io/server v1.26.2-125.1
+	go.temporal.io/sdk v1.31.0
+	go.temporal.io/server v1.26.2-rc.0
 	google.golang.org/grpc v1.67.1
 	google.golang.org/protobuf v1.35.1
 	gopkg.in/yaml.v3 v3.0.1
