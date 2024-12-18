@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/temporalio/cli/temporalcli/internal/printer"
 	activitypb "go.temporal.io/api/activity/v1"
 	"go.temporal.io/api/common/v1"
@@ -165,7 +166,8 @@ func (c *TemporalActivityUpdateOptionsCommand) run(cctx *CommandContext, args []
 			Paths: updatePath,
 		},
 
-		Identity: c.Identity,
+		Identity:  c.Identity,
+		RequestId: uuid.NewString(),
 	})
 	if err != nil {
 		return fmt.Errorf("unable to update Activity options: %w", err)
@@ -186,6 +188,68 @@ func (c *TemporalActivityUpdateOptionsCommand) run(cctx *CommandContext, args []
 	}
 
 	_ = cctx.Printer.PrintStructured(updatedOptions, printer.StructuredOptions{})
+
+	return nil
+}
+
+func (c *TemporalActivityPauseCommand) run(cctx *CommandContext, args []string) error {
+	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	_, err = cl.WorkflowService().PauseActivityById(cctx, &workflowservice.PauseActivityByIdRequest{
+		Namespace:  c.Parent.Namespace,
+		WorkflowId: c.WorkflowId,
+		RunId:      c.RunId,
+		ActivityId: c.ActivityId,
+		Identity:   c.Identity,
+		RequestId:  uuid.NewString(),
+	})
+	if err != nil {
+		return fmt.Errorf("unable to update Activity options: %w", err)
+	}
+
+	return nil
+}
+
+func (c *TemporalActivityUnpauseCommand) run(cctx *CommandContext, args []string) error {
+	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	request := &workflowservice.UnpauseActivityByIdRequest{
+		Namespace:  c.Parent.Namespace,
+		WorkflowId: c.WorkflowId,
+		RunId:      c.RunId,
+		ActivityId: c.ActivityId,
+		Identity:   c.Identity,
+	}
+	if c.Reset {
+		request.Operation = &workflowservice.UnpauseActivityByIdRequest_Reset_{
+			Reset_: &workflowservice.UnpauseActivityByIdRequest_ResetOperation{
+				NoWait:         c.NoWait,
+				ResetHeartbeat: c.ResetHeartbeats,
+			},
+		}
+	} else {
+		if c.ResetHeartbeats {
+			return fmt.Errorf("reset-heartbeats flag can only be used with reset flag")
+		}
+		request.Operation = &workflowservice.UnpauseActivityByIdRequest_Resume{
+			Resume: &workflowservice.UnpauseActivityByIdRequest_ResumeOperation{
+				NoWait: c.NoWait,
+			},
+		}
+	}
+
+	_, err = cl.WorkflowService().UnpauseActivityById(cctx, request)
+	if err != nil {
+		return fmt.Errorf("unable to uppause an Activity: %w", err)
+	}
 
 	return nil
 }
