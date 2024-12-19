@@ -181,6 +181,56 @@ func (s *SharedServerSuite) TestActivityOptionsUpdate_Partial() {
 	s.ContainsOnSameLine(out, "BackoffCoefficient", "2")
 }
 
+func (s *SharedServerSuite) TestActivityPauseUnpause() {
+	run := s.waitActivityStarted()
+	wid := run.GetID()
+	aid := "dev-activity-id"
+	identity := "MyIdentity"
+
+	res := s.Execute(
+		"activity", "pause",
+		"--activity-id", aid,
+		"--workflow-id", wid,
+		"--run-id", run.GetRunID(),
+		"--identity", identity,
+		"--address", s.Address(),
+	)
+
+	s.NoError(res.Err)
+
+	res = s.Execute(
+		"activity", "unpause",
+		"--activity-id", aid,
+		"--workflow-id", wid,
+		"--run-id", run.GetRunID(),
+		"--identity", identity,
+		"--address", s.Address(),
+		"--reset",
+	)
+
+	s.NoError(res.Err)
+}
+
+func (s *SharedServerSuite) TestActivityUnPause_Failed() {
+	run := s.waitActivityStarted()
+	wid := run.GetID()
+	aid := "dev-activity-id"
+	identity := "MyIdentity"
+
+	// should fail because --reset-heartbeat is provided, but --reset flag is missing
+	res := s.Execute(
+		"activity", "unpause",
+		"--activity-id", aid,
+		"--workflow-id", wid,
+		"--run-id", run.GetRunID(),
+		"--identity", identity,
+		"--address", s.Address(),
+		"--reset-heartbeats",
+	)
+
+	s.Error(res.Err)
+}
+
 // Test helpers
 
 func (s *SharedServerSuite) waitActivityStarted() client.WorkflowRun {
