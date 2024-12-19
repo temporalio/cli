@@ -231,6 +231,37 @@ func (s *SharedServerSuite) TestActivityUnPause_Failed() {
 	s.Error(res.Err)
 }
 
+func (s *SharedServerSuite) TestActivityReset() {
+	run := s.waitActivityStarted()
+	wid := run.GetID()
+	aid := "dev-activity-id"
+	identity := "MyIdentity"
+
+	res := s.Execute(
+		"activity", "reset",
+		"--activity-id", aid,
+		"--workflow-id", wid,
+		"--run-id", run.GetRunID(),
+		"--identity", identity,
+		"--address", s.Address(),
+	)
+
+	s.NoError(res.Err)
+
+	// reset should fail because activity is not found
+
+	res = s.Execute(
+		"activity", "reset",
+		"--activity-id", "fake_id",
+		"--workflow-id", wid,
+		"--run-id", run.GetRunID(),
+		"--identity", identity,
+		"--address", s.Address(),
+	)
+
+	s.Error(res.Err)
+}
+
 // Test helpers
 
 func (s *SharedServerSuite) waitActivityStarted() client.WorkflowRun {
