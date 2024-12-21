@@ -317,8 +317,8 @@ commands:
       |                                                                            |
       | Please note:                                                               |
       | - Wrap attributes with backticks if it contains characters not in          |
-      |   `[a-zA-Z0-9]`.                                                           |
-      | - `STARTS_WITH` is only available for Keyword search attributes.           |
+      |   [a-zA-Z0-9].                                                             |
+      | - STARTS_WITH is only available for Keyword search attributes.             |
       +----------------------------------------------------------------------------+
       ```
 
