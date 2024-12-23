@@ -1647,9 +1647,8 @@ commands:
         default: 7233
       - name: http-port
         type: int
-        description: | 
-          Port for the HTTP API service.
-          Default is off.
+        description: Port for the HTTP API service.
+        default: 7243
       - name: metrics-port
         type: int
         description: |
