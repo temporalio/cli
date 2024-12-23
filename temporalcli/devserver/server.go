@@ -227,7 +227,6 @@ func (s *StartOptions) buildServerOptions() ([]temporal.ServerOption, error) {
 	dynConf[dynamicconfig.HistoryCacheHostLevelMaxSize.Key()] = 8096
 	// Up default visibility RPS
 	dynConf[dynamicconfig.FrontendMaxNamespaceVisibilityRPSPerInstance.Key()] = 100
-	// This doesn't enable Nexus but it is required for Nexus to work and simplifies the experience.
 	// NOTE that the URL scheme is fixed to HTTP since the dev server doesn't support TLS at the time of writing.
 	dynConf[nexusoperations.CallbackURLTemplate.Key()] = fmt.Sprintf(
 		"http://%s:%d/namespaces/{{.NamespaceName}}/nexus/callback", MaybeEscapeIPv6(s.FrontendIP), s.FrontendHTTPPort)
