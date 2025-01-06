@@ -17,7 +17,7 @@ require (
 	github.com/temporalio/ui-server/v2 v2.32.0
 	go.temporal.io/api v1.43.0
 	go.temporal.io/sdk v1.31.1-0.20241212214416-ccb28ef56de8
-	go.temporal.io/server v1.26.2-124.0.0.20241213230717-4f9d034f1379
+	go.temporal.io/server v1.26.2
 	google.golang.org/grpc v1.67.1
 	google.golang.org/protobuf v1.35.1
 	gopkg.in/yaml.v3 v3.0.1

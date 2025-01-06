@@ -8,18 +8,22 @@ import (
 	"os/user"
 
 	"go.temporal.io/sdk/converter"
+	"go.temporal.io/sdk/workflow"
 
 	"github.com/fatih/color"
 	"github.com/google/uuid"
 	"github.com/temporalio/cli/temporalcli/internal/printer"
 	"go.temporal.io/api/batch/v1"
 	"go.temporal.io/api/common/v1"
+	deploymentpb "go.temporal.io/api/deployment/v1"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/query/v1"
 	"go.temporal.io/api/update/v1"
+	workflowpb "go.temporal.io/api/workflow/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/temporal"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
 )
 
 func (c *TemporalWorkflowCancelCommand) run(cctx *CommandContext, args []string) error {
@@ -79,6 +83,117 @@ func (c *TemporalWorkflowDeleteCommand) run(cctx *CommandContext, args []string)
 		batchReq.Operation = &workflowservice.StartBatchOperationRequest_DeletionOperation{
 			DeletionOperation: &batch.BatchOperationDeletion{
 				Identity: clientIdentity(),
+			},
+		}
+		if err := startBatchJob(cctx, cl, batchReq); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *TemporalWorkflowModifyOptionsVersioningOverrideCommand) run(cctx *CommandContext, args []string) error {
+	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	if c.DeploymentBehavior.Value == "unspecified" || c.DeploymentBehavior.Value == "auto_upgrade" {
+		if c.DeploymentSeriesName != "" {
+			return fmt.Errorf("cannot set deployment series name with %v behavior", c.DeploymentBehavior)
+		}
+		if c.DeploymentBuildId != "" {
+			return fmt.Errorf("cannot set deployment build ID with %v behavior", c.DeploymentBehavior)
+		}
+	}
+
+	if c.DeploymentBehavior.Value == "pinned" {
+		if c.DeploymentSeriesName == "" {
+			return fmt.Errorf("missing deployment series name with 'pinned' behavior")
+		}
+		if c.DeploymentBuildId == "" {
+			return fmt.Errorf("missing deployment build ID with 'pinned' behavior")
+		}
+	}
+
+	exec, batchReq, err := c.Parent.workflowExecOrBatch(cctx, c.Parent.Parent.Namespace, cl, singleOrBatchOverrides{})
+
+	// Run single or batch
+	if err != nil {
+		return err
+	} else if exec != nil {
+		behavior := workflow.VersioningBehaviorUnspecified
+		switch c.DeploymentBehavior.Value {
+		case "unspecified":
+		case "pinned":
+			behavior = workflow.VersioningBehaviorPinned
+		case "auto_upgrade":
+			behavior = workflow.VersioningBehaviorAutoUpgrade
+		default:
+			return fmt.Errorf(
+				"invalid deployment behavior: %v, valid values are: 'unspecified', 'pinned', and 'auto_upgrade'",
+				c.DeploymentBehavior,
+			)
+		}
+
+		_, err := cl.UpdateWorkflowExecutionOptions(cctx, client.UpdateWorkflowExecutionOptionsRequest{
+			WorkflowId: exec.WorkflowId,
+			RunId: exec.RunId,
+			WorkflowExecutionOptionsChanges: client.WorkflowExecutionOptionsChanges{
+				VersioningOverride: &client.VersioningOverride{
+					Behavior: behavior,
+					Deployment: client.Deployment{
+						SeriesName:  c.DeploymentSeriesName,
+						BuildID:    c.DeploymentBuildId,
+					},
+				},
+			},
+		})
+		if err != nil {
+			return fmt.Errorf("failed to override workflow versioning options: %w", err)
+		}
+		cctx.Printer.Println("Override workflow versioning options succeeded")
+	} else { // Run batch
+		var workflowExecutionOptions *workflowpb.WorkflowExecutionOptions
+		protoMask, err := fieldmaskpb.New(workflowExecutionOptions, "versioning_override")
+		if err != nil {
+			panic("invalid field mask")
+		}
+
+		behavior := enums.VERSIONING_BEHAVIOR_UNSPECIFIED
+		switch c.DeploymentBehavior.Value {
+		case "unspecified":
+		case "pinned":
+			behavior = enums.VERSIONING_BEHAVIOR_PINNED
+		case "auto_upgrade":
+			behavior = enums.VERSIONING_BEHAVIOR_AUTO_UPGRADE
+		default:
+			return fmt.Errorf(
+				"invalid deployment behavior: %v, valid values are: 'unspecified', 'pinned', and 'auto_upgrade'",
+				c.DeploymentBehavior,
+			)
+		}
+
+		deployment := &deploymentpb.Deployment{
+				SeriesName: c.DeploymentSeriesName,
+				BuildId:    c.DeploymentBuildId,
+			}
+		if c.DeploymentSeriesName == "" &&  c.DeploymentBuildId == "" {
+			// auto_upgrade needs a `nil` pointer
+			deployment = nil
+		}
+
+		batchReq.Operation = &workflowservice.StartBatchOperationRequest_UpdateWorkflowOptionsOperation{
+			UpdateWorkflowOptionsOperation: &batch.BatchOperationUpdateWorkflowExecutionOptions{
+				Identity: clientIdentity(),
+				WorkflowExecutionOptions: &workflowpb.WorkflowExecutionOptions{
+					VersioningOverride: &workflowpb.VersioningOverride{
+						Behavior:   behavior,
+						Deployment: deployment,
+					},
+				},
+				UpdateMask: protoMask,
 			},
 		}
 		if err := startBatchJob(cctx, cl, batchReq); err != nil {

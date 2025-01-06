@@ -12,7 +12,7 @@
 #   * Re-use and adapt existing wording and phrases wherever possible.
 #   * Word command summaries as if they began "This command will..."
 #     Use sentence casing for the summary.
-#   * ID is fully capitalized in text ("the Workflow ID") and Id in 
+#   * ID is fully capitalized in text ("the Workflow ID") and Id in
 #     [metasyntax](https://en.wikipedia.org/wiki/Metasyntactic_variable) (YourWorkflowId).
 # * Avoid parentheticals unless absolutely necessary.
 
@@ -30,7 +30,7 @@
 
 # * Code, flags, and keys:
 #   * Demonstrate at least one example invocation of the command in every long description.
-#   * Include the most commonly used patterns in long descriptions so users don't 
+#   * Include the most commonly used patterns in long descriptions so users don't
 #     have to call help at multiple invocation levels.
 #   * Avoid deprecated period-delineated versions of environment-specific keys.
 #     * Yes:
@@ -53,10 +53,10 @@
 #     * Yes: temporal operator [command] [subcommand] [options]
 #     Commands with subcommands can't be run on their own.
 #     Because of this, always use full command examples.
-#   * Use square brackets to highlight optional elements, especially when long 
+#   * Use square brackets to highlight optional elements, especially when long
 #     descriptions would suffer from two very similar command invocations.
 #     * Yes: temporal operator cluster describe [--detail]
-#   * Use YourEnvironment, YourNamespace, etc. as unquoted metasyntactic variable 
+#   * Use YourEnvironment, YourNamespace, etc. as unquoted metasyntactic variable
 #     stand-ins.
 #     Respectful metasyntax describes the role of the stand-in.
 #     * Yes: --workflow-id YourWorkflowId
@@ -67,7 +67,7 @@
 #     This is more universally supported and consistent with POSIX guidelines.
 #     * Yes: `temporal command --namespace YourNamespace`.
 #     * No: `temporal command --namespace=YourNamespace`.
-#     Note: in this utility's current incarnation, Boolean options must be 
+#     Note: in this utility's current incarnation, Boolean options must be
 #     set with an equal sign.
 #     Since Booleans can be treated like flags, avoid using assigned values in samples.
 #     * Yes: `--detail`
@@ -75,11 +75,11 @@
 
 # For options and flags:
 
-# * When options and flags can be passed multiple times, say so explicitly in 
+# * When options and flags can be passed multiple times, say so explicitly in
 #   the usage text: "Can be passed multiple times."
 # * Never rely on the flag type (e.g. `string`, `bool`, etc.) being shown to the user.
 #   It is replaced/hidden when a `META-VARIABLE` is used.
-# * Where possible, use a `META-VARIABLE` (all caps and wrapped in `\``s) to 
+# * Where possible, use a `META-VARIABLE` (all caps and wrapped in `\``s) to
 #   describe/reference content passed to an option.
 # * Limit `code spans` to meta-variables.
 #   To reference other options or specify literal values, use double quotes.
@@ -107,13 +107,13 @@
 #   option-sets: A list of option sets. (string[])
 
 # * name, summary, and descrption are required fields. All other fields are optional.
-# * Available option types are `bool`, `duration`, `int`, `float`, `string`, `string[]`, 
+# * Available option types are `bool`, `duration`, `int`, `float`, `string`, `string[]`,
 #   `string-enum`, string-enum[], or `timestamp`.
 # * Include a new-line after each command entry.
 
 # OPTION SET OVERVIEW
 
-# An options set declaration is the equivalent of pasting those options into the 
+# An options set declaration is the equivalent of pasting those options into the
 # bulleted options list.
 
 # - name: The name of the option set. (string)
@@ -151,7 +151,7 @@ commands:
       - name: log-level
         type: string-enum
         enum-values:
-          - debug 
+          - debug
           - info
           - warn
           - error
@@ -225,7 +225,7 @@ commands:
       keywords:
         - activity
         - activity complete
-        - activity execution 
+        - activity execution
         - activity fail
         - cli reference
         - cli-feature
@@ -393,6 +393,160 @@ commands:
         type: string
         description: Reason for terminating the batch job.
         required: true
+
+  - name: temporal deployment
+    summary: Describe, list, and operate on Deployments
+    description: |
+      +---------------------------------------------------------------------+
+      | CAUTION: Worker Deployment is experimental. Deployment commands are |
+      | subject to change.                                                  |
+      +---------------------------------------------------------------------+
+
+      Deployment commands perform operations on Worker Deployments:
+
+      ```
+      temporal deployment [command] [options]
+      ```
+
+      For example:
+
+      ```
+      temporal deployment list
+      ```
+    option-sets:
+      - client
+    docs:
+      description-header: >-
+        Temporal Deployment commands enable operations on Worker Deployments,
+        such as describe, list, update-current, and get-current, simplifying
+        versioning and management of workers.
+      keywords:
+        - deployment
+        - deployment describe
+        - deployment list
+        - deployment get-current
+        - deployment update-current
+
+  - name: temporal deployment describe
+    summary: Show properties of a Deployment
+    description: |
+      +---------------------------------------------------------------------+
+      | CAUTION: Worker Deployment is experimental. Deployment commands are |
+      | subject to change.                                                  |
+      +---------------------------------------------------------------------+
+
+      Describes properties of a Deployment, such as whether it is current,
+      some custom metadata, or a list of its task queues.
+
+      ```
+      temporal deployment describe [options]
+      ```
+
+      For example, to also include reachability information:
+
+      ```
+      temporal deployment describe \
+          --deployment-series-name YourDeploymentSeriesName \
+          --deployment-build-id YourDeploymentBuildId \
+          --report-reachability
+      ```
+    option-sets:
+      - deployment-reference
+    options:
+      - name: report-reachability
+        type: bool
+        description: |
+          Flag to include reachability information of a Deployment.
+
+  - name: temporal deployment get-current
+    summary: Show the current Deployment
+    description: |
+      +---------------------------------------------------------------------+
+      | CAUTION: Worker Deployment is experimental. Deployment commands are |
+      | subject to change.                                                  |
+      +---------------------------------------------------------------------+
+
+      Gets the current Deployment for a Deployment Series Name. Whether a
+      Deployment is current or not can affect which Workers will execute
+      Tasks of an existing or new Workflow.
+
+
+      ```
+      temporal deployment get-current [options]
+      ```
+
+      For example:
+
+      ```
+      temporal deployment get-current \
+          --deployment-series-name YourDeploymentSeriesName
+      ```
+    options:
+      - name: deployment-series-name
+        type: string
+        description: Series Name for the current Deployment.
+        required: true
+
+  - name: temporal deployment list
+    summary: Enumerate Deployments in the client's namespace
+    description: |
+      +---------------------------------------------------------------------+
+      | CAUTION: Worker Deployment is experimental. Deployment commands are |
+      | subject to change.                                                  |
+      +---------------------------------------------------------------------+
+
+      List existing Deployments in the client's namespace, optionally
+      filtering them by Deployment Series Name.
+
+
+      ```
+      temporal deployment list [options]
+      ```
+
+      For example, adding an optional filter:
+
+      ```
+      temporal deployment list \
+          --deployment-series-name YourDeploymentSeriesName
+      ```
+    options:
+      - name: deployment-series-name
+        type: string
+        description: Series Name to filter Deployments.
+
+  - name: temporal deployment update-current
+    summary: Change the current Deployment
+    description: |
+      +---------------------------------------------------------------------+
+      | CAUTION: Worker deployment is experimental. Deployment commands are |
+      | subject to change.                                                  |
+      +---------------------------------------------------------------------+
+
+      Sets the current Deployment for a given Deployment Series. Whether a
+      Deployment is current or not can affect which Workers will execute
+      Tasks of an existing or new Workflow.
+
+      ```
+      temporal deployment update-current [options]
+      ```
+
+      For example:
+
+      ```
+      temporal deployment update-current \
+          --deployment-series-name YourDeploymentSeriesName \
+          --deployment-build-id YourDeploymentBuildId
+      ```
+    option-sets:
+      - deployment-reference
+    options:
+      - name: deployment-metadata
+        type: string[]
+        description: |
+          Set deployment metadata using `KEY="VALUE"` pairs.
+          Keys must be identifiers, and values must be JSON values.
+          For example: 'YourKey={"your": "value"}'.
+          Can be passed multiple times.
 
   - name: temporal env
     summary: Manage environments
@@ -956,7 +1110,7 @@ commands:
       The endpoint target may either be a Worker, in which case
       `--target-namespace` and `--target-task-queue` must both be provided, or
       an external URL, in which case `--target-url` must be provided.
-      
+
       This command will fail if an Endpoint with the same name is already
       registered.
 
@@ -1005,12 +1159,12 @@ commands:
     summary: Update an existing Nexus Endpoint (EXPERIMENTAL)
     description: |
       Update an existing Nexus Endpoint on the Server.
-     
+
       A Nexus Endpoint name is used in Workflow code to invoke Nexus Operations.
       The Endpoint target may either be a Worker, in which case
       `--target-namespace` and `--target-task-queue` must both be provided, or
       an external URL, in which case `--target-url` must be provided.
-      
+
       The Endpoint is patched; existing fields for which flags are not provided
       are left as they were.
 
@@ -1479,7 +1633,7 @@ commands:
         default: 7233
       - name: http-port
         type: int
-        description: | 
+        description: |
           Port for the HTTP API service.
           Default is off.
       - name: metrics-port
@@ -1489,7 +1643,7 @@ commands:
           Default is off.
       - name: ui-port
         type: int
-        description: | 
+        description: |
           Port for the Web UI.
           Default is '--port' value + 1000.
       - name: headless
@@ -1613,10 +1767,10 @@ commands:
       NOTE: The `TasksAddRate` and `TasksDispatchRate` metrics may differ from the
       actual rate of add/dispatch, because tasks may be dispatched eagerly to an
       available worker, or may apply only to specific workers (they are "sticky").
-      Such tasks are not counted by these metrics. Despite the inaccuracy of 
+      Such tasks are not counted by these metrics. Despite the inaccuracy of
       these two metrics, the derived metric of `BacklogIncreaseRate` is accurate
       for backlogs older than a few seconds.
-  
+
       Safely retire Workers assigned a Build ID by checking reachability across
       all task types. Use the flag `--report-reachability`:
 
@@ -2285,9 +2439,9 @@ commands:
     docs:
       description-header: >-
         Temporal Workflow commands enable operations on Workflow Executions,
-        such as cancel, count, delete, describe, execute, list, query, reset,
-        reset-batch, show, signal, stack, start, terminate, trace, and update,
-        enhancing efficiency and control.
+        such as cancel, count, delete, describe, execute, list, modify-options,
+        query, reset, reset-batch, show, signal, stack, start, terminate,
+        trace, and update, enhancing efficiency and control.
       keywords:
         - call stack
         - cancellation
@@ -2310,6 +2464,7 @@ commands:
         - workflow execute
         - workflow execution
         - workflow list
+        - workflow modify-options
         - workflow query
         - workflow reset
         - workflow reset-batch
@@ -2437,7 +2592,7 @@ commands:
     options:
       - name: detailed
         type: bool
-        description: | 
+        description: |
           Display events as sections instead of table.
           Does not apply to JSON output.
 
@@ -2497,6 +2652,95 @@ commands:
       - name: limit
         type: int
         description: Maximum number of Workflow Executions to display.
+
+  - name: temporal workflow modify-options
+    summary: Change Workflow Execution Options
+    description: |
+      Modify properties of Workflow Executions:
+
+      ```
+      temporal workflow modify-options [command] [options]
+      ```
+
+      For example, properties that control Worker Versioning:
+
+      ```
+      temporal workflow modify-options versioning-override \
+          --workflow-id YourWorkflowId \
+          --deployment-behavior auto_upgrade
+      ```
+    option-sets:
+      - single-workflow-or-batch
+    docs:
+      description-header: >-
+        Temporal Workflow Modify Options enables
+        changes to properties of a Workflow Execution, such as
+        versioning-override.
+      keywords:
+        - workflow
+        - workflow modify-options
+        - workflow modify-options versioning-override
+
+  - name: temporal workflow modify-options versioning-override
+    summary: Overrides the Deployment options of a Workflow Execution
+    description: |
+      +---------------------------------------------------------------------+
+      | CAUTION: Worker versioning is experimental. Versioning commands are |
+      | subject to change.                                                  |
+      +---------------------------------------------------------------------+
+
+      Overrides the Deployment configuration of a Workflow Execution, which
+      controls Worker Versioning.
+
+      ```
+      temporal workflow modify-options versioning-override [options]
+      ```
+
+      For example, to force Workers in the current Deployment execute the
+      next Workflow Task:
+
+      ```
+      temporal workflow modify-options versioning-override \
+          --workflow-id YourWorkflowId \
+          --deployment-behavior auto_upgrade
+      ```
+
+      or to pin the workflow execution to a Deployment:
+
+      ```
+      temporal workflow modify-options versioning-override \
+          --workflow-id YourWorkflowId \
+          --deployment-behavior pinned \
+          --deployment-series-name YourDeploymentSeriesName \
+          --deployment-build-id YourDeploymentBuildId
+      ```
+
+      To remove any previous overrides, set the behavior to
+      unspecified:
+
+      ```
+      temporal workflow modify-options versioning-override \
+          --workflow-id YourWorkflowId \
+          --deployment-behavior unspecified
+      ```
+
+      To see the current override use `temporal workflow describe`
+    options:
+      - name: deployment-behavior
+        type: string-enum
+        description: |
+          Flag to describe the versioning behavior of a Workflow.
+        required: true
+        enum-values:
+          - unspecified
+          - pinned
+          - auto_upgrade
+      - name: deployment-series-name
+        type: string
+        description: Series Name for a Deployment (Only for pinned).
+      - name: deployment-build-id
+        type: string
+        description: Build ID for a Deployment (Only for pinned).
 
   - name: temporal workflow query
     summary: Retrieve Workflow Execution state
@@ -3008,7 +3252,7 @@ option-sets:
       - name: overlap-policy
         type: string-enum
         description: Policy for handling overlapping Workflow Executions. # copilot updated this
-        enum-values:  
+        enum-values:
           - Skip
           - BufferOne
           - BufferAll
@@ -3103,6 +3347,17 @@ option-sets:
         short: r
         description: Run ID.
 
+  - name: deployment-reference
+    options:
+      - name: deployment-series-name
+        type: string
+        description: Series Name for a Deployment.
+        required: true
+      - name: deployment-build-id
+        type: string
+        description: Build ID for a Deployment.
+        required: true
+
   - name: single-workflow-or-batch
     options:
       - name: workflow-id
@@ -3154,7 +3409,7 @@ option-sets:
         type: string
         description: Workflow Type name.
         required: true
-        aliases: 
+        aliases:
           - name
       - name: task-queue
         type: string
@@ -3258,7 +3513,7 @@ option-sets:
         type: string
         description: Handler method name.
         required: true
-        aliases: 
+        aliases:
           - type
       - name: first-execution-run-id
         type: string
