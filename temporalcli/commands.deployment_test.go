@@ -11,34 +11,34 @@ import (
 )
 
 type jsonTaskQueuesInfosRowType struct {
-		Name string `json:"name"`
-		Type string `json:"type"`
-		FirstPollerTime time.Time `json:"firstPollerTime"`
+	Name            string    `json:"name"`
+	Type            string    `json:"type"`
+	FirstPollerTime time.Time `json:"firstPollerTime"`
 }
 
 type jsonDeploymentType struct {
 	SeriesName string `json:"seriesName"`
-	BuildID string `json:"buildId"`
+	BuildID    string `json:"buildId"`
 }
 
 type jsonDeploymentInfoType struct {
-	Deployment jsonDeploymentType `json:"deployment"`
-	CreateTime time.Time `json:"createTime"`
-	IsCurrent bool `json:"isCurrent"`
+	Deployment      jsonDeploymentType           `json:"deployment"`
+	CreateTime      time.Time                    `json:"createTime"`
+	IsCurrent       bool                         `json:"isCurrent"`
 	TaskQueuesInfos []jsonTaskQueuesInfosRowType `json:"taskQueuesInfos,omitempty"`
-	Metadata map[string]*common.Payload `json:"metadata,omitempty"`
+	Metadata        map[string]*common.Payload   `json:"metadata,omitempty"`
 }
 
 type jsonDeploymentReachabilityInfoType struct {
 	DeploymentInfo jsonDeploymentInfoType `json:"deploymentInfo"`
-	Reachability string `json:"reachability"`
-	LastUpdateTime time.Time `json:"lastUpdateTime"`
+	Reachability   string                 `json:"reachability"`
+	LastUpdateTime time.Time              `json:"lastUpdateTime"`
 }
 
 type jsonDeploymentListEntryType struct {
 	Deployment jsonDeploymentType `json:"deployment"`
-	CreateTime time.Time `json:"createTime"`
-	IsCurrent bool `json:"isCurrent"`
+	CreateTime time.Time          `json:"createTime"`
+	IsCurrent  bool               `json:"isCurrent"`
 }
 
 func (s *SharedServerSuite) TestDeployment_Update_Current() {

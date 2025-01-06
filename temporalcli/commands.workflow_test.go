@@ -432,14 +432,14 @@ func (s *SharedServerSuite) TestWorkflow_Batch_Modify_Options_Versioning_Overrid
 	}
 	w := s.DevServer.StartDevWorker(s.Suite.T(), DevWorkerOptions{
 		Worker: worker.Options{
-			BuildID: buildId1,
+			BuildID:                 buildId1,
 			UseBuildIDForVersioning: true,
 			DeploymentOptions: worker.DeploymentOptions{
-				DeploymentSeriesName: seriesName,
+				DeploymentSeriesName:      seriesName,
 				DefaultVersioningBehavior: workflow.VersioningBehaviorPinned,
 			},
 		},
-		Workflows:     []any{waitingWorkflow},
+		Workflows: []any{waitingWorkflow},
 	})
 	defer w.Stop()
 
@@ -485,7 +485,7 @@ func (s *SharedServerSuite) TestWorkflow_Batch_Modify_Options_Versioning_Overrid
 	res = s.Execute(
 		"workflow", "modify-options", "versioning-override",
 		"--address", s.Address(),
-		"--query", "CustomKeywordField = '" + searchAttr + "'",
+		"--query", "CustomKeywordField = '"+searchAttr+"'",
 		"--deployment-behavior", "pinned",
 		"--deployment-series-name", seriesName,
 		"--deployment-build-id", buildId2,
@@ -523,14 +523,14 @@ func (s *SharedServerSuite) TestWorkflow_Modify_Options_Versioning_Override() {
 	}
 	w := s.DevServer.StartDevWorker(s.Suite.T(), DevWorkerOptions{
 		Worker: worker.Options{
-			BuildID: buildId1,
+			BuildID:                 buildId1,
 			UseBuildIDForVersioning: true,
 			DeploymentOptions: worker.DeploymentOptions{
-				DeploymentSeriesName: seriesName,
+				DeploymentSeriesName:      seriesName,
 				DefaultVersioningBehavior: workflow.VersioningBehaviorPinned,
 			},
 		},
-		Workflows:     []any{waitingWorkflow},
+		Workflows: []any{waitingWorkflow},
 	})
 	defer w.Stop()
 

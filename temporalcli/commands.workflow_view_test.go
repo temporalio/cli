@@ -20,9 +20,9 @@ import (
 	"go.temporal.io/api/operatorservice/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
-	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/temporalnexus"
+	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
 )
 
@@ -558,14 +558,14 @@ func (s *SharedServerSuite) TestWorkflow_Describe_Deployment() {
 	}
 	w := s.DevServer.StartDevWorker(s.Suite.T(), DevWorkerOptions{
 		Worker: worker.Options{
-			BuildID: buildId,
+			BuildID:                 buildId,
 			UseBuildIDForVersioning: true,
 			DeploymentOptions: worker.DeploymentOptions{
-				DeploymentSeriesName: seriesName,
+				DeploymentSeriesName:      seriesName,
 				DefaultVersioningBehavior: workflow.VersioningBehaviorPinned,
 			},
 		},
-		Workflows:     []any{waitingWorkflow},
+		Workflows: []any{waitingWorkflow},
 	})
 	defer w.Stop()
 

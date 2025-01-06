@@ -6,59 +6,57 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/temporalio/cli/temporalcli/internal/printer"
-	"go.temporal.io/sdk/client"
 	"go.temporal.io/api/common/v1"
-
+	"go.temporal.io/sdk/client"
 )
 
 type taskQueuesInfosRowType struct {
-		Name string `json:"name"`
-		Type string `json:"type"`
-		FirstPollerTime time.Time `json:"firstPollerTime"`
+	Name            string    `json:"name"`
+	Type            string    `json:"type"`
+	FirstPollerTime time.Time `json:"firstPollerTime"`
 }
 
 type deploymentType struct {
 	SeriesName string `json:"seriesName"`
-	BuildID string `json:"buildId"`
+	BuildID    string `json:"buildId"`
 }
 
 type formattedDeploymentInfoType struct {
-	Deployment deploymentType `json:"deployment"`
-	CreateTime time.Time `json:"createTime"`
-	IsCurrent bool `json:"isCurrent"`
-	TaskQueuesInfos []taskQueuesInfosRowType `json:"taskQueuesInfos,omitempty"`
-	Metadata map[string]*common.Payload `json:"metadata,omitempty"`
+	Deployment      deploymentType             `json:"deployment"`
+	CreateTime      time.Time                  `json:"createTime"`
+	IsCurrent       bool                       `json:"isCurrent"`
+	TaskQueuesInfos []taskQueuesInfosRowType   `json:"taskQueuesInfos,omitempty"`
+	Metadata        map[string]*common.Payload `json:"metadata,omitempty"`
 }
 
 type formattedDeploymentReachabilityInfoType struct {
 	DeploymentInfo formattedDeploymentInfoType `json:"deploymentInfo"`
-	Reachability string `json:"reachability"`
-	LastUpdateTime time.Time `json:"lastUpdateTime"`
+	Reachability   string                      `json:"reachability"`
+	LastUpdateTime time.Time                   `json:"lastUpdateTime"`
 }
 
 type formattedDeploymentListEntryType struct {
 	SeriesName string
-	BuildID string
+	BuildID    string
 	CreateTime time.Time
-	IsCurrent bool
+	IsCurrent  bool
 }
 
 type formattedDualDeploymentInfoType struct {
-	Previous formattedDeploymentInfoType  `json:"previous"`
-	Current formattedDeploymentInfoType  `json:"current"`
+	Previous formattedDeploymentInfoType `json:"previous"`
+	Current  formattedDeploymentInfoType `json:"current"`
 }
-
 
 func formatTaskQueuesInfos(tqis []client.DeploymentTaskQueueInfo) ([]taskQueuesInfosRowType, error) {
 	var tqiRows []taskQueuesInfosRowType
 	for _, tqi := range tqis {
-		tqTypeStr, err  := taskQueueTypeToStr(tqi.Type)
+		tqTypeStr, err := taskQueueTypeToStr(tqi.Type)
 		if err != nil {
 			return tqiRows, err
 		}
 		tqiRows = append(tqiRows, taskQueuesInfosRowType{
-			Name: tqi.Name,
-			Type: tqTypeStr,
+			Name:            tqi.Name,
+			Type:            tqTypeStr,
 			FirstPollerTime: tqi.FirstPollerTime,
 		})
 	}
@@ -74,12 +72,12 @@ func deploymentInfoToRows(deploymentInfo client.DeploymentInfo) (formattedDeploy
 	return formattedDeploymentInfoType{
 		Deployment: deploymentType{
 			SeriesName: deploymentInfo.Deployment.SeriesName,
-			BuildID: deploymentInfo.Deployment.BuildID,
+			BuildID:    deploymentInfo.Deployment.BuildID,
 		},
-		CreateTime: deploymentInfo.CreateTime,
-		IsCurrent: deploymentInfo.IsCurrent,
+		CreateTime:      deploymentInfo.CreateTime,
+		IsCurrent:       deploymentInfo.IsCurrent,
 		TaskQueuesInfos: tqi,
-		Metadata: deploymentInfo.Metadata,
+		Metadata:        deploymentInfo.Metadata,
 	}, nil
 }
 
@@ -94,16 +92,16 @@ func printDeploymentInfo(cctx *CommandContext, deploymentInfo client.DeploymentI
 		cctx.Printer.Println(color.MagentaString(msg))
 		printMe := struct {
 			SeriesName string
-			BuildID string
+			BuildID    string
 			CreateTime time.Time
-			IsCurrent bool
-			Metadata map[string]*common.Payload `cli:",cardOmitEmpty"`
+			IsCurrent  bool
+			Metadata   map[string]*common.Payload `cli:",cardOmitEmpty"`
 		}{
 			SeriesName: deploymentInfo.Deployment.SeriesName,
-			BuildID: deploymentInfo.Deployment.BuildID,
+			BuildID:    deploymentInfo.Deployment.BuildID,
 			CreateTime: deploymentInfo.CreateTime,
-			IsCurrent: deploymentInfo.IsCurrent,
-			Metadata: deploymentInfo.Metadata,
+			IsCurrent:  deploymentInfo.IsCurrent,
+			Metadata:   deploymentInfo.Metadata,
 		}
 		err := cctx.Printer.PrintStructured(printMe, printer.StructuredOptions{})
 		if err != nil {
@@ -158,7 +156,7 @@ func printDeploymentReachabilityInfo(cctx *CommandContext, reachability client.D
 	fReachabilityInfo := formattedDeploymentReachabilityInfoType{
 		DeploymentInfo: fDeploymentInfo,
 		LastUpdateTime: reachability.LastUpdateTime,
-		Reachability: rTypeStr,
+		Reachability:   rTypeStr,
 	}
 
 	if !cctx.JSONOutput {
@@ -171,10 +169,10 @@ func printDeploymentReachabilityInfo(cctx *CommandContext, reachability client.D
 		cctx.Printer.Println(color.MagentaString("Reachability:"))
 		printMe := struct {
 			LastUpdateTime time.Time
-			Reachability string
+			Reachability   string
 		}{
 			LastUpdateTime: fReachabilityInfo.LastUpdateTime,
-			Reachability: fReachabilityInfo.Reachability,
+			Reachability:   fReachabilityInfo.Reachability,
 		}
 		return cctx.Printer.PrintStructured(printMe, printer.StructuredOptions{})
 	}
@@ -188,12 +186,12 @@ func printDeploymentSetCurrentResponse(cctx *CommandContext, response client.Dep
 	if !cctx.JSONOutput {
 		err := printDeploymentInfo(cctx, response.Previous, "Previous Deployment:")
 		if err != nil {
-			 return fmt.Errorf("displaying previous deployment info failed: %w", err)
+			return fmt.Errorf("displaying previous deployment info failed: %w", err)
 		}
 
 		err = printDeploymentInfo(cctx, response.Current, "Current Deployment:")
 		if err != nil {
-			 return fmt.Errorf("displaying current deployment info failed: %w", err)
+			return fmt.Errorf("displaying current deployment info failed: %w", err)
 		}
 
 		return nil
@@ -210,7 +208,7 @@ func printDeploymentSetCurrentResponse(cctx *CommandContext, response client.Dep
 
 	return cctx.Printer.PrintStructured(formattedDualDeploymentInfoType{
 		Previous: previous,
-		Current: current,
+		Current:  current,
 	}, printer.StructuredOptions{})
 }
 
@@ -226,7 +224,7 @@ func (c *TemporalDeploymentDescribeCommand) run(cctx *CommandContext, args []str
 		resp, err := cl.DeploymentClient().GetReachability(cctx, client.DeploymentGetReachabilityOptions{
 			Deployment: client.Deployment{
 				SeriesName: c.DeploymentSeriesName,
-				BuildID: c.DeploymentBuildId,
+				BuildID:    c.DeploymentBuildId,
 			},
 		})
 		if err != nil {
@@ -241,7 +239,7 @@ func (c *TemporalDeploymentDescribeCommand) run(cctx *CommandContext, args []str
 		resp, err := cl.DeploymentClient().Describe(cctx, client.DeploymentDescribeOptions{
 			Deployment: client.Deployment{
 				SeriesName: c.DeploymentSeriesName,
-				BuildID: c.DeploymentBuildId,
+				BuildID:    c.DeploymentBuildId,
 			},
 		})
 		if err != nil {
@@ -256,7 +254,6 @@ func (c *TemporalDeploymentDescribeCommand) run(cctx *CommandContext, args []str
 
 	return nil
 }
-
 
 func (c *TemporalDeploymentGetCurrentCommand) run(cctx *CommandContext, args []string) error {
 	cl, err := c.Parent.ClientOptions.dialClient(cctx)
@@ -279,7 +276,6 @@ func (c *TemporalDeploymentGetCurrentCommand) run(cctx *CommandContext, args []s
 
 	return nil
 }
-
 
 func (c *TemporalDeploymentListCommand) run(cctx *CommandContext, args []string) error {
 	cl, err := c.Parent.dialClient(cctx)
@@ -314,10 +310,10 @@ func (c *TemporalDeploymentListCommand) run(cctx *CommandContext, args []string)
 		listEntry := formattedDeploymentInfoType{
 			Deployment: deploymentType{
 				SeriesName: entry.Deployment.SeriesName,
-				BuildID: entry.Deployment.BuildID,
+				BuildID:    entry.Deployment.BuildID,
 			},
 			CreateTime: entry.CreateTime,
-			IsCurrent: entry.IsCurrent,
+			IsCurrent:  entry.IsCurrent,
 		}
 		if cctx.JSONOutput {
 			// For JSON dump one line of JSON per deployment
@@ -326,9 +322,9 @@ func (c *TemporalDeploymentListCommand) run(cctx *CommandContext, args []string)
 			// For non-JSON, we are doing a table for each page
 			page = append(page, &formattedDeploymentListEntryType{
 				SeriesName: listEntry.Deployment.SeriesName,
-				BuildID: listEntry.Deployment.BuildID,
+				BuildID:    listEntry.Deployment.BuildID,
 				CreateTime: listEntry.CreateTime,
-				IsCurrent: listEntry.IsCurrent,
+				IsCurrent:  listEntry.IsCurrent,
 			})
 			if len(page) == cap(page) {
 				_ = cctx.Printer.PrintStructured(page, printTableOpts)
@@ -346,7 +342,6 @@ func (c *TemporalDeploymentListCommand) run(cctx *CommandContext, args []string)
 	return nil
 }
 
-
 func (c *TemporalDeploymentUpdateCurrentCommand) run(cctx *CommandContext, args []string) error {
 	cl, err := c.Parent.dialClient(cctx)
 	if err != nil {
@@ -354,7 +349,7 @@ func (c *TemporalDeploymentUpdateCurrentCommand) run(cctx *CommandContext, args 
 	}
 	defer cl.Close()
 
-	metadata, err := stringKeysJSONValues(c.DeploymentMetadata, false);
+	metadata, err := stringKeysJSONValues(c.DeploymentMetadata, false)
 	if err != nil {
 		return fmt.Errorf("invalid metadata values: %w", err)
 	}
@@ -362,7 +357,7 @@ func (c *TemporalDeploymentUpdateCurrentCommand) run(cctx *CommandContext, args 
 	resp, err := cl.DeploymentClient().SetCurrent(cctx, client.DeploymentSetCurrentOptions{
 		Deployment: client.Deployment{
 			SeriesName: c.DeploymentSeriesName,
-			BuildID: c.DeploymentBuildId,
+			BuildID:    c.DeploymentBuildId,
 		},
 		MetadataUpdate: client.DeploymentMetadataUpdate{
 			UpsertEntries: metadata,

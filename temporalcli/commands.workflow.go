@@ -139,12 +139,12 @@ func (c *TemporalWorkflowModifyOptionsVersioningOverrideCommand) run(cctx *Comma
 
 		_, err := cl.UpdateWorkflowExecutionOptions(cctx, client.UpdateWorkflowExecutionOptionsRequest{
 			WorkflowId: exec.WorkflowId,
-			RunId: exec.RunId,
+			RunId:      exec.RunId,
 			WorkflowExecutionOptionsChanges: client.WorkflowExecutionOptionsChanges{
 				VersioningOverride: &client.VersioningOverride{
 					Behavior: behavior,
 					Deployment: client.Deployment{
-						SeriesName:  c.DeploymentSeriesName,
+						SeriesName: c.DeploymentSeriesName,
 						BuildID:    c.DeploymentBuildId,
 					},
 				},
@@ -176,10 +176,10 @@ func (c *TemporalWorkflowModifyOptionsVersioningOverrideCommand) run(cctx *Comma
 		}
 
 		deployment := &deploymentpb.Deployment{
-				SeriesName: c.DeploymentSeriesName,
-				BuildId:    c.DeploymentBuildId,
-			}
-		if c.DeploymentSeriesName == "" &&  c.DeploymentBuildId == "" {
+			SeriesName: c.DeploymentSeriesName,
+			BuildId:    c.DeploymentBuildId,
+		}
+		if c.DeploymentSeriesName == "" && c.DeploymentBuildId == "" {
 			// auto_upgrade needs a `nil` pointer
 			deployment = nil
 		}
