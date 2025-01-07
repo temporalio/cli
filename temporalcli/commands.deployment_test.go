@@ -41,23 +41,23 @@ type jsonDeploymentListEntryType struct {
 	IsCurrent  bool               `json:"isCurrent"`
 }
 
-func (s *SharedServerSuite) TestDeployment_Update_Current() {
+func (s *SharedServerSuite) TestDeployment_Set_Current() {
 	seriesName := uuid.NewString()
 	buildId := uuid.NewString()
 
 	res := s.Execute(
-		"deployment", "update-current",
+		"worker-deployment", "set-current",
 		"--address", s.Address(),
-		"--deployment-series-name", seriesName,
-		"--deployment-build-id", buildId,
-		"--deployment-metadata", "bar=1",
+		"--series-name", seriesName,
+		"--build-id", buildId,
+		"--metadata", "bar=1",
 	)
 	s.NoError(res.Err)
 
 	res = s.Execute(
-		"deployment", "get-current",
+		"worker-deployment", "get-current",
 		"--address", s.Address(),
-		"--deployment-series-name", seriesName,
+		"--series-name", seriesName,
 	)
 	s.NoError(res.Err)
 
@@ -68,9 +68,9 @@ func (s *SharedServerSuite) TestDeployment_Update_Current() {
 
 	// json
 	res = s.Execute(
-		"deployment", "get-current",
+		"worker-deployment", "get-current",
 		"--address", s.Address(),
-		"--deployment-series-name", seriesName,
+		"--series-name", seriesName,
 		"--output", "json",
 	)
 	s.NoError(res.Err)
@@ -91,25 +91,25 @@ func (s *SharedServerSuite) TestDeployment_List() {
 	buildId2 := uuid.NewString()
 
 	res := s.Execute(
-		"deployment", "update-current",
+		"worker-deployment", "set-current",
 		"--address", s.Address(),
-		"--deployment-series-name", seriesName,
-		"--deployment-build-id", buildId1,
+		"--series-name", seriesName,
+		"--build-id", buildId1,
 	)
 	s.NoError(res.Err)
 
 	res = s.Execute(
-		"deployment", "update-current",
+		"worker-deployment", "set-current",
 		"--address", s.Address(),
-		"--deployment-series-name", seriesName,
-		"--deployment-build-id", buildId2,
+		"--series-name", seriesName,
+		"--build-id", buildId2,
 	)
 	s.NoError(res.Err)
 
 	res = s.Execute(
-		"deployment", "list",
+		"worker-deployment", "list",
 		"--address", s.Address(),
-		"--deployment-series-name", seriesName,
+		"--series-name", seriesName,
 	)
 	s.NoError(res.Err)
 
@@ -118,9 +118,9 @@ func (s *SharedServerSuite) TestDeployment_List() {
 
 	// json
 	res = s.Execute(
-		"deployment", "list",
+		"worker-deployment", "list",
 		"--address", s.Address(),
-		"--deployment-series-name", seriesName,
+		"--series-name", seriesName,
 		"--output", "json",
 	)
 	s.NoError(res.Err)
@@ -143,26 +143,26 @@ func (s *SharedServerSuite) TestDeployment_Describe_Reachability() {
 	buildId2 := uuid.NewString()
 
 	res := s.Execute(
-		"deployment", "update-current",
+		"worker-deployment", "set-current",
 		"--address", s.Address(),
-		"--deployment-series-name", seriesName,
-		"--deployment-build-id", buildId1,
+		"--series-name", seriesName,
+		"--build-id", buildId1,
 	)
 	s.NoError(res.Err)
 
 	res = s.Execute(
-		"deployment", "update-current",
+		"worker-deployment", "set-current",
 		"--address", s.Address(),
-		"--deployment-series-name", seriesName,
-		"--deployment-build-id", buildId2,
+		"--series-name", seriesName,
+		"--build-id", buildId2,
 	)
 	s.NoError(res.Err)
 
 	res = s.Execute(
-		"deployment", "describe",
+		"worker-deployment", "describe",
 		"--address", s.Address(),
-		"--deployment-series-name", seriesName,
-		"--deployment-build-id", buildId1,
+		"--series-name", seriesName,
+		"--build-id", buildId1,
 		"--report-reachability",
 	)
 	s.NoError(res.Err)
@@ -174,10 +174,10 @@ func (s *SharedServerSuite) TestDeployment_Describe_Reachability() {
 
 	// json
 	res = s.Execute(
-		"deployment", "describe",
+		"worker-deployment", "describe",
 		"--address", s.Address(),
-		"--deployment-series-name", seriesName,
-		"--deployment-build-id", buildId2,
+		"--series-name", seriesName,
+		"--build-id", buildId2,
 		"--report-reachability",
 		"--output", "json",
 	)

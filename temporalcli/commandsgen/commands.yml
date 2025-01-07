@@ -394,8 +394,8 @@ commands:
         description: Reason for terminating the batch job.
         required: true
 
-  - name: temporal deployment
-    summary: Describe, list, and operate on Deployments
+  - name: temporal worker-deployment
+    summary: Describe, list, and operate on Worker Deployments
     description: |
       +---------------------------------------------------------------------+
       | CAUTION: Worker Deployment is experimental. Deployment commands are |
@@ -405,49 +405,50 @@ commands:
       Deployment commands perform operations on Worker Deployments:
 
       ```
-      temporal deployment [command] [options]
+      temporal worker-deployment [command] [options]
       ```
 
       For example:
 
       ```
-      temporal deployment list
+      temporal worker-deployment list
       ```
     option-sets:
       - client
     docs:
       description-header: >-
         Temporal Deployment commands enable operations on Worker Deployments,
-        such as describe, list, update-current, and get-current, simplifying
+        such as describe, list, set-current, and get-current, simplifying
         versioning and management of workers.
       keywords:
-        - deployment
-        - deployment describe
-        - deployment list
-        - deployment get-current
-        - deployment update-current
+        - worker-deployment
+        - worker-deployment describe
+        - worker-deployment list
+        - worker-deployment get-current
+        - worker-deployment set-current
 
-  - name: temporal deployment describe
-    summary: Show properties of a Deployment
+  - name: temporal worker-deployment describe
+    summary: Show properties of a Worker Deployment
     description: |
       +---------------------------------------------------------------------+
       | CAUTION: Worker Deployment is experimental. Deployment commands are |
       | subject to change.                                                  |
       +---------------------------------------------------------------------+
 
-      Describes properties of a Deployment, such as whether it is current,
-      some custom metadata, or a list of its task queues.
+      Describes properties of a Worker Deployment, such as whether it is
+      current, the non-empty list of its task queues, custom metadata if
+      present, and reachability status when requested.
 
       ```
-      temporal deployment describe [options]
+      temporal worker-deployment describe [options]
       ```
 
       For example, to also include reachability information:
 
       ```
-      temporal deployment describe \
-          --deployment-series-name YourDeploymentSeriesName \
-          --deployment-build-id YourDeploymentBuildId \
+      temporal worker-deployment describe \
+          --series-name YourDeploymentSeriesName \
+          --build-id YourDeploymentBuildId \
           --report-reachability
       ```
     option-sets:
@@ -456,91 +457,92 @@ commands:
       - name: report-reachability
         type: bool
         description: |
-          Flag to include reachability information of a Deployment.
+          Flag to include reachability information of a Worker Deployment.
 
-  - name: temporal deployment get-current
-    summary: Show the current Deployment
+  - name: temporal worker-deployment get-current
+    summary: Show the current Worker Deployment
     description: |
       +---------------------------------------------------------------------+
       | CAUTION: Worker Deployment is experimental. Deployment commands are |
       | subject to change.                                                  |
       +---------------------------------------------------------------------+
 
-      Gets the current Deployment for a Deployment Series Name. Whether a
-      Deployment is current or not can affect which Workers will execute
-      Tasks of an existing or new Workflow.
-
+      Gets the current Worker Deployment for a Deployment Series Name.
+      When a Deployment is current, Workers of that Deployment will receive
+      tasks from new Workflows and from existing AutoUpgrade Workflows that
+      are running on this Deployment Series.
 
       ```
-      temporal deployment get-current [options]
+      temporal worker-deployment get-current [options]
       ```
 
       For example:
 
       ```
-      temporal deployment get-current \
-          --deployment-series-name YourDeploymentSeriesName
+      temporal worker-deployment get-current \
+          --series-name YourDeploymentSeriesName
       ```
     options:
-      - name: deployment-series-name
+      - name: series-name
         type: string
-        description: Series Name for the current Deployment.
+        description: Series Name for the current Worker Deployment.
         required: true
 
-  - name: temporal deployment list
-    summary: Enumerate Deployments in the client's namespace
+  - name: temporal worker-deployment list
+    summary: Enumerate Worker Deployments in the client's namespace
     description: |
       +---------------------------------------------------------------------+
       | CAUTION: Worker Deployment is experimental. Deployment commands are |
       | subject to change.                                                  |
       +---------------------------------------------------------------------+
 
-      List existing Deployments in the client's namespace, optionally
+      List existing Worker Deployments in the client's namespace, optionally
       filtering them by Deployment Series Name.
 
 
       ```
-      temporal deployment list [options]
+      temporal worker-deployment list [options]
       ```
 
       For example, adding an optional filter:
 
       ```
-      temporal deployment list \
-          --deployment-series-name YourDeploymentSeriesName
+      temporal worker-deployment list \
+          --series-name YourDeploymentSeriesName
       ```
     options:
-      - name: deployment-series-name
+      - name: series-name
         type: string
-        description: Series Name to filter Deployments.
+        description: Series Name to filter Worker Deployments.
 
-  - name: temporal deployment update-current
-    summary: Change the current Deployment
+  - name: temporal worker-deployment set-current
+    summary: Change the current Worker Deployment
     description: |
       +---------------------------------------------------------------------+
       | CAUTION: Worker deployment is experimental. Deployment commands are |
       | subject to change.                                                  |
       +---------------------------------------------------------------------+
 
-      Sets the current Deployment for a given Deployment Series. Whether a
-      Deployment is current or not can affect which Workers will execute
-      Tasks of an existing or new Workflow.
+      Sets the current Deployment for a given Deployment Series.
+      When a Deployment is current, Workers of that Deployment will receive
+      tasks from new Workflows and from existing AutoUpgrade Workflows that
+      are running on this Deployment Series.
 
       ```
-      temporal deployment update-current [options]
+      temporal worker-deployment set-current [options]
       ```
 
       For example:
 
       ```
-      temporal deployment update-current \
-          --deployment-series-name YourDeploymentSeriesName \
-          --deployment-build-id YourDeploymentBuildId
+      temporal worker-deployment set-current \
+          --series-name YourDeploymentSeriesName \
+          --build-id YourDeploymentBuildId
       ```
     option-sets:
       - deployment-reference
     options:
-      - name: deployment-metadata
+      - name: metadata
         type: string[]
         description: |
           Set deployment metadata using `KEY="VALUE"` pairs.
@@ -2653,94 +2655,66 @@ commands:
         type: int
         description: Maximum number of Workflow Executions to display.
 
-  - name: temporal workflow modify-options
+  - name: temporal workflow update-options
     summary: Change Workflow Execution Options
     description: |
       Modify properties of Workflow Executions:
 
       ```
-      temporal workflow modify-options [command] [options]
+      temporal workflow update-options [options]
       ```
 
-      For example, properties that control Worker Versioning:
-
-      ```
-      temporal workflow modify-options versioning-override \
-          --workflow-id YourWorkflowId \
-          --deployment-behavior auto_upgrade
-      ```
-    option-sets:
-      - single-workflow-or-batch
-    docs:
-      description-header: >-
-        Temporal Workflow Modify Options enables
-        changes to properties of a Workflow Execution, such as
-        versioning-override.
-      keywords:
-        - workflow
-        - workflow modify-options
-        - workflow modify-options versioning-override
-
-  - name: temporal workflow modify-options versioning-override
-    summary: Overrides the Deployment options of a Workflow Execution
-    description: |
-      +---------------------------------------------------------------------+
-      | CAUTION: Worker versioning is experimental. Versioning commands are |
-      | subject to change.                                                  |
-      +---------------------------------------------------------------------+
-
-      Overrides the Deployment configuration of a Workflow Execution, which
-      controls Worker Versioning.
-
-      ```
-      temporal workflow modify-options versioning-override [options]
-      ```
+      It can override the Worker Deployment configuration of a
+      Workflow Execution, which controls Worker Versioning.
 
       For example, to force Workers in the current Deployment execute the
       next Workflow Task:
 
       ```
-      temporal workflow modify-options versioning-override \
+      temporal workflow update-options \
           --workflow-id YourWorkflowId \
-          --deployment-behavior auto_upgrade
+          --versioning-override-behavior auto_upgrade
       ```
 
-      or to pin the workflow execution to a Deployment:
+      or to pin the workflow execution to a Worker Deployment:
 
       ```
-      temporal workflow modify-options versioning-override \
+      temporal workflow update-options \
           --workflow-id YourWorkflowId \
-          --deployment-behavior pinned \
-          --deployment-series-name YourDeploymentSeriesName \
-          --deployment-build-id YourDeploymentBuildId
+          --versioning-override-behavior pinned \
+          --versioning-override-series-name YourDeploymentSeriesName \
+          --versioning-override-build-id YourDeploymentBuildId
       ```
 
       To remove any previous overrides, set the behavior to
       unspecified:
 
       ```
-      temporal workflow modify-options versioning-override \
+      temporal workflow update-options \
           --workflow-id YourWorkflowId \
-          --deployment-behavior unspecified
+          --versioning-override-behavior unspecified
       ```
 
       To see the current override use `temporal workflow describe`
+
+    option-sets:
+      - single-workflow-or-batch
     options:
-      - name: deployment-behavior
+      - name: versioning-override-behavior
         type: string-enum
         description: |
-          Flag to describe the versioning behavior of a Workflow.
+          Flag to override the versioning behavior of a Workflow.
         required: true
         enum-values:
           - unspecified
           - pinned
           - auto_upgrade
-      - name: deployment-series-name
+      - name: versioning-override-series-name
         type: string
-        description: Series Name for a Deployment (Only for pinned).
-      - name: deployment-build-id
+        description: Override Series Name for a Worker Deployment (Only for pinned).
+      - name: versioning-override-build-id
         type: string
-        description: Build ID for a Deployment (Only for pinned).
+        description: Override Build ID for a Worker Deployment (Only for pinned).
 
   - name: temporal workflow query
     summary: Retrieve Workflow Execution state
@@ -3349,13 +3323,13 @@ option-sets:
 
   - name: deployment-reference
     options:
-      - name: deployment-series-name
+      - name: series-name
         type: string
-        description: Series Name for a Deployment.
+        description: Series Name for a Worker Deployment.
         required: true
-      - name: deployment-build-id
+      - name: build-id
         type: string
-        description: Build ID for a Deployment.
+        description: Build ID for a Worker Deployment.
         required: true
 
   - name: single-workflow-or-batch

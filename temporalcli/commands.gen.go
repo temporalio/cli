@@ -132,15 +132,15 @@ func (v *WorkflowReferenceOptions) buildFlags(cctx *CommandContext, f *pflag.Fla
 }
 
 type DeploymentReferenceOptions struct {
-	DeploymentSeriesName string
-	DeploymentBuildId    string
+	SeriesName string
+	BuildId    string
 }
 
 func (v *DeploymentReferenceOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
-	f.StringVar(&v.DeploymentSeriesName, "deployment-series-name", "", "Series Name for a Deployment. Required.")
-	_ = cobra.MarkFlagRequired(f, "deployment-series-name")
-	f.StringVar(&v.DeploymentBuildId, "deployment-build-id", "", "Build ID for a Deployment. Required.")
-	_ = cobra.MarkFlagRequired(f, "deployment-build-id")
+	f.StringVar(&v.SeriesName, "series-name", "", "Series Name for a Worker Deployment. Required.")
+	_ = cobra.MarkFlagRequired(f, "series-name")
+	f.StringVar(&v.BuildId, "build-id", "", "Build ID for a Worker Deployment. Required.")
+	_ = cobra.MarkFlagRequired(f, "build-id")
 }
 
 type SingleWorkflowOrBatchOptions struct {
@@ -303,12 +303,12 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalActivityCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalBatchCommand(cctx, &s).Command)
-	s.Command.AddCommand(&NewTemporalDeploymentCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalEnvCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalOperatorCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalServerCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalTaskQueueCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkerDeploymentCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowCommand(cctx, &s).Command)
 	s.Command.PersistentFlags().StringVar(&s.Env, "env", "default", "Active environment name (`ENV`).")
 	cctx.BindFlagEnvVar(s.Command.PersistentFlags().Lookup("env"), "TEMPORAL_ENV")
@@ -526,144 +526,6 @@ func NewTemporalBatchTerminateCommand(cctx *CommandContext, parent *TemporalBatc
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "job-id")
 	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for terminating the batch job. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "reason")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
-	}
-	return &s
-}
-
-type TemporalDeploymentCommand struct {
-	Parent  *TemporalCommand
-	Command cobra.Command
-	ClientOptions
-}
-
-func NewTemporalDeploymentCommand(cctx *CommandContext, parent *TemporalCommand) *TemporalDeploymentCommand {
-	var s TemporalDeploymentCommand
-	s.Parent = parent
-	s.Command.Use = "deployment"
-	s.Command.Short = "Describe, list, and operate on Deployments"
-	if hasHighlighting {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nDeployment commands perform operations on Worker Deployments:\n\n\x1b[1mtemporal deployment [command] [options]\x1b[0m\n\nFor example:\n\n\x1b[1mtemporal deployment list\x1b[0m"
-	} else {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nDeployment commands perform operations on Worker Deployments:\n\n```\ntemporal deployment [command] [options]\n```\n\nFor example:\n\n```\ntemporal deployment list\n```"
-	}
-	s.Command.Args = cobra.NoArgs
-	s.Command.AddCommand(&NewTemporalDeploymentDescribeCommand(cctx, &s).Command)
-	s.Command.AddCommand(&NewTemporalDeploymentGetCurrentCommand(cctx, &s).Command)
-	s.Command.AddCommand(&NewTemporalDeploymentListCommand(cctx, &s).Command)
-	s.Command.AddCommand(&NewTemporalDeploymentUpdateCurrentCommand(cctx, &s).Command)
-	s.ClientOptions.buildFlags(cctx, s.Command.PersistentFlags())
-	return &s
-}
-
-type TemporalDeploymentDescribeCommand struct {
-	Parent  *TemporalDeploymentCommand
-	Command cobra.Command
-	DeploymentReferenceOptions
-	ReportReachability bool
-}
-
-func NewTemporalDeploymentDescribeCommand(cctx *CommandContext, parent *TemporalDeploymentCommand) *TemporalDeploymentDescribeCommand {
-	var s TemporalDeploymentDescribeCommand
-	s.Parent = parent
-	s.Command.DisableFlagsInUseLine = true
-	s.Command.Use = "describe [flags]"
-	s.Command.Short = "Show properties of a Deployment"
-	if hasHighlighting {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nDescribes properties of a Deployment, such as whether it is current,\nsome custom metadata, or a list of its task queues.\n\n\x1b[1mtemporal deployment describe [options]\x1b[0m\n\nFor example, to also include reachability information:\n\n\x1b[1mtemporal deployment describe \\\n    --deployment-series-name YourDeploymentSeriesName \\\n    --deployment-build-id YourDeploymentBuildId \\\n    --report-reachability\x1b[0m"
-	} else {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nDescribes properties of a Deployment, such as whether it is current,\nsome custom metadata, or a list of its task queues.\n\n```\ntemporal deployment describe [options]\n```\n\nFor example, to also include reachability information:\n\n```\ntemporal deployment describe \\\n    --deployment-series-name YourDeploymentSeriesName \\\n    --deployment-build-id YourDeploymentBuildId \\\n    --report-reachability\n```"
-	}
-	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().BoolVar(&s.ReportReachability, "report-reachability", false, "Flag to include reachability information of a Deployment.")
-	s.DeploymentReferenceOptions.buildFlags(cctx, s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
-	}
-	return &s
-}
-
-type TemporalDeploymentGetCurrentCommand struct {
-	Parent               *TemporalDeploymentCommand
-	Command              cobra.Command
-	DeploymentSeriesName string
-}
-
-func NewTemporalDeploymentGetCurrentCommand(cctx *CommandContext, parent *TemporalDeploymentCommand) *TemporalDeploymentGetCurrentCommand {
-	var s TemporalDeploymentGetCurrentCommand
-	s.Parent = parent
-	s.Command.DisableFlagsInUseLine = true
-	s.Command.Use = "get-current [flags]"
-	s.Command.Short = "Show the current Deployment"
-	if hasHighlighting {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nGets the current Deployment for a Deployment Series Name. Whether a\nDeployment is current or not can affect which Workers will execute\nTasks of an existing or new Workflow.\n\n\n\x1b[1mtemporal deployment get-current [options]\x1b[0m\n\nFor example:\n\n\x1b[1mtemporal deployment get-current \\\n    --deployment-series-name YourDeploymentSeriesName\x1b[0m"
-	} else {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nGets the current Deployment for a Deployment Series Name. Whether a\nDeployment is current or not can affect which Workers will execute\nTasks of an existing or new Workflow.\n\n\n```\ntemporal deployment get-current [options]\n```\n\nFor example:\n\n```\ntemporal deployment get-current \\\n    --deployment-series-name YourDeploymentSeriesName\n```"
-	}
-	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.DeploymentSeriesName, "deployment-series-name", "", "Series Name for the current Deployment. Required.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "deployment-series-name")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
-	}
-	return &s
-}
-
-type TemporalDeploymentListCommand struct {
-	Parent               *TemporalDeploymentCommand
-	Command              cobra.Command
-	DeploymentSeriesName string
-}
-
-func NewTemporalDeploymentListCommand(cctx *CommandContext, parent *TemporalDeploymentCommand) *TemporalDeploymentListCommand {
-	var s TemporalDeploymentListCommand
-	s.Parent = parent
-	s.Command.DisableFlagsInUseLine = true
-	s.Command.Use = "list [flags]"
-	s.Command.Short = "Enumerate Deployments in the client's namespace"
-	if hasHighlighting {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nList existing Deployments in the client's namespace, optionally\nfiltering them by Deployment Series Name.\n\n\n\x1b[1mtemporal deployment list [options]\x1b[0m\n\nFor example, adding an optional filter:\n\n\x1b[1mtemporal deployment list \\\n    --deployment-series-name YourDeploymentSeriesName\x1b[0m"
-	} else {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nList existing Deployments in the client's namespace, optionally\nfiltering them by Deployment Series Name.\n\n\n```\ntemporal deployment list [options]\n```\n\nFor example, adding an optional filter:\n\n```\ntemporal deployment list \\\n    --deployment-series-name YourDeploymentSeriesName\n```"
-	}
-	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.DeploymentSeriesName, "deployment-series-name", "", "Series Name to filter Deployments.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
-	}
-	return &s
-}
-
-type TemporalDeploymentUpdateCurrentCommand struct {
-	Parent  *TemporalDeploymentCommand
-	Command cobra.Command
-	DeploymentReferenceOptions
-	DeploymentMetadata []string
-}
-
-func NewTemporalDeploymentUpdateCurrentCommand(cctx *CommandContext, parent *TemporalDeploymentCommand) *TemporalDeploymentUpdateCurrentCommand {
-	var s TemporalDeploymentUpdateCurrentCommand
-	s.Parent = parent
-	s.Command.DisableFlagsInUseLine = true
-	s.Command.Use = "update-current [flags]"
-	s.Command.Short = "Change the current Deployment"
-	if hasHighlighting {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nSets the current Deployment for a given Deployment Series. Whether a\nDeployment is current or not can affect which Workers will execute\nTasks of an existing or new Workflow.\n\n\x1b[1mtemporal deployment update-current [options]\x1b[0m\n\nFor example:\n\n\x1b[1mtemporal deployment update-current \\\n    --deployment-series-name YourDeploymentSeriesName \\\n    --deployment-build-id YourDeploymentBuildId\x1b[0m"
-	} else {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nSets the current Deployment for a given Deployment Series. Whether a\nDeployment is current or not can affect which Workers will execute\nTasks of an existing or new Workflow.\n\n```\ntemporal deployment update-current [options]\n```\n\nFor example:\n\n```\ntemporal deployment update-current \\\n    --deployment-series-name YourDeploymentSeriesName \\\n    --deployment-build-id YourDeploymentBuildId\n```"
-	}
-	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringArrayVar(&s.DeploymentMetadata, "deployment-metadata", nil, "Set deployment metadata using `KEY=\"VALUE\"` pairs. Keys must be identifiers, and values must be JSON values. For example: 'YourKey={\"your\": \"value\"}'. Can be passed multiple times.")
-	s.DeploymentReferenceOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -2477,6 +2339,144 @@ func NewTemporalTaskQueueVersioningReplaceRedirectRuleCommand(cctx *CommandConte
 	return &s
 }
 
+type TemporalWorkerDeploymentCommand struct {
+	Parent  *TemporalCommand
+	Command cobra.Command
+	ClientOptions
+}
+
+func NewTemporalWorkerDeploymentCommand(cctx *CommandContext, parent *TemporalCommand) *TemporalWorkerDeploymentCommand {
+	var s TemporalWorkerDeploymentCommand
+	s.Parent = parent
+	s.Command.Use = "worker-deployment"
+	s.Command.Short = "Describe, list, and operate on Worker Deployments"
+	if hasHighlighting {
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nDeployment commands perform operations on Worker Deployments:\n\n\x1b[1mtemporal worker-deployment [command] [options]\x1b[0m\n\nFor example:\n\n\x1b[1mtemporal worker-deployment list\x1b[0m"
+	} else {
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nDeployment commands perform operations on Worker Deployments:\n\n```\ntemporal worker-deployment [command] [options]\n```\n\nFor example:\n\n```\ntemporal worker-deployment list\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalWorkerDeploymentDescribeCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkerDeploymentGetCurrentCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkerDeploymentListCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkerDeploymentSetCurrentCommand(cctx, &s).Command)
+	s.ClientOptions.buildFlags(cctx, s.Command.PersistentFlags())
+	return &s
+}
+
+type TemporalWorkerDeploymentDescribeCommand struct {
+	Parent  *TemporalWorkerDeploymentCommand
+	Command cobra.Command
+	DeploymentReferenceOptions
+	ReportReachability bool
+}
+
+func NewTemporalWorkerDeploymentDescribeCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentCommand) *TemporalWorkerDeploymentDescribeCommand {
+	var s TemporalWorkerDeploymentDescribeCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "describe [flags]"
+	s.Command.Short = "Show properties of a Worker Deployment"
+	if hasHighlighting {
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nDescribes properties of a Worker Deployment, such as whether it is\ncurrent, the non-empty list of its task queues, custom metadata if\npresent, and reachability status when requested.\n\n\x1b[1mtemporal worker-deployment describe [options]\x1b[0m\n\nFor example, to also include reachability information:\n\n\x1b[1mtemporal worker-deployment describe \\\n    --series-name YourDeploymentSeriesName \\\n    --build-id YourDeploymentBuildId \\\n    --report-reachability\x1b[0m"
+	} else {
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nDescribes properties of a Worker Deployment, such as whether it is\ncurrent, the non-empty list of its task queues, custom metadata if\npresent, and reachability status when requested.\n\n```\ntemporal worker-deployment describe [options]\n```\n\nFor example, to also include reachability information:\n\n```\ntemporal worker-deployment describe \\\n    --series-name YourDeploymentSeriesName \\\n    --build-id YourDeploymentBuildId \\\n    --report-reachability\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().BoolVar(&s.ReportReachability, "report-reachability", false, "Flag to include reachability information of a Worker Deployment.")
+	s.DeploymentReferenceOptions.buildFlags(cctx, s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalWorkerDeploymentGetCurrentCommand struct {
+	Parent     *TemporalWorkerDeploymentCommand
+	Command    cobra.Command
+	SeriesName string
+}
+
+func NewTemporalWorkerDeploymentGetCurrentCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentCommand) *TemporalWorkerDeploymentGetCurrentCommand {
+	var s TemporalWorkerDeploymentGetCurrentCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "get-current [flags]"
+	s.Command.Short = "Show the current Worker Deployment"
+	if hasHighlighting {
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nGets the current Worker Deployment for a Deployment Series Name.\nWhen a Deployment is current, Workers of that Deployment will receive\ntasks from new Workflows and from existing AutoUpgrade Workflows that\nare running on this Deployment Series.\n\n\x1b[1mtemporal worker-deployment get-current [options]\x1b[0m\n\nFor example:\n\n\x1b[1mtemporal worker-deployment get-current \\\n    --series-name YourDeploymentSeriesName\x1b[0m"
+	} else {
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nGets the current Worker Deployment for a Deployment Series Name.\nWhen a Deployment is current, Workers of that Deployment will receive\ntasks from new Workflows and from existing AutoUpgrade Workflows that\nare running on this Deployment Series.\n\n```\ntemporal worker-deployment get-current [options]\n```\n\nFor example:\n\n```\ntemporal worker-deployment get-current \\\n    --series-name YourDeploymentSeriesName\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.SeriesName, "series-name", "", "Series Name for the current Worker Deployment. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "series-name")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalWorkerDeploymentListCommand struct {
+	Parent     *TemporalWorkerDeploymentCommand
+	Command    cobra.Command
+	SeriesName string
+}
+
+func NewTemporalWorkerDeploymentListCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentCommand) *TemporalWorkerDeploymentListCommand {
+	var s TemporalWorkerDeploymentListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "Enumerate Worker Deployments in the client's namespace"
+	if hasHighlighting {
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nList existing Worker Deployments in the client's namespace, optionally\nfiltering them by Deployment Series Name.\n\n\n\x1b[1mtemporal worker-deployment list [options]\x1b[0m\n\nFor example, adding an optional filter:\n\n\x1b[1mtemporal worker-deployment list \\\n    --series-name YourDeploymentSeriesName\x1b[0m"
+	} else {
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nList existing Worker Deployments in the client's namespace, optionally\nfiltering them by Deployment Series Name.\n\n\n```\ntemporal worker-deployment list [options]\n```\n\nFor example, adding an optional filter:\n\n```\ntemporal worker-deployment list \\\n    --series-name YourDeploymentSeriesName\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.SeriesName, "series-name", "", "Series Name to filter Worker Deployments.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalWorkerDeploymentSetCurrentCommand struct {
+	Parent  *TemporalWorkerDeploymentCommand
+	Command cobra.Command
+	DeploymentReferenceOptions
+	Metadata []string
+}
+
+func NewTemporalWorkerDeploymentSetCurrentCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentCommand) *TemporalWorkerDeploymentSetCurrentCommand {
+	var s TemporalWorkerDeploymentSetCurrentCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "set-current [flags]"
+	s.Command.Short = "Change the current Worker Deployment"
+	if hasHighlighting {
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nSets the current Deployment for a given Deployment Series.\nWhen a Deployment is current, Workers of that Deployment will receive\ntasks from new Workflows and from existing AutoUpgrade Workflows that\nare running on this Deployment Series.\n\n\x1b[1mtemporal worker-deployment set-current [options]\x1b[0m\n\nFor example:\n\n\x1b[1mtemporal worker-deployment set-current \\\n    --series-name YourDeploymentSeriesName \\\n    --build-id YourDeploymentBuildId\x1b[0m"
+	} else {
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nSets the current Deployment for a given Deployment Series.\nWhen a Deployment is current, Workers of that Deployment will receive\ntasks from new Workflows and from existing AutoUpgrade Workflows that\nare running on this Deployment Series.\n\n```\ntemporal worker-deployment set-current [options]\n```\n\nFor example:\n\n```\ntemporal worker-deployment set-current \\\n    --series-name YourDeploymentSeriesName \\\n    --build-id YourDeploymentBuildId\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringArrayVar(&s.Metadata, "metadata", nil, "Set deployment metadata using `KEY=\"VALUE\"` pairs. Keys must be identifiers, and values must be JSON values. For example: 'YourKey={\"your\": \"value\"}'. Can be passed multiple times.")
+	s.DeploymentReferenceOptions.buildFlags(cctx, s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
 type TemporalWorkflowCommand struct {
 	Parent  *TemporalCommand
 	Command cobra.Command
@@ -2501,7 +2501,6 @@ func NewTemporalWorkflowCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.AddCommand(&NewTemporalWorkflowExecuteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowFixHistoryJsonCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowListCommand(cctx, &s).Command)
-	s.Command.AddCommand(&NewTemporalWorkflowModifyOptionsCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowQueryCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowResetCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowResultCommand(cctx, &s).Command)
@@ -2512,6 +2511,7 @@ func NewTemporalWorkflowCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.AddCommand(&NewTemporalWorkflowTerminateCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowTraceCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowUpdateCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkflowUpdateOptionsCommand(cctx, &s).Command)
 	s.ClientOptions.buildFlags(cctx, s.Command.PersistentFlags())
 	return &s
 }
@@ -2717,61 +2717,6 @@ func NewTemporalWorkflowListCommand(cctx *CommandContext, parent *TemporalWorkfl
 	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Content for an SQL-like `QUERY` List Filter.")
 	s.Command.Flags().BoolVar(&s.Archived, "archived", false, "Limit output to archived Workflow Executions.")
 	s.Command.Flags().IntVar(&s.Limit, "limit", 0, "Maximum number of Workflow Executions to display.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
-	}
-	return &s
-}
-
-type TemporalWorkflowModifyOptionsCommand struct {
-	Parent  *TemporalWorkflowCommand
-	Command cobra.Command
-	SingleWorkflowOrBatchOptions
-}
-
-func NewTemporalWorkflowModifyOptionsCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowModifyOptionsCommand {
-	var s TemporalWorkflowModifyOptionsCommand
-	s.Parent = parent
-	s.Command.Use = "modify-options"
-	s.Command.Short = "Change Workflow Execution Options"
-	if hasHighlighting {
-		s.Command.Long = "Modify properties of Workflow Executions:\n\n\x1b[1mtemporal workflow modify-options [command] [options]\x1b[0m\n\nFor example, properties that control Worker Versioning:\n\n\x1b[1mtemporal workflow modify-options versioning-override \\\n    --workflow-id YourWorkflowId \\\n    --deployment-behavior auto_upgrade\x1b[0m"
-	} else {
-		s.Command.Long = "Modify properties of Workflow Executions:\n\n```\ntemporal workflow modify-options [command] [options]\n```\n\nFor example, properties that control Worker Versioning:\n\n```\ntemporal workflow modify-options versioning-override \\\n    --workflow-id YourWorkflowId \\\n    --deployment-behavior auto_upgrade\n```"
-	}
-	s.Command.Args = cobra.NoArgs
-	s.Command.AddCommand(&NewTemporalWorkflowModifyOptionsVersioningOverrideCommand(cctx, &s).Command)
-	s.SingleWorkflowOrBatchOptions.buildFlags(cctx, s.Command.PersistentFlags())
-	return &s
-}
-
-type TemporalWorkflowModifyOptionsVersioningOverrideCommand struct {
-	Parent               *TemporalWorkflowModifyOptionsCommand
-	Command              cobra.Command
-	DeploymentBehavior   StringEnum
-	DeploymentSeriesName string
-	DeploymentBuildId    string
-}
-
-func NewTemporalWorkflowModifyOptionsVersioningOverrideCommand(cctx *CommandContext, parent *TemporalWorkflowModifyOptionsCommand) *TemporalWorkflowModifyOptionsVersioningOverrideCommand {
-	var s TemporalWorkflowModifyOptionsVersioningOverrideCommand
-	s.Parent = parent
-	s.Command.DisableFlagsInUseLine = true
-	s.Command.Use = "versioning-override [flags]"
-	s.Command.Short = "Overrides the Deployment options of a Workflow Execution"
-	if hasHighlighting {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker versioning is experimental. Versioning commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nOverrides the Deployment configuration of a Workflow Execution, which\ncontrols Worker Versioning.\n\n\x1b[1mtemporal workflow modify-options versioning-override [options]\x1b[0m\n\nFor example, to force Workers in the current Deployment execute the\nnext Workflow Task:\n\n\x1b[1mtemporal workflow modify-options versioning-override \\\n    --workflow-id YourWorkflowId \\\n    --deployment-behavior auto_upgrade\x1b[0m\n\nor to pin the workflow execution to a Deployment:\n\n\x1b[1mtemporal workflow modify-options versioning-override \\\n    --workflow-id YourWorkflowId \\\n    --deployment-behavior pinned \\\n    --deployment-series-name YourDeploymentSeriesName \\\n    --deployment-build-id YourDeploymentBuildId\x1b[0m\n\nTo remove any previous overrides, set the behavior to\nunspecified:\n\n\x1b[1mtemporal workflow modify-options versioning-override \\\n    --workflow-id YourWorkflowId \\\n    --deployment-behavior unspecified\x1b[0m\n\nTo see the current override use \x1b[1mtemporal workflow describe\x1b[0m"
-	} else {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker versioning is experimental. Versioning commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nOverrides the Deployment configuration of a Workflow Execution, which\ncontrols Worker Versioning.\n\n```\ntemporal workflow modify-options versioning-override [options]\n```\n\nFor example, to force Workers in the current Deployment execute the\nnext Workflow Task:\n\n```\ntemporal workflow modify-options versioning-override \\\n    --workflow-id YourWorkflowId \\\n    --deployment-behavior auto_upgrade\n```\n\nor to pin the workflow execution to a Deployment:\n\n```\ntemporal workflow modify-options versioning-override \\\n    --workflow-id YourWorkflowId \\\n    --deployment-behavior pinned \\\n    --deployment-series-name YourDeploymentSeriesName \\\n    --deployment-build-id YourDeploymentBuildId\n```\n\nTo remove any previous overrides, set the behavior to\nunspecified:\n\n```\ntemporal workflow modify-options versioning-override \\\n    --workflow-id YourWorkflowId \\\n    --deployment-behavior unspecified\n```\n\nTo see the current override use `temporal workflow describe`"
-	}
-	s.Command.Args = cobra.NoArgs
-	s.DeploymentBehavior = NewStringEnum([]string{"unspecified", "pinned", "auto_upgrade"}, "")
-	s.Command.Flags().Var(&s.DeploymentBehavior, "deployment-behavior", "Flag to describe the versioning behavior of a Workflow. Accepted values: unspecified, pinned, auto_upgrade. Required.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "deployment-behavior")
-	s.Command.Flags().StringVar(&s.DeploymentSeriesName, "deployment-series-name", "", "Series Name for a Deployment (Only for pinned).")
-	s.Command.Flags().StringVar(&s.DeploymentBuildId, "deployment-build-id", "", "Build ID for a Deployment (Only for pinned).")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -3229,6 +3174,41 @@ func NewTemporalWorkflowUpdateStartCommand(cctx *CommandContext, parent *Tempora
 	s.Command.Flags().SetNormalizeFunc(aliasNormalizer(map[string]string{
 		"type": "name",
 	}))
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalWorkflowUpdateOptionsCommand struct {
+	Parent  *TemporalWorkflowCommand
+	Command cobra.Command
+	SingleWorkflowOrBatchOptions
+	VersioningOverrideBehavior   StringEnum
+	VersioningOverrideSeriesName string
+	VersioningOverrideBuildId    string
+}
+
+func NewTemporalWorkflowUpdateOptionsCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowUpdateOptionsCommand {
+	var s TemporalWorkflowUpdateOptionsCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "update-options [flags]"
+	s.Command.Short = "Change Workflow Execution Options"
+	if hasHighlighting {
+		s.Command.Long = "Modify properties of Workflow Executions:\n\n\x1b[1mtemporal workflow update-options [options]\x1b[0m\n\nIt can override the Worker Deployment configuration of a\nWorkflow Execution, which controls Worker Versioning.\n\nFor example, to force Workers in the current Deployment execute the\nnext Workflow Task:\n\n\x1b[1mtemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior auto_upgrade\x1b[0m\n\nor to pin the workflow execution to a Worker Deployment:\n\n\x1b[1mtemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior pinned \\\n    --versioning-override-series-name YourDeploymentSeriesName \\\n    --versioning-override-build-id YourDeploymentBuildId\x1b[0m\n\nTo remove any previous overrides, set the behavior to\nunspecified:\n\n\x1b[1mtemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior unspecified\x1b[0m\n\nTo see the current override use \x1b[1mtemporal workflow describe\x1b[0m"
+	} else {
+		s.Command.Long = "Modify properties of Workflow Executions:\n\n```\ntemporal workflow update-options [options]\n```\n\nIt can override the Worker Deployment configuration of a\nWorkflow Execution, which controls Worker Versioning.\n\nFor example, to force Workers in the current Deployment execute the\nnext Workflow Task:\n\n```\ntemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior auto_upgrade\n```\n\nor to pin the workflow execution to a Worker Deployment:\n\n```\ntemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior pinned \\\n    --versioning-override-series-name YourDeploymentSeriesName \\\n    --versioning-override-build-id YourDeploymentBuildId\n```\n\nTo remove any previous overrides, set the behavior to\nunspecified:\n\n```\ntemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior unspecified\n```\n\nTo see the current override use `temporal workflow describe`"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.VersioningOverrideBehavior = NewStringEnum([]string{"unspecified", "pinned", "auto_upgrade"}, "")
+	s.Command.Flags().Var(&s.VersioningOverrideBehavior, "versioning-override-behavior", "Flag to override the versioning behavior of a Workflow. Accepted values: unspecified, pinned, auto_upgrade. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "versioning-override-behavior")
+	s.Command.Flags().StringVar(&s.VersioningOverrideSeriesName, "versioning-override-series-name", "", "Override Series Name for a Worker Deployment (Only for pinned).")
+	s.Command.Flags().StringVar(&s.VersioningOverrideBuildId, "versioning-override-build-id", "", "Override Build ID for a Worker Deployment (Only for pinned).")
+	s.SingleWorkflowOrBatchOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

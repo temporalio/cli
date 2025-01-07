@@ -105,7 +105,7 @@ func printDeploymentInfo(cctx *CommandContext, deploymentInfo client.DeploymentI
 		}
 		err := cctx.Printer.PrintStructured(printMe, printer.StructuredOptions{})
 		if err != nil {
-			return fmt.Errorf("displaying deployment info failed: %w", err)
+			return fmt.Errorf("displaying worker deployment info failed: %w", err)
 		}
 
 		if len(deploymentInfo.TaskQueuesInfos) > 0 {
@@ -160,7 +160,7 @@ func printDeploymentReachabilityInfo(cctx *CommandContext, reachability client.D
 	}
 
 	if !cctx.JSONOutput {
-		err := printDeploymentInfo(cctx, reachability.DeploymentInfo, "Deployment:")
+		err := printDeploymentInfo(cctx, reachability.DeploymentInfo, "Worker Deployment:")
 		if err != nil {
 			return err
 		}
@@ -184,14 +184,14 @@ func printDeploymentReachabilityInfo(cctx *CommandContext, reachability client.D
 func printDeploymentSetCurrentResponse(cctx *CommandContext, response client.DeploymentSetCurrentResponse) error {
 
 	if !cctx.JSONOutput {
-		err := printDeploymentInfo(cctx, response.Previous, "Previous Deployment:")
+		err := printDeploymentInfo(cctx, response.Previous, "Previous Worker Deployment:")
 		if err != nil {
-			return fmt.Errorf("displaying previous deployment info failed: %w", err)
+			return fmt.Errorf("displaying previous worker deployment info failed: %w", err)
 		}
 
-		err = printDeploymentInfo(cctx, response.Current, "Current Deployment:")
+		err = printDeploymentInfo(cctx, response.Current, "Current Worker Deployment:")
 		if err != nil {
-			return fmt.Errorf("displaying current deployment info failed: %w", err)
+			return fmt.Errorf("displaying current worker deployment info failed: %w", err)
 		}
 
 		return nil
@@ -199,11 +199,11 @@ func printDeploymentSetCurrentResponse(cctx *CommandContext, response client.Dep
 
 	previous, err := deploymentInfoToRows(response.Previous)
 	if err != nil {
-		return fmt.Errorf("displaying previous deployment info failed: %w", err)
+		return fmt.Errorf("displaying previous worker deployment info failed: %w", err)
 	}
 	current, err := deploymentInfoToRows(response.Current)
 	if err != nil {
-		return fmt.Errorf("displaying current deployment info failed: %w", err)
+		return fmt.Errorf("displaying current worker deployment info failed: %w", err)
 	}
 
 	return cctx.Printer.PrintStructured(formattedDualDeploymentInfoType{
@@ -212,7 +212,7 @@ func printDeploymentSetCurrentResponse(cctx *CommandContext, response client.Dep
 	}, printer.StructuredOptions{})
 }
 
-func (c *TemporalDeploymentDescribeCommand) run(cctx *CommandContext, args []string) error {
+func (c *TemporalWorkerDeploymentDescribeCommand) run(cctx *CommandContext, args []string) error {
 	cl, err := c.Parent.ClientOptions.dialClient(cctx)
 	if err != nil {
 		return err
@@ -223,12 +223,12 @@ func (c *TemporalDeploymentDescribeCommand) run(cctx *CommandContext, args []str
 		// Expensive call, rate-limited by target method
 		resp, err := cl.DeploymentClient().GetReachability(cctx, client.DeploymentGetReachabilityOptions{
 			Deployment: client.Deployment{
-				SeriesName: c.DeploymentSeriesName,
-				BuildID:    c.DeploymentBuildId,
+				SeriesName: c.SeriesName,
+				BuildID:    c.BuildId,
 			},
 		})
 		if err != nil {
-			return fmt.Errorf("error describing deployment with reachability: %w", err)
+			return fmt.Errorf("error describing worker deployment with reachability: %w", err)
 		}
 
 		err = printDeploymentReachabilityInfo(cctx, resp)
@@ -238,14 +238,14 @@ func (c *TemporalDeploymentDescribeCommand) run(cctx *CommandContext, args []str
 	} else {
 		resp, err := cl.DeploymentClient().Describe(cctx, client.DeploymentDescribeOptions{
 			Deployment: client.Deployment{
-				SeriesName: c.DeploymentSeriesName,
-				BuildID:    c.DeploymentBuildId,
+				SeriesName: c.SeriesName,
+				BuildID:    c.BuildId,
 			},
 		})
 		if err != nil {
-			return fmt.Errorf("error describing deployment: %w", err)
+			return fmt.Errorf("error describing worker deployment: %w", err)
 		}
-		err = printDeploymentInfo(cctx, resp.DeploymentInfo, "Deployment:")
+		err = printDeploymentInfo(cctx, resp.DeploymentInfo, "Worker Deployment:")
 		if err != nil {
 			return err
 		}
@@ -255,7 +255,7 @@ func (c *TemporalDeploymentDescribeCommand) run(cctx *CommandContext, args []str
 	return nil
 }
 
-func (c *TemporalDeploymentGetCurrentCommand) run(cctx *CommandContext, args []string) error {
+func (c *TemporalWorkerDeploymentGetCurrentCommand) run(cctx *CommandContext, args []string) error {
 	cl, err := c.Parent.ClientOptions.dialClient(cctx)
 	if err != nil {
 		return err
@@ -263,13 +263,13 @@ func (c *TemporalDeploymentGetCurrentCommand) run(cctx *CommandContext, args []s
 	defer cl.Close()
 
 	resp, err := cl.DeploymentClient().GetCurrent(cctx, client.DeploymentGetCurrentOptions{
-		SeriesName: c.DeploymentSeriesName,
+		SeriesName: c.SeriesName,
 	})
 	if err != nil {
 		return fmt.Errorf("error getting the current deployment: %w", err)
 	}
 
-	err = printDeploymentInfo(cctx, resp.DeploymentInfo, "Current Deployment:")
+	err = printDeploymentInfo(cctx, resp.DeploymentInfo, "Current Worker Deployment:")
 	if err != nil {
 		return err
 	}
@@ -277,7 +277,7 @@ func (c *TemporalDeploymentGetCurrentCommand) run(cctx *CommandContext, args []s
 	return nil
 }
 
-func (c *TemporalDeploymentListCommand) run(cctx *CommandContext, args []string) error {
+func (c *TemporalWorkerDeploymentListCommand) run(cctx *CommandContext, args []string) error {
 	cl, err := c.Parent.dialClient(cctx)
 	if err != nil {
 		return err
@@ -285,7 +285,7 @@ func (c *TemporalDeploymentListCommand) run(cctx *CommandContext, args []string)
 	defer cl.Close()
 
 	res, err := cl.DeploymentClient().List(cctx, client.DeploymentListOptions{
-		SeriesName: c.DeploymentSeriesName,
+		SeriesName: c.SeriesName,
 	})
 	if err != nil {
 		return err
@@ -342,29 +342,29 @@ func (c *TemporalDeploymentListCommand) run(cctx *CommandContext, args []string)
 	return nil
 }
 
-func (c *TemporalDeploymentUpdateCurrentCommand) run(cctx *CommandContext, args []string) error {
+func (c *TemporalWorkerDeploymentSetCurrentCommand) run(cctx *CommandContext, args []string) error {
 	cl, err := c.Parent.dialClient(cctx)
 	if err != nil {
 		return err
 	}
 	defer cl.Close()
 
-	metadata, err := stringKeysJSONValues(c.DeploymentMetadata, false)
+	metadata, err := stringKeysJSONValues(c.Metadata, false)
 	if err != nil {
 		return fmt.Errorf("invalid metadata values: %w", err)
 	}
 
 	resp, err := cl.DeploymentClient().SetCurrent(cctx, client.DeploymentSetCurrentOptions{
 		Deployment: client.Deployment{
-			SeriesName: c.DeploymentSeriesName,
-			BuildID:    c.DeploymentBuildId,
+			SeriesName: c.SeriesName,
+			BuildID:    c.BuildId,
 		},
 		MetadataUpdate: client.DeploymentMetadataUpdate{
 			UpsertEntries: metadata,
 		},
 	})
 	if err != nil {
-		return fmt.Errorf("error updating the current deployment: %w", err)
+		return fmt.Errorf("error setting the current worker deployment: %w", err)
 	}
 
 	err = printDeploymentSetCurrentResponse(cctx, resp)
@@ -372,6 +372,6 @@ func (c *TemporalDeploymentUpdateCurrentCommand) run(cctx *CommandContext, args 
 		return err
 	}
 
-	cctx.Printer.Println("Successfully updating the current deployment")
+	cctx.Printer.Println("Successfully setting the current worker deployment")
 	return nil
 }

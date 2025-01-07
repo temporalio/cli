@@ -421,7 +421,7 @@ func (s *SharedServerSuite) TestWorkflow_Cancel_SingleWorkflowSuccess() {
 	s.Error(workflow.ErrCanceled, run.Get(s.Context, nil))
 }
 
-func (s *SharedServerSuite) TestWorkflow_Batch_Modify_Options_Versioning_Override() {
+func (s *SharedServerSuite) TestWorkflow_Batch_Update_Options_Versioning_Override() {
 	buildId1 := uuid.NewString()
 	buildId2 := uuid.NewString()
 	seriesName := uuid.NewString()
@@ -444,10 +444,10 @@ func (s *SharedServerSuite) TestWorkflow_Batch_Modify_Options_Versioning_Overrid
 	defer w.Stop()
 
 	res := s.Execute(
-		"deployment", "update-current",
+		"worker-deployment", "set-current",
 		"--address", s.Address(),
-		"--deployment-series-name", seriesName,
-		"--deployment-build-id", buildId1,
+		"--series-name", seriesName,
+		"--build-id", buildId1,
 	)
 	s.NoError(res.Err)
 
@@ -483,12 +483,12 @@ func (s *SharedServerSuite) TestWorkflow_Batch_Modify_Options_Versioning_Overrid
 
 	s.CommandHarness.Stdin.WriteString("y\n")
 	res = s.Execute(
-		"workflow", "modify-options", "versioning-override",
+		"workflow", "update-options",
 		"--address", s.Address(),
 		"--query", "CustomKeywordField = '"+searchAttr+"'",
-		"--deployment-behavior", "pinned",
-		"--deployment-series-name", seriesName,
-		"--deployment-build-id", buildId2,
+		"--versioning-override-behavior", "pinned",
+		"--versioning-override-series-name", seriesName,
+		"--versioning-override-build-id", buildId2,
 	)
 	s.NoError(res.Err)
 
@@ -512,7 +512,7 @@ func (s *SharedServerSuite) TestWorkflow_Batch_Modify_Options_Versioning_Overrid
 	}, 30*time.Second, 100*time.Millisecond)
 }
 
-func (s *SharedServerSuite) TestWorkflow_Modify_Options_Versioning_Override() {
+func (s *SharedServerSuite) TestWorkflow_Update_Options_Versioning_Override() {
 	buildId1 := uuid.NewString()
 	buildId2 := uuid.NewString()
 	seriesName := uuid.NewString()
@@ -535,10 +535,10 @@ func (s *SharedServerSuite) TestWorkflow_Modify_Options_Versioning_Override() {
 	defer w.Stop()
 
 	res := s.Execute(
-		"deployment", "update-current",
+		"worker-deployment", "set-current",
 		"--address", s.Address(),
-		"--deployment-series-name", seriesName,
-		"--deployment-build-id", buildId1,
+		"--series-name", seriesName,
+		"--build-id", buildId1,
 	)
 	s.NoError(res.Err)
 
@@ -562,12 +562,12 @@ func (s *SharedServerSuite) TestWorkflow_Modify_Options_Versioning_Override() {
 	}, 30*time.Second, 100*time.Millisecond)
 
 	res = s.Execute(
-		"workflow", "modify-options", "versioning-override",
+		"workflow", "update-options",
 		"--address", s.Address(),
 		"-w", run.GetID(),
-		"--deployment-behavior", "pinned",
-		"--deployment-series-name", seriesName,
-		"--deployment-build-id", buildId2,
+		"--versioning-override-behavior", "pinned",
+		"--versioning-override-series-name", seriesName,
+		"--versioning-override-build-id", buildId2,
 	)
 	s.NoError(res.Err)
 
@@ -584,10 +584,10 @@ func (s *SharedServerSuite) TestWorkflow_Modify_Options_Versioning_Override() {
 
 	// remove override
 	res = s.Execute(
-		"workflow", "modify-options", "versioning-override",
+		"workflow", "update-options",
 		"--address", s.Address(),
 		"-w", run.GetID(),
-		"--deployment-behavior", "unspecified",
+		"--versioning-override-behavior", "unspecified",
 	)
 	s.NoError(res.Err)
 

@@ -570,10 +570,10 @@ func (s *SharedServerSuite) TestWorkflow_Describe_Deployment() {
 	defer w.Stop()
 
 	res := s.Execute(
-		"deployment", "update-current",
+		"worker-deployment", "set-current",
 		"--address", s.Address(),
-		"--deployment-series-name", seriesName,
-		"--deployment-build-id", buildId,
+		"--series-name", seriesName,
+		"--build-id", buildId,
 	)
 	s.NoError(res.Err)
 

@@ -92,39 +92,39 @@ func (c *TemporalWorkflowDeleteCommand) run(cctx *CommandContext, args []string)
 	return nil
 }
 
-func (c *TemporalWorkflowModifyOptionsVersioningOverrideCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
+func (c *TemporalWorkflowUpdateOptionsCommand) run(cctx *CommandContext, args []string) error {
+	cl, err := c.Parent.ClientOptions.dialClient(cctx)
 	if err != nil {
 		return err
 	}
 	defer cl.Close()
 
-	if c.DeploymentBehavior.Value == "unspecified" || c.DeploymentBehavior.Value == "auto_upgrade" {
-		if c.DeploymentSeriesName != "" {
-			return fmt.Errorf("cannot set deployment series name with %v behavior", c.DeploymentBehavior)
+	if c.VersioningOverrideBehavior.Value == "unspecified" || c.VersioningOverrideBehavior.Value == "auto_upgrade" {
+		if c.VersioningOverrideSeriesName != "" {
+			return fmt.Errorf("cannot set deployment series name with %v behavior", c.VersioningOverrideBehavior)
 		}
-		if c.DeploymentBuildId != "" {
-			return fmt.Errorf("cannot set deployment build ID with %v behavior", c.DeploymentBehavior)
+		if c.VersioningOverrideBuildId != "" {
+			return fmt.Errorf("cannot set deployment build ID with %v behavior", c.VersioningOverrideBehavior)
 		}
 	}
 
-	if c.DeploymentBehavior.Value == "pinned" {
-		if c.DeploymentSeriesName == "" {
+	if c.VersioningOverrideBehavior.Value == "pinned" {
+		if c.VersioningOverrideSeriesName == "" {
 			return fmt.Errorf("missing deployment series name with 'pinned' behavior")
 		}
-		if c.DeploymentBuildId == "" {
+		if c.VersioningOverrideBuildId == "" {
 			return fmt.Errorf("missing deployment build ID with 'pinned' behavior")
 		}
 	}
 
-	exec, batchReq, err := c.Parent.workflowExecOrBatch(cctx, c.Parent.Parent.Namespace, cl, singleOrBatchOverrides{})
+	exec, batchReq, err := c.workflowExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{})
 
 	// Run single or batch
 	if err != nil {
 		return err
 	} else if exec != nil {
 		behavior := workflow.VersioningBehaviorUnspecified
-		switch c.DeploymentBehavior.Value {
+		switch c.VersioningOverrideBehavior.Value {
 		case "unspecified":
 		case "pinned":
 			behavior = workflow.VersioningBehaviorPinned
@@ -133,7 +133,7 @@ func (c *TemporalWorkflowModifyOptionsVersioningOverrideCommand) run(cctx *Comma
 		default:
 			return fmt.Errorf(
 				"invalid deployment behavior: %v, valid values are: 'unspecified', 'pinned', and 'auto_upgrade'",
-				c.DeploymentBehavior,
+				c.VersioningOverrideBehavior,
 			)
 		}
 
@@ -144,16 +144,16 @@ func (c *TemporalWorkflowModifyOptionsVersioningOverrideCommand) run(cctx *Comma
 				VersioningOverride: &client.VersioningOverride{
 					Behavior: behavior,
 					Deployment: client.Deployment{
-						SeriesName: c.DeploymentSeriesName,
-						BuildID:    c.DeploymentBuildId,
+						SeriesName: c.VersioningOverrideSeriesName,
+						BuildID:    c.VersioningOverrideBuildId,
 					},
 				},
 			},
 		})
 		if err != nil {
-			return fmt.Errorf("failed to override workflow versioning options: %w", err)
+			return fmt.Errorf("failed to update workflow options: %w", err)
 		}
-		cctx.Printer.Println("Override workflow versioning options succeeded")
+		cctx.Printer.Println("Update workflow options succeeded")
 	} else { // Run batch
 		var workflowExecutionOptions *workflowpb.WorkflowExecutionOptions
 		protoMask, err := fieldmaskpb.New(workflowExecutionOptions, "versioning_override")
@@ -162,7 +162,7 @@ func (c *TemporalWorkflowModifyOptionsVersioningOverrideCommand) run(cctx *Comma
 		}
 
 		behavior := enums.VERSIONING_BEHAVIOR_UNSPECIFIED
-		switch c.DeploymentBehavior.Value {
+		switch c.VersioningOverrideBehavior.Value {
 		case "unspecified":
 		case "pinned":
 			behavior = enums.VERSIONING_BEHAVIOR_PINNED
@@ -171,15 +171,15 @@ func (c *TemporalWorkflowModifyOptionsVersioningOverrideCommand) run(cctx *Comma
 		default:
 			return fmt.Errorf(
 				"invalid deployment behavior: %v, valid values are: 'unspecified', 'pinned', and 'auto_upgrade'",
-				c.DeploymentBehavior,
+				c.VersioningOverrideBehavior,
 			)
 		}
 
 		deployment := &deploymentpb.Deployment{
-			SeriesName: c.DeploymentSeriesName,
-			BuildId:    c.DeploymentBuildId,
+			SeriesName: c.VersioningOverrideSeriesName,
+			BuildId:    c.VersioningOverrideBuildId,
 		}
-		if c.DeploymentSeriesName == "" && c.DeploymentBuildId == "" {
+		if c.VersioningOverrideSeriesName == "" && c.VersioningOverrideBuildId == "" {
 			// auto_upgrade needs a `nil` pointer
 			deployment = nil
 		}
