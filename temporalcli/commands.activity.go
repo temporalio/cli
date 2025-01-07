@@ -271,10 +271,22 @@ func (c *TemporalActivityResetCommand) run(cctx *CommandContext, args []string) 
 		ResetHeartbeat: c.ResetHeartbeats,
 	}
 
-	_, err = cl.WorkflowService().ResetActivityById(cctx, request)
+	resp, err := cl.WorkflowService().ResetActivityById(cctx, request)
 	if err != nil {
 		return fmt.Errorf("unable to reset an Activity: %w", err)
 	}
+
+	resetResponse := struct {
+		NoWait          bool
+		ResetHeartbeats bool
+		ServerResponse  bool
+	}{
+		ServerResponse:  resp != nil,
+		NoWait:          c.NoWait,
+		ResetHeartbeats: c.ResetHeartbeats,
+	}
+
+	_ = cctx.Printer.PrintStructured(resetResponse, printer.StructuredOptions{})
 
 	return nil
 }

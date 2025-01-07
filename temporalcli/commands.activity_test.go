@@ -6,6 +6,7 @@ import (
 
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/history/v1"
+	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/sdk/client"
 )
 
@@ -247,6 +248,9 @@ func (s *SharedServerSuite) TestActivityReset() {
 	)
 
 	s.NoError(res.Err)
+	// make sure we receive a server response
+	out := res.Stdout.String()
+	s.ContainsOnSameLine(out, "ServerResponse", "true")
 
 	// reset should fail because activity is not found
 
@@ -260,6 +264,9 @@ func (s *SharedServerSuite) TestActivityReset() {
 	)
 
 	s.Error(res.Err)
+	// make sure we receive a NotFound error from the server`
+	var notFound *serviceerror.NotFound
+	s.ErrorAs(res.Err, &notFound)
 }
 
 // Test helpers
