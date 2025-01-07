@@ -358,9 +358,7 @@ func (s *StartOptions) buildServiceConfig(frontend bool) config.Service {
 	if frontend {
 		conf.RPC.GRPCPort = s.FrontendPort
 		conf.RPC.BindOnIP = s.FrontendIP
-		if s.FrontendHTTPPort > 0 {
-			conf.RPC.HTTPPort = s.FrontendHTTPPort
-		}
+		conf.RPC.HTTPPort = s.FrontendHTTPPort
 	} else {
 		conf.RPC.GRPCPort = MustGetFreePort(s.FrontendIP)
 		conf.RPC.BindOnIP = s.FrontendIP

@@ -59,8 +59,14 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 	if err := devserver.CheckPortFree(opts.FrontendIP, opts.FrontendPort); err != nil {
 		return fmt.Errorf("can't set frontend port %d: %w", opts.FrontendPort, err)
 	}
-	if err := devserver.CheckPortFree(opts.FrontendIP, opts.FrontendHTTPPort); err != nil {
-		return fmt.Errorf("can't set frontend HTTP port %d: %w", opts.FrontendHTTPPort, err)
+
+	// Grab a free port for HTTP ahead-of-time so we know what port is selected
+	if opts.FrontendHTTPPort == 0 {
+		opts.FrontendHTTPPort = devserver.MustGetFreePort(opts.FrontendIP)
+	} else {
+		if err := devserver.CheckPortFree(opts.FrontendIP, opts.FrontendHTTPPort); err != nil {
+			return fmt.Errorf("can't set frontend HTTP port %d: %w", opts.FrontendHTTPPort, err)
+		}
 	}
 	// Setup UI
 	if !t.Headless {
