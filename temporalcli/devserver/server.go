@@ -117,6 +117,10 @@ func Start(options StartOptions) (*Server, error) {
 		return nil, fmt.Errorf("missing initial failover version")
 	}
 
+	if options.FrontendHTTPPort == 0 {
+		options.FrontendHTTPPort = MustGetFreePort(options.FrontendIP)
+	}
+
 	// Build servers
 	var ui *uiserver.Server
 	if options.UIIP != "" {
