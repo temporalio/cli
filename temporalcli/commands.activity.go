@@ -277,9 +277,9 @@ func (c *TemporalActivityResetCommand) run(cctx *CommandContext, args []string) 
 	}
 
 	resetResponse := struct {
-		NoWait          bool
-		ResetHeartbeats bool
-		ServerResponse  bool
+		NoWait          bool `json:"noWait"`
+		ResetHeartbeats bool `json:"resetHeartbeats"`
+		ServerResponse  bool `json:"-"`
 	}{
 		ServerResponse:  resp != nil,
 		NoWait:          c.NoWait,
