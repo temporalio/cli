@@ -253,3 +253,40 @@ func (c *TemporalActivityUnpauseCommand) run(cctx *CommandContext, args []string
 
 	return nil
 }
+
+func (c *TemporalActivityResetCommand) run(cctx *CommandContext, args []string) error {
+	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	request := &workflowservice.ResetActivityByIdRequest{
+		Namespace:      c.Parent.Namespace,
+		WorkflowId:     c.WorkflowId,
+		RunId:          c.RunId,
+		ActivityId:     c.ActivityId,
+		Identity:       c.Identity,
+		NoWait:         c.NoWait,
+		ResetHeartbeat: c.ResetHeartbeats,
+	}
+
+	resp, err := cl.WorkflowService().ResetActivityById(cctx, request)
+	if err != nil {
+		return fmt.Errorf("unable to reset an Activity: %w", err)
+	}
+
+	resetResponse := struct {
+		NoWait          bool `json:"noWait"`
+		ResetHeartbeats bool `json:"resetHeartbeats"`
+		ServerResponse  bool `json:"-"`
+	}{
+		ServerResponse:  resp != nil,
+		NoWait:          c.NoWait,
+		ResetHeartbeats: c.ResetHeartbeats,
+	}
+
+	_ = cctx.Printer.PrintStructured(resetResponse, printer.StructuredOptions{})
+
+	return nil
+}

@@ -6,6 +6,7 @@ import (
 
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/history/v1"
+	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/sdk/client"
 )
 
@@ -229,6 +230,43 @@ func (s *SharedServerSuite) TestActivityUnPause_Failed() {
 	)
 
 	s.Error(res.Err)
+}
+
+func (s *SharedServerSuite) TestActivityReset() {
+	run := s.waitActivityStarted()
+	wid := run.GetID()
+	aid := "dev-activity-id"
+	identity := "MyIdentity"
+
+	res := s.Execute(
+		"activity", "reset",
+		"--activity-id", aid,
+		"--workflow-id", wid,
+		"--run-id", run.GetRunID(),
+		"--identity", identity,
+		"--address", s.Address(),
+	)
+
+	s.NoError(res.Err)
+	// make sure we receive a server response
+	out := res.Stdout.String()
+	s.ContainsOnSameLine(out, "ServerResponse", "true")
+
+	// reset should fail because activity is not found
+
+	res = s.Execute(
+		"activity", "reset",
+		"--activity-id", "fake_id",
+		"--workflow-id", wid,
+		"--run-id", run.GetRunID(),
+		"--identity", identity,
+		"--address", s.Address(),
+	)
+
+	s.Error(res.Err)
+	// make sure we receive a NotFound error from the server`
+	var notFound *serviceerror.NotFound
+	s.ErrorAs(res.Err, &notFound)
 }
 
 // Test helpers

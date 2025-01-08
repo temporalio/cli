@@ -201,12 +201,10 @@ commands:
           The command execution timeout. 0s means no timeout.
 
   - name: temporal activity
-    summary: Complete, update, pause, unpause or fail an Activity
+    summary: Complete, update, pause, unpause, reset or fail an Activity
     description: |
-      Update an Activity's options or update an Activity's state to completed 
-      or failed.
-
-      Pause or unpause an Activity.
+      Update an Activity's options, manage activity lifecycle or update 
+      an Activity's state to completed or failed.
 
       Updating activity state marks an Activity as successfully finished or as
       having encountered an error.
@@ -230,6 +228,7 @@ commands:
         - activity update-options
         - activity pause
         - activity unpause
+        - activity reset
         - activity execution 
         - activity fail
         - cli reference
@@ -453,6 +452,49 @@ commands:
         description: Reset the Activity's heartbeat timeout. Only works with --reset.
     option-sets:
       - workflow reference
+
+  - name: temporal activity reset
+    summary: Reset an Activity
+    description: |
+      Resetting an activity resets both the number of attempts and the activity 
+      timeout. If activity is paused, it will be un-paused. 
+
+      If the `no-wait` flag is provided, the activity will be rescheduled 
+      immediately. Even if the activity is currently running.
+      If the `no-wait` flag is not provided, the activity will be scheduled 
+      after the current instance completes, if needed.      
+      If the 'reset_heartbeats' flag is set, the activity heartbeat timer and 
+      heartbeats will be reset.
+
+      Specify the Activity and Workflow IDs:
+
+      ```
+      temporal activity reset \
+          --activity-id YourActivityId \
+          --workflow-id YourWorkflowId
+          --no-wait
+          --reset-heartbeats
+      ```
+    options:
+      - name: activity-id
+        short: a
+        type: string
+        description: Activity ID to pause.
+        required: true
+      - name: identity
+        type: string
+        description: Identity of the user submitting this request.
+      - name: no-wait
+        type: bool
+        description: |
+          Schedule the Activity immediately, even if its retry timeout has not 
+          expired or the activity is currently running.
+      - name: reset-heartbeats
+        type: bool
+        description: Reset the Activity's heartbeat.
+    option-sets:
+      - workflow reference
+
 
 
   - name: temporal batch
