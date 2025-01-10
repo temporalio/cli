@@ -25,26 +25,29 @@ import (
 
 func TestServer_StartDev_Simple(t *testing.T) {
 	port := strconv.Itoa(devserver.MustGetFreePort("127.0.0.1"))
+	httpPort := strconv.Itoa(devserver.MustGetFreePort("127.0.0.1"))
 	startDevServerAndRunSimpleTest(
 		t,
 		// TODO(cretz): Remove --headless when
 		// https://github.com/temporalio/ui/issues/1773 fixed
-		[]string{"server", "start-dev", "-p", port, "--headless"},
+		[]string{"server", "start-dev", "-p", port, "--http-port", httpPort, "--headless"},
 		"127.0.0.1:"+port,
 	)
 }
 
 func TestServer_StartDev_IPv4Unspecified(t *testing.T) {
 	port := strconv.Itoa(devserver.MustGetFreePort("0.0.0.0"))
+	httpPort := strconv.Itoa(devserver.MustGetFreePort("127.0.0.1"))
 	startDevServerAndRunSimpleTest(
 		t,
-		[]string{"server", "start-dev", "--ip", "0.0.0.0", "-p", port, "--headless"},
+		[]string{"server", "start-dev", "--ip", "0.0.0.0", "-p", port, "--http-port", httpPort, "--headless"},
 		"0.0.0.0:"+port,
 	)
 }
 
 func TestServer_StartDev_SQLitePragma(t *testing.T) {
 	port := strconv.Itoa(devserver.MustGetFreePort("0.0.0.0"))
+	httpPort := strconv.Itoa(devserver.MustGetFreePort("127.0.0.1"))
 	dbFilename := filepath.Join(os.TempDir(), "devserver-sqlite-pragma.sqlite")
 	defer func() {
 		_ = os.Remove(dbFilename)
@@ -55,7 +58,9 @@ func TestServer_StartDev_SQLitePragma(t *testing.T) {
 		t,
 		[]string{
 			"server", "start-dev",
-			"-p", port, "--headless",
+			"-p", port,
+			"--http-port", httpPort,
+			"--headless",
 			"--db-filename", dbFilename,
 			"--sqlite-pragma", "journal_mode=WAL",
 			"--sqlite-pragma", "synchronous=NORMAL",
@@ -76,12 +81,14 @@ func TestServer_StartDev_IPv6Unspecified(t *testing.T) {
 	}
 
 	port := strconv.Itoa(devserver.MustGetFreePort("::"))
+	httpPort := strconv.Itoa(devserver.MustGetFreePort("::"))
 	startDevServerAndRunSimpleTest(
 		t,
 		[]string{
 			"server", "start-dev",
 			"--ip", "::", "--ui-ip", "::1",
 			"-p", port,
+			"--http-port", httpPort,
 			"--ui-port", strconv.Itoa(devserver.MustGetFreePort("::")),
 			"--http-port", strconv.Itoa(devserver.MustGetFreePort("::")),
 			"--metrics-port", strconv.Itoa(devserver.MustGetFreePort("::"))},
@@ -138,9 +145,10 @@ func TestServer_StartDev_ConcurrentStarts(t *testing.T) {
 
 		// Start in background, then wait for client to be able to connect
 		port := strconv.Itoa(devserver.MustGetFreePort("127.0.0.1"))
+		httpPort := strconv.Itoa(devserver.MustGetFreePort("127.0.0.1"))
 		resCh := make(chan *CommandResult, 1)
 		go func() {
-			resCh <- h.Execute("server", "start-dev", "-p", port, "--headless", "--log-level", "never")
+			resCh <- h.Execute("server", "start-dev", "-p", port, "--http-port", httpPort, "--headless", "--log-level", "never")
 		}()
 
 		// Try to connect for a bit while checking for error
@@ -191,11 +199,13 @@ func TestServer_StartDev_WithSearchAttributes(t *testing.T) {
 
 	// Start in background, then wait for client to be able to connect
 	port := strconv.Itoa(devserver.MustGetFreePort("127.0.0.1"))
+	httpPort := strconv.Itoa(devserver.MustGetFreePort("127.0.0.1"))
 	resCh := make(chan *CommandResult, 1)
 	go func() {
 		resCh <- h.Execute(
 			"server", "start-dev",
 			"-p", port,
+			"--http-port", httpPort,
 			"--headless",
 			"--search-attribute", "search-attr-1=Int",
 			"--search-attribute", "search-attr-2=kEyWoRdLiSt",

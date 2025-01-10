@@ -117,6 +117,10 @@ func Start(options StartOptions) (*Server, error) {
 		return nil, fmt.Errorf("missing initial failover version")
 	}
 
+	if options.FrontendHTTPPort == 0 {
+		options.FrontendHTTPPort = MustGetFreePort(options.FrontendIP)
+	}
+
 	// Build servers
 	var ui *uiserver.Server
 	if options.UIIP != "" {
@@ -227,7 +231,6 @@ func (s *StartOptions) buildServerOptions() ([]temporal.ServerOption, error) {
 	dynConf[dynamicconfig.HistoryCacheHostLevelMaxSize.Key()] = 8096
 	// Up default visibility RPS
 	dynConf[dynamicconfig.FrontendMaxNamespaceVisibilityRPSPerInstance.Key()] = 100
-	// This doesn't enable Nexus but it is required for Nexus to work and simplifies the experience.
 	// NOTE that the URL scheme is fixed to HTTP since the dev server doesn't support TLS at the time of writing.
 	dynConf[nexusoperations.CallbackURLTemplate.Key()] = fmt.Sprintf(
 		"http://%s:%d/namespaces/{{.NamespaceName}}/nexus/callback", MaybeEscapeIPv6(s.FrontendIP), s.FrontendHTTPPort)
@@ -359,9 +362,7 @@ func (s *StartOptions) buildServiceConfig(frontend bool) config.Service {
 	if frontend {
 		conf.RPC.GRPCPort = s.FrontendPort
 		conf.RPC.BindOnIP = s.FrontendIP
-		if s.FrontendHTTPPort > 0 {
-			conf.RPC.HTTPPort = s.FrontendHTTPPort
-		}
+		conf.RPC.HTTPPort = s.FrontendHTTPPort
 	} else {
 		conf.RPC.GRPCPort = MustGetFreePort(s.FrontendIP)
 		conf.RPC.BindOnIP = s.FrontendIP

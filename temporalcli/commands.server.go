@@ -59,8 +59,11 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 	if err := devserver.CheckPortFree(opts.FrontendIP, opts.FrontendPort); err != nil {
 		return fmt.Errorf("can't set frontend port %d: %w", opts.FrontendPort, err)
 	}
-	if err := devserver.CheckPortFree(opts.FrontendIP, opts.FrontendHTTPPort); err != nil {
-		return fmt.Errorf("can't set frontend HTTP port %d: %w", opts.FrontendHTTPPort, err)
+
+	if opts.FrontendHTTPPort > 0 {
+		if err := devserver.CheckPortFree(opts.FrontendIP, opts.FrontendHTTPPort); err != nil {
+			return fmt.Errorf("can't set frontend HTTP port %d: %w", opts.FrontendHTTPPort, err)
+		}
 	}
 	// Setup UI
 	if !t.Headless {
@@ -152,6 +155,10 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 
 	cctx.Printer.Printlnf("CLI %v\n", VersionString())
 	cctx.Printer.Printlnf("%-8s %v:%v", "Server:", toFriendlyIp(opts.FrontendIP), opts.FrontendPort)
+	// Only print HTTP port if explicitly provided to avoid promoting the unstable HTTP API.
+	if opts.FrontendHTTPPort > 0 {
+		cctx.Printer.Printlnf("%-8s %v:%v", "HTTP:", toFriendlyIp(opts.FrontendIP), opts.FrontendHTTPPort)
+	}
 	if !t.Headless {
 		cctx.Printer.Printlnf("%-8s http://%v:%v%v", "UI:", toFriendlyIp(opts.UIIP), opts.UIPort, opts.PublicPath)
 	}
