@@ -14,6 +14,7 @@ type slogLogger struct {
 }
 
 var _ log.Logger = slogLogger{}
+var _ log.SLogWrapper = slogLogger{}
 
 func (s slogLogger) Debug(msg string, tags ...tag.Tag) { s.Log(slog.LevelDebug, msg, tags) }
 func (s slogLogger) Info(msg string, tags ...tag.Tag)  { s.Log(slog.LevelInfo, msg, tags) }
@@ -24,6 +25,10 @@ func (s slogLogger) Error(msg string, tags ...tag.Tag) { s.Log(slog.LevelError, 
 func (s slogLogger) DPanic(msg string, tags ...tag.Tag) { s.Log(slog.LevelError, msg, tags) }
 func (s slogLogger) Panic(msg string, tags ...tag.Tag)  { s.Log(slog.LevelError, msg, tags) }
 func (s slogLogger) Fatal(msg string, tags ...tag.Tag)  { s.Log(slog.LevelError, msg, tags) }
+
+func (s slogLogger) SLog() *slog.Logger {
+	return s.log
+}
 
 func (s slogLogger) Log(level slog.Level, msg string, tags []tag.Tag) {
 	if level >= s.level && s.log.Enabled(context.Background(), level) {

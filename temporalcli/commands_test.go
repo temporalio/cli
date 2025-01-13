@@ -216,8 +216,10 @@ func (s *SharedServerSuite) SetupSuite() {
 				// Allow a high rate of change to namespaces, particularly
 				// for the task-queue command tests.
 				"frontend.namespaceRPS.visibility": 10000,
-				// this is overridden since we don't want caching to be enabled while testing DescribeTaskQueue
-				// behaviour related to versioning
+				// Disable DescribeTaskQueue cache.
+				"frontend.activityAPIsEnabled": true,
+				// this is overridden since we don't want caching to be enabled
+				// while testing DescribeTaskQueue behaviour related to versioning
 				"matching.TaskQueueInfoByBuildIdTTL": 0 * time.Second,
 			},
 		},
@@ -369,7 +371,6 @@ func StartDevServer(t *testing.T, options DevServerOptions) *DevServer {
 	d.Options.DynamicConfigValues["frontend.workerVersioningWorkflowAPIs"] = true
 	d.Options.DynamicConfigValues["worker.buildIdScavengerEnabled"] = true
 	d.Options.DynamicConfigValues["frontend.enableUpdateWorkflowExecution"] = true
-	d.Options.DynamicConfigValues["system.enableNexus"] = true
 	d.Options.DynamicConfigValues["frontend.MaxConcurrentBatchOperationPerNamespace"] = 1000
 	d.Options.DynamicConfigValues["frontend.namespaceRPS.visibility"] = 100
 	d.Options.DynamicConfigValues["system.clusterMetadataRefreshInterval"] = 100 * time.Millisecond
