@@ -311,6 +311,8 @@ github.com/temporalio/tchannel-go v1.22.1-0.20240528171429-1db37fdea938 h1:sEJGh
 github.com/temporalio/tchannel-go v1.22.1-0.20240528171429-1db37fdea938/go.mod h1:ezRQRwu9KQXy8Wuuv1aaFFxoCNz5CeNbVOOkh3xctbY=
 github.com/temporalio/ui-server/v2 v2.32.0 h1:mR6eet9n4eRkGgHcZqaJdXWK5sfQguN4LoWxQXsqpY0=
 github.com/temporalio/ui-server/v2 v2.32.0/go.mod h1:b8whRt0/lbgNDzG7alSdiDzXFO8Fk783eRMhIycWtn8=
+github.com/temporalio/ui-server/v2 v2.34.0 h1:KLTTMh870/h1oxYqOtGMnmQBOP0oIcwFEnP7/i0C0hA=
+github.com/temporalio/ui-server/v2 v2.34.0/go.mod h1:Um2G8/8bDQczAdY+21ba+y+nLXwUdL7ZLlhAAaIeVqA=
 github.com/twmb/murmur3 v1.1.8 h1:8Yt9taO/WN3l08xErzjeschgZU2QSrwm1kclYq+0aRg=
 github.com/twmb/murmur3 v1.1.8/go.mod h1:Qq/R7NUyOfr65zD+6Q5IHKsJLwP7exErjN6lyyq3OSQ=
 github.com/uber-common/bark v1.0.0/go.mod h1:g0ZuPcD7XiExKHynr93Q742G/sbrdVQkghrqLGOoFuY=
