@@ -608,6 +608,11 @@ commands:
   - name: temporal worker
     summary: Read or update Worker state
     description: |
+      +---------------------------------------------------------------------+
+      | CAUTION: Worker is experimental. Worker commands are subject to     |
+      | change.                                                             |
+      +---------------------------------------------------------------------+
+
       Modify or read state associated with a Worker, for example,
       using Worker Deployments commands:
 
@@ -685,7 +690,7 @@ commands:
       - name: report-reachability
         type: bool
         description: |
-          Flag to include reachability information of a Worker Deployment.
+          Include reachability information of a Worker Deployment.
 
   - name: temporal worker deployment get-current
     summary: Show the current Worker Deployment
@@ -2884,6 +2889,11 @@ commands:
   - name: temporal workflow update-options
     summary: Change Workflow Execution Options
     description: |
+      +---------------------------------------------------------------------+
+      | CAUTION: Worflow update-options is experimental. Workflow Execution |
+      | properties are subject to change.                                   |
+      +---------------------------------------------------------------------+
+
       Modify properties of Workflow Executions:
 
       ```
@@ -2894,7 +2904,7 @@ commands:
       Workflow Execution, which controls Worker Versioning.
 
       For example, to force Workers in the current Deployment execute the
-      next Workflow Task:
+      next Workflow Task change behavior to `auto_upgrade`:
 
       ```
       temporal workflow update-options \
@@ -2902,7 +2912,8 @@ commands:
           --versioning-override-behavior auto_upgrade
       ```
 
-      or to pin the workflow execution to a Worker Deployment:
+      or to pin the workflow execution to a Worker Deployment, set behavior
+      to `pinned`:
 
       ```
       temporal workflow update-options \
@@ -2913,7 +2924,7 @@ commands:
       ```
 
       To remove any previous overrides, set the behavior to
-      unspecified:
+      `unspecified`:
 
       ```
       temporal workflow update-options \
@@ -2929,7 +2940,7 @@ commands:
       - name: versioning-override-behavior
         type: string-enum
         description: |
-          Flag to override the versioning behavior of a Workflow.
+          Override the versioning behavior of a Workflow.
         required: true
         enum-values:
           - unspecified

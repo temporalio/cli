@@ -262,7 +262,8 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
 	)
 	s.NoError(res.Err)
 
-	// TODO(antlai-temporal): Delete when a server caching bug in 1.26.2 is fixed
+	// TODO(antlai-temporal): Delete when a server caching bug in 1.26.2 is fixed,
+	// see https://github.com/temporalio/temporal/pull/6978
 	time.Sleep(1 * time.Second)
 
 	// Text
@@ -278,7 +279,8 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
 	// No pollers on id1
 	s.NotContains(res.Stdout.String(), "now")
 
-	// TODO(antlai-temporal): Delete when a server caching bug in 1.26.2 is fixed
+	// TODO(antlai-temporal): Delete when a server caching bug in 1.26.2 is fixed,
+	// see https://github.com/temporalio/temporal/pull/6978
 	time.Sleep(1 * time.Second)
 
 	res = s.Execute(
@@ -295,7 +297,8 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
 	s.ContainsOnSameLine(res.Stdout.String(), "UNVERSIONED", "workflow", s.DevServer.Options.ClientOptions.Identity, "2 seconds ago", "100000")
 	s.ContainsOnSameLine(res.Stdout.String(), "UNVERSIONED", "activity", s.DevServer.Options.ClientOptions.Identity, "2 seconds ago", "100000")
 
-	// TODO(antlai-temporal): Delete when a server caching bug in 1.26.2 is fixed
+	// TODO(antlai-temporal): Delete when a server caching bug in 1.26.2 is fixed,
+	// see https://github.com/temporalio/temporal/pull/6978
 	time.Sleep(1 * time.Second)
 
 	res = s.Execute(
@@ -312,7 +315,8 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Simple() {
 	// No pollers on id2
 	s.NotContains(res.Stdout.String(), "now")
 
-	// TODO(antlai-temporal): Delete when a server caching bug in 1.26.2 is fixed
+	// TODO(antlai-temporal): Delete when a server caching bug in 1.26.2 is fixed,
+	// see https://github.com/temporalio/temporal/pull/6978
 	time.Sleep(1 * time.Second)
 
 	res = s.Execute(

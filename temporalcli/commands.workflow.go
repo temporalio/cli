@@ -158,7 +158,7 @@ func (c *TemporalWorkflowUpdateOptionsCommand) run(cctx *CommandContext, args []
 		var workflowExecutionOptions *workflowpb.WorkflowExecutionOptions
 		protoMask, err := fieldmaskpb.New(workflowExecutionOptions, "versioning_override")
 		if err != nil {
-			panic("invalid field mask")
+			return fmt.Errorf("invalid field mask: %w", err)
 		}
 
 		behavior := enums.VERSIONING_BEHAVIOR_UNSPECIFIED
