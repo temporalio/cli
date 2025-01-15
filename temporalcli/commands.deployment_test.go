@@ -46,7 +46,7 @@ func (s *SharedServerSuite) TestDeployment_Set_Current() {
 	buildId := uuid.NewString()
 
 	res := s.Execute(
-		"worker-deployment", "set-current",
+		"worker", "deployment", "set-current",
 		"--address", s.Address(),
 		"--series-name", seriesName,
 		"--build-id", buildId,
@@ -55,7 +55,7 @@ func (s *SharedServerSuite) TestDeployment_Set_Current() {
 	s.NoError(res.Err)
 
 	res = s.Execute(
-		"worker-deployment", "get-current",
+		"worker", "deployment", "get-current",
 		"--address", s.Address(),
 		"--series-name", seriesName,
 	)
@@ -68,7 +68,7 @@ func (s *SharedServerSuite) TestDeployment_Set_Current() {
 
 	// json
 	res = s.Execute(
-		"worker-deployment", "get-current",
+		"worker", "deployment", "get-current",
 		"--address", s.Address(),
 		"--series-name", seriesName,
 		"--output", "json",
@@ -91,7 +91,7 @@ func (s *SharedServerSuite) TestDeployment_List() {
 	buildId2 := uuid.NewString()
 
 	res := s.Execute(
-		"worker-deployment", "set-current",
+		"worker", "deployment", "set-current",
 		"--address", s.Address(),
 		"--series-name", seriesName,
 		"--build-id", buildId1,
@@ -99,7 +99,7 @@ func (s *SharedServerSuite) TestDeployment_List() {
 	s.NoError(res.Err)
 
 	res = s.Execute(
-		"worker-deployment", "set-current",
+		"worker", "deployment", "set-current",
 		"--address", s.Address(),
 		"--series-name", seriesName,
 		"--build-id", buildId2,
@@ -107,7 +107,7 @@ func (s *SharedServerSuite) TestDeployment_List() {
 	s.NoError(res.Err)
 
 	res = s.Execute(
-		"worker-deployment", "list",
+		"worker", "deployment", "list",
 		"--address", s.Address(),
 		"--series-name", seriesName,
 	)
@@ -118,7 +118,7 @@ func (s *SharedServerSuite) TestDeployment_List() {
 
 	// json
 	res = s.Execute(
-		"worker-deployment", "list",
+		"worker", "deployment", "list",
 		"--address", s.Address(),
 		"--series-name", seriesName,
 		"--output", "json",
@@ -143,7 +143,7 @@ func (s *SharedServerSuite) TestDeployment_Describe_Reachability() {
 	buildId2 := uuid.NewString()
 
 	res := s.Execute(
-		"worker-deployment", "set-current",
+		"worker", "deployment", "set-current",
 		"--address", s.Address(),
 		"--series-name", seriesName,
 		"--build-id", buildId1,
@@ -151,7 +151,7 @@ func (s *SharedServerSuite) TestDeployment_Describe_Reachability() {
 	s.NoError(res.Err)
 
 	res = s.Execute(
-		"worker-deployment", "set-current",
+		"worker", "deployment", "set-current",
 		"--address", s.Address(),
 		"--series-name", seriesName,
 		"--build-id", buildId2,
@@ -159,7 +159,7 @@ func (s *SharedServerSuite) TestDeployment_Describe_Reachability() {
 	s.NoError(res.Err)
 
 	res = s.Execute(
-		"worker-deployment", "describe",
+		"worker", "deployment", "describe",
 		"--address", s.Address(),
 		"--series-name", seriesName,
 		"--build-id", buildId1,
@@ -174,7 +174,7 @@ func (s *SharedServerSuite) TestDeployment_Describe_Reachability() {
 
 	// json
 	res = s.Execute(
-		"worker-deployment", "describe",
+		"worker", "deployment", "describe",
 		"--address", s.Address(),
 		"--series-name", seriesName,
 		"--build-id", buildId2,

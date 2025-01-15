@@ -213,7 +213,7 @@ func printDeploymentSetCurrentResponse(cctx *CommandContext, response client.Dep
 }
 
 func (c *TemporalWorkerDeploymentDescribeCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
 	if err != nil {
 		return err
 	}
@@ -256,7 +256,7 @@ func (c *TemporalWorkerDeploymentDescribeCommand) run(cctx *CommandContext, args
 }
 
 func (c *TemporalWorkerDeploymentGetCurrentCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
 	if err != nil {
 		return err
 	}
@@ -278,7 +278,7 @@ func (c *TemporalWorkerDeploymentGetCurrentCommand) run(cctx *CommandContext, ar
 }
 
 func (c *TemporalWorkerDeploymentListCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.dialClient(cctx)
+	cl, err := c.Parent.Parent.dialClient(cctx)
 	if err != nil {
 		return err
 	}
@@ -343,7 +343,7 @@ func (c *TemporalWorkerDeploymentListCommand) run(cctx *CommandContext, args []s
 }
 
 func (c *TemporalWorkerDeploymentSetCurrentCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.dialClient(cctx)
+	cl, err := c.Parent.Parent.dialClient(cctx)
 	if err != nil {
 		return err
 	}

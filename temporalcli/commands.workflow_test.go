@@ -444,7 +444,7 @@ func (s *SharedServerSuite) TestWorkflow_Batch_Update_Options_Versioning_Overrid
 	defer w.Stop()
 
 	res := s.Execute(
-		"worker-deployment", "set-current",
+		"worker", "deployment", "set-current",
 		"--address", s.Address(),
 		"--series-name", seriesName,
 		"--build-id", buildId1,
@@ -535,7 +535,7 @@ func (s *SharedServerSuite) TestWorkflow_Update_Options_Versioning_Override() {
 	defer w.Stop()
 
 	res := s.Execute(
-		"worker-deployment", "set-current",
+		"worker", "deployment", "set-current",
 		"--address", s.Address(),
 		"--series-name", seriesName,
 		"--build-id", buildId1,

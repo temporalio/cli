@@ -394,7 +394,26 @@ commands:
         description: Reason for terminating the batch job.
         required: true
 
-  - name: temporal worker-deployment
+  - name: temporal worker
+    summary: Read or update Worker state
+    description: |
+      Modify or read state associated with a Worker, for example,
+      using Worker Deployments commands:
+
+      ```
+      temporal worker deployment
+      ```
+    option-sets:
+      - client
+    docs:
+      description-header: >-
+         Learn how to read or modify state associated with a Worker,
+         such as Worker Deployments.
+      keywords:
+        - worker
+        - worker deployment
+
+  - name: temporal worker deployment
     summary: Describe, list, and operate on Worker Deployments
     description: |
       +---------------------------------------------------------------------+
@@ -405,29 +424,27 @@ commands:
       Deployment commands perform operations on Worker Deployments:
 
       ```
-      temporal worker-deployment [command] [options]
+      temporal worker deployment [command] [options]
       ```
 
       For example:
 
       ```
-      temporal worker-deployment list
+      temporal worker deployment list
       ```
-    option-sets:
-      - client
     docs:
       description-header: >-
         Temporal Deployment commands enable operations on Worker Deployments,
         such as describe, list, set-current, and get-current, simplifying
         versioning and management of workers.
       keywords:
-        - worker-deployment
-        - worker-deployment describe
-        - worker-deployment list
-        - worker-deployment get-current
-        - worker-deployment set-current
+        - worker deployment
+        - worker deployment describe
+        - worker deployment list
+        - worker deployment get-current
+        - worker deployment set-current
 
-  - name: temporal worker-deployment describe
+  - name: temporal worker deployment describe
     summary: Show properties of a Worker Deployment
     description: |
       +---------------------------------------------------------------------+
@@ -440,13 +457,13 @@ commands:
       present, and reachability status when requested.
 
       ```
-      temporal worker-deployment describe [options]
+      temporal worker deployment describe [options]
       ```
 
       For example, to also include reachability information:
 
       ```
-      temporal worker-deployment describe \
+      temporal worker deployment describe \
           --series-name YourDeploymentSeriesName \
           --build-id YourDeploymentBuildId \
           --report-reachability
@@ -459,7 +476,7 @@ commands:
         description: |
           Flag to include reachability information of a Worker Deployment.
 
-  - name: temporal worker-deployment get-current
+  - name: temporal worker deployment get-current
     summary: Show the current Worker Deployment
     description: |
       +---------------------------------------------------------------------+
@@ -473,13 +490,13 @@ commands:
       are running on this Deployment Series.
 
       ```
-      temporal worker-deployment get-current [options]
+      temporal worker deployment get-current [options]
       ```
 
       For example:
 
       ```
-      temporal worker-deployment get-current \
+      temporal worker deployment get-current \
           --series-name YourDeploymentSeriesName
       ```
     options:
@@ -488,7 +505,7 @@ commands:
         description: Series Name for the current Worker Deployment.
         required: true
 
-  - name: temporal worker-deployment list
+  - name: temporal worker deployment list
     summary: Enumerate Worker Deployments in the client's namespace
     description: |
       +---------------------------------------------------------------------+
@@ -501,13 +518,13 @@ commands:
 
 
       ```
-      temporal worker-deployment list [options]
+      temporal worker deployment list [options]
       ```
 
       For example, adding an optional filter:
 
       ```
-      temporal worker-deployment list \
+      temporal worker deployment list \
           --series-name YourDeploymentSeriesName
       ```
     options:
@@ -515,7 +532,7 @@ commands:
         type: string
         description: Series Name to filter Worker Deployments.
 
-  - name: temporal worker-deployment set-current
+  - name: temporal worker deployment set-current
     summary: Change the current Worker Deployment
     description: |
       +---------------------------------------------------------------------+
@@ -529,13 +546,13 @@ commands:
       are running on this Deployment Series.
 
       ```
-      temporal worker-deployment set-current [options]
+      temporal worker deployment set-current [options]
       ```
 
       For example:
 
       ```
-      temporal worker-deployment set-current \
+      temporal worker deployment set-current \
           --series-name YourDeploymentSeriesName \
           --build-id YourDeploymentBuildId
       ```

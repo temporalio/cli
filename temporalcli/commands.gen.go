@@ -308,7 +308,7 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	s.Command.AddCommand(&NewTemporalScheduleCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalServerCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalTaskQueueCommand(cctx, &s).Command)
-	s.Command.AddCommand(&NewTemporalWorkerDeploymentCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkerCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowCommand(cctx, &s).Command)
 	s.Command.PersistentFlags().StringVar(&s.Env, "env", "default", "Active environment name (`ENV`).")
 	cctx.BindFlagEnvVar(s.Command.PersistentFlags().Lookup("env"), "TEMPORAL_ENV")
@@ -2339,28 +2339,48 @@ func NewTemporalTaskQueueVersioningReplaceRedirectRuleCommand(cctx *CommandConte
 	return &s
 }
 
-type TemporalWorkerDeploymentCommand struct {
+type TemporalWorkerCommand struct {
 	Parent  *TemporalCommand
 	Command cobra.Command
 	ClientOptions
 }
 
-func NewTemporalWorkerDeploymentCommand(cctx *CommandContext, parent *TemporalCommand) *TemporalWorkerDeploymentCommand {
+func NewTemporalWorkerCommand(cctx *CommandContext, parent *TemporalCommand) *TemporalWorkerCommand {
+	var s TemporalWorkerCommand
+	s.Parent = parent
+	s.Command.Use = "worker"
+	s.Command.Short = "Read or update Worker state"
+	if hasHighlighting {
+		s.Command.Long = "Modify or read state associated with a Worker, for example,\nusing Worker Deployments commands:\n\n\x1b[1mtemporal worker deployment\x1b[0m"
+	} else {
+		s.Command.Long = "Modify or read state associated with a Worker, for example,\nusing Worker Deployments commands:\n\n```\ntemporal worker deployment\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalWorkerDeploymentCommand(cctx, &s).Command)
+	s.ClientOptions.buildFlags(cctx, s.Command.PersistentFlags())
+	return &s
+}
+
+type TemporalWorkerDeploymentCommand struct {
+	Parent  *TemporalWorkerCommand
+	Command cobra.Command
+}
+
+func NewTemporalWorkerDeploymentCommand(cctx *CommandContext, parent *TemporalWorkerCommand) *TemporalWorkerDeploymentCommand {
 	var s TemporalWorkerDeploymentCommand
 	s.Parent = parent
-	s.Command.Use = "worker-deployment"
+	s.Command.Use = "deployment"
 	s.Command.Short = "Describe, list, and operate on Worker Deployments"
 	if hasHighlighting {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nDeployment commands perform operations on Worker Deployments:\n\n\x1b[1mtemporal worker-deployment [command] [options]\x1b[0m\n\nFor example:\n\n\x1b[1mtemporal worker-deployment list\x1b[0m"
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nDeployment commands perform operations on Worker Deployments:\n\n\x1b[1mtemporal worker deployment [command] [options]\x1b[0m\n\nFor example:\n\n\x1b[1mtemporal worker deployment list\x1b[0m"
 	} else {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nDeployment commands perform operations on Worker Deployments:\n\n```\ntemporal worker-deployment [command] [options]\n```\n\nFor example:\n\n```\ntemporal worker-deployment list\n```"
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nDeployment commands perform operations on Worker Deployments:\n\n```\ntemporal worker deployment [command] [options]\n```\n\nFor example:\n\n```\ntemporal worker deployment list\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentDescribeCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentGetCurrentCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentListCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentSetCurrentCommand(cctx, &s).Command)
-	s.ClientOptions.buildFlags(cctx, s.Command.PersistentFlags())
 	return &s
 }
 
@@ -2378,9 +2398,9 @@ func NewTemporalWorkerDeploymentDescribeCommand(cctx *CommandContext, parent *Te
 	s.Command.Use = "describe [flags]"
 	s.Command.Short = "Show properties of a Worker Deployment"
 	if hasHighlighting {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nDescribes properties of a Worker Deployment, such as whether it is\ncurrent, the non-empty list of its task queues, custom metadata if\npresent, and reachability status when requested.\n\n\x1b[1mtemporal worker-deployment describe [options]\x1b[0m\n\nFor example, to also include reachability information:\n\n\x1b[1mtemporal worker-deployment describe \\\n    --series-name YourDeploymentSeriesName \\\n    --build-id YourDeploymentBuildId \\\n    --report-reachability\x1b[0m"
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nDescribes properties of a Worker Deployment, such as whether it is\ncurrent, the non-empty list of its task queues, custom metadata if\npresent, and reachability status when requested.\n\n\x1b[1mtemporal worker deployment describe [options]\x1b[0m\n\nFor example, to also include reachability information:\n\n\x1b[1mtemporal worker deployment describe \\\n    --series-name YourDeploymentSeriesName \\\n    --build-id YourDeploymentBuildId \\\n    --report-reachability\x1b[0m"
 	} else {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nDescribes properties of a Worker Deployment, such as whether it is\ncurrent, the non-empty list of its task queues, custom metadata if\npresent, and reachability status when requested.\n\n```\ntemporal worker-deployment describe [options]\n```\n\nFor example, to also include reachability information:\n\n```\ntemporal worker-deployment describe \\\n    --series-name YourDeploymentSeriesName \\\n    --build-id YourDeploymentBuildId \\\n    --report-reachability\n```"
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nDescribes properties of a Worker Deployment, such as whether it is\ncurrent, the non-empty list of its task queues, custom metadata if\npresent, and reachability status when requested.\n\n```\ntemporal worker deployment describe [options]\n```\n\nFor example, to also include reachability information:\n\n```\ntemporal worker deployment describe \\\n    --series-name YourDeploymentSeriesName \\\n    --build-id YourDeploymentBuildId \\\n    --report-reachability\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().BoolVar(&s.ReportReachability, "report-reachability", false, "Flag to include reachability information of a Worker Deployment.")
@@ -2406,9 +2426,9 @@ func NewTemporalWorkerDeploymentGetCurrentCommand(cctx *CommandContext, parent *
 	s.Command.Use = "get-current [flags]"
 	s.Command.Short = "Show the current Worker Deployment"
 	if hasHighlighting {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nGets the current Worker Deployment for a Deployment Series Name.\nWhen a Deployment is current, Workers of that Deployment will receive\ntasks from new Workflows and from existing AutoUpgrade Workflows that\nare running on this Deployment Series.\n\n\x1b[1mtemporal worker-deployment get-current [options]\x1b[0m\n\nFor example:\n\n\x1b[1mtemporal worker-deployment get-current \\\n    --series-name YourDeploymentSeriesName\x1b[0m"
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nGets the current Worker Deployment for a Deployment Series Name.\nWhen a Deployment is current, Workers of that Deployment will receive\ntasks from new Workflows and from existing AutoUpgrade Workflows that\nare running on this Deployment Series.\n\n\x1b[1mtemporal worker deployment get-current [options]\x1b[0m\n\nFor example:\n\n\x1b[1mtemporal worker deployment get-current \\\n    --series-name YourDeploymentSeriesName\x1b[0m"
 	} else {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nGets the current Worker Deployment for a Deployment Series Name.\nWhen a Deployment is current, Workers of that Deployment will receive\ntasks from new Workflows and from existing AutoUpgrade Workflows that\nare running on this Deployment Series.\n\n```\ntemporal worker-deployment get-current [options]\n```\n\nFor example:\n\n```\ntemporal worker-deployment get-current \\\n    --series-name YourDeploymentSeriesName\n```"
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nGets the current Worker Deployment for a Deployment Series Name.\nWhen a Deployment is current, Workers of that Deployment will receive\ntasks from new Workflows and from existing AutoUpgrade Workflows that\nare running on this Deployment Series.\n\n```\ntemporal worker deployment get-current [options]\n```\n\nFor example:\n\n```\ntemporal worker deployment get-current \\\n    --series-name YourDeploymentSeriesName\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.SeriesName, "series-name", "", "Series Name for the current Worker Deployment. Required.")
@@ -2434,9 +2454,9 @@ func NewTemporalWorkerDeploymentListCommand(cctx *CommandContext, parent *Tempor
 	s.Command.Use = "list [flags]"
 	s.Command.Short = "Enumerate Worker Deployments in the client's namespace"
 	if hasHighlighting {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nList existing Worker Deployments in the client's namespace, optionally\nfiltering them by Deployment Series Name.\n\n\n\x1b[1mtemporal worker-deployment list [options]\x1b[0m\n\nFor example, adding an optional filter:\n\n\x1b[1mtemporal worker-deployment list \\\n    --series-name YourDeploymentSeriesName\x1b[0m"
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nList existing Worker Deployments in the client's namespace, optionally\nfiltering them by Deployment Series Name.\n\n\n\x1b[1mtemporal worker deployment list [options]\x1b[0m\n\nFor example, adding an optional filter:\n\n\x1b[1mtemporal worker deployment list \\\n    --series-name YourDeploymentSeriesName\x1b[0m"
 	} else {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nList existing Worker Deployments in the client's namespace, optionally\nfiltering them by Deployment Series Name.\n\n\n```\ntemporal worker-deployment list [options]\n```\n\nFor example, adding an optional filter:\n\n```\ntemporal worker-deployment list \\\n    --series-name YourDeploymentSeriesName\n```"
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nList existing Worker Deployments in the client's namespace, optionally\nfiltering them by Deployment Series Name.\n\n\n```\ntemporal worker deployment list [options]\n```\n\nFor example, adding an optional filter:\n\n```\ntemporal worker deployment list \\\n    --series-name YourDeploymentSeriesName\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.SeriesName, "series-name", "", "Series Name to filter Worker Deployments.")
@@ -2462,9 +2482,9 @@ func NewTemporalWorkerDeploymentSetCurrentCommand(cctx *CommandContext, parent *
 	s.Command.Use = "set-current [flags]"
 	s.Command.Short = "Change the current Worker Deployment"
 	if hasHighlighting {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nSets the current Deployment for a given Deployment Series.\nWhen a Deployment is current, Workers of that Deployment will receive\ntasks from new Workflows and from existing AutoUpgrade Workflows that\nare running on this Deployment Series.\n\n\x1b[1mtemporal worker-deployment set-current [options]\x1b[0m\n\nFor example:\n\n\x1b[1mtemporal worker-deployment set-current \\\n    --series-name YourDeploymentSeriesName \\\n    --build-id YourDeploymentBuildId\x1b[0m"
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nSets the current Deployment for a given Deployment Series.\nWhen a Deployment is current, Workers of that Deployment will receive\ntasks from new Workflows and from existing AutoUpgrade Workflows that\nare running on this Deployment Series.\n\n\x1b[1mtemporal worker deployment set-current [options]\x1b[0m\n\nFor example:\n\n\x1b[1mtemporal worker deployment set-current \\\n    --series-name YourDeploymentSeriesName \\\n    --build-id YourDeploymentBuildId\x1b[0m"
 	} else {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nSets the current Deployment for a given Deployment Series.\nWhen a Deployment is current, Workers of that Deployment will receive\ntasks from new Workflows and from existing AutoUpgrade Workflows that\nare running on this Deployment Series.\n\n```\ntemporal worker-deployment set-current [options]\n```\n\nFor example:\n\n```\ntemporal worker-deployment set-current \\\n    --series-name YourDeploymentSeriesName \\\n    --build-id YourDeploymentBuildId\n```"
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nSets the current Deployment for a given Deployment Series.\nWhen a Deployment is current, Workers of that Deployment will receive\ntasks from new Workflows and from existing AutoUpgrade Workflows that\nare running on this Deployment Series.\n\n```\ntemporal worker deployment set-current [options]\n```\n\nFor example:\n\n```\ntemporal worker deployment set-current \\\n    --series-name YourDeploymentSeriesName \\\n    --build-id YourDeploymentBuildId\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringArrayVar(&s.Metadata, "metadata", nil, "Set deployment metadata using `KEY=\"VALUE\"` pairs. Keys must be identifiers, and values must be JSON values. For example: 'YourKey={\"your\": \"value\"}'. Can be passed multiple times.")
