@@ -173,6 +173,7 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 			NextAttemptScheduleTime time.Time        `cli:",cardOmitEmpty"`
 			LastAttemptCompleteTime time.Time        `cli:",cardOmitEmpty"`
 			LastAttemptFailure      *failure.Failure `cli:",cardOmitEmpty"`
+			BlockedReason           string           `cli:",cardOmitEmpty"`
 		}, len(resp.Callbacks))
 		for i, cb := range resp.Callbacks {
 			cbs[i].URL = cb.GetCallback().GetNexus().GetUrl()
@@ -186,6 +187,7 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 			if cb.GetTrigger().GetWorkflowClosed() != nil {
 				cbs[i].Trigger = "WorkflowClosed"
 			}
+			cbs[i].BlockedReason = cb.GetBlockedReason()
 		}
 		_ = cctx.Printer.PrintStructured(cbs, printer.StructuredOptions{})
 		cctx.Printer.Println()
@@ -248,12 +250,14 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 				NextAttemptScheduleTime            time.Time                             `cli:",cardOmitEmpty"`
 				LastAttemptCompleteTime            time.Time                             `cli:",cardOmitEmpty"`
 				LastAttemptFailure                 *failure.Failure                      `cli:",cardOmitEmpty"`
+				BlockedReason                      string                                `cli:",cardOmitEmpty"`
 				CancelationState                   enums.NexusOperationCancellationState `cli:",cardOmitEmpty"`
 				CancelationAttempt                 int32                                 `cli:",cardOmitEmpty"`
 				CancelationRequestedTime           time.Time                             `cli:",cardOmitEmpty"`
 				CancelationNextAttemptScheduleTime time.Time                             `cli:",cardOmitEmpty"`
 				CancelationLastAttemptCompleteTime time.Time                             `cli:",cardOmitEmpty"`
 				CancelationLastAttemptFailure      *failure.Failure                      `cli:",cardOmitEmpty"`
+				CancelationBlockedReason           string                                `cli:",cardOmitEmpty"`
 			}, len(resp.PendingNexusOperations))
 			for i, op := range resp.PendingNexusOperations {
 				ops[i].Endpoint = op.GetEndpoint()
@@ -266,12 +270,14 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 				ops[i].LastAttemptCompleteTime = timestampToTime(op.LastAttemptCompleteTime)
 				ops[i].NextAttemptScheduleTime = timestampToTime(op.NextAttemptScheduleTime)
 				ops[i].ScheduleToCloseTimeout = formatDuration(op.GetScheduleToCloseTimeout().AsDuration())
+				ops[i].BlockedReason = op.GetBlockedReason()
 				ops[i].CancelationState = op.GetCancellationInfo().GetState()
 				ops[i].CancelationAttempt = op.GetCancellationInfo().GetAttempt()
 				ops[i].CancelationLastAttemptFailure = op.GetCancellationInfo().GetLastAttemptFailure()
 				ops[i].CancelationLastAttemptCompleteTime = timestampToTime(op.GetCancellationInfo().GetLastAttemptCompleteTime())
 				ops[i].CancelationNextAttemptScheduleTime = timestampToTime(op.GetCancellationInfo().GetNextAttemptScheduleTime())
 				ops[i].CancelationRequestedTime = timestampToTime(op.GetCancellationInfo().GetRequestedTime())
+				ops[i].CancelationBlockedReason = op.GetCancellationInfo().GetBlockedReason()
 			}
 			_ = cctx.Printer.PrintStructured(ops, printer.StructuredOptions{})
 			cctx.Printer.Println()

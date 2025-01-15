@@ -6,6 +6,7 @@ import (
 
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/history/v1"
+	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/sdk/client"
 )
 
@@ -104,6 +105,168 @@ func (s *SharedServerSuite) TestActivity_Fail_InvalidDetail() {
 	s.Nil(started)
 	s.Nil(completed)
 	s.Nil(failed)
+}
+
+func (s *SharedServerSuite) TestActivityOptionsUpdate_Accept() {
+	run := s.waitActivityStarted()
+	wid := run.GetID()
+	aid := "dev-activity-id"
+	identity := "MyIdentity"
+
+	res := s.Execute(
+		"activity", "update-options",
+		"--activity-id", aid,
+		"--workflow-id", wid,
+		"--run-id", run.GetRunID(),
+		"--identity", identity,
+		"--task-queue", "new-task-queue",
+		"--schedule-to-close-timeout", "60s",
+		"--schedule-to-start-timeout", "5s",
+		"--start-to-close-timeout", "10s",
+		"--heartbeat-timeout", "20s",
+		"--retry-initial-interval", "5s",
+		"--retry-maximum-interval", "60s",
+		"--retry-backoff-coefficient", "2",
+		"--retry-maximum-attempts", "5",
+		"--address", s.Address(),
+	)
+
+	s.NoError(res.Err)
+	out := res.Stdout.String()
+	s.ContainsOnSameLine(out, "ScheduleToCloseTimeout", "1m0s")
+	s.ContainsOnSameLine(out, "ScheduleToStartTimeout", "5s")
+	s.ContainsOnSameLine(out, "StartToCloseTimeout", "10s")
+	s.ContainsOnSameLine(out, "HeartbeatTimeout", "10s")
+	s.ContainsOnSameLine(out, "InitialInterval", "5s")
+	s.ContainsOnSameLine(out, "MaximumInterval", "1m0s")
+	s.ContainsOnSameLine(out, "BackoffCoefficient", "2")
+	s.ContainsOnSameLine(out, "MaximumAttempts", "5")
+}
+
+func (s *SharedServerSuite) TestActivityOptionsUpdate_Partial() {
+	run := s.waitActivityStarted()
+	wid := run.GetID()
+	aid := "dev-activity-id"
+	identity := "MyIdentity"
+
+	res := s.Execute(
+		"activity", "update-options",
+		"--activity-id", aid,
+		"--workflow-id", wid,
+		"--run-id", run.GetRunID(),
+		"--identity", identity,
+		"--task-queue", "new-task-queue",
+		"--schedule-to-close-timeout", "41s",
+		"--schedule-to-start-timeout", "11s",
+		"--retry-initial-interval", "4s",
+		"--retry-maximum-attempts", "10",
+		"--address", s.Address(),
+	)
+
+	s.NoError(res.Err)
+	out := res.Stdout.String()
+
+	// updated
+	s.ContainsOnSameLine(out, "ScheduleToCloseTimeout", "41s")
+	s.ContainsOnSameLine(out, "ScheduleToStartTimeout", "11s")
+	s.ContainsOnSameLine(out, "StartToCloseTimeout", "10s")
+	s.ContainsOnSameLine(out, "InitialInterval", "4s")
+	s.ContainsOnSameLine(out, "MaximumAttempts", "10")
+
+	// old value
+	// note - this is a snapshot of current values
+	// if this test fails, check the default values of activity options
+	s.ContainsOnSameLine(out, "StartToCloseTimeout", "10s")
+	s.ContainsOnSameLine(out, "HeartbeatTimeout", "0s")
+	s.ContainsOnSameLine(out, "MaximumInterval", "1m40s")
+	s.ContainsOnSameLine(out, "BackoffCoefficient", "2")
+}
+
+func (s *SharedServerSuite) TestActivityPauseUnpause() {
+	run := s.waitActivityStarted()
+	wid := run.GetID()
+	aid := "dev-activity-id"
+	identity := "MyIdentity"
+
+	res := s.Execute(
+		"activity", "pause",
+		"--activity-id", aid,
+		"--workflow-id", wid,
+		"--run-id", run.GetRunID(),
+		"--identity", identity,
+		"--address", s.Address(),
+	)
+
+	s.NoError(res.Err)
+
+	res = s.Execute(
+		"activity", "unpause",
+		"--activity-id", aid,
+		"--workflow-id", wid,
+		"--run-id", run.GetRunID(),
+		"--identity", identity,
+		"--address", s.Address(),
+		"--reset",
+	)
+
+	s.NoError(res.Err)
+}
+
+func (s *SharedServerSuite) TestActivityUnPause_Failed() {
+	run := s.waitActivityStarted()
+	wid := run.GetID()
+	aid := "dev-activity-id"
+	identity := "MyIdentity"
+
+	// should fail because --reset-heartbeat is provided, but --reset flag is missing
+	res := s.Execute(
+		"activity", "unpause",
+		"--activity-id", aid,
+		"--workflow-id", wid,
+		"--run-id", run.GetRunID(),
+		"--identity", identity,
+		"--address", s.Address(),
+		"--reset-heartbeats",
+	)
+
+	s.Error(res.Err)
+}
+
+func (s *SharedServerSuite) TestActivityReset() {
+	run := s.waitActivityStarted()
+	wid := run.GetID()
+	aid := "dev-activity-id"
+	identity := "MyIdentity"
+
+	res := s.Execute(
+		"activity", "reset",
+		"--activity-id", aid,
+		"--workflow-id", wid,
+		"--run-id", run.GetRunID(),
+		"--identity", identity,
+		"--address", s.Address(),
+	)
+
+	s.NoError(res.Err)
+	// make sure we receive a server response
+	out := res.Stdout.String()
+	s.ContainsOnSameLine(out, "ServerResponse", "true")
+
+	// reset should fail because activity is not found
+
+	res = s.Execute(
+		"activity", "reset",
+		"--activity-id", "fake_id",
+		"--workflow-id", wid,
+		"--run-id", run.GetRunID(),
+		"--identity", identity,
+		"--address", s.Address(),
+	)
+
+	s.Error(res.Err)
+	// make sure we receive a NotFound error from the server`
+	var notFound *serviceerror.NotFound
+	s.ErrorAs(res.Err, &notFound)
 }
 
 // Test helpers
