@@ -131,6 +131,18 @@ func (v *WorkflowReferenceOptions) buildFlags(cctx *CommandContext, f *pflag.Fla
 	f.StringVarP(&v.RunId, "run-id", "r", "", "Run ID.")
 }
 
+type DeploymentReferenceOptions struct {
+	SeriesName string
+	BuildId    string
+}
+
+func (v *DeploymentReferenceOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
+	f.StringVar(&v.SeriesName, "series-name", "", "Series Name for a Worker Deployment. Required.")
+	_ = cobra.MarkFlagRequired(f, "series-name")
+	f.StringVar(&v.BuildId, "build-id", "", "Build ID for a Worker Deployment. Required.")
+	_ = cobra.MarkFlagRequired(f, "build-id")
+}
+
 type SingleWorkflowOrBatchOptions struct {
 	WorkflowId string
 	Query      string
@@ -296,6 +308,7 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	s.Command.AddCommand(&NewTemporalScheduleCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalServerCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalTaskQueueCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkerCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowCommand(cctx, &s).Command)
 	s.Command.PersistentFlags().StringVar(&s.Env, "env", "default", "Active environment name (`ENV`).")
 	cctx.BindFlagEnvVar(s.Command.PersistentFlags().Lookup("env"), "TEMPORAL_ENV")
@@ -1772,9 +1785,9 @@ func NewTemporalTaskQueueDescribeCommand(cctx *CommandContext, parent *TemporalT
 	s.Command.Use = "describe [flags]"
 	s.Command.Short = "Show active Workers"
 	if hasHighlighting {
-		s.Command.Long = "Display a list of active Workers that have recently polled a Task Queue. The\nTemporal Server records each poll request time. A \x1b[1mLastAccessTime\x1b[0m over one\nminute may indicate the Worker is at capacity or has shut down. Temporal\nWorkers are removed if 5 minutes have passed since the last poll request.\n\n\x1b[1mtemporal task-queue describe \\\n  --task-queue YourTaskQueue\x1b[0m\n\nThis command provides poller information for a given Task Queue.\nWorkflow and Activity polling use separate Task Queues:\n\n\x1b[1mtemporal task-queue describe \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type \"activity\"\x1b[0m\n\nThis command provides the following task queue statistics:\n- \x1b[1mApproximateBacklogCount\x1b[0m: The approximate number of tasks backlogged in this\n  task queue. May count expired tasks but eventually converges to the right\n  value.\n- \x1b[1mApproximateBacklogAge\x1b[0m: Approximate age of the oldest task in the backlog,\n  based on its creation time, measured in seconds.\n- \x1b[1mTasksAddRate\x1b[0m: Approximate rate at which tasks are being added to the task\n  queue, measured in tasks per second, averaged over the last 30 seconds.\n  Includes tasks dispatched immediately without going to the backlog\n  (sync-matched tasks), as well as tasks added to the backlog. (See note below.)\n- \x1b[1mTasksDispatchRate\x1b[0m: Approximate rate at which tasks are being dispatched from\n  the task queue, measured in tasks per second, averaged over the last 30\n  seconds.  Includes tasks dispatched immediately without going to the backlog\n  (sync-matched tasks), as well as tasks added to the backlog. (See note below.)\n- \x1b[1mBacklogIncreaseRate\x1b[0m: Approximate rate at which the backlog size is\n  increasing (if positive) or decreasing (if negative), measured in tasks per\n  second, averaged over the last 30 seconds.  This is roughly equivalent to:\n  \x1b[1mTasksAddRate\x1b[0m - \x1b[1mTasksDispatchRate\x1b[0m.\n\nNOTE: The \x1b[1mTasksAddRate\x1b[0m and \x1b[1mTasksDispatchRate\x1b[0m metrics may differ from the\nactual rate of add/dispatch, because tasks may be dispatched eagerly to an\navailable worker, or may apply only to specific workers (they are \"sticky\").\nSuch tasks are not counted by these metrics. Despite the inaccuracy of \nthese two metrics, the derived metric of \x1b[1mBacklogIncreaseRate\x1b[0m is accurate\nfor backlogs older than a few seconds.\n\nSafely retire Workers assigned a Build ID by checking reachability across\nall task types. Use the flag \x1b[1m--report-reachability\x1b[0m:\n\n\x1b[1mtemporal task-queue describe \\\n    --task-queue YourTaskQueue \\\n    --build-id \"YourBuildId\" \\\n    --report-reachability\x1b[0m\n\nTask reachability information is returned for the requested versions and all\ntask types, which can be used to safely retire Workers with old code versions,\nprovided that they were assigned a Build ID.\n\nNote that task reachability status is experimental and may significantly change\nor be removed in a future release. Also, determining task reachability incurs a\nnon-trivial computing cost.\n\nTask reachability states are reported per build ID. The state may be one of the\nfollowing:\n\n- \x1b[1mReachable\x1b[0m: using the current versioning rules, the Build ID may be used\n  by new Workflow Executions or Activities OR there are currently open\n  Workflow or backlogged Activity tasks assigned to the queue.\n- \x1b[1mClosedWorkflowsOnly\x1b[0m: the Build ID does not have open Workflow Executions\n  and can't be reached by new Workflow Executions. It MAY have closed\n  Workflow Executions within the Namespace retention period.\n- \x1b[1mUnreachable\x1b[0m: this Build ID is not used for new Workflow Executions and\n  isn't used by any existing Workflow Execution within the retention period.\n\nTask reachability is eventually consistent. You may experience a delay until\nreachability converges to the most accurate value. This is designed to act\nin the most conservative way until convergence. For example, \x1b[1mReachable\x1b[0m is\nmore conservative than \x1b[1mClosedWorkflowsOnly\x1b[0m."
+		s.Command.Long = "Display a list of active Workers that have recently polled a Task Queue. The\nTemporal Server records each poll request time. A \x1b[1mLastAccessTime\x1b[0m over one\nminute may indicate the Worker is at capacity or has shut down. Temporal\nWorkers are removed if 5 minutes have passed since the last poll request.\n\n\x1b[1mtemporal task-queue describe \\\n  --task-queue YourTaskQueue\x1b[0m\n\nThis command provides poller information for a given Task Queue.\nWorkflow and Activity polling use separate Task Queues:\n\n\x1b[1mtemporal task-queue describe \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type \"activity\"\x1b[0m\n\nThis command provides the following task queue statistics:\n- \x1b[1mApproximateBacklogCount\x1b[0m: The approximate number of tasks backlogged in this\n  task queue. May count expired tasks but eventually converges to the right\n  value.\n- \x1b[1mApproximateBacklogAge\x1b[0m: Approximate age of the oldest task in the backlog,\n  based on its creation time, measured in seconds.\n- \x1b[1mTasksAddRate\x1b[0m: Approximate rate at which tasks are being added to the task\n  queue, measured in tasks per second, averaged over the last 30 seconds.\n  Includes tasks dispatched immediately without going to the backlog\n  (sync-matched tasks), as well as tasks added to the backlog. (See note below.)\n- \x1b[1mTasksDispatchRate\x1b[0m: Approximate rate at which tasks are being dispatched from\n  the task queue, measured in tasks per second, averaged over the last 30\n  seconds.  Includes tasks dispatched immediately without going to the backlog\n  (sync-matched tasks), as well as tasks added to the backlog. (See note below.)\n- \x1b[1mBacklogIncreaseRate\x1b[0m: Approximate rate at which the backlog size is\n  increasing (if positive) or decreasing (if negative), measured in tasks per\n  second, averaged over the last 30 seconds.  This is roughly equivalent to:\n  \x1b[1mTasksAddRate\x1b[0m - \x1b[1mTasksDispatchRate\x1b[0m.\n\nNOTE: The \x1b[1mTasksAddRate\x1b[0m and \x1b[1mTasksDispatchRate\x1b[0m metrics may differ from the\nactual rate of add/dispatch, because tasks may be dispatched eagerly to an\navailable worker, or may apply only to specific workers (they are \"sticky\").\nSuch tasks are not counted by these metrics. Despite the inaccuracy of\nthese two metrics, the derived metric of \x1b[1mBacklogIncreaseRate\x1b[0m is accurate\nfor backlogs older than a few seconds.\n\nSafely retire Workers assigned a Build ID by checking reachability across\nall task types. Use the flag \x1b[1m--report-reachability\x1b[0m:\n\n\x1b[1mtemporal task-queue describe \\\n    --task-queue YourTaskQueue \\\n    --build-id \"YourBuildId\" \\\n    --report-reachability\x1b[0m\n\nTask reachability information is returned for the requested versions and all\ntask types, which can be used to safely retire Workers with old code versions,\nprovided that they were assigned a Build ID.\n\nNote that task reachability status is experimental and may significantly change\nor be removed in a future release. Also, determining task reachability incurs a\nnon-trivial computing cost.\n\nTask reachability states are reported per build ID. The state may be one of the\nfollowing:\n\n- \x1b[1mReachable\x1b[0m: using the current versioning rules, the Build ID may be used\n  by new Workflow Executions or Activities OR there are currently open\n  Workflow or backlogged Activity tasks assigned to the queue.\n- \x1b[1mClosedWorkflowsOnly\x1b[0m: the Build ID does not have open Workflow Executions\n  and can't be reached by new Workflow Executions. It MAY have closed\n  Workflow Executions within the Namespace retention period.\n- \x1b[1mUnreachable\x1b[0m: this Build ID is not used for new Workflow Executions and\n  isn't used by any existing Workflow Execution within the retention period.\n\nTask reachability is eventually consistent. You may experience a delay until\nreachability converges to the most accurate value. This is designed to act\nin the most conservative way until convergence. For example, \x1b[1mReachable\x1b[0m is\nmore conservative than \x1b[1mClosedWorkflowsOnly\x1b[0m."
 	} else {
-		s.Command.Long = "Display a list of active Workers that have recently polled a Task Queue. The\nTemporal Server records each poll request time. A `LastAccessTime` over one\nminute may indicate the Worker is at capacity or has shut down. Temporal\nWorkers are removed if 5 minutes have passed since the last poll request.\n\n```\ntemporal task-queue describe \\\n  --task-queue YourTaskQueue\n```\n\nThis command provides poller information for a given Task Queue.\nWorkflow and Activity polling use separate Task Queues:\n\n```\ntemporal task-queue describe \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type \"activity\"\n```\n\nThis command provides the following task queue statistics:\n- `ApproximateBacklogCount`: The approximate number of tasks backlogged in this\n  task queue. May count expired tasks but eventually converges to the right\n  value.\n- `ApproximateBacklogAge`: Approximate age of the oldest task in the backlog,\n  based on its creation time, measured in seconds.\n- `TasksAddRate`: Approximate rate at which tasks are being added to the task\n  queue, measured in tasks per second, averaged over the last 30 seconds.\n  Includes tasks dispatched immediately without going to the backlog\n  (sync-matched tasks), as well as tasks added to the backlog. (See note below.)\n- `TasksDispatchRate`: Approximate rate at which tasks are being dispatched from\n  the task queue, measured in tasks per second, averaged over the last 30\n  seconds.  Includes tasks dispatched immediately without going to the backlog\n  (sync-matched tasks), as well as tasks added to the backlog. (See note below.)\n- `BacklogIncreaseRate`: Approximate rate at which the backlog size is\n  increasing (if positive) or decreasing (if negative), measured in tasks per\n  second, averaged over the last 30 seconds.  This is roughly equivalent to:\n  `TasksAddRate` - `TasksDispatchRate`.\n\nNOTE: The `TasksAddRate` and `TasksDispatchRate` metrics may differ from the\nactual rate of add/dispatch, because tasks may be dispatched eagerly to an\navailable worker, or may apply only to specific workers (they are \"sticky\").\nSuch tasks are not counted by these metrics. Despite the inaccuracy of \nthese two metrics, the derived metric of `BacklogIncreaseRate` is accurate\nfor backlogs older than a few seconds.\n\nSafely retire Workers assigned a Build ID by checking reachability across\nall task types. Use the flag `--report-reachability`:\n\n```\ntemporal task-queue describe \\\n    --task-queue YourTaskQueue \\\n    --build-id \"YourBuildId\" \\\n    --report-reachability\n```\n\nTask reachability information is returned for the requested versions and all\ntask types, which can be used to safely retire Workers with old code versions,\nprovided that they were assigned a Build ID.\n\nNote that task reachability status is experimental and may significantly change\nor be removed in a future release. Also, determining task reachability incurs a\nnon-trivial computing cost.\n\nTask reachability states are reported per build ID. The state may be one of the\nfollowing:\n\n- `Reachable`: using the current versioning rules, the Build ID may be used\n  by new Workflow Executions or Activities OR there are currently open\n  Workflow or backlogged Activity tasks assigned to the queue.\n- `ClosedWorkflowsOnly`: the Build ID does not have open Workflow Executions\n  and can't be reached by new Workflow Executions. It MAY have closed\n  Workflow Executions within the Namespace retention period.\n- `Unreachable`: this Build ID is not used for new Workflow Executions and\n  isn't used by any existing Workflow Execution within the retention period.\n\nTask reachability is eventually consistent. You may experience a delay until\nreachability converges to the most accurate value. This is designed to act\nin the most conservative way until convergence. For example, `Reachable` is\nmore conservative than `ClosedWorkflowsOnly`."
+		s.Command.Long = "Display a list of active Workers that have recently polled a Task Queue. The\nTemporal Server records each poll request time. A `LastAccessTime` over one\nminute may indicate the Worker is at capacity or has shut down. Temporal\nWorkers are removed if 5 minutes have passed since the last poll request.\n\n```\ntemporal task-queue describe \\\n  --task-queue YourTaskQueue\n```\n\nThis command provides poller information for a given Task Queue.\nWorkflow and Activity polling use separate Task Queues:\n\n```\ntemporal task-queue describe \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type \"activity\"\n```\n\nThis command provides the following task queue statistics:\n- `ApproximateBacklogCount`: The approximate number of tasks backlogged in this\n  task queue. May count expired tasks but eventually converges to the right\n  value.\n- `ApproximateBacklogAge`: Approximate age of the oldest task in the backlog,\n  based on its creation time, measured in seconds.\n- `TasksAddRate`: Approximate rate at which tasks are being added to the task\n  queue, measured in tasks per second, averaged over the last 30 seconds.\n  Includes tasks dispatched immediately without going to the backlog\n  (sync-matched tasks), as well as tasks added to the backlog. (See note below.)\n- `TasksDispatchRate`: Approximate rate at which tasks are being dispatched from\n  the task queue, measured in tasks per second, averaged over the last 30\n  seconds.  Includes tasks dispatched immediately without going to the backlog\n  (sync-matched tasks), as well as tasks added to the backlog. (See note below.)\n- `BacklogIncreaseRate`: Approximate rate at which the backlog size is\n  increasing (if positive) or decreasing (if negative), measured in tasks per\n  second, averaged over the last 30 seconds.  This is roughly equivalent to:\n  `TasksAddRate` - `TasksDispatchRate`.\n\nNOTE: The `TasksAddRate` and `TasksDispatchRate` metrics may differ from the\nactual rate of add/dispatch, because tasks may be dispatched eagerly to an\navailable worker, or may apply only to specific workers (they are \"sticky\").\nSuch tasks are not counted by these metrics. Despite the inaccuracy of\nthese two metrics, the derived metric of `BacklogIncreaseRate` is accurate\nfor backlogs older than a few seconds.\n\nSafely retire Workers assigned a Build ID by checking reachability across\nall task types. Use the flag `--report-reachability`:\n\n```\ntemporal task-queue describe \\\n    --task-queue YourTaskQueue \\\n    --build-id \"YourBuildId\" \\\n    --report-reachability\n```\n\nTask reachability information is returned for the requested versions and all\ntask types, which can be used to safely retire Workers with old code versions,\nprovided that they were assigned a Build ID.\n\nNote that task reachability status is experimental and may significantly change\nor be removed in a future release. Also, determining task reachability incurs a\nnon-trivial computing cost.\n\nTask reachability states are reported per build ID. The state may be one of the\nfollowing:\n\n- `Reachable`: using the current versioning rules, the Build ID may be used\n  by new Workflow Executions or Activities OR there are currently open\n  Workflow or backlogged Activity tasks assigned to the queue.\n- `ClosedWorkflowsOnly`: the Build ID does not have open Workflow Executions\n  and can't be reached by new Workflow Executions. It MAY have closed\n  Workflow Executions within the Namespace retention period.\n- `Unreachable`: this Build ID is not used for new Workflow Executions and\n  isn't used by any existing Workflow Execution within the retention period.\n\nTask reachability is eventually consistent. You may experience a delay until\nreachability converges to the most accurate value. This is designed to act\nin the most conservative way until convergence. For example, `Reachable` is\nmore conservative than `ClosedWorkflowsOnly`."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task Queue name. Required.")
@@ -2326,6 +2339,164 @@ func NewTemporalTaskQueueVersioningReplaceRedirectRuleCommand(cctx *CommandConte
 	return &s
 }
 
+type TemporalWorkerCommand struct {
+	Parent  *TemporalCommand
+	Command cobra.Command
+	ClientOptions
+}
+
+func NewTemporalWorkerCommand(cctx *CommandContext, parent *TemporalCommand) *TemporalWorkerCommand {
+	var s TemporalWorkerCommand
+	s.Parent = parent
+	s.Command.Use = "worker"
+	s.Command.Short = "Read or update Worker state"
+	if hasHighlighting {
+		s.Command.Long = "Modify or read state associated with a Worker, for example,\nusing Worker Deployments commands:\n\n\x1b[1mtemporal worker deployment\x1b[0m"
+	} else {
+		s.Command.Long = "Modify or read state associated with a Worker, for example,\nusing Worker Deployments commands:\n\n```\ntemporal worker deployment\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalWorkerDeploymentCommand(cctx, &s).Command)
+	s.ClientOptions.buildFlags(cctx, s.Command.PersistentFlags())
+	return &s
+}
+
+type TemporalWorkerDeploymentCommand struct {
+	Parent  *TemporalWorkerCommand
+	Command cobra.Command
+}
+
+func NewTemporalWorkerDeploymentCommand(cctx *CommandContext, parent *TemporalWorkerCommand) *TemporalWorkerDeploymentCommand {
+	var s TemporalWorkerDeploymentCommand
+	s.Parent = parent
+	s.Command.Use = "deployment"
+	s.Command.Short = "Describe, list, and operate on Worker Deployments"
+	if hasHighlighting {
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nDeployment commands perform operations on Worker Deployments:\n\n\x1b[1mtemporal worker deployment [command] [options]\x1b[0m\n\nFor example:\n\n\x1b[1mtemporal worker deployment list\x1b[0m"
+	} else {
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nDeployment commands perform operations on Worker Deployments:\n\n```\ntemporal worker deployment [command] [options]\n```\n\nFor example:\n\n```\ntemporal worker deployment list\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalWorkerDeploymentDescribeCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkerDeploymentGetCurrentCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkerDeploymentListCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkerDeploymentSetCurrentCommand(cctx, &s).Command)
+	return &s
+}
+
+type TemporalWorkerDeploymentDescribeCommand struct {
+	Parent  *TemporalWorkerDeploymentCommand
+	Command cobra.Command
+	DeploymentReferenceOptions
+	ReportReachability bool
+}
+
+func NewTemporalWorkerDeploymentDescribeCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentCommand) *TemporalWorkerDeploymentDescribeCommand {
+	var s TemporalWorkerDeploymentDescribeCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "describe [flags]"
+	s.Command.Short = "Show properties of a Worker Deployment"
+	if hasHighlighting {
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nDescribes properties of a Worker Deployment, such as whether it is\ncurrent, the non-empty list of its task queues, custom metadata if\npresent, and reachability status when requested.\n\n\x1b[1mtemporal worker deployment describe [options]\x1b[0m\n\nFor example, to also include reachability information:\n\n\x1b[1mtemporal worker deployment describe \\\n    --series-name YourDeploymentSeriesName \\\n    --build-id YourDeploymentBuildId \\\n    --report-reachability\x1b[0m"
+	} else {
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nDescribes properties of a Worker Deployment, such as whether it is\ncurrent, the non-empty list of its task queues, custom metadata if\npresent, and reachability status when requested.\n\n```\ntemporal worker deployment describe [options]\n```\n\nFor example, to also include reachability information:\n\n```\ntemporal worker deployment describe \\\n    --series-name YourDeploymentSeriesName \\\n    --build-id YourDeploymentBuildId \\\n    --report-reachability\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().BoolVar(&s.ReportReachability, "report-reachability", false, "Flag to include reachability information of a Worker Deployment.")
+	s.DeploymentReferenceOptions.buildFlags(cctx, s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalWorkerDeploymentGetCurrentCommand struct {
+	Parent     *TemporalWorkerDeploymentCommand
+	Command    cobra.Command
+	SeriesName string
+}
+
+func NewTemporalWorkerDeploymentGetCurrentCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentCommand) *TemporalWorkerDeploymentGetCurrentCommand {
+	var s TemporalWorkerDeploymentGetCurrentCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "get-current [flags]"
+	s.Command.Short = "Show the current Worker Deployment"
+	if hasHighlighting {
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nGets the current Worker Deployment for a Deployment Series Name.\nWhen a Deployment is current, Workers of that Deployment will receive\ntasks from new Workflows and from existing AutoUpgrade Workflows that\nare running on this Deployment Series.\n\n\x1b[1mtemporal worker deployment get-current [options]\x1b[0m\n\nFor example:\n\n\x1b[1mtemporal worker deployment get-current \\\n    --series-name YourDeploymentSeriesName\x1b[0m"
+	} else {
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nGets the current Worker Deployment for a Deployment Series Name.\nWhen a Deployment is current, Workers of that Deployment will receive\ntasks from new Workflows and from existing AutoUpgrade Workflows that\nare running on this Deployment Series.\n\n```\ntemporal worker deployment get-current [options]\n```\n\nFor example:\n\n```\ntemporal worker deployment get-current \\\n    --series-name YourDeploymentSeriesName\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.SeriesName, "series-name", "", "Series Name for the current Worker Deployment. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "series-name")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalWorkerDeploymentListCommand struct {
+	Parent     *TemporalWorkerDeploymentCommand
+	Command    cobra.Command
+	SeriesName string
+}
+
+func NewTemporalWorkerDeploymentListCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentCommand) *TemporalWorkerDeploymentListCommand {
+	var s TemporalWorkerDeploymentListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "Enumerate Worker Deployments in the client's namespace"
+	if hasHighlighting {
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nList existing Worker Deployments in the client's namespace, optionally\nfiltering them by Deployment Series Name.\n\n\n\x1b[1mtemporal worker deployment list [options]\x1b[0m\n\nFor example, adding an optional filter:\n\n\x1b[1mtemporal worker deployment list \\\n    --series-name YourDeploymentSeriesName\x1b[0m"
+	} else {
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nList existing Worker Deployments in the client's namespace, optionally\nfiltering them by Deployment Series Name.\n\n\n```\ntemporal worker deployment list [options]\n```\n\nFor example, adding an optional filter:\n\n```\ntemporal worker deployment list \\\n    --series-name YourDeploymentSeriesName\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.SeriesName, "series-name", "", "Series Name to filter Worker Deployments.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalWorkerDeploymentSetCurrentCommand struct {
+	Parent  *TemporalWorkerDeploymentCommand
+	Command cobra.Command
+	DeploymentReferenceOptions
+	Metadata []string
+}
+
+func NewTemporalWorkerDeploymentSetCurrentCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentCommand) *TemporalWorkerDeploymentSetCurrentCommand {
+	var s TemporalWorkerDeploymentSetCurrentCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "set-current [flags]"
+	s.Command.Short = "Change the current Worker Deployment"
+	if hasHighlighting {
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nSets the current Deployment for a given Deployment Series.\nWhen a Deployment is current, Workers of that Deployment will receive\ntasks from new Workflows and from existing AutoUpgrade Workflows that\nare running on this Deployment Series.\n\n\x1b[1mtemporal worker deployment set-current [options]\x1b[0m\n\nFor example:\n\n\x1b[1mtemporal worker deployment set-current \\\n    --series-name YourDeploymentSeriesName \\\n    --build-id YourDeploymentBuildId\x1b[0m"
+	} else {
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nSets the current Deployment for a given Deployment Series.\nWhen a Deployment is current, Workers of that Deployment will receive\ntasks from new Workflows and from existing AutoUpgrade Workflows that\nare running on this Deployment Series.\n\n```\ntemporal worker deployment set-current [options]\n```\n\nFor example:\n\n```\ntemporal worker deployment set-current \\\n    --series-name YourDeploymentSeriesName \\\n    --build-id YourDeploymentBuildId\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringArrayVar(&s.Metadata, "metadata", nil, "Set deployment metadata using `KEY=\"VALUE\"` pairs. Keys must be identifiers, and values must be JSON values. For example: 'YourKey={\"your\": \"value\"}'. Can be passed multiple times.")
+	s.DeploymentReferenceOptions.buildFlags(cctx, s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
 type TemporalWorkflowCommand struct {
 	Parent  *TemporalCommand
 	Command cobra.Command
@@ -2360,6 +2531,7 @@ func NewTemporalWorkflowCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.AddCommand(&NewTemporalWorkflowTerminateCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowTraceCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowUpdateCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkflowUpdateOptionsCommand(cctx, &s).Command)
 	s.ClientOptions.buildFlags(cctx, s.Command.PersistentFlags())
 	return &s
 }
@@ -3022,6 +3194,41 @@ func NewTemporalWorkflowUpdateStartCommand(cctx *CommandContext, parent *Tempora
 	s.Command.Flags().SetNormalizeFunc(aliasNormalizer(map[string]string{
 		"type": "name",
 	}))
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalWorkflowUpdateOptionsCommand struct {
+	Parent  *TemporalWorkflowCommand
+	Command cobra.Command
+	SingleWorkflowOrBatchOptions
+	VersioningOverrideBehavior   StringEnum
+	VersioningOverrideSeriesName string
+	VersioningOverrideBuildId    string
+}
+
+func NewTemporalWorkflowUpdateOptionsCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowUpdateOptionsCommand {
+	var s TemporalWorkflowUpdateOptionsCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "update-options [flags]"
+	s.Command.Short = "Change Workflow Execution Options"
+	if hasHighlighting {
+		s.Command.Long = "Modify properties of Workflow Executions:\n\n\x1b[1mtemporal workflow update-options [options]\x1b[0m\n\nIt can override the Worker Deployment configuration of a\nWorkflow Execution, which controls Worker Versioning.\n\nFor example, to force Workers in the current Deployment execute the\nnext Workflow Task:\n\n\x1b[1mtemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior auto_upgrade\x1b[0m\n\nor to pin the workflow execution to a Worker Deployment:\n\n\x1b[1mtemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior pinned \\\n    --versioning-override-series-name YourDeploymentSeriesName \\\n    --versioning-override-build-id YourDeploymentBuildId\x1b[0m\n\nTo remove any previous overrides, set the behavior to\nunspecified:\n\n\x1b[1mtemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior unspecified\x1b[0m\n\nTo see the current override use \x1b[1mtemporal workflow describe\x1b[0m"
+	} else {
+		s.Command.Long = "Modify properties of Workflow Executions:\n\n```\ntemporal workflow update-options [options]\n```\n\nIt can override the Worker Deployment configuration of a\nWorkflow Execution, which controls Worker Versioning.\n\nFor example, to force Workers in the current Deployment execute the\nnext Workflow Task:\n\n```\ntemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior auto_upgrade\n```\n\nor to pin the workflow execution to a Worker Deployment:\n\n```\ntemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior pinned \\\n    --versioning-override-series-name YourDeploymentSeriesName \\\n    --versioning-override-build-id YourDeploymentBuildId\n```\n\nTo remove any previous overrides, set the behavior to\nunspecified:\n\n```\ntemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior unspecified\n```\n\nTo see the current override use `temporal workflow describe`"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.VersioningOverrideBehavior = NewStringEnum([]string{"unspecified", "pinned", "auto_upgrade"}, "")
+	s.Command.Flags().Var(&s.VersioningOverrideBehavior, "versioning-override-behavior", "Flag to override the versioning behavior of a Workflow. Accepted values: unspecified, pinned, auto_upgrade. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "versioning-override-behavior")
+	s.Command.Flags().StringVar(&s.VersioningOverrideSeriesName, "versioning-override-series-name", "", "Override Series Name for a Worker Deployment (Only for pinned).")
+	s.Command.Flags().StringVar(&s.VersioningOverrideBuildId, "versioning-override-build-id", "", "Override Build ID for a Worker Deployment (Only for pinned).")
+	s.SingleWorkflowOrBatchOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
