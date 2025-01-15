@@ -2668,7 +2668,7 @@ commands:
     docs:
       description-header: >-
         Temporal Workflow commands enable operations on Workflow Executions,
-        such as cancel, count, delete, describe, execute, list, modify-options,
+        such as cancel, count, delete, describe, execute, list, update-options,
         query, reset, reset-batch, show, signal, stack, start, terminate,
         trace, and update, enhancing efficiency and control.
       keywords:
@@ -2693,7 +2693,7 @@ commands:
         - workflow execute
         - workflow execution
         - workflow list
-        - workflow modify-options
+        - workflow update-options
         - workflow query
         - workflow reset
         - workflow reset-batch
