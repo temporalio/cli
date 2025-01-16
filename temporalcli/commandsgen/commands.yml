@@ -3991,6 +3991,16 @@ option-sets:
         description: |
           Memo using 'KEY="VALUE"' pairs.
           Use JSON values.
+      - name: static-summary
+        type: string
+        description: |
+          Static Workflow summary for human consumption in UIs.
+          Uses Temporal Markdown formatting, should be a single line.
+      - name: static-details
+        type: string
+        description: |
+          Static Workflow details for human consumption in UIs.
+          Uses Temporal Markdown formatting, may be multiple lines.
 
   - name: workflow-start
     options:
