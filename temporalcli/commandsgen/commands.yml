@@ -3993,11 +3993,13 @@ option-sets:
           Use JSON values.
       - name: static-summary
         type: string
+        experimental: true
         description: |
           Static Workflow summary for human consumption in UIs.
           Uses Temporal Markdown formatting, should be a single line.
       - name: static-details
         type: string
+        experimental: true
         description: |
           Static Workflow details for human consumption in UIs.
           Uses Temporal Markdown formatting, may be multiple lines.
