@@ -206,7 +206,7 @@ commands:
   - name: temporal activity
     summary: Complete, update, pause, unpause, reset or fail an Activity
     description: |
-      Update an Activity's options, manage activity lifecycle or update 
+      Update an Activity's options, manage activity lifecycle or update
       an Activity's state to completed or failed.
 
       Updating activity state marks an Activity as successfully finished or as
@@ -297,9 +297,9 @@ commands:
   - name: temporal activity update-options
     summary: Update Activity options
     description: |
-      Update Activity options. Specify the Activity and Workflow IDs, and 
-      options you want to update. 
-      Updates are incremental, only changing the specified options. 
+      Update Activity options. Specify the Activity and Workflow IDs, and
+      options you want to update.
+      Updates are incremental, only changing the specified options.
 
       ```
       temporal activity update-options \
@@ -327,22 +327,22 @@ commands:
       - name: schedule-to-close-timeout
         type: duration
         description: |
-          Indicates how long the caller is willing to wait for an activity 
-          completion. 
+          Indicates how long the caller is willing to wait for an activity
+          completion.
           Limits how long retries will be attempted.
       - name: schedule-to-start-timeout
         type: duration
         description: |
-          Limits time an activity task can stay in a task queue before a worker 
-          picks it up. 
-          This timeout is always non retryable, as all a retry would achieve is 
+          Limits time an activity task can stay in a task queue before a worker
+          picks it up.
+          This timeout is always non retryable, as all a retry would achieve is
           to put it back into the same
           queue. Defaults to the schedule-to-close timeout or workflow execution
           timeout if not specified.
       - name: start-to-close-timeout
         type: duration
         description: |
-          Maximum time an activity is allowed to execute after being picked up 
+          Maximum time an activity is allowed to execute after being picked up
           by a worker. This timeout is always retryable.
       - name: heartbeat-timeout
         type: duration
@@ -356,7 +356,7 @@ commands:
       - name: retry-maximum-interval
         type: duration
         description: |
-          Maximum interval between retries. Exponential backoff leads to 
+          Maximum interval between retries. Exponential backoff leads to
           interval increase.
           This value is the cap of the increase.
       - name: retry-backoff-coefficient
@@ -371,7 +371,7 @@ commands:
         description: |
           Maximum number of attempts. When exceeded the retries stop even if not
           expired yet.
-          Setting this value to 1 disables retries. Setting this value to 0 
+          Setting this value to 1 disables retries. Setting this value to 0
           means unlimited attempts(up to the timeouts).
       - name: identity
         type: string
@@ -459,14 +459,14 @@ commands:
   - name: temporal activity reset
     summary: Reset an Activity
     description: |
-      Resetting an activity resets both the number of attempts and the activity 
-      timeout. If activity is paused, it will be un-paused. 
+      Resetting an activity resets both the number of attempts and the activity
+      timeout. If activity is paused, it will be un-paused.
 
-      If the `no-wait` flag is provided, the activity will be rescheduled 
+      If the `no-wait` flag is provided, the activity will be rescheduled
       immediately. Even if the activity is currently running.
-      If the `no-wait` flag is not provided, the activity will be scheduled 
-      after the current instance completes, if needed.      
-      If the 'reset_heartbeats' flag is set, the activity heartbeat timer and 
+      If the `no-wait` flag is not provided, the activity will be scheduled
+      after the current instance completes, if needed.
+      If the 'reset_heartbeats' flag is set, the activity heartbeat timer and
       heartbeats will be reset.
 
       Specify the Activity and Workflow IDs:
@@ -490,7 +490,7 @@ commands:
       - name: no-wait
         type: bool
         description: |
-          Schedule the Activity immediately, even if its retry timeout has not 
+          Schedule the Activity immediately, even if its retry timeout has not
           expired or the activity is currently running.
       - name: reset-heartbeats
         type: bool
@@ -623,8 +623,8 @@ commands:
       - client
     docs:
       description-header: >-
-         Learn how to read or modify state associated with a Worker,
-         such as Worker Deployments.
+        Learn how to read or modify state associated with a Worker,
+        such as Worker Deployments.
       keywords:
         - worker
         - worker deployment
@@ -2698,7 +2698,7 @@ commands:
         - workflow execute
         - workflow execution
         - workflow list
-        - workflow update-options
+        - workflow metadata
         - workflow query
         - workflow reset
         - workflow reset-batch
@@ -2708,6 +2708,7 @@ commands:
         - workflow start
         - workflow terminate
         - workflow trace
+        - workflow update-options
 
   - name: temporal workflow cancel
     summary: Send cancellation to Workflow Execution
@@ -2885,6 +2886,19 @@ commands:
       - name: limit
         type: int
         description: Maximum number of Workflow Executions to display.
+
+  - name: temporal workflow metadata
+    summary: Query the Workflow for user-specified metadata
+    description: |
+      Issue a Query for and display user-set metadata like summary and
+      details for a specific Workflow Execution:
+
+      ```
+      temporal workflow metadata \
+          --workflow-id YourWorkflowId
+      ```
+    option-sets:
+      - workflow-reference
 
   - name: temporal workflow update-options
     summary: Change Workflow Execution Options

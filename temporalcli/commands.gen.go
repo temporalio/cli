@@ -342,9 +342,9 @@ func NewTemporalActivityCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.Use = "activity"
 	s.Command.Short = "Complete, update, pause, unpause, reset or fail an Activity"
 	if hasHighlighting {
-		s.Command.Long = "Update an Activity's options, manage activity lifecycle or update \nan Activity's state to completed or failed.\n\nUpdating activity state marks an Activity as successfully finished or as\nhaving encountered an error.\n\n\x1b[1mtemporal activity complete \\\n    --activity-id=YourActivityId \\\n    --workflow-id=YourWorkflowId \\\n    --result='{\"YourResultKey\": \"YourResultValue\"}'\x1b[0m"
+		s.Command.Long = "Update an Activity's options, manage activity lifecycle or update\nan Activity's state to completed or failed.\n\nUpdating activity state marks an Activity as successfully finished or as\nhaving encountered an error.\n\n\x1b[1mtemporal activity complete \\\n    --activity-id=YourActivityId \\\n    --workflow-id=YourWorkflowId \\\n    --result='{\"YourResultKey\": \"YourResultValue\"}'\x1b[0m"
 	} else {
-		s.Command.Long = "Update an Activity's options, manage activity lifecycle or update \nan Activity's state to completed or failed.\n\nUpdating activity state marks an Activity as successfully finished or as\nhaving encountered an error.\n\n```\ntemporal activity complete \\\n    --activity-id=YourActivityId \\\n    --workflow-id=YourWorkflowId \\\n    --result='{\"YourResultKey\": \"YourResultValue\"}'\n```"
+		s.Command.Long = "Update an Activity's options, manage activity lifecycle or update\nan Activity's state to completed or failed.\n\nUpdating activity state marks an Activity as successfully finished or as\nhaving encountered an error.\n\n```\ntemporal activity complete \\\n    --activity-id=YourActivityId \\\n    --workflow-id=YourWorkflowId \\\n    --result='{\"YourResultKey\": \"YourResultValue\"}'\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalActivityCompleteCommand(cctx, &s).Command)
@@ -477,15 +477,15 @@ func NewTemporalActivityResetCommand(cctx *CommandContext, parent *TemporalActiv
 	s.Command.Use = "reset [flags]"
 	s.Command.Short = "Reset an Activity"
 	if hasHighlighting {
-		s.Command.Long = "Resetting an activity resets both the number of attempts and the activity \ntimeout. If activity is paused, it will be un-paused. \n\nIf the \x1b[1mno-wait\x1b[0m flag is provided, the activity will be rescheduled \nimmediately. Even if the activity is currently running.\nIf the \x1b[1mno-wait\x1b[0m flag is not provided, the activity will be scheduled \nafter the current instance completes, if needed.      \nIf the 'reset_heartbeats' flag is set, the activity heartbeat timer and \nheartbeats will be reset.\n\nSpecify the Activity and Workflow IDs:\n\n\x1b[1mtemporal activity reset \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n    --no-wait\n    --reset-heartbeats\x1b[0m"
+		s.Command.Long = "Resetting an activity resets both the number of attempts and the activity\ntimeout. If activity is paused, it will be un-paused.\n\nIf the \x1b[1mno-wait\x1b[0m flag is provided, the activity will be rescheduled\nimmediately. Even if the activity is currently running.\nIf the \x1b[1mno-wait\x1b[0m flag is not provided, the activity will be scheduled\nafter the current instance completes, if needed.\nIf the 'reset_heartbeats' flag is set, the activity heartbeat timer and\nheartbeats will be reset.\n\nSpecify the Activity and Workflow IDs:\n\n\x1b[1mtemporal activity reset \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n    --no-wait\n    --reset-heartbeats\x1b[0m"
 	} else {
-		s.Command.Long = "Resetting an activity resets both the number of attempts and the activity \ntimeout. If activity is paused, it will be un-paused. \n\nIf the `no-wait` flag is provided, the activity will be rescheduled \nimmediately. Even if the activity is currently running.\nIf the `no-wait` flag is not provided, the activity will be scheduled \nafter the current instance completes, if needed.      \nIf the 'reset_heartbeats' flag is set, the activity heartbeat timer and \nheartbeats will be reset.\n\nSpecify the Activity and Workflow IDs:\n\n```\ntemporal activity reset \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n    --no-wait\n    --reset-heartbeats\n```"
+		s.Command.Long = "Resetting an activity resets both the number of attempts and the activity\ntimeout. If activity is paused, it will be un-paused.\n\nIf the `no-wait` flag is provided, the activity will be rescheduled\nimmediately. Even if the activity is currently running.\nIf the `no-wait` flag is not provided, the activity will be scheduled\nafter the current instance completes, if needed.\nIf the 'reset_heartbeats' flag is set, the activity heartbeat timer and\nheartbeats will be reset.\n\nSpecify the Activity and Workflow IDs:\n\n```\ntemporal activity reset \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n    --no-wait\n    --reset-heartbeats\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "Activity ID to pause. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "activity-id")
 	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of the user submitting this request.")
-	s.Command.Flags().BoolVar(&s.NoWait, "no-wait", false, "Schedule the Activity immediately, even if its retry timeout has not  expired or the activity is currently running.")
+	s.Command.Flags().BoolVar(&s.NoWait, "no-wait", false, "Schedule the Activity immediately, even if its retry timeout has not expired or the activity is currently running.")
 	s.Command.Flags().BoolVar(&s.ResetHeartbeats, "reset-heartbeats", false, "Reset the Activity's heartbeat.")
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -558,28 +558,28 @@ func NewTemporalActivityUpdateOptionsCommand(cctx *CommandContext, parent *Tempo
 	s.Command.Use = "update-options [flags]"
 	s.Command.Short = "Update Activity options"
 	if hasHighlighting {
-		s.Command.Long = "Update Activity options. Specify the Activity and Workflow IDs, and \noptions you want to update. \nUpdates are incremental, only changing the specified options. \n\n\x1b[1mtemporal activity update-options \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --task-queue NewTaskQueueName \\\n    --schedule-to-close-timeout DURATION \\\n    --schedule-to-start-timeout DURATION \\\n    --start-to-close-timeout DURATION \\\n    --heartbeat-timeout DURATION \\\n    --retry-initial-interval DURATION \\\n    --retry-maximum-interval DURATION \\\n    --retry-backoff-coefficient NewBackoffCoefficient \\\n    --retry-maximum-attempts NewMaximumAttempts\x1b[0m"
+		s.Command.Long = "Update Activity options. Specify the Activity and Workflow IDs, and\noptions you want to update.\nUpdates are incremental, only changing the specified options.\n\n\x1b[1mtemporal activity update-options \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --task-queue NewTaskQueueName \\\n    --schedule-to-close-timeout DURATION \\\n    --schedule-to-start-timeout DURATION \\\n    --start-to-close-timeout DURATION \\\n    --heartbeat-timeout DURATION \\\n    --retry-initial-interval DURATION \\\n    --retry-maximum-interval DURATION \\\n    --retry-backoff-coefficient NewBackoffCoefficient \\\n    --retry-maximum-attempts NewMaximumAttempts\x1b[0m"
 	} else {
-		s.Command.Long = "Update Activity options. Specify the Activity and Workflow IDs, and \noptions you want to update. \nUpdates are incremental, only changing the specified options. \n\n```\ntemporal activity update-options \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --task-queue NewTaskQueueName \\\n    --schedule-to-close-timeout DURATION \\\n    --schedule-to-start-timeout DURATION \\\n    --start-to-close-timeout DURATION \\\n    --heartbeat-timeout DURATION \\\n    --retry-initial-interval DURATION \\\n    --retry-maximum-interval DURATION \\\n    --retry-backoff-coefficient NewBackoffCoefficient \\\n    --retry-maximum-attempts NewMaximumAttempts\n\n```"
+		s.Command.Long = "Update Activity options. Specify the Activity and Workflow IDs, and\noptions you want to update.\nUpdates are incremental, only changing the specified options.\n\n```\ntemporal activity update-options \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --task-queue NewTaskQueueName \\\n    --schedule-to-close-timeout DURATION \\\n    --schedule-to-start-timeout DURATION \\\n    --start-to-close-timeout DURATION \\\n    --heartbeat-timeout DURATION \\\n    --retry-initial-interval DURATION \\\n    --retry-maximum-interval DURATION \\\n    --retry-backoff-coefficient NewBackoffCoefficient \\\n    --retry-maximum-attempts NewMaximumAttempts\n\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.ActivityId, "activity-id", "", "Activity ID. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "activity-id")
 	s.Command.Flags().StringVar(&s.TaskQueue, "task-queue", "", "Name of the task queue for the Activity.")
 	s.ScheduleToCloseTimeout = 0
-	s.Command.Flags().Var(&s.ScheduleToCloseTimeout, "schedule-to-close-timeout", "Indicates how long the caller is willing to wait for an activity  completion.  Limits how long retries will be attempted.")
+	s.Command.Flags().Var(&s.ScheduleToCloseTimeout, "schedule-to-close-timeout", "Indicates how long the caller is willing to wait for an activity completion. Limits how long retries will be attempted.")
 	s.ScheduleToStartTimeout = 0
-	s.Command.Flags().Var(&s.ScheduleToStartTimeout, "schedule-to-start-timeout", "Limits time an activity task can stay in a task queue before a worker  picks it up.  This timeout is always non retryable, as all a retry would achieve is  to put it back into the same queue. Defaults to the schedule-to-close timeout or workflow execution timeout if not specified.")
+	s.Command.Flags().Var(&s.ScheduleToStartTimeout, "schedule-to-start-timeout", "Limits time an activity task can stay in a task queue before a worker picks it up. This timeout is always non retryable, as all a retry would achieve is to put it back into the same queue. Defaults to the schedule-to-close timeout or workflow execution timeout if not specified.")
 	s.StartToCloseTimeout = 0
-	s.Command.Flags().Var(&s.StartToCloseTimeout, "start-to-close-timeout", "Maximum time an activity is allowed to execute after being picked up  by a worker. This timeout is always retryable.")
+	s.Command.Flags().Var(&s.StartToCloseTimeout, "start-to-close-timeout", "Maximum time an activity is allowed to execute after being picked up by a worker. This timeout is always retryable.")
 	s.HeartbeatTimeout = 0
 	s.Command.Flags().Var(&s.HeartbeatTimeout, "heartbeat-timeout", "Maximum permitted time between successful worker heartbeats.")
 	s.RetryInitialInterval = 0
 	s.Command.Flags().Var(&s.RetryInitialInterval, "retry-initial-interval", "Interval of the first retry. If retryBackoffCoefficient is 1.0 then it is used for all retries.")
 	s.RetryMaximumInterval = 0
-	s.Command.Flags().Var(&s.RetryMaximumInterval, "retry-maximum-interval", "Maximum interval between retries. Exponential backoff leads to  interval increase. This value is the cap of the increase.")
+	s.Command.Flags().Var(&s.RetryMaximumInterval, "retry-maximum-interval", "Maximum interval between retries. Exponential backoff leads to interval increase. This value is the cap of the increase.")
 	s.Command.Flags().Float32Var(&s.RetryBackoffCoefficient, "retry-backoff-coefficient", 0, "Coefficient used to calculate the next retry interval. The next retry interval is previous interval multiplied by the backoff coefficient. Must be 1 or larger.")
-	s.Command.Flags().IntVar(&s.RetryMaximumAttempts, "retry-maximum-attempts", 0, "Maximum number of attempts. When exceeded the retries stop even if not expired yet. Setting this value to 1 disables retries. Setting this value to 0  means unlimited attempts(up to the timeouts).")
+	s.Command.Flags().IntVar(&s.RetryMaximumAttempts, "retry-maximum-attempts", 0, "Maximum number of attempts. When exceeded the retries stop even if not expired yet. Setting this value to 1 disables retries. Setting this value to 0 means unlimited attempts(up to the timeouts).")
 	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of the user submitting this request.")
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -2687,6 +2687,7 @@ func NewTemporalWorkflowCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.AddCommand(&NewTemporalWorkflowExecuteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowFixHistoryJsonCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowListCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkflowMetadataCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowQueryCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowResetCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowResultCommand(cctx, &s).Command)
@@ -2903,6 +2904,33 @@ func NewTemporalWorkflowListCommand(cctx *CommandContext, parent *TemporalWorkfl
 	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Content for an SQL-like `QUERY` List Filter.")
 	s.Command.Flags().BoolVar(&s.Archived, "archived", false, "Limit output to archived Workflow Executions.")
 	s.Command.Flags().IntVar(&s.Limit, "limit", 0, "Maximum number of Workflow Executions to display.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalWorkflowMetadataCommand struct {
+	Parent  *TemporalWorkflowCommand
+	Command cobra.Command
+	WorkflowReferenceOptions
+}
+
+func NewTemporalWorkflowMetadataCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowMetadataCommand {
+	var s TemporalWorkflowMetadataCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "metadata [flags]"
+	s.Command.Short = "Query the Workflow for user-specified metadata"
+	if hasHighlighting {
+		s.Command.Long = "Issue a Query for and display user-set metadata like summary and\ndetails for a specific Workflow Execution:\n\n\x1b[1mtemporal workflow metadata \\\n    --workflow-id YourWorkflowId\x1b[0m"
+	} else {
+		s.Command.Long = "Issue a Query for and display user-set metadata like summary and\ndetails for a specific Workflow Execution:\n\n```\ntemporal workflow metadata \\\n    --workflow-id YourWorkflowId\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

@@ -203,6 +203,11 @@ func (c *TemporalWorkflowUpdateOptionsCommand) run(cctx *CommandContext, args []
 	return nil
 }
 
+func (c *TemporalWorkflowMetadataCommand) run(cctx *CommandContext, _ []string) error {
+	return queryHelper(cctx, c.Parent, PayloadInputOptions{},
+		"__user_metadata", StringEnum{Value: ""}, c.WorkflowReferenceOptions)
+}
+
 func (c *TemporalWorkflowQueryCommand) run(cctx *CommandContext, args []string) error {
 	return queryHelper(cctx, c.Parent, c.PayloadInputOptions,
 		c.Name, c.RejectCondition, c.WorkflowReferenceOptions)
