@@ -17,6 +17,8 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+const NonJSONIndent = "  "
+
 type Colorer func(string, ...interface{}) string
 
 type Printer struct {
@@ -99,6 +101,8 @@ type StructuredOptions struct {
 	// printing.
 	Table                        *TableOptions
 	OverrideJSONPayloadShorthand *bool
+	// Indent this many additional times when printing non-JSON
+	NonJSONExtraIndent int
 }
 
 type Align int
@@ -260,6 +264,7 @@ type col struct {
 	width         int
 	cardOmitEmpty bool
 	align         Align
+	indentAmount  int
 }
 
 type colVal struct {
@@ -313,6 +318,7 @@ func adjustColsToOptions(cols []*col, options StructuredOptions) []*col {
 				col.align = align
 			}
 		}
+		col.indentAmount = options.NonJSONExtraIndent + 1
 		adjusted = append(adjusted, col)
 	}
 	return adjusted
@@ -331,8 +337,9 @@ func (p *Printer) printHeader(cols []*col) {
 		colorer = color.MagentaString
 	}
 	for _, col := range cols {
-		// We want to indent even the first field
-		p.writeStr("  ")
+		for i := 0; i < col.indentAmount; i++ {
+			p.writeStr(NonJSONIndent)
+		}
 		p.writeStr(tablewriter.Pad(colorer("%v", col.name), " ", col.width))
 	}
 	p.writeStr("\n")
@@ -346,8 +353,9 @@ func (p *Printer) printRows(cols []*col, rows []map[string]colVal) {
 
 func (p *Printer) printRow(cols []*col, row map[string]colVal) {
 	for _, col := range cols {
-		// We want to indent even the first field
-		p.writeStr("  ")
+		for i := 0; i < col.indentAmount; i++ {
+			p.writeStr(NonJSONIndent)
+		}
 		p.printCol(col, row[col.name].text)
 	}
 	p.writeStr("\n")

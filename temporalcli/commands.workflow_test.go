@@ -1205,10 +1205,14 @@ func (s *SharedServerSuite) testWorkflowMetadata(json bool) {
 	res := s.Execute(args...)
 	s.NoError(res.Err)
 	if !json {
-		s.ContainsOnSameLine(res.Stdout.String(), "QueryDefinitions", "my-query", "q-desc")
-		s.ContainsOnSameLine(res.Stdout.String(), "SignalDefinitions", "my-signal", "sig-desc")
-		s.ContainsOnSameLine(res.Stdout.String(), "UpdateDefinitions", "my-update", "upd-desc")
-		s.ContainsOnSameLine(res.Stdout.String(), "CurrentDetails", "current-deets")
+		s.Contains(res.Stdout.String(), "Query Definitions:")
+		s.ContainsOnSameLine(res.Stdout.String(), "my-query", "q-desc")
+		s.Contains(res.Stdout.String(), "Signal Definitions:")
+		s.ContainsOnSameLine(res.Stdout.String(), "my-signal", "sig-desc")
+		s.Contains(res.Stdout.String(), "Update Definitions:")
+		s.ContainsOnSameLine(res.Stdout.String(), "my-update", "upd-desc")
+		s.Contains(res.Stdout.String(), "Current Details:")
+		s.Contains(res.Stdout.String(), "current-deets")
 	} else {
 		s.Contains(res.Stdout.String(), "queryDefinitions")
 		s.ContainsOnSameLine(res.Stdout.String(), "name", "my-query")

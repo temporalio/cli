@@ -646,23 +646,49 @@ func queryHelper(cctx *CommandContext,
 	}
 
 	if queryType == metadataQueryName {
-		cctx.Printer.Println(color.MagentaString("Metadata:"))
 		var metadata sdkpb.WorkflowMetadata
-		UnmarshalProtoJSONWithOptions(result.QueryResult.Payloads[0].Data, &metadata, true)
-		output := struct {
-			WorkflowType      string
-			QueryDefinitions  []*sdkpb.WorkflowInteractionDefinition `cli:",cardOmitEmpty"`
-			SignalDefinitions []*sdkpb.WorkflowInteractionDefinition `cli:",cardOmitEmpty"`
-			UpdateDefinitions []*sdkpb.WorkflowInteractionDefinition `cli:",cardOmitEmpty"`
-			CurrentDetails    string                                 `cli:",cardOmitEmpty"`
-		}{
-			WorkflowType:      metadata.GetDefinition().GetType(),
-			QueryDefinitions:  metadata.GetDefinition().GetQueryDefinitions(),
-			SignalDefinitions: metadata.GetDefinition().GetSignalDefinitions(),
-			UpdateDefinitions: metadata.GetDefinition().GetUpdateDefinitions(),
-			CurrentDetails:    metadata.GetCurrentDetails(),
+		err := UnmarshalProtoJSONWithOptions(result.QueryResult.Payloads[0].Data, &metadata, true)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal metadata: %w", err)
 		}
-		return cctx.Printer.PrintStructured(output, printer.StructuredOptions{})
+		cctx.Printer.Println(color.MagentaString("Metadata:"))
+
+		qDefs := metadata.GetDefinition().GetQueryDefinitions()
+		if len(qDefs) > 0 {
+			cctx.Printer.Println(printer.NonJSONIndent, color.MagentaString("Query Definitions:"))
+			err := cctx.Printer.PrintStructured(qDefs, printer.StructuredOptions{
+				Table:              &printer.TableOptions{NoHeader: true},
+				NonJSONExtraIndent: 1,
+			})
+			if err != nil {
+				return err
+			}
+		}
+		sigDefs := metadata.GetDefinition().GetSignalDefinitions()
+		if len(sigDefs) > 0 {
+			cctx.Printer.Println(printer.NonJSONIndent, color.MagentaString("Signal Definitions:"))
+			err := cctx.Printer.PrintStructured(sigDefs, printer.StructuredOptions{
+				Table:              &printer.TableOptions{NoHeader: true},
+				NonJSONExtraIndent: 1,
+			})
+			if err != nil {
+				return err
+			}
+		}
+		updDefs := metadata.GetDefinition().GetUpdateDefinitions()
+		if len(updDefs) > 0 {
+			cctx.Printer.Println(printer.NonJSONIndent, color.MagentaString("Update Definitions:"))
+			err := cctx.Printer.PrintStructured(updDefs, printer.StructuredOptions{
+				Table:              &printer.TableOptions{NoHeader: true},
+				NonJSONExtraIndent: 1,
+			})
+			if err != nil {
+				return err
+			}
+		}
+		cctx.Printer.Println(printer.NonJSONIndent, color.MagentaString("Current Details:"))
+		cctx.Printer.Println(printer.NonJSONIndent, printer.NonJSONIndent, metadata.GetCurrentDetails())
+		return nil
 	} else {
 		cctx.Printer.Println(color.MagentaString("Query result:"))
 		output := struct {
