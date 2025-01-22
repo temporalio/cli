@@ -686,8 +686,11 @@ func queryHelper(cctx *CommandContext,
 				return err
 			}
 		}
-		cctx.Printer.Println(printer.NonJSONIndent, color.MagentaString("Current Details:"))
-		cctx.Printer.Println(printer.NonJSONIndent, printer.NonJSONIndent, metadata.GetCurrentDetails())
+		if metadata.GetCurrentDetails() != "" {
+			cctx.Printer.Println(printer.NonJSONIndent, color.MagentaString("Current Details:"))
+			cctx.Printer.Println(printer.NonJSONIndent, printer.NonJSONIndent,
+				metadata.GetCurrentDetails())
+		}
 		return nil
 	} else {
 		cctx.Printer.Println(color.MagentaString("Query result:"))
