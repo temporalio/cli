@@ -278,6 +278,15 @@ func (v *NexusEndpointConfigOptions) buildFlags(cctx *CommandContext, f *pflag.F
 	f.StringVar(&v.TargetUrl, "target-url", "", "An external Nexus Endpoint that receives forwarded Nexus requests. May be used as an alternative to `--target-namespace` and `--target-task-queue`.")
 }
 
+type QueryModifiersOptions struct {
+	RejectCondition StringEnum
+}
+
+func (v *QueryModifiersOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
+	v.RejectCondition = NewStringEnum([]string{"not_open", "not_completed_cleanly"}, "")
+	f.Var(&v.RejectCondition, "reject-condition", "Optional flag for rejecting Queries based on Workflow state. Accepted values: not_open, not_completed_cleanly.")
+}
+
 type TemporalCommand struct {
 	Command                 cobra.Command
 	Env                     string
@@ -2916,6 +2925,7 @@ type TemporalWorkflowMetadataCommand struct {
 	Parent  *TemporalWorkflowCommand
 	Command cobra.Command
 	WorkflowReferenceOptions
+	QueryModifiersOptions
 }
 
 func NewTemporalWorkflowMetadataCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowMetadataCommand {
@@ -2931,6 +2941,7 @@ func NewTemporalWorkflowMetadataCommand(cctx *CommandContext, parent *TemporalWo
 	}
 	s.Command.Args = cobra.NoArgs
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
+	s.QueryModifiersOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -2944,8 +2955,8 @@ type TemporalWorkflowQueryCommand struct {
 	Command cobra.Command
 	PayloadInputOptions
 	WorkflowReferenceOptions
-	Name            string
-	RejectCondition StringEnum
+	QueryModifiersOptions
+	Name string
 }
 
 func NewTemporalWorkflowQueryCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowQueryCommand {
@@ -2962,10 +2973,9 @@ func NewTemporalWorkflowQueryCommand(cctx *CommandContext, parent *TemporalWorkf
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Name, "name", "", "Query Type/Name. Required. Aliased as \"--type\".")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
-	s.RejectCondition = NewStringEnum([]string{"not_open", "not_completed_cleanly"}, "")
-	s.Command.Flags().Var(&s.RejectCondition, "reject-condition", "Optional flag for rejecting Queries based on Workflow state. Accepted values: not_open, not_completed_cleanly.")
 	s.PayloadInputOptions.buildFlags(cctx, s.Command.Flags())
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
+	s.QueryModifiersOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Flags().SetNormalizeFunc(aliasNormalizer(map[string]string{
 		"type": "name",
 	}))

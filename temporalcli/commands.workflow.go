@@ -18,6 +18,7 @@ import (
 	deploymentpb "go.temporal.io/api/deployment/v1"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/query/v1"
+	sdkpb "go.temporal.io/api/sdk/v1"
 	"go.temporal.io/api/update/v1"
 	workflowpb "go.temporal.io/api/workflow/v1"
 	"go.temporal.io/api/workflowservice/v1"
@@ -25,6 +26,8 @@ import (
 	"go.temporal.io/sdk/temporal"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 )
+
+const metadataQueryName = "__temporal_workflow_metadata"
 
 func (c *TemporalWorkflowCancelCommand) run(cctx *CommandContext, args []string) error {
 	cl, err := c.Parent.ClientOptions.dialClient(cctx)
@@ -205,7 +208,7 @@ func (c *TemporalWorkflowUpdateOptionsCommand) run(cctx *CommandContext, args []
 
 func (c *TemporalWorkflowMetadataCommand) run(cctx *CommandContext, _ []string) error {
 	return queryHelper(cctx, c.Parent, PayloadInputOptions{},
-		"__user_metadata", StringEnum{Value: ""}, c.WorkflowReferenceOptions)
+		metadataQueryName, c.RejectCondition, c.WorkflowReferenceOptions)
 }
 
 func (c *TemporalWorkflowQueryCommand) run(cctx *CommandContext, args []string) error {
@@ -642,14 +645,34 @@ func queryHelper(cctx *CommandContext,
 		return cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
 	}
 
-	cctx.Printer.Println(color.MagentaString("Query result:"))
-	output := struct {
-		QueryResult json.RawMessage `cli:",cardOmitEmpty"`
-	}{}
-	output.QueryResult, err = cctx.MarshalFriendlyJSONPayloads(result.QueryResult)
-	if err != nil {
-		return fmt.Errorf("failed to marshal query result: %w", err)
-	}
+	if queryType == metadataQueryName {
+		cctx.Printer.Println(color.MagentaString("Metadata:"))
+		var metadata sdkpb.WorkflowMetadata
+		UnmarshalProtoJSONWithOptions(result.QueryResult.Payloads[0].Data, &metadata, true)
+		output := struct {
+			WorkflowType      string
+			QueryDefinitions  []*sdkpb.WorkflowInteractionDefinition `cli:",cardOmitEmpty"`
+			SignalDefinitions []*sdkpb.WorkflowInteractionDefinition `cli:",cardOmitEmpty"`
+			UpdateDefinitions []*sdkpb.WorkflowInteractionDefinition `cli:",cardOmitEmpty"`
+			CurrentDetails    string                                 `cli:",cardOmitEmpty"`
+		}{
+			WorkflowType:      metadata.GetDefinition().GetType(),
+			QueryDefinitions:  metadata.GetDefinition().GetQueryDefinitions(),
+			SignalDefinitions: metadata.GetDefinition().GetSignalDefinitions(),
+			UpdateDefinitions: metadata.GetDefinition().GetUpdateDefinitions(),
+			CurrentDetails:    metadata.GetCurrentDetails(),
+		}
+		return cctx.Printer.PrintStructured(output, printer.StructuredOptions{})
+	} else {
+		cctx.Printer.Println(color.MagentaString("Query result:"))
+		output := struct {
+			QueryResult json.RawMessage `cli:",cardOmitEmpty"`
+		}{}
+		output.QueryResult, err = cctx.MarshalFriendlyJSONPayloads(result.QueryResult)
+		if err != nil {
+			return fmt.Errorf("failed to marshal query result: %w", err)
+		}
 
-	return cctx.Printer.PrintStructured(output, printer.StructuredOptions{})
+		return cctx.Printer.PrintStructured(output, printer.StructuredOptions{})
+	}
 }

@@ -2899,6 +2899,7 @@ commands:
       ```
     option-sets:
       - workflow-reference
+      - query-modifiers
 
   - name: temporal workflow update-options
     summary: Change Workflow Execution Options
@@ -2984,6 +2985,7 @@ commands:
     option-sets:
       - payload-input
       - workflow-reference
+      - query-modifiers
     options:
       - name: name
         type: string
@@ -2991,13 +2993,6 @@ commands:
         required: true
         aliases:
           - type
-      - name: reject-condition
-        type: string-enum
-        description: |
-          Optional flag for rejecting Queries based on Workflow state.
-        enum-values:
-          - not_open
-          - not_completed_cleanly
 
   - name: temporal workflow reset
     summary: Move Workflow Execution history point
@@ -3814,3 +3809,13 @@ option-sets:
           An external Nexus Endpoint that receives forwarded Nexus requests.
           May be used as an alternative to `--target-namespace` and
           `--target-task-queue`.
+
+  - name: query-modifiers
+    options:
+      - name: reject-condition
+        type: string-enum
+        description: |
+          Optional flag for rejecting Queries based on Workflow state.
+        enum-values:
+          - not_open
+          - not_completed_cleanly
