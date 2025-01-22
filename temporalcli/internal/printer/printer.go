@@ -385,6 +385,12 @@ func (p *Printer) printCards(cols []*col, rows []map[string]colVal) {
 
 func (p *Printer) printCard(cols []*col, row map[string]colVal) {
 	nameValueRows := make([]map[string]colVal, 0, len(cols))
+	indentAmount := 1
+	// Since this option applies to everything in a structured print, there should be
+	// no difference among columns
+	if len(cols) > 0 {
+		indentAmount = cols[0].indentAmount
+	}
 	for _, col := range cols {
 		rowVal := row[col.name].val
 		if !col.cardOmitEmpty || (rowVal != nil && !reflect.ValueOf(row[col.name].val).IsZero()) {
@@ -395,10 +401,10 @@ func (p *Printer) printCard(cols []*col, row map[string]colVal) {
 		}
 	}
 	nameValueCols := []*col{
-		{name: "Name"},
+		{name: "Name", indentAmount: indentAmount},
 		// We want to set the width to 1 here, because we want it to stretch as far
 		// as it needs to the right
-		{name: "Value", width: 1},
+		{name: "Value", width: 1, indentAmount: indentAmount},
 	}
 	p.calculateUnsetColWidths(nameValueCols, nameValueRows)
 	p.printRows(nameValueCols, nameValueRows)
