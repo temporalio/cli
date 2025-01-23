@@ -18,6 +18,7 @@ import (
 	deploymentpb "go.temporal.io/api/deployment/v1"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/query/v1"
+	sdkpb "go.temporal.io/api/sdk/v1"
 	"go.temporal.io/api/update/v1"
 	workflowpb "go.temporal.io/api/workflow/v1"
 	"go.temporal.io/api/workflowservice/v1"
@@ -25,6 +26,8 @@ import (
 	"go.temporal.io/sdk/temporal"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 )
+
+const metadataQueryName = "__temporal_workflow_metadata"
 
 func (c *TemporalWorkflowCancelCommand) run(cctx *CommandContext, args []string) error {
 	cl, err := c.Parent.ClientOptions.dialClient(cctx)
@@ -201,6 +204,11 @@ func (c *TemporalWorkflowUpdateOptionsCommand) run(cctx *CommandContext, args []
 		}
 	}
 	return nil
+}
+
+func (c *TemporalWorkflowMetadataCommand) run(cctx *CommandContext, _ []string) error {
+	return queryHelper(cctx, c.Parent, PayloadInputOptions{},
+		metadataQueryName, c.RejectCondition, c.WorkflowReferenceOptions)
 }
 
 func (c *TemporalWorkflowQueryCommand) run(cctx *CommandContext, args []string) error {
@@ -637,14 +645,63 @@ func queryHelper(cctx *CommandContext,
 		return cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
 	}
 
-	cctx.Printer.Println(color.MagentaString("Query result:"))
-	output := struct {
-		QueryResult json.RawMessage `cli:",cardOmitEmpty"`
-	}{}
-	output.QueryResult, err = cctx.MarshalFriendlyJSONPayloads(result.QueryResult)
-	if err != nil {
-		return fmt.Errorf("failed to marshal query result: %w", err)
-	}
+	if queryType == metadataQueryName {
+		var metadata sdkpb.WorkflowMetadata
+		err := UnmarshalProtoJSONWithOptions(result.QueryResult.Payloads[0].Data, &metadata, true)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal metadata: %w", err)
+		}
+		cctx.Printer.Println(color.MagentaString("Metadata:"))
 
-	return cctx.Printer.PrintStructured(output, printer.StructuredOptions{})
+		qDefs := metadata.GetDefinition().GetQueryDefinitions()
+		if len(qDefs) > 0 {
+			cctx.Printer.Println(printer.NonJSONIndent, color.MagentaString("Query Definitions:"))
+			err := cctx.Printer.PrintStructured(qDefs, printer.StructuredOptions{
+				Table:              &printer.TableOptions{NoHeader: true},
+				NonJSONExtraIndent: 1,
+			})
+			if err != nil {
+				return err
+			}
+		}
+		sigDefs := metadata.GetDefinition().GetSignalDefinitions()
+		if len(sigDefs) > 0 {
+			cctx.Printer.Println(printer.NonJSONIndent, color.MagentaString("Signal Definitions:"))
+			err := cctx.Printer.PrintStructured(sigDefs, printer.StructuredOptions{
+				Table:              &printer.TableOptions{NoHeader: true},
+				NonJSONExtraIndent: 1,
+			})
+			if err != nil {
+				return err
+			}
+		}
+		updDefs := metadata.GetDefinition().GetUpdateDefinitions()
+		if len(updDefs) > 0 {
+			cctx.Printer.Println(printer.NonJSONIndent, color.MagentaString("Update Definitions:"))
+			err := cctx.Printer.PrintStructured(updDefs, printer.StructuredOptions{
+				Table:              &printer.TableOptions{NoHeader: true},
+				NonJSONExtraIndent: 1,
+			})
+			if err != nil {
+				return err
+			}
+		}
+		if metadata.GetCurrentDetails() != "" {
+			cctx.Printer.Println(printer.NonJSONIndent, color.MagentaString("Current Details:"))
+			cctx.Printer.Println(printer.NonJSONIndent, printer.NonJSONIndent,
+				metadata.GetCurrentDetails())
+		}
+		return nil
+	} else {
+		cctx.Printer.Println(color.MagentaString("Query result:"))
+		output := struct {
+			QueryResult json.RawMessage `cli:",cardOmitEmpty"`
+		}{}
+		output.QueryResult, err = cctx.MarshalFriendlyJSONPayloads(result.QueryResult)
+		if err != nil {
+			return fmt.Errorf("failed to marshal query result: %w", err)
+		}
+
+		return cctx.Printer.PrintStructured(output, printer.StructuredOptions{})
+	}
 }

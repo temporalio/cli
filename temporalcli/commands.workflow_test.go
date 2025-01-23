@@ -1148,3 +1148,96 @@ func (s *SharedServerSuite) testStackWorkflow(json bool) {
 	s.Error(res.Err)
 	s.Contains(res.Err.Error(), "query was rejected, workflow has status: Completed")
 }
+
+func (s *SharedServerSuite) TestWorkflow_MetadataJSON() {
+	s.testWorkflowMetadata(true)
+}
+
+func (s *SharedServerSuite) TestWorkflow_Metadata() {
+	s.testWorkflowMetadata(false)
+}
+
+func (s *SharedServerSuite) testWorkflowMetadata(json bool) {
+	// Make workflow wait for signal and then return it
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
+		done := false
+		workflow.Go(ctx, func(ctx workflow.Context) {
+			_ = workflow.Await(ctx, func() bool {
+				return done
+			})
+		})
+		workflow.SetQueryHandlerWithOptions(ctx, "my-query", func(arg string) (string, error) {
+			return "hi", nil
+		}, workflow.QueryHandlerOptions{Description: "q-desc"})
+		workflow.SetUpdateHandlerWithOptions(ctx, "my-update",
+			func(ctx workflow.Context, arg string) (string, error) { return "hi", nil },
+			workflow.UpdateHandlerOptions{Description: "upd-desc"})
+		workflow.SetCurrentDetails(ctx, "current-deets")
+		workflow.GetSignalChannelWithOptions(ctx, "my-signal",
+			workflow.SignalChannelOptions{Description: "sig-desc"}).Receive(ctx, nil)
+		done = true
+		return nil, nil
+
+	})
+
+	// Start the workflow
+	run, err := s.Client.ExecuteWorkflow(
+		s.Context,
+		client.StartWorkflowOptions{
+			TaskQueue:     s.Worker().Options.TaskQueue,
+			StaticSummary: "summie",
+			StaticDetails: "deets",
+		},
+		DevWorkflow,
+		"ignored",
+	)
+	s.NoError(err)
+
+	args := []string{
+		"workflow", "metadata",
+		"--address", s.Address(),
+		"-w", run.GetID(),
+	}
+	if json {
+		args = append(args, "-o", "json")
+	}
+
+	res := s.Execute(args...)
+	s.NoError(res.Err)
+	if !json {
+		s.Contains(res.Stdout.String(), "Query Definitions:")
+		s.ContainsOnSameLine(res.Stdout.String(), "my-query", "q-desc")
+		s.Contains(res.Stdout.String(), "Signal Definitions:")
+		s.ContainsOnSameLine(res.Stdout.String(), "my-signal", "sig-desc")
+		s.Contains(res.Stdout.String(), "Update Definitions:")
+		s.ContainsOnSameLine(res.Stdout.String(), "my-update", "upd-desc")
+		s.Contains(res.Stdout.String(), "Current Details:")
+		s.Contains(res.Stdout.String(), "current-deets")
+	} else {
+		s.Contains(res.Stdout.String(), "queryDefinitions")
+		s.ContainsOnSameLine(res.Stdout.String(), "name", "my-query")
+		s.Contains(res.Stdout.String(), "signalDefinitions")
+		s.ContainsOnSameLine(res.Stdout.String(), "name", "my-signal")
+		s.Contains(res.Stdout.String(), "updateDefinitions")
+		s.ContainsOnSameLine(res.Stdout.String(), "name", "my-update")
+		s.ContainsOnSameLine(res.Stdout.String(), "currentDetails", "current-deets")
+	}
+
+	// Unblock the workflow with a signal
+	s.NoError(s.Client.SignalWorkflow(s.Context, run.GetID(), "", "my-signal", nil))
+	s.NoError(run.Get(s.Context, nil))
+
+	// Ensure query is rejected when using not open rejection condition
+	args = []string{
+		"workflow", "metadata",
+		"--address", s.Address(),
+		"-w", run.GetID(),
+		"--reject-condition", "not_open",
+	}
+	if json {
+		args = append(args, "-o", "json")
+	}
+	res = s.Execute(args...)
+	s.Error(res.Err)
+	s.Contains(res.Err.Error(), "query was rejected, workflow has status: Completed")
+}
