@@ -9,15 +9,15 @@ require (
 	github.com/fatih/color v1.17.0
 	github.com/google/uuid v1.6.0
 	github.com/mattn/go-isatty v0.0.20
-	github.com/nexus-rpc/sdk-go v0.1.0
+	github.com/nexus-rpc/sdk-go v0.1.1
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.10.0
 	github.com/temporalio/ui-server/v2 v2.32.0
-	go.temporal.io/api v1.43.0
+	go.temporal.io/api v1.43.3-0.20250130180025-c83bb3e83097
 	go.temporal.io/sdk v1.31.0
-	go.temporal.io/server v1.26.2
+	go.temporal.io/server v1.27.0-127.0.0.20250131044850-9fe70b4bdc01
 	google.golang.org/grpc v1.67.1
 	google.golang.org/protobuf v1.35.1
 	gopkg.in/yaml.v3 v3.0.1
@@ -102,7 +102,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/sony/gobreaker v1.0.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
-	github.com/temporalio/ringpop-go v0.0.0-20241119001152-e505ebd8f887 // indirect
+	github.com/temporalio/ringpop-go v0.0.0-20250130211428-b97329e994f7 // indirect
 	github.com/temporalio/sqlparser v0.0.0-20231115171017-f4060bcfa6cb // indirect
 	github.com/temporalio/tchannel-go v1.22.1-0.20240528171429-1db37fdea938 // indirect
 	github.com/twmb/murmur3 v1.1.8 // indirect

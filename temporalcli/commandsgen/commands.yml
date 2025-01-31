@@ -390,6 +390,12 @@ commands:
       However, if the Activity is currently running, it will run to completion.
       If the Activity is on its last retry attempt and fails, the failure will
       be returned to the caller, just as if the Activity had not been paused.
+      
+      Activities can be specified by their Activity ID or Activity Type. 
+      One of those parameters must be provided. If both are provided - Activity
+      Type will be used, and Activity ID will be ignored.
+
+      ```
 
       Specify the Activity and Workflow IDs:
 
@@ -403,7 +409,10 @@ commands:
         short: a
         type: string
         description: Activity ID to pause.
-        required: true
+      - name: activity-type
+        short: a
+        type: string
+        description: Activity Type to pause.
       - name: identity
         type: string
         description: Identity of the user submitting this request.
@@ -417,42 +426,47 @@ commands:
 
       If the Activity is not running and is past its retry timeout, it will be
       scheduled immediately. Otherwise, it will be scheduled after its retry
-      timeout expires. The Activity can be retried immediately with `--no-wait`.
+      timeout expires. 
 
-      Use `--reset` to reset the number of previous run attempts to zero. For
-      example, if an Activity is near the maximum number of attempts N specified
-      in its retry policy, `--reset` will allow the Activity to be retried
-      another N times after unpausing.
+      Use `--reset-attempts` to reset the number of previous run attempts to 
+      zero. For example, if an Activity is near the maximum number of attempts 
+      N specified in its retry policy, `--reset-attempts` will allow the 
+      Activity to be retried another N times after unpausing.
+      
+      Use `--reset-heartbeat` to reset the Activity's heartbeats. 
+      
+      Activities can be specified by their Activity ID or Activity Type. 
+      One of those parameters must be provided. If both are provided - Activity
+      Type will be used, and Activity ID will be ignored.      
 
-      Specify the Activity and Workflow IDs:
+      Specify the Activity ID or Type and Workflow IDs:
 
       ```
       temporal activity unpause \
           --activity-id YourActivityId \
           --workflow-id YourWorkflowId
-          --reset
-          --no-wait
+          --reset-attempts
           --reset-heartbeats
       ```
     options:
       - name: activity-id
         short: a
         type: string
-        description: Activity ID to pause.
-        required: true
+        description: Activity ID to unpause.
+      - name: activity-type
+        short: a
+        type: string
+        description: Activity Type to unpause.
       - name: identity
         type: string
         description: Identity of the user submitting this request.
-      - name: reset
+      - name: reset-attempts
         type: bool
-        description: Also reset the activity.
-      - name: no-wait
-        type: bool
-        description: |
-          Schedule the Activity immediately, even if its retry timeout has not expired.
+        description: Also reset the activity attempts.
       - name: reset-heartbeats
         type: bool
-        description: Reset the Activity's heartbeat timeout. Only works with --reset.
+        description: |
+          Reset the Activity's heartbeats. Only works with --reset-attempts.
     option-sets:
       - workflow reference
 
@@ -460,22 +474,27 @@ commands:
     summary: Reset an Activity
     description: |
       Resetting an activity resets both the number of attempts and the activity 
-      timeout. If activity is paused, it will be un-paused. 
+      timeout.  
 
-      If the `no-wait` flag is provided, the activity will be rescheduled 
-      immediately. Even if the activity is currently running.
-      If the `no-wait` flag is not provided, the activity will be scheduled 
-      after the current instance completes, if needed.      
+      If activity is paused and 'keep_paused' flag is not provided - it will be 
+      unpaused.
+      If activity is paused and 'keep_paused' flag is provided - it will stay 
+      paused.
+      If activity is waiting for the retry, is will be rescheduled immediately.
       If the 'reset_heartbeats' flag is set, the activity heartbeat timer and 
       heartbeats will be reset.
 
-      Specify the Activity and Workflow IDs:
+      Activities can be specified by their Activity ID or Activity Type. 
+      One of those parameters must be provided. If both are provided - Activity
+      Type will be used, and Activity ID will be ignored.      
+
+      Specify the Activity Type of ID and Workflow IDs:
 
       ```
       temporal activity reset \
           --activity-id YourActivityId \
           --workflow-id YourWorkflowId
-          --no-wait
+          --keep-paused
           --reset-heartbeats
       ```
     options:
@@ -483,15 +502,16 @@ commands:
         short: a
         type: string
         description: Activity ID to pause.
-        required: true
+      - name: activity-type
+        short: a
+        type: string
+        description: Activity Type to pause.
       - name: identity
         type: string
         description: Identity of the user submitting this request.
-      - name: no-wait
+      - name: keep-paused
         type: bool
-        description: |
-          Schedule the Activity immediately, even if its retry timeout has not 
-          expired or the activity is currently running.
+        description: If activity was paused - it will stay paused.
       - name: reset-heartbeats
         type: bool
         description: Reset the Activity's heartbeat.

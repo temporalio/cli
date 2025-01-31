@@ -206,30 +206,59 @@ func (s *SharedServerSuite) TestActivityPauseUnpause() {
 		"--run-id", run.GetRunID(),
 		"--identity", identity,
 		"--address", s.Address(),
-		"--reset",
+		"--reset-attempts",
 	)
 
 	s.NoError(res.Err)
 }
 
-func (s *SharedServerSuite) TestActivityUnPause_Failed() {
+func (s *SharedServerSuite) TestActivityPauseUnpauseByType() {
 	run := s.waitActivityStarted()
 	wid := run.GetID()
-	aid := "dev-activity-id"
+	at := "DevActivity"
 	identity := "MyIdentity"
 
-	// should fail because --reset-heartbeat is provided, but --reset flag is missing
 	res := s.Execute(
-		"activity", "unpause",
-		"--activity-id", aid,
+		"activity", "pause",
+		"--activity-type", at,
 		"--workflow-id", wid,
 		"--run-id", run.GetRunID(),
 		"--identity", identity,
 		"--address", s.Address(),
-		"--reset-heartbeats",
 	)
 
-	s.Error(res.Err)
+	s.NoError(res.Err)
+
+	res = s.Execute(
+		"activity", "unpause",
+		"--activity-type", at,
+		"--workflow-id", wid,
+		"--run-id", run.GetRunID(),
+		"--identity", identity,
+		"--address", s.Address(),
+		"--reset-attempts",
+	)
+
+	s.NoError(res.Err)
+}
+
+func (s *SharedServerSuite) TestActivityCommandFailed_NoActivityTpeOrid() {
+	run := s.waitActivityStarted()
+	wid := run.GetID()
+	identity := "MyIdentity"
+
+	commands := []string{"pause", "unpause", "reset"}
+	for _, command := range commands {
+		// should fail because both activity-id and activity-type are not provided
+		res := s.Execute(
+			"activity", command,
+			"--workflow-id", wid,
+			"--run-id", run.GetRunID(),
+			"--identity", identity,
+			"--address", s.Address(),
+		)
+		s.Error(res.Err)
+	}
 }
 
 func (s *SharedServerSuite) TestActivityReset() {
@@ -253,7 +282,6 @@ func (s *SharedServerSuite) TestActivityReset() {
 	s.ContainsOnSameLine(out, "ServerResponse", "true")
 
 	// reset should fail because activity is not found
-
 	res = s.Execute(
 		"activity", "reset",
 		"--activity-id", "fake_id",
