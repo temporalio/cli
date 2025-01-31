@@ -3,14 +3,15 @@
 package temporalcli
 
 import (
-	"os"
-	"time"
-
 	"github.com/mattn/go-isatty"
 
 	"github.com/spf13/cobra"
 
 	"github.com/spf13/pflag"
+
+	"os"
+
+	"time"
 )
 
 var hasHighlighting = isatty.IsTerminal(os.Stdout.Fd())
@@ -436,7 +437,7 @@ func NewTemporalActivityPauseCommand(cctx *CommandContext, parent *TemporalActiv
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "Activity ID to pause.")
-	s.Command.Flags().StringVarP(&s.ActivityType, "activity-type", "t", "", "Activity Type to pause.")
+	s.Command.Flags().StringVarP(&s.ActivityType, "activity-type", "a", "", "Activity Type to pause.")
 	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of the user submitting this request.")
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -471,7 +472,7 @@ func NewTemporalActivityResetCommand(cctx *CommandContext, parent *TemporalActiv
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "Activity ID to pause.")
-	s.Command.Flags().StringVarP(&s.ActivityType, "activity-type", "t", "", "Activity Type to pause.")
+	s.Command.Flags().StringVarP(&s.ActivityType, "activity-type", "a", "", "Activity Type to pause.")
 	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of the user submitting this request.")
 	s.Command.Flags().BoolVar(&s.KeepPaused, "keep-paused", false, "If activity was paused - it will stay paused.")
 	s.Command.Flags().BoolVar(&s.ResetHeartbeats, "reset-heartbeats", false, "Reset the Activity's heartbeat.")
@@ -508,7 +509,7 @@ func NewTemporalActivityUnpauseCommand(cctx *CommandContext, parent *TemporalAct
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "Activity ID to unpause.")
-	s.Command.Flags().StringVarP(&s.ActivityType, "activity-type", "t", "", "Activity Type to unpause.")
+	s.Command.Flags().StringVarP(&s.ActivityType, "activity-type", "a", "", "Activity Type to unpause.")
 	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of the user submitting this request.")
 	s.Command.Flags().BoolVar(&s.ResetAttempts, "reset-attempts", false, "Also reset the activity attempts.")
 	s.Command.Flags().BoolVar(&s.ResetHeartbeats, "reset-heartbeats", false, "Reset the Activity's heartbeats. Only works with --reset-attempts.")
