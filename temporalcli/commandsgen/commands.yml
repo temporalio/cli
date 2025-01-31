@@ -410,7 +410,7 @@ commands:
         type: string
         description: Activity ID to pause.
       - name: activity-type
-        short: a
+        short: g
         type: string
         description: Activity Type to pause.
       - name: identity
@@ -454,7 +454,7 @@ commands:
         type: string
         description: Activity ID to unpause.
       - name: activity-type
-        short: a
+        short: g
         type: string
         description: Activity Type to unpause.
       - name: identity
@@ -503,7 +503,7 @@ commands:
         type: string
         description: Activity ID to pause.
       - name: activity-type
-        short: a
+        short: g
         type: string
         description: Activity Type to pause.
       - name: identity
