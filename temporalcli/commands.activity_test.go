@@ -226,7 +226,6 @@ func (s *SharedServerSuite) TestActivityPauseUnpauseByType() {
 		"--identity", identity,
 		"--address", s.Address(),
 	)
-
 	s.NoError(res.Err)
 
 	res = s.Execute(
