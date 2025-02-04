@@ -486,14 +486,21 @@ func NewTemporalActivityResetCommand(cctx *CommandContext, parent *TemporalActiv
 }
 
 type TemporalActivityUnpauseCommand struct {
-	Parent  *TemporalActivityCommand
-	Command cobra.Command
-	WorkflowReferenceOptions
+	Parent          *TemporalActivityCommand
+	Command         cobra.Command
+	WorkflowId      string
+	RunId           string
 	ActivityId      string
 	ActivityType    string
 	Identity        string
 	ResetAttempts   bool
 	ResetHeartbeats bool
+	Query           string
+	Reason          string
+	MatchAll        bool
+	Jitter          Duration
+	Yes             bool
+	Rps             float32
 }
 
 func NewTemporalActivityUnpauseCommand(cctx *CommandContext, parent *TemporalActivityCommand) *TemporalActivityUnpauseCommand {
@@ -503,17 +510,25 @@ func NewTemporalActivityUnpauseCommand(cctx *CommandContext, parent *TemporalAct
 	s.Command.Use = "unpause [flags]"
 	s.Command.Short = "Unpause an Activity"
 	if hasHighlighting {
-		s.Command.Long = "Re-schedule a previously-paused Activity for execution.\n\nIf the Activity is not running and is past its retry timeout, it will be\nscheduled immediately. Otherwise, it will be scheduled after its retry\ntimeout expires. \n\nUse \x1b[1m--reset-attempts\x1b[0m to reset the number of previous run attempts to \nzero. For example, if an Activity is near the maximum number of attempts \nN specified in its retry policy, \x1b[1m--reset-attempts\x1b[0m will allow the \nActivity to be retried another N times after unpausing.\n\nUse \x1b[1m--reset-heartbeat\x1b[0m to reset the Activity's heartbeats. \n\nActivities can be specified by their Activity ID or Activity Type. \nOne of those parameters must be provided. If both are provided - Activity\nType will be used, and Activity ID will be ignored.      \n\nSpecify the Activity ID or Type and Workflow IDs:\n\n\x1b[1mtemporal activity unpause \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n    --reset-attempts\n    --reset-heartbeats\x1b[0m"
+		s.Command.Long = "Re-schedule a previously-paused Activity for execution.\n\nIf the Activity is not running and is past its retry timeout, it will be\nscheduled immediately. Otherwise, it will be scheduled after its retry\ntimeout expires. \n\nUse \x1b[1m--reset-attempts\x1b[0m to reset the number of previous run attempts to \nzero. For example, if an Activity is near the maximum number of attempts \nN specified in its retry policy, \x1b[1m--reset-attempts\x1b[0m will allow the \nActivity to be retried another N times after unpausing.\n\nUse \x1b[1m--reset-heartbeat\x1b[0m to reset the Activity's heartbeats. \n\nActivities can be specified by their Activity ID or Activity Type. \nOne of those parameters must be provided. If both are provided - Activity\nType will be used, and Activity ID will be ignored.\n\nActivities can be unpaused in bulk via a visibility Query list filter:\n\n\x1b[1mtemporal activity unpause \\\n    --query YourQuery \\\n    --reason YourReasonForTermination\x1b[0m\n\n\nSpecify the Activity ID or Type and Workflow IDs:\n\n\x1b[1mtemporal activity unpause \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n    --reset-attempts\n    --reset-heartbeats\x1b[0m"
 	} else {
-		s.Command.Long = "Re-schedule a previously-paused Activity for execution.\n\nIf the Activity is not running and is past its retry timeout, it will be\nscheduled immediately. Otherwise, it will be scheduled after its retry\ntimeout expires. \n\nUse `--reset-attempts` to reset the number of previous run attempts to \nzero. For example, if an Activity is near the maximum number of attempts \nN specified in its retry policy, `--reset-attempts` will allow the \nActivity to be retried another N times after unpausing.\n\nUse `--reset-heartbeat` to reset the Activity's heartbeats. \n\nActivities can be specified by their Activity ID or Activity Type. \nOne of those parameters must be provided. If both are provided - Activity\nType will be used, and Activity ID will be ignored.      \n\nSpecify the Activity ID or Type and Workflow IDs:\n\n```\ntemporal activity unpause \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n    --reset-attempts\n    --reset-heartbeats\n```"
+		s.Command.Long = "Re-schedule a previously-paused Activity for execution.\n\nIf the Activity is not running and is past its retry timeout, it will be\nscheduled immediately. Otherwise, it will be scheduled after its retry\ntimeout expires. \n\nUse `--reset-attempts` to reset the number of previous run attempts to \nzero. For example, if an Activity is near the maximum number of attempts \nN specified in its retry policy, `--reset-attempts` will allow the \nActivity to be retried another N times after unpausing.\n\nUse `--reset-heartbeat` to reset the Activity's heartbeats. \n\nActivities can be specified by their Activity ID or Activity Type. \nOne of those parameters must be provided. If both are provided - Activity\nType will be used, and Activity ID will be ignored.\n\nActivities can be unpaused in bulk via a visibility Query list filter:\n\n```\ntemporal activity unpause \\\n    --query YourQuery \\\n    --reason YourReasonForTermination\n```\n\n\nSpecify the Activity ID or Type and Workflow IDs:\n\n```\ntemporal activity unpause \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n    --reset-attempts\n    --reset-heartbeats\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "Activity ID to unpause.")
+	s.Command.Flags().StringVarP(&s.WorkflowId, "workflow-id", "w", "", "Workflow ID. You must set either --workflow-id or --query.")
+	s.Command.Flags().StringVarP(&s.RunId, "run-id", "r", "", "Run ID. Can only be set with --workflow-id. Do not use with --query.")
+	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "Activity ID to unpause. Can only be used without --query.")
 	s.Command.Flags().StringVarP(&s.ActivityType, "activity-type", "g", "", "Activity Type to unpause.")
 	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of the user submitting this request.")
 	s.Command.Flags().BoolVar(&s.ResetAttempts, "reset-attempts", false, "Also reset the activity attempts.")
 	s.Command.Flags().BoolVar(&s.ResetHeartbeats, "reset-heartbeats", false, "Reset the Activity's heartbeats. Only works with --reset-attempts.")
-	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
+	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Content for an SQL-like `QUERY` List Filter.")
+	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for unpause. Can only be used with --query.")
+	s.Command.Flags().BoolVar(&s.MatchAll, "match-all", false, "Every paused activity should be unpaused.  Can only be used with --query.")
+	s.Jitter = 0
+	s.Command.Flags().VarP(&s.Jitter, "jitter", "j", "The activity will start at random a time within the specified duration. Can only be used with --query.")
+	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm termination. Can only be used with --query.")
+	s.Command.Flags().Float32Var(&s.Rps, "rps", 0, "Limit batch's requests per second. Can only be used with --query.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
