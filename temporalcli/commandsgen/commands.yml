@@ -437,7 +437,16 @@ commands:
       
       Activities can be specified by their Activity ID or Activity Type. 
       One of those parameters must be provided. If both are provided - Activity
-      Type will be used, and Activity ID will be ignored.      
+      Type will be used, and Activity ID will be ignored.
+      
+      Activities can be unpaused in bulk via a visibility Query list filter:
+
+      ```
+      temporal activity unpause \
+          --query YourQuery \
+          --reason YourReasonForTermination
+      ```
+      
 
       Specify the Activity ID or Type and Workflow IDs:
 
@@ -452,7 +461,8 @@ commands:
       - name: activity-id
         short: a
         type: string
-        description: Activity ID to unpause.
+        description: |
+          Activity ID to unpause. Can only be used without --query.
       - name: activity-type
         short: g
         type: string
@@ -467,8 +477,20 @@ commands:
         type: bool
         description: |
           Reset the Activity's heartbeats. Only works with --reset-attempts.
+      - name: match-all
+        type: bool
+        description: |
+          Every paused activity should be unpaused. This flag is ignored if 
+          activity-type is provided. Can only be used with --query.
+      - name: jitter
+        type: duration
+        short: j
+        description: |
+          The activity will start at random a time within the specified duration.
+          Can only be used with --query.
     option-sets:
-      - workflow reference
+      - single-workflow-or-batch
+
 
   - name: temporal activity reset
     summary: Reset an Activity
