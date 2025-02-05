@@ -404,8 +404,6 @@ func (s *SharedServerSuite) TestUnpauseActivity_BatchSuccess() {
 		}),
 	)
 
-	failActivity.Store(false)
-
 	// Send batch activity unpause
 	cmdRes := s.Execute("activity", "unpause",
 		"--rps", "1",
@@ -416,4 +414,7 @@ func (s *SharedServerSuite) TestUnpauseActivity_BatchSuccess() {
 	)
 	s.NoError(cmdRes.Err)
 	s.NotEmpty(startBatchRequest.JobId)
+
+	// unblock the activities
+	failActivity.Store(false)
 }

@@ -458,16 +458,6 @@ commands:
           --reset-heartbeats
       ```
     options:
-      - name: workflow-id
-        short: w
-        type: string
-        description: |
-          Workflow ID. You must set either --workflow-id or --query.
-      - name: run-id
-        short: r
-        type: string
-        description: |
-          Run ID. Can only be set with --workflow-id. Do not use with --query.
       - name: activity-id
         short: a
         type: string
@@ -487,35 +477,20 @@ commands:
         type: bool
         description: |
           Reset the Activity's heartbeats. Only works with --reset-attempts.
-      - name: query
-        short: q
-        type: string
-        description: |
-          Content for an SQL-like `QUERY` List Filter.
-      - name: reason
-        type: string
-        description: |
-          Reason for unpause. Can only be used with --query.
       - name: match-all
         type: bool
         description: |
-          Every paused activity should be unpaused. 
-          Can only be used with --query.
+          Every paused activity should be unpaused. This flag is ignored if 
+          activity-type is provided. Can only be used with --query.
       - name: jitter
         type: duration
         short: j
         description: |
           The activity will start at random a time within the specified duration.
           Can only be used with --query.
-      - name: yes
-        short: y
-        type: bool
-        description: |
-          Don't prompt to confirm termination. Can only be used with --query.
-      - name: rps
-        type: float
-        description: |
-          Limit batch's requests per second. Can only be used with --query.
+    option-sets:
+      - single-workflow-or-batch
+
 
   - name: temporal activity reset
     summary: Reset an Activity
