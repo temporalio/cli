@@ -323,6 +323,25 @@ func (s *SharedServerSuite) getActivityEvents(workflowID, activityID string) (
 	return started, completed, failed
 }
 
+func checkActivitiesRunning(s *SharedServerSuite, run client.WorkflowRun) {
+	s.Eventually(func() bool {
+		resp, err := s.Client.DescribeWorkflowExecution(s.Context, run.GetID(), run.GetRunID())
+		s.NoError(err)
+		return len(resp.GetPendingActivities()) > 0
+	}, 5*time.Second, 200*time.Millisecond)
+}
+
+func checkActivitiesPaused(s *SharedServerSuite, run client.WorkflowRun) {
+	s.Eventually(func() bool {
+		resp, err := s.Client.DescribeWorkflowExecution(s.Context, run.GetID(), run.GetRunID())
+		s.NoError(err)
+		if resp.GetPendingActivities() == nil {
+			return false
+		}
+		return len(resp.GetPendingActivities()) > 0 && resp.GetPendingActivities()[0].Paused
+	}, 5*time.Second, 200*time.Millisecond)
+}
+
 func (s *SharedServerSuite) TestUnpauseActivity_BatchSuccess() {
 	var failActivity atomic.Bool
 	failActivity.Store(true)
@@ -368,23 +387,8 @@ func (s *SharedServerSuite) TestUnpauseActivity_BatchSuccess() {
 	s.NoError(res.Err)
 
 	// wait for activities to be paused
-	s.Eventually(func() bool {
-		resp, err := s.Client.DescribeWorkflowExecution(s.Context, run1.GetID(), run1.GetRunID())
-		s.NoError(err)
-		if resp.GetPendingActivities() == nil {
-			return false
-		}
-		return len(resp.PendingActivities) > 0 && resp.PendingActivities[0].Paused
-	}, 5*time.Second, 100*time.Millisecond)
-
-	s.Eventually(func() bool {
-		resp, err := s.Client.DescribeWorkflowExecution(s.Context, run2.GetID(), run2.GetRunID())
-		s.NoError(err)
-		if resp.GetPendingActivities() == nil {
-			return false
-		}
-		return len(resp.PendingActivities) > 0 && resp.PendingActivities[0].Paused
-	}, 5*time.Second, 100*time.Millisecond)
+	checkActivitiesPaused(s, run1)
+	checkActivitiesPaused(s, run2)
 
 	var lastRequestLock sync.Mutex
 	var startBatchRequest *workflowservice.StartBatchOperationRequest
@@ -415,6 +419,10 @@ func (s *SharedServerSuite) TestUnpauseActivity_BatchSuccess() {
 	s.NoError(cmdRes.Err)
 	s.NotEmpty(startBatchRequest.JobId)
 
-	// unblock the activities
+	// check activities are running
+	checkActivitiesRunning(s, run1)
+	checkActivitiesRunning(s, run2)
+
+	// unblock the activities to let them finish
 	failActivity.Store(false)
 }
