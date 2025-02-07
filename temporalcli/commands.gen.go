@@ -3,14 +3,15 @@
 package temporalcli
 
 import (
-	"os"
-	"time"
-
 	"github.com/mattn/go-isatty"
 
 	"github.com/spf13/cobra"
 
 	"github.com/spf13/pflag"
+
+	"os"
+
+	"time"
 )
 
 var hasHighlighting = isatty.IsTerminal(os.Stdout.Fd())
