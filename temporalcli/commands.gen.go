@@ -3,15 +3,14 @@
 package temporalcli
 
 import (
+	"os"
+	"time"
+
 	"github.com/mattn/go-isatty"
 
 	"github.com/spf13/cobra"
 
 	"github.com/spf13/pflag"
-
-	"os"
-
-	"time"
 )
 
 var hasHighlighting = isatty.IsTerminal(os.Stdout.Fd())
@@ -2896,6 +2895,7 @@ type TemporalWorkflowListCommand struct {
 	Query    string
 	Archived bool
 	Limit    int
+	Pagesize int
 }
 
 func NewTemporalWorkflowListCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowListCommand {
@@ -2913,6 +2913,7 @@ func NewTemporalWorkflowListCommand(cctx *CommandContext, parent *TemporalWorkfl
 	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Content for an SQL-like `QUERY` List Filter.")
 	s.Command.Flags().BoolVar(&s.Archived, "archived", false, "Limit output to archived Workflow Executions.")
 	s.Command.Flags().IntVar(&s.Limit, "limit", 0, "Maximum number of Workflow Executions to display.")
+	s.Command.Flags().IntVar(&s.Pagesize, "pagesize", 0, "Maximum number of Workflow Executions to return from server per request. Used for pagination.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
