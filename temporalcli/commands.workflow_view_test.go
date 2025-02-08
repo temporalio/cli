@@ -442,7 +442,7 @@ func (s *SharedServerSuite) TestWorkflow_List() {
 		"workflow", "list",
 		"--address", s.Address(),
 		"--query", fmt.Sprintf(`TaskQueue="%s"`, s.Worker().Options.TaskQueue),
-		"--pagesize", "1",
+		"--page-size", "1",
 	)
 	s.NoError(res.Err)
 	out := res.Stdout.String()

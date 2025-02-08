@@ -2886,9 +2886,9 @@ commands:
       - name: limit
         type: int
         description: Maximum number of Workflow Executions to display.
-      - name: pagesize
+      - name: page-size
         type: int
-        description: Maximum number of Workflow Executions to return from server per request. Used for pagination.
+        description: Maximum number of Workflow Executions to fetch at a time from the server.
 
   - name: temporal workflow metadata
     summary: Query the Workflow for user-specified metadata

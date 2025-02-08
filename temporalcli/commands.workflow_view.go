@@ -359,21 +359,21 @@ func (c *TemporalWorkflowListCommand) pageFetcher(
 	cl client.Client,
 ) func(next []byte) (workflowPage, error) {
 
-	if c.Limit > 0 && c.Limit < c.Pagesize {
-		c.Pagesize = c.Limit
+	if c.Limit > 0 && c.Limit < c.PageSize {
+		c.PageSize = c.Limit
 	}
 	return func(next []byte) (workflowPage, error) {
 		if c.Archived {
 			return cl.ListArchivedWorkflow(cctx, &workflowservice.ListArchivedWorkflowExecutionsRequest{
 				Query:         c.Query,
 				NextPageToken: next,
-				PageSize:      int32(c.Pagesize),
+				PageSize:      int32(c.PageSize),
 			})
 		}
 		return cl.ListWorkflow(cctx, &workflowservice.ListWorkflowExecutionsRequest{
 			Query:         c.Query,
 			NextPageToken: next,
-			PageSize:      int32(c.Pagesize),
+			PageSize:      int32(c.PageSize),
 		})
 	}
 }
