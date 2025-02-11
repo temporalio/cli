@@ -217,7 +217,7 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 				Endpoint                           string
 				Service                            string
 				Operation                          string
-				OperationID                        string
+				OperationToken                     string
 				State                              enums.PendingNexusOperationState
 				Attempt                            int32
 				ScheduleToCloseTimeout             string                                `cli:",cardOmitEmpty"`
@@ -237,7 +237,10 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 				ops[i].Endpoint = op.GetEndpoint()
 				ops[i].Service = op.GetService()
 				ops[i].Operation = op.GetOperation()
-				ops[i].OperationID = op.GetOperationId()
+				ops[i].OperationToken = op.GetOperationToken()
+				if ops[i].OperationToken == "" {
+					ops[i].OperationToken = op.GetOperationId()
+				}
 				ops[i].State = op.GetState()
 				ops[i].Attempt = op.GetAttempt()
 				ops[i].LastAttemptFailure = op.LastAttemptFailure
