@@ -128,6 +128,7 @@ func (h *CommandHarness) Eventually(
 	tick time.Duration,
 	msgAndArgs ...interface{},
 ) {
+	h.t.Helper()
 	// We cannot use require.Eventually because it was poorly developed to run the
 	// condition function in a goroutine which means it can run after complete or
 	// have other race conditions. Don't even need a complicated ticker because it

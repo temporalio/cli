@@ -371,6 +371,11 @@ func (s *SharedServerSuite) testTerminateBatchWorkflow(
 	res := s.Execute(args...)
 	s.NoError(res.Err)
 
+	// Wait for batch job to complete.
+	listRes := s.Execute("batch", "list", "--address", s.Address())
+	s.NoError(listRes.Err)
+	s.Contains(listRes.Stdout.String(), "Completed")
+
 	// Confirm that all workflows are terminated
 	for _, run := range runs {
 		s.Contains(run.Get(s.Context, nil).Error(), "terminated")
