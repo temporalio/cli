@@ -39,27 +39,18 @@ func (c *ClientOptions) dialClient(cctx *CommandContext) (client.Client, error) 
 
 	// Headers
 	if len(c.GrpcMeta) > 0 {
-		headers := make(stringMapHeadersProvider, len(c.GrpcMeta))
-		for _, kv := range c.GrpcMeta {
-			pieces := strings.SplitN(kv, "=", 2)
-			if len(pieces) != 2 {
-				return nil, fmt.Errorf("gRPC meta of %q does not have '='", kv)
-			}
-			headers[pieces[0]] = pieces[1]
+		headers, err := NewStringMapHeaderProvider(c.GrpcMeta)
+		if err != nil {
+			return nil, fmt.Errorf("grpc-meta %s", err)
 		}
 		clientOptions.HeadersProvider = headers
 	}
 
 	// Remote codec
 	if c.CodecEndpoint != "" {
-		// Codec server Headers
-		codecHeaders := make(stringMapHeadersProvider, len(c.CodecHeader))
-		for _, kv := range c.CodecHeader {
-			pieces := strings.SplitN(kv, "=", 2)
-			if len(pieces) != 2 {
-				return nil, fmt.Errorf("codec header of %q does not have '='", kv)
-			}
-			codecHeaders[pieces[0]] = pieces[1]
+		codecHeaders, err := NewStringMapHeaderProvider(c.CodecHeader)
+		if err != nil {
+			return nil, fmt.Errorf("codec-header %s", err)
 		}
 
 		if c.CodecAuth != "" {
@@ -197,6 +188,18 @@ type stringMapHeadersProvider map[string]string
 
 func (s stringMapHeadersProvider) GetHeaders(context.Context) (map[string]string, error) {
 	return s, nil
+}
+
+func NewStringMapHeaderProvider(config []string) (stringMapHeadersProvider, error) {
+	headers := make(stringMapHeadersProvider, len(config))
+	for _, kv := range config {
+		pieces := strings.SplitN(kv, "=", 2)
+		if len(pieces) != 2 {
+			return nil, fmt.Errorf("%q does not have '='", kv)
+		}
+		headers[pieces[0]] = pieces[1]
+	}
+	return headers, nil
 }
 
 var DataConverterWithRawValue = converter.NewCompositeDataConverter(
