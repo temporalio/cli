@@ -52,7 +52,21 @@ func (c *ClientOptions) dialClient(cctx *CommandContext) (client.Client, error) 
 
 	// Remote codec
 	if c.CodecEndpoint != "" {
-		interceptor, err := payloadCodecInterceptor(c.Namespace, c.CodecEndpoint, c.CodecAuth)
+		// Codec server Headers
+		codecHeaders := make(stringMapHeadersProvider, len(c.CodecHeader))
+		for _, kv := range c.CodecHeader {
+			pieces := strings.SplitN(kv, "=", 2)
+			if len(pieces) != 2 {
+				return nil, fmt.Errorf("codec header of %q does not have '='", kv)
+			}
+			codecHeaders[pieces[0]] = pieces[1]
+		}
+
+		if c.CodecAuth != "" {
+			codecHeaders["Authorization"] = c.CodecAuth
+		}
+
+		interceptor, err := payloadCodecInterceptor(c.Namespace, c.CodecEndpoint, codecHeaders)
 		if err != nil {
 			return nil, fmt.Errorf("failed creating payload codec interceptor: %w", err)
 		}
@@ -145,7 +159,7 @@ func fixedHeaderOverrideInterceptor(
 	return invoker(ctx, method, req, reply, cc, opts...)
 }
 
-func payloadCodecInterceptor(namespace, codecEndpoint, codecAuth string) (grpc.UnaryClientInterceptor, error) {
+func payloadCodecInterceptor(namespace, codecEndpoint string, codecHeaders stringMapHeadersProvider) (grpc.UnaryClientInterceptor, error) {
 	codecEndpoint = strings.ReplaceAll(codecEndpoint, "{namespace}", namespace)
 
 	payloadCodec := converter.NewRemotePayloadCodec(
@@ -153,8 +167,8 @@ func payloadCodecInterceptor(namespace, codecEndpoint, codecAuth string) (grpc.U
 			Endpoint: codecEndpoint,
 			ModifyRequest: func(req *http.Request) error {
 				req.Header.Set("X-Namespace", namespace)
-				if codecAuth != "" {
-					req.Header.Set("Authorization", codecAuth)
+				for headerName, headerValue := range codecHeaders {
+					req.Header.Set(headerName, headerValue)
 				}
 				return nil
 			},
