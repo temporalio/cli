@@ -933,3 +933,46 @@ func (s *SharedServerSuite) Test_WorkflowResult() {
 	s.Contains(output, `"message": "failed on purpose"`)
 	s.Contains(output, "workflowExecutionFailedEventAttributes")
 }
+
+func (s *SharedServerSuite) TestWorkflow_Describe_WorkflowMetadata() {
+	workflowId := uuid.NewString()
+
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
+		return map[string]string{"foo": "bar"}, nil
+	})
+
+	res := s.Execute(
+		"workflow", "start",
+		"--address", s.Address(),
+		"--task-queue", s.Worker().Options.TaskQueue,
+		"--type", "DevWorkflow",
+		"--workflow-id", workflowId,
+		"--static-summary", "summie",
+		"--static-details", "deets",
+	)
+	s.NoError(res.Err)
+
+	// Text
+	res = s.Execute(
+		"workflow", "describe",
+		"--address", s.Address(),
+		"-w", workflowId,
+	)
+	s.NoError(res.Err)
+	out := res.Stdout.String()
+	s.ContainsOnSameLine(out, "StaticSummary", "summie")
+	s.ContainsOnSameLine(out, "StaticDetails", "deets")
+
+	// JSON
+	res = s.Execute(
+		"workflow", "describe",
+		"-o", "json",
+		"--address", s.Address(),
+		"-w", workflowId,
+	)
+	s.NoError(res.Err)
+	var jsonOut workflowservice.DescribeWorkflowExecutionResponse
+	s.NoError(temporalcli.UnmarshalProtoJSONWithOptions(res.Stdout.Bytes(), &jsonOut, true))
+	s.NotNil(jsonOut.ExecutionConfig.UserMetadata.Summary)
+	s.NotNil(jsonOut.ExecutionConfig.UserMetadata.Details)
+}

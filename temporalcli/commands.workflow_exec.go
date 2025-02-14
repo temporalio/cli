@@ -274,6 +274,8 @@ func buildStartOptions(sw *SharedWorkflowStartOptions, w *WorkflowStartOptions) 
 		CronSchedule:                             w.Cron,
 		WorkflowExecutionErrorWhenAlreadyStarted: w.FailExisting,
 		StartDelay:                               w.StartDelay.Duration(),
+		StaticSummary:                            sw.StaticSummary,
+		StaticDetails:                            sw.StaticDetails,
 	}
 	if w.IdReusePolicy.Value != "" {
 		var err error
