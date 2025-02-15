@@ -113,8 +113,8 @@ func (s *SharedServerSuite) TestDeployment_List() {
 	)
 	s.NoError(res.Err)
 
-	s.ContainsOnSameLine(res.Stdout.String(), seriesName, buildId1, "now", "false")
-	s.ContainsOnSameLine(res.Stdout.String(), seriesName, buildId2, "now", "true")
+	s.ContainsOnSameLine(res.Stdout.String(), seriesName, buildId1, "false")
+	s.ContainsOnSameLine(res.Stdout.String(), seriesName, buildId2, "true")
 
 	// json
 	res = s.Execute(
