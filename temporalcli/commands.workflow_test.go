@@ -512,7 +512,7 @@ func (s *SharedServerSuite) TestWorkflow_Batch_Update_Options_Versioning_Overrid
 			assert.NoError(t, temporalcli.UnmarshalProtoJSONWithOptions(res.Stdout.Bytes(), &jsonResp, true))
 			versioningInfo := jsonResp.WorkflowExecutionInfo.VersioningInfo
 			assert.NotNil(t, versioningInfo.VersioningOverride)
-			assert.Equal(t, buildId2, versioningInfo.VersioningOverride.Deployment.BuildId)
+			assert.Equal(t, seriesName+"."+buildId2, versioningInfo.VersioningOverride.PinnedVersion)
 		}
 	}, 30*time.Second, 100*time.Millisecond)
 }
@@ -584,8 +584,10 @@ func (s *SharedServerSuite) TestWorkflow_Update_Options_Versioning_Override() {
 	s.NoError(res.Err)
 
 	s.ContainsOnSameLine(res.Stdout.String(), "OverrideBehavior", "Pinned")
-	s.ContainsOnSameLine(res.Stdout.String(), "OverrideDeploymentSeriesName", seriesName)
-	s.ContainsOnSameLine(res.Stdout.String(), "OverrideDeploymentBuildID", buildId2)
+	// TODO(antlai-temporal): replace by new Deployment API
+	// These fields are deprecated, and not populated in latest server
+	// s.ContainsOnSameLine(res.Stdout.String(), "OverrideDeploymentSeriesName", seriesName)
+	// s.ContainsOnSameLine(res.Stdout.String(), "OverrideDeploymentBuildID", buildId2)
 
 	// remove override
 	res = s.Execute(

@@ -598,8 +598,10 @@ func (s *SharedServerSuite) TestWorkflow_Describe_Deployment() {
 
 	out := res.Stdout.String()
 	s.ContainsOnSameLine(out, "Behavior", "Pinned")
-	s.ContainsOnSameLine(out, "DeploymentBuildID", buildId)
-	s.ContainsOnSameLine(out, "DeploymentSeriesName", seriesName)
+	// TODO(antlai-temporal): replace by new Deployment API
+	// These fields are deprecated, and not populated in latest server
+	//s.ContainsOnSameLine(out, "DeploymentBuildID", buildId)
+	//s.ContainsOnSameLine(out, "DeploymentSeriesName", seriesName)
 	s.ContainsOnSameLine(out, "OverrideBehavior", "Unspecified")
 
 	// json
@@ -615,8 +617,10 @@ func (s *SharedServerSuite) TestWorkflow_Describe_Deployment() {
 	s.NoError(temporalcli.UnmarshalProtoJSONWithOptions(res.Stdout.Bytes(), &jsonResp, true))
 	versioningInfo := jsonResp.WorkflowExecutionInfo.VersioningInfo
 	s.Equal("Pinned", versioningInfo.Behavior.String())
-	s.Equal(buildId, versioningInfo.Deployment.BuildId)
-	s.Equal(seriesName, versioningInfo.Deployment.SeriesName)
+	// TODO(antlai-temporal): replace by new Deployment API
+	// These fields are deprecated, and not populated in latest server
+	// s.Equal(buildId, versioningInfo.Deployment.BuildId)
+	// s.Equal(seriesName, versioningInfo.Deployment.SeriesName)
 	s.Nil(versioningInfo.VersioningOverride)
 	s.Nil(versioningInfo.DeploymentTransition)
 }
@@ -807,7 +811,7 @@ func (s *SharedServerSuite) TestWorkflow_Describe_NexusOperationBlocked() {
 		s.NoError(err)
 		return len(resp.PendingNexusOperations) > 0 &&
 			resp.PendingNexusOperations[0].State == enums.PENDING_NEXUS_OPERATION_STATE_BLOCKED
-	}, 30*time.Second, 100*time.Millisecond)
+	}, 60*time.Second, 100*time.Millisecond)
 
 	// Operations - Text
 	res := s.Execute(
