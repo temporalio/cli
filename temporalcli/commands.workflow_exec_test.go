@@ -433,12 +433,7 @@ func (s *SharedServerSuite) TestWorkflow_Execute_ClientHeaders() {
 }
 
 func (s *SharedServerSuite) TestWorkflow_Execute_EnvVars() {
-	s.CommandHarness.Options.LookupEnv = func(key string) (string, bool) {
-		if key == "TEMPORAL_ADDRESS" {
-			return s.Address(), true
-		}
-		return "", false
-	}
+	s.CommandHarness.Options.EnvLookup = EnvLookupMap{"TEMPORAL_ADDRESS": s.Address()}
 	res := s.Execute(
 		"workflow", "execute",
 		"--task-queue", s.Worker().Options.TaskQueue,
@@ -492,12 +487,7 @@ func (s *SharedServerSuite) TestWorkflow_Execute_EnvConfig() {
 	s.ContainsOnSameLine(res.Stdout.String(), "Result", `"env-conf-input"`)
 
 	// And we can specify `env` with a property
-	s.CommandHarness.Options.LookupEnv = func(key string) (string, bool) {
-		if key == "TEMPORAL_ENV" {
-			return "myenv", true
-		}
-		return "", false
-	}
+	s.CommandHarness.Options.EnvLookup = EnvLookupMap{"TEMPORAL_ENV": "myenv"}
 	res = s.Execute(
 		"workflow", "execute",
 		"--env-file", tmpFile.Name(),

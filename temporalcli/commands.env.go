@@ -2,10 +2,13 @@ package temporalcli
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
 	"github.com/temporalio/cli/temporalcli/internal/printer"
+	"gopkg.in/yaml.v3"
 )
 
 func (c *TemporalEnvCommand) envNameAndKey(cctx *CommandContext, args []string, keyFlag string) (string, string, error) {
@@ -43,16 +46,16 @@ func (c *TemporalEnvDeleteCommand) run(cctx *CommandContext, args []string) erro
 	}
 
 	// Env is guaranteed to already be present
-	env, _ := cctx.EnvConfigValues[envName]
+	env, _ := cctx.DeprecatedEnvConfigValues[envName]
 	// User can remove single flag or all in env
 	if key != "" {
 		cctx.Logger.Info("Deleting env property", "env", envName, "property", key)
 		delete(env, key)
 	} else {
 		cctx.Logger.Info("Deleting env", "env", env)
-		delete(cctx.EnvConfigValues, envName)
+		delete(cctx.DeprecatedEnvConfigValues, envName)
 	}
-	return cctx.WriteEnvConfigToFile()
+	return writeDeprecatedEnvConfigToFile(cctx)
 }
 
 func (c *TemporalEnvGetCommand) run(cctx *CommandContext, args []string) error {
@@ -62,7 +65,7 @@ func (c *TemporalEnvGetCommand) run(cctx *CommandContext, args []string) error {
 	}
 
 	// Env is guaranteed to already be present
-	env, _ := cctx.EnvConfigValues[envName]
+	env, _ := cctx.DeprecatedEnvConfigValues[envName]
 	type prop struct {
 		Property string `json:"property"`
 		Value    string `json:"value"`
@@ -86,8 +89,8 @@ func (c *TemporalEnvListCommand) run(cctx *CommandContext, args []string) error 
 	type env struct {
 		Name string `json:"name"`
 	}
-	envs := make([]env, 0, len(cctx.EnvConfigValues))
-	for k := range cctx.EnvConfigValues {
+	envs := make([]env, 0, len(cctx.DeprecatedEnvConfigValues))
+	for k := range cctx.DeprecatedEnvConfigValues {
 		envs = append(envs, env{Name: k})
 	}
 	// Print as table
@@ -120,13 +123,58 @@ func (c *TemporalEnvSetCommand) run(cctx *CommandContext, args []string) error {
 		return fmt.Errorf("too many arguments provided; see --help")
 	}
 
-	if cctx.EnvConfigValues == nil {
-		cctx.EnvConfigValues = map[string]map[string]string{}
+	if cctx.DeprecatedEnvConfigValues == nil {
+		cctx.DeprecatedEnvConfigValues = map[string]map[string]string{}
 	}
-	if cctx.EnvConfigValues[envName] == nil {
-		cctx.EnvConfigValues[envName] = map[string]string{}
+	if cctx.DeprecatedEnvConfigValues[envName] == nil {
+		cctx.DeprecatedEnvConfigValues[envName] = map[string]string{}
 	}
 	cctx.Logger.Info("Setting env property", "env", envName, "property", key, "value", value)
-	cctx.EnvConfigValues[envName][key] = value
-	return cctx.WriteEnvConfigToFile()
+	cctx.DeprecatedEnvConfigValues[envName][key] = value
+	return writeDeprecatedEnvConfigToFile(cctx)
+}
+
+func writeDeprecatedEnvConfigToFile(cctx *CommandContext) error {
+	if cctx.Options.DeprecatedEnvConfig.EnvConfigFile == "" {
+		return fmt.Errorf("unable to find place for env file (unknown HOME dir)")
+	}
+	cctx.Logger.Info("Writing env file", "file", cctx.Options.DeprecatedEnvConfig.EnvConfigFile)
+	return writeDeprecatedEnvConfigFile(cctx.Options.DeprecatedEnvConfig.EnvConfigFile, cctx.DeprecatedEnvConfigValues)
+}
+
+// May be empty result if can't get user home dir
+func defaultDeprecatedEnvConfigFile(appName, configName string) string {
+	// No env file if no $HOME
+	if dir, err := os.UserHomeDir(); err == nil {
+		return filepath.Join(dir, ".config", appName, configName+".yaml")
+	}
+	return ""
+}
+
+func readDeprecatedEnvConfigFile(file string) (env map[string]map[string]string, err error) {
+	b, err := os.ReadFile(file)
+	if os.IsNotExist(err) {
+		return nil, nil
+	} else if err != nil {
+		return nil, fmt.Errorf("failed reading env file: %w", err)
+	}
+	var m map[string]map[string]map[string]string
+	if err := yaml.Unmarshal(b, &m); err != nil {
+		return nil, fmt.Errorf("failed unmarshalling env YAML: %w", err)
+	}
+	return m["env"], nil
+}
+
+func writeDeprecatedEnvConfigFile(file string, env map[string]map[string]string) error {
+	b, err := yaml.Marshal(map[string]any{"env": env})
+	if err != nil {
+		return fmt.Errorf("failed marshaling YAML: %w", err)
+	}
+	// Make parent directories as needed
+	if err := os.MkdirAll(filepath.Dir(file), 0700); err != nil {
+		return fmt.Errorf("failed making env file parent dirs: %w", err)
+	} else if err := os.WriteFile(file, b, 0600); err != nil {
+		return fmt.Errorf("failed writing env file: %w", err)
+	}
+	return nil
 }

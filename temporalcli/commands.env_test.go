@@ -12,21 +12,21 @@ func TestEnv_Simple(t *testing.T) {
 	defer h.Close()
 
 	// Non-existent file, no env found for get
-	h.Options.EnvConfigFile = "does-not-exist"
+	h.Options.DeprecatedEnvConfig.EnvConfigFile = "does-not-exist"
 	res := h.Execute("env", "get", "--env", "myenv1")
 	h.ErrorContains(res.Err, `environment "myenv1" not found`)
 
 	// Temp file for env
 	tmpFile, err := os.CreateTemp("", "")
 	h.NoError(err)
-	h.Options.EnvConfigFile = tmpFile.Name()
-	defer os.Remove(h.Options.EnvConfigFile)
+	h.Options.DeprecatedEnvConfig.EnvConfigFile = tmpFile.Name()
+	defer os.Remove(h.Options.DeprecatedEnvConfig.EnvConfigFile)
 
 	// Store a key
 	res = h.Execute("env", "set", "--env", "myenv1", "-k", "foo", "-v", "bar")
 	h.NoError(res.Err)
 	// Confirm file is YAML with expected values
-	b, err := os.ReadFile(h.Options.EnvConfigFile)
+	b, err := os.ReadFile(h.Options.DeprecatedEnvConfig.EnvConfigFile)
 	h.NoError(err)
 	var yamlVals map[string]map[string]map[string]string
 	h.NoError(yaml.Unmarshal(b, &yamlVals))
@@ -86,8 +86,8 @@ func TestEnv_InputValidation(t *testing.T) {
 	// myenv1 needs to exist
 	tmpFile, err := os.CreateTemp("", "")
 	h.NoError(err)
-	h.Options.EnvConfigFile = tmpFile.Name()
-	defer os.Remove(h.Options.EnvConfigFile)
+	h.Options.DeprecatedEnvConfig.EnvConfigFile = tmpFile.Name()
+	defer os.Remove(h.Options.DeprecatedEnvConfig.EnvConfigFile)
 	res := h.Execute("env", "set", "--env", "myenv1", "-k", "foo", "-v", "bar")
 	h.NoError(res.Err)
 

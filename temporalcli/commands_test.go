@@ -163,10 +163,11 @@ func (h *CommandHarness) Execute(args ...string) *CommandResult {
 	// Set args
 	options.Args = args
 	// Disable env if no env file and no --env-file arg
-	options.DisableEnvConfig = options.EnvConfigFile == "" && !slices.Contains(args, "--env-file")
+	options.DeprecatedEnvConfig.DisableEnvConfig =
+		options.DeprecatedEnvConfig.EnvConfigFile == "" && !slices.Contains(args, "--env-file")
 	// Set default env name if disabled, otherwise we'll fail with missing environment
-	if options.DisableEnvConfig {
-		options.EnvConfigName = "default"
+	if options.DeprecatedEnvConfig.DisableEnvConfig {
+		options.DeprecatedEnvConfig.EnvConfigName = "default"
 	}
 	// Capture error
 	options.Fail = func(err error) {
@@ -189,6 +190,21 @@ func (h *CommandHarness) Execute(args ...string) *CommandResult {
 		h.t.Logf("Stderr:\n-----\n%s\n-----", &res.Stderr)
 	}
 	return res
+}
+
+type EnvLookupMap map[string]string
+
+func (e EnvLookupMap) Environ() []string {
+	ret := make([]string, 0, len(e))
+	for k := range e {
+		ret = append(ret, k)
+	}
+	return ret
+}
+
+func (e EnvLookupMap) LookupEnv(key string) (string, bool) {
+	v, ok := e[key]
+	return v, ok
 }
 
 // Run shared server suite

@@ -2,7 +2,12 @@ module github.com/temporalio/cli
 
 go 1.23.2
 
+replace go.temporal.io/sdk/contrib/envconfig v0.0.0-unpublished => ../temporal-sdk-go/contrib/envconfig
+
+replace go.temporal.io/sdk v1.32.1 => ../temporal-sdk-go
+
 require (
+	github.com/BurntSushi/toml v1.4.0
 	github.com/alitto/pond v1.9.1
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/dustin/go-humanize v1.0.1
@@ -17,6 +22,7 @@ require (
 	github.com/temporalio/ui-server/v2 v2.32.0
 	go.temporal.io/api v1.44.1
 	go.temporal.io/sdk v1.32.1
+	go.temporal.io/sdk/contrib/envconfig v0.0.0-unpublished
 	go.temporal.io/server v1.27.0-128.0
 	google.golang.org/grpc v1.70.0
 	google.golang.org/protobuf v1.36.4
