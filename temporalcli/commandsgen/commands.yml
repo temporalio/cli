@@ -1357,7 +1357,7 @@ commands:
           Once enabled, can't be changed.
 
   - name: temporal operator nexus
-    summary: Commands for managing Nexus resources (EXPERIMENTAL)
+    summary: Commands for managing Nexus resources
     description: |
       These commands manage Nexus resources.
 
@@ -1368,7 +1368,7 @@ commands:
       ```
 
   - name: temporal operator nexus endpoint
-    summary: Commands for managing Nexus Endpoints (EXPERIMENTAL)
+    summary: Commands for managing Nexus Endpoints
     description: |
       These commands manage Nexus Endpoints.
 
@@ -1379,7 +1379,7 @@ commands:
       ```
 
   - name: temporal operator nexus endpoint create
-    summary: Create a Nexus Endpoint (EXPERIMENTAL)
+    summary: Create a Nexus Endpoint
     description: |
       Create a Nexus Endpoint on the Server.
 
@@ -1402,7 +1402,7 @@ commands:
       - nexus-endpoint-identity
       - nexus-endpoint-config
   - name: temporal operator nexus endpoint delete
-    summary: Delete a Nexus Endpoint (EXPERIMENTAL)
+    summary: Delete a Nexus Endpoint
     description: |
       Delete a Nexus Endpoint from the Server.
 
@@ -1424,7 +1424,7 @@ commands:
       - nexus-endpoint-identity
 
   - name: temporal operator nexus endpoint list
-    summary: List Nexus Endpoints (EXPERIMENTAL)
+    summary: List Nexus Endpoints
     description: |
       List all Nexus Endpoints on the Server.
 
@@ -1433,7 +1433,7 @@ commands:
       ```
 
   - name: temporal operator nexus endpoint update
-    summary: Update an existing Nexus Endpoint (EXPERIMENTAL)
+    summary: Update an existing Nexus Endpoint
     description: |
       Update an existing Nexus Endpoint on the Server.
 

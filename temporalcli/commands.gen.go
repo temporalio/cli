@@ -1270,7 +1270,7 @@ func NewTemporalOperatorNexusCommand(cctx *CommandContext, parent *TemporalOpera
 	var s TemporalOperatorNexusCommand
 	s.Parent = parent
 	s.Command.Use = "nexus"
-	s.Command.Short = "Commands for managing Nexus resources (EXPERIMENTAL)"
+	s.Command.Short = "Commands for managing Nexus resources"
 	if hasHighlighting {
 		s.Command.Long = "These commands manage Nexus resources.\n\nNexus commands follow this syntax:\n\n\x1b[1mtemporal operator nexus [command] [subcommand] [options]\x1b[0m"
 	} else {
@@ -1290,7 +1290,7 @@ func NewTemporalOperatorNexusEndpointCommand(cctx *CommandContext, parent *Tempo
 	var s TemporalOperatorNexusEndpointCommand
 	s.Parent = parent
 	s.Command.Use = "endpoint"
-	s.Command.Short = "Commands for managing Nexus Endpoints (EXPERIMENTAL)"
+	s.Command.Short = "Commands for managing Nexus Endpoints"
 	if hasHighlighting {
 		s.Command.Long = "These commands manage Nexus Endpoints.\n\nNexus Endpoint commands follow this syntax:\n\n\x1b[1mtemporal operator nexus endpoint [command] [options]\x1b[0m"
 	} else {
@@ -1317,7 +1317,7 @@ func NewTemporalOperatorNexusEndpointCreateCommand(cctx *CommandContext, parent 
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "create [flags]"
-	s.Command.Short = "Create a Nexus Endpoint (EXPERIMENTAL)"
+	s.Command.Short = "Create a Nexus Endpoint"
 	if hasHighlighting {
 		s.Command.Long = "Create a Nexus Endpoint on the Server.\n\nA Nexus Endpoint name is used in Workflow code to invoke Nexus Operations.\nThe endpoint target may either be a Worker, in which case\n\x1b[1m--target-namespace\x1b[0m and \x1b[1m--target-task-queue\x1b[0m must both be provided, or\nan external URL, in which case \x1b[1m--target-url\x1b[0m must be provided.\n\nThis command will fail if an Endpoint with the same name is already\nregistered.\n\n\x1b[1mtemporal operator nexus endpoint create \\\n  --name your-endpoint \\\n  --target-namespace your-namespace \\\n  --target-task-queue your-task-queue \\\n  --description-file DESCRIPTION.md\x1b[0m"
 	} else {
@@ -1345,7 +1345,7 @@ func NewTemporalOperatorNexusEndpointDeleteCommand(cctx *CommandContext, parent 
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "delete [flags]"
-	s.Command.Short = "Delete a Nexus Endpoint (EXPERIMENTAL)"
+	s.Command.Short = "Delete a Nexus Endpoint"
 	if hasHighlighting {
 		s.Command.Long = "Delete a Nexus Endpoint from the Server.\n\n\x1b[1mtemporal operator nexus endpoint delete --name your-endpoint\x1b[0m"
 	} else {
@@ -1398,7 +1398,7 @@ func NewTemporalOperatorNexusEndpointListCommand(cctx *CommandContext, parent *T
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "list [flags]"
-	s.Command.Short = "List Nexus Endpoints (EXPERIMENTAL)"
+	s.Command.Short = "List Nexus Endpoints"
 	if hasHighlighting {
 		s.Command.Long = "List all Nexus Endpoints on the Server.\n\n\x1b[1mtemporal operator nexus endpoint list\x1b[0m"
 	} else {
@@ -1426,7 +1426,7 @@ func NewTemporalOperatorNexusEndpointUpdateCommand(cctx *CommandContext, parent 
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "update [flags]"
-	s.Command.Short = "Update an existing Nexus Endpoint (EXPERIMENTAL)"
+	s.Command.Short = "Update an existing Nexus Endpoint"
 	if hasHighlighting {
 		s.Command.Long = "Update an existing Nexus Endpoint on the Server.\n\nA Nexus Endpoint name is used in Workflow code to invoke Nexus Operations.\nThe Endpoint target may either be a Worker, in which case\n\x1b[1m--target-namespace\x1b[0m and \x1b[1m--target-task-queue\x1b[0m must both be provided, or\nan external URL, in which case \x1b[1m--target-url\x1b[0m must be provided.\n\nThe Endpoint is patched; existing fields for which flags are not provided\nare left as they were.\n\nUpdate only the target task queue:\n\n\x1b[1mtemporal operator nexus endpoint update \\\n  --name your-endpoint \\\n  --target-task-queue your-other-queue\x1b[0m\n\nUpdate only the description:\n\n\x1b[1mtemporal operator nexus endpoint update \\\n  --name your-endpoint \\\n  --description-file DESCRIPTION.md\x1b[0m"
 	} else {
