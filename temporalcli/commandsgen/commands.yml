@@ -206,7 +206,7 @@ commands:
   - name: temporal activity
     summary: Complete, update, pause, unpause, reset or fail an Activity
     description: |
-      Update an Activity's options, manage activity lifecycle or update 
+      Update an Activity's options, manage activity lifecycle or update
       an Activity's state to completed or failed.
 
       Updating activity state marks an Activity as successfully finished or as
@@ -297,9 +297,9 @@ commands:
   - name: temporal activity update-options
     summary: Update Activity options
     description: |
-      Update Activity options. Specify the Activity and Workflow IDs, and 
-      options you want to update. 
-      Updates are incremental, only changing the specified options. 
+      Update Activity options. Specify the Activity and Workflow IDs, and
+      options you want to update.
+      Updates are incremental, only changing the specified options.
 
       ```
       temporal activity update-options \
@@ -327,22 +327,22 @@ commands:
       - name: schedule-to-close-timeout
         type: duration
         description: |
-          Indicates how long the caller is willing to wait for an activity 
-          completion. 
+          Indicates how long the caller is willing to wait for an activity
+          completion.
           Limits how long retries will be attempted.
       - name: schedule-to-start-timeout
         type: duration
         description: |
-          Limits time an activity task can stay in a task queue before a worker 
-          picks it up. 
-          This timeout is always non retryable, as all a retry would achieve is 
+          Limits time an activity task can stay in a task queue before a worker
+          picks it up.
+          This timeout is always non retryable, as all a retry would achieve is
           to put it back into the same
           queue. Defaults to the schedule-to-close timeout or workflow execution
           timeout if not specified.
       - name: start-to-close-timeout
         type: duration
         description: |
-          Maximum time an activity is allowed to execute after being picked up 
+          Maximum time an activity is allowed to execute after being picked up
           by a worker. This timeout is always retryable.
       - name: heartbeat-timeout
         type: duration
@@ -356,7 +356,7 @@ commands:
       - name: retry-maximum-interval
         type: duration
         description: |
-          Maximum interval between retries. Exponential backoff leads to 
+          Maximum interval between retries. Exponential backoff leads to
           interval increase.
           This value is the cap of the increase.
       - name: retry-backoff-coefficient
@@ -371,7 +371,7 @@ commands:
         description: |
           Maximum number of attempts. When exceeded the retries stop even if not
           expired yet.
-          Setting this value to 1 disables retries. Setting this value to 0 
+          Setting this value to 1 disables retries. Setting this value to 0
           means unlimited attempts(up to the timeouts).
       - name: identity
         type: string
@@ -646,6 +646,184 @@ commands:
         type: string
         description: Reason for terminating the batch job.
         required: true
+
+  - name: temporal worker
+    summary: Read or update Worker state
+    description: |
+      +---------------------------------------------------------------------+
+      | CAUTION: Worker is experimental. Worker commands are subject to     |
+      | change.                                                             |
+      +---------------------------------------------------------------------+
+
+      Modify or read state associated with a Worker, for example,
+      using Worker Deployments commands:
+
+      ```
+      temporal worker deployment
+      ```
+    option-sets:
+      - client
+    docs:
+      description-header: >-
+        Learn how to read or modify state associated with a Worker,
+        such as Worker Deployments.
+      keywords:
+        - worker
+        - worker deployment
+
+  - name: temporal worker deployment
+    summary: Describe, list, and operate on Worker Deployments
+    description: |
+      +---------------------------------------------------------------------+
+      | CAUTION: Worker Deployment is experimental. Deployment commands are |
+      | subject to change.                                                  |
+      +---------------------------------------------------------------------+
+
+      Deployment commands perform operations on Worker Deployments:
+
+      ```
+      temporal worker deployment [command] [options]
+      ```
+
+      For example:
+
+      ```
+      temporal worker deployment list
+      ```
+    docs:
+      description-header: >-
+        Temporal Deployment commands enable operations on Worker Deployments,
+        such as describe, list, set-current, and get-current, simplifying
+        versioning and management of workers.
+      keywords:
+        - worker deployment
+        - worker deployment describe
+        - worker deployment list
+        - worker deployment get-current
+        - worker deployment set-current
+
+  - name: temporal worker deployment describe
+    summary: Show properties of a Worker Deployment
+    description: |
+      +---------------------------------------------------------------------+
+      | CAUTION: Worker Deployment is experimental. Deployment commands are |
+      | subject to change.                                                  |
+      +---------------------------------------------------------------------+
+
+      Describes properties of a Worker Deployment, such as whether it is
+      current, the non-empty list of its task queues, custom metadata if
+      present, and reachability status when requested.
+
+      ```
+      temporal worker deployment describe [options]
+      ```
+
+      For example, to also include reachability information:
+
+      ```
+      temporal worker deployment describe \
+          --series-name YourDeploymentSeriesName \
+          --build-id YourDeploymentBuildId \
+          --report-reachability
+      ```
+    option-sets:
+      - deployment-reference
+    options:
+      - name: report-reachability
+        type: bool
+        description: |
+          Include reachability information of a Worker Deployment.
+
+  - name: temporal worker deployment get-current
+    summary: Show the current Worker Deployment
+    description: |
+      +---------------------------------------------------------------------+
+      | CAUTION: Worker Deployment is experimental. Deployment commands are |
+      | subject to change.                                                  |
+      +---------------------------------------------------------------------+
+
+      Gets the current Worker Deployment for a Deployment Series Name.
+      When a Deployment is current, Workers of that Deployment will receive
+      tasks from new Workflows and from existing AutoUpgrade Workflows that
+      are running on this Deployment Series.
+
+      ```
+      temporal worker deployment get-current [options]
+      ```
+
+      For example:
+
+      ```
+      temporal worker deployment get-current \
+          --series-name YourDeploymentSeriesName
+      ```
+    options:
+      - name: series-name
+        type: string
+        description: Series Name for the current Worker Deployment.
+        required: true
+
+  - name: temporal worker deployment list
+    summary: Enumerate Worker Deployments in the client's namespace
+    description: |
+      +---------------------------------------------------------------------+
+      | CAUTION: Worker Deployment is experimental. Deployment commands are |
+      | subject to change.                                                  |
+      +---------------------------------------------------------------------+
+
+      List existing Worker Deployments in the client's namespace, optionally
+      filtering them by Deployment Series Name.
+
+
+      ```
+      temporal worker deployment list [options]
+      ```
+
+      For example, adding an optional filter:
+
+      ```
+      temporal worker deployment list \
+          --series-name YourDeploymentSeriesName
+      ```
+    options:
+      - name: series-name
+        type: string
+        description: Series Name to filter Worker Deployments.
+
+  - name: temporal worker deployment set-current
+    summary: Change the current Worker Deployment
+    description: |
+      +---------------------------------------------------------------------+
+      | CAUTION: Worker deployment is experimental. Deployment commands are |
+      | subject to change.                                                  |
+      +---------------------------------------------------------------------+
+
+      Sets the current Deployment for a given Deployment Series.
+      When a Deployment is current, Workers of that Deployment will receive
+      tasks from new Workflows and from existing AutoUpgrade Workflows that
+      are running on this Deployment Series.
+
+      ```
+      temporal worker deployment set-current [options]
+      ```
+
+      For example:
+
+      ```
+      temporal worker deployment set-current \
+          --series-name YourDeploymentSeriesName \
+          --build-id YourDeploymentBuildId
+      ```
+    option-sets:
+      - deployment-reference
+    options:
+      - name: metadata
+        type: string[]
+        description: |
+          Set deployment metadata using `KEY="VALUE"` pairs.
+          Keys must be identifiers, and values must be JSON values.
+          For example: 'YourKey={"your": "value"}'.
+          Can be passed multiple times.
 
   - name: temporal env
     summary: Manage environments
@@ -2537,9 +2715,9 @@ commands:
     docs:
       description-header: >-
         Temporal Workflow commands enable operations on Workflow Executions,
-        such as cancel, count, delete, describe, execute, list, query, reset,
-        reset-batch, show, signal, stack, start, terminate, trace, and update,
-        enhancing efficiency and control.
+        such as cancel, count, delete, describe, execute, list, update-options,
+        query, reset, reset-batch, show, signal, stack, start, terminate,
+        trace, and update, enhancing efficiency and control.
       keywords:
         - call stack
         - cancellation
@@ -2562,6 +2740,7 @@ commands:
         - workflow execute
         - workflow execution
         - workflow list
+        - workflow metadata
         - workflow query
         - workflow reset
         - workflow reset-batch
@@ -2571,6 +2750,7 @@ commands:
         - workflow start
         - workflow terminate
         - workflow trace
+        - workflow update-options
 
   - name: temporal workflow cancel
     summary: Send cancellation to Workflow Execution
@@ -2749,6 +2929,87 @@ commands:
         type: int
         description: Maximum number of Workflow Executions to display.
 
+  - name: temporal workflow metadata
+    summary: Query the Workflow for user-specified metadata
+    description: |
+      Issue a Query for and display user-set metadata like summary and
+      details for a specific Workflow Execution:
+
+      ```
+      temporal workflow metadata \
+          --workflow-id YourWorkflowId
+      ```
+    option-sets:
+      - workflow-reference
+      - query-modifiers
+
+  - name: temporal workflow update-options
+    summary: Change Workflow Execution Options
+    description: |
+      +---------------------------------------------------------------------+
+      | CAUTION: Worflow update-options is experimental. Workflow Execution |
+      | properties are subject to change.                                   |
+      +---------------------------------------------------------------------+
+
+      Modify properties of Workflow Executions:
+
+      ```
+      temporal workflow update-options [options]
+      ```
+
+      It can override the Worker Deployment configuration of a
+      Workflow Execution, which controls Worker Versioning.
+
+      For example, to force Workers in the current Deployment execute the
+      next Workflow Task change behavior to `auto_upgrade`:
+
+      ```
+      temporal workflow update-options \
+          --workflow-id YourWorkflowId \
+          --versioning-override-behavior auto_upgrade
+      ```
+
+      or to pin the workflow execution to a Worker Deployment, set behavior
+      to `pinned`:
+
+      ```
+      temporal workflow update-options \
+          --workflow-id YourWorkflowId \
+          --versioning-override-behavior pinned \
+          --versioning-override-series-name YourDeploymentSeriesName \
+          --versioning-override-build-id YourDeploymentBuildId
+      ```
+
+      To remove any previous overrides, set the behavior to
+      `unspecified`:
+
+      ```
+      temporal workflow update-options \
+          --workflow-id YourWorkflowId \
+          --versioning-override-behavior unspecified
+      ```
+
+      To see the current override use `temporal workflow describe`
+
+    option-sets:
+      - single-workflow-or-batch
+    options:
+      - name: versioning-override-behavior
+        type: string-enum
+        description: |
+          Override the versioning behavior of a Workflow.
+        required: true
+        enum-values:
+          - unspecified
+          - pinned
+          - auto_upgrade
+      - name: versioning-override-series-name
+        type: string
+        description: Override Series Name for a Worker Deployment (Only for pinned).
+      - name: versioning-override-build-id
+        type: string
+        description: Override Build ID for a Worker Deployment (Only for pinned).
+
   - name: temporal workflow query
     summary: Retrieve Workflow Execution state
     description: |
@@ -2766,6 +3027,7 @@ commands:
     option-sets:
       - payload-input
       - workflow-reference
+      - query-modifiers
     options:
       - name: name
         type: string
@@ -2773,13 +3035,6 @@ commands:
         required: true
         aliases:
           - type
-      - name: reject-condition
-        type: string-enum
-        description: |
-          Optional flag for rejecting Queries based on Workflow state.
-        enum-values:
-          - not_open
-          - not_completed_cleanly
 
   - name: temporal workflow reset
     summary: Move Workflow Execution history point
@@ -3353,6 +3608,17 @@ option-sets:
         short: r
         description: Run ID.
 
+  - name: deployment-reference
+    options:
+      - name: series-name
+        type: string
+        description: Series Name for a Worker Deployment.
+        required: true
+      - name: build-id
+        type: string
+        description: Build ID for a Worker Deployment.
+        required: true
+
   - name: single-workflow-or-batch
     options:
       - name: workflow-id
@@ -3585,3 +3851,13 @@ option-sets:
           An external Nexus Endpoint that receives forwarded Nexus requests.
           May be used as an alternative to `--target-namespace` and
           `--target-task-queue`.
+
+  - name: query-modifiers
+    options:
+      - name: reject-condition
+        type: string-enum
+        description: |
+          Optional flag for rejecting Queries based on Workflow state.
+        enum-values:
+          - not_open
+          - not_completed_cleanly
