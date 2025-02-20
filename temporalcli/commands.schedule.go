@@ -257,7 +257,7 @@ func toScheduleAction(sw *SharedWorkflowStartOptions, i *PayloadInputOptions) (c
 	if err != nil {
 		return nil, err
 	}
-	untypedSearchAttributes, err := encodeSearchAttributesToPayloads(opts.SearchAttributes)
+	untypedSearchAttributes, err := encodeMapToPayloads(opts.SearchAttributes)
 	if err != nil {
 		return nil, err
 	}
@@ -606,7 +606,7 @@ func formatDuration(d time.Duration) string {
 	return s
 }
 
-func encodeSearchAttributesToPayloads(in map[string]any) (map[string]*commonpb.Payload, error) {
+func encodeMapToPayloads(in map[string]any) (map[string]*commonpb.Payload, error) {
 	if len(in) == 0 {
 		return nil, nil
 	}

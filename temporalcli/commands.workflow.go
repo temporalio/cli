@@ -15,15 +15,19 @@ import (
 	"github.com/temporalio/cli/temporalcli/internal/printer"
 	"go.temporal.io/api/batch/v1"
 	"go.temporal.io/api/common/v1"
+	commonpb "go.temporal.io/api/common/v1"
 	deploymentpb "go.temporal.io/api/deployment/v1"
 	"go.temporal.io/api/enums/v1"
+	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/query/v1"
 	sdkpb "go.temporal.io/api/sdk/v1"
+	taskqueuepb "go.temporal.io/api/taskqueue/v1"
 	"go.temporal.io/api/update/v1"
 	workflowpb "go.temporal.io/api/workflow/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/temporal"
+	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 )
 
@@ -260,6 +264,92 @@ func (c *TemporalWorkflowSignalCommand) run(cctx *CommandContext, args []string)
 		}
 	}
 	return nil
+}
+
+func (c *TemporalWorkflowSignalWithStartCommand) run(cctx *CommandContext, _ []string) error {
+	if c.SharedWorkflowStartOptions.WorkflowId == "" {
+		return fmt.Errorf("--workflow-id flag must be provided")
+	}
+
+	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	wfStartOpts, err := buildStartOptions(&c.SharedWorkflowStartOptions, &c.WorkflowStartOptions)
+	if err != nil {
+		return err
+	}
+	wfInput, err := c.buildRawInputPayloads()
+	if err != nil {
+		return err
+	}
+
+	signalPayloadInputOpts := PayloadInputOptions{
+		Input:       c.SignalInput,
+		InputFile:   c.SignalInputFile,
+		InputMeta:   c.InputMeta,
+		InputBase64: c.SignalInputBase64,
+	}
+	signalInput, err := signalPayloadInputOpts.buildRawInputPayloads()
+	if err != nil {
+		return err
+	}
+
+	var retryPolicy *common.RetryPolicy
+	if wfStartOpts.RetryPolicy != nil {
+		retryPolicy = &commonpb.RetryPolicy{
+			MaximumInterval:        durationpb.New(wfStartOpts.RetryPolicy.MaximumInterval),
+			InitialInterval:        durationpb.New(wfStartOpts.RetryPolicy.InitialInterval),
+			BackoffCoefficient:     wfStartOpts.RetryPolicy.BackoffCoefficient,
+			MaximumAttempts:        wfStartOpts.RetryPolicy.MaximumAttempts,
+			NonRetryableErrorTypes: wfStartOpts.RetryPolicy.NonRetryableErrorTypes,
+		}
+	}
+	var memo *common.Memo
+	if wfStartOpts.Memo != nil {
+		fields, err := encodeMapToPayloads(wfStartOpts.Memo)
+		if err != nil {
+			return err
+		}
+		memo = &common.Memo{Fields: fields}
+	}
+	var searchAttr *common.SearchAttributes
+	if wfStartOpts.SearchAttributes != nil {
+		fields, err := encodeMapToPayloads(wfStartOpts.SearchAttributes)
+		if err != nil {
+			return err
+		}
+		searchAttr = &common.SearchAttributes{IndexedFields: fields}
+	}
+
+	// We have to use the raw signal service call here because the Go SDK's
+	// signal-with-start call doesn't accept multiple signal arguments.
+	_, err = cl.WorkflowService().SignalWithStartWorkflowExecution(
+		cctx,
+		&workflowservice.SignalWithStartWorkflowExecutionRequest{
+			Namespace:                c.Parent.Namespace,
+			RequestId:                uuid.NewString(),
+			WorkflowId:               c.WorkflowId,
+			WorkflowType:             &common.WorkflowType{Name: c.Type},
+			TaskQueue:                &taskqueuepb.TaskQueue{Name: c.TaskQueue, Kind: enumspb.TASK_QUEUE_KIND_NORMAL},
+			Input:                    wfInput,
+			WorkflowExecutionTimeout: durationpb.New(wfStartOpts.WorkflowExecutionTimeout),
+			WorkflowRunTimeout:       durationpb.New(wfStartOpts.WorkflowRunTimeout),
+			WorkflowTaskTimeout:      durationpb.New(wfStartOpts.WorkflowTaskTimeout),
+			SignalName:               c.SignalName,
+			SignalInput:              signalInput,
+			Identity:                 clientIdentity(),
+			RetryPolicy:              retryPolicy,
+			CronSchedule:             wfStartOpts.CronSchedule,
+			Memo:                     memo,
+			SearchAttributes:         searchAttr,
+			WorkflowIdReusePolicy:    wfStartOpts.WorkflowIDReusePolicy,
+			WorkflowIdConflictPolicy: wfStartOpts.WorkflowIDConflictPolicy,
+		},
+	)
+	return err
 }
 
 func (c *TemporalWorkflowStackCommand) run(cctx *CommandContext, args []string) error {
