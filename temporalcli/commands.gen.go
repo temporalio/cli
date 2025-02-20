@@ -32,6 +32,7 @@ type ClientOptions struct {
 	TlsServerName              string
 	CodecEndpoint              string
 	CodecAuth                  string
+	CodecHeader                []string
 }
 
 func (v *ClientOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
@@ -41,7 +42,7 @@ func (v *ClientOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
 	cctx.BindFlagEnvVar(f.Lookup("namespace"), "TEMPORAL_NAMESPACE")
 	f.StringVar(&v.ApiKey, "api-key", "", "API key for request.")
 	cctx.BindFlagEnvVar(f.Lookup("api-key"), "TEMPORAL_API_KEY")
-	f.StringArrayVar(&v.GrpcMeta, "grpc-meta", nil, "HTTP headers for requests. format as a `KEY=VALUE` pair May be passed multiple times to set multiple headers.")
+	f.StringArrayVar(&v.GrpcMeta, "grpc-meta", nil, "HTTP headers for requests. Format as a `KEY=VALUE` pair. May be passed multiple times to set multiple headers.")
 	f.BoolVar(&v.Tls, "tls", false, "Enable base TLS encryption. Does not have additional options like mTLS or client certs.")
 	cctx.BindFlagEnvVar(f.Lookup("tls"), "TEMPORAL_TLS")
 	f.StringVar(&v.TlsCertPath, "tls-cert-path", "", "Path to x509 certificate. Can't be used with --tls-cert-data.")
@@ -64,6 +65,7 @@ func (v *ClientOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
 	cctx.BindFlagEnvVar(f.Lookup("codec-endpoint"), "TEMPORAL_CODEC_ENDPOINT")
 	f.StringVar(&v.CodecAuth, "codec-auth", "", "Authorization header for Codec Server requests.")
 	cctx.BindFlagEnvVar(f.Lookup("codec-auth"), "TEMPORAL_CODEC_AUTH")
+	f.StringArrayVar(&v.CodecHeader, "codec-header", nil, "HTTP headers for requests to codec server. Format as a `KEY=VALUE` pair. May be passed multiple times to set multiple headers.")
 }
 
 type OverlapPolicyOptions struct {

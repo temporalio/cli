@@ -3408,7 +3408,7 @@ option-sets:
         type: string[]
         description: |
           HTTP headers for requests.
-          format as a `KEY=VALUE` pair
+          Format as a `KEY=VALUE` pair.
           May be passed multiple times to set multiple headers.
       - name: tls
         type: bool
@@ -3468,6 +3468,12 @@ option-sets:
         type: string
         description: Authorization header for Codec Server requests.
         env: TEMPORAL_CODEC_AUTH
+      - name: codec-header
+        type: string[]
+        description: |
+          HTTP headers for requests to codec server.
+          Format as a `KEY=VALUE` pair.
+          May be passed multiple times to set multiple headers.
 
   - name: overlap-policy
     options:
