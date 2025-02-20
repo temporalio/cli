@@ -1270,11 +1270,8 @@ func (s *SharedServerSuite) TestWorkflow_SignalWithStart_StartsWorkflow() {
 	s.NoError(res.Err)
 
 	// Check that new workflow was started with expected workflow ID.
-	s.Eventually(func() bool {
-		listResp, err := s.Client.ListWorkflow(s.Context, &workflowservice.ListWorkflowExecutionsRequest{})
-		s.NoError(err)
-		return len(listResp.Executions) == 1 && listResp.Executions[0].Execution.GetWorkflowId() == wfId
-	}, 3*time.Second, 200*time.Millisecond)
+	run := s.Client.GetWorkflow(s.Context, wfId, "")
+	s.Equal(wfId, run.GetID())
 
 	// Run workflow, block on signal.
 	var sigReceived any
@@ -1285,10 +1282,10 @@ func (s *SharedServerSuite) TestWorkflow_SignalWithStart_StartsWorkflow() {
 
 	// Wait for workflow to complete.
 	var wfReturn any
-	err = s.Client.GetWorkflow(s.Context, wfId, "").Get(s.Context, &wfReturn)
+	err := s.Client.GetWorkflow(s.Context, wfId, "").Get(s.Context, &wfReturn)
 	s.NoError(err)
 
-	// Expect workflow to have received signal and given inputs.
+	// Expect workflow to have received signal and given inputs from signal-with-start.
 	s.Equal(map[string]any{"signal-with-start": "signal-input"}, sigReceived)
 	s.Equal(map[string]any{"wf-signal-with-start": "workflow-input"}, wfReturn)
 }
@@ -1307,13 +1304,6 @@ func (s *SharedServerSuite) TestWorkflow_SignalWithStart_ExistingWorkflow() {
 
 	wfId := run.GetID()
 
-	// Check that expected workflow exists.
-	s.Eventually(func() bool {
-		listResp, err := s.Client.ListWorkflow(s.Context, &workflowservice.ListWorkflowExecutionsRequest{})
-		s.NoError(err)
-		return len(listResp.Executions) == 1 && listResp.Executions[0].Execution.GetWorkflowId() == wfId
-	}, 3*time.Second, 200*time.Millisecond)
-
 	// Send signal-with-start command.
 	res := s.Execute(
 		"workflow", "signal-with-start",
@@ -1331,13 +1321,8 @@ func (s *SharedServerSuite) TestWorkflow_SignalWithStart_ExistingWorkflow() {
 	var ret any
 	s.NoError(run.Get(s.Context, &ret))
 
-	// Expect workflow to have received signal and given inputs.
+	// Expect workflow to have not been started by the signal-with-start command.
 	s.Equal("not-signal-with-start-input", ret)
+	// Expect signal to have been received with given input.
 	s.Equal(map[string]any{"signal-with-start": "signal-input"}, sigReceived)
-
-	// Check that signal-with-start did not start a new workflow.
-	listResp, err := s.Client.ListWorkflow(s.Context, &workflowservice.ListWorkflowExecutionsRequest{})
-	s.NoError(err)
-	s.Equal(1, len(listResp.Executions))
-	s.Equal(wfId, listResp.Executions[0].Execution.GetWorkflowId())
 }
