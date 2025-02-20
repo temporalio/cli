@@ -442,10 +442,12 @@ func (s *SharedServerSuite) TestWorkflow_List() {
 		"workflow", "list",
 		"--address", s.Address(),
 		"--query", fmt.Sprintf(`TaskQueue="%s"`, s.Worker().Options.TaskQueue),
+		"--page-size", "1",
 	)
 	s.NoError(res.Err)
 	out := res.Stdout.String()
 	s.ContainsOnSameLine(out, "Completed", "DevWorkflow")
+	s.Equal(3, strings.Count(out, "DevWorkflow"))
 
 	// JSON
 	res = s.Execute(
