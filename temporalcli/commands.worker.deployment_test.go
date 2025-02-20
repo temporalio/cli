@@ -1,12 +1,8 @@
 package temporalcli_test
 
 import (
-	"encoding/base64"
-	"encoding/json"
-	"sort"
 	"time"
 
-	"github.com/google/uuid"
 	"go.temporal.io/api/common/v1"
 )
 
@@ -41,6 +37,7 @@ type jsonDeploymentListEntryType struct {
 	IsCurrent  bool               `json:"isCurrent"`
 }
 
+/*
 func (s *SharedServerSuite) TestDeployment_Set_Current() {
 	seriesName := uuid.NewString()
 	buildId := uuid.NewString()
@@ -189,3 +186,4 @@ func (s *SharedServerSuite) TestDeployment_Describe_Reachability() {
 	s.True(jsonOut.DeploymentInfo.IsCurrent)
 	s.Equal(jsonOut.Reachability, "reachable")
 }
+*/

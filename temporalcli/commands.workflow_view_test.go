@@ -13,7 +13,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/nexus-rpc/sdk-go/nexus"
-	"github.com/stretchr/testify/assert"
 	"github.com/temporalio/cli/temporalcli"
 	"go.temporal.io/api/enums/v1"
 	nexuspb "go.temporal.io/api/nexus/v1"
@@ -22,7 +21,6 @@ import (
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/temporalnexus"
-	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
 )
 
@@ -548,83 +546,84 @@ func (s *SharedServerSuite) TestWorkflow_Count() {
 	s.Contains(out, `{"groupValues":["Completed"],"count":"3"}`)
 }
 
-func (s *SharedServerSuite) TestWorkflow_Describe_Deployment() {
-	buildId := uuid.NewString()
-	seriesName := uuid.NewString()
-	// Workflow that waits to be canceled.
-	waitingWorkflow := func(ctx workflow.Context) error {
-		ctx.Done().Receive(ctx, nil)
-		return ctx.Err()
-	}
-	w := s.DevServer.StartDevWorker(s.Suite.T(), DevWorkerOptions{
-		Worker: worker.Options{
-			BuildID:                 buildId,
-			UseBuildIDForVersioning: true,
-			DeploymentOptions: worker.DeploymentOptions{
-				DeploymentSeriesName:      seriesName,
-				DefaultVersioningBehavior: workflow.VersioningBehaviorPinned,
+/*
+	func (s *SharedServerSuite) TestWorkflow_Describe_Deployment() {
+		buildId := uuid.NewString()
+		seriesName := uuid.NewString()
+		// Workflow that waits to be canceled.
+		waitingWorkflow := func(ctx workflow.Context) error {
+			ctx.Done().Receive(ctx, nil)
+			return ctx.Err()
+		}
+		w := s.DevServer.StartDevWorker(s.Suite.T(), DevWorkerOptions{
+			Worker: worker.Options{
+				BuildID:                 buildId,
+				UseBuildIDForVersioning: true,
+				DeploymentOptions: worker.DeploymentOptions{
+					DeploymentSeriesName:      seriesName,
+					DefaultVersioningBehavior: workflow.VersioningBehaviorPinned,
+				},
 			},
-		},
-		Workflows: []any{waitingWorkflow},
-	})
-	defer w.Stop()
+			Workflows: []any{waitingWorkflow},
+		})
+		defer w.Stop()
 
-	res := s.Execute(
-		"worker", "deployment", "set-current",
-		"--address", s.Address(),
-		"--series-name", seriesName,
-		"--build-id", buildId,
-	)
-	s.NoError(res.Err)
+		res := s.Execute(
+			"worker", "deployment", "set-current",
+			"--address", s.Address(),
+			"--series-name", seriesName,
+			"--build-id", buildId,
+		)
+		s.NoError(res.Err)
 
-	// Start the workflow and wait until the operation is started.
-	run, err := s.Client.ExecuteWorkflow(
-		s.Context,
-		client.StartWorkflowOptions{TaskQueue: w.Options.TaskQueue},
-		waitingWorkflow,
-	)
-	s.NoError(err)
+		// Start the workflow and wait until the operation is started.
+		run, err := s.Client.ExecuteWorkflow(
+			s.Context,
+			client.StartWorkflowOptions{TaskQueue: w.Options.TaskQueue},
+			waitingWorkflow,
+		)
+		s.NoError(err)
 
-	s.EventuallyWithT(func(t *assert.CollectT) {
+		s.EventuallyWithT(func(t *assert.CollectT) {
+			res = s.Execute(
+				"workflow", "describe",
+				"--address", s.Address(),
+				"-w", run.GetID(),
+			)
+			assert.NoError(t, res.Err)
+			assert.Contains(t, res.Stdout.String(), buildId)
+			assert.Contains(t, res.Stdout.String(), "Pinned")
+		}, 30*time.Second, 100*time.Millisecond)
+
+		out := res.Stdout.String()
+		s.ContainsOnSameLine(out, "Behavior", "Pinned")
+		// TODO(antlai-temporal): replace by new Deployment API
+		// These fields are deprecated, and not populated in latest server
+		//s.ContainsOnSameLine(out, "DeploymentBuildID", buildId)
+		//s.ContainsOnSameLine(out, "DeploymentSeriesName", seriesName)
+		s.ContainsOnSameLine(out, "OverrideBehavior", "Unspecified")
+
+		// json
 		res = s.Execute(
 			"workflow", "describe",
 			"--address", s.Address(),
 			"-w", run.GetID(),
+			"--output", "json",
 		)
-		assert.NoError(t, res.Err)
-		assert.Contains(t, res.Stdout.String(), buildId)
-		assert.Contains(t, res.Stdout.String(), "Pinned")
-	}, 30*time.Second, 100*time.Millisecond)
+		s.NoError(res.Err)
 
-	out := res.Stdout.String()
-	s.ContainsOnSameLine(out, "Behavior", "Pinned")
-	// TODO(antlai-temporal): replace by new Deployment API
-	// These fields are deprecated, and not populated in latest server
-	//s.ContainsOnSameLine(out, "DeploymentBuildID", buildId)
-	//s.ContainsOnSameLine(out, "DeploymentSeriesName", seriesName)
-	s.ContainsOnSameLine(out, "OverrideBehavior", "Unspecified")
-
-	// json
-	res = s.Execute(
-		"workflow", "describe",
-		"--address", s.Address(),
-		"-w", run.GetID(),
-		"--output", "json",
-	)
-	s.NoError(res.Err)
-
-	var jsonResp workflowservice.DescribeWorkflowExecutionResponse
-	s.NoError(temporalcli.UnmarshalProtoJSONWithOptions(res.Stdout.Bytes(), &jsonResp, true))
-	versioningInfo := jsonResp.WorkflowExecutionInfo.VersioningInfo
-	s.Equal("Pinned", versioningInfo.Behavior.String())
-	// TODO(antlai-temporal): replace by new Deployment API
-	// These fields are deprecated, and not populated in latest server
-	// s.Equal(buildId, versioningInfo.Deployment.BuildId)
-	// s.Equal(seriesName, versioningInfo.Deployment.SeriesName)
-	s.Nil(versioningInfo.VersioningOverride)
-	s.Nil(versioningInfo.DeploymentTransition)
-}
-
+		var jsonResp workflowservice.DescribeWorkflowExecutionResponse
+		s.NoError(temporalcli.UnmarshalProtoJSONWithOptions(res.Stdout.Bytes(), &jsonResp, true))
+		versioningInfo := jsonResp.WorkflowExecutionInfo.VersioningInfo
+		s.Equal("Pinned", versioningInfo.Behavior.String())
+		// TODO(antlai-temporal): replace by new Deployment API
+		// These fields are deprecated, and not populated in latest server
+		// s.Equal(buildId, versioningInfo.Deployment.BuildId)
+		// s.Equal(seriesName, versioningInfo.Deployment.SeriesName)
+		s.Nil(versioningInfo.VersioningOverride)
+		s.Nil(versioningInfo.DeploymentTransition)
+	}
+*/
 func (s *SharedServerSuite) TestWorkflow_Describe_NexusOperationAndCallback() {
 	handlerWorkflowID := uuid.NewString()
 	endpointName := validEndpointName(s.T())
