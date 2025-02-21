@@ -664,3 +664,104 @@ func (s *SharedServerSuite) TestWorkflow_Execute_NullValue() {
 	s.ContainsOnSameLine(out, "Status", "COMPLETED")
 	s.ContainsOnSameLine(out, "Result", `{"foo":null}`)
 }
+
+func (s *SharedServerSuite) TestWorkflow_SignalWithStart_WorkflowIDMandatory() {
+	res := s.Execute(
+		"workflow", "signal-with-start",
+		"--type", "wfType",
+		"--task-queue", "tq",
+		"--signal-name", "sigName",
+	)
+	s.ErrorContains(res.Err, "--workflow-id flag must be provided")
+}
+
+func (s *SharedServerSuite) TestWorkflow_SignalWithStart_StartsWorkflow() {
+	wfId := uuid.NewString()
+
+	// Send signal-with-start command.
+	res := s.Execute(
+		"workflow", "signal-with-start",
+		"--address", s.Address(),
+		"--workflow-id", wfId,
+		"--type", "DevWorkflow",
+		"--input", `{"wf-signal-with-start": "workflow-input"}`,
+		"--task-queue", "tq",
+		"--signal-name", "sigName",
+		"--signal-input", `{"signal-with-start": "signal-input"}`,
+	)
+
+	s.NoError(res.Err)
+
+	// Confirm text output has key/vals as expected
+	out := res.Stdout.String()
+	s.ContainsOnSameLine(out, "WorkflowId", wfId)
+	s.Contains(out, "RunId")
+	s.ContainsOnSameLine(out, "TaskQueue", "tq")
+	s.ContainsOnSameLine(out, "Type", "DevWorkflow")
+	s.ContainsOnSameLine(out, "Namespace", "default")
+
+	// Check that new workflow was started with expected workflow ID.
+	run := s.Client.GetWorkflow(s.Context, wfId, "")
+	s.Equal(wfId, run.GetID())
+
+	// Run workflow, block on signal.
+	var sigReceived any
+	s.StartDevWorker(s.t, DevWorkerOptions{TaskQueue: "tq"}).OnDevWorkflow(func(ctx workflow.Context, wfInput any) (any, error) {
+		workflow.GetSignalChannel(ctx, "sigName").Receive(ctx, &sigReceived)
+		return wfInput, nil
+	})
+
+	// Wait for workflow to complete.
+	var wfReturn any
+	err := s.Client.GetWorkflow(s.Context, wfId, "").Get(s.Context, &wfReturn)
+	s.NoError(err)
+
+	// Expect workflow to have received signal and given inputs from signal-with-start.
+	s.Equal(map[string]any{"signal-with-start": "signal-input"}, sigReceived)
+	s.Equal(map[string]any{"wf-signal-with-start": "workflow-input"}, wfReturn)
+}
+
+func (s *SharedServerSuite) TestWorkflow_SignalWithStart_ExistingWorkflow() {
+	// Run workflow, block on signal.
+	var sigReceived any
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, wfInput any) (any, error) {
+		workflow.GetSignalChannel(ctx, "sigName").Receive(ctx, &sigReceived)
+		return wfInput, nil
+	})
+
+	// Start workflow
+	run, err := s.Client.ExecuteWorkflow(s.Context, client.StartWorkflowOptions{TaskQueue: s.Worker().Options.TaskQueue}, DevWorkflow, "not-signal-with-start-input")
+	s.NoError(err)
+
+	wfId := run.GetID()
+
+	// Send signal-with-start command.
+	res := s.Execute(
+		"workflow", "signal-with-start",
+		"--address", s.Address(),
+		"--workflow-id", wfId,
+		"--type", "DevWorkflow",
+		"--input", `{"workflow": "workflow-input"}`,
+		"--task-queue", s.Worker().Options.TaskQueue,
+		"--signal-name", "sigName",
+		"--signal-input", `{"signal-with-start": "signal-input"}`,
+	)
+	s.NoError(res.Err)
+
+	// Confirm text output has key/vals as expected
+	out := res.Stdout.String()
+	s.ContainsOnSameLine(out, "WorkflowId", wfId)
+	s.Contains(out, "RunId")
+	s.ContainsOnSameLine(out, "TaskQueue", s.Worker().Options.TaskQueue)
+	s.ContainsOnSameLine(out, "Type", "DevWorkflow")
+	s.ContainsOnSameLine(out, "Namespace", "default")
+
+	// Wait for workflow to complete.
+	var ret any
+	s.NoError(run.Get(s.Context, &ret))
+
+	// Expect workflow to have not been started by the signal-with-start command.
+	s.Equal("not-signal-with-start-input", ret)
+	// Expect signal to have been received with given input.
+	s.Equal(map[string]any{"signal-with-start": "signal-input"}, sigReceived)
+}
