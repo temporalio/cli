@@ -16,7 +16,6 @@ import (
 	schedpb "go.temporal.io/api/schedule/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
-	"go.temporal.io/sdk/converter"
 	"go.temporal.io/server/common/primitives/timestamp"
 )
 
@@ -604,21 +603,4 @@ func formatDuration(d time.Duration) string {
 	// Remove last space
 	s = strings.TrimSpace(s)
 	return s
-}
-
-func encodeMapToPayloads(in map[string]any) (map[string]*commonpb.Payload, error) {
-	if len(in) == 0 {
-		return nil, nil
-	}
-	// search attributes always use default dataconverter
-	dc := converter.GetDefaultDataConverter()
-	out := make(map[string]*commonpb.Payload, len(in))
-	for key, val := range in {
-		payload, err := dc.ToPayload(val)
-		if err != nil {
-			return nil, err
-		}
-		out[key] = payload
-	}
-	return out, nil
 }

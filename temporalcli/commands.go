@@ -23,8 +23,10 @@ import (
 	"github.com/temporalio/cli/temporalcli/internal/printer"
 	"github.com/temporalio/ui-server/v2/server/version"
 	"go.temporal.io/api/common/v1"
+	commonpb "go.temporal.io/api/common/v1"
 	"go.temporal.io/api/failure/v1"
 	"go.temporal.io/api/temporalproto"
+	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/server/common/headers"
 	"google.golang.org/grpc"
@@ -588,4 +590,21 @@ func fromApplicationError(err *temporal.ApplicationError) (*structuredError, err
 		Type:    err.Type(),
 		Details: deets,
 	}, nil
+}
+
+func encodeMapToPayloads(in map[string]any) (map[string]*commonpb.Payload, error) {
+	if len(in) == 0 {
+		return nil, nil
+	}
+	// search attributes always use default dataconverter
+	dc := converter.GetDefaultDataConverter()
+	out := make(map[string]*commonpb.Payload, len(in))
+	for key, val := range in {
+		payload, err := dc.ToPayload(val)
+		if err != nil {
+			return nil, err
+		}
+		out[key] = payload
+	}
+	return out, nil
 }
