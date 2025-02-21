@@ -189,7 +189,7 @@ func (c *TemporalWorkflowSignalWithStartCommand) run(cctx *CommandContext, _ []s
 		return err
 	}
 	cctx.Printer.Println(color.MagentaString("Running execution:"))
-	err = cctx.Printer.PrintStructured(struct {
+	return cctx.Printer.PrintStructured(struct {
 		WorkflowId string `json:"workflowId"`
 		RunId      string `json:"runId"`
 		Type       string `json:"type"`
@@ -202,10 +202,6 @@ func (c *TemporalWorkflowSignalWithStartCommand) run(cctx *CommandContext, _ []s
 		Namespace:  c.Parent.Namespace,
 		TaskQueue:  c.TaskQueue,
 	}, printer.StructuredOptions{})
-	if err != nil {
-		return fmt.Errorf("failed printing: %w", err)
-	}
-	return nil
 }
 
 type workflowJSONResult struct {
