@@ -19,9 +19,6 @@ type formattedRoutingConfigType struct {
 	CurrentVersion                      string    `json:"currentVersion"`
 	RampingVersion                      string    `json:"rampingVersion"`
 	RampingVersionPercentage            float32   `json:"rampingVersionPercentage"`
-	CurrentVersionChangedTime           time.Time `json:"currentVersionChangedTime"`
-	RampingVersionChangedTime           time.Time `json:"rampingVersionChangedTime"`
-	RampingVersionPercentageChangedTime time.Time `json:"rampingVersionPercentageChangedTime"`
 }
 
 type formattedWorkerDeploymentInfoType struct {
@@ -38,9 +35,6 @@ type formattedWorkerDeploymentListEntryType struct {
 	CurrentVersion                      string    `cli:",cardOmitEmpty"`
 	RampingVersion                      string    `cli:",cardOmitEmpty"`
 	RampingVersionPercentage            float32   `cli:",cardOmitEmpty"`
-	CurrentVersionChangedTime           time.Time `cli:",cardOmitEmpty"`
-	RampingVersionChangedTime           time.Time `cli:",cardOmitEmpty"`
-	RampingVersionPercentageChangedTime time.Time `cli:",cardOmitEmpty"`
 }
 
 func drainageStatusToStr(drainage client.WorkerDeploymentVersionDrainageStatus) (string, error) {
@@ -77,9 +71,6 @@ func formatRoutingConfig(rc client.WorkerDeploymentRoutingConfig) (formattedRout
 		CurrentVersion:                      rc.CurrentVersion,
 		RampingVersion:                      rc.RampingVersion,
 		RampingVersionPercentage:            rc.RampingVersionPercentage,
-		CurrentVersionChangedTime:           rc.CurrentVersionChangedTime,
-		RampingVersionChangedTime:           rc.RampingVersionChangedTime,
-		RampingVersionPercentageChangedTime: rc.RampingVersionPercentageChangedTime,
 	}, nil
 }
 
@@ -119,9 +110,6 @@ func printWorkerDeploymentInfo(cctx *CommandContext, deploymentInfo client.Worke
 			CurrentVersion                      string    `cli:",cardOmitEmpty"`
 			RampingVersion                      string    `cli:",cardOmitEmpty"`
 			RampingVersionPercentage            float32   `cli:",cardOmitEmpty"`
-			CurrentVersionChangedTime           time.Time `cli:",cardOmitEmpty"`
-			RampingVersionChangedTime           time.Time `cli:",cardOmitEmpty"`
-			RampingVersionPercentageChangedTime time.Time `cli:",cardOmitEmpty"`
 		}{
 			Name:                                deploymentInfo.Name,
 			CreateTime:                          deploymentInfo.CreateTime,
@@ -129,9 +117,6 @@ func printWorkerDeploymentInfo(cctx *CommandContext, deploymentInfo client.Worke
 			CurrentVersion:                      deploymentInfo.RoutingConfig.CurrentVersion,
 			RampingVersion:                      deploymentInfo.RoutingConfig.RampingVersion,
 			RampingVersionPercentage:            deploymentInfo.RoutingConfig.RampingVersionPercentage,
-			CurrentVersionChangedTime:           deploymentInfo.RoutingConfig.CurrentVersionChangedTime,
-			RampingVersionChangedTime:           deploymentInfo.RoutingConfig.RampingVersionChangedTime,
-			RampingVersionPercentageChangedTime: deploymentInfo.RoutingConfig.RampingVersionPercentageChangedTime,
 		}
 		err := cctx.Printer.PrintStructured(printMe, printer.StructuredOptions{})
 		if err != nil {
@@ -244,9 +229,6 @@ func (c *TemporalWorkerDeploymentListCommand) run(cctx *CommandContext, args []s
 				CurrentVersion:                      listEntry.RoutingConfig.CurrentVersion,
 				RampingVersion:                      listEntry.RoutingConfig.RampingVersion,
 				RampingVersionPercentage:            listEntry.RoutingConfig.RampingVersionPercentage,
-				CurrentVersionChangedTime:           listEntry.RoutingConfig.CurrentVersionChangedTime,
-				RampingVersionChangedTime:           listEntry.RoutingConfig.RampingVersionChangedTime,
-				RampingVersionPercentageChangedTime: listEntry.RoutingConfig.RampingVersionPercentageChangedTime,
 			})
 			if len(page) == cap(page) {
 				_ = cctx.Printer.PrintStructured(page, printTableOpts)
