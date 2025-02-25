@@ -2696,6 +2696,7 @@ func NewTemporalWorkflowCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.AddCommand(&NewTemporalWorkflowDeleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowDescribeCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowExecuteCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkflowExecuteUpdateWithStartCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowFixHistoryJsonCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowListCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowMetadataCommand(cctx, &s).Command)
@@ -2707,6 +2708,7 @@ func NewTemporalWorkflowCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.AddCommand(&NewTemporalWorkflowSignalWithStartCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowStackCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowStartCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkflowStartUpdateWithStartCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowTerminateCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowTraceCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowUpdateCommand(cctx, &s).Command)
@@ -2854,6 +2856,58 @@ func NewTemporalWorkflowExecuteCommand(cctx *CommandContext, parent *TemporalWor
 	s.PayloadInputOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Flags().SetNormalizeFunc(aliasNormalizer(map[string]string{
 		"name": "type",
+	}))
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalWorkflowExecuteUpdateWithStartCommand struct {
+	Parent  *TemporalWorkflowCommand
+	Command cobra.Command
+	SharedWorkflowStartOptions
+	WorkflowStartOptions
+	PayloadInputOptions
+	UpdateName                string
+	UpdateFirstExecutionRunId string
+	UpdateId                  string
+	RunId                     string
+	UpdateInput               []string
+	UpdateInputFile           []string
+	UpdateInputMeta           []string
+	UpdateInputBase64         bool
+}
+
+func NewTemporalWorkflowExecuteUpdateWithStartCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowExecuteUpdateWithStartCommand {
+	var s TemporalWorkflowExecuteUpdateWithStartCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "execute-update-with-start [flags]"
+	s.Command.Short = "Send an Update and wait for it to complete (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Send a message to a Workflow Execution to invoke an Update handler, and wait for\nthe update to complete. If the Workflow Execution is not running, then a new workflow\nexecution is started and the update is sent.\n\nExperimental.\n\n\x1b[1mtemporal workflow execute-update-with-start \\\n  --update-name YourUpdate \\\n  --update-input '{\"update-key\": \"update-value\"}' \\\n  --workflow-id YourWorkflowId \\\n  --type YourWorkflowType \\\n  --task-queue YourTaskQueue \\\n  --input '{\"wf-key\": \"wf-value\"}'\x1b[0m"
+	} else {
+		s.Command.Long = "Send a message to a Workflow Execution to invoke an Update handler, and wait for\nthe update to complete. If the Workflow Execution is not running, then a new workflow\nexecution is started and the update is sent.\n\nExperimental.\n\n```\ntemporal workflow execute-update-with-start \\\n  --update-name YourUpdate \\\n  --update-input '{\"update-key\": \"update-value\"}' \\\n  --workflow-id YourWorkflowId \\\n  --type YourWorkflowType \\\n  --task-queue YourTaskQueue \\\n  --input '{\"wf-key\": \"wf-value\"}'\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.UpdateName, "update-name", "", "Update name. Required. Aliased as \"--update-type\".")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "update-name")
+	s.Command.Flags().StringVar(&s.UpdateFirstExecutionRunId, "update-first-execution-run-id", "", "Parent Run ID. The update is sent to the last Workflow Execution in the chain started with this Run ID.")
+	s.Command.Flags().StringVar(&s.UpdateId, "update-id", "", "Update ID. If unset, defaults to a UUID.")
+	s.Command.Flags().StringVarP(&s.RunId, "run-id", "r", "", "Run ID. If unset, looks for an Update against the currently-running Workflow Execution.")
+	s.Command.Flags().StringArrayVar(&s.UpdateInput, "update-input", nil, "Update input value. Use JSON content or set --update-input-meta to override. Can't be combined with --update-input-file. Can be passed multiple times to pass multiple arguments.")
+	s.Command.Flags().StringArrayVar(&s.UpdateInputFile, "update-input-file", nil, "A path or paths for input file(s). Use JSON content or set --update-input-meta to override. Can't be combined with --update-input. Can be passed multiple times to pass multiple arguments.")
+	s.Command.Flags().StringArrayVar(&s.UpdateInputMeta, "update-input-meta", nil, "Input update payload metadata as a `KEY=VALUE` pair. When the KEY is \"encoding\", this overrides the default (\"json/plain\"). Can be passed multiple times.")
+	s.Command.Flags().BoolVar(&s.UpdateInputBase64, "update-input-base64", false, "Assume update inputs are base64-encoded and attempt to decode them.")
+	s.SharedWorkflowStartOptions.buildFlags(cctx, s.Command.Flags())
+	s.WorkflowStartOptions.buildFlags(cctx, s.Command.Flags())
+	s.PayloadInputOptions.buildFlags(cctx, s.Command.Flags())
+	s.Command.Flags().SetNormalizeFunc(aliasNormalizer(map[string]string{
+		"name":        "type",
+		"update-type": "update-name",
 	}))
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -3235,6 +3289,62 @@ func NewTemporalWorkflowStartCommand(cctx *CommandContext, parent *TemporalWorkf
 	s.PayloadInputOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Flags().SetNormalizeFunc(aliasNormalizer(map[string]string{
 		"name": "type",
+	}))
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalWorkflowStartUpdateWithStartCommand struct {
+	Parent  *TemporalWorkflowCommand
+	Command cobra.Command
+	SharedWorkflowStartOptions
+	WorkflowStartOptions
+	PayloadInputOptions
+	UpdateName                string
+	UpdateFirstExecutionRunId string
+	UpdateWaitForStage        StringEnum
+	UpdateId                  string
+	RunId                     string
+	UpdateInput               []string
+	UpdateInputFile           []string
+	UpdateInputMeta           []string
+	UpdateInputBase64         bool
+}
+
+func NewTemporalWorkflowStartUpdateWithStartCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowStartUpdateWithStartCommand {
+	var s TemporalWorkflowStartUpdateWithStartCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "start-update-with-start [flags]"
+	s.Command.Short = "Send an Update and wait for it to be accepted or rejected (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Send a message to a Workflow Execution to invoke an Update handler, and wait for\nthe update to be accepted or rejected. If the Workflow Execution is not running, \nthen a new workflow execution is started and the update is sent.\n\nExperimental.\n\n\x1b[1mtemporal workflow start-update-with-start \\\n  --update-name YourUpdate \\\n  --update-input '{\"update-key\": \"update-value\"}' \\\n  --workflow-id YourWorkflowId \\\n  --type YourWorkflowType \\\n  --task-queue YourTaskQueue \\\n  --input '{\"wf-key\": \"wf-value\"}'\x1b[0m"
+	} else {
+		s.Command.Long = "Send a message to a Workflow Execution to invoke an Update handler, and wait for\nthe update to be accepted or rejected. If the Workflow Execution is not running, \nthen a new workflow execution is started and the update is sent.\n\nExperimental.\n\n```\ntemporal workflow start-update-with-start \\\n  --update-name YourUpdate \\\n  --update-input '{\"update-key\": \"update-value\"}' \\\n  --workflow-id YourWorkflowId \\\n  --type YourWorkflowType \\\n  --task-queue YourTaskQueue \\\n  --input '{\"wf-key\": \"wf-value\"}'\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.UpdateName, "update-name", "", "Update name. Required. Aliased as \"--update-type\".")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "update-name")
+	s.Command.Flags().StringVar(&s.UpdateFirstExecutionRunId, "update-first-execution-run-id", "", "Parent Run ID. The update is sent to the last Workflow Execution in the chain started with this Run ID.")
+	s.UpdateWaitForStage = NewStringEnum([]string{"accepted"}, "")
+	s.Command.Flags().Var(&s.UpdateWaitForStage, "update-wait-for-stage", "Update stage to wait for. The only option is `accepted`, but this option is  required. This is to allow a future version of the CLI to choose a default value. Accepted values: accepted. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "update-wait-for-stage")
+	s.Command.Flags().StringVar(&s.UpdateId, "update-id", "", "Update ID. If unset, defaults to a UUID.")
+	s.Command.Flags().StringVarP(&s.RunId, "run-id", "r", "", "Run ID. If unset, looks for an Update against the currently-running Workflow Execution.")
+	s.Command.Flags().StringArrayVar(&s.UpdateInput, "update-input", nil, "Update input value. Use JSON content or set --update-input-meta to override. Can't be combined with --update-input-file. Can be passed multiple times to pass multiple arguments.")
+	s.Command.Flags().StringArrayVar(&s.UpdateInputFile, "update-input-file", nil, "A path or paths for input file(s). Use JSON content or set --update-input-meta to override. Can't be combined with --update-input. Can be passed multiple times to pass multiple arguments.")
+	s.Command.Flags().StringArrayVar(&s.UpdateInputMeta, "update-input-meta", nil, "Input update payload metadata as a `KEY=VALUE` pair. When the KEY is \"encoding\", this overrides the default (\"json/plain\"). Can be passed multiple times.")
+	s.Command.Flags().BoolVar(&s.UpdateInputBase64, "update-input-base64", false, "Assume update inputs are base64-encoded and attempt to decode them.")
+	s.SharedWorkflowStartOptions.buildFlags(cctx, s.Command.Flags())
+	s.WorkflowStartOptions.buildFlags(cctx, s.Command.Flags())
+	s.PayloadInputOptions.buildFlags(cctx, s.Command.Flags())
+	s.Command.Flags().SetNormalizeFunc(aliasNormalizer(map[string]string{
+		"name":        "type",
+		"update-type": "update-name",
 	}))
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
