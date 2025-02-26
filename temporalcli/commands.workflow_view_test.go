@@ -550,18 +550,18 @@ func (s *SharedServerSuite) TestWorkflow_Count() {
 
 func (s *SharedServerSuite) TestWorkflow_Describe_Deployment() {
 	buildId := uuid.NewString()
-	seriesName := uuid.NewString()
+	deploymentName := uuid.NewString()
 	// Workflow that waits to be canceled.
 	waitingWorkflow := func(ctx workflow.Context) error {
 		ctx.Done().Receive(ctx, nil)
 		return ctx.Err()
 	}
+	version := deploymentName + "." + buildId
 	w := s.DevServer.StartDevWorker(s.Suite.T(), DevWorkerOptions{
 		Worker: worker.Options{
-			BuildID:                 buildId,
-			UseBuildIDForVersioning: true,
 			DeploymentOptions: worker.DeploymentOptions{
-				DeploymentSeriesName:      seriesName,
+				UseVersioning:             true,
+				Version:                   version,
 				DefaultVersioningBehavior: workflow.VersioningBehaviorPinned,
 			},
 		},
@@ -569,11 +569,29 @@ func (s *SharedServerSuite) TestWorkflow_Describe_Deployment() {
 	})
 	defer w.Stop()
 
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "list",
+			"--address", s.Address(),
+		)
+		assert.NoError(t, res.Err)
+		assert.Contains(t, res.Stdout.String(), deploymentName)
+	}, 30*time.Second, 100*time.Millisecond)
+
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "describe-version",
+			"--address", s.Address(),
+			"--version", version,
+		)
+		assert.NoError(t, res.Err)
+	}, 30*time.Second, 100*time.Millisecond)
+
 	res := s.Execute(
-		"worker", "deployment", "set-current",
+		"worker", "deployment", "set-current-version",
 		"--address", s.Address(),
-		"--series-name", seriesName,
-		"--build-id", buildId,
+		"--version", version,
+		"--yes",
 	)
 	s.NoError(res.Err)
 
@@ -592,16 +610,13 @@ func (s *SharedServerSuite) TestWorkflow_Describe_Deployment() {
 			"-w", run.GetID(),
 		)
 		assert.NoError(t, res.Err)
-		assert.Contains(t, res.Stdout.String(), buildId)
+		assert.Contains(t, res.Stdout.String(), version)
 		assert.Contains(t, res.Stdout.String(), "Pinned")
 	}, 30*time.Second, 100*time.Millisecond)
 
 	out := res.Stdout.String()
 	s.ContainsOnSameLine(out, "Behavior", "Pinned")
-	// TODO(antlai-temporal): replace by new Deployment API
-	// These fields are deprecated, and not populated in latest server
-	//s.ContainsOnSameLine(out, "DeploymentBuildID", buildId)
-	//s.ContainsOnSameLine(out, "DeploymentSeriesName", seriesName)
+	s.ContainsOnSameLine(out, "Version", version)
 	s.ContainsOnSameLine(out, "OverrideBehavior", "Unspecified")
 
 	// json
@@ -617,12 +632,8 @@ func (s *SharedServerSuite) TestWorkflow_Describe_Deployment() {
 	s.NoError(temporalcli.UnmarshalProtoJSONWithOptions(res.Stdout.Bytes(), &jsonResp, true))
 	versioningInfo := jsonResp.WorkflowExecutionInfo.VersioningInfo
 	s.Equal("Pinned", versioningInfo.Behavior.String())
-	// TODO(antlai-temporal): replace by new Deployment API
-	// These fields are deprecated, and not populated in latest server
-	// s.Equal(buildId, versioningInfo.Deployment.BuildId)
-	// s.Equal(seriesName, versioningInfo.Deployment.SeriesName)
+	s.Equal(version, versioningInfo.Version)
 	s.Nil(versioningInfo.VersioningOverride)
-	s.Nil(versioningInfo.DeploymentTransition)
 }
 
 func (s *SharedServerSuite) TestWorkflow_Describe_NexusOperationAndCallback() {

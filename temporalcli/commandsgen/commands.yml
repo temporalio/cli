@@ -672,7 +672,7 @@ commands:
         - worker deployment
 
   - name: temporal worker deployment
-    summary: Describe, list, and operate on Worker Deployments
+    summary: Describe, list, and operate on Worker Deployments and Versions
     description: |
       +---------------------------------------------------------------------+
       | CAUTION: Worker Deployment is experimental. Deployment commands are |
@@ -690,17 +690,40 @@ commands:
       ```
       temporal worker deployment list
       ```
+
+      Lists the Deployments in the client's namespace.
+
+      Arguments can be Worker Deployment Versions associated with
+      a Deployment, using a fully qualified Version identifier that
+      concatenates the Deployment Name and the Build ID with the
+      reserved separator ".".
+
+      For example:
+
+      ```
+      temporal worker deployment set-current-version \
+               --version YourDeploymentName.YourBuildID
+      ```
+      
+      Sets the current Deployment Version for a given Deployment.
+      
     docs:
       description-header: >-
-        Temporal Deployment commands enable operations on Worker Deployments,
-        such as describe, list, set-current, and get-current, simplifying
-        versioning and management of workers.
+        Temporal Deployment commands enable operations on Worker Deployments
+        that simplify versioning and management of workers,
+        such as describe, list, delete, and also operations that refer to Worker
+        Deployment Versions within them, such as describe-version,
+        delete-version, set-current-version, or set-ramping-version.
       keywords:
         - worker deployment
         - worker deployment describe
         - worker deployment list
-        - worker deployment get-current
-        - worker deployment set-current
+        - worker deployment delete
+        - worker deployment describe-version
+        - worker deployment set-current-version
+        - worker deployment set-ramping-version
+        - worker deployment delete-version
+        - worker deployment update-metadata-version
 
   - name: temporal worker deployment describe
     summary: Show properties of a Worker Deployment
@@ -710,59 +733,54 @@ commands:
       | subject to change.                                                  |
       +---------------------------------------------------------------------+
 
-      Describes properties of a Worker Deployment, such as whether it is
-      current, the non-empty list of its task queues, custom metadata if
-      present, and reachability status when requested.
+      Describe properties of a Worker Deployment, such as the versions
+      associated with it, routing information of new or existing tasks
+      executed by this deployment, or its creation time.
 
       ```
       temporal worker deployment describe [options]
       ```
 
-      For example, to also include reachability information:
+      For example, to describe a deployment `YourDeploymentName` in the default
+      namespace:
 
       ```
       temporal worker deployment describe \
-          --series-name YourDeploymentSeriesName \
-          --build-id YourDeploymentBuildId \
-          --report-reachability
+          --name YourDeploymentName
       ```
     option-sets:
-      - deployment-reference
-    options:
-      - name: report-reachability
-        type: bool
-        description: |
-          Include reachability information of a Worker Deployment.
+      - deployment-name
 
-  - name: temporal worker deployment get-current
-    summary: Show the current Worker Deployment
+  - name: temporal worker deployment delete
+    summary: Delete a Worker Deployment
     description: |
       +---------------------------------------------------------------------+
       | CAUTION: Worker Deployment is experimental. Deployment commands are |
       | subject to change.                                                  |
       +---------------------------------------------------------------------+
 
-      Gets the current Worker Deployment for a Deployment Series Name.
-      When a Deployment is current, Workers of that Deployment will receive
-      tasks from new Workflows and from existing AutoUpgrade Workflows that
-      are running on this Deployment Series.
+      Remove a Worker Deployment given its Deployment Name.
+      A Deployment can only be deleted if it has no Version in it.
 
       ```
-      temporal worker deployment get-current [options]
+      temporal worker deployment delete [options]
       ```
 
-      For example:
+      For example, setting the user identity that removed the deployment:
 
       ```
-      temporal worker deployment get-current \
-          --series-name YourDeploymentSeriesName
+      temporal worker deployment delete \
+          --name YourDeploymentName \
+          --identity YourIdentity
+
       ```
+    option-sets:
+      - deployment-name
     options:
-      - name: series-name
+      - name: identity
         type: string
-        description: Series Name for the current Worker Deployment.
-        required: true
-
+        description: Identity of the user submitting this request.
+        
   - name: temporal worker deployment list
     summary: Enumerate Worker Deployments in the client's namespace
     description: |
@@ -771,51 +789,248 @@ commands:
       | subject to change.                                                  |
       +---------------------------------------------------------------------+
 
-      List existing Worker Deployments in the client's namespace, optionally
-      filtering them by Deployment Series Name.
-
+      List existing Worker Deployments in the client's namespace.
 
       ```
       temporal worker deployment list [options]
       ```
 
-      For example, adding an optional filter:
+      For example, listing Deployments in YourDeploymentNamespace:
 
       ```
       temporal worker deployment list \
-          --series-name YourDeploymentSeriesName
+          --namespace YourDeploymentNamespace
       ```
-    options:
-      - name: series-name
-        type: string
-        description: Series Name to filter Worker Deployments.
-
-  - name: temporal worker deployment set-current
-    summary: Change the current Worker Deployment
+      
+  - name: temporal worker deployment describe-version
+    summary: Show properties of a Worker Deployment Version
     description: |
       +---------------------------------------------------------------------+
-      | CAUTION: Worker deployment is experimental. Deployment commands are |
+      | CAUTION: Worker Deployment is experimental. Deployment commands are |
       | subject to change.                                                  |
       +---------------------------------------------------------------------+
 
-      Sets the current Deployment for a given Deployment Series.
-      When a Deployment is current, Workers of that Deployment will receive
-      tasks from new Workflows and from existing AutoUpgrade Workflows that
-      are running on this Deployment Series.
+      Describe properties of a Worker Deployment Version, such as the task 
+      queues polled by workers in this Deployment Version, or drainage
+      information required to safely decommission workers, or user-provided
+      metadata, or its creation/modification time.
 
       ```
-      temporal worker deployment set-current [options]
+      temporal worker deployment describe-version [options]
       ```
+
+      For example, to describe a deployment version  in a deployment
+      `YourDeploymentName`, with Build ID `YourBuildID`, and in the default
+      namespace:
+
+      ```
+      temporal worker deployment describe-version \
+          --version YourDeploymentName.YourBuildID
+      ```
+    option-sets:
+      - deployment-version
+    
+  - name: temporal worker deployment delete-version
+    summary: Delete a Worker Deployment Version
+    description: |
+      +---------------------------------------------------------------------+
+      | CAUTION: Worker Deployment is experimental. Deployment commands are |
+      | subject to change.                                                  |
+      +---------------------------------------------------------------------+
+
+      Remove a Worker Deployment Version given its fully-qualified identifier.
+      This is rarely needed during normal operation
+      since unused Versions are eventually garbage collected.
+      The client can delete a Version only when all of the following conditions
+      are met:
+        - It is not the Current or Ramping Version for this Deployment.
+        - It has no active pollers, i.e., none of the task queues in the
+        Version have pollers.
+        - It is not draining. This requirement can be ignored with the option
+      `--skip-drainage`.
+        
+      ```
+      temporal worker deployment delete-version [options]
+      ```
+
+      For example, skipping the drainage restriction:
+
+      ```
+      temporal worker deployment delete-version \
+          --version YourDeploymentName.YourBuildID \
+          --skip-drainage          
+      ```
+    option-sets:
+      - deployment-version
+    options:
+      - name: identity
+        type: string
+        description: Identity of the user submitting this request.
+      - name: skip-drainage
+        type: bool
+        description: Ignore the deletion requirement of not draining.
+
+  - name: temporal worker deployment set-current-version
+    summary: Make a Worker Deployment Version Current for a Deployment
+    description: |
+      +---------------------------------------------------------------------+
+      | CAUTION: Worker Deployment is experimental. Deployment commands are |
+      | subject to change.                                                  |
+      +---------------------------------------------------------------------+
+
+      Set the Current Version for a Deployment.
+      When a Version is current, Workers of that Deployment Version will receive
+      tasks from new Workflows, and from existing AutoUpgrade Workflows that
+      are running on this Deployment.
+      
+      If not all the expected Task Queues are being polled by Workers in the
+      new Version the request will fail. To override this protection use
+      `--ignore-missing-task-queues`. Note that this would ignore task queues
+      in a deployment that are not yet discovered, leading to inconsistent task
+      queue configuration.
+      
+      ```
+      temporal worker deployment set-current-version [options]
+      ```
+
+      For example, to set the Current Version of a deployment
+      `YourDeploymentName`, with a version with Build ID `YourBuildID`, and
+      in the default namespace:
+
+      ```
+      temporal worker deployment set-current-version \
+          --version YourDeploymentName.YourBuildID
+      ```
+
+      The target of set-current-version can also be `__unversioned__`, which
+      moves tasks to unversioned workers, but in this case we also need to
+      specify the Deployment Name.
+
+      ```
+      temporal worker deployment set-current-version \
+          --version __unversioned__ \
+          --deployment-name YourDeploymentName
+      ```  
+    option-sets:
+      - deployment-version
+    options:
+      - name: deployment-name
+        type: string
+        description: |
+          Deployment name.
+          Only needed when `--version` is `__unversioned__` or empty.
+      - name: identity
+        type: string
+        description: Identity of the user submitting this request.
+      - name: ignore-missing-task-queues
+        type: bool
+        description: Override protection to accidentally remove task queues.
+      - name: yes
+        short: y
+        type: bool
+        description: Don't prompt to confirm set Current Version.
+
+  - name: temporal worker deployment set-ramping-version
+    summary: Change Version Ramping settings for a Worker Deployment
+    description: |
+      +---------------------------------------------------------------------+
+      | CAUTION: Worker Deployment is experimental. Deployment commands are |
+      | subject to change.                                                  |
+      +---------------------------------------------------------------------+
+
+      Set the Ramping Version and Percentage for a Deployment.
+
+      The Ramping Version can be set to a fully-qualified Version of the form
+      `YourDeploymentName.YourBuildID`, or set to "__unversioned__", a special
+      value that represents all the unversioned workers.
+
+      The Ramping Percentage is a float with values in the range [0, 100].
+      A value of 100 does not make the Ramping Version Current, use
+      `set-current-version` instead.
+
+      To remove a Ramping Version use the flag `--delete`.
+      
+      If not all the expected Task Queues are being polled by Workers in the
+      new Ramping Version the request will fail. To override this protection use
+      `--ignore-missing-task-queues`. Note that this would ignore task queues
+      in a deployment that are not yet discovered, leading to inconsistent task
+      queue configuration.
+      
+      ```
+      temporal worker deployment set-ramping-version [options]
+      ```
+
+      For example, to set the Ramping Version of a deployment
+      `YourDeploymentName`, with a version with Build ID `YourBuildID`, with
+      10 percent of tasks redirected to this version, and
+      using the default namespace:
+
+      ```
+      temporal worker deployment set-ramping-version \
+          --version YourDeploymentName.YourBuildID
+          --percentage 10.0
+      ```
+
+      And to remove that ramping:
+        
+      ```
+      temporal worker deployment set-ramping-version \
+          --version YourDeploymentName.YourBuildID \
+          --delete
+      ```    
+    option-sets:
+      - deployment-version
+    options:
+      - name: deployment-name
+        type: string
+        description: |
+          Deployment name.
+          Only needed when `--version` is `__unversioned__`.
+      - name: percentage
+        type: float
+        description: |
+          Percentage of tasks redirected to the Ramping Version.
+          Valid range [0,100].
+      - name: delete
+        type: bool
+        description: Delete the Ramping Version.
+      - name: identity
+        type: string
+        description: Identity of the user submitting this request.
+      - name: ignore-missing-task-queues
+        type: bool
+        description: Override protection to accidentally remove task queues.
+      - name: yes
+        short: y
+        type: bool
+        description: Don't prompt to confirm set Ramping Version.
+        
+  - name: temporal worker deployment update-metadata-version
+    summary: Change user-provided metadata for a Version
+    description: |
+      +---------------------------------------------------------------------+
+      | CAUTION: Worker Deployment is experimental. Deployment commands are |
+      | subject to change.                                                  |
+      +---------------------------------------------------------------------+
+      Update metadata associated with a Worker Deployment Version.
 
       For example:
 
       ```
-      temporal worker deployment set-current \
-          --series-name YourDeploymentSeriesName \
-          --build-id YourDeploymentBuildId
+       temporal worker deployment update-metadata-version \
+          --version YourDeploymentName.YourBuildID \
+          --metadata bar=1 \
+          --metadata foo=true
       ```
+
+      The current metadata is also returned with `describe-version`:
+        
+      ```
+       temporal worker deployment describe-version \
+          --version YourDeploymentName.YourBuildID \
+      ```      
     option-sets:
-      - deployment-reference
+      - deployment-version
     options:
       - name: metadata
         type: string[]
@@ -824,7 +1039,12 @@ commands:
           Keys must be identifiers, and values must be JSON values.
           For example: 'YourKey={"your": "value"}'.
           Can be passed multiple times.
-
+      - name: remove-entries
+        type: string[]
+        description: |
+          Keys of entries to be deleted from metadata.
+          Can be passed multiple times.
+          
   - name: temporal env
     summary: Manage environments
     description: |
@@ -2376,8 +2596,7 @@ commands:
     summary: Manage Task Queue Build ID handling (Experimental)
     description: |
       +---------------------------------------------------------------------+
-      | CAUTION: Worker versioning is experimental. Versioning commands are |
-      | subject to change.                                                  |
+      | CAUTION: This API has been deprecated by Worker Deployment.         |
       +---------------------------------------------------------------------+
 
       Provides commands to add, list, remove, or replace Worker Build ID assignment
@@ -2419,8 +2638,7 @@ commands:
       ```
 
       +---------------------------------------------------------------------+
-      | CAUTION: Worker versioning is experimental. Versioning commands are |
-      | subject to change.                                                  |
+      | CAUTION: This API has been deprecated by Worker Deployment.         |
       +---------------------------------------------------------------------+
     options:
       - name: source-build-id
@@ -2461,8 +2679,7 @@ commands:
       override this validation.
 
       +---------------------------------------------------------------------+
-      | CAUTION: Worker versioning is experimental. Versioning commands are |
-      | subject to change.                                                  |
+      | CAUTION: This API has been deprecated by Worker Deployment.         |
       +---------------------------------------------------------------------+
     options:
       - name: build-id
@@ -2494,8 +2711,7 @@ commands:
       Use the `--force` option to override this validation.
 
       +---------------------------------------------------------------------+
-      | CAUTION: Worker versioning is experimental. Versioning commands are |
-      | subject to change.                                                  |
+      | CAUTION: This API has been deprecated by Worker Deployment.         |
       +---------------------------------------------------------------------+
     options:
       - name: rule-index
@@ -2525,8 +2741,7 @@ commands:
       ```
 
       +---------------------------------------------------------------------+
-      | CAUTION: Worker versioning is experimental. Versioning commands are |
-      | subject to change.                                                  |
+      | CAUTION: This API has been deprecated by Worker Deployment.         |
       +---------------------------------------------------------------------+
     options:
       - name: source-build-id
@@ -2559,10 +2774,8 @@ commands:
         Build ID. You may add at most one redirect rule for each source Build ID.
         Redirect rules require that a target Build ID is fully compatible with
         the source Build ID.
-
       +---------------------------------------------------------------------+
-      | CAUTION: Worker versioning is experimental. Versioning commands are |
-      | subject to change.                                                  |
+      | CAUTION: This API has been deprecated by Worker Deployment.         |
       +---------------------------------------------------------------------+
 
   - name: temporal task-queue versioning insert-assignment-rule
@@ -2581,8 +2794,7 @@ commands:
       If you do not specify a `--rule-index`, this command inserts at index 0.
 
       +---------------------------------------------------------------------+
-      | CAUTION: Worker versioning is experimental. Versioning commands are |
-      | subject to change.                                                  |
+      | CAUTION: This API has been deprecated by Worker Deployment.         |
       +---------------------------------------------------------------------+
     options:
       - name: build-id
@@ -2637,8 +2849,7 @@ commands:
       Percent may vary between 0 and 100 (default).
 
       +---------------------------------------------------------------------+
-      | CAUTION: Worker versioning is experimental. Versioning commands are |
-      | subject to change.                                                  |
+      | CAUTION: This API has been deprecated by Worker Deployment.         |
       +---------------------------------------------------------------------+
     options:
       - name: build-id
@@ -2679,8 +2890,7 @@ commands:
       ```
 
       +---------------------------------------------------------------------+
-      | CAUTION: Worker versioning is experimental. Versioning commands are |
-      | subject to change.                                                  |
+      | CAUTION: This API has been deprecated by Worker Deployment.         |
       +---------------------------------------------------------------------+
     options:
       - name: source-build-id
@@ -2976,8 +3186,8 @@ commands:
       temporal workflow update-options \
           --workflow-id YourWorkflowId \
           --versioning-override-behavior pinned \
-          --versioning-override-series-name YourDeploymentSeriesName \
-          --versioning-override-build-id YourDeploymentBuildId
+          --versioning-override-pinned-version \
+            YourDeploymentSeriesName.YourDeploymentBuildId
       ```
 
       To remove any previous overrides, set the behavior to
@@ -3003,12 +3213,9 @@ commands:
           - unspecified
           - pinned
           - auto_upgrade
-      - name: versioning-override-series-name
+      - name: versioning-override-pinned-version
         type: string
-        description: Override Series Name for a Worker Deployment (Only for pinned).
-      - name: versioning-override-build-id
-        type: string
-        description: Override Build ID for a Worker Deployment (Only for pinned).
+        description: Override Pinned Version for a Worker Deployment (Only for pinned).
 
   - name: temporal workflow query
     summary: Retrieve Workflow Execution state
@@ -3608,6 +3815,24 @@ option-sets:
         short: r
         description: Run ID.
 
+  - name: deployment-name
+    options:
+      - name: name
+        type: string
+        short: d
+        description: Name for a Worker Deployment.
+        required: true
+
+  - name: deployment-version
+    options:
+      - name: version
+        type: string
+        short: v
+        description: |
+          Fully-qualified name for a Worker Deployment Version.
+          Use the format `YourDeploymentName.YourBuildID`.
+        required: true
+        
   - name: deployment-reference
     options:
       - name: series-name
