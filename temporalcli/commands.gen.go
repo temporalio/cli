@@ -2264,9 +2264,9 @@ func NewTemporalTaskQueueVersioningCommand(cctx *CommandContext, parent *Tempora
 	s.Command.Use = "versioning"
 	s.Command.Short = "Manage Task Queue Build ID handling (Experimental)"
 	if hasHighlighting {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker versioning is experimental. Versioning commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nProvides commands to add, list, remove, or replace Worker Build ID assignment\nand redirect rules associated with Task Queues:\n\n\x1b[1mtemporal task-queue versioning [subcommands] [options] \\\n    --task-queue YourTaskQueue\x1b[0m\n\nTask Queues support the following versioning rules and policies:\n\n- Assignment Rules: manage how new executions are assigned to run on specific\n  Worker Build IDs. Each Task Queue stores a list of ordered Assignment Rules,\n  which are evaluated from first to last. Assignment Rules also allow for\n  gradual rollout of new Build IDs by setting ramp percentage.\n- Redirect Rules: automatically assign work for a source Build ID to a target\n  Build ID. You may add at most one redirect rule for each source Build ID.\n  Redirect rules require that a target Build ID is fully compatible with\n  the source Build ID."
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment.         |\n+---------------------------------------------------------------------+\n\nProvides commands to add, list, remove, or replace Worker Build ID assignment\nand redirect rules associated with Task Queues:\n\n\x1b[1mtemporal task-queue versioning [subcommands] [options] \\\n    --task-queue YourTaskQueue\x1b[0m\n\nTask Queues support the following versioning rules and policies:\n\n- Assignment Rules: manage how new executions are assigned to run on specific\n  Worker Build IDs. Each Task Queue stores a list of ordered Assignment Rules,\n  which are evaluated from first to last. Assignment Rules also allow for\n  gradual rollout of new Build IDs by setting ramp percentage.\n- Redirect Rules: automatically assign work for a source Build ID to a target\n  Build ID. You may add at most one redirect rule for each source Build ID.\n  Redirect rules require that a target Build ID is fully compatible with\n  the source Build ID."
 	} else {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker versioning is experimental. Versioning commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nProvides commands to add, list, remove, or replace Worker Build ID assignment\nand redirect rules associated with Task Queues:\n\n```\ntemporal task-queue versioning [subcommands] [options] \\\n    --task-queue YourTaskQueue\n```\n\nTask Queues support the following versioning rules and policies:\n\n- Assignment Rules: manage how new executions are assigned to run on specific\n  Worker Build IDs. Each Task Queue stores a list of ordered Assignment Rules,\n  which are evaluated from first to last. Assignment Rules also allow for\n  gradual rollout of new Build IDs by setting ramp percentage.\n- Redirect Rules: automatically assign work for a source Build ID to a target\n  Build ID. You may add at most one redirect rule for each source Build ID.\n  Redirect rules require that a target Build ID is fully compatible with\n  the source Build ID."
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment.         |\n+---------------------------------------------------------------------+\n\nProvides commands to add, list, remove, or replace Worker Build ID assignment\nand redirect rules associated with Task Queues:\n\n```\ntemporal task-queue versioning [subcommands] [options] \\\n    --task-queue YourTaskQueue\n```\n\nTask Queues support the following versioning rules and policies:\n\n- Assignment Rules: manage how new executions are assigned to run on specific\n  Worker Build IDs. Each Task Queue stores a list of ordered Assignment Rules,\n  which are evaluated from first to last. Assignment Rules also allow for\n  gradual rollout of new Build IDs by setting ramp percentage.\n- Redirect Rules: automatically assign work for a source Build ID to a target\n  Build ID. You may add at most one redirect rule for each source Build ID.\n  Redirect rules require that a target Build ID is fully compatible with\n  the source Build ID."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalTaskQueueVersioningAddRedirectRuleCommand(cctx, &s).Command)
@@ -2297,9 +2297,9 @@ func NewTemporalTaskQueueVersioningAddRedirectRuleCommand(cctx *CommandContext, 
 	s.Command.Use = "add-redirect-rule [flags]"
 	s.Command.Short = "Add Task Queue redirect rules (Experimental)"
 	if hasHighlighting {
-		s.Command.Long = "Add a new redirect rule for a given Task Queue. You may add at most one\nredirect rule for each distinct source build ID:\n\n\x1b[1mtemporal task-queue versioning add-redirect-rule \\\n    --task-queue YourTaskQueue \\\n    --source-build-id \"YourSourceBuildID\" \\\n    --target-build-id \"YourTargetBuildID\"\x1b[0m\n\n+---------------------------------------------------------------------+\n| CAUTION: Worker versioning is experimental. Versioning commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+"
+		s.Command.Long = "Add a new redirect rule for a given Task Queue. You may add at most one\nredirect rule for each distinct source build ID:\n\n\x1b[1mtemporal task-queue versioning add-redirect-rule \\\n    --task-queue YourTaskQueue \\\n    --source-build-id \"YourSourceBuildID\" \\\n    --target-build-id \"YourTargetBuildID\"\x1b[0m\n\n+---------------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment.         |\n+---------------------------------------------------------------------+"
 	} else {
-		s.Command.Long = "Add a new redirect rule for a given Task Queue. You may add at most one\nredirect rule for each distinct source build ID:\n\n```\ntemporal task-queue versioning add-redirect-rule \\\n    --task-queue YourTaskQueue \\\n    --source-build-id \"YourSourceBuildID\" \\\n    --target-build-id \"YourTargetBuildID\"\n```\n\n+---------------------------------------------------------------------+\n| CAUTION: Worker versioning is experimental. Versioning commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+"
+		s.Command.Long = "Add a new redirect rule for a given Task Queue. You may add at most one\nredirect rule for each distinct source build ID:\n\n```\ntemporal task-queue versioning add-redirect-rule \\\n    --task-queue YourTaskQueue \\\n    --source-build-id \"YourSourceBuildID\" \\\n    --target-build-id \"YourTargetBuildID\"\n```\n\n+---------------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment.         |\n+---------------------------------------------------------------------+"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.SourceBuildId, "source-build-id", "", "Source build ID. Required.")
@@ -2330,9 +2330,9 @@ func NewTemporalTaskQueueVersioningCommitBuildIdCommand(cctx *CommandContext, pa
 	s.Command.Use = "commit-build-id [flags]"
 	s.Command.Short = "Complete Build ID rollout (Experimental)"
 	if hasHighlighting {
-		s.Command.Long = "Complete a Build ID's rollout and clean up unnecessary rules that might have\nbeen created during a gradual rollout:\n\n\x1b[1mtemporal task-queue versioning commit-build-id \\\n    --task-queue YourTaskQueue\n    --build-id \"YourBuildId\"\x1b[0m\n\nThis command automatically applies the following atomic changes:\n\n- Adds an unconditional assignment rule for the target Build ID at the\n  end of the list.\n- Removes all previously added assignment rules to the given target\n  Build ID.\n- Removes any unconditional assignment rules for other Build IDs.\n\nRejects requests when there have been no recent pollers for this Build ID.\nThis prevents committing invalid Build IDs. Use the \x1b[1m--force\x1b[0m option to\noverride this validation.\n\n+---------------------------------------------------------------------+\n| CAUTION: Worker versioning is experimental. Versioning commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+"
+		s.Command.Long = "Complete a Build ID's rollout and clean up unnecessary rules that might have\nbeen created during a gradual rollout:\n\n\x1b[1mtemporal task-queue versioning commit-build-id \\\n    --task-queue YourTaskQueue\n    --build-id \"YourBuildId\"\x1b[0m\n\nThis command automatically applies the following atomic changes:\n\n- Adds an unconditional assignment rule for the target Build ID at the\n  end of the list.\n- Removes all previously added assignment rules to the given target\n  Build ID.\n- Removes any unconditional assignment rules for other Build IDs.\n\nRejects requests when there have been no recent pollers for this Build ID.\nThis prevents committing invalid Build IDs. Use the \x1b[1m--force\x1b[0m option to\noverride this validation.\n\n+---------------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment.         |\n+---------------------------------------------------------------------+"
 	} else {
-		s.Command.Long = "Complete a Build ID's rollout and clean up unnecessary rules that might have\nbeen created during a gradual rollout:\n\n```\ntemporal task-queue versioning commit-build-id \\\n    --task-queue YourTaskQueue\n    --build-id \"YourBuildId\"\n```\n\nThis command automatically applies the following atomic changes:\n\n- Adds an unconditional assignment rule for the target Build ID at the\n  end of the list.\n- Removes all previously added assignment rules to the given target\n  Build ID.\n- Removes any unconditional assignment rules for other Build IDs.\n\nRejects requests when there have been no recent pollers for this Build ID.\nThis prevents committing invalid Build IDs. Use the `--force` option to\noverride this validation.\n\n+---------------------------------------------------------------------+\n| CAUTION: Worker versioning is experimental. Versioning commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+"
+		s.Command.Long = "Complete a Build ID's rollout and clean up unnecessary rules that might have\nbeen created during a gradual rollout:\n\n```\ntemporal task-queue versioning commit-build-id \\\n    --task-queue YourTaskQueue\n    --build-id \"YourBuildId\"\n```\n\nThis command automatically applies the following atomic changes:\n\n- Adds an unconditional assignment rule for the target Build ID at the\n  end of the list.\n- Removes all previously added assignment rules to the given target\n  Build ID.\n- Removes any unconditional assignment rules for other Build IDs.\n\nRejects requests when there have been no recent pollers for this Build ID.\nThis prevents committing invalid Build IDs. Use the `--force` option to\noverride this validation.\n\n+---------------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment.         |\n+---------------------------------------------------------------------+"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "Target build ID. Required.")
@@ -2362,9 +2362,9 @@ func NewTemporalTaskQueueVersioningDeleteAssignmentRuleCommand(cctx *CommandCont
 	s.Command.Use = "delete-assignment-rule [flags]"
 	s.Command.Short = "Removes a Task Queue assignment rule (Experimental)"
 	if hasHighlighting {
-		s.Command.Long = "Deletes a rule identified by its index in the Task Queue's list of assignment\nrules.\n\n\x1b[1mtemporal task-queue versioning delete-assignment-rule \\\n    --task-queue YourTaskQueue \\\n    --rule-index YourIntegerRuleIndex\x1b[0m\n\nBy default, the Task Queue must retain one unconditional rule, such as \"no\nhint filter\" or \"percentage\". Otherwise, the delete operation is rejected.\nUse the \x1b[1m--force\x1b[0m option to override this validation.\n\n+---------------------------------------------------------------------+\n| CAUTION: Worker versioning is experimental. Versioning commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+"
+		s.Command.Long = "Deletes a rule identified by its index in the Task Queue's list of assignment\nrules.\n\n\x1b[1mtemporal task-queue versioning delete-assignment-rule \\\n    --task-queue YourTaskQueue \\\n    --rule-index YourIntegerRuleIndex\x1b[0m\n\nBy default, the Task Queue must retain one unconditional rule, such as \"no\nhint filter\" or \"percentage\". Otherwise, the delete operation is rejected.\nUse the \x1b[1m--force\x1b[0m option to override this validation.\n\n+---------------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment.         |\n+---------------------------------------------------------------------+"
 	} else {
-		s.Command.Long = "Deletes a rule identified by its index in the Task Queue's list of assignment\nrules.\n\n```\ntemporal task-queue versioning delete-assignment-rule \\\n    --task-queue YourTaskQueue \\\n    --rule-index YourIntegerRuleIndex\n```\n\nBy default, the Task Queue must retain one unconditional rule, such as \"no\nhint filter\" or \"percentage\". Otherwise, the delete operation is rejected.\nUse the `--force` option to override this validation.\n\n+---------------------------------------------------------------------+\n| CAUTION: Worker versioning is experimental. Versioning commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+"
+		s.Command.Long = "Deletes a rule identified by its index in the Task Queue's list of assignment\nrules.\n\n```\ntemporal task-queue versioning delete-assignment-rule \\\n    --task-queue YourTaskQueue \\\n    --rule-index YourIntegerRuleIndex\n```\n\nBy default, the Task Queue must retain one unconditional rule, such as \"no\nhint filter\" or \"percentage\". Otherwise, the delete operation is rejected.\nUse the `--force` option to override this validation.\n\n+---------------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment.         |\n+---------------------------------------------------------------------+"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().IntVarP(&s.RuleIndex, "rule-index", "i", 0, "Position of the assignment rule to be replaced. Requests for invalid indices will fail. Required.")
@@ -2393,9 +2393,9 @@ func NewTemporalTaskQueueVersioningDeleteRedirectRuleCommand(cctx *CommandContex
 	s.Command.Use = "delete-redirect-rule [flags]"
 	s.Command.Short = "Removes Build-ID routing rule (Experimental)"
 	if hasHighlighting {
-		s.Command.Long = "Deletes the routing rule for the given source Build ID.\n\n\x1b[1mtemporal task-queue versioning delete-redirect-rule \\\n    --task-queue YourTaskQueue \\\n    --source-build-id \"YourBuildId\"\x1b[0m\n\n+---------------------------------------------------------------------+\n| CAUTION: Worker versioning is experimental. Versioning commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+"
+		s.Command.Long = "Deletes the routing rule for the given source Build ID.\n\n\x1b[1mtemporal task-queue versioning delete-redirect-rule \\\n    --task-queue YourTaskQueue \\\n    --source-build-id \"YourBuildId\"\x1b[0m\n\n+---------------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment.         |\n+---------------------------------------------------------------------+"
 	} else {
-		s.Command.Long = "Deletes the routing rule for the given source Build ID.\n\n```\ntemporal task-queue versioning delete-redirect-rule \\\n    --task-queue YourTaskQueue \\\n    --source-build-id \"YourBuildId\"\n```\n\n+---------------------------------------------------------------------+\n| CAUTION: Worker versioning is experimental. Versioning commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+"
+		s.Command.Long = "Deletes the routing rule for the given source Build ID.\n\n```\ntemporal task-queue versioning delete-redirect-rule \\\n    --task-queue YourTaskQueue \\\n    --source-build-id \"YourBuildId\"\n```\n\n+---------------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment.         |\n+---------------------------------------------------------------------+"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.SourceBuildId, "source-build-id", "", "Source Build ID. Required.")
@@ -2421,9 +2421,9 @@ func NewTemporalTaskQueueVersioningGetRulesCommand(cctx *CommandContext, parent 
 	s.Command.Use = "get-rules [flags]"
 	s.Command.Short = "Fetch Worker Build ID assignments and redirect rules (Experimental)"
 	if hasHighlighting {
-		s.Command.Long = "Retrieve all the Worker Build ID assignments and redirect rules associated\nwith a Task Queue:\n\n\x1b[1mtemporal task-queue versioning get-rules \\\n    --task-queue YourTaskQueue\x1b[0m\n\nTask Queues support the following versioning rules:\n\n- Assignment Rules: manage how new executions are assigned to run on specific\n  Worker Build IDs. Each Task Queue stores a list of ordered Assignment Rules,\n  which are evaluated from first to last. Assignment Rules also allow for\n  gradual rollout of new Build IDs by setting ramp percentage.\n- Redirect Rules: automatically assign work for a source Build ID to a target\n  Build ID. You may add at most one redirect rule for each source Build ID.\n  Redirect rules require that a target Build ID is fully compatible with\n  the source Build ID.\n\n+---------------------------------------------------------------------+\n| CAUTION: Worker versioning is experimental. Versioning commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+"
+		s.Command.Long = "Retrieve all the Worker Build ID assignments and redirect rules associated\nwith a Task Queue:\n\n\x1b[1mtemporal task-queue versioning get-rules \\\n    --task-queue YourTaskQueue\x1b[0m\n\nTask Queues support the following versioning rules:\n\n- Assignment Rules: manage how new executions are assigned to run on specific\n  Worker Build IDs. Each Task Queue stores a list of ordered Assignment Rules,\n  which are evaluated from first to last. Assignment Rules also allow for\n  gradual rollout of new Build IDs by setting ramp percentage.\n- Redirect Rules: automatically assign work for a source Build ID to a target\n  Build ID. You may add at most one redirect rule for each source Build ID.\n  Redirect rules require that a target Build ID is fully compatible with\n  the source Build ID.\n+---------------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment.         |\n+---------------------------------------------------------------------+"
 	} else {
-		s.Command.Long = "Retrieve all the Worker Build ID assignments and redirect rules associated\nwith a Task Queue:\n\n```\ntemporal task-queue versioning get-rules \\\n    --task-queue YourTaskQueue\n```\n\nTask Queues support the following versioning rules:\n\n- Assignment Rules: manage how new executions are assigned to run on specific\n  Worker Build IDs. Each Task Queue stores a list of ordered Assignment Rules,\n  which are evaluated from first to last. Assignment Rules also allow for\n  gradual rollout of new Build IDs by setting ramp percentage.\n- Redirect Rules: automatically assign work for a source Build ID to a target\n  Build ID. You may add at most one redirect rule for each source Build ID.\n  Redirect rules require that a target Build ID is fully compatible with\n  the source Build ID.\n\n+---------------------------------------------------------------------+\n| CAUTION: Worker versioning is experimental. Versioning commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+"
+		s.Command.Long = "Retrieve all the Worker Build ID assignments and redirect rules associated\nwith a Task Queue:\n\n```\ntemporal task-queue versioning get-rules \\\n    --task-queue YourTaskQueue\n```\n\nTask Queues support the following versioning rules:\n\n- Assignment Rules: manage how new executions are assigned to run on specific\n  Worker Build IDs. Each Task Queue stores a list of ordered Assignment Rules,\n  which are evaluated from first to last. Assignment Rules also allow for\n  gradual rollout of new Build IDs by setting ramp percentage.\n- Redirect Rules: automatically assign work for a source Build ID to a target\n  Build ID. You may add at most one redirect rule for each source Build ID.\n  Redirect rules require that a target Build ID is fully compatible with\n  the source Build ID.\n+---------------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment.         |\n+---------------------------------------------------------------------+"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -2450,9 +2450,9 @@ func NewTemporalTaskQueueVersioningInsertAssignmentRuleCommand(cctx *CommandCont
 	s.Command.Use = "insert-assignment-rule [flags]"
 	s.Command.Short = "Add an assignment rule at a index (Experimental)"
 	if hasHighlighting {
-		s.Command.Long = "Inserts a new assignment rule for this Task Queue. Rules are evaluated in\norder, starting from index 0. The first applicable rule is applied, and the\nrest ignored:\n\n\x1b[1mtemporal task-queue versioning insert-assignment-rule \\\n    --task-queue YourTaskQueue \\\n    --build-id \"YourBuildId\"\x1b[0m\n\nIf you do not specify a \x1b[1m--rule-index\x1b[0m, this command inserts at index 0.\n\n+---------------------------------------------------------------------+\n| CAUTION: Worker versioning is experimental. Versioning commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+"
+		s.Command.Long = "Inserts a new assignment rule for this Task Queue. Rules are evaluated in\norder, starting from index 0. The first applicable rule is applied, and the\nrest ignored:\n\n\x1b[1mtemporal task-queue versioning insert-assignment-rule \\\n    --task-queue YourTaskQueue \\\n    --build-id \"YourBuildId\"\x1b[0m\n\nIf you do not specify a \x1b[1m--rule-index\x1b[0m, this command inserts at index 0.\n\n+---------------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment.         |\n+---------------------------------------------------------------------+"
 	} else {
-		s.Command.Long = "Inserts a new assignment rule for this Task Queue. Rules are evaluated in\norder, starting from index 0. The first applicable rule is applied, and the\nrest ignored:\n\n```\ntemporal task-queue versioning insert-assignment-rule \\\n    --task-queue YourTaskQueue \\\n    --build-id \"YourBuildId\"\n```\n\nIf you do not specify a `--rule-index`, this command inserts at index 0.\n\n+---------------------------------------------------------------------+\n| CAUTION: Worker versioning is experimental. Versioning commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+"
+		s.Command.Long = "Inserts a new assignment rule for this Task Queue. Rules are evaluated in\norder, starting from index 0. The first applicable rule is applied, and the\nrest ignored:\n\n```\ntemporal task-queue versioning insert-assignment-rule \\\n    --task-queue YourTaskQueue \\\n    --build-id \"YourBuildId\"\n```\n\nIf you do not specify a `--rule-index`, this command inserts at index 0.\n\n+---------------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment.         |\n+---------------------------------------------------------------------+"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "Target Build ID. Required.")
@@ -2485,9 +2485,9 @@ func NewTemporalTaskQueueVersioningReplaceAssignmentRuleCommand(cctx *CommandCon
 	s.Command.Use = "replace-assignment-rule [flags]"
 	s.Command.Short = "Update assignment rule at index (Experimental)"
 	if hasHighlighting {
-		s.Command.Long = "Change an assignment rule for this Task Queue. By default, this enforces one\nunconditional rule (no hint filter or percentage). Otherwise, the operation\nwill be rejected. Set \x1b[1mforce\x1b[0m to true to bypass this validation.\n\n\x1b[1mtemporal task-queue versioning replace-assignment-rule \\\n    --task-queue YourTaskQueue \\\n    --rule-index AnIntegerIndex \\\n    --build-id \"YourBuildId\"\x1b[0m\n\nTo assign multiple assignment rules to a single Build ID, use\n'insert-assignment-rule'.\n\nTo update the percent:\n\n\x1b[1mtemporal task-queue versioning replace-assignment-rule \\\n    --task-queue YourTaskQueue \\\n    --rule-index AnIntegerIndex \\\n    --build-id \"YourBuildId\" \\\n    --percentage AnIntegerPercent\x1b[0m\n\nPercent may vary between 0 and 100 (default).\n\n+---------------------------------------------------------------------+\n| CAUTION: Worker versioning is experimental. Versioning commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+"
+		s.Command.Long = "Change an assignment rule for this Task Queue. By default, this enforces one\nunconditional rule (no hint filter or percentage). Otherwise, the operation\nwill be rejected. Set \x1b[1mforce\x1b[0m to true to bypass this validation.\n\n\x1b[1mtemporal task-queue versioning replace-assignment-rule \\\n    --task-queue YourTaskQueue \\\n    --rule-index AnIntegerIndex \\\n    --build-id \"YourBuildId\"\x1b[0m\n\nTo assign multiple assignment rules to a single Build ID, use\n'insert-assignment-rule'.\n\nTo update the percent:\n\n\x1b[1mtemporal task-queue versioning replace-assignment-rule \\\n    --task-queue YourTaskQueue \\\n    --rule-index AnIntegerIndex \\\n    --build-id \"YourBuildId\" \\\n    --percentage AnIntegerPercent\x1b[0m\n\nPercent may vary between 0 and 100 (default).\n\n+---------------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment.         |\n+---------------------------------------------------------------------+"
 	} else {
-		s.Command.Long = "Change an assignment rule for this Task Queue. By default, this enforces one\nunconditional rule (no hint filter or percentage). Otherwise, the operation\nwill be rejected. Set `force` to true to bypass this validation.\n\n```\ntemporal task-queue versioning replace-assignment-rule \\\n    --task-queue YourTaskQueue \\\n    --rule-index AnIntegerIndex \\\n    --build-id \"YourBuildId\"\n```\n\nTo assign multiple assignment rules to a single Build ID, use\n'insert-assignment-rule'.\n\nTo update the percent:\n\n```\ntemporal task-queue versioning replace-assignment-rule \\\n    --task-queue YourTaskQueue \\\n    --rule-index AnIntegerIndex \\\n    --build-id \"YourBuildId\" \\\n    --percentage AnIntegerPercent\n```\n\nPercent may vary between 0 and 100 (default).\n\n+---------------------------------------------------------------------+\n| CAUTION: Worker versioning is experimental. Versioning commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+"
+		s.Command.Long = "Change an assignment rule for this Task Queue. By default, this enforces one\nunconditional rule (no hint filter or percentage). Otherwise, the operation\nwill be rejected. Set `force` to true to bypass this validation.\n\n```\ntemporal task-queue versioning replace-assignment-rule \\\n    --task-queue YourTaskQueue \\\n    --rule-index AnIntegerIndex \\\n    --build-id \"YourBuildId\"\n```\n\nTo assign multiple assignment rules to a single Build ID, use\n'insert-assignment-rule'.\n\nTo update the percent:\n\n```\ntemporal task-queue versioning replace-assignment-rule \\\n    --task-queue YourTaskQueue \\\n    --rule-index AnIntegerIndex \\\n    --build-id \"YourBuildId\" \\\n    --percentage AnIntegerPercent\n```\n\nPercent may vary between 0 and 100 (default).\n\n+---------------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment.         |\n+---------------------------------------------------------------------+"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "Target Build ID. Required.")
@@ -2520,9 +2520,9 @@ func NewTemporalTaskQueueVersioningReplaceRedirectRuleCommand(cctx *CommandConte
 	s.Command.Use = "replace-redirect-rule [flags]"
 	s.Command.Short = "Change the target for a Build ID's redirect (Experimental)"
 	if hasHighlighting {
-		s.Command.Long = "Updates a Build ID's redirect rule on a Task Queue by replacing its target\nBuild ID:\n\n\x1b[1mtemporal task-queue versioning replace-redirect-rule \\\n    --task-queue YourTaskQueue \\\n    --source-build-id YourSourceBuildId \\\n    --target-build-id YourNewTargetBuildId\x1b[0m\n\n+---------------------------------------------------------------------+\n| CAUTION: Worker versioning is experimental. Versioning commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+"
+		s.Command.Long = "Updates a Build ID's redirect rule on a Task Queue by replacing its target\nBuild ID:\n\n\x1b[1mtemporal task-queue versioning replace-redirect-rule \\\n    --task-queue YourTaskQueue \\\n    --source-build-id YourSourceBuildId \\\n    --target-build-id YourNewTargetBuildId\x1b[0m\n\n+---------------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment.         |\n+---------------------------------------------------------------------+"
 	} else {
-		s.Command.Long = "Updates a Build ID's redirect rule on a Task Queue by replacing its target\nBuild ID:\n\n```\ntemporal task-queue versioning replace-redirect-rule \\\n    --task-queue YourTaskQueue \\\n    --source-build-id YourSourceBuildId \\\n    --target-build-id YourNewTargetBuildId\n```\n\n+---------------------------------------------------------------------+\n| CAUTION: Worker versioning is experimental. Versioning commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+"
+		s.Command.Long = "Updates a Build ID's redirect rule on a Task Queue by replacing its target\nBuild ID:\n\n```\ntemporal task-queue versioning replace-redirect-rule \\\n    --task-queue YourTaskQueue \\\n    --source-build-id YourSourceBuildId \\\n    --target-build-id YourNewTargetBuildId\n```\n\n+---------------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment.         |\n+---------------------------------------------------------------------+"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.SourceBuildId, "source-build-id", "", "Source Build ID. Required.")
@@ -2571,15 +2571,19 @@ func NewTemporalWorkerDeploymentCommand(cctx *CommandContext, parent *TemporalWo
 	s.Command.Use = "deployment"
 	s.Command.Short = "Describe, list, and operate on Worker Deployments and Versions"
 	if hasHighlighting {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nDeployment commands perform operations on Worker Deployments:\n\n\x1b[1mtemporal worker deployment [command] [options]\x1b[0m\n\nFor example:\n\n\x1b[1mtemporal worker deployment list\x1b[0m"
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nDeployment commands perform operations on Worker Deployments:\n\n\x1b[1mtemporal worker deployment [command] [options]\x1b[0m\n\nFor example:\n\n\x1b[1mtemporal worker deployment list\x1b[0m\n\nLists the Deployments in the client's namespace.\n\nArguments can be Worker Deployment Versions associated with\na Deployment, using a fully qualified Version identifier that\nconcatenates the Deployment Name and the Build ID with the\nreserved separator \".\".\n\nFor example:\n\n\x1b[1mtemporal worker deployment set-current-version \\\n         --version YourDeploymentName.YourBuildID\x1b[0m\n\nSets the current Deployment Version for a given Deployment."
 	} else {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nDeployment commands perform operations on Worker Deployments:\n\n```\ntemporal worker deployment [command] [options]\n```\n\nFor example:\n\n```\ntemporal worker deployment list\n```"
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nDeployment commands perform operations on Worker Deployments:\n\n```\ntemporal worker deployment [command] [options]\n```\n\nFor example:\n\n```\ntemporal worker deployment list\n```\n\nLists the Deployments in the client's namespace.\n\nArguments can be Worker Deployment Versions associated with\na Deployment, using a fully qualified Version identifier that\nconcatenates the Deployment Name and the Build ID with the\nreserved separator \".\".\n\nFor example:\n\n```\ntemporal worker deployment set-current-version \\\n         --version YourDeploymentName.YourBuildID\n```\n\nSets the current Deployment Version for a given Deployment."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentDeleteCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkerDeploymentDeleteVersionCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentDescribeCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkerDeploymentDescribeVersionCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentListCommand(cctx, &s).Command)
-	s.Command.AddCommand(&NewTemporalWorkerDeploymentVersionCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkerDeploymentSetCurrentVersionCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkerDeploymentSetRampingVersionCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkerDeploymentUpdateMetadataVersionCommand(cctx, &s).Command)
 	return &s
 }
 
@@ -2595,15 +2599,46 @@ func NewTemporalWorkerDeploymentDeleteCommand(cctx *CommandContext, parent *Temp
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "delete [flags]"
-	s.Command.Short = "Deletes a Worker Deployment"
+	s.Command.Short = "Delete a Worker Deployment"
 	if hasHighlighting {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nRemoves a Worker Deployment given its Deployment Name.\nA Deployment can only be deleted if it has no Version in it.\n\n\x1b[1mtemporal worker deployment delete [options]\x1b[0m\n\nFor example, setting the user identity that removed the deployment:\n\n\x1b[1mtemporal worker deployment delete \\\n    --name YourDeploymentName \\\n    --identity YourIdentity\x1b[0m"
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nRemove a Worker Deployment given its Deployment Name.\nA Deployment can only be deleted if it has no Version in it.\n\n\x1b[1mtemporal worker deployment delete [options]\x1b[0m\n\nFor example, setting the user identity that removed the deployment:\n\n\x1b[1mtemporal worker deployment delete \\\n    --name YourDeploymentName \\\n    --identity YourIdentity\x1b[0m"
 	} else {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nRemoves a Worker Deployment given its Deployment Name.\nA Deployment can only be deleted if it has no Version in it.\n\n```\ntemporal worker deployment delete [options]\n```\n\nFor example, setting the user identity that removed the deployment:\n\n```\ntemporal worker deployment delete \\\n    --name YourDeploymentName \\\n    --identity YourIdentity\n\n```"
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nRemove a Worker Deployment given its Deployment Name.\nA Deployment can only be deleted if it has no Version in it.\n\n```\ntemporal worker deployment delete [options]\n```\n\nFor example, setting the user identity that removed the deployment:\n\n```\ntemporal worker deployment delete \\\n    --name YourDeploymentName \\\n    --identity YourIdentity\n\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of the user submitting this request.")
 	s.DeploymentNameOptions.buildFlags(cctx, s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalWorkerDeploymentDeleteVersionCommand struct {
+	Parent  *TemporalWorkerDeploymentCommand
+	Command cobra.Command
+	DeploymentVersionOptions
+	Identity     string
+	SkipDrainage bool
+}
+
+func NewTemporalWorkerDeploymentDeleteVersionCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentCommand) *TemporalWorkerDeploymentDeleteVersionCommand {
+	var s TemporalWorkerDeploymentDeleteVersionCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "delete-version [flags]"
+	s.Command.Short = "Delete a Worker Deployment Version"
+	if hasHighlighting {
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nRemove a Worker Deployment Version given its fully-qualified identifier.\nThis is rarely needed during normal operation\nsince unused Versions are eventually garbage collected.\nThe client can delete a Version only when all of the following conditions\nare met:\n  - It is not the Current or Ramping Version for this Deployment.\n  - It has no active pollers, i.e., none of the task queues in the\n  Version have pollers.\n  - It is not draining. This requirement can be ignored with the option\n\x1b[1m--skip-drainage\x1b[0m.\n  \n\x1b[1mtemporal worker deployment delete-version [options]\x1b[0m\n\nFor example, skipping the drainage restriction:\n\n\x1b[1mtemporal worker deployment delete-version \\\n    --version YourDeploymentName.YourBuildID \\\n    --skip-drainage          \x1b[0m"
+	} else {
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nRemove a Worker Deployment Version given its fully-qualified identifier.\nThis is rarely needed during normal operation\nsince unused Versions are eventually garbage collected.\nThe client can delete a Version only when all of the following conditions\nare met:\n  - It is not the Current or Ramping Version for this Deployment.\n  - It has no active pollers, i.e., none of the task queues in the\n  Version have pollers.\n  - It is not draining. This requirement can be ignored with the option\n`--skip-drainage`.\n  \n```\ntemporal worker deployment delete-version [options]\n```\n\nFor example, skipping the drainage restriction:\n\n```\ntemporal worker deployment delete-version \\\n    --version YourDeploymentName.YourBuildID \\\n    --skip-drainage          \n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of the user submitting this request.")
+	s.Command.Flags().BoolVar(&s.SkipDrainage, "skip-drainage", false, "Ignore the deletion requirement of not draining.")
+	s.DeploymentVersionOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -2625,12 +2660,39 @@ func NewTemporalWorkerDeploymentDescribeCommand(cctx *CommandContext, parent *Te
 	s.Command.Use = "describe [flags]"
 	s.Command.Short = "Show properties of a Worker Deployment"
 	if hasHighlighting {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nDescribes properties of a Worker Deployment, such as the versions\nassociated with it, routing information of new or existing tasks\nexecuted by this deployment, or its creation time.\n\n\x1b[1mtemporal worker deployment describe [options]\x1b[0m\n\nFor example, to describe a deployment \x1b[1mYourDeploymentName\x1b[0m in the default\nnamespace:\n\n\x1b[1mtemporal worker deployment describe \\\n    --name YourDeploymentName\x1b[0m"
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nDescribe properties of a Worker Deployment, such as the versions\nassociated with it, routing information of new or existing tasks\nexecuted by this deployment, or its creation time.\n\n\x1b[1mtemporal worker deployment describe [options]\x1b[0m\n\nFor example, to describe a deployment \x1b[1mYourDeploymentName\x1b[0m in the default\nnamespace:\n\n\x1b[1mtemporal worker deployment describe \\\n    --name YourDeploymentName\x1b[0m"
 	} else {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nDescribes properties of a Worker Deployment, such as the versions\nassociated with it, routing information of new or existing tasks\nexecuted by this deployment, or its creation time.\n\n```\ntemporal worker deployment describe [options]\n```\n\nFor example, to describe a deployment `YourDeploymentName` in the default\nnamespace:\n\n```\ntemporal worker deployment describe \\\n    --name YourDeploymentName\n```"
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nDescribe properties of a Worker Deployment, such as the versions\nassociated with it, routing information of new or existing tasks\nexecuted by this deployment, or its creation time.\n\n```\ntemporal worker deployment describe [options]\n```\n\nFor example, to describe a deployment `YourDeploymentName` in the default\nnamespace:\n\n```\ntemporal worker deployment describe \\\n    --name YourDeploymentName\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.DeploymentNameOptions.buildFlags(cctx, s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalWorkerDeploymentDescribeVersionCommand struct {
+	Parent  *TemporalWorkerDeploymentCommand
+	Command cobra.Command
+	DeploymentVersionOptions
+}
+
+func NewTemporalWorkerDeploymentDescribeVersionCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentCommand) *TemporalWorkerDeploymentDescribeVersionCommand {
+	var s TemporalWorkerDeploymentDescribeVersionCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "describe-version [flags]"
+	s.Command.Short = "Show properties of a Worker Deployment Version"
+	if hasHighlighting {
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nDescribe properties of a Worker Deployment Version, such as the task \nqueues polled by workers in this Deployment Version, or drainage\ninformation required to safely decommission workers, or user-provided\nmetadata, or its creation/modification time.\n\n\x1b[1mtemporal worker deployment describe-version [options]\x1b[0m\n\nFor example, to describe a deployment version  in a deployment\n\x1b[1mYourDeploymentName\x1b[0m, with Build ID \x1b[1mYourBuildID\x1b[0m, and in the default\nnamespace:\n\n\x1b[1mtemporal worker deployment describe-version \\\n    --version YourDeploymentName.YourBuildID\x1b[0m"
+	} else {
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nDescribe properties of a Worker Deployment Version, such as the task \nqueues polled by workers in this Deployment Version, or drainage\ninformation required to safely decommission workers, or user-provided\nmetadata, or its creation/modification time.\n\n```\ntemporal worker deployment describe-version [options]\n```\n\nFor example, to describe a deployment version  in a deployment\n`YourDeploymentName`, with Build ID `YourBuildID`, and in the default\nnamespace:\n\n```\ntemporal worker deployment describe-version \\\n    --version YourDeploymentName.YourBuildID\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.DeploymentVersionOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -2664,89 +2726,8 @@ func NewTemporalWorkerDeploymentListCommand(cctx *CommandContext, parent *Tempor
 	return &s
 }
 
-type TemporalWorkerDeploymentVersionCommand struct {
+type TemporalWorkerDeploymentSetCurrentVersionCommand struct {
 	Parent  *TemporalWorkerDeploymentCommand
-	Command cobra.Command
-}
-
-func NewTemporalWorkerDeploymentVersionCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentCommand) *TemporalWorkerDeploymentVersionCommand {
-	var s TemporalWorkerDeploymentVersionCommand
-	s.Parent = parent
-	s.Command.Use = "version"
-	s.Command.Short = "Describe, delete, setCurrent, or setRamping, a Deployment Version"
-	if hasHighlighting {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nDeployment commands to operate on Worker Deployment Versions:\n  \n\x1b[1mtemporal worker deployment version [command] [options]\x1b[0m\n\nFor example, using a fully qualified Version identifier that\nconcatenates the Deployment Name with the Build ID using the\nreserved separator \".\":\n\n\x1b[1mtemporal worker deployment version setCurrent \\\n         --version YourDeploymentName.YourBuildID\x1b[0m         \nSets the current Deployment Version for a given Deployment.\nWhen a Version is current, Workers of that Deployment Version will receive\ntasks from new Workflows and from existing AutoUpgrade Workflows that\nare running on this Deployment."
-	} else {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nDeployment commands to operate on Worker Deployment Versions:\n  \n```\ntemporal worker deployment version [command] [options]\n```\n\nFor example, using a fully qualified Version identifier that\nconcatenates the Deployment Name with the Build ID using the\nreserved separator \".\":\n\n```\ntemporal worker deployment version setCurrent \\\n         --version YourDeploymentName.YourBuildID\n```         \nSets the current Deployment Version for a given Deployment.\nWhen a Version is current, Workers of that Deployment Version will receive\ntasks from new Workflows and from existing AutoUpgrade Workflows that\nare running on this Deployment."
-	}
-	s.Command.Args = cobra.NoArgs
-	s.Command.AddCommand(&NewTemporalWorkerDeploymentVersionDeleteCommand(cctx, &s).Command)
-	s.Command.AddCommand(&NewTemporalWorkerDeploymentVersionDescribeCommand(cctx, &s).Command)
-	s.Command.AddCommand(&NewTemporalWorkerDeploymentVersionSetCurrentCommand(cctx, &s).Command)
-	s.Command.AddCommand(&NewTemporalWorkerDeploymentVersionSetRampingCommand(cctx, &s).Command)
-	return &s
-}
-
-type TemporalWorkerDeploymentVersionDeleteCommand struct {
-	Parent  *TemporalWorkerDeploymentVersionCommand
-	Command cobra.Command
-	DeploymentVersionOptions
-	Identity     string
-	SkipDrainage bool
-}
-
-func NewTemporalWorkerDeploymentVersionDeleteCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentVersionCommand) *TemporalWorkerDeploymentVersionDeleteCommand {
-	var s TemporalWorkerDeploymentVersionDeleteCommand
-	s.Parent = parent
-	s.Command.DisableFlagsInUseLine = true
-	s.Command.Use = "delete [flags]"
-	s.Command.Short = "Deletes a Worker Deployment Version"
-	if hasHighlighting {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nRemoves a Worker Deployment Version given its fully-qualified identifier.\nThis is rarely needed during normal operation\nsince unused Versions are eventually garbage collected.\nThe client can delete a Version only when all of the following conditions\nare met:\n  - It is not the Current or Ramping Version for this Deployment.\n  - It has no active pollers, i.e., none of the task queues in the\n  Version have pollers.\n  - It is not draining. This requirement can be ignored with the option\n  --skip-drainage.\n  \n\x1b[1mtemporal worker deployment version delete [options]\x1b[0m\n\nFor example, forcing to skip the drainage restriction:\n\n\x1b[1mtemporal worker deployment version delete \\\n    --version YourDeploymentName.YourBuildID \\\n    --skip-drainage          \x1b[0m"
-	} else {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nRemoves a Worker Deployment Version given its fully-qualified identifier.\nThis is rarely needed during normal operation\nsince unused Versions are eventually garbage collected.\nThe client can delete a Version only when all of the following conditions\nare met:\n  - It is not the Current or Ramping Version for this Deployment.\n  - It has no active pollers, i.e., none of the task queues in the\n  Version have pollers.\n  - It is not draining. This requirement can be ignored with the option\n  --skip-drainage.\n  \n```\ntemporal worker deployment version delete [options]\n```\n\nFor example, forcing to skip the drainage restriction:\n\n```\ntemporal worker deployment version delete \\\n    --version YourDeploymentName.YourBuildID \\\n    --skip-drainage          \n```"
-	}
-	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of the user submitting this request.")
-	s.Command.Flags().BoolVar(&s.SkipDrainage, "skip-drainage", false, "Ignore the deletion requirement of not draining.")
-	s.DeploymentVersionOptions.buildFlags(cctx, s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
-	}
-	return &s
-}
-
-type TemporalWorkerDeploymentVersionDescribeCommand struct {
-	Parent  *TemporalWorkerDeploymentVersionCommand
-	Command cobra.Command
-	DeploymentVersionOptions
-}
-
-func NewTemporalWorkerDeploymentVersionDescribeCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentVersionCommand) *TemporalWorkerDeploymentVersionDescribeCommand {
-	var s TemporalWorkerDeploymentVersionDescribeCommand
-	s.Parent = parent
-	s.Command.DisableFlagsInUseLine = true
-	s.Command.Use = "describe [flags]"
-	s.Command.Short = "Show properties of a Worker Deployment Version"
-	if hasHighlighting {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nDescribes properties of a Worker Deployment Version, such as the task \nqueues polled by workers in this Deployment Version, or drainage\ninformation required to safely decommission workers, or user-provided\nmetadata, or its creation/modification time.\n\n\x1b[1mtemporal worker deployment version describe [options]\x1b[0m\n\nFor example, to describe a deployment version  in a deployment\n\x1b[1mYourDeploymentName\x1b[0m, with Build ID \x1b[1mYourBuildID\x1b[0m, and in the default\nnamespace:\n\n\x1b[1mtemporal worker deployment version describe \\\n    --version YourDeploymentName.YourBuildID\x1b[0m"
-	} else {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nDescribes properties of a Worker Deployment Version, such as the task \nqueues polled by workers in this Deployment Version, or drainage\ninformation required to safely decommission workers, or user-provided\nmetadata, or its creation/modification time.\n\n```\ntemporal worker deployment version describe [options]\n```\n\nFor example, to describe a deployment version  in a deployment\n`YourDeploymentName`, with Build ID `YourBuildID`, and in the default\nnamespace:\n\n```\ntemporal worker deployment version describe \\\n    --version YourDeploymentName.YourBuildID\n```"
-	}
-	s.Command.Args = cobra.NoArgs
-	s.DeploymentVersionOptions.buildFlags(cctx, s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
-	}
-	return &s
-}
-
-type TemporalWorkerDeploymentVersionSetCurrentCommand struct {
-	Parent  *TemporalWorkerDeploymentVersionCommand
 	Command cobra.Command
 	DeploymentVersionOptions
 	DeploymentName          string
@@ -2755,16 +2736,16 @@ type TemporalWorkerDeploymentVersionSetCurrentCommand struct {
 	Yes                     bool
 }
 
-func NewTemporalWorkerDeploymentVersionSetCurrentCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentVersionCommand) *TemporalWorkerDeploymentVersionSetCurrentCommand {
-	var s TemporalWorkerDeploymentVersionSetCurrentCommand
+func NewTemporalWorkerDeploymentSetCurrentVersionCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentCommand) *TemporalWorkerDeploymentSetCurrentVersionCommand {
+	var s TemporalWorkerDeploymentSetCurrentVersionCommand
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
-	s.Command.Use = "set-current [flags]"
+	s.Command.Use = "set-current-version [flags]"
 	s.Command.Short = "Make a Worker Deployment Version Current for a Deployment"
 	if hasHighlighting {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nSets the Current Version for a Deployment.\nWhen a Version is current, Workers of that Deployment Version will receive\ntasks from new Workflows and from existing AutoUpgrade Workflows that\nare running on this Deployment.\n\nIf not all the expected Task Queues are being polled by Workers in the\nnew Version the request will fail. To override this protection use\n\x1b[1m--ignore-missing-task-queues\x1b[0m. Note that this would ignore task queues\nin a deployment that are not yet discovered, leading to inconsistent task\nqueue configuration.\n\n\x1b[1mtemporal worker deployment version set-current [options]\x1b[0m\n\nFor example, to set the Current Version of a deployment\n\x1b[1mYourDeploymentName\x1b[0m, with a version with Build ID \x1b[1mYourBuildID\x1b[0m, and\nin the default namespace:\n\n\x1b[1mtemporal worker deployment version set-current \\\n    --version YourDeploymentName.YourBuildID\x1b[0m"
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nSet the Current Version for a Deployment.\nWhen a Version is current, Workers of that Deployment Version will receive\ntasks from new Workflows, and from existing AutoUpgrade Workflows that\nare running on this Deployment.\n\nIf not all the expected Task Queues are being polled by Workers in the\nnew Version the request will fail. To override this protection use\n\x1b[1m--ignore-missing-task-queues\x1b[0m. Note that this would ignore task queues\nin a deployment that are not yet discovered, leading to inconsistent task\nqueue configuration.\n\n\x1b[1mtemporal worker deployment set-current-version [options]\x1b[0m\n\nFor example, to set the Current Version of a deployment\n\x1b[1mYourDeploymentName\x1b[0m, with a version with Build ID \x1b[1mYourBuildID\x1b[0m, and\nin the default namespace:\n\n\x1b[1mtemporal worker deployment set-current-version \\\n    --version YourDeploymentName.YourBuildID\x1b[0m\n\nThe target of set-current-version can also be \x1b[1m__unversioned__\x1b[0m, which\nmoves tasks to unversioned workers, but in this case we also need to\nspecify the Deployment Name.\n\n\x1b[1mtemporal worker deployment set-current-version \\\n    --version __unversioned__ \\\n    --deployment-name YourDeploymentName\x1b[0m  "
 	} else {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nSets the Current Version for a Deployment.\nWhen a Version is current, Workers of that Deployment Version will receive\ntasks from new Workflows and from existing AutoUpgrade Workflows that\nare running on this Deployment.\n\nIf not all the expected Task Queues are being polled by Workers in the\nnew Version the request will fail. To override this protection use\n`--ignore-missing-task-queues`. Note that this would ignore task queues\nin a deployment that are not yet discovered, leading to inconsistent task\nqueue configuration.\n\n```\ntemporal worker deployment version set-current [options]\n```\n\nFor example, to set the Current Version of a deployment\n`YourDeploymentName`, with a version with Build ID `YourBuildID`, and\nin the default namespace:\n\n```\ntemporal worker deployment version set-current \\\n    --version YourDeploymentName.YourBuildID\n```"
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nSet the Current Version for a Deployment.\nWhen a Version is current, Workers of that Deployment Version will receive\ntasks from new Workflows, and from existing AutoUpgrade Workflows that\nare running on this Deployment.\n\nIf not all the expected Task Queues are being polled by Workers in the\nnew Version the request will fail. To override this protection use\n`--ignore-missing-task-queues`. Note that this would ignore task queues\nin a deployment that are not yet discovered, leading to inconsistent task\nqueue configuration.\n\n```\ntemporal worker deployment set-current-version [options]\n```\n\nFor example, to set the Current Version of a deployment\n`YourDeploymentName`, with a version with Build ID `YourBuildID`, and\nin the default namespace:\n\n```\ntemporal worker deployment set-current-version \\\n    --version YourDeploymentName.YourBuildID\n```\n\nThe target of set-current-version can also be `__unversioned__`, which\nmoves tasks to unversioned workers, but in this case we also need to\nspecify the Deployment Name.\n\n```\ntemporal worker deployment set-current-version \\\n    --version __unversioned__ \\\n    --deployment-name YourDeploymentName\n```  "
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.DeploymentName, "deployment-name", "", "Deployment name. Only needed when `--version` is `__unversioned__` or empty.")
@@ -2780,8 +2761,8 @@ func NewTemporalWorkerDeploymentVersionSetCurrentCommand(cctx *CommandContext, p
 	return &s
 }
 
-type TemporalWorkerDeploymentVersionSetRampingCommand struct {
-	Parent  *TemporalWorkerDeploymentVersionCommand
+type TemporalWorkerDeploymentSetRampingVersionCommand struct {
+	Parent  *TemporalWorkerDeploymentCommand
 	Command cobra.Command
 	DeploymentVersionOptions
 	DeploymentName          string
@@ -2792,25 +2773,55 @@ type TemporalWorkerDeploymentVersionSetRampingCommand struct {
 	Yes                     bool
 }
 
-func NewTemporalWorkerDeploymentVersionSetRampingCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentVersionCommand) *TemporalWorkerDeploymentVersionSetRampingCommand {
-	var s TemporalWorkerDeploymentVersionSetRampingCommand
+func NewTemporalWorkerDeploymentSetRampingVersionCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentCommand) *TemporalWorkerDeploymentSetRampingVersionCommand {
+	var s TemporalWorkerDeploymentSetRampingVersionCommand
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
-	s.Command.Use = "set-ramping [flags]"
+	s.Command.Use = "set-ramping-version [flags]"
 	s.Command.Short = "Change Version Ramping settings for a Worker Deployment"
 	if hasHighlighting {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nSets the Ramping Version and Percentage for a Deployment.\n\nThe Ramping Version can be set to a fully-qualified Version of the form\n\x1b[1mYourDeploymentName.YourBuildID\x1b[0m, or set to \"__unversioned__\", a special\nvalue, which represents all the unversioned workers.\n\nThe Ramping Percentage is a float with values in the range [0, 100].\nA value of 100 does not make the Ramping Version Current, use\n\x1b[1mset-current\x1b[0m instead.\n\nTo remove a Ramping Version use the flag \x1b[1m--delete\x1b[0m and set Percentage\nto 0.\n\nIf not all the expected Task Queues are being polled by Workers in the\nnew Ramping Version the request will fail. To override this protection use\n\x1b[1m--ignore-missing-task-queues\x1b[0m. Note that this would ignore task queues\nin a deployment that are not yet discovered, leading to inconsistent task\nqueue configuration.\n\n\x1b[1mtemporal worker deployment version set-ramping [options]\x1b[0m\n\nFor example, to set the Ramping Version of a deployment\n\x1b[1mYourDeploymentName\x1b[0m, with a version with Build ID \x1b[1mYourBuildID\x1b[0m, with\n10 percent of tasks redirected to this version, and\nusing the default namespace:\n\n\x1b[1mtemporal worker deployment version set-ramping \\\n    --version YourDeploymentName.YourBuildID\n    --percentage 10.0\x1b[0m\n\nAnd to remove that ramping:\n  \n\x1b[1mtemporal worker deployment version set-ramping \\\n    --version YourDeploymentName.YourBuildID \\\n    --percentage 0.0 \\\n    --delete\x1b[0m    "
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nSet the Ramping Version and Percentage for a Deployment.\n\nThe Ramping Version can be set to a fully-qualified Version of the form\n\x1b[1mYourDeploymentName.YourBuildID\x1b[0m, or set to \"__unversioned__\", a special\nvalue that represents all the unversioned workers.\n\nThe Ramping Percentage is a float with values in the range [0, 100].\nA value of 100 does not make the Ramping Version Current, use\n\x1b[1mset-current-version\x1b[0m instead.\n\nTo remove a Ramping Version use the flag \x1b[1m--delete\x1b[0m.\n\nIf not all the expected Task Queues are being polled by Workers in the\nnew Ramping Version the request will fail. To override this protection use\n\x1b[1m--ignore-missing-task-queues\x1b[0m. Note that this would ignore task queues\nin a deployment that are not yet discovered, leading to inconsistent task\nqueue configuration.\n\n\x1b[1mtemporal worker deployment set-ramping-version [options]\x1b[0m\n\nFor example, to set the Ramping Version of a deployment\n\x1b[1mYourDeploymentName\x1b[0m, with a version with Build ID \x1b[1mYourBuildID\x1b[0m, with\n10 percent of tasks redirected to this version, and\nusing the default namespace:\n\n\x1b[1mtemporal worker deployment set-ramping-version \\\n    --version YourDeploymentName.YourBuildID\n    --percentage 10.0\x1b[0m\n\nAnd to remove that ramping:\n  \n\x1b[1mtemporal worker deployment set-ramping-version \\\n    --version YourDeploymentName.YourBuildID \\\n    --delete\x1b[0m    "
 	} else {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nSets the Ramping Version and Percentage for a Deployment.\n\nThe Ramping Version can be set to a fully-qualified Version of the form\n`YourDeploymentName.YourBuildID`, or set to \"__unversioned__\", a special\nvalue, which represents all the unversioned workers.\n\nThe Ramping Percentage is a float with values in the range [0, 100].\nA value of 100 does not make the Ramping Version Current, use\n`set-current` instead.\n\nTo remove a Ramping Version use the flag `--delete` and set Percentage\nto 0.\n\nIf not all the expected Task Queues are being polled by Workers in the\nnew Ramping Version the request will fail. To override this protection use\n`--ignore-missing-task-queues`. Note that this would ignore task queues\nin a deployment that are not yet discovered, leading to inconsistent task\nqueue configuration.\n\n```\ntemporal worker deployment version set-ramping [options]\n```\n\nFor example, to set the Ramping Version of a deployment\n`YourDeploymentName`, with a version with Build ID `YourBuildID`, with\n10 percent of tasks redirected to this version, and\nusing the default namespace:\n\n```\ntemporal worker deployment version set-ramping \\\n    --version YourDeploymentName.YourBuildID\n    --percentage 10.0\n```\n\nAnd to remove that ramping:\n  \n```\ntemporal worker deployment version set-ramping \\\n    --version YourDeploymentName.YourBuildID \\\n    --percentage 0.0 \\\n    --delete\n```    "
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nSet the Ramping Version and Percentage for a Deployment.\n\nThe Ramping Version can be set to a fully-qualified Version of the form\n`YourDeploymentName.YourBuildID`, or set to \"__unversioned__\", a special\nvalue that represents all the unversioned workers.\n\nThe Ramping Percentage is a float with values in the range [0, 100].\nA value of 100 does not make the Ramping Version Current, use\n`set-current-version` instead.\n\nTo remove a Ramping Version use the flag `--delete`.\n\nIf not all the expected Task Queues are being polled by Workers in the\nnew Ramping Version the request will fail. To override this protection use\n`--ignore-missing-task-queues`. Note that this would ignore task queues\nin a deployment that are not yet discovered, leading to inconsistent task\nqueue configuration.\n\n```\ntemporal worker deployment set-ramping-version [options]\n```\n\nFor example, to set the Ramping Version of a deployment\n`YourDeploymentName`, with a version with Build ID `YourBuildID`, with\n10 percent of tasks redirected to this version, and\nusing the default namespace:\n\n```\ntemporal worker deployment set-ramping-version \\\n    --version YourDeploymentName.YourBuildID\n    --percentage 10.0\n```\n\nAnd to remove that ramping:\n  \n```\ntemporal worker deployment set-ramping-version \\\n    --version YourDeploymentName.YourBuildID \\\n    --delete\n```    "
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.DeploymentName, "deployment-name", "", "Deployment name. Only needed when `--version` is `__unversioned__` or empty.")
-	s.Command.Flags().Float32Var(&s.Percentage, "percentage", 0, "Percentage of tasks redirected to the Ramping Version. Valid range [0,100]. Required.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "percentage")
+	s.Command.Flags().StringVar(&s.DeploymentName, "deployment-name", "", "Deployment name. Only needed when `--version` is `__unversioned__`.")
+	s.Command.Flags().Float32Var(&s.Percentage, "percentage", 0, "Percentage of tasks redirected to the Ramping Version. Valid range [0,100].")
 	s.Command.Flags().BoolVar(&s.Delete, "delete", false, "Delete the Ramping Version.")
 	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of the user submitting this request.")
 	s.Command.Flags().BoolVar(&s.IgnoreMissingTaskQueues, "ignore-missing-task-queues", false, "Override protection to accidentally remove task queues.")
 	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm set Ramping Version.")
+	s.DeploymentVersionOptions.buildFlags(cctx, s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalWorkerDeploymentUpdateMetadataVersionCommand struct {
+	Parent  *TemporalWorkerDeploymentCommand
+	Command cobra.Command
+	DeploymentVersionOptions
+	Metadata      []string
+	RemoveEntries []string
+}
+
+func NewTemporalWorkerDeploymentUpdateMetadataVersionCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentCommand) *TemporalWorkerDeploymentUpdateMetadataVersionCommand {
+	var s TemporalWorkerDeploymentUpdateMetadataVersionCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "update-metadata-version [flags]"
+	s.Command.Short = "Change user-provided metadata for a Version"
+	if hasHighlighting {
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\nUpdate metadata associated with a Worker Deployment Version.\n\nFor example:\n\n\x1b[1m temporal worker deployment update-metadata-version \\\n    --version YourDeploymentName.YourBuildID \\\n    --metadata bar=1 \\\n    --metadata foo=true\x1b[0m\n\nThe current metadata is also returned with \x1b[1mdescribe-version\x1b[0m:\n  \n\x1b[1m temporal worker deployment describe-version \\\n    --version YourDeploymentName.YourBuildID \\\x1b[0m      "
+	} else {
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\nUpdate metadata associated with a Worker Deployment Version.\n\nFor example:\n\n```\n temporal worker deployment update-metadata-version \\\n    --version YourDeploymentName.YourBuildID \\\n    --metadata bar=1 \\\n    --metadata foo=true\n```\n\nThe current metadata is also returned with `describe-version`:\n  \n```\n temporal worker deployment describe-version \\\n    --version YourDeploymentName.YourBuildID \\\n```      "
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringArrayVar(&s.Metadata, "metadata", nil, "Set deployment metadata using `KEY=\"VALUE\"` pairs. Keys must be identifiers, and values must be JSON values. For example: 'YourKey={\"your\": \"value\"}'. Can be passed multiple times.")
+	s.Command.Flags().StringArrayVar(&s.RemoveEntries, "remove-entries", nil, "Keys of entries to be deleted from metadata. Can be passed multiple times.")
 	s.DeploymentVersionOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -3558,9 +3569,8 @@ type TemporalWorkflowUpdateOptionsCommand struct {
 	Parent  *TemporalWorkflowCommand
 	Command cobra.Command
 	SingleWorkflowOrBatchOptions
-	VersioningOverrideBehavior   StringEnum
-	VersioningOverrideSeriesName string
-	VersioningOverrideBuildId    string
+	VersioningOverrideBehavior      StringEnum
+	VersioningOverridePinnedVersion string
 }
 
 func NewTemporalWorkflowUpdateOptionsCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowUpdateOptionsCommand {
@@ -3570,16 +3580,15 @@ func NewTemporalWorkflowUpdateOptionsCommand(cctx *CommandContext, parent *Tempo
 	s.Command.Use = "update-options [flags]"
 	s.Command.Short = "Change Workflow Execution Options"
 	if hasHighlighting {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worflow update-options is experimental. Workflow Execution |\n| properties are subject to change.                                   |\n+---------------------------------------------------------------------+\n\nModify properties of Workflow Executions:\n\n\x1b[1mtemporal workflow update-options [options]\x1b[0m\n\nIt can override the Worker Deployment configuration of a\nWorkflow Execution, which controls Worker Versioning.\n\nFor example, to force Workers in the current Deployment execute the\nnext Workflow Task change behavior to \x1b[1mauto_upgrade\x1b[0m:\n\n\x1b[1mtemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior auto_upgrade\x1b[0m\n\nor to pin the workflow execution to a Worker Deployment, set behavior\nto \x1b[1mpinned\x1b[0m:\n\n\x1b[1mtemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior pinned \\\n    --versioning-override-series-name YourDeploymentSeriesName \\\n    --versioning-override-build-id YourDeploymentBuildId\x1b[0m\n\nTo remove any previous overrides, set the behavior to\n\x1b[1munspecified\x1b[0m:\n\n\x1b[1mtemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior unspecified\x1b[0m\n\nTo see the current override use \x1b[1mtemporal workflow describe\x1b[0m"
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worflow update-options is experimental. Workflow Execution |\n| properties are subject to change.                                   |\n+---------------------------------------------------------------------+\n\nModify properties of Workflow Executions:\n\n\x1b[1mtemporal workflow update-options [options]\x1b[0m\n\nIt can override the Worker Deployment configuration of a\nWorkflow Execution, which controls Worker Versioning.\n\nFor example, to force Workers in the current Deployment execute the\nnext Workflow Task change behavior to \x1b[1mauto_upgrade\x1b[0m:\n\n\x1b[1mtemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior auto_upgrade\x1b[0m\n\nor to pin the workflow execution to a Worker Deployment, set behavior\nto \x1b[1mpinned\x1b[0m:\n\n\x1b[1mtemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior pinned \\\n    --versioning-override-pinned-version \\\n      YourDeploymentSeriesName.YourDeploymentBuildId\x1b[0m\n\nTo remove any previous overrides, set the behavior to\n\x1b[1munspecified\x1b[0m:\n\n\x1b[1mtemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior unspecified\x1b[0m\n\nTo see the current override use \x1b[1mtemporal workflow describe\x1b[0m"
 	} else {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worflow update-options is experimental. Workflow Execution |\n| properties are subject to change.                                   |\n+---------------------------------------------------------------------+\n\nModify properties of Workflow Executions:\n\n```\ntemporal workflow update-options [options]\n```\n\nIt can override the Worker Deployment configuration of a\nWorkflow Execution, which controls Worker Versioning.\n\nFor example, to force Workers in the current Deployment execute the\nnext Workflow Task change behavior to `auto_upgrade`:\n\n```\ntemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior auto_upgrade\n```\n\nor to pin the workflow execution to a Worker Deployment, set behavior\nto `pinned`:\n\n```\ntemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior pinned \\\n    --versioning-override-series-name YourDeploymentSeriesName \\\n    --versioning-override-build-id YourDeploymentBuildId\n```\n\nTo remove any previous overrides, set the behavior to\n`unspecified`:\n\n```\ntemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior unspecified\n```\n\nTo see the current override use `temporal workflow describe`"
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worflow update-options is experimental. Workflow Execution |\n| properties are subject to change.                                   |\n+---------------------------------------------------------------------+\n\nModify properties of Workflow Executions:\n\n```\ntemporal workflow update-options [options]\n```\n\nIt can override the Worker Deployment configuration of a\nWorkflow Execution, which controls Worker Versioning.\n\nFor example, to force Workers in the current Deployment execute the\nnext Workflow Task change behavior to `auto_upgrade`:\n\n```\ntemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior auto_upgrade\n```\n\nor to pin the workflow execution to a Worker Deployment, set behavior\nto `pinned`:\n\n```\ntemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior pinned \\\n    --versioning-override-pinned-version \\\n      YourDeploymentSeriesName.YourDeploymentBuildId\n```\n\nTo remove any previous overrides, set the behavior to\n`unspecified`:\n\n```\ntemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior unspecified\n```\n\nTo see the current override use `temporal workflow describe`"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.VersioningOverrideBehavior = NewStringEnum([]string{"unspecified", "pinned", "auto_upgrade"}, "")
 	s.Command.Flags().Var(&s.VersioningOverrideBehavior, "versioning-override-behavior", "Override the versioning behavior of a Workflow. Accepted values: unspecified, pinned, auto_upgrade. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "versioning-override-behavior")
-	s.Command.Flags().StringVar(&s.VersioningOverrideSeriesName, "versioning-override-series-name", "", "Override Series Name for a Worker Deployment (Only for pinned).")
-	s.Command.Flags().StringVar(&s.VersioningOverrideBuildId, "versioning-override-build-id", "", "Override Build ID for a Worker Deployment (Only for pinned).")
+	s.Command.Flags().StringVar(&s.VersioningOverridePinnedVersion, "versioning-override-pinned-version", "", "Override Pinned Version for a Worker Deployment (Only for pinned).")
 	s.SingleWorkflowOrBatchOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {

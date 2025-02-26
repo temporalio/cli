@@ -140,23 +140,17 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 		cctx.Printer.Println()
 		vInfo := info.VersioningInfo
 		_ = cctx.Printer.PrintStructured(struct {
-			Behavior                       string
-			DeploymentSeriesName           string
-			DeploymentBuildID              string
-			OverrideBehavior               string `cli:",cardOmitEmpty"`
-			OverrideDeploymentSeriesName   string `cli:",cardOmitEmpty"`
-			OverrideDeploymentBuildID      string `cli:",cardOmitEmpty"`
-			TransitionDeploymentSeriesName string `cli:",cardOmitEmpty"`
-			TransitionDeploymentBuildID    string `cli:",cardOmitEmpty"`
+			Behavior              string
+			Version               string
+			OverrideBehavior      string `cli:",cardOmitEmpty"`
+			OverridePinnedVersion string `cli:",cardOmitEmpty"`
+			TransitionVersion     string `cli:",cardOmitEmpty"`
 		}{
-			Behavior:                       vInfo.Behavior.String(),
-			DeploymentSeriesName:           vInfo.Deployment.GetSeriesName(),
-			DeploymentBuildID:              vInfo.Deployment.GetBuildId(),
-			OverrideBehavior:               vInfo.VersioningOverride.GetBehavior().String(),
-			OverrideDeploymentSeriesName:   vInfo.VersioningOverride.GetDeployment().GetSeriesName(),
-			OverrideDeploymentBuildID:      vInfo.VersioningOverride.GetDeployment().GetBuildId(),
-			TransitionDeploymentSeriesName: vInfo.DeploymentTransition.GetDeployment().GetSeriesName(),
-			TransitionDeploymentBuildID:    vInfo.DeploymentTransition.GetDeployment().GetBuildId(),
+			Behavior:              vInfo.Behavior.String(),
+			Version:               vInfo.GetVersion(),
+			OverrideBehavior:      vInfo.VersioningOverride.GetBehavior().String(),
+			OverridePinnedVersion: vInfo.VersioningOverride.GetPinnedVersion(),
+			TransitionVersion:     vInfo.VersionTransition.GetVersion(),
 		}, printer.StructuredOptions{})
 	}
 

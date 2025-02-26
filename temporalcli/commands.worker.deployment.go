@@ -2,10 +2,12 @@ package temporalcli
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/fatih/color"
 	"github.com/temporalio/cli/temporalcli/internal/printer"
+	"go.temporal.io/api/common/v1"
 	"go.temporal.io/sdk/client"
 )
 
@@ -28,19 +30,39 @@ type formattedWorkerDeploymentInfoType struct {
 	Name                 string                     `json:"name"`
 	CreateTime           time.Time                  `json:"createTime"`
 	LastModifierIdentity string                     `json:"lastModifierIdentity"`
-	RoutingConfig        formattedRoutingConfigType `json:"routingConfig,omitempty"`
-	VersionSummaries     []versionSummariesRowType  `json:"versionSummaries,omitempty"`
+	RoutingConfig        formattedRoutingConfigType `json:"routingConfig"`
+	VersionSummaries     []versionSummariesRowType  `json:"versionSummaries"`
 }
 
 type formattedWorkerDeploymentListEntryType struct {
-	Name                                string
-	CreateTime                          time.Time
-	CurrentVersion                      string    `cli:",cardOmitEmpty"`
-	RampingVersion                      string    `cli:",cardOmitEmpty"`
-	RampingVersionPercentage            float32   `cli:",cardOmitEmpty"`
-	CurrentVersionChangedTime           time.Time `cli:",cardOmitEmpty"`
-	RampingVersionChangedTime           time.Time `cli:",cardOmitEmpty"`
-	RampingVersionPercentageChangedTime time.Time `cli:",cardOmitEmpty"`
+	Name                     string
+	CreateTime               time.Time
+	CurrentVersion           string `cli:",cardOmitEmpty"`
+	RampingVersion           string
+	RampingVersionPercentage float32 `cli:",cardOmitEmpty"`
+}
+
+type formattedDrainageInfo struct {
+	DrainageStatus  string    `json:"drainageStatus"`
+	LastChangedTime time.Time `json:"lastChangedTime"`
+	LastCheckedTime time.Time `json:"lastCheckedTime"`
+}
+
+type formattedTaskQueueInfoRowType struct {
+	Name string `json:"name"`
+	Type string `json:"type"`
+}
+
+type formattedWorkerDeploymentVersionInfoType struct {
+	Version            string                          `json:"version"`
+	CreateTime         time.Time                       `json:"createTime"`
+	RoutingChangedTime time.Time                       `json:"routingChangedTime"`
+	CurrentSinceTime   time.Time                       `json:"currentSinceTime"`
+	RampingSinceTime   time.Time                       `json:"rampingSinceTime"`
+	RampPercentage     float32                         `json:"rampPercentage"`
+	DrainageInfo       formattedDrainageInfo           `json:"drainageInfo"`
+	TaskQueuesInfos    []formattedTaskQueueInfoRowType `json:"taskQueuesInfos"`
+	Metadata           map[string]*common.Payload      `json:"metadata"`
 }
 
 func drainageStatusToStr(drainage client.WorkerDeploymentVersionDrainageStatus) (string, error) {
@@ -142,7 +164,7 @@ func printWorkerDeploymentInfo(cctx *CommandContext, deploymentInfo client.Worke
 			cctx.Printer.Println()
 			cctx.Printer.Println(color.MagentaString("Version Summaries:"))
 			err := cctx.Printer.PrintStructured(
-				deploymentInfo.VersionSummaries,
+				fDeploymentInfo.VersionSummaries,
 				printer.StructuredOptions{Table: &printer.TableOptions{}},
 			)
 			if err != nil {
@@ -155,6 +177,197 @@ func printWorkerDeploymentInfo(cctx *CommandContext, deploymentInfo client.Worke
 
 	// json output
 	return cctx.Printer.PrintStructured(fDeploymentInfo, printer.StructuredOptions{})
+}
+
+func extractDeploymentName(version string, deploymentName string, failNonQualified bool) (string, error) {
+	if version == "" || version == "__unversioned__" {
+		if failNonQualified {
+			return "", fmt.Errorf(
+				"invalid deployment version type for this operation, use a fully-qualified version",
+			)
+		}
+		if deploymentName == "" {
+			return "", fmt.Errorf(
+				"specify the deployment name with `--deployment-name` with a non-fully-qualified version",
+			)
+		}
+		return deploymentName, nil
+	}
+	splitVersion := strings.SplitN(version, ".", 2)
+	if len(splitVersion) != 2 {
+		return "", fmt.Errorf(
+			"invalid format for worker deployment version %v, not YourDeploymentName.YourBuildID",
+			version,
+		)
+	}
+	return splitVersion[0], nil
+}
+
+func formatDrainageInfo(drainageInfo *client.WorkerDeploymentVersionDrainageInfo) (formattedDrainageInfo, error) {
+	if drainageInfo == nil {
+		return formattedDrainageInfo{}, nil
+	}
+
+	drainageStr, err := drainageStatusToStr(drainageInfo.DrainageStatus)
+	if err != nil {
+		return formattedDrainageInfo{}, err
+	}
+
+	return formattedDrainageInfo{
+		DrainageStatus:  drainageStr,
+		LastChangedTime: drainageInfo.LastChangedTime,
+		LastCheckedTime: drainageInfo.LastCheckedTime,
+	}, nil
+}
+
+func formatTaskQueuesInfos(tqis []client.WorkerDeploymentTaskQueueInfo) ([]formattedTaskQueueInfoRowType, error) {
+	var tqiRows []formattedTaskQueueInfoRowType
+	for _, tqi := range tqis {
+		tqTypeStr, err := taskQueueTypeToStr(tqi.Type)
+		if err != nil {
+			return tqiRows, err
+		}
+		tqiRows = append(tqiRows, formattedTaskQueueInfoRowType{
+			Name: tqi.Name,
+			Type: tqTypeStr,
+		})
+	}
+	return tqiRows, nil
+}
+
+func workerDeploymentVersionInfoToRows(deploymentInfo client.WorkerDeploymentVersionInfo) (formattedWorkerDeploymentVersionInfoType, error) {
+	tqi, err := formatTaskQueuesInfos(deploymentInfo.TaskQueuesInfos)
+	if err != nil {
+		return formattedWorkerDeploymentVersionInfoType{}, err
+	}
+
+	drainage, err := formatDrainageInfo(deploymentInfo.DrainageInfo)
+	if err != nil {
+		return formattedWorkerDeploymentVersionInfoType{}, err
+	}
+
+	return formattedWorkerDeploymentVersionInfoType{
+		Version:            deploymentInfo.Version,
+		CreateTime:         deploymentInfo.CreateTime,
+		RoutingChangedTime: deploymentInfo.RoutingChangedTime,
+		CurrentSinceTime:   deploymentInfo.CurrentSinceTime,
+		RampingSinceTime:   deploymentInfo.RampingSinceTime,
+		RampPercentage:     deploymentInfo.RampPercentage,
+		DrainageInfo:       drainage,
+		TaskQueuesInfos:    tqi,
+		Metadata:           deploymentInfo.Metadata,
+	}, nil
+}
+
+func printWorkerDeploymentVersionInfo(cctx *CommandContext, deploymentInfo client.WorkerDeploymentVersionInfo, msg string) error {
+	fDeploymentInfo, err := workerDeploymentVersionInfoToRows(deploymentInfo)
+	if err != nil {
+		return err
+	}
+
+	if !cctx.JSONOutput {
+		cctx.Printer.Println(color.MagentaString(msg))
+		var drainageStr string
+		var drainageLastChangedTime time.Time
+		var drainageLastCheckedTime time.Time
+		if deploymentInfo.DrainageInfo != nil {
+			drainageStr, err = drainageStatusToStr(deploymentInfo.DrainageInfo.DrainageStatus)
+			if err != nil {
+				return err
+			}
+			drainageLastChangedTime = deploymentInfo.DrainageInfo.LastChangedTime
+			drainageLastCheckedTime = deploymentInfo.DrainageInfo.LastCheckedTime
+		}
+
+		printMe := struct {
+			Version                 string
+			CreateTime              time.Time
+			RoutingChangedTime      time.Time `cli:",cardOmitEmpty"`
+			CurrentSinceTime        time.Time `cli:",cardOmitEmpty"`
+			RampingSinceTime        time.Time `cli:",cardOmitEmpty"`
+			RampPercentage          float32
+			DrainageStatus          string                     `cli:",cardOmitEmpty"`
+			DrainageLastChangedTime time.Time                  `cli:",cardOmitEmpty"`
+			DrainageLastCheckedTime time.Time                  `cli:",cardOmitEmpty"`
+			Metadata                map[string]*common.Payload `cli:",cardOmitEmpty"`
+		}{
+			Version:                 deploymentInfo.Version,
+			CreateTime:              deploymentInfo.CreateTime,
+			RoutingChangedTime:      deploymentInfo.RoutingChangedTime,
+			CurrentSinceTime:        deploymentInfo.CurrentSinceTime,
+			RampingSinceTime:        deploymentInfo.RampingSinceTime,
+			RampPercentage:          deploymentInfo.RampPercentage,
+			DrainageStatus:          drainageStr,
+			DrainageLastChangedTime: drainageLastChangedTime,
+			DrainageLastCheckedTime: drainageLastCheckedTime,
+			Metadata:                deploymentInfo.Metadata,
+		}
+		err := cctx.Printer.PrintStructured(printMe, printer.StructuredOptions{})
+		if err != nil {
+			return fmt.Errorf("displaying worker deployment version info failed: %w", err)
+		}
+
+		if len(deploymentInfo.TaskQueuesInfos) > 0 {
+			cctx.Printer.Println()
+			cctx.Printer.Println(color.MagentaString("Task Queues:"))
+			err := cctx.Printer.PrintStructured(
+				fDeploymentInfo.TaskQueuesInfos,
+				printer.StructuredOptions{Table: &printer.TableOptions{}},
+			)
+			if err != nil {
+				return fmt.Errorf("displaying task queues failed: %w", err)
+			}
+		}
+
+		return nil
+	}
+
+	// json output
+	return cctx.Printer.PrintStructured(fDeploymentInfo, printer.StructuredOptions{})
+}
+
+type getDeploymentConflictTokenOptions struct {
+	safeMode        bool
+	safeModeMessage string
+	deploymentName  string
+}
+
+func (c *TemporalWorkerDeploymentCommand) getConflictToken(cctx *CommandContext, options *getDeploymentConflictTokenOptions) ([]byte, error) {
+	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	if err != nil {
+		return nil, err
+	}
+	defer cl.Close()
+
+	dHandle := cl.WorkerDeploymentClient().GetHandle(options.deploymentName)
+
+	resp, err := dHandle.Describe(cctx, client.WorkerDeploymentDescribeOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("unable to get deployment conflict token: %w", err)
+	}
+
+	if options.safeMode {
+		// duplicate `cctx.promptYes` check to avoid printing deployment info with json
+		if cctx.JSONOutput {
+			return nil, fmt.Errorf("must bypass prompts when using JSON output")
+		}
+		err = printWorkerDeploymentInfo(cctx, resp.Info, "Worker Deployment Before Update:")
+		if err != nil {
+			return nil, fmt.Errorf("displaying deployment failed: %w", err)
+		}
+
+		yes, err := cctx.promptYes(
+			fmt.Sprintf("Continue with set %v? y/N", options.safeModeMessage),
+			false,
+		)
+		if err != nil {
+			return nil, err
+		} else if !yes {
+			return nil, fmt.Errorf("user denied confirmation")
+		}
+	}
+
+	return resp.ConflictToken, nil
 }
 
 func (c *TemporalWorkerDeploymentDescribeCommand) run(cctx *CommandContext, args []string) error {
@@ -237,16 +450,17 @@ func (c *TemporalWorkerDeploymentListCommand) run(cctx *CommandContext, args []s
 			// For JSON dump one line of JSON per deployment
 			_ = cctx.Printer.PrintStructured(listEntry, printer.StructuredOptions{})
 		} else {
+			rampingVersion := "<none>"
+			if listEntry.RoutingConfig.RampingVersion != "" {
+				rampingVersion = listEntry.RoutingConfig.RampingVersion
+			}
 			// For non-JSON, we are doing a table for each page
 			page = append(page, &formattedWorkerDeploymentListEntryType{
-				Name:                                listEntry.Name,
-				CreateTime:                          listEntry.CreateTime,
-				CurrentVersion:                      listEntry.RoutingConfig.CurrentVersion,
-				RampingVersion:                      listEntry.RoutingConfig.RampingVersion,
-				RampingVersionPercentage:            listEntry.RoutingConfig.RampingVersionPercentage,
-				CurrentVersionChangedTime:           listEntry.RoutingConfig.CurrentVersionChangedTime,
-				RampingVersionChangedTime:           listEntry.RoutingConfig.RampingVersionChangedTime,
-				RampingVersionPercentageChangedTime: listEntry.RoutingConfig.RampingVersionPercentageChangedTime,
+				Name:                     listEntry.Name,
+				CreateTime:               listEntry.CreateTime,
+				CurrentVersion:           listEntry.RoutingConfig.CurrentVersion,
+				RampingVersion:           rampingVersion,
+				RampingVersionPercentage: listEntry.RoutingConfig.RampingVersionPercentage,
 			})
 			if len(page) == cap(page) {
 				_ = cctx.Printer.PrintStructured(page, printTableOpts)
@@ -260,6 +474,188 @@ func (c *TemporalWorkerDeploymentListCommand) run(cctx *CommandContext, args []s
 		// Last partial page for non-JSON
 		_ = cctx.Printer.PrintStructured(page, printTableOpts)
 	}
+
+	return nil
+}
+
+func (c *TemporalWorkerDeploymentDeleteVersionCommand) run(cctx *CommandContext, args []string) error {
+	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	name, err := extractDeploymentName(c.Version, "", true)
+	if err != nil {
+		return err
+	}
+
+	dHandle := cl.WorkerDeploymentClient().GetHandle(name)
+	_, err = dHandle.DeleteVersion(cctx, client.WorkerDeploymentDeleteVersionOptions{
+		Version:      c.Version,
+		SkipDrainage: c.SkipDrainage,
+		Identity:     c.Identity,
+	})
+	if err != nil {
+		return fmt.Errorf("error deleting worker deployment version: %w", err)
+	}
+
+	cctx.Printer.Println("Successfully deleted worker deployment version")
+	return nil
+}
+
+func (c *TemporalWorkerDeploymentDescribeVersionCommand) run(cctx *CommandContext, args []string) error {
+	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	name, err := extractDeploymentName(c.Version, "", true)
+	if err != nil {
+		return err
+	}
+
+	dHandle := cl.WorkerDeploymentClient().GetHandle(name)
+
+	resp, err := dHandle.DescribeVersion(cctx, client.WorkerDeploymentDescribeVersionOptions{
+		Version: c.Version,
+	})
+	if err != nil {
+		return fmt.Errorf("error describing worker deployment version: %w", err)
+	}
+
+	err = printWorkerDeploymentVersionInfo(cctx, resp.Info, "Worker Deployment Version:")
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *TemporalWorkerDeploymentSetCurrentVersionCommand) run(cctx *CommandContext, args []string) error {
+	cl, err := c.Parent.Parent.dialClient(cctx)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	name, err := extractDeploymentName(c.Version, c.DeploymentName, false)
+	if err != nil {
+		return err
+	}
+
+	token, err := c.Parent.getConflictToken(cctx, &getDeploymentConflictTokenOptions{
+		safeMode:        !c.Yes,
+		safeModeMessage: "Current",
+		deploymentName:  name,
+	})
+	if err != nil {
+		return err
+	}
+
+	dHandle := cl.WorkerDeploymentClient().GetHandle(name)
+	_, err = dHandle.SetCurrentVersion(cctx, client.WorkerDeploymentSetCurrentVersionOptions{
+		Version:                 c.Version,
+		Identity:                c.Identity,
+		IgnoreMissingTaskQueues: c.IgnoreMissingTaskQueues,
+		ConflictToken:           token,
+	})
+	if err != nil {
+		return fmt.Errorf("error setting the current worker deployment version: %w", err)
+	}
+
+	cctx.Printer.Println("Successfully setting the current worker deployment version")
+	return nil
+}
+
+func (c *TemporalWorkerDeploymentSetRampingVersionCommand) run(cctx *CommandContext, args []string) error {
+	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	name, err := extractDeploymentName(c.Version, c.DeploymentName, false)
+	if err != nil {
+		return err
+	}
+
+	token, err := c.Parent.getConflictToken(cctx, &getDeploymentConflictTokenOptions{
+		safeMode:        !c.Yes,
+		safeModeMessage: "Ramping",
+		deploymentName:  name,
+	})
+	if err != nil {
+		return err
+	}
+
+	version := c.Version
+	percentage := c.Percentage
+	if c.Delete {
+		version = ""
+		percentage = 0.0
+	}
+
+	dHandle := cl.WorkerDeploymentClient().GetHandle(name)
+	_, err = dHandle.SetRampingVersion(cctx, client.WorkerDeploymentSetRampingVersionOptions{
+		Version:                 version,
+		Percentage:              percentage,
+		ConflictToken:           token,
+		Identity:                c.Identity,
+		IgnoreMissingTaskQueues: c.IgnoreMissingTaskQueues,
+	})
+	if err != nil {
+		return fmt.Errorf("error  setting the ramping worker deployment version: %w", err)
+	}
+
+	cctx.Printer.Println("Successfully setting the ramping worker deployment version")
+	return nil
+}
+
+func (c *TemporalWorkerDeploymentUpdateMetadataVersionCommand) run(cctx *CommandContext, args []string) error {
+	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	name, err := extractDeploymentName(c.Version, "", true)
+	if err != nil {
+		return err
+	}
+
+	metadata, err := stringKeysJSONValues(c.Metadata, false)
+	if err != nil {
+		return fmt.Errorf("invalid metadata values: %w", err)
+	}
+
+	dHandle := cl.WorkerDeploymentClient().GetHandle(name)
+	response, err := dHandle.UpdateVersionMetadata(cctx, client.WorkerDeploymentUpdateVersionMetadataOptions{
+		Version: c.Version,
+		MetadataUpdate: client.WorkerDeploymentMetadataUpdate{
+			UpsertEntries: metadata,
+			RemoveEntries: c.RemoveEntries,
+		},
+	})
+
+	if err != nil {
+		return err
+	}
+
+	cctx.Printer.Println(color.MagentaString("Metadata:"))
+	printMe := struct {
+		Metadata map[string]*common.Payload `cli:",cardOmitEmpty"`
+	}{
+		Metadata: response.Metadata,
+	}
+
+	err = cctx.Printer.PrintStructured(printMe, printer.StructuredOptions{})
+	if err != nil {
+		return fmt.Errorf("displaying metadata failed: %w", err)
+	}
+
+	cctx.Printer.Println("Successfully updating metadata for worker deployment version")
 
 	return nil
 }
