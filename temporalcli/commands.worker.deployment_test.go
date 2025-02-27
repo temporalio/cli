@@ -61,20 +61,6 @@ type jsonDeploymentVersionInfoType struct {
 	Metadata           map[string]*common.Payload `json:"metadata"`
 }
 
-/*
-type jsonDeploymentReachabilityInfoType struct {
-	DeploymentInfo jsonDeploymentInfoType `json:"deploymentInfo"`
-	Reachability   string                 `json:"reachability"`
-	LastUpdateTime time.Time              `json:"lastUpdateTime"`
-}
-
-type jsonDeploymentListEntryType struct {
-	Deployment jsonDeploymentType `json:"deployment"`
-	CreateTime time.Time          `json:"createTime"`
-	IsCurrent  bool               `json:"isCurrent"`
-}
-*/
-
 func (s *SharedServerSuite) TestDeployment_Set_Current_Version() {
 	deploymentName := uuid.NewString()
 	buildId := uuid.NewString()
