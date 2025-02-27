@@ -270,6 +270,8 @@ func toScheduleAction(sw *SharedWorkflowStartOptions, i *PayloadInputOptions) (c
 		// RetryPolicy not supported yet
 		UntypedSearchAttributes: untypedSearchAttributes,
 		Memo:                    opts.Memo,
+		StaticSummary:           opts.StaticSummary,
+		StaticDetails:           opts.StaticDetails,
 	}
 	if action.Args, err = i.buildRawInput(); err != nil {
 		return nil, err
