@@ -190,6 +190,8 @@ type SharedWorkflowStartOptions struct {
 	TaskTimeout      Duration
 	SearchAttribute  []string
 	Memo             []string
+	StaticSummary    string
+	StaticDetails    string
 }
 
 func (v *SharedWorkflowStartOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
@@ -206,6 +208,8 @@ func (v *SharedWorkflowStartOptions) buildFlags(cctx *CommandContext, f *pflag.F
 	f.Var(&v.TaskTimeout, "task-timeout", "Fail a Workflow Task if it lasts longer than `DURATION`. This is the Start-to-close timeout for a Workflow Task.")
 	f.StringArrayVar(&v.SearchAttribute, "search-attribute", nil, "Search Attribute in `KEY=VALUE` format. Keys must be identifiers, and values must be JSON values. For example: 'YourKey={\"your\": \"value\"}'. Can be passed multiple times.")
 	f.StringArrayVar(&v.Memo, "memo", nil, "Memo using 'KEY=\"VALUE\"' pairs. Use JSON values.")
+	f.StringVar(&v.StaticSummary, "static-summary", "", "Static Workflow summary for human consumption in UIs. Uses Temporal Markdown formatting, should be a single line.")
+	f.StringVar(&v.StaticDetails, "static-details", "", "Static Workflow details for human consumption in UIs. Uses Temporal Markdown formatting, may be multiple lines.")
 }
 
 type WorkflowStartOptions struct {

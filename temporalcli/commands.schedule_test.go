@@ -176,6 +176,24 @@ func (s *SharedServerSuite) TestSchedule_CreateDescribe_SearchAttributes_Memo() 
 	s.ContainsOnSameLine(out, "Action", "wfMemo", b64(`"other data"`))
 }
 
+func (s *SharedServerSuite) TestSchedule_CreateDescribe_UserMetadata() {
+	schedId, _, res := s.createSchedule("--interval", "10d",
+		"--static-summary", "summ",
+		"--static-details", "details",
+	)
+	s.NoError(res.Err)
+
+	res = s.Execute(
+		"schedule", "describe",
+		"--address", s.Address(),
+		"-s", schedId,
+	)
+	s.NoError(res.Err)
+	out := res.Stdout.String()
+	s.ContainsOnSameLine(out, "Action", "Summary", "summ")
+	s.ContainsOnSameLine(out, "Action", "Details", "details")
+}
+
 func (s *SharedServerSuite) TestSchedule_List() {
 	res := s.Execute(
 		"operator", "search-attribute", "create",

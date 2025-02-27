@@ -134,6 +134,20 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 		HistorySize:          info.HistorySizeBytes,
 	}, printer.StructuredOptions{})
 
+	staticSummary := resp.GetExecutionConfig().GetUserMetadata().GetSummary()
+	staticDetails := resp.GetExecutionConfig().GetUserMetadata().GetDetails()
+	if len(staticSummary.GetData()) > 0 || len(staticDetails.GetData()) > 0 {
+		cctx.Printer.Println()
+		cctx.Printer.Println(color.MagentaString("Metadata:"))
+		_ = cctx.Printer.PrintStructured(struct {
+			StaticSummary *common.Payload
+			StaticDetails *common.Payload
+		}{
+			StaticSummary: staticSummary,
+			StaticDetails: staticDetails,
+		}, printer.StructuredOptions{})
+	}
+
 	if info.VersioningInfo != nil {
 		cctx.Printer.Println()
 		cctx.Printer.Println(color.MagentaString("Versioning Info:"))
