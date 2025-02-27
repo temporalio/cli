@@ -118,11 +118,11 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 		StateTransitionCount    int64
 		HistoryLength           int64
 		HistorySize             int64
-		ExecutionExpirationTime time.Time
-		RunExpirationTime       time.Time
+		ExecutionExpirationTime time.Time `cli:",cardOmitEmpty"`
+		RunExpirationTime       time.Time `cli:",cardOmitEmpty"`
 		CancelRequested         bool
-		LastResetTime           time.Time
-		OriginalStartTime       time.Time
+		LastResetTime           time.Time `cli:",cardOmitEmpty"`
+		OriginalStartTime       time.Time `cli:",cardOmitEmpty"`
 	}{
 		WorkflowId:              info.Execution.WorkflowId,
 		RunId:                   info.Execution.RunId,
