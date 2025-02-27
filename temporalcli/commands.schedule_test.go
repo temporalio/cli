@@ -190,8 +190,8 @@ func (s *SharedServerSuite) TestSchedule_CreateDescribe_UserMetadata() {
 	)
 	s.NoError(res.Err)
 	out := res.Stdout.String()
-	s.ContainsOnSameLine(out, "Action", "summary", "summ")
-	s.ContainsOnSameLine(out, "Action", "details", "farts")
+	s.ContainsOnSameLine(out, "Action", "Summary", "summ")
+	s.ContainsOnSameLine(out, "Action", "Details", "details")
 }
 
 func (s *SharedServerSuite) TestSchedule_List() {
