@@ -303,9 +303,7 @@ func (c *TemporalWorkflowListCommand) run(cctx *CommandContext, _ []string) erro
 	cctx.Printer.StartList()
 	defer cctx.Printer.EndList()
 
-	// Build request and start looping. We always use default page size regardless
-	// of user-defined limit, because we're ok w/ extra page data and the default
-	// is not clearly defined.
+	// Build request and start looping.
 	pageFetcher := c.pageFetcher(cctx, cl)
 	var nextPageToken []byte
 	var execsProcessed int
@@ -357,16 +355,22 @@ func (c *TemporalWorkflowListCommand) pageFetcher(
 	cctx *CommandContext,
 	cl client.Client,
 ) func(next []byte) (workflowPage, error) {
+
+	if c.Limit > 0 && c.Limit < c.PageSize {
+		c.PageSize = c.Limit
+	}
 	return func(next []byte) (workflowPage, error) {
 		if c.Archived {
 			return cl.ListArchivedWorkflow(cctx, &workflowservice.ListArchivedWorkflowExecutionsRequest{
 				Query:         c.Query,
 				NextPageToken: next,
+				PageSize:      int32(c.PageSize),
 			})
 		}
 		return cl.ListWorkflow(cctx, &workflowservice.ListWorkflowExecutionsRequest{
 			Query:         c.Query,
 			NextPageToken: next,
+			PageSize:      int32(c.PageSize),
 		})
 	}
 }

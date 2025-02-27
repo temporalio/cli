@@ -3138,6 +3138,9 @@ commands:
       - name: limit
         type: int
         description: Maximum number of Workflow Executions to display.
+      - name: page-size
+        type: int
+        description: Maximum number of Workflow Executions to fetch at a time from the server.
 
   - name: temporal workflow metadata
     summary: Query the Workflow for user-specified metadata
@@ -3402,6 +3405,59 @@ commands:
         aliases:
           - type
 
+  - name: temporal workflow signal-with-start
+    summary: Send a message to a Workflow Execution, start the execution if it isn't running
+    description: |
+      Send an asynchronous notification (Signal) to a Workflow Execution.
+      If the Workflow Execution is not running or is not found, it starts the 
+      workflow then sends the signal.
+
+      ```
+      temporal workflow signal-with-start \
+        --signal-name YourSignal \
+        --signal-input '{"some-key": "some-value"}' \
+        --workflow-id YourWorkflowId \
+        --type YourWorkflowType \
+        --task-queue YourTaskQueue \
+        --input '{"some-key": "some-value"}'
+      ```
+    option-sets:
+      # workflow-id is "required" (runtime check)
+      - shared-workflow-start
+      - workflow-start
+      - payload-input
+    options:
+      - name: signal-name
+        type: string
+        description: Signal name.
+        required: true
+        aliases:
+          - signal-type
+      - name: signal-input
+        type: string[]
+        description: |
+          Signal input value.
+          Use JSON content or set --signal-input-meta to override.
+          Can't be combined with --signal-input-file.
+          Can be passed multiple times to pass multiple arguments.
+      - name: signal-input-file
+        type: string[]
+        description: |
+          A path or paths for input file(s).
+          Use JSON content or set --signal-input-meta to override.
+          Can't be combined with --signal-input.
+          Can be passed multiple times to pass multiple arguments.
+      - name: signal-input-meta
+        type: string[]
+        description: |
+          Input signal payload metadata as a `KEY=VALUE` pair.
+          When the KEY is "encoding", this overrides the default ("json/plain").
+          Can be passed multiple times.
+      - name: signal-input-base64
+        type: bool
+        description: |
+          Assume signal inputs are base64-encoded and attempt to decode them.
+
   - name: temporal workflow stack
     summary: Trace a Workflow Execution
     description: |
@@ -3654,7 +3710,7 @@ option-sets:
         type: string[]
         description: |
           HTTP headers for requests.
-          format as a `KEY=VALUE` pair
+          Format as a `KEY=VALUE` pair.
           May be passed multiple times to set multiple headers.
       - name: tls
         type: bool
@@ -3714,6 +3770,12 @@ option-sets:
         type: string
         description: Authorization header for Codec Server requests.
         env: TEMPORAL_CODEC_AUTH
+      - name: codec-header
+        type: string[]
+        description: |
+          HTTP headers for requests to codec server.
+          Format as a `KEY=VALUE` pair.
+          May be passed multiple times to set multiple headers.
 
   - name: overlap-policy
     options:
@@ -3965,6 +4027,7 @@ option-sets:
           - Fail
           - UseExisting
           - TerminateExisting
+  
   - name: payload-input
     options:
       - name: input
