@@ -102,36 +102,47 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 
 	cctx.Printer.Println(color.MagentaString("Execution Info:"))
 	info := resp.WorkflowExecutionInfo
+	extendedInfo := resp.WorkflowExtendedInfo
 	_ = cctx.Printer.PrintStructured(struct {
-		WorkflowId           string
-		RunId                string
-		Type                 string
-		Namespace            string
-		TaskQueue            string
-		AssignedBuildId      string
-		StartTime            time.Time
-		CloseTime            time.Time                  `cli:",cardOmitEmpty"`
-		ExecutionTime        time.Time                  `cli:",cardOmitEmpty"`
-		Memo                 map[string]*common.Payload `cli:",cardOmitEmpty"`
-		SearchAttributes     map[string]*common.Payload `cli:",cardOmitEmpty"`
-		StateTransitionCount int64
-		HistoryLength        int64
-		HistorySize          int64
+		WorkflowId              string
+		RunId                   string
+		Type                    string
+		Namespace               string
+		TaskQueue               string
+		AssignedBuildId         string
+		StartTime               time.Time
+		CloseTime               time.Time                  `cli:",cardOmitEmpty"`
+		ExecutionTime           time.Time                  `cli:",cardOmitEmpty"`
+		Memo                    map[string]*common.Payload `cli:",cardOmitEmpty"`
+		SearchAttributes        map[string]*common.Payload `cli:",cardOmitEmpty"`
+		StateTransitionCount    int64
+		HistoryLength           int64
+		HistorySize             int64
+		ExecutionExpirationTime time.Time `cli:",cardOmitEmpty"`
+		RunExpirationTime       time.Time `cli:",cardOmitEmpty"`
+		CancelRequested         bool
+		LastResetTime           time.Time `cli:",cardOmitEmpty"`
+		OriginalStartTime       time.Time `cli:",cardOmitEmpty"`
 	}{
-		WorkflowId:           info.Execution.WorkflowId,
-		RunId:                info.Execution.RunId,
-		Type:                 info.Type.GetName(),
-		Namespace:            c.Parent.Namespace,
-		TaskQueue:            info.TaskQueue,
-		AssignedBuildId:      info.GetAssignedBuildId(),
-		StartTime:            timestampToTime(info.StartTime),
-		CloseTime:            timestampToTime(info.CloseTime),
-		ExecutionTime:        timestampToTime(info.ExecutionTime),
-		Memo:                 info.Memo.GetFields(),
-		SearchAttributes:     info.SearchAttributes.GetIndexedFields(),
-		StateTransitionCount: info.StateTransitionCount,
-		HistoryLength:        info.HistoryLength,
-		HistorySize:          info.HistorySizeBytes,
+		WorkflowId:              info.Execution.WorkflowId,
+		RunId:                   info.Execution.RunId,
+		Type:                    info.Type.GetName(),
+		Namespace:               c.Parent.Namespace,
+		TaskQueue:               info.TaskQueue,
+		AssignedBuildId:         info.GetAssignedBuildId(),
+		StartTime:               timestampToTime(info.StartTime),
+		CloseTime:               timestampToTime(info.CloseTime),
+		ExecutionTime:           timestampToTime(info.ExecutionTime),
+		Memo:                    info.Memo.GetFields(),
+		SearchAttributes:        info.SearchAttributes.GetIndexedFields(),
+		StateTransitionCount:    info.StateTransitionCount,
+		HistoryLength:           info.HistoryLength,
+		HistorySize:             info.HistorySizeBytes,
+		ExecutionExpirationTime: timestampToTime(extendedInfo.ExecutionExpirationTime),
+		RunExpirationTime:       timestampToTime(extendedInfo.RunExpirationTime),
+		CancelRequested:         extendedInfo.CancelRequested,
+		LastResetTime:           timestampToTime(extendedInfo.LastResetTime),
+		OriginalStartTime:       timestampToTime(extendedInfo.OriginalStartTime),
 	}, printer.StructuredOptions{})
 
 	staticSummary := resp.GetExecutionConfig().GetUserMetadata().GetSummary()
