@@ -528,7 +528,9 @@ func (s *SharedServerSuite) TestWorkflow_Batch_Update_Options_Versioning_Overrid
 
 			var jsonResp workflowservice.DescribeWorkflowExecutionResponse
 			assert.NoError(t, temporalcli.UnmarshalProtoJSONWithOptions(res.Stdout.Bytes(), &jsonResp, true))
-			versioningInfo := jsonResp.WorkflowExecutionInfo.VersioningInfo
+
+			versioningInfo := jsonResp.GetWorkflowExecutionInfo().GetVersioningInfo()
+			assert.NotNil(t, versioningInfo)
 			assert.NotNil(t, versioningInfo.VersioningOverride)
 			assert.Equal(t, version2, versioningInfo.VersioningOverride.PinnedVersion)
 		}
