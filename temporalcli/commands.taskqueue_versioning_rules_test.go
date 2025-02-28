@@ -165,9 +165,9 @@ func (s *SharedServerSuite) TestTaskQueue_Rules_BuildId() {
 	)
 	s.NoError(res.Err)
 
-	s.ContainsOnSameLine(res.Stdout.String(), "0", "id2", "40", "now")
-	s.ContainsOnSameLine(res.Stdout.String(), "1", "id1", "100", "now")
-	s.ContainsOnSameLine(res.Stdout.String(), "id3", "id5", "now")
+	s.ContainsOnSameLine(res.Stdout.String(), "0", "id2", "40")
+	s.ContainsOnSameLine(res.Stdout.String(), "1", "id1", "100")
+	s.ContainsOnSameLine(res.Stdout.String(), "id3", "id5")
 
 	// Safe mode
 
@@ -192,9 +192,9 @@ func (s *SharedServerSuite) TestTaskQueue_Rules_BuildId() {
 	)
 	s.NoError(res.Err)
 	// Shown before replacing
-	s.ContainsOnSameLine(res.Stdout.String(), "id3", "id5", "now")
+	s.ContainsOnSameLine(res.Stdout.String(), "id3", "id5")
 	// Shown after replacing
-	s.ContainsOnSameLine(res.Stdout.String(), "id3", "id9", "now")
+	s.ContainsOnSameLine(res.Stdout.String(), "id3", "id9")
 
 	// Commit
 

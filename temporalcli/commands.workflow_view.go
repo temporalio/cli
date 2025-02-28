@@ -102,37 +102,62 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 
 	cctx.Printer.Println(color.MagentaString("Execution Info:"))
 	info := resp.WorkflowExecutionInfo
+	extendedInfo := resp.WorkflowExtendedInfo
 	_ = cctx.Printer.PrintStructured(struct {
-		WorkflowId           string
-		RunId                string
-		Type                 string
-		Namespace            string
-		TaskQueue            string
-		AssignedBuildId      string
-		StartTime            time.Time
-		CloseTime            time.Time                  `cli:",cardOmitEmpty"`
-		ExecutionTime        time.Time                  `cli:",cardOmitEmpty"`
-		Memo                 map[string]*common.Payload `cli:",cardOmitEmpty"`
-		SearchAttributes     map[string]*common.Payload `cli:",cardOmitEmpty"`
-		StateTransitionCount int64
-		HistoryLength        int64
-		HistorySize          int64
+		WorkflowId              string
+		RunId                   string
+		Type                    string
+		Namespace               string
+		TaskQueue               string
+		AssignedBuildId         string
+		StartTime               time.Time
+		CloseTime               time.Time                  `cli:",cardOmitEmpty"`
+		ExecutionTime           time.Time                  `cli:",cardOmitEmpty"`
+		Memo                    map[string]*common.Payload `cli:",cardOmitEmpty"`
+		SearchAttributes        map[string]*common.Payload `cli:",cardOmitEmpty"`
+		StateTransitionCount    int64
+		HistoryLength           int64
+		HistorySize             int64
+		ExecutionExpirationTime time.Time `cli:",cardOmitEmpty"`
+		RunExpirationTime       time.Time `cli:",cardOmitEmpty"`
+		CancelRequested         bool
+		LastResetTime           time.Time `cli:",cardOmitEmpty"`
+		OriginalStartTime       time.Time `cli:",cardOmitEmpty"`
 	}{
-		WorkflowId:           info.Execution.WorkflowId,
-		RunId:                info.Execution.RunId,
-		Type:                 info.Type.GetName(),
-		Namespace:            c.Parent.Namespace,
-		TaskQueue:            info.TaskQueue,
-		AssignedBuildId:      info.GetAssignedBuildId(),
-		StartTime:            timestampToTime(info.StartTime),
-		CloseTime:            timestampToTime(info.CloseTime),
-		ExecutionTime:        timestampToTime(info.ExecutionTime),
-		Memo:                 info.Memo.GetFields(),
-		SearchAttributes:     info.SearchAttributes.GetIndexedFields(),
-		StateTransitionCount: info.StateTransitionCount,
-		HistoryLength:        info.HistoryLength,
-		HistorySize:          info.HistorySizeBytes,
+		WorkflowId:              info.Execution.WorkflowId,
+		RunId:                   info.Execution.RunId,
+		Type:                    info.Type.GetName(),
+		Namespace:               c.Parent.Namespace,
+		TaskQueue:               info.TaskQueue,
+		AssignedBuildId:         info.GetAssignedBuildId(),
+		StartTime:               timestampToTime(info.StartTime),
+		CloseTime:               timestampToTime(info.CloseTime),
+		ExecutionTime:           timestampToTime(info.ExecutionTime),
+		Memo:                    info.Memo.GetFields(),
+		SearchAttributes:        info.SearchAttributes.GetIndexedFields(),
+		StateTransitionCount:    info.StateTransitionCount,
+		HistoryLength:           info.HistoryLength,
+		HistorySize:             info.HistorySizeBytes,
+		ExecutionExpirationTime: timestampToTime(extendedInfo.ExecutionExpirationTime),
+		RunExpirationTime:       timestampToTime(extendedInfo.RunExpirationTime),
+		CancelRequested:         extendedInfo.CancelRequested,
+		LastResetTime:           timestampToTime(extendedInfo.LastResetTime),
+		OriginalStartTime:       timestampToTime(extendedInfo.OriginalStartTime),
 	}, printer.StructuredOptions{})
+
+	staticSummary := resp.GetExecutionConfig().GetUserMetadata().GetSummary()
+	staticDetails := resp.GetExecutionConfig().GetUserMetadata().GetDetails()
+	if len(staticSummary.GetData()) > 0 || len(staticDetails.GetData()) > 0 {
+		cctx.Printer.Println()
+		cctx.Printer.Println(color.MagentaString("Metadata:"))
+		_ = cctx.Printer.PrintStructured(struct {
+			StaticSummary *common.Payload
+			StaticDetails *common.Payload
+		}{
+			StaticSummary: staticSummary,
+			StaticDetails: staticDetails,
+		}, printer.StructuredOptions{})
+	}
 
 	if info.VersioningInfo != nil {
 		cctx.Printer.Println()
@@ -140,23 +165,17 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 		cctx.Printer.Println()
 		vInfo := info.VersioningInfo
 		_ = cctx.Printer.PrintStructured(struct {
-			Behavior                       string
-			DeploymentSeriesName           string
-			DeploymentBuildID              string
-			OverrideBehavior               string `cli:",cardOmitEmpty"`
-			OverrideDeploymentSeriesName   string `cli:",cardOmitEmpty"`
-			OverrideDeploymentBuildID      string `cli:",cardOmitEmpty"`
-			TransitionDeploymentSeriesName string `cli:",cardOmitEmpty"`
-			TransitionDeploymentBuildID    string `cli:",cardOmitEmpty"`
+			Behavior              string
+			Version               string
+			OverrideBehavior      string `cli:",cardOmitEmpty"`
+			OverridePinnedVersion string `cli:",cardOmitEmpty"`
+			TransitionVersion     string `cli:",cardOmitEmpty"`
 		}{
-			Behavior:                       vInfo.Behavior.String(),
-			DeploymentSeriesName:           vInfo.Deployment.GetSeriesName(),
-			DeploymentBuildID:              vInfo.Deployment.GetBuildId(),
-			OverrideBehavior:               vInfo.VersioningOverride.GetBehavior().String(),
-			OverrideDeploymentSeriesName:   vInfo.VersioningOverride.GetDeployment().GetSeriesName(),
-			OverrideDeploymentBuildID:      vInfo.VersioningOverride.GetDeployment().GetBuildId(),
-			TransitionDeploymentSeriesName: vInfo.DeploymentTransition.GetDeployment().GetSeriesName(),
-			TransitionDeploymentBuildID:    vInfo.DeploymentTransition.GetDeployment().GetBuildId(),
+			Behavior:              vInfo.Behavior.String(),
+			Version:               vInfo.GetVersion(),
+			OverrideBehavior:      vInfo.VersioningOverride.GetBehavior().String(),
+			OverridePinnedVersion: vInfo.VersioningOverride.GetPinnedVersion(),
+			TransitionVersion:     vInfo.VersionTransition.GetVersion(),
 		}, printer.StructuredOptions{})
 	}
 
@@ -243,7 +262,7 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 				Endpoint                           string
 				Service                            string
 				Operation                          string
-				OperationID                        string
+				OperationToken                     string
 				State                              enums.PendingNexusOperationState
 				Attempt                            int32
 				ScheduleToCloseTimeout             string                                `cli:",cardOmitEmpty"`
@@ -263,7 +282,10 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 				ops[i].Endpoint = op.GetEndpoint()
 				ops[i].Service = op.GetService()
 				ops[i].Operation = op.GetOperation()
-				ops[i].OperationID = op.GetOperationId()
+				ops[i].OperationToken = op.GetOperationToken()
+				if ops[i].OperationToken == "" {
+					ops[i].OperationToken = op.GetOperationId()
+				}
 				ops[i].State = op.GetState()
 				ops[i].Attempt = op.GetAttempt()
 				ops[i].LastAttemptFailure = op.LastAttemptFailure

@@ -15,7 +15,6 @@ import (
 	"github.com/temporalio/cli/temporalcli/internal/printer"
 	"go.temporal.io/api/batch/v1"
 	"go.temporal.io/api/common/v1"
-	deploymentpb "go.temporal.io/api/deployment/v1"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/query/v1"
 	sdkpb "go.temporal.io/api/sdk/v1"
@@ -103,20 +102,14 @@ func (c *TemporalWorkflowUpdateOptionsCommand) run(cctx *CommandContext, args []
 	defer cl.Close()
 
 	if c.VersioningOverrideBehavior.Value == "unspecified" || c.VersioningOverrideBehavior.Value == "auto_upgrade" {
-		if c.VersioningOverrideSeriesName != "" {
-			return fmt.Errorf("cannot set deployment series name with %v behavior", c.VersioningOverrideBehavior)
-		}
-		if c.VersioningOverrideBuildId != "" {
-			return fmt.Errorf("cannot set deployment build ID with %v behavior", c.VersioningOverrideBehavior)
+		if c.VersioningOverridePinnedVersion != "" {
+			return fmt.Errorf("cannot set pinned version with %v behavior", c.VersioningOverrideBehavior)
 		}
 	}
 
 	if c.VersioningOverrideBehavior.Value == "pinned" {
-		if c.VersioningOverrideSeriesName == "" {
-			return fmt.Errorf("missing deployment series name with 'pinned' behavior")
-		}
-		if c.VersioningOverrideBuildId == "" {
-			return fmt.Errorf("missing deployment build ID with 'pinned' behavior")
+		if c.VersioningOverridePinnedVersion == "" {
+			return fmt.Errorf("missing version with 'pinned' behavior")
 		}
 	}
 
@@ -145,11 +138,8 @@ func (c *TemporalWorkflowUpdateOptionsCommand) run(cctx *CommandContext, args []
 			RunId:      exec.RunId,
 			WorkflowExecutionOptionsChanges: client.WorkflowExecutionOptionsChanges{
 				VersioningOverride: &client.VersioningOverride{
-					Behavior: behavior,
-					Deployment: client.Deployment{
-						SeriesName: c.VersioningOverrideSeriesName,
-						BuildID:    c.VersioningOverrideBuildId,
-					},
+					Behavior:      behavior,
+					PinnedVersion: c.VersioningOverridePinnedVersion,
 				},
 			},
 		})
@@ -178,22 +168,13 @@ func (c *TemporalWorkflowUpdateOptionsCommand) run(cctx *CommandContext, args []
 			)
 		}
 
-		deployment := &deploymentpb.Deployment{
-			SeriesName: c.VersioningOverrideSeriesName,
-			BuildId:    c.VersioningOverrideBuildId,
-		}
-		if c.VersioningOverrideSeriesName == "" && c.VersioningOverrideBuildId == "" {
-			// auto_upgrade needs a `nil` pointer
-			deployment = nil
-		}
-
 		batchReq.Operation = &workflowservice.StartBatchOperationRequest_UpdateWorkflowOptionsOperation{
 			UpdateWorkflowOptionsOperation: &batch.BatchOperationUpdateWorkflowExecutionOptions{
 				Identity: clientIdentity(),
 				WorkflowExecutionOptions: &workflowpb.WorkflowExecutionOptions{
 					VersioningOverride: &workflowpb.VersioningOverride{
-						Behavior:   behavior,
-						Deployment: deployment,
+						Behavior:      behavior,
+						PinnedVersion: c.VersioningOverridePinnedVersion,
 					},
 				},
 				UpdateMask: protoMask,

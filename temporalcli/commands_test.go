@@ -128,6 +128,7 @@ func (h *CommandHarness) Eventually(
 	tick time.Duration,
 	msgAndArgs ...interface{},
 ) {
+	h.t.Helper()
 	// We cannot use require.Eventually because it was poorly developed to run the
 	// condition function in a goroutine which means it can run after complete or
 	// have other race conditions. Don't even need a complicated ticker because it
@@ -370,6 +371,7 @@ func StartDevServer(t *testing.T, options DevServerOptions) *DevServer {
 	d.Options.DynamicConfigValues["frontend.workerVersioningDataAPIs"] = true
 	d.Options.DynamicConfigValues["frontend.workerVersioningWorkflowAPIs"] = true
 	d.Options.DynamicConfigValues["system.enableDeployments"] = true
+	d.Options.DynamicConfigValues["system.enableDeploymentVersions"] = true
 	d.Options.DynamicConfigValues["worker.buildIdScavengerEnabled"] = true
 	d.Options.DynamicConfigValues["frontend.enableUpdateWorkflowExecution"] = true
 	d.Options.DynamicConfigValues["frontend.MaxConcurrentBatchOperationPerNamespace"] = 1000

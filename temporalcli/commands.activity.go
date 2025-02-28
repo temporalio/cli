@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/temporalio/cli/temporalcli/internal/printer"
 	activitypb "go.temporal.io/api/activity/v1"
+	"go.temporal.io/api/batch/v1"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/failure/v1"
 	taskqueuepb "go.temporal.io/api/taskqueue/v1"
@@ -156,18 +156,18 @@ func (c *TemporalActivityUpdateOptionsCommand) run(cctx *CommandContext, args []
 		updatePath = append(updatePath, "retry_policy.maximum_attempts")
 	}
 
-	result, err := cl.WorkflowService().UpdateActivityOptionsById(cctx, &workflowservice.UpdateActivityOptionsByIdRequest{
-		Namespace:       c.Parent.Namespace,
-		WorkflowId:      c.WorkflowId,
-		RunId:           c.RunId,
-		ActivityId:      c.ActivityId,
+	result, err := cl.WorkflowService().UpdateActivityOptions(cctx, &workflowservice.UpdateActivityOptionsRequest{
+		Namespace: c.Parent.Namespace,
+		Execution: &common.WorkflowExecution{
+			WorkflowId: c.WorkflowId,
+			RunId:      c.RunId,
+		},
+		Activity:        &workflowservice.UpdateActivityOptionsRequest_Id{Id: c.ActivityId},
 		ActivityOptions: activityOptions,
 		UpdateMask: &fieldmaskpb.FieldMask{
 			Paths: updatePath,
 		},
-
-		Identity:  c.Identity,
-		RequestId: uuid.NewString(),
+		Identity: c.Identity,
 	})
 	if err != nil {
 		return fmt.Errorf("unable to update Activity options: %w", err)
@@ -199,16 +199,26 @@ func (c *TemporalActivityPauseCommand) run(cctx *CommandContext, args []string) 
 	}
 	defer cl.Close()
 
-	_, err = cl.WorkflowService().PauseActivityById(cctx, &workflowservice.PauseActivityByIdRequest{
-		Namespace:  c.Parent.Namespace,
-		WorkflowId: c.WorkflowId,
-		RunId:      c.RunId,
-		ActivityId: c.ActivityId,
-		Identity:   c.Identity,
-		RequestId:  uuid.NewString(),
-	})
+	request := &workflowservice.PauseActivityRequest{
+		Namespace: c.Parent.Namespace,
+		Execution: &common.WorkflowExecution{
+			WorkflowId: c.WorkflowId,
+			RunId:      c.RunId,
+		},
+		Identity: c.Identity,
+	}
+
+	if c.ActivityType != "" {
+		request.Activity = &workflowservice.PauseActivityRequest_Type{Type: c.ActivityType}
+	} else if c.ActivityId != "" {
+		request.Activity = &workflowservice.PauseActivityRequest_Id{Id: c.ActivityId}
+	} else {
+		return fmt.Errorf("either Activity Type or Activity Id must be provided")
+	}
+
+	_, err = cl.WorkflowService().PauseActivity(cctx, request)
 	if err != nil {
-		return fmt.Errorf("unable to update Activity options: %w", err)
+		return fmt.Errorf("unable to pause Activity: %w", err)
 	}
 
 	return nil
@@ -221,34 +231,70 @@ func (c *TemporalActivityUnpauseCommand) run(cctx *CommandContext, args []string
 	}
 	defer cl.Close()
 
-	request := &workflowservice.UnpauseActivityByIdRequest{
-		Namespace:  c.Parent.Namespace,
+	opts := SingleWorkflowOrBatchOptions{
 		WorkflowId: c.WorkflowId,
 		RunId:      c.RunId,
-		ActivityId: c.ActivityId,
-		Identity:   c.Identity,
-	}
-	if c.Reset {
-		request.Operation = &workflowservice.UnpauseActivityByIdRequest_Reset_{
-			Reset_: &workflowservice.UnpauseActivityByIdRequest_ResetOperation{
-				NoWait:         c.NoWait,
-				ResetHeartbeat: c.ResetHeartbeats,
-			},
-		}
-	} else {
-		if c.ResetHeartbeats {
-			return fmt.Errorf("reset-heartbeats flag can only be used with reset flag")
-		}
-		request.Operation = &workflowservice.UnpauseActivityByIdRequest_Resume{
-			Resume: &workflowservice.UnpauseActivityByIdRequest_ResumeOperation{
-				NoWait: c.NoWait,
-			},
-		}
+		Query:      c.Query,
+		Reason:     c.Reason,
+		Yes:        c.Yes,
+		Rps:        c.Rps,
 	}
 
-	_, err = cl.WorkflowService().UnpauseActivityById(cctx, request)
+	exec, batchReq, err := opts.workflowExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{
+		// You're allowed to specify a reason when terminating a workflow
+		AllowReasonWithWorkflowID: true,
+	})
 	if err != nil {
-		return fmt.Errorf("unable to uppause an Activity: %w", err)
+		return err
+	}
+
+	if exec != nil { // single workflow operation
+		request := &workflowservice.UnpauseActivityRequest{
+			Namespace: c.Parent.Namespace,
+			Execution: &common.WorkflowExecution{
+				WorkflowId: c.WorkflowId,
+				RunId:      c.RunId,
+			},
+			ResetAttempts:  c.ResetAttempts,
+			ResetHeartbeat: c.ResetHeartbeats,
+			Jitter:         durationpb.New(c.Jitter.Duration()),
+			Identity:       c.Identity,
+		}
+
+		if c.ActivityType != "" {
+			request.Activity = &workflowservice.UnpauseActivityRequest_Type{Type: c.ActivityType}
+		} else if c.ActivityId != "" {
+			request.Activity = &workflowservice.UnpauseActivityRequest_Id{Id: c.ActivityId}
+		} else {
+			return fmt.Errorf("either Activity Type or Activity Id must be provided")
+		}
+
+		_, err = cl.WorkflowService().UnpauseActivity(cctx, request)
+		if err != nil {
+			return fmt.Errorf("unable to uppause an Activity: %w", err)
+		}
+	} else { // batch operation
+		unpauseActivitiesOperation := &batch.BatchOperationUnpauseActivities{
+			Identity:       clientIdentity(),
+			ResetAttempts:  c.ResetAttempts,
+			ResetHeartbeat: c.ResetHeartbeats,
+			Jitter:         durationpb.New(c.Jitter.Duration()),
+		}
+		if c.ActivityType != "" {
+			unpauseActivitiesOperation.Activity = &batch.BatchOperationUnpauseActivities_Type{Type: c.ActivityType}
+		} else if c.MatchAll == true {
+			unpauseActivitiesOperation.Activity = &batch.BatchOperationUnpauseActivities_MatchAll{MatchAll: true}
+		} else {
+			return fmt.Errorf("either Activity Type must be provided or MatchAll must be set to true")
+		}
+
+		batchReq.Operation = &workflowservice.StartBatchOperationRequest_UnpauseActivitiesOperation{
+			UnpauseActivitiesOperation: unpauseActivitiesOperation,
+		}
+
+		if err := startBatchJob(cctx, cl, batchReq); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -261,28 +307,37 @@ func (c *TemporalActivityResetCommand) run(cctx *CommandContext, args []string) 
 	}
 	defer cl.Close()
 
-	request := &workflowservice.ResetActivityByIdRequest{
-		Namespace:      c.Parent.Namespace,
-		WorkflowId:     c.WorkflowId,
-		RunId:          c.RunId,
-		ActivityId:     c.ActivityId,
+	request := &workflowservice.ResetActivityRequest{
+		Namespace: c.Parent.Namespace,
+		Execution: &common.WorkflowExecution{
+			WorkflowId: c.WorkflowId,
+			RunId:      c.RunId,
+		},
 		Identity:       c.Identity,
-		NoWait:         c.NoWait,
+		KeepPaused:     c.KeepPaused,
 		ResetHeartbeat: c.ResetHeartbeats,
 	}
 
-	resp, err := cl.WorkflowService().ResetActivityById(cctx, request)
+	if c.ActivityType != "" {
+		request.Activity = &workflowservice.ResetActivityRequest_Type{Type: c.ActivityType}
+	} else if c.ActivityId != "" {
+		request.Activity = &workflowservice.ResetActivityRequest_Id{Id: c.ActivityId}
+	} else {
+		return fmt.Errorf("either Activity Type or Activity Id must be provided")
+	}
+
+	resp, err := cl.WorkflowService().ResetActivity(cctx, request)
 	if err != nil {
 		return fmt.Errorf("unable to reset an Activity: %w", err)
 	}
 
 	resetResponse := struct {
-		NoWait          bool `json:"noWait"`
+		KeepPaused      bool `json:"keepPaused"`
 		ResetHeartbeats bool `json:"resetHeartbeats"`
 		ServerResponse  bool `json:"-"`
 	}{
 		ServerResponse:  resp != nil,
-		NoWait:          c.NoWait,
+		KeepPaused:      c.KeepPaused,
 		ResetHeartbeats: c.ResetHeartbeats,
 	}
 

@@ -2,22 +2,33 @@ package temporalcli_test
 
 import (
 	"context"
+	"fmt"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/history/v1"
 	"go.temporal.io/api/serviceerror"
+	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/temporal"
+	"go.temporal.io/sdk/workflow"
+	"google.golang.org/grpc"
+)
+
+const (
+	activityId   string = "dev-activity-id"
+	activityType string = "DevActivity"
+	identity     string = "MyIdentity"
 )
 
 func (s *SharedServerSuite) TestActivity_Complete() {
 	run := s.waitActivityStarted()
 	wid := run.GetID()
-	aid := "dev-activity-id"
-	identity := "MyIdentity"
 	res := s.Execute(
 		"activity", "complete",
-		"--activity-id", aid,
+		"--activity-id", activityId,
 		"--workflow-id", wid,
 		"--result", "\"complete-activity-result\"",
 		"--identity", identity,
@@ -28,7 +39,7 @@ func (s *SharedServerSuite) TestActivity_Complete() {
 	s.NoError(run.Get(s.Context, &actual))
 	s.Equal("complete-activity-result", actual)
 
-	started, completed, failed := s.getActivityEvents(wid, aid)
+	started, completed, failed := s.getActivityEvents(wid, activityId)
 	s.NotNil(started)
 	s.Nil(failed)
 	s.NotNil(completed)
@@ -39,13 +50,12 @@ func (s *SharedServerSuite) TestActivity_Complete() {
 func (s *SharedServerSuite) TestActivity_Fail() {
 	run := s.waitActivityStarted()
 	wid := run.GetID()
-	aid := "dev-activity-id"
 	detail := "{\"myKey\": \"myValue\"}"
 	reason := "MyReason"
 	identity := "MyIdentity"
 	res := s.Execute(
 		"activity", "fail",
-		"--activity-id", aid,
+		"--activity-id", activityId,
 		"--workflow-id", wid,
 		"--run-id", run.GetRunID(),
 		"--detail", detail,
@@ -57,7 +67,7 @@ func (s *SharedServerSuite) TestActivity_Fail() {
 	err := run.Get(s.Context, nil)
 	s.NotNil(err)
 
-	started, completed, failed := s.getActivityEvents(wid, aid)
+	started, completed, failed := s.getActivityEvents(wid, activityId)
 	s.NotNil(started)
 	s.Nil(completed)
 	s.NotNil(failed)
@@ -71,18 +81,16 @@ func (s *SharedServerSuite) TestActivity_Fail() {
 
 func (s *SharedServerSuite) TestActivity_Complete_InvalidResult() {
 	run := s.waitActivityStarted()
-	wid := run.GetID()
-	aid := "dev-activity-id"
 	res := s.Execute(
 		"activity", "complete",
-		"--activity-id", aid,
-		"--workflow-id", wid,
+		"--activity-id", activityId,
+		"--workflow-id", run.GetID(),
 		"--result", "{not json}",
 		"--address", s.Address(),
 	)
 	s.ErrorContains(res.Err, "is not valid JSON")
 
-	started, completed, failed := s.getActivityEvents(wid, aid)
+	started, completed, failed := s.getActivityEvents(run.GetID(), activityId)
 	s.Nil(started)
 	s.Nil(completed)
 	s.Nil(failed)
@@ -91,17 +99,16 @@ func (s *SharedServerSuite) TestActivity_Complete_InvalidResult() {
 func (s *SharedServerSuite) TestActivity_Fail_InvalidDetail() {
 	run := s.waitActivityStarted()
 	wid := run.GetID()
-	aid := "dev-activity-id"
 	res := s.Execute(
 		"activity", "fail",
-		"--activity-id", aid,
+		"--activity-id", activityId,
 		"--workflow-id", wid,
 		"--detail", "{not json}",
 		"--address", s.Address(),
 	)
 	s.ErrorContains(res.Err, "is not valid JSON")
 
-	started, completed, failed := s.getActivityEvents(wid, aid)
+	started, completed, failed := s.getActivityEvents(wid, activityId)
 	s.Nil(started)
 	s.Nil(completed)
 	s.Nil(failed)
@@ -110,12 +117,10 @@ func (s *SharedServerSuite) TestActivity_Fail_InvalidDetail() {
 func (s *SharedServerSuite) TestActivityOptionsUpdate_Accept() {
 	run := s.waitActivityStarted()
 	wid := run.GetID()
-	aid := "dev-activity-id"
-	identity := "MyIdentity"
 
 	res := s.Execute(
 		"activity", "update-options",
-		"--activity-id", aid,
+		"--activity-id", activityId,
 		"--workflow-id", wid,
 		"--run-id", run.GetRunID(),
 		"--identity", identity,
@@ -145,14 +150,11 @@ func (s *SharedServerSuite) TestActivityOptionsUpdate_Accept() {
 
 func (s *SharedServerSuite) TestActivityOptionsUpdate_Partial() {
 	run := s.waitActivityStarted()
-	wid := run.GetID()
-	aid := "dev-activity-id"
-	identity := "MyIdentity"
 
 	res := s.Execute(
 		"activity", "update-options",
-		"--activity-id", aid,
-		"--workflow-id", wid,
+		"--activity-id", activityId,
+		"--workflow-id", run.GetID(),
 		"--run-id", run.GetRunID(),
 		"--identity", identity,
 		"--task-queue", "new-task-queue",
@@ -182,87 +184,80 @@ func (s *SharedServerSuite) TestActivityOptionsUpdate_Partial() {
 	s.ContainsOnSameLine(out, "BackoffCoefficient", "2")
 }
 
+func sendActivityCommand(command string, run client.WorkflowRun, s *SharedServerSuite, extraArgs ...string) *CommandResult {
+	args := []string{
+		"activity", command,
+		"--workflow-id", run.GetID(),
+		"--run-id", run.GetRunID(),
+		"--identity", identity,
+		"--address", s.Address(),
+	}
+
+	args = append(args, extraArgs...)
+
+	res := s.Execute(args...)
+	return res
+}
+
 func (s *SharedServerSuite) TestActivityPauseUnpause() {
 	run := s.waitActivityStarted()
-	wid := run.GetID()
-	aid := "dev-activity-id"
-	identity := "MyIdentity"
 
-	res := s.Execute(
-		"activity", "pause",
-		"--activity-id", aid,
-		"--workflow-id", wid,
-		"--run-id", run.GetRunID(),
-		"--identity", identity,
-		"--address", s.Address(),
-	)
-
+	res := sendActivityCommand("pause", run, s, "--activity-id", activityId)
 	s.NoError(res.Err)
 
-	res = s.Execute(
-		"activity", "unpause",
-		"--activity-id", aid,
-		"--workflow-id", wid,
-		"--run-id", run.GetRunID(),
-		"--identity", identity,
-		"--address", s.Address(),
-		"--reset",
-	)
+	s.Eventually(func() bool {
+		resp, err := s.Client.DescribeWorkflowExecution(s.Context, run.GetID(), run.GetRunID())
+		s.NoError(err)
+		if resp.GetPendingActivities() == nil {
+			return false
+		}
+		return len(resp.PendingActivities) > 0 && resp.PendingActivities[0].Paused
+	}, 5*time.Second, 100*time.Millisecond)
 
+	res = sendActivityCommand("unpause", run, s, "--activity-id", activityId, "--reset-attempts")
+	s.NoError(res.Err)
+
+	s.Eventually(func() bool {
+		resp, err := s.Client.DescribeWorkflowExecution(s.Context, run.GetID(), run.GetRunID())
+		s.NoError(err)
+		if resp.GetPendingActivities() == nil {
+			return false
+		}
+		return len(resp.PendingActivities) > 0 && !resp.PendingActivities[0].Paused
+	}, 5*time.Second, 100*time.Millisecond)
+}
+
+func (s *SharedServerSuite) TestActivityPauseUnpauseByType() {
+	run := s.waitActivityStarted()
+	res := sendActivityCommand("pause", run, s, "--activity-type", activityType)
+	s.NoError(res.Err)
+
+	res = sendActivityCommand("unpause", run, s, "--activity-type", activityType, "--reset-attempts")
 	s.NoError(res.Err)
 }
 
-func (s *SharedServerSuite) TestActivityUnPause_Failed() {
+func (s *SharedServerSuite) TestActivityCommandFailed_NoActivityTpeOrId() {
 	run := s.waitActivityStarted()
-	wid := run.GetID()
-	aid := "dev-activity-id"
-	identity := "MyIdentity"
 
-	// should fail because --reset-heartbeat is provided, but --reset flag is missing
-	res := s.Execute(
-		"activity", "unpause",
-		"--activity-id", aid,
-		"--workflow-id", wid,
-		"--run-id", run.GetRunID(),
-		"--identity", identity,
-		"--address", s.Address(),
-		"--reset-heartbeats",
-	)
-
-	s.Error(res.Err)
+	commands := []string{"pause", "unpause", "reset"}
+	for _, command := range commands {
+		// should fail because both activity-id and activity-type are not provided
+		res := sendActivityCommand(command, run, s)
+		s.Error(res.Err)
+	}
 }
 
 func (s *SharedServerSuite) TestActivityReset() {
 	run := s.waitActivityStarted()
-	wid := run.GetID()
-	aid := "dev-activity-id"
-	identity := "MyIdentity"
 
-	res := s.Execute(
-		"activity", "reset",
-		"--activity-id", aid,
-		"--workflow-id", wid,
-		"--run-id", run.GetRunID(),
-		"--identity", identity,
-		"--address", s.Address(),
-	)
-
+	res := sendActivityCommand("reset", run, s, "--activity-id", activityId)
 	s.NoError(res.Err)
 	// make sure we receive a server response
 	out := res.Stdout.String()
 	s.ContainsOnSameLine(out, "ServerResponse", "true")
 
 	// reset should fail because activity is not found
-
-	res = s.Execute(
-		"activity", "reset",
-		"--activity-id", "fake_id",
-		"--workflow-id", wid,
-		"--run-id", run.GetRunID(),
-		"--identity", identity,
-		"--address", s.Address(),
-	)
-
+	res = sendActivityCommand("reset", run, s, "--activity-id", "fake_id")
 	s.Error(res.Err)
 	// make sure we receive a NotFound error from the server`
 	var notFound *serviceerror.NotFound
@@ -276,6 +271,22 @@ func (s *SharedServerSuite) waitActivityStarted() client.WorkflowRun {
 		time.Sleep(0xFFFF * time.Hour)
 		return nil, nil
 	})
+	run, err := s.Client.ExecuteWorkflow(
+		s.Context,
+		client.StartWorkflowOptions{TaskQueue: s.Worker().Options.TaskQueue},
+		DevWorkflow,
+		"ignored",
+	)
+	s.NoError(err)
+	s.Eventually(func() bool {
+		resp, err := s.Client.DescribeWorkflowExecution(s.Context, run.GetID(), run.GetRunID())
+		s.NoError(err)
+		return len(resp.PendingActivities) > 0
+	}, 5*time.Second, 100*time.Millisecond)
+	return run
+}
+
+func waitWorkflowStarted(s *SharedServerSuite) client.WorkflowRun {
 	run, err := s.Client.ExecuteWorkflow(
 		s.Context,
 		client.StartWorkflowOptions{TaskQueue: s.Worker().Options.TaskQueue},
@@ -310,4 +321,108 @@ func (s *SharedServerSuite) getActivityEvents(workflowID, activityID string) (
 		}
 	}
 	return started, completed, failed
+}
+
+func checkActivitiesRunning(s *SharedServerSuite, run client.WorkflowRun) {
+	s.Eventually(func() bool {
+		resp, err := s.Client.DescribeWorkflowExecution(s.Context, run.GetID(), run.GetRunID())
+		s.NoError(err)
+		return len(resp.GetPendingActivities()) > 0
+	}, 5*time.Second, 200*time.Millisecond)
+}
+
+func checkActivitiesPaused(s *SharedServerSuite, run client.WorkflowRun) {
+	s.Eventually(func() bool {
+		resp, err := s.Client.DescribeWorkflowExecution(s.Context, run.GetID(), run.GetRunID())
+		s.NoError(err)
+		if resp.GetPendingActivities() == nil {
+			return false
+		}
+		return len(resp.GetPendingActivities()) > 0 && resp.GetPendingActivities()[0].Paused
+	}, 5*time.Second, 200*time.Millisecond)
+}
+
+func (s *SharedServerSuite) TestUnpauseActivity_BatchSuccess() {
+	var failActivity atomic.Bool
+	failActivity.Store(true)
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		time.Sleep(100 * time.Millisecond)
+		if failActivity.Load() {
+			return nil, fmt.Errorf("update workflow received non-float input")
+		}
+		return nil, nil
+	})
+
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
+		// override the activity options to allow activity to constantly fail
+		ctx = workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
+			ActivityID:          activityId,
+			StartToCloseTimeout: 1 * time.Minute,
+			RetryPolicy: &temporal.RetryPolicy{
+				MaximumAttempts: 0,
+			},
+		})
+		var res any
+		err := workflow.ExecuteActivity(ctx, DevActivity).Get(ctx, &res)
+		return res, err
+	})
+
+	run1 := waitWorkflowStarted(s)
+	run2 := waitWorkflowStarted(s)
+
+	// Wait for all to appear in list
+	query := fmt.Sprintf("WorkflowId = '%s' OR WorkflowId = '%s'", run1.GetID(), run2.GetID())
+	s.Eventually(func() bool {
+		resp, err := s.Client.ListWorkflow(s.Context, &workflowservice.ListWorkflowExecutionsRequest{
+			Query: query,
+		})
+		s.NoError(err)
+		return len(resp.Executions) == 2
+	}, 3*time.Second, 100*time.Millisecond)
+
+	// Pause the activities
+	res := sendActivityCommand("pause", run1, s, "--activity-id", activityId)
+	s.NoError(res.Err)
+	res = sendActivityCommand("pause", run2, s, "--activity-id", activityId)
+	s.NoError(res.Err)
+
+	// wait for activities to be paused
+	checkActivitiesPaused(s, run1)
+	checkActivitiesPaused(s, run2)
+
+	var lastRequestLock sync.Mutex
+	var startBatchRequest *workflowservice.StartBatchOperationRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string, req, reply any,
+			cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption,
+		) error {
+			lastRequestLock.Lock()
+			if r, ok := req.(*workflowservice.StartBatchOperationRequest); ok {
+				startBatchRequest = r
+			}
+			lastRequestLock.Unlock()
+			return invoker(ctx, method, req, reply, cc, opts...)
+		}),
+	)
+
+	// Send batch activity unpause
+	cmdRes := s.Execute("activity", "unpause",
+		"--rps", "1",
+		"--address", s.Address(),
+		"--query", query,
+		"--reason", "unpause-test",
+		"--yes", "--match-all",
+	)
+	s.NoError(cmdRes.Err)
+	s.NotEmpty(startBatchRequest.JobId)
+
+	// check activities are running
+	checkActivitiesRunning(s, run1)
+	checkActivitiesRunning(s, run2)
+
+	// unblock the activities to let them finish
+	failActivity.Store(false)
 }

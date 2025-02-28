@@ -552,18 +552,18 @@ func (s *SharedServerSuite) TestWorkflow_Count() {
 
 func (s *SharedServerSuite) TestWorkflow_Describe_Deployment() {
 	buildId := uuid.NewString()
-	seriesName := uuid.NewString()
+	deploymentName := uuid.NewString()
 	// Workflow that waits to be canceled.
 	waitingWorkflow := func(ctx workflow.Context) error {
 		ctx.Done().Receive(ctx, nil)
 		return ctx.Err()
 	}
+	version := deploymentName + "." + buildId
 	w := s.DevServer.StartDevWorker(s.Suite.T(), DevWorkerOptions{
 		Worker: worker.Options{
-			BuildID:                 buildId,
-			UseBuildIDForVersioning: true,
 			DeploymentOptions: worker.DeploymentOptions{
-				DeploymentSeriesName:      seriesName,
+				UseVersioning:             true,
+				Version:                   version,
 				DefaultVersioningBehavior: workflow.VersioningBehaviorPinned,
 			},
 		},
@@ -571,11 +571,29 @@ func (s *SharedServerSuite) TestWorkflow_Describe_Deployment() {
 	})
 	defer w.Stop()
 
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "list",
+			"--address", s.Address(),
+		)
+		assert.NoError(t, res.Err)
+		assert.Contains(t, res.Stdout.String(), deploymentName)
+	}, 30*time.Second, 100*time.Millisecond)
+
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "describe-version",
+			"--address", s.Address(),
+			"--version", version,
+		)
+		assert.NoError(t, res.Err)
+	}, 30*time.Second, 100*time.Millisecond)
+
 	res := s.Execute(
-		"worker", "deployment", "set-current",
+		"worker", "deployment", "set-current-version",
 		"--address", s.Address(),
-		"--series-name", seriesName,
-		"--build-id", buildId,
+		"--version", version,
+		"--yes",
 	)
 	s.NoError(res.Err)
 
@@ -594,14 +612,13 @@ func (s *SharedServerSuite) TestWorkflow_Describe_Deployment() {
 			"-w", run.GetID(),
 		)
 		assert.NoError(t, res.Err)
-		assert.Contains(t, res.Stdout.String(), buildId)
+		assert.Contains(t, res.Stdout.String(), version)
 		assert.Contains(t, res.Stdout.String(), "Pinned")
 	}, 30*time.Second, 100*time.Millisecond)
 
 	out := res.Stdout.String()
 	s.ContainsOnSameLine(out, "Behavior", "Pinned")
-	s.ContainsOnSameLine(out, "DeploymentBuildID", buildId)
-	s.ContainsOnSameLine(out, "DeploymentSeriesName", seriesName)
+	s.ContainsOnSameLine(out, "Version", version)
 	s.ContainsOnSameLine(out, "OverrideBehavior", "Unspecified")
 
 	// json
@@ -617,10 +634,8 @@ func (s *SharedServerSuite) TestWorkflow_Describe_Deployment() {
 	s.NoError(temporalcli.UnmarshalProtoJSONWithOptions(res.Stdout.Bytes(), &jsonResp, true))
 	versioningInfo := jsonResp.WorkflowExecutionInfo.VersioningInfo
 	s.Equal("Pinned", versioningInfo.Behavior.String())
-	s.Equal(buildId, versioningInfo.Deployment.BuildId)
-	s.Equal(seriesName, versioningInfo.Deployment.SeriesName)
+	s.Equal(version, versioningInfo.Version)
 	s.Nil(versioningInfo.VersioningOverride)
-	s.Nil(versioningInfo.DeploymentTransition)
 }
 
 func (s *SharedServerSuite) TestWorkflow_Describe_NexusOperationAndCallback() {
@@ -809,7 +824,7 @@ func (s *SharedServerSuite) TestWorkflow_Describe_NexusOperationBlocked() {
 		s.NoError(err)
 		return len(resp.PendingNexusOperations) > 0 &&
 			resp.PendingNexusOperations[0].State == enums.PENDING_NEXUS_OPERATION_STATE_BLOCKED
-	}, 30*time.Second, 100*time.Millisecond)
+	}, 60*time.Second, 100*time.Millisecond)
 
 	// Operations - Text
 	res := s.Execute(
@@ -934,4 +949,47 @@ func (s *SharedServerSuite) Test_WorkflowResult() {
 	s.Contains(output, `"status": "FAILED"`)
 	s.Contains(output, `"message": "failed on purpose"`)
 	s.Contains(output, "workflowExecutionFailedEventAttributes")
+}
+
+func (s *SharedServerSuite) TestWorkflow_Describe_WorkflowMetadata() {
+	workflowId := uuid.NewString()
+
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
+		return map[string]string{"foo": "bar"}, nil
+	})
+
+	res := s.Execute(
+		"workflow", "start",
+		"--address", s.Address(),
+		"--task-queue", s.Worker().Options.TaskQueue,
+		"--type", "DevWorkflow",
+		"--workflow-id", workflowId,
+		"--static-summary", "summie",
+		"--static-details", "deets",
+	)
+	s.NoError(res.Err)
+
+	// Text
+	res = s.Execute(
+		"workflow", "describe",
+		"--address", s.Address(),
+		"-w", workflowId,
+	)
+	s.NoError(res.Err)
+	out := res.Stdout.String()
+	s.ContainsOnSameLine(out, "StaticSummary", "summie")
+	s.ContainsOnSameLine(out, "StaticDetails", "deets")
+
+	// JSON
+	res = s.Execute(
+		"workflow", "describe",
+		"-o", "json",
+		"--address", s.Address(),
+		"-w", workflowId,
+	)
+	s.NoError(res.Err)
+	var jsonOut workflowservice.DescribeWorkflowExecutionResponse
+	s.NoError(temporalcli.UnmarshalProtoJSONWithOptions(res.Stdout.Bytes(), &jsonOut, true))
+	s.NotNil(jsonOut.ExecutionConfig.UserMetadata.Summary)
+	s.NotNil(jsonOut.ExecutionConfig.UserMetadata.Details)
 }
