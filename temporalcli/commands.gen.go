@@ -2888,9 +2888,9 @@ func NewTemporalWorkflowExecuteUpdateWithStartCommand(cctx *CommandContext, pare
 	s.Command.Use = "execute-update-with-start [flags]"
 	s.Command.Short = "Send an Update and wait for it to complete (Experimental)"
 	if hasHighlighting {
-		s.Command.Long = "Send a message to a Workflow Execution to invoke an Update handler, and wait for\nthe update to complete. If the Workflow Execution is not running, then a new workflow\nexecution is started and the update is sent.\n\nExperimental.\n\n\x1b[1mtemporal workflow execute-update-with-start \\\n  --update-name YourUpdate \\\n  --update-input '{\"update-key\": \"update-value\"}' \\\n  --workflow-id YourWorkflowId \\\n  --type YourWorkflowType \\\n  --task-queue YourTaskQueue \\\n  --input '{\"wf-key\": \"wf-value\"}'\x1b[0m"
+		s.Command.Long = "Send a message to a Workflow Execution to invoke an Update handler, and wait for\nthe update to complete. If the Workflow Execution is not running, then a new workflow\nexecution is started and the update is sent.\n\nExperimental.\n\n\x1b[1mtemporal workflow execute-update-with-start \\\n  --update-name YourUpdate \\\n  --update-input '{\"update-key\": \"update-value\"}' \\\n  --workflow-id YourWorkflowId \\\n  --type YourWorkflowType \\\n  --task-queue YourTaskQueue \\\n  --id-conflict-policy Fail \\\n  --input '{\"wf-key\": \"wf-value\"}'\x1b[0m"
 	} else {
-		s.Command.Long = "Send a message to a Workflow Execution to invoke an Update handler, and wait for\nthe update to complete. If the Workflow Execution is not running, then a new workflow\nexecution is started and the update is sent.\n\nExperimental.\n\n```\ntemporal workflow execute-update-with-start \\\n  --update-name YourUpdate \\\n  --update-input '{\"update-key\": \"update-value\"}' \\\n  --workflow-id YourWorkflowId \\\n  --type YourWorkflowType \\\n  --task-queue YourTaskQueue \\\n  --input '{\"wf-key\": \"wf-value\"}'\n```"
+		s.Command.Long = "Send a message to a Workflow Execution to invoke an Update handler, and wait for\nthe update to complete. If the Workflow Execution is not running, then a new workflow\nexecution is started and the update is sent.\n\nExperimental.\n\n```\ntemporal workflow execute-update-with-start \\\n  --update-name YourUpdate \\\n  --update-input '{\"update-key\": \"update-value\"}' \\\n  --workflow-id YourWorkflowId \\\n  --type YourWorkflowType \\\n  --task-queue YourTaskQueue \\\n  --id-conflict-policy Fail \\\n  --input '{\"wf-key\": \"wf-value\"}'\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.UpdateName, "update-name", "", "Update name. Required. Aliased as \"--update-type\".")
@@ -3322,16 +3322,16 @@ func NewTemporalWorkflowStartUpdateWithStartCommand(cctx *CommandContext, parent
 	s.Command.Use = "start-update-with-start [flags]"
 	s.Command.Short = "Send an Update and wait for it to be accepted or rejected (Experimental)"
 	if hasHighlighting {
-		s.Command.Long = "Send a message to a Workflow Execution to invoke an Update handler, and wait for\nthe update to be accepted or rejected. If the Workflow Execution is not running, \nthen a new workflow execution is started and the update is sent.\n\nExperimental.\n\n\x1b[1mtemporal workflow start-update-with-start \\\n  --update-name YourUpdate \\\n  --update-input '{\"update-key\": \"update-value\"}' \\\n  --workflow-id YourWorkflowId \\\n  --type YourWorkflowType \\\n  --task-queue YourTaskQueue \\\n  --input '{\"wf-key\": \"wf-value\"}'\x1b[0m"
+		s.Command.Long = "Send a message to a Workflow Execution to invoke an Update handler, and wait for\nthe update to be accepted or rejected. If the Workflow Execution is not running, \nthen a new workflow execution is started and the update is sent.\n\nExperimental.\n\n\x1b[1mtemporal workflow start-update-with-start \\\n  --update-name YourUpdate \\\n  --update-input '{\"update-key\": \"update-value\"}' \\\n  --update-wait-for-stage accepted \\\n  --workflow-id YourWorkflowId \\\n  --type YourWorkflowType \\\n  --task-queue YourTaskQueue \\\n  --id-conflict-policy Fail \\\n  --input '{\"wf-key\": \"wf-value\"}'\x1b[0m"
 	} else {
-		s.Command.Long = "Send a message to a Workflow Execution to invoke an Update handler, and wait for\nthe update to be accepted or rejected. If the Workflow Execution is not running, \nthen a new workflow execution is started and the update is sent.\n\nExperimental.\n\n```\ntemporal workflow start-update-with-start \\\n  --update-name YourUpdate \\\n  --update-input '{\"update-key\": \"update-value\"}' \\\n  --workflow-id YourWorkflowId \\\n  --type YourWorkflowType \\\n  --task-queue YourTaskQueue \\\n  --input '{\"wf-key\": \"wf-value\"}'\n```"
+		s.Command.Long = "Send a message to a Workflow Execution to invoke an Update handler, and wait for\nthe update to be accepted or rejected. If the Workflow Execution is not running, \nthen a new workflow execution is started and the update is sent.\n\nExperimental.\n\n```\ntemporal workflow start-update-with-start \\\n  --update-name YourUpdate \\\n  --update-input '{\"update-key\": \"update-value\"}' \\\n  --update-wait-for-stage accepted \\\n  --workflow-id YourWorkflowId \\\n  --type YourWorkflowType \\\n  --task-queue YourTaskQueue \\\n  --id-conflict-policy Fail \\\n  --input '{\"wf-key\": \"wf-value\"}'\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.UpdateName, "update-name", "", "Update name. Required. Aliased as \"--update-type\".")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "update-name")
 	s.Command.Flags().StringVar(&s.UpdateFirstExecutionRunId, "update-first-execution-run-id", "", "Parent Run ID. The update is sent to the last Workflow Execution in the chain started with this Run ID.")
 	s.UpdateWaitForStage = NewStringEnum([]string{"accepted"}, "")
-	s.Command.Flags().Var(&s.UpdateWaitForStage, "update-wait-for-stage", "Update stage to wait for. The only option is `accepted`, but this option is  required. This is to allow a future version of the CLI to choose a default value. Accepted values: accepted. Required.")
+	s.Command.Flags().Var(&s.UpdateWaitForStage, "update-wait-for-stage", "Update stage to wait for. The only option is `accepted`, but this option is required. This is to allow a future version of the CLI to choose a default value. Accepted values: accepted. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "update-wait-for-stage")
 	s.Command.Flags().StringVar(&s.UpdateId, "update-id", "", "Update ID. If unset, defaults to a UUID.")
 	s.Command.Flags().StringVarP(&s.RunId, "run-id", "r", "", "Run ID. If unset, looks for an Update against the currently-running Workflow Execution.")
@@ -3546,9 +3546,9 @@ func NewTemporalWorkflowUpdateStartCommand(cctx *CommandContext, parent *Tempora
 	s.Command.Use = "start [flags]"
 	s.Command.Short = "Send an Update and wait for it to be accepted or rejected (Experimental)"
 	if hasHighlighting {
-		s.Command.Long = "Send a message to a Workflow Execution to invoke an Update handler, and wait for\nthe update to be accepted or rejected. You can subsequently wait for the update\nto complete by using \x1b[1mtemporal workflow update execute\x1b[0m.\n\nExperimental.\n\n\x1b[1mtemporal workflow update start \\\n    --workflow-id YourWorkflowId \\\n    --name YourUpdate \\\n    --input '{\"some-key\": \"some-value\"}'\x1b[0m"
+		s.Command.Long = "Send a message to a Workflow Execution to invoke an Update handler, and wait for\nthe update to be accepted or rejected. You can subsequently wait for the update\nto complete by using \x1b[1mtemporal workflow update execute\x1b[0m.\n\nExperimental.\n\n\x1b[1mtemporal workflow update start \\\n    --workflow-id YourWorkflowId \\\n    --name YourUpdate \\\n    --input '{\"some-key\": \"some-value\"}'\n    --wait-for-stage accepted\x1b[0m"
 	} else {
-		s.Command.Long = "Send a message to a Workflow Execution to invoke an Update handler, and wait for\nthe update to be accepted or rejected. You can subsequently wait for the update\nto complete by using `temporal workflow update execute`.\n\nExperimental.\n\n```\ntemporal workflow update start \\\n    --workflow-id YourWorkflowId \\\n    --name YourUpdate \\\n    --input '{\"some-key\": \"some-value\"}'\n```"
+		s.Command.Long = "Send a message to a Workflow Execution to invoke an Update handler, and wait for\nthe update to be accepted or rejected. You can subsequently wait for the update\nto complete by using `temporal workflow update execute`.\n\nExperimental.\n\n```\ntemporal workflow update start \\\n    --workflow-id YourWorkflowId \\\n    --name YourUpdate \\\n    --input '{\"some-key\": \"some-value\"}'\n    --wait-for-stage accepted\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.WaitForStage = NewStringEnum([]string{"accepted"}, "")
