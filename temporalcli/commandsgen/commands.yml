@@ -3424,6 +3424,7 @@ commands:
           --workflow-id YourWorkflowId \
           --name YourUpdate \
           --input '{"some-key": "some-value"}'
+          --wait-for-stage accepted
       ```
     option-sets:
       - update-starting
@@ -3452,13 +3453,15 @@ commands:
       temporal workflow start-update-with-start \
         --update-name YourUpdate \
         --update-input '{"update-key": "update-value"}' \
+        --update-wait-for-stage accepted \
         --workflow-id YourWorkflowId \
         --type YourWorkflowType \
         --task-queue YourTaskQueue \
+        --id-conflict-policy Fail \
         --input '{"wf-key": "wf-value"}'
       ```
     option-sets:
-      # workflow-id is "required" (runtime check)
+      # workflow-id and id-conflict-policy are "required" (runtime checks)
       - shared-workflow-start
       - workflow-start
       - payload-input
@@ -3479,7 +3482,7 @@ commands:
         type: string-enum
         description: |
           Update stage to wait for.
-          The only option is `accepted`, but this option is  required. This is to allow
+          The only option is `accepted`, but this option is required. This is to allow
           a future version of the CLI to choose a default value.
         enum-values:
           - accepted
@@ -3536,11 +3539,12 @@ commands:
         --workflow-id YourWorkflowId \
         --type YourWorkflowType \
         --task-queue YourTaskQueue \
+        --id-conflict-policy Fail \
         --input '{"wf-key": "wf-value"}'
       ```
 
     option-sets:
-      # workflow-id is "required" (runtime check)
+      # workflow-id and id-conflict-policy are "required" (runtime checks)
       - shared-workflow-start
       - workflow-start
       - payload-input

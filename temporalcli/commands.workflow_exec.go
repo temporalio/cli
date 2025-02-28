@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"reflect"
@@ -194,13 +195,11 @@ func (c *TemporalWorkflowSignalWithStartCommand) run(cctx *CommandContext, _ []s
 		RunId      string `json:"runId"`
 		Type       string `json:"type"`
 		Namespace  string `json:"namespace"`
-		TaskQueue  string `json:"taskQueue"`
 	}{
 		WorkflowId: c.WorkflowId,
 		RunId:      resp.RunId,
 		Type:       c.Type,
 		Namespace:  c.Parent.Namespace,
-		TaskQueue:  c.TaskQueue,
 	}, printer.StructuredOptions{})
 }
 
@@ -228,6 +227,7 @@ func (c *TemporalWorkflowStartUpdateWithStartCommand) run(cctx *CommandContext, 
 		UpdateID:            c.UpdateId,
 		WorkflowID:          c.WorkflowId,
 		RunID:               c.RunId,
+		UpdateName:          c.UpdateName,
 		Args:                updateInput,
 		WaitForStage:        waitForStage,
 		FirstExecutionRunID: c.UpdateFirstExecutionRunId,
@@ -245,13 +245,26 @@ func (c *TemporalWorkflowStartUpdateWithStartCommand) run(cctx *CommandContext, 
 		return err
 	}
 
+	// Currently we only accept 'accepted' as a valid wait for stage value, but we intend
+	// to support more in the future.
+	if waitForStage == client.WorkflowUpdateStageAccepted {
+		// Use a canceled context to check whether the initial server response
+		// shows that the update has _already_ failed, without issuing a second request.
+		ctx, cancel := context.WithCancel(cctx)
+		cancel()
+		err = handle.Get(ctx, nil)
+		var timeoutOrCanceledErr *client.WorkflowUpdateServiceTimeoutOrCanceledError
+		if err != nil && !errors.As(err, &timeoutOrCanceledErr) {
+			return fmt.Errorf("unable to update workflow: %w", err)
+		}
+	}
+
 	cctx.Printer.Println(color.MagentaString("Running execution:"))
 	return cctx.Printer.PrintStructured(struct {
 		WorkflowId string `json:"workflowId"`
 		RunId      string `json:"runId"`
 		Type       string `json:"type"`
 		Namespace  string `json:"namespace"`
-		TaskQueue  string `json:"taskQueue"`
 		UpdateName string `json:"updateName"`
 		UpdateID   string `json:"updateId"`
 	}{
@@ -259,7 +272,6 @@ func (c *TemporalWorkflowStartUpdateWithStartCommand) run(cctx *CommandContext, 
 		RunId:      handle.RunID(),
 		Type:       c.Type,
 		Namespace:  c.Parent.Namespace,
-		TaskQueue:  c.TaskQueue,
 		UpdateName: c.UpdateName,
 		UpdateID:   handle.UpdateID(),
 	}, printer.StructuredOptions{})
@@ -278,6 +290,7 @@ func (c *TemporalWorkflowExecuteUpdateWithStartCommand) run(cctx *CommandContext
 	}
 
 	updateOpts := client.UpdateWorkflowOptions{
+		UpdateName:          c.UpdateName,
 		UpdateID:            c.UpdateId,
 		WorkflowID:          c.WorkflowId,
 		RunID:               c.RunId,
@@ -306,23 +319,21 @@ func (c *TemporalWorkflowExecuteUpdateWithStartCommand) run(cctx *CommandContext
 
 	cctx.Printer.Println(color.MagentaString("Running execution:"))
 	return cctx.Printer.PrintStructured(struct {
-		WorkflowId string      `json:"workflowId"`
-		RunId      string      `json:"runId"`
-		Type       string      `json:"type"`
-		Namespace  string      `json:"namespace"`
-		TaskQueue  string      `json:"taskQueue"`
-		UpdateName string      `json:"updateName"`
-		UpdateID   string      `json:"updateId"`
-		Result     interface{} `json:"result"`
+		WorkflowId   string      `json:"workflowId"`
+		RunId        string      `json:"runId"`
+		Type         string      `json:"type"`
+		Namespace    string      `json:"namespace"`
+		UpdateName   string      `json:"updateName"`
+		UpdateID     string      `json:"updateId"`
+		UpdateResult interface{} `json:"updateResult"`
 	}{
-		WorkflowId: c.WorkflowId,
-		RunId:      handle.RunID(),
-		Type:       c.Type,
-		Namespace:  c.Parent.Namespace,
-		TaskQueue:  c.TaskQueue,
-		UpdateName: c.UpdateName,
-		UpdateID:   c.UpdateId,
-		Result:     valuePtr,
+		WorkflowId:   c.WorkflowId,
+		RunId:        handle.RunID(),
+		Type:         c.Type,
+		Namespace:    c.Parent.Namespace,
+		UpdateName:   c.UpdateName,
+		UpdateID:     c.UpdateId,
+		UpdateResult: valuePtr,
 	}, printer.StructuredOptions{})
 }
 
@@ -336,6 +347,9 @@ func executeUpdateWithStartWorkflow(
 ) (client.WorkflowUpdateHandle, error) {
 	if sharedWfOpts.WorkflowId == "" {
 		return nil, fmt.Errorf("--workflow-id flag must be provided")
+	}
+	if wfStartOpts.IdConflictPolicy.Value == "" {
+		return nil, fmt.Errorf("--id-conflict-policy flag must be provided")
 	}
 	cl, err := clientOpts.dialClient(cctx)
 	if err != nil {
