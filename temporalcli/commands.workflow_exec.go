@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"reflect"
@@ -121,7 +122,7 @@ func (c *TemporalWorkflowSignalWithStartCommand) run(cctx *CommandContext, _ []s
 	signalPayloadInputOpts := PayloadInputOptions{
 		Input:       c.SignalInput,
 		InputFile:   c.SignalInputFile,
-		InputMeta:   c.InputMeta,
+		InputMeta:   c.SignalInputMeta,
 		InputBase64: c.SignalInputBase64,
 	}
 	signalInput, err := signalPayloadInputOpts.buildRawInputPayloads()
@@ -194,14 +195,189 @@ func (c *TemporalWorkflowSignalWithStartCommand) run(cctx *CommandContext, _ []s
 		RunId      string `json:"runId"`
 		Type       string `json:"type"`
 		Namespace  string `json:"namespace"`
-		TaskQueue  string `json:"taskQueue"`
 	}{
 		WorkflowId: c.WorkflowId,
 		RunId:      resp.RunId,
 		Type:       c.Type,
 		Namespace:  c.Parent.Namespace,
-		TaskQueue:  c.TaskQueue,
 	}, printer.StructuredOptions{})
+}
+
+func (c *TemporalWorkflowStartUpdateWithStartCommand) run(cctx *CommandContext, _ []string) error {
+	waitForStage := client.WorkflowUpdateStageUnspecified
+	switch c.UpdateWaitForStage.Value {
+	case "accepted":
+		waitForStage = client.WorkflowUpdateStageAccepted
+	}
+	if waitForStage != client.WorkflowUpdateStageAccepted {
+		return fmt.Errorf("invalid wait for stage: %v, valid values are: 'accepted'", c.UpdateWaitForStage)
+	}
+
+	updatePayloadInputOpts := PayloadInputOptions{
+		Input:       c.UpdateInput,
+		InputFile:   c.UpdateInputFile,
+		InputMeta:   c.UpdateInputMeta,
+		InputBase64: c.UpdateInputBase64,
+	}
+	updateInput, err := updatePayloadInputOpts.buildRawInput()
+	if err != nil {
+		return err
+	}
+	updateOpts := client.UpdateWorkflowOptions{
+		UpdateID:            c.UpdateId,
+		WorkflowID:          c.WorkflowId,
+		RunID:               c.RunId,
+		UpdateName:          c.UpdateName,
+		Args:                updateInput,
+		WaitForStage:        waitForStage,
+		FirstExecutionRunID: c.UpdateFirstExecutionRunId,
+	}
+
+	handle, err := executeUpdateWithStartWorkflow(
+		cctx,
+		c.Parent.ClientOptions,
+		c.SharedWorkflowStartOptions,
+		c.WorkflowStartOptions,
+		c.PayloadInputOptions,
+		updateOpts,
+	)
+	if err != nil {
+		return err
+	}
+
+	// Currently we only accept 'accepted' as a valid wait for stage value, but we intend
+	// to support more in the future.
+	if waitForStage == client.WorkflowUpdateStageAccepted {
+		// Use a canceled context to check whether the initial server response
+		// shows that the update has _already_ failed, without issuing a second request.
+		ctx, cancel := context.WithCancel(cctx)
+		cancel()
+		err = handle.Get(ctx, nil)
+		var timeoutOrCanceledErr *client.WorkflowUpdateServiceTimeoutOrCanceledError
+		if err != nil && !errors.As(err, &timeoutOrCanceledErr) {
+			return fmt.Errorf("unable to update workflow: %w", err)
+		}
+	}
+
+	cctx.Printer.Println(color.MagentaString("Running execution:"))
+	return cctx.Printer.PrintStructured(struct {
+		WorkflowId string `json:"workflowId"`
+		RunId      string `json:"runId"`
+		Type       string `json:"type"`
+		Namespace  string `json:"namespace"`
+		UpdateName string `json:"updateName"`
+		UpdateID   string `json:"updateId"`
+	}{
+		WorkflowId: c.WorkflowId,
+		RunId:      handle.RunID(),
+		Type:       c.Type,
+		Namespace:  c.Parent.Namespace,
+		UpdateName: c.UpdateName,
+		UpdateID:   handle.UpdateID(),
+	}, printer.StructuredOptions{})
+}
+
+func (c *TemporalWorkflowExecuteUpdateWithStartCommand) run(cctx *CommandContext, _ []string) error {
+	updatePayloadInputOpts := PayloadInputOptions{
+		Input:       c.UpdateInput,
+		InputFile:   c.UpdateInputFile,
+		InputMeta:   c.UpdateInputMeta,
+		InputBase64: c.UpdateInputBase64,
+	}
+	updateInput, err := updatePayloadInputOpts.buildRawInput()
+	if err != nil {
+		return err
+	}
+
+	updateOpts := client.UpdateWorkflowOptions{
+		UpdateName:          c.UpdateName,
+		UpdateID:            c.UpdateId,
+		WorkflowID:          c.WorkflowId,
+		RunID:               c.RunId,
+		Args:                updateInput,
+		WaitForStage:        client.WorkflowUpdateStageCompleted,
+		FirstExecutionRunID: c.UpdateFirstExecutionRunId,
+	}
+
+	handle, err := executeUpdateWithStartWorkflow(
+		cctx,
+		c.Parent.ClientOptions,
+		c.SharedWorkflowStartOptions,
+		c.WorkflowStartOptions,
+		c.PayloadInputOptions,
+		updateOpts,
+	)
+	if err != nil {
+		return err
+	}
+
+	var valuePtr interface{}
+	err = handle.Get(cctx, &valuePtr)
+	if err != nil {
+		return fmt.Errorf("unable to update workflow: %w", err)
+	}
+
+	cctx.Printer.Println(color.MagentaString("Running execution:"))
+	return cctx.Printer.PrintStructured(struct {
+		WorkflowId   string      `json:"workflowId"`
+		RunId        string      `json:"runId"`
+		Type         string      `json:"type"`
+		Namespace    string      `json:"namespace"`
+		UpdateName   string      `json:"updateName"`
+		UpdateID     string      `json:"updateId"`
+		UpdateResult interface{} `json:"updateResult"`
+	}{
+		WorkflowId:   c.WorkflowId,
+		RunId:        handle.RunID(),
+		Type:         c.Type,
+		Namespace:    c.Parent.Namespace,
+		UpdateName:   c.UpdateName,
+		UpdateID:     c.UpdateId,
+		UpdateResult: valuePtr,
+	}, printer.StructuredOptions{})
+}
+
+func executeUpdateWithStartWorkflow(
+	cctx *CommandContext,
+	clientOpts ClientOptions,
+	sharedWfOpts SharedWorkflowStartOptions,
+	wfStartOpts WorkflowStartOptions,
+	wfInputOpts PayloadInputOptions,
+	updateWfOpts client.UpdateWorkflowOptions,
+) (client.WorkflowUpdateHandle, error) {
+	if sharedWfOpts.WorkflowId == "" {
+		return nil, fmt.Errorf("--workflow-id flag must be provided")
+	}
+	if wfStartOpts.IdConflictPolicy.Value == "" {
+		return nil, fmt.Errorf("--id-conflict-policy flag must be provided")
+	}
+	cl, err := clientOpts.dialClient(cctx)
+	if err != nil {
+		return nil, err
+	}
+	defer cl.Close()
+
+	clStartWfOpts, err := buildStartOptions(&sharedWfOpts, &wfStartOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	wfArgs, err := wfInputOpts.buildRawInput()
+	if err != nil {
+		return nil, err
+	}
+
+	startOp := cl.NewWithStartWorkflowOperation(
+		clStartWfOpts,
+		sharedWfOpts.Type,
+		wfArgs...,
+	)
+
+	// Execute the update with start operation
+	return cl.UpdateWithStartWorkflow(cctx, client.UpdateWithStartWorkflowOptions{
+		StartWorkflowOperation: startOp,
+		UpdateOptions:          updateWfOpts,
+	})
 }
 
 type workflowJSONResult struct {
