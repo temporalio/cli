@@ -60,7 +60,7 @@ func searchAttributeTypeStringToEnum(search string) (enums.IndexedValueType, err
 			return enums.IndexedValueType(v), nil
 		}
 	}
-	return enums.INDEXED_VALUE_TYPE_UNSPECIFIED, fmt.Errorf("unsupported search attribute type: %v", search)
+	return enums.INDEXED_VALUE_TYPE_UNSPECIFIED, fmt.Errorf("unsupported search attribute type: \"%v\"", search)
 }
 
 func (c *TemporalOperatorSearchAttributeRemoveCommand) run(cctx *CommandContext, args []string) error {
