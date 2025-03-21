@@ -128,6 +128,7 @@ func (h *CommandHarness) Eventually(
 	tick time.Duration,
 	msgAndArgs ...interface{},
 ) {
+	h.t.Helper()
 	// We cannot use require.Eventually because it was poorly developed to run the
 	// condition function in a goroutine which means it can run after complete or
 	// have other race conditions. Don't even need a complicated ticker because it
@@ -216,6 +217,11 @@ func (s *SharedServerSuite) SetupSuite() {
 				// Allow a high rate of change to namespaces, particularly
 				// for the task-queue command tests.
 				"frontend.namespaceRPS.visibility": 10000,
+				// Disable DescribeTaskQueue cache.
+				"frontend.activityAPIsEnabled": true,
+				// this is overridden since we don't want caching to be enabled
+				// while testing DescribeTaskQueue behaviour related to versioning
+				"matching.TaskQueueInfoByBuildIdTTL": 0 * time.Second,
 			},
 		},
 	})
@@ -364,9 +370,10 @@ func StartDevServer(t *testing.T, options DevServerOptions) *DevServer {
 	d.Options.DynamicConfigValues["frontend.workerVersioningRuleAPIs"] = true
 	d.Options.DynamicConfigValues["frontend.workerVersioningDataAPIs"] = true
 	d.Options.DynamicConfigValues["frontend.workerVersioningWorkflowAPIs"] = true
+	d.Options.DynamicConfigValues["system.enableDeployments"] = true
+	d.Options.DynamicConfigValues["system.enableDeploymentVersions"] = true
 	d.Options.DynamicConfigValues["worker.buildIdScavengerEnabled"] = true
 	d.Options.DynamicConfigValues["frontend.enableUpdateWorkflowExecution"] = true
-	d.Options.DynamicConfigValues["system.enableNexus"] = true
 	d.Options.DynamicConfigValues["frontend.MaxConcurrentBatchOperationPerNamespace"] = 1000
 	d.Options.DynamicConfigValues["frontend.namespaceRPS.visibility"] = 100
 	d.Options.DynamicConfigValues["system.clusterMetadataRefreshInterval"] = 100 * time.Millisecond

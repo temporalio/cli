@@ -134,6 +134,58 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 		HistorySize:          info.HistorySizeBytes,
 	}, printer.StructuredOptions{})
 
+	extendedInfo := resp.WorkflowExtendedInfo
+	if extendedInfo != nil {
+		cctx.Printer.Println(color.MagentaString("Extended Execution Info:"))
+		_ = cctx.Printer.PrintStructured(struct {
+			CancelRequested         bool
+			ExecutionExpirationTime time.Time `cli:",cardOmitEmpty"`
+			RunExpirationTime       time.Time `cli:",cardOmitEmpty"`
+			LastResetTime           time.Time `cli:",cardOmitEmpty"`
+			OriginalStartTime       time.Time `cli:",cardOmitEmpty"`
+		}{
+			CancelRequested:         extendedInfo.CancelRequested,
+			ExecutionExpirationTime: timestampToTime(extendedInfo.ExecutionExpirationTime),
+			RunExpirationTime:       timestampToTime(extendedInfo.RunExpirationTime),
+			LastResetTime:           timestampToTime(extendedInfo.LastResetTime),
+			OriginalStartTime:       timestampToTime(extendedInfo.OriginalStartTime),
+		}, printer.StructuredOptions{})
+	}
+
+	staticSummary := resp.GetExecutionConfig().GetUserMetadata().GetSummary()
+	staticDetails := resp.GetExecutionConfig().GetUserMetadata().GetDetails()
+	if len(staticSummary.GetData()) > 0 || len(staticDetails.GetData()) > 0 {
+		cctx.Printer.Println()
+		cctx.Printer.Println(color.MagentaString("Metadata:"))
+		_ = cctx.Printer.PrintStructured(struct {
+			StaticSummary *common.Payload
+			StaticDetails *common.Payload
+		}{
+			StaticSummary: staticSummary,
+			StaticDetails: staticDetails,
+		}, printer.StructuredOptions{})
+	}
+
+	if info.VersioningInfo != nil {
+		cctx.Printer.Println()
+		cctx.Printer.Println(color.MagentaString("Versioning Info:"))
+		cctx.Printer.Println()
+		vInfo := info.VersioningInfo
+		_ = cctx.Printer.PrintStructured(struct {
+			Behavior              string
+			Version               string
+			OverrideBehavior      string `cli:",cardOmitEmpty"`
+			OverridePinnedVersion string `cli:",cardOmitEmpty"`
+			TransitionVersion     string `cli:",cardOmitEmpty"`
+		}{
+			Behavior:              vInfo.Behavior.String(),
+			Version:               vInfo.GetVersion(),
+			OverrideBehavior:      vInfo.VersioningOverride.GetBehavior().String(),
+			OverridePinnedVersion: vInfo.VersioningOverride.GetPinnedVersion(),
+			TransitionVersion:     vInfo.VersionTransition.GetVersion(),
+		}, printer.StructuredOptions{})
+	}
+
 	if len(resp.Callbacks) > 0 {
 		cctx.Printer.Println()
 		cctx.Printer.Println(color.MagentaString("Callbacks: %v", len(resp.Callbacks)))
@@ -147,6 +199,7 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 			NextAttemptScheduleTime time.Time        `cli:",cardOmitEmpty"`
 			LastAttemptCompleteTime time.Time        `cli:",cardOmitEmpty"`
 			LastAttemptFailure      *failure.Failure `cli:",cardOmitEmpty"`
+			BlockedReason           string           `cli:",cardOmitEmpty"`
 		}, len(resp.Callbacks))
 		for i, cb := range resp.Callbacks {
 			cbs[i].URL = cb.GetCallback().GetNexus().GetUrl()
@@ -160,6 +213,7 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 			if cb.GetTrigger().GetWorkflowClosed() != nil {
 				cbs[i].Trigger = "WorkflowClosed"
 			}
+			cbs[i].BlockedReason = cb.GetBlockedReason()
 		}
 		_ = cctx.Printer.PrintStructured(cbs, printer.StructuredOptions{})
 		cctx.Printer.Println()
@@ -215,37 +269,44 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 				Endpoint                           string
 				Service                            string
 				Operation                          string
-				OperationID                        string
+				OperationToken                     string
 				State                              enums.PendingNexusOperationState
 				Attempt                            int32
 				ScheduleToCloseTimeout             string                                `cli:",cardOmitEmpty"`
 				NextAttemptScheduleTime            time.Time                             `cli:",cardOmitEmpty"`
 				LastAttemptCompleteTime            time.Time                             `cli:",cardOmitEmpty"`
 				LastAttemptFailure                 *failure.Failure                      `cli:",cardOmitEmpty"`
+				BlockedReason                      string                                `cli:",cardOmitEmpty"`
 				CancelationState                   enums.NexusOperationCancellationState `cli:",cardOmitEmpty"`
 				CancelationAttempt                 int32                                 `cli:",cardOmitEmpty"`
 				CancelationRequestedTime           time.Time                             `cli:",cardOmitEmpty"`
 				CancelationNextAttemptScheduleTime time.Time                             `cli:",cardOmitEmpty"`
 				CancelationLastAttemptCompleteTime time.Time                             `cli:",cardOmitEmpty"`
 				CancelationLastAttemptFailure      *failure.Failure                      `cli:",cardOmitEmpty"`
+				CancelationBlockedReason           string                                `cli:",cardOmitEmpty"`
 			}, len(resp.PendingNexusOperations))
 			for i, op := range resp.PendingNexusOperations {
 				ops[i].Endpoint = op.GetEndpoint()
 				ops[i].Service = op.GetService()
 				ops[i].Operation = op.GetOperation()
-				ops[i].OperationID = op.GetOperationId()
+				ops[i].OperationToken = op.GetOperationToken()
+				if ops[i].OperationToken == "" {
+					ops[i].OperationToken = op.GetOperationId()
+				}
 				ops[i].State = op.GetState()
 				ops[i].Attempt = op.GetAttempt()
 				ops[i].LastAttemptFailure = op.LastAttemptFailure
 				ops[i].LastAttemptCompleteTime = timestampToTime(op.LastAttemptCompleteTime)
 				ops[i].NextAttemptScheduleTime = timestampToTime(op.NextAttemptScheduleTime)
 				ops[i].ScheduleToCloseTimeout = formatDuration(op.GetScheduleToCloseTimeout().AsDuration())
+				ops[i].BlockedReason = op.GetBlockedReason()
 				ops[i].CancelationState = op.GetCancellationInfo().GetState()
 				ops[i].CancelationAttempt = op.GetCancellationInfo().GetAttempt()
 				ops[i].CancelationLastAttemptFailure = op.GetCancellationInfo().GetLastAttemptFailure()
 				ops[i].CancelationLastAttemptCompleteTime = timestampToTime(op.GetCancellationInfo().GetLastAttemptCompleteTime())
 				ops[i].CancelationNextAttemptScheduleTime = timestampToTime(op.GetCancellationInfo().GetNextAttemptScheduleTime())
 				ops[i].CancelationRequestedTime = timestampToTime(op.GetCancellationInfo().GetRequestedTime())
+				ops[i].CancelationBlockedReason = op.GetCancellationInfo().GetBlockedReason()
 			}
 			_ = cctx.Printer.PrintStructured(ops, printer.StructuredOptions{})
 			cctx.Printer.Println()
@@ -274,9 +335,7 @@ func (c *TemporalWorkflowListCommand) run(cctx *CommandContext, _ []string) erro
 	cctx.Printer.StartList()
 	defer cctx.Printer.EndList()
 
-	// Build request and start looping. We always use default page size regardless
-	// of user-defined limit, because we're ok w/ extra page data and the default
-	// is not clearly defined.
+	// Build request and start looping.
 	pageFetcher := c.pageFetcher(cctx, cl)
 	var nextPageToken []byte
 	var execsProcessed int
@@ -328,16 +387,22 @@ func (c *TemporalWorkflowListCommand) pageFetcher(
 	cctx *CommandContext,
 	cl client.Client,
 ) func(next []byte) (workflowPage, error) {
+
+	if c.Limit > 0 && c.Limit < c.PageSize {
+		c.PageSize = c.Limit
+	}
 	return func(next []byte) (workflowPage, error) {
 		if c.Archived {
 			return cl.ListArchivedWorkflow(cctx, &workflowservice.ListArchivedWorkflowExecutionsRequest{
 				Query:         c.Query,
 				NextPageToken: next,
+				PageSize:      int32(c.PageSize),
 			})
 		}
 		return cl.ListWorkflow(cctx, &workflowservice.ListWorkflowExecutionsRequest{
 			Query:         c.Query,
 			NextPageToken: next,
+			PageSize:      int32(c.PageSize),
 		})
 	}
 }

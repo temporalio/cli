@@ -38,6 +38,7 @@ import (
 	uiserver "github.com/temporalio/ui-server/v2/server"
 	uiconfig "github.com/temporalio/ui-server/v2/server/config"
 	uiserveroptions "github.com/temporalio/ui-server/v2/server/server_options"
+	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/server/common/authorization"
 	"go.temporal.io/server/common/cluster"
 	"go.temporal.io/server/common/config"
@@ -84,6 +85,7 @@ type StartOptions struct {
 	FrontendHTTPPort      int
 	EnableGlobalNamespace bool
 	DynamicConfigValues   map[string]any
+	SearchAttributes      map[string]enums.IndexedValueType
 	LogConfig             func([]byte)
 	GRPCInterceptors      []grpc.UnaryServerInterceptor
 }
@@ -113,6 +115,10 @@ func Start(options StartOptions) (*Server, error) {
 		return nil, fmt.Errorf("missing current cluster name")
 	} else if options.InitialFailoverVersion == 0 {
 		return nil, fmt.Errorf("missing initial failover version")
+	}
+
+	if options.FrontendHTTPPort == 0 {
+		options.FrontendHTTPPort = MustGetFreePort(options.FrontendIP)
 	}
 
 	// Build servers
@@ -225,7 +231,6 @@ func (s *StartOptions) buildServerOptions() ([]temporal.ServerOption, error) {
 	dynConf[dynamicconfig.HistoryCacheHostLevelMaxSize.Key()] = 8096
 	// Up default visibility RPS
 	dynConf[dynamicconfig.FrontendMaxNamespaceVisibilityRPSPerInstance.Key()] = 100
-	// This doesn't enable Nexus but it is required for Nexus to work and simplifies the experience.
 	// NOTE that the URL scheme is fixed to HTTP since the dev server doesn't support TLS at the time of writing.
 	dynConf[nexusoperations.CallbackURLTemplate.Key()] = fmt.Sprintf(
 		"http://%s:%d/namespaces/{{.NamespaceName}}/nexus/callback", MaybeEscapeIPv6(s.FrontendIP), s.FrontendHTTPPort)
@@ -340,7 +345,11 @@ func (s *StartOptions) buildSQLConfig() (*config.SQL, error) {
 	// Create namespaces
 	namespaces := make([]*sqliteschema.NamespaceConfig, len(s.Namespaces))
 	for i, ns := range s.Namespaces {
-		namespaces[i] = sqlite.NewNamespaceConfig(s.CurrentClusterName, ns, false)
+		nsConfig, err := sqlite.NewNamespaceConfig(s.CurrentClusterName, ns, false, s.SearchAttributes)
+		if err != nil {
+			return nil, fmt.Errorf("failed creating namespace config: %w", err)
+		}
+		namespaces[i] = nsConfig
 	}
 	if err := sqliteschema.CreateNamespaces(&conf, namespaces...); err != nil {
 		return nil, fmt.Errorf("failed creating namespaces: %w", err)
@@ -353,9 +362,7 @@ func (s *StartOptions) buildServiceConfig(frontend bool) config.Service {
 	if frontend {
 		conf.RPC.GRPCPort = s.FrontendPort
 		conf.RPC.BindOnIP = s.FrontendIP
-		if s.FrontendHTTPPort > 0 {
-			conf.RPC.HTTPPort = s.FrontendHTTPPort
-		}
+		conf.RPC.HTTPPort = s.FrontendHTTPPort
 	} else {
 		conf.RPC.GRPCPort = MustGetFreePort(s.FrontendIP)
 		conf.RPC.BindOnIP = s.FrontendIP

@@ -21,7 +21,7 @@ func run() error {
 	_, file, _, _ := runtime.Caller(0)
 	commandsDir := filepath.Join(file, "../../../../")
 
-	// Parse markdown
+	// Parse YAML
 	cmds, err := commandsgen.ParseCommands()
 	if err != nil {
 		return fmt.Errorf("failed parsing markdown: %w", err)

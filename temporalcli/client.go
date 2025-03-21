@@ -39,20 +39,25 @@ func (c *ClientOptions) dialClient(cctx *CommandContext) (client.Client, error) 
 
 	// Headers
 	if len(c.GrpcMeta) > 0 {
-		headers := make(stringMapHeadersProvider, len(c.GrpcMeta))
-		for _, kv := range c.GrpcMeta {
-			pieces := strings.SplitN(kv, "=", 2)
-			if len(pieces) != 2 {
-				return nil, fmt.Errorf("gRPC meta of %q does not have '='", kv)
-			}
-			headers[pieces[0]] = pieces[1]
+		headers, err := NewStringMapHeaderProvider(c.GrpcMeta)
+		if err != nil {
+			return nil, fmt.Errorf("grpc-meta %s", err)
 		}
 		clientOptions.HeadersProvider = headers
 	}
 
 	// Remote codec
 	if c.CodecEndpoint != "" {
-		interceptor, err := payloadCodecInterceptor(c.Namespace, c.CodecEndpoint, c.CodecAuth)
+		codecHeaders, err := NewStringMapHeaderProvider(c.CodecHeader)
+		if err != nil {
+			return nil, fmt.Errorf("codec-header %s", err)
+		}
+
+		if c.CodecAuth != "" {
+			codecHeaders["Authorization"] = c.CodecAuth
+		}
+
+		interceptor, err := payloadCodecInterceptor(c.Namespace, c.CodecEndpoint, codecHeaders)
 		if err != nil {
 			return nil, fmt.Errorf("failed creating payload codec interceptor: %w", err)
 		}
@@ -145,7 +150,7 @@ func fixedHeaderOverrideInterceptor(
 	return invoker(ctx, method, req, reply, cc, opts...)
 }
 
-func payloadCodecInterceptor(namespace, codecEndpoint, codecAuth string) (grpc.UnaryClientInterceptor, error) {
+func payloadCodecInterceptor(namespace, codecEndpoint string, codecHeaders stringMapHeadersProvider) (grpc.UnaryClientInterceptor, error) {
 	codecEndpoint = strings.ReplaceAll(codecEndpoint, "{namespace}", namespace)
 
 	payloadCodec := converter.NewRemotePayloadCodec(
@@ -153,8 +158,8 @@ func payloadCodecInterceptor(namespace, codecEndpoint, codecAuth string) (grpc.U
 			Endpoint: codecEndpoint,
 			ModifyRequest: func(req *http.Request) error {
 				req.Header.Set("X-Namespace", namespace)
-				if codecAuth != "" {
-					req.Header.Set("Authorization", codecAuth)
+				for headerName, headerValue := range codecHeaders {
+					req.Header.Set(headerName, headerValue)
 				}
 				return nil
 			},
@@ -183,6 +188,18 @@ type stringMapHeadersProvider map[string]string
 
 func (s stringMapHeadersProvider) GetHeaders(context.Context) (map[string]string, error) {
 	return s, nil
+}
+
+func NewStringMapHeaderProvider(config []string) (stringMapHeadersProvider, error) {
+	headers := make(stringMapHeadersProvider, len(config))
+	for _, kv := range config {
+		pieces := strings.SplitN(kv, "=", 2)
+		if len(pieces) != 2 {
+			return nil, fmt.Errorf("%q does not have '='", kv)
+		}
+		headers[pieces[0]] = pieces[1]
+	}
+	return headers, nil
 }
 
 var DataConverterWithRawValue = converter.NewCompositeDataConverter(

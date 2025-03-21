@@ -11,9 +11,12 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/temporalio/cli/temporalcli"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
 	"google.golang.org/grpc"
 )
@@ -371,6 +374,11 @@ func (s *SharedServerSuite) testTerminateBatchWorkflow(
 	res := s.Execute(args...)
 	s.NoError(res.Err)
 
+	// Wait for batch job to complete.
+	listRes := s.Execute("batch", "list", "--address", s.Address())
+	s.NoError(listRes.Err)
+	s.Contains(listRes.Stdout.String(), "Completed")
+
 	// Confirm that all workflows are terminated
 	for _, run := range runs {
 		s.Contains(run.Get(s.Context, nil).Error(), "terminated")
@@ -416,6 +424,229 @@ func (s *SharedServerSuite) TestWorkflow_Cancel_SingleWorkflowSuccess() {
 
 	// Confirm workflow was cancelled
 	s.Error(workflow.ErrCanceled, run.Get(s.Context, nil))
+}
+
+func (s *SharedServerSuite) TestWorkflow_Batch_Update_Options_Versioning_Override() {
+	buildId1 := uuid.NewString()
+	buildId2 := uuid.NewString()
+	deploymentName := uuid.NewString()
+	version1 := deploymentName + "." + buildId1
+	version2 := deploymentName + "." + buildId2
+	// Workflow that waits to be canceled.
+	waitingWorkflow := func(ctx workflow.Context) error {
+		ctx.Done().Receive(ctx, nil)
+		return ctx.Err()
+	}
+	w := s.DevServer.StartDevWorker(s.Suite.T(), DevWorkerOptions{
+		Worker: worker.Options{
+			DeploymentOptions: worker.DeploymentOptions{
+				UseVersioning:             true,
+				Version:                   version1,
+				DefaultVersioningBehavior: workflow.VersioningBehaviorPinned,
+			},
+		},
+		Workflows: []any{waitingWorkflow},
+	})
+	defer w.Stop()
+
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "list",
+			"--address", s.Address(),
+		)
+		assert.NoError(t, res.Err)
+		assert.Contains(t, res.Stdout.String(), deploymentName)
+	}, 30*time.Second, 100*time.Millisecond)
+
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "describe-version",
+			"--address", s.Address(),
+			"--version", version1,
+		)
+		assert.NoError(t, res.Err)
+	}, 30*time.Second, 100*time.Millisecond)
+
+	res := s.Execute(
+		"worker", "deployment", "set-current-version",
+		"--address", s.Address(),
+		"--version", version1,
+		"--yes",
+	)
+	s.NoError(res.Err)
+
+	// Start workflows
+	numWorkflows := 5
+	runs := make([]client.WorkflowRun, numWorkflows)
+	searchAttr := "keyword-" + uuid.NewString()
+	for i := range runs {
+		run, err := s.Client.ExecuteWorkflow(
+			s.Context,
+			client.StartWorkflowOptions{
+				TaskQueue:        w.Options.TaskQueue,
+				SearchAttributes: map[string]any{"CustomKeywordField": searchAttr},
+			},
+			waitingWorkflow,
+		)
+		s.NoError(err)
+		runs[i] = run
+	}
+
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		for _, run := range runs {
+			res = s.Execute(
+				"workflow", "describe",
+				"--address", s.Address(),
+				"-w", run.GetID(),
+			)
+			assert.NoError(t, res.Err)
+			assert.Contains(t, res.Stdout.String(), version1)
+			assert.Contains(t, res.Stdout.String(), "Pinned")
+		}
+	}, 30*time.Second, 100*time.Millisecond)
+
+	s.CommandHarness.Stdin.WriteString("y\n")
+	res = s.Execute(
+		"workflow", "update-options",
+		"--address", s.Address(),
+		"--query", "CustomKeywordField = '"+searchAttr+"'",
+		"--versioning-override-behavior", "pinned",
+		"--versioning-override-pinned-version", version2,
+	)
+	s.NoError(res.Err)
+
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		for _, run := range runs {
+			// json
+			res = s.Execute(
+				"workflow", "describe",
+				"--address", s.Address(),
+				"-w", run.GetID(),
+				"--output", "json",
+			)
+			assert.NoError(t, res.Err)
+
+			var jsonResp workflowservice.DescribeWorkflowExecutionResponse
+			assert.NoError(t, temporalcli.UnmarshalProtoJSONWithOptions(res.Stdout.Bytes(), &jsonResp, true))
+
+			versioningInfo := jsonResp.GetWorkflowExecutionInfo().GetVersioningInfo()
+			assert.NotNil(t, versioningInfo)
+			assert.NotNil(t, versioningInfo.VersioningOverride)
+			assert.Equal(t, version2, versioningInfo.VersioningOverride.PinnedVersion)
+		}
+	}, 30*time.Second, 100*time.Millisecond)
+}
+
+func (s *SharedServerSuite) TestWorkflow_Update_Options_Versioning_Override() {
+	buildId1 := uuid.NewString()
+	buildId2 := uuid.NewString()
+	deploymentName := uuid.NewString()
+	version1 := deploymentName + "." + buildId1
+	version2 := deploymentName + "." + buildId2
+
+	// Workflow that waits to be canceled.
+	waitingWorkflow := func(ctx workflow.Context) error {
+		ctx.Done().Receive(ctx, nil)
+		return ctx.Err()
+	}
+	w := s.DevServer.StartDevWorker(s.Suite.T(), DevWorkerOptions{
+		Worker: worker.Options{
+			DeploymentOptions: worker.DeploymentOptions{
+				UseVersioning:             true,
+				Version:                   version1,
+				DefaultVersioningBehavior: workflow.VersioningBehaviorPinned,
+			},
+		},
+		Workflows: []any{waitingWorkflow},
+	})
+	defer w.Stop()
+
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "list",
+			"--address", s.Address(),
+		)
+		assert.NoError(t, res.Err)
+		assert.Contains(t, res.Stdout.String(), deploymentName)
+	}, 30*time.Second, 100*time.Millisecond)
+
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "describe-version",
+			"--address", s.Address(),
+			"--version", version1,
+		)
+		assert.NoError(t, res.Err)
+	}, 30*time.Second, 100*time.Millisecond)
+
+	res := s.Execute(
+		"worker", "deployment", "set-current-version",
+		"--address", s.Address(),
+		"--version", version1,
+		"--yes",
+	)
+	s.NoError(res.Err)
+
+	// Start the workflow and wait until the operation is started.
+	run, err := s.Client.ExecuteWorkflow(
+		s.Context,
+		client.StartWorkflowOptions{TaskQueue: w.Options.TaskQueue},
+		waitingWorkflow,
+	)
+	s.NoError(err)
+
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res = s.Execute(
+			"workflow", "describe",
+			"--address", s.Address(),
+			"-w", run.GetID(),
+		)
+		assert.NoError(t, res.Err)
+		assert.Contains(t, res.Stdout.String(), version1)
+		assert.Contains(t, res.Stdout.String(), "Pinned")
+	}, 30*time.Second, 100*time.Millisecond)
+
+	res = s.Execute(
+		"workflow", "update-options",
+		"--address", s.Address(),
+		"-w", run.GetID(),
+		"--versioning-override-behavior", "pinned",
+		"--versioning-override-pinned-version", version2,
+	)
+	s.NoError(res.Err)
+
+	res = s.Execute(
+		"workflow", "describe",
+		"--address", s.Address(),
+		"-w", run.GetID(),
+	)
+	s.NoError(res.Err)
+
+	s.ContainsOnSameLine(res.Stdout.String(), "OverrideBehavior", "Pinned")
+	s.ContainsOnSameLine(res.Stdout.String(), "OverridePinnedVersion", version2)
+
+	// remove override
+	res = s.Execute(
+		"workflow", "update-options",
+		"--address", s.Address(),
+		"-w", run.GetID(),
+		"--versioning-override-behavior", "unspecified",
+	)
+	s.NoError(res.Err)
+
+	// json
+	res = s.Execute(
+		"workflow", "describe",
+		"--address", s.Address(),
+		"-w", run.GetID(),
+		"--output", "json",
+	)
+	s.NoError(res.Err)
+
+	var jsonResp workflowservice.DescribeWorkflowExecutionResponse
+	s.NoError(temporalcli.UnmarshalProtoJSONWithOptions(res.Stdout.Bytes(), &jsonResp, true))
+	versioningInfo := jsonResp.WorkflowExecutionInfo.VersioningInfo
+	s.Nil(versioningInfo.VersioningOverride)
 }
 
 func (s *SharedServerSuite) TestWorkflow_Update_Execute() {
@@ -949,6 +1180,99 @@ func (s *SharedServerSuite) testStackWorkflow(json bool) {
 	// Ensure query is rejected when using not open rejection condition
 	args = []string{
 		"workflow", "stack",
+		"--address", s.Address(),
+		"-w", run.GetID(),
+		"--reject-condition", "not_open",
+	}
+	if json {
+		args = append(args, "-o", "json")
+	}
+	res = s.Execute(args...)
+	s.Error(res.Err)
+	s.Contains(res.Err.Error(), "query was rejected, workflow has status: Completed")
+}
+
+func (s *SharedServerSuite) TestWorkflow_MetadataJSON() {
+	s.testWorkflowMetadata(true)
+}
+
+func (s *SharedServerSuite) TestWorkflow_Metadata() {
+	s.testWorkflowMetadata(false)
+}
+
+func (s *SharedServerSuite) testWorkflowMetadata(json bool) {
+	// Make workflow wait for signal and then return it
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
+		done := false
+		workflow.Go(ctx, func(ctx workflow.Context) {
+			_ = workflow.Await(ctx, func() bool {
+				return done
+			})
+		})
+		workflow.SetQueryHandlerWithOptions(ctx, "my-query", func(arg string) (string, error) {
+			return "hi", nil
+		}, workflow.QueryHandlerOptions{Description: "q-desc"})
+		workflow.SetUpdateHandlerWithOptions(ctx, "my-update",
+			func(ctx workflow.Context, arg string) (string, error) { return "hi", nil },
+			workflow.UpdateHandlerOptions{Description: "upd-desc"})
+		workflow.SetCurrentDetails(ctx, "current-deets")
+		workflow.GetSignalChannelWithOptions(ctx, "my-signal",
+			workflow.SignalChannelOptions{Description: "sig-desc"}).Receive(ctx, nil)
+		done = true
+		return nil, nil
+
+	})
+
+	// Start the workflow
+	run, err := s.Client.ExecuteWorkflow(
+		s.Context,
+		client.StartWorkflowOptions{
+			TaskQueue:     s.Worker().Options.TaskQueue,
+			StaticSummary: "summie",
+			StaticDetails: "deets",
+		},
+		DevWorkflow,
+		"ignored",
+	)
+	s.NoError(err)
+
+	args := []string{
+		"workflow", "metadata",
+		"--address", s.Address(),
+		"-w", run.GetID(),
+	}
+	if json {
+		args = append(args, "-o", "json")
+	}
+
+	res := s.Execute(args...)
+	s.NoError(res.Err)
+	if !json {
+		s.Contains(res.Stdout.String(), "Query Definitions:")
+		s.ContainsOnSameLine(res.Stdout.String(), "my-query", "q-desc")
+		s.Contains(res.Stdout.String(), "Signal Definitions:")
+		s.ContainsOnSameLine(res.Stdout.String(), "my-signal", "sig-desc")
+		s.Contains(res.Stdout.String(), "Update Definitions:")
+		s.ContainsOnSameLine(res.Stdout.String(), "my-update", "upd-desc")
+		s.Contains(res.Stdout.String(), "Current Details:")
+		s.Contains(res.Stdout.String(), "current-deets")
+	} else {
+		s.Contains(res.Stdout.String(), "queryDefinitions")
+		s.ContainsOnSameLine(res.Stdout.String(), "name", "my-query")
+		s.Contains(res.Stdout.String(), "signalDefinitions")
+		s.ContainsOnSameLine(res.Stdout.String(), "name", "my-signal")
+		s.Contains(res.Stdout.String(), "updateDefinitions")
+		s.ContainsOnSameLine(res.Stdout.String(), "name", "my-update")
+		s.ContainsOnSameLine(res.Stdout.String(), "currentDetails", "current-deets")
+	}
+
+	// Unblock the workflow with a signal
+	s.NoError(s.Client.SignalWorkflow(s.Context, run.GetID(), "", "my-signal", nil))
+	s.NoError(run.Get(s.Context, nil))
+
+	// Ensure query is rejected when using not open rejection condition
+	args = []string{
+		"workflow", "metadata",
 		"--address", s.Address(),
 		"-w", run.GetID(),
 		"--reject-condition", "not_open",

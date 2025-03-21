@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/nexus-rpc/sdk-go/nexus"
+	"github.com/stretchr/testify/assert"
 	"github.com/temporalio/cli/temporalcli"
 	"go.temporal.io/api/enums/v1"
 	nexuspb "go.temporal.io/api/nexus/v1"
@@ -21,6 +22,7 @@ import (
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/temporalnexus"
+	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
 )
 
@@ -440,10 +442,12 @@ func (s *SharedServerSuite) TestWorkflow_List() {
 		"workflow", "list",
 		"--address", s.Address(),
 		"--query", fmt.Sprintf(`TaskQueue="%s"`, s.Worker().Options.TaskQueue),
+		"--page-size", "1",
 	)
 	s.NoError(res.Err)
 	out := res.Stdout.String()
 	s.ContainsOnSameLine(out, "Completed", "DevWorkflow")
+	s.Equal(3, strings.Count(out, "DevWorkflow"))
 
 	// JSON
 	res = s.Execute(
@@ -544,6 +548,94 @@ func (s *SharedServerSuite) TestWorkflow_Count() {
 	s.Contains(out, `"count":"5"`)
 	s.Contains(out, `{"groupValues":["Running"],"count":"2"}`)
 	s.Contains(out, `{"groupValues":["Completed"],"count":"3"}`)
+}
+
+func (s *SharedServerSuite) TestWorkflow_Describe_Deployment() {
+	buildId := uuid.NewString()
+	deploymentName := uuid.NewString()
+	// Workflow that waits to be canceled.
+	waitingWorkflow := func(ctx workflow.Context) error {
+		ctx.Done().Receive(ctx, nil)
+		return ctx.Err()
+	}
+	version := deploymentName + "." + buildId
+	w := s.DevServer.StartDevWorker(s.Suite.T(), DevWorkerOptions{
+		Worker: worker.Options{
+			DeploymentOptions: worker.DeploymentOptions{
+				UseVersioning:             true,
+				Version:                   version,
+				DefaultVersioningBehavior: workflow.VersioningBehaviorPinned,
+			},
+		},
+		Workflows: []any{waitingWorkflow},
+	})
+	defer w.Stop()
+
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "list",
+			"--address", s.Address(),
+		)
+		assert.NoError(t, res.Err)
+		assert.Contains(t, res.Stdout.String(), deploymentName)
+	}, 30*time.Second, 100*time.Millisecond)
+
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "describe-version",
+			"--address", s.Address(),
+			"--version", version,
+		)
+		assert.NoError(t, res.Err)
+	}, 30*time.Second, 100*time.Millisecond)
+
+	res := s.Execute(
+		"worker", "deployment", "set-current-version",
+		"--address", s.Address(),
+		"--version", version,
+		"--yes",
+	)
+	s.NoError(res.Err)
+
+	// Start the workflow and wait until the operation is started.
+	run, err := s.Client.ExecuteWorkflow(
+		s.Context,
+		client.StartWorkflowOptions{TaskQueue: w.Options.TaskQueue},
+		waitingWorkflow,
+	)
+	s.NoError(err)
+
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res = s.Execute(
+			"workflow", "describe",
+			"--address", s.Address(),
+			"-w", run.GetID(),
+		)
+		assert.NoError(t, res.Err)
+		assert.Contains(t, res.Stdout.String(), version)
+		assert.Contains(t, res.Stdout.String(), "Pinned")
+	}, 30*time.Second, 100*time.Millisecond)
+
+	out := res.Stdout.String()
+	s.ContainsOnSameLine(out, "Behavior", "Pinned")
+	s.ContainsOnSameLine(out, "Version", version)
+	s.ContainsOnSameLine(out, "OverrideBehavior", "Unspecified")
+
+	// json
+	res = s.Execute(
+		"workflow", "describe",
+		"--address", s.Address(),
+		"-w", run.GetID(),
+		"--output", "json",
+	)
+	s.NoError(res.Err)
+
+	var jsonResp workflowservice.DescribeWorkflowExecutionResponse
+	s.NoError(temporalcli.UnmarshalProtoJSONWithOptions(res.Stdout.Bytes(), &jsonResp, true))
+	versioningInfo := jsonResp.WorkflowExecutionInfo.VersioningInfo
+	s.Equal("Pinned", versioningInfo.Behavior.String())
+	s.Equal(version, versioningInfo.Version)
+	s.Nil(versioningInfo.VersioningOverride)
 }
 
 func (s *SharedServerSuite) TestWorkflow_Describe_NexusOperationAndCallback() {
@@ -676,6 +768,99 @@ func (s *SharedServerSuite) TestWorkflow_Describe_NexusOperationAndCallback() {
 	s.Equal(enums.CALLBACK_STATE_SUCCEEDED, handlerDesc.Callbacks[0].State)
 }
 
+func (s *SharedServerSuite) TestWorkflow_Describe_NexusOperationBlocked() {
+	endpointName := validEndpointName(s.T())
+
+	// Call an unreachable operation from this workflow.
+	callerWorkflow := func(ctx workflow.Context) error {
+		client := workflow.NewNexusClient(endpointName, "test-service")
+		fut := client.ExecuteOperation(ctx, "test-op", nil, workflow.NexusOperationOptions{})
+		// Destination is unreachable, the future will never complete.
+		return fut.GetNexusOperationExecution().Get(ctx, nil)
+	}
+
+	w := s.DevServer.StartDevWorker(s.Suite.T(), DevWorkerOptions{
+		Workflows: []any{callerWorkflow},
+	})
+	defer w.Stop()
+
+	// Create an endpoint for this test.
+	_, err := s.Client.OperatorService().CreateNexusEndpoint(
+		s.Context,
+		&operatorservice.CreateNexusEndpointRequest{
+			Spec: &nexuspb.EndpointSpec{
+				Name: endpointName,
+				Target: &nexuspb.EndpointTarget{
+					Variant: &nexuspb.EndpointTarget_External_{
+						External: &nexuspb.EndpointTarget_External{
+							Url: "http://localhost:12345", // unreachable destination
+						},
+					},
+				},
+			},
+		},
+	)
+	s.NoError(err)
+
+	// Start the workflow and wait until the operation is started.
+	run, err := s.Client.ExecuteWorkflow(
+		s.Context,
+		client.StartWorkflowOptions{TaskQueue: w.Options.TaskQueue},
+		callerWorkflow,
+	)
+	s.NoError(err)
+
+	// Start another workflow so it will trigger the circuit breaker faster.
+	dummyRun, err := s.Client.ExecuteWorkflow(
+		s.Context,
+		client.StartWorkflowOptions{TaskQueue: w.Options.TaskQueue},
+		callerWorkflow,
+	)
+	s.NoError(err)
+
+	// Wait for the operation to be blocked
+	s.Eventually(func() bool {
+		resp, err := s.Client.DescribeWorkflowExecution(s.Context, run.GetID(), run.GetRunID())
+		s.NoError(err)
+		return len(resp.PendingNexusOperations) > 0 &&
+			resp.PendingNexusOperations[0].State == enums.PENDING_NEXUS_OPERATION_STATE_BLOCKED
+	}, 60*time.Second, 100*time.Millisecond)
+
+	// Operations - Text
+	res := s.Execute(
+		"workflow", "describe",
+		"--address", s.Address(),
+		"-w", run.GetID(),
+	)
+	s.NoError(res.Err)
+	out := res.Stdout.String()
+	s.ContainsOnSameLine(out, "WorkflowId", run.GetID())
+	s.Contains(out, "Pending Nexus Operations: 1")
+	s.ContainsOnSameLine(out, "Endpoint", endpointName)
+	s.ContainsOnSameLine(out, "Service", "test-service")
+	s.ContainsOnSameLine(out, "Operation", "test-op")
+	s.ContainsOnSameLine(out, "BlockedReason", "The circuit breaker is open.")
+
+	// Operations - JSON
+	res = s.Execute(
+		"workflow", "describe",
+		"--address", s.Address(),
+		"-w", run.GetID(),
+		"--output", "json",
+	)
+	s.NoError(res.Err)
+	var callerDesc workflowservice.DescribeWorkflowExecutionResponse
+	s.NoError(temporalcli.UnmarshalProtoJSONWithOptions(res.Stdout.Bytes(), &callerDesc, true))
+	s.Equal(endpointName, callerDesc.PendingNexusOperations[0].Endpoint)
+	s.Equal("test-service", callerDesc.PendingNexusOperations[0].Service)
+	s.Equal("test-op", callerDesc.PendingNexusOperations[0].Operation)
+	s.Equal(enums.PENDING_NEXUS_OPERATION_STATE_BLOCKED, callerDesc.PendingNexusOperations[0].State)
+	s.Equal("The circuit breaker is open.", callerDesc.PendingNexusOperations[0].BlockedReason)
+
+	s.NoError(s.Client.TerminateWorkflow(s.Context, run.GetID(), run.GetRunID(), ""))
+	s.NoError(s.Client.TerminateWorkflow(s.Context, dummyRun.GetID(), dummyRun.GetRunID(), ""))
+}
+
 func (s *SharedServerSuite) Test_WorkflowResult() {
 	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
 		sigs := 0
@@ -764,4 +949,47 @@ func (s *SharedServerSuite) Test_WorkflowResult() {
 	s.Contains(output, `"status": "FAILED"`)
 	s.Contains(output, `"message": "failed on purpose"`)
 	s.Contains(output, "workflowExecutionFailedEventAttributes")
+}
+
+func (s *SharedServerSuite) TestWorkflow_Describe_WorkflowMetadata() {
+	workflowId := uuid.NewString()
+
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
+		return map[string]string{"foo": "bar"}, nil
+	})
+
+	res := s.Execute(
+		"workflow", "start",
+		"--address", s.Address(),
+		"--task-queue", s.Worker().Options.TaskQueue,
+		"--type", "DevWorkflow",
+		"--workflow-id", workflowId,
+		"--static-summary", "summie",
+		"--static-details", "deets",
+	)
+	s.NoError(res.Err)
+
+	// Text
+	res = s.Execute(
+		"workflow", "describe",
+		"--address", s.Address(),
+		"-w", workflowId,
+	)
+	s.NoError(res.Err)
+	out := res.Stdout.String()
+	s.ContainsOnSameLine(out, "StaticSummary", "summie")
+	s.ContainsOnSameLine(out, "StaticDetails", "deets")
+
+	// JSON
+	res = s.Execute(
+		"workflow", "describe",
+		"-o", "json",
+		"--address", s.Address(),
+		"-w", workflowId,
+	)
+	s.NoError(res.Err)
+	var jsonOut workflowservice.DescribeWorkflowExecutionResponse
+	s.NoError(temporalcli.UnmarshalProtoJSONWithOptions(res.Stdout.Bytes(), &jsonOut, true))
+	s.NotNil(jsonOut.ExecutionConfig.UserMetadata.Summary)
+	s.NotNil(jsonOut.ExecutionConfig.UserMetadata.Details)
 }

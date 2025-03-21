@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"reflect"
@@ -12,12 +13,18 @@ import (
 	"time"
 
 	"github.com/fatih/color"
+	"github.com/google/uuid"
 	"github.com/temporalio/cli/temporalcli/internal/printer"
 	"go.temporal.io/api/common/v1"
+	commonpb "go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
+	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/history/v1"
+	taskqueuepb "go.temporal.io/api/taskqueue/v1"
 	"go.temporal.io/api/temporalproto"
+	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
+	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 func (c *TemporalWorkflowStartCommand) run(cctx *CommandContext, args []string) error {
@@ -90,6 +97,287 @@ func (c *TemporalWorkflowExecuteCommand) run(cctx *CommandContext, args []string
 		err = fmt.Errorf("workflow failed")
 	}
 	return err
+}
+
+func (c *TemporalWorkflowSignalWithStartCommand) run(cctx *CommandContext, _ []string) error {
+	if c.SharedWorkflowStartOptions.WorkflowId == "" {
+		return fmt.Errorf("--workflow-id flag must be provided")
+	}
+
+	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	wfStartOpts, err := buildStartOptions(&c.SharedWorkflowStartOptions, &c.WorkflowStartOptions)
+	if err != nil {
+		return err
+	}
+	wfInput, err := c.buildRawInputPayloads()
+	if err != nil {
+		return err
+	}
+
+	signalPayloadInputOpts := PayloadInputOptions{
+		Input:       c.SignalInput,
+		InputFile:   c.SignalInputFile,
+		InputMeta:   c.SignalInputMeta,
+		InputBase64: c.SignalInputBase64,
+	}
+	signalInput, err := signalPayloadInputOpts.buildRawInputPayloads()
+	if err != nil {
+		return err
+	}
+
+	var retryPolicy *common.RetryPolicy
+	if wfStartOpts.RetryPolicy != nil {
+		retryPolicy = &commonpb.RetryPolicy{
+			MaximumInterval:        durationpb.New(wfStartOpts.RetryPolicy.MaximumInterval),
+			InitialInterval:        durationpb.New(wfStartOpts.RetryPolicy.InitialInterval),
+			BackoffCoefficient:     wfStartOpts.RetryPolicy.BackoffCoefficient,
+			MaximumAttempts:        wfStartOpts.RetryPolicy.MaximumAttempts,
+			NonRetryableErrorTypes: wfStartOpts.RetryPolicy.NonRetryableErrorTypes,
+		}
+	}
+	var memo *common.Memo
+	if wfStartOpts.Memo != nil {
+		fields, err := encodeMapToPayloads(wfStartOpts.Memo)
+		if err != nil {
+			return err
+		}
+		memo = &common.Memo{Fields: fields}
+	}
+	var searchAttr *common.SearchAttributes
+	if wfStartOpts.SearchAttributes != nil {
+		fields, err := encodeMapToPayloads(wfStartOpts.SearchAttributes)
+		if err != nil {
+			return err
+		}
+		searchAttr = &common.SearchAttributes{IndexedFields: fields}
+	}
+
+	if wfStartOpts.VersioningOverride != (client.VersioningOverride{}) {
+		cctx.Logger.Warn("VersioningOverride is not configured for the signal-with-start command")
+	}
+
+	// We have to use the raw signal service call here because the Go SDK's
+	// signal-with-start call doesn't accept multiple signal arguments.
+	resp, err := cl.WorkflowService().SignalWithStartWorkflowExecution(
+		cctx,
+		&workflowservice.SignalWithStartWorkflowExecutionRequest{
+			Namespace:                c.Parent.Namespace,
+			RequestId:                uuid.NewString(),
+			WorkflowId:               c.WorkflowId,
+			WorkflowType:             &common.WorkflowType{Name: c.Type},
+			TaskQueue:                &taskqueuepb.TaskQueue{Name: c.TaskQueue, Kind: enumspb.TASK_QUEUE_KIND_NORMAL},
+			Input:                    wfInput,
+			WorkflowExecutionTimeout: durationpb.New(wfStartOpts.WorkflowExecutionTimeout),
+			WorkflowRunTimeout:       durationpb.New(wfStartOpts.WorkflowRunTimeout),
+			WorkflowTaskTimeout:      durationpb.New(wfStartOpts.WorkflowTaskTimeout),
+			SignalName:               c.SignalName,
+			SignalInput:              signalInput,
+			Identity:                 clientIdentity(),
+			RetryPolicy:              retryPolicy,
+			CronSchedule:             wfStartOpts.CronSchedule,
+			Memo:                     memo,
+			SearchAttributes:         searchAttr,
+			WorkflowIdReusePolicy:    wfStartOpts.WorkflowIDReusePolicy,
+			WorkflowIdConflictPolicy: wfStartOpts.WorkflowIDConflictPolicy,
+		},
+	)
+	if err != nil {
+		return err
+	}
+	cctx.Printer.Println(color.MagentaString("Running execution:"))
+	return cctx.Printer.PrintStructured(struct {
+		WorkflowId string `json:"workflowId"`
+		RunId      string `json:"runId"`
+		Type       string `json:"type"`
+		Namespace  string `json:"namespace"`
+	}{
+		WorkflowId: c.WorkflowId,
+		RunId:      resp.RunId,
+		Type:       c.Type,
+		Namespace:  c.Parent.Namespace,
+	}, printer.StructuredOptions{})
+}
+
+func (c *TemporalWorkflowStartUpdateWithStartCommand) run(cctx *CommandContext, _ []string) error {
+	waitForStage := client.WorkflowUpdateStageUnspecified
+	switch c.UpdateWaitForStage.Value {
+	case "accepted":
+		waitForStage = client.WorkflowUpdateStageAccepted
+	}
+	if waitForStage != client.WorkflowUpdateStageAccepted {
+		return fmt.Errorf("invalid wait for stage: %v, valid values are: 'accepted'", c.UpdateWaitForStage)
+	}
+
+	updatePayloadInputOpts := PayloadInputOptions{
+		Input:       c.UpdateInput,
+		InputFile:   c.UpdateInputFile,
+		InputMeta:   c.UpdateInputMeta,
+		InputBase64: c.UpdateInputBase64,
+	}
+	updateInput, err := updatePayloadInputOpts.buildRawInput()
+	if err != nil {
+		return err
+	}
+	updateOpts := client.UpdateWorkflowOptions{
+		UpdateID:            c.UpdateId,
+		WorkflowID:          c.WorkflowId,
+		RunID:               c.RunId,
+		UpdateName:          c.UpdateName,
+		Args:                updateInput,
+		WaitForStage:        waitForStage,
+		FirstExecutionRunID: c.UpdateFirstExecutionRunId,
+	}
+
+	handle, err := executeUpdateWithStartWorkflow(
+		cctx,
+		c.Parent.ClientOptions,
+		c.SharedWorkflowStartOptions,
+		c.WorkflowStartOptions,
+		c.PayloadInputOptions,
+		updateOpts,
+	)
+	if err != nil {
+		return err
+	}
+
+	// Currently we only accept 'accepted' as a valid wait for stage value, but we intend
+	// to support more in the future.
+	if waitForStage == client.WorkflowUpdateStageAccepted {
+		// Use a canceled context to check whether the initial server response
+		// shows that the update has _already_ failed, without issuing a second request.
+		ctx, cancel := context.WithCancel(cctx)
+		cancel()
+		err = handle.Get(ctx, nil)
+		var timeoutOrCanceledErr *client.WorkflowUpdateServiceTimeoutOrCanceledError
+		if err != nil && !errors.As(err, &timeoutOrCanceledErr) {
+			return fmt.Errorf("unable to update workflow: %w", err)
+		}
+	}
+
+	cctx.Printer.Println(color.MagentaString("Running execution:"))
+	return cctx.Printer.PrintStructured(struct {
+		WorkflowId string `json:"workflowId"`
+		RunId      string `json:"runId"`
+		Type       string `json:"type"`
+		Namespace  string `json:"namespace"`
+		UpdateName string `json:"updateName"`
+		UpdateID   string `json:"updateId"`
+	}{
+		WorkflowId: c.WorkflowId,
+		RunId:      handle.RunID(),
+		Type:       c.Type,
+		Namespace:  c.Parent.Namespace,
+		UpdateName: c.UpdateName,
+		UpdateID:   handle.UpdateID(),
+	}, printer.StructuredOptions{})
+}
+
+func (c *TemporalWorkflowExecuteUpdateWithStartCommand) run(cctx *CommandContext, _ []string) error {
+	updatePayloadInputOpts := PayloadInputOptions{
+		Input:       c.UpdateInput,
+		InputFile:   c.UpdateInputFile,
+		InputMeta:   c.UpdateInputMeta,
+		InputBase64: c.UpdateInputBase64,
+	}
+	updateInput, err := updatePayloadInputOpts.buildRawInput()
+	if err != nil {
+		return err
+	}
+
+	updateOpts := client.UpdateWorkflowOptions{
+		UpdateName:          c.UpdateName,
+		UpdateID:            c.UpdateId,
+		WorkflowID:          c.WorkflowId,
+		RunID:               c.RunId,
+		Args:                updateInput,
+		WaitForStage:        client.WorkflowUpdateStageCompleted,
+		FirstExecutionRunID: c.UpdateFirstExecutionRunId,
+	}
+
+	handle, err := executeUpdateWithStartWorkflow(
+		cctx,
+		c.Parent.ClientOptions,
+		c.SharedWorkflowStartOptions,
+		c.WorkflowStartOptions,
+		c.PayloadInputOptions,
+		updateOpts,
+	)
+	if err != nil {
+		return err
+	}
+
+	var valuePtr interface{}
+	err = handle.Get(cctx, &valuePtr)
+	if err != nil {
+		return fmt.Errorf("unable to update workflow: %w", err)
+	}
+
+	cctx.Printer.Println(color.MagentaString("Running execution:"))
+	return cctx.Printer.PrintStructured(struct {
+		WorkflowId   string      `json:"workflowId"`
+		RunId        string      `json:"runId"`
+		Type         string      `json:"type"`
+		Namespace    string      `json:"namespace"`
+		UpdateName   string      `json:"updateName"`
+		UpdateID     string      `json:"updateId"`
+		UpdateResult interface{} `json:"updateResult"`
+	}{
+		WorkflowId:   c.WorkflowId,
+		RunId:        handle.RunID(),
+		Type:         c.Type,
+		Namespace:    c.Parent.Namespace,
+		UpdateName:   c.UpdateName,
+		UpdateID:     c.UpdateId,
+		UpdateResult: valuePtr,
+	}, printer.StructuredOptions{})
+}
+
+func executeUpdateWithStartWorkflow(
+	cctx *CommandContext,
+	clientOpts ClientOptions,
+	sharedWfOpts SharedWorkflowStartOptions,
+	wfStartOpts WorkflowStartOptions,
+	wfInputOpts PayloadInputOptions,
+	updateWfOpts client.UpdateWorkflowOptions,
+) (client.WorkflowUpdateHandle, error) {
+	if sharedWfOpts.WorkflowId == "" {
+		return nil, fmt.Errorf("--workflow-id flag must be provided")
+	}
+	if wfStartOpts.IdConflictPolicy.Value == "" {
+		return nil, fmt.Errorf("--id-conflict-policy flag must be provided")
+	}
+	cl, err := clientOpts.dialClient(cctx)
+	if err != nil {
+		return nil, err
+	}
+	defer cl.Close()
+
+	clStartWfOpts, err := buildStartOptions(&sharedWfOpts, &wfStartOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	wfArgs, err := wfInputOpts.buildRawInput()
+	if err != nil {
+		return nil, err
+	}
+
+	startOp := cl.NewWithStartWorkflowOperation(
+		clStartWfOpts,
+		sharedWfOpts.Type,
+		wfArgs...,
+	)
+
+	// Execute the update with start operation
+	return cl.UpdateWithStartWorkflow(cctx, client.UpdateWithStartWorkflowOptions{
+		StartWorkflowOperation: startOp,
+		UpdateOptions:          updateWfOpts,
+	})
 }
 
 type workflowJSONResult struct {
@@ -274,6 +562,8 @@ func buildStartOptions(sw *SharedWorkflowStartOptions, w *WorkflowStartOptions) 
 		CronSchedule:                             w.Cron,
 		WorkflowExecutionErrorWhenAlreadyStarted: w.FailExisting,
 		StartDelay:                               w.StartDelay.Duration(),
+		StaticSummary:                            sw.StaticSummary,
+		StaticDetails:                            sw.StaticDetails,
 	}
 	if w.IdReusePolicy.Value != "" {
 		var err error

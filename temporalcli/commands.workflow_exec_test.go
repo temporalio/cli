@@ -664,3 +664,302 @@ func (s *SharedServerSuite) TestWorkflow_Execute_NullValue() {
 	s.ContainsOnSameLine(out, "Status", "COMPLETED")
 	s.ContainsOnSameLine(out, "Result", `{"foo":null}`)
 }
+
+func (s *SharedServerSuite) TestWorkflow_SignalWithStart_WorkflowIDMandatory() {
+	res := s.Execute(
+		"workflow", "signal-with-start",
+		"--type", "wfType",
+		"--task-queue", "tq",
+		"--signal-name", "sigName",
+	)
+	s.ErrorContains(res.Err, "--workflow-id flag must be provided")
+}
+
+func (s *SharedServerSuite) TestWorkflow_SignalWithStart_StartNewWorkflow() {
+	s.testSignalWithStartHelper(false)
+}
+
+func (s *SharedServerSuite) TestWorkflow_SignalWithStart_SendSignalToExistingWorkflow() {
+	s.testSignalWithStartHelper(true)
+}
+
+func (s *SharedServerSuite) testSignalWithStartHelper(useExistingWorkflow bool) {
+	wfId := uuid.NewString()
+	signalWfInput := `"workflow-input"`
+	signalInput := `"signal-input"`
+	expectedWfOutput := map[string]string{
+		"workflow": "workflow-input",
+		"signal":   "signal-input",
+	}
+
+	if useExistingWorkflow {
+		run, err := s.Client.ExecuteWorkflow(s.Context, client.StartWorkflowOptions{TaskQueue: s.Worker().Options.TaskQueue}, DevWorkflow, "not-signal-with-start-input")
+		s.NoError(err)
+		// Re-assign wfId for the signal to be sent to an existing workflow.
+		wfId = run.GetID()
+		expectedWfOutput["workflow"] = "not-signal-with-start-input"
+	}
+
+	// Run workflow, block on signal.
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, wfInput any) (any, error) {
+		wfState := make(map[string]string)
+		wfState["workflow"] = wfInput.(string)
+		var sigReceived string
+		workflow.GetSignalChannel(ctx, "sigName").Receive(ctx, &sigReceived)
+		wfState["signal"] = sigReceived
+		return wfState, nil
+	})
+
+	// Send signal-with-start command.
+	res := s.Execute(
+		"workflow", "signal-with-start",
+		"--address", s.Address(),
+		"--workflow-id", wfId,
+		"--type", "DevWorkflow",
+		"--input", signalWfInput,
+		"--task-queue", s.Worker().Options.TaskQueue,
+		"--signal-name", "sigName",
+		"--signal-input", signalInput,
+	)
+	s.NoError(res.Err)
+
+	out := res.Stdout.String()
+	s.ContainsOnSameLine(out, "WorkflowId", wfId)
+	s.Contains(out, "RunId")
+	s.ContainsOnSameLine(out, "Type", "DevWorkflow")
+	s.ContainsOnSameLine(out, "Namespace", "default")
+
+	// Check that a new workflow was started with expected workflow ID.
+	if !useExistingWorkflow {
+		run := s.Client.GetWorkflow(s.Context, wfId, "")
+		s.Equal(wfId, run.GetID())
+	}
+
+	// Wait for workflow to complete.
+	wfReturn := make(map[string]string)
+	err := s.Client.GetWorkflow(s.Context, wfId, "").Get(s.Context, &wfReturn)
+	s.NoError(err)
+
+	// Compare the extracted values with what the workflow returned
+	s.Equal(expectedWfOutput["signal"], wfReturn["signal"])
+	s.Equal(expectedWfOutput["workflow"], wfReturn["workflow"])
+}
+
+func (s *SharedServerSuite) TestWorkflow_StartUpdateWithStart_RuntimeOptionChecks() {
+	res := s.Execute(
+		"workflow", "start-update-with-start",
+		"--type", "wfType",
+		"--task-queue", "tq",
+		"--update-name", "updateName",
+		"--update-wait-for-stage", "accepted",
+	)
+	s.ErrorContains(res.Err, "--workflow-id flag must be provided")
+	res = s.Execute(
+		"workflow", "start-update-with-start",
+		"--type", "wfType",
+		"--task-queue", "tq",
+		"--update-name", "updateName",
+		"--update-wait-for-stage", "accepted",
+		"--workflow-id", "wfId",
+	)
+	s.ErrorContains(res.Err, "--id-conflict-policy flag must be provided")
+}
+
+func (s *SharedServerSuite) TestWorkflow_ExecuteUpdateWithStart_RuntimeOptionChecks() {
+	res := s.Execute(
+		"workflow", "execute-update-with-start",
+		"--type", "wfType",
+		"--task-queue", "tq",
+		"--update-name", "updateName",
+	)
+	s.ErrorContains(res.Err, "--workflow-id flag must be provided")
+	res = s.Execute(
+		"workflow", "execute-update-with-start",
+		"--type", "wfType",
+		"--task-queue", "tq",
+		"--update-name", "updateName",
+		"--workflow-id", "wfId",
+	)
+	s.ErrorContains(res.Err, "--id-conflict-policy flag must be provided")
+}
+
+type updateWithStartTest struct {
+	updateWithStartSetup
+	useStart             bool
+	idConflictPolicy     string
+	expectedError        string
+	expectedUpdateResult string
+	expectedWfOutput     map[string]string
+}
+
+type updateWithStartSetup struct {
+	wfId                string
+	updateName          string
+	updateId            string
+	useExistingWorkflow bool
+}
+
+func (s *SharedServerSuite) TestWorkflow_StartUpdateWithStart_StartsNewWorkflow() {
+	updateWithStartSetup := s.updateWithStartTestSetup(false)
+	s.testStartUpdateWithStartHelper(updateWithStartTest{
+		updateWithStartSetup: updateWithStartSetup,
+		useStart:             true,
+		idConflictPolicy:     "Fail",
+		expectedWfOutput:     map[string]string{"workflow": "workflow-input", "update": "update-input"},
+	})
+}
+
+func (s *SharedServerSuite) TestWorkflow_StartUpdateWithStart_SendUpdateToExistingWorkflow() {
+	updateWithStartSetup := s.updateWithStartTestSetup(true)
+	s.testStartUpdateWithStartHelper(updateWithStartTest{
+		updateWithStartSetup: updateWithStartSetup,
+		useStart:             true,
+		idConflictPolicy:     "Fail",
+		expectedError:        "Workflow execution is already running",
+	})
+	s.testStartUpdateWithStartHelper(updateWithStartTest{
+		updateWithStartSetup: updateWithStartSetup,
+		useStart:             true,
+		idConflictPolicy:     "UseExisting",
+		expectedWfOutput:     map[string]string{"workflow": "not-update-with-start-workflow-input", "update": "update-input"},
+	})
+}
+
+func (s *SharedServerSuite) TestWorkflow_ExecuteUpdateWithStart_StartsWorkflow() {
+	updateWithStartSetup := s.updateWithStartTestSetup(false)
+	s.testStartUpdateWithStartHelper(updateWithStartTest{
+		updateWithStartSetup: updateWithStartSetup,
+		useStart:             false,
+		idConflictPolicy:     "Fail",
+		expectedUpdateResult: "update-input",
+		expectedWfOutput:     map[string]string{"workflow": "workflow-input", "update": "update-input"},
+	})
+}
+
+func (s *SharedServerSuite) TestWorkflow_ExecuteUpdateWithStart_SendUpdateToExistingWorkflow() {
+	updateWithStartSetup := s.updateWithStartTestSetup(true)
+	s.testStartUpdateWithStartHelper(updateWithStartTest{
+		updateWithStartSetup: updateWithStartSetup,
+		useStart:             false,
+		idConflictPolicy:     "Fail",
+		expectedError:        "Workflow execution is already running",
+		expectedWfOutput:     map[string]string{"workflow": "workflow-input", "update": "update-input"},
+	})
+	s.testStartUpdateWithStartHelper(updateWithStartTest{
+		updateWithStartSetup: updateWithStartSetup,
+		useStart:             false,
+		idConflictPolicy:     "UseExisting",
+		expectedWfOutput:     map[string]string{"workflow": "not-update-with-start-workflow-input", "update": "update-input"},
+	})
+}
+
+func (s *SharedServerSuite) updateWithStartTestSetup(useExistingWorkflow bool) updateWithStartSetup {
+	wfId := uuid.NewString()
+	updateName := "test-update-name"
+	updateId := uuid.NewString()
+	if useExistingWorkflow {
+		// Start a workflow with a specific workflow ID.
+		run, err := s.Client.ExecuteWorkflow(
+			s.Context,
+			client.StartWorkflowOptions{
+				TaskQueue: s.Worker().Options.TaskQueue,
+			},
+			DevWorkflow,
+			"not-update-with-start-workflow-input",
+		)
+		s.NoError(err)
+		// Re-assign wfId for the update to be sent to an existing workflow.
+		wfId = run.GetID()
+	}
+
+	// Run workflow.
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, wfInput any) (any, error) {
+		wfState := make(map[string]string)
+		wfState["workflow"] = wfInput.(string)
+
+		err := workflow.SetUpdateHandlerWithOptions(
+			ctx,
+			updateName,
+			func(ctx workflow.Context, updateInput string) (string, error) {
+				wfState["update"] = updateInput
+				return updateInput, nil
+			},
+			workflow.UpdateHandlerOptions{},
+		)
+		if err != nil {
+			return nil, err
+		}
+		// Block workflow completion on signal.
+		workflow.GetSignalChannel(ctx, "complete").Receive(ctx, nil)
+		return wfState, nil
+	})
+	return updateWithStartSetup{wfId, updateName, updateId, useExistingWorkflow}
+}
+
+func (s *SharedServerSuite) testStartUpdateWithStartHelper(opts updateWithStartTest) {
+	cmdName := "execute-update-with-start"
+	additionalArgs := []string{}
+
+	if opts.useStart {
+		cmdName = "start-update-with-start"
+		additionalArgs = []string{"--update-wait-for-stage", "accepted"}
+	}
+
+	baseArgs := []string{
+		"workflow", cmdName,
+		"--address", s.Address(),
+		"--workflow-id", opts.wfId,
+		"--type", "DevWorkflow",
+		"--input", `"workflow-input"`,
+		"--task-queue", s.Worker().Options.TaskQueue,
+		"--id-conflict-policy", opts.idConflictPolicy,
+		"--update-name", opts.updateName,
+		"--update-id", opts.updateId,
+		"--update-input", `"update-input"`,
+	}
+
+	// Send start-update-with-start command.
+	args := append(baseArgs, additionalArgs...)
+	res := s.Execute(args...)
+
+	// Check expected error.
+	if opts.expectedError != "" {
+		s.ErrorContains(res.Err, opts.expectedError)
+		return
+	}
+
+	s.NoError(res.Err)
+
+	// Confirm text output has key/vals as expected
+	out := res.Stdout.String()
+	s.ContainsOnSameLine(out, "WorkflowId", opts.wfId)
+	s.Contains(out, "RunId")
+	s.ContainsOnSameLine(out, "Type", "DevWorkflow")
+	s.ContainsOnSameLine(out, "Namespace", "default")
+	s.ContainsOnSameLine(out, "UpdateName", opts.updateName)
+	s.ContainsOnSameLine(out, "UpdateID", opts.updateId)
+
+	// Check expected update result.
+	if opts.expectedUpdateResult != "" {
+		s.ContainsOnSameLine(out, "UpdateResult", opts.expectedUpdateResult)
+	}
+
+	// Check that new workflow was started with expected workflow ID.
+	if !opts.useExistingWorkflow {
+		run := s.Client.GetWorkflow(s.Context, opts.wfId, "")
+		s.Equal(opts.wfId, run.GetID())
+	}
+
+	// Send signal to complete workflow.
+	err := s.Client.SignalWorkflow(s.Context, opts.wfId, "", "complete", nil)
+	s.NoError(err)
+
+	// Wait for workflow to complete.
+	wfReturn := make(map[string]string)
+	err = s.Client.GetWorkflow(s.Context, opts.wfId, "").Get(s.Context, &wfReturn)
+	s.NoError(err)
+
+	// Expect workflow to have received update and given inputs from start-update-with-start.
+	s.Equal(opts.expectedWfOutput["workflow"], wfReturn["workflow"])
+	s.Equal(opts.expectedWfOutput["update"], wfReturn["update"])
+}
