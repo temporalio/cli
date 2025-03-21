@@ -59,31 +59,9 @@ jobs:
           cd docs
           pwd
           
-          # TODO: replace yuandrew with ${{ github.event.release.author.login }}
-          #  can this not be done until we "release"?
-          # Query the GitHub API for the release author
-          API_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ steps.generate_token.outputs.token }}" \
-            https://api.github.com/users/yuandrew)
-
-          # Extract the email field from the API response
-          AUTHOR_LOGIN=$(echo "$API_RESPONSE" | jq -r '.author.login')
-          echo "author_login: $AUTHOR_LOGIN"
-          EMAIL=$(echo "$API_RESPONSE" | jq -r '.author.email')
-          echo "EMAIL: $EMAIL"
-          EMAIL=$(echo "$API_RESPONSE" | jq -r '.email')
-          echo "EMAIL: $EMAIL"
-
-          # If no public email is found, fallback to a default
-          if [ "$EMAIL" == "null" ]; then
-            echo "falling back on default email"
-            EMAIL="andrew.yuan@temporal.io"
-            # TODO: sdk@temporal.io
-          fi
-          
-          
           # Setup the committers identity.
-          git config --global user.email "$EMAIL"
-          git config --global user.name "yuandrew"
+          git config --global user.email "sdk@temporal.io"
+          git config --global user.name "Temporal CLI"
           # git remote set-url origin https://temporal-cicd:${{ steps.generate_token.outputs.token }}@github.com/temporalio/documentation.git
           
           git checkout -b $BRANCH_NAME
