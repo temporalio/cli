@@ -80,6 +80,7 @@ jobs:
           # Setup the committers identity.
           git config --global user.email "$EMAIL"
           git config --global user.name "yuandrew"
+          git remote set-url origin https://temporal-cicd:${{ steps.generate_token.outputs.token }}@github.com/temporalio/documentation.git
           
           git checkout -b $BRANCH_NAME
           cp ../cli/temporalcli/docs/*.mdx docs/cli/
