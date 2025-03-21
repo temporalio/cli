@@ -36,10 +36,18 @@ jobs:
           path: cli
           submodules: recursive
 
-      - name: Checkout tools repo
+      - name: Generate token
+        id: generate_token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.TEMPORAL_CICD_APP_ID }}
+          private-key: ${{ secrets.TEMPORAL_CICD_PRIVATE_KEY }}
+
+      - name: Checkout docs repo
         uses: actions/checkout@v4
         with:
           repository: temporalio/documentation
+          token: ${{ steps.generate_token.outputs.token }}
           path: docs
 
       - name: Setup Go
@@ -74,7 +82,7 @@ jobs:
           # TODO: replace yuandrew with ${{ github.event.release.author.login }}
           #  can this not be done until we "release"?
           # Query the GitHub API for the release author
-          API_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          API_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ steps.generate_token.outputs.token }}" \
             https://api.github.com/users/yuandrew)
 
           # Extract the email field from the API response
