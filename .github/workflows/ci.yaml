@@ -49,6 +49,9 @@ jobs:
           set -x
           
           BRANCH_NAME="cli-update-docs-${{ github.ref_name }}"
+          # Remove the "/merge" suffix if it exists
+          BRANCH_NAME=${BRANCH_NAME%/merge}
+          echo "Branch name: $BRANCH_NAME"
           
           cd docs
           
