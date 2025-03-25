@@ -3049,11 +3049,11 @@ func NewTemporalWorkflowExecuteUpdateWithStartCommand(cctx *CommandContext, pare
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "execute-update-with-start [flags]"
-	s.Command.Short = "Send an Update and wait for it to complete"
+	s.Command.Short = "Send an Update-With-Start and wait for it to complete (Experimental)"
 	if hasHighlighting {
-		s.Command.Long = "Send a message to a Workflow Execution to invoke an Update handler, and wait for\nthe update to complete. If the Workflow Execution is not running, then a new workflow\nexecution is started and the update is sent.\n\n\x1b[1mtemporal workflow execute-update-with-start \\\n  --update-name YourUpdate \\\n  --update-input '{\"update-key\": \"update-value\"}' \\\n  --workflow-id YourWorkflowId \\\n  --type YourWorkflowType \\\n  --task-queue YourTaskQueue \\\n  --id-conflict-policy Fail \\\n  --input '{\"wf-key\": \"wf-value\"}'\x1b[0m"
+		s.Command.Long = "Send a message to a Workflow Execution to invoke an Update handler, and wait for\nthe update to complete. If the Workflow Execution is not running, then a new workflow\nexecution is started and the update is sent.\n\nExperimental.\n\n\x1b[1mtemporal workflow execute-update-with-start \\\n  --update-name YourUpdate \\\n  --update-input '{\"update-key\": \"update-value\"}' \\\n  --workflow-id YourWorkflowId \\\n  --type YourWorkflowType \\\n  --task-queue YourTaskQueue \\\n  --id-conflict-policy Fail \\\n  --input '{\"wf-key\": \"wf-value\"}'\x1b[0m"
 	} else {
-		s.Command.Long = "Send a message to a Workflow Execution to invoke an Update handler, and wait for\nthe update to complete. If the Workflow Execution is not running, then a new workflow\nexecution is started and the update is sent.\n\n```\ntemporal workflow execute-update-with-start \\\n  --update-name YourUpdate \\\n  --update-input '{\"update-key\": \"update-value\"}' \\\n  --workflow-id YourWorkflowId \\\n  --type YourWorkflowType \\\n  --task-queue YourTaskQueue \\\n  --id-conflict-policy Fail \\\n  --input '{\"wf-key\": \"wf-value\"}'\n```"
+		s.Command.Long = "Send a message to a Workflow Execution to invoke an Update handler, and wait for\nthe update to complete. If the Workflow Execution is not running, then a new workflow\nexecution is started and the update is sent.\n\nExperimental.\n\n```\ntemporal workflow execute-update-with-start \\\n  --update-name YourUpdate \\\n  --update-input '{\"update-key\": \"update-value\"}' \\\n  --workflow-id YourWorkflowId \\\n  --type YourWorkflowType \\\n  --task-queue YourTaskQueue \\\n  --id-conflict-policy Fail \\\n  --input '{\"wf-key\": \"wf-value\"}'\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.UpdateName, "update-name", "", "Update name. Required. Aliased as \"--update-type\".")
@@ -3483,7 +3483,7 @@ func NewTemporalWorkflowStartUpdateWithStartCommand(cctx *CommandContext, parent
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "start-update-with-start [flags]"
-	s.Command.Short = "Send an Update and wait for it to be accepted or rejected (Experimental)"
+	s.Command.Short = "Send an Update-With-Start and wait for it to be accepted or rejected (Experimental)"
 	if hasHighlighting {
 		s.Command.Long = "Send a message to a Workflow Execution to invoke an Update handler, and wait for\nthe update to be accepted or rejected. If the Workflow Execution is not running, \nthen a new workflow execution is started and the update is sent.\n\nExperimental.\n\n\x1b[1mtemporal workflow start-update-with-start \\\n  --update-name YourUpdate \\\n  --update-input '{\"update-key\": \"update-value\"}' \\\n  --update-wait-for-stage accepted \\\n  --workflow-id YourWorkflowId \\\n  --type YourWorkflowType \\\n  --task-queue YourTaskQueue \\\n  --id-conflict-policy Fail \\\n  --input '{\"wf-key\": \"wf-value\"}'\x1b[0m"
 	} else {
@@ -3598,7 +3598,7 @@ func NewTemporalWorkflowUpdateCommand(cctx *CommandContext, parent *TemporalWork
 	var s TemporalWorkflowUpdateCommand
 	s.Parent = parent
 	s.Command.Use = "update"
-	s.Command.Short = "Updates"
+	s.Command.Short = "Send and interact with Updates"
 	s.Command.Long = "An Update is a synchronous call to a Workflow Execution that can change its\nstate, control its flow, and return a result."
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalWorkflowUpdateDescribeCommand(cctx, &s).Command)
