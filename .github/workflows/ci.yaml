@@ -14,18 +14,20 @@ jobs:
       run:
         shell: bash
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          path: cli
-          submodules: recursive
-
       - name: Generate token
         id: generate_token
         uses: actions/create-github-app-token@v1
         with:
           app-id: ${{ secrets.TEMPORAL_CICD_APP_ID }}
           private-key: ${{ secrets.TEMPORAL_CICD_PRIVATE_KEY }}
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          path: cli
+          submodules: recursive
+          persist-credentials: true
+          token: ${{ steps.generate_token.outputs.token }}
 
       - name: Checkout docs repo
         uses: actions/checkout@v4
@@ -55,10 +57,8 @@ jobs:
           BRANCH_NAME="cli-update-docs-${{ github.ref_name }}"
           # Remove the "/merge" suffix if it exists
           BRANCH_NAME=${BRANCH_NAME%/merge}
-          echo "Branch name: $BRANCH_NAME"
           
           cd docs
-          pwd
           
           # Setup the committers identity.
           git config --global user.email "sdk@temporal.io"
