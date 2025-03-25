@@ -117,8 +117,10 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 		StateTransitionCount int64
 		HistoryLength        int64
 		HistorySize          int64
-		ParentExecution      *common.WorkflowExecution `cli:",cardOmitEmpty"`
-		RootExecution        *common.WorkflowExecution `cli:",cardOmitEmpty"`
+		ParentWorkflowId     string `cli:",cardOmitEmpty"`
+		ParentRunId          string `cli:",cardOmitEmpty"`
+		RootWorkflowId       string `cli:",cardOmitEmpty"`
+		RootRunId            string `cli:",cardOmitEmpty"`
 	}{
 		WorkflowId:           info.Execution.WorkflowId,
 		RunId:                info.Execution.RunId,
@@ -134,8 +136,10 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 		StateTransitionCount: info.StateTransitionCount,
 		HistoryLength:        info.HistoryLength,
 		HistorySize:          info.HistorySizeBytes,
-		ParentExecution:      info.ParentExecution,
-		RootExecution:        info.RootExecution,
+		ParentWorkflowId:     info.GetParentExecution().GetWorkflowId(),
+		ParentRunId:          info.GetParentExecution().GetRunId(),
+		RootWorkflowId:       info.GetRootExecution().GetWorkflowId(),
+		RootRunId:            info.GetRootExecution().GetRunId(),
 	}, printer.StructuredOptions{})
 
 	extendedInfo := resp.WorkflowExtendedInfo

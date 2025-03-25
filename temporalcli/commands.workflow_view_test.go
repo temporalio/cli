@@ -1034,8 +1034,10 @@ func (s *SharedServerSuite) TestWorkflow_Describe_RootWorkflow() {
 	)
 	s.NoError(res.Err)
 	out := res.Stdout.String()
-	s.ContainsOnSameLine(out, "ParentExecution", run.GetID())
-	s.ContainsOnSameLine(out, "RootExecution", run.GetID())
+	s.ContainsOnSameLine(out, "ParentWorkflowId", run.GetID())
+	s.ContainsOnSameLine(out, "ParentRunId", run.GetRunID())
+	s.ContainsOnSameLine(out, "RootWorkflowId", run.GetID())
+	s.ContainsOnSameLine(out, "RootRunId", run.GetRunID())
 
 	// JSON
 	res = s.Execute(
