@@ -134,6 +134,38 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 		HistorySize:          info.HistorySizeBytes,
 	}, printer.StructuredOptions{})
 
+	extendedInfo := resp.WorkflowExtendedInfo
+	if extendedInfo != nil {
+		cctx.Printer.Println(color.MagentaString("Extended Execution Info:"))
+		_ = cctx.Printer.PrintStructured(struct {
+			CancelRequested         bool
+			ExecutionExpirationTime time.Time `cli:",cardOmitEmpty"`
+			RunExpirationTime       time.Time `cli:",cardOmitEmpty"`
+			LastResetTime           time.Time `cli:",cardOmitEmpty"`
+			OriginalStartTime       time.Time `cli:",cardOmitEmpty"`
+		}{
+			CancelRequested:         extendedInfo.CancelRequested,
+			ExecutionExpirationTime: timestampToTime(extendedInfo.ExecutionExpirationTime),
+			RunExpirationTime:       timestampToTime(extendedInfo.RunExpirationTime),
+			LastResetTime:           timestampToTime(extendedInfo.LastResetTime),
+			OriginalStartTime:       timestampToTime(extendedInfo.OriginalStartTime),
+		}, printer.StructuredOptions{})
+	}
+
+	staticSummary := resp.GetExecutionConfig().GetUserMetadata().GetSummary()
+	staticDetails := resp.GetExecutionConfig().GetUserMetadata().GetDetails()
+	if len(staticSummary.GetData()) > 0 || len(staticDetails.GetData()) > 0 {
+		cctx.Printer.Println()
+		cctx.Printer.Println(color.MagentaString("Metadata:"))
+		_ = cctx.Printer.PrintStructured(struct {
+			StaticSummary *common.Payload
+			StaticDetails *common.Payload
+		}{
+			StaticSummary: staticSummary,
+			StaticDetails: staticDetails,
+		}, printer.StructuredOptions{})
+	}
+
 	if info.VersioningInfo != nil {
 		cctx.Printer.Println()
 		cctx.Printer.Println(color.MagentaString("Versioning Info:"))
