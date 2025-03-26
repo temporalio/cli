@@ -237,7 +237,7 @@ namespace = "my-namespace"
 	h.NotContains(res.Stdout.String(), "my-namespace")
 
 	// Delete entire profile
-	res = h.Execute("config", "delete", "--profile", "foo")
+	res = h.Execute("config", "delete-profile", "--profile", "foo")
 	h.NoError(res.Err)
 	res = h.Execute("config", "get")
 	h.ErrorContains(res.Err, `profile "foo" not found`)
@@ -273,7 +273,7 @@ address = "my-address-bar"`))
 	h.Contains(res.Stdout.String(), `"bar"`)
 
 	// Now delete and try again
-	res = h.Execute("config", "delete", "--profile", "foo")
+	res = h.Execute("config", "delete-profile", "--profile", "foo")
 	h.NoError(res.Err)
 	res = h.Execute("config", "list")
 	h.NoError(res.Err)

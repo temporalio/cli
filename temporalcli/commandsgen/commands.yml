@@ -694,7 +694,7 @@ commands:
           --value us-west-2.aws.api.temporal.io:7233
       ```
 
-      The default config file is at `$CONFIG_PATH/temporal/temporal.toml` where
+      The default config file path is `$CONFIG_PATH/temporal/temporal.toml` where
       `$CONFIG_PATH` is defined as `$HOME/.config` on Unix,
       `$HOME/Library/Application Support` on macOS, and `%AppData%` on Windows.
       This can be overridden with the `TEMPORAL_CONFIG_FILE` environment
@@ -720,17 +720,9 @@ commands:
 
   - name: temporal config delete
     summary: |
-      Delete a config file property or an entire config profile (EXPERIMENTAL)
+      Delete a config file property (EXPERIMENTAL)
     description: |
-      Remove a full profile entirely _or_ remove a property within a profile.
-      When deleting an entire profile, the `--profile` must be set explicitly.
-
-      ```
-      temporal env delete \
-          --profile my-profile
-      ```
-
-      or
+      Remove a property within a profile.
 
       ```
       temporal env delete \
@@ -742,6 +734,18 @@ commands:
         type: string
         description: |
           Specific property to delete. If unset, deletes entire profile.
+        required: true
+
+  - name: temporal config delete-profile
+    summary: |
+      Delete an entire config profile (EXPERIMENTAL)
+    description: |
+      Remove a full profile entirely. The `--profile` must be set explicitly.
+
+      ```
+      temporal env delete-profile \
+          --profile my-profile
+      ```
 
   - name: temporal config get
     summary: Show config file properties (EXPERIMENTAL)

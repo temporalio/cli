@@ -20,16 +20,7 @@ func (c *TemporalConfigDeleteCommand) run(cctx *CommandContext, _ []string) erro
 	if err != nil {
 		return err
 	}
-	// If it's a specific prop, unset it, otherwise just remove the profile
-	if c.Prop == "" {
-		// To make extra sure they meant to do this, we require the profile name
-		// as an explicit CLI arg. This prevents accidentally deleting the
-		// "default" profile.
-		if cctx.RootCommand.Profile == "" {
-			return fmt.Errorf("to delete an entire profile, --profile must be provided explicitly")
-		}
-		delete(conf.Profiles, profileName)
-	} else if strings.HasPrefix(c.Prop, "grpc_meta.") {
+	if strings.HasPrefix(c.Prop, "grpc_meta.") {
 		key := strings.TrimPrefix(c.Prop, "grpc_meta.")
 		if _, ok := confProfile.GRPCMeta[key]; !ok {
 			return fmt.Errorf("gRPC meta key %q not found", key)
@@ -42,6 +33,25 @@ func (c *TemporalConfigDeleteCommand) run(cctx *CommandContext, _ []string) erro
 		}
 		reflectVal.SetZero()
 	}
+
+	// Save
+	return writeEnvConfigFile(cctx, conf)
+}
+
+func (c *TemporalConfigDeleteProfileCommand) run(cctx *CommandContext, _ []string) error {
+	// Load config
+	profileName := envConfigProfileName(cctx)
+	conf, _, err := loadEnvConfigProfile(cctx, profileName, true)
+	if err != nil {
+		return err
+	}
+	// To make extra sure they meant to do this, we require the profile name
+	// as an explicit CLI arg. This prevents accidentally deleting the
+	// "default" profile.
+	if cctx.RootCommand.Profile == "" {
+		return fmt.Errorf("to delete an entire profile, --profile must be provided explicitly")
+	}
+	delete(conf.Profiles, profileName)
 
 	// Save
 	return writeEnvConfigFile(cctx, conf)
