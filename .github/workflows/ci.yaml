@@ -10,6 +10,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      repository-projects: write
     defaults:
       run:
         shell: bash
