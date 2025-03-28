@@ -1,7 +1,6 @@
 package temporalcli
 
 import (
-	"fmt"
 	_ "modernc.org/sqlite"
 	"os"
 	"strings"
@@ -15,7 +14,6 @@ func TestSqliteVersion(t *testing.T) {
 		t.Fatalf("Failed to read go.mod: %v", err)
 	}
 	contentStr := string(content)
-	fmt.Println("content", contentStr)
 	if !strings.Contains(contentStr, "modernc.org/sqlite v1.34.1") {
 		t.Errorf("go.mod missing dependency modernc.org/sqlite v1.34.1")
 	}
