@@ -3601,20 +3601,16 @@ commands:
       - workflow-reference
 
   - name: temporal workflow update
-    summary: Updates (Experimental)
+    summary: Send and interact with Updates
     description: |
       An Update is a synchronous call to a Workflow Execution that can change its
       state, control its flow, and return a result.
 
-      Experimental.
-
   - name: temporal workflow update describe
-    summary: Obtain status info about a specific Update (Experimental)
+    summary: Obtain status info about a specific Update
     description: |
       Given a Workflow Execution and an Update ID, return information about its current status, including
       a result if it has finished.
-
-      Experimental.
 
       ```
       temporal workflow update describe \
@@ -3625,13 +3621,11 @@ commands:
       - update-targeting
 
   - name: temporal workflow update execute
-    summary: Send an Update and wait for it to complete (Experimental)
+    summary: Send an Update and wait for it to complete
     description: |
       Send a message to a Workflow Execution to invoke an Update handler, and wait for
       the update to complete or fail. You can also use this to wait for an existing
       update to complete, by submitting an existing update ID.
-
-      Experimental.
 
       ```
       temporal workflow update execute \
@@ -3644,12 +3638,10 @@ commands:
       - payload-input
 
   - name: temporal workflow update result
-    summary: Wait for a specific Update to complete (Experimental)
+    summary: Wait for a specific Update to complete
     description: |
       Given a Workflow Execution and an Update ID, wait for the Update to complete or fail and
       print the result.
-
-      Experimental.
 
       ```
       temporal workflow update result \
@@ -3660,13 +3652,11 @@ commands:
       - update-targeting
 
   - name: temporal workflow update start
-    summary: Send an Update and wait for it to be accepted or rejected (Experimental)
+    summary: Send an Update and wait for it to be accepted or rejected
     description: |
       Send a message to a Workflow Execution to invoke an Update handler, and wait for
       the update to be accepted or rejected. You can subsequently wait for the update
       to complete by using `temporal workflow update execute`.
-
-      Experimental.
 
       ```
       temporal workflow update start \
@@ -3690,7 +3680,7 @@ commands:
         required: true
 
   - name: temporal workflow start-update-with-start
-    summary: Send an Update and wait for it to be accepted or rejected (Experimental)
+    summary: Send an Update-With-Start and wait for it to be accepted or rejected (Experimental)
     description: |
       Send a message to a Workflow Execution to invoke an Update handler, and wait for
       the update to be accepted or rejected. If the Workflow Execution is not running, 
@@ -3773,7 +3763,7 @@ commands:
           Assume update inputs are base64-encoded and attempt to decode them.
 
   - name: temporal workflow execute-update-with-start
-    summary: Send an Update and wait for it to complete (Experimental)
+    summary: Send an Update-With-Start and wait for it to complete (Experimental)
     description: |
       Send a message to a Workflow Execution to invoke an Update handler, and wait for
       the update to complete. If the Workflow Execution is not running, then a new workflow
