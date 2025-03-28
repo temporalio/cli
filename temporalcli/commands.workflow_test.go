@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/temporalio/cli/temporalcli"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/workflowservice/v1"
@@ -524,15 +525,15 @@ func (s *SharedServerSuite) TestWorkflow_Batch_Update_Options_Versioning_Overrid
 				"-w", run.GetID(),
 				"--output", "json",
 			)
-			assert.NoError(t, res.Err)
+			require.NoError(t, res.Err)
 
 			var jsonResp workflowservice.DescribeWorkflowExecutionResponse
-			assert.NoError(t, temporalcli.UnmarshalProtoJSONWithOptions(res.Stdout.Bytes(), &jsonResp, true))
+			require.NoError(t, temporalcli.UnmarshalProtoJSONWithOptions(res.Stdout.Bytes(), &jsonResp, true))
 
 			versioningInfo := jsonResp.GetWorkflowExecutionInfo().GetVersioningInfo()
-			assert.NotNil(t, versioningInfo)
-			assert.NotNil(t, versioningInfo.VersioningOverride)
-			assert.Equal(t, version2, versioningInfo.VersioningOverride.PinnedVersion)
+			require.NotNil(t, versioningInfo)
+			require.NotNil(t, versioningInfo.VersioningOverride)
+			require.Equal(t, version2, versioningInfo.VersioningOverride.PinnedVersion)
 		}
 	}, 30*time.Second, 100*time.Millisecond)
 }
