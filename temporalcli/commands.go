@@ -55,8 +55,9 @@ type CommandContext struct {
 	// that cobra does not properly exit nonzero if an unknown command/subcommand is given.
 	ActuallyRanCommand bool
 
-	// Root command only set inside of pre-run
-	RootCommand *TemporalCommand
+	// Root/current command only set inside of pre-run
+	RootCommand    *TemporalCommand
+	CurrentCommand *cobra.Command
 }
 
 type CommandOptions struct {
@@ -379,6 +380,8 @@ func (c *TemporalCommand) initCommand(cctx *CommandContext) {
 	// must unset in post-run
 	origNoColor := color.NoColor
 	c.Command.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+		// Set command
+		cctx.CurrentCommand = cmd
 		// Populate environ. We will make the error return here which will cause
 		// usage to be printed.
 		logCalls, err := cctx.populateFlagsFromEnv(cmd.Flags())

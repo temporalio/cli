@@ -74,11 +74,18 @@ func (c *ClientOptions) dialClient(cctx *CommandContext) (client.Client, error) 
 		}
 	}
 
-	// Override some values in client config profile that come from CLI args
-	if c.Address != "" {
+	// Override some values in client config profile that come from CLI args. Some
+	// flags, like address and namespace, have CLI defaults, but we don't want to
+	// override the profile version unless it was _explicitly_ set.
+	var addressExplicitlySet, namespaceExplicitlySet bool
+	if cctx.CurrentCommand != nil {
+		addressExplicitlySet = cctx.CurrentCommand.Flags().Changed("address")
+		namespaceExplicitlySet = cctx.CurrentCommand.Flags().Changed("namespace")
+	}
+	if addressExplicitlySet {
 		clientProfile.Address = c.Address
 	}
-	if c.Namespace != "" {
+	if namespaceExplicitlySet {
 		clientProfile.Namespace = c.Namespace
 	}
 	if c.ApiKey != "" {

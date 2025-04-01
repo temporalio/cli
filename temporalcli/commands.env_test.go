@@ -69,14 +69,6 @@ func TestEnv_Simple(t *testing.T) {
 	res = h.Execute("env", "list")
 	h.NoError(res.Err)
 	h.NotContains(res.Stdout.String(), "myenv2")
-
-	// Ensure env var overrides env file
-	res = h.Execute("env", "set", "--env", "myenv1", "-k", "address", "-v", "something:1234")
-	h.NoError(res.Err)
-	h.NoError(os.Setenv("TEMPORAL_ADDRESS", "overridden:1235"))
-	defer os.Unsetenv("TEMPORAL_ADDRESS")
-	res = h.Execute("workflow", "list", "--env", "myenv1")
-	h.Contains(res.Stderr.String(), "Env var overrode --env setting")
 }
 
 func TestEnv_InputValidation(t *testing.T) {
