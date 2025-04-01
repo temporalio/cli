@@ -16,7 +16,6 @@ import (
 	schedpb "go.temporal.io/api/schedule/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
-	"go.temporal.io/sdk/converter"
 	"go.temporal.io/server/common/primitives/timestamp"
 )
 
@@ -257,7 +256,7 @@ func toScheduleAction(sw *SharedWorkflowStartOptions, i *PayloadInputOptions) (c
 	if err != nil {
 		return nil, err
 	}
-	untypedSearchAttributes, err := encodeSearchAttributesToPayloads(opts.SearchAttributes)
+	untypedSearchAttributes, err := encodeMapToPayloads(opts.SearchAttributes)
 	if err != nil {
 		return nil, err
 	}
@@ -271,6 +270,8 @@ func toScheduleAction(sw *SharedWorkflowStartOptions, i *PayloadInputOptions) (c
 		// RetryPolicy not supported yet
 		UntypedSearchAttributes: untypedSearchAttributes,
 		Memo:                    opts.Memo,
+		StaticSummary:           opts.StaticSummary,
+		StaticDetails:           opts.StaticDetails,
 	}
 	if action.Args, err = i.buildRawInput(); err != nil {
 		return nil, err
@@ -604,21 +605,4 @@ func formatDuration(d time.Duration) string {
 	// Remove last space
 	s = strings.TrimSpace(s)
 	return s
-}
-
-func encodeSearchAttributesToPayloads(in map[string]any) (map[string]*commonpb.Payload, error) {
-	if len(in) == 0 {
-		return nil, nil
-	}
-	// search attributes always use default dataconverter
-	dc := converter.GetDefaultDataConverter()
-	out := make(map[string]*commonpb.Payload, len(in))
-	for key, val := range in {
-		payload, err := dc.ToPayload(val)
-		if err != nil {
-			return nil, err
-		}
-		out[key] = payload
-	}
-	return out, nil
 }

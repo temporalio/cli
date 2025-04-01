@@ -241,7 +241,7 @@ commands:
   - name: temporal activity
     summary: Complete, update, pause, unpause, reset or fail an Activity
     description: |
-      Update an Activity's options, manage activity lifecycle or update 
+      Update an Activity's options, manage activity lifecycle or update
       an Activity's state to completed or failed.
 
       Updating activity state marks an Activity as successfully finished or as
@@ -332,9 +332,9 @@ commands:
   - name: temporal activity update-options
     summary: Update Activity options
     description: |
-      Update Activity options. Specify the Activity and Workflow IDs, and 
-      options you want to update. 
-      Updates are incremental, only changing the specified options. 
+      Update Activity options. Specify the Activity and Workflow IDs, and
+      options you want to update.
+      Updates are incremental, only changing the specified options.
 
       ```
       temporal activity update-options \
@@ -362,22 +362,22 @@ commands:
       - name: schedule-to-close-timeout
         type: duration
         description: |
-          Indicates how long the caller is willing to wait for an activity 
-          completion. 
+          Indicates how long the caller is willing to wait for an activity
+          completion.
           Limits how long retries will be attempted.
       - name: schedule-to-start-timeout
         type: duration
         description: |
-          Limits time an activity task can stay in a task queue before a worker 
-          picks it up. 
-          This timeout is always non retryable, as all a retry would achieve is 
+          Limits time an activity task can stay in a task queue before a worker
+          picks it up.
+          This timeout is always non retryable, as all a retry would achieve is
           to put it back into the same
           queue. Defaults to the schedule-to-close timeout or workflow execution
           timeout if not specified.
       - name: start-to-close-timeout
         type: duration
         description: |
-          Maximum time an activity is allowed to execute after being picked up 
+          Maximum time an activity is allowed to execute after being picked up
           by a worker. This timeout is always retryable.
       - name: heartbeat-timeout
         type: duration
@@ -391,7 +391,7 @@ commands:
       - name: retry-maximum-interval
         type: duration
         description: |
-          Maximum interval between retries. Exponential backoff leads to 
+          Maximum interval between retries. Exponential backoff leads to
           interval increase.
           This value is the cap of the increase.
       - name: retry-backoff-coefficient
@@ -406,7 +406,7 @@ commands:
         description: |
           Maximum number of attempts. When exceeded the retries stop even if not
           expired yet.
-          Setting this value to 1 disables retries. Setting this value to 0 
+          Setting this value to 1 disables retries. Setting this value to 0
           means unlimited attempts(up to the timeouts).
       - name: identity
         type: string
@@ -798,6 +798,404 @@ commands:
         type: string
         description: Property value.
         required: true
+
+  - name: temporal worker
+    summary: Read or update Worker state
+    description: |
+      +---------------------------------------------------------------------+
+      | CAUTION: Worker is experimental. Worker commands are subject to     |
+      | change.                                                             |
+      +---------------------------------------------------------------------+
+
+      Modify or read state associated with a Worker, for example,
+      using Worker Deployments commands:
+
+      ```
+      temporal worker deployment
+      ```
+    option-sets:
+      - client
+    docs:
+      description-header: >-
+        Learn how to read or modify state associated with a Worker,
+        such as Worker Deployments.
+      keywords:
+        - worker
+        - worker deployment
+
+  - name: temporal worker deployment
+    summary: Describe, list, and operate on Worker Deployments and Versions
+    description: |
+      +---------------------------------------------------------------------+
+      | CAUTION: Worker Deployment is experimental. Deployment commands are |
+      | subject to change.                                                  |
+      +---------------------------------------------------------------------+
+
+      Deployment commands perform operations on Worker Deployments:
+
+      ```
+      temporal worker deployment [command] [options]
+      ```
+
+      For example:
+
+      ```
+      temporal worker deployment list
+      ```
+
+      Lists the Deployments in the client's namespace.
+
+      Arguments can be Worker Deployment Versions associated with
+      a Deployment, using a fully qualified Version identifier that
+      concatenates the Deployment Name and the Build ID with the
+      reserved separator ".".
+
+      For example:
+
+      ```
+      temporal worker deployment set-current-version \
+               --version YourDeploymentName.YourBuildID
+      ```
+      
+      Sets the current Deployment Version for a given Deployment.
+      
+    docs:
+      description-header: >-
+        Temporal Deployment commands enable operations on Worker Deployments
+        that simplify versioning and management of workers,
+        such as describe, list, delete, and also operations that refer to Worker
+        Deployment Versions within them, such as describe-version,
+        delete-version, set-current-version, or set-ramping-version.
+      keywords:
+        - worker deployment
+        - worker deployment describe
+        - worker deployment list
+        - worker deployment delete
+        - worker deployment describe-version
+        - worker deployment set-current-version
+        - worker deployment set-ramping-version
+        - worker deployment delete-version
+        - worker deployment update-metadata-version
+
+  - name: temporal worker deployment describe
+    summary: Show properties of a Worker Deployment
+    description: |
+      +---------------------------------------------------------------------+
+      | CAUTION: Worker Deployment is experimental. Deployment commands are |
+      | subject to change.                                                  |
+      +---------------------------------------------------------------------+
+
+      Describe properties of a Worker Deployment, such as the versions
+      associated with it, routing information of new or existing tasks
+      executed by this deployment, or its creation time.
+
+      ```
+      temporal worker deployment describe [options]
+      ```
+
+      For example, to describe a deployment `YourDeploymentName` in the default
+      namespace:
+
+      ```
+      temporal worker deployment describe \
+          --name YourDeploymentName
+      ```
+    option-sets:
+      - deployment-name
+
+  - name: temporal worker deployment delete
+    summary: Delete a Worker Deployment
+    description: |
+      +---------------------------------------------------------------------+
+      | CAUTION: Worker Deployment is experimental. Deployment commands are |
+      | subject to change.                                                  |
+      +---------------------------------------------------------------------+
+
+      Remove a Worker Deployment given its Deployment Name.
+      A Deployment can only be deleted if it has no Version in it.
+
+      ```
+      temporal worker deployment delete [options]
+      ```
+
+      For example, setting the user identity that removed the deployment:
+
+      ```
+      temporal worker deployment delete \
+          --name YourDeploymentName \
+          --identity YourIdentity
+
+      ```
+    option-sets:
+      - deployment-name
+    options:
+      - name: identity
+        type: string
+        description: Identity of the user submitting this request.
+        
+  - name: temporal worker deployment list
+    summary: Enumerate Worker Deployments in the client's namespace
+    description: |
+      +---------------------------------------------------------------------+
+      | CAUTION: Worker Deployment is experimental. Deployment commands are |
+      | subject to change.                                                  |
+      +---------------------------------------------------------------------+
+
+      List existing Worker Deployments in the client's namespace.
+
+      ```
+      temporal worker deployment list [options]
+      ```
+
+      For example, listing Deployments in YourDeploymentNamespace:
+
+      ```
+      temporal worker deployment list \
+          --namespace YourDeploymentNamespace
+      ```
+      
+  - name: temporal worker deployment describe-version
+    summary: Show properties of a Worker Deployment Version
+    description: |
+      +---------------------------------------------------------------------+
+      | CAUTION: Worker Deployment is experimental. Deployment commands are |
+      | subject to change.                                                  |
+      +---------------------------------------------------------------------+
+
+      Describe properties of a Worker Deployment Version, such as the task 
+      queues polled by workers in this Deployment Version, or drainage
+      information required to safely decommission workers, or user-provided
+      metadata, or its creation/modification time.
+
+      ```
+      temporal worker deployment describe-version [options]
+      ```
+
+      For example, to describe a deployment version  in a deployment
+      `YourDeploymentName`, with Build ID `YourBuildID`, and in the default
+      namespace:
+
+      ```
+      temporal worker deployment describe-version \
+          --version YourDeploymentName.YourBuildID
+      ```
+    option-sets:
+      - deployment-version
+    
+  - name: temporal worker deployment delete-version
+    summary: Delete a Worker Deployment Version
+    description: |
+      +---------------------------------------------------------------------+
+      | CAUTION: Worker Deployment is experimental. Deployment commands are |
+      | subject to change.                                                  |
+      +---------------------------------------------------------------------+
+
+      Remove a Worker Deployment Version given its fully-qualified identifier.
+      This is rarely needed during normal operation
+      since unused Versions are eventually garbage collected.
+      The client can delete a Version only when all of the following conditions
+      are met:
+        - It is not the Current or Ramping Version for this Deployment.
+        - It has no active pollers, i.e., none of the task queues in the
+        Version have pollers.
+        - It is not draining. This requirement can be ignored with the option
+      `--skip-drainage`.
+        
+      ```
+      temporal worker deployment delete-version [options]
+      ```
+
+      For example, skipping the drainage restriction:
+
+      ```
+      temporal worker deployment delete-version \
+          --version YourDeploymentName.YourBuildID \
+          --skip-drainage          
+      ```
+    option-sets:
+      - deployment-version
+    options:
+      - name: identity
+        type: string
+        description: Identity of the user submitting this request.
+      - name: skip-drainage
+        type: bool
+        description: Ignore the deletion requirement of not draining.
+
+  - name: temporal worker deployment set-current-version
+    summary: Make a Worker Deployment Version Current for a Deployment
+    description: |
+      +---------------------------------------------------------------------+
+      | CAUTION: Worker Deployment is experimental. Deployment commands are |
+      | subject to change.                                                  |
+      +---------------------------------------------------------------------+
+
+      Set the Current Version for a Deployment.
+      When a Version is current, Workers of that Deployment Version will receive
+      tasks from new Workflows, and from existing AutoUpgrade Workflows that
+      are running on this Deployment.
+      
+      If not all the expected Task Queues are being polled by Workers in the
+      new Version the request will fail. To override this protection use
+      `--ignore-missing-task-queues`. Note that this would ignore task queues
+      in a deployment that are not yet discovered, leading to inconsistent task
+      queue configuration.
+      
+      ```
+      temporal worker deployment set-current-version [options]
+      ```
+
+      For example, to set the Current Version of a deployment
+      `YourDeploymentName`, with a version with Build ID `YourBuildID`, and
+      in the default namespace:
+
+      ```
+      temporal worker deployment set-current-version \
+          --version YourDeploymentName.YourBuildID
+      ```
+
+      The target of set-current-version can also be `__unversioned__`, which
+      moves tasks to unversioned workers, but in this case we also need to
+      specify the Deployment Name.
+
+      ```
+      temporal worker deployment set-current-version \
+          --version __unversioned__ \
+          --deployment-name YourDeploymentName
+      ```  
+    option-sets:
+      - deployment-version
+    options:
+      - name: deployment-name
+        type: string
+        description: |
+          Deployment name.
+          Only needed when `--version` is `__unversioned__` or empty.
+      - name: identity
+        type: string
+        description: Identity of the user submitting this request.
+      - name: ignore-missing-task-queues
+        type: bool
+        description: Override protection to accidentally remove task queues.
+      - name: yes
+        short: y
+        type: bool
+        description: Don't prompt to confirm set Current Version.
+
+  - name: temporal worker deployment set-ramping-version
+    summary: Change Version Ramping settings for a Worker Deployment
+    description: |
+      +---------------------------------------------------------------------+
+      | CAUTION: Worker Deployment is experimental. Deployment commands are |
+      | subject to change.                                                  |
+      +---------------------------------------------------------------------+
+
+      Set the Ramping Version and Percentage for a Deployment.
+
+      The Ramping Version can be set to a fully-qualified Version of the form
+      `YourDeploymentName.YourBuildID`, or set to "__unversioned__", a special
+      value that represents all the unversioned workers.
+
+      The Ramping Percentage is a float with values in the range [0, 100].
+      A value of 100 does not make the Ramping Version Current, use
+      `set-current-version` instead.
+
+      To remove a Ramping Version use the flag `--delete`.
+      
+      If not all the expected Task Queues are being polled by Workers in the
+      new Ramping Version the request will fail. To override this protection use
+      `--ignore-missing-task-queues`. Note that this would ignore task queues
+      in a deployment that are not yet discovered, leading to inconsistent task
+      queue configuration.
+      
+      ```
+      temporal worker deployment set-ramping-version [options]
+      ```
+
+      For example, to set the Ramping Version of a deployment
+      `YourDeploymentName`, with a version with Build ID `YourBuildID`, with
+      10 percent of tasks redirected to this version, and
+      using the default namespace:
+
+      ```
+      temporal worker deployment set-ramping-version \
+          --version YourDeploymentName.YourBuildID
+          --percentage 10.0
+      ```
+
+      And to remove that ramping:
+        
+      ```
+      temporal worker deployment set-ramping-version \
+          --version YourDeploymentName.YourBuildID \
+          --delete
+      ```    
+    option-sets:
+      - deployment-version
+    options:
+      - name: deployment-name
+        type: string
+        description: |
+          Deployment name.
+          Only needed when `--version` is `__unversioned__`.
+      - name: percentage
+        type: float
+        description: |
+          Percentage of tasks redirected to the Ramping Version.
+          Valid range [0,100].
+      - name: delete
+        type: bool
+        description: Delete the Ramping Version.
+      - name: identity
+        type: string
+        description: Identity of the user submitting this request.
+      - name: ignore-missing-task-queues
+        type: bool
+        description: Override protection to accidentally remove task queues.
+      - name: yes
+        short: y
+        type: bool
+        description: Don't prompt to confirm set Ramping Version.
+        
+  - name: temporal worker deployment update-metadata-version
+    summary: Change user-provided metadata for a Version
+    description: |
+      +---------------------------------------------------------------------+
+      | CAUTION: Worker Deployment is experimental. Deployment commands are |
+      | subject to change.                                                  |
+      +---------------------------------------------------------------------+
+      Update metadata associated with a Worker Deployment Version.
+
+      For example:
+
+      ```
+       temporal worker deployment update-metadata-version \
+          --version YourDeploymentName.YourBuildID \
+          --metadata bar=1 \
+          --metadata foo=true
+      ```
+
+      The current metadata is also returned with `describe-version`:
+        
+      ```
+       temporal worker deployment describe-version \
+          --version YourDeploymentName.YourBuildID \
+      ```      
+    option-sets:
+      - deployment-version
+    options:
+      - name: metadata
+        type: string[]
+        description: |
+          Set deployment metadata using `KEY="VALUE"` pairs.
+          Keys must be identifiers, and values must be JSON values.
+          For example: 'YourKey={"your": "value"}'.
+          Can be passed multiple times.
+      - name: remove-entries
+        type: string[]
+        description: |
+          Keys of entries to be deleted from metadata.
+          Can be passed multiple times.
 
   - name: temporal env
     summary: Manage environments
@@ -1341,7 +1739,7 @@ commands:
           Once enabled, can't be changed.
 
   - name: temporal operator nexus
-    summary: Commands for managing Nexus resources (EXPERIMENTAL)
+    summary: Commands for managing Nexus resources
     description: |
       These commands manage Nexus resources.
 
@@ -1352,7 +1750,7 @@ commands:
       ```
 
   - name: temporal operator nexus endpoint
-    summary: Commands for managing Nexus Endpoints (EXPERIMENTAL)
+    summary: Commands for managing Nexus Endpoints
     description: |
       These commands manage Nexus Endpoints.
 
@@ -1363,7 +1761,7 @@ commands:
       ```
 
   - name: temporal operator nexus endpoint create
-    summary: Create a Nexus Endpoint (EXPERIMENTAL)
+    summary: Create a Nexus Endpoint
     description: |
       Create a Nexus Endpoint on the Server.
 
@@ -1386,7 +1784,7 @@ commands:
       - nexus-endpoint-identity
       - nexus-endpoint-config
   - name: temporal operator nexus endpoint delete
-    summary: Delete a Nexus Endpoint (EXPERIMENTAL)
+    summary: Delete a Nexus Endpoint
     description: |
       Delete a Nexus Endpoint from the Server.
 
@@ -1408,7 +1806,7 @@ commands:
       - nexus-endpoint-identity
 
   - name: temporal operator nexus endpoint list
-    summary: List Nexus Endpoints (EXPERIMENTAL)
+    summary: List Nexus Endpoints
     description: |
       List all Nexus Endpoints on the Server.
 
@@ -1417,7 +1815,7 @@ commands:
       ```
 
   - name: temporal operator nexus endpoint update
-    summary: Update an existing Nexus Endpoint (EXPERIMENTAL)
+    summary: Update an existing Nexus Endpoint
     description: |
       Update an existing Nexus Endpoint on the Server.
 
@@ -2360,8 +2758,7 @@ commands:
     summary: Manage Task Queue Build ID handling (Experimental)
     description: |
       +---------------------------------------------------------------------+
-      | CAUTION: Worker versioning is experimental. Versioning commands are |
-      | subject to change.                                                  |
+      | CAUTION: This API has been deprecated by Worker Deployment.         |
       +---------------------------------------------------------------------+
 
       Provides commands to add, list, remove, or replace Worker Build ID assignment
@@ -2403,8 +2800,7 @@ commands:
       ```
 
       +---------------------------------------------------------------------+
-      | CAUTION: Worker versioning is experimental. Versioning commands are |
-      | subject to change.                                                  |
+      | CAUTION: This API has been deprecated by Worker Deployment.         |
       +---------------------------------------------------------------------+
     options:
       - name: source-build-id
@@ -2445,8 +2841,7 @@ commands:
       override this validation.
 
       +---------------------------------------------------------------------+
-      | CAUTION: Worker versioning is experimental. Versioning commands are |
-      | subject to change.                                                  |
+      | CAUTION: This API has been deprecated by Worker Deployment.         |
       +---------------------------------------------------------------------+
     options:
       - name: build-id
@@ -2478,8 +2873,7 @@ commands:
       Use the `--force` option to override this validation.
 
       +---------------------------------------------------------------------+
-      | CAUTION: Worker versioning is experimental. Versioning commands are |
-      | subject to change.                                                  |
+      | CAUTION: This API has been deprecated by Worker Deployment.         |
       +---------------------------------------------------------------------+
     options:
       - name: rule-index
@@ -2509,8 +2903,7 @@ commands:
       ```
 
       +---------------------------------------------------------------------+
-      | CAUTION: Worker versioning is experimental. Versioning commands are |
-      | subject to change.                                                  |
+      | CAUTION: This API has been deprecated by Worker Deployment.         |
       +---------------------------------------------------------------------+
     options:
       - name: source-build-id
@@ -2543,10 +2936,8 @@ commands:
         Build ID. You may add at most one redirect rule for each source Build ID.
         Redirect rules require that a target Build ID is fully compatible with
         the source Build ID.
-
       +---------------------------------------------------------------------+
-      | CAUTION: Worker versioning is experimental. Versioning commands are |
-      | subject to change.                                                  |
+      | CAUTION: This API has been deprecated by Worker Deployment.         |
       +---------------------------------------------------------------------+
 
   - name: temporal task-queue versioning insert-assignment-rule
@@ -2565,8 +2956,7 @@ commands:
       If you do not specify a `--rule-index`, this command inserts at index 0.
 
       +---------------------------------------------------------------------+
-      | CAUTION: Worker versioning is experimental. Versioning commands are |
-      | subject to change.                                                  |
+      | CAUTION: This API has been deprecated by Worker Deployment.         |
       +---------------------------------------------------------------------+
     options:
       - name: build-id
@@ -2621,8 +3011,7 @@ commands:
       Percent may vary between 0 and 100 (default).
 
       +---------------------------------------------------------------------+
-      | CAUTION: Worker versioning is experimental. Versioning commands are |
-      | subject to change.                                                  |
+      | CAUTION: This API has been deprecated by Worker Deployment.         |
       +---------------------------------------------------------------------+
     options:
       - name: build-id
@@ -2663,8 +3052,7 @@ commands:
       ```
 
       +---------------------------------------------------------------------+
-      | CAUTION: Worker versioning is experimental. Versioning commands are |
-      | subject to change.                                                  |
+      | CAUTION: This API has been deprecated by Worker Deployment.         |
       +---------------------------------------------------------------------+
     options:
       - name: source-build-id
@@ -2699,9 +3087,9 @@ commands:
     docs:
       description-header: >-
         Temporal Workflow commands enable operations on Workflow Executions,
-        such as cancel, count, delete, describe, execute, list, query, reset,
-        reset-batch, show, signal, stack, start, terminate, trace, and update,
-        enhancing efficiency and control.
+        such as cancel, count, delete, describe, execute, list, update-options,
+        query, reset, reset-batch, show, signal, stack, start, terminate,
+        trace, and update, enhancing efficiency and control.
       keywords:
         - call stack
         - cancellation
@@ -2724,6 +3112,7 @@ commands:
         - workflow execute
         - workflow execution
         - workflow list
+        - workflow metadata
         - workflow query
         - workflow reset
         - workflow reset-batch
@@ -2733,6 +3122,7 @@ commands:
         - workflow start
         - workflow terminate
         - workflow trace
+        - workflow update-options
 
   - name: temporal workflow cancel
     summary: Send cancellation to Workflow Execution
@@ -2910,6 +3300,87 @@ commands:
       - name: limit
         type: int
         description: Maximum number of Workflow Executions to display.
+      - name: page-size
+        type: int
+        description: Maximum number of Workflow Executions to fetch at a time from the server.
+
+  - name: temporal workflow metadata
+    summary: Query the Workflow for user-specified metadata
+    description: |
+      Issue a Query for and display user-set metadata like summary and
+      details for a specific Workflow Execution:
+
+      ```
+      temporal workflow metadata \
+          --workflow-id YourWorkflowId
+      ```
+    option-sets:
+      - workflow-reference
+      - query-modifiers
+
+  - name: temporal workflow update-options
+    summary: Change Workflow Execution Options
+    description: |
+      +---------------------------------------------------------------------+
+      | CAUTION: Worflow update-options is experimental. Workflow Execution |
+      | properties are subject to change.                                   |
+      +---------------------------------------------------------------------+
+
+      Modify properties of Workflow Executions:
+
+      ```
+      temporal workflow update-options [options]
+      ```
+
+      It can override the Worker Deployment configuration of a
+      Workflow Execution, which controls Worker Versioning.
+
+      For example, to force Workers in the current Deployment execute the
+      next Workflow Task change behavior to `auto_upgrade`:
+
+      ```
+      temporal workflow update-options \
+          --workflow-id YourWorkflowId \
+          --versioning-override-behavior auto_upgrade
+      ```
+
+      or to pin the workflow execution to a Worker Deployment, set behavior
+      to `pinned`:
+
+      ```
+      temporal workflow update-options \
+          --workflow-id YourWorkflowId \
+          --versioning-override-behavior pinned \
+          --versioning-override-pinned-version \
+            YourDeploymentSeriesName.YourDeploymentBuildId
+      ```
+
+      To remove any previous overrides, set the behavior to
+      `unspecified`:
+
+      ```
+      temporal workflow update-options \
+          --workflow-id YourWorkflowId \
+          --versioning-override-behavior unspecified
+      ```
+
+      To see the current override use `temporal workflow describe`
+
+    option-sets:
+      - single-workflow-or-batch
+    options:
+      - name: versioning-override-behavior
+        type: string-enum
+        description: |
+          Override the versioning behavior of a Workflow.
+        required: true
+        enum-values:
+          - unspecified
+          - pinned
+          - auto_upgrade
+      - name: versioning-override-pinned-version
+        type: string
+        description: Override Pinned Version for a Worker Deployment (Only for pinned).
 
   - name: temporal workflow query
     summary: Retrieve Workflow Execution state
@@ -2928,6 +3399,7 @@ commands:
     option-sets:
       - payload-input
       - workflow-reference
+      - query-modifiers
     options:
       - name: name
         type: string
@@ -2935,13 +3407,6 @@ commands:
         required: true
         aliases:
           - type
-      - name: reject-condition
-        type: string-enum
-        description: |
-          Optional flag for rejecting Queries based on Workflow state.
-        enum-values:
-          - not_open
-          - not_completed_cleanly
 
   - name: temporal workflow reset
     summary: Move Workflow Execution history point
@@ -3100,6 +3565,59 @@ commands:
         aliases:
           - type
 
+  - name: temporal workflow signal-with-start
+    summary: Send a message to a Workflow Execution, start the execution if it isn't running
+    description: |
+      Send an asynchronous notification (Signal) to a Workflow Execution.
+      If the Workflow Execution is not running or is not found, it starts the 
+      workflow then sends the signal.
+
+      ```
+      temporal workflow signal-with-start \
+        --signal-name YourSignal \
+        --signal-input '{"some-key": "some-value"}' \
+        --workflow-id YourWorkflowId \
+        --type YourWorkflowType \
+        --task-queue YourTaskQueue \
+        --input '{"some-key": "some-value"}'
+      ```
+    option-sets:
+      # workflow-id is "required" (runtime check)
+      - shared-workflow-start
+      - workflow-start
+      - payload-input
+    options:
+      - name: signal-name
+        type: string
+        description: Signal name.
+        required: true
+        aliases:
+          - signal-type
+      - name: signal-input
+        type: string[]
+        description: |
+          Signal input value.
+          Use JSON content or set --signal-input-meta to override.
+          Can't be combined with --signal-input-file.
+          Can be passed multiple times to pass multiple arguments.
+      - name: signal-input-file
+        type: string[]
+        description: |
+          A path or paths for input file(s).
+          Use JSON content or set --signal-input-meta to override.
+          Can't be combined with --signal-input.
+          Can be passed multiple times to pass multiple arguments.
+      - name: signal-input-meta
+        type: string[]
+        description: |
+          Input signal payload metadata as a `KEY=VALUE` pair.
+          When the KEY is "encoding", this overrides the default ("json/plain").
+          Can be passed multiple times.
+      - name: signal-input-base64
+        type: bool
+        description: |
+          Assume signal inputs are base64-encoded and attempt to decode them.
+
   - name: temporal workflow stack
     summary: Trace a Workflow Execution
     description: |
@@ -3243,20 +3761,16 @@ commands:
       - workflow-reference
 
   - name: temporal workflow update
-    summary: Updates (Experimental)
+    summary: Send and interact with Updates
     description: |
       An Update is a synchronous call to a Workflow Execution that can change its
       state, control its flow, and return a result.
 
-      Experimental.
-
   - name: temporal workflow update describe
-    summary: Obtain status info about a specific Update (Experimental)
+    summary: Obtain status info about a specific Update
     description: |
       Given a Workflow Execution and an Update ID, return information about its current status, including
       a result if it has finished.
-
-      Experimental.
 
       ```
       temporal workflow update describe \
@@ -3267,13 +3781,11 @@ commands:
       - update-targeting
 
   - name: temporal workflow update execute
-    summary: Send an Update and wait for it to complete (Experimental)
+    summary: Send an Update and wait for it to complete
     description: |
       Send a message to a Workflow Execution to invoke an Update handler, and wait for
       the update to complete or fail. You can also use this to wait for an existing
       update to complete, by submitting an existing update ID.
-
-      Experimental.
 
       ```
       temporal workflow update execute \
@@ -3286,12 +3798,10 @@ commands:
       - payload-input
 
   - name: temporal workflow update result
-    summary: Wait for a specific Update to complete (Experimental)
+    summary: Wait for a specific Update to complete
     description: |
       Given a Workflow Execution and an Update ID, wait for the Update to complete or fail and
       print the result.
-
-      Experimental.
 
       ```
       temporal workflow update result \
@@ -3302,19 +3812,18 @@ commands:
       - update-targeting
 
   - name: temporal workflow update start
-    summary: Send an Update and wait for it to be accepted or rejected (Experimental)
+    summary: Send an Update and wait for it to be accepted or rejected
     description: |
       Send a message to a Workflow Execution to invoke an Update handler, and wait for
       the update to be accepted or rejected. You can subsequently wait for the update
       to complete by using `temporal workflow update execute`.
-
-      Experimental.
 
       ```
       temporal workflow update start \
           --workflow-id YourWorkflowId \
           --name YourUpdate \
           --input '{"some-key": "some-value"}'
+          --wait-for-stage accepted
       ```
     option-sets:
       - update-starting
@@ -3329,6 +3838,163 @@ commands:
         enum-values:
           - accepted
         required: true
+
+  - name: temporal workflow start-update-with-start
+    summary: Send an Update-With-Start and wait for it to be accepted or rejected (Experimental)
+    description: |
+      Send a message to a Workflow Execution to invoke an Update handler, and wait for
+      the update to be accepted or rejected. If the Workflow Execution is not running, 
+      then a new workflow execution is started and the update is sent.
+
+      Experimental.
+
+      ```
+      temporal workflow start-update-with-start \
+        --update-name YourUpdate \
+        --update-input '{"update-key": "update-value"}' \
+        --update-wait-for-stage accepted \
+        --workflow-id YourWorkflowId \
+        --type YourWorkflowType \
+        --task-queue YourTaskQueue \
+        --id-conflict-policy Fail \
+        --input '{"wf-key": "wf-value"}'
+      ```
+    option-sets:
+      # workflow-id and id-conflict-policy are "required" (runtime checks)
+      - shared-workflow-start
+      - workflow-start
+      - payload-input
+    options:
+      - name: update-name
+        type: string
+        description: Update name.
+        required: true
+        aliases:
+          - update-type
+      - name: update-first-execution-run-id
+        type: string
+        description: |
+          Parent Run ID.
+          The update is sent to the last Workflow Execution in the chain started
+          with this Run ID.
+      - name: update-wait-for-stage
+        type: string-enum
+        description: |
+          Update stage to wait for.
+          The only option is `accepted`, but this option is required. This is to allow
+          a future version of the CLI to choose a default value.
+        enum-values:
+          - accepted
+        required: true
+      - name: update-id
+        type: string
+        description: |
+          Update ID.
+          If unset, defaults to a UUID.
+      - name: run-id
+        type: string
+        short: r
+        description: |
+          Run ID.
+          If unset, looks for an Update against the currently-running Workflow Execution.
+      - name: update-input
+        type: string[]
+        description: |
+          Update input value.
+          Use JSON content or set --update-input-meta to override.
+          Can't be combined with --update-input-file.
+          Can be passed multiple times to pass multiple arguments.
+      - name: update-input-file
+        type: string[]
+        description: |
+          A path or paths for input file(s).
+          Use JSON content or set --update-input-meta to override.
+          Can't be combined with --update-input.
+          Can be passed multiple times to pass multiple arguments.
+      - name: update-input-meta
+        type: string[]
+        description: |
+          Input update payload metadata as a `KEY=VALUE` pair.
+          When the KEY is "encoding", this overrides the default ("json/plain").
+          Can be passed multiple times.
+      - name: update-input-base64
+        type: bool
+        description: |
+          Assume update inputs are base64-encoded and attempt to decode them.
+
+  - name: temporal workflow execute-update-with-start
+    summary: Send an Update-With-Start and wait for it to complete (Experimental)
+    description: |
+      Send a message to a Workflow Execution to invoke an Update handler, and wait for
+      the update to complete. If the Workflow Execution is not running, then a new workflow
+      execution is started and the update is sent.
+
+      Experimental.
+
+      ```
+      temporal workflow execute-update-with-start \
+        --update-name YourUpdate \
+        --update-input '{"update-key": "update-value"}' \
+        --workflow-id YourWorkflowId \
+        --type YourWorkflowType \
+        --task-queue YourTaskQueue \
+        --id-conflict-policy Fail \
+        --input '{"wf-key": "wf-value"}'
+      ```
+
+    option-sets:
+      # workflow-id and id-conflict-policy are "required" (runtime checks)
+      - shared-workflow-start
+      - workflow-start
+      - payload-input
+    options:
+      - name: update-name
+        type: string
+        description: Update name.
+        required: true
+        aliases:
+          - update-type
+      - name: update-first-execution-run-id
+        type: string
+        description: |
+          Parent Run ID.
+          The update is sent to the last Workflow Execution in the chain started
+          with this Run ID.
+      - name: update-id
+        type: string
+        description: |
+          Update ID.
+          If unset, defaults to a UUID.
+      - name: run-id
+        type: string
+        short: r
+        description: |
+          Run ID.
+          If unset, looks for an Update against the currently-running Workflow Execution.
+      - name: update-input
+        type: string[]
+        description: |
+          Update input value.
+          Use JSON content or set --update-input-meta to override.
+          Can't be combined with --update-input-file.
+          Can be passed multiple times to pass multiple arguments.
+      - name: update-input-file
+        type: string[]
+        description: |
+          A path or paths for input file(s).
+          Use JSON content or set --update-input-meta to override.
+          Can't be combined with --update-input.
+          Can be passed multiple times to pass multiple arguments.
+      - name: update-input-meta
+        type: string[]
+        description: |
+          Input update payload metadata as a `KEY=VALUE` pair.
+          When the KEY is "encoding", this overrides the default ("json/plain").
+          Can be passed multiple times.
+      - name: update-input-base64
+        type: bool
+        description: |
+          Assume update inputs are base64-encoded and attempt to decode them.
 
 option-sets:
   - name: client
@@ -3352,7 +4018,7 @@ option-sets:
         type: string[]
         description: |
           HTTP headers for requests.
-          format as a `KEY=VALUE` pair
+          Format as a `KEY=VALUE` pair.
           May be passed multiple times to set multiple headers.
           Can also be made available via environment variable as
           `TEMPORAL_GRPC_META_[name]`.
@@ -3416,6 +4082,12 @@ option-sets:
         type: string
         description: Authorization header for Codec Server requests.
         implied-env: TEMPORAL_CODEC_AUTH
+      - name: codec-header
+        type: string[]
+        description: |
+          HTTP headers for requests to codec server.
+          Format as a `KEY=VALUE` pair.
+          May be passed multiple times to set multiple headers.
 
   - name: overlap-policy
     options:
@@ -3517,6 +4189,35 @@ option-sets:
         short: r
         description: Run ID.
 
+  - name: deployment-name
+    options:
+      - name: name
+        type: string
+        short: d
+        description: Name for a Worker Deployment.
+        required: true
+
+  - name: deployment-version
+    options:
+      - name: version
+        type: string
+        short: v
+        description: |
+          Fully-qualified name for a Worker Deployment Version.
+          Use the format `YourDeploymentName.YourBuildID`.
+        required: true
+        
+  - name: deployment-reference
+    options:
+      - name: series-name
+        type: string
+        description: Series Name for a Worker Deployment.
+        required: true
+      - name: build-id
+        type: string
+        description: Build ID for a Worker Deployment.
+        required: true
+
   - name: single-workflow-or-batch
     options:
       - name: workflow-id
@@ -3602,6 +4303,18 @@ option-sets:
         description: |
           Memo using 'KEY="VALUE"' pairs.
           Use JSON values.
+      - name: static-summary
+        type: string
+        experimental: true
+        description: |
+          Static Workflow summary for human consumption in UIs.
+          Uses Temporal Markdown formatting, should be a single line.
+      - name: static-details
+        type: string
+        experimental: true
+        description: |
+          Static Workflow details for human consumption in UIs.
+          Uses Temporal Markdown formatting, may be multiple lines.
 
   - name: workflow-start
     options:
@@ -3636,6 +4349,7 @@ option-sets:
           - Fail
           - UseExisting
           - TerminateExisting
+  
   - name: payload-input
     options:
       - name: input
@@ -3747,3 +4461,13 @@ option-sets:
           An external Nexus Endpoint that receives forwarded Nexus requests.
           May be used as an alternative to `--target-namespace` and
           `--target-task-queue`.
+
+  - name: query-modifiers
+    options:
+      - name: reject-condition
+        type: string-enum
+        description: |
+          Optional flag for rejecting Queries based on Workflow state.
+        enum-values:
+          - not_open
+          - not_completed_cleanly

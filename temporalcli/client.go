@@ -85,16 +85,16 @@ func (c *ClientOptions) dialClient(cctx *CommandContext) (client.Client, error) 
 		clientProfile.APIKey = c.ApiKey
 	}
 	if len(c.GrpcMeta) > 0 {
-		// We append meta, not override
+		// Append meta to the client profile
+		grpcMetaFromArg, err := stringKeysValues(c.GrpcMeta)
+		if err != nil {
+			return nil, fmt.Errorf("invalid gRPC meta: %w", err)
+		}
 		if len(clientProfile.GRPCMeta) == 0 {
 			clientProfile.GRPCMeta = make(map[string]string, len(c.GrpcMeta))
 		}
-		for _, kv := range c.GrpcMeta {
-			pieces := strings.SplitN(kv, "=", 2)
-			if len(pieces) != 2 {
-				return nil, fmt.Errorf("gRPC meta of %q does not have '='", kv)
-			}
-			clientProfile.GRPCMeta[pieces[0]] = pieces[1]
+		for k, v := range grpcMetaFromArg {
+			clientProfile.GRPCMeta[k] = v
 		}
 	}
 
@@ -155,7 +155,7 @@ func (c *ClientOptions) dialClient(cctx *CommandContext) (client.Client, error) 
 	}
 
 	// Now load client options from the profile
-	clientOptions, err := clientProfile.ToClientOptions(envconfig.ToClientOptionsOptions{})
+	clientOptions, err := clientProfile.ToClientOptions(envconfig.ToClientOptionsRequest{})
 	if err != nil {
 		return nil, fmt.Errorf("failed creating client options: %w", err)
 	}
@@ -169,8 +169,12 @@ func (c *ClientOptions) dialClient(cctx *CommandContext) (client.Client, error) 
 
 	// Remote codec
 	if clientProfile.Codec != nil && clientProfile.Codec.Endpoint != "" {
+		codecHeaders, err := stringKeysValues(c.CodecHeader)
+		if err != nil {
+			return nil, fmt.Errorf("invalid codec headers: %w", err)
+		}
 		interceptor, err := payloadCodecInterceptor(
-			clientProfile.Namespace, clientProfile.Codec.Endpoint, clientProfile.Codec.Auth)
+			clientProfile.Namespace, clientProfile.Codec.Endpoint, clientProfile.Codec.Auth, codecHeaders)
 		if err != nil {
 			return nil, fmt.Errorf("failed creating payload codec interceptor: %w", err)
 		}
@@ -208,7 +212,12 @@ func fixedHeaderOverrideInterceptor(
 	return invoker(ctx, method, req, reply, cc, opts...)
 }
 
-func payloadCodecInterceptor(namespace, codecEndpoint, codecAuth string) (grpc.UnaryClientInterceptor, error) {
+func payloadCodecInterceptor(
+	namespace string,
+	codecEndpoint string,
+	codecAuth string,
+	codecHeaders map[string]string,
+) (grpc.UnaryClientInterceptor, error) {
 	codecEndpoint = strings.ReplaceAll(codecEndpoint, "{namespace}", namespace)
 
 	payloadCodec := converter.NewRemotePayloadCodec(
@@ -216,6 +225,9 @@ func payloadCodecInterceptor(namespace, codecEndpoint, codecAuth string) (grpc.U
 			Endpoint: codecEndpoint,
 			ModifyRequest: func(req *http.Request) error {
 				req.Header.Set("X-Namespace", namespace)
+				for headerName, headerValue := range codecHeaders {
+					req.Header.Set(headerName, headerValue)
+				}
 				if codecAuth != "" {
 					req.Header.Set("Authorization", codecAuth)
 				}

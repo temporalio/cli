@@ -8,6 +8,7 @@ import (
 	"os/user"
 
 	"go.temporal.io/sdk/converter"
+	"go.temporal.io/sdk/workflow"
 
 	"github.com/fatih/color"
 	"github.com/google/uuid"
@@ -16,11 +17,16 @@ import (
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/query/v1"
+	sdkpb "go.temporal.io/api/sdk/v1"
 	"go.temporal.io/api/update/v1"
+	workflowpb "go.temporal.io/api/workflow/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/temporal"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
 )
+
+const metadataQueryName = "__temporal_workflow_metadata"
 
 func (c *TemporalWorkflowCancelCommand) run(cctx *CommandContext, args []string) error {
 	cl, err := c.Parent.ClientOptions.dialClient(cctx)
@@ -86,6 +92,104 @@ func (c *TemporalWorkflowDeleteCommand) run(cctx *CommandContext, args []string)
 		}
 	}
 	return nil
+}
+
+func (c *TemporalWorkflowUpdateOptionsCommand) run(cctx *CommandContext, args []string) error {
+	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	if c.VersioningOverrideBehavior.Value == "unspecified" || c.VersioningOverrideBehavior.Value == "auto_upgrade" {
+		if c.VersioningOverridePinnedVersion != "" {
+			return fmt.Errorf("cannot set pinned version with %v behavior", c.VersioningOverrideBehavior)
+		}
+	}
+
+	if c.VersioningOverrideBehavior.Value == "pinned" {
+		if c.VersioningOverridePinnedVersion == "" {
+			return fmt.Errorf("missing version with 'pinned' behavior")
+		}
+	}
+
+	exec, batchReq, err := c.workflowExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{})
+
+	// Run single or batch
+	if err != nil {
+		return err
+	} else if exec != nil {
+		behavior := workflow.VersioningBehaviorUnspecified
+		switch c.VersioningOverrideBehavior.Value {
+		case "unspecified":
+		case "pinned":
+			behavior = workflow.VersioningBehaviorPinned
+		case "auto_upgrade":
+			behavior = workflow.VersioningBehaviorAutoUpgrade
+		default:
+			return fmt.Errorf(
+				"invalid deployment behavior: %v, valid values are: 'unspecified', 'pinned', and 'auto_upgrade'",
+				c.VersioningOverrideBehavior,
+			)
+		}
+
+		_, err := cl.UpdateWorkflowExecutionOptions(cctx, client.UpdateWorkflowExecutionOptionsRequest{
+			WorkflowId: exec.WorkflowId,
+			RunId:      exec.RunId,
+			WorkflowExecutionOptionsChanges: client.WorkflowExecutionOptionsChanges{
+				VersioningOverride: &client.VersioningOverride{
+					Behavior:      behavior,
+					PinnedVersion: c.VersioningOverridePinnedVersion,
+				},
+			},
+		})
+		if err != nil {
+			return fmt.Errorf("failed to update workflow options: %w", err)
+		}
+		cctx.Printer.Println("Update workflow options succeeded")
+	} else { // Run batch
+		var workflowExecutionOptions *workflowpb.WorkflowExecutionOptions
+		protoMask, err := fieldmaskpb.New(workflowExecutionOptions, "versioning_override")
+		if err != nil {
+			return fmt.Errorf("invalid field mask: %w", err)
+		}
+
+		behavior := enums.VERSIONING_BEHAVIOR_UNSPECIFIED
+		switch c.VersioningOverrideBehavior.Value {
+		case "unspecified":
+		case "pinned":
+			behavior = enums.VERSIONING_BEHAVIOR_PINNED
+		case "auto_upgrade":
+			behavior = enums.VERSIONING_BEHAVIOR_AUTO_UPGRADE
+		default:
+			return fmt.Errorf(
+				"invalid deployment behavior: %v, valid values are: 'unspecified', 'pinned', and 'auto_upgrade'",
+				c.VersioningOverrideBehavior,
+			)
+		}
+
+		batchReq.Operation = &workflowservice.StartBatchOperationRequest_UpdateWorkflowOptionsOperation{
+			UpdateWorkflowOptionsOperation: &batch.BatchOperationUpdateWorkflowExecutionOptions{
+				Identity: clientIdentity(),
+				WorkflowExecutionOptions: &workflowpb.WorkflowExecutionOptions{
+					VersioningOverride: &workflowpb.VersioningOverride{
+						Behavior:      behavior,
+						PinnedVersion: c.VersioningOverridePinnedVersion,
+					},
+				},
+				UpdateMask: protoMask,
+			},
+		}
+		if err := startBatchJob(cctx, cl, batchReq); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *TemporalWorkflowMetadataCommand) run(cctx *CommandContext, _ []string) error {
+	return queryHelper(cctx, c.Parent, PayloadInputOptions{},
+		metadataQueryName, c.RejectCondition, c.WorkflowReferenceOptions)
 }
 
 func (c *TemporalWorkflowQueryCommand) run(cctx *CommandContext, args []string) error {
@@ -522,14 +626,63 @@ func queryHelper(cctx *CommandContext,
 		return cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
 	}
 
-	cctx.Printer.Println(color.MagentaString("Query result:"))
-	output := struct {
-		QueryResult json.RawMessage `cli:",cardOmitEmpty"`
-	}{}
-	output.QueryResult, err = cctx.MarshalFriendlyJSONPayloads(result.QueryResult)
-	if err != nil {
-		return fmt.Errorf("failed to marshal query result: %w", err)
-	}
+	if queryType == metadataQueryName {
+		var metadata sdkpb.WorkflowMetadata
+		err := UnmarshalProtoJSONWithOptions(result.QueryResult.Payloads[0].Data, &metadata, true)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal metadata: %w", err)
+		}
+		cctx.Printer.Println(color.MagentaString("Metadata:"))
 
-	return cctx.Printer.PrintStructured(output, printer.StructuredOptions{})
+		qDefs := metadata.GetDefinition().GetQueryDefinitions()
+		if len(qDefs) > 0 {
+			cctx.Printer.Println(printer.NonJSONIndent, color.MagentaString("Query Definitions:"))
+			err := cctx.Printer.PrintStructured(qDefs, printer.StructuredOptions{
+				Table:              &printer.TableOptions{NoHeader: true},
+				NonJSONExtraIndent: 1,
+			})
+			if err != nil {
+				return err
+			}
+		}
+		sigDefs := metadata.GetDefinition().GetSignalDefinitions()
+		if len(sigDefs) > 0 {
+			cctx.Printer.Println(printer.NonJSONIndent, color.MagentaString("Signal Definitions:"))
+			err := cctx.Printer.PrintStructured(sigDefs, printer.StructuredOptions{
+				Table:              &printer.TableOptions{NoHeader: true},
+				NonJSONExtraIndent: 1,
+			})
+			if err != nil {
+				return err
+			}
+		}
+		updDefs := metadata.GetDefinition().GetUpdateDefinitions()
+		if len(updDefs) > 0 {
+			cctx.Printer.Println(printer.NonJSONIndent, color.MagentaString("Update Definitions:"))
+			err := cctx.Printer.PrintStructured(updDefs, printer.StructuredOptions{
+				Table:              &printer.TableOptions{NoHeader: true},
+				NonJSONExtraIndent: 1,
+			})
+			if err != nil {
+				return err
+			}
+		}
+		if metadata.GetCurrentDetails() != "" {
+			cctx.Printer.Println(printer.NonJSONIndent, color.MagentaString("Current Details:"))
+			cctx.Printer.Println(printer.NonJSONIndent, printer.NonJSONIndent,
+				metadata.GetCurrentDetails())
+		}
+		return nil
+	} else {
+		cctx.Printer.Println(color.MagentaString("Query result:"))
+		output := struct {
+			QueryResult json.RawMessage `cli:",cardOmitEmpty"`
+		}{}
+		output.QueryResult, err = cctx.MarshalFriendlyJSONPayloads(result.QueryResult)
+		if err != nil {
+			return fmt.Errorf("failed to marshal query result: %w", err)
+		}
+
+		return cctx.Printer.PrintStructured(output, printer.StructuredOptions{})
+	}
 }
