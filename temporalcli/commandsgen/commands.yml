@@ -4026,9 +4026,8 @@ option-sets:
         type: bool
         description: |
           Enable base TLS encryption. Does not have additional options like mTLS
-          or client certs. Unlike some other options, if this is present and set
-          explicitly to false, it can still be overridden by config file or
-          environment variables.
+          or client certs. This is defaulted to true if api-key or any other TLS
+          options are present. Use --tls=false to explicitly disable.
         implied-env: TEMPORAL_TLS
       - name: tls-cert-path
         type: string

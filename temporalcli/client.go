@@ -139,13 +139,10 @@ func (c *ClientOptions) dialClient(cctx *CommandContext) (client.Client, error) 
 			clientProfile.TLS.DisableHostVerification = c.TlsDisableHostVerification
 		}
 	}
-	// In the past, the presence of API key CLI arg did not imply TLS like it
-	// does with envconfig. Therefore if there is a user-provided API key and
-	// TLS is not present, explicitly disable it so API key presence doesn't
-	// enable it in ToClientOptions below.
-	// TODO(cretz): Or do we want to break compatibility to have TLS defaulted
-	// for all API keys?
-	if c.ApiKey != "" && clientProfile.TLS == nil {
+
+	// If TLS is explicitly disabled, we turn it off. Otherwise it may be
+	// implicitly enabled if API key or any other TLS setting is set.
+	if cctx.CurrentCommand.Flags().Changed("tls") && !c.Tls {
 		clientProfile.TLS = &envconfig.ClientConfigTLS{Disabled: true}
 	}
 

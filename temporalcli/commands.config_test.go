@@ -372,3 +372,24 @@ func TestConfig_Set(t *testing.T) {
 		},
 		all)
 }
+
+func (s *SharedServerSuite) TestAPIKey_DefaultsTLS() {
+	// A workflow list with an API key should fail because TLS is enabled by
+	// default when --api-key is present
+	res := s.Execute(
+		"workflow", "count",
+		"--address", s.Address(),
+		"--api-key", "does-not-matter",
+	)
+	s.ErrorContains(res.Err, "tls")
+
+	// But it should succeed with TLS explicitly disabled
+	res = s.Execute(
+		"workflow", "count",
+		"--address", s.Address(),
+		"--api-key", "does-not-matter",
+		"--tls=false",
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Total")
+}
