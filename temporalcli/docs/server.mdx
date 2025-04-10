@@ -1,0 +1,230 @@
+---
+id: server
+title: temporal server
+sidebar_label: temporal server
+description: Manage your Temporal Server easily with CLI commands. Start a local server using `temporal server start-dev` and access the Web UI at http://localhost:8233. Customize with multiple options.
+toc_max_heading_level: 4
+keywords:
+  - cli reference
+  - command-line-interface-cli
+  - server
+  - server start-dev
+  - temporal cli
+tags:
+  - cli-reference
+  - command-line-interface-cli
+  - server
+  - server-start-dev
+  - temporal-cli
+---
+
+## start-dev
+
+Run a development Temporal Server on your local system.
+
++------------------------------------------------------------------------+
+| WARNING: The development server is not intended for production use.    |
+| It skips certain HTTP security checks to make local use simpler.       |
+|                                                                        |
+| For production use, see:                                               |
+| https://docs.temporal.io/production-deployment                         |
++------------------------------------------------------------------------+
+
+View the Web UI for the default configuration at: http://localhost:8233
+
+```
+temporal server start-dev
+```
+
+Add persistence for Workflow Executions across runs:
+
+```
+temporal server start-dev \
+    --db-filename path-to-your-local-persistent-store
+```
+
+Set the port from the front-end gRPC Service (7233 default):
+
+```
+temporal server start-dev \
+    --port 7000
+```
+
+Use a custom port for the Web UI. The default is the gRPC port (7233 default)
+plus 1000 (8233):
+
+```
+temporal server start-dev \
+    --ui-port 3000
+```
+
+Use the following options to change the behavior of this command.
+
+**Flags:**
+
+**--db-filename**, **-f** _string_
+
+Path to file for persistent Temporal state store. By default, Workflow Executions are lost when the server process dies.
+
+**--dynamic-config-value** _string[]_
+
+Dynamic configuration value using `KEY=VALUE` pairs. Keys must be identifiers, and values must be JSON values. For example: 'YourKey="YourString"'. Can be passed multiple times.
+
+**--headless** _bool_
+
+Disable the Web UI.
+
+**--http-port** _int_
+
+Port for the HTTP API service. Defaults to a random free port. (default "0")
+
+**--ip** _string_
+
+IP address bound to the front-end Service. (default "localhost")
+
+**--log-config** _bool_
+
+Log the server config to stderr.
+
+**--metrics-port** _int_
+
+Port for '/metrics'. Default is off.
+
+**--namespace**, **-n** _string[]_
+
+Namespaces to be created at launch. The "default" Namespace is always created automatically.
+
+**--port**, **-p** _int_
+
+Port for the front-end gRPC Service. (default "7233")
+
+**--search-attribute** _string[]_
+
+Search attributes to register using `KEY=VALUE` pairs. Keys must be identifiers, and values must be the search attribute type, which is one of the following: Text, Keyword, Int, Double, Bool, Datetime, KeywordList.
+
+**--sqlite-pragma** _string[]_
+
+SQLite pragma statements in "PRAGMA=VALUE" format.
+
+**--ui-asset-path** _string_
+
+UI custom assets path.
+
+**--ui-codec-endpoint** _string_
+
+UI remote codec HTTP endpoint.
+
+**--ui-ip** _string_
+
+IP address bound to the Web UI. Default is same as '--ip' value.
+
+**--ui-port** _int_
+
+Port for the Web UI. Default is '--port' value + 1000.
+
+**--ui-public-path** _string_
+
+The public base path for the Web UI. Default is `/`.
+
+**Global Flags:**
+
+**--address** _string_
+
+Temporal Service gRPC endpoint. (default "127.0.0.1:7233")
+
+**--api-key** _string_
+
+API key for request.
+
+**--codec-auth** _string_
+
+Authorization header for Codec Server requests.
+
+**--codec-endpoint** _string_
+
+Remote Codec Server endpoint.
+
+**--codec-header** _string[]_
+
+HTTP headers for requests to codec server. Format as a `KEY=VALUE` pair. May be passed multiple times to set multiple headers.
+
+**--color** _string-enum_
+
+Output coloring. Accepted values: always, never, auto. (default "auto")
+
+**--command-timeout** _duration_
+
+The command execution timeout. 0s means no timeout.
+
+**--env** _string_
+
+Active environment name (`ENV`). (default "default")
+
+**--env-file** _string_
+
+Path to environment settings file. Defaults to `$HOME/.config/temporalio/temporal.yaml`.
+
+**--grpc-meta** _string[]_
+
+HTTP headers for requests. Format as a `KEY=VALUE` pair. May be passed multiple times to set multiple headers.
+
+**--log-format** _string-enum_
+
+Log format. Accepted values: text, json. (default "text")
+
+**--log-level** _string-enum_
+
+Log level. Default is "info" for most commands and "warn" for `server start-dev`. Accepted values: debug, info, warn, error, never. (default "info")
+
+**--namespace**, **-n** _string_
+
+Temporal Service Namespace. (default "default")
+
+**--no-json-shorthand-payloads** _bool_
+
+Raw payload output, even if the JSON option was used.
+
+**--output**, **-o** _string-enum_
+
+Non-logging data output format. Accepted values: text, json, jsonl, none. (default "text")
+
+**--time-format** _string-enum_
+
+Time format. Accepted values: relative, iso, raw. (default "relative")
+
+**--tls** _bool_
+
+Enable base TLS encryption. Does not have additional options like mTLS or client certs.
+
+**--tls-ca-data** _string_
+
+Data for server CA certificate. Can't be used with --tls-ca-path.
+
+**--tls-ca-path** _string_
+
+Path to server CA certificate. Can't be used with --tls-ca-data.
+
+**--tls-cert-data** _string_
+
+Data for x509 certificate. Can't be used with --tls-cert-path.
+
+**--tls-cert-path** _string_
+
+Path to x509 certificate. Can't be used with --tls-cert-data.
+
+**--tls-disable-host-verification** _bool_
+
+Disable TLS host-name verification.
+
+**--tls-key-data** _string_
+
+Private certificate key data. Can't be used with --tls-key-path.
+
+**--tls-key-path** _string_
+
+Path to x509 private key. Can't be used with --tls-key-data.
+
+**--tls-server-name** _string_
+
+Override target TLS server name.
+

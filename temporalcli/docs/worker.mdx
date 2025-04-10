@@ -1,0 +1,1217 @@
+---
+id: worker
+title: temporal worker
+sidebar_label: temporal worker
+description: Learn how to read or modify state associated with a Worker, such as Worker Deployments.
+toc_max_heading_level: 4
+keywords:
+  - worker
+  - worker deployment
+tags:
+  - worker
+  - worker-deployment
+---
+
+## deployment
+
++---------------------------------------------------------------------+
+| CAUTION: Worker Deployment is experimental. Deployment commands are |
+| subject to change.                                                  |
++---------------------------------------------------------------------+
+
+Deployment commands perform operations on Worker Deployments:
+
+```
+temporal worker deployment [command] [options]
+```
+
+For example:
+
+```
+temporal worker deployment list
+```
+
+Lists the Deployments in the client's namespace.
+
+Arguments can be Worker Deployment Versions associated with
+a Deployment, using a fully qualified Version identifier that
+concatenates the Deployment Name and the Build ID with the
+reserved separator ".".
+
+For example:
+
+```
+temporal worker deployment set-current-version \
+         --version YourDeploymentName.YourBuildID
+```
+
+Sets the current Deployment Version for a given Deployment.
+
+### delete
+
++---------------------------------------------------------------------+
+| CAUTION: Worker Deployment is experimental. Deployment commands are |
+| subject to change.                                                  |
++---------------------------------------------------------------------+
+
+Remove a Worker Deployment given its Deployment Name.
+A Deployment can only be deleted if it has no Version in it.
+
+```
+temporal worker deployment delete [options]
+```
+
+For example, setting the user identity that removed the deployment:
+
+```
+temporal worker deployment delete \
+    --name YourDeploymentName \
+    --identity YourIdentity
+
+```
+
+Use the following options to change the behavior of this command.
+
+**Flags:**
+
+**--identity** _string_
+
+Identity of the user submitting this request.
+
+**--name**, **-d** _string_
+
+Name for a Worker Deployment. Required.
+
+**Global Flags:**
+
+**--address** _string_
+
+Temporal Service gRPC endpoint. (default "127.0.0.1:7233")
+
+**--api-key** _string_
+
+API key for request.
+
+**--codec-auth** _string_
+
+Authorization header for Codec Server requests.
+
+**--codec-endpoint** _string_
+
+Remote Codec Server endpoint.
+
+**--codec-header** _string[]_
+
+HTTP headers for requests to codec server. Format as a `KEY=VALUE` pair. May be passed multiple times to set multiple headers.
+
+**--color** _string-enum_
+
+Output coloring. Accepted values: always, never, auto. (default "auto")
+
+**--command-timeout** _duration_
+
+The command execution timeout. 0s means no timeout.
+
+**--env** _string_
+
+Active environment name (`ENV`). (default "default")
+
+**--env-file** _string_
+
+Path to environment settings file. Defaults to `$HOME/.config/temporalio/temporal.yaml`.
+
+**--grpc-meta** _string[]_
+
+HTTP headers for requests. Format as a `KEY=VALUE` pair. May be passed multiple times to set multiple headers.
+
+**--log-format** _string-enum_
+
+Log format. Accepted values: text, json. (default "text")
+
+**--log-level** _string-enum_
+
+Log level. Default is "info" for most commands and "warn" for `server start-dev`. Accepted values: debug, info, warn, error, never. (default "info")
+
+**--namespace**, **-n** _string_
+
+Temporal Service Namespace. (default "default")
+
+**--no-json-shorthand-payloads** _bool_
+
+Raw payload output, even if the JSON option was used.
+
+**--output**, **-o** _string-enum_
+
+Non-logging data output format. Accepted values: text, json, jsonl, none. (default "text")
+
+**--time-format** _string-enum_
+
+Time format. Accepted values: relative, iso, raw. (default "relative")
+
+**--tls** _bool_
+
+Enable base TLS encryption. Does not have additional options like mTLS or client certs.
+
+**--tls-ca-data** _string_
+
+Data for server CA certificate. Can't be used with --tls-ca-path.
+
+**--tls-ca-path** _string_
+
+Path to server CA certificate. Can't be used with --tls-ca-data.
+
+**--tls-cert-data** _string_
+
+Data for x509 certificate. Can't be used with --tls-cert-path.
+
+**--tls-cert-path** _string_
+
+Path to x509 certificate. Can't be used with --tls-cert-data.
+
+**--tls-disable-host-verification** _bool_
+
+Disable TLS host-name verification.
+
+**--tls-key-data** _string_
+
+Private certificate key data. Can't be used with --tls-key-path.
+
+**--tls-key-path** _string_
+
+Path to x509 private key. Can't be used with --tls-key-data.
+
+**--tls-server-name** _string_
+
+Override target TLS server name.
+
+### delete-version
+
++---------------------------------------------------------------------+
+| CAUTION: Worker Deployment is experimental. Deployment commands are |
+| subject to change.                                                  |
++---------------------------------------------------------------------+
+
+Remove a Worker Deployment Version given its fully-qualified identifier.
+This is rarely needed during normal operation
+since unused Versions are eventually garbage collected.
+The client can delete a Version only when all of the following conditions
+are met:
+  - It is not the Current or Ramping Version for this Deployment.
+  - It has no active pollers, i.e., none of the task queues in the
+  Version have pollers.
+  - It is not draining. This requirement can be ignored with the option
+`--skip-drainage`.
+  
+```
+temporal worker deployment delete-version [options]
+```
+
+For example, skipping the drainage restriction:
+
+```
+temporal worker deployment delete-version \
+    --version YourDeploymentName.YourBuildID \
+    --skip-drainage          
+```
+
+Use the following options to change the behavior of this command.
+
+**Flags:**
+
+**--identity** _string_
+
+Identity of the user submitting this request.
+
+**--skip-drainage** _bool_
+
+Ignore the deletion requirement of not draining.
+
+**--version**, **-v** _string_
+
+Fully-qualified name for a Worker Deployment Version. Use the format `YourDeploymentName.YourBuildID`. Required.
+
+**Global Flags:**
+
+**--address** _string_
+
+Temporal Service gRPC endpoint. (default "127.0.0.1:7233")
+
+**--api-key** _string_
+
+API key for request.
+
+**--codec-auth** _string_
+
+Authorization header for Codec Server requests.
+
+**--codec-endpoint** _string_
+
+Remote Codec Server endpoint.
+
+**--codec-header** _string[]_
+
+HTTP headers for requests to codec server. Format as a `KEY=VALUE` pair. May be passed multiple times to set multiple headers.
+
+**--color** _string-enum_
+
+Output coloring. Accepted values: always, never, auto. (default "auto")
+
+**--command-timeout** _duration_
+
+The command execution timeout. 0s means no timeout.
+
+**--env** _string_
+
+Active environment name (`ENV`). (default "default")
+
+**--env-file** _string_
+
+Path to environment settings file. Defaults to `$HOME/.config/temporalio/temporal.yaml`.
+
+**--grpc-meta** _string[]_
+
+HTTP headers for requests. Format as a `KEY=VALUE` pair. May be passed multiple times to set multiple headers.
+
+**--log-format** _string-enum_
+
+Log format. Accepted values: text, json. (default "text")
+
+**--log-level** _string-enum_
+
+Log level. Default is "info" for most commands and "warn" for `server start-dev`. Accepted values: debug, info, warn, error, never. (default "info")
+
+**--namespace**, **-n** _string_
+
+Temporal Service Namespace. (default "default")
+
+**--no-json-shorthand-payloads** _bool_
+
+Raw payload output, even if the JSON option was used.
+
+**--output**, **-o** _string-enum_
+
+Non-logging data output format. Accepted values: text, json, jsonl, none. (default "text")
+
+**--time-format** _string-enum_
+
+Time format. Accepted values: relative, iso, raw. (default "relative")
+
+**--tls** _bool_
+
+Enable base TLS encryption. Does not have additional options like mTLS or client certs.
+
+**--tls-ca-data** _string_
+
+Data for server CA certificate. Can't be used with --tls-ca-path.
+
+**--tls-ca-path** _string_
+
+Path to server CA certificate. Can't be used with --tls-ca-data.
+
+**--tls-cert-data** _string_
+
+Data for x509 certificate. Can't be used with --tls-cert-path.
+
+**--tls-cert-path** _string_
+
+Path to x509 certificate. Can't be used with --tls-cert-data.
+
+**--tls-disable-host-verification** _bool_
+
+Disable TLS host-name verification.
+
+**--tls-key-data** _string_
+
+Private certificate key data. Can't be used with --tls-key-path.
+
+**--tls-key-path** _string_
+
+Path to x509 private key. Can't be used with --tls-key-data.
+
+**--tls-server-name** _string_
+
+Override target TLS server name.
+
+### describe
+
++---------------------------------------------------------------------+
+| CAUTION: Worker Deployment is experimental. Deployment commands are |
+| subject to change.                                                  |
++---------------------------------------------------------------------+
+
+Describe properties of a Worker Deployment, such as the versions
+associated with it, routing information of new or existing tasks
+executed by this deployment, or its creation time.
+
+```
+temporal worker deployment describe [options]
+```
+
+For example, to describe a deployment `YourDeploymentName` in the default
+namespace:
+
+```
+temporal worker deployment describe \
+    --name YourDeploymentName
+```
+
+Use the following options to change the behavior of this command.
+
+**Flags:**
+
+**--name**, **-d** _string_
+
+Name for a Worker Deployment. Required.
+
+**Global Flags:**
+
+**--address** _string_
+
+Temporal Service gRPC endpoint. (default "127.0.0.1:7233")
+
+**--api-key** _string_
+
+API key for request.
+
+**--codec-auth** _string_
+
+Authorization header for Codec Server requests.
+
+**--codec-endpoint** _string_
+
+Remote Codec Server endpoint.
+
+**--codec-header** _string[]_
+
+HTTP headers for requests to codec server. Format as a `KEY=VALUE` pair. May be passed multiple times to set multiple headers.
+
+**--color** _string-enum_
+
+Output coloring. Accepted values: always, never, auto. (default "auto")
+
+**--command-timeout** _duration_
+
+The command execution timeout. 0s means no timeout.
+
+**--env** _string_
+
+Active environment name (`ENV`). (default "default")
+
+**--env-file** _string_
+
+Path to environment settings file. Defaults to `$HOME/.config/temporalio/temporal.yaml`.
+
+**--grpc-meta** _string[]_
+
+HTTP headers for requests. Format as a `KEY=VALUE` pair. May be passed multiple times to set multiple headers.
+
+**--log-format** _string-enum_
+
+Log format. Accepted values: text, json. (default "text")
+
+**--log-level** _string-enum_
+
+Log level. Default is "info" for most commands and "warn" for `server start-dev`. Accepted values: debug, info, warn, error, never. (default "info")
+
+**--namespace**, **-n** _string_
+
+Temporal Service Namespace. (default "default")
+
+**--no-json-shorthand-payloads** _bool_
+
+Raw payload output, even if the JSON option was used.
+
+**--output**, **-o** _string-enum_
+
+Non-logging data output format. Accepted values: text, json, jsonl, none. (default "text")
+
+**--time-format** _string-enum_
+
+Time format. Accepted values: relative, iso, raw. (default "relative")
+
+**--tls** _bool_
+
+Enable base TLS encryption. Does not have additional options like mTLS or client certs.
+
+**--tls-ca-data** _string_
+
+Data for server CA certificate. Can't be used with --tls-ca-path.
+
+**--tls-ca-path** _string_
+
+Path to server CA certificate. Can't be used with --tls-ca-data.
+
+**--tls-cert-data** _string_
+
+Data for x509 certificate. Can't be used with --tls-cert-path.
+
+**--tls-cert-path** _string_
+
+Path to x509 certificate. Can't be used with --tls-cert-data.
+
+**--tls-disable-host-verification** _bool_
+
+Disable TLS host-name verification.
+
+**--tls-key-data** _string_
+
+Private certificate key data. Can't be used with --tls-key-path.
+
+**--tls-key-path** _string_
+
+Path to x509 private key. Can't be used with --tls-key-data.
+
+**--tls-server-name** _string_
+
+Override target TLS server name.
+
+### describe-version
+
++---------------------------------------------------------------------+
+| CAUTION: Worker Deployment is experimental. Deployment commands are |
+| subject to change.                                                  |
++---------------------------------------------------------------------+
+
+Describe properties of a Worker Deployment Version, such as the task 
+queues polled by workers in this Deployment Version, or drainage
+information required to safely decommission workers, or user-provided
+metadata, or its creation/modification time.
+
+```
+temporal worker deployment describe-version [options]
+```
+
+For example, to describe a deployment version  in a deployment
+`YourDeploymentName`, with Build ID `YourBuildID`, and in the default
+namespace:
+
+```
+temporal worker deployment describe-version \
+    --version YourDeploymentName.YourBuildID
+```
+
+Use the following options to change the behavior of this command.
+
+**Flags:**
+
+**--version**, **-v** _string_
+
+Fully-qualified name for a Worker Deployment Version. Use the format `YourDeploymentName.YourBuildID`. Required.
+
+**Global Flags:**
+
+**--address** _string_
+
+Temporal Service gRPC endpoint. (default "127.0.0.1:7233")
+
+**--api-key** _string_
+
+API key for request.
+
+**--codec-auth** _string_
+
+Authorization header for Codec Server requests.
+
+**--codec-endpoint** _string_
+
+Remote Codec Server endpoint.
+
+**--codec-header** _string[]_
+
+HTTP headers for requests to codec server. Format as a `KEY=VALUE` pair. May be passed multiple times to set multiple headers.
+
+**--color** _string-enum_
+
+Output coloring. Accepted values: always, never, auto. (default "auto")
+
+**--command-timeout** _duration_
+
+The command execution timeout. 0s means no timeout.
+
+**--env** _string_
+
+Active environment name (`ENV`). (default "default")
+
+**--env-file** _string_
+
+Path to environment settings file. Defaults to `$HOME/.config/temporalio/temporal.yaml`.
+
+**--grpc-meta** _string[]_
+
+HTTP headers for requests. Format as a `KEY=VALUE` pair. May be passed multiple times to set multiple headers.
+
+**--log-format** _string-enum_
+
+Log format. Accepted values: text, json. (default "text")
+
+**--log-level** _string-enum_
+
+Log level. Default is "info" for most commands and "warn" for `server start-dev`. Accepted values: debug, info, warn, error, never. (default "info")
+
+**--namespace**, **-n** _string_
+
+Temporal Service Namespace. (default "default")
+
+**--no-json-shorthand-payloads** _bool_
+
+Raw payload output, even if the JSON option was used.
+
+**--output**, **-o** _string-enum_
+
+Non-logging data output format. Accepted values: text, json, jsonl, none. (default "text")
+
+**--time-format** _string-enum_
+
+Time format. Accepted values: relative, iso, raw. (default "relative")
+
+**--tls** _bool_
+
+Enable base TLS encryption. Does not have additional options like mTLS or client certs.
+
+**--tls-ca-data** _string_
+
+Data for server CA certificate. Can't be used with --tls-ca-path.
+
+**--tls-ca-path** _string_
+
+Path to server CA certificate. Can't be used with --tls-ca-data.
+
+**--tls-cert-data** _string_
+
+Data for x509 certificate. Can't be used with --tls-cert-path.
+
+**--tls-cert-path** _string_
+
+Path to x509 certificate. Can't be used with --tls-cert-data.
+
+**--tls-disable-host-verification** _bool_
+
+Disable TLS host-name verification.
+
+**--tls-key-data** _string_
+
+Private certificate key data. Can't be used with --tls-key-path.
+
+**--tls-key-path** _string_
+
+Path to x509 private key. Can't be used with --tls-key-data.
+
+**--tls-server-name** _string_
+
+Override target TLS server name.
+
+### list
+
++---------------------------------------------------------------------+
+| CAUTION: Worker Deployment is experimental. Deployment commands are |
+| subject to change.                                                  |
++---------------------------------------------------------------------+
+
+List existing Worker Deployments in the client's namespace.
+
+```
+temporal worker deployment list [options]
+```
+
+For example, listing Deployments in YourDeploymentNamespace:
+
+```
+temporal worker deployment list \
+    --namespace YourDeploymentNamespace
+```
+
+Use the following options to change the behavior of this command.
+
+**Global Flags:**
+
+**--address** _string_
+
+Temporal Service gRPC endpoint. (default "127.0.0.1:7233")
+
+**--api-key** _string_
+
+API key for request.
+
+**--codec-auth** _string_
+
+Authorization header for Codec Server requests.
+
+**--codec-endpoint** _string_
+
+Remote Codec Server endpoint.
+
+**--codec-header** _string[]_
+
+HTTP headers for requests to codec server. Format as a `KEY=VALUE` pair. May be passed multiple times to set multiple headers.
+
+**--color** _string-enum_
+
+Output coloring. Accepted values: always, never, auto. (default "auto")
+
+**--command-timeout** _duration_
+
+The command execution timeout. 0s means no timeout.
+
+**--env** _string_
+
+Active environment name (`ENV`). (default "default")
+
+**--env-file** _string_
+
+Path to environment settings file. Defaults to `$HOME/.config/temporalio/temporal.yaml`.
+
+**--grpc-meta** _string[]_
+
+HTTP headers for requests. Format as a `KEY=VALUE` pair. May be passed multiple times to set multiple headers.
+
+**--log-format** _string-enum_
+
+Log format. Accepted values: text, json. (default "text")
+
+**--log-level** _string-enum_
+
+Log level. Default is "info" for most commands and "warn" for `server start-dev`. Accepted values: debug, info, warn, error, never. (default "info")
+
+**--namespace**, **-n** _string_
+
+Temporal Service Namespace. (default "default")
+
+**--no-json-shorthand-payloads** _bool_
+
+Raw payload output, even if the JSON option was used.
+
+**--output**, **-o** _string-enum_
+
+Non-logging data output format. Accepted values: text, json, jsonl, none. (default "text")
+
+**--time-format** _string-enum_
+
+Time format. Accepted values: relative, iso, raw. (default "relative")
+
+**--tls** _bool_
+
+Enable base TLS encryption. Does not have additional options like mTLS or client certs.
+
+**--tls-ca-data** _string_
+
+Data for server CA certificate. Can't be used with --tls-ca-path.
+
+**--tls-ca-path** _string_
+
+Path to server CA certificate. Can't be used with --tls-ca-data.
+
+**--tls-cert-data** _string_
+
+Data for x509 certificate. Can't be used with --tls-cert-path.
+
+**--tls-cert-path** _string_
+
+Path to x509 certificate. Can't be used with --tls-cert-data.
+
+**--tls-disable-host-verification** _bool_
+
+Disable TLS host-name verification.
+
+**--tls-key-data** _string_
+
+Private certificate key data. Can't be used with --tls-key-path.
+
+**--tls-key-path** _string_
+
+Path to x509 private key. Can't be used with --tls-key-data.
+
+**--tls-server-name** _string_
+
+Override target TLS server name.
+
+### set-current-version
+
++---------------------------------------------------------------------+
+| CAUTION: Worker Deployment is experimental. Deployment commands are |
+| subject to change.                                                  |
++---------------------------------------------------------------------+
+
+Set the Current Version for a Deployment.
+When a Version is current, Workers of that Deployment Version will receive
+tasks from new Workflows, and from existing AutoUpgrade Workflows that
+are running on this Deployment.
+
+If not all the expected Task Queues are being polled by Workers in the
+new Version the request will fail. To override this protection use
+`--ignore-missing-task-queues`. Note that this would ignore task queues
+in a deployment that are not yet discovered, leading to inconsistent task
+queue configuration.
+
+```
+temporal worker deployment set-current-version [options]
+```
+
+For example, to set the Current Version of a deployment
+`YourDeploymentName`, with a version with Build ID `YourBuildID`, and
+in the default namespace:
+
+```
+temporal worker deployment set-current-version \
+    --version YourDeploymentName.YourBuildID
+```
+
+The target of set-current-version can also be `__unversioned__`, which
+moves tasks to unversioned workers, but in this case we also need to
+specify the Deployment Name.
+
+```
+temporal worker deployment set-current-version \
+    --version __unversioned__ \
+    --deployment-name YourDeploymentName
+```  
+
+Use the following options to change the behavior of this command.
+
+**Flags:**
+
+**--deployment-name** _string_
+
+Deployment name. Only needed when `--version` is `__unversioned__` or empty.
+
+**--identity** _string_
+
+Identity of the user submitting this request.
+
+**--ignore-missing-task-queues** _bool_
+
+Override protection to accidentally remove task queues.
+
+**--version**, **-v** _string_
+
+Fully-qualified name for a Worker Deployment Version. Use the format `YourDeploymentName.YourBuildID`. Required.
+
+**--yes**, **-y** _bool_
+
+Don't prompt to confirm set Current Version.
+
+**Global Flags:**
+
+**--address** _string_
+
+Temporal Service gRPC endpoint. (default "127.0.0.1:7233")
+
+**--api-key** _string_
+
+API key for request.
+
+**--codec-auth** _string_
+
+Authorization header for Codec Server requests.
+
+**--codec-endpoint** _string_
+
+Remote Codec Server endpoint.
+
+**--codec-header** _string[]_
+
+HTTP headers for requests to codec server. Format as a `KEY=VALUE` pair. May be passed multiple times to set multiple headers.
+
+**--color** _string-enum_
+
+Output coloring. Accepted values: always, never, auto. (default "auto")
+
+**--command-timeout** _duration_
+
+The command execution timeout. 0s means no timeout.
+
+**--env** _string_
+
+Active environment name (`ENV`). (default "default")
+
+**--env-file** _string_
+
+Path to environment settings file. Defaults to `$HOME/.config/temporalio/temporal.yaml`.
+
+**--grpc-meta** _string[]_
+
+HTTP headers for requests. Format as a `KEY=VALUE` pair. May be passed multiple times to set multiple headers.
+
+**--log-format** _string-enum_
+
+Log format. Accepted values: text, json. (default "text")
+
+**--log-level** _string-enum_
+
+Log level. Default is "info" for most commands and "warn" for `server start-dev`. Accepted values: debug, info, warn, error, never. (default "info")
+
+**--namespace**, **-n** _string_
+
+Temporal Service Namespace. (default "default")
+
+**--no-json-shorthand-payloads** _bool_
+
+Raw payload output, even if the JSON option was used.
+
+**--output**, **-o** _string-enum_
+
+Non-logging data output format. Accepted values: text, json, jsonl, none. (default "text")
+
+**--time-format** _string-enum_
+
+Time format. Accepted values: relative, iso, raw. (default "relative")
+
+**--tls** _bool_
+
+Enable base TLS encryption. Does not have additional options like mTLS or client certs.
+
+**--tls-ca-data** _string_
+
+Data for server CA certificate. Can't be used with --tls-ca-path.
+
+**--tls-ca-path** _string_
+
+Path to server CA certificate. Can't be used with --tls-ca-data.
+
+**--tls-cert-data** _string_
+
+Data for x509 certificate. Can't be used with --tls-cert-path.
+
+**--tls-cert-path** _string_
+
+Path to x509 certificate. Can't be used with --tls-cert-data.
+
+**--tls-disable-host-verification** _bool_
+
+Disable TLS host-name verification.
+
+**--tls-key-data** _string_
+
+Private certificate key data. Can't be used with --tls-key-path.
+
+**--tls-key-path** _string_
+
+Path to x509 private key. Can't be used with --tls-key-data.
+
+**--tls-server-name** _string_
+
+Override target TLS server name.
+
+### set-ramping-version
+
++---------------------------------------------------------------------+
+| CAUTION: Worker Deployment is experimental. Deployment commands are |
+| subject to change.                                                  |
++---------------------------------------------------------------------+
+
+Set the Ramping Version and Percentage for a Deployment.
+
+The Ramping Version can be set to a fully-qualified Version of the form
+`YourDeploymentName.YourBuildID`, or set to "__unversioned__", a special
+value that represents all the unversioned workers.
+
+The Ramping Percentage is a float with values in the range [0, 100].
+A value of 100 does not make the Ramping Version Current, use
+`set-current-version` instead.
+
+To remove a Ramping Version use the flag `--delete`.
+
+If not all the expected Task Queues are being polled by Workers in the
+new Ramping Version the request will fail. To override this protection use
+`--ignore-missing-task-queues`. Note that this would ignore task queues
+in a deployment that are not yet discovered, leading to inconsistent task
+queue configuration.
+
+```
+temporal worker deployment set-ramping-version [options]
+```
+
+For example, to set the Ramping Version of a deployment
+`YourDeploymentName`, with a version with Build ID `YourBuildID`, with
+10 percent of tasks redirected to this version, and
+using the default namespace:
+
+```
+temporal worker deployment set-ramping-version \
+    --version YourDeploymentName.YourBuildID
+    --percentage 10.0
+```
+
+And to remove that ramping:
+  
+```
+temporal worker deployment set-ramping-version \
+    --version YourDeploymentName.YourBuildID \
+    --delete
+```    
+
+Use the following options to change the behavior of this command.
+
+**Flags:**
+
+**--delete** _bool_
+
+Delete the Ramping Version.
+
+**--deployment-name** _string_
+
+Deployment name. Only needed when `--version` is `__unversioned__`.
+
+**--identity** _string_
+
+Identity of the user submitting this request.
+
+**--ignore-missing-task-queues** _bool_
+
+Override protection to accidentally remove task queues.
+
+**--percentage** _float_
+
+Percentage of tasks redirected to the Ramping Version. Valid range [0,100].
+
+**--version**, **-v** _string_
+
+Fully-qualified name for a Worker Deployment Version. Use the format `YourDeploymentName.YourBuildID`. Required.
+
+**--yes**, **-y** _bool_
+
+Don't prompt to confirm set Ramping Version.
+
+**Global Flags:**
+
+**--address** _string_
+
+Temporal Service gRPC endpoint. (default "127.0.0.1:7233")
+
+**--api-key** _string_
+
+API key for request.
+
+**--codec-auth** _string_
+
+Authorization header for Codec Server requests.
+
+**--codec-endpoint** _string_
+
+Remote Codec Server endpoint.
+
+**--codec-header** _string[]_
+
+HTTP headers for requests to codec server. Format as a `KEY=VALUE` pair. May be passed multiple times to set multiple headers.
+
+**--color** _string-enum_
+
+Output coloring. Accepted values: always, never, auto. (default "auto")
+
+**--command-timeout** _duration_
+
+The command execution timeout. 0s means no timeout.
+
+**--env** _string_
+
+Active environment name (`ENV`). (default "default")
+
+**--env-file** _string_
+
+Path to environment settings file. Defaults to `$HOME/.config/temporalio/temporal.yaml`.
+
+**--grpc-meta** _string[]_
+
+HTTP headers for requests. Format as a `KEY=VALUE` pair. May be passed multiple times to set multiple headers.
+
+**--log-format** _string-enum_
+
+Log format. Accepted values: text, json. (default "text")
+
+**--log-level** _string-enum_
+
+Log level. Default is "info" for most commands and "warn" for `server start-dev`. Accepted values: debug, info, warn, error, never. (default "info")
+
+**--namespace**, **-n** _string_
+
+Temporal Service Namespace. (default "default")
+
+**--no-json-shorthand-payloads** _bool_
+
+Raw payload output, even if the JSON option was used.
+
+**--output**, **-o** _string-enum_
+
+Non-logging data output format. Accepted values: text, json, jsonl, none. (default "text")
+
+**--time-format** _string-enum_
+
+Time format. Accepted values: relative, iso, raw. (default "relative")
+
+**--tls** _bool_
+
+Enable base TLS encryption. Does not have additional options like mTLS or client certs.
+
+**--tls-ca-data** _string_
+
+Data for server CA certificate. Can't be used with --tls-ca-path.
+
+**--tls-ca-path** _string_
+
+Path to server CA certificate. Can't be used with --tls-ca-data.
+
+**--tls-cert-data** _string_
+
+Data for x509 certificate. Can't be used with --tls-cert-path.
+
+**--tls-cert-path** _string_
+
+Path to x509 certificate. Can't be used with --tls-cert-data.
+
+**--tls-disable-host-verification** _bool_
+
+Disable TLS host-name verification.
+
+**--tls-key-data** _string_
+
+Private certificate key data. Can't be used with --tls-key-path.
+
+**--tls-key-path** _string_
+
+Path to x509 private key. Can't be used with --tls-key-data.
+
+**--tls-server-name** _string_
+
+Override target TLS server name.
+
+### update-metadata-version
+
++---------------------------------------------------------------------+
+| CAUTION: Worker Deployment is experimental. Deployment commands are |
+| subject to change.                                                  |
++---------------------------------------------------------------------+
+Update metadata associated with a Worker Deployment Version.
+
+For example:
+
+```
+ temporal worker deployment update-metadata-version \
+    --version YourDeploymentName.YourBuildID \
+    --metadata bar=1 \
+    --metadata foo=true
+```
+
+The current metadata is also returned with `describe-version`:
+  
+```
+ temporal worker deployment describe-version \
+    --version YourDeploymentName.YourBuildID \
+```      
+
+Use the following options to change the behavior of this command.
+
+**Flags:**
+
+**--metadata** _string[]_
+
+Set deployment metadata using `KEY="VALUE"` pairs. Keys must be identifiers, and values must be JSON values. For example: `'YourKey={"your": "value"}'`. Can be passed multiple times.
+
+**--remove-entries** _string[]_
+
+Keys of entries to be deleted from metadata. Can be passed multiple times.
+
+**--version**, **-v** _string_
+
+Fully-qualified name for a Worker Deployment Version. Use the format `YourDeploymentName.YourBuildID`. Required.
+
+**Global Flags:**
+
+**--address** _string_
+
+Temporal Service gRPC endpoint. (default "127.0.0.1:7233")
+
+**--api-key** _string_
+
+API key for request.
+
+**--codec-auth** _string_
+
+Authorization header for Codec Server requests.
+
+**--codec-endpoint** _string_
+
+Remote Codec Server endpoint.
+
+**--codec-header** _string[]_
+
+HTTP headers for requests to codec server. Format as a `KEY=VALUE` pair. May be passed multiple times to set multiple headers.
+
+**--color** _string-enum_
+
+Output coloring. Accepted values: always, never, auto. (default "auto")
+
+**--command-timeout** _duration_
+
+The command execution timeout. 0s means no timeout.
+
+**--env** _string_
+
+Active environment name (`ENV`). (default "default")
+
+**--env-file** _string_
+
+Path to environment settings file. Defaults to `$HOME/.config/temporalio/temporal.yaml`.
+
+**--grpc-meta** _string[]_
+
+HTTP headers for requests. Format as a `KEY=VALUE` pair. May be passed multiple times to set multiple headers.
+
+**--log-format** _string-enum_
+
+Log format. Accepted values: text, json. (default "text")
+
+**--log-level** _string-enum_
+
+Log level. Default is "info" for most commands and "warn" for `server start-dev`. Accepted values: debug, info, warn, error, never. (default "info")
+
+**--namespace**, **-n** _string_
+
+Temporal Service Namespace. (default "default")
+
+**--no-json-shorthand-payloads** _bool_
+
+Raw payload output, even if the JSON option was used.
+
+**--output**, **-o** _string-enum_
+
+Non-logging data output format. Accepted values: text, json, jsonl, none. (default "text")
+
+**--time-format** _string-enum_
+
+Time format. Accepted values: relative, iso, raw. (default "relative")
+
+**--tls** _bool_
+
+Enable base TLS encryption. Does not have additional options like mTLS or client certs.
+
+**--tls-ca-data** _string_
+
+Data for server CA certificate. Can't be used with --tls-ca-path.
+
+**--tls-ca-path** _string_
+
+Path to server CA certificate. Can't be used with --tls-ca-data.
+
+**--tls-cert-data** _string_
+
+Data for x509 certificate. Can't be used with --tls-cert-path.
+
+**--tls-cert-path** _string_
+
+Path to x509 certificate. Can't be used with --tls-cert-data.
+
+**--tls-disable-host-verification** _bool_
+
+Disable TLS host-name verification.
+
+**--tls-key-data** _string_
+
+Private certificate key data. Can't be used with --tls-key-path.
+
+**--tls-key-path** _string_
+
+Path to x509 private key. Can't be used with --tls-key-data.
+
+**--tls-server-name** _string_
+
+Override target TLS server name.
+
