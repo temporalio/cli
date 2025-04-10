@@ -61,8 +61,8 @@ jobs:
           echo "git_email=$email" >> $GITHUB_OUTPUT
 
       - name: Publish generated docs to documentation repo
-        env:
-          GH_TOKEN: ${{ steps.generate_token.outputs.token }}
+#        env:
+#          GH_TOKEN: ${{ steps.generate_token.outputs.token }}
         run: |
           set -e
           set -x
