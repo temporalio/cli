@@ -94,10 +94,14 @@ jobs:
           
           # check token permissions on documentation repo
           curl -s -H "Authorization: token ${{ steps.generate_token.outputs.token }}" \
-            https://api.github.com/user | jq .
+            https://api.github.com/repos/temporalio/documentation | jq .
           curl -H "Authorization: token ${{ steps.generate_token.outputs.token }}" \
             https://api.github.com/repos/temporalio/documentation | jq '.permissions'
-          git ls-remote https://x-access-token:${{ steps.generate_token.outputs.token }}@github.com/temporalio/documentation.git
+          
+          curl -s -H "Authorization: token ${{ steps.generate_token.outputs.token }}" \
+            https://api.github.com/repos/temporalio/cli | jq .
+          curl -H "Authorization: token ${{ steps.generate_token.outputs.token }}" \
+            https://api.github.com/repos/temporalio/cli | jq '.permissions'
           
           git checkout -b $BRANCH_NAME
           cp ../cli/temporalcli/docs/*.mdx docs/cli/
