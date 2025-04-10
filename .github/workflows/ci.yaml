@@ -28,14 +28,14 @@ jobs:
           path: cli
           submodules: recursive
           persist-credentials: true
-          token: ${{ steps.generate_token.outputs.token }}
+#          token: ${{ steps.generate_token.outputs.token }}
 
       - name: Checkout docs repo
         uses: actions/checkout@v4
         with:
           repository: temporalio/documentation
           persist-credentials: true
-          token: ${{ steps.generate_token.outputs.token }}
+#          token: ${{ steps.generate_token.outputs.token }}
           path: docs
 
       - name: Setup Go
@@ -59,6 +59,7 @@ jobs:
         
           echo "git_name=$name" >> $GITHUB_OUTPUT
           echo "git_email=$email" >> $GITHUB_OUTPUT
+
 
       - name: Publish generated docs to documentation repo
 #        env:
