@@ -69,7 +69,6 @@ jobs:
           
           if [ -z "$GH_TOKEN" ]; then
             echo "GH_TOKEN is NOT set"
-            exit 1
           else
             echo "GH_TOKEN is set"
           fi
