@@ -28,14 +28,14 @@ jobs:
           path: cli
           submodules: recursive
           persist-credentials: true
-#          token: ${{ steps.generate_token.outputs.token }}
+          token: ${{ steps.generate_token.outputs.token }}
 
       - name: Checkout docs repo
         uses: actions/checkout@v4
         with:
           repository: temporalio/documentation
           persist-credentials: true
-#          token: ${{ steps.generate_token.outputs.token }}
+          token: ${{ steps.generate_token.outputs.token }}
           path: docs
 
       - name: Setup Go
@@ -62,8 +62,8 @@ jobs:
 
 
       - name: Publish generated docs to documentation repo
-#        env:
-#          GH_TOKEN: ${{ steps.generate_token.outputs.token }}
+        env:
+          GH_TOKEN: ${{ steps.generate_token.outputs.token }}
         run: |
           set -e
           set -x
@@ -88,6 +88,7 @@ jobs:
           echo "${{ steps.get_user.outputs.git_email }}"
           git config user.name "${{ steps.get_user.outputs.git_name }}"
           git config user.email "${{ steps.get_user.outputs.git_email }}"
+          git remote set-url origin https://x-access-token:${{ steps.generate_token.outputs.token }}@github.com/temporalio/documentation.git
           
           git checkout -b $BRANCH_NAME
           cp ../cli/temporalcli/docs/*.mdx docs/cli/
