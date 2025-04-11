@@ -45,7 +45,7 @@ jobs:
         run: |
           gh workflow run update-cli-docs.yml \
             -R temporalio/documentation \
-            -r cli-docs-autoupdate \ # TODO: change this to main once docs side PR lands in main
+            --ref cli-docs-autoupdate \ # TODO: change this to main once docs side PR lands in main
             -f cli_branch="${{ github.ref_name }}" \
             -f commit_author="${{ steps.get_user.outputs.git_name }}" \
             -f commit_author_email="${{ steps.get_user.outputs.git_email }}" \
