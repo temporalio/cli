@@ -39,13 +39,14 @@ jobs:
           private-key: ${{ secrets.TEMPORAL_CICD_PRIVATE_KEY }}
 
       # TODO: mention CLI release version
+      # TODO: change this to main once docs side PR lands in main
       - name: Trigger Documentation Workflow
         env:
           GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
         run: |
           gh workflow run update-cli-docs.yml \
             -R temporalio/documentation \
-            --ref cli-docs-autoupdate \ # TODO: change this to main once docs side PR lands in main
+            --ref cli-docs-autoupdate \
             -f cli_branch="${{ github.ref_name }}" \
             -f commit_author="${{ steps.get_user.outputs.git_name }}" \
             -f commit_author_email="${{ steps.get_user.outputs.git_email }}" \
