@@ -40,6 +40,8 @@ jobs:
         with:
           app-id: ${{ secrets.TEMPORAL_CICD_APP_ID }}
           private-key: ${{ secrets.TEMPORAL_CICD_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: documentation # generate a token with permissions to trigger GHA in documentation repo
 
       # TODO: mention CLI release version
       # TODO: change this to main once docs side PR lands in main
