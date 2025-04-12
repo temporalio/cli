@@ -43,7 +43,6 @@ jobs:
           owner: ${{ github.repository_owner }}
           repositories: documentation # generate a token with permissions to trigger GHA in documentation repo
 
-      # TODO: mention CLI release version
       # TODO: change this to main once docs side PR lands in main
       - name: Trigger Documentation Workflow
         env:
@@ -55,4 +54,4 @@ jobs:
             -f cli_branch="${{ steps.get_user.outputs.BRANCH_NAME }}" \
             -f commit_author="${{ steps.get_user.outputs.GIT_NAME }}" \
             -f commit_author_email="${{ steps.get_user.outputs.GIT_EMAIL }}" \
-            -f commit_message="Update CLI docs for release ${{ github.release.tag_name }}"
+            -f commit_message="Update CLI docs for release ${{ github.ref_name }}"
