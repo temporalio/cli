@@ -28,8 +28,11 @@ jobs:
           git_email="${{ github.actor }}@users.noreply.github.com"
           
           # Set the outputs for subsequent steps.
-          echo "git_name=$git_name" >> $GITHUB_OUTPUT
-          echo "git_email=$git_email" >> $GITHUB_OUTPUT
+          echo "GIT_NAME=$git_name" >> $GITHUB_OUTPUT
+          echo "GIT_EMAIL=$git_email" >> $GITHUB_OUTPUT
+          
+          BRANCH_NAME="cli-update-docs-${{ github.ref_name }}"
+          echo "BRANCH_NAME=${BRANCH_NAME%/merge}" >> $GITHUB_OUTPUT
 
       - name: Generate token
         id: generate_token
@@ -46,8 +49,8 @@ jobs:
         run: |
           gh workflow run update-cli-docs.yml \
             -R temporalio/documentation \
-            --ref cli-docs-autoupdate \
-            -f cli_branch="${{ github.ref_name }}" \
-            -f commit_author="${{ steps.get_user.outputs.git_name }}" \
-            -f commit_author_email="${{ steps.get_user.outputs.git_email }}" \
+            -r cli-docs-autoupdate \
+            -f cli_branch="${{ steps.get_user.outputs.BRANCH_NAME }}" \
+            -f commit_author="${{ steps.get_user.outputs.GIT_NAME }}" \
+            -f commit_author_email="${{ steps.get_user.outputs.GIT_EMAIL }}" \
             -f commit_message="Update CLI docs for release ${{ github.release.tag_name }}"
