@@ -40,7 +40,7 @@ jobs:
           owner: ${{ github.repository_owner }}
           repositories: documentation # generate a token with permissions to trigger GHA in documentation repo
 
-      # TODO: change this to main once docs side PR lands in main
+      # TODO: change this to cli_release_tag="${{ github.ref_name }}" \ before merging these changes
       - name: Trigger Documentation Workflow
         env:
           GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
@@ -48,7 +48,7 @@ jobs:
           gh workflow run update-cli-docs.yml \
             -R temporalio/documentation \
             -r cli-docs-autoupdate \
-            -f cli_release_tag="${{ github.ref_name }}" \
+            -f cli_release_tag="v1.3.0" \
             -f commit_author="${{ steps.get_user.outputs.GIT_NAME }}" \
             -f commit_author_email="${{ steps.get_user.outputs.GIT_EMAIL }}" \
             -f commit_message="Update CLI docs for release ${{ github.ref_name }}"
