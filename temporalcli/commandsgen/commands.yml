@@ -238,6 +238,9 @@ commands:
         - cli-feature
         - command-line-interface-cli
         - temporal cli
+      tags:
+        - Activities
+        - Temporal CLI
 
   - name: temporal activity complete
     summary: Complete an Activity
@@ -447,7 +450,7 @@ commands:
           --reason YourReasonForTermination
       ```
       
-
+      
       Specify the Activity ID or Type and Workflow IDs:
 
       ```
@@ -593,6 +596,8 @@ commands:
         - cli-feature
         - command-line-interface-cli
         - temporal cli
+      tags:
+        - Temporal CLI
 
   - name: temporal batch describe
     summary: Show batch job progress
@@ -670,6 +675,8 @@ commands:
       keywords:
         - worker
         - worker deployment
+      tags:
+        - Temporal CLI
 
   - name: temporal worker deployment
     summary: Describe, list, and operate on Worker Deployments and Versions
@@ -706,7 +713,7 @@ commands:
       ```
       
       Sets the current Deployment Version for a given Deployment.
-      
+
     docs:
       description-header: >-
         Temporal Deployment commands enable operations on Worker Deployments
@@ -780,7 +787,7 @@ commands:
       - name: identity
         type: string
         description: Identity of the user submitting this request.
-        
+
   - name: temporal worker deployment list
     summary: Enumerate Worker Deployments in the client's namespace
     description: |
@@ -801,7 +808,7 @@ commands:
       temporal worker deployment list \
           --namespace YourDeploymentNamespace
       ```
-      
+
   - name: temporal worker deployment describe-version
     summary: Show properties of a Worker Deployment Version
     description: |
@@ -829,7 +836,7 @@ commands:
       ```
     option-sets:
       - deployment-version
-    
+
   - name: temporal worker deployment delete-version
     summary: Delete a Worker Deployment Version
     description: |
@@ -848,7 +855,7 @@ commands:
         Version have pollers.
         - It is not draining. This requirement can be ignored with the option
       `--skip-drainage`.
-        
+      
       ```
       temporal worker deployment delete-version [options]
       ```
@@ -910,7 +917,7 @@ commands:
       temporal worker deployment set-current-version \
           --version __unversioned__ \
           --deployment-name YourDeploymentName
-      ```  
+      ```
     option-sets:
       - deployment-version
     options:
@@ -972,12 +979,12 @@ commands:
       ```
 
       And to remove that ramping:
-        
+      
       ```
       temporal worker deployment set-ramping-version \
           --version YourDeploymentName.YourBuildID \
           --delete
-      ```    
+      ```
     option-sets:
       - deployment-version
     options:
@@ -1004,7 +1011,7 @@ commands:
         short: y
         type: bool
         description: Don't prompt to confirm set Ramping Version.
-        
+
   - name: temporal worker deployment update-metadata-version
     summary: Change user-provided metadata for a Version
     description: |
@@ -1024,11 +1031,11 @@ commands:
       ```
 
       The current metadata is also returned with `describe-version`:
-        
+      
       ```
        temporal worker deployment describe-version \
           --version YourDeploymentName.YourBuildID \
-      ```      
+      ```
     option-sets:
       - deployment-version
     options:
@@ -1044,7 +1051,7 @@ commands:
         description: |
           Keys of entries to be deleted from metadata.
           Can be passed multiple times.
-          
+
   - name: temporal env
     summary: Manage environments
     description: |
@@ -1081,6 +1088,8 @@ commands:
         - env set
         - environment
         - temporal cli
+      tags:
+        - Temporal CLI
 
   - name: temporal env delete
     summary: Delete an environment or environment property
@@ -1228,6 +1237,8 @@ commands:
         - system
         - temporal cli
         - update
+      tags:
+        - Temporal CLI
 
   - name: temporal operator cluster
     summary: Manage a Temporal Cluster
@@ -1810,6 +1821,9 @@ commands:
         - schedule update
         - temporal cli
         - updates
+      tags:
+        - Temporal CLI
+        - Schedules
 
   - name: temporal schedule backfill
     summary: Backfill past actions
@@ -2069,6 +2083,9 @@ commands:
         - server
         - server start-dev
         - temporal cli
+      tags:
+        - Temporal CLI
+        - Development Server
 
   - name: temporal server start-dev
     summary: Start Temporal development server
@@ -2218,6 +2235,8 @@ commands:
         - task queue
         - task queue describe
         - temporal cli
+      tags:
+        - Temporal CLI
 
   - name: temporal task-queue describe
     summary: Show active Workers
@@ -2961,6 +2980,9 @@ commands:
         - workflow terminate
         - workflow trace
         - workflow update-options
+      tags:
+        - Temporal CLI
+        - Workflows
 
   - name: temporal workflow cancel
     summary: Send cancellation to Workflow Execution
@@ -4052,7 +4074,7 @@ option-sets:
           Fully-qualified name for a Worker Deployment Version.
           Use the format `YourDeploymentName.YourBuildID`.
         required: true
-        
+
   - name: deployment-reference
     options:
       - name: series-name
@@ -4197,7 +4219,7 @@ option-sets:
           - Fail
           - UseExisting
           - TerminateExisting
-  
+
   - name: payload-input
     options:
       - name: input
