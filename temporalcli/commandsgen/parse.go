@@ -150,7 +150,7 @@ func (c *Command) processSection() error {
 		if c.Docs.DescriptionHeader == "" {
 			return fmt.Errorf("missing description for root command: %s", c.FullName)
 		}
-		if c.Docs.Tags == nil {
+		if len(c.Docs.Tags) == 0 {
 			return fmt.Errorf("missing tags for root command: %s", c.FullName)
 		}
 	}
