@@ -993,3 +993,64 @@ func (s *SharedServerSuite) TestWorkflow_Describe_WorkflowMetadata() {
 	s.NotNil(jsonOut.ExecutionConfig.UserMetadata.Summary)
 	s.NotNil(jsonOut.ExecutionConfig.UserMetadata.Details)
 }
+
+func (s *SharedServerSuite) TestWorkflow_Describe_RootWorkflow() {
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
+		if input.(string) == "child" {
+			return "done", nil
+		}
+		ctx = workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
+			StartToCloseTimeout: 10 * time.Second,
+		})
+		childHandle := workflow.ExecuteChildWorkflow(ctx, DevWorkflow, "child")
+		var childWE workflow.Execution
+		err := childHandle.GetChildWorkflowExecution().Get(ctx, &childWE)
+		if err != nil {
+			return nil, err
+		}
+		err = childHandle.Get(ctx, nil)
+		if err != nil {
+			return nil, err
+		}
+		return childWE.ID, err
+	})
+
+	run, err := s.Client.ExecuteWorkflow(
+		s.Context,
+		client.StartWorkflowOptions{TaskQueue: s.Worker().Options.TaskQueue},
+		DevWorkflow,
+		"ignored",
+	)
+	s.NoError(err)
+	var wfRes string
+	err = run.Get(s.Context, &wfRes)
+	s.NoError(err)
+
+	// Text
+	res := s.Execute(
+		"workflow", "describe",
+		"--address", s.Address(),
+		"-w", wfRes,
+	)
+	s.NoError(res.Err)
+	out := res.Stdout.String()
+	s.ContainsOnSameLine(out, "ParentWorkflowId", run.GetID())
+	s.ContainsOnSameLine(out, "ParentRunId", run.GetRunID())
+	s.ContainsOnSameLine(out, "RootWorkflowId", run.GetID())
+	s.ContainsOnSameLine(out, "RootRunId", run.GetRunID())
+
+	// JSON
+	res = s.Execute(
+		"workflow", "describe",
+		"-o", "json",
+		"--address", s.Address(),
+		"-w", wfRes,
+	)
+	s.NoError(res.Err)
+	var jsonOut workflowservice.DescribeWorkflowExecutionResponse
+	s.NoError(temporalcli.UnmarshalProtoJSONWithOptions(res.Stdout.Bytes(), &jsonOut, true))
+	s.Equal(run.GetID(), jsonOut.WorkflowExecutionInfo.ParentExecution.GetWorkflowId())
+	s.Equal(run.GetRunID(), jsonOut.WorkflowExecutionInfo.ParentExecution.GetRunId())
+	s.Equal(run.GetID(), jsonOut.WorkflowExecutionInfo.RootExecution.GetWorkflowId())
+	s.Equal(run.GetRunID(), jsonOut.WorkflowExecutionInfo.RootExecution.GetRunId())
+}
