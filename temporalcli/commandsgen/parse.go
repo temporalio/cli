@@ -57,6 +57,7 @@ type (
 	Docs struct {
 		Keywords          []string `yaml:"keywords"`
 		DescriptionHeader string   `yaml:"description-header"`
+		Tags              []string `yaml:"tags"`
 	}
 
 	// OptionSets represents the structure of option sets.
@@ -151,6 +152,9 @@ func (c *Command) processSection() error {
 		}
 		if c.Docs.DescriptionHeader == "" {
 			return fmt.Errorf("missing description for root command: %s", c.FullName)
+		}
+		if len(c.Docs.Tags) == 0 {
+			return fmt.Errorf("missing tags for root command: %s", c.FullName)
 		}
 	}
 
