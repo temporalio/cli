@@ -722,6 +722,8 @@ commands:
         - config set
         - environment
         - temporal cli
+      tags:
+        - Temporal CLI
 
   - name: temporal config delete
     summary: |
