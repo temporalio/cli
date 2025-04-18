@@ -17,6 +17,11 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
+// Dial a client.
+//
+// Note, this call may mutate the receiver [ClientOptions.Namespace] since it is
+// so often used by callers after this call to know the currently configured
+// namespace.
 func (c *ClientOptions) dialClient(cctx *CommandContext) (client.Client, error) {
 	if cctx.RootCommand == nil {
 		return nil, fmt.Errorf("root command unexpectedly missing when dialing client")
@@ -87,6 +92,10 @@ func (c *ClientOptions) dialClient(cctx *CommandContext) (client.Client, error) 
 	}
 	if namespaceExplicitlySet {
 		clientProfile.Namespace = c.Namespace
+	} else if clientProfile.Namespace != "" {
+		// Since this namespace value is used by many commands after this call,
+		// we are mutating it to be the derived one
+		c.Namespace = clientProfile.Namespace
 	}
 	if c.ApiKey != "" {
 		clientProfile.APIKey = c.ApiKey

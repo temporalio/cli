@@ -694,7 +694,7 @@ commands:
           --value us-west-2.aws.api.temporal.io:7233
       ```
 
-      The default config file path is `$CONFIG_PATH/temporal/temporal.toml` where
+      The default config file path is `$CONFIG_PATH/temporalio/temporal.toml` where
       `$CONFIG_PATH` is defined as `$HOME/.config` on Unix,
       `$HOME/Library/Application Support` on macOS, and `%AppData%` on Windows.
       This can be overridden with the `TEMPORAL_CONFIG_FILE` environment
