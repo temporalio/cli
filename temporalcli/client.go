@@ -2,8 +2,6 @@ package temporalcli
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"fmt"
 	"net/http"
 	"os"
@@ -12,52 +10,184 @@ import (
 
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/contrib/envconfig"
 	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/log"
-
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
 
+// Dial a client.
+//
+// Note, this call may mutate the receiver [ClientOptions.Namespace] since it is
+// so often used by callers after this call to know the currently configured
+// namespace.
 func (c *ClientOptions) dialClient(cctx *CommandContext) (client.Client, error) {
-	clientOptions := client.Options{
-		HostPort:  c.Address,
-		Namespace: c.Namespace,
-		Logger:    log.NewStructuredLogger(cctx.Logger),
-		Identity:  clientIdentity(),
-		// We do not put codec on data converter here, it is applied via
-		// interceptor. Same for failure conversion.
-		// XXX: If this is altered to be more dynamic, have to also update
-		// everywhere DataConverterWithRawValue is used.
-		DataConverter: DataConverterWithRawValue,
+	if cctx.RootCommand == nil {
+		return nil, fmt.Errorf("root command unexpectedly missing when dialing client")
 	}
 
-	// API key
-	if c.ApiKey != "" {
-		clientOptions.Credentials = client.NewAPIKeyStaticCredentials(c.ApiKey)
-	}
-
-	// Headers
-	if len(c.GrpcMeta) > 0 {
-		headers, err := NewStringMapHeaderProvider(c.GrpcMeta)
+	// Load a client config profile
+	var clientProfile envconfig.ClientConfigProfile
+	if !cctx.RootCommand.DisableConfigFile || !cctx.RootCommand.DisableConfigEnv {
+		var err error
+		clientProfile, err = envconfig.LoadClientConfigProfile(envconfig.LoadClientConfigProfileOptions{
+			ConfigFilePath:    cctx.RootCommand.ConfigFile,
+			ConfigFileProfile: cctx.RootCommand.Profile,
+			DisableFile:       cctx.RootCommand.DisableConfigFile,
+			DisableEnv:        cctx.RootCommand.DisableConfigEnv,
+			EnvLookup:         cctx.Options.EnvLookup,
+		})
 		if err != nil {
-			return nil, fmt.Errorf("grpc-meta %s", err)
+			return nil, fmt.Errorf("failed loading client config: %w", err)
 		}
-		clientOptions.HeadersProvider = headers
 	}
+
+	// To support legacy TLS environment variables, if they are present, we will
+	// have them force-override anything loaded from existing file or env
+	if !cctx.RootCommand.DisableConfigEnv {
+		oldEnvTLSCert, _ := cctx.Options.EnvLookup.LookupEnv("TEMPORAL_TLS_CERT")
+		oldEnvTLSCertData, _ := cctx.Options.EnvLookup.LookupEnv("TEMPORAL_TLS_CERT_DATA")
+		oldEnvTLSKey, _ := cctx.Options.EnvLookup.LookupEnv("TEMPORAL_TLS_KEY")
+		oldEnvTLSKeyData, _ := cctx.Options.EnvLookup.LookupEnv("TEMPORAL_TLS_KEY_DATA")
+		oldEnvTLSCA, _ := cctx.Options.EnvLookup.LookupEnv("TEMPORAL_TLS_CA")
+		oldEnvTLSCAData, _ := cctx.Options.EnvLookup.LookupEnv("TEMPORAL_TLS_CA_DATA")
+		if oldEnvTLSCert != "" || oldEnvTLSCertData != "" ||
+			oldEnvTLSKey != "" || oldEnvTLSKeyData != "" ||
+			oldEnvTLSCA != "" || oldEnvTLSCAData != "" {
+			if clientProfile.TLS == nil {
+				clientProfile.TLS = &envconfig.ClientConfigTLS{}
+			}
+			if oldEnvTLSCert != "" {
+				clientProfile.TLS.ClientCertPath = oldEnvTLSCert
+			}
+			if oldEnvTLSCertData != "" {
+				clientProfile.TLS.ClientCertData = []byte(oldEnvTLSCertData)
+			}
+			if oldEnvTLSKey != "" {
+				clientProfile.TLS.ClientKeyPath = oldEnvTLSKey
+			}
+			if oldEnvTLSKeyData != "" {
+				clientProfile.TLS.ClientKeyData = []byte(oldEnvTLSKeyData)
+			}
+			if oldEnvTLSCA != "" {
+				clientProfile.TLS.ServerCACertPath = oldEnvTLSCA
+			}
+			if oldEnvTLSCAData != "" {
+				clientProfile.TLS.ServerCACertData = []byte(oldEnvTLSCAData)
+			}
+		}
+	}
+
+	// Override some values in client config profile that come from CLI args. Some
+	// flags, like address and namespace, have CLI defaults, but we don't want to
+	// override the profile version unless it was _explicitly_ set.
+	var addressExplicitlySet, namespaceExplicitlySet bool
+	if cctx.CurrentCommand != nil {
+		addressExplicitlySet = cctx.CurrentCommand.Flags().Changed("address")
+		namespaceExplicitlySet = cctx.CurrentCommand.Flags().Changed("namespace")
+	}
+	if addressExplicitlySet {
+		clientProfile.Address = c.Address
+	}
+	if namespaceExplicitlySet {
+		clientProfile.Namespace = c.Namespace
+	} else if clientProfile.Namespace != "" {
+		// Since this namespace value is used by many commands after this call,
+		// we are mutating it to be the derived one
+		c.Namespace = clientProfile.Namespace
+	}
+	if c.ApiKey != "" {
+		clientProfile.APIKey = c.ApiKey
+	}
+	if len(c.GrpcMeta) > 0 {
+		// Append meta to the client profile
+		grpcMetaFromArg, err := stringKeysValues(c.GrpcMeta)
+		if err != nil {
+			return nil, fmt.Errorf("invalid gRPC meta: %w", err)
+		}
+		if len(clientProfile.GRPCMeta) == 0 {
+			clientProfile.GRPCMeta = make(map[string]string, len(c.GrpcMeta))
+		}
+		for k, v := range grpcMetaFromArg {
+			clientProfile.GRPCMeta[k] = v
+		}
+	}
+
+	// If any of these values are present, set TLS if not set, and set values.
+	// NOTE: This means that tls=false does not explicitly disable TLS when set
+	// via envconfig.
+	if c.Tls ||
+		c.TlsCertPath != "" || c.TlsKeyPath != "" || c.TlsCaPath != "" ||
+		c.TlsCertData != "" || c.TlsKeyData != "" || c.TlsCaData != "" {
+		if clientProfile.TLS == nil {
+			clientProfile.TLS = &envconfig.ClientConfigTLS{}
+		}
+		if c.TlsCertPath != "" {
+			clientProfile.TLS.ClientCertPath = c.TlsCertPath
+		}
+		if c.TlsCertData != "" {
+			clientProfile.TLS.ClientCertData = []byte(c.TlsCertData)
+		}
+		if c.TlsKeyPath != "" {
+			clientProfile.TLS.ClientKeyPath = c.TlsKeyPath
+		}
+		if c.TlsKeyData != "" {
+			clientProfile.TLS.ClientKeyData = []byte(c.TlsKeyData)
+		}
+		if c.TlsCaPath != "" {
+			clientProfile.TLS.ServerCACertPath = c.TlsCaPath
+		}
+		if c.TlsCaData != "" {
+			clientProfile.TLS.ServerCACertData = []byte(c.TlsCaData)
+		}
+		if c.TlsServerName != "" {
+			clientProfile.TLS.ServerName = c.TlsServerName
+		}
+		if c.TlsDisableHostVerification {
+			clientProfile.TLS.DisableHostVerification = c.TlsDisableHostVerification
+		}
+	}
+
+	// If TLS is explicitly disabled, we turn it off. Otherwise it may be
+	// implicitly enabled if API key or any other TLS setting is set.
+	if cctx.CurrentCommand.Flags().Changed("tls") && !c.Tls {
+		clientProfile.TLS = &envconfig.ClientConfigTLS{Disabled: true}
+	}
+
+	// If codec endpoint is set, create codec setting regardless. But if auth is
+	// set, it only overrides if codec is present.
+	if c.CodecEndpoint != "" {
+		if clientProfile.Codec == nil {
+			clientProfile.Codec = &envconfig.ClientConfigCodec{}
+		}
+		clientProfile.Codec.Endpoint = c.CodecEndpoint
+	}
+	if c.CodecAuth != "" && clientProfile.Codec != nil {
+		clientProfile.Codec.Auth = c.CodecAuth
+	}
+
+	// Now load client options from the profile
+	clientOptions, err := clientProfile.ToClientOptions(envconfig.ToClientOptionsRequest{})
+	if err != nil {
+		return nil, fmt.Errorf("failed creating client options: %w", err)
+	}
+	clientOptions.Logger = log.NewStructuredLogger(cctx.Logger)
+	clientOptions.Identity = clientIdentity()
+	// We do not put codec on data converter here, it is applied via
+	// interceptor. Same for failure conversion.
+	// XXX: If this is altered to be more dynamic, have to also update
+	// everywhere DataConverterWithRawValue is used.
+	clientOptions.DataConverter = DataConverterWithRawValue
 
 	// Remote codec
-	if c.CodecEndpoint != "" {
-		codecHeaders, err := NewStringMapHeaderProvider(c.CodecHeader)
+	if clientProfile.Codec != nil && clientProfile.Codec.Endpoint != "" {
+		codecHeaders, err := stringKeysValues(c.CodecHeader)
 		if err != nil {
-			return nil, fmt.Errorf("codec-header %s", err)
+			return nil, fmt.Errorf("invalid codec headers: %w", err)
 		}
-
-		if c.CodecAuth != "" {
-			codecHeaders["Authorization"] = c.CodecAuth
-		}
-
-		interceptor, err := payloadCodecInterceptor(c.Namespace, c.CodecEndpoint, codecHeaders)
+		interceptor, err := payloadCodecInterceptor(
+			clientProfile.Namespace, clientProfile.Codec.Endpoint, clientProfile.Codec.Auth, codecHeaders)
 		if err != nil {
 			return nil, fmt.Errorf("failed creating payload codec interceptor: %w", err)
 		}
@@ -73,62 +203,7 @@ func (c *ClientOptions) dialClient(cctx *CommandContext) (client.Client, error) 
 	clientOptions.ConnectionOptions.DialOptions = append(
 		clientOptions.ConnectionOptions.DialOptions, cctx.Options.AdditionalClientGRPCDialOptions...)
 
-	// TLS
-	var err error
-	if clientOptions.ConnectionOptions.TLS, err = c.tlsConfig(); err != nil {
-		return nil, err
-	}
-
 	return client.Dial(clientOptions)
-}
-
-func (c *ClientOptions) tlsConfig() (*tls.Config, error) {
-	// We need TLS if any of these TLS options are set
-	if !c.Tls &&
-		c.TlsCaPath == "" && c.TlsCertPath == "" && c.TlsKeyPath == "" &&
-		c.TlsCaData == "" && c.TlsCertData == "" && c.TlsKeyData == "" {
-		return nil, nil
-	}
-
-	conf := &tls.Config{
-		ServerName:         c.TlsServerName,
-		InsecureSkipVerify: c.TlsDisableHostVerification,
-	}
-
-	if c.TlsCertPath != "" {
-		if c.TlsCertData != "" {
-			return nil, fmt.Errorf("cannot specify both --tls-cert-path and --tls-cert-data")
-		}
-		clientCert, err := tls.LoadX509KeyPair(c.TlsCertPath, c.TlsKeyPath)
-		if err != nil {
-			return nil, fmt.Errorf("failed loading client cert key pair: %w", err)
-		}
-		conf.Certificates = append(conf.Certificates, clientCert)
-	} else if c.TlsCertData != "" {
-		clientCert, err := tls.X509KeyPair([]byte(c.TlsCertData), []byte(c.TlsKeyData))
-		if err != nil {
-			return nil, fmt.Errorf("failed loading client cert key pair: %w", err)
-		}
-		conf.Certificates = append(conf.Certificates, clientCert)
-	}
-
-	if c.TlsCaPath != "" {
-		if c.TlsCaData != "" {
-			return nil, fmt.Errorf("cannot specify both --tls-ca-path and --tls-ca-data")
-		}
-		conf.RootCAs = x509.NewCertPool()
-		if b, err := os.ReadFile(c.TlsCaPath); err != nil {
-			return nil, fmt.Errorf("failed reading CA cert from %v: %w", c.TlsCaPath, err)
-		} else if !conf.RootCAs.AppendCertsFromPEM(b) {
-			return nil, fmt.Errorf("invalid CA cert from %v", c.TlsCaPath)
-		}
-	} else if c.TlsCaData != "" {
-		conf.RootCAs = x509.NewCertPool()
-		if !conf.RootCAs.AppendCertsFromPEM([]byte(c.TlsCaData)) {
-			return nil, fmt.Errorf("invalid CA cert data")
-		}
-	}
-	return conf, nil
 }
 
 func fixedHeaderOverrideInterceptor(
@@ -150,7 +225,12 @@ func fixedHeaderOverrideInterceptor(
 	return invoker(ctx, method, req, reply, cc, opts...)
 }
 
-func payloadCodecInterceptor(namespace, codecEndpoint string, codecHeaders stringMapHeadersProvider) (grpc.UnaryClientInterceptor, error) {
+func payloadCodecInterceptor(
+	namespace string,
+	codecEndpoint string,
+	codecAuth string,
+	codecHeaders map[string]string,
+) (grpc.UnaryClientInterceptor, error) {
 	codecEndpoint = strings.ReplaceAll(codecEndpoint, "{namespace}", namespace)
 
 	payloadCodec := converter.NewRemotePayloadCodec(
@@ -160,6 +240,9 @@ func payloadCodecInterceptor(namespace, codecEndpoint string, codecHeaders strin
 				req.Header.Set("X-Namespace", namespace)
 				for headerName, headerValue := range codecHeaders {
 					req.Header.Set(headerName, headerValue)
+				}
+				if codecAuth != "" {
+					req.Header.Set("Authorization", codecAuth)
 				}
 				return nil
 			},
@@ -182,24 +265,6 @@ func clientIdentity() string {
 		username = u.Username
 	}
 	return "temporal-cli:" + username + "@" + hostname
-}
-
-type stringMapHeadersProvider map[string]string
-
-func (s stringMapHeadersProvider) GetHeaders(context.Context) (map[string]string, error) {
-	return s, nil
-}
-
-func NewStringMapHeaderProvider(config []string) (stringMapHeadersProvider, error) {
-	headers := make(stringMapHeadersProvider, len(config))
-	for _, kv := range config {
-		pieces := strings.SplitN(kv, "=", 2)
-		if len(pieces) != 2 {
-			return nil, fmt.Errorf("%q does not have '='", kv)
-		}
-		headers[pieces[0]] = pieces[1]
-	}
-	return headers, nil
 }
 
 var DataConverterWithRawValue = converter.NewCompositeDataConverter(
