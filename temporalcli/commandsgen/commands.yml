@@ -102,7 +102,7 @@
 #       short: The single letter short version of name (i.e. a for address). (string)
 #       env: Binds the environment variable to this flag. (string)
 #       implied-env: Documents the environment variable as bound to the flag,
-#         but does actually bind it.
+#         but doesn't actually bind it.
 #       default: The default value. No default means zero value of the type. (string)
 #       enum-values: A list of possible values for the string-enum type. (string[])
 #       aliases: A list of aliases for the option. (string[])
