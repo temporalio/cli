@@ -23,9 +23,11 @@ type (
 		Name               string   `yaml:"name"`
 		Type               string   `yaml:"type"`
 		Description        string   `yaml:"description"`
+		Deprecated         string   `yaml:"deprecated"`
 		Short              string   `yaml:"short,omitempty"`
 		Default            string   `yaml:"default,omitempty"`
 		Env                string   `yaml:"env,omitempty"`
+		ImpliedEnv         string   `yaml:"implied-env,omitempty"`
 		Required           bool     `yaml:"required,omitempty"`
 		Aliases            []string `yaml:"aliases,omitempty"`
 		EnumValues         []string `yaml:"enum-values,omitempty"`
@@ -41,6 +43,7 @@ type (
 		Description            string `yaml:"description"`
 		DescriptionPlain       string
 		DescriptionHighlighted string
+		Deprecated             string   `yaml:"deprecated"`
 		HasInit                bool     `yaml:"has-init"`
 		ExactArgs              int      `yaml:"exact-args"`
 		MaximumArgs            int      `yaml:"maximum-args"`
@@ -54,6 +57,7 @@ type (
 	Docs struct {
 		Keywords          []string `yaml:"keywords"`
 		DescriptionHeader string   `yaml:"description-header"`
+		Tags              []string `yaml:"tags"`
 	}
 
 	// OptionSets represents the structure of option sets.
@@ -148,6 +152,9 @@ func (c *Command) processSection() error {
 		}
 		if c.Docs.DescriptionHeader == "" {
 			return fmt.Errorf("missing description for root command: %s", c.FullName)
+		}
+		if len(c.Docs.Tags) == 0 {
+			return fmt.Errorf("missing tags for root command: %s", c.FullName)
 		}
 	}
 

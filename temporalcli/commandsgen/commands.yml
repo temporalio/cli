@@ -101,6 +101,8 @@
 #       required: Whether the option is required. (bool)
 #       short: The single letter short version of name (i.e. a for address). (string)
 #       env: Binds the environment variable to this flag. (string)
+#       implied-env: Documents the environment variable as bound to the flag,
+#         but doesn't actually bind it.
 #       default: The default value. No default means zero value of the type. (string)
 #       enum-values: A list of possible values for the string-enum type. (string[])
 #       aliases: A list of aliases for the option. (string[])
@@ -143,11 +145,44 @@ commands:
         description: Active environment name (`ENV`).
         default: default
         env: TEMPORAL_ENV
+        # TODO(cretz): Deprecate when `config` GA
+        # deprecated: |
+        #   Use `profile` instead. If an env file is present, it will take
+        #   precedent over `config` file or config environment variables.
       - name: env-file
         type: string
         description: |
           Path to environment settings file.
           Defaults to `$HOME/.config/temporalio/temporal.yaml`.
+        # TODO(cretz): Deprecate when `config` GA
+        # deprecated: |
+        #   Use `config-file` instead. If an env file is present, it will take
+        #   precedent over `config` file or config environment variables.
+      - name: config-file
+        type: string
+        description: |
+          File path to read TOML config from, defaults to
+          `$CONFIG_PATH/temporal/temporal.toml` where `$CONFIG_PATH` is defined
+          as `$HOME/.config` on Unix, "$HOME/Library/Application Support" on
+          macOS, and %AppData% on Windows.
+        experimental: true
+        implied-env: TEMPORAL_CONFIG_FILE
+      - name: profile
+        type: string
+        description: Profile to use for config file.
+        experimental: true
+        implied-env: TEMPORAL_PROFILE
+      - name: disable-config-file
+        type: bool
+        description: |
+          If set, disables loading environment config from config file.
+        experimental: true
+      - name: disable-config-env
+        type: bool
+        description: |
+          If set, disables loading environment config from environment
+          variables.
+        experimental: true
       - name: log-level
         type: string-enum
         enum-values:
@@ -238,6 +273,9 @@ commands:
         - cli-feature
         - command-line-interface-cli
         - temporal cli
+      tags:
+        - Activities
+        - Temporal CLI
 
   - name: temporal activity complete
     summary: Complete an Activity
@@ -445,7 +483,7 @@ commands:
           --reason YourReasonForTermination
       ```
       
-
+      
       Specify the Activity ID or Type and Workflow IDs:
 
       ```
@@ -591,6 +629,8 @@ commands:
         - cli-feature
         - command-line-interface-cli
         - temporal cli
+      tags:
+        - Temporal CLI
 
   - name: temporal batch describe
     summary: Show batch job progress
@@ -645,6 +685,125 @@ commands:
         description: Reason for terminating the batch job.
         required: true
 
+  - name: temporal config
+    summary: Manage config files (EXPERIMENTAL)
+    description: |
+      Config files are TOML files that contain profiles, with each profile
+      containing configuration for connecting to Temporal. 
+
+      ```
+      temporal config set \
+          --prop address \
+          --value us-west-2.aws.api.temporal.io:7233
+      ```
+
+      The default config file path is `$CONFIG_PATH/temporalio/temporal.toml` where
+      `$CONFIG_PATH` is defined as `$HOME/.config` on Unix,
+      `$HOME/Library/Application Support` on macOS, and `%AppData%` on Windows.
+      This can be overridden with the `TEMPORAL_CONFIG_FILE` environment
+      variable or `--config-file`.
+
+      The default profile is `default`. This can be overridden with the
+      `TEMPORAL_PROFILE` environment variable or `--profile`.
+    docs:
+      description-header: >-
+        Temporal CLI 'config' commands allow the getting, setting, deleting, and
+        listing of configuration properties for connecting to Temporal.
+      keywords:
+        - cli reference
+        - command-line-interface-cli
+        - configuration
+        - config
+        - config delete
+        - config get
+        - config list
+        - config set
+        - environment
+        - temporal cli
+      tags:
+        - Temporal CLI
+
+  - name: temporal config delete
+    summary: |
+      Delete a config file property (EXPERIMENTAL)
+    description: |
+      Remove a property within a profile.
+
+      ```
+      temporal env delete \
+          --prop tls.client_cert_path
+      ```
+    options:
+      - name: prop
+        short: p
+        type: string
+        description: |
+          Specific property to delete. If unset, deletes entire profile.
+        required: true
+
+  - name: temporal config delete-profile
+    summary: |
+      Delete an entire config profile (EXPERIMENTAL)
+    description: |
+      Remove a full profile entirely. The `--profile` must be set explicitly.
+
+      ```
+      temporal env delete-profile \
+          --profile my-profile
+      ```
+
+  - name: temporal config get
+    summary: Show config file properties (EXPERIMENTAL)
+    description: |
+      Display specific properties or the entire profile.
+
+      ```
+      temporal config get \
+          --prop address
+      ```
+
+      or
+
+      ```
+      temporal config get
+      ```
+    options:
+      - name: prop
+        short: p
+        type: string
+        description: Specific property to get.
+
+  - name: temporal config list
+    summary: Show config file profiles (EXPERIMENTAL)
+    description: |
+      List profile names in the config file.
+
+      ```
+      temporal config list
+      ```
+
+  - name: temporal config set
+    summary: Set config file properties (EXPERIMENTAL)
+    description: |
+      Assign a value to a property and store it in the config file:
+
+      ```
+      temporal config set \
+          --prop address \
+          --value us-west-2.aws.api.temporal.io:7233
+      ```
+    options:
+      - name: prop
+        short: p
+        type: string
+        description: Property name.
+        required: true
+      - name: value
+        short: v
+        type: string
+        description: Property value.
+        required: true
+
   - name: temporal worker
     summary: Read or update Worker state
     description: |
@@ -668,6 +827,8 @@ commands:
       keywords:
         - worker
         - worker deployment
+      tags:
+        - Temporal CLI
 
   - name: temporal worker deployment
     summary: Describe, list, and operate on Worker Deployments and Versions
@@ -704,7 +865,7 @@ commands:
       ```
       
       Sets the current Deployment Version for a given Deployment.
-      
+
     docs:
       description-header: >-
         Temporal Deployment commands enable operations on Worker Deployments
@@ -778,7 +939,7 @@ commands:
       - name: identity
         type: string
         description: Identity of the user submitting this request.
-        
+
   - name: temporal worker deployment list
     summary: Enumerate Worker Deployments in the client's namespace
     description: |
@@ -799,7 +960,7 @@ commands:
       temporal worker deployment list \
           --namespace YourDeploymentNamespace
       ```
-      
+
   - name: temporal worker deployment describe-version
     summary: Show properties of a Worker Deployment Version
     description: |
@@ -827,7 +988,7 @@ commands:
       ```
     option-sets:
       - deployment-version
-    
+
   - name: temporal worker deployment delete-version
     summary: Delete a Worker Deployment Version
     description: |
@@ -846,7 +1007,7 @@ commands:
         Version have pollers.
         - It is not draining. This requirement can be ignored with the option
       `--skip-drainage`.
-        
+      
       ```
       temporal worker deployment delete-version [options]
       ```
@@ -908,7 +1069,7 @@ commands:
       temporal worker deployment set-current-version \
           --version __unversioned__ \
           --deployment-name YourDeploymentName
-      ```  
+      ```
     option-sets:
       - deployment-version
     options:
@@ -970,12 +1131,12 @@ commands:
       ```
 
       And to remove that ramping:
-        
+      
       ```
       temporal worker deployment set-ramping-version \
           --version YourDeploymentName.YourBuildID \
           --delete
-      ```    
+      ```
     option-sets:
       - deployment-version
     options:
@@ -1002,7 +1163,7 @@ commands:
         short: y
         type: bool
         description: Don't prompt to confirm set Ramping Version.
-        
+
   - name: temporal worker deployment update-metadata-version
     summary: Change user-provided metadata for a Version
     description: |
@@ -1022,11 +1183,11 @@ commands:
       ```
 
       The current metadata is also returned with `describe-version`:
-        
+      
       ```
        temporal worker deployment describe-version \
           --version YourDeploymentName.YourBuildID \
-      ```      
+      ```
     option-sets:
       - deployment-version
     options:
@@ -1042,7 +1203,7 @@ commands:
         description: |
           Keys of entries to be deleted from metadata.
           Can be passed multiple times.
-          
+
   - name: temporal env
     summary: Manage environments
     description: |
@@ -1063,6 +1224,8 @@ commands:
       Temporal CLI checks for an `--env` option first, then checks for the
       `TEMPORAL_ENV` environment variable. If neither is set, the CLI uses the
       "default" environment.
+    # TODO(cretz): Deprecate when `config` GA
+    # deprecated: Use `config` subcommands instead.
     docs:
       description-header: >-
         Temporal CLI 'env' commands allow the configuration, setting, deleting,
@@ -1079,6 +1242,8 @@ commands:
         - env set
         - environment
         - temporal cli
+      tags:
+        - Temporal CLI
 
   - name: temporal env delete
     summary: Delete an environment or environment property
@@ -1099,6 +1264,8 @@ commands:
           --env prod \
           --key tls-key-path
       ```
+    # TODO(cretz): Deprecate when `config` GA
+    # deprecated: Use `config` subcommands instead.
     maximum-args: 1
     options:
       - name: key
@@ -1127,6 +1294,8 @@ commands:
       If you don't specify an environment (with `--env` or by setting the
       `TEMPORAL_ENV` variable), this command lists properties of the "default"
       environment.
+    # TODO(cretz): Deprecate when `config` GA
+    # deprecated: Use `config` subcommands instead.
     maximum-args: 1
     options:
       - name: key
@@ -1139,6 +1308,8 @@ commands:
     description: |
       List the environments you have set up on your local computer. Environments are
       stored in "$HOME/.config/temporalio/temporal.yaml".
+    # TODO(cretz): Deprecate when `config` GA
+    # deprecated: Use `config` subcommands instead.
     ignores-missing-env: true
 
   - name: temporal env set
@@ -1160,6 +1331,8 @@ commands:
       Storing keys with CLI option names lets the CLI automatically set those
       options for you. This reduces effort and helps avoid typos when issuing
       commands.
+    # TODO(cretz): Deprecate when `config` GA
+    # deprecated: Use `config` subcommands instead.
     maximum-args: 2
     ignores-missing-env: true
     options:
@@ -1226,6 +1399,8 @@ commands:
         - system
         - temporal cli
         - update
+      tags:
+        - Temporal CLI
 
   - name: temporal operator cluster
     summary: Manage a Temporal Cluster
@@ -1808,6 +1983,9 @@ commands:
         - schedule update
         - temporal cli
         - updates
+      tags:
+        - Temporal CLI
+        - Schedules
 
   - name: temporal schedule backfill
     summary: Backfill past actions
@@ -2067,6 +2245,9 @@ commands:
         - server
         - server start-dev
         - temporal cli
+      tags:
+        - Temporal CLI
+        - Development Server
 
   - name: temporal server start-dev
     summary: Start Temporal development server
@@ -2216,6 +2397,8 @@ commands:
         - task queue
         - task queue describe
         - temporal cli
+      tags:
+        - Temporal CLI
 
   - name: temporal task-queue describe
     summary: Show active Workers
@@ -2959,6 +3142,9 @@ commands:
         - workflow terminate
         - workflow trace
         - workflow update-options
+      tags:
+        - Temporal CLI
+        - Workflows
 
   - name: temporal workflow cancel
     summary: Send cancellation to Workflow Execution
@@ -3293,10 +3479,8 @@ commands:
         required: true
       - name: reapply-type
         type: string-enum
-        description: |
-          Types of events to re-apply after reset point.
-          Deprecated.
-          Use --reapply-exclude instead.
+        description: Types of events to re-apply after reset point.
+        deprecated: Use --reapply-exclude instead.
         enum-values:
           - All
           - Signal
@@ -3841,81 +4025,84 @@ option-sets:
         type: string
         description: Temporal Service gRPC endpoint.
         default: 127.0.0.1:7233
-        env: TEMPORAL_ADDRESS
+        implied-env: TEMPORAL_ADDRESS
       - name: namespace
         short: n
         type: string
         description: Temporal Service Namespace.
         default: default
-        env: TEMPORAL_NAMESPACE
+        implied-env: TEMPORAL_NAMESPACE
       - name: api-key
         type: string
         description: API key for request.
-        env: TEMPORAL_API_KEY
+        implied-env: TEMPORAL_API_KEY
       - name: grpc-meta
         type: string[]
         description: |
           HTTP headers for requests.
           Format as a `KEY=VALUE` pair.
           May be passed multiple times to set multiple headers.
+          Can also be made available via environment variable as
+          `TEMPORAL_GRPC_META_[name]`.
       - name: tls
         type: bool
         description: |
-          Enable base TLS encryption.
-          Does not have additional options like mTLS or client certs.
-        env: TEMPORAL_TLS
+          Enable base TLS encryption. Does not have additional options like mTLS
+          or client certs. This is defaulted to true if api-key or any other TLS
+          options are present. Use --tls=false to explicitly disable.
+        implied-env: TEMPORAL_TLS
       - name: tls-cert-path
         type: string
         description: |
           Path to x509 certificate.
           Can't be used with --tls-cert-data.
-        env: TEMPORAL_TLS_CERT
+        implied-env: TEMPORAL_TLS_CLIENT_CERT_PATH
       - name: tls-cert-data
         type: string
         description: |
           Data for x509 certificate.
           Can't be used with --tls-cert-path.
-        env: TEMPORAL_TLS_CERT_DATA
+        implied-env: TEMPORAL_TLS_CLIENT_CERT_DATA
       - name: tls-key-path
         type: string
         description: |
           Path to x509 private key.
           Can't be used with --tls-key-data.
-        env: TEMPORAL_TLS_KEY
+        implied-env: TEMPORAL_TLS_CLIENT_KEY_PATH
       - name: tls-key-data
         type: string
         description: |
           Private certificate key data.
           Can't be used with --tls-key-path.
-        env: TEMPORAL_TLS_KEY_DATA
+        implied-env: TEMPORAL_TLS_CLIENT_KEY_DATA
       - name: tls-ca-path
         type: string
         description: |
           Path to server CA certificate.
           Can't be used with --tls-ca-data.
-        env: TEMPORAL_TLS_CA
+        implied-env: TEMPORAL_TLS_SERVER_CA_CERT_PATH
       - name: tls-ca-data
         type: string
         description: |
           Data for server CA certificate.
           Can't be used with --tls-ca-path.
-        env: TEMPORAL_TLS_CA_DATA
+        implied-env: TEMPORAL_TLS_SERVER_CA_CERT_DATA
       - name: tls-disable-host-verification
         type: bool
         description: Disable TLS host-name verification.
-        env: TEMPORAL_TLS_DISABLE_HOST_VERIFICATION
+        implied-env: TEMPORAL_TLS_DISABLE_HOST_VERIFICATION
       - name: tls-server-name
         type: string
         description: Override target TLS server name.
-        env: TEMPORAL_TLS_SERVER_NAME
+        implied-env: TEMPORAL_TLS_SERVER_NAME
       - name: codec-endpoint
         type: string
         description: Remote Codec Server endpoint.
-        env: TEMPORAL_CODEC_ENDPOINT
+        implied-env: TEMPORAL_CODEC_ENDPOINT
       - name: codec-auth
         type: string
         description: Authorization header for Codec Server requests.
-        env: TEMPORAL_CODEC_AUTH
+        implied-env: TEMPORAL_CODEC_AUTH
       - name: codec-header
         type: string[]
         description: |
@@ -4040,7 +4227,7 @@ option-sets:
           Fully-qualified name for a Worker Deployment Version.
           Use the format `YourDeploymentName.YourBuildID`.
         required: true
-        
+
   - name: deployment-reference
     options:
       - name: series-name
@@ -4154,10 +4341,8 @@ option-sets:
     options:
       - name: cron
         type: string
-        description: |
-          Cron schedule for the Workflow.
-          Deprecated.
-          Use Schedules instead.
+        description: Cron schedule for the Workflow.
+        deprecated: Use Schedules instead.
       - name: fail-existing
         type: bool
         description: Fail if the Workflow already exists.
@@ -4185,7 +4370,7 @@ option-sets:
           - Fail
           - UseExisting
           - TerminateExisting
-  
+
   - name: payload-input
     options:
       - name: input

@@ -61,8 +61,8 @@ func (w *docWriter) writeCommand(c *Command) {
 	w.fileMap[fileName] = &bytes.Buffer{}
 	w.fileMap[fileName].WriteString("---\n")
 	w.fileMap[fileName].WriteString("id: " + fileName + "\n")
-	w.fileMap[fileName].WriteString("title: " + c.FullName + "\n")
-	w.fileMap[fileName].WriteString("sidebar_label: " + c.FullName + "\n")
+	w.fileMap[fileName].WriteString("title: Temporal CLI " + fileName + " command reference\n")
+	w.fileMap[fileName].WriteString("sidebar_label: " + fileName + "\n")
 	w.fileMap[fileName].WriteString("description: " + c.Docs.DescriptionHeader + "\n")
 	w.fileMap[fileName].WriteString("toc_max_heading_level: 4\n")
 
@@ -70,10 +70,9 @@ func (w *docWriter) writeCommand(c *Command) {
 	for _, keyword := range c.Docs.Keywords {
 		w.fileMap[fileName].WriteString("  - " + keyword + "\n")
 	}
-	// tags are the same as Keywords, but with `-` instead of ` `
 	w.fileMap[fileName].WriteString("tags:\n")
-	for _, keyword := range c.Docs.Keywords {
-		w.fileMap[fileName].WriteString("  - " + strings.ReplaceAll(keyword, " ", "-") + "\n")
+	for _, tag := range c.Docs.Tags {
+		w.fileMap[fileName].WriteString("  - " + tag + "\n")
 	}
 	w.fileMap[fileName].WriteString("---\n\n")
 }
