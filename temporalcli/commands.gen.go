@@ -37,34 +37,20 @@ type ClientOptions struct {
 
 func (v *ClientOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
 	f.StringVar(&v.Address, "address", "127.0.0.1:7233", "Temporal Service gRPC endpoint.")
-	cctx.BindFlagEnvVar(f.Lookup("address"), "TEMPORAL_ADDRESS")
 	f.StringVarP(&v.Namespace, "namespace", "n", "default", "Temporal Service Namespace.")
-	cctx.BindFlagEnvVar(f.Lookup("namespace"), "TEMPORAL_NAMESPACE")
 	f.StringVar(&v.ApiKey, "api-key", "", "API key for request.")
-	cctx.BindFlagEnvVar(f.Lookup("api-key"), "TEMPORAL_API_KEY")
-	f.StringArrayVar(&v.GrpcMeta, "grpc-meta", nil, "HTTP headers for requests. Format as a `KEY=VALUE` pair. May be passed multiple times to set multiple headers.")
-	f.BoolVar(&v.Tls, "tls", false, "Enable base TLS encryption. Does not have additional options like mTLS or client certs.")
-	cctx.BindFlagEnvVar(f.Lookup("tls"), "TEMPORAL_TLS")
+	f.StringArrayVar(&v.GrpcMeta, "grpc-meta", nil, "HTTP headers for requests. Format as a `KEY=VALUE` pair. May be passed multiple times to set multiple headers. Can also be made available via environment variable as `TEMPORAL_GRPC_META_[name]`.")
+	f.BoolVar(&v.Tls, "tls", false, "Enable base TLS encryption. Does not have additional options like mTLS or client certs. This is defaulted to true if api-key or any other TLS options are present. Use --tls=false to explicitly disable.")
 	f.StringVar(&v.TlsCertPath, "tls-cert-path", "", "Path to x509 certificate. Can't be used with --tls-cert-data.")
-	cctx.BindFlagEnvVar(f.Lookup("tls-cert-path"), "TEMPORAL_TLS_CERT")
 	f.StringVar(&v.TlsCertData, "tls-cert-data", "", "Data for x509 certificate. Can't be used with --tls-cert-path.")
-	cctx.BindFlagEnvVar(f.Lookup("tls-cert-data"), "TEMPORAL_TLS_CERT_DATA")
 	f.StringVar(&v.TlsKeyPath, "tls-key-path", "", "Path to x509 private key. Can't be used with --tls-key-data.")
-	cctx.BindFlagEnvVar(f.Lookup("tls-key-path"), "TEMPORAL_TLS_KEY")
 	f.StringVar(&v.TlsKeyData, "tls-key-data", "", "Private certificate key data. Can't be used with --tls-key-path.")
-	cctx.BindFlagEnvVar(f.Lookup("tls-key-data"), "TEMPORAL_TLS_KEY_DATA")
 	f.StringVar(&v.TlsCaPath, "tls-ca-path", "", "Path to server CA certificate. Can't be used with --tls-ca-data.")
-	cctx.BindFlagEnvVar(f.Lookup("tls-ca-path"), "TEMPORAL_TLS_CA")
 	f.StringVar(&v.TlsCaData, "tls-ca-data", "", "Data for server CA certificate. Can't be used with --tls-ca-path.")
-	cctx.BindFlagEnvVar(f.Lookup("tls-ca-data"), "TEMPORAL_TLS_CA_DATA")
 	f.BoolVar(&v.TlsDisableHostVerification, "tls-disable-host-verification", false, "Disable TLS host-name verification.")
-	cctx.BindFlagEnvVar(f.Lookup("tls-disable-host-verification"), "TEMPORAL_TLS_DISABLE_HOST_VERIFICATION")
 	f.StringVar(&v.TlsServerName, "tls-server-name", "", "Override target TLS server name.")
-	cctx.BindFlagEnvVar(f.Lookup("tls-server-name"), "TEMPORAL_TLS_SERVER_NAME")
 	f.StringVar(&v.CodecEndpoint, "codec-endpoint", "", "Remote Codec Server endpoint.")
-	cctx.BindFlagEnvVar(f.Lookup("codec-endpoint"), "TEMPORAL_CODEC_ENDPOINT")
 	f.StringVar(&v.CodecAuth, "codec-auth", "", "Authorization header for Codec Server requests.")
-	cctx.BindFlagEnvVar(f.Lookup("codec-auth"), "TEMPORAL_CODEC_AUTH")
 	f.StringArrayVar(&v.CodecHeader, "codec-header", nil, "HTTP headers for requests to codec server. Format as a `KEY=VALUE` pair. May be passed multiple times to set multiple headers.")
 }
 
@@ -208,8 +194,8 @@ func (v *SharedWorkflowStartOptions) buildFlags(cctx *CommandContext, f *pflag.F
 	f.Var(&v.TaskTimeout, "task-timeout", "Fail a Workflow Task if it lasts longer than `DURATION`. This is the Start-to-close timeout for a Workflow Task.")
 	f.StringArrayVar(&v.SearchAttribute, "search-attribute", nil, "Search Attribute in `KEY=VALUE` format. Keys must be identifiers, and values must be JSON values. For example: 'YourKey={\"your\": \"value\"}'. Can be passed multiple times.")
 	f.StringArrayVar(&v.Memo, "memo", nil, "Memo using 'KEY=\"VALUE\"' pairs. Use JSON values.")
-	f.StringVar(&v.StaticSummary, "static-summary", "", "Static Workflow summary for human consumption in UIs. Uses Temporal Markdown formatting, should be a single line.")
-	f.StringVar(&v.StaticDetails, "static-details", "", "Static Workflow details for human consumption in UIs. Uses Temporal Markdown formatting, may be multiple lines.")
+	f.StringVar(&v.StaticSummary, "static-summary", "", "Static Workflow summary for human consumption in UIs. Uses Temporal Markdown formatting, should be a single line. EXPERIMENTAL.")
+	f.StringVar(&v.StaticDetails, "static-details", "", "Static Workflow details for human consumption in UIs. Uses Temporal Markdown formatting, may be multiple lines. EXPERIMENTAL.")
 }
 
 type WorkflowStartOptions struct {
@@ -221,7 +207,8 @@ type WorkflowStartOptions struct {
 }
 
 func (v *WorkflowStartOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
-	f.StringVar(&v.Cron, "cron", "", "Cron schedule for the Workflow. Deprecated. Use Schedules instead.")
+	f.StringVar(&v.Cron, "cron", "", "Cron schedule for the Workflow.")
+	_ = f.MarkDeprecated("cron", "Use Schedules instead.")
 	f.BoolVar(&v.FailExisting, "fail-existing", false, "Fail if the Workflow already exists.")
 	v.StartDelay = 0
 	f.Var(&v.StartDelay, "start-delay", "Delay before starting the Workflow Execution. Can't be used with cron schedules. If the Workflow receives a signal or update prior to this time, the Workflow Execution starts immediately.")
@@ -299,7 +286,7 @@ func (v *NexusEndpointConfigOptions) buildFlags(cctx *CommandContext, f *pflag.F
 	f.StringVar(&v.DescriptionFile, "description-file", "", "Path to the Nexus Endpoint description file. The contents of the description file may use Markdown formatting.")
 	f.StringVar(&v.TargetNamespace, "target-namespace", "", "Namespace where a handler Worker polls for Nexus tasks.")
 	f.StringVar(&v.TargetTaskQueue, "target-task-queue", "", "Task Queue that a handler Worker polls for Nexus tasks.")
-	f.StringVar(&v.TargetUrl, "target-url", "", "An external Nexus Endpoint that receives forwarded Nexus requests. May be used as an alternative to `--target-namespace` and `--target-task-queue`.")
+	f.StringVar(&v.TargetUrl, "target-url", "", "An external Nexus Endpoint that receives forwarded Nexus requests. May be used as an alternative to `--target-namespace` and `--target-task-queue`. EXPERIMENTAL.")
 }
 
 type QueryModifiersOptions struct {
@@ -315,6 +302,10 @@ type TemporalCommand struct {
 	Command                 cobra.Command
 	Env                     string
 	EnvFile                 string
+	ConfigFile              string
+	Profile                 string
+	DisableConfigFile       bool
+	DisableConfigEnv        bool
 	LogLevel                StringEnum
 	LogFormat               StringEnum
 	Output                  StringEnum
@@ -336,6 +327,7 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalActivityCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalBatchCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalConfigCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalEnvCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalOperatorCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleCommand(cctx, &s).Command)
@@ -346,6 +338,10 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	s.Command.PersistentFlags().StringVar(&s.Env, "env", "default", "Active environment name (`ENV`).")
 	cctx.BindFlagEnvVar(s.Command.PersistentFlags().Lookup("env"), "TEMPORAL_ENV")
 	s.Command.PersistentFlags().StringVar(&s.EnvFile, "env-file", "", "Path to environment settings file. Defaults to `$HOME/.config/temporalio/temporal.yaml`.")
+	s.Command.PersistentFlags().StringVar(&s.ConfigFile, "config-file", "", "File path to read TOML config from, defaults to `$CONFIG_PATH/temporal/temporal.toml` where `$CONFIG_PATH` is defined as `$HOME/.config` on Unix, \"$HOME/Library/Application Support\" on macOS, and %AppData% on Windows. EXPERIMENTAL.")
+	s.Command.PersistentFlags().StringVar(&s.Profile, "profile", "", "Profile to use for config file. EXPERIMENTAL.")
+	s.Command.PersistentFlags().BoolVar(&s.DisableConfigFile, "disable-config-file", false, "If set, disables loading environment config from config file. EXPERIMENTAL.")
+	s.Command.PersistentFlags().BoolVar(&s.DisableConfigEnv, "disable-config-env", false, "If set, disables loading environment config from environment variables. EXPERIMENTAL.")
 	s.LogLevel = NewStringEnum([]string{"debug", "info", "warn", "error", "never"}, "info")
 	s.Command.PersistentFlags().Var(&s.LogLevel, "log-level", "Log level. Default is \"info\" for most commands and \"warn\" for `server start-dev`. Accepted values: debug, info, warn, error, never.")
 	s.LogFormat = NewStringEnum([]string{"text", "json", "pretty"}, "text")
@@ -477,9 +473,9 @@ func NewTemporalActivityPauseCommand(cctx *CommandContext, parent *TemporalActiv
 	s.Command.Use = "pause [flags]"
 	s.Command.Short = "Pause an Activity"
 	if hasHighlighting {
-		s.Command.Long = "Pause an Activity.\n\nIf the Activity is not currently running (e.g. because it previously\nfailed), it will not be run again until it is unpaused.\n\nHowever, if the Activity is currently running, it will run to completion.\nIf the Activity is on its last retry attempt and fails, the failure will\nbe returned to the caller, just as if the Activity had not been paused.\n\nActivities can be specified by their Activity ID or Activity Type. \nOne of those parameters must be provided. If both are provided - Activity\nType will be used, and Activity ID will be ignored.\n\n\x1b[1mSpecify the Activity and Workflow IDs:\x1b[0m\ntemporal activity pause \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n```"
+		s.Command.Long = "Pause an Activity.\n\nIf the Activity is not currently running (e.g. because it previously\nfailed), it will not be run again until it is unpaused.\n\nHowever, if the Activity is currently running, it will run to completion.\nIf the Activity is on its last retry attempt and fails, the failure will\nbe returned to the caller, just as if the Activity had not been paused.\n\nActivities can be specified by their Activity ID or Activity Type. \nOne of those parameters must be provided. If both are provided - Activity\nType will be used, and Activity ID will be ignored.\n\nSpecify the Activity and Workflow IDs:\n\n\x1b[1mtemporal activity pause \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\x1b[0m"
 	} else {
-		s.Command.Long = "Pause an Activity.\n\nIf the Activity is not currently running (e.g. because it previously\nfailed), it will not be run again until it is unpaused.\n\nHowever, if the Activity is currently running, it will run to completion.\nIf the Activity is on its last retry attempt and fails, the failure will\nbe returned to the caller, just as if the Activity had not been paused.\n\nActivities can be specified by their Activity ID or Activity Type. \nOne of those parameters must be provided. If both are provided - Activity\nType will be used, and Activity ID will be ignored.\n\n```\n\nSpecify the Activity and Workflow IDs:\n\n```\ntemporal activity pause \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n```"
+		s.Command.Long = "Pause an Activity.\n\nIf the Activity is not currently running (e.g. because it previously\nfailed), it will not be run again until it is unpaused.\n\nHowever, if the Activity is currently running, it will run to completion.\nIf the Activity is on its last retry attempt and fails, the failure will\nbe returned to the caller, just as if the Activity had not been paused.\n\nActivities can be specified by their Activity ID or Activity Type. \nOne of those parameters must be provided. If both are provided - Activity\nType will be used, and Activity ID will be ignored.\n\nSpecify the Activity and Workflow IDs:\n\n```\ntemporal activity pause \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "Activity ID to pause.")
@@ -731,6 +727,166 @@ func NewTemporalBatchTerminateCommand(cctx *CommandContext, parent *TemporalBatc
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "job-id")
 	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for terminating the batch job. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "reason")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalConfigCommand struct {
+	Parent  *TemporalCommand
+	Command cobra.Command
+}
+
+func NewTemporalConfigCommand(cctx *CommandContext, parent *TemporalCommand) *TemporalConfigCommand {
+	var s TemporalConfigCommand
+	s.Parent = parent
+	s.Command.Use = "config"
+	s.Command.Short = "Manage config files (EXPERIMENTAL)"
+	if hasHighlighting {
+		s.Command.Long = "Config files are TOML files that contain profiles, with each profile\ncontaining configuration for connecting to Temporal. \n\n\x1b[1mtemporal config set \\\n    --prop address \\\n    --value us-west-2.aws.api.temporal.io:7233\x1b[0m\n\nThe default config file path is \x1b[1m$CONFIG_PATH/temporalio/temporal.toml\x1b[0m where\n\x1b[1m$CONFIG_PATH\x1b[0m is defined as \x1b[1m$HOME/.config\x1b[0m on Unix,\n\x1b[1m$HOME/Library/Application Support\x1b[0m on macOS, and \x1b[1m%AppData%\x1b[0m on Windows.\nThis can be overridden with the \x1b[1mTEMPORAL_CONFIG_FILE\x1b[0m environment\nvariable or \x1b[1m--config-file\x1b[0m.\n\nThe default profile is \x1b[1mdefault\x1b[0m. This can be overridden with the\n\x1b[1mTEMPORAL_PROFILE\x1b[0m environment variable or \x1b[1m--profile\x1b[0m."
+	} else {
+		s.Command.Long = "Config files are TOML files that contain profiles, with each profile\ncontaining configuration for connecting to Temporal. \n\n```\ntemporal config set \\\n    --prop address \\\n    --value us-west-2.aws.api.temporal.io:7233\n```\n\nThe default config file path is `$CONFIG_PATH/temporalio/temporal.toml` where\n`$CONFIG_PATH` is defined as `$HOME/.config` on Unix,\n`$HOME/Library/Application Support` on macOS, and `%AppData%` on Windows.\nThis can be overridden with the `TEMPORAL_CONFIG_FILE` environment\nvariable or `--config-file`.\n\nThe default profile is `default`. This can be overridden with the\n`TEMPORAL_PROFILE` environment variable or `--profile`."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalConfigDeleteCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalConfigDeleteProfileCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalConfigGetCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalConfigListCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalConfigSetCommand(cctx, &s).Command)
+	return &s
+}
+
+type TemporalConfigDeleteCommand struct {
+	Parent  *TemporalConfigCommand
+	Command cobra.Command
+	Prop    string
+}
+
+func NewTemporalConfigDeleteCommand(cctx *CommandContext, parent *TemporalConfigCommand) *TemporalConfigDeleteCommand {
+	var s TemporalConfigDeleteCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "delete [flags]"
+	s.Command.Short = "Delete a config file property (EXPERIMENTAL)\n"
+	if hasHighlighting {
+		s.Command.Long = "Remove a property within a profile.\n\n\x1b[1mtemporal env delete \\\n    --prop tls.client_cert_path\x1b[0m"
+	} else {
+		s.Command.Long = "Remove a property within a profile.\n\n```\ntemporal env delete \\\n    --prop tls.client_cert_path\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVarP(&s.Prop, "prop", "p", "", "Specific property to delete. If unset, deletes entire profile. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "prop")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalConfigDeleteProfileCommand struct {
+	Parent  *TemporalConfigCommand
+	Command cobra.Command
+}
+
+func NewTemporalConfigDeleteProfileCommand(cctx *CommandContext, parent *TemporalConfigCommand) *TemporalConfigDeleteProfileCommand {
+	var s TemporalConfigDeleteProfileCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "delete-profile [flags]"
+	s.Command.Short = "Delete an entire config profile (EXPERIMENTAL)\n"
+	if hasHighlighting {
+		s.Command.Long = "Remove a full profile entirely. The \x1b[1m--profile\x1b[0m must be set explicitly.\n\n\x1b[1mtemporal env delete-profile \\\n    --profile my-profile\x1b[0m"
+	} else {
+		s.Command.Long = "Remove a full profile entirely. The `--profile` must be set explicitly.\n\n```\ntemporal env delete-profile \\\n    --profile my-profile\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalConfigGetCommand struct {
+	Parent  *TemporalConfigCommand
+	Command cobra.Command
+	Prop    string
+}
+
+func NewTemporalConfigGetCommand(cctx *CommandContext, parent *TemporalConfigCommand) *TemporalConfigGetCommand {
+	var s TemporalConfigGetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "get [flags]"
+	s.Command.Short = "Show config file properties (EXPERIMENTAL)"
+	if hasHighlighting {
+		s.Command.Long = "Display specific properties or the entire profile.\n\n\x1b[1mtemporal config get \\\n    --prop address\x1b[0m\n\nor\n\n\x1b[1mtemporal config get\x1b[0m"
+	} else {
+		s.Command.Long = "Display specific properties or the entire profile.\n\n```\ntemporal config get \\\n    --prop address\n```\n\nor\n\n```\ntemporal config get\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVarP(&s.Prop, "prop", "p", "", "Specific property to get.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalConfigListCommand struct {
+	Parent  *TemporalConfigCommand
+	Command cobra.Command
+}
+
+func NewTemporalConfigListCommand(cctx *CommandContext, parent *TemporalConfigCommand) *TemporalConfigListCommand {
+	var s TemporalConfigListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "Show config file profiles (EXPERIMENTAL)"
+	if hasHighlighting {
+		s.Command.Long = "List profile names in the config file.\n\n\x1b[1mtemporal config list\x1b[0m"
+	} else {
+		s.Command.Long = "List profile names in the config file.\n\n```\ntemporal config list\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalConfigSetCommand struct {
+	Parent  *TemporalConfigCommand
+	Command cobra.Command
+	Prop    string
+	Value   string
+}
+
+func NewTemporalConfigSetCommand(cctx *CommandContext, parent *TemporalConfigCommand) *TemporalConfigSetCommand {
+	var s TemporalConfigSetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "set [flags]"
+	s.Command.Short = "Set config file properties (EXPERIMENTAL)"
+	if hasHighlighting {
+		s.Command.Long = "Assign a value to a property and store it in the config file:\n\n\x1b[1mtemporal config set \\\n    --prop address \\\n    --value us-west-2.aws.api.temporal.io:7233\x1b[0m"
+	} else {
+		s.Command.Long = "Assign a value to a property and store it in the config file:\n\n```\ntemporal config set \\\n    --prop address \\\n    --value us-west-2.aws.api.temporal.io:7233\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVarP(&s.Prop, "prop", "p", "", "Property name. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "prop")
+	s.Command.Flags().StringVarP(&s.Value, "value", "v", "", "Property value. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "value")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -2637,9 +2793,9 @@ func NewTemporalWorkerDeploymentDeleteVersionCommand(cctx *CommandContext, paren
 	s.Command.Use = "delete-version [flags]"
 	s.Command.Short = "Delete a Worker Deployment Version"
 	if hasHighlighting {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nRemove a Worker Deployment Version given its fully-qualified identifier.\nThis is rarely needed during normal operation\nsince unused Versions are eventually garbage collected.\nThe client can delete a Version only when all of the following conditions\nare met:\n  - It is not the Current or Ramping Version for this Deployment.\n  - It has no active pollers, i.e., none of the task queues in the\n  Version have pollers.\n  - It is not draining. This requirement can be ignored with the option\n\x1b[1m--skip-drainage\x1b[0m.\n  \n\x1b[1mtemporal worker deployment delete-version [options]\x1b[0m\n\nFor example, skipping the drainage restriction:\n\n\x1b[1mtemporal worker deployment delete-version \\\n    --version YourDeploymentName.YourBuildID \\\n    --skip-drainage          \x1b[0m"
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nRemove a Worker Deployment Version given its fully-qualified identifier.\nThis is rarely needed during normal operation\nsince unused Versions are eventually garbage collected.\nThe client can delete a Version only when all of the following conditions\nare met:\n  - It is not the Current or Ramping Version for this Deployment.\n  - It has no active pollers, i.e., none of the task queues in the\n  Version have pollers.\n  - It is not draining. This requirement can be ignored with the option\n\x1b[1m--skip-drainage\x1b[0m.\n\n\x1b[1mtemporal worker deployment delete-version [options]\x1b[0m\n\nFor example, skipping the drainage restriction:\n\n\x1b[1mtemporal worker deployment delete-version \\\n    --version YourDeploymentName.YourBuildID \\\n    --skip-drainage          \x1b[0m"
 	} else {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nRemove a Worker Deployment Version given its fully-qualified identifier.\nThis is rarely needed during normal operation\nsince unused Versions are eventually garbage collected.\nThe client can delete a Version only when all of the following conditions\nare met:\n  - It is not the Current or Ramping Version for this Deployment.\n  - It has no active pollers, i.e., none of the task queues in the\n  Version have pollers.\n  - It is not draining. This requirement can be ignored with the option\n`--skip-drainage`.\n  \n```\ntemporal worker deployment delete-version [options]\n```\n\nFor example, skipping the drainage restriction:\n\n```\ntemporal worker deployment delete-version \\\n    --version YourDeploymentName.YourBuildID \\\n    --skip-drainage          \n```"
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nRemove a Worker Deployment Version given its fully-qualified identifier.\nThis is rarely needed during normal operation\nsince unused Versions are eventually garbage collected.\nThe client can delete a Version only when all of the following conditions\nare met:\n  - It is not the Current or Ramping Version for this Deployment.\n  - It has no active pollers, i.e., none of the task queues in the\n  Version have pollers.\n  - It is not draining. This requirement can be ignored with the option\n`--skip-drainage`.\n\n```\ntemporal worker deployment delete-version [options]\n```\n\nFor example, skipping the drainage restriction:\n\n```\ntemporal worker deployment delete-version \\\n    --version YourDeploymentName.YourBuildID \\\n    --skip-drainage          \n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of the user submitting this request.")
@@ -2749,9 +2905,9 @@ func NewTemporalWorkerDeploymentSetCurrentVersionCommand(cctx *CommandContext, p
 	s.Command.Use = "set-current-version [flags]"
 	s.Command.Short = "Make a Worker Deployment Version Current for a Deployment"
 	if hasHighlighting {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nSet the Current Version for a Deployment.\nWhen a Version is current, Workers of that Deployment Version will receive\ntasks from new Workflows, and from existing AutoUpgrade Workflows that\nare running on this Deployment.\n\nIf not all the expected Task Queues are being polled by Workers in the\nnew Version the request will fail. To override this protection use\n\x1b[1m--ignore-missing-task-queues\x1b[0m. Note that this would ignore task queues\nin a deployment that are not yet discovered, leading to inconsistent task\nqueue configuration.\n\n\x1b[1mtemporal worker deployment set-current-version [options]\x1b[0m\n\nFor example, to set the Current Version of a deployment\n\x1b[1mYourDeploymentName\x1b[0m, with a version with Build ID \x1b[1mYourBuildID\x1b[0m, and\nin the default namespace:\n\n\x1b[1mtemporal worker deployment set-current-version \\\n    --version YourDeploymentName.YourBuildID\x1b[0m\n\nThe target of set-current-version can also be \x1b[1m__unversioned__\x1b[0m, which\nmoves tasks to unversioned workers, but in this case we also need to\nspecify the Deployment Name.\n\n\x1b[1mtemporal worker deployment set-current-version \\\n    --version __unversioned__ \\\n    --deployment-name YourDeploymentName\x1b[0m  "
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nSet the Current Version for a Deployment.\nWhen a Version is current, Workers of that Deployment Version will receive\ntasks from new Workflows, and from existing AutoUpgrade Workflows that\nare running on this Deployment.\n\nIf not all the expected Task Queues are being polled by Workers in the\nnew Version the request will fail. To override this protection use\n\x1b[1m--ignore-missing-task-queues\x1b[0m. Note that this would ignore task queues\nin a deployment that are not yet discovered, leading to inconsistent task\nqueue configuration.\n\n\x1b[1mtemporal worker deployment set-current-version [options]\x1b[0m\n\nFor example, to set the Current Version of a deployment\n\x1b[1mYourDeploymentName\x1b[0m, with a version with Build ID \x1b[1mYourBuildID\x1b[0m, and\nin the default namespace:\n\n\x1b[1mtemporal worker deployment set-current-version \\\n    --version YourDeploymentName.YourBuildID\x1b[0m\n\nThe target of set-current-version can also be \x1b[1m__unversioned__\x1b[0m, which\nmoves tasks to unversioned workers, but in this case we also need to\nspecify the Deployment Name.\n\n\x1b[1mtemporal worker deployment set-current-version \\\n    --version __unversioned__ \\\n    --deployment-name YourDeploymentName\x1b[0m"
 	} else {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nSet the Current Version for a Deployment.\nWhen a Version is current, Workers of that Deployment Version will receive\ntasks from new Workflows, and from existing AutoUpgrade Workflows that\nare running on this Deployment.\n\nIf not all the expected Task Queues are being polled by Workers in the\nnew Version the request will fail. To override this protection use\n`--ignore-missing-task-queues`. Note that this would ignore task queues\nin a deployment that are not yet discovered, leading to inconsistent task\nqueue configuration.\n\n```\ntemporal worker deployment set-current-version [options]\n```\n\nFor example, to set the Current Version of a deployment\n`YourDeploymentName`, with a version with Build ID `YourBuildID`, and\nin the default namespace:\n\n```\ntemporal worker deployment set-current-version \\\n    --version YourDeploymentName.YourBuildID\n```\n\nThe target of set-current-version can also be `__unversioned__`, which\nmoves tasks to unversioned workers, but in this case we also need to\nspecify the Deployment Name.\n\n```\ntemporal worker deployment set-current-version \\\n    --version __unversioned__ \\\n    --deployment-name YourDeploymentName\n```  "
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nSet the Current Version for a Deployment.\nWhen a Version is current, Workers of that Deployment Version will receive\ntasks from new Workflows, and from existing AutoUpgrade Workflows that\nare running on this Deployment.\n\nIf not all the expected Task Queues are being polled by Workers in the\nnew Version the request will fail. To override this protection use\n`--ignore-missing-task-queues`. Note that this would ignore task queues\nin a deployment that are not yet discovered, leading to inconsistent task\nqueue configuration.\n\n```\ntemporal worker deployment set-current-version [options]\n```\n\nFor example, to set the Current Version of a deployment\n`YourDeploymentName`, with a version with Build ID `YourBuildID`, and\nin the default namespace:\n\n```\ntemporal worker deployment set-current-version \\\n    --version YourDeploymentName.YourBuildID\n```\n\nThe target of set-current-version can also be `__unversioned__`, which\nmoves tasks to unversioned workers, but in this case we also need to\nspecify the Deployment Name.\n\n```\ntemporal worker deployment set-current-version \\\n    --version __unversioned__ \\\n    --deployment-name YourDeploymentName\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.DeploymentName, "deployment-name", "", "Deployment name. Only needed when `--version` is `__unversioned__` or empty.")
@@ -2786,9 +2942,9 @@ func NewTemporalWorkerDeploymentSetRampingVersionCommand(cctx *CommandContext, p
 	s.Command.Use = "set-ramping-version [flags]"
 	s.Command.Short = "Change Version Ramping settings for a Worker Deployment"
 	if hasHighlighting {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nSet the Ramping Version and Percentage for a Deployment.\n\nThe Ramping Version can be set to a fully-qualified Version of the form\n\x1b[1mYourDeploymentName.YourBuildID\x1b[0m, or set to \"__unversioned__\", a special\nvalue that represents all the unversioned workers.\n\nThe Ramping Percentage is a float with values in the range [0, 100].\nA value of 100 does not make the Ramping Version Current, use\n\x1b[1mset-current-version\x1b[0m instead.\n\nTo remove a Ramping Version use the flag \x1b[1m--delete\x1b[0m.\n\nIf not all the expected Task Queues are being polled by Workers in the\nnew Ramping Version the request will fail. To override this protection use\n\x1b[1m--ignore-missing-task-queues\x1b[0m. Note that this would ignore task queues\nin a deployment that are not yet discovered, leading to inconsistent task\nqueue configuration.\n\n\x1b[1mtemporal worker deployment set-ramping-version [options]\x1b[0m\n\nFor example, to set the Ramping Version of a deployment\n\x1b[1mYourDeploymentName\x1b[0m, with a version with Build ID \x1b[1mYourBuildID\x1b[0m, with\n10 percent of tasks redirected to this version, and\nusing the default namespace:\n\n\x1b[1mtemporal worker deployment set-ramping-version \\\n    --version YourDeploymentName.YourBuildID\n    --percentage 10.0\x1b[0m\n\nAnd to remove that ramping:\n  \n\x1b[1mtemporal worker deployment set-ramping-version \\\n    --version YourDeploymentName.YourBuildID \\\n    --delete\x1b[0m    "
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nSet the Ramping Version and Percentage for a Deployment.\n\nThe Ramping Version can be set to a fully-qualified Version of the form\n\x1b[1mYourDeploymentName.YourBuildID\x1b[0m, or set to \"__unversioned__\", a special\nvalue that represents all the unversioned workers.\n\nThe Ramping Percentage is a float with values in the range [0, 100].\nA value of 100 does not make the Ramping Version Current, use\n\x1b[1mset-current-version\x1b[0m instead.\n\nTo remove a Ramping Version use the flag \x1b[1m--delete\x1b[0m.\n\nIf not all the expected Task Queues are being polled by Workers in the\nnew Ramping Version the request will fail. To override this protection use\n\x1b[1m--ignore-missing-task-queues\x1b[0m. Note that this would ignore task queues\nin a deployment that are not yet discovered, leading to inconsistent task\nqueue configuration.\n\n\x1b[1mtemporal worker deployment set-ramping-version [options]\x1b[0m\n\nFor example, to set the Ramping Version of a deployment\n\x1b[1mYourDeploymentName\x1b[0m, with a version with Build ID \x1b[1mYourBuildID\x1b[0m, with\n10 percent of tasks redirected to this version, and\nusing the default namespace:\n\n\x1b[1mtemporal worker deployment set-ramping-version \\\n    --version YourDeploymentName.YourBuildID\n    --percentage 10.0\x1b[0m\n\nAnd to remove that ramping:\n\n\x1b[1mtemporal worker deployment set-ramping-version \\\n    --version YourDeploymentName.YourBuildID \\\n    --delete\x1b[0m"
 	} else {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nSet the Ramping Version and Percentage for a Deployment.\n\nThe Ramping Version can be set to a fully-qualified Version of the form\n`YourDeploymentName.YourBuildID`, or set to \"__unversioned__\", a special\nvalue that represents all the unversioned workers.\n\nThe Ramping Percentage is a float with values in the range [0, 100].\nA value of 100 does not make the Ramping Version Current, use\n`set-current-version` instead.\n\nTo remove a Ramping Version use the flag `--delete`.\n\nIf not all the expected Task Queues are being polled by Workers in the\nnew Ramping Version the request will fail. To override this protection use\n`--ignore-missing-task-queues`. Note that this would ignore task queues\nin a deployment that are not yet discovered, leading to inconsistent task\nqueue configuration.\n\n```\ntemporal worker deployment set-ramping-version [options]\n```\n\nFor example, to set the Ramping Version of a deployment\n`YourDeploymentName`, with a version with Build ID `YourBuildID`, with\n10 percent of tasks redirected to this version, and\nusing the default namespace:\n\n```\ntemporal worker deployment set-ramping-version \\\n    --version YourDeploymentName.YourBuildID\n    --percentage 10.0\n```\n\nAnd to remove that ramping:\n  \n```\ntemporal worker deployment set-ramping-version \\\n    --version YourDeploymentName.YourBuildID \\\n    --delete\n```    "
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nSet the Ramping Version and Percentage for a Deployment.\n\nThe Ramping Version can be set to a fully-qualified Version of the form\n`YourDeploymentName.YourBuildID`, or set to \"__unversioned__\", a special\nvalue that represents all the unversioned workers.\n\nThe Ramping Percentage is a float with values in the range [0, 100].\nA value of 100 does not make the Ramping Version Current, use\n`set-current-version` instead.\n\nTo remove a Ramping Version use the flag `--delete`.\n\nIf not all the expected Task Queues are being polled by Workers in the\nnew Ramping Version the request will fail. To override this protection use\n`--ignore-missing-task-queues`. Note that this would ignore task queues\nin a deployment that are not yet discovered, leading to inconsistent task\nqueue configuration.\n\n```\ntemporal worker deployment set-ramping-version [options]\n```\n\nFor example, to set the Ramping Version of a deployment\n`YourDeploymentName`, with a version with Build ID `YourBuildID`, with\n10 percent of tasks redirected to this version, and\nusing the default namespace:\n\n```\ntemporal worker deployment set-ramping-version \\\n    --version YourDeploymentName.YourBuildID\n    --percentage 10.0\n```\n\nAnd to remove that ramping:\n\n```\ntemporal worker deployment set-ramping-version \\\n    --version YourDeploymentName.YourBuildID \\\n    --delete\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.DeploymentName, "deployment-name", "", "Deployment name. Only needed when `--version` is `__unversioned__`.")
@@ -2821,9 +2977,9 @@ func NewTemporalWorkerDeploymentUpdateMetadataVersionCommand(cctx *CommandContex
 	s.Command.Use = "update-metadata-version [flags]"
 	s.Command.Short = "Change user-provided metadata for a Version"
 	if hasHighlighting {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\nUpdate metadata associated with a Worker Deployment Version.\n\nFor example:\n\n\x1b[1m temporal worker deployment update-metadata-version \\\n    --version YourDeploymentName.YourBuildID \\\n    --metadata bar=1 \\\n    --metadata foo=true\x1b[0m\n\nThe current metadata is also returned with \x1b[1mdescribe-version\x1b[0m:\n  \n\x1b[1m temporal worker deployment describe-version \\\n    --version YourDeploymentName.YourBuildID \\\x1b[0m      "
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\nUpdate metadata associated with a Worker Deployment Version.\n\nFor example:\n\n\x1b[1m temporal worker deployment update-metadata-version \\\n    --version YourDeploymentName.YourBuildID \\\n    --metadata bar=1 \\\n    --metadata foo=true\x1b[0m\n\nThe current metadata is also returned with \x1b[1mdescribe-version\x1b[0m:\n\n\x1b[1m temporal worker deployment describe-version \\\n    --version YourDeploymentName.YourBuildID \\\x1b[0m"
 	} else {
-		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\nUpdate metadata associated with a Worker Deployment Version.\n\nFor example:\n\n```\n temporal worker deployment update-metadata-version \\\n    --version YourDeploymentName.YourBuildID \\\n    --metadata bar=1 \\\n    --metadata foo=true\n```\n\nThe current metadata is also returned with `describe-version`:\n  \n```\n temporal worker deployment describe-version \\\n    --version YourDeploymentName.YourBuildID \\\n```      "
+		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\nUpdate metadata associated with a Worker Deployment Version.\n\nFor example:\n\n```\n temporal worker deployment update-metadata-version \\\n    --version YourDeploymentName.YourBuildID \\\n    --metadata bar=1 \\\n    --metadata foo=true\n```\n\nThe current metadata is also returned with `describe-version`:\n\n```\n temporal worker deployment describe-version \\\n    --version YourDeploymentName.YourBuildID \\\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringArrayVar(&s.Metadata, "metadata", nil, "Set deployment metadata using `KEY=\"VALUE\"` pairs. Keys must be identifiers, and values must be JSON values. For example: 'YourKey={\"your\": \"value\"}'. Can be passed multiple times.")
@@ -3049,7 +3205,7 @@ func NewTemporalWorkflowExecuteUpdateWithStartCommand(cctx *CommandContext, pare
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "execute-update-with-start [flags]"
-	s.Command.Short = "Send an Update and wait for it to complete (Experimental)"
+	s.Command.Short = "Send an Update-With-Start and wait for it to complete (Experimental)"
 	if hasHighlighting {
 		s.Command.Long = "Send a message to a Workflow Execution to invoke an Update handler, and wait for\nthe update to complete. If the Workflow Execution is not running, then a new workflow\nexecution is started and the update is sent.\n\nExperimental.\n\n\x1b[1mtemporal workflow execute-update-with-start \\\n  --update-name YourUpdate \\\n  --update-input '{\"update-key\": \"update-value\"}' \\\n  --workflow-id YourWorkflowId \\\n  --type YourWorkflowType \\\n  --task-queue YourTaskQueue \\\n  --id-conflict-policy Fail \\\n  --input '{\"wf-key\": \"wf-value\"}'\x1b[0m"
 	} else {
@@ -3132,7 +3288,7 @@ func NewTemporalWorkflowListCommand(cctx *CommandContext, parent *TemporalWorkfl
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Content for an SQL-like `QUERY` List Filter.")
-	s.Command.Flags().BoolVar(&s.Archived, "archived", false, "Limit output to archived Workflow Executions.")
+	s.Command.Flags().BoolVar(&s.Archived, "archived", false, "Limit output to archived Workflow Executions. EXPERIMENTAL.")
 	s.Command.Flags().IntVar(&s.Limit, "limit", 0, "Maximum number of Workflow Executions to display.")
 	s.Command.Flags().IntVar(&s.PageSize, "page-size", 0, "Maximum number of Workflow Executions to fetch at a time from the server.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -3242,7 +3398,8 @@ func NewTemporalWorkflowResetCommand(cctx *CommandContext, parent *TemporalWorkf
 	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for reset. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "reason")
 	s.ReapplyType = NewStringEnum([]string{"All", "Signal", "None"}, "All")
-	s.Command.Flags().Var(&s.ReapplyType, "reapply-type", "Types of events to re-apply after reset point. Deprecated. Use --reapply-exclude instead. Accepted values: All, Signal, None.")
+	s.Command.Flags().Var(&s.ReapplyType, "reapply-type", "Types of events to re-apply after reset point. Accepted values: All, Signal, None.")
+	_ = s.Command.Flags().MarkDeprecated("reapply-type", "Use --reapply-exclude instead.")
 	s.ReapplyExclude = NewStringEnumArray([]string{"All", "Signal", "Update"}, []string{})
 	s.Command.Flags().Var(&s.ReapplyExclude, "reapply-exclude", "Exclude these event types from re-application. Accepted values: All, Signal, Update.")
 	s.Type = NewStringEnum([]string{"FirstWorkflowTask", "LastWorkflowTask", "LastContinuedAsNew", "BuildId"}, "")
@@ -3483,7 +3640,7 @@ func NewTemporalWorkflowStartUpdateWithStartCommand(cctx *CommandContext, parent
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "start-update-with-start [flags]"
-	s.Command.Short = "Send an Update and wait for it to be accepted or rejected (Experimental)"
+	s.Command.Short = "Send an Update-With-Start and wait for it to be accepted or rejected (Experimental)"
 	if hasHighlighting {
 		s.Command.Long = "Send a message to a Workflow Execution to invoke an Update handler, and wait for\nthe update to be accepted or rejected. If the Workflow Execution is not running, \nthen a new workflow execution is started and the update is sent.\n\nExperimental.\n\n\x1b[1mtemporal workflow start-update-with-start \\\n  --update-name YourUpdate \\\n  --update-input '{\"update-key\": \"update-value\"}' \\\n  --update-wait-for-stage accepted \\\n  --workflow-id YourWorkflowId \\\n  --type YourWorkflowType \\\n  --task-queue YourTaskQueue \\\n  --id-conflict-policy Fail \\\n  --input '{\"wf-key\": \"wf-value\"}'\x1b[0m"
 	} else {
@@ -3598,8 +3755,8 @@ func NewTemporalWorkflowUpdateCommand(cctx *CommandContext, parent *TemporalWork
 	var s TemporalWorkflowUpdateCommand
 	s.Parent = parent
 	s.Command.Use = "update"
-	s.Command.Short = "Updates (Experimental)"
-	s.Command.Long = "An Update is a synchronous call to a Workflow Execution that can change its\nstate, control its flow, and return a result.\n\nExperimental."
+	s.Command.Short = "Send and interact with Updates"
+	s.Command.Long = "An Update is a synchronous call to a Workflow Execution that can change its\nstate, control its flow, and return a result."
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalWorkflowUpdateDescribeCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowUpdateExecuteCommand(cctx, &s).Command)
@@ -3619,11 +3776,11 @@ func NewTemporalWorkflowUpdateDescribeCommand(cctx *CommandContext, parent *Temp
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "describe [flags]"
-	s.Command.Short = "Obtain status info about a specific Update (Experimental)"
+	s.Command.Short = "Obtain status info about a specific Update"
 	if hasHighlighting {
-		s.Command.Long = "Given a Workflow Execution and an Update ID, return information about its current status, including\na result if it has finished.\n\nExperimental.\n\n\x1b[1mtemporal workflow update describe \\\n    --workflow-id YourWorkflowId \\\n    --update-id YourUpdateId\x1b[0m"
+		s.Command.Long = "Given a Workflow Execution and an Update ID, return information about its current status, including\na result if it has finished.\n\n\x1b[1mtemporal workflow update describe \\\n    --workflow-id YourWorkflowId \\\n    --update-id YourUpdateId\x1b[0m"
 	} else {
-		s.Command.Long = "Given a Workflow Execution and an Update ID, return information about its current status, including\na result if it has finished.\n\nExperimental.\n\n```\ntemporal workflow update describe \\\n    --workflow-id YourWorkflowId \\\n    --update-id YourUpdateId\n```"
+		s.Command.Long = "Given a Workflow Execution and an Update ID, return information about its current status, including\na result if it has finished.\n\n```\ntemporal workflow update describe \\\n    --workflow-id YourWorkflowId \\\n    --update-id YourUpdateId\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.UpdateTargetingOptions.buildFlags(cctx, s.Command.Flags())
@@ -3647,11 +3804,11 @@ func NewTemporalWorkflowUpdateExecuteCommand(cctx *CommandContext, parent *Tempo
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "execute [flags]"
-	s.Command.Short = "Send an Update and wait for it to complete (Experimental)"
+	s.Command.Short = "Send an Update and wait for it to complete"
 	if hasHighlighting {
-		s.Command.Long = "Send a message to a Workflow Execution to invoke an Update handler, and wait for\nthe update to complete or fail. You can also use this to wait for an existing\nupdate to complete, by submitting an existing update ID.\n\nExperimental.\n\n\x1b[1mtemporal workflow update execute \\\n    --workflow-id YourWorkflowId \\\n    --name YourUpdate \\\n    --input '{\"some-key\": \"some-value\"}'\x1b[0m"
+		s.Command.Long = "Send a message to a Workflow Execution to invoke an Update handler, and wait for\nthe update to complete or fail. You can also use this to wait for an existing\nupdate to complete, by submitting an existing update ID.\n\n\x1b[1mtemporal workflow update execute \\\n    --workflow-id YourWorkflowId \\\n    --name YourUpdate \\\n    --input '{\"some-key\": \"some-value\"}'\x1b[0m"
 	} else {
-		s.Command.Long = "Send a message to a Workflow Execution to invoke an Update handler, and wait for\nthe update to complete or fail. You can also use this to wait for an existing\nupdate to complete, by submitting an existing update ID.\n\nExperimental.\n\n```\ntemporal workflow update execute \\\n    --workflow-id YourWorkflowId \\\n    --name YourUpdate \\\n    --input '{\"some-key\": \"some-value\"}'\n```"
+		s.Command.Long = "Send a message to a Workflow Execution to invoke an Update handler, and wait for\nthe update to complete or fail. You can also use this to wait for an existing\nupdate to complete, by submitting an existing update ID.\n\n```\ntemporal workflow update execute \\\n    --workflow-id YourWorkflowId \\\n    --name YourUpdate \\\n    --input '{\"some-key\": \"some-value\"}'\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.UpdateStartingOptions.buildFlags(cctx, s.Command.Flags())
@@ -3678,11 +3835,11 @@ func NewTemporalWorkflowUpdateResultCommand(cctx *CommandContext, parent *Tempor
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "result [flags]"
-	s.Command.Short = "Wait for a specific Update to complete (Experimental)"
+	s.Command.Short = "Wait for a specific Update to complete"
 	if hasHighlighting {
-		s.Command.Long = "Given a Workflow Execution and an Update ID, wait for the Update to complete or fail and\nprint the result.\n\nExperimental.\n\n\x1b[1mtemporal workflow update result \\\n    --workflow-id YourWorkflowId \\\n    --update-id YourUpdateId\x1b[0m"
+		s.Command.Long = "Given a Workflow Execution and an Update ID, wait for the Update to complete or fail and\nprint the result.\n\n\x1b[1mtemporal workflow update result \\\n    --workflow-id YourWorkflowId \\\n    --update-id YourUpdateId\x1b[0m"
 	} else {
-		s.Command.Long = "Given a Workflow Execution and an Update ID, wait for the Update to complete or fail and\nprint the result.\n\nExperimental.\n\n```\ntemporal workflow update result \\\n    --workflow-id YourWorkflowId \\\n    --update-id YourUpdateId\n```"
+		s.Command.Long = "Given a Workflow Execution and an Update ID, wait for the Update to complete or fail and\nprint the result.\n\n```\ntemporal workflow update result \\\n    --workflow-id YourWorkflowId \\\n    --update-id YourUpdateId\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.UpdateTargetingOptions.buildFlags(cctx, s.Command.Flags())
@@ -3707,11 +3864,11 @@ func NewTemporalWorkflowUpdateStartCommand(cctx *CommandContext, parent *Tempora
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "start [flags]"
-	s.Command.Short = "Send an Update and wait for it to be accepted or rejected (Experimental)"
+	s.Command.Short = "Send an Update and wait for it to be accepted or rejected"
 	if hasHighlighting {
-		s.Command.Long = "Send a message to a Workflow Execution to invoke an Update handler, and wait for\nthe update to be accepted or rejected. You can subsequently wait for the update\nto complete by using \x1b[1mtemporal workflow update execute\x1b[0m.\n\nExperimental.\n\n\x1b[1mtemporal workflow update start \\\n    --workflow-id YourWorkflowId \\\n    --name YourUpdate \\\n    --input '{\"some-key\": \"some-value\"}'\n    --wait-for-stage accepted\x1b[0m"
+		s.Command.Long = "Send a message to a Workflow Execution to invoke an Update handler, and wait for\nthe update to be accepted or rejected. You can subsequently wait for the update\nto complete by using \x1b[1mtemporal workflow update execute\x1b[0m.\n\n\x1b[1mtemporal workflow update start \\\n    --workflow-id YourWorkflowId \\\n    --name YourUpdate \\\n    --input '{\"some-key\": \"some-value\"}'\n    --wait-for-stage accepted\x1b[0m"
 	} else {
-		s.Command.Long = "Send a message to a Workflow Execution to invoke an Update handler, and wait for\nthe update to be accepted or rejected. You can subsequently wait for the update\nto complete by using `temporal workflow update execute`.\n\nExperimental.\n\n```\ntemporal workflow update start \\\n    --workflow-id YourWorkflowId \\\n    --name YourUpdate \\\n    --input '{\"some-key\": \"some-value\"}'\n    --wait-for-stage accepted\n```"
+		s.Command.Long = "Send a message to a Workflow Execution to invoke an Update handler, and wait for\nthe update to be accepted or rejected. You can subsequently wait for the update\nto complete by using `temporal workflow update execute`.\n\n```\ntemporal workflow update start \\\n    --workflow-id YourWorkflowId \\\n    --name YourUpdate \\\n    --input '{\"some-key\": \"some-value\"}'\n    --wait-for-stage accepted\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.WaitForStage = NewStringEnum([]string{"accepted"}, "")

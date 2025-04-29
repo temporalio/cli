@@ -8,7 +8,7 @@ on:
 jobs:
   build-test:
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, macos-13, windows-latest, ubuntu-arm]
         include:
@@ -56,7 +56,7 @@ jobs:
           go run ./temporalcli/internal/cmd/gen-commands
           git diff --exit-code
 
-      - name: Test cloud
+      - name: Test cloud mTLS
         if: ${{ matrix.cloudTestTarget && env.HAS_SECRETS == 'true' }}
         env:
           TEMPORAL_ADDRESS: ${{ vars.TEMPORAL_CLIENT_NAMESPACE }}.tmprl.cloud:7233
@@ -70,3 +70,20 @@ jobs:
           printf '%s\n' "$TEMPORAL_TLS_CERT_CONTENT" >> client.crt
           printf '%s\n' "$TEMPORAL_TLS_KEY_CONTENT" >> client.key
           go run ./cmd/temporal workflow list --limit 2
+
+      - name: Test cloud API key env var
+        if: ${{ matrix.cloudTestTarget && env.HAS_SECRETS == 'true' }}
+        env:
+          TEMPORAL_ADDRESS: us-west-2.aws.api.temporal.io:7233
+          TEMPORAL_NAMESPACE: ${{ vars.TEMPORAL_CLIENT_NAMESPACE }}
+          TEMPORAL_API_KEY: ${{ secrets.TEMPORAL_CLIENT_CLOUD_API_KEY }}
+        shell: bash
+        run: go run ./cmd/temporal workflow list --limit 2
+
+      - name: Test cloud API key arg
+        if: ${{ matrix.cloudTestTarget && env.HAS_SECRETS == 'true' }}
+        env:
+          TEMPORAL_ADDRESS: us-west-2.aws.api.temporal.io:7233
+          TEMPORAL_NAMESPACE: ${{ vars.TEMPORAL_CLIENT_NAMESPACE }}
+        shell: bash
+        run: go run ./cmd/temporal workflow list --limit 2 --api-key ${{ secrets.TEMPORAL_CLIENT_CLOUD_API_KEY }}
