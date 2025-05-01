@@ -326,6 +326,7 @@ github.com/uber-common/bark v1.3.0/go.mod h1:5fDe/YcIVP55XhFF9hUihX2lDsDcpFrTZEA
 github.com/uber-go/tally v3.3.15+incompatible/go.mod h1:YDTIBxdXyOU/sCWilKB4bgyufu1cEi0jdVnRdxvjnmU=
 github.com/uber-go/tally/v4 v4.1.17-0.20240412215630-22fe011f5ff0 h1:z5IgRoL16N7tdzn5oikX2G4oVXopW+CWo3XRxx61OQo=
 github.com/uber-go/tally/v4 v4.1.17-0.20240412215630-22fe011f5ff0/go.mod h1:ZdpiHRGSa3z4NIAc1VlEH4SiknR885fOIF08xmS0gaU=
+github.com/uber-go/tally/v4 v4.1.17/go.mod h1:ZdpiHRGSa3z4NIAc1VlEH4SiknR885fOIF08xmS0gaU=
 github.com/uber/jaeger-client-go v2.22.1+incompatible h1:NHcubEkVbahf9t3p75TOCR83gdUHXjRJvjoBh1yACsM=
 github.com/uber/jaeger-client-go v2.22.1+incompatible/go.mod h1:WVhlPFC8FDjOFMMWRy2pZqQJSXxYSwNYOkTr/Z6d3Kk=
 github.com/uber/jaeger-lib v2.4.1+incompatible h1:td4jdvLcExb4cBISKIpHuGoVXh+dVKhn2Um6rjCsSsg=
@@ -370,10 +371,13 @@ go.opentelemetry.io/proto/otlp v1.5.0 h1:xJvq7gMzB31/d406fB8U5CBdyQGw4P399D1aQWU
 go.opentelemetry.io/proto/otlp v1.5.0/go.mod h1:keN8WnHxOy8PG0rQZjJJ5A2ebUoafqWp0eVQ4yIXvJ4=
 go.temporal.io/api v1.46.0 h1:O1efPDB6O2B8uIeCDIa+3VZC7tZMvYsMZYQapSbHvCg=
 go.temporal.io/api v1.46.0/go.mod h1:iaxoP/9OXMJcQkETTECfwYq4cw/bj4nwov8b3ZLVnXM=
+go.temporal.io/api v1.48.0/go.mod h1:iaxoP/9OXMJcQkETTECfwYq4cw/bj4nwov8b3ZLVnXM=
 go.temporal.io/sdk v1.33.0 h1:T91UzeRdlHTiMGgpygsItOH9+VSkg+M/mG85PqNjdog=
 go.temporal.io/sdk v1.33.0/go.mod h1:WwCmJZLy7zabz3ar5NRAQEygsdP8tgR9sDjISSHuWZw=
 go.temporal.io/server v1.28.0-130.0 h1:I7juPBQoGfB6kHV7MVC6OnDzl4jRWpUzcsIQPlaXKmk=
 go.temporal.io/server v1.28.0-130.0/go.mod h1:WjwWFpSiNEQp/whDLUU7IrUS7UewzJfAk3tQh0GMXZg=
+go.temporal.io/server v1.28.0-132.1 h1:zKvWT+cjUdCU09xZpKXJbOMHG1IrtvhaQAQ3/NkMY24=
+go.temporal.io/server v1.28.0-132.1/go.mod h1:wVUattJ+2Ca/kH+4t/jmgW+dSQzOllphV8tQgi/iawc=
 go.temporal.io/version v0.3.0 h1:dMrei9l9NyHt8nG6EB8vAwDLLTwx2SvRyucCSumAiig=
 go.temporal.io/version v0.3.0/go.mod h1:UA9S8/1LaKYae6TyD9NaPMJTZb911JcbqghI2CBSP78=
 go.uber.org/atomic v1.5.0/go.mod h1:sABNBOSYdrvTF6hTgEIbc7YasKWGhgEQZyfxyTvoXHQ=

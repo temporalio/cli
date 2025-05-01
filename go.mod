@@ -1,6 +1,8 @@
 module github.com/temporalio/cli
 
-go 1.23.2
+go 1.24.1
+
+toolchain go1.24.2
 
 require (
 	github.com/alitto/pond v1.9.2
@@ -15,9 +17,9 @@ require (
 	github.com/spf13/pflag v1.0.6
 	github.com/stretchr/testify v1.10.0
 	github.com/temporalio/ui-server/v2 v2.36.0
-	go.temporal.io/api v1.46.0
+	go.temporal.io/api v1.48.0
 	go.temporal.io/sdk v1.33.0
-	go.temporal.io/server v1.28.0-130.0
+	go.temporal.io/server v1.28.0-132.1
 	google.golang.org/grpc v1.71.0
 	google.golang.org/protobuf v1.36.6
 	gopkg.in/yaml.v3 v3.0.1
@@ -116,7 +118,7 @@ require (
 	github.com/temporalio/tchannel-go v1.22.1-0.20240528171429-1db37fdea938 // indirect
 	github.com/twmb/murmur3 v1.1.8 // indirect
 	github.com/uber-common/bark v1.3.0 // indirect
-	github.com/uber-go/tally/v4 v4.1.17-0.20240412215630-22fe011f5ff0 // indirect
+	github.com/uber-go/tally/v4 v4.1.17 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
