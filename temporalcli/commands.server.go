@@ -154,10 +154,10 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 	defer s.Stop()
 
 	cctx.Printer.Printlnf("CLI %v\n", VersionString())
-	cctx.Printer.Printlnf("%-8s %v:%v", "Server:", toFriendlyIp(opts.FrontendIP), opts.FrontendPort)
+	cctx.Printer.Printlnf("%-8s http://%v:%v", "Server:", toFriendlyIp(opts.FrontendIP), opts.FrontendPort)
 	// Only print HTTP port if explicitly provided to avoid promoting the unstable HTTP API.
 	if opts.FrontendHTTPPort > 0 {
-		cctx.Printer.Printlnf("%-8s %v:%v", "HTTP:", toFriendlyIp(opts.FrontendIP), opts.FrontendHTTPPort)
+		cctx.Printer.Printlnf("%-8s http://%v:%v", "HTTP:", toFriendlyIp(opts.FrontendIP), opts.FrontendHTTPPort)
 	}
 	if !t.Headless {
 		cctx.Printer.Printlnf("%-8s http://%v:%v%v", "UI:", toFriendlyIp(opts.UIIP), opts.UIPort, opts.PublicPath)
