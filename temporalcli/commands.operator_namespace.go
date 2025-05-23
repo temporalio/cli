@@ -323,6 +323,7 @@ func printNamespaceDescriptions(cctx *CommandContext, responses ...*workflowserv
 			"FailoverHistory":                      resp.FailoverHistory,
 			"Config.HistoryArchivalUri":            resp.Config.HistoryArchivalUri,
 			"Config.VisibilityArchivalUri":         resp.Config.VisibilityArchivalUri,
+			"Config.CustomSearchAttributeAliases":  resp.Config.CustomSearchAttributeAliases,
 		}
 	}
 
@@ -336,6 +337,7 @@ func printNamespaceDescriptions(cctx *CommandContext, responses ...*workflowserv
 				"ReplicationConfig.Clusters", "Config.HistoryArchivalState", "Config.VisibilityArchivalState",
 				"IsGlobalNamespace", "FailoverVersion", "FailoverHistory", "Config.HistoryArchivalUri",
 				"Config.VisibilityArchivalUri",
+				"Config.CustomSearchAttributeAliases",
 			},
 		},
 	)
