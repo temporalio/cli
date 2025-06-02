@@ -501,33 +501,42 @@ type singleOrBatchOverrides struct {
 	AllowReasonWithWorkflowID bool
 }
 
+func (s *SingleWorkflowOrBatchOptions) workflowExecOrBatchValidateParams(
+	overrides singleOrBatchOverrides,
+) error {
+	// If workflow is set, we return single execution
+	if s.WorkflowId != "" {
+		if s.Query != "" {
+			return fmt.Errorf("cannot set query when workflow ID is set")
+		} else if s.Reason != "" && !overrides.AllowReasonWithWorkflowID {
+			return fmt.Errorf("cannot set reason when workflow ID is set")
+		} else if s.Yes {
+			return fmt.Errorf("cannot set 'yes' when workflow ID is set")
+		} else if s.Rps != 0 {
+			return fmt.Errorf("cannot set rps when workflow ID is set")
+		}
+		return nil
+	}
+	// Check query is set properly
+	if s.Query == "" {
+		return fmt.Errorf("must set either workflow ID or query")
+	} else if s.WorkflowId != "" {
+		return fmt.Errorf("cannot set workflow ID when query is set")
+	} else if s.RunId != "" {
+		return fmt.Errorf("cannot set run ID when query is set")
+	}
+
+	return nil
+}
+
 func (s *SingleWorkflowOrBatchOptions) workflowExecOrBatch(
 	cctx *CommandContext,
 	namespace string,
 	cl client.Client,
 	overrides singleOrBatchOverrides,
 ) (*common.WorkflowExecution, *workflowservice.StartBatchOperationRequest, error) {
-	// If workflow is set, we return single execution
-	if s.WorkflowId != "" {
-		if s.Query != "" {
-			return nil, nil, fmt.Errorf("cannot set query when workflow ID is set")
-		} else if s.Reason != "" && !overrides.AllowReasonWithWorkflowID {
-			return nil, nil, fmt.Errorf("cannot set reason when workflow ID is set")
-		} else if s.Yes {
-			return nil, nil, fmt.Errorf("cannot set 'yes' when workflow ID is set")
-		} else if s.Rps != 0 {
-			return nil, nil, fmt.Errorf("cannot set rps when workflow ID is set")
-		}
-		return &common.WorkflowExecution{WorkflowId: s.WorkflowId, RunId: s.RunId}, nil, nil
-	}
-
-	// Check query is set properly
-	if s.Query == "" {
-		return nil, nil, fmt.Errorf("must set either workflow ID or query")
-	} else if s.WorkflowId != "" {
-		return nil, nil, fmt.Errorf("cannot set workflow ID when query is set")
-	} else if s.RunId != "" {
-		return nil, nil, fmt.Errorf("cannot set run ID when query is set")
+	if err := s.workflowExecOrBatchValidateParams(overrides); err != nil {
+		return nil, nil, err
 	}
 
 	// Count the workflows that will be affected

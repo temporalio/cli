@@ -379,6 +379,14 @@ commands:
       - name: identity
         type: string
         description: Identity of the user submitting this request.
+      - name: restore_original
+        type: bool
+        description: |
+          If set, the activity options will be restored to the default.
+          Default options are then options activity was created with.
+          They are part of the first SCHEDULE event.
+          This flag cannot be combined with any other option; if you supply
+          restore_original together with other options, the request will be rejected.
     option-sets:
       - workflow reference
 
@@ -409,11 +417,11 @@ commands:
       ```
     options:
       - name: activity-id
-        short: a
+        short: i
         type: string
         description: Activity ID to pause.
       - name: activity-type
-        short: g
+        short: t
         type: string
         description: Activity Type to pause.
       - name: identity
@@ -540,6 +548,13 @@ commands:
       - name: reset-heartbeats
         type: bool
         description: Reset the Activity's heartbeat.
+      - name: restore-original-options
+        type: bool
+        description: |
+          If set, the activity options will be restored to the defaults.
+          Default options are then options activity was created with.
+          They are part of the first SCHEDULE event.
+
     option-sets:
       - workflow reference
 
