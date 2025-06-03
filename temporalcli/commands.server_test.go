@@ -138,7 +138,7 @@ func startDevServerAndRunSimpleTest(t *testing.T, args []string, dialAddress str
 	}
 }
 
-func DisableTest_TestServer_StartDev_ConcurrentStarts(t *testing.T) {
+func TestServer_StartDev_ConcurrentStarts(t *testing.T) {
 	startOne := func() {
 		h := NewCommandHarness(t)
 		defer h.Close()
