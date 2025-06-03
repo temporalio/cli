@@ -520,6 +520,7 @@ func (s *SingleWorkflowOrBatchOptions) workflowExecOrBatch(
 		}
 		return &common.WorkflowExecution{WorkflowId: s.WorkflowId, RunId: s.RunId}, nil, nil
 	}
+
 	// Check query is set properly
 	if s.Query == "" {
 		return nil, nil, fmt.Errorf("must set either workflow ID or query")
