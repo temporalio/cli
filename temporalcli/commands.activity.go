@@ -239,7 +239,7 @@ func (c *TemporalActivityUnpauseCommand) run(cctx *CommandContext, args []string
 		AllowReasonWithWorkflowID: true,
 	}
 
-	if err := opts.workflowExecOrBatchValidateParams(overrides); err != nil {
+	if c.Query == "" {
 		// single operation.
 		if c.ActivityType == "" && c.ActivityId == "" {
 			return fmt.Errorf("either Activity Type or Activity Id must be provided")

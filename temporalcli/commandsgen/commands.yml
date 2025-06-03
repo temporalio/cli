@@ -321,6 +321,7 @@ commands:
       ```
     options:
       - name: activity-id
+        short: i
         type: string
         description: Activity ID.
         required: true
@@ -470,12 +471,12 @@ commands:
       ```
     options:
       - name: activity-id
-        short: a
+        short: i
         type: string
         description: |
           Activity ID to unpause. Can only be used without --query.
       - name: activity-type
-        short: g
+        short: t
         type: string
         description: Activity Type to unpause.
       - name: identity
@@ -532,11 +533,11 @@ commands:
       ```
     options:
       - name: activity-id
-        short: a
+        short: i
         type: string
         description: Activity ID to pause.
       - name: activity-type
-        short: g
+        short: t
         type: string
         description: Activity Type to pause.
       - name: identity

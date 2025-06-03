@@ -184,6 +184,45 @@ func (s *SharedServerSuite) TestActivityOptionsUpdate_Partial() {
 	s.ContainsOnSameLine(out, "BackoffCoefficient", "2")
 }
 
+func (s *SharedServerSuite) TestActivityOptionsUpdate_Restore() {
+	run := s.waitActivityStarted()
+
+	// update activity options to some custom values
+	res := s.Execute(
+		"activity", "update-options",
+		"--activity-id", activityId,
+		"--workflow-id", run.GetID(),
+		"--run-id", run.GetRunID(),
+		"--identity", identity,
+		"--task-queue", "new-task-queue",
+		"--schedule-to-close-timeout", "41s",
+		"--address", s.Address(),
+	)
+
+	s.NoError(res.Err)
+	out := res.Stdout.String()
+
+	// updated
+	s.ContainsOnSameLine(out, "ScheduleToCloseTimeout", "41s")
+
+	// restore the original activity options. Call should pass
+	res = s.Execute(
+		"activity", "update-options",
+		"--activity-id", activityId,
+		"--workflow-id", run.GetID(),
+		"--run-id", run.GetRunID(),
+		"--identity", identity,
+		"--restore_original",
+		"--address", s.Address(),
+	)
+
+	s.NoError(res.Err)
+	out = res.Stdout.String()
+
+	// restored
+	s.ContainsOnSameLine(out, "ScheduleToCloseTimeout", "0s")
+}
+
 func sendActivityCommand(command string, run client.WorkflowRun, s *SharedServerSuite, extraArgs ...string) *CommandResult {
 	args := []string{
 		"activity", command,
@@ -254,6 +293,13 @@ func (s *SharedServerSuite) TestActivityReset() {
 	s.NoError(res.Err)
 	// make sure we receive a server response
 	out := res.Stdout.String()
+	s.ContainsOnSameLine(out, "ServerResponse", "true")
+
+	// same but with activity options reset
+	res = sendActivityCommand("reset", run, s, "--activity-id", activityId, "--restore-original-options")
+	s.NoError(res.Err)
+	// make sure we receive a server response
+	out = res.Stdout.String()
 	s.ContainsOnSameLine(out, "ServerResponse", "true")
 
 	// reset should fail because activity is not found

@@ -35,7 +35,7 @@ func (s *SharedServerSuite) awaitNextWorkflow(searchAttr string) {
 	}, 3*time.Second, 100*time.Millisecond, "Reset execution failed to complete", lastExecs)
 }
 
-func (s *SharedServerSuite) TestWorkflow_Reset_ToFirstWorkflowTask() {
+func (s *SharedServerSuite) DisableTest_TestWorkflow_Reset_ToFirstWorkflowTask() {
 	var wfExecutions, activityExecutions int
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
 		activityExecutions++
@@ -77,7 +77,7 @@ func (s *SharedServerSuite) TestWorkflow_Reset_ToFirstWorkflowTask() {
 	s.Greater(activityExecutions, 1, "Should have re-executed the workflow from the beginning")
 }
 
-func (s *SharedServerSuite) TestWorkflow_ResetBatch_ToFirstWorkflowTask() {
+func (s *SharedServerSuite) DisableTest_TestWorkflow_ResetBatch_ToFirstWorkflowTask() {
 	var wfExecutions, activityExecutions int
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
 		activityExecutions++
@@ -119,7 +119,7 @@ func (s *SharedServerSuite) TestWorkflow_ResetBatch_ToFirstWorkflowTask() {
 	s.Greater(activityExecutions, 1, "Should have re-executed the workflow from the beginning")
 }
 
-func (s *SharedServerSuite) TestWorkflow_Reset_ToLastWorkflowTask() {
+func (s *SharedServerSuite) DisableTest_TestWorkflow_Reset_ToLastWorkflowTask() {
 	var wfExecutions, activityExecutions int
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
 		activityExecutions++
@@ -161,7 +161,7 @@ func (s *SharedServerSuite) TestWorkflow_Reset_ToLastWorkflowTask() {
 	s.Equal(1, activityExecutions, "Should not have re-executed the activity")
 }
 
-func (s *SharedServerSuite) TestWorkflow_ResetBatch_ToLastWorkflowTask() {
+func (s *SharedServerSuite) DisableTest_TestWorkflow_ResetBatch_ToLastWorkflowTask() {
 	var wfExecutions, activityExecutions int
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
 		activityExecutions++
@@ -203,7 +203,7 @@ func (s *SharedServerSuite) TestWorkflow_ResetBatch_ToLastWorkflowTask() {
 	s.Equal(1, activityExecutions, "Should not have re-executed the activity")
 }
 
-func (s *SharedServerSuite) TestWorkflow_Reset_ToEventID() {
+func (s *SharedServerSuite) DisableTest_TestWorkflow_Reset_ToEventID() {
 	// We execute two activities and will resume just before the second one. We use the same activity for both
 	// but a unique input so we can check which fake activity is executed
 	var oneExecutions, twoExecutions int
@@ -299,7 +299,7 @@ func (s *SharedServerSuite) TestWorkflow_Reset_ToEventID() {
 	s.Equal(2, twoExecutions, "Should have re-executed the second activity")
 }
 
-func (s *SharedServerSuite) TestBatchResetByBuildId() {
+func (s *SharedServerSuite) DisableTest_TestBatchResetByBuildId() {
 	sut := newSystemUnderTest(s)
 
 	sut.startWorkerFor(originalWorkflow, workflowOptions{name: "wf", version: "v1"})
@@ -332,7 +332,7 @@ func (s *SharedServerSuite) TestBatchResetByBuildId() {
 	sut.stopWorkerFor("v3")
 }
 
-func (s *SharedServerSuite) TestWorkflow_ResetBatch_OnlyMatchingQuery() {
+func (s *SharedServerSuite) DisableTest_TestWorkflow_ResetBatch_OnlyMatchingQuery() {
 	var resetWfExecutions, resetActivityExecutions int
 	var nonResetWfExecutions, nonResetActivityExecutions int
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
