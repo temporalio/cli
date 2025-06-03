@@ -167,7 +167,8 @@ func (c *TemporalActivityUpdateOptionsCommand) run(cctx *CommandContext, args []
 		UpdateMask: &fieldmaskpb.FieldMask{
 			Paths: updatePath,
 		},
-		Identity: c.Identity,
+		Identity:        c.Identity,
+		RestoreOriginal: c.RestoreOriginal,
 	})
 	if err != nil {
 		return fmt.Errorf("unable to update Activity options: %w", err)
@@ -225,12 +226,6 @@ func (c *TemporalActivityPauseCommand) run(cctx *CommandContext, args []string) 
 }
 
 func (c *TemporalActivityUnpauseCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.ClientOptions.dialClient(cctx)
-	if err != nil {
-		return err
-	}
-	defer cl.Close()
-
 	opts := SingleWorkflowOrBatchOptions{
 		WorkflowId: c.WorkflowId,
 		RunId:      c.RunId,
@@ -239,11 +234,30 @@ func (c *TemporalActivityUnpauseCommand) run(cctx *CommandContext, args []string
 		Yes:        c.Yes,
 		Rps:        c.Rps,
 	}
-
-	exec, batchReq, err := opts.workflowExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{
+	overrides := singleOrBatchOverrides{
 		// You're allowed to specify a reason when terminating a workflow
 		AllowReasonWithWorkflowID: true,
-	})
+	}
+
+	if c.Query == "" {
+		// single operation.
+		if c.ActivityType == "" && c.ActivityId == "" {
+			return fmt.Errorf("either Activity Type or Activity Id must be provided")
+		}
+	} else {
+		// batch operation.
+		if c.ActivityType == "" && !c.MatchAll {
+			return fmt.Errorf("either Activity Type must be provided or MatchAll must be set to true")
+		}
+	}
+
+	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	exec, batchReq, err := opts.workflowExecOrBatch(cctx, c.Parent.Namespace, cl, overrides)
 	if err != nil {
 		return err
 	}
@@ -301,11 +315,6 @@ func (c *TemporalActivityUnpauseCommand) run(cctx *CommandContext, args []string
 }
 
 func (c *TemporalActivityResetCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.ClientOptions.dialClient(cctx)
-	if err != nil {
-		return err
-	}
-	defer cl.Close()
 
 	request := &workflowservice.ResetActivityRequest{
 		Namespace: c.Parent.Namespace,
@@ -313,9 +322,10 @@ func (c *TemporalActivityResetCommand) run(cctx *CommandContext, args []string) 
 			WorkflowId: c.WorkflowId,
 			RunId:      c.RunId,
 		},
-		Identity:       c.Identity,
-		KeepPaused:     c.KeepPaused,
-		ResetHeartbeat: c.ResetHeartbeats,
+		Identity:               c.Identity,
+		KeepPaused:             c.KeepPaused,
+		ResetHeartbeat:         c.ResetHeartbeats,
+		RestoreOriginalOptions: c.RestoreOriginalOptions,
 	}
 
 	if c.ActivityType != "" {
@@ -325,6 +335,12 @@ func (c *TemporalActivityResetCommand) run(cctx *CommandContext, args []string) 
 	} else {
 		return fmt.Errorf("either Activity Type or Activity Id must be provided")
 	}
+
+	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
 
 	resp, err := cl.WorkflowService().ResetActivity(cctx, request)
 	if err != nil {

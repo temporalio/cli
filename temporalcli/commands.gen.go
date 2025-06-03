@@ -482,8 +482,8 @@ func NewTemporalActivityPauseCommand(cctx *CommandContext, parent *TemporalActiv
 		s.Command.Long = "Pause an Activity.\n\nIf the Activity is not currently running (e.g. because it previously\nfailed), it will not be run again until it is unpaused.\n\nHowever, if the Activity is currently running, it will run to completion.\nIf the Activity is on its last retry attempt and fails, the failure will\nbe returned to the caller, just as if the Activity had not been paused.\n\nActivities can be specified by their Activity ID or Activity Type. \nOne of those parameters must be provided. If both are provided - Activity\nType will be used, and Activity ID will be ignored.\n\n```\n\nSpecify the Activity and Workflow IDs:\n\n```\ntemporal activity pause \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "Activity ID to pause.")
-	s.Command.Flags().StringVarP(&s.ActivityType, "activity-type", "g", "", "Activity Type to pause.")
+	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "i", "", "Activity ID to pause.")
+	s.Command.Flags().StringVarP(&s.ActivityType, "activity-type", "t", "", "Activity Type to pause.")
 	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of the user submitting this request.")
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -498,11 +498,12 @@ type TemporalActivityResetCommand struct {
 	Parent  *TemporalActivityCommand
 	Command cobra.Command
 	WorkflowReferenceOptions
-	ActivityId      string
-	ActivityType    string
-	Identity        string
-	KeepPaused      bool
-	ResetHeartbeats bool
+	ActivityId             string
+	ActivityType           string
+	Identity               string
+	KeepPaused             bool
+	ResetHeartbeats        bool
+	RestoreOriginalOptions bool
 }
 
 func NewTemporalActivityResetCommand(cctx *CommandContext, parent *TemporalActivityCommand) *TemporalActivityResetCommand {
@@ -517,11 +518,12 @@ func NewTemporalActivityResetCommand(cctx *CommandContext, parent *TemporalActiv
 		s.Command.Long = "Resetting an activity resets both the number of attempts and the activity \ntimeout.  \n\nIf activity is paused and 'keep_paused' flag is not provided - it will be \nunpaused.\nIf activity is paused and 'keep_paused' flag is provided - it will stay \npaused.\nIf activity is waiting for the retry, is will be rescheduled immediately.\nIf the 'reset_heartbeats' flag is set, the activity heartbeat timer and \nheartbeats will be reset.\n\nActivities can be specified by their Activity ID or Activity Type. \nOne of those parameters must be provided. If both are provided - Activity\nType will be used, and Activity ID will be ignored.      \n\nSpecify the Activity Type of ID and Workflow IDs:\n\n```\ntemporal activity reset \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n    --keep-paused\n    --reset-heartbeats\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "Activity ID to pause.")
-	s.Command.Flags().StringVarP(&s.ActivityType, "activity-type", "g", "", "Activity Type to pause.")
+	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "i", "", "Activity ID to pause.")
+	s.Command.Flags().StringVarP(&s.ActivityType, "activity-type", "t", "", "Activity Type to pause.")
 	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of the user submitting this request.")
 	s.Command.Flags().BoolVar(&s.KeepPaused, "keep-paused", false, "If activity was paused - it will stay paused.")
 	s.Command.Flags().BoolVar(&s.ResetHeartbeats, "reset-heartbeats", false, "Reset the Activity's heartbeat.")
+	s.Command.Flags().BoolVar(&s.RestoreOriginalOptions, "restore-original-options", false, "If set, the activity options will be restored to the defaults. Default options are then options activity was created with. They are part of the first SCHEDULE event.")
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -556,8 +558,8 @@ func NewTemporalActivityUnpauseCommand(cctx *CommandContext, parent *TemporalAct
 		s.Command.Long = "Re-schedule a previously-paused Activity for execution.\n\nIf the Activity is not running and is past its retry timeout, it will be\nscheduled immediately. Otherwise, it will be scheduled after its retry\ntimeout expires. \n\nUse `--reset-attempts` to reset the number of previous run attempts to \nzero. For example, if an Activity is near the maximum number of attempts \nN specified in its retry policy, `--reset-attempts` will allow the \nActivity to be retried another N times after unpausing.\n\nUse `--reset-heartbeat` to reset the Activity's heartbeats. \n\nActivities can be specified by their Activity ID or Activity Type. \nOne of those parameters must be provided. If both are provided - Activity\nType will be used, and Activity ID will be ignored.\n\nActivities can be unpaused in bulk via a visibility Query list filter:\n\n```\ntemporal activity unpause \\\n    --query YourQuery \\\n    --reason YourReasonForTermination\n```\n\n\nSpecify the Activity ID or Type and Workflow IDs:\n\n```\ntemporal activity unpause \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n    --reset-attempts\n    --reset-heartbeats\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "Activity ID to unpause. Can only be used without --query.")
-	s.Command.Flags().StringVarP(&s.ActivityType, "activity-type", "g", "", "Activity Type to unpause.")
+	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "i", "", "Activity ID to unpause. Can only be used without --query.")
+	s.Command.Flags().StringVarP(&s.ActivityType, "activity-type", "t", "", "Activity Type to unpause.")
 	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of the user submitting this request.")
 	s.Command.Flags().BoolVar(&s.ResetAttempts, "reset-attempts", false, "Also reset the activity attempts.")
 	s.Command.Flags().BoolVar(&s.ResetHeartbeats, "reset-heartbeats", false, "Reset the Activity's heartbeats. Only works with --reset-attempts.")
@@ -588,6 +590,7 @@ type TemporalActivityUpdateOptionsCommand struct {
 	RetryBackoffCoefficient float32
 	RetryMaximumAttempts    int
 	Identity                string
+	RestoreOriginal         bool
 }
 
 func NewTemporalActivityUpdateOptionsCommand(cctx *CommandContext, parent *TemporalActivityCommand) *TemporalActivityUpdateOptionsCommand {
@@ -602,7 +605,7 @@ func NewTemporalActivityUpdateOptionsCommand(cctx *CommandContext, parent *Tempo
 		s.Command.Long = "Update Activity options. Specify the Activity and Workflow IDs, and\noptions you want to update.\nUpdates are incremental, only changing the specified options.\n\n```\ntemporal activity update-options \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --task-queue NewTaskQueueName \\\n    --schedule-to-close-timeout DURATION \\\n    --schedule-to-start-timeout DURATION \\\n    --start-to-close-timeout DURATION \\\n    --heartbeat-timeout DURATION \\\n    --retry-initial-interval DURATION \\\n    --retry-maximum-interval DURATION \\\n    --retry-backoff-coefficient NewBackoffCoefficient \\\n    --retry-maximum-attempts NewMaximumAttempts\n\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.ActivityId, "activity-id", "", "Activity ID. Required.")
+	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "i", "", "Activity ID. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "activity-id")
 	s.Command.Flags().StringVar(&s.TaskQueue, "task-queue", "", "Name of the task queue for the Activity.")
 	s.ScheduleToCloseTimeout = 0
@@ -620,6 +623,7 @@ func NewTemporalActivityUpdateOptionsCommand(cctx *CommandContext, parent *Tempo
 	s.Command.Flags().Float32Var(&s.RetryBackoffCoefficient, "retry-backoff-coefficient", 0, "Coefficient used to calculate the next retry interval. The next retry interval is previous interval multiplied by the backoff coefficient. Must be 1 or larger.")
 	s.Command.Flags().IntVar(&s.RetryMaximumAttempts, "retry-maximum-attempts", 0, "Maximum number of attempts. When exceeded the retries stop even if not expired yet. Setting this value to 1 disables retries. Setting this value to 0 means unlimited attempts(up to the timeouts).")
 	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of the user submitting this request.")
+	s.Command.Flags().BoolVar(&s.RestoreOriginal, "restore_original", false, "If set, the activity options will be restored to the default. Default options are then options activity was created with. They are part of the first SCHEDULE event. This flag cannot be combined with any other option; if you supply restore_original together with other options, the request will be rejected.")
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
