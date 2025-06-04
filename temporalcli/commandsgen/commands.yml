@@ -393,8 +393,8 @@ commands:
       However, if the Activity is currently running, it will run to completion.
       If the Activity is on its last retry attempt and fails, the failure will
       be returned to the caller, just as if the Activity had not been paused.
-      
-      Activities can be specified by their Activity ID or Activity Type. 
+
+      Activities can be specified by their Activity ID or Activity Type.
       One of those parameters must be provided. If both are provided - Activity
       Type will be used, and Activity ID will be ignored.
 
@@ -429,19 +429,19 @@ commands:
 
       If the Activity is not running and is past its retry timeout, it will be
       scheduled immediately. Otherwise, it will be scheduled after its retry
-      timeout expires. 
+      timeout expires.
 
-      Use `--reset-attempts` to reset the number of previous run attempts to 
-      zero. For example, if an Activity is near the maximum number of attempts 
-      N specified in its retry policy, `--reset-attempts` will allow the 
+      Use `--reset-attempts` to reset the number of previous run attempts to
+      zero. For example, if an Activity is near the maximum number of attempts
+      N specified in its retry policy, `--reset-attempts` will allow the
       Activity to be retried another N times after unpausing.
-      
-      Use `--reset-heartbeat` to reset the Activity's heartbeats. 
-      
-      Activities can be specified by their Activity ID or Activity Type. 
+
+      Use `--reset-heartbeat` to reset the Activity's heartbeats.
+
+      Activities can be specified by their Activity ID or Activity Type.
       One of those parameters must be provided. If both are provided - Activity
       Type will be used, and Activity ID will be ignored.
-      
+
       Activities can be unpaused in bulk via a visibility Query list filter:
 
       ```
@@ -449,8 +449,8 @@ commands:
           --query YourQuery \
           --reason YourReasonForTermination
       ```
-      
-      
+
+
       Specify the Activity ID or Type and Workflow IDs:
 
       ```
@@ -483,7 +483,7 @@ commands:
       - name: match-all
         type: bool
         description: |
-          Every paused activity should be unpaused. This flag is ignored if 
+          Every paused activity should be unpaused. This flag is ignored if
           activity-type is provided. Can only be used with --query.
       - name: jitter
         type: duration
@@ -494,24 +494,23 @@ commands:
     option-sets:
       - single-workflow-or-batch
 
-
   - name: temporal activity reset
     summary: Reset an Activity
     description: |
-      Resetting an activity resets both the number of attempts and the activity 
-      timeout.  
+      Resetting an activity resets both the number of attempts and the activity
+      timeout.
 
-      If activity is paused and 'keep_paused' flag is not provided - it will be 
+      If activity is paused and 'keep_paused' flag is not provided - it will be
       unpaused.
-      If activity is paused and 'keep_paused' flag is provided - it will stay 
+      If activity is paused and 'keep_paused' flag is provided - it will stay
       paused.
       If activity is waiting for the retry, is will be rescheduled immediately.
-      If the 'reset_heartbeats' flag is set, the activity heartbeat timer and 
+      If the 'reset_heartbeats' flag is set, the activity heartbeat timer and
       heartbeats will be reset.
 
-      Activities can be specified by their Activity ID or Activity Type. 
+      Activities can be specified by their Activity ID or Activity Type.
       One of those parameters must be provided. If both are provided - Activity
-      Type will be used, and Activity ID will be ignored.      
+      Type will be used, and Activity ID will be ignored.
 
       Specify the Activity Type of ID and Workflow IDs:
 
@@ -701,17 +700,15 @@ commands:
       Lists the Deployments in the client's namespace.
 
       Arguments can be Worker Deployment Versions associated with
-      a Deployment, using a fully qualified Version identifier that
-      concatenates the Deployment Name and the Build ID with the
-      reserved separator ".".
+      a Deployment, specified using the Deployment name and Build ID.
 
       For example:
 
       ```
       temporal worker deployment set-current-version \
-               --version YourDeploymentName.YourBuildID
+               --deployment-name YourDeploymentName --build-id YourBuildID
       ```
-      
+
       Sets the current Deployment Version for a given Deployment.
 
     docs:
@@ -817,7 +814,7 @@ commands:
       | subject to change.                                                  |
       +---------------------------------------------------------------------+
 
-      Describe properties of a Worker Deployment Version, such as the task 
+      Describe properties of a Worker Deployment Version, such as the task
       queues polled by workers in this Deployment Version, or drainage
       information required to safely decommission workers, or user-provided
       metadata, or its creation/modification time.
@@ -832,7 +829,7 @@ commands:
 
       ```
       temporal worker deployment describe-version \
-          --version YourDeploymentName.YourBuildID
+          --deployment-name YourDeploymentName --build-id YourBuildID
       ```
     option-sets:
       - deployment-version
@@ -855,7 +852,7 @@ commands:
         Version have pollers.
         - It is not draining. This requirement can be ignored with the option
       `--skip-drainage`.
-      
+
       ```
       temporal worker deployment delete-version [options]
       ```
@@ -864,8 +861,8 @@ commands:
 
       ```
       temporal worker deployment delete-version \
-          --version YourDeploymentName.YourBuildID \
-          --skip-drainage          
+          --deployment-name YourDeploymentName --build-id YourBuildID \
+          --skip-drainage
       ```
     option-sets:
       - deployment-version
@@ -889,13 +886,13 @@ commands:
       When a Version is current, Workers of that Deployment Version will receive
       tasks from new Workflows, and from existing AutoUpgrade Workflows that
       are running on this Deployment.
-      
+
       If not all the expected Task Queues are being polled by Workers in the
       new Version the request will fail. To override this protection use
       `--ignore-missing-task-queues`. Note that this would ignore task queues
       in a deployment that are not yet discovered, leading to inconsistent task
       queue configuration.
-      
+
       ```
       temporal worker deployment set-current-version [options]
       ```
@@ -906,26 +903,18 @@ commands:
 
       ```
       temporal worker deployment set-current-version \
-          --version YourDeploymentName.YourBuildID
+          --deployment-name YourDeploymentName --build-id YourBuildID
       ```
 
-      The target of set-current-version can also be `__unversioned__`, which
-      moves tasks to unversioned workers, but in this case we also need to
-      specify the Deployment Name.
+      The target of set-current-version can also be unversioned workers:
 
       ```
       temporal worker deployment set-current-version \
-          --version __unversioned__ \
-          --deployment-name YourDeploymentName
+          --deployment-name YourDeploymentName --unversioned
       ```
     option-sets:
-      - deployment-version
+      - deployment-version-or-unversioned
     options:
-      - name: deployment-name
-        type: string
-        description: |
-          Deployment name.
-          Only needed when `--version` is `__unversioned__` or empty.
       - name: identity
         type: string
         description: Identity of the user submitting this request.
@@ -947,22 +936,21 @@ commands:
 
       Set the Ramping Version and Percentage for a Deployment.
 
-      The Ramping Version can be set to a fully-qualified Version of the form
-      `YourDeploymentName.YourBuildID`, or set to "__unversioned__", a special
-      value that represents all the unversioned workers.
+      The Ramping Version can be set using deployment name and build ID,
+      or set to unversioned workers using the --unversioned flag.
 
       The Ramping Percentage is a float with values in the range [0, 100].
       A value of 100 does not make the Ramping Version Current, use
       `set-current-version` instead.
 
       To remove a Ramping Version use the flag `--delete`.
-      
+
       If not all the expected Task Queues are being polled by Workers in the
       new Ramping Version the request will fail. To override this protection use
       `--ignore-missing-task-queues`. Note that this would ignore task queues
       in a deployment that are not yet discovered, leading to inconsistent task
       queue configuration.
-      
+
       ```
       temporal worker deployment set-ramping-version [options]
       ```
@@ -974,25 +962,20 @@ commands:
 
       ```
       temporal worker deployment set-ramping-version \
-          --version YourDeploymentName.YourBuildID
+          --deployment-name YourDeploymentName --build-id YourBuildID \
           --percentage 10.0
       ```
 
       And to remove that ramping:
-      
+
       ```
       temporal worker deployment set-ramping-version \
-          --version YourDeploymentName.YourBuildID \
+          --deployment-name YourDeploymentName --build-id YourBuildID \
           --delete
       ```
     option-sets:
-      - deployment-version
+      - deployment-version-or-unversioned
     options:
-      - name: deployment-name
-        type: string
-        description: |
-          Deployment name.
-          Only needed when `--version` is `__unversioned__`.
       - name: percentage
         type: float
         description: |
@@ -1025,16 +1008,16 @@ commands:
 
       ```
        temporal worker deployment update-metadata-version \
-          --version YourDeploymentName.YourBuildID \
+          --deployment-name YourDeploymentName --build-id YourBuildID \
           --metadata bar=1 \
           --metadata foo=true
       ```
 
       The current metadata is also returned with `describe-version`:
-      
+
       ```
        temporal worker deployment describe-version \
-          --version YourDeploymentName.YourBuildID \
+          --deployment-name YourDeploymentName --build-id YourBuildID \
       ```
     option-sets:
       - deployment-version
@@ -3431,7 +3414,7 @@ commands:
     summary: Send a message to a Workflow Execution, start the execution if it isn't running
     description: |
       Send an asynchronous notification (Signal) to a Workflow Execution.
-      If the Workflow Execution is not running or is not found, it starts the 
+      If the Workflow Execution is not running or is not found, it starts the
       workflow then sends the signal.
 
       ```
@@ -3705,7 +3688,7 @@ commands:
     summary: Send an Update-With-Start and wait for it to be accepted or rejected (Experimental)
     description: |
       Send a message to a Workflow Execution to invoke an Update handler, and wait for
-      the update to be accepted or rejected. If the Workflow Execution is not running, 
+      the update to be accepted or rejected. If the Workflow Execution is not running,
       then a new workflow execution is started and the update is sent.
 
       Experimental.
@@ -4057,13 +4040,34 @@ option-sets:
 
   - name: deployment-version
     options:
-      - name: version
+      - name: deployment-name
         type: string
-        short: v
         description: |
-          Fully-qualified name for a Worker Deployment Version.
-          Use the format `YourDeploymentName.YourBuildID`.
+          Name of the Worker Deployment.
         required: true
+      - name: build-id
+        type: string
+        description: |
+          Build ID of the Worker Deployment Version.
+        required: true
+
+  - name: deployment-version-or-unversioned
+    options:
+      - name: deployment-name
+        type: string
+        description: |
+          Name of the Worker Deployment.
+        required: true
+      - name: build-id
+        type: string
+        description: |
+          Build ID of the Worker Deployment Version.
+          Required unless --unversioned is specified.
+      - name: unversioned
+        type: bool
+        description: |
+          Set unversioned workers as the target version.
+          Cannot be used with --build-id.
 
   - name: deployment-reference
     options:
