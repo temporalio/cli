@@ -195,6 +195,19 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 				bid = splitVersion[1]
 			}
 		}
+		overrideBehavior := ""
+		overridePinnedVersionDeploymentName := ""
+		overridePinnedVersionBuildId := ""
+		if vInfo.VersioningOverride != nil {
+			switch vInfo.VersioningOverride.GetOverride().(type) {
+			case *workflow.VersioningOverride_Pinned:
+				overridePinnedVersionDeploymentName = vInfo.GetVersioningOverride().GetPinned().Version.DeploymentName
+				overridePinnedVersionBuildId = vInfo.GetVersioningOverride().GetPinned().Version.BuildId
+				overrideBehavior = enums.VERSIONING_BEHAVIOR_PINNED.String()
+			case *workflow.VersioningOverride_AutoUpgrade:
+				overrideBehavior = enums.VERSIONING_BEHAVIOR_AUTO_UPGRADE.String()
+			}
+		}
 		_ = cctx.Printer.PrintStructured(struct {
 			Behavior                            string
 			DeploymentName                      string
@@ -202,16 +215,17 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 			OverrideBehavior                    string `cli:",cardOmitEmpty"`
 			OverridePinnedVersionDeploymentName string `cli:",cardOmitEmpty"`
 			OverridePinnedVersionBuildId        string `cli:",cardOmitEmpty"`
-			TransitionVersion                   string `cli:",cardOmitEmpty"`
+			TransitionVersionDeploymentName     string `cli:",cardOmitEmpty"`
+			TransitionVersionBuildId            string `cli:",cardOmitEmpty"`
 		}{
-			Behavior:       vInfo.Behavior.String(),
-			DeploymentName: dname,
-			BuildId:        bid,
-			// TODO: Use not-deprecated fields more
-			OverrideBehavior:                    vInfo.VersioningOverride.GetBehavior().String(),
-			OverridePinnedVersionDeploymentName: vInfo.VersioningOverride.GetPinnedVersion(),
-			OverridePinnedVersionBuildId:        vInfo.VersioningOverride.GetPinnedVersion(),
-			TransitionVersion:                   vInfo.VersionTransition.GetVersion(),
+			Behavior:                            vInfo.Behavior.String(),
+			DeploymentName:                      dname,
+			BuildId:                             bid,
+			OverrideBehavior:                    overrideBehavior,
+			OverridePinnedVersionDeploymentName: overridePinnedVersionDeploymentName,
+			OverridePinnedVersionBuildId:        overridePinnedVersionBuildId,
+			TransitionVersionDeploymentName:     vInfo.VersionTransition.GetDeploymentVersion().GetDeploymentName(),
+			TransitionVersionBuildId:            vInfo.VersionTransition.GetDeploymentVersion().GetBuildId(),
 		}, printer.StructuredOptions{})
 	}
 

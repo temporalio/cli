@@ -9,6 +9,7 @@ import (
 	"github.com/temporalio/cli/temporalcli/internal/printer"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/worker"
 )
 
 type versionSummariesRowType struct {
@@ -643,8 +644,10 @@ func (c *TemporalWorkerDeploymentUpdateMetadataVersionCommand) run(cctx *Command
 
 	dHandle := cl.WorkerDeploymentClient().GetHandle(c.DeploymentName)
 	response, err := dHandle.UpdateVersionMetadata(cctx, client.WorkerDeploymentUpdateVersionMetadataOptions{
-		// TODO: Fix w/ update
-		Version: fmt.Sprintf("%s.%s", c.DeploymentName, c.BuildId),
+		Version: worker.WorkerDeploymentVersion{
+			BuildId:        c.BuildId,
+			DeploymentName: c.DeploymentName,
+		},
 		MetadataUpdate: client.WorkerDeploymentMetadataUpdate{
 			UpsertEntries: metadata,
 			RemoveEntries: c.RemoveEntries,

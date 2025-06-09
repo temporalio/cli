@@ -256,9 +256,9 @@ func (s *SharedServerSuite) SetupTest() {
 
 func (s *SharedServerSuite) TearDownTest() {
 	// If there is log output, log it
-	// if b := s.LogOutput(); len(b) > 0 {
-	// 	s.t.Logf("Server/SDK Log Output:\n-----\n%s-----", b)
-	// }
+	if b := s.LogOutput(); len(b) > 0 {
+		s.t.Logf("Server/SDK Log Output:\n-----\n%s-----", b)
+	}
 	if s.CommandHarness != nil {
 		s.CommandHarness.Close()
 	}

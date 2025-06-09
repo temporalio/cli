@@ -626,7 +626,6 @@ func (s *SharedServerSuite) TestWorkflow_Describe_Deployment() {
 	s.ContainsOnSameLine(out, "Behavior", "Pinned")
 	s.ContainsOnSameLine(out, "DeploymentName", version.DeploymentName)
 	s.ContainsOnSameLine(out, "BuildId", version.BuildId)
-	s.ContainsOnSameLine(out, "OverrideBehavior", "Unspecified")
 
 	// json
 	res = s.Execute(
