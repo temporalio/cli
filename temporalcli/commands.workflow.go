@@ -8,13 +8,14 @@ import (
 	"os/user"
 
 	"go.temporal.io/sdk/converter"
-	"go.temporal.io/sdk/workflow"
+	"go.temporal.io/sdk/worker"
 
 	"github.com/fatih/color"
 	"github.com/google/uuid"
 	"github.com/temporalio/cli/temporalcli/internal/printer"
 	"go.temporal.io/api/batch/v1"
 	"go.temporal.io/api/common/v1"
+	deploymentpb "go.temporal.io/api/deployment/v1"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/query/v1"
 	sdkpb "go.temporal.io/api/sdk/v1"
@@ -101,46 +102,58 @@ func (c *TemporalWorkflowUpdateOptionsCommand) run(cctx *CommandContext, args []
 	}
 	defer cl.Close()
 
-	if c.VersioningOverrideBehavior.Value == "unspecified" || c.VersioningOverrideBehavior.Value == "auto_upgrade" {
-		if c.VersioningOverridePinnedVersion != "" {
-			return fmt.Errorf("cannot set pinned version with %v behavior", c.VersioningOverrideBehavior)
+	if c.VersioningOverrideBehavior.Value == "unspecified" ||
+		c.VersioningOverrideBehavior.Value == "auto_upgrade" {
+		if c.VersioningOverrideDeploymentName != "" || c.VersioningOverrideBuildId != "" {
+			return fmt.Errorf("cannot set pinned deployment name or build id with %v behavior",
+				c.VersioningOverrideBehavior)
 		}
 	}
 
 	if c.VersioningOverrideBehavior.Value == "pinned" {
-		if c.VersioningOverridePinnedVersion == "" {
-			return fmt.Errorf("missing version with 'pinned' behavior")
+		if c.VersioningOverrideDeploymentName == "" && c.VersioningOverrideBuildId == "" {
+			return fmt.Errorf("missing deployment name and/or build id with 'pinned' behavior")
 		}
 	}
 
 	exec, batchReq, err := c.workflowExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{})
 
+	var overrideChange *client.VersioningOverrideChange
+	switch c.VersioningOverrideBehavior.Value {
+	case "unspecified":
+		overrideChange = &client.VersioningOverrideChange{
+			Value: nil,
+		}
+	case "pinned":
+		overrideChange = &client.VersioningOverrideChange{
+			Value: &client.PinnedVersioningOverride{
+				Version: worker.WorkerDeploymentVersion{
+					DeploymentName: c.VersioningOverrideDeploymentName,
+					BuildId:        c.VersioningOverrideBuildId,
+				},
+			},
+		}
+	case "auto_upgrade":
+		overrideChange = &client.VersioningOverrideChange{
+			Value: &client.AutoUpgradeVersioningOverride{},
+		}
+	default:
+		return fmt.Errorf(
+			"invalid deployment behavior: %v, valid values are: 'unspecified', 'pinned', and 'auto_upgrade'",
+			c.VersioningOverrideBehavior,
+		)
+	}
+
 	// Run single or batch
 	if err != nil {
 		return err
 	} else if exec != nil {
-		behavior := workflow.VersioningBehaviorUnspecified
-		switch c.VersioningOverrideBehavior.Value {
-		case "unspecified":
-		case "pinned":
-			behavior = workflow.VersioningBehaviorPinned
-		case "auto_upgrade":
-			behavior = workflow.VersioningBehaviorAutoUpgrade
-		default:
-			return fmt.Errorf(
-				"invalid deployment behavior: %v, valid values are: 'unspecified', 'pinned', and 'auto_upgrade'",
-				c.VersioningOverrideBehavior,
-			)
-		}
 
 		_, err := cl.UpdateWorkflowExecutionOptions(cctx, client.UpdateWorkflowExecutionOptionsRequest{
 			WorkflowId: exec.WorkflowId,
 			RunId:      exec.RunId,
 			WorkflowExecutionOptionsChanges: client.WorkflowExecutionOptionsChanges{
-				VersioningOverride: &client.VersioningOverride{
-					Behavior:      behavior,
-					PinnedVersion: c.VersioningOverridePinnedVersion,
-				},
+				VersioningOverride: overrideChange,
 			},
 		})
 		if err != nil {
@@ -154,28 +167,16 @@ func (c *TemporalWorkflowUpdateOptionsCommand) run(cctx *CommandContext, args []
 			return fmt.Errorf("invalid field mask: %w", err)
 		}
 
-		behavior := enums.VERSIONING_BEHAVIOR_UNSPECIFIED
-		switch c.VersioningOverrideBehavior.Value {
-		case "unspecified":
-		case "pinned":
-			behavior = enums.VERSIONING_BEHAVIOR_PINNED
-		case "auto_upgrade":
-			behavior = enums.VERSIONING_BEHAVIOR_AUTO_UPGRADE
-		default:
-			return fmt.Errorf(
-				"invalid deployment behavior: %v, valid values are: 'unspecified', 'pinned', and 'auto_upgrade'",
-				c.VersioningOverrideBehavior,
-			)
+		var protoVerOverride *workflowpb.VersioningOverride
+		if overrideChange != nil {
+			protoVerOverride = versioningOverrideToProto(overrideChange.Value)
 		}
 
 		batchReq.Operation = &workflowservice.StartBatchOperationRequest_UpdateWorkflowOptionsOperation{
 			UpdateWorkflowOptionsOperation: &batch.BatchOperationUpdateWorkflowExecutionOptions{
 				Identity: clientIdentity(),
 				WorkflowExecutionOptions: &workflowpb.WorkflowExecutionOptions{
-					VersioningOverride: &workflowpb.VersioningOverride{
-						Behavior:      behavior,
-						PinnedVersion: c.VersioningOverridePinnedVersion,
-					},
+					VersioningOverride: protoVerOverride,
 				},
 				UpdateMask: protoMask,
 			},
@@ -684,5 +685,40 @@ func queryHelper(cctx *CommandContext,
 		}
 
 		return cctx.Printer.PrintStructured(output, printer.StructuredOptions{})
+	}
+}
+
+// This is (mostly) copy-pasted from the SDK since it's not exposed. Most of this will go away once
+// the deprecated fields are no longer supported.
+func versioningOverrideToProto(versioningOverride client.VersioningOverride) *workflowpb.VersioningOverride {
+	if versioningOverride == nil {
+		return nil
+	}
+	switch v := versioningOverride.(type) {
+	case *client.PinnedVersioningOverride:
+		return &workflowpb.VersioningOverride{
+			Behavior:      enums.VERSIONING_BEHAVIOR_PINNED,
+			PinnedVersion: fmt.Sprintf("%s.%s", v.Version.DeploymentName, v.Version.BuildId),
+			Deployment: &deploymentpb.Deployment{
+				SeriesName: v.Version.DeploymentName,
+				BuildId:    v.Version.BuildId,
+			},
+			Override: &workflowpb.VersioningOverride_Pinned{
+				Pinned: &workflowpb.VersioningOverride_PinnedOverride{
+					Behavior: workflowpb.VersioningOverride_PINNED_OVERRIDE_BEHAVIOR_PINNED,
+					Version: &deploymentpb.WorkerDeploymentVersion{
+						DeploymentName: v.Version.DeploymentName,
+						BuildId:        v.Version.BuildId,
+					},
+				},
+			},
+		}
+	case *client.AutoUpgradeVersioningOverride:
+		return &workflowpb.VersioningOverride{
+			Behavior: enums.VERSIONING_BEHAVIOR_AUTO_UPGRADE,
+			Override: &workflowpb.VersioningOverride_AutoUpgrade{AutoUpgrade: true},
+		}
+	default:
+		return nil
 	}
 }

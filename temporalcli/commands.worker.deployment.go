@@ -12,14 +12,17 @@ import (
 )
 
 type versionSummariesRowType struct {
-	Version        string    `json:"version"`
+	DeploymentName string    `json:"deploymentName"`
+	BuildId        string    `json:"buildId"`
 	DrainageStatus string    `json:"drainageStatus"`
 	CreateTime     time.Time `json:"createTime"`
 }
 
 type formattedRoutingConfigType struct {
-	CurrentVersion                      string    `json:"currentVersion"`
-	RampingVersion                      string    `json:"rampingVersion"`
+	CurrentVersionDeploymentName        string    `json:"currentVersionDeploymentName"`
+	CurrentVersionBuildId               string    `json:"currentVersionBuildId"`
+	RampingVersionDeploymentName        string    `json:"rampingVersionDeploymentName"`
+	RampingVersionBuildId               string    `json:"rampingVersionBuildId"`
 	RampingVersionPercentage            float32   `json:"rampingVersionPercentage"`
 	CurrentVersionChangedTime           time.Time `json:"currentVersionChangedTime"`
 	RampingVersionChangedTime           time.Time `json:"rampingVersionChangedTime"`
@@ -35,11 +38,13 @@ type formattedWorkerDeploymentInfoType struct {
 }
 
 type formattedWorkerDeploymentListEntryType struct {
-	Name                     string
-	CreateTime               time.Time
-	CurrentVersion           string `cli:",cardOmitEmpty"`
-	RampingVersion           string
-	RampingVersionPercentage float32 `cli:",cardOmitEmpty"`
+	Name                         string
+	CreateTime                   time.Time
+	CurrentVersionDeploymentName string  `cli:",cardOmitEmpty"`
+	CurrentVersionBuildId        string  `cli:",cardOmitEmpty"`
+	RampingVersionDeploymentName string  `cli:",cardOmitEmpty"`
+	RampingVersionBuildId        string  `cli:",cardOmitEmpty"`
+	RampingVersionPercentage     float32 `cli:",cardOmitEmpty"`
 }
 
 type formattedDrainageInfo struct {
@@ -54,7 +59,8 @@ type formattedTaskQueueInfoRowType struct {
 }
 
 type formattedWorkerDeploymentVersionInfoType struct {
-	Version            string                          `json:"version"`
+	DeploymentName     string                          `json:"deploymentName"`
+	BuildId            string                          `json:"buildId"`
 	CreateTime         time.Time                       `json:"createTime"`
 	RoutingChangedTime time.Time                       `json:"routingChangedTime"`
 	CurrentSinceTime   time.Time                       `json:"currentSinceTime"`
@@ -86,7 +92,8 @@ func formatVersionSummaries(vss []client.WorkerDeploymentVersionSummary) ([]vers
 			return vsRows, err
 		}
 		vsRows = append(vsRows, versionSummariesRowType{
-			Version:        vs.Version,
+			DeploymentName: vs.Version.DeploymentName,
+			BuildId:        vs.Version.BuildId,
 			CreateTime:     vs.CreateTime,
 			DrainageStatus: drainageStr,
 		})
@@ -95,9 +102,23 @@ func formatVersionSummaries(vss []client.WorkerDeploymentVersionSummary) ([]vers
 }
 
 func formatRoutingConfig(rc client.WorkerDeploymentRoutingConfig) (formattedRoutingConfigType, error) {
+	cvdn := ""
+	cvbid := ""
+	rvdn := ""
+	rvbid := ""
+	if rc.CurrentVersion != nil {
+		cvdn = rc.CurrentVersion.DeploymentName
+		cvbid = rc.CurrentVersion.BuildId
+	}
+	if rc.RampingVersion != nil {
+		rvdn = rc.RampingVersion.DeploymentName
+		rvbid = rc.RampingVersion.BuildId
+	}
 	return formattedRoutingConfigType{
-		CurrentVersion:                      rc.CurrentVersion,
-		RampingVersion:                      rc.RampingVersion,
+		CurrentVersionDeploymentName:        cvdn,
+		CurrentVersionBuildId:               cvbid,
+		RampingVersionDeploymentName:        rvdn,
+		RampingVersionBuildId:               rvbid,
 		RampingVersionPercentage:            rc.RampingVersionPercentage,
 		CurrentVersionChangedTime:           rc.CurrentVersionChangedTime,
 		RampingVersionChangedTime:           rc.RampingVersionChangedTime,
@@ -134,12 +155,26 @@ func printWorkerDeploymentInfo(cctx *CommandContext, deploymentInfo client.Worke
 
 	if !cctx.JSONOutput {
 		cctx.Printer.Println(color.MagentaString(msg))
+		curVerDepName := ""
+		curVerBuildId := ""
+		rampVerDepName := ""
+		rampVerBuildId := ""
+		if deploymentInfo.RoutingConfig.CurrentVersion != nil {
+			curVerDepName = deploymentInfo.RoutingConfig.CurrentVersion.DeploymentName
+			curVerBuildId = deploymentInfo.RoutingConfig.CurrentVersion.BuildId
+		}
+		if deploymentInfo.RoutingConfig.RampingVersion != nil {
+			rampVerDepName = deploymentInfo.RoutingConfig.RampingVersion.DeploymentName
+			rampVerBuildId = deploymentInfo.RoutingConfig.RampingVersion.BuildId
+		}
 		printMe := struct {
 			Name                                string
 			CreateTime                          time.Time
 			LastModifierIdentity                string    `cli:",cardOmitEmpty"`
-			CurrentVersion                      string    `cli:",cardOmitEmpty"`
-			RampingVersion                      string    `cli:",cardOmitEmpty"`
+			CurrentVersionDeploymentName        string    `cli:",cardOmitEmpty"`
+			CurrentVersionBuildID               string    `cli:",cardOmitEmpty"`
+			RampingVersionDeploymentName        string    `cli:",cardOmitEmpty"`
+			RampingVersionBuildID               string    `cli:",cardOmitEmpty"`
 			RampingVersionPercentage            float32   `cli:",cardOmitEmpty"`
 			CurrentVersionChangedTime           time.Time `cli:",cardOmitEmpty"`
 			RampingVersionChangedTime           time.Time `cli:",cardOmitEmpty"`
@@ -148,8 +183,10 @@ func printWorkerDeploymentInfo(cctx *CommandContext, deploymentInfo client.Worke
 			Name:                                deploymentInfo.Name,
 			CreateTime:                          deploymentInfo.CreateTime,
 			LastModifierIdentity:                deploymentInfo.LastModifierIdentity,
-			CurrentVersion:                      deploymentInfo.RoutingConfig.CurrentVersion,
-			RampingVersion:                      deploymentInfo.RoutingConfig.RampingVersion,
+			CurrentVersionDeploymentName:        curVerDepName,
+			CurrentVersionBuildID:               curVerBuildId,
+			RampingVersionDeploymentName:        rampVerDepName,
+			RampingVersionBuildID:               rampVerBuildId,
 			RampingVersionPercentage:            deploymentInfo.RoutingConfig.RampingVersionPercentage,
 			CurrentVersionChangedTime:           deploymentInfo.RoutingConfig.CurrentVersionChangedTime,
 			RampingVersionChangedTime:           deploymentInfo.RoutingConfig.RampingVersionChangedTime,
@@ -247,7 +284,8 @@ func workerDeploymentVersionInfoToRows(deploymentInfo client.WorkerDeploymentVer
 	}
 
 	return formattedWorkerDeploymentVersionInfoType{
-		Version:            deploymentInfo.Version,
+		DeploymentName:     deploymentInfo.Version.DeploymentName,
+		BuildId:            deploymentInfo.Version.BuildId,
 		CreateTime:         deploymentInfo.CreateTime,
 		RoutingChangedTime: deploymentInfo.RoutingChangedTime,
 		CurrentSinceTime:   deploymentInfo.CurrentSinceTime,
@@ -280,7 +318,8 @@ func printWorkerDeploymentVersionInfo(cctx *CommandContext, deploymentInfo clien
 		}
 
 		printMe := struct {
-			Version                 string
+			DeploymentName          string
+			BuildId                 string
 			CreateTime              time.Time
 			RoutingChangedTime      time.Time `cli:",cardOmitEmpty"`
 			CurrentSinceTime        time.Time `cli:",cardOmitEmpty"`
@@ -291,7 +330,8 @@ func printWorkerDeploymentVersionInfo(cctx *CommandContext, deploymentInfo clien
 			DrainageLastCheckedTime time.Time                  `cli:",cardOmitEmpty"`
 			Metadata                map[string]*common.Payload `cli:",cardOmitEmpty"`
 		}{
-			Version:                 deploymentInfo.Version,
+			DeploymentName:          deploymentInfo.Version.DeploymentName,
+			BuildId:                 deploymentInfo.Version.BuildId,
 			CreateTime:              deploymentInfo.CreateTime,
 			RoutingChangedTime:      deploymentInfo.RoutingChangedTime,
 			CurrentSinceTime:        deploymentInfo.CurrentSinceTime,
@@ -450,17 +490,15 @@ func (c *TemporalWorkerDeploymentListCommand) run(cctx *CommandContext, args []s
 			// For JSON dump one line of JSON per deployment
 			_ = cctx.Printer.PrintStructured(listEntry, printer.StructuredOptions{})
 		} else {
-			rampingVersion := "<none>"
-			if listEntry.RoutingConfig.RampingVersion != "" {
-				rampingVersion = listEntry.RoutingConfig.RampingVersion
-			}
 			// For non-JSON, we are doing a table for each page
 			page = append(page, &formattedWorkerDeploymentListEntryType{
-				Name:                     listEntry.Name,
-				CreateTime:               listEntry.CreateTime,
-				CurrentVersion:           listEntry.RoutingConfig.CurrentVersion,
-				RampingVersion:           rampingVersion,
-				RampingVersionPercentage: listEntry.RoutingConfig.RampingVersionPercentage,
+				Name:                         listEntry.Name,
+				CreateTime:                   listEntry.CreateTime,
+				CurrentVersionDeploymentName: listEntry.RoutingConfig.CurrentVersionDeploymentName,
+				CurrentVersionBuildId:        listEntry.RoutingConfig.CurrentVersionBuildId,
+				RampingVersionDeploymentName: listEntry.RoutingConfig.RampingVersionDeploymentName,
+				RampingVersionBuildId:        listEntry.RoutingConfig.RampingVersionBuildId,
+				RampingVersionPercentage:     listEntry.RoutingConfig.RampingVersionPercentage,
 			})
 			if len(page) == cap(page) {
 				_ = cctx.Printer.PrintStructured(page, printTableOpts)
@@ -485,14 +523,9 @@ func (c *TemporalWorkerDeploymentDeleteVersionCommand) run(cctx *CommandContext,
 	}
 	defer cl.Close()
 
-	name, err := extractDeploymentName(c.Version, "", true)
-	if err != nil {
-		return err
-	}
-
-	dHandle := cl.WorkerDeploymentClient().GetHandle(name)
+	dHandle := cl.WorkerDeploymentClient().GetHandle(c.DeploymentName)
 	_, err = dHandle.DeleteVersion(cctx, client.WorkerDeploymentDeleteVersionOptions{
-		Version:      c.Version,
+		BuildID:      c.BuildId,
 		SkipDrainage: c.SkipDrainage,
 		Identity:     c.Identity,
 	})
@@ -511,15 +544,10 @@ func (c *TemporalWorkerDeploymentDescribeVersionCommand) run(cctx *CommandContex
 	}
 	defer cl.Close()
 
-	name, err := extractDeploymentName(c.Version, "", true)
-	if err != nil {
-		return err
-	}
-
-	dHandle := cl.WorkerDeploymentClient().GetHandle(name)
+	dHandle := cl.WorkerDeploymentClient().GetHandle(c.DeploymentName)
 
 	resp, err := dHandle.DescribeVersion(cctx, client.WorkerDeploymentDescribeVersionOptions{
-		Version: c.Version,
+		BuildID: c.BuildId,
 	})
 	if err != nil {
 		return fmt.Errorf("error describing worker deployment version: %w", err)
@@ -540,23 +568,18 @@ func (c *TemporalWorkerDeploymentSetCurrentVersionCommand) run(cctx *CommandCont
 	}
 	defer cl.Close()
 
-	name, err := extractDeploymentName(c.Version, c.DeploymentName, false)
-	if err != nil {
-		return err
-	}
-
 	token, err := c.Parent.getConflictToken(cctx, &getDeploymentConflictTokenOptions{
 		safeMode:        !c.Yes,
 		safeModeMessage: "Current",
-		deploymentName:  name,
+		deploymentName:  c.DeploymentName,
 	})
 	if err != nil {
 		return err
 	}
 
-	dHandle := cl.WorkerDeploymentClient().GetHandle(name)
+	dHandle := cl.WorkerDeploymentClient().GetHandle(c.DeploymentName)
 	_, err = dHandle.SetCurrentVersion(cctx, client.WorkerDeploymentSetCurrentVersionOptions{
-		Version:                 c.Version,
+		BuildID:                 c.BuildId,
 		Identity:                c.Identity,
 		IgnoreMissingTaskQueues: c.IgnoreMissingTaskQueues,
 		ConflictToken:           token,
@@ -565,7 +588,7 @@ func (c *TemporalWorkerDeploymentSetCurrentVersionCommand) run(cctx *CommandCont
 		return fmt.Errorf("error setting the current worker deployment version: %w", err)
 	}
 
-	cctx.Printer.Println("Successfully setting the current worker deployment version")
+	cctx.Printer.Println("Successfully set the current worker deployment version")
 	return nil
 }
 
@@ -576,30 +599,23 @@ func (c *TemporalWorkerDeploymentSetRampingVersionCommand) run(cctx *CommandCont
 	}
 	defer cl.Close()
 
-	name, err := extractDeploymentName(c.Version, c.DeploymentName, false)
-	if err != nil {
-		return err
-	}
-
 	token, err := c.Parent.getConflictToken(cctx, &getDeploymentConflictTokenOptions{
 		safeMode:        !c.Yes,
 		safeModeMessage: "Ramping",
-		deploymentName:  name,
+		deploymentName:  c.DeploymentName,
 	})
 	if err != nil {
 		return err
 	}
 
-	version := c.Version
 	percentage := c.Percentage
 	if c.Delete {
-		version = ""
 		percentage = 0.0
 	}
 
-	dHandle := cl.WorkerDeploymentClient().GetHandle(name)
+	dHandle := cl.WorkerDeploymentClient().GetHandle(c.DeploymentName)
 	_, err = dHandle.SetRampingVersion(cctx, client.WorkerDeploymentSetRampingVersionOptions{
-		Version:                 version,
+		BuildID:                 c.BuildId,
 		Percentage:              percentage,
 		ConflictToken:           token,
 		Identity:                c.Identity,
@@ -609,7 +625,7 @@ func (c *TemporalWorkerDeploymentSetRampingVersionCommand) run(cctx *CommandCont
 		return fmt.Errorf("error  setting the ramping worker deployment version: %w", err)
 	}
 
-	cctx.Printer.Println("Successfully setting the ramping worker deployment version")
+	cctx.Printer.Println("Successfully set the ramping worker deployment version")
 	return nil
 }
 
@@ -620,19 +636,15 @@ func (c *TemporalWorkerDeploymentUpdateMetadataVersionCommand) run(cctx *Command
 	}
 	defer cl.Close()
 
-	name, err := extractDeploymentName(c.Version, "", true)
-	if err != nil {
-		return err
-	}
-
 	metadata, err := stringKeysJSONValues(c.Metadata, false)
 	if err != nil {
 		return fmt.Errorf("invalid metadata values: %w", err)
 	}
 
-	dHandle := cl.WorkerDeploymentClient().GetHandle(name)
+	dHandle := cl.WorkerDeploymentClient().GetHandle(c.DeploymentName)
 	response, err := dHandle.UpdateVersionMetadata(cctx, client.WorkerDeploymentUpdateVersionMetadataOptions{
-		Version: c.Version,
+		// TODO: Fix w/ update
+		Version: fmt.Sprintf("%s.%s", c.DeploymentName, c.BuildId),
 		MetadataUpdate: client.WorkerDeploymentMetadataUpdate{
 			UpsertEntries: metadata,
 			RemoveEntries: c.RemoveEntries,

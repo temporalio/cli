@@ -3194,8 +3194,8 @@ commands:
       temporal workflow update-options \
           --workflow-id YourWorkflowId \
           --versioning-override-behavior pinned \
-          --versioning-override-pinned-version \
-            YourDeploymentSeriesName.YourDeploymentBuildId
+          --versioning-override-deployment-name YourDeploymentSeriesName \
+          --versioning-override-build-id YourDeploymentBuildId
       ```
 
       To remove any previous overrides, set the behavior to
@@ -3221,9 +3221,14 @@ commands:
           - unspecified
           - pinned
           - auto_upgrade
-      - name: versioning-override-pinned-version
+      - name: versioning-override-deployment-name
         type: string
-        description: Override Pinned Version for a Worker Deployment (Only for pinned).
+        description: Deployment name component of override Pinned Version for a Worker Deployment
+          (Only for pinned).
+      - name: versioning-override-build-id
+        type: string
+        description: Build Id component of override Pinned Version for a Worker Deployment
+          (Only for pinned).
 
   - name: temporal workflow query
     summary: Retrieve Workflow Execution state

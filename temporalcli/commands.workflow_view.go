@@ -3,6 +3,7 @@ package temporalcli
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/fatih/color"
@@ -180,18 +181,37 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 		cctx.Printer.Println(color.MagentaString("Versioning Info:"))
 		cctx.Printer.Println()
 		vInfo := info.VersioningInfo
+
+		var dname string
+		var bid string
+		if vInfo.GetDeploymentVersion() != nil {
+			dname = vInfo.GetDeploymentVersion().DeploymentName
+			bid = vInfo.GetDeploymentVersion().BuildId
+		}
+		if dname == "" {
+			splitVersion := strings.SplitN(vInfo.GetVersion(), ".", 2)
+			if len(splitVersion) == 2 {
+				dname = splitVersion[0]
+				bid = splitVersion[1]
+			}
+		}
 		_ = cctx.Printer.PrintStructured(struct {
-			Behavior              string
-			Version               string
-			OverrideBehavior      string `cli:",cardOmitEmpty"`
-			OverridePinnedVersion string `cli:",cardOmitEmpty"`
-			TransitionVersion     string `cli:",cardOmitEmpty"`
+			Behavior                            string
+			DeploymentName                      string
+			BuildId                             string
+			OverrideBehavior                    string `cli:",cardOmitEmpty"`
+			OverridePinnedVersionDeploymentName string `cli:",cardOmitEmpty"`
+			OverridePinnedVersionBuildId        string `cli:",cardOmitEmpty"`
+			TransitionVersion                   string `cli:",cardOmitEmpty"`
 		}{
-			Behavior:              vInfo.Behavior.String(),
-			Version:               vInfo.GetVersion(),
-			OverrideBehavior:      vInfo.VersioningOverride.GetBehavior().String(),
-			OverridePinnedVersion: vInfo.VersioningOverride.GetPinnedVersion(),
-			TransitionVersion:     vInfo.VersionTransition.GetVersion(),
+			Behavior:       vInfo.Behavior.String(),
+			DeploymentName: dname,
+			BuildId:        bid,
+			// TODO: Use not-deprecated fields more
+			OverrideBehavior:                    vInfo.VersioningOverride.GetBehavior().String(),
+			OverridePinnedVersionDeploymentName: vInfo.VersioningOverride.GetPinnedVersion(),
+			OverridePinnedVersionBuildId:        vInfo.VersioningOverride.GetPinnedVersion(),
+			TransitionVersion:                   vInfo.VersionTransition.GetVersion(),
 		}, printer.StructuredOptions{})
 	}
 
