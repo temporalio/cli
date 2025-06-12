@@ -18,7 +18,6 @@ import (
 )
 
 func (c *TemporalWorkflowResetCommand) run(cctx *CommandContext, _ []string) error {
-	cctx.Printer.Printlnf("Inside TemporalWorkflowResetCommand.run()")
 	validateArguments, doReset := c.getResetOperations()
 	if err := validateArguments(); err != nil {
 		return err
@@ -68,12 +67,10 @@ func (c *TemporalWorkflowResetCommand) validateBatchResetArguments() error {
 	return nil
 }
 func (c *TemporalWorkflowResetCommand) doWorkflowReset(cctx *CommandContext, cl client.Client) error {
-	cctx.Printer.Printlnf("Inside TemporalWorkflowResetCommand.doWorkflowReset()")
 	return c.doWorkflowResetWithPostOps(cctx, cl, nil)
 }
 
 func (c *TemporalWorkflowResetCommand) doWorkflowResetWithPostOps(cctx *CommandContext, cl client.Client, postOps []*workflow.PostResetOperation) error {
-	cctx.Printer.Printlnf("Inside TemporalWorkflowResetCommand.doWorkflowResetWithPostOps(). postOps: %v", postOps)
 	var err error
 	resetBaseRunID := c.RunId
 	eventID := int64(c.EventId)
