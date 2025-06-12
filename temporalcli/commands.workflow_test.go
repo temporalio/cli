@@ -562,6 +562,7 @@ func (s *SharedServerSuite) TestWorkflow_Batch_Update_Options_Versioning_Overrid
 func (s *SharedServerSuite) TestWorkflow_Update_Options_Versioning_Override() {
 	buildId1 := uuid.NewString()
 	buildId2 := uuid.NewString()
+	buildId3 := "id3-" + uuid.NewString()
 	deploymentName := uuid.NewString()
 	version1 := worker.WorkerDeploymentVersion{
 		DeploymentName: deploymentName,
@@ -657,6 +658,26 @@ func (s *SharedServerSuite) TestWorkflow_Update_Options_Versioning_Override() {
 	s.ContainsOnSameLine(res.Stdout.String(), "OverrideBehavior", "Pinned")
 	s.ContainsOnSameLine(res.Stdout.String(), "OverridePinnedVersionDeploymentName", version2.DeploymentName)
 	s.ContainsOnSameLine(res.Stdout.String(), "OverridePinnedVersionBuildId", version2.BuildId)
+
+	// Using only build-id
+	res = s.Execute(
+		"workflow", "update-options",
+		"--address", s.Address(),
+		"-w", run.GetID(),
+		"--versioning-override-behavior", "pinned",
+		"--versioning-override-build-id", buildId3,
+	)
+	s.NoError(res.Err)
+
+	res = s.Execute(
+		"workflow", "describe",
+		"--address", s.Address(),
+		"-w", run.GetID(),
+	)
+	s.NoError(res.Err)
+
+	s.ContainsOnSameLine(res.Stdout.String(), "OverrideBehavior", "Pinned")
+	s.ContainsOnSameLine(res.Stdout.String(), "OverridePinnedVersionBuildId", buildId3)
 
 	// remove override
 	res = s.Execute(

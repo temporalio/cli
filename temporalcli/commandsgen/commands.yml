@@ -3223,13 +3223,12 @@ commands:
           - auto_upgrade
       - name: versioning-override-deployment-name
         type: string
-        description: Deployment name component of override Pinned Version for a Worker Deployment
-          (Only for pinned).
+        description: When overriding to a `pinned` behavior, specifies the Deployment Name of the
+          version to target.
       - name: versioning-override-build-id
         type: string
-        description: Build Id component of override Pinned Version for a Worker Deployment
-          (Only for pinned).
-
+        description: When overriding to a `pinned` behavior, specifies the Build ID of the
+          version to target.
   - name: temporal workflow query
     summary: Retrieve Workflow Execution state
     description: |
