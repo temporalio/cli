@@ -9,18 +9,17 @@ import (
 )
 
 func (c *TemporalWorkflowResetWithWorkflowUpdateOptionsCommand) run(cctx *CommandContext, args []string) error {
+	cctx.Printer.Printlnf("Inside TemporalWorkflowResetWithWorkflowUpdateOptionsCommand.run()")
 	validate, _ := c.Parent.getResetOperations()
 	if err := validate(); err != nil {
 		return err
 	}
 
-	if c.VersioningOverrideBehavior.Value == "unspecified" || c.VersioningOverrideBehavior.Value == "auto_upgrade" {
-		if c.VersioningOverridePinnedVersion != "" {
-			return fmt.Errorf("cannot set pinned version with %v behavior", c.VersioningOverrideBehavior)
-		}
-	}
 	if c.VersioningOverrideBehavior.Value == "pinned" && c.VersioningOverridePinnedVersion == "" {
 		return fmt.Errorf("missing version with 'pinned' behavior")
+	}
+	if c.VersioningOverrideBehavior.Value != "pinned" && c.VersioningOverridePinnedVersion != "" {
+		return fmt.Errorf("cannot set pinned version with %v behavior", c.VersioningOverrideBehavior)
 	}
 
 	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
@@ -29,11 +28,8 @@ func (c *TemporalWorkflowResetWithWorkflowUpdateOptionsCommand) run(cctx *Comman
 	}
 	defer cl.Close()
 
-	behavior := enums.VERSIONING_BEHAVIOR_UNSPECIFIED
+	var behavior enums.VersioningBehavior
 	switch c.VersioningOverrideBehavior.Value {
-	case "unspecified":
-		// Leave as UNSPECIFIED, but the server may require an explicit behavior
-		behavior = enums.VERSIONING_BEHAVIOR_UNSPECIFIED
 	case "pinned":
 		behavior = enums.VERSIONING_BEHAVIOR_PINNED
 	case "auto_upgrade":
