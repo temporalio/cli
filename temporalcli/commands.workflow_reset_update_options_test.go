@@ -186,10 +186,19 @@ func (s *SharedServerSuite) TestWorkflow_ResetWithWorkflowUpdateOptions_Single_P
 			Query: "CustomKeywordField = '" + searchAttr + "'",
 		})
 		s.NoError(err)
-		return len(resp.Executions) == 2 && resp.Executions[0].Status == enums.WORKFLOW_EXECUTION_STATUS_COMPLETED
-	}, 5*time.Second, 100*time.Millisecond)
+		if len(resp.Executions) < 2 { // there should be two executions.
+			return false
+		}
+		resetRunID := resp.Executions[0].Execution.RunId // the first result is the reset execution.
+		descResult, err := s.Client.DescribeWorkflowExecution(s.Context, run.GetID(), resetRunID)
+		s.NoError(err)
+		s.NotNil(descResult)
 
-	s.Equal(2, wfExecutions, "Should have re-executed the workflow")
+		info := descResult.GetWorkflowExecutionInfo()
+		pinnedVersionOverride := info.VersioningInfo.VersioningOverride.GetPinned().GetVersion()
+		pinnedVersionOverrideString := pinnedVersionOverride.GetDeploymentName() + "." + pinnedVersionOverride.GetBuildId()
+		return pinnedVersionOverrideString == pinnedVersion // the second execution should have the pinned version override.
+	}, 5*time.Second, 100*time.Millisecond)
 }
 
 func (s *SharedServerSuite) TestWorkflow_ResetBatchWithWorkflowUpdateOptions_AutoUpgradeBehavior() {
