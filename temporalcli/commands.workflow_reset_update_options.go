@@ -9,7 +9,6 @@ import (
 )
 
 func (c *TemporalWorkflowResetWithWorkflowUpdateOptionsCommand) run(cctx *CommandContext, args []string) error {
-	cctx.Printer.Printlnf("Inside TemporalWorkflowResetWithWorkflowUpdateOptionsCommand.run()\n")
 	validate, _ := c.Parent.getResetOperations()
 	if err := validate(); err != nil {
 		return err
@@ -33,6 +32,8 @@ func (c *TemporalWorkflowResetWithWorkflowUpdateOptionsCommand) run(cctx *Comman
 	behavior := enums.VERSIONING_BEHAVIOR_UNSPECIFIED
 	switch c.VersioningOverrideBehavior.Value {
 	case "unspecified":
+		// Leave as UNSPECIFIED, but the server may require an explicit behavior
+		behavior = enums.VERSIONING_BEHAVIOR_UNSPECIFIED
 	case "pinned":
 		behavior = enums.VERSIONING_BEHAVIOR_PINNED
 	case "auto_upgrade":
@@ -41,28 +42,37 @@ func (c *TemporalWorkflowResetWithWorkflowUpdateOptionsCommand) run(cctx *Comman
 		return fmt.Errorf("invalid deployment behavior: %v, valid values are: 'unspecified', 'pinned', and 'auto_upgrade'", c.VersioningOverrideBehavior)
 	}
 
-	var workflowExecutionOptions *workflowpb.WorkflowExecutionOptions
-	protoMask, err := fieldmaskpb.New(workflowExecutionOptions, "versioning_override")
-	if err != nil {
-		return fmt.Errorf("invalid field mask: %w", err)
-	}
+	// Only create the post-reset operation if we have a non-unspecified behavior or a pinned version
+	if behavior != enums.VERSIONING_BEHAVIOR_UNSPECIFIED || c.VersioningOverridePinnedVersion != "" {
+		var workflowExecutionOptions *workflowpb.WorkflowExecutionOptions
+		protoMask, err := fieldmaskpb.New(workflowExecutionOptions, "versioning_override")
+		if err != nil {
+			return fmt.Errorf("invalid field mask: %w", err)
+		}
 
-	postOp := &workflowpb.PostResetOperation{
-		Variant: &workflowpb.PostResetOperation_UpdateWorkflowOptions_{
-			UpdateWorkflowOptions: &workflowpb.PostResetOperation_UpdateWorkflowOptions{
-				WorkflowExecutionOptions: &workflowpb.WorkflowExecutionOptions{
-					VersioningOverride: &workflowpb.VersioningOverride{
-						Behavior:      behavior,
-						PinnedVersion: c.VersioningOverridePinnedVersion,
+		postOp := &workflowpb.PostResetOperation{
+			Variant: &workflowpb.PostResetOperation_UpdateWorkflowOptions_{
+				UpdateWorkflowOptions: &workflowpb.PostResetOperation_UpdateWorkflowOptions{
+					WorkflowExecutionOptions: &workflowpb.WorkflowExecutionOptions{
+						VersioningOverride: &workflowpb.VersioningOverride{
+							Behavior:      behavior,
+							PinnedVersion: c.VersioningOverridePinnedVersion,
+						},
 					},
+					UpdateMask: protoMask,
 				},
-				UpdateMask: protoMask,
 			},
-		},
+		}
+
+		if c.Parent.WorkflowId != "" {
+			return c.Parent.doWorkflowResetWithPostOps(cctx, cl, []*workflowpb.PostResetOperation{postOp})
+		}
+		return c.Parent.runBatchResetWithPostOps(cctx, cl, []*workflowpb.PostResetOperation{postOp})
 	}
 
+	// If unspecified with no version, just do a regular reset without post-ops
 	if c.Parent.WorkflowId != "" {
-		return c.Parent.doWorkflowResetWithPostOps(cctx, cl, []*workflowpb.PostResetOperation{postOp})
+		return c.Parent.doWorkflowResetWithPostOps(cctx, cl, nil)
 	}
-	return c.Parent.runBatchResetWithPostOps(cctx, cl, []*workflowpb.PostResetOperation{postOp})
+	return c.Parent.runBatchResetWithPostOps(cctx, cl, nil)
 }
