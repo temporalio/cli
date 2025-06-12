@@ -298,6 +298,18 @@ func (v *QueryModifiersOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSe
 	f.Var(&v.RejectCondition, "reject-condition", "Optional flag for rejecting Queries based on Workflow state. Accepted values: not_open, not_completed_cleanly.")
 }
 
+type WorkflowUpdateOptionsOptions struct {
+	VersioningOverrideBehavior      StringEnum
+	VersioningOverridePinnedVersion string
+}
+
+func (v *WorkflowUpdateOptionsOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
+	v.VersioningOverrideBehavior = NewStringEnum([]string{"unspecified", "pinned", "auto_upgrade"}, "")
+	f.Var(&v.VersioningOverrideBehavior, "versioning-override-behavior", "Override the versioning behavior of a Workflow. Accepted values: unspecified, pinned, auto_upgrade. Required.")
+	_ = cobra.MarkFlagRequired(f, "versioning-override-behavior")
+	f.StringVar(&v.VersioningOverridePinnedVersion, "versioning-override-pinned-version", "", "Override Pinned Version for a Worker Deployment (Only for pinned).")
+}
+
 type TemporalCommand struct {
 	Command                 cobra.Command
 	Env                     string
@@ -3383,8 +3395,7 @@ type TemporalWorkflowResetCommand struct {
 func NewTemporalWorkflowResetCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowResetCommand {
 	var s TemporalWorkflowResetCommand
 	s.Parent = parent
-	s.Command.DisableFlagsInUseLine = true
-	s.Command.Use = "reset [flags]"
+	s.Command.Use = "reset"
 	s.Command.Short = "Move Workflow Execution history point"
 	if hasHighlighting {
 		s.Command.Long = "Reset a Workflow Execution so it can resume from a point in its Event History\nwithout losing its progress up to that point:\n\n\x1b[1mtemporal workflow reset \\\n    --workflow-id YourWorkflowId \\\n    --event-id YourLastEvent\x1b[0m\n\nStart from where the Workflow Execution last continued as new:\n\n\x1b[1mtemporal workflow reset \\\n    --workflow-id YourWorkflowId \\\n    --type LastContinuedAsNew\x1b[0m\n\nFor batch resets, limit your resets to FirstWorkflowTask, LastWorkflowTask, or\nBuildId. Do not use Workflow IDs, run IDs, or event IDs with this command.\n\nVisit https://docs.temporal.io/visibility to read more about Search\nAttributes and Query creation."
@@ -3392,21 +3403,40 @@ func NewTemporalWorkflowResetCommand(cctx *CommandContext, parent *TemporalWorkf
 		s.Command.Long = "Reset a Workflow Execution so it can resume from a point in its Event History\nwithout losing its progress up to that point:\n\n```\ntemporal workflow reset \\\n    --workflow-id YourWorkflowId \\\n    --event-id YourLastEvent\n```\n\nStart from where the Workflow Execution last continued as new:\n\n```\ntemporal workflow reset \\\n    --workflow-id YourWorkflowId \\\n    --type LastContinuedAsNew\n```\n\nFor batch resets, limit your resets to FirstWorkflowTask, LastWorkflowTask, or\nBuildId. Do not use Workflow IDs, run IDs, or event IDs with this command.\n\nVisit https://docs.temporal.io/visibility to read more about Search\nAttributes and Query creation."
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVarP(&s.WorkflowId, "workflow-id", "w", "", "Workflow ID. Required for non-batch reset operations.")
-	s.Command.Flags().StringVarP(&s.RunId, "run-id", "r", "", "Run ID.")
-	s.Command.Flags().IntVarP(&s.EventId, "event-id", "e", 0, "Event ID to reset to. Event must occur after `WorkflowTaskStarted`. `WorkflowTaskCompleted`, `WorkflowTaskFailed`, etc. are valid.")
-	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for reset. Required.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "reason")
+	s.Command.AddCommand(&NewTemporalWorkflowResetWithWorkflowUpdateOptionsCommand(cctx, &s).Command)
+	s.Command.PersistentFlags().StringVarP(&s.WorkflowId, "workflow-id", "w", "", "Workflow ID. Required for non-batch reset operations.")
+	s.Command.PersistentFlags().StringVarP(&s.RunId, "run-id", "r", "", "Run ID.")
+	s.Command.PersistentFlags().IntVarP(&s.EventId, "event-id", "e", 0, "Event ID to reset to. Event must occur after `WorkflowTaskStarted`. `WorkflowTaskCompleted`, `WorkflowTaskFailed`, etc. are valid.")
+	s.Command.PersistentFlags().StringVar(&s.Reason, "reason", "", "Reason for reset. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.PersistentFlags(), "reason")
 	s.ReapplyType = NewStringEnum([]string{"All", "Signal", "None"}, "All")
-	s.Command.Flags().Var(&s.ReapplyType, "reapply-type", "Types of events to re-apply after reset point. Accepted values: All, Signal, None.")
-	_ = s.Command.Flags().MarkDeprecated("reapply-type", "Use --reapply-exclude instead.")
+	s.Command.PersistentFlags().Var(&s.ReapplyType, "reapply-type", "Types of events to re-apply after reset point. Accepted values: All, Signal, None.")
+	_ = s.Command.PersistentFlags().MarkDeprecated("reapply-type", "Use --reapply-exclude instead.")
 	s.ReapplyExclude = NewStringEnumArray([]string{"All", "Signal", "Update"}, []string{})
-	s.Command.Flags().Var(&s.ReapplyExclude, "reapply-exclude", "Exclude these event types from re-application. Accepted values: All, Signal, Update.")
+	s.Command.PersistentFlags().Var(&s.ReapplyExclude, "reapply-exclude", "Exclude these event types from re-application. Accepted values: All, Signal, Update.")
 	s.Type = NewStringEnum([]string{"FirstWorkflowTask", "LastWorkflowTask", "LastContinuedAsNew", "BuildId"}, "")
-	s.Command.Flags().VarP(&s.Type, "type", "t", "The event type for the reset. Accepted values: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew, BuildId.")
-	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "A Build ID. Use only with the BuildId `--type`. Resets the first Workflow task processed by this ID. By default, this reset may be in a prior run, earlier than a Continue as New point.")
-	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Content for an SQL-like `QUERY` List Filter.")
-	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm. Only allowed when `--query` is present.")
+	s.Command.PersistentFlags().VarP(&s.Type, "type", "t", "The event type for the reset. Accepted values: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew, BuildId.")
+	s.Command.PersistentFlags().StringVar(&s.BuildId, "build-id", "", "A Build ID. Use only with the BuildId `--type`. Resets the first Workflow task processed by this ID. By default, this reset may be in a prior run, earlier than a Continue as New point.")
+	s.Command.PersistentFlags().StringVarP(&s.Query, "query", "q", "", "Content for an SQL-like `QUERY` List Filter.")
+	s.Command.PersistentFlags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm. Only allowed when `--query` is present.")
+	return &s
+}
+
+type TemporalWorkflowResetWithWorkflowUpdateOptionsCommand struct {
+	Parent  *TemporalWorkflowResetCommand
+	Command cobra.Command
+	WorkflowUpdateOptionsOptions
+}
+
+func NewTemporalWorkflowResetWithWorkflowUpdateOptionsCommand(cctx *CommandContext, parent *TemporalWorkflowResetCommand) *TemporalWorkflowResetWithWorkflowUpdateOptionsCommand {
+	var s TemporalWorkflowResetWithWorkflowUpdateOptionsCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "with-workflow-update-options [flags]"
+	s.Command.Short = "Update options on reset workflow"
+	s.Command.Long = "Run Workflow Update Options atomically after the Workflow is reset.\nWorkflows selected by the reset command are forwarded onto the subcommand."
+	s.Command.Args = cobra.NoArgs
+	s.WorkflowUpdateOptionsOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
