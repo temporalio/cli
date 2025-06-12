@@ -18,6 +18,7 @@ import (
 )
 
 func (c *TemporalWorkflowResetCommand) run(cctx *CommandContext, _ []string) error {
+	cctx.Printer.Printlnf("Inside TemporalWorkflowResetCommand.run()")
 	validateArguments, doReset := c.getResetOperations()
 	if err := validateArguments(); err != nil {
 		return err
