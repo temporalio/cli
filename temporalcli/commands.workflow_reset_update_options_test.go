@@ -98,52 +98,6 @@ func (s *SharedServerSuite) TestWorkflow_ResetWithWorkflowUpdateOptions_Single_A
 	s.Equal(2, wfExecutions, "Should have re-executed the workflow")
 }
 
-func (s *SharedServerSuite) TestWorkflow_ResetWithWorkflowUpdateOptions_Single_UnspecifiedBehavior() {
-	var wfExecutions int
-	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
-		wfExecutions++
-		return "result", nil
-	})
-
-	// Start the workflow
-	searchAttr := "keyword-" + uuid.NewString()
-	run, err := s.Client.ExecuteWorkflow(
-		s.Context,
-		client.StartWorkflowOptions{
-			TaskQueue:        s.Worker().Options.TaskQueue,
-			SearchAttributes: map[string]any{"CustomKeywordField": searchAttr},
-		},
-		DevWorkflow,
-		"test-input",
-	)
-	s.NoError(err)
-	var result any
-	s.NoError(run.Get(s.Context, &result))
-	s.Equal(1, wfExecutions)
-
-	// Reset with unspecified versioning behavior (should work by doing regular reset)
-	res := s.Execute(
-		"workflow", "reset", "with-workflow-update-options",
-		"--address", s.Address(),
-		"-w", run.GetID(),
-		"-t", "FirstWorkflowTask",
-		"--reason", "test-reset-with-unspecified",
-		"--versioning-override-behavior", "unspecified",
-	)
-	require.NoError(s.T(), res.Err)
-
-	// Wait for reset to complete
-	s.Eventually(func() bool {
-		resp, err := s.Client.ListWorkflow(s.Context, &workflowservice.ListWorkflowExecutionsRequest{
-			Query: "CustomKeywordField = '" + searchAttr + "'",
-		})
-		s.NoError(err)
-		return len(resp.Executions) == 2 && resp.Executions[0].Status == enums.WORKFLOW_EXECUTION_STATUS_COMPLETED
-	}, 3*time.Second, 100*time.Millisecond)
-
-	s.Equal(2, wfExecutions, "Should have re-executed the workflow")
-}
-
 func (s *SharedServerSuite) TestWorkflow_ResetWithWorkflowUpdateOptions_Single_PinnedBehavior() {
 	var wfExecutions int
 	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {

@@ -3419,6 +3419,7 @@ commands:
 
   - name: temporal workflow reset
     summary: Move Workflow Execution history point
+    subcommands-optional: true
     description: |
       Reset a Workflow Execution so it can resume from a point in its Event History
       without losing its progress up to that point:
