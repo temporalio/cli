@@ -51,7 +51,8 @@
 #   * When commands have a single command-level option, include it the mandatory example.
 #   * Use square bracket overviews to present how complex commands will be used.
 #     * Yes: temporal operator [command] [subcommand] [options]
-#     Commands with subcommands can't be run on their own.
+#     Commands with subcommands can't be run on their own unless
+#     subcommands-optional is set to true.
 #     Because of this, always use full command examples.
 #   * Use square brackets to highlight optional elements, especially when long
 #     descriptions would suffer from two very similar command invocations.
@@ -94,6 +95,7 @@
 #   exact-args: Require this exact number of args. (int)
 #   maximum-args: Require this maximum number of args. (int)
 #   ignores-missing-env: Ignore missing environment variables. (bool)
+#   subcommands-optional: Allow command to be run even when it has subcommands. (bool)
 #   options: A list of options. (Option[])
 #     - name: The option name. (string)
 #       type: The option type. (string)
@@ -483,7 +485,7 @@ commands:
           --reason YourReasonForTermination
       ```
 
-      
+
       Specify the Activity ID or Type and Workflow IDs:
 
       ```
@@ -689,7 +691,7 @@ commands:
     summary: Manage config files (EXPERIMENTAL)
     description: |
       Config files are TOML files that contain profiles, with each profile
-      containing configuration for connecting to Temporal. 
+      containing configuration for connecting to Temporal.
 
       ```
       temporal config set \
@@ -3858,7 +3860,7 @@ commands:
     summary: Send an Update-With-Start and wait for it to be accepted or rejected (Experimental)
     description: |
       Send a message to a Workflow Execution to invoke an Update handler, and wait for
-      the update to be accepted or rejected. If the Workflow Execution is not running, 
+      the update to be accepted or rejected. If the Workflow Execution is not running,
       then a new workflow execution is started and the update is sent.
 
       Experimental.
@@ -4520,3 +4522,5 @@ option-sets:
       - name: versioning-override-pinned-version
         type: string
         description: Override Pinned Version for a Worker Deployment (Only for pinned).
+
+
