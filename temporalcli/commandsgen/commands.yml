@@ -51,7 +51,8 @@
 #   * When commands have a single command-level option, include it the mandatory example.
 #   * Use square bracket overviews to present how complex commands will be used.
 #     * Yes: temporal operator [command] [subcommand] [options]
-#     Commands with subcommands can't be run on their own.
+#     Commands with subcommands can't be run on their own unless
+#     subcommands-optional is set to true.
 #     Because of this, always use full command examples.
 #   * Use square brackets to highlight optional elements, especially when long
 #     descriptions would suffer from two very similar command invocations.
@@ -94,6 +95,7 @@
 #   exact-args: Require this exact number of args. (int)
 #   maximum-args: Require this maximum number of args. (int)
 #   ignores-missing-env: Ignore missing environment variables. (bool)
+#   subcommands-optional: Allow command to be run even when it has subcommands. (bool)
 #   options: A list of options. (Option[])
 #     - name: The option name. (string)
 #       type: The option type. (string)
@@ -428,8 +430,8 @@ commands:
       However, if the Activity is currently running, it will run to completion.
       If the Activity is on its last retry attempt and fails, the failure will
       be returned to the caller, just as if the Activity had not been paused.
-      
-      Activities can be specified by their Activity ID or Activity Type. 
+
+      Activities can be specified by their Activity ID or Activity Type.
       One of those parameters must be provided. If both are provided - Activity
       Type will be used, and Activity ID will be ignored.
 
@@ -462,19 +464,19 @@ commands:
 
       If the Activity is not running and is past its retry timeout, it will be
       scheduled immediately. Otherwise, it will be scheduled after its retry
-      timeout expires. 
+      timeout expires.
 
-      Use `--reset-attempts` to reset the number of previous run attempts to 
-      zero. For example, if an Activity is near the maximum number of attempts 
-      N specified in its retry policy, `--reset-attempts` will allow the 
+      Use `--reset-attempts` to reset the number of previous run attempts to
+      zero. For example, if an Activity is near the maximum number of attempts
+      N specified in its retry policy, `--reset-attempts` will allow the
       Activity to be retried another N times after unpausing.
-      
-      Use `--reset-heartbeat` to reset the Activity's heartbeats. 
-      
-      Activities can be specified by their Activity ID or Activity Type. 
+
+      Use `--reset-heartbeat` to reset the Activity's heartbeats.
+
+      Activities can be specified by their Activity ID or Activity Type.
       One of those parameters must be provided. If both are provided - Activity
       Type will be used, and Activity ID will be ignored.
-      
+
       Activities can be unpaused in bulk via a visibility Query list filter:
 
       ```
@@ -482,8 +484,8 @@ commands:
           --query YourQuery \
           --reason YourReasonForTermination
       ```
-      
-      
+
+
       Specify the Activity ID or Type and Workflow IDs:
 
       ```
@@ -516,7 +518,7 @@ commands:
       - name: match-all
         type: bool
         description: |
-          Every paused activity should be unpaused. This flag is ignored if 
+          Every paused activity should be unpaused. This flag is ignored if
           activity-type is provided. Can only be used with --query.
       - name: jitter
         type: duration
@@ -531,20 +533,20 @@ commands:
   - name: temporal activity reset
     summary: Reset an Activity
     description: |
-      Resetting an activity resets both the number of attempts and the activity 
-      timeout.  
+      Resetting an activity resets both the number of attempts and the activity
+      timeout.
 
-      If activity is paused and 'keep_paused' flag is not provided - it will be 
+      If activity is paused and 'keep_paused' flag is not provided - it will be
       unpaused.
-      If activity is paused and 'keep_paused' flag is provided - it will stay 
+      If activity is paused and 'keep_paused' flag is provided - it will stay
       paused.
       If activity is waiting for the retry, is will be rescheduled immediately.
-      If the 'reset_heartbeats' flag is set, the activity heartbeat timer and 
+      If the 'reset_heartbeats' flag is set, the activity heartbeat timer and
       heartbeats will be reset.
 
-      Activities can be specified by their Activity ID or Activity Type. 
+      Activities can be specified by their Activity ID or Activity Type.
       One of those parameters must be provided. If both are provided - Activity
-      Type will be used, and Activity ID will be ignored.      
+      Type will be used, and Activity ID will be ignored.
 
       Specify the Activity Type of ID and Workflow IDs:
 
@@ -689,7 +691,7 @@ commands:
     summary: Manage config files (EXPERIMENTAL)
     description: |
       Config files are TOML files that contain profiles, with each profile
-      containing configuration for connecting to Temporal. 
+      containing configuration for connecting to Temporal.
 
       ```
       temporal config set \
@@ -863,7 +865,7 @@ commands:
       temporal worker deployment set-current-version \
                --version YourDeploymentName.YourBuildID
       ```
-      
+
       Sets the current Deployment Version for a given Deployment.
 
     docs:
@@ -969,7 +971,7 @@ commands:
       | subject to change.                                                  |
       +---------------------------------------------------------------------+
 
-      Describe properties of a Worker Deployment Version, such as the task 
+      Describe properties of a Worker Deployment Version, such as the task
       queues polled by workers in this Deployment Version, or drainage
       information required to safely decommission workers, or user-provided
       metadata, or its creation/modification time.
@@ -1007,7 +1009,7 @@ commands:
         Version have pollers.
         - It is not draining. This requirement can be ignored with the option
       `--skip-drainage`.
-      
+
       ```
       temporal worker deployment delete-version [options]
       ```
@@ -1017,7 +1019,7 @@ commands:
       ```
       temporal worker deployment delete-version \
           --version YourDeploymentName.YourBuildID \
-          --skip-drainage          
+          --skip-drainage
       ```
     option-sets:
       - deployment-version
@@ -1041,13 +1043,13 @@ commands:
       When a Version is current, Workers of that Deployment Version will receive
       tasks from new Workflows, and from existing AutoUpgrade Workflows that
       are running on this Deployment.
-      
+
       If not all the expected Task Queues are being polled by Workers in the
       new Version the request will fail. To override this protection use
       `--ignore-missing-task-queues`. Note that this would ignore task queues
       in a deployment that are not yet discovered, leading to inconsistent task
       queue configuration.
-      
+
       ```
       temporal worker deployment set-current-version [options]
       ```
@@ -1108,13 +1110,13 @@ commands:
       `set-current-version` instead.
 
       To remove a Ramping Version use the flag `--delete`.
-      
+
       If not all the expected Task Queues are being polled by Workers in the
       new Ramping Version the request will fail. To override this protection use
       `--ignore-missing-task-queues`. Note that this would ignore task queues
       in a deployment that are not yet discovered, leading to inconsistent task
       queue configuration.
-      
+
       ```
       temporal worker deployment set-ramping-version [options]
       ```
@@ -1131,7 +1133,7 @@ commands:
       ```
 
       And to remove that ramping:
-      
+
       ```
       temporal worker deployment set-ramping-version \
           --version YourDeploymentName.YourBuildID \
@@ -1183,7 +1185,7 @@ commands:
       ```
 
       The current metadata is also returned with `describe-version`:
-      
+
       ```
        temporal worker deployment describe-version \
           --version YourDeploymentName.YourBuildID \
@@ -3599,7 +3601,7 @@ commands:
     summary: Send a message to a Workflow Execution, start the execution if it isn't running
     description: |
       Send an asynchronous notification (Signal) to a Workflow Execution.
-      If the Workflow Execution is not running or is not found, it starts the 
+      If the Workflow Execution is not running or is not found, it starts the
       workflow then sends the signal.
 
       ```
@@ -3873,7 +3875,7 @@ commands:
     summary: Send an Update-With-Start and wait for it to be accepted or rejected (Experimental)
     description: |
       Send a message to a Workflow Execution to invoke an Update handler, and wait for
-      the update to be accepted or rejected. If the Workflow Execution is not running, 
+      the update to be accepted or rejected. If the Workflow Execution is not running,
       then a new workflow execution is started and the update is sent.
 
       Experimental.
@@ -4515,3 +4517,5 @@ option-sets:
       - name: versioning-override-pinned-version
         type: string
         description: Override Pinned Version for a Worker Deployment (Only for pinned).
+
+
