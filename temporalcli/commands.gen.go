@@ -304,8 +304,8 @@ type WorkflowUpdateOptionsOptions struct {
 }
 
 func (v *WorkflowUpdateOptionsOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
-	v.VersioningOverrideBehavior = NewStringEnum([]string{"unspecified", "pinned", "auto_upgrade"}, "")
-	f.Var(&v.VersioningOverrideBehavior, "versioning-override-behavior", "Override the versioning behavior of a Workflow. Accepted values: unspecified, pinned, auto_upgrade. Required.")
+	v.VersioningOverrideBehavior = NewStringEnum([]string{"pinned", "auto_upgrade"}, "")
+	f.Var(&v.VersioningOverrideBehavior, "versioning-override-behavior", "Override the versioning behavior of a Workflow. Accepted values: pinned, auto_upgrade. Required.")
 	_ = cobra.MarkFlagRequired(f, "versioning-override-behavior")
 	f.StringVar(&v.VersioningOverridePinnedVersion, "versioning-override-pinned-version", "", "Override Pinned Version for a Worker Deployment (Only for pinned).")
 }

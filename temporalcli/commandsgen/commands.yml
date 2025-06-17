@@ -4512,7 +4512,6 @@ option-sets:
           Override the versioning behavior of a Workflow.
         required: true
         enum-values:
-          - unspecified
           - pinned
           - auto_upgrade
       - name: versioning-override-pinned-version
