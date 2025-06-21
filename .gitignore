@@ -7,3 +7,9 @@
 /.vscode
 /.zed
 *~
+
+# direnv
+.direnv/
+
+# nix
+/result
