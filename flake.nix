@@ -35,27 +35,11 @@
           inherit (pkgs) lib;
         in
         {
-          default = pkgs.buildGoModule (finalAttrs: {
-            pname = "temporalcli";
+          default = pkgs.temporal-cli.overrideAttrs {
             version = "1.3.0";
-
-            src = builtins.path {
-              path = ./.;
-              filter = lib.cleanSourceFilter;
-              name = "temporalcli-source";
-            };
-
-            vendorHash = "sha256-nHLN8VTD4Zlc8kjjv4XLxgDe+/wN339nukl/VbhWchU=";
-
-            doCheck = false;
-
-            meta = {
-              description = "Command-line interface for running Temporal Server and interacting with Workflows, Activities, Namespaces, and other parts of Temporal";
-              homepage = "https://github.com/temporalio/cli";
-              license = lib.licenses.mit;
-              mainProgram = "temporal";
-            };
-          });
+            src = lib.cleanSource ./.;
+            vendorHash = "sha256-AO6djBGm4cUZ1p1h3AMskNnJSxV0OSyOkvTLrpiVw8g=";
+          };
         }
       );
 
