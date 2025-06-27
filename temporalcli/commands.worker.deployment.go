@@ -2,7 +2,6 @@ package temporalcli
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/fatih/color"
@@ -215,30 +214,6 @@ func printWorkerDeploymentInfo(cctx *CommandContext, deploymentInfo client.Worke
 
 	// json output
 	return cctx.Printer.PrintStructured(fDeploymentInfo, printer.StructuredOptions{})
-}
-
-func extractDeploymentName(version string, deploymentName string, failNonQualified bool) (string, error) {
-	if version == "" || version == "__unversioned__" {
-		if failNonQualified {
-			return "", fmt.Errorf(
-				"invalid deployment version type for this operation, use a fully-qualified version",
-			)
-		}
-		if deploymentName == "" {
-			return "", fmt.Errorf(
-				"specify the deployment name with `--deployment-name` with a non-fully-qualified version",
-			)
-		}
-		return deploymentName, nil
-	}
-	splitVersion := strings.SplitN(version, ".", 2)
-	if len(splitVersion) != 2 {
-		return "", fmt.Errorf(
-			"invalid format for worker deployment version %v, not YourDeploymentName.YourBuildID",
-			version,
-		)
-	}
-	return splitVersion[0], nil
 }
 
 func formatDrainageInfo(drainageInfo *client.WorkerDeploymentVersionDrainageInfo) (formattedDrainageInfo, error) {

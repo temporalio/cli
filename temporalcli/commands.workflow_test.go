@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/temporalio/cli/temporalcli"
 	"go.temporal.io/api/enums/v1"
+	workflowpb "go.temporal.io/api/workflow/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
@@ -429,7 +430,7 @@ func (s *SharedServerSuite) TestWorkflow_Cancel_SingleWorkflowSuccess() {
 
 func (s *SharedServerSuite) TestWorkflow_Batch_Update_Options_Versioning_Override() {
 	buildId1 := uuid.NewString()
-	buildId2 := uuid.NewString()
+	buildId2 := "bid2-" + uuid.NewString()
 	deploymentName := uuid.NewString()
 	version1 := worker.WorkerDeploymentVersion{
 		DeploymentName: deploymentName,
@@ -534,6 +535,13 @@ func (s *SharedServerSuite) TestWorkflow_Batch_Update_Options_Versioning_Overrid
 		"--versioning-override-build-id", version2.BuildId,
 	)
 	s.NoError(res.Err)
+	time.Sleep(10 * time.Second)
+	res = s.Execute(
+		"workflow", "describe",
+		"--address", s.Address(),
+		"-w", runs[0].GetID(),
+		"--output", "json",
+	)
 
 	s.EventuallyWithT(func(t *assert.CollectT) {
 		for _, run := range runs {
@@ -551,10 +559,11 @@ func (s *SharedServerSuite) TestWorkflow_Batch_Update_Options_Versioning_Overrid
 
 			versioningInfo := jsonResp.GetWorkflowExecutionInfo().GetVersioningInfo()
 			require.NotNil(t, versioningInfo)
-			// TODO: Unclear why this just is not showing up in the response
-			// require.NotNil(t, versioningInfo.VersioningOverride)
-			// TODO: Fix
-			// require.Equal(t, version2, versioningInfo.VersioningOverride.PinnedVersion)
+			require.NotNil(t, versioningInfo.VersioningOverride)
+			asPinned := versioningInfo.VersioningOverride.Override.(*workflowpb.VersioningOverride_Pinned)
+			require.Equal(t, version2.DeploymentName, asPinned.Pinned.Version.DeploymentName)
+			require.Equal(t, version2.BuildId, asPinned.Pinned.Version.BuildId)
+			require.Equal(t, enums.VERSIONING_BEHAVIOR_PINNED, versioningInfo.Behavior)
 		}
 	}, 10*time.Second, 100*time.Millisecond)
 }
