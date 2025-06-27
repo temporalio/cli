@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/temporalio/cli/temporalcli"
 	"go.temporal.io/api/enums/v1"
+	workflowpb "go.temporal.io/api/workflow/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
@@ -429,10 +430,16 @@ func (s *SharedServerSuite) TestWorkflow_Cancel_SingleWorkflowSuccess() {
 
 func (s *SharedServerSuite) TestWorkflow_Batch_Update_Options_Versioning_Override() {
 	buildId1 := uuid.NewString()
-	buildId2 := uuid.NewString()
+	buildId2 := "bid2-" + uuid.NewString()
 	deploymentName := uuid.NewString()
-	version1 := deploymentName + "." + buildId1
-	version2 := deploymentName + "." + buildId2
+	version1 := worker.WorkerDeploymentVersion{
+		DeploymentName: deploymentName,
+		BuildId:        buildId1,
+	}
+	version2 := worker.WorkerDeploymentVersion{
+		DeploymentName: deploymentName,
+		BuildId:        buildId2,
+	}
 	// Workflow that waits to be canceled.
 	waitingWorkflow := func(ctx workflow.Context) error {
 		ctx.Done().Receive(ctx, nil)
@@ -463,7 +470,8 @@ func (s *SharedServerSuite) TestWorkflow_Batch_Update_Options_Versioning_Overrid
 		res := s.Execute(
 			"worker", "deployment", "describe-version",
 			"--address", s.Address(),
-			"--version", version1,
+			"--deployment-name", version1.DeploymentName,
+			"--build-id", version1.BuildId,
 		)
 		assert.NoError(t, res.Err)
 	}, 30*time.Second, 100*time.Millisecond)
@@ -471,7 +479,8 @@ func (s *SharedServerSuite) TestWorkflow_Batch_Update_Options_Versioning_Overrid
 	res := s.Execute(
 		"worker", "deployment", "set-current-version",
 		"--address", s.Address(),
-		"--version", version1,
+		"--deployment-name", version1.DeploymentName,
+		"--build-id", version1.BuildId,
 		"--yes",
 	)
 	s.NoError(res.Err)
@@ -501,7 +510,8 @@ func (s *SharedServerSuite) TestWorkflow_Batch_Update_Options_Versioning_Overrid
 				"-w", run.GetID(),
 			)
 			assert.NoError(t, res.Err)
-			assert.Contains(t, res.Stdout.String(), version1)
+			assert.Contains(t, res.Stdout.String(), version1.DeploymentName)
+			assert.Contains(t, res.Stdout.String(), version1.BuildId)
 			assert.Contains(t, res.Stdout.String(), "Pinned")
 		}
 	}, 30*time.Second, 100*time.Millisecond)
@@ -521,9 +531,17 @@ func (s *SharedServerSuite) TestWorkflow_Batch_Update_Options_Versioning_Overrid
 		"--address", s.Address(),
 		"--query", "CustomKeywordField = '"+searchAttr+"'",
 		"--versioning-override-behavior", "pinned",
-		"--versioning-override-pinned-version", version2,
+		"--versioning-override-deployment-name", version2.DeploymentName,
+		"--versioning-override-build-id", version2.BuildId,
 	)
 	s.NoError(res.Err)
+	time.Sleep(10 * time.Second)
+	res = s.Execute(
+		"workflow", "describe",
+		"--address", s.Address(),
+		"-w", runs[0].GetID(),
+		"--output", "json",
+	)
 
 	s.EventuallyWithT(func(t *assert.CollectT) {
 		for _, run := range runs {
@@ -542,17 +560,27 @@ func (s *SharedServerSuite) TestWorkflow_Batch_Update_Options_Versioning_Overrid
 			versioningInfo := jsonResp.GetWorkflowExecutionInfo().GetVersioningInfo()
 			require.NotNil(t, versioningInfo)
 			require.NotNil(t, versioningInfo.VersioningOverride)
-			require.Equal(t, version2, versioningInfo.VersioningOverride.PinnedVersion)
+			asPinned := versioningInfo.VersioningOverride.Override.(*workflowpb.VersioningOverride_Pinned)
+			require.Equal(t, version2.DeploymentName, asPinned.Pinned.Version.DeploymentName)
+			require.Equal(t, version2.BuildId, asPinned.Pinned.Version.BuildId)
+			require.Equal(t, enums.VERSIONING_BEHAVIOR_PINNED, versioningInfo.Behavior)
 		}
-	}, 30*time.Second, 100*time.Millisecond)
+	}, 10*time.Second, 100*time.Millisecond)
 }
 
 func (s *SharedServerSuite) TestWorkflow_Update_Options_Versioning_Override() {
 	buildId1 := uuid.NewString()
 	buildId2 := uuid.NewString()
+	buildId3 := "id3-" + uuid.NewString()
 	deploymentName := uuid.NewString()
-	version1 := deploymentName + "." + buildId1
-	version2 := deploymentName + "." + buildId2
+	version1 := worker.WorkerDeploymentVersion{
+		DeploymentName: deploymentName,
+		BuildId:        buildId1,
+	}
+	version2 := worker.WorkerDeploymentVersion{
+		DeploymentName: deploymentName,
+		BuildId:        buildId2,
+	}
 
 	// Workflow that waits to be canceled.
 	waitingWorkflow := func(ctx workflow.Context) error {
@@ -584,7 +612,8 @@ func (s *SharedServerSuite) TestWorkflow_Update_Options_Versioning_Override() {
 		res := s.Execute(
 			"worker", "deployment", "describe-version",
 			"--address", s.Address(),
-			"--version", version1,
+			"--deployment-name", version1.DeploymentName,
+			"--build-id", version1.BuildId,
 		)
 		assert.NoError(t, res.Err)
 	}, 30*time.Second, 100*time.Millisecond)
@@ -592,7 +621,8 @@ func (s *SharedServerSuite) TestWorkflow_Update_Options_Versioning_Override() {
 	res := s.Execute(
 		"worker", "deployment", "set-current-version",
 		"--address", s.Address(),
-		"--version", version1,
+		"--deployment-name", version1.DeploymentName,
+		"--build-id", version1.BuildId,
 		"--yes",
 	)
 	s.NoError(res.Err)
@@ -612,7 +642,8 @@ func (s *SharedServerSuite) TestWorkflow_Update_Options_Versioning_Override() {
 			"-w", run.GetID(),
 		)
 		assert.NoError(t, res.Err)
-		assert.Contains(t, res.Stdout.String(), version1)
+		assert.Contains(t, res.Stdout.String(), version1.DeploymentName)
+		assert.Contains(t, res.Stdout.String(), version1.BuildId)
 		assert.Contains(t, res.Stdout.String(), "Pinned")
 	}, 30*time.Second, 100*time.Millisecond)
 
@@ -621,7 +652,8 @@ func (s *SharedServerSuite) TestWorkflow_Update_Options_Versioning_Override() {
 		"--address", s.Address(),
 		"-w", run.GetID(),
 		"--versioning-override-behavior", "pinned",
-		"--versioning-override-pinned-version", version2,
+		"--versioning-override-deployment-name", version2.DeploymentName,
+		"--versioning-override-build-id", version2.BuildId,
 	)
 	s.NoError(res.Err)
 
@@ -633,7 +665,28 @@ func (s *SharedServerSuite) TestWorkflow_Update_Options_Versioning_Override() {
 	s.NoError(res.Err)
 
 	s.ContainsOnSameLine(res.Stdout.String(), "OverrideBehavior", "Pinned")
-	s.ContainsOnSameLine(res.Stdout.String(), "OverridePinnedVersion", version2)
+	s.ContainsOnSameLine(res.Stdout.String(), "OverridePinnedVersionDeploymentName", version2.DeploymentName)
+	s.ContainsOnSameLine(res.Stdout.String(), "OverridePinnedVersionBuildId", version2.BuildId)
+
+	// Using only build-id
+	res = s.Execute(
+		"workflow", "update-options",
+		"--address", s.Address(),
+		"-w", run.GetID(),
+		"--versioning-override-behavior", "pinned",
+		"--versioning-override-build-id", buildId3,
+	)
+	s.NoError(res.Err)
+
+	res = s.Execute(
+		"workflow", "describe",
+		"--address", s.Address(),
+		"-w", run.GetID(),
+	)
+	s.NoError(res.Err)
+
+	s.ContainsOnSameLine(res.Stdout.String(), "OverrideBehavior", "Pinned")
+	s.ContainsOnSameLine(res.Stdout.String(), "OverridePinnedVersionBuildId", buildId3)
 
 	// remove override
 	res = s.Execute(
