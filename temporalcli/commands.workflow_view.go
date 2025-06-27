@@ -15,6 +15,7 @@ import (
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/converter"
+	"go.temporal.io/sdk/temporalnexus"
 )
 
 func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []string) error {
@@ -200,6 +201,7 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 		cctx.Printer.Println()
 		cbs := make([]struct {
 			URL                     string
+			Links                   []string
 			Trigger                 string
 			State                   enums.CallbackState
 			Attempt                 int32
@@ -211,6 +213,12 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 		}, len(resp.Callbacks))
 		for i, cb := range resp.Callbacks {
 			cbs[i].URL = cb.GetCallback().GetNexus().GetUrl()
+			for _, link := range cb.GetCallback().GetLinks() {
+				if link.GetWorkflowEvent() != nil {
+					nexusLink := temporalnexus.ConvertLinkWorkflowEventToNexusLink(link.GetWorkflowEvent())
+					cbs[i].Links = append(cbs[i].Links, nexusLink.URL.String())
+				}
+			}
 			cbs[i].State = cb.GetState()
 			cbs[i].Attempt = cb.GetAttempt()
 			cbs[i].LastAttemptFailure = cb.LastAttemptFailure

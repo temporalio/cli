@@ -10,6 +10,7 @@ import (
 	"go.temporal.io/api/batch/v1"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
+	workflow "go.temporal.io/api/workflow/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 
@@ -66,7 +67,10 @@ func (c *TemporalWorkflowResetCommand) validateBatchResetArguments() error {
 	return nil
 }
 func (c *TemporalWorkflowResetCommand) doWorkflowReset(cctx *CommandContext, cl client.Client) error {
+	return c.doWorkflowResetWithPostOps(cctx, cl, nil)
+}
 
+func (c *TemporalWorkflowResetCommand) doWorkflowResetWithPostOps(cctx *CommandContext, cl client.Client, postOps []*workflow.PostResetOperation) error {
 	var err error
 	resetBaseRunID := c.RunId
 	eventID := int64(c.EventId)
@@ -94,6 +98,7 @@ func (c *TemporalWorkflowResetCommand) doWorkflowReset(cctx *CommandContext, cl 
 		WorkflowTaskFinishEventId: eventID,
 		ResetReapplyType:          reapplyType,
 		ResetReapplyExcludeTypes:  reapplyExcludes,
+		PostResetOperations:       postOps,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to reset workflow: %w", err)
@@ -108,6 +113,10 @@ func (c *TemporalWorkflowResetCommand) doWorkflowReset(cctx *CommandContext, cl 
 }
 
 func (c *TemporalWorkflowResetCommand) runBatchReset(cctx *CommandContext, cl client.Client) error {
+	return c.runBatchResetWithPostOps(cctx, cl, nil)
+}
+
+func (c *TemporalWorkflowResetCommand) runBatchResetWithPostOps(cctx *CommandContext, cl client.Client, postOps []*workflow.PostResetOperation) error {
 	request := workflowservice.StartBatchOperationRequest{
 		Namespace:       c.Parent.Namespace,
 		JobId:           uuid.NewString(),
@@ -121,8 +130,9 @@ func (c *TemporalWorkflowResetCommand) runBatchReset(cctx *CommandContext, cl cl
 	}
 	request.Operation = &workflowservice.StartBatchOperationRequest_ResetOperation{
 		ResetOperation: &batch.BatchOperationReset{
-			Identity: clientIdentity(),
-			Options:  batchResetOptions,
+			Identity:            clientIdentity(),
+			Options:             batchResetOptions,
+			PostResetOperations: postOps,
 		},
 	}
 	count, err := cl.CountWorkflow(cctx, &workflowservice.CountWorkflowExecutionsRequest{Query: c.Query})
