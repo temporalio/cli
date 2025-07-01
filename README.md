@@ -15,11 +15,11 @@ Reference [the documentation](https://docs.temporal.io/cli) for detailed install
 ### Install via download
 
 1. Download the version for your OS and architecture:
-    - [Linux amd64](https://temporal.download/cli/archive/latest?platform=linux&arch=amd64)
-    - [Linux arm64](https://temporal.download/cli/archive/latest?platform=linux&arch=arm64)
-    - [macOS amd64](https://temporal.download/cli/archive/latest?platform=darwin&arch=amd64)
-    - [macOS arm64](https://temporal.download/cli/archive/latest?platform=darwin&arch=arm64) (Apple silicon)
-    - [Windows amd64](https://temporal.download/cli/archive/latest?platform=windows&arch=amd64)
+   - [Linux amd64](https://temporal.download/cli/archive/latest?platform=linux&arch=amd64)
+   - [Linux arm64](https://temporal.download/cli/archive/latest?platform=linux&arch=arm64)
+   - [macOS amd64](https://temporal.download/cli/archive/latest?platform=darwin&arch=amd64)
+   - [macOS arm64](https://temporal.download/cli/archive/latest?platform=darwin&arch=arm64) (Apple silicon)
+   - [Windows amd64](https://temporal.download/cli/archive/latest?platform=windows&arch=amd64)
 2. Extract the downloaded archive.
 3. Add the `temporal` binary to your `PATH` (`temporal.exe` for Windows).
 
@@ -30,6 +30,27 @@ Reference [the documentation](https://docs.temporal.io/cli) for detailed install
 3. Switch to cloned directory, and run `go build ./cmd/temporal`
 
 The executable will be at `temporal` (`temporal.exe` for Windows).
+
+### Build with Nix
+
+1. [Install Nix](https://docs.determinate.systems/getting-started/individuals#install)
+2. Clone repository
+3. Switch to cloned directory, and run `nix build`
+
+The executable will be at `result/bin/temporal`.
+
+### Nix Development Environment
+
+1. [Install Nix](https://docs.determinate.systems/getting-started/individuals#install)
+2. Clone repository
+3. Switch to cloned directory, and run `nix develop`
+
+Go and related tools will be made available in this shell. This can be further automated by direnv:
+
+1. Install direnv: `nix profile add nixpkgs#direnv`
+2. Run `direnv allow` in the project directory
+
+Now every time you enter the project directory, all the tools will be available.
 
 ## Usage
 
