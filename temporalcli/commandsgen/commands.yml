@@ -3194,7 +3194,7 @@ commands:
       temporal workflow update-options \
           --workflow-id YourWorkflowId \
           --versioning-override-behavior pinned \
-          --versioning-override-deployment-name YourDeploymentSeriesName \
+          --versioning-override-deployment-name YourDeploymentName \
           --versioning-override-build-id YourDeploymentBuildId
       ```
 
