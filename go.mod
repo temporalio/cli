@@ -1,10 +1,9 @@
 module github.com/temporalio/cli
 
-go 1.24.1
-
-toolchain go1.24.2
+go 1.24.4
 
 require (
+	github.com/BurntSushi/toml v1.4.0
 	github.com/alitto/pond v1.9.2
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/dustin/go-humanize v1.0.1
@@ -19,6 +18,7 @@ require (
 	github.com/temporalio/ui-server/v2 v2.36.0
 	go.temporal.io/api v1.50.0
 	go.temporal.io/sdk v1.35.0
+	go.temporal.io/sdk/contrib/envconfig v0.1.0
 	go.temporal.io/server v1.28.0
 	google.golang.org/grpc v1.71.0
 	google.golang.org/protobuf v1.36.6

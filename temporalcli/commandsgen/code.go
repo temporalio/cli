@@ -208,6 +208,9 @@ func (c *Command) writeCode(w *codeWriter) error {
 		w.writeLinef("s.Command.Annotations = make(map[string]string)")
 		w.writeLinef("s.Command.Annotations[\"ignoresMissingEnv\"] = \"true\"")
 	}
+	if c.Deprecated != "" {
+		w.writeLinef("s.Command.Deprecated = %q", c.Deprecated)
+	}
 	// Add subcommands
 	for _, subCommand := range subCommands {
 		w.writeLinef("s.Command.AddCommand(&New%v(cctx, &s).Command)", subCommand.structName())
@@ -408,6 +411,10 @@ func (o *Option) writeFlagBuilding(selfVar, flagVar string, w *codeWriter) error
 	for _, alias := range o.Aliases {
 		desc += fmt.Sprintf(` Aliased as "--%v".`, alias)
 	}
+	// If experimental, make obvious
+	if o.Experimental {
+		desc += " EXPERIMENTAL."
+	}
 
 	if setDefault != "" {
 		// set default before calling Var so that it stores thedefault value into the flag
@@ -425,6 +432,9 @@ func (o *Option) writeFlagBuilding(selfVar, flagVar string, w *codeWriter) error
 	}
 	if o.Env != "" {
 		w.writeLinef("cctx.BindFlagEnvVar(%v.Lookup(%q), %q)", flagVar, o.Name, o.Env)
+	}
+	if o.Deprecated != "" {
+		w.writeLinef("_ = %v.MarkDeprecated(%q, %q)", flagVar, o.Name, o.Deprecated)
 	}
 	return nil
 }

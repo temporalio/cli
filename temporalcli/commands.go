@@ -10,7 +10,6 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"slices"
 	"strings"
 	"syscall"
@@ -26,13 +25,13 @@ import (
 	commonpb "go.temporal.io/api/common/v1"
 	"go.temporal.io/api/failure/v1"
 	"go.temporal.io/api/temporalproto"
+	"go.temporal.io/sdk/contrib/envconfig"
 	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/server/common/headers"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
-	"gopkg.in/yaml.v3"
 )
 
 // Version is the value put as the default command version. This is often
@@ -42,9 +41,9 @@ var Version = "0.0.0-DEV"
 type CommandContext struct {
 	// This context is closed on interrupt
 	context.Context
-	Options          CommandOptions
-	EnvConfigValues  map[string]map[string]string
-	FlagsWithEnvVars []*pflag.Flag
+	Options                   CommandOptions
+	DeprecatedEnvConfigValues map[string]map[string]string
+	FlagsWithEnvVars          []*pflag.Flag
 
 	// These values may not be available until after pre-run of main command
 	Printer               *printer.Printer
@@ -55,20 +54,19 @@ type CommandContext struct {
 	// Is set to true if any command actually started running. This is a hack to workaround the fact
 	// that cobra does not properly exit nonzero if an unknown command/subcommand is given.
 	ActuallyRanCommand bool
+
+	// Root/current command only set inside of pre-run
+	RootCommand    *TemporalCommand
+	CurrentCommand *cobra.Command
 }
 
 type CommandOptions struct {
 	// If empty, assumed to be os.Args[1:]
 	Args []string
-	// If unset, defaulted to $HOME/.config/temporalio/temporal.yaml
-	EnvConfigFile string
-	// If unset, attempts to extract --env from Args (which defaults to "default")
-	EnvConfigName string
-	// If true, does not do any env config reading
-	DisableEnvConfig bool
-	// If nil, os.LookupEnv is used. This is for environment variables and not
-	// related to env config stuff above.
-	LookupEnv func(string) (string, bool)
+	// Deprecated `--env` and `--env-file` approach
+	DeprecatedEnvConfig DeprecatedEnvConfig
+	// If nil, [envconfig.EnvLookupOS] is used.
+	EnvLookup envconfig.EnvLookup
 
 	// These three fields below default to OS values
 	Stdin  io.Reader
@@ -79,6 +77,15 @@ type CommandOptions struct {
 	Fail func(error)
 
 	AdditionalClientGRPCDialOptions []grpc.DialOption
+}
+
+type DeprecatedEnvConfig struct {
+	// If unset, defaulted to $HOME/.config/temporalio/temporal.yaml
+	EnvConfigFile string
+	// If unset, attempts to extract --env from Args (which defaults to "default")
+	EnvConfigName string
+	// If true, does not do any env config reading
+	DisableEnvConfig bool
 }
 
 // NewCommandContext creates a CommandContext for use by the rest of the CLI.
@@ -106,8 +113,8 @@ func (c *CommandContext) preprocessOptions() error {
 	if len(c.Options.Args) == 0 {
 		c.Options.Args = os.Args[1:]
 	}
-	if c.Options.LookupEnv == nil {
-		c.Options.LookupEnv = os.LookupEnv
+	if c.Options.EnvLookup == nil {
+		c.Options.EnvLookup = envconfig.EnvLookupOS
 	}
 
 	if c.Options.Stdin == nil {
@@ -142,37 +149,38 @@ func (c *CommandContext) preprocessOptions() error {
 	// Why last?  Callers need the CommandContext to be usable no matter what,
 	// because they rely on it to print errors even if env parsing fails.  In
 	// that situation, we will return both the CommandContext AND an error.
-	if !c.Options.DisableEnvConfig {
-		if c.Options.EnvConfigFile == "" {
+	if !c.Options.DeprecatedEnvConfig.DisableEnvConfig {
+		if c.Options.DeprecatedEnvConfig.EnvConfigFile == "" {
 			// Default to --env-file, prefetched from CLI args
 			for i, arg := range c.Options.Args {
 				if arg == "--env-file" && i+1 < len(c.Options.Args) {
-					c.Options.EnvConfigFile = c.Options.Args[i+1]
+					c.Options.DeprecatedEnvConfig.EnvConfigFile = c.Options.Args[i+1]
 				}
 			}
 			// Default to inside home dir
-			if c.Options.EnvConfigFile == "" {
-				c.Options.EnvConfigFile = defaultEnvConfigFile("temporalio", "temporal")
+			if c.Options.DeprecatedEnvConfig.EnvConfigFile == "" {
+				c.Options.DeprecatedEnvConfig.EnvConfigFile = defaultDeprecatedEnvConfigFile("temporalio", "temporal")
 			}
 		}
 
-		if c.Options.EnvConfigName == "" {
-			c.Options.EnvConfigName = "default"
-			if envVal, ok := c.Options.LookupEnv(temporalEnv); ok {
-				c.Options.EnvConfigName = envVal
+		if c.Options.DeprecatedEnvConfig.EnvConfigName == "" {
+			c.Options.DeprecatedEnvConfig.EnvConfigName = "default"
+			if envVal, _ := c.Options.EnvLookup.LookupEnv(temporalEnv); envVal != "" {
+				c.Options.DeprecatedEnvConfig.EnvConfigName = envVal
 			}
 			// Default to --env, prefetched from CLI args
 			for i, arg := range c.Options.Args {
 				if arg == "--env" && i+1 < len(c.Options.Args) {
-					c.Options.EnvConfigName = c.Options.Args[i+1]
+					c.Options.DeprecatedEnvConfig.EnvConfigName = c.Options.Args[i+1]
 				}
 			}
 		}
 
 		// Load env flags
-		if c.Options.EnvConfigFile != "" {
+		if c.Options.DeprecatedEnvConfig.EnvConfigFile != "" {
 			var err error
-			if c.EnvConfigValues, err = readEnvConfigFile(c.Options.EnvConfigFile); err != nil {
+			c.DeprecatedEnvConfigValues, err = readDeprecatedEnvConfigFile(c.Options.DeprecatedEnvConfig.EnvConfigFile)
+			if err != nil {
 				return err
 			}
 		}
@@ -189,14 +197,6 @@ func (c *CommandContext) BindFlagEnvVar(flag *pflag.Flag, envVar string) {
 	}
 	flag.Annotations[flagEnvVarAnnotation] = []string{envVar}
 	c.FlagsWithEnvVars = append(c.FlagsWithEnvVars, flag)
-}
-
-func (c *CommandContext) WriteEnvConfigToFile() error {
-	if c.Options.EnvConfigFile == "" {
-		return fmt.Errorf("unable to find place for env file (unknown HOME dir)")
-	}
-	c.Logger.Info("Writing env file", "file", c.Options.EnvConfigFile)
-	return writeEnvConfigFile(c.Options.EnvConfigFile, c.EnvConfigValues)
 }
 
 func (c *CommandContext) MarshalFriendlyJSONPayloads(m *common.Payloads) (json.RawMessage, error) {
@@ -266,7 +266,7 @@ func (c *CommandContext) populateFlagsFromEnv(flags *pflag.FlagSet) (func(*slog.
 			return
 		}
 		// Env config first, then environ
-		if v, ok := c.EnvConfigValues[c.Options.EnvConfigName][flag.Name]; ok {
+		if v, ok := c.DeprecatedEnvConfigValues[c.Options.DeprecatedEnvConfig.EnvConfigName][flag.Name]; ok {
 			if err := flag.Value.Set(v); err != nil {
 				flagErr = fmt.Errorf("failed setting flag %v from config with value %v: %w", flag.Name, v, err)
 				return
@@ -274,7 +274,7 @@ func (c *CommandContext) populateFlagsFromEnv(flags *pflag.FlagSet) (func(*slog.
 			flag.Changed = true
 		}
 		if anns := flag.Annotations[flagEnvVarAnnotation]; len(anns) == 1 {
-			if envVal, ok := c.Options.LookupEnv(anns[0]); ok {
+			if envVal, _ := c.Options.EnvLookup.LookupEnv(anns[0]); envVal != "" {
 				if err := flag.Value.Set(envVal); err != nil {
 					flagErr = fmt.Errorf("failed setting flag %v with env name %v and value %v: %w",
 						flag.Name, anns[0], envVal, err)
@@ -380,6 +380,8 @@ func (c *TemporalCommand) initCommand(cctx *CommandContext) {
 	// must unset in post-run
 	origNoColor := color.NoColor
 	c.Command.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+		// Set command
+		cctx.CurrentCommand = cmd
 		// Populate environ. We will make the error return here which will cause
 		// usage to be printed.
 		logCalls, err := cctx.populateFlagsFromEnv(cmd.Flags())
@@ -403,13 +405,13 @@ func (c *TemporalCommand) initCommand(cctx *CommandContext) {
 		}
 		cctx.ActuallyRanCommand = true
 
-		if cctx.Options.EnvConfigName != "default" {
-			if _, ok := cctx.EnvConfigValues[cctx.Options.EnvConfigName]; !ok {
+		if cctx.Options.DeprecatedEnvConfig.EnvConfigName != "default" {
+			if _, ok := cctx.DeprecatedEnvConfigValues[cctx.Options.DeprecatedEnvConfig.EnvConfigName]; !ok {
 				if _, ok := cmd.Annotations["ignoresMissingEnv"]; !ok {
 					// stfu about help output
 					cmd.SilenceErrors = true
 					cmd.SilenceUsage = true
-					return fmt.Errorf("environment %q not found", cctx.Options.EnvConfigName)
+					return fmt.Errorf("environment %q not found", cctx.Options.DeprecatedEnvConfig.EnvConfigName)
 				}
 			}
 		}
@@ -433,6 +435,9 @@ func VersionString() string {
 }
 
 func (c *TemporalCommand) preRun(cctx *CommandContext) error {
+	// Set this command as the root
+	cctx.RootCommand = c
+
 	// Configure logger if not already on context
 	if cctx.Logger == nil {
 		// If level is never, make noop logger
@@ -505,43 +510,6 @@ func (c *TemporalCommand) preRun(cctx *CommandContext) error {
 		)
 	}
 
-	return nil
-}
-
-// May be empty result if can't get user home dir
-func defaultEnvConfigFile(appName, configName string) string {
-	// No env file if no $HOME
-	if dir, err := os.UserHomeDir(); err == nil {
-		return filepath.Join(dir, ".config", appName, configName+".yaml")
-	}
-	return ""
-}
-
-func readEnvConfigFile(file string) (env map[string]map[string]string, err error) {
-	b, err := os.ReadFile(file)
-	if os.IsNotExist(err) {
-		return nil, nil
-	} else if err != nil {
-		return nil, fmt.Errorf("failed reading env file: %w", err)
-	}
-	var m map[string]map[string]map[string]string
-	if err := yaml.Unmarshal(b, &m); err != nil {
-		return nil, fmt.Errorf("failed unmarshalling env YAML: %w", err)
-	}
-	return m["env"], nil
-}
-
-func writeEnvConfigFile(file string, env map[string]map[string]string) error {
-	b, err := yaml.Marshal(map[string]any{"env": env})
-	if err != nil {
-		return fmt.Errorf("failed marshaling YAML: %w", err)
-	}
-	// Make parent directories as needed
-	if err := os.MkdirAll(filepath.Dir(file), 0700); err != nil {
-		return fmt.Errorf("failed making env file parent dirs: %w", err)
-	} else if err := os.WriteFile(file, b, 0600); err != nil {
-		return fmt.Errorf("failed writing env file: %w", err)
-	}
 	return nil
 }
 

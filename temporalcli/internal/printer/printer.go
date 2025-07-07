@@ -1,6 +1,7 @@
 package printer
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -428,6 +429,9 @@ func (p *Printer) textVal(v any) string {
 				return fmt.Sprintf("<failed converting to string: %v>", err)
 			}
 			return string(b)
+		} else if ref.Kind() == reflect.Slice && ref.Type().Elem().Kind() == reflect.Uint8 {
+			b, _ := ref.Interface().([]byte)
+			return "bytes(" + base64.StdEncoding.EncodeToString(b) + ")"
 		} else if ref.Kind() == reflect.Slice {
 			// We don't want to reimplement all of fmt.Sprintf, but expanding one level of
 			// slice helps format lists more consistently.
