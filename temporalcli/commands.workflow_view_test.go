@@ -558,7 +558,10 @@ func (s *SharedServerSuite) TestWorkflow_Describe_Deployment() {
 		ctx.Done().Receive(ctx, nil)
 		return ctx.Err()
 	}
-	version := deploymentName + "." + buildId
+	version := worker.WorkerDeploymentVersion{
+		DeploymentName: deploymentName,
+		BuildId:        buildId,
+	}
 	w := s.DevServer.StartDevWorker(s.Suite.T(), DevWorkerOptions{
 		Worker: worker.Options{
 			DeploymentOptions: worker.DeploymentOptions{
@@ -584,7 +587,8 @@ func (s *SharedServerSuite) TestWorkflow_Describe_Deployment() {
 		res := s.Execute(
 			"worker", "deployment", "describe-version",
 			"--address", s.Address(),
-			"--version", version,
+			"--deployment-name", version.DeploymentName,
+			"--build-id", version.BuildId,
 		)
 		assert.NoError(t, res.Err)
 	}, 30*time.Second, 100*time.Millisecond)
@@ -592,7 +596,8 @@ func (s *SharedServerSuite) TestWorkflow_Describe_Deployment() {
 	res := s.Execute(
 		"worker", "deployment", "set-current-version",
 		"--address", s.Address(),
-		"--version", version,
+		"--deployment-name", version.DeploymentName,
+		"--build-id", version.BuildId,
 		"--yes",
 	)
 	s.NoError(res.Err)
@@ -612,14 +617,15 @@ func (s *SharedServerSuite) TestWorkflow_Describe_Deployment() {
 			"-w", run.GetID(),
 		)
 		assert.NoError(t, res.Err)
-		assert.Contains(t, res.Stdout.String(), version)
+		assert.Contains(t, res.Stdout.String(), version.DeploymentName)
+		assert.Contains(t, res.Stdout.String(), version.BuildId)
 		assert.Contains(t, res.Stdout.String(), "Pinned")
 	}, 30*time.Second, 100*time.Millisecond)
 
 	out := res.Stdout.String()
 	s.ContainsOnSameLine(out, "Behavior", "Pinned")
-	s.ContainsOnSameLine(out, "Version", version)
-	s.ContainsOnSameLine(out, "OverrideBehavior", "Unspecified")
+	s.ContainsOnSameLine(out, "DeploymentName", version.DeploymentName)
+	s.ContainsOnSameLine(out, "BuildId", version.BuildId)
 
 	// json
 	res = s.Execute(
@@ -634,7 +640,8 @@ func (s *SharedServerSuite) TestWorkflow_Describe_Deployment() {
 	s.NoError(temporalcli.UnmarshalProtoJSONWithOptions(res.Stdout.Bytes(), &jsonResp, true))
 	versioningInfo := jsonResp.WorkflowExecutionInfo.VersioningInfo
 	s.Equal("Pinned", versioningInfo.Behavior.String())
-	s.Equal(version, versioningInfo.Version)
+	s.Equal(version.BuildId, versioningInfo.DeploymentVersion.BuildId)
+	s.Equal(version.DeploymentName, versioningInfo.DeploymentVersion.DeploymentName)
 	s.Nil(versioningInfo.VersioningOverride)
 }
 

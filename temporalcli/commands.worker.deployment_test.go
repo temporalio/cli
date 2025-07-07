@@ -16,14 +16,17 @@ import (
 )
 
 type jsonVersionSummariesRowType struct {
-	Version        string    `json:"version"`
+	DeploymentName string    `json:"deploymentName"`
+	BuildID        string    `json:"buildId"`
 	DrainageStatus string    `json:"drainageStatus"`
 	CreateTime     time.Time `json:"createTime"`
 }
 
 type jsonRoutingConfigType struct {
-	CurrentVersion                      string    `json:"currentVersion"`
-	RampingVersion                      string    `json:"rampingVersion"`
+	CurrentVersionDeploymentName        string    `json:"currentVersionDeploymentName"`
+	CurrentVersionBuildID               string    `json:"currentVersionBuildId"`
+	RampingVersionDeploymentName        string    `json:"rampingVersionDeploymentName"`
+	RampingVersionBuildID               string    `json:"rampingVersionBuildId"`
 	RampingVersionPercentage            float32   `json:"rampingVersionPercentage"`
 	CurrentVersionChangedTime           time.Time `json:"currentVersionChangedTime"`
 	RampingVersionChangedTime           time.Time `json:"rampingVersionChangedTime"`
@@ -64,7 +67,10 @@ type jsonDeploymentVersionInfoType struct {
 func (s *SharedServerSuite) TestDeployment_Set_Current_Version() {
 	deploymentName := uuid.NewString()
 	buildId := uuid.NewString()
-	version := deploymentName + "." + buildId
+	version := worker.WorkerDeploymentVersion{
+		DeploymentName: deploymentName,
+		BuildId:        buildId,
+	}
 	w := s.DevServer.StartDevWorker(s.Suite.T(), DevWorkerOptions{
 		Worker: worker.Options{
 			DeploymentOptions: worker.DeploymentOptions{
@@ -89,7 +95,7 @@ func (s *SharedServerSuite) TestDeployment_Set_Current_Version() {
 		res := s.Execute(
 			"worker", "deployment", "describe-version",
 			"--address", s.Address(),
-			"--version", version,
+			"--deployment-name", version.DeploymentName, "--build-id", version.BuildId,
 		)
 		assert.NoError(t, res.Err)
 	}, 30*time.Second, 100*time.Millisecond)
@@ -97,7 +103,7 @@ func (s *SharedServerSuite) TestDeployment_Set_Current_Version() {
 	res := s.Execute(
 		"worker", "deployment", "set-current-version",
 		"--address", s.Address(),
-		"--version", version,
+		"--deployment-name", version.DeploymentName, "--build-id", version.BuildId,
 		"--yes",
 	)
 	s.NoError(res.Err)
@@ -110,7 +116,8 @@ func (s *SharedServerSuite) TestDeployment_Set_Current_Version() {
 	s.NoError(res.Err)
 
 	s.ContainsOnSameLine(res.Stdout.String(), "Name", deploymentName)
-	s.ContainsOnSameLine(res.Stdout.String(), "CurrentVersion", version)
+	s.ContainsOnSameLine(res.Stdout.String(), "CurrentVersionDeploymentName", version.DeploymentName)
+	s.ContainsOnSameLine(res.Stdout.String(), "CurrentVersionBuildID", version.BuildId)
 
 	// json
 	res = s.Execute(
@@ -124,13 +131,14 @@ func (s *SharedServerSuite) TestDeployment_Set_Current_Version() {
 	var jsonOut jsonDeploymentInfoType
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
 	s.Equal(deploymentName, jsonOut.Name)
-	s.Equal(version, jsonOut.RoutingConfig.CurrentVersion)
+	s.Equal(version.DeploymentName, jsonOut.RoutingConfig.CurrentVersionDeploymentName)
+	s.Equal(version.BuildId, jsonOut.RoutingConfig.CurrentVersionBuildID)
 
 	// set metadata
 	res = s.Execute(
 		"worker", "deployment", "update-metadata-version",
 		"--address", s.Address(),
-		"--version", version,
+		"--deployment-name", version.DeploymentName, "--build-id", version.BuildId,
 		"--metadata", "bar=1",
 		"--output", "json",
 	)
@@ -147,7 +155,7 @@ func (s *SharedServerSuite) TestDeployment_Set_Current_Version() {
 	res = s.Execute(
 		"worker", "deployment", "update-metadata-version",
 		"--address", s.Address(),
-		"--version", version,
+		"--deployment-name", version.DeploymentName, "--build-id", version.BuildId,
 		"--remove-entries", "bar",
 		"--output", "json",
 	)
@@ -156,7 +164,7 @@ func (s *SharedServerSuite) TestDeployment_Set_Current_Version() {
 	res = s.Execute(
 		"worker", "deployment", "describe-version",
 		"--address", s.Address(),
-		"--version", version,
+		"--deployment-name", version.DeploymentName, "--build-id", version.BuildId,
 		"--output", "json",
 	)
 	s.NoError(res.Err)
@@ -175,13 +183,19 @@ func filterByNamePrefix(jsonOut []jsonDeploymentInfoType, prefix string) []jsonD
 }
 
 func (s *SharedServerSuite) TestDeployment_List() {
-	prefix := uuid.NewString()
-	deploymentName1 := prefix + "a" + uuid.NewString()
-	deploymentName2 := prefix + "b" + uuid.NewString()
+	prefix := "deployment_list_"
+	deploymentName1 := prefix + "a_" + uuid.NewString()
+	deploymentName2 := prefix + "b_" + uuid.NewString()
 	buildId1 := uuid.NewString()
 	buildId2 := uuid.NewString()
-	version1 := deploymentName1 + "." + buildId1
-	version2 := deploymentName2 + "." + buildId2
+	version1 := worker.WorkerDeploymentVersion{
+		DeploymentName: deploymentName1,
+		BuildId:        buildId1,
+	}
+	version2 := worker.WorkerDeploymentVersion{
+		DeploymentName: deploymentName2,
+		BuildId:        buildId2,
+	}
 
 	w1 := s.DevServer.StartDevWorker(s.Suite.T(), DevWorkerOptions{
 		Worker: worker.Options{
@@ -219,13 +233,13 @@ func (s *SharedServerSuite) TestDeployment_List() {
 		res := s.Execute(
 			"worker", "deployment", "describe-version",
 			"--address", s.Address(),
-			"--version", version1,
+			"--deployment-name", version1.DeploymentName, "--build-id", version1.BuildId,
 		)
 		assert.NoError(t, res.Err)
 		res = s.Execute(
 			"worker", "deployment", "describe-version",
 			"--address", s.Address(),
-			"--version", version2,
+			"--deployment-name", version2.DeploymentName, "--build-id", version2.BuildId,
 		)
 		assert.NoError(t, res.Err)
 	}, 30*time.Second, 100*time.Millisecond)
@@ -233,7 +247,7 @@ func (s *SharedServerSuite) TestDeployment_List() {
 	res := s.Execute(
 		"worker", "deployment", "set-current-version",
 		"--address", s.Address(),
-		"--version", version1,
+		"--deployment-name", version1.DeploymentName, "--build-id", version1.BuildId,
 		"--yes",
 	)
 	s.NoError(res.Err)
@@ -241,19 +255,21 @@ func (s *SharedServerSuite) TestDeployment_List() {
 	res = s.Execute(
 		"worker", "deployment", "set-current-version",
 		"--address", s.Address(),
-		"--version", version2,
+		"--deployment-name", version2.DeploymentName, "--build-id", version2.BuildId,
 		"--yes",
 	)
 	s.NoError(res.Err)
 
-	res = s.Execute(
-		"worker", "deployment", "list",
-		"--address", s.Address(),
-	)
-	s.NoError(res.Err)
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res = s.Execute(
+			"worker", "deployment", "list",
+			"--address", s.Address(),
+		)
+		s.NoError(res.Err)
+	}, 10*time.Second, 100*time.Millisecond)
 
-	s.ContainsOnSameLine(res.Stdout.String(), deploymentName1, version1)
-	s.ContainsOnSameLine(res.Stdout.String(), deploymentName2, version2)
+	s.ContainsOnSameLine(res.Stdout.String(), deploymentName1, version1.BuildId)
+	s.ContainsOnSameLine(res.Stdout.String(), deploymentName2, version2.BuildId)
 
 	// json
 	res = s.Execute(
@@ -271,17 +287,25 @@ func (s *SharedServerSuite) TestDeployment_List() {
 	})
 	s.Equal(2, len(jsonOut))
 	s.Equal(deploymentName1, jsonOut[0].Name)
-	s.Equal(version1, jsonOut[0].RoutingConfig.CurrentVersion)
+	s.Equal(version1.DeploymentName, jsonOut[0].RoutingConfig.CurrentVersionDeploymentName)
+	s.Equal(version1.BuildId, jsonOut[0].RoutingConfig.CurrentVersionBuildID)
 	s.Equal(deploymentName2, jsonOut[1].Name)
-	s.Equal(version2, jsonOut[1].RoutingConfig.CurrentVersion)
+	s.Equal(version2.DeploymentName, jsonOut[1].RoutingConfig.CurrentVersionDeploymentName)
+	s.Equal(version2.BuildId, jsonOut[1].RoutingConfig.CurrentVersionBuildID)
 }
 
 func (s *SharedServerSuite) TestDeployment_Describe_Drainage() {
 	deploymentName := uuid.NewString()
 	buildId1 := "a" + uuid.NewString()
 	buildId2 := "b" + uuid.NewString()
-	version1 := deploymentName + "." + buildId1
-	version2 := deploymentName + "." + buildId2
+	version1 := worker.WorkerDeploymentVersion{
+		DeploymentName: deploymentName,
+		BuildId:        buildId1,
+	}
+	version2 := worker.WorkerDeploymentVersion{
+		DeploymentName: deploymentName,
+		BuildId:        buildId2,
+	}
 
 	w1 := s.DevServer.StartDevWorker(s.Suite.T(), DevWorkerOptions{
 		Worker: worker.Options{
@@ -318,13 +342,13 @@ func (s *SharedServerSuite) TestDeployment_Describe_Drainage() {
 		res := s.Execute(
 			"worker", "deployment", "describe-version",
 			"--address", s.Address(),
-			"--version", version1,
+			"--deployment-name", version1.DeploymentName, "--build-id", version1.BuildId,
 		)
 		assert.NoError(t, res.Err)
 		res = s.Execute(
 			"worker", "deployment", "describe-version",
 			"--address", s.Address(),
-			"--version", version2,
+			"--deployment-name", version2.DeploymentName, "--build-id", version2.BuildId,
 		)
 		assert.NoError(t, res.Err)
 	}, 30*time.Second, 100*time.Millisecond)
@@ -332,7 +356,7 @@ func (s *SharedServerSuite) TestDeployment_Describe_Drainage() {
 	res := s.Execute(
 		"worker", "deployment", "set-current-version",
 		"--address", s.Address(),
-		"--version", version1,
+		"--deployment-name", version1.DeploymentName, "--build-id", version1.BuildId,
 		"--yes",
 	)
 	s.NoError(res.Err)
@@ -343,13 +367,14 @@ func (s *SharedServerSuite) TestDeployment_Describe_Drainage() {
 		"--name", deploymentName,
 	)
 	s.NoError(res.Err)
-	s.ContainsOnSameLine(res.Stdout.String(), "CurrentVersion", version1)
+	s.ContainsOnSameLine(res.Stdout.String(), "CurrentVersionDeploymentName", version1.DeploymentName)
+	s.ContainsOnSameLine(res.Stdout.String(), "CurrentVersionBuildID", version1.BuildId)
 
 	fmt.Print("hello")
 	res = s.Execute(
 		"worker", "deployment", "set-current-version",
 		"--address", s.Address(),
-		"--version", version2,
+		"--deployment-name", version2.DeploymentName, "--build-id", version2.BuildId,
 		"--yes",
 	)
 	s.NoError(res.Err)
@@ -361,9 +386,10 @@ func (s *SharedServerSuite) TestDeployment_Describe_Drainage() {
 	)
 	s.NoError(res.Err)
 
-	s.ContainsOnSameLine(res.Stdout.String(), "CurrentVersion", version2)
-	s.ContainsOnSameLine(res.Stdout.String(), version1, "draining")
-	s.ContainsOnSameLine(res.Stdout.String(), version2, "unspecified")
+	s.ContainsOnSameLine(res.Stdout.String(), "CurrentVersionDeploymentName", version2.DeploymentName)
+	s.ContainsOnSameLine(res.Stdout.String(), "CurrentVersionBuildID", version2.BuildId)
+	s.ContainsOnSameLine(res.Stdout.String(), version1.DeploymentName, "draining")
+	s.ContainsOnSameLine(res.Stdout.String(), version2.DeploymentName, "unspecified")
 
 	// json
 	res = s.Execute(
@@ -378,22 +404,28 @@ func (s *SharedServerSuite) TestDeployment_Describe_Drainage() {
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
 	s.Equal(deploymentName, jsonOut.Name)
 	sort.Slice(jsonOut.VersionSummaries, func(i, j int) bool {
-		return jsonOut.VersionSummaries[i].Version < jsonOut.VersionSummaries[j].Version
+		return jsonOut.VersionSummaries[i].BuildID < jsonOut.VersionSummaries[j].BuildID
 	})
 
 	s.Equal(2, len(jsonOut.VersionSummaries))
 	s.Equal("draining", jsonOut.VersionSummaries[0].DrainageStatus)
-	s.Equal(version1, jsonOut.VersionSummaries[0].Version)
+	s.Equal(version1.BuildId, jsonOut.VersionSummaries[0].BuildID)
 	s.Equal("unspecified", jsonOut.VersionSummaries[1].DrainageStatus)
-	s.Equal(version2, jsonOut.VersionSummaries[1].Version)
+	s.Equal(version2.BuildId, jsonOut.VersionSummaries[1].BuildID)
 }
 
 func (s *SharedServerSuite) TestDeployment_Ramping() {
 	deploymentName := uuid.NewString()
 	buildId1 := "a" + uuid.NewString()
 	buildId2 := "b" + uuid.NewString()
-	version1 := deploymentName + "." + buildId1
-	version2 := deploymentName + "." + buildId2
+	version1 := worker.WorkerDeploymentVersion{
+		DeploymentName: deploymentName,
+		BuildId:        buildId1,
+	}
+	version2 := worker.WorkerDeploymentVersion{
+		DeploymentName: deploymentName,
+		BuildId:        buildId2,
+	}
 
 	w1 := s.DevServer.StartDevWorker(s.Suite.T(), DevWorkerOptions{
 		Worker: worker.Options{
@@ -430,13 +462,13 @@ func (s *SharedServerSuite) TestDeployment_Ramping() {
 		res := s.Execute(
 			"worker", "deployment", "describe-version",
 			"--address", s.Address(),
-			"--version", version1,
+			"--deployment-name", version1.DeploymentName, "--build-id", version1.BuildId,
 		)
 		assert.NoError(t, res.Err)
 		res = s.Execute(
 			"worker", "deployment", "describe-version",
 			"--address", s.Address(),
-			"--version", version2,
+			"--deployment-name", version2.DeploymentName, "--build-id", version2.BuildId,
 		)
 		assert.NoError(t, res.Err)
 	}, 30*time.Second, 100*time.Millisecond)
@@ -444,7 +476,7 @@ func (s *SharedServerSuite) TestDeployment_Ramping() {
 	res := s.Execute(
 		"worker", "deployment", "set-current-version",
 		"--address", s.Address(),
-		"--version", version1,
+		"--deployment-name", version1.DeploymentName, "--build-id", version1.BuildId,
 		"--yes",
 	)
 	s.NoError(res.Err)
@@ -452,7 +484,7 @@ func (s *SharedServerSuite) TestDeployment_Ramping() {
 	res = s.Execute(
 		"worker", "deployment", "set-ramping-version",
 		"--address", s.Address(),
-		"--version", version2,
+		"--deployment-name", version2.DeploymentName, "--build-id", version2.BuildId,
 		"--percentage", "12.5",
 		"--yes",
 	)
@@ -464,16 +496,17 @@ func (s *SharedServerSuite) TestDeployment_Ramping() {
 		"--name", deploymentName,
 	)
 	s.NoError(res.Err)
-
-	s.ContainsOnSameLine(res.Stdout.String(), "CurrentVersion", version1)
-	s.ContainsOnSameLine(res.Stdout.String(), "RampingVersion", version2)
+	s.ContainsOnSameLine(res.Stdout.String(), "CurrentVersionDeploymentName", version1.DeploymentName)
+	s.ContainsOnSameLine(res.Stdout.String(), "CurrentVersionBuildID", version1.BuildId)
+	s.ContainsOnSameLine(res.Stdout.String(), "RampingVersionDeploymentName", version2.DeploymentName)
+	s.ContainsOnSameLine(res.Stdout.String(), "RampingVersionBuildID", version2.BuildId)
 	s.ContainsOnSameLine(res.Stdout.String(), "RampingVersionPercentage", "12.5")
 
 	// setting version2 as current also removes the ramp
 	res = s.Execute(
 		"worker", "deployment", "set-current-version",
 		"--address", s.Address(),
-		"--version", version2,
+		"--deployment-name", version2.DeploymentName, "--build-id", version2.BuildId,
 		"--yes",
 	)
 	s.NoError(res.Err)
@@ -489,14 +522,14 @@ func (s *SharedServerSuite) TestDeployment_Ramping() {
 	var jsonOut jsonDeploymentInfoType
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
 	s.Equal(deploymentName, jsonOut.Name)
-	s.Empty(jsonOut.RoutingConfig.RampingVersion)
-	s.Equal(version2, jsonOut.RoutingConfig.CurrentVersion)
+	s.Empty(jsonOut.RoutingConfig.RampingVersionBuildID)
+	s.Equal(version2.BuildId, jsonOut.RoutingConfig.CurrentVersionBuildID)
 
 	//same with explicit delete
 	res = s.Execute(
 		"worker", "deployment", "set-ramping-version",
 		"--address", s.Address(),
-		"--version", version1,
+		"--deployment-name", version1.DeploymentName, "--build-id", version1.BuildId,
 		"--percentage", "10.1",
 		"--yes",
 	)
@@ -508,15 +541,16 @@ func (s *SharedServerSuite) TestDeployment_Ramping() {
 		"--name", deploymentName,
 	)
 	s.NoError(res.Err)
-
-	s.ContainsOnSameLine(res.Stdout.String(), "CurrentVersion", version2)
-	s.ContainsOnSameLine(res.Stdout.String(), "RampingVersion", version1)
+	s.ContainsOnSameLine(res.Stdout.String(), "CurrentVersionDeploymentName", version2.DeploymentName)
+	s.ContainsOnSameLine(res.Stdout.String(), "CurrentVersionBuildID", version2.BuildId)
+	s.ContainsOnSameLine(res.Stdout.String(), "RampingVersionDeploymentName", version1.DeploymentName)
+	s.ContainsOnSameLine(res.Stdout.String(), "RampingVersionBuildID", version1.BuildId)
 	s.ContainsOnSameLine(res.Stdout.String(), "RampingVersionPercentage", "10.1")
 
 	res = s.Execute(
 		"worker", "deployment", "set-ramping-version",
 		"--address", s.Address(),
-		"--version", version1,
+		"--deployment-name", version1.DeploymentName, "--build-id", version1.BuildId,
 		"--delete",
 		"--yes",
 	)
@@ -532,7 +566,6 @@ func (s *SharedServerSuite) TestDeployment_Ramping() {
 
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
 	s.Equal(deploymentName, jsonOut.Name)
-	s.Empty(jsonOut.RoutingConfig.RampingVersion)
-	s.Equal(version2, jsonOut.RoutingConfig.CurrentVersion)
-
+	s.Equal(float32(0), jsonOut.RoutingConfig.RampingVersionPercentage)
+	s.Equal(version2.BuildId, jsonOut.RoutingConfig.CurrentVersionBuildID)
 }
