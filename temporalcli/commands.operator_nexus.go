@@ -24,7 +24,7 @@ func (c *TemporalOperatorNexusEndpointCreateCommand) run(cctx *CommandContext, _
 		return err
 	}
 	if target == nil {
-		return fmt.Errorf("either --target-namespace and --target-task queue or --target-url are required")
+		return fmt.Errorf("either --target-namespace and --target-task-queue or --target-url are required")
 	}
 
 	cl, err := c.Parent.Parent.Parent.ClientOptions.dialClient(cctx)
@@ -253,7 +253,7 @@ func (c *TemporalOperatorNexusEndpointCommand) endpointTargetFromArgs(namespace,
 			},
 		}, nil
 	}
-	return nil, fmt.Errorf("either --target-namespace and --target-task queue or --target-url are required")
+	return nil, fmt.Errorf("either --target-namespace and --target-task-queue or --target-url are required")
 }
 
 func (c *TemporalOperatorNexusEndpointCommand) getEndpointByName(ctx context.Context, cl client.Client, name string) (*nexuspb.Endpoint, error) {
