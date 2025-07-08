@@ -29,7 +29,7 @@ func (s *SharedServerSuite) TestCreateNexusEndpoint_Target() {
 
 	s.T().Run("NoTarget_FailsValidation", func(t *testing.T) {
 		res := s.Execute("operator", "nexus", "endpoint", "create", "--name", validEndpointName(t))
-		require.ErrorContains(t, res.Err, "either --target-namespace and --target-task queue or --target-url are required")
+		require.ErrorContains(t, res.Err, "either --target-namespace and --target-task-queue or --target-url are required")
 	})
 
 	s.T().Run("NoTaskQueue_FailsValidation", func(t *testing.T) {
@@ -45,7 +45,7 @@ func (s *SharedServerSuite) TestCreateNexusEndpoint_Target() {
 			"--name", validEndpointName(t),
 			"--target-task-queue", "tq",
 		)
-		require.ErrorContains(t, res.Err, "either --target-namespace and --target-task queue or --target-url are required")
+		require.ErrorContains(t, res.Err, "either --target-namespace and --target-task-queue or --target-url are required")
 	})
 
 	s.T().Run("WorkerTarget_Accepted", func(t *testing.T) {
