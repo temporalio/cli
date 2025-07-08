@@ -157,10 +157,6 @@ func (c *TemporalWorkflowSignalWithStartCommand) run(cctx *CommandContext, _ []s
 		searchAttr = &common.SearchAttributes{IndexedFields: fields}
 	}
 
-	if wfStartOpts.VersioningOverride != (client.VersioningOverride{}) {
-		cctx.Logger.Warn("VersioningOverride is not configured for the signal-with-start command")
-	}
-
 	// We have to use the raw signal service call here because the Go SDK's
 	// signal-with-start call doesn't accept multiple signal arguments.
 	resp, err := cl.WorkflowService().SignalWithStartWorkflowExecution(

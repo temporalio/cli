@@ -3,6 +3,7 @@ package temporalcli
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/fatih/color"
@@ -15,6 +16,7 @@ import (
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/converter"
+	"go.temporal.io/sdk/temporalnexus"
 )
 
 func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []string) error {
@@ -179,18 +181,51 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 		cctx.Printer.Println(color.MagentaString("Versioning Info:"))
 		cctx.Printer.Println()
 		vInfo := info.VersioningInfo
+
+		var dname string
+		var bid string
+		if vInfo.GetDeploymentVersion() != nil {
+			dname = vInfo.GetDeploymentVersion().DeploymentName
+			bid = vInfo.GetDeploymentVersion().BuildId
+		}
+		if dname == "" {
+			splitVersion := strings.SplitN(vInfo.GetVersion(), ".", 2)
+			if len(splitVersion) == 2 {
+				dname = splitVersion[0]
+				bid = splitVersion[1]
+			}
+		}
+		overrideBehavior := ""
+		overridePinnedVersionDeploymentName := ""
+		overridePinnedVersionBuildId := ""
+		if vInfo.VersioningOverride != nil {
+			switch vInfo.VersioningOverride.GetOverride().(type) {
+			case *workflow.VersioningOverride_Pinned:
+				overridePinnedVersionDeploymentName = vInfo.GetVersioningOverride().GetPinned().Version.DeploymentName
+				overridePinnedVersionBuildId = vInfo.GetVersioningOverride().GetPinned().Version.BuildId
+				overrideBehavior = enums.VERSIONING_BEHAVIOR_PINNED.String()
+			case *workflow.VersioningOverride_AutoUpgrade:
+				overrideBehavior = enums.VERSIONING_BEHAVIOR_AUTO_UPGRADE.String()
+			}
+		}
 		_ = cctx.Printer.PrintStructured(struct {
-			Behavior              string
-			Version               string
-			OverrideBehavior      string `cli:",cardOmitEmpty"`
-			OverridePinnedVersion string `cli:",cardOmitEmpty"`
-			TransitionVersion     string `cli:",cardOmitEmpty"`
+			Behavior                            string
+			DeploymentName                      string
+			BuildId                             string
+			OverrideBehavior                    string `cli:",cardOmitEmpty"`
+			OverridePinnedVersionDeploymentName string `cli:",cardOmitEmpty"`
+			OverridePinnedVersionBuildId        string `cli:",cardOmitEmpty"`
+			TransitionVersionDeploymentName     string `cli:",cardOmitEmpty"`
+			TransitionVersionBuildId            string `cli:",cardOmitEmpty"`
 		}{
-			Behavior:              vInfo.Behavior.String(),
-			Version:               vInfo.GetVersion(),
-			OverrideBehavior:      vInfo.VersioningOverride.GetBehavior().String(),
-			OverridePinnedVersion: vInfo.VersioningOverride.GetPinnedVersion(),
-			TransitionVersion:     vInfo.VersionTransition.GetVersion(),
+			Behavior:                            vInfo.Behavior.String(),
+			DeploymentName:                      dname,
+			BuildId:                             bid,
+			OverrideBehavior:                    overrideBehavior,
+			OverridePinnedVersionDeploymentName: overridePinnedVersionDeploymentName,
+			OverridePinnedVersionBuildId:        overridePinnedVersionBuildId,
+			TransitionVersionDeploymentName:     vInfo.VersionTransition.GetDeploymentVersion().GetDeploymentName(),
+			TransitionVersionBuildId:            vInfo.VersionTransition.GetDeploymentVersion().GetBuildId(),
 		}, printer.StructuredOptions{})
 	}
 
@@ -200,6 +235,7 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 		cctx.Printer.Println()
 		cbs := make([]struct {
 			URL                     string
+			Links                   []string
 			Trigger                 string
 			State                   enums.CallbackState
 			Attempt                 int32
@@ -211,6 +247,12 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 		}, len(resp.Callbacks))
 		for i, cb := range resp.Callbacks {
 			cbs[i].URL = cb.GetCallback().GetNexus().GetUrl()
+			for _, link := range cb.GetCallback().GetLinks() {
+				if link.GetWorkflowEvent() != nil {
+					nexusLink := temporalnexus.ConvertLinkWorkflowEventToNexusLink(link.GetWorkflowEvent())
+					cbs[i].Links = append(cbs[i].Links, nexusLink.URL.String())
+				}
+			}
 			cbs[i].State = cb.GetState()
 			cbs[i].Attempt = cb.GetAttempt()
 			cbs[i].LastAttemptFailure = cb.LastAttemptFailure
