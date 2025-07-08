@@ -480,9 +480,13 @@ type ActivityReferenceOptions struct {
 	ActivityType string
 }
 
-func (v *ActivityReferenceOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
-	f.StringVarP(&v.ActivityId, "activity-id", "a", "", "Activity ID to pause.")
-	f.StringVarP(&v.ActivityType, "activity-type", "g", "", "Activity Type to pause.")
+func (v *ActivityReferenceOptions) buildFlags(_ *CommandContext, f *pflag.FlagSet, activityType string, onlyWithoutQuery bool) {
+	f.StringVarP(&v.ActivityId, "activity-id", "a", "", fmt.Sprintf("Activity ID to %s.", activityType))
+	if onlyWithoutQuery {
+		f.StringVarP(&v.ActivityType, "activity-type", "g", "", fmt.Sprintf("Activity Type to %s. Can only be used without --query.", activityType))
+	} else {
+		f.StringVarP(&v.ActivityType, "activity-type", "g", "", fmt.Sprintf("Activity Type to %s.", activityType))
+	}
 }
 
 func (v *ActivityReferenceOptions) validateFlags() error {
@@ -517,11 +521,9 @@ func NewTemporalActivityPauseCommand(cctx *CommandContext, parent *TemporalActiv
 		s.Command.Long = "Pause an Activity.\n\nIf the Activity is not currently running (e.g. because it previously\nfailed), it will not be run again until it is unpaused.\n\nHowever, if the Activity is currently running, it will run to completion.\nIf the Activity is on its last retry attempt and fails, the failure will\nbe returned to the caller, just as if the Activity had not been paused.\n\nActivities can be specified by their Activity ID or Activity Type.\nOne of those parameters must be provided. If both are provided - Activity\nType will be used, and Activity ID will be ignored.\n\nSpecify the Activity and Workflow IDs:\n\n```\ntemporal activity pause \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "Activity ID to pause.")
-	s.Command.Flags().StringVarP(&s.ActivityType, "activity-type", "g", "", "Activity Type to pause.")
 	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of the user submitting this request.")
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
-	s.ActivityReferenceOptions.buildFlags(cctx, s.Command.Flags())
+	s.ActivityReferenceOptions.buildFlags(cctx, s.Command.Flags(), "pause", false)
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -554,13 +556,11 @@ func NewTemporalActivityResetCommand(cctx *CommandContext, parent *TemporalActiv
 		s.Command.Long = "Resetting an activity resets both the number of attempts and the activity\ntimeout.\n\nIf activity is paused and 'keep_paused' flag is not provided - it will be\nunpaused.\nIf activity is paused and 'keep_paused' flag is provided - it will stay\npaused.\nIf activity is waiting for the retry, is will be rescheduled immediately.\nIf the 'reset_heartbeats' flag is set, the activity heartbeat timer and\nheartbeats will be reset.\n\nActivities can be specified by their Activity ID or Activity Type.\nOne of those parameters must be provided. If both are provided - Activity\nType will be used, and Activity ID will be ignored.\n\nSpecify the Activity Type of ID and Workflow IDs:\n\n```\ntemporal activity reset \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n    --keep-paused\n    --reset-heartbeats\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "Activity ID to pause.")
-	s.Command.Flags().StringVarP(&s.ActivityType, "activity-type", "g", "", "Activity Type to pause.")
 	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of the user submitting this request.")
 	s.Command.Flags().BoolVar(&s.KeepPaused, "keep-paused", false, "If activity was paused - it will stay paused.")
 	s.Command.Flags().BoolVar(&s.ResetHeartbeats, "reset-heartbeats", false, "Reset the Activity's heartbeat.")
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
-	s.ActivityReferenceOptions.buildFlags(cctx, s.Command.Flags())
+	s.ActivityReferenceOptions.buildFlags(cctx, s.Command.Flags(), "reset", false)
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -595,8 +595,6 @@ func NewTemporalActivityUnpauseCommand(cctx *CommandContext, parent *TemporalAct
 		s.Command.Long = "Re-schedule a previously-paused Activity for execution.\n\nIf the Activity is not running and is past its retry timeout, it will be\nscheduled immediately. Otherwise, it will be scheduled after its retry\ntimeout expires.\n\nUse `--reset-attempts` to reset the number of previous run attempts to\nzero. For example, if an Activity is near the maximum number of attempts\nN specified in its retry policy, `--reset-attempts` will allow the\nActivity to be retried another N times after unpausing.\n\nUse `--reset-heartbeat` to reset the Activity's heartbeats.\n\nActivities can be specified by their Activity ID or Activity Type.\nOne of those parameters must be provided. If both are provided - Activity\nType will be used, and Activity ID will be ignored.\n\nActivities can be unpaused in bulk via a visibility Query list filter:\n\n```\ntemporal activity unpause \\\n    --query YourQuery \\\n    --reason YourReasonForTermination\n```\n\n\nSpecify the Activity ID or Type and Workflow IDs:\n\n```\ntemporal activity unpause \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n    --reset-attempts\n    --reset-heartbeats\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "Activity ID to unpause. Can only be used without --query.")
-	s.Command.Flags().StringVarP(&s.ActivityType, "activity-type", "g", "", "Activity Type to unpause.")
 	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of the user submitting this request.")
 	s.Command.Flags().BoolVar(&s.ResetAttempts, "reset-attempts", false, "Also reset the activity attempts.")
 	s.Command.Flags().BoolVar(&s.ResetHeartbeats, "reset-heartbeats", false, "Reset the Activity's heartbeats. Only works with --reset-attempts.")
@@ -604,7 +602,7 @@ func NewTemporalActivityUnpauseCommand(cctx *CommandContext, parent *TemporalAct
 	s.Jitter = 0
 	s.Command.Flags().VarP(&s.Jitter, "jitter", "j", "The activity will start at random a time within the specified duration. Can only be used with --query.")
 	s.SingleWorkflowOrBatchOptions.buildFlags(cctx, s.Command.Flags())
-	s.ActivityReferenceOptions.buildFlags(cctx, s.Command.Flags())
+	s.ActivityReferenceOptions.buildFlags(cctx, s.Command.Flags(), "unpause", true)
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
