@@ -208,6 +208,10 @@ func (c *TemporalActivityPauseCommand) run(cctx *CommandContext, args []string) 
 		Identity: c.Identity,
 	}
 
+	if c.ActivityType != "" && c.ActivityId != "" {
+		return fmt.Errorf("either Activity Type or Activity Id, but not both")
+	}
+
 	if c.ActivityType != "" {
 		request.Activity = &workflowservice.PauseActivityRequest_Type{Type: c.ActivityType}
 	} else if c.ActivityId != "" {
@@ -259,6 +263,10 @@ func (c *TemporalActivityUnpauseCommand) run(cctx *CommandContext, args []string
 			ResetHeartbeat: c.ResetHeartbeats,
 			Jitter:         durationpb.New(c.Jitter.Duration()),
 			Identity:       c.Identity,
+		}
+
+		if c.ActivityType != "" && c.ActivityId != "" {
+			return fmt.Errorf("either Activity Type or Activity Id, but not both")
 		}
 
 		if c.ActivityType != "" {
@@ -316,6 +324,10 @@ func (c *TemporalActivityResetCommand) run(cctx *CommandContext, args []string) 
 		Identity:       c.Identity,
 		KeepPaused:     c.KeepPaused,
 		ResetHeartbeat: c.ResetHeartbeats,
+	}
+
+	if c.ActivityType != "" && c.ActivityId != "" {
+		return fmt.Errorf("either Activity Type or Activity Id, but not both")
 	}
 
 	if c.ActivityType != "" {
