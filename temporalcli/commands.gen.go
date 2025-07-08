@@ -3,6 +3,8 @@
 package temporalcli
 
 import (
+	"fmt"
+
 	"github.com/mattn/go-isatty"
 
 	"github.com/spf13/cobra"
@@ -473,10 +475,31 @@ func NewTemporalActivityFailCommand(cctx *CommandContext, parent *TemporalActivi
 	return &s
 }
 
+type ActivityReferenceOptions struct {
+	ActivityId   string
+	ActivityType string
+}
+
+func (v *ActivityReferenceOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
+	f.StringVarP(&v.ActivityId, "activity-id", "a", "", "Activity ID to pause.")
+	f.StringVarP(&v.ActivityType, "activity-type", "g", "", "Activity Type to pause.")
+}
+
+func (v *ActivityReferenceOptions) validateFlags() error {
+	if v.ActivityId != "" && v.ActivityType != "" {
+		return fmt.Errorf("either Activity Type or Activity Id, but not both")
+	}
+	if v.ActivityId == "" && v.ActivityType == "" {
+		return fmt.Errorf("either Activity Type or Activity Id, but not both")
+	}
+	return nil
+}
+
 type TemporalActivityPauseCommand struct {
 	Parent  *TemporalActivityCommand
 	Command cobra.Command
 	WorkflowReferenceOptions
+	ActivityReferenceOptions
 	ActivityId   string
 	ActivityType string
 	Identity     string
@@ -498,6 +521,7 @@ func NewTemporalActivityPauseCommand(cctx *CommandContext, parent *TemporalActiv
 	s.Command.Flags().StringVarP(&s.ActivityType, "activity-type", "g", "", "Activity Type to pause.")
 	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of the user submitting this request.")
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
+	s.ActivityReferenceOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -510,6 +534,7 @@ type TemporalActivityResetCommand struct {
 	Parent  *TemporalActivityCommand
 	Command cobra.Command
 	WorkflowReferenceOptions
+	ActivityReferenceOptions
 	ActivityId      string
 	ActivityType    string
 	Identity        string
@@ -535,6 +560,7 @@ func NewTemporalActivityResetCommand(cctx *CommandContext, parent *TemporalActiv
 	s.Command.Flags().BoolVar(&s.KeepPaused, "keep-paused", false, "If activity was paused - it will stay paused.")
 	s.Command.Flags().BoolVar(&s.ResetHeartbeats, "reset-heartbeats", false, "Reset the Activity's heartbeat.")
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
+	s.ActivityReferenceOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -547,6 +573,7 @@ type TemporalActivityUnpauseCommand struct {
 	Parent  *TemporalActivityCommand
 	Command cobra.Command
 	SingleWorkflowOrBatchOptions
+	ActivityReferenceOptions
 	ActivityId      string
 	ActivityType    string
 	Identity        string
@@ -577,6 +604,7 @@ func NewTemporalActivityUnpauseCommand(cctx *CommandContext, parent *TemporalAct
 	s.Jitter = 0
 	s.Command.Flags().VarP(&s.Jitter, "jitter", "j", "The activity will start at random a time within the specified duration. Can only be used with --query.")
 	s.SingleWorkflowOrBatchOptions.buildFlags(cctx, s.Command.Flags())
+	s.ActivityReferenceOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

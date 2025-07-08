@@ -208,16 +208,15 @@ func (c *TemporalActivityPauseCommand) run(cctx *CommandContext, args []string) 
 		Identity: c.Identity,
 	}
 
-	if c.ActivityType != "" && c.ActivityId != "" {
-		return fmt.Errorf("either Activity Type or Activity Id, but not both")
+	if err := c.ActivityReferenceOptions.validateFlags(); err != nil {
+		return err
 	}
 
 	if c.ActivityType != "" {
 		request.Activity = &workflowservice.PauseActivityRequest_Type{Type: c.ActivityType}
-	} else if c.ActivityId != "" {
+	}
+	if c.ActivityId != "" {
 		request.Activity = &workflowservice.PauseActivityRequest_Id{Id: c.ActivityId}
-	} else {
-		return fmt.Errorf("either Activity Type or Activity Id must be provided")
 	}
 
 	_, err = cl.WorkflowService().PauseActivity(cctx, request)
@@ -265,16 +264,15 @@ func (c *TemporalActivityUnpauseCommand) run(cctx *CommandContext, args []string
 			Identity:       c.Identity,
 		}
 
-		if c.ActivityType != "" && c.ActivityId != "" {
-			return fmt.Errorf("either Activity Type or Activity Id, but not both")
+		if err := c.ActivityReferenceOptions.validateFlags(); err != nil {
+			return err
 		}
 
 		if c.ActivityType != "" {
 			request.Activity = &workflowservice.UnpauseActivityRequest_Type{Type: c.ActivityType}
-		} else if c.ActivityId != "" {
+		}
+		if c.ActivityId != "" {
 			request.Activity = &workflowservice.UnpauseActivityRequest_Id{Id: c.ActivityId}
-		} else {
-			return fmt.Errorf("either Activity Type or Activity Id must be provided")
 		}
 
 		_, err = cl.WorkflowService().UnpauseActivity(cctx, request)
@@ -326,16 +324,15 @@ func (c *TemporalActivityResetCommand) run(cctx *CommandContext, args []string) 
 		ResetHeartbeat: c.ResetHeartbeats,
 	}
 
-	if c.ActivityType != "" && c.ActivityId != "" {
-		return fmt.Errorf("either Activity Type or Activity Id, but not both")
+	if err := c.ActivityReferenceOptions.validateFlags(); err != nil {
+		return err
 	}
 
 	if c.ActivityType != "" {
 		request.Activity = &workflowservice.ResetActivityRequest_Type{Type: c.ActivityType}
-	} else if c.ActivityId != "" {
+	}
+	if c.ActivityId != "" {
 		request.Activity = &workflowservice.ResetActivityRequest_Id{Id: c.ActivityId}
-	} else {
-		return fmt.Errorf("either Activity Type or Activity Id must be provided")
 	}
 
 	resp, err := cl.WorkflowService().ResetActivity(cctx, request)
