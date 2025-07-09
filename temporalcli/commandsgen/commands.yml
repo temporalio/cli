@@ -4517,10 +4517,15 @@ option-sets:
           Override the versioning behavior of a Workflow.
         required: true
         enum-values:
+          - unspecified
           - pinned
           - auto_upgrade
-      - name: versioning-override-pinned-version
+      - name: versioning-override-deployment-name
         type: string
-        description: Override Pinned Version for a Worker Deployment (Only for pinned).
-
+        description: When overriding to a `pinned` behavior, specifies the Deployment Name of the
+          version to target.
+      - name: versioning-override-build-id
+        type: string
+        description: When overriding to a `pinned` behavior, specifies the Build ID of the
+          version to target.
 

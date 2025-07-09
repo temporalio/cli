@@ -35,7 +35,7 @@ func (s *SharedServerSuite) TestWorkflow_ResetWithWorkflowUpdateOptions_Validate
 		"--versioning-override-behavior", "pinned",
 	)
 	require.Error(s.T(), res.Err)
-	require.Contains(s.T(), res.Err.Error(), "missing version with 'pinned' behavior")
+	require.Contains(s.T(), res.Err.Error(), "deployment name and build id are required with 'pinned' behavior")
 }
 
 func (s *SharedServerSuite) TestWorkflow_ResetWithWorkflowUpdateOptions_ValidatesArguments_AutoUpgradeWithVersion() {
@@ -46,10 +46,10 @@ func (s *SharedServerSuite) TestWorkflow_ResetWithWorkflowUpdateOptions_Validate
 		"-t", "FirstWorkflowTask",
 		"--reason", "test-reset",
 		"--versioning-override-behavior", "auto_upgrade",
-		"--versioning-override-pinned-version", "some-version",
+		"--versioning-override-deployment-name", "some-deployment",
 	)
 	require.Error(s.T(), res.Err)
-	require.Contains(s.T(), res.Err.Error(), "cannot set pinned version with")
+	require.Contains(s.T(), res.Err.Error(), "cannot set deployment name or build id with auto_upgrade behavior")
 }
 
 func (s *SharedServerSuite) TestWorkflow_ResetWithWorkflowUpdateOptions_Single_AutoUpgradeBehavior() {
@@ -122,7 +122,8 @@ func (s *SharedServerSuite) TestWorkflow_ResetWithWorkflowUpdateOptions_Single_P
 	s.Equal(1, wfExecutions)
 
 	// Reset with pinned versioning behavior and properly formatted version
-	pinnedVersion := "test-deployment.v1.0"
+	pinnedDeploymentName := "test-deployment"
+	pinnedBuildId := "v1.0"
 	res := s.Execute(
 		"workflow", "reset", "with-workflow-update-options",
 		"--address", s.Address(),
@@ -130,7 +131,8 @@ func (s *SharedServerSuite) TestWorkflow_ResetWithWorkflowUpdateOptions_Single_P
 		"-t", "FirstWorkflowTask",
 		"--reason", "test-reset-with-pinned-version",
 		"--versioning-override-behavior", "pinned",
-		"--versioning-override-pinned-version", pinnedVersion,
+		"--versioning-override-deployment-name", pinnedDeploymentName,
+		"--versioning-override-build-id", pinnedBuildId,
 	)
 	require.NoError(s.T(), res.Err)
 
@@ -150,8 +152,7 @@ func (s *SharedServerSuite) TestWorkflow_ResetWithWorkflowUpdateOptions_Single_P
 
 		info := descResult.GetWorkflowExecutionInfo()
 		pinnedVersionOverride := info.VersioningInfo.VersioningOverride.GetPinned().GetVersion()
-		pinnedVersionOverrideString := pinnedVersionOverride.GetDeploymentName() + "." + pinnedVersionOverride.GetBuildId()
-		return pinnedVersionOverrideString == pinnedVersion // the second execution should have the pinned version override.
+		return pinnedVersionOverride.GetDeploymentName() == pinnedDeploymentName && pinnedVersionOverride.GetBuildId() == pinnedBuildId
 	}, 5*time.Second, 100*time.Millisecond)
 }
 
@@ -226,7 +227,8 @@ func (s *SharedServerSuite) TestWorkflow_ResetBatchWithWorkflowUpdateOptions_Pin
 	s.Equal(1, wfExecutions)
 
 	// Reset batch with pinned versioning behavior and properly formatted version
-	pinnedVersion := "batch-deployment.v1.0"
+	pinnedDeploymentName := "batch-deployment"
+	pinnedBuildId := "v1.0"
 	s.CommandHarness.Stdin.WriteString("y\n")
 	res := s.Execute(
 		"workflow", "reset", "with-workflow-update-options",
@@ -235,7 +237,8 @@ func (s *SharedServerSuite) TestWorkflow_ResetBatchWithWorkflowUpdateOptions_Pin
 		"-t", "FirstWorkflowTask",
 		"--reason", "test-batch-reset-with-pinned-version",
 		"--versioning-override-behavior", "pinned",
-		"--versioning-override-pinned-version", pinnedVersion,
+		"--versioning-override-deployment-name", pinnedDeploymentName,
+		"--versioning-override-build-id", pinnedBuildId,
 	)
 	require.NoError(s.T(), res.Err)
 
@@ -255,8 +258,7 @@ func (s *SharedServerSuite) TestWorkflow_ResetBatchWithWorkflowUpdateOptions_Pin
 
 		info := descResult.GetWorkflowExecutionInfo()
 		pinnedVersionOverride := info.VersioningInfo.VersioningOverride.GetPinned().GetVersion()
-		pinnedVersionOverrideString := pinnedVersionOverride.GetDeploymentName() + "." + pinnedVersionOverride.GetBuildId()
-		return pinnedVersionOverrideString == pinnedVersion // the second execution should have the pinned version override.
+		return pinnedVersionOverride.GetDeploymentName() == pinnedDeploymentName && pinnedVersionOverride.GetBuildId() == pinnedBuildId
 	}, 5*time.Second, 100*time.Millisecond)
 }
 
