@@ -48,7 +48,7 @@ func (c *TemporalWorkflowResetWithWorkflowUpdateOptionsCommand) run(cctx *Comman
 			AutoUpgrade: true,
 		}
 	default:
-		return fmt.Errorf("invalid deployment behavior: %v, valid values are: 'pinned', and 'auto_upgrade'", c.VersioningOverrideBehavior)
+		return fmt.Errorf("invalid deployment behavior: %v, valid values are: 'pinned', and 'auto_upgrade'", c.VersioningOverrideBehavior.Value)
 	}
 
 	var workflowExecutionOptions *workflowpb.WorkflowExecutionOptions
