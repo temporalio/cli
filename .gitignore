@@ -2,6 +2,9 @@
 /temporal
 /temporal.exe
 
+# Goreleaser output
+/dist
+
 # Used by IDE
 /.idea
 /.vscode

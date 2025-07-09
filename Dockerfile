@@ -1,21 +1,9 @@
-FROM golang:1.24-bookworm AS builder
+FROM --platform=$BUILDARCH scratch AS dist
+COPY ./dist/nix_linux_amd64_v1/temporal /dist/amd64/temporal
+COPY ./dist/nix_linux_arm64/temporal /dist/arm64/temporal
 
-WORKDIR /app
+FROM alpine:3.22
+ARG TARGETARCH
+COPY --from=dist /dist/$TARGETARCH/temporal /usr/local/bin/temporal
 
-# Copy everything
-COPY . ./
-
-# Build
-RUN go build ./cmd/temporal
-
-# Use slim container for running
-FROM debian:bookworm-slim
-RUN set -x && apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    ca-certificates && \
-    rm -rf /var/lib/apt/lists/*
-
-# Copy binary
-COPY --from=builder /app/temporal /app/temporal
-
-# Set CLI as primary entrypoint
-ENTRYPOINT ["/app/temporal"]
+ENTRYPOINT ["temporal"]
