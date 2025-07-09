@@ -454,7 +454,6 @@ commands:
         type: string
         description: The Activity ID to pause. Either `activity-id` or `activity-type` must be provided, but not both.
       - name: activity-type
-        short: g
         type: string
         description: All activities of the Activity Type will be paused. Either `activity-id` or `activity-type` must be provided, but not both.
       - name: identity
@@ -507,7 +506,6 @@ commands:
         description: |
           The Activity ID to unpause. Can only be used without --query or --match-all. Either `activity-id` or `activity-type` must be provided, but not both.
       - name: activity-type
-        short: g
         type: string
         description: |
           Activities of this Type will unpause. Can only be used without --match-all. Either `activity-id` or `activity-type` must be provided, but not both.
@@ -582,7 +580,6 @@ commands:
         type: string
         description: The Activity ID to reset. Either `activity-id` or `activity-type` must be provided, but not both.
       - name: activity-type
-        short: g
         type: string
         description: The Activity Type to reset. Either `activity-id` or `activity-type` must be provided, but not both.
       - name: identity
