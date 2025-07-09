@@ -454,7 +454,6 @@ commands:
         description: Identity of the user submitting this request.
     option-sets:
       - workflow reference
-      - activity-reference
 
   - name: temporal activity unpause
     summary: Unpause an Activity
@@ -528,7 +527,6 @@ commands:
           Can only be used with --query.
     option-sets:
       - single-workflow-or-batch
-      - activity-reference
 
   - name: temporal activity reset
     summary: Reset an Activity
@@ -577,7 +575,6 @@ commands:
         description: Reset the Activity's heartbeat.
     option-sets:
       - workflow reference
-      - activity-reference
 
   - name: temporal batch
     summary: Manage running batch jobs
