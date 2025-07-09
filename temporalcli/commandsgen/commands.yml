@@ -444,11 +444,11 @@ commands:
       - name: activity-id
         short: a
         type: string
-        description: Activity ID to pause.
+        description: Activity ID to pause. Either `activity-id` or `activity-type` must be provided, but not both.
       - name: activity-type
         short: g
         type: string
-        description: Activity Type to pause.
+        description: Either `activity-id` or `activity-type` must be provided, but not both.Activity Type to pause.
       - name: identity
         type: string
         description: Identity of the user submitting this request.
@@ -498,11 +498,12 @@ commands:
         short: a
         type: string
         description: |
-          Activity ID to unpause. Can only be used without --query.
+          Activity ID to unpause. Can only be used without --query or --match-all. Either `activity-id` or `activity-type` must be provided, but not both.
       - name: activity-type
         short: g
         type: string
-        description: Activity Type to unpause.
+        description: |
+          Activity Type to unpause. Can only be used without --match-all. Either `activity-id` or `activity-type` must be provided, but not both.
       - name: identity
         type: string
         description: Identity of the user submitting this request.
@@ -558,11 +559,11 @@ commands:
       - name: activity-id
         short: a
         type: string
-        description: Activity ID to pause.
+        description: Activity ID to reset. Either `activity-id` or `activity-type` must be provided, but not both.
       - name: activity-type
         short: g
         type: string
-        description: Activity Type to pause.
+        description: Activity Type to reset. Either `activity-id` or `activity-type` must be provided, but not both.
       - name: identity
         type: string
         description: Identity of the user submitting this request.

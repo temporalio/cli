@@ -247,6 +247,16 @@ func (s *SharedServerSuite) TestActivityCommandFailed_NoActivityTpeOrId() {
 	}
 }
 
+func (s *SharedServerSuite) TestActivityCommandFailed_BothActivityTpeOrId() {
+	run := s.waitActivityStarted()
+
+	commands := []string{"pause", "unpause", "reset"}
+	for _, command := range commands {
+		res := sendActivityCommand(command, run, s, "--activity-id", activityId, "--activity-type", activityType)
+		s.Error(res.Err)
+	}
+}
+
 func (s *SharedServerSuite) TestActivityReset() {
 	run := s.waitActivityStarted()
 
