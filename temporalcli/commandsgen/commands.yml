@@ -337,9 +337,11 @@ commands:
   - name: temporal activity update-options
     summary: Update Activity options
     description: |
-      Update Activity options. Specify the Activity and Workflow IDs, and
-      options you want to update.
-      Updates are incremental, only changing the specified options.
+      Updates the options of a running Activity that were passed into it from
+       a Workflow. Updates are incremental, only changing the specified 
+       options.
+
+      For example:
 
       ```
       temporal activity update-options \
@@ -354,8 +356,9 @@ commands:
           --retry-maximum-interval DURATION \
           --retry-backoff-coefficient NewBackoffCoefficient \
           --retry-maximum-attempts NewMaximumAttempts
-
       ```
+
+      You may follow this command with `temporal activity reset`, and the new values will apply after the reset.
     options:
       - name: activity-id
         type: string
@@ -427,33 +430,36 @@ commands:
       If the Activity is not currently running (e.g. because it previously
       failed), it will not be run again until it is unpaused.
 
-      However, if the Activity is currently running, it will run to completion.
+      However, if the Activity is currently running, it will run until the next 
+      time it fails, completes, or times out, at which point the pause will kick in.
+
       If the Activity is on its last retry attempt and fails, the failure will
       be returned to the caller, just as if the Activity had not been paused.
 
-      Activities can be specified by their Activity ID or Activity Type.
-      One of those parameters must be provided. If both are provided - Activity
-      Type will be used, and Activity ID will be ignored.
+      Activities should be specified either by their Activity ID or Activity Type.
 
-      Specify the Activity and Workflow IDs:
+      For example, specify the Activity and Workflow IDs like this:
 
       ```
       temporal activity pause \
           --activity-id YourActivityId \
           --workflow-id YourWorkflowId
       ```
+
+      To later unpause the activity, see [unpause](#unpause). You may also want to 
+      [reset](#reset) the activity to unpause it while also starting it from the beginning.
     options:
       - name: activity-id
         short: a
         type: string
-        description: Activity ID to pause. Either `activity-id` or `activity-type` must be provided, but not both.
+        description: The Activity ID to pause. Either `activity-id` or `activity-type` must be provided, but not both.
       - name: activity-type
         short: g
         type: string
-        description: Either `activity-id` or `activity-type` must be provided, but not both.Activity Type to pause.
+        description: All activities of the Activity Type will be paused. Either `activity-id` or `activity-type` must be provided, but not both.
       - name: identity
         type: string
-        description: Identity of the user submitting this request.
+        description: The identity of the user or client submitting this request.
     option-sets:
       - workflow reference
 
@@ -474,17 +480,7 @@ commands:
       Use `--reset-heartbeat` to reset the Activity's heartbeats.
 
       Activities can be specified by their Activity ID or Activity Type.
-      One of those parameters must be provided. If both are provided - Activity
-      Type will be used, and Activity ID will be ignored.
-
-      Activities can be unpaused in bulk via a visibility Query list filter:
-
-      ```
-      temporal activity unpause \
-          --query YourQuery \
-          --reason YourReasonForTermination
-      ```
-
+      One of those parameters must be provided.
 
       Specify the Activity ID or Type and Workflow IDs:
 
@@ -495,20 +491,29 @@ commands:
           --reset-attempts
           --reset-heartbeats
       ```
+
+      Activities can be unpaused in bulk via a visibility Query list filter. 
+      For example, if you want to unpause activities of type Foo that you 
+      previously paused, do:
+
+      ```
+      temporal activity unpause \
+          --query 'TemporalPauseInfo="property:activityType=Foo"'
+      ```
     options:
       - name: activity-id
         short: a
         type: string
         description: |
-          Activity ID to unpause. Can only be used without --query or --match-all. Either `activity-id` or `activity-type` must be provided, but not both.
+          The Activity ID to unpause. Can only be used without --query or --match-all. Either `activity-id` or `activity-type` must be provided, but not both.
       - name: activity-type
         short: g
         type: string
         description: |
-          Activity Type to unpause. Can only be used without --match-all. Either `activity-id` or `activity-type` must be provided, but not both.
+          Activities of this Type will unpause. Can only be used without --match-all. Either `activity-id` or `activity-type` must be provided, but not both.
       - name: identity
         type: string
-        description: Identity of the user submitting this request.
+        description: The identity of the user or client submitting this request.
       - name: reset-attempts
         type: bool
         description: Also reset the activity attempts.
@@ -533,20 +538,34 @@ commands:
   - name: temporal activity reset
     summary: Reset an Activity
     description: |
-      Resetting an activity resets both the number of attempts and the activity
-      timeout.
+      Resetting an activity restarts the activity as if it were first being 
+      scheduled. That is, it will reset both the number of attempts and the 
+      activity timeout, as well as, optionally, the 
+      [heartbeat details](#reset-heartbeats).
 
-      If activity is paused and 'keep_paused' flag is not provided - it will be
-      unpaused.
-      If activity is paused and 'keep_paused' flag is provided - it will stay
-      paused.
-      If activity is waiting for the retry, is will be rescheduled immediately.
-      If the 'reset_heartbeats' flag is set, the activity heartbeat timer and
-      heartbeats will be reset.
+      If the activity may be executing (i.e. it has not yet timed out), the 
+      reset will take effect the next time it fails, heartbeats, or times out.
+      If is waiting for a retry (i.e. has failed or timed out), the reset 
+      will apply immediately.
+
+      If the activity is already paused, it will be unpaused by default. 
+      You can specify `keep_paused` to prevent this.
+
+      If the activity is paused and the `keep_paused` flag is not provided, 
+      it will be unpaused. If the activity is paused and `keep_paused` flag 
+      is provided - it will stay paused.
 
       Activities can be specified by their Activity ID or Activity Type.
-      One of those parameters must be provided. If both are provided - Activity
-      Type will be used, and Activity ID will be ignored.
+
+      ### Resetting activities that heartbeat {#reset-heartbeats}
+
+      Activities that heartbeat will receive a [Canceled failure](/references/failures#cancelled-failure) 
+      the next time they heartbeat after a reset.
+
+      If, in your Activity, you need to do any cleanup when an Activity is 
+      reset, handle this error and then re-throw it when you've cleaned up.
+
+      If the `reset_heartbeats` flag is set, the heartbeat details will also be cleared.
 
       Specify the Activity Type of ID and Workflow IDs:
 
@@ -561,20 +580,20 @@ commands:
       - name: activity-id
         short: a
         type: string
-        description: Activity ID to reset. Either `activity-id` or `activity-type` must be provided, but not both.
+        description: The Activity ID to reset. Either `activity-id` or `activity-type` must be provided, but not both.
       - name: activity-type
         short: g
         type: string
-        description: Activity Type to reset. Either `activity-id` or `activity-type` must be provided, but not both.
+        description: The Activity Type to reset. Either `activity-id` or `activity-type` must be provided, but not both.
       - name: identity
         type: string
-        description: Identity of the user submitting this request.
+        description: The identity of the user or client submitting this request.
       - name: keep-paused
         type: bool
-        description: If activity was paused - it will stay paused.
+        description: If the activity was paused, it will stay paused.
       - name: reset-heartbeats
         type: bool
-        description: Reset the Activity's heartbeat.
+        description: Clear the Activity's heartbeat details.
     option-sets:
       - workflow reference
 
