@@ -23,6 +23,17 @@ Reference [the documentation](https://docs.temporal.io/cli) for detailed install
 2. Extract the downloaded archive.
 3. Add the `temporal` binary to your `PATH` (`temporal.exe` for Windows).
 
+### Run via Docker
+
+[Temporal CLI on DockerHub](https://hub.docker.com/r/temporalio/temporal)
+
+    docker run --rm temporalio/temporal
+
+Note that for dev server to be accessible from host system, it needs to listen on external IP and the ports need to be forwarded:
+
+    docker run --rm -p 7233:7233 -p 8233:8233 temporalio/temporal:latest server start-dev --ip 0.0.0.0
+    # UI is now accessible from host at http://localhost:8233/
+
 ### Build
 
 1. Install [Go](https://go.dev/)
