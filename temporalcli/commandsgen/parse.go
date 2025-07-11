@@ -48,6 +48,7 @@ type (
 		ExactArgs              int      `yaml:"exact-args"`
 		MaximumArgs            int      `yaml:"maximum-args"`
 		IgnoreMissingEnv       bool     `yaml:"ignores-missing-env"`
+		SubcommandsOptional    bool     `yaml:"subcommands-optional"`
 		Options                []Option `yaml:"options"`
 		OptionSets             []string `yaml:"option-sets"`
 		Docs                   Docs     `yaml:"docs"`
