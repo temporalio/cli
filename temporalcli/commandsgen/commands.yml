@@ -538,7 +538,7 @@ commands:
   - name: temporal activity reset
     summary: Reset an Activity
     description: |
-      Reset an activity, which restarts the activity as if it were first being 
+      Reset an activity. This restarts the activity as if it were first being 
       scheduled. That is, it will reset both the number of attempts and the 
       activity timeout, as well as, optionally, the 
       [heartbeat details](#reset-heartbeats).
