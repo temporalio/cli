@@ -337,7 +337,7 @@ commands:
   - name: temporal activity update-options
     summary: Update Activity options
     description: |
-      Updates the options of a running Activity that were passed into it from
+      Update the options of a running Activity that were passed into it from
        a Workflow. Updates are incremental, only changing the specified 
        options.
 
@@ -538,7 +538,7 @@ commands:
   - name: temporal activity reset
     summary: Reset an Activity
     description: |
-      Resetting an activity restarts the activity as if it were first being 
+      Reset an activity, which restarts the activity as if it were first being 
       scheduled. That is, it will reset both the number of attempts and the 
       activity timeout, as well as, optionally, the 
       [heartbeat details](#reset-heartbeats).
