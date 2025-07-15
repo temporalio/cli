@@ -27,7 +27,7 @@ Reference [the documentation](https://docs.temporal.io/cli) for detailed install
 
 [Temporal CLI on DockerHub](https://hub.docker.com/r/temporalio/temporal)
 
-    docker run --rm temporalio/temporal
+    docker run --rm temporalio/temporal --help
 
 Note that for dev server to be accessible from host system, it needs to listen on external IP and the ports need to be forwarded:
 
