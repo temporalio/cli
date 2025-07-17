@@ -524,11 +524,15 @@ type TemporalActivityResetCommand struct {
 	Parent  *TemporalActivityCommand
 	Command cobra.Command
 	WorkflowReferenceOptions
-	ActivityId      string
-	ActivityType    string
-	Identity        string
-	KeepPaused      bool
-	ResetHeartbeats bool
+	ActivityId             string
+	ActivityType           string
+	Identity               string
+	KeepPaused             bool
+	ResetAttempts          bool
+	ResetHeartbeats        bool
+	MatchAll               bool
+	Jitter                 Duration
+	RestoreOriginalOptions bool
 }
 
 func NewTemporalActivityResetCommand(cctx *CommandContext, parent *TemporalActivityCommand) *TemporalActivityResetCommand {
@@ -538,16 +542,21 @@ func NewTemporalActivityResetCommand(cctx *CommandContext, parent *TemporalActiv
 	s.Command.Use = "reset [flags]"
 	s.Command.Short = "Reset an Activity"
 	if hasHighlighting {
-		s.Command.Long = "Reset an activity. This restarts the activity as if it were first being \nscheduled. That is, it will reset both the number of attempts and the \nactivity timeout, as well as, optionally, the \nheartbeat details.\n\nIf the activity may be executing (i.e. it has not yet timed out), the \nreset will take effect the next time it fails, heartbeats, or times out.\nIf is waiting for a retry (i.e. has failed or timed out), the reset \nwill apply immediately.\n\nIf the activity is already paused, it will be unpaused by default. \nYou can specify \x1b[1mkeep_paused\x1b[0m to prevent this.\n\nIf the activity is paused and the \x1b[1mkeep_paused\x1b[0m flag is not provided, \nit will be unpaused. If the activity is paused and \x1b[1mkeep_paused\x1b[0m flag \nis provided - it will stay paused.\n\nActivities can be specified by their Activity ID or Activity Type.\n\n### Resetting activities that heartbeat {#reset-heartbeats}\n\nActivities that heartbeat will receive a Canceled failure \nthe next time they heartbeat after a reset.\n\nIf, in your Activity, you need to do any cleanup when an Activity is \nreset, handle this error and then re-throw it when you've cleaned up.\n\nIf the \x1b[1mreset_heartbeats\x1b[0m flag is set, the heartbeat details will also be cleared.\n\nSpecify the Activity Type of ID and Workflow IDs:\n\n\x1b[1mtemporal activity reset \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n    --keep-paused\n    --reset-heartbeats\x1b[0m"
+		s.Command.Long = "Reset an activity. This restarts the activity as if it were first being \nscheduled. That is, it will reset both the number of attempts and the \nactivity timeout, as well as, optionally, the \nheartbeat details.\n\nIf the activity may be executing (i.e. it has not yet timed out), the \nreset will take effect the next time it fails, heartbeats, or times out.\nIf is waiting for a retry (i.e. has failed or timed out), the reset \nwill apply immediately.\n\nIf the activity is already paused, it will be unpaused by default. \nYou can specify \x1b[1mkeep_paused\x1b[0m to prevent this.\n\nIf the activity is paused and the \x1b[1mkeep_paused\x1b[0m flag is not provided, \nit will be unpaused. If the activity is paused and \x1b[1mkeep_paused\x1b[0m flag \nis provided - it will stay paused.\n\nActivities can be specified by their Activity ID or Activity Type.\n\n### Resetting activities that heartbeat {#reset-heartbeats}\n\nActivities that heartbeat will receive a Canceled failure \nthe next time they heartbeat after a reset.\n\nIf, in your Activity, you need to do any cleanup when an Activity is \nreset, handle this error and then re-throw it when you've cleaned up.\n\nIf the \x1b[1mreset_heartbeats\x1b[0m flag is set, the heartbeat details will also be cleared.\n\nSpecify the Activity Type of ID and Workflow IDs:\n\n\x1b[1mtemporal activity reset \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n    --keep-paused\n    --reset-heartbeats\x1b[0m\n\nActivities can be reset in bulk with a visibility Query list filter. \nFor example, if you want to reset activities of type Foo:\n\n\x1b[1mtemporal activity reset \\\n    --query 'TemporalResetInfo=\"property:activityType=Foo\"'\x1b[0m"
 	} else {
-		s.Command.Long = "Reset an activity. This restarts the activity as if it were first being \nscheduled. That is, it will reset both the number of attempts and the \nactivity timeout, as well as, optionally, the \nheartbeat details.\n\nIf the activity may be executing (i.e. it has not yet timed out), the \nreset will take effect the next time it fails, heartbeats, or times out.\nIf is waiting for a retry (i.e. has failed or timed out), the reset \nwill apply immediately.\n\nIf the activity is already paused, it will be unpaused by default. \nYou can specify `keep_paused` to prevent this.\n\nIf the activity is paused and the `keep_paused` flag is not provided, \nit will be unpaused. If the activity is paused and `keep_paused` flag \nis provided - it will stay paused.\n\nActivities can be specified by their Activity ID or Activity Type.\n\n### Resetting activities that heartbeat {#reset-heartbeats}\n\nActivities that heartbeat will receive a Canceled failure \nthe next time they heartbeat after a reset.\n\nIf, in your Activity, you need to do any cleanup when an Activity is \nreset, handle this error and then re-throw it when you've cleaned up.\n\nIf the `reset_heartbeats` flag is set, the heartbeat details will also be cleared.\n\nSpecify the Activity Type of ID and Workflow IDs:\n\n```\ntemporal activity reset \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n    --keep-paused\n    --reset-heartbeats\n```"
+		s.Command.Long = "Reset an activity. This restarts the activity as if it were first being \nscheduled. That is, it will reset both the number of attempts and the \nactivity timeout, as well as, optionally, the \nheartbeat details.\n\nIf the activity may be executing (i.e. it has not yet timed out), the \nreset will take effect the next time it fails, heartbeats, or times out.\nIf is waiting for a retry (i.e. has failed or timed out), the reset \nwill apply immediately.\n\nIf the activity is already paused, it will be unpaused by default. \nYou can specify `keep_paused` to prevent this.\n\nIf the activity is paused and the `keep_paused` flag is not provided, \nit will be unpaused. If the activity is paused and `keep_paused` flag \nis provided - it will stay paused.\n\nActivities can be specified by their Activity ID or Activity Type.\n\n### Resetting activities that heartbeat {#reset-heartbeats}\n\nActivities that heartbeat will receive a Canceled failure \nthe next time they heartbeat after a reset.\n\nIf, in your Activity, you need to do any cleanup when an Activity is \nreset, handle this error and then re-throw it when you've cleaned up.\n\nIf the `reset_heartbeats` flag is set, the heartbeat details will also be cleared.\n\nSpecify the Activity Type of ID and Workflow IDs:\n\n```\ntemporal activity reset \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n    --keep-paused\n    --reset-heartbeats\n```\n\nActivities can be reset in bulk with a visibility Query list filter. \nFor example, if you want to reset activities of type Foo:\n\n```\ntemporal activity reset \\\n    --query 'TemporalResetInfo=\"property:activityType=Foo\"'\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "The Activity ID to reset. Either `activity-id` or `activity-type` must be provided, but not both.")
 	s.Command.Flags().StringVar(&s.ActivityType, "activity-type", "", "The Activity Type to reset. Either `activity-id` or `activity-type` must be provided, but not both.")
 	s.Command.Flags().StringVar(&s.Identity, "identity", "", "The identity of the user or client submitting this request.")
 	s.Command.Flags().BoolVar(&s.KeepPaused, "keep-paused", false, "If the activity was paused, it will stay paused.")
+	s.Command.Flags().BoolVar(&s.ResetAttempts, "reset-attempts", false, "Also reset the activity attempts.")
 	s.Command.Flags().BoolVar(&s.ResetHeartbeats, "reset-heartbeats", false, "Clear the Activity's heartbeat details.")
+	s.Command.Flags().BoolVar(&s.MatchAll, "match-all", false, "Every paused activity should be unpaused. This flag is ignored if activity-type is provided. Can only be used with --query.")
+	s.Jitter = 0
+	s.Command.Flags().VarP(&s.Jitter, "jitter", "j", "The activity will reset at random a time within the specified duration. Can only be used with --query.")
+	s.Command.Flags().BoolVar(&s.RestoreOriginalOptions, "restore-original-options", false, "Restore the original options of the activity. Can only be used with --query.")
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -604,6 +613,8 @@ type TemporalActivityUpdateOptionsCommand struct {
 	Command cobra.Command
 	WorkflowReferenceOptions
 	ActivityId              string
+	ActivityType            string
+	MatchAll                bool
 	TaskQueue               string
 	ScheduleToCloseTimeout  Duration
 	ScheduleToStartTimeout  Duration
@@ -614,6 +625,8 @@ type TemporalActivityUpdateOptionsCommand struct {
 	RetryBackoffCoefficient float32
 	RetryMaximumAttempts    int
 	Identity                string
+	Jitter                  Duration
+	RestoreOriginalOptions  bool
 }
 
 func NewTemporalActivityUpdateOptionsCommand(cctx *CommandContext, parent *TemporalActivityCommand) *TemporalActivityUpdateOptionsCommand {
@@ -623,13 +636,14 @@ func NewTemporalActivityUpdateOptionsCommand(cctx *CommandContext, parent *Tempo
 	s.Command.Use = "update-options [flags]"
 	s.Command.Short = "Update Activity options"
 	if hasHighlighting {
-		s.Command.Long = "Update the options of a running Activity that were passed into it from\n a Workflow. Updates are incremental, only changing the specified \n options.\n\nFor example:\n\n\x1b[1mtemporal activity update-options \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --task-queue NewTaskQueueName \\\n    --schedule-to-close-timeout DURATION \\\n    --schedule-to-start-timeout DURATION \\\n    --start-to-close-timeout DURATION \\\n    --heartbeat-timeout DURATION \\\n    --retry-initial-interval DURATION \\\n    --retry-maximum-interval DURATION \\\n    --retry-backoff-coefficient NewBackoffCoefficient \\\n    --retry-maximum-attempts NewMaximumAttempts\x1b[0m\n\nYou may follow this command with \x1b[1mtemporal activity reset\x1b[0m, and the new values will apply after the reset."
+		s.Command.Long = "Update the options of a running Activity that were passed into it from\n a Workflow. Updates are incremental, only changing the specified \n options.\n\nFor example:\n\n\x1b[1mtemporal activity update-options \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --task-queue NewTaskQueueName \\\n    --schedule-to-close-timeout DURATION \\\n    --schedule-to-start-timeout DURATION \\\n    --start-to-close-timeout DURATION \\\n    --heartbeat-timeout DURATION \\\n    --retry-initial-interval DURATION \\\n    --retry-maximum-interval DURATION \\\n    --retry-backoff-coefficient NewBackoffCoefficient \\\n    --retry-maximum-attempts NewMaximumAttempts\x1b[0m\n\nYou may follow this command with \x1b[1mtemporal activity reset\x1b[0m, and the new values will apply after the reset.\n\nActivity options can be updated in bulk with a visibility Query list filter. \nFor example, if you want to update options for activities of type Foo, do:\n\n\x1b[1mtemporal activity update-options \\\n    --query 'TemporalPauseInfo=\"property:activityType=Foo\"'\n    ...\x1b[0m"
 	} else {
-		s.Command.Long = "Update the options of a running Activity that were passed into it from\n a Workflow. Updates are incremental, only changing the specified \n options.\n\nFor example:\n\n```\ntemporal activity update-options \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --task-queue NewTaskQueueName \\\n    --schedule-to-close-timeout DURATION \\\n    --schedule-to-start-timeout DURATION \\\n    --start-to-close-timeout DURATION \\\n    --heartbeat-timeout DURATION \\\n    --retry-initial-interval DURATION \\\n    --retry-maximum-interval DURATION \\\n    --retry-backoff-coefficient NewBackoffCoefficient \\\n    --retry-maximum-attempts NewMaximumAttempts\n```\n\nYou may follow this command with `temporal activity reset`, and the new values will apply after the reset."
+		s.Command.Long = "Update the options of a running Activity that were passed into it from\n a Workflow. Updates are incremental, only changing the specified \n options.\n\nFor example:\n\n```\ntemporal activity update-options \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --task-queue NewTaskQueueName \\\n    --schedule-to-close-timeout DURATION \\\n    --schedule-to-start-timeout DURATION \\\n    --start-to-close-timeout DURATION \\\n    --heartbeat-timeout DURATION \\\n    --retry-initial-interval DURATION \\\n    --retry-maximum-interval DURATION \\\n    --retry-backoff-coefficient NewBackoffCoefficient \\\n    --retry-maximum-attempts NewMaximumAttempts\n```\n\nYou may follow this command with `temporal activity reset`, and the new values will apply after the reset.\n\nActivity options can be updated in bulk with a visibility Query list filter. \nFor example, if you want to update options for activities of type Foo, do:\n\n```\ntemporal activity update-options \\\n    --query 'TemporalPauseInfo=\"property:activityType=Foo\"'\n    ...\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.ActivityId, "activity-id", "", "Activity ID. Required.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "activity-id")
+	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "The Activity ID to update options. Can only be used without --query or --match-all. Either `activity-id` or `activity-type` must be provided, but not both.")
+	s.Command.Flags().StringVarP(&s.ActivityType, "activity-type", "g", "", "Activities of this Type will unpause. Can only be used without --match-all. Either `activity-id` or `activity-type` must be provided, but not both.")
+	s.Command.Flags().BoolVar(&s.MatchAll, "match-all", false, "Every paused activity should be unpaused. This flag is ignored if activity-type is provided. Can only be used with --query.")
 	s.Command.Flags().StringVar(&s.TaskQueue, "task-queue", "", "Name of the task queue for the Activity.")
 	s.ScheduleToCloseTimeout = 0
 	s.Command.Flags().Var(&s.ScheduleToCloseTimeout, "schedule-to-close-timeout", "Indicates how long the caller is willing to wait for an activity completion. Limits how long retries will be attempted.")
@@ -646,6 +660,9 @@ func NewTemporalActivityUpdateOptionsCommand(cctx *CommandContext, parent *Tempo
 	s.Command.Flags().Float32Var(&s.RetryBackoffCoefficient, "retry-backoff-coefficient", 0, "Coefficient used to calculate the next retry interval. The next retry interval is previous interval multiplied by the backoff coefficient. Must be 1 or larger.")
 	s.Command.Flags().IntVar(&s.RetryMaximumAttempts, "retry-maximum-attempts", 0, "Maximum number of attempts. When exceeded the retries stop even if not expired yet. Setting this value to 1 disables retries. Setting this value to 0 means unlimited attempts(up to the timeouts).")
 	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of the user submitting this request.")
+	s.Jitter = 0
+	s.Command.Flags().VarP(&s.Jitter, "jitter", "j", "The activity will start at random a time within the specified duration. Can only be used with --query.")
+	s.Command.Flags().BoolVar(&s.RestoreOriginalOptions, "restore-original-options", false, "Restore the original options of the activity. Can only be used with --query.")
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {

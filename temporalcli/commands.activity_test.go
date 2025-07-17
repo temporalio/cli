@@ -436,3 +436,89 @@ func (s *SharedServerSuite) TestUnpauseActivity_BatchSuccess() {
 	// unblock the activities to let them finish
 	failActivity.Store(false)
 }
+
+
+func (s *SharedServerSuite) TestResetActivity_BatchSuccess() {
+	var failActivity atomic.Bool
+	failActivity.Store(true)
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		time.Sleep(100 * time.Millisecond)
+		if failActivity.Load() {
+			return nil, fmt.Errorf("update workflow received non-float input")
+		}
+		return nil, nil
+	})
+
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
+		// override the activity options to allow activity to constantly fail
+		ctx = workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
+			ActivityID:          activityId,
+			StartToCloseTimeout: 1 * time.Minute,
+			RetryPolicy: &temporal.RetryPolicy{
+				MaximumAttempts: 0,
+			},
+		})
+		var res any
+		err := workflow.ExecuteActivity(ctx, DevActivity).Get(ctx, &res)
+		return res, err
+	})
+
+	run1 := waitWorkflowStarted(s)
+	run2 := waitWorkflowStarted(s)
+
+	// Wait for all to appear in list
+	query := fmt.Sprintf("WorkflowId = '%s' OR WorkflowId = '%s'", run1.GetID(), run2.GetID())
+	s.Eventually(func() bool {
+		resp, err := s.Client.ListWorkflow(s.Context, &workflowservice.ListWorkflowExecutionsRequest{
+			Query: query,
+		})
+		s.NoError(err)
+		return len(resp.Executions) == 2
+	}, 3*time.Second, 100*time.Millisecond)
+
+	// Pause the activities
+	res := sendActivityCommand("pause", run1, s, "--activity-id", activityId)
+	s.NoError(res.Err)
+	res = sendActivityCommand("pause", run2, s, "--activity-id", activityId)
+	s.NoError(res.Err)
+
+	// wait for activities to be paused
+	checkActivitiesPaused(s, run1)
+	checkActivitiesPaused(s, run2)
+
+	var lastRequestLock sync.Mutex
+	var startBatchRequest *workflowservice.StartBatchOperationRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string, req, reply any,
+			cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption,
+		) error {
+			lastRequestLock.Lock()
+			if r, ok := req.(*workflowservice.StartBatchOperationRequest); ok {
+				startBatchRequest = r
+			}
+			lastRequestLock.Unlock()
+			return invoker(ctx, method, req, reply, cc, opts...)
+		}),
+	)
+
+	// Send reset activity unpause
+	cmdRes := s.Execute("activity", "reset",
+		"--rps", "1",
+		"--address", s.Address(),
+		"--query", query,
+		"--reason", "unpause-test",
+		"--yes", "--match-all",
+	)
+	s.NoError(cmdRes.Err)
+	s.NotEmpty(startBatchRequest.JobId)
+
+	// check activities are running
+	checkActivitiesRunning(s, run1)
+	checkActivitiesRunning(s, run2)
+
+	// unblock the activities to let them finish
+	failActivity.Store(false)
+}

@@ -156,39 +156,82 @@ func (c *TemporalActivityUpdateOptionsCommand) run(cctx *CommandContext, args []
 		updatePath = append(updatePath, "retry_policy.maximum_attempts")
 	}
 
-	result, err := cl.WorkflowService().UpdateActivityOptions(cctx, &workflowservice.UpdateActivityOptionsRequest{
-		Namespace: c.Parent.Namespace,
-		Execution: &common.WorkflowExecution{
-			WorkflowId: c.WorkflowId,
-			RunId:      c.RunId,
-		},
-		Activity:        &workflowservice.UpdateActivityOptionsRequest_Id{Id: c.ActivityId},
-		ActivityOptions: activityOptions,
-		UpdateMask: &fieldmaskpb.FieldMask{
-			Paths: updatePath,
-		},
-		Identity: c.Identity,
+	opts := SingleWorkflowOrBatchOptions{
+		WorkflowId: c.WorkflowId,
+		RunId:      c.RunId,
+		Query:      c.Query,
+		Reason:     c.Reason,
+		Yes:        c.Yes,
+		Rps:        c.Rps,
+	}
+
+	exec, batchReq, err := opts.workflowExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{
+		// You're allowed to specify a reason when terminating a workflow
+		AllowReasonWithWorkflowID: true,
 	})
 	if err != nil {
-		return fmt.Errorf("unable to update Activity options: %w", err)
+		return err
 	}
 
-	updatedOptions := updateOptionsDescribe{
-		TaskQueue: result.GetActivityOptions().TaskQueue.GetName(),
+	if exec != nil {
+		result, err := cl.WorkflowService().UpdateActivityOptions(cctx, &workflowservice.UpdateActivityOptionsRequest{
+			Namespace: c.Parent.Namespace,
+			Execution: &common.WorkflowExecution{
+				WorkflowId: c.WorkflowId,
+				RunId:      c.RunId,
+			},
+			Activity:        &workflowservice.UpdateActivityOptionsRequest_Id{Id: c.ActivityId},
+			ActivityOptions: activityOptions,
+			UpdateMask: &fieldmaskpb.FieldMask{
+				Paths: updatePath,
+			},
+			Identity: c.Identity,
+		})
+		if err != nil {
+			return fmt.Errorf("unable to update Activity options: %w", err)
+		}
 
-		ScheduleToCloseTimeout: result.GetActivityOptions().ScheduleToCloseTimeout.AsDuration(),
-		ScheduleToStartTimeout: result.GetActivityOptions().ScheduleToStartTimeout.AsDuration(),
-		StartToCloseTimeout:    result.GetActivityOptions().StartToCloseTimeout.AsDuration(),
-		HeartbeatTimeout:       result.GetActivityOptions().HeartbeatTimeout.AsDuration(),
+		updatedOptions := updateOptionsDescribe{
+			TaskQueue: result.GetActivityOptions().TaskQueue.GetName(),
 
-		InitialInterval:    result.GetActivityOptions().RetryPolicy.InitialInterval.AsDuration(),
-		BackoffCoefficient: result.GetActivityOptions().RetryPolicy.BackoffCoefficient,
-		MaximumInterval:    result.GetActivityOptions().RetryPolicy.MaximumInterval.AsDuration(),
-		MaximumAttempts:    result.GetActivityOptions().RetryPolicy.MaximumAttempts,
+			ScheduleToCloseTimeout: result.GetActivityOptions().ScheduleToCloseTimeout.AsDuration(),
+			ScheduleToStartTimeout: result.GetActivityOptions().ScheduleToStartTimeout.AsDuration(),
+			StartToCloseTimeout:    result.GetActivityOptions().StartToCloseTimeout.AsDuration(),
+			HeartbeatTimeout:       result.GetActivityOptions().HeartbeatTimeout.AsDuration(),
+
+			InitialInterval:    result.GetActivityOptions().RetryPolicy.InitialInterval.AsDuration(),
+			BackoffCoefficient: result.GetActivityOptions().RetryPolicy.BackoffCoefficient,
+			MaximumInterval:    result.GetActivityOptions().RetryPolicy.MaximumInterval.AsDuration(),
+			MaximumAttempts:    result.GetActivityOptions().RetryPolicy.MaximumAttempts,
+		}
+
+		_ = cctx.Printer.PrintStructured(updatedOptions, printer.StructuredOptions{})
+	} else {
+		updateActivitiesOperation := &batch.BatchOperationUpdateActivityOptions{
+			Identity: c.Identity,
+			Activity: &batch.BatchOperationUpdateActivityOptions_Type{Type: c.ActivityType},
+			UpdateMask: &fieldmaskpb.FieldMask{
+				Paths: updatePath,
+			},
+			RestoreOriginal: c.RestoreOriginalOptions,
+		}
+
+		if c.ActivityType != "" {
+			updateActivitiesOperation.Activity = &batch.BatchOperationUpdateActivityOptions_Type{Type: c.ActivityType}
+		} else if c.MatchAll == true {
+			updateActivitiesOperation.Activity = &batch.BatchOperationUpdateActivityOptions_MatchAll{MatchAll: true}
+		} else {
+			return fmt.Errorf("either Activity Type must be provided or MatchAll must be set to true")
+		}
+
+		batchReq.Operation = &workflowservice.StartBatchOperationRequest_UpdateOptionsActivitiesOperation{
+			UpdateOptionsActivitiesOperation: updateActivitiesOperation,
+		}
+
+		if err := startBatchJob(cctx, cl, batchReq); err != nil {
+			return err
+		}
 	}
-
-	_ = cctx.Printer.PrintStructured(updatedOptions, printer.StructuredOptions{})
-
 	return nil
 }
 
@@ -279,7 +322,7 @@ func (c *TemporalActivityUnpauseCommand) run(cctx *CommandContext, args []string
 
 		_, err = cl.WorkflowService().UnpauseActivity(cctx, request)
 		if err != nil {
-			return fmt.Errorf("unable to uppause an Activity: %w", err)
+			return fmt.Errorf("unable to unpause an Activity: %w", err)
 		}
 	} else { // batch operation
 		unpauseActivitiesOperation := &batch.BatchOperationUnpauseActivities{
@@ -315,45 +358,88 @@ func (c *TemporalActivityResetCommand) run(cctx *CommandContext, args []string) 
 	}
 	defer cl.Close()
 
-	request := &workflowservice.ResetActivityRequest{
-		Namespace: c.Parent.Namespace,
-		Execution: &common.WorkflowExecution{
-			WorkflowId: c.WorkflowId,
-			RunId:      c.RunId,
-		},
-		Identity:       c.Identity,
-		KeepPaused:     c.KeepPaused,
-		ResetHeartbeat: c.ResetHeartbeats,
+	opts := SingleWorkflowOrBatchOptions{
+		WorkflowId: c.WorkflowId,
+		RunId:      c.RunId,
+		Query:      c.Query,
+		Reason:     c.Reason,
+		Yes:        c.Yes,
+		Rps:        c.Rps,
 	}
 
-	if c.ActivityId != "" && c.ActivityType != "" {
-		return fmt.Errorf("either Activity Type or Activity Id, but not both")
-	}
-
-	if c.ActivityType != "" {
-		request.Activity = &workflowservice.ResetActivityRequest_Type{Type: c.ActivityType}
-	} else if c.ActivityId != "" {
-		request.Activity = &workflowservice.ResetActivityRequest_Id{Id: c.ActivityId}
-	} else {
-		return fmt.Errorf("either Activity Type or Activity Id must be provided")
-	}
-
-	resp, err := cl.WorkflowService().ResetActivity(cctx, request)
+	exec, batchReq, err := opts.workflowExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{
+		// You're allowed to specify a reason when terminating a workflow
+		AllowReasonWithWorkflowID: true,
+	})
 	if err != nil {
-		return fmt.Errorf("unable to reset an Activity: %w", err)
+		return err
 	}
 
-	resetResponse := struct {
-		KeepPaused      bool `json:"keepPaused"`
-		ResetHeartbeats bool `json:"resetHeartbeats"`
-		ServerResponse  bool `json:"-"`
-	}{
-		ServerResponse:  resp != nil,
-		KeepPaused:      c.KeepPaused,
-		ResetHeartbeats: c.ResetHeartbeats,
-	}
+	if exec != nil { // single workflow operation
+		request := &workflowservice.ResetActivityRequest{
+			Namespace: c.Parent.Namespace,
+			Execution: &common.WorkflowExecution{
+				WorkflowId: c.WorkflowId,
+				RunId:      c.RunId,
+			},
+			Identity:       c.Identity,
+			KeepPaused:     c.KeepPaused,
+			ResetHeartbeat: c.ResetHeartbeats,
+		}
 
-	_ = cctx.Printer.PrintStructured(resetResponse, printer.StructuredOptions{})
+		if c.ActivityId != "" && c.ActivityType != "" {
+			return fmt.Errorf("either Activity Type or Activity Id, but not both")
+		}
+
+		if c.ActivityType != "" {
+			request.Activity = &workflowservice.ResetActivityRequest_Type{Type: c.ActivityType}
+		} else if c.ActivityId != "" {
+			request.Activity = &workflowservice.ResetActivityRequest_Id{Id: c.ActivityId}
+		} else {
+			return fmt.Errorf("either Activity Type or Activity Id must be provided")
+		}
+
+		resp, err := cl.WorkflowService().ResetActivity(cctx, request)
+		if err != nil {
+			return fmt.Errorf("unable to reset an Activity: %w", err)
+		}
+
+		resetResponse := struct {
+			KeepPaused      bool `json:"keepPaused"`
+			ResetHeartbeats bool `json:"resetHeartbeats"`
+			ServerResponse  bool `json:"-"`
+		}{
+			ServerResponse:  resp != nil,
+			KeepPaused:      c.KeepPaused,
+			ResetHeartbeats: c.ResetHeartbeats,
+		}
+
+		_ = cctx.Printer.PrintStructured(resetResponse, printer.StructuredOptions{})
+	} else { // batch operation
+		resetActivitiesOperation := &batch.BatchOperationResetActivities{
+			Identity:               clientIdentity(),
+			ResetAttempts:          c.ResetAttempts,
+			ResetHeartbeat:         c.ResetHeartbeats,
+			KeepPaused:             c.KeepPaused,
+			Jitter:                 durationpb.New(c.Jitter.Duration()),
+			RestoreOriginalOptions: c.RestoreOriginalOptions,
+		}
+		if c.ActivityType != "" {
+			resetActivitiesOperation.Activity = &batch.BatchOperationResetActivities_Type{Type: c.ActivityType}
+		} else if c.MatchAll == true {
+			resetActivitiesOperation.Activity = &batch.BatchOperationResetActivities_MatchAll{MatchAll: true}
+		} else {
+			return fmt.Errorf("either Activity Type must be provided or MatchAll must be set to true")
+		}
+
+		batchReq.Operation = &workflowservice.StartBatchOperationRequest_ResetActivitiesOperation{
+			ResetActivitiesOperation: resetActivitiesOperation,
+		}
+
+		if err := startBatchJob(cctx, cl, batchReq); err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
