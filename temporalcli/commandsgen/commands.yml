@@ -361,7 +361,7 @@ commands:
       You may follow this command with `temporal activity reset`, and the new values will apply after the reset.
 
       Activity options can be updated in bulk with a visibility Query list filter. 
-      For example, if you want to update options for activities of type Foo, do:
+      For example, if you want to reset for activities of type Foo, do:
 
       ```
       temporal activity update-options \
@@ -379,11 +379,11 @@ commands:
         short: g
         type: string
         description: |
-          Activities of this Type will unpause. Can only be used without --match-all. Either `activity-id` or `activity-type` must be provided, but not both.
+          Activities of this Type will be updated. Can only be used without --match-all. Either `activity-id` or `activity-type` must be provided, but not both.
       - name: match-all
         type: bool
         description: |
-          Every paused activity should be unpaused. This flag is ignored if
+          Every activity should be updated. This flag is ignored if
           activity-type is provided. Can only be used with --query.
       - name: task-queue
         type: string
@@ -440,17 +440,9 @@ commands:
       - name: identity
         type: string
         description: Identity of the user submitting this request.
-      - name: jitter
-        type: duration
-        short: j
-        description: |
-          The activity will start at random a time within the specified duration.
-          Can only be used with --query.
       - name: restore-original-options
         type: bool
-        description: |
-          Restore the original options of the activity.
-          Can only be used with --query.
+        description: Restore the original options of the activity.
     option-sets:
       - workflow-reference
 
@@ -546,7 +538,7 @@ commands:
         description: The identity of the user or client submitting this request.
       - name: reset-attempts
         type: bool
-        description: Also reset the activity attempts.
+        description: Reset the activity attempts.
       - name: reset-heartbeats
         type: bool
         description: |
@@ -630,14 +622,15 @@ commands:
         description: If the activity was paused, it will stay paused.
       - name: reset-attempts
         type: bool
-        description: Also reset the activity attempts.
+        description: Reset the activity attempts.
       - name: reset-heartbeats
         type: bool
-        description: Clear the Activity's heartbeat details.
+        description: |
+          Reset the Activity's heartbeats. Only works with --reset-attempts.
       - name: match-all
         type: bool
         description: |
-          Every paused activity should be unpaused. This flag is ignored if
+          Every activity should be reset. This flag is ignored if
           activity-type is provided. Can only be used with --query.
       - name: jitter
         type: duration
@@ -649,7 +642,6 @@ commands:
         type: bool
         description: |
           Restore the original options of the activity.
-          Can only be used with --query.
     option-sets:
       - workflow-reference
 
