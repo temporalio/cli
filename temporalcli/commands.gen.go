@@ -33,6 +33,7 @@ type ClientOptions struct {
 	CodecEndpoint              string
 	CodecAuth                  string
 	CodecHeader                []string
+	Identity                   string
 }
 
 func (v *ClientOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
@@ -52,6 +53,7 @@ func (v *ClientOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
 	f.StringVar(&v.CodecEndpoint, "codec-endpoint", "", "Remote Codec Server endpoint.")
 	f.StringVar(&v.CodecAuth, "codec-auth", "", "Authorization header for Codec Server requests.")
 	f.StringArrayVar(&v.CodecHeader, "codec-header", nil, "HTTP headers for requests to codec server. Format as a `KEY=VALUE` pair. May be passed multiple times to set multiple headers.")
+	f.StringVar(&v.Identity, "identity", "", "The identity of the user or client submitting this request.")
 }
 
 type OverlapPolicyOptions struct {
@@ -3832,6 +3834,7 @@ type TemporalWorkflowUpdateDescribeCommand struct {
 	Parent  *TemporalWorkflowUpdateCommand
 	Command cobra.Command
 	UpdateTargetingOptions
+	Identity string
 }
 
 func NewTemporalWorkflowUpdateDescribeCommand(cctx *CommandContext, parent *TemporalWorkflowUpdateCommand) *TemporalWorkflowUpdateDescribeCommand {
@@ -3846,6 +3849,7 @@ func NewTemporalWorkflowUpdateDescribeCommand(cctx *CommandContext, parent *Temp
 		s.Command.Long = "Given a Workflow Execution and an Update ID, return information about its current status, including\na result if it has finished.\n\n```\ntemporal workflow update describe \\\n    --workflow-id YourWorkflowId \\\n    --update-id YourUpdateId\n```"
 	}
 	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Identity, "identity", "", "The identity of the user or client submitting this request.")
 	s.UpdateTargetingOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {

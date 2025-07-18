@@ -50,7 +50,7 @@ func (c *TemporalWorkflowCancelCommand) run(cctx *CommandContext, args []string)
 	} else { // batchReq != nil
 		batchReq.Operation = &workflowservice.StartBatchOperationRequest_CancellationOperation{
 			CancellationOperation: &batch.BatchOperationCancellation{
-				Identity: clientIdentity(),
+				Identity: clientIdentity(c.Parent.Identity),
 			},
 		}
 		if err := startBatchJob(cctx, cl, batchReq); err != nil {
@@ -85,7 +85,7 @@ func (c *TemporalWorkflowDeleteCommand) run(cctx *CommandContext, args []string)
 	} else { // batchReq != nil
 		batchReq.Operation = &workflowservice.StartBatchOperationRequest_DeletionOperation{
 			DeletionOperation: &batch.BatchOperationDeletion{
-				Identity: clientIdentity(),
+				Identity: clientIdentity(c.Parent.Identity),
 			},
 		}
 		if err := startBatchJob(cctx, cl, batchReq); err != nil {
@@ -174,7 +174,7 @@ func (c *TemporalWorkflowUpdateOptionsCommand) run(cctx *CommandContext, args []
 
 		batchReq.Operation = &workflowservice.StartBatchOperationRequest_UpdateWorkflowOptionsOperation{
 			UpdateWorkflowOptionsOperation: &batch.BatchOperationUpdateWorkflowExecutionOptions{
-				Identity: clientIdentity(),
+				Identity: clientIdentity(c.Parent.Identity),
 				WorkflowExecutionOptions: &workflowpb.WorkflowExecutionOptions{
 					VersioningOverride: protoVerOverride,
 				},
@@ -223,7 +223,7 @@ func (c *TemporalWorkflowSignalCommand) run(cctx *CommandContext, args []string)
 			WorkflowExecution: &common.WorkflowExecution{WorkflowId: c.WorkflowId, RunId: c.RunId},
 			SignalName:        c.Name,
 			Input:             input,
-			Identity:          clientIdentity(),
+			Identity:          clientIdentity(c.Parent.Identity),
 		})
 		if err != nil {
 			return fmt.Errorf("failed signalling workflow: %w", err)
@@ -234,7 +234,7 @@ func (c *TemporalWorkflowSignalCommand) run(cctx *CommandContext, args []string)
 			SignalOperation: &batch.BatchOperationSignal{
 				Signal:   c.Name,
 				Input:    input,
-				Identity: clientIdentity(),
+				Identity: clientIdentity(c.Parent.Identity),
 			},
 		}
 		if err := startBatchJob(cctx, cl, batchReq); err != nil {
@@ -287,7 +287,7 @@ func (c *TemporalWorkflowTerminateCommand) run(cctx *CommandContext, _ []string)
 	} else { // batchReq != nil
 		batchReq.Operation = &workflowservice.StartBatchOperationRequest_TerminationOperation{
 			TerminationOperation: &batch.BatchOperationTermination{
-				Identity: clientIdentity(),
+				Identity: clientIdentity(c.Parent.Identity),
 			},
 		}
 		if err := startBatchJob(cctx, cl, batchReq); err != nil {
@@ -386,7 +386,7 @@ func (c *TemporalWorkflowUpdateDescribeCommand) run(cctx *CommandContext, args [
 			},
 			UpdateId: c.UpdateId,
 		},
-		Identity: clientIdentity(),
+		Identity: clientIdentity(c.Identity),
 		// WaitPolicy omitted intentionally for nonblocking
 	}
 	resp, err := cl.WorkflowService().PollWorkflowExecutionUpdate(cctx, pollReq)

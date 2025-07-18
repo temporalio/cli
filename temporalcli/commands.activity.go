@@ -50,7 +50,7 @@ func (c *TemporalActivityCompleteCommand) run(cctx *CommandContext, args []strin
 		RunId:      c.RunId,
 		ActivityId: c.ActivityId,
 		Result:     resultPayloads,
-		Identity:   c.Identity,
+		Identity:   clientIdentity(c.Identity),
 	})
 	if err != nil {
 		return fmt.Errorf("unable to complete Activity: %w", err)
@@ -86,7 +86,7 @@ func (c *TemporalActivityFailCommand) run(cctx *CommandContext, args []string) e
 				Details:      detailPayloads,
 			}},
 		},
-		Identity: c.Identity,
+		Identity: clientIdentity(c.Identity),
 	})
 	if err != nil {
 		return fmt.Errorf("unable to fail Activity: %w", err)
@@ -165,10 +165,7 @@ func (c *TemporalActivityUpdateOptionsCommand) run(cctx *CommandContext, args []
 		Rps:        c.Rps,
 	}
 
-	exec, batchReq, err := opts.workflowExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{
-		// You're allowed to specify a reason when terminating a workflow
-		AllowReasonWithWorkflowID: true,
-	})
+	exec, batchReq, err := opts.workflowExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{})
 	if err != nil {
 		return err
 	}
@@ -185,7 +182,7 @@ func (c *TemporalActivityUpdateOptionsCommand) run(cctx *CommandContext, args []
 			UpdateMask: &fieldmaskpb.FieldMask{
 				Paths: updatePath,
 			},
-			Identity: c.Identity,
+			Identity: clientIdentity(c.Identity),
 		})
 		if err != nil {
 			return fmt.Errorf("unable to update Activity options: %w", err)
@@ -208,7 +205,7 @@ func (c *TemporalActivityUpdateOptionsCommand) run(cctx *CommandContext, args []
 		_ = cctx.Printer.PrintStructured(updatedOptions, printer.StructuredOptions{})
 	} else {
 		updateActivitiesOperation := &batch.BatchOperationUpdateActivityOptions{
-			Identity: c.Identity,
+			Identity: clientIdentity(c.Identity),
 			Activity: &batch.BatchOperationUpdateActivityOptions_Type{Type: c.ActivityType},
 			UpdateMask: &fieldmaskpb.FieldMask{
 				Paths: updatePath,
@@ -248,7 +245,7 @@ func (c *TemporalActivityPauseCommand) run(cctx *CommandContext, args []string) 
 			WorkflowId: c.WorkflowId,
 			RunId:      c.RunId,
 		},
-		Identity: c.Identity,
+		Identity: clientIdentity(c.Identity),
 	}
 
 	if c.ActivityId != "" && c.ActivityType != "" {
@@ -287,10 +284,7 @@ func (c *TemporalActivityUnpauseCommand) run(cctx *CommandContext, args []string
 		Rps:        c.Rps,
 	}
 
-	exec, batchReq, err := opts.workflowExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{
-		// You're allowed to specify a reason when terminating a workflow
-		AllowReasonWithWorkflowID: true,
-	})
+	exec, batchReq, err := opts.workflowExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{})
 	if err != nil {
 		return err
 	}
@@ -305,7 +299,7 @@ func (c *TemporalActivityUnpauseCommand) run(cctx *CommandContext, args []string
 			ResetAttempts:  c.ResetAttempts,
 			ResetHeartbeat: c.ResetHeartbeats,
 			Jitter:         durationpb.New(c.Jitter.Duration()),
-			Identity:       c.Identity,
+			Identity:       clientIdentity(c.Identity),
 		}
 
 		if c.ActivityId != "" && c.ActivityType != "" {
@@ -326,7 +320,7 @@ func (c *TemporalActivityUnpauseCommand) run(cctx *CommandContext, args []string
 		}
 	} else { // batch operation
 		unpauseActivitiesOperation := &batch.BatchOperationUnpauseActivities{
-			Identity:       clientIdentity(),
+			Identity:       clientIdentity(c.Identity),
 			ResetAttempts:  c.ResetAttempts,
 			ResetHeartbeat: c.ResetHeartbeats,
 			Jitter:         durationpb.New(c.Jitter.Duration()),
@@ -367,10 +361,7 @@ func (c *TemporalActivityResetCommand) run(cctx *CommandContext, args []string) 
 		Rps:        c.Rps,
 	}
 
-	exec, batchReq, err := opts.workflowExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{
-		// You're allowed to specify a reason when terminating a workflow
-		AllowReasonWithWorkflowID: true,
-	})
+	exec, batchReq, err := opts.workflowExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{})
 	if err != nil {
 		return err
 	}
@@ -382,7 +373,7 @@ func (c *TemporalActivityResetCommand) run(cctx *CommandContext, args []string) 
 				WorkflowId: c.WorkflowId,
 				RunId:      c.RunId,
 			},
-			Identity:       c.Identity,
+			Identity:       clientIdentity(c.Identity),
 			KeepPaused:     c.KeepPaused,
 			ResetHeartbeat: c.ResetHeartbeats,
 		}
@@ -417,7 +408,7 @@ func (c *TemporalActivityResetCommand) run(cctx *CommandContext, args []string) 
 		_ = cctx.Printer.PrintStructured(resetResponse, printer.StructuredOptions{})
 	} else { // batch operation
 		resetActivitiesOperation := &batch.BatchOperationResetActivities{
-			Identity:               clientIdentity(),
+			Identity:               clientIdentity(c.Identity),
 			ResetAttempts:          c.ResetAttempts,
 			ResetHeartbeat:         c.ResetHeartbeats,
 			KeepPaused:             c.KeepPaused,

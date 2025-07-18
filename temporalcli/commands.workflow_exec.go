@@ -173,7 +173,7 @@ func (c *TemporalWorkflowSignalWithStartCommand) run(cctx *CommandContext, _ []s
 			WorkflowTaskTimeout:      durationpb.New(wfStartOpts.WorkflowTaskTimeout),
 			SignalName:               c.SignalName,
 			SignalInput:              signalInput,
-			Identity:                 clientIdentity(),
+			Identity:                 clientIdentity(c.Parent.Identity),
 			RetryPolicy:              retryPolicy,
 			CronSchedule:             wfStartOpts.CronSchedule,
 			Memo:                     memo,

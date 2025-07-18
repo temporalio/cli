@@ -3862,6 +3862,10 @@ commands:
           --workflow-id YourWorkflowId \
           --update-id YourUpdateId
       ```
+    options: 
+      - name: identity
+        type: string
+        description: The identity of the user or client submitting this request.
     option-sets:
       - update-targeting
 
@@ -4172,6 +4176,9 @@ option-sets:
           HTTP headers for requests to codec server.
           Format as a `KEY=VALUE` pair.
           May be passed multiple times to set multiple headers.
+      - name: identity
+        type: string
+        description: The identity of the user or client submitting this request.
 
   - name: overlap-policy
     options:

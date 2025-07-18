@@ -173,7 +173,7 @@ func (c *ClientOptions) dialClient(cctx *CommandContext) (client.Client, error) 
 		return nil, fmt.Errorf("failed creating client options: %w", err)
 	}
 	clientOptions.Logger = log.NewStructuredLogger(cctx.Logger)
-	clientOptions.Identity = clientIdentity()
+	clientOptions.Identity = clientIdentity(c.Identity)
 	// We do not put codec on data converter here, it is applied via
 	// interceptor. Same for failure conversion.
 	// XXX: If this is altered to be more dynamic, have to also update
@@ -255,7 +255,10 @@ func payloadCodecInterceptor(
 	)
 }
 
-func clientIdentity() string {
+func clientIdentity(providedIdentity string) string {
+	if providedIdentity != "" {
+		return providedIdentity
+	}
 	hostname, err := os.Hostname()
 	if err != nil {
 		hostname = "unknown-host"
