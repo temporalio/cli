@@ -218,14 +218,14 @@ func (c *TemporalActivityUpdateOptionsCommand) run(cctx *CommandContext, args []
 
 		if c.ActivityType != "" {
 			updateActivitiesOperation.Activity = &batch.BatchOperationUpdateActivityOptions_Type{Type: c.ActivityType}
-		} else if c.MatchAll == true {
+		} else if c.MatchAll {
 			updateActivitiesOperation.Activity = &batch.BatchOperationUpdateActivityOptions_MatchAll{MatchAll: true}
 		} else {
 			return fmt.Errorf("either Activity Type must be provided or MatchAll must be set to true")
 		}
 
-		batchReq.Operation = &workflowservice.StartBatchOperationRequest_UpdateOptionsActivitiesOperation{
-			UpdateOptionsActivitiesOperation: updateActivitiesOperation,
+		batchReq.Operation = &workflowservice.StartBatchOperationRequest_UpdateActivityOptionsOperation{
+			UpdateActivityOptionsOperation: updateActivitiesOperation,
 		}
 
 		if err := startBatchJob(cctx, cl, batchReq); err != nil {
@@ -333,7 +333,7 @@ func (c *TemporalActivityUnpauseCommand) run(cctx *CommandContext, args []string
 		}
 		if c.ActivityType != "" {
 			unpauseActivitiesOperation.Activity = &batch.BatchOperationUnpauseActivities_Type{Type: c.ActivityType}
-		} else if c.MatchAll == true {
+		} else if c.MatchAll {
 			unpauseActivitiesOperation.Activity = &batch.BatchOperationUnpauseActivities_MatchAll{MatchAll: true}
 		} else {
 			return fmt.Errorf("either Activity Type must be provided or MatchAll must be set to true")
@@ -426,7 +426,7 @@ func (c *TemporalActivityResetCommand) run(cctx *CommandContext, args []string) 
 		}
 		if c.ActivityType != "" {
 			resetActivitiesOperation.Activity = &batch.BatchOperationResetActivities_Type{Type: c.ActivityType}
-		} else if c.MatchAll == true {
+		} else if c.MatchAll {
 			resetActivitiesOperation.Activity = &batch.BatchOperationResetActivities_MatchAll{MatchAll: true}
 		} else {
 			return fmt.Errorf("either Activity Type must be provided or MatchAll must be set to true")
