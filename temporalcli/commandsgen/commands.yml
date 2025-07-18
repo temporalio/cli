@@ -304,7 +304,7 @@ commands:
         type: string
         description: Identity of the user submitting this request.
     option-sets:
-      - workflow reference
+      - workflow-reference
 
   - name: temporal activity fail
     summary: Fail an Activity
@@ -332,7 +332,7 @@ commands:
         type: string
         description: Reason for failing the Activity.
     option-sets:
-      - workflow reference
+      - workflow-reference
 
   - name: temporal activity update-options
     summary: Update Activity options
@@ -420,7 +420,7 @@ commands:
         type: string
         description: Identity of the user submitting this request.
     option-sets:
-      - workflow reference
+      - workflow-reference
 
   - name: temporal activity pause
     summary: Pause an Activity
@@ -461,7 +461,7 @@ commands:
         type: string
         description: The identity of the user or client submitting this request.
     option-sets:
-      - workflow reference
+      - workflow-reference
 
   - name: temporal activity unpause
     summary: Unpause an Activity
@@ -595,7 +595,7 @@ commands:
         type: bool
         description: Clear the Activity's heartbeat details.
     option-sets:
-      - workflow reference
+      - workflow-reference
 
   - name: temporal batch
     summary: Manage running batch jobs
@@ -2038,8 +2038,8 @@ commands:
         description: Backfill start time.
         required: true
     option-sets:
-      - overlap policy
-      - schedule id
+      - overlap-policy
+      - schedule-id
 
   - name: temporal schedule create
     summary: Create a new Schedule
