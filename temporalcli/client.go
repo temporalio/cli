@@ -255,6 +255,7 @@ func payloadCodecInterceptor(
 	)
 }
 
+// if providedIdentity is empty, use the hostname and username to generate a default identity
 func clientIdentity(providedIdentity string) string {
 	if providedIdentity != "" {
 		return providedIdentity
