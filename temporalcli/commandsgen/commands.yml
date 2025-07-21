@@ -984,10 +984,6 @@ commands:
       ```
     option-sets:
       - deployment-name
-    options:
-      - name: identity
-        type: string
-        description: Identity of the user submitting this request.
 
   - name: temporal worker deployment list
     summary: Enumerate Worker Deployments in the client's namespace
@@ -1070,9 +1066,6 @@ commands:
     option-sets:
       - deployment-version
     options:
-      - name: identity
-        type: string
-        description: Identity of the user submitting this request.
       - name: skip-drainage
         type: bool
         description: Ignore the deletion requirement of not draining.
@@ -1118,9 +1111,6 @@ commands:
     option-sets:
       - deployment-version-or-unversioned
     options:
-      - name: identity
-        type: string
-        description: Identity of the user submitting this request.
       - name: ignore-missing-task-queues
         type: bool
         description: Override protection to accidentally remove task queues.
@@ -1186,9 +1176,6 @@ commands:
       - name: delete
         type: bool
         description: Delete the Ramping Version.
-      - name: identity
-        type: string
-        description: Identity of the user submitting this request.
       - name: ignore-missing-task-queues
         type: bool
         description: Override protection to accidentally remove task queues.

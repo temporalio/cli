@@ -356,7 +356,6 @@ func (s *SharedServerSuite) TestUnpauseActivity_BatchSuccess() {
 	var failActivity atomic.Bool
 	failActivity.Store(true)
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
-		// time.Sleep(100 * time.Millisecond)
 		if failActivity.Load() {
 			return nil, fmt.Errorf("update workflow received non-float input")
 		}
@@ -365,7 +364,7 @@ func (s *SharedServerSuite) TestUnpauseActivity_BatchSuccess() {
 
 	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
 		// override the activity options to allow activity to constantly fail
-		ctx = workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
+		ctx = workflow.WithActivityOptions(ctx, workflow.ActivityOp{
 			ActivityID:          activityId,
 			StartToCloseTimeout: 1 * time.Minute,
 			RetryPolicy: &temporal.RetryPolicy{

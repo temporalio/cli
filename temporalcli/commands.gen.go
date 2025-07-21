@@ -2787,7 +2787,6 @@ type TemporalWorkerDeploymentDeleteCommand struct {
 	Parent  *TemporalWorkerDeploymentCommand
 	Command cobra.Command
 	DeploymentNameOptions
-	Identity string
 }
 
 func NewTemporalWorkerDeploymentDeleteCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentCommand) *TemporalWorkerDeploymentDeleteCommand {
@@ -2802,7 +2801,6 @@ func NewTemporalWorkerDeploymentDeleteCommand(cctx *CommandContext, parent *Temp
 		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nRemove a Worker Deployment given its Deployment Name.\nA Deployment can only be deleted if it has no Version in it.\n\n```\ntemporal worker deployment delete [options]\n```\n\nFor example, setting the user identity that removed the deployment:\n\n```\ntemporal worker deployment delete \\\n    --name YourDeploymentName \\\n    --identity YourIdentity\n\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of the user submitting this request.")
 	s.DeploymentNameOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -2816,7 +2814,6 @@ type TemporalWorkerDeploymentDeleteVersionCommand struct {
 	Parent  *TemporalWorkerDeploymentCommand
 	Command cobra.Command
 	DeploymentVersionOptions
-	Identity     string
 	SkipDrainage bool
 }
 
@@ -2832,7 +2829,6 @@ func NewTemporalWorkerDeploymentDeleteVersionCommand(cctx *CommandContext, paren
 		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nRemove a Worker Deployment Version given its fully-qualified identifier.\nThis is rarely needed during normal operation\nsince unused Versions are eventually garbage collected.\nThe client can delete a Version only when all of the following conditions\nare met:\n  - It is not the Current or Ramping Version for this Deployment.\n  - It has no active pollers, i.e., none of the task queues in the\n  Version have pollers.\n  - It is not draining. This requirement can be ignored with the option\n`--skip-drainage`.\n```\ntemporal worker deployment delete-version [options]\n```\n\nFor example, skipping the drainage restriction:\n\n```\ntemporal worker deployment delete-version \\\n    --deployment-name YourDeploymentName --build-id YourBuildID \\\n    --skip-drainage\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of the user submitting this request.")
 	s.Command.Flags().BoolVar(&s.SkipDrainage, "skip-drainage", false, "Ignore the deletion requirement of not draining.")
 	s.DeploymentVersionOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -2926,7 +2922,6 @@ type TemporalWorkerDeploymentSetCurrentVersionCommand struct {
 	Parent  *TemporalWorkerDeploymentCommand
 	Command cobra.Command
 	DeploymentVersionOrUnversionedOptions
-	Identity                string
 	IgnoreMissingTaskQueues bool
 	Yes                     bool
 }
@@ -2943,7 +2938,6 @@ func NewTemporalWorkerDeploymentSetCurrentVersionCommand(cctx *CommandContext, p
 		s.Command.Long = "+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n\nSet the Current Version for a Deployment.\nWhen a Version is current, Workers of that Deployment Version will receive\ntasks from new Workflows, and from existing AutoUpgrade Workflows that\nare running on this Deployment.\n\nIf not all the expected Task Queues are being polled by Workers in the\nnew Version the request will fail. To override this protection use\n`--ignore-missing-task-queues`. Note that this would ignore task queues\nin a deployment that are not yet discovered, leading to inconsistent task\nqueue configuration.\n\n```\ntemporal worker deployment set-current-version [options]\n```\n\nFor example, to set the Current Version of a deployment\n`YourDeploymentName`, with a version with Build ID `YourBuildID`, and\nin the default namespace:\n\n```\ntemporal worker deployment set-current-version \\\n    --deployment-name YourDeploymentName --build-id YourBuildID\n```\n\nThe target of set-current-version can also be unversioned workers:\n\n```\ntemporal worker deployment set-current-version \\\n    --deployment-name YourDeploymentName --unversioned\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of the user submitting this request.")
 	s.Command.Flags().BoolVar(&s.IgnoreMissingTaskQueues, "ignore-missing-task-queues", false, "Override protection to accidentally remove task queues.")
 	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm set Current Version.")
 	s.DeploymentVersionOrUnversionedOptions.buildFlags(cctx, s.Command.Flags())
@@ -2961,7 +2955,6 @@ type TemporalWorkerDeploymentSetRampingVersionCommand struct {
 	DeploymentVersionOrUnversionedOptions
 	Percentage              float32
 	Delete                  bool
-	Identity                string
 	IgnoreMissingTaskQueues bool
 	Yes                     bool
 }
@@ -2980,7 +2973,6 @@ func NewTemporalWorkerDeploymentSetRampingVersionCommand(cctx *CommandContext, p
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().Float32Var(&s.Percentage, "percentage", 0, "Percentage of tasks redirected to the Ramping Version. Valid range [0,100].")
 	s.Command.Flags().BoolVar(&s.Delete, "delete", false, "Delete the Ramping Version.")
-	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of the user submitting this request.")
 	s.Command.Flags().BoolVar(&s.IgnoreMissingTaskQueues, "ignore-missing-task-queues", false, "Override protection to accidentally remove task queues.")
 	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm set Ramping Version.")
 	s.DeploymentVersionOrUnversionedOptions.buildFlags(cctx, s.Command.Flags())
