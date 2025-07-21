@@ -356,7 +356,7 @@ func (s *SharedServerSuite) TestUnpauseActivity_BatchSuccess() {
 	var failActivity atomic.Bool
 	failActivity.Store(true)
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
-		time.Sleep(100 * time.Millisecond)
+		// time.Sleep(100 * time.Millisecond)
 		if failActivity.Load() {
 			return nil, fmt.Errorf("update workflow received non-float input")
 		}
@@ -442,7 +442,6 @@ func (s *SharedServerSuite) TestResetActivity_BatchSuccess() {
 	var failActivity atomic.Bool
 	failActivity.Store(true)
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
-		time.Sleep(100 * time.Millisecond)
 		if failActivity.Load() {
 			return nil, fmt.Errorf("update workflow received non-float input")
 		}

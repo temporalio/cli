@@ -143,7 +143,7 @@ func (c TemporalBatchTerminateCommand) run(cctx *CommandContext, args []string) 
 		Namespace: c.Parent.Namespace,
 		JobId:     c.JobId,
 		Reason:    c.Reason,
-		Identity:  clientIdentity(c.Parent.Identity),
+		Identity:  c.Parent.Identity,
 	})
 
 	var notFound *serviceerror.NotFound

@@ -300,9 +300,6 @@ commands:
         type: string
         description: Result `JSON` to return.
         required: true
-      - name: identity
-        type: string
-        description: Identity of the user submitting this request.
     option-sets:
       - workflow-reference
 
@@ -325,9 +322,6 @@ commands:
       - name: detail
         type: string
         description: Reason for failing the Activity (JSON).
-      - name: identity
-        type: string
-        description: Identity of the user submitting this request.
       - name: reason
         type: string
         description: Reason for failing the Activity.
@@ -437,9 +431,6 @@ commands:
           expired yet.
           Setting this value to 1 disables retries. Setting this value to 0
           means unlimited attempts(up to the timeouts).
-      - name: identity
-        type: string
-        description: Identity of the user submitting this request.
       - name: restore-original-options
         type: bool
         description: Restore the original options of the activity.
@@ -480,9 +471,6 @@ commands:
       - name: activity-type
         type: string
         description: All activities of the Activity Type will be paused. Either `activity-id` or `activity-type` must be provided, but not both.
-      - name: identity
-        type: string
-        description: The identity of the user or client submitting this request.
     option-sets:
       - workflow-reference
 
@@ -533,9 +521,6 @@ commands:
         type: string
         description: |
           Activities of this Type will unpause. Can only be used without --match-all. Either `activity-id` or `activity-type` must be provided, but not both.
-      - name: identity
-        type: string
-        description: The identity of the user or client submitting this request.
       - name: reset-attempts
         type: bool
         description: Reset the activity attempts.
@@ -614,9 +599,6 @@ commands:
       - name: activity-type
         type: string
         description: The Activity Type to reset. Either `activity-id` or `activity-type` must be provided, but not both.
-      - name: identity
-        type: string
-        description: The identity of the user or client submitting this request.
       - name: keep-paused
         type: bool
         description: If the activity was paused, it will stay paused.
@@ -3862,10 +3844,6 @@ commands:
           --workflow-id YourWorkflowId \
           --update-id YourUpdateId
       ```
-    options: 
-      - name: identity
-        type: string
-        description: The identity of the user or client submitting this request.
     option-sets:
       - update-targeting
 
