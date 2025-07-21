@@ -364,7 +364,7 @@ func (s *SharedServerSuite) TestUnpauseActivity_BatchSuccess() {
 
 	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
 		// override the activity options to allow activity to constantly fail
-		ctx = workflow.WithActivityOptions(ctx, workflow.ActivityOp{
+		ctx = workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
 			ActivityID:          activityId,
 			StartToCloseTimeout: 1 * time.Minute,
 			RetryPolicy: &temporal.RetryPolicy{
