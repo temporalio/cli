@@ -53,7 +53,7 @@ func (v *ClientOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
 	f.StringVar(&v.CodecEndpoint, "codec-endpoint", "", "Remote Codec Server endpoint.")
 	f.StringVar(&v.CodecAuth, "codec-auth", "", "Authorization header for Codec Server requests.")
 	f.StringArrayVar(&v.CodecHeader, "codec-header", nil, "HTTP headers for requests to codec server. Format as a `KEY=VALUE` pair. May be passed multiple times to set multiple headers.")
-	f.StringVar(&v.Identity, "identity", "", "The identity of the user or client submitting this request.")
+	f.StringVar(&v.Identity, "identity", "temporal-cli:$USER@$HOST", "The identity of the user or client submitting this request.")
 }
 
 type OverlapPolicyOptions struct {

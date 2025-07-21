@@ -4144,6 +4144,7 @@ option-sets:
       - name: identity
         type: string
         description: The identity of the user or client submitting this request.
+        default: "temporal-cli:$USER@$HOST"
 
   - name: overlap-policy
     options:
