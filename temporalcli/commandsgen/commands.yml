@@ -4140,8 +4140,7 @@ option-sets:
           May be passed multiple times to set multiple headers.
       - name: identity
         type: string
-        description: The identity of the user or client submitting this request.
-        default: "temporal-cli:$USER@$HOST"
+        description: The identity of the user or client submitting this request. Defaults to "temporal-cli:$USER@$HOST".
 
   - name: overlap-policy
     options:
