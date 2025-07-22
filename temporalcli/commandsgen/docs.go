@@ -161,7 +161,11 @@ func (w *docWriter) processOptions(c *Command) {
 
 	// Maintain stack of options available from parent commands
 	for _, set := range c.OptionSets {
-		optionSetOptions := w.optionSetMap[set].Options
+		optionSet, ok := w.optionSetMap[set]
+		if !ok {
+			panic(fmt.Sprintf("invalid option set %v used", set))
+		}
+		optionSetOptions := optionSet.Options
 		options = append(options, optionSetOptions...)
 	}
 
