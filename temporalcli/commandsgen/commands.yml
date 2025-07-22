@@ -370,7 +370,6 @@ commands:
         description: |
           The Activity ID to update options. Mutually exclusive with `--query`, `--match-all`, and `--activity-type`. Requires `--workflow-id` to be specified.
       - name: activity-type
-        short: g
         type: string
         description: |
           Activities of this Type will be updated. Can only be used without --match-all. Either `activity-id` or `activity-type` must be provided, but not both.

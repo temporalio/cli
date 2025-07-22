@@ -632,7 +632,7 @@ func NewTemporalActivityUpdateOptionsCommand(cctx *CommandContext, parent *Tempo
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "The Activity ID to update options. Mutually exclusive with `--query`, `--match-all`, and `--activity-type`. Requires `--workflow-id` to be specified.")
-	s.Command.Flags().StringVarP(&s.ActivityType, "activity-type", "g", "", "Activities of this Type will be updated. Can only be used without --match-all. Either `activity-id` or `activity-type` must be provided, but not both.")
+	s.Command.Flags().StringVar(&s.ActivityType, "activity-type", "", "Activities of this Type will be updated. Can only be used without --match-all. Either `activity-id` or `activity-type` must be provided, but not both.")
 	s.Command.Flags().BoolVar(&s.MatchAll, "match-all", false, "Every activity should be updated. This flag is ignored if activity-type is provided. Can only be used with --query.")
 	s.Command.Flags().StringVar(&s.TaskQueue, "task-queue", "", "Name of the task queue for the Activity.")
 	s.ScheduleToCloseTimeout = 0
