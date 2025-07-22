@@ -332,8 +332,8 @@ commands:
     summary: Update Activity options
     description: |
       Update the options of a running Activity that were passed into it from
-       a Workflow. Updates are incremental, only changing the specified 
-       options.
+      a Workflow. Updates are incremental, only changing the specified 
+      options.
 
       For example:
 
@@ -354,7 +354,7 @@ commands:
 
       You may follow this command with `temporal activity reset`, and the new values will apply after the reset.
 
-      Activity options can be updated in bulk with a visibility Query list filter. 
+      Activity options can be updated in bulk with a visibility query list filter. 
       For example, if you want to reset for activities of type Foo, do:
 
       ```
@@ -368,7 +368,7 @@ commands:
         short: a
         type: string
         description: |
-          The Activity ID to update options. Can only be used without --query or --match-all. Either `activity-id` or `activity-type` must be provided, but not both.
+          The Activity ID to update options. Mutually exclusive with `--query`, `--match-all`, and `--activity-type`. Requires `--workflow-id` to be specified.
       - name: activity-type
         short: g
         type: string
@@ -516,7 +516,7 @@ commands:
         short: a
         type: string
         description: |
-          The Activity ID to unpause. Can only be used without --query or --match-all. Either `activity-id` or `activity-type` must be provided, but not both.
+          The Activity ID to unpause.  Mutually exclusive with `--query`, `--match-all`, and `--activity-type`. Requires `--workflow-id` to be specified.
       - name: activity-type
         type: string
         description: |
@@ -535,7 +535,6 @@ commands:
           activity-type is provided. Can only be used with --query.
       - name: jitter
         type: duration
-        short: j
         description: |
           The activity will start at random a time within the specified duration.
           Can only be used with --query.
@@ -584,7 +583,7 @@ commands:
           --reset-heartbeats
       ```
 
-      Activities can be reset in bulk with a visibility Query list filter. 
+      Activities can be reset in bulk with a visibility query list filter. 
       For example, if you want to reset activities of type Foo:
 
       ```
@@ -595,7 +594,7 @@ commands:
       - name: activity-id
         short: a
         type: string
-        description: The Activity ID to reset. Either `activity-id` or `activity-type` must be provided, but not both.
+        description: The Activity ID to reset.  Mutually exclusive with `--query`, `--match-all`, and `--activity-type`. Requires `--workflow-id` to be specified.
       - name: activity-type
         type: string
         description: The Activity Type to reset. Either `activity-id` or `activity-type` must be provided, but not both.
@@ -616,7 +615,6 @@ commands:
           activity-type is provided. Can only be used with --query.
       - name: jitter
         type: duration
-        short: j
         description: |
           The activity will reset at random a time within the specified duration.
           Can only be used with --query.
