@@ -45,7 +45,7 @@ jobs:
         run: |
           gh workflow run update-cli-docs.yml \
             -R temporalio/documentation \
-            -r cli-docs-autoupdate \
+            -r main \
             -f cli_release_tag="${{ github.ref_name }}" \
             -f commit_author="${{ steps.get_user.outputs.GIT_NAME }}" \
             -f commit_author_email="${{ steps.get_user.outputs.GIT_EMAIL }}" \

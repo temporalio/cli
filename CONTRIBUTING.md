@@ -46,3 +46,18 @@ Note that inclusion of space characters in the value supplied via `-ldflags` is 
 Here's an example that adds branch info from a local repo to the version string, and includes a space character:
 
     go build -ldflags "-X 'github.com/temporalio/cli/temporalcli.buildInfo=ServerBranch $(git -C ../temporal rev-parse --abbrev-ref HEAD)'" -o temporal ./cmd/temporal/main.go
+
+## Building Docker image
+
+Docker image build requires [Goreleaser](https://goreleaser.com/) to build the binaries first, although it doesn't use
+Goreleaser for the Docker image itself.
+
+First, run the Goreleaser build:
+
+    goreleaser build --snapshot --clean
+
+Then, run the Docker build using the following command:
+
+    docker build --tag temporalio/temporal:snapshot --platform=<platform> .
+
+Currently only `linux/amd64` and `linux/arm64` platforms are supported.

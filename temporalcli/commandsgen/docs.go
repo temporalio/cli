@@ -9,7 +9,6 @@ import (
 )
 
 func GenerateDocsFiles(commands Commands) (map[string][]byte, error) {
-
 	optionSetMap := make(map[string]OptionSets)
 	for i, optionSet := range commands.OptionSets {
 		optionSetMap[optionSet.Name] = commands.OptionSets[i]
@@ -59,6 +58,8 @@ func (c *Command) writeDoc(w *docWriter) error {
 func (w *docWriter) writeCommand(c *Command) {
 	fileName := c.fileName()
 	w.fileMap[fileName] = &bytes.Buffer{}
+	w.fileMap[fileName].WriteString("{/* NOTE: This is an auto-generated file. Any edit to this file will be overwritten.\n")
+	w.fileMap[fileName].WriteString("This file is generated from https://github.com/temporalio/cli/blob/main/temporalcli/commandsgen/commands.yml */}\n")
 	w.fileMap[fileName].WriteString("---\n")
 	w.fileMap[fileName].WriteString("id: " + fileName + "\n")
 	w.fileMap[fileName].WriteString("title: Temporal CLI " + fileName + " command reference\n")
@@ -160,7 +161,11 @@ func (w *docWriter) processOptions(c *Command) {
 
 	// Maintain stack of options available from parent commands
 	for _, set := range c.OptionSets {
-		optionSetOptions := w.optionSetMap[set].Options
+		optionSet, ok := w.optionSetMap[set]
+		if !ok {
+			panic(fmt.Sprintf("invalid option set %v used", set))
+		}
+		optionSetOptions := optionSet.Options
 		options = append(options, optionSetOptions...)
 	}
 

@@ -51,7 +51,8 @@
 #   * When commands have a single command-level option, include it the mandatory example.
 #   * Use square bracket overviews to present how complex commands will be used.
 #     * Yes: temporal operator [command] [subcommand] [options]
-#     Commands with subcommands can't be run on their own.
+#     Commands with subcommands can't be run on their own unless
+#     subcommands-optional is set to true.
 #     Because of this, always use full command examples.
 #   * Use square brackets to highlight optional elements, especially when long
 #     descriptions would suffer from two very similar command invocations.
@@ -94,6 +95,7 @@
 #   exact-args: Require this exact number of args. (int)
 #   maximum-args: Require this maximum number of args. (int)
 #   ignores-missing-env: Ignore missing environment variables. (bool)
+#   subcommands-optional: Allow command to be run even when it has subcommands. (bool)
 #   options: A list of options. (Option[])
 #     - name: The option name. (string)
 #       type: The option type. (string)
@@ -302,7 +304,7 @@ commands:
         type: string
         description: Identity of the user submitting this request.
     option-sets:
-      - workflow reference
+      - workflow-reference
 
   - name: temporal activity fail
     summary: Fail an Activity
@@ -330,14 +332,16 @@ commands:
         type: string
         description: Reason for failing the Activity.
     option-sets:
-      - workflow reference
+      - workflow-reference
 
   - name: temporal activity update-options
     summary: Update Activity options
     description: |
-      Update Activity options. Specify the Activity and Workflow IDs, and
-      options you want to update.
-      Updates are incremental, only changing the specified options.
+      Update the options of a running Activity that were passed into it from
+       a Workflow. Updates are incremental, only changing the specified 
+       options.
+
+      For example:
 
       ```
       temporal activity update-options \
@@ -352,8 +356,9 @@ commands:
           --retry-maximum-interval DURATION \
           --retry-backoff-coefficient NewBackoffCoefficient \
           --retry-maximum-attempts NewMaximumAttempts
-
       ```
+
+      You may follow this command with `temporal activity reset`, and the new values will apply after the reset.
     options:
       - name: activity-id
         type: string
@@ -415,7 +420,7 @@ commands:
         type: string
         description: Identity of the user submitting this request.
     option-sets:
-      - workflow reference
+      - workflow-reference
 
   - name: temporal activity pause
     summary: Pause an Activity
@@ -425,35 +430,38 @@ commands:
       If the Activity is not currently running (e.g. because it previously
       failed), it will not be run again until it is unpaused.
 
-      However, if the Activity is currently running, it will run to completion.
+      However, if the Activity is currently running, it will run until the next 
+      time it fails, completes, or times out, at which point the pause will kick in.
+
       If the Activity is on its last retry attempt and fails, the failure will
       be returned to the caller, just as if the Activity had not been paused.
 
-      Activities can be specified by their Activity ID or Activity Type.
-      One of those parameters must be provided. If both are provided - Activity
-      Type will be used, and Activity ID will be ignored.
+      Activities should be specified either by their Activity ID or Activity Type.
 
-      Specify the Activity and Workflow IDs:
+      For example, specify the Activity and Workflow IDs like this:
 
       ```
       temporal activity pause \
           --activity-id YourActivityId \
           --workflow-id YourWorkflowId
       ```
+
+      To later unpause the activity, see [unpause](#unpause). You may also want to 
+      [reset](#reset) the activity to unpause it while also starting it from the beginning.
     options:
       - name: activity-id
         short: a
         type: string
-        description: Activity ID to pause.
+        description: The Activity ID to pause. Either `activity-id` or `activity-type` must be provided, but not both.
       - name: activity-type
         short: g
         type: string
-        description: Activity Type to pause.
+        description: All activities of the Activity Type will be paused. Either `activity-id` or `activity-type` must be provided, but not both.
       - name: identity
         type: string
-        description: Identity of the user submitting this request.
+        description: The identity of the user or client submitting this request.
     option-sets:
-      - workflow reference
+      - workflow-reference
 
   - name: temporal activity unpause
     summary: Unpause an Activity
@@ -472,18 +480,8 @@ commands:
       Use `--reset-heartbeat` to reset the Activity's heartbeats.
 
       Activities can be specified by their Activity ID or Activity Type.
-      One of those parameters must be provided. If both are provided - Activity
-      Type will be used, and Activity ID will be ignored.
+      One of those parameters must be provided.
 
-      Activities can be unpaused in bulk via a visibility Query list filter:
-
-      ```
-      temporal activity unpause \
-          --query YourQuery \
-          --reason YourReasonForTermination
-      ```
-
-      
       Specify the Activity ID or Type and Workflow IDs:
 
       ```
@@ -493,19 +491,29 @@ commands:
           --reset-attempts
           --reset-heartbeats
       ```
+
+      Activities can be unpaused in bulk via a visibility Query list filter. 
+      For example, if you want to unpause activities of type Foo that you 
+      previously paused, do:
+
+      ```
+      temporal activity unpause \
+          --query 'TemporalPauseInfo="property:activityType=Foo"'
+      ```
     options:
       - name: activity-id
         short: a
         type: string
         description: |
-          Activity ID to unpause. Can only be used without --query.
+          The Activity ID to unpause. Can only be used without --query or --match-all. Either `activity-id` or `activity-type` must be provided, but not both.
       - name: activity-type
         short: g
         type: string
-        description: Activity Type to unpause.
+        description: |
+          Activities of this Type will unpause. Can only be used without --match-all. Either `activity-id` or `activity-type` must be provided, but not both.
       - name: identity
         type: string
-        description: Identity of the user submitting this request.
+        description: The identity of the user or client submitting this request.
       - name: reset-attempts
         type: bool
         description: Also reset the activity attempts.
@@ -530,20 +538,34 @@ commands:
   - name: temporal activity reset
     summary: Reset an Activity
     description: |
-      Resetting an activity resets both the number of attempts and the activity
-      timeout.
+      Reset an activity. This restarts the activity as if it were first being 
+      scheduled. That is, it will reset both the number of attempts and the 
+      activity timeout, as well as, optionally, the 
+      [heartbeat details](#reset-heartbeats).
 
-      If activity is paused and 'keep_paused' flag is not provided - it will be
-      unpaused.
-      If activity is paused and 'keep_paused' flag is provided - it will stay
-      paused.
-      If activity is waiting for the retry, is will be rescheduled immediately.
-      If the 'reset_heartbeats' flag is set, the activity heartbeat timer and
-      heartbeats will be reset.
+      If the activity may be executing (i.e. it has not yet timed out), the 
+      reset will take effect the next time it fails, heartbeats, or times out.
+      If is waiting for a retry (i.e. has failed or timed out), the reset 
+      will apply immediately.
+
+      If the activity is already paused, it will be unpaused by default. 
+      You can specify `keep_paused` to prevent this.
+
+      If the activity is paused and the `keep_paused` flag is not provided, 
+      it will be unpaused. If the activity is paused and `keep_paused` flag 
+      is provided - it will stay paused.
 
       Activities can be specified by their Activity ID or Activity Type.
-      One of those parameters must be provided. If both are provided - Activity
-      Type will be used, and Activity ID will be ignored.
+
+      ### Resetting activities that heartbeat {#reset-heartbeats}
+
+      Activities that heartbeat will receive a [Canceled failure](/references/failures#cancelled-failure) 
+      the next time they heartbeat after a reset.
+
+      If, in your Activity, you need to do any cleanup when an Activity is 
+      reset, handle this error and then re-throw it when you've cleaned up.
+
+      If the `reset_heartbeats` flag is set, the heartbeat details will also be cleared.
 
       Specify the Activity Type of ID and Workflow IDs:
 
@@ -558,22 +580,22 @@ commands:
       - name: activity-id
         short: a
         type: string
-        description: Activity ID to pause.
+        description: The Activity ID to reset. Either `activity-id` or `activity-type` must be provided, but not both.
       - name: activity-type
         short: g
         type: string
-        description: Activity Type to pause.
+        description: The Activity Type to reset. Either `activity-id` or `activity-type` must be provided, but not both.
       - name: identity
         type: string
-        description: Identity of the user submitting this request.
+        description: The identity of the user or client submitting this request.
       - name: keep-paused
         type: bool
-        description: If activity was paused - it will stay paused.
+        description: If the activity was paused, it will stay paused.
       - name: reset-heartbeats
         type: bool
-        description: Reset the Activity's heartbeat.
+        description: Clear the Activity's heartbeat details.
     option-sets:
-      - workflow reference
+      - workflow-reference
 
   - name: temporal batch
     summary: Manage running batch jobs
@@ -688,7 +710,7 @@ commands:
     summary: Manage config files (EXPERIMENTAL)
     description: |
       Config files are TOML files that contain profiles, with each profile
-      containing configuration for connecting to Temporal. 
+      containing configuration for connecting to Temporal.
 
       ```
       temporal config set \
@@ -2016,8 +2038,8 @@ commands:
         description: Backfill start time.
         required: true
     option-sets:
-      - overlap policy
-      - schedule id
+      - overlap-policy
+      - schedule-id
 
   - name: temporal schedule create
     summary: Create a new Schedule
@@ -3416,6 +3438,7 @@ commands:
 
   - name: temporal workflow reset
     summary: Move Workflow Execution history point
+    subcommands-optional: true
     description: |
       Reset a Workflow Execution so it can resume from a point in its Event History
       without losing its progress up to that point:
@@ -3504,6 +3527,14 @@ commands:
         description: |
           Don't prompt to confirm.
           Only allowed when `--query` is present.
+
+  - name: temporal workflow reset with-workflow-update-options
+    summary: Update options on reset workflow
+    description: |
+      Run Workflow Update Options atomically after the Workflow is reset.
+      Workflows selected by the reset command are forwarded onto the subcommand.
+    option-sets:
+      - workflow-update-options
 
   - name: temporal workflow result
     summary: Wait for and show the result of a Workflow Execution
@@ -3849,7 +3880,7 @@ commands:
     summary: Send an Update-With-Start and wait for it to be accepted or rejected (Experimental)
     description: |
       Send a message to a Workflow Execution to invoke an Update handler, and wait for
-      the update to be accepted or rejected. If the Workflow Execution is not running, 
+      the update to be accepted or rejected. If the Workflow Execution is not running,
       then a new workflow execution is started and the update is sent.
 
       Experimental.
@@ -4496,3 +4527,23 @@ option-sets:
         enum-values:
           - not_open
           - not_completed_cleanly
+
+  - name: workflow-update-options
+    options:
+      - name: versioning-override-behavior
+        type: string-enum
+        description: |
+          Override the versioning behavior of a Workflow.
+        required: true
+        enum-values:
+          - pinned
+          - auto_upgrade
+      - name: versioning-override-deployment-name
+        type: string
+        description: When overriding to a `pinned` behavior, specifies the Deployment Name of the
+          version to target.
+      - name: versioning-override-build-id
+        type: string
+        description: When overriding to a `pinned` behavior, specifies the Build ID of the
+          version to target.
+
