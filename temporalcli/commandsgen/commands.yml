@@ -434,7 +434,7 @@ commands:
         type: bool
         description: Restore the original options of the activity.
     option-sets:
-      - workflow-reference
+      - single-workflow-or-batch
 
   - name: temporal activity pause
     summary: Pause an Activity
@@ -622,7 +622,7 @@ commands:
         description: |
           Restore the original options of the activity.
     option-sets:
-      - workflow-reference
+      - single-workflow-or-batch
 
   - name: temporal batch
     summary: Manage running batch jobs
