@@ -377,7 +377,7 @@ commands:
         type: bool
         description: |
           Every activity should be updated. This flag is ignored if
-          activity-type is provided. Can only be used with --query.
+          activity-type is provided.
       - name: task-queue
         type: string
         description: Name of the task queue for the Activity.
@@ -531,7 +531,7 @@ commands:
         type: bool
         description: |
           Every paused activity should be unpaused. This flag is ignored if
-          activity-type is provided. Can only be used with --query.
+          activity-type is provided. 
       - name: jitter
         type: duration
         description: |
@@ -611,7 +611,7 @@ commands:
         type: bool
         description: |
           Every activity should be reset. This flag is ignored if
-          activity-type is provided. Can only be used with --query.
+          activity-type is provided.
       - name: jitter
         type: duration
         description: |
