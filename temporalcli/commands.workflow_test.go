@@ -56,6 +56,46 @@ func (s *SharedServerSuite) TestWorkflow_Signal_SingleWorkflowSuccess() {
 	s.Equal(map[string]any{"foo": "bar"}, actual)
 }
 
+func (s *SharedServerSuite) TestWorkflow_Signal_MultipleInputsWithComplexMetadata() {
+	// Start a random workflow
+	run, err := s.Client.ExecuteWorkflow(
+		s.Context,
+		client.StartWorkflowOptions{TaskQueue: s.Worker().Options.TaskQueue},
+		DevWorkflow,
+		"ignored",
+	)
+	s.NoError(err)
+
+	// Send signal
+	res := s.Execute(
+		"workflow", "signal",
+		"--address", s.Address(),
+		"-w", run.GetID(),
+		"--name", "my-signal",
+		"-i", `{"foo": "bar"}`,
+		"-i", `{"bar": "baz"}`,
+		"--input-meta", "encoding=json/proto",
+		"--input-meta", "messageType=foo",
+		"--input-meta", "messageType=bar",
+	)
+	s.NoError(res.Err)
+	s.NoError(s.Client.TerminateWorkflow(s.Context, run.GetID(), "", ""))
+	iter := s.Client.GetWorkflowHistory(s.Context, run.GetID(), "", false, enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
+	for iter.HasNext() {
+		ev, err := iter.Next()
+		s.NoError(err)
+		if attr := ev.GetWorkflowExecutionSignaledEventAttributes(); attr != nil {
+			payloads := attr.GetInput().GetPayloads()
+			s.Equal("json/proto", string(payloads[0].Metadata["encoding"]))
+			s.Equal("json/proto", string(payloads[1].Metadata["encoding"]))
+			s.Equal("foo", string(payloads[0].Metadata["messageType"]))
+			s.Equal("bar", string(payloads[1].Metadata["messageType"]))
+		}
+		return
+	}
+	s.Fail("No signal event found in workflow history")
+}
+
 func (s *SharedServerSuite) TestWorkflow_Signal_BatchWorkflowSuccess() {
 	res := s.testSignalBatchWorkflow(false)
 	s.Contains(res.Stdout.String(), "approximately 5 workflow(s)")
