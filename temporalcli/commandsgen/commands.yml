@@ -354,6 +354,8 @@ commands:
 
       You may follow this command with `temporal activity reset`, and the new values will apply after the reset.
 
+      Either `activity-id`, `activity-type`, or `--match-all` must be specified.
+
       Activity options can be updated in bulk with a visibility query list filter. 
       For example, if you want to reset for activities of type Foo, do:
 
@@ -372,12 +374,11 @@ commands:
       - name: activity-type
         type: string
         description: |
-          Activities of this Type will be updated. Can only be used without --match-all. Either `activity-id` or `activity-type` must be provided, but not both.
+          Activities of this Type will be updated. Mutually exclusive with `--match-all` and `activity-id`.
       - name: match-all
         type: bool
         description: |
-          Every activity should be updated. This flag is ignored if
-          activity-type is provided.
+          Every activity should be updated. Mutually exclusive with `--activity-id` and `--activity-type`.
       - name: task-queue
         type: string
         description: Name of the task queue for the Activity.
@@ -582,6 +583,8 @@ commands:
           --reset-heartbeats
       ```
 
+      Either `activity-id`, `activity-type`, or `--match-all` must be specified.
+
       Activities can be reset in bulk with a visibility query list filter. 
       For example, if you want to reset activities of type Foo:
 
@@ -596,7 +599,7 @@ commands:
         description: The Activity ID to reset.  Mutually exclusive with `--query`, `--match-all`, and `--activity-type`. Requires `--workflow-id` to be specified.
       - name: activity-type
         type: string
-        description: The Activity Type to reset. Either `activity-id` or `activity-type` must be provided, but not both.
+        description: Activities of this Type will be reset. Mutually exclusive with `--match-all` and `activity-id`.
       - name: keep-paused
         type: bool
         description: If the activity was paused, it will stay paused.
@@ -610,8 +613,7 @@ commands:
       - name: match-all
         type: bool
         description: |
-          Every activity should be reset. This flag is ignored if
-          activity-type is provided.
+          Every activity should be reset. Every activity should be updated. Mutually exclusive with `--activity-id` and `--activity-type`.
       - name: jitter
         type: duration
         description: |
