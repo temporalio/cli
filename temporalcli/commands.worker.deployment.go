@@ -415,7 +415,7 @@ func (c *TemporalWorkerDeploymentDeleteCommand) run(cctx *CommandContext, args [
 
 	_, err = cl.WorkerDeploymentClient().Delete(cctx, client.WorkerDeploymentDeleteOptions{
 		Name:     c.Name,
-		Identity: c.Identity,
+		Identity: c.Parent.Parent.Identity,
 	})
 	if err != nil {
 		return fmt.Errorf("error deleting worker deployment: %w", err)
@@ -503,7 +503,7 @@ func (c *TemporalWorkerDeploymentDeleteVersionCommand) run(cctx *CommandContext,
 	_, err = dHandle.DeleteVersion(cctx, client.WorkerDeploymentDeleteVersionOptions{
 		BuildID:      c.BuildId,
 		SkipDrainage: c.SkipDrainage,
-		Identity:     c.Identity,
+		Identity:     c.Parent.Parent.Identity,
 	})
 	if err != nil {
 		return fmt.Errorf("error deleting worker deployment version: %w", err)
@@ -556,7 +556,7 @@ func (c *TemporalWorkerDeploymentSetCurrentVersionCommand) run(cctx *CommandCont
 	dHandle := cl.WorkerDeploymentClient().GetHandle(c.DeploymentName)
 	_, err = dHandle.SetCurrentVersion(cctx, client.WorkerDeploymentSetCurrentVersionOptions{
 		BuildID:                 c.BuildId,
-		Identity:                c.Identity,
+		Identity:                c.Parent.Parent.Identity,
 		IgnoreMissingTaskQueues: c.IgnoreMissingTaskQueues,
 		ConflictToken:           token,
 	})
@@ -594,7 +594,7 @@ func (c *TemporalWorkerDeploymentSetRampingVersionCommand) run(cctx *CommandCont
 		BuildID:                 c.BuildId,
 		Percentage:              percentage,
 		ConflictToken:           token,
-		Identity:                c.Identity,
+		Identity:                c.Parent.Parent.Identity,
 		IgnoreMissingTaskQueues: c.IgnoreMissingTaskQueues,
 	})
 	if err != nil {
