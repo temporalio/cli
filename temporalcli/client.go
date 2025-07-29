@@ -27,6 +27,18 @@ func (c *ClientOptions) dialClient(cctx *CommandContext) (client.Client, error) 
 		return nil, fmt.Errorf("root command unexpectedly missing when dialing client")
 	}
 
+	if c.Identity == "" {
+		hostname, err := os.Hostname()
+		if err != nil {
+			hostname = "unknown-host"
+		}
+		username := "unknown-user"
+		if u, err := user.Current(); err == nil {
+			username = u.Username
+		}
+		c.Identity = "temporal-cli:" + username + "@" + hostname
+	}
+
 	// Load a client config profile
 	var clientProfile envconfig.ClientConfigProfile
 	if !cctx.RootCommand.DisableConfigFile || !cctx.RootCommand.DisableConfigEnv {
@@ -173,7 +185,6 @@ func (c *ClientOptions) dialClient(cctx *CommandContext) (client.Client, error) 
 		return nil, fmt.Errorf("failed creating client options: %w", err)
 	}
 	clientOptions.Logger = log.NewStructuredLogger(cctx.Logger)
-	clientOptions.Identity = clientIdentity()
 	// We do not put codec on data converter here, it is applied via
 	// interceptor. Same for failure conversion.
 	// XXX: If this is altered to be more dynamic, have to also update
@@ -253,18 +264,6 @@ func payloadCodecInterceptor(
 			Codecs: []converter.PayloadCodec{payloadCodec},
 		},
 	)
-}
-
-func clientIdentity() string {
-	hostname, err := os.Hostname()
-	if err != nil {
-		hostname = "unknown-host"
-	}
-	username := "unknown-user"
-	if u, err := user.Current(); err == nil {
-		username = u.Username
-	}
-	return "temporal-cli:" + username + "@" + hostname
 }
 
 var DataConverterWithRawValue = converter.NewCompositeDataConverter(
