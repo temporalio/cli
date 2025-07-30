@@ -287,6 +287,9 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 				LastFailure          *failure.Failure  `cli:",cardOmitEmpty"`
 				LastWorkerIdentity   string            `cli:",cardOmitEmpty"`
 				LastHeartbeatDetails []*common.Payload `cli:",cardOmitEmpty"`
+				Paused               bool
+				PauseTime            time.Time `cli:",cardOmitEmpty"`
+				PausedBy             string    `cli:",cardOmitEmpty"`
 			}, len(resp.PendingActivities))
 			for i, a := range resp.PendingActivities {
 				acts[i].ActivityId = a.ActivityId
@@ -301,6 +304,18 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 				acts[i].LastFailure = a.LastFailure
 				acts[i].LastWorkerIdentity = a.LastWorkerIdentity
 				acts[i].LastHeartbeatDetails = a.HeartbeatDetails.GetPayloads()
+				acts[i].Paused = a.Paused
+
+				if pauseInfo := a.GetPauseInfo(); pauseInfo != nil {
+					acts[i].PauseTime = timestampToTime(pauseInfo.GetPauseTime())
+
+					switch pausedBy := pauseInfo.GetPausedBy().(type) {
+					case *workflow.PendingActivityInfo_PauseInfo_Manual_:
+						acts[i].PausedBy = pausedBy.Manual.Identity
+					case *workflow.PendingActivityInfo_PauseInfo_Rule_:
+						acts[i].PausedBy = pausedBy.Rule.Identity
+					}
+				}
 			}
 			_ = cctx.Printer.PrintStructured(acts, printer.StructuredOptions{})
 			cctx.Printer.Println()
