@@ -9,10 +9,12 @@ import (
 	"go.temporal.io/api/common/v1"
 )
 
+// CreatePayloads creates API Payload objects from given data and metadata slices.
+// If metadata has an entry at a data index, it is used, otherwise it uses the metadata entry at index 0.
 func CreatePayloads(data [][]byte, metadata map[string][][]byte, isBase64 bool) (*common.Payloads, error) {
 	ret := &common.Payloads{Payloads: make([]*common.Payload, len(data))}
 	for i, in := range data {
-		var metadataForIndex = map[string][]byte{}
+		var metadataForIndex = make(map[string][]byte, len(metadata))
 		for k, vals := range metadata {
 			if len(vals) == 0 {
 				continue
