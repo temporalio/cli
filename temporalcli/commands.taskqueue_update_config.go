@@ -15,8 +15,7 @@ func (c *TemporalTaskQueueUpdateConfigCommand) run(cctx *CommandContext, args []
 	}
 	defer cl.Close()
 
-	// Parse task queue and type
-	taskQueueName := c.TaskQueue
+	taskQueue := c.TaskQueue
 	taskQueueType := enums.TASK_QUEUE_TYPE_WORKFLOW // default
 	if c.TaskQueueType != "" {
 		switch c.TaskQueueType {
@@ -32,6 +31,15 @@ func (c *TemporalTaskQueueUpdateConfigCommand) run(cctx *CommandContext, args []
 	}
 
 	// Build the request
+	if taskQueue == "" {
+		return fmt.Errorf("TaskQueue name is required")
+	}
+	if taskQueueType == enums.TASK_QUEUE_TYPE_WORKFLOW {
+		if c.QueueRateLimit != nil {
+			return fmt.Errorf("setting rate limit on workflow task queues is not allowed")
+		}
+		return fmt.Errorf("taskQueueType is required")
+	}
 	namespace := c.Namespace
 	if namespace == "" {
 		return fmt.Errorf("namespace is required")
@@ -40,7 +48,7 @@ func (c *TemporalTaskQueueUpdateConfigCommand) run(cctx *CommandContext, args []
 	request := &workflowservice.UpdateTaskQueueConfigRequest{
 		Namespace:     namespace,
 		Identity:      c.Identity,
-		TaskQueue:     taskQueueName,
+		TaskQueue:     taskQueue,
 		TaskQueueType: taskQueueType,
 	}
 
