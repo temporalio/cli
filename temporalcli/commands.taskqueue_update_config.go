@@ -32,8 +32,13 @@ func (c *TemporalTaskQueueUpdateConfigCommand) run(cctx *CommandContext, args []
 	}
 
 	// Build the request
+	namespace := c.Namespace
+	if namespace == "" {
+		return fmt.Errorf("namespace is required")
+	}
+
 	request := &workflowservice.UpdateTaskQueueConfigRequest{
-		Namespace:     c.Parent.Namespace,
+		Namespace:     namespace,
 		Identity:      c.Identity,
 		TaskQueue:     taskQueueName,
 		TaskQueueType: taskQueueType,

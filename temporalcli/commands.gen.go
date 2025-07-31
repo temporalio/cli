@@ -2451,6 +2451,7 @@ type TemporalTaskQueueUpdateConfigCommand struct {
 	TaskQueue string
 	TaskQueueType string
 	Identity string
+	Namespace string
 	QueueRateLimit *struct {
 		RequestsPerSecond float64
 		Reason            string
@@ -2477,6 +2478,7 @@ func NewTemporalTaskQueueUpdateConfigCommand(cctx *CommandContext, parent *Tempo
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
 	s.Command.Flags().StringVar(&s.TaskQueueType, "task-queue-type", "", "Task Queue type. Accepted values: workflow, activity, nexus.")
 	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity for the operation.")
+	s.Command.Flags().StringVar(&s.Namespace, "namespace", "", "Namespace for the operation.")
 	
 	// Queue rate limit flags
 	var queueRateLimit float64
