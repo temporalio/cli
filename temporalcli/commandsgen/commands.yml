@@ -4135,7 +4135,7 @@ option-sets:
       - name: address
         type: string
         description: Temporal Service gRPC endpoint.
-        default: 127.0.0.1:7233
+        default: localhost:7233
         implied-env: TEMPORAL_ADDRESS
       - name: client-authority
         type: string
