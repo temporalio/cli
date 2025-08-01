@@ -36,7 +36,7 @@ func (c *TemporalTaskQueueUpdateConfigCommand) run(cctx *CommandContext, args []
 
 	// Build the request
 	if taskQueue == "" {
-		return fmt.Errorf("TaskQueue name is required")
+		return fmt.Errorf("taskQueue name is required")
 	}
 	if taskQueueType == enums.TASK_QUEUE_TYPE_WORKFLOW {
 		if c.QueueRateLimit != nil && c.QueueRateLimit.RequestsPerSecond != UnsetRateLimit {
@@ -64,7 +64,7 @@ func (c *TemporalTaskQueueUpdateConfigCommand) run(cctx *CommandContext, args []
 				Reason: c.QueueRateLimit.Reason,
 			}
 		} else {
-			// For setting a value (including 0)
+			// For setting a value
 			request.UpdateQueueRateLimit = &workflowservice.UpdateTaskQueueConfigRequest_RateLimitUpdate{
 				RateLimit: &taskqueue.RateLimit{
 					RequestsPerSecond: float32(c.QueueRateLimit.RequestsPerSecond),
@@ -82,7 +82,7 @@ func (c *TemporalTaskQueueUpdateConfigCommand) run(cctx *CommandContext, args []
 				Reason: c.FairnessKeyRateLimitDefault.Reason,
 			}
 		} else {
-			// For setting a value (including 0)
+			// For setting a value
 			request.UpdateFairnessKeyRateLimitDefault = &workflowservice.UpdateTaskQueueConfigRequest_RateLimitUpdate{
 				RateLimit: &taskqueue.RateLimit{
 					RequestsPerSecond: float32(c.FairnessKeyRateLimitDefault.RequestsPerSecond),

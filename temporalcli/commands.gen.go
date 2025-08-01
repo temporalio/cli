@@ -2487,9 +2487,9 @@ func NewTemporalTaskQueueUpdateConfigCommand(cctx *CommandContext, parent *Tempo
 	s.Command.Use = "update-config [flags]"
 	s.Command.Short = "Update Task Queue configuration"
 	if hasHighlighting {
-		s.Command.Long = "Update Task Queue configuration - rate limits and fairness key configs:\n\n\x1b[1mtemporal task-queue update-config \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type activity \\\n    --queue-rate-limit <requests_per_second:float> \\\n    --queue-rate-limit-reason <reason_string> \\\n    --fairness-key-rate-limit-default <requests_per_second:float> \\\n    --fairness-key-rate-limit-reason  <reason_string>\x1b[0m\n\nThis command supports updating:\n- Queue rate limits: Controls the overall rate limiit for the task queue\n- Fairness key rate limit defaults: Sets default rate limits for fairness keys\n\nTo unset a rate limit, use --queue-rate-limit -1 or --fairness-key-rate-limit-default -1"
+		s.Command.Long = "Update a Task Queue's overall rate limit and the default rate limit for all fairness keys:\n\n\x1b[1mtemporal task-queue update-config \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type activity \\\n    --queue-rate-limit <requests_per_second:float> \\\n    --queue-rate-limit-reason <reason_string> \\\n    --fairness-key-rate-limit-default <requests_per_second:float> \\\n    --fairness-key-rate-limit-reason  <reason_string>\x1b[0m\n\nThis command supports updating:\n- Queue rate limit: Controls the overall rate limit for the task queue.\n  This setting overrides the worker rate limit if set.\n  Unless modified, this is the system-defined rate limit.\n- Fairness key rate limit defaults: Sets default per-key rate limit for all fairness keys.\n  If set, each individual fairness key will be limited to this rate,\n  scaled by the weight of the fairness key.\n\nTo unset a rate limit, use --queue-rate-limit -1 or --fairness-key-rate-limit-default -1"
 	} else {
-		s.Command.Long = "Update Task Queue configuration - rate limits and fairness key configs:\n\n```\ntemporal task-queue update-config \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type activity \\\n    --queue-rate-limit  <requests_per_second:float> \\\n    --queue-rate-limit-reason <reason_string> \\\n    --fairness-key-rate-limit-default <requests_per_second:float> \\\n    --fairness-key-rate-limit-reason  <reason_string>\n```\n\nThis command supports updating:\n- Queue rate limits: Controls the overall rate limiit for the task queue\n- Fairness key rate limit defaults: Sets default rate limits for fairness keys\n\nTo unset a rate limit, use --queue-rate-limit -1 or --fairness-key-rate-limit-default -1"
+		s.Command.Long = "Update a Task Queue's overall rate limit and the default rate limit for all fairness keys:\n\n```\ntemporal task-queue update-config \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type activity \\\n    --queue-rate-limit  <requests_per_second:float> \\\n    --queue-rate-limit-reason <reason_string> \\\n    --fairness-key-rate-limit-default <requests_per_second:float> \\\n    --fairness-key-rate-limit-reason  <reason_string>\n```\n\nThis command supports updating:\n- Queue rate limit: Controls the overall rate limit for the task queue.\n  This setting overrides the worker rate limit if set.\n  Unless modified, this is the system-defined rate limit.\n- Fairness key rate limit defaults: Sets default per-key rate limit for all fairness keys.\n  If set, each individual fairness key will be limited to this rate,\n  scaled by the weight of the fairness key.\n\nTo unset a rate limit, use --queue-rate-limit -1 or --fairness-key-rate-limit-default -1"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task Queue name. Required.")
@@ -2514,7 +2514,7 @@ func NewTemporalTaskQueueUpdateConfigCommand(cctx *CommandContext, parent *Tempo
 	
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		// Set up the rate limit structs if values are provided (including -1 for unset)
-		if queueRateLimit != 0 || queueRateLimitReason != "" {
+		if queueRateLimitReason != "" {
 			s.QueueRateLimit = &struct {
 				RequestsPerSecond float64
 				Reason            string
@@ -2524,7 +2524,7 @@ func NewTemporalTaskQueueUpdateConfigCommand(cctx *CommandContext, parent *Tempo
 			}
 		}
 		
-		if fairnessKeyRateLimit != 0 || fairnessKeyRateLimitReason != "" {
+		if fairnessKeyRateLimitReason != "" {
 			s.FairnessKeyRateLimitDefault = &struct {
 				RequestsPerSecond float64
 				Reason            string
