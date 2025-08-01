@@ -16,6 +16,48 @@ import (
 
 var hasHighlighting = isatty.IsTerminal(os.Stdout.Fd())
 
+type ClientOptions struct {
+	Address                    string
+	ClientAuthority            string
+	Namespace                  string
+	ApiKey                     string
+	GrpcMeta                   []string
+	Tls                        bool
+	TlsCertPath                string
+	TlsCertData                string
+	TlsKeyPath                 string
+	TlsKeyData                 string
+	TlsCaPath                  string
+	TlsCaData                  string
+	TlsDisableHostVerification bool
+	TlsServerName              string
+	CodecEndpoint              string
+	CodecAuth                  string
+	CodecHeader                []string
+	Identity                   string
+}
+
+func (v *ClientOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
+	f.StringVar(&v.Address, "address", "localhost:7233", "Temporal Service gRPC endpoint.")
+	f.StringVar(&v.ClientAuthority, "client-authority", "", "Temporal gRPC client :authority pseudoheader.")
+	f.StringVarP(&v.Namespace, "namespace", "n", "default", "Temporal Service Namespace.")
+	f.StringVar(&v.ApiKey, "api-key", "", "API key for request.")
+	f.StringArrayVar(&v.GrpcMeta, "grpc-meta", nil, "HTTP headers for requests. Format as a `KEY=VALUE` pair. May be passed multiple times to set multiple headers. Can also be made available via environment variable as `TEMPORAL_GRPC_META_[name]`.")
+	f.BoolVar(&v.Tls, "tls", false, "Enable base TLS encryption. Does not have additional options like mTLS or client certs. This is defaulted to true if api-key or any other TLS options are present. Use --tls=false to explicitly disable.")
+	f.StringVar(&v.TlsCertPath, "tls-cert-path", "", "Path to x509 certificate. Can't be used with --tls-cert-data.")
+	f.StringVar(&v.TlsCertData, "tls-cert-data", "", "Data for x509 certificate. Can't be used with --tls-cert-path.")
+	f.StringVar(&v.TlsKeyPath, "tls-key-path", "", "Path to x509 private key. Can't be used with --tls-key-data.")
+	f.StringVar(&v.TlsKeyData, "tls-key-data", "", "Private certificate key data. Can't be used with --tls-key-path.")
+	f.StringVar(&v.TlsCaPath, "tls-ca-path", "", "Path to server CA certificate. Can't be used with --tls-ca-data.")
+	f.StringVar(&v.TlsCaData, "tls-ca-data", "", "Data for server CA certificate. Can't be used with --tls-ca-path.")
+	f.BoolVar(&v.TlsDisableHostVerification, "tls-disable-host-verification", false, "Disable TLS host-name verification.")
+	f.StringVar(&v.TlsServerName, "tls-server-name", "", "Override target TLS server name.")
+	f.StringVar(&v.CodecEndpoint, "codec-endpoint", "", "Remote Codec Server endpoint.")
+	f.StringVar(&v.CodecAuth, "codec-auth", "", "Authorization header for Codec Server requests.")
+	f.StringArrayVar(&v.CodecHeader, "codec-header", nil, "HTTP headers for requests to codec server. Format as a `KEY=VALUE` pair. May be passed multiple times to set multiple headers.")
+	f.StringVar(&v.Identity, "identity", "", "The identity of the user or client submitting this request. Defaults to \"temporal-cli:$USER@$HOST\".")
+}
+
 type OverlapPolicyOptions struct {
 	OverlapPolicy cliext.FlagStringEnum
 	FlagSet       *pflag.FlagSet
