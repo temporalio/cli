@@ -406,9 +406,11 @@ func (c *TemporalTaskQueueDescribeCommand) runLegacy(cctx *CommandContext, args 
 
 		// Create a structured table for config display
 		type configRow struct {
-			Setting string
-			Value   string
-			Details string
+			Setting     string
+			Value       string
+			Reason      string
+			UpdatedBy   string
+			UpdatedTime string
 		}
 
 		var configRows []configRow
@@ -417,7 +419,9 @@ func (c *TemporalTaskQueueDescribeCommand) runLegacy(cctx *CommandContext, args 
 		if config.QueueRateLimit != nil {
 			rateLimit := config.QueueRateLimit
 			value := "Not Set"
-			details := ""
+			reason := ""
+			updatedBy := ""
+			updatedTime := ""
 
 			if rateLimit.RateLimit != nil && rateLimit.RateLimit.RequestsPerSecond > 0 {
 				value = fmt.Sprintf("%.0f requests/second", rateLimit.RateLimit.RequestsPerSecond)
@@ -425,27 +429,23 @@ func (c *TemporalTaskQueueDescribeCommand) runLegacy(cctx *CommandContext, args 
 
 			if rateLimit.Metadata != nil {
 				if rateLimit.Metadata.Reason != "" {
-					details = fmt.Sprintf("Reason: %s", rateLimit.Metadata.Reason)
+					reason = rateLimit.Metadata.Reason
 				}
 				if rateLimit.Metadata.UpdateIdentity != "" {
-					if details != "" {
-						details += " | "
-					}
-					details += fmt.Sprintf("Updated by: %s", rateLimit.Metadata.UpdateIdentity)
+					updatedBy = rateLimit.Metadata.UpdateIdentity
 				}
 				if rateLimit.Metadata.UpdateTime != nil {
-					if details != "" {
-						details += " | "
-					}
 					updateTime := rateLimit.Metadata.UpdateTime.AsTime()
-					details += fmt.Sprintf("Updated: %s", updateTime.Format("2006-01-02 15:04:05"))
+					updatedTime = updateTime.Format("2006-01-02 15:04:05")
 				}
 			}
 
 			configRows = append(configRows, configRow{
-				Setting: "Queue Rate Limit",
-				Value:   value,
-				Details: details,
+				Setting:     "Queue Rate Limit",
+				Value:       value,
+				Reason:      reason,
+				UpdatedBy:   updatedBy,
+				UpdatedTime: updatedTime,
 			})
 		}
 
@@ -453,7 +453,9 @@ func (c *TemporalTaskQueueDescribeCommand) runLegacy(cctx *CommandContext, args 
 		if config.FairnessKeysRateLimitDefault != nil {
 			rateLimit := config.FairnessKeysRateLimitDefault
 			value := "Not Set"
-			details := ""
+			reason := ""
+			updatedBy := ""
+			updatedTime := ""
 
 			if rateLimit.RateLimit != nil && rateLimit.RateLimit.RequestsPerSecond > 0 {
 				value = fmt.Sprintf("%.0f requests/second", rateLimit.RateLimit.RequestsPerSecond)
@@ -461,27 +463,23 @@ func (c *TemporalTaskQueueDescribeCommand) runLegacy(cctx *CommandContext, args 
 
 			if rateLimit.Metadata != nil {
 				if rateLimit.Metadata.Reason != "" {
-					details = fmt.Sprintf("Reason: %s", rateLimit.Metadata.Reason)
+					reason = rateLimit.Metadata.Reason
 				}
 				if rateLimit.Metadata.UpdateIdentity != "" {
-					if details != "" {
-						details += " | "
-					}
-					details += fmt.Sprintf("Updated by: %s", rateLimit.Metadata.UpdateIdentity)
+					updatedBy = rateLimit.Metadata.UpdateIdentity
 				}
 				if rateLimit.Metadata.UpdateTime != nil {
-					if details != "" {
-						details += " | "
-					}
 					updateTime := rateLimit.Metadata.UpdateTime.AsTime()
-					details += fmt.Sprintf("Updated: %s", updateTime.Format("2006-01-02 15:04:05"))
+					updatedTime = updateTime.Format("2006-01-02 15:04:05")
 				}
 			}
 
 			configRows = append(configRows, configRow{
-				Setting: "Fairness Key Rate Limit Default",
-				Value:   value,
-				Details: details,
+				Setting:     "Fairness Key Rate Limit Default",
+				Value:       value,
+				Reason:      reason,
+				UpdatedBy:   updatedBy,
+				UpdatedTime: updatedTime,
 			})
 		}
 
