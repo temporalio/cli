@@ -19,8 +19,8 @@ func (s *SharedServerSuite) getTaskQueueConfig(taskQueue, taskQueueType string) 
 	)
 	require.NoError(s.T(), res.Err)
 
-	var result map[string]interface{}
-	err := json.Unmarshal([]byte(res.Stdout.String()), &result)
+	var result map[string]any
+	err := json.Unmarshal(res.Stdout.Bytes(), &result)
 	require.NoError(s.T(), err)
 
 	return result
@@ -31,19 +31,19 @@ func (s *SharedServerSuite) verifyRateLimit(config map[string]interface{}, expec
 	configData, exists := config["config"]
 	require.True(s.T(), exists, "Config should exist in response")
 
-	configMap, ok := configData.(map[string]interface{})
+	configMap, ok := configData.(map[string]any)
 	require.True(s.T(), ok, "Config should be a map")
 
 	queueRateLimit, exists := configMap["queue_rate_limit"]
 	require.True(s.T(), exists, "Queue rate limit should exist")
 
-	rateLimitMap, ok := queueRateLimit.(map[string]interface{})
+	rateLimitMap, ok := queueRateLimit.(map[string]any)
 	require.True(s.T(), ok, "Queue rate limit should be a map")
 
 	rateLimit, exists := rateLimitMap["rate_limit"]
 	require.True(s.T(), exists, "Rate limit should exist")
 
-	rateLimitData, ok := rateLimit.(map[string]interface{})
+	rateLimitData, ok := rateLimit.(map[string]any)
 	require.True(s.T(), ok, "Rate limit should be a map")
 
 	requestsPerSecond, exists := rateLimitData["requests_per_second"]
@@ -60,7 +60,7 @@ func (s *SharedServerSuite) verifyRateLimit(config map[string]interface{}, expec
 		metadata, exists := rateLimitMap["metadata"]
 		require.True(s.T(), exists, "Metadata should exist")
 
-		metadataMap, ok := metadata.(map[string]interface{})
+		metadataMap, ok := metadata.(map[string]any)
 		require.True(s.T(), ok, "Metadata should be a map")
 
 		reason, exists := metadataMap["reason"]
@@ -84,7 +84,7 @@ func (s *SharedServerSuite) verifyRateLimitUnset(config map[string]interface{}) 
 	queueRateLimit, exists := configMap["queue_rate_limit"]
 	require.True(s.T(), exists, "Queue rate limit field should exist")
 
-	rateLimitMap, ok := queueRateLimit.(map[string]interface{})
+	rateLimitMap, ok := queueRateLimit.(map[string]any)
 	require.True(s.T(), ok, "Queue rate limit should be a map")
 
 	// If rate_limit subfield is missing, it means the rate limit is unset
@@ -97,7 +97,7 @@ func (s *SharedServerSuite) verifyFairnessKeyRateLimit(config map[string]interfa
 	configData, exists := config["config"]
 	require.True(s.T(), exists, "Config should exist in response")
 
-	configMap, ok := configData.(map[string]interface{})
+	configMap, ok := configData.(map[string]any)
 	require.True(s.T(), ok, "Config should be a map")
 
 	fairnessKeyRateLimit, exists := configMap["fairness_keys_rate_limit_default"]

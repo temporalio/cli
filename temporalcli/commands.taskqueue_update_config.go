@@ -10,6 +10,7 @@ import (
 
 const (
 	UnsetRateLimit = -1
+	NoopRateLimit  = -99999
 )
 
 func (c *TemporalTaskQueueUpdateConfigCommand) run(cctx *CommandContext, args []string) error {
@@ -55,15 +56,15 @@ func (c *TemporalTaskQueueUpdateConfigCommand) run(cctx *CommandContext, args []
 		TaskQueue:     taskQueue,
 		TaskQueueType: taskQueueType,
 	}
-
+	// RateLimit `NoopRateLimit` indicates no changes required.
 	// Add queue rate limit if specified (including unset)
-	if c.QueueRateLimitReason != "" || c.QueueRateLimit != 0 {
+	if c.QueueRateLimitReason != "" || c.QueueRateLimit != NoopRateLimit {
 		if c.QueueRateLimit == UnsetRateLimit {
 			// For unset, we pass an empty RateLimitUpdate with no RateLimit
 			request.UpdateQueueRateLimit = &workflowservice.UpdateTaskQueueConfigRequest_RateLimitUpdate{
 				Reason: c.QueueRateLimitReason,
 			}
-		} else {
+		} else if c.QueueRateLimit != NoopRateLimit {
 			// For setting a value (including 0)
 			request.UpdateQueueRateLimit = &workflowservice.UpdateTaskQueueConfigRequest_RateLimitUpdate{
 				RateLimit: &taskqueue.RateLimit{
@@ -75,13 +76,13 @@ func (c *TemporalTaskQueueUpdateConfigCommand) run(cctx *CommandContext, args []
 	}
 
 	// Add fairness key rate limit default if specified (including unset)
-	if c.FairnessKeyRateLimitReason != "" || c.FairnessKeyRateLimitDefault != 0 {
+	if c.FairnessKeyRateLimitReason != "" || c.FairnessKeyRateLimitDefault != NoopRateLimit {
 		if c.FairnessKeyRateLimitDefault == UnsetRateLimit {
 			// For unset, we pass an empty RateLimitUpdate with no RateLimit
 			request.UpdateFairnessKeyRateLimitDefault = &workflowservice.UpdateTaskQueueConfigRequest_RateLimitUpdate{
 				Reason: c.FairnessKeyRateLimitReason,
 			}
-		} else {
+		} else if c.FairnessKeyRateLimitDefault != NoopRateLimit {
 			// For setting a value (including 0)
 			request.UpdateFairnessKeyRateLimitDefault = &workflowservice.UpdateTaskQueueConfigRequest_RateLimitUpdate{
 				RateLimit: &taskqueue.RateLimit{
@@ -101,10 +102,10 @@ func (c *TemporalTaskQueueUpdateConfigCommand) run(cctx *CommandContext, args []
 	cctx.Printer.Println("Successfully updated task queue configuration")
 
 	// Print summary of what was updated
-	if c.QueueRateLimitReason != "" || c.QueueRateLimit != 0 {
+	if c.QueueRateLimitReason != "" || c.QueueRateLimit != NoopRateLimit {
 		if c.QueueRateLimit == UnsetRateLimit {
 			cctx.Printer.Println("Queue Rate Limit: Unset")
-		} else {
+		} else if c.QueueRateLimit != NoopRateLimit {
 			cctx.Printer.Printlnf("Queue Rate Limit: %.2f requests/second", c.QueueRateLimit)
 		}
 		if c.QueueRateLimitReason != "" {
@@ -112,10 +113,10 @@ func (c *TemporalTaskQueueUpdateConfigCommand) run(cctx *CommandContext, args []
 		}
 	}
 
-	if c.FairnessKeyRateLimitReason != "" || c.FairnessKeyRateLimitDefault != 0 {
+	if c.FairnessKeyRateLimitReason != "" || c.FairnessKeyRateLimitDefault != NoopRateLimit {
 		if c.FairnessKeyRateLimitDefault == UnsetRateLimit {
 			cctx.Printer.Println("Fairness Key Rate Limit Default: Unset")
-		} else {
+		} else if c.FairnessKeyRateLimitDefault != NoopRateLimit {
 			cctx.Printer.Printlnf("Fairness Key Rate Limit Default: %.2f requests/second", c.FairnessKeyRateLimitDefault)
 		}
 		if c.FairnessKeyRateLimitReason != "" {
