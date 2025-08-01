@@ -38,7 +38,7 @@ type ClientOptions struct {
 }
 
 func (v *ClientOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
-	f.StringVar(&v.Address, "address", "127.0.0.1:7233", "Temporal Service gRPC endpoint.")
+	f.StringVar(&v.Address, "address", "localhost:7233", "Temporal Service gRPC endpoint.")
 	f.StringVar(&v.ClientAuthority, "client-authority", "", "Temporal gRPC client :authority pseudoheader.")
 	f.StringVarP(&v.Namespace, "namespace", "n", "default", "Temporal Service Namespace.")
 	f.StringVar(&v.ApiKey, "api-key", "", "API key for request.")
