@@ -3130,6 +3130,7 @@ commands:
       temporal task-queue update-config \
           --task-queue YourTaskQueue \
           --task-queue-type activity \
+          --namespace YourNamespace \
           --queue-rate-limit <requests_per_second:float> \
           --queue-rate-limit-reason <reason_string> \
           --fairness-key-rate-limit-default <requests_per_second:float> \
