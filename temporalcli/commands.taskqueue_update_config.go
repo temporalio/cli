@@ -21,8 +21,8 @@ func (c *TemporalTaskQueueUpdateConfigCommand) run(cctx *CommandContext, args []
 
 	taskQueue := c.TaskQueue
 	taskQueueType := enums.TASK_QUEUE_TYPE_WORKFLOW // default
-	if c.TaskQueueType != "" {
-		switch c.TaskQueueType {
+	if c.TaskQueueType.String() != "" {
+		switch c.TaskQueueType.String() {
 		case "workflow":
 			taskQueueType = enums.TASK_QUEUE_TYPE_WORKFLOW
 		case "activity":
@@ -30,7 +30,7 @@ func (c *TemporalTaskQueueUpdateConfigCommand) run(cctx *CommandContext, args []
 		case "nexus":
 			taskQueueType = enums.TASK_QUEUE_TYPE_NEXUS
 		default:
-			return fmt.Errorf("invalid task queue type: %s. Must be one of: workflow, activity, nexus", c.TaskQueueType)
+			return fmt.Errorf("invalid task queue type: %s. Must be one of: workflow, activity, nexus", c.TaskQueueType.String())
 		}
 	}
 
@@ -39,7 +39,7 @@ func (c *TemporalTaskQueueUpdateConfigCommand) run(cctx *CommandContext, args []
 		return fmt.Errorf("taskQueue name is required")
 	}
 	if taskQueueType == enums.TASK_QUEUE_TYPE_WORKFLOW {
-		if c.QueueRateLimit != nil && c.QueueRateLimit.RequestsPerSecond != UnsetRateLimit {
+		if c.QueueRateLimit != 0 && c.QueueRateLimit != UnsetRateLimit {
 			return fmt.Errorf("setting rate limit on workflow task queues is not allowed")
 		}
 		return fmt.Errorf("taskQueueType is required")
@@ -57,37 +57,37 @@ func (c *TemporalTaskQueueUpdateConfigCommand) run(cctx *CommandContext, args []
 	}
 
 	// Add queue rate limit if specified (including unset)
-	if c.QueueRateLimit != nil {
-		if c.QueueRateLimit.RequestsPerSecond == UnsetRateLimit {
+	if c.QueueRateLimitReason != "" || c.QueueRateLimit != 0 {
+		if c.QueueRateLimit == UnsetRateLimit {
 			// For unset, we pass an empty RateLimitUpdate with no RateLimit
 			request.UpdateQueueRateLimit = &workflowservice.UpdateTaskQueueConfigRequest_RateLimitUpdate{
-				Reason: c.QueueRateLimit.Reason,
+				Reason: c.QueueRateLimitReason,
 			}
 		} else {
-			// For setting a value
+			// For setting a value (including 0)
 			request.UpdateQueueRateLimit = &workflowservice.UpdateTaskQueueConfigRequest_RateLimitUpdate{
 				RateLimit: &taskqueue.RateLimit{
-					RequestsPerSecond: float32(c.QueueRateLimit.RequestsPerSecond),
+					RequestsPerSecond: c.QueueRateLimit,
 				},
-				Reason: c.QueueRateLimit.Reason,
+				Reason: c.QueueRateLimitReason,
 			}
 		}
 	}
 
 	// Add fairness key rate limit default if specified (including unset)
-	if c.FairnessKeyRateLimitDefault != nil {
-		if c.FairnessKeyRateLimitDefault.RequestsPerSecond == UnsetRateLimit {
+	if c.FairnessKeyRateLimitReason != "" || c.FairnessKeyRateLimitDefault != 0 {
+		if c.FairnessKeyRateLimitDefault == UnsetRateLimit {
 			// For unset, we pass an empty RateLimitUpdate with no RateLimit
 			request.UpdateFairnessKeyRateLimitDefault = &workflowservice.UpdateTaskQueueConfigRequest_RateLimitUpdate{
-				Reason: c.FairnessKeyRateLimitDefault.Reason,
+				Reason: c.FairnessKeyRateLimitReason,
 			}
 		} else {
-			// For setting a value
+			// For setting a value (including 0)
 			request.UpdateFairnessKeyRateLimitDefault = &workflowservice.UpdateTaskQueueConfigRequest_RateLimitUpdate{
 				RateLimit: &taskqueue.RateLimit{
-					RequestsPerSecond: float32(c.FairnessKeyRateLimitDefault.RequestsPerSecond),
+					RequestsPerSecond: c.FairnessKeyRateLimitDefault,
 				},
-				Reason: c.FairnessKeyRateLimitDefault.Reason,
+				Reason: c.FairnessKeyRateLimitReason,
 			}
 		}
 	}
@@ -101,25 +101,25 @@ func (c *TemporalTaskQueueUpdateConfigCommand) run(cctx *CommandContext, args []
 	cctx.Printer.Println("Successfully updated task queue configuration")
 
 	// Print summary of what was updated
-	if c.QueueRateLimit != nil {
-		if c.QueueRateLimit.RequestsPerSecond == UnsetRateLimit {
+	if c.QueueRateLimitReason != "" || c.QueueRateLimit != 0 {
+		if c.QueueRateLimit == UnsetRateLimit {
 			cctx.Printer.Println("Queue Rate Limit: Unset")
 		} else {
-			cctx.Printer.Printlnf("Queue Rate Limit: %.2f requests/second", c.QueueRateLimit.RequestsPerSecond)
+			cctx.Printer.Printlnf("Queue Rate Limit: %.2f requests/second", c.QueueRateLimit)
 		}
-		if c.QueueRateLimit.Reason != "" {
-			cctx.Printer.Printlnf("Queue Rate Limit Reason: %s", c.QueueRateLimit.Reason)
+		if c.QueueRateLimitReason != "" {
+			cctx.Printer.Printlnf("Queue Rate Limit Reason: %s", c.QueueRateLimitReason)
 		}
 	}
 
-	if c.FairnessKeyRateLimitDefault != nil {
-		if c.FairnessKeyRateLimitDefault.RequestsPerSecond == UnsetRateLimit {
+	if c.FairnessKeyRateLimitReason != "" || c.FairnessKeyRateLimitDefault != 0 {
+		if c.FairnessKeyRateLimitDefault == UnsetRateLimit {
 			cctx.Printer.Println("Fairness Key Rate Limit Default: Unset")
 		} else {
-			cctx.Printer.Printlnf("Fairness Key Rate Limit Default: %.2f requests/second", c.FairnessKeyRateLimitDefault.RequestsPerSecond)
+			cctx.Printer.Printlnf("Fairness Key Rate Limit Default: %.2f requests/second", c.FairnessKeyRateLimitDefault)
 		}
-		if c.FairnessKeyRateLimitDefault.Reason != "" {
-			cctx.Printer.Printlnf("Fairness Key Rate Limit Reason: %s", c.FairnessKeyRateLimitDefault.Reason)
+		if c.FairnessKeyRateLimitReason != "" {
+			cctx.Printer.Printlnf("Fairness Key Rate Limit Reason: %s", c.FairnessKeyRateLimitReason)
 		}
 	}
 

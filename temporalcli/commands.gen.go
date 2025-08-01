@@ -2180,11 +2180,11 @@ type TemporalTaskQueueDescribeCommand struct {
 	SelectUnversioned   bool
 	SelectAllActive     bool
 	ReportReachability  bool
-	ReportConfig        bool
 	LegacyMode          bool
 	TaskQueueTypeLegacy StringEnum
 	PartitionsLegacy    int
 	DisableStats        bool
+	ReportConfig        bool
 }
 
 func NewTemporalTaskQueueDescribeCommand(cctx *CommandContext, parent *TemporalTaskQueueCommand) *TemporalTaskQueueDescribeCommand {
@@ -2207,12 +2207,12 @@ func NewTemporalTaskQueueDescribeCommand(cctx *CommandContext, parent *TemporalT
 	s.Command.Flags().BoolVar(&s.SelectUnversioned, "select-unversioned", false, "Include the unversioned queue.")
 	s.Command.Flags().BoolVar(&s.SelectAllActive, "select-all-active", false, "Include all active versions. A version is active if it had new tasks or polls recently.")
 	s.Command.Flags().BoolVar(&s.ReportReachability, "report-reachability", false, "Display task reachability information.")
-	s.Command.Flags().BoolVar(&s.ReportConfig, "report-config", false, "Include task queue configuration in the response.")
 	s.Command.Flags().BoolVar(&s.LegacyMode, "legacy-mode", false, "Enable a legacy mode for servers that do not support rules-based worker versioning. This mode only provides pollers info.")
 	s.TaskQueueTypeLegacy = NewStringEnum([]string{"workflow", "activity"}, "workflow")
 	s.Command.Flags().Var(&s.TaskQueueTypeLegacy, "task-queue-type-legacy", "Task Queue type (legacy mode only). Accepted values: workflow, activity.")
 	s.Command.Flags().IntVar(&s.PartitionsLegacy, "partitions-legacy", 1, "Query partitions 1 through `N`. Experimental/Temporary feature. Legacy mode only.")
 	s.Command.Flags().BoolVar(&s.DisableStats, "disable-stats", false, "Disable task queue statistics.")
+	s.Command.Flags().BoolVar(&s.ReportConfig, "report-config", false, "Include task queue configuration in the response. When enabled, the command will return the current rate limit configuration for the task queue.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -2464,20 +2464,16 @@ func NewTemporalTaskQueueUpdateBuildIdsPromoteSetCommand(cctx *CommandContext, p
 }
 
 type TemporalTaskQueueUpdateConfigCommand struct {
-	Parent  *TemporalTaskQueueCommand
-	Command cobra.Command
-	TaskQueue string
-	TaskQueueType string
-	Identity string
-	Namespace string
-	QueueRateLimit *struct {
-		RequestsPerSecond float64
-		Reason            string
-	}
-	FairnessKeyRateLimitDefault *struct {
-		RequestsPerSecond float64
-		Reason            string
-	}
+	Parent                      *TemporalTaskQueueCommand
+	Command                     cobra.Command
+	TaskQueue                   string
+	TaskQueueType               StringEnum
+	Identity                    string
+	Namespace                   string
+	QueueRateLimit              float32
+	QueueRateLimitReason        string
+	FairnessKeyRateLimitDefault float32
+	FairnessKeyRateLimitReason  string
 }
 
 func NewTemporalTaskQueueUpdateConfigCommand(cctx *CommandContext, parent *TemporalTaskQueueCommand) *TemporalTaskQueueUpdateConfigCommand {
@@ -2487,53 +2483,22 @@ func NewTemporalTaskQueueUpdateConfigCommand(cctx *CommandContext, parent *Tempo
 	s.Command.Use = "update-config [flags]"
 	s.Command.Short = "Update Task Queue configuration"
 	if hasHighlighting {
-		s.Command.Long = "Update a Task Queue's overall rate limit and the default rate limit for all fairness keys:\n\n\x1b[1mtemporal task-queue update-config \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type activity \\\n    --queue-rate-limit <requests_per_second:float> \\\n    --queue-rate-limit-reason <reason_string> \\\n    --fairness-key-rate-limit-default <requests_per_second:float> \\\n    --fairness-key-rate-limit-reason  <reason_string>\x1b[0m\n\nThis command supports updating:\n- Queue rate limit: Controls the overall rate limit for the task queue.\n  This setting overrides the worker rate limit if set.\n  Unless modified, this is the system-defined rate limit.\n- Fairness key rate limit defaults: Sets default per-key rate limit for all fairness keys.\n  If set, each individual fairness key will be limited to this rate,\n  scaled by the weight of the fairness key.\n\nTo unset a rate limit, use --queue-rate-limit -1 or --fairness-key-rate-limit-default -1"
+		s.Command.Long = "Update a Task Queue's overall rate limit and the default rate limit for all fairness keys:\n\n\x1b[1mtemporal task-queue update-config \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type activity \\\n    --queue-rate-limit <requests_per_second:float> \\\n    --queue-rate-limit-reason <reason_string> \\\n    --fairness-key-rate-limit-default <requests_per_second:float> \\\n    --fairness-key-rate-limit-reason <reason_string>\x1b[0m\n\nThis command supports updating:\n- Queue rate limits: Controls the overall rate of task processing.\n  This setting overrides the worker rate limit if set.\n  Unless modified, this is the system-defined rate limit.\n- Fairness key rate limit defaults: Sets default rate limits for fairness keys.\n  If set, each individual fairness key will be limited to this rate,\n  scaled by the weight of the fairness key.\n\n\nTo unset a rate limit, use --queue-rate-limit -1 or --fairness-key-rate-limit-default -1"
 	} else {
-		s.Command.Long = "Update a Task Queue's overall rate limit and the default rate limit for all fairness keys:\n\n```\ntemporal task-queue update-config \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type activity \\\n    --queue-rate-limit  <requests_per_second:float> \\\n    --queue-rate-limit-reason <reason_string> \\\n    --fairness-key-rate-limit-default <requests_per_second:float> \\\n    --fairness-key-rate-limit-reason  <reason_string>\n```\n\nThis command supports updating:\n- Queue rate limit: Controls the overall rate limit for the task queue.\n  This setting overrides the worker rate limit if set.\n  Unless modified, this is the system-defined rate limit.\n- Fairness key rate limit defaults: Sets default per-key rate limit for all fairness keys.\n  If set, each individual fairness key will be limited to this rate,\n  scaled by the weight of the fairness key.\n\nTo unset a rate limit, use --queue-rate-limit -1 or --fairness-key-rate-limit-default -1"
+		s.Command.Long = "Update a Task Queue's overall rate limit and the default rate limit for all fairness keys:\n\n```\ntemporal task-queue update-config \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type activity \\\n    --queue-rate-limit <requests_per_second:float> \\\n    --queue-rate-limit-reason <reason_string> \\\n    --fairness-key-rate-limit-default <requests_per_second:float> \\\n    --fairness-key-rate-limit-reason <reason_string>\n```\n\nThis command supports updating:\n- Queue rate limits: Controls the overall rate of task processing.\n  This setting overrides the worker rate limit if set.\n  Unless modified, this is the system-defined rate limit.\n- Fairness key rate limit defaults: Sets default rate limits for fairness keys.\n  If set, each individual fairness key will be limited to this rate,\n  scaled by the weight of the fairness key.\n\n\nTo unset a rate limit, use --queue-rate-limit -1 or --fairness-key-rate-limit-default -1"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task Queue name. Required.")
+	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task Queue name. Required. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
-	s.Command.Flags().StringVar(&s.TaskQueueType, "task-queue-type", "", "Task Queue type. Accepted values: workflow, activity, nexus.")
+	s.TaskQueueType = NewStringEnum([]string{"workflow", "activity", "nexus"}, "")
+	s.Command.Flags().Var(&s.TaskQueueType, "task-queue-type", "Task Queue type. Accepted values: workflow, activity, nexus. Accepted values: workflow, activity, nexus.")
 	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity for the operation.")
 	s.Command.Flags().StringVar(&s.Namespace, "namespace", "", "Namespace for the operation.")
-	
-	// Queue rate limit flags
-	var queueRateLimit float64
-	var queueRateLimitReason string
-	s.Command.Flags().Float64Var(&queueRateLimit, "queue-rate-limit", 0, "Queue rate limit in requests per second. Use -1 to unset.")
-	s.Command.Flags().StringVar(&queueRateLimitReason, "queue-rate-limit-reason", "", "Reason for queue rate limit update.")
-	s.Command.Flags().MarkHidden("queue-rate-limit-reason")
-	
-	// Fairness key rate limit flags
-	var fairnessKeyRateLimit float64
-	var fairnessKeyRateLimitReason string
-	s.Command.Flags().Float64Var(&fairnessKeyRateLimit, "fairness-key-rate-limit-default", 0, "Fairness key rate limit default in requests per second. Use -1 to unset.")
-	s.Command.Flags().StringVar(&fairnessKeyRateLimitReason, "fairness-key-rate-limit-reason", "", "Reason for fairness key rate limit update.")
-	s.Command.Flags().MarkHidden("fairness-key-rate-limit-reason")
-	
+	s.Command.Flags().Float32Var(&s.QueueRateLimit, "queue-rate-limit", 0, "Queue rate limit in requests per second. Use -1 to unset.")
+	s.Command.Flags().StringVar(&s.QueueRateLimitReason, "queue-rate-limit-reason", "", "Reason for queue rate limit update.")
+	s.Command.Flags().Float32Var(&s.FairnessKeyRateLimitDefault, "fairness-key-rate-limit-default", 0, "Fairness key rate limit default in requests per second. Use -1 to unset.")
+	s.Command.Flags().StringVar(&s.FairnessKeyRateLimitReason, "fairness-key-rate-limit-reason", "", "Reason for fairness key rate limit update.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
-		// Set up the rate limit structs if values are provided (including -1 for unset)
-		if queueRateLimitReason != "" {
-			s.QueueRateLimit = &struct {
-				RequestsPerSecond float64
-				Reason            string
-			}{
-				RequestsPerSecond: queueRateLimit, // Can be -1 for unset, 0 for zero rate limit, or positive value
-				Reason:            queueRateLimitReason,
-			}
-		}
-		
-		if fairnessKeyRateLimitReason != "" {
-			s.FairnessKeyRateLimitDefault = &struct {
-				RequestsPerSecond float64
-				Reason            string
-			}{
-				RequestsPerSecond: fairnessKeyRateLimit, // Can be -1 for unset, 0 for zero rate limit, or positive value
-				Reason:            fairnessKeyRateLimitReason,
-			}
-		}
-		
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
 		}

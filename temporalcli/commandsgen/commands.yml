@@ -2560,6 +2560,12 @@ commands:
       - name: disable-stats
         type: bool
         description: Disable task queue statistics.
+      - name: report-config
+        type: bool
+        description: |
+          Include task queue configuration in the response.
+          When enabled, the command will return the current rate limit
+          configuration for the task queue.
 
   - name: temporal task-queue get-build-id-reachability
     summary: Show Build ID availability (Deprecated)
@@ -3114,6 +3120,73 @@ commands:
         short: y
         type: bool
         description: Don't prompt to confirm.
+
+  - name: temporal task-queue update-config
+    summary: Update Task Queue configuration
+    description: |
+      Update a Task Queue's overall rate limit and the default rate limit for all fairness keys:
+
+      ```
+      temporal task-queue update-config \
+          --task-queue YourTaskQueue \
+          --task-queue-type activity \
+          --queue-rate-limit <requests_per_second:float> \
+          --queue-rate-limit-reason <reason_string> \
+          --fairness-key-rate-limit-default <requests_per_second:float> \
+          --fairness-key-rate-limit-reason <reason_string>
+      ```
+
+      This command supports updating:
+      - Queue rate limits: Controls the overall rate of task processing.
+        This setting overrides the worker rate limit if set.
+        Unless modified, this is the system-defined rate limit.
+      - Fairness key rate limit defaults: Sets default rate limits for fairness keys.
+        If set, each individual fairness key will be limited to this rate,
+        scaled by the weight of the fairness key.
+
+
+      To unset a rate limit, use --queue-rate-limit -1 or --fairness-key-rate-limit-default -1
+    options:
+      - name: task-queue
+        type: string
+        description: |
+          Task Queue name.
+          Required.
+        required: true
+        short: t
+      - name: task-queue-type
+        type: string-enum
+        description: |
+          Task Queue type.
+          Accepted values: workflow, activity, nexus.
+        enum-values:
+          - workflow
+          - activity
+          - nexus
+      - name: identity
+        type: string
+        description: Identity for the operation.
+      - name: namespace
+        type: string
+        description: Namespace for the operation.
+      - name: queue-rate-limit
+        type: float
+        description: |
+          Queue rate limit in requests per second.
+          Use -1 to unset.
+      - name: queue-rate-limit-reason
+        type: string
+        description: Reason for queue rate limit update.
+        hidden: true
+      - name: fairness-key-rate-limit-default
+        type: float
+        description: |
+          Fairness key rate limit default in requests per second.
+          Use -1 to unset.
+      - name: fairness-key-rate-limit-reason
+        type: string
+        description: Reason for fairness key rate limit update.
+        hidden: true
 
   - name: temporal workflow
     summary: Start, list, and operate on Workflows
