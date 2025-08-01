@@ -1,48 +1,41 @@
-package temporalcli
+package temporalcli_test
 
 import (
-	"testing"
+	"fmt"
+
+	"github.com/stretchr/testify/require"
 )
 
-func TestTemporalTaskQueueUpdateConfigCommand_Flags(t *testing.T) {
-	// This test verifies that the command flags are properly defined
-	// and the command can be created without errors
+func (s *SharedServerSuite) TestTaskQueue_Update_ReportConfig() {
+	// First, update a task queue configuration (activity task queue with queue rate limit)
+	res := s.Execute(
+		"task-queue", "update-config",
+		"--address", s.Address(),
+		"--task-queue", "test-describe-config-queue",
+		"--task-queue-type", "activity",
+		"--namespace", "default",
+		"--identity", "test-identity",
+		"--queue-rate-limit", "100",
+	)
+	fmt.Println(res.Stdout.String())
+	require.NoError(s.T(), res.Err)
 
-	cctx := &CommandContext{}
-	parent := &TemporalTaskQueueCommand{}
+	// Now describe the task queue with report-config flag
+	res2 := s.Execute(
+		"task-queue", "describe",
+		"--address", s.Address(),
+		"--task-queue", "test-describe-config-queue",
+		"--task-queue-type-legacy", "activity",
+		"--legacy-mode",
+		"--report-config",
+		"-o", "json",
+	)
+	fmt.Println(res2.Stdout.String())
+	require.NoError(s.T(), res2.Err)
 
-	cmd := NewTemporalTaskQueueUpdateConfigCommand(cctx, parent)
-
-	// Verify the command has the expected flags
-	flags := cmd.Command.Flags()
-
-	// Check that required flags exist
-	if flags.Lookup("task-queue") == nil {
-		t.Error("task-queue flag not found")
-	}
-
-	if flags.Lookup("task-queue-type") == nil {
-		t.Error("task-queue-type flag not found")
-	}
-
-	if flags.Lookup("queue-rate-limit") == nil {
-		t.Error("queue-rate-limit flag not found")
-	}
-
-	if flags.Lookup("fairness-key-rate-limit-default") == nil {
-		t.Error("fairness-key-rate-limit-default flag not found")
-	}
-
-	if flags.Lookup("identity") == nil {
-		t.Error("identity flag not found")
-	}
-
-	// Verify command metadata
-	if cmd.Command.Use != "update-config [flags]" {
-		t.Errorf("expected command use to be 'update-config [flags]', got '%s'", cmd.Command.Use)
-	}
-
-	if cmd.Command.Short != "Update Task Queue configuration" {
-		t.Errorf("expected command short description to be 'Update Task Queue configuration', got '%s'", cmd.Command.Short)
-	}
+	// Parse the JSON output to verify config is included
+	output := res2.Stdout.String()
+	require.Contains(s.T(), output, "config")
+	require.Contains(s.T(), output, "queue_rate_limit")
+	require.Contains(s.T(), output, "100")
 }

@@ -334,6 +334,7 @@ func (c *TemporalTaskQueueDescribeCommand) runLegacy(cctx *CommandContext, args 
 
 	var statuses []*statusWithPartition
 	var pollers []*pollerWithPartition
+	var config *taskqueue.TaskQueueConfig
 
 	// TODO: remove this when the server does partition fan-out
 	for p := 0; p < partitions; p++ {
@@ -345,6 +346,7 @@ func (c *TemporalTaskQueueDescribeCommand) runLegacy(cctx *CommandContext, args 
 			},
 			TaskQueueType:          taskQueueType,
 			IncludeTaskQueueStatus: true,
+			ReportConfig:           c.ReportConfig,
 		})
 		if err != nil {
 			return fmt.Errorf("unable to describe task queue: %w", err)
@@ -360,14 +362,25 @@ func (c *TemporalTaskQueueDescribeCommand) runLegacy(cctx *CommandContext, args 
 				Versioning: pi.WorkerVersionCapabilities,
 			})
 		}
+		// Capture config from the first partition (they should all be the same)
+		if p == 0 && resp.Config != nil {
+			config = resp.Config
+		}
 	}
 
 	// For JSON, we'll just dump the proto
 	if cctx.JSONOutput {
-		return cctx.Printer.PrintStructured(map[string]any{
+		output := map[string]any{
 			"taskQueues": statuses,
 			"pollers":    pollers,
-		}, printer.StructuredOptions{})
+		}
+
+		// Include config if requested
+		if c.ReportConfig && config != nil {
+			output["config"] = config
+		}
+
+		return cctx.Printer.PrintStructured(output, printer.StructuredOptions{})
 	}
 
 	// For text, we will use a table for pollers
@@ -382,7 +395,18 @@ func (c *TemporalTaskQueueDescribeCommand) runLegacy(cctx *CommandContext, args 
 		items[i].LastAccessTime = poller.LastAccessTime.AsTime()
 		items[i].RatePerSecond = poller.RatePerSecond
 	}
-	return cctx.Printer.PrintStructured(items, printer.StructuredOptions{Table: &printer.TableOptions{}})
+	err = cctx.Printer.PrintStructured(items, printer.StructuredOptions{Table: &printer.TableOptions{}})
+	if err != nil {
+		return err
+	}
+
+	// Display config if requested
+	if c.ReportConfig && config != nil {
+		cctx.Printer.Println(color.MagentaString("\nTask Queue Configuration:"))
+		return cctx.Printer.PrintStructured(config, printer.StructuredOptions{})
+	}
+
+	return nil
 }
 
 func (c *TemporalTaskQueueListPartitionCommand) run(cctx *CommandContext, args []string) error {
