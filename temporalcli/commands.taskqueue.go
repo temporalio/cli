@@ -403,7 +403,94 @@ func (c *TemporalTaskQueueDescribeCommand) runLegacy(cctx *CommandContext, args 
 	// Display config if requested
 	if c.ReportConfig && config != nil {
 		cctx.Printer.Println(color.MagentaString("\nTask Queue Configuration:"))
-		return cctx.Printer.PrintStructured(config, printer.StructuredOptions{})
+
+		// Create a structured table for config display
+		type configRow struct {
+			Setting string
+			Value   string
+			Details string
+		}
+
+		var configRows []configRow
+
+		// Queue Rate Limit
+		if config.QueueRateLimit != nil {
+			rateLimit := config.QueueRateLimit
+			value := "Not Set"
+			details := ""
+
+			if rateLimit.RateLimit != nil && rateLimit.RateLimit.RequestsPerSecond > 0 {
+				value = fmt.Sprintf("%.0f requests/second", rateLimit.RateLimit.RequestsPerSecond)
+			}
+
+			if rateLimit.Metadata != nil {
+				if rateLimit.Metadata.Reason != "" {
+					details = fmt.Sprintf("Reason: %s", rateLimit.Metadata.Reason)
+				}
+				if rateLimit.Metadata.UpdateIdentity != "" {
+					if details != "" {
+						details += " | "
+					}
+					details += fmt.Sprintf("Updated by: %s", rateLimit.Metadata.UpdateIdentity)
+				}
+				if rateLimit.Metadata.UpdateTime != nil {
+					if details != "" {
+						details += " | "
+					}
+					updateTime := rateLimit.Metadata.UpdateTime.AsTime()
+					details += fmt.Sprintf("Updated: %s", updateTime.Format("2006-01-02 15:04:05"))
+				}
+			}
+
+			configRows = append(configRows, configRow{
+				Setting: "Queue Rate Limit",
+				Value:   value,
+				Details: details,
+			})
+		}
+
+		// Fairness Key Rate Limit Default
+		if config.FairnessKeysRateLimitDefault != nil {
+			rateLimit := config.FairnessKeysRateLimitDefault
+			value := "Not Set"
+			details := ""
+
+			if rateLimit.RateLimit != nil && rateLimit.RateLimit.RequestsPerSecond > 0 {
+				value = fmt.Sprintf("%.0f requests/second", rateLimit.RateLimit.RequestsPerSecond)
+			}
+
+			if rateLimit.Metadata != nil {
+				if rateLimit.Metadata.Reason != "" {
+					details = fmt.Sprintf("Reason: %s", rateLimit.Metadata.Reason)
+				}
+				if rateLimit.Metadata.UpdateIdentity != "" {
+					if details != "" {
+						details += " | "
+					}
+					details += fmt.Sprintf("Updated by: %s", rateLimit.Metadata.UpdateIdentity)
+				}
+				if rateLimit.Metadata.UpdateTime != nil {
+					if details != "" {
+						details += " | "
+					}
+					updateTime := rateLimit.Metadata.UpdateTime.AsTime()
+					details += fmt.Sprintf("Updated: %s", updateTime.Format("2006-01-02 15:04:05"))
+				}
+			}
+
+			configRows = append(configRows, configRow{
+				Setting: "Fairness Key Rate Limit Default",
+				Value:   value,
+				Details: details,
+			})
+		}
+
+		// Print the config table
+		if len(configRows) > 0 {
+			return cctx.Printer.PrintStructured(configRows, printer.StructuredOptions{
+				Table: &printer.TableOptions{},
+			})
+		}
 	}
 
 	return nil
