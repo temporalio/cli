@@ -2487,9 +2487,9 @@ func NewTemporalTaskQueueUpdateConfigCommand(cctx *CommandContext, parent *Tempo
 	s.Command.Use = "update-config [flags]"
 	s.Command.Short = "Update Task Queue configuration"
 	if hasHighlighting {
-		s.Command.Long = "Update Task Queue configuration including rate limits and fairness key settings:\n\n\x1b[1mtemporal task-queue update-config \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type activity \\\n    --queue-rate-limit 100 \\\n    --queue-rate-limit-reason \"Rate limiting for stability\" \\\n    --fairness-key-rate-limit-default 45 \\\n    --fairness-key-rate-limit-reason \"Fairness key test\"\x1b[0m\n\nThis command supports updating:\n- Queue rate limits: Controls the overall rate of task processing\n- Fairness key rate limit defaults: Sets default rate limits for fairness keys"
+		s.Command.Long = "Update Task Queue configuration - rate limits and fairness key configs:\n\n\x1b[1mtemporal task-queue update-config \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type activity \\\n    --queue-rate-limit <requests_per_second:float> \\\n    --queue-rate-limit-reason <reason_string> \\\n    --fairness-key-rate-limit-default <requests_per_second:float> \\\n    --fairness-key-rate-limit-reason  <reason_string>\x1b[0m\n\nThis command supports updating:\n- Queue rate limits: Controls the overall rate limiit for the task queue\n- Fairness key rate limit defaults: Sets default rate limits for fairness keys\n\nTo unset a rate limit, use --queue-rate-limit -1 or --fairness-key-rate-limit-default -1"
 	} else {
-		s.Command.Long = "Update Task Queue configuration including rate limits and fairness key settings:\n\n```\ntemporal task-queue update-config \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type activity \\\n    --queue-rate-limit 100 \\\n    --queue-rate-limit-reason \"Rate limiting for stability\" \\\n    --fairness-key-rate-limit-default 45 \\\n    --fairness-key-rate-limit-reason \"Fairness key test\"\n```\n\nThis command supports updating:\n- Queue rate limits: Controls the overall rate of task processing\n- Fairness key rate limit defaults: Sets default rate limits for fairness keys"
+		s.Command.Long = "Update Task Queue configuration - rate limits and fairness key configs:\n\n```\ntemporal task-queue update-config \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type activity \\\n    --queue-rate-limit  <requests_per_second:float> \\\n    --queue-rate-limit-reason <reason_string> \\\n    --fairness-key-rate-limit-default <requests_per_second:float> \\\n    --fairness-key-rate-limit-reason  <reason_string>\n```\n\nThis command supports updating:\n- Queue rate limits: Controls the overall rate limiit for the task queue\n- Fairness key rate limit defaults: Sets default rate limits for fairness keys\n\nTo unset a rate limit, use --queue-rate-limit -1 or --fairness-key-rate-limit-default -1"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task Queue name. Required.")
@@ -2501,35 +2501,35 @@ func NewTemporalTaskQueueUpdateConfigCommand(cctx *CommandContext, parent *Tempo
 	// Queue rate limit flags
 	var queueRateLimit float64
 	var queueRateLimitReason string
-	s.Command.Flags().Float64Var(&queueRateLimit, "queue-rate-limit", 0, "Queue rate limit in requests per second.")
+	s.Command.Flags().Float64Var(&queueRateLimit, "queue-rate-limit", 0, "Queue rate limit in requests per second. Use -1 to unset.")
 	s.Command.Flags().StringVar(&queueRateLimitReason, "queue-rate-limit-reason", "", "Reason for queue rate limit update.")
 	s.Command.Flags().MarkHidden("queue-rate-limit-reason")
 	
 	// Fairness key rate limit flags
 	var fairnessKeyRateLimit float64
 	var fairnessKeyRateLimitReason string
-	s.Command.Flags().Float64Var(&fairnessKeyRateLimit, "fairness-key-rate-limit-default", 0, "Fairness key rate limit default in requests per second.")
+	s.Command.Flags().Float64Var(&fairnessKeyRateLimit, "fairness-key-rate-limit-default", 0, "Fairness key rate limit default in requests per second. Use -1 to unset.")
 	s.Command.Flags().StringVar(&fairnessKeyRateLimitReason, "fairness-key-rate-limit-reason", "", "Reason for fairness key rate limit update.")
 	s.Command.Flags().MarkHidden("fairness-key-rate-limit-reason")
 	
 	s.Command.Run = func(c *cobra.Command, args []string) {
-		// Set up the rate limit structs if values are provided
-		if queueRateLimit > 0 {
+		// Set up the rate limit structs if values are provided (including -1 for unset)
+		if queueRateLimit != 0 || queueRateLimitReason != "" {
 			s.QueueRateLimit = &struct {
 				RequestsPerSecond float64
 				Reason            string
 			}{
-				RequestsPerSecond: queueRateLimit,
+				RequestsPerSecond: queueRateLimit, // Can be -1 for unset, 0 for zero rate limit, or positive value
 				Reason:            queueRateLimitReason,
 			}
 		}
 		
-		if fairnessKeyRateLimit > 0 {
+		if fairnessKeyRateLimit != 0 || fairnessKeyRateLimitReason != "" {
 			s.FairnessKeyRateLimitDefault = &struct {
 				RequestsPerSecond float64
 				Reason            string
 			}{
-				RequestsPerSecond: fairnessKeyRateLimit,
+				RequestsPerSecond: fairnessKeyRateLimit, // Can be -1 for unset, 0 for zero rate limit, or positive value
 				Reason:            fairnessKeyRateLimitReason,
 			}
 		}

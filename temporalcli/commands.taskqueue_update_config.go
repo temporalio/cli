@@ -8,6 +8,10 @@ import (
 	workflowservice "go.temporal.io/api/workflowservice/v1"
 )
 
+const (
+	UnsetRateLimit = -1
+)
+
 func (c *TemporalTaskQueueUpdateConfigCommand) run(cctx *CommandContext, args []string) error {
 	cl, err := c.Parent.ClientOptions.dialClient(cctx)
 	if err != nil {
@@ -35,7 +39,7 @@ func (c *TemporalTaskQueueUpdateConfigCommand) run(cctx *CommandContext, args []
 		return fmt.Errorf("TaskQueue name is required")
 	}
 	if taskQueueType == enums.TASK_QUEUE_TYPE_WORKFLOW {
-		if c.QueueRateLimit != nil {
+		if c.QueueRateLimit != nil && c.QueueRateLimit.RequestsPerSecond != UnsetRateLimit {
 			return fmt.Errorf("setting rate limit on workflow task queues is not allowed")
 		}
 		return fmt.Errorf("taskQueueType is required")
@@ -52,23 +56,39 @@ func (c *TemporalTaskQueueUpdateConfigCommand) run(cctx *CommandContext, args []
 		TaskQueueType: taskQueueType,
 	}
 
-	// Add queue rate limit if specified
+	// Add queue rate limit if specified (including unset)
 	if c.QueueRateLimit != nil {
-		request.UpdateQueueRateLimit = &workflowservice.UpdateTaskQueueConfigRequest_RateLimitUpdate{
-			RateLimit: &taskqueue.RateLimit{
-				RequestsPerSecond: float32(c.QueueRateLimit.RequestsPerSecond),
-			},
-			Reason: c.QueueRateLimit.Reason,
+		if c.QueueRateLimit.RequestsPerSecond == UnsetRateLimit {
+			// For unset, we pass an empty RateLimitUpdate with no RateLimit
+			request.UpdateQueueRateLimit = &workflowservice.UpdateTaskQueueConfigRequest_RateLimitUpdate{
+				Reason: c.QueueRateLimit.Reason,
+			}
+		} else {
+			// For setting a value (including 0)
+			request.UpdateQueueRateLimit = &workflowservice.UpdateTaskQueueConfigRequest_RateLimitUpdate{
+				RateLimit: &taskqueue.RateLimit{
+					RequestsPerSecond: float32(c.QueueRateLimit.RequestsPerSecond),
+				},
+				Reason: c.QueueRateLimit.Reason,
+			}
 		}
 	}
 
-	// Add fairness key rate limit default if specified
+	// Add fairness key rate limit default if specified (including unset)
 	if c.FairnessKeyRateLimitDefault != nil {
-		request.UpdateFairnessKeyRateLimitDefault = &workflowservice.UpdateTaskQueueConfigRequest_RateLimitUpdate{
-			RateLimit: &taskqueue.RateLimit{
-				RequestsPerSecond: float32(c.FairnessKeyRateLimitDefault.RequestsPerSecond),
-			},
-			Reason: c.FairnessKeyRateLimitDefault.Reason,
+		if c.FairnessKeyRateLimitDefault.RequestsPerSecond == UnsetRateLimit {
+			// For unset, we pass an empty RateLimitUpdate with no RateLimit
+			request.UpdateFairnessKeyRateLimitDefault = &workflowservice.UpdateTaskQueueConfigRequest_RateLimitUpdate{
+				Reason: c.FairnessKeyRateLimitDefault.Reason,
+			}
+		} else {
+			// For setting a value (including 0)
+			request.UpdateFairnessKeyRateLimitDefault = &workflowservice.UpdateTaskQueueConfigRequest_RateLimitUpdate{
+				RateLimit: &taskqueue.RateLimit{
+					RequestsPerSecond: float32(c.FairnessKeyRateLimitDefault.RequestsPerSecond),
+				},
+				Reason: c.FairnessKeyRateLimitDefault.Reason,
+			}
 		}
 	}
 
@@ -82,14 +102,22 @@ func (c *TemporalTaskQueueUpdateConfigCommand) run(cctx *CommandContext, args []
 
 	// Print summary of what was updated
 	if c.QueueRateLimit != nil {
-		cctx.Printer.Printlnf("Queue Rate Limit: %.2f requests/second", c.QueueRateLimit.RequestsPerSecond)
+		if c.QueueRateLimit.RequestsPerSecond == UnsetRateLimit {
+			cctx.Printer.Println("Queue Rate Limit: Unset")
+		} else {
+			cctx.Printer.Printlnf("Queue Rate Limit: %.2f requests/second", c.QueueRateLimit.RequestsPerSecond)
+		}
 		if c.QueueRateLimit.Reason != "" {
 			cctx.Printer.Printlnf("Queue Rate Limit Reason: %s", c.QueueRateLimit.Reason)
 		}
 	}
 
 	if c.FairnessKeyRateLimitDefault != nil {
-		cctx.Printer.Printlnf("Fairness Key Rate Limit Default: %.2f requests/second", c.FairnessKeyRateLimitDefault.RequestsPerSecond)
+		if c.FairnessKeyRateLimitDefault.RequestsPerSecond == UnsetRateLimit {
+			cctx.Printer.Println("Fairness Key Rate Limit Default: Unset")
+		} else {
+			cctx.Printer.Printlnf("Fairness Key Rate Limit Default: %.2f requests/second", c.FairnessKeyRateLimitDefault.RequestsPerSecond)
+		}
 		if c.FairnessKeyRateLimitDefault.Reason != "" {
 			cctx.Printer.Printlnf("Fairness Key Rate Limit Reason: %s", c.FairnessKeyRateLimitDefault.Reason)
 		}
