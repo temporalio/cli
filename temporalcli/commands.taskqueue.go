@@ -2,6 +2,7 @@ package temporalcli
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/fatih/color"
@@ -404,7 +405,7 @@ func (c *TemporalTaskQueueDescribeCommand) runLegacy(cctx *CommandContext, args 
 	if c.ReportConfig && config != nil {
 		cctx.Printer.Println(color.MagentaString("\nTask Queue Configuration:"))
 
-		// Create a structured table for config display
+		// Create a structured table for config display.
 		type configRow struct {
 			Setting     string
 			Value       string
@@ -429,10 +430,10 @@ func (c *TemporalTaskQueueDescribeCommand) runLegacy(cctx *CommandContext, args 
 
 			if rateLimit.Metadata != nil {
 				if rateLimit.Metadata.Reason != "" {
-					reason = rateLimit.Metadata.Reason
+					reason = truncateString(rateLimit.Metadata.Reason, 50)
 				}
 				if rateLimit.Metadata.UpdateIdentity != "" {
-					updatedBy = rateLimit.Metadata.UpdateIdentity
+					updatedBy = truncateString(rateLimit.Metadata.UpdateIdentity, 50)
 				}
 				if rateLimit.Metadata.UpdateTime != nil {
 					updateTime := rateLimit.Metadata.UpdateTime.AsTime()
@@ -463,10 +464,10 @@ func (c *TemporalTaskQueueDescribeCommand) runLegacy(cctx *CommandContext, args 
 
 			if rateLimit.Metadata != nil {
 				if rateLimit.Metadata.Reason != "" {
-					reason = rateLimit.Metadata.Reason
+					reason = truncateString(rateLimit.Metadata.Reason, 50)
 				}
 				if rateLimit.Metadata.UpdateIdentity != "" {
-					updatedBy = rateLimit.Metadata.UpdateIdentity
+					updatedBy = truncateString(rateLimit.Metadata.UpdateIdentity, 50)
 				}
 				if rateLimit.Metadata.UpdateTime != nil {
 					updateTime := rateLimit.Metadata.UpdateTime.AsTime()
@@ -485,6 +486,20 @@ func (c *TemporalTaskQueueDescribeCommand) runLegacy(cctx *CommandContext, args 
 
 		// Print the config table
 		if len(configRows) > 0 {
+			// Add a note about truncation if any content was truncated
+			hasTruncatedContent := false
+			for _, row := range configRows {
+				if len(row.Reason) > 0 && strings.HasSuffix(row.Reason, "...") ||
+					len(row.UpdatedBy) > 0 && strings.HasSuffix(row.UpdatedBy, "...") {
+					hasTruncatedContent = true
+					break
+				}
+			}
+
+			if hasTruncatedContent {
+				cctx.Printer.Println(color.YellowString("Note: Long content has been truncated. Use --output json for full details."))
+			}
+
 			return cctx.Printer.PrintStructured(configRows, printer.StructuredOptions{
 				Table: &printer.TableOptions{},
 			})
@@ -533,4 +548,12 @@ func (c *TemporalTaskQueueListPartitionCommand) run(cctx *CommandContext, args [
 	_ = cctx.Printer.PrintStructured(items, printer.StructuredOptions{Table: &printer.TableOptions{}})
 
 	return nil
+}
+
+// Helper function to truncate strings
+func truncateString(s string, maxLength int) string {
+	if len(s) <= maxLength {
+		return s
+	}
+	return s[:maxLength-3] + "..."
 }
