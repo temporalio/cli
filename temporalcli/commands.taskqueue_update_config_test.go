@@ -47,12 +47,14 @@ func (s *SharedServerSuite) verifyRateLimit(config map[string]interface{}, expec
 	require.True(s.T(), ok, "Rate limit should be a map")
 
 	requestsPerSecond, exists := rateLimitData["requests_per_second"]
-	require.True(s.T(), exists, "Requests per second should exist")
-
-	actualRateLimit, ok := requestsPerSecond.(float64)
-	require.True(s.T(), ok, "Requests per second should be a float64")
-
-	require.Equal(s.T(), expectedRateLimit, actualRateLimit, "Rate limit should match expected value")
+	if !exists {
+		// If requests_per_second is missing, it means the rate limit is 0
+		require.Equal(s.T(), float64(0), expectedRateLimit, "Rate limit should be 0 when requests_per_second is missing")
+	} else {
+		actualRateLimit, ok := requestsPerSecond.(float64)
+		require.True(s.T(), ok, "Requests per second should be a float64")
+		require.Equal(s.T(), expectedRateLimit, actualRateLimit, "Rate limit should match expected value")
+	}
 
 	if expectedReason != "" {
 		metadata, exists := rateLimitMap["metadata"]
@@ -79,9 +81,15 @@ func (s *SharedServerSuite) verifyRateLimitUnset(config map[string]interface{}) 
 	configMap, ok := configData.(map[string]interface{})
 	require.True(s.T(), ok, "Config should be a map")
 
-	// If config exists but no queue_rate_limit, it means it's unset
-	_, exists = configMap["queue_rate_limit"]
-	require.False(s.T(), exists, "Queue rate limit should not exist (unset)")
+	queueRateLimit, exists := configMap["queue_rate_limit"]
+	require.True(s.T(), exists, "Queue rate limit field should exist")
+
+	rateLimitMap, ok := queueRateLimit.(map[string]interface{})
+	require.True(s.T(), ok, "Queue rate limit should be a map")
+
+	// If rate_limit subfield is missing, it means the rate limit is unset
+	_, exists = rateLimitMap["rate_limit"]
+	require.False(s.T(), exists, "Rate limit should not exist (unset)")
 }
 
 // Helper function to verify fairness key rate limit in config
@@ -105,12 +113,14 @@ func (s *SharedServerSuite) verifyFairnessKeyRateLimit(config map[string]interfa
 	require.True(s.T(), ok, "Rate limit should be a map")
 
 	requestsPerSecond, exists := rateLimitData["requests_per_second"]
-	require.True(s.T(), exists, "Requests per second should exist")
-
-	actualRateLimit, ok := requestsPerSecond.(float64)
-	require.True(s.T(), ok, "Requests per second should be a float64")
-
-	require.Equal(s.T(), expectedRateLimit, actualRateLimit, "Fairness key rate limit should match expected value")
+	if !exists {
+		// If requests_per_second is missing, it means the rate limit is 0
+		require.Equal(s.T(), float64(0), expectedRateLimit, "Fairness key rate limit should be 0 when requests_per_second is missing")
+	} else {
+		actualRateLimit, ok := requestsPerSecond.(float64)
+		require.True(s.T(), ok, "Requests per second should be a float64")
+		require.Equal(s.T(), expectedRateLimit, actualRateLimit, "Fairness key rate limit should match expected value")
+	}
 
 	if expectedReason != "" {
 		metadata, exists := rateLimitMap["metadata"]
@@ -137,9 +147,15 @@ func (s *SharedServerSuite) verifyFairnessKeyRateLimitUnset(config map[string]in
 	configMap, ok := configData.(map[string]interface{})
 	require.True(s.T(), ok, "Config should be a map")
 
-	// If config exists but no fairness_keys_rate_limit_default, it means it's unset
-	_, exists = configMap["fairness_keys_rate_limit_default"]
-	require.False(s.T(), exists, "Fairness key rate limit should not exist (unset)")
+	fairnessKeyRateLimit, exists := configMap["fairness_keys_rate_limit_default"]
+	require.True(s.T(), exists, "Fairness key rate limit field should exist")
+
+	rateLimitMap, ok := fairnessKeyRateLimit.(map[string]interface{})
+	require.True(s.T(), ok, "Fairness key rate limit should be a map")
+
+	// If rate_limit subfield is missing, it means the rate limit is unset
+	_, exists = rateLimitMap["rate_limit"]
+	require.False(s.T(), exists, "Rate limit should not exist (unset)")
 }
 
 func (s *SharedServerSuite) TestTaskQueue_UpdateConfig_AllFields() {
@@ -266,6 +282,5 @@ func (s *SharedServerSuite) TestTaskQueue_UpdateConfig_WorkflowTaskQueueError() 
 		"--identity", "test-identity",
 		"--queue-rate-limit", "100",
 	)
-	require.Error(s.T(), res.Err)
-	require.Contains(s.T(), res.Stderr.String(), "setting rate limit on workflow task queues is not allowed")
+	require.ErrorContains(s.T(), res.Err, "setting rate limit on workflow task queues is not allowed")
 }
