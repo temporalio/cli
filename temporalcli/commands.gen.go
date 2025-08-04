@@ -246,7 +246,7 @@ type PayloadInputOptions struct {
 func (v *PayloadInputOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
 	f.StringArrayVarP(&v.Input, "input", "i", nil, "Input value. Use JSON content or set --input-meta to override. Can't be combined with --input-file. Can be passed multiple times to pass multiple arguments.")
 	f.StringArrayVar(&v.InputFile, "input-file", nil, "A path or paths for input file(s). Use JSON content or set --input-meta to override. Can't be combined with --input. Can be passed multiple times to pass multiple arguments.")
-	f.StringArrayVar(&v.InputMeta, "input-meta", nil, "Input payload metadata as a `KEY=VALUE` pair. When the KEY is \"encoding\", this overrides the default (\"json/plain\"). Can be passed multiple times. Passing the same key more than once will apply its values in sequence to the corresponding --input arguments.")
+	f.StringArrayVar(&v.InputMeta, "input-meta", nil, "Input payload metadata as a `KEY=VALUE` pair. When the KEY is \"encoding\", this overrides the default (\"json/plain\"). Can be passed multiple times. Repeated metadata keys are applied to the corresponding inputs in the provided order.")
 	f.BoolVar(&v.InputBase64, "input-base64", false, "Assume inputs are base64-encoded and attempt to decode them.")
 }
 
