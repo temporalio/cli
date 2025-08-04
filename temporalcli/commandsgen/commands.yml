@@ -4531,6 +4531,7 @@ option-sets:
           Input payload metadata as a `KEY=VALUE` pair.
           When the KEY is "encoding", this overrides the default ("json/plain").
           Can be passed multiple times.
+          Repeated metadata keys are applied to the corresponding inputs in the provided order.
       - name: input-base64
         type: bool
         description: |
