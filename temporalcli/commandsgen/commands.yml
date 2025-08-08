@@ -304,9 +304,6 @@ commands:
         type: string
         description: Result `JSON` to return.
         required: true
-      - name: identity
-        type: string
-        description: Identity of the user submitting this request.
     option-sets:
       - workflow-reference
 
@@ -329,9 +326,6 @@ commands:
       - name: detail
         type: string
         description: Reason for failing the Activity (JSON).
-      - name: identity
-        type: string
-        description: Identity of the user submitting this request.
       - name: reason
         type: string
         description: Reason for failing the Activity.
@@ -420,9 +414,6 @@ commands:
           expired yet.
           Setting this value to 1 disables retries. Setting this value to 0
           means unlimited attempts(up to the timeouts).
-      - name: identity
-        type: string
-        description: Identity of the user submitting this request.
     option-sets:
       - workflow-reference
 
@@ -461,9 +452,6 @@ commands:
         short: g
         type: string
         description: All activities of the Activity Type will be paused. Either `activity-id` or `activity-type` must be provided, but not both.
-      - name: identity
-        type: string
-        description: The identity of the user or client submitting this request.
     option-sets:
       - workflow-reference
 
@@ -515,9 +503,6 @@ commands:
         type: string
         description: |
           Activities of this Type will unpause. Can only be used without --match-all. Either `activity-id` or `activity-type` must be provided, but not both.
-      - name: identity
-        type: string
-        description: The identity of the user or client submitting this request.
       - name: reset-attempts
         type: bool
         description: Also reset the activity attempts.
@@ -589,9 +574,6 @@ commands:
         short: g
         type: string
         description: The Activity Type to reset. Either `activity-id` or `activity-type` must be provided, but not both.
-      - name: identity
-        type: string
-        description: The identity of the user or client submitting this request.
       - name: keep-paused
         type: bool
         description: If the activity was paused, it will stay paused.
@@ -966,10 +948,6 @@ commands:
       ```
     option-sets:
       - deployment-name
-    options:
-      - name: identity
-        type: string
-        description: Identity of the user submitting this request.
 
   - name: temporal worker deployment list
     summary: Enumerate Worker Deployments in the client's namespace
@@ -1058,9 +1036,6 @@ commands:
     option-sets:
       - deployment-version
     options:
-      - name: identity
-        type: string
-        description: Identity of the user submitting this request.
       - name: skip-drainage
         type: bool
         description: Ignore the deletion requirement of not draining.
@@ -1108,9 +1083,6 @@ commands:
     option-sets:
       - deployment-version-or-unversioned
     options:
-      - name: identity
-        type: string
-        description: Identity of the user submitting this request.
       - name: ignore-missing-task-queues
         type: bool
         description: Override protection to accidentally remove task queues.
@@ -1178,9 +1150,6 @@ commands:
       - name: delete
         type: bool
         description: Delete the Ramping Version.
-      - name: identity
-        type: string
-        description: Identity of the user submitting this request.
       - name: ignore-missing-task-queues
         type: bool
         description: Override protection to accidentally remove task queues.
@@ -2573,8 +2542,7 @@ commands:
         type: bool
         description: |
           Include task queue configuration in the response.
-          When enabled, the command will return the current rate limit
-          configuration for the task queue.
+          When enabled, the command will return the current configuration for the task queue.
 
   - name: temporal task-queue get-build-id-reachability
     summary: Show Build ID availability (Deprecated)
@@ -3209,12 +3177,6 @@ commands:
           - workflow
           - activity
           - nexus
-      - name: identity
-        type: string
-        description: Identity for the operation.
-      - name: namespace
-        type: string
-        description: Namespace for the operation.
       - name: queue-rate-limit
         type: float
         description: |
@@ -4276,6 +4238,9 @@ option-sets:
           HTTP headers for requests to codec server.
           Format as a `KEY=VALUE` pair.
           May be passed multiple times to set multiple headers.
+      - name: identity
+        type: string
+        description: The identity of the user or client submitting this request. Defaults to "temporal-cli:$USER@$HOST".
 
   - name: overlap-policy
     options:
