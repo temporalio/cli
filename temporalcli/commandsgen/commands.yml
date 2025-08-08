@@ -3175,7 +3175,6 @@ commands:
         description: |
           Queue rate limit in requests per second.
           Use -1 to unset.
-        default: -99999
       - name: queue-rate-limit-reason
         type: string
         description: Reason for queue rate limit update.
@@ -3185,7 +3184,6 @@ commands:
         description: |
           Fairness key rate limit default in requests per second.
           Use -1 to unset.
-        default: -99999
       - name: fairness-key-rate-limit-reason
         type: string
         description: Reason for fairness key rate limit update.

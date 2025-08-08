@@ -2,7 +2,6 @@ package temporalcli
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/fatih/color"
@@ -405,100 +404,22 @@ func (c *TemporalTaskQueueDescribeCommand) runLegacy(cctx *CommandContext, args 
 	if c.ReportConfig && config != nil {
 		cctx.Printer.Println(color.MagentaString("\nTask Queue Configuration:"))
 
-		// Create a structured table for config display.
-		type configRow struct {
-			Setting     string
-			Value       string
-			Reason      string
-			UpdatedBy   string
-			UpdatedTime string
-		}
-
 		var configRows []configRow
 
 		// Queue Rate Limit
 		if config.QueueRateLimit != nil {
-			rateLimit := config.QueueRateLimit
-			value := "Not Set"
-			reason := ""
-			updatedBy := ""
-			updatedTime := ""
-
-			if rateLimit.RateLimit != nil && rateLimit.RateLimit.RequestsPerSecond > 0 {
-				value = fmt.Sprintf("%.0f requests/second", rateLimit.RateLimit.RequestsPerSecond)
-			}
-
-			if rateLimit.Metadata != nil {
-				if rateLimit.Metadata.Reason != "" {
-					reason = truncateString(rateLimit.Metadata.Reason, 50)
-				}
-				if rateLimit.Metadata.UpdateIdentity != "" {
-					updatedBy = truncateString(rateLimit.Metadata.UpdateIdentity, 50)
-				}
-				if rateLimit.Metadata.UpdateTime != nil {
-					updateTime := rateLimit.Metadata.UpdateTime.AsTime()
-					updatedTime = updateTime.Format(time.DateTime)
-				}
-			}
-
-			configRows = append(configRows, configRow{
-				Setting:     "Queue Rate Limit",
-				Value:       value,
-				Reason:      reason,
-				UpdatedBy:   updatedBy,
-				UpdatedTime: updatedTime,
-			})
+			configRows = append(configRows, buildRateLimitConfigRow("Queue Rate Limit", config.QueueRateLimit, "%.2f rps"))
 		}
 
 		// Fairness Key Rate Limit Default
 		if config.FairnessKeysRateLimitDefault != nil {
-			rateLimit := config.FairnessKeysRateLimitDefault
-			value := "Not Set"
-			reason := ""
-			updatedBy := ""
-			updatedTime := ""
-
-			if rateLimit.RateLimit != nil && rateLimit.RateLimit.RequestsPerSecond > 0 {
-				value = fmt.Sprintf("%.0f requests/second", rateLimit.RateLimit.RequestsPerSecond)
-			}
-
-			if rateLimit.Metadata != nil {
-				if rateLimit.Metadata.Reason != "" {
-					reason = truncateString(rateLimit.Metadata.Reason, 50)
-				}
-				if rateLimit.Metadata.UpdateIdentity != "" {
-					updatedBy = truncateString(rateLimit.Metadata.UpdateIdentity, 50)
-				}
-				if rateLimit.Metadata.UpdateTime != nil {
-					updateTime := rateLimit.Metadata.UpdateTime.AsTime()
-					updatedTime = updateTime.Format("2006-01-02 15:04:05")
-				}
-			}
-
-			configRows = append(configRows, configRow{
-				Setting:     "Fairness Key Rate Limit Default",
-				Value:       value,
-				Reason:      reason,
-				UpdatedBy:   updatedBy,
-				UpdatedTime: updatedTime,
-			})
+			configRows = append(configRows, buildRateLimitConfigRow("Fairness Key Rate Limit Default", config.FairnessKeysRateLimitDefault, "%.0f requests/second"))
 		}
 
 		// Print the config table
 		if len(configRows) > 0 {
-			// Add a note about truncation if any content was truncated
-			hasTruncatedContent := false
-			for _, row := range configRows {
-				if len(row.Reason) > 0 && strings.HasSuffix(row.Reason, "...") ||
-					len(row.UpdatedBy) > 0 && strings.HasSuffix(row.UpdatedBy, "...") {
-					hasTruncatedContent = true
-					break
-				}
-			}
-
-			if hasTruncatedContent {
-				cctx.Printer.Println(color.YellowString("Note: Long content has been truncated. Use --output json for full details."))
-			}
+			// Always show truncation note, regardless of actual truncation
+			cctx.Printer.Println(color.YellowString("Note: Long content may be truncated. Use --output json for full details."))
 
 			return cctx.Printer.PrintStructured(configRows, printer.StructuredOptions{
 				Table: &printer.TableOptions{},

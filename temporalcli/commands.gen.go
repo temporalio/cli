@@ -2212,7 +2212,7 @@ func NewTemporalTaskQueueDescribeCommand(cctx *CommandContext, parent *TemporalT
 	s.Command.Flags().Var(&s.TaskQueueTypeLegacy, "task-queue-type-legacy", "Task Queue type (legacy mode only). Accepted values: workflow, activity.")
 	s.Command.Flags().IntVar(&s.PartitionsLegacy, "partitions-legacy", 1, "Query partitions 1 through `N`. Experimental/Temporary feature. Legacy mode only.")
 	s.Command.Flags().BoolVar(&s.DisableStats, "disable-stats", false, "Disable task queue statistics.")
-	s.Command.Flags().BoolVar(&s.ReportConfig, "report-config", false, "Include task queue configuration in the response. When enabled, the command will return the current rate limit configuration for the task queue.")
+	s.Command.Flags().BoolVar(&s.ReportConfig, "report-config", false, "Include task queue configuration in the response. When enabled, the command will return the current configuration for the task queue.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -2492,11 +2492,15 @@ func NewTemporalTaskQueueUpdateConfigCommand(cctx *CommandContext, parent *Tempo
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
 	s.TaskQueueType = NewStringEnum([]string{"workflow", "activity", "nexus"}, "")
 	s.Command.Flags().Var(&s.TaskQueueType, "task-queue-type", "Task Queue type. Accepted values: workflow, activity, nexus. Accepted values: workflow, activity, nexus.")
+<<<<<<< HEAD
 	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity for the operation.")
 	s.Command.Flags().StringVar(&s.Namespace, "namespace", "", "Namespace for the operation.")
 	s.Command.Flags().Float32Var(&s.QueueRateLimit, "queue-rate-limit", -99999, "Queue rate limit in requests per second. Use -1 to unset.")
+=======
+	s.Command.Flags().Float32Var(&s.QueueRateLimit, "queue-rate-limit", 0, "Queue rate limit in requests per second. Use -1 to unset.")
+>>>>>>> f35a3b2 (Code refactor + removed default sentinel of -99999)
 	s.Command.Flags().StringVar(&s.QueueRateLimitReason, "queue-rate-limit-reason", "", "Reason for queue rate limit update.")
-	s.Command.Flags().Float32Var(&s.FairnessKeyRateLimitDefault, "fairness-key-rate-limit-default", -99999, "Fairness key rate limit default in requests per second. Use -1 to unset.")
+	s.Command.Flags().Float32Var(&s.FairnessKeyRateLimitDefault, "fairness-key-rate-limit-default", 0, "Fairness key rate limit default in requests per second. Use -1 to unset.")
 	s.Command.Flags().StringVar(&s.FairnessKeyRateLimitReason, "fairness-key-rate-limit-reason", "", "Reason for fairness key rate limit update.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
