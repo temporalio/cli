@@ -437,7 +437,7 @@ func (c *TemporalTaskQueueDescribeCommand) runLegacy(cctx *CommandContext, args 
 				}
 				if rateLimit.Metadata.UpdateTime != nil {
 					updateTime := rateLimit.Metadata.UpdateTime.AsTime()
-					updatedTime = updateTime.Format("2006-01-02 15:04:05")
+					updatedTime = updateTime.Format(time.DateTime)
 				}
 			}
 
