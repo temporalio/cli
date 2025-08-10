@@ -3,9 +3,15 @@ package temporalcli
 import (
 	"fmt"
 
+	"github.com/fatih/color"
+	"github.com/temporalio/cli/temporalcli/internal/printer"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/taskqueue/v1"
 	"go.temporal.io/api/workflowservice/v1"
+)
+
+const (
+	UnsetRateLimit = -1
 )
 
 // Create a structured table for config display.
@@ -82,4 +88,38 @@ func buildRateLimitUpdate(
 		},
 		Reason: reason,
 	}
+}
+
+// printTaskQueueConfig is a shared function to print task queue configuration
+// This can be used by both the config get command and the describe command
+func printTaskQueueConfig(cctx *CommandContext, config *taskqueue.TaskQueueConfig) error {
+	// For JSON, we'll just dump the proto
+	if cctx.JSONOutput {
+		return cctx.Printer.PrintStructured(config, printer.StructuredOptions{})
+	}
+
+	// For text, we will use a table
+	var configRows []configRow
+
+	// Queue Rate Limit
+	if config.QueueRateLimit != nil {
+		configRows = append(configRows, buildRateLimitConfigRow("Queue Rate Limit", config.QueueRateLimit, "%.2f rps"))
+	}
+
+	// Fairness Key Rate Limit Default
+	if config.FairnessKeysRateLimitDefault != nil {
+		configRows = append(configRows, buildRateLimitConfigRow("Fairness Key Rate Limit Default", config.FairnessKeysRateLimitDefault, "%.0f requests/second"))
+	}
+
+	// Print the config table
+	if len(configRows) > 0 {
+		// Always show truncation note, regardless of actual truncation
+		cctx.Printer.Println(color.YellowString("Note: Long content may be truncated. Use --output json for full details."))
+
+		return cctx.Printer.PrintStructured(configRows, printer.StructuredOptions{
+			Table: &printer.TableOptions{},
+		})
+	}
+
+	return nil
 }
