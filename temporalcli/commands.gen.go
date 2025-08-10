@@ -2171,6 +2171,102 @@ func NewTemporalTaskQueueCommand(cctx *CommandContext, parent *TemporalCommand) 
 	return &s
 }
 
+<<<<<<< HEAD
+=======
+type TemporalTaskQueueConfigCommand struct {
+	Parent  *TemporalTaskQueueCommand
+	Command cobra.Command
+}
+
+func NewTemporalTaskQueueConfigCommand(cctx *CommandContext, parent *TemporalTaskQueueCommand) *TemporalTaskQueueConfigCommand {
+	var s TemporalTaskQueueConfigCommand
+	s.Parent = parent
+	s.Command.Use = "config"
+	s.Command.Short = "Get and set Task Queue configuration"
+	if hasHighlighting {
+		s.Command.Long = "Manage Task Queue configuration:\n\n\x1b[1mtemporal task-queue config [command] [options]\x1b[0m\n\nAvailable commands:\n- \x1b[1mget\x1b[0m: Retrieve the current configuration for a task queue\n- \x1b[1mset\x1b[0m: Update the configuration for a task queue"
+	} else {
+		s.Command.Long = "Manage Task Queue configuration:\n\n```\ntemporal task-queue config [command] [options]\n```\n\nAvailable commands:\n- `get`: Retrieve the current configuration for a task queue\n- `set`: Update the configuration for a task queue"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalTaskQueueConfigGetCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalTaskQueueConfigSetCommand(cctx, &s).Command)
+	return &s
+}
+
+type TemporalTaskQueueConfigGetCommand struct {
+	Parent        *TemporalTaskQueueConfigCommand
+	Command       cobra.Command
+	TaskQueue     string
+	TaskQueueType StringEnum
+}
+
+func NewTemporalTaskQueueConfigGetCommand(cctx *CommandContext, parent *TemporalTaskQueueConfigCommand) *TemporalTaskQueueConfigGetCommand {
+	var s TemporalTaskQueueConfigGetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "get [flags]"
+	s.Command.Short = "Get Task Queue configuration"
+	if hasHighlighting {
+		s.Command.Long = "Retrieve the current configuration for a Task Queue:\n\n\x1b[1mtemporal task-queue config get \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type activity\x1b[0m\n\nThis command returns the current configuration including:\n- Queue rate limit: The overall rate limit of the task queue.\n  This setting overrides the worker rate limit if set.\n  Unless modified, this is the system-defined rate limit.\n- Fairness key rate limit defaults: Default rate limits for fairness keys.\n  If set, each individual fairness key will be limited to this rate,\n  scaled by the weight of the fairness key."
+	} else {
+		s.Command.Long = "Retrieve the current configuration for a Task Queue:\n\n```\ntemporal task-queue config get \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type activity\n```\n\nThis command returns the current configuration including:\n- Queue rate limit: The overall rate limit of the task queue.\n  This setting overrides the worker rate limit if set.\n  Unless modified, this is the system-defined rate limit.\n- Fairness key rate limit defaults: Default rate limits for fairness keys.\n  If set, each individual fairness key will be limited to this rate,\n  scaled by the weight of the fairness key."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task Queue name. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
+	s.TaskQueueType = NewStringEnum([]string{"workflow", "activity", "nexus"}, "")
+	s.Command.Flags().Var(&s.TaskQueueType, "task-queue-type", "Task Queue type. Accepted values: workflow, activity, nexus. Accepted values: workflow, activity, nexus. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue-type")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalTaskQueueConfigSetCommand struct {
+	Parent                      *TemporalTaskQueueConfigCommand
+	Command                     cobra.Command
+	TaskQueue                   string
+	TaskQueueType               StringEnum
+	QueueRateLimit              float32
+	QueueRateLimitReason        string
+	FairnessKeyRateLimitDefault float32
+	FairnessKeyRateLimitReason  string
+}
+
+func NewTemporalTaskQueueConfigSetCommand(cctx *CommandContext, parent *TemporalTaskQueueConfigCommand) *TemporalTaskQueueConfigSetCommand {
+	var s TemporalTaskQueueConfigSetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "set [flags]"
+	s.Command.Short = "Set Task Queue configuration"
+	if hasHighlighting {
+		s.Command.Long = "Update a Task Queue's overall rate limit and the default rate limit for all fairness keys:\n\n\x1b[1mtemporal task-queue config set \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type activity \\\n    --namespace YourNamespace \\\n    --queue-rate-limit <requests_per_second:float> \\\n    --queue-rate-limit-reason <reason_string> \\\n    --fairness-key-rate-limit-default <requests_per_second:float> \\\n    --fairness-key-rate-limit-reason <reason_string>\x1b[0m\n\nThis command supports updating:\n- Queue rate limits: Controls the overall rate limit of the task queue.\n  This setting overrides the worker rate limit if set.\n  Unless modified, this is the system-defined rate limit.\n- Fairness key rate limit defaults: Sets default rate limits for fairness keys.\n  If set, each individual fairness key will be limited to this rate,\n  scaled by the weight of the fairness key.\n\nTo unset a rate limit, use --queue-rate-limit -1 or --fairness-key-rate-limit-default -1"
+	} else {
+		s.Command.Long = "Update a Task Queue's overall rate limit and the default rate limit for all fairness keys:\n\n```\ntemporal task-queue config set \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type activity \\\n    --namespace YourNamespace \\\n    --queue-rate-limit <requests_per_second:float> \\\n    --queue-rate-limit-reason <reason_string> \\\n    --fairness-key-rate-limit-default <requests_per_second:float> \\\n    --fairness-key-rate-limit-reason <reason_string>\n```\n\nThis command supports updating:\n- Queue rate limits: Controls the overall rate limit of the task queue.\n  This setting overrides the worker rate limit if set.\n  Unless modified, this is the system-defined rate limit.\n- Fairness key rate limit defaults: Sets default rate limits for fairness keys.\n  If set, each individual fairness key will be limited to this rate,\n  scaled by the weight of the fairness key.\n\nTo unset a rate limit, use --queue-rate-limit -1 or --fairness-key-rate-limit-default -1"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task Queue name. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
+	s.TaskQueueType = NewStringEnum([]string{"workflow", "activity", "nexus"}, "")
+	s.Command.Flags().Var(&s.TaskQueueType, "task-queue-type", "Task Queue type. Accepted values: workflow, activity, nexus. Accepted values: workflow, activity, nexus. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue-type")
+	s.Command.Flags().Float32Var(&s.QueueRateLimit, "queue-rate-limit", 0, "Queue rate limit in requests per second. Use -1 to unset.")
+	s.Command.Flags().StringVar(&s.QueueRateLimitReason, "queue-rate-limit-reason", "", "Reason for queue rate limit update.")
+	s.Command.Flags().Float32Var(&s.FairnessKeyRateLimitDefault, "fairness-key-rate-limit-default", 0, "Fairness key rate limit default in requests per second. Use -1 to unset.")
+	s.Command.Flags().StringVar(&s.FairnessKeyRateLimitReason, "fairness-key-rate-limit-reason", "", "Reason for fairness key rate limit update.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+>>>>>>> 700ac54 (Added required tags for taskqueue name and type)
 type TemporalTaskQueueDescribeCommand struct {
 	Parent              *TemporalTaskQueueCommand
 	Command             cobra.Command
