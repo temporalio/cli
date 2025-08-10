@@ -3121,13 +3121,63 @@ commands:
         type: bool
         description: Don't prompt to confirm.
 
-  - name: temporal task-queue update-config
-    summary: Update Task Queue configuration
+  - name: temporal task-queue config
+    summary: Get and set Task Queue configuration
+    description: |
+      Manage Task Queue configuration:
+
+      ```
+      temporal task-queue config [command] [options]
+      ```
+
+      Available commands:
+      - `get`: Retrieve the current configuration for a task queue
+      - `set`: Update the configuration for a task queue
+
+  - name: temporal task-queue config get
+    summary: Get Task Queue configuration
+    description: |
+      Retrieve the current configuration for a Task Queue:
+
+      ```
+      temporal task-queue config get \
+          --task-queue YourTaskQueue \
+          --task-queue-type activity
+      ```
+
+      This command returns the current configuration including:
+      - Queue rate limit: The overall rate limit of the task queue.
+        This setting overrides the worker rate limit if set.
+        Unless modified, this is the system-defined rate limit.
+      - Fairness key rate limit defaults: Default rate limits for fairness keys.
+        If set, each individual fairness key will be limited to this rate,
+        scaled by the weight of the fairness key.
+
+    options:
+      - name: task-queue
+        type: string
+        description: |
+          Task Queue name.
+          Required.
+        required: true
+        short: t
+      - name: task-queue-type
+        type: string-enum
+        description: |
+          Task Queue type.
+          Accepted values: workflow, activity, nexus.
+        enum-values:
+          - workflow
+          - activity
+          - nexus
+
+  - name: temporal task-queue config set
+    summary: Set Task Queue configuration
     description: |
       Update a Task Queue's overall rate limit and the default rate limit for all fairness keys:
 
       ```
-      temporal task-queue update-config \
+      temporal task-queue config set \
           --task-queue YourTaskQueue \
           --task-queue-type activity \
           --namespace YourNamespace \
@@ -3138,13 +3188,12 @@ commands:
       ```
 
       This command supports updating:
-      - Queue rate limits: Controls the overall rate of task processing.
+      - Queue rate limits: Controls the overall rate limit of the task queue.
         This setting overrides the worker rate limit if set.
         Unless modified, this is the system-defined rate limit.
       - Fairness key rate limit defaults: Sets default rate limits for fairness keys.
         If set, each individual fairness key will be limited to this rate,
         scaled by the weight of the fairness key.
-
 
       To unset a rate limit, use --queue-rate-limit -1 or --fairness-key-rate-limit-default -1
     options:
