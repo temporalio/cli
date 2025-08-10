@@ -70,13 +70,9 @@ func buildRateLimitConfigRow(setting string, rl *taskqueue.RateLimitConfig, form
 }
 
 func buildRateLimitUpdate(
-	rateLimitSet bool,
 	rateLimit float32,
 	reason string,
 ) *workflowservice.UpdateTaskQueueConfigRequest_RateLimitUpdate {
-	if reason == "" && !rateLimitSet {
-		return nil
-	}
 	if rateLimit == UnsetRateLimit {
 		return &workflowservice.UpdateTaskQueueConfigRequest_RateLimitUpdate{
 			Reason: reason,

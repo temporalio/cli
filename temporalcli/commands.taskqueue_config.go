@@ -80,6 +80,14 @@ func (c *TemporalTaskQueueConfigSetCommand) run(cctx *CommandContext, args []str
 		}
 	}
 
+	if c.Command.Flags().Changed("queue-rate-limit-reason") && !c.Command.Flags().Changed("queue-rate-limit") {
+		return fmt.Errorf("queue-rate-limit-reason can only be set if queue-rate-limit is updated")
+	}
+
+	if c.Command.Flags().Changed("fairness-key-rate-limit-default-reason") && !c.Command.Flags().Changed("fairness-key-rate-limit-default") {
+		return fmt.Errorf("fairness-key-rate-limit-default-reason can only be set if fairness-key-rate-limit-default is updated")
+	}
+
 	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
 	if err != nil {
 		return err
@@ -94,18 +102,20 @@ func (c *TemporalTaskQueueConfigSetCommand) run(cctx *CommandContext, args []str
 	}
 
 	// Add queue rate limit if specified (including unset)
-	request.UpdateQueueRateLimit = buildRateLimitUpdate(
-		c.Command.Flags().Changed("queue-rate-limit"),
-		c.QueueRateLimit,
-		c.QueueRateLimitReason,
-	)
+	if c.Command.Flags().Changed("queue-rate-limit") {
+		request.UpdateQueueRateLimit = buildRateLimitUpdate(
+			c.QueueRateLimit,
+			c.QueueRateLimitReason,
+		)
+	}
 
 	// Add fairness key rate limit default if specified (including unset)
-	request.UpdateFairnessKeyRateLimitDefault = buildRateLimitUpdate(
-		c.Command.Flags().Changed("fairness-key-rate-limit-default"),
-		c.FairnessKeyRateLimitDefault,
-		c.FairnessKeyRateLimitReason,
-	)
+	if c.Command.Flags().Changed("fairness-key-rate-limit-default") {
+		request.UpdateFairnessKeyRateLimitDefault = buildRateLimitUpdate(
+			c.FairnessKeyRateLimitDefault,
+			c.FairnessKeyRateLimitReason,
+		)
+	}
 
 	// Call the API
 	resp, err := cl.WorkflowService().UpdateTaskQueueConfig(cctx, request)
