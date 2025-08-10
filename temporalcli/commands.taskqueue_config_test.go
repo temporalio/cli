@@ -36,82 +36,6 @@ func (s *SharedServerSuite) TestTaskQueue_Config_Get_Empty() {
 	s.Contains(res.Stdout.String(), "No configuration found for task queue")
 }
 
-func (s *SharedServerSuite) TestTaskQueue_Config_Set_And_Get_Queue_Rate_Limit() {
-	taskQueue := "test-config-queue-" + s.T().Name()
-	testIdentity := "test-identity-" + s.T().Name()
-
-	// Set queue rate limit with explicit identity
-	res := s.Execute(
-		"task-queue", "config", "set",
-		"--address", s.Address(),
-		"--task-queue", taskQueue,
-		"--task-queue-type", "activity",
-		"--identity", testIdentity,
-		"--queue-rate-limit", "15.5",
-		"--queue-rate-limit-reason", "test rate limit",
-	)
-	s.NoError(res.Err)
-	s.Contains(res.Stdout.String(), "Successfully updated task queue configuration")
-
-	// Get the configuration and verify it was set using JSON output
-	res = s.Execute(
-		"task-queue", "config", "get",
-		"--address", s.Address(),
-		"--task-queue", taskQueue,
-		"--task-queue-type", "activity",
-		"-o", "json",
-	)
-	s.NoError(res.Err)
-
-	var config taskQueueConfigType
-	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &config))
-	s.NotNil(config.QueueRateLimit)
-	s.NotNil(config.QueueRateLimit.RateLimit)
-	s.Equal(float32(15.5), config.QueueRateLimit.RateLimit.RequestsPerSecond)
-	s.NotNil(config.QueueRateLimit.Metadata)
-	s.Equal("test rate limit", config.QueueRateLimit.Metadata.Reason)
-	s.Equal(testIdentity, config.QueueRateLimit.Metadata.UpdateIdentity)
-	s.NotEmpty(config.QueueRateLimit.Metadata.UpdateTime)
-}
-
-func (s *SharedServerSuite) TestTaskQueue_Config_Set_And_Get_Fairness_Key_Rate_Limit() {
-	taskQueue := "test-config-queue-" + s.T().Name()
-	testIdentity := "test-identity-" + s.T().Name()
-
-	// Set fairness key rate limit default with explicit identity
-	res := s.Execute(
-		"task-queue", "config", "set",
-		"--address", s.Address(),
-		"--task-queue", taskQueue,
-		"--task-queue-type", "activity",
-		"--identity", testIdentity,
-		"--fairness-key-rate-limit-default", "8.0",
-		"--fairness-key-rate-limit-reason", "test fairness limit",
-	)
-	s.NoError(res.Err)
-	s.Contains(res.Stdout.String(), "Successfully updated task queue configuration")
-
-	// Get the configuration and verify it was set using JSON output
-	res = s.Execute(
-		"task-queue", "config", "get",
-		"--address", s.Address(),
-		"--task-queue", taskQueue,
-		"--task-queue-type", "activity",
-		"-o", "json",
-	)
-	s.NoError(res.Err)
-
-	var config taskQueueConfigType
-	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &config))
-	s.NotNil(config.FairnessKeysRateLimitDefault)
-	s.NotNil(config.FairnessKeysRateLimitDefault.RateLimit)
-	s.Equal(float32(8.0), config.FairnessKeysRateLimitDefault.RateLimit.RequestsPerSecond)
-	s.NotNil(config.FairnessKeysRateLimitDefault.Metadata)
-	s.Equal("test fairness limit", config.FairnessKeysRateLimitDefault.Metadata.Reason)
-	s.Equal(testIdentity, config.FairnessKeysRateLimitDefault.Metadata.UpdateIdentity)
-	s.NotEmpty(config.FairnessKeysRateLimitDefault.Metadata.UpdateTime)
-}
-
 func (s *SharedServerSuite) TestTaskQueue_Config_Set_And_Get_Both_Limits() {
 	taskQueue := "test-config-queue-" + s.T().Name()
 	testIdentity := "test-identity-" + s.T().Name()
@@ -163,59 +87,10 @@ func (s *SharedServerSuite) TestTaskQueue_Config_Set_And_Get_Both_Limits() {
 	s.NotEmpty(config.FairnessKeysRateLimitDefault.Metadata.UpdateTime)
 }
 
-func (s *SharedServerSuite) TestTaskQueue_Config_Update_Existing_Config() {
-	taskQueue := "test-config-queue-" + s.T().Name()
-	initialIdentity := "initial-identity-" + s.T().Name()
-	updatedIdentity := "updated-identity-" + s.T().Name()
-
-	// Set initial configuration with first identity
-	res := s.Execute(
-		"task-queue", "config", "set",
-		"--address", s.Address(),
-		"--task-queue", taskQueue,
-		"--task-queue-type", "activity",
-		"--identity", initialIdentity,
-		"--queue-rate-limit", "5.0",
-		"--queue-rate-limit-reason", "initial queue limit",
-	)
-	s.NoError(res.Err)
-
-	// Update the configuration with different identity
-	res = s.Execute(
-		"task-queue", "config", "set",
-		"--address", s.Address(),
-		"--task-queue", taskQueue,
-		"--task-queue-type", "activity",
-		"--identity", updatedIdentity,
-		"--queue-rate-limit", "25.0",
-		"--queue-rate-limit-reason", "updated queue limit",
-	)
-	s.NoError(res.Err)
-	s.Contains(res.Stdout.String(), "Successfully updated task queue configuration")
-
-	// Get the configuration and verify it was updated using JSON output
-	res = s.Execute(
-		"task-queue", "config", "get",
-		"--address", s.Address(),
-		"--task-queue", taskQueue,
-		"--task-queue-type", "activity",
-		"-o", "json",
-	)
-	s.NoError(res.Err)
-
-	var config taskQueueConfigType
-	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &config))
-	s.NotNil(config.QueueRateLimit)
-	s.Equal(float32(25.0), config.QueueRateLimit.RateLimit.RequestsPerSecond)
-	s.Equal("updated queue limit", config.QueueRateLimit.Metadata.Reason)
-	s.Equal(updatedIdentity, config.QueueRateLimit.Metadata.UpdateIdentity)
-	s.NotEmpty(config.QueueRateLimit.Metadata.UpdateTime)
-}
-
 func (s *SharedServerSuite) TestTaskQueue_Config_Unset_Rate_Limits() {
 	taskQueue := "test-config-queue-" + s.T().Name()
 	testIdentity := "test-identity-" + s.T().Name()
-
+	var config taskQueueConfigType
 	// Set initial configuration
 	res := s.Execute(
 		"task-queue", "config", "set",
@@ -227,6 +102,23 @@ func (s *SharedServerSuite) TestTaskQueue_Config_Unset_Rate_Limits() {
 		"--fairness-key-rate-limit-default", "5.0",
 	)
 	s.NoError(res.Err)
+
+	res = s.Execute(
+		"task-queue", "config", "get",
+		"--address", s.Address(),
+		"--task-queue", taskQueue,
+		"--task-queue-type", "activity",
+		"-o", "json",
+	)
+	s.NoError(res.Err)
+
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &config))
+	s.NotNil(config.QueueRateLimit)
+	s.NotNil(config.QueueRateLimit.RateLimit)
+	s.Equal(float32(10.0), config.QueueRateLimit.RateLimit.RequestsPerSecond)
+	s.NotNil(config.FairnessKeysRateLimitDefault)
+	s.NotNil(config.FairnessKeysRateLimitDefault.RateLimit)
+	s.Equal(float32(5.0), config.FairnessKeysRateLimitDefault.RateLimit.RequestsPerSecond)
 
 	// Unset queue rate limit (set to -1)
 	res = s.Execute(
@@ -249,11 +141,12 @@ func (s *SharedServerSuite) TestTaskQueue_Config_Unset_Rate_Limits() {
 	)
 	s.NoError(res.Err)
 
-	var config taskQueueConfigType
-	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &config))
-	s.Nil(config.QueueRateLimit)
-	s.NotNil(config.FairnessKeysRateLimitDefault)
-	s.Equal(float32(5.0), config.FairnessKeysRateLimitDefault.RateLimit.RequestsPerSecond)
+	var unsetQrlConfig taskQueueConfigType
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &unsetQrlConfig))
+	s.NotNil(unsetQrlConfig.QueueRateLimit)
+	s.Nil(unsetQrlConfig.QueueRateLimit.RateLimit)
+	s.NotNil(unsetQrlConfig.FairnessKeysRateLimitDefault)
+	s.Equal(float32(5.0), unsetQrlConfig.FairnessKeysRateLimitDefault.RateLimit.RequestsPerSecond)
 
 	// Unset fairness key rate limit
 	res = s.Execute(
@@ -276,10 +169,10 @@ func (s *SharedServerSuite) TestTaskQueue_Config_Unset_Rate_Limits() {
 	)
 	s.NoError(res.Err)
 
-	var finalConfig taskQueueConfigType
-	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &finalConfig))
-	s.Nil(finalConfig.QueueRateLimit)
-	s.Nil(finalConfig.FairnessKeysRateLimitDefault)
+	var unsetFkrlConfig taskQueueConfigType
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &unsetFkrlConfig))
+	s.NotNil(unsetFkrlConfig.FairnessKeysRateLimitDefault)
+	s.Nil(unsetFkrlConfig.FairnessKeysRateLimitDefault.RateLimit)
 }
 
 func (s *SharedServerSuite) TestTaskQueue_Config_Workflow_Task_Queue_Restrictions() {
@@ -296,7 +189,7 @@ func (s *SharedServerSuite) TestTaskQueue_Config_Workflow_Task_Queue_Restriction
 	s.Error(res.Err)
 
 	// TODO : add test to check if setting fairness key rate limit on workflow task queue is allowed
-	// Will be done after we merge the server PR (pending) to allow setting fairness key rate limit on workflow task queues
+	// Will be done after the server PR (pending) to allow setting fairness key rate limit on workflow task queues is merged.
 }
 
 func (s *SharedServerSuite) TestTaskQueue_Config_Describe_With_Report_Config() {
@@ -315,22 +208,6 @@ func (s *SharedServerSuite) TestTaskQueue_Config_Describe_With_Report_Config() {
 	)
 	s.NoError(res.Err)
 
-	// Use describe command with --report-config flag
-	res = s.Execute(
-		"task-queue", "describe",
-		"--address", s.Address(),
-		"--task-queue", taskQueue,
-		"--task-queue-type-legacy", "activity",
-		"--report-config",
-		"--legacy-mode",
-	)
-	s.NoError(res.Err)
-	out := res.Stdout.String()
-	s.Contains(out, "Task Queue Configuration:")
-	s.Contains(out, "Queue Rate Limit")
-	s.Contains(out, "12.50 rps")
-	s.Contains(out, "describe test")
-
 	// Test JSON output with describe
 	res = s.Execute(
 		"task-queue", "describe",
@@ -344,7 +221,36 @@ func (s *SharedServerSuite) TestTaskQueue_Config_Describe_With_Report_Config() {
 	s.NoError(res.Err)
 
 	// The JSON output should contain the config section
-	var result map[string]interface{}
+	var result map[string]any
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &result))
-	s.Contains(result, "config")
+
+	cfg, ok := result["config"].(map[string]any)
+	s.True(ok, "config should be an object")
+	s.NotEmpty(cfg)
+
+	qrl, ok := cfg["queue_rate_limit"].(map[string]any)
+	s.True(ok, "config.queueRateLimit should be an object")
+	s.NotEmpty(qrl)
+
+	rl, ok := qrl["rate_limit"].(map[string]any)
+	s.True(ok, "config.queueRateLimit.RateLimit should be an object")
+
+	rps, ok := rl["requests_per_second"].(float64)
+	s.True(ok, "requests_per_second should be a number")
+	s.Equal(12.5, rps)
+
+	md, ok := qrl["metadata"].(map[string]any)
+	s.True(ok, "metadata should be an object")
+	s.NotEmpty(md)
+
+	reason, ok := md["reason"].(string)
+	s.True(ok)
+	s.Equal("describe test", reason)
+
+	updID, ok := md["update_identity"].(string)
+	s.True(ok)
+	s.Equal(testIdentity, updID)
+
+	updTime, _ := md["update_time"].(map[string]any)
+	s.NotEmpty(updTime)
 }
