@@ -3100,7 +3100,6 @@ commands:
         type: string
         description: |
           Task Queue name.
-          Required.
         required: true
         short: t
       - name: task-queue-type
@@ -3108,6 +3107,7 @@ commands:
         description: |
           Task Queue type.
           Accepted values: workflow, activity, nexus.
+        required: true
         enum-values:
           - workflow
           - activity
@@ -3143,7 +3143,6 @@ commands:
         type: string
         description: |
           Task Queue name.
-          Required.
         required: true
         short: t
       - name: task-queue-type
@@ -3151,6 +3150,7 @@ commands:
         description: |
           Task Queue type.
           Accepted values: workflow, activity, nexus.
+        required: true
         enum-values:
           - workflow
           - activity
