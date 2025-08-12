@@ -26,6 +26,7 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 		return err
 	}
 	defer cl.Close()
+
 	resp, err := cl.DescribeWorkflowExecution(cctx, c.WorkflowId, c.RunId)
 	if err != nil {
 		return fmt.Errorf("failed describing workflow: %w", err)
@@ -287,6 +288,9 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 				LastFailure          *failure.Failure  `cli:",cardOmitEmpty"`
 				LastWorkerIdentity   string            `cli:",cardOmitEmpty"`
 				LastHeartbeatDetails []*common.Payload `cli:",cardOmitEmpty"`
+				Paused               bool
+				PauseTime            time.Time `cli:",cardOmitEmpty"`
+				PausedBy             string    `cli:",cardOmitEmpty"`
 			}, len(resp.PendingActivities))
 			for i, a := range resp.PendingActivities {
 				acts[i].ActivityId = a.ActivityId
@@ -301,9 +305,42 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 				acts[i].LastFailure = a.LastFailure
 				acts[i].LastWorkerIdentity = a.LastWorkerIdentity
 				acts[i].LastHeartbeatDetails = a.HeartbeatDetails.GetPayloads()
+				acts[i].Paused = a.Paused
+
+				if pauseInfo := a.GetPauseInfo(); pauseInfo != nil {
+					acts[i].PauseTime = timestampToTime(pauseInfo.GetPauseTime())
+
+					switch pausedBy := pauseInfo.GetPausedBy().(type) {
+					case *workflow.PendingActivityInfo_PauseInfo_Manual_:
+						acts[i].PausedBy = pausedBy.Manual.Identity
+					case *workflow.PendingActivityInfo_PauseInfo_Rule_:
+						acts[i].PausedBy = pausedBy.Rule.Identity
+					}
+				}
 			}
 			_ = cctx.Printer.PrintStructured(acts, printer.StructuredOptions{})
 			cctx.Printer.Println()
+		}
+
+		if pauseInfo := resp.GetWorkflowPauseInfo(); pauseInfo != nil {
+			cctx.Printer.Println(color.MagentaString("Paused Activities: %v", len(pauseInfo.GetActivityPauseInfos())))
+			if len(pauseInfo.GetActivityPauseInfos()) > 0 {
+				cctx.Printer.Println()
+				acts := make([]struct {
+					UpdateTime   time.Time
+					ActivityType string
+					Identity     string
+					Reason       string
+				}, len(pauseInfo.GetActivityPauseInfos()))
+				for i, a := range pauseInfo.GetActivityPauseInfos() {
+					acts[i].UpdateTime = timestampToTime(a.GetUpdateTime())
+					acts[i].ActivityType = a.ActivityType
+					acts[i].Identity = a.Identity
+					acts[i].Reason = a.Reason
+				}
+				_ = cctx.Printer.PrintStructured(acts, printer.StructuredOptions{})
+				cctx.Printer.Println()
+			}
 		}
 
 		cctx.Printer.Println(color.MagentaString("Pending Child Workflows: %v", len(resp.PendingChildren)))
