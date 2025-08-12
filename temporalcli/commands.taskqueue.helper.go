@@ -105,7 +105,7 @@ func printTaskQueueConfig(cctx *CommandContext, config *taskqueue.TaskQueueConfi
 
 	// Fairness Key Rate Limit Default
 	if config.FairnessKeysRateLimitDefault != nil {
-		configRows = append(configRows, buildRateLimitConfigRow("Fairness Key Rate Limit Default", config.FairnessKeysRateLimitDefault, "%.2f requests/second"))
+		configRows = append(configRows, buildRateLimitConfigRow("Fairness Key Rate Limit Default", config.FairnessKeysRateLimitDefault, "%.2f rps"))
 	}
 
 	// Print the config table
