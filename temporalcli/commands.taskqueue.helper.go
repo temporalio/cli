@@ -2,6 +2,7 @@ package temporalcli
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/temporalio/cli/temporalcli/internal/printer"
@@ -56,7 +57,7 @@ func buildRateLimitConfigRow(setting string, rl *taskqueue.RateLimitConfig, form
 		}
 		if rl.Metadata.UpdateTime != nil {
 			updateTime := rl.Metadata.UpdateTime.AsTime()
-			updatedTime = updateTime.Format("2006-01-02 15:04:05")
+			updatedTime = updateTime.Format(time.RFC3339)
 		}
 	}
 
@@ -104,7 +105,7 @@ func printTaskQueueConfig(cctx *CommandContext, config *taskqueue.TaskQueueConfi
 
 	// Fairness Key Rate Limit Default
 	if config.FairnessKeysRateLimitDefault != nil {
-		configRows = append(configRows, buildRateLimitConfigRow("Fairness Key Rate Limit Default", config.FairnessKeysRateLimitDefault, "%.0f requests/second"))
+		configRows = append(configRows, buildRateLimitConfigRow("Fairness Key Rate Limit Default", config.FairnessKeysRateLimitDefault, "%.2f requests/second"))
 	}
 
 	// Print the config table
