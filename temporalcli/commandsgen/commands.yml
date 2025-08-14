@@ -332,7 +332,7 @@ commands:
     summary: Update Activity options
     description: |
       Update the options of a running Activity that were passed into it from
-      a Workflow. Updates are incremental, only changing the specified 
+       a Workflow. Updates are incremental, only changing the specified 
       options.
 
       For example:
@@ -364,8 +364,10 @@ commands:
           --query 'TemporalPauseInfo="property:activityType=Foo"'
           ...
       ```
+
+      You may follow this command with `temporal activity reset`, and the new values will apply after the reset.
     options:
-      
+
       - name: activity-id
         short: a
         type: string
@@ -471,6 +473,9 @@ commands:
       - name: activity-type
         type: string
         description: All activities of the Activity Type will be paused. Either `activity-id` or `activity-type` must be provided, but not both.
+      - name: identity
+        type: string
+        description: The identity of the user or client submitting this request.
     option-sets:
       - workflow-reference
 
@@ -516,11 +521,15 @@ commands:
         short: a
         type: string
         description: |
-          The Activity ID to unpause.  Mutually exclusive with `--query`, `--match-all`, and `--activity-type`. Requires `--workflow-id` to be specified.
+          The Activity ID to unpause. Can only be used without --query or --match-all. Either `activity-id` or `activity-type` must be provided, but not both.
       - name: activity-type
+        short: g
         type: string
         description: |
           Activities of this Type will unpause. Can only be used without --match-all. Either `activity-id` or `activity-type` must be provided, but not both.
+      - name: identity
+        type: string
+        description: The identity of the user or client submitting this request.
       - name: reset-attempts
         type: bool
         description: Reset the activity attempts.
@@ -532,7 +541,7 @@ commands:
         type: bool
         description: |
           Every paused activity should be unpaused. This flag is ignored if
-          activity-type is provided. 
+          activity-type is provided.
       - name: jitter
         type: duration
         description: |
@@ -596,10 +605,13 @@ commands:
       - name: activity-id
         short: a
         type: string
-        description: The Activity ID to reset.  Mutually exclusive with `--query`, `--match-all`, and `--activity-type`. Requires `--workflow-id` to be specified.
+        description: The Activity ID to reset. Either `activity-id` or `activity-type` must be provided, but not both.
       - name: activity-type
         type: string
-        description: Activities of this Type will be reset. Mutually exclusive with `--match-all` and `activity-id`.
+        description: The Activity Type to reset. Either `activity-id` or `activity-type` must be provided, but not both.
+      - name: identity
+        type: string
+        description: The identity of the user or client submitting this request.
       - name: keep-paused
         type: bool
         description: If the activity was paused, it will stay paused.
@@ -608,21 +620,19 @@ commands:
         description: Reset the activity attempts.
       - name: reset-heartbeats
         type: bool
-        description: |
-          Reset the Activity's heartbeats. Only works with --reset-attempts.
+        description: Clear the Activity's heartbeat details.
       - name: match-all
         type: bool
         description: |
           Every activity should be reset. Every activity should be updated. Mutually exclusive with `--activity-id` and `--activity-type`.
       - name: jitter
         type: duration
-        description: |
+        description:
           The activity will reset at random a time within the specified duration.
           Can only be used with --query.
       - name: restore-original-options
         type: bool
-        description: |
-          Restore the original options of the activity.
+        description: Restore the original options of the activity.
     option-sets:
       - single-workflow-or-batch
 
