@@ -561,8 +561,11 @@ func buildStartOptions(sw *SharedWorkflowStartOptions, w *WorkflowStartOptions) 
 		StartDelay:                               w.StartDelay.Duration(),
 		StaticSummary:                            sw.StaticSummary,
 		StaticDetails:                            sw.StaticDetails,
-		// TODO: Fill in from passed in values
-		Priority: temporal.Priority{},
+		Priority: temporal.Priority{
+			PriorityKey:    sw.PriorityKey,
+			FairnessKey:    sw.FairnessKey,
+			FairnessWeight: sw.FairnessWeight,
+		},
 	}
 	if w.IdReusePolicy.Value != "" {
 		var err error
