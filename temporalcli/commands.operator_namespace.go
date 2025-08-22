@@ -281,6 +281,7 @@ func (c *TemporalOperatorNamespaceUpdateCommand) run(cctx *CommandContext, args 
 		}
 		replicationConfig := &replication.NamespaceReplicationConfig{
 			Clusters: clusters,
+			State:    replicationState(c.ReplicationState.String()),
 		}
 		updateRequest = &workflowservice.UpdateNamespaceRequest{
 			Namespace:         nsName,
@@ -316,6 +317,7 @@ func printNamespaceDescriptions(cctx *CommandContext, responses ...*workflowserv
 			"Config.WorkflowExecutionRetentionTtl": resp.Config.WorkflowExecutionRetentionTtl.AsDuration(),
 			"ReplicationConfig.ActiveClusterName":  resp.ReplicationConfig.ActiveClusterName,
 			"ReplicationConfig.Clusters":           resp.ReplicationConfig.Clusters,
+			"ReplicationConfig.State":              resp.ReplicationConfig.State,
 			"Config.HistoryArchivalState":          resp.Config.HistoryArchivalState,
 			"Config.VisibilityArchivalState":       resp.Config.VisibilityArchivalState,
 			"IsGlobalNamespace":                    resp.IsGlobalNamespace,
@@ -334,7 +336,8 @@ func printNamespaceDescriptions(cctx *CommandContext, responses ...*workflowserv
 				"NamespaceInfo.Name", "NamespaceInfo.Id", "NamespaceInfo.Description",
 				"NamespaceInfo.OwnerEmail", "NamespaceInfo.State", "NamespaceInfo.Data",
 				"Config.WorkflowExecutionRetentionTtl", "ReplicationConfig.ActiveClusterName",
-				"ReplicationConfig.Clusters", "Config.HistoryArchivalState", "Config.VisibilityArchivalState",
+				"ReplicationConfig.Clusters", "ReplicationConfig.State",
+				"Config.HistoryArchivalState", "Config.VisibilityArchivalState",
 				"IsGlobalNamespace", "FailoverVersion", "FailoverHistory", "Config.HistoryArchivalUri",
 				"Config.VisibilityArchivalUri",
 				"Config.CustomSearchAttributeAliases",
@@ -351,4 +354,14 @@ func archivalState(input string) enums.ArchivalState {
 		return enums.ARCHIVAL_STATE_ENABLED
 	}
 	return enums.ARCHIVAL_STATE_UNSPECIFIED
+}
+
+func replicationState(input string) enums.ReplicationState {
+	switch input {
+	case "normal":
+		return enums.REPLICATION_STATE_NORMAL
+	case "handover":
+		return enums.REPLICATION_STATE_HANDOVER
+	}
+	return enums.REPLICATION_STATE_UNSPECIFIED
 }
