@@ -239,6 +239,10 @@ commands:
         type: duration
         description: |
           The command execution timeout. 0s means no timeout.
+      - name: client-connect-timeout
+        type: duration
+        description: |
+          The client connection timeout. 0s means no timeout.
 
   - name: temporal activity
     summary: Complete, update, pause, unpause, reset or fail an Activity

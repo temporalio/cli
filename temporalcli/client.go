@@ -203,6 +203,16 @@ func (c *ClientOptions) dialClient(cctx *CommandContext) (client.Client, error) 
 	clientOptions.ConnectionOptions.DialOptions = append(
 		clientOptions.ConnectionOptions.DialOptions, cctx.Options.AdditionalClientGRPCDialOptions...)
 
+	if cctx.Options.ClientConnectTimeout != 0 {
+		// This is needed because the Go SDK overwrites the contextTimeout for GetSystemInfo, if not set
+		clientOptions.ConnectionOptions.GetSystemInfoTimeout = cctx.Options.ClientConnectTimeout
+
+		ctx := context.Background()
+		ctx, _ = context.WithTimeoutCause(ctx, cctx.Options.ClientConnectTimeout,
+			fmt.Errorf("command timed out after %v", cctx.Options.ClientConnectTimeout))
+		return client.DialContext(ctx, clientOptions)
+	}
+
 	return client.Dial(clientOptions)
 }
 
