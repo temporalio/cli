@@ -1432,6 +1432,7 @@ type TemporalOperatorNamespaceUpdateCommand struct {
 	PromoteGlobal           bool
 	HistoryArchivalState    StringEnum
 	HistoryUri              string
+	ReplicationState        StringEnum
 	Retention               Duration
 	VisibilityArchivalState StringEnum
 	VisibilityUri           string
@@ -1458,6 +1459,8 @@ func NewTemporalOperatorNamespaceUpdateCommand(cctx *CommandContext, parent *Tem
 	s.HistoryArchivalState = NewStringEnum([]string{"disabled", "enabled"}, "")
 	s.Command.Flags().Var(&s.HistoryArchivalState, "history-archival-state", "History archival state. Accepted values: disabled, enabled.")
 	s.Command.Flags().StringVar(&s.HistoryUri, "history-uri", "", "Archive history to this `URI`. Once enabled, can't be changed.")
+	s.ReplicationState = NewStringEnum([]string{"normal", "handover"}, "")
+	s.Command.Flags().Var(&s.ReplicationState, "replication-state", "Replication state. Accepted values: normal, handover.")
 	s.Retention = 0
 	s.Command.Flags().Var(&s.Retention, "retention", "Length of time a closed Workflow is preserved before deletion.")
 	s.VisibilityArchivalState = NewStringEnum([]string{"disabled", "enabled"}, "")

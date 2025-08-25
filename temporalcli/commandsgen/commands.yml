@@ -1736,6 +1736,12 @@ commands:
         description: |
           Archive history to this `URI`.
           Once enabled, can't be changed.
+      - name: replication-state
+        type: string-enum
+        description: Replication state.
+        enum-values:
+          - normal
+          - handover
       - name: retention
         type: duration
         description: Length of time a closed Workflow is preserved before deletion.
