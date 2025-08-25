@@ -207,13 +207,12 @@ func (c *ClientOptions) dialClient(cctx *CommandContext) (client.Client, error) 
 		// This is needed because the Go SDK overwrites the contextTimeout for GetSystemInfo, if not set
 		clientOptions.ConnectionOptions.GetSystemInfoTimeout = cctx.Options.ClientConnectTimeout
 
-		ctx := context.Background()
-		ctx, _ = context.WithTimeoutCause(ctx, cctx.Options.ClientConnectTimeout,
+		ctxWithTimeout, _ := context.WithTimeoutCause(cctx, cctx.Options.ClientConnectTimeout,
 			fmt.Errorf("command timed out after %v", cctx.Options.ClientConnectTimeout))
-		return client.DialContext(ctx, clientOptions)
+		return client.DialContext(ctxWithTimeout, clientOptions)
 	}
 
-	return client.Dial(clientOptions)
+	return client.DialContext(cctx, clientOptions)
 }
 
 func fixedHeaderOverrideInterceptor(
