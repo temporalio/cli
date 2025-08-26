@@ -343,6 +343,7 @@ type TemporalCommand struct {
 	Color                   StringEnum
 	NoJsonShorthandPayloads bool
 	CommandTimeout          Duration
+	ClientConnectTimeout    Duration
 }
 
 func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
@@ -385,6 +386,8 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	s.Command.PersistentFlags().BoolVar(&s.NoJsonShorthandPayloads, "no-json-shorthand-payloads", false, "Raw payload output, even if the JSON option was used.")
 	s.CommandTimeout = 0
 	s.Command.PersistentFlags().Var(&s.CommandTimeout, "command-timeout", "The command execution timeout. 0s means no timeout.")
+	s.ClientConnectTimeout = 0
+	s.Command.PersistentFlags().Var(&s.ClientConnectTimeout, "client-connect-timeout", "The client connection timeout. 0s means no timeout.")
 	s.initCommand(cctx)
 	return &s
 }
