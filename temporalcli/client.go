@@ -172,6 +172,11 @@ func (c *ClientOptions) dialClient(cctx *CommandContext) (client.Client, error) 
 	if err != nil {
 		return nil, fmt.Errorf("failed creating client options: %w", err)
 	}
+
+	if c.ClientAuthority != "" {
+		clientOptions.ConnectionOptions.Authority = c.ClientAuthority
+	}
+
 	clientOptions.Logger = log.NewStructuredLogger(cctx.Logger)
 	clientOptions.Identity = clientIdentity()
 	// We do not put codec on data converter here, it is applied via
