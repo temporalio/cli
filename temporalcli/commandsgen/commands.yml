@@ -3500,11 +3500,13 @@ commands:
           - auto_upgrade
       - name: versioning-override-deployment-name
         type: string
-        description: When overriding to a `pinned` behavior, specifies the Deployment Name of the
+        description:
+          When overriding to a `pinned` behavior, specifies the Deployment Name of the
           version to target.
       - name: versioning-override-build-id
         type: string
-        description: When overriding to a `pinned` behavior, specifies the Build ID of the
+        description:
+          When overriding to a `pinned` behavior, specifies the Build ID of the
           version to target.
   - name: temporal workflow query
     summary: Retrieve Workflow Execution state
@@ -4473,6 +4475,22 @@ option-sets:
         description: |
           Static Workflow details for human consumption in UIs.
           Uses Temporal Markdown formatting, may be multiple lines.
+      - name: priority-key
+        type: int
+        description: |
+          Priority key (1-5, lower numbers = higher priority).
+          Tasks in a queue should be processed in close-to-priority-order.
+          Default is 3 when not specified.
+      - name: fairness-key
+        type: string
+        description: |
+          Fairness key (max 64 bytes) for proportional task dispatch.
+          Tasks with same key share capacity based on their weight.
+      - name: fairness-weight
+        type: float
+        description: |
+          Weight [0.001-1000] for this fairness key.
+          Keys are dispatched proportionally to their weights.
 
   - name: workflow-start
     options:
@@ -4643,10 +4661,11 @@ option-sets:
           - auto_upgrade
       - name: versioning-override-deployment-name
         type: string
-        description: When overriding to a `pinned` behavior, specifies the Deployment Name of the
+        description:
+          When overriding to a `pinned` behavior, specifies the Deployment Name of the
           version to target.
       - name: versioning-override-build-id
         type: string
-        description: When overriding to a `pinned` behavior, specifies the Build ID of the
+        description:
+          When overriding to a `pinned` behavior, specifies the Build ID of the
           version to target.
-
