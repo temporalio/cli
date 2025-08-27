@@ -4051,6 +4051,10 @@ option-sets:
         description: Temporal Service gRPC endpoint.
         default: 127.0.0.1:7233
         implied-env: TEMPORAL_ADDRESS
+      - name: grpc-authority 
+        type: string
+        description: Temporal gRPC client :authority pseudoheader.
+        implied-env: TEMPORAL_GRPC_AUTHORITY
       - name: namespace
         short: n
         type: string

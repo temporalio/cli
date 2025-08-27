@@ -251,6 +251,7 @@ func loadEnvConfigProfile(
 
 var envConfigPropsToFieldNames = map[string]string{
 	"address":                       "Address",
+	"grpc_authority":                "GRPCAuthority",
 	"namespace":                     "Namespace",
 	"api_key":                       "APIKey",
 	"tls":                           "TLS",
