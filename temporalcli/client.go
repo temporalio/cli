@@ -173,8 +173,8 @@ func (c *ClientOptions) dialClient(cctx *CommandContext) (client.Client, error) 
 		return nil, fmt.Errorf("failed creating client options: %w", err)
 	}
 
-	if c.GrpcAuthority != "" {
-		clientOptions.ConnectionOptions.Authority = c.GrpcAuthority
+	if c.ClientAuthority != "" {
+		clientOptions.ConnectionOptions.Authority = c.ClientAuthority
 	}
 
 	clientOptions.Logger = log.NewStructuredLogger(cctx.Logger)
