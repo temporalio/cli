@@ -24,6 +24,7 @@ import (
 	"go.temporal.io/api/temporalproto"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/temporal"
 	"google.golang.org/protobuf/types/known/durationpb"
 )
 
@@ -560,6 +561,11 @@ func buildStartOptions(sw *SharedWorkflowStartOptions, w *WorkflowStartOptions) 
 		StartDelay:                               w.StartDelay.Duration(),
 		StaticSummary:                            sw.StaticSummary,
 		StaticDetails:                            sw.StaticDetails,
+		Priority: temporal.Priority{
+			PriorityKey:    sw.PriorityKey,
+			FairnessKey:    sw.FairnessKey,
+			FairnessWeight: sw.FairnessWeight,
+		},
 	}
 	if w.IdReusePolicy.Value != "" {
 		var err error
