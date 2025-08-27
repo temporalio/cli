@@ -174,7 +174,7 @@ func (c *ClientOptions) dialClient(cctx *CommandContext) (client.Client, error) 
 		return nil, fmt.Errorf("failed creating client options: %w", err)
 	}
 
-	if grpcAuthorityExplicitlySet {
+	if c.GrpcAuthority != "" {
 		clientOptions.ConnectionOptions.Authority = c.GrpcAuthority
 	}
 
