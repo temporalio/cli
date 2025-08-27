@@ -82,10 +82,9 @@ func (c *ClientOptions) dialClient(cctx *CommandContext) (client.Client, error) 
 	// Override some values in client config profile that come from CLI args. Some
 	// flags, like address and namespace, have CLI defaults, but we don't want to
 	// override the profile version unless it was _explicitly_ set.
-	var addressExplicitlySet, grpcAuthorityExplicitlySet, namespaceExplicitlySet bool
+	var addressExplicitlySet, namespaceExplicitlySet bool
 	if cctx.CurrentCommand != nil {
 		addressExplicitlySet = cctx.CurrentCommand.Flags().Changed("address")
-		grpcAuthorityExplicitlySet = cctx.CurrentCommand.Flags().Changed("grpc-authority")
 		namespaceExplicitlySet = cctx.CurrentCommand.Flags().Changed("namespace")
 	}
 	if addressExplicitlySet {
