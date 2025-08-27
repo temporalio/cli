@@ -2,8 +2,6 @@ module github.com/temporalio/cli
 
 go 1.24.5
 
-toolchain go1.24.6
-
 require (
 	github.com/BurntSushi/toml v1.4.0
 	github.com/alitto/pond v1.9.2
@@ -19,9 +17,9 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/temporalio/ui-server/v2 v2.39.0
 	go.temporal.io/api v1.52.0
-	go.temporal.io/sdk v1.35.0
+	go.temporal.io/sdk v1.36.0
 	go.temporal.io/sdk/contrib/envconfig v0.1.0
-	go.temporal.io/server v1.29.0-139.2
+	go.temporal.io/server v1.29.0-139.3
 	google.golang.org/grpc v1.72.2
 	google.golang.org/protobuf v1.36.6
 	gopkg.in/yaml.v3 v3.0.1
@@ -29,7 +27,7 @@ require (
 )
 
 require (
-	cel.dev/expr v0.22.1 // indirect
+	cel.dev/expr v0.23.1 // indirect
 	cloud.google.com/go v0.120.0 // indirect
 	cloud.google.com/go/auth v0.15.0 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.8 // indirect
@@ -78,7 +76,7 @@ require (
 	github.com/googleapis/gax-go/v2 v2.14.1 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/gorilla/securecookie v1.1.2 // indirect
-	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0 // indirect
+	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.2 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.26.3 // indirect
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
