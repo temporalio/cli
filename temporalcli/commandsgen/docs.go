@@ -58,8 +58,6 @@ func (c *Command) writeDoc(w *docWriter) error {
 func (w *docWriter) writeCommand(c *Command) {
 	fileName := c.fileName()
 	w.fileMap[fileName] = &bytes.Buffer{}
-	w.fileMap[fileName].WriteString("{/* NOTE: This is an auto-generated file. Any edit to this file will be overwritten.\n")
-	w.fileMap[fileName].WriteString("This file is generated from https://github.com/temporalio/cli/blob/main/temporalcli/commandsgen/commands.yml */}\n")
 	w.fileMap[fileName].WriteString("---\n")
 	w.fileMap[fileName].WriteString("id: " + fileName + "\n")
 	w.fileMap[fileName].WriteString("title: Temporal CLI " + fileName + " command reference\n")
@@ -75,7 +73,10 @@ func (w *docWriter) writeCommand(c *Command) {
 	for _, tag := range c.Docs.Tags {
 		w.fileMap[fileName].WriteString("  - " + tag + "\n")
 	}
-	w.fileMap[fileName].WriteString("---\n\n")
+	w.fileMap[fileName].WriteString("---")
+	w.fileMap[fileName].WriteString("\n\n")
+	w.fileMap[fileName].WriteString("{/* NOTE: This is an auto-generated file. Any edit to this file will be overwritten.\n")
+	w.fileMap[fileName].WriteString("This file is generated from https://github.com/temporalio/cli/blob/main/temporalcli/commandsgen/commands.yml */}\n")
 }
 
 func (w *docWriter) writeSubcommand(c *Command) {
