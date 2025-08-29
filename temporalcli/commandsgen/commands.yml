@@ -239,6 +239,10 @@ commands:
         type: duration
         description: |
           The command execution timeout. 0s means no timeout.
+      - name: client-connect-timeout
+        type: duration
+        description: |
+          The client connection timeout. 0s means no timeout.
 
   - name: temporal activity
     summary: Complete, update, pause, unpause, reset or fail an Activity
@@ -1736,6 +1740,12 @@ commands:
         description: |
           Archive history to this `URI`.
           Once enabled, can't be changed.
+      - name: replication-state
+        type: string-enum
+        description: Replication state.
+        enum-values:
+          - normal
+          - handover
       - name: retention
         type: duration
         description: Length of time a closed Workflow is preserved before deletion.
@@ -4041,6 +4051,9 @@ option-sets:
         description: Temporal Service gRPC endpoint.
         default: 127.0.0.1:7233
         implied-env: TEMPORAL_ADDRESS
+      - name: client-authority 
+        type: string
+        description: Temporal gRPC client :authority pseudoheader.
       - name: namespace
         short: n
         type: string

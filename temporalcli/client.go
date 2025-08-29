@@ -172,6 +172,11 @@ func (c *ClientOptions) dialClient(cctx *CommandContext) (client.Client, error) 
 	if err != nil {
 		return nil, fmt.Errorf("failed creating client options: %w", err)
 	}
+
+	if c.ClientAuthority != "" {
+		clientOptions.ConnectionOptions.Authority = c.ClientAuthority
+	}
+
 	clientOptions.Logger = log.NewStructuredLogger(cctx.Logger)
 	clientOptions.Identity = clientIdentity()
 	// We do not put codec on data converter here, it is applied via
@@ -203,7 +208,17 @@ func (c *ClientOptions) dialClient(cctx *CommandContext) (client.Client, error) 
 	clientOptions.ConnectionOptions.DialOptions = append(
 		clientOptions.ConnectionOptions.DialOptions, cctx.Options.AdditionalClientGRPCDialOptions...)
 
-	return client.Dial(clientOptions)
+	if cctx.Options.ClientConnectTimeout != 0 {
+		// This is needed because the Go SDK overwrites the contextTimeout for GetSystemInfo, if not set
+		clientOptions.ConnectionOptions.GetSystemInfoTimeout = cctx.Options.ClientConnectTimeout
+
+		ctxWithTimeout, cancel := context.WithTimeoutCause(cctx, cctx.Options.ClientConnectTimeout,
+			fmt.Errorf("command timed out after %v", cctx.Options.ClientConnectTimeout))
+		defer cancel()
+		return client.DialContext(ctxWithTimeout, clientOptions)
+	}
+
+	return client.DialContext(cctx, clientOptions)
 }
 
 func fixedHeaderOverrideInterceptor(

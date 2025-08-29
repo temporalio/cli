@@ -18,6 +18,7 @@ var hasHighlighting = isatty.IsTerminal(os.Stdout.Fd())
 
 type ClientOptions struct {
 	Address                    string
+	ClientAuthority            string
 	Namespace                  string
 	ApiKey                     string
 	GrpcMeta                   []string
@@ -37,6 +38,7 @@ type ClientOptions struct {
 
 func (v *ClientOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
 	f.StringVar(&v.Address, "address", "127.0.0.1:7233", "Temporal Service gRPC endpoint.")
+	f.StringVar(&v.ClientAuthority, "client-authority", "", "Temporal gRPC client :authority pseudoheader.")
 	f.StringVarP(&v.Namespace, "namespace", "n", "default", "Temporal Service Namespace.")
 	f.StringVar(&v.ApiKey, "api-key", "", "API key for request.")
 	f.StringArrayVar(&v.GrpcMeta, "grpc-meta", nil, "HTTP headers for requests. Format as a `KEY=VALUE` pair. May be passed multiple times to set multiple headers. Can also be made available via environment variable as `TEMPORAL_GRPC_META_[name]`.")
@@ -343,6 +345,7 @@ type TemporalCommand struct {
 	Color                   StringEnum
 	NoJsonShorthandPayloads bool
 	CommandTimeout          Duration
+	ClientConnectTimeout    Duration
 }
 
 func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
@@ -385,6 +388,8 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	s.Command.PersistentFlags().BoolVar(&s.NoJsonShorthandPayloads, "no-json-shorthand-payloads", false, "Raw payload output, even if the JSON option was used.")
 	s.CommandTimeout = 0
 	s.Command.PersistentFlags().Var(&s.CommandTimeout, "command-timeout", "The command execution timeout. 0s means no timeout.")
+	s.ClientConnectTimeout = 0
+	s.Command.PersistentFlags().Var(&s.ClientConnectTimeout, "client-connect-timeout", "The client connection timeout. 0s means no timeout.")
 	s.initCommand(cctx)
 	return &s
 }
@@ -1432,6 +1437,7 @@ type TemporalOperatorNamespaceUpdateCommand struct {
 	PromoteGlobal           bool
 	HistoryArchivalState    StringEnum
 	HistoryUri              string
+	ReplicationState        StringEnum
 	Retention               Duration
 	VisibilityArchivalState StringEnum
 	VisibilityUri           string
@@ -1458,6 +1464,8 @@ func NewTemporalOperatorNamespaceUpdateCommand(cctx *CommandContext, parent *Tem
 	s.HistoryArchivalState = NewStringEnum([]string{"disabled", "enabled"}, "")
 	s.Command.Flags().Var(&s.HistoryArchivalState, "history-archival-state", "History archival state. Accepted values: disabled, enabled.")
 	s.Command.Flags().StringVar(&s.HistoryUri, "history-uri", "", "Archive history to this `URI`. Once enabled, can't be changed.")
+	s.ReplicationState = NewStringEnum([]string{"normal", "handover"}, "")
+	s.Command.Flags().Var(&s.ReplicationState, "replication-state", "Replication state. Accepted values: normal, handover.")
 	s.Retention = 0
 	s.Command.Flags().Var(&s.Retention, "retention", "Length of time a closed Workflow is preserved before deletion.")
 	s.VisibilityArchivalState = NewStringEnum([]string{"disabled", "enabled"}, "")
