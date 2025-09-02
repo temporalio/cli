@@ -21,7 +21,6 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/temporalio/cli/temporalcli/internal/printer"
 	"github.com/temporalio/ui-server/v2/server/version"
-	"go.temporal.io/api/common/v1"
 	commonpb "go.temporal.io/api/common/v1"
 	"go.temporal.io/api/failure/v1"
 	"go.temporal.io/api/temporalproto"
@@ -200,7 +199,7 @@ func (c *CommandContext) BindFlagEnvVar(flag *pflag.Flag, envVar string) {
 	c.FlagsWithEnvVars = append(c.FlagsWithEnvVars, flag)
 }
 
-func (c *CommandContext) MarshalFriendlyJSONPayloads(m *common.Payloads) (json.RawMessage, error) {
+func (c *CommandContext) MarshalFriendlyJSONPayloads(m *commonpb.Payloads) (json.RawMessage, error) {
 	if m == nil {
 		return []byte("null"), nil
 	}
@@ -236,7 +235,7 @@ func (c *CommandContext) MarshalProtoJSON(m proto.Message) ([]byte, error) {
 func (c *CommandContext) MarshalProtoJSONWithOptions(m proto.Message, jsonShorthandPayloads bool) ([]byte, error) {
 	opts := temporalproto.CustomJSONMarshalOptions{Indent: c.Printer.JSONIndent}
 	if jsonShorthandPayloads {
-		opts.Metadata = map[string]any{common.EnablePayloadShorthandMetadataKey: true}
+		opts.Metadata = map[string]any{commonpb.EnablePayloadShorthandMetadataKey: true}
 	}
 	return opts.Marshal(m)
 }
@@ -248,7 +247,7 @@ func (c *CommandContext) UnmarshalProtoJSON(b []byte, m proto.Message) error {
 func UnmarshalProtoJSONWithOptions(b []byte, m proto.Message, jsonShorthandPayloads bool) error {
 	opts := temporalproto.CustomJSONUnmarshalOptions{DiscardUnknown: true}
 	if jsonShorthandPayloads {
-		opts.Metadata = map[string]any{common.EnablePayloadShorthandMetadataKey: true}
+		opts.Metadata = map[string]any{commonpb.EnablePayloadShorthandMetadataKey: true}
 	}
 	return opts.Unmarshal(b, m)
 }
@@ -345,6 +344,9 @@ func Execute(ctx context.Context, options CommandOptions) {
 	if err == nil {
 		// We have a context; let's actually run the command.
 		cmd := NewTemporalCommand(cctx)
+		// Ensure the root command is available for error reporting paths where
+		// pre-run never executes (e.g., unknown command scenarios).
+		cctx.RootCommand = cmd
 		cmd.Command.SetArgs(cctx.Options.Args)
 		err = cmd.Command.ExecuteContext(cctx)
 	}
@@ -364,19 +366,27 @@ func Execute(ctx context.Context, options CommandOptions) {
 	//
 	// - https://github.com/spf13/cobra/issues/1156
 	// - https://github.com/spf13/cobra/issues/706
-	if !cctx.ActuallyRanCommand {
+	if err == nil && !cctx.ActuallyRanCommand {
 		zeroExitArgs := []string{"--help", "-h", "--version", "-v", "help"}
 		if slices.ContainsFunc(cctx.Options.Args, func(a string) bool {
 			return slices.Contains(zeroExitArgs, a)
 		}) {
 			return
 		}
-		cctx.Options.Fail(fmt.Errorf("unknown command"))
+		unknown := unknownCommandFromArgs(cctx, cctx.Options.Args)
+		if unknown == "" {
+			cctx.Options.Fail(fmt.Errorf("unknown command"))
+			return
+		}
+		cctx.Options.Fail(fmt.Errorf("unknown command: %q", unknown))
 	}
 }
 
 func (c *TemporalCommand) initCommand(cctx *CommandContext) {
 	c.Command.Version = VersionString()
+	// Allow unknown flags at the root so that unknown commands are reported
+	// correctly when both an invalid command and flags are provided.
+	c.Command.FParseErrWhitelist = cobra.FParseErrWhitelist{UnknownFlags: true}
 	// Unfortunately color is a global option, so we can set in pre-run but we
 	// must unset in post-run
 	origNoColor := color.NoColor
@@ -406,6 +416,14 @@ func (c *TemporalCommand) initCommand(cctx *CommandContext) {
 		}
 		cctx.ActuallyRanCommand = true
 
+		// If this command has subcommands but received extra args, treat the first
+		// extra arg as an unknown subcommand for a clearer error message.
+		if cmd.HasAvailableSubCommands() && len(args) > 0 {
+			cmd.SilenceErrors = true
+			cmd.SilenceUsage = true
+			return fmt.Errorf("unknown command: %q", args[0])
+		}
+
 		if cctx.Options.DeprecatedEnvConfig.EnvConfigName != "default" {
 			if _, ok := cctx.DeprecatedEnvConfigValues[cctx.Options.DeprecatedEnvConfig.EnvConfigName]; !ok {
 				if _, ok := cmd.Annotations["ignoresMissingEnv"]; !ok {
@@ -420,6 +438,14 @@ func (c *TemporalCommand) initCommand(cctx *CommandContext) {
 	}
 	c.Command.PersistentPostRun = func(*cobra.Command, []string) {
 		color.NoColor = origNoColor
+	}
+
+	// For commands that have subcommands, allow arbitrary args so that we can
+	// detect unknown subcommands ourselves and produce a clearer error message.
+	for _, child := range c.Command.Commands() {
+		if child.HasSubCommands() {
+			child.Args = cobra.ArbitraryArgs
+		}
 	}
 }
 
@@ -524,6 +550,74 @@ func aliasNormalizer(aliases map[string]string) func(f *pflag.FlagSet, name stri
 		}
 		return pflag.NormalizedName(name)
 	}
+}
+
+// firstUnknownCommandToken returns the first positional argument that is not a flag
+// or a value for a known root-level flag. This helps identify which token is the
+// unknown command when no command actually ran (e.g., "temporal foo --address ...").
+func unknownCommandFromArgs(cctx *CommandContext, args []string) string {
+	knownTop := map[string]struct{}{}
+	if cctx != nil && cctx.RootCommand != nil {
+		for _, child := range cctx.RootCommand.Command.Commands() {
+			if child.IsAvailableCommand() || child.Name() == "help" {
+				knownTop[child.Name()] = struct{}{}
+			}
+		}
+	}
+	// Flags that accept a separate value (i.e., the next arg if not provided with '=')
+	flagsWithValues := map[string]struct{}{
+		"env":                    {},
+		"env-file":               {},
+		"config-file":            {},
+		"profile":                {},
+		"log-level":              {},
+		"log-format":             {},
+		"output":                 {},
+		"time-format":            {},
+		"color":                  {},
+		"command-timeout":        {},
+		"client-connect-timeout": {},
+	}
+
+	skipNext := false
+	sawKnownTop := false
+	for i := 0; i < len(args); i++ {
+		if skipNext {
+			skipNext = false
+			continue
+		}
+		a := args[i]
+		if strings.HasPrefix(a, "--") {
+			name := a[2:]
+			if eq := strings.IndexByte(name, '='); eq >= 0 {
+				// value attached via --flag=value
+				_ = name[:eq]
+				continue
+			}
+			if _, ok := flagsWithValues[name]; ok {
+				// consume next token as value if present
+				skipNext = true
+			}
+			continue
+		}
+		if strings.HasPrefix(a, "-") {
+			// Handle -o value; other short flags here do not take separate values
+			if a == "-o" {
+				skipNext = true
+			}
+			continue
+		}
+		// Positional token
+		if !sawKnownTop {
+			if _, ok := knownTop[a]; ok {
+				sawKnownTop = true
+				continue
+			}
+			return a
+		}
+		return a
+	}
+	return ""
 }
 
 func newNopLogger() *slog.Logger { return slog.New(discardLogHandler{}) }
