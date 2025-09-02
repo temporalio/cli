@@ -552,59 +552,19 @@ func aliasNormalizer(aliases map[string]string) func(f *pflag.FlagSet, name stri
 	}
 }
 
-// firstUnknownCommandToken returns the first positional argument that is not a flag
-// or a value for a known root-level flag. This helps identify which token is the
-// unknown command when no command actually ran (e.g., "temporal foo --address ...").
 func unknownCommandFromArgs(cctx *CommandContext, args []string) string {
-	knownTop := map[string]struct{}{}
-	if cctx != nil && cctx.RootCommand != nil {
-		for _, child := range cctx.RootCommand.Command.Commands() {
-			if child.IsAvailableCommand() || child.Name() == "help" {
-				knownTop[child.Name()] = struct{}{}
-			}
-		}
-	}
-	// Flags that accept a separate value (i.e., the next arg if not provided with '=')
-	flagsWithValues := map[string]struct{}{
-		"env":                    {},
-		"env-file":               {},
-		"config-file":            {},
-		"profile":                {},
-		"log-level":              {},
-		"log-format":             {},
-		"output":                 {},
-		"time-format":            {},
-		"color":                  {},
-		"command-timeout":        {},
-		"client-connect-timeout": {},
-	}
+	knownTop := buildKnownTopCommands(cctx)
+	flags := getRootFlags(cctx)
 
-	skipNext := false
 	sawKnownTop := false
 	for i := 0; i < len(args); i++ {
-		if skipNext {
-			skipNext = false
-			continue
-		}
 		a := args[i]
 		if strings.HasPrefix(a, "--") {
-			name := a[2:]
-			if eq := strings.IndexByte(name, '='); eq >= 0 {
-				// value attached via --flag=value
-				_ = name[:eq]
-				continue
-			}
-			if _, ok := flagsWithValues[name]; ok {
-				// consume next token as value if present
-				skipNext = true
-			}
+			skipLongFlagAndMaybeValue(args, &i, flags)
 			continue
 		}
-		if strings.HasPrefix(a, "-") {
-			// Handle -o value; other short flags here do not take separate values
-			if a == "-o" {
-				skipNext = true
-			}
+		if strings.HasPrefix(a, "-") && len(a) > 1 {
+			skipShortFlagAndMaybeValue(args, &i, flags)
 			continue
 		}
 		// Positional token
@@ -618,6 +578,76 @@ func unknownCommandFromArgs(cctx *CommandContext, args []string) string {
 		return a
 	}
 	return ""
+}
+
+func buildKnownTopCommands(cctx *CommandContext) map[string]struct{} {
+	known := map[string]struct{}{}
+	if cctx == nil || cctx.RootCommand == nil {
+		return known
+	}
+	for _, child := range cctx.RootCommand.Command.Commands() {
+		if child.IsAvailableCommand() || child.Name() == "help" {
+			known[child.Name()] = struct{}{}
+		}
+	}
+	return known
+}
+
+func getRootFlags(cctx *CommandContext) *pflag.FlagSet {
+	if cctx == nil || cctx.RootCommand == nil {
+		return nil
+	}
+	return cctx.RootCommand.Command.Flags()
+}
+
+func consumesNextForLongFlag(flags *pflag.FlagSet, name string) bool {
+	if flags == nil {
+		return true
+	}
+	if f := flags.Lookup(name); f != nil {
+		return f.NoOptDefVal == ""
+	}
+	return true
+}
+
+func consumesNextForShortFlag(flags *pflag.FlagSet, short byte) bool {
+	if flags == nil {
+		return true
+	}
+	if f := flags.ShorthandLookup(string(short)); f != nil {
+		return f.NoOptDefVal == ""
+	}
+	return true
+}
+
+func skipLongFlagAndMaybeValue(args []string, i *int, flags *pflag.FlagSet) {
+	name := args[*i][2:]
+	if eq := strings.IndexByte(name, '='); eq >= 0 {
+		// --flag=value
+		return
+	}
+	if consumesNextForLongFlag(flags, name) {
+		if *i+1 < len(args) {
+			*i = *i + 1
+		}
+	}
+}
+
+func skipShortFlagAndMaybeValue(args []string, i *int, flags *pflag.FlagSet) {
+	name := args[*i][1:]
+	if eq := strings.IndexByte(name, '='); eq >= 0 {
+		// -o=value
+		return
+	}
+	if len(name) == 1 {
+		if consumesNextForShortFlag(flags, name[0]) {
+			if *i+1 < len(args) {
+				*i = *i + 1
+			}
+		}
+		return
+	}
+	// Clustered short flags like -abc; assume flags-only and continue
 }
 
 func newNopLogger() *slog.Logger { return slog.New(discardLogHandler{}) }
