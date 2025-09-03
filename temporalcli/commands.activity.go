@@ -50,7 +50,7 @@ func (c *TemporalActivityCompleteCommand) run(cctx *CommandContext, args []strin
 		RunId:      c.RunId,
 		ActivityId: c.ActivityId,
 		Result:     resultPayloads,
-		Identity:   c.Identity,
+		Identity:   c.Parent.Identity,
 	})
 	if err != nil {
 		return fmt.Errorf("unable to complete Activity: %w", err)
@@ -86,7 +86,7 @@ func (c *TemporalActivityFailCommand) run(cctx *CommandContext, args []string) e
 				Details:      detailPayloads,
 			}},
 		},
-		Identity: c.Identity,
+		Identity: c.Parent.Identity,
 	})
 	if err != nil {
 		return fmt.Errorf("unable to fail Activity: %w", err)
@@ -167,7 +167,7 @@ func (c *TemporalActivityUpdateOptionsCommand) run(cctx *CommandContext, args []
 		UpdateMask: &fieldmaskpb.FieldMask{
 			Paths: updatePath,
 		},
-		Identity: c.Identity,
+		Identity: c.Parent.Identity,
 	})
 	if err != nil {
 		return fmt.Errorf("unable to update Activity options: %w", err)
@@ -205,7 +205,7 @@ func (c *TemporalActivityPauseCommand) run(cctx *CommandContext, args []string) 
 			WorkflowId: c.WorkflowId,
 			RunId:      c.RunId,
 		},
-		Identity: c.Identity,
+		Identity: c.Parent.Identity,
 	}
 
 	if c.ActivityId != "" && c.ActivityType != "" {
@@ -262,7 +262,7 @@ func (c *TemporalActivityUnpauseCommand) run(cctx *CommandContext, args []string
 			ResetAttempts:  c.ResetAttempts,
 			ResetHeartbeat: c.ResetHeartbeats,
 			Jitter:         durationpb.New(c.Jitter.Duration()),
-			Identity:       c.Identity,
+			Identity:       c.Parent.Identity,
 		}
 
 		if c.ActivityId != "" && c.ActivityType != "" {
@@ -283,7 +283,7 @@ func (c *TemporalActivityUnpauseCommand) run(cctx *CommandContext, args []string
 		}
 	} else { // batch operation
 		unpauseActivitiesOperation := &batch.BatchOperationUnpauseActivities{
-			Identity:       clientIdentity(),
+			Identity:       c.Parent.Identity,
 			ResetAttempts:  c.ResetAttempts,
 			ResetHeartbeat: c.ResetHeartbeats,
 			Jitter:         durationpb.New(c.Jitter.Duration()),
@@ -321,7 +321,7 @@ func (c *TemporalActivityResetCommand) run(cctx *CommandContext, args []string) 
 			WorkflowId: c.WorkflowId,
 			RunId:      c.RunId,
 		},
-		Identity:       c.Identity,
+		Identity:       c.Parent.Identity,
 		KeepPaused:     c.KeepPaused,
 		ResetHeartbeat: c.ResetHeartbeats,
 	}
