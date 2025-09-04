@@ -832,10 +832,12 @@ commands:
   - name: temporal worker
     summary: Read or update Worker state
     description: |
+      ```
       +---------------------------------------------------------------------+
       | CAUTION: Worker is experimental. Worker commands are subject to     |
       | change.                                                             |
       +---------------------------------------------------------------------+
+      ```
 
       Modify or read state associated with a Worker, for example,
       using Worker Deployments commands:
@@ -858,10 +860,12 @@ commands:
   - name: temporal worker deployment
     summary: Describe, list, and operate on Worker Deployments and Versions
     description: |
+      ```
       +---------------------------------------------------------------------+
       | CAUTION: Worker Deployment is experimental. Deployment commands are |
       | subject to change.                                                  |
       +---------------------------------------------------------------------+
+      ```
 
       Deployment commands perform operations on Worker Deployments:
 
@@ -910,10 +914,12 @@ commands:
   - name: temporal worker deployment describe
     summary: Show properties of a Worker Deployment
     description: |
+      ```
       +---------------------------------------------------------------------+
       | CAUTION: Worker Deployment is experimental. Deployment commands are |
       | subject to change.                                                  |
       +---------------------------------------------------------------------+
+      ```
 
       Describe properties of a Worker Deployment, such as the versions
       associated with it, routing information of new or existing tasks
@@ -936,10 +942,12 @@ commands:
   - name: temporal worker deployment delete
     summary: Delete a Worker Deployment
     description: |
+      ```
       +---------------------------------------------------------------------+
       | CAUTION: Worker Deployment is experimental. Deployment commands are |
       | subject to change.                                                  |
       +---------------------------------------------------------------------+
+      ```
 
       Remove a Worker Deployment given its Deployment Name.
       A Deployment can only be deleted if it has no Version in it.
@@ -966,10 +974,12 @@ commands:
   - name: temporal worker deployment list
     summary: Enumerate Worker Deployments in the client's namespace
     description: |
+      ```
       +---------------------------------------------------------------------+
       | CAUTION: Worker Deployment is experimental. Deployment commands are |
       | subject to change.                                                  |
       +---------------------------------------------------------------------+
+      ```
 
       List existing Worker Deployments in the client's namespace.
 
@@ -987,10 +997,12 @@ commands:
   - name: temporal worker deployment describe-version
     summary: Show properties of a Worker Deployment Version
     description: |
+      ```
       +---------------------------------------------------------------------+
       | CAUTION: Worker Deployment is experimental. Deployment commands are |
       | subject to change.                                                  |
       +---------------------------------------------------------------------+
+      ```
 
       Describe properties of a Worker Deployment Version, such as the task
       queues polled by workers in this Deployment Version, or drainage
@@ -1015,10 +1027,12 @@ commands:
   - name: temporal worker deployment delete-version
     summary: Delete a Worker Deployment Version
     description: |
+      ```
       +---------------------------------------------------------------------+
       | CAUTION: Worker Deployment is experimental. Deployment commands are |
       | subject to change.                                                  |
       +---------------------------------------------------------------------+
+      ```
 
       Remove a Worker Deployment Version given its fully-qualified identifier.
       This is rarely needed during normal operation
@@ -1054,10 +1068,12 @@ commands:
   - name: temporal worker deployment set-current-version
     summary: Make a Worker Deployment Version Current for a Deployment
     description: |
+      ```
       +---------------------------------------------------------------------+
       | CAUTION: Worker Deployment is experimental. Deployment commands are |
       | subject to change.                                                  |
       +---------------------------------------------------------------------+
+      ```
 
       Set the Current Version for a Deployment.
       When a Version is current, Workers of that Deployment Version will receive
@@ -1106,10 +1122,12 @@ commands:
   - name: temporal worker deployment set-ramping-version
     summary: Change Version Ramping settings for a Worker Deployment
     description: |
+      ```
       +---------------------------------------------------------------------+
       | CAUTION: Worker Deployment is experimental. Deployment commands are |
       | subject to change.                                                  |
       +---------------------------------------------------------------------+
+      ```
 
       Set the Ramping Version and Percentage for a Deployment.
 
@@ -1174,10 +1192,13 @@ commands:
   - name: temporal worker deployment update-metadata-version
     summary: Change user-provided metadata for a Version
     description: |
+      ```
       +---------------------------------------------------------------------+
       | CAUTION: Worker Deployment is experimental. Deployment commands are |
       | subject to change.                                                  |
       +---------------------------------------------------------------------+
+      ```
+
       Update metadata associated with a Worker Deployment Version.
 
       For example:
@@ -2209,6 +2230,7 @@ commands:
     description: |
       Run a development Temporal Server on your local system.
 
+      ```
       +------------------------------------------------------------------------+
       | WARNING: The development server is not intended for production use.    |
       | It skips certain HTTP security checks to make local use simpler.       |
@@ -2216,6 +2238,7 @@ commands:
       | For production use, see:                                               |
       | https://docs.temporal.io/production-deployment                         |
       +------------------------------------------------------------------------+
+      ```
 
       View the Web UI for the default configuration at: http://localhost:8233
 
@@ -2266,6 +2289,7 @@ commands:
     description: |
       Run a development Temporal Server on your local system.
 
+      ```
       +------------------------------------------------------------------------+
       | WARNING: The development server is not intended for production use.    |
       | It skips certain HTTP security checks to make local use simpler.       |
@@ -2273,6 +2297,7 @@ commands:
       | For production use, see:                                               |
       | https://docs.temporal.io/production-deployment                         |
       +------------------------------------------------------------------------+
+      ```
 
       View the Web UI for the default configuration at: http://localhost:8233
 
@@ -2548,9 +2573,11 @@ commands:
   - name: temporal task-queue get-build-id-reachability
     summary: Show Build ID availability (Deprecated)
     description: |
+      ```
       +-----------------------------------------------------------------------------+
       | CAUTION: This command is deprecated and will be removed in a later release. |
       +-----------------------------------------------------------------------------+
+      ```
 
       Show if a given Build ID can be used for new, existing, or closed Workflows
       in Namespaces that support Worker versioning:
@@ -2593,9 +2620,11 @@ commands:
   - name: temporal task-queue get-build-ids
     summary: Fetch Build ID versions (Deprecated)
     description: |
+      ```
       +-----------------------------------------------------------------------------+
       | CAUTION: This command is deprecated and will be removed in a later release. |
       +-----------------------------------------------------------------------------+
+      ```
 
       Fetch sets of compatible Build IDs for specified Task Queues and display their
       information:
@@ -2640,9 +2669,11 @@ commands:
   - name: temporal task-queue update-build-ids
     summary: Manage Build IDs (Deprecated)
     description: |
+      ```
       +-----------------------------------------------------------------------------+
       | CAUTION: This command is deprecated and will be removed in a later release. |
       +-----------------------------------------------------------------------------+
+      ```
 
       Add or change a Task Queue's compatible Build IDs for Namespaces using Worker
       versioning:
@@ -2690,9 +2721,11 @@ commands:
   - name: temporal task-queue update-build-ids add-new-default
     summary: Set new default Build ID set (Deprecated)
     description: |
+      ```
       +-----------------------------------------------------------------------------+
       | CAUTION: This command is deprecated and will be removed in a later release. |
       +-----------------------------------------------------------------------------+
+      ```
 
       Create a new Task Queue Build ID set, add a Build ID to it, and make it the
       overall Task Queue default. The new set will be incompatible with previous
@@ -2704,11 +2737,13 @@ commands:
           --build-id "YourNewBuildId"
       ```
 
+      ```
       +------------------------------------------------------------------------+
       | NOTICE: This command is limited to Namespaces that support Worker      |
       | versioning. Worker versioning is experimental. Versioning commands are |
       | subject to change.                                                     |
       +------------------------------------------------------------------------+
+      ```
     options:
       - name: build-id
         type: string
@@ -2723,9 +2758,11 @@ commands:
   - name: temporal task-queue update-build-ids promote-id-in-set
     summary: Set Build ID as set default (Deprecated)
     description: |
+      ```
       +-----------------------------------------------------------------------------+
       | CAUTION: This command is deprecated and will be removed in a later release. |
       +-----------------------------------------------------------------------------+
+      ```
 
       Establish an existing Build ID as the default in its Task Queue set. New tasks
       compatible with this set will now be dispatched to this ID:
@@ -2736,11 +2773,13 @@ commands:
           --build-id "YourBuildId"
       ```
 
+      ```
       +------------------------------------------------------------------------+
       | NOTICE: This command is limited to Namespaces that support Worker      |
       | versioning. Worker versioning is experimental. Versioning commands are |
       | subject to change.                                                     |
       +------------------------------------------------------------------------+
+      ```
     options:
       - name: build-id
         type: string
@@ -2755,9 +2794,11 @@ commands:
   - name: temporal task-queue update-build-ids promote-set
     summary: Promote Build ID set (Deprecated)
     description: |
+      ```
       +-----------------------------------------------------------------------------+
       | CAUTION: This command is deprecated and will be removed in a later release. |
       +-----------------------------------------------------------------------------+
+      ```
 
       Promote a Build ID set to be the default on a Task Queue. Identify the set by
       providing a Build ID within it. If the set is already the default, this
@@ -2769,11 +2810,13 @@ commands:
           --build-id "YourBuildId"
       ```
 
+      ```
       +------------------------------------------------------------------------+
       | NOTICE: This command is limited to Namespaces that support Worker      |
       | versioning. Worker versioning is experimental. Versioning commands are |
       | subject to change.                                                     |
       +------------------------------------------------------------------------+
+      ```
     options:
       - name: build-id
         type: string
@@ -2788,9 +2831,11 @@ commands:
   - name: temporal task-queue versioning
     summary: Manage Task Queue Build ID handling (Experimental)
     description: |
+      ```
       +---------------------------------------------------------------------+
       | CAUTION: This API has been deprecated by Worker Deployment.         |
       +---------------------------------------------------------------------+
+      ```
 
       Provides commands to add, list, remove, or replace Worker Build ID assignment
       and redirect rules associated with Task Queues:
@@ -2830,9 +2875,11 @@ commands:
           --target-build-id "YourTargetBuildID"
       ```
 
+      ```
       +---------------------------------------------------------------------+
       | CAUTION: This API has been deprecated by Worker Deployment.         |
       +---------------------------------------------------------------------+
+      ```
     options:
       - name: source-build-id
         type: string
@@ -2871,9 +2918,11 @@ commands:
       This prevents committing invalid Build IDs. Use the `--force` option to
       override this validation.
 
+      ```
       +---------------------------------------------------------------------+
       | CAUTION: This API has been deprecated by Worker Deployment.         |
       +---------------------------------------------------------------------+
+      ```
     options:
       - name: build-id
         type: string
@@ -2903,9 +2952,11 @@ commands:
       hint filter" or "percentage". Otherwise, the delete operation is rejected.
       Use the `--force` option to override this validation.
 
+      ```
       +---------------------------------------------------------------------+
       | CAUTION: This API has been deprecated by Worker Deployment.         |
       +---------------------------------------------------------------------+
+      ```
     options:
       - name: rule-index
         type: int
@@ -2933,9 +2984,11 @@ commands:
           --source-build-id "YourBuildId"
       ```
 
+      ```
       +---------------------------------------------------------------------+
       | CAUTION: This API has been deprecated by Worker Deployment.         |
       +---------------------------------------------------------------------+
+      ```
     options:
       - name: source-build-id
         type: string
@@ -2967,9 +3020,11 @@ commands:
         Build ID. You may add at most one redirect rule for each source Build ID.
         Redirect rules require that a target Build ID is fully compatible with
         the source Build ID.
+      ```
       +---------------------------------------------------------------------+
       | CAUTION: This API has been deprecated by Worker Deployment.         |
       +---------------------------------------------------------------------+
+      ```
 
   - name: temporal task-queue versioning insert-assignment-rule
     summary: Add an assignment rule at a index (Experimental)
@@ -2986,9 +3041,11 @@ commands:
 
       If you do not specify a `--rule-index`, this command inserts at index 0.
 
+      ```
       +---------------------------------------------------------------------+
       | CAUTION: This API has been deprecated by Worker Deployment.         |
       +---------------------------------------------------------------------+
+      ```
     options:
       - name: build-id
         type: string
@@ -3041,9 +3098,11 @@ commands:
 
       Percent may vary between 0 and 100 (default).
 
+      ```
       +---------------------------------------------------------------------+
       | CAUTION: This API has been deprecated by Worker Deployment.         |
       +---------------------------------------------------------------------+
+      ```
     options:
       - name: build-id
         type: string
@@ -3082,9 +3141,11 @@ commands:
           --target-build-id YourNewTargetBuildId
       ```
 
+      ```
       +---------------------------------------------------------------------+
       | CAUTION: This API has been deprecated by Worker Deployment.         |
       +---------------------------------------------------------------------+
+      ```
     options:
       - name: source-build-id
         type: string
@@ -3355,10 +3416,12 @@ commands:
   - name: temporal workflow update-options
     summary: Change Workflow Execution Options
     description: |
+      ```
       +---------------------------------------------------------------------+
       | CAUTION: Worflow update-options is experimental. Workflow Execution |
       | properties are subject to change.                                   |
       +---------------------------------------------------------------------+
+      ```
 
       Modify properties of Workflow Executions:
 
