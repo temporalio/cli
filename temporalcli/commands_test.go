@@ -624,6 +624,27 @@ func TestUnknownCommandExitsNonzero(t *testing.T) {
 	assert.Contains(t, res.Err.Error(), "unknown command")
 }
 
+func TestUnknownRootCommandIncludesToken(t *testing.T) {
+	commandHarness := NewCommandHarness(t)
+	res := commandHarness.Execute("foo", "bar", "--address", "127.0.0.1:7233")
+	require.Error(t, res.Err)
+	assert.Contains(t, res.Err.Error(), `unknown command: "foo"`)
+}
+
+func TestUnknownSubcommandIncludesToken(t *testing.T) {
+	commandHarness := NewCommandHarness(t)
+	res := commandHarness.Execute("workflow", "doesnotexist")
+	require.Error(t, res.Err)
+	assert.Contains(t, res.Err.Error(), `unknown command: "doesnotexist"`)
+}
+
+func TestUnknownFlagOnValidSubcommandStillErrorsAsFlag(t *testing.T) {
+	commandHarness := NewCommandHarness(t)
+	res := commandHarness.Execute("workflow", "--doesnotexist")
+	require.Error(t, res.Err)
+	assert.Contains(t, res.Err.Error(), "unknown flag: --doesnotexist")
+}
+
 func (s *SharedServerSuite) TestHiddenAliasLogFormat() {
 	_ = s.waitActivityStarted().GetID()
 	res := s.Execute("workflow", "list", "--log-format", "pretty", "--address", s.Address())
