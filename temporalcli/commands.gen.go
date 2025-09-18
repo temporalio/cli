@@ -34,6 +34,7 @@ type ClientOptions struct {
 	CodecEndpoint              string
 	CodecAuth                  string
 	CodecHeader                []string
+	Identity                   string
 }
 
 func (v *ClientOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
@@ -54,6 +55,7 @@ func (v *ClientOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
 	f.StringVar(&v.CodecEndpoint, "codec-endpoint", "", "Remote Codec Server endpoint.")
 	f.StringVar(&v.CodecAuth, "codec-auth", "", "Authorization header for Codec Server requests.")
 	f.StringArrayVar(&v.CodecHeader, "codec-header", nil, "HTTP headers for requests to codec server. Format as a `KEY=VALUE` pair. May be passed multiple times to set multiple headers.")
+	f.StringVar(&v.Identity, "identity", "", "The identity of the user or client submitting this request. Defaults to \"temporal-cli:$USER@$HOST\".")
 }
 
 type OverlapPolicyOptions struct {
@@ -427,7 +429,6 @@ type TemporalActivityCompleteCommand struct {
 	WorkflowReferenceOptions
 	ActivityId string
 	Result     string
-	Identity   string
 }
 
 func NewTemporalActivityCompleteCommand(cctx *CommandContext, parent *TemporalActivityCommand) *TemporalActivityCompleteCommand {
@@ -446,7 +447,6 @@ func NewTemporalActivityCompleteCommand(cctx *CommandContext, parent *TemporalAc
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "activity-id")
 	s.Command.Flags().StringVar(&s.Result, "result", "", "Result `JSON` to return. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "result")
-	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of the user submitting this request.")
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -462,7 +462,6 @@ type TemporalActivityFailCommand struct {
 	WorkflowReferenceOptions
 	ActivityId string
 	Detail     string
-	Identity   string
 	Reason     string
 }
 
@@ -481,7 +480,6 @@ func NewTemporalActivityFailCommand(cctx *CommandContext, parent *TemporalActivi
 	s.Command.Flags().StringVar(&s.ActivityId, "activity-id", "", "Activity ID to fail. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "activity-id")
 	s.Command.Flags().StringVar(&s.Detail, "detail", "", "Reason for failing the Activity (JSON).")
-	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of the user submitting this request.")
 	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for failing the Activity.")
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -498,7 +496,6 @@ type TemporalActivityPauseCommand struct {
 	WorkflowReferenceOptions
 	ActivityId   string
 	ActivityType string
-	Identity     string
 }
 
 func NewTemporalActivityPauseCommand(cctx *CommandContext, parent *TemporalActivityCommand) *TemporalActivityPauseCommand {
@@ -515,7 +512,6 @@ func NewTemporalActivityPauseCommand(cctx *CommandContext, parent *TemporalActiv
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "The Activity ID to pause. Either `activity-id` or `activity-type` must be provided, but not both.")
 	s.Command.Flags().StringVarP(&s.ActivityType, "activity-type", "g", "", "All activities of the Activity Type will be paused. Either `activity-id` or `activity-type` must be provided, but not both.")
-	s.Command.Flags().StringVar(&s.Identity, "identity", "", "The identity of the user or client submitting this request.")
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -531,7 +527,6 @@ type TemporalActivityResetCommand struct {
 	WorkflowReferenceOptions
 	ActivityId      string
 	ActivityType    string
-	Identity        string
 	KeepPaused      bool
 	ResetHeartbeats bool
 }
@@ -550,7 +545,6 @@ func NewTemporalActivityResetCommand(cctx *CommandContext, parent *TemporalActiv
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "The Activity ID to reset. Either `activity-id` or `activity-type` must be provided, but not both.")
 	s.Command.Flags().StringVarP(&s.ActivityType, "activity-type", "g", "", "The Activity Type to reset. Either `activity-id` or `activity-type` must be provided, but not both.")
-	s.Command.Flags().StringVar(&s.Identity, "identity", "", "The identity of the user or client submitting this request.")
 	s.Command.Flags().BoolVar(&s.KeepPaused, "keep-paused", false, "If the activity was paused, it will stay paused.")
 	s.Command.Flags().BoolVar(&s.ResetHeartbeats, "reset-heartbeats", false, "Clear the Activity's heartbeat details.")
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
@@ -568,7 +562,6 @@ type TemporalActivityUnpauseCommand struct {
 	SingleWorkflowOrBatchOptions
 	ActivityId      string
 	ActivityType    string
-	Identity        string
 	ResetAttempts   bool
 	ResetHeartbeats bool
 	MatchAll        bool
@@ -589,7 +582,6 @@ func NewTemporalActivityUnpauseCommand(cctx *CommandContext, parent *TemporalAct
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "The Activity ID to unpause. Can only be used without --query or --match-all. Either `activity-id` or `activity-type` must be provided, but not both.")
 	s.Command.Flags().StringVarP(&s.ActivityType, "activity-type", "g", "", "Activities of this Type will unpause. Can only be used without --match-all. Either `activity-id` or `activity-type` must be provided, but not both.")
-	s.Command.Flags().StringVar(&s.Identity, "identity", "", "The identity of the user or client submitting this request.")
 	s.Command.Flags().BoolVar(&s.ResetAttempts, "reset-attempts", false, "Also reset the activity attempts.")
 	s.Command.Flags().BoolVar(&s.ResetHeartbeats, "reset-heartbeats", false, "Reset the Activity's heartbeats. Only works with --reset-attempts.")
 	s.Command.Flags().BoolVar(&s.MatchAll, "match-all", false, "Every paused activity should be unpaused. This flag is ignored if activity-type is provided. Can only be used with --query.")
@@ -618,7 +610,6 @@ type TemporalActivityUpdateOptionsCommand struct {
 	RetryMaximumInterval    Duration
 	RetryBackoffCoefficient float32
 	RetryMaximumAttempts    int
-	Identity                string
 }
 
 func NewTemporalActivityUpdateOptionsCommand(cctx *CommandContext, parent *TemporalActivityCommand) *TemporalActivityUpdateOptionsCommand {
@@ -650,7 +641,6 @@ func NewTemporalActivityUpdateOptionsCommand(cctx *CommandContext, parent *Tempo
 	s.Command.Flags().Var(&s.RetryMaximumInterval, "retry-maximum-interval", "Maximum interval between retries. Exponential backoff leads to interval increase. This value is the cap of the increase.")
 	s.Command.Flags().Float32Var(&s.RetryBackoffCoefficient, "retry-backoff-coefficient", 0, "Coefficient used to calculate the next retry interval. The next retry interval is previous interval multiplied by the backoff coefficient. Must be 1 or larger.")
 	s.Command.Flags().IntVar(&s.RetryMaximumAttempts, "retry-maximum-attempts", 0, "Maximum number of attempts. When exceeded the retries stop even if not expired yet. Setting this value to 1 disables retries. Setting this value to 0 means unlimited attempts(up to the timeouts).")
-	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of the user submitting this request.")
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -2152,6 +2142,7 @@ func NewTemporalTaskQueueCommand(cctx *CommandContext, parent *TemporalCommand) 
 		s.Command.Long = "Inspect and update Task Queues, the queues that Workers poll for Workflow and\nActivity tasks:\n\n```\ntemporal task-queue [command] [command options] \\\n    --task-queue YourTaskQueue\n```\n\nFor example:\n\n```\ntemporal task-queue describe \\\n    --task-queue YourTaskQueue\n```"
 	}
 	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalTaskQueueConfigCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalTaskQueueDescribeCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalTaskQueueGetBuildIdReachabilityCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalTaskQueueGetBuildIdsCommand(cctx, &s).Command)
@@ -2159,6 +2150,99 @@ func NewTemporalTaskQueueCommand(cctx *CommandContext, parent *TemporalCommand) 
 	s.Command.AddCommand(&NewTemporalTaskQueueUpdateBuildIdsCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalTaskQueueVersioningCommand(cctx, &s).Command)
 	s.ClientOptions.buildFlags(cctx, s.Command.PersistentFlags())
+	return &s
+}
+
+type TemporalTaskQueueConfigCommand struct {
+	Parent  *TemporalTaskQueueCommand
+	Command cobra.Command
+}
+
+func NewTemporalTaskQueueConfigCommand(cctx *CommandContext, parent *TemporalTaskQueueCommand) *TemporalTaskQueueConfigCommand {
+	var s TemporalTaskQueueConfigCommand
+	s.Parent = parent
+	s.Command.Use = "config"
+	s.Command.Short = "Get and set Task Queue configuration"
+	if hasHighlighting {
+		s.Command.Long = "Manage Task Queue configuration:\n\n\x1b[1mtemporal task-queue config [command] [options]\x1b[0m\n\nAvailable commands:\n- \x1b[1mget\x1b[0m: Retrieve the current configuration for a task queue\n- \x1b[1mset\x1b[0m: Update the configuration for a task queue"
+	} else {
+		s.Command.Long = "Manage Task Queue configuration:\n\n```\ntemporal task-queue config [command] [options]\n```\n\nAvailable commands:\n- `get`: Retrieve the current configuration for a task queue\n- `set`: Update the configuration for a task queue"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalTaskQueueConfigGetCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalTaskQueueConfigSetCommand(cctx, &s).Command)
+	return &s
+}
+
+type TemporalTaskQueueConfigGetCommand struct {
+	Parent        *TemporalTaskQueueConfigCommand
+	Command       cobra.Command
+	TaskQueue     string
+	TaskQueueType StringEnum
+}
+
+func NewTemporalTaskQueueConfigGetCommand(cctx *CommandContext, parent *TemporalTaskQueueConfigCommand) *TemporalTaskQueueConfigGetCommand {
+	var s TemporalTaskQueueConfigGetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "get [flags]"
+	s.Command.Short = "Get Task Queue configuration"
+	if hasHighlighting {
+		s.Command.Long = "Retrieve the current configuration for a Task Queue:\n\n\x1b[1mtemporal task-queue config get \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type activity\x1b[0m\n\nThis command returns the current configuration including:\n- Queue rate limit: The overall rate limit of the task queue.\n  This setting overrides the worker rate limit if set.\n  Unless modified, this is the system-defined rate limit.\n- Fairness key rate limit defaults: Default rate limits for fairness keys.\n  If set, each individual fairness key will be limited to this rate,\n  scaled by the weight of the fairness key."
+	} else {
+		s.Command.Long = "Retrieve the current configuration for a Task Queue:\n\n```\ntemporal task-queue config get \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type activity\n```\n\nThis command returns the current configuration including:\n- Queue rate limit: The overall rate limit of the task queue.\n  This setting overrides the worker rate limit if set.\n  Unless modified, this is the system-defined rate limit.\n- Fairness key rate limit defaults: Default rate limits for fairness keys.\n  If set, each individual fairness key will be limited to this rate,\n  scaled by the weight of the fairness key."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task Queue name. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
+	s.TaskQueueType = NewStringEnum([]string{"workflow", "activity", "nexus"}, "")
+	s.Command.Flags().Var(&s.TaskQueueType, "task-queue-type", "Task Queue type. Accepted values: workflow, activity, nexus. Accepted values: workflow, activity, nexus. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue-type")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalTaskQueueConfigSetCommand struct {
+	Parent                      *TemporalTaskQueueConfigCommand
+	Command                     cobra.Command
+	TaskQueue                   string
+	TaskQueueType               StringEnum
+	QueueRateLimit              float32
+	QueueRateLimitReason        string
+	FairnessKeyRateLimitDefault float32
+	FairnessKeyRateLimitReason  string
+}
+
+func NewTemporalTaskQueueConfigSetCommand(cctx *CommandContext, parent *TemporalTaskQueueConfigCommand) *TemporalTaskQueueConfigSetCommand {
+	var s TemporalTaskQueueConfigSetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "set [flags]"
+	s.Command.Short = "Set Task Queue configuration"
+	if hasHighlighting {
+		s.Command.Long = "Update a Task Queue's overall rate limit and the default rate limit for all fairness keys:\n\n\x1b[1mtemporal task-queue config set \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type activity \\\n    --namespace YourNamespace \\\n    --queue-rate-limit <requests_per_second:float> \\\n    --queue-rate-limit-reason <reason_string> \\\n    --fairness-key-rate-limit-default <requests_per_second:float> \\\n    --fairness-key-rate-limit-reason <reason_string>\x1b[0m\n\nThis command supports updating:\n- Queue rate limits: Controls the overall rate limit of the task queue.\n  This setting overrides the worker rate limit if set.\n  Unless modified, this is the system-defined rate limit.\n- Fairness key rate limit defaults: Sets default rate limits for fairness keys.\n  If set, each individual fairness key will be limited to this rate,\n  scaled by the weight of the fairness key.\n\nTo unset a rate limit, use --queue-rate-limit -1 or --fairness-key-rate-limit-default -1"
+	} else {
+		s.Command.Long = "Update a Task Queue's overall rate limit and the default rate limit for all fairness keys:\n\n```\ntemporal task-queue config set \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type activity \\\n    --namespace YourNamespace \\\n    --queue-rate-limit <requests_per_second:float> \\\n    --queue-rate-limit-reason <reason_string> \\\n    --fairness-key-rate-limit-default <requests_per_second:float> \\\n    --fairness-key-rate-limit-reason <reason_string>\n```\n\nThis command supports updating:\n- Queue rate limits: Controls the overall rate limit of the task queue.\n  This setting overrides the worker rate limit if set.\n  Unless modified, this is the system-defined rate limit.\n- Fairness key rate limit defaults: Sets default rate limits for fairness keys.\n  If set, each individual fairness key will be limited to this rate,\n  scaled by the weight of the fairness key.\n\nTo unset a rate limit, use --queue-rate-limit -1 or --fairness-key-rate-limit-default -1"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task Queue name. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
+	s.TaskQueueType = NewStringEnum([]string{"workflow", "activity", "nexus"}, "")
+	s.Command.Flags().Var(&s.TaskQueueType, "task-queue-type", "Task Queue type. Accepted values: workflow, activity, nexus. Accepted values: workflow, activity, nexus. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue-type")
+	s.Command.Flags().Float32Var(&s.QueueRateLimit, "queue-rate-limit", 0, "Queue rate limit in requests per second. Use -1 to unset.")
+	s.Command.Flags().StringVar(&s.QueueRateLimitReason, "queue-rate-limit-reason", "", "Reason for queue rate limit update.")
+	s.Command.Flags().Float32Var(&s.FairnessKeyRateLimitDefault, "fairness-key-rate-limit-default", 0, "Fairness key rate limit default in requests per second. Use -1 to unset.")
+	s.Command.Flags().StringVar(&s.FairnessKeyRateLimitReason, "fairness-key-rate-limit-reason", "", "Reason for fairness key rate limit update.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
 	return &s
 }
 
@@ -2175,6 +2259,7 @@ type TemporalTaskQueueDescribeCommand struct {
 	TaskQueueTypeLegacy StringEnum
 	PartitionsLegacy    int
 	DisableStats        bool
+	ReportConfig        bool
 }
 
 func NewTemporalTaskQueueDescribeCommand(cctx *CommandContext, parent *TemporalTaskQueueCommand) *TemporalTaskQueueDescribeCommand {
@@ -2202,6 +2287,7 @@ func NewTemporalTaskQueueDescribeCommand(cctx *CommandContext, parent *TemporalT
 	s.Command.Flags().Var(&s.TaskQueueTypeLegacy, "task-queue-type-legacy", "Task Queue type (legacy mode only). Accepted values: workflow, activity.")
 	s.Command.Flags().IntVar(&s.PartitionsLegacy, "partitions-legacy", 1, "Query partitions 1 through `N`. Experimental/Temporary feature. Legacy mode only.")
 	s.Command.Flags().BoolVar(&s.DisableStats, "disable-stats", false, "Disable task queue statistics.")
+	s.Command.Flags().BoolVar(&s.ReportConfig, "report-config", false, "Include task queue configuration in the response. When enabled, the command will return the current configuration for the task queue.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -2791,7 +2877,6 @@ type TemporalWorkerDeploymentDeleteCommand struct {
 	Parent  *TemporalWorkerDeploymentCommand
 	Command cobra.Command
 	DeploymentNameOptions
-	Identity string
 }
 
 func NewTemporalWorkerDeploymentDeleteCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentCommand) *TemporalWorkerDeploymentDeleteCommand {
@@ -2806,7 +2891,6 @@ func NewTemporalWorkerDeploymentDeleteCommand(cctx *CommandContext, parent *Temp
 		s.Command.Long = "```\n+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n```\n\nRemove a Worker Deployment given its Deployment Name.\nA Deployment can only be deleted if it has no Version in it.\n\n```\ntemporal worker deployment delete [options]\n```\n\nFor example, setting the user identity that removed the deployment:\n\n```\ntemporal worker deployment delete \\\n    --name YourDeploymentName \\\n    --identity YourIdentity\n\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of the user submitting this request.")
 	s.DeploymentNameOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -2820,7 +2904,6 @@ type TemporalWorkerDeploymentDeleteVersionCommand struct {
 	Parent  *TemporalWorkerDeploymentCommand
 	Command cobra.Command
 	DeploymentVersionOptions
-	Identity     string
 	SkipDrainage bool
 }
 
@@ -2836,7 +2919,6 @@ func NewTemporalWorkerDeploymentDeleteVersionCommand(cctx *CommandContext, paren
 		s.Command.Long = "```\n+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n```\n\nRemove a Worker Deployment Version given its fully-qualified identifier.\nThis is rarely needed during normal operation\nsince unused Versions are eventually garbage collected.\nThe client can delete a Version only when all of the following conditions\nare met:\n  - It is not the Current or Ramping Version for this Deployment.\n  - It has no active pollers, i.e., none of the task queues in the\n  Version have pollers.\n  - It is not draining. This requirement can be ignored with the option\n`--skip-drainage`.\n```\ntemporal worker deployment delete-version [options]\n```\n\nFor example, skipping the drainage restriction:\n\n```\ntemporal worker deployment delete-version \\\n    --deployment-name YourDeploymentName --build-id YourBuildID \\\n    --skip-drainage\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of the user submitting this request.")
 	s.Command.Flags().BoolVar(&s.SkipDrainage, "skip-drainage", false, "Ignore the deletion requirement of not draining.")
 	s.DeploymentVersionOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -2930,7 +3012,6 @@ type TemporalWorkerDeploymentSetCurrentVersionCommand struct {
 	Parent  *TemporalWorkerDeploymentCommand
 	Command cobra.Command
 	DeploymentVersionOrUnversionedOptions
-	Identity                string
 	IgnoreMissingTaskQueues bool
 	Yes                     bool
 }
@@ -2947,7 +3028,6 @@ func NewTemporalWorkerDeploymentSetCurrentVersionCommand(cctx *CommandContext, p
 		s.Command.Long = "```\n+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n```\n\nSet the Current Version for a Deployment.\nWhen a Version is current, Workers of that Deployment Version will receive\ntasks from new Workflows, and from existing AutoUpgrade Workflows that\nare running on this Deployment.\n\nIf not all the expected Task Queues are being polled by Workers in the\nnew Version the request will fail. To override this protection use\n`--ignore-missing-task-queues`. Note that this would ignore task queues\nin a deployment that are not yet discovered, leading to inconsistent task\nqueue configuration.\n\n```\ntemporal worker deployment set-current-version [options]\n```\n\nFor example, to set the Current Version of a deployment\n`YourDeploymentName`, with a version with Build ID `YourBuildID`, and\nin the default namespace:\n\n```\ntemporal worker deployment set-current-version \\\n    --deployment-name YourDeploymentName --build-id YourBuildID\n```\n\nThe target of set-current-version can also be unversioned workers:\n\n```\ntemporal worker deployment set-current-version \\\n    --deployment-name YourDeploymentName --unversioned\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of the user submitting this request.")
 	s.Command.Flags().BoolVar(&s.IgnoreMissingTaskQueues, "ignore-missing-task-queues", false, "Override protection to accidentally remove task queues.")
 	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm set Current Version.")
 	s.DeploymentVersionOrUnversionedOptions.buildFlags(cctx, s.Command.Flags())
@@ -2965,7 +3045,6 @@ type TemporalWorkerDeploymentSetRampingVersionCommand struct {
 	DeploymentVersionOrUnversionedOptions
 	Percentage              float32
 	Delete                  bool
-	Identity                string
 	IgnoreMissingTaskQueues bool
 	Yes                     bool
 }
@@ -2984,7 +3063,6 @@ func NewTemporalWorkerDeploymentSetRampingVersionCommand(cctx *CommandContext, p
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().Float32Var(&s.Percentage, "percentage", 0, "Percentage of tasks redirected to the Ramping Version. Valid range [0,100].")
 	s.Command.Flags().BoolVar(&s.Delete, "delete", false, "Delete the Ramping Version.")
-	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of the user submitting this request.")
 	s.Command.Flags().BoolVar(&s.IgnoreMissingTaskQueues, "ignore-missing-task-queues", false, "Override protection to accidentally remove task queues.")
 	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm set Ramping Version.")
 	s.DeploymentVersionOrUnversionedOptions.buildFlags(cctx, s.Command.Flags())

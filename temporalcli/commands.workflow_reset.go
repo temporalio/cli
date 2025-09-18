@@ -130,7 +130,7 @@ func (c *TemporalWorkflowResetCommand) runBatchResetWithPostOps(cctx *CommandCon
 	}
 	request.Operation = &workflowservice.StartBatchOperationRequest_ResetOperation{
 		ResetOperation: &batch.BatchOperationReset{
-			Identity:            clientIdentity(),
+			Identity:            c.Parent.Identity,
 			Options:             batchResetOptions,
 			PostResetOperations: postOps,
 		},
