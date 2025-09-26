@@ -342,7 +342,7 @@ commands:
     summary: Update Activity options
     description: |
       Update the options of a running Activity that were passed into it from
-       a Workflow. Updates are incremental, only changing the specified 
+       a Workflow. Updates are incremental, only changing the specified
        options.
 
       For example:
@@ -434,7 +434,7 @@ commands:
       If the Activity is not currently running (e.g. because it previously
       failed), it will not be run again until it is unpaused.
 
-      However, if the Activity is currently running, it will run until the next 
+      However, if the Activity is currently running, it will run until the next
       time it fails, completes, or times out, at which point the pause will kick in.
 
       If the Activity is on its last retry attempt and fails, the failure will
@@ -450,7 +450,7 @@ commands:
           --workflow-id YourWorkflowId
       ```
 
-      To later unpause the activity, see [unpause](#unpause). You may also want to 
+      To later unpause the activity, see [unpause](#unpause). You may also want to
       [reset](#reset) the activity to unpause it while also starting it from the beginning.
     options:
       - name: activity-id
@@ -460,7 +460,9 @@ commands:
       - name: activity-type
         short: g
         type: string
-        description: All activities of the Activity Type will be paused. Either `activity-id` or `activity-type` must be provided, but not both.
+        description: |
+          All activities of the Activity Type will be paused. Either `activity-id` or `activity-type` must be provided, but not both.
+          Note: Pausing Activity by Type is an experimental feature and may change in the future.
       - name: identity
         type: string
         description: The identity of the user or client submitting this request.
@@ -496,8 +498,8 @@ commands:
           --reset-heartbeats
       ```
 
-      Activities can be unpaused in bulk via a visibility Query list filter. 
-      For example, if you want to unpause activities of type Foo that you 
+      Activities can be unpaused in bulk via a visibility Query list filter.
+      For example, if you want to unpause activities of type Foo that you
       previously paused, do:
 
       ```
@@ -542,31 +544,31 @@ commands:
   - name: temporal activity reset
     summary: Reset an Activity
     description: |
-      Reset an activity. This restarts the activity as if it were first being 
-      scheduled. That is, it will reset both the number of attempts and the 
-      activity timeout, as well as, optionally, the 
+      Reset an activity. This restarts the activity as if it were first being
+      scheduled. That is, it will reset both the number of attempts and the
+      activity timeout, as well as, optionally, the
       [heartbeat details](#reset-heartbeats).
 
-      If the activity may be executing (i.e. it has not yet timed out), the 
+      If the activity may be executing (i.e. it has not yet timed out), the
       reset will take effect the next time it fails, heartbeats, or times out.
-      If is waiting for a retry (i.e. has failed or timed out), the reset 
+      If is waiting for a retry (i.e. has failed or timed out), the reset
       will apply immediately.
 
-      If the activity is already paused, it will be unpaused by default. 
+      If the activity is already paused, it will be unpaused by default.
       You can specify `keep_paused` to prevent this.
 
-      If the activity is paused and the `keep_paused` flag is not provided, 
-      it will be unpaused. If the activity is paused and `keep_paused` flag 
+      If the activity is paused and the `keep_paused` flag is not provided,
+      it will be unpaused. If the activity is paused and `keep_paused` flag
       is provided - it will stay paused.
 
       Activities can be specified by their Activity ID or Activity Type.
 
       ### Resetting activities that heartbeat {#reset-heartbeats}
 
-      Activities that heartbeat will receive a [Canceled failure](/references/failures#cancelled-failure) 
+      Activities that heartbeat will receive a [Canceled failure](/references/failures#cancelled-failure)
       the next time they heartbeat after a reset.
 
-      If, in your Activity, you need to do any cleanup when an Activity is 
+      If, in your Activity, you need to do any cleanup when an Activity is
       reset, handle this error and then re-throw it when you've cleaned up.
 
       If the `reset_heartbeats` flag is set, the heartbeat details will also be cleared.
@@ -4114,7 +4116,7 @@ option-sets:
         description: Temporal Service gRPC endpoint.
         default: 127.0.0.1:7233
         implied-env: TEMPORAL_ADDRESS
-      - name: client-authority 
+      - name: client-authority
         type: string
         description: Temporal gRPC client :authority pseudoheader.
       - name: namespace
