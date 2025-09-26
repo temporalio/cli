@@ -16,7 +16,7 @@ require (
 	github.com/spf13/pflag v1.0.6
 	github.com/stretchr/testify v1.10.0
 	github.com/temporalio/ui-server/v2 v2.39.0
-	go.temporal.io/api v1.51.1-0.20250725211336-3d6e39249ecf
+	go.temporal.io/api v1.53.0
 	go.temporal.io/sdk v1.35.0
 	go.temporal.io/sdk/contrib/envconfig v0.1.0
 	go.temporal.io/server v1.28.0
