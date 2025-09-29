@@ -47,10 +47,10 @@ func (s *SharedServerSuite) TestTaskQueue_Config_Set_And_Get_Both_Limits() {
 		"--task-queue", taskQueue,
 		"--task-queue-type", "activity",
 		"--identity", testIdentity,
-		"--queue-rate-limit", "20.0",
-		"--queue-rate-limit-reason", "queue limit reason",
-		"--fairness-key-rate-limit-default", "10.0",
-		"--fairness-key-rate-limit-reason", "fairness limit reason",
+		"--queue-rps-limit", "20.0",
+		"--queue-rps-limit-reason", "queue limit reason",
+		"--fairness-key-rps-limit-default", "10.0",
+		"--fairness-key-rps-limit-reason", "fairness limit reason",
 	)
 	s.NoError(res.Err)
 	s.Contains(res.Stdout.String(), "Successfully updated task queue configuration")
@@ -98,8 +98,8 @@ func (s *SharedServerSuite) TestTaskQueue_Config_Unset_Rate_Limits() {
 		"--task-queue", taskQueue,
 		"--task-queue-type", "activity",
 		"--identity", testIdentity,
-		"--queue-rate-limit", "10.0",
-		"--fairness-key-rate-limit-default", "5.0",
+		"--queue-rps-limit", "10.0",
+		"--fairness-key-rps-limit-default", "5.0",
 	)
 	s.NoError(res.Err)
 
@@ -127,7 +127,7 @@ func (s *SharedServerSuite) TestTaskQueue_Config_Unset_Rate_Limits() {
 		"--task-queue", taskQueue,
 		"--task-queue-type", "activity",
 		"--identity", testIdentity,
-		"--queue-rate-limit", "-1",
+		"--queue-rps-limit", "-1",
 	)
 	s.NoError(res.Err)
 
@@ -155,7 +155,7 @@ func (s *SharedServerSuite) TestTaskQueue_Config_Unset_Rate_Limits() {
 		"--task-queue", taskQueue,
 		"--task-queue-type", "activity",
 		"--identity", testIdentity,
-		"--fairness-key-rate-limit-default", "-1",
+		"--fairness-key-rps-limit-default", "-1",
 	)
 	s.NoError(res.Err)
 
@@ -184,7 +184,7 @@ func (s *SharedServerSuite) TestTaskQueue_Config_Workflow_Task_Queue_Restriction
 		"--address", s.Address(),
 		"--task-queue", taskQueue,
 		"--task-queue-type", "workflow",
-		"--queue-rate-limit", "10.0",
+		"--queue-rps-limit", "10.0",
 	)
 	s.Error(res.Err)
 
@@ -203,8 +203,8 @@ func (s *SharedServerSuite) TestTaskQueue_Config_Describe_With_Report_Config() {
 		"--task-queue", taskQueue,
 		"--task-queue-type", "activity",
 		"--identity", testIdentity,
-		"--queue-rate-limit", "12.5",
-		"--queue-rate-limit-reason", "describe test",
+		"--queue-rps-limit", "12.5",
+		"--queue-rps-limit-reason", "describe test",
 	)
 	s.NoError(res.Err)
 

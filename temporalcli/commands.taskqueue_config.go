@@ -74,18 +74,18 @@ func (c *TemporalTaskQueueConfigSetCommand) run(cctx *CommandContext, args []str
 
 	// Check workflow task queue restrictions
 	if taskQueueType == enums.TASK_QUEUE_TYPE_WORKFLOW {
-		if c.Command.Flags().Changed("queue-rate-limit") ||
-			c.Command.Flags().Changed("queue-rate-limit-reason") {
+		if c.Command.Flags().Changed("queue-rps-limit") ||
+			c.Command.Flags().Changed("queue-rps-limit-reason") {
 			return fmt.Errorf("setting rate limit on workflow task queues is not allowed")
 		}
 	}
 
-	if c.Command.Flags().Changed("queue-rate-limit-reason") && !c.Command.Flags().Changed("queue-rate-limit") {
-		return fmt.Errorf("queue-rate-limit-reason can only be set if queue-rate-limit is updated")
+	if c.Command.Flags().Changed("queue-rps-limit-reason") && !c.Command.Flags().Changed("queue-rps-limit") {
+		return fmt.Errorf("queue-rps-limit-reason can only be set if queue-rps-limit is updated")
 	}
 
-	if c.Command.Flags().Changed("fairness-key-rate-limit-default-reason") && !c.Command.Flags().Changed("fairness-key-rate-limit-default") {
-		return fmt.Errorf("fairness-key-rate-limit-default-reason can only be set if fairness-key-rate-limit-default is updated")
+	if c.Command.Flags().Changed("fairness-key-rps-limit-default-reason") && !c.Command.Flags().Changed("fairness-key-rps-limit-default") {
+		return fmt.Errorf("fairness-key-rps-limit-default-reason can only be set if fairness-key-rps-limit-default is updated")
 	}
 
 	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
@@ -102,18 +102,18 @@ func (c *TemporalTaskQueueConfigSetCommand) run(cctx *CommandContext, args []str
 	}
 
 	// Add queue rate limit if specified (including unset)
-	if c.Command.Flags().Changed("queue-rate-limit") {
+	if c.Command.Flags().Changed("queue-rps-limit") {
 		request.UpdateQueueRateLimit = buildRateLimitUpdate(
-			c.QueueRateLimit,
-			c.QueueRateLimitReason,
+			c.QueueRpsLimit,
+			c.QueueRpsLimitReason,
 		)
 	}
 
 	// Add fairness key rate limit default if specified (including unset)
-	if c.Command.Flags().Changed("fairness-key-rate-limit-default") {
+	if c.Command.Flags().Changed("fairness-key-rps-limit-default") {
 		request.UpdateFairnessKeyRateLimitDefault = buildRateLimitUpdate(
-			c.FairnessKeyRateLimitDefault,
-			c.FairnessKeyRateLimitReason,
+			c.FairnessKeyRpsLimitDefault,
+			c.FairnessKeyRpsLimitReason,
 		)
 	}
 
