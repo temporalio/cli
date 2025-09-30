@@ -391,6 +391,7 @@ go.temporal.io/sdk/contrib/envconfig v0.1.0 h1:s+G/Ujph+Xl2jzLiiIm2T1vuijDkUL4Ks
 go.temporal.io/sdk/contrib/envconfig v0.1.0/go.mod h1:FQEO3C56h9C7M6sDgSanB8HnBTmopw9qgVx4F1S6pJk=
 go.temporal.io/server v1.29.0-139.3 h1:j4u7esLvLqzE67Q6s/ExvaFKOensFhskCWXe1VHyBdU=
 go.temporal.io/server v1.29.0-139.3/go.mod h1:OKFCSB0xxCX1Bmi2rYutWJEKppIrwuqx+c3e5GeY54w=
+go.temporal.io/version v0.3.0/go.mod h1:UA9S8/1LaKYae6TyD9NaPMJTZb911JcbqghI2CBSP78=
 go.uber.org/atomic v1.5.0/go.mod h1:sABNBOSYdrvTF6hTgEIbc7YasKWGhgEQZyfxyTvoXHQ=
 go.uber.org/atomic v1.7.0/go.mod h1:fEN4uk6kAWBTFdckzkM89CLk9XfWZrxpCo0nPH17wJc=
 go.uber.org/atomic v1.11.0 h1:ZvwS0R+56ePWxUNi+Atn9dWONBPp/AUETXlHW0DxSjE=
