@@ -2,6 +2,8 @@ package temporalcli
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/temporalio/cli/temporalcli/internal/printer"
 	enums "go.temporal.io/api/enums/v1"
@@ -80,11 +82,44 @@ func (c *TemporalTaskQueueConfigSetCommand) run(cctx *CommandContext, args []str
 		}
 	}
 
-	if c.Command.Flags().Changed("queue-rps-limit-reason") && !c.Command.Flags().Changed("queue-rps-limit") {
+	// Helper to parse RPS values for a given flag name.
+	// Accepts "default" or a non-negative float string.
+	parseRPS := func(flagName string) (*taskqueue.RateLimit, error) {
+		raw := strings.TrimSpace(c.Command.Flags().Lookup(flagName).Value.String())
+		if raw == "" {
+			return nil, fmt.Errorf("invalid value for --%s: must be a non-negative number or 'default'", flagName)
+		}
+		if strings.EqualFold(raw, "default") {
+			// Unset: returning nil RateLimit removes the existing rate limit.
+			return nil, nil
+		}
+		v, err := strconv.ParseFloat(raw, 32)
+		if err != nil {
+			return nil, fmt.Errorf("invalid value for --%s: must be a non-negative number or 'default'", flagName)
+		}
+		if v < 0 {
+			return nil, fmt.Errorf("invalid value for --%s: must be >= 0 or 'default'", flagName)
+		}
+		return &taskqueue.RateLimit{RequestsPerSecond: float32(v)}, nil
+	}
+
+	var queueRpsLimitParsed *taskqueue.RateLimit
+	if c.Command.Flags().Changed("queue-rps-limit") {
+		var err error
+		if queueRpsLimitParsed, err = parseRPS("queue-rps-limit"); err != nil {
+			return err
+		}
+	} else if c.Command.Flags().Changed("queue-rps-limit-reason") {
 		return fmt.Errorf("queue-rps-limit-reason can only be set if queue-rps-limit is updated")
 	}
 
-	if c.Command.Flags().Changed("fairness-key-rps-limit-default-reason") && !c.Command.Flags().Changed("fairness-key-rps-limit-default") {
+	var fairnessKeyRpsLimitDefaultParsed *taskqueue.RateLimit
+	if c.Command.Flags().Changed("fairness-key-rps-limit-default") {
+		var err error
+		if fairnessKeyRpsLimitDefaultParsed, err = parseRPS("fairness-key-rps-limit-default"); err != nil {
+			return err
+		}
+	} else if c.Command.Flags().Changed("fairness-key-rps-limit-default-reason") {
 		return fmt.Errorf("fairness-key-rps-limit-default-reason can only be set if fairness-key-rps-limit-default is updated")
 	}
 
@@ -103,18 +138,18 @@ func (c *TemporalTaskQueueConfigSetCommand) run(cctx *CommandContext, args []str
 
 	// Add queue rate limit if specified (including unset)
 	if c.Command.Flags().Changed("queue-rps-limit") {
-		request.UpdateQueueRateLimit = buildRateLimitUpdate(
-			c.QueueRpsLimit,
-			c.QueueRpsLimitReason,
-		)
+		request.UpdateQueueRateLimit = &workflowservice.UpdateTaskQueueConfigRequest_RateLimitUpdate{
+			RateLimit: queueRpsLimitParsed,
+			Reason:    c.QueueRpsLimitReason,
+		}
 	}
 
 	// Add fairness key rate limit default if specified (including unset)
 	if c.Command.Flags().Changed("fairness-key-rps-limit-default") {
-		request.UpdateFairnessKeyRateLimitDefault = buildRateLimitUpdate(
-			c.FairnessKeyRpsLimitDefault,
-			c.FairnessKeyRpsLimitReason,
-		)
+		request.UpdateFairnessKeyRateLimitDefault = &workflowservice.UpdateTaskQueueConfigRequest_RateLimitUpdate{
+			RateLimit: fairnessKeyRpsLimitDefaultParsed,
+			Reason:    c.FairnessKeyRpsLimitReason,
+		}
 	}
 
 	// Call the API

@@ -120,14 +120,14 @@ func (s *SharedServerSuite) TestTaskQueue_Config_Unset_Rate_Limits() {
 	s.NotNil(config.FairnessKeysRateLimitDefault.RateLimit)
 	s.Equal(float32(5.0), config.FairnessKeysRateLimitDefault.RateLimit.RequestsPerSecond)
 
-	// Unset queue rate limit (set to -1)
+	// Unset queue rate limit (set to default)
 	res = s.Execute(
 		"task-queue", "config", "set",
 		"--address", s.Address(),
 		"--task-queue", taskQueue,
 		"--task-queue-type", "activity",
 		"--identity", testIdentity,
-		"--queue-rps-limit", "-1",
+		"--queue-rps-limit", "default",
 	)
 	s.NoError(res.Err)
 
@@ -155,7 +155,7 @@ func (s *SharedServerSuite) TestTaskQueue_Config_Unset_Rate_Limits() {
 		"--task-queue", taskQueue,
 		"--task-queue-type", "activity",
 		"--identity", testIdentity,
-		"--fairness-key-rps-limit-default", "-1",
+		"--fairness-key-rps-limit-default", "default",
 	)
 	s.NoError(res.Err)
 

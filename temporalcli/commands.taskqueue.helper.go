@@ -8,11 +8,6 @@ import (
 	"github.com/temporalio/cli/temporalcli/internal/printer"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/taskqueue/v1"
-	"go.temporal.io/api/workflowservice/v1"
-)
-
-const (
-	UnsetRateLimit = -1
 )
 
 // Create a structured table for config display.
@@ -67,23 +62,6 @@ func buildRateLimitConfigRow(setting string, rl *taskqueue.RateLimitConfig, form
 		Reason:      reason,
 		UpdatedBy:   updatedBy,
 		UpdatedTime: updatedTime,
-	}
-}
-
-func buildRateLimitUpdate(
-	rateLimit float32,
-	reason string,
-) *workflowservice.UpdateTaskQueueConfigRequest_RateLimitUpdate {
-	if rateLimit == UnsetRateLimit {
-		return &workflowservice.UpdateTaskQueueConfigRequest_RateLimitUpdate{
-			Reason: reason,
-		}
-	}
-	return &workflowservice.UpdateTaskQueueConfigRequest_RateLimitUpdate{
-		RateLimit: &taskqueue.RateLimit{
-			RequestsPerSecond: rateLimit,
-		},
-		Reason: reason,
 	}
 }
 

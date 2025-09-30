@@ -2230,9 +2230,9 @@ type TemporalTaskQueueConfigSetCommand struct {
 	Command                    cobra.Command
 	TaskQueue                  string
 	TaskQueueType              StringEnum
-	QueueRpsLimit              float32
+	QueueRpsLimit              string
 	QueueRpsLimitReason        string
-	FairnessKeyRpsLimitDefault float32
+	FairnessKeyRpsLimitDefault string
 	FairnessKeyRpsLimitReason  string
 }
 
@@ -2243,9 +2243,9 @@ func NewTemporalTaskQueueConfigSetCommand(cctx *CommandContext, parent *Temporal
 	s.Command.Use = "set [flags]"
 	s.Command.Short = "Set Task Queue configuration"
 	if hasHighlighting {
-		s.Command.Long = "Update a Task Queue's overall rate limit and the default rate limit for all fairness keys:\n\n\x1b[1mtemporal task-queue config set \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type activity \\\n    --namespace YourNamespace \\\n    --queue-rps-limit <requests_per_second:float> \\\n    --queue-rps-limit-reason <reason_string> \\\n    --fairness-key-rps-limit-default <requests_per_second:float> \\\n    --fairness-key-rps-limit-reason <reason_string>\x1b[0m\n\nThis command supports updating:\n- Queue rate limits: Controls the overall rate limit of the task queue.\n  This setting overrides the worker rate limit if set.\n  Unless modified, this is the system-defined rate limit.\n- Fairness key rate limit defaults: Sets default rate limits for fairness keys.\n  If set, each individual fairness key will be limited to this rate,\n  scaled by the weight of the fairness key.\n\nTo unset a rate limit, use --queue-rps-limit -1 or --fairness-key-rps-limit-default -1"
+		s.Command.Long = "Update a Task Queue's overall rate limit and the default rate limit for all fairness keys:\n\n\x1b[1mtemporal task-queue config set \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type activity \\\n    --namespace YourNamespace \\\n    --queue-rps-limit <requests_per_second:float> \\\n    --queue-rps-limit-reason <reason_string> \\\n    --fairness-key-rps-limit-default <requests_per_second:float> \\\n    --fairness-key-rps-limit-reason <reason_string>\x1b[0m\n\nThis command supports updating:\n- Queue rate limits: Controls the overall rate limit of the task queue.\n  This setting overrides the worker rate limit if set.\n  Unless modified, this is the system-defined rate limit.\n- Fairness key rate limit defaults: Sets default rate limits for fairness keys.\n  If set, each individual fairness key will be limited to this rate,\n  scaled by the weight of the fairness key.\n\nTo unset a rate limit, pass in 'default', for example: --queue-rps-limit default"
 	} else {
-		s.Command.Long = "Update a Task Queue's overall rate limit and the default rate limit for all fairness keys:\n\n```\ntemporal task-queue config set \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type activity \\\n    --namespace YourNamespace \\\n    --queue-rps-limit <requests_per_second:float> \\\n    --queue-rps-limit-reason <reason_string> \\\n    --fairness-key-rps-limit-default <requests_per_second:float> \\\n    --fairness-key-rps-limit-reason <reason_string>\n```\n\nThis command supports updating:\n- Queue rate limits: Controls the overall rate limit of the task queue.\n  This setting overrides the worker rate limit if set.\n  Unless modified, this is the system-defined rate limit.\n- Fairness key rate limit defaults: Sets default rate limits for fairness keys.\n  If set, each individual fairness key will be limited to this rate,\n  scaled by the weight of the fairness key.\n\nTo unset a rate limit, use --queue-rps-limit -1 or --fairness-key-rps-limit-default -1"
+		s.Command.Long = "Update a Task Queue's overall rate limit and the default rate limit for all fairness keys:\n\n```\ntemporal task-queue config set \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type activity \\\n    --namespace YourNamespace \\\n    --queue-rps-limit <requests_per_second:float> \\\n    --queue-rps-limit-reason <reason_string> \\\n    --fairness-key-rps-limit-default <requests_per_second:float> \\\n    --fairness-key-rps-limit-reason <reason_string>\n```\n\nThis command supports updating:\n- Queue rate limits: Controls the overall rate limit of the task queue.\n  This setting overrides the worker rate limit if set.\n  Unless modified, this is the system-defined rate limit.\n- Fairness key rate limit defaults: Sets default rate limits for fairness keys.\n  If set, each individual fairness key will be limited to this rate,\n  scaled by the weight of the fairness key.\n\nTo unset a rate limit, pass in 'default', for example: --queue-rps-limit default"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task Queue name. Required.")
@@ -2253,9 +2253,15 @@ func NewTemporalTaskQueueConfigSetCommand(cctx *CommandContext, parent *Temporal
 	s.TaskQueueType = NewStringEnum([]string{"workflow", "activity", "nexus"}, "")
 	s.Command.Flags().Var(&s.TaskQueueType, "task-queue-type", "Task Queue type. Accepted values: workflow, activity, nexus. Accepted values: workflow, activity, nexus. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue-type")
-	s.Command.Flags().Float32Var(&s.QueueRpsLimit, "queue-rps-limit", 0, "Queue rate limit in requests per second. Use -1 to unset.")
+	{
+		flag := newCustomStringFlag(&s.QueueRpsLimit, "float|default")
+		s.Command.Flags().Var(flag, "queue-rps-limit", "Queue rate limit in requests per second. Accepts a float; or 'default' to unset.")
+	}
 	s.Command.Flags().StringVar(&s.QueueRpsLimitReason, "queue-rps-limit-reason", "", "Reason for queue rate limit update.")
-	s.Command.Flags().Float32Var(&s.FairnessKeyRpsLimitDefault, "fairness-key-rps-limit-default", 0, "Fairness key rate limit default in requests per second. Use -1 to unset.")
+	{
+		flag := newCustomStringFlag(&s.FairnessKeyRpsLimitDefault, "float|default")
+		s.Command.Flags().Var(flag, "fairness-key-rps-limit-default", "Fairness key rate limit default in requests per second. Accepts a float; or 'default' to unset.")
+	}
 	s.Command.Flags().StringVar(&s.FairnessKeyRpsLimitReason, "fairness-key-rps-limit-reason", "", "Reason for fairness key rate limit update.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {

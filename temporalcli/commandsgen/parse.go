@@ -22,6 +22,7 @@ type (
 	Option struct {
 		Name               string   `yaml:"name"`
 		Type               string   `yaml:"type"`
+		DisplayType        string   `yaml:"display-type"`
 		Description        string   `yaml:"description"`
 		Deprecated         string   `yaml:"deprecated"`
 		Short              string   `yaml:"short,omitempty"`
@@ -214,6 +215,9 @@ func (o *Option) processSection() error {
 
 	if o.Type == "" {
 		return fmt.Errorf("missing option type")
+	}
+	if o.Type != "string" && o.DisplayType != "" {
+		return fmt.Errorf("display-type is only allowed for string options")
 	}
 
 	if o.Description == "" {
