@@ -3174,7 +3174,7 @@ commands:
   - name: temporal task-queue config set
     summary: Set Task Queue configuration
     description: |
-      Update a Task Queue's overall rate limit and the default rate limit for all fairness keys:
+      Update configuration settings for a Task Queue.
 
       ```
       temporal task-queue config set \
