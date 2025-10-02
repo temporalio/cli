@@ -420,26 +420,13 @@ func (o *Option) writeFlagBuilding(selfVar, flagVar string, w *codeWriter) error
 		// set default before calling Var so that it stores thedefault value into the flag
 		w.writeLinef("%v.%v = %v", selfVar, o.fieldName(), setDefault)
 	}
-	if o.DisplayType != "" {
-		// Use custom flag
-		w.writeLinef("{")
-		w.writeLinef("flag := newCustomStringFlag(&%v.%v, %q)",
-			selfVar, o.fieldName(), o.DisplayType)
-		method := "Var"
-		if o.Short != "" {
-			method += "P"
-		}
-		w.writeLinef("%v.%s(flag, %q, %q)", flagVar, method, o.Name, desc)
-		w.writeLinef("}")
+	if o.Short != "" {
+		w.writeLinef("%v.%vP(&%v.%v, %q, %q%v, %q)", flagVar, flagMeth, selfVar, o.fieldName(), o.Name, o.Short, defaultLit, desc)
 	} else {
-		// Use standard flag
-		if o.Short != "" {
-			w.writeLinef("%v.%vP(&%v.%v, %q, %q%v, %q)",
-				flagVar, flagMeth, selfVar, o.fieldName(), o.Name, o.Short, defaultLit, desc)
-		} else {
-			w.writeLinef("%v.%v(&%v.%v, %q%v, %q)",
-				flagVar, flagMeth, selfVar, o.fieldName(), o.Name, defaultLit, desc)
-		}
+		w.writeLinef("%v.%v(&%v.%v, %q%v, %q)", flagVar, flagMeth, selfVar, o.fieldName(), o.Name, defaultLit, desc)
+	}
+	if o.DisplayType != "" {
+		w.writeLinef("OverrideFlagDisplayType(%v.Lookup(%q), %q)", flagVar, o.Name, o.DisplayType)
 	}
 	if o.Required {
 		w.writeLinef("_ = %v.MarkFlagRequired(%v, %q)", w.importCobra(), flagVar, o.Name)
