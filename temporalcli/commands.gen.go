@@ -3,14 +3,15 @@
 package temporalcli
 
 import (
-	"os"
-	"time"
-
 	"github.com/mattn/go-isatty"
 
 	"github.com/spf13/cobra"
 
 	"github.com/spf13/pflag"
+
+	"os"
+
+	"time"
 )
 
 var hasHighlighting = isatty.IsTerminal(os.Stdout.Fd())
@@ -2252,10 +2253,10 @@ func NewTemporalTaskQueueConfigSetCommand(cctx *CommandContext, parent *Temporal
 	s.Command.Flags().Var(&s.TaskQueueType, "task-queue-type", "Task Queue type. Accepted values: workflow, activity, nexus. Accepted values: workflow, activity, nexus. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue-type")
 	s.Command.Flags().StringVar(&s.QueueRpsLimit, "queue-rps-limit", "", "Queue rate limit in requests per second. Accepts a float; or 'default' to unset.")
-	OverrideFlagDisplayType(s.Command.Flags().Lookup("queue-rps-limit"), "float|default")
+	overrideFlagDisplayType(s.Command.Flags().Lookup("queue-rps-limit"), "float|default")
 	s.Command.Flags().StringVar(&s.QueueRpsLimitReason, "queue-rps-limit-reason", "", "Reason for queue rate limit update.")
 	s.Command.Flags().StringVar(&s.FairnessKeyRpsLimitDefault, "fairness-key-rps-limit-default", "", "Fairness key rate limit default in requests per second. Accepts a float; or 'default' to unset.")
-	OverrideFlagDisplayType(s.Command.Flags().Lookup("fairness-key-rps-limit-default"), "float|default")
+	overrideFlagDisplayType(s.Command.Flags().Lookup("fairness-key-rps-limit-default"), "float|default")
 	s.Command.Flags().StringVar(&s.FairnessKeyRpsLimitReason, "fairness-key-rps-limit-reason", "", "Reason for fairness key rate limit update.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {

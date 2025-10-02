@@ -586,6 +586,6 @@ func (o *overrideDisplayTypeFlagValue) Type() string {
 	return o.displayType
 }
 
-func OverrideFlagDisplayType(flag *pflag.Flag, displayType string) {
+func overrideFlagDisplayType(flag *pflag.Flag, displayType string) {
 	flag.Value = &overrideDisplayTypeFlagValue{Value: flag.Value, displayType: displayType}
 }
