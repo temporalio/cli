@@ -99,6 +99,7 @@
 #   options: A list of options. (Option[])
 #     - name: The option name. (string)
 #       type: The option type. (string)
+#       display-type: Optional custom description for displaying the type in the help (string)
 #       description: The option description. (string)
 #       required: Whether the option is required. (bool)
 #       short: The single letter short version of name (i.e. a for address). (string)
