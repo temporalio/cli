@@ -912,6 +912,7 @@ commands:
         - worker deployment set-ramping-version
         - worker deployment delete-version
         - worker deployment update-metadata-version
+        - worker deployment manager-identity
 
   - name: temporal worker deployment describe
     summary: Show properties of a Worker Deployment
@@ -1232,6 +1233,157 @@ commands:
         description: |
           Keys of entries to be deleted from metadata.
           Can be passed multiple times.
+
+  - name: temporal worker deployment manager-identity
+    summary: Manager Identity commands change the `ManagerIdentity` of a Worker Deployment
+    description: |
+      ```
+      +---------------------------------------------------------------------+
+      | CAUTION: Worker Deployment is experimental. Deployment commands are |
+      | subject to change.                                                  |
+      +---------------------------------------------------------------------+
+      ```
+
+      Manager Identity commands change the `ManagerIdentity` of a Worker Deployment:
+
+      ```
+      temporal worker deployment manager-identity [command] [options]
+      ```
+      
+      When present, `ManagerIdentity` is the identity of the user that has the 
+      exclusive right to make changes to this Worker Deployment. Empty by default.
+      When set, users whose identity does not match the `ManagerIdentity` will not
+      be able to change the Worker Deployment.
+  
+      This is especially useful in environments where multiple users (such as CLI
+      users and automated controllers) may interact with the same Worker Deployment.
+      `ManagerIdentity` allows different users to communicate with one another about
+      who is expected to make changes to the Worker Deployment.
+      
+      The current Manager Identity is returned with `describe`:
+      ```
+       temporal worker deployment describe \
+          --deployment-name YourDeploymentName
+      ```
+
+    docs:
+      description-header: >-
+        Temporal Deployment Manager Identity commands enable set and unset
+        operations on the manager identity field of Worker Deployments.
+      keywords:
+        - worker deployment manager-identity set
+        - worker deployment manager-identity unset
+
+  - name: temporal worker deployment manager-identity set
+    summary: Set the Manager Identity of a Worker Deployment
+    description: |
+      ```
+      +---------------------------------------------------------------------+
+      | CAUTION: Worker Deployment is experimental. Deployment commands are |
+      | subject to change.                                                  |
+      +---------------------------------------------------------------------+
+      ```
+
+      Set the `ManagerIdentity` of a Worker Deployment given its Deployment Name.
+      
+      When present, `ManagerIdentity` is the identity of the user that has the 
+      exclusive right to make changes to this Worker Deployment. Empty by default.
+      When set, users whose identity does not match the `ManagerIdentity` will not
+      be able to change the Worker Deployment.
+  
+      This is especially useful in environments where multiple users (such as CLI
+      users and automated controllers) may interact with the same Worker Deployment.
+      `ManagerIdentity` allows different users to communicate with one another about
+      who is expected to make changes to the Worker Deployment.
+
+      ```
+      temporal worker deployment manager-identity set [options]
+      ```
+      
+      For example:
+
+      ```
+      temporal worker deployment manager-identity set \
+         --deployment-name DeploymentName \
+         --self \
+         --identity YourUserIdentity # optional, populated by CLI if not provided
+      ```
+
+      Sets the Manager Identity of the Deployment to the identity of the user making 
+      this request. If you don't specifically pass an identity field, the CLI will 
+      generate your identity for you.
+      
+      For example:
+      ```
+      temporal worker deployment manager-identity set \
+         --deployment-name DeploymentName \
+         --manager-identity NewManagerIdentity
+      ```
+      
+      Sets the Manager Identity of the Deployment to any string.
+
+    option-sets:
+      - deployment-name
+    options:
+      - name: manager-identity
+        type: string
+        description: New Manager Identity. Required unless --self is specified.
+      - name: self
+        type: bool
+        description: Set Manager Identity to the identity of the user submitting this request. Required unless --manager-identity is specified.
+      - name: identity
+        type: string
+        description: Identity of the user submitting this request.
+      - name: yes
+        short: y
+        type: bool
+        description: Don't prompt to confirm set Manager Identity.
+
+  - name: temporal worker deployment manager-identity unset
+    summary: Unset the Manager Identity of a Worker Deployment
+    description: |
+      ```
+      +---------------------------------------------------------------------+
+      | CAUTION: Worker Deployment is experimental. Deployment commands are |
+      | subject to change.                                                  |
+      +---------------------------------------------------------------------+
+      ```
+
+      Unset the `ManagerIdentity` of a Worker Deployment given its Deployment Name.
+      
+      When present, `ManagerIdentity` is the identity of the user that has the 
+      exclusive right to make changes to this Worker Deployment. Empty by default.
+      When set, users whose identity does not match the `ManagerIdentity` will not
+      be able to change the Worker Deployment.
+      
+      This is especially useful in environments where multiple users (such as CLI
+      users and automated controllers) may interact with the same Worker Deployment.
+      `ManagerIdentity` allows different users to communicate with one another about
+      who is expected to make changes to the Worker Deployment.
+
+      ```
+      temporal worker deployment manager-identity unset [options]
+      ```
+      
+      For example:
+
+      ```
+      temporal worker deployment manager-identity unset \
+         --deployment-name YourDeploymentName
+      ```
+
+      Clears the Manager Identity field for a given Deployment.
+
+    option-sets:
+      - deployment-name
+    options:
+      - name: identity
+        type: string
+        description: Identity of the user submitting this request.
+      - name: yes
+        short: y
+        type: bool
+        description: Don't prompt to confirm unset Manager Identity.
 
   - name: temporal env
     summary: Manage environments

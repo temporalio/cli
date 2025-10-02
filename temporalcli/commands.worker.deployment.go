@@ -7,6 +7,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/temporalio/cli/temporalcli/internal/printer"
 	"go.temporal.io/api/common/v1"
+	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
 )
@@ -489,6 +490,66 @@ func (c *TemporalWorkerDeploymentListCommand) run(cctx *CommandContext, args []s
 		_ = cctx.Printer.PrintStructured(page, printTableOpts)
 	}
 
+	return nil
+}
+
+func (c *TemporalWorkerDeploymentManagerIdentitySetCommand) run(cctx *CommandContext, args []string) error {
+	cl, err := c.Parent.Parent.Parent.ClientOptions.dialClient(cctx)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	token, err := c.Parent.Parent.getConflictToken(cctx, &getDeploymentConflictTokenOptions{
+		safeMode:        !c.Yes,
+		safeModeMessage: "ManagerIdentity",
+		deploymentName:  c.Name,
+	})
+	if err != nil {
+		return err
+	}
+
+	req := &workflowservice.SetWorkerDeploymentManagerRequest{
+		Namespace:      c.Parent.Parent.Parent.Namespace,
+		DeploymentName: c.Name,
+		ConflictToken:  token,
+		Identity:       c.Identity,
+	}
+	var newManagerIdentity string
+	if c.Self {
+		req.NewManagerIdentity = &workflowservice.SetWorkerDeploymentManagerRequest_Self{Self: true}
+		newManagerIdentity = c.Identity
+	} else {
+		req.NewManagerIdentity = &workflowservice.SetWorkerDeploymentManagerRequest_ManagerIdentity{ManagerIdentity: c.ManagerIdentity}
+		newManagerIdentity = c.ManagerIdentity
+	}
+
+	_, err = cl.WorkflowService().SetWorkerDeploymentManager(cctx, req)
+
+	if err != nil {
+		return fmt.Errorf("error deleting worker deployment: %w", err)
+	}
+
+	cctx.Printer.Printlnf("Successfully set manager identity to '%s'", newManagerIdentity)
+	return nil
+}
+
+func (c *TemporalWorkerDeploymentManagerIdentityUnsetCommand) run(cctx *CommandContext, args []string) error {
+	cl, err := c.Parent.Parent.Parent.ClientOptions.dialClient(cctx)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	_, err = cl.WorkerDeploymentClient().Delete(cctx, client.WorkerDeploymentDeleteOptions{
+		Name:     c.Name,
+		Identity: c.Identity,
+	})
+	if err != nil {
+		return fmt.Errorf("error deleting worker deployment: %w", err)
+	}
+
+	cctx.Printer.Println("Successfully deleted worker deployment")
 	return nil
 }
 
