@@ -2348,18 +2348,19 @@ commands:
         default: 7233
       - name: http-port
         type: int
-        description: Port for the HTTP API service. Defaults to a random free port.
+        description: Port for the HTTP API service.
+        Defaults to a random free port.
         default: 0
       - name: metrics-port
         type: int
         description: |
-          Port for '/metrics'.
-          Default is off.
+          Port for the '/metrics' HTTP endpoint.
+          Defaults to a random free port.
       - name: ui-port
         type: int
         description: |
           Port for the Web UI.
-          Default is '--port' value + 1000.
+          Defaults to '--port' value + 1000.
       - name: headless
         type: bool
         description: Disable the Web UI.
@@ -2371,12 +2372,12 @@ commands:
         type: string
         description: |
           IP address bound to the Web UI.
-          Default is same as '--ip' value.
+          Defaults to same as '--ip' value.
       - name: ui-public-path
         type: string
         description: |
           The public base path for the Web UI.
-          Default is `/`.
+          Defaults to `/`.
       - name: ui-asset-path
         type: string
         description: UI custom assets path.
