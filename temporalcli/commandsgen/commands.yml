@@ -2348,8 +2348,9 @@ commands:
         default: 7233
       - name: http-port
         type: int
-        description: Port for the HTTP API service.
-        Defaults to a random free port.
+        description: |
+          Port for the HTTP API service.
+          Defaults to a random free port.
         default: 0
       - name: metrics-port
         type: int
