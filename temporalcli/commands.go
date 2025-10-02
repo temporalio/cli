@@ -580,3 +580,16 @@ func encodeMapToPayloads(in map[string]any) (map[string]*commonpb.Payload, error
 	}
 	return out, nil
 }
+
+type overrideDisplayTypeFlagValue struct {
+	pflag.Value
+	displayType string
+}
+
+func (o *overrideDisplayTypeFlagValue) Type() string {
+	return o.displayType
+}
+
+func overrideFlagDisplayType(flag *pflag.Flag, displayType string) {
+	flag.Value = &overrideDisplayTypeFlagValue{Value: flag.Value, displayType: displayType}
+}

@@ -421,11 +421,12 @@ func (o *Option) writeFlagBuilding(selfVar, flagVar string, w *codeWriter) error
 		w.writeLinef("%v.%v = %v", selfVar, o.fieldName(), setDefault)
 	}
 	if o.Short != "" {
-		w.writeLinef("%v.%vP(&%v.%v, %q, %q%v, %q)",
-			flagVar, flagMeth, selfVar, o.fieldName(), o.Name, o.Short, defaultLit, desc)
+		w.writeLinef("%v.%vP(&%v.%v, %q, %q%v, %q)", flagVar, flagMeth, selfVar, o.fieldName(), o.Name, o.Short, defaultLit, desc)
 	} else {
-		w.writeLinef("%v.%v(&%v.%v, %q%v, %q)",
-			flagVar, flagMeth, selfVar, o.fieldName(), o.Name, defaultLit, desc)
+		w.writeLinef("%v.%v(&%v.%v, %q%v, %q)", flagVar, flagMeth, selfVar, o.fieldName(), o.Name, defaultLit, desc)
+	}
+	if o.DisplayType != "" {
+		w.writeLinef("overrideFlagDisplayType(%v.Lookup(%q), %q)", flagVar, o.Name, o.DisplayType)
 	}
 	if o.Required {
 		w.writeLinef("_ = %v.MarkFlagRequired(%v, %q)", w.importCobra(), flagVar, o.Name)
