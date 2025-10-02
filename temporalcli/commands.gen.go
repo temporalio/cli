@@ -497,6 +497,7 @@ type TemporalActivityPauseCommand struct {
 	WorkflowReferenceOptions
 	ActivityId   string
 	ActivityType string
+	Identity     string
 }
 
 func NewTemporalActivityPauseCommand(cctx *CommandContext, parent *TemporalActivityCommand) *TemporalActivityPauseCommand {
@@ -512,7 +513,8 @@ func NewTemporalActivityPauseCommand(cctx *CommandContext, parent *TemporalActiv
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "The Activity ID to pause. Either `activity-id` or `activity-type` must be provided, but not both.")
-	s.Command.Flags().StringVar(&s.ActivityType, "activity-type", "", "All activities of the Activity Type will be paused. Either `activity-id` or `activity-type` must be provided, but not both. Note: Pausing Activity by Type is an experimental feature and may change in the future.")
+	s.Command.Flags().StringVar(&s.ActivityType, "activity-type", "", "All activities of the Activity Type will be paused. Either `activity-id` or `activity-type` must be provided, but not both.")
+	s.Command.Flags().StringVar(&s.Identity, "identity", "", "The identity of the user or client submitting this request.")
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -528,6 +530,7 @@ type TemporalActivityResetCommand struct {
 	SingleWorkflowOrBatchOptions
 	ActivityId             string
 	ActivityType           string
+	Identity               string
 	KeepPaused             bool
 	ResetAttempts          bool
 	ResetHeartbeats        bool
@@ -550,6 +553,7 @@ func NewTemporalActivityResetCommand(cctx *CommandContext, parent *TemporalActiv
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "The Activity ID to reset. Either `activity-id` or `activity-type` must be provided, but not both.")
 	s.Command.Flags().StringVar(&s.ActivityType, "activity-type", "", "The Activity Type to reset. Either `activity-id` or `activity-type` must be provided, but not both.")
+	s.Command.Flags().StringVar(&s.Identity, "identity", "", "The identity of the user or client submitting this request.")
 	s.Command.Flags().BoolVar(&s.KeepPaused, "keep-paused", false, "If the activity was paused, it will stay paused.")
 	s.Command.Flags().BoolVar(&s.ResetAttempts, "reset-attempts", false, "Reset the activity attempts.")
 	s.Command.Flags().BoolVar(&s.ResetHeartbeats, "reset-heartbeats", false, "Clear the Activity's heartbeat details.")
@@ -572,6 +576,7 @@ type TemporalActivityUnpauseCommand struct {
 	SingleWorkflowOrBatchOptions
 	ActivityId      string
 	ActivityType    string
+	Identity        string
 	ResetAttempts   bool
 	ResetHeartbeats bool
 	MatchAll        bool
@@ -592,6 +597,7 @@ func NewTemporalActivityUnpauseCommand(cctx *CommandContext, parent *TemporalAct
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "The Activity ID to unpause. Can only be used without --query or --match-all. Either `activity-id` or `activity-type` must be provided, but not both.")
 	s.Command.Flags().StringVarP(&s.ActivityType, "activity-type", "g", "", "Activities of this Type will unpause. Can only be used without --match-all. Either `activity-id` or `activity-type` must be provided, but not both.")
+	s.Command.Flags().StringVar(&s.Identity, "identity", "", "The identity of the user or client submitting this request.")
 	s.Command.Flags().BoolVar(&s.ResetAttempts, "reset-attempts", false, "Reset the activity attempts.")
 	s.Command.Flags().BoolVar(&s.ResetHeartbeats, "reset-heartbeats", false, "Reset the Activity's heartbeats. Only works with --reset-attempts.")
 	s.Command.Flags().BoolVar(&s.MatchAll, "match-all", false, "Every paused activity should be unpaused. This flag is ignored if activity-type is provided.")
@@ -2219,14 +2225,16 @@ func NewTemporalTaskQueueConfigGetCommand(cctx *CommandContext, parent *Temporal
 }
 
 type TemporalTaskQueueConfigSetCommand struct {
-	Parent                     *TemporalTaskQueueConfigCommand
-	Command                    cobra.Command
-	TaskQueue                  string
-	TaskQueueType              StringEnum
-	QueueRpsLimit              string
-	QueueRpsLimitReason        string
-	FairnessKeyRpsLimitDefault string
-	FairnessKeyRpsLimitReason  string
+	Parent                      *TemporalTaskQueueConfigCommand
+	Command                     cobra.Command
+	TaskQueue                   string
+	TaskQueueType               StringEnum
+	Identity                    string
+	Namespace                   string
+	QueueRateLimit              float32
+	QueueRateLimitReason        string
+	FairnessKeyRateLimitDefault float32
+	FairnessKeyRateLimitReason  string
 }
 
 func NewTemporalTaskQueueConfigSetCommand(cctx *CommandContext, parent *TemporalTaskQueueConfigCommand) *TemporalTaskQueueConfigSetCommand {
@@ -2236,9 +2244,9 @@ func NewTemporalTaskQueueConfigSetCommand(cctx *CommandContext, parent *Temporal
 	s.Command.Use = "set [flags]"
 	s.Command.Short = "Set Task Queue configuration"
 	if hasHighlighting {
-		s.Command.Long = "Update configuration settings for a Task Queue.\n\n\x1b[1mtemporal task-queue config set \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type activity \\\n    --namespace YourNamespace \\\n    --queue-rps-limit <requests_per_second:float> \\\n    --queue-rps-limit-reason <reason_string> \\\n    --fairness-key-rps-limit-default <requests_per_second:float> \\\n    --fairness-key-rps-limit-reason <reason_string>\x1b[0m\n\nThis command supports updating:\n- Queue rate limits: Controls the overall rate limit of the task queue.\n  This setting overrides the worker rate limit if set.\n  Unless modified, this is the system-defined rate limit.\n- Fairness key rate limit defaults: Sets default rate limits for fairness keys.\n  If set, each individual fairness key will be limited to this rate,\n  scaled by the weight of the fairness key.\n\nTo unset a rate limit, pass in 'default', for example: --queue-rps-limit default"
+		s.Command.Long = "Update configuration settings for a Task Queue.\n\n\x1b[1mtemporal task-queue config set \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type activity \\\n    --namespace YourNamespace \\\n    --queue-rate-limit <requests_per_second:float> \\\n    --queue-rate-limit-reason <reason_string> \\\n    --fairness-key-rate-limit-default <requests_per_second:float> \\\n    --fairness-key-rate-limit-reason <reason_string>\x1b[0m\n\nThis command supports updating:\n- Queue rate limits: Controls the overall rate limit of the task queue.\n  This setting overrides the worker rate limit if set.\n  Unless modified, this is the system-defined rate limit.\n- Fairness key rate limit defaults: Sets default rate limits for fairness keys.\n  If set, each individual fairness key will be limited to this rate,\n  scaled by the weight of the fairness key.\n\nTo unset a rate limit, use --queue-rate-limit -1 or --fairness-key-rate-limit-default -1"
 	} else {
-		s.Command.Long = "Update configuration settings for a Task Queue.\n\n```\ntemporal task-queue config set \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type activity \\\n    --namespace YourNamespace \\\n    --queue-rps-limit <requests_per_second:float> \\\n    --queue-rps-limit-reason <reason_string> \\\n    --fairness-key-rps-limit-default <requests_per_second:float> \\\n    --fairness-key-rps-limit-reason <reason_string>\n```\n\nThis command supports updating:\n- Queue rate limits: Controls the overall rate limit of the task queue.\n  This setting overrides the worker rate limit if set.\n  Unless modified, this is the system-defined rate limit.\n- Fairness key rate limit defaults: Sets default rate limits for fairness keys.\n  If set, each individual fairness key will be limited to this rate,\n  scaled by the weight of the fairness key.\n\nTo unset a rate limit, pass in 'default', for example: --queue-rps-limit default"
+		s.Command.Long = "Update configuration settings for a Task Queue.\n\n```\ntemporal task-queue config set \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type activity \\\n    --namespace YourNamespace \\\n    --queue-rate-limit <requests_per_second:float> \\\n    --queue-rate-limit-reason <reason_string> \\\n    --fairness-key-rate-limit-default <requests_per_second:float> \\\n    --fairness-key-rate-limit-reason <reason_string>\n```\n\nThis command supports updating:\n- Queue rate limits: Controls the overall rate limit of the task queue.\n  This setting overrides the worker rate limit if set.\n  Unless modified, this is the system-defined rate limit.\n- Fairness key rate limit defaults: Sets default rate limits for fairness keys.\n  If set, each individual fairness key will be limited to this rate,\n  scaled by the weight of the fairness key.\n\nTo unset a rate limit, use --queue-rate-limit -1 or --fairness-key-rate-limit-default -1"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task Queue name. Required.")
@@ -2246,12 +2254,12 @@ func NewTemporalTaskQueueConfigSetCommand(cctx *CommandContext, parent *Temporal
 	s.TaskQueueType = NewStringEnum([]string{"workflow", "activity", "nexus"}, "")
 	s.Command.Flags().Var(&s.TaskQueueType, "task-queue-type", "Task Queue type. Accepted values: workflow, activity, nexus. Accepted values: workflow, activity, nexus. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue-type")
-	s.Command.Flags().StringVar(&s.QueueRpsLimit, "queue-rps-limit", "", "Queue rate limit in requests per second. Accepts a float; or 'default' to unset.")
-	OverrideFlagDisplayType(s.Command.Flags().Lookup("queue-rps-limit"), "float|default")
-	s.Command.Flags().StringVar(&s.QueueRpsLimitReason, "queue-rps-limit-reason", "", "Reason for queue rate limit update.")
-	s.Command.Flags().StringVar(&s.FairnessKeyRpsLimitDefault, "fairness-key-rps-limit-default", "", "Fairness key rate limit default in requests per second. Accepts a float; or 'default' to unset.")
-	OverrideFlagDisplayType(s.Command.Flags().Lookup("fairness-key-rps-limit-default"), "float|default")
-	s.Command.Flags().StringVar(&s.FairnessKeyRpsLimitReason, "fairness-key-rps-limit-reason", "", "Reason for fairness key rate limit update.")
+	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity for the operation.")
+	s.Command.Flags().StringVar(&s.Namespace, "namespace", "", "Namespace for the operation.")
+	s.Command.Flags().Float32Var(&s.QueueRateLimit, "queue-rate-limit", 0, "Queue rate limit in requests per second. Use -1 to unset.")
+	s.Command.Flags().StringVar(&s.QueueRateLimitReason, "queue-rate-limit-reason", "", "Reason for queue rate limit update.")
+	s.Command.Flags().Float32Var(&s.FairnessKeyRateLimitDefault, "fairness-key-rate-limit-default", 0, "Fairness key rate limit default in requests per second. Use -1 to unset.")
+	s.Command.Flags().StringVar(&s.FairnessKeyRateLimitReason, "fairness-key-rate-limit-reason", "", "Reason for fairness key rate limit update.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -2301,7 +2309,7 @@ func NewTemporalTaskQueueDescribeCommand(cctx *CommandContext, parent *TemporalT
 	s.Command.Flags().Var(&s.TaskQueueTypeLegacy, "task-queue-type-legacy", "Task Queue type (legacy mode only). Accepted values: workflow, activity.")
 	s.Command.Flags().IntVar(&s.PartitionsLegacy, "partitions-legacy", 1, "Query partitions 1 through `N`. Experimental/Temporary feature. Legacy mode only.")
 	s.Command.Flags().BoolVar(&s.DisableStats, "disable-stats", false, "Disable task queue statistics.")
-	s.Command.Flags().BoolVar(&s.ReportConfig, "report-config", false, "Include task queue configuration in the response. When enabled, the command will return the current configuration for the task queue.")
+	s.Command.Flags().BoolVar(&s.ReportConfig, "report-config", false, "Include task queue configuration in the response. When enabled, the command will return the current rate limit configuration for the task queue.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
