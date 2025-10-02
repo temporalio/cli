@@ -2955,6 +2955,7 @@ type TemporalWorkerDeploymentManagerIdentitySetCommand struct {
 	ManagerIdentity string
 	Self            bool
 	Identity        string
+	Yes             bool
 }
 
 func NewTemporalWorkerDeploymentManagerIdentitySetCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentManagerIdentityCommand) *TemporalWorkerDeploymentManagerIdentitySetCommand {
@@ -2972,6 +2973,7 @@ func NewTemporalWorkerDeploymentManagerIdentitySetCommand(cctx *CommandContext, 
 	s.Command.Flags().StringVar(&s.ManagerIdentity, "manager-identity", "", "New Manager Identity. Required unless --self is specified.")
 	s.Command.Flags().BoolVar(&s.Self, "self", false, "Set Manager Identity to the identity of the user submitting this request. Required unless --manager-identity is specified.")
 	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of the user submitting this request.")
+	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm set Manager Identity.")
 	s.DeploymentNameOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -2986,6 +2988,7 @@ type TemporalWorkerDeploymentManagerIdentityUnsetCommand struct {
 	Command cobra.Command
 	DeploymentNameOptions
 	Identity string
+	Yes      bool
 }
 
 func NewTemporalWorkerDeploymentManagerIdentityUnsetCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentManagerIdentityCommand) *TemporalWorkerDeploymentManagerIdentityUnsetCommand {
@@ -3001,6 +3004,7 @@ func NewTemporalWorkerDeploymentManagerIdentityUnsetCommand(cctx *CommandContext
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of the user submitting this request.")
+	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm unset Manager Identity.")
 	s.DeploymentNameOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
