@@ -3182,10 +3182,10 @@ commands:
           --task-queue YourTaskQueue \
           --task-queue-type activity \
           --namespace YourNamespace \
-          --queue-rate-limit <requests_per_second:float> \
-          --queue-rate-limit-reason <reason_string> \
-          --fairness-key-rate-limit-default <requests_per_second:float> \
-          --fairness-key-rate-limit-reason <reason_string>
+          --queue-rps-limit <requests_per_second:float> \
+          --queue-rps-limit-reason <reason_string> \
+          --fairness-key-rps-limit-default <requests_per_second:float> \
+          --fairness-key-rps-limit-reason <reason_string>
       ```
 
       This command supports updating:
@@ -3196,7 +3196,7 @@ commands:
         If set, each individual fairness key will be limited to this rate,
         scaled by the weight of the fairness key.
 
-      To unset a rate limit, use --queue-rate-limit -1 or --fairness-key-rate-limit-default -1
+      To unset a rate limit, pass in 'default', for example: --queue-rps-limit default
     options:
       - name: task-queue
         type: string
@@ -3214,27 +3214,23 @@ commands:
           - workflow
           - activity
           - nexus
-      - name: identity
+      - name: queue-rps-limit
         type: string
-        description: Identity for the operation.
-      - name: namespace
-        type: string
-        description: Namespace for the operation.
-      - name: queue-rate-limit
-        type: float
+        display-type: float|default
         description: |
           Queue rate limit in requests per second.
-          Use -1 to unset.
-      - name: queue-rate-limit-reason
+          Accepts a float; or 'default' to unset.
+      - name: queue-rps-limit-reason
         type: string
         description: Reason for queue rate limit update.
         hidden: true
-      - name: fairness-key-rate-limit-default
-        type: float
+      - name: fairness-key-rps-limit-default
+        type: string
+        display-type: float|default
         description: |
           Fairness key rate limit default in requests per second.
-          Use -1 to unset.
-      - name: fairness-key-rate-limit-reason
+          Accepts a float; or 'default' to unset.
+      - name: fairness-key-rps-limit-reason
         type: string
         description: Reason for fairness key rate limit update.
         hidden: true
