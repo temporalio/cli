@@ -337,8 +337,7 @@ commands:
     summary: Update Activity options
     description: |
       Update the options of a running Activity that were passed into it from
-      a Workflow. Updates are incremental, only changing the specified 
-      options.
+      a Workflow. Updates are incremental, only changing the specified options.
 
       For example:
 
@@ -370,7 +369,6 @@ commands:
           ...
       ```
     options:
-      
       - name: activity-id
         short: a
         type: string
@@ -541,8 +539,7 @@ commands:
       - name: match-all
         type: bool
         description: |
-          Every paused activity should be unpaused. This flag is ignored if
-          activity-type is provided. 
+          Every paused activity should be unpaused. This flag is ignored if activity-type is provided.
       - name: jitter
         type: duration
         description: |
