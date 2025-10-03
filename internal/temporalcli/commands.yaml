@@ -269,7 +269,6 @@ commands:
           ...
       ```
     options:
-      
       - name: activity-id
         short: a
         type: string
