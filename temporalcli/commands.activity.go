@@ -376,6 +376,8 @@ func (c *TemporalActivityResetCommand) run(cctx *CommandContext, args []string) 
 			request.Activity = &workflowservice.ResetActivityRequest_Type{Type: c.ActivityType}
 		} else if c.ActivityId != "" {
 			request.Activity = &workflowservice.ResetActivityRequest_Id{Id: c.ActivityId}
+		} else {
+			return fmt.Errorf("either Activity Type or Activity Id must be provided")
 		}
 
 		resp, err := cl.WorkflowService().ResetActivity(cctx, request)
