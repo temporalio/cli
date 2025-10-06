@@ -306,7 +306,7 @@ func formatWorkerHostInfo(info *workerpb.WorkerHostInfo) *workerHostInfo {
 	formatted := &workerHostInfo{
 		HostName:            info.GetHostName(),
 		ProcessId:           info.GetProcessId(),
-		ProcessKey:          info.GetProcessKey(),
+		ProcessKey:          "FIXME", // DO NOT MERGE!!! info.GetProcessKey(),
 		CurrentHostCPUUsage: info.GetCurrentHostCpuUsage(),
 		CurrentHostMemUsage: info.GetCurrentHostMemUsage(),
 	}
