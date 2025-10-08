@@ -67,7 +67,7 @@ type jsonDeploymentVersionInfoType struct {
 
 func (s *SharedServerSuite) TestDeployment_Set_Current_Version() {
 	deploymentName := uuid.NewString()
-	BuildID := uuid.NewString()
+	buildId := uuid.NewString()
 	version := worker.WorkerDeploymentVersion{
 		DeploymentName: deploymentName,
 		BuildID:        buildId,
@@ -187,8 +187,8 @@ func (s *SharedServerSuite) TestDeployment_List() {
 	prefix := "deployment_list_"
 	deploymentName1 := prefix + "a_" + uuid.NewString()
 	deploymentName2 := prefix + "b_" + uuid.NewString()
-	BuildID1 := uuid.NewString()
-	BuildID2 := uuid.NewString()
+	buildId1 := uuid.NewString()
+	buildId2 := uuid.NewString()
 	version1 := worker.WorkerDeploymentVersion{
 		DeploymentName: deploymentName1,
 		BuildID:        buildId1,
@@ -297,8 +297,8 @@ func (s *SharedServerSuite) TestDeployment_List() {
 
 func (s *SharedServerSuite) TestDeployment_Describe_Drainage() {
 	deploymentName := uuid.NewString()
-	BuildID1 := "a" + uuid.NewString()
-	BuildID2 := "b" + uuid.NewString()
+	buildId1 := "a" + uuid.NewString()
+	buildId2 := "b" + uuid.NewString()
 	version1 := worker.WorkerDeploymentVersion{
 		DeploymentName: deploymentName,
 		BuildID:        buildId1,
@@ -417,8 +417,8 @@ func (s *SharedServerSuite) TestDeployment_Describe_Drainage() {
 
 func (s *SharedServerSuite) TestDeployment_Ramping() {
 	deploymentName := uuid.NewString()
-	BuildID1 := "a" + uuid.NewString()
-	BuildID2 := "b" + uuid.NewString()
+	buildId1 := "a" + uuid.NewString()
+	buildId2 := "b" + uuid.NewString()
 	version1 := worker.WorkerDeploymentVersion{
 		DeploymentName: deploymentName,
 		BuildID:        buildId1,
