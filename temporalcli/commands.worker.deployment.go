@@ -7,7 +7,6 @@ import (
 	"github.com/fatih/color"
 	"github.com/temporalio/cli/temporalcli/internal/printer"
 	"go.temporal.io/api/common/v1"
-	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
 )
@@ -534,7 +533,7 @@ func (c *TemporalWorkerDeploymentManagerIdentitySetCommand) run(cctx *CommandCon
 }
 
 func (c *TemporalWorkerDeploymentManagerIdentityUnsetCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.Parent.Parent.ClientOptions.dialClient(cctx)
+	cl, err := c.Parent.Parent.Parent.dialClient(cctx)
 	if err != nil {
 		return err
 	}
@@ -549,21 +548,17 @@ func (c *TemporalWorkerDeploymentManagerIdentityUnsetCommand) run(cctx *CommandC
 		return err
 	}
 
-	req := &workflowservice.SetWorkerDeploymentManagerRequest{
-		Namespace:          c.Parent.Parent.Parent.Namespace,
-		DeploymentName:     c.Name,
-		ConflictToken:      token,
-		Identity:           c.Parent.Parent.Parent.Identity,
-		NewManagerIdentity: &workflowservice.SetWorkerDeploymentManagerRequest_ManagerIdentity{ManagerIdentity: ""},
-	}
-
-	_, err = cl.WorkflowService().SetWorkerDeploymentManager(cctx, req)
-
+	dHandle := cl.WorkerDeploymentClient().GetHandle(c.Name)
+	resp, err := dHandle.SetManagerIdentity(cctx, client.WorkerDeploymentSetManagerIdentityOptions{
+		Identity:        c.Parent.Parent.Parent.Identity,
+		ConflictToken:   token,
+		ManagerIdentity: "",
+	})
 	if err != nil {
-		return fmt.Errorf("error unsetting worker deployment manager identity: %w", err)
+		return fmt.Errorf("error unsetting the manager identity: %w", err)
 	}
 
-	cctx.Printer.Println("Successfully unset manager identity")
+	cctx.Printer.Printlnf("Successfully unset manager identity, was previously '%s'", resp.PreviousManagerIdentity)
 	return nil
 }
 
