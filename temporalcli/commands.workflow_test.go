@@ -602,7 +602,7 @@ func (s *SharedServerSuite) TestWorkflow_Batch_Update_Options_Versioning_Overrid
 			require.NotNil(t, versioningInfo.VersioningOverride)
 			asPinned := versioningInfo.VersioningOverride.Override.(*workflowpb.VersioningOverride_Pinned)
 			require.Equal(t, version2.DeploymentName, asPinned.Pinned.Version.DeploymentName)
-			require.Equal(t, version2.BuildId, asPinned.Pinned.Version.BuildId)
+			require.Equal(t, version2.BuildId, asPinned.Pinned.Version.BuildID)
 			require.Equal(t, enums.VERSIONING_BEHAVIOR_PINNED, versioningInfo.Behavior)
 		}
 	}, 10*time.Second, 100*time.Millisecond)

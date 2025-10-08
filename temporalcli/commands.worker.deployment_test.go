@@ -95,7 +95,7 @@ func (s *SharedServerSuite) TestDeployment_Set_Current_Version() {
 		res := s.Execute(
 			"worker", "deployment", "describe-version",
 			"--address", s.Address(),
-			"--deployment-name", version.DeploymentName, "--build-id", version.BuildId,
+			"--deployment-name", version.DeploymentName, "--build-id", Version.BuildID,
 		)
 		assert.NoError(t, res.Err)
 	}, 30*time.Second, 100*time.Millisecond)
@@ -103,7 +103,7 @@ func (s *SharedServerSuite) TestDeployment_Set_Current_Version() {
 	res := s.Execute(
 		"worker", "deployment", "set-current-version",
 		"--address", s.Address(),
-		"--deployment-name", version.DeploymentName, "--build-id", version.BuildId,
+		"--deployment-name", version.DeploymentName, "--build-id", Version.BuildID,
 		"--yes",
 	)
 	s.NoError(res.Err)
@@ -117,7 +117,7 @@ func (s *SharedServerSuite) TestDeployment_Set_Current_Version() {
 
 	s.ContainsOnSameLine(res.Stdout.String(), "Name", deploymentName)
 	s.ContainsOnSameLine(res.Stdout.String(), "CurrentVersionDeploymentName", version.DeploymentName)
-	s.ContainsOnSameLine(res.Stdout.String(), "CurrentVersionBuildID", version.BuildId)
+	s.ContainsOnSameLine(res.Stdout.String(), "CurrentVersionBuildID", Version.BuildID)
 
 	// json
 	res = s.Execute(
@@ -132,13 +132,13 @@ func (s *SharedServerSuite) TestDeployment_Set_Current_Version() {
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
 	s.Equal(deploymentName, jsonOut.Name)
 	s.Equal(version.DeploymentName, jsonOut.RoutingConfig.CurrentVersionDeploymentName)
-	s.Equal(version.BuildId, jsonOut.RoutingConfig.CurrentVersionBuildID)
+	s.Equal(Version.BuildID, jsonOut.RoutingConfig.CurrentVersionBuildID)
 
 	// set metadata
 	res = s.Execute(
 		"worker", "deployment", "update-metadata-version",
 		"--address", s.Address(),
-		"--deployment-name", version.DeploymentName, "--build-id", version.BuildId,
+		"--deployment-name", version.DeploymentName, "--build-id", Version.BuildID,
 		"--metadata", "bar=1",
 		"--output", "json",
 	)
@@ -155,7 +155,7 @@ func (s *SharedServerSuite) TestDeployment_Set_Current_Version() {
 	res = s.Execute(
 		"worker", "deployment", "update-metadata-version",
 		"--address", s.Address(),
-		"--deployment-name", version.DeploymentName, "--build-id", version.BuildId,
+		"--deployment-name", version.DeploymentName, "--build-id", Version.BuildID,
 		"--remove-entries", "bar",
 		"--output", "json",
 	)
@@ -164,7 +164,7 @@ func (s *SharedServerSuite) TestDeployment_Set_Current_Version() {
 	res = s.Execute(
 		"worker", "deployment", "describe-version",
 		"--address", s.Address(),
-		"--deployment-name", version.DeploymentName, "--build-id", version.BuildId,
+		"--deployment-name", version.DeploymentName, "--build-id", Version.BuildID,
 		"--output", "json",
 	)
 	s.NoError(res.Err)
