@@ -498,7 +498,7 @@ func (c *TemporalWorkerDeploymentListCommand) run(cctx *CommandContext, args []s
 }
 
 func (c *TemporalWorkerDeploymentManagerIdentitySetCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.Parent.Parent.ClientOptions.dialClient(cctx)
+	cl, err := c.Parent.Parent.Parent.dialClient(cctx)
 	if err != nil {
 		return err
 	}
@@ -513,28 +513,23 @@ func (c *TemporalWorkerDeploymentManagerIdentitySetCommand) run(cctx *CommandCon
 		return err
 	}
 
-	req := &workflowservice.SetWorkerDeploymentManagerRequest{
-		Namespace:      c.Parent.Parent.Parent.Namespace,
-		DeploymentName: c.Name,
-		ConflictToken:  token,
-		Identity:       c.Parent.Parent.Parent.Identity,
-	}
-	var newManagerIdentity string
+	newManagerIdentity := c.ManagerIdentity
 	if c.Self {
-		req.NewManagerIdentity = &workflowservice.SetWorkerDeploymentManagerRequest_Self{Self: true}
 		newManagerIdentity = c.Parent.Parent.Parent.Identity
-	} else {
-		req.NewManagerIdentity = &workflowservice.SetWorkerDeploymentManagerRequest_ManagerIdentity{ManagerIdentity: c.ManagerIdentity}
-		newManagerIdentity = c.ManagerIdentity
 	}
 
-	_, err = cl.WorkflowService().SetWorkerDeploymentManager(cctx, req)
-
+	dHandle := cl.WorkerDeploymentClient().GetHandle(c.Name)
+	resp, err := dHandle.SetManagerIdentity(cctx, client.WorkerDeploymentSetManagerIdentityOptions{
+		Identity:        c.Parent.Parent.Parent.Identity,
+		ConflictToken:   token,
+		Self:            c.Self,
+		ManagerIdentity: c.ManagerIdentity,
+	})
 	if err != nil {
-		return fmt.Errorf("error setting worker deployment manager identity: %w", err)
+		return fmt.Errorf("error setting the manager identity: %w", err)
 	}
 
-	cctx.Printer.Printlnf("Successfully set manager identity to '%s'", newManagerIdentity)
+	cctx.Printer.Printlnf("Successfully set manager identity to '%s', was previously '%s'", newManagerIdentity, resp.PreviousManagerIdentity)
 	return nil
 }
 
