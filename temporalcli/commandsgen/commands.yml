@@ -99,6 +99,7 @@
 #   options: A list of options. (Option[])
 #     - name: The option name. (string)
 #       type: The option type. (string)
+#       display-type: Optional custom description for displaying the type in the help (string)
 #       description: The option description. (string)
 #       required: Whether the option is required. (bool)
 #       short: The single letter short version of name (i.e. a for address). (string)
@@ -304,9 +305,6 @@ commands:
         type: string
         description: Result `JSON` to return.
         required: true
-      - name: identity
-        type: string
-        description: Identity of the user submitting this request.
     option-sets:
       - workflow-reference
 
@@ -329,9 +327,6 @@ commands:
       - name: detail
         type: string
         description: Reason for failing the Activity (JSON).
-      - name: identity
-        type: string
-        description: Identity of the user submitting this request.
       - name: reason
         type: string
         description: Reason for failing the Activity.
@@ -342,8 +337,7 @@ commands:
     summary: Update Activity options
     description: |
       Update the options of a running Activity that were passed into it from
-       a Workflow. Updates are incremental, only changing the specified
-       options.
+      a Workflow. Updates are incremental, only changing the specified options.
 
       For example:
 
@@ -363,11 +357,31 @@ commands:
       ```
 
       You may follow this command with `temporal activity reset`, and the new values will apply after the reset.
+
+      Either `activity-id`, `activity-type`, or `--match-all` must be specified.
+
+      Activity options can be updated in bulk with a visibility query list filter. 
+      For example, if you want to reset for activities of type Foo, do:
+
+      ```
+      temporal activity update-options \
+          --query 'TemporalPauseInfo="property:activityType=Foo"'
+          ...
+      ```
     options:
       - name: activity-id
+        short: a
         type: string
-        description: Activity ID.
-        required: true
+        description: |
+          The Activity ID to update options. Mutually exclusive with `--query`, `--match-all`, and `--activity-type`. Requires `--workflow-id` to be specified.
+      - name: activity-type
+        type: string
+        description: |
+          Activities of this Type will be updated. Mutually exclusive with `--match-all` and `activity-id`.
+      - name: match-all
+        type: bool
+        description: |
+          Every activity should be updated. Mutually exclusive with `--activity-id` and `--activity-type`.
       - name: task-queue
         type: string
         description: Name of the task queue for the Activity.
@@ -420,11 +434,11 @@ commands:
           expired yet.
           Setting this value to 1 disables retries. Setting this value to 0
           means unlimited attempts(up to the timeouts).
-      - name: identity
-        type: string
-        description: Identity of the user submitting this request.
+      - name: restore-original-options
+        type: bool
+        description: Restore the original options of the activity.
     option-sets:
-      - workflow-reference
+      - single-workflow-or-batch
 
   - name: temporal activity pause
     summary: Pause an Activity
@@ -458,7 +472,6 @@ commands:
         type: string
         description: The Activity ID to pause. Either `activity-id` or `activity-type` must be provided, but not both.
       - name: activity-type
-        short: g
         type: string
         description: |
           All activities of the Activity Type will be paused. Either `activity-id` or `activity-type` must be provided, but not both.
@@ -511,18 +524,14 @@ commands:
         short: a
         type: string
         description: |
-          The Activity ID to unpause. Can only be used without --query or --match-all. Either `activity-id` or `activity-type` must be provided, but not both.
+          The Activity ID to unpause.  Mutually exclusive with `--query`, `--match-all`, and `--activity-type`. Requires `--workflow-id` to be specified.
       - name: activity-type
-        short: g
         type: string
         description: |
           Activities of this Type will unpause. Can only be used without --match-all. Either `activity-id` or `activity-type` must be provided, but not both.
-      - name: identity
-        type: string
-        description: The identity of the user or client submitting this request.
       - name: reset-attempts
         type: bool
-        description: Also reset the activity attempts.
+        description: Reset the activity attempts.
       - name: reset-heartbeats
         type: bool
         description: |
@@ -530,11 +539,9 @@ commands:
       - name: match-all
         type: bool
         description: |
-          Every paused activity should be unpaused. This flag is ignored if
-          activity-type is provided. Can only be used with --query.
+          Every paused activity should be unpaused. This flag is ignored if activity-type is provided.
       - name: jitter
         type: duration
-        short: j
         description: |
           The activity will start at random a time within the specified duration.
           Can only be used with --query.
@@ -582,26 +589,49 @@ commands:
           --keep-paused
           --reset-heartbeats
       ```
+
+      Either `activity-id`, `activity-type`, or `--match-all` must be specified.
+
+      Activities can be reset in bulk with a visibility query list filter. 
+      For example, if you want to reset activities of type Foo:
+
+      ```
+      temporal activity reset \
+          --query 'TemporalResetInfo="property:activityType=Foo"'
+      ```
     options:
       - name: activity-id
         short: a
         type: string
-        description: The Activity ID to reset. Either `activity-id` or `activity-type` must be provided, but not both.
+        description: The Activity ID to reset.  Mutually exclusive with `--query`, `--match-all`, and `--activity-type`. Requires `--workflow-id` to be specified.
       - name: activity-type
-        short: g
         type: string
-        description: The Activity Type to reset. Either `activity-id` or `activity-type` must be provided, but not both.
-      - name: identity
-        type: string
-        description: The identity of the user or client submitting this request.
+        description: Activities of this Type will be reset. Mutually exclusive with `--match-all` and `activity-id`.
       - name: keep-paused
         type: bool
         description: If the activity was paused, it will stay paused.
+      - name: reset-attempts
+        type: bool
+        description: Reset the activity attempts.
       - name: reset-heartbeats
         type: bool
-        description: Clear the Activity's heartbeat details.
+        description: |
+          Reset the Activity's heartbeats. Only works with --reset-attempts.
+      - name: match-all
+        type: bool
+        description: |
+          Every activity should be reset. Every activity should be updated. Mutually exclusive with `--activity-id` and `--activity-type`.
+      - name: jitter
+        type: duration
+        description: |
+          The activity will reset at random a time within the specified duration.
+          Can only be used with --query.
+      - name: restore-original-options
+        type: bool
+        description: |
+          Restore the original options of the activity.
     option-sets:
-      - workflow-reference
+      - single-workflow-or-batch
 
   - name: temporal batch
     summary: Manage running batch jobs
@@ -969,10 +999,6 @@ commands:
       ```
     option-sets:
       - deployment-name
-    options:
-      - name: identity
-        type: string
-        description: Identity of the user submitting this request.
 
   - name: temporal worker deployment list
     summary: Enumerate Worker Deployments in the client's namespace
@@ -1061,9 +1087,6 @@ commands:
     option-sets:
       - deployment-version
     options:
-      - name: identity
-        type: string
-        description: Identity of the user submitting this request.
       - name: skip-drainage
         type: bool
         description: Ignore the deletion requirement of not draining.
@@ -1111,9 +1134,6 @@ commands:
     option-sets:
       - deployment-version-or-unversioned
     options:
-      - name: identity
-        type: string
-        description: Identity of the user submitting this request.
       - name: ignore-missing-task-queues
         type: bool
         description: Override protection to accidentally remove task queues.
@@ -1181,9 +1201,6 @@ commands:
       - name: delete
         type: bool
         description: Delete the Ramping Version.
-      - name: identity
-        type: string
-        description: Identity of the user submitting this request.
       - name: ignore-missing-task-queues
         type: bool
         description: Override protection to accidentally remove task queues.
@@ -2500,18 +2517,20 @@ commands:
         default: 7233
       - name: http-port
         type: int
-        description: Port for the HTTP API service. Defaults to a random free port.
+        description: |
+          Port for the HTTP API service.
+          Defaults to a random free port.
         default: 0
       - name: metrics-port
         type: int
         description: |
-          Port for '/metrics'.
-          Default is off.
+          Port for the '/metrics' HTTP endpoint.
+          Defaults to a random free port.
       - name: ui-port
         type: int
         description: |
           Port for the Web UI.
-          Default is '--port' value + 1000.
+          Defaults to '--port' value + 1000.
       - name: headless
         type: bool
         description: Disable the Web UI.
@@ -2523,12 +2542,12 @@ commands:
         type: string
         description: |
           IP address bound to the Web UI.
-          Default is same as '--ip' value.
+          Defaults to same as '--ip' value.
       - name: ui-public-path
         type: string
         description: |
           The public base path for the Web UI.
-          Default is `/`.
+          Defaults to `/`.
       - name: ui-asset-path
         type: string
         description: UI custom assets path.
@@ -2723,6 +2742,12 @@ commands:
       - name: disable-stats
         type: bool
         description: Disable task queue statistics.
+      - name: report-config
+        type: bool
+        description: |
+          Include task queue configuration in the response.
+          When enabled, the command will return the current rate limit
+          configuration for the task queue.
 
   - name: temporal task-queue get-build-id-reachability
     summary: Show Build ID availability (Deprecated)
@@ -3314,6 +3339,119 @@ commands:
         type: bool
         description: Don't prompt to confirm.
 
+  - name: temporal task-queue config
+    summary: Get and set Task Queue configuration
+    description: |
+      Manage Task Queue configuration:
+
+      ```
+      temporal task-queue config [command] [options]
+      ```
+
+      Available commands:
+      - `get`: Retrieve the current configuration for a task queue
+      - `set`: Update the configuration for a task queue
+
+  - name: temporal task-queue config get
+    summary: Get Task Queue configuration
+    description: |
+      Retrieve the current configuration for a Task Queue:
+
+      ```
+      temporal task-queue config get \
+          --task-queue YourTaskQueue \
+          --task-queue-type activity
+      ```
+
+      This command returns the current configuration including:
+      - Queue rate limit: The overall rate limit of the task queue.
+        This setting overrides the worker rate limit if set.
+        Unless modified, this is the system-defined rate limit.
+      - Fairness key rate limit defaults: Default rate limits for fairness keys.
+        If set, each individual fairness key will be limited to this rate,
+        scaled by the weight of the fairness key.
+
+    options:
+      - name: task-queue
+        type: string
+        description: |
+          Task Queue name.
+        required: true
+        short: t
+      - name: task-queue-type
+        type: string-enum
+        description: |
+          Task Queue type.
+          Accepted values: workflow, activity, nexus.
+        required: true
+        enum-values:
+          - workflow
+          - activity
+          - nexus
+
+  - name: temporal task-queue config set
+    summary: Set Task Queue configuration
+    description: |
+      Update configuration settings for a Task Queue.
+
+      ```
+      temporal task-queue config set \
+          --task-queue YourTaskQueue \
+          --task-queue-type activity \
+          --namespace YourNamespace \
+          --queue-rps-limit <requests_per_second:float> \
+          --queue-rps-limit-reason <reason_string> \
+          --fairness-key-rps-limit-default <requests_per_second:float> \
+          --fairness-key-rps-limit-reason <reason_string>
+      ```
+
+      This command supports updating:
+      - Queue rate limits: Controls the overall rate limit of the task queue.
+        This setting overrides the worker rate limit if set.
+        Unless modified, this is the system-defined rate limit.
+      - Fairness key rate limit defaults: Sets default rate limits for fairness keys.
+        If set, each individual fairness key will be limited to this rate,
+        scaled by the weight of the fairness key.
+
+      To unset a rate limit, pass in 'default', for example: --queue-rps-limit default
+    options:
+      - name: task-queue
+        type: string
+        description: |
+          Task Queue name.
+        required: true
+        short: t
+      - name: task-queue-type
+        type: string-enum
+        description: |
+          Task Queue type.
+          Accepted values: workflow, activity, nexus.
+        required: true
+        enum-values:
+          - workflow
+          - activity
+          - nexus
+      - name: queue-rps-limit
+        type: string
+        display-type: float|default
+        description: |
+          Queue rate limit in requests per second.
+          Accepts a float; or 'default' to unset.
+      - name: queue-rps-limit-reason
+        type: string
+        description: Reason for queue rate limit update.
+        hidden: true
+      - name: fairness-key-rps-limit-default
+        type: string
+        display-type: float|default
+        description: |
+          Fairness key rate limit default in requests per second.
+          Accepts a float; or 'default' to unset.
+      - name: fairness-key-rps-limit-reason
+        type: string
+        description: Reason for fairness key rate limit update.
+        hidden: true
+
   - name: temporal workflow
     summary: Start, list, and operate on Workflows
     description: |
@@ -3631,11 +3769,13 @@ commands:
           - auto_upgrade
       - name: versioning-override-deployment-name
         type: string
-        description: When overriding to a `pinned` behavior, specifies the Deployment Name of the
+        description:
+          When overriding to a `pinned` behavior, specifies the Deployment Name of the
           version to target.
       - name: versioning-override-build-id
         type: string
-        description: When overriding to a `pinned` behavior, specifies the Build ID of the
+        description:
+          When overriding to a `pinned` behavior, specifies the Build ID of the
           version to target.
   - name: temporal workflow query
     summary: Retrieve Workflow Execution state
@@ -4266,7 +4406,7 @@ option-sets:
       - name: address
         type: string
         description: Temporal Service gRPC endpoint.
-        default: 127.0.0.1:7233
+        default: localhost:7233
         implied-env: TEMPORAL_ADDRESS
       - name: client-authority
         type: string
@@ -4354,6 +4494,9 @@ option-sets:
           HTTP headers for requests to codec server.
           Format as a `KEY=VALUE` pair.
           May be passed multiple times to set multiple headers.
+      - name: identity
+        type: string
+        description: The identity of the user or client submitting this request. Defaults to "temporal-cli:$USER@$HOST".
 
   - name: overlap-policy
     options:
@@ -4601,6 +4744,22 @@ option-sets:
         description: |
           Static Workflow details for human consumption in UIs.
           Uses Temporal Markdown formatting, may be multiple lines.
+      - name: priority-key
+        type: int
+        description: |
+          Priority key (1-5, lower numbers = higher priority).
+          Tasks in a queue should be processed in close-to-priority-order.
+          Default is 3 when not specified.
+      - name: fairness-key
+        type: string
+        description: |
+          Fairness key (max 64 bytes) for proportional task dispatch.
+          Tasks with same key share capacity based on their weight.
+      - name: fairness-weight
+        type: float
+        description: |
+          Weight [0.001-1000] for this fairness key.
+          Keys are dispatched proportionally to their weights.
 
   - name: workflow-start
     options:
@@ -4659,6 +4818,7 @@ option-sets:
           Input payload metadata as a `KEY=VALUE` pair.
           When the KEY is "encoding", this overrides the default ("json/plain").
           Can be passed multiple times.
+          Repeated metadata keys are applied to the corresponding inputs in the provided order.
       - name: input-base64
         type: bool
         description: |
@@ -4770,10 +4930,11 @@ option-sets:
           - auto_upgrade
       - name: versioning-override-deployment-name
         type: string
-        description: When overriding to a `pinned` behavior, specifies the Deployment Name of the
+        description:
+          When overriding to a `pinned` behavior, specifies the Deployment Name of the
           version to target.
       - name: versioning-override-build-id
         type: string
-        description: When overriding to a `pinned` behavior, specifies the Build ID of the
+        description:
+          When overriding to a `pinned` behavior, specifies the Build ID of the
           version to target.
-

@@ -70,7 +70,7 @@ func (s *SharedServerSuite) TestDeployment_Set_Current_Version() {
 	BuildID := uuid.NewString()
 	version := worker.WorkerDeploymentVersion{
 		DeploymentName: deploymentName,
-		BuildID:        BuildID,
+		BuildID:        buildId,
 	}
 	w := s.DevServer.StartDevWorker(s.Suite.T(), DevWorkerOptions{
 		Worker: worker.Options{
@@ -191,11 +191,11 @@ func (s *SharedServerSuite) TestDeployment_List() {
 	BuildID2 := uuid.NewString()
 	version1 := worker.WorkerDeploymentVersion{
 		DeploymentName: deploymentName1,
-		BuildID:        BuildID1,
+		BuildID:        buildId1,
 	}
 	version2 := worker.WorkerDeploymentVersion{
 		DeploymentName: deploymentName2,
-		BuildID:        BuildID2,
+		BuildID:        buildId2,
 	}
 
 	w1 := s.DevServer.StartDevWorker(s.Suite.T(), DevWorkerOptions{
@@ -301,11 +301,11 @@ func (s *SharedServerSuite) TestDeployment_Describe_Drainage() {
 	BuildID2 := "b" + uuid.NewString()
 	version1 := worker.WorkerDeploymentVersion{
 		DeploymentName: deploymentName,
-		BuildID:        BuildID1,
+		BuildID:        buildId1,
 	}
 	version2 := worker.WorkerDeploymentVersion{
 		DeploymentName: deploymentName,
-		BuildID:        BuildID2,
+		BuildID:        buildId2,
 	}
 
 	w1 := s.DevServer.StartDevWorker(s.Suite.T(), DevWorkerOptions{
@@ -421,11 +421,11 @@ func (s *SharedServerSuite) TestDeployment_Ramping() {
 	BuildID2 := "b" + uuid.NewString()
 	version1 := worker.WorkerDeploymentVersion{
 		DeploymentName: deploymentName,
-		BuildID:        BuildID1,
+		BuildID:        buildId1,
 	}
 	version2 := worker.WorkerDeploymentVersion{
 		DeploymentName: deploymentName,
-		BuildID:        BuildID2,
+		BuildID:        buildId2,
 	}
 
 	w1 := s.DevServer.StartDevWorker(s.Suite.T(), DevWorkerOptions{

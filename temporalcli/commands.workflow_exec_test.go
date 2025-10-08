@@ -17,6 +17,7 @@ import (
 	"github.com/google/uuid"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
+	"go.temporal.io/api/history/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/converter"
@@ -952,4 +953,51 @@ func (s *SharedServerSuite) testStartUpdateWithStartHelper(opts updateWithStartT
 	// Expect workflow to have received update and given inputs from start-update-with-start.
 	s.Equal(opts.expectedWfOutput["workflow"], wfReturn["workflow"])
 	s.Equal(opts.expectedWfOutput["update"], wfReturn["update"])
+}
+
+func (s *SharedServerSuite) TestWorkflow_Start_WithPriorityOptions() {
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
+		return "success", nil
+	})
+
+	workflowId := "priority-test-" + uuid.New().String()
+	res := s.Execute(
+		"workflow", "start",
+		"--address", s.Address(),
+		"--task-queue", s.Worker().Options.TaskQueue,
+		"--type", "DevWorkflow",
+		"--workflow-id", workflowId,
+		"--priority-key", "2",
+		"--fairness-key", "high-priority-tenant",
+		"--fairness-weight", "5.5",
+	)
+	s.NoError(res.Err)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	iter := s.Client.GetWorkflowHistory(ctx,
+		workflowId, "", false, enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
+
+	var startedEvent *history.HistoryEvent
+	for iter.HasNext() {
+		event, err := iter.Next()
+		s.NoError(err)
+		if event.EventType == enums.EVENT_TYPE_WORKFLOW_EXECUTION_STARTED {
+			startedEvent = event
+			break
+		}
+	}
+
+	s.NotNil(startedEvent, "WorkflowExecutionStarted event not found")
+
+	startedAttrs := startedEvent.GetWorkflowExecutionStartedEventAttributes()
+	s.NotNil(startedAttrs, "WorkflowExecutionStarted attributes not found")
+
+	priority := startedAttrs.GetPriority()
+	s.NotNil(priority, "Priority not found in WorkflowExecutionStarted event")
+
+	s.Equal(int32(2), priority.GetPriorityKey())
+	s.Equal("high-priority-tenant", priority.GetFairnessKey())
+	s.Equal(float32(5.5), priority.GetFairnessWeight())
 }

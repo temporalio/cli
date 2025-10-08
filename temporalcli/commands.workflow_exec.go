@@ -24,6 +24,7 @@ import (
 	"go.temporal.io/api/temporalproto"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/temporal"
 	"google.golang.org/protobuf/types/known/durationpb"
 )
 
@@ -173,7 +174,7 @@ func (c *TemporalWorkflowSignalWithStartCommand) run(cctx *CommandContext, _ []s
 			WorkflowTaskTimeout:      durationpb.New(wfStartOpts.WorkflowTaskTimeout),
 			SignalName:               c.SignalName,
 			SignalInput:              signalInput,
-			Identity:                 clientIdentity(),
+			Identity:                 c.Parent.Identity,
 			RetryPolicy:              retryPolicy,
 			CronSchedule:             wfStartOpts.CronSchedule,
 			Memo:                     memo,
@@ -560,6 +561,11 @@ func buildStartOptions(sw *SharedWorkflowStartOptions, w *WorkflowStartOptions) 
 		StartDelay:                               w.StartDelay.Duration(),
 		StaticSummary:                            sw.StaticSummary,
 		StaticDetails:                            sw.StaticDetails,
+		Priority: temporal.Priority{
+			PriorityKey:    sw.PriorityKey,
+			FairnessKey:    sw.FairnessKey,
+			FairnessWeight: sw.FairnessWeight,
+		},
 	}
 	if w.IdReusePolicy.Value != "" {
 		var err error
@@ -623,13 +629,23 @@ func (p *PayloadInputOptions) buildRawInputPayloads() (*common.Payloads, error) 
 	}
 
 	// Build metadata
-	metadata := map[string][]byte{"encoding": []byte("json/plain")}
+	metadata := map[string][][]byte{}
 	for _, meta := range p.InputMeta {
 		metaPieces := strings.SplitN(meta, "=", 2)
 		if len(metaPieces) != 2 {
 			return nil, fmt.Errorf("metadata %v expected to have '='", meta)
 		}
-		metadata[metaPieces[0]] = []byte(metaPieces[1])
+		if vals, ok := metadata[metaPieces[0]]; ok {
+			if len(vals) == len(inData) {
+				return nil, fmt.Errorf("received more --input-meta flags for key %q than number of inputs", metaPieces[0])
+			}
+			metadata[metaPieces[0]] = append(vals, []byte(metaPieces[1]))
+		} else {
+			metadata[metaPieces[0]] = [][]byte{[]byte(metaPieces[1])}
+		}
+	}
+	if _, ok := metadata["encoding"]; !ok {
+		metadata["encoding"] = [][]byte{[]byte("json/plain")}
 	}
 	return CreatePayloads(inData, metadata, p.InputBase64)
 }
