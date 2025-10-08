@@ -3060,7 +3060,6 @@ type TemporalWorkerDeploymentManagerIdentitySetCommand struct {
 	DeploymentNameOptions
 	ManagerIdentity string
 	Self            bool
-	Identity        string
 	Yes             bool
 }
 
@@ -3078,7 +3077,6 @@ func NewTemporalWorkerDeploymentManagerIdentitySetCommand(cctx *CommandContext, 
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.ManagerIdentity, "manager-identity", "", "New Manager Identity. Required unless --self is specified.")
 	s.Command.Flags().BoolVar(&s.Self, "self", false, "Set Manager Identity to the identity of the user submitting this request. Required unless --manager-identity is specified.")
-	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of the user submitting this request.")
 	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm set Manager Identity.")
 	s.DeploymentNameOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -3093,8 +3091,7 @@ type TemporalWorkerDeploymentManagerIdentityUnsetCommand struct {
 	Parent  *TemporalWorkerDeploymentManagerIdentityCommand
 	Command cobra.Command
 	DeploymentNameOptions
-	Identity string
-	Yes      bool
+	Yes bool
 }
 
 func NewTemporalWorkerDeploymentManagerIdentityUnsetCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentManagerIdentityCommand) *TemporalWorkerDeploymentManagerIdentityUnsetCommand {
@@ -3109,7 +3106,6 @@ func NewTemporalWorkerDeploymentManagerIdentityUnsetCommand(cctx *CommandContext
 		s.Command.Long = "```\n+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n```\n\nUnset the `ManagerIdentity` of a Worker Deployment given its Deployment Name.\n\nWhen present, `ManagerIdentity` is the identity of the user that has the \nexclusive right to make changes to this Worker Deployment. Empty by default.\nWhen set, users whose identity does not match the `ManagerIdentity` will not\nbe able to change the Worker Deployment.\n\nThis is especially useful in environments where multiple users (such as CLI\nusers and automated controllers) may interact with the same Worker Deployment.\n`ManagerIdentity` allows different users to communicate with one another about\nwho is expected to make changes to the Worker Deployment.\n\n```\ntemporal worker deployment manager-identity unset [options]\n```\n\nFor example:\n\n```\ntemporal worker deployment manager-identity unset \\\n   --deployment-name YourDeploymentName\n```\n\nClears the Manager Identity field for a given Deployment."
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.Identity, "identity", "", "Identity of the user submitting this request.")
 	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm unset Manager Identity.")
 	s.DeploymentNameOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {

@@ -1348,9 +1348,6 @@ commands:
       - name: self
         type: bool
         description: Set Manager Identity to the identity of the user submitting this request. Required unless --manager-identity is specified.
-      - name: identity
-        type: string
-        description: Identity of the user submitting this request.
       - name: yes
         short: y
         type: bool
@@ -1394,9 +1391,6 @@ commands:
     option-sets:
       - deployment-name
     options:
-      - name: identity
-        type: string
-        description: Identity of the user submitting this request.
       - name: yes
         short: y
         type: bool

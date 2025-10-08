@@ -159,9 +159,9 @@ func printWorkerDeploymentInfo(cctx *CommandContext, deploymentInfo client.Worke
 	if !cctx.JSONOutput {
 		cctx.Printer.Println(color.MagentaString(msg))
 		curVerDepName := ""
-		curVerBuildID := ""
+		curVerBuildId := ""
 		rampVerDepName := ""
-		rampVerBuildID := ""
+		rampVerBuildId := ""
 		if deploymentInfo.RoutingConfig.CurrentVersion != nil {
 			curVerDepName = deploymentInfo.RoutingConfig.CurrentVersion.DeploymentName
 			curVerBuildId = deploymentInfo.RoutingConfig.CurrentVersion.BuildID
@@ -189,9 +189,9 @@ func printWorkerDeploymentInfo(cctx *CommandContext, deploymentInfo client.Worke
 			LastModifierIdentity:                deploymentInfo.LastModifierIdentity,
 			ManagerIdentity:                     deploymentInfo.ManagerIdentity,
 			CurrentVersionDeploymentName:        curVerDepName,
-			CurrentVersionBuildID:               curVerBuildID,
+			CurrentVersionBuildID:               curVerBuildId,
 			RampingVersionDeploymentName:        rampVerDepName,
-			RampingVersionBuildID:               rampVerBuildID,
+			RampingVersionBuildID:               rampVerBuildId,
 			RampingVersionPercentage:            deploymentInfo.RoutingConfig.RampingVersionPercentage,
 			CurrentVersionChangedTime:           deploymentInfo.RoutingConfig.CurrentVersionChangedTime,
 			RampingVersionChangedTime:           deploymentInfo.RoutingConfig.RampingVersionChangedTime,
@@ -517,12 +517,12 @@ func (c *TemporalWorkerDeploymentManagerIdentitySetCommand) run(cctx *CommandCon
 		Namespace:      c.Parent.Parent.Parent.Namespace,
 		DeploymentName: c.Name,
 		ConflictToken:  token,
-		Identity:       c.Identity,
+		Identity:       c.Parent.Parent.Parent.Identity,
 	}
 	var newManagerIdentity string
 	if c.Self {
 		req.NewManagerIdentity = &workflowservice.SetWorkerDeploymentManagerRequest_Self{Self: true}
-		newManagerIdentity = c.Identity
+		newManagerIdentity = c.Parent.Parent.Parent.Identity
 	} else {
 		req.NewManagerIdentity = &workflowservice.SetWorkerDeploymentManagerRequest_ManagerIdentity{ManagerIdentity: c.ManagerIdentity}
 		newManagerIdentity = c.ManagerIdentity
@@ -558,7 +558,7 @@ func (c *TemporalWorkerDeploymentManagerIdentityUnsetCommand) run(cctx *CommandC
 		Namespace:          c.Parent.Parent.Parent.Namespace,
 		DeploymentName:     c.Name,
 		ConflictToken:      token,
-		Identity:           c.Identity,
+		Identity:           c.Parent.Parent.Parent.Identity,
 		NewManagerIdentity: &workflowservice.SetWorkerDeploymentManagerRequest_ManagerIdentity{ManagerIdentity: ""},
 	}
 
