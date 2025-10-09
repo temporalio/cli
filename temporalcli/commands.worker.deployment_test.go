@@ -172,6 +172,133 @@ func (s *SharedServerSuite) TestDeployment_Set_Current_Version() {
 	s.Nil(jsonVersionOut.Metadata)
 }
 
+func (s *SharedServerSuite) TestDeployment_Set_Current_Version_AllowNoPollers() {
+	deploymentName := uuid.NewString()
+	buildId := uuid.NewString()
+	version := worker.WorkerDeploymentVersion{
+		DeploymentName: deploymentName,
+		BuildID:        buildId,
+	}
+
+	// with --allow-no-pollers, no need to have a worker polling on this version
+	res := s.Execute(
+		"worker", "deployment", "set-current-version",
+		"--address", s.Address(),
+		"--deployment-name", version.DeploymentName, "--build-id", version.BuildID,
+		"--allow-no-pollers",
+		"--yes",
+	)
+	s.NoError(res.Err)
+
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "list",
+			"--address", s.Address(),
+		)
+		assert.NoError(t, res.Err)
+		assert.Contains(t, res.Stdout.String(), deploymentName)
+	}, 30*time.Second, 100*time.Millisecond)
+
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "describe-version",
+			"--address", s.Address(),
+			"--deployment-name", version.DeploymentName, "--build-id", version.BuildID,
+		)
+		assert.NoError(t, res.Err)
+	}, 30*time.Second, 100*time.Millisecond)
+
+	res = s.Execute(
+		"worker", "deployment", "describe",
+		"--address", s.Address(),
+		"--name", deploymentName,
+	)
+	s.NoError(res.Err)
+
+	s.ContainsOnSameLine(res.Stdout.String(), "Name", deploymentName)
+	s.ContainsOnSameLine(res.Stdout.String(), "CurrentVersionDeploymentName", version.DeploymentName)
+	s.ContainsOnSameLine(res.Stdout.String(), "CurrentVersionBuildID", version.BuildID)
+
+	// json
+	res = s.Execute(
+		"worker", "deployment", "describe",
+		"--address", s.Address(),
+		"--name", deploymentName,
+		"--output", "json",
+	)
+	s.NoError(res.Err)
+
+	var jsonOut jsonDeploymentInfoType
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	s.Equal(deploymentName, jsonOut.Name)
+	s.Equal(version.DeploymentName, jsonOut.RoutingConfig.CurrentVersionDeploymentName)
+	s.Equal(version.BuildID, jsonOut.RoutingConfig.CurrentVersionBuildID)
+}
+
+func (s *SharedServerSuite) TestDeployment_Set_Ramping_Version_AllowNoPollers() {
+	deploymentName := uuid.NewString()
+	buildId := uuid.NewString()
+	version := worker.WorkerDeploymentVersion{
+		DeploymentName: deploymentName,
+		BuildID:        buildId,
+	}
+
+	// with --allow-no-pollers, no need to have a worker polling on this version
+	res := s.Execute(
+		"worker", "deployment", "set-ramping-version",
+		"--address", s.Address(),
+		"--deployment-name", version.DeploymentName, "--build-id", version.BuildID,
+		"--percentage", "5",
+		"--allow-no-pollers",
+		"--yes",
+	)
+	s.NoError(res.Err)
+
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "list",
+			"--address", s.Address(),
+		)
+		assert.NoError(t, res.Err)
+		assert.Contains(t, res.Stdout.String(), deploymentName)
+	}, 30*time.Second, 100*time.Millisecond)
+
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "describe-version",
+			"--address", s.Address(),
+			"--deployment-name", version.DeploymentName, "--build-id", version.BuildID,
+		)
+		assert.NoError(t, res.Err)
+	}, 30*time.Second, 100*time.Millisecond)
+
+	res = s.Execute(
+		"worker", "deployment", "describe",
+		"--address", s.Address(),
+		"--name", deploymentName,
+	)
+	s.NoError(res.Err)
+
+	s.ContainsOnSameLine(res.Stdout.String(), "Name", deploymentName)
+	s.ContainsOnSameLine(res.Stdout.String(), "RampingVersionDeploymentName", version.DeploymentName)
+	s.ContainsOnSameLine(res.Stdout.String(), "RampingVersionBuildID", version.BuildID)
+
+	// json
+	res = s.Execute(
+		"worker", "deployment", "describe",
+		"--address", s.Address(),
+		"--name", deploymentName,
+		"--output", "json",
+	)
+	s.NoError(res.Err)
+
+	var jsonOut jsonDeploymentInfoType
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	s.Equal(deploymentName, jsonOut.Name)
+	s.Equal(version.DeploymentName, jsonOut.RoutingConfig.RampingVersionDeploymentName)
+	s.Equal(version.BuildID, jsonOut.RoutingConfig.RampingVersionBuildID)
+}
+
 func filterByNamePrefix(jsonOut []jsonDeploymentInfoType, prefix string) []jsonDeploymentInfoType {
 	result := []jsonDeploymentInfoType{}
 	for i := range jsonOut {
