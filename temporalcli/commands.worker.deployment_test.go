@@ -17,16 +17,16 @@ import (
 
 type jsonVersionSummariesRowType struct {
 	DeploymentName string    `json:"deploymentName"`
-	BuildID        string    `json:"buildId"`
+	BuildID        string    `json:"BuildID"`
 	DrainageStatus string    `json:"drainageStatus"`
 	CreateTime     time.Time `json:"createTime"`
 }
 
 type jsonRoutingConfigType struct {
 	CurrentVersionDeploymentName        string    `json:"currentVersionDeploymentName"`
-	CurrentVersionBuildID               string    `json:"currentVersionBuildId"`
+	CurrentVersionBuildID               string    `json:"currentVersionBuildID"`
 	RampingVersionDeploymentName        string    `json:"rampingVersionDeploymentName"`
-	RampingVersionBuildID               string    `json:"rampingVersionBuildId"`
+	RampingVersionBuildID               string    `json:"rampingVersionBuildID"`
 	RampingVersionPercentage            float32   `json:"rampingVersionPercentage"`
 	CurrentVersionChangedTime           time.Time `json:"currentVersionChangedTime"`
 	RampingVersionChangedTime           time.Time `json:"rampingVersionChangedTime"`
@@ -39,6 +39,7 @@ type jsonDeploymentInfoType struct {
 	LastModifierIdentity string                        `json:"lastModifierIdentity"`
 	RoutingConfig        jsonRoutingConfigType         `json:"routingConfig"`
 	VersionSummaries     []jsonVersionSummariesRowType `json:"versionSummaries"`
+	ManagerIdentity      string                        `json:"managerIdentity"`
 }
 
 type jsonDrainageInfo struct {
@@ -568,4 +569,74 @@ func (s *SharedServerSuite) TestDeployment_Ramping() {
 	s.Equal(deploymentName, jsonOut.Name)
 	s.Equal(float32(0), jsonOut.RoutingConfig.RampingVersionPercentage)
 	s.Equal(version2.BuildID, jsonOut.RoutingConfig.CurrentVersionBuildID)
+}
+
+func (s *SharedServerSuite) TestDeployment_Set_Manager_Identity() {
+	deploymentName := uuid.NewString()
+	BuildID := uuid.NewString()
+	testIdentity := uuid.NewString()
+	version := worker.WorkerDeploymentVersion{
+		DeploymentName: deploymentName,
+		BuildID:        BuildID,
+	}
+	w := s.DevServer.StartDevWorker(s.Suite.T(), DevWorkerOptions{
+		Worker: worker.Options{
+			DeploymentOptions: worker.DeploymentOptions{
+				UseVersioning:             true,
+				Version:                   version,
+				DefaultVersioningBehavior: workflow.VersioningBehaviorPinned,
+			},
+		},
+	})
+	defer w.Stop()
+
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "list",
+			"--address", s.Address(),
+		)
+		assert.NoError(t, res.Err)
+		assert.Contains(t, res.Stdout.String(), deploymentName)
+	}, 30*time.Second, 100*time.Millisecond)
+
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "describe-version",
+			"--address", s.Address(),
+			"--deployment-name", version.DeploymentName, "--build-id", version.BuildID,
+		)
+		assert.NoError(t, res.Err)
+	}, 30*time.Second, 100*time.Millisecond)
+
+	res := s.Execute(
+		"worker", "deployment", "manager-identity", "set",
+		"--address", s.Address(),
+		"--deployment-name", version.DeploymentName, "--manager-identity", testIdentity,
+		"--yes",
+	)
+	s.NoError(res.Err)
+
+	res = s.Execute(
+		"worker", "deployment", "describe",
+		"--address", s.Address(),
+		"--name", deploymentName,
+	)
+	s.NoError(res.Err)
+
+	s.ContainsOnSameLine(res.Stdout.String(), "Name", deploymentName)
+	s.ContainsOnSameLine(res.Stdout.String(), "ManagerIdentity", testIdentity)
+
+	// json
+	res = s.Execute(
+		"worker", "deployment", "describe",
+		"--address", s.Address(),
+		"--name", deploymentName,
+		"--output", "json",
+	)
+	s.NoError(res.Err)
+
+	var jsonOut jsonDeploymentInfoType
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	s.Equal(deploymentName, jsonOut.Name)
+	s.Equal(testIdentity, jsonOut.ManagerIdentity)
 }

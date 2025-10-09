@@ -2891,6 +2891,7 @@ func NewTemporalWorkerDeploymentCommand(cctx *CommandContext, parent *TemporalWo
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentDescribeCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentDescribeVersionCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentListCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkerDeploymentManagerIdentityCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentSetCurrentVersionCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentSetRampingVersionCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentUpdateMetadataVersionCommand(cctx, &s).Command)
@@ -3024,6 +3025,89 @@ func NewTemporalWorkerDeploymentListCommand(cctx *CommandContext, parent *Tempor
 		s.Command.Long = "```\n+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n```\n\nList existing Worker Deployments in the client's namespace.\n\n```\ntemporal worker deployment list [options]\n```\n\nFor example, listing Deployments in YourDeploymentNamespace:\n\n```\ntemporal worker deployment list \\\n    --namespace YourDeploymentNamespace\n```"
 	}
 	s.Command.Args = cobra.NoArgs
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalWorkerDeploymentManagerIdentityCommand struct {
+	Parent  *TemporalWorkerDeploymentCommand
+	Command cobra.Command
+}
+
+func NewTemporalWorkerDeploymentManagerIdentityCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentCommand) *TemporalWorkerDeploymentManagerIdentityCommand {
+	var s TemporalWorkerDeploymentManagerIdentityCommand
+	s.Parent = parent
+	s.Command.Use = "manager-identity"
+	s.Command.Short = "Manager Identity commands change the `ManagerIdentity` of a Worker Deployment"
+	if hasHighlighting {
+		s.Command.Long = "\x1b[1m+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\x1b[0m\n\nManager Identity commands change the \x1b[1mManagerIdentity\x1b[0m of a Worker Deployment:\n\n\x1b[1mtemporal worker deployment manager-identity [command] [options]\x1b[0m\n\nWhen present, \x1b[1mManagerIdentity\x1b[0m is the identity of the user that has the \nexclusive right to make changes to this Worker Deployment. Empty by default.\nWhen set, users whose identity does not match the \x1b[1mManagerIdentity\x1b[0m will not\nbe able to change the Worker Deployment.\n\nThis is especially useful in environments where multiple users (such as CLI\nusers and automated controllers) may interact with the same Worker Deployment.\n\x1b[1mManagerIdentity\x1b[0m allows different users to communicate with one another about\nwho is expected to make changes to the Worker Deployment.\n\nThe current Manager Identity is returned with \x1b[1mdescribe\x1b[0m:\n\x1b[1m temporal worker deployment describe \\\n    --deployment-name YourDeploymentName\x1b[0m"
+	} else {
+		s.Command.Long = "```\n+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n```\n\nManager Identity commands change the `ManagerIdentity` of a Worker Deployment:\n\n```\ntemporal worker deployment manager-identity [command] [options]\n```\n\nWhen present, `ManagerIdentity` is the identity of the user that has the \nexclusive right to make changes to this Worker Deployment. Empty by default.\nWhen set, users whose identity does not match the `ManagerIdentity` will not\nbe able to change the Worker Deployment.\n\nThis is especially useful in environments where multiple users (such as CLI\nusers and automated controllers) may interact with the same Worker Deployment.\n`ManagerIdentity` allows different users to communicate with one another about\nwho is expected to make changes to the Worker Deployment.\n\nThe current Manager Identity is returned with `describe`:\n```\n temporal worker deployment describe \\\n    --deployment-name YourDeploymentName\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalWorkerDeploymentManagerIdentitySetCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkerDeploymentManagerIdentityUnsetCommand(cctx, &s).Command)
+	return &s
+}
+
+type TemporalWorkerDeploymentManagerIdentitySetCommand struct {
+	Parent          *TemporalWorkerDeploymentManagerIdentityCommand
+	Command         cobra.Command
+	ManagerIdentity string
+	Self            bool
+	DeploymentName  string
+	Yes             bool
+}
+
+func NewTemporalWorkerDeploymentManagerIdentitySetCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentManagerIdentityCommand) *TemporalWorkerDeploymentManagerIdentitySetCommand {
+	var s TemporalWorkerDeploymentManagerIdentitySetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "set [flags]"
+	s.Command.Short = "Set the Manager Identity of a Worker Deployment"
+	if hasHighlighting {
+		s.Command.Long = "\x1b[1m+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\x1b[0m\n\nSet the \x1b[1mManagerIdentity\x1b[0m of a Worker Deployment given its Deployment Name.\n\nWhen present, \x1b[1mManagerIdentity\x1b[0m is the identity of the user that has the \nexclusive right to make changes to this Worker Deployment. Empty by default.\nWhen set, users whose identity does not match the \x1b[1mManagerIdentity\x1b[0m will not\nbe able to change the Worker Deployment.\n\nThis is especially useful in environments where multiple users (such as CLI\nusers and automated controllers) may interact with the same Worker Deployment.\n\x1b[1mManagerIdentity\x1b[0m allows different users to communicate with one another about\nwho is expected to make changes to the Worker Deployment.\n\n\x1b[1mtemporal worker deployment manager-identity set [options]\x1b[0m\n\nFor example:\n\n\x1b[1mtemporal worker deployment manager-identity set \\\n   --deployment-name DeploymentName \\\n   --self \\\n   --identity YourUserIdentity # optional, populated by CLI if not provided\x1b[0m\n\nSets the Manager Identity of the Deployment to the identity of the user making \nthis request. If you don't specifically pass an identity field, the CLI will \ngenerate your identity for you.\n\nFor example:\n\x1b[1mtemporal worker deployment manager-identity set \\\n   --deployment-name DeploymentName \\\n   --manager-identity NewManagerIdentity\x1b[0m\n\nSets the Manager Identity of the Deployment to any string."
+	} else {
+		s.Command.Long = "```\n+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n```\n\nSet the `ManagerIdentity` of a Worker Deployment given its Deployment Name.\n\nWhen present, `ManagerIdentity` is the identity of the user that has the \nexclusive right to make changes to this Worker Deployment. Empty by default.\nWhen set, users whose identity does not match the `ManagerIdentity` will not\nbe able to change the Worker Deployment.\n\nThis is especially useful in environments where multiple users (such as CLI\nusers and automated controllers) may interact with the same Worker Deployment.\n`ManagerIdentity` allows different users to communicate with one another about\nwho is expected to make changes to the Worker Deployment.\n\n```\ntemporal worker deployment manager-identity set [options]\n```\n\nFor example:\n\n```\ntemporal worker deployment manager-identity set \\\n   --deployment-name DeploymentName \\\n   --self \\\n   --identity YourUserIdentity # optional, populated by CLI if not provided\n```\n\nSets the Manager Identity of the Deployment to the identity of the user making \nthis request. If you don't specifically pass an identity field, the CLI will \ngenerate your identity for you.\n\nFor example:\n```\ntemporal worker deployment manager-identity set \\\n   --deployment-name DeploymentName \\\n   --manager-identity NewManagerIdentity\n```\n\nSets the Manager Identity of the Deployment to any string."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.ManagerIdentity, "manager-identity", "", "New Manager Identity. Required unless --self is specified.")
+	s.Command.Flags().BoolVar(&s.Self, "self", false, "Set Manager Identity to the identity of the user submitting this request. Required unless --manager-identity is specified.")
+	s.Command.Flags().StringVar(&s.DeploymentName, "deployment-name", "", "Name for a Worker Deployment. Required.")
+	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm set Manager Identity.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalWorkerDeploymentManagerIdentityUnsetCommand struct {
+	Parent         *TemporalWorkerDeploymentManagerIdentityCommand
+	Command        cobra.Command
+	DeploymentName string
+	Yes            bool
+}
+
+func NewTemporalWorkerDeploymentManagerIdentityUnsetCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentManagerIdentityCommand) *TemporalWorkerDeploymentManagerIdentityUnsetCommand {
+	var s TemporalWorkerDeploymentManagerIdentityUnsetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "unset [flags]"
+	s.Command.Short = "Unset the Manager Identity of a Worker Deployment"
+	if hasHighlighting {
+		s.Command.Long = "\x1b[1m+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\x1b[0m\n\nUnset the \x1b[1mManagerIdentity\x1b[0m of a Worker Deployment given its Deployment Name.\n\nWhen present, \x1b[1mManagerIdentity\x1b[0m is the identity of the user that has the \nexclusive right to make changes to this Worker Deployment. Empty by default.\nWhen set, users whose identity does not match the \x1b[1mManagerIdentity\x1b[0m will not\nbe able to change the Worker Deployment.\n\nThis is especially useful in environments where multiple users (such as CLI\nusers and automated controllers) may interact with the same Worker Deployment.\n\x1b[1mManagerIdentity\x1b[0m allows different users to communicate with one another about\nwho is expected to make changes to the Worker Deployment.\n\n\x1b[1mtemporal worker deployment manager-identity unset [options]\x1b[0m\n\nFor example:\n\n\x1b[1mtemporal worker deployment manager-identity unset \\\n   --deployment-name YourDeploymentName\x1b[0m\n\nClears the Manager Identity field for a given Deployment."
+	} else {
+		s.Command.Long = "```\n+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n```\n\nUnset the `ManagerIdentity` of a Worker Deployment given its Deployment Name.\n\nWhen present, `ManagerIdentity` is the identity of the user that has the \nexclusive right to make changes to this Worker Deployment. Empty by default.\nWhen set, users whose identity does not match the `ManagerIdentity` will not\nbe able to change the Worker Deployment.\n\nThis is especially useful in environments where multiple users (such as CLI\nusers and automated controllers) may interact with the same Worker Deployment.\n`ManagerIdentity` allows different users to communicate with one another about\nwho is expected to make changes to the Worker Deployment.\n\n```\ntemporal worker deployment manager-identity unset [options]\n```\n\nFor example:\n\n```\ntemporal worker deployment manager-identity unset \\\n   --deployment-name YourDeploymentName\n```\n\nClears the Manager Identity field for a given Deployment."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.DeploymentName, "deployment-name", "", "Name for a Worker Deployment. Required.")
+	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm unset Manager Identity.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
