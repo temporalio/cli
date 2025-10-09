@@ -1,12 +1,14 @@
 package temporalcli
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/fatih/color"
 	"github.com/temporalio/cli/temporalcli/internal/printer"
 	"go.temporal.io/api/common/v1"
+	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
 )
@@ -619,7 +621,7 @@ func (c *TemporalWorkerDeploymentSetCurrentVersionCommand) run(cctx *CommandCont
 		safeModeMessage: "Current",
 		deploymentName:  c.DeploymentName,
 	})
-	if err != nil {
+	if err != nil && !(errors.As(err, new(*serviceerror.NotFound)) && c.AllowNoPollers) {
 		return err
 	}
 
@@ -628,6 +630,7 @@ func (c *TemporalWorkerDeploymentSetCurrentVersionCommand) run(cctx *CommandCont
 		BuildID:                 c.BuildId,
 		Identity:                c.Parent.Parent.Identity,
 		IgnoreMissingTaskQueues: c.IgnoreMissingTaskQueues,
+		AllowNoPollers:          c.AllowNoPollers,
 		ConflictToken:           token,
 	})
 	if err != nil {
@@ -650,7 +653,7 @@ func (c *TemporalWorkerDeploymentSetRampingVersionCommand) run(cctx *CommandCont
 		safeModeMessage: "Ramping",
 		deploymentName:  c.DeploymentName,
 	})
-	if err != nil {
+	if err != nil && !(errors.As(err, new(*serviceerror.NotFound)) && c.AllowNoPollers) {
 		return err
 	}
 
@@ -666,6 +669,7 @@ func (c *TemporalWorkerDeploymentSetRampingVersionCommand) run(cctx *CommandCont
 		ConflictToken:           token,
 		Identity:                c.Parent.Parent.Identity,
 		IgnoreMissingTaskQueues: c.IgnoreMissingTaskQueues,
+		AllowNoPollers:          c.AllowNoPollers,
 	})
 	if err != nil {
 		return fmt.Errorf("error  setting the ramping worker deployment version: %w", err)

@@ -3121,6 +3121,7 @@ type TemporalWorkerDeploymentSetCurrentVersionCommand struct {
 	Command cobra.Command
 	DeploymentVersionOrUnversionedOptions
 	IgnoreMissingTaskQueues bool
+	AllowNoPollers          bool
 	Yes                     bool
 }
 
@@ -3137,6 +3138,7 @@ func NewTemporalWorkerDeploymentSetCurrentVersionCommand(cctx *CommandContext, p
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().BoolVar(&s.IgnoreMissingTaskQueues, "ignore-missing-task-queues", false, "Override protection to accidentally remove task queues.")
+	s.Command.Flags().BoolVar(&s.AllowNoPollers, "allow-no-pollers", false, "Override protection and set version as current even if it has no pollers.")
 	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm set Current Version.")
 	s.DeploymentVersionOrUnversionedOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -3154,6 +3156,7 @@ type TemporalWorkerDeploymentSetRampingVersionCommand struct {
 	Percentage              float32
 	Delete                  bool
 	IgnoreMissingTaskQueues bool
+	AllowNoPollers          bool
 	Yes                     bool
 }
 
@@ -3172,6 +3175,7 @@ func NewTemporalWorkerDeploymentSetRampingVersionCommand(cctx *CommandContext, p
 	s.Command.Flags().Float32Var(&s.Percentage, "percentage", 0, "Percentage of tasks redirected to the Ramping Version. Valid range [0,100].")
 	s.Command.Flags().BoolVar(&s.Delete, "delete", false, "Delete the Ramping Version.")
 	s.Command.Flags().BoolVar(&s.IgnoreMissingTaskQueues, "ignore-missing-task-queues", false, "Override protection to accidentally remove task queues.")
+	s.Command.Flags().BoolVar(&s.AllowNoPollers, "allow-no-pollers", false, "Override protection and set version as ramping even if it has no pollers.")
 	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm set Ramping Version.")
 	s.DeploymentVersionOrUnversionedOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {

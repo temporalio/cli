@@ -1137,6 +1137,9 @@ commands:
       - name: ignore-missing-task-queues
         type: bool
         description: Override protection to accidentally remove task queues.
+      - name: allow-no-pollers
+        type: bool
+        description: Override protection and set version as current even if it has no pollers.
       - name: yes
         short: y
         type: bool
@@ -1204,6 +1207,9 @@ commands:
       - name: ignore-missing-task-queues
         type: bool
         description: Override protection to accidentally remove task queues.
+      - name: allow-no-pollers
+        type: bool
+        description: Override protection and set version as ramping even if it has no pollers.
       - name: yes
         short: y
         type: bool
