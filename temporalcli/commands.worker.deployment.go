@@ -173,7 +173,7 @@ func printWorkerDeploymentInfo(cctx *CommandContext, deploymentInfo client.Worke
 			Name                                string
 			CreateTime                          time.Time
 			LastModifierIdentity                string    `cli:",cardOmitEmpty"`
-			ManagerIdentity                     string    `cli:",cardOmitempty"`
+			ManagerIdentity                     string    `cli:",cardOmitEmpty"`
 			CurrentVersionDeploymentName        string    `cli:",cardOmitEmpty"`
 			CurrentVersionBuildID               string    `cli:",cardOmitEmpty"`
 			RampingVersionDeploymentName        string    `cli:",cardOmitEmpty"`
@@ -506,7 +506,7 @@ func (c *TemporalWorkerDeploymentManagerIdentitySetCommand) run(cctx *CommandCon
 	token, err := c.Parent.Parent.getConflictToken(cctx, &getDeploymentConflictTokenOptions{
 		safeMode:        !c.Yes,
 		safeModeMessage: "ManagerIdentity",
-		deploymentName:  c.Name,
+		deploymentName:  c.DeploymentName,
 	})
 	if err != nil {
 		return err
@@ -517,7 +517,7 @@ func (c *TemporalWorkerDeploymentManagerIdentitySetCommand) run(cctx *CommandCon
 		newManagerIdentity = c.Parent.Parent.Parent.Identity
 	}
 
-	dHandle := cl.WorkerDeploymentClient().GetHandle(c.Name)
+	dHandle := cl.WorkerDeploymentClient().GetHandle(c.DeploymentName)
 	resp, err := dHandle.SetManagerIdentity(cctx, client.WorkerDeploymentSetManagerIdentityOptions{
 		Identity:        c.Parent.Parent.Parent.Identity,
 		ConflictToken:   token,
@@ -542,13 +542,13 @@ func (c *TemporalWorkerDeploymentManagerIdentityUnsetCommand) run(cctx *CommandC
 	token, err := c.Parent.Parent.getConflictToken(cctx, &getDeploymentConflictTokenOptions{
 		safeMode:        !c.Yes,
 		safeModeMessage: "ManagerIdentity",
-		deploymentName:  c.Name,
+		deploymentName:  c.DeploymentName,
 	})
 	if err != nil {
 		return err
 	}
 
-	dHandle := cl.WorkerDeploymentClient().GetHandle(c.Name)
+	dHandle := cl.WorkerDeploymentClient().GetHandle(c.DeploymentName)
 	resp, err := dHandle.SetManagerIdentity(cctx, client.WorkerDeploymentSetManagerIdentityOptions{
 		Identity:        c.Parent.Parent.Parent.Identity,
 		ConflictToken:   token,

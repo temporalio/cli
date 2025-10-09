@@ -1339,8 +1339,6 @@ commands:
       
       Sets the Manager Identity of the Deployment to any string.
 
-    option-sets:
-      - deployment-name
     options:
       - name: manager-identity
         type: string
@@ -1348,6 +1346,9 @@ commands:
       - name: self
         type: bool
         description: Set Manager Identity to the identity of the user submitting this request. Required unless --manager-identity is specified.
+      - name: deployment-name
+        type: string
+        description: Name for a Worker Deployment. Required.
       - name: yes
         short: y
         type: bool
@@ -1388,9 +1389,10 @@ commands:
 
       Clears the Manager Identity field for a given Deployment.
 
-    option-sets:
-      - deployment-name
     options:
+      - name: deployment-name
+        type: string
+        description: Name for a Worker Deployment. Required.
       - name: yes
         short: y
         type: bool

@@ -609,7 +609,7 @@ func (s *SharedServerSuite) TestDeployment_Set_Manager_Identity() {
 	}, 30*time.Second, 100*time.Millisecond)
 
 	res := s.Execute(
-		"worker", "deployment", "set-manager-identity",
+		"worker", "deployment", "manager-identity", "set",
 		"--address", s.Address(),
 		"--deployment-name", version.DeploymentName, "--manager-identity", testIdentity,
 		"--yes",
