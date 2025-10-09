@@ -558,6 +558,7 @@ func (c *TemporalWorkerDeploymentSetCurrentVersionCommand) run(cctx *CommandCont
 		BuildID:                 c.BuildId,
 		Identity:                c.Parent.Parent.Identity,
 		IgnoreMissingTaskQueues: c.IgnoreMissingTaskQueues,
+		AllowNoPollers:          c.AllowNoPollers,
 		ConflictToken:           token,
 	})
 	if err != nil {
@@ -596,6 +597,7 @@ func (c *TemporalWorkerDeploymentSetRampingVersionCommand) run(cctx *CommandCont
 		ConflictToken:           token,
 		Identity:                c.Parent.Parent.Identity,
 		IgnoreMissingTaskQueues: c.IgnoreMissingTaskQueues,
+		AllowNoPollers:          c.AllowNoPollers,
 	})
 	if err != nil {
 		return fmt.Errorf("error  setting the ramping worker deployment version: %w", err)
