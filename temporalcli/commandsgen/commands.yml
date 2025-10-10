@@ -38,7 +38,7 @@
 #           temporal env set \
 #               --env prod \
 #               --key tls-cert-path \
-#               --value /home/my-user/certs/cluster.cert`
+#               --value /home/my-user/certs/cluster.cert
 #           ```
 #     * No: `temporal env set prod.tls-cert-path /home/my-user/certs/cluster.cert`.
 #   * Split invocation samples to multiple lines.
@@ -113,7 +113,7 @@
 
 # * name, summary, and descrption are required fields. All other fields are optional.
 # * Available option types are `bool`, `duration`, `int`, `float`, `string`, `string[]`,
-#   `string-enum`, string-enum[], or `timestamp`.
+#   `string-enum`, `string-enum[]`, or `timestamp`.
 # * Include a new-line after each command entry.
 
 # OPTION SET OVERVIEW
@@ -166,8 +166,8 @@ commands:
         description: |
           File path to read TOML config from, defaults to
           `$CONFIG_PATH/temporal/temporal.toml` where `$CONFIG_PATH` is defined
-          as `$HOME/.config` on Unix, "$HOME/Library/Application Support" on
-          macOS, and %AppData% on Windows.
+          as `$HOME/.config` on Unix, `$HOME/Library/Application Support` on
+          macOS, and `%AppData%` on Windows.
         experimental: true
         implied-env: TEMPORAL_CONFIG_FILE
       - name: profile
@@ -1251,7 +1251,7 @@ commands:
         description: |
           Set deployment metadata using `KEY="VALUE"` pairs.
           Keys must be identifiers, and values must be JSON values.
-          For example: 'YourKey={"your": "value"}'.
+          For example: `YourKey={"your": "value"}`
           Can be passed multiple times.
       - name: remove-entries
         type: string[]
@@ -1768,7 +1768,7 @@ commands:
       temporal operator namespace create \
           --namespace YourNewNamespaceName \
           [options]
-      ````
+      ```
 
       Create a Namespace with multi-region data replication:
 
@@ -1805,7 +1805,7 @@ commands:
         description: |
           Namespace data as `KEY=VALUE` pairs.
           Keys must be identifiers, and values must be JSON values.
-          For example: 'YourKey={"your": "value"}'.
+          For example: `YourKey={"your": "value"}`
           Can be passed multiple times.
       - name: description
         type: string
@@ -1945,7 +1945,7 @@ commands:
         description: |
           Namespace data as `KEY=VALUE` pairs.
           Keys must be identifiers, and values must be JSON values.
-          For example: 'YourKey={"your": "value"}'.
+          For example: `YourKey={"your": "value"}`
           Can be passed multiple times.
       - name: description
         type: string
@@ -2597,7 +2597,7 @@ commands:
         description: |
           Dynamic configuration value using `KEY=VALUE` pairs.
           Keys must be identifiers, and values must be JSON values.
-          For example: 'YourKey="YourString"'.
+          For example: `YourKey="YourString"`
           Can be passed multiple times.
       - name: log-config
         type: bool
@@ -3698,7 +3698,7 @@ commands:
 
       ```
       temporal workflow list \
-          --query YourQuery`
+          --query YourQuery
       ```
 
       Visit https://docs.temporal.io/visibility to read more about Search Attributes
