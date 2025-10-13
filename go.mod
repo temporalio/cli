@@ -20,6 +20,7 @@ require (
 	go.temporal.io/sdk v1.37.0
 	go.temporal.io/sdk/contrib/envconfig v0.1.0
 	go.temporal.io/server v1.29.0
+	golang.org/x/term v0.32.0
 	google.golang.org/grpc v1.72.2
 	google.golang.org/protobuf v1.36.6
 	gopkg.in/yaml.v3 v3.0.1
