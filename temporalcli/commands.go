@@ -377,6 +377,7 @@ func Execute(ctx context.Context, options CommandOptions) {
 }
 
 // getUsageTemplate returns a custom usage template with proper flag wrapping
+// The default template can be found here: https://github.com/spf13/cobra/blob/v1.9.1/command.go#L1937-L1966
 func getUsageTemplate() string {
 	// Get terminal width, default to 80 if unable to determine
 	width := 80
