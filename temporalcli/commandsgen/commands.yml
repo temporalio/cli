@@ -2666,7 +2666,7 @@ commands:
       ```
       temporal task-queue describe \
           --task-queue YourTaskQueue \
-          --build-id "YourBuildId" \
+          --select-build-id "YourBuildId" \
           --report-reachability
       ```
 
