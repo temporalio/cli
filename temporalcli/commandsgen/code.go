@@ -14,6 +14,10 @@ import (
 
 func GenerateCommandsCode(pkg string, commands Commands) ([]byte, error) {
 	w := &codeWriter{allCommands: commands.CommandList, OptionSets: commands.OptionSets}
+	// For non-temporalcli packages, import and use temporalcli types
+	if pkg != "temporalcli" {
+		w.typePrefix = w.importPkg("github.com/temporalio/cli/temporalcli") + "."
+	}
 	// Put terminal check at top
 	w.writeLinef("var hasHighlighting = %v.IsTerminal(%v.Stdout.Fd())", w.importIsatty(), w.importPkg("os"))
 
@@ -61,6 +65,8 @@ type codeWriter struct {
 	OptionSets  []OptionSets
 	// Key is short ref, value is full
 	imports map[string]string
+	// Type prefix for types like CommandContext, StringEnum (e.g. "temporalcli.")
+	typePrefix string
 }
 
 var regexNonAlnum = regexp.MustCompile("[^A-Za-z0-9]+")
@@ -102,6 +108,13 @@ func (c *codeWriter) importPflag() string { return c.importPkg("github.com/spf13
 
 func (c *codeWriter) importIsatty() string { return c.importPkg("github.com/mattn/go-isatty") }
 
+// Type name helpers that respect typePrefix
+func (c *codeWriter) commandContextType() string { return c.typePrefix + "CommandContext" }
+func (c *codeWriter) stringEnumType() string     { return c.typePrefix + "StringEnum" }
+func (c *codeWriter) stringEnumArrayType() string { return c.typePrefix + "StringEnumArray" }
+func (c *codeWriter) newStringEnum() string      { return c.typePrefix + "NewStringEnum" }
+func (c *codeWriter) newStringEnumArray() string { return c.typePrefix + "NewStringEnumArray" }
+
 func (c *Command) structName() string { return namify(c.FullName, true) + "Command" }
 
 func (o *OptionSets) writeCode(w *codeWriter) error {
@@ -120,8 +133,8 @@ func (o *OptionSets) writeCode(w *codeWriter) error {
 	w.writeLinef("}\n")
 
 	// write flags
-	w.writeLinef("func (v *%v) buildFlags(cctx *CommandContext, f *%v.FlagSet) {",
-		o.setStructName(), w.importPflag())
+	w.writeLinef("func (v *%v) buildFlags(cctx *%v, f *%v.FlagSet) {",
+		o.setStructName(), w.commandContextType(), w.importPflag())
 	o.writeFlagBuilding("v", "f", w)
 	w.writeLinef("}\n")
 
@@ -164,10 +177,10 @@ func (c *Command) writeCode(w *codeWriter) error {
 
 	// Constructor builds the struct and sets the flags
 	if hasParent {
-		w.writeLinef("func New%v(cctx *CommandContext, parent *%v) *%v {",
-			c.structName(), parent.structName(), c.structName())
+		w.writeLinef("func New%v(cctx *%v, parent *%v) *%v {",
+			c.structName(), w.commandContextType(), parent.structName(), c.structName())
 	} else {
-		w.writeLinef("func New%v(cctx *CommandContext) *%v {", c.structName(), c.structName())
+		w.writeLinef("func New%v(cctx *%v) *%v {", c.structName(), w.commandContextType(), c.structName())
 	}
 	w.writeLinef("var s %v", c.structName())
 	if hasParent {
@@ -307,9 +320,9 @@ func (o *Option) writeStructField(w *codeWriter) error {
 	case "string[]":
 		goDataType = "[]string"
 	case "string-enum":
-		goDataType = "StringEnum"
+		goDataType = w.stringEnumType()
 	case "string-enum[]":
-		goDataType = "StringEnumArray"
+		goDataType = w.stringEnumArrayType()
 	default:
 		return fmt.Errorf("unrecognized data type %v", o.Type)
 	}
@@ -370,8 +383,8 @@ func (o *Option) writeFlagBuilding(selfVar, flagVar string, w *codeWriter) error
 			pieces[i+len(o.EnumValues)] = fmt.Sprintf("%q", legacyVal)
 		}
 
-		w.writeLinef("%v.%v = NewStringEnum([]string{%v}, %q)",
-			selfVar, o.fieldName(), strings.Join(pieces, ", "), o.Default)
+		w.writeLinef("%v.%v = %v([]string{%v}, %q)",
+			selfVar, o.fieldName(), w.newStringEnum(), strings.Join(pieces, ", "), o.Default)
 		flagMeth = "Var"
 	case "string-enum[]":
 		if len(o.EnumValues) == 0 {
@@ -387,11 +400,11 @@ func (o *Option) writeFlagBuilding(selfVar, flagVar string, w *codeWriter) error
 		}
 
 		if o.Default != "" {
-			w.writeLinef("%v.%v = NewStringEnumArray([]string{%v}, %q)",
-				selfVar, o.fieldName(), strings.Join(pieces, ", "), o.Default)
+			w.writeLinef("%v.%v = %v([]string{%v}, %q)",
+				selfVar, o.fieldName(), w.newStringEnumArray(), strings.Join(pieces, ", "), o.Default)
 		} else {
-			w.writeLinef("%v.%v = NewStringEnumArray([]string{%v}, []string{})",
-				selfVar, o.fieldName(), strings.Join(pieces, ", "))
+			w.writeLinef("%v.%v = %v([]string{%v}, []string{})",
+				selfVar, o.fieldName(), w.newStringEnumArray(), strings.Join(pieces, ", "))
 		}
 		flagMeth = "Var"
 	default:

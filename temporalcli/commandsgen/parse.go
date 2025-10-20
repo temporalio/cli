@@ -1,10 +1,8 @@
-// Package commandsgen is built to read the YAML format described in
-// temporalcli/commandsgen/commands.yml and generate code from it.
+// Package commandsgen is built to read the YAML format and generate code from it.
 package commandsgen
 
 import (
 	"bytes"
-	_ "embed"
 	"fmt"
 	"regexp"
 	"slices"
@@ -13,9 +11,6 @@ import (
 
 	"gopkg.in/yaml.v3"
 )
-
-//go:embed commands.yml
-var CommandsYAML []byte
 
 type (
 	// Option represents the structure of an option within option sets.
@@ -76,9 +71,9 @@ type (
 	}
 )
 
-func ParseCommands() (Commands, error) {
+func ParseCommands(yamlBytes []byte) (Commands, error) {
 	// Fix CRLF
-	md := bytes.ReplaceAll(CommandsYAML, []byte("\r\n"), []byte("\n"))
+	md := bytes.ReplaceAll(yamlBytes, []byte("\r\n"), []byte("\n"))
 
 	var m Commands
 	err := yaml.Unmarshal(md, &m)

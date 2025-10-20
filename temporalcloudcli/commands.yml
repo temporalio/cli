@@ -1,0 +1,52 @@
+# Temporal Cloud CLI commands
+commands:
+  - name: temporal-cloud
+    summary: Temporal Cloud command-line interface
+    description: |
+      The Temporal Cloud CLI provides management and operations for Temporal Cloud.
+
+      Example:
+
+      ```
+      temporal-cloud hello
+      ```
+    has-init: false
+    options:
+      - name: output
+        type: string-enum
+        short: o
+        description: Output format.
+        enum-values:
+          - text
+          - json
+        default: text
+
+  - name: temporal-cloud hello
+    summary: Print hello world message
+    description: |
+      Print a hello world message to test the Temporal Cloud CLI extension.
+
+      Example:
+
+      ```
+      temporal-cloud hello
+      ```
+    docs:
+      keywords:
+        - hello
+        - test
+      description-header: Hello World Command
+      tags:
+        - testing
+
+  - name: temporal-cloud user get
+    summary: Get user details
+    description: Shows details for a specific user.
+    has-init: false
+    args:
+      - name: username
+        description: The username to get details for.
+    options:
+      - name: show-email
+        type: bool
+        description: Show the user's email address.

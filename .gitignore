@@ -1,9 +1,15 @@
 # Binaries for programs and plugins
 /temporal
 /temporal.exe
+/temporal-cloud
+/temporal-cloud.exe
 
 # Goreleaser output
 /dist
+
+# Generated docs
+/temporalcli/docs
+/temporalcloudcli/docs
 
 # Used by IDE
 /.idea

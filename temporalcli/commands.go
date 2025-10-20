@@ -3,6 +3,7 @@ package temporalcli
 import (
 	"bufio"
 	"context"
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -19,6 +20,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"github.com/temporalio/cli/temporalcli/internal/cliext"
 	"github.com/temporalio/cli/temporalcli/internal/printer"
 	"github.com/temporalio/ui-server/v2/server/version"
 	"go.temporal.io/api/common/v1"
@@ -38,6 +40,9 @@ import (
 // Version is the value put as the default command version. This is often
 // replaced at build time via ldflags.
 var Version = "0.0.0-DEV"
+
+//go:embed commands.yml
+var CommandsYAML []byte
 
 type CommandContext struct {
 	// This context is closed on interrupt
@@ -347,7 +352,38 @@ func Execute(ctx context.Context, options CommandOptions) {
 		// We have a context; let's actually run the command.
 		cmd := NewTemporalCommand(cctx)
 		cmd.Command.SetArgs(cctx.Options.Args)
+
+		// Check if a built-in command exists for these args before executing
+		_, foundArgs, cmdErr := cmd.Command.Find(cctx.Options.Args)
+		// A built-in command exists if Find succeeds AND there are no remaining args
+		// (remaining args would indicate an unknown subcommand)
+		builtInCommandExists := cmdErr == nil && len(foundArgs) == 0
+
 		err = cmd.Command.ExecuteContext(cctx)
+
+		// If no built-in command exists for these args, try extensions
+		// (Even if a command "ran" to show help, if it's not a real command, we should try extensions)
+		if !builtInCommandExists && !cctx.ActuallyRanCommand {
+			// Try to execute as extension
+			ioConfig := &cliext.IOConfig{
+				Stdin:  cctx.Options.Stdin,
+				Stdout: cctx.Options.Stdout,
+				Stderr: cctx.Options.Stderr,
+			}
+			result := cliext.TryExecuteExtension(cctx, cctx.Options.Args, 0, ioConfig)
+			if result != nil && result.Extension != nil {
+				// Extension was found and executed
+				cctx.ActuallyRanCommand = true
+				if result.ExitCode != 0 {
+					// Extension failed, create error with exit code
+					err = fmt.Errorf("extension exited with code %d", result.ExitCode)
+				} else {
+					// Extension succeeded, clear any error
+					err = nil
+				}
+			}
+			// If result is nil or Extension is nil, keep the original error
+		}
 	}
 
 	if err != nil {
