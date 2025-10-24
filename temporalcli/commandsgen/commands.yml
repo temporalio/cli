@@ -1404,6 +1404,78 @@ commands:
         type: bool
         description: Don't prompt to confirm unset Manager Identity.
 
+  - name: temporal worker heartbeat
+    summary: Inspect worker heartbeat data
+    description: |
+      ```
+      +---------------------------------------------------------------------+
+      | CAUTION: Worker heartbeat is experimental. Commands are subject to  |
+      | change.                                                             |
+      +---------------------------------------------------------------------+
+      ```
+
+      Inspect worker heartbeat information in a Namespace:
+
+      ```
+      temporal worker heartbeat [command] [options]
+      ```
+
+      For example, list Worker heartbeats:
+
+      ```
+      temporal worker heartbeat list \
+          --namespace YourNamespace
+      ```
+
+    docs:
+      description-header: >-
+        Worker heartbeat commands inspect the latest status reported by
+        workers.
+      keywords:
+        - worker heartbeat
+        - worker heartbeat list
+        - worker heartbeat describe
+      tags:
+        - Temporal CLI
+
+  - name: temporal worker heartbeat list
+    summary: List worker status information in a specific namespace (EXPERIMENTAL)
+    description: |
+      Get a list of workers that have sent heartbeats to the specified namespace.
+      
+      ```
+      temporal worker heartbeat list --namespace YourNamespace --query 'taskQueue="YourTaskQueue"'
+      ```
+    options:
+      - name: namespace
+        short: n
+        type: string
+        description: Temporal Service Namespace.
+      - name: query
+        short: q
+        type: string
+        description: Content for an SQL-like `QUERY` List Filter.
+      - name: limit
+        type: int
+        description: Maximum number of Worker heartbeats to display.
+
+  - name: temporal worker heartbeat describe
+    summary: Returns information about a specific worker (EXPERIMENTAL)
+    description: |
+      Look up the heartbeat information of a specific worker.
+      
+      ```
+      temporal worker heartbeat describe --namespace your-namespace --worker-instance-key your-key
+      ```
+    options:
+      - name: namespace
+        short: n
+        type: string
+        description: Namespace this worker belongs to.
+      - name: worker-instance-key
+        type: string
+        description: Worker instance key to describe.
+
   - name: temporal env
     summary: Manage environments
     description: |
