@@ -84,15 +84,15 @@ type formattedWorkerHeartbeatDetail struct {
 	Plugins                    []formattedPluginInfo                `json:"plugins,omitempty" cli:",cardOmitEmpty"`
 }
 
-func (c *TemporalWorkerHeartbeatDescribeCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
+func (c *TemporalWorkerDescribeCommand) run(cctx *CommandContext, args []string) error {
+	cl, err := c.Parent.ClientOptions.dialClient(cctx)
 	if err != nil {
 		return err
 	}
 	defer cl.Close()
 
 	resp, err := cl.WorkflowService().DescribeWorker(cctx, &workflowservice.DescribeWorkerRequest{
-		Namespace:         c.Parent.Parent.Namespace,
+		Namespace:         c.Parent.Namespace,
 		WorkerInstanceKey: c.WorkerInstanceKey,
 	})
 	if err != nil {
@@ -117,8 +117,8 @@ func (c *TemporalWorkerHeartbeatDescribeCommand) run(cctx *CommandContext, args 
 	return cctx.Printer.PrintStructured(formatted, printer.StructuredOptions{})
 }
 
-func (c *TemporalWorkerHeartbeatListCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
+func (c *TemporalWorkerListCommand) run(cctx *CommandContext, args []string) error {
+	cl, err := c.Parent.ClientOptions.dialClient(cctx)
 	if err != nil {
 		return err
 	}
@@ -138,7 +138,7 @@ func (c *TemporalWorkerHeartbeatListCommand) run(cctx *CommandContext, args []st
 
 	for {
 		req := &workflowservice.ListWorkersRequest{
-			Namespace:     c.Parent.Parent.Namespace,
+			Namespace:     c.Parent.Namespace,
 			NextPageToken: token,
 			Query:         c.Query,
 		}

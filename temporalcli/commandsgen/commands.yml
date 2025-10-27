@@ -886,6 +886,8 @@ commands:
       keywords:
         - worker
         - worker deployment
+        - worker list
+        - worker describe
       tags:
         - Temporal CLI
 
@@ -1404,47 +1406,13 @@ commands:
         type: bool
         description: Don't prompt to confirm unset Manager Identity.
 
-  - name: temporal worker heartbeat
-    summary: Inspect worker heartbeat data
-    description: |
-      ```
-      +---------------------------------------------------------------------+
-      | CAUTION: Worker heartbeat is experimental. Commands are subject to  |
-      | change.                                                             |
-      +---------------------------------------------------------------------+
-      ```
-
-      Inspect worker heartbeat information in a Namespace:
-
-      ```
-      temporal worker heartbeat [command] [options]
-      ```
-
-      For example, list Worker heartbeats:
-
-      ```
-      temporal worker heartbeat list \
-          --namespace YourNamespace
-      ```
-
-    docs:
-      description-header: >-
-        Worker heartbeat commands inspect the latest status reported by
-        workers.
-      keywords:
-        - worker heartbeat
-        - worker heartbeat list
-        - worker heartbeat describe
-      tags:
-        - Temporal CLI
-
-  - name: temporal worker heartbeat list
+  - name: temporal worker list
     summary: List worker status information in a specific namespace (EXPERIMENTAL)
     description: |
-      Get a list of workers that have sent heartbeats to the specified namespace.
+      Get a list of workers to the specified namespace.
       
       ```
-      temporal worker heartbeat list --namespace YourNamespace --query 'taskQueue="YourTaskQueue"'
+      temporal worker list --namespace YourNamespace --query 'taskQueue="YourTaskQueue"'
       ```
     options:
       - name: namespace
@@ -1457,15 +1425,15 @@ commands:
         description: Content for an SQL-like `QUERY` List Filter.
       - name: limit
         type: int
-        description: Maximum number of Worker heartbeats to display.
+        description: Maximum number of workers to display.
 
-  - name: temporal worker heartbeat describe
+  - name: temporal worker describe
     summary: Returns information about a specific worker (EXPERIMENTAL)
     description: |
-      Look up the heartbeat information of a specific worker.
+      Look up information of a specific worker.
       
       ```
-      temporal worker heartbeat describe --namespace YourNamespace --worker-instance-key YourKey
+      temporal worker describe --namespace YourNamespace --worker-instance-key YourKey
       ```
     options:
       - name: namespace
