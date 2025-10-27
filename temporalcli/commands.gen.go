@@ -3253,9 +3253,9 @@ func NewTemporalWorkerHeartbeatDescribeCommand(cctx *CommandContext, parent *Tem
 	s.Command.Use = "describe [flags]"
 	s.Command.Short = "Returns information about a specific worker (EXPERIMENTAL)"
 	if hasHighlighting {
-		s.Command.Long = "Look up the heartbeat information of a specific worker.\n\n\x1b[1mtemporal worker heartbeat describe --namespace your-namespace --worker-instance-key your-key\x1b[0m"
+		s.Command.Long = "Look up the heartbeat information of a specific worker.\n\n\x1b[1mtemporal worker heartbeat describe --namespace YourNamespace --worker-instance-key YourKey\x1b[0m"
 	} else {
-		s.Command.Long = "Look up the heartbeat information of a specific worker.\n\n```\ntemporal worker heartbeat describe --namespace your-namespace --worker-instance-key your-key\n```"
+		s.Command.Long = "Look up the heartbeat information of a specific worker.\n\n```\ntemporal worker heartbeat describe --namespace YourNamespace --worker-instance-key YourKey\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.Namespace, "namespace", "n", "", "Namespace this worker belongs to.")

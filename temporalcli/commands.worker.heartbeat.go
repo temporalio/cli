@@ -16,60 +16,60 @@ import (
 type workerHeartbeatListRow struct {
 	WorkerInstanceKey string    `json:"workerInstanceKey"`
 	Status            string    `json:"status"`
-	TaskQueue         string    `json:"taskQueue,omitempty" cli:",cardOmitEmpty"`
-	WorkerIdentity    string    `json:"workerIdentity,omitempty" cli:",cardOmitEmpty"`
-	HostName          string    `json:"hostName,omitempty" cli:",cardOmitEmpty"`
+	TaskQueue         string    `json:"taskQueue"`
+	WorkerIdentity    string    `json:"workerIdentity"`
+	HostName          string    `json:"hostName"`
 	Deployment        string    `json:"deployment,omitempty" cli:",cardOmitEmpty"`
 	HeartbeatTime     time.Time `json:"heartbeatTime"`
-	Elapsed           string    `json:"elapsedSinceLastHeartbeat,omitempty" cli:",cardOmitEmpty"`
+	Elapsed           string    `json:"elapsedSinceLastHeartbeat"`
 }
 
 type formattedWorkerDeploymentVersionRef struct {
-	DeploymentName string `json:"deploymentName,omitempty" cli:",cardOmitEmpty"`
-	BuildId        string `json:"buildId,omitempty" cli:",cardOmitEmpty"`
+	DeploymentName string `json:"deploymentName"`
+	BuildId        string `json:"buildId"`
 }
 
 type formattedWorkerHostInfo struct {
-	HostName            string  `json:"hostName,omitempty" cli:",cardOmitEmpty"`
-	ProcessId           string  `json:"processId,omitempty" cli:",cardOmitEmpty"`
-	ProcessKey          string  `json:"processKey,omitempty" cli:",cardOmitEmpty"`
-	CurrentHostCPUUsage float32 `json:"currentHostCpuUsage,omitempty" cli:",cardOmitEmpty"`
-	CurrentHostMemUsage float32 `json:"currentHostMemUsage,omitempty" cli:",cardOmitEmpty"`
+	HostName            string  `json:"hostName"`
+	ProcessId           string  `json:"processId"`
+	ProcessKey          string  `json:"processKey"`
+	CurrentHostCPUUsage float32 `json:"currentHostCpuUsage"`
+	CurrentHostMemUsage float32 `json:"currentHostMemUsage"`
 }
 
 type formattedWorkerSlotsInfo struct {
-	CurrentAvailableSlots      int32  `json:"currentAvailableSlots,omitempty" cli:",cardOmitEmpty"`
-	CurrentUsedSlots           int32  `json:"currentUsedSlots,omitempty" cli:",cardOmitEmpty"`
-	SlotSupplierKind           string `json:"slotSupplierKind,omitempty" cli:",cardOmitEmpty"`
-	TotalProcessedTasks        int32  `json:"totalProcessedTasks,omitempty" cli:",cardOmitEmpty"`
-	TotalFailedTasks           int32  `json:"totalFailedTasks,omitempty" cli:",cardOmitEmpty"`
-	LastIntervalProcessedTasks int32  `json:"lastIntervalProcessedTasks,omitempty" cli:",cardOmitEmpty"`
-	LastIntervalFailureTasks   int32  `json:"lastIntervalFailureTasks,omitempty" cli:",cardOmitEmpty"`
+	CurrentAvailableSlots      int32  `json:"currentAvailableSlots"`
+	CurrentUsedSlots           int32  `json:"currentUsedSlots"`
+	SlotSupplierKind           string `json:"slotSupplierKind"`
+	TotalProcessedTasks        int32  `json:"totalProcessedTasks"`
+	TotalFailedTasks           int32  `json:"totalFailedTasks"`
+	LastIntervalProcessedTasks int32  `json:"lastIntervalProcessedTasks"`
+	LastIntervalFailureTasks   int32  `json:"lastIntervalFailureTasks"`
 }
 
 type formattedWorkerPollerInfo struct {
-	CurrentPollers         int32     `json:"currentPollers,omitempty" cli:",cardOmitEmpty"`
-	LastSuccessfulPollTime time.Time `json:"lastSuccessfulPollTime,omitempty" cli:",cardOmitEmpty"`
-	IsAutoscaling          bool      `json:"isAutoscaling,omitempty" cli:",cardOmitEmpty"`
+	CurrentPollers         int32     `json:"currentPollers"`
+	LastSuccessfulPollTime time.Time `json:"lastSuccessfulPollTime"`
+	IsAutoscaling          bool      `json:"isAutoscaling"`
 }
 
 type formattedPluginInfo struct {
 	Name    string `json:"name"`
-	Version string `json:"version,omitempty" cli:",cardOmitEmpty"`
+	Version string `json:"version"`
 }
 
 type formattedWorkerHeartbeatDetail struct {
 	WorkerInstanceKey          string                               `json:"workerInstanceKey"`
-	WorkerIdentity             string                               `json:"workerIdentity,omitempty" cli:",cardOmitEmpty"`
+	WorkerIdentity             string                               `json:"workerIdentity"`
 	Status                     string                               `json:"status"`
-	TaskQueue                  string                               `json:"taskQueue,omitempty" cli:",cardOmitEmpty"`
+	TaskQueue                  string                               `json:"taskQueue"`
 	DeploymentVersion          *formattedWorkerDeploymentVersionRef `json:"deploymentVersion,omitempty" cli:",cardOmitEmpty"`
-	SdkName                    string                               `json:"sdkName,omitempty" cli:",cardOmitEmpty"`
-	SdkVersion                 string                               `json:"sdkVersion,omitempty" cli:",cardOmitEmpty"`
+	SdkName                    string                               `json:"sdkName"`
+	SdkVersion                 string                               `json:"sdkVersion"`
 	StartTime                  time.Time                            `json:"startTime"`
 	HeartbeatTime              time.Time                            `json:"heartbeatTime"`
-	ElapsedSinceLastHeartbeat  string                               `json:"elapsedSinceLastHeartbeat,omitempty" cli:",cardOmitEmpty"`
-	HostInfo                   *formattedWorkerHostInfo             `json:"hostInfo,omitempty" cli:",cardOmitEmpty"`
+	ElapsedSinceLastHeartbeat  string                               `json:"elapsedSinceLastHeartbeat"`
+	HostInfo                   *formattedWorkerHostInfo             `json:"hostInfo"`
 	WorkflowTaskSlotsInfo      *formattedWorkerSlotsInfo            `json:"workflowTaskSlotsInfo,omitempty" cli:",cardOmitEmpty"`
 	ActivityTaskSlotsInfo      *formattedWorkerSlotsInfo            `json:"activityTaskSlotsInfo,omitempty" cli:",cardOmitEmpty"`
 	NexusTaskSlotsInfo         *formattedWorkerSlotsInfo            `json:"nexusTaskSlotsInfo,omitempty" cli:",cardOmitEmpty"`
@@ -78,9 +78,9 @@ type formattedWorkerHeartbeatDetail struct {
 	WorkflowStickyPollerInfo   *formattedWorkerPollerInfo           `json:"workflowStickyPollerInfo,omitempty" cli:",cardOmitEmpty"`
 	ActivityPollerInfo         *formattedWorkerPollerInfo           `json:"activityPollerInfo,omitempty" cli:",cardOmitEmpty"`
 	NexusPollerInfo            *formattedWorkerPollerInfo           `json:"nexusPollerInfo,omitempty" cli:",cardOmitEmpty"`
-	TotalStickyCacheHit        int32                                `json:"totalStickyCacheHit,omitempty" cli:",cardOmitEmpty"`
-	TotalStickyCacheMiss       int32                                `json:"totalStickyCacheMiss,omitempty" cli:",cardOmitEmpty"`
-	CurrentStickyCacheSize     int32                                `json:"currentStickyCacheSize,omitempty" cli:",cardOmitEmpty"`
+	TotalStickyCacheHit        int32                                `json:"totalStickyCacheHit"`
+	TotalStickyCacheMiss       int32                                `json:"totalStickyCacheMiss"`
+	CurrentStickyCacheSize     int32                                `json:"currentStickyCacheSize"`
 	Plugins                    []formattedPluginInfo                `json:"plugins,omitempty" cli:",cardOmitEmpty"`
 }
 
@@ -278,7 +278,7 @@ func workerStatusToString(status enumspb.WorkerStatus) string {
 	if statusStr == "" {
 		return "unspecified"
 	}
-	return strings.ToLower(statusStr)
+	return statusStr
 }
 
 func formatDeploymentVersion(dv *deploymentpb.WorkerDeploymentVersion) string {
@@ -330,7 +330,7 @@ func formatWorkerSlots(info *workerpb.WorkerSlotsInfo) *formattedWorkerSlotsInfo
 		LastIntervalProcessedTasks: info.GetLastIntervalProcessedTasks(),
 		LastIntervalFailureTasks:   info.GetLastIntervalFailureTasks(),
 	}
-	if formatted.CurrentAvailableSlots == 0 && formatted.CurrentUsedSlots == 0 && formatted.SlotSupplierKind == "" &&
+	if formatted.CurrentAvailableSlots == 0 && formatted.CurrentUsedSlots == 0 && formatted.SlotSupplierKind == "Fixed" &&
 		formatted.TotalProcessedTasks == 0 && formatted.TotalFailedTasks == 0 &&
 		formatted.LastIntervalProcessedTasks == 0 && formatted.LastIntervalFailureTasks == 0 {
 		return nil

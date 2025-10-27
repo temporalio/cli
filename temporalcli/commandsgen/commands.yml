@@ -1465,7 +1465,7 @@ commands:
       Look up the heartbeat information of a specific worker.
       
       ```
-      temporal worker heartbeat describe --namespace your-namespace --worker-instance-key your-key
+      temporal worker heartbeat describe --namespace YourNamespace --worker-instance-key YourKey
       ```
     options:
       - name: namespace
