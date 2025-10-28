@@ -13,7 +13,7 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 )
 
-type workerHeartbeatListRow struct {
+type workerListRow struct {
 	WorkerInstanceKey string    `json:"workerInstanceKey"`
 	Status            string    `json:"status"`
 	TaskQueue         string    `json:"taskQueue"`
@@ -24,12 +24,12 @@ type workerHeartbeatListRow struct {
 	Elapsed           string    `json:"elapsedSinceLastHeartbeat"`
 }
 
-type formattedWorkerDeploymentVersionRef struct {
+type workerDeploymentVersionRef struct {
 	DeploymentName string `json:"deploymentName"`
 	BuildId        string `json:"buildId"`
 }
 
-type formattedWorkerHostInfo struct {
+type workerHostInfo struct {
 	HostName            string  `json:"hostName"`
 	ProcessId           string  `json:"processId"`
 	ProcessKey          string  `json:"processKey"`
@@ -37,7 +37,7 @@ type formattedWorkerHostInfo struct {
 	CurrentHostMemUsage float32 `json:"currentHostMemUsage"`
 }
 
-type formattedWorkerSlotsInfo struct {
+type workerSlotsInfo struct {
 	CurrentAvailableSlots      int32  `json:"currentAvailableSlots"`
 	CurrentUsedSlots           int32  `json:"currentUsedSlots"`
 	SlotSupplierKind           string `json:"slotSupplierKind"`
@@ -47,41 +47,41 @@ type formattedWorkerSlotsInfo struct {
 	LastIntervalFailureTasks   int32  `json:"lastIntervalFailureTasks"`
 }
 
-type formattedWorkerPollerInfo struct {
+type workerPollerInfo struct {
 	CurrentPollers         int32     `json:"currentPollers"`
 	LastSuccessfulPollTime time.Time `json:"lastSuccessfulPollTime"`
 	IsAutoscaling          bool      `json:"isAutoscaling"`
 }
 
-type formattedPluginInfo struct {
+type pluginInfo struct {
 	Name    string `json:"name"`
 	Version string `json:"version"`
 }
 
-type formattedWorkerHeartbeatDetail struct {
-	WorkerInstanceKey          string                               `json:"workerInstanceKey"`
-	WorkerIdentity             string                               `json:"workerIdentity"`
-	Status                     string                               `json:"status"`
-	TaskQueue                  string                               `json:"taskQueue"`
-	DeploymentVersion          *formattedWorkerDeploymentVersionRef `json:"deploymentVersion,omitempty" cli:",cardOmitEmpty"`
-	SdkName                    string                               `json:"sdkName"`
-	SdkVersion                 string                               `json:"sdkVersion"`
-	StartTime                  time.Time                            `json:"startTime"`
-	HeartbeatTime              time.Time                            `json:"heartbeatTime"`
-	ElapsedSinceLastHeartbeat  string                               `json:"elapsedSinceLastHeartbeat"`
-	HostInfo                   *formattedWorkerHostInfo             `json:"hostInfo"`
-	WorkflowTaskSlotsInfo      *formattedWorkerSlotsInfo            `json:"workflowTaskSlotsInfo,omitempty" cli:",cardOmitEmpty"`
-	ActivityTaskSlotsInfo      *formattedWorkerSlotsInfo            `json:"activityTaskSlotsInfo,omitempty" cli:",cardOmitEmpty"`
-	NexusTaskSlotsInfo         *formattedWorkerSlotsInfo            `json:"nexusTaskSlotsInfo,omitempty" cli:",cardOmitEmpty"`
-	LocalActivityTaskSlotsInfo *formattedWorkerSlotsInfo            `json:"localActivityTaskSlotsInfo,omitempty" cli:",cardOmitEmpty"`
-	WorkflowPollerInfo         *formattedWorkerPollerInfo           `json:"workflowPollerInfo,omitempty" cli:",cardOmitEmpty"`
-	WorkflowStickyPollerInfo   *formattedWorkerPollerInfo           `json:"workflowStickyPollerInfo,omitempty" cli:",cardOmitEmpty"`
-	ActivityPollerInfo         *formattedWorkerPollerInfo           `json:"activityPollerInfo,omitempty" cli:",cardOmitEmpty"`
-	NexusPollerInfo            *formattedWorkerPollerInfo           `json:"nexusPollerInfo,omitempty" cli:",cardOmitEmpty"`
-	TotalStickyCacheHit        int32                                `json:"totalStickyCacheHit"`
-	TotalStickyCacheMiss       int32                                `json:"totalStickyCacheMiss"`
-	CurrentStickyCacheSize     int32                                `json:"currentStickyCacheSize"`
-	Plugins                    []formattedPluginInfo                `json:"plugins,omitempty" cli:",cardOmitEmpty"`
+type workerDescribeDetail struct {
+	WorkerInstanceKey          string                      `json:"workerInstanceKey"`
+	WorkerIdentity             string                      `json:"workerIdentity"`
+	Status                     string                      `json:"status"`
+	TaskQueue                  string                      `json:"taskQueue"`
+	DeploymentVersion          *workerDeploymentVersionRef `json:"deploymentVersion,omitempty" cli:",cardOmitEmpty"`
+	SdkName                    string                      `json:"sdkName"`
+	SdkVersion                 string                      `json:"sdkVersion"`
+	StartTime                  time.Time                   `json:"startTime"`
+	HeartbeatTime              time.Time                   `json:"heartbeatTime"`
+	ElapsedSinceLastHeartbeat  string                      `json:"elapsedSinceLastHeartbeat"`
+	HostInfo                   *workerHostInfo             `json:"hostInfo"`
+	WorkflowTaskSlotsInfo      *workerSlotsInfo            `json:"workflowTaskSlotsInfo,omitempty" cli:",cardOmitEmpty"`
+	ActivityTaskSlotsInfo      *workerSlotsInfo            `json:"activityTaskSlotsInfo,omitempty" cli:",cardOmitEmpty"`
+	NexusTaskSlotsInfo         *workerSlotsInfo            `json:"nexusTaskSlotsInfo,omitempty" cli:",cardOmitEmpty"`
+	LocalActivityTaskSlotsInfo *workerSlotsInfo            `json:"localActivityTaskSlotsInfo,omitempty" cli:",cardOmitEmpty"`
+	WorkflowPollerInfo         *workerPollerInfo           `json:"workflowPollerInfo,omitempty" cli:",cardOmitEmpty"`
+	WorkflowStickyPollerInfo   *workerPollerInfo           `json:"workflowStickyPollerInfo,omitempty" cli:",cardOmitEmpty"`
+	ActivityPollerInfo         *workerPollerInfo           `json:"activityPollerInfo,omitempty" cli:",cardOmitEmpty"`
+	NexusPollerInfo            *workerPollerInfo           `json:"nexusPollerInfo,omitempty" cli:",cardOmitEmpty"`
+	TotalStickyCacheHit        int32                       `json:"totalStickyCacheHit"`
+	TotalStickyCacheMiss       int32                       `json:"totalStickyCacheMiss"`
+	CurrentStickyCacheSize     int32                       `json:"currentStickyCacheSize"`
+	Plugins                    []pluginInfo                `json:"plugins,omitempty" cli:",cardOmitEmpty"`
 }
 
 func (c *TemporalWorkerDescribeCommand) run(cctx *CommandContext, args []string) error {
@@ -100,7 +100,7 @@ func (c *TemporalWorkerDescribeCommand) run(cctx *CommandContext, args []string)
 	}
 
 	if cctx.JSONOutput {
-		return cctx.Printer.PrintStructured(resp, printer.StructuredOptions{})
+		return cctx.Printer.PrintStructured(resp.GetWorkerInfo(), printer.StructuredOptions{})
 	}
 
 	info := resp.GetWorkerInfo()
@@ -113,7 +113,7 @@ func (c *TemporalWorkerDescribeCommand) run(cctx *CommandContext, args []string)
 		return fmt.Errorf("worker heartbeat not found in response")
 	}
 
-	formatted := formatWorkerHeartbeatDetail(hb)
+	formatted := formatWorkerDescribeDetail(hb)
 	return cctx.Printer.PrintStructured(formatted, printer.StructuredOptions{})
 }
 
@@ -132,7 +132,7 @@ func (c *TemporalWorkerListCommand) run(cctx *CommandContext, args []string) err
 	defer cctx.Printer.EndList()
 
 	printOpts := printer.StructuredOptions{Table: &printer.TableOptions{}}
-	page := make([]*workerHeartbeatListRow, 0, 100)
+	page := make([]*workerListRow, 0, 100)
 	printed := 0
 	var token []byte
 
@@ -174,7 +174,7 @@ func (c *TemporalWorkerListCommand) run(cctx *CommandContext, args []string) err
 				if hb == nil {
 					continue
 				}
-				row := formatWorkerHeartbeatListRow(hb)
+				row := formatWorkerListRow(hb)
 				page = append(page, &row)
 				printed++
 				if len(page) == cap(page) {
@@ -206,12 +206,12 @@ func (c *TemporalWorkerListCommand) run(cctx *CommandContext, args []string) err
 	return nil
 }
 
-func formatWorkerHeartbeatListRow(hb *workerpb.WorkerHeartbeat) workerHeartbeatListRow {
+func formatWorkerListRow(hb *workerpb.WorkerHeartbeat) workerListRow {
 	if hb == nil {
-		return workerHeartbeatListRow{}
+		return workerListRow{}
 	}
 
-	row := workerHeartbeatListRow{
+	row := workerListRow{
 		WorkerInstanceKey: hb.GetWorkerInstanceKey(),
 		Status:            workerStatusToString(hb.GetStatus()),
 		TaskQueue:         hb.GetTaskQueue(),
@@ -230,12 +230,12 @@ func formatWorkerHeartbeatListRow(hb *workerpb.WorkerHeartbeat) workerHeartbeatL
 	return row
 }
 
-func formatWorkerHeartbeatDetail(hb *workerpb.WorkerHeartbeat) formattedWorkerHeartbeatDetail {
+func formatWorkerDescribeDetail(hb *workerpb.WorkerHeartbeat) workerDescribeDetail {
 	if hb == nil {
-		return formattedWorkerHeartbeatDetail{}
+		return workerDescribeDetail{}
 	}
 
-	detail := formattedWorkerHeartbeatDetail{
+	detail := workerDescribeDetail{
 		WorkerInstanceKey:          hb.GetWorkerInstanceKey(),
 		WorkerIdentity:             hb.GetWorkerIdentity(),
 		Status:                     workerStatusToString(hb.GetStatus()),
@@ -262,7 +262,7 @@ func formatWorkerHeartbeatDetail(hb *workerpb.WorkerHeartbeat) formattedWorkerHe
 
 	if dv := hb.GetDeploymentVersion(); dv != nil {
 		if dv.GetDeploymentName() != "" || dv.GetBuildId() != "" {
-			detail.DeploymentVersion = &formattedWorkerDeploymentVersionRef{
+			detail.DeploymentVersion = &workerDeploymentVersionRef{
 				DeploymentName: dv.GetDeploymentName(),
 				BuildId:        dv.GetBuildId(),
 			}
@@ -299,11 +299,11 @@ func formatDeploymentVersion(dv *deploymentpb.WorkerDeploymentVersion) string {
 	}
 }
 
-func formatWorkerHostInfo(info *workerpb.WorkerHostInfo) *formattedWorkerHostInfo {
+func formatWorkerHostInfo(info *workerpb.WorkerHostInfo) *workerHostInfo {
 	if info == nil {
 		return nil
 	}
-	formatted := &formattedWorkerHostInfo{
+	formatted := &workerHostInfo{
 		HostName:            info.GetHostName(),
 		ProcessId:           info.GetProcessId(),
 		ProcessKey:          info.GetProcessKey(),
@@ -317,11 +317,11 @@ func formatWorkerHostInfo(info *workerpb.WorkerHostInfo) *formattedWorkerHostInf
 	return formatted
 }
 
-func formatWorkerSlots(info *workerpb.WorkerSlotsInfo) *formattedWorkerSlotsInfo {
+func formatWorkerSlots(info *workerpb.WorkerSlotsInfo) *workerSlotsInfo {
 	if info == nil {
 		return nil
 	}
-	formatted := &formattedWorkerSlotsInfo{
+	formatted := &workerSlotsInfo{
 		CurrentAvailableSlots:      info.GetCurrentAvailableSlots(),
 		CurrentUsedSlots:           info.GetCurrentUsedSlots(),
 		SlotSupplierKind:           info.GetSlotSupplierKind(),
@@ -338,11 +338,11 @@ func formatWorkerSlots(info *workerpb.WorkerSlotsInfo) *formattedWorkerSlotsInfo
 	return formatted
 }
 
-func formatWorkerPoller(info *workerpb.WorkerPollerInfo) *formattedWorkerPollerInfo {
+func formatWorkerPoller(info *workerpb.WorkerPollerInfo) *workerPollerInfo {
 	if info == nil {
 		return nil
 	}
-	formatted := &formattedWorkerPollerInfo{
+	formatted := &workerPollerInfo{
 		CurrentPollers:         info.GetCurrentPollers(),
 		LastSuccessfulPollTime: timestampToTime(info.GetLastSuccessfulPollTime()),
 		IsAutoscaling:          info.GetIsAutoscaling(),
@@ -353,16 +353,16 @@ func formatWorkerPoller(info *workerpb.WorkerPollerInfo) *formattedWorkerPollerI
 	return formatted
 }
 
-func formatPlugins(plugins []*workerpb.PluginInfo) []formattedPluginInfo {
+func formatPlugins(plugins []*workerpb.PluginInfo) []pluginInfo {
 	if len(plugins) == 0 {
 		return nil
 	}
-	formatted := make([]formattedPluginInfo, 0, len(plugins))
+	formatted := make([]pluginInfo, 0, len(plugins))
 	for _, plugin := range plugins {
 		if plugin == nil {
 			continue
 		}
-		formatted = append(formatted, formattedPluginInfo{
+		formatted = append(formatted, pluginInfo{
 			Name:    plugin.GetName(),
 			Version: plugin.GetVersion(),
 		})

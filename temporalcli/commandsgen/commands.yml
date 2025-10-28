@@ -1415,10 +1415,6 @@ commands:
       temporal worker list --namespace YourNamespace --query 'taskQueue="YourTaskQueue"'
       ```
     options:
-      - name: namespace
-        short: n
-        type: string
-        description: Temporal Service Namespace.
       - name: query
         short: q
         type: string
@@ -1436,13 +1432,10 @@ commands:
       temporal worker describe --namespace YourNamespace --worker-instance-key YourKey
       ```
     options:
-      - name: namespace
-        short: n
-        type: string
-        description: Namespace this worker belongs to.
       - name: worker-instance-key
         type: string
         description: Worker instance key to describe.
+        required: true
 
   - name: temporal env
     summary: Manage environments

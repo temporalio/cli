@@ -3222,7 +3222,6 @@ func NewTemporalWorkerDeploymentUpdateMetadataVersionCommand(cctx *CommandContex
 type TemporalWorkerDescribeCommand struct {
 	Parent            *TemporalWorkerCommand
 	Command           cobra.Command
-	Namespace         string
 	WorkerInstanceKey string
 }
 
@@ -3238,8 +3237,8 @@ func NewTemporalWorkerDescribeCommand(cctx *CommandContext, parent *TemporalWork
 		s.Command.Long = "Look up information of a specific worker.\n\n```\ntemporal worker describe --namespace YourNamespace --worker-instance-key YourKey\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVarP(&s.Namespace, "namespace", "n", "", "Namespace this worker belongs to.")
-	s.Command.Flags().StringVar(&s.WorkerInstanceKey, "worker-instance-key", "", "Worker instance key to describe.")
+	s.Command.Flags().StringVar(&s.WorkerInstanceKey, "worker-instance-key", "", "Worker instance key to describe. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "worker-instance-key")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -3249,11 +3248,10 @@ func NewTemporalWorkerDescribeCommand(cctx *CommandContext, parent *TemporalWork
 }
 
 type TemporalWorkerListCommand struct {
-	Parent    *TemporalWorkerCommand
-	Command   cobra.Command
-	Namespace string
-	Query     string
-	Limit     int
+	Parent  *TemporalWorkerCommand
+	Command cobra.Command
+	Query   string
+	Limit   int
 }
 
 func NewTemporalWorkerListCommand(cctx *CommandContext, parent *TemporalWorkerCommand) *TemporalWorkerListCommand {
@@ -3268,7 +3266,6 @@ func NewTemporalWorkerListCommand(cctx *CommandContext, parent *TemporalWorkerCo
 		s.Command.Long = "Get a list of workers to the specified namespace.\n\n```\ntemporal worker list --namespace YourNamespace --query 'taskQueue=\"YourTaskQueue\"'\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVarP(&s.Namespace, "namespace", "n", "", "Temporal Service Namespace.")
 	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Content for an SQL-like `QUERY` List Filter.")
 	s.Command.Flags().IntVar(&s.Limit, "limit", 0, "Maximum number of workers to display.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
