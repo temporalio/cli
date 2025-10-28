@@ -14,14 +14,14 @@ import (
 )
 
 type workerListRow struct {
-	WorkerInstanceKey string    `json:"workerInstanceKey"`
-	Status            string    `json:"status"`
-	TaskQueue         string    `json:"taskQueue"`
-	WorkerIdentity    string    `json:"workerIdentity"`
-	HostName          string    `json:"hostName"`
-	Deployment        string    `json:"deployment,omitempty" cli:",cardOmitEmpty"`
-	HeartbeatTime     time.Time `json:"heartbeatTime"`
-	Elapsed           string    `json:"elapsedSinceLastHeartbeat"`
+	WorkerInstanceKey string
+	Status            string
+	TaskQueue         string
+	WorkerIdentity    string
+	HostName          string
+	Deployment        string
+	HeartbeatTime     time.Time
+	Elapsed           string
 }
 
 type workerDeploymentVersionRef struct {
