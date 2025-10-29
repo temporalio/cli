@@ -25,63 +25,63 @@ type workerListRow struct {
 }
 
 type workerDeploymentVersionRef struct {
-	DeploymentName string `json:"deploymentName"`
-	BuildId        string `json:"buildId"`
+	DeploymentName string
+	BuildId        string
 }
 
 type workerHostInfo struct {
-	HostName            string  `json:"hostName"`
-	ProcessId           string  `json:"processId"`
-	ProcessKey          string  `json:"processKey"`
-	CurrentHostCPUUsage float32 `json:"currentHostCpuUsage"`
-	CurrentHostMemUsage float32 `json:"currentHostMemUsage"`
+	HostName            string
+	ProcessId           string
+	ProcessKey          string
+	CurrentHostCPUUsage float32
+	CurrentHostMemUsage float32
 }
 
 type workerSlotsInfo struct {
-	CurrentAvailableSlots      int32  `json:"currentAvailableSlots"`
-	CurrentUsedSlots           int32  `json:"currentUsedSlots"`
-	SlotSupplierKind           string `json:"slotSupplierKind"`
-	TotalProcessedTasks        int32  `json:"totalProcessedTasks"`
-	TotalFailedTasks           int32  `json:"totalFailedTasks"`
-	LastIntervalProcessedTasks int32  `json:"lastIntervalProcessedTasks"`
-	LastIntervalFailureTasks   int32  `json:"lastIntervalFailureTasks"`
+	CurrentAvailableSlots      int32
+	CurrentUsedSlots           int32
+	SlotSupplierKind           string
+	TotalProcessedTasks        int32
+	TotalFailedTasks           int32
+	LastIntervalProcessedTasks int32
+	LastIntervalFailureTasks   int32
 }
 
 type workerPollerInfo struct {
-	CurrentPollers         int32     `json:"currentPollers"`
-	LastSuccessfulPollTime time.Time `json:"lastSuccessfulPollTime"`
-	IsAutoscaling          bool      `json:"isAutoscaling"`
+	CurrentPollers         int32
+	LastSuccessfulPollTime time.Time
+	IsAutoscaling          bool
 }
 
 type pluginInfo struct {
-	Name    string `json:"name"`
-	Version string `json:"version"`
+	Name    string
+	Version string
 }
 
 type workerDescribeDetail struct {
-	WorkerInstanceKey          string                      `json:"workerInstanceKey"`
-	WorkerIdentity             string                      `json:"workerIdentity"`
-	Status                     string                      `json:"status"`
-	TaskQueue                  string                      `json:"taskQueue"`
-	DeploymentVersion          *workerDeploymentVersionRef `json:"deploymentVersion,omitempty" cli:",cardOmitEmpty"`
-	SdkName                    string                      `json:"sdkName"`
-	SdkVersion                 string                      `json:"sdkVersion"`
-	StartTime                  time.Time                   `json:"startTime"`
-	HeartbeatTime              time.Time                   `json:"heartbeatTime"`
-	ElapsedSinceLastHeartbeat  string                      `json:"elapsedSinceLastHeartbeat"`
-	HostInfo                   *workerHostInfo             `json:"hostInfo"`
-	WorkflowTaskSlotsInfo      *workerSlotsInfo            `json:"workflowTaskSlotsInfo,omitempty" cli:",cardOmitEmpty"`
-	ActivityTaskSlotsInfo      *workerSlotsInfo            `json:"activityTaskSlotsInfo,omitempty" cli:",cardOmitEmpty"`
-	NexusTaskSlotsInfo         *workerSlotsInfo            `json:"nexusTaskSlotsInfo,omitempty" cli:",cardOmitEmpty"`
-	LocalActivityTaskSlotsInfo *workerSlotsInfo            `json:"localActivityTaskSlotsInfo,omitempty" cli:",cardOmitEmpty"`
-	WorkflowPollerInfo         *workerPollerInfo           `json:"workflowPollerInfo,omitempty" cli:",cardOmitEmpty"`
-	WorkflowStickyPollerInfo   *workerPollerInfo           `json:"workflowStickyPollerInfo,omitempty" cli:",cardOmitEmpty"`
-	ActivityPollerInfo         *workerPollerInfo           `json:"activityPollerInfo,omitempty" cli:",cardOmitEmpty"`
-	NexusPollerInfo            *workerPollerInfo           `json:"nexusPollerInfo,omitempty" cli:",cardOmitEmpty"`
-	TotalStickyCacheHit        int32                       `json:"totalStickyCacheHit"`
-	TotalStickyCacheMiss       int32                       `json:"totalStickyCacheMiss"`
-	CurrentStickyCacheSize     int32                       `json:"currentStickyCacheSize"`
-	Plugins                    []pluginInfo                `json:"plugins,omitempty" cli:",cardOmitEmpty"`
+	WorkerInstanceKey          string
+	WorkerIdentity             string
+	Status                     string
+	TaskQueue                  string
+	DeploymentVersion          *workerDeploymentVersionRef `cli:",cardOmitEmpty"`
+	SdkName                    string
+	SdkVersion                 string
+	StartTime                  time.Time
+	HeartbeatTime              time.Time
+	ElapsedSinceLastHeartbeat  string
+	HostInfo                   *workerHostInfo
+	WorkflowTaskSlotsInfo      *workerSlotsInfo  `cli:",cardOmitEmpty"`
+	ActivityTaskSlotsInfo      *workerSlotsInfo  `cli:",cardOmitEmpty"`
+	NexusTaskSlotsInfo         *workerSlotsInfo  `cli:",cardOmitEmpty"`
+	LocalActivityTaskSlotsInfo *workerSlotsInfo  `cli:",cardOmitEmpty"`
+	WorkflowPollerInfo         *workerPollerInfo `cli:",cardOmitEmpty"`
+	WorkflowStickyPollerInfo   *workerPollerInfo `cli:",cardOmitEmpty"`
+	ActivityPollerInfo         *workerPollerInfo `cli:",cardOmitEmpty"`
+	NexusPollerInfo            *workerPollerInfo `cli:",cardOmitEmpty"`
+	TotalStickyCacheHit        int32
+	TotalStickyCacheMiss       int32
+	CurrentStickyCacheSize     int32
+	Plugins                    []pluginInfo `cli:",cardOmitEmpty"`
 }
 
 func (c *TemporalWorkerDescribeCommand) run(cctx *CommandContext, args []string) error {
