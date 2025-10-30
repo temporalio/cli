@@ -6,6 +6,9 @@ on:
     types:
       - published
 
+permissions:
+  contents: write
+
 jobs:
   goreleaser:
     runs-on: ubuntu-latest
