@@ -15,7 +15,7 @@ require (
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/pflag v1.0.6
 	github.com/stretchr/testify v1.10.0
-	github.com/temporalio/ui-server/v2 v2.41.0
+	github.com/temporalio/ui-server/v2 v2.42.1
 	go.temporal.io/api v1.53.0
 	go.temporal.io/sdk v1.37.0
 	go.temporal.io/sdk/contrib/envconfig v0.1.0
