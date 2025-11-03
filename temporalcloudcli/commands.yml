@@ -39,10 +39,24 @@ commands:
       tags:
         - testing
 
+  - name: temporal-cloud user
+    summary: Manage users
+    description: |
+      Commands for managing users.
+    has-init: false
+    docs:
+      keywords:
+        - user
+        - management
+      description-header: User Management Commands
+      tags:
+        - users
+
   - name: temporal-cloud user get
     summary: Get user details
     description: Shows details for a specific user.
     has-init: false
+    exact-args: 1
     args:
       - name: username
         description: The username to get details for.

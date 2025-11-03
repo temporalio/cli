@@ -359,6 +359,12 @@ func Execute(ctx context.Context, options CommandOptions) {
 		// (remaining args would indicate an unknown subcommand)
 		builtInCommandExists := cmdErr == nil && len(foundArgs) == 0
 
+		// If no built-in command exists, we might try an extension, so silence cobra's errors
+		if !builtInCommandExists {
+			cmd.Command.SilenceErrors = true
+			cmd.Command.SilenceUsage = true
+		}
+
 		err = cmd.Command.ExecuteContext(cctx)
 
 		// If no built-in command exists for these args, try extensions

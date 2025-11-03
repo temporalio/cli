@@ -365,7 +365,6 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	} else {
 		s.Command.Long = "The Temporal CLI manages, monitors, and debugs Temporal apps. It lets you run\na local Temporal Service, start Workflow Executions, pass messages to running\nWorkflows, inspect state, and more.\n\n* Start a local development service:\n      `temporal server start-dev`\n* View help: pass `--help` to any command:\n      `temporal activity complete --help`"
 	}
-	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalActivityCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalBatchCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalConfigCommand(cctx, &s).Command)
@@ -418,7 +417,6 @@ func NewTemporalActivityCommand(cctx *CommandContext, parent *TemporalCommand) *
 	} else {
 		s.Command.Long = "Update an Activity's options, manage activity lifecycle or update\nan Activity's state to completed or failed.\n\nUpdating activity state marks an Activity as successfully finished or as\nhaving encountered an error.\n\n```\ntemporal activity complete \\\n    --activity-id=YourActivityId \\\n    --workflow-id=YourWorkflowId \\\n    --result='{\"YourResultKey\": \"YourResultValue\"}'\n```"
 	}
-	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalActivityCompleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalActivityFailCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalActivityPauseCommand(cctx, &s).Command)
@@ -688,7 +686,6 @@ func NewTemporalBatchCommand(cctx *CommandContext, parent *TemporalCommand) *Tem
 	} else {
 		s.Command.Long = "List or terminate running batch jobs.\n\nA batch job executes a command on multiple Workflow Executions at once. Create\nbatch jobs by passing `--query` to commands that support it. For example, to\ncreate a batch job to cancel a set of Workflow Executions:\n\n```\ntemporal workflow cancel \\\n  --query 'ExecutionStatus = \"Running\" AND WorkflowType=\"YourWorkflow\"' \\\n  --reason \"Testing\"\n```\n\nQuery Quick Reference:\n\n```\n+----------------------------------------------------------------------------+\n| Composition:                                                               |\n| - Data types: String literals with single or double quotes,                |\n|   Numbers (integer and floating point), Booleans                           |\n| - Comparison: '=', '!=', '>', '>=', '<', '<='                              |\n| - Expressions/Operators:  'IN array', 'BETWEEN value AND value',           |\n|   'STARTS_WITH string', 'IS NULL', 'IS NOT NULL', 'expr AND expr',         |\n|   'expr OR expr', '( expr )'                                               |\n| - Array: '( comma-separated-values )'                                      |\n|                                                                            |\n| Please note:                                                               |\n| - Wrap attributes with backticks if it contains characters not in          |\n|   [a-zA-Z0-9].                                                             |\n| - STARTS_WITH is only available for Keyword search attributes.             |\n+----------------------------------------------------------------------------+\n```\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation."
 	}
-	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalBatchDescribeCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalBatchListCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalBatchTerminateCommand(cctx, &s).Command)
@@ -797,7 +794,6 @@ func NewTemporalConfigCommand(cctx *CommandContext, parent *TemporalCommand) *Te
 	} else {
 		s.Command.Long = "Config files are TOML files that contain profiles, with each profile\ncontaining configuration for connecting to Temporal.\n\n```\ntemporal config set \\\n    --prop address \\\n    --value us-west-2.aws.api.temporal.io:7233\n```\n\nThe default config file path is `$CONFIG_PATH/temporalio/temporal.toml` where\n`$CONFIG_PATH` is defined as `$HOME/.config` on Unix,\n`$HOME/Library/Application Support` on macOS, and `%AppData%` on Windows.\nThis can be overridden with the `TEMPORAL_CONFIG_FILE` environment\nvariable or `--config-file`.\n\nThe default profile is `default`. This can be overridden with the\n`TEMPORAL_PROFILE` environment variable or `--profile`."
 	}
-	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalConfigDeleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalConfigDeleteProfileCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalConfigGetCommand(cctx, &s).Command)
@@ -957,7 +953,6 @@ func NewTemporalEnvCommand(cctx *CommandContext, parent *TemporalCommand) *Tempo
 	} else {
 		s.Command.Long = "Environments manage key-value presets, auto-configuring Temporal CLI options\nfor you. You can set up distinct environments like \"dev\" and \"prod\" for\nconvenience:\n\n```\ntemporal env set \\\n    --env prod \\\n    --key address \\\n    --value production.f45a2.tmprl.cloud:7233\n```\n\nEach environment is isolated. Changes to \"prod\" presets won't affect \"dev\".\n\nFor easiest use, set a `TEMPORAL_ENV` environment variable in your shell. The\nTemporal CLI checks for an `--env` option first, then checks for the\n`TEMPORAL_ENV` environment variable. If neither is set, the CLI uses the\n\"default\" environment."
 	}
-	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalEnvDeleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalEnvGetCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalEnvListCommand(cctx, &s).Command)
@@ -1089,7 +1084,6 @@ func NewTemporalOperatorCommand(cctx *CommandContext, parent *TemporalCommand) *
 	} else {
 		s.Command.Long = "Operator commands manage and fetch information about Namespaces, Search\nAttributes, Nexus Endpoints, and Temporal Services:\n\n```\ntemporal operator [command] [subcommand] [options]\n```\n\nFor example, to show information about the Temporal Service at the default\naddress (localhost):\n\n```\ntemporal operator cluster describe\n```"
 	}
-	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalOperatorClusterCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalOperatorNamespaceCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalOperatorNexusCommand(cctx, &s).Command)
@@ -1113,7 +1107,6 @@ func NewTemporalOperatorClusterCommand(cctx *CommandContext, parent *TemporalOpe
 	} else {
 		s.Command.Long = "Perform operator actions on Temporal Services (also known as Clusters).\n\n```\ntemporal operator cluster [subcommand] [options]\n```\n\nFor example to check Service/Cluster health:\n\n```\ntemporal operator cluster health\n```"
 	}
-	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalOperatorClusterDescribeCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalOperatorClusterHealthCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalOperatorClusterListCommand(cctx, &s).Command)
@@ -1300,7 +1293,6 @@ func NewTemporalOperatorNamespaceCommand(cctx *CommandContext, parent *TemporalO
 	} else {
 		s.Command.Long = "Manage Temporal Cluster (Service) Namespaces:\n\n```\ntemporal operator namespace [command] [command options]\n```\n\nFor example:\n\n```\ntemporal operator namespace create \\\n    --namespace YourNewNamespaceName\n```"
 	}
-	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalOperatorNamespaceCreateCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalOperatorNamespaceDeleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalOperatorNamespaceDescribeCommand(cctx, &s).Command)
@@ -1506,7 +1498,6 @@ func NewTemporalOperatorNexusCommand(cctx *CommandContext, parent *TemporalOpera
 	} else {
 		s.Command.Long = "These commands manage Nexus resources.\n\nNexus commands follow this syntax:\n\n```\ntemporal operator nexus [command] [subcommand] [options]\n```"
 	}
-	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalOperatorNexusEndpointCommand(cctx, &s).Command)
 	return &s
 }
@@ -1526,7 +1517,6 @@ func NewTemporalOperatorNexusEndpointCommand(cctx *CommandContext, parent *Tempo
 	} else {
 		s.Command.Long = "These commands manage Nexus Endpoints.\n\nNexus Endpoint commands follow this syntax:\n\n```\ntemporal operator nexus endpoint [command] [options]\n```"
 	}
-	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalOperatorNexusEndpointCreateCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalOperatorNexusEndpointDeleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalOperatorNexusEndpointGetCommand(cctx, &s).Command)
@@ -1689,7 +1679,6 @@ func NewTemporalOperatorSearchAttributeCommand(cctx *CommandContext, parent *Tem
 	} else {
 		s.Command.Long = "Create, list, or remove Search Attributes fields stored in a Workflow\nExecution's metadata:\n\n```\ntemporal operator search-attribute create \\\n    --name YourAttributeName \\\n    --type Keyword\n```\n\nSupported types include: Text, Keyword, Int, Double, Bool, Datetime, and\nKeywordList.\n\nIf you wish to delete a Search Attribute, please contact support\nat https://support.temporal.io."
 	}
-	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalOperatorSearchAttributeCreateCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalOperatorSearchAttributeListCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalOperatorSearchAttributeRemoveCommand(cctx, &s).Command)
@@ -1799,7 +1788,6 @@ func NewTemporalScheduleCommand(cctx *CommandContext, parent *TemporalCommand) *
 	} else {
 		s.Command.Long = "Create, use, and update Schedules that allow Workflow Executions to be created\nat specified times:\n\n```\ntemporal schedule [commands] [options]\n```\n\nFor example:\n\n```\ntemporal schedule describe \\\n    --schedule-id \"YourScheduleId\"\n```"
 	}
-	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalScheduleBackfillCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleCreateCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleDeleteCommand(cctx, &s).Command)
@@ -2085,7 +2073,6 @@ func NewTemporalServerCommand(cctx *CommandContext, parent *TemporalCommand) *Te
 	} else {
 		s.Command.Long = "Run a development Temporal Server on your local system.\n\n```\n+------------------------------------------------------------------------+\n| WARNING: The development server is not intended for production use.    |\n| It skips certain HTTP security checks to make local use simpler.       |\n|                                                                        |\n| For production use, see:                                               |\n| https://docs.temporal.io/production-deployment                         |\n+------------------------------------------------------------------------+\n```\n\nView the Web UI for the default configuration at: http://localhost:8233\n\n```\ntemporal server start-dev\n```\n\nAdd persistence for Workflow Executions across runs:\n\n```\ntemporal server start-dev \\\n    --db-filename path-to-your-local-persistent-store\n```\n\nSet the port from the front-end gRPC Service (7233 default):\n\n```\ntemporal server start-dev \\\n    --port 7234 \\\n    --ui-port 8234 \\\n    --metrics-port 57271\n```\n\nUse a custom port for the Web UI. The default is the gRPC port (7233 default)\nplus 1000 (8233):\n\n```\ntemporal server start-dev \\\n    --ui-port 3000\n```"
 	}
-	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalServerStartDevCommand(cctx, &s).Command)
 	return &s
 }
@@ -2163,7 +2150,6 @@ func NewTemporalTaskQueueCommand(cctx *CommandContext, parent *TemporalCommand) 
 	} else {
 		s.Command.Long = "Inspect and update Task Queues, the queues that Workers poll for Workflow and\nActivity tasks:\n\n```\ntemporal task-queue [command] [command options] \\\n    --task-queue YourTaskQueue\n```\n\nFor example:\n\n```\ntemporal task-queue describe \\\n    --task-queue YourTaskQueue\n```"
 	}
-	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalTaskQueueConfigCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalTaskQueueDescribeCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalTaskQueueGetBuildIdReachabilityCommand(cctx, &s).Command)
@@ -2190,7 +2176,6 @@ func NewTemporalTaskQueueConfigCommand(cctx *CommandContext, parent *TemporalTas
 	} else {
 		s.Command.Long = "Manage Task Queue configuration:\n\n```\ntemporal task-queue config [command] [options]\n```\n\nAvailable commands:\n- `get`: Retrieve the current configuration for a task queue\n- `set`: Update the configuration for a task queue"
 	}
-	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalTaskQueueConfigGetCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalTaskQueueConfigSetCommand(cctx, &s).Command)
 	return &s
@@ -2425,7 +2410,6 @@ func NewTemporalTaskQueueUpdateBuildIdsCommand(cctx *CommandContext, parent *Tem
 	} else {
 		s.Command.Long = "```\n+-----------------------------------------------------------------------------+\n| CAUTION: This command is deprecated and will be removed in a later release. |\n+-----------------------------------------------------------------------------+\n```\n\nAdd or change a Task Queue's compatible Build IDs for Namespaces using Worker\nversioning:\n\n```\ntemporal task-queue update-build-ids [subcommands] [options] \\\n    --task-queue YourTaskQueue\n```"
 	}
-	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalTaskQueueUpdateBuildIdsAddNewCompatibleCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalTaskQueueUpdateBuildIdsAddNewDefaultCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalTaskQueueUpdateBuildIdsPromoteIdInSetCommand(cctx, &s).Command)
@@ -2578,7 +2562,6 @@ func NewTemporalTaskQueueVersioningCommand(cctx *CommandContext, parent *Tempora
 	} else {
 		s.Command.Long = "```\n+---------------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment.         |\n+---------------------------------------------------------------------+\n```\n\nProvides commands to add, list, remove, or replace Worker Build ID assignment\nand redirect rules associated with Task Queues:\n\n```\ntemporal task-queue versioning [subcommands] [options] \\\n    --task-queue YourTaskQueue\n```\n\nTask Queues support the following versioning rules and policies:\n\n- Assignment Rules: manage how new executions are assigned to run on specific\n  Worker Build IDs. Each Task Queue stores a list of ordered Assignment Rules,\n  which are evaluated from first to last. Assignment Rules also allow for\n  gradual rollout of new Build IDs by setting ramp percentage.\n- Redirect Rules: automatically assign work for a source Build ID to a target\n  Build ID. You may add at most one redirect rule for each source Build ID.\n  Redirect rules require that a target Build ID is fully compatible with\n  the source Build ID."
 	}
-	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalTaskQueueVersioningAddRedirectRuleCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalTaskQueueVersioningCommitBuildIdCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalTaskQueueVersioningDeleteAssignmentRuleCommand(cctx, &s).Command)
@@ -2864,7 +2847,6 @@ func NewTemporalWorkerCommand(cctx *CommandContext, parent *TemporalCommand) *Te
 	} else {
 		s.Command.Long = "```\n+---------------------------------------------------------------------+\n| CAUTION: Worker is experimental. Worker commands are subject to     |\n| change.                                                             |\n+---------------------------------------------------------------------+\n```\n\nModify or read state associated with a Worker, for example,\nusing Worker Deployments commands:\n\n```\ntemporal worker deployment\n```"
 	}
-	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentCommand(cctx, &s).Command)
 	s.ClientOptions.buildFlags(cctx, s.Command.PersistentFlags())
 	return &s
@@ -2885,7 +2867,6 @@ func NewTemporalWorkerDeploymentCommand(cctx *CommandContext, parent *TemporalWo
 	} else {
 		s.Command.Long = "```\n+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n```\n\nDeployment commands perform operations on Worker Deployments:\n\n```\ntemporal worker deployment [command] [options]\n```\n\nFor example:\n\n```\ntemporal worker deployment list\n```\n\nLists the Deployments in the client's namespace.\n\nArguments can be Worker Deployment Versions associated with\na Deployment, specified using the Deployment name and Build ID.\n\nFor example:\n\n```\ntemporal worker deployment set-current-version \\\n         --deployment-name YourDeploymentName --build-id YourBuildID\n```\n\nSets the current Deployment Version for a given Deployment."
 	}
-	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentDeleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentDeleteVersionCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentDescribeCommand(cctx, &s).Command)
@@ -3048,7 +3029,6 @@ func NewTemporalWorkerDeploymentManagerIdentityCommand(cctx *CommandContext, par
 	} else {
 		s.Command.Long = "```\n+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n```\n\nManager Identity commands change the `ManagerIdentity` of a Worker Deployment:\n\n```\ntemporal worker deployment manager-identity [command] [options]\n```\n\nWhen present, `ManagerIdentity` is the identity of the user that has the \nexclusive right to make changes to this Worker Deployment. Empty by default.\nWhen set, users whose identity does not match the `ManagerIdentity` will not\nbe able to change the Worker Deployment.\n\nThis is especially useful in environments where multiple users (such as CLI\nusers and automated controllers) may interact with the same Worker Deployment.\n`ManagerIdentity` allows different users to communicate with one another about\nwho is expected to make changes to the Worker Deployment.\n\nThe current Manager Identity is returned with `describe`:\n```\n temporal worker deployment describe \\\n    --deployment-name YourDeploymentName\n```"
 	}
-	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentManagerIdentitySetCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentManagerIdentityUnsetCommand(cctx, &s).Command)
 	return &s
@@ -3233,7 +3213,6 @@ func NewTemporalWorkflowCommand(cctx *CommandContext, parent *TemporalCommand) *
 	} else {
 		s.Command.Long = "Workflow commands perform operations on Workflow Executions:\n\n```\ntemporal workflow [command] [options]\n```\n\nFor example:\n\n```\ntemporal workflow list\n```"
 	}
-	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalWorkflowCancelCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowCountCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowDeleteCommand(cctx, &s).Command)
@@ -3614,7 +3593,6 @@ func NewTemporalWorkflowResetCommand(cctx *CommandContext, parent *TemporalWorkf
 	} else {
 		s.Command.Long = "Reset a Workflow Execution so it can resume from a point in its Event History\nwithout losing its progress up to that point:\n\n```\ntemporal workflow reset \\\n    --workflow-id YourWorkflowId \\\n    --event-id YourLastEvent\n```\n\nStart from where the Workflow Execution last continued as new:\n\n```\ntemporal workflow reset \\\n    --workflow-id YourWorkflowId \\\n    --type LastContinuedAsNew\n```\n\nFor batch resets, limit your resets to FirstWorkflowTask, LastWorkflowTask, or\nBuildId. Do not use Workflow IDs, run IDs, or event IDs with this command.\n\nVisit https://docs.temporal.io/visibility to read more about Search\nAttributes and Query creation."
 	}
-	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalWorkflowResetWithWorkflowUpdateOptionsCommand(cctx, &s).Command)
 	s.Command.PersistentFlags().StringVarP(&s.WorkflowId, "workflow-id", "w", "", "Workflow ID. Required for non-batch reset operations.")
 	s.Command.PersistentFlags().StringVarP(&s.RunId, "run-id", "r", "", "Run ID.")
@@ -4004,7 +3982,6 @@ func NewTemporalWorkflowUpdateCommand(cctx *CommandContext, parent *TemporalWork
 	s.Command.Use = "update"
 	s.Command.Short = "Send and interact with Updates"
 	s.Command.Long = "An Update is a synchronous call to a Workflow Execution that can change its\nstate, control its flow, and return a result."
-	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalWorkflowUpdateDescribeCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowUpdateExecuteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowUpdateResultCommand(cctx, &s).Command)
