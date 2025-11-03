@@ -2866,6 +2866,8 @@ func NewTemporalWorkerCommand(cctx *CommandContext, parent *TemporalCommand) *Te
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkerDescribeCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkerListCommand(cctx, &s).Command)
 	s.ClientOptions.buildFlags(cctx, s.Command.PersistentFlags())
 	return &s
 }
@@ -3209,6 +3211,63 @@ func NewTemporalWorkerDeploymentUpdateMetadataVersionCommand(cctx *CommandContex
 	s.Command.Flags().StringArrayVar(&s.Metadata, "metadata", nil, "Set deployment metadata using `KEY=\"VALUE\"` pairs. Keys must be identifiers, and values must be JSON values. For example: 'YourKey={\"your\": \"value\"}'. Can be passed multiple times.")
 	s.Command.Flags().StringArrayVar(&s.RemoveEntries, "remove-entries", nil, "Keys of entries to be deleted from metadata. Can be passed multiple times.")
 	s.DeploymentVersionOptions.buildFlags(cctx, s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalWorkerDescribeCommand struct {
+	Parent            *TemporalWorkerCommand
+	Command           cobra.Command
+	WorkerInstanceKey string
+}
+
+func NewTemporalWorkerDescribeCommand(cctx *CommandContext, parent *TemporalWorkerCommand) *TemporalWorkerDescribeCommand {
+	var s TemporalWorkerDescribeCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "describe [flags]"
+	s.Command.Short = "Returns information about a specific worker (EXPERIMENTAL)"
+	if hasHighlighting {
+		s.Command.Long = "Look up information of a specific worker.\n\n\x1b[1mtemporal worker describe --namespace YourNamespace --worker-instance-key YourKey\x1b[0m"
+	} else {
+		s.Command.Long = "Look up information of a specific worker.\n\n```\ntemporal worker describe --namespace YourNamespace --worker-instance-key YourKey\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.WorkerInstanceKey, "worker-instance-key", "", "Worker instance key to describe. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "worker-instance-key")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalWorkerListCommand struct {
+	Parent  *TemporalWorkerCommand
+	Command cobra.Command
+	Query   string
+	Limit   int
+}
+
+func NewTemporalWorkerListCommand(cctx *CommandContext, parent *TemporalWorkerCommand) *TemporalWorkerListCommand {
+	var s TemporalWorkerListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "List worker status information in a specific namespace (EXPERIMENTAL)"
+	if hasHighlighting {
+		s.Command.Long = "Get a list of workers to the specified namespace.\n\n\x1b[1mtemporal worker list --namespace YourNamespace --query 'taskQueue=\"YourTaskQueue\"'\x1b[0m"
+	} else {
+		s.Command.Long = "Get a list of workers to the specified namespace.\n\n```\ntemporal worker list --namespace YourNamespace --query 'taskQueue=\"YourTaskQueue\"'\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Content for an SQL-like `QUERY` List Filter.")
+	s.Command.Flags().IntVar(&s.Limit, "limit", 0, "Maximum number of workers to display.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

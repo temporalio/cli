@@ -238,6 +238,9 @@ func (s *SharedServerSuite) SetupSuite() {
 				// this is overridden since we don't want caching to be enabled
 				// while testing DescribeTaskQueue behaviour related to versioning
 				"matching.TaskQueueInfoByBuildIdTTL": 0 * time.Second,
+				// worker heartbeating
+				"frontend.WorkerHeartbeatsEnabled": true,
+				"frontend.ListWorkersEnabled":      true,
 			},
 		},
 	})
