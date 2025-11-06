@@ -22,6 +22,10 @@ jobs:
         with:
           app-id: ${{ secrets.TEMPORAL_CICD_APP_ID }}
           private-key: ${{ secrets.TEMPORAL_CICD_PRIVATE_KEY }}
+          owner: temporalio
+          repositories: |
+            cli
+            docker-builds
 
       - name: Dispatch docker builds Github Action
         env:
