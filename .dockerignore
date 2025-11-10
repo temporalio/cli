@@ -1,0 +1,42 @@
+# Version control
+.git
+.gitignore
+
+# Documentation
+*.md
+README*
+docs/
+
+# Tests
+*_test.go
+**/*_test.go
+tests/
+test/
+
+# Development
+.env
+.env.*
+*.log
+
+# Build artifacts
+temporal
+temporal.exe
+
+# IDE
+.vscode
+.idea
+.zed
+.claude
+*.swp
+*~
+
+# CI/CD
+.github
+.goreleaser.yml
+
+# Scripts
+install.sh
+install.test.sh
+
+# Go
+go.sum
