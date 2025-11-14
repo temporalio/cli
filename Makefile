@@ -1,11 +1,14 @@
-.PHONY: all gen build
+.PHONY: all gen build fmt-imports
 
 all: gen build
 
-gen: temporalcli/commands.gen.go
+gen: internal/commands.gen.go
 
-temporalcli/commands.gen.go: temporalcli/commandsgen/commands.yml
-	go run ./temporalcli/internal/cmd/gen-commands
+internal/commands.gen.go: internal/commandsgen/commands.yml
+	go run ./internal/cmd/gen-commands
 
 build:
 	go build ./cmd/temporal
+
+fmt-imports:
+	go run golang.org/x/tools/cmd/goimports -local github.com/temporalio/cli -w .

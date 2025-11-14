@@ -38,7 +38,7 @@ builds:
       dir: cmd/temporal
       binary: temporal
       ldflags:
-        - -s -w -X github.com/temporalio/cli/temporalcli.Version={{.Version}}
+        - -s -w -X github.com/temporalio/cli/internal.Version={{.Version}}
       goarch:
         - amd64
         - arm64
