@@ -10,7 +10,7 @@ import (
 
 // Pinning modernc.org/sqlite to this version until https://gitlab.com/cznic/sqlite/-/issues/196 is resolved
 func TestSqliteVersion(t *testing.T) {
-	content, err := os.ReadFile("../go.mod")
+	content, err := os.ReadFile("../../go.mod")
 	if err != nil {
 		t.Fatalf("Failed to read go.mod: %v", err)
 	}
