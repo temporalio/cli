@@ -11,4 +11,5 @@ build:
 	go build ./cmd/temporal
 
 fmt-imports:
+	go install golang.org/x/tools/cmd/goimports@v0.39.0
 	go run golang.org/x/tools/cmd/goimports -local github.com/temporalio/cli -w .
