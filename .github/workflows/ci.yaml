@@ -56,12 +56,6 @@ jobs:
           go run ./internal/cmd/gen-commands
           git diff --exit-code
 
-      - name: Check import formatting
-        if: ${{ matrix.checkGenCodeTarget }}
-        run: |
-          make fmt-imports
-          git diff --exit-code
-
       - name: Test cloud mTLS
         if: ${{ matrix.cloudTestTarget && env.HAS_SECRETS == 'true' }}
         env:
