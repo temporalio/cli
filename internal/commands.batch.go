@@ -5,12 +5,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/temporalio/cli/internal/printer"
 	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"google.golang.org/protobuf/types/known/timestamppb"
-
-	"github.com/temporalio/cli/internal/printer"
 )
 
 type (

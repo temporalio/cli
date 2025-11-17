@@ -19,6 +19,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"github.com/temporalio/cli/internal/printer"
 	"github.com/temporalio/ui-server/v2/server/version"
 	"go.temporal.io/api/common/v1"
 	commonpb "go.temporal.io/api/common/v1"
@@ -32,8 +33,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
-
-	"github.com/temporalio/cli/internal/printer"
 )
 
 // Version is the value put as the default command version. This is often

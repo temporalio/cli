@@ -5,14 +5,13 @@ import (
 	"time"
 
 	"github.com/fatih/color"
+	"github.com/temporalio/cli/internal/printer"
 	commonpb "go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/taskqueue/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/server/common/tqid"
-
-	"github.com/temporalio/cli/internal/printer"
 )
 
 const taskQueueUnversioned = "UNVERSIONED"

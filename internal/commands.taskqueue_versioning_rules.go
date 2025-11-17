@@ -5,9 +5,8 @@ import (
 	"time"
 
 	"github.com/fatih/color"
-	"go.temporal.io/sdk/client"
-
 	"github.com/temporalio/cli/internal/printer"
+	"go.temporal.io/sdk/client"
 )
 
 type assignmentRowType struct {

@@ -6,12 +6,11 @@ import (
 	"time"
 
 	"github.com/fatih/color"
+	"github.com/temporalio/cli/internal/printer"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
-
-	"github.com/temporalio/cli/internal/printer"
 )
 
 type versionSummariesRowType struct {

@@ -7,9 +7,8 @@ import (
 	"sort"
 	"strings"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/temporalio/cli/internal/printer"
+	"gopkg.in/yaml.v3"
 )
 
 func (c *TemporalEnvCommand) envNameAndKey(cctx *CommandContext, args []string, keyFlag string) (string, string, error) {

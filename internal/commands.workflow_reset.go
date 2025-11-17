@@ -7,14 +7,13 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/temporalio/cli/internal/printer"
 	"go.temporal.io/api/batch/v1"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
 	workflow "go.temporal.io/api/workflow/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
-
-	"github.com/temporalio/cli/internal/printer"
 )
 
 func (c *TemporalWorkflowResetCommand) run(cctx *CommandContext, _ []string) error {

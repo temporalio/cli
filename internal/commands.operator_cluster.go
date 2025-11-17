@@ -4,11 +4,10 @@ import (
 	"fmt"
 
 	"github.com/fatih/color"
+	"github.com/temporalio/cli/internal/printer"
 	"go.temporal.io/api/operatorservice/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
-
-	"github.com/temporalio/cli/internal/printer"
 )
 
 func (c *TemporalOperatorClusterHealthCommand) run(cctx *CommandContext, args []string) error {

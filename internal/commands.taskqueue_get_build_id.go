@@ -5,9 +5,8 @@ import (
 	"strconv"
 
 	"github.com/fatih/color"
-	"go.temporal.io/sdk/client"
-
 	"github.com/temporalio/cli/internal/printer"
+	"go.temporal.io/sdk/client"
 )
 
 func (c *TemporalTaskQueueGetBuildIdsCommand) run(cctx *CommandContext, args []string) error {

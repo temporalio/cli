@@ -5,13 +5,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/temporalio/cli/internal/printer"
 	deploymentpb "go.temporal.io/api/deployment/v1"
 	enumspb "go.temporal.io/api/enums/v1"
 	workerpb "go.temporal.io/api/worker/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"google.golang.org/protobuf/types/known/durationpb"
-
-	"github.com/temporalio/cli/internal/printer"
 )
 
 type workerListRow struct {

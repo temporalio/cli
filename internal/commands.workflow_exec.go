@@ -14,6 +14,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/google/uuid"
+	"github.com/temporalio/cli/internal/printer"
 	"go.temporal.io/api/common/v1"
 	commonpb "go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
@@ -25,8 +26,6 @@ import (
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/temporal"
 	"google.golang.org/protobuf/types/known/durationpb"
-
-	"github.com/temporalio/cli/internal/printer"
 )
 
 func (c *TemporalWorkflowStartCommand) run(cctx *CommandContext, args []string) error {

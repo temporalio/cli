@@ -7,11 +7,10 @@ import (
 	"time"
 
 	"github.com/fatih/color"
-	"go.temporal.io/api/enums/v1"
-	"go.temporal.io/sdk/client"
-
 	"github.com/temporalio/cli/internal/printer"
 	"github.com/temporalio/cli/internal/tracer"
+	"go.temporal.io/api/enums/v1"
+	"go.temporal.io/sdk/client"
 )
 
 var workflowTraceFoldFlags = map[string]enums.WorkflowExecutionStatus{

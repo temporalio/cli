@@ -7,12 +7,11 @@ import (
 	"os"
 
 	"github.com/fatih/color"
+	"github.com/temporalio/cli/internal/printer"
 	commonpb "go.temporal.io/api/common/v1"
 	nexuspb "go.temporal.io/api/nexus/v1"
 	"go.temporal.io/api/operatorservice/v1"
 	"go.temporal.io/sdk/client"
-
-	"github.com/temporalio/cli/internal/printer"
 )
 
 func (c *TemporalOperatorNexusEndpointCreateCommand) run(cctx *CommandContext, _ []string) error {

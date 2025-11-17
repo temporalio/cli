@@ -8,9 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"google.golang.org/protobuf/encoding/protojson"
-
 	"github.com/temporalio/cli/internal/printer"
+	"google.golang.org/protobuf/encoding/protojson"
 
 	commonpb "go.temporal.io/api/common/v1"
 	enumspb "go.temporal.io/api/enums/v1"

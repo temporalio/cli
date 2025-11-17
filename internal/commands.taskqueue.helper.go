@@ -5,10 +5,9 @@ import (
 	"time"
 
 	"github.com/fatih/color"
+	"github.com/temporalio/cli/internal/printer"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/taskqueue/v1"
-
-	"github.com/temporalio/cli/internal/printer"
 )
 
 // Create a structured table for config display.

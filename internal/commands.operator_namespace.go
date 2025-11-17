@@ -4,14 +4,13 @@ import (
 	"fmt"
 
 	"github.com/fatih/color"
+	"github.com/temporalio/cli/internal/printer"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/namespace/v1"
 	"go.temporal.io/api/operatorservice/v1"
 	"go.temporal.io/api/replication/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"google.golang.org/protobuf/types/known/durationpb"
-
-	"github.com/temporalio/cli/internal/printer"
 )
 
 func (c *TemporalOperatorCommand) getNSFromFlagOrArg0(cctx *CommandContext, args []string) (string, error) {

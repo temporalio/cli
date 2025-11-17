@@ -9,9 +9,8 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
-	"go.temporal.io/sdk/contrib/envconfig"
-
 	"github.com/temporalio/cli/internal/printer"
+	"go.temporal.io/sdk/contrib/envconfig"
 )
 
 func (c *TemporalConfigDeleteCommand) run(cctx *CommandContext, _ []string) error {

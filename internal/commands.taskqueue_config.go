@@ -5,11 +5,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/temporalio/cli/internal/printer"
 	enums "go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/taskqueue/v1"
 	"go.temporal.io/api/workflowservice/v1"
-
-	"github.com/temporalio/cli/internal/printer"
 )
 
 // TaskQueueConfigGetCommand handles getting task queue configuration

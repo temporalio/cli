@@ -10,7 +10,6 @@ import (
 	"unicode"
 
 	"github.com/stretchr/testify/require"
-
 	"github.com/temporalio/cli/internal/printer"
 )
 

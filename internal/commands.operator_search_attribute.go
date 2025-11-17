@@ -5,10 +5,9 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
+	"github.com/temporalio/cli/internal/printer"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/operatorservice/v1"
-
-	"github.com/temporalio/cli/internal/printer"
 )
 
 func (c *TemporalOperatorSearchAttributeCreateCommand) run(cctx *CommandContext, args []string) error {

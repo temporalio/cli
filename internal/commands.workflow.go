@@ -12,6 +12,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/google/uuid"
+	"github.com/temporalio/cli/internal/printer"
 	"go.temporal.io/api/batch/v1"
 	"go.temporal.io/api/common/v1"
 	deploymentpb "go.temporal.io/api/deployment/v1"
@@ -24,8 +25,6 @@ import (
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/temporal"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
-
-	"github.com/temporalio/cli/internal/printer"
 )
 
 const metadataQueryName = "__temporal_workflow_metadata"
