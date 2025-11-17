@@ -13,11 +13,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/temporalio/cli/internal/devserver"
 	"go.temporal.io/api/operatorservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/temporal"
-
-	"github.com/temporalio/cli/internal/devserver"
 )
 
 // TODO(cretz): To test:

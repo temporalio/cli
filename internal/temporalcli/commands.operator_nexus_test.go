@@ -11,10 +11,9 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/temporalio/cli/internal/temporalcli"
 	"go.temporal.io/api/nexus/v1"
 	"go.temporal.io/api/operatorservice/v1"
-
-	temporalcli "github.com/temporalio/cli/internal"
 )
 
 func (s *SharedServerSuite) TestCreateNexusEndpoint_Target() {

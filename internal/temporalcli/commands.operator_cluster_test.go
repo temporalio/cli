@@ -6,10 +6,9 @@ import (
 	"strconv"
 	"time"
 
-	"go.temporal.io/api/workflowservice/v1"
-
-	temporalcli "github.com/temporalio/cli/internal"
 	"github.com/temporalio/cli/internal/devserver"
+	"github.com/temporalio/cli/internal/temporalcli"
+	"go.temporal.io/api/workflowservice/v1"
 )
 
 func (s *SharedServerSuite) TestOperator_Cluster_System() {

@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/temporalio/cli/internal/temporalcli"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/workflowservice/v1"
-
-	temporalcli "github.com/temporalio/cli/internal"
 )
 
 func (s *SharedServerSuite) TestOperator_NamespaceCreateListAndDescribe() {

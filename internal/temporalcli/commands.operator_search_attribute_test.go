@@ -1,10 +1,9 @@
 package temporalcli_test
 
 import (
+	"github.com/temporalio/cli/internal/temporalcli"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/operatorservice/v1"
-
-	temporalcli "github.com/temporalio/cli/internal"
 )
 
 func (s *SharedServerSuite) TestOperator_SearchAttribute_Create_Already_Exists() {

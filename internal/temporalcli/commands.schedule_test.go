@@ -12,11 +12,10 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/temporalio/cli/internal/temporalcli"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/operatorservice/v1"
 	"go.temporal.io/sdk/workflow"
-
-	temporalcli "github.com/temporalio/cli/internal"
 )
 
 func (s *SharedServerSuite) createSchedule(args ...string) (schedId, schedWfId string, res *CommandResult) {

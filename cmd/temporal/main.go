@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 
-	temporalcli "github.com/temporalio/cli/internal"
+	"github.com/temporalio/cli/internal/temporalcli"
 
 	// Prevent the pinned version of sqlite driver from unintentionally changing
 	// until https://gitlab.com/cznic/sqlite/-/issues/196 is resolved.
