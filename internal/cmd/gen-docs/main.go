@@ -7,7 +7,8 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/temporalio/cli/internal/commandsgen"
+	"github.com/temporalio/cli/cliext/commandsgen"
+	"github.com/temporalio/cli/internal/temporalcli"
 )
 
 func main() {
@@ -28,7 +29,7 @@ func run() error {
 	}
 
 	// Parse YAML
-	cmds, err := commandsgen.ParseCommands()
+	cmds, err := commandsgen.ParseCommands(temporalcli.CommandsYAML())
 	if err != nil {
 		return fmt.Errorf("failed parsing YAML: %w", err)
 	}
