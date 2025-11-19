@@ -8,12 +8,10 @@ import (
 	"regexp"
 	"sort"
 	"strings"
-
-	"go.temporal.io/server/common/primitives/timestamp"
 )
 
-func GenerateCommandsCode(pkg string, commands Commands) ([]byte, error) {
-	w := &codeWriter{allCommands: commands.CommandList, OptionSets: commands.OptionSets}
+func GenerateCommandsCode(pkg string, contextType string, commands Commands) ([]byte, error) {
+	w := &codeWriter{allCommands: commands.CommandList, OptionSets: commands.OptionSets, contextType: contextType}
 	// Put terminal check at top
 	w.writeLinef("var hasHighlighting = %v.IsTerminal(%v.Stdout.Fd())", w.importIsatty(), w.importPkg("os"))
 
@@ -59,6 +57,7 @@ type codeWriter struct {
 	buf         bytes.Buffer
 	allCommands []Command
 	OptionSets  []OptionSets
+	contextType string
 	// Key is short ref, value is full
 	imports map[string]string
 }
@@ -120,8 +119,8 @@ func (o *OptionSets) writeCode(w *codeWriter) error {
 	w.writeLinef("}\n")
 
 	// write flags
-	w.writeLinef("func (v *%v) buildFlags(cctx *CommandContext, f *%v.FlagSet) {",
-		o.setStructName(), w.importPflag())
+	w.writeLinef("func (v *%v) buildFlags(cctx %s, f *%v.FlagSet) {",
+		o.setStructName(), w.contextType, w.importPflag())
 	o.writeFlagBuilding("v", "f", w)
 	w.writeLinef("}\n")
 
@@ -164,10 +163,10 @@ func (c *Command) writeCode(w *codeWriter) error {
 
 	// Constructor builds the struct and sets the flags
 	if hasParent {
-		w.writeLinef("func New%v(cctx *CommandContext, parent *%v) *%v {",
-			c.structName(), parent.structName(), c.structName())
+		w.writeLinef("func New%v(cctx %s, parent *%v) *%v {",
+			c.structName(), w.contextType, parent.structName(), c.structName())
 	} else {
-		w.writeLinef("func New%v(cctx *CommandContext) *%v {", c.structName(), c.structName())
+		w.writeLinef("func New%v(cctx %s) *%v {", c.structName(), w.contextType, c.structName())
 	}
 	w.writeLinef("var s %v", c.structName())
 	if hasParent {
@@ -328,7 +327,7 @@ func (o *Option) writeFlagBuilding(selfVar, flagVar string, w *codeWriter) error
 	case "duration":
 		flagMeth, setDefault = "Var", "0"
 		if o.Default != "" {
-			dur, err := timestamp.ParseDuration(o.Default)
+			dur, err := parseDuration(o.Default)
 			if err != nil {
 				return fmt.Errorf("invalid default: %w", err)
 			}
