@@ -10,7 +10,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, macos-13, windows-latest, ubuntu-arm]
+        os:
+          [
+            ubuntu-latest,
+            macos-latest,
+            macos-15-intel,
+            windows-latest,
+            ubuntu-arm,
+          ]
         include:
           - os: ubuntu-latest
             checkGenCommands: true
