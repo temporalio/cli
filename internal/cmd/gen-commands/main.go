@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/temporalio/cli/cliext/commandsgen"
+	"github.com/temporalio/cli/commandsgen"
 	"github.com/temporalio/cli/internal/temporalcli"
 )
 
