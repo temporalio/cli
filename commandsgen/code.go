@@ -8,8 +8,6 @@ import (
 	"regexp"
 	"sort"
 	"strings"
-
-	"go.temporal.io/server/common/primitives/timestamp"
 )
 
 func GenerateCommandsCode(pkg string, contextType string, commands Commands) ([]byte, error) {
@@ -329,7 +327,7 @@ func (o *Option) writeFlagBuilding(selfVar, flagVar string, w *codeWriter) error
 	case "duration":
 		flagMeth, setDefault = "Var", "0"
 		if o.Default != "" {
-			dur, err := timestamp.ParseDuration(o.Default)
+			dur, err := parseDuration(o.Default)
 			if err != nil {
 				return fmt.Errorf("invalid default: %w", err)
 			}
