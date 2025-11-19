@@ -3,7 +3,6 @@ package temporalcli
 import (
 	"bufio"
 	"context"
-	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -35,14 +34,6 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
-
-//go:embed commands.yaml
-var commandsYAML []byte
-
-// CommandsYAML returns the embedded commands.yaml data for use by code generators.
-func CommandsYAML() []byte {
-	return commandsYAML
-}
 
 // Version is the value put as the default command version. This is often
 // replaced at build time via ldflags.

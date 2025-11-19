@@ -21,9 +21,9 @@ Example to run a single test case:
 ## Adding/updating commands
 
 First, update [commands.yaml](internal/temporalcli/commands.yaml) following the rules in that file. Then to regenerate the
-[commands.gen.go](internal/commands.gen.go) file from code, simply run:
+[commands.gen.go](internal/temporalcli/commands.gen.go) file from code, simply run:
 
-    go run ./internal/cmd/gen-commands
+    make gen
 
 This will expect every non-parent command to have a `run` method, so for new commands developers will have to implement
 `run` on the new command in a separate file before it will compile.
@@ -31,7 +31,7 @@ This will expect every non-parent command to have a `run` method, so for new com
 Once a command is updated, the CI will automatically generate new docs
 and create a PR in the Documentation repo with the corresponding updates. To generate these docs locally, run:
 
-    go run ./internal/cmd/gen-docs
+    go run ./cmd/gen-docs -output dist/docs < internal/temporalcli/commands.yaml
 
 This will auto-generate a new set of docs to `dist/docs/`. If a new root command is added, a new file will be automatically generated, like `temporal activity` and `activity.mdx`.
 
