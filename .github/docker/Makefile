@@ -1,4 +1,14 @@
-IMAGE_REPO ?= temporalio
+# Detect repository owner from git remote
+REPO_OWNER := $(shell git remote get-url origin | sed -E 's|.*[:/]([^/]+)/[^/]+\.git|\1|' | tr '[:upper:]' '[:lower:]')
+
+# For temporalio org, default to temporalio. For others, require IMAGE_REPO to be set
+ifeq ($(REPO_OWNER),temporalio)
+	IMAGE_REPO ?= temporalio
+else
+	ifndef IMAGE_REPO
+		$(error IMAGE_REPO must be set for non-temporalio repositories. Usage: make build IMAGE_REPO=your-dockerhub-username)
+	endif
+endif
 
 CLI_SHA := $(shell git rev-parse HEAD)
 IMAGE_SHA_TAG := $(shell git rev-parse --short HEAD)
@@ -14,19 +24,25 @@ help: ## Display this help message
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-20s %s\n", $$1, $$2}'
 
 .PHONY: build
-build: ## Build Docker images locally
+build: ## Build Docker images (multi-arch)
+	@echo "Building binaries with goreleaser..."
 	cd ../.. && goreleaser release --snapshot --clean --skip=publish
-	$(BAKE_ENV) docker buildx bake --file docker-bake.hcl cli
+	@echo "Building Docker images (multi-arch)..."
+	cd ../.. && $(BAKE_ENV) docker buildx bake --file .github/docker/docker-bake.hcl cli
+	@echo ""
+	@echo "Success! Built multi-arch images"
+	@echo "Note: Multi-arch images are not loaded into Docker. Use 'make build-local' to build and test locally."
 
-.PHONY: load
-load: ## Build and load image into local Docker
+.PHONY: build-local
+build-local: ## Build and load Docker image for local testing
+	@echo "Building binaries with goreleaser..."
 	cd ../.. && goreleaser release --snapshot --clean --skip=publish
-	$(BAKE_ENV) docker buildx bake --file docker-bake.hcl --load cli
-
-.PHONY: push
-push: ## Build and push Docker images
-	cd ../.. && goreleaser release --snapshot --clean --skip=publish
-	$(BAKE_ENV) docker buildx bake --file docker-bake.hcl --push cli
+	@echo "Building Docker image for local platform..."
+	cd ../.. && $(BAKE_ENV) docker buildx bake --file .github/docker/docker-bake.hcl --set cli.platforms=linux/amd64 --load cli
+	@echo "Testing Docker image..."
+	docker run --rm $(IMAGE_REPO)/temporal:$(IMAGE_SHA_TAG) --version
+	@echo ""
+	@echo "Success! Image: $(IMAGE_REPO)/temporal:$(IMAGE_SHA_TAG)"
 
 .PHONY: clean
 clean: ## Clean build artifacts

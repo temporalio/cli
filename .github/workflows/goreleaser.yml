@@ -43,9 +43,9 @@ jobs:
         run: echo "::set-output name=go::$(go version | cut -d ' ' -f 3)"
 
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@336e29918d653399e599bfca99fadc1d7ffbc9f7 # v4.3.0
+        uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6.4.0
         with:
-          version: v1.26.2
+          version: v2.12.7
           args: release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -73,6 +73,12 @@ jobs:
           # Get version from tag, strip 'v' prefix
           VERSION="${GITHUB_REF#refs/tags/v}"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+          # Determine image repo based on repository owner
+          if [[ "${{ github.repository_owner }}" == "temporalio" ]]; then
+            echo "image_repo=temporalio" >> $GITHUB_OUTPUT
+          else
+            echo "image_repo=${{ github.repository_owner }}" >> $GITHUB_OUTPUT
+          fi
 
       - name: Check if release is latest
         id: check_latest
@@ -89,6 +95,7 @@ jobs:
             console.log(`Release prerelease: ${release.prerelease}, tag_latest: ${!release.prerelease}`)
 
       - name: Build and push Docker images
+        if: github.repository_owner == 'temporalio'
         run: |
           docker buildx bake \
             --file .github/docker/docker-bake.hcl \

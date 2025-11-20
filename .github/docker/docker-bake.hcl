@@ -24,8 +24,8 @@ variable "ALPINE_IMAGE" {
 }
 
 target "cli" {
-  dockerfile = "cli.Dockerfile"
-  context = ".github/docker"
+  dockerfile = ".github/docker/cli.Dockerfile"
+  context = "."
   tags = compact([
     "${IMAGE_REPO}/temporal:${IMAGE_SHA_TAG}",
     "${IMAGE_REPO}/temporal:${VERSION}",

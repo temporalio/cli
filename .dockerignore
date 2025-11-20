@@ -7,10 +7,10 @@
 .github
 
 # Build artifacts
-dist/
 build/
 .goreleaser/
 *.snap
+# Keep dist/ as it contains binaries needed for Docker build
 
 # Development
 .vscode/

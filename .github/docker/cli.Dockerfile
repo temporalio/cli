@@ -5,8 +5,8 @@ ARG BUILDARCH
 
 # Build stage - copy binaries from goreleaser output
 FROM --platform=$BUILDARCH scratch AS dist
-COPY ../../dist/nix_linux_amd64_v1/temporal /dist/amd64/temporal
-COPY ../../dist/nix_linux_arm64/temporal /dist/arm64/temporal
+COPY dist/nix_linux_amd64_v1/temporal /dist/amd64/temporal
+COPY dist/nix_linux_arm64_v8.0/temporal /dist/arm64/temporal
 
 # Stage to extract CA certificates and create user files
 FROM ${ALPINE_IMAGE} AS certs
