@@ -1,0 +1,161 @@
+name: Build and Publish (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      publish:
+        description: 'Whether to publish the release and Docker image'
+        required: true
+        type: boolean
+      version:
+        description: 'Version tag for the release (required if publish is true)'
+        required: false
+        type: string
+    secrets:
+      DOCKER_USERNAME:
+        required: false
+      DOCKER_PASSWORD:
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build and Publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
+        with:
+          go-version-file: "go.mod"
+          check-latest: true
+
+      - name: Get build date
+        id: date
+        run: echo "::set-output name=date::$(date '+%F-%T')"
+
+      - name: Get build unix timestamp
+        id: timestamp
+        run: echo "::set-output name=timestamp::$(date '+%s')"
+
+      - name: Get git branch
+        id: branch
+        run: echo "::set-output name=branch::$(git rev-parse --abbrev-ref HEAD)"
+
+      - name: Get build platform
+        id: platform
+        run: echo "::set-output name=platform::$(go version | cut -d ' ' -f 4)"
+
+      - name: Get Go version
+        id: go
+        run: echo "::set-output name=go::$(go version | cut -d ' ' -f 3)"
+
+      - name: Run GoReleaser (release)
+        if: inputs.publish
+        uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6.4.0
+        with:
+          version: v2.12.7
+          args: release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BUILD_DATE: ${{ steps.date.outputs.date }}
+          BUILD_TS_UNIX: ${{ steps.timestamp.outputs.timestamp }}
+          GIT_BRANCH: ${{ steps.branch.outputs.branch }}
+          BUILD_PLATFORM: ${{ steps.platform.outputs.platform }}
+          GO_VERSION: ${{ steps.go.outputs.go }}
+
+      - name: Run GoReleaser (snapshot)
+        if: ${{ !inputs.publish }}
+        uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6.4.0
+        with:
+          version: v2.12.7
+          args: release --snapshot --clean
+        env:
+          BUILD_DATE: ${{ steps.date.outputs.date }}
+          BUILD_TS_UNIX: ${{ steps.timestamp.outputs.timestamp }}
+          GIT_BRANCH: ${{ steps.branch.outputs.branch }}
+          BUILD_PLATFORM: ${{ steps.platform.outputs.platform }}
+          GO_VERSION: ${{ steps.go.outputs.go }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        if: inputs.publish && github.repository_owner == 'temporalio'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Get build metadata
+        id: meta
+        run: |
+          echo "cli_sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+          echo "image_sha_tag=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "image_branch_tag=$(git rev-parse --abbrev-ref HEAD)" >> $GITHUB_OUTPUT
+
+          if [[ "${{ inputs.publish }}" == "true" ]]; then
+            # Get version from input, strip 'v' prefix
+            VERSION="${{ inputs.version }}"
+            VERSION="${VERSION#v}"
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          else
+            echo "version=snapshot" >> $GITHUB_OUTPUT
+          fi
+
+          # Determine image repo based on repository owner
+          if [[ "${{ github.repository_owner }}" == "temporalio" ]]; then
+            echo "image_repo=temporalio" >> $GITHUB_OUTPUT
+          else
+            echo "image_repo=${{ github.repository_owner }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check if release is latest
+        if: inputs.publish
+        id: check_latest
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: release } = await github.rest.repos.getReleaseByTag({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag: context.ref.replace('refs/tags/', '')
+            });
+            // Tag as latest only if release is marked as latest (not pre-release)
+            core.setOutput('tag_latest', release.prerelease ? 'false' : 'true');
+            console.log(`Release prerelease: ${release.prerelease}, tag_latest: ${!release.prerelease}`)
+
+      - name: Build and push Docker image
+        if: inputs.publish && github.repository_owner == 'temporalio'
+        run: |
+          docker buildx bake \
+            --file .github/docker/docker-bake.hcl \
+            --push \
+            cli
+        env:
+          CLI_SHA: ${{ steps.meta.outputs.cli_sha }}
+          IMAGE_SHA_TAG: ${{ steps.meta.outputs.image_sha_tag }}
+          IMAGE_BRANCH_TAG: ${{ steps.meta.outputs.image_branch_tag }}
+          VERSION: ${{ steps.meta.outputs.version }}
+          TAG_LATEST: ${{ steps.check_latest.outputs.tag_latest }}
+          IMAGE_REPO: temporalio
+
+      - name: Build Docker image
+        if: ${{ !inputs.publish }}
+        run: |
+          docker buildx bake \
+            --file .github/docker/docker-bake.hcl \
+            cli
+        env:
+          CLI_SHA: ${{ steps.meta.outputs.cli_sha }}
+          IMAGE_SHA_TAG: ${{ steps.meta.outputs.image_sha_tag }}
+          IMAGE_BRANCH_TAG: ${{ steps.meta.outputs.image_branch_tag }}
+          VERSION: ${{ steps.meta.outputs.version }}
+          TAG_LATEST: false
+          IMAGE_REPO: temporalio
