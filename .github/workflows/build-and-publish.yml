@@ -35,23 +35,23 @@ jobs:
 
       - name: Get build date
         id: date
-        run: echo "::set-output name=date::$(date '+%F-%T')"
+        run: echo "date=$(date '+%F-%T')" >> $GITHUB_OUTPUT
 
       - name: Get build unix timestamp
         id: timestamp
-        run: echo "::set-output name=timestamp::$(date '+%s')"
+        run: echo "timestamp=$(date '+%s')" >> $GITHUB_OUTPUT
 
       - name: Get git branch
         id: branch
-        run: echo "::set-output name=branch::$(git rev-parse --abbrev-ref HEAD)"
+        run: echo "branch=$(git rev-parse --abbrev-ref HEAD)" >> $GITHUB_OUTPUT
 
       - name: Get build platform
         id: platform
-        run: echo "::set-output name=platform::$(go version | cut -d ' ' -f 4)"
+        run: echo "platform=$(go version | cut -d ' ' -f 4)" >> $GITHUB_OUTPUT
 
       - name: Get Go version
         id: go
-        run: echo "::set-output name=go::$(go version | cut -d ' ' -f 3)"
+        run: echo "go=$(go version | cut -d ' ' -f 3)" >> $GITHUB_OUTPUT
 
       - name: Run GoReleaser (release)
         if: inputs.publish
