@@ -1,0 +1,34 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# GitHub
+.github
+
+# Build artifacts
+dist/
+build/
+.goreleaser/
+*.snap
+
+# Development
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Documentation
+*.md
+docs/
+
+# CI/CD
+.circleci/
+
+# Test files
+*_test.go
+testdata/
+
+# Misc
+.DS_Store

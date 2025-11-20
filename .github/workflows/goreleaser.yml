@@ -1,4 +1,4 @@
-name: goreleaser
+name: Release
 
 on:
   workflow_dispatch:
@@ -7,7 +7,8 @@ on:
       - published
 
 jobs:
-  goreleaser:
+  release:
+    name: Build and Publish Release
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -53,3 +54,50 @@ jobs:
           GIT_BRANCH: ${{ steps.branch.outputs.branch }}
           BUILD_PLATFORM: ${{ steps.platform.outputs.platform }}
           GO_VERSION: ${{ steps.go.outputs.go }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Get build metadata
+        id: meta
+        run: |
+          echo "cli_sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+          echo "image_sha_tag=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "image_branch_tag=$(git rev-parse --abbrev-ref HEAD)" >> $GITHUB_OUTPUT
+          # Get version from tag, strip 'v' prefix
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check if release is latest
+        id: check_latest
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: release } = await github.rest.repos.getReleaseByTag({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag: context.ref.replace('refs/tags/', '')
+            });
+            // Tag as latest only if release is marked as latest (not pre-release)
+            core.setOutput('tag_latest', release.prerelease ? 'false' : 'true');
+            console.log(`Release prerelease: ${release.prerelease}, tag_latest: ${!release.prerelease}`)
+
+      - name: Build and push Docker images
+        run: |
+          docker buildx bake \
+            --file .github/docker/docker-bake.hcl \
+            --push \
+            cli
+        env:
+          CLI_SHA: ${{ steps.meta.outputs.cli_sha }}
+          IMAGE_SHA_TAG: ${{ steps.meta.outputs.image_sha_tag }}
+          IMAGE_BRANCH_TAG: ${{ steps.meta.outputs.image_branch_tag }}
+          VERSION: ${{ steps.meta.outputs.version }}
+          TAG_LATEST: ${{ steps.check_latest.outputs.tag_latest }}
+          IMAGE_REPO: temporalio

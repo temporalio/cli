@@ -1,4 +1,4 @@
-.PHONY: all gen build fmt-imports
+.PHONY: all gen build fmt-imports update-alpine
 
 all: gen build
 
@@ -9,3 +9,6 @@ internal/commands.gen.go: internal/commandsgen/commands.yml
 
 build:
 	go build ./cmd/temporal
+
+update-alpine:
+	$(MAKE) -C .github/docker update-alpine
