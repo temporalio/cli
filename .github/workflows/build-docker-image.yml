@@ -6,11 +6,10 @@ on:
     branches:
       - main
 
-permissions:
-  contents: read
-
 jobs:
   build:
+    permissions:
+      contents: read
     uses: ./.github/workflows/build-and-publish.yml
     with:
       publish: false

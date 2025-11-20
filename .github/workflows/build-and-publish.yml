@@ -4,11 +4,11 @@ on:
   workflow_call:
     inputs:
       publish:
-        description: 'Whether to publish the release and Docker image'
+        description: "Whether to publish the release and Docker image"
         required: true
         type: boolean
       version:
-        description: 'Version tag for the release (required if publish is true)'
+        description: "Version tag for the release (required if publish is true)"
         required: false
         type: string
     secrets:
@@ -95,14 +95,18 @@ jobs:
 
       - name: Get build metadata
         id: meta
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+          INPUT_PUBLISH: ${{ inputs.publish }}
+          REPO_OWNER: ${{ github.repository_owner }}
         run: |
           echo "cli_sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
           echo "image_sha_tag=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
           echo "image_branch_tag=$(git rev-parse --abbrev-ref HEAD)" >> $GITHUB_OUTPUT
 
-          if [[ "${{ inputs.publish }}" == "true" ]]; then
+          if [[ "$INPUT_PUBLISH" == "true" ]]; then
             # Get version from input, strip 'v' prefix
-            VERSION="${{ inputs.version }}"
+            VERSION="$INPUT_VERSION"
             VERSION="${VERSION#v}"
             echo "version=$VERSION" >> $GITHUB_OUTPUT
           else
@@ -110,10 +114,10 @@ jobs:
           fi
 
           # Determine image repo based on repository owner
-          if [[ "${{ github.repository_owner }}" == "temporalio" ]]; then
+          if [[ "$REPO_OWNER" == "temporalio" ]]; then
             echo "image_repo=temporalio" >> $GITHUB_OUTPUT
           else
-            echo "image_repo=${{ github.repository_owner }}" >> $GITHUB_OUTPUT
+            echo "image_repo=$REPO_OWNER" >> $GITHUB_OUTPUT
           fi
 
       - name: Check if release is latest
