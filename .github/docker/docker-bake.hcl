@@ -10,6 +10,10 @@ variable "IMAGE_NAME" {
   default = "temporal"
 }
 
+variable "GITHUB_REPOSITORY" {
+  default = "temporalio/cli"
+}
+
 variable "IMAGE_SHA_TAG" {}
 
 variable "IMAGE_BRANCH_TAG" {}
@@ -46,8 +50,8 @@ target "cli" {
   labels = {
     "org.opencontainers.image.title" = "temporal"
     "org.opencontainers.image.description" = "Temporal CLI"
-    "org.opencontainers.image.url" = "https://github.com/temporalio/cli"
-    "org.opencontainers.image.source" = "https://github.com/temporalio/cli"
+    "org.opencontainers.image.url" = "https://github.com/${GITHUB_REPOSITORY}"
+    "org.opencontainers.image.source" = "https://github.com/${GITHUB_REPOSITORY}"
     "org.opencontainers.image.licenses" = "MIT"
     "org.opencontainers.image.revision" = "${CLI_SHA}"
     "org.opencontainers.image.created" = timestamp()
