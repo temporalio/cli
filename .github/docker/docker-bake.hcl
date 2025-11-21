@@ -1,5 +1,17 @@
 variable "IMAGE_REPO" {
-  default = "temporalio"
+  default = "ghcr.io"
+}
+
+variable "IMAGE_NAMESPACE" {
+  default = ""
+}
+
+variable "IMAGE_NAME" {
+  default = "temporal"
+}
+
+variable "GITHUB_REPOSITORY" {
+  default = "temporalio/cli"
 }
 
 variable "IMAGE_SHA_TAG" {}
@@ -27,9 +39,9 @@ target "cli" {
   dockerfile = ".github/docker/cli.Dockerfile"
   context = "."
   tags = compact([
-    "${IMAGE_REPO}/temporal:${IMAGE_SHA_TAG}",
-    "${IMAGE_REPO}/temporal:${VERSION}",
-    TAG_LATEST ? "${IMAGE_REPO}/temporal:latest" : "",
+    IMAGE_REPO == "" ? "${IMAGE_NAMESPACE}/${IMAGE_NAME}:${IMAGE_SHA_TAG}" : "${IMAGE_REPO}/${IMAGE_NAMESPACE}/${IMAGE_NAME}:${IMAGE_SHA_TAG}",
+    IMAGE_REPO == "" ? "${IMAGE_NAMESPACE}/${IMAGE_NAME}:${VERSION}" : "${IMAGE_REPO}/${IMAGE_NAMESPACE}/${IMAGE_NAME}:${VERSION}",
+    TAG_LATEST ? (IMAGE_REPO == "" ? "${IMAGE_NAMESPACE}/${IMAGE_NAME}:latest" : "${IMAGE_REPO}/${IMAGE_NAMESPACE}/${IMAGE_NAME}:latest") : "",
   ])
   platforms = ["linux/amd64", "linux/arm64"]
   args = {
@@ -38,8 +50,8 @@ target "cli" {
   labels = {
     "org.opencontainers.image.title" = "temporal"
     "org.opencontainers.image.description" = "Temporal CLI"
-    "org.opencontainers.image.url" = "https://github.com/temporalio/cli"
-    "org.opencontainers.image.source" = "https://github.com/temporalio/cli"
+    "org.opencontainers.image.url" = "https://github.com/${GITHUB_REPOSITORY}"
+    "org.opencontainers.image.source" = "https://github.com/${GITHUB_REPOSITORY}"
     "org.opencontainers.image.licenses" = "MIT"
     "org.opencontainers.image.revision" = "${CLI_SHA}"
     "org.opencontainers.image.created" = timestamp()

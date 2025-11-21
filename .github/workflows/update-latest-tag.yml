@@ -1,0 +1,120 @@
+name: Update Latest Docker Tag
+
+on:
+  release:
+    types:
+      - edited
+      - released
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  update-latest:
+    name: Update Latest Tag
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Check if release is latest
+        id: check_latest
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const releaseTag = process.env.RELEASE_TAG;
+            const { data: release } = await github.rest.repos.getReleaseByTag({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag: releaseTag
+            });
+
+            const isLatest = !release.prerelease && !release.draft;
+            core.setOutput('is_latest', isLatest);
+            console.log(`Release: ${release.tag_name}`);
+            console.log(`Prerelease: ${release.prerelease}, Draft: ${release.draft}`);
+            console.log(`Should tag as latest: ${isLatest}`);
+
+      - name: Set up Docker Buildx
+        if: steps.check_latest.outputs.is_latest == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Get registry configuration
+        if: steps.check_latest.outputs.is_latest == 'true'
+        id: registry
+        run: |
+          REPO_OWNER="${{ github.repository_owner }}"
+
+          # Auto-detect registry based on repository owner
+          if [[ "$REPO_OWNER" == "temporalio" ]]; then
+            REGISTRY="docker.io"
+            echo "type=dockerhub" >> $GITHUB_OUTPUT
+            echo "repo=" >> $GITHUB_OUTPUT
+          else
+            REGISTRY="ghcr.io"
+            echo "type=ghcr" >> $GITHUB_OUTPUT
+            echo "repo=${REGISTRY}" >> $GITHUB_OUTPUT
+          fi
+
+          echo "namespace=${REPO_OWNER}" >> $GITHUB_OUTPUT
+          echo "image=temporal" >> $GITHUB_OUTPUT
+
+      - name: Log in to GitHub Container Registry
+        if: steps.check_latest.outputs.is_latest == 'true' && steps.registry.outputs.type == 'ghcr'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Log in to Docker Hub
+        if: steps.check_latest.outputs.is_latest == 'true' && steps.registry.outputs.type == 'dockerhub'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Get version tag
+        if: steps.check_latest.outputs.is_latest == 'true'
+        id: version
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          VERSION="$RELEASE_TAG"
+          VERSION="${VERSION#v}"
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Pull and retag image as latest
+        if: steps.check_latest.outputs.is_latest == 'true'
+        run: |
+          # Construct image paths
+          REPO="${{ steps.registry.outputs.repo }}"
+          NAMESPACE="${{ steps.registry.outputs.namespace }}"
+          IMAGE="${{ steps.registry.outputs.image }}"
+          VERSION="${{ steps.version.outputs.version }}"
+
+          if [[ -z "$REPO" ]]; then
+            # Docker Hub format
+            SOURCE_IMAGE="${NAMESPACE}/${IMAGE}:${VERSION}"
+            LATEST_IMAGE="${NAMESPACE}/${IMAGE}:latest"
+          else
+            # Other registries
+            SOURCE_IMAGE="${REPO}/${NAMESPACE}/${IMAGE}:${VERSION}"
+            LATEST_IMAGE="${REPO}/${NAMESPACE}/${IMAGE}:latest"
+          fi
+
+          echo "Pulling ${SOURCE_IMAGE}..."
+          docker pull ${SOURCE_IMAGE}
+
+          echo "Tagging as ${LATEST_IMAGE}..."
+          docker tag ${SOURCE_IMAGE} ${LATEST_IMAGE}
+
+          echo "Pushing ${LATEST_IMAGE}..."
+          docker push ${LATEST_IMAGE}
+
+          echo "✅ Successfully updated latest tag to point to version ${VERSION}"
