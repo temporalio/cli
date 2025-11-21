@@ -11,11 +11,7 @@ on:
         description: "Version tag for the release (required if publish is true)"
         required: false
         type: string
-    secrets:
-      DOCKER_USERNAME:
-        required: false
-      DOCKER_PASSWORD:
-        required: false
+    secrets: {}
 
 jobs:
   build:
@@ -84,12 +80,13 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to Docker Hub
-        if: inputs.publish && github.repository_owner == 'temporalio'
+      - name: Log in to GitHub Container Registry
+        if: inputs.publish
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Get build metadata
         id: meta
@@ -134,7 +131,7 @@ jobs:
             console.log(`Release prerelease: ${release.prerelease}, tag_latest: ${!release.prerelease}`)
 
       - name: Build and push Docker image
-        if: inputs.publish && github.repository_owner == 'temporalio'
+        if: inputs.publish
         run: |
           docker buildx bake \
             --file .github/docker/docker-bake.hcl \
@@ -146,7 +143,7 @@ jobs:
           IMAGE_BRANCH_TAG: ${{ steps.meta.outputs.image_branch_tag }}
           VERSION: ${{ steps.meta.outputs.version }}
           TAG_LATEST: ${{ steps.check_latest.outputs.tag_latest }}
-          IMAGE_REPO: temporalio
+          IMAGE_REPO: ${{ steps.meta.outputs.image_repo }}
 
       - name: Build Docker image
         if: ${{ !inputs.publish }}
@@ -160,7 +157,7 @@ jobs:
           IMAGE_BRANCH_TAG: ${{ steps.meta.outputs.image_branch_tag }}
           VERSION: ${{ steps.meta.outputs.version }}
           TAG_LATEST: false
-          IMAGE_REPO: temporalio
+          IMAGE_REPO: ${{ steps.meta.outputs.image_repo }}
 
       - name: Upload build artifacts
         if: ${{ !inputs.publish }}

@@ -1,5 +1,5 @@
 variable "IMAGE_REPO" {
-  default = "temporalio"
+  default = "ghcr.io/chaptersix"
 }
 
 variable "IMAGE_SHA_TAG" {}
@@ -27,9 +27,9 @@ target "cli" {
   dockerfile = ".github/docker/cli.Dockerfile"
   context = "."
   tags = compact([
-    "${IMAGE_REPO}/temporal:${IMAGE_SHA_TAG}",
-    "${IMAGE_REPO}/temporal:${VERSION}",
-    TAG_LATEST ? "${IMAGE_REPO}/temporal:latest" : "",
+    "${IMAGE_REPO}/temporal-cli:${IMAGE_SHA_TAG}",
+    "${IMAGE_REPO}/temporal-cli:${VERSION}",
+    TAG_LATEST ? "${IMAGE_REPO}/temporal-cli:latest" : "",
   ])
   platforms = ["linux/amd64", "linux/arm64"]
   args = {
