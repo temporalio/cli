@@ -112,7 +112,7 @@ jobs:
           if [[ "$REPO_OWNER" == "temporalio" ]]; then
             echo "image_repo=temporalio" >> $GITHUB_OUTPUT
           else
-            echo "image_repo=$REPO_OWNER" >> $GITHUB_OUTPUT
+            echo "image_repo=ghcr.io/$REPO_OWNER" >> $GITHUB_OUTPUT
           fi
 
       - name: Check if release is latest
