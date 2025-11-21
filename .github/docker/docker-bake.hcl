@@ -34,12 +34,10 @@ variable "ALPINE_IMAGE" {
 target "cli" {
   dockerfile = ".github/docker/cli.Dockerfile"
   context = "."
-  // Construct full image path (Docker Hub has no registry prefix)
-  _image_path = IMAGE_REPO == "" ? "${IMAGE_NAMESPACE}/${IMAGE_NAME}" : "${IMAGE_REPO}/${IMAGE_NAMESPACE}/${IMAGE_NAME}"
   tags = compact([
-    "${_image_path}:${IMAGE_SHA_TAG}",
-    "${_image_path}:${VERSION}",
-    TAG_LATEST ? "${_image_path}:latest" : "",
+    IMAGE_REPO == "" ? "${IMAGE_NAMESPACE}/${IMAGE_NAME}:${IMAGE_SHA_TAG}" : "${IMAGE_REPO}/${IMAGE_NAMESPACE}/${IMAGE_NAME}:${IMAGE_SHA_TAG}",
+    IMAGE_REPO == "" ? "${IMAGE_NAMESPACE}/${IMAGE_NAME}:${VERSION}" : "${IMAGE_REPO}/${IMAGE_NAMESPACE}/${IMAGE_NAME}:${VERSION}",
+    TAG_LATEST ? (IMAGE_REPO == "" ? "${IMAGE_NAMESPACE}/${IMAGE_NAME}:latest" : "${IMAGE_REPO}/${IMAGE_NAMESPACE}/${IMAGE_NAME}:latest") : "",
   ])
   platforms = ["linux/amd64", "linux/arm64"]
   args = {
