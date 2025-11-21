@@ -15,3 +15,6 @@ jobs:
     with:
       publish: true
       version: ${{ github.ref_name }}
+    secrets:
+      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}

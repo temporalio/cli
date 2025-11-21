@@ -1,5 +1,13 @@
 variable "IMAGE_REPO" {
-  default = "ghcr.io/chaptersix"
+  default = "ghcr.io"
+}
+
+variable "IMAGE_NAMESPACE" {
+  default = ""
+}
+
+variable "IMAGE_NAME" {
+  default = "temporal"
 }
 
 variable "IMAGE_SHA_TAG" {}
@@ -27,9 +35,9 @@ target "cli" {
   dockerfile = ".github/docker/cli.Dockerfile"
   context = "."
   tags = compact([
-    "${IMAGE_REPO}/temporal-cli:${IMAGE_SHA_TAG}",
-    "${IMAGE_REPO}/temporal-cli:${VERSION}",
-    TAG_LATEST ? "${IMAGE_REPO}/temporal-cli:latest" : "",
+    IMAGE_REPO == "" ? "${IMAGE_NAMESPACE}/${IMAGE_NAME}:${IMAGE_SHA_TAG}" : "${IMAGE_REPO}/${IMAGE_NAMESPACE}/${IMAGE_NAME}:${IMAGE_SHA_TAG}",
+    IMAGE_REPO == "" ? "${IMAGE_NAMESPACE}/${IMAGE_NAME}:${VERSION}" : "${IMAGE_REPO}/${IMAGE_NAMESPACE}/${IMAGE_NAME}:${VERSION}",
+    TAG_LATEST ? (IMAGE_REPO == "" ? "${IMAGE_NAMESPACE}/${IMAGE_NAME}:latest" : "${IMAGE_REPO}/${IMAGE_NAMESPACE}/${IMAGE_NAME}:latest") : "",
   ])
   platforms = ["linux/amd64", "linux/arm64"]
   args = {
