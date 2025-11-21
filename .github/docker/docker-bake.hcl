@@ -1,5 +1,13 @@
 variable "IMAGE_REPO" {
-  default = "ghcr.io/chaptersix"
+  default = "ghcr.io"
+}
+
+variable "IMAGE_NAMESPACE" {
+  default = ""
+}
+
+variable "IMAGE_NAME" {
+  default = "temporal"
 }
 
 variable "IMAGE_SHA_TAG" {}
@@ -26,10 +34,12 @@ variable "ALPINE_IMAGE" {
 target "cli" {
   dockerfile = ".github/docker/cli.Dockerfile"
   context = "."
+  // Construct full image path (Docker Hub has no registry prefix)
+  _image_path = IMAGE_REPO == "" ? "${IMAGE_NAMESPACE}/${IMAGE_NAME}" : "${IMAGE_REPO}/${IMAGE_NAMESPACE}/${IMAGE_NAME}"
   tags = compact([
-    "${IMAGE_REPO}/temporal-cli:${IMAGE_SHA_TAG}",
-    "${IMAGE_REPO}/temporal-cli:${VERSION}",
-    TAG_LATEST ? "${IMAGE_REPO}/temporal-cli:latest" : "",
+    "${_image_path}:${IMAGE_SHA_TAG}",
+    "${_image_path}:${VERSION}",
+    TAG_LATEST ? "${_image_path}:latest" : "",
   ])
   platforms = ["linux/amd64", "linux/arm64"]
   args = {
