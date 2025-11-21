@@ -108,60 +108,70 @@ jobs:
           INPUT_REGISTRY_NAMESPACE: ${{ inputs.registry_namespace }}
           INPUT_IMAGE_NAME: ${{ inputs.image_name }}
           REPO_OWNER: ${{ github.repository_owner }}
-        run: |
-          echo "cli_sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
-          echo "image_sha_tag=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-          echo "image_branch_tag=$(git rev-parse --abbrev-ref HEAD)" >> $GITHUB_OUTPUT
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const inputVersion = process.env.INPUT_VERSION;
+            const inputPublish = process.env.INPUT_PUBLISH;
+            const inputRegistry = process.env.INPUT_REGISTRY;
+            const inputRegistryNamespace = process.env.INPUT_REGISTRY_NAMESPACE;
+            const inputImageName = process.env.INPUT_IMAGE_NAME;
+            const repoOwner = process.env.REPO_OWNER;
 
-          if [[ "$INPUT_PUBLISH" == "true" ]]; then
-            # Get version from input, strip 'v' prefix
-            VERSION="$INPUT_VERSION"
-            VERSION="${VERSION#v}"
-            echo "version=$VERSION" >> $GITHUB_OUTPUT
-          else
-            echo "version=snapshot" >> $GITHUB_OUTPUT
-          fi
+            // Get git information
+            const { execSync } = require('child_process');
+            const cliSha = execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
+            const imageShaTag = execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim();
+            const imageBranchTag = execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf8' }).trim();
 
-          # Determine registry (with auto-detection for temporalio vs forks)
-          REGISTRY="$INPUT_REGISTRY"
-          if [[ -z "$REGISTRY" ]]; then
-            if [[ "$REPO_OWNER" == "temporalio" ]]; then
-              REGISTRY="docker.io"
-            else
-              REGISTRY="ghcr.io"
-            fi
-          fi
+            core.setOutput('cli_sha', cliSha);
+            core.setOutput('image_sha_tag', imageShaTag);
+            core.setOutput('image_branch_tag', imageBranchTag);
 
-          # Determine registry type for authentication
-          if [[ "$REGISTRY" == "ghcr.io" ]]; then
-            echo "registry_type=ghcr" >> $GITHUB_OUTPUT
-          elif [[ "$REGISTRY" == "docker.io" ]]; then
-            echo "registry_type=dockerhub" >> $GITHUB_OUTPUT
-          else
-            echo "registry_type=other" >> $GITHUB_OUTPUT
-          fi
+            // Determine version
+            let version;
+            if (inputPublish === 'true') {
+              // Get version from input, strip 'v' prefix
+              version = inputVersion.startsWith('v') ? inputVersion.slice(1) : inputVersion;
+            } else {
+              version = 'snapshot';
+            }
+            core.setOutput('version', version);
 
-          # Set namespace (defaults to repository owner)
-          NAMESPACE="$INPUT_REGISTRY_NAMESPACE"
-          if [[ -z "$NAMESPACE" ]]; then
-            NAMESPACE="$REPO_OWNER"
-          fi
+            // Determine registry (with auto-detection for temporalio vs forks)
+            let registry = inputRegistry;
+            if (!registry) {
+              if (repoOwner === 'temporalio') {
+                registry = 'docker.io';
+              } else {
+                registry = 'ghcr.io';
+              }
+            }
 
-          # Set image name (defaults to 'temporal')
-          IMAGE_NAME="$INPUT_IMAGE_NAME"
-          if [[ -z "$IMAGE_NAME" ]]; then
-            IMAGE_NAME="temporal"
-          fi
+            // Determine registry type for authentication
+            let registryType;
+            if (registry === 'ghcr.io') {
+              registryType = 'ghcr';
+            } else if (registry === 'docker.io') {
+              registryType = 'dockerhub';
+            } else {
+              registryType = 'other';
+            }
+            core.setOutput('registry_type', registryType);
 
-          # For Docker Hub, use empty string as registry (special case)
-          if [[ "$REGISTRY" == "docker.io" ]]; then
-            echo "image_repo=" >> $GITHUB_OUTPUT
-          else
-            echo "image_repo=${REGISTRY}" >> $GITHUB_OUTPUT
-          fi
+            // Set namespace (defaults to repository owner)
+            const namespace = inputRegistryNamespace || repoOwner;
+            core.setOutput('image_namespace', namespace);
 
-          echo "image_namespace=${NAMESPACE}" >> $GITHUB_OUTPUT
-          echo "image_name=${IMAGE_NAME}" >> $GITHUB_OUTPUT
+            // Set image name (defaults to 'temporal')
+            const imageName = inputImageName || 'temporal';
+            core.setOutput('image_name', imageName);
+
+            // For Docker Hub, use empty string as registry (special case)
+            const imageRepo = registry === 'docker.io' ? '' : registry;
+            core.setOutput('image_repo', imageRepo);
+
+            console.log(`Registry: ${registry}, Type: ${registryType}, Namespace: ${namespace}, Image: ${imageName}`);
 
       - name: Log in to GitHub Container Registry
         if: inputs.publish && steps.meta.outputs.registry_type == 'ghcr'
