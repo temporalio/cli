@@ -178,21 +178,6 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Check if release is latest
-        if: inputs.publish
-        id: check_latest
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const { data: release } = await github.rest.repos.getReleaseByTag({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              tag: context.ref.replace('refs/tags/', '')
-            });
-            // Tag as latest only if release is marked as latest (not pre-release)
-            core.setOutput('tag_latest', release.prerelease ? 'false' : 'true');
-            console.log(`Release prerelease: ${release.prerelease}, tag_latest: ${!release.prerelease}`)
-
       - name: Build and push Docker image
         if: inputs.publish
         run: |
@@ -205,7 +190,7 @@ jobs:
           IMAGE_SHA_TAG: ${{ steps.meta.outputs.image_sha_tag }}
           IMAGE_BRANCH_TAG: ${{ steps.meta.outputs.image_branch_tag }}
           VERSION: ${{ steps.meta.outputs.version }}
-          TAG_LATEST: ${{ steps.check_latest.outputs.tag_latest }}
+          TAG_LATEST: false
           IMAGE_REPO: ${{ steps.meta.outputs.image_repo }}
           IMAGE_NAMESPACE: ${{ steps.meta.outputs.image_namespace }}
           IMAGE_NAME: ${{ steps.meta.outputs.image_name }}
@@ -225,11 +210,3 @@ jobs:
           IMAGE_REPO: ${{ steps.meta.outputs.image_repo }}
           IMAGE_NAMESPACE: ${{ steps.meta.outputs.image_namespace }}
           IMAGE_NAME: ${{ steps.meta.outputs.image_name }}
-
-      - name: Upload build artifacts
-        if: ${{ !inputs.publish }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: temporal-cli-dist
-          path: dist/
-          retention-days: 7
