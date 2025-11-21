@@ -1,0 +1,15 @@
+name: Build Docker Image
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    permissions:
+      contents: read
+    uses: ./.github/workflows/build-and-publish.yml
+    with:
+      publish: false
