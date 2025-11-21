@@ -30,13 +30,10 @@ variable "TAG_LATEST" {
   default = false
 }
 
-# Alpine base image with digest for reproducible builds
-variable "ALPINE_IMAGE" {
-  default = "alpine:3.22@sha256:4b7ce07002c69e8f3d704a9c5d6fd3053be500b7f1c69fc0d80990c2ad8dd412"
-}
+
 
 target "cli" {
-  dockerfile = ".github/docker/cli.Dockerfile"
+  dockerfile = "Dockerfile"
   context = "."
   tags = compact([
     IMAGE_REPO == "" ? "${IMAGE_NAMESPACE}/${IMAGE_NAME}:${IMAGE_SHA_TAG}" : "${IMAGE_REPO}/${IMAGE_NAMESPACE}/${IMAGE_NAME}:${IMAGE_SHA_TAG}",
@@ -44,9 +41,6 @@ target "cli" {
     TAG_LATEST ? (IMAGE_REPO == "" ? "${IMAGE_NAMESPACE}/${IMAGE_NAME}:latest" : "${IMAGE_REPO}/${IMAGE_NAMESPACE}/${IMAGE_NAME}:latest") : "",
   ])
   platforms = ["linux/amd64", "linux/arm64"]
-  args = {
-    ALPINE_IMAGE = "${ALPINE_IMAGE}"
-  }
   labels = {
     "org.opencontainers.image.title" = "temporal"
     "org.opencontainers.image.description" = "Temporal CLI"

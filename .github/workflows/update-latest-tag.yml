@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+        uses: actions/checkout@v3
         with:
           ref: ${{ github.event.release.tag_name }}
 
@@ -47,22 +47,29 @@ jobs:
       - name: Get registry configuration
         if: steps.check_latest.outputs.is_latest == 'true'
         id: registry
-        run: |
-          REPO_OWNER="${{ github.repository_owner }}"
-
-          # Auto-detect registry based on repository owner
-          if [[ "$REPO_OWNER" == "temporalio" ]]; then
-            REGISTRY="docker.io"
-            echo "type=dockerhub" >> $GITHUB_OUTPUT
-            echo "repo=" >> $GITHUB_OUTPUT
-          else
-            REGISTRY="ghcr.io"
-            echo "type=ghcr" >> $GITHUB_OUTPUT
-            echo "repo=${REGISTRY}" >> $GITHUB_OUTPUT
-          fi
-
-          echo "namespace=${REPO_OWNER}" >> $GITHUB_OUTPUT
-          echo "image=temporal" >> $GITHUB_OUTPUT
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const repoOwner = context.repo.owner;
+            
+            // Auto-detect registry based on repository owner
+            let registry, type, repo;
+            if (repoOwner === 'temporalio') {
+              registry = 'docker.io';
+              type = 'dockerhub';
+              repo = '';
+            } else {
+              registry = 'ghcr.io';
+              type = 'ghcr';
+              repo = registry;
+            }
+            
+            core.setOutput('type', type);
+            core.setOutput('repo', repo);
+            core.setOutput('namespace', repoOwner);
+            core.setOutput('image', 'temporal');
+            
+            console.log(`Registry: ${registry}, Type: ${type}, Namespace: ${repoOwner}`);
 
       - name: Log in to GitHub Container Registry
         if: steps.check_latest.outputs.is_latest == 'true' && steps.registry.outputs.type == 'ghcr'
