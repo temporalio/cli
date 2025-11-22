@@ -192,7 +192,7 @@ jobs:
         if: inputs.publish
         run: |
           docker buildx bake \
-            --file .github/docker/docker-bake.hcl \
+            --file docker-bake.hcl \
             --push \
             cli
         env:
@@ -210,7 +210,7 @@ jobs:
         if: ${{ !inputs.publish }}
         run: |
           docker buildx bake \
-            --file .github/docker/docker-bake.hcl \
+            --file docker-bake.hcl \
             cli
         env:
           CLI_SHA: ${{ steps.meta.outputs.cli_sha }}
