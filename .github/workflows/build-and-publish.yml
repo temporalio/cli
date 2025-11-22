@@ -69,6 +69,25 @@ jobs:
         id: go
         run: echo "go=$(go version | cut -d ' ' -f 3)" >> $GITHUB_OUTPUT
 
+      - name: Check if release is latest
+        if: inputs.publish
+        id: check_latest_release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const releaseTag = '${{ inputs.version }}';
+            const { data: release } = await github.rest.repos.getReleaseByTag({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag: releaseTag
+            });
+
+            const isLatest = !release.prerelease && !release.draft;
+            core.setOutput('is_latest', isLatest);
+            console.log(`Release: ${release.tag_name}`);
+            console.log(`Prerelease: ${release.prerelease}, Draft: ${release.draft}`);
+            console.log(`Should tag as latest: ${isLatest}`);
+
       - name: Run GoReleaser (release)
         if: inputs.publish
         uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6.4.0
@@ -200,7 +219,7 @@ jobs:
           IMAGE_SHA_TAG: ${{ steps.meta.outputs.image_sha_tag }}
           IMAGE_BRANCH_TAG: ${{ steps.meta.outputs.image_branch_tag }}
           VERSION: ${{ steps.meta.outputs.version }}
-          TAG_LATEST: false
+          TAG_LATEST: ${{ steps.check_latest_release.outputs.is_latest }}
           IMAGE_REPO: ${{ steps.meta.outputs.image_repo }}
           IMAGE_NAMESPACE: ${{ steps.meta.outputs.image_namespace }}
           IMAGE_NAME: ${{ steps.meta.outputs.image_name }}
@@ -217,9 +236,8 @@ jobs:
           IMAGE_SHA_TAG: ${{ steps.meta.outputs.image_sha_tag }}
           IMAGE_BRANCH_TAG: ${{ steps.meta.outputs.image_branch_tag }}
           VERSION: ${{ steps.meta.outputs.version }}
-          TAG_LATEST: false
+          TAG_LATEST: ${{ steps.check_latest_release.outputs.is_latest }}
           IMAGE_REPO: ${{ steps.meta.outputs.image_repo }}
           IMAGE_NAMESPACE: ${{ steps.meta.outputs.image_namespace }}
           IMAGE_NAME: ${{ steps.meta.outputs.image_name }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          TARGETPLATFORM: linux/amd64,linux/arm64
