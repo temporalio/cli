@@ -236,7 +236,7 @@ jobs:
           IMAGE_SHA_TAG: ${{ steps.meta.outputs.image_sha_tag }}
           IMAGE_BRANCH_TAG: ${{ steps.meta.outputs.image_branch_tag }}
           VERSION: ${{ steps.meta.outputs.version }}
-          TAG_LATEST: ${{ steps.check_latest_release.outputs.is_latest == 'true' }}
+          TAG_LATEST: false
           IMAGE_REPO: ${{ steps.meta.outputs.image_repo }}
           IMAGE_NAMESPACE: ${{ steps.meta.outputs.image_namespace }}
           IMAGE_NAME: ${{ steps.meta.outputs.image_name }}

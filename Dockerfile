@@ -1,9 +1,7 @@
 # syntax=docker/dockerfile:1
 
-ARG TARGETARCH
-
 # Build stage - copy binaries from goreleaser output
-FROM --platform=$TARGETARCH scratch AS dist
+FROM scratch AS dist
 COPY dist/nix_linux_amd64_v1/temporal /dist/amd64/temporal
 COPY dist/nix_linux_arm64_v8.0/temporal /dist/arm64/temporal
 
@@ -27,7 +25,7 @@ COPY --from=certs /etc/group /etc/group
 # Copy the appropriate binary for target architecture
 COPY --from=dist /dist/$TARGETARCH/temporal /temporal
 
-# Run as non-root user temporal
-USER temporal:temporal
+# Run as non-root user temporal (uid 1000)
+USER 1000:1000
 
 ENTRYPOINT ["/temporal"]
