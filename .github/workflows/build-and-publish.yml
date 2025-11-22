@@ -222,3 +222,4 @@ jobs:
           IMAGE_NAMESPACE: ${{ steps.meta.outputs.image_namespace }}
           IMAGE_NAME: ${{ steps.meta.outputs.image_name }}
           GITHUB_REPOSITORY: ${{ github.repository }}
+          TARGETPLATFORM: linux/amd64,linux/arm64
