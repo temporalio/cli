@@ -3,8 +3,13 @@ on:
   workflow_dispatch:
   release:
     types: [published]
+
+permissions:
+  contents: read
+
 jobs:
   update:
+    if: github.repository == 'temporalio/cli'
     runs-on: ubuntu-latest
     defaults:
       run:
