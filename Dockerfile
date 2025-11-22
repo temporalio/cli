@@ -1,18 +1,25 @@
 # syntax=docker/dockerfile:1
 
-# Build stage to extract CA certificates
+# Build stage to extract CA certificates and create user files
 FROM alpine:3.22@sha256:4b7ce07002c69e8f3d704a9c5d6fd3053be500b7f1c69fc0d80990c2ad8dd412 AS certs
-RUN apk add --no-cache ca-certificates
+RUN apk add --no-cache ca-certificates && \
+    adduser -u 1000 -D temporal
 
-# Final distroless stage
-FROM gcr.io/distroless/static-debian12:nonroot
+# Final scratch stage - completely minimal base
+FROM scratch
 
 # Copy CA certificates from certs stage
 COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+
+# Copy passwd and group files for non-root user
+COPY --from=certs /etc/passwd /etc/passwd
+COPY --from=certs /etc/group /etc/group
 
 # Copy the appropriate binary for target architecture
 ARG TARGETARCH
 COPY dist/nix_linux_${TARGETARCH}/temporal /temporal
 
-# Set entrypoint
+# Run as non-root user temporal (uid 1000)
+USER 1000:1000
+
 ENTRYPOINT ["/temporal"]
