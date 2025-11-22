@@ -5,6 +5,7 @@ on:
     types: [published]
 jobs:
   update:
+    if: github.repository == 'temporalio/cli'
     runs-on: ubuntu-latest
     defaults:
       run:
