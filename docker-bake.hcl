@@ -1,7 +1,3 @@
-variable "IMAGE_REPO" {
-  default = "ghcr.io"
-}
-
 variable "IMAGE_NAMESPACE" {
   default = ""
 }
@@ -15,8 +11,6 @@ variable "GITHUB_REPOSITORY" {
 }
 
 variable "IMAGE_SHA_TAG" {}
-
-variable "IMAGE_BRANCH_TAG" {}
 
 variable "CLI_SHA" {
   default = ""
@@ -36,9 +30,9 @@ target "cli" {
   dockerfile = "Dockerfile"
   context = "."
   tags = compact([
-    IMAGE_REPO == "" ? "${IMAGE_NAMESPACE}/${IMAGE_NAME}:${IMAGE_SHA_TAG}" : "${IMAGE_REPO}/${IMAGE_NAMESPACE}/${IMAGE_NAME}:${IMAGE_SHA_TAG}",
-    IMAGE_REPO == "" ? "${IMAGE_NAMESPACE}/${IMAGE_NAME}:${VERSION}" : "${IMAGE_REPO}/${IMAGE_NAMESPACE}/${IMAGE_NAME}:${VERSION}",
-    TAG_LATEST ? (IMAGE_REPO == "" ? "${IMAGE_NAMESPACE}/${IMAGE_NAME}:latest" : "${IMAGE_REPO}/${IMAGE_NAMESPACE}/${IMAGE_NAME}:latest") : "",
+    "${IMAGE_NAMESPACE}/${IMAGE_NAME}:${IMAGE_SHA_TAG}",
+    "${IMAGE_NAMESPACE}/${IMAGE_NAME}:${VERSION}",
+    TAG_LATEST ? ${IMAGE_NAMESPACE}/${IMAGE_NAME}:latest : "",
   ])
   platforms = ["linux/amd64", "linux/arm64"]
   labels = {

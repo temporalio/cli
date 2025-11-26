@@ -43,7 +43,7 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v6
         with:
           go-version-file: "go.mod"
           check-latest: true
@@ -72,7 +72,7 @@ jobs:
       - name: Check if release is latest
         if: inputs.publish
         id: check_latest_release
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const releaseTag = '${{ inputs.version }}';
@@ -123,7 +123,6 @@ jobs:
         env:
           INPUT_VERSION: ${{ inputs.version }}
           INPUT_PUBLISH: ${{ inputs.publish }}
-          INPUT_REGISTRY: ${{ inputs.registry }}
           INPUT_REGISTRY_NAMESPACE: ${{ inputs.registry_namespace }}
           INPUT_IMAGE_NAME: ${{ inputs.image_name }}
           REPO_OWNER: ${{ github.repository_owner }}
@@ -141,11 +140,9 @@ jobs:
             const { execSync } = require('child_process');
             const cliSha = execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
             const imageShaTag = execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim();
-            const imageBranchTag = execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf8' }).trim();
 
             core.setOutput('cli_sha', cliSha);
             core.setOutput('image_sha_tag', imageShaTag);
-            core.setOutput('image_branch_tag', imageBranchTag);
 
             // Determine version
             let version;
@@ -159,24 +156,6 @@ jobs:
 
             // Determine registry (with auto-detection for temporalio vs forks)
             let registry = inputRegistry;
-            if (!registry) {
-              if (repoOwner === 'temporalio') {
-                registry = 'docker.io';
-              } else {
-                registry = 'ghcr.io';
-              }
-            }
-
-            // Determine registry type for authentication
-            let registryType;
-            if (registry === 'ghcr.io') {
-              registryType = 'ghcr';
-            } else if (registry === 'docker.io') {
-              registryType = 'dockerhub';
-            } else {
-              registryType = 'other';
-            }
-            core.setOutput('registry_type', registryType);
 
             // Set namespace (defaults to repository owner)
             const namespace = inputRegistryNamespace || repoOwner;
@@ -186,44 +165,7 @@ jobs:
             const imageName = inputImageName || 'temporal';
             core.setOutput('image_name', imageName);
 
-            // For Docker Hub, use empty string as registry (special case)
-            const imageRepo = registry === 'docker.io' ? '' : registry;
-            core.setOutput('image_repo', imageRepo);
-
-            console.log(`Registry: ${registry}, Type: ${registryType}, Namespace: ${namespace}, Image: ${imageName}`);
-
-      - name: Log in to GitHub Container Registry
-        if: inputs.publish && steps.meta.outputs.registry_type == 'ghcr'
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Log in to Docker Hub
-        if: inputs.publish && steps.meta.outputs.registry_type == 'dockerhub'
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Build and push Docker image
-        if: inputs.publish
-        run: |
-          docker buildx bake \
-            --file docker-bake.hcl \
-            --push \
-            cli
-        env:
-          CLI_SHA: ${{ steps.meta.outputs.cli_sha }}
-          IMAGE_SHA_TAG: ${{ steps.meta.outputs.image_sha_tag }}
-          IMAGE_BRANCH_TAG: ${{ steps.meta.outputs.image_branch_tag }}
-          VERSION: ${{ steps.meta.outputs.version }}
-          TAG_LATEST: ${{ steps.check_latest_release.outputs.is_latest == 'true' }}
-          IMAGE_REPO: ${{ steps.meta.outputs.image_repo }}
-          IMAGE_NAMESPACE: ${{ steps.meta.outputs.image_namespace }}
-          IMAGE_NAME: ${{ steps.meta.outputs.image_name }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
+            console.log(`Namespace: ${namespace}, Image: ${imageName}`);
 
       - name: Build Docker image
         if: ${{ !inputs.publish }}
@@ -234,10 +176,32 @@ jobs:
         env:
           CLI_SHA: ${{ steps.meta.outputs.cli_sha }}
           IMAGE_SHA_TAG: ${{ steps.meta.outputs.image_sha_tag }}
-          IMAGE_BRANCH_TAG: ${{ steps.meta.outputs.image_branch_tag }}
           VERSION: ${{ steps.meta.outputs.version }}
           TAG_LATEST: false
-          IMAGE_REPO: ${{ steps.meta.outputs.image_repo }}
           IMAGE_NAMESPACE: ${{ steps.meta.outputs.image_namespace }}
           IMAGE_NAME: ${{ steps.meta.outputs.image_name }}
           GITHUB_REPOSITORY: ${{ github.repository }}
+
+      - name: Log in to Docker Hub
+        if: inputs.publish
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push Docker image
+        if: ${{ inputs.publish }}
+        run: |
+          docker buildx bake \
+            --file docker-bake.hcl \
+            --push \
+            cli
+        env:
+          CLI_SHA: ${{ steps.meta.outputs.cli_sha }}
+          IMAGE_SHA_TAG: ${{ steps.meta.outputs.image_sha_tag }}
+          VERSION: ${{ steps.meta.outputs.version }}
+          TAG_LATEST: ${{ steps.check_latest_release.outputs.is_latest == 'true' }}
+          IMAGE_NAMESPACE: ${{ steps.meta.outputs.image_namespace }}
+          IMAGE_NAME: ${{ steps.meta.outputs.image_name }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+

@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.event.release.tag_name }}
 
@@ -24,7 +24,7 @@ jobs:
         id: check_latest
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const releaseTag = process.env.RELEASE_TAG;
@@ -47,7 +47,7 @@ jobs:
       - name: Get registry configuration
         if: steps.check_latest.outputs.is_latest == 'true'
         id: registry
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const repoOwner = context.repo.owner;
