@@ -15,6 +15,7 @@ require (
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/pflag v1.0.6
 	github.com/stretchr/testify v1.10.0
+	github.com/temporalio/cli/cliext v0.0.0
 	github.com/temporalio/ui-server/v2 v2.42.1
 	go.temporal.io/api v1.53.0
 	go.temporal.io/sdk v1.37.0
@@ -176,3 +177,5 @@ require (
 	modernc.org/strutil v1.2.1 // indirect
 	modernc.org/token v1.1.0 // indirect
 )
+
+replace github.com/temporalio/cli/cliext => ./cliext

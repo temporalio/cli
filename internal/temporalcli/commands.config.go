@@ -2,46 +2,41 @@ package temporalcli
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"reflect"
 	"sort"
 	"strings"
 
 	"github.com/BurntSushi/toml"
+	"github.com/temporalio/cli/cliext"
 	"github.com/temporalio/cli/internal/printer"
 	"go.temporal.io/sdk/contrib/envconfig"
 )
 
 func (c *TemporalConfigDeleteCommand) run(cctx *CommandContext, _ []string) error {
-	// Load config
-	profileName := envConfigProfileName(cctx)
-	conf, confProfile, err := loadEnvConfigProfile(cctx, profileName, true)
+	result, err := cliext.LoadProfile(loadProfileOpts(cctx, true))
 	if err != nil {
 		return err
 	}
 	if strings.HasPrefix(c.Prop, "grpc_meta.") {
 		key := strings.TrimPrefix(c.Prop, "grpc_meta.")
-		if _, ok := confProfile.GRPCMeta[key]; !ok {
+		if _, ok := result.Profile.GRPCMeta[key]; !ok {
 			return fmt.Errorf("gRPC meta key %q not found", key)
 		}
-		delete(confProfile.GRPCMeta, key)
+		delete(result.Profile.GRPCMeta, key)
 	} else {
-		reflectVal, err := reflectEnvConfigProp(confProfile, c.Prop, true)
+		reflectVal, err := reflectEnvConfigProp(result.Profile, c.Prop, true)
 		if err != nil {
 			return err
 		}
 		reflectVal.SetZero()
 	}
 
-	// Save
-	return writeEnvConfigFile(cctx, conf)
+	cctx.Logger.Info("Writing config file", "file", result.ConfigFilePath)
+	return cliext.WriteConfig(result.Config, result.ConfigFilePath)
 }
 
 func (c *TemporalConfigDeleteProfileCommand) run(cctx *CommandContext, _ []string) error {
-	// Load config
-	profileName := envConfigProfileName(cctx)
-	conf, _, err := loadEnvConfigProfile(cctx, profileName, true)
+	result, err := cliext.LoadProfile(loadProfileOpts(cctx, true))
 	if err != nil {
 		return err
 	}
@@ -51,16 +46,14 @@ func (c *TemporalConfigDeleteProfileCommand) run(cctx *CommandContext, _ []strin
 	if cctx.RootCommand.Profile == "" {
 		return fmt.Errorf("to delete an entire profile, --profile must be provided explicitly")
 	}
-	delete(conf.Profiles, profileName)
+	delete(result.Config.Profiles, result.ProfileName)
 
-	// Save
-	return writeEnvConfigFile(cctx, conf)
+	cctx.Logger.Info("Writing config file", "file", result.ConfigFilePath)
+	return cliext.WriteConfig(result.Config, result.ConfigFilePath)
 }
 
 func (c *TemporalConfigGetCommand) run(cctx *CommandContext, _ []string) error {
-	// Load config profile
-	profileName := envConfigProfileName(cctx)
-	conf, confProfile, err := loadEnvConfigProfile(cctx, profileName, true)
+	result, err := cliext.LoadProfile(loadProfileOpts(cctx, true))
 	if err != nil {
 		return err
 	}
@@ -78,14 +71,14 @@ func (c *TemporalConfigGetCommand) run(cctx *CommandContext, _ []string) error {
 		var reflectVal reflect.Value
 		// gRPC meta is special
 		if strings.HasPrefix(c.Prop, "grpc_meta.") {
-			v, ok := confProfile.GRPCMeta[strings.TrimPrefix(c.Prop, "grpc_meta.")]
+			v, ok := result.Profile.GRPCMeta[strings.TrimPrefix(c.Prop, "grpc_meta.")]
 			if !ok {
 				return fmt.Errorf("unknown property %q", c.Prop)
 			}
 			reflectVal = reflect.ValueOf(v)
 		} else {
 			// Single value goes into property-value structure
-			reflectVal, err = reflectEnvConfigProp(confProfile, c.Prop, false)
+			reflectVal, err = reflectEnvConfigProp(result.Profile, c.Prop, false)
 			if err != nil {
 				return err
 			}
@@ -104,12 +97,12 @@ func (c *TemporalConfigGetCommand) run(cctx *CommandContext, _ []string) error {
 		var tomlConf struct {
 			Profiles map[string]any `toml:"profile"`
 		}
-		if b, err := conf.ToTOML(envconfig.ClientConfigToTOMLOptions{}); err != nil {
+		if b, err := result.Config.ToTOML(envconfig.ClientConfigToTOMLOptions{}); err != nil {
 			return fmt.Errorf("failed converting to TOML: %w", err)
 		} else if err := toml.Unmarshal(b, &tomlConf); err != nil {
 			return fmt.Errorf("failed converting from TOML: %w", err)
 		}
-		return cctx.Printer.PrintStructured(tomlConf.Profiles[profileName], printer.StructuredOptions{})
+		return cctx.Printer.PrintStructured(tomlConf.Profiles[result.ProfileName], printer.StructuredOptions{})
 	} else {
 		// Get every property individually as a property-value pair except zero
 		// vals
@@ -117,12 +110,12 @@ func (c *TemporalConfigGetCommand) run(cctx *CommandContext, _ []string) error {
 		for k := range envConfigPropsToFieldNames {
 			// TLS is a special case
 			if k == "tls" {
-				if confProfile.TLS != nil {
+				if result.Profile.TLS != nil {
 					props = append(props, prop{Property: "tls", Value: true})
 				}
 				continue
 			}
-			if val, err := reflectEnvConfigProp(confProfile, k, false); err != nil {
+			if val, err := reflectEnvConfigProp(result.Profile, k, false); err != nil {
 				return err
 			} else if !val.IsZero() {
 				props = append(props, prop{Property: k, Value: val.Interface()})
@@ -130,7 +123,7 @@ func (c *TemporalConfigGetCommand) run(cctx *CommandContext, _ []string) error {
 		}
 
 		// Add "grpc_meta"
-		for k, v := range confProfile.GRPCMeta {
+		for k, v := range result.Profile.GRPCMeta {
 			props = append(props, prop{Property: "grpc_meta." + k, Value: v})
 		}
 
@@ -141,7 +134,7 @@ func (c *TemporalConfigGetCommand) run(cctx *CommandContext, _ []string) error {
 }
 
 func (c *TemporalConfigListCommand) run(cctx *CommandContext, _ []string) error {
-	clientConfig, err := envconfig.LoadClientConfig(envconfig.LoadClientConfigOptions{
+	result, err := cliext.LoadConfig(cliext.LoadConfigOptions{
 		ConfigFilePath: cctx.RootCommand.ConfigFile,
 		EnvLookup:      cctx.Options.EnvLookup,
 	})
@@ -151,8 +144,8 @@ func (c *TemporalConfigListCommand) run(cctx *CommandContext, _ []string) error 
 	type profile struct {
 		Name string `json:"name"`
 	}
-	profiles := make([]profile, 0, len(clientConfig.Profiles))
-	for k := range clientConfig.Profiles {
+	profiles := make([]profile, 0, len(result.Config.Profiles))
+	for k := range result.Config.Profiles {
 		profiles = append(profiles, profile{Name: k})
 	}
 	sort.Slice(profiles, func(i, j int) bool { return profiles[i].Name < profiles[j].Name })
@@ -160,20 +153,19 @@ func (c *TemporalConfigListCommand) run(cctx *CommandContext, _ []string) error 
 }
 
 func (c *TemporalConfigSetCommand) run(cctx *CommandContext, _ []string) error {
-	// Load config
-	conf, confProfile, err := loadEnvConfigProfile(cctx, envConfigProfileName(cctx), false)
+	result, err := cliext.LoadProfile(loadProfileOpts(cctx, false))
 	if err != nil {
 		return err
 	}
 	// As a special case, "grpc_meta." values are handled specifically
 	if strings.HasPrefix(c.Prop, "grpc_meta.") {
-		if confProfile.GRPCMeta == nil {
-			confProfile.GRPCMeta = map[string]string{}
+		if result.Profile.GRPCMeta == nil {
+			result.Profile.GRPCMeta = map[string]string{}
 		}
-		confProfile.GRPCMeta[strings.TrimPrefix(c.Prop, "grpc_meta.")] = c.Value
+		result.Profile.GRPCMeta[strings.TrimPrefix(c.Prop, "grpc_meta.")] = c.Value
 	} else {
 		// Get reflect value
-		reflectVal, err := reflectEnvConfigProp(confProfile, c.Prop, false)
+		reflectVal, err := reflectEnvConfigProp(result.Profile, c.Prop, false)
 		if err != nil {
 			return err
 		}
@@ -211,42 +203,17 @@ func (c *TemporalConfigSetCommand) run(cctx *CommandContext, _ []string) error {
 		}
 	}
 
-	// Save
-	return writeEnvConfigFile(cctx, conf)
+	cctx.Logger.Info("Writing config file", "file", result.ConfigFilePath)
+	return cliext.WriteConfig(result.Config, result.ConfigFilePath)
 }
 
-func envConfigProfileName(cctx *CommandContext) string {
-	if cctx.RootCommand.Profile != "" {
-		return cctx.RootCommand.Profile
-	} else if p, _ := cctx.Options.EnvLookup.LookupEnv("TEMPORAL_PROFILE"); p != "" {
-		return p
+func loadProfileOpts(cctx *CommandContext, failIfNotFound bool) cliext.LoadProfileOptions {
+	return cliext.LoadProfileOptions{
+		ConfigFilePath:  cctx.RootCommand.ConfigFile,
+		ProfileName:     cctx.RootCommand.Profile,
+		CreateIfMissing: !failIfNotFound,
+		EnvLookup:       cctx.Options.EnvLookup,
 	}
-	return envconfig.DefaultConfigFileProfile
-}
-
-func loadEnvConfigProfile(
-	cctx *CommandContext,
-	profile string,
-	failIfNotFound bool,
-) (*envconfig.ClientConfig, *envconfig.ClientConfigProfile, error) {
-	clientConfig, err := envconfig.LoadClientConfig(envconfig.LoadClientConfigOptions{
-		ConfigFilePath: cctx.RootCommand.ConfigFile,
-		EnvLookup:      cctx.Options.EnvLookup,
-	})
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// Load profile
-	clientProfile := clientConfig.Profiles[profile]
-	if clientProfile == nil {
-		if failIfNotFound {
-			return nil, nil, fmt.Errorf("profile %q not found", profile)
-		}
-		clientProfile = &envconfig.ClientConfigProfile{}
-		clientConfig.Profiles[profile] = clientProfile
-	}
-	return &clientConfig, clientProfile, nil
 }
 
 var envConfigPropsToFieldNames = map[string]string{
@@ -303,33 +270,4 @@ func reflectEnvConfigProp(
 		parentVal = parentVal.Elem()
 	}
 	return parentVal.FieldByName(field), nil
-}
-
-func writeEnvConfigFile(cctx *CommandContext, conf *envconfig.ClientConfig) error {
-	// Get file
-	configFile := cctx.RootCommand.ConfigFile
-	if configFile == "" {
-		configFile, _ = cctx.Options.EnvLookup.LookupEnv("TEMPORAL_CONFIG_FILE")
-		if configFile == "" {
-			var err error
-			if configFile, err = envconfig.DefaultConfigFilePath(); err != nil {
-				return err
-			}
-		}
-	}
-
-	// Convert to TOML
-	b, err := conf.ToTOML(envconfig.ClientConfigToTOMLOptions{})
-	if err != nil {
-		return fmt.Errorf("failed building TOML: %w", err)
-	}
-
-	// Write to file, making dirs as needed
-	cctx.Logger.Info("Writing config file", "file", configFile)
-	if err := os.MkdirAll(filepath.Dir(configFile), 0700); err != nil {
-		return fmt.Errorf("failed making config file parent dirs: %w", err)
-	} else if err := os.WriteFile(configFile, b, 0600); err != nil {
-		return fmt.Errorf("failed writing config file: %w", err)
-	}
-	return nil
 }
