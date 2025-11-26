@@ -32,8 +32,8 @@ jobs:
           git_email="${{ github.actor }}@users.noreply.github.com"
           
           # Set the outputs for subsequent steps.
-          echo "GIT_NAME=$git_name" >> $GITHUB_OUTPUT
-          echo "GIT_EMAIL=$git_email" >> $GITHUB_OUTPUT
+          echo "GIT_NAME=$git_name" >> "$GITHUB_OUTPUT"
+          echo "GIT_EMAIL=$git_email" >> "$GITHUB_OUTPUT"
 
       - name: Generate token
         id: generate_token

@@ -46,23 +46,23 @@ jobs:
 
       - name: Get build date
         id: date
-        run: echo "date=$(date '+%F-%T')" >> $GITHUB_OUTPUT
+        run: echo "date=$(date '+%F-%T')" >> "$GITHUB_OUTPUT"
 
       - name: Get build unix timestamp
         id: timestamp
-        run: echo "timestamp=$(date '+%s')" >> $GITHUB_OUTPUT
+        run: echo "timestamp=$(date '+%s')" >> "$GITHUB_OUTPUT"
 
       - name: Get git branch
         id: branch
-        run: echo "branch=$(git rev-parse --abbrev-ref HEAD)" >> $GITHUB_OUTPUT
+        run: echo "branch=$(git rev-parse --abbrev-ref HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Get build platform
         id: platform
-        run: echo "platform=$(go version | cut -d ' ' -f 4)" >> $GITHUB_OUTPUT
+        run: echo "platform=$(go version | cut -d ' ' -f 4)" >> "$GITHUB_OUTPUT"
 
       - name: Get Go version
         id: go
-        run: echo "go=$(go version | cut -d ' ' -f 3)" >> $GITHUB_OUTPUT
+        run: echo "go=$(go version | cut -d ' ' -f 3)" >> "$GITHUB_OUTPUT"
 
       - name: Check if release is latest
         if: inputs.publish
@@ -167,7 +167,7 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
 
       - name: Log in to Docker Hub
-        if: inputs.publish && secrets.DOCKER_USERNAME != '' && secrets.DOCKER_PASSWORD != ''
+        if: inputs.publish
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}

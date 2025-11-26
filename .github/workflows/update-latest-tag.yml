@@ -94,7 +94,7 @@ jobs:
         run: |
           VERSION="$RELEASE_TAG"
           VERSION="${VERSION#v}"
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Pull and retag image as latest
         if: steps.check_latest.outputs.is_latest == 'true'
