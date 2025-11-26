@@ -123,6 +123,7 @@ jobs:
         env:
           INPUT_VERSION: ${{ inputs.version }}
           INPUT_PUBLISH: ${{ inputs.publish }}
+          INPUT_REGISTRY: ${{ inputs.registry }}
           INPUT_REGISTRY_NAMESPACE: ${{ inputs.registry_namespace }}
           INPUT_IMAGE_NAME: ${{ inputs.image_name }}
           REPO_OWNER: ${{ github.repository_owner }}
@@ -183,7 +184,7 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
 
       - name: Log in to Docker Hub
-        if: inputs.publish
+        if: inputs.publish && secrets.DOCKER_USERNAME != '' && secrets.DOCKER_PASSWORD != ''
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}

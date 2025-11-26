@@ -32,7 +32,7 @@ target "cli" {
   tags = compact([
     "${IMAGE_NAMESPACE}/${IMAGE_NAME}:${IMAGE_SHA_TAG}",
     "${IMAGE_NAMESPACE}/${IMAGE_NAME}:${VERSION}",
-    TAG_LATEST ? ${IMAGE_NAMESPACE}/${IMAGE_NAME}:latest : "",
+    TAG_LATEST ? "${IMAGE_NAMESPACE}/${IMAGE_NAME}:latest" : "",
   ])
   platforms = ["linux/amd64", "linux/arm64"]
   labels = {

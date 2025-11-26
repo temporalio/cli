@@ -99,6 +99,7 @@ jobs:
       - name: Pull and retag image as latest
         if: steps.check_latest.outputs.is_latest == 'true'
         run: |
+          set -e
           # Construct image paths
           REPO="${{ steps.registry.outputs.repo }}"
           NAMESPACE="${{ steps.registry.outputs.namespace }}"
@@ -116,12 +117,19 @@ jobs:
           fi
 
           echo "Pulling ${SOURCE_IMAGE}..."
-          docker pull ${SOURCE_IMAGE}
+          if ! docker pull ${SOURCE_IMAGE}; then
+            echo "Error: Failed to pull ${SOURCE_IMAGE}. The image may not exist yet."
+            echo "This can happen if the build-and-publish workflow hasn't completed successfully."
+            exit 1
+          fi
 
           echo "Tagging as ${LATEST_IMAGE}..."
           docker tag ${SOURCE_IMAGE} ${LATEST_IMAGE}
 
           echo "Pushing ${LATEST_IMAGE}..."
-          docker push ${LATEST_IMAGE}
+          if ! docker push ${LATEST_IMAGE}; then
+            echo "Error: Failed to push ${LATEST_IMAGE}"
+            exit 1
+          fi
 
           echo "✅ Successfully updated latest tag to point to version ${VERSION}"
