@@ -163,7 +163,7 @@ jobs:
           VERSION: ${{ steps.meta.outputs.version }}
           TAG_LATEST: false
           IMAGE_NAMESPACE: ${{ inputs.registry_namespace }}
-          IMAGE_NAME: ${{ steps.meta.outputs.image_name }}
+          IMAGE_NAME: ${{ inputs.image_name }}
           GITHUB_REPOSITORY: ${{ github.repository }}
 
       - name: Log in to Docker Hub
