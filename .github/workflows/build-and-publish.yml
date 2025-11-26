@@ -11,11 +11,6 @@ on:
         description: "Version tag for the release (required if publish is true)"
         required: false
         type: string
-      registry:
-        description: "Container registry (docker.io, ghcr.io, etc.)"
-        required: false
-        type: string
-        default: ""
       registry_namespace:
         description: "Registry namespace/organization"
         required: false
@@ -123,7 +118,6 @@ jobs:
         env:
           INPUT_VERSION: ${{ inputs.version }}
           INPUT_PUBLISH: ${{ inputs.publish }}
-          INPUT_REGISTRY: ${{ inputs.registry }}
           INPUT_REGISTRY_NAMESPACE: ${{ inputs.registry_namespace }}
           INPUT_IMAGE_NAME: ${{ inputs.image_name }}
           REPO_OWNER: ${{ github.repository_owner }}
@@ -132,9 +126,7 @@ jobs:
           script: |
             const inputVersion = process.env.INPUT_VERSION;
             const inputPublish = process.env.INPUT_PUBLISH;
-            const inputRegistry = process.env.INPUT_REGISTRY;
             const inputRegistryNamespace = process.env.INPUT_REGISTRY_NAMESPACE;
-            const inputImageName = process.env.INPUT_IMAGE_NAME;
             const repoOwner = process.env.REPO_OWNER;
 
             // Get git information
@@ -155,18 +147,9 @@ jobs:
             }
             core.setOutput('version', version);
 
-            // Determine registry (with auto-detection for temporalio vs forks)
-            let registry = inputRegistry;
-
             // Set namespace (defaults to repository owner)
             const namespace = inputRegistryNamespace || repoOwner;
             core.setOutput('image_namespace', namespace);
-
-            // Set image name (defaults to 'temporal')
-            const imageName = inputImageName || 'temporal';
-            core.setOutput('image_name', imageName);
-
-            console.log(`Namespace: ${namespace}, Image: ${imageName}`);
 
       - name: Build Docker image
         if: ${{ !inputs.publish }}
@@ -179,7 +162,7 @@ jobs:
           IMAGE_SHA_TAG: ${{ steps.meta.outputs.image_sha_tag }}
           VERSION: ${{ steps.meta.outputs.version }}
           TAG_LATEST: false
-          IMAGE_NAMESPACE: ${{ steps.meta.outputs.image_namespace }}
+          IMAGE_NAMESPACE: ${{ inputs.registry_namespace }}
           IMAGE_NAME: ${{ steps.meta.outputs.image_name }}
           GITHUB_REPOSITORY: ${{ github.repository }}
 
@@ -203,6 +186,6 @@ jobs:
           VERSION: ${{ steps.meta.outputs.version }}
           TAG_LATEST: ${{ steps.check_latest_release.outputs.is_latest == 'true' }}
           IMAGE_NAMESPACE: ${{ steps.meta.outputs.image_namespace }}
-          IMAGE_NAME: ${{ steps.meta.outputs.image_name }}
+          IMAGE_NAME: ${{ inputs.image_name }}
           GITHUB_REPOSITORY: ${{ github.repository }}
 
