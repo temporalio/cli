@@ -2,18 +2,27 @@ package commandsgen
 
 import (
 	"bytes"
+	"embed"
 	"fmt"
+	"go/ast"
 	"go/format"
+	"go/parser"
+	"go/token"
+	"io/fs"
 	"path"
 	"regexp"
 	"sort"
 	"strings"
 
-	"go.temporal.io/server/common/primitives/timestamp"
+	"github.com/temporalio/cli/internal/commandsgen/types"
 )
 
-func GenerateCommandsCode(pkg string, commands Commands) ([]byte, error) {
-	w := &codeWriter{allCommands: commands.CommandList, OptionSets: commands.OptionSets}
+//go:embed types/*.go
+var typesFS embed.FS
+
+func GenerateCommandsCode(pkg string, contextType string, commands Commands) ([]byte, error) {
+	w := &codeWriter{allCommands: commands.CommandList, OptionSets: commands.OptionSets, contextType: contextType}
+
 	// Put terminal check at top
 	w.writeLinef("var hasHighlighting = %v.IsTerminal(%v.Stdout.Fd())", w.importIsatty(), w.importPkg("os"))
 
@@ -24,11 +33,26 @@ func GenerateCommandsCode(pkg string, commands Commands) ([]byte, error) {
 		}
 	}
 
-	// Write all commands, then come back and write package and imports
+	// Write all commands
 	for _, cmd := range commands.CommandList {
 		if err := cmd.writeCode(w); err != nil {
 			return nil, fmt.Errorf("failed writing command %v: %w", cmd.FullName, err)
 		}
+	}
+
+	// Append embedded Go files from types/ (parse imports with go/ast, write code after imports)
+	err := fs.WalkDir(typesFS, "types", func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() || strings.Contains(path, "_test.go") {
+			return err
+		}
+		src, err := typesFS.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		return w.appendGoSource(string(src))
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	// Write package and imports to final buf
@@ -59,6 +83,7 @@ type codeWriter struct {
 	buf         bytes.Buffer
 	allCommands []Command
 	OptionSets  []OptionSets
+	contextType string
 	// Key is short ref, value is full
 	imports map[string]string
 }
@@ -98,6 +123,36 @@ func (c *codeWriter) importPkg(pkg string) string {
 
 func (c *codeWriter) importCobra() string { return c.importPkg("github.com/spf13/cobra") }
 
+// appendGoSource parses a Go source file, registers its imports, and appends
+// everything after the import block to the output buffer.
+func (c *codeWriter) appendGoSource(src string) error {
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, "", src, parser.ImportsOnly)
+	if err != nil {
+		return fmt.Errorf("failed to parse embedded source: %w", err)
+	}
+
+	// Register imports
+	for _, imp := range f.Imports {
+		// imp.Path.Value includes quotes, so trim them
+		c.importPkg(strings.Trim(imp.Path.Value, `"`))
+	}
+
+	// Find end of imports and append the rest
+	var lastImportEnd token.Pos
+	for _, decl := range f.Decls {
+		if genDecl, ok := decl.(*ast.GenDecl); ok && genDecl.Tok == token.IMPORT {
+			if genDecl.End() > lastImportEnd {
+				lastImportEnd = genDecl.End()
+			}
+		}
+	}
+
+	// Write everything after imports
+	c.buf.WriteString(src[fset.Position(lastImportEnd).Offset:])
+	return nil
+}
+
 func (c *codeWriter) importPflag() string { return c.importPkg("github.com/spf13/pflag") }
 
 func (c *codeWriter) importIsatty() string { return c.importPkg("github.com/mattn/go-isatty") }
@@ -120,8 +175,8 @@ func (o *OptionSets) writeCode(w *codeWriter) error {
 	w.writeLinef("}\n")
 
 	// write flags
-	w.writeLinef("func (v *%v) buildFlags(cctx *CommandContext, f *%v.FlagSet) {",
-		o.setStructName(), w.importPflag())
+	w.writeLinef("func (v *%v) buildFlags(cctx %s, f *%v.FlagSet) {",
+		o.setStructName(), w.contextType, w.importPflag())
 	o.writeFlagBuilding("v", "f", w)
 	w.writeLinef("}\n")
 
@@ -164,10 +219,10 @@ func (c *Command) writeCode(w *codeWriter) error {
 
 	// Constructor builds the struct and sets the flags
 	if hasParent {
-		w.writeLinef("func New%v(cctx *CommandContext, parent *%v) *%v {",
-			c.structName(), parent.structName(), c.structName())
+		w.writeLinef("func New%v(cctx %s, parent *%v) *%v {",
+			c.structName(), w.contextType, parent.structName(), c.structName())
 	} else {
-		w.writeLinef("func New%v(cctx *CommandContext) *%v {", c.structName(), c.structName())
+		w.writeLinef("func New%v(cctx %s) *%v {", c.structName(), w.contextType, c.structName())
 	}
 	w.writeLinef("var s %v", c.structName())
 	if hasParent {
@@ -328,7 +383,7 @@ func (o *Option) writeFlagBuilding(selfVar, flagVar string, w *codeWriter) error
 	case "duration":
 		flagMeth, setDefault = "Var", "0"
 		if o.Default != "" {
-			dur, err := timestamp.ParseDuration(o.Default)
+			dur, err := types.ParseDuration(o.Default)
 			if err != nil {
 				return fmt.Errorf("invalid default: %w", err)
 			}

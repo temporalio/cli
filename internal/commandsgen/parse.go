@@ -1,10 +1,8 @@
-// Package commandsgen is built to read the YAML format described in
-// internal/commandsgen/commands.yml and generate code from it.
+// Package commandsgen reads YAML command definitions and generates code from them.
 package commandsgen
 
 import (
 	"bytes"
-	_ "embed"
 	"fmt"
 	"regexp"
 	"slices"
@@ -13,9 +11,6 @@ import (
 
 	"gopkg.in/yaml.v3"
 )
-
-//go:embed commands.yml
-var CommandsYAML []byte
 
 type (
 	// Option represents the structure of an option within option sets.
@@ -76,9 +71,10 @@ type (
 	}
 )
 
-func ParseCommands() (Commands, error) {
+// ParseCommands parses command definitions from YAML bytes.
+func ParseCommands(yamlData []byte) (Commands, error) {
 	// Fix CRLF
-	md := bytes.ReplaceAll(CommandsYAML, []byte("\r\n"), []byte("\n"))
+	md := bytes.ReplaceAll(yamlData, []byte("\r\n"), []byte("\n"))
 
 	var m Commands
 	err := yaml.Unmarshal(md, &m)

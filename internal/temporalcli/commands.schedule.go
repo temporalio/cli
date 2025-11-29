@@ -16,7 +16,6 @@ import (
 	schedpb "go.temporal.io/api/schedule/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
-	"go.temporal.io/server/common/primitives/timestamp"
 )
 
 type printableSchedule struct {
@@ -210,11 +209,11 @@ func toIntervalSpec(str string) (client.ScheduleIntervalSpec, error) {
 	if len(parts) > 2 {
 		return spec, fmt.Errorf(`invalid interval: must be "<duration>" or "<duration>/<duration>"`)
 	} else if len(parts) == 2 {
-		if spec.Offset, err = timestamp.ParseDuration(parts[1]); err != nil {
+		if spec.Offset, err = ParseDuration(parts[1]); err != nil {
 			return spec, fmt.Errorf("invalid interval: %w", err)
 		}
 	}
-	if spec.Every, err = timestamp.ParseDuration(parts[0]); err != nil {
+	if spec.Every, err = ParseDuration(parts[0]); err != nil {
 		return spec, fmt.Errorf("invalid interval: %w", err)
 	}
 	return spec, nil

@@ -393,7 +393,9 @@ func (s *SharedServerSuite) TestDeployment_List() {
 			"worker", "deployment", "list",
 			"--address", s.Address(),
 		)
-		s.NoError(res.Err)
+		assert.NoError(t, res.Err)
+		assert.Contains(t, res.Stdout.String(), version1.BuildID)
+		assert.Contains(t, res.Stdout.String(), version2.BuildID)
 	}, 10*time.Second, 100*time.Millisecond)
 
 	s.ContainsOnSameLine(res.Stdout.String(), deploymentName1, version1.BuildID)

@@ -3,6 +3,8 @@
 package temporalcli
 
 import (
+	"fmt"
+
 	"github.com/mattn/go-isatty"
 
 	"github.com/spf13/cobra"
@@ -10,6 +12,12 @@ import (
 	"github.com/spf13/pflag"
 
 	"os"
+
+	"regexp"
+
+	"strconv"
+
+	"strings"
 
 	"time"
 )
@@ -4226,4 +4234,120 @@ func NewTemporalWorkflowUpdateOptionsCommand(cctx *CommandContext, parent *Tempo
 		}
 	}
 	return &s
+}
+
+var reDays = regexp.MustCompile(`(\d+(\.\d*)?|(\.\d+))d`)
+
+type Duration time.Duration
+
+// ParseDuration is like time.ParseDuration, but supports unit "d" for days
+// (always interpreted as exactly 24 hours).
+func ParseDuration(s string) (time.Duration, error) {
+	s = reDays.ReplaceAllStringFunc(s, func(v string) string {
+		fv, err := strconv.ParseFloat(strings.TrimSuffix(v, "d"), 64)
+		if err != nil {
+			return v // will cause time.ParseDuration to return an error
+		}
+		return fmt.Sprintf("%fh", 24*fv)
+	})
+	return time.ParseDuration(s)
+}
+
+func (d Duration) Duration() time.Duration {
+	return time.Duration(d)
+}
+
+func (d *Duration) String() string {
+	return d.Duration().String()
+}
+
+func (d *Duration) Set(s string) error {
+	p, err := ParseDuration(s)
+	if err != nil {
+		return err
+	}
+	*d = Duration(p)
+	return nil
+}
+
+func (d *Duration) Type() string {
+	return "duration"
+}
+
+type StringEnum struct {
+	Allowed            []string
+	Value              string
+	ChangedFromDefault bool
+}
+
+func NewStringEnum(allowed []string, value string) StringEnum {
+	return StringEnum{Allowed: allowed, Value: value}
+}
+
+func (s *StringEnum) String() string { return s.Value }
+
+func (s *StringEnum) Set(p string) error {
+	for _, allowed := range s.Allowed {
+		if p == allowed {
+			s.Value = p
+			s.ChangedFromDefault = true
+			return nil
+		}
+	}
+	return fmt.Errorf("%v is not one of required values of %v", p, strings.Join(s.Allowed, ", "))
+}
+
+func (*StringEnum) Type() string { return "string" }
+
+type StringEnumArray struct {
+	Allowed map[string]string
+	Values  []string
+}
+
+func NewStringEnumArray(allowed []string, values []string) StringEnumArray {
+	var allowedMap = make(map[string]string)
+	for _, str := range allowed {
+		allowedMap[strings.ToLower(str)] = str
+	}
+	return StringEnumArray{Allowed: allowedMap, Values: values}
+}
+
+func (s *StringEnumArray) String() string { return strings.Join(s.Values, ",") }
+
+func (s *StringEnumArray) Set(p string) error {
+	val, ok := s.Allowed[strings.ToLower(p)]
+	if !ok {
+		values := make([]string, 0, len(s.Allowed))
+		for _, v := range s.Allowed {
+			values = append(values, v)
+		}
+		return fmt.Errorf("invalid value: %s, allowed values are: %s", p, strings.Join(values, ", "))
+	}
+	s.Values = append(s.Values, val)
+	return nil
+}
+
+func (*StringEnumArray) Type() string { return "string" }
+
+type Timestamp time.Time
+
+func (t Timestamp) Time() time.Time {
+	return time.Time(t)
+}
+
+func (t *Timestamp) String() string {
+	return t.Time().Format(time.RFC3339)
+}
+
+func (t *Timestamp) Set(s string) error {
+	p, err := time.Parse(time.RFC3339, s)
+	if err != nil {
+		return err
+	}
+	*t = Timestamp(p)
+	return nil
+}
+
+func (t *Timestamp) Type() string {
+	return "timestamp"
 }
