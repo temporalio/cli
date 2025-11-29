@@ -2,15 +2,26 @@ package cliext
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"reflect"
 	"strings"
 
 	"go.temporal.io/sdk/contrib/envconfig"
 )
 
-var envConfigPropsToFieldNames = map[string]string{
+// LoadProfileOptions contains options for loading a profile.
+type LoadProfileOptions struct {
+	// ConfigFilePath is the path to the configuration file.
+	// If empty, the default path will be used.
+	ConfigFilePath string
+
+	// ProfileName is the name of the profile to load.
+	ProfileName string
+
+	// CreateIfMissing creates an empty profile if it doesn't exist.
+	CreateIfMissing bool
+}
+
+var envProfilePropsToFieldNames = map[string]string{
 	"address":                       "Address",
 	"namespace":                     "Namespace",
 	"api_key":                       "APIKey",
@@ -29,58 +40,21 @@ var envConfigPropsToFieldNames = map[string]string{
 }
 
 // LoadProfile loads a specific profile from the configuration.
-// If createIfMissing is true and the profile doesn't exist, an empty profile is created.
-// If createIfMissing is false and the profile doesn't exist, an error is returned.
-func LoadProfile(opts LoadOptions, profileName string, createIfMissing bool) (*envconfig.ClientConfig, *envconfig.ClientConfigProfile, error) {
-	config, err := LoadConfig(opts)
+func LoadProfile(opts LoadProfileOptions) (*envconfig.ClientConfig, *envconfig.ClientConfigProfile, error) {
+	config, err := LoadConfig(opts.ConfigFilePath)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	// Load profile
-	profile := config.Profiles[profileName]
+	profile := config.Profiles[opts.ProfileName]
 	if profile == nil {
-		if !createIfMissing {
-			return nil, nil, fmt.Errorf("profile %q not found", profileName)
+		if !opts.CreateIfMissing {
+			return nil, nil, fmt.Errorf("profile %q not found", opts.ProfileName)
 		}
 		profile = &envconfig.ClientConfigProfile{}
-		config.Profiles[profileName] = profile
+		config.Profiles[opts.ProfileName] = profile
 	}
 	return config, profile, nil
-}
-
-// WriteConfig writes the configuration to the specified file or default location.
-func WriteConfig(config *envconfig.ClientConfig, opts LoadOptions) error {
-	// Get file
-	configFile := opts.ConfigFilePath
-	if configFile == "" {
-		envLookup := opts.EnvLookup
-		if envLookup == nil {
-			envLookup = EnvLookupOS
-		}
-		configFile, _ = envLookup.LookupEnv("TEMPORAL_CONFIG_FILE")
-		if configFile == "" {
-			var err error
-			if configFile, err = envconfig.DefaultConfigFilePath(); err != nil {
-				return err
-			}
-		}
-	}
-
-	// Convert to TOML
-	b, err := config.ToTOML(envconfig.ClientConfigToTOMLOptions{})
-	if err != nil {
-		return fmt.Errorf("failed building TOML: %w", err)
-	}
-
-	// Write to file, making dirs as needed
-	if err := os.MkdirAll(filepath.Dir(configFile), 0700); err != nil {
-		return fmt.Errorf("failed making config file parent dirs: %w", err)
-	}
-	if err := os.WriteFile(configFile, b, 0600); err != nil {
-		return fmt.Errorf("failed writing config file: %w", err)
-	}
-	return nil
 }
 
 // GetPropertyValue gets a property value from a profile by property name.
@@ -184,7 +158,7 @@ func ListProperties(profile *envconfig.ClientConfigProfile) (map[string]any, err
 	// Get every property individually as a property-value pair except zero vals
 	props := make(map[string]any)
 
-	for k := range envConfigPropsToFieldNames {
+	for k := range envProfilePropsToFieldNames {
 		// TLS is a special case
 		if k == "tls" {
 			if profile.TLS != nil {
@@ -215,7 +189,7 @@ func getReflectValue(
 	failIfParentNotFound bool,
 ) (reflect.Value, error) {
 	// Get field name
-	field := envConfigPropsToFieldNames[prop]
+	field := envProfilePropsToFieldNames[prop]
 	if field == "" {
 		return reflect.Value{}, fmt.Errorf("unknown property %q", prop)
 	}

@@ -11,9 +11,8 @@ import (
 )
 
 func (c *TemporalConfigDeleteCommand) run(cctx *CommandContext, _ []string) error {
-	opts := loadOptsFromContext(cctx)
-	profileName := envConfigProfileName(cctx)
-	conf, confProfile, err := cliext.LoadProfile(opts, profileName, false)
+	opts := loadProfileOptsFromContext(cctx, false)
+	conf, confProfile, err := cliext.LoadProfile(opts)
 	if err != nil {
 		return err
 	}
@@ -23,13 +22,12 @@ func (c *TemporalConfigDeleteCommand) run(cctx *CommandContext, _ []string) erro
 	}
 
 	cctx.Logger.Info("Writing config file", "file", opts.ConfigFilePath)
-	return cliext.WriteConfig(conf, opts)
+	return cliext.WriteConfig(conf, opts.ConfigFilePath)
 }
 
 func (c *TemporalConfigDeleteProfileCommand) run(cctx *CommandContext, _ []string) error {
-	opts := loadOptsFromContext(cctx)
-	profileName := envConfigProfileName(cctx)
-	conf, _, err := cliext.LoadProfile(opts, profileName, false)
+	opts := loadProfileOptsFromContext(cctx, false)
+	conf, _, err := cliext.LoadProfile(opts)
 	if err != nil {
 		return err
 	}
@@ -39,16 +37,15 @@ func (c *TemporalConfigDeleteProfileCommand) run(cctx *CommandContext, _ []strin
 	if cctx.RootCommand.Profile == "" {
 		return fmt.Errorf("to delete an entire profile, --profile must be provided explicitly")
 	}
-	delete(conf.Profiles, profileName)
+	delete(conf.Profiles, opts.ProfileName)
 
 	cctx.Logger.Info("Writing config file", "file", opts.ConfigFilePath)
-	return cliext.WriteConfig(conf, opts)
+	return cliext.WriteConfig(conf, opts.ConfigFilePath)
 }
 
 func (c *TemporalConfigGetCommand) run(cctx *CommandContext, _ []string) error {
-	opts := loadOptsFromContext(cctx)
-	profileName := envConfigProfileName(cctx)
-	conf, confProfile, err := cliext.LoadProfile(opts, profileName, false)
+	opts := loadProfileOptsFromContext(cctx, false)
+	conf, confProfile, err := cliext.LoadProfile(opts)
 	if err != nil {
 		return err
 	}
@@ -82,7 +79,7 @@ func (c *TemporalConfigGetCommand) run(cctx *CommandContext, _ []string) error {
 		} else if err := toml.Unmarshal(b, &tomlConf); err != nil {
 			return fmt.Errorf("failed converting from TOML: %w", err)
 		}
-		return cctx.Printer.PrintStructured(tomlConf.Profiles[profileName], printer.StructuredOptions{})
+		return cctx.Printer.PrintStructured(tomlConf.Profiles[opts.ProfileName], printer.StructuredOptions{})
 	} else {
 		// Get every property individually as a property-value pair except zero vals
 		propsMap, err := cliext.ListProperties(confProfile)
@@ -101,8 +98,8 @@ func (c *TemporalConfigGetCommand) run(cctx *CommandContext, _ []string) error {
 }
 
 func (c *TemporalConfigListCommand) run(cctx *CommandContext, _ []string) error {
-	opts := loadOptsFromContext(cctx)
-	config, err := cliext.LoadConfig(opts)
+	configFilePath := configFilePathFromContext(cctx)
+	config, err := cliext.LoadConfig(configFilePath)
 	if err != nil {
 		return err
 	}
@@ -118,9 +115,8 @@ func (c *TemporalConfigListCommand) run(cctx *CommandContext, _ []string) error 
 }
 
 func (c *TemporalConfigSetCommand) run(cctx *CommandContext, _ []string) error {
-	opts := loadOptsFromContext(cctx)
-	profileName := envConfigProfileName(cctx)
-	conf, confProfile, err := cliext.LoadProfile(opts, profileName, true)
+	opts := loadProfileOptsFromContext(cctx, true)
+	conf, confProfile, err := cliext.LoadProfile(opts)
 	if err != nil {
 		return err
 	}
@@ -130,10 +126,18 @@ func (c *TemporalConfigSetCommand) run(cctx *CommandContext, _ []string) error {
 	}
 
 	cctx.Logger.Info("Writing config file", "file", opts.ConfigFilePath)
-	return cliext.WriteConfig(conf, opts)
+	return cliext.WriteConfig(conf, opts.ConfigFilePath)
 }
 
-func envConfigProfileName(cctx *CommandContext) string {
+func configFilePathFromContext(cctx *CommandContext) string {
+	if cctx.RootCommand.ConfigFile != "" {
+		return cctx.RootCommand.ConfigFile
+	}
+	configFilePath, _ := cctx.Options.EnvLookup.LookupEnv("TEMPORAL_CONFIG_FILE")
+	return configFilePath
+}
+
+func profileNameFromContext(cctx *CommandContext) string {
 	if cctx.RootCommand.Profile != "" {
 		return cctx.RootCommand.Profile
 	} else if p, _ := cctx.Options.EnvLookup.LookupEnv("TEMPORAL_PROFILE"); p != "" {
@@ -142,9 +146,10 @@ func envConfigProfileName(cctx *CommandContext) string {
 	return envconfig.DefaultConfigFileProfile
 }
 
-func loadOptsFromContext(cctx *CommandContext) cliext.LoadOptions {
-	return cliext.LoadOptions{
-		ConfigFilePath: cctx.RootCommand.ConfigFile,
-		EnvLookup:      cctx.Options.EnvLookup,
+func loadProfileOptsFromContext(cctx *CommandContext, createIfMissing bool) cliext.LoadProfileOptions {
+	return cliext.LoadProfileOptions{
+		ConfigFilePath:  configFilePathFromContext(cctx),
+		ProfileName:     profileNameFromContext(cctx),
+		CreateIfMissing: createIfMissing,
 	}
 }

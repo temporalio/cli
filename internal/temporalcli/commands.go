@@ -19,7 +19,6 @@ import (
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"github.com/temporalio/cli/cliext"
 	"github.com/temporalio/cli/internal/printer"
 	"github.com/temporalio/ui-server/v2/server/version"
 	"go.temporal.io/api/common/v1"
@@ -66,8 +65,8 @@ type CommandOptions struct {
 	Args []string
 	// Deprecated `--env` and `--env-file` approach
 	DeprecatedEnvConfig DeprecatedEnvConfig
-	// If nil, [cliext.EnvLookupOS] is used.
-	EnvLookup cliext.EnvLookup
+	// If nil, [EnvLookupOS] is used.
+	EnvLookup EnvLookup
 
 	// These three fields below default to OS values
 	Stdin  io.Reader
@@ -116,7 +115,7 @@ func (c *CommandContext) preprocessOptions() error {
 		c.Options.Args = os.Args[1:]
 	}
 	if c.Options.EnvLookup == nil {
-		c.Options.EnvLookup = cliext.EnvLookupOS
+		c.Options.EnvLookup = EnvLookupOS
 	}
 
 	if c.Options.Stdin == nil {
