@@ -44,83 +44,34 @@ jobs:
         if: steps.check_latest.outputs.is_latest == 'true'
         uses: docker/setup-buildx-action@v3
 
-      - name: Get registry configuration
-        if: steps.check_latest.outputs.is_latest == 'true'
-        id: registry
-        uses: actions/github-script@v8
-        with:
-          script: |
-            const repoOwner = context.repo.owner;
-            
-            // Auto-detect registry based on repository owner
-            let registry, type, repo;
-            if (repoOwner === 'temporalio') {
-              registry = 'docker.io';
-              type = 'dockerhub';
-              repo = '';
-            } else {
-              registry = 'ghcr.io';
-              type = 'ghcr';
-              repo = registry;
-            }
-            
-            core.setOutput('type', type);
-            core.setOutput('repo', repo);
-            core.setOutput('namespace', repoOwner);
-            core.setOutput('image', 'temporal');
-            
-            console.log(`Registry: ${registry}, Type: ${type}, Namespace: ${repoOwner}`);
-
-      - name: Log in to GitHub Container Registry
-        if: steps.check_latest.outputs.is_latest == 'true' && steps.registry.outputs.type == 'ghcr'
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Log in to Docker Hub
-        if: steps.check_latest.outputs.is_latest == 'true' && steps.registry.outputs.type == 'dockerhub'
+        if: steps.check_latest.outputs.is_latest == 'true'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Get version tag
+      - name: Prepare version and check if already tagged as latest
         if: steps.check_latest.outputs.is_latest == 'true'
-        id: version
+        id: check_current_latest
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
-        run: |
-          VERSION="$RELEASE_TAG"
-          VERSION="${VERSION#v}"
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+        run: node .github/scripts/check-latest-tag.js
 
       - name: Pull and retag image as latest
-        if: steps.check_latest.outputs.is_latest == 'true'
+        if: steps.check_latest.outputs.is_latest == 'true' && steps.check_current_latest.outputs.already_latest != 'true'
+        env:
+          SOURCE_IMAGE: ${{ steps.check_current_latest.outputs.source_image }}
+          LATEST_IMAGE: ${{ steps.check_current_latest.outputs.latest_image }}
+          VERSION: ${{ steps.check_current_latest.outputs.version }}
         run: |
           set -e
-          # Construct image paths
-          REPO="${{ steps.registry.outputs.repo }}"
-          NAMESPACE="${{ steps.registry.outputs.namespace }}"
-          IMAGE="${{ steps.registry.outputs.image }}"
-          VERSION="${{ steps.version.outputs.version }}"
-
-          if [[ -z "$REPO" ]]; then
-            # Docker Hub format
-            SOURCE_IMAGE="${NAMESPACE}/${IMAGE}:${VERSION}"
-            LATEST_IMAGE="${NAMESPACE}/${IMAGE}:latest"
-          else
-            # Other registries
-            SOURCE_IMAGE="${REPO}/${NAMESPACE}/${IMAGE}:${VERSION}"
-            LATEST_IMAGE="${REPO}/${NAMESPACE}/${IMAGE}:latest"
-          fi
 
           echo "Pulling ${SOURCE_IMAGE}..."
           if ! docker pull ${SOURCE_IMAGE}; then
             echo "Error: Failed to pull ${SOURCE_IMAGE}. The image may not exist yet."
-            echo "This can happen if the build-and-publish workflow hasn't completed successfully."
-            exit 1
+            echo "This can happen if the build-and-publish workflow has not yet completed successfully."
+            exit 0
           fi
 
           echo "Tagging as ${LATEST_IMAGE}..."
