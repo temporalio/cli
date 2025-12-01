@@ -68,19 +68,12 @@ jobs:
           set -e
 
           echo "Pulling ${SOURCE_IMAGE}..."
-          if ! docker pull ${SOURCE_IMAGE}; then
-            echo "Error: Failed to pull ${SOURCE_IMAGE}. The image may not exist yet."
-            echo "This can happen if the build-and-publish workflow has not yet completed successfully."
-            exit 0
-          fi
+          docker pull ${SOURCE_IMAGE}
 
           echo "Tagging as ${LATEST_IMAGE}..."
           docker tag ${SOURCE_IMAGE} ${LATEST_IMAGE}
 
           echo "Pushing ${LATEST_IMAGE}..."
-          if ! docker push ${LATEST_IMAGE}; then
-            echo "Error: Failed to push ${LATEST_IMAGE}"
-            exit 1
-          fi
+          docker push ${LATEST_IMAGE}
 
           echo "✅ Successfully updated latest tag to point to version ${VERSION}"
