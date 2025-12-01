@@ -19,6 +19,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           ref: ${{ github.event.release.tag_name }}
+          persist-credentials: false
 
       - name: Check if release is latest
         id: check_latest
@@ -68,12 +69,12 @@ jobs:
           set -e
 
           echo "Pulling ${SOURCE_IMAGE}..."
-          docker pull ${SOURCE_IMAGE}
+          docker pull "${SOURCE_IMAGE}"
 
           echo "Tagging as ${LATEST_IMAGE}..."
-          docker tag ${SOURCE_IMAGE} ${LATEST_IMAGE}
+          docker tag "${SOURCE_IMAGE}" "${LATEST_IMAGE}"
 
           echo "Pushing ${LATEST_IMAGE}..."
-          docker push ${LATEST_IMAGE}
+          docker push "${LATEST_IMAGE}"
 
           echo "✅ Successfully updated latest tag to point to version ${VERSION}"
