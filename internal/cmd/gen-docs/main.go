@@ -1,11 +1,11 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
-	"runtime"
 
 	"github.com/temporalio/cli/internal/commandsgen"
 )
@@ -17,33 +17,46 @@ func main() {
 }
 
 func run() error {
-	// Get commands dir
-	_, file, _, _ := runtime.Caller(0)
-	genDocsDir := filepath.Dir(file)
-	docsDir := filepath.Join(genDocsDir, "../../../dist/docs/")
+	var (
+		outputDir string
+		inputFile string
+	)
 
-	err := os.MkdirAll(docsDir, os.ModePerm)
+	flag.StringVar(&inputFile, "input", "", "Input YAML file (required)")
+	flag.StringVar(&outputDir, "output", ".", "Output directory for docs")
+	flag.Parse()
+
+	// Read input from file
+	if inputFile == "" {
+		return fmt.Errorf("-input flag is required")
+	}
+	yamlBytes, err := os.ReadFile(inputFile)
 	if err != nil {
-		log.Fatalf("Error creating directory: %v", err)
+		return fmt.Errorf("failed reading input: %w", err)
+	}
+
+	// Create output directory
+	if err := os.MkdirAll(outputDir, 0755); err != nil {
+		return fmt.Errorf("failed creating output directory: %w", err)
 	}
 
 	// Parse YAML
-	cmds, err := commandsgen.ParseCommands()
+	cmds, err := commandsgen.ParseCommands(yamlBytes)
 	if err != nil {
 		return fmt.Errorf("failed parsing YAML: %w", err)
 	}
 
 	// Generate docs
-	b, err := commandsgen.GenerateDocsFiles(cmds)
+	docs, err := commandsgen.GenerateDocsFiles(cmds)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed generating docs: %w", err)
 	}
 
-	// Write
-	for filename, content := range b {
-		filePath := filepath.Join(docsDir, filename+".mdx")
+	// Write files
+	for filename, content := range docs {
+		filePath := filepath.Join(outputDir, filename+".mdx")
 		if err := os.WriteFile(filePath, content, 0644); err != nil {
-			return fmt.Errorf("failed writing file: %w", err)
+			return fmt.Errorf("failed writing %s: %w", filePath, err)
 		}
 	}
 
