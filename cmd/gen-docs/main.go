@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -18,13 +17,20 @@ func main() {
 }
 
 func run() error {
-	var outputDir string
+	var (
+		outputDir string
+		inputFile string
+	)
 
+	flag.StringVar(&inputFile, "input", "", "Input YAML file (required)")
 	flag.StringVar(&outputDir, "output", ".", "Output directory for docs")
 	flag.Parse()
 
-	// Read input from stdin
-	yamlBytes, err := io.ReadAll(os.Stdin)
+	// Read input from file
+	if inputFile == "" {
+		return fmt.Errorf("-input flag is required")
+	}
+	yamlBytes, err := os.ReadFile(inputFile)
 	if err != nil {
 		return fmt.Errorf("failed reading input: %w", err)
 	}
