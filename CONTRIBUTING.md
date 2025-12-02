@@ -21,9 +21,9 @@ Example to run a single test case:
 ## Adding/updating commands
 
 First, update [commands.yaml](internal/temporalcli/commands.yaml) following the rules in that file. Then to regenerate the
-[commands.gen.go](internal/temporalcli/commands.gen.go) file from code, simply run:
+[commands.gen.go](internal/temporalcli/commands.gen.go) file from code, run:
 
-    make gen
+    go run ./cmd/gen-commands -pkg temporalcli -context "*CommandContext" < internal/temporalcli/commands.yaml > internal/temporalcli/commands.gen.go
 
 This will expect every non-parent command to have a `run` method, so for new commands developers will have to implement
 `run` on the new command in a separate file before it will compile.
