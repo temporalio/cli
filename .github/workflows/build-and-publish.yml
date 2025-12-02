@@ -64,25 +64,6 @@ jobs:
         id: go
         run: echo "go=$(go version | cut -d ' ' -f 3)" >> "$GITHUB_OUTPUT"
 
-      - name: Check if release is latest
-        if: inputs.publish
-        id: check_latest_release
-        uses: actions/github-script@v8
-        with:
-          script: |
-            const releaseTag = '${{ inputs.version }}';
-            const { data: release } = await github.rest.repos.getReleaseByTag({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              tag: releaseTag
-            });
-
-            const isLatest = !release.prerelease && !release.draft;
-            core.setOutput('is_latest', isLatest);
-            console.log(`Release: ${release.tag_name}`);
-            console.log(`Prerelease: ${release.prerelease}, Draft: ${release.draft}`);
-            console.log(`Should tag as latest: ${isLatest}`);
-
       - name: Run GoReleaser (release)
         if: inputs.publish
         uses: goreleaser/goreleaser-action@v6
@@ -161,7 +142,6 @@ jobs:
           CLI_SHA: ${{ steps.meta.outputs.cli_sha }}
           IMAGE_SHA_TAG: ${{ steps.meta.outputs.image_sha_tag }}
           VERSION: ${{ steps.meta.outputs.version }}
-          TAG_LATEST: false
           IMAGE_NAMESPACE: ${{ inputs.registry_namespace }}
           IMAGE_NAME: ${{ inputs.image_name }}
           GITHUB_REPOSITORY: ${{ github.repository }}
@@ -184,8 +164,6 @@ jobs:
           CLI_SHA: ${{ steps.meta.outputs.cli_sha }}
           IMAGE_SHA_TAG: ${{ steps.meta.outputs.image_sha_tag }}
           VERSION: ${{ steps.meta.outputs.version }}
-          TAG_LATEST: ${{ steps.check_latest_release.outputs.is_latest == 'true' }}
           IMAGE_NAMESPACE: ${{ steps.meta.outputs.image_namespace }}
           IMAGE_NAME: ${{ inputs.image_name }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-
