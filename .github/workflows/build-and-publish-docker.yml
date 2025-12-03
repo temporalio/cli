@@ -30,9 +30,8 @@ jobs:
         uses: actions/checkout@v6
         with:
           persist-credentials: false
-          fetch-depth: 0
 
-      - name: Get build metadata
+      - name: Get build metadata from release
         id: meta
         env:
           INPUT_VERSION: ${{ inputs.version }}
@@ -43,19 +42,22 @@ jobs:
             const inputVersion = process.env.INPUT_VERSION;
             const inputTagLatest = process.env.INPUT_TAG_LATEST;
 
-            const { execSync } = require('child_process');
-            const cliSha = execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
-            const imageShaTag = execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim();
+            const version = inputVersion.startsWith('v') ? inputVersion.slice(1) : inputVersion;
+            const releaseTag = inputVersion.startsWith('v') ? inputVersion : `v${inputVersion}`;
+
+            const { data: release } = await github.rest.repos.getReleaseByTag({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag: releaseTag
+            });
+
+            const cliSha = release.target_commitish;
+            const imageShaTag = cliSha.substring(0, 7);
 
             core.setOutput('cli_sha', cliSha);
             core.setOutput('image_sha_tag', imageShaTag);
-
-            const version = inputVersion.startsWith('v') ? inputVersion.slice(1) : inputVersion;
             core.setOutput('version', version);
-
-            const releaseTag = inputVersion.startsWith('v') ? inputVersion : `v${inputVersion}`;
             core.setOutput('release_tag', releaseTag);
-
             core.setOutput('tag_latest', inputTagLatest === 'true');
 
       - name: Download release assets
