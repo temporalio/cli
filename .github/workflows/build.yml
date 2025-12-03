@@ -1,17 +1,17 @@
-name: Release
+name: Build
 
 on:
-  workflow_dispatch:
-  release:
-    types:
-      - published
+  pull_request:
+  push:
+    branches:
+      - main
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  release:
-    name: Release
+  build:
+    name: Build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -46,13 +46,12 @@ jobs:
         id: go
         run: echo "go=$(go version | cut -d ' ' -f 3)" >> "$GITHUB_OUTPUT"
 
-      - name: Run GoReleaser
+      - name: Run GoReleaser (snapshot)
         uses: goreleaser/goreleaser-action@v6
         with:
           version: v2.12.7
-          args: release
+          args: release --snapshot --clean
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BUILD_DATE: ${{ steps.date.outputs.date }}
           BUILD_TS_UNIX: ${{ steps.timestamp.outputs.timestamp }}
           GIT_BRANCH: ${{ steps.branch.outputs.branch }}
