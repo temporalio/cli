@@ -153,6 +153,7 @@ func (c *TemporalOperatorClusterUpsertCommand) run(cctx *CommandContext, args []
 	_, err = cl.OperatorService().AddOrUpdateRemoteCluster(cctx, &operatorservice.AddOrUpdateRemoteClusterRequest{
 		FrontendAddress:               c.FrontendAddress,
 		EnableRemoteClusterConnection: c.EnableConnection,
+		EnableReplication:             c.EnableReplication,
 	})
 	if err != nil {
 		return fmt.Errorf("unable to upsert cluster: %w", err)
