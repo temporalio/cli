@@ -1,3 +1,5 @@
+version: 2
+
 before:
   hooks:
     - go mod download
@@ -11,24 +13,26 @@ archives:
   - <<: &archive_defaults
       name_template: "temporal_cli_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     id: nix
-    builds:
+    ids:
       - nix
-    format: tar.gz
+    formats:
+      - tar.gz
     files:
       - LICENSE
 
   - <<: *archive_defaults
     id: windows-zip
-    builds:
+    ids:
       - windows
-    format: zip
+    formats:
+      - zip
     files:
       - LICENSE
 
     # used by SDKs as zip cannot be used by rust https://github.com/zip-rs/zip/issues/108
   - <<: *archive_defaults
     id: windows-targz
-    builds:
+    ids:
       - windows
     files:
       - LICENSE
@@ -61,7 +65,7 @@ checksum:
   algorithm: sha256
 
 changelog:
-  skip: true
+  disable: true
 
 announce:
   skip: "true"
