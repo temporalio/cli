@@ -32,7 +32,7 @@ type workerDeploymentVersionRef struct {
 type workerHostInfo struct {
 	HostName            string
 	ProcessId           string
-	ProcessKey          string
+	WorkerGroupingKey   string
 	CurrentHostCPUUsage float32
 	CurrentHostMemUsage float32
 }
@@ -306,11 +306,11 @@ func formatWorkerHostInfo(info *workerpb.WorkerHostInfo) *workerHostInfo {
 	formatted := &workerHostInfo{
 		HostName:            info.GetHostName(),
 		ProcessId:           info.GetProcessId(),
-		ProcessKey:          info.GetProcessKey(),
+		WorkerGroupingKey:   info.GetWorkerGroupingKey(),
 		CurrentHostCPUUsage: info.GetCurrentHostCpuUsage(),
 		CurrentHostMemUsage: info.GetCurrentHostMemUsage(),
 	}
-	if formatted.HostName == "" && formatted.ProcessId == "" && formatted.ProcessKey == "" &&
+	if formatted.HostName == "" && formatted.ProcessId == "" && formatted.WorkerGroupingKey == "" &&
 		formatted.CurrentHostCPUUsage == 0 && formatted.CurrentHostMemUsage == 0 {
 		return nil
 	}
