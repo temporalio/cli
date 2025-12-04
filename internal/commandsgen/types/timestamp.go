@@ -1,4 +1,6 @@
-package temporalcli
+// NOTE: this file is embedded inside the generated commands.gen.go output
+
+package types
 
 import "time"
 

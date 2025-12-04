@@ -222,14 +222,17 @@ func (s *SharedServerSuite) TestSchedule_List() {
 	s.NoError(res.Err)
 
 	// table really-long
-
-	res = s.Execute(
-		"schedule", "list",
-		"--address", s.Address(),
-		"--really-long",
-	)
-	s.NoError(res.Err)
-	out := res.Stdout.String()
+	var out string
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res = s.Execute(
+			"schedule", "list",
+			"--address", s.Address(),
+			"--really-long",
+		)
+		assert.NoError(t, res.Err)
+		out = res.Stdout.String()
+		assert.Contains(t, out, schedId)
+	}, 10*time.Second, time.Second)
 	s.ContainsOnSameLine(out, schedId, "DevWorkflow", "0s" /*jitter*/, "false", "nil" /*memo*/)
 	s.ContainsOnSameLine(out, "TestSchedule_List")
 

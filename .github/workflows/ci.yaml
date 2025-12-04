@@ -10,10 +10,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, macos-13, windows-latest, ubuntu-arm]
+        os:
+          [
+            ubuntu-latest,
+            macos-latest,
+            macos-15-intel,
+            windows-latest,
+            ubuntu-arm,
+          ]
         include:
           - os: ubuntu-latest
-            checkGenCodeTarget: true
+            checkGenCommands: true
             cloudTestTarget: true
           - os: ubuntu-arm
             runsOn: buildjet-4vcpu-ubuntu-2204-arm
@@ -51,10 +58,15 @@ jobs:
           retention-days: 14
 
       - name: Regen code, confirm unchanged
-        if: ${{ matrix.checkGenCodeTarget }}
+        if: ${{ matrix.checkGenCommands }}
         run: |
-          go run ./internal/cmd/gen-commands
+          go run ./internal/cmd/gen-commands -input internal/temporalcli/commands.yaml -pkg temporalcli -context "*CommandContext" > internal/temporalcli/commands.gen.go
           git diff --exit-code
+
+      - name: Generate docs, confirm working
+        if: ${{ matrix.checkGenCommands }}
+        run: |
+          go run ./internal/cmd/gen-docs -input internal/temporalcli/commands.yaml -output dist/docs
 
       - name: Test cloud mTLS
         if: ${{ matrix.cloudTestTarget && env.HAS_SECRETS == 'true' }}
