@@ -111,10 +111,13 @@ func (w *docWriter) writeSubcommand(c *Command) {
 			return options[i].Name < options[j].Name
 		})
 
-		// Only write command-specific flags here
+		// Write command-specific flags or global flags message
 		if len(options) > 0 {
-			w.fileMap[fileName].WriteString("Use the following options to change the behavior of this command.\n\n")
+			w.fileMap[fileName].WriteString("Use the following options to change the behavior of this command. ")
+			w.fileMap[fileName].WriteString("You can also use any of the [global flags](#global-flags) that apply to all subcommands.\n\n")
 			w.writeOptionsTable(options, c)
+		} else {
+			w.fileMap[fileName].WriteString("Use [global flags](#global-flags) to customize the connection to the Temporal Service for this command.\n\n")
 		}
 
 		// Collect global flags for later (deduplicated)
