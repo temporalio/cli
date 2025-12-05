@@ -81,7 +81,11 @@ func (w *docWriter) writeCommand(c *Command) {
 	w.fileMap[fileName].WriteString("---")
 	w.fileMap[fileName].WriteString("\n\n")
 	w.fileMap[fileName].WriteString("{/* NOTE: This is an auto-generated file. Any edit to this file will be overwritten.\n")
-	w.fileMap[fileName].WriteString("This file is generated from https://github.com/temporalio/cli/blob/main/internal/commandsgen/commands.yml via internal/cmd/gen-docs */}\n")
+	w.fileMap[fileName].WriteString("This file is generated from https://github.com/temporalio/cli/blob/main/internal/commandsgen/commands.yml via internal/cmd/gen-docs */}\n\n")
+	// Add introductory paragraph
+	w.fileMap[fileName].WriteString(fmt.Sprintf("This page provides a reference for the `temporal` CLI `%s` command. ", fileName))
+	w.fileMap[fileName].WriteString("The flags applicable to each subcommand are presented in a table within the heading for the subcommand. ")
+	w.fileMap[fileName].WriteString("Refer to [Global Flags](#global-flags) for flags that you can use with every subcommand.\n\n")
 }
 
 func (w *docWriter) writeSubcommand(c *Command) {
