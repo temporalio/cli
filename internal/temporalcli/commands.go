@@ -20,12 +20,12 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/temporalio/cli/internal/printer"
+	"github.com/temporalio/cli/cliext"
 	"github.com/temporalio/ui-server/v2/server/version"
 	"go.temporal.io/api/common/v1"
 	commonpb "go.temporal.io/api/common/v1"
 	"go.temporal.io/api/failure/v1"
 	"go.temporal.io/api/temporalproto"
-	"go.temporal.io/sdk/contrib/envconfig"
 	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/server/common/headers"
@@ -66,8 +66,8 @@ type CommandOptions struct {
 	Args []string
 	// Deprecated `--env` and `--env-file` approach
 	DeprecatedEnvConfig DeprecatedEnvConfig
-	// If nil, [envconfig.EnvLookupOS] is used.
-	EnvLookup envconfig.EnvLookup
+	// If nil, [cliext.EnvLookupOS] is used.
+	EnvLookup cliext.EnvLookup
 
 	// These three fields below default to OS values
 	Stdin  io.Reader
@@ -116,7 +116,7 @@ func (c *CommandContext) preprocessOptions() error {
 		c.Options.Args = os.Args[1:]
 	}
 	if c.Options.EnvLookup == nil {
-		c.Options.EnvLookup = envconfig.EnvLookupOS
+		c.Options.EnvLookup = cliext.EnvLookupOS
 	}
 
 	if c.Options.Stdin == nil {
