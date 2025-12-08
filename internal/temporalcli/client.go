@@ -13,6 +13,8 @@ import (
 	"go.temporal.io/sdk/contrib/envconfig"
 	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/log"
+	"go.temporal.io/sdk/workflow"
+	"go.temporal.io/server/common/payload"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
@@ -229,6 +231,20 @@ func (c *ClientOptions) dialClient(cctx *CommandContext) (client.Client, error) 
 		return client.DialContext(ctxWithTimeout, clientOptions)
 	}
 
+	if len(c.Headers) > 0 {
+		headerFields := map[string]*common.Payload{}
+		for _, h := range c.Headers {
+			parts := strings.SplitN(h, "=", 2)
+			if len(parts) != 2 {
+				return nil, fmt.Errorf("invalid temporal headers %q — expected KEY=VALUE", h)
+			}
+			headerFields[parts[0]] = payload.EncodeString(parts[1])
+		}
+		clientOptions.ContextPropagators = []workflow.ContextPropagator{
+			&workflowContextPropagator{Headers: headerFields},
+		}
+	}
+
 	return client.DialContext(cctx, clientOptions)
 }
 
@@ -313,4 +329,30 @@ func (rawValuePayloadConverter) ToString(p *common.Payload) string {
 func (rawValuePayloadConverter) Encoding() string {
 	// Should never be used
 	return "raw-value-encoding"
+}
+
+type workflowContextPropagator struct {
+	Headers map[string]*common.Payload
+}
+
+func (w *workflowContextPropagator) Inject(ctx context.Context, writer workflow.HeaderWriter) error {
+	for k, v := range w.Headers {
+		writer.Set(k, v)
+	}
+	return nil
+}
+
+func (w *workflowContextPropagator) InjectFromWorkflow(ctx workflow.Context, writer workflow.HeaderWriter) error {
+	for k, v := range w.Headers {
+		writer.Set(k, v)
+	}
+	return nil
+}
+
+func (w *workflowContextPropagator) Extract(ctx context.Context, reader workflow.HeaderReader) (context.Context, error) {
+	return ctx, nil
+}
+
+func (w *workflowContextPropagator) ExtractToWorkflow(ctx workflow.Context, reader workflow.HeaderReader) (workflow.Context, error) {
+	return ctx, nil
 }

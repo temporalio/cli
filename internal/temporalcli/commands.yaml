@@ -4464,6 +4464,12 @@ option-sets:
           May be passed multiple times to set multiple headers.
           Can also be made available via environment variable as
           `TEMPORAL_GRPC_META_[name]`.
+      - name: headers
+        type: string[]
+        description: |
+          Temporal workflow headers in 'KEY=VALUE' format.
+          May be passed multiple times to set multiple Temporal headers.
+          Note: These are workflow headers, not gRPC headers.
       - name: tls
         type: bool
         description: |
