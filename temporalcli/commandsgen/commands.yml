@@ -1555,6 +1555,9 @@ commands:
       - name: enable-connection
         type: bool
         description: Set the connection to "enabled".
+      - name: enable-replication
+        type: bool
+        description: Set the replication to "enabled".
 
   - name: temporal operator namespace
     summary: Namespace operations

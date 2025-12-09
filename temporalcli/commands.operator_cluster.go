@@ -126,13 +126,14 @@ func (c *TemporalOperatorClusterListCommand) run(cctx *CommandContext, args []st
 					"HistoryShardCount":      cluster.HistoryShardCount,
 					"InitialFailoverVersion": cluster.InitialFailoverVersion,
 					"IsConnectionEnabled":    cluster.IsConnectionEnabled,
+					"IsReplicationEnabled":   cluster.IsReplicationEnabled,
 				})
 			}
 		}
 		// Print table, headers only on first table
 		if len(textTable) > 0 {
 			_ = cctx.Printer.PrintStructured(textTable, printer.StructuredOptions{
-				Fields: []string{"Name", "ClusterId", "Address", "HistoryShardCount", "InitialFailoverVersion", "IsConnectionEnabled"},
+				Fields: []string{"Name", "ClusterId", "Address", "HistoryShardCount", "InitialFailoverVersion", "IsConnectionEnabled", "IsReplicationEnabled"},
 				Table:  &printer.TableOptions{NoHeader: pageIndex > 0},
 			})
 		}
@@ -153,6 +154,7 @@ func (c *TemporalOperatorClusterUpsertCommand) run(cctx *CommandContext, args []
 	_, err = cl.OperatorService().AddOrUpdateRemoteCluster(cctx, &operatorservice.AddOrUpdateRemoteClusterRequest{
 		FrontendAddress:               c.FrontendAddress,
 		EnableRemoteClusterConnection: c.EnableConnection,
+		EnableReplication:             c.EnableReplication,
 	})
 	if err != nil {
 		return fmt.Errorf("unable to upsert cluster: %w", err)
