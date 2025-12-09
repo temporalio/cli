@@ -15,9 +15,10 @@ func GenerateDocsFiles(commands Commands) (map[string][]byte, error) {
 	}
 
 	w := &docWriter{
-		fileMap:      make(map[string]*bytes.Buffer),
-		optionSetMap: optionSetMap,
-		allCommands:  commands.CommandList,
+		fileMap:        make(map[string]*bytes.Buffer),
+		optionSetMap:   optionSetMap,
+		allCommands:    commands.CommandList,
+		globalFlagsMap: make(map[string]map[string]Option),
 	}
 
 	// sorted ascending by full name of command (activity complete, batch list, etc)
@@ -26,6 +27,9 @@ func GenerateDocsFiles(commands Commands) (map[string][]byte, error) {
 			return nil, fmt.Errorf("failed writing docs for command %s: %w", cmd.FullName, err)
 		}
 	}
+
+	// Write global flags section once at the end of each file
+	w.writeGlobalFlagsSections()
 
 	// Format and return
 	var finalMap = make(map[string][]byte)
@@ -36,10 +40,11 @@ func GenerateDocsFiles(commands Commands) (map[string][]byte, error) {
 }
 
 type docWriter struct {
-	allCommands  []Command
-	fileMap      map[string]*bytes.Buffer
-	optionSetMap map[string]OptionSets
-	optionsStack [][]Option
+	allCommands    []Command
+	fileMap        map[string]*bytes.Buffer
+	optionSetMap   map[string]OptionSets
+	optionsStack   [][]Option
+	globalFlagsMap map[string]map[string]Option // fileName -> optionName -> Option
 }
 
 func (c *Command) writeDoc(w *docWriter) error {
@@ -76,7 +81,11 @@ func (w *docWriter) writeCommand(c *Command) {
 	w.fileMap[fileName].WriteString("---")
 	w.fileMap[fileName].WriteString("\n\n")
 	w.fileMap[fileName].WriteString("{/* NOTE: This is an auto-generated file. Any edit to this file will be overwritten.\n")
-	w.fileMap[fileName].WriteString("This file is generated from https://github.com/temporalio/cli/blob/main/internal/commandsgen/commands.yml via internal/cmd/gen-docs */}\n")
+	w.fileMap[fileName].WriteString("This file is generated from https://github.com/temporalio/cli/blob/main/internal/commandsgen/commands.yml via internal/cmd/gen-docs */}\n\n")
+	// Add introductory paragraph
+	w.fileMap[fileName].WriteString(fmt.Sprintf("This page provides a reference for the `temporal` CLI `%s` command. ", fileName))
+	w.fileMap[fileName].WriteString("The flags applicable to each subcommand are presented in a table within the heading for the subcommand. ")
+	w.fileMap[fileName].WriteString("Refer to [Global Flags](#global-flags) for flags that you can use with every subcommand.\n\n")
 }
 
 func (w *docWriter) writeSubcommand(c *Command) {
@@ -86,9 +95,7 @@ func (w *docWriter) writeSubcommand(c *Command) {
 	w.fileMap[fileName].WriteString(c.Description + "\n\n")
 
 	if w.isLeafCommand(c) {
-		w.fileMap[fileName].WriteString("Use the following options to change the behavior of this command.\n\n")
-
-		// gather options from command and all options aviailable from parent commands
+		// gather options from command and all options available from parent commands
 		var options = make([]Option, 0)
 		var globalOptions = make([]Option, 0)
 		for i, o := range w.optionsStack {
@@ -104,51 +111,116 @@ func (w *docWriter) writeSubcommand(c *Command) {
 			return options[i].Name < options[j].Name
 		})
 
-		sort.Slice(globalOptions, func(i, j int) bool {
-			return globalOptions[i].Name < globalOptions[j].Name
-		})
+		// Write command-specific flags or global flags message
+		if len(options) > 0 {
+			w.fileMap[fileName].WriteString("Use the following options to change the behavior of this command. ")
+			w.fileMap[fileName].WriteString("You can also use any of the [global flags](#global-flags) that apply to all subcommands.\n\n")
+			w.writeOptionsTable(options, c)
+		} else {
+			w.fileMap[fileName].WriteString("Use [global flags](#global-flags) to customize the connection to the Temporal Service for this command.\n\n")
+		}
 
-		w.writeOptions("Flags", options, c)
-		w.writeOptions("Global Flags", globalOptions, c)
-
+		// Collect global flags for later (deduplicated)
+		w.collectGlobalFlags(fileName, globalOptions)
 	}
 }
 
-func (w *docWriter) writeOptions(prefix string, options []Option, c *Command) {
+func (w *docWriter) writeOptionsTable(options []Option, c *Command) {
 	if len(options) == 0 {
 		return
 	}
 
 	fileName := c.fileName()
+	buf := w.fileMap[fileName]
 
-	w.fileMap[fileName].WriteString(fmt.Sprintf("**%s:**\n\n", prefix))
+	// Command-specific flags: 3 columns (no Default)
+	buf.WriteString("| Flag | Required | Description |\n")
+	buf.WriteString("|------|----------|-------------|\n")
 
 	for _, o := range options {
-		// option name and alias
-		w.fileMap[fileName].WriteString(fmt.Sprintf("**--%s**", o.Name))
-		if len(o.Short) > 0 {
-			w.fileMap[fileName].WriteString(fmt.Sprintf(", **-%s**", o.Short))
-		}
-		w.fileMap[fileName].WriteString(fmt.Sprintf(" _%s_\n\n", o.Type))
+		w.writeOptionRow(buf, o, false)
+	}
+	buf.WriteString("\n")
+}
 
-		// description
-		w.fileMap[fileName].WriteString(encodeJSONExample(o.Description))
-		if o.Required {
-			w.fileMap[fileName].WriteString(" Required.")
-		}
-		if len(o.EnumValues) > 0 {
-			w.fileMap[fileName].WriteString(fmt.Sprintf(" Accepted values: %s.", strings.Join(o.EnumValues, ", ")))
-		}
+func (w *docWriter) writeOptionRow(buf *bytes.Buffer, o Option, includeDefault bool) {
+	// Flag name column
+	flagName := fmt.Sprintf("`--%s`", o.Name)
+	if len(o.Short) > 0 {
+		flagName += fmt.Sprintf(", `-%s`", o.Short)
+	}
+
+	// Required column
+	required := "No"
+	if o.Required {
+		required = "Yes"
+	}
+
+	// Description column - starts with data type
+	optionType := o.Type
+	if o.DisplayType != "" {
+		optionType = o.DisplayType
+	}
+	description := fmt.Sprintf("**%s** %s", optionType, encodeJSONExample(o.Description))
+	if len(o.EnumValues) > 0 {
+		description += fmt.Sprintf(" Accepted values: %s.", strings.Join(o.EnumValues, ", "))
+	}
+	if o.Experimental {
+		description += " _(Experimental)_"
+	}
+	// Escape pipes in description for table compatibility
+	description = strings.ReplaceAll(description, "|", "\\|")
+
+	if includeDefault {
+		// Default column
+		defaultVal := ""
 		if len(o.Default) > 0 {
-			w.fileMap[fileName].WriteString(fmt.Sprintf(` (default "%s")`, o.Default))
+			defaultVal = fmt.Sprintf("`%s`", o.Default)
 		}
-		w.fileMap[fileName].WriteString("\n\n")
+		buf.WriteString(fmt.Sprintf("| %s | %s | %s | %s |\n", flagName, required, description, defaultVal))
+	} else {
+		buf.WriteString(fmt.Sprintf("| %s | %s | %s |\n", flagName, required, description))
+	}
+}
 
-		if o.Experimental {
-			w.fileMap[fileName].WriteString(":::note" + "\n\n")
-			w.fileMap[fileName].WriteString("Option is experimental." + "\n\n")
-			w.fileMap[fileName].WriteString(":::" + "\n\n")
+func (w *docWriter) collectGlobalFlags(fileName string, options []Option) {
+	if w.globalFlagsMap[fileName] == nil {
+		w.globalFlagsMap[fileName] = make(map[string]Option)
+	}
+	for _, o := range options {
+		// Only add if not already present (deduplication)
+		if _, exists := w.globalFlagsMap[fileName][o.Name]; !exists {
+			w.globalFlagsMap[fileName][o.Name] = o
 		}
+	}
+}
+
+func (w *docWriter) writeGlobalFlagsSections() {
+	for fileName, optionsMap := range w.globalFlagsMap {
+		if len(optionsMap) == 0 {
+			continue
+		}
+
+		// Convert map to slice and sort
+		options := make([]Option, 0, len(optionsMap))
+		for _, o := range optionsMap {
+			options = append(options, o)
+		}
+		sort.Slice(options, func(i, j int) bool {
+			return options[i].Name < options[j].Name
+		})
+
+		buf := w.fileMap[fileName]
+		buf.WriteString("## Global Flags\n\n")
+		buf.WriteString("The following options can be used with any command.\n\n")
+		// Global flags: 4 columns (with Default)
+		buf.WriteString("| Flag | Required | Description | Default |\n")
+		buf.WriteString("|------|----------|-------------|--------|\n")
+
+		for _, o := range options {
+			w.writeOptionRow(buf, o, true)
+		}
+		buf.WriteString("\n")
 	}
 }
 
