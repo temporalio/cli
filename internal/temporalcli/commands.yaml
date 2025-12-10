@@ -4724,6 +4724,7 @@ option-sets:
         type: string[]
         description: |
           Temporal workflow headers in 'KEY=VALUE' format.
+          Keys must be identifiers, and values must be JSON values.
           May be passed multiple times to set multiple Temporal headers.
           Note: These are workflow headers, not gRPC headers.
 
@@ -4772,6 +4773,7 @@ option-sets:
         type: string[]
         description: |
           Temporal workflow headers in 'KEY=VALUE' format.
+          Keys must be identifiers, and values must be JSON values.
           May be passed multiple times to set multiple Temporal headers.
           Note: These are workflow headers, not gRPC headers.
       - name: memo
@@ -4905,6 +4907,7 @@ option-sets:
         type: string[]
         description: |
           Temporal workflow headers in 'KEY=VALUE' format.
+          Keys must be identifiers, and values must be JSON values.
           May be passed multiple times to set multiple Temporal headers.
           Note: These are workflow headers, not gRPC headers.
 
@@ -4974,8 +4977,9 @@ option-sets:
         type: string[]
         description: |
           Temporal workflow headers in 'KEY=VALUE' format.
+          Keys must be identifiers, and values must be JSON values.
           May be passed multiple times to set multiple Temporal headers.
-          Note: These are workflow headers, not gRPC headers.      
+          Note: These are workflow headers, not gRPC headers.   
 
   - name: workflow-update-options
     options:

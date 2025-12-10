@@ -14,7 +14,6 @@ import (
 	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/log"
 	"go.temporal.io/sdk/workflow"
-	"go.temporal.io/server/common/payload"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
@@ -321,13 +320,16 @@ func (rawValuePayloadConverter) Encoding() string {
 
 type headerPropagator struct{}
 
-const cliHeaderContextKey = "worflow-headers"
+type cliHeaderContextKey struct{}
 
 func (headerPropagator) Inject(ctx context.Context, writer workflow.HeaderWriter) error {
-	val := ctx.Value(cliHeaderContextKey)
-	if headers, ok := val.(map[string]string); ok {
+	if headers, ok := ctx.Value(cliHeaderContextKey{}).(map[string]any); ok {
 		for k, v := range headers {
-			writer.Set(k, payload.EncodeString(v))
+			p, err := converter.GetDefaultDataConverter().ToPayload(v)
+			if err != nil {
+				return err
+			}
+			writer.Set(k, p)
 		}
 	}
 	return nil
@@ -349,13 +351,9 @@ func contextWithHeaders(ctx context.Context, headers []string) (context.Context,
 	if len(headers) == 0 {
 		return ctx, nil
 	}
-	out := make(map[string]string)
-	for _, h := range headers {
-		p := strings.SplitN(h, "=", 2)
-		if len(p) != 2 {
-			return ctx, fmt.Errorf("invalid header %q — expected KEY=VALUE", h)
-		}
-		out[p[0]] = p[1]
+	out, err := stringKeysJSONValues(headers, false)
+	if err != nil {
+		return ctx, err
 	}
-	return context.WithValue(ctx, cliHeaderContextKey, out), nil
+	return context.WithValue(ctx, cliHeaderContextKey{}, out), nil
 }
