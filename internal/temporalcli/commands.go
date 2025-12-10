@@ -25,6 +25,7 @@ import (
 	commonpb "go.temporal.io/api/common/v1"
 	"go.temporal.io/api/failure/v1"
 	"go.temporal.io/api/temporalproto"
+	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/contrib/envconfig"
 	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/temporal"
@@ -59,6 +60,10 @@ type CommandContext struct {
 	// Root/current command only set inside of pre-run
 	RootCommand    *TemporalCommand
 	CurrentCommand *cobra.Command
+
+	// Store original Dial options here. Used to create a new client while preserving
+	// the original ones.
+	StoredClientOptions client.Options
 }
 
 type CommandOptions struct {

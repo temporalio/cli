@@ -190,12 +190,12 @@ func (c *TemporalWorkflowUpdateOptionsCommand) run(cctx *CommandContext, args []
 
 func (c *TemporalWorkflowMetadataCommand) run(cctx *CommandContext, _ []string) error {
 	return queryHelper(cctx, c.Parent, PayloadInputOptions{},
-		metadataQueryName, c.RejectCondition, c.WorkflowReferenceOptions)
+		metadataQueryName, nil, c.RejectCondition, c.WorkflowReferenceOptions)
 }
 
 func (c *TemporalWorkflowQueryCommand) run(cctx *CommandContext, args []string) error {
 	return queryHelper(cctx, c.Parent, c.PayloadInputOptions,
-		c.Name, c.RejectCondition, c.WorkflowReferenceOptions)
+		c.Name, c.Headers, c.RejectCondition, c.WorkflowReferenceOptions)
 }
 
 func (c *TemporalWorkflowSignalCommand) run(cctx *CommandContext, args []string) error {
@@ -206,6 +206,11 @@ func (c *TemporalWorkflowSignalCommand) run(cctx *CommandContext, args []string)
 	defer cl.Close()
 
 	input, err := c.buildRawInputPayloads()
+	if err != nil {
+		return err
+	}
+
+	cctx.Context, err = contextWithHeaders(cctx.Context, c.Headers)
 	if err != nil {
 		return err
 	}
@@ -246,7 +251,7 @@ func (c *TemporalWorkflowSignalCommand) run(cctx *CommandContext, args []string)
 
 func (c *TemporalWorkflowStackCommand) run(cctx *CommandContext, args []string) error {
 	return queryHelper(cctx, c.Parent, PayloadInputOptions{},
-		"__stack_trace", c.RejectCondition, c.WorkflowReferenceOptions)
+		"__stack_trace", nil, c.RejectCondition, c.WorkflowReferenceOptions)
 }
 
 func (c *TemporalWorkflowTerminateCommand) run(cctx *CommandContext, _ []string) error {
@@ -449,6 +454,11 @@ func workflowUpdateHelper(cctx *CommandContext,
 		WaitForStage:        waitForStage,
 	}
 
+	cctx.Context, err = contextWithHeaders(cctx.Context, updateStartOpts.Headers)
+	if err != nil {
+		return err
+	}
+
 	updateHandle, err := cl.UpdateWorkflow(cctx, request)
 	if err != nil {
 		return fmt.Errorf("unable to update workflow: %w", err)
@@ -580,6 +590,7 @@ func queryHelper(cctx *CommandContext,
 	parent *TemporalWorkflowCommand,
 	inputOpts PayloadInputOptions,
 	queryType string,
+	headers []string,
 	rejectCondition StringEnum,
 	execution WorkflowReferenceOptions,
 ) error {
@@ -603,6 +614,11 @@ func queryHelper(cctx *CommandContext,
 		queryRejectCond = enums.QUERY_REJECT_CONDITION_NOT_COMPLETED_CLEANLY
 	default:
 		return fmt.Errorf("invalid query reject condition: %v, valid values are: 'not_open', 'not_completed_cleanly'", rejectCondition)
+	}
+
+	cctx.Context, err = contextWithHeaders(cctx.Context, headers)
+	if err != nil {
+		return err
 	}
 
 	result, err := cl.WorkflowService().QueryWorkflow(cctx, &workflowservice.QueryWorkflowRequest{

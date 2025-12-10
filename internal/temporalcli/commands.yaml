@@ -4464,12 +4464,6 @@ option-sets:
           May be passed multiple times to set multiple headers.
           Can also be made available via environment variable as
           `TEMPORAL_GRPC_META_[name]`.
-      - name: headers
-        type: string[]
-        description: |
-          Temporal workflow headers in 'KEY=VALUE' format.
-          May be passed multiple times to set multiple Temporal headers.
-          Note: These are workflow headers, not gRPC headers.
       - name: tls
         type: bool
         description: |
@@ -4726,6 +4720,12 @@ option-sets:
         description: |
           Limit batch's requests per second.
           Only allowed if query is present.
+      - name: headers
+        type: string[]
+        description: |
+          Temporal workflow headers in 'KEY=VALUE' format.
+          May be passed multiple times to set multiple Temporal headers.
+          Note: These are workflow headers, not gRPC headers.
 
   - name: shared-workflow-start
     options:
@@ -4768,6 +4768,12 @@ option-sets:
           Keys must be identifiers, and values must be JSON values.
           For example: 'YourKey={"your": "value"}'.
           Can be passed multiple times.
+      - name: headers
+        type: string[]
+        description: |
+          Temporal workflow headers in 'KEY=VALUE' format.
+          May be passed multiple times to set multiple Temporal headers.
+          Note: These are workflow headers, not gRPC headers.
       - name: memo
         type: string[]
         description: |
@@ -4895,6 +4901,12 @@ option-sets:
         description: |
           Run ID.
           If unset, looks for an Update against the currently-running Workflow Execution.
+      - name: headers
+        type: string[]
+        description: |
+          Temporal workflow headers in 'KEY=VALUE' format.
+          May be passed multiple times to set multiple Temporal headers.
+          Note: These are workflow headers, not gRPC headers.
 
   - name: update-targeting
     options:
@@ -4958,6 +4970,12 @@ option-sets:
         enum-values:
           - not_open
           - not_completed_cleanly
+      - name: headers
+        type: string[]
+        description: |
+          Temporal workflow headers in 'KEY=VALUE' format.
+          May be passed multiple times to set multiple Temporal headers.
+          Note: These are workflow headers, not gRPC headers.      
 
   - name: workflow-update-options
     options:

@@ -231,19 +231,7 @@ func (c *ClientOptions) dialClient(cctx *CommandContext) (client.Client, error) 
 		return client.DialContext(ctxWithTimeout, clientOptions)
 	}
 
-	if len(c.Headers) > 0 {
-		headerFields := map[string]*common.Payload{}
-		for _, h := range c.Headers {
-			parts := strings.SplitN(h, "=", 2)
-			if len(parts) != 2 {
-				return nil, fmt.Errorf("invalid temporal headers %q — expected KEY=VALUE", h)
-			}
-			headerFields[parts[0]] = payload.EncodeString(parts[1])
-		}
-		clientOptions.ContextPropagators = []workflow.ContextPropagator{
-			&workflowContextPropagator{Headers: headerFields},
-		}
-	}
+	clientOptions.ContextPropagators = append(clientOptions.ContextPropagators, headerPropagator{})
 
 	return client.DialContext(cctx, clientOptions)
 }
@@ -331,28 +319,43 @@ func (rawValuePayloadConverter) Encoding() string {
 	return "raw-value-encoding"
 }
 
-type workflowContextPropagator struct {
-	Headers map[string]*common.Payload
-}
+type headerPropagator struct{}
 
-func (w *workflowContextPropagator) Inject(ctx context.Context, writer workflow.HeaderWriter) error {
-	for k, v := range w.Headers {
-		writer.Set(k, v)
+const cliHeaderContextKey = "worflow-headers"
+
+func (headerPropagator) Inject(ctx context.Context, writer workflow.HeaderWriter) error {
+	val := ctx.Value(cliHeaderContextKey)
+	if headers, ok := val.(map[string]string); ok {
+		for k, v := range headers {
+			writer.Set(k, payload.EncodeString(v))
+		}
 	}
 	return nil
 }
 
-func (w *workflowContextPropagator) InjectFromWorkflow(ctx workflow.Context, writer workflow.HeaderWriter) error {
-	for k, v := range w.Headers {
-		writer.Set(k, v)
-	}
+func (headerPropagator) InjectFromWorkflow(ctx workflow.Context, writer workflow.HeaderWriter) error {
 	return nil
 }
 
-func (w *workflowContextPropagator) Extract(ctx context.Context, reader workflow.HeaderReader) (context.Context, error) {
+func (headerPropagator) Extract(ctx context.Context, _ workflow.HeaderReader) (context.Context, error) {
 	return ctx, nil
 }
 
-func (w *workflowContextPropagator) ExtractToWorkflow(ctx workflow.Context, reader workflow.HeaderReader) (workflow.Context, error) {
+func (headerPropagator) ExtractToWorkflow(ctx workflow.Context, _ workflow.HeaderReader) (workflow.Context, error) {
 	return ctx, nil
+}
+
+func contextWithHeaders(ctx context.Context, headers []string) (context.Context, error) {
+	if len(headers) == 0 {
+		return ctx, nil
+	}
+	out := make(map[string]string)
+	for _, h := range headers {
+		p := strings.SplitN(h, "=", 2)
+		if len(p) != 2 {
+			return ctx, fmt.Errorf("invalid header %q — expected KEY=VALUE", h)
+		}
+		out[p[0]] = p[1]
+	}
+	return context.WithValue(ctx, cliHeaderContextKey, out), nil
 }
