@@ -104,6 +104,33 @@ func (s *SharedServerSuite) TestWorkflow_Start_StartDelay() {
 	)
 }
 
+func (s *SharedServerSuite) TestWorkflow_Start_With_headers() {
+	res := s.Execute(
+		"workflow", "start",
+		"--address", s.Address(),
+		"--headers", "id=123",
+		"--task-queue", s.Worker().Options.TaskQueue,
+		"--type", "DevWorkflow",
+		"--workflow-id", "id123",
+		"-i", `["val1", "val2"]`,
+	)
+	s.NoError(res.Err)
+	eventIter := s.Client.GetWorkflowHistory(s.Context, "id123", "", false, enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
+	for eventIter.HasNext() {
+		event, err := eventIter.Next()
+		s.NoError(err)
+		if event.EventType == enums.EVENT_TYPE_WORKFLOW_EXECUTION_STARTED {
+			headers := event.GetWorkflowExecutionStartedEventAttributes().GetHeader()
+			payload := headers.Fields["id"]
+			s.NotNil(payload)
+			var val int
+			err := converter.GetDefaultDataConverter().FromPayload(payload, &val)
+			s.NoError(err)
+			s.Equal(123, val)
+		}
+	}
+}
+
 func (s *SharedServerSuite) TestWorkflow_Execute_SimpleSuccess() {
 	// Text
 	s.Worker().OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
