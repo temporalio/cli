@@ -184,6 +184,7 @@ type SingleWorkflowOrBatchOptions struct {
 	Reason     string
 	Yes        bool
 	Rps        float32
+	Headers    []string
 }
 
 func (v *SingleWorkflowOrBatchOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
@@ -193,6 +194,7 @@ func (v *SingleWorkflowOrBatchOptions) buildFlags(cctx *CommandContext, f *pflag
 	f.StringVar(&v.Reason, "reason", "", "Reason for batch operation. Only use with --query. Defaults to user name.")
 	f.BoolVarP(&v.Yes, "yes", "y", false, "Don't prompt to confirm signaling. Only allowed when --query is present.")
 	f.Float32Var(&v.Rps, "rps", 0, "Limit batch's requests per second. Only allowed if query is present.")
+	f.StringArrayVar(&v.Headers, "headers", nil, "Temporal workflow headers in 'KEY=VALUE' format. Keys must be identifiers, and values must be JSON values. May be passed multiple times to set multiple Temporal headers. Note: These are workflow headers, not gRPC headers.")
 }
 
 type SharedWorkflowStartOptions struct {
@@ -203,6 +205,7 @@ type SharedWorkflowStartOptions struct {
 	ExecutionTimeout Duration
 	TaskTimeout      Duration
 	SearchAttribute  []string
+	Headers          []string
 	Memo             []string
 	StaticSummary    string
 	StaticDetails    string
@@ -224,6 +227,7 @@ func (v *SharedWorkflowStartOptions) buildFlags(cctx *CommandContext, f *pflag.F
 	v.TaskTimeout = Duration(10000 * time.Millisecond)
 	f.Var(&v.TaskTimeout, "task-timeout", "Fail a Workflow Task if it lasts longer than `DURATION`. This is the Start-to-close timeout for a Workflow Task.")
 	f.StringArrayVar(&v.SearchAttribute, "search-attribute", nil, "Search Attribute in `KEY=VALUE` format. Keys must be identifiers, and values must be JSON values. For example: 'YourKey={\"your\": \"value\"}'. Can be passed multiple times.")
+	f.StringArrayVar(&v.Headers, "headers", nil, "Temporal workflow headers in 'KEY=VALUE' format. Keys must be identifiers, and values must be JSON values. May be passed multiple times to set multiple Temporal headers. Note: These are workflow headers, not gRPC headers.")
 	f.StringArrayVar(&v.Memo, "memo", nil, "Memo using 'KEY=\"VALUE\"' pairs. Use JSON values.")
 	f.StringVar(&v.StaticSummary, "static-summary", "", "Static Workflow summary for human consumption in UIs. Uses Temporal Markdown formatting, should be a single line. EXPERIMENTAL.")
 	f.StringVar(&v.StaticDetails, "static-details", "", "Static Workflow details for human consumption in UIs. Uses Temporal Markdown formatting, may be multiple lines. EXPERIMENTAL.")
@@ -272,6 +276,7 @@ type UpdateStartingOptions struct {
 	WorkflowId          string
 	UpdateId            string
 	RunId               string
+	Headers             []string
 }
 
 func (v *UpdateStartingOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
@@ -282,6 +287,7 @@ func (v *UpdateStartingOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSe
 	_ = cobra.MarkFlagRequired(f, "workflow-id")
 	f.StringVar(&v.UpdateId, "update-id", "", "Update ID. If unset, defaults to a UUID.")
 	f.StringVarP(&v.RunId, "run-id", "r", "", "Run ID. If unset, looks for an Update against the currently-running Workflow Execution.")
+	f.StringArrayVar(&v.Headers, "headers", nil, "Temporal workflow headers in 'KEY=VALUE' format. Keys must be identifiers, and values must be JSON values. May be passed multiple times to set multiple Temporal headers. Note: These are workflow headers, not gRPC headers.")
 }
 
 type UpdateTargetingOptions struct {
@@ -325,11 +331,13 @@ func (v *NexusEndpointConfigOptions) buildFlags(cctx *CommandContext, f *pflag.F
 
 type QueryModifiersOptions struct {
 	RejectCondition StringEnum
+	Headers         []string
 }
 
 func (v *QueryModifiersOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
 	v.RejectCondition = NewStringEnum([]string{"not_open", "not_completed_cleanly"}, "")
 	f.Var(&v.RejectCondition, "reject-condition", "Optional flag for rejecting Queries based on Workflow state. Accepted values: not_open, not_completed_cleanly.")
+	f.StringArrayVar(&v.Headers, "headers", nil, "Temporal workflow headers in 'KEY=VALUE' format. Keys must be identifiers, and values must be JSON values. May be passed multiple times to set multiple Temporal headers. Note: These are workflow headers, not gRPC headers.")
 }
 
 type WorkflowUpdateOptionsOptions struct {

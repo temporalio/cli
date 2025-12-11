@@ -158,6 +158,11 @@ func (c *TemporalWorkflowSignalWithStartCommand) run(cctx *CommandContext, _ []s
 		searchAttr = &common.SearchAttributes{IndexedFields: fields}
 	}
 
+	cctx.Context, err = contextWithHeaders(cctx.Context, c.SharedWorkflowStartOptions.Headers)
+	if err != nil {
+		return err
+	}
+
 	// We have to use the raw signal service call here because the Go SDK's
 	// signal-with-start call doesn't accept multiple signal arguments.
 	resp, err := cl.WorkflowService().SignalWithStartWorkflowExecution(
@@ -363,6 +368,10 @@ func executeUpdateWithStartWorkflow(
 	if err != nil {
 		return nil, err
 	}
+	cctx.Context, err = contextWithHeaders(cctx.Context, sharedWfOpts.Headers)
+	if err != nil {
+		return nil, err
+	}
 
 	startOp := cl.NewWithStartWorkflowOperation(
 		clStartWfOpts,
@@ -521,6 +530,12 @@ func (c *TemporalWorkflowCommand) startWorkflow(
 	if err != nil {
 		return nil, err
 	}
+
+	cctx.Context, err = contextWithHeaders(cctx.Context, sharedWorkflowOpts.Headers)
+	if err != nil {
+		return nil, err
+	}
+
 	run, err := cl.ExecuteWorkflow(cctx, startOpts, sharedWorkflowOpts.Type, input...)
 	if err != nil {
 		return nil, fmt.Errorf("failed starting workflow: %w", err)
