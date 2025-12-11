@@ -13,6 +13,7 @@ import (
 	"go.temporal.io/sdk/contrib/envconfig"
 	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/log"
+	"go.temporal.io/sdk/workflow"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
@@ -229,6 +230,8 @@ func (c *ClientOptions) dialClient(cctx *CommandContext) (client.Client, error) 
 		return client.DialContext(ctxWithTimeout, clientOptions)
 	}
 
+	clientOptions.ContextPropagators = append(clientOptions.ContextPropagators, headerPropagator{})
+
 	return client.DialContext(cctx, clientOptions)
 }
 
@@ -313,4 +316,44 @@ func (rawValuePayloadConverter) ToString(p *common.Payload) string {
 func (rawValuePayloadConverter) Encoding() string {
 	// Should never be used
 	return "raw-value-encoding"
+}
+
+type headerPropagator struct{}
+
+type cliHeaderContextKey struct{}
+
+func (headerPropagator) Inject(ctx context.Context, writer workflow.HeaderWriter) error {
+	if headers, ok := ctx.Value(cliHeaderContextKey{}).(map[string]any); ok {
+		for k, v := range headers {
+			p, err := converter.GetDefaultDataConverter().ToPayload(v)
+			if err != nil {
+				return err
+			}
+			writer.Set(k, p)
+		}
+	}
+	return nil
+}
+
+func (headerPropagator) InjectFromWorkflow(ctx workflow.Context, writer workflow.HeaderWriter) error {
+	return nil
+}
+
+func (headerPropagator) Extract(ctx context.Context, _ workflow.HeaderReader) (context.Context, error) {
+	return ctx, nil
+}
+
+func (headerPropagator) ExtractToWorkflow(ctx workflow.Context, _ workflow.HeaderReader) (workflow.Context, error) {
+	return ctx, nil
+}
+
+func contextWithHeaders(ctx context.Context, headers []string) (context.Context, error) {
+	if len(headers) == 0 {
+		return ctx, nil
+	}
+	out, err := stringKeysJSONValues(headers, false)
+	if err != nil {
+		return ctx, err
+	}
+	return context.WithValue(ctx, cliHeaderContextKey{}, out), nil
 }
