@@ -3277,9 +3277,9 @@ func NewTemporalWorkerListCommand(cctx *CommandContext, parent *TemporalWorkerCo
 	s.Command.Use = "list [flags]"
 	s.Command.Short = "List worker status information in a specific namespace (EXPERIMENTAL)"
 	if hasHighlighting {
-		s.Command.Long = "Get a list of workers to the specified namespace.\n\n\x1b[1mtemporal worker list --namespace YourNamespace --query 'taskQueue=\"YourTaskQueue\"'\x1b[0m"
+		s.Command.Long = "Get a list of workers to the specified namespace.\n\n\x1b[1mtemporal worker list --namespace YourNamespace --query 'TaskQueue=\"YourTaskQueue\"'\x1b[0m"
 	} else {
-		s.Command.Long = "Get a list of workers to the specified namespace.\n\n```\ntemporal worker list --namespace YourNamespace --query 'taskQueue=\"YourTaskQueue\"'\n```"
+		s.Command.Long = "Get a list of workers to the specified namespace.\n\n```\ntemporal worker list --namespace YourNamespace --query 'TaskQueue=\"YourTaskQueue\"'\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Content for an SQL-like `QUERY` List Filter.")
