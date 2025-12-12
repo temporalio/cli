@@ -60,13 +60,13 @@ jobs:
       - name: Regen code, confirm unchanged
         if: ${{ matrix.checkGenCommands }}
         run: |
-          go run ./internal/cmd/gen-commands -input internal/temporalcli/commands.yaml -pkg temporalcli -context "*CommandContext" > internal/temporalcli/commands.gen.go
+          go run ./cmd/gen-commands -input internal/temporalcli/commands.yaml -pkg temporalcli -context "*CommandContext" > internal/temporalcli/commands.gen.go
           git diff --exit-code
 
       - name: Generate docs, confirm working
         if: ${{ matrix.checkGenCommands }}
         run: |
-          go run ./internal/cmd/gen-docs -input internal/temporalcli/commands.yaml -output dist/docs
+          go run ./cmd/gen-docs -input internal/temporalcli/commands.yaml -output dist/docs
 
       - name: Test cloud mTLS
         if: ${{ matrix.cloudTestTarget && env.HAS_SECRETS == 'true' }}
