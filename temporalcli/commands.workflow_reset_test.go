@@ -19,7 +19,7 @@ import (
 	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
 	"go.temporal.io/server/common/rpc"
-	"go.temporal.io/server/common/searchattribute"
+	"go.temporal.io/server/common/searchattribute/sadefs"
 	"go.temporal.io/server/common/worker_versioning"
 )
 
@@ -871,8 +871,8 @@ func (sut *batchResetTestData) waitBlockOnNonDeterministicError() {
 
 	// wait for it to appear in visibility
 	query := fmt.Sprintf(`%s = "%s" and %s = "%s"`,
-		searchattribute.ExecutionStatus, "Running",
-		searchattribute.BuildIds, worker_versioning.UnversionedBuildIdSearchAttribute(sut.internalVersionFor("v2")))
+		sadefs.ExecutionStatus, "Running",
+		sadefs.BuildIds, worker_versioning.UnversionedBuildIdSearchAttribute(sut.internalVersionFor("v2")))
 	sut.assert.Eventually(func() bool {
 		resp, err := sut.client.ListWorkflow(sut.ctx, &workflowservice.ListWorkflowExecutionsRequest{
 			Namespace: sut.namespace,
