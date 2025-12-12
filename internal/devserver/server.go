@@ -35,6 +35,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/temporalio/cli/cliext"
 	uiserver "github.com/temporalio/ui-server/v2/server"
 	uiconfig "github.com/temporalio/ui-server/v2/server/config"
 	uiserveroptions "github.com/temporalio/ui-server/v2/server/server_options"
@@ -118,7 +119,7 @@ func Start(options StartOptions) (*Server, error) {
 	}
 
 	if options.FrontendHTTPPort == 0 {
-		options.FrontendHTTPPort = MustGetFreePort(options.FrontendIP)
+		options.FrontendHTTPPort = cliext.MustGetFreePort(options.FrontendIP)
 	}
 
 	// Build servers
@@ -161,9 +162,9 @@ func (s *Server) Stop() {
 
 func (s *StartOptions) buildUIServer() *uiserver.Server {
 	return uiserver.NewServer(uiserveroptions.WithConfigProvider(&uiconfig.Config{
-		Host:                MaybeEscapeIPv6(s.UIIP),
+		Host:                cliext.MaybeEscapeIPv6(s.UIIP),
 		Port:                s.UIPort,
-		TemporalGRPCAddress: fmt.Sprintf("%v:%v", MaybeEscapeIPv6(s.FrontendIP), s.FrontendPort),
+		TemporalGRPCAddress: fmt.Sprintf("%v:%v", cliext.MaybeEscapeIPv6(s.FrontendIP), s.FrontendPort),
 		EnableUI:            true,
 		PublicPath:          s.PublicPath,
 		UIAssetPath:         s.UIAssetPath,
@@ -233,13 +234,13 @@ func (s *StartOptions) buildServerOptions() ([]temporal.ServerOption, error) {
 	dynConf[dynamicconfig.FrontendMaxNamespaceVisibilityRPSPerInstance.Key()] = 100
 	// NOTE that the URL scheme is fixed to HTTP since the dev server doesn't support TLS at the time of writing.
 	dynConf[nexusoperations.CallbackURLTemplate.Key()] = fmt.Sprintf(
-		"http://%s:%d/namespaces/{{.NamespaceName}}/nexus/callback", MaybeEscapeIPv6(s.FrontendIP), s.FrontendHTTPPort)
+		"http://%s:%d/namespaces/{{.NamespaceName}}/nexus/callback", cliext.MaybeEscapeIPv6(s.FrontendIP), s.FrontendHTTPPort)
 	dynConf[callbacks.AllowedAddresses.Key()] = []struct {
 		Pattern       string
 		AllowInsecure bool
 	}{
 		{
-			Pattern:       fmt.Sprintf("%s:%d", MaybeEscapeIPv6(s.FrontendIP), s.FrontendHTTPPort),
+			Pattern:       fmt.Sprintf("%s:%d", cliext.MaybeEscapeIPv6(s.FrontendIP), s.FrontendHTTPPort),
 			AllowInsecure: true,
 		},
 	}
@@ -266,7 +267,7 @@ func (s *StartOptions) buildServerConfig() (*config.Config, error) {
 	if conf.Global.Metrics == nil && s.MetricsPort > 0 {
 		conf.Global.Metrics = &metrics.Config{
 			Prometheus: &metrics.PrometheusConfig{
-				ListenAddress: fmt.Sprintf("%v:%v", MaybeEscapeIPv6(s.FrontendIP), s.MetricsPort),
+				ListenAddress: fmt.Sprintf("%v:%v", cliext.MaybeEscapeIPv6(s.FrontendIP), s.MetricsPort),
 				HandlerPath:   "/metrics",
 			},
 		}
@@ -294,8 +295,8 @@ func (s *StartOptions) buildServerConfig() (*config.Config, error) {
 				s.CurrentClusterName: {
 					Enabled:                true,
 					InitialFailoverVersion: int64(s.InitialFailoverVersion),
-					RPCAddress:             fmt.Sprintf("%v:%v", MaybeEscapeIPv6(s.FrontendIP), s.FrontendPort),
-					HTTPAddress:            fmt.Sprintf("%v:%v", MaybeEscapeIPv6(s.FrontendIP), s.FrontendHTTPPort),
+					RPCAddress:             fmt.Sprintf("%v:%v", cliext.MaybeEscapeIPv6(s.FrontendIP), s.FrontendPort),
+					HTTPAddress:            fmt.Sprintf("%v:%v", cliext.MaybeEscapeIPv6(s.FrontendIP), s.FrontendHTTPPort),
 					ClusterID:              s.ClusterID,
 				},
 			},
@@ -312,7 +313,7 @@ func (s *StartOptions) buildServerConfig() (*config.Config, error) {
 	conf.Archival.Visibility.State = "disabled"
 	conf.NamespaceDefaults.Archival.History.State = "disabled"
 	conf.NamespaceDefaults.Archival.Visibility.State = "disabled"
-	conf.PublicClient.HostPort = fmt.Sprintf("%v:%v", MaybeEscapeIPv6(s.FrontendIP), s.FrontendPort)
+	conf.PublicClient.HostPort = fmt.Sprintf("%v:%v", cliext.MaybeEscapeIPv6(s.FrontendIP), s.FrontendPort)
 	return &conf, nil
 }
 
@@ -364,7 +365,7 @@ func (s *StartOptions) buildServiceConfig(frontend bool) config.Service {
 		conf.RPC.BindOnIP = s.FrontendIP
 		conf.RPC.HTTPPort = s.FrontendHTTPPort
 	} else {
-		conf.RPC.GRPCPort = MustGetFreePort(s.FrontendIP)
+		conf.RPC.GRPCPort = cliext.MustGetFreePort(s.FrontendIP)
 		conf.RPC.BindOnIP = s.FrontendIP
 	}
 	return conf

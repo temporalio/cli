@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"go.temporal.io/api/enums/v1"
 
+	"github.com/temporalio/cli/cliext"
 	"github.com/temporalio/cli/internal/devserver"
 )
 
@@ -57,12 +58,12 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 	} else if err := opts.LogLevel.UnmarshalText([]byte(logLevel)); err != nil {
 		return fmt.Errorf("invalid log level %q: %w", logLevel, err)
 	}
-	if err := devserver.CheckPortFree(opts.FrontendIP, opts.FrontendPort); err != nil {
+	if err := cliext.CheckPortFree(opts.FrontendIP, opts.FrontendPort); err != nil {
 		return fmt.Errorf("can't set frontend port %d: %w", opts.FrontendPort, err)
 	}
 
 	if opts.FrontendHTTPPort > 0 {
-		if err := devserver.CheckPortFree(opts.FrontendIP, opts.FrontendHTTPPort); err != nil {
+		if err := cliext.CheckPortFree(opts.FrontendIP, opts.FrontendHTTPPort); err != nil {
 			return fmt.Errorf("can't set frontend HTTP port %d: %w", opts.FrontendHTTPPort, err)
 		}
 	}
@@ -77,11 +78,11 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 			if opts.UIPort > 65535 {
 				opts.UIPort = 65535
 			}
-			if err := devserver.CheckPortFree(opts.UIIP, opts.UIPort); err != nil {
+			if err := cliext.CheckPortFree(opts.UIIP, opts.UIPort); err != nil {
 				return fmt.Errorf("can't use default UI port %d (%d + 1000): %w", opts.UIPort, t.Port, err)
 			}
 		} else {
-			if err := devserver.CheckPortFree(opts.UIIP, opts.UIPort); err != nil {
+			if err := cliext.CheckPortFree(opts.UIIP, opts.UIPort); err != nil {
 				return fmt.Errorf("can't set UI port %d: %w", opts.UIPort, err)
 			}
 		}
@@ -140,9 +141,9 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 	}
 	// Grab a free port for metrics ahead-of-time so we know what port is selected
 	if opts.MetricsPort == 0 {
-		opts.MetricsPort = devserver.MustGetFreePort(opts.FrontendIP)
+		opts.MetricsPort = cliext.MustGetFreePort(opts.FrontendIP)
 	} else {
-		if err := devserver.CheckPortFree(opts.FrontendIP, opts.MetricsPort); err != nil {
+		if err := cliext.CheckPortFree(opts.FrontendIP, opts.MetricsPort); err != nil {
 			return fmt.Errorf("can't set metrics port %d: %w", opts.MetricsPort, err)
 		}
 	}
@@ -173,7 +174,7 @@ func toFriendlyIp(host string) string {
 	if host == "127.0.0.1" || host == "::1" {
 		return "localhost"
 	}
-	return devserver.MaybeEscapeIPv6(host)
+	return cliext.MaybeEscapeIPv6(host)
 }
 
 func persistentClusterID() string {

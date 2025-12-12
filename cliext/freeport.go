@@ -1,4 +1,4 @@
-package devserver
+package cliext
 
 import (
 	"fmt"
@@ -24,13 +24,13 @@ func GetFreePort(host string) (int, error) {
 	host = MaybeEscapeIPv6(host)
 	l, err := net.Listen("tcp", host+":0")
 	if err != nil {
-		return 0, fmt.Errorf("failed to assign a free port: %v", err)
+		return 0, fmt.Errorf("failed to assign a free port: %w", err)
 	}
 	defer l.Close()
 	port := l.Addr().(*net.TCPAddr).Port
 
 	// On Linux and some BSD variants, ephemeral ports are randomized, and may
-	// consequently repeat within a short time frame after the listenning end
+	// consequently repeat within a short time frame after the listening end
 	// has been closed. To avoid this, we make a connection to the port, then
 	// close that connection from the server's side (this is very important),
 	// which puts the connection in TIME_WAIT state for some time (by default,
@@ -50,17 +50,17 @@ func GetFreePort(host string) (int, error) {
 		// to ::1). For safety, rebuild address form the original host instead.
 		tcpAddr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%d", host, port))
 		if err != nil {
-			return 0, fmt.Errorf("error resolving address: %v", err)
+			return 0, fmt.Errorf("error resolving address: %w", err)
 		}
 		r, err := net.DialTCP("tcp", nil, tcpAddr)
 		if err != nil {
-			return 0, fmt.Errorf("failed to assign a free port: %v", err)
+			return 0, fmt.Errorf("failed to assign a free port: %w", err)
 		}
 		c, err := l.Accept()
 		if err != nil {
-			return 0, fmt.Errorf("failed to assign a free port: %v", err)
+			return 0, fmt.Errorf("failed to assign a free port: %w", err)
 		}
-		// Closing the socket from the server side
+		// Closing the socket from the server side.
 		c.Close()
 		defer r.Close()
 	}

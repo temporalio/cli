@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/BurntSushi/toml"
 )
@@ -39,7 +41,21 @@ server_ca_cert_path = "my-server-ca-cert-path"
 server_ca_cert_data = "my-server-ca-cert-data"
 # Intentionally absent
 # server_name = "my-server-name"
-disable_host_verification = true`))
+disable_host_verification = true
+
+[profile.foo.oauth]
+client_id = "my-oauth-client-id"
+client_secret = "my-oauth-client-secret"
+token_url = "https://example.com/oauth/token"
+auth_url = "https://example.com/oauth/authorize"
+access_token = "my-oauth-access-token"
+refresh_token = "my-oauth-refresh-token"
+token_type = "Bearer"
+expires_at = "2318-03-23T00:00:00Z"
+scopes = ["openid", "profile", "email"]
+
+[profile.foo.oauth.request_params]
+audience = "https://api.example.com"`))
 	f.Close()
 	h.NoError(err)
 	env["TEMPORAL_CONFIG_FILE"] = f.Name()
@@ -87,14 +103,29 @@ disable_host_verification = true`))
 		"tls.server_ca_cert_data":       []byte("my-server-ca-cert-data"),
 		"tls.server_name":               "",
 		"tls.disable_host_verification": true,
+		"oauth.client_id":               "my-oauth-client-id",
+		"oauth.client_secret":           "my-oauth-client-secret",
+		"oauth.token_url":               "https://example.com/oauth/token",
+		"oauth.auth_url":                "https://example.com/oauth/authorize",
+		"oauth.access_token":            "my-oauth-access-token",
+		"oauth.refresh_token":           "my-oauth-refresh-token",
+		"oauth.token_type":              "Bearer",
+		"oauth.expires_at":              time.Date(2318, 3, 23, 0, 0, 0, 0, time.UTC),
+		"oauth.scopes":                  []string{"openid", "profile", "email"},
+		"oauth.request_params.audience": "https://api.example.com",
 	}
 	expectedNonJSON := make(map[string]any, len(expectedJSON))
 	for prop, expectedVal := range expectedJSON {
 		if b, ok := expectedVal.([]byte); ok {
 			expectedVal = "bytes(" + base64.StdEncoding.EncodeToString(b) + ")"
-		} else {
-			expectedNonJSON[prop] = expectedVal
+		} else if prop == "oauth.expires_at" {
+			// times display in relative format in text output
+			expectedVal = "a long while from now"
+		} else if s, ok := expectedVal.([]string); ok {
+			// Slices display as "[item1, item2, item3]" in text output
+			expectedVal = "[" + strings.Join(s, ", ") + "]"
 		}
+		expectedNonJSON[prop] = expectedVal
 	}
 
 	// JSON individual
@@ -127,6 +158,20 @@ disable_host_verification = true`))
 			"some-header3": "some-value3"
 		},
 		"namespace": "my-namespace",
+		"oauth": {
+			"access_token": "my-oauth-access-token",
+			"auth_url": "https://example.com/oauth/authorize",
+			"client_id": "my-oauth-client-id",
+			"client_secret": "my-oauth-client-secret",
+			"expires_at": "2318-03-23T00:00:00Z",
+			"refresh_token": "my-oauth-refresh-token",
+			"request_params": {
+				"audience": "https://api.example.com"
+			},
+			"scopes": ["openid", "profile", "email"],
+			"token_type": "Bearer",
+			"token_url": "https://example.com/oauth/token"
+		},
 		"tls": {
 			"client_cert_data": "my-client-cert-data",
 			"client_cert_path": "my-client-cert-path",
@@ -317,21 +362,31 @@ func TestConfig_Set(t *testing.T) {
 
 	// Set a bunch of other things
 	toSet := map[string]string{
-		"address":                       "my-address",
-		"namespace":                     "my-namespace",
-		"api_key":                       "my-api-key",
-		"codec.endpoint":                "my-endpoint",
-		"codec.auth":                    "my-auth",
-		"grpc_meta.sOme_header1":        "some-value1",
-		"tls":                           "true",
-		"tls.disabled":                  "true",
-		"tls.client_cert_path":          "my-client-cert-path",
-		"tls.client_cert_data":          "my-client-cert-data",
-		"tls.client_key_path":           "my-client-key-path",
-		"tls.client_key_data":           "my-client-key-data",
-		"tls.server_ca_cert_path":       "my-server-ca-cert-path",
-		"tls.server_ca_cert_data":       "my-server-ca-cert-data",
-		"tls.disable_host_verification": "true",
+		"address":                          "my-address",
+		"namespace":                        "my-namespace",
+		"api_key":                          "my-api-key",
+		"codec.endpoint":                   "my-endpoint",
+		"codec.auth":                       "my-auth",
+		"grpc_meta.sOme_header1":           "some-value1",
+		"tls":                              "true",
+		"tls.disabled":                     "true",
+		"tls.client_cert_path":             "my-client-cert-path",
+		"tls.client_cert_data":             "my-client-cert-data",
+		"tls.client_key_path":              "my-client-key-path",
+		"tls.client_key_data":              "my-client-key-data",
+		"tls.server_ca_cert_path":          "my-server-ca-cert-path",
+		"tls.server_ca_cert_data":          "my-server-ca-cert-data",
+		"tls.disable_host_verification":    "true",
+		"oauth.client_id":                  "test-oauth-client",
+		"oauth.client_secret":              "test-oauth-secret",
+		"oauth.auth_url":                   "https://example.com/auth",
+		"oauth.token_url":                  "https://example.com/token",
+		"oauth.access_token":               "test-access-token",
+		"oauth.refresh_token":              "test-refresh-token",
+		"oauth.token_type":                 "Bearer",
+		"oauth.scopes":                     "read,write,admin",
+		"oauth.request_params.audience":    "https://test-api.example.com",
+		"oauth.request_params.resource_id": "test-resource",
 	}
 	for k, v := range toSet {
 		res = h.Execute("config", "set", "--prop", k, "--value", v)
@@ -366,6 +421,20 @@ func TestConfig_Set(t *testing.T) {
 					},
 					"grpc_meta": map[string]any{
 						"some-header1": "some-value1",
+					},
+					"oauth": map[string]any{
+						"client_id":     "test-oauth-client",
+						"client_secret": "test-oauth-secret",
+						"auth_url":      "https://example.com/auth",
+						"token_url":     "https://example.com/token",
+						"access_token":  "test-access-token",
+						"refresh_token": "test-refresh-token",
+						"token_type":    "Bearer",
+						"scopes":        []any{"read", "write", "admin"},
+						"request_params": map[string]any{
+							"audience":    "https://test-api.example.com",
+							"resource_id": "test-resource",
+						},
 					},
 				},
 			},

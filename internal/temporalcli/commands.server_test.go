@@ -13,7 +13,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/temporalio/cli/internal/devserver"
+	"github.com/temporalio/cli/cliext"
 	"go.temporal.io/api/operatorservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/temporal"
@@ -24,8 +24,8 @@ import (
 // * Server reuse existing database file
 
 func TestServer_StartDev_Simple(t *testing.T) {
-	port := strconv.Itoa(devserver.MustGetFreePort("127.0.0.1"))
-	httpPort := strconv.Itoa(devserver.MustGetFreePort("127.0.0.1"))
+	port := strconv.Itoa(cliext.MustGetFreePort("127.0.0.1"))
+	httpPort := strconv.Itoa(cliext.MustGetFreePort("127.0.0.1"))
 	startDevServerAndRunSimpleTest(
 		t,
 		// TODO(cretz): Remove --headless when
@@ -36,8 +36,8 @@ func TestServer_StartDev_Simple(t *testing.T) {
 }
 
 func TestServer_StartDev_IPv4Unspecified(t *testing.T) {
-	port := strconv.Itoa(devserver.MustGetFreePort("0.0.0.0"))
-	httpPort := strconv.Itoa(devserver.MustGetFreePort("127.0.0.1"))
+	port := strconv.Itoa(cliext.MustGetFreePort("0.0.0.0"))
+	httpPort := strconv.Itoa(cliext.MustGetFreePort("127.0.0.1"))
 	startDevServerAndRunSimpleTest(
 		t,
 		[]string{"server", "start-dev", "--ip", "0.0.0.0", "-p", port, "--http-port", httpPort, "--headless"},
@@ -46,8 +46,8 @@ func TestServer_StartDev_IPv4Unspecified(t *testing.T) {
 }
 
 func TestServer_StartDev_SQLitePragma(t *testing.T) {
-	port := strconv.Itoa(devserver.MustGetFreePort("0.0.0.0"))
-	httpPort := strconv.Itoa(devserver.MustGetFreePort("127.0.0.1"))
+	port := strconv.Itoa(cliext.MustGetFreePort("0.0.0.0"))
+	httpPort := strconv.Itoa(cliext.MustGetFreePort("127.0.0.1"))
 	dbFilename := filepath.Join(os.TempDir(), "devserver-sqlite-pragma.sqlite")
 	defer func() {
 		_ = os.Remove(dbFilename)
@@ -80,8 +80,8 @@ func TestServer_StartDev_IPv6Unspecified(t *testing.T) {
 		return
 	}
 
-	port := strconv.Itoa(devserver.MustGetFreePort("::"))
-	httpPort := strconv.Itoa(devserver.MustGetFreePort("::"))
+	port := strconv.Itoa(cliext.MustGetFreePort("::"))
+	httpPort := strconv.Itoa(cliext.MustGetFreePort("::"))
 	startDevServerAndRunSimpleTest(
 		t,
 		[]string{
@@ -89,9 +89,9 @@ func TestServer_StartDev_IPv6Unspecified(t *testing.T) {
 			"--ip", "::", "--ui-ip", "::1",
 			"-p", port,
 			"--http-port", httpPort,
-			"--ui-port", strconv.Itoa(devserver.MustGetFreePort("::")),
-			"--http-port", strconv.Itoa(devserver.MustGetFreePort("::")),
-			"--metrics-port", strconv.Itoa(devserver.MustGetFreePort("::"))},
+			"--ui-port", strconv.Itoa(cliext.MustGetFreePort("::")),
+			"--http-port", strconv.Itoa(cliext.MustGetFreePort("::")),
+			"--metrics-port", strconv.Itoa(cliext.MustGetFreePort("::"))},
 		"[::]:"+port,
 	)
 }
@@ -144,8 +144,8 @@ func TestServer_StartDev_ConcurrentStarts(t *testing.T) {
 		defer h.Close()
 
 		// Start in background, then wait for client to be able to connect
-		port := strconv.Itoa(devserver.MustGetFreePort("127.0.0.1"))
-		httpPort := strconv.Itoa(devserver.MustGetFreePort("127.0.0.1"))
+		port := strconv.Itoa(cliext.MustGetFreePort("127.0.0.1"))
+		httpPort := strconv.Itoa(cliext.MustGetFreePort("127.0.0.1"))
 		resCh := make(chan *CommandResult, 1)
 		go func() {
 			resCh <- h.Execute("server", "start-dev", "-p", port, "--http-port", httpPort, "--headless", "--log-level", "never")
@@ -198,8 +198,8 @@ func TestServer_StartDev_WithSearchAttributes(t *testing.T) {
 	defer h.Close()
 
 	// Start in background, then wait for client to be able to connect
-	port := strconv.Itoa(devserver.MustGetFreePort("127.0.0.1"))
-	httpPort := strconv.Itoa(devserver.MustGetFreePort("127.0.0.1"))
+	port := strconv.Itoa(cliext.MustGetFreePort("127.0.0.1"))
+	httpPort := strconv.Itoa(cliext.MustGetFreePort("127.0.0.1"))
 	resCh := make(chan *CommandResult, 1)
 	go func() {
 		resCh <- h.Execute(

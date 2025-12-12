@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"github.com/temporalio/cli/cliext"
 	"github.com/temporalio/cli/internal/devserver"
 	"github.com/temporalio/cli/internal/temporalcli"
 	"go.temporal.io/api/enums/v1"
@@ -194,8 +195,8 @@ type EnvLookupMap map[string]string
 
 func (e EnvLookupMap) Environ() []string {
 	ret := make([]string, 0, len(e))
-	for k := range e {
-		ret = append(ret, k)
+	for k, v := range e {
+		ret = append(ret, k+"="+v)
 	}
 	return ret
 }
@@ -335,10 +336,10 @@ func StartDevServer(t *testing.T, options DevServerOptions) *DevServer {
 		d.Options.FrontendIP = "127.0.0.1"
 	}
 	if d.Options.FrontendPort == 0 {
-		d.Options.FrontendPort = devserver.MustGetFreePort(d.Options.FrontendIP)
+		d.Options.FrontendPort = cliext.MustGetFreePort(d.Options.FrontendIP)
 	}
 	if d.Options.FrontendHTTPPort == 0 {
-		d.Options.FrontendHTTPPort = devserver.MustGetFreePort(d.Options.FrontendIP)
+		d.Options.FrontendHTTPPort = cliext.MustGetFreePort(d.Options.FrontendIP)
 	}
 	if len(d.Options.Namespaces) == 0 {
 		d.Options.Namespaces = []string{
