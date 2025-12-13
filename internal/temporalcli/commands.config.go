@@ -2,13 +2,12 @@ package temporalcli
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"reflect"
 	"sort"
 	"strings"
 
 	"github.com/BurntSushi/toml"
+	"github.com/temporalio/cli/cliext"
 	"github.com/temporalio/cli/internal/printer"
 	"go.temporal.io/sdk/contrib/envconfig"
 )
@@ -23,9 +22,18 @@ func (c *TemporalConfigDeleteCommand) run(cctx *CommandContext, _ []string) erro
 	if strings.HasPrefix(c.Prop, "grpc_meta.") {
 		key := strings.TrimPrefix(c.Prop, "grpc_meta.")
 		if _, ok := confProfile.GRPCMeta[key]; !ok {
-			return fmt.Errorf("gRPC meta key %q not found", key)
+			return fmt.Errorf("property %q not found", c.Prop)
 		}
 		delete(confProfile.GRPCMeta, key)
+	} else if strings.HasPrefix(c.Prop, "oauth.request_params.") {
+		key := strings.TrimPrefix(c.Prop, "oauth.request_params.")
+		if confProfile.OAuth == nil || confProfile.OAuth.RequestParams == nil {
+			return fmt.Errorf("property %q not found", c.Prop)
+		}
+		if _, ok := confProfile.OAuth.RequestParams[key]; !ok {
+			return fmt.Errorf("property %q not found", c.Prop)
+		}
+		delete(confProfile.OAuth.RequestParams, key)
 	} else {
 		reflectVal, err := reflectEnvConfigProp(confProfile, c.Prop, true)
 		if err != nil {
@@ -60,7 +68,7 @@ func (c *TemporalConfigDeleteProfileCommand) run(cctx *CommandContext, _ []strin
 func (c *TemporalConfigGetCommand) run(cctx *CommandContext, _ []string) error {
 	// Load config profile
 	profileName := envConfigProfileName(cctx)
-	conf, confProfile, err := loadEnvConfigProfile(cctx, profileName, true)
+	_, confProfile, err := loadEnvConfigProfile(cctx, profileName, true)
 	if err != nil {
 		return err
 	}
@@ -72,13 +80,22 @@ func (c *TemporalConfigGetCommand) run(cctx *CommandContext, _ []string) error {
 	if c.Prop != "" {
 		// We do not support asking for structures with children at this time,
 		// but "tls" is a special case because it's also a bool.
-		if c.Prop == "codec" || c.Prop == "grpc_meta" {
+		if c.Prop == "codec" || c.Prop == "grpc_meta" || c.Prop == "oauth" || c.Prop == "oauth.request_params" {
 			return fmt.Errorf("must provide exact property, not parent property")
 		}
 		var reflectVal reflect.Value
-		// gRPC meta is special
+		// gRPC meta and OAuth request params are special
 		if strings.HasPrefix(c.Prop, "grpc_meta.") {
 			v, ok := confProfile.GRPCMeta[strings.TrimPrefix(c.Prop, "grpc_meta.")]
+			if !ok {
+				return fmt.Errorf("unknown property %q", c.Prop)
+			}
+			reflectVal = reflect.ValueOf(v)
+		} else if strings.HasPrefix(c.Prop, "oauth.request_params.") {
+			if confProfile.OAuth == nil || confProfile.OAuth.RequestParams == nil {
+				return fmt.Errorf("unknown property %q", c.Prop)
+			}
+			v, ok := confProfile.OAuth.RequestParams[strings.TrimPrefix(c.Prop, "oauth.request_params.")]
 			if !ok {
 				return fmt.Errorf("unknown property %q", c.Prop)
 			}
@@ -104,7 +121,12 @@ func (c *TemporalConfigGetCommand) run(cctx *CommandContext, _ []string) error {
 		var tomlConf struct {
 			Profiles map[string]any `toml:"profile"`
 		}
-		if b, err := conf.ToTOML(envconfig.ClientConfigToTOMLOptions{}); err != nil {
+		cliextConfig := &cliext.ClientConfig{
+			Profiles: map[string]*cliext.Profile{
+				profileName: confProfile,
+			},
+		}
+		if b, err := cliext.ConfigToTOML(cliextConfig); err != nil {
 			return fmt.Errorf("failed converting to TOML: %w", err)
 		} else if err := toml.Unmarshal(b, &tomlConf); err != nil {
 			return fmt.Errorf("failed converting from TOML: %w", err)
@@ -129,9 +151,16 @@ func (c *TemporalConfigGetCommand) run(cctx *CommandContext, _ []string) error {
 			}
 		}
 
-		// Add "grpc_meta"
+		// Add grpc_meta
 		for k, v := range confProfile.GRPCMeta {
 			props = append(props, prop{Property: "grpc_meta." + k, Value: v})
+		}
+
+		// Add oauth.request_params
+		if confProfile.OAuth != nil {
+			for k, v := range confProfile.OAuth.RequestParams {
+				props = append(props, prop{Property: "oauth.request_params." + k, Value: v})
+			}
 		}
 
 		// Sort and display
@@ -141,7 +170,7 @@ func (c *TemporalConfigGetCommand) run(cctx *CommandContext, _ []string) error {
 }
 
 func (c *TemporalConfigListCommand) run(cctx *CommandContext, _ []string) error {
-	clientConfig, err := envconfig.LoadClientConfig(envconfig.LoadClientConfigOptions{
+	loadResult, err := cliext.LoadConfig(cliext.LoadConfigOptions{
 		ConfigFilePath: cctx.RootCommand.ConfigFile,
 		EnvLookup:      cctx.Options.EnvLookup,
 	})
@@ -151,8 +180,8 @@ func (c *TemporalConfigListCommand) run(cctx *CommandContext, _ []string) error 
 	type profile struct {
 		Name string `json:"name"`
 	}
-	profiles := make([]profile, 0, len(clientConfig.Profiles))
-	for k := range clientConfig.Profiles {
+	profiles := make([]profile, 0, len(loadResult.Config.Profiles))
+	for k := range loadResult.Config.Profiles {
 		profiles = append(profiles, profile{Name: k})
 	}
 	sort.Slice(profiles, func(i, j int) bool { return profiles[i].Name < profiles[j].Name })
@@ -165,12 +194,20 @@ func (c *TemporalConfigSetCommand) run(cctx *CommandContext, _ []string) error {
 	if err != nil {
 		return err
 	}
-	// As a special case, "grpc_meta." values are handled specifically
+	// gRPC meta and OAuth request params are handled specifically
 	if strings.HasPrefix(c.Prop, "grpc_meta.") {
 		if confProfile.GRPCMeta == nil {
 			confProfile.GRPCMeta = map[string]string{}
 		}
 		confProfile.GRPCMeta[strings.TrimPrefix(c.Prop, "grpc_meta.")] = c.Value
+	} else if strings.HasPrefix(c.Prop, "oauth.request_params.") {
+		if confProfile.OAuth == nil {
+			confProfile.OAuth = &cliext.OAuthConfig{}
+		}
+		if confProfile.OAuth.RequestParams == nil {
+			confProfile.OAuth.RequestParams = map[string]string{}
+		}
+		confProfile.OAuth.RequestParams[strings.TrimPrefix(c.Prop, "oauth.request_params.")] = c.Value
 	} else {
 		// Get reflect value
 		reflectVal, err := reflectEnvConfigProp(confProfile, c.Prop, false)
@@ -195,10 +232,24 @@ func (c *TemporalConfigSetCommand) run(cctx *CommandContext, _ []string) error {
 				return fmt.Errorf("must be 'true' or 'false' to set this property")
 			}
 		case reflect.Slice:
-			if reflectVal.Type().Elem().Kind() != reflect.Uint8 {
+			switch reflectVal.Type().Elem().Kind() {
+			case reflect.Uint8:
+				// []byte - set as bytes
+				reflectVal.SetBytes([]byte(c.Value))
+			case reflect.String:
+				// []string - split by comma
+				if c.Value == "" {
+					reflectVal.Set(reflect.MakeSlice(reflectVal.Type(), 0, 0))
+				} else {
+					parts := strings.Split(c.Value, ",")
+					for i := range parts {
+						parts[i] = strings.TrimSpace(parts[i])
+					}
+					reflectVal.Set(reflect.ValueOf(parts))
+				}
+			default:
 				return fmt.Errorf("unexpected slice of type %v", reflectVal.Type())
 			}
-			reflectVal.SetBytes([]byte(c.Value))
 		case reflect.Bool:
 			if c.Value != "true" && c.Value != "false" {
 				return fmt.Errorf("must be 'true' or 'false' to set this property")
@@ -228,25 +279,25 @@ func loadEnvConfigProfile(
 	cctx *CommandContext,
 	profile string,
 	failIfNotFound bool,
-) (*envconfig.ClientConfig, *envconfig.ClientConfigProfile, error) {
-	clientConfig, err := envconfig.LoadClientConfig(envconfig.LoadClientConfigOptions{
+) (cliext.ClientConfig, *cliext.Profile, error) {
+	loadResult, err := cliext.LoadConfig(cliext.LoadConfigOptions{
 		ConfigFilePath: cctx.RootCommand.ConfigFile,
 		EnvLookup:      cctx.Options.EnvLookup,
 	})
 	if err != nil {
-		return nil, nil, err
+		return cliext.ClientConfig{}, nil, err
 	}
 
 	// Load profile
-	clientProfile := clientConfig.Profiles[profile]
+	clientProfile := loadResult.Config.Profiles[profile]
 	if clientProfile == nil {
 		if failIfNotFound {
-			return nil, nil, fmt.Errorf("profile %q not found", profile)
+			return cliext.ClientConfig{}, nil, fmt.Errorf("profile %q not found", profile)
 		}
-		clientProfile = &envconfig.ClientConfigProfile{}
-		clientConfig.Profiles[profile] = clientProfile
+		clientProfile = &cliext.Profile{}
+		loadResult.Config.Profiles[profile] = clientProfile
 	}
-	return &clientConfig, clientProfile, nil
+	return loadResult.Config, clientProfile, nil
 }
 
 var envConfigPropsToFieldNames = map[string]string{
@@ -265,10 +316,19 @@ var envConfigPropsToFieldNames = map[string]string{
 	"tls.disable_host_verification": "DisableHostVerification",
 	"codec.endpoint":                "Endpoint",
 	"codec.auth":                    "Auth",
+	"oauth.client_id":        "ClientID",
+	"oauth.client_secret":    "ClientSecret",
+	"oauth.auth_url":         "AuthURL",
+	"oauth.token_url":        "TokenURL",
+	"oauth.scopes":           "Scopes",
+	"oauth.access_token":     "AccessToken",
+	"oauth.refresh_token":    "RefreshToken",
+	"oauth.token_type":       "TokenType",
+	"oauth.expires_at":       "AccessTokenExpiresAt",
 }
 
 func reflectEnvConfigProp(
-	prof *envconfig.ClientConfigProfile,
+	prof *cliext.Profile,
 	prop string,
 	failIfParentNotFound bool,
 ) (reflect.Value, error) {
@@ -279,7 +339,7 @@ func reflectEnvConfigProp(
 	}
 
 	// Load reflect val
-	parentVal := reflect.ValueOf(prof)
+	parentVal := reflect.ValueOf(&prof.ClientConfigProfile).Elem()
 	if strings.HasPrefix(prop, "tls.") {
 		if prof.TLS == nil {
 			if failIfParentNotFound {
@@ -287,7 +347,7 @@ func reflectEnvConfigProp(
 			}
 			prof.TLS = &envconfig.ClientConfigTLS{}
 		}
-		parentVal = reflect.ValueOf(prof.TLS)
+		parentVal = reflect.ValueOf(prof.TLS).Elem()
 	} else if strings.HasPrefix(prop, "codec.") {
 		if prof.Codec == nil {
 			if failIfParentNotFound {
@@ -295,41 +355,25 @@ func reflectEnvConfigProp(
 			}
 			prof.Codec = &envconfig.ClientConfigCodec{}
 		}
-		parentVal = reflect.ValueOf(prof.Codec)
-	}
-
-	// Return reflected field
-	if parentVal.Kind() == reflect.Pointer {
-		parentVal = parentVal.Elem()
+		parentVal = reflect.ValueOf(prof.Codec).Elem()
+	} else if strings.HasPrefix(prop, "oauth.") {
+		if prof.OAuth == nil {
+			if failIfParentNotFound {
+				return reflect.Value{}, fmt.Errorf("no OAuth options found")
+			}
+			prof.OAuth = &cliext.OAuthConfig{}
+		}
+		parentVal = reflect.ValueOf(prof.OAuth).Elem()
 	}
 	return parentVal.FieldByName(field), nil
 }
 
-func writeEnvConfigFile(cctx *CommandContext, conf *envconfig.ClientConfig) error {
-	// Get file
+func writeEnvConfigFile(cctx *CommandContext, conf cliext.ClientConfig) error {
 	configFile := cctx.RootCommand.ConfigFile
-	if configFile == "" {
-		configFile, _ = cctx.Options.EnvLookup.LookupEnv("TEMPORAL_CONFIG_FILE")
-		if configFile == "" {
-			var err error
-			if configFile, err = envconfig.DefaultConfigFilePath(); err != nil {
-				return err
-			}
-		}
-	}
-
-	// Convert to TOML
-	b, err := conf.ToTOML(envconfig.ClientConfigToTOMLOptions{})
-	if err != nil {
-		return fmt.Errorf("failed building TOML: %w", err)
-	}
-
-	// Write to file, making dirs as needed
 	cctx.Logger.Info("Writing config file", "file", configFile)
-	if err := os.MkdirAll(filepath.Dir(configFile), 0700); err != nil {
-		return fmt.Errorf("failed making config file parent dirs: %w", err)
-	} else if err := os.WriteFile(configFile, b, 0600); err != nil {
-		return fmt.Errorf("failed writing config file: %w", err)
-	}
-	return nil
+	return cliext.WriteConfig(cliext.WriteConfigOptions{
+		Config:         conf,
+		ConfigFilePath: configFile,
+		EnvLookup:      cctx.Options.EnvLookup,
+	})
 }

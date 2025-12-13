@@ -8,6 +8,7 @@ import (
 	"os/user"
 	"strings"
 
+	"github.com/temporalio/cli/cliext"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/contrib/envconfig"
@@ -41,19 +42,21 @@ func (c *ClientOptions) dialClient(cctx *CommandContext) (client.Client, error) 
 	}
 
 	// Load a client config profile
-	var clientProfile envconfig.ClientConfigProfile
+	var clientProfile *cliext.Profile
 	if !cctx.RootCommand.DisableConfigFile || !cctx.RootCommand.DisableConfigEnv {
-		var err error
-		clientProfile, err = envconfig.LoadClientConfigProfile(envconfig.LoadClientConfigProfileOptions{
-			ConfigFilePath:    cctx.RootCommand.ConfigFile,
-			ConfigFileProfile: cctx.RootCommand.Profile,
-			DisableFile:       cctx.RootCommand.DisableConfigFile,
-			DisableEnv:        cctx.RootCommand.DisableConfigEnv,
-			EnvLookup:         cctx.Options.EnvLookup,
+		profileResult, err := cliext.LoadProfile(cliext.LoadProfileOptions{
+			LoadClientConfigProfileOptions: envconfig.LoadClientConfigProfileOptions{
+				ConfigFilePath:    cctx.RootCommand.ConfigFile,
+				ConfigFileProfile: cctx.RootCommand.Profile,
+				DisableFile:       cctx.RootCommand.DisableConfigFile,
+				DisableEnv:        cctx.RootCommand.DisableConfigEnv,
+				EnvLookup:         cctx.Options.EnvLookup,
+			},
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed loading client config: %w", err)
 		}
+		clientProfile = profileResult.Profile
 	}
 
 	// To support legacy TLS environment variables, if they are present, we will
@@ -166,6 +169,20 @@ func (c *ClientOptions) dialClient(cctx *CommandContext) (client.Client, error) 
 	// implicitly enabled if API key or any other TLS setting is set.
 	if cctx.CurrentCommand.Flags().Changed("tls") && !c.Tls {
 		clientProfile.TLS = &envconfig.ClientConfigTLS{Disabled: true}
+	}
+
+	// If OAuth is configured and no API key or (enabled) TLS is set,
+	// use the OAuth client to obtain an access token.
+	if clientProfile.OAuth != nil &&
+		clientProfile.APIKey == "" &&
+		clientProfile.TLS == nil && !clientProfile.TLS.Disabled {
+
+		oauthClient := cliext.NewOAuthClient(clientProfile.OAuth.OAuthClientConfig)
+		token, err := oauthClient.Token(cctx, clientProfile.OAuth)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get OAuth token: %w", err)
+		}
+		clientProfile.APIKey = token.AccessToken
 	}
 
 	// If codec endpoint is set, create codec setting regardless. But if auth is

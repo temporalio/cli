@@ -12,9 +12,10 @@ require (
 	github.com/mattn/go-isatty v0.0.20
 	github.com/nexus-rpc/sdk-go v0.3.0
 	github.com/olekukonko/tablewriter v0.0.5
-	github.com/spf13/cobra v1.9.1
-	github.com/spf13/pflag v1.0.6
+	github.com/spf13/cobra v1.10.2
+	github.com/spf13/pflag v1.0.9
 	github.com/stretchr/testify v1.10.0
+	github.com/temporalio/cli/cliext v0.0.0
 	github.com/temporalio/ui-server/v2 v2.42.1
 	go.temporal.io/api v1.53.0
 	go.temporal.io/sdk v1.37.0
@@ -26,6 +27,8 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 	modernc.org/sqlite v1.34.1
 )
+
+replace github.com/temporalio/cli/cliext => ./cliext
 
 require (
 	cel.dev/expr v0.23.1 // indirect
@@ -106,6 +109,7 @@ require (
 	github.com/olivere/elastic/v7 v7.0.32 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/pborman/uuid v1.2.1 // indirect
+	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
@@ -156,7 +160,7 @@ require (
 	golang.org/x/crypto v0.38.0 // indirect
 	golang.org/x/exp v0.0.0-20250305212735-054e65f0b394 // indirect
 	golang.org/x/net v0.40.0 // indirect
-	golang.org/x/oauth2 v0.30.0 // indirect
+	golang.org/x/oauth2 v0.33.0 // indirect
 	golang.org/x/sync v0.14.0 // indirect
 	golang.org/x/sys v0.33.0 // indirect
 	golang.org/x/text v0.25.0 // indirect
