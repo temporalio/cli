@@ -11,3 +11,9 @@
 /.zed
 /.claude
 *~
+
+# direnv
+.direnv/
+
+# nix
+/result
