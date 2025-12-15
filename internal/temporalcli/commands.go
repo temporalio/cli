@@ -61,18 +61,22 @@ type CommandContext struct {
 	CurrentCommand *cobra.Command
 }
 
+type IOStreams struct {
+	Stdin  io.Reader
+	Stdout io.Writer
+	Stderr io.Writer
+}
+
 type CommandOptions struct {
+	// IOStreams defaults to OS values.
+	IOStreams
+
 	// If empty, assumed to be os.Args[1:]
 	Args []string
 	// Deprecated `--env` and `--env-file` approach
 	DeprecatedEnvConfig DeprecatedEnvConfig
 	// If nil, [envconfig.EnvLookupOS] is used.
 	EnvLookup envconfig.EnvLookup
-
-	// These three fields below default to OS values
-	Stdin  io.Reader
-	Stdout io.Writer
-	Stderr io.Writer
 
 	// Defaults to logging error then os.Exit(1)
 	Fail func(error)
@@ -347,7 +351,42 @@ func Execute(ctx context.Context, options CommandOptions) {
 		// We have a context; let's actually run the command.
 		cmd := NewTemporalCommand(cctx)
 		cmd.Command.SetArgs(cctx.Options.Args)
-		err = cmd.Command.ExecuteContext(cctx)
+		cmd.Command.SetOut(cctx.Options.Stdout)
+		cmd.Command.SetErr(cctx.Options.Stderr)
+
+		// Check if a built-in command fully handles these args.
+		// Find() returns the deepest matching command and remaining args.
+		// If remaining args include positional args (not just flags), they could be
+		// an unknown subcommand that an extension might provide.
+		// Example: "workflow diagram" finds "workflow", leaving "diagram" for
+		// a potential "temporal-workflow-diagram" extension.
+		_, foundArgs, cmdErr := cmd.Command.Find(cctx.Options.Args)
+		hasRemainingPositionalArgs := slices.ContainsFunc(foundArgs, func(a string) bool {
+			return !strings.HasPrefix(a, "-")
+		})
+		builtInCommandExists := cmdErr == nil && !hasRemainingPositionalArgs
+
+		// If no built-in command exists, try extensions first.
+		if !builtInCommandExists {
+			// Parse flags to get --command-timeout value. If found, set the timeout.
+			_ = cmd.Command.PersistentFlags().Parse(cctx.Options.Args)
+			extCtx := cctx.Context
+			if timeout := cmd.CommandTimeout.Duration(); timeout > 0 {
+				var cancel context.CancelFunc
+				extCtx, cancel = context.WithTimeout(extCtx, timeout)
+				defer cancel()
+			}
+
+			if extErr, found := tryExecuteExtension(extCtx, &cctx.Options); found {
+				cctx.ActuallyRanCommand = true
+				err = extErr
+			}
+		}
+
+		// Only run Cobra if no extension handled the command.
+		if !cctx.ActuallyRanCommand {
+			err = cmd.Command.ExecuteContext(cctx)
+		}
 	}
 
 	if err != nil {
