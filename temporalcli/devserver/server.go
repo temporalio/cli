@@ -246,7 +246,7 @@ func (s *StartOptions) buildServerOptions() ([]temporal.ServerOption, error) {
 
 	// Dynamic config if set
 	for k, v := range s.DynamicConfigValues {
-		dynConf[dynamicconfig.Key(k)] = v
+		dynConf[dynamicconfig.MakeKey(k)] = v
 	}
 	opts = append(opts, temporal.WithDynamicConfigClient(dynConf))
 
