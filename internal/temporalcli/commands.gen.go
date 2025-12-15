@@ -835,9 +835,9 @@ func NewTemporalConfigDeleteCommand(cctx *CommandContext, parent *TemporalConfig
 	s.Command.Use = "delete [flags]"
 	s.Command.Short = "Delete a config file property (EXPERIMENTAL)\n"
 	if hasHighlighting {
-		s.Command.Long = "Remove a property within a profile.\n\n\x1b[1mtemporal env delete \\\n    --prop tls.client_cert_path\x1b[0m"
+		s.Command.Long = "Remove a property within a profile.\n\n\x1b[1mtemporal config delete \\\n    --prop tls.client_cert_path\x1b[0m"
 	} else {
-		s.Command.Long = "Remove a property within a profile.\n\n```\ntemporal env delete \\\n    --prop tls.client_cert_path\n```"
+		s.Command.Long = "Remove a property within a profile.\n\n```\ntemporal config delete \\\n    --prop tls.client_cert_path\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.Prop, "prop", "p", "", "Specific property to delete. If unset, deletes entire profile. Required.")
@@ -862,9 +862,9 @@ func NewTemporalConfigDeleteProfileCommand(cctx *CommandContext, parent *Tempora
 	s.Command.Use = "delete-profile [flags]"
 	s.Command.Short = "Delete an entire config profile (EXPERIMENTAL)\n"
 	if hasHighlighting {
-		s.Command.Long = "Remove a full profile entirely. The \x1b[1m--profile\x1b[0m must be set explicitly.\n\n\x1b[1mtemporal env delete-profile \\\n    --profile my-profile\x1b[0m"
+		s.Command.Long = "Remove a full profile entirely. The \x1b[1m--profile\x1b[0m must be set explicitly.\n\n\x1b[1mtemporal config delete-profile \\\n    --profile my-profile\x1b[0m"
 	} else {
-		s.Command.Long = "Remove a full profile entirely. The `--profile` must be set explicitly.\n\n```\ntemporal env delete-profile \\\n    --profile my-profile\n```"
+		s.Command.Long = "Remove a full profile entirely. The `--profile` must be set explicitly.\n\n```\ntemporal config delete-profile \\\n    --profile my-profile\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Run = func(c *cobra.Command, args []string) {
