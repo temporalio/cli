@@ -17,7 +17,7 @@ import (
 
 // Go code snippets for cross-platform test extensions.
 var (
-	codeEchoArgs   = `fmt.Println("Args:", filepath.Base(os.Args[0]), strings.Join(os.Args[1:], " "))`
+	codeEchoArgs   = `fmt.Println("Args:", strings.TrimSuffix(filepath.Base(os.Args[0]), ".exe"), strings.Join(os.Args[1:], " "))`
 	codeEchoStderr = func(msg string) string {
 		return fmt.Sprintf(`fmt.Fprintln(os.Stderr, %q)`, msg)
 	}
