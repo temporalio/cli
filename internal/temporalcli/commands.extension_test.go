@@ -33,7 +33,7 @@ var (
 	}
 )
 
-func TestExtension_InvokesSingleLevelExtension(t *testing.T) {
+func TestExtension_InvokesRootExtension(t *testing.T) {
 	h := newExtensionHarness(t)
 	h.createExtension("temporal-foo", codeEchoArgs)
 
@@ -42,7 +42,7 @@ func TestExtension_InvokesSingleLevelExtension(t *testing.T) {
 	assert.Equal(t, "Args: temporal-foo \n", res.Stdout.String())
 }
 
-func TestExtension_InvokesNestedExtension(t *testing.T) {
+func TestExtension_InvokesSubcommandExtension(t *testing.T) {
 	h := newExtensionHarness(t)
 	h.createExtension("temporal-foo-bar", codeEchoArgs)
 
@@ -88,28 +88,83 @@ func TestExtension_ConvertsDashToUnderscoreInLookup(t *testing.T) {
 func TestExtension_DoesNotOverrideBuiltinCommand(t *testing.T) {
 	h := newExtensionHarness(t)
 	h.createExtension("temporal-workflow", codeEchoArgs)
+	h.createExtension("temporal-workflow-list", codeEchoArgs)
 
-	res := h.Execute("workflow", "--help")
+	t.Run("root command", func(t *testing.T) {
+		res := h.Execute("workflow", "--help")
+		assert.Contains(t, res.Stdout.String(), "Workflow commands perform operations on Workflow Executions")
+	})
 
-	assert.Contains(t, res.Stdout.String(), "Workflow commands perform operations on Workflow Executions")
+	t.Run("subcommand", func(t *testing.T) {
+		res := h.Execute("workflow", "list", "--help")
+		assert.Contains(t, res.Stdout.String(), "List Workflow Executions")
+	})
 }
 
-func TestExtension_ExtendsBuiltinWithSubcommand(t *testing.T) {
-	h := newExtensionHarness(t)
-	h.createExtension("temporal-workflow-diagram", codeEchoArgs)
-
-	res := h.Execute("workflow", "diagram")
-
-	assert.Equal(t, "Args: temporal-workflow-diagram \n", res.Stdout.String())
-}
-
-func TestExtension_PassesFlagsAfterExtensionCommand(t *testing.T) {
+func TestExtension_Flags(t *testing.T) {
 	h := newExtensionHarness(t)
 	h.createExtension("temporal-foo", codeEchoArgs)
+	h.createExtension("temporal-foo-bar", codeEchoArgs)
+	h.createExtension("temporal-foo-json", codeEchoArgs)
+	h.createExtension("temporal-workflow-diagram", codeEchoArgs)
+	h.createExtension("temporal-workflow-diagram-foo", codeEchoArgs)
+	h.createExtension("temporal-workflow-diagram-json", codeEchoArgs)
 
-	res := h.Execute("foo", "bar", "--flag", "value")
+	cases := []struct {
+		args string
+		want string
+		err  string
+	}{
+		// Root extension
 
-	assert.Equal(t, "Args: temporal-foo bar --flag value\n", res.Stdout.String())
+		{args: "--output json foo", want: "temporal-foo --output json"},
+		{args: "--output=json foo", want: "temporal-foo --output=json"},
+		{args: "-o json foo", want: "temporal-foo -o json"},
+		{args: "-o=json foo", want: "temporal-foo -o=json"},
+		{args: "--no-json-shorthand-payloads foo", want: "temporal-foo --no-json-shorthand-payloads"}, // boolean flag
+		{args: "--unknown-flag value foo", err: "unknown flag"},
+
+		{args: "foo --output json", want: "temporal-foo --output json"}, // not temporal-foo-json!
+		{args: "foo --output=json", want: "temporal-foo --output=json"},
+		{args: "foo -o json", want: "temporal-foo -o json"},
+		{args: "foo -o=json", want: "temporal-foo -o=json"},
+		{args: "foo -x bar", want: "temporal-foo-bar -x"},
+		{args: "foo bar --flag value", want: "temporal-foo-bar --flag value"}, // unknown flag passed through
+
+		// Subcommand extension
+
+		{args: "--output json workflow diagram", want: "temporal-workflow-diagram --output json"},
+		{args: "--output=json workflow diagram", want: "temporal-workflow-diagram --output=json"},
+		{args: "-o json workflow diagram", want: "temporal-workflow-diagram -o json"},
+		{args: "-o=json workflow diagram", want: "temporal-workflow-diagram -o=json"},
+		{args: "--unknown-flag value workflow diagram", err: "unknown flag"},
+
+		{args: "workflow --address localhost:7233 diagram", want: "temporal-workflow-diagram --address localhost:7233"},
+		{args: "workflow --address=localhost:7233 diagram", want: "temporal-workflow-diagram --address=localhost:7233"},
+		{args: "workflow -n my-namespace diagram", want: "temporal-workflow-diagram -n my-namespace"},
+		{args: "workflow -n=my-namespace diagram", want: "temporal-workflow-diagram -n=my-namespace"},
+		{args: "workflow --tls diagram", want: "temporal-workflow-diagram --tls"}, // boolean flag
+		{args: "workflow --unknown-flag diagram", err: "unknown flag"},
+
+		{args: "workflow diagram --output json", want: "temporal-workflow-diagram --output json"}, // not temporal-workflow-diagram-json!
+		{args: "workflow diagram --output=json", want: "temporal-workflow-diagram --output=json"},
+		{args: "workflow diagram -o json", want: "temporal-workflow-diagram -o json"},
+		{args: "workflow diagram -o=json", want: "temporal-workflow-diagram -o=json"},
+		{args: "workflow diagram -x foo", want: "temporal-workflow-diagram-foo -x"},
+		{args: "workflow diagram foo --flag value", want: "temporal-workflow-diagram-foo --flag value"},
+
+		// Note: Flag aliases are already implicitly tested via other command-specific tests.
+	}
+
+	for _, c := range cases {
+		res := h.Execute(strings.Split(c.args, " ")...)
+		if c.err != "" {
+			assert.ErrorContains(t, res.Err, c.err)
+		} else {
+			assert.Equal(t, "Args: "+c.want+"\n", res.Stdout.String())
+			assert.NoError(t, res.Err)
+		}
+	}
 }
 
 func TestExtension_PassesStdin(t *testing.T) {

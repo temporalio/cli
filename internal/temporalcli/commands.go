@@ -348,42 +348,19 @@ func Execute(ctx context.Context, options CommandOptions) {
 	defer cancel()
 
 	if err == nil {
-		// We have a context; let's actually run the command.
 		cmd := NewTemporalCommand(cctx)
 		cmd.Command.SetArgs(cctx.Options.Args)
 		cmd.Command.SetOut(cctx.Options.Stdout)
 		cmd.Command.SetErr(cctx.Options.Stderr)
 
-		// Check if a built-in command fully handles these args.
-		// Find() returns the deepest matching command and remaining args.
-		// If remaining args include positional args (not just flags), they could be
-		// an unknown subcommand that an extension might provide.
-		// Example: "workflow diagram" finds "workflow", leaving "diagram" for
-		// a potential "temporal-workflow-diagram" extension.
-		_, foundArgs, cmdErr := cmd.Command.Find(cctx.Options.Args)
-		hasRemainingPositionalArgs := slices.ContainsFunc(foundArgs, func(a string) bool {
-			return !strings.HasPrefix(a, "-")
-		})
-		builtInCommandExists := cmdErr == nil && !hasRemainingPositionalArgs
-
-		// If no built-in command exists, try extensions first.
-		if !builtInCommandExists {
-			// Parse flags to get --command-timeout value. If found, set the timeout.
-			_ = cmd.Command.PersistentFlags().Parse(cctx.Options.Args)
-			extCtx := cctx.Context
-			if timeout := cmd.CommandTimeout.Duration(); timeout > 0 {
-				var cancel context.CancelFunc
-				extCtx, cancel = context.WithTimeout(extCtx, timeout)
-				defer cancel()
-			}
-
-			if extErr, found := tryExecuteExtension(extCtx, &cctx.Options); found {
-				cctx.ActuallyRanCommand = true
-				err = extErr
-			}
+		// Try extension first.
+		err, cctx.ActuallyRanCommand = tryExecuteExtension(cctx, cmd)
+		if err != nil {
+			cctx.Options.Fail(err)
+			return
 		}
 
-		// Only run Cobra if no extension handled the command.
+		// Run builtin command if no extension handled the command.
 		if !cctx.ActuallyRanCommand {
 			err = cmd.Command.ExecuteContext(cctx)
 		}
