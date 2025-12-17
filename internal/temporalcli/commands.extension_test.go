@@ -93,10 +93,10 @@ func TestExtension_DoesNotOverrideBuiltinCommand(t *testing.T) {
 func TestExtension_Flags(t *testing.T) {
 	h := newExtensionHarness(t)
 	h.createExtension("temporal-foo", codeEchoArgs)
-	h.createExtension("temporal-foo-bar", codeEchoArgs)
+	h.createExtension("temporal-foo-bar", codeEchoArgs)  // should never be called
 	h.createExtension("temporal-foo-json", codeEchoArgs) // should never be called
 	h.createExtension("temporal-workflow-diagram", codeEchoArgs)
-	h.createExtension("temporal-workflow-diagram-foo", codeEchoArgs)
+	h.createExtension("temporal-workflow-diagram-foo", codeEchoArgs)  // should never be called
 	h.createExtension("temporal-workflow-diagram-json", codeEchoArgs) // should never be called
 
 	cases := []struct {
@@ -106,41 +106,46 @@ func TestExtension_Flags(t *testing.T) {
 	}{
 		// Root extension
 
+		{args: "--no-json-shorthand-payloads foo", want: "temporal-foo --no-json-shorthand-payloads"}, // boolean flag
 		{args: "--output json foo", want: "temporal-foo --output json"},
 		{args: "--output=json foo", want: "temporal-foo --output=json"},
-		{args: "-o json foo", want: "temporal-foo -o json"},
+		{args: "-o json foo", want: "temporal-foo -o json"}, // shorthand
 		{args: "-o=json foo", want: "temporal-foo -o=json"},
-		{args: "--no-json-shorthand-payloads foo", want: "temporal-foo --no-json-shorthand-payloads"}, // boolean flag
-		{args: "--unknown-flag value foo", err: "unknown flag"},
+		{args: "--unknown-flag value foo", err: "unknown flag"}, // unknown flag before extension name
+		{args: "--output invalid foo", err: "invalid argument"}, // invalid value for known flag
 
-		{args: "foo --output json", want: "temporal-foo --output json"}, // not temporal-foo-json!
+		{args: "foo --output json", want: "temporal-foo --output json"}, // not temporal-foo-json
 		{args: "foo --output=json", want: "temporal-foo --output=json"},
 		{args: "foo -o json", want: "temporal-foo -o json"},
 		{args: "foo -o=json", want: "temporal-foo -o=json"},
-		{args: "foo -x bar", want: "temporal-foo -x bar"},                     // unknown flag passed through
-		{args: "foo bar --flag value", want: "temporal-foo-bar --flag value"}, // nested commands
+		{args: "foo -x bar", want: "temporal-foo -x bar"},                         // not temporal-foo-x
+		{args: "foo --output invalid", err: "invalid argument"},                   // invalid value for known flag
+		{args: "foo arg1 -x value arg2", want: "temporal-foo arg1 -x value arg2"}, // order preserved
 
 		// Subcommand extension
 
 		{args: "--output json workflow diagram", want: "temporal-workflow-diagram --output json"},
 		{args: "--output=json workflow diagram", want: "temporal-workflow-diagram --output=json"},
-		{args: "-o json workflow diagram", want: "temporal-workflow-diagram -o json"},
+		{args: "-o json workflow diagram", want: "temporal-workflow-diagram -o json"}, // shorthand
 		{args: "-o=json workflow diagram", want: "temporal-workflow-diagram -o=json"},
 		{args: "--unknown-flag value workflow diagram", err: "unknown flag"},
 
-		{args: "workflow --address localhost:7233 diagram", want: "temporal-workflow-diagram --address localhost:7233"},
-		{args: "workflow --address=localhost:7233 diagram", want: "temporal-workflow-diagram --address=localhost:7233"},
-		{args: "workflow -n my-namespace diagram", want: "temporal-workflow-diagram -n my-namespace"},
-		{args: "workflow -n=my-namespace diagram", want: "temporal-workflow-diagram -n=my-namespace"},
 		{args: "workflow --tls diagram", want: "temporal-workflow-diagram --tls"}, // boolean flag
-		{args: "workflow --unknown-flag diagram", err: "unknown flag"},
+		{args: "workflow --namespace my-ns diagram", want: "temporal-workflow-diagram --namespace my-ns"},
+		{args: "workflow --namespace=my-ns diagram", want: "temporal-workflow-diagram --namespace=my-ns"},
+		{args: "workflow -n my-ns diagram", want: "temporal-workflow-diagram -n my-ns"}, // shorthand
+		{args: "workflow -n=my-ns diagram", want: "temporal-workflow-diagram -n=my-ns"},
+		{args: "workflow --unknown-flag diagram", err: "unknown flag"},       // unknown flag before extension name
+		{args: "workflow --output invalid diagram", err: "invalid argument"}, // invalid value for known flag
 
-		{args: "workflow diagram --output json", want: "temporal-workflow-diagram --output json"}, // not temporal-workflow-diagram-json!
+		{args: "workflow diagram --output json", want: "temporal-workflow-diagram --output json"}, // not temporal-workflow-diagram-json
 		{args: "workflow diagram --output=json", want: "temporal-workflow-diagram --output=json"},
-		{args: "workflow diagram -o json", want: "temporal-workflow-diagram -o json"},
+		{args: "workflow diagram -o json", want: "temporal-workflow-diagram -o json"}, // shorthand
 		{args: "workflow diagram -o=json", want: "temporal-workflow-diagram -o=json"},
-		{args: "workflow diagram -x foo", want: "temporal-workflow-diagram -x foo"},                     // unknown flag passed through
-		{args: "workflow diagram foo --flag value", want: "temporal-workflow-diagram-foo --flag value"}, // nested commands
+		{args: "workflow diagram -x foo", want: "temporal-workflow-diagram -x foo"},                         // not temporal-workflow-diagram-foo
+		{args: "workflow diagram arg1 -x value arg2", want: "temporal-workflow-diagram arg1 -x value arg2"}, // order preserved
+		{args: "workflow diagram foo --flag value", want: "temporal-workflow-diagram-foo --flag value"},     // nested commands
+		{args: "workflow diagram --output invalid", err: "invalid argument"},                                // invalid value for known flag
 
 		// Note: Flag aliases are already implicitly tested via other command-specific tests.
 	}
@@ -228,8 +233,10 @@ func TestExtension_FailsOnCommandTimeout(t *testing.T) {
 	h.createExtension("temporal-foo", codeSleep(10*time.Second))
 
 	res := h.Execute("foo", "--command-timeout", "100ms")
-
 	assert.EqualError(t, res.Err, "program interrupted")
+
+	res = h.Execute("foo", "--command-timeout", "invalid")
+	assert.ErrorContains(t, res.Err, "invalid argument \"invalid\"")
 }
 
 func TestExtension_FailsOnCommandCancellation(t *testing.T) {

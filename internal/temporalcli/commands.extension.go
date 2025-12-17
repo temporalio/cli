@@ -21,8 +21,6 @@ const (
 // It returns an error if the extension command fails, and a boolean indicating whether an extension was executed.
 func tryExecuteExtension(cctx *CommandContext, tcmd *TemporalCommand) (error, bool) {
 	// Find the deepest matching built-in command and remaining args.
-	//
-	// E.g., "workflow diagram" -> foundCmd="workflow", remainingArgs=["diagram"].
 	foundCmd, remainingArgs, findErr := tcmd.Command.Find(cctx.Options.Args)
 
 	// Check if remaining args include positional args (not just flags).
@@ -32,39 +30,31 @@ func tryExecuteExtension(cctx *CommandContext, tcmd *TemporalCommand) (error, bo
 		return nil, false
 	}
 
-	// Separate known CLI flags from extension args.
-	//
-	// E.g., ["--output", "json", "foo", "--bar"] -> cliFlags=["--output", "json"], extArgs=["foo", "--bar"]
-	cliFlags, extArgs, splitErr := splitArgs(foundCmd, remainingArgs)
+	// Split args into CLI args and extension args:
+	// 	- cliArgs contains known flags and unknown flags before the first positional argument
+	//  - extArgs contains the rest
+	// Also returns whether cliArgs contains unknown flags.
+	cliArgs, cliArgUnknown, extArgs := splitArgs(foundCmd, remainingArgs)
 
-	// If there was an unknown flag before the extension name, reject it.
-	if splitErr != nil {
-		return splitErr, false
-	}
-
-	// If no positional args remain (potential extension names), let the built-in command handle it.
-	if len(extArgs) == 0 {
+	// Search for an extension executable.
+	cmdPrefix := strings.Split(foundCmd.CommandPath(), " ")[1:]
+	extPath, extArgs := lookupExtension(cmdPrefix, extArgs)
+	if extPath == "" && !cliArgUnknown {
 		return nil, false
 	}
 
-	// Build command prefix from command path (excluding root "temporal").
-	//
-	// E.g., "temporal workflow" -> ["workflow"]
-	//       "temporal workflow list" -> ["workflow", "list"]
-	cmdPrefix := strings.Split(foundCmd.CommandPath(), " ")[1:]
+	// Parse CLI args to validate flags.
+	// Happens even if no extension was found to provide proper flag error message.
+	if err := foundCmd.Flags().Parse(cliArgs); err != nil {
+		return err, false
+	}
 
-	// Search for an extension executable.
-	// Positional args are used to build the extension name.
-	//
-	// E.g., cmdPrefix=["workflow"], extArgs=["diagram", "arg1"] -> extPath="temporal-workflow-diagram", unmatchedArgs=["arg1"]
-	extPath, unmatchedArgs := lookupExtension(cmdPrefix, extArgs)
+	// Abort if no extension was found.
 	if extPath == "" {
 		return nil, false
 	}
 
 	// Apply --command-timeout if set.
-	// Parse errors are ignored since flag validation already happened earlier.
-	_ = tcmd.Command.PersistentFlags().Parse(cctx.Options.Args)
 	ctx := cctx.Context
 	if timeout := tcmd.CommandTimeout.Duration(); timeout > 0 {
 		var cancel context.CancelFunc
@@ -72,8 +62,7 @@ func tryExecuteExtension(cctx *CommandContext, tcmd *TemporalCommand) (error, bo
 		defer cancel()
 	}
 
-	// Execute the extension command.
-	cmd := exec.CommandContext(ctx, extPath, append(cliFlags, unmatchedArgs...)...)
+	cmd := exec.CommandContext(ctx, extPath, append(cliArgs, extArgs...)...)
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = cctx.Options.Stdin, cctx.Options.Stdout, cctx.Options.Stderr
 	if err := cmd.Run(); err != nil {
 		if ctx.Err() != nil {
@@ -88,112 +77,97 @@ func tryExecuteExtension(cctx *CommandContext, tcmd *TemporalCommand) (error, bo
 	return nil, true
 }
 
-func splitArgs(foundCmd *cobra.Command, args []string) (cliFlags, extArgs []string, err error) {
-	// Build map of all flags and whether they take a value by walking up the command tree.
-	flagTakesValue := map[string]bool{}
-	for c := foundCmd; c != nil; c = c.Parent() {
-		c.Flags().VisitAll(func(f *pflag.Flag) {
-			// NoOptDefVal is only set for boolean flags and empty for flags requiring a value.
-			takesValue := f.NoOptDefVal == ""
-			if _, ok := flagTakesValue[f.Name]; !ok {
-				flagTakesValue[f.Name] = takesValue
-			}
-			if f.Shorthand != "" {
-				if _, ok := flagTakesValue[f.Shorthand]; !ok {
-					flagTakesValue[f.Shorthand] = takesValue
-				}
-			}
-		})
-	}
-
-	// Get flag normalizer to handle aliases.
-	normalize := foundCmd.Flags().GetNormalizeFunc()
-
-	// Split args into CLI flags (known flags) and extension args (positional args + unknown flags).
-	// Unknown flags before the first positional arg are rejected.
-	seenPosArg := false
+func splitArgs(foundCmd *cobra.Command, args []string) (cliArgs []string, cliArgUnknown bool, extArgs []string) {
+	seenPos := false
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
 
-		// Positional arg: goes to extension args.
 		if isPosArg(arg) {
-			seenPosArg = true
+			seenPos = true
 			extArgs = append(extArgs, arg)
 			continue
 		}
 
-		// Extract flag name, handling both --flag=value and --flag value forms.
-		name, _, hasInline := strings.Cut(strings.TrimLeft(arg, "-"), "=")
+		name, hasInline := parseFlagArg(arg)
 
-		// Normalize the flag name to handle aliases.
-		if normalize != nil {
-			name = string(normalize(foundCmd.Flags(), name))
-		}
-
-		takesValue, isKnown := flagTakesValue[name]
-		if !isKnown {
-			if !seenPosArg {
-				// Unknown flags before first positional arg are rejected.
-				if err == nil {
-					err = fmt.Errorf("unknown flag: --%s", name)
-				}
-				continue
+		// Known flag: goes to cliArgs for validation.
+		if f, takesValue := lookupFlag(foundCmd, name); f != nil {
+			cliArgs = append(cliArgs, arg)
+			if takesValue && !hasInline && i+1 < len(args) {
+				i++
+				cliArgs = append(cliArgs, args[i])
 			}
-			// Unknown flags after first positional arg go to extension.
-			extArgs = append(extArgs, arg)
 			continue
 		}
 
-		// Known flag: goes to CLI flags.
-		cliFlags = append(cliFlags, arg)
-
-		// If flag takes a value and it's not inline (--flag=value), consume next arg.
-		if takesValue && !hasInline && i+1 < len(args) {
-			i++
-			cliFlags = append(cliFlags, args[i])
+		// Unknown flag.
+		if seenPos {
+			// After first positional: goes to extArgs.
+			extArgs = append(extArgs, arg)
+		} else {
+			// Before first positional: goes to cliArgs.
+			cliArgs = append(cliArgs, arg)
+			cliArgUnknown = true
 		}
 	}
-
-	return cliFlags, extArgs, err
+	return
 }
 
-func lookupExtension(cmdPrefix, args []string) (extPath string, unmatchedArgs []string) {
-	// Collect positional args for extension name lookup, stopping at the first flag.
-	// Args after the first flag are passed through to the extension, not used for lookup.
+func isPosArg(arg string) bool {
+	return !strings.HasPrefix(arg, "-")
+}
+
+// parseFlagArg extracts the flag name from a flag argument.
+// Handles both --flag=value and --flag forms, returning the name and whether it has an inline value.
+func parseFlagArg(arg string) (name string, hasInline bool) {
+	name, _, hasInline = strings.Cut(strings.TrimLeft(arg, "-"), "=")
+	return
+}
+
+// lookupFlag finds a flag by name on cmd and all parents.
+// It resolves aliases and considers shorthand flags.
+func lookupFlag(cmd *cobra.Command, name string) (*pflag.Flag, bool) {
+	if normalize := cmd.Flags().GetNormalizeFunc(); normalize != nil {
+		name = string(normalize(cmd.Flags(), name))
+	}
+	for c := cmd; c != nil; c = c.Parent() {
+		if f := c.Flags().Lookup(name); f != nil {
+			return f, f.NoOptDefVal == ""
+		}
+		if len(name) == 1 {
+			if f := c.Flags().ShorthandLookup(name); f != nil {
+				return f, f.NoOptDefVal == ""
+			}
+		}
+	}
+	return nil, false
+}
+
+// lookupExtension finds an extension executable and returns its path along with
+// extArgs with matched positional args removed.
+func lookupExtension(cmdPrefix, extArgs []string) (string, []string) {
+	// Extract positional args from extArgs until we hit an unknown flag.
+	// We stop at unknown flags because we can't tell if subsequent args are flag values or positionals.
 	var posArgs []string
-	firstFlagIdx := len(args)
-	for i, arg := range args {
+	for _, arg := range extArgs {
 		if !isPosArg(arg) {
-			firstFlagIdx = i
 			break
 		}
 		// Dashes are converted to underscores so "foo bar-baz" finds "temporal-foo-bar_baz".
-		// This avoids ambiguity since dashes separate command parts in the executable name.
 		posArgs = append(posArgs, strings.ReplaceAll(arg, extensionSeparator, argDashReplacement))
 	}
 
-	parts := append(cmdPrefix, posArgs...)
-	if len(parts) == 0 {
-		return "", nil
-	}
-
 	// Try most-specific to least-specific.
+	parts := append(cmdPrefix, posArgs...)
 	for n := len(parts); n > 0; n-- {
 		path, err := exec.LookPath(extensionPrefix + strings.Join(parts[:n], extensionSeparator))
 		if err != nil {
 			continue
 		}
-
-		// Build unmatched args: positional args after matched count + everything after first flag.
+		// Remove matched positionals from extArgs (they come first).
 		matched := max(n-len(cmdPrefix), 0)
-		unmatchedArgs = append(unmatchedArgs, args[matched:firstFlagIdx]...)
-		unmatchedArgs = append(unmatchedArgs, args[firstFlagIdx:]...)
-		return path, unmatchedArgs
+		return path, extArgs[matched:]
 	}
 
-	return "", nil
-}
-
-func isPosArg(arg string) bool {
-	return !strings.HasPrefix(arg, "-")
+	return "", extArgs
 }
