@@ -787,7 +787,7 @@ commands:
       Remove a property within a profile.
 
       ```
-      temporal env delete \
+      temporal config delete \
           --prop tls.client_cert_path
       ```
     options:
@@ -805,7 +805,7 @@ commands:
       Remove a full profile entirely. The `--profile` must be set explicitly.
 
       ```
-      temporal env delete-profile \
+      temporal config delete-profile \
           --profile my-profile
       ```
 
