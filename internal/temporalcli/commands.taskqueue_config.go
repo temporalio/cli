@@ -24,16 +24,16 @@ func (c *TemporalTaskQueueConfigGetCommand) run(cctx *CommandContext, args []str
 		return err
 	}
 
-	namespace := c.Parent.Parent.Namespace
-	if namespace == "" {
-		return fmt.Errorf("namespace is required")
-	}
-
 	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
 	if err != nil {
 		return err
 	}
 	defer cl.Close()
+
+	namespace := c.Parent.Parent.Namespace
+	if namespace == "" {
+		return fmt.Errorf("namespace is required")
+	}
 
 	// Get the task queue configuration
 	resp, err := cl.WorkflowService().DescribeTaskQueue(cctx, &workflowservice.DescribeTaskQueueRequest{
@@ -67,11 +67,6 @@ func (c *TemporalTaskQueueConfigSetCommand) run(cctx *CommandContext, args []str
 	taskQueueType, err := parseTaskQueueType(c.TaskQueueType.Value)
 	if err != nil {
 		return err
-	}
-
-	namespace := c.Parent.Parent.Namespace
-	if namespace == "" {
-		return fmt.Errorf("namespace is required")
 	}
 
 	// Check workflow task queue restrictions
@@ -128,6 +123,11 @@ func (c *TemporalTaskQueueConfigSetCommand) run(cctx *CommandContext, args []str
 		return err
 	}
 	defer cl.Close()
+
+	namespace := c.Parent.Parent.Namespace
+	if namespace == "" {
+		return fmt.Errorf("namespace is required")
+	}
 
 	request := &workflowservice.UpdateTaskQueueConfigRequest{
 		Namespace:     namespace,
