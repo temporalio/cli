@@ -61,17 +61,6 @@ func TestExtension_PrefersMostSpecificExtension(t *testing.T) {
 	assert.Equal(t, "Args: temporal-foo-bar \n", res.Stdout.String())
 }
 
-func TestExtension_SkipsFlagsInLookup(t *testing.T) {
-	h := newExtensionHarness(t)
-	h.createExtension("temporal-foo", codeEchoArgs)
-	h.createExtension("temporal-foo-bar", codeEchoArgs)
-
-	res := h.Execute("foo", "-x", "bar")
-
-	// Should find temporal-foo-bar (skipping -x), not temporal-foo.
-	assert.Equal(t, "Args: temporal-foo-bar -x\n", res.Stdout.String())
-}
-
 func TestExtension_ConvertsDashToUnderscoreInLookup(t *testing.T) {
 	h := newExtensionHarness(t)
 	h.createExtension("temporal-foo-bar_baz", codeEchoArgs)
@@ -105,10 +94,10 @@ func TestExtension_Flags(t *testing.T) {
 	h := newExtensionHarness(t)
 	h.createExtension("temporal-foo", codeEchoArgs)
 	h.createExtension("temporal-foo-bar", codeEchoArgs)
-	h.createExtension("temporal-foo-json", codeEchoArgs)
+	h.createExtension("temporal-foo-json", codeEchoArgs) // should never be called
 	h.createExtension("temporal-workflow-diagram", codeEchoArgs)
 	h.createExtension("temporal-workflow-diagram-foo", codeEchoArgs)
-	h.createExtension("temporal-workflow-diagram-json", codeEchoArgs)
+	h.createExtension("temporal-workflow-diagram-json", codeEchoArgs) // should never be called
 
 	cases := []struct {
 		args string
@@ -128,8 +117,8 @@ func TestExtension_Flags(t *testing.T) {
 		{args: "foo --output=json", want: "temporal-foo --output=json"},
 		{args: "foo -o json", want: "temporal-foo -o json"},
 		{args: "foo -o=json", want: "temporal-foo -o=json"},
-		{args: "foo -x bar", want: "temporal-foo-bar -x"},
-		{args: "foo bar --flag value", want: "temporal-foo-bar --flag value"}, // unknown flag passed through
+		{args: "foo -x bar", want: "temporal-foo -x bar"},                     // unknown flag passed through
+		{args: "foo bar --flag value", want: "temporal-foo-bar --flag value"}, // nested commands
 
 		// Subcommand extension
 
@@ -150,8 +139,8 @@ func TestExtension_Flags(t *testing.T) {
 		{args: "workflow diagram --output=json", want: "temporal-workflow-diagram --output=json"},
 		{args: "workflow diagram -o json", want: "temporal-workflow-diagram -o json"},
 		{args: "workflow diagram -o=json", want: "temporal-workflow-diagram -o=json"},
-		{args: "workflow diagram -x foo", want: "temporal-workflow-diagram-foo -x"},
-		{args: "workflow diagram foo --flag value", want: "temporal-workflow-diagram-foo --flag value"},
+		{args: "workflow diagram -x foo", want: "temporal-workflow-diagram -x foo"},                     // unknown flag passed through
+		{args: "workflow diagram foo --flag value", want: "temporal-workflow-diagram-foo --flag value"}, // nested commands
 
 		// Note: Flag aliases are already implicitly tested via other command-specific tests.
 	}

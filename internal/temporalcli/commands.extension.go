@@ -158,14 +158,18 @@ func splitArgs(foundCmd *cobra.Command, args []string) (cliFlags, extArgs []stri
 }
 
 func lookupExtension(cmdPrefix, args []string) (extPath string, unmatchedArgs []string) {
-	// Collect positional args for extension name lookup.
-	// Dashes are converted to underscores so "foo bar-baz" finds "temporal-foo-bar_baz".
-	// This avoids ambiguity since dashes separate command parts in the executable name.
+	// Collect positional args for extension name lookup, stopping at the first flag.
+	// Args after the first flag are passed through to the extension, not used for lookup.
 	var posArgs []string
-	for _, arg := range args {
-		if isPosArg(arg) {
-			posArgs = append(posArgs, strings.ReplaceAll(arg, extensionSeparator, argDashReplacement))
+	firstFlagIdx := len(args)
+	for i, arg := range args {
+		if !isPosArg(arg) {
+			firstFlagIdx = i
+			break
 		}
+		// Dashes are converted to underscores so "foo bar-baz" finds "temporal-foo-bar_baz".
+		// This avoids ambiguity since dashes separate command parts in the executable name.
+		posArgs = append(posArgs, strings.ReplaceAll(arg, extensionSeparator, argDashReplacement))
 	}
 
 	parts := append(cmdPrefix, posArgs...)
@@ -180,16 +184,10 @@ func lookupExtension(cmdPrefix, args []string) (extPath string, unmatchedArgs []
 			continue
 		}
 
-		// Build unmatched args: all flags + positional args after matched count.
+		// Build unmatched args: positional args after matched count + everything after first flag.
 		matched := max(n-len(cmdPrefix), 0)
-		posSeen := 0
-		for _, arg := range args {
-			if !isPosArg(arg) {
-				unmatchedArgs = append(unmatchedArgs, arg)
-			} else if posSeen++; posSeen > matched {
-				unmatchedArgs = append(unmatchedArgs, arg)
-			}
-		}
+		unmatchedArgs = append(unmatchedArgs, args[matched:firstFlagIdx]...)
+		unmatchedArgs = append(unmatchedArgs, args[firstFlagIdx:]...)
 		return path, unmatchedArgs
 	}
 
