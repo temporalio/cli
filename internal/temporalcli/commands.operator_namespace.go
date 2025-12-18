@@ -26,16 +26,16 @@ func (c *TemporalOperatorCommand) getNSFromFlagOrArg0(cctx *CommandContext, args
 }
 
 func (c *TemporalOperatorNamespaceCreateCommand) run(cctx *CommandContext, args []string) error {
-	nsName, err := c.Parent.Parent.getNSFromFlagOrArg0(cctx, args)
-	if err != nil {
-		return err
-	}
-
 	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
 	if err != nil {
 		return err
 	}
 	defer cl.Close()
+
+	nsName, err := c.Parent.Parent.getNSFromFlagOrArg0(cctx, args)
+	if err != nil {
+		return err
+	}
 
 	var clusters []*replication.ClusterReplicationConfig
 	for _, clusterName := range c.Cluster {
@@ -74,6 +74,12 @@ func (c *TemporalOperatorNamespaceCreateCommand) run(cctx *CommandContext, args 
 }
 
 func (c *TemporalOperatorNamespaceDeleteCommand) run(cctx *CommandContext, args []string) error {
+	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
 	nsName, err := c.Parent.Parent.getNSFromFlagOrArg0(cctx, args)
 	if err != nil {
 		return err
@@ -90,12 +96,6 @@ func (c *TemporalOperatorNamespaceDeleteCommand) run(cctx *CommandContext, args 
 	if !yes {
 		return fmt.Errorf("user denied confirmation or mistyped the namespace name")
 	}
-
-	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
-	if err != nil {
-		return err
-	}
-	defer cl.Close()
 
 	resp, err := cl.OperatorService().DeleteNamespace(cctx, &operatorservice.DeleteNamespaceRequest{
 		Namespace: nsName,
@@ -114,6 +114,12 @@ func (c *TemporalOperatorNamespaceDeleteCommand) run(cctx *CommandContext, args 
 func (c *TemporalOperatorNamespaceDescribeCommand) run(cctx *CommandContext, args []string) error {
 	nsID := c.NamespaceId
 
+	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
 	nsName, err := c.Parent.Parent.getNSFromFlagOrArg0(cctx, args)
 	if err != nil {
 		return err
@@ -130,12 +136,6 @@ func (c *TemporalOperatorNamespaceDescribeCommand) run(cctx *CommandContext, arg
 	if (nsID == "" && nsName == "") || (nsID != "" && nsName != "") {
 		return fmt.Errorf("provide one of --namespace-id=<uuid> or -n name, but not both")
 	}
-
-	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
-	if err != nil {
-		return err
-	}
-	defer cl.Close()
 
 	resp, err := cl.WorkflowService().DescribeNamespace(cctx, &workflowservice.DescribeNamespaceRequest{
 		Namespace: nsName,
@@ -193,16 +193,16 @@ func (c *TemporalOperatorNamespaceListCommand) run(cctx *CommandContext, args []
 }
 
 func (c *TemporalOperatorNamespaceUpdateCommand) run(cctx *CommandContext, args []string) error {
-	nsName, err := c.Parent.Parent.getNSFromFlagOrArg0(cctx, args)
-	if err != nil {
-		return err
-	}
-
 	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
 	if err != nil {
 		return err
 	}
 	defer cl.Close()
+
+	nsName, err := c.Parent.Parent.getNSFromFlagOrArg0(cctx, args)
+	if err != nil {
+		return err
+	}
 
 	var updateRequest *workflowservice.UpdateNamespaceRequest
 
