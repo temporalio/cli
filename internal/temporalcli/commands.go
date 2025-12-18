@@ -61,18 +61,22 @@ type CommandContext struct {
 	CurrentCommand *cobra.Command
 }
 
+type IOStreams struct {
+	Stdin  io.Reader
+	Stdout io.Writer
+	Stderr io.Writer
+}
+
 type CommandOptions struct {
+	// IOStreams defaults to OS values.
+	IOStreams
+
 	// If empty, assumed to be os.Args[1:]
 	Args []string
 	// Deprecated `--env` and `--env-file` approach
 	DeprecatedEnvConfig DeprecatedEnvConfig
 	// If nil, [envconfig.EnvLookupOS] is used.
 	EnvLookup envconfig.EnvLookup
-
-	// These three fields below default to OS values
-	Stdin  io.Reader
-	Stdout io.Writer
-	Stderr io.Writer
 
 	// Defaults to logging error then os.Exit(1)
 	Fail func(error)
@@ -344,10 +348,22 @@ func Execute(ctx context.Context, options CommandOptions) {
 	defer cancel()
 
 	if err == nil {
-		// We have a context; let's actually run the command.
 		cmd := NewTemporalCommand(cctx)
 		cmd.Command.SetArgs(cctx.Options.Args)
-		err = cmd.Command.ExecuteContext(cctx)
+		cmd.Command.SetOut(cctx.Options.Stdout)
+		cmd.Command.SetErr(cctx.Options.Stderr)
+
+		// Try extension first.
+		err, cctx.ActuallyRanCommand = tryExecuteExtension(cctx, cmd)
+		if err != nil {
+			cctx.Options.Fail(err)
+			return
+		}
+
+		// Run builtin command if no extension handled the command.
+		if !cctx.ActuallyRanCommand {
+			err = cmd.Command.ExecuteContext(cctx)
+		}
 	}
 
 	if err != nil {
