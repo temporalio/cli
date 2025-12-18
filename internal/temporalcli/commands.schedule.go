@@ -147,7 +147,7 @@ func specToPrintable(out *printableSchedule, spec *client.ScheduleSpec) {
 }
 
 func (c *TemporalScheduleBackfillCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -279,7 +279,7 @@ func toScheduleAction(sw *SharedWorkflowStartOptions, i *PayloadInputOptions) (c
 }
 
 func (c *TemporalScheduleCreateCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -313,7 +313,7 @@ func (c *TemporalScheduleCreateCommand) run(cctx *CommandContext, args []string)
 }
 
 func (c *TemporalScheduleDeleteCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -328,7 +328,7 @@ func (c *TemporalScheduleDeleteCommand) run(cctx *CommandContext, args []string)
 }
 
 func (c *TemporalScheduleDescribeCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -362,7 +362,7 @@ func (c *TemporalScheduleDescribeCommand) run(cctx *CommandContext, args []strin
 }
 
 func (c *TemporalScheduleListCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -470,7 +470,7 @@ func (c *TemporalScheduleToggleCommand) run(cctx *CommandContext, args []string)
 		return errors.New("exactly one of --pause or --unpause is required")
 	}
 
-	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -489,7 +489,7 @@ func (c *TemporalScheduleToggleCommand) run(cctx *CommandContext, args []string)
 }
 
 func (c *TemporalScheduleTriggerCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -512,7 +512,7 @@ func (c *TemporalScheduleTriggerCommand) run(cctx *CommandContext, args []string
 }
 
 func (c *TemporalScheduleUpdateCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}

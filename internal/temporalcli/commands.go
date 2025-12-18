@@ -19,6 +19,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"github.com/temporalio/cli/cliext"
 	"github.com/temporalio/cli/internal/printer"
 	"github.com/temporalio/ui-server/v2/server/version"
 	"go.temporal.io/api/common/v1"
@@ -507,34 +508,10 @@ func (c *TemporalCommand) preRun(cctx *CommandContext) error {
 
 	// Configure logger if not already on context
 	if cctx.Logger == nil {
-		// If level is never, make noop logger
-		if c.LogLevel.Value == "never" {
-			cctx.Logger = newNopLogger()
-		} else {
-			var level slog.Level
-			if err := level.UnmarshalText([]byte(c.LogLevel.Value)); err != nil {
-				return fmt.Errorf("invalid log level %q: %w", c.LogLevel.Value, err)
-			}
-			var handler slog.Handler
-			switch c.LogFormat.Value {
-			// We have a "pretty" alias for compatibility
-			case "", "text", "pretty":
-				handler = slog.NewTextHandler(cctx.Options.Stderr, &slog.HandlerOptions{
-					Level: level,
-					// Remove the TZ
-					ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
-						if a.Key == slog.TimeKey && a.Value.Kind() == slog.KindTime {
-							a.Value = slog.StringValue(a.Value.Time().Format("2006-01-02T15:04:05.000"))
-						}
-						return a
-					},
-				})
-			case "json":
-				handler = slog.NewJSONHandler(cctx.Options.Stderr, &slog.HandlerOptions{Level: level})
-			default:
-				return fmt.Errorf("invalid log format %q", c.LogFormat.Value)
-			}
-			cctx.Logger = slog.New(handler)
+		var err error
+		cctx.Logger, err = cliext.NewLogger(c.CommonOptions, cctx.Options.Stderr)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -591,15 +568,6 @@ func aliasNormalizer(aliases map[string]string) func(f *pflag.FlagSet, name stri
 		return pflag.NormalizedName(name)
 	}
 }
-
-func newNopLogger() *slog.Logger { return slog.New(discardLogHandler{}) }
-
-type discardLogHandler struct{}
-
-func (discardLogHandler) Enabled(context.Context, slog.Level) bool  { return false }
-func (discardLogHandler) Handle(context.Context, slog.Record) error { return nil }
-func (d discardLogHandler) WithAttrs([]slog.Attr) slog.Handler      { return d }
-func (d discardLogHandler) WithGroup(string) slog.Handler           { return d }
 
 func timestampToTime(t *timestamppb.Timestamp) time.Time {
 	if t == nil {
