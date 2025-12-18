@@ -59,9 +59,10 @@ type (
 
 	// OptionSets represents the structure of option sets.
 	OptionSets struct {
-		Name        string   `yaml:"name"`
-		Description string   `yaml:"description"`
-		Options     []Option `yaml:"options"`
+		Name            string   `yaml:"name"`
+		Description     string   `yaml:"description"`
+		Options         []Option `yaml:"options"`
+		ExternalPackage string   `yaml:"external-package"`
 	}
 
 	// Commands represents the top-level structure holding commands and option sets.
@@ -71,35 +72,79 @@ type (
 	}
 )
 
-// ParseCommands parses command definitions from YAML bytes.
-func ParseCommands(yamlData []byte) (Commands, error) {
-	// Fix CRLF
-	md := bytes.ReplaceAll(yamlData, []byte("\r\n"), []byte("\n"))
+// IsExternal returns true if this option set references an external package.
+func (o *OptionSets) IsExternal() bool {
+	return o.ExternalPackage != ""
+}
 
-	var m Commands
-	err := yaml.Unmarshal(md, &m)
-	if err != nil {
-		return Commands{}, fmt.Errorf("failed unmarshalling yaml: %w", err)
+// ParseCommands parses command definitions from one or more YAML byte slices.
+// When multiple sources are provided, they are merged with later sources
+// taking precedence, except for external option-sets which are preserved.
+func ParseCommands(yamlDataList ...[]byte) (Commands, error) {
+	var merged Commands
+
+	for _, yamlData := range yamlDataList {
+		// Fix CRLF
+		md := bytes.ReplaceAll(yamlData, []byte("\r\n"), []byte("\n"))
+
+		var m Commands
+		err := yaml.Unmarshal(md, &m)
+		if err != nil {
+			return Commands{}, fmt.Errorf("failed unmarshalling yaml: %w", err)
+		}
+
+		// Merge option sets
+		for _, newOptSet := range m.OptionSets {
+			found := false
+			for j, existing := range merged.OptionSets {
+				if existing.Name == newOptSet.Name {
+					found = true
+					// Don't override external references - they take precedence
+					if !existing.IsExternal() {
+						merged.OptionSets[j] = newOptSet
+					}
+					break
+				}
+			}
+			if !found {
+				merged.OptionSets = append(merged.OptionSets, newOptSet)
+			}
+		}
+
+		// Merge commands (later sources override)
+		for _, newCmd := range m.CommandList {
+			found := false
+			for j, existing := range merged.CommandList {
+				if existing.FullName == newCmd.FullName {
+					found = true
+					merged.CommandList[j] = newCmd
+					break
+				}
+			}
+			if !found {
+				merged.CommandList = append(merged.CommandList, newCmd)
+			}
+		}
 	}
 
-	for i, optionSet := range m.OptionSets {
-		if err := m.OptionSets[i].processSection(); err != nil {
+	for i, optionSet := range merged.OptionSets {
+		if err := merged.OptionSets[i].processSection(); err != nil {
 			return Commands{}, fmt.Errorf("failed parsing option set section %q: %w", optionSet.Name, err)
 		}
 	}
 
-	for i, command := range m.CommandList {
-		if err := m.CommandList[i].processSection(); err != nil {
+	for i, command := range merged.CommandList {
+		if err := merged.CommandList[i].processSection(); err != nil {
 			return Commands{}, fmt.Errorf("failed parsing command section %q: %w", command.FullName, err)
 		}
 	}
 
 	// alphabetize commands
-	sort.Slice(m.CommandList, func(i, j int) bool {
-		return m.CommandList[i].FullName < m.CommandList[j].FullName
+	sort.Slice(merged.CommandList, func(i, j int) bool {
+		return merged.CommandList[i].FullName < merged.CommandList[j].FullName
 	})
 
-	return m, nil
+	return merged, nil
 }
 
 var markdownLinkPattern = regexp.MustCompile(`\[(.*?)\]\((.*?)\)`)
@@ -112,6 +157,11 @@ const ansiBold = "\033[1m"
 func (o OptionSets) processSection() error {
 	if o.Name == "" {
 		return fmt.Errorf("missing option set name")
+	}
+
+	// External option-sets don't need validation
+	if o.IsExternal() {
+		return nil
 	}
 
 	for i, option := range o.Options {

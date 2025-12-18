@@ -86,7 +86,7 @@ type getConflictTokenOptions struct {
 }
 
 func (c *TemporalTaskQueueVersioningCommand) getConflictToken(cctx *CommandContext, options *getConflictTokenOptions) (client.VersioningConflictToken, error) {
-	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return client.VersioningConflictToken{}, err
 	}
@@ -131,7 +131,7 @@ func (c *TemporalTaskQueueVersioningCommand) getConflictToken(cctx *CommandConte
 }
 
 func (c *TemporalTaskQueueVersioningCommand) updateBuildIdRules(cctx *CommandContext, options client.UpdateWorkerVersioningRulesOptions) error {
-	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -321,7 +321,7 @@ func (c *TemporalTaskQueueVersioningReplaceRedirectRuleCommand) run(cctx *Comman
 }
 
 func (c *TemporalTaskQueueVersioningGetRulesCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}

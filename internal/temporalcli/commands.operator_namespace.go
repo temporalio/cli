@@ -26,16 +26,16 @@ func (c *TemporalOperatorCommand) getNSFromFlagOrArg0(cctx *CommandContext, args
 }
 
 func (c *TemporalOperatorNamespaceCreateCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
-	if err != nil {
-		return err
-	}
-	defer cl.Close()
-
 	nsName, err := c.Parent.Parent.getNSFromFlagOrArg0(cctx, args)
 	if err != nil {
 		return err
 	}
+
+	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
 
 	var clusters []*replication.ClusterReplicationConfig
 	for _, clusterName := range c.Cluster {
@@ -74,7 +74,7 @@ func (c *TemporalOperatorNamespaceCreateCommand) run(cctx *CommandContext, args 
 }
 
 func (c *TemporalOperatorNamespaceDeleteCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -114,7 +114,7 @@ func (c *TemporalOperatorNamespaceDeleteCommand) run(cctx *CommandContext, args 
 func (c *TemporalOperatorNamespaceDescribeCommand) run(cctx *CommandContext, args []string) error {
 	nsID := c.NamespaceId
 
-	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -156,7 +156,7 @@ func (c *TemporalOperatorNamespaceDescribeCommand) run(cctx *CommandContext, arg
 }
 
 func (c *TemporalOperatorNamespaceListCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -193,16 +193,16 @@ func (c *TemporalOperatorNamespaceListCommand) run(cctx *CommandContext, args []
 }
 
 func (c *TemporalOperatorNamespaceUpdateCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
-	if err != nil {
-		return err
-	}
-	defer cl.Close()
-
 	nsName, err := c.Parent.Parent.getNSFromFlagOrArg0(cctx, args)
 	if err != nil {
 		return err
 	}
+
+	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
 
 	var updateRequest *workflowservice.UpdateNamespaceRequest
 

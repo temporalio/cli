@@ -24,16 +24,16 @@ func (c *TemporalTaskQueueConfigGetCommand) run(cctx *CommandContext, args []str
 		return err
 	}
 
-	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
-	if err != nil {
-		return err
-	}
-	defer cl.Close()
-
 	namespace := c.Parent.Parent.Namespace
 	if namespace == "" {
 		return fmt.Errorf("namespace is required")
 	}
+
+	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
 
 	// Get the task queue configuration
 	resp, err := cl.WorkflowService().DescribeTaskQueue(cctx, &workflowservice.DescribeTaskQueueRequest{
@@ -118,7 +118,7 @@ func (c *TemporalTaskQueueConfigSetCommand) run(cctx *CommandContext, args []str
 		return fmt.Errorf("fairness-key-rps-limit-default-reason can only be set if fairness-key-rps-limit-default is updated")
 	}
 
-	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}

@@ -23,11 +23,20 @@ var typesFS embed.FS
 func GenerateCommandsCode(pkg string, contextType string, commands Commands) ([]byte, error) {
 	w := &codeWriter{allCommands: commands.CommandList, OptionSets: commands.OptionSets, contextType: contextType}
 
+	// Generate optionsContext interface
+	w.writeLinef("// optionsContext provides context for building option flags.")
+	w.writeLinef("type optionsContext interface {")
+	w.writeLinef("\tBindFlagEnvVar(flag *%v.Flag, envVar string)", w.importPflag())
+	w.writeLinef("}\n")
+
 	// Put terminal check at top
 	w.writeLinef("var hasHighlighting = %v.IsTerminal(%v.Stdout.Fd())", w.importIsatty(), w.importPkg("os"))
 
-	// Write all option sets
+	// Write all option sets (skip external ones)
 	for _, optSet := range commands.OptionSets {
+		if optSet.IsExternal() {
+			continue
+		}
 		if err := optSet.writeCode(w); err != nil {
 			return nil, fmt.Errorf("failed writing command %v: %w", optSet.Name, err)
 		}
@@ -172,11 +181,14 @@ func (o *OptionSets) writeCode(w *codeWriter) error {
 		}
 
 	}
+	// Add FlagSet for tracking which flags were explicitly set
+	w.writeLinef("FlagSet *%v.FlagSet", w.importPflag())
 	w.writeLinef("}\n")
 
 	// write flags
-	w.writeLinef("func (v *%v) buildFlags(cctx %s, f *%v.FlagSet) {",
-		o.setStructName(), w.contextType, w.importPflag())
+	w.writeLinef("func (v *%v) BuildFlags(ctx optionsContext, f *%v.FlagSet) {",
+		o.setStructName(), w.importPflag())
+	w.writeLinef("v.FlagSet = f")
 	o.writeFlagBuilding("v", "f", w)
 	w.writeLinef("}\n")
 
@@ -204,9 +216,22 @@ func (c *Command) writeCode(w *codeWriter) error {
 	w.writeLinef("Command %v.Command", w.importCobra())
 
 	// Include option sets
-	for _, opt := range c.OptionSets {
-		w.writeLinef("%vOptions", namify(opt, true))
-
+	for _, optSetName := range c.OptionSets {
+		// Find the option set to check if it's external
+		var optSet *OptionSets
+		for i := range w.OptionSets {
+			if w.OptionSets[i].Name == optSetName {
+				optSet = &w.OptionSets[i]
+				break
+			}
+		}
+		if optSet != nil && optSet.IsExternal() {
+			// External option-set: import package and use its type
+			pkgRef := w.importPkg(optSet.ExternalPackage)
+			w.writeLinef("%v.%vOptions", pkgRef, namify(optSetName, true))
+		} else {
+			w.writeLinef("%vOptions", namify(optSetName, true))
+		}
 	}
 
 	// Each option
@@ -291,20 +316,26 @@ func (c *Command) writeCode(w *codeWriter) error {
 
 	for _, include := range c.OptionSets {
 		// Find include
-	cmdLoop:
-		for _, optSet := range w.OptionSets {
-			if optSet.Name == include {
+		var optSet *OptionSets
+		for i := range w.OptionSets {
+			if w.OptionSets[i].Name == include {
+				optSet = &w.OptionSets[i]
 				for _, opt := range optSet.Options {
 					for _, alias := range opt.Aliases {
 						flagAliases = append(flagAliases, []string{alias, opt.Name})
 					}
 				}
-				break cmdLoop
+				break
 			}
-
 		}
 
-		w.writeLinef("s.%v.buildFlags(cctx, %v)", setStructName(include), flagVar)
+		if optSet != nil && optSet.IsExternal() {
+			// External option-set: use type name with Options suffix
+			w.writeLinef("s.%vOptions.BuildFlags(cctx, %v)", namify(include, true), flagVar)
+		} else {
+			// Internal option-set: use struct name
+			w.writeLinef("s.%v.BuildFlags(cctx, %v)", setStructName(include), flagVar)
+		}
 	}
 
 	// Generate normalize for aliases
@@ -486,8 +517,13 @@ func (o *Option) writeFlagBuilding(selfVar, flagVar string, w *codeWriter) error
 	if o.Required {
 		w.writeLinef("_ = %v.MarkFlagRequired(%v, %q)", w.importCobra(), flagVar, o.Name)
 	}
-	if o.Env != "" {
-		w.writeLinef("cctx.BindFlagEnvVar(%v.Lookup(%q), %q)", flagVar, o.Name, o.Env)
+	// Use env or implied-env for environment variable binding
+	envVar := o.Env
+	if envVar == "" {
+		envVar = o.ImpliedEnv
+	}
+	if envVar != "" {
+		w.writeLinef("ctx.BindFlagEnvVar(%v.Lookup(%q), %q)", flagVar, o.Name, envVar)
 	}
 	if o.Deprecated != "" {
 		w.writeLinef("_ = %v.MarkDeprecated(%q, %q)", flagVar, o.Name, o.Deprecated)
