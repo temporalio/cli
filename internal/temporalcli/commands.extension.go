@@ -17,6 +17,11 @@ const (
 	argDashReplacement = "_" // dashes in args are replaced to avoid ambiguity
 )
 
+// cliArgsToParseForExtension lists CLI flags that should be parsed (validated).
+var cliArgsToParseForExtension = map[string]bool{
+	"command-timeout": true,
+}
+
 // tryExecuteExtension tries to execute an extension command if the command is not a built-in command.
 // It returns an error if the extension command fails, and a boolean indicating whether an extension was executed.
 func tryExecuteExtension(cctx *CommandContext, tcmd *TemporalCommand) (error, bool) {
@@ -30,26 +35,23 @@ func tryExecuteExtension(cctx *CommandContext, tcmd *TemporalCommand) (error, bo
 		return nil, false
 	}
 
-	// Split args into CLI args and extension args:
-	// 	- cliArgs contains known flags and unknown flags before the first positional argument
-	//  - extArgs contains the rest
-	// Also returns whether cliArgs contains unknown flags.
-	cliArgs, cliArgUnknown, extArgs := splitArgs(foundCmd, remainingArgs)
+	// Group args into these lists:
+	// - cliParseArgs: args to validate (subset of cliPassArgs)
+	// - cliPassArgs: known CLI args to pass to extension
+	// - extArgs: args to pass to extension and use for extension lookup
+	cliParseArgs, cliPassArgs, extArgs := groupArgs(foundCmd, remainingArgs)
 
 	// Search for an extension executable.
 	cmdPrefix := strings.Split(foundCmd.CommandPath(), " ")[1:]
 	extPath, extArgs := lookupExtension(cmdPrefix, extArgs)
-	if extPath == "" && !cliArgUnknown {
-		return nil, false
+
+	// Parse CLI args that need validation.
+	if len(cliParseArgs) > 0 {
+		if err := foundCmd.Flags().Parse(cliParseArgs); err != nil {
+			return err, false
+		}
 	}
 
-	// Parse CLI args to validate flags.
-	// Happens even if no extension was found to provide proper flag error message.
-	if err := foundCmd.Flags().Parse(cliArgs); err != nil {
-		return err, false
-	}
-
-	// Abort if no extension was found.
 	if extPath == "" {
 		return nil, false
 	}
@@ -62,7 +64,7 @@ func tryExecuteExtension(cctx *CommandContext, tcmd *TemporalCommand) (error, bo
 		defer cancel()
 	}
 
-	cmd := exec.CommandContext(ctx, extPath, append(cliArgs, extArgs...)...)
+	cmd := exec.CommandContext(ctx, extPath, append(cliPassArgs, extArgs...)...)
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = cctx.Options.Stdin, cctx.Options.Stdout, cctx.Options.Stderr
 	if err := cmd.Run(); err != nil {
 		if ctx.Err() != nil {
@@ -77,7 +79,7 @@ func tryExecuteExtension(cctx *CommandContext, tcmd *TemporalCommand) (error, bo
 	return nil, true
 }
 
-func splitArgs(foundCmd *cobra.Command, args []string) (cliArgs []string, cliArgUnknown bool, extArgs []string) {
+func groupArgs(foundCmd *cobra.Command, args []string) (cliParseArgs, cliPassArgs, extArgs []string) {
 	seenPos := false
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
@@ -89,25 +91,29 @@ func splitArgs(foundCmd *cobra.Command, args []string) (cliArgs []string, cliArg
 		}
 
 		name, hasInline := parseFlagArg(arg)
-
-		// Known flag: goes to cliArgs for validation.
 		if f, takesValue := lookupFlag(foundCmd, name); f != nil {
-			cliArgs = append(cliArgs, arg)
+			// Known CLI flag: goes to cliPassArgs.
+			// Flags in cliArgsToParseForExtension also go to cliParseArgs.
+			shouldParse := cliArgsToParseForExtension[f.Name]
+			cliPassArgs = append(cliPassArgs, arg)
+			if shouldParse {
+				cliParseArgs = append(cliParseArgs, arg)
+			}
 			if takesValue && !hasInline && i+1 < len(args) {
 				i++
-				cliArgs = append(cliArgs, args[i])
+				cliPassArgs = append(cliPassArgs, args[i])
+				if shouldParse {
+					cliParseArgs = append(cliParseArgs, args[i])
+				}
 			}
-			continue
-		}
-
-		// Unknown flag.
-		if seenPos {
-			// After first positional: goes to extArgs.
-			extArgs = append(extArgs, arg)
 		} else {
-			// Before first positional: goes to cliArgs.
-			cliArgs = append(cliArgs, arg)
-			cliArgUnknown = true
+			// Unknown flag: before first positional goes to cliParseArgs (to fail validation),
+			// after first positional goes to extArgs (passed to extension).
+			if seenPos {
+				extArgs = append(extArgs, arg)
+			} else {
+				cliParseArgs = append(cliParseArgs, arg)
+			}
 		}
 	}
 	return
@@ -159,13 +165,13 @@ func lookupExtension(cmdPrefix, extArgs []string) (string, []string) {
 
 	// Try most-specific to least-specific.
 	parts := append(cmdPrefix, posArgs...)
-	for n := len(parts); n > 0; n-- {
+	for n := len(parts); n > len(cmdPrefix); n-- {
 		path, err := exec.LookPath(extensionPrefix + strings.Join(parts[:n], extensionSeparator))
 		if err != nil {
 			continue
 		}
 		// Remove matched positionals from extArgs (they come first).
-		matched := max(n-len(cmdPrefix), 0)
+		matched := n - len(cmdPrefix)
 		return path, extArgs[matched:]
 	}
 

@@ -111,15 +111,17 @@ func TestExtension_Flags(t *testing.T) {
 		{args: "--output=json foo", want: "temporal-foo --output=json"},
 		{args: "-o json foo", want: "temporal-foo -o json"}, // shorthand
 		{args: "-o=json foo", want: "temporal-foo -o=json"},
-		{args: "--unknown-flag value foo", err: "unknown flag"}, // unknown flag before extension name
-		{args: "--output invalid foo", err: "invalid argument"}, // invalid value for known flag
+		{args: "--unknown-flag value foo", err: "unknown flag"},                       // unknown flags before extension fail
+		{args: "--output invalid foo", want: "temporal-foo --output invalid"},         // invalid value passed through
+		{args: "--command-timeout 1s foo", want: "temporal-foo --command-timeout 1s"}, // --command-timeout passed through
+		{args: "--command-timeout invalid foo", err: "invalid argument"},              // --command-timeout invalid
 
 		{args: "foo --output json", want: "temporal-foo --output json"}, // not temporal-foo-json
 		{args: "foo --output=json", want: "temporal-foo --output=json"},
 		{args: "foo -o json", want: "temporal-foo -o json"},
 		{args: "foo -o=json", want: "temporal-foo -o=json"},
 		{args: "foo -x bar", want: "temporal-foo -x bar"},                         // not temporal-foo-x
-		{args: "foo --output invalid", err: "invalid argument"},                   // invalid value for known flag
+		{args: "foo --output invalid", want: "temporal-foo --output invalid"},     // invalid value passed through
 		{args: "foo arg1 -x value arg2", want: "temporal-foo arg1 -x value arg2"}, // order preserved
 
 		// Subcommand extension
@@ -128,15 +130,15 @@ func TestExtension_Flags(t *testing.T) {
 		{args: "--output=json workflow diagram", want: "temporal-workflow-diagram --output=json"},
 		{args: "-o json workflow diagram", want: "temporal-workflow-diagram -o json"}, // shorthand
 		{args: "-o=json workflow diagram", want: "temporal-workflow-diagram -o=json"},
-		{args: "--unknown-flag value workflow diagram", err: "unknown flag"},
+		{args: "--unknown-flag value workflow diagram", err: "unknown flag"}, // unknown flags before extension fail
 
 		{args: "workflow --tls diagram", want: "temporal-workflow-diagram --tls"}, // boolean flag
 		{args: "workflow --namespace my-ns diagram", want: "temporal-workflow-diagram --namespace my-ns"},
 		{args: "workflow --namespace=my-ns diagram", want: "temporal-workflow-diagram --namespace=my-ns"},
 		{args: "workflow -n my-ns diagram", want: "temporal-workflow-diagram -n my-ns"}, // shorthand
 		{args: "workflow -n=my-ns diagram", want: "temporal-workflow-diagram -n=my-ns"},
-		{args: "workflow --unknown-flag diagram", err: "unknown flag"},       // unknown flag before extension name
-		{args: "workflow --output invalid diagram", err: "invalid argument"}, // invalid value for known flag
+		{args: "workflow --unknown-flag diagram", err: "unknown flag"},                                  // unknown flags before extension fail
+		{args: "workflow --output invalid diagram", want: "temporal-workflow-diagram --output invalid"}, // invalid value passed through
 
 		{args: "workflow diagram --output json", want: "temporal-workflow-diagram --output json"}, // not temporal-workflow-diagram-json
 		{args: "workflow diagram --output=json", want: "temporal-workflow-diagram --output=json"},
@@ -145,7 +147,7 @@ func TestExtension_Flags(t *testing.T) {
 		{args: "workflow diagram -x foo", want: "temporal-workflow-diagram -x foo"},                         // not temporal-workflow-diagram-foo
 		{args: "workflow diagram arg1 -x value arg2", want: "temporal-workflow-diagram arg1 -x value arg2"}, // order preserved
 		{args: "workflow diagram foo --flag value", want: "temporal-workflow-diagram-foo --flag value"},     // nested commands
-		{args: "workflow diagram --output invalid", err: "invalid argument"},                                // invalid value for known flag
+		{args: "workflow diagram --output invalid", want: "temporal-workflow-diagram --output invalid"},     // invalid value passed through
 
 		// Note: Flag aliases are already implicitly tested via other command-specific tests.
 	}
