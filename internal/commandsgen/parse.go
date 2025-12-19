@@ -28,6 +28,7 @@ type (
 		Aliases            []string `yaml:"aliases,omitempty"`
 		EnumValues         []string `yaml:"enum-values,omitempty"`
 		Experimental       bool     `yaml:"experimental,omitempty"`
+		Hidden             bool     `yaml:"hidden,omitempty"`
 		HiddenLegacyValues []string `yaml:"hidden-legacy-values,omitempty"`
 	}
 
