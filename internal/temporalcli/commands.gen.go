@@ -3,8 +3,6 @@
 package temporalcli
 
 import (
-	"fmt"
-
 	"github.com/mattn/go-isatty"
 
 	"github.com/spf13/cobra"
@@ -14,26 +12,18 @@ import (
 	"github.com/temporalio/cli/cliext"
 
 	"os"
-
-	"regexp"
-
-	"strconv"
-
-	"strings"
-
-	"time"
 )
 
 var hasHighlighting = isatty.IsTerminal(os.Stdout.Fd())
 
 type OverlapPolicyOptions struct {
-	OverlapPolicy StringEnum
+	OverlapPolicy cliext.FlagStringEnum
 	FlagSet       *pflag.FlagSet
 }
 
 func (v *OverlapPolicyOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
-	v.OverlapPolicy = NewStringEnum([]string{"Skip", "BufferOne", "BufferAll", "CancelOther", "TerminateOther", "AllowAll"}, "Skip")
+	v.OverlapPolicy = cliext.NewFlagStringEnum([]string{"Skip", "BufferOne", "BufferAll", "CancelOther", "TerminateOther", "AllowAll"}, "Skip")
 	f.Var(&v.OverlapPolicy, "overlap-policy", "Policy for handling overlapping Workflow Executions. Accepted values: Skip, BufferOne, BufferAll, CancelOther, TerminateOther, AllowAll.")
 }
 
@@ -50,16 +40,16 @@ func (v *ScheduleIdOptions) BuildFlags(f *pflag.FlagSet) {
 
 type ScheduleConfigurationOptions struct {
 	Calendar                []string
-	CatchupWindow           Duration
+	CatchupWindow           cliext.FlagDuration
 	Cron                    []string
-	EndTime                 Timestamp
+	EndTime                 cliext.FlagTimestamp
 	Interval                []string
-	Jitter                  Duration
+	Jitter                  cliext.FlagDuration
 	Notes                   string
 	Paused                  bool
 	PauseOnFailure          bool
 	RemainingActions        int
-	StartTime               Timestamp
+	StartTime               cliext.FlagTimestamp
 	TimeZone                string
 	ScheduleSearchAttribute []string
 	ScheduleMemo            []string
@@ -179,9 +169,9 @@ type SharedWorkflowStartOptions struct {
 	WorkflowId       string
 	Type             string
 	TaskQueue        string
-	RunTimeout       Duration
-	ExecutionTimeout Duration
-	TaskTimeout      Duration
+	RunTimeout       cliext.FlagDuration
+	ExecutionTimeout cliext.FlagDuration
+	TaskTimeout      cliext.FlagDuration
 	SearchAttribute  []string
 	Headers          []string
 	Memo             []string
@@ -204,7 +194,7 @@ func (v *SharedWorkflowStartOptions) BuildFlags(f *pflag.FlagSet) {
 	f.Var(&v.RunTimeout, "run-timeout", "Fail a Workflow Run if it lasts longer than `DURATION`.")
 	v.ExecutionTimeout = 0
 	f.Var(&v.ExecutionTimeout, "execution-timeout", "Fail a WorkflowExecution if it lasts longer than `DURATION`. This time-out includes retries and ContinueAsNew tasks.")
-	v.TaskTimeout = Duration(10000 * time.Millisecond)
+	v.TaskTimeout = cliext.MustParseFlagDuration("10s")
 	f.Var(&v.TaskTimeout, "task-timeout", "Fail a Workflow Task if it lasts longer than `DURATION`. This is the Start-to-close timeout for a Workflow Task.")
 	f.StringArrayVar(&v.SearchAttribute, "search-attribute", nil, "Search Attribute in `KEY=VALUE` format. Keys must be identifiers, and values must be JSON values. For example: 'YourKey={\"your\": \"value\"}'. Can be passed multiple times.")
 	f.StringArrayVar(&v.Headers, "headers", nil, "Temporal workflow headers in 'KEY=VALUE' format. Keys must be identifiers, and values must be JSON values. May be passed multiple times to set multiple Temporal headers. Note: These are workflow headers, not gRPC headers.")
@@ -219,9 +209,9 @@ func (v *SharedWorkflowStartOptions) BuildFlags(f *pflag.FlagSet) {
 type WorkflowStartOptions struct {
 	Cron             string
 	FailExisting     bool
-	StartDelay       Duration
-	IdReusePolicy    StringEnum
-	IdConflictPolicy StringEnum
+	StartDelay       cliext.FlagDuration
+	IdReusePolicy    cliext.FlagStringEnum
+	IdConflictPolicy cliext.FlagStringEnum
 	FlagSet          *pflag.FlagSet
 }
 
@@ -232,9 +222,9 @@ func (v *WorkflowStartOptions) BuildFlags(f *pflag.FlagSet) {
 	f.BoolVar(&v.FailExisting, "fail-existing", false, "Fail if the Workflow already exists.")
 	v.StartDelay = 0
 	f.Var(&v.StartDelay, "start-delay", "Delay before starting the Workflow Execution. Can't be used with cron schedules. If the Workflow receives a signal or update prior to this time, the Workflow Execution starts immediately.")
-	v.IdReusePolicy = NewStringEnum([]string{"AllowDuplicate", "AllowDuplicateFailedOnly", "RejectDuplicate", "TerminateIfRunning"}, "")
+	v.IdReusePolicy = cliext.NewFlagStringEnum([]string{"AllowDuplicate", "AllowDuplicateFailedOnly", "RejectDuplicate", "TerminateIfRunning"}, "")
 	f.Var(&v.IdReusePolicy, "id-reuse-policy", "Re-use policy for the Workflow ID in new Workflow Executions. Accepted values: AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate, TerminateIfRunning.")
-	v.IdConflictPolicy = NewStringEnum([]string{"Fail", "UseExisting", "TerminateExisting"}, "")
+	v.IdConflictPolicy = cliext.NewFlagStringEnum([]string{"Fail", "UseExisting", "TerminateExisting"}, "")
 	f.Var(&v.IdConflictPolicy, "id-conflict-policy", "Determines how to resolve a conflict when spawning a new Workflow Execution with a particular Workflow Id used by an existing Open Workflow Execution. Accepted values: Fail, UseExisting, TerminateExisting.")
 }
 
@@ -322,20 +312,20 @@ func (v *NexusEndpointConfigOptions) BuildFlags(f *pflag.FlagSet) {
 }
 
 type QueryModifiersOptions struct {
-	RejectCondition StringEnum
+	RejectCondition cliext.FlagStringEnum
 	Headers         []string
 	FlagSet         *pflag.FlagSet
 }
 
 func (v *QueryModifiersOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
-	v.RejectCondition = NewStringEnum([]string{"not_open", "not_completed_cleanly"}, "")
+	v.RejectCondition = cliext.NewFlagStringEnum([]string{"not_open", "not_completed_cleanly"}, "")
 	f.Var(&v.RejectCondition, "reject-condition", "Optional flag for rejecting Queries based on Workflow state. Accepted values: not_open, not_completed_cleanly.")
 	f.StringArrayVar(&v.Headers, "headers", nil, "Temporal workflow headers in 'KEY=VALUE' format. Keys must be identifiers, and values must be JSON values. May be passed multiple times to set multiple Temporal headers. Note: These are workflow headers, not gRPC headers.")
 }
 
 type WorkflowUpdateOptionsOptions struct {
-	VersioningOverrideBehavior       StringEnum
+	VersioningOverrideBehavior       cliext.FlagStringEnum
 	VersioningOverrideDeploymentName string
 	VersioningOverrideBuildId        string
 	FlagSet                          *pflag.FlagSet
@@ -343,7 +333,7 @@ type WorkflowUpdateOptionsOptions struct {
 
 func (v *WorkflowUpdateOptionsOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
-	v.VersioningOverrideBehavior = NewStringEnum([]string{"pinned", "auto_upgrade"}, "")
+	v.VersioningOverrideBehavior = cliext.NewFlagStringEnum([]string{"pinned", "auto_upgrade"}, "")
 	f.Var(&v.VersioningOverrideBehavior, "versioning-override-behavior", "Override the versioning behavior of a Workflow. Accepted values: pinned, auto_upgrade. Required.")
 	_ = cobra.MarkFlagRequired(f, "versioning-override-behavior")
 	f.StringVar(&v.VersioningOverrideDeploymentName, "versioning-override-deployment-name", "", "When overriding to a `pinned` behavior, specifies the Deployment Name of the version to target.")
@@ -517,7 +507,7 @@ type TemporalActivityResetCommand struct {
 	ResetAttempts          bool
 	ResetHeartbeats        bool
 	MatchAll               bool
-	Jitter                 Duration
+	Jitter                 cliext.FlagDuration
 	RestoreOriginalOptions bool
 }
 
@@ -560,7 +550,7 @@ type TemporalActivityUnpauseCommand struct {
 	ResetAttempts   bool
 	ResetHeartbeats bool
 	MatchAll        bool
-	Jitter          Duration
+	Jitter          cliext.FlagDuration
 }
 
 func NewTemporalActivityUnpauseCommand(cctx *CommandContext, parent *TemporalActivityCommand) *TemporalActivityUnpauseCommand {
@@ -599,12 +589,12 @@ type TemporalActivityUpdateOptionsCommand struct {
 	ActivityType            string
 	MatchAll                bool
 	TaskQueue               string
-	ScheduleToCloseTimeout  Duration
-	ScheduleToStartTimeout  Duration
-	StartToCloseTimeout     Duration
-	HeartbeatTimeout        Duration
-	RetryInitialInterval    Duration
-	RetryMaximumInterval    Duration
+	ScheduleToCloseTimeout  cliext.FlagDuration
+	ScheduleToStartTimeout  cliext.FlagDuration
+	StartToCloseTimeout     cliext.FlagDuration
+	HeartbeatTimeout        cliext.FlagDuration
+	RetryInitialInterval    cliext.FlagDuration
+	RetryMaximumInterval    cliext.FlagDuration
 	RetryBackoffCoefficient float32
 	RetryMaximumAttempts    int
 	RestoreOriginalOptions  bool
@@ -1296,10 +1286,10 @@ type TemporalOperatorNamespaceCreateCommand struct {
 	Description             string
 	Email                   string
 	Global                  bool
-	HistoryArchivalState    StringEnum
+	HistoryArchivalState    cliext.FlagStringEnum
 	HistoryUri              string
-	Retention               Duration
-	VisibilityArchivalState StringEnum
+	Retention               cliext.FlagDuration
+	VisibilityArchivalState cliext.FlagStringEnum
 	VisibilityUri           string
 }
 
@@ -1321,12 +1311,12 @@ func NewTemporalOperatorNamespaceCreateCommand(cctx *CommandContext, parent *Tem
 	s.Command.Flags().StringVar(&s.Description, "description", "", "Namespace description.")
 	s.Command.Flags().StringVar(&s.Email, "email", "", "Owner email.")
 	s.Command.Flags().BoolVar(&s.Global, "global", false, "Enable multi-region data replication.")
-	s.HistoryArchivalState = NewStringEnum([]string{"disabled", "enabled"}, "disabled")
+	s.HistoryArchivalState = cliext.NewFlagStringEnum([]string{"disabled", "enabled"}, "disabled")
 	s.Command.Flags().Var(&s.HistoryArchivalState, "history-archival-state", "History archival state. Accepted values: disabled, enabled.")
 	s.Command.Flags().StringVar(&s.HistoryUri, "history-uri", "", "Archive history to this `URI`. Once enabled, can't be changed.")
-	s.Retention = Duration(259200000 * time.Millisecond)
+	s.Retention = cliext.MustParseFlagDuration("72h")
 	s.Command.Flags().Var(&s.Retention, "retention", "Time to preserve closed Workflows before deletion.")
-	s.VisibilityArchivalState = NewStringEnum([]string{"disabled", "enabled"}, "disabled")
+	s.VisibilityArchivalState = cliext.NewFlagStringEnum([]string{"disabled", "enabled"}, "disabled")
 	s.Command.Flags().Var(&s.VisibilityArchivalState, "visibility-archival-state", "Visibility archival state. Accepted values: disabled, enabled.")
 	s.Command.Flags().StringVar(&s.VisibilityUri, "visibility-uri", "", "Archive visibility data to this `URI`. Once enabled, can't be changed.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -1425,11 +1415,11 @@ type TemporalOperatorNamespaceUpdateCommand struct {
 	Description             string
 	Email                   string
 	PromoteGlobal           bool
-	HistoryArchivalState    StringEnum
+	HistoryArchivalState    cliext.FlagStringEnum
 	HistoryUri              string
-	ReplicationState        StringEnum
-	Retention               Duration
-	VisibilityArchivalState StringEnum
+	ReplicationState        cliext.FlagStringEnum
+	Retention               cliext.FlagDuration
+	VisibilityArchivalState cliext.FlagStringEnum
 	VisibilityUri           string
 }
 
@@ -1451,14 +1441,14 @@ func NewTemporalOperatorNamespaceUpdateCommand(cctx *CommandContext, parent *Tem
 	s.Command.Flags().StringVar(&s.Description, "description", "", "Namespace description.")
 	s.Command.Flags().StringVar(&s.Email, "email", "", "Owner email.")
 	s.Command.Flags().BoolVar(&s.PromoteGlobal, "promote-global", false, "Enable multi-region data replication.")
-	s.HistoryArchivalState = NewStringEnum([]string{"disabled", "enabled"}, "")
+	s.HistoryArchivalState = cliext.NewFlagStringEnum([]string{"disabled", "enabled"}, "")
 	s.Command.Flags().Var(&s.HistoryArchivalState, "history-archival-state", "History archival state. Accepted values: disabled, enabled.")
 	s.Command.Flags().StringVar(&s.HistoryUri, "history-uri", "", "Archive history to this `URI`. Once enabled, can't be changed.")
-	s.ReplicationState = NewStringEnum([]string{"normal", "handover"}, "")
+	s.ReplicationState = cliext.NewFlagStringEnum([]string{"normal", "handover"}, "")
 	s.Command.Flags().Var(&s.ReplicationState, "replication-state", "Replication state. Accepted values: normal, handover.")
 	s.Retention = 0
 	s.Command.Flags().Var(&s.Retention, "retention", "Length of time a closed Workflow is preserved before deletion.")
-	s.VisibilityArchivalState = NewStringEnum([]string{"disabled", "enabled"}, "")
+	s.VisibilityArchivalState = cliext.NewFlagStringEnum([]string{"disabled", "enabled"}, "")
 	s.Command.Flags().Var(&s.VisibilityArchivalState, "visibility-archival-state", "Visibility archival state. Accepted values: disabled, enabled.")
 	s.Command.Flags().StringVar(&s.VisibilityUri, "visibility-uri", "", "Archive visibility data to this `URI`. Once enabled, can't be changed.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -1678,7 +1668,7 @@ type TemporalOperatorSearchAttributeCreateCommand struct {
 	Parent  *TemporalOperatorSearchAttributeCommand
 	Command cobra.Command
 	Name    []string
-	Type    StringEnumArray
+	Type    cliext.FlagStringEnumArray
 }
 
 func NewTemporalOperatorSearchAttributeCreateCommand(cctx *CommandContext, parent *TemporalOperatorSearchAttributeCommand) *TemporalOperatorSearchAttributeCreateCommand {
@@ -1695,7 +1685,7 @@ func NewTemporalOperatorSearchAttributeCreateCommand(cctx *CommandContext, paren
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringArrayVar(&s.Name, "name", nil, "Search Attribute name. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
-	s.Type = NewStringEnumArray([]string{"Text", "Keyword", "Int", "Double", "Bool", "Datetime", "KeywordList"}, []string{})
+	s.Type = cliext.NewFlagStringEnumArray([]string{"Text", "Keyword", "Int", "Double", "Bool", "Datetime", "KeywordList"}, []string{})
 	s.Command.Flags().Var(&s.Type, "type", "Search Attribute type. Accepted values: Text, Keyword, Int, Double, Bool, Datetime, KeywordList. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "type")
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -1795,8 +1785,8 @@ type TemporalScheduleBackfillCommand struct {
 	Command cobra.Command
 	OverlapPolicyOptions
 	ScheduleIdOptions
-	EndTime   Timestamp
-	StartTime Timestamp
+	EndTime   cliext.FlagTimestamp
+	StartTime cliext.FlagTimestamp
 }
 
 func NewTemporalScheduleBackfillCommand(cctx *CommandContext, parent *TemporalScheduleCommand) *TemporalScheduleBackfillCommand {
@@ -2178,7 +2168,7 @@ type TemporalTaskQueueConfigGetCommand struct {
 	Parent        *TemporalTaskQueueConfigCommand
 	Command       cobra.Command
 	TaskQueue     string
-	TaskQueueType StringEnum
+	TaskQueueType cliext.FlagStringEnum
 }
 
 func NewTemporalTaskQueueConfigGetCommand(cctx *CommandContext, parent *TemporalTaskQueueConfigCommand) *TemporalTaskQueueConfigGetCommand {
@@ -2195,7 +2185,7 @@ func NewTemporalTaskQueueConfigGetCommand(cctx *CommandContext, parent *Temporal
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task Queue name. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
-	s.TaskQueueType = NewStringEnum([]string{"workflow", "activity", "nexus"}, "")
+	s.TaskQueueType = cliext.NewFlagStringEnum([]string{"workflow", "activity", "nexus"}, "")
 	s.Command.Flags().Var(&s.TaskQueueType, "task-queue-type", "Task Queue type. Accepted values: workflow, activity, nexus. Accepted values: workflow, activity, nexus. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue-type")
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -2210,7 +2200,7 @@ type TemporalTaskQueueConfigSetCommand struct {
 	Parent                     *TemporalTaskQueueConfigCommand
 	Command                    cobra.Command
 	TaskQueue                  string
-	TaskQueueType              StringEnum
+	TaskQueueType              cliext.FlagStringEnum
 	QueueRpsLimit              string
 	QueueRpsLimitReason        string
 	FairnessKeyRpsLimitDefault string
@@ -2231,7 +2221,7 @@ func NewTemporalTaskQueueConfigSetCommand(cctx *CommandContext, parent *Temporal
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task Queue name. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
-	s.TaskQueueType = NewStringEnum([]string{"workflow", "activity", "nexus"}, "")
+	s.TaskQueueType = cliext.NewFlagStringEnum([]string{"workflow", "activity", "nexus"}, "")
 	s.Command.Flags().Var(&s.TaskQueueType, "task-queue-type", "Task Queue type. Accepted values: workflow, activity, nexus. Accepted values: workflow, activity, nexus. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue-type")
 	s.Command.Flags().StringVar(&s.QueueRpsLimit, "queue-rps-limit", "", "Queue rate limit in requests per second. Accepts a float; or 'default' to unset.")
@@ -2252,13 +2242,13 @@ type TemporalTaskQueueDescribeCommand struct {
 	Parent              *TemporalTaskQueueCommand
 	Command             cobra.Command
 	TaskQueue           string
-	TaskQueueType       StringEnumArray
+	TaskQueueType       cliext.FlagStringEnumArray
 	SelectBuildId       []string
 	SelectUnversioned   bool
 	SelectAllActive     bool
 	ReportReachability  bool
 	LegacyMode          bool
-	TaskQueueTypeLegacy StringEnum
+	TaskQueueTypeLegacy cliext.FlagStringEnum
 	PartitionsLegacy    int
 	DisableStats        bool
 	ReportConfig        bool
@@ -2278,14 +2268,14 @@ func NewTemporalTaskQueueDescribeCommand(cctx *CommandContext, parent *TemporalT
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task Queue name. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
-	s.TaskQueueType = NewStringEnumArray([]string{"workflow", "activity", "nexus"}, []string{})
+	s.TaskQueueType = cliext.NewFlagStringEnumArray([]string{"workflow", "activity", "nexus"}, []string{})
 	s.Command.Flags().Var(&s.TaskQueueType, "task-queue-type", "Task Queue type. If not specified, all types are reported. Accepted values: workflow, activity, nexus.")
 	s.Command.Flags().StringArrayVar(&s.SelectBuildId, "select-build-id", nil, "Filter the Task Queue based on Build ID.")
 	s.Command.Flags().BoolVar(&s.SelectUnversioned, "select-unversioned", false, "Include the unversioned queue.")
 	s.Command.Flags().BoolVar(&s.SelectAllActive, "select-all-active", false, "Include all active versions. A version is active if it had new tasks or polls recently.")
 	s.Command.Flags().BoolVar(&s.ReportReachability, "report-reachability", false, "Display task reachability information.")
 	s.Command.Flags().BoolVar(&s.LegacyMode, "legacy-mode", false, "Enable a legacy mode for servers that do not support rules-based worker versioning. This mode only provides pollers info.")
-	s.TaskQueueTypeLegacy = NewStringEnum([]string{"workflow", "activity"}, "workflow")
+	s.TaskQueueTypeLegacy = cliext.NewFlagStringEnum([]string{"workflow", "activity"}, "workflow")
 	s.Command.Flags().Var(&s.TaskQueueTypeLegacy, "task-queue-type-legacy", "Task Queue type (legacy mode only). Accepted values: workflow, activity.")
 	s.Command.Flags().IntVar(&s.PartitionsLegacy, "partitions-legacy", 1, "Query partitions 1 through `N`. Experimental/Temporary feature. Legacy mode only.")
 	s.Command.Flags().BoolVar(&s.DisableStats, "disable-stats", false, "Disable task queue statistics.")
@@ -2302,7 +2292,7 @@ type TemporalTaskQueueGetBuildIdReachabilityCommand struct {
 	Parent           *TemporalTaskQueueCommand
 	Command          cobra.Command
 	BuildId          []string
-	ReachabilityType StringEnum
+	ReachabilityType cliext.FlagStringEnum
 	TaskQueue        []string
 }
 
@@ -2319,7 +2309,7 @@ func NewTemporalTaskQueueGetBuildIdReachabilityCommand(cctx *CommandContext, par
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringArrayVar(&s.BuildId, "build-id", nil, "One or more Build ID strings. Can be passed multiple times.")
-	s.ReachabilityType = NewStringEnum([]string{"open", "closed", "existing"}, "existing")
+	s.ReachabilityType = cliext.NewFlagStringEnum([]string{"open", "closed", "existing"}, "existing")
 	s.Command.Flags().Var(&s.ReachabilityType, "reachability-type", "Reachability filter. `open`: reachable by one or more open workflows. `closed`: reachable by one or more closed workflows. `existing`: reachable by either. New Workflow Executions reachable by a Build ID are always reported. Accepted values: open, closed, existing.")
 	s.Command.Flags().StringArrayVarP(&s.TaskQueue, "task-queue", "t", nil, "Search only the specified task queue(s). Can be passed multiple times.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -3633,9 +3623,9 @@ type TemporalWorkflowResetCommand struct {
 	RunId          string
 	EventId        int
 	Reason         string
-	ReapplyType    StringEnum
-	ReapplyExclude StringEnumArray
-	Type           StringEnum
+	ReapplyType    cliext.FlagStringEnum
+	ReapplyExclude cliext.FlagStringEnumArray
+	Type           cliext.FlagStringEnum
 	BuildId        string
 	Query          string
 	Yes            bool
@@ -3658,12 +3648,12 @@ func NewTemporalWorkflowResetCommand(cctx *CommandContext, parent *TemporalWorkf
 	s.Command.PersistentFlags().IntVarP(&s.EventId, "event-id", "e", 0, "Event ID to reset to. Event must occur after `WorkflowTaskStarted`. `WorkflowTaskCompleted`, `WorkflowTaskFailed`, etc. are valid.")
 	s.Command.PersistentFlags().StringVar(&s.Reason, "reason", "", "Reason for reset. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.PersistentFlags(), "reason")
-	s.ReapplyType = NewStringEnum([]string{"All", "Signal", "None"}, "All")
+	s.ReapplyType = cliext.NewFlagStringEnum([]string{"All", "Signal", "None"}, "All")
 	s.Command.PersistentFlags().Var(&s.ReapplyType, "reapply-type", "Types of events to re-apply after reset point. Accepted values: All, Signal, None.")
 	_ = s.Command.PersistentFlags().MarkDeprecated("reapply-type", "Use --reapply-exclude instead.")
-	s.ReapplyExclude = NewStringEnumArray([]string{"All", "Signal", "Update"}, []string{})
+	s.ReapplyExclude = cliext.NewFlagStringEnumArray([]string{"All", "Signal", "Update"}, []string{})
 	s.Command.PersistentFlags().Var(&s.ReapplyExclude, "reapply-exclude", "Exclude these event types from re-application. Accepted values: All, Signal, Update.")
-	s.Type = NewStringEnum([]string{"FirstWorkflowTask", "LastWorkflowTask", "LastContinuedAsNew", "BuildId"}, "")
+	s.Type = cliext.NewFlagStringEnum([]string{"FirstWorkflowTask", "LastWorkflowTask", "LastContinuedAsNew", "BuildId"}, "")
 	s.Command.PersistentFlags().VarP(&s.Type, "type", "t", "The event type for the reset. Accepted values: FirstWorkflowTask, LastWorkflowTask, LastContinuedAsNew, BuildId.")
 	s.Command.PersistentFlags().StringVar(&s.BuildId, "build-id", "", "A Build ID. Use only with the BuildId `--type`. Resets the first Workflow task processed by this ID. By default, this reset may be in a prior run, earlier than a Continue as New point.")
 	s.Command.PersistentFlags().StringVarP(&s.Query, "query", "q", "", "Content for an SQL-like `QUERY` List Filter.")
@@ -3842,7 +3832,7 @@ type TemporalWorkflowStackCommand struct {
 	Parent  *TemporalWorkflowCommand
 	Command cobra.Command
 	WorkflowReferenceOptions
-	RejectCondition StringEnum
+	RejectCondition cliext.FlagStringEnum
 }
 
 func NewTemporalWorkflowStackCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowStackCommand {
@@ -3857,7 +3847,7 @@ func NewTemporalWorkflowStackCommand(cctx *CommandContext, parent *TemporalWorkf
 		s.Command.Long = "Perform a Query on a Workflow Execution using a `__stack_trace`-type Query.\nDisplay a stack trace of the threads and routines currently in use by the\nWorkflow for troubleshooting:\n\n```\ntemporal workflow stack \\\n    --workflow-id YourWorkflowId\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.RejectCondition = NewStringEnum([]string{"not_open", "not_completed_cleanly"}, "")
+	s.RejectCondition = cliext.NewFlagStringEnum([]string{"not_open", "not_completed_cleanly"}, "")
 	s.Command.Flags().Var(&s.RejectCondition, "reject-condition", "Optional flag to reject Queries based on Workflow state. Accepted values: not_open, not_completed_cleanly.")
 	s.WorkflowReferenceOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -3910,7 +3900,7 @@ type TemporalWorkflowStartUpdateWithStartCommand struct {
 	PayloadInputOptions
 	UpdateName                string
 	UpdateFirstExecutionRunId string
-	UpdateWaitForStage        StringEnum
+	UpdateWaitForStage        cliext.FlagStringEnum
 	UpdateId                  string
 	RunId                     string
 	UpdateInput               []string
@@ -3934,7 +3924,7 @@ func NewTemporalWorkflowStartUpdateWithStartCommand(cctx *CommandContext, parent
 	s.Command.Flags().StringVar(&s.UpdateName, "update-name", "", "Update name. Required. Aliased as \"--update-type\".")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "update-name")
 	s.Command.Flags().StringVar(&s.UpdateFirstExecutionRunId, "update-first-execution-run-id", "", "Parent Run ID. The update is sent to the last Workflow Execution in the chain started with this Run ID.")
-	s.UpdateWaitForStage = NewStringEnum([]string{"accepted"}, "")
+	s.UpdateWaitForStage = cliext.NewFlagStringEnum([]string{"accepted"}, "")
 	s.Command.Flags().Var(&s.UpdateWaitForStage, "update-wait-for-stage", "Update stage to wait for. The only option is `accepted`, but this option is required. This is to allow a future version of the CLI to choose a default value. Accepted values: accepted. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "update-wait-for-stage")
 	s.Command.Flags().StringVar(&s.UpdateId, "update-id", "", "Update ID. If unset, defaults to a UUID.")
@@ -4140,7 +4130,7 @@ type TemporalWorkflowUpdateStartCommand struct {
 	Command cobra.Command
 	UpdateStartingOptions
 	PayloadInputOptions
-	WaitForStage StringEnum
+	WaitForStage cliext.FlagStringEnum
 }
 
 func NewTemporalWorkflowUpdateStartCommand(cctx *CommandContext, parent *TemporalWorkflowUpdateCommand) *TemporalWorkflowUpdateStartCommand {
@@ -4155,7 +4145,7 @@ func NewTemporalWorkflowUpdateStartCommand(cctx *CommandContext, parent *Tempora
 		s.Command.Long = "Send a message to a Workflow Execution to invoke an Update handler, and wait for\nthe update to be accepted or rejected. You can subsequently wait for the update\nto complete by using `temporal workflow update execute`.\n\n```\ntemporal workflow update start \\\n    --workflow-id YourWorkflowId \\\n    --name YourUpdate \\\n    --input '{\"some-key\": \"some-value\"}'\n    --wait-for-stage accepted\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.WaitForStage = NewStringEnum([]string{"accepted"}, "")
+	s.WaitForStage = cliext.NewFlagStringEnum([]string{"accepted"}, "")
 	s.Command.Flags().Var(&s.WaitForStage, "wait-for-stage", "Update stage to wait for. The only option is `accepted`, but this option is  required. This is to allow a future version of the CLI to choose a default value. Accepted values: accepted. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "wait-for-stage")
 	s.UpdateStartingOptions.BuildFlags(s.Command.Flags())
@@ -4175,7 +4165,7 @@ type TemporalWorkflowUpdateOptionsCommand struct {
 	Parent  *TemporalWorkflowCommand
 	Command cobra.Command
 	SingleWorkflowOrBatchOptions
-	VersioningOverrideBehavior       StringEnum
+	VersioningOverrideBehavior       cliext.FlagStringEnum
 	VersioningOverrideDeploymentName string
 	VersioningOverrideBuildId        string
 }
@@ -4192,7 +4182,7 @@ func NewTemporalWorkflowUpdateOptionsCommand(cctx *CommandContext, parent *Tempo
 		s.Command.Long = "```\n+---------------------------------------------------------------------+\n| CAUTION: Worflow update-options is experimental. Workflow Execution |\n| properties are subject to change.                                   |\n+---------------------------------------------------------------------+\n```\n\nModify properties of Workflow Executions:\n\n```\ntemporal workflow update-options [options]\n```\n\nIt can override the Worker Deployment configuration of a\nWorkflow Execution, which controls Worker Versioning.\n\nFor example, to force Workers in the current Deployment execute the\nnext Workflow Task change behavior to `auto_upgrade`:\n\n```\ntemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior auto_upgrade\n```\n\nor to pin the workflow execution to a Worker Deployment, set behavior\nto `pinned`:\n\n```\ntemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior pinned \\\n    --versioning-override-deployment-name YourDeploymentName \\\n    --versioning-override-build-id YourDeploymentBuildId\n```\n\nTo remove any previous overrides, set the behavior to\n`unspecified`:\n\n```\ntemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior unspecified\n```\n\nTo see the current override use `temporal workflow describe`"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.VersioningOverrideBehavior = NewStringEnum([]string{"unspecified", "pinned", "auto_upgrade"}, "")
+	s.VersioningOverrideBehavior = cliext.NewFlagStringEnum([]string{"unspecified", "pinned", "auto_upgrade"}, "")
 	s.Command.Flags().Var(&s.VersioningOverrideBehavior, "versioning-override-behavior", "Override the versioning behavior of a Workflow. Accepted values: unspecified, pinned, auto_upgrade. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "versioning-override-behavior")
 	s.Command.Flags().StringVar(&s.VersioningOverrideDeploymentName, "versioning-override-deployment-name", "", "When overriding to a `pinned` behavior, specifies the Deployment Name of the version to target.")
@@ -4204,120 +4194,4 @@ func NewTemporalWorkflowUpdateOptionsCommand(cctx *CommandContext, parent *Tempo
 		}
 	}
 	return &s
-}
-
-var reDays = regexp.MustCompile(`(\d+(\.\d*)?|(\.\d+))d`)
-
-type Duration time.Duration
-
-// ParseDuration is like time.ParseDuration, but supports unit "d" for days
-// (always interpreted as exactly 24 hours).
-func ParseDuration(s string) (time.Duration, error) {
-	s = reDays.ReplaceAllStringFunc(s, func(v string) string {
-		fv, err := strconv.ParseFloat(strings.TrimSuffix(v, "d"), 64)
-		if err != nil {
-			return v // will cause time.ParseDuration to return an error
-		}
-		return fmt.Sprintf("%fh", 24*fv)
-	})
-	return time.ParseDuration(s)
-}
-
-func (d Duration) Duration() time.Duration {
-	return time.Duration(d)
-}
-
-func (d *Duration) String() string {
-	return d.Duration().String()
-}
-
-func (d *Duration) Set(s string) error {
-	p, err := ParseDuration(s)
-	if err != nil {
-		return err
-	}
-	*d = Duration(p)
-	return nil
-}
-
-func (d *Duration) Type() string {
-	return "duration"
-}
-
-type StringEnum struct {
-	Allowed            []string
-	Value              string
-	ChangedFromDefault bool
-}
-
-func NewStringEnum(allowed []string, value string) StringEnum {
-	return StringEnum{Allowed: allowed, Value: value}
-}
-
-func (s *StringEnum) String() string { return s.Value }
-
-func (s *StringEnum) Set(p string) error {
-	for _, allowed := range s.Allowed {
-		if p == allowed {
-			s.Value = p
-			s.ChangedFromDefault = true
-			return nil
-		}
-	}
-	return fmt.Errorf("%v is not one of required values of %v", p, strings.Join(s.Allowed, ", "))
-}
-
-func (*StringEnum) Type() string { return "string" }
-
-type StringEnumArray struct {
-	Allowed map[string]string
-	Values  []string
-}
-
-func NewStringEnumArray(allowed []string, values []string) StringEnumArray {
-	var allowedMap = make(map[string]string)
-	for _, str := range allowed {
-		allowedMap[strings.ToLower(str)] = str
-	}
-	return StringEnumArray{Allowed: allowedMap, Values: values}
-}
-
-func (s *StringEnumArray) String() string { return strings.Join(s.Values, ",") }
-
-func (s *StringEnumArray) Set(p string) error {
-	val, ok := s.Allowed[strings.ToLower(p)]
-	if !ok {
-		values := make([]string, 0, len(s.Allowed))
-		for _, v := range s.Allowed {
-			values = append(values, v)
-		}
-		return fmt.Errorf("invalid value: %s, allowed values are: %s", p, strings.Join(values, ", "))
-	}
-	s.Values = append(s.Values, val)
-	return nil
-}
-
-func (*StringEnumArray) Type() string { return "string" }
-
-type Timestamp time.Time
-
-func (t Timestamp) Time() time.Time {
-	return time.Time(t)
-}
-
-func (t *Timestamp) String() string {
-	return t.Time().Format(time.RFC3339)
-}
-
-func (t *Timestamp) Set(s string) error {
-	p, err := time.Parse(time.RFC3339, s)
-	if err != nil {
-		return err
-	}
-	*t = Timestamp(p)
-	return nil
-}
-
-func (t *Timestamp) Type() string {
-	return "timestamp"
 }

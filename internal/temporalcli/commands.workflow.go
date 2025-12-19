@@ -592,7 +592,7 @@ func queryHelper(cctx *CommandContext,
 	inputOpts PayloadInputOptions,
 	queryType string,
 	headers []string,
-	rejectCondition StringEnum,
+	rejectCondition cliext.FlagStringEnum,
 	execution WorkflowReferenceOptions,
 ) error {
 	cl, err := dialClient(cctx, &parent.ClientOptions)

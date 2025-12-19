@@ -2,30 +2,25 @@ package commandsgen
 
 import (
 	"bytes"
-	"embed"
 	"fmt"
-	"go/ast"
 	"go/format"
-	"go/parser"
-	"go/token"
-	"io/fs"
 	"path"
 	"regexp"
 	"sort"
 	"strings"
-
-	"github.com/temporalio/cli/internal/commandsgen/types"
 )
-
-//go:embed types/*.go
-var typesFS embed.FS
 
 func GenerateCommandsCode(pkg string, contextType string, commands Commands) ([]byte, error) {
 	optionSets := make(map[string]*OptionSets, len(commands.OptionSets))
 	for i := range commands.OptionSets {
 		optionSets[commands.OptionSets[i].Name] = &commands.OptionSets[i]
 	}
-	w := &codeWriter{allCommands: commands.CommandList, optionSets: optionSets, contextType: contextType}
+	w := &codeWriter{allCommands: commands.CommandList, optionSets: optionSets, contextType: contextType, pkg: pkg}
+
+	// Import cliext if generating for a different package
+	if pkg != "cliext" {
+		w.importPkg("github.com/temporalio/cli/cliext")
+	}
 
 	// Put terminal check at top
 	w.writeLinef("var hasHighlighting = %v.IsTerminal(%v.Stdout.Fd())", w.importIsatty(), w.importPkg("os"))
@@ -46,21 +41,6 @@ func GenerateCommandsCode(pkg string, contextType string, commands Commands) ([]
 		if err := cmd.writeCode(w); err != nil {
 			return nil, fmt.Errorf("failed writing command %v: %w", cmd.FullName, err)
 		}
-	}
-
-	// Append embedded Go files from types/ (parse imports with go/ast, write code after imports)
-	err := fs.WalkDir(typesFS, "types", func(path string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() || strings.Contains(path, "_test.go") {
-			return err
-		}
-		src, err := typesFS.ReadFile(path)
-		if err != nil {
-			return err
-		}
-		return w.appendGoSource(string(src))
-	})
-	if err != nil {
-		return nil, err
 	}
 
 	// Write package and imports to final buf
@@ -92,6 +72,7 @@ type codeWriter struct {
 	allCommands []Command
 	optionSets  map[string]*OptionSets
 	contextType string
+	pkg         string
 	// Key is short ref, value is full
 	imports map[string]string
 }
@@ -115,6 +96,14 @@ func (c *codeWriter) writeLinef(s string, args ...any) {
 	_, _ = c.buf.WriteString(fmt.Sprintf(s, args...) + "\n")
 }
 
+// flagType returns the appropriate type name with package qualification if needed
+func (c *codeWriter) flagType(typeName string) string {
+	if c.pkg == "cliext" {
+		return typeName
+	}
+	return "cliext." + typeName
+}
+
 func (c *codeWriter) importPkg(pkg string) string {
 	// For now we'll just panic on dupe and assume last path element is pkg name
 	ref := strings.TrimPrefix(path.Base(pkg), "go-")
@@ -130,36 +119,6 @@ func (c *codeWriter) importPkg(pkg string) string {
 }
 
 func (c *codeWriter) importCobra() string { return c.importPkg("github.com/spf13/cobra") }
-
-// appendGoSource parses a Go source file, registers its imports, and appends
-// everything after the import block to the output buffer.
-func (c *codeWriter) appendGoSource(src string) error {
-	fset := token.NewFileSet()
-	f, err := parser.ParseFile(fset, "", src, parser.ImportsOnly)
-	if err != nil {
-		return fmt.Errorf("failed to parse embedded source: %w", err)
-	}
-
-	// Register imports
-	for _, imp := range f.Imports {
-		// imp.Path.Value includes quotes, so trim them
-		c.importPkg(strings.Trim(imp.Path.Value, `"`))
-	}
-
-	// Find end of imports and append the rest
-	var lastImportEnd token.Pos
-	for _, decl := range f.Decls {
-		if genDecl, ok := decl.(*ast.GenDecl); ok && genDecl.Tok == token.IMPORT {
-			if genDecl.End() > lastImportEnd {
-				lastImportEnd = genDecl.End()
-			}
-		}
-	}
-
-	// Write everything after imports
-	c.buf.WriteString(src[fset.Position(lastImportEnd).Offset:])
-	return nil
-}
 
 func (c *codeWriter) importPflag() string { return c.importPkg("github.com/spf13/pflag") }
 
@@ -371,15 +330,15 @@ func (o *Option) writeStructField(w *codeWriter) error {
 	case "float":
 		goDataType = "float32"
 	case "duration":
-		goDataType = "Duration"
+		goDataType = w.flagType("FlagDuration")
 	case "timestamp":
-		goDataType = "Timestamp"
+		goDataType = w.flagType("FlagTimestamp")
 	case "string[]":
 		goDataType = "[]string"
 	case "string-enum":
-		goDataType = "StringEnum"
+		goDataType = w.flagType("FlagStringEnum")
 	case "string-enum[]":
-		goDataType = "StringEnumArray"
+		goDataType = w.flagType("FlagStringEnumArray")
 	default:
 		return fmt.Errorf("unrecognized data type %v", o.Type)
 	}
@@ -398,12 +357,7 @@ func (o *Option) writeFlagBuilding(selfVar, flagVar string, w *codeWriter) error
 	case "duration":
 		flagMeth, setDefault = "Var", "0"
 		if o.Default != "" {
-			dur, err := types.ParseDuration(o.Default)
-			if err != nil {
-				return fmt.Errorf("invalid default: %w", err)
-			}
-			// We round to the nearest ms
-			setDefault = fmt.Sprintf("Duration(%v * %v.Millisecond)", dur.Milliseconds(), w.importPkg("time"))
+			setDefault = fmt.Sprintf("%v(%q)", w.flagType("MustParseFlagDuration"), o.Default)
 		}
 	case "timestamp":
 		if o.Default != "" {
@@ -440,8 +394,8 @@ func (o *Option) writeFlagBuilding(selfVar, flagVar string, w *codeWriter) error
 			pieces[i+len(o.EnumValues)] = fmt.Sprintf("%q", legacyVal)
 		}
 
-		w.writeLinef("%v.%v = NewStringEnum([]string{%v}, %q)",
-			selfVar, o.fieldName(), strings.Join(pieces, ", "), o.Default)
+		w.writeLinef("%v.%v = %v([]string{%v}, %q)",
+			selfVar, o.fieldName(), w.flagType("NewFlagStringEnum"), strings.Join(pieces, ", "), o.Default)
 		flagMeth = "Var"
 	case "string-enum[]":
 		if len(o.EnumValues) == 0 {
@@ -457,11 +411,11 @@ func (o *Option) writeFlagBuilding(selfVar, flagVar string, w *codeWriter) error
 		}
 
 		if o.Default != "" {
-			w.writeLinef("%v.%v = NewStringEnumArray([]string{%v}, %q)",
-				selfVar, o.fieldName(), strings.Join(pieces, ", "), o.Default)
+			w.writeLinef("%v.%v = %v([]string{%v}, %q)",
+				selfVar, o.fieldName(), w.flagType("NewFlagStringEnumArray"), strings.Join(pieces, ", "), o.Default)
 		} else {
-			w.writeLinef("%v.%v = NewStringEnumArray([]string{%v}, []string{})",
-				selfVar, o.fieldName(), strings.Join(pieces, ", "))
+			w.writeLinef("%v.%v = %v([]string{%v}, []string{})",
+				selfVar, o.fieldName(), w.flagType("NewFlagStringEnumArray"), strings.Join(pieces, ", "))
 		}
 		flagMeth = "Var"
 	default:

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/temporalio/cli/cliext"
 	"github.com/temporalio/cli/internal/printer"
 	"google.golang.org/protobuf/encoding/protojson"
 
@@ -209,11 +210,11 @@ func toIntervalSpec(str string) (client.ScheduleIntervalSpec, error) {
 	if len(parts) > 2 {
 		return spec, fmt.Errorf(`invalid interval: must be "<duration>" or "<duration>/<duration>"`)
 	} else if len(parts) == 2 {
-		if spec.Offset, err = ParseDuration(parts[1]); err != nil {
+		if spec.Offset, err = cliext.ParseFlagDuration(parts[1]); err != nil {
 			return spec, fmt.Errorf("invalid interval: %w", err)
 		}
 	}
-	if spec.Every, err = ParseDuration(parts[0]); err != nil {
+	if spec.Every, err = cliext.ParseFlagDuration(parts[0]); err != nil {
 		return spec, fmt.Errorf("invalid interval: %w", err)
 	}
 	return spec, nil
