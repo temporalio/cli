@@ -1,6 +1,7 @@
 package cliext_test
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -12,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/temporalio/cli/cliext"
+	"go.temporal.io/sdk/client"
 	"golang.org/x/oauth2"
 )
 
@@ -88,7 +90,7 @@ func TestClientOptionsBuilder_OAuth_ValidToken(t *testing.T) {
 func TestClientOptionsBuilder_OAuth_Refresh(t *testing.T) {
 	s := newMockOAuthServer(t)
 	s.TokenRefreshHandler = func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, `{"access_token":"refreshed-token","expires_in":3600}`)
+		fmt.Fprint(w, `{"access_token":"refreshed-token","refresh_token":"new-refresh-token","expires_in":3600,"token_type":"Bearer"}`)
 	}
 
 	configFile := filepath.Join(t.TempDir(), "config.toml")
@@ -121,10 +123,24 @@ func TestClientOptionsBuilder_OAuth_Refresh(t *testing.T) {
 			Namespace: "default",
 		},
 	}
-	opts, err := builder.Build(t.Context())
+	opts, err := builder.Build(context.Background())
 
 	require.NoError(t, err)
 	assert.NotNil(t, opts.Credentials)
+
+	// Create a client and attempt to dial to force the token refresh.
+	// This will fail to connect since there's no server, but it will trigger
+	// the OAuth token refresh and persistence.
+	_, _ = client.Dial(opts)
+
+	// Verify that the refreshed token was persisted to the config file
+	result, err := cliext.LoadClientOAuth(cliext.LoadClientOAuthOptions{
+		ConfigFilePath: configFile,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, result.OAuth)
+	assert.Equal(t, "refreshed-token", result.OAuth.Token.AccessToken)
+	assert.Equal(t, "new-refresh-token", result.OAuth.Token.RefreshToken)
 }
 
 func TestClientOptionsBuilder_OAuth_APIKeyTakesPrecedence(t *testing.T) {
