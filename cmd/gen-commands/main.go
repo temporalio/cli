@@ -36,6 +36,7 @@ func run() error {
 	flag.Var(&inputFiles, "input", "Input YAML file (can be specified multiple times)")
 	flag.Parse()
 
+	// Read input from file
 	if len(inputFiles) == 0 {
 		return fmt.Errorf("-input flag is required")
 	}
@@ -49,16 +50,19 @@ func run() error {
 		yamlDataList[i] = data
 	}
 
+	// Parse YAML
 	cmds, err := commandsgen.ParseCommands(yamlDataList...)
 	if err != nil {
 		return fmt.Errorf("failed parsing YAML: %w", err)
 	}
 
+	// Generate code
 	b, err := commandsgen.GenerateCommandsCode(pkg, contextType, cmds)
 	if err != nil {
 		return fmt.Errorf("failed generating code: %w", err)
 	}
 
+	// Write output to stdout
 	if _, err = os.Stdout.Write(b); err != nil {
 		return fmt.Errorf("failed writing output: %w", err)
 	}

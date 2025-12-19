@@ -11,6 +11,7 @@ import (
 // The output is written to the provided writer (typically stderr).
 // Returns a nop logger if LogLevel is "never".
 func NewLogger(opts CommonOptions, w io.Writer) (*slog.Logger, error) {
+	// If level is never, make noop logger
 	if opts.LogLevel.Value == "never" {
 		return newNopLogger(), nil
 	}
@@ -22,6 +23,7 @@ func NewLogger(opts CommonOptions, w io.Writer) (*slog.Logger, error) {
 
 	var handler slog.Handler
 	switch opts.LogFormat.Value {
+	// We have a "pretty" alias for compatibility
 	case "", "text", "pretty":
 		handler = slog.NewTextHandler(w, &slog.HandlerOptions{
 			Level: level,

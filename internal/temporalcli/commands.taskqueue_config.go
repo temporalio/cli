@@ -24,16 +24,16 @@ func (c *TemporalTaskQueueConfigGetCommand) run(cctx *CommandContext, args []str
 		return err
 	}
 
-	namespace := c.Parent.Parent.Namespace
-	if namespace == "" {
-		return fmt.Errorf("namespace is required")
-	}
-
 	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
 	defer cl.Close()
+
+	namespace := c.Parent.Parent.Namespace
+	if namespace == "" {
+		return fmt.Errorf("namespace is required")
+	}
 
 	// Get the task queue configuration
 	resp, err := cl.WorkflowService().DescribeTaskQueue(cctx, &workflowservice.DescribeTaskQueueRequest{

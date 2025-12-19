@@ -24,11 +24,6 @@ import (
 	"time"
 )
 
-// optionsContext provides context for building option flags.
-type optionsContext interface {
-	BindFlagEnvVar(flag *pflag.Flag, envVar string)
-}
-
 var hasHighlighting = isatty.IsTerminal(os.Stdout.Fd())
 
 type OverlapPolicyOptions struct {
@@ -36,7 +31,7 @@ type OverlapPolicyOptions struct {
 	FlagSet       *pflag.FlagSet
 }
 
-func (v *OverlapPolicyOptions) BuildFlags(ctx optionsContext, f *pflag.FlagSet) {
+func (v *OverlapPolicyOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
 	v.OverlapPolicy = NewStringEnum([]string{"Skip", "BufferOne", "BufferAll", "CancelOther", "TerminateOther", "AllowAll"}, "Skip")
 	f.Var(&v.OverlapPolicy, "overlap-policy", "Policy for handling overlapping Workflow Executions. Accepted values: Skip, BufferOne, BufferAll, CancelOther, TerminateOther, AllowAll.")
@@ -47,7 +42,7 @@ type ScheduleIdOptions struct {
 	FlagSet    *pflag.FlagSet
 }
 
-func (v *ScheduleIdOptions) BuildFlags(ctx optionsContext, f *pflag.FlagSet) {
+func (v *ScheduleIdOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
 	f.StringVarP(&v.ScheduleId, "schedule-id", "s", "", "Schedule ID. Required.")
 	_ = cobra.MarkFlagRequired(f, "schedule-id")
@@ -71,7 +66,7 @@ type ScheduleConfigurationOptions struct {
 	FlagSet                 *pflag.FlagSet
 }
 
-func (v *ScheduleConfigurationOptions) BuildFlags(ctx optionsContext, f *pflag.FlagSet) {
+func (v *ScheduleConfigurationOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
 	f.StringArrayVar(&v.Calendar, "calendar", nil, "Calendar specification in JSON. For example: `{\"dayOfWeek\":\"Fri\",\"hour\":\"17\",\"minute\":\"5\"}`.")
 	v.CatchupWindow = 0
@@ -97,7 +92,7 @@ type WorkflowReferenceOptions struct {
 	FlagSet    *pflag.FlagSet
 }
 
-func (v *WorkflowReferenceOptions) BuildFlags(ctx optionsContext, f *pflag.FlagSet) {
+func (v *WorkflowReferenceOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
 	f.StringVarP(&v.WorkflowId, "workflow-id", "w", "", "Workflow ID. Required.")
 	_ = cobra.MarkFlagRequired(f, "workflow-id")
@@ -109,7 +104,7 @@ type DeploymentNameOptions struct {
 	FlagSet *pflag.FlagSet
 }
 
-func (v *DeploymentNameOptions) BuildFlags(ctx optionsContext, f *pflag.FlagSet) {
+func (v *DeploymentNameOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
 	f.StringVarP(&v.Name, "name", "d", "", "Name for a Worker Deployment. Required.")
 	_ = cobra.MarkFlagRequired(f, "name")
@@ -121,7 +116,7 @@ type DeploymentVersionOptions struct {
 	FlagSet        *pflag.FlagSet
 }
 
-func (v *DeploymentVersionOptions) BuildFlags(ctx optionsContext, f *pflag.FlagSet) {
+func (v *DeploymentVersionOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
 	f.StringVar(&v.DeploymentName, "deployment-name", "", "Name of the Worker Deployment. Required.")
 	_ = cobra.MarkFlagRequired(f, "deployment-name")
@@ -136,7 +131,7 @@ type DeploymentVersionOrUnversionedOptions struct {
 	FlagSet        *pflag.FlagSet
 }
 
-func (v *DeploymentVersionOrUnversionedOptions) BuildFlags(ctx optionsContext, f *pflag.FlagSet) {
+func (v *DeploymentVersionOrUnversionedOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
 	f.StringVar(&v.DeploymentName, "deployment-name", "", "Name of the Worker Deployment. Required.")
 	_ = cobra.MarkFlagRequired(f, "deployment-name")
@@ -150,7 +145,7 @@ type DeploymentReferenceOptions struct {
 	FlagSet    *pflag.FlagSet
 }
 
-func (v *DeploymentReferenceOptions) BuildFlags(ctx optionsContext, f *pflag.FlagSet) {
+func (v *DeploymentReferenceOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
 	f.StringVar(&v.SeriesName, "series-name", "", "Series Name for a Worker Deployment. Required.")
 	_ = cobra.MarkFlagRequired(f, "series-name")
@@ -169,7 +164,7 @@ type SingleWorkflowOrBatchOptions struct {
 	FlagSet    *pflag.FlagSet
 }
 
-func (v *SingleWorkflowOrBatchOptions) BuildFlags(ctx optionsContext, f *pflag.FlagSet) {
+func (v *SingleWorkflowOrBatchOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
 	f.StringVarP(&v.WorkflowId, "workflow-id", "w", "", "Workflow ID. You must set either --workflow-id or --query.")
 	f.StringVarP(&v.Query, "query", "q", "", "Content for an SQL-like `QUERY` List Filter. You must set either --workflow-id or --query.")
@@ -198,7 +193,7 @@ type SharedWorkflowStartOptions struct {
 	FlagSet          *pflag.FlagSet
 }
 
-func (v *SharedWorkflowStartOptions) BuildFlags(ctx optionsContext, f *pflag.FlagSet) {
+func (v *SharedWorkflowStartOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
 	f.StringVarP(&v.WorkflowId, "workflow-id", "w", "", "Workflow ID. If not supplied, the Service generates a unique ID.")
 	f.StringVar(&v.Type, "type", "", "Workflow Type name. Required. Aliased as \"--name\".")
@@ -230,7 +225,7 @@ type WorkflowStartOptions struct {
 	FlagSet          *pflag.FlagSet
 }
 
-func (v *WorkflowStartOptions) BuildFlags(ctx optionsContext, f *pflag.FlagSet) {
+func (v *WorkflowStartOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
 	f.StringVar(&v.Cron, "cron", "", "Cron schedule for the Workflow.")
 	_ = f.MarkDeprecated("cron", "Use Schedules instead.")
@@ -251,7 +246,7 @@ type PayloadInputOptions struct {
 	FlagSet     *pflag.FlagSet
 }
 
-func (v *PayloadInputOptions) BuildFlags(ctx optionsContext, f *pflag.FlagSet) {
+func (v *PayloadInputOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
 	f.StringArrayVarP(&v.Input, "input", "i", nil, "Input value. Use JSON content or set --input-meta to override. Can't be combined with --input-file. Can be passed multiple times to pass multiple arguments.")
 	f.StringArrayVar(&v.InputFile, "input-file", nil, "A path or paths for input file(s). Use JSON content or set --input-meta to override. Can't be combined with --input. Can be passed multiple times to pass multiple arguments.")
@@ -269,7 +264,7 @@ type UpdateStartingOptions struct {
 	FlagSet             *pflag.FlagSet
 }
 
-func (v *UpdateStartingOptions) BuildFlags(ctx optionsContext, f *pflag.FlagSet) {
+func (v *UpdateStartingOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
 	f.StringVar(&v.Name, "name", "", "Handler method name. Required. Aliased as \"--type\".")
 	_ = cobra.MarkFlagRequired(f, "name")
@@ -288,7 +283,7 @@ type UpdateTargetingOptions struct {
 	FlagSet    *pflag.FlagSet
 }
 
-func (v *UpdateTargetingOptions) BuildFlags(ctx optionsContext, f *pflag.FlagSet) {
+func (v *UpdateTargetingOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
 	f.StringVarP(&v.WorkflowId, "workflow-id", "w", "", "Workflow ID. Required.")
 	_ = cobra.MarkFlagRequired(f, "workflow-id")
@@ -302,7 +297,7 @@ type NexusEndpointIdentityOptions struct {
 	FlagSet *pflag.FlagSet
 }
 
-func (v *NexusEndpointIdentityOptions) BuildFlags(ctx optionsContext, f *pflag.FlagSet) {
+func (v *NexusEndpointIdentityOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
 	f.StringVar(&v.Name, "name", "", "Endpoint name. Required.")
 	_ = cobra.MarkFlagRequired(f, "name")
@@ -317,7 +312,7 @@ type NexusEndpointConfigOptions struct {
 	FlagSet         *pflag.FlagSet
 }
 
-func (v *NexusEndpointConfigOptions) BuildFlags(ctx optionsContext, f *pflag.FlagSet) {
+func (v *NexusEndpointConfigOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
 	f.StringVar(&v.Description, "description", "", "Nexus Endpoint description. You may use Markdown formatting in the Nexus Endpoint description.")
 	f.StringVar(&v.DescriptionFile, "description-file", "", "Path to the Nexus Endpoint description file. The contents of the description file may use Markdown formatting.")
@@ -332,7 +327,7 @@ type QueryModifiersOptions struct {
 	FlagSet         *pflag.FlagSet
 }
 
-func (v *QueryModifiersOptions) BuildFlags(ctx optionsContext, f *pflag.FlagSet) {
+func (v *QueryModifiersOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
 	v.RejectCondition = NewStringEnum([]string{"not_open", "not_completed_cleanly"}, "")
 	f.Var(&v.RejectCondition, "reject-condition", "Optional flag for rejecting Queries based on Workflow state. Accepted values: not_open, not_completed_cleanly.")
@@ -346,7 +341,7 @@ type WorkflowUpdateOptionsOptions struct {
 	FlagSet                          *pflag.FlagSet
 }
 
-func (v *WorkflowUpdateOptionsOptions) BuildFlags(ctx optionsContext, f *pflag.FlagSet) {
+func (v *WorkflowUpdateOptionsOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
 	v.VersioningOverrideBehavior = NewStringEnum([]string{"pinned", "auto_upgrade"}, "")
 	f.Var(&v.VersioningOverrideBehavior, "versioning-override-behavior", "Override the versioning behavior of a Workflow. Accepted values: pinned, auto_upgrade. Required.")
@@ -380,7 +375,7 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	s.Command.AddCommand(&NewTemporalTaskQueueCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowCommand(cctx, &s).Command)
-	s.CommonOptions.BuildFlags(cctx, s.Command.PersistentFlags())
+	s.CommonOptions.BuildFlags(s.Command.PersistentFlags())
 	s.initCommand(cctx)
 	return &s
 }
@@ -408,7 +403,7 @@ func NewTemporalActivityCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.AddCommand(&NewTemporalActivityResetCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalActivityUnpauseCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalActivityUpdateOptionsCommand(cctx, &s).Command)
-	s.ClientOptions.BuildFlags(cctx, s.Command.PersistentFlags())
+	s.ClientOptions.BuildFlags(s.Command.PersistentFlags())
 	return &s
 }
 
@@ -436,7 +431,7 @@ func NewTemporalActivityCompleteCommand(cctx *CommandContext, parent *TemporalAc
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "activity-id")
 	s.Command.Flags().StringVar(&s.Result, "result", "", "Result `JSON` to return. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "result")
-	s.WorkflowReferenceOptions.BuildFlags(cctx, s.Command.Flags())
+	s.WorkflowReferenceOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -470,7 +465,7 @@ func NewTemporalActivityFailCommand(cctx *CommandContext, parent *TemporalActivi
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "activity-id")
 	s.Command.Flags().StringVar(&s.Detail, "detail", "", "Reason for failing the Activity (JSON).")
 	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for failing the Activity.")
-	s.WorkflowReferenceOptions.BuildFlags(cctx, s.Command.Flags())
+	s.WorkflowReferenceOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -503,7 +498,7 @@ func NewTemporalActivityPauseCommand(cctx *CommandContext, parent *TemporalActiv
 	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "The Activity ID to pause. Either `activity-id` or `activity-type` must be provided, but not both.")
 	s.Command.Flags().StringVar(&s.ActivityType, "activity-type", "", "All activities of the Activity Type will be paused. Either `activity-id` or `activity-type` must be provided, but not both. Note: Pausing Activity by Type is an experimental feature and may change in the future.")
 	s.Command.Flags().StringVar(&s.Identity, "identity", "", "The identity of the user or client submitting this request.")
-	s.WorkflowReferenceOptions.BuildFlags(cctx, s.Command.Flags())
+	s.WorkflowReferenceOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -547,7 +542,7 @@ func NewTemporalActivityResetCommand(cctx *CommandContext, parent *TemporalActiv
 	s.Jitter = 0
 	s.Command.Flags().Var(&s.Jitter, "jitter", "The activity will reset at random a time within the specified duration. Can only be used with --query.")
 	s.Command.Flags().BoolVar(&s.RestoreOriginalOptions, "restore-original-options", false, "Restore the original options of the activity.")
-	s.SingleWorkflowOrBatchOptions.BuildFlags(cctx, s.Command.Flags())
+	s.SingleWorkflowOrBatchOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -587,7 +582,7 @@ func NewTemporalActivityUnpauseCommand(cctx *CommandContext, parent *TemporalAct
 	s.Command.Flags().BoolVar(&s.MatchAll, "match-all", false, "Every paused activity should be unpaused. This flag is ignored if activity-type is provided.")
 	s.Jitter = 0
 	s.Command.Flags().Var(&s.Jitter, "jitter", "The activity will start at random a time within the specified duration. Can only be used with --query.")
-	s.SingleWorkflowOrBatchOptions.BuildFlags(cctx, s.Command.Flags())
+	s.SingleWorkflowOrBatchOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -646,7 +641,7 @@ func NewTemporalActivityUpdateOptionsCommand(cctx *CommandContext, parent *Tempo
 	s.Command.Flags().Float32Var(&s.RetryBackoffCoefficient, "retry-backoff-coefficient", 0, "Coefficient used to calculate the next retry interval. The next retry interval is previous interval multiplied by the backoff coefficient. Must be 1 or larger.")
 	s.Command.Flags().IntVar(&s.RetryMaximumAttempts, "retry-maximum-attempts", 0, "Maximum number of attempts. When exceeded the retries stop even if not expired yet. Setting this value to 1 disables retries. Setting this value to 0 means unlimited attempts(up to the timeouts).")
 	s.Command.Flags().BoolVar(&s.RestoreOriginalOptions, "restore-original-options", false, "Restore the original options of the activity.")
-	s.SingleWorkflowOrBatchOptions.BuildFlags(cctx, s.Command.Flags())
+	s.SingleWorkflowOrBatchOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -675,7 +670,7 @@ func NewTemporalBatchCommand(cctx *CommandContext, parent *TemporalCommand) *Tem
 	s.Command.AddCommand(&NewTemporalBatchDescribeCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalBatchListCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalBatchTerminateCommand(cctx, &s).Command)
-	s.ClientOptions.BuildFlags(cctx, s.Command.PersistentFlags())
+	s.ClientOptions.BuildFlags(s.Command.PersistentFlags())
 	return &s
 }
 
@@ -1077,7 +1072,7 @@ func NewTemporalOperatorCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.AddCommand(&NewTemporalOperatorNamespaceCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalOperatorNexusCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalOperatorSearchAttributeCommand(cctx, &s).Command)
-	s.ClientOptions.BuildFlags(cctx, s.Command.PersistentFlags())
+	s.ClientOptions.BuildFlags(s.Command.PersistentFlags())
 	return &s
 }
 
@@ -1537,8 +1532,8 @@ func NewTemporalOperatorNexusEndpointCreateCommand(cctx *CommandContext, parent 
 		s.Command.Long = "Create a Nexus Endpoint on the Server.\n\nA Nexus Endpoint name is used in Workflow code to invoke Nexus Operations.\nThe endpoint target may either be a Worker, in which case\n`--target-namespace` and `--target-task-queue` must both be provided, or\nan external URL, in which case `--target-url` must be provided.\n\nThis command will fail if an Endpoint with the same name is already\nregistered.\n\n```\ntemporal operator nexus endpoint create \\\n  --name your-endpoint \\\n  --target-namespace your-namespace \\\n  --target-task-queue your-task-queue \\\n  --description-file DESCRIPTION.md\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.NexusEndpointIdentityOptions.BuildFlags(cctx, s.Command.Flags())
-	s.NexusEndpointConfigOptions.BuildFlags(cctx, s.Command.Flags())
+	s.NexusEndpointIdentityOptions.BuildFlags(s.Command.Flags())
+	s.NexusEndpointConfigOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -1565,7 +1560,7 @@ func NewTemporalOperatorNexusEndpointDeleteCommand(cctx *CommandContext, parent 
 		s.Command.Long = "Delete a Nexus Endpoint from the Server.\n\n```\ntemporal operator nexus endpoint delete --name your-endpoint\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.NexusEndpointIdentityOptions.BuildFlags(cctx, s.Command.Flags())
+	s.NexusEndpointIdentityOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -1592,7 +1587,7 @@ func NewTemporalOperatorNexusEndpointGetCommand(cctx *CommandContext, parent *Te
 		s.Command.Long = "Get a Nexus Endpoint by name from the Server.\n\n```\ntemporal operator nexus endpoint get --name your-endpoint\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.NexusEndpointIdentityOptions.BuildFlags(cctx, s.Command.Flags())
+	s.NexusEndpointIdentityOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -1647,8 +1642,8 @@ func NewTemporalOperatorNexusEndpointUpdateCommand(cctx *CommandContext, parent 
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().BoolVar(&s.UnsetDescription, "unset-description", false, "Unset the description.")
-	s.NexusEndpointIdentityOptions.BuildFlags(cctx, s.Command.Flags())
-	s.NexusEndpointConfigOptions.BuildFlags(cctx, s.Command.Flags())
+	s.NexusEndpointIdentityOptions.BuildFlags(s.Command.Flags())
+	s.NexusEndpointConfigOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -1791,7 +1786,7 @@ func NewTemporalScheduleCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.AddCommand(&NewTemporalScheduleToggleCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleTriggerCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleUpdateCommand(cctx, &s).Command)
-	s.ClientOptions.BuildFlags(cctx, s.Command.PersistentFlags())
+	s.ClientOptions.BuildFlags(s.Command.PersistentFlags())
 	return &s
 }
 
@@ -1820,8 +1815,8 @@ func NewTemporalScheduleBackfillCommand(cctx *CommandContext, parent *TemporalSc
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "end-time")
 	s.Command.Flags().Var(&s.StartTime, "start-time", "Backfill start time. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "start-time")
-	s.OverlapPolicyOptions.BuildFlags(cctx, s.Command.Flags())
-	s.ScheduleIdOptions.BuildFlags(cctx, s.Command.Flags())
+	s.OverlapPolicyOptions.BuildFlags(s.Command.Flags())
+	s.ScheduleIdOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -1852,11 +1847,11 @@ func NewTemporalScheduleCreateCommand(cctx *CommandContext, parent *TemporalSche
 		s.Command.Long = "Create a new Schedule on the Temporal Service. A Schedule automatically starts\nnew Workflow Executions at the times you specify.\n\nFor example:\n\n```\n  temporal schedule create \\\n    --schedule-id \"YourScheduleId\" \\\n    --calendar '{\"dayOfWeek\":\"Fri\",\"hour\":\"3\",\"minute\":\"30\"}' \\\n    --workflow-id YourBaseWorkflowIdName \\\n    --task-queue YourTaskQueue \\\n    --type YourWorkflowType\n```\n\nSchedules support any combination of `--calendar`, `--interval`, and `--cron`:\n\n* Shorthand `--interval` strings.\n  For example: 45m (every 45 minutes) or 6h/5h (every 6 hours, at the top of\n  the 5th hour).\n* JSON `--calendar`, as in the preceding example.\n* Unix-style `--cron` strings and robfig declarations\n  (@daily/@weekly/@every X/etc).\n  For example, every Friday at 12:30 PM: `30 12 * * Fri`."
 	}
 	s.Command.Args = cobra.NoArgs
-	s.ScheduleConfigurationOptions.BuildFlags(cctx, s.Command.Flags())
-	s.ScheduleIdOptions.BuildFlags(cctx, s.Command.Flags())
-	s.OverlapPolicyOptions.BuildFlags(cctx, s.Command.Flags())
-	s.SharedWorkflowStartOptions.BuildFlags(cctx, s.Command.Flags())
-	s.PayloadInputOptions.BuildFlags(cctx, s.Command.Flags())
+	s.ScheduleConfigurationOptions.BuildFlags(s.Command.Flags())
+	s.ScheduleIdOptions.BuildFlags(s.Command.Flags())
+	s.OverlapPolicyOptions.BuildFlags(s.Command.Flags())
+	s.SharedWorkflowStartOptions.BuildFlags(s.Command.Flags())
+	s.PayloadInputOptions.BuildFlags(s.Command.Flags())
 	s.Command.Flags().SetNormalizeFunc(aliasNormalizer(map[string]string{
 		"name": "type",
 	}))
@@ -1886,7 +1881,7 @@ func NewTemporalScheduleDeleteCommand(cctx *CommandContext, parent *TemporalSche
 		s.Command.Long = "Deletes a Schedule on the front end Service:\n\n```\ntemporal schedule delete \\\n    --schedule-id YourScheduleId\n```\n\nRemoving a Schedule won't affect the Workflow Executions it started that are\nstill running. To cancel or terminate these Workflow Executions, use `temporal\nworkflow delete` with the `TemporalScheduledById` Search Attribute instead."
 	}
 	s.Command.Args = cobra.NoArgs
-	s.ScheduleIdOptions.BuildFlags(cctx, s.Command.Flags())
+	s.ScheduleIdOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -1913,7 +1908,7 @@ func NewTemporalScheduleDescribeCommand(cctx *CommandContext, parent *TemporalSc
 		s.Command.Long = "Show a Schedule configuration, including information about past, current, and\nfuture Workflow runs:\n\n```\ntemporal schedule describe \\\n    --schedule-id YourScheduleId\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.ScheduleIdOptions.BuildFlags(cctx, s.Command.Flags())
+	s.ScheduleIdOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -1977,7 +1972,7 @@ func NewTemporalScheduleToggleCommand(cctx *CommandContext, parent *TemporalSche
 	s.Command.Flags().BoolVar(&s.Pause, "pause", false, "Pause the Schedule.")
 	s.Command.Flags().StringVar(&s.Reason, "reason", "(no reason provided)", "Reason for pausing or unpausing the Schedule.")
 	s.Command.Flags().BoolVar(&s.Unpause, "unpause", false, "Unpause the Schedule.")
-	s.ScheduleIdOptions.BuildFlags(cctx, s.Command.Flags())
+	s.ScheduleIdOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -2005,8 +2000,8 @@ func NewTemporalScheduleTriggerCommand(cctx *CommandContext, parent *TemporalSch
 		s.Command.Long = "Trigger a Schedule to run immediately:\n\n```\ntemporal schedule trigger \\\n    --schedule-id \"YourScheduleId\"\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.ScheduleIdOptions.BuildFlags(cctx, s.Command.Flags())
-	s.OverlapPolicyOptions.BuildFlags(cctx, s.Command.Flags())
+	s.ScheduleIdOptions.BuildFlags(s.Command.Flags())
+	s.OverlapPolicyOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -2037,11 +2032,11 @@ func NewTemporalScheduleUpdateCommand(cctx *CommandContext, parent *TemporalSche
 		s.Command.Long = "Update an existing Schedule with new configuration details, including time\nspecifications, action, and policies:\n\n```\ntemporal schedule update \\\n    --schedule-id \"YourScheduleId\" \\\n    --workflow-type \"NewWorkflowType\"\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.ScheduleConfigurationOptions.BuildFlags(cctx, s.Command.Flags())
-	s.ScheduleIdOptions.BuildFlags(cctx, s.Command.Flags())
-	s.OverlapPolicyOptions.BuildFlags(cctx, s.Command.Flags())
-	s.SharedWorkflowStartOptions.BuildFlags(cctx, s.Command.Flags())
-	s.PayloadInputOptions.BuildFlags(cctx, s.Command.Flags())
+	s.ScheduleConfigurationOptions.BuildFlags(s.Command.Flags())
+	s.ScheduleIdOptions.BuildFlags(s.Command.Flags())
+	s.OverlapPolicyOptions.BuildFlags(s.Command.Flags())
+	s.SharedWorkflowStartOptions.BuildFlags(s.Command.Flags())
+	s.PayloadInputOptions.BuildFlags(s.Command.Flags())
 	s.Command.Flags().SetNormalizeFunc(aliasNormalizer(map[string]string{
 		"name": "type",
 	}))
@@ -2154,7 +2149,7 @@ func NewTemporalTaskQueueCommand(cctx *CommandContext, parent *TemporalCommand) 
 	s.Command.AddCommand(&NewTemporalTaskQueueListPartitionCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalTaskQueueUpdateBuildIdsCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalTaskQueueVersioningCommand(cctx, &s).Command)
-	s.ClientOptions.BuildFlags(cctx, s.Command.PersistentFlags())
+	s.ClientOptions.BuildFlags(s.Command.PersistentFlags())
 	return &s
 }
 
@@ -2851,7 +2846,7 @@ func NewTemporalWorkerCommand(cctx *CommandContext, parent *TemporalCommand) *Te
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDescribeCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerListCommand(cctx, &s).Command)
-	s.ClientOptions.BuildFlags(cctx, s.Command.PersistentFlags())
+	s.ClientOptions.BuildFlags(s.Command.PersistentFlags())
 	return &s
 }
 
@@ -2901,7 +2896,7 @@ func NewTemporalWorkerDeploymentDeleteCommand(cctx *CommandContext, parent *Temp
 		s.Command.Long = "```\n+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n```\n\nRemove a Worker Deployment given its Deployment Name.\nA Deployment can only be deleted if it has no Version in it.\n\n```\ntemporal worker deployment delete [options]\n```\n\nFor example, setting the user identity that removed the deployment:\n\n```\ntemporal worker deployment delete \\\n    --name YourDeploymentName \\\n    --identity YourIdentity\n\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.DeploymentNameOptions.BuildFlags(cctx, s.Command.Flags())
+	s.DeploymentNameOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -2930,7 +2925,7 @@ func NewTemporalWorkerDeploymentDeleteVersionCommand(cctx *CommandContext, paren
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().BoolVar(&s.SkipDrainage, "skip-drainage", false, "Ignore the deletion requirement of not draining.")
-	s.DeploymentVersionOptions.BuildFlags(cctx, s.Command.Flags())
+	s.DeploymentVersionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -2957,7 +2952,7 @@ func NewTemporalWorkerDeploymentDescribeCommand(cctx *CommandContext, parent *Te
 		s.Command.Long = "```\n+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n```\n\nDescribe properties of a Worker Deployment, such as the versions\nassociated with it, routing information of new or existing tasks\nexecuted by this deployment, or its creation time.\n\n```\ntemporal worker deployment describe [options]\n```\n\nFor example, to describe a deployment `YourDeploymentName` in the default\nnamespace:\n\n```\ntemporal worker deployment describe \\\n    --name YourDeploymentName\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.DeploymentNameOptions.BuildFlags(cctx, s.Command.Flags())
+	s.DeploymentNameOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -2984,7 +2979,7 @@ func NewTemporalWorkerDeploymentDescribeVersionCommand(cctx *CommandContext, par
 		s.Command.Long = "```\n+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n```\n\nDescribe properties of a Worker Deployment Version, such as the task\nqueues polled by workers in this Deployment Version, or drainage\ninformation required to safely decommission workers, or user-provided\nmetadata, or its creation/modification time.\n\n```\ntemporal worker deployment describe-version [options]\n```\n\nFor example, to describe a deployment version  in a deployment\n`YourDeploymentName`, with Build ID `YourBuildID`, and in the default\nnamespace:\n\n```\ntemporal worker deployment describe-version \\\n    --deployment-name YourDeploymentName --build-id YourBuildID\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.DeploymentVersionOptions.BuildFlags(cctx, s.Command.Flags())
+	s.DeploymentVersionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -3125,7 +3120,7 @@ func NewTemporalWorkerDeploymentSetCurrentVersionCommand(cctx *CommandContext, p
 	s.Command.Flags().BoolVar(&s.IgnoreMissingTaskQueues, "ignore-missing-task-queues", false, "Override protection to accidentally remove task queues.")
 	s.Command.Flags().BoolVar(&s.AllowNoPollers, "allow-no-pollers", false, "Override protection and set version as current even if it has no pollers.")
 	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm set Current Version.")
-	s.DeploymentVersionOrUnversionedOptions.BuildFlags(cctx, s.Command.Flags())
+	s.DeploymentVersionOrUnversionedOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -3162,7 +3157,7 @@ func NewTemporalWorkerDeploymentSetRampingVersionCommand(cctx *CommandContext, p
 	s.Command.Flags().BoolVar(&s.IgnoreMissingTaskQueues, "ignore-missing-task-queues", false, "Override protection to accidentally remove task queues.")
 	s.Command.Flags().BoolVar(&s.AllowNoPollers, "allow-no-pollers", false, "Override protection and set version as ramping even if it has no pollers.")
 	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm set Ramping Version.")
-	s.DeploymentVersionOrUnversionedOptions.BuildFlags(cctx, s.Command.Flags())
+	s.DeploymentVersionOrUnversionedOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -3193,7 +3188,7 @@ func NewTemporalWorkerDeploymentUpdateMetadataVersionCommand(cctx *CommandContex
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringArrayVar(&s.Metadata, "metadata", nil, "Set deployment metadata using `KEY=\"VALUE\"` pairs. Keys must be identifiers, and values must be JSON values. For example: `YourKey={\"your\": \"value\"}` Can be passed multiple times.")
 	s.Command.Flags().StringArrayVar(&s.RemoveEntries, "remove-entries", nil, "Keys of entries to be deleted from metadata. Can be passed multiple times.")
-	s.DeploymentVersionOptions.BuildFlags(cctx, s.Command.Flags())
+	s.DeploymentVersionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -3298,7 +3293,7 @@ func NewTemporalWorkflowCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.AddCommand(&NewTemporalWorkflowTraceCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowUpdateCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowUpdateOptionsCommand(cctx, &s).Command)
-	s.ClientOptions.BuildFlags(cctx, s.Command.PersistentFlags())
+	s.ClientOptions.BuildFlags(s.Command.PersistentFlags())
 	return &s
 }
 
@@ -3320,7 +3315,7 @@ func NewTemporalWorkflowCancelCommand(cctx *CommandContext, parent *TemporalWork
 		s.Command.Long = "Canceling a running Workflow Execution records a\n`WorkflowExecutionCancelRequested` event in the Event History. The Service\nschedules a new Command Task, and the Workflow Execution performs any cleanup\nwork supported by its implementation.\n\nUse the Workflow ID to cancel an Execution:\n\n```\ntemporal workflow cancel \\\n    --workflow-id YourWorkflowId\n```\n\nA visibility Query lets you send bulk cancellations to Workflow Executions\nmatching the results:\n\n```\ntemporal workflow cancel \\\n    --query YourQuery\n```\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation. See `temporal batch --help` for a quick reference."
 	}
 	s.Command.Args = cobra.NoArgs
-	s.SingleWorkflowOrBatchOptions.BuildFlags(cctx, s.Command.Flags())
+	s.SingleWorkflowOrBatchOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -3374,7 +3369,7 @@ func NewTemporalWorkflowDeleteCommand(cctx *CommandContext, parent *TemporalWork
 		s.Command.Long = "Delete a Workflow Executions and its Event History:\n\n```\ntemporal workflow delete \\\n    --workflow-id YourWorkflowId\n```\n\nThe removal executes asynchronously. If the Execution is Running, the Service\nterminates it before deletion.\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation. See `temporal batch --help` for a quick reference."
 	}
 	s.Command.Args = cobra.NoArgs
-	s.SingleWorkflowOrBatchOptions.BuildFlags(cctx, s.Command.Flags())
+	s.SingleWorkflowOrBatchOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -3405,7 +3400,7 @@ func NewTemporalWorkflowDescribeCommand(cctx *CommandContext, parent *TemporalWo
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().BoolVar(&s.ResetPoints, "reset-points", false, "Show auto-reset points only.")
 	s.Command.Flags().BoolVar(&s.Raw, "raw", false, "Print properties without changing their format.")
-	s.WorkflowReferenceOptions.BuildFlags(cctx, s.Command.Flags())
+	s.WorkflowReferenceOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -3436,9 +3431,9 @@ func NewTemporalWorkflowExecuteCommand(cctx *CommandContext, parent *TemporalWor
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().BoolVar(&s.Detailed, "detailed", false, "Display events as sections instead of table. Does not apply to JSON output.")
-	s.SharedWorkflowStartOptions.BuildFlags(cctx, s.Command.Flags())
-	s.WorkflowStartOptions.BuildFlags(cctx, s.Command.Flags())
-	s.PayloadInputOptions.BuildFlags(cctx, s.Command.Flags())
+	s.SharedWorkflowStartOptions.BuildFlags(s.Command.Flags())
+	s.WorkflowStartOptions.BuildFlags(s.Command.Flags())
+	s.PayloadInputOptions.BuildFlags(s.Command.Flags())
 	s.Command.Flags().SetNormalizeFunc(aliasNormalizer(map[string]string{
 		"name": "type",
 	}))
@@ -3487,9 +3482,9 @@ func NewTemporalWorkflowExecuteUpdateWithStartCommand(cctx *CommandContext, pare
 	s.Command.Flags().StringArrayVar(&s.UpdateInputFile, "update-input-file", nil, "A path or paths for input file(s). Use JSON content or set --update-input-meta to override. Can't be combined with --update-input. Can be passed multiple times to pass multiple arguments.")
 	s.Command.Flags().StringArrayVar(&s.UpdateInputMeta, "update-input-meta", nil, "Input update payload metadata as a `KEY=VALUE` pair. When the KEY is \"encoding\", this overrides the default (\"json/plain\"). Can be passed multiple times.")
 	s.Command.Flags().BoolVar(&s.UpdateInputBase64, "update-input-base64", false, "Assume update inputs are base64-encoded and attempt to decode them.")
-	s.SharedWorkflowStartOptions.BuildFlags(cctx, s.Command.Flags())
-	s.WorkflowStartOptions.BuildFlags(cctx, s.Command.Flags())
-	s.PayloadInputOptions.BuildFlags(cctx, s.Command.Flags())
+	s.SharedWorkflowStartOptions.BuildFlags(s.Command.Flags())
+	s.WorkflowStartOptions.BuildFlags(s.Command.Flags())
+	s.PayloadInputOptions.BuildFlags(s.Command.Flags())
 	s.Command.Flags().SetNormalizeFunc(aliasNormalizer(map[string]string{
 		"name":        "type",
 		"update-type": "update-name",
@@ -3584,8 +3579,8 @@ func NewTemporalWorkflowMetadataCommand(cctx *CommandContext, parent *TemporalWo
 		s.Command.Long = "Issue a Query for and display user-set metadata like summary and\ndetails for a specific Workflow Execution:\n\n```\ntemporal workflow metadata \\\n    --workflow-id YourWorkflowId\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.WorkflowReferenceOptions.BuildFlags(cctx, s.Command.Flags())
-	s.QueryModifiersOptions.BuildFlags(cctx, s.Command.Flags())
+	s.WorkflowReferenceOptions.BuildFlags(s.Command.Flags())
+	s.QueryModifiersOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -3617,9 +3612,9 @@ func NewTemporalWorkflowQueryCommand(cctx *CommandContext, parent *TemporalWorkf
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Name, "name", "", "Query Type/Name. Required. Aliased as \"--type\".")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
-	s.PayloadInputOptions.BuildFlags(cctx, s.Command.Flags())
-	s.WorkflowReferenceOptions.BuildFlags(cctx, s.Command.Flags())
-	s.QueryModifiersOptions.BuildFlags(cctx, s.Command.Flags())
+	s.PayloadInputOptions.BuildFlags(s.Command.Flags())
+	s.WorkflowReferenceOptions.BuildFlags(s.Command.Flags())
+	s.QueryModifiersOptions.BuildFlags(s.Command.Flags())
 	s.Command.Flags().SetNormalizeFunc(aliasNormalizer(map[string]string{
 		"type": "name",
 	}))
@@ -3695,7 +3690,7 @@ func NewTemporalWorkflowResetWithWorkflowUpdateOptionsCommand(cctx *CommandConte
 	s.Command.Short = "Update options on reset workflow"
 	s.Command.Long = "Run Workflow Update Options atomically after the Workflow is reset.\nWorkflows selected by the reset command are forwarded onto the subcommand."
 	s.Command.Args = cobra.NoArgs
-	s.WorkflowUpdateOptionsOptions.BuildFlags(cctx, s.Command.Flags())
+	s.WorkflowUpdateOptionsOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -3722,7 +3717,7 @@ func NewTemporalWorkflowResultCommand(cctx *CommandContext, parent *TemporalWork
 		s.Command.Long = "Wait for and print the result of a Workflow Execution:\n\n```\ntemporal workflow result \\\n    --workflow-id YourWorkflowId\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.WorkflowReferenceOptions.BuildFlags(cctx, s.Command.Flags())
+	s.WorkflowReferenceOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -3753,7 +3748,7 @@ func NewTemporalWorkflowShowCommand(cctx *CommandContext, parent *TemporalWorkfl
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().BoolVarP(&s.Follow, "follow", "f", false, "Follow the Workflow Execution progress in real time. Does not apply to JSON output.")
 	s.Command.Flags().BoolVar(&s.Detailed, "detailed", false, "Display events as detailed sections instead of table. Does not apply to JSON output.")
-	s.WorkflowReferenceOptions.BuildFlags(cctx, s.Command.Flags())
+	s.WorkflowReferenceOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -3784,8 +3779,8 @@ func NewTemporalWorkflowSignalCommand(cctx *CommandContext, parent *TemporalWork
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Name, "name", "", "Signal name. Required. Aliased as \"--type\".")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
-	s.SingleWorkflowOrBatchOptions.BuildFlags(cctx, s.Command.Flags())
-	s.PayloadInputOptions.BuildFlags(cctx, s.Command.Flags())
+	s.SingleWorkflowOrBatchOptions.BuildFlags(s.Command.Flags())
+	s.PayloadInputOptions.BuildFlags(s.Command.Flags())
 	s.Command.Flags().SetNormalizeFunc(aliasNormalizer(map[string]string{
 		"type": "name",
 	}))
@@ -3828,9 +3823,9 @@ func NewTemporalWorkflowSignalWithStartCommand(cctx *CommandContext, parent *Tem
 	s.Command.Flags().StringArrayVar(&s.SignalInputFile, "signal-input-file", nil, "A path or paths for input file(s). Use JSON content or set --signal-input-meta to override. Can't be combined with --signal-input. Can be passed multiple times to pass multiple arguments.")
 	s.Command.Flags().StringArrayVar(&s.SignalInputMeta, "signal-input-meta", nil, "Input signal payload metadata as a `KEY=VALUE` pair. When the KEY is \"encoding\", this overrides the default (\"json/plain\"). Can be passed multiple times.")
 	s.Command.Flags().BoolVar(&s.SignalInputBase64, "signal-input-base64", false, "Assume signal inputs are base64-encoded and attempt to decode them.")
-	s.SharedWorkflowStartOptions.BuildFlags(cctx, s.Command.Flags())
-	s.WorkflowStartOptions.BuildFlags(cctx, s.Command.Flags())
-	s.PayloadInputOptions.BuildFlags(cctx, s.Command.Flags())
+	s.SharedWorkflowStartOptions.BuildFlags(s.Command.Flags())
+	s.WorkflowStartOptions.BuildFlags(s.Command.Flags())
+	s.PayloadInputOptions.BuildFlags(s.Command.Flags())
 	s.Command.Flags().SetNormalizeFunc(aliasNormalizer(map[string]string{
 		"name":        "type",
 		"signal-type": "signal-name",
@@ -3864,7 +3859,7 @@ func NewTemporalWorkflowStackCommand(cctx *CommandContext, parent *TemporalWorkf
 	s.Command.Args = cobra.NoArgs
 	s.RejectCondition = NewStringEnum([]string{"not_open", "not_completed_cleanly"}, "")
 	s.Command.Flags().Var(&s.RejectCondition, "reject-condition", "Optional flag to reject Queries based on Workflow state. Accepted values: not_open, not_completed_cleanly.")
-	s.WorkflowReferenceOptions.BuildFlags(cctx, s.Command.Flags())
+	s.WorkflowReferenceOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -3893,9 +3888,9 @@ func NewTemporalWorkflowStartCommand(cctx *CommandContext, parent *TemporalWorkf
 		s.Command.Long = "Start a new Workflow Execution. Returns the Workflow- and Run-IDs:\n\n```\ntemporal workflow start \\\n    --workflow-id YourWorkflowId \\\n    --type YourWorkflow \\\n    --task-queue YourTaskQueue \\\n    --input '{\"some-key\": \"some-value\"}'\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.SharedWorkflowStartOptions.BuildFlags(cctx, s.Command.Flags())
-	s.WorkflowStartOptions.BuildFlags(cctx, s.Command.Flags())
-	s.PayloadInputOptions.BuildFlags(cctx, s.Command.Flags())
+	s.SharedWorkflowStartOptions.BuildFlags(s.Command.Flags())
+	s.WorkflowStartOptions.BuildFlags(s.Command.Flags())
+	s.PayloadInputOptions.BuildFlags(s.Command.Flags())
 	s.Command.Flags().SetNormalizeFunc(aliasNormalizer(map[string]string{
 		"name": "type",
 	}))
@@ -3948,9 +3943,9 @@ func NewTemporalWorkflowStartUpdateWithStartCommand(cctx *CommandContext, parent
 	s.Command.Flags().StringArrayVar(&s.UpdateInputFile, "update-input-file", nil, "A path or paths for input file(s). Use JSON content or set --update-input-meta to override. Can't be combined with --update-input. Can be passed multiple times to pass multiple arguments.")
 	s.Command.Flags().StringArrayVar(&s.UpdateInputMeta, "update-input-meta", nil, "Input update payload metadata as a `KEY=VALUE` pair. When the KEY is \"encoding\", this overrides the default (\"json/plain\"). Can be passed multiple times.")
 	s.Command.Flags().BoolVar(&s.UpdateInputBase64, "update-input-base64", false, "Assume update inputs are base64-encoded and attempt to decode them.")
-	s.SharedWorkflowStartOptions.BuildFlags(cctx, s.Command.Flags())
-	s.WorkflowStartOptions.BuildFlags(cctx, s.Command.Flags())
-	s.PayloadInputOptions.BuildFlags(cctx, s.Command.Flags())
+	s.SharedWorkflowStartOptions.BuildFlags(s.Command.Flags())
+	s.WorkflowStartOptions.BuildFlags(s.Command.Flags())
+	s.PayloadInputOptions.BuildFlags(s.Command.Flags())
 	s.Command.Flags().SetNormalizeFunc(aliasNormalizer(map[string]string{
 		"name":        "type",
 		"update-type": "update-name",
@@ -4026,7 +4021,7 @@ func NewTemporalWorkflowTraceCommand(cctx *CommandContext, parent *TemporalWorkf
 	s.Command.Flags().BoolVar(&s.NoFold, "no-fold", false, "Disable folding. Fetch and display Child Workflows within the set depth.")
 	s.Command.Flags().IntVar(&s.Depth, "depth", -1, "Set depth for your Child Workflow fetches. Pass -1 to fetch child workflows at any depth.")
 	s.Command.Flags().IntVar(&s.Concurrency, "concurrency", 10, "Number of Workflow Histories to fetch at a time.")
-	s.WorkflowReferenceOptions.BuildFlags(cctx, s.Command.Flags())
+	s.WorkflowReferenceOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -4072,7 +4067,7 @@ func NewTemporalWorkflowUpdateDescribeCommand(cctx *CommandContext, parent *Temp
 		s.Command.Long = "Given a Workflow Execution and an Update ID, return information about its current status, including\na result if it has finished.\n\n```\ntemporal workflow update describe \\\n    --workflow-id YourWorkflowId \\\n    --update-id YourUpdateId\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.UpdateTargetingOptions.BuildFlags(cctx, s.Command.Flags())
+	s.UpdateTargetingOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -4100,8 +4095,8 @@ func NewTemporalWorkflowUpdateExecuteCommand(cctx *CommandContext, parent *Tempo
 		s.Command.Long = "Send a message to a Workflow Execution to invoke an Update handler, and wait for\nthe update to complete or fail. You can also use this to wait for an existing\nupdate to complete, by submitting an existing update ID.\n\n```\ntemporal workflow update execute \\\n    --workflow-id YourWorkflowId \\\n    --name YourUpdate \\\n    --input '{\"some-key\": \"some-value\"}'\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.UpdateStartingOptions.BuildFlags(cctx, s.Command.Flags())
-	s.PayloadInputOptions.BuildFlags(cctx, s.Command.Flags())
+	s.UpdateStartingOptions.BuildFlags(s.Command.Flags())
+	s.PayloadInputOptions.BuildFlags(s.Command.Flags())
 	s.Command.Flags().SetNormalizeFunc(aliasNormalizer(map[string]string{
 		"type": "name",
 	}))
@@ -4131,7 +4126,7 @@ func NewTemporalWorkflowUpdateResultCommand(cctx *CommandContext, parent *Tempor
 		s.Command.Long = "Given a Workflow Execution and an Update ID, wait for the Update to complete or fail and\nprint the result.\n\n```\ntemporal workflow update result \\\n    --workflow-id YourWorkflowId \\\n    --update-id YourUpdateId\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.UpdateTargetingOptions.BuildFlags(cctx, s.Command.Flags())
+	s.UpdateTargetingOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -4163,8 +4158,8 @@ func NewTemporalWorkflowUpdateStartCommand(cctx *CommandContext, parent *Tempora
 	s.WaitForStage = NewStringEnum([]string{"accepted"}, "")
 	s.Command.Flags().Var(&s.WaitForStage, "wait-for-stage", "Update stage to wait for. The only option is `accepted`, but this option is  required. This is to allow a future version of the CLI to choose a default value. Accepted values: accepted. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "wait-for-stage")
-	s.UpdateStartingOptions.BuildFlags(cctx, s.Command.Flags())
-	s.PayloadInputOptions.BuildFlags(cctx, s.Command.Flags())
+	s.UpdateStartingOptions.BuildFlags(s.Command.Flags())
+	s.PayloadInputOptions.BuildFlags(s.Command.Flags())
 	s.Command.Flags().SetNormalizeFunc(aliasNormalizer(map[string]string{
 		"type": "name",
 	}))
@@ -4202,7 +4197,7 @@ func NewTemporalWorkflowUpdateOptionsCommand(cctx *CommandContext, parent *Tempo
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "versioning-override-behavior")
 	s.Command.Flags().StringVar(&s.VersioningOverrideDeploymentName, "versioning-override-deployment-name", "", "When overriding to a `pinned` behavior, specifies the Deployment Name of the version to target.")
 	s.Command.Flags().StringVar(&s.VersioningOverrideBuildId, "versioning-override-build-id", "", "When overriding to a `pinned` behavior, specifies the Build ID of the version to target.")
-	s.SingleWorkflowOrBatchOptions.BuildFlags(cctx, s.Command.Flags())
+	s.SingleWorkflowOrBatchOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

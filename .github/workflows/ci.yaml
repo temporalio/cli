@@ -60,7 +60,7 @@ jobs:
       - name: Regen code, confirm unchanged
         if: ${{ matrix.checkGenCommands }}
         run: |
-          go run ./cmd/gen-commands -input internal/temporalcli/commands.yaml -input cliext/option-sets.yaml -pkg temporalcli -context "*CommandContext" > internal/temporalcli/commands.gen.go
+          go run ./cmd/gen-commands -input internal/temporalcli/commands.yaml -pkg temporalcli -context "*CommandContext" > internal/temporalcli/commands.gen.go
           go run ./cmd/gen-commands -input cliext/option-sets.yaml -pkg cliext > cliext/flags.gen.go
           git diff --exit-code
 

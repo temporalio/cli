@@ -15,7 +15,7 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-// dialClient creates a Temporal client using cliext.BuildClientOptions with CLI-specific customizations.
+// dialClient creates a Temporal client using cliext.ClientOptionsBuilder with CLI-specific customizations.
 //
 // Note, this call may mutate the ClientOptions.Namespace since it is
 // so often used by callers after this call to know the currently configured
@@ -39,27 +39,31 @@ func dialClient(cctx *CommandContext, c *cliext.ClientOptions) (client.Client, e
 	}
 
 	// Build client options using cliext
-	clientOpts, resolvedNamespace, err := cliext.BuildClientOptions(cctx, cliext.ClientOptionsBuilder{
+	builder := &cliext.ClientOptionsBuilder{
 		CommonOptions: cctx.RootCommand.CommonOptions,
 		ClientOptions: *c,
 		EnvLookup:     cctx.Options.EnvLookup,
 		Logger:        cctx.Logger,
-	})
+	}
+	clientOpts, err := builder.Build(cctx)
 	if err != nil {
 		return nil, err
 	}
 
-	// Add data converter with raw value support.
+	// We do not put codec on data converter here, it is applied via
+	// interceptor. Same for failure conversion.
+	// XXX: If this is altered to be more dynamic, have to also update
+	// everywhere DataConverterWithRawValue is used.
 	clientOpts.DataConverter = DataConverterWithRawValue
 
 	// Add header propagator.
 	clientOpts.ContextPropagators = append(clientOpts.ContextPropagators, headerPropagator{})
 
-	// Add fixed header overrides (client-name, client-version, etc.).
+	// Fixed header overrides
 	clientOpts.ConnectionOptions.DialOptions = append(
 		clientOpts.ConnectionOptions.DialOptions, grpc.WithChainUnaryInterceptor(fixedHeaderOverrideInterceptor))
 
-	// Additional gRPC options from command context.
+	// Additional gRPC options
 	clientOpts.ConnectionOptions.DialOptions = append(
 		clientOpts.ConnectionOptions.DialOptions, cctx.Options.AdditionalClientGRPCDialOptions...)
 
@@ -68,8 +72,9 @@ func dialClient(cctx *CommandContext, c *cliext.ClientOptions) (client.Client, e
 		return nil, err
 	}
 
-	// Update namespace to the resolved one (may be different from input if loaded from profile)
-	c.Namespace = resolvedNamespace
+	// Since this namespace value is used by many commands after this call,
+	// we are mutating it to be the derived one
+	c.Namespace = clientOpts.Namespace
 
 	return cl, nil
 }

@@ -2,15 +2,16 @@ package cliext
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 	"time"
 
 	"github.com/BurntSushi/toml"
 	"go.temporal.io/sdk/contrib/envconfig"
+	"golang.org/x/oauth2"
 )
 
 // OAuthClientConfig contains OAuth client credentials and endpoints.
@@ -23,6 +24,8 @@ type OAuthClientConfig struct {
 	TokenURL string
 	// AuthURL is the OAuth authorization endpoint URL.
 	AuthURL string
+	// RedirectURL is the OAuth redirect URL.
+	RedirectURL string
 	// Scopes are the requested OAuth scopes.
 	Scopes []string
 	// RequestParams are additional parameters to include in OAuth requests.
@@ -35,8 +38,6 @@ type OAuthToken struct {
 	AccessToken string
 	// AccessTokenExpiresAt is when the access token expires.
 	AccessTokenExpiresAt time.Time
-	// AccessTokenRefreshed indicates whether the access token was just refreshed.
-	AccessTokenRefreshed bool
 	// RefreshToken is the refresh token for obtaining new access tokens.
 	RefreshToken string
 	// TokenType is the type of token (usually "Bearer").
@@ -49,53 +50,26 @@ type OAuthConfig struct {
 	OAuthToken
 }
 
-// oauthConfigTOML is the TOML representation of OAuthConfig.
-type oauthConfigTOML struct {
-	ClientID      string          `toml:"client_id,omitempty"`
-	ClientSecret  string          `toml:"client_secret,omitempty"`
-	TokenURL      string          `toml:"token_url,omitempty"`
-	AuthURL       string          `toml:"auth_url,omitempty"`
-	AccessToken   string          `toml:"access_token,omitempty"`
-	RefreshToken  string          `toml:"refresh_token,omitempty"`
-	TokenType     string          `toml:"token_type,omitempty"`
-	ExpiresAt     string          `toml:"expires_at,omitempty"`
-	Scopes        []string        `toml:"scopes,omitempty"`
-	RequestParams inlineStringMap `toml:"request_params,omitempty"`
-}
-
-type rawProfileWithOAuth struct {
-	OAuth *oauthConfigTOML `toml:"oauth"`
-}
-
-type rawConfigWithOAuth struct {
-	Profile map[string]*rawProfileWithOAuth `toml:"profile"`
-}
-
-// inlineStringMap wraps a map to marshal as an inline TOML table.
-type inlineStringMap map[string]string
-
-func (m inlineStringMap) MarshalTOML() ([]byte, error) {
-	if len(m) == 0 {
-		return nil, nil
+// newTokenSource creates an oauth2.TokenSource that automatically refreshes
+// the access token when it expires.
+func (c *OAuthConfig) newTokenSource(ctx context.Context) oauth2.TokenSource {
+	cfg := &oauth2.Config{
+		ClientID:     c.ClientID,
+		ClientSecret: c.ClientSecret,
+		RedirectURL:  c.RedirectURL,
+		Endpoint: oauth2.Endpoint{
+			AuthURL:  c.AuthURL,
+			TokenURL: c.TokenURL,
+		},
+		Scopes: c.Scopes,
 	}
-
-	// Sort keys for deterministic output.
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
+	token := &oauth2.Token{
+		AccessToken:  c.AccessToken,
+		RefreshToken: c.RefreshToken,
+		TokenType:    c.TokenType,
+		Expiry:       c.AccessTokenExpiresAt,
 	}
-	sort.Strings(keys)
-
-	var buf bytes.Buffer
-	buf.WriteString("{ ")
-	for i, k := range keys {
-		if i > 0 {
-			buf.WriteString(", ")
-		}
-		fmt.Fprintf(&buf, "%s = %q", k, m[k])
-	}
-	buf.WriteString(" }")
-	return buf.Bytes(), nil
+	return oauth2.ReuseTokenSourceWithExpiry(token, cfg.TokenSource(ctx, token), time.Minute)
 }
 
 // LoadClientOAuthOptions are options for LoadClientOAuth.
@@ -122,31 +96,9 @@ type LoadClientOAuthResult struct {
 
 // LoadClientOAuth loads OAuth configuration from the config file for a specific profile.
 func LoadClientOAuth(opts LoadClientOAuthOptions) (LoadClientOAuthResult, error) {
-	envLookup := opts.EnvLookup
-	if envLookup == nil {
-		envLookup = envconfig.EnvLookupOS
-	}
-
-	// Resolve config file path.
-	configFilePath := opts.ConfigFilePath
-	if configFilePath == "" {
-		configFilePath, _ = envLookup.LookupEnv("TEMPORAL_CONFIG_FILE")
-	}
-	if configFilePath == "" {
-		var err error
-		configFilePath, err = envconfig.DefaultConfigFilePath()
-		if err != nil {
-			return LoadClientOAuthResult{}, fmt.Errorf("failed to get default config path: %w", err)
-		}
-	}
-
-	// Resolve profile name.
-	profileName := opts.ProfileName
-	if profileName == "" {
-		profileName, _ = envLookup.LookupEnv("TEMPORAL_PROFILE")
-	}
-	if profileName == "" {
-		profileName = envconfig.DefaultConfigFileProfile
+	configFilePath, profileName, err := resolveConfigAndProfile(opts.ConfigFilePath, opts.ProfileName, opts.EnvLookup)
+	if err != nil {
+		return LoadClientOAuthResult{}, err
 	}
 
 	// Load OAuth from file.
@@ -160,87 +112,6 @@ func LoadClientOAuth(opts LoadClientOAuthOptions) (LoadClientOAuthResult, error)
 		ConfigFilePath: configFilePath,
 		ProfileName:    profileName,
 	}, nil
-}
-
-// StoreClientOAuthOptions are options for StoreClientOAuth.
-type StoreClientOAuthOptions struct {
-	// ConfigFilePath overrides the config file path. If empty, uses TEMPORAL_CONFIG_FILE
-	// env var or the default path.
-	ConfigFilePath string
-	// ProfileName specifies which profile to store OAuth for. If empty, uses TEMPORAL_PROFILE
-	// env var or "default".
-	ProfileName string
-	// OAuth is the OAuth configuration to store. If nil, removes OAuth from the profile.
-	OAuth *OAuthConfig
-	// EnvLookup overrides environment variable lookup. If nil, uses os.LookupEnv.
-	EnvLookup envconfig.EnvLookup
-}
-
-// StoreClientOAuth stores OAuth configuration in the config file for a specific profile.
-// If OAuth is nil, it removes the OAuth configuration from the profile.
-// This function preserves all other content in the config file.
-func StoreClientOAuth(opts StoreClientOAuthOptions) error {
-	envLookup := opts.EnvLookup
-	if envLookup == nil {
-		envLookup = envconfig.EnvLookupOS
-	}
-
-	// Resolve config file path.
-	configFilePath := opts.ConfigFilePath
-	if configFilePath == "" {
-		configFilePath, _ = envLookup.LookupEnv("TEMPORAL_CONFIG_FILE")
-	}
-	if configFilePath == "" {
-		var err error
-		configFilePath, err = envconfig.DefaultConfigFilePath()
-		if err != nil {
-			return fmt.Errorf("failed to get default config path: %w", err)
-		}
-	}
-
-	// Resolve profile name.
-	profileName := opts.ProfileName
-	if profileName == "" {
-		profileName, _ = envLookup.LookupEnv("TEMPORAL_PROFILE")
-	}
-	if profileName == "" {
-		profileName = envconfig.DefaultConfigFileProfile
-	}
-
-	// Load existing OAuth configs from file.
-	oauthByProfile, err := loadOAuthConfigFromFile(configFilePath)
-	if err != nil {
-		return fmt.Errorf("failed to load existing config: %w", err)
-	}
-	if oauthByProfile == nil {
-		oauthByProfile = make(map[string]*OAuthConfig)
-	}
-
-	// Update the OAuth config for this profile.
-	oauthByProfile[profileName] = opts.OAuth
-
-	// Read existing file content to preserve non-OAuth sections.
-	existingContent, err := os.ReadFile(configFilePath)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		return fmt.Errorf("failed to read config file: %w", err)
-	}
-
-	// Write the updated config.
-	newContent, err := mergeOAuthIntoConfig(existingContent, oauthByProfile)
-	if err != nil {
-		return fmt.Errorf("failed to merge OAuth config: %w", err)
-	}
-
-	// Ensure directory exists.
-	if err := os.MkdirAll(filepath.Dir(configFilePath), 0700); err != nil {
-		return fmt.Errorf("failed to create config directory: %w", err)
-	}
-
-	if err := os.WriteFile(configFilePath, newContent, 0600); err != nil {
-		return fmt.Errorf("failed to write config file: %w", err)
-	}
-
-	return nil
 }
 
 // loadOAuthConfigFromFile loads OAuth configurations for all profiles from a TOML file.
@@ -271,6 +142,7 @@ func loadOAuthConfigFromFile(path string) (map[string]*OAuthConfig, error) {
 				ClientSecret:  cfg.ClientSecret,
 				TokenURL:      cfg.TokenURL,
 				AuthURL:       cfg.AuthURL,
+				RedirectURL:   cfg.RedirectURL,
 				RequestParams: cfg.RequestParams,
 				Scopes:        cfg.Scopes,
 			},
@@ -292,25 +164,165 @@ func loadOAuthConfigFromFile(path string) (map[string]*OAuthConfig, error) {
 	return oauthByProfile, nil
 }
 
-// mergeOAuthIntoConfig merges OAuth configurations into existing TOML content.
-// It preserves all non-OAuth content and updates/adds OAuth sections per profile.
-func mergeOAuthIntoConfig(existingContent []byte, oauthByProfile map[string]*OAuthConfig) ([]byte, error) {
-	// Parse existing content to get the structure.
+// resolveConfigAndProfile resolves the config file path and profile name.
+func resolveConfigAndProfile(configFilePath, profileName string, envLookup envconfig.EnvLookup) (string, string, error) {
+	if envLookup == nil {
+		envLookup = envconfig.EnvLookupOS
+	}
+
+	// Resolve config file path.
+	if configFilePath == "" {
+		configFilePath, _ = envLookup.LookupEnv("TEMPORAL_CONFIG_FILE")
+	}
+	if configFilePath == "" {
+		var err error
+		configFilePath, err = envconfig.DefaultConfigFilePath()
+		if err != nil {
+			return "", "", fmt.Errorf("failed to get default config path: %w", err)
+		}
+	}
+
+	// Resolve profile name.
+	if profileName == "" {
+		profileName, _ = envLookup.LookupEnv("TEMPORAL_PROFILE")
+	}
+	if profileName == "" {
+		profileName = envconfig.DefaultConfigFileProfile
+	}
+
+	return configFilePath, profileName, nil
+}
+
+// StoreClientOAuthOptions are options for StoreClientOAuth.
+type StoreClientOAuthOptions struct {
+	// ConfigFilePath overrides the config file path. If empty, uses TEMPORAL_CONFIG_FILE
+	// env var or the default path.
+	ConfigFilePath string
+	// ProfileName specifies which profile to store OAuth for. If empty, uses TEMPORAL_PROFILE
+	// env var or "default".
+	ProfileName string
+	// OAuth is the OAuth configuration to store. If nil, removes OAuth from the profile.
+	OAuth *OAuthConfig
+	// EnvLookup overrides environment variable lookup. If nil, uses os.LookupEnv.
+	EnvLookup envconfig.EnvLookup
+}
+
+// StoreClientOAuth stores OAuth configuration in the config file for a specific profile.
+// If OAuth is nil, it removes the OAuth configuration from the profile.
+// This function preserves all other content in the config file.
+func StoreClientOAuth(opts StoreClientOAuthOptions) error {
+	configFilePath, profileName, err := resolveConfigAndProfile(opts.ConfigFilePath, opts.ProfileName, opts.EnvLookup)
+	if err != nil {
+		return err
+	}
+
+	// Read and parse existing file content.
+	existingContent, err := os.ReadFile(configFilePath)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("failed to read config file: %w", err)
+	}
+
 	var existingRaw map[string]any
 	if len(existingContent) > 0 {
 		if _, err := toml.Decode(string(existingContent), &existingRaw); err != nil {
-			return nil, fmt.Errorf("failed to parse existing config: %w", err)
+			return fmt.Errorf("failed to parse existing config: %w", err)
 		}
 	}
 	if existingRaw == nil {
 		existingRaw = make(map[string]any)
 	}
 
+	// Load existing OAuth configs from the parsed content.
+	oauthByProfile, err := parseOAuthFromRaw(existingRaw)
+	if err != nil {
+		return fmt.Errorf("failed to parse existing OAuth config: %w", err)
+	}
+	if oauthByProfile == nil {
+		oauthByProfile = make(map[string]*OAuthConfig)
+	}
+
+	// Update the OAuth config for this profile.
+	oauthByProfile[profileName] = opts.OAuth
+
+	// Merge OAuth configs back into the raw structure.
+	if err := mergeOAuthIntoRaw(existingRaw, oauthByProfile); err != nil {
+		return err
+	}
+
+	// Marshal back to TOML.
+	var buf bytes.Buffer
+	enc := toml.NewEncoder(&buf)
+	if err := enc.Encode(existingRaw); err != nil {
+		return fmt.Errorf("failed to encode config: %w", err)
+	}
+
+	// Ensure directory exists.
+	if err := os.MkdirAll(filepath.Dir(configFilePath), 0700); err != nil {
+		return fmt.Errorf("failed to create config directory: %w", err)
+	}
+
+	if err := os.WriteFile(configFilePath, buf.Bytes(), 0600); err != nil {
+		return fmt.Errorf("failed to write config file: %w", err)
+	}
+
+	return nil
+}
+
+func parseOAuthFromRaw(raw map[string]any) (map[string]*OAuthConfig, error) {
+	var parsed rawConfigWithOAuth
+
+	// Re-encode and decode to convert map[string]any to our struct.
+	// This is simpler than manual type assertions for nested structures.
+	var buf bytes.Buffer
+	enc := toml.NewEncoder(&buf)
+	if err := enc.Encode(raw); err != nil {
+		return nil, err
+	}
+	if _, err := toml.Decode(buf.String(), &parsed); err != nil {
+		return nil, err
+	}
+
+	oauthByProfile := make(map[string]*OAuthConfig)
+	for profileName, profile := range parsed.Profile {
+		if profile == nil || profile.OAuth == nil {
+			continue
+		}
+		cfg := profile.OAuth
+		oauth := &OAuthConfig{
+			OAuthClientConfig: OAuthClientConfig{
+				ClientID:      cfg.ClientID,
+				ClientSecret:  cfg.ClientSecret,
+				TokenURL:      cfg.TokenURL,
+				AuthURL:       cfg.AuthURL,
+				RedirectURL:   cfg.RedirectURL,
+				RequestParams: cfg.RequestParams,
+				Scopes:        cfg.Scopes,
+			},
+			OAuthToken: OAuthToken{
+				AccessToken:  cfg.AccessToken,
+				RefreshToken: cfg.RefreshToken,
+				TokenType:    cfg.TokenType,
+			},
+		}
+		if cfg.ExpiresAt != "" {
+			t, err := time.Parse(time.RFC3339, cfg.ExpiresAt)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse expires_at for profile %q: %w", profileName, err)
+			}
+			oauth.AccessTokenExpiresAt = t
+		}
+		oauthByProfile[profileName] = oauth
+	}
+	return oauthByProfile, nil
+}
+
+// mergeOAuthIntoRaw merges OAuth configurations into a raw TOML structure.
+func mergeOAuthIntoRaw(raw map[string]any, oauthByProfile map[string]*OAuthConfig) error {
 	// Get or create the profile section.
-	profileSection, ok := existingRaw["profile"].(map[string]any)
+	profileSection, ok := raw["profile"].(map[string]any)
 	if !ok {
 		profileSection = make(map[string]any)
-		existingRaw["profile"] = profileSection
+		raw["profile"] = profileSection
 	}
 
 	// Update OAuth for each profile.
@@ -328,14 +340,30 @@ func mergeOAuthIntoConfig(existingContent []byte, oauthByProfile map[string]*OAu
 		}
 	}
 
-	// Marshal back to TOML.
-	var buf bytes.Buffer
-	enc := toml.NewEncoder(&buf)
-	if err := enc.Encode(existingRaw); err != nil {
-		return nil, fmt.Errorf("failed to encode config: %w", err)
-	}
+	return nil
+}
 
-	return buf.Bytes(), nil
+// oauthConfigTOML is the TOML representation of OAuthConfig.
+type oauthConfigTOML struct {
+	ClientID      string          `toml:"client_id,omitempty"`
+	ClientSecret  string          `toml:"client_secret,omitempty"`
+	TokenURL      string          `toml:"token_url,omitempty"`
+	AuthURL       string          `toml:"auth_url,omitempty"`
+	RedirectURL   string          `toml:"redirect_url,omitempty"`
+	AccessToken   string          `toml:"access_token,omitempty"`
+	RefreshToken  string          `toml:"refresh_token,omitempty"`
+	TokenType     string          `toml:"token_type,omitempty"`
+	ExpiresAt     string          `toml:"expires_at,omitempty"`
+	Scopes        []string        `toml:"scopes,omitempty"`
+	RequestParams inlineStringMap `toml:"request_params,inline,omitempty"`
+}
+
+type rawProfileWithOAuth struct {
+	OAuth *oauthConfigTOML `toml:"oauth"`
+}
+
+type rawConfigWithOAuth struct {
+	Profile map[string]*rawProfileWithOAuth `toml:"profile"`
 }
 
 // oauthConfigToTOML converts OAuthConfig to its TOML representation.
@@ -348,6 +376,7 @@ func oauthConfigToTOML(oauth *OAuthConfig) *oauthConfigTOML {
 		ClientSecret:  oauth.ClientSecret,
 		TokenURL:      oauth.TokenURL,
 		AuthURL:       oauth.AuthURL,
+		RedirectURL:   oauth.RedirectURL,
 		AccessToken:   oauth.AccessToken,
 		RefreshToken:  oauth.RefreshToken,
 		TokenType:     oauth.TokenType,

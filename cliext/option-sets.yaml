@@ -4,8 +4,40 @@
 
 option-sets:
   - name: common
-    description: Common CLI options for all commands.
     options:
+      - name: env
+        type: string
+        description: Active environment name (`ENV`).
+        default: default
+        implied-env: TEMPORAL_ENV
+      - name: env-file
+        type: string
+        description: |
+          Path to environment settings file.
+          Defaults to `$HOME/.config/temporalio/temporal.yaml`.
+      - name: config-file
+        type: string
+        description: |
+          File path to read TOML config from, defaults to
+          `$CONFIG_PATH/temporal/temporal.toml` where `$CONFIG_PATH` is defined
+          as `$HOME/.config` on Unix, `$HOME/Library/Application Support` on
+          macOS, and `%AppData%` on Windows.
+        experimental: true
+      - name: profile
+        type: string
+        description: Profile to use for config file.
+        experimental: true
+      - name: disable-config-file
+        type: bool
+        description: |
+          If set, disables loading environment config from config file.
+        experimental: true
+      - name: disable-config-env
+        type: bool
+        description: |
+          If set, disables loading environment config from environment
+          variables.
+        experimental: true
       - name: log-level
         type: string-enum
         enum-values:
@@ -64,44 +96,8 @@ option-sets:
         type: duration
         description: |
           The client connection timeout. 0s means no timeout.
-      - name: env
-        type: string
-        description: Active environment name (`ENV`).
-        default: default
-        env: TEMPORAL_ENV
-      - name: env-file
-        type: string
-        description: |
-          Path to environment settings file.
-          Defaults to `$HOME/.config/temporalio/temporal.yaml`.
-      - name: config-file
-        type: string
-        description: |
-          File path to read TOML config from, defaults to
-          `$CONFIG_PATH/temporal/temporal.toml` where `$CONFIG_PATH` is defined
-          as `$HOME/.config` on Unix, `$HOME/Library/Application Support` on
-          macOS, and `%AppData%` on Windows.
-        experimental: true
-        implied-env: TEMPORAL_CONFIG_FILE
-      - name: profile
-        type: string
-        description: Profile to use for config file.
-        experimental: true
-        implied-env: TEMPORAL_PROFILE
-      - name: disable-config-file
-        type: bool
-        description: |
-          If set, disables loading environment config from config file.
-        experimental: true
-      - name: disable-config-env
-        type: bool
-        description: |
-          If set, disables loading environment config from environment
-          variables.
-        experimental: true
 
   - name: client
-    description: Client connection options.
     options:
       - name: address
         type: string

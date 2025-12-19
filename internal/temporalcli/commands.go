@@ -441,6 +441,9 @@ Use "{{.CommandPath}} [command] --help" for more information about a command.{{e
 func (c *TemporalCommand) initCommand(cctx *CommandContext) {
 	c.Command.Version = VersionString()
 
+	// Bind TEMPORAL_ENV environment variable to --env flag
+	cctx.BindFlagEnvVar(c.Command.PersistentFlags().Lookup("env"), "TEMPORAL_ENV")
+
 	// Set custom usage template with proper flag wrapping
 	c.Command.SetUsageTemplate(getUsageTemplate())
 

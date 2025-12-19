@@ -27,9 +27,7 @@ refresh_token = "test-refresh-token"
 token_type = "Bearer"
 expires_at = "2318-03-23T00:00:00Z"
 scopes = ["openid", "profile", "email"]
-
-[profile.default.oauth.request_params]
-audience = "https://api.example.com"
+request_params = { audience = "https://api.example.com" }
 `)
 	require.NoError(t, err)
 	require.NoError(t, f.Close())

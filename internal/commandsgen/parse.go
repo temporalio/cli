@@ -22,7 +22,6 @@ type (
 		Deprecated         string   `yaml:"deprecated"`
 		Short              string   `yaml:"short,omitempty"`
 		Default            string   `yaml:"default,omitempty"`
-		Env                string   `yaml:"env,omitempty"`
 		ImpliedEnv         string   `yaml:"implied-env,omitempty"`
 		Required           bool     `yaml:"required,omitempty"`
 		Aliases            []string `yaml:"aliases,omitempty"`
@@ -72,16 +71,11 @@ type (
 	}
 )
 
-// IsExternal returns true if this option set references an external package.
-func (o *OptionSets) IsExternal() bool {
-	return o.ExternalPackage != ""
-}
-
 // ParseCommands parses command definitions from one or more YAML byte slices.
-// When multiple sources are provided, they are merged with later sources
-// taking precedence, except for external option-sets which are preserved.
 func ParseCommands(yamlDataList ...[]byte) (Commands, error) {
-	var merged Commands
+	var res Commands
+	optionSetNames := make(map[string]bool)
+	commandNames := make(map[string]bool)
 
 	for _, yamlData := range yamlDataList {
 		// Fix CRLF
@@ -93,58 +87,46 @@ func ParseCommands(yamlDataList ...[]byte) (Commands, error) {
 			return Commands{}, fmt.Errorf("failed unmarshalling yaml: %w", err)
 		}
 
-		// Merge option sets
-		for _, newOptSet := range m.OptionSets {
-			found := false
-			for j, existing := range merged.OptionSets {
-				if existing.Name == newOptSet.Name {
-					found = true
-					// Don't override external references - they take precedence
-					if !existing.IsExternal() {
-						merged.OptionSets[j] = newOptSet
-					}
-					break
-				}
+		for _, optSet := range m.OptionSets {
+			// Skip external option-sets (imports) when checking for duplicates
+			if optSet.ExternalPackage != "" {
+				res.OptionSets = append(res.OptionSets, optSet)
+				continue
 			}
-			if !found {
-				merged.OptionSets = append(merged.OptionSets, newOptSet)
+			if optionSetNames[optSet.Name] {
+				return Commands{}, fmt.Errorf("duplicate option set %q", optSet.Name)
 			}
+			optionSetNames[optSet.Name] = true
+			res.OptionSets = append(res.OptionSets, optSet)
 		}
 
-		// Merge commands (later sources override)
-		for _, newCmd := range m.CommandList {
-			found := false
-			for j, existing := range merged.CommandList {
-				if existing.FullName == newCmd.FullName {
-					found = true
-					merged.CommandList[j] = newCmd
-					break
-				}
+		for _, cmd := range m.CommandList {
+			if commandNames[cmd.FullName] {
+				return Commands{}, fmt.Errorf("duplicate command %q", cmd.FullName)
 			}
-			if !found {
-				merged.CommandList = append(merged.CommandList, newCmd)
-			}
+			commandNames[cmd.FullName] = true
+			res.CommandList = append(res.CommandList, cmd)
 		}
 	}
 
-	for i, optionSet := range merged.OptionSets {
-		if err := merged.OptionSets[i].processSection(); err != nil {
+	for i, optionSet := range res.OptionSets {
+		if err := res.OptionSets[i].processSection(); err != nil {
 			return Commands{}, fmt.Errorf("failed parsing option set section %q: %w", optionSet.Name, err)
 		}
 	}
 
-	for i, command := range merged.CommandList {
-		if err := merged.CommandList[i].processSection(); err != nil {
+	for i, command := range res.CommandList {
+		if err := res.CommandList[i].processSection(); err != nil {
 			return Commands{}, fmt.Errorf("failed parsing command section %q: %w", command.FullName, err)
 		}
 	}
 
 	// alphabetize commands
-	sort.Slice(merged.CommandList, func(i, j int) bool {
-		return merged.CommandList[i].FullName < merged.CommandList[j].FullName
+	sort.Slice(res.CommandList, func(i, j int) bool {
+		return res.CommandList[i].FullName < res.CommandList[j].FullName
 	})
 
-	return merged, nil
+	return res, nil
 }
 
 var markdownLinkPattern = regexp.MustCompile(`\[(.*?)\]\((.*?)\)`)
@@ -157,11 +139,6 @@ const ansiBold = "\033[1m"
 func (o OptionSets) processSection() error {
 	if o.Name == "" {
 		return fmt.Errorf("missing option set name")
-	}
-
-	// External option-sets don't need validation
-	if o.IsExternal() {
-		return nil
 	}
 
 	for i, option := range o.Options {
@@ -278,7 +255,7 @@ func (o *Option) processSection() error {
 		return fmt.Errorf("description should end in a '.'")
 	}
 
-	if o.Env != strings.ToUpper(o.Env) {
+	if o.ImpliedEnv != strings.ToUpper(o.ImpliedEnv) {
 		return fmt.Errorf("env variables must be in all caps")
 	}
 

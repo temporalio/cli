@@ -103,9 +103,8 @@
 #       description: The option description. (string)
 #       required: Whether the option is required. (bool)
 #       short: The single letter short version of name (i.e. a for address). (string)
-#       env: Binds the environment variable to this flag. (string)
-#       implied-env: Documents the environment variable as bound to the flag,
-#         but doesn't actually bind it.
+#       implied-env: Documents the environment variable in the help text.
+#         Environment variable binding must be done manually in code.
 #       default: The default value. No default means zero value of the type. (string)
 #       enum-values: A list of possible values for the string-enum type. (string[])
 #       aliases: A list of aliases for the option. (string[])
@@ -4339,7 +4338,6 @@ option-sets:
   # Import common and client option sets from cliext package
   - name: common
     external-package: github.com/temporalio/cli/cliext
-
   - name: client
     external-package: github.com/temporalio/cli/cliext
 
