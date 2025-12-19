@@ -24,7 +24,7 @@ func (c *TemporalTaskQueueConfigGetCommand) run(cctx *CommandContext, args []str
 		return err
 	}
 
-	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -118,7 +118,7 @@ func (c *TemporalTaskQueueConfigSetCommand) run(cctx *CommandContext, args []str
 		return fmt.Errorf("fairness-key-rps-limit-default-reason can only be set if fairness-key-rps-limit-default is updated")
 	}
 
-	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}

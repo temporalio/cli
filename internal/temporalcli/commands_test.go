@@ -194,8 +194,8 @@ type EnvLookupMap map[string]string
 
 func (e EnvLookupMap) Environ() []string {
 	ret := make([]string, 0, len(e))
-	for k := range e {
-		ret = append(ret, k)
+	for k, v := range e {
+		ret = append(ret, k+"="+v)
 	}
 	return ret
 }

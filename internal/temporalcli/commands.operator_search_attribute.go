@@ -11,7 +11,7 @@ import (
 )
 
 func (c *TemporalOperatorSearchAttributeCreateCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -64,7 +64,7 @@ func searchAttributeTypeStringToEnum(search string) (enums.IndexedValueType, err
 }
 
 func (c *TemporalOperatorSearchAttributeRemoveCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -101,7 +101,7 @@ func (c *TemporalOperatorSearchAttributeRemoveCommand) run(cctx *CommandContext,
 }
 
 func (c *TemporalOperatorSearchAttributeListCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}

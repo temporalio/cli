@@ -14,6 +14,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/google/uuid"
+	"github.com/temporalio/cli/cliext"
 	"github.com/temporalio/cli/internal/printer"
 	"go.temporal.io/api/common/v1"
 	commonpb "go.temporal.io/api/common/v1"
@@ -29,7 +30,7 @@ import (
 )
 
 func (c *TemporalWorkflowStartCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -39,7 +40,7 @@ func (c *TemporalWorkflowStartCommand) run(cctx *CommandContext, args []string) 
 }
 
 func (c *TemporalWorkflowExecuteCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -105,7 +106,7 @@ func (c *TemporalWorkflowSignalWithStartCommand) run(cctx *CommandContext, _ []s
 		return fmt.Errorf("--workflow-id flag must be provided")
 	}
 
-	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -341,7 +342,7 @@ func (c *TemporalWorkflowExecuteUpdateWithStartCommand) run(cctx *CommandContext
 
 func executeUpdateWithStartWorkflow(
 	cctx *CommandContext,
-	clientOpts ClientOptions,
+	clientOpts cliext.ClientOptions,
 	sharedWfOpts SharedWorkflowStartOptions,
 	wfStartOpts WorkflowStartOptions,
 	wfInputOpts PayloadInputOptions,
@@ -353,7 +354,7 @@ func executeUpdateWithStartWorkflow(
 	if wfStartOpts.IdConflictPolicy.Value == "" {
 		return nil, fmt.Errorf("--id-conflict-policy flag must be provided")
 	}
-	cl, err := clientOpts.dialClient(cctx)
+	cl, err := dialClient(cctx, &clientOpts)
 	if err != nil {
 		return nil, err
 	}

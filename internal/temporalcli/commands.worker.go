@@ -85,7 +85,7 @@ type workerDescribeDetail struct {
 }
 
 func (c *TemporalWorkerDescribeCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -118,7 +118,7 @@ func (c *TemporalWorkerDescribeCommand) run(cctx *CommandContext, args []string)
 }
 
 func (c *TemporalWorkerListCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}

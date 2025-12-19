@@ -31,7 +31,7 @@ This will expect every non-parent command to have a `run` method, so for new com
 Once a command is updated, the CI will automatically generate new docs
 and create a PR in the Documentation repo with the corresponding updates. To generate these docs locally, run:
 
-    go run ./cmd/gen-docs -input internal/temporalcli/commands.yaml -output dist/docs
+    go run ./cmd/gen-docs -input internal/temporalcli/commands.yaml -input cliext/option-sets.yaml -output dist/docs
 
 This will auto-generate a new set of docs to `dist/docs/`. If a new root command is added, a new file will be automatically generated, like `temporal activity` and `activity.mdx`.
 

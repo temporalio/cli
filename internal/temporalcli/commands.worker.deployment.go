@@ -355,7 +355,7 @@ type getDeploymentConflictTokenOptions struct {
 }
 
 func (c *TemporalWorkerDeploymentCommand) getConflictToken(cctx *CommandContext, options *getDeploymentConflictTokenOptions) ([]byte, error) {
-	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -393,7 +393,7 @@ func (c *TemporalWorkerDeploymentCommand) getConflictToken(cctx *CommandContext,
 }
 
 func (c *TemporalWorkerDeploymentDescribeCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -413,7 +413,7 @@ func (c *TemporalWorkerDeploymentDescribeCommand) run(cctx *CommandContext, args
 }
 
 func (c *TemporalWorkerDeploymentDeleteCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -432,7 +432,7 @@ func (c *TemporalWorkerDeploymentDeleteCommand) run(cctx *CommandContext, args [
 }
 
 func (c *TemporalWorkerDeploymentListCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.Parent.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -499,7 +499,7 @@ func (c *TemporalWorkerDeploymentListCommand) run(cctx *CommandContext, args []s
 }
 
 func (c *TemporalWorkerDeploymentManagerIdentitySetCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.Parent.Parent.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.Parent.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -535,7 +535,7 @@ func (c *TemporalWorkerDeploymentManagerIdentitySetCommand) run(cctx *CommandCon
 }
 
 func (c *TemporalWorkerDeploymentManagerIdentityUnsetCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.Parent.Parent.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.Parent.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -565,7 +565,7 @@ func (c *TemporalWorkerDeploymentManagerIdentityUnsetCommand) run(cctx *CommandC
 }
 
 func (c *TemporalWorkerDeploymentDeleteVersionCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -586,7 +586,7 @@ func (c *TemporalWorkerDeploymentDeleteVersionCommand) run(cctx *CommandContext,
 }
 
 func (c *TemporalWorkerDeploymentDescribeVersionCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -610,7 +610,7 @@ func (c *TemporalWorkerDeploymentDescribeVersionCommand) run(cctx *CommandContex
 }
 
 func (c *TemporalWorkerDeploymentSetCurrentVersionCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.Parent.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -642,7 +642,7 @@ func (c *TemporalWorkerDeploymentSetCurrentVersionCommand) run(cctx *CommandCont
 }
 
 func (c *TemporalWorkerDeploymentSetRampingVersionCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -680,7 +680,7 @@ func (c *TemporalWorkerDeploymentSetRampingVersionCommand) run(cctx *CommandCont
 }
 
 func (c *TemporalWorkerDeploymentUpdateMetadataVersionCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}

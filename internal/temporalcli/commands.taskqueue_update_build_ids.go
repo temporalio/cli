@@ -7,7 +7,7 @@ import (
 )
 
 func (c *TemporalTaskQueueUpdateBuildIdsCommand) updateBuildIds(cctx *CommandContext, options *client.UpdateWorkerBuildIdCompatibilityOptions) error {
-	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}

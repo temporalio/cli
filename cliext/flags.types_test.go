@@ -1,22 +1,22 @@
-package types_test
+package cliext_test
 
 import (
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/suite"
-	"github.com/temporalio/cli/internal/commandsgen/types"
+	"github.com/temporalio/cli/cliext"
 )
 
-type ParseDurationSuite struct {
+type ParseFlagDurationSuite struct {
 	suite.Suite
 }
 
-func TestParseDurationSuite(t *testing.T) {
-	suite.Run(t, new(ParseDurationSuite))
+func TestParseFlagDurationSuite(t *testing.T) {
+	suite.Run(t, new(ParseFlagDurationSuite))
 }
 
-func (s *ParseDurationSuite) TestParseDuration() {
+func (s *ParseFlagDurationSuite) TestParseFlagDuration() {
 	for _, c := range []struct {
 		input    string
 		expected time.Duration // -1 means error
@@ -35,7 +35,7 @@ func (s *ParseDurationSuite) TestParseDuration() {
 		{"", -1},          // error
 		{"10000000h", -1}, // error out of bounds
 	} {
-		got, err := types.ParseDuration(c.input)
+		got, err := cliext.ParseFlagDuration(c.input)
 		if c.expected == -1 {
 			s.Error(err)
 		} else {

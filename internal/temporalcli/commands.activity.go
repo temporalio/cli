@@ -32,7 +32,7 @@ type (
 )
 
 func (c *TemporalActivityCompleteCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -59,7 +59,7 @@ func (c *TemporalActivityCompleteCommand) run(cctx *CommandContext, args []strin
 }
 
 func (c *TemporalActivityFailCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -95,7 +95,7 @@ func (c *TemporalActivityFailCommand) run(cctx *CommandContext, args []string) e
 }
 
 func (c *TemporalActivityUpdateOptionsCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -233,7 +233,7 @@ func (c *TemporalActivityUpdateOptionsCommand) run(cctx *CommandContext, args []
 }
 
 func (c *TemporalActivityPauseCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -265,7 +265,7 @@ func (c *TemporalActivityPauseCommand) run(cctx *CommandContext, args []string) 
 }
 
 func (c *TemporalActivityUnpauseCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -338,7 +338,7 @@ func (c *TemporalActivityUnpauseCommand) run(cctx *CommandContext, args []string
 }
 
 func (c *TemporalActivityResetCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}

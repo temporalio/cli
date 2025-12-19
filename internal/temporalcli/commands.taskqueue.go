@@ -254,7 +254,7 @@ func (c *TemporalTaskQueueDescribeCommand) run(cctx *CommandContext, args []stri
 		return c.runLegacy(cctx, args)
 	}
 	// Call describeEnhanced
-	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -300,7 +300,7 @@ func (c *TemporalTaskQueueDescribeCommand) run(cctx *CommandContext, args []stri
 
 func (c *TemporalTaskQueueDescribeCommand) runLegacy(cctx *CommandContext, args []string) error {
 	// Call describe
-	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -410,7 +410,7 @@ func (c *TemporalTaskQueueDescribeCommand) runLegacy(cctx *CommandContext, args 
 }
 
 func (c *TemporalTaskQueueListPartitionCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}

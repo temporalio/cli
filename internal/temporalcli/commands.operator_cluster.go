@@ -11,7 +11,7 @@ import (
 )
 
 func (c *TemporalOperatorClusterHealthCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -32,7 +32,7 @@ func (c *TemporalOperatorClusterHealthCommand) run(cctx *CommandContext, args []
 }
 
 func (c *TemporalOperatorClusterSystemCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -63,7 +63,7 @@ func (c *TemporalOperatorClusterSystemCommand) run(cctx *CommandContext, args []
 }
 
 func (c *TemporalOperatorClusterDescribeCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -89,7 +89,7 @@ func (c *TemporalOperatorClusterDescribeCommand) run(cctx *CommandContext, args 
 }
 
 func (c *TemporalOperatorClusterListCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -145,7 +145,7 @@ func (c *TemporalOperatorClusterListCommand) run(cctx *CommandContext, args []st
 }
 
 func (c *TemporalOperatorClusterUpsertCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -169,7 +169,7 @@ func (c *TemporalOperatorClusterUpsertCommand) run(cctx *CommandContext, args []
 }
 
 func (c *TemporalOperatorClusterRemoveCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}

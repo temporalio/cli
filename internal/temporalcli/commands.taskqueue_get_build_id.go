@@ -10,7 +10,7 @@ import (
 )
 
 func (c *TemporalTaskQueueGetBuildIdsCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -62,7 +62,7 @@ func taskReachabilityToString(x client.TaskReachability) string {
 }
 
 func (c *TemporalTaskQueueGetBuildIdReachabilityCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}

@@ -103,9 +103,8 @@
 #       description: The option description. (string)
 #       required: Whether the option is required. (bool)
 #       short: The single letter short version of name (i.e. a for address). (string)
-#       env: Binds the environment variable to this flag. (string)
-#       implied-env: Documents the environment variable as bound to the flag,
-#         but doesn't actually bind it.
+#       implied-env: Documents the environment variable in the help text.
+#         Environment variable binding must be done manually in code.
 #       default: The default value. No default means zero value of the type. (string)
 #       enum-values: A list of possible values for the string-enum type. (string[])
 #       aliases: A list of aliases for the option. (string[])
@@ -142,108 +141,8 @@ commands:
       * View help: pass `--help` to any command:
             `temporal activity complete --help`
     has-init: true
-    options:
-      - name: env
-        type: string
-        description: Active environment name (`ENV`).
-        default: default
-        env: TEMPORAL_ENV
-        # TODO(cretz): Deprecate when `config` GA
-        # deprecated: |
-        #   Use `profile` instead. If an env file is present, it will take
-        #   precedent over `config` file or config environment variables.
-      - name: env-file
-        type: string
-        description: |
-          Path to environment settings file.
-          Defaults to `$HOME/.config/temporalio/temporal.yaml`.
-        # TODO(cretz): Deprecate when `config` GA
-        # deprecated: |
-        #   Use `config-file` instead. If an env file is present, it will take
-        #   precedent over `config` file or config environment variables.
-      - name: config-file
-        type: string
-        description: |
-          File path to read TOML config from, defaults to
-          `$CONFIG_PATH/temporal/temporal.toml` where `$CONFIG_PATH` is defined
-          as `$HOME/.config` on Unix, `$HOME/Library/Application Support` on
-          macOS, and `%AppData%` on Windows.
-        experimental: true
-        implied-env: TEMPORAL_CONFIG_FILE
-      - name: profile
-        type: string
-        description: Profile to use for config file.
-        experimental: true
-        implied-env: TEMPORAL_PROFILE
-      - name: disable-config-file
-        type: bool
-        description: |
-          If set, disables loading environment config from config file.
-        experimental: true
-      - name: disable-config-env
-        type: bool
-        description: |
-          If set, disables loading environment config from environment
-          variables.
-        experimental: true
-      - name: log-level
-        type: string-enum
-        enum-values:
-          - debug
-          - info
-          - warn
-          - error
-          - never
-        description: |
-          Log level.
-          Default is "info" for most commands and "warn" for `server start-dev`.
-        default: info
-      - name: log-format
-        type: string-enum
-        description: Log format.
-        enum-values:
-          - text
-          - json
-        hidden-legacy-values:
-          - pretty
-        default: text
-      - name: output
-        type: string-enum
-        short: o
-        description: Non-logging data output format.
-        enum-values:
-          - text
-          - json
-          - jsonl
-          - none
-        default: text
-      - name: time-format
-        type: string-enum
-        description: Time format.
-        enum-values:
-          - relative
-          - iso
-          - raw
-        default: relative
-      - name: color
-        type: string-enum
-        description: Output coloring.
-        enum-values:
-          - always
-          - never
-          - auto
-        default: auto
-      - name: no-json-shorthand-payloads
-        type: bool
-        description: Raw payload output, even if the JSON option was used.
-      - name: command-timeout
-        type: duration
-        description: |
-          The command execution timeout. 0s means no timeout.
-      - name: client-connect-timeout
-        type: duration
-        description: |
-          The client connection timeout. 0s means no timeout.
+    option-sets:
+      - common
 
   - name: temporal activity
     summary: Complete, update, pause, unpause, reset or fail an Activity
@@ -4436,102 +4335,11 @@ commands:
           Assume update inputs are base64-encoded and attempt to decode them.
 
 option-sets:
+  # Import common and client option sets from cliext package
+  - name: common
+    external-package: github.com/temporalio/cli/cliext
   - name: client
-    options:
-      - name: address
-        type: string
-        description: Temporal Service gRPC endpoint.
-        default: localhost:7233
-        implied-env: TEMPORAL_ADDRESS
-      - name: client-authority
-        type: string
-        description: Temporal gRPC client :authority pseudoheader.
-      - name: namespace
-        short: n
-        type: string
-        description: Temporal Service Namespace.
-        default: default
-        implied-env: TEMPORAL_NAMESPACE
-      - name: api-key
-        type: string
-        description: API key for request.
-        implied-env: TEMPORAL_API_KEY
-      - name: grpc-meta
-        type: string[]
-        description: |
-          HTTP headers for requests.
-          Format as a `KEY=VALUE` pair.
-          May be passed multiple times to set multiple headers.
-          Can also be made available via environment variable as
-          `TEMPORAL_GRPC_META_[name]`.
-      - name: tls
-        type: bool
-        description: |
-          Enable base TLS encryption. Does not have additional options like mTLS
-          or client certs. This is defaulted to true if api-key or any other TLS
-          options are present. Use --tls=false to explicitly disable.
-        implied-env: TEMPORAL_TLS
-      - name: tls-cert-path
-        type: string
-        description: |
-          Path to x509 certificate.
-          Can't be used with --tls-cert-data.
-        implied-env: TEMPORAL_TLS_CLIENT_CERT_PATH
-      - name: tls-cert-data
-        type: string
-        description: |
-          Data for x509 certificate.
-          Can't be used with --tls-cert-path.
-        implied-env: TEMPORAL_TLS_CLIENT_CERT_DATA
-      - name: tls-key-path
-        type: string
-        description: |
-          Path to x509 private key.
-          Can't be used with --tls-key-data.
-        implied-env: TEMPORAL_TLS_CLIENT_KEY_PATH
-      - name: tls-key-data
-        type: string
-        description: |
-          Private certificate key data.
-          Can't be used with --tls-key-path.
-        implied-env: TEMPORAL_TLS_CLIENT_KEY_DATA
-      - name: tls-ca-path
-        type: string
-        description: |
-          Path to server CA certificate.
-          Can't be used with --tls-ca-data.
-        implied-env: TEMPORAL_TLS_SERVER_CA_CERT_PATH
-      - name: tls-ca-data
-        type: string
-        description: |
-          Data for server CA certificate.
-          Can't be used with --tls-ca-path.
-        implied-env: TEMPORAL_TLS_SERVER_CA_CERT_DATA
-      - name: tls-disable-host-verification
-        type: bool
-        description: Disable TLS host-name verification.
-        implied-env: TEMPORAL_TLS_DISABLE_HOST_VERIFICATION
-      - name: tls-server-name
-        type: string
-        description: Override target TLS server name.
-        implied-env: TEMPORAL_TLS_SERVER_NAME
-      - name: codec-endpoint
-        type: string
-        description: Remote Codec Server endpoint.
-        implied-env: TEMPORAL_CODEC_ENDPOINT
-      - name: codec-auth
-        type: string
-        description: Authorization header for Codec Server requests.
-        implied-env: TEMPORAL_CODEC_AUTH
-      - name: codec-header
-        type: string[]
-        description: |
-          HTTP headers for requests to codec server.
-          Format as a `KEY=VALUE` pair.
-          May be passed multiple times to set multiple headers.
-      - name: identity
-        type: string
-        description: The identity of the user or client submitting this request. Defaults to "temporal-cli:$USER@$HOST".
+    external-package: github.com/temporalio/cli/cliext
 
   - name: overlap-policy
     options:
