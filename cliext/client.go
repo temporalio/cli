@@ -196,8 +196,8 @@ func (b *ClientOptionsBuilder) Build(ctx context.Context) (client.Options, error
 		clientOpts.Logger = log.NewStructuredLogger(b.Logger)
 	}
 
-	// Attempt to configure OAuth config if no API key is set.
-	if cfg.ApiKey == "" {
+	// Attempt to configure OAuth config if no API key is set and config file is enabled.
+	if cfg.ApiKey == "" && !common.DisableConfigFile {
 		result, err := LoadClientOAuth(LoadClientOAuthOptions{
 			ConfigFilePath: common.ConfigFile,
 			ProfileName:    common.Profile,

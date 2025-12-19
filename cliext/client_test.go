@@ -50,35 +50,14 @@ func newMockOAuthServer(t *testing.T) *mockOAuthServer {
 
 func TestClientOptionsBuilder_OAuth_ValidToken(t *testing.T) {
 	s := newMockOAuthServer(t)
-
-	configFile := filepath.Join(t.TempDir(), "config.toml")
-
-	err := cliext.StoreClientOAuth(cliext.StoreClientOAuthOptions{
-		ConfigFilePath: configFile,
-		OAuth: &cliext.OAuthConfig{
-			ClientConfig: &oauth2.Config{
-				ClientID:     "test-client",
-				ClientSecret: "test-secret",
-				Endpoint: oauth2.Endpoint{
-					TokenURL: s.tokenURL,
-				},
-			},
-			Token: &oauth2.Token{
-				AccessToken:  "test-access-token",
-				RefreshToken: "test-refresh-token",
-				Expiry:       time.Now().Add(time.Hour), // not expired
-			},
-		},
-	})
-	require.NoError(t, err)
+	configFile := createTestOAuthConfig(t, s.tokenURL, time.Now().Add(time.Hour))
 
 	builder := &cliext.ClientOptionsBuilder{
 		CommonOptions: cliext.CommonOptions{
 			ConfigFile: configFile,
 		},
 		ClientOptions: cliext.ClientOptions{
-			Address:   "localhost:7233",
-			Namespace: "default",
+			Address: "localhost:17233",
 		},
 	}
 	opts, err := builder.Build(t.Context())
@@ -93,34 +72,14 @@ func TestClientOptionsBuilder_OAuth_Refresh(t *testing.T) {
 		fmt.Fprint(w, `{"access_token":"refreshed-token","refresh_token":"new-refresh-token","expires_in":3600,"token_type":"Bearer"}`)
 	}
 
-	configFile := filepath.Join(t.TempDir(), "config.toml")
-
-	err := cliext.StoreClientOAuth(cliext.StoreClientOAuthOptions{
-		ConfigFilePath: configFile,
-		OAuth: &cliext.OAuthConfig{
-			ClientConfig: &oauth2.Config{
-				ClientID:     "test-client",
-				ClientSecret: "test-secret",
-				Endpoint: oauth2.Endpoint{
-					TokenURL: s.tokenURL,
-				},
-			},
-			Token: &oauth2.Token{
-				AccessToken:  "test-access-token",
-				RefreshToken: "test-refresh-token",
-				Expiry:       time.Now().Add(-time.Hour), // expired
-			},
-		},
-	})
-	require.NoError(t, err)
+	configFile := createTestOAuthConfig(t, s.tokenURL, time.Now().Add(-time.Hour))
 
 	builder := &cliext.ClientOptionsBuilder{
 		CommonOptions: cliext.CommonOptions{
 			ConfigFile: configFile,
 		},
 		ClientOptions: cliext.ClientOptions{
-			Address:   "localhost:7233",
-			Namespace: "default",
+			Address: "localhost:17233",
 		},
 	}
 	opts, err := builder.Build(context.Background())
@@ -143,11 +102,82 @@ func TestClientOptionsBuilder_OAuth_Refresh(t *testing.T) {
 	assert.Equal(t, "new-refresh-token", result.OAuth.Token.RefreshToken)
 }
 
+func TestClientOptionsBuilder_OAuth_NoConfigFile(t *testing.T) {
+	builder := &cliext.ClientOptionsBuilder{
+		CommonOptions: cliext.CommonOptions{
+			ConfigFile:        "/non/existent/path.toml",
+			DisableConfigFile: true,
+		},
+		ClientOptions: cliext.ClientOptions{
+			Address: "localhost:17233",
+		},
+	}
+	opts, err := builder.Build(t.Context())
+
+	require.NoError(t, err)
+	assert.Nil(t, opts.Credentials)
+}
+
+func TestClientOptionsBuilder_OAuth_NoOAuthConfigured(t *testing.T) {
+	configFile := filepath.Join(t.TempDir(), "config.toml")
+	err := os.WriteFile(configFile, []byte{}, 0600) // empty
+	require.NoError(t, err)
+
+	builder := &cliext.ClientOptionsBuilder{
+		CommonOptions: cliext.CommonOptions{
+			ConfigFile: configFile,
+		},
+		ClientOptions: cliext.ClientOptions{
+			Address: "localhost:17233",
+		},
+	}
+	opts, err := builder.Build(t.Context())
+
+	require.NoError(t, err)
+	assert.Nil(t, opts.Credentials)
+}
+
+func TestClientOptionsBuilder_OAuth_DisableConfigFile(t *testing.T) {
+	s := newMockOAuthServer(t)
+	configFileWithOAuth := createTestOAuthConfig(t, s.tokenURL, time.Now().Add(time.Hour))
+
+	builder := &cliext.ClientOptionsBuilder{
+		CommonOptions: cliext.CommonOptions{
+			ConfigFile:        configFileWithOAuth,
+			DisableConfigFile: true, // disables loading config file
+		},
+		ClientOptions: cliext.ClientOptions{
+			Address: "localhost:17233",
+		},
+	}
+	opts, err := builder.Build(t.Context())
+
+	require.NoError(t, err)
+	assert.Nil(t, opts.Credentials)
+}
+
 func TestClientOptionsBuilder_OAuth_APIKeyTakesPrecedence(t *testing.T) {
 	s := newMockOAuthServer(t)
+	configFileWithOAuth := createTestOAuthConfig(t, s.tokenURL, time.Now().Add(time.Hour))
 
+	builder := &cliext.ClientOptionsBuilder{
+		CommonOptions: cliext.CommonOptions{
+			ConfigFile: configFileWithOAuth,
+		},
+		ClientOptions: cliext.ClientOptions{
+			Address: "localhost:17233",
+			ApiKey:  "explicit-api-key", // takes precedence
+		},
+	}
+	opts, err := builder.Build(t.Context())
+
+	require.NoError(t, err)
+	assert.NotNil(t, opts.Credentials)
+}
+
+func createTestOAuthConfig(t *testing.T, tokenURL string, expiry time.Time) string {
+	t.Helper()
 	configFile := filepath.Join(t.TempDir(), "config.toml")
-
 	err := cliext.StoreClientOAuth(cliext.StoreClientOAuthOptions{
 		ConfigFilePath: configFile,
 		OAuth: &cliext.OAuthConfig{
@@ -155,72 +185,16 @@ func TestClientOptionsBuilder_OAuth_APIKeyTakesPrecedence(t *testing.T) {
 				ClientID:     "test-client",
 				ClientSecret: "test-secret",
 				Endpoint: oauth2.Endpoint{
-					TokenURL: s.tokenURL,
+					TokenURL: tokenURL,
 				},
 			},
 			Token: &oauth2.Token{
 				AccessToken:  "test-access-token",
 				RefreshToken: "test-refresh-token",
-				Expiry:       time.Now().Add(time.Hour),
+				Expiry:       expiry,
 			},
 		},
 	})
 	require.NoError(t, err)
-
-	// When API key is set, OAuth should not be used
-	builder := &cliext.ClientOptionsBuilder{
-		CommonOptions: cliext.CommonOptions{
-			ConfigFile: configFile,
-		},
-		ClientOptions: cliext.ClientOptions{
-			Address:   "localhost:7233",
-			Namespace: "default",
-			ApiKey:    "explicit-api-key",
-		},
-	}
-	opts, err := builder.Build(t.Context())
-
-	require.NoError(t, err)
-	// The API key credentials should be used, not OAuth
-	assert.NotNil(t, opts.Credentials)
-}
-
-func TestClientOptionsBuilder_OAuth_NoOAuth(t *testing.T) {
-	configFile := filepath.Join(t.TempDir(), "config.toml")
-	err := os.WriteFile(configFile, []byte("[profile.default]\naddress = \"localhost:7233\"\n"), 0600)
-	require.NoError(t, err)
-
-	builder := &cliext.ClientOptionsBuilder{
-		CommonOptions: cliext.CommonOptions{
-			ConfigFile: configFile,
-		},
-		ClientOptions: cliext.ClientOptions{
-			Address:   "localhost:7233",
-			Namespace: "default",
-		},
-	}
-	opts, err := builder.Build(t.Context())
-
-	require.NoError(t, err)
-	// When no OAuth is configured, credentials should be nil
-	assert.Nil(t, opts.Credentials)
-}
-
-func TestClientOptionsBuilder_OAuth_NoConfigFile(t *testing.T) {
-	// Test with a non-existent config file
-	builder := &cliext.ClientOptionsBuilder{
-		CommonOptions: cliext.CommonOptions{
-			ConfigFile:        "/non/existent/path.toml",
-			DisableConfigFile: true,
-		},
-		ClientOptions: cliext.ClientOptions{
-			Address:   "localhost:7233",
-			Namespace: "default",
-		},
-	}
-	opts, err := builder.Build(t.Context())
-
-	require.NoError(t, err)
-	// When config file is disabled, credentials should be nil (no OAuth configured)
-	assert.Nil(t, opts.Credentials)
+	return configFile
 }
