@@ -103,7 +103,7 @@ func (b *ClientOptionsBuilder) Build(ctx context.Context) (client.Options, error
 		profile.Namespace = cfg.Namespace
 	}
 
-	// Set API key on profile if provided (OAuth credentials are set later on clientOpts)
+	// Set API key on profile if provided
 	if cfg.ApiKey != "" {
 		profile.APIKey = cfg.ApiKey
 	}
