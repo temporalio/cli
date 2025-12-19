@@ -199,7 +199,20 @@ func (b *ClientOptionsBuilder) Build(ctx context.Context) (client.Options, error
 	}
 
 	// Attempt to configure OAuth config if no API key is set and config file is enabled.
-	if cfg.ApiKey == "" && !common.DisableConfigFile {
+	if cfg.ApiKey != "" {
+		if b.Logger != nil {
+			b.Logger.Debug("Skipping OAuth: API key is set")
+		}
+	} else if common.DisableConfigFile {
+		if b.Logger != nil {
+			b.Logger.Debug("Skipping OAuth: config file is disabled")
+		}
+	} else {
+		if b.Logger != nil {
+			b.Logger.Debug("Attempting to load OAuth config",
+				"configFilePath", common.ConfigFile,
+				"profile", common.Profile)
+		}
 		result, err := LoadClientOAuth(LoadClientOAuthOptions{
 			ConfigFilePath: common.ConfigFile,
 			ProfileName:    common.Profile,
@@ -208,12 +221,26 @@ func (b *ClientOptionsBuilder) Build(ctx context.Context) (client.Options, error
 		if err != nil {
 			return client.Options{}, fmt.Errorf("failed to load OAuth config: %w", err)
 		}
+		if b.Logger != nil {
+			hasOAuth := result.OAuth != nil
+			hasToken := hasOAuth && result.OAuth.Token != nil
+			hasAccessToken := hasToken && result.OAuth.Token.AccessToken != ""
+			b.Logger.Debug("OAuth config loaded",
+				"configFilePath", result.ConfigFilePath,
+				"profileName", result.ProfileName,
+				"hasOAuth", hasOAuth,
+				"hasToken", hasToken,
+				"hasAccessToken", hasAccessToken)
+		}
 		// Only set credentials if OAuth is configured with an access token
 		if result.OAuth != nil && result.OAuth.Token != nil && result.OAuth.Token.AccessToken != "" {
 			b.oauthConfig = result.OAuth
 			b.oauthConfigFilePath = result.ConfigFilePath
 			b.oauthProfileName = result.ProfileName
 			clientOpts.Credentials = client.NewAPIKeyDynamicCredentials(b.getOAuthToken)
+			if b.Logger != nil {
+				b.Logger.Debug("OAuth credentials configured")
+			}
 		}
 	}
 
@@ -288,16 +315,28 @@ func newPayloadCodecInterceptor(
 // It uses oauth2.TokenSource to automatically refresh the token when needed.
 // If the token is refreshed, it automatically persists the new token to the config file.
 func (b *ClientOptionsBuilder) getOAuthToken(ctx context.Context) (string, error) {
+	if b.Logger != nil {
+		b.Logger.Debug("getOAuthToken called",
+			"hasRefreshToken", b.oauthConfig.Token.RefreshToken != "",
+			"tokenExpiry", b.oauthConfig.Token.Expiry)
+	}
+
 	curAccessToken := b.oauthConfig.Token.AccessToken
 
 	tokenSource := b.oauthConfig.newTokenSource(ctx)
 	token, err := tokenSource.Token()
 	if err != nil {
+		if b.Logger != nil {
+			b.Logger.Debug("getOAuthToken failed to get token", "error", err)
+		}
 		return "", err
 	}
 
 	// If the token was refreshed, persist it back to the config file
 	if token.AccessToken != curAccessToken {
+		if b.Logger != nil {
+			b.Logger.Debug("OAuth token was refreshed, persisting to config file")
+		}
 		b.oauthConfig.Token = token
 
 		// Persist the updated token to the config file
@@ -312,6 +351,8 @@ func (b *ClientOptionsBuilder) getOAuthToken(ctx context.Context) (string, error
 				b.Logger.Warn("Failed to persist refreshed OAuth token to config file", "error", err)
 			}
 		}
+	} else if b.Logger != nil {
+		b.Logger.Debug("OAuth token still valid, no refresh needed")
 	}
 
 	return token.AccessToken, nil
