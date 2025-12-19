@@ -3475,7 +3475,6 @@ commands:
       - name: queue-rps-limit-reason
         type: string
         description: Reason for queue rate limit update.
-        hidden: true
       - name: fairness-key-rps-limit-default
         type: string
         display-type: float|default
@@ -3485,7 +3484,6 @@ commands:
       - name: fairness-key-rps-limit-reason
         type: string
         description: Reason for fairness key rate limit update.
-        hidden: true
 
   - name: temporal workflow
     summary: Start, list, and operate on Workflows

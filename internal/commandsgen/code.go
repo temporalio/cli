@@ -492,5 +492,8 @@ func (o *Option) writeFlagBuilding(selfVar, flagVar string, w *codeWriter) error
 	if o.Deprecated != "" {
 		w.writeLinef("_ = %v.MarkDeprecated(%q, %q)", flagVar, o.Name, o.Deprecated)
 	}
+	if o.Hidden {
+		w.writeLinef("_ = %v.MarkHidden(%q)", flagVar, o.Name)
+	}
 	return nil
 }
