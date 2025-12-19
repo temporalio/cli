@@ -443,6 +443,9 @@ func (c *TemporalCommand) initCommand(cctx *CommandContext) {
 	// Set custom usage template with proper flag wrapping
 	c.Command.SetUsageTemplate(getUsageTemplate())
 
+	// Customize the built-in help command to support --all/-a for listing extensions
+	customizeHelpCommand(&c.Command)
+
 	// Unfortunately color is a global option, so we can set in pre-run but we
 	// must unset in post-run
 	origNoColor := color.NoColor
