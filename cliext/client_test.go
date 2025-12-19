@@ -48,6 +48,38 @@ func newMockOAuthServer(t *testing.T) *mockOAuthServer {
 	return m
 }
 
+func TestClientOptionsBuilder_OptionsPassedThrough(t *testing.T) {
+	builder := &cliext.ClientOptionsBuilder{
+		CommonOptions: cliext.CommonOptions{
+			DisableConfigFile:    true,
+			ClientConnectTimeout: cliext.FlagDuration(5 * time.Second),
+		},
+		ClientOptions: cliext.ClientOptions{
+			Address:         "my-custom-host:7233",
+			Namespace:       "my-namespace",
+			ApiKey:          "my-api-key",
+			Identity:        "my-identity",
+			ClientAuthority: "my-authority",
+			CodecEndpoint:   "http://localhost:8080/codec",
+			CodecAuth:       "my-codec-auth",
+			GrpcMeta:        []string{"key1=value1", "key2=value2"},
+		},
+	}
+	opts, err := builder.Build(t.Context())
+
+	require.NoError(t, err)
+	assert.Equal(t, "my-custom-host:7233", opts.HostPort)
+	assert.Equal(t, "my-namespace", opts.Namespace)
+	assert.NotNil(t, opts.Credentials)
+	assert.Equal(t, "my-identity", opts.Identity)
+	assert.Equal(t, "my-authority", opts.ConnectionOptions.Authority)
+	assert.Equal(t, 5*time.Second, opts.ConnectionOptions.GetSystemInfoTimeout)
+	// CodecEndpoint/CodecAuth result in a gRPC interceptor being added
+	assert.NotEmpty(t, opts.ConnectionOptions.DialOptions)
+	// GrpcMeta results in a HeadersProvider being set
+	assert.NotNil(t, opts.HeadersProvider)
+}
+
 func TestClientOptionsBuilder_OAuth_ValidToken(t *testing.T) {
 	s := newMockOAuthServer(t)
 	configFile := createTestOAuthConfig(t, s.tokenURL, time.Now().Add(time.Hour))
