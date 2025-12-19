@@ -96,6 +96,8 @@ func (b *ClientOptionsBuilder) Build(ctx context.Context) (client.Options, error
 	// override the profile version unless it was _explicitly_ set.
 	if cfg.FlagSet != nil && cfg.FlagSet.Changed("address") {
 		profile.Address = cfg.Address
+	} else if profile.Address == "" {
+		profile.Address = cfg.Address
 	}
 	if cfg.FlagSet != nil && cfg.FlagSet.Changed("namespace") {
 		profile.Namespace = cfg.Namespace
