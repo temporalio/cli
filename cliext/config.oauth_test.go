@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/temporalio/cli/cliext"
+	"golang.org/x/oauth2"
 )
 
 func TestLoadClientOAuth(t *testing.T) {
@@ -27,7 +28,6 @@ refresh_token = "test-refresh-token"
 token_type = "Bearer"
 expires_at = "2318-03-23T00:00:00Z"
 scopes = ["openid", "profile", "email"]
-request_params = { audience = "https://api.example.com" }
 `)
 	require.NoError(t, err)
 	require.NoError(t, f.Close())
@@ -38,16 +38,15 @@ request_params = { audience = "https://api.example.com" }
 	require.NoError(t, err)
 	require.NotNil(t, result.OAuth)
 
-	assert.Equal(t, "test-client", result.OAuth.ClientID)
-	assert.Equal(t, "test-secret", result.OAuth.ClientSecret)
-	assert.Equal(t, "https://example.com/oauth/token", result.OAuth.TokenURL)
-	assert.Equal(t, "https://example.com/oauth/authorize", result.OAuth.AuthURL)
-	assert.Equal(t, "test-access-token", result.OAuth.AccessToken)
-	assert.Equal(t, "test-refresh-token", result.OAuth.RefreshToken)
-	assert.Equal(t, "Bearer", result.OAuth.TokenType)
-	assert.Equal(t, time.Date(2318, 3, 23, 0, 0, 0, 0, time.UTC), result.OAuth.AccessTokenExpiresAt)
-	assert.Equal(t, []string{"openid", "profile", "email"}, result.OAuth.Scopes)
-	assert.Equal(t, map[string]string{"audience": "https://api.example.com"}, result.OAuth.RequestParams)
+	assert.Equal(t, "test-client", result.OAuth.ClientConfig.ClientID)
+	assert.Equal(t, "test-secret", result.OAuth.ClientConfig.ClientSecret)
+	assert.Equal(t, "https://example.com/oauth/token", result.OAuth.ClientConfig.Endpoint.TokenURL)
+	assert.Equal(t, "https://example.com/oauth/authorize", result.OAuth.ClientConfig.Endpoint.AuthURL)
+	assert.Equal(t, "test-access-token", result.OAuth.Token.AccessToken)
+	assert.Equal(t, "test-refresh-token", result.OAuth.Token.RefreshToken)
+	assert.Equal(t, "Bearer", result.OAuth.Token.TokenType)
+	assert.Equal(t, time.Date(2318, 3, 23, 0, 0, 0, 0, time.UTC), result.OAuth.Token.Expiry)
+	assert.Equal(t, []string{"openid", "profile", "email"}, result.OAuth.ClientConfig.Scopes)
 }
 
 func TestLoadClientOAuth_DifferentProfile(t *testing.T) {
@@ -71,9 +70,9 @@ refresh_token = "custom-refresh"
 	require.NoError(t, err)
 	require.NotNil(t, result.OAuth)
 
-	assert.Equal(t, "custom-client", result.OAuth.ClientID)
-	assert.Equal(t, "custom-token", result.OAuth.AccessToken)
-	assert.Equal(t, "custom-refresh", result.OAuth.RefreshToken)
+	assert.Equal(t, "custom-client", result.OAuth.ClientConfig.ClientID)
+	assert.Equal(t, "custom-token", result.OAuth.Token.AccessToken)
+	assert.Equal(t, "custom-refresh", result.OAuth.Token.RefreshToken)
 	assert.Equal(t, "custom", result.ProfileName)
 }
 
@@ -121,21 +120,20 @@ address = "localhost:7233"
 	err = cliext.StoreClientOAuth(cliext.StoreClientOAuthOptions{
 		ConfigFilePath: f.Name(),
 		OAuth: &cliext.OAuthConfig{
-			OAuthClientConfig: cliext.OAuthClientConfig{
+			ClientConfig: &oauth2.Config{
 				ClientID:     "new-client",
 				ClientSecret: "new-secret",
-				TokenURL:     "https://new.example.com/token",
-				AuthURL:      "https://new.example.com/auth",
-				Scopes:       []string{"read", "write"},
-				RequestParams: map[string]string{
-					"audience": "https://new-api.example.com",
+				Endpoint: oauth2.Endpoint{
+					TokenURL: "https://new.example.com/token",
+					AuthURL:  "https://new.example.com/auth",
 				},
+				Scopes: []string{"read", "write"},
 			},
-			OAuthToken: cliext.OAuthToken{
-				AccessToken:          "new-access-token",
-				RefreshToken:         "new-refresh-token",
-				TokenType:            "Bearer",
-				AccessTokenExpiresAt: time.Date(2025, 12, 31, 0, 0, 0, 0, time.UTC),
+			Token: &oauth2.Token{
+				AccessToken:  "new-access-token",
+				RefreshToken: "new-refresh-token",
+				TokenType:    "Bearer",
+				Expiry:       time.Date(2025, 12, 31, 0, 0, 0, 0, time.UTC),
 			},
 		},
 	})
@@ -148,12 +146,11 @@ address = "localhost:7233"
 	require.NoError(t, err)
 	require.NotNil(t, result.OAuth)
 
-	assert.Equal(t, "new-client", result.OAuth.ClientID)
-	assert.Equal(t, "new-secret", result.OAuth.ClientSecret)
-	assert.Equal(t, "new-access-token", result.OAuth.AccessToken)
-	assert.Equal(t, "new-refresh-token", result.OAuth.RefreshToken)
-	assert.Equal(t, []string{"read", "write"}, result.OAuth.Scopes)
-	assert.Equal(t, map[string]string{"audience": "https://new-api.example.com"}, result.OAuth.RequestParams)
+	assert.Equal(t, "new-client", result.OAuth.ClientConfig.ClientID)
+	assert.Equal(t, "new-secret", result.OAuth.ClientConfig.ClientSecret)
+	assert.Equal(t, "new-access-token", result.OAuth.Token.AccessToken)
+	assert.Equal(t, "new-refresh-token", result.OAuth.Token.RefreshToken)
+	assert.Equal(t, []string{"read", "write"}, result.OAuth.ClientConfig.Scopes)
 }
 
 func TestStoreClientOAuth_Remove(t *testing.T) {
@@ -200,10 +197,10 @@ func TestStoreClientOAuth_CreateNewFile(t *testing.T) {
 	err = cliext.StoreClientOAuth(cliext.StoreClientOAuthOptions{
 		ConfigFilePath: f.Name(),
 		OAuth: &cliext.OAuthConfig{
-			OAuthClientConfig: cliext.OAuthClientConfig{
+			ClientConfig: &oauth2.Config{
 				ClientID: "new-client",
 			},
-			OAuthToken: cliext.OAuthToken{
+			Token: &oauth2.Token{
 				AccessToken:  "new-token",
 				RefreshToken: "new-refresh",
 			},
@@ -217,8 +214,8 @@ func TestStoreClientOAuth_CreateNewFile(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.NotNil(t, result.OAuth)
-	assert.Equal(t, "new-client", result.OAuth.ClientID)
-	assert.Equal(t, "new-token", result.OAuth.AccessToken)
+	assert.Equal(t, "new-client", result.OAuth.ClientConfig.ClientID)
+	assert.Equal(t, "new-token", result.OAuth.Token.AccessToken)
 }
 
 func TestStoreClientOAuth_PreservesOtherContent(t *testing.T) {
@@ -242,10 +239,10 @@ address = "other:7233"
 	err = cliext.StoreClientOAuth(cliext.StoreClientOAuthOptions{
 		ConfigFilePath: f.Name(),
 		OAuth: &cliext.OAuthConfig{
-			OAuthClientConfig: cliext.OAuthClientConfig{
+			ClientConfig: &oauth2.Config{
 				ClientID: "test-client",
 			},
-			OAuthToken: cliext.OAuthToken{
+			Token: &oauth2.Token{
 				AccessToken:  "test-token",
 				RefreshToken: "test-refresh",
 			},

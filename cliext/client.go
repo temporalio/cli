@@ -203,7 +203,7 @@ func (b *ClientOptionsBuilder) Build(ctx context.Context) (client.Options, error
 			return client.Options{}, fmt.Errorf("failed to load OAuth config: %w", err)
 		}
 		// Only set credentials if OAuth is configured with an access token
-		if result.OAuth != nil && result.OAuth.AccessToken != "" {
+		if result.OAuth != nil && result.OAuth.Token != nil && result.OAuth.Token.AccessToken != "" {
 			b.oauthConfig = result.OAuth
 			clientOpts.Credentials = client.NewAPIKeyDynamicCredentials(b.getOAuthToken)
 		}

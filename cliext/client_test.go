@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/temporalio/cli/cliext"
+	"golang.org/x/oauth2"
 )
 
 type mockOAuthServer struct {
@@ -53,15 +54,17 @@ func TestClientOptionsBuilder_OAuth_ValidToken(t *testing.T) {
 	err := cliext.StoreClientOAuth(cliext.StoreClientOAuthOptions{
 		ConfigFilePath: configFile,
 		OAuth: &cliext.OAuthConfig{
-			OAuthClientConfig: cliext.OAuthClientConfig{
+			ClientConfig: &oauth2.Config{
 				ClientID:     "test-client",
 				ClientSecret: "test-secret",
-				TokenURL:     s.tokenURL,
+				Endpoint: oauth2.Endpoint{
+					TokenURL: s.tokenURL,
+				},
 			},
-			OAuthToken: cliext.OAuthToken{
-				AccessToken:          "test-access-token",
-				RefreshToken:         "test-refresh-token",
-				AccessTokenExpiresAt: time.Now().Add(time.Hour), // not expired
+			Token: &oauth2.Token{
+				AccessToken:  "test-access-token",
+				RefreshToken: "test-refresh-token",
+				Expiry:       time.Now().Add(time.Hour), // not expired
 			},
 		},
 	})
@@ -93,15 +96,17 @@ func TestClientOptionsBuilder_OAuth_Refresh(t *testing.T) {
 	err := cliext.StoreClientOAuth(cliext.StoreClientOAuthOptions{
 		ConfigFilePath: configFile,
 		OAuth: &cliext.OAuthConfig{
-			OAuthClientConfig: cliext.OAuthClientConfig{
+			ClientConfig: &oauth2.Config{
 				ClientID:     "test-client",
 				ClientSecret: "test-secret",
-				TokenURL:     s.tokenURL,
+				Endpoint: oauth2.Endpoint{
+					TokenURL: s.tokenURL,
+				},
 			},
-			OAuthToken: cliext.OAuthToken{
-				AccessToken:          "test-access-token",
-				RefreshToken:         "test-refresh-token",
-				AccessTokenExpiresAt: time.Now().Add(-time.Hour), // expired
+			Token: &oauth2.Token{
+				AccessToken:  "test-access-token",
+				RefreshToken: "test-refresh-token",
+				Expiry:       time.Now().Add(-time.Hour), // expired
 			},
 		},
 	})
@@ -130,15 +135,17 @@ func TestClientOptionsBuilder_OAuth_APIKeyTakesPrecedence(t *testing.T) {
 	err := cliext.StoreClientOAuth(cliext.StoreClientOAuthOptions{
 		ConfigFilePath: configFile,
 		OAuth: &cliext.OAuthConfig{
-			OAuthClientConfig: cliext.OAuthClientConfig{
+			ClientConfig: &oauth2.Config{
 				ClientID:     "test-client",
 				ClientSecret: "test-secret",
-				TokenURL:     s.tokenURL,
+				Endpoint: oauth2.Endpoint{
+					TokenURL: s.tokenURL,
+				},
 			},
-			OAuthToken: cliext.OAuthToken{
-				AccessToken:          "test-access-token",
-				RefreshToken:         "test-refresh-token",
-				AccessTokenExpiresAt: time.Now().Add(time.Hour),
+			Token: &oauth2.Token{
+				AccessToken:  "test-access-token",
+				RefreshToken: "test-refresh-token",
+				Expiry:       time.Now().Add(time.Hour),
 			},
 		},
 	})
