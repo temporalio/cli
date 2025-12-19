@@ -14,62 +14,22 @@ import (
 	"golang.org/x/oauth2"
 )
 
-// OAuthClientConfig contains OAuth client credentials and endpoints.
-type OAuthClientConfig struct {
-	// ClientID is the OAuth client ID.
-	ClientID string
-	// ClientSecret is the OAuth client secret.
-	ClientSecret string
-	// TokenURL is the OAuth token endpoint URL.
-	TokenURL string
-	// AuthURL is the OAuth authorization endpoint URL.
-	AuthURL string
-	// RedirectURL is the OAuth redirect URL.
-	RedirectURL string
-	// Scopes are the requested OAuth scopes.
-	Scopes []string
-	// RequestParams are additional parameters to include in OAuth requests.
-	RequestParams map[string]string
-}
-
-// OAuthToken contains OAuth token information.
-type OAuthToken struct {
-	// AccessToken is the current access token.
-	AccessToken string
-	// AccessTokenExpiresAt is when the access token expires.
-	AccessTokenExpiresAt time.Time
-	// RefreshToken is the refresh token for obtaining new access tokens.
-	RefreshToken string
-	// TokenType is the type of token (usually "Bearer").
-	TokenType string
-}
-
 // OAuthConfig combines OAuth client configuration with token information.
 type OAuthConfig struct {
-	OAuthClientConfig
-	OAuthToken
+	// ClientConfig is the OAuth 2.0 client configuration.
+	ClientConfig *oauth2.Config
+	// Token is the OAuth 2.0 token.
+	Token *oauth2.Token
 }
 
 // newTokenSource creates an oauth2.TokenSource that automatically refreshes
 // the access token when it expires.
 func (c *OAuthConfig) newTokenSource(ctx context.Context) oauth2.TokenSource {
-	cfg := &oauth2.Config{
-		ClientID:     c.ClientID,
-		ClientSecret: c.ClientSecret,
-		RedirectURL:  c.RedirectURL,
-		Endpoint: oauth2.Endpoint{
-			AuthURL:  c.AuthURL,
-			TokenURL: c.TokenURL,
-		},
-		Scopes: c.Scopes,
+	if c.ClientConfig == nil || c.Token == nil {
+		return nil
 	}
-	token := &oauth2.Token{
-		AccessToken:  c.AccessToken,
-		RefreshToken: c.RefreshToken,
-		TokenType:    c.TokenType,
-		Expiry:       c.AccessTokenExpiresAt,
-	}
-	return oauth2.ReuseTokenSourceWithExpiry(token, cfg.TokenSource(ctx, token), time.Minute)
+
+	return oauth2.ReuseTokenSourceWithExpiry(c.Token, c.ClientConfig.TokenSource(ctx, c.Token), time.Minute)
 }
 
 // LoadClientOAuthOptions are options for LoadClientOAuth.
@@ -136,28 +96,34 @@ func loadOAuthConfigFromFile(path string) (map[string]*OAuthConfig, error) {
 			continue
 		}
 		cfg := profile.OAuth
-		oauth := &OAuthConfig{
-			OAuthClientConfig: OAuthClientConfig{
-				ClientID:      cfg.ClientID,
-				ClientSecret:  cfg.ClientSecret,
-				TokenURL:      cfg.TokenURL,
-				AuthURL:       cfg.AuthURL,
-				RedirectURL:   cfg.RedirectURL,
-				RequestParams: cfg.RequestParams,
-				Scopes:        cfg.Scopes,
-			},
-			OAuthToken: OAuthToken{
-				AccessToken:  cfg.AccessToken,
-				RefreshToken: cfg.RefreshToken,
-				TokenType:    cfg.TokenType,
-			},
-		}
+
+		// Parse expiry time if present
+		var expiry time.Time
 		if cfg.ExpiresAt != "" {
 			t, err := time.Parse(time.RFC3339, cfg.ExpiresAt)
 			if err != nil {
 				return nil, fmt.Errorf("failed to parse expires_at for profile %q: %w", profileName, err)
 			}
-			oauth.AccessTokenExpiresAt = t
+			expiry = t
+		}
+
+		oauth := &OAuthConfig{
+			ClientConfig: &oauth2.Config{
+				ClientID:     cfg.ClientID,
+				ClientSecret: cfg.ClientSecret,
+				RedirectURL:  cfg.RedirectURL,
+				Scopes:       cfg.Scopes,
+				Endpoint: oauth2.Endpoint{
+					AuthURL:  cfg.AuthURL,
+					TokenURL: cfg.TokenURL,
+				},
+			},
+			Token: &oauth2.Token{
+				AccessToken:  cfg.AccessToken,
+				RefreshToken: cfg.RefreshToken,
+				TokenType:    cfg.TokenType,
+				Expiry:       expiry,
+			},
 		}
 		oauthByProfile[profileName] = oauth
 	}
@@ -288,28 +254,34 @@ func parseOAuthFromRaw(raw map[string]any) (map[string]*OAuthConfig, error) {
 			continue
 		}
 		cfg := profile.OAuth
-		oauth := &OAuthConfig{
-			OAuthClientConfig: OAuthClientConfig{
-				ClientID:      cfg.ClientID,
-				ClientSecret:  cfg.ClientSecret,
-				TokenURL:      cfg.TokenURL,
-				AuthURL:       cfg.AuthURL,
-				RedirectURL:   cfg.RedirectURL,
-				RequestParams: cfg.RequestParams,
-				Scopes:        cfg.Scopes,
-			},
-			OAuthToken: OAuthToken{
-				AccessToken:  cfg.AccessToken,
-				RefreshToken: cfg.RefreshToken,
-				TokenType:    cfg.TokenType,
-			},
-		}
+
+		// Parse expiry time if present
+		var expiry time.Time
 		if cfg.ExpiresAt != "" {
 			t, err := time.Parse(time.RFC3339, cfg.ExpiresAt)
 			if err != nil {
 				return nil, fmt.Errorf("failed to parse expires_at for profile %q: %w", profileName, err)
 			}
-			oauth.AccessTokenExpiresAt = t
+			expiry = t
+		}
+
+		oauth := &OAuthConfig{
+			ClientConfig: &oauth2.Config{
+				ClientID:     cfg.ClientID,
+				ClientSecret: cfg.ClientSecret,
+				RedirectURL:  cfg.RedirectURL,
+				Scopes:       cfg.Scopes,
+				Endpoint: oauth2.Endpoint{
+					AuthURL:  cfg.AuthURL,
+					TokenURL: cfg.TokenURL,
+				},
+			},
+			Token: &oauth2.Token{
+				AccessToken:  cfg.AccessToken,
+				RefreshToken: cfg.RefreshToken,
+				TokenType:    cfg.TokenType,
+				Expiry:       expiry,
+			},
 		}
 		oauthByProfile[profileName] = oauth
 	}
@@ -345,17 +317,16 @@ func mergeOAuthIntoRaw(raw map[string]any, oauthByProfile map[string]*OAuthConfi
 
 // oauthConfigTOML is the TOML representation of OAuthConfig.
 type oauthConfigTOML struct {
-	ClientID      string          `toml:"client_id,omitempty"`
-	ClientSecret  string          `toml:"client_secret,omitempty"`
-	TokenURL      string          `toml:"token_url,omitempty"`
-	AuthURL       string          `toml:"auth_url,omitempty"`
-	RedirectURL   string          `toml:"redirect_url,omitempty"`
-	AccessToken   string          `toml:"access_token,omitempty"`
-	RefreshToken  string          `toml:"refresh_token,omitempty"`
-	TokenType     string          `toml:"token_type,omitempty"`
-	ExpiresAt     string          `toml:"expires_at,omitempty"`
-	Scopes        []string        `toml:"scopes,omitempty"`
-	RequestParams inlineStringMap `toml:"request_params,inline,omitempty"`
+	ClientID     string   `toml:"client_id,omitempty"`
+	ClientSecret string   `toml:"client_secret,omitempty"`
+	TokenURL     string   `toml:"token_url,omitempty"`
+	AuthURL      string   `toml:"auth_url,omitempty"`
+	RedirectURL  string   `toml:"redirect_url,omitempty"`
+	AccessToken  string   `toml:"access_token,omitempty"`
+	RefreshToken string   `toml:"refresh_token,omitempty"`
+	TokenType    string   `toml:"token_type,omitempty"`
+	ExpiresAt    string   `toml:"expires_at,omitempty"`
+	Scopes       []string `toml:"scopes,omitempty"`
 }
 
 type rawProfileWithOAuth struct {
@@ -368,23 +339,22 @@ type rawConfigWithOAuth struct {
 
 // oauthConfigToTOML converts OAuthConfig to its TOML representation.
 func oauthConfigToTOML(oauth *OAuthConfig) *oauthConfigTOML {
-	if oauth == nil {
+	if oauth == nil || oauth.ClientConfig == nil || oauth.Token == nil {
 		return nil
 	}
 	result := &oauthConfigTOML{
-		ClientID:      oauth.ClientID,
-		ClientSecret:  oauth.ClientSecret,
-		TokenURL:      oauth.TokenURL,
-		AuthURL:       oauth.AuthURL,
-		RedirectURL:   oauth.RedirectURL,
-		AccessToken:   oauth.AccessToken,
-		RefreshToken:  oauth.RefreshToken,
-		TokenType:     oauth.TokenType,
-		Scopes:        oauth.Scopes,
-		RequestParams: oauth.RequestParams,
+		ClientID:     oauth.ClientConfig.ClientID,
+		ClientSecret: oauth.ClientConfig.ClientSecret,
+		TokenURL:     oauth.ClientConfig.Endpoint.TokenURL,
+		AuthURL:      oauth.ClientConfig.Endpoint.AuthURL,
+		RedirectURL:  oauth.ClientConfig.RedirectURL,
+		AccessToken:  oauth.Token.AccessToken,
+		RefreshToken: oauth.Token.RefreshToken,
+		TokenType:    oauth.Token.TokenType,
+		Scopes:       oauth.ClientConfig.Scopes,
 	}
-	if !oauth.AccessTokenExpiresAt.IsZero() {
-		result.ExpiresAt = oauth.AccessTokenExpiresAt.Format(time.RFC3339)
+	if !oauth.Token.Expiry.IsZero() {
+		result.ExpiresAt = oauth.Token.Expiry.Format(time.RFC3339)
 	}
 	return result
 }
