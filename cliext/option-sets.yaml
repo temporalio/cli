@@ -15,6 +15,7 @@ option-sets:
         description: |
           Path to environment settings file.
           Defaults to `$HOME/.config/temporalio/temporal.yaml`.
+        implied-env: TEMPORAL_ENV_FILE
       - name: config-file
         type: string
         description: |
@@ -23,10 +24,12 @@ option-sets:
           as `$HOME/.config` on Unix, `$HOME/Library/Application Support` on
           macOS, and `%AppData%` on Windows.
         experimental: true
+        implied-env: TEMPORAL_CONFIG_FILE
       - name: profile
         type: string
         description: Profile to use for config file.
         experimental: true
+        implied-env: TEMPORAL_PROFILE
       - name: disable-config-file
         type: bool
         description: |
