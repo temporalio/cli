@@ -2,12 +2,9 @@ package cliext
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"fmt"
 	"log/slog"
 	"net/http"
-	"os"
 	"strings"
 
 	"go.temporal.io/sdk/client"
@@ -17,7 +14,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-// ClientOptionsBuilder contains options for building Temporal client options.
+// ClientOptionsBuilder contains options for building SDK client.Options
 type ClientOptionsBuilder struct {
 	// CommonOptions contains common CLI options including profile config.
 	CommonOptions CommonOptions
@@ -29,14 +26,14 @@ type ClientOptionsBuilder struct {
 	// Logger is the slog logger to use for the client. If set, it will be
 	// wrapped with the SDK's structured logger adapter.
 	Logger *slog.Logger
+	// oauthConfig is initialized during Build() if OAuth is configured.
+	oauthConfig *OAuthConfig
 }
 
-// BuildClientOptions creates SDK client options from a ClientOptionsBuilder.
-// If OAuth is configured and no APIKey is set, OAuth will be used to obtain an access token.
-// Returns the client options and the resolved namespace (which may differ from input if loaded from profile).
-func BuildClientOptions(ctx context.Context, opts ClientOptionsBuilder) (client.Options, string, error) {
-	cfg := opts.ClientOptions
-	common := opts.CommonOptions
+// Build creates SDK client.Options
+func (b *ClientOptionsBuilder) Build(ctx context.Context) (client.Options, error) {
+	cfg := b.ClientOptions
+	common := b.CommonOptions
 
 	// Load a client config profile if configured
 	var profile envconfig.ClientConfigProfile
@@ -47,22 +44,22 @@ func BuildClientOptions(ctx context.Context, opts ClientOptionsBuilder) (client.
 			ConfigFileProfile: common.Profile,
 			DisableFile:       common.DisableConfigFile,
 			DisableEnv:        common.DisableConfigEnv,
-			EnvLookup:         opts.EnvLookup,
+			EnvLookup:         b.EnvLookup,
 		})
 		if err != nil {
-			return client.Options{}, "", fmt.Errorf("failed loading client config: %w", err)
+			return client.Options{}, fmt.Errorf("failed loading client config: %w", err)
 		}
 	}
 
 	// To support legacy TLS environment variables, if they are present, we will
 	// have them force-override anything loaded from existing file or env
-	if !common.DisableConfigEnv && opts.EnvLookup != nil {
-		oldEnvTLSCert, _ := opts.EnvLookup.LookupEnv("TEMPORAL_TLS_CERT")
-		oldEnvTLSCertData, _ := opts.EnvLookup.LookupEnv("TEMPORAL_TLS_CERT_DATA")
-		oldEnvTLSKey, _ := opts.EnvLookup.LookupEnv("TEMPORAL_TLS_KEY")
-		oldEnvTLSKeyData, _ := opts.EnvLookup.LookupEnv("TEMPORAL_TLS_KEY_DATA")
-		oldEnvTLSCA, _ := opts.EnvLookup.LookupEnv("TEMPORAL_TLS_CA")
-		oldEnvTLSCAData, _ := opts.EnvLookup.LookupEnv("TEMPORAL_TLS_CA_DATA")
+	if !common.DisableConfigEnv && b.EnvLookup != nil {
+		oldEnvTLSCert, _ := b.EnvLookup.LookupEnv("TEMPORAL_TLS_CERT")
+		oldEnvTLSCertData, _ := b.EnvLookup.LookupEnv("TEMPORAL_TLS_CERT_DATA")
+		oldEnvTLSKey, _ := b.EnvLookup.LookupEnv("TEMPORAL_TLS_KEY")
+		oldEnvTLSKeyData, _ := b.EnvLookup.LookupEnv("TEMPORAL_TLS_KEY_DATA")
+		oldEnvTLSCA, _ := b.EnvLookup.LookupEnv("TEMPORAL_TLS_CA")
+		oldEnvTLSCAData, _ := b.EnvLookup.LookupEnv("TEMPORAL_TLS_CA_DATA")
 		if oldEnvTLSCert != "" || oldEnvTLSCertData != "" ||
 			oldEnvTLSKey != "" || oldEnvTLSKeyData != "" ||
 			oldEnvTLSCA != "" || oldEnvTLSCAData != "" {
@@ -96,13 +93,10 @@ func BuildClientOptions(ctx context.Context, opts ClientOptionsBuilder) (client.
 	if cfg.FlagSet != nil && cfg.FlagSet.Changed("address") {
 		profile.Address = cfg.Address
 	}
-	resolvedNamespace := profile.Namespace
 	if cfg.FlagSet != nil && cfg.FlagSet.Changed("namespace") {
 		profile.Namespace = cfg.Namespace
-		resolvedNamespace = cfg.Namespace
 	} else if profile.Namespace == "" {
 		profile.Namespace = cfg.Namespace
-		resolvedNamespace = cfg.Namespace
 	}
 
 	// Set API key on profile if provided (OAuth credentials are set later on clientOpts)
@@ -114,7 +108,7 @@ func BuildClientOptions(ctx context.Context, opts ClientOptionsBuilder) (client.
 	if len(cfg.GrpcMeta) > 0 {
 		grpcMetaFromArg, err := parseKeyValuePairs(cfg.GrpcMeta)
 		if err != nil {
-			return client.Options{}, "", fmt.Errorf("invalid gRPC meta: %w", err)
+			return client.Options{}, fmt.Errorf("invalid gRPC meta: %w", err)
 		}
 		if len(profile.GRPCMeta) == 0 {
 			profile.GRPCMeta = make(map[string]string, len(cfg.GrpcMeta))
@@ -125,6 +119,8 @@ func BuildClientOptions(ctx context.Context, opts ClientOptionsBuilder) (client.
 	}
 
 	// If any of these TLS values are present, set TLS if not set, and set values.
+	// NOTE: This means that tls=false does not explicitly disable TLS when set
+	// via envconfig.
 	if cfg.Tls ||
 		cfg.TlsCertPath != "" || cfg.TlsKeyPath != "" || cfg.TlsCaPath != "" ||
 		cfg.TlsCertData != "" || cfg.TlsKeyData != "" || cfg.TlsCaData != "" {
@@ -178,7 +174,12 @@ func BuildClientOptions(ctx context.Context, opts ClientOptionsBuilder) (client.
 	// Convert profile to client options.
 	clientOpts, err := profile.ToClientOptions(envconfig.ToClientOptionsRequest{})
 	if err != nil {
-		return client.Options{}, "", fmt.Errorf("failed to build client options: %w", err)
+		return client.Options{}, fmt.Errorf("failed to build client options: %w", err)
+	}
+
+	// Set client authority if provided.
+	if cfg.ClientAuthority != "" {
+		clientOpts.ConnectionOptions.Authority = cfg.ClientAuthority
 	}
 
 	// Set identity if provided.
@@ -187,20 +188,40 @@ func BuildClientOptions(ctx context.Context, opts ClientOptionsBuilder) (client.
 	}
 
 	// Set logger if provided.
-	if opts.Logger != nil {
-		clientOpts.Logger = log.NewStructuredLogger(opts.Logger)
+	if b.Logger != nil {
+		clientOpts.Logger = log.NewStructuredLogger(b.Logger)
 	}
 
-	// Set OAuth credentials if configured and no API key is set.
-	// OAuth config is loaded on-demand from the config file.
+	// Attempt to configure OAuth config if no API key is set.
 	if cfg.ApiKey == "" {
-		clientOpts.Credentials = client.NewAPIKeyDynamicCredentials(
-			NewOAuthDynamicTokenProvider(opts))
+		result, err := LoadClientOAuth(LoadClientOAuthOptions{
+			ConfigFilePath: common.ConfigFile,
+			ProfileName:    common.Profile,
+			EnvLookup:      b.EnvLookup,
+		})
+		if err != nil {
+			return client.Options{}, fmt.Errorf("failed to load OAuth config: %w", err)
+		}
+		// Only set credentials if OAuth is configured with an access token
+		if result.OAuth != nil && result.OAuth.AccessToken != "" {
+			b.oauthConfig = result.OAuth
+			clientOpts.Credentials = client.NewAPIKeyDynamicCredentials(b.getOAuthToken)
+		}
 	}
 
-	// Set client authority if provided.
-	if cfg.ClientAuthority != "" {
-		clientOpts.ConnectionOptions.Authority = cfg.ClientAuthority
+	// Remote codec
+	if profile.Codec != nil && profile.Codec.Endpoint != "" {
+		codecHeaders, err := parseKeyValuePairs(cfg.CodecHeader)
+		if err != nil {
+			return client.Options{}, fmt.Errorf("invalid codec headers: %w", err)
+		}
+		interceptor, err := newPayloadCodecInterceptor(
+			profile.Namespace, profile.Codec.Endpoint, profile.Codec.Auth, codecHeaders)
+		if err != nil {
+			return client.Options{}, fmt.Errorf("failed creating payload codec interceptor: %w", err)
+		}
+		clientOpts.ConnectionOptions.DialOptions = append(
+			clientOpts.ConnectionOptions.DialOptions, grpc.WithChainUnaryInterceptor(interceptor))
 	}
 
 	// Set connect timeout for GetSystemInfo if provided.
@@ -208,22 +229,7 @@ func BuildClientOptions(ctx context.Context, opts ClientOptionsBuilder) (client.
 		clientOpts.ConnectionOptions.GetSystemInfoTimeout = common.ClientConnectTimeout.Duration()
 	}
 
-	// Add codec interceptor if codec endpoint is configured.
-	if profile.Codec != nil && profile.Codec.Endpoint != "" {
-		codecHeaders, err := parseKeyValuePairs(cfg.CodecHeader)
-		if err != nil {
-			return client.Options{}, "", fmt.Errorf("invalid codec headers: %w", err)
-		}
-		interceptor, err := newPayloadCodecInterceptor(
-			profile.Namespace, profile.Codec.Endpoint, profile.Codec.Auth, codecHeaders)
-		if err != nil {
-			return client.Options{}, "", fmt.Errorf("failed creating payload codec interceptor: %w", err)
-		}
-		clientOpts.ConnectionOptions.DialOptions = append(
-			clientOpts.ConnectionOptions.DialOptions, grpc.WithChainUnaryInterceptor(interceptor))
-	}
-
-	return clientOpts, resolvedNamespace, nil
+	return clientOpts, nil
 }
 
 // parseKeyValuePairs parses a slice of "KEY=VALUE" strings into a map.
@@ -270,52 +276,13 @@ func newPayloadCodecInterceptor(
 	)
 }
 
-// BuildTLSConfig creates a TLS configuration from the ClientOptions TLS settings.
-// This is useful when you need the TLS config separately from the full client options.
-func BuildTLSConfig(cfg ClientOptions) (*tls.Config, error) {
-	if !cfg.Tls && cfg.TlsCertPath == "" && cfg.TlsKeyPath == "" && cfg.TlsCaPath == "" &&
-		cfg.TlsCertData == "" && cfg.TlsKeyData == "" && cfg.TlsCaData == "" {
-		return nil, nil
+// getOAuthToken returns a valid OAuth access token from the builder's configuration.
+// It uses oauth2.TokenSource to automatically refresh the token when needed.
+func (b *ClientOptionsBuilder) getOAuthToken(ctx context.Context) (string, error) {
+	tokenSource := b.oauthConfig.newTokenSource(ctx)
+	token, err := tokenSource.Token()
+	if err != nil {
+		return "", err
 	}
-
-	tlsConfig := &tls.Config{
-		ServerName:         cfg.TlsServerName,
-		InsecureSkipVerify: cfg.TlsDisableHostVerification,
-	}
-
-	// Load client certificate.
-	if cfg.TlsCertPath != "" && cfg.TlsKeyPath != "" {
-		cert, err := tls.LoadX509KeyPair(cfg.TlsCertPath, cfg.TlsKeyPath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load client certificate: %w", err)
-		}
-		tlsConfig.Certificates = []tls.Certificate{cert}
-	} else if cfg.TlsCertData != "" && cfg.TlsKeyData != "" {
-		cert, err := tls.X509KeyPair([]byte(cfg.TlsCertData), []byte(cfg.TlsKeyData))
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse client certificate: %w", err)
-		}
-		tlsConfig.Certificates = []tls.Certificate{cert}
-	}
-
-	// Load CA certificate.
-	if cfg.TlsCaPath != "" || cfg.TlsCaData != "" {
-		pool := x509.NewCertPool()
-		var caData []byte
-		if cfg.TlsCaPath != "" {
-			var err error
-			caData, err = os.ReadFile(cfg.TlsCaPath)
-			if err != nil {
-				return nil, fmt.Errorf("failed to read CA certificate: %w", err)
-			}
-		} else {
-			caData = []byte(cfg.TlsCaData)
-		}
-		if !pool.AppendCertsFromPEM(caData) {
-			return nil, fmt.Errorf("failed to parse CA certificate")
-		}
-		tlsConfig.RootCAs = pool
-	}
-
-	return tlsConfig, nil
+	return token.AccessToken, nil
 }

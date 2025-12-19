@@ -20,14 +20,15 @@ import (
 	"time"
 )
 
-// optionsContext provides context for building option flags.
-type optionsContext interface {
-	BindFlagEnvVar(flag *pflag.Flag, envVar string)
-}
-
 var hasHighlighting = isatty.IsTerminal(os.Stdout.Fd())
 
 type CommonOptions struct {
+	Env                     string
+	EnvFile                 string
+	ConfigFile              string
+	Profile                 string
+	DisableConfigFile       bool
+	DisableConfigEnv        bool
 	LogLevel                StringEnum
 	LogFormat               StringEnum
 	Output                  StringEnum
@@ -36,17 +37,17 @@ type CommonOptions struct {
 	NoJsonShorthandPayloads bool
 	CommandTimeout          Duration
 	ClientConnectTimeout    Duration
-	Env                     string
-	EnvFile                 string
-	ConfigFile              string
-	Profile                 string
-	DisableConfigFile       bool
-	DisableConfigEnv        bool
 	FlagSet                 *pflag.FlagSet
 }
 
-func (v *CommonOptions) BuildFlags(ctx optionsContext, f *pflag.FlagSet) {
+func (v *CommonOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
+	f.StringVar(&v.Env, "env", "default", "Active environment name (`ENV`).")
+	f.StringVar(&v.EnvFile, "env-file", "", "Path to environment settings file. Defaults to `$HOME/.config/temporalio/temporal.yaml`.")
+	f.StringVar(&v.ConfigFile, "config-file", "", "File path to read TOML config from, defaults to `$CONFIG_PATH/temporal/temporal.toml` where `$CONFIG_PATH` is defined as `$HOME/.config` on Unix, `$HOME/Library/Application Support` on macOS, and `%AppData%` on Windows. EXPERIMENTAL.")
+	f.StringVar(&v.Profile, "profile", "", "Profile to use for config file. EXPERIMENTAL.")
+	f.BoolVar(&v.DisableConfigFile, "disable-config-file", false, "If set, disables loading environment config from config file. EXPERIMENTAL.")
+	f.BoolVar(&v.DisableConfigEnv, "disable-config-env", false, "If set, disables loading environment config from environment variables. EXPERIMENTAL.")
 	v.LogLevel = NewStringEnum([]string{"debug", "info", "warn", "error", "never"}, "info")
 	f.Var(&v.LogLevel, "log-level", "Log level. Default is \"info\" for most commands and \"warn\" for `server start-dev`. Accepted values: debug, info, warn, error, never.")
 	v.LogFormat = NewStringEnum([]string{"text", "json", "pretty"}, "text")
@@ -62,15 +63,6 @@ func (v *CommonOptions) BuildFlags(ctx optionsContext, f *pflag.FlagSet) {
 	f.Var(&v.CommandTimeout, "command-timeout", "The command execution timeout. 0s means no timeout.")
 	v.ClientConnectTimeout = 0
 	f.Var(&v.ClientConnectTimeout, "client-connect-timeout", "The client connection timeout. 0s means no timeout.")
-	f.StringVar(&v.Env, "env", "default", "Active environment name (`ENV`).")
-	ctx.BindFlagEnvVar(f.Lookup("env"), "TEMPORAL_ENV")
-	f.StringVar(&v.EnvFile, "env-file", "", "Path to environment settings file. Defaults to `$HOME/.config/temporalio/temporal.yaml`.")
-	f.StringVar(&v.ConfigFile, "config-file", "", "File path to read TOML config from, defaults to `$CONFIG_PATH/temporal/temporal.toml` where `$CONFIG_PATH` is defined as `$HOME/.config` on Unix, `$HOME/Library/Application Support` on macOS, and `%AppData%` on Windows. EXPERIMENTAL.")
-	ctx.BindFlagEnvVar(f.Lookup("config-file"), "TEMPORAL_CONFIG_FILE")
-	f.StringVar(&v.Profile, "profile", "", "Profile to use for config file. EXPERIMENTAL.")
-	ctx.BindFlagEnvVar(f.Lookup("profile"), "TEMPORAL_PROFILE")
-	f.BoolVar(&v.DisableConfigFile, "disable-config-file", false, "If set, disables loading environment config from config file. EXPERIMENTAL.")
-	f.BoolVar(&v.DisableConfigEnv, "disable-config-env", false, "If set, disables loading environment config from environment variables. EXPERIMENTAL.")
 }
 
 type ClientOptions struct {
@@ -95,38 +87,24 @@ type ClientOptions struct {
 	FlagSet                    *pflag.FlagSet
 }
 
-func (v *ClientOptions) BuildFlags(ctx optionsContext, f *pflag.FlagSet) {
+func (v *ClientOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
 	f.StringVar(&v.Address, "address", "localhost:7233", "Temporal Service gRPC endpoint.")
-	ctx.BindFlagEnvVar(f.Lookup("address"), "TEMPORAL_ADDRESS")
 	f.StringVar(&v.ClientAuthority, "client-authority", "", "Temporal gRPC client :authority pseudoheader.")
 	f.StringVarP(&v.Namespace, "namespace", "n", "default", "Temporal Service Namespace.")
-	ctx.BindFlagEnvVar(f.Lookup("namespace"), "TEMPORAL_NAMESPACE")
 	f.StringVar(&v.ApiKey, "api-key", "", "API key for request.")
-	ctx.BindFlagEnvVar(f.Lookup("api-key"), "TEMPORAL_API_KEY")
 	f.StringArrayVar(&v.GrpcMeta, "grpc-meta", nil, "HTTP headers for requests. Format as a `KEY=VALUE` pair. May be passed multiple times to set multiple headers. Can also be made available via environment variable as `TEMPORAL_GRPC_META_[name]`.")
 	f.BoolVar(&v.Tls, "tls", false, "Enable base TLS encryption. Does not have additional options like mTLS or client certs. This is defaulted to true if api-key or any other TLS options are present. Use --tls=false to explicitly disable.")
-	ctx.BindFlagEnvVar(f.Lookup("tls"), "TEMPORAL_TLS")
 	f.StringVar(&v.TlsCertPath, "tls-cert-path", "", "Path to x509 certificate. Can't be used with --tls-cert-data.")
-	ctx.BindFlagEnvVar(f.Lookup("tls-cert-path"), "TEMPORAL_TLS_CLIENT_CERT_PATH")
 	f.StringVar(&v.TlsCertData, "tls-cert-data", "", "Data for x509 certificate. Can't be used with --tls-cert-path.")
-	ctx.BindFlagEnvVar(f.Lookup("tls-cert-data"), "TEMPORAL_TLS_CLIENT_CERT_DATA")
 	f.StringVar(&v.TlsKeyPath, "tls-key-path", "", "Path to x509 private key. Can't be used with --tls-key-data.")
-	ctx.BindFlagEnvVar(f.Lookup("tls-key-path"), "TEMPORAL_TLS_CLIENT_KEY_PATH")
 	f.StringVar(&v.TlsKeyData, "tls-key-data", "", "Private certificate key data. Can't be used with --tls-key-path.")
-	ctx.BindFlagEnvVar(f.Lookup("tls-key-data"), "TEMPORAL_TLS_CLIENT_KEY_DATA")
 	f.StringVar(&v.TlsCaPath, "tls-ca-path", "", "Path to server CA certificate. Can't be used with --tls-ca-data.")
-	ctx.BindFlagEnvVar(f.Lookup("tls-ca-path"), "TEMPORAL_TLS_SERVER_CA_CERT_PATH")
 	f.StringVar(&v.TlsCaData, "tls-ca-data", "", "Data for server CA certificate. Can't be used with --tls-ca-path.")
-	ctx.BindFlagEnvVar(f.Lookup("tls-ca-data"), "TEMPORAL_TLS_SERVER_CA_CERT_DATA")
 	f.BoolVar(&v.TlsDisableHostVerification, "tls-disable-host-verification", false, "Disable TLS host-name verification.")
-	ctx.BindFlagEnvVar(f.Lookup("tls-disable-host-verification"), "TEMPORAL_TLS_DISABLE_HOST_VERIFICATION")
 	f.StringVar(&v.TlsServerName, "tls-server-name", "", "Override target TLS server name.")
-	ctx.BindFlagEnvVar(f.Lookup("tls-server-name"), "TEMPORAL_TLS_SERVER_NAME")
 	f.StringVar(&v.CodecEndpoint, "codec-endpoint", "", "Remote Codec Server endpoint.")
-	ctx.BindFlagEnvVar(f.Lookup("codec-endpoint"), "TEMPORAL_CODEC_ENDPOINT")
 	f.StringVar(&v.CodecAuth, "codec-auth", "", "Authorization header for Codec Server requests.")
-	ctx.BindFlagEnvVar(f.Lookup("codec-auth"), "TEMPORAL_CODEC_AUTH")
 	f.StringArrayVar(&v.CodecHeader, "codec-header", nil, "HTTP headers for requests to codec server. Format as a `KEY=VALUE` pair. May be passed multiple times to set multiple headers.")
 	f.StringVar(&v.Identity, "identity", "", "The identity of the user or client submitting this request. Defaults to \"temporal-cli:$USER@$HOST\".")
 }

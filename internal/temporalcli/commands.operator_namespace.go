@@ -193,16 +193,16 @@ func (c *TemporalOperatorNamespaceListCommand) run(cctx *CommandContext, args []
 }
 
 func (c *TemporalOperatorNamespaceUpdateCommand) run(cctx *CommandContext, args []string) error {
-	nsName, err := c.Parent.Parent.getNSFromFlagOrArg0(cctx, args)
-	if err != nil {
-		return err
-	}
-
 	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
 	defer cl.Close()
+
+	nsName, err := c.Parent.Parent.getNSFromFlagOrArg0(cctx, args)
+	if err != nil {
+		return err
+	}
 
 	var updateRequest *workflowservice.UpdateNamespaceRequest
 
