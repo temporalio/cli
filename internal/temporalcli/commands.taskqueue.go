@@ -151,15 +151,18 @@ func buildIDToStatsRows(statsRows []statsRowType, buildID string, typesInfo map[
 		if err != nil {
 			return statsRows, err
 		}
-		statsRows = append(statsRows, statsRowType{
-			BuildID:                 buildID,
-			TaskQueueType:           taskQueueType,
-			ApproximateBacklogCount: info.Stats.ApproximateBacklogCount,
-			ApproximateBacklogAge:   formatDuration(info.Stats.ApproximateBacklogAge),
-			BacklogIncreaseRate:     info.Stats.BacklogIncreaseRate,
-			TasksAddRate:            info.Stats.TasksAddRate,
-			TasksDispatchRate:       info.Stats.TasksDispatchRate,
-		})
+		stats := statsRowType{
+			BuildID:       buildID,
+			TaskQueueType: taskQueueType,
+		}
+		if info.Stats != nil {
+			stats.ApproximateBacklogCount = info.Stats.ApproximateBacklogCount
+			stats.BacklogIncreaseRate = info.Stats.BacklogIncreaseRate
+			stats.TasksAddRate = info.Stats.TasksAddRate
+			stats.TasksDispatchRate = info.Stats.TasksDispatchRate
+			stats.ApproximateBacklogAge = formatDuration(info.Stats.ApproximateBacklogAge)
+		}
+		statsRows = append(statsRows, stats)
 	}
 	return statsRows, nil
 }
