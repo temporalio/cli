@@ -383,6 +383,7 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalActivityCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalAgentCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalBatchCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalConfigCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalEnvCommand(cctx, &s).Command)
@@ -680,6 +681,134 @@ func NewTemporalActivityUpdateOptionsCommand(cctx *CommandContext, parent *Tempo
 	s.Command.Flags().IntVar(&s.RetryMaximumAttempts, "retry-maximum-attempts", 0, "Maximum number of attempts. When exceeded the retries stop even if not expired yet. Setting this value to 1 disables retries. Setting this value to 0 means unlimited attempts(up to the timeouts).")
 	s.Command.Flags().BoolVar(&s.RestoreOriginalOptions, "restore-original-options", false, "Restore the original options of the activity.")
 	s.SingleWorkflowOrBatchOptions.buildFlags(cctx, s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalAgentCommand struct {
+	Parent  *TemporalCommand
+	Command cobra.Command
+	ClientOptions
+}
+
+func NewTemporalAgentCommand(cctx *CommandContext, parent *TemporalCommand) *TemporalAgentCommand {
+	var s TemporalAgentCommand
+	s.Parent = parent
+	s.Command.Use = "agent"
+	s.Command.Short = "Agent-optimized commands for AI-assisted debugging"
+	if hasHighlighting {
+		s.Command.Long = "Agent commands expose Temporal's workflow history and execution state in a\nstructured, machine-readable format optimized for AI agents and automated\ntooling.\n\nThese commands provide:\n- Automatic workflow chain traversal (parent to child to grandchild)\n- Cross-namespace failure tracking\n- Compact, structured JSON output designed for low token cost\n- Derived views like root_cause and leaf_failure\n\n\x1b[1mtemporal agent [command] [options]\x1b[0m\n\nFor example, to trace a workflow to its deepest failure:\n\n\x1b[1mtemporal agent trace \\\n    --workflow-id YourWorkflowId \\\n    --namespace YourNamespace\x1b[0m"
+	} else {
+		s.Command.Long = "Agent commands expose Temporal's workflow history and execution state in a\nstructured, machine-readable format optimized for AI agents and automated\ntooling.\n\nThese commands provide:\n- Automatic workflow chain traversal (parent to child to grandchild)\n- Cross-namespace failure tracking\n- Compact, structured JSON output designed for low token cost\n- Derived views like root_cause and leaf_failure\n\n```\ntemporal agent [command] [options]\n```\n\nFor example, to trace a workflow to its deepest failure:\n\n```\ntemporal agent trace \\\n    --workflow-id YourWorkflowId \\\n    --namespace YourNamespace\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalAgentFailuresCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalAgentTimelineCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalAgentTraceCommand(cctx, &s).Command)
+	s.ClientOptions.buildFlags(cctx, s.Command.PersistentFlags())
+	return &s
+}
+
+type TemporalAgentFailuresCommand struct {
+	Parent           *TemporalAgentCommand
+	Command          cobra.Command
+	Since            Duration
+	Status           []string
+	FollowChildren   bool
+	FollowNamespaces []string
+	Depth            int
+	Limit            int
+}
+
+func NewTemporalAgentFailuresCommand(cctx *CommandContext, parent *TemporalAgentCommand) *TemporalAgentFailuresCommand {
+	var s TemporalAgentFailuresCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "failures [flags]"
+	s.Command.Short = "List recent workflow failures with auto-traversed root cause"
+	if hasHighlighting {
+		s.Command.Long = "List recent workflow failures, automatically traversing workflow chains to\nfind the deepest failure (leaf failure) and root cause.\n\nShow failures from the last hour:\n\n\x1b[1mtemporal agent failures \\\n    --namespace YourNamespace \\\n    --since 1h\x1b[0m\n\nFollow child workflows across namespaces to find root causes:\n\n\x1b[1mtemporal agent failures \\\n    --namespace YourNamespace \\\n    --since 24h \\\n    --follow-children \\\n    --follow-namespaces OtherNamespace1,OtherNamespace2\x1b[0m\n\nFilter by specific failure statuses:\n\n\x1b[1mtemporal agent failures \\\n    --namespace YourNamespace \\\n    --since 1h \\\n    --status Failed,TimedOut\x1b[0m"
+	} else {
+		s.Command.Long = "List recent workflow failures, automatically traversing workflow chains to\nfind the deepest failure (leaf failure) and root cause.\n\nShow failures from the last hour:\n\n```\ntemporal agent failures \\\n    --namespace YourNamespace \\\n    --since 1h\n```\n\nFollow child workflows across namespaces to find root causes:\n\n```\ntemporal agent failures \\\n    --namespace YourNamespace \\\n    --since 24h \\\n    --follow-children \\\n    --follow-namespaces OtherNamespace1,OtherNamespace2\n```\n\nFilter by specific failure statuses:\n\n```\ntemporal agent failures \\\n    --namespace YourNamespace \\\n    --since 1h \\\n    --status Failed,TimedOut\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Since = Duration(3600000 * time.Millisecond)
+	s.Command.Flags().Var(&s.Since, "since", "Time window to search for failures. For example: \"1h\", \"24h\", \"7d\".")
+	s.Command.Flags().StringArrayVar(&s.Status, "status", nil, "Filter by workflow status. Accepted values: Failed, TimedOut, Canceled, Terminated. Can be passed multiple times.")
+	s.Command.Flags().BoolVar(&s.FollowChildren, "follow-children", false, "Automatically traverse child workflows to find leaf failures.")
+	s.Command.Flags().StringArrayVar(&s.FollowNamespaces, "follow-namespaces", nil, "Additional namespaces to follow when traversing child workflows. Can be passed multiple times.")
+	s.Command.Flags().IntVar(&s.Depth, "depth", 0, "Maximum depth to traverse when following child workflows. Zero means unlimited.")
+	s.Command.Flags().IntVar(&s.Limit, "limit", 50, "Maximum number of failures to return.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalAgentTimelineCommand struct {
+	Parent  *TemporalAgentCommand
+	Command cobra.Command
+	WorkflowReferenceOptions
+	Compact           bool
+	IncludePayloads   bool
+	EventTypes        []string
+	ExcludeEventTypes []string
+}
+
+func NewTemporalAgentTimelineCommand(cctx *CommandContext, parent *TemporalAgentCommand) *TemporalAgentTimelineCommand {
+	var s TemporalAgentTimelineCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "timeline [flags]"
+	s.Command.Short = "Show a compact event timeline for a workflow"
+	if hasHighlighting {
+		s.Command.Long = "Display a compact, structured timeline of events for a workflow execution.\nThe output is optimized for machine consumption with low token cost.\n\nBasic usage:\n\n\x1b[1mtemporal agent timeline \\\n    --workflow-id YourWorkflowId \\\n    --namespace YourNamespace\x1b[0m\n\nInclude payload data in the output:\n\n\x1b[1mtemporal agent timeline \\\n    --workflow-id YourWorkflowId \\\n    --namespace YourNamespace \\\n    --include-payloads\x1b[0m\n\nCollapse repetitive events (like retries):\n\n\x1b[1mtemporal agent timeline \\\n    --workflow-id YourWorkflowId \\\n    --namespace YourNamespace \\\n    --compact\x1b[0m"
+	} else {
+		s.Command.Long = "Display a compact, structured timeline of events for a workflow execution.\nThe output is optimized for machine consumption with low token cost.\n\nBasic usage:\n\n```\ntemporal agent timeline \\\n    --workflow-id YourWorkflowId \\\n    --namespace YourNamespace\n```\n\nInclude payload data in the output:\n\n```\ntemporal agent timeline \\\n    --workflow-id YourWorkflowId \\\n    --namespace YourNamespace \\\n    --include-payloads\n```\n\nCollapse repetitive events (like retries):\n\n```\ntemporal agent timeline \\\n    --workflow-id YourWorkflowId \\\n    --namespace YourNamespace \\\n    --compact\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().BoolVar(&s.Compact, "compact", false, "Collapse repetitive events like retries into summary entries.")
+	s.Command.Flags().BoolVar(&s.IncludePayloads, "include-payloads", false, "Include activity and workflow payload data in the output.")
+	s.Command.Flags().StringArrayVar(&s.EventTypes, "event-types", nil, "Filter to specific event types. Can be passed multiple times.")
+	s.Command.Flags().StringArrayVar(&s.ExcludeEventTypes, "exclude-event-types", nil, "Exclude specific event types. Can be passed multiple times.")
+	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalAgentTraceCommand struct {
+	Parent  *TemporalAgentCommand
+	Command cobra.Command
+	WorkflowReferenceOptions
+	FollowNamespaces []string
+	Depth            int
+}
+
+func NewTemporalAgentTraceCommand(cctx *CommandContext, parent *TemporalAgentCommand) *TemporalAgentTraceCommand {
+	var s TemporalAgentTraceCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "trace [flags]"
+	s.Command.Short = "Trace a workflow through its child chain to the deepest failure"
+	if hasHighlighting {
+		s.Command.Long = "Trace a workflow execution through its entire child workflow chain,\nidentifying the deepest failure point (leaf failure) and extracting\nroot cause information.\n\nThis automates the manual process of:\n1. Finding the workflow\n2. Inspecting its children\n3. Following the failing child\n4. Repeating until reaching the leaf failure\n5. Extracting the relevant failure info\n\nBasic usage:\n\n\x1b[1mtemporal agent trace \\\n    --workflow-id YourWorkflowId \\\n    --namespace YourNamespace\x1b[0m\n\nFollow children across namespaces:\n\n\x1b[1mtemporal agent trace \\\n    --workflow-id YourWorkflowId \\\n    --namespace YourNamespace \\\n    --follow-namespaces OtherNamespace1,OtherNamespace2\x1b[0m"
+	} else {
+		s.Command.Long = "Trace a workflow execution through its entire child workflow chain,\nidentifying the deepest failure point (leaf failure) and extracting\nroot cause information.\n\nThis automates the manual process of:\n1. Finding the workflow\n2. Inspecting its children\n3. Following the failing child\n4. Repeating until reaching the leaf failure\n5. Extracting the relevant failure info\n\nBasic usage:\n\n```\ntemporal agent trace \\\n    --workflow-id YourWorkflowId \\\n    --namespace YourNamespace\n```\n\nFollow children across namespaces:\n\n```\ntemporal agent trace \\\n    --workflow-id YourWorkflowId \\\n    --namespace YourNamespace \\\n    --follow-namespaces OtherNamespace1,OtherNamespace2\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringArrayVar(&s.FollowNamespaces, "follow-namespaces", nil, "Additional namespaces to follow when traversing child workflows. Can be passed multiple times.")
+	s.Command.Flags().IntVar(&s.Depth, "depth", 0, "Maximum depth to traverse when following child workflows. Zero means unlimited.")
+	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

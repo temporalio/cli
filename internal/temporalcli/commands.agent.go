@@ -1,0 +1,176 @@
+package temporalcli
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/temporalio/cli/internal/agent"
+	"github.com/temporalio/cli/internal/printer"
+	"go.temporal.io/api/enums/v1"
+	"go.temporal.io/sdk/client"
+)
+
+// cliClientProvider implements agent.ClientProvider using the CLI's client options.
+type cliClientProvider struct {
+	cctx          *CommandContext
+	clientOptions *ClientOptions
+	clients       map[string]client.Client
+}
+
+func newCLIClientProvider(cctx *CommandContext, clientOptions *ClientOptions) *cliClientProvider {
+	return &cliClientProvider{
+		cctx:          cctx,
+		clientOptions: clientOptions,
+		clients:       make(map[string]client.Client),
+	}
+}
+
+func (p *cliClientProvider) GetClient(ctx context.Context, namespace string) (client.Client, error) {
+	// Check if we already have a client for this namespace
+	if cl, ok := p.clients[namespace]; ok {
+		return cl, nil
+	}
+
+	// Create a new client options with the target namespace
+	opts := *p.clientOptions
+	opts.Namespace = namespace
+
+	cl, err := opts.dialClient(p.cctx)
+	if err != nil {
+		return nil, err
+	}
+
+	p.clients[namespace] = cl
+	return cl, nil
+}
+
+func (p *cliClientProvider) Close() {
+	for _, cl := range p.clients {
+		cl.Close()
+	}
+}
+
+func (c *TemporalAgentCommand) run(cctx *CommandContext, args []string) error {
+	// Parent command should show help
+	return c.Command.Help()
+}
+
+func (c *TemporalAgentFailuresCommand) run(cctx *CommandContext, args []string) error {
+	// Create client provider
+	clientProvider := newCLIClientProvider(cctx, &c.Parent.ClientOptions)
+	defer clientProvider.Close()
+
+	// Parse statuses
+	var statuses []enums.WorkflowExecutionStatus
+	for _, s := range c.Status {
+		status := agent.ParseWorkflowStatus(s)
+		if status == enums.WORKFLOW_EXECUTION_STATUS_UNSPECIFIED {
+			return fmt.Errorf("invalid status: %s", s)
+		}
+		statuses = append(statuses, status)
+	}
+
+	// Build options
+	opts := agent.FailuresOptions{
+		Since:            c.Since.Duration(),
+		Statuses:         statuses,
+		FollowChildren:   c.FollowChildren,
+		FollowNamespaces: c.FollowNamespaces,
+		MaxDepth:         c.Depth,
+		Limit:            c.Limit,
+	}
+
+	// Add the main namespace to follow namespaces if following children
+	if opts.FollowChildren && len(opts.FollowNamespaces) == 0 {
+		opts.FollowNamespaces = []string{c.Parent.ClientOptions.Namespace}
+	} else if opts.FollowChildren {
+		// Ensure main namespace is included
+		found := false
+		for _, ns := range opts.FollowNamespaces {
+			if ns == c.Parent.ClientOptions.Namespace {
+				found = true
+				break
+			}
+		}
+		if !found {
+			opts.FollowNamespaces = append([]string{c.Parent.ClientOptions.Namespace}, opts.FollowNamespaces...)
+		}
+	}
+
+	// Find failures
+	finder := agent.NewFailuresFinder(clientProvider, opts)
+	result, err := finder.FindFailures(cctx, c.Parent.ClientOptions.Namespace)
+	if err != nil {
+		return fmt.Errorf("failed to find failures: %w", err)
+	}
+
+	// Output JSON
+	return cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
+}
+
+func (c *TemporalAgentTraceCommand) run(cctx *CommandContext, args []string) error {
+	// Create client provider
+	clientProvider := newCLIClientProvider(cctx, &c.Parent.ClientOptions)
+	defer clientProvider.Close()
+
+	// Build options
+	opts := agent.TraverserOptions{
+		FollowNamespaces: c.FollowNamespaces,
+		MaxDepth:         c.Depth,
+	}
+
+	// Add the main namespace to follow namespaces
+	if len(opts.FollowNamespaces) == 0 {
+		opts.FollowNamespaces = []string{c.Parent.ClientOptions.Namespace}
+	} else {
+		// Ensure main namespace is included
+		found := false
+		for _, ns := range opts.FollowNamespaces {
+			if ns == c.Parent.ClientOptions.Namespace {
+				found = true
+				break
+			}
+		}
+		if !found {
+			opts.FollowNamespaces = append([]string{c.Parent.ClientOptions.Namespace}, opts.FollowNamespaces...)
+		}
+	}
+
+	// Trace workflow
+	traverser := agent.NewChainTraverser(clientProvider, opts)
+	result, err := traverser.Trace(cctx, c.Parent.ClientOptions.Namespace, c.WorkflowId, c.RunId)
+	if err != nil {
+		return fmt.Errorf("failed to trace workflow: %w", err)
+	}
+
+	// Output JSON
+	return cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
+}
+
+func (c *TemporalAgentTimelineCommand) run(cctx *CommandContext, args []string) error {
+	// Create client
+	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	// Build options
+	opts := agent.TimelineOptions{
+		Compact:           c.Compact,
+		IncludePayloads:   c.IncludePayloads,
+		EventTypes:        c.EventTypes,
+		ExcludeEventTypes: c.ExcludeEventTypes,
+	}
+
+	// Generate timeline
+	generator := agent.NewTimelineGenerator(cl, opts)
+	result, err := generator.Generate(cctx, c.Parent.ClientOptions.Namespace, c.WorkflowId, c.RunId)
+	if err != nil {
+		return fmt.Errorf("failed to generate timeline: %w", err)
+	}
+
+	// Output JSON
+	return cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
+}
+

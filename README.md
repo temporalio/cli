@@ -46,6 +46,52 @@ The executable will be at `temporal` (`temporal.exe` for Windows).
 
 Reference [the documentation](https://docs.temporal.io/cli) for detailed usage information.
 
+## Agent Commands
+
+The `temporal agent` command group provides machine-readable, structured output optimized for AI agents, LLM tooling, and automated debugging workflows.
+
+### Commands
+
+- **`temporal agent failures`** - List recent workflow failures with auto-traversed root cause
+- **`temporal agent trace`** - Trace a workflow through its child chain to the deepest failure  
+- **`temporal agent timeline`** - Show a compact event timeline for a workflow
+
+### Examples
+
+```bash
+# List failures from the last hour with automatic chain traversal
+temporal agent failures --namespace prod --since 1h --follow-children -o json
+
+# Trace a workflow to find the deepest failure in the chain
+temporal agent trace --workflow-id order-123 --namespace prod -o json
+
+# Get a compact timeline of workflow events
+temporal agent timeline --workflow-id order-123 --namespace prod --compact -o json
+```
+
+### Output
+
+All agent commands output structured JSON designed for:
+- Low token cost (compact, no redundant data)
+- Easy parsing by LLMs and automated tools
+- Derived views like `root_cause`, `leaf_failure`, and `chain`
+
+Example trace output:
+```json
+{
+  "chain": [
+    {"namespace": "prod", "workflow_id": "order-123", "status": "Failed", "depth": 0},
+    {"namespace": "prod", "workflow_id": "payment-456", "status": "Failed", "depth": 1, "leaf": true}
+  ],
+  "root_cause": {
+    "type": "ActivityFailed",
+    "activity": "ProcessPayment",
+    "error": "connection timeout"
+  },
+  "depth": 1
+}
+```
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).

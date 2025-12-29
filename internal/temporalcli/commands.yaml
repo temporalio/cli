@@ -4435,6 +4435,213 @@ commands:
         description: |
           Assume update inputs are base64-encoded and attempt to decode them.
 
+  - name: temporal agent
+    summary: Agent-optimized commands for AI-assisted debugging
+    description: |
+      Agent commands expose Temporal's workflow history and execution state in a
+      structured, machine-readable format optimized for AI agents and automated
+      tooling.
+
+      These commands provide:
+      - Automatic workflow chain traversal (parent to child to grandchild)
+      - Cross-namespace failure tracking
+      - Compact, structured JSON output designed for low token cost
+      - Derived views like root_cause and leaf_failure
+
+      ```
+      temporal agent [command] [options]
+      ```
+
+      For example, to trace a workflow to its deepest failure:
+
+      ```
+      temporal agent trace \
+          --workflow-id YourWorkflowId \
+          --namespace YourNamespace
+      ```
+    option-sets:
+      - client
+    docs:
+      description-header: >-
+        Temporal Agent commands provide machine-readable workflow debugging
+        capabilities optimized for AI agents and automated tooling, including
+        failure analysis, workflow chain tracing, and timeline extraction.
+      keywords:
+        - agent
+        - ai
+        - debugging
+        - failures
+        - llm
+        - machine-readable
+        - trace
+      tags:
+        - agent
+        - ai
+        - debugging
+
+  - name: temporal agent failures
+    summary: List recent workflow failures with auto-traversed root cause
+    description: |
+      List recent workflow failures, automatically traversing workflow chains to
+      find the deepest failure (leaf failure) and root cause.
+
+      Show failures from the last hour:
+
+      ```
+      temporal agent failures \
+          --namespace YourNamespace \
+          --since 1h
+      ```
+
+      Follow child workflows across namespaces to find root causes:
+
+      ```
+      temporal agent failures \
+          --namespace YourNamespace \
+          --since 24h \
+          --follow-children \
+          --follow-namespaces OtherNamespace1,OtherNamespace2
+      ```
+
+      Filter by specific failure statuses:
+
+      ```
+      temporal agent failures \
+          --namespace YourNamespace \
+          --since 1h \
+          --status Failed,TimedOut
+      ```
+    options:
+      - name: since
+        type: duration
+        description: |
+          Time window to search for failures.
+          For example: "1h", "24h", "7d".
+        default: 1h
+      - name: status
+        type: string[]
+        description: |
+          Filter by workflow status.
+          Accepted values: Failed, TimedOut, Canceled, Terminated.
+          Can be passed multiple times.
+      - name: follow-children
+        type: bool
+        description: |
+          Automatically traverse child workflows to find leaf failures.
+      - name: follow-namespaces
+        type: string[]
+        description: |
+          Additional namespaces to follow when traversing child workflows.
+          Can be passed multiple times.
+      - name: depth
+        type: int
+        description: |
+          Maximum depth to traverse when following child workflows.
+          Zero means unlimited.
+        default: 0
+      - name: limit
+        type: int
+        description: Maximum number of failures to return.
+        default: 50
+
+  - name: temporal agent trace
+    summary: Trace a workflow through its child chain to the deepest failure
+    description: |
+      Trace a workflow execution through its entire child workflow chain,
+      identifying the deepest failure point (leaf failure) and extracting
+      root cause information.
+
+      This automates the manual process of:
+      1. Finding the workflow
+      2. Inspecting its children
+      3. Following the failing child
+      4. Repeating until reaching the leaf failure
+      5. Extracting the relevant failure info
+
+      Basic usage:
+
+      ```
+      temporal agent trace \
+          --workflow-id YourWorkflowId \
+          --namespace YourNamespace
+      ```
+
+      Follow children across namespaces:
+
+      ```
+      temporal agent trace \
+          --workflow-id YourWorkflowId \
+          --namespace YourNamespace \
+          --follow-namespaces OtherNamespace1,OtherNamespace2
+      ```
+    option-sets:
+      - workflow-reference
+    options:
+      - name: follow-namespaces
+        type: string[]
+        description: |
+          Additional namespaces to follow when traversing child workflows.
+          Can be passed multiple times.
+      - name: depth
+        type: int
+        description: |
+          Maximum depth to traverse when following child workflows.
+          Zero means unlimited.
+        default: 0
+
+  - name: temporal agent timeline
+    summary: Show a compact event timeline for a workflow
+    description: |
+      Display a compact, structured timeline of events for a workflow execution.
+      The output is optimized for machine consumption with low token cost.
+
+      Basic usage:
+
+      ```
+      temporal agent timeline \
+          --workflow-id YourWorkflowId \
+          --namespace YourNamespace
+      ```
+
+      Include payload data in the output:
+
+      ```
+      temporal agent timeline \
+          --workflow-id YourWorkflowId \
+          --namespace YourNamespace \
+          --include-payloads
+      ```
+
+      Collapse repetitive events (like retries):
+
+      ```
+      temporal agent timeline \
+          --workflow-id YourWorkflowId \
+          --namespace YourNamespace \
+          --compact
+      ```
+    option-sets:
+      - workflow-reference
+    options:
+      - name: compact
+        type: bool
+        description: |
+          Collapse repetitive events like retries into summary entries.
+      - name: include-payloads
+        type: bool
+        description: |
+          Include activity and workflow payload data in the output.
+      - name: event-types
+        type: string[]
+        description: |
+          Filter to specific event types.
+          Can be passed multiple times.
+      - name: exclude-event-types
+        type: string[]
+        description: |
+          Exclude specific event types.
+          Can be passed multiple times.
+
 option-sets:
   - name: client
     options:
