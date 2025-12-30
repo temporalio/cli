@@ -295,6 +295,82 @@ func (s *SharedServerSuite) TestAgent_Failures_FindsFailedWorkflows() {
 	}
 }
 
+func (s *SharedServerSuite) TestAgent_Failures_WithFollowChildren() {
+	childWfType := "child-wf-failures-" + uuid.NewString()
+
+	// Register child workflow that fails
+	s.Worker().Worker.RegisterWorkflowWithOptions(
+		func(ctx workflow.Context, input any) (any, error) {
+			return "", temporal.NewApplicationError("deep child error", "DeepChildError")
+		},
+		workflow.RegisterOptions{Name: childWfType},
+	)
+
+	// Register parent workflow that calls child
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
+		var result string
+		err := workflow.ExecuteChildWorkflow(
+			workflow.WithChildOptions(ctx, workflow.ChildWorkflowOptions{
+				WorkflowExecutionTimeout: 30 * time.Second,
+			}),
+			childWfType,
+			input,
+		).Get(ctx, &result)
+		return result, err
+	})
+
+	// Start parent workflow
+	run, err := s.Client.ExecuteWorkflow(
+		s.Context,
+		client.StartWorkflowOptions{TaskQueue: s.Worker().Options.TaskQueue},
+		DevWorkflow,
+		"test",
+	)
+	s.NoError(err)
+
+	// Wait for failure
+	var result string
+	_ = run.Get(s.Context, &result)
+
+	// Wait for workflow to be visible
+	s.Eventually(func() bool {
+		resp, err := s.Client.ListWorkflow(s.Context, &workflowservice.ListWorkflowExecutionsRequest{
+			Query: "WorkflowId = '" + run.GetID() + "' AND ExecutionStatus = 'Failed'",
+		})
+		s.NoError(err)
+		return len(resp.Executions) == 1
+	}, 5*time.Second, 100*time.Millisecond)
+
+	// Run failures command with --follow-children
+	res := s.Execute(
+		"agent", "failures",
+		"--address", s.Address(),
+		"--since", "1h",
+		"--follow-children",
+		"-o", "json",
+	)
+	s.NoError(res.Err)
+
+	var failuresResult agent.FailuresResult
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &failuresResult))
+
+	// Find our specific failure
+	var ourFailure *agent.FailureReport
+	for i := range failuresResult.Failures {
+		if failuresResult.Failures[i].RootWorkflow.WorkflowID == run.GetID() {
+			ourFailure = &failuresResult.Failures[i]
+			break
+		}
+	}
+
+	s.NotNil(ourFailure, "should find our workflow in failures")
+	s.Equal(1, ourFailure.Depth, "depth should be 1 (parent -> child)")
+	s.Len(ourFailure.Chain, 2, "chain should have 2 elements")
+	s.NotNil(ourFailure.LeafFailure, "should have leaf_failure populated")
+	s.NotEqual(ourFailure.RootWorkflow.WorkflowID, ourFailure.LeafFailure.WorkflowID, "leaf should be different from root")
+	s.Contains(ourFailure.RootCause, "deep child error", "root cause should mention the child error")
+}
+
 func (s *SharedServerSuite) TestAgent_Timeline_Compact() {
 	// Create a simple completing workflow
 	s.Worker().OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {

@@ -12,26 +12,42 @@ import (
 
 // cliClientProvider implements agent.ClientProvider using the CLI's client options.
 type cliClientProvider struct {
-	cctx          *CommandContext
-	clientOptions *ClientOptions
-	clients       map[string]client.Client
+	cctx           *CommandContext
+	clientOptions  *ClientOptions
+	clients        map[string]client.Client
+	primaryClient  client.Client
+	primaryNS      string
 }
 
-func newCLIClientProvider(cctx *CommandContext, clientOptions *ClientOptions) *cliClientProvider {
+func newCLIClientProvider(cctx *CommandContext, clientOptions *ClientOptions) (*cliClientProvider, error) {
+	// Create the primary client first
+	primaryClient, err := clientOptions.dialClient(cctx)
+	if err != nil {
+		return nil, err
+	}
+
 	return &cliClientProvider{
 		cctx:          cctx,
 		clientOptions: clientOptions,
 		clients:       make(map[string]client.Client),
-	}
+		primaryClient: primaryClient,
+		primaryNS:     clientOptions.Namespace,
+	}, nil
 }
 
 func (p *cliClientProvider) GetClient(ctx context.Context, namespace string) (client.Client, error) {
+	// If requesting the primary namespace, return the primary client
+	if namespace == p.primaryNS {
+		return p.primaryClient, nil
+	}
+
 	// Check if we already have a client for this namespace
 	if cl, ok := p.clients[namespace]; ok {
 		return cl, nil
 	}
 
-	// Create a new client options with the target namespace
+	// For other namespaces, create a new client with the same connection options
+	// but different namespace. We copy the ClientOptions and use dialClient.
 	opts := *p.clientOptions
 	opts.Namespace = namespace
 
@@ -45,6 +61,9 @@ func (p *cliClientProvider) GetClient(ctx context.Context, namespace string) (cl
 }
 
 func (p *cliClientProvider) Close() {
+	if p.primaryClient != nil {
+		p.primaryClient.Close()
+	}
 	for _, cl := range p.clients {
 		cl.Close()
 	}
@@ -57,7 +76,10 @@ func (c *TemporalAgentCommand) run(cctx *CommandContext, args []string) error {
 
 func (c *TemporalAgentFailuresCommand) run(cctx *CommandContext, args []string) error {
 	// Create client provider
-	clientProvider := newCLIClientProvider(cctx, &c.Parent.ClientOptions)
+	clientProvider, err := newCLIClientProvider(cctx, &c.Parent.ClientOptions)
+	if err != nil {
+		return fmt.Errorf("failed to create client: %w", err)
+	}
 	defer clientProvider.Close()
 
 	// Parse statuses
@@ -110,7 +132,10 @@ func (c *TemporalAgentFailuresCommand) run(cctx *CommandContext, args []string) 
 
 func (c *TemporalAgentTraceCommand) run(cctx *CommandContext, args []string) error {
 	// Create client provider
-	clientProvider := newCLIClientProvider(cctx, &c.Parent.ClientOptions)
+	clientProvider, err := newCLIClientProvider(cctx, &c.Parent.ClientOptions)
+	if err != nil {
+		return fmt.Errorf("failed to create client: %w", err)
+	}
 	defer clientProvider.Close()
 
 	// Build options
