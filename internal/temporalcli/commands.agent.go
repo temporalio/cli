@@ -215,6 +215,8 @@ func (c *TemporalAgentToolSpecCommand) run(cctx *CommandContext, _ []string) err
 	switch c.Format.Value {
 	case "openai":
 		output, err = agent.GetOpenAIToolSpecsJSON()
+	case "claude":
+		output, err = agent.GetClaudeToolSpecsJSON()
 	case "langchain":
 		output, err = agent.GetLangChainToolSpecsJSON()
 	case "functions":
