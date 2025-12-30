@@ -55,6 +55,7 @@ The `temporal agent` command group provides machine-readable, structured output 
 - **`temporal agent failures`** - List recent workflow failures with auto-traversed root cause
 - **`temporal agent trace`** - Trace a workflow through its child chain to the deepest failure  
 - **`temporal agent timeline`** - Show a compact event timeline for a workflow
+- **`temporal agent tool-spec`** - Output tool specifications for AI agent frameworks
 
 ### Examples
 
@@ -93,6 +94,46 @@ Example trace output:
   },
   "depth": 1
 }
+```
+
+### AI Agent Integration
+
+The `temporal agent tool-spec` command outputs tool definitions compatible with AI agent frameworks:
+
+```bash
+# OpenAI function calling format (default)
+temporal agent tool-spec --format openai
+
+# LangChain tool format
+temporal agent tool-spec --format langchain
+
+# Raw function definitions
+temporal agent tool-spec --format functions
+```
+
+These tool specs can be used to integrate Temporal debugging capabilities into AI agents, allowing them to:
+- Query recent failures and their root causes
+- Trace workflow chains to find the deepest failure
+- Get compact workflow timelines
+
+Example OpenAI integration:
+```python
+import subprocess
+import json
+
+# Get tool specs
+result = subprocess.run(
+    ["temporal", "agent", "tool-spec", "--format", "openai"],
+    capture_output=True, text=True
+)
+tools = json.loads(result.stdout)
+
+# Use with OpenAI API
+response = openai.chat.completions.create(
+    model="gpt-4",
+    messages=[{"role": "user", "content": "Find recent failures in the prod namespace"}],
+    tools=tools
+)
 ```
 
 ## Contributing

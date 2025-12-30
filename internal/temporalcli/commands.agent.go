@@ -207,3 +207,26 @@ func (c *TemporalAgentTimelineCommand) run(cctx *CommandContext, args []string) 
 	// Output JSON
 	return cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
 }
+
+func (c *TemporalAgentToolSpecCommand) run(cctx *CommandContext, _ []string) error {
+	var output string
+	var err error
+
+	switch c.Format.Value {
+	case "openai":
+		output, err = agent.GetOpenAIToolSpecsJSON()
+	case "langchain":
+		output, err = agent.GetLangChainToolSpecsJSON()
+	case "functions":
+		output, err = agent.GetToolSpecsJSON()
+	default:
+		return fmt.Errorf("unknown format: %s", c.Format.Value)
+	}
+
+	if err != nil {
+		return fmt.Errorf("failed to generate tool spec: %w", err)
+	}
+
+	cctx.Printer.Println(output)
+	return nil
+}
