@@ -4511,6 +4511,15 @@ commands:
           --since 1h \
           --status Failed,TimedOut
       ```
+
+      Filter failures containing a specific error message:
+
+      ```
+      temporal agent failures \
+          --namespace YourNamespace \
+          --since 1h \
+          --error-contains "timeout"
+      ```
     options:
       - name: since
         type: duration
@@ -4543,6 +4552,11 @@ commands:
         type: int
         description: Maximum number of failures to return.
         default: 50
+      - name: error-contains
+        type: string
+        description: |
+          Filter failures to only those containing this substring in the error message.
+          Case-insensitive matching.
 
   - name: temporal agent trace
     summary: Trace a workflow through its child chain to the deepest failure

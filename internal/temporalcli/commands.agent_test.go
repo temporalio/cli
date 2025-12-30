@@ -3,6 +3,7 @@ package temporalcli_test
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -371,6 +372,98 @@ func (s *SharedServerSuite) TestAgent_Failures_WithFollowChildren() {
 	s.Contains(ourFailure.RootCause, "deep child error", "root cause should mention the child error")
 }
 
+func (s *SharedServerSuite) TestAgent_Failures_ErrorContains() {
+	uniqueError1 := "unique-error-" + uuid.NewString()
+	uniqueError2 := "different-error-" + uuid.NewString()
+
+	// Create workflows that fail with different error messages
+	var errorToReturn string
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
+		return "", temporal.NewApplicationError(errorToReturn, "TestError")
+	})
+
+	// Start workflow with first error
+	errorToReturn = uniqueError1
+	run1, err := s.Client.ExecuteWorkflow(
+		s.Context,
+		client.StartWorkflowOptions{TaskQueue: s.Worker().Options.TaskQueue},
+		DevWorkflow,
+		"test1",
+	)
+	s.NoError(err)
+	var result string
+	_ = run1.Get(s.Context, &result)
+
+	// Start workflow with second error
+	errorToReturn = uniqueError2
+	run2, err := s.Client.ExecuteWorkflow(
+		s.Context,
+		client.StartWorkflowOptions{TaskQueue: s.Worker().Options.TaskQueue},
+		DevWorkflow,
+		"test2",
+	)
+	s.NoError(err)
+	_ = run2.Get(s.Context, &result)
+
+	// Wait for workflows to be visible
+	s.Eventually(func() bool {
+		resp, err := s.Client.ListWorkflow(s.Context, &workflowservice.ListWorkflowExecutionsRequest{
+			Query: "ExecutionStatus = 'Failed'",
+		})
+		s.NoError(err)
+		return len(resp.Executions) >= 2
+	}, 5*time.Second, 100*time.Millisecond)
+
+	// Run failures command with --error-contains filtering for first error
+	res := s.Execute(
+		"agent", "failures",
+		"--address", s.Address(),
+		"--since", "1h",
+		"--error-contains", uniqueError1,
+		"-o", "json",
+	)
+	s.NoError(res.Err)
+
+	var failuresResult agent.FailuresResult
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &failuresResult))
+
+	// Should find exactly 1 failure with uniqueError1
+	s.Len(failuresResult.Failures, 1, "should find exactly 1 failure with the specific error")
+	s.Contains(failuresResult.Failures[0].RootCause, uniqueError1, "root cause should contain the filter string")
+
+	// Run with case-insensitive matching
+	res = s.Execute(
+		"agent", "failures",
+		"--address", s.Address(),
+		"--since", "1h",
+		"--error-contains", strings.ToUpper(uniqueError1[:10]),
+		"-o", "json",
+	)
+	s.NoError(res.Err)
+
+	var failuresResult2 agent.FailuresResult
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &failuresResult2))
+
+	// Should still find the failure (case-insensitive)
+	s.Len(failuresResult2.Failures, 1, "should find failure with case-insensitive match")
+
+	// Run with non-matching filter
+	res = s.Execute(
+		"agent", "failures",
+		"--address", s.Address(),
+		"--since", "1h",
+		"--error-contains", "nonexistent-error-string-xyz",
+		"-o", "json",
+	)
+	s.NoError(res.Err)
+
+	var failuresResult3 agent.FailuresResult
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &failuresResult3))
+
+	// Should find no failures
+	s.Len(failuresResult3.Failures, 0, "should find no failures with non-matching filter")
+}
+
 func (s *SharedServerSuite) TestAgent_Timeline_Compact() {
 	// Create a simple completing workflow
 	s.Worker().OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
@@ -404,4 +497,3 @@ func (s *SharedServerSuite) TestAgent_Timeline_Compact() {
 	// In compact mode, should still have key events
 	s.Greater(len(timeline.Events), 0)
 }
-

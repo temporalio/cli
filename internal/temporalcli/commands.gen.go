@@ -722,6 +722,7 @@ type TemporalAgentFailuresCommand struct {
 	FollowNamespaces []string
 	Depth            int
 	Limit            int
+	ErrorContains    string
 }
 
 func NewTemporalAgentFailuresCommand(cctx *CommandContext, parent *TemporalAgentCommand) *TemporalAgentFailuresCommand {
@@ -731,9 +732,9 @@ func NewTemporalAgentFailuresCommand(cctx *CommandContext, parent *TemporalAgent
 	s.Command.Use = "failures [flags]"
 	s.Command.Short = "List recent workflow failures with auto-traversed root cause"
 	if hasHighlighting {
-		s.Command.Long = "List recent workflow failures, automatically traversing workflow chains to\nfind the deepest failure (leaf failure) and root cause.\n\nShow failures from the last hour:\n\n\x1b[1mtemporal agent failures \\\n    --namespace YourNamespace \\\n    --since 1h\x1b[0m\n\nFollow child workflows across namespaces to find root causes:\n\n\x1b[1mtemporal agent failures \\\n    --namespace YourNamespace \\\n    --since 24h \\\n    --follow-children \\\n    --follow-namespaces OtherNamespace1,OtherNamespace2\x1b[0m\n\nFilter by specific failure statuses:\n\n\x1b[1mtemporal agent failures \\\n    --namespace YourNamespace \\\n    --since 1h \\\n    --status Failed,TimedOut\x1b[0m"
+		s.Command.Long = "List recent workflow failures, automatically traversing workflow chains to\nfind the deepest failure (leaf failure) and root cause.\n\nShow failures from the last hour:\n\n\x1b[1mtemporal agent failures \\\n    --namespace YourNamespace \\\n    --since 1h\x1b[0m\n\nFollow child workflows across namespaces to find root causes:\n\n\x1b[1mtemporal agent failures \\\n    --namespace YourNamespace \\\n    --since 24h \\\n    --follow-children \\\n    --follow-namespaces OtherNamespace1,OtherNamespace2\x1b[0m\n\nFilter by specific failure statuses:\n\n\x1b[1mtemporal agent failures \\\n    --namespace YourNamespace \\\n    --since 1h \\\n    --status Failed,TimedOut\x1b[0m\n\nFilter failures containing a specific error message:\n\n\x1b[1mtemporal agent failures \\\n    --namespace YourNamespace \\\n    --since 1h \\\n    --error-contains \"timeout\"\x1b[0m"
 	} else {
-		s.Command.Long = "List recent workflow failures, automatically traversing workflow chains to\nfind the deepest failure (leaf failure) and root cause.\n\nShow failures from the last hour:\n\n```\ntemporal agent failures \\\n    --namespace YourNamespace \\\n    --since 1h\n```\n\nFollow child workflows across namespaces to find root causes:\n\n```\ntemporal agent failures \\\n    --namespace YourNamespace \\\n    --since 24h \\\n    --follow-children \\\n    --follow-namespaces OtherNamespace1,OtherNamespace2\n```\n\nFilter by specific failure statuses:\n\n```\ntemporal agent failures \\\n    --namespace YourNamespace \\\n    --since 1h \\\n    --status Failed,TimedOut\n```"
+		s.Command.Long = "List recent workflow failures, automatically traversing workflow chains to\nfind the deepest failure (leaf failure) and root cause.\n\nShow failures from the last hour:\n\n```\ntemporal agent failures \\\n    --namespace YourNamespace \\\n    --since 1h\n```\n\nFollow child workflows across namespaces to find root causes:\n\n```\ntemporal agent failures \\\n    --namespace YourNamespace \\\n    --since 24h \\\n    --follow-children \\\n    --follow-namespaces OtherNamespace1,OtherNamespace2\n```\n\nFilter by specific failure statuses:\n\n```\ntemporal agent failures \\\n    --namespace YourNamespace \\\n    --since 1h \\\n    --status Failed,TimedOut\n```\n\nFilter failures containing a specific error message:\n\n```\ntemporal agent failures \\\n    --namespace YourNamespace \\\n    --since 1h \\\n    --error-contains \"timeout\"\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Since = Duration(3600000 * time.Millisecond)
@@ -743,6 +744,7 @@ func NewTemporalAgentFailuresCommand(cctx *CommandContext, parent *TemporalAgent
 	s.Command.Flags().StringArrayVar(&s.FollowNamespaces, "follow-namespaces", nil, "Additional namespaces to follow when traversing child workflows. Can be passed multiple times.")
 	s.Command.Flags().IntVar(&s.Depth, "depth", 0, "Maximum depth to traverse when following child workflows. Zero means unlimited.")
 	s.Command.Flags().IntVar(&s.Limit, "limit", 50, "Maximum number of failures to return.")
+	s.Command.Flags().StringVar(&s.ErrorContains, "error-contains", "", "Filter failures to only those containing this substring in the error message. Case-insensitive matching.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

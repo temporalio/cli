@@ -231,6 +231,9 @@ type FailuresOptions struct {
 	MaxDepth int
 	// Limit is the maximum number of failures to return.
 	Limit int
+	// ErrorContains filters failures to only those containing this substring in the error message.
+	// Case-insensitive matching.
+	ErrorContains string
 }
 
 // FailuresFinder finds recent workflow failures.
@@ -328,6 +331,13 @@ func (f *FailuresFinder) FindFailures(ctx context.Context, namespace string) (*F
 			} else {
 				// Just get the failure message from the workflow itself
 				report.RootCause = f.getWorkflowFailure(ctx, cl, exec.GetExecution().GetWorkflowId(), exec.GetExecution().GetRunId())
+			}
+
+			// Filter by error message if specified
+			if f.opts.ErrorContains != "" {
+				if !strings.Contains(strings.ToLower(report.RootCause), strings.ToLower(f.opts.ErrorContains)) {
+					continue
+				}
 			}
 
 			failures = append(failures, report)
@@ -594,4 +604,3 @@ func (sm *stateMachine) processEvent(event *history.HistoryEvent) {
 		}
 	}
 }
-
