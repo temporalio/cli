@@ -69,6 +69,12 @@ temporal agent failures --namespace prod --since 1h --error-contains "timeout" -
 # Show only leaf failures (de-duplicate parent/child chains)
 temporal agent failures --namespace prod --since 1h --follow-children --leaf-only -o json
 
+# Compact error messages (strip wrapper context, show core error)
+temporal agent failures --namespace prod --since 1h --follow-children --compact-errors -o json
+
+# Combine leaf-only and compact-errors for cleanest output
+temporal agent failures --namespace prod --since 1h --follow-children --leaf-only --compact-errors -o json
+
 # Trace a workflow to find the deepest failure in the chain
 temporal agent trace --workflow-id order-123 --namespace prod -o json
 

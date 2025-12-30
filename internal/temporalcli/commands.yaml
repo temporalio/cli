@@ -4564,6 +4564,12 @@ commands:
           When enabled, parent workflows that failed due to child workflow failures
           are excluded, showing only the deepest failure in each chain.
           This de-duplicates failures by showing only the root cause.
+      - name: compact-errors
+        type: bool
+        description: |
+          Extract the core error message, stripping wrapper context.
+          Removes verbose details like workflow IDs, run IDs, and event IDs
+          from error messages, leaving just the essential error information.
 
   - name: temporal agent trace
     summary: Trace a workflow through its child chain to the deepest failure
