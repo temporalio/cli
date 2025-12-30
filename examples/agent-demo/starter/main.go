@@ -18,7 +18,7 @@ import (
 
 func main() {
 	// Command line flags
-	scenario := flag.String("scenario", "all", "Scenario to run: success, payment-fail, shipping-fail, nested-fail, all")
+	scenario := flag.String("scenario", "all", "Scenario to run: success, payment-fail, shipping-fail, nested-fail, timeout, retry-exhaustion, multi-child, all")
 	flag.Parse()
 
 	// Get configuration from environment
@@ -83,11 +83,20 @@ func main() {
 		runShippingFailScenario(ctx, c, taskQueue, timestamp)
 	case "nested-fail":
 		runNestedFailScenario(ctx, c, taskQueue, timestamp)
+	case "timeout":
+		runTimeoutScenario(ctx, c, taskQueue, timestamp)
+	case "retry-exhaustion":
+		runRetryExhaustionScenario(ctx, c, taskQueue, timestamp)
+	case "multi-child":
+		runMultiChildScenario(ctx, c, taskQueue, timestamp)
 	case "all":
 		runSuccessScenario(ctx, c, taskQueue, timestamp)
 		runPaymentFailScenario(ctx, c, taskQueue, timestamp)
 		runShippingFailScenario(ctx, c, taskQueue, timestamp)
 		runNestedFailScenario(ctx, c, taskQueue, timestamp)
+		runTimeoutScenario(ctx, c, taskQueue, timestamp)
+		runRetryExhaustionScenario(ctx, c, taskQueue, timestamp)
+		runMultiChildScenario(ctx, c, taskQueue, timestamp)
 	default:
 		log.Fatalf("Unknown scenario: %s", *scenario)
 	}
@@ -167,4 +176,52 @@ func runNestedFailScenario(ctx context.Context, c client.Client, taskQueue, time
 		return
 	}
 	log.Printf("Started NestedFailureWorkflow (3 levels deep): %s", run.GetID())
+}
+
+func runTimeoutScenario(ctx context.Context, c client.Client, taskQueue, timestamp string) {
+	log.Println("=== Running Timeout Scenario ===")
+
+	// Workflow with activity that will timeout
+	workflowID := fmt.Sprintf("timeout-fail-%s", timestamp)
+	run, err := c.ExecuteWorkflow(ctx, client.StartWorkflowOptions{
+		ID:        workflowID,
+		TaskQueue: taskQueue,
+	}, workflows.TimeoutWorkflow, fmt.Sprintf("task-%s", timestamp))
+	if err != nil {
+		log.Printf("Failed to start TimeoutWorkflow: %v", err)
+		return
+	}
+	log.Printf("Started TimeoutWorkflow (will timeout): %s", run.GetID())
+}
+
+func runRetryExhaustionScenario(ctx context.Context, c client.Client, taskQueue, timestamp string) {
+	log.Println("=== Running Retry Exhaustion Scenario ===")
+
+	// Workflow that will exhaust all retries
+	workflowID := fmt.Sprintf("retry-exhaustion-%s", timestamp)
+	run, err := c.ExecuteWorkflow(ctx, client.StartWorkflowOptions{
+		ID:        workflowID,
+		TaskQueue: taskQueue,
+	}, workflows.RetryExhaustionWorkflow, fmt.Sprintf("task-%s", timestamp))
+	if err != nil {
+		log.Printf("Failed to start RetryExhaustionWorkflow: %v", err)
+		return
+	}
+	log.Printf("Started RetryExhaustionWorkflow (will exhaust 5 retries): %s", run.GetID())
+}
+
+func runMultiChildScenario(ctx context.Context, c client.Client, taskQueue, timestamp string) {
+	log.Println("=== Running Multi-Child Failure Scenario ===")
+
+	// Workflow with multiple children where one fails
+	workflowID := fmt.Sprintf("multi-child-fail-%s", timestamp)
+	run, err := c.ExecuteWorkflow(ctx, client.StartWorkflowOptions{
+		ID:        workflowID,
+		TaskQueue: taskQueue,
+	}, workflows.MultiChildFailureWorkflow, fmt.Sprintf("ORD-%s", timestamp))
+	if err != nil {
+		log.Printf("Failed to start MultiChildFailureWorkflow: %v", err)
+		return
+	}
+	log.Printf("Started MultiChildFailureWorkflow (validation child will fail): %s", run.GetID())
 }

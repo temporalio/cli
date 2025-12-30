@@ -99,9 +99,9 @@ func NestedFailureWorkflow(ctx workflow.Context, depth int, maxDepth int) error 
 		// Deepest level - execute an activity that will fail
 		ao := workflow.ActivityOptions{
 			StartToCloseTimeout: 10 * time.Second,
-		RetryPolicy: &temporal.RetryPolicy{
-			MaximumAttempts: 1,
-		},
+			RetryPolicy: &temporal.RetryPolicy{
+				MaximumAttempts: 1,
+			},
 		}
 		ctx = workflow.WithActivityOptions(ctx, ao)
 
@@ -143,6 +143,166 @@ func SimpleSuccessWorkflow(ctx workflow.Context, input string) (string, error) {
 	}
 
 	logger.Info("SimpleSuccessWorkflow completed", "result", result)
+	return result, nil
+}
+
+// TimeoutWorkflow demonstrates activity timeout failures
+func TimeoutWorkflow(ctx workflow.Context, taskID string) error {
+	logger := workflow.GetLogger(ctx)
+	logger.Info("TimeoutWorkflow started", "taskID", taskID)
+
+	// Set a very short timeout that will be exceeded
+	ao := workflow.ActivityOptions{
+		StartToCloseTimeout: 2 * time.Second,
+		RetryPolicy: &temporal.RetryPolicy{
+			MaximumAttempts: 1, // No retries - fail immediately on timeout
+		},
+	}
+	ctx = workflow.WithActivityOptions(ctx, ao)
+
+	var result string
+	err := workflow.ExecuteActivity(ctx, SlowActivity, taskID).Get(ctx, &result)
+	if err != nil {
+		return fmt.Errorf("timeout workflow failed: %w", err)
+	}
+
+	logger.Info("TimeoutWorkflow completed", "taskID", taskID, "result", result)
+	return nil
+}
+
+// RetryExhaustionWorkflow demonstrates retry exhaustion failures
+func RetryExhaustionWorkflow(ctx workflow.Context, taskID string) error {
+	logger := workflow.GetLogger(ctx)
+	logger.Info("RetryExhaustionWorkflow started", "taskID", taskID)
+
+	ao := workflow.ActivityOptions{
+		StartToCloseTimeout: 10 * time.Second,
+		RetryPolicy: &temporal.RetryPolicy{
+			MaximumAttempts:        5,
+			InitialInterval:        100 * time.Millisecond,
+			MaximumInterval:        500 * time.Millisecond,
+			BackoffCoefficient:     1.5,
+			NonRetryableErrorTypes: []string{}, // All errors are retryable
+		},
+	}
+	ctx = workflow.WithActivityOptions(ctx, ao)
+
+	var result string
+	err := workflow.ExecuteActivity(ctx, AlwaysFailsActivity, taskID).Get(ctx, &result)
+	if err != nil {
+		return fmt.Errorf("retry exhaustion: all %d attempts failed: %w", 5, err)
+	}
+
+	logger.Info("RetryExhaustionWorkflow completed", "taskID", taskID, "result", result)
+	return nil
+}
+
+// MultiChildFailureWorkflow spawns multiple children, only one fails
+// This tests the agent's ability to identify which branch failed
+func MultiChildFailureWorkflow(ctx workflow.Context, orderID string) error {
+	logger := workflow.GetLogger(ctx)
+	logger.Info("MultiChildFailureWorkflow started", "orderID", orderID)
+
+	// Execute multiple child workflows in parallel
+	// Only the "validation" child will fail
+
+	// Child 1: Inventory check (succeeds)
+	inventoryCtx := workflow.WithChildOptions(ctx, workflow.ChildWorkflowOptions{
+		WorkflowID: fmt.Sprintf("inventory-check-%s", orderID),
+	})
+	inventoryFuture := workflow.ExecuteChildWorkflow(inventoryCtx, InventoryCheckWorkflow, orderID)
+
+	// Child 2: Validation (fails)
+	validationCtx := workflow.WithChildOptions(ctx, workflow.ChildWorkflowOptions{
+		WorkflowID: fmt.Sprintf("validation-%s", orderID),
+	})
+	validationFuture := workflow.ExecuteChildWorkflow(validationCtx, ValidationWorkflow, orderID)
+
+	// Child 3: Pricing (succeeds)
+	pricingCtx := workflow.WithChildOptions(ctx, workflow.ChildWorkflowOptions{
+		WorkflowID: fmt.Sprintf("pricing-%s", orderID),
+	})
+	pricingFuture := workflow.ExecuteChildWorkflow(pricingCtx, PricingWorkflow, orderID)
+
+	// Wait for all children
+	var inventoryResult, validationResult, pricingResult string
+
+	if err := inventoryFuture.Get(ctx, &inventoryResult); err != nil {
+		return fmt.Errorf("inventory check failed: %w", err)
+	}
+	logger.Info("Inventory check completed", "result", inventoryResult)
+
+	if err := validationFuture.Get(ctx, &validationResult); err != nil {
+		return fmt.Errorf("validation failed: %w", err)
+	}
+	logger.Info("Validation completed", "result", validationResult)
+
+	if err := pricingFuture.Get(ctx, &pricingResult); err != nil {
+		return fmt.Errorf("pricing failed: %w", err)
+	}
+	logger.Info("Pricing completed", "result", pricingResult)
+
+	logger.Info("MultiChildFailureWorkflow completed successfully", "orderID", orderID)
+	return nil
+}
+
+// InventoryCheckWorkflow - always succeeds
+func InventoryCheckWorkflow(ctx workflow.Context, orderID string) (string, error) {
+	logger := workflow.GetLogger(ctx)
+	logger.Info("InventoryCheckWorkflow started", "orderID", orderID)
+
+	ao := workflow.ActivityOptions{
+		StartToCloseTimeout: 10 * time.Second,
+	}
+	ctx = workflow.WithActivityOptions(ctx, ao)
+
+	var result string
+	err := workflow.ExecuteActivity(ctx, SuccessActivity, "inventory-"+orderID).Get(ctx, &result)
+	if err != nil {
+		return "", err
+	}
+
+	return result, nil
+}
+
+// ValidationWorkflow - fails with a specific validation error
+func ValidationWorkflow(ctx workflow.Context, orderID string) (string, error) {
+	logger := workflow.GetLogger(ctx)
+	logger.Info("ValidationWorkflow started", "orderID", orderID)
+
+	ao := workflow.ActivityOptions{
+		StartToCloseTimeout: 10 * time.Second,
+		RetryPolicy: &temporal.RetryPolicy{
+			MaximumAttempts: 1,
+		},
+	}
+	ctx = workflow.WithActivityOptions(ctx, ao)
+
+	var result string
+	err := workflow.ExecuteActivity(ctx, ValidationActivity, orderID).Get(ctx, &result)
+	if err != nil {
+		return "", err
+	}
+
+	return result, nil
+}
+
+// PricingWorkflow - always succeeds
+func PricingWorkflow(ctx workflow.Context, orderID string) (string, error) {
+	logger := workflow.GetLogger(ctx)
+	logger.Info("PricingWorkflow started", "orderID", orderID)
+
+	ao := workflow.ActivityOptions{
+		StartToCloseTimeout: 10 * time.Second,
+	}
+	ctx = workflow.WithActivityOptions(ctx, ao)
+
+	var result string
+	err := workflow.ExecuteActivity(ctx, SuccessActivity, "pricing-"+orderID).Get(ctx, &result)
+	if err != nil {
+		return "", err
+	}
+
 	return result, nil
 }
 
@@ -195,3 +355,36 @@ func SuccessActivity(ctx context.Context, input string) (string, error) {
 	return fmt.Sprintf("processed: %s", input), nil
 }
 
+// SlowActivity takes longer than typical timeouts - used to trigger timeout failures
+func SlowActivity(ctx context.Context, taskID string) (string, error) {
+	logger := activity.GetLogger(ctx)
+	logger.Info("SlowActivity started - will take 5 seconds", "taskID", taskID)
+
+	// Sleep for 5 seconds - longer than the 2 second timeout in TimeoutWorkflow
+	time.Sleep(5 * time.Second)
+
+	return fmt.Sprintf("slow-completed-%s", taskID), nil
+}
+
+// AlwaysFailsActivity always returns an error - used for retry exhaustion testing
+func AlwaysFailsActivity(ctx context.Context, taskID string) (string, error) {
+	logger := activity.GetLogger(ctx)
+	info := activity.GetInfo(ctx)
+	attempt := info.Attempt
+
+	logger.Info("AlwaysFailsActivity executing", "taskID", taskID, "attempt", attempt)
+
+	time.Sleep(50 * time.Millisecond)
+
+	return "", fmt.Errorf("transient error on attempt %d: service temporarily unavailable", attempt)
+}
+
+// ValidationActivity always fails with a validation error
+func ValidationActivity(ctx context.Context, orderID string) (string, error) {
+	logger := activity.GetLogger(ctx)
+	logger.Info("ValidationActivity executing", "orderID", orderID)
+
+	time.Sleep(100 * time.Millisecond)
+
+	return "", errors.New("validation failed: order contains invalid product SKU 'INVALID-123'")
+}

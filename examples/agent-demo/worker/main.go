@@ -77,12 +77,21 @@ func main() {
 	w.RegisterWorkflow(workflows.ShippingWorkflow)
 	w.RegisterWorkflow(workflows.NestedFailureWorkflow)
 	w.RegisterWorkflow(workflows.SimpleSuccessWorkflow)
+	w.RegisterWorkflow(workflows.TimeoutWorkflow)
+	w.RegisterWorkflow(workflows.RetryExhaustionWorkflow)
+	w.RegisterWorkflow(workflows.MultiChildFailureWorkflow)
+	w.RegisterWorkflow(workflows.InventoryCheckWorkflow)
+	w.RegisterWorkflow(workflows.ValidationWorkflow)
+	w.RegisterWorkflow(workflows.PricingWorkflow)
 
 	// Register activities
 	w.RegisterActivity(workflows.ProcessPaymentActivity)
 	w.RegisterActivity(workflows.ShipOrderActivity)
 	w.RegisterActivity(workflows.FailingActivity)
 	w.RegisterActivity(workflows.SuccessActivity)
+	w.RegisterActivity(workflows.SlowActivity)
+	w.RegisterActivity(workflows.AlwaysFailsActivity)
+	w.RegisterActivity(workflows.ValidationActivity)
 
 	log.Printf("Starting worker on task queue: %s", taskQueue)
 
