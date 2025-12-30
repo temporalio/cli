@@ -4656,6 +4656,41 @@ commands:
           Exclude specific event types.
           Can be passed multiple times.
 
+  - name: temporal agent tool-spec
+    summary: Output tool specifications for AI agent frameworks
+    description: |
+      Output structured tool specifications compatible with AI agent frameworks
+      like OpenAI function calling and LangChain.
+
+      These specifications describe the available Temporal agent tools and their
+      parameters, allowing AI agents to understand and invoke them.
+
+      Output OpenAI-compatible tool specifications:
+
+      ```
+      temporal agent tool-spec --format openai
+      ```
+
+      Output LangChain-compatible tool specifications:
+
+      ```
+      temporal agent tool-spec --format langchain
+      ```
+
+      Output raw function definitions:
+
+      ```
+      temporal agent tool-spec --format functions
+      ```
+    options:
+      - name: format
+        type: string-enum
+        description: |
+          Output format for tool specifications.
+          Accepted values: openai, langchain, functions.
+        default: openai
+        enum-values: [openai, langchain, functions]
+
 option-sets:
   - name: client
     options:

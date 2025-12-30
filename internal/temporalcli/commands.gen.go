@@ -708,6 +708,7 @@ func NewTemporalAgentCommand(cctx *CommandContext, parent *TemporalCommand) *Tem
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalAgentFailuresCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalAgentTimelineCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalAgentToolSpecCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalAgentTraceCommand(cctx, &s).Command)
 	s.ClientOptions.buildFlags(cctx, s.Command.PersistentFlags())
 	return &s
@@ -780,6 +781,34 @@ func NewTemporalAgentTimelineCommand(cctx *CommandContext, parent *TemporalAgent
 	s.Command.Flags().StringArrayVar(&s.EventTypes, "event-types", nil, "Filter to specific event types. Can be passed multiple times.")
 	s.Command.Flags().StringArrayVar(&s.ExcludeEventTypes, "exclude-event-types", nil, "Exclude specific event types. Can be passed multiple times.")
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalAgentToolSpecCommand struct {
+	Parent  *TemporalAgentCommand
+	Command cobra.Command
+	Format  StringEnum
+}
+
+func NewTemporalAgentToolSpecCommand(cctx *CommandContext, parent *TemporalAgentCommand) *TemporalAgentToolSpecCommand {
+	var s TemporalAgentToolSpecCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "tool-spec [flags]"
+	s.Command.Short = "Output tool specifications for AI agent frameworks"
+	if hasHighlighting {
+		s.Command.Long = "Output structured tool specifications compatible with AI agent frameworks\nlike OpenAI function calling and LangChain.\n\nThese specifications describe the available Temporal agent tools and their\nparameters, allowing AI agents to understand and invoke them.\n\nOutput OpenAI-compatible tool specifications:\n\n\x1b[1mtemporal agent tool-spec --format openai\x1b[0m\n\nOutput LangChain-compatible tool specifications:\n\n\x1b[1mtemporal agent tool-spec --format langchain\x1b[0m\n\nOutput raw function definitions:\n\n\x1b[1mtemporal agent tool-spec --format functions\x1b[0m"
+	} else {
+		s.Command.Long = "Output structured tool specifications compatible with AI agent frameworks\nlike OpenAI function calling and LangChain.\n\nThese specifications describe the available Temporal agent tools and their\nparameters, allowing AI agents to understand and invoke them.\n\nOutput OpenAI-compatible tool specifications:\n\n```\ntemporal agent tool-spec --format openai\n```\n\nOutput LangChain-compatible tool specifications:\n\n```\ntemporal agent tool-spec --format langchain\n```\n\nOutput raw function definitions:\n\n```\ntemporal agent tool-spec --format functions\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Format = NewStringEnum([]string{"openai", "langchain", "functions"}, "openai")
+	s.Command.Flags().Var(&s.Format, "format", "Output format for tool specifications. Accepted values: openai, langchain, functions. Accepted values: openai, langchain, functions.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
