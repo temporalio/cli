@@ -3,6 +3,7 @@ package temporalcli
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/temporalio/cli/internal/agent"
@@ -52,6 +53,14 @@ func (p *cliClientProvider) GetClient(ctx context.Context, namespace string) (cl
 	opts := *p.clientOptions
 	opts.Namespace = namespace
 
+	// Check for namespace-specific API key in environment
+	// Format: TEMPORAL_API_KEY_<NAMESPACE> where namespace is normalized
+	// (dots/dashes replaced with underscores, uppercased)
+	nsEnvKey := normalizeNamespaceForEnv(namespace)
+	if apiKey := os.Getenv("TEMPORAL_API_KEY_" + nsEnvKey); apiKey != "" {
+		opts.ApiKey = apiKey
+	}
+
 	cl, err := opts.dialClient(p.cctx)
 	if err != nil {
 		return nil, err
@@ -59,6 +68,15 @@ func (p *cliClientProvider) GetClient(ctx context.Context, namespace string) (cl
 
 	p.clients[namespace] = cl
 	return cl, nil
+}
+
+// normalizeNamespaceForEnv converts a namespace to an environment variable suffix.
+// e.g., "moedash-finance-ns.temporal-dev" -> "MOEDASH_FINANCE_NS_TEMPORAL_DEV"
+func normalizeNamespaceForEnv(namespace string) string {
+	result := strings.ToUpper(namespace)
+	result = strings.ReplaceAll(result, ".", "_")
+	result = strings.ReplaceAll(result, "-", "_")
+	return result
 }
 
 func (p *cliClientProvider) Close() {
