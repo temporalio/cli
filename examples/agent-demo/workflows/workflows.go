@@ -388,3 +388,161 @@ func ValidationActivity(ctx context.Context, orderID string) (string, error) {
 
 	return "", errors.New("validation failed: order contains invalid product SKU 'INVALID-123'")
 }
+
+// --- Long-running workflows for state demo ---
+
+// LongRunningWorkflow runs for ~30 seconds with visible pending activities
+// Use this to demo `temporal agent state` showing pending activities
+func LongRunningWorkflow(ctx workflow.Context, orderID string) error {
+	logger := workflow.GetLogger(ctx)
+	logger.Info("LongRunningWorkflow started", "orderID", orderID)
+
+	ao := workflow.ActivityOptions{
+		StartToCloseTimeout: 60 * time.Second,
+		HeartbeatTimeout:    10 * time.Second,
+	}
+	ctx = workflow.WithActivityOptions(ctx, ao)
+
+	// Step 1: Long activity (10 seconds)
+	logger.Info("Starting Step 1: LongActivity")
+	var result string
+	if err := workflow.ExecuteActivity(ctx, LongActivity, "step1-"+orderID, 10).Get(ctx, &result); err != nil {
+		return fmt.Errorf("step 1 failed: %w", err)
+	}
+	logger.Info("Step 1 completed", "result", result)
+
+	// Step 2: Another long activity (10 seconds)
+	logger.Info("Starting Step 2: LongActivity")
+	if err := workflow.ExecuteActivity(ctx, LongActivity, "step2-"+orderID, 10).Get(ctx, &result); err != nil {
+		return fmt.Errorf("step 2 failed: %w", err)
+	}
+	logger.Info("Step 2 completed", "result", result)
+
+	// Step 3: Spawn child workflow that also takes time
+	logger.Info("Starting Step 3: LongChildWorkflow")
+	childCtx := workflow.WithChildOptions(ctx, workflow.ChildWorkflowOptions{
+		WorkflowID: fmt.Sprintf("long-child-%s", orderID),
+	})
+	if err := workflow.ExecuteChildWorkflow(childCtx, LongChildWorkflow, orderID).Get(ctx, nil); err != nil {
+		return fmt.Errorf("step 3 child workflow failed: %w", err)
+	}
+	logger.Info("Step 3 completed")
+
+	logger.Info("LongRunningWorkflow completed successfully", "orderID", orderID)
+	return nil
+}
+
+// LongChildWorkflow is a child workflow that runs for ~10 seconds
+func LongChildWorkflow(ctx workflow.Context, orderID string) error {
+	logger := workflow.GetLogger(ctx)
+	logger.Info("LongChildWorkflow started", "orderID", orderID)
+
+	ao := workflow.ActivityOptions{
+		StartToCloseTimeout: 30 * time.Second,
+	}
+	ctx = workflow.WithActivityOptions(ctx, ao)
+
+	var result string
+	if err := workflow.ExecuteActivity(ctx, LongActivity, "child-"+orderID, 8).Get(ctx, &result); err != nil {
+		return err
+	}
+
+	logger.Info("LongChildWorkflow completed", "orderID", orderID)
+	return nil
+}
+
+// LongActivity runs for a configurable number of seconds
+func LongActivity(ctx context.Context, taskID string, durationSeconds int) (string, error) {
+	logger := activity.GetLogger(ctx)
+	logger.Info("LongActivity started", "taskID", taskID, "durationSeconds", durationSeconds)
+
+	// Heartbeat every 2 seconds
+	for i := 0; i < durationSeconds; i++ {
+		time.Sleep(1 * time.Second)
+		activity.RecordHeartbeat(ctx, fmt.Sprintf("progress: %d/%d", i+1, durationSeconds))
+	}
+
+	logger.Info("LongActivity completed", "taskID", taskID)
+	return fmt.Sprintf("completed-%s-after-%ds", taskID, durationSeconds), nil
+}
+
+// --- Deep chain workflows for trace demo ---
+
+// DeepChainWorkflow creates a 4-level deep failure chain
+func DeepChainWorkflow(ctx workflow.Context, orderID string) error {
+	logger := workflow.GetLogger(ctx)
+	logger.Info("DeepChainWorkflow (Level 1) started", "orderID", orderID)
+
+	childCtx := workflow.WithChildOptions(ctx, workflow.ChildWorkflowOptions{
+		WorkflowID: fmt.Sprintf("deep-level2-%s", orderID),
+	})
+
+	if err := workflow.ExecuteChildWorkflow(childCtx, DeepLevel2Workflow, orderID).Get(ctx, nil); err != nil {
+		return fmt.Errorf("level 1 failed: %w", err)
+	}
+
+	return nil
+}
+
+// DeepLevel2Workflow is level 2 of the deep chain
+func DeepLevel2Workflow(ctx workflow.Context, orderID string) error {
+	logger := workflow.GetLogger(ctx)
+	logger.Info("DeepLevel2Workflow started", "orderID", orderID)
+
+	childCtx := workflow.WithChildOptions(ctx, workflow.ChildWorkflowOptions{
+		WorkflowID: fmt.Sprintf("deep-level3-%s", orderID),
+	})
+
+	if err := workflow.ExecuteChildWorkflow(childCtx, DeepLevel3Workflow, orderID).Get(ctx, nil); err != nil {
+		return fmt.Errorf("level 2 failed: %w", err)
+	}
+
+	return nil
+}
+
+// DeepLevel3Workflow is level 3 of the deep chain
+func DeepLevel3Workflow(ctx workflow.Context, orderID string) error {
+	logger := workflow.GetLogger(ctx)
+	logger.Info("DeepLevel3Workflow started", "orderID", orderID)
+
+	childCtx := workflow.WithChildOptions(ctx, workflow.ChildWorkflowOptions{
+		WorkflowID: fmt.Sprintf("deep-level4-%s", orderID),
+	})
+
+	if err := workflow.ExecuteChildWorkflow(childCtx, DeepLevel4Workflow, orderID).Get(ctx, nil); err != nil {
+		return fmt.Errorf("level 3 failed: %w", err)
+	}
+
+	return nil
+}
+
+// DeepLevel4Workflow is the leaf - fails with a database error
+func DeepLevel4Workflow(ctx workflow.Context, orderID string) error {
+	logger := workflow.GetLogger(ctx)
+	logger.Info("DeepLevel4Workflow (LEAF) started", "orderID", orderID)
+
+	ao := workflow.ActivityOptions{
+		StartToCloseTimeout: 10 * time.Second,
+		RetryPolicy: &temporal.RetryPolicy{
+			MaximumAttempts: 1,
+		},
+	}
+	ctx = workflow.WithActivityOptions(ctx, ao)
+
+	var result string
+	if err := workflow.ExecuteActivity(ctx, DatabaseFailureActivity, orderID).Get(ctx, &result); err != nil {
+		return fmt.Errorf("database operation failed: %w", err)
+	}
+
+	return nil
+}
+
+// DatabaseFailureActivity simulates a database connection failure
+func DatabaseFailureActivity(ctx context.Context, orderID string) (string, error) {
+	logger := activity.GetLogger(ctx)
+	logger.Info("DatabaseFailureActivity executing", "orderID", orderID)
+
+	time.Sleep(100 * time.Millisecond)
+
+	return "", errors.New("FATAL: connection to database 'orders_db' failed: ECONNREFUSED 10.0.1.5:5432")
+}
