@@ -102,6 +102,32 @@ func TestGetLangChainToolSpecsJSON(t *testing.T) {
 	}
 }
 
+func TestGetClaudeToolSpecsJSON(t *testing.T) {
+	jsonStr, err := GetClaudeToolSpecsJSON()
+	if err != nil {
+		t.Fatalf("failed to get Claude tool specs JSON: %v", err)
+	}
+
+	// Verify it's valid JSON with correct structure
+	var specs []ClaudeToolSpec
+	if err := json.Unmarshal([]byte(jsonStr), &specs); err != nil {
+		t.Fatalf("failed to unmarshal Claude tool specs JSON: %v", err)
+	}
+
+	if len(specs) != 3 {
+		t.Errorf("expected 3 specs, got %d", len(specs))
+	}
+
+	for _, spec := range specs {
+		if spec.Name == "" {
+			t.Error("tool name is empty")
+		}
+		if spec.InputSchema.Type != "object" {
+			t.Errorf("expected input_schema type 'object', got %s", spec.InputSchema.Type)
+		}
+	}
+}
+
 func TestToolSpecContainsNamespaceRequired(t *testing.T) {
 	specs := GetToolSpecs()
 
@@ -118,4 +144,3 @@ func TestToolSpecContainsNamespaceRequired(t *testing.T) {
 		}
 	}
 }
-

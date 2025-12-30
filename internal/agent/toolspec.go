@@ -204,3 +204,34 @@ func GetLangChainToolSpecsJSON() (string, error) {
 	}
 	return string(data), nil
 }
+
+// ClaudeToolSpec represents an Anthropic Claude-compatible tool definition.
+type ClaudeToolSpec struct {
+	Name        string         `json:"name"`
+	Description string         `json:"description"`
+	InputSchema ToolParameters `json:"input_schema"`
+}
+
+// GetClaudeToolSpecs returns the tool specifications in Anthropic Claude format.
+func GetClaudeToolSpecs() []ClaudeToolSpec {
+	specs := GetToolSpecs()
+	claude := make([]ClaudeToolSpec, len(specs))
+	for i, spec := range specs {
+		claude[i] = ClaudeToolSpec{
+			Name:        spec.Name,
+			Description: spec.Description,
+			InputSchema: spec.Parameters,
+		}
+	}
+	return claude
+}
+
+// GetClaudeToolSpecsJSON returns the tool specifications as Anthropic Claude-compatible JSON.
+func GetClaudeToolSpecsJSON() (string, error) {
+	specs := GetClaudeToolSpecs()
+	data, err := json.MarshalIndent(specs, "", "  ")
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}

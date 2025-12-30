@@ -4671,6 +4671,12 @@ commands:
       temporal agent tool-spec --format openai
       ```
 
+      Output Anthropic Claude-compatible tool specifications:
+
+      ```
+      temporal agent tool-spec --format claude
+      ```
+
       Output LangChain-compatible tool specifications:
 
       ```
@@ -4687,9 +4693,9 @@ commands:
         type: string-enum
         description: |
           Output format for tool specifications.
-          Accepted values: openai, langchain, functions.
+          Accepted values: openai, claude, langchain, functions.
         default: openai
-        enum-values: [openai, langchain, functions]
+        enum-values: [openai, claude, langchain, functions]
 
 option-sets:
   - name: client

@@ -104,6 +104,9 @@ The `temporal agent tool-spec` command outputs tool definitions compatible with 
 # OpenAI function calling format (default)
 temporal agent tool-spec --format openai
 
+# Anthropic Claude format
+temporal agent tool-spec --format claude
+
 # LangChain tool format
 temporal agent tool-spec --format langchain
 
@@ -133,6 +136,29 @@ response = openai.chat.completions.create(
     model="gpt-4",
     messages=[{"role": "user", "content": "Find recent failures in the prod namespace"}],
     tools=tools
+)
+```
+
+Example Claude integration:
+```python
+import subprocess
+import json
+import anthropic
+
+# Get tool specs
+result = subprocess.run(
+    ["temporal", "agent", "tool-spec", "--format", "claude"],
+    capture_output=True, text=True
+)
+tools = json.loads(result.stdout)
+
+# Use with Anthropic API
+client = anthropic.Anthropic()
+response = client.messages.create(
+    model="claude-sonnet-4-20250514",
+    max_tokens=1024,
+    tools=tools,
+    messages=[{"role": "user", "content": "Find recent failures in the prod namespace"}]
 )
 ```
 
