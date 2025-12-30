@@ -234,6 +234,9 @@ type FailuresOptions struct {
 	// ErrorContains filters failures to only those containing this substring in the error message.
 	// Case-insensitive matching.
 	ErrorContains string
+	// LeafOnly, when true, shows only leaf failures (workflows with no failing children).
+	// Parent workflows that failed due to child workflow failures are excluded.
+	LeafOnly bool
 }
 
 // FailuresFinder finds recent workflow failures.
@@ -264,6 +267,10 @@ func (f *FailuresFinder) FindFailures(ctx context.Context, namespace string) (*F
 	var failures []FailureReport
 	var nextPageToken []byte
 
+	// Track parent workflow IDs for leaf-only filtering
+	// Key: workflow ID, Value: true if this workflow is a parent of a failing child
+	parentWorkflows := make(map[string]bool)
+
 	for {
 		resp, err := cl.ListWorkflow(ctx, &workflowservice.ListWorkflowExecutionsRequest{
 			Namespace:     namespace,
@@ -275,7 +282,9 @@ func (f *FailuresFinder) FindFailures(ctx context.Context, namespace string) (*F
 		}
 
 		for _, exec := range resp.GetExecutions() {
-			if f.opts.Limit > 0 && len(failures) >= f.opts.Limit {
+			// For leaf-only, we may need to collect more than the limit initially
+			// since we'll filter some out
+			if !f.opts.LeafOnly && f.opts.Limit > 0 && len(failures) >= f.opts.Limit {
 				break
 			}
 
@@ -327,6 +336,14 @@ func (f *FailuresFinder) FindFailures(ctx context.Context, namespace string) (*F
 							}
 						}
 					}
+
+					// Track parent workflows for leaf-only filtering
+					// All workflows in the chain except the last one are parents
+					if f.opts.LeafOnly && len(traceResult.Chain) > 1 {
+						for i := 0; i < len(traceResult.Chain)-1; i++ {
+							parentWorkflows[traceResult.Chain[i].WorkflowID] = true
+						}
+					}
 				}
 			} else {
 				// Just get the failure message from the workflow itself
@@ -343,7 +360,7 @@ func (f *FailuresFinder) FindFailures(ctx context.Context, namespace string) (*F
 			failures = append(failures, report)
 		}
 
-		if f.opts.Limit > 0 && len(failures) >= f.opts.Limit {
+		if !f.opts.LeafOnly && f.opts.Limit > 0 && len(failures) >= f.opts.Limit {
 			break
 		}
 
@@ -351,6 +368,23 @@ func (f *FailuresFinder) FindFailures(ctx context.Context, namespace string) (*F
 		if len(nextPageToken) == 0 {
 			break
 		}
+	}
+
+	// Apply leaf-only filtering
+	if f.opts.LeafOnly {
+		var leafFailures []FailureReport
+		for _, report := range failures {
+			// Skip this failure if it's a parent (has failing children)
+			if parentWorkflows[report.RootWorkflow.WorkflowID] {
+				continue
+			}
+			leafFailures = append(leafFailures, report)
+			// Apply limit after filtering
+			if f.opts.Limit > 0 && len(leafFailures) >= f.opts.Limit {
+				break
+			}
+		}
+		failures = leafFailures
 	}
 
 	return &FailuresResult{

@@ -60,6 +60,11 @@ Returns structured JSON with failure reports including root_workflow, leaf_failu
 						Type:        "string",
 						Description: "Filter failures to only those containing this substring in the error message (case-insensitive).",
 					},
+					"leaf_only": {
+						Type:        "boolean",
+						Description: "Show only leaf failures (workflows with no failing children). Filters out parent workflows that failed due to child failures, de-duplicating failure chains. Default: false.",
+						Default:     false,
+					},
 					"limit": {
 						Type:        "integer",
 						Description: "Maximum number of failures to return. Default: 50.",
