@@ -83,6 +83,14 @@ func main() {
 	w.RegisterWorkflow(workflows.InventoryCheckWorkflow)
 	w.RegisterWorkflow(workflows.ValidationWorkflow)
 	w.RegisterWorkflow(workflows.PricingWorkflow)
+	// Long-running workflows for state demo
+	w.RegisterWorkflow(workflows.LongRunningWorkflow)
+	w.RegisterWorkflow(workflows.LongChildWorkflow)
+	// Deep chain workflows for trace demo
+	w.RegisterWorkflow(workflows.DeepChainWorkflow)
+	w.RegisterWorkflow(workflows.DeepLevel2Workflow)
+	w.RegisterWorkflow(workflows.DeepLevel3Workflow)
+	w.RegisterWorkflow(workflows.DeepLevel4Workflow)
 
 	// Register activities
 	w.RegisterActivity(workflows.ProcessPaymentActivity)
@@ -92,6 +100,8 @@ func main() {
 	w.RegisterActivity(workflows.SlowActivity)
 	w.RegisterActivity(workflows.AlwaysFailsActivity)
 	w.RegisterActivity(workflows.ValidationActivity)
+	w.RegisterActivity(workflows.LongActivity)
+	w.RegisterActivity(workflows.DatabaseFailureActivity)
 
 	log.Printf("Starting worker on task queue: %s", taskQueue)
 

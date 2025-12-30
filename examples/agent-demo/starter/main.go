@@ -18,7 +18,7 @@ import (
 
 func main() {
 	// Command line flags
-	scenario := flag.String("scenario", "all", "Scenario to run: success, payment-fail, shipping-fail, nested-fail, timeout, retry-exhaustion, multi-child, all")
+	scenario := flag.String("scenario", "all", "Scenario to run: success, payment-fail, shipping-fail, nested-fail, timeout, retry-exhaustion, multi-child, long-running, deep-chain, all")
 	flag.Parse()
 
 	// Get configuration from environment
@@ -89,6 +89,10 @@ func main() {
 		runRetryExhaustionScenario(ctx, c, taskQueue, timestamp)
 	case "multi-child":
 		runMultiChildScenario(ctx, c, taskQueue, timestamp)
+	case "long-running":
+		runLongRunningScenario(ctx, c, taskQueue, timestamp)
+	case "deep-chain":
+		runDeepChainScenario(ctx, c, taskQueue, timestamp)
 	case "all":
 		runSuccessScenario(ctx, c, taskQueue, timestamp)
 		runPaymentFailScenario(ctx, c, taskQueue, timestamp)
@@ -97,6 +101,8 @@ func main() {
 		runTimeoutScenario(ctx, c, taskQueue, timestamp)
 		runRetryExhaustionScenario(ctx, c, taskQueue, timestamp)
 		runMultiChildScenario(ctx, c, taskQueue, timestamp)
+		runDeepChainScenario(ctx, c, taskQueue, timestamp)
+		// Note: long-running not included in 'all' since it takes ~30 seconds
 	default:
 		log.Fatalf("Unknown scenario: %s", *scenario)
 	}
@@ -224,4 +230,41 @@ func runMultiChildScenario(ctx context.Context, c client.Client, taskQueue, time
 		return
 	}
 	log.Printf("Started MultiChildFailureWorkflow (validation child will fail): %s", run.GetID())
+}
+
+func runLongRunningScenario(ctx context.Context, c client.Client, taskQueue, timestamp string) {
+	log.Println("=== Running Long-Running Scenario ===")
+	log.Println("This workflow takes ~30 seconds. Use 'temporal agent state' to view pending activities!")
+
+	// Long-running workflow to demonstrate 'temporal agent state'
+	workflowID := fmt.Sprintf("long-running-%s", timestamp)
+	run, err := c.ExecuteWorkflow(ctx, client.StartWorkflowOptions{
+		ID:        workflowID,
+		TaskQueue: taskQueue,
+	}, workflows.LongRunningWorkflow, fmt.Sprintf("order-%s", timestamp))
+	if err != nil {
+		log.Printf("Failed to start LongRunningWorkflow: %v", err)
+		return
+	}
+	log.Printf("Started LongRunningWorkflow: %s", run.GetID())
+	log.Println("TIP: While running, query its state with:")
+	log.Printf("  temporal agent state --workflow-id %s --namespace <your-namespace> -o json", workflowID)
+}
+
+func runDeepChainScenario(ctx context.Context, c client.Client, taskQueue, timestamp string) {
+	log.Println("=== Running Deep Chain Failure Scenario ===")
+
+	// 4-level deep chain that fails at the leaf
+	workflowID := fmt.Sprintf("deep-chain-%s", timestamp)
+	run, err := c.ExecuteWorkflow(ctx, client.StartWorkflowOptions{
+		ID:        workflowID,
+		TaskQueue: taskQueue,
+	}, workflows.DeepChainWorkflow, fmt.Sprintf("order-%s", timestamp))
+	if err != nil {
+		log.Printf("Failed to start DeepChainWorkflow: %v", err)
+		return
+	}
+	log.Printf("Started DeepChainWorkflow (4 levels deep, fails with DB error): %s", run.GetID())
+	log.Println("TIP: Trace the full chain with:")
+	log.Printf("  temporal agent trace --workflow-id %s --namespace <your-namespace> -o json", workflowID)
 }
