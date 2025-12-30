@@ -546,6 +546,92 @@ func (s *SharedServerSuite) TestAgent_Failures_MultipleStatuses() {
 	s.Len(failuresResult3.Failures, 0, "should find no failures when filtering by Canceled only")
 }
 
+func (s *SharedServerSuite) TestAgent_Failures_LeafOnly() {
+	childWfType := "leaf-only-child-" + uuid.NewString()
+
+	// Register child workflow that fails
+	s.Worker().Worker.RegisterWorkflowWithOptions(
+		func(ctx workflow.Context, input any) (any, error) {
+			return "", temporal.NewApplicationError("leaf child error", "LeafError")
+		},
+		workflow.RegisterOptions{Name: childWfType},
+	)
+
+	// Register parent workflow that calls child
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
+		var result string
+		err := workflow.ExecuteChildWorkflow(
+			workflow.WithChildOptions(ctx, workflow.ChildWorkflowOptions{
+				WorkflowExecutionTimeout: 30 * time.Second,
+			}),
+			childWfType,
+			input,
+		).Get(ctx, &result)
+		return result, err
+	})
+
+	// Start parent workflow (which will fail due to child failure)
+	run, err := s.Client.ExecuteWorkflow(
+		s.Context,
+		client.StartWorkflowOptions{TaskQueue: s.Worker().Options.TaskQueue},
+		DevWorkflow,
+		"test",
+	)
+	s.NoError(err)
+
+	// Wait for failure
+	var result string
+	_ = run.Get(s.Context, &result)
+
+	// Wait for both parent and child to be visible as failed
+	s.Eventually(func() bool {
+		resp, err := s.Client.ListWorkflow(s.Context, &workflowservice.ListWorkflowExecutionsRequest{
+			Query: "ExecutionStatus = 'Failed'",
+		})
+		s.NoError(err)
+		// Both parent and child should be failed
+		return len(resp.Executions) >= 2
+	}, 5*time.Second, 100*time.Millisecond)
+
+	// Run failures command WITHOUT --leaf-only
+	res := s.Execute(
+		"agent", "failures",
+		"--address", s.Address(),
+		"--since", "1h",
+		"--follow-children",
+		"-o", "json",
+	)
+	s.NoError(res.Err)
+
+	var allFailures agent.FailuresResult
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &allFailures))
+
+	// Should find at least 2 failures (parent + child)
+	s.GreaterOrEqual(len(allFailures.Failures), 2, "should find parent and child failures without --leaf-only")
+
+	// Run failures command WITH --leaf-only
+	res = s.Execute(
+		"agent", "failures",
+		"--address", s.Address(),
+		"--since", "1h",
+		"--follow-children",
+		"--leaf-only",
+		"-o", "json",
+	)
+	s.NoError(res.Err)
+
+	var leafOnlyFailures agent.FailuresResult
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &leafOnlyFailures))
+
+	// With leaf-only, should have fewer failures (parent filtered out)
+	s.Less(len(leafOnlyFailures.Failures), len(allFailures.Failures), "leaf-only should filter out parent failures")
+
+	// Verify that parent workflow is NOT in the leaf-only results
+	for _, f := range leafOnlyFailures.Failures {
+		s.NotEqual(run.GetID(), f.RootWorkflow.WorkflowID, "parent workflow should not appear in leaf-only results")
+	}
+}
+
 func (s *SharedServerSuite) TestAgent_Timeline_Compact() {
 	// Create a simple completing workflow
 	s.Worker().OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {

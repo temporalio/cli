@@ -109,6 +109,7 @@ func (c *TemporalAgentFailuresCommand) run(cctx *CommandContext, args []string) 
 		MaxDepth:         c.Depth,
 		Limit:            c.Limit,
 		ErrorContains:    c.ErrorContains,
+		LeafOnly:         c.LeafOnly,
 	}
 
 	// Add the main namespace to follow namespaces if following children

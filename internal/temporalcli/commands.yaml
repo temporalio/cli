@@ -4557,6 +4557,13 @@ commands:
         description: |
           Filter failures to only those containing this substring in the error message.
           Case-insensitive matching.
+      - name: leaf-only
+        type: bool
+        description: |
+          Show only leaf failures (workflows with no failing children).
+          When enabled, parent workflows that failed due to child workflow failures
+          are excluded, showing only the deepest failure in each chain.
+          This de-duplicates failures by showing only the root cause.
 
   - name: temporal agent trace
     summary: Trace a workflow through its child chain to the deepest failure

@@ -724,6 +724,7 @@ type TemporalAgentFailuresCommand struct {
 	Depth            int
 	Limit            int
 	ErrorContains    string
+	LeafOnly         bool
 }
 
 func NewTemporalAgentFailuresCommand(cctx *CommandContext, parent *TemporalAgentCommand) *TemporalAgentFailuresCommand {
@@ -746,6 +747,7 @@ func NewTemporalAgentFailuresCommand(cctx *CommandContext, parent *TemporalAgent
 	s.Command.Flags().IntVar(&s.Depth, "depth", 0, "Maximum depth to traverse when following child workflows. Zero means unlimited.")
 	s.Command.Flags().IntVar(&s.Limit, "limit", 50, "Maximum number of failures to return.")
 	s.Command.Flags().StringVar(&s.ErrorContains, "error-contains", "", "Filter failures to only those containing this substring in the error message. Case-insensitive matching.")
+	s.Command.Flags().BoolVar(&s.LeafOnly, "leaf-only", false, "Show only leaf failures (workflows with no failing children). When enabled, parent workflows that failed due to child workflow failures are excluded, showing only the deepest failure in each chain. This de-duplicates failures by showing only the root cause.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
