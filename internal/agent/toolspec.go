@@ -65,6 +65,11 @@ Returns structured JSON with failure reports including root_workflow, leaf_failu
 						Description: "Show only leaf failures (workflows with no failing children). Filters out parent workflows that failed due to child failures, de-duplicating failure chains. Default: false.",
 						Default:     false,
 					},
+					"compact_errors": {
+						Type:        "boolean",
+						Description: "Extract the core error message and strip wrapper context. Removes verbose details like workflow IDs, run IDs, and event IDs. Default: false.",
+						Default:     false,
+					},
 					"limit": {
 						Type:        "integer",
 						Description: "Maximum number of failures to return. Default: 50.",

@@ -237,6 +237,8 @@ type FailuresOptions struct {
 	// LeafOnly, when true, shows only leaf failures (workflows with no failing children).
 	// Parent workflows that failed due to child workflow failures are excluded.
 	LeafOnly bool
+	// CompactErrors, when true, extracts the core error message and strips wrapper context.
+	CompactErrors bool
 }
 
 // FailuresFinder finds recent workflow failures.
@@ -355,6 +357,11 @@ func (f *FailuresFinder) FindFailures(ctx context.Context, namespace string) (*F
 				if !strings.Contains(strings.ToLower(report.RootCause), strings.ToLower(f.opts.ErrorContains)) {
 					continue
 				}
+			}
+
+			// Apply error compaction if requested
+			if f.opts.CompactErrors && report.RootCause != "" {
+				report.RootCause = CompactErrorWithContext(report.RootCause)
 			}
 
 			failures = append(failures, report)
