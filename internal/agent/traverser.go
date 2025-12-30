@@ -134,7 +134,7 @@ func (t *ChainTraverser) traceRecursive(
 
 	chain := []WorkflowChainNode{node}
 
-	// Find the deepest failure by following failed children
+	// Find the deepest failure by following failed children and Nexus operations
 	var deepestRootCause *RootCause
 
 	// First check for failed child workflows
@@ -156,7 +156,32 @@ func (t *ChainTraverser) traceRecursive(
 		}
 	}
 
-	// If no failed children found root cause, check activities
+	// Then check for failed Nexus operations
+	for _, nexusOp := range sm.failedNexusOps {
+		// Skip if we don't have target workflow info
+		if nexusOp.namespace == "" || nexusOp.workflowID == "" {
+			continue
+		}
+
+		if !t.canFollowNamespace(nexusOp.namespace) {
+			continue
+		}
+
+		nexusChain, nexusRootCause, err := t.traceRecursive(ctx, nexusOp.namespace, nexusOp.workflowID, nexusOp.runID, depth+1)
+		if err != nil {
+			// Log but continue - may not have access to target namespace
+			continue
+		}
+
+		if len(nexusChain) > 0 {
+			chain = append(chain, nexusChain...)
+			if nexusRootCause != nil {
+				deepestRootCause = nexusRootCause
+			}
+		}
+	}
+
+	// If no failed children/Nexus found root cause, check activities
 	if deepestRootCause == nil && len(sm.failedActivities) > 0 {
 		// Use the first failed activity as root cause
 		act := sm.failedActivities[0]
@@ -165,6 +190,20 @@ func (t *ChainTraverser) traceRecursive(
 			Activity:  act.activityType,
 			Error:     act.failureMessage,
 			Timestamp: act.failureTime,
+			Workflow: &WorkflowRef{
+				Namespace:  namespace,
+				WorkflowID: workflowID,
+				RunID:      sm.runID,
+			},
+		}
+	}
+
+	// If no root cause yet but have failed Nexus ops (without target info), use that
+	if deepestRootCause == nil && len(sm.failedNexusOps) > 0 {
+		nexusOp := sm.failedNexusOps[0]
+		deepestRootCause = &RootCause{
+			Type:  "NexusOperationFailed",
+			Error: fmt.Sprintf("nexus %s/%s: %s", nexusOp.service, nexusOp.operation, nexusOp.failureMessage),
 			Workflow: &WorkflowRef{
 				Namespace:  namespace,
 				WorkflowID: workflowID,
@@ -473,6 +512,10 @@ type stateMachine struct {
 	// Pending and failed child workflows
 	pendingChildren map[int64]*childWorkflowState
 	failedChildren  []*childWorkflowState
+
+	// Pending and failed Nexus operations
+	pendingNexusOps map[int64]*nexusOperationState
+	failedNexusOps  []*nexusOperationState
 }
 
 type activityState struct {
@@ -493,11 +536,23 @@ type childWorkflowState struct {
 	failureMessage string
 }
 
+// nexusOperationState tracks a Nexus operation's state.
+type nexusOperationState struct {
+	endpoint       string
+	service        string
+	operation      string
+	namespace      string // Target namespace (from links)
+	workflowID     string // Target workflow ID (from links)
+	runID          string // Target workflow run ID (from links)
+	failureMessage string
+}
+
 func newStateMachine() *stateMachine {
 	return &stateMachine{
 		status:            enums.WORKFLOW_EXECUTION_STATUS_UNSPECIFIED,
 		pendingActivities: make(map[int64]*activityState),
 		pendingChildren:   make(map[int64]*childWorkflowState),
+		pendingNexusOps:   make(map[int64]*nexusOperationState),
 	}
 }
 
@@ -642,6 +697,60 @@ func (sm *stateMachine) processEvent(event *history.HistoryEvent) {
 			child.runID = attrs.GetWorkflowExecution().GetRunId()
 			delete(sm.pendingChildren, attrs.GetInitiatedEventId())
 			sm.failedChildren = append(sm.failedChildren, child)
+		}
+
+	// Nexus operation events
+	case enums.EVENT_TYPE_NEXUS_OPERATION_SCHEDULED:
+		attrs := event.GetNexusOperationScheduledEventAttributes()
+		sm.pendingNexusOps[event.EventId] = &nexusOperationState{
+			endpoint:  attrs.GetEndpoint(),
+			service:   attrs.GetService(),
+			operation: attrs.GetOperation(),
+		}
+
+	case enums.EVENT_TYPE_NEXUS_OPERATION_STARTED:
+		attrs := event.GetNexusOperationStartedEventAttributes()
+		if nexusOp, ok := sm.pendingNexusOps[attrs.GetScheduledEventId()]; ok {
+			// Extract target workflow from links
+			for _, link := range event.GetLinks() {
+				if wfEvent := link.GetWorkflowEvent(); wfEvent != nil {
+					nexusOp.namespace = wfEvent.GetNamespace()
+					nexusOp.workflowID = wfEvent.GetWorkflowId()
+					nexusOp.runID = wfEvent.GetRunId()
+					break
+				}
+			}
+		}
+
+	case enums.EVENT_TYPE_NEXUS_OPERATION_COMPLETED:
+		attrs := event.GetNexusOperationCompletedEventAttributes()
+		delete(sm.pendingNexusOps, attrs.GetScheduledEventId())
+
+	case enums.EVENT_TYPE_NEXUS_OPERATION_FAILED:
+		attrs := event.GetNexusOperationFailedEventAttributes()
+		if nexusOp, ok := sm.pendingNexusOps[attrs.GetScheduledEventId()]; ok {
+			nexusOp.failureMessage = attrs.GetFailure().GetMessage()
+			// Extract cause if available
+			if cause := attrs.GetFailure().GetCause(); cause != nil {
+				nexusOp.failureMessage = cause.GetMessage()
+			}
+			delete(sm.pendingNexusOps, attrs.GetScheduledEventId())
+			sm.failedNexusOps = append(sm.failedNexusOps, nexusOp)
+		}
+
+	case enums.EVENT_TYPE_NEXUS_OPERATION_CANCELED:
+		attrs := event.GetNexusOperationCanceledEventAttributes()
+		delete(sm.pendingNexusOps, attrs.GetScheduledEventId())
+
+	case enums.EVENT_TYPE_NEXUS_OPERATION_TIMED_OUT:
+		attrs := event.GetNexusOperationTimedOutEventAttributes()
+		if nexusOp, ok := sm.pendingNexusOps[attrs.GetScheduledEventId()]; ok {
+			nexusOp.failureMessage = "nexus operation timed out"
+			if attrs.GetFailure() != nil {
+				nexusOp.failureMessage = attrs.GetFailure().GetMessage()
+			}
+			delete(sm.pendingNexusOps, attrs.GetScheduledEventId())
+			sm.failedNexusOps = append(sm.failedNexusOps, nexusOp)
 		}
 	}
 }
