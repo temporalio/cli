@@ -3,6 +3,7 @@ package temporalcli
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/temporalio/cli/internal/agent"
 	"github.com/temporalio/cli/internal/printer"
@@ -82,14 +83,21 @@ func (c *TemporalAgentFailuresCommand) run(cctx *CommandContext, args []string) 
 	}
 	defer clientProvider.Close()
 
-	// Parse statuses
+	// Parse statuses (supports both comma-separated and multiple flags)
 	var statuses []enums.WorkflowExecutionStatus
 	for _, s := range c.Status {
-		status := agent.ParseWorkflowStatus(s)
-		if status == enums.WORKFLOW_EXECUTION_STATUS_UNSPECIFIED {
-			return fmt.Errorf("invalid status: %s", s)
+		// Split by comma in case user passes "Failed,TimedOut"
+		for _, part := range strings.Split(s, ",") {
+			part = strings.TrimSpace(part)
+			if part == "" {
+				continue
+			}
+			status := agent.ParseWorkflowStatus(part)
+			if status == enums.WORKFLOW_EXECUTION_STATUS_UNSPECIFIED {
+				return fmt.Errorf("invalid status: %s", part)
+			}
+			statuses = append(statuses, status)
 		}
-		statuses = append(statuses, status)
 	}
 
 	// Build options
