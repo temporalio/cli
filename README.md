@@ -80,6 +80,12 @@ temporal agent trace --workflow-id order-123 --namespace prod -o json
 
 # Get a compact timeline of workflow events
 temporal agent timeline --workflow-id order-123 --namespace prod --compact -o json
+
+# Get current workflow state (pending activities, child workflows)
+temporal agent state --workflow-id order-123 --namespace prod -o json
+
+# Get detailed state including memo and search attributes
+temporal agent state --workflow-id order-123 --namespace prod --include-details -o json
 ```
 
 ### Output

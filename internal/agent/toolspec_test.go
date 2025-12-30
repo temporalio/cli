@@ -8,12 +8,12 @@ import (
 func TestGetToolSpecs(t *testing.T) {
 	specs := GetToolSpecs()
 
-	if len(specs) != 3 {
-		t.Errorf("expected 3 tool specs, got %d", len(specs))
+	if len(specs) != 4 {
+		t.Errorf("expected 4 tool specs, got %d", len(specs))
 	}
 
 	// Verify each tool has required fields
-	expectedNames := []string{"find_recent_failures", "trace_workflow_chain", "get_workflow_timeline"}
+	expectedNames := []string{"find_recent_failures", "trace_workflow_chain", "get_workflow_timeline", "get_workflow_state"}
 	for i, spec := range specs {
 		if spec.Name != expectedNames[i] {
 			t.Errorf("expected tool name %s, got %s", expectedNames[i], spec.Name)
@@ -45,8 +45,8 @@ func TestGetToolSpecsJSON(t *testing.T) {
 		t.Fatalf("failed to unmarshal tool specs JSON: %v", err)
 	}
 
-	if len(specs) != 3 {
-		t.Errorf("expected 3 specs, got %d", len(specs))
+	if len(specs) != 4 {
+		t.Errorf("expected 4 specs, got %d", len(specs))
 	}
 }
 
@@ -62,8 +62,8 @@ func TestGetOpenAIToolSpecsJSON(t *testing.T) {
 		t.Fatalf("failed to unmarshal OpenAI tool specs JSON: %v", err)
 	}
 
-	if len(specs) != 3 {
-		t.Errorf("expected 3 specs, got %d", len(specs))
+	if len(specs) != 4 {
+		t.Errorf("expected 4 specs, got %d", len(specs))
 	}
 
 	for _, spec := range specs {
@@ -88,8 +88,8 @@ func TestGetLangChainToolSpecsJSON(t *testing.T) {
 		t.Fatalf("failed to unmarshal LangChain tool specs JSON: %v", err)
 	}
 
-	if len(specs) != 3 {
-		t.Errorf("expected 3 specs, got %d", len(specs))
+	if len(specs) != 4 {
+		t.Errorf("expected 4 specs, got %d", len(specs))
 	}
 
 	for _, spec := range specs {
@@ -114,8 +114,8 @@ func TestGetClaudeToolSpecsJSON(t *testing.T) {
 		t.Fatalf("failed to unmarshal Claude tool specs JSON: %v", err)
 	}
 
-	if len(specs) != 3 {
-		t.Errorf("expected 3 specs, got %d", len(specs))
+	if len(specs) != 4 {
+		t.Errorf("expected 4 specs, got %d", len(specs))
 	}
 
 	for _, spec := range specs {

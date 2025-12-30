@@ -4669,6 +4669,41 @@ commands:
           Exclude specific event types.
           Can be passed multiple times.
 
+  - name: temporal agent state
+    summary: Show the current state of a workflow execution
+    description: |
+      Display the current state of a running or completed workflow execution,
+      including pending activities, pending child workflows, pending signals,
+      and available query handlers.
+
+      This provides a snapshot of what a workflow is currently doing or waiting
+      for, optimized for AI agent consumption.
+
+      Basic usage:
+
+      ```
+      temporal agent state \
+          --workflow-id YourWorkflowId \
+          --namespace YourNamespace
+      ```
+
+      Show detailed pending activity information:
+
+      ```
+      temporal agent state \
+          --workflow-id YourWorkflowId \
+          --namespace YourNamespace \
+          --include-details
+      ```
+    option-sets:
+      - workflow-reference
+    options:
+      - name: include-details
+        type: bool
+        description: |
+          Include detailed information about pending items, such as
+          activity inputs and retry state.
+
   - name: temporal agent tool-spec
     summary: Output tool specifications for AI agent frameworks
     description: |

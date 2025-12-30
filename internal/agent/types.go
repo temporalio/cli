@@ -139,6 +139,85 @@ type TimelineResult struct {
 	EventCount int `json:"event_count"`
 }
 
+// PendingActivity represents an activity that is currently pending execution.
+type PendingActivity struct {
+	// ActivityID is the unique ID of the activity.
+	ActivityID string `json:"activity_id"`
+	// ActivityType is the type name of the activity.
+	ActivityType string `json:"activity_type"`
+	// State is the current state (SCHEDULED, STARTED, CANCEL_REQUESTED).
+	State string `json:"state"`
+	// Attempt is the current attempt number (1-based).
+	Attempt int32 `json:"attempt"`
+	// MaxAttempts is the maximum number of attempts (0 = unlimited).
+	MaxAttempts int32 `json:"max_attempts,omitempty"`
+	// ScheduledTime when the activity was scheduled.
+	ScheduledTime *time.Time `json:"scheduled_time,omitempty"`
+	// LastStartedTime when the activity was last started.
+	LastStartedTime *time.Time `json:"last_started_time,omitempty"`
+	// HeartbeatTimeout is the heartbeat timeout duration.
+	HeartbeatTimeoutSec int64 `json:"heartbeat_timeout_sec,omitempty"`
+	// LastHeartbeatTime when the last heartbeat was received.
+	LastHeartbeatTime *time.Time `json:"last_heartbeat_time,omitempty"`
+	// LastFailure contains the last failure message if retrying.
+	LastFailure string `json:"last_failure,omitempty"`
+	// Input data (if include-details is set).
+	Input any `json:"input,omitempty"`
+}
+
+// PendingChildWorkflow represents a child workflow that is currently pending.
+type PendingChildWorkflow struct {
+	// WorkflowID of the child workflow.
+	WorkflowID string `json:"workflow_id"`
+	// RunID of the child workflow.
+	RunID string `json:"run_id,omitempty"`
+	// WorkflowType is the type name of the child workflow.
+	WorkflowType string `json:"workflow_type"`
+	// InitiatedEventID is the event ID that initiated this child workflow.
+	InitiatedEventID int64 `json:"initiated_event_id"`
+	// ParentClosePolicy determines what happens when parent closes.
+	ParentClosePolicy string `json:"parent_close_policy,omitempty"`
+}
+
+// PendingSignal represents an external signal that hasn't been delivered yet.
+// Note: Temporal doesn't expose pending signals directly; this is for future use.
+type PendingSignal struct {
+	// SignalName is the name of the signal.
+	SignalName string `json:"signal_name"`
+}
+
+// WorkflowStateResult is the output of the state command.
+type WorkflowStateResult struct {
+	// Workflow identifies the workflow.
+	Workflow WorkflowRef `json:"workflow"`
+	// WorkflowType is the type name of the workflow.
+	WorkflowType string `json:"workflow_type,omitempty"`
+	// Status is the current status of the workflow.
+	Status string `json:"status"`
+	// StartTime when the workflow started.
+	StartTime *time.Time `json:"start_time,omitempty"`
+	// CloseTime when the workflow closed (if closed).
+	CloseTime *time.Time `json:"close_time,omitempty"`
+	// IsRunning is true if the workflow is currently running.
+	IsRunning bool `json:"is_running"`
+	// PendingActivities is the list of currently pending activities.
+	PendingActivities []PendingActivity `json:"pending_activities,omitempty"`
+	// PendingActivityCount is the count of pending activities.
+	PendingActivityCount int `json:"pending_activity_count"`
+	// PendingChildWorkflows is the list of currently pending child workflows.
+	PendingChildWorkflows []PendingChildWorkflow `json:"pending_child_workflows,omitempty"`
+	// PendingChildWorkflowCount is the count of pending child workflows.
+	PendingChildWorkflowCount int `json:"pending_child_workflow_count"`
+	// TaskQueue is the task queue the workflow is running on.
+	TaskQueue string `json:"task_queue,omitempty"`
+	// HistoryLength is the number of events in the workflow history.
+	HistoryLength int64 `json:"history_length,omitempty"`
+	// Memo contains workflow memo data.
+	Memo map[string]any `json:"memo,omitempty"`
+	// SearchAttributes contains indexed search attributes.
+	SearchAttributes map[string]any `json:"search_attributes,omitempty"`
+}
+
 // WorkflowStatusFromEnum converts an enums.WorkflowExecutionStatus to a string.
 func WorkflowStatusFromEnum(status enums.WorkflowExecutionStatus) string {
 	switch status {
