@@ -464,6 +464,88 @@ func (s *SharedServerSuite) TestAgent_Failures_ErrorContains() {
 	s.Len(failuresResult3.Failures, 0, "should find no failures with non-matching filter")
 }
 
+func (s *SharedServerSuite) TestAgent_Failures_MultipleStatuses() {
+	// Create a workflow that can fail or be canceled
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
+		return "", temporal.NewApplicationError("multi-status-test", "TestError")
+	})
+
+	// Start and wait for workflow to fail
+	run1, err := s.Client.ExecuteWorkflow(
+		s.Context,
+		client.StartWorkflowOptions{TaskQueue: s.Worker().Options.TaskQueue},
+		DevWorkflow,
+		"test1",
+	)
+	s.NoError(err)
+	var result string
+	_ = run1.Get(s.Context, &result)
+
+	// Wait for workflow to be visible
+	s.Eventually(func() bool {
+		resp, err := s.Client.ListWorkflow(s.Context, &workflowservice.ListWorkflowExecutionsRequest{
+			Query: "WorkflowId = '" + run1.GetID() + "' AND ExecutionStatus = 'Failed'",
+		})
+		s.NoError(err)
+		return len(resp.Executions) == 1
+	}, 5*time.Second, 100*time.Millisecond)
+
+	// Test comma-separated statuses
+	res := s.Execute(
+		"agent", "failures",
+		"--address", s.Address(),
+		"--since", "1h",
+		"--status", "Failed,TimedOut",
+		"-o", "json",
+	)
+	s.NoError(res.Err)
+
+	var failuresResult agent.FailuresResult
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &failuresResult))
+
+	// Should find at least our 1 failure
+	s.GreaterOrEqual(len(failuresResult.Failures), 1, "should find failures with comma-separated statuses")
+
+	// Verify the query contains both statuses
+	s.Contains(failuresResult.Query, "Failed", "query should contain Failed status")
+	s.Contains(failuresResult.Query, "TimedOut", "query should contain TimedOut status")
+
+	// Test multiple --status flags
+	res = s.Execute(
+		"agent", "failures",
+		"--address", s.Address(),
+		"--since", "1h",
+		"--status", "Failed",
+		"--status", "TimedOut",
+		"-o", "json",
+	)
+	s.NoError(res.Err)
+
+	var failuresResult2 agent.FailuresResult
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &failuresResult2))
+
+	// Should find the same failures
+	s.GreaterOrEqual(len(failuresResult2.Failures), 1, "should find failures with multiple --status flags")
+	s.Contains(failuresResult2.Query, "Failed", "query should contain Failed status")
+	s.Contains(failuresResult2.Query, "TimedOut", "query should contain TimedOut status")
+
+	// Test single status to verify filtering works
+	res = s.Execute(
+		"agent", "failures",
+		"--address", s.Address(),
+		"--since", "1h",
+		"--status", "Canceled",
+		"-o", "json",
+	)
+	s.NoError(res.Err)
+
+	var failuresResult3 agent.FailuresResult
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &failuresResult3))
+
+	// Should find no failures (we only have Failed workflows, not Canceled)
+	s.Len(failuresResult3.Failures, 0, "should find no failures when filtering by Canceled only")
+}
+
 func (s *SharedServerSuite) TestAgent_Timeline_Compact() {
 	// Create a simple completing workflow
 	s.Worker().OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
