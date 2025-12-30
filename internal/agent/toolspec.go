@@ -142,6 +142,35 @@ Categories include: workflow, activity, timer, child_workflow, signal, update, a
 				Required: []string{"namespace", "workflow_id"},
 			},
 		},
+		{
+			Name: "get_workflow_state",
+			Description: `Get the current state of a workflow execution.
+Returns information about pending activities, pending child workflows, and workflow status.
+Useful for understanding what a running workflow is currently doing or waiting for.`,
+			Parameters: ToolParameters{
+				Type: "object",
+				Properties: map[string]ToolProperty{
+					"namespace": {
+						Type:        "string",
+						Description: "The Temporal namespace containing the workflow.",
+					},
+					"workflow_id": {
+						Type:        "string",
+						Description: "The workflow ID to get state for.",
+					},
+					"run_id": {
+						Type:        "string",
+						Description: "Optional run ID. If not specified, uses the latest run.",
+					},
+					"include_details": {
+						Type:        "boolean",
+						Description: "Include detailed information about pending items like memo and search attributes. Default: false.",
+						Default:     false,
+					},
+				},
+				Required: []string{"namespace", "workflow_id"},
+			},
+		},
 	}
 }
 

@@ -210,6 +210,30 @@ func (c *TemporalAgentTimelineCommand) run(cctx *CommandContext, args []string) 
 	return cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
 }
 
+func (c *TemporalAgentStateCommand) run(cctx *CommandContext, args []string) error {
+	// Create client
+	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	// Build options
+	opts := agent.StateOptions{
+		IncludeDetails: c.IncludeDetails,
+	}
+
+	// Extract state
+	extractor := agent.NewStateExtractor(cl, opts)
+	result, err := extractor.GetState(cctx, c.Parent.ClientOptions.Namespace, c.WorkflowId, c.RunId)
+	if err != nil {
+		return fmt.Errorf("failed to get workflow state: %w", err)
+	}
+
+	// Output JSON
+	return cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
+}
+
 func (c *TemporalAgentToolSpecCommand) run(cctx *CommandContext, _ []string) error {
 	var output string
 	var err error

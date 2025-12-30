@@ -707,6 +707,7 @@ func NewTemporalAgentCommand(cctx *CommandContext, parent *TemporalCommand) *Tem
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalAgentFailuresCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalAgentStateCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalAgentTimelineCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalAgentToolSpecCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalAgentTraceCommand(cctx, &s).Command)
@@ -750,6 +751,35 @@ func NewTemporalAgentFailuresCommand(cctx *CommandContext, parent *TemporalAgent
 	s.Command.Flags().StringVar(&s.ErrorContains, "error-contains", "", "Filter failures to only those containing this substring in the error message. Case-insensitive matching.")
 	s.Command.Flags().BoolVar(&s.LeafOnly, "leaf-only", false, "Show only leaf failures (workflows with no failing children). When enabled, parent workflows that failed due to child workflow failures are excluded, showing only the deepest failure in each chain. This de-duplicates failures by showing only the root cause.")
 	s.Command.Flags().BoolVar(&s.CompactErrors, "compact-errors", false, "Extract the core error message, stripping wrapper context. Removes verbose details like workflow IDs, run IDs, and event IDs from error messages, leaving just the essential error information.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalAgentStateCommand struct {
+	Parent  *TemporalAgentCommand
+	Command cobra.Command
+	WorkflowReferenceOptions
+	IncludeDetails bool
+}
+
+func NewTemporalAgentStateCommand(cctx *CommandContext, parent *TemporalAgentCommand) *TemporalAgentStateCommand {
+	var s TemporalAgentStateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "state [flags]"
+	s.Command.Short = "Show the current state of a workflow execution"
+	if hasHighlighting {
+		s.Command.Long = "Display the current state of a running or completed workflow execution,\nincluding pending activities, pending child workflows, pending signals,\nand available query handlers.\n\nThis provides a snapshot of what a workflow is currently doing or waiting\nfor, optimized for AI agent consumption.\n\nBasic usage:\n\n\x1b[1mtemporal agent state \\\n    --workflow-id YourWorkflowId \\\n    --namespace YourNamespace\x1b[0m\n\nShow detailed pending activity information:\n\n\x1b[1mtemporal agent state \\\n    --workflow-id YourWorkflowId \\\n    --namespace YourNamespace \\\n    --include-details\x1b[0m"
+	} else {
+		s.Command.Long = "Display the current state of a running or completed workflow execution,\nincluding pending activities, pending child workflows, pending signals,\nand available query handlers.\n\nThis provides a snapshot of what a workflow is currently doing or waiting\nfor, optimized for AI agent consumption.\n\nBasic usage:\n\n```\ntemporal agent state \\\n    --workflow-id YourWorkflowId \\\n    --namespace YourNamespace\n```\n\nShow detailed pending activity information:\n\n```\ntemporal agent state \\\n    --workflow-id YourWorkflowId \\\n    --namespace YourNamespace \\\n    --include-details\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().BoolVar(&s.IncludeDetails, "include-details", false, "Include detailed information about pending items, such as activity inputs and retry state.")
+	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
