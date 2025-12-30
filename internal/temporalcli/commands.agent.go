@@ -12,11 +12,11 @@ import (
 
 // cliClientProvider implements agent.ClientProvider using the CLI's client options.
 type cliClientProvider struct {
-	cctx           *CommandContext
-	clientOptions  *ClientOptions
-	clients        map[string]client.Client
-	primaryClient  client.Client
-	primaryNS      string
+	cctx          *CommandContext
+	clientOptions *ClientOptions
+	clients       map[string]client.Client
+	primaryClient client.Client
+	primaryNS     string
 }
 
 func newCLIClientProvider(cctx *CommandContext, clientOptions *ClientOptions) (*cliClientProvider, error) {
@@ -100,6 +100,7 @@ func (c *TemporalAgentFailuresCommand) run(cctx *CommandContext, args []string) 
 		FollowNamespaces: c.FollowNamespaces,
 		MaxDepth:         c.Depth,
 		Limit:            c.Limit,
+		ErrorContains:    c.ErrorContains,
 	}
 
 	// Add the main namespace to follow namespaces if following children
@@ -198,4 +199,3 @@ func (c *TemporalAgentTimelineCommand) run(cctx *CommandContext, args []string) 
 	// Output JSON
 	return cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
 }
-
