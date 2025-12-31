@@ -206,6 +206,36 @@ type PendingSignal struct {
 	SignalName string `json:"signal_name"`
 }
 
+// PendingNexusOperation represents a Nexus operation that is currently pending.
+type PendingNexusOperation struct {
+	// Endpoint is the Nexus endpoint name.
+	Endpoint string `json:"endpoint"`
+	// Service is the Nexus service name.
+	Service string `json:"service"`
+	// Operation is the Nexus operation name.
+	Operation string `json:"operation"`
+	// OperationToken is the async operation token (for async operations).
+	OperationToken string `json:"operation_token,omitempty"`
+	// State is the current state (Scheduled, Started, BackingOff, Blocked).
+	State string `json:"state"`
+	// Attempt is the current attempt number.
+	Attempt int32 `json:"attempt"`
+	// ScheduledTime when the operation was scheduled.
+	ScheduledTime *time.Time `json:"scheduled_time,omitempty"`
+	// ScheduledEventID is the event ID of the NexusOperationScheduled event.
+	ScheduledEventID int64 `json:"scheduled_event_id,omitempty"`
+	// LastAttemptCompleteTime when the last attempt completed.
+	LastAttemptCompleteTime *time.Time `json:"last_attempt_complete_time,omitempty"`
+	// NextAttemptScheduleTime when the next attempt is scheduled.
+	NextAttemptScheduleTime *time.Time `json:"next_attempt_schedule_time,omitempty"`
+	// LastFailure contains the last attempt's failure message if retrying.
+	LastFailure string `json:"last_failure,omitempty"`
+	// BlockedReason provides additional information if the operation is blocked.
+	BlockedReason string `json:"blocked_reason,omitempty"`
+	// ScheduleToCloseTimeoutSec is the timeout for the operation in seconds.
+	ScheduleToCloseTimeoutSec int64 `json:"schedule_to_close_timeout_sec,omitempty"`
+}
+
 // WorkflowStateResult is the output of the state command.
 type WorkflowStateResult struct {
 	// Workflow identifies the workflow.
@@ -228,6 +258,10 @@ type WorkflowStateResult struct {
 	PendingChildWorkflows []PendingChildWorkflow `json:"pending_child_workflows,omitempty"`
 	// PendingChildWorkflowCount is the count of pending child workflows.
 	PendingChildWorkflowCount int `json:"pending_child_workflow_count"`
+	// PendingNexusOperations is the list of currently pending Nexus operations.
+	PendingNexusOperations []PendingNexusOperation `json:"pending_nexus_operations,omitempty"`
+	// PendingNexusOperationCount is the count of pending Nexus operations.
+	PendingNexusOperationCount int `json:"pending_nexus_operation_count"`
 	// TaskQueue is the task queue the workflow is running on.
 	TaskQueue string `json:"task_queue,omitempty"`
 	// HistoryLength is the number of events in the workflow history.

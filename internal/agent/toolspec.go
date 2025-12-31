@@ -151,8 +151,8 @@ Categories include: workflow, activity, timer, child_workflow, signal, update, a
 		{
 			Name: "get_workflow_state",
 			Description: `Get the current state of a workflow execution.
-Returns information about pending activities, pending child workflows, and workflow status.
-Useful for understanding what a running workflow is currently doing or waiting for.`,
+Returns information about pending activities, pending child workflows, pending Nexus operations, and workflow status.
+Useful for understanding what a running workflow is currently doing or waiting for, including cross-namespace Nexus calls.`,
 			Parameters: ToolParameters{
 				Type: "object",
 				Properties: map[string]ToolProperty{
