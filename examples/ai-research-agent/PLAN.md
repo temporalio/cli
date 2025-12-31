@@ -171,7 +171,7 @@ temporal agent trace --workflow-id <id> -o json | jq '.root_cause'
 **Run and verify:**
 ```bash
 temporal agent timeline --workflow-id <id> -o json | jq '.events[].type'
-# Should show: ActivityScheduled, ActivityCompleted, ActivityScheduled...
+# Should show: ActivityTaskScheduled, ActivityCompleted, ActivityTaskScheduled...
 ```
 
 ---
@@ -185,7 +185,7 @@ temporal agent timeline --workflow-id <id> -o json | jq '.events[].type'
 
 **Verify parallelism:**
 ```bash
-temporal agent timeline --workflow-id <id> -o json | jq '[.events[] | select(.type == "ActivityScheduled")] | length'
+temporal agent timeline --workflow-id <id> -o json | jq '[.events[] | select(.type == "ActivityTaskScheduled")] | length'
 # Should show 3 activities scheduled at nearly the same time
 
 # Or visualize it - parallel activities appear at the same time in the diagram:
