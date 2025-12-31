@@ -33,11 +33,14 @@ func ResearchWorkflow(ctx workflow.Context, req shared.ResearchRequest) (*shared
 	logger.Info("Got sub-questions", "count", len(subQuestions))
 
 	// Step 2: Research all sub-questions in parallel
-	// Use a shorter timeout and limited retries for research activities
+	// Use a shorter timeout with exponential backoff retries for transient failures
 	researchCtx := workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
 		StartToCloseTimeout: 10 * time.Second,
 		RetryPolicy: &temporal.RetryPolicy{
-			MaximumAttempts: 3,
+			InitialInterval:    1 * time.Second,  // First retry after 1s
+			BackoffCoefficient: 2.0,              // Double the delay each retry
+			MaximumInterval:    10 * time.Second, // Cap at 10s between retries
+			MaximumAttempts:    3,                // Try up to 3 times total
 		},
 	})
 
