@@ -316,4 +316,3 @@ func ParseWorkflowStatus(s string) enums.WorkflowExecutionStatus {
 		return enums.WORKFLOW_EXECUTION_STATUS_UNSPECIFIED
 	}
 }
-

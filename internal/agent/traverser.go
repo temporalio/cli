@@ -367,49 +367,51 @@ func (f *FailuresFinder) FindFailures(ctx context.Context, namespace string) (*F
 			}
 
 			// If following children, trace the workflow
+			// Always trace to get detailed root cause (activity name, actual error)
+			// Use MaxDepth=1 to only trace the current workflow's activities (no child following)
+			// unless FollowChildren is enabled
+			maxDepth := 1 // Only the root workflow, don't follow children
 			if f.opts.FollowChildren {
-				traverser := NewChainTraverser(f.clientProvider, TraverserOptions{
-					FollowNamespaces: f.opts.FollowNamespaces,
-					MaxDepth:         f.opts.MaxDepth,
-				})
+				maxDepth = f.opts.MaxDepth // 0 = unlimited, or user-specified limit
+			}
+			traverser := NewChainTraverser(f.clientProvider, TraverserOptions{
+				FollowNamespaces: f.opts.FollowNamespaces,
+				MaxDepth:         maxDepth,
+			})
 
-				traceResult, err := traverser.Trace(ctx, namespace, exec.GetExecution().GetWorkflowId(), exec.GetExecution().GetRunId())
-				if err != nil {
-					// Log but continue
-					report.RootCause = fmt.Sprintf("failed to trace: %v", err)
-				} else if traceResult != nil {
-					report.Depth = traceResult.Depth
-					report.Chain = make([]string, len(traceResult.Chain))
-					for i, node := range traceResult.Chain {
-						report.Chain[i] = node.WorkflowID
+			traceResult, err := traverser.Trace(ctx, namespace, exec.GetExecution().GetWorkflowId(), exec.GetExecution().GetRunId())
+			if err != nil {
+				// Log but continue
+				report.RootCause = fmt.Sprintf("failed to trace: %v", err)
+			} else if traceResult != nil {
+				report.Depth = traceResult.Depth
+				report.Chain = make([]string, len(traceResult.Chain))
+				for i, node := range traceResult.Chain {
+					report.Chain[i] = node.WorkflowID
+				}
+				if traceResult.RootCause != nil {
+					if traceResult.RootCause.Activity != "" {
+						report.RootCause = fmt.Sprintf("%s: %s - %s", traceResult.RootCause.Type, traceResult.RootCause.Activity, traceResult.RootCause.Error)
+					} else {
+						report.RootCause = fmt.Sprintf("%s: %s", traceResult.RootCause.Type, traceResult.RootCause.Error)
 					}
-					if traceResult.RootCause != nil {
-						if traceResult.RootCause.Activity != "" {
-							report.RootCause = fmt.Sprintf("%s: %s - %s", traceResult.RootCause.Type, traceResult.RootCause.Activity, traceResult.RootCause.Error)
-						} else {
-							report.RootCause = fmt.Sprintf("%s: %s", traceResult.RootCause.Type, traceResult.RootCause.Error)
-						}
-						if len(traceResult.Chain) > 0 {
-							lastNode := traceResult.Chain[len(traceResult.Chain)-1]
-							report.LeafFailure = &WorkflowRef{
-								Namespace:  lastNode.Namespace,
-								WorkflowID: lastNode.WorkflowID,
-								RunID:      lastNode.RunID,
-							}
-						}
-					}
-
-					// Track parent workflows for leaf-only filtering
-					// All workflows in the chain except the last one are parents
-					if f.opts.LeafOnly && len(traceResult.Chain) > 1 {
-						for i := 0; i < len(traceResult.Chain)-1; i++ {
-							parentWorkflows[traceResult.Chain[i].WorkflowID] = true
+					if len(traceResult.Chain) > 0 {
+						lastNode := traceResult.Chain[len(traceResult.Chain)-1]
+						report.LeafFailure = &WorkflowRef{
+							Namespace:  lastNode.Namespace,
+							WorkflowID: lastNode.WorkflowID,
+							RunID:      lastNode.RunID,
 						}
 					}
 				}
-			} else {
-				// Just get the failure message from the workflow itself
-				report.RootCause = f.getWorkflowFailure(ctx, cl, exec.GetExecution().GetWorkflowId(), exec.GetExecution().GetRunId())
+
+				// Track parent workflows for leaf-only filtering
+				// All workflows in the chain except the last one are parents
+				if f.opts.LeafOnly && len(traceResult.Chain) > 1 {
+					for i := 0; i < len(traceResult.Chain)-1; i++ {
+						parentWorkflows[traceResult.Chain[i].WorkflowID] = true
+					}
+				}
 			}
 
 			// Filter by error message if specified
