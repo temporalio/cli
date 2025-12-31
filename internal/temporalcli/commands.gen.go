@@ -728,6 +728,7 @@ type TemporalAgentFailuresCommand struct {
 	LeafOnly         bool
 	CompactErrors    bool
 	GroupBy          StringEnum
+	Format           StringEnum
 }
 
 func NewTemporalAgentFailuresCommand(cctx *CommandContext, parent *TemporalAgentCommand) *TemporalAgentFailuresCommand {
@@ -754,6 +755,8 @@ func NewTemporalAgentFailuresCommand(cctx *CommandContext, parent *TemporalAgent
 	s.Command.Flags().BoolVar(&s.CompactErrors, "compact-errors", false, "Extract the core error message, stripping wrapper context. Removes verbose details like workflow IDs, run IDs, and event IDs from error messages, leaving just the essential error information.")
 	s.GroupBy = NewStringEnum([]string{"none", "type", "namespace", "status", "error"}, "none")
 	s.Command.Flags().Var(&s.GroupBy, "group-by", "Group failures by a field instead of listing them individually. Returns aggregated counts and summaries per group. Accepted values: none, type, namespace, status, error.")
+	s.Format = NewStringEnum([]string{"json", "mermaid"}, "json")
+	s.Command.Flags().Var(&s.Format, "format", "Output format. Use \"mermaid\" to generate a visual diagram. Accepted values: json, mermaid.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -767,6 +770,7 @@ type TemporalAgentStateCommand struct {
 	Command cobra.Command
 	WorkflowReferenceOptions
 	IncludeDetails bool
+	Format         StringEnum
 }
 
 func NewTemporalAgentStateCommand(cctx *CommandContext, parent *TemporalAgentCommand) *TemporalAgentStateCommand {
@@ -782,6 +786,8 @@ func NewTemporalAgentStateCommand(cctx *CommandContext, parent *TemporalAgentCom
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().BoolVar(&s.IncludeDetails, "include-details", false, "Include detailed information about pending items, such as activity inputs and retry state.")
+	s.Format = NewStringEnum([]string{"json", "mermaid"}, "json")
+	s.Command.Flags().Var(&s.Format, "format", "Output format. Use \"mermaid\" to generate a state diagram. Accepted values: json, mermaid.")
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -799,6 +805,7 @@ type TemporalAgentTimelineCommand struct {
 	IncludePayloads   bool
 	EventTypes        []string
 	ExcludeEventTypes []string
+	Format            StringEnum
 }
 
 func NewTemporalAgentTimelineCommand(cctx *CommandContext, parent *TemporalAgentCommand) *TemporalAgentTimelineCommand {
@@ -817,6 +824,8 @@ func NewTemporalAgentTimelineCommand(cctx *CommandContext, parent *TemporalAgent
 	s.Command.Flags().BoolVar(&s.IncludePayloads, "include-payloads", false, "Include activity and workflow payload data in the output.")
 	s.Command.Flags().StringArrayVar(&s.EventTypes, "event-types", nil, "Filter to specific event types. Can be passed multiple times.")
 	s.Command.Flags().StringArrayVar(&s.ExcludeEventTypes, "exclude-event-types", nil, "Exclude specific event types. Can be passed multiple times.")
+	s.Format = NewStringEnum([]string{"json", "mermaid"}, "json")
+	s.Command.Flags().Var(&s.Format, "format", "Output format. Use \"mermaid\" to generate a sequence diagram. Accepted values: json, mermaid.")
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -860,6 +869,7 @@ type TemporalAgentTraceCommand struct {
 	WorkflowReferenceOptions
 	FollowNamespaces []string
 	Depth            int
+	Format           StringEnum
 }
 
 func NewTemporalAgentTraceCommand(cctx *CommandContext, parent *TemporalAgentCommand) *TemporalAgentTraceCommand {
@@ -876,6 +886,8 @@ func NewTemporalAgentTraceCommand(cctx *CommandContext, parent *TemporalAgentCom
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringArrayVar(&s.FollowNamespaces, "follow-namespaces", nil, "Additional namespaces to follow when traversing child workflows. Can be passed multiple times.")
 	s.Command.Flags().IntVar(&s.Depth, "depth", 0, "Maximum depth to traverse when following child workflows. Zero means unlimited.")
+	s.Format = NewStringEnum([]string{"json", "mermaid"}, "json")
+	s.Command.Flags().Var(&s.Format, "format", "Output format. Use \"mermaid\" to generate a visual flowchart diagram. Accepted values: json, mermaid.")
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {

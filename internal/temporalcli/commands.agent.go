@@ -156,7 +156,11 @@ func (c *TemporalAgentFailuresCommand) run(cctx *CommandContext, args []string) 
 		return fmt.Errorf("failed to find failures: %w", err)
 	}
 
-	// Output JSON
+	// Output based on format
+	if c.Format.Value == "mermaid" {
+		cctx.Printer.Println(agent.FailuresToMermaid(result))
+		return nil
+	}
 	return cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
 }
 
@@ -198,7 +202,11 @@ func (c *TemporalAgentTraceCommand) run(cctx *CommandContext, args []string) err
 		return fmt.Errorf("failed to trace workflow: %w", err)
 	}
 
-	// Output JSON
+	// Output based on format
+	if c.Format.Value == "mermaid" {
+		cctx.Printer.Println(agent.TraceToMermaid(result))
+		return nil
+	}
 	return cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
 }
 
@@ -225,7 +233,11 @@ func (c *TemporalAgentTimelineCommand) run(cctx *CommandContext, args []string) 
 		return fmt.Errorf("failed to generate timeline: %w", err)
 	}
 
-	// Output JSON
+	// Output based on format
+	if c.Format.Value == "mermaid" {
+		cctx.Printer.Println(agent.TimelineToMermaid(result))
+		return nil
+	}
 	return cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
 }
 
@@ -249,7 +261,11 @@ func (c *TemporalAgentStateCommand) run(cctx *CommandContext, args []string) err
 		return fmt.Errorf("failed to get workflow state: %w", err)
 	}
 
-	// Output JSON
+	// Output based on format
+	if c.Format.Value == "mermaid" {
+		cctx.Printer.Println(agent.StateToMermaid(result))
+		return nil
+	}
 	return cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
 }
 
