@@ -86,7 +86,31 @@ temporal agent state --workflow-id order-123 --namespace prod -o json
 
 # Get detailed state including memo and search attributes
 temporal agent state --workflow-id order-123 --namespace prod --include-details -o json
+
+# Cross-namespace traversal (Nexus/child workflows in other namespaces)
+TEMPORAL_API_KEY_FINANCE_NS="$FINANCE_KEY" \
+temporal agent trace --workflow-id order-123 --namespace commerce-ns \
+  --follow-namespaces finance-ns -o json
 ```
+
+### Cross-Namespace Traversal
+
+When tracing workflows that span multiple namespaces (via Nexus or child workflows), you can provide namespace-specific API keys using environment variables:
+
+```bash
+# Format: TEMPORAL_API_KEY_<NAMESPACE> where namespace is normalized
+# (dots/dashes replaced with underscores, uppercased)
+
+export TEMPORAL_API_KEY="primary-ns-key"
+export TEMPORAL_API_KEY_FINANCE_NS="finance-ns-key"
+export TEMPORAL_API_KEY_LOGISTICS_NS="logistics-ns-key"
+
+# Now trace can follow Nexus operations and child workflows across namespaces
+temporal agent trace --workflow-id order-123 --namespace commerce-ns \
+  --follow-namespaces finance-ns,logistics-ns -o json
+```
+
+This enables full chain traversal across namespace boundaries while respecting per-namespace access controls.
 
 ### Output
 
