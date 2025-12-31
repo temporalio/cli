@@ -48,13 +48,14 @@ func (s *StateExtractor) GetState(ctx context.Context, namespace, workflowID, ru
 			WorkflowID: workflowID,
 			RunID:      execInfo.Execution.GetRunId(),
 		},
-		WorkflowType:              execInfo.Type.GetName(),
-		Status:                    WorkflowStatusFromEnum(execInfo.Status),
-		IsRunning:                 execInfo.Status == enums.WORKFLOW_EXECUTION_STATUS_RUNNING,
-		TaskQueue:                 execInfo.GetTaskQueue(),
-		HistoryLength:             execInfo.HistoryLength,
-		PendingActivityCount:      len(desc.PendingActivities),
-		PendingChildWorkflowCount: len(desc.PendingChildren),
+		WorkflowType:               execInfo.Type.GetName(),
+		Status:                     WorkflowStatusFromEnum(execInfo.Status),
+		IsRunning:                  execInfo.Status == enums.WORKFLOW_EXECUTION_STATUS_RUNNING,
+		TaskQueue:                  execInfo.GetTaskQueue(),
+		HistoryLength:              execInfo.HistoryLength,
+		PendingActivityCount:       len(desc.PendingActivities),
+		PendingChildWorkflowCount:  len(desc.PendingChildren),
+		PendingNexusOperationCount: len(desc.PendingNexusOperations),
 	}
 
 	// Set times
@@ -113,6 +114,45 @@ func (s *StateExtractor) GetState(ctx context.Context, namespace, workflowID, ru
 		result.PendingChildWorkflows = append(result.PendingChildWorkflows, pendingChild)
 	}
 
+	// Process pending Nexus operations
+	for _, pn := range desc.PendingNexusOperations {
+		pendingNexus := PendingNexusOperation{
+			Endpoint:         pn.Endpoint,
+			Service:          pn.Service,
+			Operation:        pn.Operation,
+			OperationToken:   pn.OperationToken,
+			State:            pendingNexusOperationStateToString(pn.State),
+			Attempt:          pn.Attempt,
+			ScheduledEventID: pn.ScheduledEventId,
+			BlockedReason:    pn.BlockedReason,
+		}
+
+		if pn.ScheduledTime != nil {
+			t := pn.ScheduledTime.AsTime()
+			pendingNexus.ScheduledTime = &t
+		}
+
+		if pn.LastAttemptCompleteTime != nil {
+			t := pn.LastAttemptCompleteTime.AsTime()
+			pendingNexus.LastAttemptCompleteTime = &t
+		}
+
+		if pn.NextAttemptScheduleTime != nil {
+			t := pn.NextAttemptScheduleTime.AsTime()
+			pendingNexus.NextAttemptScheduleTime = &t
+		}
+
+		if pn.LastAttemptFailure != nil && pn.LastAttemptFailure.Message != "" {
+			pendingNexus.LastFailure = pn.LastAttemptFailure.Message
+		}
+
+		if pn.ScheduleToCloseTimeout != nil {
+			pendingNexus.ScheduleToCloseTimeoutSec = int64(pn.ScheduleToCloseTimeout.AsDuration().Seconds())
+		}
+
+		result.PendingNexusOperations = append(result.PendingNexusOperations, pendingNexus)
+	}
+
 	// Process memo if present
 	if s.opts.IncludeDetails && execInfo.Memo != nil && len(execInfo.Memo.Fields) > 0 {
 		result.Memo = make(map[string]any)
@@ -167,5 +207,21 @@ func parentClosePolicyToString(policy enums.ParentClosePolicy) string {
 		return "RequestCancel"
 	default:
 		return "Unspecified"
+	}
+}
+
+// pendingNexusOperationStateToString converts a pending Nexus operation state to a string.
+func pendingNexusOperationStateToString(state enums.PendingNexusOperationState) string {
+	switch state {
+	case enums.PENDING_NEXUS_OPERATION_STATE_SCHEDULED:
+		return "Scheduled"
+	case enums.PENDING_NEXUS_OPERATION_STATE_BACKING_OFF:
+		return "BackingOff"
+	case enums.PENDING_NEXUS_OPERATION_STATE_STARTED:
+		return "Started"
+	case enums.PENDING_NEXUS_OPERATION_STATE_BLOCKED:
+		return "Blocked"
+	default:
+		return "Unknown"
 	}
 }
