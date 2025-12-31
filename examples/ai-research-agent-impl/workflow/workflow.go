@@ -30,13 +30,18 @@ func ResearchWorkflow(ctx workflow.Context, req shared.ResearchRequest) (*shared
 	}
 	logger.Info("Got sub-questions", "count", len(subQuestions))
 
-	// Step 2: Research each sub-question
-	logger.Info("Researching sub-questions")
-	researchedQuestions := make([]shared.SubQuestion, len(subQuestions))
+	// Step 2: Research all sub-questions in parallel
+	logger.Info("Researching sub-questions in parallel")
+	futures := make([]workflow.Future, len(subQuestions))
 	for i, sq := range subQuestions {
+		futures[i] = workflow.ExecuteActivity(ctx, activity.ResearchSubQuestion, sq)
+	}
+
+	// Wait for all research activities to complete
+	researchedQuestions := make([]shared.SubQuestion, len(subQuestions))
+	for i, future := range futures {
 		var researched shared.SubQuestion
-		err := workflow.ExecuteActivity(ctx, activity.ResearchSubQuestion, sq).Get(ctx, &researched)
-		if err != nil {
+		if err := future.Get(ctx, &researched); err != nil {
 			return nil, err
 		}
 		researchedQuestions[i] = researched
