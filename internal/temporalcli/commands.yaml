@@ -4978,7 +4978,8 @@ option-sets:
       - name: run-id
         type: string
         short: r
-        description: Run ID.
+        description: |
+          Run ID. If not specified, the latest run is used.
 
   - name: deployment-name
     options:
