@@ -3,6 +3,7 @@ package workflow
 import (
 	"time"
 
+	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
 
 	"github.com/temporalio/cli/examples/ai-research-agent-impl/activity"
@@ -31,9 +32,12 @@ func ResearchWorkflow(ctx workflow.Context, req shared.ResearchRequest) (*shared
 	logger.Info("Got sub-questions", "count", len(subQuestions))
 
 	// Step 2: Research all sub-questions in parallel
-	// Use a shorter timeout for research activities
+	// Use a shorter timeout and limited retries for research activities
 	researchCtx := workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
 		StartToCloseTimeout: 10 * time.Second,
+		RetryPolicy: &temporal.RetryPolicy{
+			MaximumAttempts: 3,
+		},
 	})
 
 	logger.Info("Researching sub-questions in parallel")

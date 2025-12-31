@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 
+	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/sdk/client"
 
 	"github.com/temporalio/cli/examples/ai-research-agent-impl/shared"
@@ -25,9 +26,12 @@ func main() {
 	defer c.Close()
 
 	// Set up the workflow options
+	// WorkflowIDConflictPolicy terminates any existing workflow with the same ID
+	// and starts a new run
 	options := client.StartWorkflowOptions{
-		ID:        "research-workflow",
-		TaskQueue: shared.TaskQueue,
+		ID:                       "research-workflow",
+		TaskQueue:                shared.TaskQueue,
+		WorkflowIDConflictPolicy: enums.WORKFLOW_ID_CONFLICT_POLICY_TERMINATE_EXISTING,
 	}
 
 	// Create the request
@@ -55,5 +59,3 @@ func main() {
 	fmt.Println("Question:", result.Question)
 	fmt.Println("Answer:", result.Answer)
 }
-
-
