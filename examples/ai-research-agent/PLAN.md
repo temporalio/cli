@@ -13,6 +13,86 @@ Before starting, make sure you have:
 
 ---
 
+## Teaching Your AI About Temporal Agent CLI
+
+Your AI assistant needs to know about the `temporal agent` commands. Here are three ways to set this up:
+
+### Option 1: Add to AI Rules/Instructions (Recommended)
+
+**For Cursor:** Copy the `.cursorrules` file from this example to your project:
+
+```bash
+# Copy the ready-to-use rules file
+cp examples/ai-research-agent/.cursorrules ./your-project/
+```
+
+Or create your own `.cursorrules` file with this content:
+
+**For other AIs:** Add to custom instructions, system prompt, or project rules:
+
+```
+When debugging Temporal workflows, use the `temporal agent` CLI commands:
+
+- `temporal agent failures --since 1h` - Find recent failures
+- `temporal agent trace --workflow-id <id>` - Trace workflow chain to leaf failure
+- `temporal agent timeline --workflow-id <id>` - Get event timeline
+- `temporal agent state --workflow-id <id>` - Check pending activities/children
+
+Key flags:
+- `--follow-children` - Follow child workflows
+- `--leaf-only` - Show only leaf failures (de-duplicate chains)
+- `--compact-errors` - Strip wrapper context from errors
+- `--group-by error` - Group failures by error type
+- `--format mermaid` - Output visual diagrams
+
+Always output JSON with `-o json` for structured data, or `--format mermaid` for diagrams.
+```
+
+### Option 2: Load Tool Spec (For Agent Frameworks)
+
+Generate tool specifications for your AI framework:
+
+```bash
+# For OpenAI function calling
+temporal agent tool-spec --format openai > temporal-tools.json
+
+# For Claude/Anthropic
+temporal agent tool-spec --format claude > temporal-tools.json
+
+# For LangChain
+temporal agent tool-spec --format langchain > temporal-tools.json
+```
+
+Then load this into your agent framework's tool configuration.
+
+### Option 3: Prompt at Session Start
+
+At the beginning of each session, tell your AI:
+
+> "I'm using Temporal for workflow orchestration. When I have issues, use the `temporal agent` CLI to debug. The commands are:
+> - `temporal agent failures` - find failures
+> - `temporal agent trace` - trace workflow chains  
+> - `temporal agent timeline` - see event history
+> - `temporal agent state` - check pending work
+> 
+> Use `--format mermaid` to show me diagrams."
+
+### Verification
+
+Test that your AI knows the commands by asking:
+
+> "How would you debug a failed Temporal workflow?"
+
+**Expected response should include:**
+```bash
+temporal agent trace --workflow-id <id> -o json
+temporal agent failures --since 1h --follow-children -o json
+```
+
+If the AI suggests looking at logs or using `temporal workflow describe`, remind it about the agent commands.
+
+---
+
 ## Phase 1: Basic Workflow
 
 ### Prompt 1.1 — Initial Setup
