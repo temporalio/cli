@@ -129,6 +129,7 @@ func (c *TemporalAgentFailuresCommand) run(cctx *CommandContext, args []string) 
 		ErrorContains:    c.ErrorContains,
 		LeafOnly:         c.LeafOnly,
 		CompactErrors:    c.CompactErrors,
+		GroupBy:          c.GroupBy.Value,
 	}
 
 	// Add the main namespace to follow namespaces if following children

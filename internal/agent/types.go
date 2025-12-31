@@ -80,11 +80,31 @@ type FailureReport struct {
 
 // FailuresResult is the output of the failures command.
 type FailuresResult struct {
-	Failures []FailureReport `json:"failures"`
+	Failures []FailureReport `json:"failures,omitempty"`
+	// Groups contains aggregated failure groups (when --group-by is used).
+	Groups []FailureGroup `json:"groups,omitempty"`
 	// TotalCount is the total number of failures matching the query (may be more than returned).
 	TotalCount int `json:"total_count,omitempty"`
 	// Query is the visibility query used.
 	Query string `json:"query,omitempty"`
+	// GroupedBy indicates what field failures were grouped by (if any).
+	GroupedBy string `json:"grouped_by,omitempty"`
+}
+
+// FailureGroup represents a group of failures aggregated by a common field.
+type FailureGroup struct {
+	// Key is the grouping key value.
+	Key string `json:"key"`
+	// Count is the number of failures in this group.
+	Count int `json:"count"`
+	// Percentage of total failures.
+	Percentage float64 `json:"percentage"`
+	// Sample is a sample failure from this group.
+	Sample *FailureReport `json:"sample,omitempty"`
+	// FirstSeen is the timestamp of the earliest failure in this group.
+	FirstSeen *time.Time `json:"first_seen,omitempty"`
+	// LastSeen is the timestamp of the most recent failure in this group.
+	LastSeen *time.Time `json:"last_seen,omitempty"`
 }
 
 // TimelineEvent represents a single event in a workflow timeline.

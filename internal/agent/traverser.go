@@ -278,6 +278,8 @@ type FailuresOptions struct {
 	LeafOnly bool
 	// CompactErrors, when true, extracts the core error message and strips wrapper context.
 	CompactErrors bool
+	// GroupBy specifies how to group failures. Valid values: "none", "type", "namespace", "status", "error".
+	GroupBy string
 }
 
 // FailuresFinder finds recent workflow failures.
@@ -433,11 +435,96 @@ func (f *FailuresFinder) FindFailures(ctx context.Context, namespace string) (*F
 		failures = leafFailures
 	}
 
+	// Apply grouping if requested
+	if f.opts.GroupBy != "" && f.opts.GroupBy != "none" {
+		groups := f.groupFailures(failures)
+		return &FailuresResult{
+			Groups:     groups,
+			TotalCount: len(failures),
+			Query:      query,
+			GroupedBy:  f.opts.GroupBy,
+		}, nil
+	}
+
 	return &FailuresResult{
 		Failures:   failures,
 		TotalCount: len(failures),
 		Query:      query,
 	}, nil
+}
+
+// groupFailures groups failures by the specified field.
+func (f *FailuresFinder) groupFailures(failures []FailureReport) []FailureGroup {
+	groupMap := make(map[string]*FailureGroup)
+
+	for i := range failures {
+		report := &failures[i]
+		key := f.getGroupKey(report)
+
+		if group, ok := groupMap[key]; ok {
+			group.Count++
+			// Update time bounds
+			if report.Timestamp != nil {
+				if group.FirstSeen == nil || report.Timestamp.Before(*group.FirstSeen) {
+					group.FirstSeen = report.Timestamp
+				}
+				if group.LastSeen == nil || report.Timestamp.After(*group.LastSeen) {
+					group.LastSeen = report.Timestamp
+				}
+			}
+		} else {
+			groupMap[key] = &FailureGroup{
+				Key:       key,
+				Count:     1,
+				Sample:    report,
+				FirstSeen: report.Timestamp,
+				LastSeen:  report.Timestamp,
+			}
+		}
+	}
+
+	// Convert to slice and calculate percentages
+	total := len(failures)
+	groups := make([]FailureGroup, 0, len(groupMap))
+	for _, group := range groupMap {
+		group.Percentage = float64(group.Count) / float64(total) * 100
+		groups = append(groups, *group)
+	}
+
+	// Sort by count descending
+	for i := 0; i < len(groups); i++ {
+		for j := i + 1; j < len(groups); j++ {
+			if groups[j].Count > groups[i].Count {
+				groups[i], groups[j] = groups[j], groups[i]
+			}
+		}
+	}
+
+	return groups
+}
+
+// getGroupKey returns the grouping key for a failure report.
+func (f *FailuresFinder) getGroupKey(report *FailureReport) string {
+	switch f.opts.GroupBy {
+	case "type":
+		// Extract workflow type from the leaf failure or root workflow
+		if report.LeafFailure != nil {
+			return report.LeafFailure.WorkflowID
+		}
+		return report.RootWorkflow.WorkflowID
+	case "namespace":
+		if report.LeafFailure != nil {
+			return report.LeafFailure.Namespace
+		}
+		return report.RootWorkflow.Namespace
+	case "status":
+		return report.Status
+	case "error":
+		// Use the root cause as the key (compacted for grouping)
+		return CompactError(report.RootCause)
+	default:
+		return "unknown"
+	}
 }
 
 func (f *FailuresFinder) buildQuery() string {

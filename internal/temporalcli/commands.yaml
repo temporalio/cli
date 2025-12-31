@@ -4570,6 +4570,18 @@ commands:
           Extract the core error message, stripping wrapper context.
           Removes verbose details like workflow IDs, run IDs, and event IDs
           from error messages, leaving just the essential error information.
+      - name: group-by
+        type: string-enum
+        description: |
+          Group failures by a field instead of listing them individually.
+          Returns aggregated counts and summaries per group.
+        enum-values:
+          - none
+          - type
+          - namespace
+          - status
+          - error
+        default: none
 
   - name: temporal agent trace
     summary: Trace a workflow through its child chain to the deepest failure
