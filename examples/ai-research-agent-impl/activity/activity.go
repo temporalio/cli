@@ -2,6 +2,8 @@ package activity
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	"go.temporal.io/sdk/activity"
 
@@ -9,14 +11,28 @@ import (
 )
 
 // Research performs research for a given question.
-// Currently returns a hardcoded answer - will be expanded to perform actual research.
+// Simulates processing by sleeping, then returns a formatted response.
 func Research(ctx context.Context, req shared.ResearchRequest) (*shared.ResearchResult, error) {
 	logger := activity.GetLogger(ctx)
 	logger.Info("Research activity started", "question", req.Question)
 
-	// Hardcoded response for now
-	answer := "This is a hardcoded answer. The research agent will be expanded to break down " +
-		"complex questions into sub-questions, research each one, and synthesize the results."
+	// Simulate processing time
+	logger.Info("Processing question...")
+	select {
+	case <-time.After(2 * time.Second):
+		// Processing complete
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+
+	// Generate a formatted response
+	answer := fmt.Sprintf("After analyzing the question '%s', here are the findings:\n\n"+
+		"1. This question requires further breakdown into sub-questions\n"+
+		"2. Each sub-question would be researched independently\n"+
+		"3. Results would be synthesized into a final answer\n\n"+
+		"[Processed at: %s]",
+		req.Question,
+		time.Now().Format(time.RFC3339))
 
 	result := &shared.ResearchResult{
 		Question: req.Question,
