@@ -80,11 +80,12 @@ type FailureReport struct {
 
 // FailuresResult is the output of the failures command.
 type FailuresResult struct {
-	Failures []FailureReport `json:"failures,omitempty"`
+	// Failures is the list of failure reports (always present, may be empty).
+	Failures []FailureReport `json:"failures"`
 	// Groups contains aggregated failure groups (when --group-by is used).
 	Groups []FailureGroup `json:"groups,omitempty"`
-	// TotalCount is the total number of failures matching the query (may be more than returned).
-	TotalCount int `json:"total_count,omitempty"`
+	// TotalCount is the total number of failures matching the query.
+	TotalCount int `json:"total_count"`
 	// Query is the visibility query used.
 	Query string `json:"query,omitempty"`
 	// GroupedBy indicates what field failures were grouped by (if any).

@@ -326,7 +326,7 @@ func (f *FailuresFinder) FindFailures(ctx context.Context, namespace string) (*F
 	query := f.buildQuery()
 
 	// List workflows
-	var failures []FailureReport
+	failures := make([]FailureReport, 0) // Initialize as empty slice, not nil (for JSON serialization)
 	var nextPageToken []byte
 
 	// Track parent workflow IDs for leaf-only filtering
