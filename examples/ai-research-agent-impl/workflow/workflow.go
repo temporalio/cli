@@ -1,6 +1,7 @@
 package workflow
 
 import (
+	"fmt"
 	"time"
 
 	"go.temporal.io/sdk/temporal"
@@ -47,30 +48,42 @@ func ResearchWorkflow(ctx workflow.Context, req shared.ResearchRequest) (*shared
 	}
 
 	// Wait for all research activities to complete
-	researchedQuestions := make([]shared.SubQuestion, len(subQuestions))
+	// Tolerate partial failures: only fail if more than half fail
+	var successfulResults []shared.SubQuestion
+	var failedCount int
+
 	for i, future := range futures {
 		var researched shared.SubQuestion
 		if err := future.Get(ctx, &researched); err != nil {
-			return nil, err
+			logger.Warn("Research activity failed", "subQuestion", subQuestions[i].Question, "error", err)
+			failedCount++
+		} else {
+			successfulResults = append(successfulResults, researched)
 		}
-		researchedQuestions[i] = researched
 	}
 
-	// Step 3: Synthesize the answers
+	// Check if we have enough successful results (more than half must succeed)
+	totalCount := len(subQuestions)
+	if failedCount > totalCount/2 {
+		return nil, fmt.Errorf("too many research activities failed: %d out of %d", failedCount, totalCount)
+	}
+
+	logger.Info("Research completed with partial results", "successful", len(successfulResults), "failed", failedCount)
+
+	// Step 3: Synthesize the answers from successful results
 	logger.Info("Synthesizing answers")
 	var answer string
-	err = workflow.ExecuteActivity(ctx, activity.SynthesizeAnswers, req.Question, researchedQuestions).Get(ctx, &answer)
+	err = workflow.ExecuteActivity(ctx, activity.SynthesizeAnswers, req.Question, successfulResults).Get(ctx, &answer)
 	if err != nil {
 		return nil, err
 	}
 
 	result := &shared.ResearchResult{
 		Question:     req.Question,
-		SubQuestions: researchedQuestions,
+		SubQuestions: successfulResults,
 		Answer:       answer,
 	}
 
 	logger.Info("ResearchWorkflow completed")
 	return result, nil
 }
-
