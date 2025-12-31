@@ -2,15 +2,32 @@ package temporalcli
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
 
 	"github.com/temporalio/cli/internal/agent"
-	"github.com/temporalio/cli/internal/printer"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/sdk/client"
 )
+
+// printAgentOutput outputs a result in the specified format.
+// For mermaid, it outputs the mermaid diagram.
+// For json (or unspecified), it outputs properly formatted JSON.
+func printAgentOutput(cctx *CommandContext, format string, result any, toMermaid func() string) error {
+	if format == "mermaid" {
+		cctx.Printer.Println(toMermaid())
+		return nil
+	}
+	// Default to JSON output - format it properly
+	data, err := json.MarshalIndent(result, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal result: %w", err)
+	}
+	cctx.Printer.Println(string(data))
+	return nil
+}
 
 // cliClientProvider implements agent.ClientProvider using the CLI's client options.
 type cliClientProvider struct {
@@ -157,11 +174,9 @@ func (c *TemporalAgentFailuresCommand) run(cctx *CommandContext, args []string) 
 	}
 
 	// Output based on format
-	if c.Format.Value == "mermaid" {
-		cctx.Printer.Println(agent.FailuresToMermaid(result))
-		return nil
-	}
-	return cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
+	return printAgentOutput(cctx, c.Format.Value, result, func() string {
+		return agent.FailuresToMermaid(result)
+	})
 }
 
 func (c *TemporalAgentTraceCommand) run(cctx *CommandContext, args []string) error {
@@ -203,11 +218,9 @@ func (c *TemporalAgentTraceCommand) run(cctx *CommandContext, args []string) err
 	}
 
 	// Output based on format
-	if c.Format.Value == "mermaid" {
-		cctx.Printer.Println(agent.TraceToMermaid(result))
-		return nil
-	}
-	return cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
+	return printAgentOutput(cctx, c.Format.Value, result, func() string {
+		return agent.TraceToMermaid(result)
+	})
 }
 
 func (c *TemporalAgentTimelineCommand) run(cctx *CommandContext, args []string) error {
@@ -234,11 +247,9 @@ func (c *TemporalAgentTimelineCommand) run(cctx *CommandContext, args []string) 
 	}
 
 	// Output based on format
-	if c.Format.Value == "mermaid" {
-		cctx.Printer.Println(agent.TimelineToMermaid(result))
-		return nil
-	}
-	return cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
+	return printAgentOutput(cctx, c.Format.Value, result, func() string {
+		return agent.TimelineToMermaid(result)
+	})
 }
 
 func (c *TemporalAgentStateCommand) run(cctx *CommandContext, args []string) error {
@@ -262,11 +273,9 @@ func (c *TemporalAgentStateCommand) run(cctx *CommandContext, args []string) err
 	}
 
 	// Output based on format
-	if c.Format.Value == "mermaid" {
-		cctx.Printer.Println(agent.StateToMermaid(result))
-		return nil
-	}
-	return cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
+	return printAgentOutput(cctx, c.Format.Value, result, func() string {
+		return agent.StateToMermaid(result)
+	})
 }
 
 func (c *TemporalAgentToolSpecCommand) run(cctx *CommandContext, _ []string) error {
