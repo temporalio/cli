@@ -24,7 +24,9 @@ func main() {
 
 	// Register workflow and activities
 	w.RegisterWorkflow(workflow.ResearchWorkflow)
-	w.RegisterActivity(activity.Research)
+	w.RegisterActivity(activity.BreakdownQuestion)
+	w.RegisterActivity(activity.ResearchSubQuestion)
+	w.RegisterActivity(activity.SynthesizeAnswers)
 
 	log.Println("Starting worker on task queue:", shared.TaskQueue)
 

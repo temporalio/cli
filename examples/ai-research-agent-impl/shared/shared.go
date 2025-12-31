@@ -9,7 +9,14 @@ type ResearchRequest struct {
 
 // ResearchResult is the output from the research workflow.
 type ResearchResult struct {
+	Question     string        `json:"question"`
+	SubQuestions []SubQuestion `json:"sub_questions,omitempty"`
+	Answer       string        `json:"answer"`
+}
+
+// SubQuestion represents a breakdown of the main question.
+type SubQuestion struct {
 	Question string `json:"question"`
-	Answer   string `json:"answer"`
+	Answer   string `json:"answer,omitempty"`
 }
 
