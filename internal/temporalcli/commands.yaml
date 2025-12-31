@@ -4582,6 +4582,13 @@ commands:
           - status
           - error
         default: none
+      - name: format
+        type: string-enum
+        enum-values: ["json", "mermaid"]
+        default: json
+        description: |
+          Output format. Use "mermaid" to generate a visual diagram.
+          Shows a pie chart when grouped, or a flowchart of failure chains.
 
   - name: temporal agent trace
     summary: Trace a workflow through its child chain to the deepest failure
@@ -4627,6 +4634,12 @@ commands:
           Maximum depth to traverse when following child workflows.
           Zero means unlimited.
         default: 0
+      - name: format
+        type: string-enum
+        enum-values: ["json", "mermaid"]
+        default: json
+        description: |
+          Output format. Use "mermaid" to generate a visual flowchart diagram.
 
   - name: temporal agent timeline
     summary: Show a compact event timeline for a workflow
@@ -4680,6 +4693,12 @@ commands:
         description: |
           Exclude specific event types.
           Can be passed multiple times.
+      - name: format
+        type: string-enum
+        enum-values: ["json", "mermaid"]
+        default: json
+        description: |
+          Output format. Use "mermaid" to generate a sequence diagram.
 
   - name: temporal agent state
     summary: Show the current state of a workflow execution
@@ -4715,6 +4734,12 @@ commands:
         description: |
           Include detailed information about pending items, such as
           activity inputs and retry state.
+      - name: format
+        type: string-enum
+        enum-values: ["json", "mermaid"]
+        default: json
+        description: |
+          Output format. Use "mermaid" to generate a state diagram.
 
   - name: temporal agent tool-spec
     summary: Output tool specifications for AI agent frameworks

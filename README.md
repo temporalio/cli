@@ -134,6 +134,44 @@ This enables full chain traversal across namespace boundaries while respecting p
 
 **Note:** When using `--group-by` with cross-namespace queries, failures are grouped by their leaf failure namespace, providing insight into which downstream services are causing issues.
 
+### Mermaid Visualization
+
+All agent commands support `--format mermaid` to generate visual diagrams:
+
+```bash
+# Visualize workflow chain as a flowchart
+temporal agent trace --workflow-id order-123 --namespace prod --format mermaid
+
+# Visualize timeline as a sequence diagram  
+temporal agent timeline --workflow-id order-123 --namespace prod --format mermaid
+
+# Visualize current state with pending activities
+temporal agent state --workflow-id order-123 --namespace prod --format mermaid
+
+# Visualize failures as a pie chart (when grouped)
+temporal agent failures --namespace prod --since 1h --group-by error --format mermaid
+
+# Visualize failures as a flowchart (when not grouped)
+temporal agent failures --namespace prod --since 1h --follow-children --format mermaid
+```
+
+The mermaid output renders directly in:
+- Cursor AI and VS Code with Mermaid extension
+- GitHub markdown files and comments
+- Notion pages
+- Any markdown preview with Mermaid support
+
+Example trace output with `--format mermaid`:
+```
+graph TD
+    W0[🔄 OrderWorkflow<br/>Failed]
+    W1[❌ PaymentWorkflow<br/>Failed<br/>🎯 LEAF]
+    W0 -->|failed| W1
+    RC(((connection timeout)))
+    W1 -.->|root cause| RC
+    style RC fill:#ff6b6b,stroke:#c92a2a,color:#fff
+```
+
 ### Output
 
 All agent commands output structured JSON designed for:
