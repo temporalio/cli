@@ -15,9 +15,14 @@ func (a *Activities) ReserveSeat(ctx context.Context, input ReserveSeatInput) (R
 	logger := activity.GetLogger(ctx)
 	logger.Info("Reserving seat", "user_id", input.UserID, "event_id", input.EventID)
 
-	// Simulate seat reservation
+	// Simulate seat reservation by sleeping 1 second
+	time.Sleep(1 * time.Second)
+
+	// Generate a seat number like 'A15'
+	seatNumber := fmt.Sprintf("A%d", time.Now().UnixNano()%50+1)
 	reservationID := fmt.Sprintf("res-%s-%s-%d", input.UserID, input.EventID, time.Now().UnixMilli())
-	seatNumber := fmt.Sprintf("A%d", time.Now().UnixMilli()%100+1)
+
+	logger.Info("Seat reserved", "seat", seatNumber)
 
 	return ReserveSeatResult{
 		ReservationID: reservationID,
@@ -72,4 +77,3 @@ func (a *Activities) SendSMS(ctx context.Context, userID, confirmationID string)
 	// Simulate SMS sending
 	return nil
 }
-
