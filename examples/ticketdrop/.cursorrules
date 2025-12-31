@@ -1,0 +1,102 @@
+# TicketDrop - Temporal Agent CLI Rules
+
+When debugging Temporal workflows in this ticketing system, use the `temporal agent` CLI commands.
+
+## Commands
+
+### Find Recent Failures
+```bash
+temporal agent failures --since 1h --format json
+temporal agent failures --since 1h --follow-children --leaf-only --compact-errors --format json
+temporal agent failures --since 1h --group-by error --format mermaid
+```
+
+### Trace a Failed Purchase
+```bash
+temporal agent trace --workflow-id <id> --format json
+temporal agent trace --workflow-id <id> --format mermaid
+temporal agent trace --workflow-id <id> --follow-children --format mermaid
+```
+
+### Check Event Timeline (for race conditions)
+```bash
+temporal agent timeline --workflow-id <id> --format json
+temporal agent timeline --workflow-id <id> --format mermaid
+temporal agent timeline --workflow-id <id> --compact --format mermaid
+```
+
+### Check Pending Work (for stuck workflows)
+```bash
+temporal agent state --workflow-id <id> --format json
+temporal agent state --workflow-id <id> --format mermaid
+```
+
+## Key Flags
+
+- `--format json` - Structured output for parsing
+- `--format mermaid` - Visual diagrams
+- `--follow-children` - Include child workflows and Nexus operations
+- `--leaf-only` - Only show deepest failures (skip wrappers)
+- `--compact-errors` - Remove verbose error context
+- `--group-by error` - Aggregate failures by error message
+- `--group-by status` - Aggregate by workflow status
+
+## Common TicketDrop Debugging Scenarios
+
+### Double-Booking (Race Condition)
+Use timeline to see if two reservations overlap:
+```bash
+temporal agent timeline --workflow-id purchase-user-1 --format mermaid
+temporal agent timeline --workflow-id purchase-user-2 --format mermaid
+```
+
+### Payment Timeout
+Check what's stuck:
+```bash
+temporal agent state --workflow-id purchase-xyz --format mermaid
+```
+
+### Seat Not Released After Failure
+Trace the saga compensation:
+```bash
+temporal agent trace --workflow-id purchase-failed-user --format mermaid
+```
+
+### Queue Position Lost
+Check the join events in queue:
+```bash
+temporal agent timeline --workflow-id queue-concert-1 --format json | jq '.events[] | select(.type | contains("Signal"))'
+```
+
+### Load Test Analysis
+After running load test, see failure distribution:
+```bash
+temporal agent failures --since 5m --group-by error --format mermaid
+```
+
+## Workflow IDs in TicketDrop
+
+- Purchase workflow: `purchase-{user-id}`
+- Queue workflow: `queue-{event-id}`
+- Notification workflow: `notification-{purchase-id}`
+
+## Example Debugging Session
+
+1. User reports "payment stuck":
+```bash
+temporal agent state --workflow-id purchase-user-123 --format mermaid
+# Shows: ProcessPayment activity on attempt 3, last error: "gateway timeout"
+```
+
+2. Find all payment failures:
+```bash
+temporal agent failures --since 1h --group-by error --format mermaid
+# Pie chart: 60% "gateway timeout", 40% "card declined"
+```
+
+3. Check if seat was released:
+```bash
+temporal agent trace --workflow-id purchase-user-123 --format mermaid
+# Flowchart shows: Reserve ✅ → Payment ❌ → Release ✅
+```
+
