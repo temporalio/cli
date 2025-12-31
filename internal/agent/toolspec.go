@@ -70,6 +70,12 @@ Returns structured JSON with failure reports including root_workflow, leaf_failu
 						Description: "Extract the core error message and strip wrapper context. Removes verbose details like workflow IDs, run IDs, and event IDs. Default: false.",
 						Default:     false,
 					},
+					"group_by": {
+						Type:        "string",
+						Description: "Group failures by a field instead of listing individually. Returns aggregated counts and summaries per group.",
+						Enum:        []string{"none", "type", "namespace", "status", "error"},
+						Default:     "none",
+					},
 					"limit": {
 						Type:        "integer",
 						Description: "Maximum number of failures to return. Default: 50.",
