@@ -45,7 +45,7 @@ Key flags:
 - `--group-by error` - Group failures by error type
 - `--format mermaid` - Output visual diagrams
 
-Always output JSON with `-o json` for structured data, or `--format mermaid` for diagrams.
+Always output JSON with `--format json` for structured data, or `--format mermaid` for diagrams.
 ```
 
 ### Option 2: Load Tool Spec (For Agent Frameworks)
@@ -85,8 +85,8 @@ Test that your AI knows the commands by asking:
 
 **Expected response should include:**
 ```bash
-temporal agent trace --workflow-id <id> -o json
-temporal agent failures --since 1h --follow-children -o json
+temporal agent trace --workflow-id <id> --format json
+temporal agent failures --since 1h --follow-children --format json
 ```
 
 If the AI suggests looking at logs or using `temporal workflow describe`, remind it about the agent commands.
@@ -128,7 +128,7 @@ go run ./starter -question "What is Temporal?"
 temporal workflow list
 
 # Use agent trace to see what happened
-temporal agent trace --workflow-id <id> -o json
+temporal agent trace --workflow-id <id> --format json
 ```
 
 **This teaches:** Using `agent trace` to understand workflow state.
@@ -150,7 +150,7 @@ activity not registered: ProcessQuestion
 
 **AI uses agent CLI to diagnose:**
 ```bash
-temporal agent trace --workflow-id <id> -o json | jq '.root_cause'
+temporal agent trace --workflow-id <id> --format json | jq '.root_cause'
 # Shows: "activity not registered"
 ```
 
@@ -170,7 +170,7 @@ temporal agent trace --workflow-id <id> -o json | jq '.root_cause'
 
 **Run and verify:**
 ```bash
-temporal agent timeline --workflow-id <id> -o json | jq '.events[].type'
+temporal agent timeline --workflow-id <id> --format json | jq '.events[].type'
 # Should show: ActivityTaskScheduled, ActivityCompleted, ActivityTaskScheduled...
 ```
 
@@ -185,7 +185,7 @@ temporal agent timeline --workflow-id <id> -o json | jq '.events[].type'
 
 **Verify parallelism:**
 ```bash
-temporal agent timeline --workflow-id <id> -o json | jq '[.events[] | select(.type == "ActivityTaskScheduled")] | length'
+temporal agent timeline --workflow-id <id> --format json | jq '[.events[] | select(.type == "ActivityTaskScheduled")] | length'
 # Should show 3 activities scheduled at nearly the same time
 
 # Or visualize it - parallel activities appear at the same time in the diagram:
@@ -241,8 +241,8 @@ go run ./starter -question "Very complex philosophical question"
 
 **Diagnose timeout:**
 ```bash
-temporal agent failures --since 5m -o json
-temporal agent trace --workflow-id <id> -o json | jq '.root_cause'
+temporal agent failures --since 5m --format json
+temporal agent trace --workflow-id <id> --format json | jq '.root_cause'
 # Shows: "activity StartToClose timeout"
 ```
 
@@ -260,7 +260,7 @@ temporal agent trace --workflow-id <id> -o json | jq '.root_cause'
 
 **Verify chain:**
 ```bash
-temporal agent trace --workflow-id <id> -o json | jq '.chain'
+temporal agent trace --workflow-id <id> --format json | jq '.chain'
 # Shows parent-child hierarchy
 
 # Visualize the chain as a flowchart:
@@ -283,13 +283,13 @@ Coordinator → ResearchAgent1
 **AI suggests using agent CLI:**
 ```bash
 # Find recent failures
-temporal agent failures --since 10m -o json
+temporal agent failures --since 10m --format json
 
 # Get detailed trace showing which child failed
-temporal agent trace --workflow-id <id> -o json | jq '{depth: .depth, root_cause: .root_cause}'
+temporal agent trace --workflow-id <id> --format json | jq '{depth: .depth, root_cause: .root_cause}'
 
 # Use leaf-only to see actual failure, not parent wrapper
-temporal agent failures --since 10m --follow-children --leaf-only -o json
+temporal agent failures --since 10m --follow-children --leaf-only --format json
 ```
 
 **This teaches:** Using `--follow-children` and `--leaf-only` for nested workflows.
@@ -339,7 +339,7 @@ graph TD
 go run ./starter -question "Mixed success question"
 
 # See partial results
-temporal agent trace --workflow-id <id> -o json
+temporal agent trace --workflow-id <id> --format json
 # Shows some children completed, some failed, parent still succeeded
 ```
 
@@ -357,7 +357,7 @@ temporal agent trace --workflow-id <id> -o json
 
 **View timeline:**
 ```bash
-temporal agent timeline --workflow-id <id> -o json | jq '.events[] | select(.type | contains("Child"))'
+temporal agent timeline --workflow-id <id> --format json | jq '.events[] | select(.type | contains("Child"))'
 # Shows: Research agents start → complete → Synthesizer starts → completes
 
 # Better: Visualize the entire flow as a sequence diagram:
@@ -390,7 +390,7 @@ Synthesizer → Coordinator: ✅ Done
 ```bash
 go run ./starter -question "Gibberish input that produces bad results"
 
-temporal agent failures --since 5m --compact-errors -o json | jq '.failures[].root_cause'
+temporal agent failures --since 5m --compact-errors --format json | jq '.failures[].root_cause'
 # Shows: "quality check failed: score 0.45 below threshold 0.7"
 ```
 
@@ -410,7 +410,7 @@ temporal agent failures --since 5m --compact-errors -o json | jq '.failures[].ro
 **Observe retries:**
 ```bash
 # While workflow is running
-temporal agent state --workflow-id <id> -o json | jq '.pending_activities'
+temporal agent state --workflow-id <id> --format json | jq '.pending_activities'
 # Shows: attempt: 2, last_failure: "rate limit exceeded"
 ```
 
@@ -426,10 +426,10 @@ temporal agent state --workflow-id <id> -o json | jq '.pending_activities'
 **Diagnose failures:**
 ```bash
 # After batch completes
-temporal agent failures --since 10m -o json | jq '.total_count'
+temporal agent failures --since 10m --format json | jq '.total_count'
 
 # Group by error type to find patterns
-temporal agent failures --since 10m --group-by error -o json | jq '.groups'
+temporal agent failures --since 10m --group-by error --format json | jq '.groups'
 # Might show: "rate limit: 6, timeout: 2, success: 2"
 
 # Visualize as a pie chart - instantly see the breakdown:
@@ -504,8 +504,8 @@ pie title Failures by namespace
 go run ./starter -load-test -count 20
 
 # Watch for timeouts vs retries
-temporal agent failures --since 10m --status TimedOut -o json
-temporal agent failures --since 10m --status Failed -o json
+temporal agent failures --since 10m --status TimedOut --format json
+temporal agent failures --since 10m --status Failed --format json
 ```
 
 ---
@@ -522,7 +522,7 @@ temporal agent failures --since 10m --status Failed -o json
 
 **Check progress:**
 ```bash
-temporal agent state --workflow-id <id> -o json
+temporal agent state --workflow-id <id> --format json
 # Shows pending_child_workflows with count
 
 # Visualize pending work:
@@ -582,7 +582,7 @@ The bottleneck appears to be the rate limit. The activity has already retried 3 
 go run ./starter -question "Important research" -require-approval
 
 # Check state - should be waiting
-temporal agent state --workflow-id <id> -o json
+temporal agent state --workflow-id <id> --format json
 # Shows: status: Running, but no pending activities
 
 # Send approval
@@ -607,7 +607,7 @@ go run ./starter -question "Very long research"
 temporal workflow cancel --workflow-id <id>
 
 # Check that children were also cancelled
-temporal agent failures --since 5m -o json | jq '.failures[] | select(.status == "Canceled")'
+temporal agent failures --since 5m --format json | jq '.failures[] | select(.status == "Canceled")'
 ```
 
 ---
@@ -625,11 +625,11 @@ temporal agent trace --workflow-id <id> --format mermaid
 # The flowchart highlights the failing path in red
 
 # Step 2: Get the JSON details
-temporal agent trace --workflow-id <id> -o json | jq '.root_cause'
+temporal agent trace --workflow-id <id> --format json | jq '.root_cause'
 # Shows: error in SynthesizerWorkflow
 
 # Step 3: Trace the child
-temporal agent trace --workflow-id <synth-id> -o json | jq '.root_cause'
+temporal agent trace --workflow-id <synth-id> --format json | jq '.root_cause'
 # Shows: "no findings to synthesize"
 
 # Step 4: Visualize the timeline to see what happened
@@ -637,7 +637,7 @@ temporal agent timeline --workflow-id <id> --format mermaid
 # Sequence diagram shows: 3 research agents all returned errors!
 
 # Step 5: Find the actual root cause
-temporal agent failures --since 10m --follow-children --leaf-only --compact-errors -o json
+temporal agent failures --since 10m --follow-children --leaf-only --compact-errors --format json
 # Shows: "API key expired"
 
 # Step 6: Visualize failure breakdown
@@ -706,7 +706,7 @@ pie title Failures by error
 
 **AI uses timeline analysis:**
 ```bash
-temporal agent timeline --workflow-id <id> -o json | jq '.events[] | {type, timestamp, details}'
+temporal agent timeline --workflow-id <id> --format json | jq '.events[] | {type, timestamp, details}'
 ```
 
 **Looking at timestamps reveals:**

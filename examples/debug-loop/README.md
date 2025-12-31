@@ -70,10 +70,10 @@ This is a classic TOCTOU race condition!
 
 ```bash
 # Get the trace - shows root cause
-temporal agent trace --workflow-id order-123456 --namespace default -o json
+temporal agent trace --workflow-id order-123456 --namespace default --format json
 
 # THIS IS KEY: Get the timeline to see the race condition
-temporal agent timeline --workflow-id order-123456 --namespace default -o json
+temporal agent timeline --workflow-id order-123456 --namespace default --format json
 ```
 
 ## What the Timeline Reveals
@@ -103,8 +103,8 @@ A workflow failed with "insufficient inventory for KEYBOARD-03: requested 1, ava
 The logs show the inventory check passed, but the reservation failed.
 
 Use temporal agent to diagnose:
-  temporal agent trace --workflow-id [id] --namespace default -o json
-  temporal agent timeline --workflow-id [id] --namespace default -o json
+  temporal agent trace --workflow-id [id] --namespace default --format json
+  temporal agent timeline --workflow-id [id] --namespace default --format json
 
 Questions to answer:
 1. Did the inventory check pass? What did it show?
