@@ -131,3 +131,72 @@ func extractTopic(question string) string {
 	}
 	return truncate(question, 60)
 }
+
+// CheckQuality evaluates the quality of a synthesized answer.
+// Returns a score between 0.0 and 1.0, with feedback.
+func CheckQuality(ctx context.Context, question string, answer string) (shared.QualityCheckResult, error) {
+	logger := activity.GetLogger(ctx)
+	logger.Info("CheckQuality activity started")
+
+	// Simulate quality check processing
+	select {
+	case <-time.After(500 * time.Millisecond):
+	case <-ctx.Done():
+		return shared.QualityCheckResult{}, ctx.Err()
+	}
+
+	// Simulate quality scoring based on content analysis
+	// In a real implementation, this would use an LLM or other quality metrics
+	score := 0.5 // Base score
+
+	// Check for key sections
+	if strings.Contains(answer, "## Executive Summary") {
+		score += 0.1
+	}
+	if strings.Contains(answer, "## Key Findings") {
+		score += 0.1
+	}
+	if strings.Contains(answer, "## Conclusion") {
+		score += 0.1
+	}
+
+	// Check answer length (longer answers tend to be more thorough)
+	if len(answer) > 500 {
+		score += 0.1
+	}
+	if len(answer) > 1000 {
+		score += 0.1
+	}
+
+	// Add some randomness to simulate real-world variability
+	score += (rand.Float64() - 0.5) * 0.2
+
+	// Clamp score to valid range
+	if score < 0 {
+		score = 0
+	}
+	if score > 1 {
+		score = 1
+	}
+
+	// Generate feedback based on score
+	var feedback string
+	switch {
+	case score >= 0.9:
+		feedback = "Excellent quality. The answer is comprehensive and well-structured."
+	case score >= 0.7:
+		feedback = "Good quality. The answer addresses the main points adequately."
+	case score >= 0.5:
+		feedback = "Moderate quality. The answer could use more depth or structure."
+	default:
+		feedback = "Low quality. The answer lacks key sections or sufficient detail."
+	}
+
+	result := shared.QualityCheckResult{
+		Score:    score,
+		Feedback: feedback,
+	}
+
+	logger.Info("CheckQuality activity completed", "score", score)
+	return result, nil
+}
