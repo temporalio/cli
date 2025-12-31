@@ -11,3 +11,5 @@
 /.zed
 /.claude
 *~
+
+.DS_Store
