@@ -175,6 +175,16 @@ Based on experiment findings, the following improvements were made:
 | LangChain tool spec | ✅ Done | `temporal agent tool-spec --format langchain` |
 | Claude tool spec | ✅ Done | `temporal agent tool-spec --format claude` |
 
+### Phase 6: Visualization
+
+| Feature | Status | Flag/Command |
+|---------|--------|--------------|
+| Trace flowchart | ✅ Done | `temporal agent trace --format mermaid` |
+| Timeline sequence diagram | ✅ Done | `temporal agent timeline --format mermaid` |
+| State diagram | ✅ Done | `temporal agent state --format mermaid` |
+| Failures pie chart | ✅ Done | `temporal agent failures --group-by error --format mermaid` |
+| Failures flowchart | ✅ Done | `temporal agent failures --format mermaid` |
+
 ---
 
 ## Comparison: Agent Commands vs Log-Based Debugging
@@ -216,5 +226,6 @@ The `temporal agent` CLI successfully achieves the goals:
 6. **Timing analysis**: Timeline timestamps enable race condition diagnosis
 7. **Low token cost**: Structured JSON is ~10x more efficient than raw logs
 8. **Autonomous debugging**: LLM successfully diagnosed and fixed a TOCTOU bug without hints
+9. **Mermaid visualization**: `--format mermaid` generates visual diagrams for human-in-the-loop debugging
 
 **Temporal's execution history + agent-optimized CLI = effective AI debugging feedback loop.**
