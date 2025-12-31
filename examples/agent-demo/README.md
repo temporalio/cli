@@ -94,7 +94,7 @@ temporal agent failures \
     --tls \
     --since 1h \
     --follow-children \
-    -o json | jq
+    --format json | jq
 ```
 
 ### Trace a Workflow Chain
@@ -107,7 +107,7 @@ temporal agent trace \
     --api-key $TEMPORAL_API_KEY \
     --tls \
     -w order-payment-fail-XXXXXX \
-    -o json | jq
+    --format json | jq
 
 # Trace the nested failure workflow (3 levels deep)
 temporal agent trace \
@@ -116,7 +116,7 @@ temporal agent trace \
     --api-key $TEMPORAL_API_KEY \
     --tls \
     -w nested-failure-XXXXXX \
-    -o json | jq
+    --format json | jq
 ```
 
 ### Get Workflow Timeline
@@ -129,7 +129,7 @@ temporal agent timeline \
     --tls \
     -w order-success-XXXXXX \
     --compact \
-    -o json | jq
+    --format json | jq
 ```
 
 ## Workflow Scenarios

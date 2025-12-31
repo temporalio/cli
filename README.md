@@ -61,42 +61,42 @@ The `temporal agent` command group provides machine-readable, structured output 
 
 ```bash
 # List failures from the last hour with automatic chain traversal
-temporal agent failures --namespace prod --since 1h --follow-children -o json
+temporal agent failures --namespace prod --since 1h --follow-children --format json
 
 # Filter failures by error message (case-insensitive)
-temporal agent failures --namespace prod --since 1h --error-contains "timeout" -o json
+temporal agent failures --namespace prod --since 1h --error-contains "timeout" --format json
 
 # Show only leaf failures (de-duplicate parent/child chains)
-temporal agent failures --namespace prod --since 1h --follow-children --leaf-only -o json
+temporal agent failures --namespace prod --since 1h --follow-children --leaf-only --format json
 
 # Compact error messages (strip wrapper context, show core error)
-temporal agent failures --namespace prod --since 1h --follow-children --compact-errors -o json
+temporal agent failures --namespace prod --since 1h --follow-children --compact-errors --format json
 
 # Combine leaf-only and compact-errors for cleanest output
-temporal agent failures --namespace prod --since 1h --follow-children --leaf-only --compact-errors -o json
+temporal agent failures --namespace prod --since 1h --follow-children --leaf-only --compact-errors --format json
 
 # Group failures by error type for quick summary
-temporal agent failures --namespace prod --since 24h --follow-children --compact-errors --group-by error -o json
+temporal agent failures --namespace prod --since 24h --follow-children --compact-errors --group-by error --format json
 
 # Group failures by namespace to see which services are failing
-temporal agent failures --namespace prod --since 24h --follow-children --group-by namespace -o json
+temporal agent failures --namespace prod --since 24h --follow-children --group-by namespace --format json
 
 # Trace a workflow to find the deepest failure in the chain
-temporal agent trace --workflow-id order-123 --namespace prod -o json
+temporal agent trace --workflow-id order-123 --namespace prod --format json
 
 # Get a compact timeline of workflow events
-temporal agent timeline --workflow-id order-123 --namespace prod --compact -o json
+temporal agent timeline --workflow-id order-123 --namespace prod --compact --format json
 
 # Get current workflow state (pending activities, child workflows)
-temporal agent state --workflow-id order-123 --namespace prod -o json
+temporal agent state --workflow-id order-123 --namespace prod --format json
 
 # Get detailed state including memo and search attributes
-temporal agent state --workflow-id order-123 --namespace prod --include-details -o json
+temporal agent state --workflow-id order-123 --namespace prod --include-details --format json
 
 # Cross-namespace traversal (Nexus/child workflows in other namespaces)
 TEMPORAL_API_KEY_FINANCE_NS="$FINANCE_KEY" \
 temporal agent trace --workflow-id order-123 --namespace commerce-ns \
-  --follow-namespaces finance-ns -o json
+  --follow-namespaces finance-ns --format json
 ```
 
 ### Cross-Namespace Traversal
@@ -122,12 +122,12 @@ export TEMPORAL_API_KEY_LOGISTICS_NS="logistics-ns-key"
 
 # Now trace can follow Nexus operations and child workflows across namespaces
 temporal agent trace --workflow-id order-123 --namespace commerce-ns \
-  --follow-namespaces finance-ns,logistics-ns -o json
+  --follow-namespaces finance-ns,logistics-ns --format json
 
 # For failures command, use --follow-children with --follow-namespaces
 temporal agent failures --namespace commerce-ns --since 1h \
   --follow-children --follow-namespaces finance-ns,logistics-ns \
-  --leaf-only --compact-errors -o json
+  --leaf-only --compact-errors --format json
 ```
 
 This enables full chain traversal across namespace boundaries while respecting per-namespace access controls.
