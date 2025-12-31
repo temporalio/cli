@@ -41,8 +41,11 @@ func main() {
 	w.RegisterWorkflow(workflows.ProcessOrderWorkflow)
 
 	// Register activities
-	w.RegisterActivity(activities.ProcessPayment)
 	w.RegisterActivity(activities.CheckInventory)
+	w.RegisterActivity(activities.ReserveInventory)
+	w.RegisterActivity(activities.ReleaseInventory)
+	w.RegisterActivity(activities.ProcessPayment)
+	w.RegisterActivity(activities.SimulateExternalReservation)
 
 	log.Printf("Starting worker on task queue: %s", TaskQueue)
 	log.Printf("Connected to Temporal at %s, namespace: %s", address, namespace)
