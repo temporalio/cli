@@ -15,7 +15,7 @@ temporal agent failures --since 1h --group-by error --format mermaid
 ```bash
 temporal agent trace --workflow-id <id> --format json
 temporal agent trace --workflow-id <id> --format mermaid
-temporal agent trace --workflow-id <id> --follow-children --format mermaid
+# Note: trace always follows children automatically. Use --depth to limit.
 ```
 
 ### Check Event Timeline
@@ -52,7 +52,7 @@ temporal agent state --workflow-id <id> --format mermaid
 | Multiple failures, need patterns | `temporal agent failures --since 1h --group-by error --format mermaid` |
 | Workflow stuck, need to see pending work | `temporal agent state --workflow-id <id> --format mermaid` |
 | Race condition suspected | `temporal agent timeline --workflow-id <id> --format mermaid` |
-| Child workflow failed | `temporal agent trace --workflow-id <id> --follow-children --format mermaid` |
+| Child workflow failed | `temporal agent trace --workflow-id <id> --format mermaid` (follows children automatically) |
 | Error message too verbose | Add `--compact-errors` to any failure command |
 
 ## Output Formats
@@ -85,7 +85,8 @@ Use for visualization:
 
 3. **If child workflows involved:**
    ```bash
-   temporal agent trace --workflow-id <id> --follow-children --leaf-only --format mermaid
+   # trace automatically follows children
+   temporal agent trace --workflow-id <id> --format mermaid
    ```
 
 4. **If timing issue suspected:**
