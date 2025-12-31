@@ -3,6 +3,7 @@ package activity
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"go.temporal.io/sdk/activity"
@@ -10,36 +11,90 @@ import (
 	"github.com/temporalio/cli/examples/ai-research-agent-impl/shared"
 )
 
-// Research performs research for a given question.
-// Simulates processing by sleeping, then returns a formatted response.
-func Research(ctx context.Context, req shared.ResearchRequest) (*shared.ResearchResult, error) {
+// BreakdownQuestion takes a question and returns 3 sub-questions.
+// Simulates AI processing by sleeping, then returns generated sub-questions.
+func BreakdownQuestion(ctx context.Context, question string) ([]shared.SubQuestion, error) {
 	logger := activity.GetLogger(ctx)
-	logger.Info("Research activity started", "question", req.Question)
+	logger.Info("BreakdownQuestion activity started", "question", question)
 
-	// Simulate processing time
-	logger.Info("Processing question...")
+	// Simulate AI processing time
 	select {
-	case <-time.After(2 * time.Second):
-		// Processing complete
+	case <-time.After(1 * time.Second):
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	}
 
-	// Generate a formatted response
-	answer := fmt.Sprintf("After analyzing the question '%s', here are the findings:\n\n"+
-		"1. This question requires further breakdown into sub-questions\n"+
-		"2. Each sub-question would be researched independently\n"+
-		"3. Results would be synthesized into a final answer\n\n"+
-		"[Processed at: %s]",
-		req.Question,
-		time.Now().Format(time.RFC3339))
-
-	result := &shared.ResearchResult{
-		Question: req.Question,
-		Answer:   answer,
+	// Generate sub-questions based on the main question
+	// In a real implementation, this would call an LLM
+	subQuestions := []shared.SubQuestion{
+		{Question: fmt.Sprintf("What are the key concepts in: %s", question)},
+		{Question: fmt.Sprintf("What evidence or data supports: %s", question)},
+		{Question: fmt.Sprintf("What are different perspectives on: %s", question)},
 	}
 
-	logger.Info("Research activity completed")
+	logger.Info("BreakdownQuestion activity completed", "count", len(subQuestions))
+	return subQuestions, nil
+}
+
+// ResearchSubQuestion researches a single sub-question.
+// Simulates processing by sleeping, then returns an answer.
+func ResearchSubQuestion(ctx context.Context, subQuestion shared.SubQuestion) (shared.SubQuestion, error) {
+	logger := activity.GetLogger(ctx)
+	logger.Info("ResearchSubQuestion activity started", "question", subQuestion.Question)
+
+	// Simulate research time
+	select {
+	case <-time.After(2 * time.Second):
+	case <-ctx.Done():
+		return shared.SubQuestion{}, ctx.Err()
+	}
+
+	// Generate a simulated answer
+	result := shared.SubQuestion{
+		Question: subQuestion.Question,
+		Answer: fmt.Sprintf("Research findings for '%s': This sub-question has been analyzed. "+
+			"[Researched at: %s]",
+			truncate(subQuestion.Question, 50),
+			time.Now().Format(time.RFC3339)),
+	}
+
+	logger.Info("ResearchSubQuestion activity completed")
 	return result, nil
+}
+
+// truncate shortens a string to maxLen characters.
+func truncate(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen] + "..."
+}
+
+// SynthesizeAnswers combines sub-question answers into a final answer.
+func SynthesizeAnswers(ctx context.Context, question string, subQuestions []shared.SubQuestion) (string, error) {
+	logger := activity.GetLogger(ctx)
+	logger.Info("SynthesizeAnswers activity started", "subQuestionCount", len(subQuestions))
+
+	// Simulate synthesis time
+	select {
+	case <-time.After(1 * time.Second):
+	case <-ctx.Done():
+		return "", ctx.Err()
+	}
+
+	// Build the synthesized answer
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("Research Summary for: %s\n\n", question))
+
+	for i, sq := range subQuestions {
+		sb.WriteString(fmt.Sprintf("## Finding %d\n", i+1))
+		sb.WriteString(fmt.Sprintf("Q: %s\n", sq.Question))
+		sb.WriteString(fmt.Sprintf("A: %s\n\n", sq.Answer))
+	}
+
+	sb.WriteString(fmt.Sprintf("[Synthesized at: %s]", time.Now().Format(time.RFC3339)))
+
+	logger.Info("SynthesizeAnswers activity completed")
+	return sb.String(), nil
 }
 
