@@ -3,6 +3,7 @@ package activity
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"strings"
 	"time"
 
@@ -42,9 +43,13 @@ func ResearchSubQuestion(ctx context.Context, subQuestion shared.SubQuestion) (s
 	logger := activity.GetLogger(ctx)
 	logger.Info("ResearchSubQuestion activity started", "question", subQuestion.Question)
 
-	// Simulate research time
+	// Simulate research time with random duration between 5-15 seconds
+	// Some will timeout (over 10s), some will succeed (under 10s)
+	sleepDuration := time.Duration(5+rand.Intn(11)) * time.Second
+	logger.Info("Simulating research", "duration", sleepDuration)
+
 	select {
-	case <-time.After(2 * time.Second):
+	case <-time.After(sleepDuration):
 	case <-ctx.Done():
 		return shared.SubQuestion{}, ctx.Err()
 	}
