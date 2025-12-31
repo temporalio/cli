@@ -1,6 +1,6 @@
-# TicketDrop - Temporal Agent CLI Rules
+# Temporal Agent CLI - Debugging Rules
 
-When debugging Temporal workflows in this ticketing system, use the `temporal agent` CLI commands.
+When debugging Temporal workflows, use the `temporal agent` CLI commands for structured, machine-readable output.
 
 ## Commands
 
@@ -11,21 +11,21 @@ temporal agent failures --since 1h --follow-children --leaf-only --compact-error
 temporal agent failures --since 1h --group-by error --format mermaid
 ```
 
-### Trace a Failed Purchase
+### Trace a Workflow Chain
 ```bash
 temporal agent trace --workflow-id <id> --format json
 temporal agent trace --workflow-id <id> --format mermaid
 temporal agent trace --workflow-id <id> --follow-children --format mermaid
 ```
 
-### Check Event Timeline (for race conditions)
+### Check Event Timeline
 ```bash
 temporal agent timeline --workflow-id <id> --format json
 temporal agent timeline --workflow-id <id> --format mermaid
 temporal agent timeline --workflow-id <id> --compact --format mermaid
 ```
 
-### Check Pending Work (for stuck workflows)
+### Check Workflow State
 ```bash
 temporal agent state --workflow-id <id> --format json
 temporal agent state --workflow-id <id> --format mermaid
@@ -33,70 +33,72 @@ temporal agent state --workflow-id <id> --format mermaid
 
 ## Key Flags
 
-- `--format json` - Structured output for parsing
-- `--format mermaid` - Visual diagrams
-- `--follow-children` - Include child workflows and Nexus operations
-- `--leaf-only` - Only show deepest failures (skip wrappers)
-- `--compact-errors` - Remove verbose error context
-- `--group-by error` - Aggregate failures by error message
-- `--group-by status` - Aggregate by workflow status
+| Flag | Purpose |
+|------|---------|
+| `--format json` | Structured output for parsing |
+| `--format mermaid` | Visual diagrams (flowchart, sequence, pie) |
+| `--follow-children` | Include child workflows and Nexus operations |
+| `--leaf-only` | Only show deepest failures (skip wrapper errors) |
+| `--compact-errors` | Remove verbose error context |
+| `--group-by error` | Aggregate failures by error message |
+| `--group-by status` | Aggregate by workflow status |
+| `--group-by namespace` | Aggregate by namespace |
 
-## Common TicketDrop Debugging Scenarios
+## When to Use Each Command
 
-### Double-Booking (Race Condition)
-Use timeline to see if two reservations overlap:
+| Situation | Command |
+|-----------|---------|
+| Workflow failed, need root cause | `temporal agent trace --workflow-id <id> --format json` |
+| Multiple failures, need patterns | `temporal agent failures --since 1h --group-by error --format mermaid` |
+| Workflow stuck, need to see pending work | `temporal agent state --workflow-id <id> --format mermaid` |
+| Race condition suspected | `temporal agent timeline --workflow-id <id> --format mermaid` |
+| Child workflow failed | `temporal agent trace --workflow-id <id> --follow-children --format mermaid` |
+| Error message too verbose | Add `--compact-errors` to any failure command |
+
+## Output Formats
+
+### JSON Output
+Use for programmatic analysis:
 ```bash
-temporal agent timeline --workflow-id purchase-user-1 --format mermaid
-temporal agent timeline --workflow-id purchase-user-2 --format mermaid
+temporal agent trace --workflow-id <id> --format json | jq '.root_cause'
+temporal agent failures --since 1h --format json | jq '.total_count'
 ```
 
-### Payment Timeout
-Check what's stuck:
-```bash
-temporal agent state --workflow-id purchase-xyz --format mermaid
-```
+### Mermaid Output
+Use for visualization:
+- `trace` → Flowchart showing workflow chain
+- `timeline` → Sequence diagram showing events
+- `failures --group-by` → Pie chart showing distribution
+- `state` → State diagram showing pending work
 
-### Seat Not Released After Failure
-Trace the saga compensation:
-```bash
-temporal agent trace --workflow-id purchase-failed-user --format mermaid
-```
+## Debugging Workflow
 
-### Queue Position Lost
-Check the join events in queue:
-```bash
-temporal agent timeline --workflow-id queue-concert-1 --format json | jq '.events[] | select(.type | contains("Signal"))'
-```
+1. **Find what failed:**
+   ```bash
+   temporal agent failures --since 10m --format json
+   ```
 
-### Load Test Analysis
-After running load test, see failure distribution:
-```bash
-temporal agent failures --since 5m --group-by error --format mermaid
-```
+2. **Trace the failure:**
+   ```bash
+   temporal agent trace --workflow-id <id> --format mermaid
+   ```
 
-## Workflow IDs in TicketDrop
+3. **If child workflows involved:**
+   ```bash
+   temporal agent trace --workflow-id <id> --follow-children --leaf-only --format mermaid
+   ```
 
-- Purchase workflow: `purchase-{user-id}`
-- Queue workflow: `queue-{event-id}`
-- Notification workflow: `notification-{purchase-id}`
+4. **If timing issue suspected:**
+   ```bash
+   temporal agent timeline --workflow-id <id> --format mermaid
+   ```
 
-## Example Debugging Session
+5. **If workflow stuck:**
+   ```bash
+   temporal agent state --workflow-id <id> --format mermaid
+   ```
 
-1. User reports "payment stuck":
-```bash
-temporal agent state --workflow-id purchase-user-123 --format mermaid
-# Shows: ProcessPayment activity on attempt 3, last error: "gateway timeout"
-```
-
-2. Find all payment failures:
-```bash
-temporal agent failures --since 1h --group-by error --format mermaid
-# Pie chart: 60% "gateway timeout", 40% "card declined"
-```
-
-3. Check if seat was released:
-```bash
-temporal agent trace --workflow-id purchase-user-123 --format mermaid
-# Flowchart shows: Reserve ✅ → Payment ❌ → Release ✅
-```
-
+6. **Analyze failure patterns:**
+   ```bash
+   temporal agent failures --since 1h --group-by error --format mermaid
+   ```
