@@ -442,7 +442,8 @@ graph TD
 go run ./starter --user-id test-user --event-id concert-1
 
 # Check that purchase succeeded but notification failed
-temporal agent trace --workflow-id purchase-test-user --follow-children --format mermaid
+# trace automatically follows children
+temporal agent trace --workflow-id purchase-test-user --format mermaid
 ```
 
 **Shows:**
@@ -513,7 +514,7 @@ temporal agent timeline --workflow-id purchase-user-15 --format json | jq '.dura
 | 4 | Compensation flow | `trace --format mermaid` | Flowchart with saga |
 | 5 | Stuck seat release | `state --format mermaid` | State diagram |
 | 6 | Queue position | `timeline --format json` | — |
-| 7 | Notification failure | `trace --follow-children` | Flowchart |
+| 7 | Notification failure | `trace` (auto-follows children) | Flowchart |
 | 8 | Load test chaos | `failures --group-by error` | Pie chart |
 
 ---
@@ -530,7 +531,8 @@ When something goes wrong, ask your AI:
 temporal agent trace --workflow-id purchase-123 --format mermaid
 
 # Step 2: If payment/notification involved, follow children
-temporal agent trace --workflow-id purchase-123 --follow-children --format mermaid
+# trace automatically follows child workflows
+temporal agent trace --workflow-id purchase-123 --format mermaid
 
 # Step 3: Check timing if race condition suspected
 temporal agent timeline --workflow-id purchase-123 --format mermaid
