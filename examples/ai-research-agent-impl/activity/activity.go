@@ -45,7 +45,7 @@ func ResearchSubQuestion(ctx context.Context, subQuestion shared.SubQuestion) (s
 
 	// Simulate research time with random duration between 5-15 seconds
 	// Some will timeout (over 10s), some will succeed (under 10s)
-	sleepDuration := time.Duration(8+rand.Intn(11)) * time.Second
+	sleepDuration := time.Duration(5+rand.Intn(11)) * time.Second
 	logger.Info("Simulating research", "duration", sleepDuration)
 
 	select {
