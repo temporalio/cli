@@ -38,11 +38,21 @@ func NewTimelineGenerator(cl client.Client, opts TimelineOptions) *TimelineGener
 
 // Generate generates a timeline for the given workflow.
 func (g *TimelineGenerator) Generate(ctx context.Context, namespace, workflowID, runID string) (*TimelineResult, error) {
+	// If run ID not provided, describe the workflow first to get the latest run ID
+	actualRunID := runID
+	if runID == "" {
+		desc, err := g.client.DescribeWorkflowExecution(ctx, workflowID, "")
+		if err != nil {
+			return nil, fmt.Errorf("failed to describe workflow: %w", err)
+		}
+		actualRunID = desc.WorkflowExecutionInfo.Execution.GetRunId()
+	}
+
 	result := &TimelineResult{
 		Workflow: WorkflowRef{
 			Namespace:  namespace,
 			WorkflowID: workflowID,
-			RunID:      runID,
+			RunID:      actualRunID,
 		},
 		Events: []TimelineEvent{},
 	}
@@ -59,8 +69,8 @@ func (g *TimelineGenerator) Generate(ctx context.Context, namespace, workflowID,
 	// For compact mode: track retries
 	activityRetries := make(map[string]int) // activityType -> retry count
 
-	// Get workflow history
-	iter := g.client.GetWorkflowHistory(ctx, workflowID, runID, false, enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
+	// Get workflow history (use actual run ID to ensure consistency)
+	iter := g.client.GetWorkflowHistory(ctx, workflowID, actualRunID, false, enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
 
 	for iter.HasNext() {
 		historyEvent, err := iter.Next()
@@ -82,9 +92,6 @@ func (g *TimelineGenerator) Generate(ctx context.Context, namespace, workflowID,
 			result.Status = "Running"
 			t := historyEvent.GetEventTime().AsTime()
 			result.StartTime = &t
-			if runID == "" {
-				result.Workflow.RunID = attrs.GetOriginalExecutionRunId()
-			}
 		}
 
 		// Update status from close events

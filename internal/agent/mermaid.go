@@ -14,6 +14,14 @@ const (
 	MermaidFormatGantt     MermaidFormat = "gantt"
 )
 
+// formatWorkflowHeader generates a mermaid comment with workflow identification.
+func formatWorkflowHeader(workflowID, runID string) string {
+	if runID != "" {
+		return fmt.Sprintf("%%%% Workflow: %s\n%%%% Run: %s\n", workflowID, runID)
+	}
+	return fmt.Sprintf("%%%% Workflow: %s\n", workflowID)
+}
+
 // TraceToMermaid generates a mermaid flowchart from a TraceResult.
 func TraceToMermaid(result *TraceResult) string {
 	if result == nil || len(result.Chain) == 0 {
@@ -21,6 +29,13 @@ func TraceToMermaid(result *TraceResult) string {
 	}
 
 	var sb strings.Builder
+
+	// Add workflow identification header
+	if len(result.Chain) > 0 {
+		root := result.Chain[0]
+		sb.WriteString(formatWorkflowHeader(root.WorkflowID, root.RunID))
+	}
+
 	sb.WriteString("graph TD\n")
 
 	// Generate node definitions
@@ -65,6 +80,10 @@ func TimelineToMermaid(result *TimelineResult) string {
 	}
 
 	var sb strings.Builder
+
+	// Add workflow identification header
+	sb.WriteString(formatWorkflowHeader(result.Workflow.WorkflowID, result.Workflow.RunID))
+
 	sb.WriteString("sequenceDiagram\n")
 
 	// Collect participants (unique activity types, child workflows, etc.)
@@ -116,6 +135,10 @@ func StateToMermaid(result *WorkflowStateResult) string {
 	}
 
 	var sb strings.Builder
+
+	// Add workflow identification header
+	sb.WriteString(formatWorkflowHeader(result.Workflow.WorkflowID, result.Workflow.RunID))
+
 	sb.WriteString("graph TD\n")
 
 	// Main workflow node
@@ -194,6 +217,8 @@ func FailuresToMermaid(result *FailuresResult) string {
 	// If grouped, show as pie chart
 	if len(result.Groups) > 0 {
 		var sb strings.Builder
+		// Add context header
+		sb.WriteString(fmt.Sprintf("%%%% Total failures: %d\n", result.TotalCount))
 		sb.WriteString(fmt.Sprintf("pie title Failures by %s\n", result.GroupedBy))
 		for _, group := range result.Groups {
 			sb.WriteString(fmt.Sprintf("    %q : %d\n", truncate(group.Key, 30), group.Count))
@@ -203,6 +228,8 @@ func FailuresToMermaid(result *FailuresResult) string {
 
 	// Otherwise show as flowchart of failure chains
 	var sb strings.Builder
+	// Add context header
+	sb.WriteString(fmt.Sprintf("%%%% Total failures: %d\n", result.TotalCount))
 	sb.WriteString("graph LR\n")
 
 	for i, failure := range result.Failures {

@@ -51,7 +51,21 @@ func NewChainTraverser(clientProvider ClientProvider, opts TraverserOptions) *Ch
 
 // Trace traces a workflow through its child chain to find the deepest failure.
 func (t *ChainTraverser) Trace(ctx context.Context, namespace, workflowID, runID string) (*TraceResult, error) {
-	chain, rootCause, err := t.traceRecursive(ctx, namespace, workflowID, runID, 0)
+	// If run ID not provided, describe the workflow first to get the latest run ID
+	actualRunID := runID
+	if runID == "" {
+		cl, err := t.clientProvider.GetClient(ctx, namespace)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get client for namespace %s: %w", namespace, err)
+		}
+		desc, err := cl.DescribeWorkflowExecution(ctx, workflowID, "")
+		if err != nil {
+			return nil, fmt.Errorf("failed to describe workflow: %w", err)
+		}
+		actualRunID = desc.WorkflowExecutionInfo.Execution.GetRunId()
+	}
+
+	chain, rootCause, err := t.traceRecursive(ctx, namespace, workflowID, actualRunID, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -110,10 +124,15 @@ func (t *ChainTraverser) traceRecursive(
 	}
 
 	// Build the current node
+	// Use the passed-in runID if provided, otherwise fall back to state machine's runID
+	actualRunID := runID
+	if actualRunID == "" {
+		actualRunID = sm.runID
+	}
 	node := WorkflowChainNode{
 		Namespace:    namespace,
 		WorkflowID:   workflowID,
-		RunID:        sm.runID,
+		RunID:        actualRunID,
 		WorkflowType: sm.workflowType,
 		Status:       WorkflowStatusFromEnum(sm.status),
 		Depth:        depth,
@@ -193,7 +212,7 @@ func (t *ChainTraverser) traceRecursive(
 			Workflow: &WorkflowRef{
 				Namespace:  namespace,
 				WorkflowID: workflowID,
-				RunID:      sm.runID,
+				RunID:      actualRunID,
 			},
 		}
 	}
@@ -207,7 +226,7 @@ func (t *ChainTraverser) traceRecursive(
 			Workflow: &WorkflowRef{
 				Namespace:  namespace,
 				WorkflowID: workflowID,
-				RunID:      sm.runID,
+				RunID:      actualRunID,
 			},
 		}
 	}
@@ -221,7 +240,7 @@ func (t *ChainTraverser) traceRecursive(
 			Workflow: &WorkflowRef{
 				Namespace:  namespace,
 				WorkflowID: workflowID,
-				RunID:      sm.runID,
+				RunID:      actualRunID,
 			},
 		}
 	}
@@ -235,7 +254,7 @@ func (t *ChainTraverser) traceRecursive(
 			Workflow: &WorkflowRef{
 				Namespace:  namespace,
 				WorkflowID: workflowID,
-				RunID:      sm.runID,
+				RunID:      actualRunID,
 			},
 		}
 	}
