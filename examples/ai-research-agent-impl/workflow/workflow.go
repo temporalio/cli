@@ -31,10 +31,15 @@ func ResearchWorkflow(ctx workflow.Context, req shared.ResearchRequest) (*shared
 	logger.Info("Got sub-questions", "count", len(subQuestions))
 
 	// Step 2: Research all sub-questions in parallel
+	// Use a shorter timeout for research activities
+	researchCtx := workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
+		StartToCloseTimeout: 10 * time.Second,
+	})
+
 	logger.Info("Researching sub-questions in parallel")
 	futures := make([]workflow.Future, len(subQuestions))
 	for i, sq := range subQuestions {
-		futures[i] = workflow.ExecuteActivity(ctx, activity.ResearchSubQuestion, sq)
+		futures[i] = workflow.ExecuteActivity(researchCtx, activity.ResearchSubQuestion, sq)
 	}
 
 	// Wait for all research activities to complete
