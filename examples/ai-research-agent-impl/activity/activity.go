@@ -75,7 +75,8 @@ func truncate(s string, maxLen int) string {
 	return s[:maxLen] + "..."
 }
 
-// SynthesizeAnswers combines sub-question answers into a final answer.
+// SynthesizeAnswers combines sub-question answers into a coherent final answer.
+// In a real implementation, this would use an LLM to create a narrative summary.
 func SynthesizeAnswers(ctx context.Context, question string, subQuestions []shared.SubQuestion) (string, error) {
 	logger := activity.GetLogger(ctx)
 	logger.Info("SynthesizeAnswers activity started", "subQuestionCount", len(subQuestions))
@@ -87,18 +88,46 @@ func SynthesizeAnswers(ctx context.Context, question string, subQuestions []shar
 		return "", ctx.Err()
 	}
 
-	// Build the synthesized answer
+	// Build a coherent synthesized answer
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("Research Summary for: %s\n\n", question))
 
+	// Executive summary
+	sb.WriteString(fmt.Sprintf("# Research Report: %s\n\n", question))
+	sb.WriteString(fmt.Sprintf("## Executive Summary\n"))
+	sb.WriteString(fmt.Sprintf("This report synthesizes findings from %d research threads ", len(subQuestions)))
+	sb.WriteString("to provide a comprehensive answer to the question above.\n\n")
+
+	// Key findings section
+	sb.WriteString("## Key Findings\n\n")
 	for i, sq := range subQuestions {
-		sb.WriteString(fmt.Sprintf("## Finding %d\n", i+1))
-		sb.WriteString(fmt.Sprintf("Q: %s\n", sq.Question))
-		sb.WriteString(fmt.Sprintf("A: %s\n\n", sq.Answer))
+		sb.WriteString(fmt.Sprintf("### %d. %s\n", i+1, extractTopic(sq.Question)))
+		sb.WriteString(fmt.Sprintf("%s\n\n", sq.Answer))
 	}
 
-	sb.WriteString(fmt.Sprintf("[Synthesized at: %s]", time.Now().Format(time.RFC3339)))
+	// Conclusion
+	sb.WriteString("## Conclusion\n")
+	sb.WriteString(fmt.Sprintf("Based on the analysis of %d sub-questions, ", len(subQuestions)))
+	sb.WriteString("the research provides multiple perspectives on the topic. ")
+	sb.WriteString("The findings above represent the key insights gathered from each research thread.\n\n")
+
+	sb.WriteString(fmt.Sprintf("---\n*Report generated at: %s*", time.Now().Format(time.RFC3339)))
 
 	logger.Info("SynthesizeAnswers activity completed")
 	return sb.String(), nil
+}
+
+// extractTopic extracts a short topic from a sub-question.
+func extractTopic(question string) string {
+	// Remove common prefixes to get the core topic
+	prefixes := []string{
+		"What are the key concepts in: ",
+		"What evidence or data supports: ",
+		"What are different perspectives on: ",
+	}
+	for _, prefix := range prefixes {
+		if strings.HasPrefix(question, prefix) {
+			return strings.TrimPrefix(question, prefix)
+		}
+	}
+	return truncate(question, 60)
 }
