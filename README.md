@@ -75,6 +75,12 @@ temporal agent failures --namespace prod --since 1h --follow-children --compact-
 # Combine leaf-only and compact-errors for cleanest output
 temporal agent failures --namespace prod --since 1h --follow-children --leaf-only --compact-errors -o json
 
+# Group failures by error type for quick summary
+temporal agent failures --namespace prod --since 24h --follow-children --compact-errors --group-by error -o json
+
+# Group failures by namespace to see which services are failing
+temporal agent failures --namespace prod --since 24h --follow-children --group-by namespace -o json
+
 # Trace a workflow to find the deepest failure in the chain
 temporal agent trace --workflow-id order-123 --namespace prod -o json
 
@@ -98,19 +104,35 @@ temporal agent trace --workflow-id order-123 --namespace commerce-ns \
 When tracing workflows that span multiple namespaces (via Nexus or child workflows), you can provide namespace-specific API keys using environment variables:
 
 ```bash
-# Format: TEMPORAL_API_KEY_<NAMESPACE> where namespace is normalized
-# (dots/dashes replaced with underscores, uppercased)
+# Format: TEMPORAL_API_KEY_<NAMESPACE>
+# Namespace names are normalized: dots/dashes → underscores, then UPPERCASED
+#
+# Examples of namespace → environment variable:
+#   finance-ns              → TEMPORAL_API_KEY_FINANCE_NS
+#   moedash-finance-ns      → TEMPORAL_API_KEY_MOEDASH_FINANCE_NS
+#   finance.temporal-dev    → TEMPORAL_API_KEY_FINANCE_TEMPORAL_DEV
+#   moedash-finance-ns.temporal-dev → TEMPORAL_API_KEY_MOEDASH_FINANCE_NS_TEMPORAL_DEV
 
+# Primary namespace uses TEMPORAL_API_KEY
 export TEMPORAL_API_KEY="primary-ns-key"
+
+# Additional namespaces use namespace-specific keys
 export TEMPORAL_API_KEY_FINANCE_NS="finance-ns-key"
 export TEMPORAL_API_KEY_LOGISTICS_NS="logistics-ns-key"
 
 # Now trace can follow Nexus operations and child workflows across namespaces
 temporal agent trace --workflow-id order-123 --namespace commerce-ns \
   --follow-namespaces finance-ns,logistics-ns -o json
+
+# For failures command, use --follow-children with --follow-namespaces
+temporal agent failures --namespace commerce-ns --since 1h \
+  --follow-children --follow-namespaces finance-ns,logistics-ns \
+  --leaf-only --compact-errors -o json
 ```
 
 This enables full chain traversal across namespace boundaries while respecting per-namespace access controls.
+
+**Note:** When using `--group-by` with cross-namespace queries, failures are grouped by their leaf failure namespace, providing insight into which downstream services are causing issues.
 
 ### Output
 

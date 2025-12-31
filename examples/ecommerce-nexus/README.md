@@ -119,19 +119,55 @@ go run ./starter -scenario deep-chain            # 4-level cross-NS chain
 
 ## Testing with Agent CLI
 
+### Cross-Namespace API Keys
+
+For cross-namespace tracing, set namespace-specific API keys:
+
 ```bash
-# Find failures in commerce namespace
-temporal agent failures --namespace $COMMERCE_NS --since 1h --follow-children -o json
+# Format: TEMPORAL_API_KEY_<NAMESPACE>
+# Namespace names are normalized: dots/dashes → underscores, then UPPERCASED
+#
+# Example for moedash-finance-ns.temporal-dev:
+#   → TEMPORAL_API_KEY_MOEDASH_FINANCE_NS_TEMPORAL_DEV
 
-# Trace a failed order
-temporal agent trace --workflow-id order-123 --namespace $COMMERCE_NS -o json
+# Primary namespace (commerce) uses TEMPORAL_API_KEY
+export TEMPORAL_API_KEY="$(cat staging-commerce-temporal-api-key.txt)"
 
-# Check workflow state
+# Finance namespace
+export TEMPORAL_API_KEY_MOEDASH_FINANCE_NS_TEMPORAL_DEV="$(cat staging-finance-temporal-api-key.txt)"
+
+# Logistics namespace
+export TEMPORAL_API_KEY_MOEDASH_LOGISTICS_NS_TEMPORAL_DEV="$(cat staging-logistics-temporal-api-key.txt)"
+```
+
+### Commands
+
+```bash
+# Find failures in commerce namespace (cross-namespace traversal)
+temporal agent failures --namespace $COMMERCE_NS --since 1h \
+    --follow-children --follow-namespaces $FINANCE_NS,$LOGISTICS_NS -o json
+
+# Trace a failed order (follows Nexus and child workflows across namespaces)
+temporal agent trace --workflow-id order-123 --namespace $COMMERCE_NS \
+    --follow-namespaces $FINANCE_NS,$LOGISTICS_NS -o json
+
+# Check workflow state (shows pending Nexus operations)
 temporal agent state --workflow-id order-123 --namespace $COMMERCE_NS -o json
 
 # With leaf-only and compact errors
 temporal agent failures --namespace $COMMERCE_NS --since 1h \
-    --follow-children --leaf-only --compact-errors -o json
+    --follow-children --follow-namespaces $FINANCE_NS,$LOGISTICS_NS \
+    --leaf-only --compact-errors -o json
+
+# Group failures by error type
+temporal agent failures --namespace $COMMERCE_NS --since 1h \
+    --follow-children --follow-namespaces $FINANCE_NS,$LOGISTICS_NS \
+    --compact-errors --group-by error -o json
+
+# Group by namespace to see which services are failing
+temporal agent failures --namespace $COMMERCE_NS --since 1h \
+    --follow-children --follow-namespaces $FINANCE_NS,$LOGISTICS_NS \
+    --group-by namespace -o json
 ```
 
 ## Validation Points
