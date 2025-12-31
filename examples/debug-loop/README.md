@@ -1,18 +1,30 @@
-# Debug Loop Test
+# Debug Loop Test: TOCTOU Race Condition
 
-This example tests the end-to-end AI agent debug loop:
-1. Run a workflow with an intentional bug
-2. Use `temporal agent` CLI to diagnose the failure
-3. Have an AI agent (Cursor) propose a fix
-4. Apply the fix and verify success
+This example tests the end-to-end AI agent debug loop with a **realistic TOCTOU (Time-of-Check to Time-of-Use) race condition** that requires workflow timeline analysis to diagnose.
 
 ## The Bug
 
-The `ProcessOrderWorkflow` has a subtle retry configuration bug:
+The `ProcessOrderWorkflow` has a subtle race condition:
 
-- **Activity:** `CheckInventory` simulates a flaky inventory service that needs 3 attempts to succeed
-- **Bug:** The retry policy has `MaximumAttempts: 2`, so the activity never gets a 3rd attempt
-- **Result:** The workflow fails with "activity retry limit exceeded"
+1. **Parallel Check Phase**: Inventory is checked for ALL items simultaneously
+2. **Delay Phase**: A 200ms processing delay occurs (simulating real-world latency)
+3. **Sequential Reserve Phase**: Inventory is reserved one item at a time
+
+**Problem**: During the delay, a competing order can claim limited-stock items. All checks pass, but reservations fail because inventory state changed between check and reserve.
+
+### Why This Bug Is Realistic
+
+- The **error message alone is misleading**: `insufficient inventory for KEYBOARD-03: requested 1, available 0`
+- A naive analysis might conclude "the inventory was wrong" or "the check was broken"
+- The **inventory check DID pass** - you can verify this in the timeline
+- The real issue is a **race condition** that requires timing analysis to diagnose
+
+### What Makes Diagnosis Non-Trivial
+
+1. The error says "available 0" but the check showed "available 1"
+2. The workflow logic appears correct (check → then reserve)
+3. You need to see **WHEN** events occurred to understand the race
+4. You need to recognize the **parallel check + sequential reserve** anti-pattern
 
 ## Running the Test
 
@@ -29,90 +41,134 @@ cd examples/debug-loop
 go run ./worker
 ```
 
-### Step 3: Run the Buggy Workflow
+### Step 3: Run the Race Condition Scenario
 
 ```bash
-go run ./starter
+go run ./starter --scenario race
 ```
 
 Expected output:
 ```
-Starting order workflow: order-1234567890
-Waiting for workflow completion...
-Workflow FAILED: activity retry limit exceeded
+=== RACE CONDITION SIMULATION ===
+Two orders will compete for the same item (KEYBOARD-03, only 1 in stock)
 
-=== DEBUG INSTRUCTIONS ===
-Use the temporal agent CLI to diagnose this failure:
+Starting main order: order-123456
+  Items: LAPTOP-001 x1, MOUSE-002 x2, KEYBOARD-03 x1
+Main order started: order-123456 (run ID: abc...)
+Competing order started: competing-123456
 
-  temporal agent failures --namespace default --since 5m -o json
-  temporal agent trace --workflow-id order-1234567890 --namespace default -o json
-  temporal agent timeline --workflow-id order-1234567890 --namespace default --compact -o json
+=== RESULTS ===
+Main order FAILED: insufficient inventory for KEYBOARD-03: requested 1, available 0
+Competing order SUCCEEDED
+
+=== DEBUG CHALLENGE ===
+One order's inventory check PASSED but reservation FAILED.
+This is a classic TOCTOU race condition!
 ```
 
 ### Step 4: Diagnose with Temporal Agent CLI
 
 ```bash
-# Find recent failures
-temporal agent failures --namespace default --since 5m -o json
+# Get the trace - shows root cause
+temporal agent trace --workflow-id order-123456 --namespace default -o json
 
-# Trace the workflow chain
-temporal agent trace --workflow-id order-1234567890 --namespace default -o json
-
-# Get compact timeline
-temporal agent timeline --workflow-id order-1234567890 --namespace default --compact -o json
+# THIS IS KEY: Get the timeline to see the race condition
+temporal agent timeline --workflow-id order-123456 --namespace default -o json
 ```
 
-### Step 5: AI Analysis (Cursor)
+## What the Timeline Reveals
 
-Prompt Cursor with:
 ```
-"A workflow just failed with 'activity retry limit exceeded'. 
-Use the temporal agent CLI to diagnose the root cause.
-The workflow ID is [workflow-id], namespace is default."
+T+0ms     CheckInventory (LAPTOP-001) scheduled   ─┐
+T+0ms     CheckInventory (MOUSE-002) scheduled    ├── Parallel checks
+T+0ms     CheckInventory (KEYBOARD-03) scheduled  ─┘
+T+1ms     CheckInventory (LAPTOP-001) completed: Available=true
+T+2ms     CheckInventory (MOUSE-002) completed: Available=true  
+T+3ms     CheckInventory (KEYBOARD-03) completed: Available=true, InStock=1  ← CHECK PASSED!
+T+200ms   TimerFired (processing delay)           ← RACE WINDOW
+T+205ms   ReserveInventory (LAPTOP-001) completed
+T+210ms   ReserveInventory (MOUSE-002) completed
+T+215ms   ReserveInventory (KEYBOARD-03) FAILED   ← RESERVE FAILED!
+          Error: "insufficient inventory: requested 1, available 0"
 ```
 
-### Step 6: Apply Fix
+**The key insight**: At T+3ms, KEYBOARD-03 showed `InStock=1`. At T+215ms, reservation failed with `available=0`. 
 
-The fix is to change `MaximumAttempts: 2` to `MaximumAttempts: 3` in `workflows/order.go`:
+The competing order claimed the keyboard during the 200ms delay!
 
+## AI Agent Diagnosis Prompt
+
+```
+A workflow failed with "insufficient inventory for KEYBOARD-03: requested 1, available 0".
+The logs show the inventory check passed, but the reservation failed.
+
+Use temporal agent to diagnose:
+  temporal agent trace --workflow-id [id] --namespace default -o json
+  temporal agent timeline --workflow-id [id] --namespace default -o json
+
+Questions to answer:
+1. Did the inventory check pass? What did it show?
+2. How much time passed between check and reserve?
+3. What could have changed the inventory during that time?
+```
+
+## Expected AI Analysis
+
+A good AI diagnosis should identify:
+
+1. **Timeline Analysis**: Checks at T+3ms showed `InStock=1`, reservation at T+215ms showed `available=0`
+2. **Pattern Recognition**: Parallel checks + delay + sequential reserves = TOCTOU vulnerability
+3. **Root Cause**: Another workflow reserved the item during the 200ms processing delay
+4. **Fix Proposals**:
+   - Atomic check-and-reserve in a single activity
+   - Remove the delay between check and reserve
+   - Use optimistic locking/versioning
+   - Re-validate inventory immediately before each reservation
+
+## The Fix
+
+Option 1: **Atomic Operation**
 ```go
-// Before (buggy)
-RetryPolicy: &temporal.RetryPolicy{
-    MaximumAttempts: 2, // BUG: Should be 3 or more!
-}
-
-// After (fixed)
-RetryPolicy: &temporal.RetryPolicy{
-    MaximumAttempts: 3,
+// Instead of separate check + reserve, do both atomically
+func CheckAndReserveInventory(ctx context.Context, input CheckAndReserveInput) (*ReserveResult, error) {
+    // Single transaction that checks and reserves
 }
 ```
 
-### Step 7: Verify Fix
-
-1. Restart the worker
-2. Run the starter again
-3. The workflow should complete successfully
-
-## Expected Timeline Output
-
-```json
-{
-  "events": [
-    {"type": "WorkflowExecutionStarted", ...},
-    {"type": "ActivityTaskScheduled", "name": "ProcessPayment", ...},
-    {"type": "ActivityTaskCompleted", "name": "ProcessPayment", ...},
-    {"type": "ActivityTaskScheduled", "name": "CheckInventory", ...},
-    {"type": "ActivityTaskFailed", "name": "CheckInventory", "attempt": 1, "error": "inventory service unavailable (attempt 1/3)"},
-    {"type": "ActivityTaskScheduled", "name": "CheckInventory", ...},
-    {"type": "ActivityTaskFailed", "name": "CheckInventory", "attempt": 2, "error": "inventory service unavailable (attempt 2/3)"},
-    {"type": "WorkflowExecutionFailed", "error": "activity retry limit exceeded"}
-  ]
+Option 2: **Re-validate Before Reserve**
+```go
+// Check again right before reserving
+for _, item := range items {
+    // Re-check inventory (no caching)
+    check := checkInventory(item)
+    if !check.Available {
+        return nil, fmt.Errorf("item %s became unavailable", item.SKU)
+    }
+    // Reserve immediately after check
+    reserve(item)
 }
 ```
 
-The key insight from the timeline is:
-1. Activity failed on attempt 1 and 2
-2. Error message says "attempt X/3" (indicating 3 attempts are needed)
-3. But only 2 attempts were made before the workflow failed
-4. **Conclusion:** MaximumAttempts is too low
+Option 3: **Remove Unnecessary Delay**
+```go
+// Don't sleep between check and reserve!
+// The 200ms delay creates an unnecessary race window
+```
 
+## Files
+
+| File | Purpose |
+|------|---------|
+| `workflows/order.go` | Order workflow with TOCTOU race condition |
+| `activities/inventory.go` | Inventory check/reserve activities |
+| `worker/main.go` | Worker registration |
+| `starter/main.go` | Race condition scenario launcher |
+
+## Key Learning
+
+The `temporal agent timeline` command is essential for diagnosing race conditions because it shows:
+- **When** each event occurred (precise timestamps)
+- **What** the state was at each point (activity results)
+- **How long** each phase took (identifying race windows)
+
+Without the timeline, you only see "check passed" and "reserve failed" - not the crucial timing that explains the discrepancy.
