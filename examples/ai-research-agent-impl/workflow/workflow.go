@@ -78,6 +78,23 @@ func ResearchWorkflow(ctx workflow.Context, req shared.ResearchRequest) (*shared
 		return nil, err
 	}
 
+	// Step 4: Check quality of the synthesized answer
+	logger.Info("Checking answer quality")
+	var qualityResult shared.QualityCheckResult
+	err = workflow.ExecuteActivity(ctx, activity.CheckQuality, req.Question, answer).Get(ctx, &qualityResult)
+	if err != nil {
+		return nil, err
+	}
+
+	logger.Info("Quality check completed", "score", qualityResult.Score, "feedback", qualityResult.Feedback)
+
+	// Fail if quality score is below threshold
+	const qualityThreshold = 0.7
+	if qualityResult.Score < qualityThreshold {
+		return nil, fmt.Errorf("answer quality too low: score %.2f (threshold %.2f). Feedback: %s",
+			qualityResult.Score, qualityThreshold, qualityResult.Feedback)
+	}
+
 	result := &shared.ResearchResult{
 		Question:     req.Question,
 		SubQuestions: successfulResults,

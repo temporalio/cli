@@ -20,3 +20,9 @@ type SubQuestion struct {
 	Answer   string `json:"answer,omitempty"`
 }
 
+// QualityCheckResult contains the quality score and feedback.
+type QualityCheckResult struct {
+	Score    float64 `json:"score"`    // 0.0 to 1.0
+	Feedback string  `json:"feedback"` // Explanation of the score
+}
+
