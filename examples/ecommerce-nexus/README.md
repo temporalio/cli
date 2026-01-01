@@ -1,6 +1,6 @@
 # Multi-Namespace E-Commerce Simulation with Nexus
 
-This example demonstrates a multi-namespace e-commerce system using both Nexus endpoints and cross-namespace child workflows. It's designed to validate the `temporal agent` CLI's tracing capabilities across different cross-service patterns.
+This example demonstrates a multi-namespace e-commerce system using both Nexus endpoints and cross-namespace child workflows. It's designed to validate the `temporal workflow` CLI's tracing capabilities across different cross-service patterns.
 
 ## Architecture
 
@@ -174,8 +174,8 @@ temporal workflow failures --namespace $COMMERCE_NS --since 1h \
 
 This example tests:
 
-1. **Nexus call tracing** - Does `agent trace` follow Nexus calls?
-2. **Cross-NS child WF tracing** - Does `agent trace` follow cross-namespace child workflows?
+1. **Nexus call tracing** - Does `workflow diagnose` follow Nexus calls?
+2. **Cross-NS child WF tracing** - Does `workflow diagnose` follow cross-namespace child workflows?
 3. **Error propagation** - Do errors from Nexus calls appear in parent workflow?
 4. **Leaf-only filtering** - Does `--leaf-only` work with Nexus?
 5. **Compact errors** - Does `--compact-errors` strip Nexus wrapper messages?

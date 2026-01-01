@@ -334,7 +334,7 @@ func printFinalStats(stats *Stats) {
 
 	// List failed workflow IDs for debugging
 	failCount := 0
-	log.Println("\nFailed workflow IDs (for agent trace testing):")
+	log.Println("\nFailed workflow IDs (for workflow diagnose testing):")
 	stats.FailedIDs.Range(func(key, value interface{}) bool {
 		failCount++
 		if failCount <= 10 {

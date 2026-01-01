@@ -10,12 +10,12 @@ A step-by-step guide for building a high-concurrency ticket sales platform using
 
 Before starting, make sure you have:
 - A local Temporal server running (`temporal server start-dev`)
-- The Temporal CLI with agent commands (`temporal agent --help`)
+- The Temporal CLI with workflow debugging commands (`temporal workflow --help`)
 - An AI coding assistant (Cursor, Claude Code, etc.)
 
 ---
 
-## Teaching Your AI About Temporal Agent CLI
+## Teaching Your AI About Temporal Workflow CLI
 
 Copy the `.cursorrules` file to your project:
 
@@ -25,7 +25,7 @@ cp examples/ticketdrop/.cursorrules ./your-project/
 
 Or tell your AI at the start of the session:
 
-> "I'm building a Temporal workflow system. When debugging, use `temporal agent` commands:
+> "I'm building a Temporal workflow system. When debugging, use `temporal workflow` commands:
 > - `temporal workflow diagnose --workflow-id <id>` - trace failures
 > - `temporal workflow show --compact --workflow-id <id>` - see event sequence
 > - `temporal workflow describe --pending --workflow-id <id>` - check pending work
@@ -93,7 +93,7 @@ temporal workflow diagnose --workflow-id <id> --format json
 
 **What you'll likely see:** The workflow completed but didn't do anything meaningful.
 
-**This teaches:** Using `agent trace` to understand workflow execution.
+**This teaches:** Using `workflow diagnose` to understand workflow execution.
 
 ---
 
@@ -333,7 +333,7 @@ graph TD
     WF --> A0
 ```
 
-**This teaches:** Using `state` to find stuck activities.
+**This teaches:** Using `workflow describe --pending` to find stuck activities.
 
 ---
 
@@ -523,7 +523,7 @@ temporal workflow show --compact --workflow-id purchase-user-15 --format json | 
 
 When something goes wrong, ask your AI:
 
-> "The purchase workflow `<workflow-id>` failed. Use `temporal agent` to find out why. Show me a diagram."
+> "The purchase workflow `<workflow-id>` failed. Use `temporal workflow` CLI to find out why. Show me a diagram."
 
 **Expected AI response:**
 ```bash

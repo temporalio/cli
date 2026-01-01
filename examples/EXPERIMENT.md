@@ -1,6 +1,6 @@
 # Agent Debugging Experiment
 
-This document describes experiments to validate that the `temporal agent` CLI enables AI agents to debug Temporal workflow failures using structured output instead of logs.
+This document describes experiments to validate that the `temporal workflow` CLI commands enable AI agents to debug Temporal workflow failures using structured output instead of logs.
 
 ## Hypothesis
 
@@ -37,7 +37,7 @@ AI agents can query failures, trace nested workflow chains across namespaces, an
 | Test 2 | `workflow diagnose` | "database connection refused" at depth 3 | 100/100 | Perfect chain traversal |
 | Test 3 | `workflow show --compact` | ValidationWorkflow failed with invalid SKU | 100/100 | Clear child workflow timeline |
 | Test 4 | `workflow diagnose` | "activity StartToClose timeout" | 100/100 | Correctly identified timeout vs app error |
-| Test 5 | `agent failures --error-contains` | Found 2 timeout-related failures | 100/100 | Filter worked correctly |
+| Test 5 | `workflow failures --error-contains` | Found 2 timeout-related failures | 100/100 | Filter worked correctly |
 
 **Overall Score:** 99/100
 
@@ -95,7 +95,7 @@ AI agents can query failures, trace nested workflow chains across namespaces, an
 
 The `debug-loop-fresh` example contains a TOCTOU race condition with all hints removed. The LLM was given only:
 
-> "I've created a sample example under `examples/debug-loop-fresh`, and I want you to find and fix its issue with the use of temporal agent CLI"
+> "I've created a sample example under `examples/debug-loop-fresh`, and I want you to find and fix its issue with the use of temporal workflow CLI"
 
 ### LLM's Diagnosis Process
 
@@ -124,7 +124,7 @@ The `debug-loop-fresh` example contains a TOCTOU race condition with all hints r
 | Fix verified | ✅ Deterministic behavior |
 | Human intervention needed | ❌ None |
 
-**This validates the core thesis:** An LLM can autonomously diagnose complex timing bugs using only `temporal agent` CLI output.
+**This validates the core thesis:** An LLM can autonomously diagnose complex timing bugs using only `temporal workflow` CLI output.
 
 ---
 
@@ -205,7 +205,7 @@ Based on experiment findings, the following improvements were made:
 
 | Criterion | Status | Evidence |
 |-----------|--------|----------|
-| AI finds failures without LogQL | ✅ | All experiments used `temporal agent` only |
+| AI finds failures without LogQL | ✅ | All experiments used `temporal workflow` only |
 | Root cause accuracy | ✅ | 100% in all tests |
 | Low token cost | ✅ | ~10x reduction vs logs |
 | Cross-namespace traversal | ✅ | Nexus chains fully traced |
@@ -216,10 +216,10 @@ Based on experiment findings, the following improvements were made:
 
 ## Conclusion
 
-The `temporal agent` CLI successfully achieves the goals:
+The `temporal workflow` CLI commands successfully achieve the goals:
 
 1. **Agent-native feedback loop**: AI agents effectively debug Temporal workflow failures using structured output
-2. **No logs required**: All debugging done via `temporal agent` commands
+2. **No logs required**: All debugging done via `temporal workflow` commands
 3. **Automatic chain traversal**: Traces follow child workflows and Nexus operations across namespaces
 4. **Root cause extraction**: Leaf failures clearly identified with `--leaf-only`
 5. **Error compaction**: `--compact-errors` strips wrapper context for cleaner output

@@ -1,6 +1,6 @@
 # TicketDrop Example
 
-A distributed ticket sales system demonstrating Temporal workflow patterns and `temporal agent` CLI debugging.
+A distributed ticket sales system demonstrating Temporal workflow patterns and `temporal workflow` CLI debugging.
 
 **Scenario:** 50,000 fans trying to buy 500 concert tickets in 10 seconds. Race conditions, timeouts, and cascading failures guaranteed.
 
@@ -18,8 +18,8 @@ A distributed ticket sales system demonstrating Temporal workflow patterns and `
 # Start Temporal server
 temporal server start-dev
 
-# Verify agent commands work
-temporal agent --help
+# Verify workflow debugging commands work
+temporal workflow failures --help
 ```
 
 ## Quick Start

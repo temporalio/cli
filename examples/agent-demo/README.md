@@ -1,6 +1,6 @@
 # Temporal Agent Demo
 
-This demo project demonstrates the `temporal agent` commands for AI-assisted debugging.
+This demo project demonstrates the `temporal workflow` commands for AI-assisted debugging.
 
 ## Overview
 
@@ -78,7 +78,7 @@ go run ./starter -scenario shipping-fail
 go run ./starter -scenario nested-fail
 ```
 
-## Using Temporal Agent Commands
+## Using Temporal Workflow Commands
 
 After workflows have run, use the agent commands to analyze them.
 
