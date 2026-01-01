@@ -57,4 +57,3 @@ func main() {
 	resultJSON, _ := json.MarshalIndent(result, "", "  ")
 	fmt.Printf("\n✅ Purchase complete!\n%s\n", resultJSON)
 }
-

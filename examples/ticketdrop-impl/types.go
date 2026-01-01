@@ -74,4 +74,3 @@ type SendConfirmationResult struct {
 	EmailSent bool `json:"email_sent"`
 	SMSSent   bool `json:"sms_sent"`
 }
-
