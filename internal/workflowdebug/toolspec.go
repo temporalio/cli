@@ -1,6 +1,6 @@
-// Package agent provides structured, agent-optimized views of Temporal workflow
-// execution data, designed for AI agents and automated tooling.
-package agent
+// Package workflowdebug provides structured, machine-readable views of Temporal
+// workflow execution data, designed for AI agents and automated debugging tools.
+package workflowdebug
 
 import "encoding/json"
 

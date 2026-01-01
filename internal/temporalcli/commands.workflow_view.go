@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/fatih/color"
-	"github.com/temporalio/cli/internal/agent"
 	"github.com/temporalio/cli/internal/printer"
+	"github.com/temporalio/cli/internal/workflowdebug"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/failure/v1"
@@ -29,17 +29,17 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 		}
 		defer cl.Close()
 
-		opts := agent.StateOptions{
+		opts := workflowdebug.StateOptions{
 			IncludeDetails: true, // Always include details in pending mode
 		}
-		extractor := agent.NewStateExtractor(cl, opts)
+		extractor := workflowdebug.NewStateExtractor(cl, opts)
 		result, err := extractor.GetState(cctx, c.Parent.ClientOptions.Namespace, c.WorkflowId, c.RunId)
 		if err != nil {
 			return fmt.Errorf("failed to get workflow state: %w", err)
 		}
 
-		return printAgentOutput(cctx, c.Format.Value, result, func() string {
-			return agent.StateToMermaid(result)
+		return printWorkdlowOutput(cctx, c.Format.Value, result, func() string {
+			return workflowdebug.StateToMermaid(result)
 		})
 	}
 
@@ -587,19 +587,19 @@ func (c *TemporalWorkflowShowCommand) run(cctx *CommandContext, _ []string) erro
 		}
 		defer cl.Close()
 
-		opts := agent.TimelineOptions{
+		opts := workflowdebug.TimelineOptions{
 			Compact:           true, // Always compact for this mode
 			EventTypes:        c.EventTypes,
 			ExcludeEventTypes: c.ExcludeEventTypes,
 		}
-		generator := agent.NewTimelineGenerator(cl, opts)
+		generator := workflowdebug.NewTimelineGenerator(cl, opts)
 		result, err := generator.Generate(cctx, c.Parent.ClientOptions.Namespace, c.WorkflowId, c.RunId)
 		if err != nil {
 			return fmt.Errorf("failed to generate timeline: %w", err)
 		}
 
-		return printAgentOutput(cctx, c.Format.Value, result, func() string {
-			return agent.TimelineToMermaid(result)
+		return printWorkdlowOutput(cctx, c.Format.Value, result, func() string {
+			return workflowdebug.TimelineToMermaid(result)
 		})
 	}
 

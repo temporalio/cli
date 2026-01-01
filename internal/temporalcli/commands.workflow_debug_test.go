@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/temporalio/cli/internal/agent"
+	"github.com/temporalio/cli/internal/workflowdebug"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/temporal"
@@ -45,7 +45,7 @@ func (s *SharedServerSuite) TestWorkflowShow_Compact_BasicWorkflow() {
 	s.NoError(res.Err)
 
 	// Parse JSON output
-	var timeline agent.TimelineResult
+	var timeline workflowdebug.TimelineResult
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &timeline))
 
 	// Verify basic structure
@@ -111,7 +111,7 @@ func (s *SharedServerSuite) TestWorkflowShow_Compact_WithActivity() {
 	)
 	s.NoError(res.Err)
 
-	var timeline agent.TimelineResult
+	var timeline workflowdebug.TimelineResult
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &timeline))
 
 	// Check for activity events
@@ -159,7 +159,7 @@ func (s *SharedServerSuite) TestWorkflowDiagnose_SimpleWorkflow() {
 	)
 	s.NoError(res.Err)
 
-	var trace agent.TraceResult
+	var trace workflowdebug.TraceResult
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &trace))
 
 	// Verify structure
@@ -221,7 +221,7 @@ func (s *SharedServerSuite) TestWorkflowDiagnose_WithChildWorkflow() {
 	)
 	s.NoError(res.Err)
 
-	var trace agent.TraceResult
+	var trace workflowdebug.TraceResult
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &trace))
 
 	// Should have 2 nodes in chain (parent and child)
@@ -283,7 +283,7 @@ func (s *SharedServerSuite) TestWorkflowFailures_FindsFailedWorkflows() {
 	)
 	s.NoError(res.Err)
 
-	var failuresResult agent.FailuresResult
+	var failuresResult workflowdebug.FailuresResult
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &failuresResult))
 
 	// Should find at least our 3 failures
@@ -352,11 +352,11 @@ func (s *SharedServerSuite) TestWorkflowFailures_WithFollowChildren() {
 	)
 	s.NoError(res.Err)
 
-	var failuresResult agent.FailuresResult
+	var failuresResult workflowdebug.FailuresResult
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &failuresResult))
 
 	// Find our specific failure
-	var ourFailure *agent.FailureReport
+	var ourFailure *workflowdebug.FailureReport
 	for i := range failuresResult.Failures {
 		if failuresResult.Failures[i].RootWorkflow.WorkflowID == run.GetID() {
 			ourFailure = &failuresResult.Failures[i]
@@ -424,7 +424,7 @@ func (s *SharedServerSuite) TestWorkflowFailures_ErrorContains() {
 	)
 	s.NoError(res.Err)
 
-	var failuresResult agent.FailuresResult
+	var failuresResult workflowdebug.FailuresResult
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &failuresResult))
 
 	// Should find exactly 1 failure with uniqueError1
@@ -441,7 +441,7 @@ func (s *SharedServerSuite) TestWorkflowFailures_ErrorContains() {
 	)
 	s.NoError(res.Err)
 
-	var failuresResult2 agent.FailuresResult
+	var failuresResult2 workflowdebug.FailuresResult
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &failuresResult2))
 
 	// Should still find the failure (case-insensitive)
@@ -457,7 +457,7 @@ func (s *SharedServerSuite) TestWorkflowFailures_ErrorContains() {
 	)
 	s.NoError(res.Err)
 
-	var failuresResult3 agent.FailuresResult
+	var failuresResult3 workflowdebug.FailuresResult
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &failuresResult3))
 
 	// Should find no failures
@@ -500,7 +500,7 @@ func (s *SharedServerSuite) TestWorkflowFailures_MultipleStatuses() {
 	)
 	s.NoError(res.Err)
 
-	var failuresResult agent.FailuresResult
+	var failuresResult workflowdebug.FailuresResult
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &failuresResult))
 
 	// Should find at least our 1 failure
@@ -521,7 +521,7 @@ func (s *SharedServerSuite) TestWorkflowFailures_MultipleStatuses() {
 	)
 	s.NoError(res.Err)
 
-	var failuresResult2 agent.FailuresResult
+	var failuresResult2 workflowdebug.FailuresResult
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &failuresResult2))
 
 	// Should find the same failures
@@ -539,7 +539,7 @@ func (s *SharedServerSuite) TestWorkflowFailures_MultipleStatuses() {
 	)
 	s.NoError(res.Err)
 
-	var failuresResult3 agent.FailuresResult
+	var failuresResult3 workflowdebug.FailuresResult
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &failuresResult3))
 
 	// Should find no failures (we only have Failed workflows, not Canceled)
@@ -603,7 +603,7 @@ func (s *SharedServerSuite) TestWorkflowFailures_LeafOnly() {
 	)
 	s.NoError(res.Err)
 
-	var allFailures agent.FailuresResult
+	var allFailures workflowdebug.FailuresResult
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &allFailures))
 
 	// Should find at least 2 failures (parent + child)
@@ -620,7 +620,7 @@ func (s *SharedServerSuite) TestWorkflowFailures_LeafOnly() {
 	)
 	s.NoError(res.Err)
 
-	var leafOnlyFailures agent.FailuresResult
+	var leafOnlyFailures workflowdebug.FailuresResult
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &leafOnlyFailures))
 
 	// With leaf-only, should have fewer failures (parent filtered out)
@@ -659,7 +659,7 @@ func (s *SharedServerSuite) TestWorkflowShow_Compact_Compact() {
 	)
 	s.NoError(res.Err)
 
-	var timeline agent.TimelineResult
+	var timeline workflowdebug.TimelineResult
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &timeline))
 
 	// In compact mode, should still have key events

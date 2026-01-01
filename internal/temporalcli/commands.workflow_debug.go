@@ -7,15 +7,15 @@ import (
 	"os"
 	"strings"
 
-	"github.com/temporalio/cli/internal/agent"
+	"github.com/temporalio/cli/internal/workflowdebug"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/sdk/client"
 )
 
-// printAgentOutput outputs a result in the specified format.
+// printWorkflowOutput outputs a result in the specified format.
 // For mermaid, it outputs the mermaid diagram.
 // For json (or unspecified), it outputs properly formatted JSON.
-func printAgentOutput(cctx *CommandContext, format string, result any, toMermaid func() string) error {
+func printWorkflowOutput(cctx *CommandContext, format string, result any, toMermaid func() string) error {
 	if format == "mermaid" {
 		cctx.Printer.Println(toMermaid())
 		return nil
@@ -29,7 +29,7 @@ func printAgentOutput(cctx *CommandContext, format string, result any, toMermaid
 	return nil
 }
 
-// cliClientProvider implements agent.ClientProvider using the CLI's client options.
+// cliClientProvider implements workflowdebug.ClientProvider using the CLI's client options.
 type cliClientProvider struct {
 	cctx          *CommandContext
 	clientOptions *ClientOptions
@@ -123,7 +123,7 @@ func (c *TemporalWorkflowFailuresCommand) run(cctx *CommandContext, args []strin
 			if part == "" {
 				continue
 			}
-			status := agent.ParseWorkflowStatus(part)
+			status := workflowdebug.ParseWorkflowStatus(part)
 			if status == enums.WORKFLOW_EXECUTION_STATUS_UNSPECIFIED {
 				return fmt.Errorf("invalid status: %s", part)
 			}
@@ -132,7 +132,7 @@ func (c *TemporalWorkflowFailuresCommand) run(cctx *CommandContext, args []strin
 	}
 
 	// Build options
-	opts := agent.FailuresOptions{
+	opts := workflowdebug.FailuresOptions{
 		Since:            c.Since.Duration(),
 		Statuses:         statuses,
 		FollowChildren:   c.FollowChildren,
@@ -163,15 +163,15 @@ func (c *TemporalWorkflowFailuresCommand) run(cctx *CommandContext, args []strin
 	}
 
 	// Find failures
-	finder := agent.NewFailuresFinder(clientProvider, opts)
+	finder := workflowdebug.NewFailuresFinder(clientProvider, opts)
 	result, err := finder.FindFailures(cctx, c.Parent.ClientOptions.Namespace)
 	if err != nil {
 		return fmt.Errorf("failed to find failures: %w", err)
 	}
 
 	// Output based on format
-	return printAgentOutput(cctx, c.Format.Value, result, func() string {
-		return agent.FailuresToMermaid(result)
+	return printWorkflowOutput(cctx, c.Format.Value, result, func() string {
+		return workflowdebug.FailuresToMermaid(result)
 	})
 }
 
@@ -185,7 +185,7 @@ func (c *TemporalWorkflowDiagnoseCommand) run(cctx *CommandContext, args []strin
 	defer clientProvider.Close()
 
 	// Build options
-	opts := agent.TraverserOptions{
+	opts := workflowdebug.TraverserOptions{
 		FollowNamespaces: c.FollowNamespaces,
 		MaxDepth:         c.Depth,
 	}
@@ -208,15 +208,15 @@ func (c *TemporalWorkflowDiagnoseCommand) run(cctx *CommandContext, args []strin
 	}
 
 	// Trace workflow
-	traverser := agent.NewChainTraverser(clientProvider, opts)
+	traverser := workflowdebug.NewChainTraverser(clientProvider, opts)
 	result, err := traverser.Trace(cctx, c.Parent.ClientOptions.Namespace, c.WorkflowId, c.RunId)
 	if err != nil {
 		return fmt.Errorf("failed to diagnose workflow: %w", err)
 	}
 
 	// Output based on format
-	return printAgentOutput(cctx, c.Format.Value, result, func() string {
-		return agent.TraceToMermaid(result)
+	return printWorkflowOutput(cctx, c.Format.Value, result, func() string {
+		return workflowdebug.TraceToMermaid(result)
 	})
 }
 
@@ -227,13 +227,13 @@ func (c *TemporalToolSpecCommand) run(cctx *CommandContext, _ []string) error {
 
 	switch c.Format.Value {
 	case "openai":
-		output, err = agent.GetOpenAIToolSpecsJSON()
+		output, err = workflowdebug.GetOpenAIToolSpecsJSON()
 	case "claude":
-		output, err = agent.GetClaudeToolSpecsJSON()
+		output, err = workflowdebug.GetClaudeToolSpecsJSON()
 	case "langchain":
-		output, err = agent.GetLangChainToolSpecsJSON()
+		output, err = workflowdebug.GetLangChainToolSpecsJSON()
 	case "functions":
-		output, err = agent.GetToolSpecsJSON()
+		output, err = workflowdebug.GetToolSpecsJSON()
 	default:
 		return fmt.Errorf("unknown format: %s", c.Format.Value)
 	}
