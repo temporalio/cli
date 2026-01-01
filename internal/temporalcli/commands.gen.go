@@ -128,7 +128,7 @@ type WorkflowReferenceOptions struct {
 func (v *WorkflowReferenceOptions) buildFlags(cctx *CommandContext, f *pflag.FlagSet) {
 	f.StringVarP(&v.WorkflowId, "workflow-id", "w", "", "Workflow ID. Required.")
 	_ = cobra.MarkFlagRequired(f, "workflow-id")
-	f.StringVarP(&v.RunId, "run-id", "r", "", "Run ID.")
+	f.StringVarP(&v.RunId, "run-id", "r", "", "Run ID. If not specified, the latest run is used.")
 }
 
 type DeploymentNameOptions struct {
@@ -390,6 +390,7 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	s.Command.AddCommand(&NewTemporalScheduleCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalServerCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalTaskQueueCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalToolSpecCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowCommand(cctx, &s).Command)
 	s.Command.PersistentFlags().StringVar(&s.Env, "env", "default", "Active environment name (`ENV`).")
@@ -2864,6 +2865,34 @@ func NewTemporalTaskQueueVersioningReplaceRedirectRuleCommand(cctx *CommandConte
 	return &s
 }
 
+type TemporalToolSpecCommand struct {
+	Parent  *TemporalCommand
+	Command cobra.Command
+	Format  StringEnum
+}
+
+func NewTemporalToolSpecCommand(cctx *CommandContext, parent *TemporalCommand) *TemporalToolSpecCommand {
+	var s TemporalToolSpecCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "tool-spec [flags]"
+	s.Command.Short = "Output tool specifications for AI agent frameworks"
+	if hasHighlighting {
+		s.Command.Long = "Output structured tool specifications for AI agent frameworks like OpenAI,\nAnthropic Claude, and LangChain. These specifications describe the available\nTemporal workflow commands and parameters, enabling AI agents to invoke them.\n\nOutput OpenAI-compatible tool specifications:\n\n\x1b[1mtemporal tool-spec --format openai\x1b[0m\n\nOutput Anthropic Claude-compatible tool specifications:\n\n\x1b[1mtemporal tool-spec --format claude\x1b[0m\n\nOutput LangChain-compatible tool specifications:\n\n\x1b[1mtemporal tool-spec --format langchain\x1b[0m\n\nOutput raw function definitions:\n\n\x1b[1mtemporal tool-spec --format functions\x1b[0m"
+	} else {
+		s.Command.Long = "Output structured tool specifications for AI agent frameworks like OpenAI,\nAnthropic Claude, and LangChain. These specifications describe the available\nTemporal workflow commands and parameters, enabling AI agents to invoke them.\n\nOutput OpenAI-compatible tool specifications:\n\n```\ntemporal tool-spec --format openai\n```\n\nOutput Anthropic Claude-compatible tool specifications:\n\n```\ntemporal tool-spec --format claude\n```\n\nOutput LangChain-compatible tool specifications:\n\n```\ntemporal tool-spec --format langchain\n```\n\nOutput raw function definitions:\n\n```\ntemporal tool-spec --format functions\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Format = NewStringEnum([]string{"openai", "claude", "langchain", "functions"}, "openai")
+	s.Command.Flags().Var(&s.Format, "format", "Output format for tool specifications. Accepted values: openai, claude, langchain, functions. Accepted values: openai, claude, langchain, functions.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
 type TemporalWorkerCommand struct {
 	Parent  *TemporalCommand
 	Command cobra.Command
@@ -3313,8 +3342,10 @@ func NewTemporalWorkflowCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.AddCommand(&NewTemporalWorkflowCountCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowDeleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowDescribeCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkflowDiagnoseCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowExecuteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowExecuteUpdateWithStartCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkflowFailuresCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowFixHistoryJsonCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowListCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowMetadataCommand(cctx, &s).Command)
@@ -3422,6 +3453,8 @@ type TemporalWorkflowDescribeCommand struct {
 	WorkflowReferenceOptions
 	ResetPoints bool
 	Raw         bool
+	Pending     bool
+	Format      StringEnum
 }
 
 func NewTemporalWorkflowDescribeCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowDescribeCommand {
@@ -3431,13 +3464,50 @@ func NewTemporalWorkflowDescribeCommand(cctx *CommandContext, parent *TemporalWo
 	s.Command.Use = "describe [flags]"
 	s.Command.Short = "Show Workflow Execution info"
 	if hasHighlighting {
-		s.Command.Long = "Display information about a specific Workflow Execution:\n\n\x1b[1mtemporal workflow describe \\\n    --workflow-id YourWorkflowId\x1b[0m\n\nShow the Workflow Execution's auto-reset points:\n\n\x1b[1mtemporal workflow describe \\\n    --workflow-id YourWorkflowId \\\n    --reset-points true\x1b[0m"
+		s.Command.Long = "Display information about a specific Workflow Execution:\n\n\x1b[1mtemporal workflow describe \\\n    --workflow-id YourWorkflowId\x1b[0m\n\nShow the Workflow Execution's auto-reset points:\n\n\x1b[1mtemporal workflow describe \\\n    --workflow-id YourWorkflowId \\\n    --reset-points true\x1b[0m\n\nShow pending activities, children, and Nexus operations:\n\n\x1b[1mtemporal workflow describe \\\n    --workflow-id YourWorkflowId \\\n    --pending\x1b[0m\n\nGenerate a visual state diagram:\n\n\x1b[1mtemporal workflow describe \\\n    --workflow-id YourWorkflowId \\\n    --pending \\\n    --format mermaid\x1b[0m"
 	} else {
-		s.Command.Long = "Display information about a specific Workflow Execution:\n\n```\ntemporal workflow describe \\\n    --workflow-id YourWorkflowId\n```\n\nShow the Workflow Execution's auto-reset points:\n\n```\ntemporal workflow describe \\\n    --workflow-id YourWorkflowId \\\n    --reset-points true\n```"
+		s.Command.Long = "Display information about a specific Workflow Execution:\n\n```\ntemporal workflow describe \\\n    --workflow-id YourWorkflowId\n```\n\nShow the Workflow Execution's auto-reset points:\n\n```\ntemporal workflow describe \\\n    --workflow-id YourWorkflowId \\\n    --reset-points true\n```\n\nShow pending activities, children, and Nexus operations:\n\n```\ntemporal workflow describe \\\n    --workflow-id YourWorkflowId \\\n    --pending\n```\n\nGenerate a visual state diagram:\n\n```\ntemporal workflow describe \\\n    --workflow-id YourWorkflowId \\\n    --pending \\\n    --format mermaid\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().BoolVar(&s.ResetPoints, "reset-points", false, "Show auto-reset points only.")
 	s.Command.Flags().BoolVar(&s.Raw, "raw", false, "Print properties without changing their format.")
+	s.Command.Flags().BoolVar(&s.Pending, "pending", false, "Show pending activities, child workflows, signals, and Nexus operations. Provides a snapshot of what the workflow is currently doing or waiting for.")
+	s.Format = NewStringEnum([]string{"default", "mermaid"}, "")
+	s.Command.Flags().Var(&s.Format, "format", "Visual output format. Use \"mermaid\" to generate a state diagram showing pending work. Implies --pending. Accepted values: default, mermaid.")
+	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalWorkflowDiagnoseCommand struct {
+	Parent  *TemporalWorkflowCommand
+	Command cobra.Command
+	WorkflowReferenceOptions
+	FollowNamespaces []string
+	Depth            int
+	Format           StringEnum
+}
+
+func NewTemporalWorkflowDiagnoseCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowDiagnoseCommand {
+	var s TemporalWorkflowDiagnoseCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "diagnose [flags]"
+	s.Command.Short = "Trace workflow to deepest failure point"
+	if hasHighlighting {
+		s.Command.Long = "Trace a workflow execution through its child workflow chain to find\nthe deepest failure point (leaf failure) and extract root cause info.\n\nThis automates the manual process of following failed child workflows\nuntil reaching the actual source of the failure.\n\nBasic usage:\n\n\x1b[1mtemporal workflow diagnose \\\n    --workflow-id YourWorkflowId\x1b[0m\n\nFollow children across namespaces:\n\n\x1b[1mtemporal workflow diagnose \\\n    --workflow-id YourWorkflowId \\\n    --follow-namespaces OtherNamespace1,OtherNamespace2\x1b[0m\n\nGenerate a visual flowchart:\n\n\x1b[1mtemporal workflow diagnose \\\n    --workflow-id YourWorkflowId \\\n    --format mermaid\x1b[0m"
+	} else {
+		s.Command.Long = "Trace a workflow execution through its child workflow chain to find\nthe deepest failure point (leaf failure) and extract root cause info.\n\nThis automates the manual process of following failed child workflows\nuntil reaching the actual source of the failure.\n\nBasic usage:\n\n```\ntemporal workflow diagnose \\\n    --workflow-id YourWorkflowId\n```\n\nFollow children across namespaces:\n\n```\ntemporal workflow diagnose \\\n    --workflow-id YourWorkflowId \\\n    --follow-namespaces OtherNamespace1,OtherNamespace2\n```\n\nGenerate a visual flowchart:\n\n```\ntemporal workflow diagnose \\\n    --workflow-id YourWorkflowId \\\n    --format mermaid\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringArrayVar(&s.FollowNamespaces, "follow-namespaces", nil, "Additional namespaces to follow when traversing child workflows. Can be passed multiple times.")
+	s.Command.Flags().IntVar(&s.Depth, "depth", 0, "Maximum depth to traverse when following child workflows. Zero means unlimited.")
+	s.Format = NewStringEnum([]string{"json", "mermaid"}, "json")
+	s.Command.Flags().Var(&s.Format, "format", "Output format. Use \"mermaid\" for a visual flowchart. Accepted values: json, mermaid.")
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -3527,6 +3597,56 @@ func NewTemporalWorkflowExecuteUpdateWithStartCommand(cctx *CommandContext, pare
 		"name":        "type",
 		"update-type": "update-name",
 	}))
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalWorkflowFailuresCommand struct {
+	Parent           *TemporalWorkflowCommand
+	Command          cobra.Command
+	Since            Duration
+	Status           []string
+	FollowChildren   bool
+	FollowNamespaces []string
+	Depth            int
+	Limit            int
+	ErrorContains    string
+	LeafOnly         bool
+	CompactErrors    bool
+	GroupBy          StringEnum
+	Format           StringEnum
+}
+
+func NewTemporalWorkflowFailuresCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowFailuresCommand {
+	var s TemporalWorkflowFailuresCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "failures [flags]"
+	s.Command.Short = "List recent workflow failures with root cause analysis"
+	if hasHighlighting {
+		s.Command.Long = "List recent workflow failures, automatically analyzing each to find the\nroot cause. This command traces through child workflows and activities\nto identify the deepest failure point.\n\nShow failures from the last hour:\n\n\x1b[1mtemporal workflow failures \\\n    --since 1h\x1b[0m\n\nFollow child workflows to find root causes:\n\n\x1b[1mtemporal workflow failures \\\n    --since 24h \\\n    --follow-children \\\n    --follow-namespaces OtherNamespace1,OtherNamespace2\x1b[0m\n\nGroup failures by error message to find patterns:\n\n\x1b[1mtemporal workflow failures \\\n    --since 1h \\\n    --group-by error \\\n    --format mermaid\x1b[0m\n\nFilter failures containing specific text:\n\n\x1b[1mtemporal workflow failures \\\n    --since 1h \\\n    --error-contains \"timeout\"\x1b[0m"
+	} else {
+		s.Command.Long = "List recent workflow failures, automatically analyzing each to find the\nroot cause. This command traces through child workflows and activities\nto identify the deepest failure point.\n\nShow failures from the last hour:\n\n```\ntemporal workflow failures \\\n    --since 1h\n```\n\nFollow child workflows to find root causes:\n\n```\ntemporal workflow failures \\\n    --since 24h \\\n    --follow-children \\\n    --follow-namespaces OtherNamespace1,OtherNamespace2\n```\n\nGroup failures by error message to find patterns:\n\n```\ntemporal workflow failures \\\n    --since 1h \\\n    --group-by error \\\n    --format mermaid\n```\n\nFilter failures containing specific text:\n\n```\ntemporal workflow failures \\\n    --since 1h \\\n    --error-contains \"timeout\"\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Since = Duration(3600000 * time.Millisecond)
+	s.Command.Flags().Var(&s.Since, "since", "Time window to search for failures. For example: \"1h\", \"24h\", \"7d\".")
+	s.Command.Flags().StringArrayVar(&s.Status, "status", nil, "Filter by workflow status. Accepted values: Failed, TimedOut, Canceled, Terminated. Can be passed multiple times.")
+	s.Command.Flags().BoolVar(&s.FollowChildren, "follow-children", false, "Traverse child workflows to find leaf failures.")
+	s.Command.Flags().StringArrayVar(&s.FollowNamespaces, "follow-namespaces", nil, "Additional namespaces to follow when traversing child workflows. Can be passed multiple times.")
+	s.Command.Flags().IntVar(&s.Depth, "depth", 0, "Maximum depth to traverse when following child workflows. Zero means unlimited.")
+	s.Command.Flags().IntVar(&s.Limit, "limit", 50, "Maximum number of failures to return.")
+	s.Command.Flags().StringVar(&s.ErrorContains, "error-contains", "", "Filter failures to only those containing this substring in the error. Case-insensitive matching.")
+	s.Command.Flags().BoolVar(&s.LeafOnly, "leaf-only", false, "Show only leaf failures (workflows with no failing children). De-duplicates failures by showing only the root cause.")
+	s.Command.Flags().BoolVar(&s.CompactErrors, "compact-errors", false, "Extract the core error message, stripping wrapper context.")
+	s.GroupBy = NewStringEnum([]string{"none", "type", "namespace", "status", "error"}, "none")
+	s.Command.Flags().Var(&s.GroupBy, "group-by", "Group failures by a field instead of listing individually. Returns aggregated counts per group. Accepted values: none, type, namespace, status, error.")
+	s.Format = NewStringEnum([]string{"json", "mermaid"}, "json")
+	s.Command.Flags().Var(&s.Format, "format", "Output format. Use \"mermaid\" for a visual diagram. Shows a pie chart when grouped, or a flowchart of failure chains. Accepted values: json, mermaid.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -3768,8 +3888,12 @@ type TemporalWorkflowShowCommand struct {
 	Parent  *TemporalWorkflowCommand
 	Command cobra.Command
 	WorkflowReferenceOptions
-	Follow   bool
-	Detailed bool
+	Follow            bool
+	Detailed          bool
+	Compact           bool
+	EventTypes        []string
+	ExcludeEventTypes []string
+	Format            StringEnum
 }
 
 func NewTemporalWorkflowShowCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowShowCommand {
@@ -3779,13 +3903,18 @@ func NewTemporalWorkflowShowCommand(cctx *CommandContext, parent *TemporalWorkfl
 	s.Command.Use = "show [flags]"
 	s.Command.Short = "Display Event History"
 	if hasHighlighting {
-		s.Command.Long = "Show a Workflow Execution's Event History.\nWhen using JSON output (\x1b[1m--output json\x1b[0m), you may pass the results to an SDK\nto perform a replay:\n\n\x1b[1mtemporal workflow show \\\n    --workflow-id YourWorkflowId\n    --output json\x1b[0m"
+		s.Command.Long = "Show a Workflow Execution's Event History.\nWhen using JSON output (\x1b[1m--output json\x1b[0m), you may pass the results to an SDK\nto perform a replay:\n\n\x1b[1mtemporal workflow show \\\n    --workflow-id YourWorkflowId\n    --output json\x1b[0m\n\nGenerate a visual sequence diagram of the workflow timeline:\n\n\x1b[1mtemporal workflow show \\\n    --workflow-id YourWorkflowId\n    --format mermaid\x1b[0m\n\nShow a compact timeline (collapsed retries, focused events):\n\n\x1b[1mtemporal workflow show \\\n    --workflow-id YourWorkflowId\n    --compact\x1b[0m"
 	} else {
-		s.Command.Long = "Show a Workflow Execution's Event History.\nWhen using JSON output (`--output json`), you may pass the results to an SDK\nto perform a replay:\n\n```\ntemporal workflow show \\\n    --workflow-id YourWorkflowId\n    --output json\n```"
+		s.Command.Long = "Show a Workflow Execution's Event History.\nWhen using JSON output (`--output json`), you may pass the results to an SDK\nto perform a replay:\n\n```\ntemporal workflow show \\\n    --workflow-id YourWorkflowId\n    --output json\n```\n\nGenerate a visual sequence diagram of the workflow timeline:\n\n```\ntemporal workflow show \\\n    --workflow-id YourWorkflowId\n    --format mermaid\n```\n\nShow a compact timeline (collapsed retries, focused events):\n\n```\ntemporal workflow show \\\n    --workflow-id YourWorkflowId\n    --compact\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().BoolVarP(&s.Follow, "follow", "f", false, "Follow the Workflow Execution progress in real time. Does not apply to JSON output.")
 	s.Command.Flags().BoolVar(&s.Detailed, "detailed", false, "Display events as detailed sections instead of table. Does not apply to JSON output.")
+	s.Command.Flags().BoolVar(&s.Compact, "compact", false, "Show a compact event timeline focused on activities and workflows. Collapses retries and filters noise for easier debugging.")
+	s.Command.Flags().StringArrayVar(&s.EventTypes, "event-types", nil, "Filter to specific event types in compact mode. Can be passed multiple times.")
+	s.Command.Flags().StringArrayVar(&s.ExcludeEventTypes, "exclude-event-types", nil, "Exclude specific event types in compact mode. Can be passed multiple times.")
+	s.Format = NewStringEnum([]string{"default", "mermaid"}, "")
+	s.Command.Flags().Var(&s.Format, "format", "Visual output format. Use \"mermaid\" to generate a sequence diagram of the workflow timeline. Implies --compact. Accepted values: default, mermaid.")
 	s.WorkflowReferenceOptions.buildFlags(cctx, s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
