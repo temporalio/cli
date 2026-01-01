@@ -2,7 +2,9 @@ package ticketdrop
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"math/rand"
 	"time"
 
 	"go.temporal.io/sdk/activity"
@@ -36,8 +38,17 @@ func (a *Activities) ProcessPayment(ctx context.Context, input ProcessPaymentInp
 	logger := activity.GetLogger(ctx)
 	logger.Info("Processing payment", "user_id", input.UserID, "amount", input.Amount)
 
-	// Simulate payment processing
-	transactionID := fmt.Sprintf("txn-%s-%d", input.ReservationID, time.Now().UnixMilli())
+	// Simulate payment processing (2 seconds)
+	time.Sleep(2 * time.Second)
+
+	// 20% random failure rate
+	if rand.Float64() < 0.2 {
+		logger.Warn("Payment failed", "user_id", input.UserID)
+		return ProcessPaymentResult{}, errors.New("payment declined: insufficient funds")
+	}
+
+	transactionID := fmt.Sprintf("pay-%s-%d", input.UserID, time.Now().UnixMilli())
+	logger.Info("Payment successful", "transaction_id", transactionID)
 
 	return ProcessPaymentResult{
 		TransactionID: transactionID,
