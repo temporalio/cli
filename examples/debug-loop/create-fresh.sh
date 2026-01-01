@@ -515,7 +515,7 @@ func runRaceScenario(c client.Client, namespace, orderID string, ts int64, wait 
 	if failedID != "" {
 		log.Println("")
 		log.Println("=== DEBUG CHALLENGE ===")
-		log.Println("One order failed. Use temporal agent to diagnose why.")
+		log.Println("One order failed. Use temporal workflow CLI to diagnose why.")
 		log.Println("")
 		log.Printf("  temporal workflow diagnose --workflow-id %s --namespace %s --format json", failedID, namespace)
 		log.Printf("  temporal workflow show --compact --workflow-id %s --namespace %s --format json", failedID, namespace)
@@ -564,7 +564,7 @@ sed -i '' 's|debug-loop|debug-loop-fresh|g' "$FRESH_DIR/go.mod"
 cat > "$FRESH_DIR/README.md" << 'EOF'
 # Debug Loop Challenge
 
-An order processing workflow is failing with inventory errors. Diagnose the root cause using `temporal agent` CLI.
+An order processing workflow is failing with inventory errors. Diagnose the root cause using `temporal workflow` CLI.
 
 ## Setup
 
@@ -599,7 +599,7 @@ But the workflow checks inventory before reserving. Why does the check pass but 
 
 ## Your Task
 
-Diagnose using `temporal agent`:
+Diagnose using `temporal workflow`:
 
 ```bash
 temporal workflow failures --namespace default --since 5m --format json

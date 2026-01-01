@@ -1,6 +1,6 @@
-# Temporal Agent CLI - Debugging Rules
+# Temporal Workflow CLI - Debugging Rules
 
-When debugging Temporal workflows, use the `temporal agent` CLI commands for structured, machine-readable output.
+When debugging Temporal workflows, use the `temporal workflow` CLI commands for structured, machine-readable output.
 
 ## Commands
 

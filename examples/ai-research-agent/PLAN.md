@@ -13,9 +13,9 @@ Before starting, make sure you have:
 
 ---
 
-## Teaching Your AI About Temporal Agent CLI
+## Teaching Your AI About Temporal Workflow CLI
 
-Your AI assistant needs to know about the `temporal agent` commands. Here are three ways to set this up:
+Your AI assistant needs to know about the `temporal workflow` debugging commands. Here are three ways to set this up:
 
 ### Option 1: Add to AI Rules/Instructions (Recommended)
 
@@ -31,7 +31,7 @@ Or create your own `.cursorrules` file with this content:
 **For other AIs:** Add to custom instructions, system prompt, or project rules:
 
 ```
-When debugging Temporal workflows, use the `temporal agent` CLI commands:
+When debugging Temporal workflows, use the `temporal workflow` CLI commands:
 
 - `temporal workflow failures --since 1h` - Find recent failures
 - `temporal workflow diagnose --workflow-id <id>` - Trace workflow chain to leaf failure
@@ -69,7 +69,7 @@ Then load this into your agent framework's tool configuration.
 
 At the beginning of each session, tell your AI:
 
-> "I'm using Temporal for workflow orchestration. When I have issues, use the `temporal agent` CLI to debug. The commands are:
+> "I'm using Temporal for workflow orchestration. When I have issues, use the `temporal workflow` CLI to debug. The commands are:
 > - `temporal workflow failures` - find failures
 > - `temporal workflow diagnose` - trace workflow chains  
 > - `temporal workflow show --compact` - see event history
@@ -89,7 +89,7 @@ temporal workflow diagnose --workflow-id <id> --format json
 temporal workflow failures --since 1h --follow-children --format json
 ```
 
-If the AI suggests looking at logs or using `temporal workflow describe`, remind it about the agent commands.
+If the AI suggests looking at logs, remind it about the workflow debugging commands (`failures`, `diagnose`, `show --compact`, `describe --pending`).
 
 ---
 
@@ -127,11 +127,11 @@ go run ./starter -question "What is Temporal?"
 # Check if workflow exists
 temporal workflow list
 
-# Use agent trace to see what happened
+# Use workflow diagnose to see what happened
 temporal workflow diagnose --workflow-id <id> --format json
 ```
 
-**This teaches:** Using `agent trace` to understand workflow state.
+**This teaches:** Using `workflow diagnose` to understand workflow state.
 
 ---
 
@@ -148,7 +148,7 @@ temporal workflow diagnose --workflow-id <id> --format json
 activity not registered: ProcessQuestion
 ```
 
-**AI uses agent CLI to diagnose:**
+**AI uses workflow CLI to diagnose:**
 ```bash
 temporal workflow diagnose --workflow-id <id> --format json | jq '.root_cause'
 # Shows: "activity not registered"
@@ -723,12 +723,12 @@ temporal workflow show --compact --workflow-id <id> --format json | jq '.events[
 
 | Phase | Key Failure | Agent CLI Command Learned | Visualization Prompt |
 |-------|-------------|---------------------------|----------------------|
-| 1 | Activity not registered | `agent trace --workflow-id <id>` | — |
-| 2 | Timeout | `agent failures --since 5m` | **2.2b:** Sequence diagram |
+| 1 | Activity not registered | `workflow diagnose --workflow-id <id>` | — |
+| 2 | Timeout | `workflow failures --since 5m` | **2.2b:** Sequence diagram |
 | 3 | Child workflow failed | `--follow-children --leaf-only` | **3.2b:** Flowchart |
 | 4 | Poor quality result | `--compact-errors` | Sequence diagram |
 | 5 | Production load failures | `--group-by error` | **5.2b:** Pie chart |
-| 6 | Waiting for signal | `agent state --workflow-id <id>` | **6.1b:** State diagram |
+| 6 | Waiting for signal | `workflow describe --pending --workflow-id <id>` | **6.1b:** State diagram |
 | 7 | Mystery nested failure | Full debugging workflow | **7.1b:** Combined visuals |
 
 > **Note:** Prompts ending in "b" (e.g., 2.2b, 3.2b) are visualization-focused prompts that teach users to ask the AI for diagrams instead of JSON.
@@ -739,7 +739,7 @@ temporal workflow show --compact --workflow-id <id> --format json | jq '.events[
 
 When asking your AI to diagnose issues, use this template:
 
-> "The workflow `<workflow-id>` failed. Use `temporal agent` CLI to find the root cause. Start with `agent trace`, then use `agent failures` if needed. Show me a diagram of what happened. Tell me exactly what went wrong."
+> "The workflow `<workflow-id>` failed. Use `temporal workflow` CLI to find the root cause. Start with `workflow diagnose`, then use `workflow failures` if needed. Show me a diagram of what happened. Tell me exactly what went wrong."
 
 The AI should respond with:
 1. Commands it ran (including `--format mermaid` for visuals)
@@ -771,7 +771,8 @@ After completing all phases, you should:
 2. ✅ Understand how to use `temporal workflow diagnose` for debugging
 3. ✅ Know when to use `--follow-children` and `--leaf-only`
 4. ✅ Be able to analyze failures with `--group-by`
-5. ✅ Use `agent state` to check pending work
+5. ✅ Use `workflow describe --pending` to check pending work
 6. ✅ Debug complex nested failures without looking at logs
 7. ✅ Generate visual diagrams with `--format mermaid` for quick understanding
 8. ✅ Know which visualization type fits each debugging scenario
+9. ✅ Use `temporal workflow describe --pending` to check pending work

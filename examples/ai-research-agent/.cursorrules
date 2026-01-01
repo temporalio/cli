@@ -1,6 +1,6 @@
-# Temporal Agent CLI Rules for Cursor
+# Temporal Workflow CLI Rules for Cursor
 
-When debugging Temporal workflows, use the `temporal agent` CLI commands instead of logs.
+When debugging Temporal workflows, use the `temporal workflow` CLI commands instead of logs.
 
 ## Available Commands
 
@@ -49,10 +49,10 @@ Use `--format mermaid` to generate diagrams:
 
 ## Debugging Workflow
 
-1. Start with `agent trace` to see the chain and root cause
+1. Start with `workflow diagnose` to see the chain and root cause
 2. Use `--format mermaid` to visualize if complex
-3. Use `agent failures --leaf-only` to see actual failures
-4. Use `agent state` to check pending work on running workflows
+3. Use `workflow failures --leaf-only` to see actual failures
+4. Use `workflow describe --pending` to check pending work on running workflows
 5. Use `--group-by` to find patterns in multiple failures
 
 ## Example Session

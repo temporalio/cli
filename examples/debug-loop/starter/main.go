@@ -185,7 +185,7 @@ func runRaceScenario(c client.Client, namespace, orderID string, ts int64, wait 
 		log.Println("One order's inventory check PASSED but reservation FAILED.")
 		log.Println("This is a classic TOCTOU (Time-of-Check to Time-of-Use) race condition!")
 		log.Println("")
-		log.Println("Use temporal agent to analyze the failed order:")
+		log.Println("Use temporal workflow CLI to analyze the failed order:")
 		log.Println("")
 		log.Printf("  temporal workflow diagnose --workflow-id %s --namespace %s --format json", failedID, namespace)
 		log.Printf("  temporal workflow show --compact --workflow-id %s --namespace %s --format json", failedID, namespace)

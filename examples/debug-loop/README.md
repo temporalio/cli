@@ -66,7 +66,7 @@ One order's inventory check PASSED but reservation FAILED.
 This is a classic TOCTOU race condition!
 ```
 
-### Step 4: Diagnose with Temporal Agent CLI
+### Step 4: Diagnose with Temporal Workflow CLI
 
 ```bash
 # Get the trace - shows root cause
@@ -102,7 +102,7 @@ The competing order claimed the keyboard during the 200ms delay!
 A workflow failed with "insufficient inventory for KEYBOARD-03: requested 1, available 0".
 The logs show the inventory check passed, but the reservation failed.
 
-Use temporal agent to diagnose:
+Use temporal workflow CLI to diagnose:
   temporal workflow diagnose --workflow-id [id] --namespace default --format json
   temporal workflow show --compact --workflow-id [id] --namespace default --format json
 
