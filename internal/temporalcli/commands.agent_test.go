@@ -14,7 +14,7 @@ import (
 	"go.temporal.io/sdk/workflow"
 )
 
-func (s *SharedServerSuite) TestAgent_Timeline_BasicWorkflow() {
+func (s *SharedServerSuite) TestWorkflowShow_Compact_BasicWorkflow() {
 	// Create a simple workflow that completes
 	s.Worker().OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
 		inputStr, _ := input.(string)
@@ -37,7 +37,7 @@ func (s *SharedServerSuite) TestAgent_Timeline_BasicWorkflow() {
 
 	// Run timeline command
 	res := s.Execute(
-		"agent", "timeline",
+		"workflow", "show", "--compact",
 		"--address", s.Address(),
 		"-w", run.GetID(),
 		"-o", "json",
@@ -72,7 +72,7 @@ func (s *SharedServerSuite) TestAgent_Timeline_BasicWorkflow() {
 	s.True(foundCompleted, "should have workflow completed event")
 }
 
-func (s *SharedServerSuite) TestAgent_Timeline_WithActivity() {
+func (s *SharedServerSuite) TestWorkflowShow_Compact_WithActivity() {
 	// Create a workflow with an activity
 	s.Worker().OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
 		var result string
@@ -104,7 +104,7 @@ func (s *SharedServerSuite) TestAgent_Timeline_WithActivity() {
 
 	// Run timeline command
 	res := s.Execute(
-		"agent", "timeline",
+		"workflow", "show", "--compact",
 		"--address", s.Address(),
 		"-w", run.GetID(),
 		"-o", "json",
@@ -131,7 +131,7 @@ func (s *SharedServerSuite) TestAgent_Timeline_WithActivity() {
 	s.True(foundCompleted, "should have activity completed event")
 }
 
-func (s *SharedServerSuite) TestAgent_Trace_SimpleWorkflow() {
+func (s *SharedServerSuite) TestWorkflowDiagnose_SimpleWorkflow() {
 	// Create a simple failing workflow
 	s.Worker().OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
 		return "", temporal.NewApplicationError("test error", "TestError")
@@ -152,7 +152,7 @@ func (s *SharedServerSuite) TestAgent_Trace_SimpleWorkflow() {
 
 	// Run trace command
 	res := s.Execute(
-		"agent", "trace",
+		"workflow", "diagnose",
 		"--address", s.Address(),
 		"-w", run.GetID(),
 		"-o", "json",
@@ -174,7 +174,7 @@ func (s *SharedServerSuite) TestAgent_Trace_SimpleWorkflow() {
 	s.Contains(trace.RootCause.Error, "test error")
 }
 
-func (s *SharedServerSuite) TestAgent_Trace_WithChildWorkflow() {
+func (s *SharedServerSuite) TestWorkflowDiagnose_WithChildWorkflow() {
 	childWfType := "child-wf-" + uuid.NewString()
 
 	// Register child workflow that fails
@@ -214,7 +214,7 @@ func (s *SharedServerSuite) TestAgent_Trace_WithChildWorkflow() {
 
 	// Run trace command
 	res := s.Execute(
-		"agent", "trace",
+		"workflow", "diagnose",
 		"--address", s.Address(),
 		"-w", run.GetID(),
 		"-o", "json",
@@ -239,7 +239,7 @@ func (s *SharedServerSuite) TestAgent_Trace_WithChildWorkflow() {
 	s.Contains(trace.RootCause.Error, "child error")
 }
 
-func (s *SharedServerSuite) TestAgent_Failures_FindsFailedWorkflows() {
+func (s *SharedServerSuite) TestWorkflowFailures_FindsFailedWorkflows() {
 	searchAttr := "keyword-" + uuid.NewString()
 
 	// Create a failing workflow
@@ -276,7 +276,7 @@ func (s *SharedServerSuite) TestAgent_Failures_FindsFailedWorkflows() {
 
 	// Run failures command
 	res := s.Execute(
-		"agent", "failures",
+		"workflow", "failures",
 		"--address", s.Address(),
 		"--since", "1h",
 		"-o", "json",
@@ -296,7 +296,7 @@ func (s *SharedServerSuite) TestAgent_Failures_FindsFailedWorkflows() {
 	}
 }
 
-func (s *SharedServerSuite) TestAgent_Failures_WithFollowChildren() {
+func (s *SharedServerSuite) TestWorkflowFailures_WithFollowChildren() {
 	childWfType := "child-wf-failures-" + uuid.NewString()
 
 	// Register child workflow that fails
@@ -344,7 +344,7 @@ func (s *SharedServerSuite) TestAgent_Failures_WithFollowChildren() {
 
 	// Run failures command with --follow-children
 	res := s.Execute(
-		"agent", "failures",
+		"workflow", "failures",
 		"--address", s.Address(),
 		"--since", "1h",
 		"--follow-children",
@@ -372,7 +372,7 @@ func (s *SharedServerSuite) TestAgent_Failures_WithFollowChildren() {
 	s.Contains(ourFailure.RootCause, "deep child error", "root cause should mention the child error")
 }
 
-func (s *SharedServerSuite) TestAgent_Failures_ErrorContains() {
+func (s *SharedServerSuite) TestWorkflowFailures_ErrorContains() {
 	uniqueError1 := "unique-error-" + uuid.NewString()
 	uniqueError2 := "different-error-" + uuid.NewString()
 
@@ -416,7 +416,7 @@ func (s *SharedServerSuite) TestAgent_Failures_ErrorContains() {
 
 	// Run failures command with --error-contains filtering for first error
 	res := s.Execute(
-		"agent", "failures",
+		"workflow", "failures",
 		"--address", s.Address(),
 		"--since", "1h",
 		"--error-contains", uniqueError1,
@@ -433,7 +433,7 @@ func (s *SharedServerSuite) TestAgent_Failures_ErrorContains() {
 
 	// Run with case-insensitive matching
 	res = s.Execute(
-		"agent", "failures",
+		"workflow", "failures",
 		"--address", s.Address(),
 		"--since", "1h",
 		"--error-contains", strings.ToUpper(uniqueError1[:10]),
@@ -449,7 +449,7 @@ func (s *SharedServerSuite) TestAgent_Failures_ErrorContains() {
 
 	// Run with non-matching filter
 	res = s.Execute(
-		"agent", "failures",
+		"workflow", "failures",
 		"--address", s.Address(),
 		"--since", "1h",
 		"--error-contains", "nonexistent-error-string-xyz",
@@ -464,7 +464,7 @@ func (s *SharedServerSuite) TestAgent_Failures_ErrorContains() {
 	s.Len(failuresResult3.Failures, 0, "should find no failures with non-matching filter")
 }
 
-func (s *SharedServerSuite) TestAgent_Failures_MultipleStatuses() {
+func (s *SharedServerSuite) TestWorkflowFailures_MultipleStatuses() {
 	// Create a workflow that can fail or be canceled
 	s.Worker().OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
 		return "", temporal.NewApplicationError("multi-status-test", "TestError")
@@ -492,7 +492,7 @@ func (s *SharedServerSuite) TestAgent_Failures_MultipleStatuses() {
 
 	// Test comma-separated statuses
 	res := s.Execute(
-		"agent", "failures",
+		"workflow", "failures",
 		"--address", s.Address(),
 		"--since", "1h",
 		"--status", "Failed,TimedOut",
@@ -512,7 +512,7 @@ func (s *SharedServerSuite) TestAgent_Failures_MultipleStatuses() {
 
 	// Test multiple --status flags
 	res = s.Execute(
-		"agent", "failures",
+		"workflow", "failures",
 		"--address", s.Address(),
 		"--since", "1h",
 		"--status", "Failed",
@@ -531,7 +531,7 @@ func (s *SharedServerSuite) TestAgent_Failures_MultipleStatuses() {
 
 	// Test single status to verify filtering works
 	res = s.Execute(
-		"agent", "failures",
+		"workflow", "failures",
 		"--address", s.Address(),
 		"--since", "1h",
 		"--status", "Canceled",
@@ -546,7 +546,7 @@ func (s *SharedServerSuite) TestAgent_Failures_MultipleStatuses() {
 	s.Len(failuresResult3.Failures, 0, "should find no failures when filtering by Canceled only")
 }
 
-func (s *SharedServerSuite) TestAgent_Failures_LeafOnly() {
+func (s *SharedServerSuite) TestWorkflowFailures_LeafOnly() {
 	childWfType := "leaf-only-child-" + uuid.NewString()
 
 	// Register child workflow that fails
@@ -595,7 +595,7 @@ func (s *SharedServerSuite) TestAgent_Failures_LeafOnly() {
 
 	// Run failures command WITHOUT --leaf-only
 	res := s.Execute(
-		"agent", "failures",
+		"workflow", "failures",
 		"--address", s.Address(),
 		"--since", "1h",
 		"--follow-children",
@@ -611,7 +611,7 @@ func (s *SharedServerSuite) TestAgent_Failures_LeafOnly() {
 
 	// Run failures command WITH --leaf-only
 	res = s.Execute(
-		"agent", "failures",
+		"workflow", "failures",
 		"--address", s.Address(),
 		"--since", "1h",
 		"--follow-children",
@@ -632,7 +632,7 @@ func (s *SharedServerSuite) TestAgent_Failures_LeafOnly() {
 	}
 }
 
-func (s *SharedServerSuite) TestAgent_Timeline_Compact() {
+func (s *SharedServerSuite) TestWorkflowShow_Compact_Compact() {
 	// Create a simple completing workflow
 	s.Worker().OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
 		return "done", nil
@@ -651,7 +651,7 @@ func (s *SharedServerSuite) TestAgent_Timeline_Compact() {
 
 	// Run with compact flag
 	res := s.Execute(
-		"agent", "timeline",
+		"workflow", "show", "--compact",
 		"--address", s.Address(),
 		"-w", run.GetID(),
 		"--compact",

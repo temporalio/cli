@@ -105,12 +105,8 @@ func (p *cliClientProvider) Close() {
 	}
 }
 
-func (c *TemporalAgentCommand) run(cctx *CommandContext, args []string) error {
-	// Parent command should show help
-	return c.Command.Help()
-}
-
-func (c *TemporalAgentFailuresCommand) run(cctx *CommandContext, args []string) error {
+// TemporalWorkflowFailuresCommand - list recent workflow failures
+func (c *TemporalWorkflowFailuresCommand) run(cctx *CommandContext, args []string) error {
 	// Create client provider
 	clientProvider, err := newCLIClientProvider(cctx, &c.Parent.ClientOptions)
 	if err != nil {
@@ -179,7 +175,8 @@ func (c *TemporalAgentFailuresCommand) run(cctx *CommandContext, args []string) 
 	})
 }
 
-func (c *TemporalAgentTraceCommand) run(cctx *CommandContext, args []string) error {
+// TemporalWorkflowDiagnoseCommand - trace workflow to deepest failure
+func (c *TemporalWorkflowDiagnoseCommand) run(cctx *CommandContext, args []string) error {
 	// Create client provider
 	clientProvider, err := newCLIClientProvider(cctx, &c.Parent.ClientOptions)
 	if err != nil {
@@ -214,7 +211,7 @@ func (c *TemporalAgentTraceCommand) run(cctx *CommandContext, args []string) err
 	traverser := agent.NewChainTraverser(clientProvider, opts)
 	result, err := traverser.Trace(cctx, c.Parent.ClientOptions.Namespace, c.WorkflowId, c.RunId)
 	if err != nil {
-		return fmt.Errorf("failed to trace workflow: %w", err)
+		return fmt.Errorf("failed to diagnose workflow: %w", err)
 	}
 
 	// Output based on format
@@ -223,62 +220,8 @@ func (c *TemporalAgentTraceCommand) run(cctx *CommandContext, args []string) err
 	})
 }
 
-func (c *TemporalAgentTimelineCommand) run(cctx *CommandContext, args []string) error {
-	// Create client
-	cl, err := c.Parent.ClientOptions.dialClient(cctx)
-	if err != nil {
-		return err
-	}
-	defer cl.Close()
-
-	// Build options
-	opts := agent.TimelineOptions{
-		Compact:           c.Compact,
-		IncludePayloads:   c.IncludePayloads,
-		EventTypes:        c.EventTypes,
-		ExcludeEventTypes: c.ExcludeEventTypes,
-	}
-
-	// Generate timeline
-	generator := agent.NewTimelineGenerator(cl, opts)
-	result, err := generator.Generate(cctx, c.Parent.ClientOptions.Namespace, c.WorkflowId, c.RunId)
-	if err != nil {
-		return fmt.Errorf("failed to generate timeline: %w", err)
-	}
-
-	// Output based on format
-	return printAgentOutput(cctx, c.Format.Value, result, func() string {
-		return agent.TimelineToMermaid(result)
-	})
-}
-
-func (c *TemporalAgentStateCommand) run(cctx *CommandContext, args []string) error {
-	// Create client
-	cl, err := c.Parent.ClientOptions.dialClient(cctx)
-	if err != nil {
-		return err
-	}
-	defer cl.Close()
-
-	// Build options
-	opts := agent.StateOptions{
-		IncludeDetails: c.IncludeDetails,
-	}
-
-	// Extract state
-	extractor := agent.NewStateExtractor(cl, opts)
-	result, err := extractor.GetState(cctx, c.Parent.ClientOptions.Namespace, c.WorkflowId, c.RunId)
-	if err != nil {
-		return fmt.Errorf("failed to get workflow state: %w", err)
-	}
-
-	// Output based on format
-	return printAgentOutput(cctx, c.Format.Value, result, func() string {
-		return agent.StateToMermaid(result)
-	})
-}
-
-func (c *TemporalAgentToolSpecCommand) run(cctx *CommandContext, _ []string) error {
+// TemporalToolSpecCommand - output tool specifications for AI frameworks
+func (c *TemporalToolSpecCommand) run(cctx *CommandContext, _ []string) error {
 	var output string
 	var err error
 

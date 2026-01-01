@@ -33,7 +33,8 @@ func GetToolSpecs() []ToolSpec {
 			Name: "find_recent_failures",
 			Description: `Find recent workflow failures in a Temporal namespace.
 Automatically traverses workflow chains to find the deepest failure (leaf failure) and root cause.
-Returns structured JSON with failure reports including root_workflow, leaf_failure, depth, chain, and root_cause.`,
+Returns structured JSON with failure reports including root_workflow, leaf_failure, depth, chain, and root_cause.
+CLI command: temporal workflow failures --namespace <ns> --since 1h`,
 			Parameters: ToolParameters{
 				Type: "object",
 				Properties: map[string]ToolProperty{
@@ -95,7 +96,8 @@ Returns structured JSON with failure reports including root_workflow, leaf_failu
 			Name: "trace_workflow_chain",
 			Description: `Trace a workflow execution through its entire child workflow chain to find the deepest failure.
 Identifies the leaf failure point and extracts root cause information.
-Automates the manual process of: finding the workflow, inspecting children, following failing children until reaching the leaf, and extracting failure info.`,
+Automates the manual process of: finding the workflow, inspecting children, following failing children until reaching the leaf, and extracting failure info.
+CLI command: temporal workflow diagnose --workflow-id <id>`,
 			Parameters: ToolParameters{
 				Type: "object",
 				Properties: map[string]ToolProperty{
@@ -130,7 +132,8 @@ Automates the manual process of: finding the workflow, inspecting children, foll
 			Name: "get_workflow_timeline",
 			Description: `Get a compact event timeline for a workflow execution.
 Returns structured JSON with workflow metadata and a list of events including timestamps, types, categories, and relevant details.
-Categories include: workflow, activity, timer, child_workflow, signal, update, and other.`,
+Categories include: workflow, activity, timer, child_workflow, signal, update, and other.
+CLI command: temporal workflow show --workflow-id <id> --compact`,
 			Parameters: ToolParameters{
 				Type: "object",
 				Properties: map[string]ToolProperty{
@@ -170,7 +173,8 @@ Categories include: workflow, activity, timer, child_workflow, signal, update, a
 			Name: "get_workflow_state",
 			Description: `Get the current state of a workflow execution.
 Returns information about pending activities, pending child workflows, pending Nexus operations, and workflow status.
-Useful for understanding what a running workflow is currently doing or waiting for, including cross-namespace Nexus calls.`,
+Useful for understanding what a running workflow is currently doing or waiting for, including cross-namespace Nexus calls.
+CLI command: temporal workflow describe --workflow-id <id> --pending`,
 			Parameters: ToolParameters{
 				Type: "object",
 				Properties: map[string]ToolProperty{
