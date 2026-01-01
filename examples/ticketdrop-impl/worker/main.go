@@ -26,8 +26,9 @@ func main() {
 	w.RegisterWorkflow(ticketdrop.TicketPurchase)
 	w.RegisterWorkflow(ticketdrop.SendConfirmation)
 
-	// Register activities
-	activities := &ticketdrop.Activities{}
+	// Register activities with shared seat inventory
+	inventory := ticketdrop.NewSeatInventory()
+	activities := &ticketdrop.Activities{Inventory: inventory}
 	w.RegisterActivity(activities)
 
 	log.Printf("Starting TicketDrop worker on task queue: %s", ticketdrop.TaskQueue)
