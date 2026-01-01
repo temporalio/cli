@@ -9,8 +9,8 @@ A distributed ticket sales system demonstrating Temporal workflow patterns and `
 - Building concurrent-safe reservation systems
 - Saga pattern for compensating transactions
 - Queue management for fair ordering
-- Race condition debugging with `temporal agent timeline`
-- Failure analysis with `temporal agent failures --group-by`
+- Race condition debugging with `temporal workflow show --compact`
+- Failure analysis with `temporal workflow failures --group-by`
 
 ## Prerequisites
 
@@ -50,8 +50,8 @@ Two users grab the same seat simultaneously:
 
 ```bash
 # Check the timeline for both purchases
-temporal agent timeline --workflow-id purchase-user-1 --format mermaid
-temporal agent timeline --workflow-id purchase-user-2 --format mermaid
+temporal workflow show --compact --workflow-id purchase-user-1 --format mermaid
+temporal workflow show --compact --workflow-id purchase-user-2 --format mermaid
 ```
 
 ### 2. Payment Stuck
@@ -60,7 +60,7 @@ Payment gateway timing out:
 
 ```bash
 # See what's pending
-temporal agent state --workflow-id purchase-xyz --format mermaid
+temporal workflow describe --pending --workflow-id purchase-xyz --format mermaid
 ```
 
 ### 3. Load Test Analysis
@@ -69,7 +69,7 @@ After running 100 concurrent users:
 
 ```bash
 # See failure distribution
-temporal agent failures --since 5m --group-by error --format mermaid
+temporal workflow failures --since 5m --group-by error --format mermaid
 ```
 
 ## Files

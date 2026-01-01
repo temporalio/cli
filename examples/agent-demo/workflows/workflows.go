@@ -392,7 +392,7 @@ func ValidationActivity(ctx context.Context, orderID string) (string, error) {
 // --- Long-running workflows for state demo ---
 
 // LongRunningWorkflow runs for ~30 seconds with visible pending activities
-// Use this to demo `temporal agent state` showing pending activities
+// Use this to demo `temporal workflow describe --pending` showing pending activities
 func LongRunningWorkflow(ctx workflow.Context, orderID string) error {
 	logger := workflow.GetLogger(ctx)
 	logger.Info("LongRunningWorkflow started", "orderID", orderID)
