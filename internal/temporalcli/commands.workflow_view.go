@@ -38,7 +38,7 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 			return fmt.Errorf("failed to get workflow state: %w", err)
 		}
 
-		return printWorkdlowOutput(cctx, c.Format.Value, result, func() string {
+		return printWorkflowOutput(cctx, c.Format.Value, result, func() string {
 			return workflowdebug.StateToMermaid(result)
 		})
 	}
@@ -598,7 +598,7 @@ func (c *TemporalWorkflowShowCommand) run(cctx *CommandContext, _ []string) erro
 			return fmt.Errorf("failed to generate timeline: %w", err)
 		}
 
-		return printWorkdlowOutput(cctx, c.Format.Value, result, func() string {
+		return printWorkflowOutput(cctx, c.Format.Value, result, func() string {
 			return workflowdebug.TimelineToMermaid(result)
 		})
 	}
