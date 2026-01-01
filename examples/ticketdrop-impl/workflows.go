@@ -38,15 +38,27 @@ func TicketPurchase(ctx workflow.Context, input PurchaseInput) (PurchaseResult, 
 	}
 	logger.Info("Seat reserved", "seat", reservation.SeatNumber, "expires_at", reservation.ExpiresAt)
 
-	// Step 2: Process payment
+	// Step 2: Process payment (with 10-second timeout)
+	paymentOpts := workflow.ActivityOptions{
+		StartToCloseTimeout: 10 * time.Second,
+		RetryPolicy: &temporal.RetryPolicy{
+			InitialInterval:    time.Second,
+			BackoffCoefficient: 2.0,
+			MaximumInterval:    5 * time.Second,
+			MaximumAttempts:    3,
+		},
+	}
+	paymentCtx := workflow.WithActivityOptions(ctx, paymentOpts)
+
 	var payment ProcessPaymentResult
-	err = workflow.ExecuteActivity(ctx, activities.ProcessPayment, ProcessPaymentInput{
+	err = workflow.ExecuteActivity(paymentCtx, activities.ProcessPayment, ProcessPaymentInput{
 		UserID:        input.UserID,
 		ReservationID: reservation.ReservationID,
 		Amount:        9999, // $99.99
-	}).Get(ctx, &payment)
+	}).Get(paymentCtx, &payment)
 	if err != nil {
-		return PurchaseResult{}, fmt.Errorf("failed to process payment: %w", err)
+		logger.Error("Payment failed", "error", err)
+		return PurchaseResult{}, fmt.Errorf("payment failed: %w", err)
 	}
 	logger.Info("Payment processed", "transaction_id", payment.TransactionID)
 
@@ -128,4 +140,3 @@ func SendConfirmation(ctx workflow.Context, input SendConfirmationInput) (SendCo
 
 	return result, nil
 }
-
