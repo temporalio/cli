@@ -33,10 +33,10 @@ AI agents can query failures, trace nested workflow chains across namespaces, an
 
 | Test | Tool Used | Root Cause Found | Score | Notes |
 |------|-----------|------------------|-------|-------|
-| Test 1 | `agent failures` | 6/6 failure types identified | 95/100 | All failures found with clear root causes |
-| Test 2 | `agent trace` | "database connection refused" at depth 3 | 100/100 | Perfect chain traversal |
-| Test 3 | `agent timeline` | ValidationWorkflow failed with invalid SKU | 100/100 | Clear child workflow timeline |
-| Test 4 | `agent trace` | "activity StartToClose timeout" | 100/100 | Correctly identified timeout vs app error |
+| Test 1 | `workflow failures` | 6/6 failure types identified | 95/100 | All failures found with clear root causes |
+| Test 2 | `workflow diagnose` | "database connection refused" at depth 3 | 100/100 | Perfect chain traversal |
+| Test 3 | `workflow show --compact` | ValidationWorkflow failed with invalid SKU | 100/100 | Clear child workflow timeline |
+| Test 4 | `workflow diagnose` | "activity StartToClose timeout" | 100/100 | Correctly identified timeout vs app error |
 | Test 5 | `agent failures --error-contains` | Found 2 timeout-related failures | 100/100 | Filter worked correctly |
 
 **Overall Score:** 99/100
@@ -100,8 +100,8 @@ The `debug-loop-fresh` example contains a TOCTOU race condition with all hints r
 ### LLM's Diagnosis Process
 
 1. **Ran the scenario** - Started worker and triggered race condition
-2. **Used `temporal agent trace`** - Found `ReserveInventory` failed for KEYBOARD-03
-3. **Used `temporal agent timeline`** - Analyzed timestamps of both workflows
+2. **Used `temporal workflow diagnose`** - Found `ReserveInventory` failed for KEYBOARD-03
+3. **Used `temporal workflow show --compact`** - Analyzed timestamps of both workflows
 4. **Built a race timeline** - Correlated events across both orders:
 
 | Time | Main Order | Competing Order |
@@ -136,9 +136,9 @@ Based on experiment findings, the following improvements were made:
 
 | Feature | Status | Command |
 |---------|--------|---------|
-| Find recent failures | ✅ Done | `temporal agent failures` |
-| Trace workflow chain | ✅ Done | `temporal agent trace` |
-| Workflow timeline | ✅ Done | `temporal agent timeline` |
+| Find recent failures | ✅ Done | `temporal workflow failures` |
+| Trace workflow chain | ✅ Done | `temporal workflow diagnose` |
+| Workflow timeline | ✅ Done | `temporal workflow show --compact` |
 
 ### Phase 2: Filtering & Compaction
 
@@ -154,7 +154,7 @@ Based on experiment findings, the following improvements were made:
 
 | Feature | Status | Flag/Command |
 |---------|--------|--------------|
-| Workflow state | ✅ Done | `temporal agent state` |
+| Workflow state | ✅ Done | `temporal workflow describe --pending` |
 | Pending activities | ✅ Done | Included in state output |
 | Pending Nexus operations | ✅ Done | Included in state output |
 | Group failures by type | ✅ Done | `--group-by type\|namespace\|status\|error` |
@@ -171,19 +171,19 @@ Based on experiment findings, the following improvements were made:
 
 | Feature | Status | Format |
 |---------|--------|--------|
-| OpenAI function spec | ✅ Done | `temporal agent tool-spec --format openai` |
-| LangChain tool spec | ✅ Done | `temporal agent tool-spec --format langchain` |
-| Claude tool spec | ✅ Done | `temporal agent tool-spec --format claude` |
+| OpenAI function spec | ✅ Done | `temporal tool-spec --format openai` |
+| LangChain tool spec | ✅ Done | `temporal tool-spec --format langchain` |
+| Claude tool spec | ✅ Done | `temporal tool-spec --format claude` |
 
 ### Phase 6: Visualization
 
 | Feature | Status | Flag/Command |
 |---------|--------|--------------|
-| Trace flowchart | ✅ Done | `temporal agent trace --format mermaid` |
-| Timeline sequence diagram | ✅ Done | `temporal agent timeline --format mermaid` |
-| State diagram | ✅ Done | `temporal agent state --format mermaid` |
-| Failures pie chart | ✅ Done | `temporal agent failures --group-by error --format mermaid` |
-| Failures flowchart | ✅ Done | `temporal agent failures --format mermaid` |
+| Trace flowchart | ✅ Done | `temporal workflow diagnose --format mermaid` |
+| Timeline sequence diagram | ✅ Done | `temporal workflow show --compact --format mermaid` |
+| State diagram | ✅ Done | `temporal workflow describe --pending --format mermaid` |
+| Failures pie chart | ✅ Done | `temporal workflow failures --group-by error --format mermaid` |
+| Failures flowchart | ✅ Done | `temporal workflow failures --format mermaid` |
 
 ---
 

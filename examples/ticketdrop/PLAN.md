@@ -26,10 +26,10 @@ cp examples/ticketdrop/.cursorrules ./your-project/
 Or tell your AI at the start of the session:
 
 > "I'm building a Temporal workflow system. When debugging, use `temporal agent` commands:
-> - `temporal agent trace --workflow-id <id>` - trace failures
-> - `temporal agent timeline --workflow-id <id>` - see event sequence
-> - `temporal agent state --workflow-id <id>` - check pending work
-> - `temporal agent failures --since 5m` - find recent failures
+> - `temporal workflow diagnose --workflow-id <id>` - trace failures
+> - `temporal workflow show --compact --workflow-id <id>` - see event sequence
+> - `temporal workflow describe --pending --workflow-id <id>` - check pending work
+> - `temporal workflow failures --since 5m` - find recent failures
 >
 > Use `--format mermaid` for diagrams, `--format json` for data."
 
@@ -88,7 +88,7 @@ go run ./starter --user-id user-123 --event-id concert-taylor-swift
 **AI should suggest:**
 ```bash
 temporal workflow list
-temporal agent trace --workflow-id <id> --format json
+temporal workflow diagnose --workflow-id <id> --format json
 ```
 
 **What you'll likely see:** The workflow completed but didn't do anything meaningful.
@@ -112,7 +112,7 @@ activity not registered: ReserveSeat
 
 **Debug with CLI:**
 ```bash
-temporal agent trace --workflow-id purchase-123 --format json | jq '.root_cause'
+temporal workflow diagnose --workflow-id purchase-123 --format json | jq '.root_cause'
 # Shows: "activity not registered"
 ```
 
@@ -139,7 +139,7 @@ for i in {1..10}; do
 done
 
 # Check failures
-temporal agent failures --since 5m --format json
+temporal workflow failures --since 5m --format json
 ```
 
 ---
@@ -150,10 +150,10 @@ temporal agent failures --since 5m --format json
 
 **AI should use:**
 ```bash
-temporal agent failures --since 5m --format json | jq '.failures[] | {workflow: .root_workflow.workflow_id, error: .root_cause}'
+temporal workflow failures --since 5m --format json | jq '.failures[] | {workflow: .root_workflow.workflow_id, error: .root_cause}'
 
 # Or visualize:
-temporal agent failures --since 5m --group-by error --format mermaid
+temporal workflow failures --since 5m --group-by error --format mermaid
 ```
 
 **Expected output:**
@@ -180,7 +180,7 @@ pie title Failures by error
 go run ./starter --user-id slow-user --event-id concert-1
 
 # Check what's pending
-temporal agent state --workflow-id purchase-slow-user --format mermaid
+temporal workflow describe --pending --workflow-id purchase-slow-user --format mermaid
 ```
 
 **State diagram shows:**
@@ -215,7 +215,7 @@ done
 wait
 
 # Check results
-temporal agent failures --since 2m --format json | jq '.total_count'
+temporal workflow failures --since 2m --format json | jq '.total_count'
 # Should show ~5 failures
 ```
 
@@ -231,8 +231,8 @@ temporal agent failures --since 2m --format json | jq '.total_count'
 temporal workflow list --query 'ExecutionStatus="Completed"' -o json | jq -r '.[] | .workflowId'
 
 # Check the timeline of two suspicious purchases
-temporal agent timeline --workflow-id purchase-user-3 --format mermaid
-temporal agent timeline --workflow-id purchase-user-7 --format mermaid
+temporal workflow show --compact --workflow-id purchase-user-3 --format mermaid
+temporal workflow show --compact --workflow-id purchase-user-7 --format mermaid
 ```
 
 **Timeline reveals the race:**
@@ -273,7 +273,7 @@ done
 wait
 
 # All failures should now be "no seats available", not double-booking
-temporal agent failures --since 2m --group-by error --format mermaid
+temporal workflow failures --since 2m --group-by error --format mermaid
 ```
 
 ---
@@ -294,7 +294,7 @@ temporal agent failures --since 2m --group-by error --format mermaid
 go run ./starter --user-id unlucky-user --event-id concert-1
 
 # Wait for failure, then check trace
-temporal agent trace --workflow-id purchase-unlucky-user --format mermaid
+temporal workflow diagnose --workflow-id purchase-unlucky-user --format mermaid
 ```
 
 **Expected flowchart:**
@@ -320,7 +320,7 @@ graph TD
 
 **AI uses state command:**
 ```bash
-temporal agent state --workflow-id purchase-unlucky-user --format mermaid
+temporal workflow describe --pending --workflow-id purchase-unlucky-user --format mermaid
 ```
 
 **Output shows:**
@@ -365,7 +365,7 @@ QueueManager (long-running)
 
 **AI uses:**
 ```bash
-temporal agent state --workflow-id queue-concert-1 --format json
+temporal workflow describe --pending --workflow-id queue-concert-1 --format json
 ```
 
 **Output:**
@@ -383,7 +383,7 @@ temporal agent state --workflow-id queue-concert-1 --format json
 
 **Or visualize:**
 ```bash
-temporal agent state --workflow-id queue-concert-1 --format mermaid
+temporal workflow describe --pending --workflow-id queue-concert-1 --format mermaid
 ```
 
 ---
@@ -394,7 +394,7 @@ temporal agent state --workflow-id queue-concert-1 --format mermaid
 
 **AI uses timeline:**
 ```bash
-temporal agent timeline --workflow-id queue-concert-1 --format json | jq '.events[] | select(.name == "UserJoined")'
+temporal workflow show --compact --workflow-id queue-concert-1 --format json | jq '.events[] | select(.name == "UserJoined")'
 ```
 
 **Investigation reveals:** The user's browser sent the join signal twice (on refresh), and the workflow didn't handle duplicate joins.
@@ -416,7 +416,7 @@ temporal agent timeline --workflow-id queue-concert-1 --format json | jq '.event
 
 **Verify:**
 ```bash
-temporal agent trace --workflow-id purchase-happy-user --format mermaid
+temporal workflow diagnose --workflow-id purchase-happy-user --format mermaid
 ```
 
 **Shows:**
@@ -443,7 +443,7 @@ go run ./starter --user-id test-user --event-id concert-1
 
 # Check that purchase succeeded but notification failed
 # trace automatically follows children
-temporal agent trace --workflow-id purchase-test-user --format mermaid
+temporal workflow diagnose --workflow-id purchase-test-user --format mermaid
 ```
 
 **Shows:**
@@ -474,7 +474,7 @@ graph TD
 go run ./loadtest --users 100 --tickets 20 --event concert-final
 
 # Watch chaos unfold
-temporal agent failures --since 2m --follow-children --group-by error --format mermaid
+temporal workflow failures --since 2m --follow-children --group-by error --format mermaid
 ```
 
 **Expected pie chart:**
@@ -499,7 +499,7 @@ pie title Failures by error
 temporal workflow list --query 'WorkflowType="TicketPurchaseWorkflow" AND ExecutionStatus="Completed"' -o json | jq -r '.[].workflowId'
 
 # Check timing - who was fastest?
-temporal agent timeline --workflow-id purchase-user-15 --format json | jq '.duration_ms'
+temporal workflow show --compact --workflow-id purchase-user-15 --format json | jq '.duration_ms'
 ```
 
 ---
@@ -528,17 +528,17 @@ When something goes wrong, ask your AI:
 **Expected AI response:**
 ```bash
 # Step 1: Trace the failure chain
-temporal agent trace --workflow-id purchase-123 --format mermaid
+temporal workflow diagnose --workflow-id purchase-123 --format mermaid
 
 # Step 2: If payment/notification involved, follow children
 # trace automatically follows child workflows
-temporal agent trace --workflow-id purchase-123 --format mermaid
+temporal workflow diagnose --workflow-id purchase-123 --format mermaid
 
 # Step 3: Check timing if race condition suspected
-temporal agent timeline --workflow-id purchase-123 --format mermaid
+temporal workflow show --compact --workflow-id purchase-123 --format mermaid
 
 # Step 4: If stuck, check pending work
-temporal agent state --workflow-id purchase-123 --format mermaid
+temporal workflow describe --pending --workflow-id purchase-123 --format mermaid
 ```
 
 ---

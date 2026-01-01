@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/fatih/color"
+	"github.com/temporalio/cli/internal/agent"
 	"github.com/temporalio/cli/internal/printer"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
@@ -20,6 +21,28 @@ import (
 )
 
 func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []string) error {
+	// Handle --pending or --format mermaid with agent-style output
+	if c.Pending || c.Format.Value == "mermaid" {
+		cl, err := c.Parent.ClientOptions.dialClient(cctx)
+		if err != nil {
+			return err
+		}
+		defer cl.Close()
+
+		opts := agent.StateOptions{
+			IncludeDetails: true, // Always include details in pending mode
+		}
+		extractor := agent.NewStateExtractor(cl, opts)
+		result, err := extractor.GetState(cctx, c.Parent.ClientOptions.Namespace, c.WorkflowId, c.RunId)
+		if err != nil {
+			return fmt.Errorf("failed to get workflow state: %w", err)
+		}
+
+		return printAgentOutput(cctx, c.Format.Value, result, func() string {
+			return agent.StateToMermaid(result)
+		})
+	}
+
 	// Call describe
 	cl, err := c.Parent.ClientOptions.dialClient(cctx)
 	if err != nil {
@@ -556,6 +579,30 @@ func (c *TemporalWorkflowResultCommand) run(cctx *CommandContext, _ []string) er
 }
 
 func (c *TemporalWorkflowShowCommand) run(cctx *CommandContext, _ []string) error {
+	// Handle --compact or --format mermaid with agent-style timeline output
+	if c.Compact || c.Format.Value == "mermaid" {
+		cl, err := c.Parent.ClientOptions.dialClient(cctx)
+		if err != nil {
+			return err
+		}
+		defer cl.Close()
+
+		opts := agent.TimelineOptions{
+			Compact:           true, // Always compact for this mode
+			EventTypes:        c.EventTypes,
+			ExcludeEventTypes: c.ExcludeEventTypes,
+		}
+		generator := agent.NewTimelineGenerator(cl, opts)
+		result, err := generator.Generate(cctx, c.Parent.ClientOptions.Namespace, c.WorkflowId, c.RunId)
+		if err != nil {
+			return fmt.Errorf("failed to generate timeline: %w", err)
+		}
+
+		return printAgentOutput(cctx, c.Format.Value, result, func() string {
+			return agent.TimelineToMermaid(result)
+		})
+	}
+
 	// Call describe
 	cl, err := c.Parent.ClientOptions.dialClient(cctx)
 	if err != nil {

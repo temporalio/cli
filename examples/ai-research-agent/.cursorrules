@@ -6,28 +6,28 @@ When debugging Temporal workflows, use the `temporal agent` CLI commands instead
 
 ### Find Failures
 ```bash
-temporal agent failures --since 1h --format json
-temporal agent failures --since 1h --follow-children --leaf-only --compact-errors --format json
-temporal agent failures --since 1h --group-by error --format json
+temporal workflow failures --since 1h --format json
+temporal workflow failures --since 1h --follow-children --leaf-only --compact-errors --format json
+temporal workflow failures --since 1h --group-by error --format json
 ```
 
 ### Trace Workflow Chain
 ```bash
-temporal agent trace --workflow-id <id> --format json
-temporal agent trace --workflow-id <id> --format mermaid
+temporal workflow diagnose --workflow-id <id> --format json
+temporal workflow diagnose --workflow-id <id> --format mermaid
 ```
 
 ### Get Timeline
 ```bash
-temporal agent timeline --workflow-id <id> --format json
-temporal agent timeline --workflow-id <id> --compact --format json
-temporal agent timeline --workflow-id <id> --format mermaid
+temporal workflow show --compact --workflow-id <id> --format json
+temporal workflow show --compact --workflow-id <id> --compact --format json
+temporal workflow show --compact --workflow-id <id> --format mermaid
 ```
 
 ### Check State
 ```bash
-temporal agent state --workflow-id <id> --format json
-temporal agent state --workflow-id <id> --format mermaid
+temporal workflow describe --pending --workflow-id <id> --format json
+temporal workflow describe --pending --workflow-id <id> --format mermaid
 ```
 
 ## Key Flags
@@ -60,7 +60,7 @@ Use `--format mermaid` to generate diagrams:
 User: "The order workflow failed"
 
 You should:
-1. Run `temporal agent trace --workflow-id order-123 --format json`
+1. Run `temporal workflow diagnose --workflow-id order-123 --format json`
 2. If complex, add `--format mermaid` for visual
 3. Identify the leaf failure and root cause
 4. Explain what went wrong

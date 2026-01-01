@@ -46,57 +46,60 @@ The executable will be at `temporal` (`temporal.exe` for Windows).
 
 Reference [the documentation](https://docs.temporal.io/cli) for detailed usage information.
 
-## Agent Commands
+## AI-Optimized Debugging Commands
 
-The `temporal agent` command group provides machine-readable, structured output optimized for AI agents, LLM tooling, and automated debugging workflows.
+The CLI includes workflow commands optimized for AI agents, LLM tooling, and automated debugging:
 
-### Commands
+### New Commands
 
-- **`temporal agent failures`** - List recent workflow failures with auto-traversed root cause
-- **`temporal agent trace`** - Trace a workflow through its child chain to the deepest failure  
-- **`temporal agent timeline`** - Show a compact event timeline for a workflow
-- **`temporal agent tool-spec`** - Output tool specifications for AI agent frameworks
+- **`temporal workflow failures`** - List recent workflow failures with auto-traversed root cause
+- **`temporal workflow diagnose`** - Trace a workflow through its child chain to the deepest failure
+- **`temporal tool-spec`** - Output tool specifications for AI agent frameworks
+
+### Enhanced Commands
+
+- **`temporal workflow show --compact`** - Show a compact event timeline
+- **`temporal workflow show --format mermaid`** - Generate a sequence diagram
+- **`temporal workflow describe --pending`** - Show pending activities, children, and Nexus operations
+- **`temporal workflow describe --format mermaid`** - Generate a state diagram
 
 ### Examples
 
 ```bash
 # List failures from the last hour with automatic chain traversal
-temporal agent failures --namespace prod --since 1h --follow-children --format json
+temporal workflow failures --namespace prod --since 1h --follow-children
 
 # Filter failures by error message (case-insensitive)
-temporal agent failures --namespace prod --since 1h --error-contains "timeout" --format json
+temporal workflow failures --namespace prod --since 1h --error-contains "timeout"
 
 # Show only leaf failures (de-duplicate parent/child chains)
-temporal agent failures --namespace prod --since 1h --follow-children --leaf-only --format json
+temporal workflow failures --namespace prod --since 1h --follow-children --leaf-only
 
 # Compact error messages (strip wrapper context, show core error)
-temporal agent failures --namespace prod --since 1h --follow-children --compact-errors --format json
+temporal workflow failures --namespace prod --since 1h --follow-children --compact-errors
 
 # Combine leaf-only and compact-errors for cleanest output
-temporal agent failures --namespace prod --since 1h --follow-children --leaf-only --compact-errors --format json
+temporal workflow failures --namespace prod --since 1h --follow-children --leaf-only --compact-errors
 
 # Group failures by error type for quick summary
-temporal agent failures --namespace prod --since 24h --follow-children --compact-errors --group-by error --format json
+temporal workflow failures --namespace prod --since 24h --follow-children --compact-errors --group-by error
 
 # Group failures by namespace to see which services are failing
-temporal agent failures --namespace prod --since 24h --follow-children --group-by namespace --format json
+temporal workflow failures --namespace prod --since 24h --follow-children --group-by namespace
 
 # Trace a workflow to find the deepest failure in the chain
-temporal agent trace --workflow-id order-123 --namespace prod --format json
+temporal workflow diagnose --workflow-id order-123 --namespace prod
 
 # Get a compact timeline of workflow events
-temporal agent timeline --workflow-id order-123 --namespace prod --compact --format json
+temporal workflow show --workflow-id order-123 --namespace prod --compact
 
 # Get current workflow state (pending activities, child workflows)
-temporal agent state --workflow-id order-123 --namespace prod --format json
-
-# Get detailed state including memo and search attributes
-temporal agent state --workflow-id order-123 --namespace prod --include-details --format json
+temporal workflow describe --workflow-id order-123 --namespace prod --pending
 
 # Cross-namespace traversal (Nexus/child workflows in other namespaces)
 TEMPORAL_API_KEY_FINANCE_NS="$FINANCE_KEY" \
-temporal agent trace --workflow-id order-123 --namespace commerce-ns \
-  --follow-namespaces finance-ns --format json
+temporal workflow diagnose --workflow-id order-123 --namespace commerce-ns \
+  --follow-namespaces finance-ns
 ```
 
 ### Cross-Namespace Traversal
@@ -111,7 +114,6 @@ When tracing workflows that span multiple namespaces (via Nexus or child workflo
 #   finance-ns              → TEMPORAL_API_KEY_FINANCE_NS
 #   moedash-finance-ns      → TEMPORAL_API_KEY_MOEDASH_FINANCE_NS
 #   finance.temporal-dev    → TEMPORAL_API_KEY_FINANCE_TEMPORAL_DEV
-#   moedash-finance-ns.temporal-dev → TEMPORAL_API_KEY_MOEDASH_FINANCE_NS_TEMPORAL_DEV
 
 # Primary namespace uses TEMPORAL_API_KEY
 export TEMPORAL_API_KEY="primary-ns-key"
@@ -120,39 +122,35 @@ export TEMPORAL_API_KEY="primary-ns-key"
 export TEMPORAL_API_KEY_FINANCE_NS="finance-ns-key"
 export TEMPORAL_API_KEY_LOGISTICS_NS="logistics-ns-key"
 
-# Now trace can follow Nexus operations and child workflows across namespaces
-temporal agent trace --workflow-id order-123 --namespace commerce-ns \
-  --follow-namespaces finance-ns,logistics-ns --format json
+# Now diagnose can follow Nexus operations and child workflows across namespaces
+temporal workflow diagnose --workflow-id order-123 --namespace commerce-ns \
+  --follow-namespaces finance-ns,logistics-ns
 
 # For failures command, use --follow-children with --follow-namespaces
-temporal agent failures --namespace commerce-ns --since 1h \
+temporal workflow failures --namespace commerce-ns --since 1h \
   --follow-children --follow-namespaces finance-ns,logistics-ns \
-  --leaf-only --compact-errors --format json
+  --leaf-only --compact-errors
 ```
-
-This enables full chain traversal across namespace boundaries while respecting per-namespace access controls.
-
-**Note:** When using `--group-by` with cross-namespace queries, failures are grouped by their leaf failure namespace, providing insight into which downstream services are causing issues.
 
 ### Mermaid Visualization
 
-All agent commands support `--format mermaid` to generate visual diagrams:
+Commands support `--format mermaid` to generate visual diagrams:
 
 ```bash
 # Visualize workflow chain as a flowchart
-temporal agent trace --workflow-id order-123 --namespace prod --format mermaid
+temporal workflow diagnose --workflow-id order-123 --namespace prod --format mermaid
 
 # Visualize timeline as a sequence diagram  
-temporal agent timeline --workflow-id order-123 --namespace prod --format mermaid
+temporal workflow show --workflow-id order-123 --namespace prod --format mermaid
 
 # Visualize current state with pending activities
-temporal agent state --workflow-id order-123 --namespace prod --format mermaid
+temporal workflow describe --workflow-id order-123 --namespace prod --pending --format mermaid
 
 # Visualize failures as a pie chart (when grouped)
-temporal agent failures --namespace prod --since 1h --group-by error --format mermaid
+temporal workflow failures --namespace prod --since 1h --group-by error --format mermaid
 
 # Visualize failures as a flowchart (when not grouped)
-temporal agent failures --namespace prod --since 1h --follow-children --format mermaid
+temporal workflow failures --namespace prod --since 1h --follow-children --format mermaid
 ```
 
 The mermaid output renders directly in:
@@ -161,7 +159,7 @@ The mermaid output renders directly in:
 - Notion pages
 - Any markdown preview with Mermaid support
 
-Example trace output with `--format mermaid`:
+Example diagnose output with `--format mermaid`:
 ```
 graph TD
     W0[🔄 OrderWorkflow<br/>Failed]
@@ -172,45 +170,22 @@ graph TD
     style RC fill:#ff6b6b,stroke:#c92a2a,color:#fff
 ```
 
-### Output
-
-All agent commands output structured JSON designed for:
-- Low token cost (compact, no redundant data)
-- Easy parsing by LLMs and automated tools
-- Derived views like `root_cause`, `leaf_failure`, and `chain`
-
-Example trace output:
-```json
-{
-  "chain": [
-    {"namespace": "prod", "workflow_id": "order-123", "status": "Failed", "depth": 0},
-    {"namespace": "prod", "workflow_id": "payment-456", "status": "Failed", "depth": 1, "leaf": true}
-  ],
-  "root_cause": {
-    "type": "ActivityFailed",
-    "activity": "ProcessPayment",
-    "error": "connection timeout"
-  },
-  "depth": 1
-}
-```
-
 ### AI Agent Integration
 
-The `temporal agent tool-spec` command outputs tool definitions compatible with AI agent frameworks:
+The `temporal tool-spec` command outputs tool definitions compatible with AI agent frameworks:
 
 ```bash
 # OpenAI function calling format (default)
-temporal agent tool-spec --format openai
+temporal tool-spec --format openai
 
 # Anthropic Claude format
-temporal agent tool-spec --format claude
+temporal tool-spec --format claude
 
 # LangChain tool format
-temporal agent tool-spec --format langchain
+temporal tool-spec --format langchain
 
 # Raw function definitions
-temporal agent tool-spec --format functions
+temporal tool-spec --format functions
 ```
 
 These tool specs can be used to integrate Temporal debugging capabilities into AI agents, allowing them to:
@@ -225,7 +200,7 @@ import json
 
 # Get tool specs
 result = subprocess.run(
-    ["temporal", "agent", "tool-spec", "--format", "openai"],
+    ["temporal", "tool-spec", "--format", "openai"],
     capture_output=True, text=True
 )
 tools = json.loads(result.stdout)
@@ -246,7 +221,7 @@ import anthropic
 
 # Get tool specs
 result = subprocess.run(
-    ["temporal", "agent", "tool-spec", "--format", "claude"],
+    ["temporal", "tool-spec", "--format", "claude"],
     capture_output=True, text=True
 )
 tools = json.loads(result.stdout)

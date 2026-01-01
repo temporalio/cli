@@ -385,12 +385,12 @@ func printDebugCommands() {
 
 	log.Println("\n=== Debug Commands ===")
 	log.Println("Find recent failures:")
-	log.Printf("  temporal agent failures --namespace %s --since 1h --follow-children --format json", commerceNS)
+	log.Printf("  temporal workflow failures --namespace %s --since 1h --follow-children --format json", commerceNS)
 	log.Println("\nWith leaf-only and compact errors:")
-	log.Printf("  temporal agent failures --namespace %s --since 1h --follow-children --leaf-only --compact-errors --format json", commerceNS)
+	log.Printf("  temporal workflow failures --namespace %s --since 1h --follow-children --leaf-only --compact-errors --format json", commerceNS)
 	log.Println("\nTrace a specific order:")
-	log.Printf("  temporal agent trace --workflow-id order-<id> --namespace %s --format json", commerceNS)
+	log.Printf("  temporal workflow diagnose --workflow-id order-<id> --namespace %s --format json", commerceNS)
 	log.Println("\nCheck workflow state:")
-	log.Printf("  temporal agent state --workflow-id order-<id> --namespace %s --format json", commerceNS)
+	log.Printf("  temporal workflow describe --pending --workflow-id order-<id> --namespace %s --format json", commerceNS)
 }
 
