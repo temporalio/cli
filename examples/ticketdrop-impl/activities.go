@@ -86,18 +86,17 @@ type Activities struct {
 // Idempotent: retries return the same seat.
 func (a *Activities) ReserveSeat(ctx context.Context, input ReserveSeatInput) (ReserveSeatResult, error) {
 	logger := activity.GetLogger(ctx)
-	logger.Info("Reserving seat", "user_id", input.UserID, "event_id", input.EventID,
-		"available", a.Inventory.Available(input.EventID))
+	logger.Info("Reserving seat", "user_id", input.UserID, "event_id", input.EventID)
 
-	// Simulate seat reservation by sleeping 1 second
-	time.Sleep(1 * time.Second)
-
-	// Try to reserve a seat from inventory (idempotent)
+	// Reserve seat first (atomic operation protected by mutex)
 	seatNumber, wasRetry, err := a.Inventory.Reserve(input.EventID, input.UserID)
 	if err != nil {
 		logger.Warn("Reservation failed", "error", err)
 		return ReserveSeatResult{}, err
 	}
+
+	// Simulate confirmation delay (e.g., writing to database)
+	time.Sleep(1 * time.Second)
 
 	if wasRetry {
 		logger.Info("Returning existing reservation (idempotent)", "seat", seatNumber)
