@@ -78,6 +78,29 @@ func (inv *SeatInventory) Available(eventID string) int {
 	return len(inv.seats[eventID])
 }
 
+// Release returns a seat back to the available pool (compensation).
+func (inv *SeatInventory) Release(eventID, userID, seat string) bool {
+	inv.mu.Lock()
+	defer inv.mu.Unlock()
+
+	userKey := fmt.Sprintf("%s:%s", eventID, userID)
+	seatKey := fmt.Sprintf("%s:%s", eventID, seat)
+
+	// Verify this user owns this seat
+	if inv.seatOwners[seatKey] != userID {
+		return false
+	}
+
+	// Remove from tracking
+	delete(inv.userSeats, userKey)
+	delete(inv.seatOwners, seatKey)
+
+	// Add seat back to available pool
+	inv.seats[eventID] = append(inv.seats[eventID], seat)
+
+	return true
+}
+
 type Activities struct {
 	Inventory *SeatInventory
 }
@@ -111,6 +134,21 @@ func (a *Activities) ReserveSeat(ctx context.Context, input ReserveSeatInput) (R
 		SeatNumber:    seatNumber,
 		ExpiresAt:     time.Now().Add(5 * time.Minute),
 	}, nil
+}
+
+// ReleaseSeat returns a seat to the available pool (compensation for failed payment).
+func (a *Activities) ReleaseSeat(ctx context.Context, eventID, userID, seat string) error {
+	logger := activity.GetLogger(ctx)
+	logger.Info("Releasing seat (compensation)", "user_id", userID, "event_id", eventID, "seat", seat)
+
+	released := a.Inventory.Release(eventID, userID, seat)
+	if !released {
+		logger.Warn("Seat was not released (may not be owned by user)", "seat", seat)
+		return nil // Don't fail compensation
+	}
+
+	logger.Info("Seat released", "seat", seat, "available", a.Inventory.Available(eventID))
+	return nil
 }
 
 // ProcessPayment charges the credit card.

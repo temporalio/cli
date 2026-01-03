@@ -57,7 +57,16 @@ func TicketPurchase(ctx workflow.Context, input PurchaseInput) (PurchaseResult, 
 		Amount:        9999, // $99.99
 	}).Get(paymentCtx, &payment)
 	if err != nil {
-		logger.Error("Payment failed", "error", err)
+		logger.Error("Payment failed, releasing seat", "error", err, "seat", reservation.SeatNumber)
+
+		// Compensation: release the reserved seat back to inventory
+		releaseErr := workflow.ExecuteActivity(ctx, activities.ReleaseSeat,
+			input.EventID, input.UserID, reservation.SeatNumber,
+		).Get(ctx, nil)
+		if releaseErr != nil {
+			logger.Error("Failed to release seat during compensation", "error", releaseErr)
+		}
+
 		return PurchaseResult{}, fmt.Errorf("payment failed: %w", err)
 	}
 	logger.Info("Payment processed", "transaction_id", payment.TransactionID)
