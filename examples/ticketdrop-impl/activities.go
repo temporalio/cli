@@ -13,16 +13,18 @@ import (
 
 // SeatInventory tracks available seats per event.
 type SeatInventory struct {
-	mu       sync.Mutex
-	seats    map[string][]string // eventID -> available seats
-	reserved map[string]string   // seatKey -> userID
+	mu         sync.Mutex
+	seats      map[string][]string // eventID -> available seats
+	userSeats  map[string]string   // "eventID:userID" -> seat (for idempotency)
+	seatOwners map[string]string   // "eventID:seat" -> userID
 }
 
 // NewSeatInventory creates an inventory with 10 seats per event.
 func NewSeatInventory() *SeatInventory {
 	return &SeatInventory{
-		seats:    make(map[string][]string),
-		reserved: make(map[string]string),
+		seats:      make(map[string][]string),
+		userSeats:  make(map[string]string),
+		seatOwners: make(map[string]string),
 	}
 }
 
@@ -38,26 +40,34 @@ func (inv *SeatInventory) initEvent(eventID string) {
 }
 
 // Reserve attempts to reserve a seat for an event.
-func (inv *SeatInventory) Reserve(eventID, userID string) (string, error) {
+// Idempotent: if user already has a seat for this event, return the same seat.
+func (inv *SeatInventory) Reserve(eventID, userID string) (string, bool, error) {
 	inv.mu.Lock()
 	defer inv.mu.Unlock()
 
 	inv.initEvent(eventID)
 
+	// Idempotency check: if user already has a seat, return it
+	userKey := fmt.Sprintf("%s:%s", eventID, userID)
+	if existingSeat, exists := inv.userSeats[userKey]; exists {
+		return existingSeat, true, nil // true = was already reserved
+	}
+
 	available := inv.seats[eventID]
 	if len(available) == 0 {
-		return "", errors.New("sold out: no seats available")
+		return "", false, errors.New("sold out: no seats available")
 	}
 
 	// Take the first available seat
 	seat := available[0]
 	inv.seats[eventID] = available[1:]
 
-	// Track reservation
+	// Track reservation for idempotency
+	inv.userSeats[userKey] = seat
 	seatKey := fmt.Sprintf("%s:%s", eventID, seat)
-	inv.reserved[seatKey] = userID
+	inv.seatOwners[seatKey] = userID
 
-	return seat, nil
+	return seat, false, nil
 }
 
 // Available returns the count of available seats for an event.
@@ -73,6 +83,7 @@ type Activities struct {
 }
 
 // ReserveSeat locks a seat for 5 minutes.
+// Idempotent: retries return the same seat.
 func (a *Activities) ReserveSeat(ctx context.Context, input ReserveSeatInput) (ReserveSeatResult, error) {
 	logger := activity.GetLogger(ctx)
 	logger.Info("Reserving seat", "user_id", input.UserID, "event_id", input.EventID,
@@ -81,15 +92,20 @@ func (a *Activities) ReserveSeat(ctx context.Context, input ReserveSeatInput) (R
 	// Simulate seat reservation by sleeping 1 second
 	time.Sleep(1 * time.Second)
 
-	// Try to reserve a seat from inventory
-	seatNumber, err := a.Inventory.Reserve(input.EventID, input.UserID)
+	// Try to reserve a seat from inventory (idempotent)
+	seatNumber, wasRetry, err := a.Inventory.Reserve(input.EventID, input.UserID)
 	if err != nil {
 		logger.Warn("Reservation failed", "error", err)
 		return ReserveSeatResult{}, err
 	}
 
+	if wasRetry {
+		logger.Info("Returning existing reservation (idempotent)", "seat", seatNumber)
+	} else {
+		logger.Info("Seat reserved", "seat", seatNumber, "remaining", a.Inventory.Available(input.EventID))
+	}
+
 	reservationID := fmt.Sprintf("res-%s-%s-%d", input.UserID, input.EventID, time.Now().UnixMilli())
-	logger.Info("Seat reserved", "seat", seatNumber, "remaining", a.Inventory.Available(input.EventID))
 
 	return ReserveSeatResult{
 		ReservationID: reservationID,
