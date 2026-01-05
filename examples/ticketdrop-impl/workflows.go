@@ -149,3 +149,106 @@ func SendConfirmation(ctx workflow.Context, input SendConfirmationInput) (SendCo
 
 	return result, nil
 }
+
+// TicketQueue manages a fair queue for ticket purchases.
+// Users join via signal, max 10 concurrent purchases at a time.
+func TicketQueue(ctx workflow.Context, eventID string) error {
+	logger := workflow.GetLogger(ctx)
+	logger.Info("Starting ticket queue", "event_id", eventID)
+
+	// Queue state
+	var waitingUsers []string
+	activePurchases := make(map[string]workflow.Future) // userID -> purchase future
+	var completedCount int
+
+	// Signal channels
+	joinChan := workflow.GetSignalChannel(ctx, SignalJoinQueue)
+	doneChan := workflow.GetSignalChannel(ctx, SignalPurchaseDone)
+
+	// Selector for handling multiple signals and child completions
+	selector := workflow.NewSelector(ctx)
+
+	// Handle join signals
+	selector.AddReceive(joinChan, func(c workflow.ReceiveChannel, more bool) {
+		var signal JoinQueueSignal
+		c.Receive(ctx, &signal)
+		logger.Info("User joined queue", "user_id", signal.UserID, "position", len(waitingUsers)+1)
+		waitingUsers = append(waitingUsers, signal.UserID)
+	})
+
+	// Handle purchase done signals
+	selector.AddReceive(doneChan, func(c workflow.ReceiveChannel, more bool) {
+		var signal PurchaseDoneSignal
+		c.Receive(ctx, &signal)
+		logger.Info("Purchase completed", "user_id", signal.UserID, "success", signal.Success)
+		delete(activePurchases, signal.UserID)
+		completedCount++
+	})
+
+	// Process the queue
+	for {
+		// Start purchases for waiting users if we have capacity
+		for len(activePurchases) < MaxConcurrent && len(waitingUsers) > 0 {
+			userID := waitingUsers[0]
+			waitingUsers = waitingUsers[1:]
+
+			logger.Info("Starting purchase", "user_id", userID, "active", len(activePurchases)+1, "waiting", len(waitingUsers))
+
+			childOpts := workflow.ChildWorkflowOptions{
+				WorkflowID: fmt.Sprintf("purchase-%s-%s", eventID, userID),
+			}
+			childCtx := workflow.WithChildOptions(ctx, childOpts)
+
+			future := workflow.ExecuteChildWorkflow(childCtx, TicketPurchase, PurchaseInput{
+				UserID:  userID,
+				EventID: eventID,
+			})
+			activePurchases[userID] = future
+
+			// Add completion handler for this child
+			userIDCopy := userID
+			selector.AddFuture(future, func(f workflow.Future) {
+				var result PurchaseResult
+				err := f.Get(ctx, &result)
+				success := err == nil
+				logger.Info("Child workflow completed", "user_id", userIDCopy, "success", success)
+				delete(activePurchases, userIDCopy)
+				completedCount++
+			})
+		}
+
+		// Wait for signals or child completions
+		// Use a timeout to periodically check state
+		timerFuture := workflow.NewTimer(ctx, 5*time.Second)
+		selector.AddFuture(timerFuture, func(f workflow.Future) {
+			// Timer fired, just continue the loop
+		})
+
+		selector.Select(ctx)
+
+		// Log status periodically
+		logger.Debug("Queue status", "waiting", len(waitingUsers), "active", len(activePurchases), "completed", completedCount)
+
+		// Continue as new if history gets too long (every 1000 completions)
+		if completedCount >= 1000 {
+			logger.Info("Continuing as new workflow", "completed", completedCount)
+			return workflow.NewContinueAsNewError(ctx, TicketQueue, eventID)
+		}
+	}
+}
+
+// GetQueueStatus is a query handler that returns current queue status.
+func GetQueueStatus(waitingUsers []string, activeCount int) QueueStatus {
+	entries := make([]QueueEntry, len(waitingUsers))
+	for i, userID := range waitingUsers {
+		entries[i] = QueueEntry{
+			UserID:   userID,
+			Position: i + 1,
+		}
+	}
+	return QueueStatus{
+		QueueLength:  len(waitingUsers),
+		ActiveCount:  activeCount,
+		WaitingUsers: entries,
+	}
+}

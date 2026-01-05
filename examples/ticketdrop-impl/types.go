@@ -3,7 +3,10 @@ package ticketdrop
 import "time"
 
 const (
-	TaskQueue = "ticketdrop"
+	TaskQueue          = "ticketdrop"
+	MaxConcurrent      = 10 // Max concurrent purchases per event
+	SignalJoinQueue    = "join-queue"
+	SignalPurchaseDone = "purchase-done"
 )
 
 // PurchaseInput is the input to the TicketPurchase workflow.
@@ -73,4 +76,30 @@ type SendConfirmationInput struct {
 type SendConfirmationResult struct {
 	EmailSent bool `json:"email_sent"`
 	SMSSent   bool `json:"sms_sent"`
+}
+
+// QueueEntry represents a user waiting in the queue.
+type QueueEntry struct {
+	UserID    string    `json:"user_id"`
+	JoinedAt  time.Time `json:"joined_at"`
+	Position  int       `json:"position"`
+}
+
+// JoinQueueSignal is sent when a user wants to join the queue.
+type JoinQueueSignal struct {
+	UserID string `json:"user_id"`
+}
+
+// PurchaseDoneSignal is sent when a purchase completes (success or failure).
+type PurchaseDoneSignal struct {
+	UserID  string `json:"user_id"`
+	Success bool   `json:"success"`
+}
+
+// QueueStatus represents the current state of the queue.
+type QueueStatus struct {
+	EventID       string       `json:"event_id"`
+	QueueLength   int          `json:"queue_length"`
+	ActiveCount   int          `json:"active_count"`
+	WaitingUsers  []QueueEntry `json:"waiting_users"`
 }

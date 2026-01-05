@@ -25,6 +25,7 @@ func main() {
 	// Register workflows
 	w.RegisterWorkflow(ticketdrop.TicketPurchase)
 	w.RegisterWorkflow(ticketdrop.SendConfirmation)
+	w.RegisterWorkflow(ticketdrop.TicketQueue)
 
 	// Register activities with shared seat inventory
 	inventory := ticketdrop.NewSeatInventory()
