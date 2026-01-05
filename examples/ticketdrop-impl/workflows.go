@@ -158,8 +158,26 @@ func TicketQueue(ctx workflow.Context, eventID string) error {
 
 	// Queue state
 	var waitingUsers []string
+	activeUsers := make(map[string]bool) // userID -> true if active
 	activePurchases := make(map[string]workflow.Future) // userID -> purchase future
 	var completedCount int
+
+	// Register query handler for queue status
+	err := workflow.SetQueryHandler(ctx, "status", func() (QueueStatus, error) {
+		activeList := make([]string, 0, len(activeUsers))
+		for userID := range activeUsers {
+			activeList = append(activeList, userID)
+		}
+		return QueueStatus{
+			EventID:      eventID,
+			QueueLength:  len(waitingUsers),
+			ActiveCount:  len(activeUsers),
+			WaitingUsers: buildQueueEntries(waitingUsers),
+		}, nil
+	})
+	if err != nil {
+		return err
+	}
 
 	// Signal channels
 	joinChan := workflow.GetSignalChannel(ctx, SignalJoinQueue)
@@ -188,11 +206,11 @@ func TicketQueue(ctx workflow.Context, eventID string) error {
 	// Process the queue
 	for {
 		// Start purchases for waiting users if we have capacity
-		for len(activePurchases) < MaxConcurrent && len(waitingUsers) > 0 {
+		for len(activeUsers) < MaxConcurrent && len(waitingUsers) > 0 {
 			userID := waitingUsers[0]
 			waitingUsers = waitingUsers[1:]
 
-			logger.Info("Starting purchase", "user_id", userID, "active", len(activePurchases)+1, "waiting", len(waitingUsers))
+			logger.Info("Starting purchase", "user_id", userID, "active", len(activeUsers)+1, "waiting", len(waitingUsers))
 
 			childOpts := workflow.ChildWorkflowOptions{
 				WorkflowID: fmt.Sprintf("purchase-%s-%s", eventID, userID),
@@ -204,6 +222,7 @@ func TicketQueue(ctx workflow.Context, eventID string) error {
 				EventID: eventID,
 			})
 			activePurchases[userID] = future
+			activeUsers[userID] = true
 
 			// Add completion handler for this child
 			userIDCopy := userID
@@ -213,6 +232,7 @@ func TicketQueue(ctx workflow.Context, eventID string) error {
 				success := err == nil
 				logger.Info("Child workflow completed", "user_id", userIDCopy, "success", success)
 				delete(activePurchases, userIDCopy)
+				delete(activeUsers, userIDCopy)
 				completedCount++
 			})
 		}
@@ -237,8 +257,8 @@ func TicketQueue(ctx workflow.Context, eventID string) error {
 	}
 }
 
-// GetQueueStatus is a query handler that returns current queue status.
-func GetQueueStatus(waitingUsers []string, activeCount int) QueueStatus {
+// buildQueueEntries creates queue entries from a list of user IDs.
+func buildQueueEntries(waitingUsers []string) []QueueEntry {
 	entries := make([]QueueEntry, len(waitingUsers))
 	for i, userID := range waitingUsers {
 		entries[i] = QueueEntry{
@@ -246,9 +266,5 @@ func GetQueueStatus(waitingUsers []string, activeCount int) QueueStatus {
 			Position: i + 1,
 		}
 	}
-	return QueueStatus{
-		QueueLength:  len(waitingUsers),
-		ActiveCount:  activeCount,
-		WaitingUsers: entries,
-	}
+	return entries
 }
