@@ -13,7 +13,6 @@ func (c *TemporalWorkflowPauseCommand) run(cctx *CommandContext, args []string) 
 
 	_, err = cl.WorkflowService().PauseWorkflowExecution(cctx, &workflowservice.PauseWorkflowExecutionRequest{
 		Namespace:  c.Parent.Namespace,
-		Reason:     c.Reason,
 		WorkflowId: c.WorkflowId,
 		RunId:      c.RunId,
 		Identity:   c.Parent.Identity,
