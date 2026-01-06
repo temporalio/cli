@@ -16,6 +16,7 @@ func (c *TemporalWorkflowPauseCommand) run(cctx *CommandContext, args []string) 
 		WorkflowId: c.WorkflowId,
 		RunId:      c.RunId,
 		Identity:   c.Parent.Identity,
+		Reason:     c.Reason,
 	})
 	if err != nil {
 		return err
