@@ -83,7 +83,6 @@ type CommandOptions struct {
 	Fail func(error)
 
 	AdditionalClientGRPCDialOptions []grpc.DialOption
-	ClientConnectTimeout            time.Duration
 }
 
 type DeprecatedEnvConfig struct {
@@ -559,10 +558,6 @@ func (c *TemporalCommand) preRun(cctx *CommandContext) error {
 			fmt.Errorf("command timed out after %v", c.CommandTimeout.Duration()),
 		)
 	}
-	if c.ClientConnectTimeout.Duration() > 0 {
-		cctx.Options.ClientConnectTimeout = c.ClientConnectTimeout.Duration()
-	}
-
 	return nil
 }
 
