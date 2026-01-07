@@ -14,7 +14,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-// ClientOptionsBuilder contains options for building SDK client.Options
+// ClientOptionsBuilder contains options for building SDK client.Options.
 type ClientOptionsBuilder struct {
 	// CommonOptions contains common CLI options including profile config.
 	CommonOptions CommonOptions
@@ -26,12 +26,13 @@ type ClientOptionsBuilder struct {
 	// Logger is the slog logger to use for the client. If set, it will be
 	// wrapped with the SDK's structured logger adapter.
 	Logger *slog.Logger
-	// oauthConfig is initialized during Build() if OAuth is configured.
-	oauthConfig *OAuthConfig
-	// oauthConfigFilePath is the path where OAuth config is stored.
-	oauthConfigFilePath string
-	// oauthProfileName is the profile name where OAuth config is stored.
-	oauthProfileName string
+}
+
+type oauthCredentials struct {
+	builder        *ClientOptionsBuilder
+	config         *OAuthConfig
+	configFilePath string
+	profileName    string
 }
 
 // Build creates SDK client.Options
@@ -210,10 +211,13 @@ func (b *ClientOptionsBuilder) Build(ctx context.Context) (client.Options, error
 		}
 		// Only set credentials if OAuth is configured with an access token
 		if result.OAuth != nil && result.OAuth.Token != nil && result.OAuth.Token.AccessToken != "" {
-			b.oauthConfig = result.OAuth
-			b.oauthConfigFilePath = result.ConfigFilePath
-			b.oauthProfileName = result.ProfileName
-			clientOpts.Credentials = client.NewAPIKeyDynamicCredentials(b.getOAuthToken)
+			creds := &oauthCredentials{
+				builder:        b,
+				config:         result.OAuth,
+				configFilePath: result.ConfigFilePath,
+				profileName:    result.ProfileName,
+			}
+			clientOpts.Credentials = client.NewAPIKeyDynamicCredentials(creds.getToken)
 		}
 	}
 
@@ -284,13 +288,10 @@ func newPayloadCodecInterceptor(
 	)
 }
 
-// getOAuthToken returns a valid OAuth access token from the builder's configuration.
-// It uses oauth2.TokenSource to automatically refresh the token when needed.
-// If the token is refreshed, it automatically persists the new token to the config file.
-func (b *ClientOptionsBuilder) getOAuthToken(ctx context.Context) (string, error) {
-	curAccessToken := b.oauthConfig.Token.AccessToken
+func (c *oauthCredentials) getToken(ctx context.Context) (string, error) {
+	curAccessToken := c.config.Token.AccessToken
 
-	tokenSource := b.oauthConfig.newTokenSource(ctx)
+	tokenSource := c.config.newTokenSource(ctx)
 	token, err := tokenSource.Token()
 	if err != nil {
 		return "", err
@@ -298,18 +299,18 @@ func (b *ClientOptionsBuilder) getOAuthToken(ctx context.Context) (string, error
 
 	// If the token was refreshed, persist it back to the config file
 	if token.AccessToken != curAccessToken {
-		b.oauthConfig.Token = token
+		c.config.Token = token
 
 		// Persist the updated token to the config file
 		if err := StoreClientOAuth(StoreClientOAuthOptions{
-			ConfigFilePath: b.oauthConfigFilePath,
-			ProfileName:    b.oauthProfileName,
-			OAuth:          b.oauthConfig,
-			EnvLookup:      b.EnvLookup,
+			ConfigFilePath: c.configFilePath,
+			ProfileName:    c.profileName,
+			OAuth:          c.config,
+			EnvLookup:      c.builder.EnvLookup,
 		}); err != nil {
 			// Log the error but don't fail the request - the token is still valid in memory
-			if b.Logger != nil {
-				b.Logger.Warn("Failed to persist refreshed OAuth token to config file", "error", err)
+			if c.builder.Logger != nil {
+				c.builder.Logger.Warn("Failed to persist refreshed OAuth token to config file", "error", err)
 			}
 		}
 	}
