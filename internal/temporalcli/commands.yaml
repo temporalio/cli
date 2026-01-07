@@ -165,7 +165,7 @@ commands:
         type: string
         description: |
           File path to read TOML config from, defaults to
-          `$CONFIG_PATH/temporal/temporal.toml` where `$CONFIG_PATH` is defined
+          `$CONFIG_PATH/temporalio/temporal.toml` where `$CONFIG_PATH` is defined
           as `$HOME/.config` on Unix, `$HOME/Library/Application Support` on
           macOS, and `%AppData%` on Windows.
         experimental: true
@@ -1274,17 +1274,17 @@ commands:
       ```
       temporal worker deployment manager-identity [command] [options]
       ```
-      
+
       When present, `ManagerIdentity` is the identity of the user that has the 
       exclusive right to make changes to this Worker Deployment. Empty by default.
       When set, users whose identity does not match the `ManagerIdentity` will not
       be able to change the Worker Deployment.
-  
+
       This is especially useful in environments where multiple users (such as CLI
       users and automated controllers) may interact with the same Worker Deployment.
       `ManagerIdentity` allows different users to communicate with one another about
       who is expected to make changes to the Worker Deployment.
-      
+
       The current Manager Identity is returned with `describe`:
       ```
        temporal worker deployment describe \
@@ -1310,12 +1310,12 @@ commands:
       ```
 
       Set the `ManagerIdentity` of a Worker Deployment given its Deployment Name.
-      
+
       When present, `ManagerIdentity` is the identity of the user that has the 
       exclusive right to make changes to this Worker Deployment. Empty by default.
       When set, users whose identity does not match the `ManagerIdentity` will not
       be able to change the Worker Deployment.
-  
+
       This is especially useful in environments where multiple users (such as CLI
       users and automated controllers) may interact with the same Worker Deployment.
       `ManagerIdentity` allows different users to communicate with one another about
@@ -1324,7 +1324,7 @@ commands:
       ```
       temporal worker deployment manager-identity set [options]
       ```
-      
+
       For example:
 
       ```
@@ -1337,14 +1337,14 @@ commands:
       Sets the Manager Identity of the Deployment to the identity of the user making 
       this request. If you don't specifically pass an identity field, the CLI will 
       generate your identity for you.
-      
+
       For example:
       ```
       temporal worker deployment manager-identity set \
          --deployment-name DeploymentName \
          --manager-identity NewManagerIdentity
       ```
-      
+
       Sets the Manager Identity of the Deployment to any string.
 
     options:
@@ -1373,12 +1373,12 @@ commands:
       ```
 
       Unset the `ManagerIdentity` of a Worker Deployment given its Deployment Name.
-      
+
       When present, `ManagerIdentity` is the identity of the user that has the 
       exclusive right to make changes to this Worker Deployment. Empty by default.
       When set, users whose identity does not match the `ManagerIdentity` will not
       be able to change the Worker Deployment.
-      
+
       This is especially useful in environments where multiple users (such as CLI
       users and automated controllers) may interact with the same Worker Deployment.
       `ManagerIdentity` allows different users to communicate with one another about
@@ -1387,7 +1387,7 @@ commands:
       ```
       temporal worker deployment manager-identity unset [options]
       ```
-      
+
       For example:
 
       ```
@@ -1410,7 +1410,7 @@ commands:
     summary: List worker status information in a specific namespace (EXPERIMENTAL)
     description: |
       Get a list of workers to the specified namespace.
-      
+
       ```
       temporal worker list --namespace YourNamespace --query 'TaskQueue="YourTaskQueue"'
       ```
@@ -1427,7 +1427,7 @@ commands:
     summary: Returns information about a specific worker (EXPERIMENTAL)
     description: |
       Look up information of a specific worker.
-      
+
       ```
       temporal worker describe --namespace YourNamespace --worker-instance-key YourKey
       ```
@@ -4979,7 +4979,7 @@ option-sets:
           Temporal workflow headers in 'KEY=VALUE' format.
           Keys must be identifiers, and values must be JSON values.
           May be passed multiple times to set multiple Temporal headers.
-          Note: These are workflow headers, not gRPC headers.   
+          Note: These are workflow headers, not gRPC headers.
 
   - name: workflow-update-options
     options:
