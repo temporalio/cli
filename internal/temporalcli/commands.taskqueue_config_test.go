@@ -2,6 +2,8 @@ package temporalcli_test
 
 import (
 	"encoding/json"
+	"fmt"
+	"os"
 )
 
 type taskQueueConfigType struct {
@@ -253,4 +255,73 @@ func (s *SharedServerSuite) TestTaskQueue_Config_Describe_With_Report_Config() {
 
 	updTime, _ := md["update_time"].(map[string]any)
 	s.NotEmpty(updTime)
+}
+
+func (s *SharedServerSuite) TestTaskQueueConfig_EnvConfigNamespace() {
+	// Create test namespace
+	testNS := "tq-config-envconfig-test"
+	res := s.Execute(
+		"operator", "namespace", "create",
+		"--address", s.Address(),
+		"-n", testNS,
+	)
+	s.NoError(res.Err)
+
+	// Create temp config file
+	f, err := os.CreateTemp("", "temporal-test-*.toml")
+	s.NoError(err)
+	defer os.Remove(f.Name())
+
+	_, err = fmt.Fprintf(f, `
+[profile.default]
+address = "%s"
+namespace = "%s"
+`, s.Address(), testNS)
+	s.NoError(err)
+	f.Close()
+
+	// Set environment
+	s.CommandHarness.Options.EnvLookup = EnvLookupMap{
+		"TEMPORAL_CONFIG_FILE": f.Name(),
+	}
+
+	taskQueue := "test-tq-envconfig-" + s.T().Name()
+
+	// Test 1: Set config without -n flag (should use envconfig)
+	res = s.Execute(
+		"task-queue", "config", "set",
+		"--task-queue", taskQueue,
+		"--task-queue-type", "activity",
+		"--queue-rps-limit", "15.0",
+		"--queue-rps-limit-reason", "envconfig test",
+	)
+	s.NoError(res.Err)
+
+	// Test 2: Get config without -n flag (should use envconfig)
+	res = s.Execute(
+		"task-queue", "config", "get",
+		"--task-queue", taskQueue,
+		"--task-queue-type", "activity",
+		"-o", "json",
+	)
+	s.NoError(res.Err)
+
+	var config taskQueueConfigType
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &config))
+	s.NotNil(config.QueueRateLimit)
+	s.NotNil(config.QueueRateLimit.RateLimit)
+	s.Equal(float32(15.0), config.QueueRateLimit.RateLimit.RequestsPerSecond)
+	s.Equal("envconfig test", config.QueueRateLimit.Metadata.Reason)
+
+	// Test 3: CLI flag should override envconfig - verify config doesn't exist in default namespace
+	res = s.Execute(
+		"task-queue", "config", "get",
+		"--task-queue", taskQueue,
+		"--task-queue-type", "activity",
+		"-n", "default",
+	)
+	s.NoError(res.Err)
+	// In default namespace, no config was set for this task queue
+	s.Contains(res.Stdout.String(), "No configuration found for task queue",
+		"CLI flag should override envconfig and query default namespace")
 }

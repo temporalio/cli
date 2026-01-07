@@ -21,7 +21,7 @@ func (c *TemporalWorkflowResetCommand) run(cctx *CommandContext, _ []string) err
 	if err := validateArguments(); err != nil {
 		return err
 	}
-	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}

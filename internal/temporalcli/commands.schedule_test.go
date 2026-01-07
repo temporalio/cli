@@ -28,8 +28,10 @@ func (s *SharedServerSuite) createSchedule(args ...string) (schedId, schedWfId s
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
 		options := temporalcli.CommandOptions{
-			Stdout: io.Discard,
-			Stderr: io.Discard,
+			IOStreams: temporalcli.IOStreams{
+				Stdout: io.Discard,
+				Stderr: io.Discard,
+			},
 			Args: []string{
 				"schedule", "delete",
 				"--address", s.Address(),

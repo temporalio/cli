@@ -2,6 +2,7 @@ package temporalcli_test
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/temporalio/cli/internal/temporalcli"
@@ -205,4 +206,87 @@ func (s *SharedServerSuite) TestUpdateOldAndNewNSArgs() {
 	)
 	s.Error(res.Err)
 	s.ContainsOnSameLine(res.Err.Error(), "namespace was provided as both an argument", "and a flag")
+}
+
+func (s *SharedServerSuite) TestOperatorNamespace_EnvConfigResolution() {
+	// Create a test namespace to use in envconfig
+	testNS := "envconfig-test-namespace"
+	res := s.Execute(
+		"operator", "namespace", "create",
+		"--address", s.Address(),
+		"-n", testNS,
+	)
+	s.NoError(res.Err)
+
+	// Create temp config file with namespace
+	f, err := os.CreateTemp("", "temporal-test-*.toml")
+	s.NoError(err)
+	defer os.Remove(f.Name())
+
+	_, err = fmt.Fprintf(f, `
+[profile.default]
+address = "%s"
+namespace = "%s"
+`, s.Address(), testNS)
+	s.NoError(err)
+	f.Close()
+
+	// Set environment to use config file
+	s.CommandHarness.Options.EnvLookup = EnvLookupMap{
+		"TEMPORAL_CONFIG_FILE": f.Name(),
+	}
+
+	// Test 1: Describe should use envconfig namespace (no -n flag)
+	res = s.Execute(
+		"operator", "namespace", "describe",
+		"--output", "json",
+	)
+	s.NoError(res.Err)
+	var descResp workflowservice.DescribeNamespaceResponse
+	s.NoError(temporalcli.UnmarshalProtoJSONWithOptions(res.Stdout.Bytes(), &descResp, true))
+	s.Equal(testNS, descResp.NamespaceInfo.Name, "Should use namespace from envconfig")
+
+	// Test 2: Update should use envconfig namespace
+	res = s.Execute(
+		"operator", "namespace", "update",
+		"--description", "Updated via envconfig",
+		"--output", "json",
+	)
+	s.NoError(res.Err)
+
+	// Verify update was applied to correct namespace
+	res = s.Execute(
+		"operator", "namespace", "describe",
+		"--output", "json",
+	)
+	s.NoError(res.Err)
+	s.NoError(temporalcli.UnmarshalProtoJSONWithOptions(res.Stdout.Bytes(), &descResp, true))
+	s.Equal("Updated via envconfig", descResp.NamespaceInfo.Description)
+	s.Equal(testNS, descResp.NamespaceInfo.Name)
+
+	// Test 3: CLI flag should override envconfig
+	res = s.Execute(
+		"operator", "namespace", "describe",
+		"--output", "json",
+		"-n", "default",
+	)
+	s.NoError(res.Err)
+	s.NoError(temporalcli.UnmarshalProtoJSONWithOptions(res.Stdout.Bytes(), &descResp, true))
+	s.Equal("default", descResp.NamespaceInfo.Name, "Explicit -n flag should override envconfig")
+
+	// Test 4: Delete should use envconfig namespace
+	res = s.Execute(
+		"operator", "namespace", "delete",
+		"--yes",
+	)
+	s.NoError(res.Err)
+
+	// Verify namespace was deleted
+	res = s.Execute(
+		"operator", "namespace", "describe",
+		"--output", "json",
+		"-n", testNS,
+	)
+	s.Error(res.Err)
+	s.Contains(res.Err.Error(), "is not found")
 }
