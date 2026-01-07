@@ -67,7 +67,16 @@ func dialClient(cctx *CommandContext, c *cliext.ClientOptions) (client.Client, e
 	clientOpts.ConnectionOptions.DialOptions = append(
 		clientOpts.ConnectionOptions.DialOptions, cctx.Options.AdditionalClientGRPCDialOptions...)
 
-	cl, err := client.DialContext(cctx, clientOpts)
+	// Apply context timeout for dial if configured
+	dialCtx := context.Context(cctx)
+	if cctx.RootCommand.CommonOptions.ClientConnectTimeout != 0 {
+		timeout := cctx.RootCommand.CommonOptions.ClientConnectTimeout.Duration()
+		var cancel context.CancelFunc
+		dialCtx, cancel = context.WithTimeoutCause(cctx, timeout, fmt.Errorf("command timed out after %v", timeout))
+		defer cancel()
+	}
+
+	cl, err := client.DialContext(dialCtx, clientOpts)
 	if err != nil {
 		return nil, err
 	}

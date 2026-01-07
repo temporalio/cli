@@ -35,7 +35,10 @@ type oauthCredentials struct {
 	profileName    string
 }
 
-// Build creates SDK client.Options
+// Build creates SDK client.Options from the builder configuration.
+//
+// Note: If CommonOptions.ClientConnectTimeout is set, callers should apply it
+// as a context timeout when dialing.
 func (b *ClientOptionsBuilder) Build(ctx context.Context) (client.Options, error) {
 	cfg := b.ClientOptions
 	common := b.CommonOptions
