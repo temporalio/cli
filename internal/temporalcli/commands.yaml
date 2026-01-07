@@ -109,6 +109,7 @@
 #       default: The default value. No default means zero value of the type. (string)
 #       enum-values: A list of possible values for the string-enum type. (string[])
 #       aliases: A list of aliases for the option. (string[])
+#       hidden: Hides the option from help output. (bool)
 #   option-sets: A list of option sets. (string[])
 
 # * name, summary, and descrption are required fields. All other fields are optional.
