@@ -3,7 +3,10 @@ package temporalcli
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 
@@ -42,7 +45,7 @@ func tryExecuteExtension(cctx *CommandContext, tcmd *TemporalCommand) (error, bo
 	cliParseArgs, cliPassArgs, extArgs := groupArgs(foundCmd, remainingArgs)
 
 	// Search for an extension executable.
-	cmdPrefix := strings.Split(foundCmd.CommandPath(), " ")[1:]
+	cmdPrefix := strings.Fields(foundCmd.CommandPath())
 	extPath, extArgs := lookupExtension(cmdPrefix, extArgs)
 
 	// Parse CLI args that need validation.
@@ -159,21 +162,110 @@ func lookupExtension(cmdPrefix, extArgs []string) (string, []string) {
 		if !isPosArg(arg) {
 			break
 		}
-		// Dashes are converted to underscores so "foo bar-baz" finds "temporal-foo-bar_baz".
-		posArgs = append(posArgs, strings.ReplaceAll(arg, extensionSeparator, argDashReplacement))
+		posArgs = append(posArgs, arg)
 	}
 
 	// Try most-specific to least-specific.
 	parts := append(cmdPrefix, posArgs...)
 	for n := len(parts); n > len(cmdPrefix); n-- {
-		path, err := exec.LookPath(extensionPrefix + strings.Join(parts[:n], extensionSeparator))
-		if err != nil {
-			continue
+		binName := extensionCommandToBinary(parts[:n])
+		if fullPath, _ := isExecutable(binName); fullPath != "" {
+			// Remove matched positionals from extArgs (they come first).
+			matched := n - len(cmdPrefix)
+			return fullPath, extArgs[matched:]
 		}
-		// Remove matched positionals from extArgs (they come first).
-		matched := n - len(cmdPrefix)
-		return path, extArgs[matched:]
 	}
 
 	return "", extArgs
+}
+
+// discoverExtensions scans the PATH for executables with the "temporal-" prefix
+// and returns their command parts (without the prefix).
+func discoverExtensions() [][]string {
+	var extensions [][]string
+	seen := make(map[string]bool)
+
+	for _, dir := range filepath.SplitList(os.Getenv("PATH")) {
+		if dir == "" {
+			continue
+		}
+
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			continue
+		}
+
+		for _, entry := range entries {
+			name := entry.Name()
+
+			// Look for extensions.
+			if !strings.HasPrefix(name, extensionPrefix) {
+				continue
+			}
+
+			// Check if the file is executable.
+			fullPath, baseName := isExecutable(filepath.Join(dir, name))
+			if fullPath == "" {
+				continue
+			}
+
+			path := extensionBinaryToCommandPath(baseName)
+			key := strings.Join(path, "/")
+			if seen[key] {
+				continue
+			}
+
+			seen[key] = true
+			extensions = append(extensions, path)
+		}
+	}
+	return extensions
+}
+
+// isExecutable checks if a file or command is executable.
+// On Windows, it validates PATHEXT suffix and strips it from the base name.
+// Returns the full path and base name (without Windows extension suffix).
+func isExecutable(name string) (fullPath, baseName string) {
+	path, err := exec.LookPath(name)
+	if err != nil {
+		return "", ""
+	}
+
+	base := filepath.Base(path)
+	if runtime.GOOS == "windows" {
+		pathext := os.Getenv("PATHEXT")
+		if pathext == "" {
+			pathext = ".exe;.bat"
+		}
+		lower := strings.ToLower(base)
+		for ext := range strings.SplitSeq(strings.ToLower(pathext), ";") {
+			if ext != "" && strings.HasSuffix(lower, ext) {
+				return path, base[:len(base)-len(ext)]
+			}
+		}
+		return "", ""
+	}
+	return path, base
+}
+
+// extensionBinaryToCommandPath converts a binary name to command path.
+// Underscores are converted to dashes.
+// For example: "temporal-foo-bar_baz" -> ["temporal", "foo", "bar-baz"]
+func extensionBinaryToCommandPath(binary string) []string {
+	path := strings.Split(binary, extensionSeparator)
+	for i, p := range path {
+		path[i] = strings.ReplaceAll(p, argDashReplacement, extensionSeparator)
+	}
+	return path
+}
+
+// extensionCommandToBinary converts command path to a binary name.
+// Dashes in path are converted to underscores.
+// For example: ["temporal", "foo", "bar-baz"] -> "temporal-foo-bar_baz"
+func extensionCommandToBinary(path []string) string {
+	converted := make([]string, len(path))
+	for i, p := range path {
+		converted[i] = strings.ReplaceAll(p, extensionSeparator, argDashReplacement)
+	}
+	return strings.Join(converted, extensionSeparator)
 }
