@@ -3541,7 +3541,7 @@ commands:
       temporal workflow describe \
           --workflow-id YourWorkflowId \
           --pending \
-          --format mermaid
+          --output mermaid
       ```
 
       Trace through child workflows to find root cause of failure:
@@ -3559,7 +3559,7 @@ commands:
           --workflow-id YourWorkflowId \
           --trace-root-cause \
           --follow-namespaces OtherNamespace1,OtherNamespace2 \
-          --format mermaid
+          --output mermaid
       ```
     option-sets:
       - workflow-reference
@@ -3591,12 +3591,6 @@ commands:
           Maximum depth to traverse when tracing child workflows.
           Zero means unlimited. Used with --trace-root-cause.
         default: 0
-      - name: format
-        type: string-enum
-        enum-values: ["default", "json", "mermaid"]
-        description: |
-          Visual output format. Use "mermaid" to generate a state diagram
-          showing pending work. Implies --pending.
 
   - name: temporal workflow execute
     summary: Start new Workflow Execution
@@ -3696,7 +3690,7 @@ commands:
           --failed \
           --since 1h \
           --group-by error \
-          --format mermaid
+          --output mermaid
       ```
     options:
       - name: query
@@ -3772,13 +3766,6 @@ commands:
           - status
           - error
         default: none
-      - name: format
-        type: string-enum
-        enum-values: ["default", "json", "mermaid"]
-        default: default
-        description: |
-          Output format. Use "mermaid" for a visual diagram (used with --failed).
-          Shows a pie chart when grouped, or a flowchart of failure chains.
 
   - name: temporal workflow metadata
     summary: Query the Workflow for user-specified metadata
@@ -4022,7 +4009,7 @@ commands:
       ```
       temporal workflow show \
           --workflow-id YourWorkflowId
-          --format mermaid
+          --output mermaid
       ```
 
       Show a compact timeline (collapsed retries, focused events):
@@ -4059,12 +4046,6 @@ commands:
         description: |
           Exclude specific event types in compact mode.
           Can be passed multiple times.
-      - name: format
-        type: string-enum
-        enum-values: ["default", "mermaid"]
-        description: |
-          Visual output format. Use "mermaid" to generate a sequence diagram
-          of the workflow timeline. Implies --compact.
     option-sets:
       - workflow-reference
 
