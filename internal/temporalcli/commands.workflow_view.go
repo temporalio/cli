@@ -56,13 +56,13 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 			return fmt.Errorf("failed to trace workflow: %w", err)
 		}
 
-		return printWorkflowOutput(cctx, c.Format.Value, result, func() string {
+		return printWorkflowOutput(cctx, cctx.RootCommand.Output.Value, result, func() string {
 			return workflowdebug.TraceToMermaid(result)
 		})
 	}
 
-	// Handle --pending or --format mermaid with agent-style output
-	if c.Pending || c.Format.Value == "mermaid" {
+	// Handle --pending or --output mermaid with agent-style output
+	if c.Pending || cctx.RootCommand.Output.Value == "mermaid" {
 		cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 		if err != nil {
 			return err
@@ -78,7 +78,7 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 			return fmt.Errorf("failed to get workflow state: %w", err)
 		}
 
-		return printWorkflowOutput(cctx, c.Format.Value, result, func() string {
+		return printWorkflowOutput(cctx, cctx.RootCommand.Output.Value, result, func() string {
 			return workflowdebug.StateToMermaid(result)
 		})
 	}
@@ -561,7 +561,7 @@ func (c *TemporalWorkflowListCommand) runFailedMode(cctx *CommandContext) error 
 		return fmt.Errorf("failed to find failures: %w", err)
 	}
 
-	return printWorkflowOutput(cctx, c.Format.Value, result, func() string {
+	return printWorkflowOutput(cctx, cctx.RootCommand.Output.Value, result, func() string {
 		return workflowdebug.FailuresToMermaid(result)
 	})
 }
@@ -694,8 +694,8 @@ func (c *TemporalWorkflowResultCommand) run(cctx *CommandContext, _ []string) er
 }
 
 func (c *TemporalWorkflowShowCommand) run(cctx *CommandContext, _ []string) error {
-	// Handle --compact or --format mermaid with agent-style timeline output
-	if c.Compact || c.Format.Value == "mermaid" {
+	// Handle --compact or --output mermaid with agent-style timeline output
+	if c.Compact || cctx.RootCommand.Output.Value == "mermaid" {
 		cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 		if err != nil {
 			return err
@@ -713,7 +713,7 @@ func (c *TemporalWorkflowShowCommand) run(cctx *CommandContext, _ []string) erro
 			return fmt.Errorf("failed to generate timeline: %w", err)
 		}
 
-		return printWorkflowOutput(cctx, c.Format.Value, result, func() string {
+		return printWorkflowOutput(cctx, cctx.RootCommand.Output.Value, result, func() string {
 			return workflowdebug.TimelineToMermaid(result)
 		})
 	}

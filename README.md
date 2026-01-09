@@ -55,9 +55,9 @@ The CLI includes workflow commands optimized for AI agents, LLM tooling, and aut
 - **`temporal workflow list --failed`** - List recent workflow failures with auto-traversed root cause
 - **`temporal workflow describe --trace-root-cause`** - Trace a workflow through its child chain to the deepest failure
 - **`temporal workflow show --compact`** - Show a compact event timeline
-- **`temporal workflow show --format mermaid`** - Generate a sequence diagram
+- **`temporal workflow show --output mermaid`** - Generate a sequence diagram
 - **`temporal workflow describe --pending`** - Show pending activities, children, and Nexus operations
-- **`temporal workflow describe --format mermaid`** - Generate a state diagram
+- **`temporal workflow describe --output mermaid`** - Generate a state diagram
 - **`temporal tool-spec`** - Output tool specifications for AI agent frameworks
 
 ### Examples
@@ -131,23 +131,23 @@ temporal workflow list --failed --namespace commerce-ns --since 1h \
 
 ### Mermaid Visualization
 
-Commands support `--format mermaid` to generate visual diagrams:
+Commands support `--output mermaid` to generate visual diagrams:
 
 ```bash
 # Visualize workflow chain as a flowchart
-temporal workflow describe --trace-root-cause --workflow-id order-123 --namespace prod --format mermaid
+temporal workflow describe --trace-root-cause --workflow-id order-123 --namespace prod --output mermaid
 
 # Visualize timeline as a sequence diagram  
-temporal workflow show --workflow-id order-123 --namespace prod --format mermaid
+temporal workflow show --workflow-id order-123 --namespace prod --output mermaid
 
 # Visualize current state with pending activities
-temporal workflow describe --workflow-id order-123 --namespace prod --pending --format mermaid
+temporal workflow describe --workflow-id order-123 --namespace prod --pending --output mermaid
 
 # Visualize failures as a pie chart (when grouped)
-temporal workflow list --failed --namespace prod --since 1h --group-by error --format mermaid
+temporal workflow list --failed --namespace prod --since 1h --group-by error --output mermaid
 
 # Visualize failures as a flowchart (when not grouped)
-temporal workflow list --failed --namespace prod --since 1h --follow-children --format mermaid
+temporal workflow list --failed --namespace prod --since 1h --follow-children --output mermaid
 ```
 
 The mermaid output renders directly in:
@@ -156,7 +156,7 @@ The mermaid output renders directly in:
 - Notion pages
 - Any markdown preview with Mermaid support
 
-Example diagnose output with `--format mermaid`:
+Example diagnose output with `--output mermaid`:
 ```
 graph TD
     W0[🔄 OrderWorkflow<br/>Failed]

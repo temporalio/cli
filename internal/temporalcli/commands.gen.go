@@ -3407,7 +3407,6 @@ type TemporalWorkflowDescribeCommand struct {
 	TraceRootCause   bool
 	FollowNamespaces []string
 	Depth            int
-	Format           cliext.FlagStringEnum
 }
 
 func NewTemporalWorkflowDescribeCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowDescribeCommand {
@@ -3417,9 +3416,9 @@ func NewTemporalWorkflowDescribeCommand(cctx *CommandContext, parent *TemporalWo
 	s.Command.Use = "describe [flags]"
 	s.Command.Short = "Show Workflow Execution info"
 	if hasHighlighting {
-		s.Command.Long = "Display information about a specific Workflow Execution:\n\n\x1b[1mtemporal workflow describe \\\n    --workflow-id YourWorkflowId\x1b[0m\n\nShow the Workflow Execution's auto-reset points:\n\n\x1b[1mtemporal workflow describe \\\n    --workflow-id YourWorkflowId \\\n    --reset-points true\x1b[0m\n\nShow pending activities, children, and Nexus operations:\n\n\x1b[1mtemporal workflow describe \\\n    --workflow-id YourWorkflowId \\\n    --pending\x1b[0m\n\nGenerate a visual state diagram:\n\n\x1b[1mtemporal workflow describe \\\n    --workflow-id YourWorkflowId \\\n    --pending \\\n    --format mermaid\x1b[0m\n\nTrace through child workflows to find root cause of failure:\n\n\x1b[1mtemporal workflow describe \\\n    --workflow-id YourWorkflowId \\\n    --trace-root-cause\x1b[0m\n\nFollow children across namespaces:\n\n\x1b[1mtemporal workflow describe \\\n    --workflow-id YourWorkflowId \\\n    --trace-root-cause \\\n    --follow-namespaces OtherNamespace1,OtherNamespace2 \\\n    --format mermaid\x1b[0m"
+		s.Command.Long = "Display information about a specific Workflow Execution:\n\n\x1b[1mtemporal workflow describe \\\n    --workflow-id YourWorkflowId\x1b[0m\n\nShow the Workflow Execution's auto-reset points:\n\n\x1b[1mtemporal workflow describe \\\n    --workflow-id YourWorkflowId \\\n    --reset-points true\x1b[0m\n\nShow pending activities, children, and Nexus operations:\n\n\x1b[1mtemporal workflow describe \\\n    --workflow-id YourWorkflowId \\\n    --pending\x1b[0m\n\nGenerate a visual state diagram:\n\n\x1b[1mtemporal workflow describe \\\n    --workflow-id YourWorkflowId \\\n    --pending \\\n    --output mermaid\x1b[0m\n\nTrace through child workflows to find root cause of failure:\n\n\x1b[1mtemporal workflow describe \\\n    --workflow-id YourWorkflowId \\\n    --trace-root-cause\x1b[0m\n\nFollow children across namespaces:\n\n\x1b[1mtemporal workflow describe \\\n    --workflow-id YourWorkflowId \\\n    --trace-root-cause \\\n    --follow-namespaces OtherNamespace1,OtherNamespace2 \\\n    --output mermaid\x1b[0m"
 	} else {
-		s.Command.Long = "Display information about a specific Workflow Execution:\n\n```\ntemporal workflow describe \\\n    --workflow-id YourWorkflowId\n```\n\nShow the Workflow Execution's auto-reset points:\n\n```\ntemporal workflow describe \\\n    --workflow-id YourWorkflowId \\\n    --reset-points true\n```\n\nShow pending activities, children, and Nexus operations:\n\n```\ntemporal workflow describe \\\n    --workflow-id YourWorkflowId \\\n    --pending\n```\n\nGenerate a visual state diagram:\n\n```\ntemporal workflow describe \\\n    --workflow-id YourWorkflowId \\\n    --pending \\\n    --format mermaid\n```\n\nTrace through child workflows to find root cause of failure:\n\n```\ntemporal workflow describe \\\n    --workflow-id YourWorkflowId \\\n    --trace-root-cause\n```\n\nFollow children across namespaces:\n\n```\ntemporal workflow describe \\\n    --workflow-id YourWorkflowId \\\n    --trace-root-cause \\\n    --follow-namespaces OtherNamespace1,OtherNamespace2 \\\n    --format mermaid\n```"
+		s.Command.Long = "Display information about a specific Workflow Execution:\n\n```\ntemporal workflow describe \\\n    --workflow-id YourWorkflowId\n```\n\nShow the Workflow Execution's auto-reset points:\n\n```\ntemporal workflow describe \\\n    --workflow-id YourWorkflowId \\\n    --reset-points true\n```\n\nShow pending activities, children, and Nexus operations:\n\n```\ntemporal workflow describe \\\n    --workflow-id YourWorkflowId \\\n    --pending\n```\n\nGenerate a visual state diagram:\n\n```\ntemporal workflow describe \\\n    --workflow-id YourWorkflowId \\\n    --pending \\\n    --output mermaid\n```\n\nTrace through child workflows to find root cause of failure:\n\n```\ntemporal workflow describe \\\n    --workflow-id YourWorkflowId \\\n    --trace-root-cause\n```\n\nFollow children across namespaces:\n\n```\ntemporal workflow describe \\\n    --workflow-id YourWorkflowId \\\n    --trace-root-cause \\\n    --follow-namespaces OtherNamespace1,OtherNamespace2 \\\n    --output mermaid\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().BoolVar(&s.ResetPoints, "reset-points", false, "Show auto-reset points only.")
@@ -3428,8 +3427,6 @@ func NewTemporalWorkflowDescribeCommand(cctx *CommandContext, parent *TemporalWo
 	s.Command.Flags().BoolVar(&s.TraceRootCause, "trace-root-cause", false, "Trace through child workflow chain to find the deepest failure point. Automates following failed child workflows to find the actual root cause.")
 	s.Command.Flags().StringArrayVar(&s.FollowNamespaces, "follow-namespaces", nil, "Additional namespaces to follow when tracing child workflows. Used with --trace-root-cause. Can be passed multiple times.")
 	s.Command.Flags().IntVar(&s.Depth, "depth", 0, "Maximum depth to traverse when tracing child workflows. Zero means unlimited. Used with --trace-root-cause.")
-	s.Format = cliext.NewFlagStringEnum([]string{"default", "json", "mermaid"}, "")
-	s.Command.Flags().Var(&s.Format, "format", "Visual output format. Use \"mermaid\" to generate a state diagram showing pending work. Implies --pending. Accepted values: default, json, mermaid.")
 	s.WorkflowReferenceOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -3574,7 +3571,6 @@ type TemporalWorkflowListCommand struct {
 	LeafOnly         bool
 	CompactErrors    bool
 	GroupBy          cliext.FlagStringEnum
-	Format           cliext.FlagStringEnum
 }
 
 func NewTemporalWorkflowListCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowListCommand {
@@ -3584,9 +3580,9 @@ func NewTemporalWorkflowListCommand(cctx *CommandContext, parent *TemporalWorkfl
 	s.Command.Use = "list [flags]"
 	s.Command.Short = "Show Workflow Executions"
 	if hasHighlighting {
-		s.Command.Long = "List Workflow Executions. The optional \x1b[1m--query\x1b[0m limits the output to\nWorkflows matching a Query:\n\n\x1b[1mtemporal workflow list \\\n    --query YourQuery\x1b[0m\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation. See \x1b[1mtemporal batch --help\x1b[0m for a quick reference.\n\nView a list of archived Workflow Executions:\n\n\x1b[1mtemporal workflow list \\\n    --archived\x1b[0m\n\nList failed workflows from the last hour with root cause analysis:\n\n\x1b[1mtemporal workflow list \\\n    --failed \\\n    --since 1h\x1b[0m\n\nFollow child workflows to find root causes:\n\n\x1b[1mtemporal workflow list \\\n    --failed \\\n    --since 24h \\\n    --follow-children \\\n    --follow-namespaces OtherNamespace1,OtherNamespace2\x1b[0m\n\nGroup failures by error message to find patterns:\n\n\x1b[1mtemporal workflow list \\\n    --failed \\\n    --since 1h \\\n    --group-by error \\\n    --format mermaid\x1b[0m"
+		s.Command.Long = "List Workflow Executions. The optional \x1b[1m--query\x1b[0m limits the output to\nWorkflows matching a Query:\n\n\x1b[1mtemporal workflow list \\\n    --query YourQuery\x1b[0m\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation. See \x1b[1mtemporal batch --help\x1b[0m for a quick reference.\n\nView a list of archived Workflow Executions:\n\n\x1b[1mtemporal workflow list \\\n    --archived\x1b[0m\n\nList failed workflows from the last hour with root cause analysis:\n\n\x1b[1mtemporal workflow list \\\n    --failed \\\n    --since 1h\x1b[0m\n\nFollow child workflows to find root causes:\n\n\x1b[1mtemporal workflow list \\\n    --failed \\\n    --since 24h \\\n    --follow-children \\\n    --follow-namespaces OtherNamespace1,OtherNamespace2\x1b[0m\n\nGroup failures by error message to find patterns:\n\n\x1b[1mtemporal workflow list \\\n    --failed \\\n    --since 1h \\\n    --group-by error \\\n    --output mermaid\x1b[0m"
 	} else {
-		s.Command.Long = "List Workflow Executions. The optional `--query` limits the output to\nWorkflows matching a Query:\n\n```\ntemporal workflow list \\\n    --query YourQuery\n```\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation. See `temporal batch --help` for a quick reference.\n\nView a list of archived Workflow Executions:\n\n```\ntemporal workflow list \\\n    --archived\n```\n\nList failed workflows from the last hour with root cause analysis:\n\n```\ntemporal workflow list \\\n    --failed \\\n    --since 1h\n```\n\nFollow child workflows to find root causes:\n\n```\ntemporal workflow list \\\n    --failed \\\n    --since 24h \\\n    --follow-children \\\n    --follow-namespaces OtherNamespace1,OtherNamespace2\n```\n\nGroup failures by error message to find patterns:\n\n```\ntemporal workflow list \\\n    --failed \\\n    --since 1h \\\n    --group-by error \\\n    --format mermaid\n```"
+		s.Command.Long = "List Workflow Executions. The optional `--query` limits the output to\nWorkflows matching a Query:\n\n```\ntemporal workflow list \\\n    --query YourQuery\n```\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation. See `temporal batch --help` for a quick reference.\n\nView a list of archived Workflow Executions:\n\n```\ntemporal workflow list \\\n    --archived\n```\n\nList failed workflows from the last hour with root cause analysis:\n\n```\ntemporal workflow list \\\n    --failed \\\n    --since 1h\n```\n\nFollow child workflows to find root causes:\n\n```\ntemporal workflow list \\\n    --failed \\\n    --since 24h \\\n    --follow-children \\\n    --follow-namespaces OtherNamespace1,OtherNamespace2\n```\n\nGroup failures by error message to find patterns:\n\n```\ntemporal workflow list \\\n    --failed \\\n    --since 1h \\\n    --group-by error \\\n    --output mermaid\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Content for an SQL-like `QUERY` List Filter.")
@@ -3605,8 +3601,6 @@ func NewTemporalWorkflowListCommand(cctx *CommandContext, parent *TemporalWorkfl
 	s.Command.Flags().BoolVar(&s.CompactErrors, "compact-errors", false, "Extract the core error message, stripping wrapper context (used with --failed).")
 	s.GroupBy = cliext.NewFlagStringEnum([]string{"none", "type", "namespace", "status", "error"}, "none")
 	s.Command.Flags().Var(&s.GroupBy, "group-by", "Group failures by a field instead of listing individually. Returns aggregated counts per group (used with --failed). Accepted values: none, type, namespace, status, error.")
-	s.Format = cliext.NewFlagStringEnum([]string{"default", "json", "mermaid"}, "default")
-	s.Command.Flags().Var(&s.Format, "format", "Output format. Use \"mermaid\" for a visual diagram (used with --failed). Shows a pie chart when grouped, or a flowchart of failure chains. Accepted values: default, json, mermaid.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -3790,7 +3784,6 @@ type TemporalWorkflowShowCommand struct {
 	Compact           bool
 	EventTypes        []string
 	ExcludeEventTypes []string
-	Format            cliext.FlagStringEnum
 }
 
 func NewTemporalWorkflowShowCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowShowCommand {
@@ -3800,9 +3793,9 @@ func NewTemporalWorkflowShowCommand(cctx *CommandContext, parent *TemporalWorkfl
 	s.Command.Use = "show [flags]"
 	s.Command.Short = "Display Event History"
 	if hasHighlighting {
-		s.Command.Long = "Show a Workflow Execution's Event History.\nWhen using JSON output (\x1b[1m--output json\x1b[0m), you may pass the results to an SDK\nto perform a replay:\n\n\x1b[1mtemporal workflow show \\\n    --workflow-id YourWorkflowId\n    --output json\x1b[0m\n\nGenerate a visual sequence diagram of the workflow timeline:\n\n\x1b[1mtemporal workflow show \\\n    --workflow-id YourWorkflowId\n    --format mermaid\x1b[0m\n\nShow a compact timeline (collapsed retries, focused events):\n\n\x1b[1mtemporal workflow show \\\n    --workflow-id YourWorkflowId\n    --compact\x1b[0m"
+		s.Command.Long = "Show a Workflow Execution's Event History.\nWhen using JSON output (\x1b[1m--output json\x1b[0m), you may pass the results to an SDK\nto perform a replay:\n\n\x1b[1mtemporal workflow show \\\n    --workflow-id YourWorkflowId\n    --output json\x1b[0m\n\nGenerate a visual sequence diagram of the workflow timeline:\n\n\x1b[1mtemporal workflow show \\\n    --workflow-id YourWorkflowId\n    --output mermaid\x1b[0m\n\nShow a compact timeline (collapsed retries, focused events):\n\n\x1b[1mtemporal workflow show \\\n    --workflow-id YourWorkflowId\n    --compact\x1b[0m"
 	} else {
-		s.Command.Long = "Show a Workflow Execution's Event History.\nWhen using JSON output (`--output json`), you may pass the results to an SDK\nto perform a replay:\n\n```\ntemporal workflow show \\\n    --workflow-id YourWorkflowId\n    --output json\n```\n\nGenerate a visual sequence diagram of the workflow timeline:\n\n```\ntemporal workflow show \\\n    --workflow-id YourWorkflowId\n    --format mermaid\n```\n\nShow a compact timeline (collapsed retries, focused events):\n\n```\ntemporal workflow show \\\n    --workflow-id YourWorkflowId\n    --compact\n```"
+		s.Command.Long = "Show a Workflow Execution's Event History.\nWhen using JSON output (`--output json`), you may pass the results to an SDK\nto perform a replay:\n\n```\ntemporal workflow show \\\n    --workflow-id YourWorkflowId\n    --output json\n```\n\nGenerate a visual sequence diagram of the workflow timeline:\n\n```\ntemporal workflow show \\\n    --workflow-id YourWorkflowId\n    --output mermaid\n```\n\nShow a compact timeline (collapsed retries, focused events):\n\n```\ntemporal workflow show \\\n    --workflow-id YourWorkflowId\n    --compact\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().BoolVarP(&s.Follow, "follow", "f", false, "Follow the Workflow Execution progress in real time. Does not apply to JSON output.")
@@ -3810,8 +3803,6 @@ func NewTemporalWorkflowShowCommand(cctx *CommandContext, parent *TemporalWorkfl
 	s.Command.Flags().BoolVar(&s.Compact, "compact", false, "Show a compact event timeline focused on activities and workflows. Collapses retries and filters noise for easier debugging.")
 	s.Command.Flags().StringArrayVar(&s.EventTypes, "event-types", nil, "Filter to specific event types in compact mode. Can be passed multiple times.")
 	s.Command.Flags().StringArrayVar(&s.ExcludeEventTypes, "exclude-event-types", nil, "Exclude specific event types in compact mode. Can be passed multiple times.")
-	s.Format = cliext.NewFlagStringEnum([]string{"default", "mermaid"}, "")
-	s.Command.Flags().Var(&s.Format, "format", "Visual output format. Use \"mermaid\" to generate a sequence diagram of the workflow timeline. Implies --compact. Accepted values: default, mermaid.")
 	s.WorkflowReferenceOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
