@@ -34,7 +34,7 @@ func GetToolSpecs() []ToolSpec {
 			Description: `Find recent workflow failures in a Temporal namespace.
 Automatically traverses workflow chains to find the deepest failure (leaf failure) and root cause.
 Returns structured JSON with failure reports including root_workflow, leaf_failure, depth, chain, and root_cause.
-CLI command: temporal workflow failures --namespace <ns> --since 1h`,
+CLI command: temporal workflow list --failed --namespace <ns> --since 1h`,
 			Parameters: ToolParameters{
 				Type: "object",
 				Properties: map[string]ToolProperty{
@@ -97,7 +97,7 @@ CLI command: temporal workflow failures --namespace <ns> --since 1h`,
 			Description: `Trace a workflow execution through its entire child workflow chain to find the deepest failure.
 Identifies the leaf failure point and extracts root cause information.
 Automates the manual process of: finding the workflow, inspecting children, following failing children until reaching the leaf, and extracting failure info.
-CLI command: temporal workflow diagnose --workflow-id <id>`,
+CLI command: temporal workflow describe --trace-root-cause --workflow-id <id>`,
 			Parameters: ToolParameters{
 				Type: "object",
 				Properties: map[string]ToolProperty{

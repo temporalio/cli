@@ -3543,6 +3543,24 @@ commands:
           --pending \
           --format mermaid
       ```
+
+      Trace through child workflows to find root cause of failure:
+
+      ```
+      temporal workflow describe \
+          --workflow-id YourWorkflowId \
+          --trace-root-cause
+      ```
+
+      Follow children across namespaces:
+
+      ```
+      temporal workflow describe \
+          --workflow-id YourWorkflowId \
+          --trace-root-cause \
+          --follow-namespaces OtherNamespace1,OtherNamespace2 \
+          --format mermaid
+      ```
     option-sets:
       - workflow-reference
     options:
@@ -3557,9 +3575,25 @@ commands:
         description: |
           Show pending activities, child workflows, signals, and Nexus operations.
           Provides a snapshot of what the workflow is currently doing or waiting for.
+      - name: trace-root-cause
+        type: bool
+        description: |
+          Trace through child workflow chain to find the deepest failure point.
+          Automates following failed child workflows to find the actual root cause.
+      - name: follow-namespaces
+        type: string[]
+        description: |
+          Additional namespaces to follow when tracing child workflows.
+          Used with --trace-root-cause. Can be passed multiple times.
+      - name: depth
+        type: int
+        description: |
+          Maximum depth to traverse when tracing child workflows.
+          Zero means unlimited. Used with --trace-root-cause.
+        default: 0
       - name: format
         type: string-enum
-        enum-values: ["default", "mermaid"]
+        enum-values: ["default", "json", "mermaid"]
         description: |
           Visual output format. Use "mermaid" to generate a state diagram
           showing pending work. Implies --pending.
@@ -3636,6 +3670,34 @@ commands:
       temporal workflow list \
           --archived
       ```
+
+      List failed workflows from the last hour with root cause analysis:
+
+      ```
+      temporal workflow list \
+          --failed \
+          --since 1h
+      ```
+
+      Follow child workflows to find root causes:
+
+      ```
+      temporal workflow list \
+          --failed \
+          --since 24h \
+          --follow-children \
+          --follow-namespaces OtherNamespace1,OtherNamespace2
+      ```
+
+      Group failures by error message to find patterns:
+
+      ```
+      temporal workflow list \
+          --failed \
+          --since 1h \
+          --group-by error \
+          --format mermaid
+      ```
     options:
       - name: query
         short: q
@@ -3651,63 +3713,28 @@ commands:
       - name: page-size
         type: int
         description: Maximum number of Workflow Executions to fetch at a time from the server.
-
-  - name: temporal workflow failures
-    summary: List recent workflow failures with root cause analysis
-    description: |
-      List recent workflow failures, automatically analyzing each to find the
-      root cause. This command traces through child workflows and activities
-      to identify the deepest failure point.
-
-      Show failures from the last hour:
-
-      ```
-      temporal workflow failures \
-          --since 1h
-      ```
-
-      Follow child workflows to find root causes:
-
-      ```
-      temporal workflow failures \
-          --since 24h \
-          --follow-children \
-          --follow-namespaces OtherNamespace1,OtherNamespace2
-      ```
-
-      Group failures by error message to find patterns:
-
-      ```
-      temporal workflow failures \
-          --since 1h \
-          --group-by error \
-          --format mermaid
-      ```
-
-      Filter failures containing specific text:
-
-      ```
-      temporal workflow failures \
-          --since 1h \
-          --error-contains "timeout"
-      ```
-    options:
+      - name: failed
+        type: bool
+        description: |
+          List failed workflows with root cause analysis.
+          Automatically traces through child workflows and activities
+          to identify the deepest failure point.
       - name: since
         type: duration
         description: |
-          Time window to search for failures.
+          Time window to search for failures (used with --failed).
           For example: "1h", "24h", "7d".
         default: 1h
       - name: status
         type: string[]
         description: |
-          Filter by workflow status.
+          Filter by workflow status (used with --failed).
           Accepted values: Failed, TimedOut, Canceled, Terminated.
           Can be passed multiple times.
       - name: follow-children
         type: bool
         description: |
-          Traverse child workflows to find leaf failures.
+          Traverse child workflows to find leaf failures (used with --failed).
       - name: follow-namespaces
         type: string[]
         description: |
@@ -3719,29 +3746,25 @@ commands:
           Maximum depth to traverse when following child workflows.
           Zero means unlimited.
         default: 0
-      - name: limit
-        type: int
-        description: Maximum number of failures to return.
-        default: 50
       - name: error-contains
         type: string
         description: |
           Filter failures to only those containing this substring in the error.
-          Case-insensitive matching.
+          Case-insensitive matching (used with --failed).
       - name: leaf-only
         type: bool
         description: |
           Show only leaf failures (workflows with no failing children).
-          De-duplicates failures by showing only the root cause.
+          De-duplicates failures by showing only the root cause (used with --failed).
       - name: compact-errors
         type: bool
         description: |
-          Extract the core error message, stripping wrapper context.
+          Extract the core error message, stripping wrapper context (used with --failed).
       - name: group-by
         type: string-enum
         description: |
           Group failures by a field instead of listing individually.
-          Returns aggregated counts per group.
+          Returns aggregated counts per group (used with --failed).
         enum-values:
           - none
           - type
@@ -3751,63 +3774,11 @@ commands:
         default: none
       - name: format
         type: string-enum
-        enum-values: ["json", "mermaid"]
-        default: json
+        enum-values: ["default", "json", "mermaid"]
+        default: default
         description: |
-          Output format. Use "mermaid" for a visual diagram.
+          Output format. Use "mermaid" for a visual diagram (used with --failed).
           Shows a pie chart when grouped, or a flowchart of failure chains.
-
-  - name: temporal workflow diagnose
-    summary: Trace workflow to deepest failure point
-    description: |
-      Trace a workflow execution through its child workflow chain to find
-      the deepest failure point (leaf failure) and extract root cause info.
-
-      This automates the manual process of following failed child workflows
-      until reaching the actual source of the failure.
-
-      Basic usage:
-
-      ```
-      temporal workflow diagnose \
-          --workflow-id YourWorkflowId
-      ```
-
-      Follow children across namespaces:
-
-      ```
-      temporal workflow diagnose \
-          --workflow-id YourWorkflowId \
-          --follow-namespaces OtherNamespace1,OtherNamespace2
-      ```
-
-      Generate a visual flowchart:
-
-      ```
-      temporal workflow diagnose \
-          --workflow-id YourWorkflowId \
-          --format mermaid
-      ```
-    option-sets:
-      - workflow-reference
-    options:
-      - name: follow-namespaces
-        type: string[]
-        description: |
-          Additional namespaces to follow when traversing child workflows.
-          Can be passed multiple times.
-      - name: depth
-        type: int
-        description: |
-          Maximum depth to traverse when following child workflows.
-          Zero means unlimited.
-        default: 0
-      - name: format
-        type: string-enum
-        enum-values: ["json", "mermaid"]
-        default: json
-        description: |
-          Output format. Use "mermaid" for a visual flowchart.
 
   - name: temporal workflow metadata
     summary: Query the Workflow for user-specified metadata

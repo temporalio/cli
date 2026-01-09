@@ -131,7 +131,7 @@ func (s *SharedServerSuite) TestWorkflowShow_Compact_WithActivity() {
 	s.True(foundCompleted, "should have activity completed event")
 }
 
-func (s *SharedServerSuite) TestWorkflowDiagnose_SimpleWorkflow() {
+func (s *SharedServerSuite) TestWorkflowDescribe_TraceRootCause_SimpleWorkflow() {
 	// Create a simple failing workflow
 	s.Worker().OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
 		return "", temporal.NewApplicationError("test error", "TestError")
@@ -150,9 +150,9 @@ func (s *SharedServerSuite) TestWorkflowDiagnose_SimpleWorkflow() {
 	err = run.Get(s.Context, &result)
 	s.Error(err)
 
-	// Run trace command
+	// Run describe --trace-root-cause command
 	res := s.Execute(
-		"workflow", "diagnose",
+		"workflow", "describe", "--trace-root-cause",
 		"--address", s.Address(),
 		"-w", run.GetID(),
 		"-o", "json",
@@ -174,7 +174,7 @@ func (s *SharedServerSuite) TestWorkflowDiagnose_SimpleWorkflow() {
 	s.Contains(trace.RootCause.Error, "test error")
 }
 
-func (s *SharedServerSuite) TestWorkflowDiagnose_WithChildWorkflow() {
+func (s *SharedServerSuite) TestWorkflowDescribe_TraceRootCause_WithChildWorkflow() {
 	childWfType := "child-wf-" + uuid.NewString()
 
 	// Register child workflow that fails
@@ -212,9 +212,9 @@ func (s *SharedServerSuite) TestWorkflowDiagnose_WithChildWorkflow() {
 	err = run.Get(s.Context, &result)
 	s.Error(err)
 
-	// Run trace command
+	// Run describe --trace-root-cause command
 	res := s.Execute(
-		"workflow", "diagnose",
+		"workflow", "describe", "--trace-root-cause",
 		"--address", s.Address(),
 		"-w", run.GetID(),
 		"-o", "json",
@@ -239,7 +239,7 @@ func (s *SharedServerSuite) TestWorkflowDiagnose_WithChildWorkflow() {
 	s.Contains(trace.RootCause.Error, "child error")
 }
 
-func (s *SharedServerSuite) TestWorkflowFailures_FindsFailedWorkflows() {
+func (s *SharedServerSuite) TestWorkflowList_Failed_FindsFailedWorkflows() {
 	searchAttr := "keyword-" + uuid.NewString()
 
 	// Create a failing workflow
@@ -274,9 +274,9 @@ func (s *SharedServerSuite) TestWorkflowFailures_FindsFailedWorkflows() {
 		return len(resp.Executions) == 3
 	}, 5*time.Second, 100*time.Millisecond)
 
-	// Run failures command
+	// Run list --failed command
 	res := s.Execute(
-		"workflow", "failures",
+		"workflow", "list", "--failed",
 		"--address", s.Address(),
 		"--since", "1h",
 		"-o", "json",
@@ -296,7 +296,7 @@ func (s *SharedServerSuite) TestWorkflowFailures_FindsFailedWorkflows() {
 	}
 }
 
-func (s *SharedServerSuite) TestWorkflowFailures_WithFollowChildren() {
+func (s *SharedServerSuite) TestWorkflowList_Failed_WithFollowChildren() {
 	childWfType := "child-wf-failures-" + uuid.NewString()
 
 	// Register child workflow that fails
@@ -342,9 +342,9 @@ func (s *SharedServerSuite) TestWorkflowFailures_WithFollowChildren() {
 		return len(resp.Executions) == 1
 	}, 5*time.Second, 100*time.Millisecond)
 
-	// Run failures command with --follow-children
+	// Run list --failed command with --follow-children
 	res := s.Execute(
-		"workflow", "failures",
+		"workflow", "list", "--failed",
 		"--address", s.Address(),
 		"--since", "1h",
 		"--follow-children",
@@ -372,7 +372,7 @@ func (s *SharedServerSuite) TestWorkflowFailures_WithFollowChildren() {
 	s.Contains(ourFailure.RootCause, "deep child error", "root cause should mention the child error")
 }
 
-func (s *SharedServerSuite) TestWorkflowFailures_ErrorContains() {
+func (s *SharedServerSuite) TestWorkflowList_Failed_ErrorContains() {
 	uniqueError1 := "unique-error-" + uuid.NewString()
 	uniqueError2 := "different-error-" + uuid.NewString()
 
@@ -416,7 +416,7 @@ func (s *SharedServerSuite) TestWorkflowFailures_ErrorContains() {
 
 	// Run failures command with --error-contains filtering for first error
 	res := s.Execute(
-		"workflow", "failures",
+		"workflow", "list", "--failed",
 		"--address", s.Address(),
 		"--since", "1h",
 		"--error-contains", uniqueError1,
@@ -433,7 +433,7 @@ func (s *SharedServerSuite) TestWorkflowFailures_ErrorContains() {
 
 	// Run with case-insensitive matching
 	res = s.Execute(
-		"workflow", "failures",
+		"workflow", "list", "--failed",
 		"--address", s.Address(),
 		"--since", "1h",
 		"--error-contains", strings.ToUpper(uniqueError1[:10]),
@@ -449,7 +449,7 @@ func (s *SharedServerSuite) TestWorkflowFailures_ErrorContains() {
 
 	// Run with non-matching filter
 	res = s.Execute(
-		"workflow", "failures",
+		"workflow", "list", "--failed",
 		"--address", s.Address(),
 		"--since", "1h",
 		"--error-contains", "nonexistent-error-string-xyz",
@@ -464,7 +464,7 @@ func (s *SharedServerSuite) TestWorkflowFailures_ErrorContains() {
 	s.Len(failuresResult3.Failures, 0, "should find no failures with non-matching filter")
 }
 
-func (s *SharedServerSuite) TestWorkflowFailures_MultipleStatuses() {
+func (s *SharedServerSuite) TestWorkflowList_Failed_MultipleStatuses() {
 	// Create a workflow that can fail or be canceled
 	s.Worker().OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
 		return "", temporal.NewApplicationError("multi-status-test", "TestError")
@@ -492,7 +492,7 @@ func (s *SharedServerSuite) TestWorkflowFailures_MultipleStatuses() {
 
 	// Test comma-separated statuses
 	res := s.Execute(
-		"workflow", "failures",
+		"workflow", "list", "--failed",
 		"--address", s.Address(),
 		"--since", "1h",
 		"--status", "Failed,TimedOut",
@@ -512,7 +512,7 @@ func (s *SharedServerSuite) TestWorkflowFailures_MultipleStatuses() {
 
 	// Test multiple --status flags
 	res = s.Execute(
-		"workflow", "failures",
+		"workflow", "list", "--failed",
 		"--address", s.Address(),
 		"--since", "1h",
 		"--status", "Failed",
@@ -531,7 +531,7 @@ func (s *SharedServerSuite) TestWorkflowFailures_MultipleStatuses() {
 
 	// Test single status to verify filtering works
 	res = s.Execute(
-		"workflow", "failures",
+		"workflow", "list", "--failed",
 		"--address", s.Address(),
 		"--since", "1h",
 		"--status", "Canceled",
@@ -546,7 +546,7 @@ func (s *SharedServerSuite) TestWorkflowFailures_MultipleStatuses() {
 	s.Len(failuresResult3.Failures, 0, "should find no failures when filtering by Canceled only")
 }
 
-func (s *SharedServerSuite) TestWorkflowFailures_LeafOnly() {
+func (s *SharedServerSuite) TestWorkflowList_Failed_LeafOnly() {
 	childWfType := "leaf-only-child-" + uuid.NewString()
 
 	// Register child workflow that fails
@@ -595,7 +595,7 @@ func (s *SharedServerSuite) TestWorkflowFailures_LeafOnly() {
 
 	// Run failures command WITHOUT --leaf-only
 	res := s.Execute(
-		"workflow", "failures",
+		"workflow", "list", "--failed",
 		"--address", s.Address(),
 		"--since", "1h",
 		"--follow-children",
@@ -611,7 +611,7 @@ func (s *SharedServerSuite) TestWorkflowFailures_LeafOnly() {
 
 	// Run failures command WITH --leaf-only
 	res = s.Execute(
-		"workflow", "failures",
+		"workflow", "list", "--failed",
 		"--address", s.Address(),
 		"--since", "1h",
 		"--follow-children",

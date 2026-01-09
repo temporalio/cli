@@ -9,7 +9,6 @@ import (
 	"github.com/temporalio/cli/cliext"
 	"github.com/temporalio/cli/internal/printer"
 	"github.com/temporalio/cli/internal/workflowdebug"
-	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/sdk/client"
 )
 
@@ -99,121 +98,6 @@ func (p *cliClientProvider) Close() {
 	for _, cl := range p.clients {
 		cl.Close()
 	}
-}
-
-// TemporalWorkflowFailuresCommand - list recent workflow failures
-func (c *TemporalWorkflowFailuresCommand) run(cctx *CommandContext, args []string) error {
-	// Create client provider
-	clientProvider, err := newCLIClientProvider(cctx, &c.Parent.ClientOptions)
-	if err != nil {
-		return fmt.Errorf("failed to create client: %w", err)
-	}
-	defer clientProvider.Close()
-
-	// Parse statuses (supports both comma-separated and multiple flags)
-	var statuses []enums.WorkflowExecutionStatus
-	for _, s := range c.Status {
-		// Split by comma in case user passes "Failed,TimedOut"
-		for _, part := range strings.Split(s, ",") {
-			part = strings.TrimSpace(part)
-			if part == "" {
-				continue
-			}
-			status := workflowdebug.ParseWorkflowStatus(part)
-			if status == enums.WORKFLOW_EXECUTION_STATUS_UNSPECIFIED {
-				return fmt.Errorf("invalid status: %s", part)
-			}
-			statuses = append(statuses, status)
-		}
-	}
-
-	// Build options
-	opts := workflowdebug.FailuresOptions{
-		Since:            c.Since.Duration(),
-		Statuses:         statuses,
-		FollowChildren:   c.FollowChildren,
-		FollowNamespaces: c.FollowNamespaces,
-		MaxDepth:         c.Depth,
-		Limit:            c.Limit,
-		ErrorContains:    c.ErrorContains,
-		LeafOnly:         c.LeafOnly,
-		CompactErrors:    c.CompactErrors,
-		GroupBy:          c.GroupBy.Value,
-	}
-
-	// Add the main namespace to follow namespaces if following children
-	if opts.FollowChildren && len(opts.FollowNamespaces) == 0 {
-		opts.FollowNamespaces = []string{c.Parent.ClientOptions.Namespace}
-	} else if opts.FollowChildren {
-		// Ensure main namespace is included
-		found := false
-		for _, ns := range opts.FollowNamespaces {
-			if ns == c.Parent.ClientOptions.Namespace {
-				found = true
-				break
-			}
-		}
-		if !found {
-			opts.FollowNamespaces = append([]string{c.Parent.ClientOptions.Namespace}, opts.FollowNamespaces...)
-		}
-	}
-
-	// Find failures
-	finder := workflowdebug.NewFailuresFinder(clientProvider, opts)
-	result, err := finder.FindFailures(cctx, c.Parent.ClientOptions.Namespace)
-	if err != nil {
-		return fmt.Errorf("failed to find failures: %w", err)
-	}
-
-	// Output based on format
-	return printWorkflowOutput(cctx, c.Format.Value, result, func() string {
-		return workflowdebug.FailuresToMermaid(result)
-	})
-}
-
-// TemporalWorkflowDiagnoseCommand - trace workflow to deepest failure
-func (c *TemporalWorkflowDiagnoseCommand) run(cctx *CommandContext, args []string) error {
-	// Create client provider
-	clientProvider, err := newCLIClientProvider(cctx, &c.Parent.ClientOptions)
-	if err != nil {
-		return fmt.Errorf("failed to create client: %w", err)
-	}
-	defer clientProvider.Close()
-
-	// Build options
-	opts := workflowdebug.TraverserOptions{
-		FollowNamespaces: c.FollowNamespaces,
-		MaxDepth:         c.Depth,
-	}
-
-	// Add the main namespace to follow namespaces
-	if len(opts.FollowNamespaces) == 0 {
-		opts.FollowNamespaces = []string{c.Parent.ClientOptions.Namespace}
-	} else {
-		// Ensure main namespace is included
-		found := false
-		for _, ns := range opts.FollowNamespaces {
-			if ns == c.Parent.ClientOptions.Namespace {
-				found = true
-				break
-			}
-		}
-		if !found {
-			opts.FollowNamespaces = append([]string{c.Parent.ClientOptions.Namespace}, opts.FollowNamespaces...)
-		}
-	}
-
-	// Trace workflow
-	traverser := workflowdebug.NewChainTraverser(clientProvider, opts)
-	result, err := traverser.Trace(cctx, c.Parent.ClientOptions.Namespace, c.WorkflowId, c.RunId)
-	if err != nil {
-		return fmt.Errorf("failed to diagnose workflow: %w", err)
-	}
-
-	// Output based on format
-	return printWorkflowOutput(cctx, c.Format.Value, result, func() string {
-		return workflowdebug.TraceToMermaid(result)
-	})
 }
 
 // TemporalToolSpecCommand - output tool specifications for AI frameworks
