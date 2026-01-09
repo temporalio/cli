@@ -17,16 +17,16 @@ import (
 )
 
 var scenarios = map[string]string{
-	"success":            "Complete order with all steps succeeding",
-	"nexus-payment-fail": "Payment fails via Nexus (card declined)",
-	"nexus-fraud":        "Fraud detection via Nexus chain",
-	"child-shipping-fail":"Shipping fails via cross-NS child workflow",
-	"inventory-fail":     "Inventory reservation fails",
-	"saga-compensation":  "Order fails at shipping, triggers compensation",
-	"deep-chain":         "4-level cross-NS chain that fails",
-	"multi-fail":         "Multiple concurrent failures",
-	"timeout":            "Payment timeout via Nexus",
-	"all":                "Run all scenarios",
+	"success":             "Complete order with all steps succeeding",
+	"nexus-payment-fail":  "Payment fails via Nexus (card declined)",
+	"nexus-fraud":         "Fraud detection via Nexus chain",
+	"child-shipping-fail": "Shipping fails via cross-NS child workflow",
+	"inventory-fail":      "Inventory reservation fails",
+	"saga-compensation":   "Order fails at shipping, triggers compensation",
+	"deep-chain":          "4-level cross-NS chain that fails",
+	"multi-fail":          "Multiple concurrent failures",
+	"timeout":             "Payment timeout via Nexus",
+	"all":                 "Run all scenarios",
 }
 
 func main() {
@@ -123,34 +123,34 @@ func main() {
 
 func runAllScenarios(ctx context.Context, c client.Client, timestamp string) {
 	log.Println("=== Running All Scenarios ===")
-	
+
 	runSuccessScenario(ctx, c, timestamp)
 	time.Sleep(1 * time.Second)
-	
+
 	runNexusPaymentFailScenario(ctx, c, timestamp)
 	time.Sleep(1 * time.Second)
-	
+
 	runNexusFraudScenario(ctx, c, timestamp)
 	time.Sleep(1 * time.Second)
-	
+
 	runChildShippingFailScenario(ctx, c, timestamp)
 	time.Sleep(1 * time.Second)
-	
+
 	runInventoryFailScenario(ctx, c, timestamp)
 	time.Sleep(1 * time.Second)
-	
+
 	runSagaCompensationScenario(ctx, c, timestamp)
 	time.Sleep(1 * time.Second)
-	
+
 	runDeepChainScenario(ctx, c, timestamp)
-	
+
 	log.Println("=== All Scenarios Started ===")
 	printDebugCommands()
 }
 
 func runSuccessScenario(ctx context.Context, c client.Client, timestamp string) {
 	log.Println("=== Running Success Scenario ===")
-	
+
 	orderID := fmt.Sprintf("order-success-%s", timestamp)
 	input := shared.OrderInput{
 		OrderID:    orderID,
@@ -176,7 +176,7 @@ func runSuccessScenario(ctx context.Context, c client.Client, timestamp string) 
 func runNexusPaymentFailScenario(ctx context.Context, c client.Client, timestamp string) {
 	log.Println("=== Running Nexus Payment Fail Scenario ===")
 	log.Println("This order's payment will be declined via Nexus call to finance-ns")
-	
+
 	orderID := fmt.Sprintf("order-nexus-payment-fail-%s", timestamp)
 	input := shared.OrderInput{
 		OrderID:    orderID,
@@ -203,7 +203,7 @@ func runNexusFraudScenario(ctx context.Context, c client.Client, timestamp strin
 	log.Println("=== Running Nexus Fraud Detection Scenario ===")
 	log.Println("This order will be flagged as fraudulent by finance-ns via Nexus")
 	log.Println("Chain: commerce-ns OrderSaga -> [Nexus] -> finance-ns Payment -> finance-ns FraudCheck")
-	
+
 	orderID := fmt.Sprintf("order-nexus-fraud-%s", timestamp)
 	input := shared.OrderInput{
 		OrderID:    orderID,
@@ -230,7 +230,7 @@ func runChildShippingFailScenario(ctx context.Context, c client.Client, timestam
 	log.Println("=== Running Child Workflow Shipping Fail Scenario ===")
 	log.Println("This order will fail at shipping via cross-namespace child workflow")
 	log.Println("Chain: commerce-ns OrderSaga -> [Child WF] -> logistics-ns ShipOrder")
-	
+
 	orderID := fmt.Sprintf("order-child-shipping-fail-%s", timestamp)
 	// We'll manually set an address that triggers failure
 	// The order workflow will extract this from the order
@@ -258,7 +258,7 @@ func runChildShippingFailScenario(ctx context.Context, c client.Client, timestam
 func runInventoryFailScenario(ctx context.Context, c client.Client, timestamp string) {
 	log.Println("=== Running Inventory Fail Scenario ===")
 	log.Println("This order will fail at inventory (same namespace)")
-	
+
 	orderID := fmt.Sprintf("order-inventory-fail-%s", timestamp)
 	input := shared.OrderInput{
 		OrderID:    orderID,
@@ -286,7 +286,7 @@ func runSagaCompensationScenario(ctx context.Context, c client.Client, timestamp
 	log.Println("This order will fail at shipping, triggering:")
 	log.Println("  - Refund via Nexus to finance-ns")
 	log.Println("  - Inventory release in commerce-ns")
-	
+
 	orderID := fmt.Sprintf("order-saga-compensation-%s", timestamp)
 	// Use INVALID_ADDRESS to trigger shipping failure after payment succeeds
 	input := shared.OrderInput{
@@ -316,7 +316,7 @@ func runDeepChainScenario(ctx context.Context, c client.Client, timestamp string
 	log.Println("  commerce-ns:OrderSaga -> commerce-ns:Inventory")
 	log.Println("                        -> [Nexus] finance-ns:Payment -> finance-ns:FraudCheck")
 	log.Println("                        -> [Child] logistics-ns:Ship -> logistics-ns:Track")
-	
+
 	// Run fraud scenario which creates the deepest chain
 	orderID := fmt.Sprintf("order-deep-chain-%s", timestamp)
 	input := shared.OrderInput{
@@ -343,7 +343,7 @@ func runDeepChainScenario(ctx context.Context, c client.Client, timestamp string
 func runMultiFailScenario(ctx context.Context, c client.Client, timestamp string) {
 	log.Println("=== Running Multi-Failure Scenario ===")
 	log.Println("Starting multiple orders that will fail in different ways")
-	
+
 	// Start multiple failures concurrently
 	runNexusPaymentFailScenario(ctx, c, timestamp+"-multi1")
 	runNexusFraudScenario(ctx, c, timestamp+"-multi2")
@@ -354,7 +354,7 @@ func runMultiFailScenario(ctx context.Context, c client.Client, timestamp string
 func runTimeoutScenario(ctx context.Context, c client.Client, timestamp string) {
 	log.Println("=== Running Timeout Scenario ===")
 	log.Println("This order's payment will timeout via Nexus")
-	
+
 	orderID := fmt.Sprintf("order-timeout-%s", timestamp)
 	input := shared.OrderInput{
 		OrderID:    orderID,
@@ -385,12 +385,11 @@ func printDebugCommands() {
 
 	log.Println("\n=== Debug Commands ===")
 	log.Println("Find recent failures:")
-	log.Printf("  temporal workflow list --failed --namespace %s --since 1h --follow-children --format json", commerceNS)
+	log.Printf("  temporal workflow list --failed --namespace %s --since 1h --follow-children --output json", commerceNS)
 	log.Println("\nWith leaf-only and compact errors:")
-	log.Printf("  temporal workflow list --failed --namespace %s --since 1h --follow-children --leaf-only --compact-errors --format json", commerceNS)
+	log.Printf("  temporal workflow list --failed --namespace %s --since 1h --follow-children --leaf-only --compact-errors --output json", commerceNS)
 	log.Println("\nTrace a specific order:")
-	log.Printf("  temporal workflow describe --trace-root-cause --workflow-id order-<id> --namespace %s --format json", commerceNS)
+	log.Printf("  temporal workflow describe --trace-root-cause --workflow-id order-<id> --namespace %s --output json", commerceNS)
 	log.Println("\nCheck workflow state:")
-	log.Printf("  temporal workflow describe --pending --workflow-id order-<id> --namespace %s --format json", commerceNS)
+	log.Printf("  temporal workflow describe --pending --workflow-id order-<id> --namespace %s --output json", commerceNS)
 }
-

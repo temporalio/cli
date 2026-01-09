@@ -50,8 +50,8 @@ Two users grab the same seat simultaneously:
 
 ```bash
 # Check the timeline for both purchases
-temporal workflow show --compact --workflow-id purchase-user-1 --format mermaid
-temporal workflow show --compact --workflow-id purchase-user-2 --format mermaid
+temporal workflow show --compact --workflow-id purchase-user-1 --output mermaid
+temporal workflow show --compact --workflow-id purchase-user-2 --output mermaid
 ```
 
 ### 2. Payment Stuck
@@ -60,7 +60,7 @@ Payment gateway timing out:
 
 ```bash
 # See what's pending
-temporal workflow describe --pending --workflow-id purchase-xyz --format mermaid
+temporal workflow describe --pending --workflow-id purchase-xyz --output mermaid
 ```
 
 ### 3. Load Test Analysis
@@ -69,7 +69,7 @@ After running 100 concurrent users:
 
 ```bash
 # See failure distribution
-temporal workflow list --failed --since 5m --group-by error --format mermaid
+temporal workflow list --failed --since 5m --group-by error --output mermaid
 ```
 
 ## Files

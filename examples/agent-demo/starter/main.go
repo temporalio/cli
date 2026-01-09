@@ -248,7 +248,7 @@ func runLongRunningScenario(ctx context.Context, c client.Client, taskQueue, tim
 	}
 	log.Printf("Started LongRunningWorkflow: %s", run.GetID())
 	log.Println("TIP: While running, query its state with:")
-	log.Printf("  temporal workflow describe --pending --workflow-id %s --namespace <your-namespace> --format json", workflowID)
+	log.Printf("  temporal workflow describe --pending --workflow-id %s --namespace <your-namespace> --output json", workflowID)
 }
 
 func runDeepChainScenario(ctx context.Context, c client.Client, taskQueue, timestamp string) {
@@ -266,5 +266,5 @@ func runDeepChainScenario(ctx context.Context, c client.Client, taskQueue, times
 	}
 	log.Printf("Started DeepChainWorkflow (4 levels deep, fails with DB error): %s", run.GetID())
 	log.Println("TIP: Trace the full chain with:")
-	log.Printf("  temporal workflow describe --trace-root-cause --workflow-id %s --namespace <your-namespace> --format json", workflowID)
+	log.Printf("  temporal workflow describe --trace-root-cause --workflow-id %s --namespace <your-namespace> --output json", workflowID)
 }

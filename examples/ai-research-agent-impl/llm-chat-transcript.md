@@ -807,7 +807,7 @@ func ResearchWorkflow(ctx workflow.Context, req shared.ResearchRequest) (*shared
 Restart your worker and run the starter to see it in action. You can watch the progress with:
 
 ```bash
-temporal agent timeline --workflow-id research-workflow --format mermaid
+temporal agent timeline --workflow-id research-workflow --output mermaid
 ```
 
 ```go
@@ -830,7 +830,7 @@ func ResearchWorkflow(ctx workflow.Context, req shared.ResearchRequest) (*shared
 ```
 
 ```shellscript
-temporal agent timeline --workflow-id research-workflow --format mermaid
+temporal agent timeline --workflow-id research-workflow --output mermaid
 ```
 
 ---
@@ -941,7 +941,7 @@ Done! The workflow now runs all sub-question research in parallel:
 Restart your worker and run again. You can see the parallel execution in the timeline:
 
 ```bash
-temporal agent timeline --workflow-id research-workflow --format mermaid
+temporal agent timeline --workflow-id research-workflow --output mermaid
 ```
 
 ```go
@@ -964,7 +964,7 @@ temporal agent timeline --workflow-id research-workflow --format mermaid
 ```
 
 ```shellscript
-temporal agent timeline --workflow-id research-workflow --format mermaid
+temporal agent timeline --workflow-id research-workflow --output mermaid
 ```
 
 ---
@@ -1434,7 +1434,7 @@ temporal agent failures --since 5m -o json
 
 **User**
 
-but, the output of `temporal agent failures --since 5m --format json` is empty. When I look at the Temporal UI, I see unlimited retries.
+but, the output of `temporal agent failures --since 5m --output json` is empty. When I look at the Temporal UI, I see unlimited retries.
 
 ---
 
@@ -1825,7 +1825,7 @@ Here's what happened, using the `temporal agent` commands to debug:
 
 **1. Timeline shows the failure:**
 ```bash
-temporal agent timeline --workflow-id research-workflow --format mermaid
+temporal agent timeline --workflow-id research-workflow --output mermaid
 ```
 
 ```mermaid
@@ -1863,7 +1863,7 @@ Key findings:
 To fix: either increase the timeout, reduce the sleep duration, or handle partial failures gracefully.
 
 ```shellscript
-temporal agent timeline --workflow-id research-workflow --format mermaid
+temporal agent timeline --workflow-id research-workflow --output mermaid
 ```
 
 ```plaintext

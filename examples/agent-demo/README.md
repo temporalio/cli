@@ -94,7 +94,7 @@ temporal workflow list --failed \
     --tls \
     --since 1h \
     --follow-children \
-    --format json | jq
+    --output json | jq
 ```
 
 ### Trace a Workflow Chain
@@ -107,7 +107,7 @@ temporal workflow describe --trace-root-cause \
     --api-key $TEMPORAL_API_KEY \
     --tls \
     -w order-payment-fail-XXXXXX \
-    --format json | jq
+    --output json | jq
 
 # Trace the nested failure workflow (3 levels deep)
 temporal workflow describe --trace-root-cause \
@@ -116,7 +116,7 @@ temporal workflow describe --trace-root-cause \
     --api-key $TEMPORAL_API_KEY \
     --tls \
     -w nested-failure-XXXXXX \
-    --format json | jq
+    --output json | jq
 ```
 
 ### Get Workflow Timeline
@@ -129,7 +129,7 @@ temporal workflow show --compact \
     --tls \
     -w order-success-XXXXXX \
     --compact \
-    --format json | jq
+    --output json | jq
 ```
 
 ## Workflow Scenarios

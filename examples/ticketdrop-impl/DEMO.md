@@ -141,7 +141,7 @@ Ask: *"Show me a visualization of the failures"*
 
 The AI will run:
 ```bash
-temporal workflow list --failed --since 5m --group-by error --format mermaid
+temporal workflow list --failed --since 5m --group-by error --output mermaid
 ```
 
 ### If you have more time (2-minute version):
@@ -172,7 +172,7 @@ This is deterministic - every payment fails, making it easy for AI to spot.
 2. **"Automatic root cause traversal"** - Follows child workflows automatically  
 3. **"Pattern analysis built-in"** - `--group-by error` shows it's all the same bug
 4. **"AI-readable output"** - JSON that AI can parse and reason about
-5. **"Visual when you need it"** - `--format mermaid` for diagrams
+5. **"Visual when you need it"** - `--output mermaid` for diagrams
 
 ---
 

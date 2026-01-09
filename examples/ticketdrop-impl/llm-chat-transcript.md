@@ -802,11 +802,11 @@ You can view the workflow in the Temporal UI at http://localhost:8233 — look f
 Or use the agent CLI to trace it:
 
 ```bash
-temporal agent trace --workflow-id ticket-purchase-alice-concert-2025 --follow-children --format mermaid
+temporal agent trace --workflow-id ticket-purchase-alice-concert-2025 --follow-children --output mermaid
 ```
 
 ```shellscript
-temporal agent trace --workflow-id ticket-purchase-alice-concert-2025 --follow-children --format mermaid
+temporal agent trace --workflow-id ticket-purchase-alice-concert-2025 --follow-children --output mermaid
 ```
 
 ---
@@ -3176,12 +3176,12 @@ temporal workflow list --query "ExecutionStatus = 'Running'"
 
 **2. Check for pending activities:**
 ```bash
-temporal workflow describe --pending --workflow-id <id> --format json
+temporal workflow describe --pending --workflow-id <id> --output json
 ```
 
 **3. See what's waiting:**
 ```bash
-temporal workflow describe --pending --workflow-id <id> --format mermaid
+temporal workflow describe --pending --workflow-id <id> --output mermaid
 ```
 
 The output shows:
@@ -3212,11 +3212,11 @@ temporal workflow list --query "ExecutionStatus = 'Running'"
 ```
 
 ```shellscript
-temporal workflow describe --pending --workflow-id <id> --format json
+temporal workflow describe --pending --workflow-id <id> --output json
 ```
 
 ```shellscript
-temporal workflow describe --pending --workflow-id <id> --format mermaid
+temporal workflow describe --pending --workflow-id <id> --output mermaid
 ```
 
 ```json

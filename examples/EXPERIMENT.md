@@ -179,11 +179,11 @@ Based on experiment findings, the following improvements were made:
 
 | Feature | Status | Flag/Command |
 |---------|--------|--------------|
-| Trace flowchart | ✅ Done | `temporal workflow describe --trace-root-cause --format mermaid` |
-| Timeline sequence diagram | ✅ Done | `temporal workflow show --compact --format mermaid` |
-| State diagram | ✅ Done | `temporal workflow describe --pending --format mermaid` |
-| Failures pie chart | ✅ Done | `temporal workflow list --failed --group-by error --format mermaid` |
-| Failures flowchart | ✅ Done | `temporal workflow list --failed --format mermaid` |
+| Trace flowchart | ✅ Done | `temporal workflow describe --trace-root-cause --output mermaid` |
+| Timeline sequence diagram | ✅ Done | `temporal workflow show --compact --output mermaid` |
+| State diagram | ✅ Done | `temporal workflow describe --pending --output mermaid` |
+| Failures pie chart | ✅ Done | `temporal workflow list --failed --group-by error --output mermaid` |
+| Failures flowchart | ✅ Done | `temporal workflow list --failed --output mermaid` |
 
 ---
 
@@ -226,6 +226,6 @@ The `temporal workflow` CLI commands successfully achieve the goals:
 6. **Timing analysis**: Timeline timestamps enable race condition diagnosis
 7. **Low token cost**: Structured JSON is ~10x more efficient than raw logs
 8. **Autonomous debugging**: LLM successfully diagnosed and fixed a TOCTOU bug without hints
-9. **Mermaid visualization**: `--format mermaid` generates visual diagrams for human-in-the-loop debugging
+9. **Mermaid visualization**: `--output mermaid` generates visual diagrams for human-in-the-loop debugging
 
 **Temporal's execution history + agent-optimized CLI = effective AI debugging feedback loop.**

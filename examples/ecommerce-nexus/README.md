@@ -145,29 +145,29 @@ export TEMPORAL_API_KEY_MOEDASH_LOGISTICS_NS_TEMPORAL_DEV="$(cat staging-logisti
 ```bash
 # Find failures in commerce namespace (cross-namespace traversal)
 temporal workflow list --failed --namespace $COMMERCE_NS --since 1h \
-    --follow-children --follow-namespaces $FINANCE_NS,$LOGISTICS_NS --format json
+    --follow-children --follow-namespaces $FINANCE_NS,$LOGISTICS_NS --output json
 
 # Trace a failed order (follows Nexus and child workflows across namespaces)
 temporal workflow describe --trace-root-cause --workflow-id order-123 --namespace $COMMERCE_NS \
-    --follow-namespaces $FINANCE_NS,$LOGISTICS_NS --format json
+    --follow-namespaces $FINANCE_NS,$LOGISTICS_NS --output json
 
 # Check workflow state (shows pending Nexus operations)
-temporal workflow describe --pending --workflow-id order-123 --namespace $COMMERCE_NS --format json
+temporal workflow describe --pending --workflow-id order-123 --namespace $COMMERCE_NS --output json
 
 # With leaf-only and compact errors
 temporal workflow list --failed --namespace $COMMERCE_NS --since 1h \
     --follow-children --follow-namespaces $FINANCE_NS,$LOGISTICS_NS \
-    --leaf-only --compact-errors --format json
+    --leaf-only --compact-errors --output json
 
 # Group failures by error type
 temporal workflow list --failed --namespace $COMMERCE_NS --since 1h \
     --follow-children --follow-namespaces $FINANCE_NS,$LOGISTICS_NS \
-    --compact-errors --group-by error --format json
+    --compact-errors --group-by error --output json
 
 # Group by namespace to see which services are failing
 temporal workflow list --failed --namespace $COMMERCE_NS --since 1h \
     --follow-children --follow-namespaces $FINANCE_NS,$LOGISTICS_NS \
-    --group-by namespace --format json
+    --group-by namespace --output json
 ```
 
 ## Validation Points
