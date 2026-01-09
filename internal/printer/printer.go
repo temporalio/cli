@@ -3,12 +3,15 @@ package printer
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"os"
 	"reflect"
 	"slices"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/fatih/color"
@@ -189,8 +192,25 @@ func (p *Printer) PrintStructuredTableIter(
 	}
 }
 
+// isBrokenPipeError returns true if the error indicates a broken pipe or
+// disconnected terminal (e.g., when the terminal is closed while writing).
+func isBrokenPipeError(err error) bool {
+	if errors.Is(err, syscall.EPIPE) {
+		return true
+	}
+	// Check for "broken pipe" in error message as a fallback
+	if err != nil && strings.Contains(err.Error(), "broken pipe") {
+		return true
+	}
+	return false
+}
+
 func (p *Printer) write(b []byte) {
 	if _, err := p.Output.Write(b); err != nil {
+		// Exit gracefully on broken pipe (terminal disconnected)
+		if isBrokenPipeError(err) {
+			os.Exit(0)
+		}
 		panic(err)
 	}
 }
@@ -201,6 +221,10 @@ func (p *Printer) writeStr(s string) {
 
 func (p *Printer) writef(s string, v ...any) {
 	if _, err := fmt.Fprintf(p.Output, s, v...); err != nil {
+		// Exit gracefully on broken pipe (terminal disconnected)
+		if isBrokenPipeError(err) {
+			os.Exit(0)
+		}
 		panic(err)
 	}
 }
