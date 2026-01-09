@@ -108,7 +108,9 @@ func NewCommandContext(ctx context.Context, options CommandOptions) (*CommandCon
 	}
 
 	// Setup interrupt handler
-	ctx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
+	// Include SIGHUP to handle terminal disconnection gracefully
+	// Without this, the process may hang when the terminal is closed
+	ctx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
 	cctx.Context = ctx
 	return cctx, stop, nil
 }
