@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/temporalio/cli/cliext"
 	"github.com/temporalio/cli/internal/workflowdebug"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/sdk/client"
@@ -32,15 +33,15 @@ func printWorkflowOutput(cctx *CommandContext, format string, result any, toMerm
 // cliClientProvider implements workflowdebug.ClientProvider using the CLI's client options.
 type cliClientProvider struct {
 	cctx          *CommandContext
-	clientOptions *ClientOptions
+	clientOptions *cliext.ClientOptions
 	clients       map[string]client.Client
 	primaryClient client.Client
 	primaryNS     string
 }
 
-func newCLIClientProvider(cctx *CommandContext, clientOptions *ClientOptions) (*cliClientProvider, error) {
+func newCLIClientProvider(cctx *CommandContext, clientOptions *cliext.ClientOptions) (*cliClientProvider, error) {
 	// Create the primary client first
-	primaryClient, err := clientOptions.dialClient(cctx)
+	primaryClient, err := dialClient(cctx, clientOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +79,7 @@ func (p *cliClientProvider) GetClient(ctx context.Context, namespace string) (cl
 		opts.ApiKey = apiKey
 	}
 
-	cl, err := opts.dialClient(p.cctx)
+	cl, err := dialClient(p.cctx, &opts)
 	if err != nil {
 		return nil, err
 	}
