@@ -2,12 +2,12 @@ package temporalcli
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
 
 	"github.com/temporalio/cli/cliext"
+	"github.com/temporalio/cli/internal/printer"
 	"github.com/temporalio/cli/internal/workflowdebug"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/sdk/client"
@@ -21,13 +21,8 @@ func printWorkflowOutput(cctx *CommandContext, format string, result any, toMerm
 		cctx.Printer.Println(toMermaid())
 		return nil
 	}
-	// Default to JSON output - format it properly
-	data, err := json.MarshalIndent(result, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to marshal result: %w", err)
-	}
-	cctx.Printer.Println(string(data))
-	return nil
+	// Use PrintStructured for proper JSON output (Println is ignored in JSON mode)
+	return cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
 }
 
 // cliClientProvider implements workflowdebug.ClientProvider using the CLI's client options.
