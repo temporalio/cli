@@ -50,45 +50,42 @@ Reference [the documentation](https://docs.temporal.io/cli) for detailed usage i
 
 The CLI includes workflow commands optimized for AI agents, LLM tooling, and automated debugging:
 
-### New Commands
-
-- **`temporal workflow failures`** - List recent workflow failures with auto-traversed root cause
-- **`temporal workflow diagnose`** - Trace a workflow through its child chain to the deepest failure
-- **`temporal tool-spec`** - Output tool specifications for AI agent frameworks
-
 ### Enhanced Commands
 
+- **`temporal workflow list --failed`** - List recent workflow failures with auto-traversed root cause
+- **`temporal workflow describe --trace-root-cause`** - Trace a workflow through its child chain to the deepest failure
 - **`temporal workflow show --compact`** - Show a compact event timeline
 - **`temporal workflow show --format mermaid`** - Generate a sequence diagram
 - **`temporal workflow describe --pending`** - Show pending activities, children, and Nexus operations
 - **`temporal workflow describe --format mermaid`** - Generate a state diagram
+- **`temporal tool-spec`** - Output tool specifications for AI agent frameworks
 
 ### Examples
 
 ```bash
 # List failures from the last hour with automatic chain traversal
-temporal workflow failures --namespace prod --since 1h --follow-children
+temporal workflow list --failed --namespace prod --since 1h --follow-children
 
 # Filter failures by error message (case-insensitive)
-temporal workflow failures --namespace prod --since 1h --error-contains "timeout"
+temporal workflow list --failed --namespace prod --since 1h --error-contains "timeout"
 
 # Show only leaf failures (de-duplicate parent/child chains)
-temporal workflow failures --namespace prod --since 1h --follow-children --leaf-only
+temporal workflow list --failed --namespace prod --since 1h --follow-children --leaf-only
 
 # Compact error messages (strip wrapper context, show core error)
-temporal workflow failures --namespace prod --since 1h --follow-children --compact-errors
+temporal workflow list --failed --namespace prod --since 1h --follow-children --compact-errors
 
 # Combine leaf-only and compact-errors for cleanest output
-temporal workflow failures --namespace prod --since 1h --follow-children --leaf-only --compact-errors
+temporal workflow list --failed --namespace prod --since 1h --follow-children --leaf-only --compact-errors
 
 # Group failures by error type for quick summary
-temporal workflow failures --namespace prod --since 24h --follow-children --compact-errors --group-by error
+temporal workflow list --failed --namespace prod --since 24h --follow-children --compact-errors --group-by error
 
 # Group failures by namespace to see which services are failing
-temporal workflow failures --namespace prod --since 24h --follow-children --group-by namespace
+temporal workflow list --failed --namespace prod --since 24h --follow-children --group-by namespace
 
 # Trace a workflow to find the deepest failure in the chain
-temporal workflow diagnose --workflow-id order-123 --namespace prod
+temporal workflow describe --trace-root-cause --workflow-id order-123 --namespace prod
 
 # Get a compact timeline of workflow events
 temporal workflow show --workflow-id order-123 --namespace prod --compact
@@ -98,7 +95,7 @@ temporal workflow describe --workflow-id order-123 --namespace prod --pending
 
 # Cross-namespace traversal (Nexus/child workflows in other namespaces)
 TEMPORAL_API_KEY_FINANCE_NS="$FINANCE_KEY" \
-temporal workflow diagnose --workflow-id order-123 --namespace commerce-ns \
+temporal workflow describe --trace-root-cause --workflow-id order-123 --namespace commerce-ns \
   --follow-namespaces finance-ns
 ```
 
@@ -122,12 +119,12 @@ export TEMPORAL_API_KEY="primary-ns-key"
 export TEMPORAL_API_KEY_FINANCE_NS="finance-ns-key"
 export TEMPORAL_API_KEY_LOGISTICS_NS="logistics-ns-key"
 
-# Now diagnose can follow Nexus operations and child workflows across namespaces
-temporal workflow diagnose --workflow-id order-123 --namespace commerce-ns \
+# Trace root cause across namespaces (follows Nexus operations and child workflows)
+temporal workflow describe --trace-root-cause --workflow-id order-123 --namespace commerce-ns \
   --follow-namespaces finance-ns,logistics-ns
 
-# For failures command, use --follow-children with --follow-namespaces
-temporal workflow failures --namespace commerce-ns --since 1h \
+# List failures with cross-namespace traversal
+temporal workflow list --failed --namespace commerce-ns --since 1h \
   --follow-children --follow-namespaces finance-ns,logistics-ns \
   --leaf-only --compact-errors
 ```
@@ -138,7 +135,7 @@ Commands support `--format mermaid` to generate visual diagrams:
 
 ```bash
 # Visualize workflow chain as a flowchart
-temporal workflow diagnose --workflow-id order-123 --namespace prod --format mermaid
+temporal workflow describe --trace-root-cause --workflow-id order-123 --namespace prod --format mermaid
 
 # Visualize timeline as a sequence diagram  
 temporal workflow show --workflow-id order-123 --namespace prod --format mermaid
@@ -147,10 +144,10 @@ temporal workflow show --workflow-id order-123 --namespace prod --format mermaid
 temporal workflow describe --workflow-id order-123 --namespace prod --pending --format mermaid
 
 # Visualize failures as a pie chart (when grouped)
-temporal workflow failures --namespace prod --since 1h --group-by error --format mermaid
+temporal workflow list --failed --namespace prod --since 1h --group-by error --format mermaid
 
 # Visualize failures as a flowchart (when not grouped)
-temporal workflow failures --namespace prod --since 1h --follow-children --format mermaid
+temporal workflow list --failed --namespace prod --since 1h --follow-children --format mermaid
 ```
 
 The mermaid output renders directly in:
