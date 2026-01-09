@@ -1,9 +1,3 @@
-// BUGGY VERSION - Use this for demo
-// Replace activities.go with this file to introduce a bug
-//
-// BUG: Payment gateway fails for "premium" seats (A6-A10)
-// This simulates a misconfigured payment tier that causes consistent failures.
-
 package ticketdrop
 
 import (
@@ -11,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -48,15 +40,17 @@ func (inv *SeatInventory) initEvent(eventID string) {
 }
 
 // Reserve attempts to reserve a seat for an event.
+// Idempotent: if user already has a seat for this event, return the same seat.
 func (inv *SeatInventory) Reserve(eventID, userID string) (string, bool, error) {
 	inv.mu.Lock()
 	defer inv.mu.Unlock()
 
 	inv.initEvent(eventID)
 
+	// Idempotency check: if user already has a seat, return it
 	userKey := fmt.Sprintf("%s:%s", eventID, userID)
 	if existingSeat, exists := inv.userSeats[userKey]; exists {
-		return existingSeat, true, nil
+		return existingSeat, true, nil // true = was already reserved
 	}
 
 	available := inv.seats[eventID]
@@ -64,8 +58,11 @@ func (inv *SeatInventory) Reserve(eventID, userID string) (string, bool, error) 
 		return "", false, errors.New("sold out: no seats available")
 	}
 
+	// Take the first available seat
 	seat := available[0]
 	inv.seats[eventID] = available[1:]
+
+	// Track reservation for idempotency
 	inv.userSeats[userKey] = seat
 	seatKey := fmt.Sprintf("%s:%s", eventID, seat)
 	inv.seatOwners[seatKey] = userID
@@ -73,6 +70,7 @@ func (inv *SeatInventory) Reserve(eventID, userID string) (string, bool, error) 
 	return seat, false, nil
 }
 
+// Available returns the count of available seats for an event.
 func (inv *SeatInventory) Available(eventID string) int {
 	inv.mu.Lock()
 	defer inv.mu.Unlock()
@@ -80,6 +78,7 @@ func (inv *SeatInventory) Available(eventID string) int {
 	return len(inv.seats[eventID])
 }
 
+// Release returns a seat back to the available pool (compensation).
 func (inv *SeatInventory) Release(eventID, userID, seat string) bool {
 	inv.mu.Lock()
 	defer inv.mu.Unlock()
@@ -87,12 +86,16 @@ func (inv *SeatInventory) Release(eventID, userID, seat string) bool {
 	userKey := fmt.Sprintf("%s:%s", eventID, userID)
 	seatKey := fmt.Sprintf("%s:%s", eventID, seat)
 
+	// Verify this user owns this seat
 	if inv.seatOwners[seatKey] != userID {
 		return false
 	}
 
+	// Remove from tracking
 	delete(inv.userSeats, userKey)
 	delete(inv.seatOwners, seatKey)
+
+	// Add seat back to available pool
 	inv.seats[eventID] = append(inv.seats[eventID], seat)
 
 	return true
@@ -102,17 +105,20 @@ type Activities struct {
 	Inventory *SeatInventory
 }
 
+// ReserveSeat locks a seat for 5 minutes.
+// Idempotent: retries return the same seat.
 func (a *Activities) ReserveSeat(ctx context.Context, input ReserveSeatInput) (ReserveSeatResult, error) {
 	logger := activity.GetLogger(ctx)
 	logger.Info("Reserving seat", "user_id", input.UserID, "event_id", input.EventID)
 
+	// Reserve seat first (atomic operation protected by mutex)
 	seatNumber, wasRetry, err := a.Inventory.Reserve(input.EventID, input.UserID)
 	if err != nil {
 		logger.Warn("Reservation failed", "error", err)
 		return ReserveSeatResult{}, err
 	}
 
-	time.Sleep(1 * time.Second)
+	time.Sleep(200 * time.Millisecond)
 
 	if wasRetry {
 		logger.Info("Returning existing reservation (idempotent)", "seat", seatNumber)
@@ -120,7 +126,7 @@ func (a *Activities) ReserveSeat(ctx context.Context, input ReserveSeatInput) (R
 		logger.Info("Seat reserved", "seat", seatNumber, "remaining", a.Inventory.Available(input.EventID))
 	}
 
-	reservationID := fmt.Sprintf("res-%s-%s-%d", input.UserID, input.EventID, time.Now().UnixMilli())
+	reservationID := fmt.Sprintf("res-%s-%s", input.UserID, seatNumber)
 
 	return ReserveSeatResult{
 		ReservationID: reservationID,
@@ -129,6 +135,7 @@ func (a *Activities) ReserveSeat(ctx context.Context, input ReserveSeatInput) (R
 	}, nil
 }
 
+// ReleaseSeat returns a seat to the available pool (compensation for failed payment).
 func (a *Activities) ReleaseSeat(ctx context.Context, eventID, userID, seat string) error {
 	logger := activity.GetLogger(ctx)
 	logger.Info("Releasing seat (compensation)", "user_id", userID, "event_id", eventID, "seat", seat)
@@ -136,47 +143,46 @@ func (a *Activities) ReleaseSeat(ctx context.Context, eventID, userID, seat stri
 	released := a.Inventory.Release(eventID, userID, seat)
 	if !released {
 		logger.Warn("Seat was not released (may not be owned by user)", "seat", seat)
-		return nil
+		return nil // Don't fail compensation
 	}
 
 	logger.Info("Seat released", "seat", seat, "available", a.Inventory.Available(eventID))
 	return nil
 }
 
-// ProcessPayment charges the credit card.
-// 🐛 BUG: Premium seats (A6-A10) always fail due to misconfigured payment tier
+// ProcessPayment charges the credit card via payment gateway.
 func (a *Activities) ProcessPayment(ctx context.Context, input ProcessPaymentInput) (ProcessPaymentResult, error) {
 	logger := activity.GetLogger(ctx)
 	logger.Info("Processing payment", "user_id", input.UserID, "amount", input.Amount)
 
-	time.Sleep(2 * time.Second)
+	// Simulate calling payment gateway
+	// Real payment gateways have variable latency:
+	// - Domestic Visa/Mastercard: 500ms-1s
+	// - International cards: 2-3s
+	// - Amex: 2-4s (requires additional verification)
 
-	// ═══════════════════════════════════════════════════════════════════
-	// 🐛 BUG: This extracts seat number from reservation ID incorrectly
-	//    The payment gateway rejects "premium tier" seats (A6-A10)
-	//    because the tier configuration is wrong.
-	// ═══════════════════════════════════════════════════════════════════
-	// 
-	// The reservation ID format is: res-{userID}-{eventID}-{timestamp}
-	// But we're trying to parse seat info that isn't there!
-	// This causes seats A6+ to fail because of a hardcoded check.
-	
-	// Simulate checking seat tier (BUG: always fails for seats 6-10)
-	// In a real system this might be: getPremiumTier(reservationID)
-	if isPremiumSeat(input.ReservationID) {
-		logger.Error("Payment gateway rejected premium tier", "reservation", input.ReservationID)
-		return ProcessPaymentResult{}, errors.New("payment gateway error: premium tier not configured for merchant account")
+	processingTime := simulatePaymentGatewayLatency()
+
+	const paymentTimeout = 2 * time.Second // TODO: Should be 10s for production
+
+	if processingTime > paymentTimeout {
+		logger.Error("Payment gateway timeout",
+			"processing_time_ms", processingTime.Milliseconds(),
+			"timeout_ms", paymentTimeout.Milliseconds())
+		return ProcessPaymentResult{}, fmt.Errorf("payment timeout after %dms (limit: %dms)",
+			processingTime.Milliseconds(), paymentTimeout.Milliseconds())
 	}
-	// ═══════════════════════════════════════════════════════════════════
 
-	// Normal 10% random failure
-	if rand.Float64() < 0.1 {
-		logger.Warn("Payment failed", "user_id", input.UserID)
+	// Simulate the actual processing time
+	time.Sleep(processingTime)
+
+	// 3% random decline rate (realistic)
+	if rand.Float64() < 0.03 {
 		return ProcessPaymentResult{}, errors.New("payment declined: insufficient funds")
 	}
 
-	transactionID := fmt.Sprintf("pay-%s-%d", input.UserID, time.Now().UnixMilli())
-	logger.Info("Payment successful", "transaction_id", transactionID)
+	transactionID := fmt.Sprintf("txn-%s-%d", input.UserID, time.Now().UnixMilli())
+	logger.Info("Payment successful", "transaction_id", transactionID, "processing_time_ms", processingTime.Milliseconds())
 
 	return ProcessPaymentResult{
 		TransactionID: transactionID,
@@ -184,29 +190,32 @@ func (a *Activities) ProcessPayment(ctx context.Context, input ProcessPaymentInp
 	}, nil
 }
 
-// 🐛 BUG: This function has flawed logic
-// It's supposed to check if a seat is "premium" but the reservation ID
-// doesn't actually contain seat information in a parseable way.
-// This causes false positives for users with IDs containing digits 6-10.
-func isPremiumSeat(reservationID string) bool {
-	// Buggy logic: tries to extract seat number from reservation ID
-	// but reservation ID format is: res-{userID}-{eventID}-{timestamp}
-	// This incorrectly matches user IDs like "fan-6", "fan-7", etc.
-	parts := strings.Split(reservationID, "-")
-	for _, part := range parts {
-		if num, err := strconv.Atoi(part); err == nil {
-			if num >= 6 && num <= 10 {
-				return true // BUG: False positive!
-			}
-		}
+// simulatePaymentGatewayLatency returns realistic payment processing times
+func simulatePaymentGatewayLatency() time.Duration {
+	// Distribution of payment processing times (realistic):
+	// 60% - Fast (domestic cards): 500ms - 1.5s
+	// 25% - Medium (some international): 1.5s - 2.5s
+	// 15% - Slow (Amex, international): 2.5s - 4s
+
+	r := rand.Float64()
+	switch {
+	case r < 0.60:
+		// Fast payments: 500ms - 1500ms
+		return time.Duration(500+rand.Intn(1000)) * time.Millisecond
+	case r < 0.85:
+		// Medium payments: 1500ms - 2500ms
+		return time.Duration(1500+rand.Intn(1000)) * time.Millisecond
+	default:
+		// Slow payments (Amex/international): 2500ms - 4000ms
+		return time.Duration(2500+rand.Intn(1500)) * time.Millisecond
 	}
-	return false
 }
 
 func (a *Activities) IssueTicket(ctx context.Context, input IssueTicketInput) (IssueTicketResult, error) {
 	logger := activity.GetLogger(ctx)
 	logger.Info("Issuing ticket", "user_id", input.UserID, "seat", input.SeatNumber)
 
+	// Simulate ticket issuance with QR code generation
 	ticketID := fmt.Sprintf("tkt-%s-%s-%d", input.EventID, input.SeatNumber, time.Now().UnixMilli())
 	qrCode := fmt.Sprintf("QR:%s:%s:%s", ticketID, input.UserID, input.TransactionID)
 
@@ -216,14 +225,20 @@ func (a *Activities) IssueTicket(ctx context.Context, input IssueTicketInput) (I
 	}, nil
 }
 
+// SendEmail sends a confirmation email.
 func (a *Activities) SendEmail(ctx context.Context, userID, confirmationID, qrCode string) error {
 	logger := activity.GetLogger(ctx)
 	logger.Info("Sending confirmation email", "user_id", userID, "confirmation_id", confirmationID)
+
+	// Simulate email sending
 	return nil
 }
 
+// SendSMS sends a confirmation SMS.
 func (a *Activities) SendSMS(ctx context.Context, userID, confirmationID string) error {
 	logger := activity.GetLogger(ctx)
 	logger.Info("Sending confirmation SMS", "user_id", userID, "confirmation_id", confirmationID)
+
+	// Simulate SMS sending
 	return nil
 }

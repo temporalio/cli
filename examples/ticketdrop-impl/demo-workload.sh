@@ -32,28 +32,39 @@ if ! temporal workflow list --limit 1 &>/dev/null 2>&1; then
     exit 1
 fi
 
-# Build if needed
-if [ ! -f bin/worker ] || [ ! -f bin/queue-starter ]; then
-    echo -e "${YELLOW}Building binaries...${NC}"
-    go build -o bin/worker ./worker
-    go build -o bin/queue-starter ./queue-starter
-    go build -o bin/starter ./starter
-    echo -e "${GREEN}✓ Build complete${NC}"
-fi
+# Build binaries
+rm -rf bin/worker bin/queue-starter bin/starter
+echo -e "${YELLOW}Building binaries...${NC}"
+go build -o bin/worker ./worker
+go build -o bin/queue-starter ./queue-starter
+go build -o bin/starter ./starter
+echo -e "${GREEN}✓ Build complete${NC}"
 
-# Start worker in background
+# Start worker in background with nohup to prevent it from dying
 echo -e "${YELLOW}Starting worker...${NC}"
-./bin/worker &
+nohup ./bin/worker > /tmp/ticketdrop-worker.log 2>&1 &
 WORKER_PID=$!
-echo -e "${GREEN}✓ Worker started (PID: $WORKER_PID)${NC}"
+sleep 2
+
+# Verify worker started
+if ps -p $WORKER_PID > /dev/null 2>&1; then
+    echo -e "${GREEN}✓ Worker started (PID: $WORKER_PID)${NC}"
+    echo -e "${BLUE}  Log: /tmp/ticketdrop-worker.log${NC}"
+else
+    echo -e "${RED}❌ Worker failed to start. Check /tmp/ticketdrop-worker.log${NC}"
+    cat /tmp/ticketdrop-worker.log
+    exit 1
+fi
 
 cleanup() {
     echo ""
     echo -e "${YELLOW}Shutting down...${NC}"
     kill $WORKER_PID 2>/dev/null || true
+    # Also kill any other workers that might be running
+    pkill -f "bin/worker" 2>/dev/null || true
     exit 0
 }
-trap cleanup SIGINT SIGTERM
+trap cleanup SIGINT SIGTERM EXIT
 
 # Event counter
 EVENT_NUM=1
@@ -90,21 +101,38 @@ while true; do
     # Wait for queue to drain (with timeout)
     QUEUE_WF="ticket-queue-$EVENT_ID"
     WAIT_COUNT=0
-    MAX_WAIT=60
+    MAX_WAIT=120
     
     while [ $WAIT_COUNT -lt $MAX_WAIT ]; do
-        status=$(temporal workflow query --workflow-id "$QUEUE_WF" --type status -o json 2>/dev/null | jq -r '.queryResult[0]' 2>/dev/null || echo '{}')
-        active=$(echo "$status" | jq -r '.active_count // 0')
-        waiting=$(echo "$status" | jq -r '.queue_length // 0')
+        # Check if worker is still running, restart if needed
+        if ! ps -p $WORKER_PID > /dev/null 2>&1; then
+            echo -e "  ${RED}⚠ Worker died, restarting...${NC}"
+            nohup ./bin/worker >> /tmp/ticketdrop-worker.log 2>&1 &
+            WORKER_PID=$!
+            sleep 2
+        fi
         
+        status=$(temporal workflow query --workflow-id "$QUEUE_WF" --type status -o json 2>/dev/null | jq -r '.queryResult[0]' 2>/dev/null || echo '{}')
+        active=$(echo "$status" | jq -r '.active_count // 0' 2>/dev/null || echo "0")
+        waiting=$(echo "$status" | jq -r '.queue_length // 0' 2>/dev/null || echo "0")
+        
+        # Check if queue is done or workflow ended
         if [ "$active" = "0" ] && [ "$waiting" = "0" ]; then
+            break
+        fi
+        if [ "$status" = "{}" ] || [ "$status" = "null" ] || [ -z "$status" ]; then
+            echo -e "  ${YELLOW}Queue workflow ended${NC}"
             break
         fi
         
         echo -e "  Processing: ${YELLOW}Active=$active${NC} | ${BLUE}Waiting=$waiting${NC}"
-        sleep 2
-        WAIT_COUNT=$((WAIT_COUNT + 2))
+        sleep 3
+        WAIT_COUNT=$((WAIT_COUNT + 3))
     done
+    
+    if [ $WAIT_COUNT -ge $MAX_WAIT ]; then
+        echo -e "  ${YELLOW}⚠ Timeout - moving to next event${NC}"
+    fi
     
     # Quick results summary
     completed=$(temporal workflow list --query "WorkflowType = 'TicketPurchase' AND ExecutionStatus = 'Completed'" --limit 100 2>/dev/null | grep -c "$EVENT_ID" || echo "0")

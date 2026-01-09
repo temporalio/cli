@@ -97,28 +97,20 @@ Output shows: **All failures are "premium tier not configured"**
 
 ### [0:45] AI Finds the Bug
 
-The AI will search the codebase and find `isPremiumSeat()`:
+The AI will search for "timeout" and find in `ProcessPayment`:
 
 ```go
-// 🐛 BUG: This incorrectly matches user IDs like "fan-6", "fan-7"
-func isPremiumSeat(reservationID string) bool {
-    parts := strings.Split(reservationID, "-")
-    for _, part := range parts {
-        if num, err := strconv.Atoi(part); err == nil {
-            if num >= 6 && num <= 10 {
-                return true // BUG: False positive!
-            }
-        }
-    }
-    return false
-}
+// 🐛 BUG: Internal timeout is too short!
+// This was set to 2s during development for fast tests.
+// Production payment gateways can take up to 5s for international cards.
+const paymentTimeout = 2 * time.Second  // TODO: Should be 10s for production
 ```
 
 ### [0:55] AI Suggests Fix
 
-> "The `isPremiumSeat` function parses the reservation ID incorrectly. 
-> It's matching user IDs (fan-6, fan-7...) instead of seat numbers.
-> The fix is to check the actual seat number, not the reservation ID."
+> "The payment timeout is set to 2 seconds, but the error shows payments 
+> taking 2500-3000ms. International cards and Amex can take up to 5 seconds.
+> Increase the timeout to 10 seconds."
 
 ### [1:00] Done!
 
@@ -166,12 +158,14 @@ Watch AI:
 
 ## 📊 Expected Failure Pattern
 
-With the buggy code:
-- **fan-1 through fan-5**: Usually succeed (unless random payment decline)
-- **fan-6 through fan-10**: Always fail ("premium tier not configured")
-- **fan-11+**: Succeed (no digits 6-10 in their ID)
+With the buggy code (~15% of payments fail due to timeout):
+- **Fast payments (60%)**: ✅ Complete in 500-1500ms, succeed
+- **Medium payments (25%)**: ⚠️ 1500-2500ms, some hit the 2s limit
+- **Slow payments (15%)**: ❌ 2500-4000ms, always timeout
 
-This creates a consistent ~50% failure rate that's easy to diagnose.
+**Error message to look for:** `"payment timeout after 2847ms (limit: 2000ms)"`
+
+This is realistic: international cards and Amex take longer to process.
 
 ---
 
