@@ -8,6 +8,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/temporalio/cli/internal/printer"
+	"github.com/temporalio/cli/internal/workflowdebug"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/failure/v1"
@@ -20,6 +21,68 @@ import (
 )
 
 func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []string) error {
+	// Handle --trace-root-cause for failure diagnosis
+	if c.TraceRootCause {
+		clientProvider, err := newCLIClientProvider(cctx, &c.Parent.ClientOptions)
+		if err != nil {
+			return fmt.Errorf("failed to create client: %w", err)
+		}
+		defer clientProvider.Close()
+
+		opts := workflowdebug.TraverserOptions{
+			FollowNamespaces: c.FollowNamespaces,
+			MaxDepth:         c.Depth,
+		}
+
+		// Add the main namespace to follow namespaces
+		if len(opts.FollowNamespaces) == 0 {
+			opts.FollowNamespaces = []string{c.Parent.ClientOptions.Namespace}
+		} else {
+			found := false
+			for _, ns := range opts.FollowNamespaces {
+				if ns == c.Parent.ClientOptions.Namespace {
+					found = true
+					break
+				}
+			}
+			if !found {
+				opts.FollowNamespaces = append([]string{c.Parent.ClientOptions.Namespace}, opts.FollowNamespaces...)
+			}
+		}
+
+		traverser := workflowdebug.NewChainTraverser(clientProvider, opts)
+		result, err := traverser.Trace(cctx, c.Parent.ClientOptions.Namespace, c.WorkflowId, c.RunId)
+		if err != nil {
+			return fmt.Errorf("failed to trace workflow: %w", err)
+		}
+
+		return printWorkflowOutput(cctx, cctx.RootCommand.Output.Value, result, func() string {
+			return workflowdebug.TraceToMermaid(result)
+		})
+	}
+
+	// Handle --pending or --output mermaid with agent-style output
+	if c.Pending || cctx.RootCommand.Output.Value == "mermaid" {
+		cl, err := dialClient(cctx, &c.Parent.ClientOptions)
+		if err != nil {
+			return err
+		}
+		defer cl.Close()
+
+		opts := workflowdebug.StateOptions{
+			IncludeDetails: true, // Always include details in pending mode
+		}
+		extractor := workflowdebug.NewStateExtractor(cl, opts)
+		result, err := extractor.GetState(cctx, c.Parent.ClientOptions.Namespace, c.WorkflowId, c.RunId)
+		if err != nil {
+			return fmt.Errorf("failed to get workflow state: %w", err)
+		}
+
+		return printWorkflowOutput(cctx, cctx.RootCommand.Output.Value, result, func() string {
+			return workflowdebug.StateToMermaid(result)
+		})
+	}
+
 	// Call describe
 	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
@@ -375,6 +438,11 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 }
 
 func (c *TemporalWorkflowListCommand) run(cctx *CommandContext, _ []string) error {
+	// Handle --failed mode for failure analysis
+	if c.Failed {
+		return c.runFailedMode(cctx)
+	}
+
 	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return err
@@ -426,6 +494,76 @@ func (c *TemporalWorkflowListCommand) run(cctx *CommandContext, _ []string) erro
 			return nil
 		}
 	}
+}
+
+// runFailedMode handles the --failed flag for listing failed workflows with root cause analysis
+func (c *TemporalWorkflowListCommand) runFailedMode(cctx *CommandContext) error {
+	clientProvider, err := newCLIClientProvider(cctx, &c.Parent.ClientOptions)
+	if err != nil {
+		return fmt.Errorf("failed to create client: %w", err)
+	}
+	defer clientProvider.Close()
+
+	// Parse statuses
+	var statuses []enums.WorkflowExecutionStatus
+	for _, s := range c.Status {
+		for _, part := range strings.Split(s, ",") {
+			part = strings.TrimSpace(part)
+			if part == "" {
+				continue
+			}
+			status := workflowdebug.ParseWorkflowStatus(part)
+			if status == enums.WORKFLOW_EXECUTION_STATUS_UNSPECIFIED {
+				return fmt.Errorf("invalid status: %s", part)
+			}
+			statuses = append(statuses, status)
+		}
+	}
+
+	// Build options
+	opts := workflowdebug.FailuresOptions{
+		Since:            c.Since.Duration(),
+		Statuses:         statuses,
+		FollowChildren:   c.FollowChildren,
+		FollowNamespaces: c.FollowNamespaces,
+		MaxDepth:         c.Depth,
+		Limit:            c.Limit,
+		ErrorContains:    c.ErrorContains,
+		LeafOnly:         c.LeafOnly,
+		CompactErrors:    c.CompactErrors,
+		GroupBy:          c.GroupBy.Value,
+	}
+
+	// Set default limit if not specified
+	if opts.Limit == 0 {
+		opts.Limit = 50
+	}
+
+	// Add the main namespace to follow namespaces if following children
+	if opts.FollowChildren && len(opts.FollowNamespaces) == 0 {
+		opts.FollowNamespaces = []string{c.Parent.ClientOptions.Namespace}
+	} else if opts.FollowChildren {
+		found := false
+		for _, ns := range opts.FollowNamespaces {
+			if ns == c.Parent.ClientOptions.Namespace {
+				found = true
+				break
+			}
+		}
+		if !found {
+			opts.FollowNamespaces = append([]string{c.Parent.ClientOptions.Namespace}, opts.FollowNamespaces...)
+		}
+	}
+
+	finder := workflowdebug.NewFailuresFinder(clientProvider, opts)
+	result, err := finder.FindFailures(cctx, c.Parent.ClientOptions.Namespace)
+	if err != nil {
+		return fmt.Errorf("failed to find failures: %w", err)
+	}
+
+	return printWorkflowOutput(cctx, cctx.RootCommand.Output.Value, result, func() string {
+		return workflowdebug.FailuresToMermaid(result)
+	})
 }
 
 type workflowPage interface {
@@ -556,6 +694,30 @@ func (c *TemporalWorkflowResultCommand) run(cctx *CommandContext, _ []string) er
 }
 
 func (c *TemporalWorkflowShowCommand) run(cctx *CommandContext, _ []string) error {
+	// Handle --compact or --output mermaid with agent-style timeline output
+	if c.Compact || cctx.RootCommand.Output.Value == "mermaid" {
+		cl, err := dialClient(cctx, &c.Parent.ClientOptions)
+		if err != nil {
+			return err
+		}
+		defer cl.Close()
+
+		opts := workflowdebug.TimelineOptions{
+			Compact:           true, // Always compact for this mode
+			EventTypes:        c.EventTypes,
+			ExcludeEventTypes: c.ExcludeEventTypes,
+		}
+		generator := workflowdebug.NewTimelineGenerator(cl, opts)
+		result, err := generator.Generate(cctx, c.Parent.ClientOptions.Namespace, c.WorkflowId, c.RunId)
+		if err != nil {
+			return fmt.Errorf("failed to generate timeline: %w", err)
+		}
+
+		return printWorkflowOutput(cctx, cctx.RootCommand.Output.Value, result, func() string {
+			return workflowdebug.TimelineToMermaid(result)
+		})
+	}
+
 	// Call describe
 	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {

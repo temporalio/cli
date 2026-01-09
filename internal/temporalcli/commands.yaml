@@ -3526,6 +3526,41 @@ commands:
           --workflow-id YourWorkflowId \
           --reset-points true
       ```
+
+      Show pending activities, children, and Nexus operations:
+
+      ```
+      temporal workflow describe \
+          --workflow-id YourWorkflowId \
+          --pending
+      ```
+
+      Generate a visual state diagram:
+
+      ```
+      temporal workflow describe \
+          --workflow-id YourWorkflowId \
+          --pending \
+          --output mermaid
+      ```
+
+      Trace through child workflows to find root cause of failure:
+
+      ```
+      temporal workflow describe \
+          --workflow-id YourWorkflowId \
+          --trace-root-cause
+      ```
+
+      Follow children across namespaces:
+
+      ```
+      temporal workflow describe \
+          --workflow-id YourWorkflowId \
+          --trace-root-cause \
+          --follow-namespaces OtherNamespace1,OtherNamespace2 \
+          --output mermaid
+      ```
     option-sets:
       - workflow-reference
     options:
@@ -3535,6 +3570,27 @@ commands:
       - name: raw
         type: bool
         description: Print properties without changing their format.
+      - name: pending
+        type: bool
+        description: |
+          Show pending activities, child workflows, signals, and Nexus operations.
+          Provides a snapshot of what the workflow is currently doing or waiting for.
+      - name: trace-root-cause
+        type: bool
+        description: |
+          Trace through child workflow chain to find the deepest failure point.
+          Automates following failed child workflows to find the actual root cause.
+      - name: follow-namespaces
+        type: string[]
+        description: |
+          Additional namespaces to follow when tracing child workflows.
+          Used with --trace-root-cause. Can be passed multiple times.
+      - name: depth
+        type: int
+        description: |
+          Maximum depth to traverse when tracing child workflows.
+          Zero means unlimited. Used with --trace-root-cause.
+        default: 0
 
   - name: temporal workflow execute
     summary: Start new Workflow Execution
@@ -3608,6 +3664,34 @@ commands:
       temporal workflow list \
           --archived
       ```
+
+      List failed workflows from the last hour with root cause analysis:
+
+      ```
+      temporal workflow list \
+          --failed \
+          --since 1h
+      ```
+
+      Follow child workflows to find root causes:
+
+      ```
+      temporal workflow list \
+          --failed \
+          --since 24h \
+          --follow-children \
+          --follow-namespaces OtherNamespace1,OtherNamespace2
+      ```
+
+      Group failures by error message to find patterns:
+
+      ```
+      temporal workflow list \
+          --failed \
+          --since 1h \
+          --group-by error \
+          --output mermaid
+      ```
     options:
       - name: query
         short: q
@@ -3623,6 +3707,65 @@ commands:
       - name: page-size
         type: int
         description: Maximum number of Workflow Executions to fetch at a time from the server.
+      - name: failed
+        type: bool
+        description: |
+          List failed workflows with root cause analysis.
+          Automatically traces through child workflows and activities
+          to identify the deepest failure point.
+      - name: since
+        type: duration
+        description: |
+          Time window to search for failures (used with --failed).
+          For example: "1h", "24h", "7d".
+        default: 1h
+      - name: status
+        type: string[]
+        description: |
+          Filter by workflow status (used with --failed).
+          Accepted values: Failed, TimedOut, Canceled, Terminated.
+          Can be passed multiple times.
+      - name: follow-children
+        type: bool
+        description: |
+          Traverse child workflows to find leaf failures (used with --failed).
+      - name: follow-namespaces
+        type: string[]
+        description: |
+          Additional namespaces to follow when traversing child workflows.
+          Can be passed multiple times.
+      - name: depth
+        type: int
+        description: |
+          Maximum depth to traverse when following child workflows.
+          Zero means unlimited.
+        default: 0
+      - name: error-contains
+        type: string
+        description: |
+          Filter failures to only those containing this substring in the error.
+          Case-insensitive matching (used with --failed).
+      - name: leaf-only
+        type: bool
+        description: |
+          Show only leaf failures (workflows with no failing children).
+          De-duplicates failures by showing only the root cause (used with --failed).
+      - name: compact-errors
+        type: bool
+        description: |
+          Extract the core error message, stripping wrapper context (used with --failed).
+      - name: group-by
+        type: string-enum
+        description: |
+          Group failures by a field instead of listing individually.
+          Returns aggregated counts per group (used with --failed).
+        enum-values:
+          - none
+          - type
+          - namespace
+          - status
+          - error
+        default: none
 
   - name: temporal workflow metadata
     summary: Query the Workflow for user-specified metadata
@@ -3860,6 +4003,22 @@ commands:
           --workflow-id YourWorkflowId
           --output json
       ```
+
+      Generate a visual sequence diagram of the workflow timeline:
+
+      ```
+      temporal workflow show \
+          --workflow-id YourWorkflowId
+          --output mermaid
+      ```
+
+      Show a compact timeline (collapsed retries, focused events):
+
+      ```
+      temporal workflow show \
+          --workflow-id YourWorkflowId
+          --compact
+      ```
     options:
       - name: follow
         short: f
@@ -3872,6 +4031,21 @@ commands:
         description: |
           Display events as detailed sections instead of table.
           Does not apply to JSON output.
+      - name: compact
+        type: bool
+        description: |
+          Show a compact event timeline focused on activities and workflows.
+          Collapses retries and filters noise for easier debugging.
+      - name: event-types
+        type: string[]
+        description: |
+          Filter to specific event types in compact mode.
+          Can be passed multiple times.
+      - name: exclude-event-types
+        type: string[]
+        description: |
+          Exclude specific event types in compact mode.
+          Can be passed multiple times.
     option-sets:
       - workflow-reference
 
@@ -4333,6 +4507,60 @@ commands:
         description: |
           Assume update inputs are base64-encoded and attempt to decode them.
 
+  - name: temporal tool-spec
+    summary: Output tool specifications for AI agent frameworks
+    description: |
+      Output structured tool specifications for AI agent frameworks like OpenAI,
+      Anthropic Claude, and LangChain. These specifications describe the available
+      Temporal workflow commands and parameters, enabling AI agents to invoke them.
+
+      Output OpenAI-compatible tool specifications:
+
+      ```
+      temporal tool-spec --format openai
+      ```
+
+      Output Anthropic Claude-compatible tool specifications:
+
+      ```
+      temporal tool-spec --format claude
+      ```
+
+      Output LangChain-compatible tool specifications:
+
+      ```
+      temporal tool-spec --format langchain
+      ```
+
+      Output raw function definitions:
+
+      ```
+      temporal tool-spec --format functions
+      ```
+    options:
+      - name: format
+        type: string-enum
+        description: |
+          Output format for tool specifications.
+          Accepted values: openai, claude, langchain, functions.
+        default: openai
+        enum-values: [openai, claude, langchain, functions]
+    docs:
+      description-header: >-
+        Generate tool specifications for AI agents and LLMs to interact with
+        Temporal. Supports OpenAI, Claude, LangChain, and raw function formats.
+      keywords:
+        - ai
+        - agent
+        - llm
+        - openai
+        - claude
+        - langchain
+        - tools
+      tags:
+        - ai
+        - agent
+
 option-sets:
   # Import common and client option sets from cliext package
   - name: common
@@ -4438,7 +4666,8 @@ option-sets:
       - name: run-id
         type: string
         short: r
-        description: Run ID.
+        description: |
+          Run ID. If not specified, the latest run is used.
 
   - name: deployment-name
     options:
