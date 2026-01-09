@@ -32,10 +32,10 @@ chmod +x demo-workload.sh
 
 You should see events cycling with failures:
 ```
-🎫 Event: concert-001 | Users: 25 | Seats: 10
-  ✓ All 25 users joined queue
-  Processing: Active=10 | Waiting=15
-  ✅ Tickets sold: 4 | ❌ Failed: 6   <-- Failures happening!
+🎫 Event: concert-001 | Users: 10 | Seats: 50
+  ✓ All 10 users joined queue
+  Processing: Active=5 | Waiting=5
+  ❌ Failed: 10 | ✅ Sold: 0   <-- ALL payments failing!
 ```
 
 ### Terminal 3: Open Cursor IDE
@@ -77,12 +77,12 @@ It will see output like:
 {
   "failures": [
     {
-      "root_workflow": { "workflow_id": "purchase-concert-001-fan-6" },
-      "root_cause": "ActivityFailed: ProcessPayment - payment gateway error: premium tier not configured",
+      "root_workflow": { "workflow_id": "purchase-concert-001-fan-1" },
+      "root_cause": "ActivityFailed: ProcessPayment - payment timeout after 847ms (limit: 100ms)",
       "depth": 0
     }
   ],
-  "total_count": 12
+  "total_count": 10
 }
 ```
 
@@ -93,24 +93,22 @@ AI might run:
 temporal workflow failures --since 5m --group-by error
 ```
 
-Output shows: **All failures are "premium tier not configured"**
+Output shows: **All failures are "payment timeout"** with 100ms limit
 
 ### [0:45] AI Finds the Bug
 
-The AI will search for "timeout" and find in `ProcessPayment`:
+The AI will search the codebase and find in `ProcessPayment`:
 
 ```go
-// 🐛 BUG: Internal timeout is too short!
-// This was set to 2s during development for fast tests.
-// Production payment gateways can take up to 5s for international cards.
-const paymentTimeout = 2 * time.Second  // TODO: Should be 10s for production
+// BUG: Timeout way too short! Was set to 100ms for unit tests.
+// Real payments take 500ms-4s. This fails almost every payment.
+const paymentTimeout = 100 * time.Millisecond // TODO: Should be 10s for production
 ```
 
 ### [0:55] AI Suggests Fix
 
-> "The payment timeout is set to 2 seconds, but the error shows payments 
-> taking 2500-3000ms. International cards and Amex can take up to 5 seconds.
-> Increase the timeout to 10 seconds."
+> "The payment timeout is set to 100 milliseconds, but the error shows payments 
+> taking 500-4000ms. Real payment gateways are slower. Change 100ms to 10s."
 
 ### [1:00] Done!
 
@@ -151,21 +149,20 @@ Add: *"Now fix the bug"*
 
 Watch AI:
 1. Edit `activities.go`
-2. Fix the `isPremiumSeat` function
+2. Change `100 * time.Millisecond` to `10 * time.Second`
 3. Suggest rebuilding the worker
 
 ---
 
 ## 📊 Expected Failure Pattern
 
-With the buggy code (~15% of payments fail due to timeout):
-- **Fast payments (60%)**: ✅ Complete in 500-1500ms, succeed
-- **Medium payments (25%)**: ⚠️ 1500-2500ms, some hit the 2s limit
-- **Slow payments (15%)**: ❌ 2500-4000ms, always timeout
+With the buggy code (**100% of payments fail**):
+- Payment timeout: 100ms
+- Actual payment time: 500ms - 4000ms (always exceeds timeout)
 
-**Error message to look for:** `"payment timeout after 2847ms (limit: 2000ms)"`
+**Error message:** `"payment timeout after Xms (limit: 100ms)"`
 
-This is realistic: international cards and Amex take longer to process.
+This is deterministic - every payment fails, making it easy for AI to spot.
 
 ---
 

@@ -1,3 +1,8 @@
+// BUGGY VERSION - Payment timeout is way too short
+//
+// BUG: Payment timeout set to 100ms (left from unit testing)
+// Real payment gateways take 500ms-4s. This causes ALL payments to fail.
+
 package ticketdrop
 
 import (
@@ -19,7 +24,7 @@ type SeatInventory struct {
 	seatOwners map[string]string   // "eventID:seat" -> userID
 }
 
-// NewSeatInventory creates an inventory with 10 seats per event.
+// NewSeatInventory creates an inventory with seats per event.
 func NewSeatInventory() *SeatInventory {
 	return &SeatInventory{
 		seats:      make(map[string][]string),
@@ -30,9 +35,9 @@ func NewSeatInventory() *SeatInventory {
 
 func (inv *SeatInventory) initEvent(eventID string) {
 	if _, exists := inv.seats[eventID]; !exists {
-		// Initialize 10 seats: A1-A10
-		seats := make([]string, 10)
-		for i := 0; i < 10; i++ {
+		// Initialize 50 seats: A1-A50 (more capacity for demo)
+		seats := make([]string, 50)
+		for i := 0; i < 50; i++ {
 			seats[i] = fmt.Sprintf("A%d", i+1)
 		}
 		inv.seats[eventID] = seats
@@ -163,7 +168,9 @@ func (a *Activities) ProcessPayment(ctx context.Context, input ProcessPaymentInp
 
 	processingTime := simulatePaymentGatewayLatency()
 
-	const paymentTimeout = 2 * time.Second // TODO: Should be 10s for production
+	// BUG: Timeout way too short! Was set to 100ms for unit tests.
+	// Real payments take 500ms-4s. This fails almost every payment.
+	const paymentTimeout = 100 * time.Millisecond // TODO: Should be 10s for production
 
 	if processingTime > paymentTimeout {
 		logger.Error("Payment gateway timeout",
