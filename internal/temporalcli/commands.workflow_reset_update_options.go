@@ -25,7 +25,7 @@ func (c *TemporalWorkflowResetWithWorkflowUpdateOptionsCommand) run(cctx *Comman
 		}
 	}
 
-	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}

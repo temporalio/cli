@@ -27,7 +27,7 @@ func (c *TemporalOperatorNexusEndpointCreateCommand) run(cctx *CommandContext, _
 		return fmt.Errorf("either --target-namespace and --target-task-queue or --target-url are required")
 	}
 
-	cl, err := c.Parent.Parent.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.Parent.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -48,7 +48,7 @@ func (c *TemporalOperatorNexusEndpointCreateCommand) run(cctx *CommandContext, _
 }
 
 func (c *TemporalOperatorNexusEndpointDeleteCommand) run(cctx *CommandContext, _ []string) error {
-	cl, err := c.Parent.Parent.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.Parent.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -71,7 +71,7 @@ func (c *TemporalOperatorNexusEndpointDeleteCommand) run(cctx *CommandContext, _
 }
 
 func (c *TemporalOperatorNexusEndpointGetCommand) run(cctx *CommandContext, _ []string) error {
-	cl, err := c.Parent.Parent.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.Parent.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -89,7 +89,7 @@ func (c *TemporalOperatorNexusEndpointGetCommand) run(cctx *CommandContext, _ []
 }
 
 func (c *TemporalOperatorNexusEndpointListCommand) run(cctx *CommandContext, _ []string) error {
-	cl, err := c.Parent.Parent.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.Parent.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -138,7 +138,7 @@ func (c *TemporalOperatorNexusEndpointUpdateCommand) run(cctx *CommandContext, _
 		return fmt.Errorf("provided both --target-task-queue and --target-url")
 	}
 
-	cl, err := c.Parent.Parent.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.Parent.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}

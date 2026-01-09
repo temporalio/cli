@@ -23,7 +23,7 @@ import (
 func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []string) error {
 	// Handle --pending or --format mermaid with agent-style output
 	if c.Pending || c.Format.Value == "mermaid" {
-		cl, err := c.Parent.ClientOptions.dialClient(cctx)
+		cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 		if err != nil {
 			return err
 		}
@@ -44,7 +44,7 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 	}
 
 	// Call describe
-	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -398,7 +398,7 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 }
 
 func (c *TemporalWorkflowListCommand) run(cctx *CommandContext, _ []string) error {
-	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -481,7 +481,7 @@ func (c *TemporalWorkflowListCommand) pageFetcher(
 }
 
 func (c *TemporalWorkflowCountCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -528,7 +528,7 @@ func (c *TemporalWorkflowCountCommand) run(cctx *CommandContext, args []string) 
 }
 
 func (c *TemporalWorkflowResultCommand) run(cctx *CommandContext, _ []string) error {
-	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -581,7 +581,7 @@ func (c *TemporalWorkflowResultCommand) run(cctx *CommandContext, _ []string) er
 func (c *TemporalWorkflowShowCommand) run(cctx *CommandContext, _ []string) error {
 	// Handle --compact or --format mermaid with agent-style timeline output
 	if c.Compact || c.Format.Value == "mermaid" {
-		cl, err := c.Parent.ClientOptions.dialClient(cctx)
+		cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 		if err != nil {
 			return err
 		}
@@ -604,7 +604,7 @@ func (c *TemporalWorkflowShowCommand) run(cctx *CommandContext, _ []string) erro
 	}
 
 	// Call describe
-	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}

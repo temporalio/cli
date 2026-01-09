@@ -12,6 +12,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/google/uuid"
+	"github.com/temporalio/cli/cliext"
 	"github.com/temporalio/cli/internal/printer"
 	"go.temporal.io/api/batch/v1"
 	"go.temporal.io/api/common/v1"
@@ -30,7 +31,7 @@ import (
 const metadataQueryName = "__temporal_workflow_metadata"
 
 func (c *TemporalWorkflowCancelCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -62,7 +63,7 @@ func (c *TemporalWorkflowCancelCommand) run(cctx *CommandContext, args []string)
 }
 
 func (c *TemporalWorkflowDeleteCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -96,7 +97,7 @@ func (c *TemporalWorkflowDeleteCommand) run(cctx *CommandContext, args []string)
 }
 
 func (c *TemporalWorkflowUpdateOptionsCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -199,7 +200,7 @@ func (c *TemporalWorkflowQueryCommand) run(cctx *CommandContext, args []string) 
 }
 
 func (c *TemporalWorkflowSignalCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -255,7 +256,7 @@ func (c *TemporalWorkflowStackCommand) run(cctx *CommandContext, args []string) 
 }
 
 func (c *TemporalWorkflowTerminateCommand) run(cctx *CommandContext, _ []string) error {
-	cl, err := c.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -330,7 +331,7 @@ func (c *TemporalWorkflowUpdateExecuteCommand) run(cctx *CommandContext, args []
 }
 
 func (c *TemporalWorkflowUpdateResultCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -375,7 +376,7 @@ func (c *TemporalWorkflowUpdateResultCommand) run(cctx *CommandContext, args []s
 }
 
 func (c *TemporalWorkflowUpdateDescribeCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := c.Parent.Parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -427,13 +428,13 @@ func (c *TemporalWorkflowUpdateDescribeCommand) run(cctx *CommandContext, args [
 }
 
 func workflowUpdateHelper(cctx *CommandContext,
-	clientOpts ClientOptions,
+	clientOpts cliext.ClientOptions,
 	inputOpts PayloadInputOptions,
 	updateTargetOpts UpdateTargetingOptions,
 	updateStartOpts UpdateStartingOptions,
 	waitForStage client.WorkflowUpdateStage,
 ) error {
-	cl, err := clientOpts.dialClient(cctx)
+	cl, err := dialClient(cctx, &clientOpts)
 	if err != nil {
 		return err
 	}
@@ -591,10 +592,10 @@ func queryHelper(cctx *CommandContext,
 	inputOpts PayloadInputOptions,
 	queryType string,
 	headers []string,
-	rejectCondition StringEnum,
+	rejectCondition cliext.FlagStringEnum,
 	execution WorkflowReferenceOptions,
 ) error {
-	cl, err := parent.ClientOptions.dialClient(cctx)
+	cl, err := dialClient(cctx, &parent.ClientOptions)
 	if err != nil {
 		return err
 	}
