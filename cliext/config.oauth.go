@@ -1,18 +1,31 @@
 package cliext
 
 import (
-	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"time"
 
-	"github.com/BurntSushi/toml"
 	"go.temporal.io/sdk/contrib/envconfig"
 	"golang.org/x/oauth2"
 )
+
+// oauthConfigJSON is an intermediate struct for JSON serialization of OAuth config.
+type oauthConfigJSON struct {
+	ClientID     string   `json:"client_id,omitempty"`
+	ClientSecret string   `json:"client_secret,omitempty"`
+	TokenURL     string   `json:"token_url,omitempty"`
+	AuthURL      string   `json:"auth_url,omitempty"`
+	RedirectURL  string   `json:"redirect_url,omitempty"`
+	AccessToken  string   `json:"access_token,omitempty"`
+	RefreshToken string   `json:"refresh_token,omitempty"`
+	TokenType    string   `json:"token_type,omitempty"`
+	ExpiresAt    string   `json:"expires_at,omitempty"`
+	Scopes       []string `json:"scopes,omitempty"`
+}
 
 // OAuthConfig combines OAuth client configuration with token information.
 type OAuthConfig struct {
@@ -84,50 +97,70 @@ func loadOAuthConfigFromFile(path string) (map[string]*OAuthConfig, error) {
 		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
 
-	var raw rawConfigWithOAuth
-	if _, err := toml.Decode(string(data), &raw); err != nil {
+	// Use envconfig's FromTOML with AdditionalProfileFields to capture OAuth fields
+	var conf envconfig.ClientConfig
+	additional := make(map[string]map[string]any)
+	if err := conf.FromTOML(data, envconfig.ClientConfigFromTOMLOptions{
+		AdditionalProfileFields: additional,
+	}); err != nil {
 		return nil, fmt.Errorf("failed to parse config file: %w", err)
 	}
 
 	oauthByProfile := make(map[string]*OAuthConfig)
-	for profileName, profile := range raw.Profile {
-		if profile == nil || profile.OAuth == nil {
-			oauthByProfile[profileName] = nil
+	for profileName, fields := range additional {
+		oauthRaw, ok := fields["oauth"].(map[string]any)
+		if !ok {
 			continue
 		}
-		cfg := profile.OAuth
-
-		// Parse expiry time if present
-		var expiry time.Time
-		if cfg.ExpiresAt != "" {
-			t, err := time.Parse(time.RFC3339, cfg.ExpiresAt)
-			if err != nil {
-				return nil, fmt.Errorf("failed to parse expires_at for profile %q: %w", profileName, err)
-			}
-			expiry = t
-		}
-
-		oauth := &OAuthConfig{
-			ClientConfig: &oauth2.Config{
-				ClientID:     cfg.ClientID,
-				ClientSecret: cfg.ClientSecret,
-				RedirectURL:  cfg.RedirectURL,
-				Scopes:       cfg.Scopes,
-				Endpoint: oauth2.Endpoint{
-					AuthURL:  cfg.AuthURL,
-					TokenURL: cfg.TokenURL,
-				},
-			},
-			Token: &oauth2.Token{
-				AccessToken:  cfg.AccessToken,
-				RefreshToken: cfg.RefreshToken,
-				TokenType:    cfg.TokenType,
-				Expiry:       expiry,
-			},
+		oauth, err := oauthConfigFromMap(oauthRaw)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse oauth for profile %q: %w", profileName, err)
 		}
 		oauthByProfile[profileName] = oauth
 	}
 	return oauthByProfile, nil
+}
+
+// oauthConfigFromMap converts a map[string]any to OAuthConfig using JSON as intermediary.
+func oauthConfigFromMap(m map[string]any) (*OAuthConfig, error) {
+	data, err := json.Marshal(m)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal oauth config: %w", err)
+	}
+
+	var cfg oauthConfigJSON
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal oauth config: %w", err)
+	}
+
+	// Parse expiry time if present
+	var expiry time.Time
+	if cfg.ExpiresAt != "" {
+		t, err := time.Parse(time.RFC3339, cfg.ExpiresAt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse expires_at: %w", err)
+		}
+		expiry = t
+	}
+
+	return &OAuthConfig{
+		ClientConfig: &oauth2.Config{
+			ClientID:     cfg.ClientID,
+			ClientSecret: cfg.ClientSecret,
+			RedirectURL:  cfg.RedirectURL,
+			Scopes:       cfg.Scopes,
+			Endpoint: oauth2.Endpoint{
+				AuthURL:  cfg.AuthURL,
+				TokenURL: cfg.TokenURL,
+			},
+		},
+		Token: &oauth2.Token{
+			AccessToken:  cfg.AccessToken,
+			RefreshToken: cfg.RefreshToken,
+			TokenType:    cfg.TokenType,
+			Expiry:       expiry,
+		},
+	}, nil
 }
 
 // resolveConfigAndProfile resolves the config file path and profile name.
@@ -182,43 +215,45 @@ func StoreClientOAuth(opts StoreClientOAuthOptions) error {
 		return err
 	}
 
-	// Read and parse existing file content.
+	// Read and parse existing file content using envconfig.
 	existingContent, err := os.ReadFile(configFilePath)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("failed to read config file: %w", err)
 	}
 
-	var existingRaw map[string]any
+	var conf envconfig.ClientConfig
+	additional := make(map[string]map[string]any)
 	if len(existingContent) > 0 {
-		if _, err := toml.Decode(string(existingContent), &existingRaw); err != nil {
+		if err := conf.FromTOML(existingContent, envconfig.ClientConfigFromTOMLOptions{
+			AdditionalProfileFields: additional,
+		}); err != nil {
 			return fmt.Errorf("failed to parse existing config: %w", err)
 		}
 	}
-	if existingRaw == nil {
-		existingRaw = make(map[string]any)
+
+	// Ensure the profile exists in the config.
+	if conf.Profiles == nil {
+		conf.Profiles = make(map[string]*envconfig.ClientConfigProfile)
+	}
+	if conf.Profiles[profileName] == nil {
+		conf.Profiles[profileName] = &envconfig.ClientConfigProfile{}
 	}
 
-	// Load existing OAuth configs from the parsed content.
-	oauthByProfile, err := parseOAuthFromRaw(existingRaw)
+	// Update the OAuth config for this profile in additional fields.
+	if additional[profileName] == nil {
+		additional[profileName] = make(map[string]any)
+	}
+	if opts.OAuth == nil {
+		delete(additional[profileName], "oauth")
+	} else {
+		additional[profileName]["oauth"] = oauthConfigToMap(opts.OAuth)
+	}
+
+	// Marshal back to TOML using envconfig.
+	data, err := conf.ToTOML(envconfig.ClientConfigToTOMLOptions{
+		AdditionalProfileFields: additional,
+	})
 	if err != nil {
-		return fmt.Errorf("failed to parse existing OAuth config: %w", err)
-	}
-	if oauthByProfile == nil {
-		oauthByProfile = make(map[string]*OAuthConfig)
-	}
-
-	// Update the OAuth config for this profile.
-	oauthByProfile[profileName] = opts.OAuth
-
-	// Merge OAuth configs back into the raw structure.
-	if err := mergeOAuthIntoRaw(existingRaw, oauthByProfile); err != nil {
-		return err
-	}
-
-	// Marshal back to TOML.
-	var buf bytes.Buffer
-	enc := toml.NewEncoder(&buf)
-	if err := enc.Encode(existingRaw); err != nil {
 		return fmt.Errorf("failed to encode config: %w", err)
 	}
 
@@ -227,122 +262,20 @@ func StoreClientOAuth(opts StoreClientOAuthOptions) error {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 
-	if err := os.WriteFile(configFilePath, buf.Bytes(), 0600); err != nil {
+	if err := os.WriteFile(configFilePath, data, 0600); err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
 
 	return nil
 }
 
-func parseOAuthFromRaw(raw map[string]any) (map[string]*OAuthConfig, error) {
-	var parsed rawConfigWithOAuth
-
-	// Re-encode and decode to convert map[string]any to our struct.
-	// This is simpler than manual type assertions for nested structures.
-	var buf bytes.Buffer
-	enc := toml.NewEncoder(&buf)
-	if err := enc.Encode(raw); err != nil {
-		return nil, err
-	}
-	if _, err := toml.Decode(buf.String(), &parsed); err != nil {
-		return nil, err
-	}
-
-	oauthByProfile := make(map[string]*OAuthConfig)
-	for profileName, profile := range parsed.Profile {
-		if profile == nil || profile.OAuth == nil {
-			continue
-		}
-		cfg := profile.OAuth
-
-		// Parse expiry time if present
-		var expiry time.Time
-		if cfg.ExpiresAt != "" {
-			t, err := time.Parse(time.RFC3339, cfg.ExpiresAt)
-			if err != nil {
-				return nil, fmt.Errorf("failed to parse expires_at for profile %q: %w", profileName, err)
-			}
-			expiry = t
-		}
-
-		oauth := &OAuthConfig{
-			ClientConfig: &oauth2.Config{
-				ClientID:     cfg.ClientID,
-				ClientSecret: cfg.ClientSecret,
-				RedirectURL:  cfg.RedirectURL,
-				Scopes:       cfg.Scopes,
-				Endpoint: oauth2.Endpoint{
-					AuthURL:  cfg.AuthURL,
-					TokenURL: cfg.TokenURL,
-				},
-			},
-			Token: &oauth2.Token{
-				AccessToken:  cfg.AccessToken,
-				RefreshToken: cfg.RefreshToken,
-				TokenType:    cfg.TokenType,
-				Expiry:       expiry,
-			},
-		}
-		oauthByProfile[profileName] = oauth
-	}
-	return oauthByProfile, nil
-}
-
-// mergeOAuthIntoRaw merges OAuth configurations into a raw TOML structure.
-func mergeOAuthIntoRaw(raw map[string]any, oauthByProfile map[string]*OAuthConfig) error {
-	// Get or create the profile section.
-	profileSection, ok := raw["profile"].(map[string]any)
-	if !ok {
-		profileSection = make(map[string]any)
-		raw["profile"] = profileSection
-	}
-
-	// Update OAuth for each profile.
-	for profileName, oauth := range oauthByProfile {
-		profile, ok := profileSection[profileName].(map[string]any)
-		if !ok {
-			profile = make(map[string]any)
-			profileSection[profileName] = profile
-		}
-
-		if oauth == nil {
-			delete(profile, "oauth")
-		} else {
-			profile["oauth"] = oauthConfigToTOML(oauth)
-		}
-	}
-
-	return nil
-}
-
-// oauthConfigTOML is the TOML representation of OAuthConfig.
-type oauthConfigTOML struct {
-	ClientID     string   `toml:"client_id,omitempty"`
-	ClientSecret string   `toml:"client_secret,omitempty"`
-	TokenURL     string   `toml:"token_url,omitempty"`
-	AuthURL      string   `toml:"auth_url,omitempty"`
-	RedirectURL  string   `toml:"redirect_url,omitempty"`
-	AccessToken  string   `toml:"access_token,omitempty"`
-	RefreshToken string   `toml:"refresh_token,omitempty"`
-	TokenType    string   `toml:"token_type,omitempty"`
-	ExpiresAt    string   `toml:"expires_at,omitempty"`
-	Scopes       []string `toml:"scopes,omitempty"`
-}
-
-type rawProfileWithOAuth struct {
-	OAuth *oauthConfigTOML `toml:"oauth"`
-}
-
-type rawConfigWithOAuth struct {
-	Profile map[string]*rawProfileWithOAuth `toml:"profile"`
-}
-
-// oauthConfigToTOML converts OAuthConfig to its TOML representation.
-func oauthConfigToTOML(oauth *OAuthConfig) *oauthConfigTOML {
+// oauthConfigToMap converts OAuthConfig to map[string]any using JSON as intermediary.
+func oauthConfigToMap(oauth *OAuthConfig) map[string]any {
 	if oauth == nil || oauth.ClientConfig == nil || oauth.Token == nil {
 		return nil
 	}
-	result := &oauthConfigTOML{
+
+	cfg := oauthConfigJSON{
 		ClientID:     oauth.ClientConfig.ClientID,
 		ClientSecret: oauth.ClientConfig.ClientSecret,
 		TokenURL:     oauth.ClientConfig.Endpoint.TokenURL,
@@ -354,7 +287,18 @@ func oauthConfigToTOML(oauth *OAuthConfig) *oauthConfigTOML {
 		Scopes:       oauth.ClientConfig.Scopes,
 	}
 	if !oauth.Token.Expiry.IsZero() {
-		result.ExpiresAt = oauth.Token.Expiry.Format(time.RFC3339)
+		cfg.ExpiresAt = oauth.Token.Expiry.Format(time.RFC3339)
+	}
+
+	data, err := json.Marshal(cfg)
+	if err != nil {
+		return nil
+	}
+
+	var result map[string]any
+	if err := json.Unmarshal(data, &result); err != nil {
+		return nil
 	}
 	return result
 }
+
