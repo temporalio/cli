@@ -70,7 +70,7 @@ This is a classic TOCTOU race condition!
 
 ```bash
 # Get the trace - shows root cause
-temporal workflow diagnose --workflow-id order-123456 --namespace default --format json
+temporal workflow describe --trace-root-cause --workflow-id order-123456 --namespace default --format json
 
 # THIS IS KEY: Get the timeline to see the race condition
 temporal workflow show --compact --workflow-id order-123456 --namespace default --format json
@@ -103,7 +103,7 @@ A workflow failed with "insufficient inventory for KEYBOARD-03: requested 1, ava
 The logs show the inventory check passed, but the reservation failed.
 
 Use temporal workflow CLI to diagnose:
-  temporal workflow diagnose --workflow-id [id] --namespace default --format json
+  temporal workflow describe --trace-root-cause --workflow-id [id] --namespace default --format json
   temporal workflow show --compact --workflow-id [id] --namespace default --format json
 
 Questions to answer:

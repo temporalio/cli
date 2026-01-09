@@ -10,7 +10,7 @@ A distributed ticket sales system demonstrating Temporal workflow patterns and `
 - Saga pattern for compensating transactions
 - Queue management for fair ordering
 - Race condition debugging with `temporal workflow show --compact`
-- Failure analysis with `temporal workflow failures --group-by`
+- Failure analysis with `temporal workflow list --failed --group-by`
 
 ## Prerequisites
 
@@ -19,7 +19,7 @@ A distributed ticket sales system demonstrating Temporal workflow patterns and `
 temporal server start-dev
 
 # Verify workflow debugging commands work
-temporal workflow failures --help
+temporal workflow list --failed --help
 ```
 
 ## Quick Start
@@ -69,7 +69,7 @@ After running 100 concurrent users:
 
 ```bash
 # See failure distribution
-temporal workflow failures --since 5m --group-by error --format mermaid
+temporal workflow list --failed --since 5m --group-by error --format mermaid
 ```
 
 ## Files

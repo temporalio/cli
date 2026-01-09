@@ -5,7 +5,7 @@
 Show an AI agent (Cursor/Claude) debugging a production issue in real-time:
 1. **See failures happening** (workload running in background)
 2. **Ask AI to investigate** (one prompt)
-3. **Watch AI find root cause** (uses `temporal workflow diagnose`)
+3. **Watch AI find root cause** (uses `temporal workflow describe --trace-root-cause`)
 4. **AI suggests fix** (pinpoints the buggy code)
 
 ---
@@ -69,7 +69,7 @@ Can you find out what's failing and why?
 
 The AI will run:
 ```bash
-temporal workflow failures --since 5m --follow-children --leaf-only --compact-errors
+temporal workflow list --failed --since 5m --follow-children --leaf-only --compact-errors
 ```
 
 It will see output like:
@@ -90,7 +90,7 @@ It will see output like:
 
 AI might run:
 ```bash
-temporal workflow failures --since 5m --group-by error
+temporal workflow list --failed --since 5m --group-by error
 ```
 
 Output shows: **All failures are "payment timeout"** with 100ms limit
@@ -141,7 +141,7 @@ Ask: *"Show me a visualization of the failures"*
 
 The AI will run:
 ```bash
-temporal workflow failures --since 5m --group-by error --format mermaid
+temporal workflow list --failed --since 5m --group-by error --format mermaid
 ```
 
 ### If you have more time (2-minute version):

@@ -266,5 +266,5 @@ func runDeepChainScenario(ctx context.Context, c client.Client, taskQueue, times
 	}
 	log.Printf("Started DeepChainWorkflow (4 levels deep, fails with DB error): %s", run.GetID())
 	log.Println("TIP: Trace the full chain with:")
-	log.Printf("  temporal workflow diagnose --workflow-id %s --namespace <your-namespace> --format json", workflowID)
+	log.Printf("  temporal workflow describe --trace-root-cause --workflow-id %s --namespace <your-namespace> --format json", workflowID)
 }

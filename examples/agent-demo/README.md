@@ -87,7 +87,7 @@ After workflows have run, use the agent commands to analyze them.
 ### List Recent Failures
 
 ```bash
-temporal workflow failures \
+temporal workflow list --failed \
     --address $TEMPORAL_ADDRESS \
     --namespace $TEMPORAL_NAMESPACE \
     --api-key $TEMPORAL_API_KEY \
@@ -101,7 +101,7 @@ temporal workflow failures \
 
 ```bash
 # Find the deepest failure in an order workflow
-temporal workflow diagnose \
+temporal workflow describe --trace-root-cause \
     --address $TEMPORAL_ADDRESS \
     --namespace $TEMPORAL_NAMESPACE \
     --api-key $TEMPORAL_API_KEY \
@@ -110,7 +110,7 @@ temporal workflow diagnose \
     --format json | jq
 
 # Trace the nested failure workflow (3 levels deep)
-temporal workflow diagnose \
+temporal workflow describe --trace-root-cause \
     --address $TEMPORAL_ADDRESS \
     --namespace $TEMPORAL_NAMESPACE \
     --api-key $TEMPORAL_API_KEY \
@@ -161,6 +161,6 @@ NestedFailureWorkflow (depth=0)
                     └── FailingActivity → FAILS: "database connection refused"
 ```
 
-The `temporal workflow diagnose` command will automatically traverse this entire chain
+The `temporal workflow describe --trace-root-cause` command will automatically traverse this entire chain
 and identify the leaf failure with its root cause.
 

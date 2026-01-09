@@ -6,15 +6,15 @@ When debugging Temporal workflows, use the `temporal workflow` CLI commands for 
 
 ### Find Recent Failures
 ```bash
-temporal workflow failures --since 1h --format json
-temporal workflow failures --since 1h --follow-children --leaf-only --compact-errors --format json
-temporal workflow failures --since 1h --group-by error --format mermaid
+temporal workflow list --failed --since 1h --format json
+temporal workflow list --failed --since 1h --follow-children --leaf-only --compact-errors --format json
+temporal workflow list --failed --since 1h --group-by error --format mermaid
 ```
 
 ### Trace a Workflow Chain
 ```bash
-temporal workflow diagnose --workflow-id <id> --format json
-temporal workflow diagnose --workflow-id <id> --format mermaid
+temporal workflow describe --trace-root-cause --workflow-id <id> --format json
+temporal workflow describe --trace-root-cause --workflow-id <id> --format mermaid
 # Note: trace always follows children automatically. Use --depth to limit.
 ```
 
@@ -48,11 +48,11 @@ temporal workflow describe --pending --workflow-id <id> --format mermaid
 
 | Situation | Command |
 |-----------|---------|
-| Workflow failed, need root cause | `temporal workflow diagnose --workflow-id <id> --format json` |
-| Multiple failures, need patterns | `temporal workflow failures --since 1h --group-by error --format mermaid` |
+| Workflow failed, need root cause | `temporal workflow describe --trace-root-cause --workflow-id <id> --format json` |
+| Multiple failures, need patterns | `temporal workflow list --failed --since 1h --group-by error --format mermaid` |
 | Workflow stuck, need to see pending work | `temporal workflow describe --pending --workflow-id <id> --format mermaid` |
 | Race condition suspected | `temporal workflow show --compact --workflow-id <id> --format mermaid` |
-| Child workflow failed | `temporal workflow diagnose --workflow-id <id> --format mermaid` (follows children automatically) |
+| Child workflow failed | `temporal workflow describe --trace-root-cause --workflow-id <id> --format mermaid` (follows children automatically) |
 | Error message too verbose | Add `--compact-errors` to any failure command |
 
 ## Output Formats
@@ -60,8 +60,8 @@ temporal workflow describe --pending --workflow-id <id> --format mermaid
 ### JSON Output
 Use for programmatic analysis:
 ```bash
-temporal workflow diagnose --workflow-id <id> --format json | jq '.root_cause'
-temporal workflow failures --since 1h --format json | jq '.total_count'
+temporal workflow describe --trace-root-cause --workflow-id <id> --format json | jq '.root_cause'
+temporal workflow list --failed --since 1h --format json | jq '.total_count'
 ```
 
 ### Mermaid Output
@@ -75,18 +75,18 @@ Use for visualization:
 
 1. **Find what failed:**
    ```bash
-   temporal workflow failures --since 10m --format json
+   temporal workflow list --failed --since 10m --format json
    ```
 
 2. **Trace the failure:**
    ```bash
-   temporal workflow diagnose --workflow-id <id> --format mermaid
+   temporal workflow describe --trace-root-cause --workflow-id <id> --format mermaid
    ```
 
 3. **If child workflows involved:**
    ```bash
    # trace automatically follows children
-   temporal workflow diagnose --workflow-id <id> --format mermaid
+   temporal workflow describe --trace-root-cause --workflow-id <id> --format mermaid
    ```
 
 4. **If timing issue suspected:**
@@ -101,5 +101,5 @@ Use for visualization:
 
 6. **Analyze failure patterns:**
    ```bash
-   temporal workflow failures --since 1h --group-by error --format mermaid
+   temporal workflow list --failed --since 1h --group-by error --format mermaid
    ```

@@ -517,7 +517,7 @@ func runRaceScenario(c client.Client, namespace, orderID string, ts int64, wait 
 		log.Println("=== DEBUG CHALLENGE ===")
 		log.Println("One order failed. Use temporal workflow CLI to diagnose why.")
 		log.Println("")
-		log.Printf("  temporal workflow diagnose --workflow-id %s --namespace %s --format json", failedID, namespace)
+		log.Printf("  temporal workflow describe --trace-root-cause --workflow-id %s --namespace %s --format json", failedID, namespace)
 		log.Printf("  temporal workflow show --compact --workflow-id %s --namespace %s --format json", failedID, namespace)
 		log.Println("")
 		log.Println("Question: Why did the inventory check pass but the reservation fail?")
@@ -602,8 +602,8 @@ But the workflow checks inventory before reserving. Why does the check pass but 
 Diagnose using `temporal workflow`:
 
 ```bash
-temporal workflow failures --namespace default --since 5m --format json
-temporal workflow diagnose --workflow-id <id> --namespace default --format json
+temporal workflow list --failed --namespace default --since 5m --format json
+temporal workflow describe --trace-root-cause --workflow-id <id> --namespace default --format json
 temporal workflow show --compact --workflow-id <id> --namespace default --format json
 ```
 

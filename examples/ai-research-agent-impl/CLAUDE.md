@@ -6,15 +6,15 @@ When debugging Temporal workflows, use the `temporal workflow` CLI commands inst
 
 ### Find Failures
 ```bash
-temporal workflow failures --since 1h --format json
-temporal workflow failures --since 1h --follow-children --leaf-only --compact-errors --format json
-temporal workflow failures --since 1h --group-by error --format json
+temporal workflow list --failed --since 1h --format json
+temporal workflow list --failed --since 1h --follow-children --leaf-only --compact-errors --format json
+temporal workflow list --failed --since 1h --group-by error --format json
 ```
 
 ### Trace Workflow Chain
 ```bash
-temporal workflow diagnose --workflow-id <id> --format json
-temporal workflow diagnose --workflow-id <id> --format mermaid
+temporal workflow describe --trace-root-cause --workflow-id <id> --format json
+temporal workflow describe --trace-root-cause --workflow-id <id> --format mermaid
 ```
 
 ### Get Timeline
@@ -60,7 +60,7 @@ Use `--format mermaid` to generate diagrams:
 User: "The order workflow failed"
 
 You should:
-1. Run `temporal workflow diagnose --workflow-id order-123 --format json`
+1. Run `temporal workflow describe --trace-root-cause --workflow-id order-123 --format json`
 2. If complex, add `--format mermaid` for visual
 3. Identify the leaf failure and root cause
 4. Explain what went wrong

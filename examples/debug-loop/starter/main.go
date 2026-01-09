@@ -187,7 +187,7 @@ func runRaceScenario(c client.Client, namespace, orderID string, ts int64, wait 
 		log.Println("")
 		log.Println("Use temporal workflow CLI to analyze the failed order:")
 		log.Println("")
-		log.Printf("  temporal workflow diagnose --workflow-id %s --namespace %s --format json", failedID, namespace)
+		log.Printf("  temporal workflow describe --trace-root-cause --workflow-id %s --namespace %s --format json", failedID, namespace)
 		log.Printf("  temporal workflow show --compact --workflow-id %s --namespace %s --format json", failedID, namespace)
 		log.Println("")
 		log.Println("Key insight: Look at the timeline to see that:")

@@ -100,7 +100,7 @@ The `debug-loop-fresh` example contains a TOCTOU race condition with all hints r
 ### LLM's Diagnosis Process
 
 1. **Ran the scenario** - Started worker and triggered race condition
-2. **Used `temporal workflow diagnose`** - Found `ReserveInventory` failed for KEYBOARD-03
+2. **Used `temporal workflow describe --trace-root-cause`** - Found `ReserveInventory` failed for KEYBOARD-03
 3. **Used `temporal workflow show --compact`** - Analyzed timestamps of both workflows
 4. **Built a race timeline** - Correlated events across both orders:
 
@@ -136,8 +136,8 @@ Based on experiment findings, the following improvements were made:
 
 | Feature | Status | Command |
 |---------|--------|---------|
-| Find recent failures | ✅ Done | `temporal workflow failures` |
-| Trace workflow chain | ✅ Done | `temporal workflow diagnose` |
+| Find recent failures | ✅ Done | `temporal workflow list --failed` |
+| Trace workflow chain | ✅ Done | `temporal workflow describe --trace-root-cause` |
 | Workflow timeline | ✅ Done | `temporal workflow show --compact` |
 
 ### Phase 2: Filtering & Compaction
@@ -179,11 +179,11 @@ Based on experiment findings, the following improvements were made:
 
 | Feature | Status | Flag/Command |
 |---------|--------|--------------|
-| Trace flowchart | ✅ Done | `temporal workflow diagnose --format mermaid` |
+| Trace flowchart | ✅ Done | `temporal workflow describe --trace-root-cause --format mermaid` |
 | Timeline sequence diagram | ✅ Done | `temporal workflow show --compact --format mermaid` |
 | State diagram | ✅ Done | `temporal workflow describe --pending --format mermaid` |
-| Failures pie chart | ✅ Done | `temporal workflow failures --group-by error --format mermaid` |
-| Failures flowchart | ✅ Done | `temporal workflow failures --format mermaid` |
+| Failures pie chart | ✅ Done | `temporal workflow list --failed --group-by error --format mermaid` |
+| Failures flowchart | ✅ Done | `temporal workflow list --failed --format mermaid` |
 
 ---
 

@@ -26,10 +26,10 @@ cp examples/ticketdrop/.cursorrules ./your-project/
 Or tell your AI at the start of the session:
 
 > "I'm building a Temporal workflow system. When debugging, use `temporal workflow` commands:
-> - `temporal workflow diagnose --workflow-id <id>` - trace failures
+> - `temporal workflow describe --trace-root-cause --workflow-id <id>` - trace failures
 > - `temporal workflow show --compact --workflow-id <id>` - see event sequence
 > - `temporal workflow describe --pending --workflow-id <id>` - check pending work
-> - `temporal workflow failures --since 5m` - find recent failures
+> - `temporal workflow list --failed --since 5m` - find recent failures
 >
 > Use `--format mermaid` for diagrams, `--format json` for data."
 
@@ -88,7 +88,7 @@ go run ./starter --user-id user-123 --event-id concert-taylor-swift
 **AI should suggest:**
 ```bash
 temporal workflow list
-temporal workflow diagnose --workflow-id <id> --format json
+temporal workflow describe --trace-root-cause --workflow-id <id> --format json
 ```
 
 **What you'll likely see:** The workflow completed but didn't do anything meaningful.
@@ -112,7 +112,7 @@ activity not registered: ReserveSeat
 
 **Debug with CLI:**
 ```bash
-temporal workflow diagnose --workflow-id purchase-123 --format json | jq '.root_cause'
+temporal workflow describe --trace-root-cause --workflow-id purchase-123 --format json | jq '.root_cause'
 # Shows: "activity not registered"
 ```
 
@@ -139,7 +139,7 @@ for i in {1..10}; do
 done
 
 # Check failures
-temporal workflow failures --since 5m --format json
+temporal workflow list --failed --since 5m --format json
 ```
 
 ---
@@ -150,10 +150,10 @@ temporal workflow failures --since 5m --format json
 
 **AI should use:**
 ```bash
-temporal workflow failures --since 5m --format json | jq '.failures[] | {workflow: .root_workflow.workflow_id, error: .root_cause}'
+temporal workflow list --failed --since 5m --format json | jq '.failures[] | {workflow: .root_workflow.workflow_id, error: .root_cause}'
 
 # Or visualize:
-temporal workflow failures --since 5m --group-by error --format mermaid
+temporal workflow list --failed --since 5m --group-by error --format mermaid
 ```
 
 **Expected output:**
@@ -215,7 +215,7 @@ done
 wait
 
 # Check results
-temporal workflow failures --since 2m --format json | jq '.total_count'
+temporal workflow list --failed --since 2m --format json | jq '.total_count'
 # Should show ~5 failures
 ```
 
@@ -273,7 +273,7 @@ done
 wait
 
 # All failures should now be "no seats available", not double-booking
-temporal workflow failures --since 2m --group-by error --format mermaid
+temporal workflow list --failed --since 2m --group-by error --format mermaid
 ```
 
 ---
@@ -294,7 +294,7 @@ temporal workflow failures --since 2m --group-by error --format mermaid
 go run ./starter --user-id unlucky-user --event-id concert-1
 
 # Wait for failure, then check trace
-temporal workflow diagnose --workflow-id purchase-unlucky-user --format mermaid
+temporal workflow describe --trace-root-cause --workflow-id purchase-unlucky-user --format mermaid
 ```
 
 **Expected flowchart:**
@@ -416,7 +416,7 @@ temporal workflow show --compact --workflow-id queue-concert-1 --format json | j
 
 **Verify:**
 ```bash
-temporal workflow diagnose --workflow-id purchase-happy-user --format mermaid
+temporal workflow describe --trace-root-cause --workflow-id purchase-happy-user --format mermaid
 ```
 
 **Shows:**
@@ -443,7 +443,7 @@ go run ./starter --user-id test-user --event-id concert-1
 
 # Check that purchase succeeded but notification failed
 # trace automatically follows children
-temporal workflow diagnose --workflow-id purchase-test-user --format mermaid
+temporal workflow describe --trace-root-cause --workflow-id purchase-test-user --format mermaid
 ```
 
 **Shows:**
@@ -474,7 +474,7 @@ graph TD
 go run ./loadtest --users 100 --tickets 20 --event concert-final
 
 # Watch chaos unfold
-temporal workflow failures --since 2m --follow-children --group-by error --format mermaid
+temporal workflow list --failed --since 2m --follow-children --group-by error --format mermaid
 ```
 
 **Expected pie chart:**
@@ -528,11 +528,11 @@ When something goes wrong, ask your AI:
 **Expected AI response:**
 ```bash
 # Step 1: Trace the failure chain
-temporal workflow diagnose --workflow-id purchase-123 --format mermaid
+temporal workflow describe --trace-root-cause --workflow-id purchase-123 --format mermaid
 
 # Step 2: If payment/notification involved, follow children
 # trace automatically follows child workflows
-temporal workflow diagnose --workflow-id purchase-123 --format mermaid
+temporal workflow describe --trace-root-cause --workflow-id purchase-123 --format mermaid
 
 # Step 3: Check timing if race condition suspected
 temporal workflow show --compact --workflow-id purchase-123 --format mermaid
