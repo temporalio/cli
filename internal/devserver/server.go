@@ -91,8 +91,9 @@ type StartOptions struct {
 }
 
 type Server struct {
-	server temporal.Server
-	ui     *uiserver.Server
+	server   temporal.Server
+	ui       *uiserver.Server
+	logLevel *slog.LevelVar
 }
 
 func Start(options StartOptions) (*Server, error) {
@@ -126,7 +127,7 @@ func Start(options StartOptions) (*Server, error) {
 	if options.UIIP != "" {
 		ui = options.buildUIServer()
 	}
-	server, err := options.buildServer()
+	server, logLevel, err := options.buildServer()
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +150,7 @@ func Start(options StartOptions) (*Server, error) {
 		}
 		return nil, err
 	}
-	return &Server{server, ui}, nil
+	return &Server{server: server, ui: ui, logLevel: logLevel}, nil
 }
 
 func (s *Server) Stop() {
@@ -157,6 +158,12 @@ func (s *Server) Stop() {
 		s.ui.Stop()
 	}
 	s.server.Stop()
+}
+
+func (s *Server) SuppressWarnings() {
+	if s.logLevel != nil {
+		s.logLevel.Set(slog.LevelError)
+	}
 }
 
 func (s *StartOptions) buildUIServer() *uiserver.Server {
@@ -173,19 +180,20 @@ func (s *StartOptions) buildUIServer() *uiserver.Server {
 	}))
 }
 
-func (s *StartOptions) buildServer() (temporal.Server, error) {
-	opts, err := s.buildServerOptions()
+func (s *StartOptions) buildServer() (temporal.Server, *slog.LevelVar, error) {
+	opts, logLevel, err := s.buildServerOptions()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return temporal.NewServer(opts...)
+	server, err := temporal.NewServer(opts...)
+	return server, logLevel, err
 }
 
-func (s *StartOptions) buildServerOptions() ([]temporal.ServerOption, error) {
+func (s *StartOptions) buildServerOptions() ([]temporal.ServerOption, *slog.LevelVar, error) {
 	// Build config and log it
 	conf, err := s.buildServerConfig()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	} else if s.LogConfig != nil {
 		// We're going to marshal YAML
 		if b, err := yaml.Marshal(conf); err != nil {
@@ -196,17 +204,19 @@ func (s *StartOptions) buildServerOptions() ([]temporal.ServerOption, error) {
 	}
 
 	// Build common opts
+	logLevel := &slog.LevelVar{}
+	logLevel.Set(s.LogLevel)
 	logger := slogLogger{
 		log:   s.Logger,
-		level: s.LogLevel,
+		level: logLevel,
 	}
 	authorizer, err := authorization.GetAuthorizerFromConfig(&conf.Global.Authorization)
 	if err != nil {
-		return nil, fmt.Errorf("failed creating authorizer: %w", err)
+		return nil, nil, fmt.Errorf("failed creating authorizer: %w", err)
 	}
 	claimMapper, err := authorization.GetClaimMapperFromConfig(&conf.Global.Authorization, logger)
 	if err != nil {
-		return nil, fmt.Errorf("failed creating claim mapper: %w", err)
+		return nil, nil, fmt.Errorf("failed creating claim mapper: %w", err)
 	}
 	opts := []temporal.ServerOption{
 		temporal.WithConfig(conf),
@@ -255,7 +265,7 @@ func (s *StartOptions) buildServerOptions() ([]temporal.ServerOption, error) {
 		opts = append(opts, temporal.WithChainedFrontendGrpcInterceptors(s.GRPCInterceptors...))
 	}
 
-	return opts, nil
+	return opts, logLevel, nil
 }
 
 func (s *StartOptions) buildServerConfig() (*config.Config, error) {

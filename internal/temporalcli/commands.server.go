@@ -165,7 +165,7 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 	}
 	cctx.Printer.Printlnf("%-8s http://%v:%v/metrics", "Metrics:", toFriendlyIp(opts.FrontendIP), opts.MetricsPort)
 	<-cctx.Done()
-	cctx.Printer.Println("Stopping server...")
+	s.SuppressWarnings()
 	return nil
 }
 
