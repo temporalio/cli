@@ -20,7 +20,7 @@ option-sets:
         type: string
         description: |
           File path to read TOML config from, defaults to
-          `$CONFIG_PATH/temporal/temporal.toml` where `$CONFIG_PATH` is defined
+          `$CONFIG_PATH/temporalio/temporal.toml` where `$CONFIG_PATH` is defined
           as `$HOME/.config` on Unix, `$HOME/Library/Application Support` on
           macOS, and `%AppData%` on Windows.
         experimental: true

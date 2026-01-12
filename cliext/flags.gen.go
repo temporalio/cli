@@ -34,7 +34,7 @@ func (v *CommonOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
 	f.StringVar(&v.Env, "env", "default", "Active environment name (`ENV`).")
 	f.StringVar(&v.EnvFile, "env-file", "", "Path to environment settings file. Defaults to `$HOME/.config/temporalio/temporal.yaml`.")
-	f.StringVar(&v.ConfigFile, "config-file", "", "File path to read TOML config from, defaults to `$CONFIG_PATH/temporal/temporal.toml` where `$CONFIG_PATH` is defined as `$HOME/.config` on Unix, `$HOME/Library/Application Support` on macOS, and `%AppData%` on Windows. EXPERIMENTAL.")
+	f.StringVar(&v.ConfigFile, "config-file", "", "File path to read TOML config from, defaults to `$CONFIG_PATH/temporalio/temporal.toml` where `$CONFIG_PATH` is defined as `$HOME/.config` on Unix, `$HOME/Library/Application Support` on macOS, and `%AppData%` on Windows. EXPERIMENTAL.")
 	f.StringVar(&v.Profile, "profile", "", "Profile to use for config file. EXPERIMENTAL.")
 	f.BoolVar(&v.DisableConfigFile, "disable-config-file", false, "If set, disables loading environment config from config file. EXPERIMENTAL.")
 	f.BoolVar(&v.DisableConfigEnv, "disable-config-env", false, "If set, disables loading environment config from environment variables. EXPERIMENTAL.")
