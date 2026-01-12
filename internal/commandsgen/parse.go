@@ -22,12 +22,12 @@ type (
 		Deprecated         string   `yaml:"deprecated"`
 		Short              string   `yaml:"short,omitempty"`
 		Default            string   `yaml:"default,omitempty"`
-		Env                string   `yaml:"env,omitempty"`
 		ImpliedEnv         string   `yaml:"implied-env,omitempty"`
 		Required           bool     `yaml:"required,omitempty"`
 		Aliases            []string `yaml:"aliases,omitempty"`
 		EnumValues         []string `yaml:"enum-values,omitempty"`
 		Experimental       bool     `yaml:"experimental,omitempty"`
+		Hidden             bool     `yaml:"hidden,omitempty"`
 		HiddenLegacyValues []string `yaml:"hidden-legacy-values,omitempty"`
 	}
 
@@ -59,9 +59,10 @@ type (
 
 	// OptionSets represents the structure of option sets.
 	OptionSets struct {
-		Name        string   `yaml:"name"`
-		Description string   `yaml:"description"`
-		Options     []Option `yaml:"options"`
+		Name            string   `yaml:"name"`
+		Description     string   `yaml:"description"`
+		Options         []Option `yaml:"options"`
+		ExternalPackage string   `yaml:"external-package"`
 	}
 
 	// Commands represents the top-level structure holding commands and option sets.
@@ -71,35 +72,62 @@ type (
 	}
 )
 
-// ParseCommands parses command definitions from YAML bytes.
-func ParseCommands(yamlData []byte) (Commands, error) {
-	// Fix CRLF
-	md := bytes.ReplaceAll(yamlData, []byte("\r\n"), []byte("\n"))
+// ParseCommands parses command definitions from one or more YAML byte slices.
+func ParseCommands(yamlDataList ...[]byte) (Commands, error) {
+	var res Commands
+	optionSetNames := make(map[string]bool)
+	commandNames := make(map[string]bool)
 
-	var m Commands
-	err := yaml.Unmarshal(md, &m)
-	if err != nil {
-		return Commands{}, fmt.Errorf("failed unmarshalling yaml: %w", err)
+	for _, yamlData := range yamlDataList {
+		// Fix CRLF
+		md := bytes.ReplaceAll(yamlData, []byte("\r\n"), []byte("\n"))
+
+		var m Commands
+		err := yaml.Unmarshal(md, &m)
+		if err != nil {
+			return Commands{}, fmt.Errorf("failed unmarshalling yaml: %w", err)
+		}
+
+		for _, optSet := range m.OptionSets {
+			// Skip external option-sets (imports) when checking for duplicates
+			if optSet.ExternalPackage != "" {
+				res.OptionSets = append(res.OptionSets, optSet)
+				continue
+			}
+			if optionSetNames[optSet.Name] {
+				return Commands{}, fmt.Errorf("duplicate option set %q", optSet.Name)
+			}
+			optionSetNames[optSet.Name] = true
+			res.OptionSets = append(res.OptionSets, optSet)
+		}
+
+		for _, cmd := range m.CommandList {
+			if commandNames[cmd.FullName] {
+				return Commands{}, fmt.Errorf("duplicate command %q", cmd.FullName)
+			}
+			commandNames[cmd.FullName] = true
+			res.CommandList = append(res.CommandList, cmd)
+		}
 	}
 
-	for i, optionSet := range m.OptionSets {
-		if err := m.OptionSets[i].processSection(); err != nil {
+	for i, optionSet := range res.OptionSets {
+		if err := res.OptionSets[i].processSection(); err != nil {
 			return Commands{}, fmt.Errorf("failed parsing option set section %q: %w", optionSet.Name, err)
 		}
 	}
 
-	for i, command := range m.CommandList {
-		if err := m.CommandList[i].processSection(); err != nil {
+	for i, command := range res.CommandList {
+		if err := res.CommandList[i].processSection(); err != nil {
 			return Commands{}, fmt.Errorf("failed parsing command section %q: %w", command.FullName, err)
 		}
 	}
 
 	// alphabetize commands
-	sort.Slice(m.CommandList, func(i, j int) bool {
-		return m.CommandList[i].FullName < m.CommandList[j].FullName
+	sort.Slice(res.CommandList, func(i, j int) bool {
+		return res.CommandList[i].FullName < res.CommandList[j].FullName
 	})
 
-	return m, nil
+	return res, nil
 }
 
 var markdownLinkPattern = regexp.MustCompile(`\[(.*?)\]\((.*?)\)`)
@@ -228,7 +256,7 @@ func (o *Option) processSection() error {
 		return fmt.Errorf("description should end in a '.'")
 	}
 
-	if o.Env != strings.ToUpper(o.Env) {
+	if o.ImpliedEnv != strings.ToUpper(o.ImpliedEnv) {
 		return fmt.Errorf("env variables must be in all caps")
 	}
 
