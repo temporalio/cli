@@ -335,6 +335,8 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 				State                              enums.PendingNexusOperationState
 				Attempt                            int32
 				ScheduleToCloseTimeout             string                                `cli:",cardOmitEmpty"`
+				ScheduleToStartTimeout             string                                `cli:",cardOmitEmpty"`
+				StartToCloseTimeout                string                                `cli:",cardOmitEmpty"`
 				NextAttemptScheduleTime            time.Time                             `cli:",cardOmitEmpty"`
 				LastAttemptCompleteTime            time.Time                             `cli:",cardOmitEmpty"`
 				LastAttemptFailure                 *failure.Failure                      `cli:",cardOmitEmpty"`
@@ -361,6 +363,8 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 				ops[i].LastAttemptCompleteTime = timestampToTime(op.LastAttemptCompleteTime)
 				ops[i].NextAttemptScheduleTime = timestampToTime(op.NextAttemptScheduleTime)
 				ops[i].ScheduleToCloseTimeout = formatDuration(op.GetScheduleToCloseTimeout().AsDuration())
+				ops[i].ScheduleToStartTimeout = formatDuration(op.GetScheduleToStartTimeout().AsDuration())
+				ops[i].StartToCloseTimeout = formatDuration(op.GetStartToCloseTimeout().AsDuration())
 				ops[i].BlockedReason = op.GetBlockedReason()
 				ops[i].CancelationState = op.GetCancellationInfo().GetState()
 				ops[i].CancelationAttempt = op.GetCancellationInfo().GetAttempt()
