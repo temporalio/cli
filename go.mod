@@ -16,10 +16,10 @@ require (
 	github.com/spf13/pflag v1.0.6
 	github.com/stretchr/testify v1.10.0
 	github.com/temporalio/ui-server/v2 v2.39.0
-	go.temporal.io/api v1.60.1-0.20260108175916-49710b8392af
+	go.temporal.io/api v1.60.1-0.20260113171616-51aa2c291ff8
 	go.temporal.io/sdk v1.38.0
 	go.temporal.io/sdk/contrib/envconfig v0.1.0
-	go.temporal.io/server v1.29.0-135.0.0.20251210204203-56cbfb9a643c
+	go.temporal.io/server v1.29.0-135.0.0.20260113195300-8f4d4ba06710
 	google.golang.org/grpc v1.72.2
 	google.golang.org/protobuf v1.36.6
 	gopkg.in/yaml.v3 v3.0.1
@@ -167,7 +167,3 @@ require (
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
 )
-
-replace go.temporal.io/api => ../api-go
-
-replace go.temporal.io/server => ../temporal
