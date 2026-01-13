@@ -560,7 +560,7 @@ func (s *SharedServerSuite) TestWorkflow_Describe_Deployment() {
 	}
 	version := worker.WorkerDeploymentVersion{
 		DeploymentName: deploymentName,
-		BuildId:        buildId,
+		BuildID:        buildId,
 	}
 	w := s.DevServer.StartDevWorker(s.Suite.T(), DevWorkerOptions{
 		Worker: worker.Options{
@@ -588,7 +588,7 @@ func (s *SharedServerSuite) TestWorkflow_Describe_Deployment() {
 			"worker", "deployment", "describe-version",
 			"--address", s.Address(),
 			"--deployment-name", version.DeploymentName,
-			"--build-id", version.BuildId,
+			"--build-id", version.BuildID,
 		)
 		assert.NoError(t, res.Err)
 	}, 30*time.Second, 100*time.Millisecond)
@@ -597,7 +597,7 @@ func (s *SharedServerSuite) TestWorkflow_Describe_Deployment() {
 		"worker", "deployment", "set-current-version",
 		"--address", s.Address(),
 		"--deployment-name", version.DeploymentName,
-		"--build-id", version.BuildId,
+		"--build-id", version.BuildID,
 		"--yes",
 	)
 	s.NoError(res.Err)
@@ -618,14 +618,14 @@ func (s *SharedServerSuite) TestWorkflow_Describe_Deployment() {
 		)
 		assert.NoError(t, res.Err)
 		assert.Contains(t, res.Stdout.String(), version.DeploymentName)
-		assert.Contains(t, res.Stdout.String(), version.BuildId)
+		assert.Contains(t, res.Stdout.String(), version.BuildID)
 		assert.Contains(t, res.Stdout.String(), "Pinned")
 	}, 30*time.Second, 100*time.Millisecond)
 
 	out := res.Stdout.String()
 	s.ContainsOnSameLine(out, "Behavior", "Pinned")
 	s.ContainsOnSameLine(out, "DeploymentName", version.DeploymentName)
-	s.ContainsOnSameLine(out, "BuildId", version.BuildId)
+	s.ContainsOnSameLine(out, "BuildId", version.BuildID)
 
 	// json
 	res = s.Execute(
@@ -640,7 +640,7 @@ func (s *SharedServerSuite) TestWorkflow_Describe_Deployment() {
 	s.NoError(temporalcli.UnmarshalProtoJSONWithOptions(res.Stdout.Bytes(), &jsonResp, true))
 	versioningInfo := jsonResp.WorkflowExecutionInfo.VersioningInfo
 	s.Equal("Pinned", versioningInfo.Behavior.String())
-	s.Equal(version.BuildId, versioningInfo.DeploymentVersion.BuildId)
+	s.Equal(version.BuildID, versioningInfo.DeploymentVersion.BuildId)
 	s.Equal(version.DeploymentName, versioningInfo.DeploymentVersion.DeploymentName)
 	s.Nil(versioningInfo.VersioningOverride)
 }
