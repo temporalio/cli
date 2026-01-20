@@ -15,7 +15,7 @@ require (
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
 	github.com/stretchr/testify v1.10.0
-	github.com/temporalio/cli/cliext v0.0.0
+	github.com/temporalio/cli/cliext v0.0.0-20260112201740-5187684a49f9
 	github.com/temporalio/ui-server/v2 v2.42.1
 	go.temporal.io/api v1.53.0
 	go.temporal.io/sdk v1.37.0
@@ -28,8 +28,6 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 	modernc.org/sqlite v1.34.1
 )
-
-replace github.com/temporalio/cli/cliext => ./cliext
 
 require (
 	cel.dev/expr v0.23.1 // indirect
