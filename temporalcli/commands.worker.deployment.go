@@ -93,7 +93,7 @@ func formatVersionSummaries(vss []client.WorkerDeploymentVersionSummary) ([]vers
 		}
 		vsRows = append(vsRows, versionSummariesRowType{
 			DeploymentName: vs.Version.DeploymentName,
-			BuildId:        vs.Version.BuildId,
+			BuildId:        vs.Version.BuildID,
 			CreateTime:     vs.CreateTime,
 			DrainageStatus: drainageStr,
 		})
@@ -108,11 +108,11 @@ func formatRoutingConfig(rc client.WorkerDeploymentRoutingConfig) (formattedRout
 	rvbid := ""
 	if rc.CurrentVersion != nil {
 		cvdn = rc.CurrentVersion.DeploymentName
-		cvbid = rc.CurrentVersion.BuildId
+		cvbid = rc.CurrentVersion.BuildID
 	}
 	if rc.RampingVersion != nil {
 		rvdn = rc.RampingVersion.DeploymentName
-		rvbid = rc.RampingVersion.BuildId
+		rvbid = rc.RampingVersion.BuildID
 	}
 	return formattedRoutingConfigType{
 		CurrentVersionDeploymentName:        cvdn,
@@ -161,11 +161,11 @@ func printWorkerDeploymentInfo(cctx *CommandContext, deploymentInfo client.Worke
 		rampVerBuildId := ""
 		if deploymentInfo.RoutingConfig.CurrentVersion != nil {
 			curVerDepName = deploymentInfo.RoutingConfig.CurrentVersion.DeploymentName
-			curVerBuildId = deploymentInfo.RoutingConfig.CurrentVersion.BuildId
+			curVerBuildId = deploymentInfo.RoutingConfig.CurrentVersion.BuildID
 		}
 		if deploymentInfo.RoutingConfig.RampingVersion != nil {
 			rampVerDepName = deploymentInfo.RoutingConfig.RampingVersion.DeploymentName
-			rampVerBuildId = deploymentInfo.RoutingConfig.RampingVersion.BuildId
+			rampVerBuildId = deploymentInfo.RoutingConfig.RampingVersion.BuildID
 		}
 		printMe := struct {
 			Name                                string
@@ -261,7 +261,7 @@ func workerDeploymentVersionInfoToRows(deploymentInfo client.WorkerDeploymentVer
 
 	return formattedWorkerDeploymentVersionInfoType{
 		DeploymentName:     deploymentInfo.Version.DeploymentName,
-		BuildId:            deploymentInfo.Version.BuildId,
+		BuildId:            deploymentInfo.Version.BuildID,
 		CreateTime:         deploymentInfo.CreateTime,
 		RoutingChangedTime: deploymentInfo.RoutingChangedTime,
 		CurrentSinceTime:   deploymentInfo.CurrentSinceTime,
@@ -307,7 +307,7 @@ func printWorkerDeploymentVersionInfo(cctx *CommandContext, deploymentInfo clien
 			Metadata                map[string]*common.Payload `cli:",cardOmitEmpty"`
 		}{
 			DeploymentName:          deploymentInfo.Version.DeploymentName,
-			BuildId:                 deploymentInfo.Version.BuildId,
+			BuildId:                 deploymentInfo.Version.BuildID,
 			CreateTime:              deploymentInfo.CreateTime,
 			RoutingChangedTime:      deploymentInfo.RoutingChangedTime,
 			CurrentSinceTime:        deploymentInfo.CurrentSinceTime,
@@ -620,7 +620,7 @@ func (c *TemporalWorkerDeploymentUpdateMetadataVersionCommand) run(cctx *Command
 	dHandle := cl.WorkerDeploymentClient().GetHandle(c.DeploymentName)
 	response, err := dHandle.UpdateVersionMetadata(cctx, client.WorkerDeploymentUpdateVersionMetadataOptions{
 		Version: worker.WorkerDeploymentVersion{
-			BuildId:        c.BuildId,
+			BuildID:        c.BuildId,
 			DeploymentName: c.DeploymentName,
 		},
 		MetadataUpdate: client.WorkerDeploymentMetadataUpdate{

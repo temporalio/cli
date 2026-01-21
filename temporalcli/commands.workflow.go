@@ -129,7 +129,7 @@ func (c *TemporalWorkflowUpdateOptionsCommand) run(cctx *CommandContext, args []
 			Value: &client.PinnedVersioningOverride{
 				Version: worker.WorkerDeploymentVersion{
 					DeploymentName: c.VersioningOverrideDeploymentName,
-					BuildId:        c.VersioningOverrideBuildId,
+					BuildID:        c.VersioningOverrideBuildId,
 				},
 			},
 		}
@@ -698,17 +698,17 @@ func versioningOverrideToProto(versioningOverride client.VersioningOverride) *wo
 	case *client.PinnedVersioningOverride:
 		return &workflowpb.VersioningOverride{
 			Behavior:      enums.VERSIONING_BEHAVIOR_PINNED,
-			PinnedVersion: fmt.Sprintf("%s.%s", v.Version.DeploymentName, v.Version.BuildId),
+			PinnedVersion: fmt.Sprintf("%s.%s", v.Version.DeploymentName, v.Version.BuildID),
 			Deployment: &deploymentpb.Deployment{
 				SeriesName: v.Version.DeploymentName,
-				BuildId:    v.Version.BuildId,
+				BuildId:    v.Version.BuildID,
 			},
 			Override: &workflowpb.VersioningOverride_Pinned{
 				Pinned: &workflowpb.VersioningOverride_PinnedOverride{
 					Behavior: workflowpb.VersioningOverride_PINNED_OVERRIDE_BEHAVIOR_PINNED,
 					Version: &deploymentpb.WorkerDeploymentVersion{
 						DeploymentName: v.Version.DeploymentName,
-						BuildId:        v.Version.BuildId,
+						BuildId:        v.Version.BuildID,
 					},
 				},
 			},

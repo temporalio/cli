@@ -560,7 +560,7 @@ func (s *SharedServerSuite) TestWorkflow_Describe_Deployment() {
 	}
 	version := worker.WorkerDeploymentVersion{
 		DeploymentName: deploymentName,
-		BuildId:        buildId,
+		BuildID:        buildId,
 	}
 	w := s.DevServer.StartDevWorker(s.Suite.T(), DevWorkerOptions{
 		Worker: worker.Options{
