@@ -161,6 +161,18 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 			OriginalStartTime:       timestampToTime(extendedInfo.OriginalStartTime),
 		}, printer.StructuredOptions{})
 	}
+	if extendedInfo != nil && extendedInfo.PauseInfo != nil {
+		cctx.Printer.Println(color.MagentaString("Pause Info:"))
+		_ = cctx.Printer.PrintStructured(struct {
+			Identity   string    `cli:",cardOmitEmpty"`
+			Reason     string    `cli:",cardOmitEmpty"`
+			PausedTime time.Time `cli:",cardOmitEmpty"`
+		}{
+			Identity:   extendedInfo.PauseInfo.GetIdentity(),
+			Reason:     extendedInfo.PauseInfo.GetReason(),
+			PausedTime: timestampToTime(extendedInfo.PauseInfo.GetPausedTime()),
+		}, printer.StructuredOptions{})
+	}
 
 	staticSummary := resp.GetExecutionConfig().GetUserMetadata().GetSummary()
 	staticDetails := resp.GetExecutionConfig().GetUserMetadata().GetDetails()
