@@ -155,6 +155,10 @@ func (s *SharedServerSuite) TestWorkflow_ResetWithWorkflowUpdateOptions_Single_P
 		assert.NoError(t, res.Err)
 	}, 30*time.Second, 100*time.Millisecond)
 
+	// Wait for the version to be registered in all task queue partitions
+	// TODO: replace with a task queue info check on the describe-version command once the CLI supports it
+	time.Sleep(1 * time.Second)
+
 	res := s.Execute(
 		"workflow", "reset", "with-workflow-update-options",
 		"--address", s.Address(),
