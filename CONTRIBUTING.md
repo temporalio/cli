@@ -20,10 +20,10 @@ Example to run a single test case:
 
 ## Adding/updating commands
 
-First, update [commands.yml](temporalcli/commandsgen/commands.yml) following the rules in that file. Then to regenerate the
-[commands.gen.go](temporalcli/commands.gen.go) file from code, simply run:
+First, update [commands.yaml](internal/temporalcli/commands.yaml) following the rules in that file. Then to regenerate the
+[commands.gen.go](internal/temporalcli/commands.gen.go) file from code, run:
 
-    go run ./temporalcli/internal/cmd/gen-commands
+    go run ./cmd/gen-commands -input internal/temporalcli/commands.yaml -pkg temporalcli -context "*CommandContext" > internal/temporalcli/commands.gen.go
 
 This will expect every non-parent command to have a `run` method, so for new commands developers will have to implement
 `run` on the new command in a separate file before it will compile.
@@ -31,21 +31,21 @@ This will expect every non-parent command to have a `run` method, so for new com
 Once a command is updated, the CI will automatically generate new docs
 and create a PR in the Documentation repo with the corresponding updates. To generate these docs locally, run:
 
-    go run ./temporalcli/internal/cmd/gen-docs
+    go run ./cmd/gen-docs -input internal/temporalcli/commands.yaml -output dist/docs
 
-This will auto-generate a new set of docs to `temporalcli/docs/`. If a new root command is added, a new file will be automatically generated, like `temporal activity` and `activity.mdx`.
+This will auto-generate a new set of docs to `dist/docs/`. If a new root command is added, a new file will be automatically generated, like `temporal activity` and `activity.mdx`.
 
 ## Inject additional build-time information
 
 To add build-time information to the version string printed by the binary, use
 
-    go build -ldflags "-X github.com/temporalio/cli/temporalcli.buildInfo=<MyString>"
+    go build -ldflags "-X github.com/temporalio/cli/internal.buildInfo=<MyString>"
 
 This can be useful if, for example, you've used a `replace` statement in go.mod pointing to a local directory.
 Note that inclusion of space characters in the value supplied via `-ldflags` is tricky.
 Here's an example that adds branch info from a local repo to the version string, and includes a space character:
 
-    go build -ldflags "-X 'github.com/temporalio/cli/temporalcli.buildInfo=ServerBranch $(git -C ../temporal rev-parse --abbrev-ref HEAD)'" -o temporal ./cmd/temporal/main.go
+    go build -ldflags "-X 'github.com/temporalio/cli/internal.buildInfo=ServerBranch $(git -C ../temporal rev-parse --abbrev-ref HEAD)'" -o temporal ./cmd/temporal/main.go
 
 ## Building Docker image
 

@@ -1,0 +1,123 @@
+name: Build and Publish Docker Image
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag for the Docker image (e.g., 1.2.3 or v1.2.3)'
+        required: true
+        type: string
+      publish:
+        description: 'Push the image to Docker Hub'
+        required: false
+        type: boolean
+        default: true
+      tag_latest:
+        description: 'Also tag this image as latest'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-publish:
+    name: Build and Publish Docker Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Get build metadata from release
+        id: meta
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+          INPUT_TAG_LATEST: ${{ inputs.tag_latest }}
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const inputVersion = process.env.INPUT_VERSION;
+            const inputTagLatest = process.env.INPUT_TAG_LATEST;
+
+            const version = inputVersion.startsWith('v') ? inputVersion.slice(1) : inputVersion;
+            const releaseTag = inputVersion.startsWith('v') ? inputVersion : `v${inputVersion}`;
+
+            const { data: release } = await github.rest.repos.getReleaseByTag({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag: releaseTag
+            });
+
+            const cliSha = release.target_commitish;
+            const imageShaTag = cliSha.substring(0, 7);
+
+            core.setOutput('cli_sha', cliSha);
+            core.setOutput('image_sha_tag', imageShaTag);
+            core.setOutput('version', version);
+            core.setOutput('release_tag', releaseTag);
+            core.setOutput('tag_latest', inputTagLatest === 'true');
+
+      - name: Download release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.meta.outputs.release_tag }}
+        run: |
+          echo "Downloading assets from release ${RELEASE_TAG}..."
+          gh release download "${RELEASE_TAG}" --pattern "temporal_*_linux_*.tar.gz"
+
+          echo "Extracting and organizing binaries..."
+          mkdir -p dist/amd64 dist/arm64
+
+          tar -xzf temporal_*_linux_amd64.tar.gz
+          mv temporal dist/amd64/temporal
+
+          tar -xzf temporal_*_linux_arm64.tar.gz
+          mv temporal dist/arm64/temporal
+
+          echo "Verifying binaries..."
+          ls -lh dist/amd64/temporal
+          ls -lh dist/arm64/temporal
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        if: inputs.publish
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push Docker image
+        if: inputs.publish
+        run: |
+          docker buildx bake \
+            --file docker-bake.hcl \
+            --push \
+            cli
+        env:
+          CLI_SHA: ${{ steps.meta.outputs.cli_sha }}
+          IMAGE_SHA_TAG: ${{ steps.meta.outputs.image_sha_tag }}
+          VERSION: ${{ steps.meta.outputs.version }}
+          TAG_LATEST: ${{ steps.meta.outputs.tag_latest }}
+          IMAGE_NAMESPACE: temporalio
+          IMAGE_NAME: temporal
+          GITHUB_REPOSITORY: ${{ github.repository }}
+
+      - name: Build Docker image (no push)
+        if: ${{ !inputs.publish }}
+        run: |
+          docker buildx bake \
+            --file docker-bake.hcl \
+            cli
+        env:
+          CLI_SHA: ${{ steps.meta.outputs.cli_sha }}
+          IMAGE_SHA_TAG: ${{ steps.meta.outputs.image_sha_tag }}
+          VERSION: ${{ steps.meta.outputs.version }}
+          TAG_LATEST: ${{ steps.meta.outputs.tag_latest }}
+          IMAGE_NAMESPACE: temporalio
+          IMAGE_NAME: temporal
+          GITHUB_REPOSITORY: ${{ github.repository }}

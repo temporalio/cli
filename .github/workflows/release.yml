@@ -1,0 +1,60 @@
+name: Release
+
+on:
+  workflow_dispatch:
+  release:
+    types:
+      - published
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: "go.mod"
+          check-latest: true
+          cache: true
+
+      - name: Get build date
+        id: date
+        run: echo "date=$(date '+%F-%T')" >> "$GITHUB_OUTPUT"
+
+      - name: Get build unix timestamp
+        id: timestamp
+        run: echo "timestamp=$(date '+%s')" >> "$GITHUB_OUTPUT"
+
+      - name: Get git branch
+        id: branch
+        run: echo "branch=$(git rev-parse --abbrev-ref HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Get build platform
+        id: platform
+        run: echo "platform=$(go version | cut -d ' ' -f 4)" >> "$GITHUB_OUTPUT"
+
+      - name: Get Go version
+        id: go
+        run: echo "go=$(go version | cut -d ' ' -f 3)" >> "$GITHUB_OUTPUT"
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          version: v2.12.7
+          args: release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BUILD_DATE: ${{ steps.date.outputs.date }}
+          BUILD_TS_UNIX: ${{ steps.timestamp.outputs.timestamp }}
+          GIT_BRANCH: ${{ steps.branch.outputs.branch }}
+          BUILD_PLATFORM: ${{ steps.platform.outputs.platform }}
+          GO_VERSION: ${{ steps.go.outputs.go }}

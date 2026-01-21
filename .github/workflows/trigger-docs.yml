@@ -3,8 +3,13 @@ on:
   workflow_dispatch:
   release:
     types: [published]
+
+permissions:
+  contents: read
+
 jobs:
   update:
+    if: github.repository == 'temporalio/cli'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -12,32 +17,36 @@ jobs:
     steps:
       - name: Get user info from GitHub API
         id: get_user
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
         run: |
-          echo "GitHub actor: ${{ github.actor }}"
+          echo "GitHub actor: ${GITHUB_ACTOR}"
           # Query the GitHub API for the user's details.
           curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            https://api.github.com/users/${{ github.actor }} > user.json
-          
+            "https://api.github.com/users/${GITHUB_ACTOR}" > user.json
+
           # Extract the user's full name if available, default to the username otherwise.
           git_name=$(jq -r '.name // empty' user.json)
           if [ -z "$git_name" ]; then
-            git_name="${{ github.actor }}"
+            git_name="${GITHUB_ACTOR}"
           fi
-          
-          git_email="${{ github.actor }}@users.noreply.github.com"
-          
+
+          git_email="${GITHUB_ACTOR}@users.noreply.github.com"
+
           # Set the outputs for subsequent steps.
-          echo "GIT_NAME=$git_name" >> $GITHUB_OUTPUT
-          echo "GIT_EMAIL=$git_email" >> $GITHUB_OUTPUT
+          echo "GIT_NAME=$git_name" >> "$GITHUB_OUTPUT"
+          echo "GIT_EMAIL=$git_email" >> "$GITHUB_OUTPUT"
 
       - name: Generate token
         id: generate_token
-        uses: actions/create-github-app-token@v1
+        uses: actions/create-github-app-token@v2
         with:
           app-id: ${{ secrets.TEMPORAL_CICD_APP_ID }}
           private-key: ${{ secrets.TEMPORAL_CICD_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
-          repositories: documentation # generate a token with permissions to trigger GHA in documentation repo
+          # Generate a token with permissions to trigger GHA in documentation repo.
+          repositories: |
+            documentation
 
       - name: Trigger Documentation Workflow
         env:

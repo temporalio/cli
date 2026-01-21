@@ -10,10 +10,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, macos-13, windows-latest, ubuntu-arm]
+        os:
+          [
+            ubuntu-latest,
+            macos-latest,
+            macos-15-intel,
+            windows-latest,
+            ubuntu-arm,
+          ]
         include:
           - os: ubuntu-latest
-            checkGenCodeTarget: true
+            checkGenCommands: true
             cloudTestTarget: true
           - os: ubuntu-arm
             runsOn: buildjet-4vcpu-ubuntu-2204-arm
@@ -31,7 +38,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: 'go.mod'
+          go-version-file: go.mod
 
       - name: Install gotestsum
         run: go install gotest.tools/gotestsum@latest
@@ -42,7 +49,7 @@ jobs:
       - name: Test
         run: gotestsum --junitfile junit-xml/${{matrix.os}}.xml -- ./...
 
-      - name: 'Upload junit-xml artifacts'
+      - name: Upload junit-xml artifacts
         uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -51,10 +58,15 @@ jobs:
           retention-days: 14
 
       - name: Regen code, confirm unchanged
-        if: ${{ matrix.checkGenCodeTarget }}
+        if: ${{ matrix.checkGenCommands }}
         run: |
-          go run ./temporalcli/internal/cmd/gen-commands
+          go run ./cmd/gen-commands -input internal/temporalcli/commands.yaml -pkg temporalcli -context "*CommandContext" > internal/temporalcli/commands.gen.go
           git diff --exit-code
+
+      - name: Generate docs, confirm working
+        if: ${{ matrix.checkGenCommands }}
+        run: |
+          go run ./cmd/gen-docs -input internal/temporalcli/commands.yaml -output dist/docs
 
       - name: Test cloud mTLS
         if: ${{ matrix.cloudTestTarget && env.HAS_SECRETS == 'true' }}
