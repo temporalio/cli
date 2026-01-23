@@ -14,6 +14,9 @@ import (
 	"google.golang.org/grpc"
 )
 
+// addressNamespaceTemplate is the placeholder in addresses that gets replaced with the namespace.
+const addressNamespaceTemplate = "${namespace}"
+
 // ClientOptionsBuilder contains options for building SDK client.Options.
 type ClientOptionsBuilder struct {
 	// CommonOptions contains common CLI options including profile config.
@@ -103,14 +106,21 @@ func (b *ClientOptionsBuilder) Build(ctx context.Context) (client.Options, error
 	} else if profile.Address == "" {
 		profile.Address = cfg.Address
 	}
+	var namespaceExplicitlySet bool
 	if cfg.FlagSet != nil && cfg.FlagSet.Changed("namespace") {
+		namespaceExplicitlySet = true
 		profile.Namespace = cfg.Namespace
-	} else if profile.Namespace == "" {
+	} else if profile.Namespace != "" {
+		namespaceExplicitlySet = true
+	} else {
 		profile.Namespace = cfg.Namespace
 	}
 
 	// Replace templated namespace in address, if present.
-	profile.Address = strings.ReplaceAll(profile.Address, "${namespace}", profile.Namespace)
+	addressHasNamespaceTemplate := strings.Contains(profile.Address, addressNamespaceTemplate)
+	if addressHasNamespaceTemplate {
+		profile.Address = strings.ReplaceAll(profile.Address, addressNamespaceTemplate, profile.Namespace)
+	}
 
 	// Set API key on profile if provided
 	if cfg.ApiKey != "" {
@@ -217,8 +227,8 @@ func (b *ClientOptionsBuilder) Build(ctx context.Context) (client.Options, error
 		}
 		// Only set credentials if OAuth is configured with an access token
 		if result.OAuth != nil && result.OAuth.Token != nil && result.OAuth.Token.AccessToken != "" {
-			// Error if OAuth is configured but namespace is still the default to show a clearer error message.
-			if clientOpts.Namespace == "default" {
+			// Error if OAuth is configured with templated address but namespace was not explicitly set.
+			if addressHasNamespaceTemplate && !namespaceExplicitlySet {
 				return client.Options{}, fmt.Errorf(
 					"namespace is required to be set via `--namespace` or configured in profile.")
 			}
