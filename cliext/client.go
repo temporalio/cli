@@ -109,6 +109,9 @@ func (b *ClientOptionsBuilder) Build(ctx context.Context) (client.Options, error
 		profile.Namespace = cfg.Namespace
 	}
 
+	// Replace templated namespace in address, if present.
+	profile.Address = strings.ReplaceAll(profile.Address, "${namespace}", profile.Namespace)
+
 	// Set API key on profile if provided
 	if cfg.ApiKey != "" {
 		profile.APIKey = cfg.ApiKey
@@ -214,6 +217,11 @@ func (b *ClientOptionsBuilder) Build(ctx context.Context) (client.Options, error
 		}
 		// Only set credentials if OAuth is configured with an access token
 		if result.OAuth != nil && result.OAuth.Token != nil && result.OAuth.Token.AccessToken != "" {
+			// Error if OAuth is configured but namespace is still the default to show a clearer error message.
+			if clientOpts.Namespace == "default" {
+				return client.Options{}, fmt.Errorf(
+					"Please specify a namespace with `--namespace` or configure one in your profile.")
+			}
 			creds := &oauthCredentials{
 				builder:        b,
 				config:         result.OAuth,
