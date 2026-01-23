@@ -246,7 +246,7 @@ func TestClientOptionsBuilder_OAuth_NonDefaultNamespaceRequired(t *testing.T) {
 	_, err := builder.Build(t.Context())
 
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "Please specify a namespace")
+	assert.Contains(t, err.Error(), "namespace is required")
 }
 
 func createTestOAuthConfig(t *testing.T, tokenURL string, expiry time.Time) string {

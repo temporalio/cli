@@ -220,7 +220,7 @@ func (b *ClientOptionsBuilder) Build(ctx context.Context) (client.Options, error
 			// Error if OAuth is configured but namespace is still the default to show a clearer error message.
 			if clientOpts.Namespace == "default" {
 				return client.Options{}, fmt.Errorf(
-					"Please specify a namespace with `--namespace` or configure one in your profile.")
+					"namespace is required to be set via `--namespace` or configured in profile.")
 			}
 			creds := &oauthCredentials{
 				builder:        b,
