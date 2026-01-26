@@ -80,6 +80,23 @@ func TestClientOptionsBuilder_OptionsPassedThrough(t *testing.T) {
 	assert.NotNil(t, opts.HeadersProvider)
 }
 
+func TestClientOptionsBuilder_NamespaceReplacementInAddress(t *testing.T) {
+	builder := &cliext.ClientOptionsBuilder{
+		CommonOptions: cliext.CommonOptions{
+			DisableConfigFile: true,
+		},
+		ClientOptions: cliext.ClientOptions{
+			Address:   "${namespace}.api.temporal.io:7233",
+			Namespace: "my-namespace",
+		},
+	}
+
+	opts, err := builder.Build(t.Context())
+
+	require.NoError(t, err)
+	assert.Equal(t, "my-namespace.api.temporal.io:7233", opts.HostPort)
+}
+
 func TestClientOptionsBuilder_OAuth_ValidToken(t *testing.T) {
 	s := newMockOAuthServer(t)
 	configFile := createTestOAuthConfig(t, s.tokenURL, time.Now().Add(time.Hour))
@@ -89,7 +106,8 @@ func TestClientOptionsBuilder_OAuth_ValidToken(t *testing.T) {
 			ConfigFile: configFile,
 		},
 		ClientOptions: cliext.ClientOptions{
-			Address: "localhost:17233",
+			Address:   "localhost:17233",
+			Namespace: "my-namespace",
 		},
 	}
 	opts, err := builder.Build(t.Context())
@@ -111,7 +129,8 @@ func TestClientOptionsBuilder_OAuth_Refresh(t *testing.T) {
 			ConfigFile: configFile,
 		},
 		ClientOptions: cliext.ClientOptions{
-			Address: "localhost:17233",
+			Address:   "localhost:17233",
+			Namespace: "my-namespace",
 		},
 	}
 	opts, err := builder.Build(context.Background())
@@ -141,7 +160,8 @@ func TestClientOptionsBuilder_OAuth_NoConfigFile(t *testing.T) {
 			DisableConfigFile: true,
 		},
 		ClientOptions: cliext.ClientOptions{
-			Address: "localhost:17233",
+			Address:   "localhost:17233",
+			Namespace: "my-namespace",
 		},
 	}
 	opts, err := builder.Build(t.Context())
@@ -160,7 +180,8 @@ func TestClientOptionsBuilder_OAuth_NoOAuthConfigured(t *testing.T) {
 			ConfigFile: configFile,
 		},
 		ClientOptions: cliext.ClientOptions{
-			Address: "localhost:17233",
+			Address:   "localhost:17233",
+			Namespace: "my-namespace",
 		},
 	}
 	opts, err := builder.Build(t.Context())
@@ -179,7 +200,8 @@ func TestClientOptionsBuilder_OAuth_DisableConfigFile(t *testing.T) {
 			DisableConfigFile: true, // disables loading config file
 		},
 		ClientOptions: cliext.ClientOptions{
-			Address: "localhost:17233",
+			Address:   "localhost:17233",
+			Namespace: "my-namespace",
 		},
 	}
 	opts, err := builder.Build(t.Context())
@@ -197,14 +219,34 @@ func TestClientOptionsBuilder_OAuth_APIKeyTakesPrecedence(t *testing.T) {
 			ConfigFile: configFileWithOAuth,
 		},
 		ClientOptions: cliext.ClientOptions{
-			Address: "localhost:17233",
-			ApiKey:  "explicit-api-key", // takes precedence
+			Address:   "localhost:17233",
+			Namespace: "my-namespace",
+			ApiKey:    "explicit-api-key", // takes precedence
 		},
 	}
 	opts, err := builder.Build(t.Context())
 
 	require.NoError(t, err)
 	assert.NotNil(t, opts.Credentials)
+}
+
+func TestClientOptionsBuilder_OAuth_NonDefaultNamespaceRequired(t *testing.T) {
+	configFileWithOAuth := createTestOAuthConfig(t, "", time.Now().Add(time.Hour))
+
+	builder := &cliext.ClientOptionsBuilder{
+		CommonOptions: cliext.CommonOptions{
+			ConfigFile: configFileWithOAuth,
+		},
+		ClientOptions: cliext.ClientOptions{
+			Address:   "${namespace}.api.temporal.io:7233",
+			Namespace: "default",
+		},
+	}
+
+	_, err := builder.Build(t.Context())
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "namespace is required")
 }
 
 func createTestOAuthConfig(t *testing.T, tokenURL string, expiry time.Time) string {

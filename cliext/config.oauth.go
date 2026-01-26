@@ -169,6 +169,8 @@ type StoreClientOAuthOptions struct {
 	ProfileName string
 	// OAuth is the OAuth configuration to store. If nil, removes OAuth from the profile.
 	OAuth *OAuthConfig
+	// Address is the server address to store in the profile. If empty, address is not modified.
+	Address string
 	// EnvLookup overrides environment variable lookup. If nil, uses os.LookupEnv.
 	EnvLookup envconfig.EnvLookup
 }
@@ -213,6 +215,21 @@ func StoreClientOAuth(opts StoreClientOAuthOptions) error {
 	// Merge OAuth configs back into the raw structure.
 	if err := mergeOAuthIntoRaw(existingRaw, oauthByProfile); err != nil {
 		return err
+	}
+
+	// Set address if provided.
+	if opts.Address != "" {
+		profileSection, ok := existingRaw["profile"].(map[string]any)
+		if !ok {
+			profileSection = make(map[string]any)
+			existingRaw["profile"] = profileSection
+		}
+		profile, ok := profileSection[profileName].(map[string]any)
+		if !ok {
+			profile = make(map[string]any)
+			profileSection[profileName] = profile
+		}
+		profile["address"] = opts.Address
 	}
 
 	// Marshal back to TOML.
