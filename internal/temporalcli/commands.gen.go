@@ -1224,10 +1224,11 @@ func NewTemporalOperatorClusterSystemCommand(cctx *CommandContext, parent *Tempo
 }
 
 type TemporalOperatorClusterUpsertCommand struct {
-	Parent           *TemporalOperatorClusterCommand
-	Command          cobra.Command
-	FrontendAddress  string
-	EnableConnection bool
+	Parent            *TemporalOperatorClusterCommand
+	Command           cobra.Command
+	FrontendAddress   string
+	EnableConnection  bool
+	EnableReplication bool
 }
 
 func NewTemporalOperatorClusterUpsertCommand(cctx *CommandContext, parent *TemporalOperatorClusterCommand) *TemporalOperatorClusterUpsertCommand {
@@ -1245,6 +1246,7 @@ func NewTemporalOperatorClusterUpsertCommand(cctx *CommandContext, parent *Tempo
 	s.Command.Flags().StringVar(&s.FrontendAddress, "frontend-address", "", "Remote endpoint. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "frontend-address")
 	s.Command.Flags().BoolVar(&s.EnableConnection, "enable-connection", false, "Set the connection to \"enabled\".")
+	s.Command.Flags().BoolVar(&s.EnableReplication, "enable-replication", false, "Set the replication to \"enabled\".")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
