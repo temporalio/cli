@@ -843,7 +843,7 @@ commands:
         - worker deployment set-current-version
         - worker deployment set-ramping-version
         - worker deployment delete-version
-        - worker deployment update-metadata-version
+        - worker deployment update-version-metadata
         - worker deployment manager-identity
 
   - name: temporal worker deployment describe
@@ -1117,7 +1117,7 @@ commands:
         type: bool
         description: Don't prompt to confirm set Ramping Version.
 
-  - name: temporal worker deployment update-metadata-version
+  - name: temporal worker deployment update-version-metadata
     summary: Change user-provided metadata for a Version
     description: |
       ```
@@ -1132,7 +1132,7 @@ commands:
       For example:
 
       ```
-       temporal worker deployment update-metadata-version \
+       temporal worker deployment update-version-metadata \
           --deployment-name YourDeploymentName --build-id YourBuildID \
           --metadata bar=1 \
           --metadata foo=true
@@ -2532,13 +2532,11 @@ commands:
     docs:
       description-header: >-
         Temporal Task Queue commands facilitate operations like describing
-        poller info, displaying partitions, fetching compatible Build IDs,
-        and determining Build ID reachability for effective Workflow and
-        Activity management.
+        poller info, backlog stats, and versioning info.
       keywords:
         - cli reference
         - command-line-interface-cli
-        - list partitions
+        - backlog
         - task queue
         - task queue describe
         - temporal cli
@@ -2592,41 +2590,15 @@ commands:
       Such tasks are not counted by these metrics. Despite the inaccuracy of
       these two metrics, the derived metric of `BacklogIncreaseRate` is accurate
       for backlogs older than a few seconds.
-
-      Safely retire Workers assigned a Build ID by checking reachability across
-      all task types. Use the flag `--report-reachability`:
-
-      ```
-      temporal task-queue describe \
-          --task-queue YourTaskQueue \
-          --select-build-id "YourBuildId" \
-          --report-reachability
-      ```
-
-      Task reachability information is returned for the requested versions and all
-      task types, which can be used to safely retire Workers with old code versions,
-      provided that they were assigned a Build ID.
-
-      Note that task reachability status is experimental and may significantly change
-      or be removed in a future release. Also, determining task reachability incurs a
-      non-trivial computing cost.
-
-      Task reachability states are reported per build ID. The state may be one of the
-      following:
-
-      - `Reachable`: using the current versioning rules, the Build ID may be used
-        by new Workflow Executions or Activities OR there are currently open
-        Workflow or backlogged Activity tasks assigned to the queue.
-      - `ClosedWorkflowsOnly`: the Build ID does not have open Workflow Executions
-        and can't be reached by new Workflow Executions. It MAY have closed
-        Workflow Executions within the Namespace retention period.
-      - `Unreachable`: this Build ID is not used for new Workflow Executions and
-        isn't used by any existing Workflow Execution within the retention period.
-
-      Task reachability is eventually consistent. You may experience a delay until
-      reachability converges to the most accurate value. This is designed to act
-      in the most conservative way until convergence. For example, `Reachable` is
-      more conservative than `ClosedWorkflowsOnly`.
+      
+      NOTE: for versioned Task Queues the reported stats include all versioned queues
+      and the unversioned queue. To get stats of a particular version, use 
+      `temporal worker deployment describe-version` instead.
+      
+      If the task queue is versioned, versioning info will be returned that includes
+      the Current and Ramping (if present) Worker Deployment Versions which receive
+      the tasks of this Task Queue are being dispatched to. To manage versioning use 
+      the `temporal worker deployment` commands.
     options:
       - name: task-queue
         type: string
@@ -2635,34 +2607,48 @@ commands:
         required: true
       - name: task-queue-type
         type: string-enum[]
-        description: Task Queue type. If not specified, all types are reported.
+        description: |
+          Task Queue type.
+          Note: This argument will become required in a future release and the support for 
+          multiple values will also be removed.
         enum-values:
           - workflow
           - activity
           - nexus
       - name: select-build-id
         type: string[]
-        description: Filter the Task Queue based on Build ID.
+        description: |
+          Filter the Task Queue based on Build ID.
+          Deprecated: Use `temporal worker deployment describe-version` instead.
       - name: select-unversioned
         type: bool
-        description: Include the unversioned queue.
+        description: | 
+          Include the unversioned queue.
+          Deprecated: For unversioned queues just refer to the returned stats by this command.
       - name: select-all-active
         type: bool
         description: |
           Include all active versions.
           A version is active if it had new tasks or polls recently.
+          Deprecated: Use `temporal worker deployment` comands to list the versions and then 
+          get stats of each version separately.
       - name: report-reachability
         type: bool
-        description: Display task reachability information.
+        description: |
+          Display task reachability information.
+          Deprecated: Use `temporal worker deployment describe-version` instead and refer to the Drainage status.
       - name: legacy-mode
         type: bool
         description: |
           Enable a legacy mode for servers that do not support rules-based
           worker versioning.
           This mode only provides pollers info.
+          Deprecated.
       - name: task-queue-type-legacy
         type: string-enum
-        description: Task Queue type (legacy mode only).
+        description: |
+          Task Queue type (legacy mode only).
+          Deprecated: use `--task-queue-type` instead.
         enum-values:
           - workflow
           - activity
@@ -2673,6 +2659,7 @@ commands:
           Query partitions 1 through `N`.
           Experimental/Temporary feature.
           Legacy mode only.
+          Deprecated. Partition is an internal concept. The returned stats cover all partitions.
         default: 1
       - name: disable-stats
         type: bool
