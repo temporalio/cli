@@ -469,8 +469,9 @@ func (s *SharedServerSuite) TestWorkflow_Cancel_SingleWorkflowSuccess() {
 }
 
 func (s *SharedServerSuite) TestWorkflow_Batch_Update_Options_Versioning_Override() {
-	buildId1 := uuid.NewString()
-	buildId2 := "bid2-" + uuid.NewString()
+	buildId1 := "id1-" + uuid.NewString()
+	buildId2 := "id2-" + uuid.NewString()
+	testTaskQueue := uuid.NewString()
 	deploymentName := uuid.NewString()
 	version1 := worker.WorkerDeploymentVersion{
 		DeploymentName: deploymentName,
@@ -485,7 +486,7 @@ func (s *SharedServerSuite) TestWorkflow_Batch_Update_Options_Versioning_Overrid
 		ctx.Done().Receive(ctx, nil)
 		return ctx.Err()
 	}
-	w := s.DevServer.StartDevWorker(s.Suite.T(), DevWorkerOptions{
+	w1 := s.DevServer.StartDevWorker(s.Suite.T(), DevWorkerOptions{
 		Worker: worker.Options{
 			DeploymentOptions: worker.DeploymentOptions{
 				UseVersioning:             true,
@@ -494,8 +495,22 @@ func (s *SharedServerSuite) TestWorkflow_Batch_Update_Options_Versioning_Overrid
 			},
 		},
 		Workflows: []any{waitingWorkflow},
+		TaskQueue: testTaskQueue,
 	})
-	defer w.Stop()
+	defer w1.Stop()
+
+	w2 := s.DevServer.StartDevWorker(s.Suite.T(), DevWorkerOptions{
+		Worker: worker.Options{
+			DeploymentOptions: worker.DeploymentOptions{
+				UseVersioning:             true,
+				Version:                   version2,
+				DefaultVersioningBehavior: workflow.VersioningBehaviorPinned,
+			},
+		},
+		Workflows: []any{waitingWorkflow},
+		TaskQueue: testTaskQueue,
+	})
+	defer w2.Stop()
 
 	s.EventuallyWithT(func(t *assert.CollectT) {
 		res := s.Execute(
@@ -512,6 +527,16 @@ func (s *SharedServerSuite) TestWorkflow_Batch_Update_Options_Versioning_Overrid
 			"--address", s.Address(),
 			"--deployment-name", version1.DeploymentName,
 			"--build-id", version1.BuildID,
+		)
+		assert.NoError(t, res.Err)
+	}, 30*time.Second, 100*time.Millisecond)
+
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "describe-version",
+			"--address", s.Address(),
+			"--deployment-name", version2.DeploymentName,
+			"--build-id", version2.BuildID,
 		)
 		assert.NoError(t, res.Err)
 	}, 30*time.Second, 100*time.Millisecond)
@@ -533,7 +558,7 @@ func (s *SharedServerSuite) TestWorkflow_Batch_Update_Options_Versioning_Overrid
 		run, err := s.Client.ExecuteWorkflow(
 			s.Context,
 			client.StartWorkflowOptions{
-				TaskQueue:        w.Options.TaskQueue,
+				TaskQueue:        w1.Options.TaskQueue,
 				SearchAttributes: map[string]any{"CustomKeywordField": searchAttr},
 			},
 			waitingWorkflow,
@@ -609,8 +634,9 @@ func (s *SharedServerSuite) TestWorkflow_Batch_Update_Options_Versioning_Overrid
 }
 
 func (s *SharedServerSuite) TestWorkflow_Update_Options_Versioning_Override() {
-	buildId1 := uuid.NewString()
-	buildId2 := uuid.NewString()
+	buildId1 := "id1-" + uuid.NewString()
+	buildId2 := "id2-" + uuid.NewString()
+	testTaskQueue := uuid.NewString()
 	buildId3 := "id3-" + uuid.NewString()
 	deploymentName := uuid.NewString()
 	version1 := worker.WorkerDeploymentVersion{
@@ -627,7 +653,7 @@ func (s *SharedServerSuite) TestWorkflow_Update_Options_Versioning_Override() {
 		ctx.Done().Receive(ctx, nil)
 		return ctx.Err()
 	}
-	w := s.DevServer.StartDevWorker(s.Suite.T(), DevWorkerOptions{
+	w1 := s.DevServer.StartDevWorker(s.Suite.T(), DevWorkerOptions{
 		Worker: worker.Options{
 			DeploymentOptions: worker.DeploymentOptions{
 				UseVersioning:             true,
@@ -636,8 +662,22 @@ func (s *SharedServerSuite) TestWorkflow_Update_Options_Versioning_Override() {
 			},
 		},
 		Workflows: []any{waitingWorkflow},
+		TaskQueue: testTaskQueue,
 	})
-	defer w.Stop()
+	defer w1.Stop()
+
+	w2 := s.DevServer.StartDevWorker(s.Suite.T(), DevWorkerOptions{
+		Worker: worker.Options{
+			DeploymentOptions: worker.DeploymentOptions{
+				UseVersioning:             true,
+				Version:                   version2,
+				DefaultVersioningBehavior: workflow.VersioningBehaviorPinned,
+			},
+		},
+		Workflows: []any{waitingWorkflow},
+		TaskQueue: testTaskQueue,
+	})
+	defer w2.Stop()
 
 	s.EventuallyWithT(func(t *assert.CollectT) {
 		res := s.Execute(
@@ -658,6 +698,16 @@ func (s *SharedServerSuite) TestWorkflow_Update_Options_Versioning_Override() {
 		assert.NoError(t, res.Err)
 	}, 30*time.Second, 100*time.Millisecond)
 
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "describe-version",
+			"--address", s.Address(),
+			"--deployment-name", version2.DeploymentName,
+			"--build-id", version2.BuildID,
+		)
+		assert.NoError(t, res.Err)
+	}, 30*time.Second, 100*time.Millisecond)
+
 	res := s.Execute(
 		"worker", "deployment", "set-current-version",
 		"--address", s.Address(),
@@ -670,7 +720,7 @@ func (s *SharedServerSuite) TestWorkflow_Update_Options_Versioning_Override() {
 	// Start the workflow and wait until the operation is started.
 	run, err := s.Client.ExecuteWorkflow(
 		s.Context,
-		client.StartWorkflowOptions{TaskQueue: w.Options.TaskQueue},
+		client.StartWorkflowOptions{TaskQueue: w1.Options.TaskQueue},
 		waitingWorkflow,
 	)
 	s.NoError(err)
@@ -708,7 +758,7 @@ func (s *SharedServerSuite) TestWorkflow_Update_Options_Versioning_Override() {
 	s.ContainsOnSameLine(res.Stdout.String(), "OverridePinnedVersionDeploymentName", version2.DeploymentName)
 	s.ContainsOnSameLine(res.Stdout.String(), "OverridePinnedVersionBuildId", version2.BuildID)
 
-	// Using only build-id
+	// Using only build-id (should fail - pinned requires both deployment name and build id)
 	res = s.Execute(
 		"workflow", "update-options",
 		"--address", s.Address(),
@@ -716,7 +766,7 @@ func (s *SharedServerSuite) TestWorkflow_Update_Options_Versioning_Override() {
 		"--versioning-override-behavior", "pinned",
 		"--versioning-override-build-id", buildId3,
 	)
-	s.NoError(res.Err)
+	s.ErrorContains(res.Err, "missing deployment name and/or build id with 'pinned' behavior")
 
 	res = s.Execute(
 		"workflow", "describe",
@@ -726,7 +776,7 @@ func (s *SharedServerSuite) TestWorkflow_Update_Options_Versioning_Override() {
 	s.NoError(res.Err)
 
 	s.ContainsOnSameLine(res.Stdout.String(), "OverrideBehavior", "Pinned")
-	s.ContainsOnSameLine(res.Stdout.String(), "OverridePinnedVersionBuildId", buildId3)
+	s.ContainsOnSameLine(res.Stdout.String(), "OverridePinnedVersionBuildId", buildId2)
 
 	// remove override
 	res = s.Execute(

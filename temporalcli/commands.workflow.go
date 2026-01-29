@@ -111,7 +111,7 @@ func (c *TemporalWorkflowUpdateOptionsCommand) run(cctx *CommandContext, args []
 	}
 
 	if c.VersioningOverrideBehavior.Value == "pinned" {
-		if c.VersioningOverrideDeploymentName == "" && c.VersioningOverrideBuildId == "" {
+		if c.VersioningOverrideDeploymentName == "" || c.VersioningOverrideBuildId == "" {
 			return fmt.Errorf("missing deployment name and/or build id with 'pinned' behavior")
 		}
 	}
