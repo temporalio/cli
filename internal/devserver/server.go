@@ -47,13 +47,13 @@ import (
 	"go.temporal.io/server/common/metrics"
 	sqliteplugin "go.temporal.io/server/common/persistence/sql/sqlplugin/sqlite"
 	"go.temporal.io/server/common/primitives"
-	"go.temporal.io/server/components/callbacks"
 	"go.temporal.io/server/components/nexusoperations"
 	"go.temporal.io/server/schema/sqlite"
 	sqliteschema "go.temporal.io/server/schema/sqlite"
 	"go.temporal.io/server/temporal"
 	"google.golang.org/grpc"
 	"gopkg.in/yaml.v3"
+	"go.temporal.io/server/components/callbacks"
 )
 
 const (
@@ -244,6 +244,7 @@ func (s *StartOptions) buildServerOptions() ([]temporal.ServerOption, *slog.Leve
 	// Enable the system callback URL for worker targets.
 	dynConf[nexusoperations.UseSystemCallbackURL.Key()] = true
 
+	dynConf[callbacks.AllowedAddresses.Key()] = true
 	// Dynamic config if set
 	for k, v := range s.DynamicConfigValues {
 		dynConf[dynamicconfig.MakeKey(k)] = v
