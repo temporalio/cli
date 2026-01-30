@@ -48,9 +48,19 @@ type jsonDrainageInfo struct {
 	LastCheckedTime time.Time `json:"lastCheckedTime"`
 }
 
+type jsonVersionStatsType struct {
+	ApproximateBacklogCount int64   `json:"approximateBacklogCount"`
+	ApproximateBacklogAge   int64   `json:"approximateBacklogAge"` // Duration is serialized as nanoseconds
+	BacklogIncreaseRate     float32 `json:"backlogIncreaseRate"`
+	TasksAddRate            float32 `json:"tasksAddRate"`
+	TasksDispatchRate       float32 `json:"tasksDispatchRate"`
+}
+
 type jsonTaskQueueInfoRowType struct {
-	Name string `json:"name"`
-	Type string `json:"type"`
+	Name               string                          `json:"name"`
+	Type               string                          `json:"type"`
+	Stats              *jsonVersionStatsType           `json:"stats,omitempty"`
+	StatsByPriorityKey map[string]jsonVersionStatsType `json:"statsByPriorityKey,omitempty"`
 }
 
 type jsonDeploymentVersionInfoType struct {
@@ -768,4 +778,111 @@ func (s *SharedServerSuite) TestDeployment_Set_Manager_Identity() {
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
 	s.Equal(deploymentName, jsonOut.Name)
 	s.Equal(testIdentity, jsonOut.ManagerIdentity)
+}
+
+func (s *SharedServerSuite) TestDeployment_Describe_Version_TaskQueueStats() {
+	deploymentName := uuid.NewString()
+	buildId := uuid.NewString()
+	taskQueue := uuid.NewString()
+	version := worker.WorkerDeploymentVersion{
+		DeploymentName: deploymentName,
+		BuildID:        buildId,
+	}
+
+	// Start a worker with deployment versioning
+	w := s.DevServer.StartDevWorker(s.Suite.T(), DevWorkerOptions{
+		TaskQueue: taskQueue,
+		Worker: worker.Options{
+			DeploymentOptions: worker.DeploymentOptions{
+				UseVersioning:             true,
+				Version:                   version,
+				DefaultVersioningBehavior: workflow.VersioningBehaviorAutoUpgrade,
+			},
+		},
+	})
+
+	// Wait for the deployment version to appear
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "describe-version",
+			"--address", s.Address(),
+			"--deployment-name", version.DeploymentName, "--build-id", version.BuildID,
+		)
+		assert.NoError(t, res.Err)
+	}, 30*time.Second, 100*time.Millisecond)
+
+	// Set as current version
+	res := s.Execute(
+		"worker", "deployment", "set-current-version",
+		"--address", s.Address(),
+		"--deployment-name", version.DeploymentName, "--build-id", version.BuildID,
+		"--yes",
+	)
+	s.NoError(res.Err)
+
+	// Keep worker running for the test - we're testing that stats appear/disappear correctly
+	defer w.Stop()
+
+	// Test 1: describe-version WITHOUT --report-task-queue-stats should NOT show stats columns
+	res = s.Execute(
+		"worker", "deployment", "describe-version",
+		"--address", s.Address(),
+		"--deployment-name", version.DeploymentName, "--build-id", version.BuildID,
+	)
+	s.NoError(res.Err)
+	// Stats columns should not appear in text output
+	s.NotContains(res.Stdout.String(), "ApproximateBacklogCount")
+
+	// Test 2: describe-version WITH --report-task-queue-stats should show stats columns
+	res = s.Execute(
+		"worker", "deployment", "describe-version",
+		"--address", s.Address(),
+		"--deployment-name", version.DeploymentName, "--build-id", version.BuildID,
+		"--report-task-queue-stats",
+	)
+	s.NoError(res.Err)
+	// Stats columns should appear in text output
+	s.Contains(res.Stdout.String(), "ApproximateBacklogCount")
+
+	// Test 3: JSON output without stats flag - stats should be nil/missing
+	res = s.Execute(
+		"worker", "deployment", "describe-version",
+		"--address", s.Address(),
+		"--deployment-name", version.DeploymentName, "--build-id", version.BuildID,
+		"--output", "json",
+	)
+	s.NoError(res.Err)
+	var jsonOutNoStats jsonDeploymentVersionInfoType
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOutNoStats))
+	// Should have task queue info but no stats
+	s.Greater(len(jsonOutNoStats.TaskQueuesInfos), 0)
+	for _, tq := range jsonOutNoStats.TaskQueuesInfos {
+		s.Nil(tq.Stats, "Stats should be nil when --report-task-queue-stats is not provided")
+	}
+
+	// Test 4: JSON output with stats flag - stats should be present
+	res = s.Execute(
+		"worker", "deployment", "describe-version",
+		"--address", s.Address(),
+		"--deployment-name", version.DeploymentName, "--build-id", version.BuildID,
+		"--report-task-queue-stats",
+		"--output", "json",
+	)
+	s.NoError(res.Err)
+	var jsonOutWithStats jsonDeploymentVersionInfoType
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOutWithStats))
+	// Should have task queue info with stats
+	s.Greater(len(jsonOutWithStats.TaskQueuesInfos), 0)
+
+	// Verify stats are present when --report-task-queue-stats is provided
+	foundTQWithStats := false
+	for _, tq := range jsonOutWithStats.TaskQueuesInfos {
+		if tq.Stats != nil {
+			foundTQWithStats = true
+			// Stats struct should exist - the actual values may be 0 depending on timing
+			// Just verify the struct is populated
+			break
+		}
+	}
+	s.True(foundTQWithStats, "At least one task queue should have stats when --report-task-queue-stats is provided")
 }
