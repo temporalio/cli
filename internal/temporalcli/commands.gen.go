@@ -2957,6 +2957,7 @@ type TemporalWorkerDeploymentDescribeVersionCommand struct {
 	Parent  *TemporalWorkerDeploymentCommand
 	Command cobra.Command
 	DeploymentVersionOptions
+	ReportTaskQueueStats bool
 }
 
 func NewTemporalWorkerDeploymentDescribeVersionCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentCommand) *TemporalWorkerDeploymentDescribeVersionCommand {
@@ -2971,6 +2972,7 @@ func NewTemporalWorkerDeploymentDescribeVersionCommand(cctx *CommandContext, par
 		s.Command.Long = "```\n+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n```\n\nDescribe properties of a Worker Deployment Version, such as the task\nqueues polled by workers in this Deployment Version, or drainage\ninformation required to safely decommission workers, or user-provided\nmetadata, or its creation/modification time.\n\n```\ntemporal worker deployment describe-version [options]\n```\n\nFor example, to describe a deployment version  in a deployment\n`YourDeploymentName`, with Build ID `YourBuildID`, and in the default\nnamespace:\n\n```\ntemporal worker deployment describe-version \\\n    --deployment-name YourDeploymentName --build-id YourBuildID\n```"
 	}
 	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().BoolVar(&s.ReportTaskQueueStats, "report-task-queue-stats", false, "Report stats for task queues polled by this version.")
 	s.DeploymentVersionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {

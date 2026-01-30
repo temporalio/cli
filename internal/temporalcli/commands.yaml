@@ -954,6 +954,10 @@ commands:
       ```
     option-sets:
       - deployment-version
+    options:
+      - name: report-task-queue-stats
+        type: bool
+        description: Report stats for task queues polled by this version.
 
   - name: temporal worker deployment delete-version
     summary: Delete a Worker Deployment Version
