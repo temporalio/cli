@@ -59,8 +59,8 @@ type formattedDrainageInfo struct {
 type formattedTaskQueueInfoRowType struct {
 	Name               string                                 `json:"name"`
 	Type               string                                 `json:"type"`
-	Stats              formattedVersionStatsRowType           `json:"stats"`
-	StatsByPriorityKey map[int32]formattedVersionStatsRowType `json:"statsByPriorityKey"`
+	Stats              *formattedVersionStatsRowType          `json:"stats,omitempty"`
+	StatsByPriorityKey map[int32]formattedVersionStatsRowType `json:"statsByPriorityKey,omitempty"`
 }
 
 type formattedVersionStatsRowType struct {
@@ -274,7 +274,7 @@ func formatDrainageInfo(drainageInfo *client.WorkerDeploymentVersionDrainageInfo
 	}, nil
 }
 
-func formatTaskQueuesInfos(tqis []client.WorkerDeploymentTaskQueueInfo) ([]formattedTaskQueueInfoRowType, error) {
+func formatTaskQueuesInfos(tqis []client.WorkerDeploymentTaskQueueInfo, includeStats bool) ([]formattedTaskQueueInfoRowType, error) {
 	var tqiRows []formattedTaskQueueInfoRowType
 	for _, tqi := range tqis {
 		tqTypeStr, err := taskQueueTypeToStr(tqi.Type)
@@ -282,22 +282,32 @@ func formatTaskQueuesInfos(tqis []client.WorkerDeploymentTaskQueueInfo) ([]forma
 			return tqiRows, err
 		}
 
-		fVersionStats, err := formatVersionStatsRowType(tqi.Stats)
-		fVersionStatsByPriorityKey := map[int32]formattedVersionStatsRowType{}
-		for k, v := range tqi.StatsByPriorityKey {
-			formatted, err := formatVersionStatsRowType(&v)
+		row := formattedTaskQueueInfoRowType{
+			Name: tqi.Name,
+			Type: tqTypeStr,
+		}
+
+		if includeStats {
+			fVersionStats, err := formatVersionStatsRowType(tqi.Stats)
 			if err != nil {
 				return tqiRows, err
 			}
-			fVersionStatsByPriorityKey[k] = formatted
+			row.Stats = &fVersionStats
+
+			if len(tqi.StatsByPriorityKey) > 0 {
+				fVersionStatsByPriorityKey := map[int32]formattedVersionStatsRowType{}
+				for k, v := range tqi.StatsByPriorityKey {
+					formatted, err := formatVersionStatsRowType(&v)
+					if err != nil {
+						return tqiRows, err
+					}
+					fVersionStatsByPriorityKey[k] = formatted
+				}
+				row.StatsByPriorityKey = fVersionStatsByPriorityKey
+			}
 		}
 
-		tqiRows = append(tqiRows, formattedTaskQueueInfoRowType{
-			Name:               tqi.Name,
-			Type:               tqTypeStr,
-			Stats:              fVersionStats,
-			StatsByPriorityKey: fVersionStatsByPriorityKey,
-		})
+		tqiRows = append(tqiRows, row)
 	}
 	return tqiRows, nil
 }
@@ -315,8 +325,8 @@ func formatVersionStatsRowType(tqStats *client.TaskQueueStats) (formattedVersion
 	}, nil
 }
 
-func workerDeploymentVersionInfoToRows(deploymentInfo client.WorkerDeploymentVersionInfo) (formattedWorkerDeploymentVersionInfoType, error) {
-	tqi, err := formatTaskQueuesInfos(deploymentInfo.TaskQueuesInfos)
+func workerDeploymentVersionInfoToRows(deploymentInfo client.WorkerDeploymentVersionInfo, includeStats bool) (formattedWorkerDeploymentVersionInfoType, error) {
+	tqi, err := formatTaskQueuesInfos(deploymentInfo.TaskQueuesInfos, includeStats)
 	if err != nil {
 		return formattedWorkerDeploymentVersionInfoType{}, err
 	}
@@ -345,7 +355,7 @@ type printVersionInfoOptions struct {
 }
 
 func printWorkerDeploymentVersionInfo(cctx *CommandContext, deploymentInfo client.WorkerDeploymentVersionInfo, msg string, opts printVersionInfoOptions) error {
-	fDeploymentInfo, err := workerDeploymentVersionInfoToRows(deploymentInfo)
+	fDeploymentInfo, err := workerDeploymentVersionInfoToRows(deploymentInfo, opts.showStats)
 	if err != nil {
 		return err
 	}
@@ -422,15 +432,18 @@ func printTaskQueuesInfo(cctx *CommandContext, taskQueues []formattedTaskQueueIn
 		// Show flattened stats in the table
 		rows := make([]taskQueueDisplayRowWithStats, 0, len(taskQueues))
 		for _, tq := range taskQueues {
-			rows = append(rows, taskQueueDisplayRowWithStats{
-				Name:                    tq.Name,
-				Type:                    tq.Type,
-				ApproximateBacklogCount: tq.Stats.ApproximateBacklogCount,
-				ApproximateBacklogAge:   formatDurationShort(tq.Stats.ApproximateBacklogAge),
-				BacklogIncreaseRate:     tq.Stats.BacklogIncreaseRate,
-				TasksAddRate:            tq.Stats.TasksAddRate,
-				TasksDispatchRate:       tq.Stats.TasksDispatchRate,
-			})
+			row := taskQueueDisplayRowWithStats{
+				Name: tq.Name,
+				Type: tq.Type,
+			}
+			if tq.Stats != nil {
+				row.ApproximateBacklogCount = tq.Stats.ApproximateBacklogCount
+				row.ApproximateBacklogAge = formatDurationShort(tq.Stats.ApproximateBacklogAge)
+				row.BacklogIncreaseRate = tq.Stats.BacklogIncreaseRate
+				row.TasksAddRate = tq.Stats.TasksAddRate
+				row.TasksDispatchRate = tq.Stats.TasksDispatchRate
+			}
+			rows = append(rows, row)
 		}
 		if err := cctx.Printer.PrintStructured(rows, printer.StructuredOptions{Table: &printer.TableOptions{}}); err != nil {
 			return fmt.Errorf("displaying task queues failed: %w", err)
