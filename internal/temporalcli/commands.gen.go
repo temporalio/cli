@@ -2866,7 +2866,7 @@ func NewTemporalWorkerDeploymentCommand(cctx *CommandContext, parent *TemporalWo
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentManagerIdentityCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentSetCurrentVersionCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentSetRampingVersionCommand(cctx, &s).Command)
-	s.Command.AddCommand(&NewTemporalWorkerDeploymentUpdateMetadataVersionCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkerDeploymentUpdateVersionMetadataCommand(cctx, &s).Command)
 	return &s
 }
 
@@ -3158,7 +3158,7 @@ func NewTemporalWorkerDeploymentSetRampingVersionCommand(cctx *CommandContext, p
 	return &s
 }
 
-type TemporalWorkerDeploymentUpdateMetadataVersionCommand struct {
+type TemporalWorkerDeploymentUpdateVersionMetadataCommand struct {
 	Parent  *TemporalWorkerDeploymentCommand
 	Command cobra.Command
 	DeploymentVersionOptions
@@ -3166,16 +3166,16 @@ type TemporalWorkerDeploymentUpdateMetadataVersionCommand struct {
 	RemoveEntries []string
 }
 
-func NewTemporalWorkerDeploymentUpdateMetadataVersionCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentCommand) *TemporalWorkerDeploymentUpdateMetadataVersionCommand {
-	var s TemporalWorkerDeploymentUpdateMetadataVersionCommand
+func NewTemporalWorkerDeploymentUpdateVersionMetadataCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentCommand) *TemporalWorkerDeploymentUpdateVersionMetadataCommand {
+	var s TemporalWorkerDeploymentUpdateVersionMetadataCommand
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
-	s.Command.Use = "update-metadata-version [flags]"
+	s.Command.Use = "update-version-metadata [flags]"
 	s.Command.Short = "Change user-provided metadata for a Version"
 	if hasHighlighting {
-		s.Command.Long = "\x1b[1m+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\x1b[0m\n\nUpdate metadata associated with a Worker Deployment Version.\n\nFor example:\n\n\x1b[1m temporal worker deployment update-metadata-version \\\n    --deployment-name YourDeploymentName --build-id YourBuildID \\\n    --metadata bar=1 \\\n    --metadata foo=true\x1b[0m\n\nThe current metadata is also returned with \x1b[1mdescribe-version\x1b[0m:\n\x1b[1m temporal worker deployment describe-version \\\n    --deployment-name YourDeploymentName --build-id YourBuildID \\\x1b[0m"
+		s.Command.Long = "\x1b[1m+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\x1b[0m\n\nUpdate metadata associated with a Worker Deployment Version.\n\nFor example:\n\n\x1b[1m temporal worker deployment update-version-metadata \\\n    --deployment-name YourDeploymentName --build-id YourBuildID \\\n    --metadata bar=1 \\\n    --metadata foo=true\x1b[0m\n\nThe current metadata is also returned with \x1b[1mdescribe-version\x1b[0m:\n\x1b[1m temporal worker deployment describe-version \\\n    --deployment-name YourDeploymentName --build-id YourBuildID \\\x1b[0m"
 	} else {
-		s.Command.Long = "```\n+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n```\n\nUpdate metadata associated with a Worker Deployment Version.\n\nFor example:\n\n```\n temporal worker deployment update-metadata-version \\\n    --deployment-name YourDeploymentName --build-id YourBuildID \\\n    --metadata bar=1 \\\n    --metadata foo=true\n```\n\nThe current metadata is also returned with `describe-version`:\n```\n temporal worker deployment describe-version \\\n    --deployment-name YourDeploymentName --build-id YourBuildID \\\n```"
+		s.Command.Long = "```\n+---------------------------------------------------------------------+\n| CAUTION: Worker Deployment is experimental. Deployment commands are |\n| subject to change.                                                  |\n+---------------------------------------------------------------------+\n```\n\nUpdate metadata associated with a Worker Deployment Version.\n\nFor example:\n\n```\n temporal worker deployment update-version-metadata \\\n    --deployment-name YourDeploymentName --build-id YourBuildID \\\n    --metadata bar=1 \\\n    --metadata foo=true\n```\n\nThe current metadata is also returned with `describe-version`:\n```\n temporal worker deployment describe-version \\\n    --deployment-name YourDeploymentName --build-id YourBuildID \\\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringArrayVar(&s.Metadata, "metadata", nil, "Set deployment metadata using `KEY=\"VALUE\"` pairs. Keys must be identifiers, and values must be JSON values. For example: `YourKey={\"your\": \"value\"}` Can be passed multiple times.")
