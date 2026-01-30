@@ -243,15 +243,6 @@ func (s *StartOptions) buildServerOptions() ([]temporal.ServerOption, *slog.Leve
 	dynConf[dynamicconfig.FrontendMaxNamespaceVisibilityRPSPerInstance.Key()] = 100
 	// Enable the system callback URL for worker targets.
 	dynConf[nexusoperations.UseSystemCallbackURL.Key()] = true
-	dynConf[callbacks.AllowedAddresses.Key()] = []struct {
-		Pattern       string
-		AllowInsecure bool
-	}{
-		{
-			Pattern:       fmt.Sprintf("%s:%d", MaybeEscapeIPv6(s.FrontendIP), s.FrontendHTTPPort),
-			AllowInsecure: true,
-		},
-	}
 
 	// Dynamic config if set
 	for k, v := range s.DynamicConfigValues {
