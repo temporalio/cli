@@ -242,11 +242,7 @@ func (s *StartOptions) buildServerOptions() ([]temporal.ServerOption, *slog.Leve
 	// Up default visibility RPS
 	dynConf[dynamicconfig.FrontendMaxNamespaceVisibilityRPSPerInstance.Key()] = 100
 	// Enable the system callback URL for worker targets.
-	// NOTE that the URL scheme is fixed to HTTP since the dev server doesn't support TLS at the time of writing.
-	// The callback URL template is used as a fallback for external targets.
 	dynConf[nexusoperations.UseSystemCallbackURL.Key()] = true
-	dynConf[nexusoperations.CallbackURLTemplate.Key()] = fmt.Sprintf(
-		"http://%s:%d/namespaces/{{.NamespaceName}}/nexus/callback", MaybeEscapeIPv6(s.FrontendIP), s.FrontendHTTPPort)
 	dynConf[callbacks.AllowedAddresses.Key()] = []struct {
 		Pattern       string
 		AllowInsecure bool
