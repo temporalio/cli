@@ -260,7 +260,7 @@ commands:
 
       Either `activity-id`, `activity-type`, or `--match-all` must be specified.
 
-      Activity options can be updated in bulk with a visibility query list filter. 
+      Activity options can be updated in bulk with a visibility query list filter.
       For example, if you want to reset for activities of type Foo, do:
 
       ```
@@ -492,7 +492,7 @@ commands:
 
       Either `activity-id`, `activity-type`, or `--match-all` must be specified.
 
-      Activities can be reset in bulk with a visibility query list filter. 
+      Activities can be reset in bulk with a visibility query list filter.
       For example, if you want to reset activities of type Foo:
 
       ```
@@ -1642,6 +1642,9 @@ commands:
       - name: enable-connection
         type: bool
         description: Set the connection to "enabled".
+      - name: enable-replication
+        type: bool
+        description: Set the replication to "enabled".
 
   - name: temporal operator namespace
     summary: Namespace operations
@@ -4332,6 +4335,34 @@ commands:
         type: bool
         description: |
           Assume update inputs are base64-encoded and attempt to decode them.
+
+  - name: temporal workflow pause
+    summary: 'Pause a Workflow Execution (Experimental feature)'
+    description: |
+      Pause a Workflow Execution.
+      Note: This is an experimental feature and may change in the future.
+    options:
+      - name: reason
+        type: string
+        description: |
+          Reason for pausing the Workflow Execution.
+          Defaults to message with the current user's name.
+    option-sets:
+      - workflow-reference
+
+  - name: temporal workflow unpause
+    summary: 'Unpause a previously paused Workflow Execution (Experimental feature)'
+    description: |
+      Unpause a previously paused Workflow Execution.
+      Note: This is an experimental feature and may change in the future.
+    options:
+      - name: reason
+        type: string
+        description: |
+          Reason for unpausing the Workflow Execution.
+          Defaults to message with the current user's name.
+    option-sets:
+      - workflow-reference
 
 option-sets:
   # Import common and client option sets from cliext package

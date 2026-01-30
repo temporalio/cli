@@ -81,6 +81,9 @@ jobs:
           ls -lh dist/amd64/temporal
           ls -lh dist/arm64/temporal
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
