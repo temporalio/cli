@@ -843,7 +843,7 @@ commands:
         - worker deployment set-current-version
         - worker deployment set-ramping-version
         - worker deployment delete-version
-        - worker deployment update-metadata-version
+        - worker deployment update-version-metadata
         - worker deployment manager-identity
 
   - name: temporal worker deployment describe
@@ -1117,7 +1117,7 @@ commands:
         type: bool
         description: Don't prompt to confirm set Ramping Version.
 
-  - name: temporal worker deployment update-metadata-version
+  - name: temporal worker deployment update-version-metadata
     summary: Change user-provided metadata for a Version
     description: |
       ```
@@ -1132,7 +1132,7 @@ commands:
       For example:
 
       ```
-       temporal worker deployment update-metadata-version \
+       temporal worker deployment update-version-metadata \
           --deployment-name YourDeploymentName --build-id YourBuildID \
           --metadata bar=1 \
           --metadata foo=true

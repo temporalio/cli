@@ -137,7 +137,7 @@ func (s *SharedServerSuite) TestDeployment_Set_Current_Version() {
 
 	// set metadata
 	res = s.Execute(
-		"worker", "deployment", "update-metadata-version",
+		"worker", "deployment", "update-version-metadata",
 		"--address", s.Address(),
 		"--deployment-name", version.DeploymentName, "--build-id", version.BuildID,
 		"--metadata", "bar=1",
@@ -154,7 +154,7 @@ func (s *SharedServerSuite) TestDeployment_Set_Current_Version() {
 
 	// remove metadata
 	res = s.Execute(
-		"worker", "deployment", "update-metadata-version",
+		"worker", "deployment", "update-version-metadata",
 		"--address", s.Address(),
 		"--deployment-name", version.DeploymentName, "--build-id", version.BuildID,
 		"--remove-entries", "bar",
