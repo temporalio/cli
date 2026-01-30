@@ -757,7 +757,7 @@ func (s *SharedServerSuite) TestWorkflow_Describe_NexusOperationAndCallback() {
 	out = res.Stdout.String()
 	s.ContainsOnSameLine(out, "WorkflowId", handlerWorkflowID)
 	s.Contains(out, "Callbacks: 1")
-	s.ContainsOnSameLine(out, "URL", "http://"+s.DevServer.Options.FrontendIP)
+	s.ContainsOnSameLine(out, "URL", "temporal://system")
 	s.ContainsOnSameLine(out, "Trigger", "WorkflowClosed")
 	s.ContainsOnSameLine(out, "State", "Succeeded")
 
