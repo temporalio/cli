@@ -242,6 +242,7 @@ func (s *StartOptions) buildServerOptions() ([]temporal.ServerOption, *slog.Leve
 	// Up default visibility RPS
 	dynConf[dynamicconfig.FrontendMaxNamespaceVisibilityRPSPerInstance.Key()] = 100
 	// Enable the system callback URL for worker targets.
+	// TODO: Remove this when upgrading to server 1.31.
 	dynConf[nexusoperations.UseSystemCallbackURL.Key()] = true
 
 	dynConf[callbacks.AllowedAddresses.Key()] = true
