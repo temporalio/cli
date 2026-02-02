@@ -325,8 +325,11 @@ func formatVersionStatsRowType(tqStats *client.TaskQueueStats) (formattedVersion
 	}, nil
 }
 
-func workerDeploymentVersionInfoToRows(deploymentInfo client.WorkerDeploymentVersionInfo, includeStats bool) (formattedWorkerDeploymentVersionInfoType, error) {
-	tqi, err := formatTaskQueuesInfos(deploymentInfo.TaskQueuesInfos, includeStats)
+// workerDeploymentVersionInfoToRows converts SDK types to formatted types for display.
+// The taskQueueInfos parameter should be from resp.TaskQueueInfos (not resp.Info.TaskQueuesInfos)
+// because the stats are only populated in the top-level TaskQueueInfos field.
+func workerDeploymentVersionInfoToRows(deploymentInfo client.WorkerDeploymentVersionInfo, taskQueueInfos []client.WorkerDeploymentTaskQueueInfo, includeStats bool) (formattedWorkerDeploymentVersionInfoType, error) {
+	tqi, err := formatTaskQueuesInfos(taskQueueInfos, includeStats)
 	if err != nil {
 		return formattedWorkerDeploymentVersionInfoType{}, err
 	}
@@ -354,8 +357,11 @@ type printVersionInfoOptions struct {
 	showStats bool
 }
 
-func printWorkerDeploymentVersionInfo(cctx *CommandContext, deploymentInfo client.WorkerDeploymentVersionInfo, msg string, opts printVersionInfoOptions) error {
-	fDeploymentInfo, err := workerDeploymentVersionInfoToRows(deploymentInfo, opts.showStats)
+// printWorkerDeploymentVersionInfo prints worker deployment version info.
+// The taskQueueInfos parameter should be from resp.TaskQueueInfos (not resp.Info.TaskQueuesInfos)
+// because the stats are only populated in the top-level TaskQueueInfos field.
+func printWorkerDeploymentVersionInfo(cctx *CommandContext, deploymentInfo client.WorkerDeploymentVersionInfo, taskQueueInfos []client.WorkerDeploymentTaskQueueInfo, msg string, opts printVersionInfoOptions) error {
+	fDeploymentInfo, err := workerDeploymentVersionInfoToRows(deploymentInfo, taskQueueInfos, opts.showStats)
 	if err != nil {
 		return err
 	}
@@ -404,7 +410,7 @@ func printWorkerDeploymentVersionInfo(cctx *CommandContext, deploymentInfo clien
 			return fmt.Errorf("displaying worker deployment version info failed: %w", err)
 		}
 
-		if len(deploymentInfo.TaskQueuesInfos) > 0 {
+		if len(taskQueueInfos) > 0 {
 			if err := printTaskQueuesInfo(cctx, fDeploymentInfo.TaskQueuesInfos, opts); err != nil {
 				return err
 			}
@@ -761,7 +767,8 @@ func (c *TemporalWorkerDeploymentDescribeVersionCommand) run(cctx *CommandContex
 		return fmt.Errorf("error describing worker deployment version: %w", err)
 	}
 
-	err = printWorkerDeploymentVersionInfo(cctx, resp.Info, "Worker Deployment Version:", printVersionInfoOptions{
+	// Use resp.TaskQueueInfos (not resp.Info.TaskQueuesInfos) because stats are only in the top-level field
+	err = printWorkerDeploymentVersionInfo(cctx, resp.Info, resp.TaskQueueInfos, "Worker Deployment Version:", printVersionInfoOptions{
 		showStats: c.ReportTaskQueueStats,
 	})
 	if err != nil {
