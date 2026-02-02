@@ -9,6 +9,7 @@ import (
 	"io"
 	"math/rand"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/stretchr/testify/assert"
@@ -507,6 +508,105 @@ func (s *SharedServerSuite) TestSchedule_Update() {
 		return j.Schedule.Action.StartWorkflow.WorkflowType.Name == "SomeOtherWf" &&
 			j.Schedule.Action.StartWorkflow.TaskQueue.Name == "SomeOtherTq" &&
 			j.Schedule.Spec.Interval[0].Interval == "3600s"
+	}, 10*time.Second, 100*time.Millisecond)
+}
+
+func (s *SharedServerSuite) TestSchedule_Update_PreservesCronWhenNotProvided() {
+	schedId, schedWfId, res := s.createSchedule("--cron", "0 9 * * *")
+	s.NoError(res.Err)
+
+	// Update with only non-spec flags (no --cron). Existing cron should be preserved.
+	res = s.Execute(
+		"schedule", "update",
+		"--address", s.Address(),
+		"-s", schedId,
+		"--task-queue", "SomeOtherTq",
+		"--type", "SomeOtherWf",
+		"--workflow-id", schedWfId,
+		"--overlap-policy", "AllowAll",
+	)
+	s.NoError(res.Err)
+
+	s.Eventually(func() bool {
+		res = s.Execute(
+			"schedule", "describe",
+			"--address", s.Address(),
+			"-s", schedId,
+			"-o", "json",
+		)
+		s.NoError(res.Err)
+		var j struct {
+			Schedule struct {
+				Spec struct {
+					CronExpressions []string `json:"cronExpressions"`
+				} `json:"spec"`
+				Action struct {
+					StartWorkflow struct {
+						WorkflowType struct {
+							Name string `json:"name"`
+						} `json:"workflowType"`
+						TaskQueue struct {
+							Name string `json:"name"`
+						} `json:"taskQueue"`
+					} `json:"startWorkflow"`
+				} `json:"action"`
+			} `json:"schedule"`
+			Info struct {
+				FutureActionTimes []string `json:"futureActionTimes"`
+			} `json:"info"`
+		}
+		s.NoError(json.Unmarshal(res.Stdout.Bytes(), &j))
+		// Cron was preserved: either cronExpressions contains our cron, or futureActionTimes
+		// are at 09:00 UTC (server may return structuredCalendar instead of cronExpressions).
+		cronPreserved := (len(j.Schedule.Spec.CronExpressions) == 1 && j.Schedule.Spec.CronExpressions[0] == "0 9 * * *") ||
+			(len(j.Info.FutureActionTimes) > 0 && (strings.Contains(j.Info.FutureActionTimes[0], "T09:00") || strings.Contains(j.Info.FutureActionTimes[0], " 09:00")))
+		return cronPreserved &&
+			j.Schedule.Action.StartWorkflow.WorkflowType.Name == "SomeOtherWf" &&
+			j.Schedule.Action.StartWorkflow.TaskQueue.Name == "SomeOtherTq"
+	}, 10*time.Second, 100*time.Millisecond)
+}
+
+func (s *SharedServerSuite) TestSchedule_Update_PreservesJitterWhenNotProvided() {
+	schedId, schedWfId, res := s.createSchedule("--interval", "10d", "--jitter", "1m")
+	s.NoError(res.Err)
+
+	// Update with only non-spec flags (no --jitter). Existing jitter should be preserved.
+	res = s.Execute(
+		"schedule", "update",
+		"--address", s.Address(),
+		"-s", schedId,
+		"--task-queue", "SomeOtherTq",
+		"--type", "SomeOtherWf",
+		"--workflow-id", schedWfId,
+	)
+	s.NoError(res.Err)
+
+	s.Eventually(func() bool {
+		res = s.Execute(
+			"schedule", "describe",
+			"--address", s.Address(),
+			"-s", schedId,
+			"-o", "json",
+		)
+		s.NoError(res.Err)
+		var j struct {
+			Schedule struct {
+				Spec struct {
+					Jitter string `json:"jitter"`
+				} `json:"spec"`
+				Action struct {
+					StartWorkflow struct {
+						WorkflowType struct {
+							Name string `json:"name"`
+						} `json:"workflowType"`
+					} `json:"startWorkflow"`
+				} `json:"action"`
+			} `json:"schedule"`
+		}
+		s.NoError(json.Unmarshal(res.Stdout.Bytes(), &j))
+		// Jitter 1m is stored as 60s by the server
+		return (j.Schedule.Spec.Jitter == "60s" || j.Schedule.Spec.Jitter == "1m") &&
+			j.Schedule.Action.StartWorkflow.WorkflowType.Name == "SomeOtherWf"
 	}, 10*time.Second, 100*time.Millisecond)
 }
 
