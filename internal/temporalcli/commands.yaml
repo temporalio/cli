@@ -764,13 +764,6 @@ commands:
   - name: temporal worker
     summary: Read or update Worker state
     description: |
-      ```
-      +---------------------------------------------------------------------+
-      | CAUTION: Worker is experimental. Worker commands are subject to     |
-      | change.                                                             |
-      +---------------------------------------------------------------------+
-      ```
-
       Modify or read state associated with a Worker, for example,
       using Worker Deployments commands:
 
@@ -794,13 +787,6 @@ commands:
   - name: temporal worker deployment
     summary: Describe, list, and operate on Worker Deployments and Versions
     description: |
-      ```
-      +---------------------------------------------------------------------+
-      | CAUTION: Worker Deployment is experimental. Deployment commands are |
-      | subject to change.                                                  |
-      +---------------------------------------------------------------------+
-      ```
-
       Deployment commands perform operations on Worker Deployments:
 
       ```
@@ -849,13 +835,6 @@ commands:
   - name: temporal worker deployment describe
     summary: Show properties of a Worker Deployment
     description: |
-      ```
-      +---------------------------------------------------------------------+
-      | CAUTION: Worker Deployment is experimental. Deployment commands are |
-      | subject to change.                                                  |
-      +---------------------------------------------------------------------+
-      ```
-
       Describe properties of a Worker Deployment, such as the versions
       associated with it, routing information of new or existing tasks
       executed by this deployment, or its creation time.
@@ -877,13 +856,6 @@ commands:
   - name: temporal worker deployment delete
     summary: Delete a Worker Deployment
     description: |
-      ```
-      +---------------------------------------------------------------------+
-      | CAUTION: Worker Deployment is experimental. Deployment commands are |
-      | subject to change.                                                  |
-      +---------------------------------------------------------------------+
-      ```
-
       Remove a Worker Deployment given its Deployment Name.
       A Deployment can only be deleted if it has no Version in it.
 
@@ -905,13 +877,6 @@ commands:
   - name: temporal worker deployment list
     summary: Enumerate Worker Deployments in the client's namespace
     description: |
-      ```
-      +---------------------------------------------------------------------+
-      | CAUTION: Worker Deployment is experimental. Deployment commands are |
-      | subject to change.                                                  |
-      +---------------------------------------------------------------------+
-      ```
-
       List existing Worker Deployments in the client's namespace.
 
       ```
@@ -928,13 +893,6 @@ commands:
   - name: temporal worker deployment describe-version
     summary: Show properties of a Worker Deployment Version
     description: |
-      ```
-      +---------------------------------------------------------------------+
-      | CAUTION: Worker Deployment is experimental. Deployment commands are |
-      | subject to change.                                                  |
-      +---------------------------------------------------------------------+
-      ```
-
       Describe properties of a Worker Deployment Version, such as the task
       queues polled by workers in this Deployment Version, or drainage
       information required to safely decommission workers, or user-provided
@@ -958,13 +916,6 @@ commands:
   - name: temporal worker deployment delete-version
     summary: Delete a Worker Deployment Version
     description: |
-      ```
-      +---------------------------------------------------------------------+
-      | CAUTION: Worker Deployment is experimental. Deployment commands are |
-      | subject to change.                                                  |
-      +---------------------------------------------------------------------+
-      ```
-
       Remove a Worker Deployment Version given its fully-qualified identifier.
       This is rarely needed during normal operation
       since unused Versions are eventually garbage collected.
@@ -996,13 +947,6 @@ commands:
   - name: temporal worker deployment set-current-version
     summary: Make a Worker Deployment Version Current for a Deployment
     description: |
-      ```
-      +---------------------------------------------------------------------+
-      | CAUTION: Worker Deployment is experimental. Deployment commands are |
-      | subject to change.                                                  |
-      +---------------------------------------------------------------------+
-      ```
-
       Set the Current Version for a Deployment.
       When a Version is current, Workers of that Deployment Version will receive
       tasks from new Workflows, and from existing AutoUpgrade Workflows that
@@ -1050,13 +994,6 @@ commands:
   - name: temporal worker deployment set-ramping-version
     summary: Change Version Ramping settings for a Worker Deployment
     description: |
-      ```
-      +---------------------------------------------------------------------+
-      | CAUTION: Worker Deployment is experimental. Deployment commands are |
-      | subject to change.                                                  |
-      +---------------------------------------------------------------------+
-      ```
-
       Set the Ramping Version and Percentage for a Deployment.
 
       The Ramping Version can be set using deployment name and build ID,
@@ -1120,13 +1057,6 @@ commands:
   - name: temporal worker deployment update-version-metadata
     summary: Change user-provided metadata for a Version
     description: |
-      ```
-      +---------------------------------------------------------------------+
-      | CAUTION: Worker Deployment is experimental. Deployment commands are |
-      | subject to change.                                                  |
-      +---------------------------------------------------------------------+
-      ```
-
       Update metadata associated with a Worker Deployment Version.
 
       For example:
@@ -1162,13 +1092,6 @@ commands:
   - name: temporal worker deployment manager-identity
     summary: Manager Identity commands change the `ManagerIdentity` of a Worker Deployment
     description: |
-      ```
-      +---------------------------------------------------------------------+
-      | CAUTION: Worker Deployment is experimental. Deployment commands are |
-      | subject to change.                                                  |
-      +---------------------------------------------------------------------+
-      ```
-
       Manager Identity commands change the `ManagerIdentity` of a Worker Deployment:
 
       ```
@@ -1202,13 +1125,6 @@ commands:
   - name: temporal worker deployment manager-identity set
     summary: Set the Manager Identity of a Worker Deployment
     description: |
-      ```
-      +---------------------------------------------------------------------+
-      | CAUTION: Worker Deployment is experimental. Deployment commands are |
-      | subject to change.                                                  |
-      +---------------------------------------------------------------------+
-      ```
-
       Set the `ManagerIdentity` of a Worker Deployment given its Deployment Name.
       
       When present, `ManagerIdentity` is the identity of the user that has the 
@@ -1265,13 +1181,6 @@ commands:
   - name: temporal worker deployment manager-identity unset
     summary: Unset the Manager Identity of a Worker Deployment
     description: |
-      ```
-      +---------------------------------------------------------------------+
-      | CAUTION: Worker Deployment is experimental. Deployment commands are |
-      | subject to change.                                                  |
-      +---------------------------------------------------------------------+
-      ```
-
       Unset the `ManagerIdentity` of a Worker Deployment given its Deployment Name.
       
       When present, `ManagerIdentity` is the identity of the user that has the 
@@ -2610,9 +2519,10 @@ commands:
       task types, which can be used to safely retire Workers with old code versions,
       provided that they were assigned a Build ID.
 
-      Note that task reachability status is experimental and may significantly change
-      or be removed in a future release. Also, determining task reachability incurs a
-      non-trivial computing cost.
+      Note that task reachability status is deprecated in favor of Drainage Status
+      (ie. of a Drained or Draining Worker Deployment Version) and will be removed 
+      in a future release. Also, determining task reachability incurs a non-trivial 
+      computing cost.
 
       Task reachability states are reported per build ID. The state may be one of the
       following:
@@ -2856,9 +2766,7 @@ commands:
 
       ```
       +------------------------------------------------------------------------+
-      | NOTICE: This command is limited to Namespaces that support Worker      |
-      | versioning. Worker versioning is experimental. Versioning commands are |
-      | subject to change.                                                     |
+      | NOTICE: This command is deprecated. Use Worker Deployments instead.    |
       +------------------------------------------------------------------------+
       ```
     options:
@@ -2892,9 +2800,7 @@ commands:
 
       ```
       +------------------------------------------------------------------------+
-      | NOTICE: This command is limited to Namespaces that support Worker      |
-      | versioning. Worker versioning is experimental. Versioning commands are |
-      | subject to change.                                                     |
+      | NOTICE: This command is deprecated. Use Worker Deployments instead.    |
       +------------------------------------------------------------------------+
       ```
     options:
@@ -2929,9 +2835,7 @@ commands:
 
       ```
       +------------------------------------------------------------------------+
-      | NOTICE: This command is limited to Namespaces that support Worker      |
-      | versioning. Worker versioning is experimental. Versioning commands are |
-      | subject to change.                                                     |
+      | NOTICE: This command is deprecated. Use Worker Deployments instead.    |
       +------------------------------------------------------------------------+
       ```
     options:
@@ -2946,7 +2850,7 @@ commands:
         short: t
 
   - name: temporal task-queue versioning
-    summary: Manage Task Queue Build ID handling (Experimental)
+    summary: Manage Task Queue Build ID handling (Deprecated)
     description: |
       ```
       +---------------------------------------------------------------------+
@@ -2980,7 +2884,7 @@ commands:
         required: true
 
   - name: temporal task-queue versioning add-redirect-rule
-    summary: Add Task Queue redirect rules (Experimental)
+    summary: Add Task Queue redirect rules (Deprecated)
     description: |
       Add a new redirect rule for a given Task Queue. You may add at most one
       redirect rule for each distinct source build ID:
@@ -3012,7 +2916,7 @@ commands:
         description: Don't prompt to confirm.
 
   - name: temporal task-queue versioning commit-build-id
-    summary: Complete Build ID rollout (Experimental)
+    summary: Complete Build ID rollout (Deprecated)
     description: |
       Complete a Build ID's rollout and clean up unnecessary rules that might have
       been created during a gradual rollout:
@@ -3054,7 +2958,7 @@ commands:
         description: Don't prompt to confirm.
 
   - name: temporal task-queue versioning delete-assignment-rule
-    summary: Removes a Task Queue assignment rule (Experimental)
+    summary: Removes a Task Queue assignment rule (Deprecated)
     description: |
       Deletes a rule identified by its index in the Task Queue's list of assignment
       rules.
@@ -3091,7 +2995,7 @@ commands:
         description: Don't prompt to confirm.
 
   - name: temporal task-queue versioning delete-redirect-rule
-    summary: Removes Build-ID routing rule (Experimental)
+    summary: Removes Build-ID routing rule (Deprecated)
     description: |
       Deletes the routing rule for the given source Build ID.
 
@@ -3117,7 +3021,7 @@ commands:
         description: Don't prompt to confirm.
 
   - name: temporal task-queue versioning get-rules
-    summary: Fetch Worker Build ID assignments and redirect rules (Experimental)
+    summary: Fetch Worker Build ID assignments and redirect rules (Deprecated)
     description: |
       Retrieve all the Worker Build ID assignments and redirect rules associated
       with a Task Queue:
@@ -3144,7 +3048,7 @@ commands:
       ```
 
   - name: temporal task-queue versioning insert-assignment-rule
-    summary: Add an assignment rule at a index (Experimental)
+    summary: Add an assignment rule at a index (Deprecated)
     description: |
       Inserts a new assignment rule for this Task Queue. Rules are evaluated in
       order, starting from index 0. The first applicable rule is applied, and the
@@ -3187,7 +3091,7 @@ commands:
         description: Don't prompt to confirm.
 
   - name: temporal task-queue versioning replace-assignment-rule
-    summary: Update assignment rule at index (Experimental)
+    summary: Update assignment rule at index (Deprecated)
     description: |
       Change an assignment rule for this Task Queue. By default, this enforces one
       unconditional rule (no hint filter or percentage). Otherwise, the operation
@@ -3246,7 +3150,7 @@ commands:
         description: Bypass the validation that one unconditional rule remains.
 
   - name: temporal task-queue versioning replace-redirect-rule
-    summary: Change the target for a Build ID's redirect (Experimental)
+    summary: Change the target for a Build ID's redirect (Deprecated)
     description: |
       Updates a Build ID's redirect rule on a Task Queue by replacing its target
       Build ID:
@@ -3644,13 +3548,6 @@ commands:
   - name: temporal workflow update-options
     summary: Change Workflow Execution Options
     description: |
-      ```
-      +---------------------------------------------------------------------+
-      | CAUTION: Worflow update-options is experimental. Workflow Execution |
-      | properties are subject to change.                                   |
-      +---------------------------------------------------------------------+
-      ```
-
       Modify properties of Workflow Executions:
 
       ```
