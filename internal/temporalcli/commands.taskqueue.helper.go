@@ -111,10 +111,8 @@ func printTaskQueueVersioningInfo(cctx *CommandContext, versioningInfo *taskqueu
 
 	// For text, we will use a structured display
 	var currentVersionDeploymentName, currentVersionBuildID string
-	if versioningInfo.CurrentDeploymentVersion != nil {
-		currentVersionDeploymentName = versioningInfo.CurrentDeploymentVersion.DeploymentName
-		currentVersionBuildID = versioningInfo.CurrentDeploymentVersion.BuildId
-	}
+	currentVersionDeploymentName := versioningInfo.GetCurrentDeploymentVersion().GetDeploymentName()
+    currentVersionBuildID := versioningInfo.GetCurrentDeploymentVersion().GetBuildId()
 
 	var rampingVersionDeploymentName, rampingVersionBuildID string
 	if versioningInfo.RampingDeploymentVersion != nil {
