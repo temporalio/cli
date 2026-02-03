@@ -11,6 +11,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"go.temporal.io/api/common/v1"
+	deploymentpb "go.temporal.io/api/deployment/v1"
+	enumspb "go.temporal.io/api/enums/v1"
+	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
@@ -851,33 +854,39 @@ func (s *SharedServerSuite) TestDeployment_Describe_Version_TaskQueueStats() {
 		s.T().Logf("Started workflow %d: %s", i, run.GetID())
 	}
 
-	// Test 1: Verify SDK returns non-zero backlog stats (validates server behavior)
-	dHandle := s.Client.WorkerDeploymentClient().GetHandle(deploymentName)
+	// Test 1: Verify gRPC returns non-zero backlog stats (validates server behavior)
+	// Use raw gRPC instead of SDK's DeploymentClient to avoid circular dependency
 	s.EventuallyWithT(func(t *assert.CollectT) {
-		desc, err := dHandle.DescribeVersion(s.Context, client.WorkerDeploymentDescribeVersionOptions{
-			BuildID:              version.BuildID,
+		desc, err := s.Client.WorkflowService().DescribeWorkerDeploymentVersion(s.Context, &workflowservice.DescribeWorkerDeploymentVersionRequest{
+			Namespace: s.Namespace(),
+			DeploymentVersion: &deploymentpb.WorkerDeploymentVersion{
+				DeploymentName: version.DeploymentName,
+				BuildId:        version.BuildID,
+			},
 			ReportTaskQueueStats: true,
 		})
 		assert.NoError(t, err)
 
 		// Find the workflow task queue and check backlog stats (matching SDK test pattern)
-		for _, tqInfo := range desc.TaskQueueInfos {
-			if tqInfo.Name == taskQueue && tqInfo.Type == client.TaskQueueTypeWorkflow && tqInfo.Stats != nil {
+		for _, tqInfo := range desc.GetVersionTaskQueues() {
+			if tqInfo.GetName() == taskQueue && tqInfo.GetType() == enumspb.TASK_QUEUE_TYPE_WORKFLOW && tqInfo.GetStats() != nil {
+				stats := tqInfo.GetStats()
+				backlogIncreaseRate := stats.TasksAddRate - stats.TasksDispatchRate
 				// Check all stats fields like the SDK test does
-				if tqInfo.Stats.ApproximateBacklogCount > 0 &&
-					tqInfo.Stats.ApproximateBacklogAge.Nanoseconds() > 0 &&
-					tqInfo.Stats.TasksAddRate > 0 &&
-					tqInfo.Stats.TasksDispatchRate == 0 && // zero task dispatch due to no pollers
-					tqInfo.Stats.BacklogIncreaseRate > 0 {
+				if stats.ApproximateBacklogCount > 0 &&
+					stats.ApproximateBacklogAge.AsDuration().Nanoseconds() > 0 &&
+					stats.TasksAddRate > 0 &&
+					stats.TasksDispatchRate == 0 && // zero task dispatch due to no pollers
+					backlogIncreaseRate > 0 {
 					return // Success
 				}
 				t.Errorf("Unexpected backlog stats for tq %s: backlogCount=%d, backlogAge=%v, addRate=%f, dispatchRate=%f, increaseRate=%f",
-					taskQueue, tqInfo.Stats.ApproximateBacklogCount, tqInfo.Stats.ApproximateBacklogAge,
-					tqInfo.Stats.TasksAddRate, tqInfo.Stats.TasksDispatchRate, tqInfo.Stats.BacklogIncreaseRate)
+					taskQueue, stats.ApproximateBacklogCount, stats.ApproximateBacklogAge.AsDuration(),
+					stats.TasksAddRate, stats.TasksDispatchRate, backlogIncreaseRate)
 				return
 			}
 		}
-		t.Errorf("No workflow task queue with stats found for task queue %s in %d task queues", taskQueue, len(desc.TaskQueueInfos))
+		t.Errorf("No workflow task queue with stats found for task queue %s in %d task queues", taskQueue, len(desc.GetVersionTaskQueues()))
 	}, 10*time.Second, 500*time.Millisecond)
 
 	// Verify text output has all stats columns with non-zero values
@@ -898,6 +907,8 @@ func (s *SharedServerSuite) TestDeployment_Describe_Version_TaskQueueStats() {
 	// Verify the workflow task queue row has the expected backlog count (we started 3 workflows)
 	// Format: Name Type ApproximateBacklogCount ApproximateBacklogAge BacklogIncreaseRate TasksAddRate TasksDispatchRate
 	s.ContainsOnSameLine(outputWithStats, taskQueue, "workflow", "3")
+	// Verify that "Stats by Priority" is NOT shown when only the default priority key (3) is used
+	s.NotContains(outputWithStats, "Stats by Priority")
 
 	// Test 2: describe-version WITHOUT --report-task-queue-stats should NOT show stats columns
 	res = s.Execute(

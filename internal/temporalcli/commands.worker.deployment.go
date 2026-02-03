@@ -480,9 +480,10 @@ func printTaskQueuesInfo(cctx *CommandContext, taskQueues []formattedTaskQueueIn
 			return fmt.Errorf("displaying task queues failed: %w", err)
 		}
 
-		// Show per-priority stats automatically if any task queue has priority data
+		// Show per-priority stats automatically if any task queue has non-default priority data.
+		// Skip if the only priority key is 3 (the default), as that would be redundant.
 		for _, tq := range taskQueues {
-			if len(tq.StatsByPriorityKey) == 0 {
+			if !hasNonDefaultPriorityKeys(tq.StatsByPriorityKey) {
 				continue
 			}
 			cctx.Printer.Println()
@@ -536,6 +537,24 @@ func sortInt32s(s []int32) {
 			}
 		}
 	}
+}
+
+// defaultPriorityKey is the default priority key value. When this is the only
+// priority key present, we skip showing per-priority stats as it would be redundant.
+const defaultPriorityKey = 3
+
+// hasNonDefaultPriorityKeys returns true if the map contains any priority keys
+// other than the default (3), or contains multiple priority keys.
+func hasNonDefaultPriorityKeys(statsByPriorityKey map[int32]formattedVersionStatsRowType) bool {
+	if len(statsByPriorityKey) == 0 {
+		return false
+	}
+	if len(statsByPriorityKey) > 1 {
+		return true
+	}
+	// Exactly one key - check if it's the default
+	_, hasDefault := statsByPriorityKey[defaultPriorityKey]
+	return !hasDefault
 }
 
 type getDeploymentConflictTokenOptions struct {
