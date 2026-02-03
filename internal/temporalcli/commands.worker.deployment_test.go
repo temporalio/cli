@@ -15,6 +15,7 @@ import (
 	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
 )
@@ -784,7 +785,15 @@ func (s *SharedServerSuite) TestDeployment_Set_Manager_Identity() {
 	s.Equal(testIdentity, jsonOut.ManagerIdentity)
 }
 
-func (s *SharedServerSuite) TestDeployment_Describe_Version_TaskQueueStats() {
+func (s *SharedServerSuite) TestDeployment_Describe_Version_TaskQueueStats_WithPriority() {
+	s.testDeploymentDescribeVersionTaskQueueStats(true)
+}
+
+func (s *SharedServerSuite) TestDeployment_Describe_Version_TaskQueueStats_WithoutPriority() {
+	s.testDeploymentDescribeVersionTaskQueueStats(false)
+}
+
+func (s *SharedServerSuite) testDeploymentDescribeVersionTaskQueueStats(withPriority bool) {
 	deploymentName := uuid.NewString()
 	buildId := uuid.NewString()
 	taskQueue := uuid.NewString()
@@ -837,15 +846,21 @@ func (s *SharedServerSuite) TestDeployment_Describe_Version_TaskQueueStats() {
 	// Stop the worker so workflow tasks will backlog
 	w1.Stop()
 
-	// Start workflows - they will queue up as workflow tasks since there's no worker
-	numWorkflows := 3
+	// Start workflows - they will queue up as workflow tasks since there is no worker
+	// Priority keys: 1 (high), 3 (medium/default), 5 (low)
+	priorityKeys := []int{1, 3, 5}
+	numWorkflows := len(priorityKeys)
 	workflowRuns := make([]client.WorkflowRun, numWorkflows)
 	for i := 0; i < numWorkflows; i++ {
+		opts := client.StartWorkflowOptions{
+			TaskQueue: taskQueue,
+		}
+		if withPriority {
+			opts.Priority = temporal.Priority{PriorityKey: priorityKeys[i]}
+		}
 		run, err := s.Client.ExecuteWorkflow(
 			s.Context,
-			client.StartWorkflowOptions{
-				TaskQueue: taskQueue,
-			},
+			opts,
 			"TestBacklogWorkflow",
 			"test-input",
 		)
@@ -907,8 +922,19 @@ func (s *SharedServerSuite) TestDeployment_Describe_Version_TaskQueueStats() {
 	// Verify the workflow task queue row has the expected backlog count (we started 3 workflows)
 	// Format: Name Type ApproximateBacklogCount ApproximateBacklogAge BacklogIncreaseRate TasksAddRate TasksDispatchRate
 	s.ContainsOnSameLine(outputWithStats, taskQueue, "workflow", "3")
-	// Verify that "Stats by Priority" is NOT shown when only the default priority key (3) is used
-	s.NotContains(outputWithStats, "Stats by Priority")
+	if withPriority {
+		s.Contains(outputWithStats, "Stats by Priority")
+		// Verify each priority key row shows approximate backlog count of 1 (one workflow per priority)
+		// The format is: Priority ApproximateBacklogCount ApproximateBacklogAge ...
+		// We started one workflow with each priority key (1, 3, 5), so each should have backlog of 1
+		for _, priorityKey := range priorityKeys {
+			// Check that the priority row contains the priority key followed by backlog count of 1
+			s.ContainsOnSameLine(outputWithStats, fmt.Sprintf("%d", priorityKey), "workflow", "1")
+		}
+	} else {
+		// Verify that "Stats by Priority" is NOT shown when only the default priority key (3) is used
+		s.NotContains(outputWithStats, "Stats by Priority")
+	}
 
 	// Test 2: describe-version WITHOUT --report-task-queue-stats should NOT show stats columns
 	res = s.Execute(
