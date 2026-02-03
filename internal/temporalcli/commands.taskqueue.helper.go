@@ -98,3 +98,50 @@ func printTaskQueueConfig(cctx *CommandContext, config *taskqueue.TaskQueueConfi
 
 	return nil
 }
+
+func printTaskQueueVersioningInfo(cctx *CommandContext, versioningInfo *taskqueue.TaskQueueVersioningInfo) error {
+	if versioningInfo == nil {
+		return nil
+	}
+
+	// For JSON, we'll just dump the proto
+	if cctx.JSONOutput {
+		return cctx.Printer.PrintStructured(versioningInfo, printer.StructuredOptions{})
+	}
+
+	// For text, we will use a structured display
+	var currentVersionDeploymentName, currentVersionBuildID string
+	if versioningInfo.CurrentDeploymentVersion != nil {
+		currentVersionDeploymentName = versioningInfo.CurrentDeploymentVersion.DeploymentName
+		currentVersionBuildID = versioningInfo.CurrentDeploymentVersion.BuildId
+	}
+
+	var rampingVersionDeploymentName, rampingVersionBuildID string
+	if versioningInfo.RampingDeploymentVersion != nil {
+		rampingVersionDeploymentName = versioningInfo.RampingDeploymentVersion.DeploymentName
+		rampingVersionBuildID = versioningInfo.RampingDeploymentVersion.BuildId
+	}
+
+	var updateTime time.Time
+	if versioningInfo.UpdateTime != nil {
+		updateTime = versioningInfo.UpdateTime.AsTime()
+	}
+
+	printMe := struct {
+		CurrentVersionDeploymentName string    `cli:",cardOmitEmpty"`
+		CurrentVersionBuildID        string    `cli:",cardOmitEmpty"`
+		RampingVersionDeploymentName string    `cli:",cardOmitEmpty"`
+		RampingVersionBuildID        string    `cli:",cardOmitEmpty"`
+		RampingVersionPercentage     float32   `cli:",cardOmitEmpty"`
+		UpdateTime                   time.Time `cli:",cardOmitEmpty"`
+	}{
+		CurrentVersionDeploymentName: currentVersionDeploymentName,
+		CurrentVersionBuildID:        currentVersionBuildID,
+		RampingVersionDeploymentName: rampingVersionDeploymentName,
+		RampingVersionBuildID:        rampingVersionBuildID,
+		RampingVersionPercentage:     versioningInfo.RampingVersionPercentage,
+		UpdateTime:                   updateTime,
+	}
+
+	return cctx.Printer.PrintStructured(printMe, printer.StructuredOptions{})
+}
