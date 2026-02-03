@@ -2766,7 +2766,9 @@ commands:
 
       ```
       +------------------------------------------------------------------------+
-      | NOTICE: This command is deprecated. Use Worker Deployments instead.    |
+      | NOTICE: This command is limited to Namespaces that support Worker      |
+      | versioning. Worker versioning is experimental. Versioning commands are |
+      | subject to change.                                                     |
       +------------------------------------------------------------------------+
       ```
     options:
@@ -2800,7 +2802,9 @@ commands:
 
       ```
       +------------------------------------------------------------------------+
-      | NOTICE: This command is deprecated. Use Worker Deployments instead.    |
+      | NOTICE: This command is limited to Namespaces that support Worker      |
+      | versioning. Worker versioning is experimental. Versioning commands are |
+      | subject to change.                                                     |
       +------------------------------------------------------------------------+
       ```
     options:
@@ -2835,7 +2839,9 @@ commands:
 
       ```
       +------------------------------------------------------------------------+
-      | NOTICE: This command is deprecated. Use Worker Deployments instead.    |
+      | NOTICE: This command is limited to Namespaces that support Worker      |
+      | versioning. Worker versioning is experimental. Versioning commands are |
+      | subject to change.                                                     |
       +------------------------------------------------------------------------+
       ```
     options:
