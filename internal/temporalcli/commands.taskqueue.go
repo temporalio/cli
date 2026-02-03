@@ -253,55 +253,6 @@ func printTaskQueueDescription(cctx *CommandContext, taskQueueDescription client
 }
 
 func (c *TemporalTaskQueueDescribeCommand) run(cctx *CommandContext, args []string) error {
-	if c.LegacyMode {
-		return c.runLegacy(cctx, args)
-	}
-	// Call describeEnhanced
-	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
-	if err != nil {
-		return err
-	}
-
-	var selection *client.TaskQueueVersionSelection
-	if len(c.SelectBuildId) > 0 || c.SelectUnversioned || c.SelectAllActive {
-		selection = &client.TaskQueueVersionSelection{
-			BuildIDs:    c.SelectBuildId,
-			Unversioned: c.SelectUnversioned,
-			AllActive:   c.SelectAllActive,
-		}
-	}
-
-	var taskQueueTypes []client.TaskQueueType
-	for _, t := range c.TaskQueueType.Values {
-		var taskQueueType client.TaskQueueType
-		switch t {
-		case "workflow":
-			taskQueueType = client.TaskQueueTypeWorkflow
-		case "activity":
-			taskQueueType = client.TaskQueueTypeActivity
-		case "nexus":
-			taskQueueType = client.TaskQueueTypeNexus
-		default:
-			return fmt.Errorf("unrecognized task queue type: %s", t)
-		}
-		taskQueueTypes = append(taskQueueTypes, taskQueueType)
-	}
-
-	resp, err := cl.DescribeTaskQueueEnhanced(cctx, client.DescribeTaskQueueEnhancedOptions{
-		TaskQueue:              c.TaskQueue,
-		Versions:               selection,
-		TaskQueueTypes:         taskQueueTypes,
-		ReportPollers:          true,
-		ReportTaskReachability: c.ReportReachability,
-		ReportStats:            !c.DisableStats,
-	})
-	if err != nil {
-		return fmt.Errorf("unable to describe task queue: %w", err)
-	}
-	return printTaskQueueDescription(cctx, resp, c.ReportReachability, c.DisableStats)
-}
-
-func (c *TemporalTaskQueueDescribeCommand) runLegacy(cctx *CommandContext, args []string) error {
 	// Call describe
 	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
@@ -309,20 +260,20 @@ func (c *TemporalTaskQueueDescribeCommand) runLegacy(cctx *CommandContext, args 
 	}
 	defer cl.Close()
 	var taskQueueType enums.TaskQueueType
-	switch c.TaskQueueTypeLegacy.Value {
+	switch c.TaskQueueType.Value {
 	case "workflow":
 		taskQueueType = enums.TASK_QUEUE_TYPE_WORKFLOW
 	case "activity":
 		taskQueueType = enums.TASK_QUEUE_TYPE_ACTIVITY
 	default:
-		return fmt.Errorf("unrecognized task queue type: %q", c.TaskQueueTypeLegacy.Value)
+		return fmt.Errorf("unrecognized task queue type: %q", c.TaskQueueType.Value)
 	}
 
 	taskQueue, err := tqid.NewTaskQueueFamily(c.Parent.Namespace, c.TaskQueue)
 	if err != nil {
 		return fmt.Errorf("failed to parse task queue name: %w", err)
 	}
-	partitions := c.PartitionsLegacy
+	partitions := c.Partitions
 
 	type statusWithPartition struct {
 		Partition int `json:"partition"`
