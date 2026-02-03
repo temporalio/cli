@@ -470,9 +470,9 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_VersioningInfo_Legacy() {
 		TaskQueues     []map[string]any `json:"taskQueues"`
 		VersioningInfo struct {
 			CurrentDeploymentVersion struct {
-				DeploymentName string `json:"deploymentName"`
-				BuildId        string `json:"buildId"`
-			} `json:"currentDeploymentVersion"`
+				DeploymentName string `json:"deployment_name"`
+				BuildId        string `json:"build_id"`
+			} `json:"current_deployment_version"`
 		} `json:"versioning_info"`
 	}
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
