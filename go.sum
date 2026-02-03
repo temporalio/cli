@@ -381,8 +381,8 @@ go.opentelemetry.io/proto/otlp v1.5.0 h1:xJvq7gMzB31/d406fB8U5CBdyQGw4P399D1aQWU
 go.opentelemetry.io/proto/otlp v1.5.0/go.mod h1:keN8WnHxOy8PG0rQZjJJ5A2ebUoafqWp0eVQ4yIXvJ4=
 go.temporal.io/api v1.60.0 h1:SlRkizt3PXu/J62NWlUNLldHtJhUxfsBRuF4T0KYkgY=
 go.temporal.io/api v1.60.0/go.mod h1:iaxoP/9OXMJcQkETTECfwYq4cw/bj4nwov8b3ZLVnXM=
-go.temporal.io/sdk v1.39.1-0.20260130045906-e8d585d63336 h1:idDAGysX5i6Bob4L76rBItu2kGvDDORaDkBKd1fwA5g=
-go.temporal.io/sdk v1.39.1-0.20260130045906-e8d585d63336/go.mod h1:ESULA8dXvbPtw53DunYBgZFswk7RB4/8AcVXq5oSe+s=
+go.temporal.io/sdk v1.38.0 h1:4Bok5LEdED7YKpsSjIa3dDqram5VOq+ydBf4pyx0Wo4=
+go.temporal.io/sdk v1.38.0/go.mod h1:a+R2Ej28ObvHoILbHaxMyind7M6D+W0L7edt5UJF4SE=
 go.temporal.io/sdk/contrib/envconfig v0.1.0 h1:s+G/Ujph+Xl2jzLiiIm2T1vuijDkUL4Kse49dgDVGBE=
 go.temporal.io/sdk/contrib/envconfig v0.1.0/go.mod h1:FQEO3C56h9C7M6sDgSanB8HnBTmopw9qgVx4F1S6pJk=
 go.temporal.io/server v1.30.0-148.4 h1:ARyw74hyW5407tJG2az3wBtpbPE859lkGpaoP097Pwo=
