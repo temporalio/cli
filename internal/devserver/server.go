@@ -47,7 +47,6 @@ import (
 	"go.temporal.io/server/common/metrics"
 	sqliteplugin "go.temporal.io/server/common/persistence/sql/sqlplugin/sqlite"
 	"go.temporal.io/server/common/primitives"
-	"go.temporal.io/server/components/callbacks"
 	"go.temporal.io/server/components/nexusoperations"
 	"go.temporal.io/server/schema/sqlite"
 	sqliteschema "go.temporal.io/server/schema/sqlite"
@@ -241,18 +240,9 @@ func (s *StartOptions) buildServerOptions() ([]temporal.ServerOption, *slog.Leve
 	dynConf[dynamicconfig.HistoryCacheHostLevelMaxSize.Key()] = 8096
 	// Up default visibility RPS
 	dynConf[dynamicconfig.FrontendMaxNamespaceVisibilityRPSPerInstance.Key()] = 100
-	// NOTE that the URL scheme is fixed to HTTP since the dev server doesn't support TLS at the time of writing.
-	dynConf[nexusoperations.CallbackURLTemplate.Key()] = fmt.Sprintf(
-		"http://%s:%d/namespaces/{{.NamespaceName}}/nexus/callback", MaybeEscapeIPv6(s.FrontendIP), s.FrontendHTTPPort)
-	dynConf[callbacks.AllowedAddresses.Key()] = []struct {
-		Pattern       string
-		AllowInsecure bool
-	}{
-		{
-			Pattern:       fmt.Sprintf("%s:%d", MaybeEscapeIPv6(s.FrontendIP), s.FrontendHTTPPort),
-			AllowInsecure: true,
-		},
-	}
+	// Enable the system callback URL for worker targets.
+	// TODO: Remove this when upgrading to server 1.31.
+	dynConf[nexusoperations.UseSystemCallbackURL.Key()] = true
 
 	// Dynamic config if set
 	for k, v := range s.DynamicConfigValues {
