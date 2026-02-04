@@ -11,6 +11,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"go.temporal.io/api/common/v1"
+	deploymentpb "go.temporal.io/api/deployment/v1"
+	enumspb "go.temporal.io/api/enums/v1"
+	"go.temporal.io/api/workflowservice/v1"
+	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
 )
@@ -48,9 +53,19 @@ type jsonDrainageInfo struct {
 	LastCheckedTime time.Time `json:"lastCheckedTime"`
 }
 
+type jsonVersionStatsType struct {
+	ApproximateBacklogCount int64   `json:"approximateBacklogCount"`
+	ApproximateBacklogAge   int64   `json:"approximateBacklogAge"` // Duration is serialized as nanoseconds
+	BacklogIncreaseRate     float32 `json:"backlogIncreaseRate"`
+	TasksAddRate            float32 `json:"tasksAddRate"`
+	TasksDispatchRate       float32 `json:"tasksDispatchRate"`
+}
+
 type jsonTaskQueueInfoRowType struct {
-	Name string `json:"name"`
-	Type string `json:"type"`
+	Name               string                          `json:"name"`
+	Type               string                          `json:"type"`
+	Stats              *jsonVersionStatsType           `json:"stats,omitempty"`
+	StatsByPriorityKey map[string]jsonVersionStatsType `json:"statsByPriorityKey,omitempty"`
 }
 
 type jsonDeploymentVersionInfoType struct {
@@ -768,4 +783,266 @@ func (s *SharedServerSuite) TestDeployment_Set_Manager_Identity() {
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
 	s.Equal(deploymentName, jsonOut.Name)
 	s.Equal(testIdentity, jsonOut.ManagerIdentity)
+}
+
+func (s *SharedServerSuite) TestDeployment_Describe_Version_TaskQueueStats_WithPriority() {
+	s.testDeploymentDescribeVersionTaskQueueStats(true)
+}
+
+func (s *SharedServerSuite) TestDeployment_Describe_Version_TaskQueueStats_WithoutPriority() {
+	s.testDeploymentDescribeVersionTaskQueueStats(false)
+}
+
+func (s *SharedServerSuite) testDeploymentDescribeVersionTaskQueueStats(withPriority bool) {
+	deploymentName := uuid.NewString()
+	buildId := uuid.NewString()
+	taskQueue := uuid.NewString()
+	version := worker.WorkerDeploymentVersion{
+		DeploymentName: deploymentName,
+		BuildID:        buildId,
+	}
+
+	// Create worker directly with explicit versioning behavior
+	w1 := worker.New(s.Client, taskQueue, worker.Options{
+		DeploymentOptions: worker.DeploymentOptions{
+			UseVersioning: true,
+			Version:       version,
+		},
+	})
+
+	// Register a workflow with explicit Pinned versioning behavior
+	w1.RegisterWorkflowWithOptions(
+		func(ctx workflow.Context, input any) (any, error) {
+			workflow.GetSignalChannel(ctx, "complete-signal").Receive(ctx, nil)
+			return nil, nil
+		},
+		workflow.RegisterOptions{
+			Name:               "TestBacklogWorkflow",
+			VersioningBehavior: workflow.VersioningBehaviorPinned,
+		},
+	)
+
+	s.NoError(w1.Start())
+
+	// Wait for the deployment version to appear
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "describe-version",
+			"--address", s.Address(),
+			"--deployment-name", version.DeploymentName, "--build-id", version.BuildID,
+		)
+		assert.NoError(t, res.Err)
+	}, 30*time.Second, 100*time.Millisecond)
+
+	// Set as current version so workflows are routed to this version
+	res := s.Execute(
+		"worker", "deployment", "set-current-version",
+		"--address", s.Address(),
+		"--deployment-name", version.DeploymentName, "--build-id", version.BuildID,
+		"--yes",
+	)
+	s.NoError(res.Err)
+
+	// Stop the worker so workflow tasks will backlog
+	w1.Stop()
+
+	// Start workflows - they will queue up as workflow tasks since there is no worker
+	// Priority keys: 1 (high), 3 (medium/default), 5 (low)
+	priorityKeys := []int{1, 3, 5}
+	numWorkflows := len(priorityKeys)
+	workflowRuns := make([]client.WorkflowRun, numWorkflows)
+	for i := 0; i < numWorkflows; i++ {
+		opts := client.StartWorkflowOptions{
+			TaskQueue: taskQueue,
+		}
+		if withPriority {
+			opts.Priority = temporal.Priority{PriorityKey: priorityKeys[i]}
+		}
+		run, err := s.Client.ExecuteWorkflow(
+			s.Context,
+			opts,
+			"TestBacklogWorkflow",
+			"test-input",
+		)
+		s.NoError(err)
+		workflowRuns[i] = run
+		s.T().Logf("Started workflow %d: %s", i, run.GetID())
+	}
+
+	// Test 1: Verify gRPC returns non-zero backlog stats (validates server behavior)
+	// Use raw gRPC instead of SDK's DeploymentClient to avoid circular dependency
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		desc, err := s.Client.WorkflowService().DescribeWorkerDeploymentVersion(s.Context, &workflowservice.DescribeWorkerDeploymentVersionRequest{
+			Namespace: s.Namespace(),
+			DeploymentVersion: &deploymentpb.WorkerDeploymentVersion{
+				DeploymentName: version.DeploymentName,
+				BuildId:        version.BuildID,
+			},
+			ReportTaskQueueStats: true,
+		})
+		assert.NoError(t, err)
+
+		// Find the workflow task queue and check backlog stats (matching SDK test pattern)
+		for _, tqInfo := range desc.GetVersionTaskQueues() {
+			if tqInfo.GetName() == taskQueue && tqInfo.GetType() == enumspb.TASK_QUEUE_TYPE_WORKFLOW && tqInfo.GetStats() != nil {
+				stats := tqInfo.GetStats()
+				backlogIncreaseRate := stats.TasksAddRate - stats.TasksDispatchRate
+				// Check all stats fields like the SDK test does
+				if stats.ApproximateBacklogCount > 0 &&
+					stats.ApproximateBacklogAge.AsDuration().Nanoseconds() > 0 &&
+					stats.TasksAddRate > 0 &&
+					stats.TasksDispatchRate == 0 && // zero task dispatch due to no pollers
+					backlogIncreaseRate > 0 {
+					return // Success
+				}
+				t.Errorf("Unexpected backlog stats for tq %s: backlogCount=%d, backlogAge=%v, addRate=%f, dispatchRate=%f, increaseRate=%f",
+					taskQueue, stats.ApproximateBacklogCount, stats.ApproximateBacklogAge.AsDuration(),
+					stats.TasksAddRate, stats.TasksDispatchRate, backlogIncreaseRate)
+				return
+			}
+		}
+		t.Errorf("No workflow task queue with stats found for task queue %s in %d task queues", taskQueue, len(desc.GetVersionTaskQueues()))
+	}, 10*time.Second, 500*time.Millisecond)
+
+	// Verify text output has all stats columns with non-zero values
+	res = s.Execute(
+		"worker", "deployment", "describe-version",
+		"--address", s.Address(),
+		"--deployment-name", version.DeploymentName, "--build-id", version.BuildID,
+		"--report-task-queue-stats",
+	)
+	s.NoError(res.Err)
+	outputWithStats := res.Stdout.String()
+	// Verify column headers are present
+	s.Contains(outputWithStats, "ApproximateBacklogCount")
+	s.Contains(outputWithStats, "ApproximateBacklogAge")
+	s.Contains(outputWithStats, "BacklogIncreaseRate")
+	s.Contains(outputWithStats, "TasksAddRate")
+	s.Contains(outputWithStats, "TasksDispatchRate")
+	// Verify the workflow task queue row has the expected backlog count (we started 3 workflows)
+	// Format: Name Type ApproximateBacklogCount ApproximateBacklogAge BacklogIncreaseRate TasksAddRate TasksDispatchRate
+	s.ContainsOnSameLine(outputWithStats, taskQueue, "workflow", "3")
+	if withPriority {
+		s.Contains(outputWithStats, "Stats by Priority")
+		// Verify each priority key row shows approximate backlog count of 1 (one workflow per priority)
+		// The format is: Priority ApproximateBacklogCount ApproximateBacklogAge ...
+		// We started one workflow with each priority key (1, 3, 5), so each should have backlog of 1
+		for _, priorityKey := range priorityKeys {
+			// Check that the priority row contains the priority key followed by backlog count of 1
+			nonZeroBacklogIncreaseRate := "0."
+			nonZeroTasksAddRate := "0."
+			zeroTaskDispatchRate := "0"
+			// Once priority is enabled in all servers by default, check that backlog count of 1 is on each priority row.
+			// For servers where priority is not enabled, or workflows that aren't actively using priority keys,
+			// all backlog will be sent to the default priority key (3).
+			s.ContainsOnSameLine(outputWithStats,
+				fmt.Sprintf("%d", priorityKey),
+				nonZeroBacklogIncreaseRate,
+				nonZeroTasksAddRate,
+				zeroTaskDispatchRate,
+			)
+		}
+	} else {
+		// Verify that "Stats by Priority" is NOT shown when only the default priority key (3) is used
+		s.NotContains(outputWithStats, "Stats by Priority")
+	}
+
+	// Test 2: describe-version WITHOUT --report-task-queue-stats should NOT show stats columns
+	res = s.Execute(
+		"worker", "deployment", "describe-version",
+		"--address", s.Address(),
+		"--deployment-name", version.DeploymentName, "--build-id", version.BuildID,
+	)
+	s.NoError(res.Err)
+	// Stats columns should not appear in text output
+	outputNoStats := res.Stdout.String()
+	s.NotContains(outputNoStats, "ApproximateBacklogCount")
+	s.NotContains(outputNoStats, "ApproximateBacklogAge")
+	s.NotContains(outputNoStats, "BacklogIncreaseRate")
+	s.NotContains(outputNoStats, "TasksAddRate")
+	s.NotContains(outputNoStats, "TasksDispatchRate")
+
+	// Test 3: JSON output without stats flag - stats should be nil/missing
+	res = s.Execute(
+		"worker", "deployment", "describe-version",
+		"--address", s.Address(),
+		"--deployment-name", version.DeploymentName, "--build-id", version.BuildID,
+		"--output", "json",
+	)
+	s.NoError(res.Err)
+	var jsonOutNoStats jsonDeploymentVersionInfoType
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOutNoStats))
+	// Should have task queue info but no stats
+	s.Greater(len(jsonOutNoStats.TaskQueuesInfos), 0)
+	for _, tq := range jsonOutNoStats.TaskQueuesInfos {
+		s.Nil(tq.Stats, "Stats should be nil when --report-task-queue-stats is not provided")
+	}
+
+	// Test 4: JSON output with stats flag - verify stats structure is present with non-zero backlog
+	res = s.Execute(
+		"worker", "deployment", "describe-version",
+		"--address", s.Address(),
+		"--deployment-name", version.DeploymentName, "--build-id", version.BuildID,
+		"--report-task-queue-stats",
+		"--output", "json",
+	)
+	s.NoError(res.Err)
+
+	var jsonOutWithStats jsonDeploymentVersionInfoType
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOutWithStats))
+	s.Greater(len(jsonOutWithStats.TaskQueuesInfos), 0, "Should have task queue info")
+
+	// Find the workflow task queue and verify it has non-zero backlog stats
+	foundWorkflowTQWithStats := false
+	for _, tq := range jsonOutWithStats.TaskQueuesInfos {
+		if tq.Name == taskQueue && tq.Type == "workflow" {
+			s.NotNil(tq.Stats, "Stats should be present when --report-task-queue-stats is provided")
+			if tq.Stats != nil {
+				foundWorkflowTQWithStats = true
+				// Verify all stats fields are present and backlog count matches what we created
+				s.Greater(tq.Stats.ApproximateBacklogCount, int64(0),
+					"ApproximateBacklogCount should be non-zero with pending workflows")
+				s.Greater(tq.Stats.ApproximateBacklogAge, int64(0),
+					"ApproximateBacklogAge should be non-zero with pending workflows")
+				s.Greater(tq.Stats.TasksAddRate, float32(0),
+					"TasksAddRate should be non-zero after adding tasks")
+				// BacklogIncreaseRate may be positive (if backlog is growing)
+				// TasksDispatchRate should be 0 since no worker is running
+				s.Equal(float32(0), tq.Stats.TasksDispatchRate,
+					"TasksDispatchRate should be zero with no worker running")
+			}
+		}
+	}
+	s.True(foundWorkflowTQWithStats, "Should find workflow task queue with stats")
+
+	// Cleanup: Restart worker and signal workflows to complete
+	w2 := worker.New(s.Client, taskQueue, worker.Options{
+		DeploymentOptions: worker.DeploymentOptions{
+			UseVersioning: true,
+			Version:       version,
+		},
+	})
+	w2.RegisterWorkflowWithOptions(
+		func(ctx workflow.Context, input any) (any, error) {
+			workflow.GetSignalChannel(ctx, "complete-signal").Receive(ctx, nil)
+			return nil, nil
+		},
+		workflow.RegisterOptions{
+			Name:               "TestBacklogWorkflow",
+			VersioningBehavior: workflow.VersioningBehaviorPinned,
+		},
+	)
+	s.NoError(w2.Start())
+	defer w2.Stop()
+
+	// Signal all workflows to complete
+	for _, run := range workflowRuns {
+		err := s.Client.SignalWorkflow(s.Context, run.GetID(), run.GetRunID(), "complete-signal", nil)
+		s.NoError(err)
+	}
+
+	// Wait for workflows to complete
+	for _, run := range workflowRuns {
+		s.NoError(run.Get(s.Context, nil))
+	}
 }
