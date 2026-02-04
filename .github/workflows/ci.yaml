@@ -10,6 +10,80 @@ permissions:
   actions: write
 
 jobs:
+  validate-server-version:
+    name: Validate Server Version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate server dependency version
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const semver = require('semver');
+
+            const SERVER_MODULE = 'go.temporal.io/server';
+            const TEMPORAL_REPO = 'temporalio/temporal';
+
+            // 1. Read and parse go.mod
+            const goModContent = fs.readFileSync('go.mod', 'utf-8');
+            const serverVersionMatch = goModContent.match(new RegExp(`${SERVER_MODULE.replace(/\//g, '\\/')}\\s+(v[^\\s]+)`));
+
+            if (!serverVersionMatch) {
+              core.setFailed(`Could not find ${SERVER_MODULE} dependency in go.mod`);
+              return;
+            }
+
+            const serverVersion = serverVersionMatch[1];
+            core.info(`Found server dependency: ${SERVER_MODULE}@${serverVersion}`);
+
+            // 2. Validate it's a tagged version (not a pseudo-version)
+            const pseudoPattern = /-\d{14}-[a-f0-9]{12}$/;
+            if (pseudoPattern.test(serverVersion)) {
+              core.setFailed(`Server dependency must be a tagged version, not a pseudo-version: ${serverVersion}`);
+              return;
+            }
+            core.info('✓ Version is a valid tagged version');
+
+            // 3. Fetch latest release from GitHub
+            const { data: release } = await github.rest.repos.getLatestRelease({
+              owner: 'temporalio',
+              repo: 'temporal',
+            });
+            const latestRelease = release.tag_name;
+            core.info(`Latest GitHub release: ${latestRelease}`);
+
+            // 4. Validate version doesn't exceed next release (major.minor+1)
+            const serverSemver = semver.coerce(serverVersion.replace(/^v/, ''));
+            const latestSemver = semver.parse(latestRelease.replace(/^v/, ''));
+
+            if (!serverSemver || !latestSemver) {
+              core.setFailed(`Could not parse versions: server=${serverVersion}, latest=${latestRelease}`);
+              return;
+            }
+
+            const maxAllowedMinor = latestSemver.minor + 1;
+            core.info(`  Server version: ${serverSemver.major}.${serverSemver.minor}.x`);
+            core.info(`  Latest release: ${latestSemver.major}.${latestSemver.minor}.x`);
+            core.info(`  Max allowed: ${latestSemver.major}.${maxAllowedMinor}.x`);
+
+            const exceedsVersion =
+              serverSemver.major > latestSemver.major ||
+              (serverSemver.major === latestSemver.major && serverSemver.minor > maxAllowedMinor);
+
+            if (exceedsVersion) {
+              core.setFailed(
+                `Server dependency version ${serverVersion} exceeds allowed range.\n` +
+                `Max allowed: ${latestSemver.major}.${maxAllowedMinor}.x (latest release + 1 minor)\n` +
+                `Latest release: ${latestRelease}`
+              );
+              return;
+            }
+
+            core.info('✓ Server dependency version validation passed!')
+
   build-test:
     strategy:
       fail-fast: false
