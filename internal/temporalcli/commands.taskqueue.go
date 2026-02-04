@@ -6,7 +6,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/temporalio/cli/internal/printer"
-	commonpb "go.temporal.io/api/common/v1"
+	deploymentpb "go.temporal.io/api/deployment/v1"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/taskqueue/v1"
 	"go.temporal.io/api/workflowservice/v1"
@@ -332,12 +332,13 @@ func (c *TemporalTaskQueueDescribeCommand) runLegacy(cctx *CommandContext, args 
 		Partition int `json:"partition"`
 		taskqueue.PollerInfo
 		// copy this out to display nicer in table or card, but not json
-		Versioning *commonpb.WorkerVersionCapabilities `json:"-"`
+		Versioning *deploymentpb.WorkerDeploymentOptions `json:"-"`
 	}
 
 	var statuses []*statusWithPartition
 	var pollers []*pollerWithPartition
 	var config *taskqueue.TaskQueueConfig
+	var versioningInfo *taskqueue.TaskQueueVersioningInfo
 
 	// TODO: remove this when the server does partition fan-out
 	for p := 0; p < partitions; p++ {
@@ -362,12 +363,16 @@ func (c *TemporalTaskQueueDescribeCommand) runLegacy(cctx *CommandContext, args 
 			pollers = append(pollers, &pollerWithPartition{
 				Partition:  p,
 				PollerInfo: *pi,
-				Versioning: pi.WorkerVersionCapabilities,
+				Versioning: pi.GetDeploymentOptions(),
 			})
 		}
-		// Capture config from the first partition (they should all be the same)
+		// Capture config from the root partition
 		if p == 0 && resp.Config != nil {
 			config = resp.Config
+		}
+		// Capture versioning info from the root partition
+		if p == 0 && resp.VersioningInfo != nil {
+			versioningInfo = resp.VersioningInfo
 		}
 	}
 
@@ -381,6 +386,11 @@ func (c *TemporalTaskQueueDescribeCommand) runLegacy(cctx *CommandContext, args 
 		// Include config if requested
 		if c.ReportConfig && config != nil {
 			output["config"] = config
+		}
+
+		// Include versioning info if not nil
+		if versioningInfo != nil {
+			output["versioning_info"] = versioningInfo
 		}
 
 		return cctx.Printer.PrintStructured(output, printer.StructuredOptions{})
@@ -407,6 +417,12 @@ func (c *TemporalTaskQueueDescribeCommand) runLegacy(cctx *CommandContext, args 
 	if c.ReportConfig && config != nil {
 		cctx.Printer.Println(color.MagentaString("\nTask Queue Configuration:"))
 		return printTaskQueueConfig(cctx, config)
+	}
+
+	// Display versioning info if not nil
+	if versioningInfo != nil {
+		cctx.Printer.Println(color.MagentaString("\nVersioning Info:"))
+		return printTaskQueueVersioningInfo(cctx, versioningInfo)
 	}
 
 	return nil
