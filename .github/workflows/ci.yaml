@@ -22,10 +22,15 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const semver = require('semver');
 
             const SERVER_MODULE = 'go.temporal.io/server';
-            const TEMPORAL_REPO = 'temporalio/temporal';
+
+            // Parse major.minor from a version string like "v1.30.0-148.4" or "v1.29.2"
+            function parseMajorMinor(version) {
+              const match = version.match(/^v?(\d+)\.(\d+)/);
+              if (!match) return null;
+              return { major: parseInt(match[1], 10), minor: parseInt(match[2], 10) };
+            }
 
             // 1. Read and parse go.mod
             const goModContent = fs.readFileSync('go.mod', 'utf-8');
@@ -56,27 +61,27 @@ jobs:
             core.info(`Latest GitHub release: ${latestRelease}`);
 
             // 4. Validate version doesn't exceed next release (major.minor+1)
-            const serverSemver = semver.coerce(serverVersion.replace(/^v/, ''));
-            const latestSemver = semver.parse(latestRelease.replace(/^v/, ''));
+            const serverVer = parseMajorMinor(serverVersion);
+            const latestVer = parseMajorMinor(latestRelease);
 
-            if (!serverSemver || !latestSemver) {
+            if (!serverVer || !latestVer) {
               core.setFailed(`Could not parse versions: server=${serverVersion}, latest=${latestRelease}`);
               return;
             }
 
-            const maxAllowedMinor = latestSemver.minor + 1;
-            core.info(`  Server version: ${serverSemver.major}.${serverSemver.minor}.x`);
-            core.info(`  Latest release: ${latestSemver.major}.${latestSemver.minor}.x`);
-            core.info(`  Max allowed: ${latestSemver.major}.${maxAllowedMinor}.x`);
+            const maxAllowedMinor = latestVer.minor + 1;
+            core.info(`  Server version: ${serverVer.major}.${serverVer.minor}.x`);
+            core.info(`  Latest release: ${latestVer.major}.${latestVer.minor}.x`);
+            core.info(`  Max allowed: ${latestVer.major}.${maxAllowedMinor}.x`);
 
             const exceedsVersion =
-              serverSemver.major > latestSemver.major ||
-              (serverSemver.major === latestSemver.major && serverSemver.minor > maxAllowedMinor);
+              serverVer.major > latestVer.major ||
+              (serverVer.major === latestVer.major && serverVer.minor > maxAllowedMinor);
 
             if (exceedsVersion) {
               core.setFailed(
                 `Server dependency version ${serverVersion} exceeds allowed range.\n` +
-                `Max allowed: ${latestSemver.major}.${maxAllowedMinor}.x (latest release + 1 minor)\n` +
+                `Max allowed: ${latestVer.major}.${maxAllowedMinor}.x (latest release + 1 minor)\n` +
                 `Latest release: ${latestRelease}`
               );
               return;
