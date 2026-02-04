@@ -27,7 +27,7 @@ jobs:
             checkGenCommands: true
             cloudTestTarget: true
           - os: ubuntu-arm
-            runsOn: buildjet-4vcpu-ubuntu-2204-arm
+            runsOn: ubuntu-24.04-arm
     runs-on: ${{ matrix.runsOn || matrix.os }}
     env:
       # We can't check this directly in the cloud test's `if:` condition below,
