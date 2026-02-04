@@ -895,7 +895,7 @@ func (c *TemporalWorkerDeploymentSetRampingVersionCommand) run(cctx *CommandCont
 	return nil
 }
 
-func (c *TemporalWorkerDeploymentUpdateMetadataVersionCommand) run(cctx *CommandContext, args []string) error {
+func (c *TemporalWorkerDeploymentUpdateVersionMetadataCommand) run(cctx *CommandContext, args []string) error {
 	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
 	if err != nil {
 		return err
