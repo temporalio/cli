@@ -6,10 +6,12 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
 )
 
@@ -104,13 +106,14 @@ func (s *SharedServerSuite) TestWorkflow_ResetWithWorkflowUpdateOptions_Single_P
 		wfExecutions++
 		return "result", nil
 	})
+	testTaskQueue := s.Worker().Options.TaskQueue
 
 	// Start the workflow
 	searchAttr := "keyword-" + uuid.NewString()
 	run, err := s.Client.ExecuteWorkflow(
 		s.Context,
 		client.StartWorkflowOptions{
-			TaskQueue:        s.Worker().Options.TaskQueue,
+			TaskQueue:        testTaskQueue,
 			SearchAttributes: map[string]any{"CustomKeywordField": searchAttr},
 		},
 		DevWorkflow,
@@ -124,6 +127,37 @@ func (s *SharedServerSuite) TestWorkflow_ResetWithWorkflowUpdateOptions_Single_P
 	// Reset with pinned versioning behavior and properly formatted version
 	pinnedDeploymentName := "test-deployment"
 	pinnedBuildId := "v1.0"
+
+	// Start a versioned worker polling v1.0 to create the version
+	w1 := s.DevServer.StartDevWorker(s.Suite.T(), DevWorkerOptions{
+		Worker: worker.Options{
+			DeploymentOptions: worker.DeploymentOptions{
+				UseVersioning: true,
+				Version: worker.WorkerDeploymentVersion{
+					DeploymentName: pinnedDeploymentName,
+					BuildID:        pinnedBuildId,
+				},
+				DefaultVersioningBehavior: workflow.VersioningBehaviorPinned,
+			},
+		},
+		TaskQueue: testTaskQueue,
+	})
+	defer w1.Stop()
+
+	// Wait for the version to exist
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "describe-version",
+			"--address", s.Address(),
+			"--deployment-name", pinnedDeploymentName,
+			"--build-id", pinnedBuildId,
+		)
+		assert.NoError(t, res.Err)
+	}, 30*time.Second, 100*time.Millisecond)
+
+	// Wait for the version to be registered in all task queue partitions
+	time.Sleep(1 * time.Second)
+
 	res := s.Execute(
 		"workflow", "reset", "with-workflow-update-options",
 		"--address", s.Address(),
@@ -209,13 +243,14 @@ func (s *SharedServerSuite) TestWorkflow_ResetBatchWithWorkflowUpdateOptions_Pin
 		wfExecutions++
 		return "result", nil
 	})
+	testTaskQueue := s.Worker().Options.TaskQueue
 
 	// Start the workflow
 	searchAttr := "keyword-" + uuid.NewString()
 	run, err := s.Client.ExecuteWorkflow(
 		s.Context,
 		client.StartWorkflowOptions{
-			TaskQueue:        s.Worker().Options.TaskQueue,
+			TaskQueue:        testTaskQueue,
 			SearchAttributes: map[string]any{"CustomKeywordField": searchAttr},
 		},
 		DevWorkflow,
@@ -229,6 +264,36 @@ func (s *SharedServerSuite) TestWorkflow_ResetBatchWithWorkflowUpdateOptions_Pin
 	// Reset batch with pinned versioning behavior and properly formatted version
 	pinnedDeploymentName := "batch-deployment"
 	pinnedBuildId := "v1.0"
+	// Start a versioned worker polling v1.0 to create the version
+	w1 := s.DevServer.StartDevWorker(s.Suite.T(), DevWorkerOptions{
+		Worker: worker.Options{
+			DeploymentOptions: worker.DeploymentOptions{
+				UseVersioning: true,
+				Version: worker.WorkerDeploymentVersion{
+					DeploymentName: pinnedDeploymentName,
+					BuildID:        pinnedBuildId,
+				},
+				DefaultVersioningBehavior: workflow.VersioningBehaviorPinned,
+			},
+		},
+		TaskQueue: testTaskQueue,
+	})
+	defer w1.Stop()
+
+	// Wait for the version to exist
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "describe-version",
+			"--address", s.Address(),
+			"--deployment-name", pinnedDeploymentName,
+			"--build-id", pinnedBuildId,
+		)
+		assert.NoError(t, res.Err)
+	}, 30*time.Second, 100*time.Millisecond)
+
+	// Wait for the version to be registered in all task queue partitions
+	time.Sleep(1 * time.Second)
+
 	s.CommandHarness.Stdin.WriteString("y\n")
 	res := s.Execute(
 		"workflow", "reset", "with-workflow-update-options",
