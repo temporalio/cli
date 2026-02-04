@@ -323,8 +323,8 @@ github.com/temporalio/sqlparser v0.0.0-20231115171017-f4060bcfa6cb/go.mod h1:143
 github.com/temporalio/tchannel-go v1.22.1-0.20220818200552-1be8d8cffa5b/go.mod h1:c+V9Z/ZgkzAdyGvHrvC5AsXgN+M9Qwey04cBdKYzV7U=
 github.com/temporalio/tchannel-go v1.22.1-0.20240528171429-1db37fdea938 h1:sEJGhmDo+0FaPWM6f0v8Tjia0H5pR6/Baj6+kS78B+M=
 github.com/temporalio/tchannel-go v1.22.1-0.20240528171429-1db37fdea938/go.mod h1:ezRQRwu9KQXy8Wuuv1aaFFxoCNz5CeNbVOOkh3xctbY=
-github.com/temporalio/ui-server/v2 v2.42.1 h1:ajeOxqCnUiCRQQhQYLxaT7wUgF/slqZJtdW4pLjVqCs=
-github.com/temporalio/ui-server/v2 v2.42.1/go.mod h1:lKTnn50t8yQvcrarxAOjX33YcfkomkiNB5BH06wQwEE=
+github.com/temporalio/ui-server/v2 v2.45.0 h1:JePJfGst0htF/8byuSBjYYVK82ZCd2mDqjrFvWbCAhI=
+github.com/temporalio/ui-server/v2 v2.45.0/go.mod h1:xOQ+dRbyQ9lVwtRPzI95Jb8ds4JlO4dY+8PSi0bcR6c=
 github.com/twmb/murmur3 v1.1.8 h1:8Yt9taO/WN3l08xErzjeschgZU2QSrwm1kclYq+0aRg=
 github.com/twmb/murmur3 v1.1.8/go.mod h1:Qq/R7NUyOfr65zD+6Q5IHKsJLwP7exErjN6lyyq3OSQ=
 github.com/uber-common/bark v1.0.0/go.mod h1:g0ZuPcD7XiExKHynr93Q742G/sbrdVQkghrqLGOoFuY=
@@ -379,8 +379,8 @@ go.opentelemetry.io/otel/trace v1.35.0 h1:dPpEfJu1sDIqruz7BHFG3c7528f6ddfSWfFDVt
 go.opentelemetry.io/otel/trace v1.35.0/go.mod h1:WUk7DtFp1Aw2MkvqGdwiXYDZZNvA/1J8o6xRXLrIkyc=
 go.opentelemetry.io/proto/otlp v1.5.0 h1:xJvq7gMzB31/d406fB8U5CBdyQGw4P399D1aQWU/3i4=
 go.opentelemetry.io/proto/otlp v1.5.0/go.mod h1:keN8WnHxOy8PG0rQZjJJ5A2ebUoafqWp0eVQ4yIXvJ4=
-go.temporal.io/api v1.60.0 h1:SlRkizt3PXu/J62NWlUNLldHtJhUxfsBRuF4T0KYkgY=
-go.temporal.io/api v1.60.0/go.mod h1:iaxoP/9OXMJcQkETTECfwYq4cw/bj4nwov8b3ZLVnXM=
+go.temporal.io/api v1.60.1 h1:UO3T3LE69LvKd/WU5TjsAJ+/s/wpiMA2i51xkajsbXY=
+go.temporal.io/api v1.60.1/go.mod h1:iaxoP/9OXMJcQkETTECfwYq4cw/bj4nwov8b3ZLVnXM=
 go.temporal.io/sdk v1.38.0 h1:4Bok5LEdED7YKpsSjIa3dDqram5VOq+ydBf4pyx0Wo4=
 go.temporal.io/sdk v1.38.0/go.mod h1:a+R2Ej28ObvHoILbHaxMyind7M6D+W0L7edt5UJF4SE=
 go.temporal.io/sdk/contrib/envconfig v0.1.0 h1:s+G/Ujph+Xl2jzLiiIm2T1vuijDkUL4Kse49dgDVGBE=
