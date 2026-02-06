@@ -20,6 +20,7 @@ require (
 	go.temporal.io/api v1.60.1
 	go.temporal.io/sdk v1.38.0
 	go.temporal.io/sdk/contrib/envconfig v0.1.0
+	golang.org/x/mod v0.31.0
 	go.temporal.io/server v1.30.0
 	golang.org/x/term v0.38.0
 	golang.org/x/tools v0.40.0
@@ -156,7 +157,6 @@ require (
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/crypto v0.46.0 // indirect
 	golang.org/x/exp v0.0.0-20250620022241-b7579e27df2b // indirect
-	golang.org/x/mod v0.31.0 // indirect
 	golang.org/x/net v0.48.0 // indirect
 	golang.org/x/oauth2 v0.33.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
