@@ -88,8 +88,7 @@ jobs:
 
       - name: Generate docs, confirm working
         if: ${{ matrix.checkGenCommands }}
-        run: |
-          go run ./cmd/gen-docs -input internal/temporalcli/commands.yaml -input cliext/option-sets.yaml -output dist/docs
+        run: go run ./cmd/gen-docs -input internal/temporalcli/commands.yaml -input cliext/option-sets.yaml -output dist/docs
 
       - name: Test cloud mTLS
         if: ${{ matrix.cloudTestTarget && env.HAS_SECRETS == 'true' }}
