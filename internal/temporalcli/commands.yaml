@@ -146,36 +146,45 @@ commands:
       - common
 
   - name: temporal activity
-    summary: Complete, update, pause, unpause, reset or fail an Activity
+    summary: Operate on Activity Executions
     description: |
-      Update an Activity's options, manage activity lifecycle or update
-      an Activity's state to completed or failed.
+      Start, list, and manage Activity Executions.
 
-      Updating activity state marks an Activity as successfully finished or as
-      having encountered an error.
+      Start an Activity Execution (Experimental):
+
+      ```
+      temporal activity start \
+          --activity-id YourActivityId \
+          --type YourActivity \
+          --task-queue YourTaskQueue \
+          --input '{"some-key": "some-value"}'
+      ```
+
+      Complete an Activity manually:
 
       ```
       temporal activity complete \
-          --activity-id=YourActivityId \
-          --workflow-id=YourWorkflowId \
-          --result='{"YourResultKey": "YourResultValue"}'
+          --activity-id YourActivityId \
+          --result '{"YourResultKey": "YourResultValue"}'
       ```
     option-sets:
       - client
     docs:
-      description-header: >-
-        Learn how to use Temporal Activity commands for completing or failing
-        Activity Executions in your Workflow. Optimize your Temporal Workflow
-        management effectively.
       keywords:
         - activity
+        - activity start
+        - activity execute
+        - activity describe
+        - activity list
+        - activity count
+        - activity cancel
+        - activity terminate
+        - activity delete
         - activity complete
-        - activity update-options
+        - activity fail
         - activity pause
         - activity unpause
         - activity reset
-        - activity execution
-        - activity fail
         - cli reference
         - cli-feature
         - command-line-interface-cli
@@ -184,16 +193,35 @@ commands:
         - Activities
         - Temporal CLI
 
+  - name: temporal activity cancel
+    summary: Send cancellation to an Activity Execution (Experimental)
+    description: |
+      Cancel a running Activity Execution:
+
+      ```
+      temporal activity cancel \
+          --activity-id YourActivityId
+      ```
+
+      The Activity receives a cancellation request and can perform
+      cleanup before completing.
+    option-sets:
+      - activity-execution-reference
+    options:
+      - name: reason
+        type: string
+        description: Reason for cancellation.
+
   - name: temporal activity complete
     summary: Complete an Activity
     description: |
-      Complete an Activity, marking it as successfully finished. Specify the
-      Activity ID and include a JSON result for the returned value:
+      Complete an Activity, marking it as successfully finished.
+      Specify the Activity ID and include a JSON result for the
+      returned value:
 
       ```
       temporal activity complete \
           --activity-id YourActivityId \
-          --workflow-id YourWorkflowId \
           --result '{"YourResultKey": "YourResultVal"}'
       ```
     options:
@@ -201,37 +229,137 @@ commands:
         type: string
         description: Activity ID to complete.
         required: true
+      - name: workflow-id
+        type: string
+        short: w
+        description: |
+          Workflow ID. Required for workflow-scoped Activities.
+          Omit for standalone Activities.
+      - name: run-id
+        type: string
+        short: r
+        description: Run ID.
       - name: result
         type: string
         description: Result `JSON` to return.
         required: true
+
+  - name: temporal activity count
+    summary: Number of Activity Executions (Experimental)
+    description: |
+      Show a count of Activity Executions. Use `--query` to select
+      a subset:
+
+      ```
+      temporal activity count \
+          --query YourQuery
+      ```
+    options:
+      - name: query
+        type: string
+        short: q
+        description: Content for an SQL-like `QUERY` List Filter.
+
+  - name: temporal activity delete
+    summary: Remove an Activity Execution (Experimental)
+    description: |
+      Delete an Activity Execution:
+
+      ```
+      temporal activity delete \
+          --activity-id YourActivityId
+      ```
     option-sets:
-      - workflow-reference
+      - activity-execution-reference
+
+  - name: temporal activity describe
+    summary: Show Activity Execution info (Experimental)
+    description: |
+      Display information about an Activity Execution:
+
+      ```
+      temporal activity describe \
+          --activity-id YourActivityId
+      ```
+    option-sets:
+      - activity-execution-reference
+    options:
+      - name: raw
+        type: bool
+        description: Print properties without changing their format.
+
+  - name: temporal activity execute
+    summary: Start a new Activity Execution and wait for completion (Experimental)
+    description: |
+      Start a new Activity Execution and block until it completes.
+      The result is printed to stdout:
+
+      ```
+      temporal activity execute \
+          --activity-id YourActivityId \
+          --type YourActivity \
+          --task-queue YourTaskQueue \
+          --input '{"some-key": "some-value"}'
+      ```
+    option-sets:
+      - activity-start
+      - payload-input
 
   - name: temporal activity fail
     summary: Fail an Activity
     description: |
-      Fail an Activity, marking it as having encountered an error. Specify the
-      Activity and Workflow IDs:
+      Fail an Activity, marking it as having encountered an error.
+      Specify the Activity ID:
 
       ```
       temporal activity fail \
-          --activity-id YourActivityId \
-          --workflow-id YourWorkflowId
+          --activity-id YourActivityId
       ```
     options:
       - name: activity-id
         type: string
         description: Activity ID to fail.
         required: true
+      - name: workflow-id
+        type: string
+        short: w
+        description: |
+          Workflow ID. Required for workflow-scoped Activities.
+          Omit for standalone Activities.
+      - name: run-id
+        type: string
+        short: r
+        description: Run ID.
       - name: detail
         type: string
         description: Reason for failing the Activity (JSON).
       - name: reason
         type: string
         description: Reason for failing the Activity.
-    option-sets:
-      - workflow-reference
+
+  - name: temporal activity list
+    summary: Show Activity Executions (Experimental)
+    description: |
+      List Activity Executions. Use `--query` to filter results:
+
+      ```
+      temporal activity list \
+          --query YourQuery
+      ```
+    options:
+      - name: query
+        short: q
+        type: string
+        description: Content for an SQL-like `QUERY` List Filter.
+      - name: limit
+        type: int
+        description: |
+          Maximum number of Activity Executions to display.
+      - name: page-size
+        type: int
+        description: |
+          Maximum number of Activity Executions to fetch
+          at a time from the server.
 
   - name: temporal activity update-options
     summary: Update Activity options
@@ -532,6 +660,58 @@ commands:
           Restore the original options of the activity.
     option-sets:
       - single-workflow-or-batch
+
+  - name: temporal activity result
+    summary: Wait for and print the result of an Activity Execution (Experimental)
+    description: |
+      Wait for an Activity Execution to complete and print the
+      result:
+
+      ```
+      temporal activity result \
+          --activity-id YourActivityId
+      ```
+    option-sets:
+      - activity-execution-reference
+
+  - name: temporal activity start
+    summary: Start a new Activity Execution (Experimental)
+    description: |
+      Start a new Activity Execution. Returns the Activity ID and
+      Run ID:
+
+      ```
+      temporal activity start \
+          --activity-id YourActivityId \
+          --type YourActivity \
+          --task-queue YourTaskQueue \
+          --input '{"some-key": "some-value"}'
+      ```
+    option-sets:
+      - activity-start
+      - payload-input
+
+  - name: temporal activity terminate
+    summary: Forcefully end an Activity Execution (Experimental)
+    description: |
+      Terminate an Activity Execution:
+
+      ```
+      temporal activity terminate \
+          --activity-id YourActivityId \
+          --reason YourReason
+      ```
+
+      Activity code cannot see or respond to terminations. To
+      perform clean-up work, use `temporal activity cancel` instead.
+    option-sets:
+      - activity-execution-reference
+    options:
+      - name: reason
+        type: string
+        description: |
+          Reason for termination.
+          Defaults to message with the current user's name.
 
   - name: temporal batch
     summary: Manage running batch jobs
@@ -1101,17 +1281,17 @@ commands:
       ```
       temporal worker deployment manager-identity [command] [options]
       ```
-      
-      When present, `ManagerIdentity` is the identity of the user that has the 
+
+      When present, `ManagerIdentity` is the identity of the user that has the
       exclusive right to make changes to this Worker Deployment. Empty by default.
       When set, users whose identity does not match the `ManagerIdentity` will not
       be able to change the Worker Deployment.
-  
+
       This is especially useful in environments where multiple users (such as CLI
       users and automated controllers) may interact with the same Worker Deployment.
       `ManagerIdentity` allows different users to communicate with one another about
       who is expected to make changes to the Worker Deployment.
-      
+
       The current Manager Identity is returned with `describe`:
       ```
        temporal worker deployment describe \
@@ -1130,12 +1310,12 @@ commands:
     summary: Set the Manager Identity of a Worker Deployment
     description: |
       Set the `ManagerIdentity` of a Worker Deployment given its Deployment Name.
-      
-      When present, `ManagerIdentity` is the identity of the user that has the 
+
+      When present, `ManagerIdentity` is the identity of the user that has the
       exclusive right to make changes to this Worker Deployment. Empty by default.
       When set, users whose identity does not match the `ManagerIdentity` will not
       be able to change the Worker Deployment.
-  
+
       This is especially useful in environments where multiple users (such as CLI
       users and automated controllers) may interact with the same Worker Deployment.
       `ManagerIdentity` allows different users to communicate with one another about
@@ -1144,7 +1324,7 @@ commands:
       ```
       temporal worker deployment manager-identity set [options]
       ```
-      
+
       For example:
 
       ```
@@ -1154,17 +1334,17 @@ commands:
          --identity YourUserIdentity # optional, populated by CLI if not provided
       ```
 
-      Sets the Manager Identity of the Deployment to the identity of the user making 
-      this request. If you don't specifically pass an identity field, the CLI will 
+      Sets the Manager Identity of the Deployment to the identity of the user making
+      this request. If you don't specifically pass an identity field, the CLI will
       generate your identity for you.
-      
+
       For example:
       ```
       temporal worker deployment manager-identity set \
          --deployment-name DeploymentName \
          --manager-identity NewManagerIdentity
       ```
-      
+
       Sets the Manager Identity of the Deployment to any string.
 
     options:
@@ -1186,12 +1366,12 @@ commands:
     summary: Unset the Manager Identity of a Worker Deployment
     description: |
       Unset the `ManagerIdentity` of a Worker Deployment given its Deployment Name.
-      
-      When present, `ManagerIdentity` is the identity of the user that has the 
+
+      When present, `ManagerIdentity` is the identity of the user that has the
       exclusive right to make changes to this Worker Deployment. Empty by default.
       When set, users whose identity does not match the `ManagerIdentity` will not
       be able to change the Worker Deployment.
-      
+
       This is especially useful in environments where multiple users (such as CLI
       users and automated controllers) may interact with the same Worker Deployment.
       `ManagerIdentity` allows different users to communicate with one another about
@@ -1200,7 +1380,7 @@ commands:
       ```
       temporal worker deployment manager-identity unset [options]
       ```
-      
+
       For example:
 
       ```
@@ -1223,7 +1403,7 @@ commands:
     summary: List worker status information in a specific namespace (EXPERIMENTAL)
     description: |
       Get a list of workers to the specified namespace.
-      
+
       ```
       temporal worker list --namespace YourNamespace --query 'TaskQueue="YourTaskQueue"'
       ```
@@ -1240,7 +1420,7 @@ commands:
     summary: Returns information about a specific worker (EXPERIMENTAL)
     description: |
       Look up information of a specific worker.
-      
+
       ```
       temporal worker describe --namespace YourNamespace --worker-instance-key YourKey
       ```
@@ -2524,8 +2704,8 @@ commands:
       provided that they were assigned a Build ID.
 
       Note that task reachability status is deprecated in favor of Drainage Status
-      (ie. of a Drained or Draining Worker Deployment Version) and will be removed 
-      in a future release. Also, determining task reachability incurs a non-trivial 
+      (ie. of a Drained or Draining Worker Deployment Version) and will be removed
+      in a future release. Also, determining task reachability incurs a non-trivial
       computing cost.
 
       Task reachability states are reported per build ID. The state may be one of the
@@ -4724,7 +4904,7 @@ option-sets:
           Temporal workflow headers in 'KEY=VALUE' format.
           Keys must be identifiers, and values must be JSON values.
           May be passed multiple times to set multiple Temporal headers.
-          Note: These are workflow headers, not gRPC headers.   
+          Note: These are workflow headers, not gRPC headers.
 
   - name: workflow-update-options
     options:
@@ -4746,3 +4926,136 @@ option-sets:
         description:
           When overriding to a `pinned` behavior, specifies the Build ID of the
           version to target.
+
+  - name: activity-execution-reference
+    options:
+      - name: activity-id
+        type: string
+        short: a
+        description: Activity ID.
+        required: true
+      - name: run-id
+        type: string
+        short: r
+        description: |
+          Run ID.
+          If not set, targets the latest run.
+
+  - name: activity-start
+    options:
+      - name: activity-id
+        type: string
+        short: a
+        description: Activity ID.
+        required: true
+      - name: type
+        type: string
+        description: Activity Type name.
+        required: true
+        aliases:
+          - name
+      - name: task-queue
+        type: string
+        description: Activity Task queue.
+        required: true
+        short: t
+      - name: schedule-to-close-timeout
+        type: duration
+        description: |
+          Maximum time for the Activity Execution, including
+          retries. Either this or "start-to-close-timeout"
+          is required.
+      - name: schedule-to-start-timeout
+        type: duration
+        description: |
+          Maximum time an Activity task can stay in a task
+          queue before a Worker picks it up.
+      - name: start-to-close-timeout
+        type: duration
+        description: |
+          Maximum time for a single Activity attempt.
+          Either this or "schedule-to-close-timeout"
+          is required.
+      - name: heartbeat-timeout
+        type: duration
+        description: |
+          Maximum time between successful Worker heartbeats.
+      - name: retry-initial-interval
+        type: duration
+        description: |
+          Interval of the first retry.
+          If "retry-backoff-coefficient" is 1.0, it is used
+          for all retries.
+      - name: retry-maximum-interval
+        type: duration
+        description: |
+          Maximum interval between retries.
+      - name: retry-backoff-coefficient
+        type: float
+        description: |
+          Coefficient for calculating the next retry interval.
+          Must be 1 or larger.
+      - name: retry-maximum-attempts
+        type: int
+        description: |
+          Maximum number of attempts.
+          Setting to 1 disables retries.
+          Setting to 0 means unlimited attempts.
+      - name: id-reuse-policy
+        type: string-enum
+        description: |
+          Re-use policy for the Activity ID when a previous
+          Execution has completed.
+        enum-values:
+          - AllowDuplicate
+          - AllowDuplicateFailedOnly
+          - RejectDuplicate
+      - name: id-conflict-policy
+        type: string-enum
+        description: |
+          Policy for handling a conflict when starting an
+          Activity with a duplicate Activity ID of a running
+          Execution.
+        enum-values:
+          - Fail
+          - UseExisting
+      - name: search-attribute
+        type: string[]
+        description: |
+          Search Attribute in `KEY=VALUE` format.
+          Keys must be identifiers, and values must be
+          JSON values.
+          Can be passed multiple times.
+      - name: headers
+        type: string[]
+        description: |
+          Temporal activity headers in 'KEY=VALUE' format.
+          Keys must be identifiers, and values must be
+          JSON values.
+          May be passed multiple times.
+      - name: static-summary
+        type: string
+        experimental: true
+        description: |
+          Static Activity summary for human consumption in UIs.
+          Uses Temporal Markdown formatting.
+      - name: static-details
+        type: string
+        experimental: true
+        description: |
+          Static Activity details for human consumption in UIs.
+          Uses Temporal Markdown formatting.
+      - name: priority-key
+        type: int
+        description: |
+          Priority key (1-5, lower = higher priority).
+          Default is 3 when not specified.
+      - name: fairness-key
+        type: string
+        description: |
+          Fairness key (max 64 bytes) for proportional task
+          dispatch.
+      - name: fairness-weight
+        type: float
+        description: |
+          Weight [0.001-1000] for this fairness key.
