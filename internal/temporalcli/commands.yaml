@@ -181,6 +181,7 @@ commands:
         - activity terminate
         - activity delete
         - activity complete
+        - activity update-options
         - activity fail
         - activity pause
         - activity unpause
@@ -193,9 +194,15 @@ commands:
         - Activities
         - Temporal CLI
 
+  TODO: Follow the Python SDK docstring more closely in referring to this as requesting
+  cancellation and explaining that it will only be delivered if the activity is heartbeating,
+  etc. do we only send cancellation requests with heartbeat responses, not with
+  attempt starts? What is the story for workflow activities?
+
   - name: temporal activity cancel
     summary: Send cancellation to an Activity Execution (Experimental)
     description: |
+
       Cancel a running Activity Execution:
 
       ```
@@ -206,7 +213,7 @@ commands:
       The Activity receives a cancellation request and can perform
       cleanup before completing.
     option-sets:
-      - activity-execution-reference
+      - activity-reference
     options:
       - name: reason
         type: string
@@ -233,27 +240,33 @@ commands:
         type: string
         short: w
         description: |
-          Workflow ID. Required for workflow-scoped Activities.
+          Workflow ID. Required for workflow Activities.
           Omit for standalone Activities.
       - name: run-id
         type: string
         short: r
         description: Run ID.
+        TODO: is this accepted/used for standalone activity?
       - name: result
         type: string
         description: Result `JSON` to return.
         required: true
 
   - name: temporal activity count
-    summary: Number of Activity Executions (Experimental)
+    summary: Count Activity Executions (Experimental)
     description: |
-      Show a count of Activity Executions. Use `--query` to select
+      Return a count of Activity Executions. Use `--query` to select
       a subset:
 
       ```
       temporal activity count \
           --query YourQuery
       ```
+
+      TODO: show an example query
+
+      Visit https://docs.temporal.io/visibility to read more about Search Attributes
+      and Query creation. See `temporal batch --help` for a quick reference.
     options:
       - name: query
         type: string
@@ -261,7 +274,7 @@ commands:
         description: Content for an SQL-like `QUERY` List Filter.
 
   - name: temporal activity delete
-    summary: Remove an Activity Execution (Experimental)
+    summary: Delete an Activity Execution (Experimental)
     description: |
       Delete an Activity Execution:
 
@@ -269,11 +282,16 @@ commands:
       temporal activity delete \
           --activity-id YourActivityId
       ```
+
+      TODO: `workflow delete` says:
+      The removal executes asynchronously. If the Execution is Running, the Service
+      terminates it before deletion.
+
     option-sets:
-      - activity-execution-reference
+      - activity-reference
 
   - name: temporal activity describe
-    summary: Show Activity Execution info (Experimental)
+    summary: Describe Activity Execution (Experimental)
     description: |
       Display information about an Activity Execution:
 
@@ -282,14 +300,14 @@ commands:
           --activity-id YourActivityId
       ```
     option-sets:
-      - activity-execution-reference
+      - activity-reference
     options:
       - name: raw
         type: bool
         description: Print properties without changing their format.
 
   - name: temporal activity execute
-    summary: Start a new Activity Execution and wait for completion (Experimental)
+    summary: Start an Activity Execution and wait for completion (Experimental)
     description: |
       Start a new Activity Execution and block until it completes.
       The result is printed to stdout:
@@ -308,28 +326,42 @@ commands:
   - name: temporal activity fail
     summary: Fail an Activity
     description: |
-      Fail an Activity, marking it as having encountered an error.
-      Specify the Activity ID:
+      Fail an Activity, marking it as having encountered an error:
 
       ```
       temporal activity fail \
           --activity-id YourActivityId
       ```
     options:
+
+      TODO: Maybe we should create activity-reference option set that permits an optional workflow
+      ID? And a standalone-activity-reference for the ones supported for standalone only. I believe
+      when inlining run-id here you've lost the standard sentence abut how if omitted it will target
+      the last run, which suggests that sharing via activity-reference would prevent such mistakes.
+
       - name: activity-id
         type: string
         description: Activity ID to fail.
+
+        TODO: why no short? Isn't it 'short: a' elsewhere? Again, this suggests you should employ an option set.
+
         required: true
       - name: workflow-id
         type: string
         short: w
         description: |
-          Workflow ID. Required for workflow-scoped Activities.
+          Workflow ID. Required for workflow Activities.
           Omit for standalone Activities.
       - name: run-id
         type: string
         short: r
         description: Run ID.
+
+      TODO: This seems odd, to have one option named `detail`, and one named `reason`, and yet both
+      have the same semantics but differ in format. Check that this is correct, and how it is
+      exposed by the Go and Python SDKs. AsyncActivityHandle.fail in Python seems to expose a
+      different API; are they the same grpc method?
+
       - name: detail
         type: string
         description: Reason for failing the Activity (JSON).
@@ -346,11 +378,20 @@ commands:
       temporal activity list \
           --query YourQuery
       ```
+      Visit https://docs.temporal.io/visibility to read more about Search Attributes
+      and Query creation. See `temporal batch --help` for a quick reference.
     options:
       - name: query
         short: q
         type: string
+
+        TODO: this pre-existing phrasing is word salad. To what does upper-case QUERY refer? Change throughout to
+        `Query used to filter (or `count` where appropriate) the results. Visit https://docs.temporal.io/visibility to read more about Search Attributes
+      and Query creation. See `temporal batch --help` for a quick reference.`
+
         description: Content for an SQL-like `QUERY` List Filter.
+
+
       - name: limit
         type: int
         description: |
@@ -366,6 +407,8 @@ commands:
     description: |
       Update the options of a running Activity that were passed into it from
       a Workflow. Updates are incremental, only changing the specified options.
+
+      TODO: here and elsewhere (pause, unpause, reset etc) add a sentence stating that it is not supported for Standalone Activities.
 
       For example:
 
@@ -396,6 +439,14 @@ commands:
           --query 'TemporalPauseInfo="property:activityType=Foo"'
           ...
       ```
+
+      TODO: what has this command to do with pause? Why TemporalPauseInfo?
+
+    TODO: this needs to share code with the activity-start option set. If it is not able to simply
+    use it then we should factor out an option set that can be used. The timeout descriptions are
+    mosty better in activity-start (e.g. "Indicates how long the caller is willing to wait" is
+    horrible language). But there may be some good details in here to include in the final shared version.
+
     options:
       - name: activity-id
         short: a
@@ -662,9 +713,9 @@ commands:
       - single-workflow-or-batch
 
   - name: temporal activity result
-    summary: Wait for and print the result of an Activity Execution (Experimental)
+    summary: Wait for and output the result of an Activity Execution (Experimental)
     description: |
-      Wait for an Activity Execution to complete and print the
+      Wait for an Activity Execution to complete and output the
       result:
 
       ```
@@ -672,12 +723,12 @@ commands:
           --activity-id YourActivityId
       ```
     option-sets:
-      - activity-execution-reference
+      - activity-reference
 
   - name: temporal activity start
     summary: Start a new Activity Execution (Experimental)
     description: |
-      Start a new Activity Execution. Returns the Activity ID and
+      Start a new Activity Execution. Outputs the Activity ID and
       Run ID:
 
       ```
@@ -692,7 +743,7 @@ commands:
       - payload-input
 
   - name: temporal activity terminate
-    summary: Forcefully end an Activity Execution (Experimental)
+    summary: Terminate an Activity Execution (Experimental)
     description: |
       Terminate an Activity Execution:
 
@@ -705,13 +756,13 @@ commands:
       Activity code cannot see or respond to terminations. To
       perform clean-up work, use `temporal activity cancel` instead.
     option-sets:
-      - activity-execution-reference
+      - activity-reference
     options:
       - name: reason
         type: string
         description: |
           Reason for termination.
-          Defaults to message with the current user's name.
+          Defaults to a message with the current user's name.
 
   - name: temporal batch
     summary: Manage running batch jobs
@@ -3542,7 +3593,7 @@ commands:
         - Workflows
 
   - name: temporal workflow cancel
-    summary: Send cancellation to Workflow Execution
+    summary: Send cancellation to a Workflow Execution
     description: |
       Canceling a running Workflow Execution records a
       `WorkflowExecutionCancelRequested` event in the Event History. The Service
@@ -3570,15 +3621,17 @@ commands:
       - single-workflow-or-batch
 
   - name: temporal workflow count
-    summary: Number of Workflow Executions
+    summary: Count Workflow Executions
     description: |
-      Show a count of Workflow Executions, regardless of execution state (running,
+      Return a count of Workflow Executions, regardless of execution state (running,
       terminated, etc). Use `--query` to select a subset of Workflow Executions:
 
       ```
       temporal workflow count \
           --query YourQuery
       ```
+
+      TODO: show an example query
 
       Visit https://docs.temporal.io/visibility to read more about Search Attributes
       and Query creation. See `temporal batch --help` for a quick reference.
@@ -3589,9 +3642,9 @@ commands:
         description: Content for an SQL-like `QUERY` List Filter.
 
   - name: temporal workflow delete
-    summary: Remove Workflow Execution
+    summary: Delete Workflow Execution
     description: |
-      Delete a Workflow Executions and its Event History:
+      Delete a Workflow Execution and its Event History:
 
       ```
       temporal workflow delete \
@@ -3603,13 +3656,16 @@ commands:
 
       Visit https://docs.temporal.io/visibility to read more about Search Attributes
       and Query creation. See `temporal batch --help` for a quick reference.
+
+      TODO: does this actually operate on batches and accept a query? It's not documented here, and
+      I don't see the functionality in DeleteWorkflowExecution.
     option-sets:
       - single-workflow-or-batch
 
   - name: temporal workflow describe
-    summary: Show Workflow Execution info
+    summary: Describe Workflow Execution
     description: |
-      Display information about a specific Workflow Execution:
+      Display information about a Workflow Execution:
 
       ```
       temporal workflow describe \
@@ -3634,11 +3690,10 @@ commands:
         description: Print properties without changing their format.
 
   - name: temporal workflow execute
-    summary: Start new Workflow Execution
+    summary: Start a Workflow Execution and wait for completion
     description: |
-      Establish a new Workflow Execution and direct its progress to stdout. The
-      command blocks and returns when the Workflow Execution completes. If your
-      Workflow requires input, pass valid JSON:
+      Start a new Workflow Execution and direct its progress to stdout. The
+      command blocks and returns when the Workflow Execution completes:
 
       ```
       temporal workflow execute
@@ -3695,6 +3750,8 @@ commands:
       temporal workflow list \
           --query YourQuery
       ```
+
+      TODO: show an example query
 
       Visit https://docs.temporal.io/visibility to read more about Search Attributes
       and Query creation. See `temporal batch --help` for a quick reference.
@@ -3927,9 +3984,11 @@ commands:
       - workflow-update-options
 
   - name: temporal workflow result
-    summary: Wait for and show the result of a Workflow Execution
+    summary: Wait for and output the result of a Workflow Execution
     description: |
-      Wait for and print the result of a Workflow Execution:
+      TODO: Let's use 'output' as the verb in such situations, rather than 'print' or 'return'.
+
+      Wait for and output the result of a Workflow Execution:
 
       ```
       temporal workflow result \
@@ -4067,9 +4126,9 @@ commands:
       - workflow-reference
 
   - name: temporal workflow start
-    summary: Initiate a Workflow Execution
+    summary: Start a Workflow Execution
     description: |
-      Start a new Workflow Execution. Returns the Workflow- and Run-IDs:
+      Start a new Workflow Execution. Outputs the Workflow ID and Run ID:
 
       ```
       temporal workflow start \
@@ -4084,9 +4143,9 @@ commands:
       - payload-input
 
   - name: temporal workflow terminate
-    summary: Forcefully end a Workflow Execution
+    summary: Terminate a Workflow Execution
     description: |
-      Terminate a Workflow Execution:
+      Terminate (forcefully end) a Workflow Execution:
 
       ```
       temporal workflow terminate \
@@ -4927,7 +4986,8 @@ option-sets:
           When overriding to a `pinned` behavior, specifies the Build ID of the
           version to target.
 
-  - name: activity-execution-reference
+  TODO: I changed this to activity-reference, for consistency with workflow-reference
+  - name: activity-reference
     options:
       - name: activity-id
         type: string
@@ -4952,8 +5012,6 @@ option-sets:
         type: string
         description: Activity Type name.
         required: true
-        aliases:
-          - name
       - name: task-queue
         type: string
         description: Activity Task queue.
@@ -4963,7 +5021,7 @@ option-sets:
         type: duration
         description: |
           Maximum time for the Activity Execution, including
-          retries. Either this or "start-to-close-timeout"
+          all retries. Either this or "start-to-close-timeout"
           is required.
       - name: schedule-to-start-timeout
         type: duration
@@ -4980,6 +5038,12 @@ option-sets:
         type: duration
         description: |
           Maximum time between successful Worker heartbeats.
+
+      TODO: I think there should be a retry-policy-options option set, even if it's not currently
+      shared. In fact, does the CLI not expose the retry policy when starting a workflow? It's
+      possible; I know we don't really recommend non-default retry policy for workflow (the whole
+      point of workflow is that it should not need retrying)
+
       - name: retry-initial-interval
         type: duration
         description: |
