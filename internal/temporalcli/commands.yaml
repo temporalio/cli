@@ -170,6 +170,9 @@ commands:
     option-sets:
       - client
     docs:
+      description-header: >-
+        Start, list, and manage Activity Executions
+        using the Temporal CLI.
       keywords:
         - activity
         - activity start
