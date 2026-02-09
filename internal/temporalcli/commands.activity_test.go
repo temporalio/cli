@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"sync"
 	"sync/atomic"
+	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/history/v1"
 	"go.temporal.io/api/serviceerror"
@@ -518,4 +520,49 @@ func (s *SharedServerSuite) TestResetActivity_BatchSuccess() {
 
 	// unblock the activities to let them finish
 	failActivity.Store(false)
+}
+
+func TestHelp_ActivitySubcommands(t *testing.T) {
+	h := NewCommandHarness(t)
+
+	res := h.Execute("help", "activity")
+	assert.NoError(t, res.Err)
+	out := res.Stdout.String()
+	for _, sub := range []string{"cancel", "complete", "count", "delete", "describe", "execute", "fail", "list", "result", "start", "terminate"} {
+		assert.Contains(t, out, sub, "missing subcommand %q in activity help", sub)
+	}
+}
+
+func TestHelp_ActivityStartFlags(t *testing.T) {
+	h := NewCommandHarness(t)
+
+	res := h.Execute("activity", "start", "--help")
+	assert.NoError(t, res.Err)
+	out := res.Stdout.String()
+	for _, flag := range []string{"--activity-id", "--type", "--task-queue", "--schedule-to-close-timeout", "--start-to-close-timeout", "--input"} {
+		assert.Contains(t, out, flag, "missing flag %q in activity start help", flag)
+	}
+}
+
+func TestHelp_ActivityCompleteFlags(t *testing.T) {
+	h := NewCommandHarness(t)
+
+	res := h.Execute("activity", "complete", "--help")
+	assert.NoError(t, res.Err)
+	out := res.Stdout.String()
+	assert.Contains(t, out, "--activity-id")
+	assert.Contains(t, out, "--workflow-id")
+	assert.Contains(t, out, "--result")
+}
+
+func TestHelp_ActivityFailFlags(t *testing.T) {
+	h := NewCommandHarness(t)
+
+	res := h.Execute("activity", "fail", "--help")
+	assert.NoError(t, res.Err)
+	out := res.Stdout.String()
+	assert.Contains(t, out, "--activity-id")
+	assert.Contains(t, out, "--workflow-id")
+	assert.Contains(t, out, "--detail")
+	assert.Contains(t, out, "--reason")
 }
