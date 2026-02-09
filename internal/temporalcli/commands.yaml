@@ -194,24 +194,22 @@ commands:
         - Activities
         - Temporal CLI
 
-  TODO: Follow the Python SDK docstring more closely in referring to this as requesting
-  cancellation and explaining that it will only be delivered if the activity is heartbeating,
-  etc. do we only send cancellation requests with heartbeat responses, not with
-  attempt starts? What is the story for workflow activities?
-
   - name: temporal activity cancel
-    summary: Send cancellation to an Activity Execution (Experimental)
+    summary: Request cancellation of an Activity Execution (Experimental)
     description: |
-
-      Cancel a running Activity Execution:
+      Request cancellation of an Activity Execution:
 
       ```
       temporal activity cancel \
           --activity-id YourActivityId
       ```
 
-      The Activity receives a cancellation request and can perform
-      cleanup before completing.
+      Requesting cancellation does not immediately cancel the
+      Activity. If the Activity is heartbeating, a cancellation
+      error will be raised when the next heartbeat response is
+      received; if the Activity allows this error to propagate, the
+      Activity transitions to canceled status. If the Activity is
+      not heartbeating, this request has no effect on the Activity.
     option-sets:
       - activity-reference
     options:
@@ -231,22 +229,15 @@ commands:
           --activity-id YourActivityId \
           --result '{"YourResultKey": "YourResultVal"}'
       ```
+    option-sets:
+      - activity-reference
     options:
-      - name: activity-id
-        type: string
-        description: Activity ID to complete.
-        required: true
       - name: workflow-id
         type: string
         short: w
         description: |
           Workflow ID. Required for workflow Activities.
           Omit for standalone Activities.
-      - name: run-id
-        type: string
-        short: r
-        description: Run ID.
-        TODO: is this accepted/used for standalone activity?
       - name: result
         type: string
         description: Result `JSON` to return.
@@ -255,23 +246,22 @@ commands:
   - name: temporal activity count
     summary: Count Activity Executions (Experimental)
     description: |
-      Return a count of Activity Executions. Use `--query` to select
+      Return a count of Activity Executions. Use `--query` to count
       a subset:
 
       ```
       temporal activity count \
-          --query YourQuery
+          --query 'ActivityType="YourActivity"'
       ```
 
-      TODO: show an example query
-
-      Visit https://docs.temporal.io/visibility to read more about Search Attributes
-      and Query creation. See `temporal batch --help` for a quick reference.
+      Visit https://docs.temporal.io/visibility to read more about
+      Search Attributes and Query creation.
     options:
       - name: query
         type: string
         short: q
-        description: Content for an SQL-like `QUERY` List Filter.
+        description: |
+          Query to filter Activity Executions to count.
 
   - name: temporal activity delete
     summary: Delete an Activity Execution (Experimental)
@@ -283,10 +273,8 @@ commands:
           --activity-id YourActivityId
       ```
 
-      TODO: `workflow delete` says:
-      The removal executes asynchronously. If the Execution is Running, the Service
-      terminates it before deletion.
-
+      The deletion executes asynchronously. If the Activity
+      Execution is running, it will be terminated before deletion.
     option-sets:
       - activity-reference
 
@@ -310,7 +298,7 @@ commands:
     summary: Start an Activity Execution and wait for completion (Experimental)
     description: |
       Start a new Activity Execution and block until it completes.
-      The result is printed to stdout:
+      The result is output to stdout:
 
       ```
       temporal activity execute \
@@ -332,42 +320,24 @@ commands:
       temporal activity fail \
           --activity-id YourActivityId
       ```
+    option-sets:
+      - activity-reference
     options:
-
-      TODO: Maybe we should create activity-reference option set that permits an optional workflow
-      ID? And a standalone-activity-reference for the ones supported for standalone only. I believe
-      when inlining run-id here you've lost the standard sentence abut how if omitted it will target
-      the last run, which suggests that sharing via activity-reference would prevent such mistakes.
-
-      - name: activity-id
-        type: string
-        description: Activity ID to fail.
-
-        TODO: why no short? Isn't it 'short: a' elsewhere? Again, this suggests you should employ an option set.
-
-        required: true
       - name: workflow-id
         type: string
         short: w
         description: |
           Workflow ID. Required for workflow Activities.
           Omit for standalone Activities.
-      - name: run-id
-        type: string
-        short: r
-        description: Run ID.
-
-      TODO: This seems odd, to have one option named `detail`, and one named `reason`, and yet both
-      have the same semantics but differ in format. Check that this is correct, and how it is
-      exposed by the Go and Python SDKs. AsyncActivityHandle.fail in Python seems to expose a
-      different API; are they the same grpc method?
-
       - name: detail
         type: string
-        description: Reason for failing the Activity (JSON).
+        description: |
+          Failure detail (JSON). Attached as the failure details
+          payload.
       - name: reason
         type: string
-        description: Reason for failing the Activity.
+        description: |
+          Failure reason. Attached as the failure message.
 
   - name: temporal activity list
     summary: Show Activity Executions (Experimental)
@@ -376,22 +346,17 @@ commands:
 
       ```
       temporal activity list \
-          --query YourQuery
+          --query 'ActivityType="YourActivity"'
       ```
-      Visit https://docs.temporal.io/visibility to read more about Search Attributes
-      and Query creation. See `temporal batch --help` for a quick reference.
+
+      Visit https://docs.temporal.io/visibility to read more about
+      Search Attributes and Query creation.
     options:
       - name: query
         short: q
         type: string
-
-        TODO: this pre-existing phrasing is word salad. To what does upper-case QUERY refer? Change throughout to
-        `Query used to filter (or `count` where appropriate) the results. Visit https://docs.temporal.io/visibility to read more about Search Attributes
-      and Query creation. See `temporal batch --help` for a quick reference.`
-
-        description: Content for an SQL-like `QUERY` List Filter.
-
-
+        description: |
+          Query to filter the Activity Executions to list.
       - name: limit
         type: int
         description: |
@@ -407,8 +372,7 @@ commands:
     description: |
       Update the options of a running Activity that were passed into it from
       a Workflow. Updates are incremental, only changing the specified options.
-
-      TODO: here and elsewhere (pause, unpause, reset etc) add a sentence stating that it is not supported for Standalone Activities.
+      Not supported for standalone Activities.
 
       For example:
 
@@ -439,14 +403,6 @@ commands:
           --query 'TemporalPauseInfo="property:activityType=Foo"'
           ...
       ```
-
-      TODO: what has this command to do with pause? Why TemporalPauseInfo?
-
-    TODO: this needs to share code with the activity-start option set. If it is not able to simply
-    use it then we should factor out an option set that can be used. The timeout descriptions are
-    mosty better in activity-start (e.g. "Indicates how long the caller is willing to wait" is
-    horrible language). But there may be some good details in here to include in the final shared version.
-
     options:
       - name: activity-id
         short: a
@@ -522,7 +478,7 @@ commands:
   - name: temporal activity pause
     summary: Pause an Activity
     description: |
-      Pause an Activity.
+      Pause an Activity. Not supported for standalone Activities.
 
       If the Activity is not currently running (e.g. because it previously
       failed), it will not be run again until it is unpaused.
@@ -565,6 +521,7 @@ commands:
     summary: Unpause an Activity
     description: |
       Re-schedule a previously-paused Activity for execution.
+      Not supported for standalone Activities.
 
       If the Activity is not running and is past its retry timeout, it will be
       scheduled immediately. Otherwise, it will be scheduled after its retry
@@ -630,7 +587,8 @@ commands:
   - name: temporal activity reset
     summary: Reset an Activity
     description: |
-      Reset an activity. This restarts the activity as if it were first being
+      Reset an activity. Not supported for standalone Activities.
+      This restarts the activity as if it were first being
       scheduled. That is, it will reset both the number of attempts and the
       activity timeout, as well as, optionally, the
       [heartbeat details](#reset-heartbeats).
@@ -4986,7 +4944,6 @@ option-sets:
           When overriding to a `pinned` behavior, specifies the Build ID of the
           version to target.
 
-  TODO: I changed this to activity-reference, for consistency with workflow-reference
   - name: activity-reference
     options:
       - name: activity-id
@@ -5038,12 +4995,6 @@ option-sets:
         type: duration
         description: |
           Maximum time between successful Worker heartbeats.
-
-      TODO: I think there should be a retry-policy-options option set, even if it's not currently
-      shared. In fact, does the CLI not expose the retry policy when starting a workflow? It's
-      possible; I know we don't really recommend non-default retry policy for workflow (the whole
-      point of workflow is that it should not need retrying)
-
       - name: retry-initial-interval
         type: duration
         description: |
