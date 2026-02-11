@@ -2241,7 +2241,7 @@ commands:
           --workflow-type "NewWorkflowType"
       ```
 
-      Note: This command performs a full replacement of the Schedule
+      This command performs a full replacement of the Schedule
       configuration. Any options not provided will be reset to their default
       values. You must re-specify all options, not just the ones you want to
       change. To view the current configuration of a Schedule, use
