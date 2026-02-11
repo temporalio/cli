@@ -58,3 +58,11 @@ jobs:
           GIT_BRANCH: ${{ steps.branch.outputs.branch }}
           BUILD_PLATFORM: ${{ steps.platform.outputs.platform }}
           GO_VERSION: ${{ steps.go.outputs.go }}
+          
+      - name: Update APT Repository
+        uses: dawidd6/action-debian-repository@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          packages_directory: dist/
+          branch: gh-pages
+          commit_message: "chore: update APT repository for release ${{ github.ref_name }}"

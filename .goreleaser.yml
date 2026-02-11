@@ -69,3 +69,18 @@ changelog:
 
 announce:
   skip: "true"
+
+nfpms:
+  - id: temporal-apt
+    package_name: temporal
+    file_name_template: "temporal_cli_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    builds:
+      - nix 
+    vendor: Temporal Technologies Inc.
+    homepage: https://temporal.io/
+    maintainer: Temporal CLI Team <info@temporal.io>
+    description: "Command-line interface for running Temporal Server and interacting with Workflows, Activities, and Namespaces."
+    license: MIT
+    formats:
+      - deb
+    bindir: /usr/bin  
