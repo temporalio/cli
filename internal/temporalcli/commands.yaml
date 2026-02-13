@@ -2122,6 +2122,7 @@ commands:
         For example, every Friday at 12:30 PM: `30 12 * * Fri`.
     option-sets:
       - schedule-configuration
+      - schedule-create-only
       - schedule-id
       - overlap-policy
       - shared-workflow-start
@@ -2246,6 +2247,10 @@ commands:
       values. You must re-specify all options, not just the ones you want to
       change. To view the current configuration of a Schedule, use
       `temporal schedule describe` before updating.
+
+      Schedule-level memo and search attributes cannot be updated with this
+      command. They are set only during Schedule creation and are not affected
+      by updates.
     option-sets:
       - schedule-configuration
       - schedule-id
@@ -4357,6 +4362,9 @@ option-sets:
           Interpret calendar specs with the `TZ` time zone.
           For a list of time zones, see:
           https://en.wikipedia.org/wiki/List_of_tz_database_time_zones.
+
+  - name: schedule-create-only
+    options:
       - name: schedule-search-attribute
         type: string[]
         description: |
