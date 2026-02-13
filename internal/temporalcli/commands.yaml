@@ -2248,7 +2248,7 @@ commands:
       change. To view the current configuration of a Schedule, use
       `temporal schedule describe` before updating.
 
-      Schedule-level memo and search attributes cannot be updated with this
+      Schedule memo and search attributes cannot be updated with this
       command. They are set only during Schedule creation and are not affected
       by updates.
     option-sets:
