@@ -221,31 +221,82 @@ func toIntervalSpec(str string) (client.ScheduleIntervalSpec, error) {
 }
 
 func (c *ScheduleConfigurationOptions) toScheduleSpec(spec *client.ScheduleSpec) error {
-	spec.CronExpressions = c.Cron
-	// Skip not supported
-	spec.Jitter = c.Jitter.Duration()
-	spec.TimeZoneName = c.TimeZone
-	spec.StartAt = c.StartTime.Time()
-	spec.EndAt = c.EndTime.Time()
+	return c.toScheduleSpecForUpdate(spec, nil)
+}
 
-	var err error
-	for _, calPbStr := range c.Calendar {
-		var calPb schedpb.CalendarSpec
-		if err = protojson.Unmarshal([]byte(calPbStr), &calPb); err != nil {
-			return fmt.Errorf("failed to parse json calendar spec: %w", err)
+// toScheduleSpecForUpdate applies CLI options to spec, preserving existing spec
+// fields when the user did not pass the corresponding flags (fully incremental update).
+// If existing is nil, behaves like toScheduleSpec (no preservation).
+func (c *ScheduleConfigurationOptions) toScheduleSpecForUpdate(spec *client.ScheduleSpec, existing *client.ScheduleSpec) error {
+	// Jitter, TimeZoneName, StartAt, EndAt: preserve from existing when flag not set
+	if existing != nil && c.FlagSet != nil {
+		if !c.FlagSet.Changed("jitter") {
+			spec.Jitter = existing.Jitter
+		} else {
+			spec.Jitter = c.Jitter.Duration()
 		}
-		cron, err := toCronString(&calPb)
-		if err != nil {
-			return err
+		if !c.FlagSet.Changed("time-zone") {
+			spec.TimeZoneName = existing.TimeZoneName
+		} else {
+			spec.TimeZoneName = c.TimeZone
 		}
-		spec.CronExpressions = append(spec.CronExpressions, cron)
+		if !c.FlagSet.Changed("start-time") {
+			spec.StartAt = existing.StartAt
+		} else {
+			spec.StartAt = c.StartTime.Time()
+		}
+		if !c.FlagSet.Changed("end-time") {
+			spec.EndAt = existing.EndAt
+		} else {
+			spec.EndAt = c.EndTime.Time()
+		}
+	} else {
+		spec.Jitter = c.Jitter.Duration()
+		spec.TimeZoneName = c.TimeZone
+		spec.StartAt = c.StartTime.Time()
+		spec.EndAt = c.EndTime.Time()
 	}
-	for _, intStr := range c.Interval {
-		int, err := toIntervalSpec(intStr)
-		if err != nil {
-			return err
+
+	// Cron/calendar: preserve from existing when not provided by CLI
+	if len(c.Cron) == 0 && len(c.Calendar) == 0 {
+		if existing != nil {
+			spec.CronExpressions = append([]string(nil), existing.CronExpressions...)
+			spec.Calendars = append([]client.ScheduleCalendarSpec(nil), existing.Calendars...)
+		} else {
+			spec.CronExpressions = nil
+			spec.Calendars = nil
 		}
-		spec.Intervals = append(spec.Intervals, int)
+	} else {
+		spec.CronExpressions = append([]string(nil), c.Cron...)
+		var err error
+		for _, calPbStr := range c.Calendar {
+			var calPb schedpb.CalendarSpec
+			if err = protojson.Unmarshal([]byte(calPbStr), &calPb); err != nil {
+				return fmt.Errorf("failed to parse json calendar spec: %w", err)
+			}
+			cron, err := toCronString(&calPb)
+			if err != nil {
+				return err
+			}
+			spec.CronExpressions = append(spec.CronExpressions, cron)
+		}
+	}
+
+	// Intervals: preserve from existing when not provided by CLI
+	if len(c.Interval) == 0 {
+		if existing != nil {
+			spec.Intervals = append([]client.ScheduleIntervalSpec(nil), existing.Intervals...)
+		} else {
+			spec.Intervals = nil
+		}
+	} else {
+		for _, intStr := range c.Interval {
+			intv, err := toIntervalSpec(intStr)
+			if err != nil {
+				return err
+			}
+			spec.Intervals = append(spec.Intervals, intv)
+		}
 	}
 
 	return nil
@@ -540,13 +591,18 @@ func (c *TemporalScheduleUpdateCommand) run(cctx *CommandContext, args []string)
 		newSchedule.State.RemainingActions = c.RemainingActions
 	}
 
-	if err = c.toScheduleSpec(newSchedule.Spec); err != nil {
+	sch := cl.ScheduleClient().GetHandle(cctx, c.ScheduleId)
+	description, err := sch.Describe(cctx)
+	if err != nil {
+		return err
+	}
+
+	if err = c.toScheduleSpecForUpdate(newSchedule.Spec, description.Schedule.Spec); err != nil {
 		return err
 	} else if newSchedule.Action, err = toScheduleAction(&c.SharedWorkflowStartOptions, &c.PayloadInputOptions); err != nil {
 		return err
 	}
 
-	sch := cl.ScheduleClient().GetHandle(cctx, c.ScheduleId)
 	return sch.Update(cctx, client.ScheduleUpdateOptions{
 		DoUpdate: func(u client.ScheduleUpdateInput) (*client.ScheduleUpdate, error) {
 			// replace whole schedule
