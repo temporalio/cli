@@ -149,24 +149,6 @@ commands:
     summary: Operate on Activity Executions
     description: |
       Complete, fail, or update an Activity's state or options.
-
-      Complete an Activity manually:
-
-      ```
-      temporal activity complete \
-          --activity-id YourActivityId \
-          --workflow-id YourWorkflowId \
-          --result '{"YourResultKey": "YourResultValue"}'
-      ```
-
-      Update Activity options:
-
-      ```
-      temporal activity update-options \
-          --activity-id YourActivityId \
-          --workflow-id YourWorkflowId \
-          --task-queue NewTaskQueue
-      ```
     option-sets:
       - client
     docs:
