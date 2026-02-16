@@ -184,6 +184,7 @@ commands:
         - activity cancel
         - activity terminate
         - activity delete
+        - activity execution
         - activity complete
         - activity update-options
         - activity fail
@@ -199,9 +200,9 @@ commands:
         - Temporal CLI
 
   - name: temporal activity cancel
-    summary: Request cancellation of an Activity Execution (Experimental)
+    summary: Request cancellation of a Standalone Activity Execution (Experimental)
     description: |
-      Request cancellation of an Activity Execution:
+      Request cancellation of a Standalone Activity Execution. Only supported for Standalone Activity Execution.
 
       ```
       temporal activity cancel \
@@ -231,6 +232,7 @@ commands:
       ```
       temporal activity complete \
           --activity-id YourActivityId \
+          --workflow-id YourWorkflowId \
           --result '{"YourResultKey": "YourResultVal"}'
       ```
     option-sets:
@@ -248,10 +250,10 @@ commands:
         required: true
 
   - name: temporal activity count
-    summary: Count Activity Executions (Experimental)
+    summary: Count Standalone Activity Executions (Experimental)
     description: |
-      Return a count of Activity Executions. Use `--query` to count
-      a subset:
+      Return a count of Standalone Activity Executions. Use `--query` to filter
+      the activities to be counted. Only supported for Standalone Activity Execution.
 
       ```
       temporal activity count \
@@ -259,7 +261,7 @@ commands:
       ```
 
       Visit https://docs.temporal.io/visibility to read more about
-      Search Attributes and Query creation.
+      Search Attributes and queries.
     options:
       - name: query
         type: string
@@ -268,9 +270,9 @@ commands:
           Query to filter Activity Executions to count.
 
   - name: temporal activity delete
-    summary: Delete an Activity Execution (Experimental)
+    summary: Delete a Standalone Activity Execution (Experimental)
     description: |
-      Delete an Activity Execution:
+      Delete a Standalone Activity Execution. Only supported for Standalone Activity Execution.
 
       ```
       temporal activity delete \
@@ -283,9 +285,9 @@ commands:
       - activity-reference
 
   - name: temporal activity describe
-    summary: Describe Activity Execution (Experimental)
+    summary: Describe a Standalone Activity Execution (Experimental)
     description: |
-      Display information about an Activity Execution:
+      Display information about a Standalone Activity Execution. Only supported for Standalone Activity Execution.
 
       ```
       temporal activity describe \
@@ -299,10 +301,10 @@ commands:
         description: Print properties without changing their format.
 
   - name: temporal activity execute
-    summary: Start an Activity Execution and wait for completion (Experimental)
+    summary: Start a Standalone Activity Execution and wait for completion (Experimental)
     description: |
-      Start a new Activity Execution and block until it completes.
-      The result is output to stdout:
+      Start a new Standalone Activity Execution and block until it completes.
+      The result is output to stdout. Only supported for Standalone Activity Execution.
 
       ```
       temporal activity execute \
@@ -322,7 +324,8 @@ commands:
 
       ```
       temporal activity fail \
-          --activity-id YourActivityId
+          --activity-id YourActivityId \
+          --workflow-id YourWorkflowId
       ```
     option-sets:
       - activity-reference
@@ -344,9 +347,10 @@ commands:
           Failure reason. Attached as the failure message.
 
   - name: temporal activity list
-    summary: Show Activity Executions (Experimental)
+    summary: List Standalone Activity Executions (Experimental)
     description: |
-      List Activity Executions. Use `--query` to filter results:
+      List Standalone Activity Executions. Use `--query` to filter results.
+      Only supported for Standalone Activity Execution.
 
       ```
       temporal activity list \
@@ -354,7 +358,7 @@ commands:
       ```
 
       Visit https://docs.temporal.io/visibility to read more about
-      Search Attributes and Query creation.
+      Search Attributes and queries.
     options:
       - name: query
         short: q
@@ -675,10 +679,10 @@ commands:
       - single-workflow-or-batch
 
   - name: temporal activity result
-    summary: Wait for and output the result of an Activity Execution (Experimental)
+    summary: Wait for and output the result of a Standalone Activity Execution (Experimental)
     description: |
-      Wait for an Activity Execution to complete and output the
-      result:
+      Wait for a Standalone Activity Execution to complete and output the
+      result. Only supported for Standalone Activity Execution.
 
       ```
       temporal activity result \
@@ -688,10 +692,10 @@ commands:
       - activity-reference
 
   - name: temporal activity start
-    summary: Start a new Activity Execution (Experimental)
+    summary: Start a new Standalone Activity Execution (Experimental)
     description: |
-      Start a new Activity Execution. Outputs the Activity ID and
-      Run ID:
+      Start a new Standalone Activity Execution. Outputs the Activity ID and
+      Run ID. Only supported for Standalone Activity Execution.
 
       ```
       temporal activity start \
@@ -705,9 +709,9 @@ commands:
       - payload-input
 
   - name: temporal activity terminate
-    summary: Terminate an Activity Execution (Experimental)
+    summary: Terminate a Standalone Activity Execution (Experimental)
     description: |
-      Terminate an Activity Execution:
+      Terminate a Standalone Activity Execution. Only supported for Standalone Activity Execution.
 
       ```
       temporal activity terminate \
@@ -3593,8 +3597,6 @@ commands:
           --query YourQuery
       ```
 
-      TODO: show an example query
-
       Visit https://docs.temporal.io/visibility to read more about Search Attributes
       and Query creation. See `temporal batch --help` for a quick reference.
     options:
@@ -3618,14 +3620,11 @@ commands:
 
       Visit https://docs.temporal.io/visibility to read more about Search Attributes
       and Query creation. See `temporal batch --help` for a quick reference.
-
-      TODO: does this actually operate on batches and accept a query? It's not documented here, and
-      I don't see the functionality in DeleteWorkflowExecution.
     option-sets:
       - single-workflow-or-batch
 
   - name: temporal workflow describe
-    summary: Describe Workflow Execution
+    summary: Show Workflow Execution info
     description: |
       Display information about a Workflow Execution:
 
@@ -3658,7 +3657,7 @@ commands:
       command blocks and returns when the Workflow Execution completes:
 
       ```
-      temporal workflow execute
+      temporal workflow execute \
           --workflow-id YourWorkflowId \
           --type YourWorkflow \
           --task-queue YourTaskQueue \
@@ -3712,8 +3711,6 @@ commands:
       temporal workflow list \
           --query YourQuery
       ```
-
-      TODO: show an example query
 
       Visit https://docs.temporal.io/visibility to read more about Search Attributes
       and Query creation. See `temporal batch --help` for a quick reference.
@@ -3948,8 +3945,6 @@ commands:
   - name: temporal workflow result
     summary: Wait for and output the result of a Workflow Execution
     description: |
-      TODO: Let's use 'output' as the verb in such situations, rather than 'print' or 'return'.
-
       Wait for and output the result of a Workflow Execution:
 
       ```
@@ -4105,7 +4100,7 @@ commands:
       - payload-input
 
   - name: temporal workflow terminate
-    summary: Terminate a Workflow Execution
+    summary: Forcefully end a Workflow Execution
     description: |
       Terminate (forcefully end) a Workflow Execution:
 
