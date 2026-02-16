@@ -1298,17 +1298,17 @@ commands:
       ```
       temporal worker deployment manager-identity [command] [options]
       ```
-
-      When present, `ManagerIdentity` is the identity of the user that has the
+      
+      When present, `ManagerIdentity` is the identity of the user that has the 
       exclusive right to make changes to this Worker Deployment. Empty by default.
       When set, users whose identity does not match the `ManagerIdentity` will not
       be able to change the Worker Deployment.
-
+  
       This is especially useful in environments where multiple users (such as CLI
       users and automated controllers) may interact with the same Worker Deployment.
       `ManagerIdentity` allows different users to communicate with one another about
       who is expected to make changes to the Worker Deployment.
-
+      
       The current Manager Identity is returned with `describe`:
       ```
        temporal worker deployment describe \
@@ -1327,12 +1327,12 @@ commands:
     summary: Set the Manager Identity of a Worker Deployment
     description: |
       Set the `ManagerIdentity` of a Worker Deployment given its Deployment Name.
-
-      When present, `ManagerIdentity` is the identity of the user that has the
+      
+      When present, `ManagerIdentity` is the identity of the user that has the 
       exclusive right to make changes to this Worker Deployment. Empty by default.
       When set, users whose identity does not match the `ManagerIdentity` will not
       be able to change the Worker Deployment.
-
+  
       This is especially useful in environments where multiple users (such as CLI
       users and automated controllers) may interact with the same Worker Deployment.
       `ManagerIdentity` allows different users to communicate with one another about
@@ -1341,7 +1341,7 @@ commands:
       ```
       temporal worker deployment manager-identity set [options]
       ```
-
+      
       For example:
 
       ```
@@ -1351,17 +1351,17 @@ commands:
          --identity YourUserIdentity # optional, populated by CLI if not provided
       ```
 
-      Sets the Manager Identity of the Deployment to the identity of the user making
-      this request. If you don't specifically pass an identity field, the CLI will
+      Sets the Manager Identity of the Deployment to the identity of the user making 
+      this request. If you don't specifically pass an identity field, the CLI will 
       generate your identity for you.
-
+      
       For example:
       ```
       temporal worker deployment manager-identity set \
          --deployment-name DeploymentName \
          --manager-identity NewManagerIdentity
       ```
-
+      
       Sets the Manager Identity of the Deployment to any string.
 
     options:
@@ -1383,12 +1383,12 @@ commands:
     summary: Unset the Manager Identity of a Worker Deployment
     description: |
       Unset the `ManagerIdentity` of a Worker Deployment given its Deployment Name.
-
-      When present, `ManagerIdentity` is the identity of the user that has the
+      
+      When present, `ManagerIdentity` is the identity of the user that has the 
       exclusive right to make changes to this Worker Deployment. Empty by default.
       When set, users whose identity does not match the `ManagerIdentity` will not
       be able to change the Worker Deployment.
-
+      
       This is especially useful in environments where multiple users (such as CLI
       users and automated controllers) may interact with the same Worker Deployment.
       `ManagerIdentity` allows different users to communicate with one another about
@@ -1397,7 +1397,7 @@ commands:
       ```
       temporal worker deployment manager-identity unset [options]
       ```
-
+      
       For example:
 
       ```
@@ -1420,7 +1420,7 @@ commands:
     summary: List worker status information in a specific namespace (EXPERIMENTAL)
     description: |
       Get a list of workers to the specified namespace.
-
+      
       ```
       temporal worker list --namespace YourNamespace --query 'TaskQueue="YourTaskQueue"'
       ```
@@ -1437,7 +1437,7 @@ commands:
     summary: Returns information about a specific worker (EXPERIMENTAL)
     description: |
       Look up information of a specific worker.
-
+      
       ```
       temporal worker describe --namespace YourNamespace --worker-instance-key YourKey
       ```
@@ -2721,8 +2721,8 @@ commands:
       provided that they were assigned a Build ID.
 
       Note that task reachability status is deprecated in favor of Drainage Status
-      (ie. of a Drained or Draining Worker Deployment Version) and will be removed
-      in a future release. Also, determining task reachability incurs a non-trivial
+      (ie. of a Drained or Draining Worker Deployment Version) and will be removed 
+      in a future release. Also, determining task reachability incurs a non-trivial 
       computing cost.
 
       Task reachability states are reported per build ID. The state may be one of the
@@ -4085,7 +4085,9 @@ commands:
   - name: temporal workflow start
     summary: Start a Workflow Execution
     description: |
-      Start a new Workflow Execution. Outputs the Workflow ID and Run ID:
+      Start a new Workflow Execution without waiting for it to complete.
+      Use `temporal workflow execute` to start and wait for completion.
+      Outputs the Workflow ID and Run ID:
 
       ```
       temporal workflow start \
@@ -4920,7 +4922,7 @@ option-sets:
           Temporal workflow headers in 'KEY=VALUE' format.
           Keys must be identifiers, and values must be JSON values.
           May be passed multiple times to set multiple Temporal headers.
-          Note: These are workflow headers, not gRPC headers.
+          Note: These are workflow headers, not gRPC headers.   
 
   - name: workflow-update-options
     options:
@@ -5018,8 +5020,8 @@ option-sets:
       - name: id-reuse-policy
         type: string-enum
         description: |
-          Re-use policy for the Activity ID when a previous
-          Execution has completed.
+          Policy for handling activity start when an Activity
+          with the same ID exists and has completed.
         enum-values:
           - AllowDuplicate
           - AllowDuplicateFailedOnly
@@ -5027,9 +5029,8 @@ option-sets:
       - name: id-conflict-policy
         type: string-enum
         description: |
-          Policy for handling a conflict when starting an
-          Activity with a duplicate Activity ID of a running
-          Execution.
+          Policy for handling activity start when an
+          Activity with the same ID is currently running.
         enum-values:
           - Fail
           - UseExisting
@@ -5040,6 +5041,7 @@ option-sets:
           Keys must be identifiers, and values must be
           JSON values.
           Can be passed multiple times.
+          See https://docs.temporal.io/visibility.
       - name: headers
         type: string[]
         description: |
