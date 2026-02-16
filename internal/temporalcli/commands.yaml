@@ -186,7 +186,6 @@ commands:
         - activity delete
         - activity complete
         - activity update-options
-        - activity execution
         - activity fail
         - activity pause
         - activity unpause
@@ -232,7 +231,6 @@ commands:
       ```
       temporal activity complete \
           --activity-id YourActivityId \
-          --workflow-id YourWorkflowId \
           --result '{"YourResultKey": "YourResultVal"}'
       ```
     option-sets:
@@ -250,12 +248,10 @@ commands:
         required: true
 
   - name: temporal activity count
-    summary: Count Standalone Activity Executions (Experimental)
+    summary: Count Activity Executions (Experimental)
     description: |
-      Return a count of Standalone Activity Executions. Use `--query` to filter
-      the activities to be counted.
-
-      Only supported for Standalone Activity Execution.
+      Return a count of Activity Executions. Use `--query` to count
+      a subset:
 
       ```
       temporal activity count \
@@ -263,7 +259,7 @@ commands:
       ```
 
       Visit https://docs.temporal.io/visibility to read more about
-      Search Attributes and queries.
+      Search Attributes and Query creation.
     options:
       - name: query
         type: string
@@ -326,8 +322,7 @@ commands:
 
       ```
       temporal activity fail \
-          --activity-id YourActivityId \
-          --workflow-id YourWorkflowId
+          --activity-id YourActivityId
       ```
     option-sets:
       - activity-reference
@@ -349,11 +344,9 @@ commands:
           Failure reason. Attached as the failure message.
 
   - name: temporal activity list
-    summary: List Standalone Activity Executions (Experimental)
+    summary: Show Activity Executions (Experimental)
     description: |
-      List Standalone Activity Executions. Use `--query` to filter results.
-
-      Only supported for Standalone Activity Execution.
+      List Activity Executions. Use `--query` to filter results:
 
       ```
       temporal activity list \
@@ -361,7 +354,7 @@ commands:
       ```
 
       Visit https://docs.temporal.io/visibility to read more about
-      Search Attributes and queries.
+      Search Attributes and Query creation.
     options:
       - name: query
         short: q
@@ -682,12 +675,10 @@ commands:
       - single-workflow-or-batch
 
   - name: temporal activity result
-    summary: Wait for and output the result of a Standalone Activity Execution (Experimental)
+    summary: Wait for and output the result of an Activity Execution (Experimental)
     description: |
-      Wait for a Standalone Activity Execution to complete and output the
-      result.
-
-      Only supported for Standalone Activity Execution.
+      Wait for an Activity Execution to complete and output the
+      result:
 
       ```
       temporal activity result \
@@ -1304,7 +1295,7 @@ commands:
       temporal worker deployment manager-identity [command] [options]
       ```
 
-      When present, `ManagerIdentity` is the identity of the user that has the 
+      When present, `ManagerIdentity` is the identity of the user that has the
       exclusive right to make changes to this Worker Deployment. Empty by default.
       When set, users whose identity does not match the `ManagerIdentity` will not
       be able to change the Worker Deployment.
@@ -1333,7 +1324,7 @@ commands:
     description: |
       Set the `ManagerIdentity` of a Worker Deployment given its Deployment Name.
 
-      When present, `ManagerIdentity` is the identity of the user that has the 
+      When present, `ManagerIdentity` is the identity of the user that has the
       exclusive right to make changes to this Worker Deployment. Empty by default.
       When set, users whose identity does not match the `ManagerIdentity` will not
       be able to change the Worker Deployment.
@@ -1356,8 +1347,8 @@ commands:
          --identity YourUserIdentity # optional, populated by CLI if not provided
       ```
 
-      Sets the Manager Identity of the Deployment to the identity of the user making 
-      this request. If you don't specifically pass an identity field, the CLI will 
+      Sets the Manager Identity of the Deployment to the identity of the user making
+      this request. If you don't specifically pass an identity field, the CLI will
       generate your identity for you.
 
       For example:
@@ -1389,7 +1380,7 @@ commands:
     description: |
       Unset the `ManagerIdentity` of a Worker Deployment given its Deployment Name.
 
-      When present, `ManagerIdentity` is the identity of the user that has the 
+      When present, `ManagerIdentity` is the identity of the user that has the
       exclusive right to make changes to this Worker Deployment. Empty by default.
       When set, users whose identity does not match the `ManagerIdentity` will not
       be able to change the Worker Deployment.
@@ -2726,8 +2717,8 @@ commands:
       provided that they were assigned a Build ID.
 
       Note that task reachability status is deprecated in favor of Drainage Status
-      (ie. of a Drained or Draining Worker Deployment Version) and will be removed 
-      in a future release. Also, determining task reachability incurs a non-trivial 
+      (ie. of a Drained or Draining Worker Deployment Version) and will be removed
+      in a future release. Also, determining task reachability incurs a non-trivial
       computing cost.
 
       Task reachability states are reported per build ID. The state may be one of the
@@ -3599,11 +3590,13 @@ commands:
 
       ```
       temporal workflow count \
-          --query 'WorkflowType="YourWorkflow"'
+          --query YourQuery
       ```
 
+      TODO: show an example query
+
       Visit https://docs.temporal.io/visibility to read more about Search Attributes
-      and queries. See `temporal batch --help` for a quick reference.
+      and Query creation. See `temporal batch --help` for a quick reference.
     options:
       - name: query
         type: string
@@ -3611,9 +3604,9 @@ commands:
         description: Content for an SQL-like `QUERY` List Filter.
 
   - name: temporal workflow delete
-    summary: Remove Workflow Execution
+    summary: Delete Workflow Execution
     description: |
-      Delete a Workflow Executions and its Event History:
+      Delete a Workflow Execution and its Event History:
 
       ```
       temporal workflow delete \
@@ -3625,6 +3618,9 @@ commands:
 
       Visit https://docs.temporal.io/visibility to read more about Search Attributes
       and Query creation. See `temporal batch --help` for a quick reference.
+
+      TODO: does this actually operate on batches and accept a query? It's not documented here, and
+      I don't see the functionality in DeleteWorkflowExecution.
     option-sets:
       - single-workflow-or-batch
 
@@ -3662,7 +3658,7 @@ commands:
       command blocks and returns when the Workflow Execution completes:
 
       ```
-      temporal workflow execute \
+      temporal workflow execute
           --workflow-id YourWorkflowId \
           --type YourWorkflow \
           --task-queue YourTaskQueue \
@@ -3714,11 +3710,13 @@ commands:
 
       ```
       temporal workflow list \
-          --query 'WorkflowType="YourWorkflow"'
+          --query YourQuery
       ```
 
+      TODO: show an example query
+
       Visit https://docs.temporal.io/visibility to read more about Search Attributes
-      and queries. See `temporal batch --help` for a quick reference.
+      and Query creation. See `temporal batch --help` for a quick reference.
 
       View a list of archived Workflow Executions:
 
@@ -3950,6 +3948,8 @@ commands:
   - name: temporal workflow result
     summary: Wait for and output the result of a Workflow Execution
     description: |
+      TODO: Let's use 'output' as the verb in such situations, rather than 'print' or 'return'.
+
       Wait for and output the result of a Workflow Execution:
 
       ```
@@ -4088,9 +4088,9 @@ commands:
       - workflow-reference
 
   - name: temporal workflow start
-    summary: Initiate a Workflow Execution
+    summary: Start a Workflow Execution
     description: |
-      Start a new Workflow Execution. Returns the Workflow- and Run-IDs:
+      Start a new Workflow Execution. Outputs the Workflow ID and Run ID:
 
       ```
       temporal workflow start \
@@ -4925,7 +4925,7 @@ option-sets:
           Temporal workflow headers in 'KEY=VALUE' format.
           Keys must be identifiers, and values must be JSON values.
           May be passed multiple times to set multiple Temporal headers.
-          Note: These are workflow headers, not gRPC headers.   
+          Note: These are workflow headers, not gRPC headers.
 
   - name: workflow-update-options
     options:
