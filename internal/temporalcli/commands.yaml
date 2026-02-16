@@ -225,7 +225,7 @@ commands:
         short: w
         description: |
           Workflow ID. Required for workflow Activities.
-          Omit for standalone Activities.
+          Omit for Standalone Activities.
       - name: result
         type: string
         description: Result `JSON` to return.
@@ -317,7 +317,7 @@ commands:
         short: w
         description: |
           Workflow ID. Required for workflow Activities.
-          Omit for standalone Activities.
+          Omit for Standalone Activities.
       - name: detail
         type: string
         description: |
@@ -361,7 +361,7 @@ commands:
     description: |
       Update the options of a running Activity that were passed into it from
       a Workflow. Updates are incremental, only changing the specified options.
-      Not supported for standalone Activities.
+      Not supported for Standalone Activities.
 
       For example:
 
@@ -467,7 +467,7 @@ commands:
   - name: temporal activity pause
     summary: Pause an Activity
     description: |
-      Pause an Activity. Not supported for standalone Activities.
+      Pause an Activity. Not supported for Standalone Activities.
 
       If the Activity is not currently running (e.g. because it previously
       failed), it will not be run again until it is unpaused.
@@ -510,7 +510,7 @@ commands:
     summary: Unpause an Activity
     description: |
       Re-schedule a previously-paused Activity for execution.
-      Not supported for standalone Activities.
+      Not supported for Standalone Activities.
 
       If the Activity is not running and is past its retry timeout, it will be
       scheduled immediately. Otherwise, it will be scheduled after its retry
@@ -576,7 +576,7 @@ commands:
   - name: temporal activity reset
     summary: Reset an Activity
     description: |
-      Reset an activity. Not supported for standalone Activities.
+      Reset an activity. Not supported for Standalone Activities.
       This restarts the activity as if it were first being
       scheduled. That is, it will reset both the number of attempts and the
       activity timeout, as well as, optionally, the
