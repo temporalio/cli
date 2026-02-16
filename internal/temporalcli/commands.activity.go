@@ -8,7 +8,7 @@ import (
 	"github.com/temporalio/cli/internal/printer"
 	activitypb "go.temporal.io/api/activity/v1"
 	"go.temporal.io/api/batch/v1"
-	commonpb "go.temporal.io/api/common/v1"
+	"go.temporal.io/api/common/v1"
 	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/failure/v1"
 	sdkpb "go.temporal.io/api/sdk/v1"
@@ -69,7 +69,7 @@ func (c *TemporalActivityFailCommand) run(cctx *CommandContext, args []string) e
 	}
 	defer cl.Close()
 
-	var detailPayloads *commonpb.Payloads
+	var detailPayloads *common.Payloads
 	if len(c.Detail) > 0 {
 		metadata := map[string][][]byte{"encoding": {[]byte("json/plain")}}
 		detailPayloads, err = CreatePayloads([][]byte{[]byte(c.Detail)}, metadata, false)
@@ -137,7 +137,7 @@ func (c *TemporalActivityUpdateOptionsCommand) run(cctx *CommandContext, args []
 		c.Command.Flags().Changed("retry-maximum-interval") ||
 		c.Command.Flags().Changed("retry-backoff-coefficient") ||
 		c.Command.Flags().Changed("retry-maximum-attempts") {
-		activityOptions.RetryPolicy = &commonpb.RetryPolicy{}
+		activityOptions.RetryPolicy = &common.RetryPolicy{}
 	}
 
 	if c.Command.Flags().Changed("retry-initial-interval") {
@@ -177,7 +177,7 @@ func (c *TemporalActivityUpdateOptionsCommand) run(cctx *CommandContext, args []
 	if exec != nil {
 		result, err := cl.WorkflowService().UpdateActivityOptions(cctx, &workflowservice.UpdateActivityOptionsRequest{
 			Namespace: c.Parent.Namespace,
-			Execution: &commonpb.WorkflowExecution{
+			Execution: &common.WorkflowExecution{
 				WorkflowId: c.WorkflowId,
 				RunId:      c.RunId,
 			},
@@ -245,7 +245,7 @@ func (c *TemporalActivityPauseCommand) run(cctx *CommandContext, args []string) 
 
 	request := &workflowservice.PauseActivityRequest{
 		Namespace: c.Parent.Namespace,
-		Execution: &commonpb.WorkflowExecution{
+		Execution: &common.WorkflowExecution{
 			WorkflowId: c.WorkflowId,
 			RunId:      c.RunId,
 		},
@@ -292,7 +292,7 @@ func (c *TemporalActivityUnpauseCommand) run(cctx *CommandContext, args []string
 	if exec != nil { // single workflow operation
 		request := &workflowservice.UnpauseActivityRequest{
 			Namespace: c.Parent.Namespace,
-			Execution: &commonpb.WorkflowExecution{
+			Execution: &common.WorkflowExecution{
 				WorkflowId: c.WorkflowId,
 				RunId:      c.RunId,
 			},
@@ -365,7 +365,7 @@ func (c *TemporalActivityResetCommand) run(cctx *CommandContext, args []string) 
 	if exec != nil { // single workflow operation
 		request := &workflowservice.ResetActivityRequest{
 			Namespace: c.Parent.Namespace,
-			Execution: &commonpb.WorkflowExecution{
+			Execution: &common.WorkflowExecution{
 				WorkflowId: c.WorkflowId,
 				RunId:      c.RunId,
 			},
@@ -697,7 +697,7 @@ func buildStartActivityRequest(
 		Identity:   parent.Identity,
 		RequestId:  uuid.New().String(),
 		ActivityId: opts.ActivityId,
-		ActivityType: &commonpb.ActivityType{
+		ActivityType: &common.ActivityType{
 			Name: opts.Type,
 		},
 		TaskQueue: &taskqueuepb.TaskQueue{
@@ -712,7 +712,7 @@ func buildStartActivityRequest(
 
 	if opts.RetryInitialInterval.Duration() > 0 || opts.RetryMaximumInterval.Duration() > 0 ||
 		opts.RetryBackoffCoefficient > 0 || opts.RetryMaximumAttempts > 0 {
-		req.RetryPolicy = &commonpb.RetryPolicy{}
+		req.RetryPolicy = &common.RetryPolicy{}
 		if opts.RetryInitialInterval.Duration() > 0 {
 			req.RetryPolicy.InitialInterval = durationpb.New(opts.RetryInitialInterval.Duration())
 		}
@@ -753,7 +753,7 @@ func buildStartActivityRequest(
 		if err != nil {
 			return nil, fmt.Errorf("failed encoding search attributes: %w", err)
 		}
-		req.SearchAttributes = &commonpb.SearchAttributes{IndexedFields: saPayloads}
+		req.SearchAttributes = &common.SearchAttributes{IndexedFields: saPayloads}
 	}
 
 	if len(opts.Headers) > 0 {
@@ -765,19 +765,19 @@ func buildStartActivityRequest(
 		if err != nil {
 			return nil, fmt.Errorf("failed encoding headers: %w", err)
 		}
-		req.Header = &commonpb.Header{Fields: headerPayloads}
+		req.Header = &common.Header{Fields: headerPayloads}
 	}
 
 	if opts.StaticSummary != "" || opts.StaticDetails != "" {
 		req.UserMetadata = &sdkpb.UserMetadata{}
 		if opts.StaticSummary != "" {
-			req.UserMetadata.Summary = &commonpb.Payload{
+			req.UserMetadata.Summary = &common.Payload{
 				Metadata: map[string][]byte{"encoding": []byte("json/plain")},
 				Data:     []byte(fmt.Sprintf("%q", opts.StaticSummary)),
 			}
 		}
 		if opts.StaticDetails != "" {
-			req.UserMetadata.Details = &commonpb.Payload{
+			req.UserMetadata.Details = &common.Payload{
 				Metadata: map[string][]byte{"encoding": []byte("json/plain")},
 				Data:     []byte(fmt.Sprintf("%q", opts.StaticDetails)),
 			}
@@ -785,7 +785,7 @@ func buildStartActivityRequest(
 	}
 
 	if opts.PriorityKey > 0 || opts.FairnessKey != "" || opts.FairnessWeight > 0 {
-		req.Priority = &commonpb.Priority{
+		req.Priority = &common.Priority{
 			PriorityKey:    int32(opts.PriorityKey),
 			FairnessKey:    opts.FairnessKey,
 			FairnessWeight: float32(opts.FairnessWeight),

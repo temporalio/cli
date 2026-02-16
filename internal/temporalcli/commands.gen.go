@@ -454,9 +454,9 @@ func NewTemporalActivityCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.Use = "activity"
 	s.Command.Short = "Operate on Activity Executions"
 	if hasHighlighting {
-		s.Command.Long = "Start, list, and manage Activity Executions.\n\nStart an Activity Execution (Experimental):\n\n\x1b[1mtemporal activity start \\\n    --activity-id YourActivityId \\\n    --type YourActivity \\\n    --task-queue YourTaskQueue \\\n    --input '{\"some-key\": \"some-value\"}'\x1b[0m\n\nComplete an Activity manually:\n\n\x1b[1mtemporal activity complete \\\n    --activity-id YourActivityId \\\n    --result '{\"YourResultKey\": \"YourResultValue\"}'\x1b[0m"
+		s.Command.Long = "Complete, fail, or update an Activity's state or options.\n\nComplete an Activity manually:\n\n\x1b[1mtemporal activity complete \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --result '{\"YourResultKey\": \"YourResultValue\"}'\x1b[0m\n\nUpdate Activity options:\n\n\x1b[1mtemporal activity update-options \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --task-queue NewTaskQueue\x1b[0m"
 	} else {
-		s.Command.Long = "Start, list, and manage Activity Executions.\n\nStart an Activity Execution (Experimental):\n\n```\ntemporal activity start \\\n    --activity-id YourActivityId \\\n    --type YourActivity \\\n    --task-queue YourTaskQueue \\\n    --input '{\"some-key\": \"some-value\"}'\n```\n\nComplete an Activity manually:\n\n```\ntemporal activity complete \\\n    --activity-id YourActivityId \\\n    --result '{\"YourResultKey\": \"YourResultValue\"}'\n```"
+		s.Command.Long = "Complete, fail, or update an Activity's state or options.\n\nComplete an Activity manually:\n\n```\ntemporal activity complete \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --result '{\"YourResultKey\": \"YourResultValue\"}'\n```\n\nUpdate Activity options:\n\n```\ntemporal activity update-options \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --task-queue NewTaskQueue\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalActivityCancelCommand(cctx, &s).Command)

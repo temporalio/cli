@@ -148,31 +148,32 @@ commands:
   - name: temporal activity
     summary: Operate on Activity Executions
     description: |
-      Start, list, and manage Activity Executions.
-
-      Start an Activity Execution (Experimental):
-
-      ```
-      temporal activity start \
-          --activity-id YourActivityId \
-          --type YourActivity \
-          --task-queue YourTaskQueue \
-          --input '{"some-key": "some-value"}'
-      ```
+      Complete, fail, or update an Activity's state or options.
 
       Complete an Activity manually:
 
       ```
       temporal activity complete \
           --activity-id YourActivityId \
+          --workflow-id YourWorkflowId \
           --result '{"YourResultKey": "YourResultValue"}'
+      ```
+
+      Update Activity options:
+
+      ```
+      temporal activity update-options \
+          --activity-id YourActivityId \
+          --workflow-id YourWorkflowId \
+          --task-queue NewTaskQueue
       ```
     option-sets:
       - client
     docs:
       description-header: >-
-        Start, list, and manage Activity Executions
-        using the Temporal CLI.
+        Learn how to use Temporal Activity commands for completing or failing
+        Activity Executions in your Workflow. Optimize your Temporal Workflow
+        management effectively.
       keywords:
         - activity
         - activity start
