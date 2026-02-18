@@ -458,7 +458,6 @@ func NewTemporalActivityCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.AddCommand(&NewTemporalActivityCancelCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalActivityCompleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalActivityCountCommand(cctx, &s).Command)
-	s.Command.AddCommand(&NewTemporalActivityDeleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalActivityDescribeCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalActivityExecuteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalActivityFailCommand(cctx, &s).Command)
@@ -554,33 +553,6 @@ func NewTemporalActivityCountCommand(cctx *CommandContext, parent *TemporalActiv
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Query to filter Activity Executions to count.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
-	}
-	return &s
-}
-
-type TemporalActivityDeleteCommand struct {
-	Parent  *TemporalActivityCommand
-	Command cobra.Command
-	ActivityReferenceOptions
-}
-
-func NewTemporalActivityDeleteCommand(cctx *CommandContext, parent *TemporalActivityCommand) *TemporalActivityDeleteCommand {
-	var s TemporalActivityDeleteCommand
-	s.Parent = parent
-	s.Command.DisableFlagsInUseLine = true
-	s.Command.Use = "delete [flags]"
-	s.Command.Short = "Delete a Standalone Activity Execution (Experimental)"
-	if hasHighlighting {
-		s.Command.Long = "Delete a Standalone Activity Execution.\n\n\x1b[1mtemporal activity delete \\\n    --activity-id YourActivityId\x1b[0m\n\nThe deletion executes asynchronously. If the Activity\nExecution is running, it will be terminated before deletion."
-	} else {
-		s.Command.Long = "Delete a Standalone Activity Execution.\n\n```\ntemporal activity delete \\\n    --activity-id YourActivityId\n```\n\nThe deletion executes asynchronously. If the Activity\nExecution is running, it will be terminated before deletion."
-	}
-	s.Command.Args = cobra.NoArgs
-	s.ActivityReferenceOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

@@ -165,7 +165,6 @@ commands:
         - activity count
         - activity cancel
         - activity terminate
-        - activity delete
         - activity execution
         - activity complete
         - activity update-options
@@ -250,21 +249,6 @@ commands:
         short: q
         description: |
           Query to filter Activity Executions to count.
-
-  - name: temporal activity delete
-    summary: Delete a Standalone Activity Execution (Experimental)
-    description: |
-      Delete a Standalone Activity Execution.
-
-      ```
-      temporal activity delete \
-          --activity-id YourActivityId
-      ```
-
-      The deletion executes asynchronously. If the Activity
-      Execution is running, it will be terminated before deletion.
-    option-sets:
-      - activity-reference
 
   - name: temporal activity describe
     summary: Describe a Standalone Activity Execution (Experimental)

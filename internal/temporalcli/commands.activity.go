@@ -644,25 +644,6 @@ func (c *TemporalActivityTerminateCommand) run(cctx *CommandContext, args []stri
 	return nil
 }
 
-func (c *TemporalActivityDeleteCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
-	if err != nil {
-		return err
-	}
-	defer cl.Close()
-
-	_, err = cl.WorkflowService().DeleteActivityExecution(cctx, &workflowservice.DeleteActivityExecutionRequest{
-		Namespace:  c.Parent.Namespace,
-		ActivityId: c.ActivityId,
-		RunId:      c.RunId,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to delete activity: %w", err)
-	}
-	cctx.Printer.Println("Delete activity succeeded")
-	return nil
-}
-
 func (c *TemporalActivityResultCommand) run(cctx *CommandContext, args []string) error {
 	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {

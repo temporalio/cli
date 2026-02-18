@@ -528,7 +528,7 @@ func TestHelp_ActivitySubcommands(t *testing.T) {
 	res := h.Execute("help", "activity")
 	assert.NoError(t, res.Err)
 	out := res.Stdout.String()
-	for _, sub := range []string{"cancel", "complete", "count", "delete", "describe", "execute", "fail", "list", "result", "start", "terminate"} {
+	for _, sub := range []string{"cancel", "complete", "count", "describe", "execute", "fail", "list", "result", "start", "terminate"} {
 		assert.Contains(t, out, sub, "missing subcommand %q in activity help", sub)
 	}
 }
