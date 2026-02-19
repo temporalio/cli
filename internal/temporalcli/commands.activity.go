@@ -647,18 +647,17 @@ func (c *TemporalActivityResultCommand) run(cctx *CommandContext, args []string)
 	return pollActivityOutcome(cctx, cl.WorkflowService(), c.Parent.Namespace, c.ActivityId, c.RunId)
 }
 
-// pollActivityOutcome long-polls for the activity's outcome, re-issuing the
-// poll when the server returns an empty response (its signal to keep polling).
-// Each iteration uses a per-RPC timeout as a safety net against network hangs,
-// consistent with the Go SDK's long-poll pattern.
 func pollActivityOutcome(cctx *CommandContext, svc workflowservice.WorkflowServiceClient, ns, activityID, runID string) error {
-	for {
+	req := &workflowservice.PollActivityExecutionRequest{
+		Namespace:  ns,
+		ActivityId: activityID,
+		RunId:      runID,
+	}
+	var resp *workflowservice.PollActivityExecutionResponse
+	for resp.GetOutcome() == nil {
 		rpcCtx, cancel := context.WithTimeout(cctx, longPollPerRPCTimeout)
-		resp, err := svc.PollActivityExecution(rpcCtx, &workflowservice.PollActivityExecutionRequest{
-			Namespace:  ns,
-			ActivityId: activityID,
-			RunId:      runID,
-		})
+		var err error
+		resp, err = svc.PollActivityExecution(rpcCtx, req)
 		cancel()
 		if err != nil {
 			if cctx.Err() != nil {
@@ -666,10 +665,8 @@ func pollActivityOutcome(cctx *CommandContext, svc workflowservice.WorkflowServi
 			}
 			return fmt.Errorf("failed polling activity result: %w", err)
 		}
-		if resp.Outcome != nil {
-			return printActivityOutcome(cctx, resp.Outcome)
-		}
 	}
+	return printActivityOutcome(cctx, resp.GetOutcome())
 }
 
 const longPollPerRPCTimeout = 70 * time.Second
@@ -789,14 +786,12 @@ func buildStartActivityRequest(
 }
 
 func printActivityOutcome(cctx *CommandContext, outcome *activitypb.ActivityExecutionOutcome) error {
-	if outcome == nil {
-		return fmt.Errorf("activity outcome not available")
-	}
 	if cctx.JSONOutput {
 		return cctx.Printer.PrintStructured(outcome, printer.StructuredOptions{})
 	}
-	if result := outcome.GetResult(); result != nil {
-		for _, payload := range result.Payloads {
+	switch v := outcome.GetValue().(type) {
+	case *activitypb.ActivityExecutionOutcome_Result:
+		for _, payload := range v.Result.Payloads {
 			var value any
 			if err := converter.GetDefaultDataConverter().FromPayload(payload, &value); err != nil {
 				cctx.Printer.Printlnf("Result: <failed converting: %v>", err)
@@ -805,9 +800,9 @@ func printActivityOutcome(cctx *CommandContext, outcome *activitypb.ActivityExec
 			}
 		}
 		return nil
+	case *activitypb.ActivityExecutionOutcome_Failure:
+		return fmt.Errorf("activity failed: %s", v.Failure.GetMessage())
+	default:
+		return fmt.Errorf("unexpected activity outcome type: %T", v)
 	}
-	if f := outcome.GetFailure(); f != nil {
-		return fmt.Errorf("activity failed: %s", f.GetMessage())
-	}
-	return fmt.Errorf("activity completed with unknown outcome")
 }

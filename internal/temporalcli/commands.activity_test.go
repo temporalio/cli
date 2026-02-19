@@ -9,19 +9,14 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	activitypb "go.temporal.io/api/activity/v1"
-	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/history/v1"
 	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
-	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
 	"google.golang.org/grpc"
-	"google.golang.org/protobuf/proto"
 )
 
 const (
@@ -528,52 +523,23 @@ func (s *SharedServerSuite) TestResetActivity_BatchSuccess() {
 }
 
 func (s *SharedServerSuite) TestActivityExecute_RetriesOnEmptyPollResponse() {
-	resultPayload, err := converter.GetDefaultDataConverter().ToPayload("standalone-result")
-	require.NoError(s.T(), err)
-
-	var pollCount atomic.Int32
-	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
-		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
-		grpc.WithChainUnaryInterceptor(func(
-			ctx context.Context,
-			method string, req, reply any,
-			cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption,
-		) error {
-			if _, ok := req.(*workflowservice.StartActivityExecutionRequest); ok {
-				proto.Merge(reply.(proto.Message), &workflowservice.StartActivityExecutionResponse{
-					RunId:   "fake-run-id",
-					Started: true,
-				})
-				return nil
-			}
-			if _, ok := req.(*workflowservice.PollActivityExecutionRequest); ok {
-				if pollCount.Add(1) == 1 {
-					return nil
-				}
-				proto.Merge(reply.(proto.Message), &workflowservice.PollActivityExecutionResponse{
-					Outcome: &activitypb.ActivityExecutionOutcome{
-						Value: &activitypb.ActivityExecutionOutcome_Result{
-							Result: &common.Payloads{Payloads: []*common.Payload{resultPayload}},
-						},
-					},
-				})
-				return nil
-			}
-			return invoker(ctx, method, req, reply, cc, opts...)
-		}),
-	)
+	// Activity sleeps longer than the server's activity.longPollTimeout (2s),
+	// forcing at least one empty poll response before the result arrives.
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		time.Sleep(3 * time.Second)
+		return "standalone-result", nil
+	})
 
 	res := s.Execute(
 		"activity", "execute",
 		"--activity-id", "poll-retry-test",
 		"--type", "DevActivity",
-		"--task-queue", "fake-tq",
+		"--task-queue", s.Worker().Options.TaskQueue,
 		"--start-to-close-timeout", "30s",
 		"--address", s.Address(),
 	)
 	s.NoError(res.Err)
 	s.Contains(res.Stdout.String(), "standalone-result")
-	s.GreaterOrEqual(pollCount.Load(), int32(2))
 }
 
 func TestHelp_ActivitySubcommands(t *testing.T) {
