@@ -277,6 +277,7 @@ commands:
           --activity-id YourActivityId \
           --type YourActivity \
           --task-queue YourTaskQueue \
+          --start-to-close-timeout 30s \
           --input '{"some-key": "some-value"}'
       ```
     option-sets:
@@ -667,6 +668,7 @@ commands:
           --activity-id YourActivityId \
           --type YourActivity \
           --task-queue YourTaskQueue \
+          --schedule-to-close-timeout 5m \
           --input '{"some-key": "some-value"}'
       ```
     option-sets:
