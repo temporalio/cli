@@ -1,6 +1,7 @@
 package temporalcli
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -470,15 +471,7 @@ func (c *TemporalActivityExecuteCommand) run(cctx *CommandContext, args []string
 	if err != nil {
 		return fmt.Errorf("failed starting activity: %w", err)
 	}
-	pollResp, err := cl.WorkflowService().PollActivityExecution(cctx, &workflowservice.PollActivityExecutionRequest{
-		Namespace:  c.Parent.Namespace,
-		ActivityId: c.ActivityId,
-		RunId:      startResp.RunId,
-	})
-	if err != nil {
-		return fmt.Errorf("failed polling activity result: %w", err)
-	}
-	return printActivityOutcome(cctx, pollResp.Outcome)
+	return pollActivityOutcome(cctx, cl.WorkflowService(), c.Parent.Namespace, c.ActivityId, startResp.RunId)
 }
 
 func (c *TemporalActivityDescribeCommand) run(cctx *CommandContext, args []string) error {
@@ -651,16 +644,35 @@ func (c *TemporalActivityResultCommand) run(cctx *CommandContext, args []string)
 	}
 	defer cl.Close()
 
-	resp, err := cl.WorkflowService().PollActivityExecution(cctx, &workflowservice.PollActivityExecutionRequest{
-		Namespace:  c.Parent.Namespace,
-		ActivityId: c.ActivityId,
-		RunId:      c.RunId,
-	})
-	if err != nil {
-		return fmt.Errorf("failed polling activity result: %w", err)
-	}
-	return printActivityOutcome(cctx, resp.Outcome)
+	return pollActivityOutcome(cctx, cl.WorkflowService(), c.Parent.Namespace, c.ActivityId, c.RunId)
 }
+
+// pollActivityOutcome long-polls for the activity's outcome, re-issuing the
+// poll when the server returns an empty response (its signal to keep polling).
+// Each iteration uses a per-RPC timeout as a safety net against network hangs,
+// consistent with the Go SDK's long-poll pattern.
+func pollActivityOutcome(cctx *CommandContext, svc workflowservice.WorkflowServiceClient, ns, activityID, runID string) error {
+	for {
+		rpcCtx, cancel := context.WithTimeout(cctx, longPollPerRPCTimeout)
+		resp, err := svc.PollActivityExecution(rpcCtx, &workflowservice.PollActivityExecutionRequest{
+			Namespace:  ns,
+			ActivityId: activityID,
+			RunId:      runID,
+		})
+		cancel()
+		if err != nil {
+			if cctx.Err() != nil {
+				return cctx.Err()
+			}
+			return fmt.Errorf("failed polling activity result: %w", err)
+		}
+		if resp.Outcome != nil {
+			return printActivityOutcome(cctx, resp.Outcome)
+		}
+	}
+}
+
+const longPollPerRPCTimeout = 70 * time.Second
 
 func buildStartActivityRequest(
 	cctx *CommandContext,
