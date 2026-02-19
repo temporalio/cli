@@ -2,13 +2,13 @@ package temporalcli_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 	"sync/atomic"
-	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/history/v1"
 	"go.temporal.io/api/serviceerror"
@@ -522,7 +522,99 @@ func (s *SharedServerSuite) TestResetActivity_BatchSuccess() {
 	failActivity.Store(false)
 }
 
-func (s *SharedServerSuite) TestActivityExecute_RetriesOnEmptyPollResponse() {
+// startStandaloneActivity starts a standalone activity via the CLI and returns
+// the parsed JSON response containing activityId and runId.
+func (s *SharedServerSuite) startStandaloneActivity(activityID string, extraArgs ...string) map[string]any {
+	args := []string{
+		"activity", "start",
+		"-o", "json",
+		"--activity-id", activityID,
+		"--type", "DevActivity",
+		"--task-queue", s.Worker().Options.TaskQueue,
+		"--start-to-close-timeout", "30s",
+		"--address", s.Address(),
+	}
+	args = append(args, extraArgs...)
+	res := s.Execute(args...)
+	s.NoError(res.Err)
+	var jsonOut map[string]any
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	return jsonOut
+}
+
+func (s *SharedServerSuite) TestStandaloneActivity_Start() {
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		return "start-result", nil
+	})
+
+	res := s.Execute(
+		"activity", "start",
+		"--activity-id", "start-test",
+		"--type", "DevActivity",
+		"--task-queue", s.Worker().Options.TaskQueue,
+		"--start-to-close-timeout", "30s",
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	out := res.Stdout.String()
+	s.ContainsOnSameLine(out, "ActivityId", "start-test")
+	s.Contains(out, "RunId")
+	s.ContainsOnSameLine(out, "Started", "true")
+
+	// JSON
+	res = s.Execute(
+		"activity", "start",
+		"-o", "json",
+		"--activity-id", "start-test-json",
+		"--type", "DevActivity",
+		"--task-queue", s.Worker().Options.TaskQueue,
+		"--start-to-close-timeout", "30s",
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	var jsonOut map[string]any
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	s.Equal("start-test-json", jsonOut["activityId"])
+	s.NotEmpty(jsonOut["runId"])
+	s.Equal(true, jsonOut["started"])
+}
+
+func (s *SharedServerSuite) TestStandaloneActivity_Execute_Success() {
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		return map[string]string{"foo": "bar"}, nil
+	})
+
+	res := s.Execute(
+		"activity", "execute",
+		"--activity-id", "exec-test",
+		"--type", "DevActivity",
+		"--task-queue", s.Worker().Options.TaskQueue,
+		"--start-to-close-timeout", "30s",
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	s.ContainsOnSameLine(res.Stdout.String(), "Result", `map[foo:bar]`)
+}
+
+func (s *SharedServerSuite) TestStandaloneActivity_Execute_Failure() {
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		return nil, fmt.Errorf("intentional failure")
+	})
+
+	res := s.Execute(
+		"activity", "execute",
+		"--activity-id", "exec-fail-test",
+		"--type", "DevActivity",
+		"--task-queue", s.Worker().Options.TaskQueue,
+		"--start-to-close-timeout", "30s",
+		"--retry-maximum-attempts", "1",
+		"--address", s.Address(),
+	)
+	s.ErrorContains(res.Err, "activity failed")
+	s.ErrorContains(res.Err, "intentional failure")
+}
+
+func (s *SharedServerSuite) TestStandaloneActivity_Execute_RetriesOnEmptyPollResponse() {
 	// Activity sleeps longer than the server's activity.longPollTimeout (2s),
 	// forcing at least one empty poll response before the result arrives.
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
@@ -542,47 +634,120 @@ func (s *SharedServerSuite) TestActivityExecute_RetriesOnEmptyPollResponse() {
 	s.Contains(res.Stdout.String(), "standalone-result")
 }
 
-func TestHelp_ActivitySubcommands(t *testing.T) {
-	h := NewCommandHarness(t)
+func (s *SharedServerSuite) TestStandaloneActivity_Result() {
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		return "result-value", nil
+	})
 
-	res := h.Execute("help", "activity")
-	assert.NoError(t, res.Err)
-	out := res.Stdout.String()
-	for _, sub := range []string{"cancel", "complete", "count", "describe", "execute", "fail", "list", "result", "start", "terminate"} {
-		assert.Contains(t, out, sub, "missing subcommand %q in activity help", sub)
-	}
+	started := s.startStandaloneActivity("result-test")
+
+	res := s.Execute(
+		"activity", "result",
+		"--activity-id", "result-test",
+		"--run-id", started["runId"].(string),
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "result-value")
 }
 
-func TestHelp_ActivityStartFlags(t *testing.T) {
-	h := NewCommandHarness(t)
+func (s *SharedServerSuite) TestStandaloneActivity_Describe() {
+	activityStarted := make(chan struct{})
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		close(activityStarted)
+		<-ctx.Done()
+		return nil, ctx.Err()
+	})
 
-	res := h.Execute("activity", "start", "--help")
-	assert.NoError(t, res.Err)
+	started := s.startStandaloneActivity("describe-test")
+	<-activityStarted
+
+	res := s.Execute(
+		"activity", "describe",
+		"--activity-id", "describe-test",
+		"--run-id", started["runId"].(string),
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
 	out := res.Stdout.String()
-	for _, flag := range []string{"--activity-id", "--type", "--task-queue", "--schedule-to-close-timeout", "--start-to-close-timeout", "--input"} {
-		assert.Contains(t, out, flag, "missing flag %q in activity start help", flag)
-	}
+	s.ContainsOnSameLine(out, "ActivityId", "describe-test")
+	s.Contains(out, "DevActivity")
 }
 
-func TestHelp_ActivityCompleteFlags(t *testing.T) {
-	h := NewCommandHarness(t)
+func (s *SharedServerSuite) TestStandaloneActivity_List() {
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		return "listed", nil
+	})
 
-	res := h.Execute("activity", "complete", "--help")
-	assert.NoError(t, res.Err)
-	out := res.Stdout.String()
-	assert.Contains(t, out, "--activity-id")
-	assert.Contains(t, out, "--workflow-id")
-	assert.Contains(t, out, "--result")
+	s.startStandaloneActivity("list-test-1")
+	s.startStandaloneActivity("list-test-2")
+
+	s.Eventually(func() bool {
+		res := s.Execute(
+			"activity", "list",
+			"--address", s.Address(),
+		)
+		out := res.Stdout.String()
+		return res.Err == nil && strings.Contains(out, "list-test-1") && strings.Contains(out, "list-test-2")
+	}, 5*time.Second, 200*time.Millisecond)
 }
 
-func TestHelp_ActivityFailFlags(t *testing.T) {
-	h := NewCommandHarness(t)
+func (s *SharedServerSuite) TestStandaloneActivity_Count() {
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		return "counted", nil
+	})
 
-	res := h.Execute("activity", "fail", "--help")
-	assert.NoError(t, res.Err)
-	out := res.Stdout.String()
-	assert.Contains(t, out, "--activity-id")
-	assert.Contains(t, out, "--workflow-id")
-	assert.Contains(t, out, "--detail")
-	assert.Contains(t, out, "--reason")
+	s.startStandaloneActivity("count-test")
+
+	s.Eventually(func() bool {
+		res := s.Execute(
+			"activity", "count",
+			"--address", s.Address(),
+		)
+		return res.Err == nil && strings.Contains(res.Stdout.String(), "Total:")
+	}, 5*time.Second, 200*time.Millisecond)
+}
+
+func (s *SharedServerSuite) TestStandaloneActivity_Cancel() {
+	activityStarted := make(chan struct{})
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		close(activityStarted)
+		<-ctx.Done()
+		return nil, ctx.Err()
+	})
+
+	started := s.startStandaloneActivity("cancel-test")
+	<-activityStarted
+
+	res := s.Execute(
+		"activity", "cancel",
+		"--activity-id", "cancel-test",
+		"--run-id", started["runId"].(string),
+		"--reason", "test-cancel",
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Cancellation requested")
+}
+
+func (s *SharedServerSuite) TestStandaloneActivity_Terminate() {
+	activityStarted := make(chan struct{})
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		close(activityStarted)
+		<-ctx.Done()
+		return nil, ctx.Err()
+	})
+
+	started := s.startStandaloneActivity("terminate-test")
+	<-activityStarted
+
+	res := s.Execute(
+		"activity", "terminate",
+		"--activity-id", "terminate-test",
+		"--run-id", started["runId"].(string),
+		"--reason", "test-terminate",
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Activity terminated")
 }
