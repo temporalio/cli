@@ -2,6 +2,7 @@ package temporalcli
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -796,7 +797,12 @@ func printActivityOutcome(cctx *CommandContext, outcome *activitypb.ActivityExec
 			if err := converter.GetDefaultDataConverter().FromPayload(payload, &value); err != nil {
 				cctx.Printer.Printlnf("Result: <failed converting: %v>", err)
 			} else {
-				cctx.Printer.Printlnf("Result: %v", value)
+				jsonBytes, err := json.Marshal(value)
+				if err != nil {
+					cctx.Printer.Printlnf("Result: <failed marshaling: %v>", err)
+				} else {
+					cctx.Printer.Printlnf("Result: %s", jsonBytes)
+				}
 			}
 		}
 		return nil
