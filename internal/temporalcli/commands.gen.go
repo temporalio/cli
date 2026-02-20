@@ -39,21 +39,19 @@ func (v *ScheduleIdOptions) BuildFlags(f *pflag.FlagSet) {
 }
 
 type ScheduleConfigurationOptions struct {
-	Calendar                []string
-	CatchupWindow           cliext.FlagDuration
-	Cron                    []string
-	EndTime                 cliext.FlagTimestamp
-	Interval                []string
-	Jitter                  cliext.FlagDuration
-	Notes                   string
-	Paused                  bool
-	PauseOnFailure          bool
-	RemainingActions        int
-	StartTime               cliext.FlagTimestamp
-	TimeZone                string
-	ScheduleSearchAttribute []string
-	ScheduleMemo            []string
-	FlagSet                 *pflag.FlagSet
+	Calendar         []string
+	CatchupWindow    cliext.FlagDuration
+	Cron             []string
+	EndTime          cliext.FlagTimestamp
+	Interval         []string
+	Jitter           cliext.FlagDuration
+	Notes            string
+	Paused           bool
+	PauseOnFailure   bool
+	RemainingActions int
+	StartTime        cliext.FlagTimestamp
+	TimeZone         string
+	FlagSet          *pflag.FlagSet
 }
 
 func (v *ScheduleConfigurationOptions) BuildFlags(f *pflag.FlagSet) {
@@ -72,6 +70,16 @@ func (v *ScheduleConfigurationOptions) BuildFlags(f *pflag.FlagSet) {
 	f.IntVar(&v.RemainingActions, "remaining-actions", 0, "Total allowed actions. Default is zero (unlimited).")
 	f.Var(&v.StartTime, "start-time", "Schedule start time.")
 	f.StringVar(&v.TimeZone, "time-zone", "", "Interpret calendar specs with the `TZ` time zone. For a list of time zones, see: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones.")
+}
+
+type ScheduleCreateOnlyOptions struct {
+	ScheduleSearchAttribute []string
+	ScheduleMemo            []string
+	FlagSet                 *pflag.FlagSet
+}
+
+func (v *ScheduleCreateOnlyOptions) BuildFlags(f *pflag.FlagSet) {
+	v.FlagSet = f
 	f.StringArrayVar(&v.ScheduleSearchAttribute, "schedule-search-attribute", nil, "Set schedule Search Attributes using `KEY=\"VALUE` pairs. Keys must be identifiers, and values must be JSON values. For example: 'YourKey={\"your\": \"value\"}'. Can be passed multiple times.")
 	f.StringArrayVar(&v.ScheduleMemo, "schedule-memo", nil, "Set schedule memo using `KEY=\"VALUE` pairs. Keys must be identifiers, and values must be JSON values. For example: 'YourKey={\"your\": \"value\"}'. Can be passed multiple times.")
 }
@@ -1821,6 +1829,7 @@ type TemporalScheduleCreateCommand struct {
 	Parent  *TemporalScheduleCommand
 	Command cobra.Command
 	ScheduleConfigurationOptions
+	ScheduleCreateOnlyOptions
 	ScheduleIdOptions
 	OverlapPolicyOptions
 	SharedWorkflowStartOptions
@@ -1840,6 +1849,7 @@ func NewTemporalScheduleCreateCommand(cctx *CommandContext, parent *TemporalSche
 	}
 	s.Command.Args = cobra.NoArgs
 	s.ScheduleConfigurationOptions.BuildFlags(s.Command.Flags())
+	s.ScheduleCreateOnlyOptions.BuildFlags(s.Command.Flags())
 	s.ScheduleIdOptions.BuildFlags(s.Command.Flags())
 	s.OverlapPolicyOptions.BuildFlags(s.Command.Flags())
 	s.SharedWorkflowStartOptions.BuildFlags(s.Command.Flags())
@@ -2019,9 +2029,9 @@ func NewTemporalScheduleUpdateCommand(cctx *CommandContext, parent *TemporalSche
 	s.Command.Use = "update [flags]"
 	s.Command.Short = "Update Schedule details"
 	if hasHighlighting {
-		s.Command.Long = "Update an existing Schedule with new configuration details, including time\nspecifications, action, and policies:\n\n\x1b[1mtemporal schedule update \\\n    --schedule-id \"YourScheduleId\" \\\n    --workflow-type \"NewWorkflowType\"\x1b[0m"
+		s.Command.Long = "Update an existing Schedule with new configuration details, including time\nspecifications, action, and policies:\n\n\x1b[1mtemporal schedule update \\\n    --schedule-id \"YourScheduleId\" \\\n    --workflow-type \"NewWorkflowType\"\x1b[0m\n\nThis command performs a full replacement of the Schedule\nconfiguration. Any options not provided will be reset to their default\nvalues. You must re-specify all options, not just the ones you want to\nchange. To view the current configuration of a Schedule, use\n\x1b[1mtemporal schedule describe\x1b[0m before updating.\n\nSchedule memo and search attributes cannot be updated with this\ncommand. They are set only during Schedule creation and are not affected\nby updates."
 	} else {
-		s.Command.Long = "Update an existing Schedule with new configuration details, including time\nspecifications, action, and policies:\n\n```\ntemporal schedule update \\\n    --schedule-id \"YourScheduleId\" \\\n    --workflow-type \"NewWorkflowType\"\n```"
+		s.Command.Long = "Update an existing Schedule with new configuration details, including time\nspecifications, action, and policies:\n\n```\ntemporal schedule update \\\n    --schedule-id \"YourScheduleId\" \\\n    --workflow-type \"NewWorkflowType\"\n```\n\nThis command performs a full replacement of the Schedule\nconfiguration. Any options not provided will be reset to their default\nvalues. You must re-specify all options, not just the ones you want to\nchange. To view the current configuration of a Schedule, use\n`temporal schedule describe` before updating.\n\nSchedule memo and search attributes cannot be updated with this\ncommand. They are set only during Schedule creation and are not affected\nby updates."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.ScheduleConfigurationOptions.BuildFlags(s.Command.Flags())
