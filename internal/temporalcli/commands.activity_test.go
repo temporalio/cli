@@ -593,7 +593,7 @@ func (s *SharedServerSuite) TestStandaloneActivity_Execute_Success() {
 		"--address", s.Address(),
 	)
 	s.NoError(res.Err)
-	s.ContainsOnSameLine(res.Stdout.String(), "Result", `map[foo:bar]`)
+	s.ContainsOnSameLine(res.Stdout.String(), "Result", `{"foo":"bar"}`)
 }
 
 func (s *SharedServerSuite) TestStandaloneActivity_Execute_Failure() {
