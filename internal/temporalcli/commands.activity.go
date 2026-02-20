@@ -1,7 +1,6 @@
 package temporalcli
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -16,6 +15,7 @@ import (
 	sdkpb "go.temporal.io/api/sdk/v1"
 	taskqueuepb "go.temporal.io/api/taskqueue/v1"
 	"go.temporal.io/api/workflowservice/v1"
+	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/converter"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
@@ -472,7 +472,7 @@ func (c *TemporalActivityExecuteCommand) run(cctx *CommandContext, args []string
 	if err != nil {
 		return fmt.Errorf("failed starting activity: %w", err)
 	}
-	return pollActivityOutcome(cctx, cl.WorkflowService(), c.Parent.Namespace, c.ActivityId, startResp.RunId)
+	return getActivityResult(cctx, cl, c.ActivityId, startResp.RunId)
 }
 
 func (c *TemporalActivityResultCommand) run(cctx *CommandContext, args []string) error {
@@ -482,7 +482,7 @@ func (c *TemporalActivityResultCommand) run(cctx *CommandContext, args []string)
 	}
 	defer cl.Close()
 
-	return pollActivityOutcome(cctx, cl.WorkflowService(), c.Parent.Namespace, c.ActivityId, c.RunId)
+	return getActivityResult(cctx, cl, c.ActivityId, c.RunId)
 }
 
 func (c *TemporalActivityDescribeCommand) run(cctx *CommandContext, args []string) error {
@@ -648,29 +648,29 @@ func (c *TemporalActivityTerminateCommand) run(cctx *CommandContext, args []stri
 	return nil
 }
 
-func pollActivityOutcome(cctx *CommandContext, svc workflowservice.WorkflowServiceClient, ns, activityID, runID string) error {
-	req := &workflowservice.PollActivityExecutionRequest{
-		Namespace:  ns,
-		ActivityId: activityID,
-		RunId:      runID,
+func getActivityResult(cctx *CommandContext, cl client.Client, activityID, runID string) error {
+	handle := cl.GetActivityHandle(client.GetActivityHandleOptions{
+		ActivityID: activityID,
+		RunID:      runID,
+	})
+	var valuePtr interface{}
+	if err := handle.Get(cctx, &valuePtr); err != nil {
+		return fmt.Errorf("activity failed: %w", err)
 	}
-	var resp *workflowservice.PollActivityExecutionResponse
-	for resp.GetOutcome() == nil {
-		rpcCtx, cancel := context.WithTimeout(cctx, longPollPerRPCTimeout)
-		var err error
-		resp, err = svc.PollActivityExecution(rpcCtx, req)
-		cancel()
-		if err != nil {
-			if cctx.Err() != nil {
-				return cctx.Err()
-			}
-			return fmt.Errorf("failed polling activity result: %w", err)
-		}
+	if cctx.JSONOutput {
+		return cctx.Printer.PrintStructured(
+			struct {
+				Result interface{} `json:"result"`
+			}{Result: valuePtr},
+			printer.StructuredOptions{})
 	}
-	return printActivityOutcome(cctx, resp.GetOutcome())
+	jsonBytes, err := json.Marshal(valuePtr)
+	if err != nil {
+		return fmt.Errorf("failed marshaling result: %w", err)
+	}
+	cctx.Printer.Printlnf("Result: %s", jsonBytes)
+	return nil
 }
-
-const longPollPerRPCTimeout = 70 * time.Second
 
 func buildStartActivityRequest(
 	cctx *CommandContext,
@@ -784,31 +784,4 @@ func buildStartActivityRequest(
 	}
 
 	return req, nil
-}
-
-func printActivityOutcome(cctx *CommandContext, outcome *activitypb.ActivityExecutionOutcome) error {
-	if cctx.JSONOutput {
-		return cctx.Printer.PrintStructured(outcome, printer.StructuredOptions{})
-	}
-	switch v := outcome.GetValue().(type) {
-	case *activitypb.ActivityExecutionOutcome_Result:
-		for _, payload := range v.Result.Payloads {
-			var value any
-			if err := converter.GetDefaultDataConverter().FromPayload(payload, &value); err != nil {
-				cctx.Printer.Printlnf("Result: <failed converting: %v>", err)
-			} else {
-				jsonBytes, err := json.Marshal(value)
-				if err != nil {
-					cctx.Printer.Printlnf("Result: <failed marshaling: %v>", err)
-				} else {
-					cctx.Printer.Printlnf("Result: %s", jsonBytes)
-				}
-			}
-		}
-		return nil
-	case *activitypb.ActivityExecutionOutcome_Failure:
-		return fmt.Errorf("activity failed: %s", v.Failure.GetMessage())
-	default:
-		return fmt.Errorf("unexpected activity outcome type: %T", v)
-	}
 }
