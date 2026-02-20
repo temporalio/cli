@@ -3525,7 +3525,7 @@ commands:
         - Workflows
 
   - name: temporal workflow cancel
-    summary: Send cancellation to a Workflow Execution
+    summary: Send cancellation to Workflow Execution
     description: |
       Canceling a running Workflow Execution records a
       `WorkflowExecutionCancelRequested` event in the Event History. The Service
@@ -3553,9 +3553,9 @@ commands:
       - single-workflow-or-batch
 
   - name: temporal workflow count
-    summary: Count Workflow Executions
+    summary: Number of Workflow Executions
     description: |
-      Output a count of Workflow Executions, regardless of execution state (running,
+      Show a count of Workflow Executions, regardless of execution state (running,
       terminated, etc). Use `--query` to select a subset of Workflow Executions:
 
       ```
@@ -3572,9 +3572,9 @@ commands:
         description: Content for an SQL-like `QUERY` List Filter.
 
   - name: temporal workflow delete
-    summary: Delete Workflow Execution
+    summary: Remove Workflow Execution
     description: |
-      Delete a Workflow Execution and its Event History:
+      Delete a Workflow Executions and its Event History:
 
       ```
       temporal workflow delete \
@@ -3585,14 +3585,14 @@ commands:
       terminates it before deletion.
 
       Visit https://docs.temporal.io/visibility to read more about Search Attributes
-      and queries. See `temporal batch --help` for a quick reference.
+      and Query creation. See `temporal batch --help` for a quick reference.
     option-sets:
       - single-workflow-or-batch
 
   - name: temporal workflow describe
     summary: Show Workflow Execution info
     description: |
-      Display information about a Workflow Execution:
+      Display information about a specific Workflow Execution:
 
       ```
       temporal workflow describe \
@@ -3617,13 +3617,14 @@ commands:
         description: Print properties without changing their format.
 
   - name: temporal workflow execute
-    summary: Start a Workflow Execution and wait for completion
+    summary: Start new Workflow Execution
     description: |
-      Start a new Workflow Execution and direct its progress to stdout. The
-      command blocks and returns when the Workflow Execution completes:
+      Establish a new Workflow Execution and direct its progress to stdout. The
+      command blocks and returns when the Workflow Execution completes. If your
+      Workflow requires input, pass valid JSON:
 
       ```
-      temporal workflow execute \
+      temporal workflow execute
           --workflow-id YourWorkflowId \
           --type YourWorkflow \
           --task-queue YourTaskQueue \
@@ -3909,9 +3910,9 @@ commands:
       - workflow-update-options
 
   - name: temporal workflow result
-    summary: Wait for and output the result of a Workflow Execution
+    summary: Wait for and show the result of a Workflow Execution
     description: |
-      Wait for and output the result of a Workflow Execution:
+      Wait for and print the result of a Workflow Execution:
 
       ```
       temporal workflow result \
@@ -4049,11 +4050,9 @@ commands:
       - workflow-reference
 
   - name: temporal workflow start
-    summary: Start a Workflow Execution
+    summary: Initiate a Workflow Execution
     description: |
-      Start a new Workflow Execution without waiting for it to complete.
-      Use `temporal workflow execute` to start and wait for completion.
-      Outputs the Workflow ID and Run ID:
+      Start a new Workflow Execution. Returns the Workflow- and Run-IDs:
 
       ```
       temporal workflow start \
@@ -4070,7 +4069,7 @@ commands:
   - name: temporal workflow terminate
     summary: Forcefully end a Workflow Execution
     description: |
-      Terminate (forcefully end) a Workflow Execution:
+      Terminate a Workflow Execution:
 
       ```
       temporal workflow terminate \
@@ -4695,13 +4694,13 @@ option-sets:
         experimental: true
         description: |
           Static Workflow summary for human consumption in UIs.
-          Uses standard Markdown formatting excluding images, HTML, and script tags, should be a single line.
+          Uses Temporal Markdown formatting, should be a single line.
       - name: static-details
         type: string
         experimental: true
         description: |
           Static Workflow details for human consumption in UIs.
-          Uses standard Markdown formatting excluding images, HTML, and script tags, may be multiple lines.
+          Uses Temporal Markdown formatting, may be multiple lines.
       - name: priority-key
         type: int
         description: |
