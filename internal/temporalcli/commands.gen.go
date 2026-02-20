@@ -517,9 +517,9 @@ func NewTemporalActivityCompleteCommand(cctx *CommandContext, parent *TemporalAc
 	s.Command.Use = "complete [flags]"
 	s.Command.Short = "Complete an Activity"
 	if hasHighlighting {
-		s.Command.Long = "Complete an Activity, marking it as successfully finished.\nSpecify the Activity ID and include a JSON result for the\nreturned value:\n\n\x1b[1mtemporal activity complete \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --result '{\"YourResultKey\": \"YourResultVal\"}'\x1b[0m"
+		s.Command.Long = "Complete an Activity, marking it as successfully finished. Specify the\nActivity ID and include a JSON result for the returned value:\n\n\x1b[1mtemporal activity complete \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --result '{\"YourResultKey\": \"YourResultVal\"}'\x1b[0m"
 	} else {
-		s.Command.Long = "Complete an Activity, marking it as successfully finished.\nSpecify the Activity ID and include a JSON result for the\nreturned value:\n\n```\ntemporal activity complete \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --result '{\"YourResultKey\": \"YourResultVal\"}'\n```"
+		s.Command.Long = "Complete an Activity, marking it as successfully finished. Specify the\nActivity ID and include a JSON result for the returned value:\n\n```\ntemporal activity complete \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --result '{\"YourResultKey\": \"YourResultVal\"}'\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.WorkflowId, "workflow-id", "w", "", "Workflow ID. Required for workflow Activities. Omit for Standalone Activities.")
@@ -3637,9 +3637,9 @@ func NewTemporalWorkflowCountCommand(cctx *CommandContext, parent *TemporalWorkf
 	s.Command.Use = "count [flags]"
 	s.Command.Short = "Count Workflow Executions"
 	if hasHighlighting {
-		s.Command.Long = "Return a count of Workflow Executions, regardless of execution state (running,\nterminated, etc). Use \x1b[1m--query\x1b[0m to select a subset of Workflow Executions:\n\n\x1b[1mtemporal workflow count \\\n    --query YourQuery\x1b[0m\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation. See \x1b[1mtemporal batch --help\x1b[0m for a quick reference."
+		s.Command.Long = "Output a count of Workflow Executions, regardless of execution state (running,\nterminated, etc). Use \x1b[1m--query\x1b[0m to select a subset of Workflow Executions:\n\n\x1b[1mtemporal workflow count \\\n    --query YourQuery\x1b[0m\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation. See \x1b[1mtemporal batch --help\x1b[0m for a quick reference."
 	} else {
-		s.Command.Long = "Return a count of Workflow Executions, regardless of execution state (running,\nterminated, etc). Use `--query` to select a subset of Workflow Executions:\n\n```\ntemporal workflow count \\\n    --query YourQuery\n```\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation. See `temporal batch --help` for a quick reference."
+		s.Command.Long = "Output a count of Workflow Executions, regardless of execution state (running,\nterminated, etc). Use `--query` to select a subset of Workflow Executions:\n\n```\ntemporal workflow count \\\n    --query YourQuery\n```\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation. See `temporal batch --help` for a quick reference."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Content for an SQL-like `QUERY` List Filter.")
@@ -3664,9 +3664,9 @@ func NewTemporalWorkflowDeleteCommand(cctx *CommandContext, parent *TemporalWork
 	s.Command.Use = "delete [flags]"
 	s.Command.Short = "Delete Workflow Execution"
 	if hasHighlighting {
-		s.Command.Long = "Delete a Workflow Execution and its Event History:\n\n\x1b[1mtemporal workflow delete \\\n    --workflow-id YourWorkflowId\x1b[0m\n\nThe removal executes asynchronously. If the Execution is Running, the Service\nterminates it before deletion.\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation. See \x1b[1mtemporal batch --help\x1b[0m for a quick reference."
+		s.Command.Long = "Delete a Workflow Execution and its Event History:\n\n\x1b[1mtemporal workflow delete \\\n    --workflow-id YourWorkflowId\x1b[0m\n\nThe removal executes asynchronously. If the Execution is Running, the Service\nterminates it before deletion.\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand queries. See \x1b[1mtemporal batch --help\x1b[0m for a quick reference."
 	} else {
-		s.Command.Long = "Delete a Workflow Execution and its Event History:\n\n```\ntemporal workflow delete \\\n    --workflow-id YourWorkflowId\n```\n\nThe removal executes asynchronously. If the Execution is Running, the Service\nterminates it before deletion.\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation. See `temporal batch --help` for a quick reference."
+		s.Command.Long = "Delete a Workflow Execution and its Event History:\n\n```\ntemporal workflow delete \\\n    --workflow-id YourWorkflowId\n```\n\nThe removal executes asynchronously. If the Execution is Running, the Service\nterminates it before deletion.\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand queries. See `temporal batch --help` for a quick reference."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.SingleWorkflowOrBatchOptions.BuildFlags(s.Command.Flags())

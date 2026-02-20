@@ -206,9 +206,8 @@ commands:
   - name: temporal activity complete
     summary: Complete an Activity
     description: |
-      Complete an Activity, marking it as successfully finished.
-      Specify the Activity ID and include a JSON result for the
-      returned value:
+      Complete an Activity, marking it as successfully finished. Specify the
+      Activity ID and include a JSON result for the returned value:
 
       ```
       temporal activity complete \
@@ -3556,7 +3555,7 @@ commands:
   - name: temporal workflow count
     summary: Count Workflow Executions
     description: |
-      Return a count of Workflow Executions, regardless of execution state (running,
+      Output a count of Workflow Executions, regardless of execution state (running,
       terminated, etc). Use `--query` to select a subset of Workflow Executions:
 
       ```
@@ -3586,7 +3585,7 @@ commands:
       terminates it before deletion.
 
       Visit https://docs.temporal.io/visibility to read more about Search Attributes
-      and Query creation. See `temporal batch --help` for a quick reference.
+      and queries. See `temporal batch --help` for a quick reference.
     option-sets:
       - single-workflow-or-batch
 
