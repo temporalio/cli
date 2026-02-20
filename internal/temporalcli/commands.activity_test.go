@@ -522,6 +522,48 @@ func (s *SharedServerSuite) TestResetActivity_BatchSuccess() {
 	failActivity.Store(false)
 }
 
+func (s *SharedServerSuite) TestStandaloneActivity_Complete() {
+	activityStarted := make(chan struct{})
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		close(activityStarted)
+		<-ctx.Done()
+		return nil, ctx.Err()
+	})
+
+	started := s.startStandaloneActivity("sa-complete-test")
+	<-activityStarted
+
+	res := s.Execute(
+		"activity", "complete",
+		"--activity-id", "sa-complete-test",
+		"--run-id", started["runId"].(string),
+		"--result", `"completed-externally"`,
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+}
+
+func (s *SharedServerSuite) TestStandaloneActivity_Fail() {
+	activityStarted := make(chan struct{})
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		close(activityStarted)
+		<-ctx.Done()
+		return nil, ctx.Err()
+	})
+
+	started := s.startStandaloneActivity("sa-fail-test")
+	<-activityStarted
+
+	res := s.Execute(
+		"activity", "fail",
+		"--activity-id", "sa-fail-test",
+		"--run-id", started["runId"].(string),
+		"--reason", "external-failure",
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+}
+
 // startStandaloneActivity starts a standalone activity via the CLI and returns
 // the parsed JSON response containing activityId and runId.
 func (s *SharedServerSuite) startStandaloneActivity(activityID string, extraArgs ...string) map[string]any {
