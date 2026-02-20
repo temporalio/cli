@@ -485,7 +485,7 @@ func NewTemporalActivityCancelCommand(cctx *CommandContext, parent *TemporalActi
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "cancel [flags]"
-	s.Command.Short = "Request cancellation of a Standalone Activity Execution (Experimental)"
+	s.Command.Short = "Cancel a Standalone Activity Execution (Experimental)"
 	if hasHighlighting {
 		s.Command.Long = "Request cancellation of a Standalone Activity Execution.\n\n\x1b[1mtemporal activity cancel \\\n    --activity-id YourActivityId\x1b[0m\n\nRequesting cancellation does not immediately cancel the\nActivity. If the Activity is heartbeating, a cancellation\nerror will be raised when the next heartbeat response is\nreceived; if the Activity allows this error to propagate, the\nActivity transitions to canceled status. If the Activity is\nnot heartbeating, this request has no effect on the Activity."
 	} else {
@@ -515,7 +515,7 @@ func NewTemporalActivityCompleteCommand(cctx *CommandContext, parent *TemporalAc
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "complete [flags]"
-	s.Command.Short = "Complete an Activity"
+	s.Command.Short = "Complete an Activity with a result"
 	if hasHighlighting {
 		s.Command.Long = "Complete an Activity, marking it as successfully finished. Specify the\nActivity ID and include a JSON result for the returned value:\n\n\x1b[1mtemporal activity complete \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --result '{\"YourResultKey\": \"YourResultVal\"}'\x1b[0m"
 	} else {
@@ -573,7 +573,7 @@ func NewTemporalActivityDescribeCommand(cctx *CommandContext, parent *TemporalAc
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "describe [flags]"
-	s.Command.Short = "Describe a Standalone Activity Execution (Experimental)"
+	s.Command.Short = "Show Standalone Activity Execution info (Experimental)"
 	if hasHighlighting {
 		s.Command.Long = "Display information about a Standalone Activity Execution.\n\n\x1b[1mtemporal activity describe \\\n    --activity-id YourActivityId\x1b[0m"
 	} else {
@@ -602,7 +602,7 @@ func NewTemporalActivityExecuteCommand(cctx *CommandContext, parent *TemporalAct
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "execute [flags]"
-	s.Command.Short = "Start a Standalone Activity Execution and wait for completion (Experimental)"
+	s.Command.Short = "Start a Standalone Activity and wait for its result (Experimental)"
 	if hasHighlighting {
 		s.Command.Long = "Start a new Standalone Activity Execution and block until it completes.\nThe result is output to stdout.\n\n\x1b[1mtemporal activity execute \\\n    --activity-id YourActivityId \\\n    --type YourActivity \\\n    --task-queue YourTaskQueue \\\n    --start-to-close-timeout 30s \\\n    --input '{\"some-key\": \"some-value\"}'\x1b[0m"
 	} else {
@@ -633,7 +633,7 @@ func NewTemporalActivityFailCommand(cctx *CommandContext, parent *TemporalActivi
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "fail [flags]"
-	s.Command.Short = "Fail an Activity"
+	s.Command.Short = "Fail an Activity with an error"
 	if hasHighlighting {
 		s.Command.Long = "Fail an Activity, marking it as having encountered an error:\n\n\x1b[1mtemporal activity fail \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\x1b[0m"
 	} else {
@@ -771,7 +771,7 @@ func NewTemporalActivityResultCommand(cctx *CommandContext, parent *TemporalActi
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "result [flags]"
-	s.Command.Short = "Wait for and output the result of a Standalone Activity Execution (Experimental)"
+	s.Command.Short = "Get the result of a Standalone Activity Execution (Experimental)"
 	if hasHighlighting {
 		s.Command.Long = "Wait for a Standalone Activity Execution to complete and output the\nresult.\n\n\x1b[1mtemporal activity result \\\n    --activity-id YourActivityId\x1b[0m"
 	} else {
@@ -799,7 +799,7 @@ func NewTemporalActivityStartCommand(cctx *CommandContext, parent *TemporalActiv
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "start [flags]"
-	s.Command.Short = "Start a new Standalone Activity Execution (Experimental)"
+	s.Command.Short = "Start a Standalone Activity Execution (Experimental)"
 	if hasHighlighting {
 		s.Command.Long = "Start a new Standalone Activity Execution. Outputs the Activity ID and\nRun ID.\n\n\x1b[1mtemporal activity start \\\n    --activity-id YourActivityId \\\n    --type YourActivity \\\n    --task-queue YourTaskQueue \\\n    --schedule-to-close-timeout 5m \\\n    --input '{\"some-key\": \"some-value\"}'\x1b[0m"
 	} else {
@@ -828,7 +828,7 @@ func NewTemporalActivityTerminateCommand(cctx *CommandContext, parent *TemporalA
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "terminate [flags]"
-	s.Command.Short = "Terminate a Standalone Activity Execution (Experimental)"
+	s.Command.Short = "Forcefully end a Standalone Activity Execution (Experimental)"
 	if hasHighlighting {
 		s.Command.Long = "Terminate a Standalone Activity Execution.\n\n\x1b[1mtemporal activity terminate \\\n    --activity-id YourActivityId \\\n    --reason YourReason\x1b[0m\n\nActivity code cannot see or respond to terminations. To\nperform clean-up work, use \x1b[1mtemporal activity cancel\x1b[0m instead."
 	} else {

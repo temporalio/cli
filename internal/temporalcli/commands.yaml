@@ -181,7 +181,7 @@ commands:
         - Temporal CLI
 
   - name: temporal activity cancel
-    summary: Request cancellation of a Standalone Activity Execution (Experimental)
+    summary: Cancel a Standalone Activity Execution (Experimental)
     description: |
       Request cancellation of a Standalone Activity Execution.
 
@@ -204,7 +204,7 @@ commands:
         description: Reason for cancellation.
 
   - name: temporal activity complete
-    summary: Complete an Activity
+    summary: Complete an Activity with a result
     description: |
       Complete an Activity, marking it as successfully finished. Specify the
       Activity ID and include a JSON result for the returned value:
@@ -250,7 +250,7 @@ commands:
           Query to filter Activity Executions to count.
 
   - name: temporal activity describe
-    summary: Describe a Standalone Activity Execution (Experimental)
+    summary: Show Standalone Activity Execution info (Experimental)
     description: |
       Display information about a Standalone Activity Execution.
 
@@ -266,7 +266,7 @@ commands:
         description: Print properties without changing their format.
 
   - name: temporal activity execute
-    summary: Start a Standalone Activity Execution and wait for completion (Experimental)
+    summary: Start a Standalone Activity and wait for its result (Experimental)
     description: |
       Start a new Standalone Activity Execution and block until it completes.
       The result is output to stdout.
@@ -284,7 +284,7 @@ commands:
       - payload-input
 
   - name: temporal activity fail
-    summary: Fail an Activity
+    summary: Fail an Activity with an error
     description: |
       Fail an Activity, marking it as having encountered an error:
 
@@ -644,7 +644,7 @@ commands:
       - single-workflow-or-batch
 
   - name: temporal activity result
-    summary: Wait for and output the result of a Standalone Activity Execution (Experimental)
+    summary: Get the result of a Standalone Activity Execution (Experimental)
     description: |
       Wait for a Standalone Activity Execution to complete and output the
       result.
@@ -657,7 +657,7 @@ commands:
       - activity-reference
 
   - name: temporal activity start
-    summary: Start a new Standalone Activity Execution (Experimental)
+    summary: Start a Standalone Activity Execution (Experimental)
     description: |
       Start a new Standalone Activity Execution. Outputs the Activity ID and
       Run ID.
@@ -675,7 +675,7 @@ commands:
       - payload-input
 
   - name: temporal activity terminate
-    summary: Terminate a Standalone Activity Execution (Experimental)
+    summary: Forcefully end a Standalone Activity Execution (Experimental)
     description: |
       Terminate a Standalone Activity Execution.
 
