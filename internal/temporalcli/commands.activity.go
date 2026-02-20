@@ -475,6 +475,16 @@ func (c *TemporalActivityExecuteCommand) run(cctx *CommandContext, args []string
 	return pollActivityOutcome(cctx, cl.WorkflowService(), c.Parent.Namespace, c.ActivityId, startResp.RunId)
 }
 
+func (c *TemporalActivityResultCommand) run(cctx *CommandContext, args []string) error {
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	return pollActivityOutcome(cctx, cl.WorkflowService(), c.Parent.Namespace, c.ActivityId, c.RunId)
+}
+
 func (c *TemporalActivityDescribeCommand) run(cctx *CommandContext, args []string) error {
 	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
@@ -636,16 +646,6 @@ func (c *TemporalActivityTerminateCommand) run(cctx *CommandContext, args []stri
 	}
 	cctx.Printer.Println("Activity terminated")
 	return nil
-}
-
-func (c *TemporalActivityResultCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
-	if err != nil {
-		return err
-	}
-	defer cl.Close()
-
-	return pollActivityOutcome(cctx, cl.WorkflowService(), c.Parent.Namespace, c.ActivityId, c.RunId)
 }
 
 func pollActivityOutcome(cctx *CommandContext, svc workflowservice.WorkflowServiceClient, ns, activityID, runID string) error {
