@@ -148,7 +148,7 @@ commands:
   - name: temporal activity
     summary: Operate on Activity Executions
     description: |
-      Complete, fail, or update an Activity's state or options.
+      Perform operations on Activity Executions.
     option-sets:
       - client
     docs:
@@ -1264,17 +1264,17 @@ commands:
       ```
       temporal worker deployment manager-identity [command] [options]
       ```
-      
-      When present, `ManagerIdentity` is the identity of the user that has the 
+
+      When present, `ManagerIdentity` is the identity of the user that has the
       exclusive right to make changes to this Worker Deployment. Empty by default.
       When set, users whose identity does not match the `ManagerIdentity` will not
       be able to change the Worker Deployment.
-  
+
       This is especially useful in environments where multiple users (such as CLI
       users and automated controllers) may interact with the same Worker Deployment.
       `ManagerIdentity` allows different users to communicate with one another about
       who is expected to make changes to the Worker Deployment.
-      
+
       The current Manager Identity is returned with `describe`:
       ```
        temporal worker deployment describe \
@@ -1293,12 +1293,12 @@ commands:
     summary: Set the Manager Identity of a Worker Deployment
     description: |
       Set the `ManagerIdentity` of a Worker Deployment given its Deployment Name.
-      
-      When present, `ManagerIdentity` is the identity of the user that has the 
+
+      When present, `ManagerIdentity` is the identity of the user that has the
       exclusive right to make changes to this Worker Deployment. Empty by default.
       When set, users whose identity does not match the `ManagerIdentity` will not
       be able to change the Worker Deployment.
-  
+
       This is especially useful in environments where multiple users (such as CLI
       users and automated controllers) may interact with the same Worker Deployment.
       `ManagerIdentity` allows different users to communicate with one another about
@@ -1307,7 +1307,7 @@ commands:
       ```
       temporal worker deployment manager-identity set [options]
       ```
-      
+
       For example:
 
       ```
@@ -1317,17 +1317,17 @@ commands:
          --identity YourUserIdentity # optional, populated by CLI if not provided
       ```
 
-      Sets the Manager Identity of the Deployment to the identity of the user making 
-      this request. If you don't specifically pass an identity field, the CLI will 
+      Sets the Manager Identity of the Deployment to the identity of the user making
+      this request. If you don't specifically pass an identity field, the CLI will
       generate your identity for you.
-      
+
       For example:
       ```
       temporal worker deployment manager-identity set \
          --deployment-name DeploymentName \
          --manager-identity NewManagerIdentity
       ```
-      
+
       Sets the Manager Identity of the Deployment to any string.
 
     options:
@@ -1349,12 +1349,12 @@ commands:
     summary: Unset the Manager Identity of a Worker Deployment
     description: |
       Unset the `ManagerIdentity` of a Worker Deployment given its Deployment Name.
-      
-      When present, `ManagerIdentity` is the identity of the user that has the 
+
+      When present, `ManagerIdentity` is the identity of the user that has the
       exclusive right to make changes to this Worker Deployment. Empty by default.
       When set, users whose identity does not match the `ManagerIdentity` will not
       be able to change the Worker Deployment.
-      
+
       This is especially useful in environments where multiple users (such as CLI
       users and automated controllers) may interact with the same Worker Deployment.
       `ManagerIdentity` allows different users to communicate with one another about
@@ -1363,7 +1363,7 @@ commands:
       ```
       temporal worker deployment manager-identity unset [options]
       ```
-      
+
       For example:
 
       ```
@@ -1386,7 +1386,7 @@ commands:
     summary: List worker status information in a specific namespace (EXPERIMENTAL)
     description: |
       Get a list of workers to the specified namespace.
-      
+
       ```
       temporal worker list --namespace YourNamespace --query 'TaskQueue="YourTaskQueue"'
       ```
@@ -1403,7 +1403,7 @@ commands:
     summary: Returns information about a specific worker (EXPERIMENTAL)
     description: |
       Look up information of a specific worker.
-      
+
       ```
       temporal worker describe --namespace YourNamespace --worker-instance-key YourKey
       ```
@@ -2687,8 +2687,8 @@ commands:
       provided that they were assigned a Build ID.
 
       Note that task reachability status is deprecated in favor of Drainage Status
-      (ie. of a Drained or Draining Worker Deployment Version) and will be removed 
-      in a future release. Also, determining task reachability incurs a non-trivial 
+      (ie. of a Drained or Draining Worker Deployment Version) and will be removed
+      in a future release. Also, determining task reachability incurs a non-trivial
       computing cost.
 
       Task reachability states are reported per build ID. The state may be one of the
@@ -4695,13 +4695,13 @@ option-sets:
         experimental: true
         description: |
           Static Workflow summary for human consumption in UIs.
-          Uses Temporal Markdown formatting, should be a single line.
+          Uses standard Markdown formatting excluding images, HTML, and script tags, should be a single line.
       - name: static-details
         type: string
         experimental: true
         description: |
           Static Workflow details for human consumption in UIs.
-          Uses Temporal Markdown formatting, may be multiple lines.
+          Uses standard Markdown formatting excluding images, HTML, and script tags, may be multiple lines.
       - name: priority-key
         type: int
         description: |
@@ -4888,7 +4888,7 @@ option-sets:
           Temporal workflow headers in 'KEY=VALUE' format.
           Keys must be identifiers, and values must be JSON values.
           May be passed multiple times to set multiple Temporal headers.
-          Note: These are workflow headers, not gRPC headers.   
+          Note: These are workflow headers, not gRPC headers.
 
   - name: workflow-update-options
     options:
@@ -5020,13 +5020,13 @@ option-sets:
         experimental: true
         description: |
           Static Activity summary for human consumption in UIs.
-          Uses Temporal Markdown formatting.
+          Uses standard Markdown formatting excluding images, HTML, and script tags.
       - name: static-details
         type: string
         experimental: true
         description: |
           Static Activity details for human consumption in UIs.
-          Uses Temporal Markdown formatting.
+          Uses standard Markdown formatting excluding images, HTML, and script tags.
       - name: priority-key
         type: int
         description: |
