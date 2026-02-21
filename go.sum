@@ -82,6 +82,8 @@ github.com/coreos/go-oidc/v3 v3.13.0/go.mod h1:HaZ3szPaZ0e4r6ebqvsLWlk2Tn+aejfmr
 github.com/cpuguy83/go-md2man/v2 v2.0.6/go.mod h1:oOW0eioCTA6cOiMLiUPZOpcVxMig6NIQQ7OS05n1F4g=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
 github.com/crossdock/crossdock-go v0.0.0-20160816171116-049aabb0122b/go.mod h1:v9FBN7gdVTpiD/+LZ7Po0UKvROyT87uLVxTHVky/dlQ=
+github.com/dandavison/temporalio-sdk-go v1.25.2-0.20260219171002-42df27d0602c h1:28iagNoCC6gA/eNRTgTYmM8qmTURtO1fKGEIl4QOQp0=
+github.com/dandavison/temporalio-sdk-go v1.25.2-0.20260219171002-42df27d0602c/go.mod h1:tauxVfN174F0bdEs27+i0h8UPD7xBb6Py2SPHo7f1C0=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1VwoXQT9A3Wy9MM3WgvqSxFWenqJduM=
@@ -379,10 +381,8 @@ go.opentelemetry.io/otel/trace v1.35.0 h1:dPpEfJu1sDIqruz7BHFG3c7528f6ddfSWfFDVt
 go.opentelemetry.io/otel/trace v1.35.0/go.mod h1:WUk7DtFp1Aw2MkvqGdwiXYDZZNvA/1J8o6xRXLrIkyc=
 go.opentelemetry.io/proto/otlp v1.5.0 h1:xJvq7gMzB31/d406fB8U5CBdyQGw4P399D1aQWU/3i4=
 go.opentelemetry.io/proto/otlp v1.5.0/go.mod h1:keN8WnHxOy8PG0rQZjJJ5A2ebUoafqWp0eVQ4yIXvJ4=
-go.temporal.io/api v1.62.0 h1:rh7LqqV+pxaLNwPLsFRZgYoDJ/NvCNDv0EnWe6oS7A4=
-go.temporal.io/api v1.62.0/go.mod h1:iaxoP/9OXMJcQkETTECfwYq4cw/bj4nwov8b3ZLVnXM=
-go.temporal.io/sdk v1.39.1-0.20260205231726-1a609f101fd5 h1:MQKBR9kOVu5TQJ73aRySrYzHWxk6BPNog5572mlWV7I=
-go.temporal.io/sdk v1.39.1-0.20260205231726-1a609f101fd5/go.mod h1:0OvuRsar0dG7vSqOcShIE3mx6unDJGBxtcopFyuYVKg=
+go.temporal.io/api v1.62.1 h1:7UHMNOIqfYBVTaW0JIh/wDpw2jORkB6zUKsxGtvjSZU=
+go.temporal.io/api v1.62.1/go.mod h1:iaxoP/9OXMJcQkETTECfwYq4cw/bj4nwov8b3ZLVnXM=
 go.temporal.io/sdk/contrib/envconfig v0.1.0 h1:s+G/Ujph+Xl2jzLiiIm2T1vuijDkUL4Kse49dgDVGBE=
 go.temporal.io/sdk/contrib/envconfig v0.1.0/go.mod h1:FQEO3C56h9C7M6sDgSanB8HnBTmopw9qgVx4F1S6pJk=
 go.temporal.io/server v1.31.0-150.0 h1:oYtbmXj0cUMpIYzOAaQcZGyIId8MmJomjArb6kg/MYk=

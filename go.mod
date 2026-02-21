@@ -17,7 +17,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/temporalio/cli/cliext v0.0.0
 	github.com/temporalio/ui-server/v2 v2.45.0
-	go.temporal.io/api v1.62.0
+	go.temporal.io/api v1.62.1
 	go.temporal.io/sdk v1.39.1-0.20260205231726-1a609f101fd5
 	go.temporal.io/sdk/contrib/envconfig v0.1.0
 	go.temporal.io/server v1.31.0-150.0
@@ -30,7 +30,10 @@ require (
 	modernc.org/sqlite v1.39.1
 )
 
-replace github.com/temporalio/cli/cliext => ./cliext
+replace (
+	github.com/temporalio/cli/cliext => ./cliext
+	go.temporal.io/sdk => github.com/dandavison/temporalio-sdk-go v1.25.2-0.20260219171002-42df27d0602c
+)
 
 require (
 	cel.dev/expr v0.23.1 // indirect
