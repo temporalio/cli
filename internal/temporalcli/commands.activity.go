@@ -216,15 +216,42 @@ func getActivityResult(cctx *CommandContext, cl client.Client, activityID, runID
 		RunID:      runID,
 	})
 	var valuePtr interface{}
-	if err := handle.Get(cctx, &valuePtr); err != nil {
-		return fmt.Errorf("activity failed: %w", err)
-	}
+	err := handle.Get(cctx, &valuePtr)
+
 	if cctx.JSONOutput {
-		return cctx.Printer.PrintStructured(
-			struct {
-				Result interface{} `json:"result"`
-			}{Result: valuePtr},
-			printer.StructuredOptions{})
+		if err != nil {
+			_ = cctx.Printer.PrintStructured(struct {
+				ActivityId string `json:"activityId"`
+				RunId      string `json:"runId"`
+				Status     string `json:"status"`
+				Failure    string `json:"failure"`
+			}{
+				ActivityId: activityID,
+				RunId:      runID,
+				Status:     "FAILED",
+				Failure:    err.Error(),
+			}, printer.StructuredOptions{})
+			return fmt.Errorf("activity failed")
+		}
+		resultJSON, marshalErr := json.Marshal(valuePtr)
+		if marshalErr != nil {
+			return fmt.Errorf("failed marshaling result: %w", marshalErr)
+		}
+		return cctx.Printer.PrintStructured(struct {
+			ActivityId string          `json:"activityId"`
+			RunId      string          `json:"runId"`
+			Status     string          `json:"status"`
+			Result     json.RawMessage `json:"result"`
+		}{
+			ActivityId: activityID,
+			RunId:      runID,
+			Status:     "COMPLETED",
+			Result:     resultJSON,
+		}, printer.StructuredOptions{})
+	}
+
+	if err != nil {
+		return fmt.Errorf("activity failed: %w", err)
 	}
 	jsonBytes, err := json.Marshal(valuePtr)
 	if err != nil {
