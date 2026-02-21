@@ -604,7 +604,6 @@ func (s *SharedServerSuite) TestStandaloneActivity_Start() {
 	s.ContainsOnSameLine(out, "Type", "DevActivity")
 	s.ContainsOnSameLine(out, "Namespace", "default")
 	s.Contains(out, "TaskQueue")
-	s.ContainsOnSameLine(out, "Started", "true")
 
 	// JSON
 	res = s.Execute(
@@ -624,7 +623,6 @@ func (s *SharedServerSuite) TestStandaloneActivity_Start() {
 	s.Equal("DevActivity", jsonOut["type"])
 	s.Equal("default", jsonOut["namespace"])
 	s.NotEmpty(jsonOut["taskQueue"])
-	s.Equal(true, jsonOut["started"])
 }
 
 func (s *SharedServerSuite) TestStandaloneActivity_Execute_Success() {

@@ -5,17 +5,16 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/temporalio/cli/internal/printer"
 	activitypb "go.temporal.io/api/activity/v1"
 	"go.temporal.io/api/batch/v1"
 	"go.temporal.io/api/common/v1"
 	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/failure/v1"
-	sdkpb "go.temporal.io/api/sdk/v1"
 	taskqueuepb "go.temporal.io/api/taskqueue/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/temporal"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 )
@@ -43,13 +42,9 @@ func (c *TemporalActivityStartCommand) run(cctx *CommandContext, args []string) 
 	}
 	defer cl.Close()
 
-	req, err := buildStartActivityRequest(cctx, c.Parent, &c.ActivityStartOptions, &c.PayloadInputOptions)
+	handle, err := startActivity(cctx, cl, &c.ActivityStartOptions, &c.PayloadInputOptions)
 	if err != nil {
 		return err
-	}
-	resp, err := cl.WorkflowService().StartActivityExecution(cctx, req)
-	if err != nil {
-		return fmt.Errorf("failed starting activity: %w", err)
 	}
 	return cctx.Printer.PrintStructured(struct {
 		ActivityId string `json:"activityId"`
@@ -57,14 +52,12 @@ func (c *TemporalActivityStartCommand) run(cctx *CommandContext, args []string) 
 		Type       string `json:"type"`
 		Namespace  string `json:"namespace"`
 		TaskQueue  string `json:"taskQueue"`
-		Started    bool   `json:"started"`
 	}{
 		ActivityId: c.ActivityId,
-		RunId:      resp.RunId,
+		RunId:      handle.GetRunID(),
 		Type:       c.Type,
 		Namespace:  c.Parent.Namespace,
 		TaskQueue:  c.TaskQueue,
-		Started:    resp.Started,
 	}, printer.StructuredOptions{})
 }
 
@@ -75,15 +68,11 @@ func (c *TemporalActivityExecuteCommand) run(cctx *CommandContext, args []string
 	}
 	defer cl.Close()
 
-	req, err := buildStartActivityRequest(cctx, c.Parent, &c.ActivityStartOptions, &c.PayloadInputOptions)
+	handle, err := startActivity(cctx, cl, &c.ActivityStartOptions, &c.PayloadInputOptions)
 	if err != nil {
 		return err
 	}
-	startResp, err := cl.WorkflowService().StartActivityExecution(cctx, req)
-	if err != nil {
-		return fmt.Errorf("failed starting activity: %w", err)
-	}
-	return getActivityResult(cctx, cl, c.ActivityId, startResp.RunId)
+	return getActivityResult(cctx, cl, c.ActivityId, handle.GetRunID())
 }
 
 func (c *TemporalActivityResultCommand) run(cctx *CommandContext, args []string) error {
@@ -96,118 +85,105 @@ func (c *TemporalActivityResultCommand) run(cctx *CommandContext, args []string)
 	return getActivityResult(cctx, cl, c.ActivityId, c.RunId)
 }
 
-func buildStartActivityRequest(
+func startActivity(
 	cctx *CommandContext,
-	parent *TemporalActivityCommand,
+	cl client.Client,
 	opts *ActivityStartOptions,
 	inputOpts *PayloadInputOptions,
-) (*workflowservice.StartActivityExecutionRequest, error) {
-	input, err := inputOpts.buildRawInputPayloads()
+) (client.ActivityHandle, error) {
+	startOpts, err := buildStartActivityOptions(opts)
 	if err != nil {
 		return nil, err
 	}
-
-	req := &workflowservice.StartActivityExecutionRequest{
-		Namespace:  parent.Namespace,
-		Identity:   parent.Identity,
-		RequestId:  uuid.New().String(),
-		ActivityId: opts.ActivityId,
-		ActivityType: &common.ActivityType{
-			Name: opts.Type,
-		},
-		TaskQueue: &taskqueuepb.TaskQueue{
-			Name: opts.TaskQueue,
-		},
-		ScheduleToCloseTimeout: durationpb.New(opts.ScheduleToCloseTimeout.Duration()),
-		ScheduleToStartTimeout: durationpb.New(opts.ScheduleToStartTimeout.Duration()),
-		StartToCloseTimeout:    durationpb.New(opts.StartToCloseTimeout.Duration()),
-		HeartbeatTimeout:       durationpb.New(opts.HeartbeatTimeout.Duration()),
-		Input:                  input,
+	input, err := inputOpts.buildRawInput()
+	if err != nil {
+		return nil, err
 	}
+	cctx.Context, err = contextWithHeaders(cctx.Context, opts.Headers)
+	if err != nil {
+		return nil, err
+	}
+	handle, err := cl.ExecuteActivity(cctx, startOpts, opts.Type, input...)
+	if err != nil {
+		return nil, fmt.Errorf("failed starting activity: %w", err)
+	}
+	return handle, nil
+}
 
+func buildStartActivityOptions(opts *ActivityStartOptions) (client.StartActivityOptions, error) {
+	o := client.StartActivityOptions{
+		ID:                     opts.ActivityId,
+		TaskQueue:              opts.TaskQueue,
+		ScheduleToCloseTimeout: opts.ScheduleToCloseTimeout.Duration(),
+		ScheduleToStartTimeout: opts.ScheduleToStartTimeout.Duration(),
+		StartToCloseTimeout:    opts.StartToCloseTimeout.Duration(),
+		HeartbeatTimeout:       opts.HeartbeatTimeout.Duration(),
+		Summary:                opts.StaticSummary,
+		Details:                opts.StaticDetails,
+		Priority: temporal.Priority{
+			PriorityKey:    opts.PriorityKey,
+			FairnessKey:    opts.FairnessKey,
+			FairnessWeight: opts.FairnessWeight,
+		},
+	}
 	if opts.RetryInitialInterval.Duration() > 0 || opts.RetryMaximumInterval.Duration() > 0 ||
 		opts.RetryBackoffCoefficient > 0 || opts.RetryMaximumAttempts > 0 {
-		req.RetryPolicy = &common.RetryPolicy{}
-		if opts.RetryInitialInterval.Duration() > 0 {
-			req.RetryPolicy.InitialInterval = durationpb.New(opts.RetryInitialInterval.Duration())
-		}
-		if opts.RetryMaximumInterval.Duration() > 0 {
-			req.RetryPolicy.MaximumInterval = durationpb.New(opts.RetryMaximumInterval.Duration())
-		}
-		if opts.RetryBackoffCoefficient > 0 {
-			req.RetryPolicy.BackoffCoefficient = float64(opts.RetryBackoffCoefficient)
-		}
-		if opts.RetryMaximumAttempts > 0 {
-			req.RetryPolicy.MaximumAttempts = int32(opts.RetryMaximumAttempts)
+		o.RetryPolicy = &temporal.RetryPolicy{
+			InitialInterval:    opts.RetryInitialInterval.Duration(),
+			MaximumInterval:    opts.RetryMaximumInterval.Duration(),
+			BackoffCoefficient: float64(opts.RetryBackoffCoefficient),
+			MaximumAttempts:    int32(opts.RetryMaximumAttempts),
 		}
 	}
-
 	if opts.IdReusePolicy.Value != "" {
-		v, err := stringToProtoEnum[enumspb.ActivityIdReusePolicy](
+		var err error
+		o.ActivityIDReusePolicy, err = stringToProtoEnum[enumspb.ActivityIdReusePolicy](
 			opts.IdReusePolicy.Value, enumspb.ActivityIdReusePolicy_shorthandValue, enumspb.ActivityIdReusePolicy_value)
 		if err != nil {
-			return nil, fmt.Errorf("invalid activity ID reuse policy: %w", err)
+			return o, fmt.Errorf("invalid activity ID reuse policy: %w", err)
 		}
-		req.IdReusePolicy = v
 	}
 	if opts.IdConflictPolicy.Value != "" {
-		v, err := stringToProtoEnum[enumspb.ActivityIdConflictPolicy](
+		var err error
+		o.ActivityIDConflictPolicy, err = stringToProtoEnum[enumspb.ActivityIdConflictPolicy](
 			opts.IdConflictPolicy.Value, enumspb.ActivityIdConflictPolicy_shorthandValue, enumspb.ActivityIdConflictPolicy_value)
 		if err != nil {
-			return nil, fmt.Errorf("invalid activity ID conflict policy: %w", err)
+			return o, fmt.Errorf("invalid activity ID conflict policy: %w", err)
 		}
-		req.IdConflictPolicy = v
 	}
-
 	if len(opts.SearchAttribute) > 0 {
 		saMap, err := stringKeysJSONValues(opts.SearchAttribute, false)
 		if err != nil {
-			return nil, fmt.Errorf("invalid search attribute values: %w", err)
+			return o, fmt.Errorf("invalid search attribute values: %w", err)
 		}
-		saPayloads, err := encodeMapToPayloads(saMap)
-		if err != nil {
-			return nil, fmt.Errorf("failed encoding search attributes: %w", err)
+		if o.TypedSearchAttributes, err = mapToSearchAttributes(saMap); err != nil {
+			return o, err
 		}
-		req.SearchAttributes = &common.SearchAttributes{IndexedFields: saPayloads}
 	}
+	return o, nil
+}
 
-	if len(opts.Headers) > 0 {
-		headerMap, err := stringKeysJSONValues(opts.Headers, false)
-		if err != nil {
-			return nil, fmt.Errorf("invalid header values: %w", err)
-		}
-		headerPayloads, err := encodeMapToPayloads(headerMap)
-		if err != nil {
-			return nil, fmt.Errorf("failed encoding headers: %w", err)
-		}
-		req.Header = &common.Header{Fields: headerPayloads}
-	}
-
-	if opts.StaticSummary != "" || opts.StaticDetails != "" {
-		req.UserMetadata = &sdkpb.UserMetadata{}
-		if opts.StaticSummary != "" {
-			req.UserMetadata.Summary = &common.Payload{
-				Metadata: map[string][]byte{"encoding": []byte("json/plain")},
-				Data:     []byte(fmt.Sprintf("%q", opts.StaticSummary)),
+func mapToSearchAttributes(m map[string]any) (temporal.SearchAttributes, error) {
+	updates := make([]temporal.SearchAttributeUpdate, 0, len(m))
+	for k, v := range m {
+		switch val := v.(type) {
+		case string:
+			updates = append(updates, temporal.NewSearchAttributeKeyKeyword(k).ValueSet(val))
+		case float64:
+			updates = append(updates, temporal.NewSearchAttributeKeyFloat64(k).ValueSet(val))
+		case bool:
+			updates = append(updates, temporal.NewSearchAttributeKeyBool(k).ValueSet(val))
+		case []any:
+			strs := make([]string, len(val))
+			for i, s := range val {
+				strs[i] = fmt.Sprint(s)
 			}
-		}
-		if opts.StaticDetails != "" {
-			req.UserMetadata.Details = &common.Payload{
-				Metadata: map[string][]byte{"encoding": []byte("json/plain")},
-				Data:     []byte(fmt.Sprintf("%q", opts.StaticDetails)),
-			}
+			updates = append(updates, temporal.NewSearchAttributeKeyKeywordList(k).ValueSet(strs))
+		default:
+			return temporal.SearchAttributes{}, fmt.Errorf("unsupported search attribute type for key %q: %T", k, v)
 		}
 	}
-
-	if opts.PriorityKey > 0 || opts.FairnessKey != "" || opts.FairnessWeight > 0 {
-		req.Priority = &common.Priority{
-			PriorityKey:    int32(opts.PriorityKey),
-			FairnessKey:    opts.FairnessKey,
-			FairnessWeight: float32(opts.FairnessWeight),
-		}
-	}
-
-	return req, nil
+	return temporal.NewSearchAttributes(updates...), nil
 }
 
 func getActivityResult(cctx *CommandContext, cl client.Client, activityID, runID string) error {
