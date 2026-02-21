@@ -601,6 +601,9 @@ func (s *SharedServerSuite) TestStandaloneActivity_Start() {
 	out := res.Stdout.String()
 	s.ContainsOnSameLine(out, "ActivityId", "start-test")
 	s.Contains(out, "RunId")
+	s.ContainsOnSameLine(out, "Type", "DevActivity")
+	s.ContainsOnSameLine(out, "Namespace", "default")
+	s.Contains(out, "TaskQueue")
 	s.ContainsOnSameLine(out, "Started", "true")
 
 	// JSON
@@ -618,6 +621,9 @@ func (s *SharedServerSuite) TestStandaloneActivity_Start() {
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
 	s.Equal("start-test-json", jsonOut["activityId"])
 	s.NotEmpty(jsonOut["runId"])
+	s.Equal("DevActivity", jsonOut["type"])
+	s.Equal("default", jsonOut["namespace"])
+	s.NotEmpty(jsonOut["taskQueue"])
 	s.Equal(true, jsonOut["started"])
 }
 
@@ -638,6 +644,27 @@ func (s *SharedServerSuite) TestStandaloneActivity_Execute_Success() {
 	s.ContainsOnSameLine(res.Stdout.String(), "Result", `{"foo":"bar"}`)
 }
 
+func (s *SharedServerSuite) TestStandaloneActivity_Execute_Success_JSON() {
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		return map[string]string{"foo": "bar"}, nil
+	})
+
+	res := s.Execute(
+		"activity", "execute",
+		"-o", "json",
+		"--activity-id", "exec-json-test",
+		"--type", "DevActivity",
+		"--task-queue", s.Worker().Options.TaskQueue,
+		"--start-to-close-timeout", "30s",
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	var jsonOut map[string]any
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	s.Equal("COMPLETED", jsonOut["status"])
+	s.Equal(map[string]any{"foo": "bar"}, jsonOut["result"])
+}
+
 func (s *SharedServerSuite) TestStandaloneActivity_Execute_Failure() {
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
 		return nil, fmt.Errorf("intentional failure")
@@ -654,6 +681,29 @@ func (s *SharedServerSuite) TestStandaloneActivity_Execute_Failure() {
 	)
 	s.ErrorContains(res.Err, "activity failed")
 	s.ErrorContains(res.Err, "intentional failure")
+}
+
+func (s *SharedServerSuite) TestStandaloneActivity_Execute_Failure_JSON() {
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		return nil, fmt.Errorf("intentional failure")
+	})
+
+	res := s.Execute(
+		"activity", "execute",
+		"-o", "json",
+		"--activity-id", "exec-fail-json-test",
+		"--type", "DevActivity",
+		"--task-queue", s.Worker().Options.TaskQueue,
+		"--start-to-close-timeout", "30s",
+		"--retry-maximum-attempts", "1",
+		"--address", s.Address(),
+	)
+	s.Error(res.Err)
+	// JSON output should still contain structured failure information
+	var jsonOut map[string]any
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	s.Equal("FAILED", jsonOut["status"])
+	s.NotEmpty(jsonOut["failure"])
 }
 
 func (s *SharedServerSuite) TestStandaloneActivity_Execute_RetriesOnEmptyPollResponse() {

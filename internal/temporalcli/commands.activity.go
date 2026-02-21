@@ -16,7 +16,6 @@ import (
 	taskqueuepb "go.temporal.io/api/taskqueue/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
-	"go.temporal.io/sdk/converter"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 )
@@ -55,10 +54,16 @@ func (c *TemporalActivityStartCommand) run(cctx *CommandContext, args []string) 
 	return cctx.Printer.PrintStructured(struct {
 		ActivityId string `json:"activityId"`
 		RunId      string `json:"runId"`
+		Type       string `json:"type"`
+		Namespace  string `json:"namespace"`
+		TaskQueue  string `json:"taskQueue"`
 		Started    bool   `json:"started"`
 	}{
 		ActivityId: c.ActivityId,
 		RunId:      resp.RunId,
+		Type:       c.Type,
+		Namespace:  c.Parent.Namespace,
+		TaskQueue:  c.TaskQueue,
 		Started:    resp.Started,
 	}, printer.StructuredOptions{})
 }
@@ -236,20 +241,18 @@ func (c *TemporalActivityDescribeCommand) run(cctx *CommandContext, args []strin
 	}
 	defer cl.Close()
 
-	resp, err := cl.WorkflowService().DescribeActivityExecution(cctx, &workflowservice.DescribeActivityExecutionRequest{
-		Namespace:      c.Parent.Namespace,
-		ActivityId:     c.ActivityId,
-		RunId:          c.RunId,
-		IncludeInput:   true,
-		IncludeOutcome: true,
+	handle := cl.GetActivityHandle(client.GetActivityHandleOptions{
+		ActivityID: c.ActivityId,
+		RunID:      c.RunId,
 	})
+	desc, err := handle.Describe(cctx, client.DescribeActivityOptions{})
 	if err != nil {
 		return fmt.Errorf("failed describing activity: %w", err)
 	}
 	if c.Raw || cctx.JSONOutput {
-		return cctx.Printer.PrintStructured(resp, printer.StructuredOptions{})
+		return cctx.Printer.PrintStructured(desc.RawExecutionInfo, printer.StructuredOptions{})
 	}
-	return cctx.Printer.PrintStructured(resp.Info, printer.StructuredOptions{})
+	return cctx.Printer.PrintStructured(desc.RawExecutionInfo, printer.StructuredOptions{})
 }
 
 func (c *TemporalActivityListCommand) run(cctx *CommandContext, args []string) error {
@@ -258,6 +261,10 @@ func (c *TemporalActivityListCommand) run(cctx *CommandContext, args []string) e
 		return err
 	}
 	defer cl.Close()
+
+	if c.Limit > 0 && c.Limit < c.PageSize {
+		c.PageSize = c.Limit
+	}
 
 	cctx.Printer.StartList()
 	defer cctx.Printer.EndList()
@@ -311,33 +318,21 @@ func (c *TemporalActivityCountCommand) run(cctx *CommandContext, args []string) 
 	}
 	defer cl.Close()
 
-	resp, err := cl.WorkflowService().CountActivityExecutions(cctx, &workflowservice.CountActivityExecutionsRequest{
-		Namespace: c.Parent.Namespace,
-		Query:     c.Query,
-	})
+	result, err := cl.CountActivities(cctx, client.CountActivitiesOptions{Query: c.Query})
 	if err != nil {
 		return fmt.Errorf("failed counting activities: %w", err)
 	}
 	if cctx.JSONOutput {
-		for _, group := range resp.Groups {
-			for _, payload := range group.GroupValues {
-				delete(payload.GetMetadata(), "type")
-			}
-		}
-		return cctx.Printer.PrintStructured(resp, printer.StructuredOptions{})
+		return cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
 	}
-	cctx.Printer.Printlnf("Total: %v", resp.Count)
-	for _, group := range resp.Groups {
+	cctx.Printer.Printlnf("Total: %v", result.Count)
+	for _, group := range result.Groups {
 		var valueStr string
-		for _, payload := range group.GroupValues {
-			var value any
-			if err := converter.GetDefaultDataConverter().FromPayload(payload, &value); err != nil {
-				value = fmt.Sprintf("<failed converting: %v>", err)
-			}
+		for _, v := range group.GroupValues {
 			if valueStr != "" {
 				valueStr += ", "
 			}
-			valueStr += fmt.Sprintf("%v", value)
+			valueStr += fmt.Sprintf("%v", v)
 		}
 		cctx.Printer.Printlnf("Group total: %v, values: %v", group.Count, valueStr)
 	}
@@ -351,15 +346,11 @@ func (c *TemporalActivityCancelCommand) run(cctx *CommandContext, args []string)
 	}
 	defer cl.Close()
 
-	_, err = cl.WorkflowService().RequestCancelActivityExecution(cctx, &workflowservice.RequestCancelActivityExecutionRequest{
-		Namespace:  c.Parent.Namespace,
-		ActivityId: c.ActivityId,
-		RunId:      c.RunId,
-		Identity:   c.Parent.Identity,
-		RequestId:  uuid.New().String(),
-		Reason:     c.Reason,
+	handle := cl.GetActivityHandle(client.GetActivityHandleOptions{
+		ActivityID: c.ActivityId,
+		RunID:      c.RunId,
 	})
-	if err != nil {
+	if err := handle.Cancel(cctx, client.CancelActivityOptions{Reason: c.Reason}); err != nil {
 		return fmt.Errorf("failed to cancel activity: %w", err)
 	}
 	cctx.Printer.Println("Cancellation requested")
@@ -377,15 +368,12 @@ func (c *TemporalActivityTerminateCommand) run(cctx *CommandContext, args []stri
 	if reason == "" {
 		reason = defaultReason()
 	}
-	_, err = cl.WorkflowService().TerminateActivityExecution(cctx, &workflowservice.TerminateActivityExecutionRequest{
-		Namespace:  c.Parent.Namespace,
-		ActivityId: c.ActivityId,
-		RunId:      c.RunId,
-		Identity:   c.Parent.Identity,
-		RequestId:  uuid.New().String(),
-		Reason:     reason,
+	handle := cl.GetActivityHandle(client.GetActivityHandleOptions{
+		ActivityID: c.ActivityId,
+		RunID:      c.RunId,
 	})
-	if err != nil {
+	// Terminate may fail if the activity doesn't exist or has already completed.
+	if err := handle.Terminate(cctx, client.TerminateActivityOptions{Reason: reason}); err != nil {
 		return fmt.Errorf("failed to terminate activity: %w", err)
 	}
 	cctx.Printer.Println("Activity terminated")
