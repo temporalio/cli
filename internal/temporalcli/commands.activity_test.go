@@ -697,11 +697,13 @@ func (s *SharedServerSuite) TestStandaloneActivity_Execute_Failure_JSON() {
 		"--address", s.Address(),
 	)
 	s.Error(res.Err)
-	// JSON output should still contain structured failure information
 	var jsonOut map[string]any
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
 	s.Equal("FAILED", jsonOut["status"])
-	s.NotEmpty(jsonOut["failure"])
+	failureObj, ok := jsonOut["failure"].(map[string]any)
+	s.True(ok, "failure should be a structured object, got: %T", jsonOut["failure"])
+	s.NotEmpty(failureObj["message"])
+	s.NotNil(failureObj["cause"])
 }
 
 func (s *SharedServerSuite) TestStandaloneActivity_Execute_RetriesOnEmptyPollResponse() {
