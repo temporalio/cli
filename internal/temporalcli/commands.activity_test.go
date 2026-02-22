@@ -737,6 +737,49 @@ func (s *SharedServerSuite) TestStandaloneActivity_Execute_Failure_JSON() {
 	s.NotNil(failureObj["applicationFailureInfo"])
 }
 
+func (s *SharedServerSuite) TestStandaloneActivity_Execute_NoJsonShorthandPayloads() {
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		return map[string]string{"key": "val"}, nil
+	})
+
+	// With shorthand (default): result is decoded
+	res := s.Execute(
+		"activity", "execute",
+		"-o", "json",
+		"--activity-id", "shorthand-test",
+		"--type", "DevActivity",
+		"--task-queue", s.Worker().Options.TaskQueue,
+		"--start-to-close-timeout", "30s",
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	var jsonOut map[string]any
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	s.Equal(map[string]any{"key": "val"}, jsonOut["result"])
+
+	// Without shorthand: result should be raw payloads with metadata/data
+	res = s.Execute(
+		"activity", "execute",
+		"-o", "json",
+		"--no-json-shorthand-payloads",
+		"--activity-id", "no-shorthand-test",
+		"--type", "DevActivity",
+		"--task-queue", s.Worker().Options.TaskQueue,
+		"--start-to-close-timeout", "30s",
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	resultMap, ok := jsonOut["result"].(map[string]any)
+	s.True(ok, "result should be a payloads object, got: %T", jsonOut["result"])
+	payloads, ok := resultMap["payloads"].([]any)
+	s.True(ok, "result should have payloads array")
+	s.Len(payloads, 1)
+	payload := payloads[0].(map[string]any)
+	s.NotNil(payload["metadata"])
+	s.NotNil(payload["data"])
+}
+
 func (s *SharedServerSuite) TestStandaloneActivity_Execute_RetriesOnEmptyPollResponse() {
 	// Activity sleeps longer than the server's activity.longPollTimeout (2s),
 	// forcing at least one empty poll response before the result arrives.

@@ -2,6 +2,7 @@ package temporalcli
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -12,9 +13,11 @@ import (
 	"go.temporal.io/api/common/v1"
 	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/failure/v1"
+	"go.temporal.io/api/serviceerror"
 	taskqueuepb "go.temporal.io/api/taskqueue/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/temporal"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
@@ -66,7 +69,7 @@ func (c *TemporalActivityExecuteCommand) run(cctx *CommandContext, args []string
 			return err
 		}
 	}
-	return getActivityResult(cctx, cl, c.ActivityId, handle.GetRunID())
+	return getActivityResult(cctx, cl, c.Parent.Namespace, c.ActivityId, handle.GetRunID())
 }
 
 func (c *TemporalActivityResultCommand) run(cctx *CommandContext, args []string) error {
@@ -76,7 +79,7 @@ func (c *TemporalActivityResultCommand) run(cctx *CommandContext, args []string)
 	}
 	defer cl.Close()
 
-	return getActivityResult(cctx, cl, c.ActivityId, c.RunId)
+	return getActivityResult(cctx, cl, c.Parent.Namespace, c.ActivityId, c.RunId)
 }
 
 func startActivity(
@@ -199,37 +202,55 @@ func mapToSearchAttributes(m map[string]any) (temporal.SearchAttributes, error) 
 	return temporal.NewSearchAttributes(updates...), nil
 }
 
-func getActivityResult(cctx *CommandContext, cl client.Client, activityID, runID string) error {
-	handle := cl.GetActivityHandle(client.GetActivityHandleOptions{
-		ActivityID: activityID,
-		RunID:      runID,
-	})
-	var valuePtr interface{}
-	err := handle.Get(cctx, &valuePtr)
-
-	if cctx.JSONOutput {
-		if err != nil {
-			failureProto := temporal.GetDefaultFailureConverter().ErrorToFailure(err)
-			failureJSON, marshalErr := cctx.MarshalProtoJSON(failureProto)
-			if marshalErr != nil {
-				return fmt.Errorf("failed marshaling failure: %w", marshalErr)
-			}
-			_ = cctx.Printer.PrintStructured(struct {
-				ActivityId string          `json:"activityId"`
-				RunId      string          `json:"runId"`
-				Status     string          `json:"status"`
-				Failure    json.RawMessage `json:"failure"`
-			}{
-				ActivityId: activityID,
-				RunId:      runID,
-				Status:     "FAILED",
-				Failure:    failureJSON,
-			}, printer.StructuredOptions{})
-			return fmt.Errorf("activity failed")
+func getActivityResult(cctx *CommandContext, cl client.Client, namespace, activityID, runID string) error {
+	outcome, err := pollActivityOutcome(cctx, cl, namespace, activityID, runID)
+	if err != nil {
+		var notFound *serviceerror.NotFound
+		if errors.As(err, &notFound) {
+			return fmt.Errorf("activity not found: %s", activityID)
 		}
-		resultJSON, marshalErr := json.Marshal(valuePtr)
-		if marshalErr != nil {
-			return fmt.Errorf("failed marshaling result: %w", marshalErr)
+		return fmt.Errorf("failed polling activity result: %w", err)
+	}
+
+	resolvedRunID := runID
+	if resolvedRunID == "" {
+		handle := cl.GetActivityHandle(client.GetActivityHandleOptions{ActivityID: activityID})
+		if desc, descErr := handle.Describe(cctx, client.DescribeActivityOptions{}); descErr == nil {
+			resolvedRunID = desc.RawExecutionInfo.GetRunId()
+		}
+	}
+
+	switch v := outcome.GetValue().(type) {
+	case *activitypb.ActivityExecutionOutcome_Result:
+		return printActivityResult(cctx, activityID, resolvedRunID, v.Result)
+	case *activitypb.ActivityExecutionOutcome_Failure:
+		return printActivityFailure(cctx, activityID, resolvedRunID, v.Failure)
+	default:
+		return fmt.Errorf("unexpected activity outcome type: %T", v)
+	}
+}
+
+func pollActivityOutcome(cctx *CommandContext, cl client.Client, namespace, activityID, runID string) (*activitypb.ActivityExecutionOutcome, error) {
+	for {
+		resp, err := cl.WorkflowService().PollActivityExecution(cctx, &workflowservice.PollActivityExecutionRequest{
+			Namespace:  namespace,
+			ActivityId: activityID,
+			RunId:      runID,
+		})
+		if err != nil {
+			return nil, err
+		}
+		if resp.GetOutcome() != nil {
+			return resp.GetOutcome(), nil
+		}
+	}
+}
+
+func printActivityResult(cctx *CommandContext, activityID, runID string, result *common.Payloads) error {
+	if cctx.JSONOutput {
+		resultJSON, err := marshalActivityPayloads(cctx, result)
+		if err != nil {
+			return fmt.Errorf("failed marshaling result: %w", err)
 		}
 		return cctx.Printer.PrintStructured(struct {
 			ActivityId string          `json:"activityId"`
@@ -245,20 +266,13 @@ func getActivityResult(cctx *CommandContext, cl client.Client, activityID, runID
 	}
 
 	cctx.Printer.Println(color.MagentaString("Results:"))
-	if err != nil {
-		failureProto := temporal.GetDefaultFailureConverter().ErrorToFailure(err)
-		_ = cctx.Printer.PrintStructured(struct {
-			Status  string
-			Failure string `cli:",cardOmitEmpty"`
-		}{
-			Status:  color.RedString("FAILED"),
-			Failure: cctx.MarshalFriendlyFailureBodyText(failureProto, "    "),
-		}, printer.StructuredOptions{})
-		return fmt.Errorf("activity failed")
+	var valuePtr interface{}
+	if err := converter.GetDefaultDataConverter().FromPayloads(result, &valuePtr); err != nil {
+		return fmt.Errorf("failed decoding result: %w", err)
 	}
-	resultJSON, marshalErr := json.Marshal(valuePtr)
-	if marshalErr != nil {
-		return fmt.Errorf("failed marshaling result: %w", marshalErr)
+	resultJSON, err := json.Marshal(valuePtr)
+	if err != nil {
+		return fmt.Errorf("failed marshaling result: %w", err)
 	}
 	return cctx.Printer.PrintStructured(struct {
 		Status string
@@ -267,6 +281,48 @@ func getActivityResult(cctx *CommandContext, cl client.Client, activityID, runID
 		Status: color.GreenString("COMPLETED"),
 		Result: resultJSON,
 	}, printer.StructuredOptions{})
+}
+
+func marshalActivityPayloads(cctx *CommandContext, payloads *common.Payloads) (json.RawMessage, error) {
+	if cctx.JSONShorthandPayloads {
+		var valuePtr interface{}
+		if err := converter.GetDefaultDataConverter().FromPayloads(payloads, &valuePtr); err != nil {
+			return nil, err
+		}
+		return json.Marshal(valuePtr)
+	}
+	return cctx.MarshalProtoJSON(payloads)
+}
+
+func printActivityFailure(cctx *CommandContext, activityID, runID string, f *failure.Failure) error {
+	if cctx.JSONOutput {
+		failureJSON, err := cctx.MarshalProtoJSON(f)
+		if err != nil {
+			return fmt.Errorf("failed marshaling failure: %w", err)
+		}
+		_ = cctx.Printer.PrintStructured(struct {
+			ActivityId string          `json:"activityId"`
+			RunId      string          `json:"runId"`
+			Status     string          `json:"status"`
+			Failure    json.RawMessage `json:"failure"`
+		}{
+			ActivityId: activityID,
+			RunId:      runID,
+			Status:     "FAILED",
+			Failure:    failureJSON,
+		}, printer.StructuredOptions{})
+		return fmt.Errorf("activity failed")
+	}
+
+	cctx.Printer.Println(color.MagentaString("Results:"))
+	_ = cctx.Printer.PrintStructured(struct {
+		Status  string
+		Failure string `cli:",cardOmitEmpty"`
+	}{
+		Status:  color.RedString("FAILED"),
+		Failure: cctx.MarshalFriendlyFailureBodyText(f, "    "),
+	}, printer.StructuredOptions{})
+	return fmt.Errorf("activity failed")
 }
 
 func (c *TemporalActivityDescribeCommand) run(cctx *CommandContext, args []string) error {
@@ -287,7 +343,72 @@ func (c *TemporalActivityDescribeCommand) run(cctx *CommandContext, args []strin
 	if c.Raw || cctx.JSONOutput {
 		return cctx.Printer.PrintStructured(desc.RawExecutionInfo, printer.StructuredOptions{})
 	}
-	return cctx.Printer.PrintStructured(desc.RawExecutionInfo, printer.StructuredOptions{})
+	return printActivityDescription(cctx, desc.RawExecutionInfo)
+}
+
+func printActivityDescription(cctx *CommandContext, info *activitypb.ActivityExecutionInfo) error {
+	d := struct {
+		ActivityId              string
+		RunId                   string
+		Type                    string
+		Status                  string
+		RunState                string `cli:",cardOmitEmpty"`
+		TaskQueue               string
+		ScheduleToCloseTimeout  time.Duration `cli:",cardOmitEmpty"`
+		ScheduleToStartTimeout  time.Duration `cli:",cardOmitEmpty"`
+		StartToCloseTimeout     time.Duration `cli:",cardOmitEmpty"`
+		HeartbeatTimeout        time.Duration `cli:",cardOmitEmpty"`
+		LastStartedTime         time.Time     `cli:",cardOmitEmpty"`
+		Attempt                 int32
+		ExecutionDuration       time.Duration `cli:",cardOmitEmpty"`
+		ScheduleTime            time.Time     `cli:",cardOmitEmpty"`
+		CloseTime               time.Time     `cli:",cardOmitEmpty"`
+		LastFailure             string        `cli:",cardOmitEmpty"`
+		LastWorkerIdentity      string        `cli:",cardOmitEmpty"`
+		LastAttemptCompleteTime time.Time     `cli:",cardOmitEmpty"`
+		StateTransitionCount    int64
+	}{
+		ActivityId:              info.GetActivityId(),
+		RunId:                   info.GetRunId(),
+		Type:                    info.GetActivityType().GetName(),
+		Status:                  activityStatusShorthand(info.GetStatus()),
+		RunState:                pendingActivityStateShorthand(info.GetRunState()),
+		TaskQueue:               info.GetTaskQueue(),
+		ScheduleToCloseTimeout:  info.GetScheduleToCloseTimeout().AsDuration(),
+		ScheduleToStartTimeout:  info.GetScheduleToStartTimeout().AsDuration(),
+		StartToCloseTimeout:     info.GetStartToCloseTimeout().AsDuration(),
+		HeartbeatTimeout:        info.GetHeartbeatTimeout().AsDuration(),
+		LastStartedTime:         timestampToTime(info.GetLastStartedTime()),
+		Attempt:                 info.GetAttempt(),
+		ExecutionDuration:       info.GetExecutionDuration().AsDuration(),
+		ScheduleTime:            timestampToTime(info.GetScheduleTime()),
+		CloseTime:               timestampToTime(info.GetCloseTime()),
+		LastWorkerIdentity:      info.GetLastWorkerIdentity(),
+		LastAttemptCompleteTime: timestampToTime(info.GetLastAttemptCompleteTime()),
+		StateTransitionCount:    info.GetStateTransitionCount(),
+	}
+	if f := info.GetLastFailure(); f != nil {
+		d.LastFailure = cctx.MarshalFriendlyFailureBodyText(f, "    ")
+	}
+	return cctx.Printer.PrintStructured(d, printer.StructuredOptions{})
+}
+
+func activityStatusShorthand(s enumspb.ActivityExecutionStatus) string {
+	for name, val := range enumspb.ActivityExecutionStatus_shorthandValue {
+		if int32(s) == val {
+			return name
+		}
+	}
+	return s.String()
+}
+
+func pendingActivityStateShorthand(s enumspb.PendingActivityState) string {
+	for name, val := range enumspb.PendingActivityState_shorthandValue {
+		if int32(s) == val && name != "Unspecified" {
+			return name
+		}
+	}
+	return ""
 }
 
 func (c *TemporalActivityListCommand) run(cctx *CommandContext, args []string) error {
