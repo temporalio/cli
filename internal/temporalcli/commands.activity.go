@@ -474,21 +474,33 @@ func (c *TemporalActivityCountCommand) run(cctx *CommandContext, args []string) 
 	}
 	defer cl.Close()
 
-	result, err := cl.CountActivities(cctx, client.CountActivitiesOptions{Query: c.Query})
+	resp, err := cl.WorkflowService().CountActivityExecutions(cctx, &workflowservice.CountActivityExecutionsRequest{
+		Namespace: c.Parent.Namespace,
+		Query:     c.Query,
+	})
 	if err != nil {
 		return fmt.Errorf("failed counting activities: %w", err)
 	}
 	if cctx.JSONOutput {
-		return cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
+		for _, group := range resp.Groups {
+			for _, payload := range group.GroupValues {
+				delete(payload.GetMetadata(), "type")
+			}
+		}
+		return cctx.Printer.PrintStructured(resp, printer.StructuredOptions{})
 	}
-	cctx.Printer.Printlnf("Total: %v", result.Count)
-	for _, group := range result.Groups {
+	cctx.Printer.Printlnf("Total: %v", resp.Count)
+	for _, group := range resp.Groups {
 		var valueStr string
-		for _, v := range group.GroupValues {
+		for _, payload := range group.GroupValues {
+			var value any
+			if err := converter.GetDefaultDataConverter().FromPayload(payload, &value); err != nil {
+				value = fmt.Sprintf("<failed converting: %v>", err)
+			}
 			if valueStr != "" {
 				valueStr += ", "
 			}
-			valueStr += fmt.Sprintf("%v", v)
+			valueStr += fmt.Sprintf("%v", value)
 		}
 		cctx.Printer.Printlnf("Group total: %v, values: %v", group.Count, valueStr)
 	}
