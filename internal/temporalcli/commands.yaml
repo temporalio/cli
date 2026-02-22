@@ -203,7 +203,7 @@ commands:
         description: Reason for cancellation.
 
   - name: temporal activity complete
-    summary: Complete an Activity with a result
+    summary: Mark an activity as successfully finished with a result
     description: |
       Complete an Activity, marking it as successfully finished. Specify the
       Activity ID and include a JSON result for the returned value:
