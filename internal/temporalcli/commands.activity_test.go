@@ -774,18 +774,48 @@ func (s *SharedServerSuite) TestStandaloneActivity_Describe() {
 	})
 
 	started := s.startStandaloneActivity("describe-test")
+	runID := started["runId"].(string)
 	<-activityStarted
 
+	// Text
 	res := s.Execute(
 		"activity", "describe",
 		"--activity-id", "describe-test",
-		"--run-id", started["runId"].(string),
+		"--run-id", runID,
 		"--address", s.Address(),
 	)
 	s.NoError(res.Err)
 	out := res.Stdout.String()
 	s.ContainsOnSameLine(out, "ActivityId", "describe-test")
 	s.Contains(out, "DevActivity")
+	s.ContainsOnSameLine(out, "Status", "Running")
+	s.Contains(out, s.Worker().Options.TaskQueue)
+
+	// JSON
+	res = s.Execute(
+		"activity", "describe",
+		"-o", "json",
+		"--activity-id", "describe-test",
+		"--run-id", runID,
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	var jsonOut map[string]any
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	s.Equal("describe-test", jsonOut["activityId"])
+	s.NotNil(jsonOut["activityType"])
+	s.NotNil(jsonOut["taskQueue"])
+
+	// Raw
+	res = s.Execute(
+		"activity", "describe",
+		"--raw",
+		"--activity-id", "describe-test",
+		"--run-id", runID,
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "describe-test")
 }
 
 func (s *SharedServerSuite) TestStandaloneActivity_List() {
@@ -813,6 +843,7 @@ func (s *SharedServerSuite) TestStandaloneActivity_Count() {
 
 	s.startStandaloneActivity("count-test")
 
+	// Text
 	s.Eventually(func() bool {
 		res := s.Execute(
 			"activity", "count",
