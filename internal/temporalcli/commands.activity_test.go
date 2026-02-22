@@ -772,6 +772,32 @@ func (s *SharedServerSuite) TestStandaloneActivity_Result() {
 	)
 	s.NoError(res.Err)
 	s.Contains(res.Stdout.String(), "result-value")
+
+	// JSON result should populate runId from the describe response
+	res = s.Execute(
+		"activity", "result",
+		"-o", "json",
+		"--activity-id", "result-test",
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	var jsonOut map[string]any
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	s.Equal("COMPLETED", jsonOut["status"])
+	s.NotEmpty(jsonOut["runId"], "runId should be populated even when --run-id is not specified")
+}
+
+func (s *SharedServerSuite) TestStandaloneActivity_Result_NotFound() {
+	res := s.Execute(
+		"activity", "result",
+		"--activity-id", "nonexistent-activity-id",
+		"--address", s.Address(),
+	)
+	// Should be a CLI error, not a "FAILED" result
+	s.Error(res.Err)
+	s.Contains(res.Err.Error(), "not found")
+	// Should NOT render as a result with Status=FAILED
+	s.NotContains(res.Stdout.String(), "FAILED")
 }
 
 func (s *SharedServerSuite) TestStandaloneActivity_Describe() {
@@ -786,7 +812,7 @@ func (s *SharedServerSuite) TestStandaloneActivity_Describe() {
 	runID := started["runId"].(string)
 	<-activityStarted
 
-	// Text
+	// Text: should have human-friendly formatting
 	res := s.Execute(
 		"activity", "describe",
 		"--activity-id", "describe-test",
@@ -796,9 +822,11 @@ func (s *SharedServerSuite) TestStandaloneActivity_Describe() {
 	s.NoError(res.Err)
 	out := res.Stdout.String()
 	s.ContainsOnSameLine(out, "ActivityId", "describe-test")
-	s.Contains(out, "DevActivity")
+	s.ContainsOnSameLine(out, "Type", "DevActivity")
 	s.ContainsOnSameLine(out, "Status", "Running")
-	s.Contains(out, s.Worker().Options.TaskQueue)
+	s.ContainsOnSameLine(out, "TaskQueue", s.Worker().Options.TaskQueue)
+	// Text output should NOT contain raw proto JSON like {"name":"DevActivity"}
+	s.NotContains(out, `{"name":`)
 
 	// JSON
 	res = s.Execute(
@@ -815,7 +843,7 @@ func (s *SharedServerSuite) TestStandaloneActivity_Describe() {
 	s.NotNil(jsonOut["activityType"])
 	s.NotNil(jsonOut["taskQueue"])
 
-	// Raw
+	// Raw: should contain proto JSON format (e.g. {"name":"DevActivity"})
 	res = s.Execute(
 		"activity", "describe",
 		"--raw",
@@ -824,7 +852,36 @@ func (s *SharedServerSuite) TestStandaloneActivity_Describe() {
 		"--address", s.Address(),
 	)
 	s.NoError(res.Err)
-	s.Contains(res.Stdout.String(), "describe-test")
+	rawOut := res.Stdout.String()
+	s.Contains(rawOut, "describe-test")
+	s.Contains(rawOut, `{"name":"DevActivity"}`)
+}
+
+func (s *SharedServerSuite) TestStandaloneActivity_Describe_FailedLastFailure() {
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		return nil, fmt.Errorf("describe-failure-msg")
+	})
+
+	started := s.startStandaloneActivity("describe-fail-test", "--retry-maximum-attempts", "1")
+
+	// Wait for the activity to fail
+	handle := s.Client.GetActivityHandle(client.GetActivityHandleOptions{
+		ActivityID: "describe-fail-test",
+		RunID:      started["runId"].(string),
+	})
+	_ = handle.Get(s.Context, nil)
+
+	res := s.Execute(
+		"activity", "describe",
+		"--activity-id", "describe-fail-test",
+		"--run-id", started["runId"].(string),
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	out := res.Stdout.String()
+	// LastFailure should be human-readable, not raw JSON
+	s.Contains(out, "describe-failure-msg")
+	s.NotContains(out, `"message":"describe-failure-msg"`)
 }
 
 func (s *SharedServerSuite) TestStandaloneActivity_List() {
