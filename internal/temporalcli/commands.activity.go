@@ -47,19 +47,7 @@ func (c *TemporalActivityStartCommand) run(cctx *CommandContext, args []string) 
 	if err != nil {
 		return err
 	}
-	return cctx.Printer.PrintStructured(struct {
-		ActivityId string `json:"activityId"`
-		RunId      string `json:"runId"`
-		Type       string `json:"type"`
-		Namespace  string `json:"namespace"`
-		TaskQueue  string `json:"taskQueue"`
-	}{
-		ActivityId: c.ActivityId,
-		RunId:      handle.GetRunID(),
-		Type:       c.Type,
-		Namespace:  c.Parent.Namespace,
-		TaskQueue:  c.TaskQueue,
-	}, printer.StructuredOptions{})
+	return printActivityExecution(cctx, c.ActivityId, handle.GetRunID(), c.Type, c.Parent.Namespace, c.TaskQueue)
 }
 
 func (c *TemporalActivityExecuteCommand) run(cctx *CommandContext, args []string) error {
@@ -72,6 +60,11 @@ func (c *TemporalActivityExecuteCommand) run(cctx *CommandContext, args []string
 	handle, err := startActivity(cctx, cl, &c.ActivityStartOptions, &c.PayloadInputOptions)
 	if err != nil {
 		return err
+	}
+	if !cctx.JSONOutput {
+		if err := printActivityExecution(cctx, c.ActivityId, handle.GetRunID(), c.Type, c.Parent.Namespace, c.TaskQueue); err != nil {
+			return err
+		}
 	}
 	return getActivityResult(cctx, cl, c.ActivityId, handle.GetRunID())
 }
@@ -109,6 +102,25 @@ func startActivity(
 		return nil, fmt.Errorf("failed starting activity: %w", err)
 	}
 	return handle, nil
+}
+
+func printActivityExecution(cctx *CommandContext, activityID, runID, activityType, namespace, taskQueue string) error {
+	if !cctx.JSONOutput {
+		cctx.Printer.Println(color.MagentaString("Running execution:"))
+	}
+	return cctx.Printer.PrintStructured(struct {
+		ActivityId string `json:"activityId"`
+		RunId      string `json:"runId"`
+		Type       string `json:"type"`
+		Namespace  string `json:"namespace"`
+		TaskQueue  string `json:"taskQueue"`
+	}{
+		ActivityId: activityID,
+		RunId:      runID,
+		Type:       activityType,
+		Namespace:  namespace,
+		TaskQueue:  taskQueue,
+	}, printer.StructuredOptions{})
 }
 
 func buildStartActivityOptions(opts *ActivityStartOptions) (client.StartActivityOptions, error) {
@@ -232,6 +244,7 @@ func getActivityResult(cctx *CommandContext, cl client.Client, activityID, runID
 		}, printer.StructuredOptions{})
 	}
 
+	cctx.Printer.Println(color.MagentaString("Results:"))
 	if err != nil {
 		failureProto := temporal.GetDefaultFailureConverter().ErrorToFailure(err)
 		_ = cctx.Printer.PrintStructured(struct {
@@ -243,12 +256,17 @@ func getActivityResult(cctx *CommandContext, cl client.Client, activityID, runID
 		}, printer.StructuredOptions{})
 		return fmt.Errorf("activity failed")
 	}
-	jsonBytes, err := json.Marshal(valuePtr)
-	if err != nil {
-		return fmt.Errorf("failed marshaling result: %w", err)
+	resultJSON, marshalErr := json.Marshal(valuePtr)
+	if marshalErr != nil {
+		return fmt.Errorf("failed marshaling result: %w", marshalErr)
 	}
-	cctx.Printer.Printlnf("Result: %s", jsonBytes)
-	return nil
+	return cctx.Printer.PrintStructured(struct {
+		Status string
+		Result json.RawMessage `cli:",cardOmitEmpty"`
+	}{
+		Status: color.GreenString("COMPLETED"),
+		Result: resultJSON,
+	}, printer.StructuredOptions{})
 }
 
 func (c *TemporalActivityDescribeCommand) run(cctx *CommandContext, args []string) error {

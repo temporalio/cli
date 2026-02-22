@@ -619,6 +619,7 @@ func (s *SharedServerSuite) TestStandaloneActivity_Start() {
 	)
 	s.NoError(res.Err)
 	out := res.Stdout.String()
+	s.Contains(out, "Running execution:")
 	s.ContainsOnSameLine(out, "ActivityId", "start-test")
 	s.Contains(out, "RunId")
 	s.ContainsOnSameLine(out, "Type", "DevActivity")
@@ -659,7 +660,12 @@ func (s *SharedServerSuite) TestStandaloneActivity_Execute_Success() {
 		"--address", s.Address(),
 	)
 	s.NoError(res.Err)
-	s.ContainsOnSameLine(res.Stdout.String(), "Result", `{"foo":"bar"}`)
+	out := res.Stdout.String()
+	s.Contains(out, "Running execution:")
+	s.ContainsOnSameLine(out, "ActivityId", "exec-test")
+	s.Contains(out, "Results:")
+	s.ContainsOnSameLine(out, "Status", "COMPLETED")
+	s.ContainsOnSameLine(out, "Result", `{"foo":"bar"}`)
 }
 
 func (s *SharedServerSuite) TestStandaloneActivity_Execute_Success_JSON() {
@@ -699,6 +705,8 @@ func (s *SharedServerSuite) TestStandaloneActivity_Execute_Failure() {
 	)
 	s.ErrorContains(res.Err, "activity failed")
 	out := res.Stdout.String()
+	s.Contains(out, "Running execution:")
+	s.Contains(out, "Results:")
 	s.Contains(out, "FAILED")
 	s.Contains(out, "intentional failure")
 }
