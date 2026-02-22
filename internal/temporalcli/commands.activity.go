@@ -381,6 +381,8 @@ func (c *TemporalActivityTerminateCommand) run(cctx *CommandContext, args []stri
 	}
 	defer cl.Close()
 
+	// CONSIDER(dan): defaultReason is applied for terminate but not cancel, matching
+	// the workflow pattern. It may be worth making this consistent across both.
 	reason := c.Reason
 	if reason == "" {
 		reason = defaultReason()
