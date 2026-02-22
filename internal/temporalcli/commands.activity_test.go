@@ -798,6 +798,19 @@ func (s *SharedServerSuite) TestStandaloneActivity_Count() {
 		)
 		return res.Err == nil && strings.Contains(res.Stdout.String(), "Total:")
 	}, 5*time.Second, 200*time.Millisecond)
+
+	// JSON
+	res := s.Execute(
+		"activity", "count",
+		"--address", s.Address(),
+		"-o", "json",
+	)
+	s.NoError(res.Err)
+	var jsonOut map[string]any
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	count, ok := jsonOut["Count"].(float64)
+	s.True(ok)
+	s.GreaterOrEqual(count, float64(1))
 }
 
 func (s *SharedServerSuite) TestStandaloneActivity_Cancel() {
