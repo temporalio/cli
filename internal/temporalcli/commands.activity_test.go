@@ -1049,3 +1049,40 @@ func (s *SharedServerSuite) TestStandaloneActivity_Terminate() {
 	s.Error(err)
 	s.Contains(err.Error(), "terminated")
 }
+
+func (s *SharedServerSuite) TestStandaloneActivity_Start_SearchAttributeDatetime() {
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		return nil, nil
+	})
+
+	res := s.Execute(
+		"operator", "search-attribute", "create",
+		"--address", s.Address(),
+		"--name", "SATestDatetime",
+		"--type", "Datetime",
+	)
+	s.NoError(res.Err)
+
+	res = s.Execute(
+		"activity", "start",
+		"-o", "json",
+		"--activity-id", "sa-datetime-test",
+		"--type", "DevActivity",
+		"--task-queue", s.Worker().Options.TaskQueue,
+		"--start-to-close-timeout", "30s",
+		"--search-attribute", `SATestDatetime="2024-01-15T00:00:00Z"`,
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+
+	// The Datetime search attribute should be queryable. This fails if
+	// mapToSearchAttributes sends the value as Keyword instead of Datetime.
+	s.Eventually(func() bool {
+		res = s.Execute(
+			"activity", "list",
+			"--address", s.Address(),
+			"--query", `SATestDatetime = "2024-01-15T00:00:00Z"`,
+		)
+		return res.Err == nil && strings.Contains(res.Stdout.String(), "sa-datetime-test")
+	}, 5*time.Second, 200*time.Millisecond)
+}
