@@ -485,11 +485,11 @@ func NewTemporalActivityCancelCommand(cctx *CommandContext, parent *TemporalActi
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "cancel [flags]"
-	s.Command.Short = "Cancel a Standalone Activity Execution (Experimental)"
+	s.Command.Short = "Request cancellation of a Standalone Activity Execution (Experimental)"
 	if hasHighlighting {
-		s.Command.Long = "Request cancellation of a Standalone Activity Execution.\n\n\x1b[1mtemporal activity cancel \\\n    --activity-id YourActivityId\x1b[0m\n\nRequesting cancellation does not immediately cancel the\nActivity. If the Activity is heartbeating, a cancellation\nerror will be raised when the next heartbeat response is\nreceived; if the Activity allows this error to propagate, the\nActivity transitions to canceled status. If the Activity is\nnot heartbeating, this request has no effect on the Activity."
+		s.Command.Long = "Request cancellation of a Standalone Activity Execution.\n\n\x1b[1mtemporal activity cancel \\\n    --activity-id YourActivityId\x1b[0m\n\nRequesting cancellation transitions the Activity's run state\nto CancelRequested. If the Activity is heartbeating, a\ncancellation error will be raised when the next heartbeat\nresponse is received; if the Activity allows this error to\npropagate, the Activity transitions to canceled status."
 	} else {
-		s.Command.Long = "Request cancellation of a Standalone Activity Execution.\n\n```\ntemporal activity cancel \\\n    --activity-id YourActivityId\n```\n\nRequesting cancellation does not immediately cancel the\nActivity. If the Activity is heartbeating, a cancellation\nerror will be raised when the next heartbeat response is\nreceived; if the Activity allows this error to propagate, the\nActivity transitions to canceled status. If the Activity is\nnot heartbeating, this request has no effect on the Activity."
+		s.Command.Long = "Request cancellation of a Standalone Activity Execution.\n\n```\ntemporal activity cancel \\\n    --activity-id YourActivityId\n```\n\nRequesting cancellation transitions the Activity's run state\nto CancelRequested. If the Activity is heartbeating, a\ncancellation error will be raised when the next heartbeat\nresponse is received; if the Activity allows this error to\npropagate, the Activity transitions to canceled status."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for cancellation.")
@@ -515,7 +515,7 @@ func NewTemporalActivityCompleteCommand(cctx *CommandContext, parent *TemporalAc
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "complete [flags]"
-	s.Command.Short = "Complete an Activity with a result"
+	s.Command.Short = "Mark an activity as successfully finished with a result"
 	if hasHighlighting {
 		s.Command.Long = "Complete an Activity, marking it as successfully finished. Specify the\nActivity ID and include a JSON result for the returned value:\n\n\x1b[1mtemporal activity complete \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --result '{\"YourResultKey\": \"YourResultVal\"}'\x1b[0m"
 	} else {
