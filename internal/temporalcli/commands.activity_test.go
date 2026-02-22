@@ -861,6 +861,20 @@ func (s *SharedServerSuite) TestStandaloneActivity_Count() {
 		return res.Err == nil && strings.Contains(res.Stdout.String(), "Total:")
 	}, 5*time.Second, 200*time.Millisecond)
 
+	// Grouped text
+	s.Eventually(func() bool {
+		res := s.Execute(
+			"activity", "count",
+			"--address", s.Address(),
+			"--query", "GROUP BY ExecutionStatus",
+		)
+		if res.Err != nil {
+			return false
+		}
+		out := res.Stdout.String()
+		return strings.Contains(out, "Total:") && strings.Contains(out, "Group total:")
+	}, 5*time.Second, 200*time.Millisecond)
+
 	// JSON
 	res := s.Execute(
 		"activity", "count",
