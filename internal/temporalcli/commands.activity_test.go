@@ -531,16 +531,26 @@ func (s *SharedServerSuite) TestStandaloneActivity_Complete() {
 	})
 
 	started := s.startStandaloneActivity("sa-complete-test")
+	runID := started["runId"].(string)
 	<-activityStarted
 
 	res := s.Execute(
 		"activity", "complete",
 		"--activity-id", "sa-complete-test",
-		"--run-id", started["runId"].(string),
+		"--run-id", runID,
 		"--result", `"completed-externally"`,
+		"--identity", identity,
 		"--address", s.Address(),
 	)
 	s.NoError(res.Err)
+
+	handle := s.Client.GetActivityHandle(client.GetActivityHandleOptions{
+		ActivityID: "sa-complete-test",
+		RunID:      runID,
+	})
+	var actual string
+	s.NoError(handle.Get(s.Context, &actual))
+	s.Equal("completed-externally", actual)
 }
 
 func (s *SharedServerSuite) TestStandaloneActivity_Fail() {
@@ -552,16 +562,26 @@ func (s *SharedServerSuite) TestStandaloneActivity_Fail() {
 	})
 
 	started := s.startStandaloneActivity("sa-fail-test")
+	runID := started["runId"].(string)
 	<-activityStarted
 
 	res := s.Execute(
 		"activity", "fail",
 		"--activity-id", "sa-fail-test",
-		"--run-id", started["runId"].(string),
+		"--run-id", runID,
 		"--reason", "external-failure",
+		"--identity", identity,
 		"--address", s.Address(),
 	)
 	s.NoError(res.Err)
+
+	handle := s.Client.GetActivityHandle(client.GetActivityHandleOptions{
+		ActivityID: "sa-fail-test",
+		RunID:      runID,
+	})
+	err := handle.Get(s.Context, nil)
+	s.Error(err)
+	s.Contains(err.Error(), "external-failure")
 }
 
 // startStandaloneActivity starts a standalone activity via the CLI and returns
