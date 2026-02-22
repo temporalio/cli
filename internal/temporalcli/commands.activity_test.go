@@ -816,7 +816,7 @@ func (s *SharedServerSuite) TestStandaloneActivity_Result() {
 	s.NoError(res.Err)
 	s.Contains(res.Stdout.String(), "result-value")
 
-	// JSON result should populate runId from the describe response
+	// JSON output without --run-id
 	res = s.Execute(
 		"activity", "result",
 		"-o", "json",
@@ -827,7 +827,6 @@ func (s *SharedServerSuite) TestStandaloneActivity_Result() {
 	var jsonOut map[string]any
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
 	s.Equal("COMPLETED", jsonOut["status"])
-	s.NotEmpty(jsonOut["runId"], "runId should be populated even when --run-id is not specified")
 }
 
 func (s *SharedServerSuite) TestStandaloneActivity_Result_NotFound() {

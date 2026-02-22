@@ -212,19 +212,11 @@ func getActivityResult(cctx *CommandContext, cl client.Client, namespace, activi
 		return fmt.Errorf("failed polling activity result: %w", err)
 	}
 
-	resolvedRunID := runID
-	if resolvedRunID == "" {
-		handle := cl.GetActivityHandle(client.GetActivityHandleOptions{ActivityID: activityID})
-		if desc, descErr := handle.Describe(cctx, client.DescribeActivityOptions{}); descErr == nil {
-			resolvedRunID = desc.RawExecutionInfo.GetRunId()
-		}
-	}
-
 	switch v := outcome.GetValue().(type) {
 	case *activitypb.ActivityExecutionOutcome_Result:
-		return printActivityResult(cctx, activityID, resolvedRunID, v.Result)
+		return printActivityResult(cctx, activityID, runID, v.Result)
 	case *activitypb.ActivityExecutionOutcome_Failure:
-		return printActivityFailure(cctx, activityID, resolvedRunID, v.Failure)
+		return printActivityFailure(cctx, activityID, runID, v.Failure)
 	default:
 		return fmt.Errorf("unexpected activity outcome type: %T", v)
 	}
@@ -532,8 +524,9 @@ func (c *TemporalActivityTerminateCommand) run(cctx *CommandContext, args []stri
 	}
 	defer cl.Close()
 
-	// CONSIDER(dan): defaultReason is applied for terminate but not cancel, matching
-	// the workflow pattern. It may be worth making this consistent across both.
+	// Neither SDK provides a default reason for cancel or terminate. The CLI
+	// adds a default for terminate (matching workflow terminate) but not cancel,
+	// since the workflow cancel API historically had no reason field.
 	reason := c.Reason
 	if reason == "" {
 		reason = defaultReason()
