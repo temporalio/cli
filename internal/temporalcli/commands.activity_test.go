@@ -624,7 +624,7 @@ func (s *SharedServerSuite) TestStandaloneActivity_Start() {
 	s.Contains(out, "RunId")
 	s.ContainsOnSameLine(out, "Type", "DevActivity")
 	s.ContainsOnSameLine(out, "Namespace", "default")
-	s.Contains(out, "TaskQueue")
+	s.ContainsOnSameLine(out, "TaskQueue", s.Worker().Options.TaskQueue)
 
 	// JSON
 	res = s.Execute(
