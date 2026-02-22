@@ -485,7 +485,7 @@ func NewTemporalActivityCancelCommand(cctx *CommandContext, parent *TemporalActi
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "cancel [flags]"
-	s.Command.Short = "Request cancellation of a Standalone Activity Execution (Experimental)"
+	s.Command.Short = "Request cancellation of a Standalone Activity (Experimental)"
 	if hasHighlighting {
 		s.Command.Long = "Request cancellation of a Standalone Activity Execution.\n\n\x1b[1mtemporal activity cancel \\\n    --activity-id YourActivityId\x1b[0m\n\nRequesting cancellation transitions the Activity's run state\nto CancelRequested. If the Activity is heartbeating, a\ncancellation error will be raised when the next heartbeat\nresponse is received; if the Activity allows this error to\npropagate, the Activity transitions to canceled status."
 	} else {
@@ -515,7 +515,7 @@ func NewTemporalActivityCompleteCommand(cctx *CommandContext, parent *TemporalAc
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "complete [flags]"
-	s.Command.Short = "Mark an activity as successfully finished with a result"
+	s.Command.Short = "Mark an activity as completed successfully with a result"
 	if hasHighlighting {
 		s.Command.Long = "Complete an Activity, marking it as successfully finished. Specify the\nActivity ID and include a JSON result for the returned value:\n\n\x1b[1mtemporal activity complete \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --result '{\"YourResultKey\": \"YourResultVal\"}'\x1b[0m"
 	} else {
@@ -545,7 +545,7 @@ func NewTemporalActivityCountCommand(cctx *CommandContext, parent *TemporalActiv
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "count [flags]"
-	s.Command.Short = "Count Standalone Activity Executions (Experimental)"
+	s.Command.Short = "Count Standalone Activities matching a query (Experimental)"
 	if hasHighlighting {
 		s.Command.Long = "Return a count of Standalone Activity Executions. Use \x1b[1m--query\x1b[0m to filter\nthe activities to be counted.\n\n\x1b[1mtemporal activity count \\\n    --query 'ActivityType=\"YourActivity\"'\x1b[0m\n\nVisit https://docs.temporal.io/visibility to read more about\nSearch Attributes and queries."
 	} else {
@@ -573,7 +573,7 @@ func NewTemporalActivityDescribeCommand(cctx *CommandContext, parent *TemporalAc
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "describe [flags]"
-	s.Command.Short = "Show Standalone Activity Execution info (Experimental)"
+	s.Command.Short = "Show detailed info for a Standalone Activity (Experimental)"
 	if hasHighlighting {
 		s.Command.Long = "Display information about a Standalone Activity Execution.\n\n\x1b[1mtemporal activity describe \\\n    --activity-id YourActivityId\x1b[0m"
 	} else {
@@ -602,7 +602,7 @@ func NewTemporalActivityExecuteCommand(cctx *CommandContext, parent *TemporalAct
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "execute [flags]"
-	s.Command.Short = "Start a Standalone Activity and wait for its result (Experimental)"
+	s.Command.Short = "Start a new Standalone Activity and wait for its result (Experimental)"
 	if hasHighlighting {
 		s.Command.Long = "Start a new Standalone Activity Execution and block until it completes.\nThe result is output to stdout.\n\n\x1b[1mtemporal activity execute \\\n    --activity-id YourActivityId \\\n    --type YourActivity \\\n    --task-queue YourTaskQueue \\\n    --start-to-close-timeout 30s \\\n    --input '{\"some-key\": \"some-value\"}'\x1b[0m"
 	} else {
@@ -633,7 +633,7 @@ func NewTemporalActivityFailCommand(cctx *CommandContext, parent *TemporalActivi
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "fail [flags]"
-	s.Command.Short = "Fail an Activity with an error"
+	s.Command.Short = "Mark an Activity as completed unsuccessfully with an error"
 	if hasHighlighting {
 		s.Command.Long = "Fail an Activity, marking it as having encountered an error:\n\n\x1b[1mtemporal activity fail \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\x1b[0m"
 	} else {
@@ -665,7 +665,7 @@ func NewTemporalActivityListCommand(cctx *CommandContext, parent *TemporalActivi
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "list [flags]"
-	s.Command.Short = "List Standalone Activity Executions (Experimental)"
+	s.Command.Short = "List Standalone Activities matching a query (Experimental)"
 	if hasHighlighting {
 		s.Command.Long = "List Standalone Activity Executions. Use \x1b[1m--query\x1b[0m to filter results.\n\n\x1b[1mtemporal activity list \\\n    --query 'ActivityType=\"YourActivity\"'\x1b[0m\n\nVisit https://docs.temporal.io/visibility to read more about\nSearch Attributes and queries."
 	} else {
@@ -771,7 +771,7 @@ func NewTemporalActivityResultCommand(cctx *CommandContext, parent *TemporalActi
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "result [flags]"
-	s.Command.Short = "Get the result of a Standalone Activity Execution (Experimental)"
+	s.Command.Short = "Wait for and output the result of a Standalone Activity (Experimental)"
 	if hasHighlighting {
 		s.Command.Long = "Wait for a Standalone Activity Execution to complete and output the\nresult.\n\n\x1b[1mtemporal activity result \\\n    --activity-id YourActivityId\x1b[0m"
 	} else {
@@ -799,7 +799,7 @@ func NewTemporalActivityStartCommand(cctx *CommandContext, parent *TemporalActiv
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "start [flags]"
-	s.Command.Short = "Start a Standalone Activity Execution (Experimental)"
+	s.Command.Short = "Start a new Standalone Activity (Experimental)"
 	if hasHighlighting {
 		s.Command.Long = "Start a new Standalone Activity Execution. Outputs the Activity ID and\nRun ID.\n\n\x1b[1mtemporal activity start \\\n    --activity-id YourActivityId \\\n    --type YourActivity \\\n    --task-queue YourTaskQueue \\\n    --schedule-to-close-timeout 5m \\\n    --input '{\"some-key\": \"some-value\"}'\x1b[0m"
 	} else {
@@ -828,7 +828,7 @@ func NewTemporalActivityTerminateCommand(cctx *CommandContext, parent *TemporalA
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "terminate [flags]"
-	s.Command.Short = "Forcefully end a Standalone Activity Execution (Experimental)"
+	s.Command.Short = "Forcefully end a Standalone Activity (Experimental)"
 	if hasHighlighting {
 		s.Command.Long = "Terminate a Standalone Activity Execution.\n\n\x1b[1mtemporal activity terminate \\\n    --activity-id YourActivityId \\\n    --reason YourReason\x1b[0m\n\nActivity code cannot see or respond to terminations. To\nperform clean-up work, use \x1b[1mtemporal activity cancel\x1b[0m instead."
 	} else {
@@ -909,7 +909,7 @@ func NewTemporalActivityUpdateOptionsCommand(cctx *CommandContext, parent *Tempo
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "update-options [flags]"
-	s.Command.Short = "Update Activity options"
+	s.Command.Short = "Change the values of options affecting a running Activity"
 	if hasHighlighting {
 		s.Command.Long = "Update the options of a running Activity that were passed into it from\na Workflow. Updates are incremental, only changing the specified options.\nNot supported for Standalone Activities.\n\nFor example:\n\n\x1b[1mtemporal activity update-options \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --task-queue NewTaskQueueName \\\n    --schedule-to-close-timeout DURATION \\\n    --schedule-to-start-timeout DURATION \\\n    --start-to-close-timeout DURATION \\\n    --heartbeat-timeout DURATION \\\n    --retry-initial-interval DURATION \\\n    --retry-maximum-interval DURATION \\\n    --retry-backoff-coefficient NewBackoffCoefficient \\\n    --retry-maximum-attempts NewMaximumAttempts\x1b[0m\n\nYou may follow this command with \x1b[1mtemporal activity reset\x1b[0m, and the new values will apply after the reset.\n\nEither \x1b[1mactivity-id\x1b[0m, \x1b[1mactivity-type\x1b[0m, or \x1b[1m--match-all\x1b[0m must be specified.\n\nActivity options can be updated in bulk with a visibility query list filter.\nFor example, if you want to reset for activities of type Foo, do:\n\n\x1b[1mtemporal activity update-options \\\n    --query 'TemporalPauseInfo=\"property:activityType=Foo\"'\n    ...\x1b[0m"
 	} else {

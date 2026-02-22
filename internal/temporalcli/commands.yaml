@@ -181,7 +181,7 @@ commands:
         - Temporal CLI
 
   - name: temporal activity cancel
-    summary: Request cancellation of a Standalone Activity Execution (Experimental)
+    summary: Request cancellation of a Standalone Activity (Experimental)
     description: |
       Request cancellation of a Standalone Activity Execution.
 
@@ -203,7 +203,7 @@ commands:
         description: Reason for cancellation.
 
   - name: temporal activity complete
-    summary: Mark an activity as successfully finished with a result
+    summary: Mark an activity as completed successfully with a result
     description: |
       Complete an Activity, marking it as successfully finished. Specify the
       Activity ID and include a JSON result for the returned value:
@@ -229,7 +229,7 @@ commands:
         required: true
 
   - name: temporal activity count
-    summary: Count Standalone Activity Executions (Experimental)
+    summary: Count Standalone Activities matching a query (Experimental)
     description: |
       Return a count of Standalone Activity Executions. Use `--query` to filter
       the activities to be counted.
@@ -249,7 +249,7 @@ commands:
           Query to filter Activity Executions to count.
 
   - name: temporal activity describe
-    summary: Show Standalone Activity Execution info (Experimental)
+    summary: Show detailed info for a Standalone Activity (Experimental)
     description: |
       Display information about a Standalone Activity Execution.
 
@@ -265,7 +265,7 @@ commands:
         description: Print properties without changing their format.
 
   - name: temporal activity execute
-    summary: Start a Standalone Activity and wait for its result (Experimental)
+    summary: Start a new Standalone Activity and wait for its result (Experimental)
     description: |
       Start a new Standalone Activity Execution and block until it completes.
       The result is output to stdout.
@@ -283,7 +283,7 @@ commands:
       - payload-input
 
   - name: temporal activity fail
-    summary: Fail an Activity with an error
+    summary: Mark an Activity as completed unsuccessfully with an error
     description: |
       Fail an Activity, marking it as having encountered an error:
 
@@ -312,7 +312,7 @@ commands:
           Failure reason. Attached as the failure message.
 
   - name: temporal activity list
-    summary: List Standalone Activity Executions (Experimental)
+    summary: List Standalone Activities matching a query (Experimental)
     description: |
       List Standalone Activity Executions. Use `--query` to filter results.
 
@@ -340,7 +340,7 @@ commands:
           at a time from the server.
 
   - name: temporal activity update-options
-    summary: Update Activity options
+    summary: Change the values of options affecting a running Activity
     description: |
       Update the options of a running Activity that were passed into it from
       a Workflow. Updates are incremental, only changing the specified options.
@@ -643,7 +643,7 @@ commands:
       - single-workflow-or-batch
 
   - name: temporal activity result
-    summary: Get the result of a Standalone Activity Execution (Experimental)
+    summary: Wait for and output the result of a Standalone Activity (Experimental)
     description: |
       Wait for a Standalone Activity Execution to complete and output the
       result.
@@ -656,7 +656,7 @@ commands:
       - activity-reference
 
   - name: temporal activity start
-    summary: Start a Standalone Activity Execution (Experimental)
+    summary: Start a new Standalone Activity (Experimental)
     description: |
       Start a new Standalone Activity Execution. Outputs the Activity ID and
       Run ID.
@@ -674,7 +674,7 @@ commands:
       - payload-input
 
   - name: temporal activity terminate
-    summary: Forcefully end a Standalone Activity Execution (Experimental)
+    summary: Forcefully end a Standalone Activity (Experimental)
     description: |
       Terminate a Standalone Activity Execution.
 
