@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/temporalio/cli/internal/printer"
 	activitypb "go.temporal.io/api/activity/v1"
 	"go.temporal.io/api/batch/v1"
@@ -232,7 +233,15 @@ func getActivityResult(cctx *CommandContext, cl client.Client, activityID, runID
 	}
 
 	if err != nil {
-		return fmt.Errorf("activity failed: %w", err)
+		failureProto := temporal.GetDefaultFailureConverter().ErrorToFailure(err)
+		_ = cctx.Printer.PrintStructured(struct {
+			Status  string
+			Failure string `cli:",cardOmitEmpty"`
+		}{
+			Status:  color.RedString("FAILED"),
+			Failure: cctx.MarshalFriendlyFailureBodyText(failureProto, "    "),
+		}, printer.StructuredOptions{})
+		return fmt.Errorf("activity failed")
 	}
 	jsonBytes, err := json.Marshal(valuePtr)
 	if err != nil {
