@@ -647,16 +647,20 @@ func (s *SharedServerSuite) TestStandaloneActivity_Start() {
 }
 
 func (s *SharedServerSuite) TestStandaloneActivity_Execute_Success() {
+	var receivedInput any
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		receivedInput = a
 		return map[string]string{"foo": "bar"}, nil
 	})
 
+	// Text
 	res := s.Execute(
 		"activity", "execute",
 		"--activity-id", "exec-test",
 		"--type", "DevActivity",
 		"--task-queue", s.Worker().Options.TaskQueue,
 		"--start-to-close-timeout", "30s",
+		"-i", `"my-input"`,
 		"--address", s.Address(),
 	)
 	s.NoError(res.Err)
@@ -666,14 +670,10 @@ func (s *SharedServerSuite) TestStandaloneActivity_Execute_Success() {
 	s.Contains(out, "Results:")
 	s.ContainsOnSameLine(out, "Status", "COMPLETED")
 	s.ContainsOnSameLine(out, "Result", `{"foo":"bar"}`)
-}
+	s.Equal("my-input", receivedInput)
 
-func (s *SharedServerSuite) TestStandaloneActivity_Execute_Success_JSON() {
-	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
-		return map[string]string{"foo": "bar"}, nil
-	})
-
-	res := s.Execute(
+	// JSON
+	res = s.Execute(
 		"activity", "execute",
 		"-o", "json",
 		"--activity-id", "exec-json-test",
@@ -685,6 +685,7 @@ func (s *SharedServerSuite) TestStandaloneActivity_Execute_Success_JSON() {
 	s.NoError(res.Err)
 	var jsonOut map[string]any
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	s.Equal("exec-json-test", jsonOut["activityId"])
 	s.Equal("COMPLETED", jsonOut["status"])
 	s.Equal(map[string]any{"foo": "bar"}, jsonOut["result"])
 }
