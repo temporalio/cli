@@ -678,7 +678,9 @@ func (s *SharedServerSuite) TestStandaloneActivity_Execute_Failure() {
 		"--address", s.Address(),
 	)
 	s.ErrorContains(res.Err, "activity failed")
-	s.ErrorContains(res.Err, "intentional failure")
+	out := res.Stdout.String()
+	s.Contains(out, "FAILED")
+	s.Contains(out, "intentional failure")
 }
 
 func (s *SharedServerSuite) TestStandaloneActivity_Execute_Failure_JSON() {
