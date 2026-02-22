@@ -702,8 +702,8 @@ func (s *SharedServerSuite) TestStandaloneActivity_Execute_Failure_JSON() {
 	s.Equal("FAILED", jsonOut["status"])
 	failureObj, ok := jsonOut["failure"].(map[string]any)
 	s.True(ok, "failure should be a structured object, got: %T", jsonOut["failure"])
-	s.NotEmpty(failureObj["message"])
-	s.NotNil(failureObj["cause"])
+	s.Contains(failureObj["message"], "intentional failure")
+	s.NotNil(failureObj["applicationFailureInfo"])
 }
 
 func (s *SharedServerSuite) TestStandaloneActivity_Execute_RetriesOnEmptyPollResponse() {

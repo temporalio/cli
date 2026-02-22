@@ -196,16 +196,21 @@ func getActivityResult(cctx *CommandContext, cl client.Client, activityID, runID
 
 	if cctx.JSONOutput {
 		if err != nil {
+			failureProto := temporal.GetDefaultFailureConverter().ErrorToFailure(err)
+			failureJSON, marshalErr := cctx.MarshalProtoJSON(failureProto)
+			if marshalErr != nil {
+				return fmt.Errorf("failed marshaling failure: %w", marshalErr)
+			}
 			_ = cctx.Printer.PrintStructured(struct {
-				ActivityId string `json:"activityId"`
-				RunId      string `json:"runId"`
-				Status     string `json:"status"`
-				Failure    string `json:"failure"`
+				ActivityId string          `json:"activityId"`
+				RunId      string          `json:"runId"`
+				Status     string          `json:"status"`
+				Failure    json.RawMessage `json:"failure"`
 			}{
 				ActivityId: activityID,
 				RunId:      runID,
 				Status:     "FAILED",
-				Failure:    err.Error(),
+				Failure:    failureJSON,
 			}, printer.StructuredOptions{})
 			return fmt.Errorf("activity failed")
 		}
