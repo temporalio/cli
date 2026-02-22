@@ -181,7 +181,7 @@ commands:
         - Temporal CLI
 
   - name: temporal activity cancel
-    summary: Cancel a Standalone Activity Execution (Experimental)
+    summary: Request cancellation of a Standalone Activity Execution (Experimental)
     description: |
       Request cancellation of a Standalone Activity Execution.
 
@@ -190,12 +190,11 @@ commands:
           --activity-id YourActivityId
       ```
 
-      Requesting cancellation does not immediately cancel the
-      Activity. If the Activity is heartbeating, a cancellation
-      error will be raised when the next heartbeat response is
-      received; if the Activity allows this error to propagate, the
-      Activity transitions to canceled status. If the Activity is
-      not heartbeating, this request has no effect on the Activity.
+      Requesting cancellation transitions the Activity's run state
+      to CancelRequested. If the Activity is heartbeating, a
+      cancellation error will be raised when the next heartbeat
+      response is received; if the Activity allows this error to
+      propagate, the Activity transitions to canceled status.
     option-sets:
       - activity-reference
     options:

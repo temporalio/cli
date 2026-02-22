@@ -875,17 +875,27 @@ func (s *SharedServerSuite) TestStandaloneActivity_Cancel() {
 	})
 
 	started := s.startStandaloneActivity("cancel-test")
+	runID := started["runId"].(string)
 	<-activityStarted
 
 	res := s.Execute(
 		"activity", "cancel",
 		"--activity-id", "cancel-test",
-		"--run-id", started["runId"].(string),
+		"--run-id", runID,
 		"--reason", "test-cancel",
 		"--address", s.Address(),
 	)
 	s.NoError(res.Err)
 	s.Contains(res.Stdout.String(), "Cancellation requested")
+
+	handle := s.Client.GetActivityHandle(client.GetActivityHandleOptions{
+		ActivityID: "cancel-test",
+		RunID:      runID,
+	})
+	s.Eventually(func() bool {
+		desc, err := handle.Describe(s.Context, client.DescribeActivityOptions{})
+		return err == nil && desc.RunState.String() == "CancelRequested"
+	}, 5*time.Second, 100*time.Millisecond)
 }
 
 func (s *SharedServerSuite) TestStandaloneActivity_Terminate() {
@@ -897,15 +907,24 @@ func (s *SharedServerSuite) TestStandaloneActivity_Terminate() {
 	})
 
 	started := s.startStandaloneActivity("terminate-test")
+	runID := started["runId"].(string)
 	<-activityStarted
 
 	res := s.Execute(
 		"activity", "terminate",
 		"--activity-id", "terminate-test",
-		"--run-id", started["runId"].(string),
+		"--run-id", runID,
 		"--reason", "test-terminate",
 		"--address", s.Address(),
 	)
 	s.NoError(res.Err)
 	s.Contains(res.Stdout.String(), "Activity terminated")
+
+	handle := s.Client.GetActivityHandle(client.GetActivityHandleOptions{
+		ActivityID: "terminate-test",
+		RunID:      runID,
+	})
+	err := handle.Get(s.Context, nil)
+	s.Error(err)
+	s.Contains(err.Error(), "terminated")
 }
