@@ -1135,11 +1135,8 @@ func (s *SharedServerSuite) TestActivity_SearchAttributes() {
 }
 
 func (s *SharedServerSuite) TestActivity_SearchAttributes_Datetime() {
-	// Datetime custom search attribute queries are broken on the SQLite dev
-	// server due to a format mismatch between the STRFTIME generated column
-	// (.000 fractional seconds) and the Go query converter (no fractional
-	// part for whole seconds). See docs/cli-search-attribute-bug.md.
-	s.T().Skip("Datetime custom search attribute queries broken on SQLite (server bug)")
+	// Datetime custom search attribute queries do not work currently.
+	s.T().Skip("Datetime custom search attribute queries do not work currently")
 
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
 		return nil, nil
