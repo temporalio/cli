@@ -523,6 +523,7 @@ func (s *SharedServerSuite) TestResetActivity_BatchSuccess() {
 	failActivity.Store(false)
 }
 
+// No JSON test: complete command produces no output on success.
 func (s *SharedServerSuite) TestActivity_Complete_ByRunId() {
 	activityStarted := make(chan struct{})
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
@@ -554,6 +555,7 @@ func (s *SharedServerSuite) TestActivity_Complete_ByRunId() {
 	s.Equal("completed-externally", actual)
 }
 
+// No JSON test: fail command produces no output on success.
 func (s *SharedServerSuite) TestActivity_Fail_ByRunId() {
 	activityStarted := make(chan struct{})
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
@@ -687,10 +689,12 @@ func (s *SharedServerSuite) TestActivity_Execute_Success() {
 	var jsonOut map[string]any
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
 	s.Equal("exec-json-test", jsonOut["activityId"])
+	s.NotEmpty(jsonOut["runId"])
 	s.Equal("COMPLETED", jsonOut["status"])
 	s.Equal(map[string]any{"foo": "bar"}, jsonOut["result"])
 }
 
+// Text-only: JSON failure is covered by TestActivity_Execute_Failure_JSON.
 func (s *SharedServerSuite) TestActivity_Execute_Failure() {
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
 		return nil, fmt.Errorf("intentional failure")
@@ -731,6 +735,8 @@ func (s *SharedServerSuite) TestActivity_Execute_Failure_JSON() {
 	s.Error(res.Err)
 	var jsonOut map[string]any
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	s.Equal("exec-fail-json-test", jsonOut["activityId"])
+	s.NotEmpty(jsonOut["runId"])
 	s.Equal("FAILED", jsonOut["status"])
 	failureObj, ok := jsonOut["failure"].(map[string]any)
 	s.True(ok, "failure should be a structured object, got: %T", jsonOut["failure"])
@@ -781,6 +787,7 @@ func (s *SharedServerSuite) TestActivity_Execute_NoJsonShorthandPayloads() {
 	s.NotNil(payload["data"])
 }
 
+// Behavioral test: no JSON variant needed, poll retry is output-format independent.
 func (s *SharedServerSuite) TestActivity_Execute_RetriesOnEmptyPollResponse() {
 	// Activity sleeps longer than the server's activity.longPollTimeout (2s),
 	// forcing at least one empty poll response before the result arrives.
@@ -925,6 +932,8 @@ func (s *SharedServerSuite) TestActivity_Describe() {
 	s.Contains(rawOut, `{"name":"DevActivity"}`)
 }
 
+// Text-only: verifies LastFailure is rendered as human-readable text (not raw JSON).
+// JSON/raw modes use the proto directly and are covered by TestActivity_Describe.
 func (s *SharedServerSuite) TestActivity_Describe_FailedLastFailure() {
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
 		return nil, fmt.Errorf("describe-failure-msg")
@@ -1039,6 +1048,7 @@ func (s *SharedServerSuite) TestActivity_Count() {
 	s.True(ok)
 }
 
+// No JSON test: cancel command outputs a fixed message, not structured data.
 func (s *SharedServerSuite) TestActivity_Cancel() {
 	activityStarted := make(chan struct{})
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
@@ -1071,6 +1081,7 @@ func (s *SharedServerSuite) TestActivity_Cancel() {
 	}, 5*time.Second, 100*time.Millisecond)
 }
 
+// No JSON test: terminate command outputs a fixed message, not structured data.
 func (s *SharedServerSuite) TestActivity_Terminate() {
 	activityStarted := make(chan struct{})
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
