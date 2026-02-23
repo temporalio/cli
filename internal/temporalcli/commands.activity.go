@@ -244,17 +244,22 @@ func pollActivityOutcome(cctx *CommandContext, cl client.Client, namespace, acti
 			ActivityId: activityID,
 			RunId:      runID,
 		})
-		pollTimedOut := pollCtx.Err() != nil
-		cancel()
 		if err != nil {
+			// Check pollCtx before cancel(): cancel() sets pollCtx.Err() to
+			// Canceled unconditionally, masking whether it was a genuine timeout.
+			pollTimedOut := pollCtx.Err() != nil
+			cancel()
 			if cctx.Err() != nil {
 				return nil, cctx.Err()
 			}
+			// Per-request timeout but parent still alive: retry. This handles
+			// stuck connections; the SDK uses gRPC-level retries instead.
 			if pollTimedOut {
 				continue
 			}
 			return nil, err
 		}
+		cancel()
 		if resp.GetOutcome() != nil {
 			return resp.GetOutcome(), nil
 		}
