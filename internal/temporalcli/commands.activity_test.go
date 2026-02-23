@@ -523,7 +523,7 @@ func (s *SharedServerSuite) TestResetActivity_BatchSuccess() {
 	failActivity.Store(false)
 }
 
-// No JSON test: complete command produces no output on success.
+// No JSON variant: command produces no output on success in any mode.
 func (s *SharedServerSuite) TestActivity_Complete_ByRunId() {
 	activityStarted := make(chan struct{})
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
@@ -555,7 +555,7 @@ func (s *SharedServerSuite) TestActivity_Complete_ByRunId() {
 	s.Equal("completed-externally", actual)
 }
 
-// No JSON test: fail command produces no output on success.
+// No JSON variant: command produces no output on success in any mode.
 func (s *SharedServerSuite) TestActivity_Fail_ByRunId() {
 	activityStarted := make(chan struct{})
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
