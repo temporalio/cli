@@ -362,6 +362,23 @@ func (c *TemporalActivityDescribeCommand) run(cctx *CommandContext, args []strin
 }
 
 func printActivityDescription(cctx *CommandContext, info *activitypb.ActivityExecutionInfo) error {
+	statusShorthand := func(s enumspb.ActivityExecutionStatus) string {
+		for name, val := range enumspb.ActivityExecutionStatus_shorthandValue {
+			if int32(s) == val {
+				return name
+			}
+		}
+		return s.String()
+	}
+	runStateShorthand := func(s enumspb.PendingActivityState) string {
+		for name, val := range enumspb.PendingActivityState_shorthandValue {
+			if int32(s) == val && name != "Unspecified" {
+				return name
+			}
+		}
+		return ""
+	}
+
 	d := struct {
 		ActivityId              string
 		RunId                   string
@@ -386,8 +403,8 @@ func printActivityDescription(cctx *CommandContext, info *activitypb.ActivityExe
 		ActivityId:              info.GetActivityId(),
 		RunId:                   info.GetRunId(),
 		Type:                    info.GetActivityType().GetName(),
-		Status:                  activityStatusShorthand(info.GetStatus()),
-		RunState:                pendingActivityStateShorthand(info.GetRunState()),
+		Status:                  statusShorthand(info.GetStatus()),
+		RunState:                runStateShorthand(info.GetRunState()),
 		TaskQueue:               info.GetTaskQueue(),
 		ScheduleToCloseTimeout:  info.GetScheduleToCloseTimeout().AsDuration(),
 		ScheduleToStartTimeout:  info.GetScheduleToStartTimeout().AsDuration(),
@@ -406,24 +423,6 @@ func printActivityDescription(cctx *CommandContext, info *activitypb.ActivityExe
 		d.LastFailure = cctx.MarshalFriendlyFailureBodyText(f, "    ")
 	}
 	return cctx.Printer.PrintStructured(d, printer.StructuredOptions{})
-}
-
-func activityStatusShorthand(s enumspb.ActivityExecutionStatus) string {
-	for name, val := range enumspb.ActivityExecutionStatus_shorthandValue {
-		if int32(s) == val {
-			return name
-		}
-	}
-	return s.String()
-}
-
-func pendingActivityStateShorthand(s enumspb.PendingActivityState) string {
-	for name, val := range enumspb.PendingActivityState_shorthandValue {
-		if int32(s) == val && name != "Unspecified" {
-			return name
-		}
-	}
-	return ""
 }
 
 func (c *TemporalActivityListCommand) run(cctx *CommandContext, args []string) error {
