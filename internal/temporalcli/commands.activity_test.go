@@ -839,10 +839,8 @@ func (s *SharedServerSuite) TestActivity_Result_NotFound() {
 		"--activity-id", "nonexistent-activity-id",
 		"--address", s.Address(),
 	)
-	// Should be a CLI error, not a "FAILED" result
 	s.Error(res.Err)
 	s.Contains(res.Err.Error(), "not found")
-	// Should NOT render as a result with Status=FAILED
 	s.NotContains(res.Stdout.String(), "FAILED")
 }
 
@@ -866,7 +864,7 @@ func (s *SharedServerSuite) TestActivity_Describe() {
 	runID := started["runId"].(string)
 	<-activityStarted
 
-	// Text: verify all timeout and identity fields
+	// Text
 	res := s.Execute(
 		"activity", "describe",
 		"--activity-id", "describe-test",
@@ -887,7 +885,7 @@ func (s *SharedServerSuite) TestActivity_Describe() {
 	s.Contains(out, "LastWorkerIdentity")
 	s.NotContains(out, `{"name":`)
 
-	// JSON: verify structured fields including retry policy
+	// JSON
 	res = s.Execute(
 		"activity", "describe",
 		"-o", "json",
@@ -912,7 +910,7 @@ func (s *SharedServerSuite) TestActivity_Describe() {
 	s.Equal(float64(3), retryPolicy["backoffCoefficient"])
 	s.Equal("120s", retryPolicy["maximumInterval"])
 
-	// Raw: should contain proto JSON format (e.g. {"name":"DevActivity"})
+	// Raw: should contain proto JSON format
 	res = s.Execute(
 		"activity", "describe",
 		"--raw",
@@ -926,8 +924,7 @@ func (s *SharedServerSuite) TestActivity_Describe() {
 	s.Contains(rawOut, `{"name":"DevActivity"}`)
 }
 
-// Text-only: verifies LastFailure is rendered as human-readable text (not raw JSON).
-// JSON/raw modes use the proto directly and are covered by TestActivity_Describe.
+// Text-only: verifies LastFailure is rendered as text not JSON.
 func (s *SharedServerSuite) TestActivity_Describe_FailedLastFailure() {
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
 		return nil, fmt.Errorf("describe-failure-msg")
@@ -1042,7 +1039,7 @@ func (s *SharedServerSuite) TestActivity_Count() {
 	s.True(ok)
 }
 
-// No JSON test: cancel command outputs a fixed message, not structured data.
+// No JSON variant: Println outputs the same text regardless of -o json (matches workflow cancel).
 func (s *SharedServerSuite) TestActivity_Cancel() {
 	activityStarted := make(chan struct{})
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
@@ -1075,7 +1072,7 @@ func (s *SharedServerSuite) TestActivity_Cancel() {
 	}, 5*time.Second, 100*time.Millisecond)
 }
 
-// No JSON test: terminate command outputs a fixed message, not structured data.
+// No JSON variant: Println outputs the same text regardless of -o json (matches workflow terminate).
 func (s *SharedServerSuite) TestActivity_Terminate() {
 	activityStarted := make(chan struct{})
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
