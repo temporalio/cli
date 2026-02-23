@@ -547,9 +547,8 @@ func (c *TemporalActivityTerminateCommand) run(cctx *CommandContext, args []stri
 	}
 	defer cl.Close()
 
-	// Neither SDK provides a default reason for cancel or terminate. The CLI
-	// adds a default for terminate (matching workflow terminate) but not cancel,
-	// since the workflow cancel API historically had no reason field.
+	// The CLI adds a default for terminate but not cancel.
+	// This matches the behavior for workflows.
 	reason := c.Reason
 	if reason == "" {
 		reason = defaultReason()
