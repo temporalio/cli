@@ -67,7 +67,7 @@ func (c *TemporalActivityExecuteCommand) run(cctx *CommandContext, args []string
 	}
 	if !cctx.JSONOutput {
 		if err := printActivityExecution(cctx, c.ActivityId, handle.GetRunID(), c.Type, c.Parent.Namespace, c.TaskQueue); err != nil {
-			return err
+			cctx.Logger.Error("Failed printing execution info", "error", err)
 		}
 	}
 	return getActivityResult(cctx, cl, c.Parent.Namespace, c.ActivityId, handle.GetRunID())
@@ -286,7 +286,7 @@ func printActivityResult(cctx *CommandContext, activityID, runID string, result 
 	}
 
 	cctx.Printer.Println(color.MagentaString("Results:"))
-	var valuePtr interface{}
+	var valuePtr any
 	if err := converter.GetDefaultDataConverter().FromPayloads(result, &valuePtr); err != nil {
 		return fmt.Errorf("failed decoding result: %w", err)
 	}
@@ -305,7 +305,7 @@ func printActivityResult(cctx *CommandContext, activityID, runID string, result 
 
 func marshalActivityPayloads(cctx *CommandContext, payloads *common.Payloads) (json.RawMessage, error) {
 	if cctx.JSONShorthandPayloads {
-		var valuePtr interface{}
+		var valuePtr any
 		if err := converter.GetDefaultDataConverter().FromPayloads(payloads, &valuePtr); err != nil {
 			return nil, err
 		}
