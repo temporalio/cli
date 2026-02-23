@@ -1135,11 +1135,6 @@ func (s *SharedServerSuite) TestActivity_SearchAttributes() {
 }
 
 func (s *SharedServerSuite) TestActivity_SearchAttributes_Datetime() {
-	// Querying by custom Datetime search attributes returns no results on the
-	// dev server, even though the attribute is set correctly at start time.
-	// See docs/cli-search-attribute-bug.md for investigation.
-	s.T().Skip("custom Datetime search attribute queries return no results on dev server")
-
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
 		return nil, nil
 	})
@@ -1159,7 +1154,7 @@ func (s *SharedServerSuite) TestActivity_SearchAttributes_Datetime() {
 		res = s.Execute(
 			"activity", "list",
 			"--address", s.Address(),
-			"--query", `SATestDatetime = "2024-01-15T00:00:00Z"`,
+			"--query", `SATestDatetime > "2024-01-14T00:00:00Z"`,
 		)
 		return res.Err == nil && strings.Contains(res.Stdout.String(), "sa-datetime-test")
 	}, 5*time.Second, 200*time.Millisecond)
