@@ -828,6 +828,8 @@ func (s *SharedServerSuite) TestStandaloneActivity_Result() {
 	var jsonOut map[string]any
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
 	s.Equal("COMPLETED", jsonOut["status"])
+	s.Equal("result-test", jsonOut["activityId"])
+	s.Equal("result-value", jsonOut["result"])
 }
 
 func (s *SharedServerSuite) TestStandaloneActivity_Result_NotFound() {
