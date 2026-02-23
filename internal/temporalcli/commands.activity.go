@@ -534,7 +534,7 @@ func (c *TemporalActivityCancelCommand) run(cctx *CommandContext, args []string)
 		RunID:      c.RunId,
 	})
 	if err := handle.Cancel(cctx, client.CancelActivityOptions{Reason: c.Reason}); err != nil {
-		return fmt.Errorf("failed to cancel activity: %w", err)
+		return fmt.Errorf("failed to request activity cancellation: %w", err)
 	}
 	cctx.Printer.Println("Cancellation requested")
 	return nil
