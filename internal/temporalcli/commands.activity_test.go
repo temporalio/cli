@@ -874,14 +874,17 @@ func (s *SharedServerSuite) TestStandaloneActivity_Describe() {
 
 	started := s.startStandaloneActivity("describe-test",
 		"--schedule-to-close-timeout", "300s",
+		"--schedule-to-start-timeout", "60s",
 		"--heartbeat-timeout", "15s",
 		"--retry-maximum-attempts", "5",
 		"--retry-initial-interval", "2s",
+		"--retry-backoff-coefficient", "3",
+		"--retry-maximum-interval", "120s",
 	)
 	runID := started["runId"].(string)
 	<-activityStarted
 
-	// Text: should have human-friendly formatting with timeouts
+	// Text: verify all timeout and identity fields
 	res := s.Execute(
 		"activity", "describe",
 		"--activity-id", "describe-test",
@@ -896,7 +899,10 @@ func (s *SharedServerSuite) TestStandaloneActivity_Describe() {
 	s.ContainsOnSameLine(out, "TaskQueue", s.Worker().Options.TaskQueue)
 	s.ContainsOnSameLine(out, "StartToCloseTimeout", "30s")
 	s.ContainsOnSameLine(out, "ScheduleToCloseTimeout", "5m0s")
+	s.ContainsOnSameLine(out, "ScheduleToStartTimeout", "1m0s")
 	s.ContainsOnSameLine(out, "HeartbeatTimeout", "15s")
+	s.ContainsOnSameLine(out, "Attempt", "1")
+	s.Contains(out, "LastWorkerIdentity")
 	s.NotContains(out, `{"name":`)
 
 	// JSON: verify structured fields including retry policy
@@ -913,10 +919,16 @@ func (s *SharedServerSuite) TestStandaloneActivity_Describe() {
 	s.Equal("describe-test", jsonOut["activityId"])
 	s.NotNil(jsonOut["activityType"])
 	s.NotNil(jsonOut["taskQueue"])
+	s.Equal("300s", jsonOut["scheduleToCloseTimeout"])
+	s.Equal("60s", jsonOut["scheduleToStartTimeout"])
+	s.Equal("30s", jsonOut["startToCloseTimeout"])
+	s.Equal("15s", jsonOut["heartbeatTimeout"])
 	retryPolicy, ok := jsonOut["retryPolicy"].(map[string]any)
 	s.True(ok, "retryPolicy should be present in JSON describe")
 	s.Equal(float64(5), retryPolicy["maximumAttempts"])
 	s.Equal("2s", retryPolicy["initialInterval"])
+	s.Equal(float64(3), retryPolicy["backoffCoefficient"])
+	s.Equal("120s", retryPolicy["maximumInterval"])
 
 	// Raw: should contain proto JSON format (e.g. {"name":"DevActivity"})
 	res = s.Execute(
@@ -966,15 +978,31 @@ func (s *SharedServerSuite) TestStandaloneActivity_List() {
 
 	s.startStandaloneActivity("list-test-1")
 	s.startStandaloneActivity("list-test-2")
+	s.startStandaloneActivity("list-test-3")
 
+	// Wait for all three to be visible
 	s.Eventually(func() bool {
 		res := s.Execute(
 			"activity", "list",
 			"--address", s.Address(),
 		)
 		out := res.Stdout.String()
-		return res.Err == nil && strings.Contains(out, "list-test-1") && strings.Contains(out, "list-test-2")
+		return res.Err == nil &&
+			strings.Contains(out, "list-test-1") &&
+			strings.Contains(out, "list-test-2") &&
+			strings.Contains(out, "list-test-3")
 	}, 5*time.Second, 200*time.Millisecond)
+
+	// --limit should cap the number of results
+	res := s.Execute(
+		"activity", "list",
+		"--limit", "2",
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	lines := strings.Split(strings.TrimSpace(res.Stdout.String()), "\n")
+	// Header line + 2 data lines = 3 lines total
+	s.Equal(3, len(lines), "expected header + 2 rows with --limit 2, got: %s", res.Stdout.String())
 }
 
 func (s *SharedServerSuite) TestStandaloneActivity_Count() {
