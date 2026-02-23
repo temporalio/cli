@@ -228,10 +228,7 @@ const pollActivityTimeout = 60 * time.Second
 
 // pollActivityOutcome polls for an activity result using a hand-rolled loop
 // rather than handle.Get() because handle.Get() deserializes the result into a
-// Go value and converts failures to Go errors, losing the raw proto payloads
-// and structured failure information needed for --no-json-shorthand-payloads
-// and faithful failure rendering. The workflow update result command uses
-// handle.Get() and consequently cannot support --no-json-shorthand-payloads.
+// Go value and converts failures to Go errors, losing the raw proto payloads.
 //
 // The per-request timeout matches the SDK's PollActivityResult implementation.
 // Unlike the SDK, we retry at the application level on per-request timeout
@@ -245,15 +242,13 @@ func pollActivityOutcome(cctx *CommandContext, cl client.Client, namespace, acti
 			RunId:      runID,
 		})
 		if err != nil {
-			// Check pollCtx before cancel(): cancel() sets pollCtx.Err() to
-			// Canceled unconditionally, masking whether it was a genuine timeout.
+			// check pollCtx.Err() first beause it is set by cancel()
 			pollTimedOut := pollCtx.Err() != nil
 			cancel()
 			if cctx.Err() != nil {
 				return nil, cctx.Err()
 			}
-			// Per-request timeout but parent still alive: retry. This handles
-			// stuck connections; the SDK uses gRPC-level retries instead.
+			// Per-request timeout but parent still alive: retry.
 			if pollTimedOut {
 				continue
 			}
