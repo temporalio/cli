@@ -872,11 +872,16 @@ func (s *SharedServerSuite) TestStandaloneActivity_Describe() {
 		return nil, ctx.Err()
 	})
 
-	started := s.startStandaloneActivity("describe-test")
+	started := s.startStandaloneActivity("describe-test",
+		"--schedule-to-close-timeout", "300s",
+		"--heartbeat-timeout", "15s",
+		"--retry-maximum-attempts", "5",
+		"--retry-initial-interval", "2s",
+	)
 	runID := started["runId"].(string)
 	<-activityStarted
 
-	// Text: should have human-friendly formatting
+	// Text: should have human-friendly formatting with timeouts
 	res := s.Execute(
 		"activity", "describe",
 		"--activity-id", "describe-test",
@@ -889,10 +894,12 @@ func (s *SharedServerSuite) TestStandaloneActivity_Describe() {
 	s.ContainsOnSameLine(out, "Type", "DevActivity")
 	s.ContainsOnSameLine(out, "Status", "Running")
 	s.ContainsOnSameLine(out, "TaskQueue", s.Worker().Options.TaskQueue)
-	// Text output should NOT contain raw proto JSON like {"name":"DevActivity"}
+	s.ContainsOnSameLine(out, "StartToCloseTimeout", "30s")
+	s.ContainsOnSameLine(out, "ScheduleToCloseTimeout", "5m0s")
+	s.ContainsOnSameLine(out, "HeartbeatTimeout", "15s")
 	s.NotContains(out, `{"name":`)
 
-	// JSON
+	// JSON: verify structured fields including retry policy
 	res = s.Execute(
 		"activity", "describe",
 		"-o", "json",
@@ -906,6 +913,10 @@ func (s *SharedServerSuite) TestStandaloneActivity_Describe() {
 	s.Equal("describe-test", jsonOut["activityId"])
 	s.NotNil(jsonOut["activityType"])
 	s.NotNil(jsonOut["taskQueue"])
+	retryPolicy, ok := jsonOut["retryPolicy"].(map[string]any)
+	s.True(ok, "retryPolicy should be present in JSON describe")
+	s.Equal(float64(5), retryPolicy["maximumAttempts"])
+	s.Equal("2s", retryPolicy["initialInterval"])
 
 	// Raw: should contain proto JSON format (e.g. {"name":"DevActivity"})
 	res = s.Execute(
