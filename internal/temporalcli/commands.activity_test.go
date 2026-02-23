@@ -9,6 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/google/uuid"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/history/v1"
 	"go.temporal.io/api/serviceerror"
@@ -1089,10 +1090,40 @@ func (s *SharedServerSuite) TestStandaloneActivity_Terminate() {
 	s.Contains(err.Error(), "terminated")
 }
 
-func (s *SharedServerSuite) TestStandaloneActivity_Start_SearchAttributeDatetime() {
-	// Skipped: Datetime custom search attribute queries are broken on the
-	// SQLite dev server due to a format mismatch between the STRFTIME generated
-	// column (.000 fractional seconds) and the Go query converter (no fractional
+func (s *SharedServerSuite) TestStandaloneActivity_SearchAttributes() {
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		return nil, nil
+	})
+
+	// Keyword: uses pre-registered CustomKeywordField
+	uniqueKW := "sa-kw-" + uuid.NewString()[:8]
+	s.startStandaloneActivity("sa-keyword-test",
+		"--search-attribute", fmt.Sprintf(`CustomKeywordField="%s"`, uniqueKW),
+	)
+	s.Eventually(func() bool {
+		res := s.Execute(
+			"activity", "list",
+			"--address", s.Address(),
+			"--query", fmt.Sprintf(`CustomKeywordField = "%s"`, uniqueKW),
+		)
+		return res.Err == nil && strings.Contains(res.Stdout.String(), "sa-keyword-test")
+	}, 5*time.Second, 200*time.Millisecond)
+
+	// Verify search attribute field appears in describe JSON
+	res := s.Execute(
+		"activity", "describe",
+		"-o", "json",
+		"--activity-id", "sa-keyword-test",
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "CustomKeywordField")
+}
+
+func (s *SharedServerSuite) TestStandaloneActivity_SearchAttributes_Datetime() {
+	// Datetime custom search attribute queries are broken on the SQLite dev
+	// server due to a format mismatch between the STRFTIME generated column
+	// (.000 fractional seconds) and the Go query converter (no fractional
 	// part for whole seconds). See docs/cli-search-attribute-bug.md.
 	s.T().Skip("Datetime custom search attribute queries broken on SQLite (server bug)")
 
@@ -1108,18 +1139,9 @@ func (s *SharedServerSuite) TestStandaloneActivity_Start_SearchAttributeDatetime
 	)
 	s.NoError(res.Err)
 
-	res = s.Execute(
-		"activity", "start",
-		"-o", "json",
-		"--activity-id", "sa-datetime-test",
-		"--type", "DevActivity",
-		"--task-queue", s.Worker().Options.TaskQueue,
-		"--start-to-close-timeout", "30s",
+	s.startStandaloneActivity("sa-datetime-test",
 		"--search-attribute", `SATestDatetime="2024-01-15T00:00:00Z"`,
-		"--address", s.Address(),
 	)
-	s.NoError(res.Err)
-
 	s.Eventually(func() bool {
 		res = s.Execute(
 			"activity", "list",
@@ -1128,4 +1150,48 @@ func (s *SharedServerSuite) TestStandaloneActivity_Start_SearchAttributeDatetime
 		)
 		return res.Err == nil && strings.Contains(res.Stdout.String(), "sa-datetime-test")
 	}, 5*time.Second, 200*time.Millisecond)
+}
+
+func (s *SharedServerSuite) TestStandaloneActivity_List_Pagination() {
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		return "paginated", nil
+	})
+
+	uniqueKW := "page-" + uuid.NewString()[:8]
+	for i := 0; i < 5; i++ {
+		s.startStandaloneActivity(fmt.Sprintf("page-test-%d", i),
+			"--search-attribute", fmt.Sprintf(`CustomKeywordField="%s"`, uniqueKW),
+		)
+	}
+
+	// Wait for all 5 to be visible
+	s.Eventually(func() bool {
+		res := s.Execute(
+			"activity", "list",
+			"--address", s.Address(),
+			"--query", fmt.Sprintf(`CustomKeywordField = "%s"`, uniqueKW),
+		)
+		return res.Err == nil && strings.Count(res.Stdout.String(), "page-test-") >= 5
+	}, 5*time.Second, 200*time.Millisecond)
+
+	// Small page size forces multi-page fetching; verify all 5 appear
+	res := s.Execute(
+		"activity", "list",
+		"--page-size", "2",
+		"--address", s.Address(),
+		"--query", fmt.Sprintf(`CustomKeywordField = "%s"`, uniqueKW),
+	)
+	s.NoError(res.Err)
+	s.Equal(5, strings.Count(res.Stdout.String(), "page-test-"))
+
+	// --limit 3 with page-size 2 should return exactly 3
+	res = s.Execute(
+		"activity", "list",
+		"--page-size", "2",
+		"--limit", "3",
+		"--address", s.Address(),
+		"--query", fmt.Sprintf(`CustomKeywordField = "%s"`, uniqueKW),
+	)
+	s.NoError(res.Err)
+	s.Equal(3, strings.Count(res.Stdout.String(), "page-test-"))
 }

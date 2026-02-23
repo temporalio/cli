@@ -496,29 +496,16 @@ func (c *TemporalActivityCountCommand) run(cctx *CommandContext, args []string) 
 	if err != nil {
 		return fmt.Errorf("failed counting activities: %w", err)
 	}
+	groups := make([]countGroup, len(resp.Groups))
+	for i, g := range resp.Groups {
+		groups[i] = g
+	}
 	if cctx.JSONOutput {
-		for _, group := range resp.Groups {
-			for _, payload := range group.GroupValues {
-				delete(payload.GetMetadata(), "type")
-			}
-		}
+		stripCountGroupMetadataType(groups)
 		return cctx.Printer.PrintStructured(resp, printer.StructuredOptions{})
 	}
 	cctx.Printer.Printlnf("Total: %v", resp.Count)
-	for _, group := range resp.Groups {
-		var valueStr string
-		for _, payload := range group.GroupValues {
-			var value any
-			if err := converter.GetDefaultDataConverter().FromPayload(payload, &value); err != nil {
-				value = fmt.Sprintf("<failed converting: %v>", err)
-			}
-			if valueStr != "" {
-				valueStr += ", "
-			}
-			valueStr += fmt.Sprintf("%v", value)
-		}
-		cctx.Printer.Printlnf("Group total: %v, values: %v", group.Count, valueStr)
-	}
+	printCountGroupsText(cctx, groups)
 	return nil
 }
 
