@@ -980,8 +980,18 @@ func (s *SharedServerSuite) TestStandaloneActivity_List() {
 	)
 	s.NoError(res.Err)
 	lines := strings.Split(strings.TrimSpace(res.Stdout.String()), "\n")
-	// Header line + 2 data lines = 3 lines total
 	s.Equal(3, len(lines), "expected header + 2 rows with --limit 2, got: %s", res.Stdout.String())
+
+	// JSON
+	res = s.Execute(
+		"activity", "list",
+		"-o", "json",
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	out := res.Stdout.String()
+	s.ContainsOnSameLine(out, "activityId", "list-test-1")
+	s.ContainsOnSameLine(out, "status", "ACTIVITY_EXECUTION_STATUS_COMPLETED")
 }
 
 func (s *SharedServerSuite) TestStandaloneActivity_Count() {
