@@ -1135,8 +1135,10 @@ func (s *SharedServerSuite) TestActivity_SearchAttributes() {
 }
 
 func (s *SharedServerSuite) TestActivity_SearchAttributes_Datetime() {
-	// Datetime custom search attribute queries do not work currently.
-	s.T().Skip("Datetime custom search attribute queries do not work currently")
+	// Querying by custom Datetime search attributes returns no results on the
+	// dev server, even though the attribute is set correctly at start time.
+	// See docs/cli-search-attribute-bug.md for investigation.
+	s.T().Skip("custom Datetime search attribute queries return no results on dev server")
 
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
 		return nil, nil
