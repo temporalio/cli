@@ -694,12 +694,12 @@ func (s *SharedServerSuite) TestActivity_Execute_Success() {
 	s.Equal(map[string]any{"foo": "bar"}, jsonOut["result"])
 }
 
-// Text-only: JSON failure is covered by TestActivity_Execute_Failure_JSON.
 func (s *SharedServerSuite) TestActivity_Execute_Failure() {
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
 		return nil, fmt.Errorf("intentional failure")
 	})
 
+	// Text
 	res := s.Execute(
 		"activity", "execute",
 		"--activity-id", "exec-fail-test",
@@ -715,14 +715,9 @@ func (s *SharedServerSuite) TestActivity_Execute_Failure() {
 	s.Contains(out, "Results:")
 	s.Contains(out, "FAILED")
 	s.Contains(out, "intentional failure")
-}
 
-func (s *SharedServerSuite) TestActivity_Execute_Failure_JSON() {
-	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
-		return nil, fmt.Errorf("intentional failure")
-	})
-
-	res := s.Execute(
+	// JSON
+	res = s.Execute(
 		"activity", "execute",
 		"-o", "json",
 		"--activity-id", "exec-fail-json-test",
@@ -787,7 +782,6 @@ func (s *SharedServerSuite) TestActivity_Execute_NoJsonShorthandPayloads() {
 	s.NotNil(payload["data"])
 }
 
-// Behavioral test: no JSON variant needed, poll retry is output-format independent.
 func (s *SharedServerSuite) TestActivity_Execute_RetriesOnEmptyPollResponse() {
 	// Activity sleeps longer than the server's activity.longPollTimeout (2s),
 	// forcing at least one empty poll response before the result arrives.
