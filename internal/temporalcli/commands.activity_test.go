@@ -523,7 +523,7 @@ func (s *SharedServerSuite) TestResetActivity_BatchSuccess() {
 	failActivity.Store(false)
 }
 
-func (s *SharedServerSuite) TestStandaloneActivity_Complete() {
+func (s *SharedServerSuite) TestActivity_Complete_ByRunId() {
 	activityStarted := make(chan struct{})
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
 		close(activityStarted)
@@ -531,7 +531,7 @@ func (s *SharedServerSuite) TestStandaloneActivity_Complete() {
 		return nil, ctx.Err()
 	})
 
-	started := s.startStandaloneActivity("sa-complete-test")
+	started := s.startActivity("sa-complete-test")
 	runID := started["runId"].(string)
 	<-activityStarted
 
@@ -554,7 +554,7 @@ func (s *SharedServerSuite) TestStandaloneActivity_Complete() {
 	s.Equal("completed-externally", actual)
 }
 
-func (s *SharedServerSuite) TestStandaloneActivity_Fail() {
+func (s *SharedServerSuite) TestActivity_Fail_ByRunId() {
 	activityStarted := make(chan struct{})
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
 		close(activityStarted)
@@ -562,7 +562,7 @@ func (s *SharedServerSuite) TestStandaloneActivity_Fail() {
 		return nil, ctx.Err()
 	})
 
-	started := s.startStandaloneActivity("sa-fail-test")
+	started := s.startActivity("sa-fail-test")
 	runID := started["runId"].(string)
 	<-activityStarted
 
@@ -585,9 +585,9 @@ func (s *SharedServerSuite) TestStandaloneActivity_Fail() {
 	s.Contains(err.Error(), "external-failure")
 }
 
-// startStandaloneActivity starts a standalone activity via the CLI and returns
+// startActivity starts an activity via the CLI and returns
 // the parsed JSON response containing activityId and runId.
-func (s *SharedServerSuite) startStandaloneActivity(activityID string, extraArgs ...string) map[string]any {
+func (s *SharedServerSuite) startActivity(activityID string, extraArgs ...string) map[string]any {
 	args := []string{
 		"activity", "start",
 		"-o", "json",
@@ -605,7 +605,7 @@ func (s *SharedServerSuite) startStandaloneActivity(activityID string, extraArgs
 	return jsonOut
 }
 
-func (s *SharedServerSuite) TestStandaloneActivity_Start() {
+func (s *SharedServerSuite) TestActivity_Start() {
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
 		return "start-result", nil
 	})
@@ -647,7 +647,7 @@ func (s *SharedServerSuite) TestStandaloneActivity_Start() {
 	s.NotEmpty(jsonOut["taskQueue"])
 }
 
-func (s *SharedServerSuite) TestStandaloneActivity_Execute_Success() {
+func (s *SharedServerSuite) TestActivity_Execute_Success() {
 	var receivedInput any
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
 		receivedInput = a
@@ -691,7 +691,7 @@ func (s *SharedServerSuite) TestStandaloneActivity_Execute_Success() {
 	s.Equal(map[string]any{"foo": "bar"}, jsonOut["result"])
 }
 
-func (s *SharedServerSuite) TestStandaloneActivity_Execute_Failure() {
+func (s *SharedServerSuite) TestActivity_Execute_Failure() {
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
 		return nil, fmt.Errorf("intentional failure")
 	})
@@ -713,7 +713,7 @@ func (s *SharedServerSuite) TestStandaloneActivity_Execute_Failure() {
 	s.Contains(out, "intentional failure")
 }
 
-func (s *SharedServerSuite) TestStandaloneActivity_Execute_Failure_JSON() {
+func (s *SharedServerSuite) TestActivity_Execute_Failure_JSON() {
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
 		return nil, fmt.Errorf("intentional failure")
 	})
@@ -738,7 +738,7 @@ func (s *SharedServerSuite) TestStandaloneActivity_Execute_Failure_JSON() {
 	s.NotNil(failureObj["applicationFailureInfo"])
 }
 
-func (s *SharedServerSuite) TestStandaloneActivity_Execute_NoJsonShorthandPayloads() {
+func (s *SharedServerSuite) TestActivity_Execute_NoJsonShorthandPayloads() {
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
 		return map[string]string{"key": "val"}, nil
 	})
@@ -781,7 +781,7 @@ func (s *SharedServerSuite) TestStandaloneActivity_Execute_NoJsonShorthandPayloa
 	s.NotNil(payload["data"])
 }
 
-func (s *SharedServerSuite) TestStandaloneActivity_Execute_RetriesOnEmptyPollResponse() {
+func (s *SharedServerSuite) TestActivity_Execute_RetriesOnEmptyPollResponse() {
 	// Activity sleeps longer than the server's activity.longPollTimeout (2s),
 	// forcing at least one empty poll response before the result arrives.
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
@@ -801,12 +801,12 @@ func (s *SharedServerSuite) TestStandaloneActivity_Execute_RetriesOnEmptyPollRes
 	s.Contains(res.Stdout.String(), "standalone-result")
 }
 
-func (s *SharedServerSuite) TestStandaloneActivity_Result() {
+func (s *SharedServerSuite) TestActivity_Result() {
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
 		return "result-value", nil
 	})
 
-	started := s.startStandaloneActivity("result-test")
+	started := s.startActivity("result-test")
 
 	res := s.Execute(
 		"activity", "result",
@@ -832,7 +832,7 @@ func (s *SharedServerSuite) TestStandaloneActivity_Result() {
 	s.Equal("result-value", jsonOut["result"])
 }
 
-func (s *SharedServerSuite) TestStandaloneActivity_Result_NotFound() {
+func (s *SharedServerSuite) TestActivity_Result_NotFound() {
 	res := s.Execute(
 		"activity", "result",
 		"--activity-id", "nonexistent-activity-id",
@@ -845,7 +845,7 @@ func (s *SharedServerSuite) TestStandaloneActivity_Result_NotFound() {
 	s.NotContains(res.Stdout.String(), "FAILED")
 }
 
-func (s *SharedServerSuite) TestStandaloneActivity_Describe() {
+func (s *SharedServerSuite) TestActivity_Describe() {
 	activityStarted := make(chan struct{})
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
 		close(activityStarted)
@@ -853,7 +853,7 @@ func (s *SharedServerSuite) TestStandaloneActivity_Describe() {
 		return nil, ctx.Err()
 	})
 
-	started := s.startStandaloneActivity("describe-test",
+	started := s.startActivity("describe-test",
 		"--schedule-to-close-timeout", "300s",
 		"--schedule-to-start-timeout", "60s",
 		"--heartbeat-timeout", "15s",
@@ -925,12 +925,12 @@ func (s *SharedServerSuite) TestStandaloneActivity_Describe() {
 	s.Contains(rawOut, `{"name":"DevActivity"}`)
 }
 
-func (s *SharedServerSuite) TestStandaloneActivity_Describe_FailedLastFailure() {
+func (s *SharedServerSuite) TestActivity_Describe_FailedLastFailure() {
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
 		return nil, fmt.Errorf("describe-failure-msg")
 	})
 
-	started := s.startStandaloneActivity("describe-fail-test", "--retry-maximum-attempts", "1")
+	started := s.startActivity("describe-fail-test", "--retry-maximum-attempts", "1")
 
 	// Wait for the activity to fail
 	handle := s.Client.GetActivityHandle(client.GetActivityHandleOptions{
@@ -952,14 +952,14 @@ func (s *SharedServerSuite) TestStandaloneActivity_Describe_FailedLastFailure() 
 	s.NotContains(out, `"message":"describe-failure-msg"`)
 }
 
-func (s *SharedServerSuite) TestStandaloneActivity_List() {
+func (s *SharedServerSuite) TestActivity_List() {
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
 		return "listed", nil
 	})
 
-	s.startStandaloneActivity("list-test-1")
-	s.startStandaloneActivity("list-test-2")
-	s.startStandaloneActivity("list-test-3")
+	s.startActivity("list-test-1")
+	s.startActivity("list-test-2")
+	s.startActivity("list-test-3")
 
 	// Wait for all three to be visible
 	s.Eventually(func() bool {
@@ -996,12 +996,12 @@ func (s *SharedServerSuite) TestStandaloneActivity_List() {
 	s.ContainsOnSameLine(out, "status", "ACTIVITY_EXECUTION_STATUS_COMPLETED")
 }
 
-func (s *SharedServerSuite) TestStandaloneActivity_Count() {
+func (s *SharedServerSuite) TestActivity_Count() {
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
 		return "counted", nil
 	})
 
-	s.startStandaloneActivity("count-test")
+	s.startActivity("count-test")
 
 	// Text
 	s.Eventually(func() bool {
@@ -1039,7 +1039,7 @@ func (s *SharedServerSuite) TestStandaloneActivity_Count() {
 	s.True(ok)
 }
 
-func (s *SharedServerSuite) TestStandaloneActivity_Cancel() {
+func (s *SharedServerSuite) TestActivity_Cancel() {
 	activityStarted := make(chan struct{})
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
 		close(activityStarted)
@@ -1047,7 +1047,7 @@ func (s *SharedServerSuite) TestStandaloneActivity_Cancel() {
 		return nil, ctx.Err()
 	})
 
-	started := s.startStandaloneActivity("cancel-test")
+	started := s.startActivity("cancel-test")
 	runID := started["runId"].(string)
 	<-activityStarted
 
@@ -1071,7 +1071,7 @@ func (s *SharedServerSuite) TestStandaloneActivity_Cancel() {
 	}, 5*time.Second, 100*time.Millisecond)
 }
 
-func (s *SharedServerSuite) TestStandaloneActivity_Terminate() {
+func (s *SharedServerSuite) TestActivity_Terminate() {
 	activityStarted := make(chan struct{})
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
 		close(activityStarted)
@@ -1079,7 +1079,7 @@ func (s *SharedServerSuite) TestStandaloneActivity_Terminate() {
 		return nil, ctx.Err()
 	})
 
-	started := s.startStandaloneActivity("terminate-test")
+	started := s.startActivity("terminate-test")
 	runID := started["runId"].(string)
 	<-activityStarted
 
@@ -1102,14 +1102,14 @@ func (s *SharedServerSuite) TestStandaloneActivity_Terminate() {
 	s.Contains(err.Error(), "terminated")
 }
 
-func (s *SharedServerSuite) TestStandaloneActivity_SearchAttributes() {
+func (s *SharedServerSuite) TestActivity_SearchAttributes() {
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
 		return nil, nil
 	})
 
 	// Keyword: uses pre-registered CustomKeywordField
 	uniqueKW := "sa-kw-" + uuid.NewString()[:8]
-	s.startStandaloneActivity("sa-keyword-test",
+	s.startActivity("sa-keyword-test",
 		"--search-attribute", fmt.Sprintf(`CustomKeywordField="%s"`, uniqueKW),
 	)
 	s.Eventually(func() bool {
@@ -1132,7 +1132,7 @@ func (s *SharedServerSuite) TestStandaloneActivity_SearchAttributes() {
 	s.Contains(res.Stdout.String(), "CustomKeywordField")
 }
 
-func (s *SharedServerSuite) TestStandaloneActivity_SearchAttributes_Datetime() {
+func (s *SharedServerSuite) TestActivity_SearchAttributes_Datetime() {
 	// Datetime custom search attribute queries are broken on the SQLite dev
 	// server due to a format mismatch between the STRFTIME generated column
 	// (.000 fractional seconds) and the Go query converter (no fractional
@@ -1151,7 +1151,7 @@ func (s *SharedServerSuite) TestStandaloneActivity_SearchAttributes_Datetime() {
 	)
 	s.NoError(res.Err)
 
-	s.startStandaloneActivity("sa-datetime-test",
+	s.startActivity("sa-datetime-test",
 		"--search-attribute", `SATestDatetime="2024-01-15T00:00:00Z"`,
 	)
 	s.Eventually(func() bool {
@@ -1164,14 +1164,14 @@ func (s *SharedServerSuite) TestStandaloneActivity_SearchAttributes_Datetime() {
 	}, 5*time.Second, 200*time.Millisecond)
 }
 
-func (s *SharedServerSuite) TestStandaloneActivity_List_Pagination() {
+func (s *SharedServerSuite) TestActivity_List_Pagination() {
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
 		return "paginated", nil
 	})
 
 	uniqueKW := "page-" + uuid.NewString()[:8]
 	for i := 0; i < 5; i++ {
-		s.startStandaloneActivity(fmt.Sprintf("page-test-%d", i),
+		s.startActivity(fmt.Sprintf("page-test-%d", i),
 			"--search-attribute", fmt.Sprintf(`CustomKeywordField="%s"`, uniqueKW),
 		)
 	}
