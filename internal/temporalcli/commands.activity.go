@@ -1,6 +1,7 @@
 package temporalcli
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -222,14 +223,36 @@ func getActivityResult(cctx *CommandContext, cl client.Client, namespace, activi
 	}
 }
 
+// Matches the SDK's pollActivityTimeout in internal_activity_client.go.
+const pollActivityTimeout = 60 * time.Second
+
+// pollActivityOutcome polls for an activity result using a hand-rolled loop
+// rather than handle.Get() because handle.Get() deserializes the result into a
+// Go value and converts failures to Go errors, losing the raw proto payloads
+// and structured failure information needed for --no-json-shorthand-payloads
+// and faithful failure rendering. The workflow update result command uses
+// handle.Get() and consequently cannot support --no-json-shorthand-payloads.
+//
+// The per-request timeout matches the SDK's PollActivityResult implementation.
+// Unlike the SDK, we retry at the application level on per-request timeout
+// since we don't have the SDK's gRPC-level retry interceptor.
 func pollActivityOutcome(cctx *CommandContext, cl client.Client, namespace, activityID, runID string) (*activitypb.ActivityExecutionOutcome, error) {
 	for {
-		resp, err := cl.WorkflowService().PollActivityExecution(cctx, &workflowservice.PollActivityExecutionRequest{
+		pollCtx, cancel := context.WithTimeout(cctx, pollActivityTimeout)
+		resp, err := cl.WorkflowService().PollActivityExecution(pollCtx, &workflowservice.PollActivityExecutionRequest{
 			Namespace:  namespace,
 			ActivityId: activityID,
 			RunId:      runID,
 		})
+		pollTimedOut := pollCtx.Err() != nil
+		cancel()
 		if err != nil {
+			if cctx.Err() != nil {
+				return nil, cctx.Err()
+			}
+			if pollTimedOut {
+				continue
+			}
 			return nil, err
 		}
 		if resp.GetOutcome() != nil {
