@@ -800,6 +800,28 @@ func (s *SharedServerSuite) TestStandaloneActivity_Execute_RetriesOnEmptyPollRes
 	s.Contains(res.Stdout.String(), "standalone-result")
 }
 
+// Verifies that activity result polling survives beyond the gRPC default
+// RPC timeout (10s). Analogous to the SDK test "Polling does not cease
+// prematurely". The server's activity.longPollTimeout is 2s, so the server
+// returns empty poll responses every 2s; the CLI must keep retrying.
+func (s *SharedServerSuite) TestStandaloneActivity_Execute_PollSurvivesBeyondGRPCTimeout() {
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		time.Sleep(12 * time.Second)
+		return "slow-result", nil
+	})
+
+	res := s.Execute(
+		"activity", "execute",
+		"--activity-id", "slow-poll-test",
+		"--type", "DevActivity",
+		"--task-queue", s.Worker().Options.TaskQueue,
+		"--start-to-close-timeout", "30s",
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "slow-result")
+}
+
 func (s *SharedServerSuite) TestStandaloneActivity_Result() {
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
 		return "result-value", nil
