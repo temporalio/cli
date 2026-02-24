@@ -2,6 +2,7 @@ package temporalcli_test
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	"gopkg.in/yaml.v3"
@@ -103,4 +104,54 @@ func TestEnv_InputValidation(t *testing.T) {
 
 	res = h.Execute("env", "set", "myenv1.foo")
 	h.ErrorContains(res.Err, `no value provided`)
+}
+
+func TestEnv_DeprecationWarningBypassesLogger(t *testing.T) {
+	h := NewCommandHarness(t)
+	defer h.Close()
+
+	tmpFile, err := os.CreateTemp("", "")
+	h.NoError(err)
+	h.Options.DeprecatedEnvConfig.EnvConfigFile = tmpFile.Name()
+	defer os.Remove(h.Options.DeprecatedEnvConfig.EnvConfigFile)
+	res := h.Execute("env", "set", "--env", "myenv1", "-k", "foo", "-v", "bar")
+	h.NoError(res.Err)
+
+	// Using deprecated argument syntax should produce a warning on stderr.
+	// The warning must bypass the logger so it appears regardless of log level.
+	for _, logLevel := range []string{"never", "error", "info"} {
+		t.Run("log-level="+logLevel, func(t *testing.T) {
+			res = h.Execute("env", "get", "--log-level", logLevel, "myenv1")
+			h.NoError(res.Err)
+
+			stderr := res.Stderr.String()
+			h.Contains(stderr, "Warning:")
+			h.Contains(stderr, "deprecated")
+
+			// Must be a plain-text warning, not a structured log message
+			h.False(strings.Contains(stderr, "time="), "warning should not be a structured log message")
+			h.False(strings.Contains(stderr, "level="), "warning should not be a structured log message")
+		})
+	}
+}
+
+func TestEnv_DefaultLogLevelProducesNoLogOutput(t *testing.T) {
+	h := NewCommandHarness(t)
+	defer h.Close()
+
+	tmpFile, err := os.CreateTemp("", "")
+	h.NoError(err)
+	h.Options.DeprecatedEnvConfig.EnvConfigFile = tmpFile.Name()
+	defer os.Remove(h.Options.DeprecatedEnvConfig.EnvConfigFile)
+
+	// env set logs "Setting env property" via cctx.Logger.Info(). With the
+	// default log level ("never"), this should not appear on stderr.
+	res := h.Execute("env", "set", "--env", "myenv1", "-k", "foo", "-v", "bar")
+	h.NoError(res.Err)
+	h.Empty(res.Stderr.String(), "default log level should produce no log output")
+
+	// With --log-level info, the logger output should appear.
+	res = h.Execute("env", "set", "--env", "myenv1", "-k", "baz", "-v", "qux", "--log-level", "info")
+	h.NoError(res.Err)
+	h.Contains(res.Stderr.String(), "Setting env property")
 }
