@@ -39,7 +39,7 @@ func (v *CommonOptions) BuildFlags(f *pflag.FlagSet) {
 	f.BoolVar(&v.DisableConfigFile, "disable-config-file", false, "If set, disables loading environment config from config file. EXPERIMENTAL.")
 	f.BoolVar(&v.DisableConfigEnv, "disable-config-env", false, "If set, disables loading environment config from environment variables. EXPERIMENTAL.")
 	v.LogLevel = NewFlagStringEnum([]string{"debug", "info", "warn", "error", "never"}, "info")
-	f.Var(&v.LogLevel, "log-level", "Log level. Default is \"info\" for most commands and \"warn\" for `server start-dev`. Accepted values: debug, info, warn, error, never.")
+	f.Var(&v.LogLevel, "log-level", "Log level. Default is \"info\" for most commands and \"warn\" for \"server start-dev\". Accepted values: debug, info, warn, error, never.")
 	v.LogFormat = NewFlagStringEnum([]string{"text", "json", "pretty"}, "text")
 	f.Var(&v.LogFormat, "log-format", "Log format. Accepted values: text, json.")
 	v.Output = NewFlagStringEnum([]string{"text", "json", "jsonl", "none"}, "text")
