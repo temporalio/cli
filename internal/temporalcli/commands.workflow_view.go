@@ -560,7 +560,7 @@ func (c *TemporalWorkflowResultCommand) run(cctx *CommandContext, _ []string) er
 	// Log print failure and return workflow failure if workflow failed
 	if closeEvent.EventType != enums.EVENT_TYPE_WORKFLOW_EXECUTION_COMPLETED {
 		if err != nil {
-			cctx.Logger.Error("Workflow failed, and printing the output also failed", "error", err)
+			fmt.Fprintf(cctx.Options.Stderr, "Warning: printing workflow output failed: %v\n", err)
 		}
 		err = fmt.Errorf("workflow failed")
 	}
