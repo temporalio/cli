@@ -39,6 +39,7 @@ import (
 	uiconfig "github.com/temporalio/ui-server/v2/server/config"
 	uiserveroptions "github.com/temporalio/ui-server/v2/server/server_options"
 	"go.temporal.io/api/enums/v1"
+	"go.temporal.io/server/chasm/lib/activity"
 	"go.temporal.io/server/common/authorization"
 	"go.temporal.io/server/common/cluster"
 	"go.temporal.io/server/common/config"
@@ -239,6 +240,11 @@ func (s *StartOptions) buildServerOptions() ([]temporal.ServerOption, *slog.Leve
 	dynConf[dynamicconfig.HistoryCacheHostLevelMaxSize.Key()] = 8096
 	// Up default visibility RPS
 	dynConf[dynamicconfig.FrontendMaxNamespaceVisibilityRPSPerInstance.Key()] = 100
+
+	// Enable CHASM and SAA. These will be on by default in server v0.32, at which point these lines
+	// should be removed.
+	dynConf[dynamicconfig.EnableChasm.Key()] = true
+	dynConf[activity.Enabled.Key()] = true
 
 	// Dynamic config if set
 	for k, v := range s.DynamicConfigValues {
