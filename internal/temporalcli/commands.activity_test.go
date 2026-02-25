@@ -2,16 +2,20 @@ package temporalcli_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/google/uuid"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/history/v1"
 	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
 	"google.golang.org/grpc"
@@ -518,4 +522,798 @@ func (s *SharedServerSuite) TestResetActivity_BatchSuccess() {
 
 	// unblock the activities to let them finish
 	failActivity.Store(false)
+}
+
+func (s *SharedServerSuite) TestActivity_Start() {
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		return "start-result", nil
+	})
+
+	res := s.Execute(
+		"activity", "start",
+		"--activity-id", "start-test",
+		"--type", "DevActivity",
+		"--task-queue", s.Worker().Options.TaskQueue,
+		"--start-to-close-timeout", "30s",
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	out := res.Stdout.String()
+	s.Contains(out, "Running execution:")
+	s.ContainsOnSameLine(out, "ActivityId", "start-test")
+	s.Contains(out, "RunId")
+	s.ContainsOnSameLine(out, "Type", "DevActivity")
+	s.ContainsOnSameLine(out, "Namespace", "default")
+	s.ContainsOnSameLine(out, "TaskQueue", s.Worker().Options.TaskQueue)
+
+	// JSON
+	res = s.Execute(
+		"activity", "start",
+		"-o", "json",
+		"--activity-id", "start-test-json",
+		"--type", "DevActivity",
+		"--task-queue", s.Worker().Options.TaskQueue,
+		"--start-to-close-timeout", "30s",
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	var jsonOut map[string]any
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	s.Equal("start-test-json", jsonOut["activityId"])
+	s.NotEmpty(jsonOut["runId"])
+	s.Equal("DevActivity", jsonOut["type"])
+	s.Equal("default", jsonOut["namespace"])
+	s.NotEmpty(jsonOut["taskQueue"])
+}
+
+func (s *SharedServerSuite) TestActivity_Start_With_Headers() {
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		return nil, nil
+	})
+
+	var capturedHeader *workflowservice.StartActivityExecutionRequest
+	var mu sync.Mutex
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string, req, reply any,
+			cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption,
+		) error {
+			if startReq, ok := req.(*workflowservice.StartActivityExecutionRequest); ok {
+				mu.Lock()
+				capturedHeader = startReq
+				mu.Unlock()
+			}
+			return invoker(ctx, method, req, reply, cc, opts...)
+		}),
+	)
+
+	res := s.Execute(
+		"activity", "start",
+		"--activity-id", "header-test",
+		"--type", "DevActivity",
+		"--task-queue", s.Worker().Options.TaskQueue,
+		"--start-to-close-timeout", "30s",
+		"--headers", "id=123",
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+
+	mu.Lock()
+	defer mu.Unlock()
+	s.NotNil(capturedHeader)
+	payload := capturedHeader.Header.Fields["id"]
+	s.NotNil(payload)
+	var val int
+	s.NoError(converter.GetDefaultDataConverter().FromPayload(payload, &val))
+	s.Equal(123, val)
+}
+
+func (s *SharedServerSuite) TestActivity_Execute_Success() {
+	var receivedInput any
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		receivedInput = a
+		return map[string]string{"foo": "bar"}, nil
+	})
+
+	// Text
+	res := s.Execute(
+		"activity", "execute",
+		"--activity-id", "exec-test",
+		"--type", "DevActivity",
+		"--task-queue", s.Worker().Options.TaskQueue,
+		"--start-to-close-timeout", "30s",
+		"-i", `"my-input"`,
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	out := res.Stdout.String()
+	s.Contains(out, "Running execution:")
+	s.ContainsOnSameLine(out, "ActivityId", "exec-test")
+	s.Contains(out, "Results:")
+	s.ContainsOnSameLine(out, "Status", "COMPLETED")
+	s.ContainsOnSameLine(out, "Result", `{"foo":"bar"}`)
+	s.Equal("my-input", receivedInput)
+
+	// JSON
+	res = s.Execute(
+		"activity", "execute",
+		"-o", "json",
+		"--activity-id", "exec-json-test",
+		"--type", "DevActivity",
+		"--task-queue", s.Worker().Options.TaskQueue,
+		"--start-to-close-timeout", "30s",
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	var jsonOut map[string]any
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	s.Equal("exec-json-test", jsonOut["activityId"])
+	s.NotEmpty(jsonOut["runId"])
+	s.Equal("COMPLETED", jsonOut["status"])
+	s.Equal(map[string]any{"foo": "bar"}, jsonOut["result"])
+}
+
+func (s *SharedServerSuite) TestActivity_Execute_Failure() {
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		return nil, fmt.Errorf("intentional failure")
+	})
+
+	// Text
+	res := s.Execute(
+		"activity", "execute",
+		"--activity-id", "exec-fail-test",
+		"--type", "DevActivity",
+		"--task-queue", s.Worker().Options.TaskQueue,
+		"--start-to-close-timeout", "30s",
+		"--retry-maximum-attempts", "1",
+		"--address", s.Address(),
+	)
+	s.ErrorContains(res.Err, "activity failed")
+	out := res.Stdout.String()
+	s.Contains(out, "Running execution:")
+	s.Contains(out, "Results:")
+	s.Contains(out, "FAILED")
+	s.Contains(out, "intentional failure")
+
+	// JSON
+	res = s.Execute(
+		"activity", "execute",
+		"-o", "json",
+		"--activity-id", "exec-fail-json-test",
+		"--type", "DevActivity",
+		"--task-queue", s.Worker().Options.TaskQueue,
+		"--start-to-close-timeout", "30s",
+		"--retry-maximum-attempts", "1",
+		"--address", s.Address(),
+	)
+	s.Error(res.Err)
+	var jsonOut map[string]any
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	s.Equal("exec-fail-json-test", jsonOut["activityId"])
+	s.NotEmpty(jsonOut["runId"])
+	s.Equal("FAILED", jsonOut["status"])
+	failureObj, ok := jsonOut["failure"].(map[string]any)
+	s.True(ok, "failure should be a structured object, got: %T", jsonOut["failure"])
+	s.Contains(failureObj["message"], "intentional failure")
+	s.NotNil(failureObj["applicationFailureInfo"])
+}
+
+func (s *SharedServerSuite) TestActivity_Execute_NoJsonShorthandPayloads() {
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		return map[string]string{"key": "val"}, nil
+	})
+
+	// With shorthand (default): result is decoded
+	res := s.Execute(
+		"activity", "execute",
+		"-o", "json",
+		"--activity-id", "shorthand-test",
+		"--type", "DevActivity",
+		"--task-queue", s.Worker().Options.TaskQueue,
+		"--start-to-close-timeout", "30s",
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	var jsonOut map[string]any
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	s.Equal(map[string]any{"key": "val"}, jsonOut["result"])
+
+	// Without shorthand: result should be raw payloads with metadata/data
+	res = s.Execute(
+		"activity", "execute",
+		"-o", "json",
+		"--no-json-shorthand-payloads",
+		"--activity-id", "no-shorthand-test",
+		"--type", "DevActivity",
+		"--task-queue", s.Worker().Options.TaskQueue,
+		"--start-to-close-timeout", "30s",
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	resultMap, ok := jsonOut["result"].(map[string]any)
+	s.True(ok, "result should be a payloads object, got: %T", jsonOut["result"])
+	payloads, ok := resultMap["payloads"].([]any)
+	s.True(ok, "result should have payloads array")
+	s.Len(payloads, 1)
+	payload := payloads[0].(map[string]any)
+	s.NotNil(payload["metadata"])
+	s.NotNil(payload["data"])
+}
+
+func (s *SharedServerSuite) TestActivity_Execute_RetriesOnEmptyPollResponse() {
+	// Activity sleeps longer than the server's activity.longPollTimeout (2s),
+	// forcing at least one empty poll response before the result arrives.
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		time.Sleep(3 * time.Second)
+		return "standalone-result", nil
+	})
+
+	res := s.Execute(
+		"activity", "execute",
+		"--activity-id", "poll-retry-test",
+		"--type", "DevActivity",
+		"--task-queue", s.Worker().Options.TaskQueue,
+		"--start-to-close-timeout", "30s",
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "standalone-result")
+}
+
+// startActivity starts an activity via the CLI and returns
+// the parsed JSON response containing activityId and runId.
+func (s *SharedServerSuite) startActivity(activityID string, extraArgs ...string) map[string]any {
+	args := []string{
+		"activity", "start",
+		"-o", "json",
+		"--activity-id", activityID,
+		"--type", "DevActivity",
+		"--task-queue", s.Worker().Options.TaskQueue,
+		"--start-to-close-timeout", "30s",
+		"--address", s.Address(),
+	}
+	args = append(args, extraArgs...)
+	res := s.Execute(args...)
+	s.NoError(res.Err)
+	var jsonOut map[string]any
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	return jsonOut
+}
+
+func (s *SharedServerSuite) TestActivity_Result() {
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		return "result-value", nil
+	})
+
+	started := s.startActivity("result-test")
+
+	res := s.Execute(
+		"activity", "result",
+		"--activity-id", "result-test",
+		"--run-id", started["runId"].(string),
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "result-value")
+
+	// JSON output without --run-id
+	res = s.Execute(
+		"activity", "result",
+		"-o", "json",
+		"--activity-id", "result-test",
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	var jsonOut map[string]any
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	s.Equal("COMPLETED", jsonOut["status"])
+	s.Equal("result-test", jsonOut["activityId"])
+	s.Equal("result-value", jsonOut["result"])
+}
+
+func (s *SharedServerSuite) TestActivity_Result_NotFound() {
+	res := s.Execute(
+		"activity", "result",
+		"--activity-id", "nonexistent-activity-id",
+		"--address", s.Address(),
+	)
+	s.Error(res.Err)
+	s.Contains(res.Err.Error(), "not found")
+	s.NotContains(res.Stdout.String(), "FAILED")
+}
+
+func (s *SharedServerSuite) TestActivity_Describe() {
+	activityStarted := make(chan struct{})
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		close(activityStarted)
+		<-ctx.Done()
+		return nil, ctx.Err()
+	})
+
+	started := s.startActivity("describe-test",
+		"--schedule-to-close-timeout", "300s",
+		"--schedule-to-start-timeout", "60s",
+		"--heartbeat-timeout", "15s",
+		"--retry-maximum-attempts", "5",
+		"--retry-initial-interval", "2s",
+		"--retry-backoff-coefficient", "3",
+		"--retry-maximum-interval", "120s",
+	)
+	runID := started["runId"].(string)
+	<-activityStarted
+
+	// Text
+	res := s.Execute(
+		"activity", "describe",
+		"--activity-id", "describe-test",
+		"--run-id", runID,
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	out := res.Stdout.String()
+	s.ContainsOnSameLine(out, "ActivityId", "describe-test")
+	s.ContainsOnSameLine(out, "Type", "DevActivity")
+	s.ContainsOnSameLine(out, "Status", "Running")
+	s.ContainsOnSameLine(out, "TaskQueue", s.Worker().Options.TaskQueue)
+	s.ContainsOnSameLine(out, "StartToCloseTimeout", "30s")
+	s.ContainsOnSameLine(out, "ScheduleToCloseTimeout", "5m0s")
+	s.ContainsOnSameLine(out, "ScheduleToStartTimeout", "1m0s")
+	s.ContainsOnSameLine(out, "HeartbeatTimeout", "15s")
+	s.ContainsOnSameLine(out, "Attempt", "1")
+	s.Contains(out, "LastWorkerIdentity")
+	s.NotContains(out, `{"name":`)
+
+	// JSON
+	res = s.Execute(
+		"activity", "describe",
+		"-o", "json",
+		"--activity-id", "describe-test",
+		"--run-id", runID,
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	var jsonOut map[string]any
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	s.Equal("describe-test", jsonOut["activityId"])
+	s.NotNil(jsonOut["activityType"])
+	s.NotNil(jsonOut["taskQueue"])
+	s.Equal("300s", jsonOut["scheduleToCloseTimeout"])
+	s.Equal("60s", jsonOut["scheduleToStartTimeout"])
+	s.Equal("30s", jsonOut["startToCloseTimeout"])
+	s.Equal("15s", jsonOut["heartbeatTimeout"])
+	retryPolicy, ok := jsonOut["retryPolicy"].(map[string]any)
+	s.True(ok, "retryPolicy should be present in JSON describe")
+	s.Equal(float64(5), retryPolicy["maximumAttempts"])
+	s.Equal("2s", retryPolicy["initialInterval"])
+	s.Equal(float64(3), retryPolicy["backoffCoefficient"])
+	s.Equal("120s", retryPolicy["maximumInterval"])
+
+	// Raw: should contain proto JSON format
+	res = s.Execute(
+		"activity", "describe",
+		"--raw",
+		"--activity-id", "describe-test",
+		"--run-id", runID,
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	rawOut := res.Stdout.String()
+	s.Contains(rawOut, "describe-test")
+	s.Contains(rawOut, `{"name":"DevActivity"}`)
+}
+
+// Text-only: verifies LastFailure is rendered as text not JSON.
+func (s *SharedServerSuite) TestActivity_Describe_FailedLastFailure() {
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		return nil, fmt.Errorf("describe-failure-msg")
+	})
+
+	started := s.startActivity("describe-fail-test", "--retry-maximum-attempts", "1")
+
+	// Wait for the activity to fail
+	handle := s.Client.GetActivityHandle(client.GetActivityHandleOptions{
+		ActivityID: "describe-fail-test",
+		RunID:      started["runId"].(string),
+	})
+	_ = handle.Get(s.Context, nil)
+
+	res := s.Execute(
+		"activity", "describe",
+		"--activity-id", "describe-fail-test",
+		"--run-id", started["runId"].(string),
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	out := res.Stdout.String()
+	// LastFailure should be human-readable, not raw JSON
+	s.Contains(out, "describe-failure-msg")
+	s.NotContains(out, `"message":"describe-failure-msg"`)
+}
+
+func (s *SharedServerSuite) TestActivity_List() {
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		return "listed", nil
+	})
+
+	s.startActivity("list-test-1")
+	s.startActivity("list-test-2")
+	s.startActivity("list-test-3")
+
+	// Wait for all three to be visible
+	s.Eventually(func() bool {
+		res := s.Execute(
+			"activity", "list",
+			"--address", s.Address(),
+		)
+		out := res.Stdout.String()
+		return res.Err == nil &&
+			strings.Contains(out, "list-test-1") &&
+			strings.Contains(out, "list-test-2") &&
+			strings.Contains(out, "list-test-3")
+	}, 5*time.Second, 200*time.Millisecond)
+
+	// --limit should cap the number of results
+	res := s.Execute(
+		"activity", "list",
+		"--limit", "2",
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	lines := strings.Split(strings.TrimSpace(res.Stdout.String()), "\n")
+	s.Equal(3, len(lines), "expected header + 2 rows with --limit 2, got: %s", res.Stdout.String())
+
+	// JSON
+	res = s.Execute(
+		"activity", "list",
+		"-o", "json",
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	out := res.Stdout.String()
+	s.ContainsOnSameLine(out, "activityId", "list-test-1")
+	s.ContainsOnSameLine(out, "status", "ACTIVITY_EXECUTION_STATUS_COMPLETED")
+}
+
+func (s *SharedServerSuite) TestActivity_Count() {
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		return "counted", nil
+	})
+
+	s.startActivity("count-test")
+
+	// Text
+	s.Eventually(func() bool {
+		res := s.Execute(
+			"activity", "count",
+			"--address", s.Address(),
+		)
+		return res.Err == nil && strings.Contains(res.Stdout.String(), "Total:")
+	}, 5*time.Second, 200*time.Millisecond)
+
+	// Grouped text
+	s.Eventually(func() bool {
+		res := s.Execute(
+			"activity", "count",
+			"--address", s.Address(),
+			"--query", "GROUP BY ExecutionStatus",
+		)
+		if res.Err != nil {
+			return false
+		}
+		out := res.Stdout.String()
+		return strings.Contains(out, "Total:") && strings.Contains(out, "Group total:")
+	}, 5*time.Second, 200*time.Millisecond)
+
+	// JSON
+	res := s.Execute(
+		"activity", "count",
+		"--address", s.Address(),
+		"-o", "json",
+	)
+	s.NoError(res.Err)
+	var jsonOut map[string]any
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	_, ok := jsonOut["count"]
+	s.True(ok)
+}
+
+// No JSON variant: command produces no output on success in any mode.
+func (s *SharedServerSuite) TestActivity_Complete_ByRunId() {
+	activityStarted := make(chan struct{})
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		close(activityStarted)
+		<-ctx.Done()
+		return nil, ctx.Err()
+	})
+
+	started := s.startActivity("sa-complete-test")
+	runID := started["runId"].(string)
+	<-activityStarted
+
+	res := s.Execute(
+		"activity", "complete",
+		"--activity-id", "sa-complete-test",
+		"--run-id", runID,
+		"--result", `"completed-externally"`,
+		"--identity", identity,
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+
+	handle := s.Client.GetActivityHandle(client.GetActivityHandleOptions{
+		ActivityID: "sa-complete-test",
+		RunID:      runID,
+	})
+	var actual string
+	s.NoError(handle.Get(s.Context, &actual))
+	s.Equal("completed-externally", actual)
+}
+
+// No JSON variant: command produces no output on success in any mode.
+func (s *SharedServerSuite) TestActivity_Fail_ByRunId() {
+	activityStarted := make(chan struct{})
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		close(activityStarted)
+		<-ctx.Done()
+		return nil, ctx.Err()
+	})
+
+	started := s.startActivity("sa-fail-test")
+	runID := started["runId"].(string)
+	<-activityStarted
+
+	res := s.Execute(
+		"activity", "fail",
+		"--activity-id", "sa-fail-test",
+		"--run-id", runID,
+		"--reason", "external-failure",
+		"--identity", identity,
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+
+	handle := s.Client.GetActivityHandle(client.GetActivityHandleOptions{
+		ActivityID: "sa-fail-test",
+		RunID:      runID,
+	})
+	err := handle.Get(s.Context, nil)
+	s.Error(err)
+	s.Contains(err.Error(), "external-failure")
+}
+
+// No JSON variant: Println outputs the same text regardless of -o json (matches workflow cancel).
+func (s *SharedServerSuite) TestActivity_Cancel() {
+	activityStarted := make(chan struct{})
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		close(activityStarted)
+		<-ctx.Done()
+		return nil, ctx.Err()
+	})
+
+	started := s.startActivity("cancel-test")
+	runID := started["runId"].(string)
+	<-activityStarted
+
+	res := s.Execute(
+		"activity", "cancel",
+		"--activity-id", "cancel-test",
+		"--run-id", runID,
+		"--reason", "test-cancel",
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Cancellation requested")
+
+	handle := s.Client.GetActivityHandle(client.GetActivityHandleOptions{
+		ActivityID: "cancel-test",
+		RunID:      runID,
+	})
+	s.Eventually(func() bool {
+		desc, err := handle.Describe(s.Context, client.DescribeActivityOptions{})
+		return err == nil && desc.RunState.String() == "CancelRequested"
+	}, 5*time.Second, 100*time.Millisecond)
+}
+
+// No JSON variant: Println outputs the same text regardless of -o json (matches workflow terminate).
+func (s *SharedServerSuite) TestActivity_Terminate() {
+	activityStarted := make(chan struct{})
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		close(activityStarted)
+		<-ctx.Done()
+		return nil, ctx.Err()
+	})
+
+	started := s.startActivity("terminate-test")
+	runID := started["runId"].(string)
+	<-activityStarted
+
+	res := s.Execute(
+		"activity", "terminate",
+		"--activity-id", "terminate-test",
+		"--run-id", runID,
+		"--reason", "test-terminate",
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Activity terminated")
+
+	handle := s.Client.GetActivityHandle(client.GetActivityHandleOptions{
+		ActivityID: "terminate-test",
+		RunID:      runID,
+	})
+	err := handle.Get(s.Context, nil)
+	s.Error(err)
+	s.Contains(err.Error(), "terminated")
+}
+
+func (s *SharedServerSuite) TestActivity_SearchAttributes() {
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		return nil, nil
+	})
+
+	for _, sa := range []struct{ name, typ string }{
+		{"SATestBool", "Bool"},
+		{"SATestInt", "Int"},
+		{"SATestDouble", "Double"},
+		{"SATestKeyword", "Keyword"},
+		{"SATestText", "Text"},
+		{"SATestKeywordList", "KeywordList"},
+	} {
+		res := s.Execute(
+			"operator", "search-attribute", "create",
+			"--address", s.Address(),
+			"--name", sa.name,
+			"--type", sa.typ,
+		)
+		s.NoError(res.Err)
+	}
+
+	unique := uuid.NewString()[:8]
+
+	// Bool (JSON bool → NewSearchAttributeKeyBool)
+	s.startActivity("sa-bool-"+unique,
+		"--search-attribute", `SATestBool=true`,
+	)
+	s.Eventually(func() bool {
+		res := s.Execute("activity", "list", "--address", s.Address(),
+			"--query", `SATestBool = true`)
+		return res.Err == nil && strings.Contains(res.Stdout.String(), "sa-bool-"+unique)
+	}, 5*time.Second, 200*time.Millisecond)
+
+	// Int (JSON number → float64 → sent as Float64; server decodes via schema)
+	s.startActivity("sa-int-"+unique,
+		"--search-attribute", `SATestInt=42`,
+	)
+	s.Eventually(func() bool {
+		res := s.Execute("activity", "list", "--address", s.Address(),
+			"--query", `SATestInt = 42`)
+		return res.Err == nil && strings.Contains(res.Stdout.String(), "sa-int-"+unique)
+	}, 5*time.Second, 200*time.Millisecond)
+
+	// Double (JSON number → float64 → NewSearchAttributeKeyFloat64)
+	s.startActivity("sa-double-"+unique,
+		"--search-attribute", `SATestDouble=3.14`,
+	)
+	s.Eventually(func() bool {
+		res := s.Execute("activity", "list", "--address", s.Address(),
+			"--query", `SATestDouble = 3.14`)
+		return res.Err == nil && strings.Contains(res.Stdout.String(), "sa-double-"+unique)
+	}, 5*time.Second, 200*time.Millisecond)
+
+	// Keyword (JSON string → NewSearchAttributeKeyKeyword)
+	s.startActivity("sa-keyword-"+unique,
+		"--search-attribute", fmt.Sprintf(`SATestKeyword="kw-%s"`, unique),
+	)
+	s.Eventually(func() bool {
+		res := s.Execute("activity", "list", "--address", s.Address(),
+			"--query", fmt.Sprintf(`SATestKeyword = "kw-%s"`, unique))
+		return res.Err == nil && strings.Contains(res.Stdout.String(), "sa-keyword-"+unique)
+	}, 5*time.Second, 200*time.Millisecond)
+
+	// Text (JSON string → sent as Keyword; server decodes via schema)
+	s.startActivity("sa-text-"+unique,
+		"--search-attribute", fmt.Sprintf(`SATestText="text value %s"`, unique),
+	)
+	s.Eventually(func() bool {
+		res := s.Execute("activity", "list", "--address", s.Address(),
+			"--query", fmt.Sprintf(`SATestText = "text value %s"`, unique))
+		return res.Err == nil && strings.Contains(res.Stdout.String(), "sa-text-"+unique)
+	}, 5*time.Second, 200*time.Millisecond)
+
+	// KeywordList (JSON array → []any → NewSearchAttributeKeyKeywordList)
+	s.startActivity("sa-kwlist-"+unique,
+		"--search-attribute", `SATestKeywordList=["alpha","beta"]`,
+	)
+	s.Eventually(func() bool {
+		res := s.Execute("activity", "list", "--address", s.Address(),
+			"--query", `SATestKeywordList = "alpha"`)
+		return res.Err == nil && strings.Contains(res.Stdout.String(), "sa-kwlist-"+unique)
+	}, 5*time.Second, 200*time.Millisecond)
+}
+
+func (s *SharedServerSuite) TestActivity_SearchAttributes_Datetime() {
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		return nil, nil
+	})
+
+	res := s.Execute(
+		"operator", "search-attribute", "create",
+		"--address", s.Address(),
+		"--name", "SATestDatetime",
+		"--type", "Datetime",
+	)
+	s.NoError(res.Err)
+
+	s.startActivity("sa-datetime-test",
+		"--search-attribute", `SATestDatetime="2024-01-15T00:00:00Z"`,
+	)
+	s.Eventually(func() bool {
+		res = s.Execute(
+			"activity", "list",
+			"--address", s.Address(),
+			"--query", `SATestDatetime > "2024-01-14T00:00:00Z"`,
+		)
+		return res.Err == nil && strings.Contains(res.Stdout.String(), "sa-datetime-test")
+	}, 5*time.Second, 200*time.Millisecond)
+}
+
+func (s *SharedServerSuite) TestActivity_SearchAttributes_InvalidKeywordList() {
+	res := s.Execute(
+		"activity", "start",
+		"--activity-id", "sa-invalid-kwlist",
+		"--type", "DevActivity",
+		"--task-queue", s.Worker().Options.TaskQueue,
+		"--start-to-close-timeout", "30s",
+		"--search-attribute", `Foo=[1,"a"]`,
+		"--address", s.Address(),
+	)
+	s.Error(res.Err)
+	s.Contains(res.Err.Error(), "array element 0 is float64, not string")
+}
+
+func (s *SharedServerSuite) TestActivity_List_Pagination() {
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		return "paginated", nil
+	})
+
+	uniqueKW := "page-" + uuid.NewString()[:8]
+	for i := 0; i < 5; i++ {
+		s.startActivity(fmt.Sprintf("page-test-%d", i),
+			"--search-attribute", fmt.Sprintf(`CustomKeywordField="%s"`, uniqueKW),
+		)
+	}
+
+	// Wait for all 5 to be visible
+	s.Eventually(func() bool {
+		res := s.Execute(
+			"activity", "list",
+			"--address", s.Address(),
+			"--query", fmt.Sprintf(`CustomKeywordField = "%s"`, uniqueKW),
+		)
+		return res.Err == nil && strings.Count(res.Stdout.String(), "page-test-") >= 5
+	}, 5*time.Second, 200*time.Millisecond)
+
+	// Small page size forces multi-page fetching; verify all 5 appear
+	res := s.Execute(
+		"activity", "list",
+		"--page-size", "2",
+		"--address", s.Address(),
+		"--query", fmt.Sprintf(`CustomKeywordField = "%s"`, uniqueKW),
+	)
+	s.NoError(res.Err)
+	s.Equal(5, strings.Count(res.Stdout.String(), "page-test-"))
+
+	// --limit 3 with page-size 2 should return exactly 3
+	res = s.Execute(
+		"activity", "list",
+		"--page-size", "2",
+		"--limit", "3",
+		"--address", s.Address(),
+		"--query", fmt.Sprintf(`CustomKeywordField = "%s"`, uniqueKW),
+	)
+	s.NoError(res.Err)
+	s.Equal(3, strings.Count(res.Stdout.String(), "page-test-"))
 }
