@@ -39,8 +39,9 @@ type (
 		Description            string `yaml:"description"`
 		DescriptionPlain       string
 		DescriptionHighlighted string
-		Deprecated             string   `yaml:"deprecated"`
-		HasInit                bool     `yaml:"has-init"`
+		Deprecated             bool   `yaml:"deprecated"`
+		DeprecationMessage     string `yaml:"deprecation-message"`
+		HasInit                bool   `yaml:"has-init"`
 		ExactArgs              int      `yaml:"exact-args"`
 		MaximumArgs            int      `yaml:"maximum-args"`
 		IgnoreMissingEnv       bool     `yaml:"ignores-missing-env"`
@@ -137,6 +138,22 @@ var markdownInlineCodeRegex = regexp.MustCompile("`([^`]+)`")
 const ansiReset = "\033[0m"
 const ansiBold = "\033[1m"
 
+const defaultDeprecationMessage = "This command is deprecated and will be removed in a later release."
+
+// generateDeprecationBox creates a formatted CAUTION box for deprecated commands.
+// If message is empty, uses the default deprecation message.
+func generateDeprecationBox(message string) string {
+	if message == "" {
+		message = defaultDeprecationMessage
+	}
+	content := "CAUTION: " + message
+	// Calculate box width (content + 2 spaces padding + 2 border chars)
+	boxWidth := len(content) + 4
+	border := "+" + strings.Repeat("-", boxWidth-2) + "+"
+	middle := "| " + content + " |"
+	return "```\n" + border + "\n" + middle + "\n" + border + "\n```\n\n"
+}
+
 func (o OptionSets) processSection() error {
 	if o.Name == "" {
 		return fmt.Errorf("missing option set name")
@@ -170,6 +187,11 @@ func (c *Command) processSection() error {
 
 	if c.Description == "" {
 		return fmt.Errorf("missing description for command: %s", c.FullName)
+	}
+
+	// Prepend deprecation warning box if command is deprecated
+	if c.Deprecated {
+		c.Description = generateDeprecationBox(c.DeprecationMessage) + c.Description
 	}
 
 	if len(c.NamePath) == 2 {
