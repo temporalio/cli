@@ -143,11 +143,7 @@ func (c *CommandContext) preprocessOptions() error {
 			if c.Err() != nil {
 				err = fmt.Errorf("program interrupted")
 			}
-			if c.Logger != nil {
-				c.Logger.Error(err.Error())
-			} else {
-				fmt.Fprintln(os.Stderr, err)
-			}
+			fmt.Fprintf(c.Options.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
 	}
