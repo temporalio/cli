@@ -271,6 +271,20 @@ func TestServer_StartDev_WithSearchAttributes(t *testing.T) {
 	}
 }
 
+func TestServer_StartDev_TsnetFlags(t *testing.T) {
+	h := NewCommandHarness(t)
+	defer h.Close()
+
+	// Verify that --tsnet and related flags are recognized by the CLI parser
+	res := h.Execute("server", "start-dev", "--help")
+	h.NoError(res.Err)
+	output := res.Stdout.String()
+	assert.Contains(t, output, "--tsnet")
+	assert.Contains(t, output, "--tsnet-hostname")
+	assert.Contains(t, output, "--tsnet-authkey")
+	assert.Contains(t, output, "--tsnet-state-dir")
+}
+
 type testLogger struct {
 	t *testing.T
 }
