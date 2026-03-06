@@ -2089,6 +2089,10 @@ type TemporalServerStartDevCommand struct {
 	DynamicConfigValue []string
 	LogConfig          bool
 	SearchAttribute    []string
+	Tsnet              bool
+	TsnetHostname      string
+	TsnetAuthkey       string
+	TsnetStateDir      string
 }
 
 func NewTemporalServerStartDevCommand(cctx *CommandContext, parent *TemporalServerCommand) *TemporalServerStartDevCommand {
@@ -2119,6 +2123,10 @@ func NewTemporalServerStartDevCommand(cctx *CommandContext, parent *TemporalServ
 	s.Command.Flags().StringArrayVar(&s.DynamicConfigValue, "dynamic-config-value", nil, "Dynamic configuration value using `KEY=VALUE` pairs. Keys must be identifiers, and values must be JSON values. For example: `YourKey=\"YourString\"` Can be passed multiple times.")
 	s.Command.Flags().BoolVar(&s.LogConfig, "log-config", false, "Log the server config to stderr.")
 	s.Command.Flags().StringArrayVar(&s.SearchAttribute, "search-attribute", nil, "Search attributes to register using `KEY=VALUE` pairs. Keys must be identifiers, and values must be the search attribute type, which is one of the following: Text, Keyword, Int, Double, Bool, Datetime, KeywordList.")
+	s.Command.Flags().BoolVar(&s.Tsnet, "tsnet", false, "Expose the dev server on a Tailscale network via tsnet. Allows other machines on the tailnet to connect without manual port forwarding or VPN configuration.")
+	s.Command.Flags().StringVar(&s.TsnetHostname, "tsnet-hostname", "temporal-dev", "Tailscale hostname for the dev server. Appears as \"<hostname>.<tailnet>.ts.net\" on the network.")
+	s.Command.Flags().StringVar(&s.TsnetAuthkey, "tsnet-authkey", "", "Tailscale auth key for non-interactive authentication. If empty, falls back to the TS_AUTHKEY environment variable. If neither is set, a login URL is printed for interactive auth.")
+	s.Command.Flags().StringVar(&s.TsnetStateDir, "tsnet-state-dir", "", "State directory for tsnet. Defaults to a \"tsnet-temporal-dev\" directory under the user config directory.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

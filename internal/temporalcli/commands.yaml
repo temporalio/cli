@@ -2436,6 +2436,31 @@ commands:
           Keys must be identifiers, and values must be the search
           attribute type, which is one of the following:
           Text, Keyword, Int, Double, Bool, Datetime, KeywordList.
+      - name: tsnet
+        type: bool
+        description: |
+          Expose the dev server on a Tailscale network via tsnet.
+          Allows other machines on the tailnet to connect without
+          manual port forwarding or VPN configuration.
+      - name: tsnet-hostname
+        type: string
+        description: |
+          Tailscale hostname for the dev server.
+          Appears as "<hostname>.<tailnet>.ts.net" on the network.
+        default: temporal-dev
+      - name: tsnet-authkey
+        type: string
+        description: |
+          Tailscale auth key for non-interactive authentication.
+          If empty, falls back to the TS_AUTHKEY environment variable.
+          If neither is set, a login URL is printed for interactive
+          auth.
+      - name: tsnet-state-dir
+        type: string
+        description: |
+          State directory for tsnet.
+          Defaults to a "tsnet-temporal-dev" directory under the
+          user config directory.
 
   - name: temporal task-queue
     summary: Manage Task Queues
