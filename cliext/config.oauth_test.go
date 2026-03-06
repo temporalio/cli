@@ -258,3 +258,31 @@ address = "other:7233"
 	assert.Contains(t, string(content), "other:7233")
 	assert.Contains(t, string(content), "test-client")
 }
+
+func TestStoreClientOAuth_WithAddress(t *testing.T) {
+	f, err := os.CreateTemp("", "temporal-config-*.toml")
+	require.NoError(t, err)
+	defer os.Remove(f.Name())
+	require.NoError(t, f.Close())
+
+	// Store OAuth config with address
+	err = cliext.StoreClientOAuth(cliext.StoreClientOAuthOptions{
+		ConfigFilePath: f.Name(),
+		OAuth: &cliext.OAuthConfig{
+			ClientConfig: &oauth2.Config{
+				ClientID: "test-client",
+			},
+			Token: &oauth2.Token{
+				AccessToken: "test-token",
+			},
+		},
+		Address: "${namespace}.api.temporal.io:7233",
+	})
+	require.NoError(t, err)
+
+	// Verify address was written
+	content, err := os.ReadFile(f.Name())
+	require.NoError(t, err)
+	assert.Contains(t, string(content), `address = "${namespace}.api.temporal.io:7233"`)
+	assert.Contains(t, string(content), "test-client")
+}

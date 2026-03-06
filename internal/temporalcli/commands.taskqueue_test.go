@@ -10,6 +10,7 @@ import (
 	"github.com/temporalio/cli/internal/temporalcli"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/workflowservice/v1"
+	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
 )
 
@@ -384,6 +385,99 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_Simple_Legacy() {
 	s.NoError(res.Err)
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
 	s.GreaterOrEqual(10, len(jsonOut.TaskQueues))
+}
+
+func (s *SharedServerSuite) TestTaskQueue_Describe_VersioningInfo_Legacy() {
+	deploymentName := uuid.NewString()
+	buildId := uuid.NewString()
+	version := worker.WorkerDeploymentVersion{
+		DeploymentName: deploymentName,
+		BuildID:        buildId,
+	}
+	taskQueue := uuid.NewString()
+
+	// Start a versioned worker polling on task queue
+	w := s.DevServer.StartDevWorker(s.Suite.T(), DevWorkerOptions{
+		TaskQueue: taskQueue,
+		Worker: worker.Options{
+			DeploymentOptions: worker.DeploymentOptions{
+				UseVersioning:             true,
+				Version:                   version,
+				DefaultVersioningBehavior: workflow.VersioningBehaviorPinned,
+			},
+		},
+	})
+	defer w.Stop()
+
+	// Wait for deployment to appear in list
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "list",
+			"--address", s.Address(),
+		)
+		assert.NoError(t, res.Err)
+		assert.Contains(t, res.Stdout.String(), deploymentName)
+	}, 30*time.Second, 100*time.Millisecond)
+
+	// Wait for version to be describable
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "describe-version",
+			"--address", s.Address(),
+			"--deployment-name", version.DeploymentName, "--build-id", version.BuildID,
+		)
+		assert.NoError(t, res.Err)
+	}, 30*time.Second, 100*time.Millisecond)
+
+	// Set this version as current
+	res := s.Execute(
+		"worker", "deployment", "set-current-version",
+		"--address", s.Address(),
+		"--deployment-name", version.DeploymentName, "--build-id", version.BuildID,
+		"--yes",
+	)
+	s.NoError(res.Err)
+
+	// Text: describe task queue until the versioning info shows the expected current version
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res = s.Execute(
+			"task-queue", "describe",
+			"--legacy-mode",
+			"--address", s.Address(),
+			"--task-queue", taskQueue,
+		)
+		assert.NoError(t, res.Err)
+		assert.Contains(t, res.Stdout.String(), "Versioning Info:")
+		assert.Contains(t, res.Stdout.String(), deploymentName)
+		assert.Contains(t, res.Stdout.String(), buildId)
+	}, 30*time.Second, 100*time.Millisecond)
+	// Confirm that the deployment name and build id are on the same line as their respective labels
+	s.ContainsOnSameLine(res.Stdout.String(), "CurrentVersionDeploymentName", deploymentName)
+	s.ContainsOnSameLine(res.Stdout.String(), "CurrentVersionBuildID", buildId)
+
+	// JSON output verification
+	res = s.Execute(
+		"task-queue", "describe",
+		"-o", "json",
+		"--legacy-mode",
+		"--address", s.Address(),
+		"--task-queue", taskQueue,
+	)
+	s.NoError(res.Err)
+
+	var jsonOut struct {
+		Pollers        []map[string]any `json:"pollers"`
+		TaskQueues     []map[string]any `json:"taskQueues"`
+		VersioningInfo struct {
+			CurrentDeploymentVersion struct {
+				DeploymentName string `json:"deployment_name"`
+				BuildId        string `json:"build_id"`
+			} `json:"current_deployment_version"`
+		} `json:"versioning_info"`
+	}
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	s.Equal(deploymentName, jsonOut.VersioningInfo.CurrentDeploymentVersion.DeploymentName)
+	s.Equal(buildId, jsonOut.VersioningInfo.CurrentDeploymentVersion.BuildId)
 }
 
 func (s *SharedServerSuite) TestTaskQueue_ListPartition() {

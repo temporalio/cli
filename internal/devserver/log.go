@@ -10,7 +10,7 @@ import (
 
 type slogLogger struct {
 	log   *slog.Logger
-	level slog.Level
+	level *slog.LevelVar
 }
 
 var _ log.Logger = slogLogger{}
@@ -31,7 +31,7 @@ func (s slogLogger) SLog() *slog.Logger {
 }
 
 func (s slogLogger) Log(level slog.Level, msg string, tags []tag.Tag) {
-	if level >= s.level && s.log.Enabled(context.Background(), level) {
+	if level >= s.level.Level() && s.log.Enabled(context.Background(), level) {
 		s.log.LogAttrs(context.Background(), level, msg, logTagsToAttrs(tags)...)
 	}
 }

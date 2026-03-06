@@ -5,7 +5,29 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+  actions: write
+
 jobs:
+  validate-server-version:
+    name: Validate Server Version
+    if: github.event_name == 'push' || github.base_ref == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Validate server dependency version
+        run: go run ./internal/cmd/validate-server-version
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   build-test:
     strategy:
       fail-fast: false
@@ -23,7 +45,7 @@ jobs:
             checkGenCommands: true
             cloudTestTarget: true
           - os: ubuntu-arm
-            runsOn: buildjet-4vcpu-ubuntu-2204-arm
+            runsOn: ubuntu-24.04-arm
     runs-on: ${{ matrix.runsOn || matrix.os }}
     env:
       # We can't check this directly in the cloud test's `if:` condition below,
@@ -66,8 +88,7 @@ jobs:
 
       - name: Generate docs, confirm working
         if: ${{ matrix.checkGenCommands }}
-        run: |
-          go run ./cmd/gen-docs -input internal/temporalcli/commands.yaml -input cliext/option-sets.yaml -output dist/docs
+        run: go run ./cmd/gen-docs -input internal/temporalcli/commands.yaml -input cliext/option-sets.yaml -output dist/docs
 
       - name: Test cloud mTLS
         if: ${{ matrix.cloudTestTarget && env.HAS_SECRETS == 'true' }}
