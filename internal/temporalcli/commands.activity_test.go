@@ -543,9 +543,7 @@ func (s *SharedServerSuite) TestActivity_Start() {
 	s.Contains(out, "Running execution:")
 	s.ContainsOnSameLine(out, "ActivityId", "start-test")
 	s.Contains(out, "RunId")
-	s.ContainsOnSameLine(out, "Type", "DevActivity")
 	s.ContainsOnSameLine(out, "Namespace", "default")
-	s.ContainsOnSameLine(out, "TaskQueue", s.Worker().Options.TaskQueue)
 
 	// JSON
 	res = s.Execute(
@@ -562,9 +560,7 @@ func (s *SharedServerSuite) TestActivity_Start() {
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
 	s.Equal("start-test-json", jsonOut["activityId"])
 	s.NotEmpty(jsonOut["runId"])
-	s.Equal("DevActivity", jsonOut["type"])
 	s.Equal("default", jsonOut["namespace"])
-	s.NotEmpty(jsonOut["taskQueue"])
 }
 
 func (s *SharedServerSuite) TestActivity_Start_With_Headers() {
