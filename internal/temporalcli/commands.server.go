@@ -178,7 +178,7 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 			tsnetOpts.UIAddr = fmt.Sprintf("%s:%d", opts.UIIP, opts.UIPort)
 			tsnetOpts.UIPort = opts.UIPort
 		}
-		tsnetSrv, err := devserver.StartTsnet(tsnetOpts)
+		tsnetSrv, err := devserver.StartTsnet(cctx, tsnetOpts)
 		if err != nil {
 			return fmt.Errorf("failed starting tsnet: %w", err)
 		}
