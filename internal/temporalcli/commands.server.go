@@ -164,6 +164,32 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 		cctx.Printer.Printlnf("%-17s http://%v:%v%v", "Temporal UI:", toFriendlyIp(opts.UIIP), opts.UIPort, opts.PublicPath)
 	}
 	cctx.Printer.Printlnf("%-17s http://%v:%v/metrics", "Temporal Metrics:", toFriendlyIp(opts.FrontendIP), opts.MetricsPort)
+
+	if t.Tsnet {
+		tsnetOpts := devserver.TsnetOptions{
+			Hostname:     t.TsnetHostname,
+			AuthKey:      t.TsnetAuthkey,
+			StateDir:     t.TsnetStateDir,
+			FrontendAddr: fmt.Sprintf("%s:%d", opts.FrontendIP, opts.FrontendPort),
+			FrontendPort: opts.FrontendPort,
+			Logger:       cctx.Logger,
+		}
+		if !t.Headless {
+			tsnetOpts.UIAddr = fmt.Sprintf("%s:%d", opts.UIIP, opts.UIPort)
+			tsnetOpts.UIPort = opts.UIPort
+		}
+		tsnetSrv, err := devserver.StartTsnet(cctx, tsnetOpts)
+		if err != nil {
+			return fmt.Errorf("failed starting tsnet: %w", err)
+		}
+		defer tsnetSrv.Stop()
+
+		cctx.Printer.Printlnf("%-17s %s:%d", "Tsnet gRPC:", tsnetSrv.Hostname, opts.FrontendPort)
+		if !t.Headless {
+			cctx.Printer.Printlnf("%-17s http://%s:%d", "Tsnet UI:", tsnetSrv.Hostname, opts.UIPort)
+		}
+	}
+
 	<-cctx.Done()
 	if !t.Parent.Parent.LogLevel.ChangedFromDefault {
 		// The server routinely emits various warnings on shutdown.
