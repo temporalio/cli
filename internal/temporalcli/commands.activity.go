@@ -51,7 +51,7 @@ func (c *TemporalActivityStartCommand) run(cctx *CommandContext, args []string) 
 	if err != nil {
 		return err
 	}
-	return printActivityExecution(cctx, c.ActivityId, handle.GetRunID(), c.Type, c.Parent.Namespace, c.TaskQueue)
+	return printActivityExecution(cctx, c.ActivityId, handle.GetRunID(), c.Parent.Namespace)
 }
 
 func (c *TemporalActivityExecuteCommand) run(cctx *CommandContext, args []string) error {
@@ -66,7 +66,7 @@ func (c *TemporalActivityExecuteCommand) run(cctx *CommandContext, args []string
 		return err
 	}
 	if !cctx.JSONOutput {
-		if err := printActivityExecution(cctx, c.ActivityId, handle.GetRunID(), c.Type, c.Parent.Namespace, c.TaskQueue); err != nil {
+		if err := printActivityExecution(cctx, c.ActivityId, handle.GetRunID(), c.Parent.Namespace); err != nil {
 			cctx.Logger.Error("Failed printing execution info", "error", err)
 		}
 	}
@@ -108,22 +108,18 @@ func startActivity(
 	return handle, nil
 }
 
-func printActivityExecution(cctx *CommandContext, activityID, runID, activityType, namespace, taskQueue string) error {
+func printActivityExecution(cctx *CommandContext, activityID, runID, namespace string) error {
 	if !cctx.JSONOutput {
 		cctx.Printer.Println(color.MagentaString("Running execution:"))
 	}
 	return cctx.Printer.PrintStructured(struct {
 		ActivityId string `json:"activityId"`
 		RunId      string `json:"runId"`
-		Type       string `json:"type"`
 		Namespace  string `json:"namespace"`
-		TaskQueue  string `json:"taskQueue"`
 	}{
 		ActivityId: activityID,
 		RunId:      runID,
-		Type:       activityType,
 		Namespace:  namespace,
-		TaskQueue:  taskQueue,
 	}, printer.StructuredOptions{})
 }
 
