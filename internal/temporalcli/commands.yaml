@@ -2614,13 +2614,8 @@ commands:
 
   - name: temporal task-queue get-build-id-reachability
     summary: Show Build ID availability (Deprecated)
+    deprecated: true
     description: |
-      ```
-      +-----------------------------------------------------------------------------+
-      | CAUTION: This command is deprecated and will be removed in a later release. |
-      +-----------------------------------------------------------------------------+
-      ```
-
       Show if a given Build ID can be used for new, existing, or closed Workflows
       in Namespaces that support Worker versioning:
 
@@ -2661,13 +2656,8 @@ commands:
 
   - name: temporal task-queue get-build-ids
     summary: Fetch Build ID versions (Deprecated)
+    deprecated: true
     description: |
-      ```
-      +-----------------------------------------------------------------------------+
-      | CAUTION: This command is deprecated and will be removed in a later release. |
-      +-----------------------------------------------------------------------------+
-      ```
-
       Fetch sets of compatible Build IDs for specified Task Queues and display their
       information:
 
@@ -2872,13 +2862,9 @@ commands:
 
   - name: temporal task-queue versioning
     summary: Manage Task Queue Build ID handling (Deprecated)
+    deprecated: true
+    deprecation-message: This API has been deprecated by Worker Deployment.
     description: |
-      ```
-      +---------------------------------------------------------------------+
-      | CAUTION: This API has been deprecated by Worker Deployment.         |
-      +---------------------------------------------------------------------+
-      ```
-
       Provides commands to add, list, remove, or replace Worker Build ID assignment
       and redirect rules associated with Task Queues:
 
