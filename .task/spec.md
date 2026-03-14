@@ -32,6 +32,12 @@ to run, and understanding the paths. `temporal init` should collapse this to one
 
 ### Stripe CLI — closest prior art
 
+Docs:
+- CLI wiki: https://github.com/stripe/stripe-cli/wiki/Samples-command
+- Samples gallery (web, no CLI docs): https://docs.stripe.com/samples
+- CLI source: https://github.com/stripe/stripe-cli/tree/master/pkg/samples
+- Registry repo: https://github.com/stripe-samples/samples-list
+
 Stripe's `stripe samples create` command is the single most relevant prior art. Like
 Temporal, Stripe is an SDK vendor with a CLI, multi-language samples, and the goal of
 getting users from zero to a running integration quickly.
