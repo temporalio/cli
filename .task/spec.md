@@ -203,20 +203,23 @@ Rejected because:
 - User is inside someone else's repo, not their own project
 - Doesn't answer the "initialize the project for them" question
 
-### The manifest: `temporal-samples.yaml`
+### The manifests
 
-Located at the root of each samples repo. The manifest is a sample catalog with
-scaffolding configuration. It does **not** contain run commands — READMEs are the
-interface for telling users what to run.
+Two levels, matching the self-containment principle: repo-level config and
+per-sample metadata.
+
+**Repo-level: `temporal-samples.yaml`** at the repo root. Contains only what's
+truly repo-level — language identifier and scaffold template:
 
 ```yaml
-# temporal-samples.yaml
+# temporal-samples.yaml (repo root)
 version: 1
 language: python
 repo: temporalio/samples-python
 
-# Default scaffold template for generating per-sample build files.
-# Simple {{variable}} substitution. Each sample's fields are available.
+# Scaffold template for generating a standalone project from any sample.
+# {{name}} and {{dependencies}} are substituted from the sample's
+# temporal-sample.yaml.
 scaffold:
   pyproject.toml: |
     [project]
@@ -228,26 +231,31 @@ scaffold:
     [build-system]
     requires = ["hatchling"]
     build-backend = "hatchling.build"
-
-samples:
-  hello_standalone_activity:
-    description: "Execute Activities directly from a Temporal Client, without a Workflow"
-    path: hello_standalone_activity
-    dependencies:
-      - "temporalio>=1.23.0,<2"
-
-  encryption:
-    description: "End-to-end encryption with a custom codec"
-    path: encryption
-    dependencies:
-      - "temporalio>=1.23.0,<2"
-      - "cryptography>=38.0.1,<39"
-      - "aiohttp>=3.8.1,<4"
 ```
 
-For Go:
+**Per-sample: `temporal-sample.yaml`** in each sample directory. Each sample
+owns its own metadata:
 
 ```yaml
+# hello_standalone_activity/temporal-sample.yaml
+description: Execute Activities directly from a Temporal Client, without a Workflow
+dependencies:
+  - "temporalio>=1.23.0,<2"
+```
+
+```yaml
+# encryption/temporal-sample.yaml
+description: End-to-end encryption with a custom codec
+dependencies:
+  - "temporalio>=1.23.0,<2"
+  - "cryptography>=38.0.1,<39"
+  - "aiohttp>=3.8.1,<4"
+```
+
+For Go, the repo-level scaffold is different but the per-sample structure is the same:
+
+```yaml
+# temporal-samples.yaml (samples-go repo root)
 version: 1
 language: go
 repo: temporalio/samples-go
@@ -259,60 +267,57 @@ scaffold:
     go 1.23.0
 
     require go.temporal.io/sdk v1.33.0
+```
 
-samples:
-  helloworld:
-    description: "Basic hello world workflow"
-    path: helloworld
-    # Import path rewriting (like gonew)
-    rewrite_imports:
-      from: "github.com/temporalio/samples-go"
-
-  grpc-proxy:
-    description: "gRPC proxy for Temporal"
-    path: grpc-proxy
-    # Already has its own go.mod — no scaffolding needed
-    standalone: true
+```yaml
+# helloworld/temporal-sample.yaml
+description: Basic hello world workflow
+rewrite_imports:
+  from: "github.com/temporalio/samples-go"
 ```
 
 For TypeScript (simplest — samples are already standalone):
 
 ```yaml
+# temporal-samples.yaml (samples-typescript repo root)
 version: 1
 language: typescript
 repo: temporalio/samples-typescript
 
 scaffold: {}  # No scaffolding needed; each sample has its own package.json
+```
 
-samples:
-  hello-world:
-    description: "Basic hello world workflow"
-    path: hello-world
-    standalone: true
+```yaml
+# hello-world/temporal-sample.yaml
+description: Basic hello world workflow
+standalone: true
 ```
 
 **Key schema points:**
 
-- `samples.*.dependencies` — the sample's actual dependencies, used both for
-  scaffold generation and (in future) for generating committed per-sample build files.
-- `samples.*.standalone: true` — the sample directory is already a self-contained
-  project. The CLI copies it without scaffolding. TypeScript samples are all like this.
-- `samples.*.rewrite_imports` — Go-specific: rewrite import paths from the monorepo
-  module path to the extracted project's module path (following `gonew`'s approach).
-- **No `run` commands.** The CLI prints the README after extraction. READMEs are the
-  single source of truth for how to run a sample.
+- **Per-sample `dependencies`** — used for scaffold generation. Absent when
+  `standalone: true` (the sample already has its own build file).
+- **Per-sample `standalone: true`** — the sample directory is already a
+  self-contained project. The CLI copies it flat, no scaffolding.
+- **Per-sample `rewrite_imports`** — Go-specific: rewrite import paths from
+  the monorepo module to the extracted project (following `gonew`).
+- **No `run` commands.** The CLI prints the README after extraction. READMEs
+  are the single source of truth for how to run a sample.
+
+**Sample discovery:** For `temporal sample list`, the CLI downloads the repo
+tarball (cached) and scans for directories containing `temporal-sample.yaml`.
+One HTTP request, no index file to maintain.
 
 ### Template variables
 
-The manifest scaffold templates support simple `{{variable}}` substitution:
+The scaffold templates support simple `{{variable}}` substitution:
 
 | Variable | Source | Example |
 |----------|--------|---------|
-| `name` | Sample name (directory name or user-specified) | `hello_standalone_activity` |
-| `dependencies` | From sample's `dependencies` list, quoted+joined | `"temporalio>=1.23.0,<2"` |
+| `name` | Directory name (or user-specified) | `hello_standalone_activity` |
+| `dependencies` | From per-sample `dependencies`, quoted+joined | `"temporalio>=1.23.0,<2"` |
 
-This is deliberately minimal. If a sample needs complex scaffolding, that's a signal
-the samples repo should restructure to make it more extractable.
+Deliberately minimal. Complex scaffolding needs = restructure the sample.
 
 ### Command naming: `temporal sample`
 
