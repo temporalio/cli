@@ -4282,6 +4282,65 @@ commands:
     option-sets:
       - workflow-reference
 
+  - name: temporal sample
+    summary: Initialize or list sample projects
+    description: |
+      Create a new project from a Temporal sample, or browse
+      available samples for a given language.
+
+      List all Python samples:
+
+          temporal sample list python
+
+      Initialize a sample:
+
+          temporal sample init python hello
+
+      Initialize from a GitHub URL:
+
+          temporal sample init \
+              https://github.com/temporalio/samples-python/tree/main/hello
+    docs:
+      description-header: >-
+        Temporal CLI sample commands create standalone projects from Temporal
+        sample repositories.
+      keywords:
+        - cli reference
+        - sample
+        - sample init
+        - sample list
+      tags:
+        - Temporal CLI
+
+  - name: temporal sample init
+    summary: Create a project from a Temporal sample
+    description: |
+      Download a sample from the Temporal samples repository and set up
+      a standalone project. Provide a language and sample name, or a
+      GitHub URL:
+
+          temporal sample init python hello
+
+          temporal sample init \
+              https://github.com/temporalio/samples-python/tree/main/hello
+
+      Use "--output-dir" to control where the project is created.
+      Defaults to "./<sample-name>/" in the current directory.
+    maximum-args: 2
+    options:
+      - name: output-dir
+        type: string
+        description: Directory to create the project in.
+
+  - name: temporal sample list
+    summary: List available Temporal samples for a language
+    description: |
+      Download and scan the samples repository for a given language,
+      then print each sample's name and description:
+
+          temporal sample list python
+    maximum-args: 1
+
 option-sets:
   # Import common and client option sets from cliext package
   - name: common

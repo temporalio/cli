@@ -368,6 +368,7 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	s.Command.AddCommand(&NewTemporalConfigCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalEnvCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalOperatorCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalSampleCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalServerCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalTaskQueueCommand(cctx, &s).Command)
@@ -1753,6 +1754,67 @@ func NewTemporalOperatorSearchAttributeRemoveCommand(cctx *CommandContext, paren
 	s.Command.Flags().StringArrayVar(&s.Name, "name", nil, "Search Attribute name. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
 	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm removal.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalSampleCommand struct {
+	Parent  *TemporalCommand
+	Command cobra.Command
+}
+
+func NewTemporalSampleCommand(cctx *CommandContext, parent *TemporalCommand) *TemporalSampleCommand {
+	var s TemporalSampleCommand
+	s.Parent = parent
+	s.Command.Use = "sample"
+	s.Command.Short = "Initialize or list sample projects"
+	s.Command.Long = "Create a new project from a Temporal sample, or browse\navailable samples for a given language.\n\nList all Python samples:\n\n    temporal sample list python\n\nInitialize a sample:\n\n    temporal sample init python hello\n\nInitialize from a GitHub URL:\n\n    temporal sample init \\\n        https://github.com/temporalio/samples-python/tree/main/hello"
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalSampleInitCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalSampleListCommand(cctx, &s).Command)
+	return &s
+}
+
+type TemporalSampleInitCommand struct {
+	Parent    *TemporalSampleCommand
+	Command   cobra.Command
+	OutputDir string
+}
+
+func NewTemporalSampleInitCommand(cctx *CommandContext, parent *TemporalSampleCommand) *TemporalSampleInitCommand {
+	var s TemporalSampleInitCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "init [flags]"
+	s.Command.Short = "Create a project from a Temporal sample"
+	s.Command.Long = "Download a sample from the Temporal samples repository and set up\na standalone project. Provide a language and sample name, or a\nGitHub URL:\n\n    temporal sample init python hello\n\n    temporal sample init \\\n        https://github.com/temporalio/samples-python/tree/main/hello\n\nUse \"--output-dir\" to control where the project is created.\nDefaults to \"./<sample-name>/\" in the current directory."
+	s.Command.Args = cobra.MaximumNArgs(2)
+	s.Command.Flags().StringVar(&s.OutputDir, "output-dir", "", "Directory to create the project in.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalSampleListCommand struct {
+	Parent  *TemporalSampleCommand
+	Command cobra.Command
+}
+
+func NewTemporalSampleListCommand(cctx *CommandContext, parent *TemporalSampleCommand) *TemporalSampleListCommand {
+	var s TemporalSampleListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "List available Temporal samples for a language"
+	s.Command.Long = "Download and scan the samples repository for a given language,\nthen print each sample's name and description:\n\n    temporal sample list python"
+	s.Command.Args = cobra.MaximumNArgs(1)
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
