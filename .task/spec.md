@@ -145,11 +145,11 @@ dependencies:
 
 Schema points:
 
-- `standalone: true` — sample directory is already a complete project (TypeScript).
-  CLI copies flat, no scaffolding.
+- If the repo-level `scaffold` is empty, there's nothing to generate — the CLI
+  copies the sample directory flat (TypeScript).
 - `rewrite_imports` — Go-specific: rewrite import paths from monorepo module to
   extracted project (following `gonew`).
-- `dependencies` — used for scaffold template substitution. Absent when standalone.
+- `dependencies` — used for scaffold template substitution.
 - No `run` commands. The CLI prints the README; READMEs are the source of truth
   for how to run a sample.
 
