@@ -5,7 +5,8 @@
 A new Temporal user wants to go from zero to a running sample in under two minutes.
 Today that requires: finding the right samples repo, cloning it, understanding the
 project structure, installing language-specific tooling, figuring out which commands
-to run, and understanding the paths. `temporal init` should collapse this to one command.
+to run, and understanding the paths. `temporal sample init` should collapse this to
+one command.
 
 ## Prior art
 
@@ -41,15 +42,15 @@ to run, and understanding the paths. `temporal init` should collapse this to one
 
 **Key observations from this broader survey:**
 
-- **`sam init` is the closest UX model** for what we're building: multi-language serverless
-  platform, multi-step wizard, templates in a GitHub repo, custom template URLs supported.
+- **`sam init` is the closest structural model** for what we're building: multi-language
+  serverless platform, templates in a GitHub repo, custom template URLs supported.
 - **`dotnet new`** shows what a fully mature template ecosystem looks like: searchable
   registry, parameterized templates, community publishing. Worth aspiring to long-term.
 - **`pulumi new`** has the best interactive selection UX for a large template catalog.
 - **Spring Initializr** demonstrates the "thin CLI over server API" alternative — the
   web UI is the real product, the CLI is for scripting.
-- The tools with interactive selection (`sam init`, `pulumi new`, `serverless`, C3) are
-  consistently rated as having better onboarding UX than flag-driven tools.
+- Note: `sam init` defaults to interactive mode, which is convenient for exploration
+  but makes it impossible to script without `--no-interactive`. We should avoid this.
 
 ### Competitors
 
@@ -113,7 +114,6 @@ points to repos; Temporal's would point to directories within repos.
 **What we should adopt from Stripe:**
 - The two-tier metadata pattern (central discovery + per-sample config)
 - `go-git` for download (the CLI already uses Go; go-git is battle-tested)
-- Interactive prompts for selection
 - Local caching of downloaded samples
 - Config injection (Temporal address/namespace instead of API keys)
 
@@ -416,30 +416,48 @@ getting-started flow should work out of the box with no extra installation.
 
 ### CLI UX
 
+Language is a positional argument, not a flag. Users nearly always care about one
+language — it's the primary dimension of their mental model. Making it positional
+keeps commands concise and natural.
+
 ```
-# From a GitHub URL (any samples repo, any branch)
+# Standard form: language + sample name
+temporal sample init python hello_standalone_activity
+
+# From a GitHub URL (language inferred from repo name)
 temporal sample init https://github.com/temporalio/samples-python/tree/main/hello_standalone_activity
 
-# Short form: language flag + sample name
-temporal sample init --language python hello_standalone_activity
-
 # Specify output directory
-temporal sample init --language python hello_standalone_activity --output-dir ./my-project
+temporal sample init python hello_standalone_activity --output-dir ./my-project
 
-# Interactive: pick language, then sample
-temporal sample init
+# List available samples for a language (language is required)
+temporal sample list python
+```
 
-# List available samples for a language
-temporal sample list --language python
+Missing required arguments produce usage help and exit non-zero — no interactive
+prompts by default. CLIs must be scriptable.
 
-# List all samples across all languages
-temporal sample list
+```
+$ temporal sample init
+Error: requires language argument
+
+Usage: temporal sample init <language> <sample> [flags]
+       temporal sample init <github-url> [flags]
+
+Languages: go, java, python, typescript, dotnet, ruby, php
+
+$ temporal sample list
+Error: requires language argument
+
+Usage: temporal sample list <language> [flags]
+
+Languages: go, java, python, typescript, dotnet, ruby, php
 ```
 
 #### Detailed flow
 
 ```
-$ temporal sample init --language python hello_standalone_activity
+$ temporal sample init python hello_standalone_activity
 
 Downloading hello_standalone_activity from temporalio/samples-python...
 Created ./hello_standalone_activity/
@@ -464,7 +482,7 @@ To get started:
 #### `temporal sample list`
 
 ```
-$ temporal sample list --language python
+$ temporal sample list python
 
 Available Python samples:
 
@@ -473,31 +491,12 @@ Available Python samples:
   dsl                          YAML-based DSL workflow interpreter
   ...
 
-See all samples: https://github.com/temporalio/samples-python
+https://github.com/temporalio/samples-python
 ```
 
-```
-$ temporal sample list
-
-Available samples:
-
-  Go:
-    helloworld                   Basic hello world workflow
-    ...
-
-  Python:
-    hello_standalone_activity    Execute Activities directly from a Client
-    ...
-
-  TypeScript:
-    hello-world                  Basic hello world workflow
-    ...
-
-  ...
-```
-
-This reads the manifest from each samples repo and displays sample names + descriptions.
-Manifests are fetched (and cached briefly) from GitHub.
+Language is required. This reads the manifest from the language's samples repo and
+displays sample names + descriptions. The manifest is fetched (and cached briefly)
+from GitHub.
 
 #### URL parsing
 
@@ -507,7 +506,7 @@ When given a GitHub URL, the CLI parses it to extract:
 - Path → sample directory
 
 This means `temporal sample init https://github.com/temporalio/samples-python/tree/main/hello_standalone_activity`
-is equivalent to `temporal sample init --language python hello_standalone_activity`.
+is equivalent to `temporal sample init python hello_standalone_activity`.
 
 ### Download mechanism
 
@@ -544,34 +543,16 @@ the CLI can fall back to:
 
 This provides a degraded but functional experience while repos adopt the manifest.
 
-### Interactive mode
+### No default interactive mode
 
-When `temporal sample init` is run without arguments, it enters an interactive flow:
+Bare `temporal sample init` and `temporal sample list` print usage and exit non-zero.
+No wizard launches unless the user explicitly opts in. This is a deliberate design
+choice: CLIs should be scriptable, and implicit interactive prompts break pipelines,
+CI scripts, and documentation that assumes deterministic behavior.
 
-```
-$ temporal sample init
-
-Select a language:
-  1. Go
-  2. Java
-  3. Python
-  4. TypeScript
-  5. .NET
-  6. Ruby
-  7. PHP
-
-> 3
-
-Select a sample:
-  1. hello_standalone_activity - Execute Activities directly from a Client
-  2. encryption - End-to-end encryption with a custom codec
-  ...
-
-> 1
-
-Created ./hello_standalone_activity/
-...
-```
+If we later decide interactive discovery is valuable, it should be behind an explicit
+flag (e.g. `temporal sample init --interactive`) or a separate command
+(`temporal sample browse`). But the core commands are deterministic.
 
 ### What about users already in a project?
 
@@ -631,8 +612,8 @@ The CLI resolves these from the user's current `temporal env` configuration.
 - Implement CLI command with GitHub tarball download
 - Define manifest schema (`temporal-samples.yaml` v1)
 - Add manifests to `samples-python` and `samples-typescript`
-- `temporal sample init` with `--language` flag, URL form, interactive mode
-- `temporal sample list` with optional `--language` filter
+- `temporal sample init <language> <sample>` and URL form
+- `temporal sample list <language>`
 
 ### Phase 2: Go, .NET, Java
 
@@ -684,7 +665,7 @@ An AI agent can then help you adapt it to your context or understand it.
    resolve "latest stable" at init time? The manifest should probably specify a minimum,
    and the CLI could optionally upgrade to latest.
 
-3. **Branch/tag support**: Should `temporal init --python hello_standalone_activity@v1.0`
+3. **Branch/tag support**: Should `temporal sample init python hello_standalone_activity@v1.0`
    work? Useful for reproducibility, but adds complexity.
 
 4. **Prerequisites checking**: Should the CLI check that `uv`, `go`, `npm`, etc. are
