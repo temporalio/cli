@@ -182,21 +182,8 @@ $ temporal sample init python hello_standalone_activity
 Downloading hello_standalone_activity from temporalio/samples-python...
 Created ./hello_standalone_activity/
 
-To get started:
-
   cd hello_standalone_activity
-
-  # 1. Start the dev server (if not using Temporal Cloud)
-  temporal server start-dev
-
-  # 2. Run the Worker (in a new terminal)
-  uv run hello_standalone_activity/worker.py
-
-  # 3. Execute the Activity (in a new terminal)
-  uv run hello_standalone_activity/execute_activity.py
-
-  # View in the Web UI
-  http://localhost:8233
+  cat README.md
 ```
 
 ```
