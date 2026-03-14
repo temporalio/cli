@@ -224,7 +224,7 @@ hello_standalone_activity/          ← project root (created by CLI)
 This mirrors the monorepo layout for a single sample. README commands like
 `uv run hello_standalone_activity/worker.py` work identically in both contexts.
 
-For TypeScript (`standalone: true`), the sample directory IS the project — copied
+For TypeScript (empty `scaffold`), the sample directory IS the project — copied
 flat, no nesting.
 
 ### Download mechanism
