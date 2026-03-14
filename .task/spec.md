@@ -10,47 +10,43 @@ one command.
 
 ## Prior art
 
-### Relevant prior art studied
+### Prior art surveyed
 
-| Tool | Mechanism | Post-download setup | Metadata |
-|------|-----------|-------------------|----------|
-| **create-next-app** | GitHub tarball + tar filter to subdirectory | Installs deps, copies `.gitignore` | None; directory existence checked via GitHub API |
-| **degit** | GitHub tarball + tar filter | None (pure copy) | None |
-| **gonew** | `go mod download` | Rewrites `go.mod` module path + import paths | None; any Go module is a valid template |
-| **cargo-generate** | Git clone | Liquid template substitution, interactive prompts | `cargo-generate.toml` in template |
-| **Vite** | Bundled templates (18) in npm package | `npm install` | Hardcoded |
-| **Cookiecutter** | Git clone | Jinja2 substitution in files + filenames | `cookiecutter.json` |
-| **Stripe CLI** | `go-git` clone to local cache | Parses `.env.example`, injects API keys | Two-tier: central `samples.json` registry + per-sample `.cli.json` |
-| **Vercel Templates** | Web gallery + one-click deploy | Creates repo, configures deployment | Web-based gallery at vercel.com/templates |
-| **Supabase** | Docs-driven framework-specific quickstarts | Per-framework tutorial with runnable code | Curated docs pages |
-| **Firebase** | Per-platform quickstart repos on GitHub | IDE-openable projects | GitHub repo structure |
+| Tool | Mechanism | Post-download | Metadata | Docs |
+|------|-----------|---------------|----------|------|
+| **Stripe CLI** | `go-git` clone to cache | `.env` injection of API keys | Two-tier: central `samples.json` + per-sample `.cli.json` | [wiki](https://github.com/stripe/stripe-cli/wiki/Samples-command), [gallery](https://docs.stripe.com/samples), [source](https://github.com/stripe/stripe-cli/tree/master/pkg/samples) |
+| **`sam init`** | Git clone | Full project + tests | GitHub repo ([templates](https://github.com/aws/aws-sam-cli-app-templates)) + custom URLs | [docs](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/using-sam-cli-init.html) |
+| **`pulumi new`** | Git clone | Dep install + stack init | GitHub repo ([templates](https://github.com/pulumi/templates)) + arbitrary git URLs | [docs](https://www.pulumi.com/docs/iac/cli/commands/pulumi_new/) |
+| **`dotnet new`** | NuGet download | Dep restore | `.template.config/template.json`; `dotnet new search` queries NuGet.org | [docs](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-new) |
+| **Spring Initializr** | HTTP API → zip | Full Maven/Gradle project | Centralized server API; web UI at start.spring.io | [docs](https://docs.spring.io/spring-boot/cli/using-the-cli.html) |
+| **create-next-app** | GitHub tarball + tar filter | Installs deps, copies `.gitignore` | None; checks dir existence via GitHub API | — |
+| **degit** | GitHub tarball + tar filter | None (pure copy) | None | — |
+| **gonew** | `go mod download` | Rewrites module path + imports | None; any Go module is a template | — |
+| **cargo-generate** | Git clone | Liquid template substitution | `cargo-generate.toml` in template | — |
+| **`cdk init`** | Built into CLI (3 templates) | Dep install + git init | Hardcoded | [docs](https://docs.aws.amazon.com/cdk/v2/guide/ref-cli-cmd-init.html) |
+| **`serverless`** | Bundled with CLI | Creates `serverless.yml` + handler | Hardcoded | [docs](https://www.serverless.com/framework/docs-providers-aws-cli-reference-create) |
+| **C3 (Cloudflare)** | Bundled + delegates to framework CLIs | Dep install + optional deploy | Hardcoded | [docs](https://developers.cloudflare.com/pages/get-started/c3/) |
+| **`flutter create`** | Built into SDK (6 templates) | Dep install | Hardcoded | [docs](https://docs.flutter.dev/reference/create-new-app) |
+| **`projen new`** | npm/PyPI packages | Ongoing synthesis from `.projenrc` | Package registry | [docs](https://projen.io/docs/introduction/getting-started/) |
+| **Cookiecutter** | Git clone | Jinja2 substitution in files + filenames | `cookiecutter.json` | — |
+| **Yeoman (`yo`)** | npm packages (`generator-*`) | Generator-defined | npm registry | [docs](https://yeoman.io/learning/) |
+| **Vite** | Bundled templates (18) | `npm install` | Hardcoded | — |
+| **Vercel Templates** | Web gallery + one-click deploy | Creates repo, configures deployment | Web gallery at vercel.com/templates | — |
+| **Firebase** | Per-platform quickstart repos | IDE-openable projects | GitHub repo structure | — |
+| **Supabase** | Docs-driven quickstarts | Per-framework tutorial | Curated docs pages | — |
 
-### Non-SDK CLI scaffolding tools
+**Key observations:**
 
-| Tool | Interactive selection | Template distribution | Post-creation | Docs |
-|------|---------------------|----------------------|---------------|------|
-| **`sam init`** (AWS SAM) | **Best wizard**: multi-step (template source → app template → runtime → package type → tracing → name) | GitHub repo ([aws-sam-cli-app-templates](https://github.com/aws/aws-sam-cli-app-templates)) + custom git/HTTP/zip URLs | Full project + tests, no dep install | [sam init guide](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/using-sam-cli-init.html) |
-| **`pulumi new`** | **Best filterable list**: searchable `<provider>-<language>` templates, then prompts for project name, description, stack, and template-specific config (e.g. `aws:region`) | GitHub repo ([pulumi/templates](https://github.com/pulumi/templates)) + arbitrary git URLs | Dep install + stack init | [pulumi new docs](https://www.pulumi.com/docs/iac/cli/commands/pulumi_new/) |
-| **`dotnet new`** | No interactive picker (flag-driven: `dotnet new <SHORT_NAME>`) | **Most extensible**: NuGet packages with `.template.config/template.json` manifest; `dotnet new search` queries NuGet.org | Dep restore | [dotnet new docs](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-new) |
-| **Spring Initializr** | No (flag-driven CLI; real UX is web at start.spring.io) | **Centralized server API** — CLI is a thin HTTP client | Downloads zip with full Maven/Gradle project | [Spring CLI docs](https://docs.spring.io/spring-boot/cli/using-the-cli.html) |
-| **`serverless`** | Yes (arrow-key template list on bare invocation) | Bundled with CLI (AWS-only in v4) | Creates `serverless.yml` + handler | [serverless create docs](https://www.serverless.com/framework/docs-providers-aws-cli-reference-create) |
-| **`cdk init`** | No (flag-driven, 3 templates) | Built into CLI | Dep install + git init + compile | [cdk init reference](https://docs.aws.amazon.com/cdk/v2/guide/ref-cli-cmd-init.html) |
-| **C3 (Cloudflare)** | Yes (multi-step: start type → template → language → git? → deploy?) | Bundled + delegates to framework CLIs | Dep install + optional git + optional deploy | [C3 docs](https://developers.cloudflare.com/pages/get-started/c3/) |
-| **Yeoman (`yo`)** | Yes (meta-menu of installed generators) | npm packages (`generator-*`) | Generator-defined | [yeoman.io](https://yeoman.io/learning/) |
-| **`flutter create`** | No (flag-driven, 6 templates via `--template`) | Built into SDK | Dep install | [flutter create docs](https://docs.flutter.dev/reference/create-new-app) |
-| **`projen new`** | No (argument-driven) | npm/PyPI packages | **Ongoing synthesis** — `.projenrc` file is the permanent source of truth | [projen docs](https://projen.io/docs/introduction/getting-started/) |
-
-**Key observations from this broader survey:**
-
-- **`sam init` is the closest structural model** for what we're building: multi-language
-  serverless platform, templates in a GitHub repo, custom template URLs supported.
+- **Stripe CLI** is the closest structural analog: SDK vendor, multi-language, CLI-driven
+  sample scaffolding. Covered in detail below.
+- **`sam init`** is the closest structural model for multi-language serverless templates
+  in a GitHub repo with custom URL support. It defaults to interactive mode, which is
+  convenient for exploration but makes it impossible to script without `--no-interactive`.
+  We should avoid this.
 - **`dotnet new`** shows what a fully mature template ecosystem looks like: searchable
   registry, parameterized templates, community publishing. Worth aspiring to long-term.
-- **`pulumi new`** has the best interactive selection UX for a large template catalog.
 - **Spring Initializr** demonstrates the "thin CLI over server API" alternative — the
   web UI is the real product, the CLI is for scripting.
-- Note: `sam init` defaults to interactive mode, which is convenient for exploration
-  but makes it impossible to script without `--no-interactive`. We should avoid this.
 
 ### Competitors
 
