@@ -400,33 +400,40 @@ The CLI has a PATH-based extension system (`temporal-<subcommand>`), but `sample
 should be built-in: it's part of the core getting-started story alongside
 `temporal server start-dev` and must work with zero extra installation.
 
-## Phased rollout
+## Scope
 
-**Phase 1: Python + TypeScript.** Define manifest schema, add manifests to these two
-repos, implement `temporal sample init` and `temporal sample list`. These languages
-have the most extractable samples and the largest user base.
+All languages except PHP are supported from the initial release:
+**Python, TypeScript, Go, Java, .NET, Ruby.**
 
-**Phase 2: Go, .NET, Ruby.** Go requires import-path rewriting. .NET requires
-inlining `Directory.Build.props` content. Ruby needs a generated `Gemfile`.
+Each language exercises a different combination of the manifest features,
+validating that the design generalises:
 
-**Phase 3: Java.** Requires generating full Gradle scaffolding and handling the
-class-per-sample structure. May warrant restructuring `samples-java` first.
+| Language | scaffold | sample\_path | rewrite\_imports | Extraction |
+|----------|----------|-------------|-----------------|------------|
+| Python | `pyproject.toml` | — | — | nested |
+| Go | `go.mod` | — | yes | nested |
+| TypeScript | empty | — | — | flat |
+| Java | `build.gradle` | `core/src/main/java/io/temporal/samples` | — | nested (deep) |
+| .NET | `Directory.Build.props` | `src` | — | nested |
+| Ruby | `Gemfile` | — | — | nested |
 
-**Phase 4: Polish.** Caching, version pinning, config injection (Temporal address/
+PHP is deferred: the repo is a single Docker-based application, not a
+collection of independent samples.
+
+**Polish (later):** Caching, version pinning, config injection (Temporal address/
 namespace from `temporal env`), `temporal sample update`.
 
 ## Open questions
 
-1. **Java sample granularity**: Is the unit a single class (`HelloActivity`) or a
-   package directory (`hello/`)? The latter is more natural for `temporal sample init`
-   but still requires full Gradle scaffolding.
+1. **Java sample granularity**: The unit is a package directory (`hello/`)
+   under `core/src/main/java/io/temporal/samples/`. Each package may contain
+   multiple classes, all sharing a `main()` entry point. The `temporal-sample.yaml`
+   lives inside the package directory.
 
-2. **PHP**: Defer, or support with a different model (clone whole repo)?
+2. **PHP**: Deferred. The repo structure is a single Docker-based application,
+   not a collection of independent samples.
 
-3. **Manifest bootstrapping**: Start with Python + TypeScript (already partially done)
-   and let the format prove itself before coordinating across all repos.
-
-4. **Prerequisites checking**: Should the manifest declare `prerequisites: ["uv"]` so
+3. **Prerequisites checking**: Should the manifest declare `prerequisites: ["uv"]` so
    the CLI can `which`-check before proceeding?
 
 ## Long-term direction

@@ -219,6 +219,194 @@ func TestSample_Init_GitHubURL(t *testing.T) {
 	assert.FileExists(t, filepath.Join("hello", "hello", "__init__.py"))
 }
 
+// TestSample_Init_Go_ImportRewrite verifies that Go import paths are rewritten
+// from the monorepo module path to the new standalone module name.
+func TestSample_Init_Go_ImportRewrite(t *testing.T) {
+	manifest := `version: 1
+language: go
+repo: temporalio/samples-go
+scaffold:
+  go.mod: |
+    module {{name}}
+    go 1.23.0
+    require go.temporal.io/sdk v1.41.0
+rewrite_imports:
+  from: github.com/temporalio/samples-go
+  glob: "*.go"
+`
+	tarball := buildGitHubTarball(t, "temporalio-samples-go-abc1234/", []tarEntry{
+		{"temporal-samples.yaml", manifest},
+		{"helloworld/temporal-sample.yaml", "description: Basic hello world workflow\n"},
+		{"helloworld/helloworld.go", "package helloworld\n\nimport \"go.temporal.io/sdk/workflow\"\n"},
+		{"helloworld/worker/main.go", "package main\n\nimport (\n\t\"github.com/temporalio/samples-go/helloworld\"\n)\n"},
+		{"helloworld/starter/main.go", "package main\n\nimport (\n\t\"github.com/temporalio/samples-go/helloworld\"\n)\n"},
+		{"helloworld/README.md", "# Hello World\n"},
+	})
+
+	srv := serveSamples(t, manifest, tarball)
+	t.Setenv("TEMPORAL_SAMPLES_BASE_URL", srv.URL)
+	t.Chdir(t.TempDir())
+
+	h := NewCommandHarness(t)
+	res := h.Execute("sample", "init", "go", "helloworld")
+
+	require.NoError(t, res.Err)
+
+	// Scaffold: go.mod generated with module name.
+	gomod, err := os.ReadFile(filepath.Join("helloworld", "go.mod"))
+	require.NoError(t, err)
+	assert.Contains(t, string(gomod), "module helloworld")
+
+	// Import paths rewritten from monorepo to standalone.
+	worker, err := os.ReadFile(filepath.Join("helloworld", "helloworld", "worker", "main.go"))
+	require.NoError(t, err)
+	assert.Contains(t, string(worker), `"helloworld/helloworld"`)
+	assert.NotContains(t, string(worker), "github.com/temporalio/samples-go")
+}
+
+// TestSample_Init_Java verifies that Java samples are extracted from the deep
+// sample_path, with Gradle scaffold files generated at the project root.
+func TestSample_Init_Java(t *testing.T) {
+	manifest := `version: 1
+language: java
+repo: temporalio/samples-java
+scaffold:
+  build.gradle: |
+    plugins { id 'java' }
+    repositories { mavenCentral() }
+    java { sourceCompatibility = JavaVersion.VERSION_11 }
+    dependencies {
+        implementation "io.temporal:temporal-sdk:{{sdk_version}}"
+    }
+    task execute(type: JavaExec) {
+        mainClass = findProperty("mainClass") ?: ""
+        classpath = sourceSets.main.runtimeClasspath
+    }
+sample_path: core/src/main/java/io/temporal/samples
+`
+	tarball := buildGitHubTarball(t, "temporalio-samples-java-abc1234/", []tarEntry{
+		{"temporal-samples.yaml", manifest},
+		{"core/src/main/java/io/temporal/samples/hello/temporal-sample.yaml", "description: Basic hello world samples\nsdk_version: \"1.32.1\"\n"},
+		{"core/src/main/java/io/temporal/samples/hello/HelloActivity.java", "package io.temporal.samples.hello;\npublic class HelloActivity {}\n"},
+		{"core/src/main/java/io/temporal/samples/hello/README.md", "# Hello\n"},
+	})
+
+	srv := serveSamples(t, manifest, tarball)
+	t.Setenv("TEMPORAL_SAMPLES_BASE_URL", srv.URL)
+	t.Chdir(t.TempDir())
+
+	h := NewCommandHarness(t)
+	res := h.Execute("sample", "init", "java", "hello")
+
+	require.NoError(t, res.Err)
+
+	// Scaffold: build.gradle with sdk_version expanded.
+	gradle, err := os.ReadFile(filepath.Join("hello", "build.gradle"))
+	require.NoError(t, err)
+	assert.Contains(t, string(gradle), `temporal-sdk:1.32.1`)
+
+	// Java source preserved at deep path under project root.
+	assert.FileExists(t, filepath.Join("hello",
+		"src", "main", "java", "io", "temporal", "samples", "hello",
+		"HelloActivity.java"))
+
+	// README at project root.
+	assert.FileExists(t, filepath.Join("hello", "README.md"))
+}
+
+// TestSample_Init_DotNet verifies that .NET samples are extracted from src/,
+// with a generated Directory.Build.props at the project root.
+func TestSample_Init_DotNet(t *testing.T) {
+	manifest := `version: 1
+language: dotnet
+repo: temporalio/samples-dotnet
+scaffold:
+  Directory.Build.props: |
+    <Project>
+      <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+      </PropertyGroup>
+      <ItemGroup>
+        <PackageReference Include="Temporalio" Version="1.11.1" />
+      </ItemGroup>
+    </Project>
+sample_path: src
+`
+	tarball := buildGitHubTarball(t, "temporalio-samples-dotnet-abc1234/", []tarEntry{
+		{"temporal-samples.yaml", manifest},
+		{"src/ActivitySimple/temporal-sample.yaml", "description: Simple activity execution from a workflow\n"},
+		{"src/ActivitySimple/TemporalioSamples.ActivitySimple.csproj", "<Project Sdk=\"Microsoft.NET.Sdk\">\n  <PropertyGroup><OutputType>Exe</OutputType></PropertyGroup>\n</Project>\n"},
+		{"src/ActivitySimple/Program.cs", "using Temporalio.Client;\n"},
+		{"src/ActivitySimple/README.md", "# Activity Simple\n"},
+	})
+
+	srv := serveSamples(t, manifest, tarball)
+	t.Setenv("TEMPORAL_SAMPLES_BASE_URL", srv.URL)
+	t.Chdir(t.TempDir())
+
+	h := NewCommandHarness(t)
+	res := h.Execute("sample", "init", "dotnet", "ActivitySimple")
+
+	require.NoError(t, res.Err)
+
+	// Scaffold: Directory.Build.props generated.
+	props, err := os.ReadFile(filepath.Join("ActivitySimple", "Directory.Build.props"))
+	require.NoError(t, err)
+	assert.Contains(t, string(props), "net8.0")
+
+	// Sample files nested under project subdir.
+	assert.FileExists(t, filepath.Join("ActivitySimple", "ActivitySimple",
+		"TemporalioSamples.ActivitySimple.csproj"))
+	assert.FileExists(t, filepath.Join("ActivitySimple", "ActivitySimple", "Program.cs"))
+
+	// README at project root.
+	assert.FileExists(t, filepath.Join("ActivitySimple", "README.md"))
+}
+
+// TestSample_Init_Ruby verifies that Ruby samples get a generated Gemfile
+// at the project root.
+func TestSample_Init_Ruby(t *testing.T) {
+	manifest := `version: 1
+language: ruby
+repo: temporalio/samples-ruby
+scaffold:
+  Gemfile: |
+    source 'https://rubygems.org'
+    gem 'temporalio'
+`
+	tarball := buildGitHubTarball(t, "temporalio-samples-ruby-abc1234/", []tarEntry{
+		{"temporal-samples.yaml", manifest},
+		{"activity_simple/temporal-sample.yaml", "description: Simple activity execution from a workflow\n"},
+		{"activity_simple/my_workflow.rb", "module ActivitySimple; end\n"},
+		{"activity_simple/my_activities.rb", "module ActivitySimple; end\n"},
+		{"activity_simple/worker.rb", "require_relative 'my_workflow'\n"},
+		{"activity_simple/starter.rb", "require_relative 'my_workflow'\n"},
+		{"activity_simple/README.md", "# Activity Simple\n"},
+	})
+
+	srv := serveSamples(t, manifest, tarball)
+	t.Setenv("TEMPORAL_SAMPLES_BASE_URL", srv.URL)
+	t.Chdir(t.TempDir())
+
+	h := NewCommandHarness(t)
+	res := h.Execute("sample", "init", "ruby", "activity_simple")
+
+	require.NoError(t, res.Err)
+
+	// Scaffold: Gemfile generated.
+	gemfile, err := os.ReadFile(filepath.Join("activity_simple", "Gemfile"))
+	require.NoError(t, err)
+	assert.Contains(t, string(gemfile), "gem 'temporalio'")
+
+	// Sample files present (Ruby uses require_relative, no nesting needed,
+	// but scaffold is non-empty so files are nested under sample subdir).
+	assert.FileExists(t, filepath.Join("activity_simple", "activity_simple", "worker.rb"))
+	assert.FileExists(t, filepath.Join("activity_simple", "activity_simple", "my_workflow.rb"))
+
+	// README at project root.
+	assert.FileExists(t, filepath.Join("activity_simple", "README.md"))
+}
+
 func TestSample_Init_NoArgs(t *testing.T) {
 	h := NewCommandHarness(t)
 	res := h.Execute("sample", "init")

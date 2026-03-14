@@ -3,16 +3,17 @@
 ## Overview
 
 Add `temporal sample init` and `temporal sample list` commands to the CLI.
-Phase 1 targets Python and TypeScript. The CLI is a manifest interpreter:
-language-specific knowledge lives in sample repo manifests, not the CLI.
+All languages except PHP are supported from the start: **Python, TypeScript,
+Go, Java, .NET, Ruby.** The CLI is a manifest interpreter: language-specific
+knowledge lives in sample repo manifests, not the CLI.
 
 ## Architecture
 
 ```
-commands.yaml          ─── declares temporal sample {init,list} commands
-commands.gen.go        ─── generated structs + Cobra wiring
-commands.sample.go     ─── run() implementations for init and list
-commands.sample_test.go ── tests (already committed, currently failing)
+commands.yaml           ─── declares temporal sample {init,list} commands
+commands.gen.go         ─── generated structs + Cobra wiring
+commands.sample.go      ─── run() implementations for init and list
+commands.sample_test.go ─── tests (already committed, currently failing)
 ```
 
 No new packages. Everything lives in `internal/temporalcli/`.
@@ -199,14 +200,56 @@ func (c *TemporalSampleInitCommand) run(cctx *CommandContext, args []string) err
      from `sampleManifest.Dependencies`.
    - Expand any other `{{key}}` from `sampleManifest.Extra`.
    - Write to `<outputDir>/<filename>`.
-9. Print instructions to stdout:
-   ```
-   Downloading <sample> from <repo>...
-   Created ./<outputDir>/
+9. If `repoManifest.RewriteImports` is set, walk all extracted files matching
+   the glob and replace the old import prefix with the new module path.
+   For Go: `github.com/temporalio/samples-go/<sample>` → `<name>/<sample>`.
+10. Print instructions to stdout:
+    ```
+    Downloading <sample> from <repo>...
+    Created ./<outputDir>/
 
-     cd <outputDir>
-     cat README.md
-   ```
+      cd <outputDir>
+      cat README.md
+    ```
+
+#### Import rewriting (Go)
+
+When `rewrite_imports` is present in the repo manifest:
+
+```go
+func rewriteImports(dir string, rule rewriteRule, oldPrefix, newPrefix string) error
+```
+
+Walk files matching `rule.Glob` under `dir`. For each file, replace all
+occurrences of `oldPrefix` with `newPrefix`. This handles both direct imports
+(`"github.com/temporalio/samples-go/helloworld"`) and nested package imports
+(`"github.com/temporalio/samples-go/helloworld/worker"`).
+
+The old prefix is `rule.From + "/" + sample`. The new prefix is
+`name + "/" + sample` (where `name` is the project directory name, which
+equals the sample name by default).
+
+#### Java: deep `sample_path`
+
+When `sample_path` is set (e.g. `core/src/main/java/io/temporal/samples`),
+the sample lives at `<sample_path>/<sample>/` in the tarball. The CLI:
+
+1. Extracts sample files to `<outputDir>/src/main/java/io/temporal/samples/<sample>/`
+   — preserving the Java source tree structure under the project root.
+2. The `src/main/java/...` prefix is derived from `sample_path` by stripping
+   the module prefix (`core/`). More precisely: `sample_path` minus the first
+   path component gives the Java source tree layout.
+
+The per-sample `temporal-sample.yaml` can supply extra template variables
+(e.g. `sdk_version`) that the scaffold template references.
+
+#### .NET: `sample_path: src`
+
+Similar to Java but simpler. Samples live at `src/<SampleName>/` in the repo.
+The CLI extracts to `<outputDir>/<SampleName>/` (nested under project root).
+The scaffold generates `Directory.Build.props` at the project root, providing
+the shared SDK version and framework target that the repo-level file normally
+supplies.
 
 #### GitHub URL parsing
 
@@ -222,11 +265,11 @@ Derive language from repo name: `samples-python` → `python`.
 #### Tarball reading
 
 ```go
-// readTarball downloads and opens a gzipped tarball, returning a *tar.Reader.
-// The caller must close the response body.
+// downloadTarball downloads and opens a gzipped tarball, returning a
+// *tar.Reader. The caller must close the response body.
 func downloadTarball(ctx context.Context, url string) (io.ReadCloser, *tar.Reader, error)
 
-// stripPrefix removes the top-level GitHub prefix directory from a tar
+// stripTarPrefix removes the top-level GitHub prefix directory from a tar
 // entry name, returning the path relative to the repo root.
 func stripTarPrefix(name string) string
 ```
@@ -234,7 +277,31 @@ func stripTarPrefix(name string) string
 GitHub tarballs have a single top-level directory (`{owner}-{repo}-{shortsha}/`).
 `stripTarPrefix` removes it by finding the first `/` and returning everything after.
 
-### 4. Dependencies
+### 4. Add manifests to sample repos
+
+Each samples repo (on branch `cli-sample-init`) gets:
+- `temporal-samples.yaml` at the repo root
+- `temporal-sample.yaml` in each sample directory (at minimum a representative
+  subset for initial testing; the full set can be populated incrementally)
+
+The Python repo already has a `temporal-samples.yaml` and two per-sample
+manifests. The remaining repos need manifests created from scratch.
+
+**Repo-level manifests (summary):**
+
+| Repo | scaffold files | sample\_path | rewrite\_imports |
+|------|---------------|-------------|-----------------|
+| samples-python | `pyproject.toml` | — | — |
+| samples-typescript | (empty) | — | — |
+| samples-go | `go.mod` | — | `from: github.com/temporalio/samples-go`, `glob: "*.go"` |
+| samples-java | `build.gradle` | `core/src/main/java/io/temporal/samples` | — |
+| samples-dotnet | `Directory.Build.props` | `src` | — |
+| samples-ruby | `Gemfile` | — | — |
+
+Per-sample manifests contain `description` and optionally `dependencies`
+or extra template variables (e.g. `sdk_version` for Java).
+
+### 5. Dependencies
 
 Add `gopkg.in/yaml.v3` for manifest parsing (check if already in `go.mod`
 — it's likely already there via transitive deps).
@@ -242,23 +309,24 @@ Add `gopkg.in/yaml.v3` for manifest parsing (check if already in `go.mod`
 No other new dependencies. The implementation uses:
 - `archive/tar`, `compress/gzip` (stdlib)
 - `net/http` (stdlib)
-- `text/template` or simple `strings.ReplaceAll` for `{{var}}` expansion
+- `strings.ReplaceAll` for `{{var}}` expansion
+- `path/filepath.WalkDir` + `strings.ReplaceAll` for import rewriting
 
 For template expansion: `strings.ReplaceAll` is simpler and sufficient.
 The spec defines only `{{name}}`, `{{dependencies}}`, and per-sample extra
 keys. No control flow, no escaping. A simple replace loop is preferable
 to `text/template`.
 
-### 5. Verify tests pass
+### 6. Verify tests pass
 
 Run:
 ```
 go test -run 'TestSample_' -count=1 -v ./internal/temporalcli/
 ```
 
-Expected: all 6 tests pass (4 feature tests + 2 error-case tests).
+Expected: all 10 tests pass (8 feature tests + 2 error-case tests).
 
-### 6. Run full test suite, linter, type checker
+### 7. Run full test suite, linter, type checker
 
 ```
 make gen
@@ -266,9 +334,10 @@ go vet ./...
 go test ./internal/temporalcli/ -count=1
 ```
 
-### 7. Commit
+### 8. Commit
 
-Single commit: YAML declarations + generated code + implementation file.
+Single commit for CLI changes: YAML declarations + generated code +
+implementation file. Separate commits for each samples repo manifest.
 
 ## Key design decisions
 
@@ -295,14 +364,18 @@ Single commit: YAML declarations + generated code + implementation file.
    is easier to understand, has no edge cases around delimiters, and needs
    no documentation for sample repo maintainers.
 
-## What this plan does NOT cover (later phases)
+7. **All languages from day one.** Each language exercises a different
+   combination of manifest features (scaffold, sample_path, rewrite_imports,
+   flat vs nested). Implementing all six validates that the manifest design
+   generalises rather than accumulating special cases.
 
-- Go import rewriting (`rewrite_imports` in manifest) — Phase 2
-- Java Gradle scaffolding — Phase 3
-- Caching downloaded tarballs — Phase 4
-- `temporal sample update` — Phase 4
-- `--ref` flag to pin a branch/tag — Phase 4
-- Prerequisite checking (`which uv`) — open question
+## What this plan does NOT cover (later)
+
+- Caching downloaded tarballs
+- `temporal sample update`
+- `--ref` flag to pin a branch/tag
+- Prerequisite checking (`which uv`)
+- PHP support
 
 ## Running the tests
 
@@ -312,15 +385,19 @@ From the repo root (`/Users/dan/worktrees/cli/init/cli`):
 # Run only the sample command tests
 go test -run 'TestSample_' -count=1 -v ./internal/temporalcli/
 
-# After implementation, all 6 must pass:
-#   TestSample_List
-#   TestSample_Init_Python
-#   TestSample_Init_TypeScript_FlatCopy
-#   TestSample_Init_GitHubURL
-#   TestSample_Init_NoArgs
-#   TestSample_List_NoArgs
+# After implementation, all 10 must pass:
+#   TestSample_List                         (list discovers samples from tarball)
+#   TestSample_Init_Python                  (scaffold + nested extraction)
+#   TestSample_Init_TypeScript_FlatCopy     (empty scaffold → flat copy)
+#   TestSample_Init_Go_ImportRewrite        (scaffold + import rewriting)
+#   TestSample_Init_Java                    (scaffold + deep sample_path)
+#   TestSample_Init_DotNet                  (scaffold + sample_path: src)
+#   TestSample_Init_Ruby                    (scaffold, no import rewrite)
+#   TestSample_Init_GitHubURL               (URL parsing variant)
+#   TestSample_Init_NoArgs                  (error: missing args)
+#   TestSample_List_NoArgs                  (error: missing args)
 ```
 
-Without the implementation, the first 4 tests fail with "unknown command"
+Without the implementation, the first 8 tests fail with "unknown command"
 (the `temporal sample` subcommand does not exist). The last 2 pass trivially
 because unknown commands already produce errors.
