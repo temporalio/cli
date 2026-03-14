@@ -112,15 +112,28 @@ their structure best) and out of the CLI (where release cadence is slower).
 
 ### The manifests
 
-**Repo-level: `temporal-samples.yaml`** at the repo root — language identifier and
-scaffold template:
+**Repo-level: `temporal-samples.yaml`** at the repo root — language identifier,
+scaffold template, and optional post-extraction operations.
+
+**Per-sample: `temporal-sample.yaml`** in each sample directory — description and
+any sample-specific metadata (e.g. dependencies).
+
+Template variables in scaffold files: `{{name}}` (directory name) and
+`{{dependencies}}` (from per-sample manifest, quoted and joined).
+
+No `run` commands in manifests. The CLI prints the README; READMEs are the source
+of truth for how to run a sample.
+
+#### Worked examples by language
+
+**Python** — scaffold generates `pyproject.toml`; sample nested inside project dir
+to preserve absolute imports (`from hello.hello_activity import ...`):
 
 ```yaml
-# temporal-samples.yaml (samples-python repo root)
+# temporal-samples.yaml (repo root)
 version: 1
 language: python
 repo: temporalio/samples-python
-
 scaffold:
   pyproject.toml: |
     [project]
@@ -128,33 +141,169 @@ scaffold:
     version = "0.1.0"
     requires-python = ">=3.10"
     dependencies = [{{dependencies}}]
-
     [build-system]
     requires = ["hatchling"]
     build-backend = "hatchling.build"
 ```
-
-**Per-sample: `temporal-sample.yaml`** in each sample directory:
-
 ```yaml
-# hello_standalone_activity/temporal-sample.yaml
-description: Execute Activities directly from a Temporal Client, without a Workflow
+# hello/temporal-sample.yaml
+description: Basic hello world samples (activity, signal, query, etc.)
 dependencies:
   - "temporalio>=1.23.0,<2"
 ```
+```
+Result:  hello/pyproject.toml  (generated)
+         hello/README.md       (copied from sample)
+         hello/hello/          (sample files)
+```
 
-Schema points:
+**Go** — scaffold generates `go.mod`; imports must be rewritten because the monorepo
+module path (`github.com/temporalio/samples-go`) no longer applies. The manifest
+specifies the old prefix; the CLI replaces it with the new module name in all `.go`
+files. This follows `gonew`'s approach.
 
-- If the repo-level `scaffold` is empty, there's nothing to generate — the CLI
-  copies the sample directory flat (TypeScript).
-- `rewrite_imports` — Go-specific: rewrite import paths from monorepo module to
-  extracted project (following `gonew`).
-- `dependencies` — used for scaffold template substitution.
-- No `run` commands. The CLI prints the README; READMEs are the source of truth
-  for how to run a sample.
+```yaml
+# temporal-samples.yaml (repo root)
+version: 1
+language: go
+repo: temporalio/samples-go
+scaffold:
+  go.mod: |
+    module {{name}}
+    go 1.23.0
+    require go.temporal.io/sdk v1.38.0
+rewrite_imports:
+  from: github.com/temporalio/samples-go
+  glob: "*.go"
+```
+```yaml
+# helloworld/temporal-sample.yaml
+description: Basic hello world workflow
+```
+```
+Result:  helloworld/go.mod              (generated, module = "helloworld")
+         helloworld/README.md           (copied)
+         helloworld/helloworld/         (sample files)
+           worker/main.go               "github.com/temporalio/samples-go/helloworld"
+                                        → "helloworld/helloworld"
+```
 
-Template variables: `{{name}}` (directory name) and `{{dependencies}}` (from
-per-sample manifest, quoted and joined). Deliberately minimal.
+**TypeScript** — no scaffolding needed; each sample already has `package.json`.
+Copied flat.
+
+```yaml
+# temporal-samples.yaml (repo root)
+version: 1
+language: typescript
+repo: temporalio/samples-typescript
+scaffold: {}
+```
+```yaml
+# hello-world/temporal-sample.yaml
+description: Basic hello world workflow
+```
+```
+Result:  hello-world/          (sample dir copied as-is)
+           package.json        (already present)
+           src/activities.ts
+           src/workflows.ts
+           ...
+```
+
+**Java** — scaffold generates Gradle wrapper and build files. Samples live deep
+in the source tree (`core/src/main/java/io/temporal/samples/hello/`); the manifest
+maps a short name to the deep path. No import rewriting needed — the Java package
+declaration and intra-package imports survive extraction.
+
+```yaml
+# temporal-samples.yaml (repo root)
+version: 1
+language: java
+repo: temporalio/samples-java
+scaffold:
+  build.gradle: |
+    plugins { id 'java' }
+    repositories { mavenCentral() }
+    java { sourceCompatibility = JavaVersion.VERSION_11 }
+    dependencies {
+        implementation "io.temporal:temporal-sdk:{{sdk_version}}"
+        implementation "io.temporal:temporal-envconfig:{{sdk_version}}"
+    }
+    task execute(type: JavaExec) {
+        mainClass = findProperty("mainClass") ?: ""
+        classpath = sourceSets.main.runtimeClasspath
+    }
+sample_path: core/src/main/java/io/temporal/samples
+```
+```yaml
+# core/src/main/java/io/temporal/samples/hello/temporal-sample.yaml
+description: Basic hello world samples (activity, retry, signal, etc.)
+sdk_version: "1.32.1"
+```
+```
+Result:  hello/build.gradle                                       (generated)
+         hello/README.md                                          (copied)
+         hello/src/main/java/io/temporal/samples/hello/           (sample files)
+           HelloActivity.java
+           HelloSignal.java
+           ...
+```
+
+**.NET** — scaffold inlines what `Directory.Build.props` normally provides into
+the `.csproj`, or generates a minimal `Directory.Build.props` alongside it.
+
+```yaml
+# temporal-samples.yaml (repo root)
+version: 1
+language: dotnet
+repo: temporalio/samples-dotnet
+scaffold:
+  Directory.Build.props: |
+    <Project>
+      <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+      </PropertyGroup>
+    </Project>
+sample_path: src
+```
+```yaml
+# src/ActivitySimple/temporal-sample.yaml
+description: Simple activity execution from a workflow
+```
+```
+Result:  ActivitySimple/Directory.Build.props  (generated)
+         ActivitySimple/README.md              (copied)
+         ActivitySimple/ActivitySimple/        (sample files)
+           ActivitySimple.csproj
+           ...
+```
+
+**Ruby** — scaffold generates `Gemfile`. Uses `require_relative` for local files,
+so no import rewriting needed.
+
+```yaml
+# temporal-samples.yaml (repo root)
+version: 1
+language: ruby
+repo: temporalio/samples-ruby
+scaffold:
+  Gemfile: |
+    source 'https://rubygems.org'
+    gem 'temporalio'
+```
+```yaml
+# activity_simple/temporal-sample.yaml
+description: Simple activity execution from a workflow
+```
+```
+Result:  activity_simple/Gemfile     (generated)
+         activity_simple/README.md   (copied)
+         activity_simple/            (sample files)
+           my_workflow.rb
+           my_activities.rb
+           worker.rb
+           starter.rb
+```
 
 **Discovery:** `temporal sample list` fetches the repo tarball and scans for
 directories containing `temporal-sample.yaml`. One HTTP request, no index to maintain.
