@@ -10,8 +10,6 @@ one command.
 
 ## Prior art
 
-### Prior art surveyed
-
 | Tool | Mechanism | Post-download | Metadata | Docs |
 |------|-----------|---------------|----------|------|
 | **Stripe CLI** | `go-git` clone to cache | `.env` injection of API keys | Two-tier: central `samples.json` + per-sample `.cli.json` | [wiki](https://github.com/stripe/stripe-cli/wiki/Samples-command), [gallery](https://docs.stripe.com/samples), [source](https://github.com/stripe/stripe-cli/tree/master/pkg/samples) |
@@ -37,189 +35,91 @@ one command.
 
 **Key observations:**
 
-- **Stripe CLI** is the closest structural analog: SDK vendor, multi-language, CLI-driven
-  sample scaffolding. Covered in detail below.
-- **`sam init`** is the closest structural model for multi-language serverless templates
-  in a GitHub repo with custom URL support. It defaults to interactive mode, which is
-  convenient for exploration but makes it impossible to script without `--no-interactive`.
-  We should avoid this.
-- **`dotnet new`** shows what a fully mature template ecosystem looks like: searchable
-  registry, parameterized templates, community publishing. Worth aspiring to long-term.
-- **Spring Initializr** demonstrates the "thin CLI over server API" alternative — the
-  web UI is the real product, the CLI is for scripting.
+- **Stripe CLI** is the closest structural analog (SDK vendor, multi-language, CLI-driven
+  sample scaffolding) and the only one with two-tier metadata. Covered below.
+- **`sam init`** is closest for multi-language templates in a GitHub repo. Defaults to
+  interactive mode — we should avoid this.
+- Two download strategies dominate: **GitHub tarballs** (create-next-app, degit) and
+  **git clone** (Stripe, cargo-generate). Tarballs are simpler for one-shot extraction.
 
-### Competitors
-
-- **Restate**: No CLI scaffolding. Manual clone from examples repo.
-- **Inngest**: No CLI scaffolding. Doc-driven quickstart only.
-- **Dagger**: `dagger init --sdk {lang}` creates empty module. `--blueprint` for module templates. Not example-oriented.
+**Competitors:** Restate, Inngest, and Dagger have no CLI sample scaffolding.
 
 ### Stripe CLI — closest prior art
 
-Docs:
-- CLI wiki: https://github.com/stripe/stripe-cli/wiki/Samples-command
-- Samples gallery (web, no CLI docs): https://docs.stripe.com/samples
-- CLI source: https://github.com/stripe/stripe-cli/tree/master/pkg/samples
-- Registry repo: https://github.com/stripe-samples/samples-list
+[CLI source](https://github.com/stripe/stripe-cli/tree/master/pkg/samples) ·
+[Registry](https://github.com/stripe-samples/samples-list) ·
+[Wiki](https://github.com/stripe/stripe-cli/wiki/Samples-command)
 
-Stripe's `stripe samples create` command is the single most relevant prior art. Like
-Temporal, Stripe is an SDK vendor with a CLI, multi-language samples, and the goal of
-getting users from zero to a running integration quickly.
+Two-tier registry: central `samples.json` (name → repo URL) + per-sample `.cli.json`
+with integrations, client/server language lists, and post-install config. Downloads
+via `go-git` clone to `~/.config/stripe/samples-cache/`. Injects API keys into `.env`.
 
-**Architecture (two-tier registry):**
+**Key structural difference:** Stripe has one sample per repo with multiple language
+implementations inside. Temporal has one repo per language with multiple samples inside.
+This inverts the registry: Stripe's index points to repos; ours points to directories
+within repos.
 
-1. **Central registry**: A separate repo (`stripe-samples/samples-list`) containing a
-   single `samples.json` file — a flat array of `{name, description, URL}` entries
-   pointing to individual sample repos. ~35 samples.
+**Adopted from Stripe:** Two-tier metadata (repo-level + per-sample), caching.
+**Different from Stripe:** Our metadata lives in the samples repos (not a separate
+registry repo). We need project scaffolding (Stripe samples are already standalone).
 
-2. **Per-sample metadata**: Each sample repo has a `.cli.json` at its root:
-   ```json
-   {
-     "name": "accept-a-payment",
-     "configureDotEnv": true,
-     "postInstall": {"message": "..."},
-     "integrations": [
-       {
-         "name": "payment-element",
-         "clients": ["html", "react-cra"],
-         "servers": ["ruby", "node", "python", "java", "go", "dotnet"]
-       }
-     ]
-   }
-   ```
+## Temporal samples repos — current state
 
-**Download**: `go-git` PlainClone to `~/.config/stripe/samples-cache/<name>/`. Pulls
-on subsequent use. No tarballs.
+Eight repos: `samples-{go,java,python,typescript,dotnet,ruby,php}` plus `samples-server`.
 
-**Multi-language handling**: Convention-based directory layout
-(`{integration}/server/{lang}/`, `{integration}/client/{lang}/`). The CLI prompts the
-user to select an integration, then client language, then server language, and copies
-only the selected directories into the target.
+| Language | Repo | Build system | Sample unit | Standalone? | Run commands |
+|----------|------|-------------|-------------|-------------|--------------|
+| **Python** | `samples-python` | Root `pyproject.toml` (uv/hatch) | Top-level dirs (~38) | No — need generated `pyproject.toml` | `uv run <sample>/worker.py` |
+| **Go** | `samples-go` | Root `go.mod` | Top-level dirs (~48) | No — need `go.mod` + import rewrite | `go run <sample>/worker/main.go` |
+| **TypeScript** | `samples-typescript` | pnpm workspace | Top-level dirs (~40), each with own `package.json` | **Yes** | `npm run start` / `npm run workflow` |
+| **Java** | `samples-java` | Root Gradle multi-module | Classes in `core/src/.../samples/` | No — complex; see below | `./gradlew execute -PmainClass=...` |
+| **.NET** | `samples-dotnet` | `.sln` + `Directory.Build.props` | Projects in `src/` | Almost — need `Directory.Build.props` content | `dotnet run` from sample dir |
+| **Ruby** | `samples-ruby` | Root `Gemfile` | Top-level dirs (~12) | No — need generated `Gemfile` | `bundle exec ruby worker.rb` |
+| **PHP** | `samples-php` | Docker + Composer | `app/` dir | No — Docker-based | Docker-based |
 
-**Config injection**: Parses `.env.example`, injects the user's Stripe API keys (from
-`~/.config/stripe` profile), writes `server/.env`.
+### Java: special case
 
-**UX**: Interactive prompts via `promptui.Select` (arrow-key selection). Spinners for
-download/copy/configure phases. Final output: "You're all set. To get started: cd {dest}".
+Java samples are not top-level directories. The `core` module contains ~30 samples as
+Java classes within `core/src/main/java/io/temporal/samples/` (e.g.,
+`hello/HelloActivity.java`). Each sample is a self-contained class with a `main()`
+method. The `springboot` and `springboot-basic` modules are separate Gradle modules
+with their own `build.gradle`, closer to the directory-per-sample model.
 
-**Key structural difference from Temporal**: Stripe has **one sample per repo** with
-multiple language implementations inside. Temporal has **one repo per language** with
-multiple samples inside. This inverts the registry design: Stripe's central registry
-points to repos; Temporal's would point to directories within repos.
+Making a Java sample standalone requires generating a full Gradle project:
+`build.gradle`, `settings.gradle`, wrapper scripts, and preserving the Java package
+hierarchy. This is the hardest extraction of any language.
 
-**What we should adopt from Stripe:**
-- The two-tier metadata pattern (central discovery + per-sample config)
-- `go-git` for download (the CLI already uses Go; go-git is battle-tested)
-- Local caching of downloaded samples
-- Config injection (Temporal address/namespace instead of API keys)
+### PHP: special case
 
-**What we should do differently:**
-- Our registry is per-language-repo, not a separate registry repo (simpler)
-- Our metadata lives alongside the samples, not in separate repos
-- We need project scaffolding (Stripe samples are already standalone per-language)
-
-### Key insight from prior art
-
-Two download strategies dominate: **GitHub tarballs** (create-next-app, degit) and
-**git clone to cache** (Stripe, cargo-generate). Tarballs are faster for one-shot use;
-git clone is better when samples are reused or updated. Since `temporal sample init` is
-typically a one-shot operation, tarballs are slightly better, but `go-git` (Stripe's
-approach) is simpler to implement in Go and handles private repos/auth naturally.
-
-The most relevant models are **Stripe CLI** (closest structural analog: SDK vendor,
-multi-language, CLI-driven) and **create-next-app** (monorepo of examples, subdirectory
-extraction). Stripe's two-tier metadata approach is the most mature design for our
-problem space.
-
-## Current state of Temporal samples repos
-
-Eight samples repos exist: `samples-{go,java,python,typescript,dotnet,ruby,php}` and
-`samples-server`. A Rust repo is expected.
-
-### Per-language extractability
-
-The central design constraint is that most samples repos are monorepos where samples
-share root-level build configuration. Extracting a single sample directory and making it
-independently buildable requires language-specific scaffolding.
-
-| Language | Root build files | Per-sample build file | Extractable standalone? |
-|----------|------------------|-----------------------|------------------------|
-| **TypeScript** | `pnpm-workspace.yaml`, root `package.json` | Own `package.json` with all deps | **Yes** — each sample is self-contained |
-| **.NET** | `Directory.Build.props`, `.sln` | Own `.csproj` (minimal, inherits from `Directory.Build.props`) | **Almost** — need `Directory.Build.props` or inline its content into `.csproj` |
-| **Python** | `pyproject.toml` (single, with dependency groups) | None (just `.py` files) | **No** — need to generate a `pyproject.toml` |
-| **Go** | `go.mod`, `go.sum` | None (share root module) | **No** — need to generate `go.mod` + rewrite imports |
-| **Ruby** | `Gemfile` | None (just `.rb` files) | **No** — need to generate `Gemfile` |
-| **Java** | `build.gradle`, `settings.gradle`, `gradle.properties` | None (share root build) | **No** — need to generate full Gradle scaffolding |
-| **PHP** | `docker-compose.yml`, `composer.json` | None | **No** — Docker-based setup, complex |
-
-### README conventions
-
-Sample READMEs vary significantly:
-
-- **Python**: Well-structured with "Quickstart" sections, but commands assume repo-root
-  working directory (e.g., `uv run hello_standalone_activity/worker.py`)
-- **Go**: Terse, assumes repo-root (e.g., `go run helloworld/worker/main.go`)
-- **TypeScript**: Has `.post-create` files in `.shared/` with post-scaffold instructions
-- **Java**: Commands use Gradle from repo root (`./gradlew -q execute -PmainClass=...`)
-- **.NET**: Commands use `dotnet run` from sample directory — works standalone
-
-### Existing metadata
-
-- TypeScript has `.scripts/list-of-samples.json` — a flat list of sample names
-- TypeScript has `.shared/.post-create` — post-scaffold instructions template
-- Python `pyproject.toml` has dependency groups for samples needing extra deps
-- No other repos have structured sample metadata
+PHP samples use Docker Compose and RoadRunner. The repo structure is a single
+application (`app/` directory), not a collection of independent samples. Supporting
+PHP may require a different approach or deferral.
 
 ## Design
 
-### Core principle: manifest-driven with progressive enhancement
+### Architecture
 
-The design has two halves:
+Two halves:
 
-1. **Samples-side**: A manifest file (`temporal-samples.yaml`) at the root of each
-   samples repo, describing samples and how to make them runnable standalone.
-2. **CLI-side**: Download logic + manifest interpreter. Minimal hardcoded language
-   knowledge; the manifest provides the instructions.
+1. **Samples-side**: A manifest file (`temporal-samples.yaml`) at each repo root,
+   describing available samples and how to scaffold them standalone.
+2. **CLI-side**: Downloads sample code, reads the manifest, generates scaffolding,
+   prints the README. The CLI is a **manifest interpreter**, not a language expert.
 
-This follows the user's stated preference: "the CLI would acquire that logic from some
-sort of structured data in the samples repo."
-
-### Why not hardcode language logic in the CLI?
-
-- 8 languages today, Rust coming, more possible
-- Build tool conventions change (poetry→uv, npm→pnpm, Maven→Gradle)
-- Samples repo maintainers know their structure best
-- CLI releases are slower than samples repo updates
-
-The CLI should be a **manifest interpreter**, not a language expert.
-
-### Why not just clone the whole repo?
-
-This was considered (it's what users do manually today, and README commands work as-is).
-Rejected because:
-
-- Defeats the "quick standalone project" goal
-- Downloads 10-100x more than needed
-- User is inside someone else's repo, not their own project
-- Doesn't answer the "initialize the project for them" question
+This keeps language-specific knowledge in the samples repos (where maintainers know
+their structure best) and out of the CLI (where release cadence is slower).
 
 ### The manifests
 
-Two levels, matching the self-containment principle: repo-level config and
-per-sample metadata.
-
-**Repo-level: `temporal-samples.yaml`** at the repo root. Contains only what's
-truly repo-level — language identifier and scaffold template:
+**Repo-level: `temporal-samples.yaml`** at the repo root — language identifier and
+scaffold template:
 
 ```yaml
-# temporal-samples.yaml (repo root)
+# temporal-samples.yaml (samples-python repo root)
 version: 1
 language: python
 repo: temporalio/samples-python
 
-# Scaffold template for generating a standalone project from any sample.
-# {{name}} and {{dependencies}} are substituted from the sample's
-# temporal-sample.yaml.
 scaffold:
   pyproject.toml: |
     [project]
@@ -233,8 +133,7 @@ scaffold:
     build-backend = "hatchling.build"
 ```
 
-**Per-sample: `temporal-sample.yaml`** in each sample directory. Each sample
-owns its own metadata:
+**Per-sample: `temporal-sample.yaml`** in each sample directory:
 
 ```yaml
 # hello_standalone_activity/temporal-sample.yaml
@@ -243,163 +142,38 @@ dependencies:
   - "temporalio>=1.23.0,<2"
 ```
 
-```yaml
-# encryption/temporal-sample.yaml
-description: End-to-end encryption with a custom codec
-dependencies:
-  - "temporalio>=1.23.0,<2"
-  - "cryptography>=38.0.1,<39"
-  - "aiohttp>=3.8.1,<4"
-```
+Schema points:
 
-For Go, the repo-level scaffold is different but the per-sample structure is the same:
+- `standalone: true` — sample directory is already a complete project (TypeScript).
+  CLI copies flat, no scaffolding.
+- `rewrite_imports` — Go-specific: rewrite import paths from monorepo module to
+  extracted project (following `gonew`).
+- `dependencies` — used for scaffold template substitution. Absent when standalone.
+- No `run` commands. The CLI prints the README; READMEs are the source of truth
+  for how to run a sample.
 
-```yaml
-# temporal-samples.yaml (samples-go repo root)
-version: 1
-language: go
-repo: temporalio/samples-go
+Template variables: `{{name}}` (directory name) and `{{dependencies}}` (from
+per-sample manifest, quoted and joined). Deliberately minimal.
 
-scaffold:
-  go.mod: |
-    module {{name}}
+**Discovery:** `temporal sample list` fetches the repo tarball and scans for
+directories containing `temporal-sample.yaml`. One HTTP request, no index to maintain.
 
-    go 1.23.0
+### Commands
 
-    require go.temporal.io/sdk v1.33.0
-```
-
-```yaml
-# helloworld/temporal-sample.yaml
-description: Basic hello world workflow
-rewrite_imports:
-  from: "github.com/temporalio/samples-go"
-```
-
-For TypeScript (simplest — samples are already standalone):
-
-```yaml
-# temporal-samples.yaml (samples-typescript repo root)
-version: 1
-language: typescript
-repo: temporalio/samples-typescript
-
-scaffold: {}  # No scaffolding needed; each sample has its own package.json
-```
-
-```yaml
-# hello-world/temporal-sample.yaml
-description: Basic hello world workflow
-standalone: true
-```
-
-**Key schema points:**
-
-- **Per-sample `dependencies`** — used for scaffold generation. Absent when
-  `standalone: true` (the sample already has its own build file).
-- **Per-sample `standalone: true`** — the sample directory is already a
-  self-contained project. The CLI copies it flat, no scaffolding.
-- **Per-sample `rewrite_imports`** — Go-specific: rewrite import paths from
-  the monorepo module to the extracted project (following `gonew`).
-- **No `run` commands.** The CLI prints the README after extraction. READMEs
-  are the single source of truth for how to run a sample.
-
-**Sample discovery:** For `temporal sample list`, the CLI downloads the repo
-tarball (cached) and scans for directories containing `temporal-sample.yaml`.
-One HTTP request, no index file to maintain.
-
-### Template variables
-
-The scaffold templates support simple `{{variable}}` substitution:
-
-| Variable | Source | Example |
-|----------|--------|---------|
-| `name` | Directory name (or user-specified) | `hello_standalone_activity` |
-| `dependencies` | From per-sample `dependencies`, quoted+joined | `"temporalio>=1.23.0,<2"` |
-
-Deliberately minimal. Complex scaffolding needs = restructure the sample.
-
-### Command naming: `temporal sample`
-
-**Decision: `temporal sample init` and `temporal sample list`.**
-
-Reasoning:
-
-- **Not `temporal init`** — `init` at root level implies initializing `temporal` itself
-  (like `git init` initializes a git repo). Using it for "download a sample" is a
-  semantic mismatch. It's also a valuable command name to reserve for future use
-  (e.g. initializing CLI configuration, onboarding wizard).
-
-- **Not `temporal python ...`** or `temporal <language> ...`** — language as a subcommand
-  creates a sprawling namespace that conflicts with the CLI's domain-oriented structure
-  (workflow, activity, schedule, etc). Makes `--help` discovery worse.
-
-- **`temporal sample <verb>`** follows the CLI's existing pattern: `temporal workflow start`,
-  `temporal schedule create`, `temporal server start-dev`. The noun is the subcommand,
-  the verb is the leaf.
-
-- **`init` over `create`** — you're *initializing a project from* a sample, not *creating*
-  a sample. `create` implies authoring. (`sam init`, `cdk init`, `cargo init` use `init`
-  for this reason.)
-
-- **`temporal sample list`** follows naturally for discovery and mirrors `stripe samples list`.
-
-- Extensible later: `temporal sample run`, `temporal sample update`, etc.
-
-### CLI extension context
-
-The CLI has a PATH-based extension system (shipped v1.6.0): any executable named
-`temporal-<subcommand>` on PATH becomes `temporal <subcommand>`. The first consumer is
-`temporal-cloud` (the cloud-cli repo at `temporalio/cloud-cli`).
-
-**Should `sample` be built-in or an extension?** Either works — the UX is identical
-thanks to the extension system. Arguments for built-in: it's part of the core
-getting-started story alongside `server start-dev`, and having it ship with the binary
-means zero extra installation. Arguments for extension: keeps the core CLI lean,
-allows independent release cadence. **Recommendation: built-in**, because the
-getting-started flow should work out of the box with no extra installation.
-
-### CLI UX
-
-Language is a positional argument, not a flag. Users nearly always care about one
-language — it's the primary dimension of their mental model. Making it positional
-keeps commands concise and natural.
+`temporal sample init` and `temporal sample list`, following the CLI's existing
+`temporal <noun> <verb>` pattern. `init` over `create` because you're initializing
+a project *from* a sample, not authoring one. Language is a positional argument.
 
 ```
-# Standard form: language + sample name
-temporal sample init python hello_standalone_activity
-
-# From a GitHub URL (language inferred from repo name)
-temporal sample init https://github.com/temporalio/samples-python/tree/main/hello_standalone_activity
-
-# Specify output directory
-temporal sample init python hello_standalone_activity --output-dir ./my-project
-
-# List available samples for a language (language is required)
-temporal sample list python
+temporal sample init <language> <sample> [--output-dir DIR]
+temporal sample init <github-url> [--output-dir DIR]
+temporal sample list <language>
 ```
 
-Missing required arguments produce usage help and exit non-zero — no interactive
-prompts by default. CLIs must be scriptable.
+Missing arguments produce usage help and exit non-zero. No interactive mode by
+default — CLIs must be scriptable.
 
-```
-$ temporal sample init
-Error: requires language argument
-
-Usage: temporal sample init <language> <sample> [flags]
-       temporal sample init <github-url> [flags]
-
-Languages: go, java, python, typescript, dotnet, ruby, php
-
-$ temporal sample list
-Error: requires language argument
-
-Usage: temporal sample list <language> [flags]
-
-Languages: go, java, python, typescript, dotnet, ruby, php
-```
-
-#### Detailed flow
+#### Example session
 
 ```
 $ temporal sample init python hello_standalone_activity
@@ -415,16 +189,14 @@ To get started:
   temporal server start-dev
 
   # 2. Run the Worker (in a new terminal)
-  uv run worker.py
+  uv run hello_standalone_activity/worker.py
 
   # 3. Execute the Activity (in a new terminal)
-  uv run execute_activity.py
+  uv run hello_standalone_activity/execute_activity.py
 
   # View in the Web UI
   http://localhost:8233
 ```
-
-#### `temporal sample list`
 
 ```
 $ temporal sample list python
@@ -439,282 +211,91 @@ Available Python samples:
 https://github.com/temporalio/samples-python
 ```
 
-Language is required. This reads the manifest from the language's samples repo and
-displays sample names + descriptions. The manifest is fetched (and cached briefly)
-from GitHub.
-
 #### URL parsing
 
-When given a GitHub URL, the CLI parses it to extract:
-- Owner/repo → determines language
-- Branch/ref
-- Path → sample directory
+`temporal sample init https://github.com/temporalio/samples-python/tree/main/hello_standalone_activity`
+parses to language=python, sample=hello_standalone_activity, ref=main. Equivalent
+to the positional form.
 
-This means `temporal sample init https://github.com/temporalio/samples-python/tree/main/hello_standalone_activity`
-is equivalent to `temporal sample init python hello_standalone_activity`.
+### Extraction
 
-### Extraction structure
-
-The CLI creates a project directory containing the sample as a subdirectory.
-This is necessary because Python (and Go) samples use absolute imports that
-reference the package by name — e.g. `from hello_standalone_activity.my_activity
-import ...`. The sample directory must exist as a package within the project:
+The CLI creates a project directory. For languages where samples use absolute imports
+(Python, Go), the sample directory is nested inside the project to preserve the
+import structure:
 
 ```
 hello_standalone_activity/          ← project root (created by CLI)
-  pyproject.toml                    ← generated from manifest scaffold template
+  pyproject.toml                    ← generated from scaffold template
   README.md                         ← copied from sample dir
   hello_standalone_activity/        ← package dir (extracted from repo)
     __init__.py
     my_activity.py
     worker.py
-    ...
 ```
 
 This mirrors the monorepo layout for a single sample. README commands like
-`uv run hello_standalone_activity/worker.py` work identically in both the
-monorepo and the extracted project. Verified working — see `.task/demo-output/`.
+`uv run hello_standalone_activity/worker.py` work identically in both contexts.
 
-For TypeScript (where `standalone: true`), the sample directory IS the project
-and is copied flat — no nesting needed.
+For TypeScript (`standalone: true`), the sample directory IS the project — copied
+flat, no nesting.
 
 ### Download mechanism
 
-Following create-next-app and degit:
+1. Fetch repo-level manifest via GitHub raw content API
+2. Parse manifest, validate sample exists
+3. Download repo tarball from `codeload.github.com`, filter to sample directory
+4. Apply scaffold templates, write output
 
-1. Fetch `https://codeload.github.com/temporalio/samples-{lang}/tar.gz/{ref}`
-2. Stream through tar extraction, filtering entries to:
-   - The sample directory (from manifest `path`)
-   - Any `common_files` specified in the manifest
-   - The manifest file itself (to read it)
-3. Strip the leading path components so files are written relative to the output directory
+**Fallback when no manifest exists**: extract the directory as-is, print the README,
+warn that additional setup may be required.
 
-For step 2, we actually need the manifest first to know what to extract. So the flow is:
+### What the CLI hardcodes
 
-1. Fetch the manifest file via GitHub raw content API:
-   `https://raw.githubusercontent.com/temporalio/samples-{lang}/{ref}/temporal-samples.yaml`
-2. Parse it, find the sample, determine what to download
-3. Download and extract via tarball API
+1. Language → repo mapping (`python` → `temporalio/samples-python`)
+2. GitHub URL parsing
+3. Manifest schema (`temporal-samples.yaml` v1)
+4. `{{variable}}` template substitution
+5. Default ref: `main`
 
-This two-step approach avoids downloading the entire tarball when we only need a subdirectory.
-(create-next-app downloads the whole tarball and filters; we can be smarter since we have a manifest.)
+### Built-in, not an extension
 
-Actually, the tarball approach is still simpler and more robust — the manifest tells us
-what to *keep* after extraction, but the tarball download + filter is a single HTTP request
-regardless. The manifest file is small; fetching it first is one extra request but gives us
-the sample metadata before we start.
-
-**Fallback when no manifest exists**: If a samples repo hasn't adopted the manifest yet,
-the CLI can fall back to:
-1. Download the sample directory via tarball
-2. Copy files as-is (no scaffolding)
-3. Print the raw README.md content
-4. Warn: "This sample may require additional setup. See README.md for details."
-
-This provides a degraded but functional experience while repos adopt the manifest.
-
-### No default interactive mode
-
-Bare `temporal sample init` and `temporal sample list` print usage and exit non-zero.
-No wizard launches unless the user explicitly opts in. This is a deliberate design
-choice: CLIs should be scriptable, and implicit interactive prompts break pipelines,
-CI scripts, and documentation that assumes deterministic behavior.
-
-If we later decide interactive discovery is valuable, it should be behind an explicit
-flag (e.g. `temporal sample init --interactive`) or a separate command
-(`temporal sample browse`). But the core commands are deterministic.
-
-### What about users already in a project?
-
-The task asks: "do we assume the user is already in a functional language project or do
-we initialize the project in the dir we're creating for them?"
-
-**Answer: always create a new directory.** Reasons:
-
-1. Merging sample code into an existing project is inherently language-specific and
-   build-tool-specific (poetry vs uv vs pip, npm vs yarn vs pnpm, Maven vs Gradle).
-   This is exactly the kind of thing that's better left to AI agents or manual work.
-2. A standalone sample directory is independently valuable: it works, you can study it,
-   then manually integrate patterns you want into your project.
-3. create-next-app, gonew, cargo-generate, and degit all create new directories.
-
-If the user wants to integrate sample code into an existing project, that's a different
-(harder, more ambiguous) problem that AI agents handle well.
-
-## What the CLI needs to hardcode
-
-Despite the manifest-driven approach, the CLI needs some hardcoded knowledge:
-
-1. **Language → repo mapping**: `python` → `temporalio/samples-python`, etc.
-2. **GitHub URL parsing**: Extract owner, repo, ref, path from GitHub URLs.
-3. **Manifest format**: The `temporal-samples.yaml` schema.
-4. **Template variable substitution**: The `{{variable}}` expansion logic.
-5. **Default ref**: `main` branch when not specified.
-
-This is minimal and stable. The language-specific knowledge lives in the manifests.
-
-## Future: manifest as single source of truth
-
-The v1 manifest described above has a known duplication: the `dependencies` list in
-the manifest overlaps with the root-level `pyproject.toml` / `go.mod` / etc. that
-already exists in the samples repo. This is acceptable for now because the manifest
-is small and the CLI needs this information. But the long-term direction is:
-
-**Phase: per-sample build files, generated from the manifest.**
-
-1. A build step in the samples repo (e.g. `make generate` or a script) reads
-   `temporal-samples.yaml` and generates per-sample build files.
-
-2. For Python (and Go), the build file can't go inside the sample directory because
-   the sample's own imports reference the package by name (e.g.
-   `from hello_standalone_activity.my_activity import ...`). Two approaches:
-   - **Restructure**: nest each sample inside a project dir
-     (`hello_standalone_activity/hello_standalone_activity/*.py`).
-   - **Rewrite imports to relative**: `from .my_activity import ...` — simpler
-     but changes how the samples look.
-   For TypeScript and .NET this isn't an issue (already self-contained).
-
-3. Generated files are committed. CI validates they're in sync with the manifest
-   (same pattern as committed protobuf stubs or `go generate` output).
-
-4. At this point, each sample directory is self-contained in the repo. Users who
-   clone can `cd` into any sample and run it directly. The root-level monorepo
-   build config (`pyproject.toml`, `go.mod` at root) can be removed.
-
-4. `temporal sample init` becomes trivial: just copy the directory. No scaffolding
-   needed at extraction time because the build files are already there.
-
-5. READMEs could also be partially generated (the quickstart commands section) from
-   the manifest, if we later add `run` commands to the schema. But for now, READMEs
-   remain hand-written.
-
-**The manifest is the single source of truth.** Per-sample build files, root build
-config, and (optionally) README quickstart sections are all derived views. This
-eliminates the dual-source-of-truth problem rather than living with it.
-
-The TypeScript samples repo already matches the end state: each sample is self-contained
-with its own `package.json`. The manifest for TypeScript is just an index with
-`standalone: true` on every sample.
-
-## Config injection (inspired by Stripe)
-
-Stripe's best UX innovation is injecting the user's API keys into `.env` so the sample
-works immediately. We should do the equivalent for Temporal:
-
-- If the user has a configured Temporal environment (via `temporal env`), inject the
-  address and namespace into the sample's configuration.
-- For local dev server: inject `localhost:7233` (the default).
-- For Temporal Cloud: inject the address, namespace, and cert paths or API key.
-
-The mechanism: each sample's `run` commands could reference environment variables that
-the CLI prints as `export` statements, or the CLI could write a `.env` file. The manifest
-specifies which variables the sample expects:
-
-```yaml
-env:
-  TEMPORAL_ADDRESS: "{{temporal_address}}"
-  TEMPORAL_NAMESPACE: "{{temporal_namespace}}"
-```
-
-The CLI resolves these from the user's current `temporal env` configuration.
+The CLI has a PATH-based extension system (`temporal-<subcommand>`), but `sample`
+should be built-in: it's part of the core getting-started story alongside
+`temporal server start-dev` and must work with zero extra installation.
 
 ## Phased rollout
 
-### Phase 1: Core mechanism + Python/TypeScript
+**Phase 1: Python + TypeScript.** Define manifest schema, add manifests to these two
+repos, implement `temporal sample init` and `temporal sample list`. These languages
+have the most extractable samples and the largest user base.
 
-- Define manifest schema (`temporal-samples.yaml` v1)
-- Add manifests to `samples-python` and `samples-typescript`
-- Implement CLI: `temporal sample init <language> <sample>`, URL form,
-  `temporal sample list <language>`
-- CLI scaffolds standalone project from manifest + tarball download
-- CLI prints README after extraction
+**Phase 2: Go, .NET, Ruby.** Go requires import-path rewriting. .NET requires
+inlining `Directory.Build.props` content. Ruby needs a generated `Gemfile`.
 
-### Phase 2: Remaining languages
+**Phase 3: Java.** Requires generating full Gradle scaffolding and handling the
+class-per-sample structure. May warrant restructuring `samples-java` first.
 
-- Add manifests to Go, Java, .NET, Ruby repos
-- Go requires import-path rewriting (follow gonew's approach)
-- Java requires Gradle scaffolding
-- .NET requires `Directory.Build.props` inlining into `.csproj`
-
-### Phase 3: Manifest as source of truth
-
-- Add generation script to samples repos: manifest → per-sample build files
-- CI validates generated files are in sync with manifest
-- Remove root-level monorepo build config
-- Each sample directory is self-contained in the repo
-- CLI extraction becomes trivial copy (no scaffolding)
-
-### Phase 4: Polish
-
-- Caching of manifests and tarballs
-- Version pinning / branch selection
-- `temporal sample update` to refresh a previously-initialized sample
-
-## Scope boundary: classical vs AI
-
-The classical `temporal sample init` command handles the **deterministic, well-defined path**:
-download a known sample from a known repo into a new directory with known scaffolding.
-This is fast, offline-capable (with caching), reproducible, and reliable.
-
-**What classical programming handles well:**
-- Downloading and extracting sample code
-- Generating project scaffolding from manifest templates
-- Displaying the README
-- Listing available samples
-
-**What's better left to AI agents:**
-- Integrating sample code into an existing project with a different build tool
-- Adapting sample code to the user's specific context (different package manager,
-  different project structure, different SDK version)
-- Troubleshooting when setup commands fail
-- Explaining what the sample code does
-
-These are complementary. `temporal sample init` gives you a working starting point.
-An AI agent can then help you adapt it to your context or understand it.
+**Phase 4: Polish.** Caching, version pinning, config injection (Temporal address/
+namespace from `temporal env`), `temporal sample update`.
 
 ## Open questions
 
-1. **Manifest ownership**: Who maintains the manifests? Likely the samples repo maintainers,
-   with CI validation that the manifest stays in sync with actual directories.
+1. **Java sample granularity**: Is the unit a single class (`HelloActivity`) or a
+   package directory (`hello/`)? The latter is more natural for `temporal sample init`
+   but still requires full Gradle scaffolding.
 
-2. **SDK version pinning**: Should the manifest hardcode SDK versions, or should the CLI
-   resolve "latest stable" at init time? The manifest should probably specify a minimum,
-   and the CLI could optionally upgrade to latest.
+2. **PHP**: Defer, or support with a different model (clone whole repo)?
 
-3. **Branch/tag support**: Should `temporal sample init python hello_standalone_activity@v1.0`
-   work? Useful for reproducibility, but adds complexity.
+3. **Manifest bootstrapping**: Start with Python + TypeScript (already partially done)
+   and let the format prove itself before coordinating across all repos.
 
-4. **Prerequisites checking**: Should the CLI check that `uv`, `go`, `npm`, etc. are
-   installed before proceeding? Helpful for UX, but adds language-specific knowledge
-   to the CLI. The manifest could specify `prerequisites: ["uv"]` and the CLI just
-   checks `which`.
+4. **Prerequisites checking**: Should the manifest declare `prerequisites: ["uv"]` so
+   the CLI can `which`-check before proceeding?
 
-5. ~~**Naming**~~: Resolved — `temporal sample init` and `temporal sample list`.
+## Long-term direction
 
-6. **Monorepo sample references**: Java's `hello` samples are at
-   `core/src/main/java/io/temporal/samples/hello/` — a deeply nested path. The manifest
-   allows the sample `name` to be a short alias (`hello`) while `path` is the full path.
-   But what about Python samples that have sub-samples (e.g., `message_passing/` contains
-   multiple sub-directories)?
-
-7. **The "Rust" question**: Should we wait for a `samples-rust` repo to exist, or define
-   the manifest format now to accommodate it?
-
-8. **Manifest bootstrapping**: How do we get manifests into all 7+ samples repos? This
-   is a coordination cost. Should we start with just Python and TypeScript (the most
-   extractable) and let the manifest format prove itself?
-
-## Recommendation
-
-Start with Phase 1 (Python + TypeScript) to validate the manifest-driven approach. These
-two languages have the most extractable samples and the largest user base. The manifest
-format is simple enough that adding other languages is incremental work in the samples
-repos, not the CLI.
-
-The CLI implementation is straightforward Go: HTTP client, tar extraction, YAML parsing,
-template substitution, terminal output. Estimated at ~500-800 lines of Go in a single
-`commands.sample.go` file plus the YAML command definition.
-
-The manifest format should be designed now for all languages (even if only Python and
-TypeScript adopt it first) to ensure it's general enough. The Go import-rewriting and
-Java Gradle-scaffolding use cases should be representable in v1 of the format.
+The v1 manifest duplicates dependency information that already exists in the root
+`pyproject.toml` / `go.mod`. Long-term, the manifest becomes the single source of
+truth: a build step in each samples repo generates per-sample build files from it,
+each sample becomes self-contained in the repo, and CLI extraction becomes a trivial
+copy. TypeScript already matches this end state.
