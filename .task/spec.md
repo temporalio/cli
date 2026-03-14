@@ -24,6 +24,33 @@ to run, and understanding the paths. `temporal init` should collapse this to one
 | **Supabase** | Docs-driven framework-specific quickstarts | Per-framework tutorial with runnable code | Curated docs pages |
 | **Firebase** | Per-platform quickstart repos on GitHub | IDE-openable projects | GitHub repo structure |
 
+### Non-SDK CLI scaffolding tools
+
+| Tool | Interactive selection | Template distribution | Post-creation | Docs |
+|------|---------------------|----------------------|---------------|------|
+| **`sam init`** (AWS SAM) | **Best wizard**: multi-step (template source → app template → runtime → package type → tracing → name) | GitHub repo ([aws-sam-cli-app-templates](https://github.com/aws/aws-sam-cli-app-templates)) + custom git/HTTP/zip URLs | Full project + tests, no dep install | [sam init guide](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/using-sam-cli-init.html) |
+| **`pulumi new`** | **Best filterable list**: searchable `<provider>-<language>` templates, then prompts for project name, description, stack, and template-specific config (e.g. `aws:region`) | GitHub repo ([pulumi/templates](https://github.com/pulumi/templates)) + arbitrary git URLs | Dep install + stack init | [pulumi new docs](https://www.pulumi.com/docs/iac/cli/commands/pulumi_new/) |
+| **`dotnet new`** | No interactive picker (flag-driven: `dotnet new <SHORT_NAME>`) | **Most extensible**: NuGet packages with `.template.config/template.json` manifest; `dotnet new search` queries NuGet.org | Dep restore | [dotnet new docs](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-new) |
+| **Spring Initializr** | No (flag-driven CLI; real UX is web at start.spring.io) | **Centralized server API** — CLI is a thin HTTP client | Downloads zip with full Maven/Gradle project | [Spring CLI docs](https://docs.spring.io/spring-boot/cli/using-the-cli.html) |
+| **`serverless`** | Yes (arrow-key template list on bare invocation) | Bundled with CLI (AWS-only in v4) | Creates `serverless.yml` + handler | [serverless create docs](https://www.serverless.com/framework/docs-providers-aws-cli-reference-create) |
+| **`cdk init`** | No (flag-driven, 3 templates) | Built into CLI | Dep install + git init + compile | [cdk init reference](https://docs.aws.amazon.com/cdk/v2/guide/ref-cli-cmd-init.html) |
+| **C3 (Cloudflare)** | Yes (multi-step: start type → template → language → git? → deploy?) | Bundled + delegates to framework CLIs | Dep install + optional git + optional deploy | [C3 docs](https://developers.cloudflare.com/pages/get-started/c3/) |
+| **Yeoman (`yo`)** | Yes (meta-menu of installed generators) | npm packages (`generator-*`) | Generator-defined | [yeoman.io](https://yeoman.io/learning/) |
+| **`flutter create`** | No (flag-driven, 6 templates via `--template`) | Built into SDK | Dep install | [flutter create docs](https://docs.flutter.dev/reference/create-new-app) |
+| **`projen new`** | No (argument-driven) | npm/PyPI packages | **Ongoing synthesis** — `.projenrc` file is the permanent source of truth | [projen docs](https://projen.io/docs/introduction/getting-started/) |
+
+**Key observations from this broader survey:**
+
+- **`sam init` is the closest UX model** for what we're building: multi-language serverless
+  platform, multi-step wizard, templates in a GitHub repo, custom template URLs supported.
+- **`dotnet new`** shows what a fully mature template ecosystem looks like: searchable
+  registry, parameterized templates, community publishing. Worth aspiring to long-term.
+- **`pulumi new`** has the best interactive selection UX for a large template catalog.
+- **Spring Initializr** demonstrates the "thin CLI over server API" alternative — the
+  web UI is the real product, the CLI is for scripting.
+- The tools with interactive selection (`sam init`, `pulumi new`, `serverless`, C3) are
+  consistently rated as having better onboarding UX than flag-driven tools.
+
 ### Competitors
 
 - **Restate**: No CLI scaffolding. Manual clone from examples repo.
