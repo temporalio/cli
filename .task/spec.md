@@ -19,6 +19,10 @@ to run, and understanding the paths. `temporal init` should collapse this to one
 | **cargo-generate** | Git clone | Liquid template substitution, interactive prompts | `cargo-generate.toml` in template |
 | **Vite** | Bundled templates (18) in npm package | `npm install` | Hardcoded |
 | **Cookiecutter** | Git clone | Jinja2 substitution in files + filenames | `cookiecutter.json` |
+| **Stripe CLI** | `go-git` clone to local cache | Parses `.env.example`, injects API keys | Two-tier: central `samples.json` registry + per-sample `.cli.json` |
+| **Vercel Templates** | Web gallery + one-click deploy | Creates repo, configures deployment | Web-based gallery at vercel.com/templates |
+| **Supabase** | Docs-driven framework-specific quickstarts | Per-framework tutorial with runnable code | Curated docs pages |
+| **Firebase** | Per-platform quickstart repos on GitHub | IDE-openable projects | GitHub repo structure |
 
 ### Competitors
 
@@ -26,17 +30,77 @@ to run, and understanding the paths. `temporal init` should collapse this to one
 - **Inngest**: No CLI scaffolding. Doc-driven quickstart only.
 - **Dagger**: `dagger init --sdk {lang}` creates empty module. `--blueprint` for module templates. Not example-oriented.
 
+### Stripe CLI — closest prior art
+
+Stripe's `stripe samples create` command is the single most relevant prior art. Like
+Temporal, Stripe is an SDK vendor with a CLI, multi-language samples, and the goal of
+getting users from zero to a running integration quickly.
+
+**Architecture (two-tier registry):**
+
+1. **Central registry**: A separate repo (`stripe-samples/samples-list`) containing a
+   single `samples.json` file — a flat array of `{name, description, URL}` entries
+   pointing to individual sample repos. ~35 samples.
+
+2. **Per-sample metadata**: Each sample repo has a `.cli.json` at its root:
+   ```json
+   {
+     "name": "accept-a-payment",
+     "configureDotEnv": true,
+     "postInstall": {"message": "..."},
+     "integrations": [
+       {
+         "name": "payment-element",
+         "clients": ["html", "react-cra"],
+         "servers": ["ruby", "node", "python", "java", "go", "dotnet"]
+       }
+     ]
+   }
+   ```
+
+**Download**: `go-git` PlainClone to `~/.config/stripe/samples-cache/<name>/`. Pulls
+on subsequent use. No tarballs.
+
+**Multi-language handling**: Convention-based directory layout
+(`{integration}/server/{lang}/`, `{integration}/client/{lang}/`). The CLI prompts the
+user to select an integration, then client language, then server language, and copies
+only the selected directories into the target.
+
+**Config injection**: Parses `.env.example`, injects the user's Stripe API keys (from
+`~/.config/stripe` profile), writes `server/.env`.
+
+**UX**: Interactive prompts via `promptui.Select` (arrow-key selection). Spinners for
+download/copy/configure phases. Final output: "You're all set. To get started: cd {dest}".
+
+**Key structural difference from Temporal**: Stripe has **one sample per repo** with
+multiple language implementations inside. Temporal has **one repo per language** with
+multiple samples inside. This inverts the registry design: Stripe's central registry
+points to repos; Temporal's would point to directories within repos.
+
+**What we should adopt from Stripe:**
+- The two-tier metadata pattern (central discovery + per-sample config)
+- `go-git` for download (the CLI already uses Go; go-git is battle-tested)
+- Interactive prompts for selection
+- Local caching of downloaded samples
+- Config injection (Temporal address/namespace instead of API keys)
+
+**What we should do differently:**
+- Our registry is per-language-repo, not a separate registry repo (simpler)
+- Our metadata lives alongside the samples, not in separate repos
+- We need project scaffolding (Stripe samples are already standalone per-language)
+
 ### Key insight from prior art
 
-The most successful tools (create-next-app, degit) use the **GitHub tarball API**
-(`https://codeload.github.com/{owner}/{repo}/tar.gz/{ref}`) to download repo
-contents, then filter the tar stream to extract a single subdirectory. This is fast,
-doesn't require git, and avoids downloading `.git` history.
+Two download strategies dominate: **GitHub tarballs** (create-next-app, degit) and
+**git clone to cache** (Stripe, cargo-generate). Tarballs are faster for one-shot use;
+git clone is better when samples are reused or updated. Since `temporal init` is
+typically a one-shot operation, tarballs are slightly better, but `go-git` (Stripe's
+approach) is simpler to implement in Go and handles private repos/auth naturally.
 
-The most relevant model is **create-next-app**: it operates on a monorepo of examples
-(identical to Temporal's structure), downloads a subdirectory, and does minimal
-post-processing. The key difference is that Next.js examples are all JavaScript/TypeScript,
-so the post-processing is uniform. We face a multi-language challenge.
+The most relevant models are **Stripe CLI** (closest structural analog: SDK vendor,
+multi-language, CLI-driven) and **create-next-app** (monorepo of examples, subdirectory
+extraction). Stripe's two-tier metadata approach is the most mature design for our
+problem space.
 
 ## Current state of Temporal samples repos
 
@@ -441,6 +505,28 @@ Despite the manifest-driven approach, the CLI needs some hardcoded knowledge:
 5. **Default ref**: `main` branch when not specified.
 
 This is minimal and stable. The language-specific knowledge lives in the manifests.
+
+## Config injection (inspired by Stripe)
+
+Stripe's best UX innovation is injecting the user's API keys into `.env` so the sample
+works immediately. We should do the equivalent for Temporal:
+
+- If the user has a configured Temporal environment (via `temporal env`), inject the
+  address and namespace into the sample's configuration.
+- For local dev server: inject `localhost:7233` (the default).
+- For Temporal Cloud: inject the address, namespace, and cert paths or API key.
+
+The mechanism: each sample's `run` commands could reference environment variables that
+the CLI prints as `export` statements, or the CLI could write a `.env` file. The manifest
+specifies which variables the sample expects:
+
+```yaml
+env:
+  TEMPORAL_ADDRESS: "{{temporal_address}}"
+  TEMPORAL_NAMESPACE: "{{temporal_namespace}}"
+```
+
+The CLI resolves these from the user's current `temporal env` configuration.
 
 ## Phased rollout
 
