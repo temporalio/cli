@@ -101,9 +101,10 @@ PHP may require a different approach or deferral.
 
 Two halves:
 
-1. **Samples-side**: A manifest file (`temporal-samples.yaml`) at each repo root,
-   describing available samples and how to scaffold them standalone.
-2. **CLI-side**: Downloads sample code, reads the manifest, generates scaffolding,
+1. **Samples-side**: A repo-level manifest (`temporal-samples.yaml`) at each repo
+   root with language identifier and scaffold templates, plus a per-sample manifest
+   (`temporal-sample.yaml`) in each sample directory with description and dependencies.
+2. **CLI-side**: Downloads sample code, reads both manifests, generates scaffolding,
    prints the README. The CLI is a **manifest interpreter**, not a language expert.
 
 This keeps language-specific knowledge in the samples repos (where maintainers know
