@@ -4335,8 +4335,7 @@ commands:
   - name: temporal sample list
     summary: List available Temporal samples for a language
     description: |
-      Download and scan the samples repository for a given language,
-      then print each sample's name and description:
+      List the available samples for a given language:
 
           temporal sample list python
     maximum-args: 1
