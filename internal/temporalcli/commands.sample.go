@@ -167,6 +167,13 @@ func (c *TemporalSampleListCommand) run(cctx *CommandContext, args []string) err
 	}
 
 	ctx := cctx
+
+	// Fetch repo manifest to learn sample_path (tolerate 404).
+	manifest, err := fetchRepoManifest(ctx, repo, "main")
+	if err != nil {
+		return err
+	}
+
 	rc, tr, err := downloadTarball(ctx, tarballURL(repo, "main"))
 	if err != nil {
 		return fmt.Errorf("downloading samples: %w", err)
@@ -186,6 +193,12 @@ func (c *TemporalSampleListCommand) run(cctx *CommandContext, args []string) err
 		rel := stripTarPrefix(hdr.Name)
 		if !strings.HasSuffix(rel, "/temporal-sample.yaml") {
 			continue
+		}
+		// If repo manifest specifies a sample_path, only consider entries under it.
+		if manifest != nil && manifest.SamplePath != "" {
+			if !strings.HasPrefix(rel, manifest.SamplePath+"/") {
+				continue
+			}
 		}
 		// Parse the sample manifest.
 		var sm sampleManifest

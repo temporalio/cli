@@ -452,6 +452,42 @@ func TestSample_Init_NotFound(t *testing.T) {
 	assert.Contains(t, res.Err.Error(), `sample "nonexistent" not found in temporalio/samples-python`)
 }
 
+// TestSample_List_SamplePath verifies that `list` respects the sample_path
+// from the repo manifest, filtering out entries outside that subtree.
+func TestSample_List_SamplePath(t *testing.T) {
+	manifest := `version: 1
+language: java
+repo: temporalio/samples-java
+scaffold:
+  build.gradle: |
+    plugins { id 'java' }
+sample_path: core/src/main/java/io/temporal/samples
+`
+	tarball := buildGitHubTarball(t, "temporalio-samples-java-abc1234/", []tarEntry{
+		{"temporal-samples.yaml", manifest},
+		// Inside sample_path — should appear.
+		{"core/src/main/java/io/temporal/samples/hello/temporal-sample.yaml", "description: Basic hello world\n"},
+		{"core/src/main/java/io/temporal/samples/hello/HelloActivity.java", "class HelloActivity {}\n"},
+		{"core/src/main/java/io/temporal/samples/saga/temporal-sample.yaml", "description: Saga pattern\n"},
+		{"core/src/main/java/io/temporal/samples/saga/SagaWorkflow.java", "class SagaWorkflow {}\n"},
+		// Outside sample_path — should NOT appear.
+		{"other/temporal-sample.yaml", "description: Should be excluded\n"},
+	})
+
+	srv := serveSamples(t, manifest, tarball)
+	t.Setenv("TEMPORAL_SAMPLES_BASE_URL", srv.URL)
+
+	h := NewCommandHarness(t)
+	res := h.Execute("sample", "list", "java")
+
+	require.NoError(t, res.Err)
+	out := res.Stdout.String()
+	assert.Contains(t, out, "hello")
+	assert.Contains(t, out, "saga")
+	assert.NotContains(t, out, "Should be excluded")
+	assert.NotContains(t, out, "other")
+}
+
 func TestSample_Init_NoArgs(t *testing.T) {
 	h := NewCommandHarness(t)
 	res := h.Execute("sample", "init")
