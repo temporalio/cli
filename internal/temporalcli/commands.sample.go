@@ -138,6 +138,9 @@ func fetchRepoManifest(ctx context.Context, repo, ref string) (*repoManifest, er
 		return nil, err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, nil
+	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("fetching manifest: HTTP %d", resp.StatusCode)
 	}
@@ -240,10 +243,15 @@ func (c *TemporalSampleInitCommand) run(cctx *CommandContext, args []string) err
 
 	ctx := cctx
 
-	// Fetch repo manifest.
+	// Fetch repo manifest. A 404 means the manifest hasn't been added yet;
+	// fall back to flat extraction with no scaffold.
 	manifest, err := fetchRepoManifest(ctx, repo, ref)
 	if err != nil {
 		return err
+	}
+	if manifest == nil {
+		fmt.Fprintf(cctx.Options.Stdout, "Warning: no temporal-samples.yaml in %s (ref %s); extracting flat\n", repo, ref)
+		manifest = &repoManifest{Repo: repo}
 	}
 
 	outputDir := c.OutputDir

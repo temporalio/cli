@@ -407,6 +407,39 @@ scaffold:
 	assert.FileExists(t, filepath.Join("activity_simple", "README.md"))
 }
 
+func TestSample_Init_NoManifest(t *testing.T) {
+	tarball := buildGitHubTarball(t, "temporalio-samples-python-abc1234/", []tarEntry{
+		{"hello/__init__.py", ""},
+		{"hello/worker.py", "import asyncio\n"},
+		{"hello/README.md", "# Hello Sample\n"},
+	})
+	// Server returns 404 for manifest, tarball as normal.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.Contains(r.URL.Path, "/tar.gz/"):
+			w.Header().Set("Content-Type", "application/gzip")
+			_, _ = w.Write(tarball)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	t.Cleanup(srv.Close)
+	t.Setenv("TEMPORAL_SAMPLES_BASE_URL", srv.URL)
+	t.Chdir(t.TempDir())
+
+	h := NewCommandHarness(t)
+	res := h.Execute("sample", "init", "python", "hello")
+
+	require.NoError(t, res.Err)
+	out := res.Stdout.String()
+	assert.Contains(t, out, "Warning")
+
+	// Flat copy: files directly under hello/, no nesting.
+	assert.FileExists(t, filepath.Join("hello", "worker.py"))
+	assert.FileExists(t, filepath.Join("hello", "README.md"))
+	assert.NoDirExists(t, filepath.Join("hello", "hello"))
+}
+
 func TestSample_Init_NotFound(t *testing.T) {
 	srv := serveSamples(t, testPythonManifest, testPythonTarball(t))
 	t.Setenv("TEMPORAL_SAMPLES_BASE_URL", srv.URL)
