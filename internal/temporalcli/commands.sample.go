@@ -363,9 +363,9 @@ func (c *TemporalSampleInitCommand) run(cctx *CommandContext, args []string) err
 		// Determine output path.
 		var outPath string
 		if nested {
-			if relToSample == "README.md" {
+			if strings.EqualFold(relToSample, "README.md") {
 				// README goes to project root.
-				outPath = filepath.Join(outputDir, "README.md")
+				outPath = filepath.Join(outputDir, relToSample)
 			} else {
 				outPath = filepath.Join(outputDir, destPrefix, relToSample)
 			}
