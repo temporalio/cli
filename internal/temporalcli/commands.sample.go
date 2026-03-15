@@ -12,7 +12,10 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
+	"time"
 
+	"github.com/mattn/go-isatty"
 	"gopkg.in/yaml.v3"
 )
 
@@ -283,11 +286,13 @@ func (c *TemporalSampleInitCommand) run(cctx *CommandContext, args []string) err
 		return fmt.Errorf("directory %q already exists", outputDir)
 	}
 
-	fmt.Fprintf(cctx.Options.Stdout, "Downloading %s from %s...\n", sample, repo)
+	spin := newSpinner(cctx.Options.Stdout, fmt.Sprintf("Downloading %s from %s", sample, repo))
+	spin.Start()
 
 	// Download tarball.
 	rc, tr, err := downloadTarball(ctx, tarballURL(repo, ref))
 	if err != nil {
+		spin.Stop()
 		return fmt.Errorf("downloading samples: %w", err)
 	}
 	defer rc.Close()
@@ -374,6 +379,8 @@ func (c *TemporalSampleInitCommand) run(cctx *CommandContext, args []string) err
 		filesWritten++
 	}
 
+	spin.Stop()
+
 	if filesWritten == 0 && !parsedSampleManifest {
 		return fmt.Errorf("sample %q not found in %s", sample, repo)
 	}
@@ -451,4 +458,53 @@ func rewriteImports(dir string, rule rewriteRule, oldPrefix, newPrefix string) e
 		replaced := strings.ReplaceAll(string(data), oldPrefix, newPrefix)
 		return os.WriteFile(path, []byte(replaced), 0o644)
 	})
+}
+
+// spinner shows a braille animation next to a message while work is in progress.
+type spinner struct {
+	w    io.Writer
+	msg  string
+	tty  bool
+	done chan struct{}
+	once sync.Once
+}
+
+var brailleFrames = [...]string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
+
+func newSpinner(w io.Writer, msg string) *spinner {
+	tty := false
+	if f, ok := w.(*os.File); ok {
+		tty = isatty.IsTerminal(f.Fd())
+	}
+	return &spinner{w: w, msg: msg, tty: tty, done: make(chan struct{})}
+}
+
+func (s *spinner) Start() {
+	if !s.tty {
+		fmt.Fprintf(s.w, "%s...\n", s.msg)
+		return
+	}
+	go func() {
+		i := 0
+		t := time.NewTicker(80 * time.Millisecond)
+		defer t.Stop()
+		for {
+			fmt.Fprintf(s.w, "\r%s %s", brailleFrames[i%len(brailleFrames)], s.msg)
+			i++
+			select {
+			case <-s.done:
+				fmt.Fprintf(s.w, "\r\033[K") // clear line
+				return
+			case <-t.C:
+			}
+		}
+	}()
+}
+
+func (s *spinner) Stop() {
+	s.once.Do(func() { close(s.done) })
+	// Give the goroutine a moment to clear the line.
+	if s.tty {
+		time.Sleep(10 * time.Millisecond)
+	}
 }
