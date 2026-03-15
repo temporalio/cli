@@ -262,7 +262,7 @@ func (c *TemporalSampleInitCommand) run(cctx *CommandContext, args []string) err
 			return fmt.Errorf("unsupported language %q (supported: go, java, python, typescript, dotnet, ruby)", lang)
 		}
 		sample = args[1]
-		ref = "main"
+		ref = defaultRef()
 	}
 
 	ctx := cctx
