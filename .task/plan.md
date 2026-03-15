@@ -1,20 +1,16 @@
 # `temporal sample` — Implementation Plan
 
-## Ordering
-
-1. Fix CLI bugs (spec §CLI bug fixes) — prerequisite for everything else
-2. Push `sample-init` branch to each sample repo with manifests
-3. Add integration tests to CLI, targeting the `sample-init` branches
-4. Open CLI PR
-5. Merge sample repo branches
-6. Switch integration tests to target `main`
-7. Populate remaining per-sample manifests incrementally
+This plan implements the spec. It covers three phases: CLI bug fixes,
+per-sample manifest content, and integration tests.
 
 ---
 
-## Step 1: CLI bug fixes
+## Phase 1: CLI bug fixes
 
-### 1a. Manifest parsing (line 314)
+All changes in `internal/temporalcli/commands.sample.go`. Add corresponding
+unit tests in `commands.sample_test.go` for each fix.
+
+### 1. Simplify manifest parsing (line 314)
 
 Replace:
 
@@ -27,47 +23,46 @@ With:
 
 ```go
 if relToSample == "temporal-sample.yaml" && !parsedSampleManifest {
-    if err := yaml.NewDecoder(tr).Decode(&sm); err != nil {
-        return fmt.Errorf("parsing sample manifest: %w", err)
-    }
-    parsedSampleManifest = true
-    continue
-}
 ```
 
-### 1b. Sample-not-found error
+Remove the inner `if` and its enclosing block.
 
-Add a file counter in the extraction loop. After the loop:
+### 2. Error when sample not found
 
-```go
-if filesExtracted == 0 {
-    return fmt.Errorf("sample %q not found in %s", sample, repo)
-}
+After the tarball extraction loop, track whether any files were extracted.
+If zero files were written and no sample manifest was parsed, return:
+
+```
+sample "nonexistent" not found in temporalio/samples-python
 ```
 
-Also clean up the empty output directory on this path.
+Add test: `TestSample_Init_NotFound` — request a nonexistent sample name,
+assert error message.
 
-### 1c. Manifest-missing fallback
+### 3. Fallback when repo manifest is missing
 
-In `init`, if `fetchRepoManifest` returns a 404 (detect via HTTP status),
-set `manifest` to a zero-value `repoManifest` (empty scaffold → flat copy)
-and print a warning to stderr. Don't fail.
+In `fetchRepoManifest`, if 404, return `(nil, nil)` instead of an error.
+In `run`, if manifest is nil, set `nested = false`, `scaffold = nil`, print
+a warning, and proceed with flat extraction.
 
-### 1d. `list` respects `sample_path`
+Add test: `TestSample_Init_NoManifest` — server returns 404 for
+`temporal-samples.yaml`, assert files extracted flat with warning on stdout.
 
-In `list`, fetch the repo manifest first (same 404 fallback). If
-`manifest.SamplePath` is non-empty, only match tar entries under that prefix.
+### 4. `list` should respect `sample_path`
 
-### Tests
+Change `list` to fetch the repo manifest first (tolerate 404 → scan
+everywhere). If `manifest.SamplePath` is set, only consider
+`temporal-sample.yaml` entries whose path starts with that prefix.
 
-Update existing synthetic tests to cover:
-- `init` with a nonexistent sample name → error
-- `init` when manifest fetch returns 404 → flat extraction + warning
-- `list` with `sample_path` set → only samples under that path appear
+Add test: `TestSample_List_SamplePath` — synthetic tarball with entries at
+two depths, assert only the ones under `sample_path` are listed.
 
 ---
 
-## Step 2: Sample repo manifests
+## Phase 2: Per-sample manifests
+
+Each repo gets a `sample-init` branch with a root `temporal-samples.yaml`
+and a `temporal-sample.yaml` in each selected sample directory.
 
 ### Python (`samples-python`) — 12 samples
 
@@ -93,18 +88,18 @@ Per-sample `temporal-sample.yaml` files:
 
 | Directory | `description` | `dependencies` |
 |-----------|---------------|----------------|
-| `hello` | Basic hello world samples (activity, signal, query, etc.) | `temporalio>=1.23.0,<2` |
-| `hello_standalone_activity` | Execute Activities directly from a Client, without a Workflow | `temporalio>=1.23.0,<2` |
-| `hello_nexus` | Define a Nexus service, implement operation handlers, call operations from a workflow | `temporalio>=1.23.0,<2` |
-| `nexus_cancel` | Fan out Nexus operations, take first result, cancel the rest | `temporalio>=1.23.0,<2` |
-| `nexus_multiple_args` | Map a Nexus operation to a handler workflow with multiple input arguments | `temporalio>=1.23.0,<2` |
-| `nexus_sync_operations` | Nexus service backed by a long-running workflow exposing updates and queries | `temporalio>=1.23.0,<2` |
-| `openai_agents` | OpenAI Agents SDK with Temporal durable execution | `openai-agents[litellm]==0.3.2`, `temporalio[openai-agents]>=1.18.0`, `requests` |
-| `langchain` | Orchestrate LangChain workflows with LangSmith tracing | `langchain>=0.1.7,<0.2`, `langchain-openai>=0.0.6,<0.0.7`, `openai>=1.4.0,<2` |
-| `bedrock` | Amazon Bedrock AI chatbot with durable execution | `boto3>=1.34.92,<2` |
-| `encryption` | End-to-end encryption codec, compatible with TypeScript and Go samples | `temporalio>=1.23.0,<2`, `cryptography>=38.0.1,<39`, `aiohttp>=3.8.1,<4` |
-| `dsl` | Workflow interpreter for arbitrary steps defined in YAML DSL | `temporalio>=1.23.0,<2`, `pyyaml>=6.0.1,<7`, `dacite>=1.8.1,<2` |
-| `schedules` | Schedule a Workflow Execution and control actions | `temporalio>=1.23.0,<2` |
+| `hello` | Basic hello world samples (activity, signal, query, etc.) | `"temporalio>=1.23.0,<2"` |
+| `hello_standalone_activity` | Execute Activities directly from a Client, without a Workflow | `"temporalio>=1.23.0,<2"` |
+| `hello_nexus` | Nexus service definition, operation handlers, and workflow calls | `"temporalio>=1.23.0,<2"`, `"nexus-rpc>=1.1.0,<2"` |
+| `nexus_cancel` | Fan out Nexus operations, take first result, cancel the rest | `"temporalio>=1.23.0,<2"`, `"nexus-rpc>=1.1.0,<2"` |
+| `nexus_multiple_args` | Map a Nexus operation to a handler workflow with multiple arguments | `"temporalio>=1.23.0,<2"`, `"nexus-rpc>=1.1.0,<2"` |
+| `nexus_sync_operations` | Nexus service backed by a long-running workflow with updates and queries | `"temporalio>=1.23.0,<2"`, `"nexus-rpc>=1.1.0,<2"` |
+| `openai_agents` | OpenAI Agents SDK with Temporal durable execution | `"openai-agents[litellm]==0.3.2"`, `"temporalio[openai-agents]>=1.18.0"`, `"requests>=2.32.0,<3"` |
+| `langchain` | Orchestrate LangChain workflows with LangSmith tracing | `"langchain>=0.1.7,<0.2"`, `"langchain-openai>=0.0.6,<0.0.7"`, `"openai>=1.4.0,<2"` |
+| `bedrock` | Amazon Bedrock AI chatbot with durable execution | `"temporalio>=1.23.0,<2"`, `"boto3>=1.34.92,<2"` |
+| `encryption` | End-to-end encryption codec, compatible with TypeScript and Go | `"temporalio>=1.23.0,<2"`, `"cryptography>=38.0.1,<39"`, `"aiohttp>=3.8.1,<4"` |
+| `dsl` | Workflow interpreter for arbitrary steps defined in YAML DSL | `"temporalio>=1.23.0,<2"`, `"pyyaml>=6.0.1,<7"`, `"dacite>=1.8.1,<2"` |
+| `schedules` | Schedule a Workflow Execution and control actions | `"temporalio>=1.23.0,<2"` |
 
 ### Go (`samples-go`) — 11 samples
 
@@ -132,7 +127,7 @@ Per-sample `temporal-sample.yaml` files:
 | Directory | `description` |
 |-----------|---------------|
 | `helloworld` | Basic hello world workflow |
-| `standalone-activity/helloworld` | Execute Activities directly from a Client without a Workflow |
+| `standalone-activity` | Execute Activities directly from a Client without a Workflow |
 | `nexus` | Nexus service definition and cross-namespace operation calls |
 | `nexus-cancelation` | Cancel a Nexus operation using WaitRequested cancellation type |
 | `nexus-context-propagation` | Propagate context through client calls, workflows, and Nexus headers |
@@ -143,9 +138,15 @@ Per-sample `temporal-sample.yaml` files:
 | `dsl` | DSL workflow interpreter driven by YAML step definitions |
 | `encryption` | Remote codec server for end-to-end encryption |
 
-**Note**: `standalone-activity/helloworld` is nested. Decide at implementation
-time: either support slashes in sample names or place the manifest at
-`standalone-activity/` level.
+No `dependencies` field — Go deps resolved by `go mod tidy`.
+
+**`standalone-activity`**: The manifest goes at `standalone-activity/temporal-sample.yaml`.
+The sample name for the CLI is `standalone-activity`. The directory contains
+`helloworld/` as a subdirectory with all the code. The existing extraction
+logic copies everything under `standalone-activity/`, preserving the
+`helloworld/` subdirectory. Import rewriting replaces
+`github.com/temporalio/samples-go/standalone-activity/helloworld` with
+`standalone-activity/helloworld`.
 
 ### TypeScript (`samples-typescript`) — 11 samples
 
@@ -173,6 +174,8 @@ Per-sample `temporal-sample.yaml` files:
 | `dsl-interpreter` | DSL workflow interpreter driven by YAML step definitions |
 | `encryption` | Custom data converter with AES encryption |
 | `food-delivery` | Production-like distributed app from blog post |
+
+No scaffold — each sample already has its own `package.json`. Copied flat.
 
 ### Java (`samples-java`) — 10 samples
 
@@ -209,7 +212,7 @@ Per-sample `temporal-sample.yaml` files (all under `core/src/main/java/io/tempor
 | `bookingsaga` | Trip booking Saga pattern with compensation | `sdk_version: "1.32.1"` |
 | `moneytransfer` | Separate processes for workflows, activities, and transfer requests | `sdk_version: "1.32.1"` |
 | `dsl` | DSL-driven workflow steps defined in JSON | `sdk_version: "1.32.1"` |
-| `fileprocessing` | Route tasks to specific Workers for download, process, upload on same host | `sdk_version: "1.32.1"` |
+| `fileprocessing` | Route tasks to specific Workers for host-local download/process/upload | `sdk_version: "1.32.1"` |
 | `encryptedpayloads` | End-to-end payload encryption | `sdk_version: "1.32.1"` |
 
 ### .NET (`samples-dotnet`) — 11 samples
@@ -283,198 +286,83 @@ Per-sample `temporal-sample.yaml` files:
 
 ---
 
-## Step 3: Integration tests
+## Phase 3: Integration tests
 
-File: `commands.sample_integration_test.go`, guarded by `//go:build sample_integration`.
+File: `internal/temporalcli/commands.sample_integration_test.go`
 
-Each test uses `TEMPORAL_SAMPLES_REF` (default `sample-init`) to target the
-feature branch, invokes `temporal sample init` via `CommandHarness`, then
-verifies structure and runs the build command.
+Gated by build tag `sample_integration` so they don't run in default CI.
+
+### Test harness
+
+```go
+//go:build sample_integration
+
+package temporalcli_test
+
+func samplesRef() string {
+    if v := os.Getenv("TEMPORAL_SAMPLES_REF"); v != "" {
+        return v
+    }
+    return "sample-init"
+}
+```
+
+Each test uses `t.Chdir(t.TempDir())` and passes a full GitHub URL with
+`samplesRef()` as the ref, so it hits real GitHub (no `TEMPORAL_SAMPLES_BASE_URL`).
 
 ### Per-language tests
 
-**Python** — init `hello`, check structure, run `uv sync`:
+**TestSampleIntegration_Python** — `temporal sample init` via URL for `hello`:
+- Assert: `hello/pyproject.toml` contains `name = "hello"` and `temporalio` dep
+- Assert: `hello/README.md` exists
+- Assert: `hello/hello/__init__.py` exists
+- Build: `cd hello && uv sync`
 
-```go
-func TestSampleIntegration_Python(t *testing.T) {
-    ref := envOr("TEMPORAL_SAMPLES_REF", "sample-init")
-    t.Chdir(t.TempDir())
+**TestSampleIntegration_Go** — `temporal sample init go helloworld`:
+- Assert: `helloworld/go.mod` contains `module helloworld`
+- Assert: `helloworld/helloworld/worker/main.go` contains `"helloworld/helloworld"`,
+  does not contain `github.com/temporalio/samples-go`
+- Build: `cd helloworld && go mod tidy && go build ./...`
 
-    h := NewCommandHarness(t)
-    res := h.Execute("sample", "init",
-        fmt.Sprintf("https://github.com/temporalio/samples-python/tree/%s/hello", ref))
-    require.NoError(t, res.Err)
+**TestSampleIntegration_TypeScript** — `temporal sample init typescript hello-world`:
+- Assert: `hello-world/package.json` exists with `@temporalio` deps
+- Assert: `hello-world/src/workflows.ts` exists
+- Assert: no `hello-world/hello-world/` nesting (flat copy)
+- Build: `cd hello-world && npm install && npx tsc --noEmit`
 
-    assert.FileExists(t, "hello/pyproject.toml")
-    assert.FileExists(t, "hello/README.md")
-    assert.FileExists(t, "hello/hello/__init__.py")
-    assert.FileExists(t, "hello/hello/hello_activity.py")
+**TestSampleIntegration_Java** — `temporal sample init java hello`:
+- Assert: `hello/build.gradle` contains `temporal-sdk:1.32.1`
+- Assert: `hello/src/main/java/io/temporal/samples/hello/` has `.java` files
+- Build: `cd hello && gradle compileJava`
 
-    pyproject, _ := os.ReadFile("hello/pyproject.toml")
-    assert.Contains(t, string(pyproject), `name = "hello"`)
-    assert.Contains(t, string(pyproject), `temporalio`)
+**TestSampleIntegration_DotNet** — `temporal sample init dotnet ActivitySimple`:
+- Assert: `ActivitySimple/Directory.Build.props` contains `net8.0` and `Temporalio`
+- Assert: `ActivitySimple/ActivitySimple/*.csproj` exists
+- Build: `cd ActivitySimple && dotnet build`
 
-    cmd := exec.Command("uv", "sync")
-    cmd.Dir = "hello"
-    out, err := cmd.CombinedOutput()
-    require.NoError(t, err, "uv sync failed: %s", out)
-}
+**TestSampleIntegration_Ruby** — `temporal sample init ruby activity_simple`:
+- Assert: `activity_simple/Gemfile` contains `gem 'temporalio'`
+- Assert: `activity_simple/activity_simple/worker.rb` exists
+- Build: `cd activity_simple && bundle install`
+
+Run command:
 ```
-
-**Go** — init `helloworld`, check imports rewritten, run `go mod tidy && go build ./...`:
-
-```go
-func TestSampleIntegration_Go(t *testing.T) {
-    ref := envOr("TEMPORAL_SAMPLES_REF", "sample-init")
-    t.Chdir(t.TempDir())
-
-    h := NewCommandHarness(t)
-    res := h.Execute("sample", "init",
-        fmt.Sprintf("https://github.com/temporalio/samples-go/tree/%s/helloworld", ref))
-    require.NoError(t, res.Err)
-
-    assert.FileExists(t, "helloworld/go.mod")
-    assert.FileExists(t, "helloworld/README.md")
-    assert.FileExists(t, "helloworld/helloworld/helloworld.go")
-    assert.FileExists(t, "helloworld/helloworld/worker/main.go")
-
-    worker, _ := os.ReadFile("helloworld/helloworld/worker/main.go")
-    assert.Contains(t, string(worker), `"helloworld/helloworld"`)
-    assert.NotContains(t, string(worker), "github.com/temporalio/samples-go")
-
-    cmd := exec.Command("sh", "-c", "go mod tidy && go build ./...")
-    cmd.Dir = "helloworld"
-    out, err := cmd.CombinedOutput()
-    require.NoError(t, err, "go build failed: %s", out)
-}
-```
-
-**TypeScript** — init `hello-world`, check flat copy, run `npm install && npx tsc --noEmit`:
-
-```go
-func TestSampleIntegration_TypeScript(t *testing.T) {
-    ref := envOr("TEMPORAL_SAMPLES_REF", "sample-init")
-    t.Chdir(t.TempDir())
-
-    h := NewCommandHarness(t)
-    res := h.Execute("sample", "init",
-        fmt.Sprintf("https://github.com/temporalio/samples-typescript/tree/%s/hello-world", ref))
-    require.NoError(t, res.Err)
-
-    assert.FileExists(t, "hello-world/package.json")
-    assert.FileExists(t, "hello-world/tsconfig.json")
-    assert.FileExists(t, "hello-world/src/workflows.ts")
-    assert.NoDirExists(t, "hello-world/hello-world")
-
-    cmd := exec.Command("sh", "-c", "npm install && npx tsc --noEmit")
-    cmd.Dir = "hello-world"
-    out, err := cmd.CombinedOutput()
-    require.NoError(t, err, "tsc failed: %s", out)
-}
-```
-
-**Java** — init `hello`, check deep path, run `gradle compileJava`:
-
-```go
-func TestSampleIntegration_Java(t *testing.T) {
-    ref := envOr("TEMPORAL_SAMPLES_REF", "sample-init")
-    t.Chdir(t.TempDir())
-
-    h := NewCommandHarness(t)
-    res := h.Execute("sample", "init",
-        fmt.Sprintf("https://github.com/temporalio/samples-java/tree/%s/hello", ref))
-    require.NoError(t, res.Err)
-
-    assert.FileExists(t, "hello/build.gradle")
-    assert.FileExists(t, "hello/README.md")
-    assert.FileExists(t, "hello/src/main/java/io/temporal/samples/hello/HelloActivity.java")
-
-    gradle, _ := os.ReadFile("hello/build.gradle")
-    assert.Contains(t, string(gradle), "temporal-sdk:1.32.1")
-
-    cmd := exec.Command("gradle", "compileJava")
-    cmd.Dir = "hello"
-    out, err := cmd.CombinedOutput()
-    require.NoError(t, err, "gradle compileJava failed: %s", out)
-}
-```
-
-**.NET** — init `ActivitySimple`, check nested structure, run `dotnet build`:
-
-```go
-func TestSampleIntegration_DotNet(t *testing.T) {
-    ref := envOr("TEMPORAL_SAMPLES_REF", "sample-init")
-    t.Chdir(t.TempDir())
-
-    h := NewCommandHarness(t)
-    res := h.Execute("sample", "init",
-        fmt.Sprintf("https://github.com/temporalio/samples-dotnet/tree/%s/ActivitySimple", ref))
-    require.NoError(t, res.Err)
-
-    assert.FileExists(t, "ActivitySimple/Directory.Build.props")
-    assert.FileExists(t, "ActivitySimple/README.md")
-    assert.FileExists(t, "ActivitySimple/ActivitySimple/Program.cs")
-
-    cmd := exec.Command("dotnet", "build")
-    cmd.Dir = "ActivitySimple"
-    out, err := cmd.CombinedOutput()
-    require.NoError(t, err, "dotnet build failed: %s", out)
-}
-```
-
-**Ruby** — init `activity_simple`, check nested structure, run `bundle install`:
-
-```go
-func TestSampleIntegration_Ruby(t *testing.T) {
-    ref := envOr("TEMPORAL_SAMPLES_REF", "sample-init")
-    t.Chdir(t.TempDir())
-
-    h := NewCommandHarness(t)
-    res := h.Execute("sample", "init",
-        fmt.Sprintf("https://github.com/temporalio/samples-ruby/tree/%s/activity_simple", ref))
-    require.NoError(t, res.Err)
-
-    assert.FileExists(t, "activity_simple/Gemfile")
-    assert.FileExists(t, "activity_simple/README.md")
-    assert.FileExists(t, "activity_simple/activity_simple/worker.rb")
-
-    cmd := exec.Command("bundle", "install")
-    cmd.Dir = "activity_simple"
-    out, err := cmd.CombinedOutput()
-    require.NoError(t, err, "bundle install failed: %s", out)
-}
-```
-
-### Helper
-
-```go
-func envOr(key, fallback string) string {
-    if v := os.Getenv(key); v != "" {
-        return v
-    }
-    return fallback
-}
+TEMPORAL_SAMPLES_REF=sample-init go test -tags sample_integration -run TestSampleIntegration -v ./internal/temporalcli/
 ```
 
 ---
 
-## Step 4: CLI PR
+## Execution order
 
-Open PR against `main` on the CLI repo containing:
-- Bug fixes (step 1)
-- Integration test file (step 3)
-- Any updates to existing synthetic tests
+1. **Phase 1** (CLI bug fixes) — one commit per fix, all in this repo.
+   Run existing unit tests after each.
 
-The synthetic unit tests provide fast CI coverage. Integration tests run
-manually via `go test -tags sample_integration -run TestSampleIntegration`.
+2. **Phase 2** (manifests) — create `sample-init` branch in each of the 6
+   sample repos. Push root manifest + all per-sample manifests in a single
+   commit per repo.
 
----
+3. **Phase 3** (integration tests) — add the test file, run against the
+   `sample-init` branches. Once green, open the CLI PR.
 
-## Step 5–7: Merge and populate
-
-5. Merge `sample-init` branches in each sample repo.
-6. Update `TEMPORAL_SAMPLES_REF` default from `sample-init` to `main` in the
-   integration tests. (Or just remove the env var override if we're confident.)
-7. Add `temporal-sample.yaml` to remaining sample directories in each repo.
-   This is incremental — `temporal sample list` only shows samples that have
-   manifests.
+4. **Post-merge**: merge `sample-init` branches in sample repos, switch
+   integration tests to default to `main`.
