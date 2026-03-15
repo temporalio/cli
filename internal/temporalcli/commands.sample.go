@@ -311,14 +311,12 @@ func (c *TemporalSampleInitCommand) run(cctx *CommandContext, args []string) err
 		relToSample := strings.TrimPrefix(rel, samplePrefix)
 
 		// Parse sample manifest if found.
-		if relToSample == "temporal-sample.yaml" || strings.HasSuffix(rel, "/temporal-sample.yaml") && !parsedSampleManifest {
-			if relToSample == "temporal-sample.yaml" {
-				if err := yaml.NewDecoder(tr).Decode(&sm); err != nil {
-					return fmt.Errorf("parsing sample manifest: %w", err)
-				}
-				parsedSampleManifest = true
-				continue
+		if relToSample == "temporal-sample.yaml" && !parsedSampleManifest {
+			if err := yaml.NewDecoder(tr).Decode(&sm); err != nil {
+				return fmt.Errorf("parsing sample manifest: %w", err)
 			}
+			parsedSampleManifest = true
+			continue
 		}
 
 		// Skip manifest files.
