@@ -277,6 +277,9 @@ scaffold:
     java { sourceCompatibility = JavaVersion.VERSION_11 }
     dependencies {
         implementation "io.temporal:temporal-sdk:{{sdk_version}}"
+        implementation "io.temporal:temporal-envconfig:{{sdk_version}}"
+        implementation "ch.qos.logback:logback-classic:1.5.6"
+        implementation "commons-lang:commons-lang:2.6"
     }
     task execute(type: JavaExec) {
         mainClass = findProperty("mainClass") ?: ""
