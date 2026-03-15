@@ -290,6 +290,7 @@ func (c *TemporalSampleInitCommand) run(cctx *CommandContext, args []string) err
 
 	var sm sampleManifest
 	parsedSampleManifest := false
+	filesWritten := 0
 
 	// Stream through tarball extracting matching files.
 	for {
@@ -341,6 +342,11 @@ func (c *TemporalSampleInitCommand) run(cctx *CommandContext, args []string) err
 		if err := writeFileFromTar(outPath, tr, hdr.Mode); err != nil {
 			return err
 		}
+		filesWritten++
+	}
+
+	if filesWritten == 0 && !parsedSampleManifest {
+		return fmt.Errorf("sample %q not found in %s", sample, repo)
 	}
 
 	// Write scaffold files.

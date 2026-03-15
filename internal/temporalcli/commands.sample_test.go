@@ -407,6 +407,18 @@ scaffold:
 	assert.FileExists(t, filepath.Join("activity_simple", "README.md"))
 }
 
+func TestSample_Init_NotFound(t *testing.T) {
+	srv := serveSamples(t, testPythonManifest, testPythonTarball(t))
+	t.Setenv("TEMPORAL_SAMPLES_BASE_URL", srv.URL)
+	t.Chdir(t.TempDir())
+
+	h := NewCommandHarness(t)
+	res := h.Execute("sample", "init", "python", "nonexistent")
+
+	require.Error(t, res.Err)
+	assert.Contains(t, res.Err.Error(), `sample "nonexistent" not found in temporalio/samples-python`)
+}
+
 func TestSample_Init_NoArgs(t *testing.T) {
 	h := NewCommandHarness(t)
 	res := h.Execute("sample", "init")
