@@ -27,6 +27,7 @@ type repoManifest struct {
 	Scaffold       map[string]string `yaml:"scaffold"`
 	RewriteImports *rewriteRule      `yaml:"rewrite_imports"`
 	SamplePath     string            `yaml:"sample_path"`
+	RootFiles      []string          `yaml:"root_files"`
 }
 
 type rewriteRule struct {
@@ -339,6 +340,16 @@ func (c *TemporalSampleInitCommand) run(cctx *CommandContext, args []string) err
 			continue
 		}
 		rel := stripTarPrefix(hdr.Name)
+
+		// Check if this is a root_files entry to copy to project root.
+		if rootFileDest := matchRootFile(rel, manifest.RootFiles); rootFileDest != "" {
+			outPath := filepath.Join(outputDir, rootFileDest)
+			if err := writeFileFromTar(outPath, tr, hdr.Mode); err != nil {
+				return err
+			}
+			continue
+		}
+
 		if !strings.HasPrefix(rel, samplePrefix) {
 			continue
 		}
@@ -458,6 +469,22 @@ func rewriteImports(dir string, rule rewriteRule, oldPrefix, newPrefix string) e
 		replaced := strings.ReplaceAll(string(data), oldPrefix, newPrefix)
 		return os.WriteFile(path, []byte(replaced), 0o644)
 	})
+}
+
+// matchRootFile checks if rel matches any root_files entry. Entries ending
+// in "/" match as directory prefixes; others match exactly. Returns the
+// relative destination path within the output dir, or "" if no match.
+func matchRootFile(rel string, rootFiles []string) string {
+	for _, rf := range rootFiles {
+		if strings.HasSuffix(rf, "/") {
+			if strings.HasPrefix(rel, rf) || rel+"/" == rf {
+				return rel
+			}
+		} else if rel == rf {
+			return rel
+		}
+	}
+	return ""
 }
 
 // spinner shows a braille animation next to a message while work is in progress.
