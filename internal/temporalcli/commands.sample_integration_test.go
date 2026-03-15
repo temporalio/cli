@@ -17,7 +17,7 @@ func samplesRef() string {
 	if v := os.Getenv("TEMPORAL_SAMPLES_REF"); v != "" {
 		return v
 	}
-	return "sample-init"
+	return "cli-sample-init"
 }
 
 func initSample(t *testing.T, args ...string) *CommandResult {
