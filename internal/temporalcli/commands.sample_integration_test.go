@@ -152,7 +152,7 @@ func TestSampleIntegration_Init_DotNet(t *testing.T) {
 	}
 	assert.True(t, csprojFound, "expected .csproj file in %s", csprojDir)
 
-	runCmd(t, "ActivitySimple", "dotnet", "build")
+	runCmd(t, filepath.Join("ActivitySimple", "ActivitySimple"), "dotnet", "build")
 }
 
 func TestSampleIntegration_Init_Ruby(t *testing.T) {
