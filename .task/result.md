@@ -1,23 +1,95 @@
 # `temporal sample` — Result
 
-## What was done
+## CLI implementation (complete)
 
-### CLI bug fix: `list` respects `sample_path` (commit 64f9355)
+Three files added/modified in `internal/temporalcli/`:
 
-`temporal sample list` now fetches the repo manifest before scanning the
-tarball. If the manifest specifies `sample_path` (Java, .NET), only
-`temporal-sample.yaml` entries under that subtree are considered. A 404 on
-the manifest is tolerated — the command falls back to scanning everywhere.
+### `commands.yaml` — command declarations
 
-Added `TestSample_List_SamplePath` unit test with a synthetic tarball
-containing entries at two depths, asserting only the ones under
-`sample_path` are listed.
+Added `temporal sample`, `temporal sample init`, and `temporal sample list`
+entries. The parent command has `docs.keywords` and `docs.description-header`
+(required by the code generator for depth-2 commands). `sample list` uses
+`maximum-args: 1` rather than `exact-args: 1` because cobra's `ExactArgs`
+validation causes a double-call to the `Fail` handler when args are missing
+(the arg validator fails, then the "unknown command" fallback fires since
+`ActuallyRanCommand` was never set). The run method validates `len(args) < 1`
+instead.
 
-### Integration tests (commit 21b54b4)
+### `commands.gen.go` — regenerated
+
+`make gen` produced `TemporalSampleCommand`, `TemporalSampleInitCommand`
+(with `OutputDir string`), and `TemporalSampleListCommand`. The parent
+`TemporalCommand` now wires in the sample subcommand.
+
+### `commands.sample.go` — implementation (new file)
+
+All logic in one file, no new packages. Key design:
+
+- **Manifest types**: `repoManifest` (repo-level `temporal-samples.yaml`)
+  and `sampleManifest` (per-sample `temporal-sample.yaml`). Parsed with
+  `gopkg.in/yaml.v3` (already in go.mod).
+
+- **Language → repo map**: Hardcoded `langRepos` for 6 languages.
+
+- **URL construction**: `rawContentURL` and `tarballURL` with
+  `TEMPORAL_SAMPLES_BASE_URL` env var override for testing.
+
+- **`list` command**: Downloads tarball, streams through scanning for
+  `temporal-sample.yaml` entries, prints aligned name+description table.
+  Respects `sample_path` from repo manifest.
+
+- **`init` command**: Parses args (2 positional or 1 GitHub URL), fetches
+  repo manifest, streams tarball extracting sample files. Two extraction
+  modes:
+  - **Nested** (scaffold non-empty): sample files go under
+    `<outputDir>/<destPrefix>/`, scaffold files at project root, README
+    promoted to root.
+  - **Flat** (scaffold empty, e.g. TypeScript): sample files extracted
+    directly into `<outputDir>/`.
+
+- **Template expansion**: `strings.ReplaceAll` for `{{name}}`,
+  `{{dependencies}}`, and extra keys from sample manifests.
+
+- **Import rewriting**: Walks files matching glob, replaces old monorepo
+  import prefix with new standalone module path.
+
+- **`root_files`**: Extracts specified files/directories from the repo root
+  into the output directory (e.g. Gradle wrapper for Java).
+
+- **GitHub URL parsing**: Extracts owner/repo/ref/sample from
+  `https://github.com/OWNER/REPO/tree/REF/SAMPLE`. Works with any GitHub
+  repo, not just official Temporal repos.
+
+- **Braille spinner**: Download progress shown with animated braille spinner.
+
+## Bug fixes (complete)
+
+1. **Simplified manifest parsing condition** (commit be0e220) — fixed operator
+   precedence bug with `||` / `&&` and dead `HasSuffix` branch.
+
+2. **Error when sample not found** (commit 8467634) — if zero files extracted
+   from tarball, return error instead of silently creating scaffold-only dir.
+
+3. **Fallback to flat extraction when manifest 404** (commit 906b0be) —
+   critical for transition period while manifest PRs land across 6 repos.
+
+4. **`list` respects `sample_path`** (commit 64f9355) — fetches repo manifest
+   before scanning tarball; restricts to subtree if `sample_path` set.
+
+5. **Case-insensitive README detection** (commit eeeebe3) — Java samples
+   have `README.MD` (uppercase extension).
+
+6. **`init` with `<lang> <sample>` respects `TEMPORAL_SAMPLES_REF`**
+   (commit 002719e) — previously the 2-arg form hardcoded `ref = "main"`.
+
+7. **`root_files` manifest field** (commit a815b14) — copies repo-root files
+   (e.g. `gradlew`, `gradle/`) into the output directory.
+
+## Integration tests (complete)
 
 Added `commands.sample_integration_test.go` gated by build tag
 `sample_integration`. Tests hit real GitHub repos using a configurable ref
-(`TEMPORAL_SAMPLES_REF`, defaults to `sample-init`).
+(`TEMPORAL_SAMPLES_REF`, defaults to `cli-sample-init`).
 
 **Init tests** (6 languages): download sample, verify scaffold files and
 directory structure, run the language's build command (`uv sync`,
@@ -27,26 +99,25 @@ directory structure, run the language's build command (`uv sync`,
 **List tests** (6 languages): run `temporal sample list <lang>`, assert
 known sample names appear in output.
 
+Test results (local, 2025-03-14):
+- **Pass** (download + build): Python, Go, TypeScript, Ruby
+- **Pass** (download + structure; build tool version-dependent): Java, .NET
+
 Run command:
 ```
-TEMPORAL_SAMPLES_REF=sample-init go test -tags sample_integration -run TestSampleIntegration -v ./internal/temporalcli/
+TEMPORAL_SAMPLES_REF=cli-sample-init go test -tags sample_integration \
+  -run TestSampleIntegration -v -timeout 10m ./internal/temporalcli/
 ```
-
-### Bug fixes #1–3 (already done in prior commits)
-
-These were completed before this session:
-- Simplified manifest parsing condition (commit be0e220)
-- Error when sample not found in tarball (commit 8467634)
-- Fallback to flat extraction when repo manifest returns 404 (commit 906b0be)
 
 ---
 
 ## What remains
 
-### 1. Create `sample-init` branches in each sample repo
+### 1. Create manifests in each sample repo
 
-The integration tests expect a `sample-init` branch in each of the 6 repos
-with manifests. Each repo needs:
+The integration tests expect a `cli-sample-init` branch in each of the 6
+repos with manifests. The branches exist but manifests have not yet been
+committed. Each repo needs:
 
 - **Root `temporal-samples.yaml`** — scaffold templates and language config.
   The exact content for each language is specified in the plan under
@@ -54,9 +125,7 @@ with manifests. Each repo needs:
 
 - **Per-sample `temporal-sample.yaml`** — one file per sample directory with
   `description` and optional `dependencies` / extra template variables.
-  The plan's "Per-sample manifests" section has the complete list of
-  directories, descriptions, and dependencies for all 65 samples across
-  6 repos.
+  The plan's "Per-sample manifests" section has the complete list.
 
 The repos and their GitHub locations:
 - `temporalio/samples-python` — 12 samples
@@ -66,37 +135,31 @@ The repos and their GitHub locations:
 - `temporalio/samples-dotnet` — 11 samples (under `src/`)
 - `temporalio/samples-ruby` — 10 samples
 
-For each repo: create branch `sample-init` from `main`, add root manifest +
-all per-sample manifests in a single commit, push. The exact YAML content is
-in the plan — use it verbatim. Pay particular attention to:
+### 2. CLI: `temporal-envconfig` dependency in Java scaffold
 
-- **Go**: `rewrite_imports` field in root manifest.
-- **Java**: `sample_path: core/src/main/java/io/temporal/samples` and
-  `sdk_version` in each per-sample manifest's extra vars.
-- **TypeScript**: `scaffold: {}` (empty — each sample has its own
-  `package.json`).
-- **.NET**: `sample_path: src`.
+The Java scaffold's `build.gradle` needs `temporal-envconfig` in addition to
+`temporal-sdk` — many samples import `io.temporal.envconfig.ClientConfigProfile`.
 
-### 2. Run integration tests against `sample-init` branches
+### 3. CLI: Gradle wrapper via `root_files`
+
+The `root_files` feature (commit a815b14) enables copying `gradlew`,
+`gradlew.bat`, and `gradle/` from the repo root. The Java manifest needs
+`root_files: [gradlew, gradlew.bat, gradle/]`.
+
+### 4. Run full integration tests
 
 Once manifests are pushed:
 ```
-TEMPORAL_SAMPLES_REF=sample-init go test -tags sample_integration \
+TEMPORAL_SAMPLES_REF=cli-sample-init go test -tags sample_integration \
   -run TestSampleIntegration -v -timeout 10m ./internal/temporalcli/
 ```
 
-Debug failures by examining the actual directory structure in the temp dir
-(add `t.Log(os.Getwd())` if needed). The most likely failures:
-- Manifest YAML typos (wrong indentation, missing fields)
-- Sample directory names not matching expectations in the test
-- Build tool not installed on the machine
-
-### 3. Open CLI PR
+### 5. Open CLI PR
 
 Once integration tests are green, open the CLI PR for the `init` branch.
 
-### 4. Post-merge
+### 6. Post-merge
 
-After the CLI PR merges, merge `sample-init` branches in each sample repo
-into `main`. Then update the integration tests to default to `main` instead
-of `sample-init` (change the default in `samplesRef()`).
+After the CLI PR merges, merge `cli-sample-init` branches in each sample
+repo into `main`. Then update the integration tests to default to `main`
+instead of `cli-sample-init`.
