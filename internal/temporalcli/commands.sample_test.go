@@ -32,7 +32,6 @@ func buildGitHubTarball(t *testing.T, prefix string, files []tarEntry) []byte {
 	gw := gzip.NewWriter(&buf)
 	tw := tar.NewWriter(gw)
 
-	// Collect unique directory entries.
 	dirs := map[string]struct{}{prefix: {}}
 	for _, f := range files {
 		d := path.Dir(prefix + f.Name)
@@ -67,18 +66,14 @@ func buildGitHubTarball(t *testing.T, prefix string, files []tarEntry) []byte {
 	return buf.Bytes()
 }
 
-// serveSamples starts an httptest.Server that mimics the two GitHub endpoints
-// the sample commands need: raw content (manifest) and codeload (tarball).
-func serveSamples(t *testing.T, manifest string, tarball []byte) *httptest.Server {
+// serveSamples starts an httptest.Server that serves a GitHub tarball.
+func serveSamples(t *testing.T, tarball []byte) *httptest.Server {
 	t.Helper()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case strings.Contains(r.URL.Path, "/tar.gz/"):
+		if strings.Contains(r.URL.Path, "/tar.gz/") {
 			w.Header().Set("Content-Type", "application/gzip")
 			_, _ = w.Write(tarball)
-		case strings.HasSuffix(r.URL.Path, "temporal-samples.yaml"):
-			_, _ = w.Write([]byte(manifest))
-		default:
+		} else {
 			http.NotFound(w, r)
 		}
 	}))
@@ -86,9 +81,9 @@ func serveSamples(t *testing.T, manifest string, tarball []byte) *httptest.Serve
 	return srv
 }
 
-const testPythonManifest = `version: 1
-language: python
-repo: temporalio/samples-python
+const testPythonHelloManifest = `description: Basic hello world samples
+dependencies:
+  - "temporalio>=1.23.0,<2"
 scaffold:
   pyproject.toml: |
     [project]
@@ -104,8 +99,7 @@ scaffold:
 func testPythonTarball(t *testing.T) []byte {
 	t.Helper()
 	return buildGitHubTarball(t, "temporalio-samples-python-abc1234/", []tarEntry{
-		{"temporal-samples.yaml", testPythonManifest},
-		{"hello/temporal-sample.yaml", "description: Basic hello world samples\ndependencies:\n  - \"temporalio>=1.23.0,<2\"\n"},
+		{"hello/temporal-sample.yaml", testPythonHelloManifest},
 		{"hello/__init__.py", ""},
 		{"hello/my_activity.py", "from temporalio import activity\n"},
 		{"hello/worker.py", "import asyncio\n"},
@@ -116,11 +110,8 @@ func testPythonTarball(t *testing.T) []byte {
 	})
 }
 
-// TestSample_List verifies that `temporal sample list <language>` downloads
-// the repo tarball, discovers samples by scanning for temporal-sample.yaml,
-// and prints names with descriptions.
 func TestSample_List(t *testing.T) {
-	srv := serveSamples(t, testPythonManifest, testPythonTarball(t))
+	srv := serveSamples(t, testPythonTarball(t))
 	t.Setenv("TEMPORAL_SAMPLES_BASE_URL", srv.URL)
 
 	h := NewCommandHarness(t)
@@ -134,11 +125,8 @@ func TestSample_List(t *testing.T) {
 	assert.Contains(t, out, "End-to-end encryption with a custom codec")
 }
 
-// TestSample_Init_Python verifies that `temporal sample init python <sample>`
-// creates a project directory with generated scaffold files (pyproject.toml),
-// README at the root, and sample files nested under a package subdirectory.
 func TestSample_Init_Python(t *testing.T) {
-	srv := serveSamples(t, testPythonManifest, testPythonTarball(t))
+	srv := serveSamples(t, testPythonTarball(t))
 	t.Setenv("TEMPORAL_SAMPLES_BASE_URL", srv.URL)
 	t.Chdir(t.TempDir())
 
@@ -167,16 +155,12 @@ func TestSample_Init_Python(t *testing.T) {
 	assert.NoFileExists(t, filepath.Join("hello", "temporal-sample.yaml"))
 	assert.NoFileExists(t, filepath.Join("hello", "hello", "temporal-sample.yaml"))
 
-	// Stdout shows next-step instructions.
 	assert.Contains(t, res.Stdout.String(), "hello")
 }
 
-// TestSample_Init_TypeScript_FlatCopy verifies that when the scaffold is empty
-// (TypeScript), sample files are copied flat — no nesting.
 func TestSample_Init_TypeScript_FlatCopy(t *testing.T) {
-	manifest := "version: 1\nlanguage: typescript\nrepo: temporalio/samples-typescript\nscaffold: {}\n"
+	// No scaffold → flat copy.
 	tarball := buildGitHubTarball(t, "temporalio-samples-typescript-def5678/", []tarEntry{
-		{"temporal-samples.yaml", manifest},
 		{"hello-world/temporal-sample.yaml", "description: Basic hello world workflow\n"},
 		{"hello-world/package.json", `{"name": "hello-world"}`},
 		{"hello-world/src/workflows.ts", "export async function greet() { return 'hello'; }\n"},
@@ -184,7 +168,7 @@ func TestSample_Init_TypeScript_FlatCopy(t *testing.T) {
 		{"hello-world/README.md", "# Hello World\n"},
 	})
 
-	srv := serveSamples(t, manifest, tarball)
+	srv := serveSamples(t, tarball)
 	t.Setenv("TEMPORAL_SAMPLES_BASE_URL", srv.URL)
 	t.Chdir(t.TempDir())
 
@@ -193,21 +177,16 @@ func TestSample_Init_TypeScript_FlatCopy(t *testing.T) {
 
 	require.NoError(t, res.Err)
 
-	// Empty scaffold: flat copy, no nesting.
 	assert.FileExists(t, filepath.Join("hello-world", "package.json"))
 	assert.FileExists(t, filepath.Join("hello-world", "src", "workflows.ts"))
 	assert.FileExists(t, filepath.Join("hello-world", "src", "activities.ts"))
 	assert.FileExists(t, filepath.Join("hello-world", "README.md"))
 	assert.NoDirExists(t, filepath.Join("hello-world", "hello-world"))
-
-	// Manifest excluded.
 	assert.NoFileExists(t, filepath.Join("hello-world", "temporal-sample.yaml"))
 }
 
-// TestSample_Init_GitHubURL verifies that a full GitHub URL can be used
-// instead of positional language + sample arguments.
 func TestSample_Init_GitHubURL(t *testing.T) {
-	srv := serveSamples(t, testPythonManifest, testPythonTarball(t))
+	srv := serveSamples(t, testPythonTarball(t))
 	t.Setenv("TEMPORAL_SAMPLES_BASE_URL", srv.URL)
 	t.Chdir(t.TempDir())
 
@@ -219,12 +198,33 @@ func TestSample_Init_GitHubURL(t *testing.T) {
 	assert.FileExists(t, filepath.Join("hello", "hello", "__init__.py"))
 }
 
-// TestSample_Init_Go_ImportRewrite verifies that Go import paths are rewritten
-// from the monorepo module path to the new standalone module name.
+func TestSample_Init_GitHubURL_DeepPath(t *testing.T) {
+	tarball := buildGitHubTarball(t, "org-repo-abc1234/", []tarEntry{
+		{"deep/path/mysample/temporal-sample.yaml", "description: Deep sample\nscaffold:\n  config.yaml: |\n    name: {{name}}\n"},
+		{"deep/path/mysample/main.py", "print('hello')\n"},
+		{"deep/path/mysample/README.md", "# Deep Sample\n"},
+	})
+	srv := serveSamples(t, tarball)
+	t.Setenv("TEMPORAL_SAMPLES_BASE_URL", srv.URL)
+	t.Chdir(t.TempDir())
+
+	h := NewCommandHarness(t)
+	res := h.Execute("sample", "init",
+		"https://github.com/org/repo/tree/main/deep/path/mysample")
+
+	require.NoError(t, res.Err)
+
+	// Scaffold present → nested.
+	assert.FileExists(t, filepath.Join("mysample", "mysample", "main.py"))
+	assert.FileExists(t, filepath.Join("mysample", "README.md"))
+
+	config, err := os.ReadFile(filepath.Join("mysample", "config.yaml"))
+	require.NoError(t, err)
+	assert.Contains(t, string(config), "name: mysample")
+}
+
 func TestSample_Init_Go_ImportRewrite(t *testing.T) {
-	manifest := `version: 1
-language: go
-repo: temporalio/samples-go
+	goManifest := `description: Basic hello world workflow
 scaffold:
   go.mod: |
     module {{name}}
@@ -235,15 +235,14 @@ rewrite_imports:
   glob: "*.go"
 `
 	tarball := buildGitHubTarball(t, "temporalio-samples-go-abc1234/", []tarEntry{
-		{"temporal-samples.yaml", manifest},
-		{"helloworld/temporal-sample.yaml", "description: Basic hello world workflow\n"},
+		{"helloworld/temporal-sample.yaml", goManifest},
 		{"helloworld/helloworld.go", "package helloworld\n\nimport \"go.temporal.io/sdk/workflow\"\n"},
 		{"helloworld/worker/main.go", "package main\n\nimport (\n\t\"github.com/temporalio/samples-go/helloworld\"\n)\n"},
 		{"helloworld/starter/main.go", "package main\n\nimport (\n\t\"github.com/temporalio/samples-go/helloworld\"\n)\n"},
 		{"helloworld/README.md", "# Hello World\n"},
 	})
 
-	srv := serveSamples(t, manifest, tarball)
+	srv := serveSamples(t, tarball)
 	t.Setenv("TEMPORAL_SAMPLES_BASE_URL", srv.URL)
 	t.Chdir(t.TempDir())
 
@@ -252,24 +251,19 @@ rewrite_imports:
 
 	require.NoError(t, res.Err)
 
-	// Scaffold: go.mod generated with module name.
 	gomod, err := os.ReadFile(filepath.Join("helloworld", "go.mod"))
 	require.NoError(t, err)
 	assert.Contains(t, string(gomod), "module helloworld")
 
-	// Import paths rewritten from monorepo to standalone.
 	worker, err := os.ReadFile(filepath.Join("helloworld", "helloworld", "worker", "main.go"))
 	require.NoError(t, err)
 	assert.Contains(t, string(worker), `"helloworld/helloworld"`)
 	assert.NotContains(t, string(worker), "github.com/temporalio/samples-go")
 }
 
-// TestSample_Init_Java verifies that Java samples are extracted from the deep
-// sample_path, with Gradle scaffold files generated at the project root.
 func TestSample_Init_Java(t *testing.T) {
-	manifest := `version: 1
-language: java
-repo: temporalio/samples-java
+	javaManifest := `description: Basic hello world samples
+sdk_version: "1.32.1"
 scaffold:
   build.gradle: |
     plugins { id 'java' }
@@ -285,16 +279,20 @@ scaffold:
         mainClass = findProperty("mainClass") ?: ""
         classpath = sourceSets.main.runtimeClasspath
     }
-sample_path: core/src/main/java/io/temporal/samples
+dest_prefix: src/main/java/io/temporal/samples
+root_files:
+  - gradlew
+  - gradle/
 `
 	tarball := buildGitHubTarball(t, "temporalio-samples-java-abc1234/", []tarEntry{
-		{"temporal-samples.yaml", manifest},
-		{"core/src/main/java/io/temporal/samples/hello/temporal-sample.yaml", "description: Basic hello world samples\nsdk_version: \"1.32.1\"\n"},
+		{"core/src/main/java/io/temporal/samples/hello/temporal-sample.yaml", javaManifest},
 		{"core/src/main/java/io/temporal/samples/hello/HelloActivity.java", "package io.temporal.samples.hello;\npublic class HelloActivity {}\n"},
 		{"core/src/main/java/io/temporal/samples/hello/README.md", "# Hello\n"},
+		{"gradlew", "#!/bin/sh\nexec gradle \"$@\"\n"},
+		{"gradle/wrapper/gradle-wrapper.properties", "distributionUrl=https://services.gradle.org/distributions/gradle-8.10.2-bin.zip\n"},
 	})
 
-	srv := serveSamples(t, manifest, tarball)
+	srv := serveSamples(t, tarball)
 	t.Setenv("TEMPORAL_SAMPLES_BASE_URL", srv.URL)
 	t.Chdir(t.TempDir())
 
@@ -308,21 +306,21 @@ sample_path: core/src/main/java/io/temporal/samples
 	require.NoError(t, err)
 	assert.Contains(t, string(gradle), `temporal-sdk:1.32.1`)
 
-	// Java source preserved at deep path under project root.
+	// Java source at deep path under project root.
 	assert.FileExists(t, filepath.Join("hello",
 		"src", "main", "java", "io", "temporal", "samples", "hello",
 		"HelloActivity.java"))
 
 	// README at project root.
 	assert.FileExists(t, filepath.Join("hello", "README.md"))
+
+	// Root files copied.
+	assert.FileExists(t, filepath.Join("hello", "gradlew"))
+	assert.FileExists(t, filepath.Join("hello", "gradle", "wrapper", "gradle-wrapper.properties"))
 }
 
-// TestSample_Init_DotNet verifies that .NET samples are extracted from src/,
-// with a generated Directory.Build.props at the project root.
 func TestSample_Init_DotNet(t *testing.T) {
-	manifest := `version: 1
-language: dotnet
-repo: temporalio/samples-dotnet
+	dotnetManifest := `description: Simple activity execution from a workflow
 scaffold:
   Directory.Build.props: |
     <Project>
@@ -333,17 +331,15 @@ scaffold:
         <PackageReference Include="Temporalio" Version="1.11.1" />
       </ItemGroup>
     </Project>
-sample_path: src
 `
 	tarball := buildGitHubTarball(t, "temporalio-samples-dotnet-abc1234/", []tarEntry{
-		{"temporal-samples.yaml", manifest},
-		{"src/ActivitySimple/temporal-sample.yaml", "description: Simple activity execution from a workflow\n"},
+		{"src/ActivitySimple/temporal-sample.yaml", dotnetManifest},
 		{"src/ActivitySimple/TemporalioSamples.ActivitySimple.csproj", "<Project Sdk=\"Microsoft.NET.Sdk\">\n  <PropertyGroup><OutputType>Exe</OutputType></PropertyGroup>\n</Project>\n"},
 		{"src/ActivitySimple/Program.cs", "using Temporalio.Client;\n"},
 		{"src/ActivitySimple/README.md", "# Activity Simple\n"},
 	})
 
-	srv := serveSamples(t, manifest, tarball)
+	srv := serveSamples(t, tarball)
 	t.Setenv("TEMPORAL_SAMPLES_BASE_URL", srv.URL)
 	t.Chdir(t.TempDir())
 
@@ -352,34 +348,25 @@ sample_path: src
 
 	require.NoError(t, res.Err)
 
-	// Scaffold: Directory.Build.props generated.
 	props, err := os.ReadFile(filepath.Join("ActivitySimple", "Directory.Build.props"))
 	require.NoError(t, err)
 	assert.Contains(t, string(props), "net8.0")
 
-	// Sample files nested under project subdir.
 	assert.FileExists(t, filepath.Join("ActivitySimple", "ActivitySimple",
 		"TemporalioSamples.ActivitySimple.csproj"))
 	assert.FileExists(t, filepath.Join("ActivitySimple", "ActivitySimple", "Program.cs"))
-
-	// README at project root.
 	assert.FileExists(t, filepath.Join("ActivitySimple", "README.md"))
 }
 
-// TestSample_Init_Ruby verifies that Ruby samples get a generated Gemfile
-// at the project root.
 func TestSample_Init_Ruby(t *testing.T) {
-	manifest := `version: 1
-language: ruby
-repo: temporalio/samples-ruby
+	rubyManifest := `description: Simple activity execution from a workflow
 scaffold:
   Gemfile: |
     source 'https://rubygems.org'
     gem 'temporalio'
 `
 	tarball := buildGitHubTarball(t, "temporalio-samples-ruby-abc1234/", []tarEntry{
-		{"temporal-samples.yaml", manifest},
-		{"activity_simple/temporal-sample.yaml", "description: Simple activity execution from a workflow\n"},
+		{"activity_simple/temporal-sample.yaml", rubyManifest},
 		{"activity_simple/my_workflow.rb", "module ActivitySimple; end\n"},
 		{"activity_simple/my_activities.rb", "module ActivitySimple; end\n"},
 		{"activity_simple/worker.rb", "require_relative 'my_workflow'\n"},
@@ -387,7 +374,7 @@ scaffold:
 		{"activity_simple/README.md", "# Activity Simple\n"},
 	})
 
-	srv := serveSamples(t, manifest, tarball)
+	srv := serveSamples(t, tarball)
 	t.Setenv("TEMPORAL_SAMPLES_BASE_URL", srv.URL)
 	t.Chdir(t.TempDir())
 
@@ -396,46 +383,32 @@ scaffold:
 
 	require.NoError(t, res.Err)
 
-	// Scaffold: Gemfile generated.
 	gemfile, err := os.ReadFile(filepath.Join("activity_simple", "Gemfile"))
 	require.NoError(t, err)
 	assert.Contains(t, string(gemfile), "gem 'temporalio'")
 
-	// Sample files present (Ruby uses require_relative, no nesting needed,
-	// but scaffold is non-empty so files are nested under sample subdir).
 	assert.FileExists(t, filepath.Join("activity_simple", "activity_simple", "worker.rb"))
 	assert.FileExists(t, filepath.Join("activity_simple", "activity_simple", "my_workflow.rb"))
-
-	// README at project root.
 	assert.FileExists(t, filepath.Join("activity_simple", "README.md"))
 }
 
-func TestSample_Init_NoManifest(t *testing.T) {
-	tarball := buildGitHubTarball(t, "temporalio-samples-python-abc1234/", []tarEntry{
-		{"hello/__init__.py", ""},
-		{"hello/worker.py", "import asyncio\n"},
-		{"hello/README.md", "# Hello Sample\n"},
+// TestSample_Init_NoManifest_URL verifies that the URL form works even when
+// the sample has no temporal-sample.yaml — files are extracted flat.
+func TestSample_Init_NoManifest_URL(t *testing.T) {
+	tarball := buildGitHubTarball(t, "org-repo-abc1234/", []tarEntry{
+		{"some/path/hello/__init__.py", ""},
+		{"some/path/hello/worker.py", "import asyncio\n"},
+		{"some/path/hello/README.md", "# Hello Sample\n"},
 	})
-	// Server returns 404 for manifest, tarball as normal.
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case strings.Contains(r.URL.Path, "/tar.gz/"):
-			w.Header().Set("Content-Type", "application/gzip")
-			_, _ = w.Write(tarball)
-		default:
-			http.NotFound(w, r)
-		}
-	}))
-	t.Cleanup(srv.Close)
+	srv := serveSamples(t, tarball)
 	t.Setenv("TEMPORAL_SAMPLES_BASE_URL", srv.URL)
 	t.Chdir(t.TempDir())
 
 	h := NewCommandHarness(t)
-	res := h.Execute("sample", "init", "python", "hello")
+	res := h.Execute("sample", "init",
+		"https://github.com/org/repo/tree/main/some/path/hello")
 
 	require.NoError(t, res.Err)
-	out := res.Stdout.String()
-	assert.Contains(t, out, "Warning")
 
 	// Flat copy: files directly under hello/, no nesting.
 	assert.FileExists(t, filepath.Join("hello", "worker.py"))
@@ -444,7 +417,7 @@ func TestSample_Init_NoManifest(t *testing.T) {
 }
 
 func TestSample_Init_NotFound(t *testing.T) {
-	srv := serveSamples(t, testPythonManifest, testPythonTarball(t))
+	srv := serveSamples(t, testPythonTarball(t))
 	t.Setenv("TEMPORAL_SAMPLES_BASE_URL", srv.URL)
 	t.Chdir(t.TempDir())
 
@@ -453,42 +426,6 @@ func TestSample_Init_NotFound(t *testing.T) {
 
 	require.Error(t, res.Err)
 	assert.Contains(t, res.Err.Error(), `sample "nonexistent" not found in temporalio/samples-python`)
-}
-
-// TestSample_List_SamplePath verifies that `list` respects the sample_path
-// from the repo manifest, filtering out entries outside that subtree.
-func TestSample_List_SamplePath(t *testing.T) {
-	manifest := `version: 1
-language: java
-repo: temporalio/samples-java
-scaffold:
-  build.gradle: |
-    plugins { id 'java' }
-sample_path: core/src/main/java/io/temporal/samples
-`
-	tarball := buildGitHubTarball(t, "temporalio-samples-java-abc1234/", []tarEntry{
-		{"temporal-samples.yaml", manifest},
-		// Inside sample_path — should appear.
-		{"core/src/main/java/io/temporal/samples/hello/temporal-sample.yaml", "description: Basic hello world\n"},
-		{"core/src/main/java/io/temporal/samples/hello/HelloActivity.java", "class HelloActivity {}\n"},
-		{"core/src/main/java/io/temporal/samples/saga/temporal-sample.yaml", "description: Saga pattern\n"},
-		{"core/src/main/java/io/temporal/samples/saga/SagaWorkflow.java", "class SagaWorkflow {}\n"},
-		// Outside sample_path — should NOT appear.
-		{"other/temporal-sample.yaml", "description: Should be excluded\n"},
-	})
-
-	srv := serveSamples(t, manifest, tarball)
-	t.Setenv("TEMPORAL_SAMPLES_BASE_URL", srv.URL)
-
-	h := NewCommandHarness(t)
-	res := h.Execute("sample", "list", "java")
-
-	require.NoError(t, res.Err)
-	out := res.Stdout.String()
-	assert.Contains(t, out, "hello")
-	assert.Contains(t, out, "saga")
-	assert.NotContains(t, out, "Should be excluded")
-	assert.NotContains(t, out, "other")
 }
 
 func TestSample_Init_NoArgs(t *testing.T) {

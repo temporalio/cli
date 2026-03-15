@@ -2,6 +2,7 @@ package temporalcli
 
 import (
 	"archive/tar"
+	"bytes"
 	"compress/gzip"
 	"context"
 	"fmt"
@@ -19,27 +20,21 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// repoManifest is the repo-level temporal-samples.yaml.
-type repoManifest struct {
-	Version        int               `yaml:"version"`
-	Language       string            `yaml:"language"`
-	Repo           string            `yaml:"repo"`
-	Scaffold       map[string]string `yaml:"scaffold"`
-	RewriteImports *rewriteRule      `yaml:"rewrite_imports"`
-	SamplePath     string            `yaml:"sample_path"`
-	RootFiles      []string          `yaml:"root_files"`
-}
-
 type rewriteRule struct {
 	From string `yaml:"from"`
 	Glob string `yaml:"glob"`
 }
 
-// sampleManifest is the per-sample temporal-sample.yaml.
+// sampleManifest is the per-sample temporal-sample.yaml. It is the sole
+// manifest: there is no repo-level manifest. Each sample is self-contained.
 type sampleManifest struct {
-	Description  string   `yaml:"description"`
-	Dependencies []string `yaml:"dependencies"`
-	// Extra captures any additional template variables.
+	Description    string            `yaml:"description"`
+	Dependencies   []string          `yaml:"dependencies"`
+	Scaffold       map[string]string `yaml:"scaffold"`
+	RewriteImports *rewriteRule      `yaml:"rewrite_imports"`
+	RootFiles      []string          `yaml:"root_files"`
+	DestPrefix     string            `yaml:"dest_prefix"`
+	// Extra captures additional template variables (e.g. sdk_version).
 	Extra map[string]any `yaml:",inline"`
 }
 
@@ -63,13 +58,6 @@ func defaultRef() string {
 	return "main"
 }
 
-func rawContentURL(repo, ref, path string) string {
-	if base := samplesBaseURL(); base != "" {
-		return base + "/" + repo + "/" + ref + "/" + path
-	}
-	return "https://raw.githubusercontent.com/" + repo + "/" + ref + "/" + path
-}
-
 func tarballURL(repo, ref string) string {
 	if base := samplesBaseURL(); base != "" {
 		return base + "/" + repo + "/tar.gz/" + ref
@@ -77,19 +65,20 @@ func tarballURL(repo, ref string) string {
 	return "https://codeload.github.com/" + repo + "/tar.gz/" + ref
 }
 
-// parseGitHubURL extracts (repo, ref, sample) from a URL like
+// parseGitHubURL extracts (repo, ref, samplePath) from a URL like
 // https://github.com/temporalio/samples-python/tree/main/hello
-func parseGitHubURL(rawURL string) (repo, ref, sample string, err error) {
+// or a deep path like
+// https://github.com/org/repo/tree/main/deep/path/sample
+func parseGitHubURL(rawURL string) (repo, ref, samplePath string, err error) {
 	u, err := url.Parse(rawURL)
 	if err != nil {
 		return "", "", "", fmt.Errorf("invalid URL: %w", err)
 	}
-	// Path: /{owner}/{repo}/tree/{ref}/{sample}
 	parts := strings.Split(strings.TrimPrefix(u.Path, "/"), "/")
 	if len(parts) < 5 || parts[2] != "tree" {
 		return "", "", "", fmt.Errorf("expected URL like https://github.com/OWNER/REPO/tree/REF/SAMPLE")
 	}
-	return parts[0] + "/" + parts[1], parts[3], parts[4], nil
+	return parts[0] + "/" + parts[1], parts[3], strings.Join(parts[4:], "/"), nil
 }
 
 // stripTarPrefix removes the top-level GitHub directory from a tar entry name.
@@ -100,47 +89,8 @@ func stripTarPrefix(name string) string {
 	return name
 }
 
-func downloadTarball(ctx context.Context, url string) (io.ReadCloser, *tar.Reader, error) {
+func downloadTarballBytes(ctx context.Context, url string) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return nil, nil, err
-	}
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, nil, err
-	}
-	if resp.StatusCode != http.StatusOK {
-		resp.Body.Close()
-		return nil, nil, fmt.Errorf("download failed: HTTP %d", resp.StatusCode)
-	}
-	gr, err := gzip.NewReader(resp.Body)
-	if err != nil {
-		resp.Body.Close()
-		return nil, nil, err
-	}
-	// Wrap both closers so caller can close everything.
-	rc := &multiCloser{closers: []io.Closer{gr, resp.Body}}
-	return rc, tar.NewReader(gr), nil
-}
-
-type multiCloser struct {
-	closers []io.Closer
-}
-
-func (mc *multiCloser) Read([]byte) (int, error) { return 0, io.EOF }
-func (mc *multiCloser) Close() error {
-	var firstErr error
-	for _, c := range mc.closers {
-		if err := c.Close(); err != nil && firstErr == nil {
-			firstErr = err
-		}
-	}
-	return firstErr
-}
-
-func fetchRepoManifest(ctx context.Context, repo, ref string) (*repoManifest, error) {
-	u := rawContentURL(repo, ref, "temporal-samples.yaml")
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -149,17 +99,18 @@ func fetchRepoManifest(ctx context.Context, repo, ref string) (*repoManifest, er
 		return nil, err
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode == http.StatusNotFound {
-		return nil, nil
-	}
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("fetching manifest: HTTP %d", resp.StatusCode)
+		return nil, fmt.Errorf("download failed: HTTP %d", resp.StatusCode)
 	}
-	var m repoManifest
-	if err := yaml.NewDecoder(resp.Body).Decode(&m); err != nil {
-		return nil, fmt.Errorf("parsing manifest: %w", err)
+	return io.ReadAll(resp.Body)
+}
+
+func newTarReader(data []byte) (*tar.Reader, error) {
+	gr, err := gzip.NewReader(bytes.NewReader(data))
+	if err != nil {
+		return nil, err
 	}
-	return &m, nil
+	return tar.NewReader(gr), nil
 }
 
 type sampleEntry struct {
@@ -177,22 +128,16 @@ func (c *TemporalSampleListCommand) run(cctx *CommandContext, args []string) err
 		return fmt.Errorf("unsupported language %q (supported: go, java, python, typescript, dotnet, ruby)", lang)
 	}
 
-	ctx := cctx
+	data, err := downloadTarballBytes(cctx, tarballURL(repo, defaultRef()))
+	if err != nil {
+		return fmt.Errorf("downloading samples: %w", err)
+	}
 
-	// Fetch repo manifest to learn sample_path (tolerate 404).
-	ref := defaultRef()
-	manifest, err := fetchRepoManifest(ctx, repo, ref)
+	tr, err := newTarReader(data)
 	if err != nil {
 		return err
 	}
 
-	rc, tr, err := downloadTarball(ctx, tarballURL(repo, ref))
-	if err != nil {
-		return fmt.Errorf("downloading samples: %w", err)
-	}
-	defer rc.Close()
-
-	// Scan for temporal-sample.yaml entries.
 	var samples []sampleEntry
 	for {
 		hdr, err := tr.Next()
@@ -206,19 +151,10 @@ func (c *TemporalSampleListCommand) run(cctx *CommandContext, args []string) err
 		if !strings.HasSuffix(rel, "/temporal-sample.yaml") {
 			continue
 		}
-		// If repo manifest specifies a sample_path, only consider entries under it.
-		if manifest != nil && manifest.SamplePath != "" {
-			if !strings.HasPrefix(rel, manifest.SamplePath+"/") {
-				continue
-			}
-		}
-		// Parse the sample manifest.
 		var sm sampleManifest
 		if err := yaml.NewDecoder(tr).Decode(&sm); err != nil {
 			continue
 		}
-		// Extract sample name from path: either "sample/temporal-sample.yaml"
-		// or "sample_path/sample/temporal-sample.yaml".
 		dir := strings.TrimSuffix(rel, "/temporal-sample.yaml")
 		name := filepath.Base(dir)
 		samples = append(samples, sampleEntry{Name: name, Description: sm.Description})
@@ -226,7 +162,6 @@ func (c *TemporalSampleListCommand) run(cctx *CommandContext, args []string) err
 
 	sort.Slice(samples, func(i, j int) bool { return samples[i].Name < samples[j].Name })
 
-	// Find max name width for alignment.
 	maxName := 0
 	for _, s := range samples {
 		if len(s.Name) > maxName {
@@ -241,7 +176,7 @@ func (c *TemporalSampleListCommand) run(cctx *CommandContext, args []string) err
 }
 
 func (c *TemporalSampleInitCommand) run(cctx *CommandContext, args []string) error {
-	var repo, ref, sample string
+	var repo, ref, sample, samplePath string
 
 	switch len(args) {
 	case 0:
@@ -251,10 +186,11 @@ func (c *TemporalSampleInitCommand) run(cctx *CommandContext, args []string) err
 			return fmt.Errorf("provide a language and sample name, or a GitHub URL")
 		}
 		var err error
-		repo, ref, sample, err = parseGitHubURL(args[0])
+		repo, ref, samplePath, err = parseGitHubURL(args[0])
 		if err != nil {
 			return err
 		}
+		sample = filepath.Base(samplePath)
 	case 2:
 		lang := strings.ToLower(args[0])
 		var ok bool
@@ -264,19 +200,6 @@ func (c *TemporalSampleInitCommand) run(cctx *CommandContext, args []string) err
 		}
 		sample = args[1]
 		ref = defaultRef()
-	}
-
-	ctx := cctx
-
-	// Fetch repo manifest. A 404 means the manifest hasn't been added yet;
-	// fall back to flat extraction with no scaffold.
-	manifest, err := fetchRepoManifest(ctx, repo, ref)
-	if err != nil {
-		return err
-	}
-	if manifest == nil {
-		fmt.Fprintf(cctx.Options.Stdout, "Warning: no temporal-samples.yaml in %s (ref %s); extracting flat\n", repo, ref)
-		manifest = &repoManifest{Repo: repo}
 	}
 
 	outputDir := c.OutputDir
@@ -290,50 +213,92 @@ func (c *TemporalSampleInitCommand) run(cctx *CommandContext, args []string) err
 	spin := newSpinner(cctx.Options.Stdout, fmt.Sprintf("Downloading %s from %s", sample, repo))
 	spin.Start()
 
-	// Download tarball.
-	rc, tr, err := downloadTarball(ctx, tarballURL(repo, ref))
+	data, err := downloadTarballBytes(cctx, tarballURL(repo, ref))
 	if err != nil {
 		spin.Stop()
 		return fmt.Errorf("downloading samples: %w", err)
 	}
-	defer rc.Close()
 
-	// Determine where in the tarball the sample lives.
-	samplePrefix := sample + "/"
-	if manifest.SamplePath != "" {
-		samplePrefix = manifest.SamplePath + "/" + sample + "/"
-	}
-
-	nested := len(manifest.Scaffold) > 0
-
-	// Determine the destination prefix for sample files within outputDir.
-	var destPrefix string
-	if nested {
-		if manifest.SamplePath != "" {
-			// For deep sample_path (e.g. "core/src/main/java/io/temporal/samples"),
-			// strip the first path component to get the source tree layout.
-			parts := strings.SplitN(manifest.SamplePath, "/", 2)
-			if len(parts) == 2 {
-				destPrefix = parts[1] + "/" + sample
-			} else {
-				destPrefix = sample
-			}
-		} else {
-			destPrefix = sample
-		}
-	}
-
+	// Locate the sample's temporal-sample.yaml in the tarball.
 	var sm sampleManifest
-	parsedSampleManifest := false
-	filesWritten := 0
+	var samplePrefix string
+	foundManifest := false
 
-	// Stream through tarball extracting matching files.
+	if samplePath != "" {
+		samplePrefix = samplePath + "/"
+	}
+
+	tr, err := newTarReader(data)
+	if err != nil {
+		spin.Stop()
+		return err
+	}
 	for {
 		hdr, err := tr.Next()
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
+			spin.Stop()
+			return fmt.Errorf("reading tarball: %w", err)
+		}
+		if hdr.Typeflag != tar.TypeReg {
+			continue
+		}
+		rel := stripTarPrefix(hdr.Name)
+		if !strings.HasSuffix(rel, "/temporal-sample.yaml") {
+			continue
+		}
+		if samplePath != "" {
+			// URL form: exact path match.
+			if rel != samplePath+"/temporal-sample.yaml" {
+				continue
+			}
+		} else {
+			// <lang> <sample> form: match by directory basename.
+			dir := strings.TrimSuffix(rel, "/temporal-sample.yaml")
+			if filepath.Base(dir) != sample {
+				continue
+			}
+			samplePrefix = dir + "/"
+		}
+		if err := yaml.NewDecoder(tr).Decode(&sm); err != nil {
+			spin.Stop()
+			return fmt.Errorf("parsing sample manifest: %w", err)
+		}
+		foundManifest = true
+		break
+	}
+
+	if !foundManifest && samplePath == "" {
+		spin.Stop()
+		return fmt.Errorf("sample %q not found in %s", sample, repo)
+	}
+
+	nested := len(sm.Scaffold) > 0
+	var destPrefix string
+	if nested {
+		if sm.DestPrefix != "" {
+			destPrefix = sm.DestPrefix + "/" + sample
+		} else {
+			destPrefix = sample
+		}
+	}
+
+	// Second pass: extract files.
+	tr, err = newTarReader(data)
+	if err != nil {
+		spin.Stop()
+		return err
+	}
+	filesWritten := 0
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			spin.Stop()
 			return fmt.Errorf("reading tarball: %w", err)
 		}
 		if hdr.Typeflag != tar.TypeReg {
@@ -341,10 +306,11 @@ func (c *TemporalSampleInitCommand) run(cctx *CommandContext, args []string) err
 		}
 		rel := stripTarPrefix(hdr.Name)
 
-		// Check if this is a root_files entry to copy to project root.
-		if rootFileDest := matchRootFile(rel, manifest.RootFiles); rootFileDest != "" {
+		// Check root_files entries.
+		if rootFileDest := matchRootFile(rel, sm.RootFiles); rootFileDest != "" {
 			outPath := filepath.Join(outputDir, rootFileDest)
 			if err := writeFileFromTar(outPath, tr, hdr.Mode); err != nil {
+				spin.Stop()
 				return err
 			}
 			continue
@@ -353,17 +319,7 @@ func (c *TemporalSampleInitCommand) run(cctx *CommandContext, args []string) err
 		if !strings.HasPrefix(rel, samplePrefix) {
 			continue
 		}
-		// Path relative to the sample directory.
 		relToSample := strings.TrimPrefix(rel, samplePrefix)
-
-		// Parse sample manifest if found.
-		if relToSample == "temporal-sample.yaml" && !parsedSampleManifest {
-			if err := yaml.NewDecoder(tr).Decode(&sm); err != nil {
-				return fmt.Errorf("parsing sample manifest: %w", err)
-			}
-			parsedSampleManifest = true
-			continue
-		}
 
 		// Skip manifest files.
 		base := filepath.Base(rel)
@@ -371,11 +327,9 @@ func (c *TemporalSampleInitCommand) run(cctx *CommandContext, args []string) err
 			continue
 		}
 
-		// Determine output path.
 		var outPath string
 		if nested {
 			if strings.EqualFold(relToSample, "README.md") {
-				// README goes to project root.
 				outPath = filepath.Join(outputDir, relToSample)
 			} else {
 				outPath = filepath.Join(outputDir, destPrefix, relToSample)
@@ -385,6 +339,7 @@ func (c *TemporalSampleInitCommand) run(cctx *CommandContext, args []string) err
 		}
 
 		if err := writeFileFromTar(outPath, tr, hdr.Mode); err != nil {
+			spin.Stop()
 			return err
 		}
 		filesWritten++
@@ -392,12 +347,12 @@ func (c *TemporalSampleInitCommand) run(cctx *CommandContext, args []string) err
 
 	spin.Stop()
 
-	if filesWritten == 0 && !parsedSampleManifest {
+	if filesWritten == 0 {
 		return fmt.Errorf("sample %q not found in %s", sample, repo)
 	}
 
 	// Write scaffold files.
-	for filename, tmpl := range manifest.Scaffold {
+	for filename, tmpl := range sm.Scaffold {
 		content := expandTemplate(tmpl, sample, &sm)
 		outPath := filepath.Join(outputDir, filename)
 		if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
@@ -409,10 +364,10 @@ func (c *TemporalSampleInitCommand) run(cctx *CommandContext, args []string) err
 	}
 
 	// Rewrite imports if configured.
-	if manifest.RewriteImports != nil {
-		oldPrefix := manifest.RewriteImports.From + "/" + sample
+	if sm.RewriteImports != nil {
+		oldPrefix := sm.RewriteImports.From + "/" + sample
 		newPrefix := filepath.Base(outputDir) + "/" + sample
-		if err := rewriteImports(outputDir, *manifest.RewriteImports, oldPrefix, newPrefix); err != nil {
+		if err := rewriteImports(outputDir, *sm.RewriteImports, oldPrefix, newPrefix); err != nil {
 			return err
 		}
 	}
@@ -435,14 +390,12 @@ func writeFileFromTar(path string, r io.Reader, mode int64) error {
 func expandTemplate(tmpl, name string, sm *sampleManifest) string {
 	s := strings.ReplaceAll(tmpl, "{{name}}", name)
 	if sm != nil {
-		// Build dependencies string: comma-joined with quotes.
 		quoted := make([]string, len(sm.Dependencies))
 		for i, d := range sm.Dependencies {
 			quoted[i] = `"` + d + `"`
 		}
 		deps := strings.Join(quoted, ", ")
 		s = strings.ReplaceAll(s, "{{dependencies}}", deps)
-		// Expand extra keys.
 		for k, v := range sm.Extra {
 			s = strings.ReplaceAll(s, "{{"+k+"}}", fmt.Sprint(v))
 		}
@@ -530,7 +483,6 @@ func (s *spinner) Start() {
 
 func (s *spinner) Stop() {
 	s.once.Do(func() { close(s.done) })
-	// Give the goroutine a moment to clear the line.
 	if s.tty {
 		time.Sleep(10 * time.Millisecond)
 	}
