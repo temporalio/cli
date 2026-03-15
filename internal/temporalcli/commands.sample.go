@@ -52,6 +52,13 @@ func samplesBaseURL() string {
 	return os.Getenv("TEMPORAL_SAMPLES_BASE_URL")
 }
 
+func defaultRef() string {
+	if v := os.Getenv("TEMPORAL_SAMPLES_REF"); v != "" {
+		return v
+	}
+	return "main"
+}
+
 func rawContentURL(repo, ref, path string) string {
 	if base := samplesBaseURL(); base != "" {
 		return base + "/" + repo + "/" + ref + "/" + path
@@ -169,12 +176,13 @@ func (c *TemporalSampleListCommand) run(cctx *CommandContext, args []string) err
 	ctx := cctx
 
 	// Fetch repo manifest to learn sample_path (tolerate 404).
-	manifest, err := fetchRepoManifest(ctx, repo, "main")
+	ref := defaultRef()
+	manifest, err := fetchRepoManifest(ctx, repo, ref)
 	if err != nil {
 		return err
 	}
 
-	rc, tr, err := downloadTarball(ctx, tarballURL(repo, "main"))
+	rc, tr, err := downloadTarball(ctx, tarballURL(repo, ref))
 	if err != nil {
 		return fmt.Errorf("downloading samples: %w", err)
 	}
