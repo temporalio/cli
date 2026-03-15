@@ -386,9 +386,9 @@ func samplesRef() string {
 Each test uses `t.Chdir(t.TempDir())` and passes a full GitHub URL with
 `samplesRef()` as the ref, so it hits real GitHub (no `TEMPORAL_SAMPLES_BASE_URL`).
 
-### Per-language tests
+### Per-language `init` tests
 
-Each language must have at least one integration test that:
+Each language must have an integration test that:
 
 1. Downloads from the real GitHub sample repo (on a feature branch initially,
    then `main` after manifest PRs merge).
@@ -396,38 +396,63 @@ Each language must have at least one integration test that:
    files in the right place, manifests excluded).
 3. Runs the language's build command to prove the scaffolded project is valid.
 
-**TestSampleIntegration_Python** — `temporal sample init` via URL for `hello`:
+**TestSampleIntegration_Init_Python** — `temporal sample init` via URL for `hello`:
 - Assert: `hello/pyproject.toml` contains `name = "hello"` and `temporalio` dep
 - Assert: `hello/README.md` exists
 - Assert: `hello/hello/__init__.py` exists
 - Build: `cd hello && uv sync`
 
-**TestSampleIntegration_Go** — `temporal sample init go helloworld`:
+**TestSampleIntegration_Init_Go** — `temporal sample init go helloworld`:
 - Assert: `helloworld/go.mod` contains `module helloworld`
 - Assert: `helloworld/helloworld/worker/main.go` contains `"helloworld/helloworld"`,
   does not contain `github.com/temporalio/samples-go`
 - Build: `cd helloworld && go mod tidy && go build ./...`
 
-**TestSampleIntegration_TypeScript** — `temporal sample init typescript hello-world`:
+**TestSampleIntegration_Init_TypeScript** — `temporal sample init typescript hello-world`:
 - Assert: `hello-world/package.json` exists with `@temporalio` deps
 - Assert: `hello-world/src/workflows.ts` exists
 - Assert: no `hello-world/hello-world/` nesting (flat copy)
 - Build: `cd hello-world && npm install && npx tsc --noEmit`
 
-**TestSampleIntegration_Java** — `temporal sample init java hello`:
+**TestSampleIntegration_Init_Java** — `temporal sample init java hello`:
 - Assert: `hello/build.gradle` contains `temporal-sdk:1.32.1`
 - Assert: `hello/src/main/java/io/temporal/samples/hello/` has `.java` files
 - Build: `cd hello && gradle compileJava`
 
-**TestSampleIntegration_DotNet** — `temporal sample init dotnet ActivitySimple`:
+**TestSampleIntegration_Init_DotNet** — `temporal sample init dotnet ActivitySimple`:
 - Assert: `ActivitySimple/Directory.Build.props` contains `net8.0` and `Temporalio`
 - Assert: `ActivitySimple/ActivitySimple/*.csproj` exists
 - Build: `cd ActivitySimple && dotnet build`
 
-**TestSampleIntegration_Ruby** — `temporal sample init ruby activity_simple`:
+**TestSampleIntegration_Init_Ruby** — `temporal sample init ruby activity_simple`:
 - Assert: `activity_simple/Gemfile` contains `gem 'temporalio'`
 - Assert: `activity_simple/activity_simple/worker.rb` exists
 - Build: `cd activity_simple && bundle install`
+
+### Per-language `list` tests
+
+Each language must have an integration test that runs `temporal sample list <lang>`
+against the real repo and asserts that known sample names appear in the output.
+
+**TestSampleIntegration_List_Python** — `temporal sample list python`:
+- Assert output contains `hello`, `encryption`, `dsl`
+
+**TestSampleIntegration_List_Go** — `temporal sample list go`:
+- Assert output contains `helloworld`, `saga`, `encryption`
+
+**TestSampleIntegration_List_TypeScript** — `temporal sample list typescript`:
+- Assert output contains `hello-world`, `saga`, `encryption`
+
+**TestSampleIntegration_List_Java** — `temporal sample list java`:
+- Assert output contains `hello`, `bookingsaga`, `encryptedpayloads`
+- Assert output does NOT contain entries from outside `sample_path`
+
+**TestSampleIntegration_List_DotNet** — `temporal sample list dotnet`:
+- Assert output contains `ActivitySimple`, `Saga`, `Encryption`
+- Assert output does NOT contain entries from outside `sample_path`
+
+**TestSampleIntegration_List_Ruby** — `temporal sample list ruby`:
+- Assert output contains `activity_simple`, `polling`
 
 Run command:
 ```
