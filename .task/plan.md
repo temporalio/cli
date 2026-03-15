@@ -1,4 +1,4 @@
-# `temporal sample` — Design
+# `temporal sample` — Plan
 
 ## What's done
 
@@ -7,7 +7,7 @@ The CLI implementation is complete and tested against synthetic HTTP fixtures.
 (Python, Go, TypeScript, Java, .NET, Ruby). See `commands.sample.go` and
 `commands.sample_test.go` in `internal/temporalcli/`.
 
-This design covers what remains: CLI bug fixes, manifest content for each sample
+This plan covers what remains: CLI bug fixes, manifest content for each sample
 repo, and integration tests that prove the scaffolded projects actually build.
 
 ---
