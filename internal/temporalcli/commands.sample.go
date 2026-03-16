@@ -273,6 +273,10 @@ func (c *TemporalSampleInitCommand) run(cctx *CommandContext, args []string) err
 
 	ctx := cctx
 
+	spin := newSpinner(cctx.Options.Stdout, fmt.Sprintf("Downloading %s from %s", sample, repo))
+	spin.Start()
+	defer spin.Stop()
+
 	// Look for manifest at the repo root first.
 	manifest, err := fetchManifest(ctx, repo, ref, manifestFile)
 	if err != nil {
@@ -318,12 +322,8 @@ func (c *TemporalSampleInitCommand) run(cctx *CommandContext, args []string) err
 		return fmt.Errorf("directory %q already exists", outputDir)
 	}
 
-	spin := newSpinner(cctx.Options.Stdout, fmt.Sprintf("Downloading %s from %s", sampleName, repo))
-	spin.Start()
-
 	rc, tr, err := downloadTarball(ctx, tarballURL(repo, ref))
 	if err != nil {
-		spin.Stop()
 		return fmt.Errorf("downloading samples: %w", err)
 	}
 	defer rc.Close()
@@ -391,8 +391,6 @@ func (c *TemporalSampleInitCommand) run(cctx *CommandContext, args []string) err
 		}
 		filesWritten++
 	}
-
-	spin.Stop()
 
 	if filesWritten == 0 {
 		return fmt.Errorf("sample %q not found in %s", sample, repo)
