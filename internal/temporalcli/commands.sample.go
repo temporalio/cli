@@ -280,7 +280,7 @@ func (c *TemporalSampleInitCommand) run(cctx *CommandContext, args []string) err
 
 	ctx := cctx
 
-	spin := newSpinner(cctx.Options.Stdout, fmt.Sprintf("Downloading %s from %s", sample, repo))
+	spin := newSpinner(cctx.Options.Stderr, fmt.Sprintf("Downloading %s from %s", sample, repo))
 	spin.Start()
 	defer spin.Stop()
 
@@ -449,10 +449,10 @@ func (c *TemporalSampleInitCommand) run(cctx *CommandContext, args []string) err
 	if !filepath.IsAbs(outputDir) {
 		displayDir = "./" + outputDir
 	}
+	fmt.Fprintln(cctx.Options.Stderr, color.GreenString("Created %s/", displayDir))
 	w := cctx.Options.Stdout
 	comment := color.New(color.Faint).SprintFunc()
 	bold := color.New(color.Bold).SprintFunc()
-	fmt.Fprintln(w, color.GreenString("Created %s/", displayDir))
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, bold("cd "+outputDir))
 	if spec != nil && len(spec.Commands) > 0 {
