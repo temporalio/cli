@@ -49,7 +49,13 @@ type sampleSpec struct {
 	Dest         string         `yaml:"dest"`
 	Description  string         `yaml:"description"`
 	Dependencies []string       `yaml:"dependencies"`
+	Commands     []commandStep  `yaml:"commands"`
 	Extra        map[string]any `yaml:",inline"`
+}
+
+type commandStep struct {
+	Cmd         string `yaml:"cmd"`
+	NewTerminal bool   `yaml:"new_terminal,omitempty"`
 }
 
 const manifestFile = "temporal-sample.yaml"
@@ -418,7 +424,27 @@ func (c *TemporalSampleInitCommand) run(cctx *CommandContext, args []string) err
 	if !filepath.IsAbs(outputDir) {
 		displayDir = "./" + outputDir
 	}
-	fmt.Fprintf(cctx.Options.Stdout, "Created %s/\n\n  cd %s\n  cat README.md\n", displayDir, outputDir)
+	w := cctx.Options.Stdout
+	fmt.Fprintf(w, "Created %s/\n\n", displayDir)
+	fmt.Fprintf(w, "  cd %s\n\n", outputDir)
+	if spec != nil && len(spec.Commands) > 0 {
+		fmt.Fprintf(w, "  Ensure Temporal is running — `temporal server start-dev` for local\n")
+		fmt.Fprintf(w, "  development, or see https://docs.temporal.io/cloud for Temporal Cloud.\n\n")
+		prevNewTerminal := false
+		for i, step := range spec.Commands {
+			if step.NewTerminal {
+				if i > 0 && !prevNewTerminal {
+					fmt.Fprintln(w)
+				}
+				fmt.Fprintf(w, "  In another terminal:\n    %s\n", step.Cmd)
+			} else {
+				fmt.Fprintf(w, "  %s\n", step.Cmd)
+			}
+			prevNewTerminal = step.NewTerminal
+		}
+	} else {
+		fmt.Fprintf(w, "  cat README.md\n")
+	}
 	return nil
 }
 
