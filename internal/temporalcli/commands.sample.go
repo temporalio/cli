@@ -51,7 +51,14 @@ type sampleSpec struct {
 	Description  string         `yaml:"description"`
 	Dependencies []string       `yaml:"dependencies"`
 	Commands     []commandStep  `yaml:"commands"`
+	Include      []includePath  `yaml:"include"`
 	Extra        map[string]any `yaml:",inline"`
+}
+
+// includePath specifies an additional directory to extract alongside the sample.
+type includePath struct {
+	Path string `yaml:"path"`
+	Dest string `yaml:"dest"`
 }
 
 type commandStep struct {
@@ -328,17 +335,28 @@ func (c *TemporalSampleInitCommand) run(cctx *CommandContext, args []string) err
 	}
 	defer rc.Close()
 
-	samplePrefix := tarballPath + "/"
 	nested := len(manifest.Scaffold) > 0
 
-	// Determine the destination prefix for sample files within outputDir.
-	var destPrefix string
+	// Build extraction rules: tarball prefix → dest prefix within outputDir.
+	type extractRule struct {
+		tarPrefix string
+		destDir   string
+		promote   bool // promote README.md to project root
+	}
+	var rules []extractRule
 	if nested {
+		destPrefix := sampleName
 		if spec != nil && spec.Dest != "" {
 			destPrefix = spec.Dest
-		} else {
-			destPrefix = sampleName
 		}
+		rules = append(rules, extractRule{tarballPath + "/", destPrefix, true})
+		if spec != nil {
+			for _, inc := range spec.Include {
+				rules = append(rules, extractRule{inc.Path + "/", inc.Dest, false})
+			}
+		}
+	} else {
+		rules = append(rules, extractRule{tarballPath + "/", "", true})
 	}
 
 	filesWritten := 0
@@ -365,25 +383,33 @@ func (c *TemporalSampleInitCommand) run(cctx *CommandContext, args []string) err
 			continue
 		}
 
-		if !strings.HasPrefix(rel, samplePrefix) {
-			continue
-		}
-		relToSample := strings.TrimPrefix(rel, samplePrefix)
-
 		// Skip manifest files.
 		if filepath.Base(rel) == manifestFile {
 			continue
 		}
 
+		// Match against extraction rules.
 		var outPath string
-		if nested {
-			if strings.EqualFold(relToSample, "README.md") {
-				outPath = filepath.Join(outputDir, relToSample)
-			} else {
-				outPath = filepath.Join(outputDir, destPrefix, relToSample)
+		matched := false
+		for _, rule := range rules {
+			if !strings.HasPrefix(rel, rule.tarPrefix) {
+				continue
 			}
-		} else {
-			outPath = filepath.Join(outputDir, relToSample)
+			relToDir := strings.TrimPrefix(rel, rule.tarPrefix)
+			if nested {
+				if rule.promote && strings.EqualFold(relToDir, "README.md") {
+					outPath = filepath.Join(outputDir, relToDir)
+				} else {
+					outPath = filepath.Join(outputDir, rule.destDir, relToDir)
+				}
+			} else {
+				outPath = filepath.Join(outputDir, relToDir)
+			}
+			matched = true
+			break
+		}
+		if !matched {
+			continue
 		}
 
 		if err := writeFileFromTar(outPath, tr, hdr.Mode); err != nil {
