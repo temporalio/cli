@@ -58,9 +58,14 @@ var langRepos = map[string]string{
 	"go":         "temporalio/samples-go",
 	"java":       "temporalio/samples-java",
 	"python":     "temporalio/samples-python",
+	"py":         "temporalio/samples-python",
 	"typescript": "temporalio/samples-typescript",
+	"ts":         "temporalio/samples-typescript",
 	"dotnet":     "temporalio/samples-dotnet",
+	"csharp":     "temporalio/samples-dotnet",
+	"cs":         "temporalio/samples-dotnet",
 	"ruby":       "temporalio/samples-ruby",
+	"rb":         "temporalio/samples-ruby",
 }
 
 func samplesBaseURL() string {
@@ -194,12 +199,12 @@ func lookupSample(m *sampleManifest, name, manifestDir string) *sampleSpec {
 
 func (c *TemporalSampleListCommand) run(cctx *CommandContext, args []string) error {
 	if len(args) < 1 {
-		return fmt.Errorf("provide a language (go, java, python, typescript, dotnet, ruby)")
+		return fmt.Errorf("provide a language (go, java, python/py, typescript/ts, dotnet/cs, ruby/rb)")
 	}
 	lang := strings.ToLower(args[0])
 	repo, ok := langRepos[lang]
 	if !ok {
-		return fmt.Errorf("unsupported language %q (supported: go, java, python, typescript, dotnet, ruby)", lang)
+		return fmt.Errorf("unsupported language %q (supported: go, java, python/py, typescript/ts, dotnet/cs, ruby/rb)", lang)
 	}
 
 	manifest, err := fetchManifest(cctx, repo, samplesRef, manifestFile)
@@ -251,10 +256,12 @@ func (c *TemporalSampleInitCommand) run(cctx *CommandContext, args []string) err
 		var ok bool
 		repo, ok = langRepos[lang]
 		if !ok {
-			return fmt.Errorf("unsupported language %q (supported: go, java, python, typescript, dotnet, ruby)", lang)
+			return fmt.Errorf("unsupported language %q (supported: go, java, python/py, typescript/ts, dotnet/cs, ruby/rb)", lang)
 		}
 		sample = args[1]
 		ref = samplesRef
+	default:
+		return fmt.Errorf("too many arguments; provide a language and sample name, or a GitHub URL")
 	}
 
 	ctx := cctx

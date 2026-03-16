@@ -170,6 +170,26 @@ func TestSampleIntegration_Init_Ruby(t *testing.T) {
 	runCmd(t, "activity_simple", "bundle", "install")
 }
 
+// TestSampleIntegration_Init_PathDot verifies that a manifest next to the
+// sample with path: "." works against a real third-party repo.
+func TestSampleIntegration_Init_PathDot(t *testing.T) {
+	res := initSample(t,
+		"https://github.com/dandavison/etc/tree/temporal-samples/temporal-sample-test")
+	require.NoError(t, res.Err)
+
+	// Scaffold: pyproject.toml generated.
+	pyproject, err := os.ReadFile(filepath.Join("temporal-sample-test", "pyproject.toml"))
+	require.NoError(t, err)
+	assert.Contains(t, string(pyproject), `name = "temporal-sample-test"`)
+	assert.Contains(t, string(pyproject), "temporalio")
+
+	// Sample files nested.
+	assert.FileExists(t, filepath.Join("temporal-sample-test", "temporal-sample-test", "worker.py"))
+	assert.FileExists(t, filepath.Join("temporal-sample-test", "README.md"))
+
+	runCmd(t, "temporal-sample-test", "uv", "sync")
+}
+
 // --- List tests ---
 
 func TestSampleIntegration_List_Python(t *testing.T) {

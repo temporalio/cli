@@ -1813,7 +1813,7 @@ func NewTemporalSampleListCommand(cctx *CommandContext, parent *TemporalSampleCo
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "list [flags]"
 	s.Command.Short = "List available Temporal samples for a language"
-	s.Command.Long = "Download and scan the samples repository for a given language,\nthen print each sample's name and description:\n\n    temporal sample list python"
+	s.Command.Long = "List the available samples for a given language:\n\n    temporal sample list python"
 	s.Command.Args = cobra.MaximumNArgs(1)
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
