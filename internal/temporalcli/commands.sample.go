@@ -15,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/mattn/go-isatty"
 	"gopkg.in/yaml.v3"
 )
@@ -425,25 +426,24 @@ func (c *TemporalSampleInitCommand) run(cctx *CommandContext, args []string) err
 		displayDir = "./" + outputDir
 	}
 	w := cctx.Options.Stdout
-	fmt.Fprintf(w, "Created %s/\n\n", displayDir)
-	fmt.Fprintf(w, "  cd %s\n\n", outputDir)
+	comment := color.New(color.Faint).SprintFunc()
+	bold := color.New(color.Bold).SprintFunc()
+	fmt.Fprintln(w, color.GreenString("Created %s/", displayDir))
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, bold("cd "+outputDir))
 	if spec != nil && len(spec.Commands) > 0 {
-		fmt.Fprintf(w, "  Ensure Temporal is running — `temporal server start-dev` for local\n")
-		fmt.Fprintf(w, "  development, or see https://docs.temporal.io/cloud for Temporal Cloud.\n\n")
-		prevNewTerminal := false
-		for i, step := range spec.Commands {
+		fmt.Fprintln(w)
+		fmt.Fprintln(w, comment("# Ensure Temporal is running (temporal server start-dev)"))
+		for _, step := range spec.Commands {
+			fmt.Fprintln(w)
 			if step.NewTerminal {
-				if i > 0 && !prevNewTerminal {
-					fmt.Fprintln(w)
-				}
-				fmt.Fprintf(w, "  In another terminal:\n    %s\n", step.Cmd)
-			} else {
-				fmt.Fprintf(w, "  %s\n", step.Cmd)
+				fmt.Fprintln(w, comment("# In another terminal:"))
 			}
-			prevNewTerminal = step.NewTerminal
+			fmt.Fprintln(w, bold(step.Cmd))
 		}
 	} else {
-		fmt.Fprintf(w, "  cat README.md\n")
+		fmt.Fprintln(w)
+		fmt.Fprintln(w, bold("cat README.md"))
 	}
 	return nil
 }

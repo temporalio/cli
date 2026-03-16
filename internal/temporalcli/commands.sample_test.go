@@ -179,7 +179,7 @@ func TestSample_Init_Python(t *testing.T) {
 	// Stdout shows run commands from manifest.
 	out := res.Stdout.String()
 	assert.Contains(t, out, "uv run hello/worker.py")
-	assert.Contains(t, out, "In another terminal:")
+	assert.Contains(t, out, "In another terminal")
 	assert.Contains(t, out, "uv run hello/starter.py")
 	assert.Contains(t, out, "temporal server start-dev")
 	assert.NotContains(t, out, "cat README.md")
