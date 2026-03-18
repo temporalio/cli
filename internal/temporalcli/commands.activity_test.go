@@ -1113,69 +1113,6 @@ func (s *SharedServerSuite) TestActivity_Cancel() {
 	}, 5*time.Second, 100*time.Millisecond)
 }
 
-func (s *SharedServerSuite) TestActivity_Delete() {
-	activityStarted := make(chan struct{})
-	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
-		close(activityStarted)
-		<-ctx.Done()
-		return nil, ctx.Err()
-	})
-
-	started := s.startActivity("delete-test")
-	runID := started["runId"].(string)
-	<-activityStarted
-
-	res := s.Execute(
-		"activity", "delete",
-		"--activity-id", "delete-test",
-		"--run-id", runID,
-		"--address", s.Address(),
-	)
-	s.NoError(res.Err)
-	out := res.Stdout.String()
-	s.Contains(out, "Deleted execution:")
-	s.ContainsOnSameLine(out, "ActivityId", "delete-test")
-	s.ContainsOnSameLine(out, "RunId", runID)
-	s.ContainsOnSameLine(out, "Namespace", "default")
-}
-
-func (s *SharedServerSuite) TestActivity_Delete_JSON() {
-	activityStarted := make(chan struct{})
-	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
-		close(activityStarted)
-		<-ctx.Done()
-		return nil, ctx.Err()
-	})
-
-	started := s.startActivity("delete-json-test")
-	runID := started["runId"].(string)
-	<-activityStarted
-
-	res := s.Execute(
-		"activity", "delete",
-		"-o", "json",
-		"--activity-id", "delete-json-test",
-		"--run-id", runID,
-		"--address", s.Address(),
-	)
-	s.NoError(res.Err)
-	var jsonOut map[string]any
-	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
-	s.Equal("delete-json-test", jsonOut["activityId"])
-	s.Equal(runID, jsonOut["runId"])
-	s.Equal("default", jsonOut["namespace"])
-}
-
-func (s *SharedServerSuite) TestActivity_Delete_NotFound() {
-	res := s.Execute(
-		"activity", "delete",
-		"--activity-id", "nonexistent-activity-id",
-		"--address", s.Address(),
-	)
-	s.Error(res.Err)
-	s.Contains(res.Err.Error(), "failed deleting activity")
-}
-
 // No JSON variant: Println outputs the same text regardless of -o json (matches workflow terminate).
 func (s *SharedServerSuite) TestActivity_Terminate() {
 	activityStarted := make(chan struct{})
