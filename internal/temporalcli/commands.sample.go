@@ -469,9 +469,9 @@ func (c *TemporalSampleInitCommand) run(cctx *CommandContext, args []string) err
 		}
 		fmt.Fprintln(w)
 		fmt.Fprintln(w, comment("# For local Temporal UI: http://localhost:8233"))
-	} else {
+	} else if readme, err := findReadme(outputDir); err == nil {
 		fmt.Fprintln(w)
-		fmt.Fprintln(w, bold("cat README.md"))
+		fmt.Fprint(w, readme)
 	}
 	return nil
 }
@@ -485,6 +485,24 @@ func writeFileFromTar(path string, r io.Reader, mode int64) error {
 		return err
 	}
 	return os.WriteFile(path, data, os.FileMode(mode))
+}
+
+// findReadme looks for a README file (case-insensitive) in dir and returns its content.
+func findReadme(dir string) (string, error) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return "", err
+	}
+	for _, e := range entries {
+		if !e.IsDir() && strings.EqualFold(e.Name(), "README.md") {
+			data, err := os.ReadFile(filepath.Join(dir, e.Name()))
+			if err != nil {
+				return "", err
+			}
+			return string(data), nil
+		}
+	}
+	return "", fmt.Errorf("no README found")
 }
 
 func expandTemplate(tmpl, name, sample string, spec *sampleSpec) string {

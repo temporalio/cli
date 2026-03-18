@@ -123,6 +123,7 @@ func testPythonTarball(t *testing.T) []byte {
 		{"hello/README.md", "# Hello Sample\n\nRun with: uv run hello/worker.py\n"},
 		{"encryption/__init__.py", ""},
 		{"encryption/worker.py", "# worker\n"},
+		{"encryption/README.md", "# Encryption Sample\n\nRun the worker, then the starter.\n"},
 	})
 }
 
@@ -183,6 +184,24 @@ func TestSample_Init_Python(t *testing.T) {
 	assert.Contains(t, out, "uv run hello/starter.py")
 	assert.Contains(t, out, "temporal server start-dev")
 	assert.Contains(t, out, "http://localhost:8233")
+	assert.NotContains(t, out, "cat README.md")
+}
+
+// TestSample_Init_Python_NoCommands verifies that when a sample has no commands
+// in the manifest, the README content is printed to stdout.
+func TestSample_Init_Python_NoCommands(t *testing.T) {
+	srv := serveSamples(t, testPythonManifest, testPythonTarball(t))
+	t.Setenv("TEMPORAL_SAMPLES_BASE_URL", srv.URL)
+	t.Chdir(t.TempDir())
+
+	h := NewCommandHarness(t)
+	res := h.Execute("sample", "init", "python", "encryption")
+
+	require.NoError(t, res.Err)
+
+	out := res.Stdout.String()
+	assert.Contains(t, out, "Encryption Sample")
+	assert.Contains(t, out, "Run the worker, then the starter.")
 	assert.NotContains(t, out, "cat README.md")
 }
 
