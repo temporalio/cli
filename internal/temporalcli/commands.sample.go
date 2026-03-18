@@ -501,7 +501,7 @@ func (c *TemporalSampleInitCommand) run(cctx *CommandContext, args []string) err
 				fmt.Fprintln(w)
 				fmt.Fprintln(w, comment("# In another terminal:"))
 			}
-			fmt.Fprintln(w, bold(step.Cmd))
+			fmt.Fprintln(w, bold(wrapCommand(step.Cmd, 100)))
 		}
 		fmt.Fprintln(w)
 		fmt.Fprintln(w, comment("# Local Temporal UI: http://localhost:8233"))
@@ -510,6 +510,33 @@ func (c *TemporalSampleInitCommand) run(cctx *CommandContext, args []string) err
 		fmt.Fprint(w, readme)
 	}
 	return nil
+}
+
+// wrapCommand breaks a shell command at word boundaries so no line exceeds
+// width characters, using backslash continuation and 4-space indentation.
+func wrapCommand(cmd string, width int) string {
+	if len(cmd) <= width {
+		return cmd
+	}
+	const indent = "    "
+	words := strings.Fields(cmd)
+	var lines []string
+	line := ""
+	for _, word := range words {
+		switch {
+		case line == "":
+			line = word
+		case len(line)+1+len(word) <= width:
+			line += " " + word
+		default:
+			lines = append(lines, line+" \\")
+			line = indent + word
+		}
+	}
+	if line != "" {
+		lines = append(lines, line)
+	}
+	return strings.Join(lines, "\n")
 }
 
 func writeFileFromTar(path string, r io.Reader, mode int64) error {
