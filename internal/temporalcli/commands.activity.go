@@ -54,6 +54,25 @@ func (c *TemporalActivityStartCommand) run(cctx *CommandContext, args []string) 
 	return printActivityExecution(cctx, c.ActivityId, handle.GetRunID(), c.Parent.Namespace)
 }
 
+func (c *TemporalActivityDeleteCommand) run(cctx *CommandContext, args []string) error {
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	_, err = cl.WorkflowService().DeleteActivityExecution(cctx, &workflowservice.DeleteActivityExecutionRequest{
+		Namespace:  c.Parent.Namespace,
+		ActivityId: c.ActivityId,
+		RunId:      c.RunId,
+	})
+	if err != nil {
+		return fmt.Errorf("failed deleting activity: %w", err)
+	}
+
+	return printActivityDeletion(cctx, c.ActivityId, c.RunId, c.Parent.Namespace)
+}
+
 func (c *TemporalActivityExecuteCommand) run(cctx *CommandContext, args []string) error {
 	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
@@ -111,6 +130,21 @@ func startActivity(
 func printActivityExecution(cctx *CommandContext, activityID, runID, namespace string) error {
 	if !cctx.JSONOutput {
 		cctx.Printer.Println(color.MagentaString("Running execution:"))
+	}
+	return cctx.Printer.PrintStructured(struct {
+		ActivityId string `json:"activityId"`
+		RunId      string `json:"runId"`
+		Namespace  string `json:"namespace"`
+	}{
+		ActivityId: activityID,
+		RunId:      runID,
+		Namespace:  namespace,
+	}, printer.StructuredOptions{})
+}
+
+func printActivityDeletion(cctx *CommandContext, activityID, runID, namespace string) error {
+	if !cctx.JSONOutput {
+		cctx.Printer.Println(color.MagentaString("Deleted execution:"))
 	}
 	return cctx.Printer.PrintStructured(struct {
 		ActivityId string `json:"activityId"`
