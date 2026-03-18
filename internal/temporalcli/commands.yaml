@@ -4285,7 +4285,7 @@ commands:
   - name: temporal sample
     summary: Browse and initialize Temporal code samples
     description: |
-      Explore and download Temporal code samples for supported languages:
+      Explore and download samples of working Temporal applications:
 
       ```
       temporal sample [command] [options]
@@ -4297,7 +4297,7 @@ commands:
       temporal sample list
       ```
 
-      Download a sample to your local machine:
+      Download a sample to use locally:
 
       ```
       temporal sample init \
@@ -4317,7 +4317,7 @@ commands:
         - Temporal CLI
 
   - name: temporal sample init
-    summary: Download a code sample to your local machine
+    summary: Download a sample to use locally
     description: |
       Fetch a Temporal code sample from the samples repository and write
       it to a local directory. Use "temporal sample list" to browse
@@ -4361,7 +4361,7 @@ commands:
         hidden: true
 
   - name: temporal sample list
-    summary: Show available Temporal code samples
+    summary: Show available samples
     description: |
       Display Temporal code samples available for download. By default,
       samples for all supported languages are shown:

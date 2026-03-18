@@ -1773,9 +1773,9 @@ func NewTemporalSampleCommand(cctx *CommandContext, parent *TemporalCommand) *Te
 	s.Command.Use = "sample"
 	s.Command.Short = "Browse and initialize Temporal code samples"
 	if hasHighlighting {
-		s.Command.Long = "Explore and download Temporal code samples for supported languages:\n\n\x1b[1mtemporal sample [command] [options]\x1b[0m\n\nList available samples:\n\n\x1b[1mtemporal sample list\x1b[0m\n\nDownload a sample to your local machine:\n\n\x1b[1mtemporal sample init \\\n    --name YourSampleName \\\n    --language YourLanguage\x1b[0m"
+		s.Command.Long = "Explore and download samples of working Temporal applications:\n\n\x1b[1mtemporal sample [command] [options]\x1b[0m\n\nList available samples:\n\n\x1b[1mtemporal sample list\x1b[0m\n\nDownload a sample to use locally:\n\n\x1b[1mtemporal sample init \\\n    --name YourSampleName \\\n    --language YourLanguage\x1b[0m"
 	} else {
-		s.Command.Long = "Explore and download Temporal code samples for supported languages:\n\n```\ntemporal sample [command] [options]\n```\n\nList available samples:\n\n```\ntemporal sample list\n```\n\nDownload a sample to your local machine:\n\n```\ntemporal sample init \\\n    --name YourSampleName \\\n    --language YourLanguage\n```"
+		s.Command.Long = "Explore and download samples of working Temporal applications:\n\n```\ntemporal sample [command] [options]\n```\n\nList available samples:\n\n```\ntemporal sample list\n```\n\nDownload a sample to use locally:\n\n```\ntemporal sample init \\\n    --name YourSampleName \\\n    --language YourLanguage\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalSampleInitCommand(cctx, &s).Command)
@@ -1797,7 +1797,7 @@ func NewTemporalSampleInitCommand(cctx *CommandContext, parent *TemporalSampleCo
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "init [flags]"
-	s.Command.Short = "Download a code sample to your local machine"
+	s.Command.Short = "Download a sample to use locally"
 	if hasHighlighting {
 		s.Command.Long = "Fetch a Temporal code sample from the samples repository and write\nit to a local directory. Use \"temporal sample list\" to browse\navailable samples:\n\n\x1b[1mtemporal sample init \\\n    --name YourSampleName \\\n    --language go\x1b[0m\n\nBy default, the sample is written to a directory named after the\nsample in the current working directory. Use \"--dir\" to specify a\ndifferent location:\n\n\x1b[1mtemporal sample init \\\n    --name YourSampleName \\\n    --language go \\\n    --dir YourOutputDirectory\x1b[0m"
 	} else {
@@ -1828,7 +1828,7 @@ func NewTemporalSampleListCommand(cctx *CommandContext, parent *TemporalSampleCo
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "list [flags]"
-	s.Command.Short = "Show available Temporal code samples"
+	s.Command.Short = "Show available samples"
 	if hasHighlighting {
 		s.Command.Long = "Display Temporal code samples available for download. By default,\nsamples for all supported languages are shown:\n\n\x1b[1mtemporal sample list\x1b[0m\n\nFilter by a specific language:\n\n\x1b[1mtemporal sample list \\\n    --language go\x1b[0m"
 	} else {
