@@ -20,17 +20,17 @@ func samplesRef() string {
 	return "cli-sample"
 }
 
-func initSample(t *testing.T, args ...string) *CommandResult {
+func initSampleURL(t *testing.T, url string) *CommandResult {
 	t.Helper()
 	t.Chdir(t.TempDir())
 	h := NewCommandHarness(t)
-	return h.Execute(append([]string{"sample", "init"}, args...)...)
+	return h.Execute("sample", "init", "--url", url)
 }
 
 func listSamples(t *testing.T, lang string) *CommandResult {
 	t.Helper()
 	h := NewCommandHarness(t)
-	return h.Execute("sample", "list", lang)
+	return h.Execute("sample", "list", "--language", lang)
 }
 
 func runCmd(t *testing.T, dir, name string, args ...string) {
@@ -46,7 +46,7 @@ func runCmd(t *testing.T, dir, name string, args ...string) {
 
 func TestSampleIntegration_Init_Python(t *testing.T) {
 	ref := samplesRef()
-	res := initSample(t,
+	res := initSampleURL(t,
 		"https://github.com/temporalio/samples-python/tree/"+ref+"/hello")
 	require.NoError(t, res.Err)
 
@@ -63,7 +63,7 @@ func TestSampleIntegration_Init_Python(t *testing.T) {
 
 func TestSampleIntegration_Init_Go(t *testing.T) {
 	ref := samplesRef()
-	res := initSample(t,
+	res := initSampleURL(t,
 		"https://github.com/temporalio/samples-go/tree/"+ref+"/helloworld")
 	require.NoError(t, res.Err)
 
@@ -86,7 +86,7 @@ func TestSampleIntegration_Init_Go(t *testing.T) {
 
 func TestSampleIntegration_Init_TypeScript(t *testing.T) {
 	ref := samplesRef()
-	res := initSample(t,
+	res := initSampleURL(t,
 		"https://github.com/temporalio/samples-typescript/tree/"+ref+"/hello-world")
 	require.NoError(t, res.Err)
 
@@ -104,7 +104,7 @@ func TestSampleIntegration_Init_TypeScript(t *testing.T) {
 
 func TestSampleIntegration_Init_Java(t *testing.T) {
 	ref := samplesRef()
-	res := initSample(t,
+	res := initSampleURL(t,
 		"https://github.com/temporalio/samples-java/tree/"+ref+"/hello")
 	require.NoError(t, res.Err)
 
@@ -130,7 +130,7 @@ func TestSampleIntegration_Init_Java(t *testing.T) {
 
 func TestSampleIntegration_Init_DotNet(t *testing.T) {
 	ref := samplesRef()
-	res := initSample(t,
+	res := initSampleURL(t,
 		"https://github.com/temporalio/samples-dotnet/tree/"+ref+"/ActivitySimple")
 	require.NoError(t, res.Err)
 
@@ -157,7 +157,7 @@ func TestSampleIntegration_Init_DotNet(t *testing.T) {
 
 func TestSampleIntegration_Init_Ruby(t *testing.T) {
 	ref := samplesRef()
-	res := initSample(t,
+	res := initSampleURL(t,
 		"https://github.com/temporalio/samples-ruby/tree/"+ref+"/activity_simple")
 	require.NoError(t, res.Err)
 
@@ -173,7 +173,7 @@ func TestSampleIntegration_Init_Ruby(t *testing.T) {
 // TestSampleIntegration_Init_PathDot verifies that a manifest next to the
 // sample with path: "." works against a real third-party repo.
 func TestSampleIntegration_Init_PathDot(t *testing.T) {
-	res := initSample(t,
+	res := initSampleURL(t,
 		"https://github.com/dandavison/etc/tree/temporal-samples/temporal-sample-test")
 	require.NoError(t, res.Err)
 

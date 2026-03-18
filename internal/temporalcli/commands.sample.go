@@ -17,6 +17,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/mattn/go-isatty"
+	"github.com/temporalio/cli/internal/printer"
 	"gopkg.in/yaml.v3"
 )
 
@@ -67,6 +68,16 @@ type commandStep struct {
 }
 
 const manifestFile = "temporal-sample.yaml"
+
+// sampleRow is the structured output record for `temporal sample list`.
+type sampleRow struct {
+	Language    string `json:"language"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
+// canonicalLanguages lists supported languages in display order.
+var canonicalLanguages = []string{"dotnet", "go", "java", "python", "ruby", "typescript"}
 
 var langRepos = map[string]string{
 	"go":         "temporalio/samples-go",
@@ -212,70 +223,99 @@ func lookupSample(m *sampleManifest, name, manifestDir string) *sampleSpec {
 }
 
 func (c *TemporalSampleListCommand) run(cctx *CommandContext, args []string) error {
-	if len(args) < 1 {
-		return fmt.Errorf("provide a language (go, java, python/py, typescript/ts, dotnet/cs, ruby/rb)")
-	}
-	lang := strings.ToLower(args[0])
-	repo, ok := langRepos[lang]
-	if !ok {
-		return fmt.Errorf("unsupported language %q (supported: go, java, python/py, typescript/ts, dotnet/cs, ruby/rb)", lang)
+	var languages []string
+	if c.Language != "" {
+		lang := strings.ToLower(c.Language)
+		if _, ok := langRepos[lang]; !ok {
+			return fmt.Errorf("unsupported language %q (supported: %s)", c.Language, strings.Join(canonicalLanguages, ", "))
+		}
+		languages = []string{lang}
+	} else {
+		languages = canonicalLanguages
 	}
 
-	manifest, err := fetchManifest(cctx, repo, samplesRef, manifestFile)
+	rows, err := fetchSampleRows(cctx, languages)
 	if err != nil {
 		return err
 	}
-	if manifest == nil {
-		return fmt.Errorf("no %s found in %s", manifestFile, repo)
-	}
-
-	type entry struct{ name, desc string }
-	entries := make([]entry, 0, len(manifest.Samples))
-	for i := range manifest.Samples {
-		s := &manifest.Samples[i]
-		entries = append(entries, entry{filepath.Base(resolveSamplePath("", s)), s.Description})
-	}
-	sort.Slice(entries, func(i, j int) bool { return entries[i].name < entries[j].name })
-
-	maxName := 0
-	for _, e := range entries {
-		if len(e.name) > maxName {
-			maxName = len(e.name)
+	sort.Slice(rows, func(i, j int) bool {
+		if rows[i].Language != rows[j].Language {
+			return rows[i].Language < rows[j].Language
 		}
+		return rows[i].Name < rows[j].Name
+	})
+
+	opts := printer.StructuredOptions{Table: &printer.TableOptions{}}
+	if c.Language != "" {
+		opts.Fields = []string{"Name", "Description"}
 	}
-	for _, e := range entries {
-		fmt.Fprintf(cctx.Options.Stdout, "%-*s  %s\n", maxName, e.name, e.desc)
+	return cctx.Printer.PrintStructured(rows, opts)
+}
+
+// fetchSampleRows fetches manifests for the given languages concurrently and
+// returns one sampleRow per sample entry.
+func fetchSampleRows(ctx context.Context, languages []string) ([]sampleRow, error) {
+	type result struct {
+		rows []sampleRow
+		err  error
 	}
-	fmt.Fprintf(cctx.Options.Stdout, "\nhttps://github.com/%s\n", repo)
-	return nil
+	results := make([]result, len(languages))
+	var wg sync.WaitGroup
+	for i, lang := range languages {
+		wg.Add(1)
+		go func(idx int, language string) {
+			defer wg.Done()
+			repo := langRepos[language]
+			m, err := fetchManifest(ctx, repo, samplesRef, manifestFile)
+			if err != nil {
+				results[idx].err = fmt.Errorf("%s: %w", language, err)
+				return
+			}
+			if m == nil {
+				return
+			}
+			for k := range m.Samples {
+				s := &m.Samples[k]
+				results[idx].rows = append(results[idx].rows, sampleRow{
+					Language:    language,
+					Name:        filepath.Base(resolveSamplePath("", s)),
+					Description: s.Description,
+				})
+			}
+		}(i, lang)
+	}
+	wg.Wait()
+	var rows []sampleRow
+	for _, r := range results {
+		if r.err != nil {
+			return nil, r.err
+		}
+		rows = append(rows, r.rows...)
+	}
+	return rows, nil
 }
 
 func (c *TemporalSampleInitCommand) run(cctx *CommandContext, args []string) error {
 	var repo, ref, sample string
 
-	switch len(args) {
-	case 0:
-		return fmt.Errorf("provide a language and sample name, or a GitHub URL")
-	case 1:
-		if !strings.HasPrefix(args[0], "https://") {
-			return fmt.Errorf("provide a language and sample name, or a GitHub URL")
-		}
+	if c.Url != "" {
 		var err error
-		repo, ref, sample, err = parseGitHubURL(args[0])
+		repo, ref, sample, err = parseGitHubURL(c.Url)
 		if err != nil {
 			return err
 		}
-	case 2:
-		lang := strings.ToLower(args[0])
+	} else {
+		if c.Name == "" || c.Language == "" {
+			return fmt.Errorf("--name and --language are required (or use --url)")
+		}
+		lang := strings.ToLower(c.Language)
 		var ok bool
 		repo, ok = langRepos[lang]
 		if !ok {
-			return fmt.Errorf("unsupported language %q (supported: go, java, python/py, typescript/ts, dotnet/cs, ruby/rb)", lang)
+			return fmt.Errorf("unsupported language %q (supported: %s)", c.Language, strings.Join(canonicalLanguages, ", "))
 		}
-		sample = args[1]
+		sample = c.Name
 		ref = samplesRef
-	default:
-		return fmt.Errorf("too many arguments; provide a language and sample name, or a GitHub URL")
 	}
 
 	ctx := cctx
@@ -321,7 +361,7 @@ func (c *TemporalSampleInitCommand) run(cctx *CommandContext, args []string) err
 	}
 	sampleName := filepath.Base(tarballPath)
 
-	outputDir := c.OutputDir
+	outputDir := c.Dir
 	if outputDir == "" {
 		outputDir = sampleName
 	}

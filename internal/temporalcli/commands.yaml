@@ -4283,23 +4283,27 @@ commands:
       - workflow-reference
 
   - name: temporal sample
-    summary: Initialize or list sample projects
+    summary: Browse and initialize Temporal code samples
     description: |
-      Create a new project from a Temporal sample, or browse
-      available samples for a given language.
+      Explore and download Temporal code samples for supported languages:
 
-      List all Python samples:
+      ```
+      temporal sample [command] [options]
+      ```
 
-          temporal sample list python
+      List available samples:
 
-      Initialize a sample:
+      ```
+      temporal sample list
+      ```
 
-          temporal sample init python hello
+      Download a sample to your local machine:
 
-      Initialize from a GitHub URL:
-
-          temporal sample init \
-              https://github.com/temporalio/samples-python/tree/main/hello
+      ```
+      temporal sample init \
+          --name YourSampleName \
+          --language YourLanguage
+      ```
     docs:
       description-header: >-
         Temporal CLI sample commands create standalone projects from Temporal
@@ -4313,32 +4317,71 @@ commands:
         - Temporal CLI
 
   - name: temporal sample init
-    summary: Create a project from a Temporal sample
+    summary: Download a code sample to your local machine
     description: |
-      Download a sample from the Temporal samples repository and set up
-      a standalone project. Provide a language and sample name, or a
-      GitHub URL:
+      Fetch a Temporal code sample from the samples repository and write
+      it to a local directory. Use "temporal sample list" to browse
+      available samples:
 
-          temporal sample init python hello
+      ```
+      temporal sample init \
+          --name YourSampleName \
+          --language go
+      ```
 
-          temporal sample init \
-              https://github.com/temporalio/samples-python/tree/main/hello
+      By default, the sample is written to a directory named after the
+      sample in the current working directory. Use "--dir" to specify a
+      different location:
 
-      Use "--output-dir" to control where the project is created.
-      Defaults to "./<sample-name>/" in the current directory.
-    maximum-args: 2
+      ```
+      temporal sample init \
+          --name YourSampleName \
+          --language go \
+          --dir YourOutputDirectory
+      ```
     options:
-      - name: output-dir
+      - name: name
+        short: n
         type: string
-        description: Directory to create the project in.
+        description: Sample name. Required unless "--url" is provided.
+      - name: language
+        short: l
+        type: string
+        description: Programming language for the sample. Required unless "--url" is provided.
+      - name: dir
+        type: string
+        description: |
+          Output directory for the sample.
+          Defaults to a new directory named after the sample in
+          the current working directory.
+      - name: url
+        type: string
+        description: |
+          GitHub URL of the sample, as an alternative to "--name"
+          and "--language".
+        hidden: true
 
   - name: temporal sample list
-    summary: List available Temporal samples for a language
+    summary: Show available Temporal code samples
     description: |
-      List the available samples for a given language:
+      Display Temporal code samples available for download. By default,
+      samples for all supported languages are shown:
 
-          temporal sample list python
-    maximum-args: 1
+      ```
+      temporal sample list
+      ```
+
+      Filter by a specific language:
+
+      ```
+      temporal sample list \
+          --language go
+      ```
+    options:
+      - name: language
+        short: l
+        type: string
+        description: Filter results by programming language.
 
 option-sets:
   # Import common and client option sets from cliext package

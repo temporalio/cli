@@ -1771,8 +1771,12 @@ func NewTemporalSampleCommand(cctx *CommandContext, parent *TemporalCommand) *Te
 	var s TemporalSampleCommand
 	s.Parent = parent
 	s.Command.Use = "sample"
-	s.Command.Short = "Initialize or list sample projects"
-	s.Command.Long = "Create a new project from a Temporal sample, or browse\navailable samples for a given language.\n\nList all Python samples:\n\n    temporal sample list python\n\nInitialize a sample:\n\n    temporal sample init python hello\n\nInitialize from a GitHub URL:\n\n    temporal sample init \\\n        https://github.com/temporalio/samples-python/tree/main/hello"
+	s.Command.Short = "Browse and initialize Temporal code samples"
+	if hasHighlighting {
+		s.Command.Long = "Explore and download Temporal code samples for supported languages:\n\n\x1b[1mtemporal sample [command] [options]\x1b[0m\n\nList available samples:\n\n\x1b[1mtemporal sample list\x1b[0m\n\nDownload a sample to your local machine:\n\n\x1b[1mtemporal sample init \\\n    --name YourSampleName \\\n    --language YourLanguage\x1b[0m"
+	} else {
+		s.Command.Long = "Explore and download Temporal code samples for supported languages:\n\n```\ntemporal sample [command] [options]\n```\n\nList available samples:\n\n```\ntemporal sample list\n```\n\nDownload a sample to your local machine:\n\n```\ntemporal sample init \\\n    --name YourSampleName \\\n    --language YourLanguage\n```"
+	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalSampleInitCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalSampleListCommand(cctx, &s).Command)
@@ -1780,9 +1784,12 @@ func NewTemporalSampleCommand(cctx *CommandContext, parent *TemporalCommand) *Te
 }
 
 type TemporalSampleInitCommand struct {
-	Parent    *TemporalSampleCommand
-	Command   cobra.Command
-	OutputDir string
+	Parent   *TemporalSampleCommand
+	Command  cobra.Command
+	Name     string
+	Language string
+	Dir      string
+	Url      string
 }
 
 func NewTemporalSampleInitCommand(cctx *CommandContext, parent *TemporalSampleCommand) *TemporalSampleInitCommand {
@@ -1790,10 +1797,18 @@ func NewTemporalSampleInitCommand(cctx *CommandContext, parent *TemporalSampleCo
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "init [flags]"
-	s.Command.Short = "Create a project from a Temporal sample"
-	s.Command.Long = "Download a sample from the Temporal samples repository and set up\na standalone project. Provide a language and sample name, or a\nGitHub URL:\n\n    temporal sample init python hello\n\n    temporal sample init \\\n        https://github.com/temporalio/samples-python/tree/main/hello\n\nUse \"--output-dir\" to control where the project is created.\nDefaults to \"./<sample-name>/\" in the current directory."
-	s.Command.Args = cobra.MaximumNArgs(2)
-	s.Command.Flags().StringVar(&s.OutputDir, "output-dir", "", "Directory to create the project in.")
+	s.Command.Short = "Download a code sample to your local machine"
+	if hasHighlighting {
+		s.Command.Long = "Fetch a Temporal code sample from the samples repository and write\nit to a local directory. Use \"temporal sample list\" to browse\navailable samples:\n\n\x1b[1mtemporal sample init \\\n    --name YourSampleName \\\n    --language go\x1b[0m\n\nBy default, the sample is written to a directory named after the\nsample in the current working directory. Use \"--dir\" to specify a\ndifferent location:\n\n\x1b[1mtemporal sample init \\\n    --name YourSampleName \\\n    --language go \\\n    --dir YourOutputDirectory\x1b[0m"
+	} else {
+		s.Command.Long = "Fetch a Temporal code sample from the samples repository and write\nit to a local directory. Use \"temporal sample list\" to browse\navailable samples:\n\n```\ntemporal sample init \\\n    --name YourSampleName \\\n    --language go\n```\n\nBy default, the sample is written to a directory named after the\nsample in the current working directory. Use \"--dir\" to specify a\ndifferent location:\n\n```\ntemporal sample init \\\n    --name YourSampleName \\\n    --language go \\\n    --dir YourOutputDirectory\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVarP(&s.Name, "name", "n", "", "Sample name. Required unless \"--url\" is provided.")
+	s.Command.Flags().StringVarP(&s.Language, "language", "l", "", "Programming language for the sample. Required unless \"--url\" is provided.")
+	s.Command.Flags().StringVar(&s.Dir, "dir", "", "Output directory for the sample. Defaults to a new directory named after the sample in the current working directory.")
+	s.Command.Flags().StringVar(&s.Url, "url", "", "GitHub URL of the sample, as an alternative to \"--name\" and \"--language\".")
+	_ = s.Command.Flags().MarkHidden("url")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -1803,8 +1818,9 @@ func NewTemporalSampleInitCommand(cctx *CommandContext, parent *TemporalSampleCo
 }
 
 type TemporalSampleListCommand struct {
-	Parent  *TemporalSampleCommand
-	Command cobra.Command
+	Parent   *TemporalSampleCommand
+	Command  cobra.Command
+	Language string
 }
 
 func NewTemporalSampleListCommand(cctx *CommandContext, parent *TemporalSampleCommand) *TemporalSampleListCommand {
@@ -1812,9 +1828,14 @@ func NewTemporalSampleListCommand(cctx *CommandContext, parent *TemporalSampleCo
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "list [flags]"
-	s.Command.Short = "List available Temporal samples for a language"
-	s.Command.Long = "List the available samples for a given language:\n\n    temporal sample list python"
-	s.Command.Args = cobra.MaximumNArgs(1)
+	s.Command.Short = "Show available Temporal code samples"
+	if hasHighlighting {
+		s.Command.Long = "Display Temporal code samples available for download. By default,\nsamples for all supported languages are shown:\n\n\x1b[1mtemporal sample list\x1b[0m\n\nFilter by a specific language:\n\n\x1b[1mtemporal sample list \\\n    --language go\x1b[0m"
+	} else {
+		s.Command.Long = "Display Temporal code samples available for download. By default,\nsamples for all supported languages are shown:\n\n```\ntemporal sample list\n```\n\nFilter by a specific language:\n\n```\ntemporal sample list \\\n    --language go\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVarP(&s.Language, "language", "l", "", "Filter results by programming language.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

@@ -134,7 +134,7 @@ func TestSample_List(t *testing.T) {
 	t.Setenv("TEMPORAL_SAMPLES_BASE_URL", srv.URL)
 
 	h := NewCommandHarness(t)
-	res := h.Execute("sample", "list", "python")
+	res := h.Execute("sample", "list", "--language", "python")
 
 	require.NoError(t, res.Err)
 	out := res.Stdout.String()
@@ -153,7 +153,7 @@ func TestSample_Init_Python(t *testing.T) {
 	t.Chdir(t.TempDir())
 
 	h := NewCommandHarness(t)
-	res := h.Execute("sample", "init", "python", "hello")
+	res := h.Execute("sample", "init", "--language", "python", "--name", "hello")
 
 	require.NoError(t, res.Err)
 
@@ -195,7 +195,7 @@ func TestSample_Init_Python_NoCommands(t *testing.T) {
 	t.Chdir(t.TempDir())
 
 	h := NewCommandHarness(t)
-	res := h.Execute("sample", "init", "python", "encryption")
+	res := h.Execute("sample", "init", "--language", "python", "--name", "encryption")
 
 	require.NoError(t, res.Err)
 
@@ -227,7 +227,7 @@ samples:
 	t.Chdir(t.TempDir())
 
 	h := NewCommandHarness(t)
-	res := h.Execute("sample", "init", "typescript", "hello-world")
+	res := h.Execute("sample", "init", "--language", "typescript", "--name", "hello-world")
 
 	require.NoError(t, res.Err)
 
@@ -251,7 +251,7 @@ func TestSample_Init_GitHubURL(t *testing.T) {
 
 	h := NewCommandHarness(t)
 	res := h.Execute("sample", "init",
-		"https://github.com/temporalio/samples-python/tree/main/hello")
+		"--url", "https://github.com/temporalio/samples-python/tree/main/hello")
 
 	require.NoError(t, res.Err)
 	assert.FileExists(t, filepath.Join("hello", "hello", "__init__.py"))
@@ -265,7 +265,7 @@ func TestSample_Init_GitHubURL_TrailingSlash(t *testing.T) {
 
 	h := NewCommandHarness(t)
 	res := h.Execute("sample", "init",
-		"https://github.com/temporalio/samples-python/tree/main/hello/")
+		"--url", "https://github.com/temporalio/samples-python/tree/main/hello/")
 
 	require.NoError(t, res.Err)
 	assert.FileExists(t, filepath.Join("hello", "hello", "__init__.py"))
@@ -280,7 +280,7 @@ func TestSample_Init_GitHubURL_RefWithSlash(t *testing.T) {
 
 	h := NewCommandHarness(t)
 	res := h.Execute("sample", "init",
-		"https://github.com/temporalio/samples-python/tree/feature/foo/hello")
+		"--url", "https://github.com/temporalio/samples-python/tree/feature/foo/hello")
 
 	require.NoError(t, res.Err)
 	assert.FileExists(t, filepath.Join("hello", "hello", "__init__.py"))
@@ -315,7 +315,7 @@ samples:
 	t.Chdir(t.TempDir())
 
 	h := NewCommandHarness(t)
-	res := h.Execute("sample", "init", "go", "helloworld")
+	res := h.Execute("sample", "init", "--language", "go", "--name", "helloworld")
 
 	require.NoError(t, res.Err)
 
@@ -374,7 +374,7 @@ samples:
 	t.Chdir(t.TempDir())
 
 	h := NewCommandHarness(t)
-	res := h.Execute("sample", "init", "java", "hello")
+	res := h.Execute("sample", "init", "--language", "java", "--name", "hello")
 
 	require.NoError(t, res.Err)
 
@@ -427,7 +427,7 @@ samples:
 	t.Chdir(t.TempDir())
 
 	h := NewCommandHarness(t)
-	res := h.Execute("sample", "init", "dotnet", "ActivitySimple")
+	res := h.Execute("sample", "init", "--language", "dotnet", "--name", "ActivitySimple")
 
 	require.NoError(t, res.Err)
 
@@ -471,7 +471,7 @@ samples:
 	t.Chdir(t.TempDir())
 
 	h := NewCommandHarness(t)
-	res := h.Execute("sample", "init", "ruby", "activity_simple")
+	res := h.Execute("sample", "init", "--language", "ruby", "--name", "activity_simple")
 
 	require.NoError(t, res.Err)
 
@@ -530,7 +530,7 @@ samples:
 
 	h := NewCommandHarness(t)
 	res := h.Execute("sample", "init",
-		"https://github.com/dandavison/etc/tree/temporal-samples/hello-sample")
+		"--url", "https://github.com/dandavison/etc/tree/temporal-samples/hello-sample")
 
 	require.NoError(t, res.Err)
 
@@ -573,7 +573,7 @@ func TestSample_Init_NoManifest(t *testing.T) {
 	t.Chdir(t.TempDir())
 
 	h := NewCommandHarness(t)
-	res := h.Execute("sample", "init", "python", "hello")
+	res := h.Execute("sample", "init", "--language", "python", "--name", "hello")
 
 	require.NoError(t, res.Err)
 	out := res.Stdout.String()
@@ -591,21 +591,15 @@ func TestSample_Init_NotFound(t *testing.T) {
 	t.Chdir(t.TempDir())
 
 	h := NewCommandHarness(t)
-	res := h.Execute("sample", "init", "python", "nonexistent")
+	res := h.Execute("sample", "init", "--language", "python", "--name", "nonexistent")
 
 	require.Error(t, res.Err)
 	assert.Contains(t, res.Err.Error(), `sample "nonexistent" not found in temporalio/samples-python`)
 }
 
-func TestSample_Init_NoArgs(t *testing.T) {
+func TestSample_Init_MissingFlags(t *testing.T) {
 	h := NewCommandHarness(t)
 	res := h.Execute("sample", "init")
-	assert.Error(t, res.Err)
-}
-
-func TestSample_List_NoArgs(t *testing.T) {
-	h := NewCommandHarness(t)
-	res := h.Execute("sample", "list")
 	assert.Error(t, res.Err)
 }
 
@@ -616,7 +610,7 @@ func TestSample_LanguageAliases(t *testing.T) {
 	for _, alias := range []string{"py", "ts", "cs", "csharp", "rb"} {
 		t.Run(alias, func(t *testing.T) {
 			h := NewCommandHarness(t)
-			res := h.Execute("sample", "list", alias)
+			res := h.Execute("sample", "list", "--language", alias)
 			// All aliases resolve to a valid repo, so the request hits our
 			// test server. The server always returns the Python manifest,
 			// which is fine — we're testing alias resolution, not content.
