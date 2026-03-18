@@ -182,6 +182,7 @@ func TestSample_Init_Python(t *testing.T) {
 	assert.Contains(t, out, "In another terminal")
 	assert.Contains(t, out, "uv run hello/starter.py")
 	assert.Contains(t, out, "temporal server start-dev")
+	assert.Contains(t, out, "http://localhost:8233")
 	assert.NotContains(t, out, "cat README.md")
 }
 
