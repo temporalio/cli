@@ -499,7 +499,7 @@ func (c *TemporalSampleInitCommand) run(cctx *CommandContext, args []string) err
 	fmt.Fprintln(w, bold("cd "+outputDir))
 	if spec != nil && len(spec.Commands) > 0 {
 		fmt.Fprintln(w)
-		fmt.Fprintln(w, comment("# For local Temporal server: temporal server start-dev"))
+		fmt.Fprintln(w, comment("# Local Temporal server: temporal server start-dev"))
 		for _, step := range spec.Commands {
 			fmt.Fprintln(w)
 			if step.NewTerminal {
@@ -508,7 +508,7 @@ func (c *TemporalSampleInitCommand) run(cctx *CommandContext, args []string) err
 			fmt.Fprintln(w, bold(step.Cmd))
 		}
 		fmt.Fprintln(w)
-		fmt.Fprintln(w, comment("# For local Temporal UI: http://localhost:8233"))
+		fmt.Fprintln(w, comment("# Local Temporal UI: http://localhost:8233"))
 	} else if readme, err := findReadme(outputDir); err == nil {
 		fmt.Fprintln(w)
 		fmt.Fprint(w, readme)
