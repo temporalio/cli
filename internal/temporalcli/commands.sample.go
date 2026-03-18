@@ -426,7 +426,7 @@ func (c *TemporalSampleInitCommand) run(cctx *CommandContext, args []string) err
 
 	// Write scaffold files.
 	for filename, tmpl := range manifest.Scaffold {
-		content := expandTemplate(tmpl, projectName, spec)
+		content := expandTemplate(tmpl, projectName, sampleName, spec)
 		outPath := filepath.Join(outputDir, filename)
 		if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
 			return err
@@ -487,8 +487,9 @@ func writeFileFromTar(path string, r io.Reader, mode int64) error {
 	return os.WriteFile(path, data, os.FileMode(mode))
 }
 
-func expandTemplate(tmpl, name string, spec *sampleSpec) string {
+func expandTemplate(tmpl, name, sample string, spec *sampleSpec) string {
 	s := strings.ReplaceAll(tmpl, "{{name}}", name)
+	s = strings.ReplaceAll(s, "{{sample}}", sample)
 	if spec != nil {
 		quoted := make([]string, len(spec.Dependencies))
 		for i, d := range spec.Dependencies {
