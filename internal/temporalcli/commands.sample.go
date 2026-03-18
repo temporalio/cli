@@ -445,6 +445,8 @@ func (c *TemporalSampleInitCommand) run(cctx *CommandContext, args []string) err
 		}
 	}
 
+	spin.Stop()
+
 	displayDir := outputDir
 	if !filepath.IsAbs(outputDir) {
 		displayDir = "./" + outputDir
