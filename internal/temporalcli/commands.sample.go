@@ -501,8 +501,8 @@ func (c *TemporalSampleInitCommand) run(cctx *CommandContext, args []string) err
 		fmt.Fprintln(w)
 		fmt.Fprintln(w, comment("# Local Temporal server: temporal server start-dev"))
 		for _, step := range spec.Commands {
-			fmt.Fprintln(w)
 			if step.NewTerminal {
+				fmt.Fprintln(w)
 				fmt.Fprintln(w, comment("# In another terminal:"))
 			}
 			fmt.Fprintln(w, bold(step.Cmd))
