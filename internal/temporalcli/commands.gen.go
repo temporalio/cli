@@ -586,9 +586,9 @@ func NewTemporalActivityDeleteCommand(cctx *CommandContext, parent *TemporalActi
 	s.Command.Use = "delete [flags]"
 	s.Command.Short = "Forcefully end a Standalone Activity (Experimental)"
 	if hasHighlighting {
-		s.Command.Long = "Delete a Standalone Activity.\n\n\x1b[1mtemporal activity delete \\\n    --activity-id YourActivityId \\\n    --reason YourReason\x1b[0m\n\nActivity code cannot see or respond to deletions."
+		s.Command.Long = "Delete a Standalone Activity.\n\n\x1b[1mtemporal activity delete \\\n    --activity-id YourActivityId \\\n    --run-id YourRunId\x1b[0m\n\nActivity code cannot see or respond to deletions."
 	} else {
-		s.Command.Long = "Delete a Standalone Activity.\n\n```\ntemporal activity delete \\\n    --activity-id YourActivityId \\\n    --reason YourReason\n```\n\nActivity code cannot see or respond to deletions."
+		s.Command.Long = "Delete a Standalone Activity.\n\n```\ntemporal activity delete \\\n    --activity-id YourActivityId \\\n    --run-id YourRunId\n```\n\nActivity code cannot see or respond to deletions."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.ActivityReferenceOptions.BuildFlags(s.Command.Flags())
