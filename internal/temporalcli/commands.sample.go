@@ -245,7 +245,7 @@ func (c *TemporalSampleListCommand) run(cctx *CommandContext, args []string) err
 		return rows[i].Name < rows[j].Name
 	})
 
-	opts := printer.StructuredOptions{Table: &printer.TableOptions{}}
+	opts := printer.StructuredOptions{Table: &printer.TableOptions{NoHeader: true}}
 	if c.Language != "" {
 		opts.Fields = []string{"Name", "Description"}
 	}
