@@ -4363,18 +4363,18 @@ commands:
   - name: temporal sample list
     summary: Show available samples
     description: |
-      Display Temporal code samples available for download. By default,
-      samples for all supported languages are shown:
-
-      ```
-      temporal sample list
-      ```
+      List code samples available for download.
 
       Filter by a specific language:
 
       ```
-      temporal sample list \
-          --language go
+      temporal sample list --language go
+      ```
+
+      By default, samples for all supported languages are shown:
+
+      ```
+      temporal sample list
       ```
     options:
       - name: language

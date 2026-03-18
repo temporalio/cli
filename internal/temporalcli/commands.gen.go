@@ -1830,9 +1830,9 @@ func NewTemporalSampleListCommand(cctx *CommandContext, parent *TemporalSampleCo
 	s.Command.Use = "list [flags]"
 	s.Command.Short = "Show available samples"
 	if hasHighlighting {
-		s.Command.Long = "Display Temporal code samples available for download. By default,\nsamples for all supported languages are shown:\n\n\x1b[1mtemporal sample list\x1b[0m\n\nFilter by a specific language:\n\n\x1b[1mtemporal sample list \\\n    --language go\x1b[0m"
+		s.Command.Long = "List code samples available for download.\n\nFilter by a specific language:\n\n\x1b[1mtemporal sample list --language go\x1b[0m\n\nBy default, samples for all supported languages are shown:\n\n\x1b[1mtemporal sample list\x1b[0m"
 	} else {
-		s.Command.Long = "Display Temporal code samples available for download. By default,\nsamples for all supported languages are shown:\n\n```\ntemporal sample list\n```\n\nFilter by a specific language:\n\n```\ntemporal sample list \\\n    --language go\n```"
+		s.Command.Long = "List code samples available for download.\n\nFilter by a specific language:\n\n```\ntemporal sample list --language go\n```\n\nBy default, samples for all supported languages are shown:\n\n```\ntemporal sample list\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.Language, "language", "l", "", "Filter results by programming language.")
