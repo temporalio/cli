@@ -4341,7 +4341,6 @@ commands:
       ```
     options:
       - name: name
-        short: n
         type: string
         description: Sample name. Required unless "--url" is provided.
       - name: language

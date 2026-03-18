@@ -1804,7 +1804,7 @@ func NewTemporalSampleInitCommand(cctx *CommandContext, parent *TemporalSampleCo
 		s.Command.Long = "Fetch a Temporal code sample from the samples repository and write\nit to a local directory. Use \"temporal sample list\" to browse\navailable samples:\n\n```\ntemporal sample init \\\n    --name YourSampleName \\\n    --language go\n```\n\nBy default, the sample is written to a directory named after the\nsample in the current working directory. Use \"--dir\" to specify a\ndifferent location:\n\n```\ntemporal sample init \\\n    --name YourSampleName \\\n    --language go \\\n    --dir YourOutputDirectory\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVarP(&s.Name, "name", "n", "", "Sample name. Required unless \"--url\" is provided.")
+	s.Command.Flags().StringVar(&s.Name, "name", "", "Sample name. Required unless \"--url\" is provided.")
 	s.Command.Flags().StringVarP(&s.Language, "language", "l", "", "Programming language for the sample. Required unless \"--url\" is provided.")
 	s.Command.Flags().StringVar(&s.Dir, "dir", "", "Output directory for the sample. Defaults to a new directory named after the sample in the current working directory.")
 	s.Command.Flags().StringVar(&s.Url, "url", "", "GitHub URL of the sample, as an alternative to \"--name\" and \"--language\".")
