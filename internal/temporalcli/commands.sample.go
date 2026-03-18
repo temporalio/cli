@@ -487,11 +487,7 @@ func (c *TemporalSampleInitCommand) run(cctx *CommandContext, args []string) err
 
 	spin.Stop()
 
-	displayDir := outputDir
-	if !filepath.IsAbs(outputDir) {
-		displayDir = "./" + outputDir
-	}
-	fmt.Fprintln(cctx.Options.Stderr, color.GreenString("Created %s/", displayDir))
+	fmt.Fprintln(cctx.Options.Stderr, color.GreenString("Created output directory: %s", outputDir))
 	w := cctx.Options.Stdout
 	comment := color.New(color.Faint).SprintFunc()
 	bold := color.New(color.Bold).SprintFunc()
