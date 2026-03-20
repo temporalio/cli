@@ -716,6 +716,21 @@ commands:
           Reason for termination.
           Defaults to a message with the current user's name.
 
+  - name: temporal activity delete
+    summary: Forcefully end a Standalone Activity (Experimental)
+    description: |
+      Delete a Standalone Activity.
+
+      ```
+      temporal activity delete \
+          --activity-id YourActivityId \
+          --run-id YourRunId
+      ```
+
+      Activity code cannot see or respond to deletions.
+    option-sets:
+      - activity-reference
+
   - name: temporal batch
     summary: Manage running batch jobs
     description: |
