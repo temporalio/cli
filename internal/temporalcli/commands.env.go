@@ -49,10 +49,8 @@ func (c *TemporalEnvDeleteCommand) run(cctx *CommandContext, args []string) erro
 	env, _ := cctx.DeprecatedEnvConfigValues[envName]
 	// User can remove single flag or all in env
 	if key != "" {
-		cctx.printVerbose(fmt.Sprintf("Deleting env property %s/%s", envName, key))
 		delete(env, key)
 	} else {
-		cctx.printVerbose(fmt.Sprintf("Deleting env %s", envName))
 		delete(cctx.DeprecatedEnvConfigValues, envName)
 	}
 	return writeDeprecatedEnvConfigToFile(cctx)
@@ -129,7 +127,6 @@ func (c *TemporalEnvSetCommand) run(cctx *CommandContext, args []string) error {
 	if cctx.DeprecatedEnvConfigValues[envName] == nil {
 		cctx.DeprecatedEnvConfigValues[envName] = map[string]string{}
 	}
-	cctx.printVerbose(fmt.Sprintf("Setting env property %s/%s=%s", envName, key, value))
 	cctx.DeprecatedEnvConfigValues[envName][key] = value
 	return writeDeprecatedEnvConfigToFile(cctx)
 }
@@ -138,7 +135,6 @@ func writeDeprecatedEnvConfigToFile(cctx *CommandContext) error {
 	if cctx.Options.DeprecatedEnvConfig.EnvConfigFile == "" {
 		return fmt.Errorf("unable to find place for env file (unknown HOME dir)")
 	}
-	cctx.printVerbose(fmt.Sprintf("Writing env file %s", cctx.Options.DeprecatedEnvConfig.EnvConfigFile))
 	return writeDeprecatedEnvConfigFile(cctx.Options.DeprecatedEnvConfig.EnvConfigFile, cctx.DeprecatedEnvConfigValues)
 }
 
