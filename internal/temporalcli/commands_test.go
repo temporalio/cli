@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"net"
 	"regexp"
 	"slices"
 	"strings"
@@ -626,25 +625,21 @@ func TestUnknownCommandExitsNonzero(t *testing.T) {
 	assert.Contains(t, res.Err.Error(), "unknown command")
 }
 
-func TestErrorReporting_IndependentOfLogLevel(t *testing.T) {
+func TestErrorsAreNotLogMessages(t *testing.T) {
 	// Errors must be reported through Fail regardless of --log-level, and
 	// must not produce structured log output on stderr.
 	for _, logLevel := range []string{"never", "error", "info"} {
 		t.Run("log-level="+logLevel, func(t *testing.T) {
 			h := NewCommandHarness(t)
-			ln, err := net.Listen("tcp", "127.0.0.1:0")
-			require.NoError(t, err)
-			ln.Close() // close immediately so connection is refused
-
 			res := h.Execute(
 				"workflow", "list",
-				"--address", ln.Addr().String(),
+				"--address", "not-a-valid-host:1",
 				"--log-level", logLevel,
 			)
 			require.Error(t, res.Err)
 
 			stderr := res.Stderr.String()
-			assert.NotContains(t, stderr, "level=ERROR",
+			assert.NotContains(t, stderr, "level=",
 				"errors should not appear as structured log messages on stderr")
 		})
 	}
