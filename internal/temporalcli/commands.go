@@ -50,7 +50,6 @@ type CommandContext struct {
 	// These values may not be available until after pre-run of main command
 	Printer               *printer.Printer
 	Logger                *slog.Logger
-	Verbose               bool
 	JSONOutput            bool
 	JSONShorthandPayloads bool
 
@@ -284,20 +283,14 @@ func (c *CommandContext) populateFlagsFromEnv(flags *pflag.FlagSet) error {
 					return
 				}
 				if flag.Changed {
-					c.printVerbose(
-						fmt.Sprintf("Env var %s overrode --env setting for flag --%s", anns[0], flag.Name))
+					fmt.Fprintf(c.Options.Stderr,
+						"Warning: env var %s overrode --env setting for flag --%s\n", anns[0], flag.Name)
 				}
 				flag.Changed = true
 			}
 		}
 	})
 	return flagErr
-}
-
-func (c *CommandContext) printVerbose(msg string) {
-	if c.Verbose {
-		fmt.Fprintln(c.Options.Stderr, msg)
-	}
 }
 
 // Returns error if JSON output enabled
@@ -452,7 +445,6 @@ func (c *TemporalCommand) initCommand(cctx *CommandContext) {
 	c.Command.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
 		// Set command
 		cctx.CurrentCommand = cmd
-		cctx.Verbose = c.Verbose
 		// Populate environ. We will make the error return here which will cause
 		// usage to be printed.
 		if err := cctx.populateFlagsFromEnv(cmd.Flags()); err != nil {
