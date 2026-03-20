@@ -69,7 +69,7 @@ type commandStep struct {
 
 const manifestFile = "temporal-sample.yaml"
 
-// sampleRow is the structured output record for `temporal sample list`.
+// sampleRow is the structured output record for `temporal project list-samples`.
 type sampleRow struct {
 	Language    string `json:"language"`
 	Name        string `json:"name"`
@@ -222,7 +222,7 @@ func lookupSample(m *sampleManifest, name, manifestDir string) *sampleSpec {
 	return nil
 }
 
-func (c *TemporalSampleListCommand) run(cctx *CommandContext, args []string) error {
+func (c *TemporalProjectListSamplesCommand) run(cctx *CommandContext, args []string) error {
 	var languages []string
 	if c.Language != "" {
 		lang := strings.ToLower(c.Language)
@@ -295,7 +295,7 @@ func fetchSampleRows(ctx context.Context, languages []string) ([]sampleRow, erro
 	return rows, nil
 }
 
-func (c *TemporalSampleInitCommand) run(cctx *CommandContext, args []string) error {
+func (c *TemporalProjectInitSampleCommand) run(cctx *CommandContext, args []string) error {
 	var repo, ref, sample string
 
 	if c.Url != "" {

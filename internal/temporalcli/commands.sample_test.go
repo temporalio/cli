@@ -127,14 +127,14 @@ func testPythonTarball(t *testing.T) []byte {
 	})
 }
 
-// TestSample_List verifies that `temporal sample list <language>` fetches
+// TestProject_ListSamples verifies that `temporal project list-samples` fetches
 // the manifest and prints sample names with descriptions.
-func TestSample_List(t *testing.T) {
+func TestProject_ListSamples(t *testing.T) {
 	srv := serveSamples(t, testPythonManifest, testPythonTarball(t))
 	t.Setenv("TEMPORAL_SAMPLES_BASE_URL", srv.URL)
 
 	h := NewCommandHarness(t)
-	res := h.Execute("sample", "list", "--language", "python")
+	res := h.Execute("project", "list-samples", "--language", "python")
 
 	require.NoError(t, res.Err)
 	out := res.Stdout.String()
@@ -144,16 +144,16 @@ func TestSample_List(t *testing.T) {
 	assert.Contains(t, out, "End-to-end encryption with a custom codec")
 }
 
-// TestSample_Init_Python verifies that `temporal sample init python <sample>`
+// TestProject_InitSample_Python verifies that `temporal project init-sample`
 // creates a project directory with generated scaffold files (pyproject.toml),
 // README at the root, and sample files nested under a package subdirectory.
-func TestSample_Init_Python(t *testing.T) {
+func TestProject_InitSample_Python(t *testing.T) {
 	srv := serveSamples(t, testPythonManifest, testPythonTarball(t))
 	t.Setenv("TEMPORAL_SAMPLES_BASE_URL", srv.URL)
 	t.Chdir(t.TempDir())
 
 	h := NewCommandHarness(t)
-	res := h.Execute("sample", "init", "--language", "python", "--name", "hello")
+	res := h.Execute("project", "init-sample", "--language", "python", "--name", "hello")
 
 	require.NoError(t, res.Err)
 
@@ -187,15 +187,15 @@ func TestSample_Init_Python(t *testing.T) {
 	assert.NotContains(t, out, "cat README.md")
 }
 
-// TestSample_Init_Python_NoCommands verifies that when a sample has no commands
+// TestProject_InitSample_Python_NoCommands verifies that when a sample has no commands
 // in the manifest, the README content is printed to stdout.
-func TestSample_Init_Python_NoCommands(t *testing.T) {
+func TestProject_InitSample_Python_NoCommands(t *testing.T) {
 	srv := serveSamples(t, testPythonManifest, testPythonTarball(t))
 	t.Setenv("TEMPORAL_SAMPLES_BASE_URL", srv.URL)
 	t.Chdir(t.TempDir())
 
 	h := NewCommandHarness(t)
-	res := h.Execute("sample", "init", "--language", "python", "--name", "encryption")
+	res := h.Execute("project", "init-sample", "--language", "python", "--name", "encryption")
 
 	require.NoError(t, res.Err)
 
@@ -205,9 +205,9 @@ func TestSample_Init_Python_NoCommands(t *testing.T) {
 	assert.NotContains(t, out, "cat README.md")
 }
 
-// TestSample_Init_TypeScript_FlatCopy verifies that when the scaffold is empty
+// TestProject_InitSample_TypeScript_FlatCopy verifies that when the scaffold is empty
 // (TypeScript), sample files are copied flat — no nesting.
-func TestSample_Init_TypeScript_FlatCopy(t *testing.T) {
+func TestProject_InitSample_TypeScript_FlatCopy(t *testing.T) {
 	manifest := `version: 1
 language: typescript
 scaffold: {}
@@ -227,7 +227,7 @@ samples:
 	t.Chdir(t.TempDir())
 
 	h := NewCommandHarness(t)
-	res := h.Execute("sample", "init", "--language", "typescript", "--name", "hello-world")
+	res := h.Execute("project", "init-sample", "--language", "typescript", "--name", "hello-world")
 
 	require.NoError(t, res.Err)
 
@@ -242,53 +242,53 @@ samples:
 	assert.NoFileExists(t, filepath.Join("hello-world", manifestFile))
 }
 
-// TestSample_Init_GitHubURL verifies that a full GitHub URL can be used
+// TestProject_InitSample_GitHubURL verifies that a full GitHub URL can be used
 // instead of positional language + sample arguments.
-func TestSample_Init_GitHubURL(t *testing.T) {
+func TestProject_InitSample_GitHubURL(t *testing.T) {
 	srv := serveSamples(t, testPythonManifest, testPythonTarball(t))
 	t.Setenv("TEMPORAL_SAMPLES_BASE_URL", srv.URL)
 	t.Chdir(t.TempDir())
 
 	h := NewCommandHarness(t)
-	res := h.Execute("sample", "init",
+	res := h.Execute("project", "init-sample",
 		"--url", "https://github.com/temporalio/samples-python/tree/main/hello")
 
 	require.NoError(t, res.Err)
 	assert.FileExists(t, filepath.Join("hello", "hello", "__init__.py"))
 }
 
-// TestSample_Init_GitHubURL_TrailingSlash verifies trailing slash is handled.
-func TestSample_Init_GitHubURL_TrailingSlash(t *testing.T) {
+// TestProject_InitSample_GitHubURL_TrailingSlash verifies trailing slash is handled.
+func TestProject_InitSample_GitHubURL_TrailingSlash(t *testing.T) {
 	srv := serveSamples(t, testPythonManifest, testPythonTarball(t))
 	t.Setenv("TEMPORAL_SAMPLES_BASE_URL", srv.URL)
 	t.Chdir(t.TempDir())
 
 	h := NewCommandHarness(t)
-	res := h.Execute("sample", "init",
+	res := h.Execute("project", "init-sample",
 		"--url", "https://github.com/temporalio/samples-python/tree/main/hello/")
 
 	require.NoError(t, res.Err)
 	assert.FileExists(t, filepath.Join("hello", "hello", "__init__.py"))
 }
 
-// TestSample_Init_GitHubURL_RefWithSlash verifies refs containing slashes
+// TestProject_InitSample_GitHubURL_RefWithSlash verifies refs containing slashes
 // (e.g. feature branches) are parsed correctly.
-func TestSample_Init_GitHubURL_RefWithSlash(t *testing.T) {
+func TestProject_InitSample_GitHubURL_RefWithSlash(t *testing.T) {
 	srv := serveSamples(t, testPythonManifest, testPythonTarball(t))
 	t.Setenv("TEMPORAL_SAMPLES_BASE_URL", srv.URL)
 	t.Chdir(t.TempDir())
 
 	h := NewCommandHarness(t)
-	res := h.Execute("sample", "init",
+	res := h.Execute("project", "init-sample",
 		"--url", "https://github.com/temporalio/samples-python/tree/feature/foo/hello")
 
 	require.NoError(t, res.Err)
 	assert.FileExists(t, filepath.Join("hello", "hello", "__init__.py"))
 }
 
-// TestSample_Init_Go_ImportRewrite verifies that Go import paths are rewritten
+// TestProject_InitSample_Go_ImportRewrite verifies that Go import paths are rewritten
 // from the monorepo module path to the new standalone module name.
-func TestSample_Init_Go_ImportRewrite(t *testing.T) {
+func TestProject_InitSample_Go_ImportRewrite(t *testing.T) {
 	manifest := `version: 1
 language: go
 scaffold:
@@ -315,7 +315,7 @@ samples:
 	t.Chdir(t.TempDir())
 
 	h := NewCommandHarness(t)
-	res := h.Execute("sample", "init", "--language", "go", "--name", "helloworld")
+	res := h.Execute("project", "init-sample", "--language", "go", "--name", "helloworld")
 
 	require.NoError(t, res.Err)
 
@@ -331,9 +331,9 @@ samples:
 	assert.NotContains(t, string(worker), "github.com/temporalio/samples-go")
 }
 
-// TestSample_Init_Java verifies that Java samples are extracted from the deep
+// TestProject_InitSample_Java verifies that Java samples are extracted from the deep
 // path, with Gradle scaffold files generated at the project root.
-func TestSample_Init_Java(t *testing.T) {
+func TestProject_InitSample_Java(t *testing.T) {
 	manifest := `version: 1
 language: java
 scaffold:
@@ -374,7 +374,7 @@ samples:
 	t.Chdir(t.TempDir())
 
 	h := NewCommandHarness(t)
-	res := h.Execute("sample", "init", "--language", "java", "--name", "hello")
+	res := h.Execute("project", "init-sample", "--language", "java", "--name", "hello")
 
 	require.NoError(t, res.Err)
 
@@ -397,9 +397,9 @@ samples:
 	assert.FileExists(t, filepath.Join("hello", "gradle", "wrapper", "gradle-wrapper.properties"))
 }
 
-// TestSample_Init_DotNet verifies that .NET samples are extracted from src/,
+// TestProject_InitSample_DotNet verifies that .NET samples are extracted from src/,
 // with a generated Directory.Build.props at the project root.
-func TestSample_Init_DotNet(t *testing.T) {
+func TestProject_InitSample_DotNet(t *testing.T) {
 	manifest := `version: 1
 language: dotnet
 scaffold:
@@ -427,7 +427,7 @@ samples:
 	t.Chdir(t.TempDir())
 
 	h := NewCommandHarness(t)
-	res := h.Execute("sample", "init", "--language", "dotnet", "--name", "ActivitySimple")
+	res := h.Execute("project", "init-sample", "--language", "dotnet", "--name", "ActivitySimple")
 
 	require.NoError(t, res.Err)
 
@@ -445,9 +445,9 @@ samples:
 	assert.FileExists(t, filepath.Join("ActivitySimple", "README.md"))
 }
 
-// TestSample_Init_Ruby verifies that Ruby samples get a generated Gemfile
+// TestProject_InitSample_Ruby verifies that Ruby samples get a generated Gemfile
 // at the project root.
-func TestSample_Init_Ruby(t *testing.T) {
+func TestProject_InitSample_Ruby(t *testing.T) {
 	manifest := `version: 1
 language: ruby
 scaffold:
@@ -471,7 +471,7 @@ samples:
 	t.Chdir(t.TempDir())
 
 	h := NewCommandHarness(t)
-	res := h.Execute("sample", "init", "--language", "ruby", "--name", "activity_simple")
+	res := h.Execute("project", "init-sample", "--language", "ruby", "--name", "activity_simple")
 
 	require.NoError(t, res.Err)
 
@@ -489,9 +489,9 @@ samples:
 	assert.FileExists(t, filepath.Join("activity_simple", "README.md"))
 }
 
-// TestSample_Init_PathDot verifies that a manifest next to the sample with
+// TestProject_InitSample_PathDot verifies that a manifest next to the sample with
 // path: "." correctly identifies the enclosing directory as the sample.
-func TestSample_Init_PathDot(t *testing.T) {
+func TestProject_InitSample_PathDot(t *testing.T) {
 	sampleManifest := `version: 1
 language: python
 scaffold:
@@ -529,7 +529,7 @@ samples:
 	t.Chdir(t.TempDir())
 
 	h := NewCommandHarness(t)
-	res := h.Execute("sample", "init",
+	res := h.Execute("project", "init-sample",
 		"--url", "https://github.com/dandavison/etc/tree/temporal-samples/hello-sample")
 
 	require.NoError(t, res.Err)
@@ -552,7 +552,7 @@ samples:
 	assert.NoFileExists(t, filepath.Join("hello-sample", "hello-sample", manifestFile))
 }
 
-func TestSample_Init_NoManifest(t *testing.T) {
+func TestProject_InitSample_NoManifest(t *testing.T) {
 	tarball := buildGitHubTarball(t, "temporalio-samples-python-abc1234/", []tarEntry{
 		{"hello/__init__.py", ""},
 		{"hello/worker.py", "import asyncio\n"},
@@ -573,7 +573,7 @@ func TestSample_Init_NoManifest(t *testing.T) {
 	t.Chdir(t.TempDir())
 
 	h := NewCommandHarness(t)
-	res := h.Execute("sample", "init", "--language", "python", "--name", "hello")
+	res := h.Execute("project", "init-sample", "--language", "python", "--name", "hello")
 
 	require.NoError(t, res.Err)
 	out := res.Stdout.String()
@@ -585,32 +585,32 @@ func TestSample_Init_NoManifest(t *testing.T) {
 	assert.NoDirExists(t, filepath.Join("hello", "hello"))
 }
 
-func TestSample_Init_NotFound(t *testing.T) {
+func TestProject_InitSample_NotFound(t *testing.T) {
 	srv := serveSamples(t, testPythonManifest, testPythonTarball(t))
 	t.Setenv("TEMPORAL_SAMPLES_BASE_URL", srv.URL)
 	t.Chdir(t.TempDir())
 
 	h := NewCommandHarness(t)
-	res := h.Execute("sample", "init", "--language", "python", "--name", "nonexistent")
+	res := h.Execute("project", "init-sample", "--language", "python", "--name", "nonexistent")
 
 	require.Error(t, res.Err)
 	assert.Contains(t, res.Err.Error(), `sample "nonexistent" not found in temporalio/samples-python`)
 }
 
-func TestSample_Init_MissingFlags(t *testing.T) {
+func TestProject_InitSample_MissingFlags(t *testing.T) {
 	h := NewCommandHarness(t)
-	res := h.Execute("sample", "init")
+	res := h.Execute("project", "init-sample")
 	assert.Error(t, res.Err)
 }
 
-func TestSample_LanguageAliases(t *testing.T) {
+func TestProject_LanguageAliases(t *testing.T) {
 	srv := serveSamples(t, testPythonManifest, testPythonTarball(t))
 	t.Setenv("TEMPORAL_SAMPLES_BASE_URL", srv.URL)
 
 	for _, alias := range []string{"py", "ts", "cs", "csharp", "rb"} {
 		t.Run(alias, func(t *testing.T) {
 			h := NewCommandHarness(t)
-			res := h.Execute("sample", "list", "--language", alias)
+			res := h.Execute("project", "list-samples", "--language", alias)
 			// All aliases resolve to a valid repo, so the request hits our
 			// test server. The server always returns the Python manifest,
 			// which is fine — we're testing alias resolution, not content.

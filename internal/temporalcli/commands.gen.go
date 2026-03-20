@@ -368,7 +368,7 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	s.Command.AddCommand(&NewTemporalConfigCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalEnvCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalOperatorCommand(cctx, &s).Command)
-	s.Command.AddCommand(&NewTemporalSampleCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalProjectCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalServerCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalTaskQueueCommand(cctx, &s).Command)
@@ -1762,29 +1762,29 @@ func NewTemporalOperatorSearchAttributeRemoveCommand(cctx *CommandContext, paren
 	return &s
 }
 
-type TemporalSampleCommand struct {
+type TemporalProjectCommand struct {
 	Parent  *TemporalCommand
 	Command cobra.Command
 }
 
-func NewTemporalSampleCommand(cctx *CommandContext, parent *TemporalCommand) *TemporalSampleCommand {
-	var s TemporalSampleCommand
+func NewTemporalProjectCommand(cctx *CommandContext, parent *TemporalCommand) *TemporalProjectCommand {
+	var s TemporalProjectCommand
 	s.Parent = parent
-	s.Command.Use = "sample"
-	s.Command.Short = "Browse and initialize Temporal code samples"
+	s.Command.Use = "project"
+	s.Command.Short = "Manage local Temporal projects"
 	if hasHighlighting {
-		s.Command.Long = "Explore and download samples of working Temporal applications:\n\n\x1b[1mtemporal sample [command] [options]\x1b[0m\n\nList available samples:\n\n\x1b[1mtemporal sample list\x1b[0m\n\nDownload a sample to use locally:\n\n\x1b[1mtemporal sample init \\\n    --name YourSampleName \\\n    --language YourLanguage\x1b[0m"
+		s.Command.Long = "Browse and download samples of working Temporal applications:\n\n\x1b[1mtemporal project [command] [options]\x1b[0m\n\nList available samples:\n\n\x1b[1mtemporal project list-samples\x1b[0m\n\nDownload a sample to use locally:\n\n\x1b[1mtemporal project init-sample \\\n    --name YourSampleName \\\n    --language YourLanguage\x1b[0m"
 	} else {
-		s.Command.Long = "Explore and download samples of working Temporal applications:\n\n```\ntemporal sample [command] [options]\n```\n\nList available samples:\n\n```\ntemporal sample list\n```\n\nDownload a sample to use locally:\n\n```\ntemporal sample init \\\n    --name YourSampleName \\\n    --language YourLanguage\n```"
+		s.Command.Long = "Browse and download samples of working Temporal applications:\n\n```\ntemporal project [command] [options]\n```\n\nList available samples:\n\n```\ntemporal project list-samples\n```\n\nDownload a sample to use locally:\n\n```\ntemporal project init-sample \\\n    --name YourSampleName \\\n    --language YourLanguage\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.AddCommand(&NewTemporalSampleInitCommand(cctx, &s).Command)
-	s.Command.AddCommand(&NewTemporalSampleListCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalProjectInitSampleCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalProjectListSamplesCommand(cctx, &s).Command)
 	return &s
 }
 
-type TemporalSampleInitCommand struct {
-	Parent   *TemporalSampleCommand
+type TemporalProjectInitSampleCommand struct {
+	Parent   *TemporalProjectCommand
 	Command  cobra.Command
 	Name     string
 	Language string
@@ -1792,16 +1792,16 @@ type TemporalSampleInitCommand struct {
 	Url      string
 }
 
-func NewTemporalSampleInitCommand(cctx *CommandContext, parent *TemporalSampleCommand) *TemporalSampleInitCommand {
-	var s TemporalSampleInitCommand
+func NewTemporalProjectInitSampleCommand(cctx *CommandContext, parent *TemporalProjectCommand) *TemporalProjectInitSampleCommand {
+	var s TemporalProjectInitSampleCommand
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
-	s.Command.Use = "init [flags]"
+	s.Command.Use = "init-sample [flags]"
 	s.Command.Short = "Download a sample to use locally"
 	if hasHighlighting {
-		s.Command.Long = "Fetch a Temporal code sample from the samples repository and write\nit to a local directory. Use \"temporal sample list\" to browse\navailable samples:\n\n\x1b[1mtemporal sample init \\\n    --name YourSampleName \\\n    --language go\x1b[0m\n\nBy default, the sample is written to a directory named after the\nsample in the current working directory. Use \"--dir\" to specify a\ndifferent location:\n\n\x1b[1mtemporal sample init \\\n    --name YourSampleName \\\n    --language go \\\n    --dir YourOutputDirectory\x1b[0m"
+		s.Command.Long = "Fetch a Temporal code sample from the samples repository and write\nit to a local directory. Use \"temporal project list-samples\" to\nbrowse available samples:\n\n\x1b[1mtemporal project init-sample \\\n    --name YourSampleName \\\n    --language go\x1b[0m\n\nBy default, the sample is written to a directory named after the\nsample in the current working directory. Use \"--dir\" to specify a\ndifferent location:\n\n\x1b[1mtemporal project init-sample \\\n    --name YourSampleName \\\n    --language go \\\n    --dir YourOutputDirectory\x1b[0m"
 	} else {
-		s.Command.Long = "Fetch a Temporal code sample from the samples repository and write\nit to a local directory. Use \"temporal sample list\" to browse\navailable samples:\n\n```\ntemporal sample init \\\n    --name YourSampleName \\\n    --language go\n```\n\nBy default, the sample is written to a directory named after the\nsample in the current working directory. Use \"--dir\" to specify a\ndifferent location:\n\n```\ntemporal sample init \\\n    --name YourSampleName \\\n    --language go \\\n    --dir YourOutputDirectory\n```"
+		s.Command.Long = "Fetch a Temporal code sample from the samples repository and write\nit to a local directory. Use \"temporal project list-samples\" to\nbrowse available samples:\n\n```\ntemporal project init-sample \\\n    --name YourSampleName \\\n    --language go\n```\n\nBy default, the sample is written to a directory named after the\nsample in the current working directory. Use \"--dir\" to specify a\ndifferent location:\n\n```\ntemporal project init-sample \\\n    --name YourSampleName \\\n    --language go \\\n    --dir YourOutputDirectory\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Name, "name", "", "Sample name. Required unless \"--url\" is provided.")
@@ -1817,22 +1817,22 @@ func NewTemporalSampleInitCommand(cctx *CommandContext, parent *TemporalSampleCo
 	return &s
 }
 
-type TemporalSampleListCommand struct {
-	Parent   *TemporalSampleCommand
+type TemporalProjectListSamplesCommand struct {
+	Parent   *TemporalProjectCommand
 	Command  cobra.Command
 	Language string
 }
 
-func NewTemporalSampleListCommand(cctx *CommandContext, parent *TemporalSampleCommand) *TemporalSampleListCommand {
-	var s TemporalSampleListCommand
+func NewTemporalProjectListSamplesCommand(cctx *CommandContext, parent *TemporalProjectCommand) *TemporalProjectListSamplesCommand {
+	var s TemporalProjectListSamplesCommand
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
-	s.Command.Use = "list [flags]"
+	s.Command.Use = "list-samples [flags]"
 	s.Command.Short = "Show available samples"
 	if hasHighlighting {
-		s.Command.Long = "List code samples available for download.\n\nFilter by a specific language:\n\n\x1b[1mtemporal sample list --language go\x1b[0m\n\nBy default, samples for all supported languages are shown:\n\n\x1b[1mtemporal sample list\x1b[0m"
+		s.Command.Long = "List code samples available for download.\n\nFilter by a specific language:\n\n\x1b[1mtemporal project list-samples --language go\x1b[0m\n\nBy default, samples for all supported languages are shown:\n\n\x1b[1mtemporal project list-samples\x1b[0m"
 	} else {
-		s.Command.Long = "List code samples available for download.\n\nFilter by a specific language:\n\n```\ntemporal sample list --language go\n```\n\nBy default, samples for all supported languages are shown:\n\n```\ntemporal sample list\n```"
+		s.Command.Long = "List code samples available for download.\n\nFilter by a specific language:\n\n```\ntemporal project list-samples --language go\n```\n\nBy default, samples for all supported languages are shown:\n\n```\ntemporal project list-samples\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.Language, "language", "l", "", "Filter results by programming language.")

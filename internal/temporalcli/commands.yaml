@@ -4282,49 +4282,49 @@ commands:
     option-sets:
       - workflow-reference
 
-  - name: temporal sample
-    summary: Browse and initialize Temporal code samples
+  - name: temporal project
+    summary: Manage local Temporal projects
     description: |
-      Explore and download samples of working Temporal applications:
+      Browse and download samples of working Temporal applications:
 
       ```
-      temporal sample [command] [options]
+      temporal project [command] [options]
       ```
 
       List available samples:
 
       ```
-      temporal sample list
+      temporal project list-samples
       ```
 
       Download a sample to use locally:
 
       ```
-      temporal sample init \
+      temporal project init-sample \
           --name YourSampleName \
           --language YourLanguage
       ```
     docs:
       description-header: >-
-        Temporal CLI sample commands create standalone projects from Temporal
-        sample repositories.
+        Temporal CLI project commands create standalone projects from
+        Temporal sample repositories.
       keywords:
         - cli reference
-        - sample
-        - sample init
-        - sample list
+        - project
+        - project init-sample
+        - project list-samples
       tags:
         - Temporal CLI
 
-  - name: temporal sample init
+  - name: temporal project init-sample
     summary: Download a sample to use locally
     description: |
       Fetch a Temporal code sample from the samples repository and write
-      it to a local directory. Use "temporal sample list" to browse
-      available samples:
+      it to a local directory. Use "temporal project list-samples" to
+      browse available samples:
 
       ```
-      temporal sample init \
+      temporal project init-sample \
           --name YourSampleName \
           --language go
       ```
@@ -4334,7 +4334,7 @@ commands:
       different location:
 
       ```
-      temporal sample init \
+      temporal project init-sample \
           --name YourSampleName \
           --language go \
           --dir YourOutputDirectory
@@ -4360,7 +4360,7 @@ commands:
           and "--language".
         hidden: true
 
-  - name: temporal sample list
+  - name: temporal project list-samples
     summary: Show available samples
     description: |
       List code samples available for download.
@@ -4368,13 +4368,13 @@ commands:
       Filter by a specific language:
 
       ```
-      temporal sample list --language go
+      temporal project list-samples --language go
       ```
 
       By default, samples for all supported languages are shown:
 
       ```
-      temporal sample list
+      temporal project list-samples
       ```
     options:
       - name: language
