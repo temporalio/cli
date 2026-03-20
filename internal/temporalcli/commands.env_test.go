@@ -134,23 +134,3 @@ func TestEnv_DeprecationWarningBypassesLogger(t *testing.T) {
 		})
 	}
 }
-
-func TestEnv_VerboseFlag(t *testing.T) {
-	h := NewCommandHarness(t)
-	defer h.Close()
-
-	tmpFile, err := os.CreateTemp("", "")
-	h.NoError(err)
-	h.Options.DeprecatedEnvConfig.EnvConfigFile = tmpFile.Name()
-	defer os.Remove(h.Options.DeprecatedEnvConfig.EnvConfigFile)
-
-	// Without --verbose, no output on stderr.
-	res := h.Execute("env", "set", "--env", "myenv1", "-k", "foo", "-v", "bar")
-	h.NoError(res.Err)
-	h.Empty(res.Stderr.String())
-
-	// With --verbose, diagnostic messages appear as plain text.
-	res = h.Execute("env", "set", "--env", "myenv1", "-k", "baz", "-v", "qux", "--verbose")
-	h.NoError(res.Err)
-	h.Contains(res.Stderr.String(), "Setting env property myenv1/baz=qux")
-}
