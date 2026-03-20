@@ -2428,7 +2428,7 @@ commands:
           Can be passed multiple times.
       - name: log-config
         type: bool
-        description: Log the server config to stderr.
+        description: Print the server config to stderr.
       - name: search-attribute
         type: string[]
         description: |

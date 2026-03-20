@@ -135,7 +135,7 @@ func TestEnv_DeprecationWarningBypassesLogger(t *testing.T) {
 	}
 }
 
-func TestEnv_DefaultLogLevelProducesNoLogOutput(t *testing.T) {
+func TestEnv_VerboseFlag(t *testing.T) {
 	h := NewCommandHarness(t)
 	defer h.Close()
 
@@ -144,14 +144,13 @@ func TestEnv_DefaultLogLevelProducesNoLogOutput(t *testing.T) {
 	h.Options.DeprecatedEnvConfig.EnvConfigFile = tmpFile.Name()
 	defer os.Remove(h.Options.DeprecatedEnvConfig.EnvConfigFile)
 
-	// env set logs "Setting env property" via cctx.Logger.Info(). With the
-	// default log level ("never"), this should not appear on stderr.
+	// Without --verbose, no output on stderr.
 	res := h.Execute("env", "set", "--env", "myenv1", "-k", "foo", "-v", "bar")
 	h.NoError(res.Err)
-	h.Empty(res.Stderr.String(), "default log level should produce no log output")
+	h.Empty(res.Stderr.String())
 
-	// With --log-level info, the logger output should appear.
-	res = h.Execute("env", "set", "--env", "myenv1", "-k", "baz", "-v", "qux", "--log-level", "info")
+	// With --verbose, diagnostic messages appear as plain text.
+	res = h.Execute("env", "set", "--env", "myenv1", "-k", "baz", "-v", "qux", "--verbose")
 	h.NoError(res.Err)
-	h.Contains(res.Stderr.String(), "Setting env property")
+	h.Contains(res.Stderr.String(), "Setting env property myenv1/baz=qux")
 }

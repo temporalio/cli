@@ -50,6 +50,7 @@ type CommandContext struct {
 	// These values may not be available until after pre-run of main command
 	Printer               *printer.Printer
 	Logger                *slog.Logger
+	Verbose               bool
 	JSONOutput            bool
 	JSONShorthandPayloads bool
 
@@ -256,13 +257,13 @@ func UnmarshalProtoJSONWithOptions(b []byte, m proto.Message, jsonShorthandPaylo
 	return opts.Unmarshal(b, m)
 }
 
-// Set flag values from environment file & variables. Returns a callback to log anything interesting
-// since logging will not yet be initialized when this runs.
-func (c *CommandContext) populateFlagsFromEnv(flags *pflag.FlagSet) (func(*slog.Logger), error) {
+// Set flag values from environment file & variables. Returns a callback to
+// print verbose messages (deferred because --verbose is not yet parsed).
+func (c *CommandContext) populateFlagsFromEnv(flags *pflag.FlagSet) (func(), error) {
 	if flags == nil {
-		return func(logger *slog.Logger) {}, nil
+		return func() {}, nil
 	}
-	var logCalls []func(*slog.Logger)
+	var verboseMessages []string
 	var flagErr error
 	flags.VisitAll(func(flag *pflag.Flag) {
 		// If the flag was already changed by the user, we don't overwrite
@@ -285,20 +286,25 @@ func (c *CommandContext) populateFlagsFromEnv(flags *pflag.FlagSet) (func(*slog.
 					return
 				}
 				if flag.Changed {
-					logCalls = append(logCalls, func(l *slog.Logger) {
-						l.Info("Env var overrode --env setting", "env_var", anns[0], "flag", flag.Name)
-					})
+					verboseMessages = append(verboseMessages,
+						fmt.Sprintf("Env var %s overrode --env setting for flag --%s", anns[0], flag.Name))
 				}
 				flag.Changed = true
 			}
 		}
 	})
-	logFn := func(logger *slog.Logger) {
-		for _, call := range logCalls {
-			call(logger)
+	printFn := func() {
+		for _, msg := range verboseMessages {
+			c.printVerbose(msg)
 		}
 	}
-	return logFn, flagErr
+	return printFn, flagErr
+}
+
+func (c *CommandContext) printVerbose(msg string) {
+	if c.Verbose {
+		fmt.Fprintln(c.Options.Stderr, msg)
+	}
 }
 
 // Returns error if JSON output enabled
@@ -468,7 +474,7 @@ func (c *TemporalCommand) initCommand(cctx *CommandContext) {
 
 		res := c.preRun(cctx)
 
-		logCalls(cctx.Logger)
+		logCalls()
 
 		// Always disable color if JSON output is on (must be run after preRun so JSONOutput is set)
 		if cctx.JSONOutput {
@@ -517,6 +523,8 @@ func (c *TemporalCommand) preRun(cctx *CommandContext) error {
 			return err
 		}
 	}
+
+	cctx.Verbose = c.Verbose
 
 	// Configure printer if not already on context
 	cctx.JSONOutput = c.Output.Value == "json" || c.Output.Value == "jsonl"

@@ -41,6 +41,9 @@ option-sets:
           If set, disables loading environment config from environment
           variables.
         experimental: true
+      - name: verbose
+        type: bool
+        description: Enable verbose output.
       - name: log-level
         type: string-enum
         enum-values:
