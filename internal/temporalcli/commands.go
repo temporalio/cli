@@ -48,7 +48,9 @@ type CommandContext struct {
 	FlagsWithEnvVars          []*pflag.Flag
 
 	// These values may not be available until after pre-run of main command
-	Printer               *printer.Printer
+	Printer *printer.Printer
+	// The logger is for the SDK and server. The CLI itself should print warnings or errors to
+	// stderr but should not use logging.
 	Logger                *slog.Logger
 	JSONOutput            bool
 	JSONShorthandPayloads bool
