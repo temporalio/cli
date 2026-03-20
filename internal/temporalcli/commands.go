@@ -257,13 +257,11 @@ func UnmarshalProtoJSONWithOptions(b []byte, m proto.Message, jsonShorthandPaylo
 	return opts.Unmarshal(b, m)
 }
 
-// Set flag values from environment file & variables. Returns a callback to
-// print verbose messages (deferred because --verbose is not yet parsed).
-func (c *CommandContext) populateFlagsFromEnv(flags *pflag.FlagSet) (func(), error) {
+// Set flag values from environment file & variables.
+func (c *CommandContext) populateFlagsFromEnv(flags *pflag.FlagSet) error {
 	if flags == nil {
-		return func() {}, nil
+		return nil
 	}
-	var verboseMessages []string
 	var flagErr error
 	flags.VisitAll(func(flag *pflag.Flag) {
 		// If the flag was already changed by the user, we don't overwrite
@@ -286,19 +284,14 @@ func (c *CommandContext) populateFlagsFromEnv(flags *pflag.FlagSet) (func(), err
 					return
 				}
 				if flag.Changed {
-					verboseMessages = append(verboseMessages,
+					c.printVerbose(
 						fmt.Sprintf("Env var %s overrode --env setting for flag --%s", anns[0], flag.Name))
 				}
 				flag.Changed = true
 			}
 		}
 	})
-	printFn := func() {
-		for _, msg := range verboseMessages {
-			c.printVerbose(msg)
-		}
-	}
-	return printFn, flagErr
+	return flagErr
 }
 
 func (c *CommandContext) printVerbose(msg string) {
@@ -459,10 +452,10 @@ func (c *TemporalCommand) initCommand(cctx *CommandContext) {
 	c.Command.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
 		// Set command
 		cctx.CurrentCommand = cmd
+		cctx.Verbose = c.Verbose
 		// Populate environ. We will make the error return here which will cause
 		// usage to be printed.
-		logCalls, err := cctx.populateFlagsFromEnv(cmd.Flags())
-		if err != nil {
+		if err := cctx.populateFlagsFromEnv(cmd.Flags()); err != nil {
 			return err
 		}
 
@@ -473,8 +466,6 @@ func (c *TemporalCommand) initCommand(cctx *CommandContext) {
 		}
 
 		res := c.preRun(cctx)
-
-		logCalls()
 
 		// Always disable color if JSON output is on (must be run after preRun so JSONOutput is set)
 		if cctx.JSONOutput {
@@ -523,8 +514,6 @@ func (c *TemporalCommand) preRun(cctx *CommandContext) error {
 			return err
 		}
 	}
-
-	cctx.Verbose = c.Verbose
 
 	// Configure printer if not already on context
 	cctx.JSONOutput = c.Output.Value == "json" || c.Output.Value == "jsonl"
