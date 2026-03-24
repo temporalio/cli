@@ -4445,6 +4445,9 @@ option-sets:
         description: Build ID for a Worker Deployment.
         required: true
 
+  # Duplicate of single-workflow-or-batch with an experimental note on --query.
+  # Cannot extend the shared option set because workflow commands that also use
+  # it (workflow cancel, workflow count, etc.) are not experimental.
   - name: single-activity-or-batch
     options:
       - name: workflow-id
