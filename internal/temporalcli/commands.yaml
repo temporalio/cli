@@ -283,6 +283,7 @@ commands:
         type: bool
         description: |
           Every activity should be updated. Mutually exclusive with `--activity-id` and `--activity-type`.
+          Note: This is an experimental feature and may change in the future.
       - name: task-queue
         type: string
         description: Name of the task queue for the Activity.
@@ -442,6 +443,7 @@ commands:
         type: bool
         description: |
           Every paused activity should be unpaused. This flag is ignored if activity-type is provided.
+          Note: This is an experimental feature and may change in the future.
       - name: jitter
         type: duration
         description: |
@@ -525,6 +527,7 @@ commands:
         type: bool
         description: |
           Every activity should be reset. Every activity should be updated. Mutually exclusive with `--activity-id` and `--activity-type`.
+          Note: This is an experimental feature and may change in the future.
       - name: jitter
         type: duration
         description: |

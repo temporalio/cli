@@ -558,7 +558,7 @@ func NewTemporalActivityResetCommand(cctx *CommandContext, parent *TemporalActiv
 	s.Command.Flags().BoolVar(&s.KeepPaused, "keep-paused", false, "If the activity was paused, it will stay paused.")
 	s.Command.Flags().BoolVar(&s.ResetAttempts, "reset-attempts", false, "Reset the activity attempts.")
 	s.Command.Flags().BoolVar(&s.ResetHeartbeats, "reset-heartbeats", false, "Reset the Activity's heartbeats. Only works with --reset-attempts.")
-	s.Command.Flags().BoolVar(&s.MatchAll, "match-all", false, "Every activity should be reset. Every activity should be updated. Mutually exclusive with `--activity-id` and `--activity-type`.")
+	s.Command.Flags().BoolVar(&s.MatchAll, "match-all", false, "Every activity should be reset. Every activity should be updated. Mutually exclusive with `--activity-id` and `--activity-type`. Note: This is an experimental feature and may change in the future.")
 	s.Jitter = 0
 	s.Command.Flags().Var(&s.Jitter, "jitter", "The activity will reset at random a time within the specified duration. Can only be used with --query.")
 	s.Command.Flags().BoolVar(&s.RestoreOriginalOptions, "restore-original-options", false, "Restore the original options of the activity.")
@@ -599,7 +599,7 @@ func NewTemporalActivityUnpauseCommand(cctx *CommandContext, parent *TemporalAct
 	s.Command.Flags().StringVar(&s.ActivityType, "activity-type", "", "Activities of this Type will unpause. Can only be used without --match-all. Either `activity-id` or `activity-type` must be provided, but not both. Note: Unpausing Activity by Type is an experimental feature and may change in the future.")
 	s.Command.Flags().BoolVar(&s.ResetAttempts, "reset-attempts", false, "Reset the activity attempts.")
 	s.Command.Flags().BoolVar(&s.ResetHeartbeats, "reset-heartbeats", false, "Reset the Activity's heartbeats. Only works with --reset-attempts.")
-	s.Command.Flags().BoolVar(&s.MatchAll, "match-all", false, "Every paused activity should be unpaused. This flag is ignored if activity-type is provided.")
+	s.Command.Flags().BoolVar(&s.MatchAll, "match-all", false, "Every paused activity should be unpaused. This flag is ignored if activity-type is provided. Note: This is an experimental feature and may change in the future.")
 	s.Jitter = 0
 	s.Command.Flags().Var(&s.Jitter, "jitter", "The activity will start at random a time within the specified duration. Can only be used with --query.")
 	s.SingleActivityOrBatchOptions.BuildFlags(s.Command.Flags())
@@ -644,7 +644,7 @@ func NewTemporalActivityUpdateOptionsCommand(cctx *CommandContext, parent *Tempo
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "The Activity ID to update options. Mutually exclusive with `--query`, `--match-all`, and `--activity-type`. Requires `--workflow-id` to be specified.")
 	s.Command.Flags().StringVar(&s.ActivityType, "activity-type", "", "Activities of this Type will be updated. Mutually exclusive with `--match-all` and `activity-id`. Note: Updating Activity options by Type is an experimental feature and may change in the future.")
-	s.Command.Flags().BoolVar(&s.MatchAll, "match-all", false, "Every activity should be updated. Mutually exclusive with `--activity-id` and `--activity-type`.")
+	s.Command.Flags().BoolVar(&s.MatchAll, "match-all", false, "Every activity should be updated. Mutually exclusive with `--activity-id` and `--activity-type`. Note: This is an experimental feature and may change in the future.")
 	s.Command.Flags().StringVar(&s.TaskQueue, "task-queue", "", "Name of the task queue for the Activity.")
 	s.ScheduleToCloseTimeout = 0
 	s.Command.Flags().Var(&s.ScheduleToCloseTimeout, "schedule-to-close-timeout", "Indicates how long the caller is willing to wait for an activity completion. Limits how long retries will be attempted.")
