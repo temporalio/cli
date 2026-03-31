@@ -835,15 +835,42 @@ commands:
         delete-version, set-current-version, or set-ramping-version.
       keywords:
         - worker deployment
+        - worker deployment create
         - worker deployment describe
         - worker deployment list
         - worker deployment delete
+        - worker deployment create-version
         - worker deployment describe-version
         - worker deployment set-current-version
         - worker deployment set-ramping-version
         - worker deployment delete-version
         - worker deployment update-version-metadata
         - worker deployment manager-identity
+
+  - name: temporal worker deployment create
+    summary: Create a new Worker Deployment
+    description: |
+      Create a new Worker Deployment:
+
+      ```
+      temporal worker deployment create [options]
+      ```
+
+      Worker Deployments are lazily created the first time a Worker polls the
+      Temporal Server and specifies a VersionOverride. However, if you need to
+      pre-define a compute configuration (for instance to set up a serverless
+      Worker), you need to call `temporal worker deployment create-version` and
+      pass in the name of the Worker Deployment. The `temporal worker
+      deployment create` command allows you to pre-define a Worker Deployment
+      so that calls to `temporal worker deployment create-version` will
+      succeed.
+      
+      If a Worker Deployment with the supplied name already exists, this
+      command will return an error.
+      
+      Note: This is an experimental feature and may change in the future.
+    option-sets:
+      - deployment-name
 
   - name: temporal worker deployment describe
     summary: Show properties of a Worker Deployment
@@ -902,6 +929,58 @@ commands:
       temporal worker deployment list \
           --namespace YourDeploymentNamespace
       ```
+
+  - name: temporal worker deployment create-version
+    summary: Create a new Worker Deployment Version
+    description: |
+
+      Create a new Worker Deployment Version:
+
+      ```
+      temporal worker deployment create-version [options]
+      ```
+
+      Configure a Worker Deployment Version's compute configuration as needed.
+      For example, pass compute provider information for an AWS Lambda function
+      that spawns a Worker in the Worker Deployment:
+
+      ```
+      temporal worker deployment create-version \
+          --namespace YourNamespaceName \
+          --deployment-name YourDeploymentName \
+          --build-id YourBuildID \
+          --aws-lambda-function-arn LambdaFunctionARN \
+          --aws-lambda-assume-role-arn LambdaAssumeRoleARN \
+          --aws-lambda-assume-role-external-id LambdaAssumeRoleExternalID
+      ```
+      
+      If a Worker Deployment Version with the supplied BuildID already exists,
+      this command will return an error.
+
+      Note: This is an experimental feature and may change in the future.
+    option-sets:
+      - deployment-version
+    options:
+      - name: aws-lambda-function-arn
+        type: string
+        description: |
+          Qualified (contains version suffix) or unqualified AWS Lambda
+          function ARN to invoke when there are no active pollers for task
+          queue targets in the Worker Deployment.
+      - name: aws-lambda-assume-role-arn
+        type: string
+        description: |
+          AWS IAM role ARN that the Temporal server will assume when invoking
+          the Lambda function that spawns a new Worker in this Worker
+          Deployment Version. Required when --aws-lambda-function-arn is
+          specified.
+      - name: aws-lambda-assume-role-external-id
+        type: string
+        description: |
+          Temporal server will enforce that the AWS IAM trust policy associated
+          with the AWS IAM role specified in --aws-lambda-assume-role-arn has
+          an aws:ExternalId condition that matches the supplied value. Required
+          when --aws-lambda-function-arn is specified.
 
   - name: temporal worker deployment describe-version
     summary: Show properties of a Worker Deployment Version
