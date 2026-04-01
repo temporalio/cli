@@ -13,7 +13,7 @@ import (
 
 func (c *TemporalEnvCommand) envNameAndKey(cctx *CommandContext, args []string, keyFlag string) (string, string, error) {
 	if len(args) > 0 {
-		cctx.Logger.Warn("Arguments to env commands are deprecated; please use --env and --key (or -k) instead")
+		fmt.Fprintln(cctx.Options.Stderr, "Warning: Arguments to env commands are deprecated; please use --env and --key (or -k) instead")
 
 		if c.Parent.Env != "default" || keyFlag != "" {
 			return "", "", fmt.Errorf("cannot specify both an argument and flags; please use flags instead")
@@ -49,10 +49,8 @@ func (c *TemporalEnvDeleteCommand) run(cctx *CommandContext, args []string) erro
 	env, _ := cctx.DeprecatedEnvConfigValues[envName]
 	// User can remove single flag or all in env
 	if key != "" {
-		cctx.Logger.Info("Deleting env property", "env", envName, "property", key)
 		delete(env, key)
 	} else {
-		cctx.Logger.Info("Deleting env", "env", env)
 		delete(cctx.DeprecatedEnvConfigValues, envName)
 	}
 	return writeDeprecatedEnvConfigToFile(cctx)
@@ -129,7 +127,6 @@ func (c *TemporalEnvSetCommand) run(cctx *CommandContext, args []string) error {
 	if cctx.DeprecatedEnvConfigValues[envName] == nil {
 		cctx.DeprecatedEnvConfigValues[envName] = map[string]string{}
 	}
-	cctx.Logger.Info("Setting env property", "env", envName, "property", key, "value", value)
 	cctx.DeprecatedEnvConfigValues[envName][key] = value
 	return writeDeprecatedEnvConfigToFile(cctx)
 }
@@ -138,7 +135,6 @@ func writeDeprecatedEnvConfigToFile(cctx *CommandContext) error {
 	if cctx.Options.DeprecatedEnvConfig.EnvConfigFile == "" {
 		return fmt.Errorf("unable to find place for env file (unknown HOME dir)")
 	}
-	cctx.Logger.Info("Writing env file", "file", cctx.Options.DeprecatedEnvConfig.EnvConfigFile)
 	return writeDeprecatedEnvConfigFile(cctx.Options.DeprecatedEnvConfig.EnvConfigFile, cctx.DeprecatedEnvConfigValues)
 }
 

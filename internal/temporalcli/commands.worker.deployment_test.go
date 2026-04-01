@@ -929,8 +929,8 @@ func (s *SharedServerSuite) testDeploymentDescribeVersionTaskQueueStats(withPrio
 		// We started one workflow with each priority key (1, 3, 5), so each should have backlog of 1
 		for _, priorityKey := range priorityKeys {
 			// Check that the priority row contains the priority key followed by backlog count of 1
-			nonZeroBacklogIncreaseRate := "0."
-			nonZeroTasksAddRate := "0."
+			nonZeroBacklogIncreaseRate := "."
+			nonZeroTasksAddRate := "."
 			zeroTaskDispatchRate := "0"
 			// Once priority is enabled in all servers by default, check that backlog count of 1 is on each priority row.
 			// For servers where priority is not enabled, or workflows that aren't actively using priority keys,

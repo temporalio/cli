@@ -625,6 +625,26 @@ func TestUnknownCommandExitsNonzero(t *testing.T) {
 	assert.Contains(t, res.Err.Error(), "unknown command")
 }
 
+func TestErrorsAreNotLogMessages(t *testing.T) {
+	// Errors must be reported through Fail regardless of --log-level, and
+	// must not produce structured log output on stderr.
+	for _, logLevel := range []string{"never", "error", "info"} {
+		t.Run("log-level="+logLevel, func(t *testing.T) {
+			h := NewCommandHarness(t)
+			res := h.Execute(
+				"workflow", "list",
+				"--address", "not-a-valid-host:1",
+				"--log-level", logLevel,
+			)
+			require.Error(t, res.Err)
+
+			stderr := res.Stderr.String()
+			assert.NotContains(t, stderr, "level=",
+				"errors should not appear as structured log messages on stderr")
+		})
+	}
+}
+
 func (s *SharedServerSuite) TestHiddenAliasLogFormat() {
 	_ = s.waitActivityStarted().GetID()
 	res := s.Execute("workflow", "list", "--log-format", "pretty", "--address", s.Address())
