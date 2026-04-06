@@ -250,6 +250,9 @@ func (c *TemporalActivityPauseCommand) run(cctx *CommandContext, args []string) 
 		Identity: c.Identity,
 		Reason:   c.Reason,
 	}
+	if request.Identity == "" {
+		request.Identity = c.Parent.Identity
+	}
 
 	if c.ActivityId != "" && c.ActivityType != "" {
 		return fmt.Errorf("either Activity Type or Activity Id, but not both")
