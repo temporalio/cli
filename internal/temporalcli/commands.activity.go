@@ -247,7 +247,8 @@ func (c *TemporalActivityPauseCommand) run(cctx *CommandContext, args []string) 
 			WorkflowId: c.WorkflowId,
 			RunId:      c.RunId,
 		},
-		Identity: c.Parent.Identity,
+		Identity: c.Identity,
+		Reason:   c.Reason,
 	}
 
 	if c.ActivityId != "" && c.ActivityType != "" {
