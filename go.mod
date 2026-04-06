@@ -10,7 +10,7 @@ require (
 	github.com/fatih/color v1.18.0
 	github.com/google/uuid v1.6.0
 	github.com/mattn/go-isatty v0.0.20
-	github.com/nexus-rpc/sdk-go v0.5.2-0.20260211051645-26b0b4c584e5
+	github.com/nexus-rpc/sdk-go v0.6.0
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
@@ -18,8 +18,8 @@ require (
 	github.com/temporalio/cli/cliext v0.0.0
 	github.com/temporalio/ui-server/v2 v2.45.3
 	go.temporal.io/api v1.62.4
-	go.temporal.io/sdk v1.38.0
-	go.temporal.io/sdk/contrib/envconfig v0.1.0
+	go.temporal.io/sdk v1.41.0
+	go.temporal.io/sdk/contrib/envconfig v1.0.0
 	go.temporal.io/server v1.31.0-152.2
 	golang.org/x/mod v0.31.0
 	golang.org/x/term v0.38.0
