@@ -198,6 +198,7 @@ commands:
       ```
     options:
       - name: activity-id
+        short: a
         type: string
         description: Activity ID to complete.
         required: true
@@ -221,6 +222,7 @@ commands:
       ```
     options:
       - name: activity-id
+        short: a
         type: string
         description: Activity ID to fail.
         required: true
@@ -376,11 +378,15 @@ commands:
       - name: activity-type
         type: string
         description: |
-          All activities of the Activity Type will be paused. Either `activity-id` or `activity-type` must be provided, but not both.
+          Activities of the given `activity-type` will be paused. Mutually
+          exclusive with `activity-id`.
           Note: Pausing Activity by Type is an experimental feature and may change in the future.
       - name: identity
         type: string
         description: The identity of the user or client submitting this request.
+      - name: reason
+        type: string
+        description: Reason for pausing the Activity.
     option-sets:
       - workflow-reference
 
@@ -430,15 +436,15 @@ commands:
       - name: activity-type
         type: string
         description: |
-          Activities of this Type will unpause. Can only be used without --match-all. Either `activity-id` or `activity-type` must be provided, but not both.
+          Activities of the given `activity-type` will be unpaused. Mutually
+          exclusive with `activity-id` and --match-all.
           Note: Unpausing Activity by Type is an experimental feature and may change in the future.
       - name: reset-attempts
         type: bool
         description: Reset the activity attempts.
       - name: reset-heartbeats
         type: bool
-        description: |
-          Reset the Activity's heartbeats. Only works with --reset-attempts.
+        description: Reset the Activity's heartbeats.
       - name: match-all
         type: bool
         description: |
@@ -511,7 +517,8 @@ commands:
       - name: activity-type
         type: string
         description: |
-          Activities of this Type will be reset. Mutually exclusive with `--match-all` and `activity-id`.
+          Activities of the given `activity-type` will be reset. Mutually
+          exclusive with --match-all and `activity-id`.
           Note: Resetting Activity by Type is an experimental feature and may change in the future.
       - name: keep-paused
         type: bool
@@ -521,8 +528,7 @@ commands:
         description: Reset the activity attempts.
       - name: reset-heartbeats
         type: bool
-        description: |
-          Reset the Activity's heartbeats. Only works with --reset-attempts.
+        description: Reset the Activity's heartbeats.
       - name: match-all
         type: bool
         description: |
