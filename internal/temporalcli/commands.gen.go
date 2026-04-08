@@ -447,7 +447,7 @@ func NewTemporalActivityCompleteCommand(cctx *CommandContext, parent *TemporalAc
 		s.Command.Long = "Complete an Activity, marking it as successfully finished. Specify the\nActivity ID and include a JSON result for the returned value:\n\n```\ntemporal activity complete \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --result '{\"YourResultKey\": \"YourResultVal\"}'\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.ActivityId, "activity-id", "", "Activity ID to complete. Required.")
+	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "Activity ID to complete. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "activity-id")
 	s.Command.Flags().StringVar(&s.Result, "result", "", "Result `JSON` to return. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "result")
@@ -481,7 +481,7 @@ func NewTemporalActivityFailCommand(cctx *CommandContext, parent *TemporalActivi
 		s.Command.Long = "Fail an Activity, marking it as having encountered an error. Specify the\nActivity and Workflow IDs:\n\n```\ntemporal activity fail \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.ActivityId, "activity-id", "", "Activity ID to fail. Required.")
+	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "Activity ID to fail. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "activity-id")
 	s.Command.Flags().StringVar(&s.Detail, "detail", "", "Reason for failing the Activity (JSON).")
 	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for failing the Activity.")
@@ -501,6 +501,7 @@ type TemporalActivityPauseCommand struct {
 	ActivityId   string
 	ActivityType string
 	Identity     string
+	Reason       string
 }
 
 func NewTemporalActivityPauseCommand(cctx *CommandContext, parent *TemporalActivityCommand) *TemporalActivityPauseCommand {
@@ -516,8 +517,9 @@ func NewTemporalActivityPauseCommand(cctx *CommandContext, parent *TemporalActiv
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "The Activity ID to pause. Either `activity-id` or `activity-type` must be provided, but not both.")
-	s.Command.Flags().StringVar(&s.ActivityType, "activity-type", "", "All activities of the Activity Type will be paused. Either `activity-id` or `activity-type` must be provided, but not both. Note: Pausing Activity by Type is an experimental feature and may change in the future.")
+	s.Command.Flags().StringVar(&s.ActivityType, "activity-type", "", "Activities of the given `activity-type` will be paused. Mutually exclusive with `activity-id`. Note: Pausing Activity by Type is an experimental feature and may change in the future.")
 	s.Command.Flags().StringVar(&s.Identity, "identity", "", "The identity of the user or client submitting this request.")
+	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for pausing the Activity.")
 	s.WorkflowReferenceOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -554,10 +556,10 @@ func NewTemporalActivityResetCommand(cctx *CommandContext, parent *TemporalActiv
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "The Activity ID to reset.  Mutually exclusive with `--query`, `--match-all`, and `--activity-type`. Requires `--workflow-id` to be specified.")
-	s.Command.Flags().StringVar(&s.ActivityType, "activity-type", "", "Activities of this Type will be reset. Mutually exclusive with `--match-all` and `activity-id`. Note: Resetting Activity by Type is an experimental feature and may change in the future.")
+	s.Command.Flags().StringVar(&s.ActivityType, "activity-type", "", "Activities of the given `activity-type` will be reset. Mutually exclusive with --match-all and `activity-id`. Note: Resetting Activity by Type is an experimental feature and may change in the future.")
 	s.Command.Flags().BoolVar(&s.KeepPaused, "keep-paused", false, "If the activity was paused, it will stay paused.")
 	s.Command.Flags().BoolVar(&s.ResetAttempts, "reset-attempts", false, "Reset the activity attempts.")
-	s.Command.Flags().BoolVar(&s.ResetHeartbeats, "reset-heartbeats", false, "Reset the Activity's heartbeats. Only works with --reset-attempts.")
+	s.Command.Flags().BoolVar(&s.ResetHeartbeats, "reset-heartbeats", false, "Reset the Activity's heartbeats.")
 	s.Command.Flags().BoolVar(&s.MatchAll, "match-all", false, "Every activity should be reset. Every activity should be updated. Mutually exclusive with `--activity-id` and `--activity-type`. Note: This is an experimental feature and may change in the future.")
 	s.Jitter = 0
 	s.Command.Flags().Var(&s.Jitter, "jitter", "The activity will reset at random a time within the specified duration. Can only be used with --query.")
@@ -596,9 +598,9 @@ func NewTemporalActivityUnpauseCommand(cctx *CommandContext, parent *TemporalAct
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "The Activity ID to unpause.  Mutually exclusive with `--query`, `--match-all`, and `--activity-type`. Requires `--workflow-id` to be specified.")
-	s.Command.Flags().StringVar(&s.ActivityType, "activity-type", "", "Activities of this Type will unpause. Can only be used without --match-all. Either `activity-id` or `activity-type` must be provided, but not both. Note: Unpausing Activity by Type is an experimental feature and may change in the future.")
+	s.Command.Flags().StringVar(&s.ActivityType, "activity-type", "", "Activities of the given `activity-type` will be unpaused. Mutually exclusive with `activity-id` and --match-all. Note: Unpausing Activity by Type is an experimental feature and may change in the future.")
 	s.Command.Flags().BoolVar(&s.ResetAttempts, "reset-attempts", false, "Reset the activity attempts.")
-	s.Command.Flags().BoolVar(&s.ResetHeartbeats, "reset-heartbeats", false, "Reset the Activity's heartbeats. Only works with --reset-attempts.")
+	s.Command.Flags().BoolVar(&s.ResetHeartbeats, "reset-heartbeats", false, "Reset the Activity's heartbeats.")
 	s.Command.Flags().BoolVar(&s.MatchAll, "match-all", false, "Every paused activity should be unpaused. This flag is ignored if activity-type is provided. Note: This is an experimental feature and may change in the future.")
 	s.Jitter = 0
 	s.Command.Flags().Var(&s.Jitter, "jitter", "The activity will start at random a time within the specified duration. Can only be used with --query.")
