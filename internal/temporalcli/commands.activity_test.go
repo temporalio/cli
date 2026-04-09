@@ -18,9 +18,8 @@ import (
 )
 
 const (
-	activityId   string = "dev-activity-id"
-	activityType string = "DevActivity"
-	identity     string = "MyIdentity"
+	activityId string = "dev-activity-id"
+	identity   string = "MyIdentity"
 )
 
 func (s *SharedServerSuite) TestActivity_Complete() {
@@ -227,33 +226,35 @@ func (s *SharedServerSuite) TestActivityPauseUnpause() {
 	}, 5*time.Second, 100*time.Millisecond)
 }
 
-func (s *SharedServerSuite) TestActivityPauseUnpauseByType() {
-	run := s.waitActivityStarted()
-	res := sendActivityCommand("pause", run, s, "--activity-type", activityType)
-	s.NoError(res.Err)
-
-	res = sendActivityCommand("unpause", run, s, "--activity-type", activityType, "--reset-attempts")
-	s.NoError(res.Err)
-}
-
-func (s *SharedServerSuite) TestActivityCommandFailed_NoActivityTpeOrId() {
+func (s *SharedServerSuite) TestActivityCommandFailed_NoActivityId() {
 	run := s.waitActivityStarted()
 
-	commands := []string{"pause", "unpause", "reset"}
-	for _, command := range commands {
-		// should fail because both activity-id and activity-type are not provided
-		res := sendActivityCommand(command, run, s)
-		s.Error(res.Err)
+	// pause is single-workflow only
+	res := sendActivityCommand("pause", run, s)
+	s.ErrorContains(res.Err, "Activity Id must be specified")
+
+	// unpause and reset support both single-workflow and batch modes
+	for _, command := range []string{"unpause", "reset"} {
+		res = sendActivityCommand(command, run, s)
+		s.ErrorContains(res.Err, "either --activity-id and --workflow-id, or --query must be set")
 	}
 }
 
-func (s *SharedServerSuite) TestActivityCommandFailed_BothActivityTpeOrId() {
+func (s *SharedServerSuite) TestActivityCommandFailed_BothWorkflowIdAndQuery() {
 	run := s.waitActivityStarted()
 
-	commands := []string{"pause", "unpause", "reset"}
+	// unpause and reset support both single-workflow (--workflow-id) and batch
+	// (--query) modes; providing both at once should fail.
+	commands := []string{"unpause", "reset"}
 	for _, command := range commands {
-		res := sendActivityCommand(command, run, s, "--activity-id", activityId, "--activity-type", activityType)
-		s.Error(res.Err)
+		res := s.Execute(
+			"activity", command,
+			"--workflow-id", run.GetID(),
+			"--query", "WorkflowType='DevWorkflow'",
+			"--activity-id", activityId,
+			"--address", s.Address(),
+		)
+		s.ErrorContains(res.Err, "cannot set query when workflow ID is set")
 	}
 }
 
@@ -423,7 +424,7 @@ func (s *SharedServerSuite) TestUnpauseActivity_BatchSuccess() {
 		"--address", s.Address(),
 		"--query", query,
 		"--reason", "unpause-test",
-		"--yes", "--match-all",
+		"--yes",
 	)
 	s.NoError(cmdRes.Err)
 	s.NotEmpty(startBatchRequest.JobId)
@@ -507,7 +508,7 @@ func (s *SharedServerSuite) TestResetActivity_BatchSuccess() {
 		"--address", s.Address(),
 		"--query", query,
 		"--reason", "unpause-test",
-		"--yes", "--match-all",
+		"--yes",
 	)
 	s.NoError(cmdRes.Err)
 	s.NotEmpty(startBatchRequest.JobId)

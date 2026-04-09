@@ -173,6 +173,9 @@ func (c *TemporalActivityUpdateOptionsCommand) run(cctx *CommandContext, args []
 	}
 
 	if exec != nil {
+		if c.ActivityId == "" {
+			return fmt.Errorf("either --activity-id and --workflow-id, or --query must be set")
+		}
 		result, err := cl.WorkflowService().UpdateActivityOptions(cctx, &workflowservice.UpdateActivityOptionsRequest{
 			Namespace: c.Parent.Namespace,
 			Execution: &common.WorkflowExecution{
@@ -208,19 +211,11 @@ func (c *TemporalActivityUpdateOptionsCommand) run(cctx *CommandContext, args []
 	} else {
 		updateActivitiesOperation := &batch.BatchOperationUpdateActivityOptions{
 			Identity: c.Parent.Identity,
-			Activity: &batch.BatchOperationUpdateActivityOptions_Type{Type: c.ActivityType},
+			Activity: &batch.BatchOperationUpdateActivityOptions_MatchAll{MatchAll: true},
 			UpdateMask: &fieldmaskpb.FieldMask{
 				Paths: updatePath,
 			},
 			RestoreOriginal: c.RestoreOriginalOptions,
-		}
-
-		if c.ActivityType != "" {
-			updateActivitiesOperation.Activity = &batch.BatchOperationUpdateActivityOptions_Type{Type: c.ActivityType}
-		} else if c.MatchAll {
-			updateActivitiesOperation.Activity = &batch.BatchOperationUpdateActivityOptions_MatchAll{MatchAll: true}
-		} else {
-			return fmt.Errorf("either Activity Type must be provided or MatchAll must be set to true")
 		}
 
 		batchReq.Operation = &workflowservice.StartBatchOperationRequest_UpdateActivityOptionsOperation{
@@ -235,6 +230,10 @@ func (c *TemporalActivityUpdateOptionsCommand) run(cctx *CommandContext, args []
 }
 
 func (c *TemporalActivityPauseCommand) run(cctx *CommandContext, args []string) error {
+	if c.ActivityId == "" {
+		return fmt.Errorf("Activity Id must be specified")
+	}
+
 	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return err
@@ -249,17 +248,10 @@ func (c *TemporalActivityPauseCommand) run(cctx *CommandContext, args []string) 
 		},
 		Identity: c.Identity,
 		Reason:   c.Reason,
+		Activity: &workflowservice.PauseActivityRequest_Id{Id: c.ActivityId},
 	}
 	if request.Identity == "" {
 		request.Identity = c.Parent.Identity
-	}
-
-	if c.ActivityId != "" && c.ActivityType != "" {
-		return fmt.Errorf("either Activity Type or Activity Id, but not both")
-	} else if c.ActivityType != "" {
-		request.Activity = &workflowservice.PauseActivityRequest_Type{Type: c.ActivityType}
-	} else if c.ActivityId != "" {
-		request.Activity = &workflowservice.PauseActivityRequest_Id{Id: c.ActivityId}
 	}
 
 	_, err = cl.WorkflowService().PauseActivity(cctx, request)
@@ -294,6 +286,10 @@ func (c *TemporalActivityUnpauseCommand) run(cctx *CommandContext, args []string
 	}
 
 	if exec != nil { // single workflow operation
+		if c.ActivityId == "" {
+			return fmt.Errorf("either --activity-id and --workflow-id, or --query must be set")
+		}
+
 		request := &workflowservice.UnpauseActivityRequest{
 			Namespace: c.Parent.Namespace,
 			Execution: &common.WorkflowExecution{
@@ -304,14 +300,7 @@ func (c *TemporalActivityUnpauseCommand) run(cctx *CommandContext, args []string
 			ResetHeartbeat: c.ResetHeartbeats,
 			Jitter:         durationpb.New(c.Jitter.Duration()),
 			Identity:       c.Parent.Identity,
-		}
-
-		if c.ActivityId != "" && c.ActivityType != "" {
-			return fmt.Errorf("either Activity Type or Activity Id, but not both")
-		} else if c.ActivityType != "" {
-			request.Activity = &workflowservice.UnpauseActivityRequest_Type{Type: c.ActivityType}
-		} else if c.ActivityId != "" {
-			request.Activity = &workflowservice.UnpauseActivityRequest_Id{Id: c.ActivityId}
+			Activity:       &workflowservice.UnpauseActivityRequest_Id{Id: c.ActivityId},
 		}
 
 		_, err = cl.WorkflowService().UnpauseActivity(cctx, request)
@@ -324,13 +313,7 @@ func (c *TemporalActivityUnpauseCommand) run(cctx *CommandContext, args []string
 			ResetAttempts:  c.ResetAttempts,
 			ResetHeartbeat: c.ResetHeartbeats,
 			Jitter:         durationpb.New(c.Jitter.Duration()),
-		}
-		if c.ActivityType != "" {
-			unpauseActivitiesOperation.Activity = &batch.BatchOperationUnpauseActivities_Type{Type: c.ActivityType}
-		} else if c.MatchAll {
-			unpauseActivitiesOperation.Activity = &batch.BatchOperationUnpauseActivities_MatchAll{MatchAll: true}
-		} else {
-			return fmt.Errorf("either Activity Type must be provided or MatchAll must be set to true")
+			Activity:       &batch.BatchOperationUnpauseActivities_MatchAll{MatchAll: true},
 		}
 
 		batchReq.Operation = &workflowservice.StartBatchOperationRequest_UnpauseActivitiesOperation{
@@ -369,7 +352,12 @@ func (c *TemporalActivityResetCommand) run(cctx *CommandContext, args []string) 
 	}
 
 	if exec != nil { // single workflow operation
+		if c.ActivityId == "" {
+			return fmt.Errorf("either --activity-id and --workflow-id, or --query must be set")
+		}
+
 		request := &workflowservice.ResetActivityRequest{
+			Activity:  &workflowservice.ResetActivityRequest_Id{Id: c.ActivityId},
 			Namespace: c.Parent.Namespace,
 			Execution: &common.WorkflowExecution{
 				WorkflowId: c.WorkflowId,
@@ -378,16 +366,6 @@ func (c *TemporalActivityResetCommand) run(cctx *CommandContext, args []string) 
 			Identity:       c.Parent.Identity,
 			KeepPaused:     c.KeepPaused,
 			ResetHeartbeat: c.ResetHeartbeats,
-		}
-
-		if c.ActivityId != "" && c.ActivityType != "" {
-			return fmt.Errorf("either Activity Type or Activity Id, but not both")
-		} else if c.ActivityType != "" {
-			request.Activity = &workflowservice.ResetActivityRequest_Type{Type: c.ActivityType}
-		} else if c.ActivityId != "" {
-			request.Activity = &workflowservice.ResetActivityRequest_Id{Id: c.ActivityId}
-		} else {
-			return fmt.Errorf("either Activity Type or Activity Id must be provided")
 		}
 
 		resp, err := cl.WorkflowService().ResetActivity(cctx, request)
@@ -414,13 +392,7 @@ func (c *TemporalActivityResetCommand) run(cctx *CommandContext, args []string) 
 			KeepPaused:             c.KeepPaused,
 			Jitter:                 durationpb.New(c.Jitter.Duration()),
 			RestoreOriginalOptions: c.RestoreOriginalOptions,
-		}
-		if c.ActivityType != "" {
-			resetActivitiesOperation.Activity = &batch.BatchOperationResetActivities_Type{Type: c.ActivityType}
-		} else if c.MatchAll {
-			resetActivitiesOperation.Activity = &batch.BatchOperationResetActivities_MatchAll{MatchAll: true}
-		} else {
-			return fmt.Errorf("either Activity Type must be provided or MatchAll must be set to true")
+			Activity:               &batch.BatchOperationResetActivities_MatchAll{MatchAll: true},
 		}
 
 		batchReq.Operation = &workflowservice.StartBatchOperationRequest_ResetActivitiesOperation{
