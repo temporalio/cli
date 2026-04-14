@@ -260,32 +260,21 @@ commands:
 
       You may follow this command with `temporal activity reset`, and the new values will apply after the reset.
 
-      Either `activity-id`, `activity-type`, or `--match-all` must be specified.
+      Either `--activity-id` or `--query` must be specified.
 
-      Activity options can be updated in bulk with a visibility query list filter.
-      For example, if you want to reset for activities of type Foo, do:
+      Activity options can be updated in bulk with a visibility query list filter:
 
       ```
       temporal activity update-options \
-          --query 'TemporalPauseInfo="property:activityType=Foo"'
-          ...
+          --query 'WorkflowType="YourWorkflow"' \
+          --task-queue NewTaskQueueName
       ```
     options:
       - name: activity-id
         short: a
         type: string
         description: |
-          The Activity ID to update options. Mutually exclusive with `--query`, `--match-all`, and `--activity-type`. Requires `--workflow-id` to be specified.
-      - name: activity-type
-        type: string
-        description: |
-          Activities of this Type will be updated. Mutually exclusive with `--match-all` and `activity-id`.
-          Note: Updating Activity options by Type is an experimental feature and may change in the future.
-      - name: match-all
-        type: bool
-        description: |
-          Every activity should be updated. Mutually exclusive with `--activity-id` and `--activity-type`.
-          Note: This is an experimental feature and may change in the future.
+          The Activity ID to update options. Mutually exclusive with `--query`. Requires `--workflow-id` to be specified.
       - name: task-queue
         type: string
         description: Name of the task queue for the Activity.
@@ -358,9 +347,7 @@ commands:
       If the Activity is on its last retry attempt and fails, the failure will
       be returned to the caller, just as if the Activity had not been paused.
 
-      Activities should be specified either by their Activity ID or Activity Type.
-
-      For example, specify the Activity and Workflow IDs like this:
+      Specify the Activity and Workflow IDs:
 
       ```
       temporal activity pause \
@@ -374,13 +361,7 @@ commands:
       - name: activity-id
         short: a
         type: string
-        description: The Activity ID to pause. Either `activity-id` or `activity-type` must be provided, but not both.
-      - name: activity-type
-        type: string
-        description: |
-          Activities of the given `activity-type` will be paused. Mutually
-          exclusive with `activity-id`.
-          Note: Pausing Activity by Type is an experimental feature and may change in the future.
+        description: The Activity ID to pause. Required.
       - name: identity
         type: string
         description: The identity of the user or client submitting this request.
@@ -406,10 +387,9 @@ commands:
 
       Use `--reset-heartbeat` to reset the Activity's heartbeats.
 
-      Activities can be specified by their Activity ID or Activity Type.
-      One of those parameters must be provided.
+      Either `--activity-id` (with `--workflow-id`) or `--query` must be specified.
 
-      Specify the Activity ID or Type and Workflow IDs:
+      Specify the Activity and Workflow IDs:
 
       ```
       temporal activity unpause \
@@ -419,37 +399,24 @@ commands:
           --reset-heartbeats
       ```
 
-      Activities can be unpaused in bulk via a visibility Query list filter.
-      For example, if you want to unpause activities of type Foo that you
-      previously paused, do:
+      Activities can be unpaused in bulk via a visibility Query list filter:
 
       ```
       temporal activity unpause \
-          --query 'TemporalPauseInfo="property:activityType=Foo"'
+          --query 'TemporalPauseInfo IS NOT NULL'
       ```
     options:
       - name: activity-id
         short: a
         type: string
         description: |
-          The Activity ID to unpause.  Mutually exclusive with `--query`, `--match-all`, and `--activity-type`. Requires `--workflow-id` to be specified.
-      - name: activity-type
-        type: string
-        description: |
-          Activities of the given `activity-type` will be unpaused. Mutually
-          exclusive with `activity-id` and --match-all.
-          Note: Unpausing Activity by Type is an experimental feature and may change in the future.
+          The Activity ID to unpause. Mutually exclusive with `--query`. Requires `--workflow-id` to be specified.
       - name: reset-attempts
         type: bool
         description: Reset the activity attempts.
       - name: reset-heartbeats
         type: bool
         description: Reset the Activity's heartbeats.
-      - name: match-all
-        type: bool
-        description: |
-          Every paused activity should be unpaused. This flag is ignored if activity-type is provided.
-          Note: This is an experimental feature and may change in the future.
       - name: jitter
         type: duration
         description: |
@@ -478,7 +445,7 @@ commands:
       it will be unpaused. If the activity is paused and `keep_paused` flag
       is provided - it will stay paused.
 
-      Activities can be specified by their Activity ID or Activity Type.
+      Either `--activity-id` (with `--workflow-id`) or `--query` must be specified.
 
       ### Resetting activities that heartbeat {#reset-heartbeats}
 
@@ -490,7 +457,7 @@ commands:
 
       If the `reset_heartbeats` flag is set, the heartbeat details will also be cleared.
 
-      Specify the Activity Type of ID and Workflow IDs:
+      Specify the Activity and Workflow IDs:
 
       ```
       temporal activity reset \
@@ -500,26 +467,17 @@ commands:
           --reset-heartbeats
       ```
 
-      Either `activity-id`, `activity-type`, or `--match-all` must be specified.
-
-      Activities can be reset in bulk with a visibility query list filter.
-      For example, if you want to reset activities of type Foo:
+      Activities can be reset in bulk with a visibility query list filter:
 
       ```
       temporal activity reset \
-          --query 'TemporalResetInfo="property:activityType=Foo"'
+          --query 'WorkflowType="YourWorkflow"'
       ```
     options:
       - name: activity-id
         short: a
         type: string
-        description: The Activity ID to reset.  Mutually exclusive with `--query`, `--match-all`, and `--activity-type`. Requires `--workflow-id` to be specified.
-      - name: activity-type
-        type: string
-        description: |
-          Activities of the given `activity-type` will be reset. Mutually
-          exclusive with --match-all and `activity-id`.
-          Note: Resetting Activity by Type is an experimental feature and may change in the future.
+        description: The Activity ID to reset. Mutually exclusive with `--query`. Requires `--workflow-id` to be specified.
       - name: keep-paused
         type: bool
         description: If the activity was paused, it will stay paused.
@@ -529,11 +487,6 @@ commands:
       - name: reset-heartbeats
         type: bool
         description: Reset the Activity's heartbeats.
-      - name: match-all
-        type: bool
-        description: |
-          Every activity should be reset. Every activity should be updated. Mutually exclusive with `--activity-id` and `--activity-type`.
-          Note: This is an experimental feature and may change in the future.
       - name: jitter
         type: duration
         description: |
