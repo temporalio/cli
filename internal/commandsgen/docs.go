@@ -423,6 +423,43 @@ func (w *docWriter) writeIndex(splitParents map[string]bool) {
 	}
 
 	w.fileMap["index"] = buf
+
+	// Generate index pages for each split parent (e.g., cloud/index)
+	for parent := range splitParents {
+		w.writeSplitIndex(parent, fileNames)
+	}
+}
+
+func (w *docWriter) writeSplitIndex(parent string, allFileNames []string) {
+	dirName := strings.ReplaceAll(parent, " ", "-")
+	fileName := dirName + "/index"
+
+	buf := &bytes.Buffer{}
+	buf.WriteString("---\n")
+	buf.WriteString("id: index\n")
+	buf.WriteString("title: Temporal CLI " + parent + " command reference\n")
+	buf.WriteString("sidebar_label: Overview\n")
+	buf.WriteString("description: Command reference for the temporal " + parent + " extension.\n")
+	buf.WriteString("slug: /cli/command-reference/" + dirName + "\n")
+	buf.WriteString("toc_max_heading_level: 4\n")
+	buf.WriteString("keywords:\n")
+	buf.WriteString("  - temporal cli\n")
+	buf.WriteString("  - " + parent + "\n")
+	buf.WriteString("  - command reference\n")
+	buf.WriteString("tags:\n")
+	buf.WriteString("  - Temporal CLI\n")
+	buf.WriteString("---\n\n")
+	buf.WriteString(fmt.Sprintf("This section includes the command reference for the `temporal %s` CLI extension.\n\n", parent))
+
+	for _, name := range allFileNames {
+		if strings.HasPrefix(name, dirName+"/") {
+			parts := strings.Split(name, "/")
+			displayName := parts[len(parts)-1]
+			buf.WriteString(fmt.Sprintf("- [%s](/cli/command-reference/%s)\n", displayName, name))
+		}
+	}
+
+	w.fileMap[fileName] = buf
 }
 
 func (w *docWriter) processOptions(c *Command) {
