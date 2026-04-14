@@ -41,6 +41,9 @@ func GenerateDocsFiles(commands Commands, splitNames []string) (map[string][]byt
 	// Write global flags section once at the end of each file
 	w.writeGlobalFlagsSections()
 
+	// Generate index page
+	w.writeIndex(splitParents)
+
 	// Format and return
 	var finalMap = make(map[string][]byte)
 	for key, buf := range w.fileMap {
@@ -382,6 +385,44 @@ func (w *docWriter) writeGlobalFlagsSections() {
 		}
 		buf.WriteString("\n")
 	}
+}
+
+func (w *docWriter) writeIndex(splitParents map[string]bool) {
+	buf := &bytes.Buffer{}
+	buf.WriteString("---\n")
+	buf.WriteString("id: index\n")
+	buf.WriteString("title: Temporal CLI command reference\n")
+	buf.WriteString("sidebar_label: Overview\n")
+	buf.WriteString("description: Complete command reference for the Temporal CLI, including the cloud extension.\n")
+	buf.WriteString("slug: /cli/command-reference\n")
+	buf.WriteString("toc_max_heading_level: 4\n")
+	buf.WriteString("keywords:\n")
+	buf.WriteString("  - temporal cli\n")
+	buf.WriteString("  - command reference\n")
+	buf.WriteString("tags:\n")
+	buf.WriteString("  - Temporal CLI\n")
+	buf.WriteString("---\n\n")
+	buf.WriteString("This section includes the complete command reference for the `temporal` CLI, including the cloud extension.\n\n")
+
+	// Collect and sort file names
+	var fileNames []string
+	for name := range w.fileMap {
+		fileNames = append(fileNames, name)
+	}
+	sort.Strings(fileNames)
+
+	for _, name := range fileNames {
+		// Use the last path segment as the display name
+		parts := strings.Split(name, "/")
+		displayName := parts[len(parts)-1]
+		if len(parts) > 1 {
+			// Split command (e.g., "cloud/namespace") — show as "cloud namespace"
+			displayName = strings.Join(parts, " ")
+		}
+		buf.WriteString(fmt.Sprintf("- [%s](/cli/command-reference/%s)\n", displayName, name))
+	}
+
+	w.fileMap["index"] = buf
 }
 
 func (w *docWriter) processOptions(c *Command) {
