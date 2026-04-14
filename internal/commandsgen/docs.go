@@ -170,9 +170,27 @@ func (w *docWriter) writeSplitCommand(c *Command, splitRoot string) {
 	w.fileMap[fileName].WriteString("\n\n")
 	w.fileMap[fileName].WriteString("{/* NOTE: This is an auto-generated file. Any edit to this file will be overwritten.\n")
 	w.fileMap[fileName].WriteString("This file is generated from https://github.com/temporalio/cli via cmd/gen-docs */}\n\n")
-	w.fileMap[fileName].WriteString(fmt.Sprintf("This page provides a reference for the `temporal %s` commands. ", fullCmdName))
-	w.fileMap[fileName].WriteString("The flags applicable to each subcommand are presented in a table within the heading for the subcommand. ")
-	w.fileMap[fileName].WriteString("Refer to [Global Flags](#global-flags) for flags that you can use with every subcommand.\n\n")
+
+	if w.isLeafCommand(c) {
+		w.fileMap[fileName].WriteString(fmt.Sprintf("This page provides a reference for the `temporal %s` command.\n\n", fullCmdName))
+		w.fileMap[fileName].WriteString(c.Description + "\n\n")
+
+		// Write options directly if any
+		var options []Option
+		if len(w.optionsStack) > 0 {
+			options = append(options, w.optionsStack[len(w.optionsStack)-1]...)
+		}
+		sort.Slice(options, func(i, j int) bool {
+			return options[i].Name < options[j].Name
+		})
+		if len(options) > 0 {
+			w.writeSplitOptionsTable(options, fileName)
+		}
+	} else {
+		w.fileMap[fileName].WriteString(fmt.Sprintf("This page provides a reference for the `temporal %s` commands. ", fullCmdName))
+		w.fileMap[fileName].WriteString("The flags applicable to each subcommand are presented in a table within the heading for the subcommand. ")
+		w.fileMap[fileName].WriteString("Refer to [Global Flags](#global-flags) for flags that you can use with every subcommand.\n\n")
+	}
 }
 
 func (w *docWriter) writeSplitSubcommand(c *Command, splitRoot string) {
