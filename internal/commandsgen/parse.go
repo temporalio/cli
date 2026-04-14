@@ -45,9 +45,9 @@ type (
 		MaximumArgs            int      `yaml:"maximum-args"`
 		IgnoreMissingEnv       bool     `yaml:"ignores-missing-env"`
 		SubcommandsOptional    bool     `yaml:"subcommands-optional"`
-		Options                []Option `yaml:"options"`
-		OptionSets             []string `yaml:"option-sets"`
-		Docs                   Docs     `yaml:"docs"`
+		Options    []Option `yaml:"options"`
+		OptionSets []string `yaml:"option-sets"`
+		Docs       Docs     `yaml:"docs"`
 	}
 
 	// Docs represents docs-only information that is not used in CLI generation.
