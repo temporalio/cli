@@ -203,7 +203,7 @@ func (w *docWriter) writeSplitSubcommand(c *Command, splitRoot string) {
 	relativeDepth := len(cmdParts) - len(splitParts)
 	prefix := strings.Repeat("#", relativeDepth)
 	leafParts := cmdParts[len(splitParts)+1:]
-	leafName := strings.Join(leafParts, "")
+	leafName := strings.Join(leafParts, " ")
 
 	w.fileMap[fileName].WriteString(prefix + " " + leafName + "\n\n")
 	w.fileMap[fileName].WriteString(c.Description + "\n\n")
