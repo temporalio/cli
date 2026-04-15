@@ -134,7 +134,6 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 	// Log config if requested
 	if t.LogConfig {
 		opts.LogConfig = func(b []byte) {
-			cctx.Logger.Info("Logging config")
 			_, _ = cctx.Options.Stderr.Write(b)
 		}
 	}

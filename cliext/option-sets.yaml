@@ -23,24 +23,20 @@ option-sets:
           `$CONFIG_PATH/temporalio/temporal.toml` where `$CONFIG_PATH` is defined
           as `$HOME/.config` on Unix, `$HOME/Library/Application Support` on
           macOS, and `%AppData%` on Windows.
-        experimental: true
         implied-env: TEMPORAL_CONFIG_FILE
       - name: profile
         type: string
         description: Profile to use for config file.
-        experimental: true
         implied-env: TEMPORAL_PROFILE
       - name: disable-config-file
         type: bool
         description: |
           If set, disables loading environment config from config file.
-        experimental: true
       - name: disable-config-env
         type: bool
         description: |
           If set, disables loading environment config from environment
           variables.
-        experimental: true
       - name: log-level
         type: string-enum
         enum-values:
@@ -51,8 +47,8 @@ option-sets:
           - never
         description: |
           Log level.
-          Default is "info" for most commands and "warn" for "server start-dev".
-        default: info
+          Default is "never" for most commands and "warn" for "server start-dev".
+        default: never
       - name: log-format
         type: string-enum
         description: Log format.

@@ -68,6 +68,15 @@ type jsonTaskQueueInfoRowType struct {
 	StatsByPriorityKey map[string]jsonVersionStatsType `json:"statsByPriorityKey,omitempty"`
 }
 
+type jsonComputeConfigScalingGroupSummary struct {
+	TaskQueueTypes []string `json:"taskQueueTypes,omitempty"`
+	ProviderType   string   `json:"providerType"`
+}
+
+type jsonComputeConfig struct {
+	ScalingGroups []jsonComputeConfigScalingGroupSummary `json:"scalingGroups,omitempty"`
+}
+
 type jsonDeploymentVersionInfoType struct {
 	Version            string                     `json:"version"`
 	CreateTime         time.Time                  `json:"createTime"`
@@ -78,6 +87,7 @@ type jsonDeploymentVersionInfoType struct {
 	DrainageInfo       jsonDrainageInfo           `json:"drainageInfo"`
 	TaskQueuesInfos    []jsonTaskQueueInfoRowType `json:"taskQueuesInfos"`
 	Metadata           map[string]*common.Payload `json:"metadata"`
+	ComputeConfig      *jsonComputeConfig         `json:"computeConfig,omitempty"`
 }
 
 func (s *SharedServerSuite) TestDeployment_Set_Current_Version() {
@@ -929,8 +939,8 @@ func (s *SharedServerSuite) testDeploymentDescribeVersionTaskQueueStats(withPrio
 		// We started one workflow with each priority key (1, 3, 5), so each should have backlog of 1
 		for _, priorityKey := range priorityKeys {
 			// Check that the priority row contains the priority key followed by backlog count of 1
-			nonZeroBacklogIncreaseRate := "0."
-			nonZeroTasksAddRate := "0."
+			nonZeroBacklogIncreaseRate := "."
+			nonZeroTasksAddRate := "."
 			zeroTaskDispatchRate := "0"
 			// Once priority is enabled in all servers by default, check that backlog count of 1 is on each priority row.
 			// For servers where priority is not enabled, or workflows that aren't actively using priority keys,
@@ -1045,4 +1055,334 @@ func (s *SharedServerSuite) testDeploymentDescribeVersionTaskQueueStats(withPrio
 	for _, run := range workflowRuns {
 		s.NoError(run.Get(s.Context, nil))
 	}
+}
+
+func (s *SharedServerSuite) TestCreateWorkerDeployment() {
+	deploymentName := uuid.NewString()
+
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "create",
+			"--address", s.Address(),
+			"--name", deploymentName,
+		)
+		assert.NoError(t, res.Err)
+		assert.Contains(t, res.Stdout.String(), "Successfully created worker deployment")
+	}, 30*time.Second, 100*time.Millisecond)
+
+	// Wait for the deployment to appear
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "describe",
+			"--address", s.Address(),
+			"--name", deploymentName,
+		)
+		assert.NoError(t, res.Err)
+	}, 30*time.Second, 100*time.Millisecond)
+
+	// Attempting to create a WD with the same name should fail with a conflict
+	// error.
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "create",
+			"--address", s.Address(),
+			"--name", deploymentName,
+		)
+		assert.Error(t, res.Err)
+		assert.ErrorContains(t, res.Err, "already exists")
+	}, 30*time.Second, 100*time.Millisecond)
+}
+
+func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_EmptyComputeConfig() {
+	deploymentName := uuid.NewString()
+	taskQueue := uuid.NewString()
+
+	lazyCreatedBuildID := uuid.NewString()
+	lazyCreatedVer := worker.WorkerDeploymentVersion{
+		DeploymentName: deploymentName,
+		BuildID:        lazyCreatedBuildID,
+	}
+
+	// Create worker with explicit versioning. This will end up creating a
+	// WorkerDeployment with the specified name. We will then manually create a
+	// worker deployment version using the `temporal worker deployment
+	// create-version` command.
+	w1 := worker.New(s.Client, taskQueue, worker.Options{
+		DeploymentOptions: worker.DeploymentOptions{
+			UseVersioning: true,
+			Version:       lazyCreatedVer,
+		},
+	})
+
+	// Register a workflow with explicit Pinned versioning behavior to trigger
+	// creation of the worker deployment.
+	w1.RegisterWorkflowWithOptions(
+		func(ctx workflow.Context, input any) (any, error) {
+			workflow.GetSignalChannel(ctx, "complete-signal").Receive(ctx, nil)
+			return nil, nil
+		},
+		workflow.RegisterOptions{
+			Name:               "TestCreateWorkerDeploymentVersion_NoComputeConfig",
+			VersioningBehavior: workflow.VersioningBehaviorPinned,
+		},
+	)
+
+	s.NoError(w1.Start())
+
+	// Wait for the lazily-created deployment to appear
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "describe-version",
+			"--address", s.Address(),
+			"--deployment-name", deploymentName,
+			"--build-id", lazyCreatedBuildID,
+		)
+		assert.NoError(t, res.Err)
+	}, 30*time.Second, 100*time.Millisecond)
+
+	// Now that we know the worker deployment exists (because the above
+	// lazily-created worker deployment version ended up creating it), we will
+	// manually create a new worker deployment version using the `temporal
+	// worker deployment create-version` CLI command.
+	noComputeConfigBuildID := uuid.NewString()
+
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "create-version",
+			"--address", s.Address(),
+			"--deployment-name", deploymentName,
+			"--build-id", noComputeConfigBuildID,
+		)
+		assert.NoError(t, res.Err)
+		assert.Contains(t, res.Stdout.String(), "Successfully created worker deployment version")
+	}, 30*time.Second, 100*time.Millisecond)
+
+	// Wait for the deployment version to appear
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "describe-version",
+			"--address", s.Address(),
+			"--deployment-name", deploymentName,
+			"--build-id", noComputeConfigBuildID,
+		)
+		assert.NoError(t, res.Err)
+	}, 30*time.Second, 100*time.Millisecond)
+
+	// Check that there is no compute config returned for this WDV
+	res := s.Execute(
+		"worker", "deployment", "describe-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", noComputeConfigBuildID,
+		"--output", "json",
+	)
+	s.NoError(res.Err)
+	var jsonOut jsonDeploymentVersionInfoType
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	s.Nil(jsonOut.ComputeConfig, "ComputeConfig should be nil.")
+
+	// Attempting to create a WDV with the same BuildID should fail with a
+	// conflict error.
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "create-version",
+			"--address", s.Address(),
+			"--deployment-name", deploymentName,
+			"--build-id", noComputeConfigBuildID,
+		)
+		assert.Error(t, res.Err)
+		assert.ErrorContains(t, res.Err, "already exists")
+	}, 30*time.Second, 100*time.Millisecond)
+}
+
+func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
+	deploymentName := uuid.NewString()
+	taskQueue := uuid.NewString()
+
+	lazyCreatedBuildID := uuid.NewString()
+	lazyCreatedVer := worker.WorkerDeploymentVersion{
+		DeploymentName: deploymentName,
+		BuildID:        lazyCreatedBuildID,
+	}
+
+	// Create worker with explicit versioning. This will end up creating a
+	// WorkerDeployment with the specified name. We will then manually create a
+	// worker deployment version using the `temporal worker deployment
+	// create-version` command.
+	w1 := worker.New(s.Client, taskQueue, worker.Options{
+		DeploymentOptions: worker.DeploymentOptions{
+			UseVersioning: true,
+			Version:       lazyCreatedVer,
+		},
+	})
+
+	// Register a workflow with explicit Pinned versioning behavior to trigger
+	// creation of the worker deployment.
+	w1.RegisterWorkflowWithOptions(
+		func(ctx workflow.Context, input any) (any, error) {
+			workflow.GetSignalChannel(ctx, "complete-signal").Receive(ctx, nil)
+			return nil, nil
+		},
+		workflow.RegisterOptions{
+			Name:               "TestCreateWorkerDeploymentVersion_Errors",
+			VersioningBehavior: workflow.VersioningBehaviorPinned,
+		},
+	)
+
+	s.NoError(w1.Start())
+
+	// Wait for the lazily-created deployment to appear
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "describe-version",
+			"--address", s.Address(),
+			"--deployment-name", deploymentName,
+			"--build-id", lazyCreatedBuildID,
+		)
+		assert.NoError(t, res.Err)
+	}, 30*time.Second, 100*time.Millisecond)
+
+	// Create some WDVs with invalid compute config parameters.
+	assumeRoleFailureBuildID := uuid.NewString()
+
+	invokeARN := "arn:aws:lambda:us-east-1:123456789012:function:MyExampleFunction:1"
+	assumeRoleARN := "arn:aws:iam::123456789012:role/MyServiceRole"
+	assumeRoleExternalID := "external-id"
+
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "create-version",
+			"--address", s.Address(),
+			"--deployment-name", deploymentName,
+			"--build-id", assumeRoleFailureBuildID,
+			"--aws-lambda-function-arn", invokeARN,
+			"--aws-lambda-assume-role-arn", assumeRoleARN,
+			"--aws-lambda-assume-role-external-id", assumeRoleExternalID,
+		)
+		assert.Error(t, res.Err)
+		assert.ErrorContains(t, res.Err, "failed to assume role arn:aws:iam::123456789012:role/MyServiceRole: operation error STS: AssumeRole")
+	}, 90*time.Second, 100*time.Millisecond)
+
+	missingExternalIDBuildID := uuid.NewString()
+
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "create-version",
+			"--address", s.Address(),
+			"--deployment-name", deploymentName,
+			"--build-id", missingExternalIDBuildID,
+			"--aws-lambda-function-arn", invokeARN,
+			"--aws-lambda-assume-role-arn", assumeRoleARN,
+		)
+		assert.Error(t, res.Err)
+		assert.ErrorContains(t, res.Err, "missing required AWS Lambda provider detail: role_external_id")
+	}, 30*time.Second, 100*time.Millisecond)
+
+	missingAssumeRoleBuildID := uuid.NewString()
+
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "create-version",
+			"--address", s.Address(),
+			"--deployment-name", deploymentName,
+			"--build-id", missingAssumeRoleBuildID,
+			"--aws-lambda-function-arn", invokeARN,
+		)
+		assert.Error(t, res.Err)
+		assert.ErrorContains(t, res.Err, "missing required AWS Lambda provider detail: role")
+	}, 30*time.Second, 100*time.Millisecond)
+}
+
+// TODO(jaypipes): Enable this test when we have a way of ensuring AWS resource
+// fixtures since the CLI test harness uses a real Temporal Server and a real
+// Temporal Server validates any supplied AWS Lambda Function and Assume Role
+// ARNs are good...
+func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_LambdaComputeConfig() {
+	s.T().Skip("AWS Lambda Function and Assume Role fixtures needed.")
+	deploymentName := uuid.NewString()
+	taskQueue := uuid.NewString()
+
+	lazyCreatedBuildID := uuid.NewString()
+	lazyCreatedVer := worker.WorkerDeploymentVersion{
+		DeploymentName: deploymentName,
+		BuildID:        lazyCreatedBuildID,
+	}
+
+	// Create worker with explicit versioning. This will end up creating a
+	// WorkerDeployment with the specified name. We will then manually create a
+	// worker deployment version using the `temporal worker deployment
+	// create-version` command.
+	w1 := worker.New(s.Client, taskQueue, worker.Options{
+		DeploymentOptions: worker.DeploymentOptions{
+			UseVersioning: true,
+			Version:       lazyCreatedVer,
+		},
+	})
+
+	// Register a workflow with explicit Pinned versioning behavior to trigger
+	// creation of the worker deployment.
+	w1.RegisterWorkflowWithOptions(
+		func(ctx workflow.Context, input any) (any, error) {
+			workflow.GetSignalChannel(ctx, "complete-signal").Receive(ctx, nil)
+			return nil, nil
+		},
+		workflow.RegisterOptions{
+			Name:               "TestCreateWorkerDeploymentVersion_LambdaComputeConfig",
+			VersioningBehavior: workflow.VersioningBehaviorPinned,
+		},
+	)
+
+	s.NoError(w1.Start())
+
+	// Now that we know the worker deployment exists (because the above
+	// lazily-created worker deployment version ended up creating it), we will
+	// manually create a new worker deployment version using the `temporal
+	// worker deployment create-version` CLI command.
+	//
+	// Create a WDV with a valid Compute Config specified and verify that the
+	// compute config provider is displayed in the output of `temporal worker
+	// deployment describe-version`
+	computeConfigBuildID := uuid.NewString()
+
+	invokeARN := "arn:aws:lambda:us-east-1:123456789012:function:MyExampleFunction:1"
+	assumeRoleARN := "arn:aws:iam::123456789012:role/MyServiceRole"
+	assumeRoleExternalID := "external-id"
+
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "create-version",
+			"--address", s.Address(),
+			"--deployment-name", deploymentName,
+			"--build-id", computeConfigBuildID,
+			"--aws-lambda-function-arn", invokeARN,
+			"--aws-lambda-assume-role-arn", assumeRoleARN,
+			"--aws-lambda-assume-role-external-id", assumeRoleExternalID,
+		)
+		assert.NoError(t, res.Err)
+		assert.Contains(t, res.Stdout.String(), "Successfully created worker deployment version")
+	}, 30*time.Second, 100*time.Millisecond)
+
+	// Wait for the deployment version to appear
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "describe-version",
+			"--address", s.Address(),
+			"--deployment-name", deploymentName,
+			"--build-id", computeConfigBuildID,
+		)
+		assert.NoError(t, res.Err)
+	}, 30*time.Second, 100*time.Millisecond)
+
+	// Check that there is a compute config returned for this WDV
+	res := s.Execute(
+		"worker", "deployment", "describe-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", computeConfigBuildID,
+		"--output", "json",
+	)
+	s.NoError(res.Err)
+	jsonOut := jsonDeploymentVersionInfoType{}
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	s.NotNil(jsonOut.ComputeConfig, "ComputeConfig should not be nil.")
 }

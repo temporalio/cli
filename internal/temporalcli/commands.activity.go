@@ -156,6 +156,8 @@ func (c *TemporalActivityUpdateOptionsCommand) run(cctx *CommandContext, args []
 		updatePath = append(updatePath, "retry_policy.maximum_attempts")
 	}
 
+	// workflowExecOrBatch is defined on SingleWorkflowOrBatchOptions; bridge via
+	// manual copy from the embedded SingleActivityOrBatchOptions fields.
 	opts := SingleWorkflowOrBatchOptions{
 		WorkflowId: c.WorkflowId,
 		RunId:      c.RunId,
@@ -245,7 +247,11 @@ func (c *TemporalActivityPauseCommand) run(cctx *CommandContext, args []string) 
 			WorkflowId: c.WorkflowId,
 			RunId:      c.RunId,
 		},
-		Identity: c.Parent.Identity,
+		Identity: c.Identity,
+		Reason:   c.Reason,
+	}
+	if request.Identity == "" {
+		request.Identity = c.Parent.Identity
 	}
 
 	if c.ActivityId != "" && c.ActivityType != "" {
@@ -271,6 +277,8 @@ func (c *TemporalActivityUnpauseCommand) run(cctx *CommandContext, args []string
 	}
 	defer cl.Close()
 
+	// workflowExecOrBatch is defined on SingleWorkflowOrBatchOptions; bridge via
+	// manual copy from the embedded SingleActivityOrBatchOptions fields.
 	opts := SingleWorkflowOrBatchOptions{
 		WorkflowId: c.WorkflowId,
 		RunId:      c.RunId,
@@ -344,6 +352,8 @@ func (c *TemporalActivityResetCommand) run(cctx *CommandContext, args []string) 
 	}
 	defer cl.Close()
 
+	// workflowExecOrBatch is defined on SingleWorkflowOrBatchOptions; bridge via
+	// manual copy from the embedded SingleActivityOrBatchOptions fields.
 	opts := SingleWorkflowOrBatchOptions{
 		WorkflowId: c.WorkflowId,
 		RunId:      c.RunId,

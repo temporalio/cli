@@ -48,7 +48,9 @@ type CommandContext struct {
 	FlagsWithEnvVars          []*pflag.Flag
 
 	// These values may not be available until after pre-run of main command
-	Printer               *printer.Printer
+	Printer *printer.Printer
+	// The logger is for the SDK and server. The CLI itself should print warnings or errors to
+	// stderr but should not use logging.
 	Logger                *slog.Logger
 	JSONOutput            bool
 	JSONShorthandPayloads bool
@@ -143,11 +145,7 @@ func (c *CommandContext) preprocessOptions() error {
 			if c.Err() != nil {
 				err = fmt.Errorf("program interrupted")
 			}
-			if c.Logger != nil {
-				c.Logger.Error(err.Error())
-			} else {
-				fmt.Fprintln(os.Stderr, err)
-			}
+			fmt.Fprintf(c.Options.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
 	}
@@ -260,13 +258,11 @@ func UnmarshalProtoJSONWithOptions(b []byte, m proto.Message, jsonShorthandPaylo
 	return opts.Unmarshal(b, m)
 }
 
-// Set flag values from environment file & variables. Returns a callback to log anything interesting
-// since logging will not yet be initialized when this runs.
-func (c *CommandContext) populateFlagsFromEnv(flags *pflag.FlagSet) (func(*slog.Logger), error) {
+// Set flag values from environment file & variables.
+func (c *CommandContext) populateFlagsFromEnv(flags *pflag.FlagSet) error {
 	if flags == nil {
-		return func(logger *slog.Logger) {}, nil
+		return nil
 	}
-	var logCalls []func(*slog.Logger)
 	var flagErr error
 	flags.VisitAll(func(flag *pflag.Flag) {
 		// If the flag was already changed by the user, we don't overwrite
@@ -289,20 +285,14 @@ func (c *CommandContext) populateFlagsFromEnv(flags *pflag.FlagSet) (func(*slog.
 					return
 				}
 				if flag.Changed {
-					logCalls = append(logCalls, func(l *slog.Logger) {
-						l.Info("Env var overrode --env setting", "env_var", anns[0], "flag", flag.Name)
-					})
+					fmt.Fprintf(c.Options.Stderr,
+						"Warning: env var %s overrode --env setting for flag --%s\n", anns[0], flag.Name)
 				}
 				flag.Changed = true
 			}
 		}
 	})
-	logFn := func(logger *slog.Logger) {
-		for _, call := range logCalls {
-			call(logger)
-		}
-	}
-	return logFn, flagErr
+	return flagErr
 }
 
 // Returns error if JSON output enabled
@@ -459,8 +449,7 @@ func (c *TemporalCommand) initCommand(cctx *CommandContext) {
 		cctx.CurrentCommand = cmd
 		// Populate environ. We will make the error return here which will cause
 		// usage to be printed.
-		logCalls, err := cctx.populateFlagsFromEnv(cmd.Flags())
-		if err != nil {
+		if err := cctx.populateFlagsFromEnv(cmd.Flags()); err != nil {
 			return err
 		}
 
@@ -471,8 +460,6 @@ func (c *TemporalCommand) initCommand(cctx *CommandContext) {
 		}
 
 		res := c.preRun(cctx)
-
-		logCalls(cctx.Logger)
 
 		// Always disable color if JSON output is on (must be run after preRun so JSONOutput is set)
 		if cctx.JSONOutput {

@@ -151,6 +151,28 @@ func (v *DeploymentReferenceOptions) BuildFlags(f *pflag.FlagSet) {
 	_ = cobra.MarkFlagRequired(f, "build-id")
 }
 
+type SingleActivityOrBatchOptions struct {
+	WorkflowId string
+	Query      string
+	RunId      string
+	Reason     string
+	Yes        bool
+	Rps        float32
+	Headers    []string
+	FlagSet    *pflag.FlagSet
+}
+
+func (v *SingleActivityOrBatchOptions) BuildFlags(f *pflag.FlagSet) {
+	v.FlagSet = f
+	f.StringVarP(&v.WorkflowId, "workflow-id", "w", "", "Workflow ID. You must set either --workflow-id or --query.")
+	f.StringVarP(&v.Query, "query", "q", "", "Content for an SQL-like `QUERY` List Filter. You must set either --workflow-id or --query. Note: Using --query for batch activity operations is an experimental feature and may change in the future.")
+	f.StringVarP(&v.RunId, "run-id", "r", "", "Run ID. Only use with --workflow-id. Cannot use with --query.")
+	f.StringVar(&v.Reason, "reason", "", "Reason for batch operation. Only use with --query. Defaults to user name.")
+	f.BoolVarP(&v.Yes, "yes", "y", false, "Don't prompt to confirm signaling. Only allowed when --query is present.")
+	f.Float32Var(&v.Rps, "rps", 0, "Limit batch's requests per second. Only allowed if query is present.")
+	f.StringArrayVar(&v.Headers, "headers", nil, "Temporal workflow headers in 'KEY=VALUE' format. Keys must be identifiers, and values must be JSON values. May be passed multiple times to set multiple Temporal headers. Note: These are workflow headers, not gRPC headers.")
+}
+
 type SingleWorkflowOrBatchOptions struct {
 	WorkflowId string
 	Query      string
@@ -425,7 +447,7 @@ func NewTemporalActivityCompleteCommand(cctx *CommandContext, parent *TemporalAc
 		s.Command.Long = "Complete an Activity, marking it as successfully finished. Specify the\nActivity ID and include a JSON result for the returned value:\n\n```\ntemporal activity complete \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --result '{\"YourResultKey\": \"YourResultVal\"}'\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.ActivityId, "activity-id", "", "Activity ID to complete. Required.")
+	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "Activity ID to complete. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "activity-id")
 	s.Command.Flags().StringVar(&s.Result, "result", "", "Result `JSON` to return. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "result")
@@ -459,7 +481,7 @@ func NewTemporalActivityFailCommand(cctx *CommandContext, parent *TemporalActivi
 		s.Command.Long = "Fail an Activity, marking it as having encountered an error. Specify the\nActivity and Workflow IDs:\n\n```\ntemporal activity fail \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.ActivityId, "activity-id", "", "Activity ID to fail. Required.")
+	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "Activity ID to fail. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "activity-id")
 	s.Command.Flags().StringVar(&s.Detail, "detail", "", "Reason for failing the Activity (JSON).")
 	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for failing the Activity.")
@@ -479,6 +501,7 @@ type TemporalActivityPauseCommand struct {
 	ActivityId   string
 	ActivityType string
 	Identity     string
+	Reason       string
 }
 
 func NewTemporalActivityPauseCommand(cctx *CommandContext, parent *TemporalActivityCommand) *TemporalActivityPauseCommand {
@@ -494,8 +517,9 @@ func NewTemporalActivityPauseCommand(cctx *CommandContext, parent *TemporalActiv
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "The Activity ID to pause. Either `activity-id` or `activity-type` must be provided, but not both.")
-	s.Command.Flags().StringVar(&s.ActivityType, "activity-type", "", "All activities of the Activity Type will be paused. Either `activity-id` or `activity-type` must be provided, but not both. Note: Pausing Activity by Type is an experimental feature and may change in the future.")
+	s.Command.Flags().StringVar(&s.ActivityType, "activity-type", "", "Activities of the given `activity-type` will be paused. Mutually exclusive with `activity-id`. Note: Pausing Activity by Type is an experimental feature and may change in the future.")
 	s.Command.Flags().StringVar(&s.Identity, "identity", "", "The identity of the user or client submitting this request.")
+	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for pausing the Activity.")
 	s.WorkflowReferenceOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -508,7 +532,7 @@ func NewTemporalActivityPauseCommand(cctx *CommandContext, parent *TemporalActiv
 type TemporalActivityResetCommand struct {
 	Parent  *TemporalActivityCommand
 	Command cobra.Command
-	SingleWorkflowOrBatchOptions
+	SingleActivityOrBatchOptions
 	ActivityId             string
 	ActivityType           string
 	KeepPaused             bool
@@ -532,15 +556,15 @@ func NewTemporalActivityResetCommand(cctx *CommandContext, parent *TemporalActiv
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "The Activity ID to reset.  Mutually exclusive with `--query`, `--match-all`, and `--activity-type`. Requires `--workflow-id` to be specified.")
-	s.Command.Flags().StringVar(&s.ActivityType, "activity-type", "", "Activities of this Type will be reset. Mutually exclusive with `--match-all` and `activity-id`.")
+	s.Command.Flags().StringVar(&s.ActivityType, "activity-type", "", "Activities of the given `activity-type` will be reset. Mutually exclusive with --match-all and `activity-id`. Note: Resetting Activity by Type is an experimental feature and may change in the future.")
 	s.Command.Flags().BoolVar(&s.KeepPaused, "keep-paused", false, "If the activity was paused, it will stay paused.")
 	s.Command.Flags().BoolVar(&s.ResetAttempts, "reset-attempts", false, "Reset the activity attempts.")
-	s.Command.Flags().BoolVar(&s.ResetHeartbeats, "reset-heartbeats", false, "Reset the Activity's heartbeats. Only works with --reset-attempts.")
-	s.Command.Flags().BoolVar(&s.MatchAll, "match-all", false, "Every activity should be reset. Every activity should be updated. Mutually exclusive with `--activity-id` and `--activity-type`.")
+	s.Command.Flags().BoolVar(&s.ResetHeartbeats, "reset-heartbeats", false, "Reset the Activity's heartbeats.")
+	s.Command.Flags().BoolVar(&s.MatchAll, "match-all", false, "Every activity should be reset. Every activity should be updated. Mutually exclusive with `--activity-id` and `--activity-type`. Note: This is an experimental feature and may change in the future.")
 	s.Jitter = 0
 	s.Command.Flags().Var(&s.Jitter, "jitter", "The activity will reset at random a time within the specified duration. Can only be used with --query.")
 	s.Command.Flags().BoolVar(&s.RestoreOriginalOptions, "restore-original-options", false, "Restore the original options of the activity.")
-	s.SingleWorkflowOrBatchOptions.BuildFlags(s.Command.Flags())
+	s.SingleActivityOrBatchOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -552,7 +576,7 @@ func NewTemporalActivityResetCommand(cctx *CommandContext, parent *TemporalActiv
 type TemporalActivityUnpauseCommand struct {
 	Parent  *TemporalActivityCommand
 	Command cobra.Command
-	SingleWorkflowOrBatchOptions
+	SingleActivityOrBatchOptions
 	ActivityId      string
 	ActivityType    string
 	ResetAttempts   bool
@@ -574,13 +598,13 @@ func NewTemporalActivityUnpauseCommand(cctx *CommandContext, parent *TemporalAct
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "The Activity ID to unpause.  Mutually exclusive with `--query`, `--match-all`, and `--activity-type`. Requires `--workflow-id` to be specified.")
-	s.Command.Flags().StringVar(&s.ActivityType, "activity-type", "", "Activities of this Type will unpause. Can only be used without --match-all. Either `activity-id` or `activity-type` must be provided, but not both.")
+	s.Command.Flags().StringVar(&s.ActivityType, "activity-type", "", "Activities of the given `activity-type` will be unpaused. Mutually exclusive with `activity-id` and --match-all. Note: Unpausing Activity by Type is an experimental feature and may change in the future.")
 	s.Command.Flags().BoolVar(&s.ResetAttempts, "reset-attempts", false, "Reset the activity attempts.")
-	s.Command.Flags().BoolVar(&s.ResetHeartbeats, "reset-heartbeats", false, "Reset the Activity's heartbeats. Only works with --reset-attempts.")
-	s.Command.Flags().BoolVar(&s.MatchAll, "match-all", false, "Every paused activity should be unpaused. This flag is ignored if activity-type is provided.")
+	s.Command.Flags().BoolVar(&s.ResetHeartbeats, "reset-heartbeats", false, "Reset the Activity's heartbeats.")
+	s.Command.Flags().BoolVar(&s.MatchAll, "match-all", false, "Every paused activity should be unpaused. This flag is ignored if activity-type is provided. Note: This is an experimental feature and may change in the future.")
 	s.Jitter = 0
 	s.Command.Flags().Var(&s.Jitter, "jitter", "The activity will start at random a time within the specified duration. Can only be used with --query.")
-	s.SingleWorkflowOrBatchOptions.BuildFlags(s.Command.Flags())
+	s.SingleActivityOrBatchOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -592,7 +616,7 @@ func NewTemporalActivityUnpauseCommand(cctx *CommandContext, parent *TemporalAct
 type TemporalActivityUpdateOptionsCommand struct {
 	Parent  *TemporalActivityCommand
 	Command cobra.Command
-	SingleWorkflowOrBatchOptions
+	SingleActivityOrBatchOptions
 	ActivityId              string
 	ActivityType            string
 	MatchAll                bool
@@ -621,8 +645,8 @@ func NewTemporalActivityUpdateOptionsCommand(cctx *CommandContext, parent *Tempo
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "The Activity ID to update options. Mutually exclusive with `--query`, `--match-all`, and `--activity-type`. Requires `--workflow-id` to be specified.")
-	s.Command.Flags().StringVar(&s.ActivityType, "activity-type", "", "Activities of this Type will be updated. Mutually exclusive with `--match-all` and `activity-id`.")
-	s.Command.Flags().BoolVar(&s.MatchAll, "match-all", false, "Every activity should be updated. Mutually exclusive with `--activity-id` and `--activity-type`.")
+	s.Command.Flags().StringVar(&s.ActivityType, "activity-type", "", "Activities of this Type will be updated. Mutually exclusive with `--match-all` and `activity-id`. Note: Updating Activity options by Type is an experimental feature and may change in the future.")
+	s.Command.Flags().BoolVar(&s.MatchAll, "match-all", false, "Every activity should be updated. Mutually exclusive with `--activity-id` and `--activity-type`. Note: This is an experimental feature and may change in the future.")
 	s.Command.Flags().StringVar(&s.TaskQueue, "task-queue", "", "Name of the task queue for the Activity.")
 	s.ScheduleToCloseTimeout = 0
 	s.Command.Flags().Var(&s.ScheduleToCloseTimeout, "schedule-to-close-timeout", "Indicates how long the caller is willing to wait for an activity completion. Limits how long retries will be attempted.")
@@ -639,7 +663,7 @@ func NewTemporalActivityUpdateOptionsCommand(cctx *CommandContext, parent *Tempo
 	s.Command.Flags().Float32Var(&s.RetryBackoffCoefficient, "retry-backoff-coefficient", 0, "Coefficient used to calculate the next retry interval. The next retry interval is previous interval multiplied by the backoff coefficient. Must be 1 or larger.")
 	s.Command.Flags().IntVar(&s.RetryMaximumAttempts, "retry-maximum-attempts", 0, "Maximum number of attempts. When exceeded the retries stop even if not expired yet. Setting this value to 1 disables retries. Setting this value to 0 means unlimited attempts(up to the timeouts).")
 	s.Command.Flags().BoolVar(&s.RestoreOriginalOptions, "restore-original-options", false, "Restore the original options of the activity.")
-	s.SingleWorkflowOrBatchOptions.BuildFlags(s.Command.Flags())
+	s.SingleActivityOrBatchOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -2117,7 +2141,7 @@ func NewTemporalServerStartDevCommand(cctx *CommandContext, parent *TemporalServ
 	s.Command.Flags().StringVar(&s.UiCodecEndpoint, "ui-codec-endpoint", "", "UI remote codec HTTP endpoint.")
 	s.Command.Flags().StringArrayVar(&s.SqlitePragma, "sqlite-pragma", nil, "SQLite pragma statements in \"PRAGMA=VALUE\" format.")
 	s.Command.Flags().StringArrayVar(&s.DynamicConfigValue, "dynamic-config-value", nil, "Dynamic configuration value using `KEY=VALUE` pairs. Keys must be identifiers, and values must be JSON values. For example: `YourKey=\"YourString\"` Can be passed multiple times.")
-	s.Command.Flags().BoolVar(&s.LogConfig, "log-config", false, "Log the server config to stderr.")
+	s.Command.Flags().BoolVar(&s.LogConfig, "log-config", false, "Print the server config to stderr.")
 	s.Command.Flags().StringArrayVar(&s.SearchAttribute, "search-attribute", nil, "Search attributes to register using `KEY=VALUE` pairs. Keys must be identifiers, and values must be the search attribute type, which is one of the following: Text, Keyword, Int, Double, Bool, Datetime, KeywordList.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -2868,6 +2892,8 @@ func NewTemporalWorkerDeploymentCommand(cctx *CommandContext, parent *TemporalWo
 		s.Command.Long = "Deployment commands perform operations on Worker Deployments:\n\n```\ntemporal worker deployment [command] [options]\n```\n\nFor example:\n\n```\ntemporal worker deployment list\n```\n\nLists the Deployments in the client's namespace.\n\nArguments can be Worker Deployment Versions associated with\na Deployment, specified using the Deployment name and Build ID.\n\nFor example:\n\n```\ntemporal worker deployment set-current-version \\\n         --deployment-name YourDeploymentName --build-id YourBuildID\n```\n\nSets the current Deployment Version for a given Deployment."
 	}
 	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalWorkerDeploymentCreateCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkerDeploymentCreateVersionCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentDeleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentDeleteVersionCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentDescribeCommand(cctx, &s).Command)
@@ -2877,6 +2903,66 @@ func NewTemporalWorkerDeploymentCommand(cctx *CommandContext, parent *TemporalWo
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentSetCurrentVersionCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentSetRampingVersionCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentUpdateVersionMetadataCommand(cctx, &s).Command)
+	return &s
+}
+
+type TemporalWorkerDeploymentCreateCommand struct {
+	Parent  *TemporalWorkerDeploymentCommand
+	Command cobra.Command
+	DeploymentNameOptions
+}
+
+func NewTemporalWorkerDeploymentCreateCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentCommand) *TemporalWorkerDeploymentCreateCommand {
+	var s TemporalWorkerDeploymentCreateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "create [flags]"
+	s.Command.Short = "Create a new Worker Deployment"
+	if hasHighlighting {
+		s.Command.Long = "Create a new Worker Deployment:\n\n\x1b[1mtemporal worker deployment create [options]\x1b[0m\n\nWorker Deployments are lazily created the first time a Worker polls the\nTemporal Server and specifies a VersionOverride. However, if you need to\npre-define a compute configuration (for instance to set up a serverless\nWorker), you need to call \x1b[1mtemporal worker deployment create-version\x1b[0m and\npass in the name of the Worker Deployment. The \x1b[1mtemporal worker\ndeployment create\x1b[0m command allows you to pre-define a Worker Deployment\nso that calls to \x1b[1mtemporal worker deployment create-version\x1b[0m will\nsucceed.\n\nIf a Worker Deployment with the supplied name already exists, this\ncommand will return an error.\n\nNote: This is an experimental feature and may change in the future."
+	} else {
+		s.Command.Long = "Create a new Worker Deployment:\n\n```\ntemporal worker deployment create [options]\n```\n\nWorker Deployments are lazily created the first time a Worker polls the\nTemporal Server and specifies a VersionOverride. However, if you need to\npre-define a compute configuration (for instance to set up a serverless\nWorker), you need to call `temporal worker deployment create-version` and\npass in the name of the Worker Deployment. The `temporal worker\ndeployment create` command allows you to pre-define a Worker Deployment\nso that calls to `temporal worker deployment create-version` will\nsucceed.\n\nIf a Worker Deployment with the supplied name already exists, this\ncommand will return an error.\n\nNote: This is an experimental feature and may change in the future."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.DeploymentNameOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalWorkerDeploymentCreateVersionCommand struct {
+	Parent  *TemporalWorkerDeploymentCommand
+	Command cobra.Command
+	DeploymentVersionOptions
+	AwsLambdaFunctionArn          string
+	AwsLambdaAssumeRoleArn        string
+	AwsLambdaAssumeRoleExternalId string
+}
+
+func NewTemporalWorkerDeploymentCreateVersionCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentCommand) *TemporalWorkerDeploymentCreateVersionCommand {
+	var s TemporalWorkerDeploymentCreateVersionCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "create-version [flags]"
+	s.Command.Short = "Create a new Worker Deployment Version"
+	if hasHighlighting {
+		s.Command.Long = "\nCreate a new Worker Deployment Version:\n\n\x1b[1mtemporal worker deployment create-version [options]\x1b[0m\n\nConfigure a Worker Deployment Version's compute configuration as needed.\nFor example, pass compute provider information for an AWS Lambda function\nthat spawns a Worker in the Worker Deployment:\n\n\x1b[1mtemporal worker deployment create-version \\\n    --namespace YourNamespaceName \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --aws-lambda-function-arn LambdaFunctionARN \\\n    --aws-lambda-assume-role-arn LambdaAssumeRoleARN \\\n    --aws-lambda-assume-role-external-id LambdaAssumeRoleExternalID\x1b[0m\n\nIf a Worker Deployment Version with the supplied BuildID already exists,\nthis command will return an error.\n\nNote: This is an experimental feature and may change in the future."
+	} else {
+		s.Command.Long = "\nCreate a new Worker Deployment Version:\n\n```\ntemporal worker deployment create-version [options]\n```\n\nConfigure a Worker Deployment Version's compute configuration as needed.\nFor example, pass compute provider information for an AWS Lambda function\nthat spawns a Worker in the Worker Deployment:\n\n```\ntemporal worker deployment create-version \\\n    --namespace YourNamespaceName \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --aws-lambda-function-arn LambdaFunctionARN \\\n    --aws-lambda-assume-role-arn LambdaAssumeRoleARN \\\n    --aws-lambda-assume-role-external-id LambdaAssumeRoleExternalID\n```\n\nIf a Worker Deployment Version with the supplied BuildID already exists,\nthis command will return an error.\n\nNote: This is an experimental feature and may change in the future."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.AwsLambdaFunctionArn, "aws-lambda-function-arn", "", "Qualified (contains version suffix) or unqualified AWS Lambda function ARN to invoke when there are no active pollers for task queue targets in the Worker Deployment.")
+	s.Command.Flags().StringVar(&s.AwsLambdaAssumeRoleArn, "aws-lambda-assume-role-arn", "", "AWS IAM role ARN that the Temporal server will assume when invoking the Lambda function that spawns a new Worker in this Worker Deployment Version. Required when --aws-lambda-function-arn is specified.")
+	s.Command.Flags().StringVar(&s.AwsLambdaAssumeRoleExternalId, "aws-lambda-assume-role-external-id", "", "Temporal server will enforce that the AWS IAM trust policy associated with the AWS IAM role specified in --aws-lambda-assume-role-arn has an aws:ExternalId condition that matches the supplied value. Required when --aws-lambda-function-arn is specified.")
+	s.DeploymentVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
 	return &s
 }
 
