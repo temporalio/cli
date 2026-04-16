@@ -47,7 +47,6 @@ import (
 	"go.temporal.io/server/common/metrics"
 	sqliteplugin "go.temporal.io/server/common/persistence/sql/sqlplugin/sqlite"
 	"go.temporal.io/server/common/primitives"
-	"go.temporal.io/server/components/nexusoperations"
 	"go.temporal.io/server/schema/sqlite"
 	sqliteschema "go.temporal.io/server/schema/sqlite"
 	"go.temporal.io/server/temporal"
@@ -240,9 +239,6 @@ func (s *StartOptions) buildServerOptions() ([]temporal.ServerOption, *slog.Leve
 	dynConf[dynamicconfig.HistoryCacheHostLevelMaxSize.Key()] = 8096
 	// Up default visibility RPS
 	dynConf[dynamicconfig.FrontendMaxNamespaceVisibilityRPSPerInstance.Key()] = 100
-	// Enable the system callback URL for worker targets.
-	// TODO: Remove this when upgrading to server 1.31.
-	dynConf[nexusoperations.UseSystemCallbackURL.Key()] = true
 
 	// Dynamic config if set
 	for k, v := range s.DynamicConfigValues {
