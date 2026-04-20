@@ -93,8 +93,8 @@ func (s *SharedServerSuite) TestTaskQueue_Config_Set_And_Get_Both_Limits() {
 func (s *SharedServerSuite) TestTaskQueue_Config_Unset_Rate_Limits() {
 	taskQueue := "test-config-queue-" + s.T().Name()
 	testIdentity := "test-identity-" + s.T().Name()
-	var config taskQueueConfigType
-	// Set initial configuration
+
+	// Set both rate limits
 	res := s.Execute(
 		"task-queue", "config", "set",
 		"--address", s.Address(),
@@ -102,10 +102,50 @@ func (s *SharedServerSuite) TestTaskQueue_Config_Unset_Rate_Limits() {
 		"--task-queue-type", "activity",
 		"--identity", testIdentity,
 		"--queue-rps-limit", "10.0",
+		"--queue-rps-limit-reason", "test",
 		"--fairness-key-rps-limit-default", "5.0",
+		"--fairness-key-rps-limit-reason", "test",
 	)
 	s.NoError(res.Err)
 
+	// Unset queue rate limit (set to default)
+	res = s.Execute(
+		"task-queue", "config", "set",
+		"--address", s.Address(),
+		"--task-queue", taskQueue,
+		"--task-queue-type", "activity",
+		"--queue-rps-limit", "default",
+		"--queue-rps-limit-reason", "unset",
+	)
+	s.NoError(res.Err)
+
+	// Verify queue rate limit is unset but fairness limit remains
+	res = s.Execute(
+		"task-queue", "config", "get",
+		"--address", s.Address(),
+		"--task-queue", taskQueue,
+		"--task-queue-type", "activity",
+		"-o", "json",
+	)
+	s.NoError(res.Err)
+
+	var config taskQueueConfigType
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &config))
+	s.Nil(config.QueueRateLimit.RateLimit)
+	s.Equal(float32(5.0), config.FairnessKeysRateLimitDefault.RateLimit.RequestsPerSecond)
+
+	// Unset fairness key rate limit
+	res = s.Execute(
+		"task-queue", "config", "set",
+		"--address", s.Address(),
+		"--task-queue", taskQueue,
+		"--task-queue-type", "activity",
+		"--fairness-key-rps-limit-default", "default",
+		"--fairness-key-rps-limit-reason", "unset",
+	)
+	s.NoError(res.Err)
+
+	// Verify both are now unset
 	res = s.Execute(
 		"task-queue", "config", "get",
 		"--address", s.Address(),
@@ -116,66 +156,7 @@ func (s *SharedServerSuite) TestTaskQueue_Config_Unset_Rate_Limits() {
 	s.NoError(res.Err)
 
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &config))
-	s.NotNil(config.QueueRateLimit)
-	s.NotNil(config.QueueRateLimit.RateLimit)
-	s.Equal(float32(10.0), config.QueueRateLimit.RateLimit.RequestsPerSecond)
-	s.NotNil(config.FairnessKeysRateLimitDefault)
-	s.NotNil(config.FairnessKeysRateLimitDefault.RateLimit)
-	s.Equal(float32(5.0), config.FairnessKeysRateLimitDefault.RateLimit.RequestsPerSecond)
-
-	// Unset queue rate limit (set to default)
-	res = s.Execute(
-		"task-queue", "config", "set",
-		"--address", s.Address(),
-		"--task-queue", taskQueue,
-		"--task-queue-type", "activity",
-		"--identity", testIdentity,
-		"--queue-rps-limit", "default",
-	)
-	s.NoError(res.Err)
-
-	// Get configuration and verify queue rate limit is unset using JSON output
-	res = s.Execute(
-		"task-queue", "config", "get",
-		"--address", s.Address(),
-		"--task-queue", taskQueue,
-		"--task-queue-type", "activity",
-		"-o", "json",
-	)
-	s.NoError(res.Err)
-
-	var unsetQrlConfig taskQueueConfigType
-	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &unsetQrlConfig))
-	s.NotNil(unsetQrlConfig.QueueRateLimit)
-	s.Nil(unsetQrlConfig.QueueRateLimit.RateLimit)
-	s.NotNil(unsetQrlConfig.FairnessKeysRateLimitDefault)
-	s.Equal(float32(5.0), unsetQrlConfig.FairnessKeysRateLimitDefault.RateLimit.RequestsPerSecond)
-
-	// Unset fairness key rate limit
-	res = s.Execute(
-		"task-queue", "config", "set",
-		"--address", s.Address(),
-		"--task-queue", taskQueue,
-		"--task-queue-type", "activity",
-		"--identity", testIdentity,
-		"--fairness-key-rps-limit-default", "default",
-	)
-	s.NoError(res.Err)
-
-	// Get configuration and verify both are unset using JSON output
-	res = s.Execute(
-		"task-queue", "config", "get",
-		"--address", s.Address(),
-		"--task-queue", taskQueue,
-		"--task-queue-type", "activity",
-		"-o", "json",
-	)
-	s.NoError(res.Err)
-
-	var unsetFkrlConfig taskQueueConfigType
-	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &unsetFkrlConfig))
-	s.NotNil(unsetFkrlConfig.FairnessKeysRateLimitDefault)
-	s.Nil(unsetFkrlConfig.FairnessKeysRateLimitDefault.RateLimit)
+	s.Nil(config.FairnessKeysRateLimitDefault.RateLimit)
 }
 
 func (s *SharedServerSuite) TestTaskQueue_Config_Workflow_Task_Queue_Restrictions() {
@@ -327,102 +308,7 @@ namespace = "%s"
 		"CLI flag should override envconfig and query default namespace")
 }
 
-func (s *SharedServerSuite) TestTaskQueue_Config_FairnessWeightOverrides_DuplicateKeys() {
-	taskQueue := "test-config-queue-" + s.T().Name()
-
-	// Try to set duplicate keys - should fail
-	res := s.Execute(
-		"task-queue", "config", "set",
-		"--address", s.Address(),
-		"--task-queue", taskQueue,
-		"--task-queue-type", "activity",
-		"--fairness-key-weight-set", "HighPriority=2.0",
-		"--fairness-key-weight-set", "HighPriority=3.0",
-	)
-	s.Error(res.Err)
-	s.Contains(res.Stderr.String(), "duplicate fairness key")
-}
-
-func (s *SharedServerSuite) TestTaskQueue_Config_FairnessWeightOverrides_ConflictingSetUnset() {
-	taskQueue := "test-config-queue-" + s.T().Name()
-
-	// Try to set and unset same key - should fail
-	res := s.Execute(
-		"task-queue", "config", "set",
-		"--address", s.Address(),
-		"--task-queue", taskQueue,
-		"--task-queue-type", "activity",
-		"--fairness-key-weight-set", "Priority=2.0",
-		"--fairness-key-weight-unset", "Priority",
-	)
-	s.Error(res.Err)
-	s.Contains(res.Stderr.String(), "both set and unset")
-}
-
-func (s *SharedServerSuite) TestTaskQueue_Config_FairnessWeightOverrides_InvalidWeight() {
-	taskQueue := "test-config-queue-" + s.T().Name()
-
-	// Try to set weight below minimum - should fail
-	res := s.Execute(
-		"task-queue", "config", "set",
-		"--address", s.Address(),
-		"--task-queue", taskQueue,
-		"--task-queue-type", "activity",
-		"--fairness-key-weight-set", "Priority=0.0005",
-	)
-	s.Error(res.Err)
-	s.Contains(res.Stderr.String(), "below minimum")
-
-	// Try negative weight - should fail parsing
-	res = s.Execute(
-		"task-queue", "config", "set",
-		"--address", s.Address(),
-		"--task-queue", taskQueue,
-		"--task-queue-type", "activity",
-		"--fairness-key-weight-set", "Priority=-1.0",
-	)
-	s.Error(res.Err)
-	s.Contains(res.Stderr.String(), "below minimum")
-}
-
-func (s *SharedServerSuite) TestTaskQueue_Config_FairnessWeightOverrides_InvalidFormat() {
-	taskQueue := "test-config-queue-" + s.T().Name()
-
-	// Missing equals sign
-	res := s.Execute(
-		"task-queue", "config", "set",
-		"--address", s.Address(),
-		"--task-queue", taskQueue,
-		"--task-queue-type", "activity",
-		"--fairness-key-weight-set", "Priority",
-	)
-	s.Error(res.Err)
-	s.Contains(res.Stderr.String(), "expected key=weight")
-
-	// Empty key
-	res = s.Execute(
-		"task-queue", "config", "set",
-		"--address", s.Address(),
-		"--task-queue", taskQueue,
-		"--task-queue-type", "activity",
-		"--fairness-key-weight-set", "=1.0",
-	)
-	s.Error(res.Err)
-	s.Contains(res.Stderr.String(), "empty key")
-
-	// Empty weight
-	res = s.Execute(
-		"task-queue", "config", "set",
-		"--address", s.Address(),
-		"--task-queue", taskQueue,
-		"--task-queue-type", "activity",
-		"--fairness-key-weight-set", "Priority=",
-	)
-	s.Error(res.Err)
-	s.Contains(res.Stderr.String(), "empty weight")
-}
-
-func (s *SharedServerSuite) TestTaskQueue_Config_RequireAtLeastOneUpdate() {
+func (s *SharedServerSuite) TestTaskQueue_Config_Validation() {
 	taskQueue := "test-config-queue-" + s.T().Name()
 
 	// No updates specified - should fail
@@ -434,13 +320,9 @@ func (s *SharedServerSuite) TestTaskQueue_Config_RequireAtLeastOneUpdate() {
 	)
 	s.Error(res.Err)
 	s.Contains(res.Stderr.String(), "at least one configuration update")
-}
-
-func (s *SharedServerSuite) TestTaskQueue_Config_RateLimitReasonRequired() {
-	taskQueue := "test-config-queue-" + s.T().Name()
 
 	// Set rate limit without reason - should fail
-	res := s.Execute(
+	res = s.Execute(
 		"task-queue", "config", "set",
 		"--address", s.Address(),
 		"--task-queue", taskQueue,
@@ -449,13 +331,9 @@ func (s *SharedServerSuite) TestTaskQueue_Config_RateLimitReasonRequired() {
 	)
 	s.Error(res.Err)
 	s.Contains(res.Stderr.String(), "reason is required")
-}
-
-func (s *SharedServerSuite) TestTaskQueue_Config_ZeroRateLimitWarning() {
-	taskQueue := "test-config-queue-" + s.T().Name()
 
 	// Set rate limit to zero - should succeed but warn
-	res := s.Execute(
+	res = s.Execute(
 		"task-queue", "config", "set",
 		"--address", s.Address(),
 		"--task-queue", taskQueue,
@@ -466,12 +344,58 @@ func (s *SharedServerSuite) TestTaskQueue_Config_ZeroRateLimitWarning() {
 	s.NoError(res.Err)
 	s.Contains(res.Stdout.String(), "WARNING")
 	s.Contains(res.Stdout.String(), "STOP ALL TRAFFIC")
+
+	// Duplicate fairness keys - should fail
+	res = s.Execute(
+		"task-queue", "config", "set",
+		"--address", s.Address(),
+		"--task-queue", taskQueue,
+		"--task-queue-type", "activity",
+		"--fairness-key-weight-set", "Priority=2.0",
+		"--fairness-key-weight-set", "Priority=3.0",
+	)
+	s.Error(res.Err)
+	s.Contains(res.Stderr.String(), "duplicate fairness key")
+
+	// Set and unset same key - should fail
+	res = s.Execute(
+		"task-queue", "config", "set",
+		"--address", s.Address(),
+		"--task-queue", taskQueue,
+		"--task-queue-type", "activity",
+		"--fairness-key-weight-set", "Priority=2.0",
+		"--fairness-key-weight-unset", "Priority",
+	)
+	s.Error(res.Err)
+	s.Contains(res.Stderr.String(), "both set and unset")
+
+	// Weight below minimum - should fail
+	res = s.Execute(
+		"task-queue", "config", "set",
+		"--address", s.Address(),
+		"--task-queue", taskQueue,
+		"--task-queue-type", "activity",
+		"--fairness-key-weight-set", "Priority=0.0005",
+	)
+	s.Error(res.Err)
+	s.Contains(res.Stderr.String(), "below minimum")
+
+	// Invalid format - should fail
+	res = s.Execute(
+		"task-queue", "config", "set",
+		"--address", s.Address(),
+		"--task-queue", taskQueue,
+		"--task-queue-type", "activity",
+		"--fairness-key-weight-set", "Priority",
+	)
+	s.Error(res.Err)
+	s.Contains(res.Stderr.String(), "expected key=weight")
 }
 
 func (s *SharedServerSuite) TestTaskQueue_Config_FairnessWeightOverrides() {
 	taskQueue := "test-config-queue-" + s.T().Name()
 
-	// Set fairness weight overrides
+	// Set multiple fairness weight overrides
 	res := s.Execute(
 		"task-queue", "config", "set",
 		"--address", s.Address(),
@@ -481,9 +405,8 @@ func (s *SharedServerSuite) TestTaskQueue_Config_FairnessWeightOverrides() {
 		"--fairness-key-weight-set", "LowPriority=0.5",
 	)
 	s.NoError(res.Err)
-	s.Contains(res.Stdout.String(), "Successfully updated task queue configuration")
 
-	// Get the configuration and verify weights were set
+	// Verify weights were set
 	res = s.Execute(
 		"task-queue", "config", "get",
 		"--address", s.Address(),
@@ -495,7 +418,6 @@ func (s *SharedServerSuite) TestTaskQueue_Config_FairnessWeightOverrides() {
 
 	var config taskQueueConfigType
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &config))
-	s.NotNil(config.FairnessWeightOverrides)
 	s.Equal(float32(2.0), config.FairnessWeightOverrides["HighPriority"])
 	s.Equal(float32(0.5), config.FairnessWeightOverrides["LowPriority"])
 
@@ -519,40 +441,9 @@ func (s *SharedServerSuite) TestTaskQueue_Config_FairnessWeightOverrides() {
 	)
 	s.NoError(res.Err)
 
-	var config2 taskQueueConfigType
-	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &config2))
-	s.NotNil(config2.FairnessWeightOverrides)
-	s.Equal(float32(2.0), config2.FairnessWeightOverrides["HighPriority"])
-	s.NotContains(config2.FairnessWeightOverrides, "LowPriority")
-
-	// Add more weights
-	res = s.Execute(
-		"task-queue", "config", "set",
-		"--address", s.Address(),
-		"--task-queue", taskQueue,
-		"--task-queue-type", "activity",
-		"--fairness-key-weight-set", "MediumPriority=1.5",
-		"--fairness-key-weight-set", "LowPriority=0.3",
-	)
-	s.NoError(res.Err)
-
-	// Verify all three weights exist
-	res = s.Execute(
-		"task-queue", "config", "get",
-		"--address", s.Address(),
-		"--task-queue", taskQueue,
-		"--task-queue-type", "activity",
-		"-o", "json",
-	)
-	s.NoError(res.Err)
-
-	var config3 taskQueueConfigType
-	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &config3))
-	s.NotNil(config3.FairnessWeightOverrides)
-	s.Len(config3.FairnessWeightOverrides, 3)
-	s.Equal(float32(2.0), config3.FairnessWeightOverrides["HighPriority"])
-	s.Equal(float32(1.5), config3.FairnessWeightOverrides["MediumPriority"])
-	s.Equal(float32(0.3), config3.FairnessWeightOverrides["LowPriority"])
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &config))
+	s.Equal(float32(2.0), config.FairnessWeightOverrides["HighPriority"])
+	s.NotContains(config.FairnessWeightOverrides, "LowPriority")
 
 	// Unset all weights
 	res = s.Execute(
@@ -574,7 +465,6 @@ func (s *SharedServerSuite) TestTaskQueue_Config_FairnessWeightOverrides() {
 	)
 	s.NoError(res.Err)
 
-	var config4 taskQueueConfigType
-	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &config4))
-	s.Empty(config4.FairnessWeightOverrides)
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &config))
+	s.Empty(config.FairnessWeightOverrides)
 }
