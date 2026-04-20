@@ -3773,6 +3773,7 @@ type TemporalWorkflowShowCommand struct {
 	WorkflowReferenceOptions
 	Follow   bool
 	Detailed bool
+	Reverse  bool
 }
 
 func NewTemporalWorkflowShowCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowShowCommand {
@@ -3789,6 +3790,7 @@ func NewTemporalWorkflowShowCommand(cctx *CommandContext, parent *TemporalWorkfl
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().BoolVarP(&s.Follow, "follow", "f", false, "Follow the Workflow Execution progress in real time. Does not apply to JSON output.")
 	s.Command.Flags().BoolVar(&s.Detailed, "detailed", false, "Display events as detailed sections instead of table. Does not apply to JSON output.")
+	s.Command.Flags().BoolVar(&s.Reverse, "reverse", false, "Fetch Event History newest-event-first. Cannot be combined with --follow.")
 	s.WorkflowReferenceOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {

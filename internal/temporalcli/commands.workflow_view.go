@@ -572,6 +572,10 @@ func (c *TemporalWorkflowResultCommand) run(cctx *CommandContext, _ []string) er
 }
 
 func (c *TemporalWorkflowShowCommand) run(cctx *CommandContext, _ []string) error {
+	if c.Reverse && c.Follow {
+		return fmt.Errorf("--reverse cannot be combined with --follow")
+	}
+
 	// Call describe
 	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
@@ -583,10 +587,12 @@ func (c *TemporalWorkflowShowCommand) run(cctx *CommandContext, _ []string) erro
 	iter := &structuredHistoryIter{
 		ctx:            cctx,
 		client:         cl,
+		namespace:      c.Parent.Namespace,
 		workflowID:     c.WorkflowId,
 		runID:          c.RunId,
 		includeDetails: c.Detailed,
 		follow:         c.Follow,
+		reverse:        c.Reverse,
 	}
 	if !cctx.JSONOutput {
 		cctx.Printer.Println(color.MagentaString("Progress:"))

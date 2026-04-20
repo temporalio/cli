@@ -707,16 +707,24 @@ func coloredEventType(e enums.EventType) string {
 type structuredHistoryIter struct {
 	ctx            context.Context
 	client         client.Client
+	namespace      string
 	workflowID     string
 	runID          string
 	includeDetails bool
 	// If set true, long poll the history for updates
 	follow bool
+	// If set true, fetch history newest-event-first via GetWorkflowExecutionHistoryReverse
+	reverse bool
 	// If and when the iterator encounters a workflow-terminating event, it will store it here
 	wfResult *history.HistoryEvent
 
-	// Internal
+	// Internal (forward)
 	iter client.HistoryEventIterator
+
+	// Internal (reverse)
+	reverseBuf       []*history.HistoryEvent
+	reverseNextToken []byte
+	reverseStarted   bool
 }
 
 func (s *structuredHistoryIter) print(cctx *CommandContext) error {
@@ -784,15 +792,20 @@ func (s *structuredHistoryIter) Next() (any, error) {
 		Type: coloredEventType(event.EventType),
 	}
 
-	// Follow continue as new
-	if attr := event.GetWorkflowExecutionContinuedAsNewEventAttributes(); attr != nil {
-		s.runID = attr.NewExecutionRunId
-		s.iter = nil
+	// Follow continue as new (forward only; reverse traversal stays within the requested run)
+	if !s.reverse {
+		if attr := event.GetWorkflowExecutionContinuedAsNewEventAttributes(); attr != nil {
+			s.runID = attr.NewExecutionRunId
+			s.iter = nil
+		}
 	}
 	return data, nil
 }
 
 func (s *structuredHistoryIter) NextRawEvent() (*history.HistoryEvent, error) {
+	if s.reverse {
+		return s.nextRawEventReverse()
+	}
 	// Load iter
 	if s.iter == nil {
 		s.iter = s.client.GetWorkflowHistory(
@@ -805,6 +818,39 @@ func (s *structuredHistoryIter) NextRawEvent() (*history.HistoryEvent, error) {
 	if err != nil {
 		return nil, err
 	}
+	if isWorkflowTerminatingEvent(event.EventType) {
+		s.wfResult = event
+	}
+	return event, nil
+}
+
+func (s *structuredHistoryIter) nextRawEventReverse() (*history.HistoryEvent, error) {
+	for len(s.reverseBuf) == 0 {
+		if s.reverseStarted && len(s.reverseNextToken) == 0 {
+			return nil, nil
+		}
+		s.reverseStarted = true
+		resp, err := s.client.WorkflowService().GetWorkflowExecutionHistoryReverse(
+			s.ctx,
+			&workflowservice.GetWorkflowExecutionHistoryReverseRequest{
+				Namespace: s.namespace,
+				Execution: &common.WorkflowExecution{
+					WorkflowId: s.workflowID,
+					RunId:      s.runID,
+				},
+				NextPageToken: s.reverseNextToken,
+			},
+		)
+		if err != nil {
+			return nil, err
+		}
+		s.reverseNextToken = resp.GetNextPageToken()
+		if h := resp.GetHistory(); h != nil {
+			s.reverseBuf = h.GetEvents()
+		}
+	}
+	event := s.reverseBuf[0]
+	s.reverseBuf = s.reverseBuf[1:]
 	if isWorkflowTerminatingEvent(event.EventType) {
 		s.wfResult = event
 	}
