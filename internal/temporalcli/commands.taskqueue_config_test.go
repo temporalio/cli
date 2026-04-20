@@ -327,6 +327,147 @@ namespace = "%s"
 		"CLI flag should override envconfig and query default namespace")
 }
 
+func (s *SharedServerSuite) TestTaskQueue_Config_FairnessWeightOverrides_DuplicateKeys() {
+	taskQueue := "test-config-queue-" + s.T().Name()
+
+	// Try to set duplicate keys - should fail
+	res := s.Execute(
+		"task-queue", "config", "set",
+		"--address", s.Address(),
+		"--task-queue", taskQueue,
+		"--task-queue-type", "activity",
+		"--fairness-key-weight-set", "HighPriority=2.0",
+		"--fairness-key-weight-set", "HighPriority=3.0",
+	)
+	s.Error(res.Err)
+	s.Contains(res.Stderr.String(), "duplicate fairness key")
+}
+
+func (s *SharedServerSuite) TestTaskQueue_Config_FairnessWeightOverrides_ConflictingSetUnset() {
+	taskQueue := "test-config-queue-" + s.T().Name()
+
+	// Try to set and unset same key - should fail
+	res := s.Execute(
+		"task-queue", "config", "set",
+		"--address", s.Address(),
+		"--task-queue", taskQueue,
+		"--task-queue-type", "activity",
+		"--fairness-key-weight-set", "Priority=2.0",
+		"--fairness-key-weight-unset", "Priority",
+	)
+	s.Error(res.Err)
+	s.Contains(res.Stderr.String(), "both set and unset")
+}
+
+func (s *SharedServerSuite) TestTaskQueue_Config_FairnessWeightOverrides_InvalidWeight() {
+	taskQueue := "test-config-queue-" + s.T().Name()
+
+	// Try to set weight below minimum - should fail
+	res := s.Execute(
+		"task-queue", "config", "set",
+		"--address", s.Address(),
+		"--task-queue", taskQueue,
+		"--task-queue-type", "activity",
+		"--fairness-key-weight-set", "Priority=0.0005",
+	)
+	s.Error(res.Err)
+	s.Contains(res.Stderr.String(), "below minimum")
+
+	// Try negative weight - should fail parsing
+	res = s.Execute(
+		"task-queue", "config", "set",
+		"--address", s.Address(),
+		"--task-queue", taskQueue,
+		"--task-queue-type", "activity",
+		"--fairness-key-weight-set", "Priority=-1.0",
+	)
+	s.Error(res.Err)
+	s.Contains(res.Stderr.String(), "below minimum")
+}
+
+func (s *SharedServerSuite) TestTaskQueue_Config_FairnessWeightOverrides_InvalidFormat() {
+	taskQueue := "test-config-queue-" + s.T().Name()
+
+	// Missing equals sign
+	res := s.Execute(
+		"task-queue", "config", "set",
+		"--address", s.Address(),
+		"--task-queue", taskQueue,
+		"--task-queue-type", "activity",
+		"--fairness-key-weight-set", "Priority",
+	)
+	s.Error(res.Err)
+	s.Contains(res.Stderr.String(), "expected key=weight")
+
+	// Empty key
+	res = s.Execute(
+		"task-queue", "config", "set",
+		"--address", s.Address(),
+		"--task-queue", taskQueue,
+		"--task-queue-type", "activity",
+		"--fairness-key-weight-set", "=1.0",
+	)
+	s.Error(res.Err)
+	s.Contains(res.Stderr.String(), "empty key")
+
+	// Empty weight
+	res = s.Execute(
+		"task-queue", "config", "set",
+		"--address", s.Address(),
+		"--task-queue", taskQueue,
+		"--task-queue-type", "activity",
+		"--fairness-key-weight-set", "Priority=",
+	)
+	s.Error(res.Err)
+	s.Contains(res.Stderr.String(), "empty weight")
+}
+
+func (s *SharedServerSuite) TestTaskQueue_Config_RequireAtLeastOneUpdate() {
+	taskQueue := "test-config-queue-" + s.T().Name()
+
+	// No updates specified - should fail
+	res := s.Execute(
+		"task-queue", "config", "set",
+		"--address", s.Address(),
+		"--task-queue", taskQueue,
+		"--task-queue-type", "activity",
+	)
+	s.Error(res.Err)
+	s.Contains(res.Stderr.String(), "at least one configuration update")
+}
+
+func (s *SharedServerSuite) TestTaskQueue_Config_RateLimitReasonRequired() {
+	taskQueue := "test-config-queue-" + s.T().Name()
+
+	// Set rate limit without reason - should fail
+	res := s.Execute(
+		"task-queue", "config", "set",
+		"--address", s.Address(),
+		"--task-queue", taskQueue,
+		"--task-queue-type", "activity",
+		"--queue-rps-limit", "10.0",
+	)
+	s.Error(res.Err)
+	s.Contains(res.Stderr.String(), "reason is required")
+}
+
+func (s *SharedServerSuite) TestTaskQueue_Config_ZeroRateLimitWarning() {
+	taskQueue := "test-config-queue-" + s.T().Name()
+
+	// Set rate limit to zero - should succeed but warn
+	res := s.Execute(
+		"task-queue", "config", "set",
+		"--address", s.Address(),
+		"--task-queue", taskQueue,
+		"--task-queue-type", "activity",
+		"--queue-rps-limit", "0",
+		"--queue-rps-limit-reason", "emergency stop",
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "WARNING")
+	s.Contains(res.Stdout.String(), "STOP ALL TRAFFIC")
+}
+
 func (s *SharedServerSuite) TestTaskQueue_Config_FairnessWeightOverrides() {
 	taskQueue := "test-config-queue-" + s.T().Name()
 

@@ -14,9 +14,9 @@ import (
 // TaskQueueConfigGetCommand handles getting task queue configuration
 func (c *TemporalTaskQueueConfigGetCommand) run(cctx *CommandContext, args []string) error {
 	// Validate inputs before dialing client
-	taskQueue := c.TaskQueue
+	taskQueue := strings.TrimSpace(c.TaskQueue)
 	if taskQueue == "" {
-		return fmt.Errorf("taskQueue name is required")
+		return fmt.Errorf("task queue name is required and cannot be empty")
 	}
 
 	taskQueueType, err := parseTaskQueueType(c.TaskQueueType.Value)
@@ -56,36 +56,101 @@ func (c *TemporalTaskQueueConfigGetCommand) run(cctx *CommandContext, args []str
 	return printTaskQueueConfig(cctx, resp.Config)
 }
 
+const (
+	// maxFairnessKeyLength matches server-side limit in temporal/common/priorities/priority_util.go
+	maxFairnessKeyLength = 64
+
+	// minFairnessWeight matches server-side limit in temporal/service/matching/fairness_util.go
+	// Server clamps weights to this minimum when applying them
+	minFairnessWeight = 0.001
+)
+
 // parseFairnessKeyWeights parses "key=weight" format strings into a map
+// Returns an error if there are duplicate keys, invalid weights, or malformed input
 func parseFairnessKeyWeights(inputs []string) (map[string]float32, error) {
 	weights := make(map[string]float32)
+	seen := make(map[string]bool)
+
 	for _, input := range inputs {
 		parts := strings.SplitN(input, "=", 2)
 		if len(parts) != 2 {
-			return nil, fmt.Errorf("invalid format: %s (expected key=weight)", input)
+			return nil, fmt.Errorf("invalid format: %q (expected key=weight)", input)
 		}
+
 		key := strings.TrimSpace(parts[0])
 		if key == "" {
-			return nil, fmt.Errorf("empty key in: %s", input)
+			return nil, fmt.Errorf("empty key in: %q", input)
 		}
-		weight, err := strconv.ParseFloat(strings.TrimSpace(parts[1]), 32)
+
+		// Check for duplicate keys
+		if seen[key] {
+			return nil, fmt.Errorf("duplicate fairness key %q specified multiple times", key)
+		}
+		seen[key] = true
+
+		// Validate key length (server enforces 64 byte limit)
+		if len(key) > maxFairnessKeyLength {
+			return nil, fmt.Errorf("fairness key %q exceeds maximum length of %d bytes", key, maxFairnessKeyLength)
+		}
+
+		weightStr := strings.TrimSpace(parts[1])
+		if weightStr == "" {
+			return nil, fmt.Errorf("empty weight value for key %q", key)
+		}
+
+		weight, err := strconv.ParseFloat(weightStr, 32)
 		if err != nil {
-			return nil, fmt.Errorf("invalid weight in %s: %w", input, err)
+			return nil, fmt.Errorf("invalid weight %q for key %q: must be a number", weightStr, key)
 		}
-		if weight < 0 {
-			return nil, fmt.Errorf("weight must be non-negative in: %s", input)
+
+		// Validate weight bounds - matches server-side validation
+		// Server only validates weight > 0 and clamps to minWeight at runtime
+		if weight < minFairnessWeight {
+			return nil, fmt.Errorf("weight %.3f for key %q is below minimum %.3f", weight, key, minFairnessWeight)
 		}
+
 		weights[key] = float32(weight)
 	}
 	return weights, nil
 }
 
+// validateFairnessKeyNames validates that key names are non-empty and within length limits
+func validateFairnessKeyNames(keys []string) error {
+	seen := make(map[string]bool)
+	for _, key := range keys {
+		trimmed := strings.TrimSpace(key)
+		if trimmed == "" {
+			return fmt.Errorf("empty fairness key name")
+		}
+		if seen[trimmed] {
+			return fmt.Errorf("duplicate fairness key %q specified multiple times", trimmed)
+		}
+		seen[trimmed] = true
+
+		if len(trimmed) > maxFairnessKeyLength {
+			return fmt.Errorf("fairness key %q exceeds maximum length of %d bytes", trimmed, maxFairnessKeyLength)
+		}
+	}
+	return nil
+}
+
+// findConflictingKeys returns keys that appear in both set and unset lists
+func findConflictingKeys(setWeights map[string]float32, unsetKeys []string) []string {
+	conflicts := []string{}
+	for _, key := range unsetKeys {
+		if _, exists := setWeights[key]; exists {
+			conflicts = append(conflicts, key)
+		}
+	}
+	return conflicts
+}
+
 // TaskQueueConfigSetCommand handles setting task queue configuration
 func (c *TemporalTaskQueueConfigSetCommand) run(cctx *CommandContext, args []string) error {
 	// Validate inputs before dialing client
-	taskQueue := c.TaskQueue
+	taskQueue := strings.TrimSpace(c.TaskQueue)
 	if taskQueue == "" {
-		return fmt.Errorf("taskQueue name is required")
+		return fmt.Errorf("task queue name is required and cannot be empty")
 	}
 
 	taskQueueType, err := parseTaskQueueType(c.TaskQueueType.Value)
@@ -103,43 +168,73 @@ func (c *TemporalTaskQueueConfigSetCommand) run(cctx *CommandContext, args []str
 
 	// Helper to parse RPS values for a given flag name.
 	// Accepts "default" or a non-negative float string.
-	parseRPS := func(flagName string) (*taskqueue.RateLimit, error) {
+	// Returns (rateLimit, isZero, error)
+	parseRPS := func(flagName string) (*taskqueue.RateLimit, bool, error) {
 		raw := strings.TrimSpace(c.Command.Flags().Lookup(flagName).Value.String())
 		if raw == "" {
-			return nil, fmt.Errorf("invalid value for --%s: must be a non-negative number or 'default'", flagName)
+			return nil, false, fmt.Errorf("invalid value for --%s: must be a non-negative number or 'default'", flagName)
 		}
 		if strings.EqualFold(raw, "default") {
 			// Unset: returning nil RateLimit removes the existing rate limit.
-			return nil, nil
+			return nil, false, nil
 		}
 		v, err := strconv.ParseFloat(raw, 32)
 		if err != nil {
-			return nil, fmt.Errorf("invalid value for --%s: must be a non-negative number or 'default'", flagName)
+			return nil, false, fmt.Errorf("invalid value for --%s: must be a non-negative number or 'default'", flagName)
 		}
 		if v < 0 {
-			return nil, fmt.Errorf("invalid value for --%s: must be >= 0 or 'default'", flagName)
+			return nil, false, fmt.Errorf("invalid value for --%s: must be >= 0 or 'default'", flagName)
 		}
-		return &taskqueue.RateLimit{RequestsPerSecond: float32(v)}, nil
+		isZero := v == 0
+		return &taskqueue.RateLimit{RequestsPerSecond: float32(v)}, isZero, nil
 	}
 
+	// Parse and validate queue rate limit
 	var queueRpsLimitParsed *taskqueue.RateLimit
+	var queueRateLimitIsZero bool
 	if c.Command.Flags().Changed("queue-rps-limit") {
 		var err error
-		if queueRpsLimitParsed, err = parseRPS("queue-rps-limit"); err != nil {
+		queueRpsLimitParsed, queueRateLimitIsZero, err = parseRPS("queue-rps-limit")
+		if err != nil {
 			return err
+		}
+
+		// Validate reason is provided
+		if c.QueueRpsLimitReason == "" {
+			return fmt.Errorf("--queue-rps-limit-reason is required when setting or unsetting queue rate limit")
+		}
+
+		// Warn about zero rate limit (stops all traffic)
+		if queueRateLimitIsZero {
+			cctx.Printer.Println("WARNING: Setting queue rate limit to 0 will STOP ALL TRAFFIC on this task queue.")
+			cctx.Printer.Println("         This will prevent any tasks from being dispatched until the limit is changed.")
 		}
 	} else if c.Command.Flags().Changed("queue-rps-limit-reason") {
-		return fmt.Errorf("queue-rps-limit-reason can only be set if queue-rps-limit is updated")
+		return fmt.Errorf("--queue-rps-limit-reason can only be set if --queue-rps-limit is specified")
 	}
 
+	// Parse and validate fairness key rate limit default
 	var fairnessKeyRpsLimitDefaultParsed *taskqueue.RateLimit
+	var fairnessRateLimitIsZero bool
 	if c.Command.Flags().Changed("fairness-key-rps-limit-default") {
 		var err error
-		if fairnessKeyRpsLimitDefaultParsed, err = parseRPS("fairness-key-rps-limit-default"); err != nil {
+		fairnessKeyRpsLimitDefaultParsed, fairnessRateLimitIsZero, err = parseRPS("fairness-key-rps-limit-default")
+		if err != nil {
 			return err
 		}
-	} else if c.Command.Flags().Changed("fairness-key-rps-limit-default-reason") {
-		return fmt.Errorf("fairness-key-rps-limit-default-reason can only be set if fairness-key-rps-limit-default is updated")
+
+		// Validate reason is provided
+		if c.FairnessKeyRpsLimitReason == "" {
+			return fmt.Errorf("--fairness-key-rps-limit-reason is required when setting or unsetting fairness key rate limit")
+		}
+
+		// Warn about zero rate limit
+		if fairnessRateLimitIsZero {
+			cctx.Printer.Println("WARNING: Setting fairness key rate limit default to 0 will STOP ALL TRAFFIC for fairness keys.")
+			cctx.Printer.Println("         This will prevent tasks with fairness keys from being dispatched until the limit is changed.")
+		}
+	} else if c.Command.Flags().Changed("fairness-key-rps-limit-reason") {
+		return fmt.Errorf("--fairness-key-rps-limit-reason can only be set if --fairness-key-rps-limit-default is specified")
 	}
 
 	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
@@ -176,25 +271,50 @@ func (c *TemporalTaskQueueConfigSetCommand) run(cctx *CommandContext, args []str
 		}
 	}
 
+	// Validate at least one configuration change is requested
+	hasAnyUpdate := c.Command.Flags().Changed("queue-rps-limit") ||
+		c.Command.Flags().Changed("fairness-key-rps-limit-default") ||
+		len(c.FairnessKeyWeightSet) > 0 ||
+		len(c.FairnessKeyWeightUnset) > 0 ||
+		c.FairnessKeyWeightUnsetAll
+
+	if !hasAnyUpdate {
+		return fmt.Errorf("at least one configuration update must be specified (use --help to see available options)")
+	}
+
 	// Handle fairness weight overrides
-	// Validate mutual exclusivity
+	// Validate mutual exclusivity of unset-all with other weight operations
 	if c.FairnessKeyWeightUnsetAll {
 		if len(c.FairnessKeyWeightSet) > 0 || len(c.FairnessKeyWeightUnset) > 0 {
 			return fmt.Errorf("--fairness-key-weight-unset-all cannot be used with --fairness-key-weight-set or --fairness-key-weight-unset")
 		}
 	}
 
-	// Handle set operations
+	// Parse and validate set operations
+	var setWeights map[string]float32
 	if len(c.FairnessKeyWeightSet) > 0 {
-		weights, err := parseFairnessKeyWeights(c.FairnessKeyWeightSet)
+		var err error
+		setWeights, err = parseFairnessKeyWeights(c.FairnessKeyWeightSet)
 		if err != nil {
 			return err
 		}
-		request.SetFairnessWeightOverrides = weights
+		request.SetFairnessWeightOverrides = setWeights
 	}
 
-	// Handle unset operations
+	// Validate unset operations
 	if len(c.FairnessKeyWeightUnset) > 0 {
+		if err := validateFairnessKeyNames(c.FairnessKeyWeightUnset); err != nil {
+			return fmt.Errorf("invalid fairness key in unset list: %w", err)
+		}
+
+		// Check for conflicts between set and unset
+		if setWeights != nil {
+			conflicts := findConflictingKeys(setWeights, c.FairnessKeyWeightUnset)
+			if len(conflicts) > 0 {
+				return fmt.Errorf("fairness keys appear in both set and unset operations: %v", conflicts)
+			}
+		}
+
 		request.UnsetFairnessWeightOverrides = c.FairnessKeyWeightUnset
 	}
 
@@ -213,19 +333,24 @@ func (c *TemporalTaskQueueConfigSetCommand) run(cctx *CommandContext, args []str
 		if err != nil {
 			return fmt.Errorf("error fetching current config for unset-all: %w", err)
 		}
-		if descResp.Config != nil && descResp.Config.FairnessWeightOverrides != nil {
+		if descResp.Config != nil && descResp.Config.FairnessWeightOverrides != nil && len(descResp.Config.FairnessWeightOverrides) > 0 {
 			keys := make([]string, 0, len(descResp.Config.FairnessWeightOverrides))
 			for key := range descResp.Config.FairnessWeightOverrides {
 				keys = append(keys, key)
 			}
 			request.UnsetFairnessWeightOverrides = keys
+			cctx.Printer.Println(fmt.Sprintf("Unsetting %d fairness weight override(s)", len(keys)))
+		} else {
+			cctx.Printer.Println("No fairness weight overrides found to unset")
+			// Don't return error, just proceed with no-op update
 		}
 	}
 
 	// Call the API
 	resp, err := cl.WorkflowService().UpdateTaskQueueConfig(cctx, request)
 	if err != nil {
-		return fmt.Errorf("error updating task queue config: %w", err)
+		// Provide more context in error message
+		return fmt.Errorf("failed to update task queue config for %s/%s: %w", namespace, taskQueue, err)
 	}
 
 	cctx.Printer.Println("Successfully updated task queue configuration")

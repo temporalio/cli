@@ -233,7 +233,7 @@ func (v *SharedWorkflowStartOptions) BuildFlags(f *pflag.FlagSet) {
 	f.StringVar(&v.StaticDetails, "static-details", "", "Static Workflow details for human consumption in UIs. Uses Temporal Markdown formatting, may be multiple lines. EXPERIMENTAL.")
 	f.IntVar(&v.PriorityKey, "priority-key", 0, "Priority key (1-5, lower numbers = higher priority). Tasks in a queue should be processed in close-to-priority-order. Default is 3 when not specified.")
 	f.StringVar(&v.FairnessKey, "fairness-key", "", "Fairness key (max 64 bytes) for proportional task dispatch. Tasks with same key share capacity based on their weight.")
-	f.Float32Var(&v.FairnessWeight, "fairness-weight", 0, "Weight [0.001-1000] for this fairness key. Keys are dispatched proportionally to their weights.")
+	f.Float32Var(&v.FairnessWeight, "fairness-weight", 0, "Weight (minimum 0.001) for this fairness key. Keys are dispatched proportionally to their weights.")
 }
 
 type WorkflowStartOptions struct {

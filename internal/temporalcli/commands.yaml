@@ -4603,7 +4603,7 @@ option-sets:
       - name: fairness-weight
         type: float
         description: |
-          Weight [0.001-1000] for this fairness key.
+          Weight (minimum 0.001) for this fairness key.
           Keys are dispatched proportionally to their weights.
 
   - name: workflow-start
