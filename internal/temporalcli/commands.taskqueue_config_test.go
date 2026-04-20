@@ -9,6 +9,7 @@ import (
 type taskQueueConfigType struct {
 	QueueRateLimit               *rateLimitConfigType `json:"queueRateLimit,omitempty"`
 	FairnessKeysRateLimitDefault *rateLimitConfigType `json:"fairnessKeysRateLimitDefault,omitempty"`
+	FairnessWeightOverrides      map[string]float32   `json:"fairnessWeightOverrides,omitempty"`
 }
 
 type rateLimitConfigType struct {
@@ -324,4 +325,115 @@ namespace = "%s"
 	// In default namespace, no config was set for this task queue
 	s.Contains(res.Stdout.String(), "No configuration found for task queue",
 		"CLI flag should override envconfig and query default namespace")
+}
+
+func (s *SharedServerSuite) TestTaskQueue_Config_FairnessWeightOverrides() {
+	taskQueue := "test-config-queue-" + s.T().Name()
+
+	// Set fairness weight overrides
+	res := s.Execute(
+		"task-queue", "config", "set",
+		"--address", s.Address(),
+		"--task-queue", taskQueue,
+		"--task-queue-type", "activity",
+		"--fairness-key-weight-set", "HighPriority=2.0",
+		"--fairness-key-weight-set", "LowPriority=0.5",
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Successfully updated task queue configuration")
+
+	// Get the configuration and verify weights were set
+	res = s.Execute(
+		"task-queue", "config", "get",
+		"--address", s.Address(),
+		"--task-queue", taskQueue,
+		"--task-queue-type", "activity",
+		"-o", "json",
+	)
+	s.NoError(res.Err)
+
+	var config taskQueueConfigType
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &config))
+	s.NotNil(config.FairnessWeightOverrides)
+	s.Equal(float32(2.0), config.FairnessWeightOverrides["HighPriority"])
+	s.Equal(float32(0.5), config.FairnessWeightOverrides["LowPriority"])
+
+	// Unset one weight
+	res = s.Execute(
+		"task-queue", "config", "set",
+		"--address", s.Address(),
+		"--task-queue", taskQueue,
+		"--task-queue-type", "activity",
+		"--fairness-key-weight-unset", "LowPriority",
+	)
+	s.NoError(res.Err)
+
+	// Verify only HighPriority remains
+	res = s.Execute(
+		"task-queue", "config", "get",
+		"--address", s.Address(),
+		"--task-queue", taskQueue,
+		"--task-queue-type", "activity",
+		"-o", "json",
+	)
+	s.NoError(res.Err)
+
+	var config2 taskQueueConfigType
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &config2))
+	s.NotNil(config2.FairnessWeightOverrides)
+	s.Equal(float32(2.0), config2.FairnessWeightOverrides["HighPriority"])
+	s.NotContains(config2.FairnessWeightOverrides, "LowPriority")
+
+	// Add more weights
+	res = s.Execute(
+		"task-queue", "config", "set",
+		"--address", s.Address(),
+		"--task-queue", taskQueue,
+		"--task-queue-type", "activity",
+		"--fairness-key-weight-set", "MediumPriority=1.5",
+		"--fairness-key-weight-set", "LowPriority=0.3",
+	)
+	s.NoError(res.Err)
+
+	// Verify all three weights exist
+	res = s.Execute(
+		"task-queue", "config", "get",
+		"--address", s.Address(),
+		"--task-queue", taskQueue,
+		"--task-queue-type", "activity",
+		"-o", "json",
+	)
+	s.NoError(res.Err)
+
+	var config3 taskQueueConfigType
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &config3))
+	s.NotNil(config3.FairnessWeightOverrides)
+	s.Len(config3.FairnessWeightOverrides, 3)
+	s.Equal(float32(2.0), config3.FairnessWeightOverrides["HighPriority"])
+	s.Equal(float32(1.5), config3.FairnessWeightOverrides["MediumPriority"])
+	s.Equal(float32(0.3), config3.FairnessWeightOverrides["LowPriority"])
+
+	// Unset all weights
+	res = s.Execute(
+		"task-queue", "config", "set",
+		"--address", s.Address(),
+		"--task-queue", taskQueue,
+		"--task-queue-type", "activity",
+		"--fairness-key-weight-unset-all",
+	)
+	s.NoError(res.Err)
+
+	// Verify all weights are gone
+	res = s.Execute(
+		"task-queue", "config", "get",
+		"--address", s.Address(),
+		"--task-queue", taskQueue,
+		"--task-queue-type", "activity",
+		"-o", "json",
+	)
+	s.NoError(res.Err)
+
+	var config4 taskQueueConfigType
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &config4))
+	s.Empty(config4.FairnessWeightOverrides)
 }

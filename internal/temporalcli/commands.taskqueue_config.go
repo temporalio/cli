@@ -56,6 +56,30 @@ func (c *TemporalTaskQueueConfigGetCommand) run(cctx *CommandContext, args []str
 	return printTaskQueueConfig(cctx, resp.Config)
 }
 
+// parseFairnessKeyWeights parses "key=weight" format strings into a map
+func parseFairnessKeyWeights(inputs []string) (map[string]float32, error) {
+	weights := make(map[string]float32)
+	for _, input := range inputs {
+		parts := strings.SplitN(input, "=", 2)
+		if len(parts) != 2 {
+			return nil, fmt.Errorf("invalid format: %s (expected key=weight)", input)
+		}
+		key := strings.TrimSpace(parts[0])
+		if key == "" {
+			return nil, fmt.Errorf("empty key in: %s", input)
+		}
+		weight, err := strconv.ParseFloat(strings.TrimSpace(parts[1]), 32)
+		if err != nil {
+			return nil, fmt.Errorf("invalid weight in %s: %w", input, err)
+		}
+		if weight < 0 {
+			return nil, fmt.Errorf("weight must be non-negative in: %s", input)
+		}
+		weights[key] = float32(weight)
+	}
+	return weights, nil
+}
+
 // TaskQueueConfigSetCommand handles setting task queue configuration
 func (c *TemporalTaskQueueConfigSetCommand) run(cctx *CommandContext, args []string) error {
 	// Validate inputs before dialing client
@@ -149,6 +173,52 @@ func (c *TemporalTaskQueueConfigSetCommand) run(cctx *CommandContext, args []str
 		request.UpdateFairnessKeyRateLimitDefault = &workflowservice.UpdateTaskQueueConfigRequest_RateLimitUpdate{
 			RateLimit: fairnessKeyRpsLimitDefaultParsed,
 			Reason:    c.FairnessKeyRpsLimitReason,
+		}
+	}
+
+	// Handle fairness weight overrides
+	// Validate mutual exclusivity
+	if c.FairnessKeyWeightUnsetAll {
+		if len(c.FairnessKeyWeightSet) > 0 || len(c.FairnessKeyWeightUnset) > 0 {
+			return fmt.Errorf("--fairness-key-weight-unset-all cannot be used with --fairness-key-weight-set or --fairness-key-weight-unset")
+		}
+	}
+
+	// Handle set operations
+	if len(c.FairnessKeyWeightSet) > 0 {
+		weights, err := parseFairnessKeyWeights(c.FairnessKeyWeightSet)
+		if err != nil {
+			return err
+		}
+		request.SetFairnessWeightOverrides = weights
+	}
+
+	// Handle unset operations
+	if len(c.FairnessKeyWeightUnset) > 0 {
+		request.UnsetFairnessWeightOverrides = c.FairnessKeyWeightUnset
+	}
+
+	// Handle unset all
+	if c.FairnessKeyWeightUnsetAll {
+		// Need to fetch current config to get all keys to unset
+		descResp, err := cl.WorkflowService().DescribeTaskQueue(cctx, &workflowservice.DescribeTaskQueueRequest{
+			Namespace: namespace,
+			TaskQueue: &taskqueue.TaskQueue{
+				Name: taskQueue,
+				Kind: enums.TASK_QUEUE_KIND_NORMAL,
+			},
+			TaskQueueType: taskQueueType,
+			ReportConfig:  true,
+		})
+		if err != nil {
+			return fmt.Errorf("error fetching current config for unset-all: %w", err)
+		}
+		if descResp.Config != nil && descResp.Config.FairnessWeightOverrides != nil {
+			keys := make([]string, 0, len(descResp.Config.FairnessWeightOverrides))
+			for key := range descResp.Config.FairnessWeightOverrides {
+				keys = append(keys, key)
+			}
+			request.UnsetFairnessWeightOverrides = keys
 		}
 	}
 
