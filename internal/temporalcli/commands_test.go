@@ -506,10 +506,10 @@ type DevWorkerOptions struct {
 	NexusServices []*nexus.Service
 }
 
-// Simply a stub for client use
+// A stub for client use
 func DevWorkflow(workflow.Context, any) (any, error) { panic("Unreachable") }
 
-// Simply a stub for client use
+// A stub for client use
 func DevActivity(context.Context, any) (any, error) { panic("Unreachable") }
 
 // Stops when harness closes.
