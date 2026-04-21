@@ -832,6 +832,10 @@ func (c *TemporalWorkerDeploymentSetCurrentVersionCommand) run(cctx *CommandCont
 	}
 	defer cl.Close()
 
+	if c.BuildId != "" && c.Unversioned {
+		return fmt.Errorf("specify either --build-id or --unversioned, not both")
+	}
+
 	token, err := c.Parent.getConflictToken(cctx, &getDeploymentConflictTokenOptions{
 		safeMode:        !c.Yes,
 		safeModeMessage: "Current",
