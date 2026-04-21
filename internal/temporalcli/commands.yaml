@@ -3287,7 +3287,7 @@ commands:
       - name: fairness-key-weight-set
         type: string[]
         description: |
-          Set fairness key weight overrides in format key=weight.
+          Set fairness key weight overrides in format key=weight (range: 0.001-1000).
           Can be specified multiple times. Example: --fairness-key-weight-set HighPriority=2.0 --fairness-key-weight-set LowPriority=0.5.
       - name: fairness-key-weight-unset
         type: string[]
@@ -4603,7 +4603,7 @@ option-sets:
       - name: fairness-weight
         type: float
         description: |
-          Weight (minimum 0.001) for this fairness key.
+          Weight [0.001-1000] for this fairness key.
           Keys are dispatched proportionally to their weights.
 
   - name: workflow-start

@@ -322,17 +322,6 @@ func (s *SharedServerSuite) TestTaskQueue_Config_Validation() {
 	s.Error(res.Err)
 	s.Contains(res.Err.Error(), "at least one configuration update")
 
-	// Set rate limit without reason - should fail
-	res = s.Execute(
-		"task-queue", "config", "set",
-		"--address", s.Address(),
-		"--task-queue", taskQueue,
-		"--task-queue-type", "activity",
-		"--queue-rps-limit", "10.0",
-	)
-	s.Error(res.Err)
-	s.Contains(res.Err.Error(), "reason is required")
-
 	// Set rate limit to zero - should succeed but warn
 	res = s.Execute(
 		"task-queue", "config", "set",
@@ -380,6 +369,17 @@ func (s *SharedServerSuite) TestTaskQueue_Config_Validation() {
 	)
 	s.Error(res.Err)
 	s.Contains(res.Err.Error(), "below minimum")
+
+	// Weight above maximum - should fail
+	res = s.Execute(
+		"task-queue", "config", "set",
+		"--address", s.Address(),
+		"--task-queue", taskQueue,
+		"--task-queue-type", "activity",
+		"--fairness-key-weight-set", "Priority=1001",
+	)
+	s.Error(res.Err)
+	s.Contains(res.Err.Error(), "exceeds maximum")
 
 	// Invalid format - should fail
 	res = s.Execute(

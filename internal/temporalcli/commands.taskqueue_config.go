@@ -63,11 +63,19 @@ const (
 	// minFairnessWeight matches server-side limit in temporal/service/matching/fairness_util.go
 	// Server clamps weights to this minimum when applying them
 	minFairnessWeight = 0.001
+
+	// maxFairnessWeight is the maximum weight value allowed
+	// Server clamps weights above this value down to this maximum
+	maxFairnessWeight = 1000.0
 )
 
 // parseFairnessKeyWeights parses "key=weight" format strings into a map
-// Returns an error if there are duplicate keys, invalid weights, or malformed input
+// Returns nil if inputs is empty, or an error if there are duplicate keys, invalid weights, or malformed input
 func parseFairnessKeyWeights(inputs []string) (map[string]float32, error) {
+	if len(inputs) == 0 {
+		return nil, nil
+	}
+
 	weights := make(map[string]float32)
 	seen := make(map[string]bool)
 
@@ -104,9 +112,12 @@ func parseFairnessKeyWeights(inputs []string) (map[string]float32, error) {
 		}
 
 		// Validate weight bounds - matches server-side validation
-		// Server only validates weight > 0 and clamps to minWeight at runtime
+		// Server clamps weights to [minWeight, maxWeight] range at runtime
 		if weight < minFairnessWeight {
 			return nil, fmt.Errorf("weight %.3f for key %q is below minimum %.3f", weight, key, minFairnessWeight)
+		}
+		if weight > maxFairnessWeight {
+			return nil, fmt.Errorf("weight %.3f for key %q exceeds maximum %.3f", weight, key, maxFairnessWeight)
 		}
 
 		weights[key] = float32(weight)
@@ -114,24 +125,33 @@ func parseFairnessKeyWeights(inputs []string) (map[string]float32, error) {
 	return weights, nil
 }
 
-// validateFairnessKeyNames validates that key names are non-empty and within length limits
-func validateFairnessKeyNames(keys []string) error {
-	seen := make(map[string]bool)
-	for _, key := range keys {
-		trimmed := strings.TrimSpace(key)
-		if trimmed == "" {
-			return fmt.Errorf("empty fairness key name")
-		}
-		if seen[trimmed] {
-			return fmt.Errorf("duplicate fairness key %q specified multiple times", trimmed)
-		}
-		seen[trimmed] = true
-
-		if len(trimmed) > maxFairnessKeyLength {
-			return fmt.Errorf("fairness key %q exceeds maximum length of %d bytes", trimmed, maxFairnessKeyLength)
-		}
+// prepareUnsetKeys validates and trims fairness key names for unsetting
+// Returns nil if keys is empty, trimmed keys if valid, or an error if validation fails
+func prepareUnsetKeys(keys []string) ([]string, error) {
+	if len(keys) == 0 {
+		return nil, nil
 	}
-	return nil
+
+	trimmed := make([]string, len(keys))
+	seen := make(map[string]bool)
+
+	for i, key := range keys {
+		trimmedKey := strings.TrimSpace(key)
+		if trimmedKey == "" {
+			return nil, fmt.Errorf("empty fairness key name")
+		}
+		if seen[trimmedKey] {
+			return nil, fmt.Errorf("duplicate fairness key %q specified multiple times", trimmedKey)
+		}
+		seen[trimmedKey] = true
+
+		if len(trimmedKey) > maxFairnessKeyLength {
+			return nil, fmt.Errorf("fairness key %q exceeds maximum length of %d bytes", trimmedKey, maxFairnessKeyLength)
+		}
+
+		trimmed[i] = trimmedKey
+	}
+	return trimmed, nil
 }
 
 // findConflictingKeys returns keys that appear in both set and unset lists
@@ -199,18 +219,11 @@ func (c *TemporalTaskQueueConfigSetCommand) run(cctx *CommandContext, args []str
 			return err
 		}
 
-		// Validate reason is provided
-		if c.QueueRpsLimitReason == "" {
-			return fmt.Errorf("--queue-rps-limit-reason is required when setting or unsetting queue rate limit")
-		}
-
 		// Warn about zero rate limit (stops all traffic)
 		if queueRateLimitIsZero {
 			cctx.Printer.Println("WARNING: Setting queue rate limit to 0 will STOP ALL TRAFFIC on this task queue.")
 			cctx.Printer.Println("         This will prevent any tasks from being dispatched until the limit is changed.")
 		}
-	} else if c.Command.Flags().Changed("queue-rps-limit-reason") {
-		return fmt.Errorf("--queue-rps-limit-reason can only be set if --queue-rps-limit is specified")
 	}
 
 	// Parse and validate fairness key rate limit default
@@ -223,18 +236,11 @@ func (c *TemporalTaskQueueConfigSetCommand) run(cctx *CommandContext, args []str
 			return err
 		}
 
-		// Validate reason is provided
-		if c.FairnessKeyRpsLimitReason == "" {
-			return fmt.Errorf("--fairness-key-rps-limit-reason is required when setting or unsetting fairness key rate limit")
-		}
-
 		// Warn about zero rate limit
 		if fairnessRateLimitIsZero {
 			cctx.Printer.Println("WARNING: Setting fairness key rate limit default to 0 will STOP ALL TRAFFIC for fairness keys.")
 			cctx.Printer.Println("         This will prevent tasks with fairness keys from being dispatched until the limit is changed.")
 		}
-	} else if c.Command.Flags().Changed("fairness-key-rps-limit-reason") {
-		return fmt.Errorf("--fairness-key-rps-limit-reason can only be set if --fairness-key-rps-limit-default is specified")
 	}
 
 	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
@@ -291,38 +297,27 @@ func (c *TemporalTaskQueueConfigSetCommand) run(cctx *CommandContext, args []str
 	}
 
 	// Parse and validate set operations
-	var setWeights map[string]float32
-	if len(c.FairnessKeyWeightSet) > 0 {
-		var err error
-		setWeights, err = parseFairnessKeyWeights(c.FairnessKeyWeightSet)
-		if err != nil {
-			return err
-		}
-		request.SetFairnessWeightOverrides = setWeights
+	setWeights, err := parseFairnessKeyWeights(c.FairnessKeyWeightSet)
+	if err != nil {
+		return err
+	}
+	request.SetFairnessWeightOverrides = setWeights
+
+	// Validate and prepare unset operations
+	trimmedUnsetKeys, err := prepareUnsetKeys(c.FairnessKeyWeightUnset)
+	if err != nil {
+		return fmt.Errorf("invalid fairness key in unset list: %w", err)
 	}
 
-	// Validate unset operations
-	if len(c.FairnessKeyWeightUnset) > 0 {
-		if err := validateFairnessKeyNames(c.FairnessKeyWeightUnset); err != nil {
-			return fmt.Errorf("invalid fairness key in unset list: %w", err)
+	// Check for conflicts between set and unset
+	if setWeights != nil && trimmedUnsetKeys != nil {
+		conflicts := findConflictingKeys(setWeights, trimmedUnsetKeys)
+		if len(conflicts) > 0 {
+			return fmt.Errorf("fairness keys appear in both set and unset operations: %v", conflicts)
 		}
-
-		// Trim keys before passing to server
-		trimmedUnsetKeys := make([]string, len(c.FairnessKeyWeightUnset))
-		for i, key := range c.FairnessKeyWeightUnset {
-			trimmedUnsetKeys[i] = strings.TrimSpace(key)
-		}
-
-		// Check for conflicts between set and unset
-		if setWeights != nil {
-			conflicts := findConflictingKeys(setWeights, trimmedUnsetKeys)
-			if len(conflicts) > 0 {
-				return fmt.Errorf("fairness keys appear in both set and unset operations: %v", conflicts)
-			}
-		}
-
-		request.UnsetFairnessWeightOverrides = trimmedUnsetKeys
 	}
+
+	request.UnsetFairnessWeightOverrides = trimmedUnsetKeys
 
 	// Handle unset all
 	if c.FairnessKeyWeightUnsetAll {

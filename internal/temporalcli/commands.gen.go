@@ -233,7 +233,7 @@ func (v *SharedWorkflowStartOptions) BuildFlags(f *pflag.FlagSet) {
 	f.StringVar(&v.StaticDetails, "static-details", "", "Static Workflow details for human consumption in UIs. Uses Temporal Markdown formatting, may be multiple lines. EXPERIMENTAL.")
 	f.IntVar(&v.PriorityKey, "priority-key", 0, "Priority key (1-5, lower numbers = higher priority). Tasks in a queue should be processed in close-to-priority-order. Default is 3 when not specified.")
 	f.StringVar(&v.FairnessKey, "fairness-key", "", "Fairness key (max 64 bytes) for proportional task dispatch. Tasks with same key share capacity based on their weight.")
-	f.Float32Var(&v.FairnessWeight, "fairness-weight", 0, "Weight (minimum 0.001) for this fairness key. Keys are dispatched proportionally to their weights.")
+	f.Float32Var(&v.FairnessWeight, "fairness-weight", 0, "Weight [0.001-1000] for this fairness key. Keys are dispatched proportionally to their weights.")
 }
 
 type WorkflowStartOptions struct {
@@ -2255,7 +2255,7 @@ func NewTemporalTaskQueueConfigSetCommand(cctx *CommandContext, parent *Temporal
 	s.Command.Flags().StringVar(&s.FairnessKeyRpsLimitDefault, "fairness-key-rps-limit-default", "", "Fairness key rate limit default in requests per second. Accepts a float; or 'default' to unset.")
 	overrideFlagDisplayType(s.Command.Flags().Lookup("fairness-key-rps-limit-default"), "float|default")
 	s.Command.Flags().StringVar(&s.FairnessKeyRpsLimitReason, "fairness-key-rps-limit-reason", "", "Reason for fairness key rate limit update.")
-	s.Command.Flags().StringArrayVar(&s.FairnessKeyWeightSet, "fairness-key-weight-set", nil, "Set fairness key weight overrides in format key=weight. Can be specified multiple times. Example: --fairness-key-weight-set HighPriority=2.0 --fairness-key-weight-set LowPriority=0.5.")
+	s.Command.Flags().StringArrayVar(&s.FairnessKeyWeightSet, "fairness-key-weight-set", nil, "Set fairness key weight overrides in format key=weight (range: 0.001-1000). Can be specified multiple times. Example: --fairness-key-weight-set HighPriority=2.0 --fairness-key-weight-set LowPriority=0.5.")
 	s.Command.Flags().StringArrayVar(&s.FairnessKeyWeightUnset, "fairness-key-weight-unset", nil, "Unset specific fairness key weight overrides. Can be specified multiple times. Example: --fairness-key-weight-unset HighPriority --fairness-key-weight-unset LowPriority.")
 	s.Command.Flags().BoolVar(&s.FairnessKeyWeightUnsetAll, "fairness-key-weight-unset-all", false, "Unset all fairness key weight overrides. Cannot be used with --fairness-key-weight-set or --fairness-key-weight-unset.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
