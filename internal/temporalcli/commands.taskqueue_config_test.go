@@ -155,8 +155,9 @@ func (s *SharedServerSuite) TestTaskQueue_Config_Unset_Rate_Limits() {
 	)
 	s.NoError(res.Err)
 
-	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &config))
-	s.Nil(config.FairnessKeysRateLimitDefault.RateLimit)
+	var config2 taskQueueConfigType
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &config2))
+	s.Nil(config2.FairnessKeysRateLimitDefault.RateLimit)
 }
 
 func (s *SharedServerSuite) TestTaskQueue_Config_Workflow_Task_Queue_Restrictions() {
@@ -319,7 +320,7 @@ func (s *SharedServerSuite) TestTaskQueue_Config_Validation() {
 		"--task-queue-type", "activity",
 	)
 	s.Error(res.Err)
-	s.Contains(res.Stderr.String(), "at least one configuration update")
+	s.Contains(res.Err.Error(), "at least one configuration update")
 
 	// Set rate limit without reason - should fail
 	res = s.Execute(
@@ -330,7 +331,7 @@ func (s *SharedServerSuite) TestTaskQueue_Config_Validation() {
 		"--queue-rps-limit", "10.0",
 	)
 	s.Error(res.Err)
-	s.Contains(res.Stderr.String(), "reason is required")
+	s.Contains(res.Err.Error(), "reason is required")
 
 	// Set rate limit to zero - should succeed but warn
 	res = s.Execute(
@@ -355,7 +356,7 @@ func (s *SharedServerSuite) TestTaskQueue_Config_Validation() {
 		"--fairness-key-weight-set", "Priority=3.0",
 	)
 	s.Error(res.Err)
-	s.Contains(res.Stderr.String(), "duplicate fairness key")
+	s.Contains(res.Err.Error(), "duplicate fairness key")
 
 	// Set and unset same key - should fail
 	res = s.Execute(
@@ -367,7 +368,7 @@ func (s *SharedServerSuite) TestTaskQueue_Config_Validation() {
 		"--fairness-key-weight-unset", "Priority",
 	)
 	s.Error(res.Err)
-	s.Contains(res.Stderr.String(), "both set and unset")
+	s.Contains(res.Err.Error(), "both set and unset")
 
 	// Weight below minimum - should fail
 	res = s.Execute(
@@ -378,7 +379,7 @@ func (s *SharedServerSuite) TestTaskQueue_Config_Validation() {
 		"--fairness-key-weight-set", "Priority=0.0005",
 	)
 	s.Error(res.Err)
-	s.Contains(res.Stderr.String(), "below minimum")
+	s.Contains(res.Err.Error(), "below minimum")
 
 	// Invalid format - should fail
 	res = s.Execute(
@@ -389,7 +390,7 @@ func (s *SharedServerSuite) TestTaskQueue_Config_Validation() {
 		"--fairness-key-weight-set", "Priority",
 	)
 	s.Error(res.Err)
-	s.Contains(res.Stderr.String(), "expected key=weight")
+	s.Contains(res.Err.Error(), "expected key=weight")
 }
 
 func (s *SharedServerSuite) TestTaskQueue_Config_FairnessWeightOverrides() {
@@ -441,9 +442,10 @@ func (s *SharedServerSuite) TestTaskQueue_Config_FairnessWeightOverrides() {
 	)
 	s.NoError(res.Err)
 
-	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &config))
-	s.Equal(float32(2.0), config.FairnessWeightOverrides["HighPriority"])
-	s.NotContains(config.FairnessWeightOverrides, "LowPriority")
+	var config2 taskQueueConfigType
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &config2))
+	s.Equal(float32(2.0), config2.FairnessWeightOverrides["HighPriority"])
+	s.NotContains(config2.FairnessWeightOverrides, "LowPriority")
 
 	// Unset all weights
 	res = s.Execute(
@@ -465,6 +467,7 @@ func (s *SharedServerSuite) TestTaskQueue_Config_FairnessWeightOverrides() {
 	)
 	s.NoError(res.Err)
 
-	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &config))
-	s.Empty(config.FairnessWeightOverrides)
+	var config3 taskQueueConfigType
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &config3))
+	s.Empty(config3.FairnessWeightOverrides)
 }

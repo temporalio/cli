@@ -307,15 +307,21 @@ func (c *TemporalTaskQueueConfigSetCommand) run(cctx *CommandContext, args []str
 			return fmt.Errorf("invalid fairness key in unset list: %w", err)
 		}
 
+		// Trim keys before passing to server
+		trimmedUnsetKeys := make([]string, len(c.FairnessKeyWeightUnset))
+		for i, key := range c.FairnessKeyWeightUnset {
+			trimmedUnsetKeys[i] = strings.TrimSpace(key)
+		}
+
 		// Check for conflicts between set and unset
 		if setWeights != nil {
-			conflicts := findConflictingKeys(setWeights, c.FairnessKeyWeightUnset)
+			conflicts := findConflictingKeys(setWeights, trimmedUnsetKeys)
 			if len(conflicts) > 0 {
 				return fmt.Errorf("fairness keys appear in both set and unset operations: %v", conflicts)
 			}
 		}
 
-		request.UnsetFairnessWeightOverrides = c.FairnessKeyWeightUnset
+		request.UnsetFairnessWeightOverrides = trimmedUnsetKeys
 	}
 
 	// Handle unset all
