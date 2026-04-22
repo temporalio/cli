@@ -972,6 +972,27 @@ func (s *SharedServerSuite) TestActivity_List() {
 	out := res.Stdout.String()
 	s.ContainsOnSameLine(out, "activityId", "list-test-1")
 	s.ContainsOnSameLine(out, "status", "ACTIVITY_EXECUTION_STATUS_COMPLETED")
+
+	// JSONL
+	res = s.Execute(
+		"activity", "list",
+		"-o", "jsonl",
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	jsonlLines := strings.Split(strings.TrimSpace(res.Stdout.String()), "\n")
+	s.GreaterOrEqual(len(jsonlLines), 3)
+	seen := map[string]bool{}
+	for _, line := range jsonlLines {
+		var exec struct {
+			ActivityId string `json:"activityId"`
+		}
+		s.NoError(json.Unmarshal([]byte(line), &exec))
+		seen[exec.ActivityId] = true
+	}
+	s.True(seen["list-test-1"])
+	s.True(seen["list-test-2"])
+	s.True(seen["list-test-3"])
 }
 
 func (s *SharedServerSuite) TestActivity_Count() {
