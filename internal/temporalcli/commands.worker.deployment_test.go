@@ -186,6 +186,17 @@ func (s *SharedServerSuite) TestDeployment_Set_Current_Version() {
 	s.NoError(res.Err)
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonVersionOut))
 	s.Nil(jsonVersionOut.Metadata)
+
+	// --build-id and --unversioned are either/or. there should be an error if
+	// the user specifies both flags.
+	res = s.Execute(
+		"worker", "deployment", "set-current-version",
+		"--address", s.Address(),
+		"--deployment-name", version.DeploymentName, "--build-id", version.BuildID,
+		"--unversioned",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "specify either --build-id or --unversioned")
 }
 
 func (s *SharedServerSuite) TestDeployment_Set_Current_Version_AllowNoPollers() {
