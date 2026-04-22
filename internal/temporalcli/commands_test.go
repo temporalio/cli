@@ -509,10 +509,10 @@ type DevWorkerOptions struct {
 	NexusServices []*nexus.Service
 }
 
-// Simply a stub for client use
+// A stub for client use
 func DevWorkflow(workflow.Context, any) (any, error) { panic("Unreachable") }
 
-// Simply a stub for client use
+// A stub for client use
 func DevActivity(context.Context, any) (any, error) { panic("Unreachable") }
 
 // Stops when harness closes.
@@ -550,7 +550,9 @@ func (d *DevWorker) Stop() {
 	d.Worker.Stop()
 }
 
-// Default is just to return DevActivity result
+// OnDevWorkflow sets the callback invoked by the pre-registered "DevWorkflow" on this worker,
+// letting a test supply workflow behavior without registering a new workflow type. If unset,
+// DevWorkflow executes DevActivity and returns its result.
 func (d *DevWorker) OnDevWorkflow(fn func(workflow.Context, any) (any, error)) {
 	d.devOpsLock.Lock()
 	defer d.devOpsLock.Unlock()
@@ -563,7 +565,9 @@ func (d *DevWorker) DevWorkflowLastInput() any {
 	return d.devWorkflowLastInput
 }
 
-// Default is just to return result
+// OnDevActivity sets the callback invoked by the pre-registered DevActivity on this worker, letting
+// a test supply activity behavior without registering a new activity. If unset, DevActivity echoes
+// its input back as the result.
 func (d *DevWorker) OnDevActivity(fn func(context.Context, any) (any, error)) {
 	d.devOpsLock.Lock()
 	defer d.devOpsLock.Unlock()
