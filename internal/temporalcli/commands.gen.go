@@ -418,6 +418,7 @@ func NewTemporalActivityCommand(cctx *CommandContext, parent *TemporalCommand) *
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalActivityCompleteCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalActivityDescribeCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalActivityFailCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalActivityPauseCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalActivityResetCommand(cctx, &s).Command)
@@ -452,6 +453,40 @@ func NewTemporalActivityCompleteCommand(cctx *CommandContext, parent *TemporalAc
 	s.Command.Flags().StringVar(&s.Result, "result", "", "Result `JSON` to return. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "result")
 	s.WorkflowReferenceOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalActivityDescribeCommand struct {
+	Parent         *TemporalActivityCommand
+	Command        cobra.Command
+	ActivityId     string
+	ActivityRunId  string
+	IncludeInput   bool
+	IncludeOutcome bool
+}
+
+func NewTemporalActivityDescribeCommand(cctx *CommandContext, parent *TemporalActivityCommand) *TemporalActivityDescribeCommand {
+	var s TemporalActivityDescribeCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "describe [flags]"
+	s.Command.Short = "Describe an Activity Execution"
+	if hasHighlighting {
+		s.Command.Long = "Retrieve details about an Activity Execution, including its status, timing,\nand retry information:\n\n\x1b[1mtemporal activity describe \\\n    --activity-id YourActivityId\x1b[0m\n\nTo include the input passed to the activity:\n\n\x1b[1mtemporal activity describe \\\n    --activity-id YourActivityId \\\n    --include-input\x1b[0m\n\nTo include the outcome (result or failure) if the activity has completed:\n\n\x1b[1mtemporal activity describe \\\n    --activity-id YourActivityId \\\n    --include-outcome\x1b[0m"
+	} else {
+		s.Command.Long = "Retrieve details about an Activity Execution, including its status, timing,\nand retry information:\n\n```\ntemporal activity describe \\\n    --activity-id YourActivityId\n```\n\nTo include the input passed to the activity:\n\n```\ntemporal activity describe \\\n    --activity-id YourActivityId \\\n    --include-input\n```\n\nTo include the outcome (result or failure) if the activity has completed:\n\n```\ntemporal activity describe \\\n    --activity-id YourActivityId \\\n    --include-outcome\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "Activity ID. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "activity-id")
+	s.Command.Flags().StringVar(&s.ActivityRunId, "activity-run-id", "", "Activity Run ID. If not specified, targets the latest run.")
+	s.Command.Flags().BoolVar(&s.IncludeInput, "include-input", false, "Include the activity input in the response.")
+	s.Command.Flags().BoolVar(&s.IncludeOutcome, "include-outcome", false, "Include the activity outcome (result/failure) in the response if completed.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
