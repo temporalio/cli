@@ -1071,15 +1071,13 @@ func (s *SharedServerSuite) testDeploymentDescribeVersionTaskQueueStats(withPrio
 func (s *SharedServerSuite) TestCreateWorkerDeployment() {
 	deploymentName := uuid.NewString()
 
-	s.EventuallyWithT(func(t *assert.CollectT) {
-		res := s.Execute(
-			"worker", "deployment", "create",
-			"--address", s.Address(),
-			"--name", deploymentName,
-		)
-		assert.NoError(t, res.Err)
-		assert.Contains(t, res.Stdout.String(), "Successfully created worker deployment")
-	}, 30*time.Second, 100*time.Millisecond)
+	res := s.Execute(
+		"worker", "deployment", "create",
+		"--address", s.Address(),
+		"--name", deploymentName,
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Successfully created worker deployment")
 
 	// Wait for the deployment to appear
 	s.EventuallyWithT(func(t *assert.CollectT) {
@@ -1093,15 +1091,13 @@ func (s *SharedServerSuite) TestCreateWorkerDeployment() {
 
 	// Attempting to create a WD with the same name should fail with a conflict
 	// error.
-	s.EventuallyWithT(func(t *assert.CollectT) {
-		res := s.Execute(
-			"worker", "deployment", "create",
-			"--address", s.Address(),
-			"--name", deploymentName,
-		)
-		assert.Error(t, res.Err)
-		assert.ErrorContains(t, res.Err, "already exists")
-	}, 30*time.Second, 100*time.Millisecond)
+	res = s.Execute(
+		"worker", "deployment", "create",
+		"--address", s.Address(),
+		"--name", deploymentName,
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "already exists")
 }
 
 func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_EmptyComputeConfig() {
@@ -1157,16 +1153,14 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_EmptyComputeConfig
 	// worker deployment create-version` CLI command.
 	noComputeConfigBuildID := uuid.NewString()
 
-	s.EventuallyWithT(func(t *assert.CollectT) {
-		res := s.Execute(
-			"worker", "deployment", "create-version",
-			"--address", s.Address(),
-			"--deployment-name", deploymentName,
-			"--build-id", noComputeConfigBuildID,
-		)
-		assert.NoError(t, res.Err)
-		assert.Contains(t, res.Stdout.String(), "Successfully created worker deployment version")
-	}, 30*time.Second, 100*time.Millisecond)
+	res := s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", noComputeConfigBuildID,
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Successfully created worker deployment version")
 
 	// Wait for the deployment version to appear
 	s.EventuallyWithT(func(t *assert.CollectT) {
@@ -1180,7 +1174,7 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_EmptyComputeConfig
 	}, 30*time.Second, 100*time.Millisecond)
 
 	// Check that there is no compute config returned for this WDV
-	res := s.Execute(
+	res = s.Execute(
 		"worker", "deployment", "describe-version",
 		"--address", s.Address(),
 		"--deployment-name", deploymentName,
@@ -1194,16 +1188,14 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_EmptyComputeConfig
 
 	// Attempting to create a WDV with the same BuildID should fail with a
 	// conflict error.
-	s.EventuallyWithT(func(t *assert.CollectT) {
-		res := s.Execute(
-			"worker", "deployment", "create-version",
-			"--address", s.Address(),
-			"--deployment-name", deploymentName,
-			"--build-id", noComputeConfigBuildID,
-		)
-		assert.Error(t, res.Err)
-		assert.ErrorContains(t, res.Err, "already exists")
-	}, 30*time.Second, 100*time.Millisecond)
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", noComputeConfigBuildID,
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "already exists")
 }
 
 func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
@@ -1260,48 +1252,42 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
 	assumeRoleARN := "arn:aws:iam::123456789012:role/MyServiceRole"
 	assumeRoleExternalID := "external-id"
 
-	s.EventuallyWithT(func(t *assert.CollectT) {
-		res := s.Execute(
-			"worker", "deployment", "create-version",
-			"--address", s.Address(),
-			"--deployment-name", deploymentName,
-			"--build-id", assumeRoleFailureBuildID,
-			"--aws-lambda-function-arn", invokeARN,
-			"--aws-lambda-assume-role-arn", assumeRoleARN,
-			"--aws-lambda-assume-role-external-id", assumeRoleExternalID,
-		)
-		assert.Error(t, res.Err)
-		assert.ErrorContains(t, res.Err, "failed to assume role arn:aws:iam::123456789012:role/MyServiceRole: operation error STS: AssumeRole")
-	}, 90*time.Second, 100*time.Millisecond)
+	res := s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", assumeRoleFailureBuildID,
+		"--aws-lambda-function-arn", invokeARN,
+		"--aws-lambda-assume-role-arn", assumeRoleARN,
+		"--aws-lambda-assume-role-external-id", assumeRoleExternalID,
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "failed to assume role arn:aws:iam::123456789012:role/MyServiceRole: operation error STS: AssumeRole")
 
 	missingExternalIDBuildID := uuid.NewString()
 
-	s.EventuallyWithT(func(t *assert.CollectT) {
-		res := s.Execute(
-			"worker", "deployment", "create-version",
-			"--address", s.Address(),
-			"--deployment-name", deploymentName,
-			"--build-id", missingExternalIDBuildID,
-			"--aws-lambda-function-arn", invokeARN,
-			"--aws-lambda-assume-role-arn", assumeRoleARN,
-		)
-		assert.Error(t, res.Err)
-		assert.ErrorContains(t, res.Err, "missing required AWS Lambda provider detail: role_external_id")
-	}, 30*time.Second, 100*time.Millisecond)
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", missingExternalIDBuildID,
+		"--aws-lambda-function-arn", invokeARN,
+		"--aws-lambda-assume-role-arn", assumeRoleARN,
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "missing required AWS Lambda provider detail: role_external_id")
 
 	missingAssumeRoleBuildID := uuid.NewString()
 
-	s.EventuallyWithT(func(t *assert.CollectT) {
-		res := s.Execute(
-			"worker", "deployment", "create-version",
-			"--address", s.Address(),
-			"--deployment-name", deploymentName,
-			"--build-id", missingAssumeRoleBuildID,
-			"--aws-lambda-function-arn", invokeARN,
-		)
-		assert.Error(t, res.Err)
-		assert.ErrorContains(t, res.Err, "missing required AWS Lambda provider detail: role")
-	}, 30*time.Second, 100*time.Millisecond)
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", missingAssumeRoleBuildID,
+		"--aws-lambda-function-arn", invokeARN,
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "missing required AWS Lambda provider detail: role")
 }
 
 // TODO(jaypipes): Enable this test when we have a way of ensuring AWS resource
@@ -1359,19 +1345,17 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_LambdaComputeConfi
 	assumeRoleARN := "arn:aws:iam::123456789012:role/MyServiceRole"
 	assumeRoleExternalID := "external-id"
 
-	s.EventuallyWithT(func(t *assert.CollectT) {
-		res := s.Execute(
-			"worker", "deployment", "create-version",
-			"--address", s.Address(),
-			"--deployment-name", deploymentName,
-			"--build-id", computeConfigBuildID,
-			"--aws-lambda-function-arn", invokeARN,
-			"--aws-lambda-assume-role-arn", assumeRoleARN,
-			"--aws-lambda-assume-role-external-id", assumeRoleExternalID,
-		)
-		assert.NoError(t, res.Err)
-		assert.Contains(t, res.Stdout.String(), "Successfully created worker deployment version")
-	}, 30*time.Second, 100*time.Millisecond)
+	res := s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", computeConfigBuildID,
+		"--aws-lambda-function-arn", invokeARN,
+		"--aws-lambda-assume-role-arn", assumeRoleARN,
+		"--aws-lambda-assume-role-external-id", assumeRoleExternalID,
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Successfully created worker deployment version")
 
 	// Wait for the deployment version to appear
 	s.EventuallyWithT(func(t *assert.CollectT) {
@@ -1385,7 +1369,7 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_LambdaComputeConfi
 	}, 30*time.Second, 100*time.Millisecond)
 
 	// Check that there is a compute config returned for this WDV
-	res := s.Execute(
+	res = s.Execute(
 		"worker", "deployment", "describe-version",
 		"--address", s.Address(),
 		"--deployment-name", deploymentName,
