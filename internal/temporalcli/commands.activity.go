@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/temporalio/cli/internal/printer"
 	activitypb "go.temporal.io/api/activity/v1"
 	"go.temporal.io/api/batch/v1"
@@ -323,6 +324,87 @@ func (c *TemporalActivityUnpauseCommand) run(cctx *CommandContext, args []string
 		if err := startBatchJob(cctx, cl, batchReq); err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+func (c *TemporalActivityDescribeCommand) run(cctx *CommandContext, args []string) error {
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	resp, err := cl.WorkflowService().DescribeActivityExecution(cctx, &workflowservice.DescribeActivityExecutionRequest{
+		Namespace:      c.Parent.Namespace,
+		ActivityId:     c.ActivityId,
+		RunId:          c.ActivityRunId,
+		IncludeInput:   c.IncludeInput,
+		IncludeOutcome: c.IncludeOutcome,
+	})
+	if err != nil {
+		return fmt.Errorf("unable to describe Activity: %w", err)
+	}
+
+	// JSON output: emit the raw proto response
+	if cctx.JSONOutput {
+		return cctx.Printer.PrintStructured(resp, printer.StructuredOptions{})
+	}
+
+	// Text output: card-style sections
+	info := resp.Info
+	cctx.Printer.Println(color.MagentaString("Activity Info:"))
+	_ = cctx.Printer.PrintStructured(struct {
+		ActivityId             string
+		RunId                  string
+		Type                   string
+		Status                 string
+		RunState               string `cli:",cardOmitEmpty"`
+		TaskQueue              string `cli:",cardOmitEmpty"`
+		Attempt                int32
+		ScheduleTime           time.Time     `cli:",cardOmitEmpty"`
+		LastStartedTime        time.Time     `cli:",cardOmitEmpty"`
+		LastHeartbeatTime      time.Time     `cli:",cardOmitEmpty"`
+		CloseTime              time.Time     `cli:",cardOmitEmpty"`
+		ExpirationTime         time.Time     `cli:",cardOmitEmpty"`
+		ScheduleToCloseTimeout time.Duration `cli:",cardOmitEmpty"`
+		StartToCloseTimeout    time.Duration `cli:",cardOmitEmpty"`
+		HeartbeatTimeout       time.Duration `cli:",cardOmitEmpty"`
+		LastWorkerIdentity     string        `cli:",cardOmitEmpty"`
+		CanceledReason         string        `cli:",cardOmitEmpty"`
+		StateTransitionCount   int64         `cli:",cardOmitEmpty"`
+	}{
+		ActivityId:             info.GetActivityId(),
+		RunId:                  resp.GetRunId(),
+		Type:                   info.GetActivityType().GetName(),
+		Status:                 info.GetStatus().String(),
+		RunState:               info.GetRunState().String(),
+		TaskQueue:              info.GetTaskQueue(),
+		Attempt:                info.GetAttempt(),
+		ScheduleTime:           timestampToTime(info.GetScheduleTime()),
+		LastStartedTime:        timestampToTime(info.GetLastStartedTime()),
+		LastHeartbeatTime:      timestampToTime(info.GetLastHeartbeatTime()),
+		CloseTime:              timestampToTime(info.GetCloseTime()),
+		ExpirationTime:         timestampToTime(info.GetExpirationTime()),
+		ScheduleToCloseTimeout: info.GetScheduleToCloseTimeout().AsDuration(),
+		StartToCloseTimeout:    info.GetStartToCloseTimeout().AsDuration(),
+		HeartbeatTimeout:       info.GetHeartbeatTimeout().AsDuration(),
+		LastWorkerIdentity:     info.GetLastWorkerIdentity(),
+		CanceledReason:         info.GetCanceledReason(),
+		StateTransitionCount:   info.GetStateTransitionCount(),
+	}, printer.StructuredOptions{})
+
+	if resp.Input != nil {
+		cctx.Printer.Println()
+		cctx.Printer.Println(color.MagentaString("Input:"))
+		_ = cctx.Printer.PrintStructured(resp.Input, printer.StructuredOptions{})
+	}
+
+	if resp.Outcome != nil {
+		cctx.Printer.Println()
+		cctx.Printer.Println(color.MagentaString("Outcome:"))
+		_ = cctx.Printer.PrintStructured(resp.Outcome, printer.StructuredOptions{})
 	}
 
 	return nil
