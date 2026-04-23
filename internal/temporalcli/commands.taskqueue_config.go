@@ -9,6 +9,7 @@ import (
 	enums "go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/taskqueue/v1"
 	"go.temporal.io/api/workflowservice/v1"
+	"golang.org/x/exp/maps"
 )
 
 // TaskQueueConfigGetCommand handles getting task queue configuration
@@ -61,12 +62,8 @@ const (
 	maxFairnessKeyLength = 64
 
 	// minFairnessWeight matches server-side limit in temporal/service/matching/fairness_util.go
-	// Server clamps weights to this minimum when applying them
+	// Client only enforces positive weight - server handles clamping to its configured range
 	minFairnessWeight = 0.001
-
-	// maxFairnessWeight is the maximum weight value allowed
-	// Server clamps weights above this value down to this maximum
-	maxFairnessWeight = 1000.0
 )
 
 // parseFairnessKeyWeights parses "key=weight" format strings into a map
@@ -85,7 +82,7 @@ func parseFairnessKeyWeights(inputs []string) (map[string]float32, error) {
 			return nil, fmt.Errorf("invalid format: %q (expected key=weight)", input)
 		}
 
-		key := strings.TrimSpace(parts[0])
+		key := parts[0]
 		if key == "" {
 			return nil, fmt.Errorf("empty key in: %q", input)
 		}
@@ -101,7 +98,7 @@ func parseFairnessKeyWeights(inputs []string) (map[string]float32, error) {
 			return nil, fmt.Errorf("fairness key %q exceeds maximum length of %d bytes", key, maxFairnessKeyLength)
 		}
 
-		weightStr := strings.TrimSpace(parts[1])
+		weightStr := parts[1]
 		if weightStr == "" {
 			return nil, fmt.Errorf("empty weight value for key %q", key)
 		}
@@ -111,13 +108,9 @@ func parseFairnessKeyWeights(inputs []string) (map[string]float32, error) {
 			return nil, fmt.Errorf("invalid weight %q for key %q: must be a number", weightStr, key)
 		}
 
-		// Validate weight bounds - matches server-side validation
-		// Server clamps weights to [minWeight, maxWeight] range at runtime
+		// Validate weight is positive - server handles clamping to its configured range
 		if weight < minFairnessWeight {
 			return nil, fmt.Errorf("weight %.3f for key %q is below minimum %.3f", weight, key, minFairnessWeight)
-		}
-		if weight > maxFairnessWeight {
-			return nil, fmt.Errorf("weight %.3f for key %q exceeds maximum %.3f", weight, key, maxFairnessWeight)
 		}
 
 		weights[key] = float32(weight)
@@ -125,38 +118,34 @@ func parseFairnessKeyWeights(inputs []string) (map[string]float32, error) {
 	return weights, nil
 }
 
-// prepareUnsetKeys validates and trims fairness key names for unsetting
-// Returns nil if keys is empty, trimmed keys if valid, or an error if validation fails
+// prepareUnsetKeys validates fairness key names for unsetting
+// Returns nil if keys is empty, or an error if validation fails
 func prepareUnsetKeys(keys []string) ([]string, error) {
 	if len(keys) == 0 {
 		return nil, nil
 	}
 
-	trimmed := make([]string, len(keys))
 	seen := make(map[string]bool)
 
-	for i, key := range keys {
-		trimmedKey := strings.TrimSpace(key)
-		if trimmedKey == "" {
+	for _, key := range keys {
+		if key == "" {
 			return nil, fmt.Errorf("empty fairness key name")
 		}
-		if seen[trimmedKey] {
-			return nil, fmt.Errorf("duplicate fairness key %q specified multiple times", trimmedKey)
+		if seen[key] {
+			return nil, fmt.Errorf("duplicate fairness key %q specified multiple times", key)
 		}
-		seen[trimmedKey] = true
+		seen[key] = true
 
-		if len(trimmedKey) > maxFairnessKeyLength {
-			return nil, fmt.Errorf("fairness key %q exceeds maximum length of %d bytes", trimmedKey, maxFairnessKeyLength)
+		if len(key) > maxFairnessKeyLength {
+			return nil, fmt.Errorf("fairness key %q exceeds maximum length of %d bytes", key, maxFairnessKeyLength)
 		}
-
-		trimmed[i] = trimmedKey
 	}
-	return trimmed, nil
+	return keys, nil
 }
 
 // findConflictingKeys returns keys that appear in both set and unset lists
 func findConflictingKeys(setWeights map[string]float32, unsetKeys []string) []string {
-	conflicts := []string{}
+	var conflicts []string
 	for _, key := range unsetKeys {
 		if _, exists := setWeights[key]; exists {
 			conflicts = append(conflicts, key)
@@ -238,8 +227,8 @@ func (c *TemporalTaskQueueConfigSetCommand) run(cctx *CommandContext, args []str
 
 		// Warn about zero rate limit
 		if fairnessRateLimitIsZero {
-			cctx.Printer.Println("WARNING: Setting fairness key rate limit default to 0 will STOP ALL TRAFFIC for fairness keys.")
-			cctx.Printer.Println("         This will prevent tasks with fairness keys from being dispatched until the limit is changed.")
+			cctx.Printer.Println("WARNING: Setting fairness key rate limit default to 0 will STOP ALL TRAFFIC on this task queue.")
+			cctx.Printer.Println("         This will prevent any tasks from being dispatched until the limit is changed.")
 		}
 	}
 
@@ -304,20 +293,18 @@ func (c *TemporalTaskQueueConfigSetCommand) run(cctx *CommandContext, args []str
 	request.SetFairnessWeightOverrides = setWeights
 
 	// Validate and prepare unset operations
-	trimmedUnsetKeys, err := prepareUnsetKeys(c.FairnessKeyWeightUnset)
+	unsetKeys, err := prepareUnsetKeys(c.FairnessKeyWeightUnset)
 	if err != nil {
 		return fmt.Errorf("invalid fairness key in unset list: %w", err)
 	}
 
 	// Check for conflicts between set and unset
-	if setWeights != nil && trimmedUnsetKeys != nil {
-		conflicts := findConflictingKeys(setWeights, trimmedUnsetKeys)
-		if len(conflicts) > 0 {
-			return fmt.Errorf("fairness keys appear in both set and unset operations: %v", conflicts)
-		}
+	conflicts := findConflictingKeys(setWeights, unsetKeys)
+	if len(conflicts) > 0 {
+		return fmt.Errorf("fairness keys appear in both set and unset operations: %v", conflicts)
 	}
 
-	request.UnsetFairnessWeightOverrides = trimmedUnsetKeys
+	request.UnsetFairnessWeightOverrides = unsetKeys
 
 	// Handle unset all
 	if c.FairnessKeyWeightUnsetAll {
@@ -335,10 +322,7 @@ func (c *TemporalTaskQueueConfigSetCommand) run(cctx *CommandContext, args []str
 			return fmt.Errorf("error fetching current config for unset-all: %w", err)
 		}
 		if descResp.Config != nil && descResp.Config.FairnessWeightOverrides != nil && len(descResp.Config.FairnessWeightOverrides) > 0 {
-			keys := make([]string, 0, len(descResp.Config.FairnessWeightOverrides))
-			for key := range descResp.Config.FairnessWeightOverrides {
-				keys = append(keys, key)
-			}
+			keys := maps.Keys(descResp.Config.FairnessWeightOverrides)
 			request.UnsetFairnessWeightOverrides = keys
 			cctx.Printer.Println(fmt.Sprintf("Unsetting %d fairness weight override(s)", len(keys)))
 		} else {
