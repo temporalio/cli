@@ -341,8 +341,8 @@ func (s *SharedServerSuite) TestTaskQueue_Config_Validation() {
 		"--address", s.Address(),
 		"--task-queue", taskQueue,
 		"--task-queue-type", "activity",
-		"--fairness-key-weight-set", "Priority=2.0",
-		"--fairness-key-weight-set", "Priority=3.0",
+		"--fairness-key-weight", "Priority=2.0",
+		"--fairness-key-weight", "Priority=3.0",
 	)
 	s.Error(res.Err)
 	s.Contains(res.Err.Error(), "duplicate fairness key")
@@ -353,11 +353,11 @@ func (s *SharedServerSuite) TestTaskQueue_Config_Validation() {
 		"--address", s.Address(),
 		"--task-queue", taskQueue,
 		"--task-queue-type", "activity",
-		"--fairness-key-weight-set", "Priority=2.0",
-		"--fairness-key-weight-unset", "Priority",
+		"--fairness-key-weight", "Priority=2.0",
+		"--fairness-key-weight", "Priority=default",
 	)
 	s.Error(res.Err)
-	s.Contains(res.Err.Error(), "both set and unset")
+	s.Contains(res.Err.Error(), "duplicate fairness key")
 
 	// Weight below minimum - should fail
 	res = s.Execute(
@@ -365,21 +365,10 @@ func (s *SharedServerSuite) TestTaskQueue_Config_Validation() {
 		"--address", s.Address(),
 		"--task-queue", taskQueue,
 		"--task-queue-type", "activity",
-		"--fairness-key-weight-set", "Priority=0.0005",
+		"--fairness-key-weight", "Priority=0.0005",
 	)
 	s.Error(res.Err)
 	s.Contains(res.Err.Error(), "below minimum")
-
-	// Weight above maximum - should fail
-	res = s.Execute(
-		"task-queue", "config", "set",
-		"--address", s.Address(),
-		"--task-queue", taskQueue,
-		"--task-queue-type", "activity",
-		"--fairness-key-weight-set", "Priority=1001",
-	)
-	s.Error(res.Err)
-	s.Contains(res.Err.Error(), "exceeds maximum")
 
 	// Invalid format - should fail
 	res = s.Execute(
@@ -387,7 +376,7 @@ func (s *SharedServerSuite) TestTaskQueue_Config_Validation() {
 		"--address", s.Address(),
 		"--task-queue", taskQueue,
 		"--task-queue-type", "activity",
-		"--fairness-key-weight-set", "Priority",
+		"--fairness-key-weight", "Priority",
 	)
 	s.Error(res.Err)
 	s.Contains(res.Err.Error(), "expected key=weight")
@@ -402,8 +391,8 @@ func (s *SharedServerSuite) TestTaskQueue_Config_FairnessWeightOverrides() {
 		"--address", s.Address(),
 		"--task-queue", taskQueue,
 		"--task-queue-type", "activity",
-		"--fairness-key-weight-set", "HighPriority=2.0",
-		"--fairness-key-weight-set", "LowPriority=0.5",
+		"--fairness-key-weight", "HighPriority=2.0",
+		"--fairness-key-weight", "LowPriority=0.5",
 	)
 	s.NoError(res.Err)
 
@@ -422,13 +411,13 @@ func (s *SharedServerSuite) TestTaskQueue_Config_FairnessWeightOverrides() {
 	s.Equal(float32(2.0), config.FairnessWeightOverrides["HighPriority"])
 	s.Equal(float32(0.5), config.FairnessWeightOverrides["LowPriority"])
 
-	// Unset one weight
+	// Unset one weight using default
 	res = s.Execute(
 		"task-queue", "config", "set",
 		"--address", s.Address(),
 		"--task-queue", taskQueue,
 		"--task-queue-type", "activity",
-		"--fairness-key-weight-unset", "LowPriority",
+		"--fairness-key-weight", "LowPriority=default",
 	)
 	s.NoError(res.Err)
 
@@ -447,13 +436,13 @@ func (s *SharedServerSuite) TestTaskQueue_Config_FairnessWeightOverrides() {
 	s.Equal(float32(2.0), config2.FairnessWeightOverrides["HighPriority"])
 	s.NotContains(config2.FairnessWeightOverrides, "LowPriority")
 
-	// Unset all weights
+	// Clear all weights
 	res = s.Execute(
 		"task-queue", "config", "set",
 		"--address", s.Address(),
 		"--task-queue", taskQueue,
 		"--task-queue-type", "activity",
-		"--fairness-key-weight-unset-all",
+		"--fairness-key-weight-clear-all",
 	)
 	s.NoError(res.Err)
 

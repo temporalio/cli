@@ -3284,21 +3284,17 @@ commands:
       - name: fairness-key-rps-limit-reason
         type: string
         description: Reason for fairness key rate limit update.
-      - name: fairness-key-weight-set
+      - name: fairness-key-weight
         type: string[]
         description: |
-          Set fairness key weight overrides in format key=weight (range: 0.001-1000).
-          Can be specified multiple times. Example: --fairness-key-weight-set HighPriority=2.0 --fairness-key-weight-set LowPriority=0.5.
-      - name: fairness-key-weight-unset
-        type: string[]
-        description: |
-          Unset specific fairness key weight overrides.
-          Can be specified multiple times. Example: --fairness-key-weight-unset HighPriority --fairness-key-weight-unset LowPriority.
-      - name: fairness-key-weight-unset-all
+          Set or unset fairness key weight overrides in format key=weight or key=default.
+          Use key=weight to set a weight (range: 0.001-1000); use key=default to unset.
+          Can be specified multiple times. Example: --fairness-key-weight HighPriority=2.0 --fairness-key-weight LowPriority=default.
+      - name: fairness-key-weight-clear-all
         type: bool
         description: |
           Unset all fairness key weight overrides.
-          Cannot be used with --fairness-key-weight-set or --fairness-key-weight-unset.
+          Cannot be used with --fairness-key-weight.
 
   - name: temporal workflow
     summary: Start, list, and operate on Workflows

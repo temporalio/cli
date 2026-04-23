@@ -66,92 +66,82 @@ const (
 	minFairnessWeight = 0.001
 )
 
-// parseFairnessKeyWeights parses "key=weight" format strings into a map
-// Returns nil if inputs is empty, or an error if there are duplicate keys, invalid weights, or malformed input
-func parseFairnessKeyWeights(inputs []string) (map[string]float32, error) {
+// parseFairnessKeyWeights parses "key=weight" or "key=default" format strings
+// Returns separate maps for set and unset operations, or an error if there are duplicate keys, invalid weights, or malformed input
+// If inputs is empty, returns nil for both maps
+func parseFairnessKeyWeights(inputs []string) (setWeights map[string]float32, unsetKeys []string, err error) {
 	if len(inputs) == 0 {
-		return nil, nil
+		return nil, nil, nil
 	}
 
-	weights := make(map[string]float32)
+	setWeights = make(map[string]float32)
+	var unsetKeysMap = make(map[string]bool) // Track unset keys in a map to check for duplicates
 	seen := make(map[string]bool)
 
 	for _, input := range inputs {
 		parts := strings.SplitN(input, "=", 2)
 		if len(parts) != 2 {
-			return nil, fmt.Errorf("invalid format: %q (expected key=weight)", input)
+			return nil, nil, fmt.Errorf("invalid format: %q (expected key=weight or key=default)", input)
 		}
 
 		key := parts[0]
 		if key == "" {
-			return nil, fmt.Errorf("empty key in: %q", input)
+			return nil, nil, fmt.Errorf("empty key in: %q", input)
 		}
 
-		// Check for duplicate keys
+		// Check for duplicate keys across both set and unset
 		if seen[key] {
-			return nil, fmt.Errorf("duplicate fairness key %q specified multiple times", key)
+			return nil, nil, fmt.Errorf("duplicate fairness key %q specified multiple times", key)
 		}
 		seen[key] = true
 
 		// Validate key length (server enforces 64 byte limit)
 		if len(key) > maxFairnessKeyLength {
-			return nil, fmt.Errorf("fairness key %q exceeds maximum length of %d bytes", key, maxFairnessKeyLength)
+			return nil, nil, fmt.Errorf("fairness key %q exceeds maximum length of %d bytes", key, maxFairnessKeyLength)
 		}
 
-		weightStr := parts[1]
-		if weightStr == "" {
-			return nil, fmt.Errorf("empty weight value for key %q", key)
+		valueStr := parts[1]
+		if valueStr == "" {
+			return nil, nil, fmt.Errorf("empty value for key %q", key)
 		}
 
-		weight, err := strconv.ParseFloat(weightStr, 32)
+		// Check if this is an unset operation (value is "default")
+		if strings.EqualFold(valueStr, "default") {
+			unsetKeysMap[key] = true
+			continue
+		}
+
+		// Parse as weight
+		weight, err := strconv.ParseFloat(valueStr, 32)
 		if err != nil {
-			return nil, fmt.Errorf("invalid weight %q for key %q: must be a number", weightStr, key)
+			return nil, nil, fmt.Errorf("invalid weight %q for key %q: must be a number or 'default'", valueStr, key)
 		}
 
 		// Validate weight is positive - server handles clamping to its configured range
 		if weight < minFairnessWeight {
-			return nil, fmt.Errorf("weight %.3f for key %q is below minimum %.3f", weight, key, minFairnessWeight)
+			return nil, nil, fmt.Errorf("weight %.3f for key %q is below minimum %.3f", weight, key, minFairnessWeight)
 		}
 
-		weights[key] = float32(weight)
-	}
-	return weights, nil
-}
-
-// prepareUnsetKeys validates fairness key names for unsetting
-// Returns nil if keys is empty, or an error if validation fails
-func prepareUnsetKeys(keys []string) ([]string, error) {
-	if len(keys) == 0 {
-		return nil, nil
+		setWeights[key] = float32(weight)
 	}
 
-	seen := make(map[string]bool)
-
-	for _, key := range keys {
-		if key == "" {
-			return nil, fmt.Errorf("empty fairness key name")
-		}
-		if seen[key] {
-			return nil, fmt.Errorf("duplicate fairness key %q specified multiple times", key)
-		}
-		seen[key] = true
-
-		if len(key) > maxFairnessKeyLength {
-			return nil, fmt.Errorf("fairness key %q exceeds maximum length of %d bytes", key, maxFairnessKeyLength)
+	// Convert unset map to slice
+	if len(unsetKeysMap) > 0 {
+		unsetKeys = make([]string, 0, len(unsetKeysMap))
+		for key := range unsetKeysMap {
+			unsetKeys = append(unsetKeys, key)
 		}
 	}
-	return keys, nil
-}
 
-// findConflictingKeys returns keys that appear in both set and unset lists
-func findConflictingKeys(setWeights map[string]float32, unsetKeys []string) []string {
-	var conflicts []string
-	for _, key := range unsetKeys {
-		if _, exists := setWeights[key]; exists {
-			conflicts = append(conflicts, key)
-		}
+	// Return nil instead of empty maps/slices
+	if len(setWeights) == 0 {
+		setWeights = nil
 	}
-	return conflicts
+	if len(unsetKeys) == 0 {
+		unsetKeys = nil
+	}
+
+	return setWeights, unsetKeys, nil
 }
 
 // TaskQueueConfigSetCommand handles setting task queue configuration
@@ -269,45 +259,31 @@ func (c *TemporalTaskQueueConfigSetCommand) run(cctx *CommandContext, args []str
 	// Validate at least one configuration change is requested
 	hasAnyUpdate := c.Command.Flags().Changed("queue-rps-limit") ||
 		c.Command.Flags().Changed("fairness-key-rps-limit-default") ||
-		len(c.FairnessKeyWeightSet) > 0 ||
-		len(c.FairnessKeyWeightUnset) > 0 ||
-		c.FairnessKeyWeightUnsetAll
+		len(c.FairnessKeyWeight) > 0 ||
+		c.FairnessKeyWeightClearAll
 
 	if !hasAnyUpdate {
 		return fmt.Errorf("at least one configuration update must be specified (use --help to see available options)")
 	}
 
 	// Handle fairness weight overrides
-	// Validate mutual exclusivity of unset-all with other weight operations
-	if c.FairnessKeyWeightUnsetAll {
-		if len(c.FairnessKeyWeightSet) > 0 || len(c.FairnessKeyWeightUnset) > 0 {
-			return fmt.Errorf("--fairness-key-weight-unset-all cannot be used with --fairness-key-weight-set or --fairness-key-weight-unset")
+	// Validate mutual exclusivity of clear-all with other weight operations
+	if c.FairnessKeyWeightClearAll {
+		if len(c.FairnessKeyWeight) > 0 {
+			return fmt.Errorf("--fairness-key-weight-clear-all cannot be used with --fairness-key-weight")
 		}
 	}
 
-	// Parse and validate set operations
-	setWeights, err := parseFairnessKeyWeights(c.FairnessKeyWeightSet)
+	// Parse fairness key weights (handles both set and unset operations)
+	setWeights, unsetKeys, err := parseFairnessKeyWeights(c.FairnessKeyWeight)
 	if err != nil {
 		return err
 	}
 	request.SetFairnessWeightOverrides = setWeights
-
-	// Validate and prepare unset operations
-	unsetKeys, err := prepareUnsetKeys(c.FairnessKeyWeightUnset)
-	if err != nil {
-		return fmt.Errorf("invalid fairness key in unset list: %w", err)
-	}
-
-	// Check for conflicts between set and unset
-	conflicts := findConflictingKeys(setWeights, unsetKeys)
-	if len(conflicts) > 0 {
-		return fmt.Errorf("fairness keys appear in both set and unset operations: %v", conflicts)
-	}
-
 	request.UnsetFairnessWeightOverrides = unsetKeys
 
-	// Handle unset all
-	if c.FairnessKeyWeightUnsetAll {
+	// Handle clear all
+	if c.FairnessKeyWeightClearAll {
 		// Need to fetch current config to get all keys to unset
 		descResp, err := cl.WorkflowService().DescribeTaskQueue(cctx, &workflowservice.DescribeTaskQueueRequest{
 			Namespace: namespace,
@@ -319,7 +295,7 @@ func (c *TemporalTaskQueueConfigSetCommand) run(cctx *CommandContext, args []str
 			ReportConfig:  true,
 		})
 		if err != nil {
-			return fmt.Errorf("error fetching current config for unset-all: %w", err)
+			return fmt.Errorf("error fetching current config for clear-all: %w", err)
 		}
 		if descResp.Config != nil && descResp.Config.FairnessWeightOverrides != nil && len(descResp.Config.FairnessWeightOverrides) > 0 {
 			keys := maps.Keys(descResp.Config.FairnessWeightOverrides)
