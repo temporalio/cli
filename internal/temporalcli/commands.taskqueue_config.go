@@ -60,11 +60,13 @@ func (c *TemporalTaskQueueConfigGetCommand) run(cctx *CommandContext, args []str
 const (
 	// maxFairnessKeyLength matches server-side limit in temporal/common/priorities/priority_util.go
 	maxFairnessKeyLength = 64
-
-	// minFairnessWeight matches server-side limit in temporal/service/matching/fairness_util.go
-	// Client only enforces positive weight - server handles clamping to its configured range
-	minFairnessWeight = 0.001
 )
+
+// printZeroRateLimitWarning prints a warning when a rate limit is set to 0
+func printZeroRateLimitWarning(p *printer.Printer, limitType string) {
+	p.Printlnf("WARNING: Setting %s to 0 will STOP ALL TRAFFIC on this task queue.", limitType)
+	p.Println("         This will prevent any tasks from being dispatched until the limit is changed.")
+}
 
 // parseFairnessKeyWeights parses "key=weight" or "key=default" format strings
 // Returns separate maps for set and unset operations, or an error if there are duplicate keys, invalid weights, or malformed input
@@ -75,7 +77,7 @@ func parseFairnessKeyWeights(inputs []string) (setWeights map[string]float32, un
 	}
 
 	setWeights = make(map[string]float32)
-	var unsetKeysMap = make(map[string]bool) // Track unset keys in a map to check for duplicates
+	unsetKeysMap := make(map[string]bool) // Track unset keys in a map to check for duplicates
 	seen := make(map[string]bool)
 
 	for _, input := range inputs {
@@ -95,20 +97,21 @@ func parseFairnessKeyWeights(inputs []string) (setWeights map[string]float32, un
 		}
 		seen[key] = true
 
-		// Validate key length (server enforces 64 byte limit)
-		if len(key) > maxFairnessKeyLength {
-			return nil, nil, fmt.Errorf("fairness key %q exceeds maximum length of %d bytes", key, maxFairnessKeyLength)
-		}
-
 		valueStr := parts[1]
 		if valueStr == "" {
 			return nil, nil, fmt.Errorf("empty value for key %q", key)
 		}
 
 		// Check if this is an unset operation (value is "default")
+		// Do this before validating key length since we don't care about length when unsetting
 		if strings.EqualFold(valueStr, "default") {
 			unsetKeysMap[key] = true
 			continue
+		}
+
+		// Validate key length only for set operations (server enforces 64 byte limit)
+		if len(key) > maxFairnessKeyLength {
+			return nil, nil, fmt.Errorf("fairness key %q exceeds maximum length of %d bytes", key, maxFairnessKeyLength)
 		}
 
 		// Parse as weight
@@ -118,8 +121,8 @@ func parseFairnessKeyWeights(inputs []string) (setWeights map[string]float32, un
 		}
 
 		// Validate weight is positive - server handles clamping to its configured range
-		if weight < minFairnessWeight {
-			return nil, nil, fmt.Errorf("weight %.3f for key %q is below minimum %.3f", weight, key, minFairnessWeight)
+		if weight <= 0 {
+			return nil, nil, fmt.Errorf("weight for key %q must be positive", key)
 		}
 
 		setWeights[key] = float32(weight)
@@ -127,10 +130,7 @@ func parseFairnessKeyWeights(inputs []string) (setWeights map[string]float32, un
 
 	// Convert unset map to slice
 	if len(unsetKeysMap) > 0 {
-		unsetKeys = make([]string, 0, len(unsetKeysMap))
-		for key := range unsetKeysMap {
-			unsetKeys = append(unsetKeys, key)
-		}
+		unsetKeys = maps.Keys(unsetKeysMap)
 	}
 
 	// Return nil instead of empty maps/slices
@@ -200,8 +200,7 @@ func (c *TemporalTaskQueueConfigSetCommand) run(cctx *CommandContext, args []str
 
 		// Warn about zero rate limit (stops all traffic)
 		if queueRateLimitIsZero {
-			cctx.Printer.Println("WARNING: Setting queue rate limit to 0 will STOP ALL TRAFFIC on this task queue.")
-			cctx.Printer.Println("         This will prevent any tasks from being dispatched until the limit is changed.")
+			printZeroRateLimitWarning(cctx.Printer, "queue rate limit")
 		}
 	}
 
@@ -217,8 +216,7 @@ func (c *TemporalTaskQueueConfigSetCommand) run(cctx *CommandContext, args []str
 
 		// Warn about zero rate limit
 		if fairnessRateLimitIsZero {
-			cctx.Printer.Println("WARNING: Setting fairness key rate limit default to 0 will STOP ALL TRAFFIC on this task queue.")
-			cctx.Printer.Println("         This will prevent any tasks from being dispatched until the limit is changed.")
+			printZeroRateLimitWarning(cctx.Printer, "fairness key rate limit default")
 		}
 	}
 
@@ -297,10 +295,14 @@ func (c *TemporalTaskQueueConfigSetCommand) run(cctx *CommandContext, args []str
 		if err != nil {
 			return fmt.Errorf("error fetching current config for clear-all: %w", err)
 		}
-		if descResp.Config != nil && descResp.Config.FairnessWeightOverrides != nil && len(descResp.Config.FairnessWeightOverrides) > 0 {
-			keys := maps.Keys(descResp.Config.FairnessWeightOverrides)
+		var overrides map[string]float32
+		if descResp.Config != nil {
+			overrides = descResp.Config.FairnessWeightOverrides
+		}
+		keys := maps.Keys(overrides)
+		if len(keys) > 0 {
 			request.UnsetFairnessWeightOverrides = keys
-			cctx.Printer.Println(fmt.Sprintf("Unsetting %d fairness weight override(s)", len(keys)))
+			cctx.Printer.Printlnf("Unsetting %d fairness weight override(s)", len(keys))
 		} else {
 			cctx.Printer.Println("No fairness weight overrides found to unset")
 			// Don't return error, just proceed with no-op update

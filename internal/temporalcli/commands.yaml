@@ -3288,7 +3288,7 @@ commands:
         type: string[]
         description: |
           Set or unset fairness key weight overrides in format key=weight or key=default.
-          Use key=weight to set a weight (range: 0.001-1000); use key=default to unset.
+          Use key=weight to set a positive weight value; use key=default to unset.
           Can be specified multiple times. Example: --fairness-key-weight HighPriority=2.0 --fairness-key-weight LowPriority=default.
       - name: fairness-key-weight-clear-all
         type: bool

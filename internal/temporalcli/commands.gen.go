@@ -2254,7 +2254,7 @@ func NewTemporalTaskQueueConfigSetCommand(cctx *CommandContext, parent *Temporal
 	s.Command.Flags().StringVar(&s.FairnessKeyRpsLimitDefault, "fairness-key-rps-limit-default", "", "Fairness key rate limit default in requests per second. Accepts a float; or 'default' to unset.")
 	overrideFlagDisplayType(s.Command.Flags().Lookup("fairness-key-rps-limit-default"), "float|default")
 	s.Command.Flags().StringVar(&s.FairnessKeyRpsLimitReason, "fairness-key-rps-limit-reason", "", "Reason for fairness key rate limit update.")
-	s.Command.Flags().StringArrayVar(&s.FairnessKeyWeight, "fairness-key-weight", nil, "Set or unset fairness key weight overrides in format key=weight or key=default. Use key=weight to set a weight (range: 0.001-1000); use key=default to unset. Can be specified multiple times. Example: --fairness-key-weight HighPriority=2.0 --fairness-key-weight LowPriority=default.")
+	s.Command.Flags().StringArrayVar(&s.FairnessKeyWeight, "fairness-key-weight", nil, "Set or unset fairness key weight overrides in format key=weight or key=default. Use key=weight to set a positive weight value; use key=default to unset. Can be specified multiple times. Example: --fairness-key-weight HighPriority=2.0 --fairness-key-weight LowPriority=default.")
 	s.Command.Flags().BoolVar(&s.FairnessKeyWeightClearAll, "fairness-key-weight-clear-all", false, "Unset all fairness key weight overrides. Cannot be used with --fairness-key-weight.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {

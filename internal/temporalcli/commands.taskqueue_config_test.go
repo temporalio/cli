@@ -359,16 +359,16 @@ func (s *SharedServerSuite) TestTaskQueue_Config_Validation() {
 	s.Error(res.Err)
 	s.Contains(res.Err.Error(), "duplicate fairness key")
 
-	// Weight below minimum - should fail
+	// Zero or negative weight - should fail
 	res = s.Execute(
 		"task-queue", "config", "set",
 		"--address", s.Address(),
 		"--task-queue", taskQueue,
 		"--task-queue-type", "activity",
-		"--fairness-key-weight", "Priority=0.0005",
+		"--fairness-key-weight", "Priority=0",
 	)
 	s.Error(res.Err)
-	s.Contains(res.Err.Error(), "below minimum")
+	s.Contains(res.Err.Error(), "must be positive")
 
 	// Invalid format - should fail
 	res = s.Execute(
