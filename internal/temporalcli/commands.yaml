@@ -3491,7 +3491,9 @@ commands:
           --queue-rps-limit <requests_per_second:float> \
           --queue-rps-limit-reason <reason_string> \
           --fairness-key-rps-limit-default <requests_per_second:float> \
-          --fairness-key-rps-limit-reason <reason_string>
+          --fairness-key-rps-limit-reason <reason_string> \
+          --fairness-key-weight-set HighPriority=2.0 \
+          --fairness-key-weight-set LowPriority=0.5
       ```
 
       This command supports updating:
@@ -3501,8 +3503,12 @@ commands:
       - Fairness key rate limit defaults: Sets default rate limits for fairness keys.
         If set, each individual fairness key will be limited to this rate,
         scaled by the weight of the fairness key.
+      - Fairness key weight overrides: Set custom weights for specific fairness keys.
+        Weights control the relative share of capacity each key receives.
 
       To unset a rate limit, pass in 'default', for example: --queue-rps-limit default
+      To unset specific fairness weights, use --fairness-key-weight-unset <key>
+      To unset all fairness weights, use --fairness-key-weight-unset-all
     options:
       - name: task-queue
         type: string
@@ -3538,6 +3544,17 @@ commands:
       - name: fairness-key-rps-limit-reason
         type: string
         description: Reason for fairness key rate limit update.
+      - name: fairness-key-weight
+        type: string[]
+        description: |
+          Set or unset fairness key weight overrides in format key=weight or key=default.
+          Use key=weight to set a positive weight value; use key=default to unset.
+          Can be specified multiple times. Example: --fairness-key-weight HighPriority=2.0 --fairness-key-weight LowPriority=default.
+      - name: fairness-key-weight-clear-all
+        type: bool
+        description: |
+          Unset all fairness key weight overrides.
+          Cannot be used with --fairness-key-weight.
 
   - name: temporal workflow
     summary: Start, list, and operate on Workflows
