@@ -63,9 +63,9 @@ const (
 )
 
 // printZeroRateLimitWarning prints a warning when a rate limit is set to 0
-func printZeroRateLimitWarning(p *printer.Printer, limitType string) {
-	p.Printlnf("WARNING: Setting %s to 0 will STOP ALL TRAFFIC on this task queue.", limitType)
-	p.Println("         This will prevent any tasks from being dispatched until the limit is changed.")
+func printZeroRateLimitWarning(cctx *CommandContext, limitType string) {
+	fmt.Fprintf(cctx.Options.Stderr, "WARNING: Setting %s to 0 will STOP ALL TRAFFIC on this task queue.\n", limitType)
+	fmt.Fprintln(cctx.Options.Stderr, "         This will prevent any tasks from being dispatched until the limit is changed.")
 }
 
 // parseFairnessKeyWeights parses "key=weight" or "key=default" format strings
@@ -200,7 +200,7 @@ func (c *TemporalTaskQueueConfigSetCommand) run(cctx *CommandContext, args []str
 
 		// Warn about zero rate limit (stops all traffic)
 		if queueRateLimitIsZero {
-			printZeroRateLimitWarning(cctx.Printer, "queue rate limit")
+			printZeroRateLimitWarning(cctx, "queue rate limit")
 		}
 	}
 
@@ -216,7 +216,7 @@ func (c *TemporalTaskQueueConfigSetCommand) run(cctx *CommandContext, args []str
 
 		// Warn about zero rate limit
 		if fairnessRateLimitIsZero {
-			printZeroRateLimitWarning(cctx.Printer, "fairness key rate limit default")
+			printZeroRateLimitWarning(cctx, "fairness key rate limit default")
 		}
 	}
 

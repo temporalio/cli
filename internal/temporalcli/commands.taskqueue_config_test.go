@@ -332,8 +332,8 @@ func (s *SharedServerSuite) TestTaskQueue_Config_Validation() {
 		"--queue-rps-limit-reason", "emergency stop",
 	)
 	s.NoError(res.Err)
-	s.Contains(res.Stdout.String(), "WARNING")
-	s.Contains(res.Stdout.String(), "STOP ALL TRAFFIC")
+	s.Contains(res.Stderr.String(), "WARNING")
+	s.Contains(res.Stderr.String(), "STOP ALL TRAFFIC")
 
 	// Duplicate fairness keys - should fail
 	res = s.Execute(
