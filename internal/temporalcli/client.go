@@ -38,6 +38,10 @@ func dialClient(cctx *CommandContext, c *cliext.ClientOptions) (client.Client, e
 		c.Identity = "temporal-cli:" + username + "@" + hostname
 	}
 
+	if err := applyClientAuthorityFromConfig(cctx, c); err != nil {
+		return nil, err
+	}
+
 	// Build client options using cliext
 	builder := &cliext.ClientOptionsBuilder{
 		CommonOptions: cctx.RootCommand.CommonOptions,
@@ -86,6 +90,28 @@ func dialClient(cctx *CommandContext, c *cliext.ClientOptions) (client.Client, e
 	c.Namespace = clientOpts.Namespace
 
 	return cl, nil
+}
+
+func applyClientAuthorityFromConfig(cctx *CommandContext, c *cliext.ClientOptions) error {
+	if c.ClientAuthority != "" || (c.FlagSet != nil && c.FlagSet.Changed("client-authority")) {
+		return nil
+	}
+	if cctx.RootCommand.DisableConfigFile {
+		return nil
+	}
+	_, additionalProfileFields, err := loadEnvConfigFile(cctx)
+	if err != nil {
+		return err
+	}
+	if v, ok, err := clientAuthorityFromAdditionalProfileFields(
+		additionalProfileFields,
+		envConfigProfileName(cctx),
+	); err != nil {
+		return err
+	} else if ok {
+		c.ClientAuthority = v
+	}
+	return nil
 }
 
 func fixedHeaderOverrideInterceptor(

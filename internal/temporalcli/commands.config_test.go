@@ -25,6 +25,7 @@ func TestConfig_Get(t *testing.T) {
 address = "my-address"
 namespace = "my-namespace"
 api_key = "my-api-key"
+client_authority = "my-client-authority"
 codec = { endpoint = "my-endpoint", auth = "my-auth" }
 grpc_meta = { some-heAder1 = "some-value1", some-header2 = "some-value2", some_heaDer3 = "some-value3" }
 some_future_key = "some future value not handled"
@@ -74,6 +75,7 @@ disable_host_verification = true`))
 		"address":                       "my-address",
 		"namespace":                     "my-namespace",
 		"api_key":                       "my-api-key",
+		"client_authority":              "my-client-authority",
 		"codec.endpoint":                "my-endpoint",
 		"codec.auth":                    "my-auth",
 		"grpc_meta.some-header1":        "some-value1",
@@ -117,6 +119,7 @@ disable_host_verification = true`))
 	h.JSONEq(`{
 		"address": "my-address",
 		"api_key": "my-api-key",
+		"client_authority": "my-client-authority",
 		"codec": {
 			"auth": "my-auth",
 			"endpoint": "my-endpoint"
@@ -202,6 +205,90 @@ address = "my-address"
 	res = h.Execute("config", "get", "--prop", "tls")
 	h.NoError(res.Err)
 	h.ContainsOnSameLine(res.Stdout.String(), "tls", "false")
+}
+
+func TestConfig_ClientAuthority(t *testing.T) {
+	h := NewCommandHarness(t)
+	defer h.Close()
+
+	f, err := os.CreateTemp("", "")
+	h.NoError(err)
+	h.NoError(f.Close())
+	h.NoError(os.Remove(f.Name()))
+	defer os.Remove(f.Name())
+	h.Options.EnvLookup = EnvLookupMap{"TEMPORAL_CONFIG_FILE": f.Name()}
+
+	// Set accepts the flag-style alias, but writes the canonical config key.
+	res := h.Execute("config", "set", "--prop", "client-authority", "--value", "my-authority")
+	h.NoError(res.Err)
+	b, err := os.ReadFile(f.Name())
+	h.NoError(err)
+	h.Contains(string(b), `client_authority = "my-authority"`)
+	h.NotContains(string(b), "client-authority")
+
+	// Get accepts both spellings and displays the canonical property name.
+	res = h.Execute("config", "get", "--prop", "client_authority")
+	h.NoError(res.Err)
+	h.ContainsOnSameLine(res.Stdout.String(), "client_authority", "my-authority")
+	res = h.Execute("config", "get", "--prop", "client-authority")
+	h.NoError(res.Err)
+	h.ContainsOnSameLine(res.Stdout.String(), "client_authority", "my-authority")
+
+	// Unrelated writes preserve the additional profile field.
+	res = h.Execute("config", "set", "--prop", "address", "--value", "my-address")
+	h.NoError(res.Err)
+	b, err = os.ReadFile(f.Name())
+	h.NoError(err)
+	h.Contains(string(b), `client_authority = "my-authority"`)
+	h.Contains(string(b), `address = "my-address"`)
+
+	// Delete accepts the alias too.
+	res = h.Execute("config", "delete", "--prop", "client-authority")
+	h.NoError(res.Err)
+	b, err = os.ReadFile(f.Name())
+	h.NoError(err)
+	h.NotContains(string(b), "client_authority")
+}
+
+func TestConfig_ClientAuthority_NormalizesExistingAlias(t *testing.T) {
+	h := NewCommandHarness(t)
+	defer h.Close()
+
+	f, err := os.CreateTemp("", "")
+	h.NoError(err)
+	defer os.Remove(f.Name())
+	_, err = f.Write([]byte(`
+[profile.foo]
+client-authority = "alias-authority"
+client_authority = "canonical-authority"`))
+	h.NoError(err)
+	h.NoError(f.Close())
+	h.Options.EnvLookup = EnvLookupMap{"TEMPORAL_CONFIG_FILE": f.Name(), "TEMPORAL_PROFILE": "foo"}
+
+	res := h.Execute("config", "set", "--prop", "namespace", "--value", "my-namespace")
+	h.NoError(res.Err)
+	b, err := os.ReadFile(f.Name())
+	h.NoError(err)
+	h.Contains(string(b), `client_authority = "canonical-authority"`)
+	h.NotContains(string(b), "client-authority")
+}
+
+func TestConfig_ClientAuthority_RejectsNonString(t *testing.T) {
+	h := NewCommandHarness(t)
+	defer h.Close()
+
+	f, err := os.CreateTemp("", "")
+	h.NoError(err)
+	defer os.Remove(f.Name())
+	_, err = f.Write([]byte(`
+[profile.foo]
+client_authority = 123`))
+	h.NoError(err)
+	h.NoError(f.Close())
+	h.Options.EnvLookup = EnvLookupMap{"TEMPORAL_CONFIG_FILE": f.Name(), "TEMPORAL_PROFILE": "foo"}
+
+	res := h.Execute("config", "get", "--prop", "client_authority")
+	h.ErrorContains(res.Err, `property "client_authority" must be a string`)
 }
 
 func TestConfig_Delete(t *testing.T) {

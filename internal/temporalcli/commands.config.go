@@ -16,18 +16,21 @@ import (
 func (c *TemporalConfigDeleteCommand) run(cctx *CommandContext, _ []string) error {
 	// Load config
 	profileName := envConfigProfileName(cctx)
-	conf, confProfile, err := loadEnvConfigProfile(cctx, profileName, true)
+	conf, confProfile, additionalProfileFields, err := loadEnvConfigProfile(cctx, profileName, true)
 	if err != nil {
 		return err
 	}
+	propName := normalizeEnvConfigProp(c.Prop)
 	if strings.HasPrefix(c.Prop, "grpc_meta.") {
 		key := strings.TrimPrefix(c.Prop, "grpc_meta.")
 		if _, ok := confProfile.GRPCMeta[key]; !ok {
 			return fmt.Errorf("gRPC meta key %q not found", key)
 		}
 		delete(confProfile.GRPCMeta, key)
+	} else if propName == envConfigPropClientAuthority {
+		deleteClientAuthority(additionalProfileFields, profileName)
 	} else {
-		reflectVal, err := reflectEnvConfigProp(confProfile, c.Prop, true)
+		reflectVal, err := reflectEnvConfigProp(confProfile, propName, true)
 		if err != nil {
 			return err
 		}
@@ -35,13 +38,13 @@ func (c *TemporalConfigDeleteCommand) run(cctx *CommandContext, _ []string) erro
 	}
 
 	// Save
-	return writeEnvConfigFile(cctx, conf)
+	return writeEnvConfigFile(cctx, conf, additionalProfileFields)
 }
 
 func (c *TemporalConfigDeleteProfileCommand) run(cctx *CommandContext, _ []string) error {
 	// Load config
 	profileName := envConfigProfileName(cctx)
-	conf, _, err := loadEnvConfigProfile(cctx, profileName, true)
+	conf, _, additionalProfileFields, err := loadEnvConfigProfile(cctx, profileName, true)
 	if err != nil {
 		return err
 	}
@@ -52,15 +55,16 @@ func (c *TemporalConfigDeleteProfileCommand) run(cctx *CommandContext, _ []strin
 		return fmt.Errorf("to delete an entire profile, --profile must be provided explicitly")
 	}
 	delete(conf.Profiles, profileName)
+	delete(additionalProfileFields, profileName)
 
 	// Save
-	return writeEnvConfigFile(cctx, conf)
+	return writeEnvConfigFile(cctx, conf, additionalProfileFields)
 }
 
 func (c *TemporalConfigGetCommand) run(cctx *CommandContext, _ []string) error {
 	// Load config profile
 	profileName := envConfigProfileName(cctx)
-	conf, confProfile, err := loadEnvConfigProfile(cctx, profileName, true)
+	conf, confProfile, additionalProfileFields, err := loadEnvConfigProfile(cctx, profileName, true)
 	if err != nil {
 		return err
 	}
@@ -70,22 +74,34 @@ func (c *TemporalConfigGetCommand) run(cctx *CommandContext, _ []string) error {
 	}
 	// If there is a specific key requested, show it, otherwise show all
 	if c.Prop != "" {
+		propName := normalizeEnvConfigProp(c.Prop)
 		// We do not support asking for structures with children at this time,
 		// but "tls" is a special case because it's also a bool.
-		if c.Prop == "codec" || c.Prop == "grpc_meta" {
+		if propName == "codec" || propName == "grpc_meta" {
 			return fmt.Errorf("must provide exact property, not parent property")
 		}
-		var reflectVal reflect.Value
 		// gRPC meta is special
 		if strings.HasPrefix(c.Prop, "grpc_meta.") {
 			v, ok := confProfile.GRPCMeta[strings.TrimPrefix(c.Prop, "grpc_meta.")]
 			if !ok {
 				return fmt.Errorf("unknown property %q", c.Prop)
 			}
-			reflectVal = reflect.ValueOf(v)
+			return cctx.Printer.PrintStructured(
+				prop{Property: c.Prop, Value: v},
+				printer.StructuredOptions{Table: &printer.TableOptions{}},
+			)
+		} else if propName == envConfigPropClientAuthority {
+			v, _, err := clientAuthorityFromAdditionalProfileFields(additionalProfileFields, profileName)
+			if err != nil {
+				return err
+			}
+			return cctx.Printer.PrintStructured(
+				prop{Property: envConfigPropClientAuthority, Value: v},
+				printer.StructuredOptions{Table: &printer.TableOptions{}},
+			)
 		} else {
 			// Single value goes into property-value structure
-			reflectVal, err = reflectEnvConfigProp(confProfile, c.Prop, false)
+			reflectVal, err := reflectEnvConfigProp(confProfile, propName, false)
 			if err != nil {
 				return err
 			}
@@ -93,18 +109,22 @@ func (c *TemporalConfigGetCommand) run(cctx *CommandContext, _ []string) error {
 			if reflectVal.Kind() == reflect.Pointer {
 				reflectVal = reflect.ValueOf(!reflectVal.IsNil())
 			}
+			return cctx.Printer.PrintStructured(
+				prop{Property: propName, Value: reflectVal.Interface()},
+				printer.StructuredOptions{Table: &printer.TableOptions{}},
+			)
 		}
-		return cctx.Printer.PrintStructured(
-			prop{Property: c.Prop, Value: reflectVal.Interface()},
-			printer.StructuredOptions{Table: &printer.TableOptions{}},
-		)
 	} else if cctx.JSONOutput {
 		// If it is JSON and not prop specific, we want to dump the TOML
 		// structure in JSON form
 		var tomlConf struct {
 			Profiles map[string]any `toml:"profile"`
 		}
-		if b, err := conf.ToTOML(envconfig.ClientConfigToTOMLOptions{}); err != nil {
+		additionalFields, err := knownAdditionalProfileFields(additionalProfileFields, profileName)
+		if err != nil {
+			return err
+		}
+		if b, err := conf.ToTOML(envconfig.ClientConfigToTOMLOptions{AdditionalProfileFields: additionalFields}); err != nil {
 			return fmt.Errorf("failed converting to TOML: %w", err)
 		} else if err := toml.Unmarshal(b, &tomlConf); err != nil {
 			return fmt.Errorf("failed converting from TOML: %w", err)
@@ -127,6 +147,11 @@ func (c *TemporalConfigGetCommand) run(cctx *CommandContext, _ []string) error {
 			} else if !val.IsZero() {
 				props = append(props, prop{Property: k, Value: val.Interface()})
 			}
+		}
+		if v, ok, err := clientAuthorityFromAdditionalProfileFields(additionalProfileFields, profileName); err != nil {
+			return err
+		} else if ok {
+			props = append(props, prop{Property: envConfigPropClientAuthority, Value: v})
 		}
 
 		// Add "grpc_meta"
@@ -161,19 +186,23 @@ func (c *TemporalConfigListCommand) run(cctx *CommandContext, _ []string) error 
 
 func (c *TemporalConfigSetCommand) run(cctx *CommandContext, _ []string) error {
 	// Load config
-	conf, confProfile, err := loadEnvConfigProfile(cctx, envConfigProfileName(cctx), false)
+	profileName := envConfigProfileName(cctx)
+	conf, confProfile, additionalProfileFields, err := loadEnvConfigProfile(cctx, profileName, false)
 	if err != nil {
 		return err
 	}
+	propName := normalizeEnvConfigProp(c.Prop)
 	// As a special case, "grpc_meta." values are handled specifically
 	if strings.HasPrefix(c.Prop, "grpc_meta.") {
 		if confProfile.GRPCMeta == nil {
 			confProfile.GRPCMeta = map[string]string{}
 		}
 		confProfile.GRPCMeta[strings.TrimPrefix(c.Prop, "grpc_meta.")] = c.Value
+	} else if propName == envConfigPropClientAuthority {
+		setClientAuthority(additionalProfileFields, profileName, c.Value)
 	} else {
 		// Get reflect value
-		reflectVal, err := reflectEnvConfigProp(confProfile, c.Prop, false)
+		reflectVal, err := reflectEnvConfigProp(confProfile, propName, false)
 		if err != nil {
 			return err
 		}
@@ -212,14 +241,16 @@ func (c *TemporalConfigSetCommand) run(cctx *CommandContext, _ []string) error {
 	}
 
 	// Save
-	return writeEnvConfigFile(cctx, conf)
+	return writeEnvConfigFile(cctx, conf, additionalProfileFields)
 }
 
 func envConfigProfileName(cctx *CommandContext) string {
 	if cctx.RootCommand.Profile != "" {
 		return cctx.RootCommand.Profile
-	} else if p, _ := cctx.Options.EnvLookup.LookupEnv("TEMPORAL_PROFILE"); p != "" {
-		return p
+	} else if cctx.Options.EnvLookup != nil {
+		if p, _ := cctx.Options.EnvLookup.LookupEnv("TEMPORAL_PROFILE"); p != "" {
+			return p
+		}
 	}
 	return envconfig.DefaultConfigFileProfile
 }
@@ -228,25 +259,22 @@ func loadEnvConfigProfile(
 	cctx *CommandContext,
 	profile string,
 	failIfNotFound bool,
-) (*envconfig.ClientConfig, *envconfig.ClientConfigProfile, error) {
-	clientConfig, err := envconfig.LoadClientConfig(envconfig.LoadClientConfigOptions{
-		ConfigFilePath: cctx.RootCommand.ConfigFile,
-		EnvLookup:      cctx.Options.EnvLookup,
-	})
+) (*envconfig.ClientConfig, *envconfig.ClientConfigProfile, map[string]map[string]any, error) {
+	clientConfig, additionalProfileFields, err := loadEnvConfigFile(cctx)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	// Load profile
 	clientProfile := clientConfig.Profiles[profile]
 	if clientProfile == nil {
 		if failIfNotFound {
-			return nil, nil, fmt.Errorf("profile %q not found", profile)
+			return nil, nil, nil, fmt.Errorf("profile %q not found", profile)
 		}
 		clientProfile = &envconfig.ClientConfigProfile{}
 		clientConfig.Profiles[profile] = clientProfile
 	}
-	return &clientConfig, clientProfile, nil
+	return clientConfig, clientProfile, additionalProfileFields, nil
 }
 
 var envConfigPropsToFieldNames = map[string]string{
@@ -265,6 +293,18 @@ var envConfigPropsToFieldNames = map[string]string{
 	"tls.disable_host_verification": "DisableHostVerification",
 	"codec.endpoint":                "Endpoint",
 	"codec.auth":                    "Auth",
+}
+
+const (
+	envConfigPropClientAuthority      = "client_authority"
+	envConfigPropClientAuthorityAlias = "client-authority"
+)
+
+func normalizeEnvConfigProp(prop string) string {
+	if prop == envConfigPropClientAuthorityAlias {
+		return envConfigPropClientAuthority
+	}
+	return prop
 }
 
 func reflectEnvConfigProp(
@@ -305,21 +345,65 @@ func reflectEnvConfigProp(
 	return parentVal.FieldByName(field), nil
 }
 
-func writeEnvConfigFile(cctx *CommandContext, conf *envconfig.ClientConfig) error {
-	// Get file
+func loadEnvConfigFile(cctx *CommandContext) (*envconfig.ClientConfig, map[string]map[string]any, error) {
+	configFile, err := envConfigFilePath(cctx)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var data []byte
+	if b, err := os.ReadFile(configFile); err == nil {
+		data = b
+	} else if !os.IsNotExist(err) {
+		return nil, nil, fmt.Errorf("failed reading file at %v: %w", configFile, err)
+	}
+
+	clientConfig := &envconfig.ClientConfig{}
+	additionalProfileFields := map[string]map[string]any{}
+	if err := clientConfig.FromTOML(data, envconfig.ClientConfigFromTOMLOptions{
+		AdditionalProfileFields: additionalProfileFields,
+	}); err != nil {
+		return nil, nil, fmt.Errorf("failed parsing config: %w", err)
+	}
+	if clientConfig.Profiles == nil {
+		clientConfig.Profiles = map[string]*envconfig.ClientConfigProfile{}
+	}
+	return clientConfig, additionalProfileFields, nil
+}
+
+func envConfigFilePath(cctx *CommandContext) (string, error) {
 	configFile := cctx.RootCommand.ConfigFile
 	if configFile == "" {
-		configFile, _ = cctx.Options.EnvLookup.LookupEnv("TEMPORAL_CONFIG_FILE")
+		env := cctx.Options.EnvLookup
+		if env == nil {
+			env = envconfig.EnvLookupOS
+		}
+		configFile, _ = env.LookupEnv("TEMPORAL_CONFIG_FILE")
 		if configFile == "" {
 			var err error
 			if configFile, err = envconfig.DefaultConfigFilePath(); err != nil {
-				return err
+				return "", err
 			}
 		}
 	}
+	return configFile, nil
+}
+
+func writeEnvConfigFile(
+	cctx *CommandContext,
+	conf *envconfig.ClientConfig,
+	additionalProfileFields map[string]map[string]any,
+) error {
+	configFile, err := envConfigFilePath(cctx)
+	if err != nil {
+		return err
+	}
+	if err := normalizeAdditionalProfileFields(additionalProfileFields); err != nil {
+		return err
+	}
 
 	// Convert to TOML
-	b, err := conf.ToTOML(envconfig.ClientConfigToTOMLOptions{})
+	b, err := conf.ToTOML(envconfig.ClientConfigToTOMLOptions{AdditionalProfileFields: additionalProfileFields})
 	if err != nil {
 		return fmt.Errorf("failed building TOML: %w", err)
 	}
@@ -331,4 +415,77 @@ func writeEnvConfigFile(cctx *CommandContext, conf *envconfig.ClientConfig) erro
 		return fmt.Errorf("failed writing config file: %w", err)
 	}
 	return nil
+}
+
+func clientAuthorityFromAdditionalProfileFields(
+	additionalProfileFields map[string]map[string]any,
+	profileName string,
+) (string, bool, error) {
+	profileFields := additionalProfileFields[profileName]
+	if profileFields == nil {
+		return "", false, nil
+	}
+	if raw, ok := profileFields[envConfigPropClientAuthority]; ok {
+		v, ok := raw.(string)
+		if !ok {
+			return "", false, fmt.Errorf("property %q must be a string", envConfigPropClientAuthority)
+		}
+		return v, true, nil
+	}
+	if raw, ok := profileFields[envConfigPropClientAuthorityAlias]; ok {
+		v, ok := raw.(string)
+		if !ok {
+			return "", false, fmt.Errorf("property %q must be a string", envConfigPropClientAuthority)
+		}
+		return v, true, nil
+	}
+	return "", false, nil
+}
+
+func setClientAuthority(additionalProfileFields map[string]map[string]any, profileName, value string) {
+	if additionalProfileFields[profileName] == nil {
+		additionalProfileFields[profileName] = map[string]any{}
+	}
+	additionalProfileFields[profileName][envConfigPropClientAuthority] = value
+	delete(additionalProfileFields[profileName], envConfigPropClientAuthorityAlias)
+}
+
+func deleteClientAuthority(additionalProfileFields map[string]map[string]any, profileName string) {
+	if additionalProfileFields[profileName] == nil {
+		return
+	}
+	delete(additionalProfileFields[profileName], envConfigPropClientAuthority)
+	delete(additionalProfileFields[profileName], envConfigPropClientAuthorityAlias)
+}
+
+func normalizeAdditionalProfileFields(additionalProfileFields map[string]map[string]any) error {
+	for profileName, profileFields := range additionalProfileFields {
+		value, ok, err := clientAuthorityFromAdditionalProfileFields(additionalProfileFields, profileName)
+		if err != nil {
+			return err
+		}
+		if ok {
+			profileFields[envConfigPropClientAuthority] = value
+		}
+		delete(profileFields, envConfigPropClientAuthorityAlias)
+	}
+	return nil
+}
+
+func knownAdditionalProfileFields(
+	additionalProfileFields map[string]map[string]any,
+	profileName string,
+) (map[string]map[string]any, error) {
+	value, ok, err := clientAuthorityFromAdditionalProfileFields(additionalProfileFields, profileName)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, nil
+	}
+	return map[string]map[string]any{
+		profileName: {
+			envConfigPropClientAuthority: value,
+		},
+	}, nil
 }
