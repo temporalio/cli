@@ -1,6 +1,6 @@
 module github.com/temporalio/cli
 
-go 1.26.1
+go 1.26.2
 
 require (
 	github.com/BurntSushi/toml v1.4.0
@@ -16,7 +16,7 @@ require (
 	github.com/spf13/pflag v1.0.10
 	github.com/stretchr/testify v1.11.1
 	github.com/temporalio/cli/cliext v0.0.0
-	github.com/temporalio/ui-server/v2 v2.45.3
+	github.com/temporalio/ui-server/v2 v2.49.1
 	go.temporal.io/api v1.62.8
 	go.temporal.io/sdk v1.41.1
 	go.temporal.io/sdk/contrib/envconfig v1.0.0
