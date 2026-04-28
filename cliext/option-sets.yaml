@@ -66,6 +66,7 @@ option-sets:
           - text
           - json
           - jsonl
+          - mermaid
           - none
         default: text
       - name: time-format
