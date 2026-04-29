@@ -343,7 +343,12 @@ func (c *TemporalWorkflowUpdateResultCommand) run(cctx *CommandContext, args []s
 		UpdateID:   c.UpdateId,
 	})
 	var valuePtr any
-	err = updateHandle.Get(cctx, &valuePtr)
+	var rawValue converter.RawValue
+	if cctx.JSONOutput {
+		err = updateHandle.Get(cctx, &rawValue)
+	} else {
+		err = updateHandle.Get(cctx, &valuePtr)
+	}
 	printMe := struct {
 		UpdateID string `json:"updateId"`
 		Result   any    `json:"result,omitempty"`
@@ -371,8 +376,35 @@ func (c *TemporalWorkflowUpdateResultCommand) run(cctx *CommandContext, args []s
 		return fmt.Errorf("unable to fetch update result: %w", err)
 	}
 
-	printMe.Result = valuePtr
+	if cctx.JSONOutput {
+		resultJSON, err := workflowUpdatePayloadJSON(cctx, rawValue.Payload())
+		if err != nil {
+			return err
+		}
+		printMe.Result = resultJSON
+	} else {
+		printMe.Result = valuePtr
+	}
 	return cctx.Printer.PrintStructured(printMe, printer.StructuredOptions{})
+}
+
+func workflowUpdatePayloadJSON(cctx *CommandContext, payload *common.Payload) (json.RawMessage, error) {
+	if cctx.JSONShorthandPayloads {
+		var valuePtr any
+		if err := converter.GetDefaultDataConverter().FromPayloads(&common.Payloads{Payloads: []*common.Payload{payload}}, &valuePtr); err != nil {
+			return nil, fmt.Errorf("failed decoding result: %w", err)
+		}
+		resultJSON, err := json.Marshal(valuePtr)
+		if err != nil {
+			return nil, fmt.Errorf("failed marshaling result: %w", err)
+		}
+		return resultJSON, nil
+	}
+	resultJSON, err := cctx.MarshalProtoJSON(payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed marshaling result: %w", err)
+	}
+	return resultJSON, nil
 }
 
 func (c *TemporalWorkflowUpdateDescribeCommand) run(cctx *CommandContext, args []string) error {
@@ -482,19 +514,53 @@ func workflowUpdateHelper(cctx *CommandContext,
 			printer.StructuredOptions{})
 	}
 
-	var valuePtr interface{}
-	err = updateHandle.Get(cctx, &valuePtr)
+	var valuePtr any
+	var rawValue converter.RawValue
+	if cctx.JSONOutput {
+		err = updateHandle.Get(cctx, &rawValue)
+	} else {
+		err = updateHandle.Get(cctx, &valuePtr)
+	}
 	if err != nil {
+		appErr := &temporal.ApplicationError{}
+		if errors.As(err, &appErr) {
+			printMe := struct {
+				Name     string `json:"name"`
+				UpdateID string `json:"updateId"`
+				Failure  any    `json:"failure"`
+			}{Name: updateStartOpts.Name, UpdateID: updateHandle.UpdateID()}
+			if cctx.JSONOutput {
+				fromAppErr, err := fromApplicationError(appErr)
+				if err != nil {
+					return fmt.Errorf("unable to update workflow: %w", err)
+				}
+				printMe.Failure = fromAppErr
+			} else {
+				printMe.Failure = appErr.Error()
+			}
+			if err := cctx.Printer.PrintStructured(printMe, printer.StructuredOptions{}); err != nil {
+				return err
+			}
+			return errors.New("update is failed")
+		}
 		return fmt.Errorf("unable to update workflow: %w", err)
 	}
 
-	return cctx.Printer.PrintStructured(
-		struct {
-			Name     string      `json:"name"`
-			UpdateID string      `json:"updateId"`
-			Result   interface{} `json:"result"`
-		}{Name: updateStartOpts.Name, UpdateID: updateHandle.UpdateID(), Result: valuePtr},
-		printer.StructuredOptions{})
+	printMe := struct {
+		Name     string `json:"name"`
+		UpdateID string `json:"updateId"`
+		Result   any    `json:"result"`
+	}{Name: updateStartOpts.Name, UpdateID: updateHandle.UpdateID()}
+	if cctx.JSONOutput {
+		resultJSON, err := workflowUpdatePayloadJSON(cctx, rawValue.Payload())
+		if err != nil {
+			return err
+		}
+		printMe.Result = resultJSON
+	} else {
+		printMe.Result = valuePtr
+	}
+	return cctx.Printer.PrintStructured(printMe, printer.StructuredOptions{})
 }
 
 func username() string {
