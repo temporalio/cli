@@ -210,7 +210,7 @@ commands:
       temporal activity complete \
           --activity-id YourActivityId \
           --workflow-id YourWorkflowId \
-          --result '{"YourResultKey": "YourResultVal"}'
+          --input '{"YourResultKey": "YourResultVal"}'
       ```
     options:
       - name: activity-id
@@ -233,10 +233,8 @@ commands:
           Run ID. For workflow Activities (when --workflow-id is
           provided), this is the Workflow Run ID. For Standalone
           Activities, this is the Activity Run ID.
-      - name: result
-        type: string
-        description: Result `JSON` to return.
-        required: true
+    option-sets:
+      - payload-input
 
   - name: temporal activity count
     summary: Count Standalone Activities matching a query (Experimental)

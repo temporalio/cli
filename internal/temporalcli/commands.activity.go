@@ -575,8 +575,7 @@ func (c *TemporalActivityCompleteCommand) run(cctx *CommandContext, args []strin
 	}
 	defer cl.Close()
 
-	metadata := map[string][][]byte{"encoding": {[]byte("json/plain")}}
-	resultPayloads, err := CreatePayloads([][]byte{[]byte(c.Result)}, metadata, false)
+	resultPayloads, err := c.PayloadInputOptions.buildRawInputPayloads()
 	if err != nil {
 		return err
 	}
