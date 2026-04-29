@@ -485,15 +485,49 @@ func workflowUpdateHelper(cctx *CommandContext,
 	var valuePtr interface{}
 	err = updateHandle.Get(cctx, &valuePtr)
 	if err != nil {
+		if cctx.JSONOutput {
+			return cctx.Printer.PrintStructured(
+				struct {
+					Name     string `json:"name"`
+					UpdateID string `json:"updateId"`
+					Error    string `json:"error"`
+				}{Name: updateStartOpts.Name, UpdateID: updateHandle.UpdateID(), Error: err.Error()},
+				printer.StructuredOptions{})
+		}
 		return fmt.Errorf("unable to update workflow: %w", err)
+	}
+
+	// Handle result serialization based on JSONShorthandPayloads
+	var resultJSON json.RawMessage
+	if cctx.JSONShorthandPayloads {
+		// Decode payloads to native Go value
+		if payloads, ok := valuePtr.(*common.Payloads); ok {
+			var decoded any
+			if err := converter.GetDefaultDataConverter().FromPayloads(payloads, &decoded); err != nil {
+				return fmt.Errorf("failed decoding result: %w", err)
+			}
+			resultJSON, err = json.Marshal(decoded)
+		} else {
+			resultJSON, err = json.Marshal(valuePtr)
+		}
+	} else {
+		// Marshal raw payloads as proto JSON
+		if payloads, ok := valuePtr.(*common.Payloads); ok {
+			resultJSON, err = cctx.MarshalProtoJSON(payloads)
+		} else {
+			resultJSON, err = json.Marshal(valuePtr)
+		}
+	}
+	if err != nil {
+		return fmt.Errorf("failed marshaling result: %w", err)
 	}
 
 	return cctx.Printer.PrintStructured(
 		struct {
-			Name     string      `json:"name"`
-			UpdateID string      `json:"updateId"`
-			Result   interface{} `json:"result"`
-		}{Name: updateStartOpts.Name, UpdateID: updateHandle.UpdateID(), Result: valuePtr},
+			Name     string          `json:"name"`
+			UpdateID string          `json:"updateId"`
+			Result   json.RawMessage `json:"result"`
+		}{Name: updateStartOpts.Name, UpdateID: updateHandle.UpdateID(), Result: resultJSON},
 		printer.StructuredOptions{})
 }
 
