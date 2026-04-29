@@ -31,12 +31,19 @@ func tryExecuteExtension(cctx *CommandContext, tcmd *TemporalCommand) (error, bo
 	// Find the deepest matching built-in command and remaining args.
 	foundCmd, remainingArgs, findErr := tcmd.Command.Find(cctx.Options.Args)
 
+	// Cobra normally adds --help/-h before parsing, but extension dispatch
+	// pre-parses flags before Cobra's execution path runs. We Initialize it so that
+	// help is treated as a normal CLI flag instead of surfacing as pflag.ErrHelp from flag parsing.
+	foundCmd.InitDefaultHelpFlag()
+
 	// Group args into these lists:
 	// - cliParseArgs: args to validate (subset of cliPassArgs)
 	// - cliPassArgs: known CLI args to pass to extension
 	// - extArgs: args to pass to extension and use for extension lookup
-	foundCmd.InitDefaultHelpFlag()
 	cliParseArgs, cliPassArgs, extArgs := groupArgs(foundCmd, remainingArgs)
+
+	// Check if remaining args include positional args (not just flags).
+	// If not, a built-in command fully handles this - no extension needed.
 	if findErr == nil && !slices.ContainsFunc(extArgs, isPosArg) {
 		return nil, false
 	}
