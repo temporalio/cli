@@ -31,18 +31,15 @@ func tryExecuteExtension(cctx *CommandContext, tcmd *TemporalCommand) (error, bo
 	// Find the deepest matching built-in command and remaining args.
 	foundCmd, remainingArgs, findErr := tcmd.Command.Find(cctx.Options.Args)
 
-	// Check if remaining args include positional args (not just flags).
-	// If not, a built-in command fully handles this - no extension needed.
-	hasPosArgs := slices.ContainsFunc(remainingArgs, isPosArg)
-	if findErr == nil && !hasPosArgs {
-		return nil, false
-	}
-
 	// Group args into these lists:
 	// - cliParseArgs: args to validate (subset of cliPassArgs)
 	// - cliPassArgs: known CLI args to pass to extension
 	// - extArgs: args to pass to extension and use for extension lookup
+	foundCmd.InitDefaultHelpFlag()
 	cliParseArgs, cliPassArgs, extArgs := groupArgs(foundCmd, remainingArgs)
+	if findErr == nil && !slices.ContainsFunc(extArgs, isPosArg) {
+		return nil, false
+	}
 
 	// Search for an extension executable.
 	cmdPrefix := strings.Fields(foundCmd.CommandPath())

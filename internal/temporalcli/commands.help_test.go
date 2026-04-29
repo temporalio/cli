@@ -29,6 +29,21 @@ func TestHelp_Subcommand(t *testing.T) {
 	assert.NoError(t, res.Err)
 }
 
+func TestHelp_WithValueFlag(t *testing.T) {
+	h := NewCommandHarness(t)
+
+	for _, args := range [][]string{
+		{"workflow", "list", "--address", "123", "--help"},
+		{"workflow", "list", "--help", "--address", "123"},
+		{"workflow", "list", "--namespace", "foo", "--help"},
+	} {
+		res := h.Execute(args...)
+		assert.Contains(t, res.Stdout.String(), "List Workflow Executions.")
+		assert.NotContains(t, res.Stderr.String(), "pflag: help requested")
+		assert.NoError(t, res.Err)
+	}
+}
+
 func TestHelp_HelpShowsAllFlag(t *testing.T) {
 	h := NewCommandHarness(t)
 	res := h.Execute("help", "--help")
