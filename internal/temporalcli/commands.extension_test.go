@@ -88,6 +88,19 @@ func TestExtension_DoesNotOverrideBuiltinCommand(t *testing.T) {
 		res := h.Execute("workflow", "list", "--help")
 		assert.Contains(t, res.Stdout.String(), "List Workflow Executions")
 	})
+
+	t.Run("subcommand with value flags", func(t *testing.T) {
+		for _, args := range [][]string{
+			{"workflow", "list", "--address", "123", "--help"},
+			{"workflow", "list", "--help", "--address", "123"},
+			{"workflow", "list", "--namespace", "foo", "--help"},
+		} {
+			res := h.Execute(args...)
+			assert.Contains(t, res.Stdout.String(), "List Workflow Executions")
+			assert.NotContains(t, res.Stderr.String(), "pflag: help requested")
+			assert.NoError(t, res.Err)
+		}
+	})
 }
 
 func TestExtension_Flags(t *testing.T) {
@@ -148,6 +161,14 @@ func TestExtension_Flags(t *testing.T) {
 		{args: "workflow diagram arg1 -x value arg2", want: "temporal-workflow-diagram arg1 -x value arg2"}, // order preserved
 		{args: "workflow diagram foo --flag value", want: "temporal-workflow-diagram-foo --flag value"},     // nested commands
 		{args: "workflow diagram --output invalid", want: "temporal-workflow-diagram --output invalid"},     // invalid value passed through
+
+		// Help flags are forwarded to extensions, not handled locally.
+
+		{args: "foo --help", want: "temporal-foo --help"},
+		{args: "foo -h", want: "temporal-foo -h"},
+		{args: "foo bar --help", want: "temporal-foo-bar --help"}, // most specific extension wins
+		{args: "workflow diagram --help", want: "temporal-workflow-diagram --help"},
+		{args: "workflow diagram -h", want: "temporal-workflow-diagram -h"},
 
 		// Note: Flag aliases are already implicitly tested via other command-specific tests.
 	}
