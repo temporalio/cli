@@ -704,6 +704,68 @@ func coloredEventType(e enums.EventType) string {
 	return fn(e.String())
 }
 
+const temporalSystemNexusEndpoint = "__temporal_system"
+
+// systemNexusOpDisplayName returns a display name for Nexus operation events on the
+// "__temporal_system" endpoint, replacing the generic NexusOperation* name with the
+// actual operation name + event-type suffix. Returns "" for all other events.
+// Populates s.systemNexusOps when it encounters a qualifying Scheduled event.
+func (s *structuredHistoryIter) systemNexusOpDisplayName(event *history.HistoryEvent) string {
+	if s.systemNexusOps == nil {
+		s.systemNexusOps = make(map[int64]string)
+	}
+	switch event.EventType {
+	case enums.EVENT_TYPE_NEXUS_OPERATION_SCHEDULED:
+		attr := event.GetNexusOperationScheduledEventAttributes()
+		if attr == nil || attr.Endpoint != temporalSystemNexusEndpoint {
+			return ""
+		}
+		s.systemNexusOps[event.EventId] = attr.Operation
+		return attr.Operation + "Scheduled"
+	case enums.EVENT_TYPE_NEXUS_OPERATION_STARTED:
+		attr := event.GetNexusOperationStartedEventAttributes()
+		if attr == nil {
+			return ""
+		}
+		if op, ok := s.systemNexusOps[attr.ScheduledEventId]; ok {
+			return op + "Started"
+		}
+	case enums.EVENT_TYPE_NEXUS_OPERATION_COMPLETED:
+		attr := event.GetNexusOperationCompletedEventAttributes()
+		if attr == nil {
+			return ""
+		}
+		if op, ok := s.systemNexusOps[attr.ScheduledEventId]; ok {
+			return op + "Completed"
+		}
+	case enums.EVENT_TYPE_NEXUS_OPERATION_FAILED:
+		attr := event.GetNexusOperationFailedEventAttributes()
+		if attr == nil {
+			return ""
+		}
+		if op, ok := s.systemNexusOps[attr.ScheduledEventId]; ok {
+			return op + "Failed"
+		}
+	case enums.EVENT_TYPE_NEXUS_OPERATION_TIMED_OUT:
+		attr := event.GetNexusOperationTimedOutEventAttributes()
+		if attr == nil {
+			return ""
+		}
+		if op, ok := s.systemNexusOps[attr.ScheduledEventId]; ok {
+			return op + "TimedOut"
+		}
+	case enums.EVENT_TYPE_NEXUS_OPERATION_CANCELED:
+		attr := event.GetNexusOperationCanceledEventAttributes()
+		if attr == nil {
+			return ""
+		}
+		if op, ok := s.systemNexusOps[attr.ScheduledEventId]; ok {
+			return op + "Canceled"
+		}
+	}
+	return ""
+}
+
 type structuredHistoryIter struct {
 	ctx            context.Context
 	client         client.Client
@@ -725,6 +787,9 @@ type structuredHistoryIter struct {
 	reverseBuf       []*history.HistoryEvent
 	reverseNextToken []byte
 	reverseStarted   bool
+
+	// maps NexusOperationScheduled eventId → operation name for __temporal_system endpoint events
+	systemNexusOps map[int64]string
 }
 
 func (s *structuredHistoryIter) print(cctx *CommandContext) error {
@@ -751,7 +816,11 @@ func (s *structuredHistoryIter) print(cctx *CommandContext) error {
 		first = false
 
 		// Print section heading
-		cctx.Printer.Printlnf("--------------- [%v] %v ---------------", event.EventId, event.EventType)
+		eventTypeName := event.EventType.String()
+		if name := s.systemNexusOpDisplayName(event); name != "" {
+			eventTypeName = name
+		}
+		cctx.Printer.Printlnf("--------------- [%v] %v ---------------", event.EventId, eventTypeName)
 		// Convert the event to dot-delimited-field/value and print one per line
 		fields, err := s.flattenFields(cctx, event)
 		if err != nil {
@@ -786,10 +855,14 @@ func (s *structuredHistoryIter) Next() (any, error) {
 		return nil, nil
 	}
 	// Build data
+	typeName := s.systemNexusOpDisplayName(event)
+	if typeName == "" {
+		typeName = coloredEventType(event.EventType)
+	}
 	data := structuredHistoryEvent{
 		ID:   event.EventId,
 		Time: event.EventTime.AsTime().Format(time.RFC3339),
-		Type: coloredEventType(event.EventType),
+		Type: typeName,
 	}
 
 	// Follow continue as new (forward only; reverse traversal stays within the requested run)
