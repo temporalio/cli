@@ -88,6 +88,19 @@ func TestExtension_DoesNotOverrideBuiltinCommand(t *testing.T) {
 		res := h.Execute("workflow", "list", "--help")
 		assert.Contains(t, res.Stdout.String(), "List Workflow Executions")
 	})
+
+	t.Run("subcommand with value flags", func(t *testing.T) {
+		for _, args := range [][]string{
+			{"workflow", "list", "--address", "123", "--help"},
+			{"workflow", "list", "--help", "--address", "123"},
+			{"workflow", "list", "--namespace", "foo", "--help"},
+		} {
+			res := h.Execute(args...)
+			assert.Contains(t, res.Stdout.String(), "List Workflow Executions")
+			assert.NotContains(t, res.Stderr.String(), "pflag: help requested")
+			assert.NoError(t, res.Err)
+		}
+	})
 }
 
 func TestExtension_Flags(t *testing.T) {
