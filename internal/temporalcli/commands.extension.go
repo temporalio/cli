@@ -31,18 +31,22 @@ func tryExecuteExtension(cctx *CommandContext, tcmd *TemporalCommand) (error, bo
 	// Find the deepest matching built-in command and remaining args.
 	foundCmd, remainingArgs, findErr := tcmd.Command.Find(cctx.Options.Args)
 
-	// Check if remaining args include positional args (not just flags).
-	// If not, a built-in command fully handles this - no extension needed.
-	hasPosArgs := slices.ContainsFunc(remainingArgs, isPosArg)
-	if findErr == nil && !hasPosArgs {
-		return nil, false
-	}
+	// Cobra normally adds --help/-h before parsing, but extension dispatch
+	// pre-parses flags before Cobra's execution path runs. We Initialize it so that
+	// help is treated as a normal CLI flag instead of surfacing as pflag.ErrHelp from flag parsing.
+	foundCmd.InitDefaultHelpFlag()
 
 	// Group args into these lists:
 	// - cliParseArgs: args to validate (subset of cliPassArgs)
 	// - cliPassArgs: known CLI args to pass to extension
 	// - extArgs: args to pass to extension and use for extension lookup
 	cliParseArgs, cliPassArgs, extArgs := groupArgs(foundCmd, remainingArgs)
+
+	// Check if remaining args include positional args (not just flags).
+	// If not, a built-in command fully handles this - no extension needed.
+	if findErr == nil && !slices.ContainsFunc(extArgs, isPosArg) {
+		return nil, false
+	}
 
 	// Search for an extension executable.
 	cmdPrefix := strings.Fields(foundCmd.CommandPath())
@@ -95,6 +99,13 @@ func groupArgs(foundCmd *cobra.Command, args []string) (cliParseArgs, cliPassArg
 
 		name, hasInline := parseFlagArg(arg)
 		if f, takesValue := lookupFlag(foundCmd, name); f != nil {
+			// Help flag after positional args should go to extArgs so it
+			// gets forwarded to extensions (e.g. "temporal foo bar --help").
+			// Before positional args it stays in cliPassArgs for Cobra to handle.
+			if f.Name == "help" && seenPos {
+				extArgs = append(extArgs, arg)
+				continue
+			}
 			// Known CLI flag: goes to cliPassArgs.
 			// Flags in cliArgsToParseForExtension also go to cliParseArgs.
 			shouldParse := cliArgsToParseForExtension[f.Name]
