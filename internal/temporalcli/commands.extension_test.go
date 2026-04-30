@@ -149,6 +149,14 @@ func TestExtension_Flags(t *testing.T) {
 		{args: "workflow diagram foo --flag value", want: "temporal-workflow-diagram-foo --flag value"},     // nested commands
 		{args: "workflow diagram --output invalid", want: "temporal-workflow-diagram --output invalid"},     // invalid value passed through
 
+		// Help flags are forwarded to extensions, not handled locally.
+
+		{args: "foo --help", want: "temporal-foo --help"},
+		{args: "foo -h", want: "temporal-foo -h"},
+		{args: "foo bar --help", want: "temporal-foo-bar --help"}, // most specific extension wins
+		{args: "workflow diagram --help", want: "temporal-workflow-diagram --help"},
+		{args: "workflow diagram -h", want: "temporal-workflow-diagram -h"},
+
 		// Note: Flag aliases are already implicitly tested via other command-specific tests.
 	}
 

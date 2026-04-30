@@ -99,6 +99,13 @@ func groupArgs(foundCmd *cobra.Command, args []string) (cliParseArgs, cliPassArg
 
 		name, hasInline := parseFlagArg(arg)
 		if f, takesValue := lookupFlag(foundCmd, name); f != nil {
+			// Help flag after positional args should go to extArgs so it
+			// gets forwarded to extensions (e.g. "temporal foo bar --help").
+			// Before positional args it stays in cliPassArgs for Cobra to handle.
+			if f.Name == "help" && seenPos {
+				extArgs = append(extArgs, arg)
+				continue
+			}
 			// Known CLI flag: goes to cliPassArgs.
 			// Flags in cliArgsToParseForExtension also go to cliParseArgs.
 			shouldParse := cliArgsToParseForExtension[f.Name]
