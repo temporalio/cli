@@ -3616,10 +3616,11 @@ func NewTemporalWorkerDescribeCommand(cctx *CommandContext, parent *TemporalWork
 }
 
 type TemporalWorkerListCommand struct {
-	Parent  *TemporalWorkerCommand
-	Command cobra.Command
-	Query   string
-	Limit   int
+	Parent               *TemporalWorkerCommand
+	Command              cobra.Command
+	Query                string
+	Limit                int
+	IncludeSystemWorkers bool
 }
 
 func NewTemporalWorkerListCommand(cctx *CommandContext, parent *TemporalWorkerCommand) *TemporalWorkerListCommand {
@@ -3636,6 +3637,7 @@ func NewTemporalWorkerListCommand(cctx *CommandContext, parent *TemporalWorkerCo
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Content for an SQL-like `QUERY` List Filter.")
 	s.Command.Flags().IntVar(&s.Limit, "limit", 0, "Maximum number of workers to display.")
+	s.Command.Flags().BoolVar(&s.IncludeSystemWorkers, "include-system-workers", false, "Include system workers that are created implicitly by the server. By default, system workers are excluded.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
