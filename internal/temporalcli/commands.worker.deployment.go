@@ -22,6 +22,7 @@ import (
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/worker"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
 )
 
 type versionSummariesRowType struct {
@@ -966,6 +967,92 @@ func (c *TemporalWorkerDeploymentCreateVersionCommand) run(cctx *CommandContext,
 	}
 
 	cctx.Printer.Println("Successfully created worker deployment version")
+	return nil
+}
+
+// awsLambdaProviderDetailsPayload returns the encoded Payload representing AWS
+// Lambda compute provider details.
+func (c *TemporalWorkerDeploymentReplaceVersionComputeConfigCommand) awsLambdaProviderDetailsPayload() (*commonpb.Payload, error) {
+	// Map keys from temporal-auto-scaled-workers:
+	// https://github.com/temporalio/temporal-auto-scaled-workers/blob/c4a7e69b6504365d7e5326b0b8e6cd95e3293f96/wci/workflow/compute_provider/aws_lambda.go#L16-L20
+	providerDetails := map[string]any{
+		"arn": c.AwsLambdaFunctionArn,
+	}
+	if c.AwsLambdaAssumeRoleArn != "" {
+		providerDetails["role"] = c.AwsLambdaAssumeRoleArn
+	}
+	if c.AwsLambdaAssumeRoleExternalId != "" {
+		providerDetails["role_external_id"] = c.AwsLambdaAssumeRoleExternalId
+	}
+	err := validateAWSLambdaProviderDetails(providerDetails)
+	if err != nil {
+		return nil, err
+	}
+	dc := converter.GetDefaultDataConverter()
+	return dc.ToPayload(&providerDetails)
+}
+
+func (c *TemporalWorkerDeploymentReplaceVersionComputeConfigCommand) run(cctx *CommandContext, args []string) error {
+	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	ns := c.Parent.Parent.Namespace
+	buildID := c.BuildId
+	identity := c.Parent.Parent.Identity
+	deploymentName := c.DeploymentName
+	requestID := uuid.NewString()
+
+	request := &workflowservice.UpdateWorkerDeploymentVersionComputeConfigRequest{
+		Namespace: ns,
+		DeploymentVersion: &deployment.WorkerDeploymentVersion{
+			DeploymentName: deploymentName,
+			BuildId:        buildID,
+		},
+		Identity:  identity,
+		RequestId: requestID,
+	}
+
+	if c.AwsLambdaFunctionArn != "" {
+		detailsPayload, err := c.awsLambdaProviderDetailsPayload()
+		if err != nil {
+			return err
+		}
+		sg := &computepb.ComputeConfigScalingGroup{
+			Provider: &computepb.ComputeProvider{
+				Type:    "aws-lambda",
+				Details: detailsPayload,
+			},
+			Scaler: &computepb.ComputeScaler{
+				// Hard-coded: no-sync is the only supported algorithm
+				// in temporal-auto-scaled-workers as of 2026-04-01.
+				Type: "no-sync",
+			},
+		}
+		updatePaths := []string{
+			"provider.details",
+		}
+		ccScalingGroups := map[string]*computepb.ComputeConfigScalingGroupUpdate{
+			"default": &computepb.ComputeConfigScalingGroupUpdate{
+				ScalingGroup: sg,
+				UpdateMask: &fieldmaskpb.FieldMask{
+					Paths: updatePaths,
+				},
+			},
+		}
+		request.ComputeConfigScalingGroups = ccScalingGroups
+	} else {
+		request.RemoveComputeConfigScalingGroups = []string{"default"}
+	}
+
+	_, err = cl.WorkflowService().UpdateWorkerDeploymentVersionComputeConfig(cctx, request)
+	if err != nil {
+		return fmt.Errorf("error replacing worker deployment version compute config: %w", err)
+	}
+
+	cctx.Printer.Println("Successfully replaced worker deployment version compute config")
 	return nil
 }
 

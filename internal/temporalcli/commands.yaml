@@ -979,6 +979,7 @@ commands:
         - worker deployment set-ramping-version
         - worker deployment delete-version
         - worker deployment update-version-metadata
+        - worker deployment replace-version-compute-config
         - worker deployment manager-identity
 
   - name: temporal worker deployment create
@@ -1318,6 +1319,53 @@ commands:
         description: |
           Keys of entries to be deleted from metadata.
           Can be passed multiple times.
+
+  - name: temporal worker deployment replace-version-compute-config
+    summary: Replace compute configuration for a Version
+    description: |
+      Replace compute configuration associated with a Worker Deployment
+      Version.
+
+      For example:
+
+      ```
+       temporal worker deployment replace-version-compute-config \
+          --deployment-name YourDeploymentName --build-id YourBuildID \
+          --aws-lambda-function-arn LambdaFunctionARN \
+          --aws-lambda-assume-role-arn LambdaAssumeRoleARN \
+          --aws-lambda-assume-role-external-id LambdaAssumeRoleExternalID
+      ```
+      
+      If a Worker Deployment Version with the supplied BuildID does not exist,
+      this command will return an error.
+
+      If --aws-lambda-function-arn is not specified, the compute configuration
+      for the Worker Deployment Version will be removed.
+
+      Note: This is an experimental feature and may change in the future.
+    option-sets:
+      - deployment-version
+    options:
+      - name: aws-lambda-function-arn
+        type: string
+        description: |
+          Qualified (contains version suffix) or unqualified AWS Lambda
+          function ARN to invoke when there are no active pollers for task
+          queue targets in the Worker Deployment.
+      - name: aws-lambda-assume-role-arn
+        type: string
+        description: |
+          AWS IAM role ARN that the Temporal server will assume when invoking
+          the Lambda function that spawns a new Worker in this Worker
+          Deployment Version. Required when --aws-lambda-function-arn is
+          specified.
+      - name: aws-lambda-assume-role-external-id
+        type: string
+        description: |
+          Temporal server will enforce that the AWS IAM trust policy associated
+          with the AWS IAM role specified in --aws-lambda-assume-role-arn has
+          an aws:ExternalId condition that matches the supplied value. Required
+          when --aws-lambda-function-arn is specified.
 
   - name: temporal worker deployment manager-identity
     summary: Manager Identity commands change the `ManagerIdentity` of a Worker Deployment
