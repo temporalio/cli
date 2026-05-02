@@ -346,6 +346,85 @@ func (s *SharedServerSuite) TestWorkflow_Terminate_BatchWorkflowSuccess_JSON() {
 	s.NotEmpty(jsonRes["batchJobId"])
 }
 
+// TestWorkflow_Terminate_BatchWorkflow_SkipsCountWhenYes verifies that --yes causes
+// the batch terminate command to skip the CountWorkflowExecutions call. The count
+// is only used for the "Start batch against approximately N workflow(s)?" prompt;
+// when --yes bypasses the prompt, issuing it adds latency and prevents batch jobs
+// from running on clusters whose visibility API is timing out.
+func (s *SharedServerSuite) TestWorkflow_Terminate_BatchWorkflow_SkipsCountWhenYes() {
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
+		ctx.Done().Receive(ctx, nil)
+		return nil, ctx.Err()
+	})
+
+	var callLock sync.Mutex
+	var countCalls, startBatchCalls int
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string, req, reply any,
+			cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption,
+		) error {
+			callLock.Lock()
+			switch req.(type) {
+			case *workflowservice.CountWorkflowExecutionsRequest:
+				countCalls++
+			case *workflowservice.StartBatchOperationRequest:
+				startBatchCalls++
+			}
+			callLock.Unlock()
+			return invoker(ctx, method, req, reply, cc, opts...)
+		}),
+	)
+
+	// Start a workflow so the batch query has at least one match. The count assertion
+	// is independent of the match count (it asserts zero CountWorkflow calls regardless),
+	// but executing the batch against a real workflow keeps the test path realistic.
+	searchAttr := "keyword-" + uuid.NewString()
+	run, err := s.Client.ExecuteWorkflow(
+		s.Context,
+		client.StartWorkflowOptions{
+			TaskQueue:        s.Worker().Options.TaskQueue,
+			SearchAttributes: map[string]any{"CustomKeywordField": searchAttr},
+		},
+		DevWorkflow,
+		"ignored",
+	)
+	s.NoError(err)
+	s.Eventually(func() bool {
+		resp, err := s.Client.ListWorkflow(s.Context, &workflowservice.ListWorkflowExecutionsRequest{
+			Query: "CustomKeywordField = '" + searchAttr + "'",
+		})
+		s.NoError(err)
+		return len(resp.Executions) == 1
+	}, 3*time.Second, 100*time.Millisecond)
+
+	res := s.Execute(
+		"workflow", "terminate",
+		"--address", s.Address(),
+		"--query", "CustomKeywordField = '"+searchAttr+"'",
+		"--reason", "skip-count-test",
+		"--yes",
+	)
+	s.NoError(res.Err)
+
+	callLock.Lock()
+	defer callLock.Unlock()
+	s.Equal(0, countCalls, "CountWorkflowExecutions must not be called when --yes is set")
+	s.Equal(1, startBatchCalls, "StartBatchOperation must still be called")
+
+	// Sanity-check: the prompt text should reflect the missing count.
+	s.NotContains(res.Stdout.String(), "approximately")
+	s.Contains(res.Stdout.String(), "matching query")
+
+	// Drain the workflow so the test fixture cleans up.
+	s.Eventually(func() bool {
+		err := run.Get(s.Context, nil)
+		return err != nil
+	}, 5*time.Second, 100*time.Millisecond)
+}
+
 func (s *SharedServerSuite) testTerminateBatchWorkflow(
 	total int,
 	rps float32,

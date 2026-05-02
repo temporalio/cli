@@ -542,13 +542,19 @@ func (s *SingleWorkflowOrBatchOptions) workflowExecOrBatch(
 		return nil, nil, fmt.Errorf("cannot set run ID when query is set")
 	}
 
-	// Count the workflows that will be affected
-	count, err := cl.CountWorkflow(cctx, &workflowservice.CountWorkflowExecutionsRequest{Query: s.Query})
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed counting workflows from query: %w", err)
+	// The count is only used in the confirmation prompt; skip the request when --yes
+	// bypasses it, so batch jobs can still proceed if the visibility API is timing out.
+	var promptMessage string
+	if s.Yes {
+		promptMessage = fmt.Sprintf("Start batch against workflows matching query %q? y/N", s.Query)
+	} else {
+		count, err := cl.CountWorkflow(cctx, &workflowservice.CountWorkflowExecutionsRequest{Query: s.Query})
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed counting workflows from query: %w", err)
+		}
+		promptMessage = fmt.Sprintf("Start batch against approximately %v workflow(s)? y/N", count.Count)
 	}
-	yes, err := cctx.promptYes(
-		fmt.Sprintf("Start batch against approximately %v workflow(s)? y/N", count.Count), s.Yes)
+	yes, err := cctx.promptYes(promptMessage, s.Yes)
 	if err != nil {
 		return nil, nil, err
 	} else if !yes {
