@@ -1012,10 +1012,23 @@ func (s *SharedServerSuite) TestWorkflow_Update_Result() {
 	s.NoError(res.Err)
 	s.ContainsOnSameLine(res.Stdout.String(), "Result", "hi pass")
 	// JSON
+	passingJSONUpdateId := "passing-json"
+	res = s.Execute("--no-json-shorthand-payloads", "workflow", "update", "execute", "--address", s.Address(), "-w", run.GetID(),
+		"--name", updateName, "-i", `"json"`, "--update-id", passingJSONUpdateId, "-o", "json")
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), `"result": {`)
+	s.Contains(res.Stdout.String(), `"metadata": {`)
+	s.Contains(res.Stdout.String(), `"data":`)
 	res = s.Execute("workflow", "update", "result", "--address", s.Address(), "-w", run.GetID(),
 		"--update-id", passingUpdateId, "-o", "json")
 	s.NoError(res.Err)
 	s.Contains(res.Stdout.String(), `"result": "hi pass"`)
+	res = s.Execute("--no-json-shorthand-payloads", "workflow", "update", "result", "--address", s.Address(), "-w", run.GetID(),
+		"--update-id", passingUpdateId, "-o", "json")
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), `"result": {`)
+	s.Contains(res.Stdout.String(), `"metadata": {`)
+	s.Contains(res.Stdout.String(), `"data":`)
 
 	rejectedUpdateId := "rejected"
 	res = s.Execute("workflow", "update", "execute", "--address", s.Address(), "-w", run.GetID(),
@@ -1029,8 +1042,10 @@ func (s *SharedServerSuite) TestWorkflow_Update_Result() {
 
 	failUpdateId := "fail"
 	res = s.Execute("workflow", "update", "execute", "--address", s.Address(), "-w", run.GetID(),
-		"--name", updateName, "-i", `"fail"`, "--update-id", failUpdateId)
+		"--name", updateName, "-i", `"fail"`, "--update-id", failUpdateId, "-o", "json")
 	s.Error(res.Err)
+	s.ErrorContains(res.Err, "update is failed")
+	s.Contains(res.Stdout.String(), `"message": "failing"`)
 	res = s.Execute("workflow", "update", "result", "--address", s.Address(), "-w", run.GetID(),
 		"--update-id", failUpdateId)
 	s.Error(res.Err)
