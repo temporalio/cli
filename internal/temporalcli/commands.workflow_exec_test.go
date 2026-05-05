@@ -150,8 +150,8 @@ func (s *SharedServerSuite) TestWorkflow_Execute_SimpleSuccess() {
 	s.ContainsOnSameLine(out, "WorkflowId", "my-id1")
 	s.Equal([]any{"val1", "val2"}, s.Worker().DevWorkflowLastInput())
 	// Confirm we have some events
-	s.ContainsOnSameLine(out, "1", "WorkflowExecutionStarted")
-	s.ContainsOnSameLine(out, "2", "WorkflowTaskScheduled")
+	s.ContainsOnSameLine(out, "1", "WorkflowExecutionStarted", "DevWorkflow")
+	s.ContainsOnSameLine(out, "2", "WorkflowTaskScheduled", s.Worker().Options.TaskQueue)
 	s.ContainsOnSameLine(out, "3", "WorkflowTaskStarted")
 	// Confirm results
 	s.Contains(out, "RunTime")
