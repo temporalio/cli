@@ -1335,3 +1335,37 @@ func (s *SharedServerSuite) TestActivity_List_Pagination() {
 	s.NoError(res.Err)
 	s.Equal(3, strings.Count(res.Stdout.String(), "page-test-"))
 }
+
+func (s *SharedServerSuite) TestActivity_Terminate_DefaultReason_NoUnknownUser() {
+	activityStarted := make(chan struct{})
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		close(activityStarted)
+		<-ctx.Done()
+		return nil, ctx.Err()
+	})
+
+	started := s.startActivity("terminate-default-reason-test")
+	runID := started["runId"].(string)
+	<-activityStarted
+
+	res := s.Execute(
+		"activity", "terminate",
+		"--activity-id", "terminate-default-reason-test",
+		"--run-id", runID,
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+
+	res = s.Execute(
+		"activity", "result", "-o", "json",
+		"--activity-id", "terminate-default-reason-test",
+		"--run-id", runID,
+		"--address", s.Address(),
+	)
+	s.Error(res.Err)
+	var outcome map[string]any
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &outcome))
+	failureMsg, _ := outcome["failure"].(map[string]any)["message"].(string)
+	s.Contains(failureMsg, "Requested from CLI by")
+	s.NotContains(failureMsg, "<unknown-user>")
+}

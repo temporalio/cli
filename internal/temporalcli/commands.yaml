@@ -4036,6 +4036,10 @@ commands:
         description: |
           Display events as detailed sections instead of table.
           Does not apply to JSON output.
+      - name: reverse
+        type: bool
+        description: |
+          Fetch Event History newest-event-first. Cannot be combined with --follow.
     option-sets:
       - workflow-reference
 

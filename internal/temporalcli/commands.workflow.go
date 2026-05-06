@@ -499,7 +499,7 @@ func workflowUpdateHelper(cctx *CommandContext,
 
 func username() string {
 	username := "<unknown-user>"
-	if u, err := user.Current(); err != nil && u.Username != "" {
+	if u, err := user.Current(); err == nil && u.Username != "" {
 		username = u.Username
 	}
 	return username
