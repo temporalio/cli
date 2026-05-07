@@ -3,17 +3,24 @@ package temporalcli
 import (
 	"errors"
 	"fmt"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/fatih/color"
+	"github.com/google/uuid"
 	"github.com/temporalio/cli/internal/printer"
 	"go.temporal.io/api/common/v1"
+	commonpb "go.temporal.io/api/common/v1"
+	computepb "go.temporal.io/api/compute/v1"
+	"go.temporal.io/api/deployment/v1"
 	deploymentpb "go.temporal.io/api/deployment/v1"
 	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/serviceerror"
 	taskqueuepb "go.temporal.io/api/taskqueue/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/worker"
 )
 
@@ -111,6 +118,24 @@ type formattedWorkerDeploymentVersionInfoType struct {
 	DrainageInfo       formattedDrainageInfo           `json:"drainageInfo"`
 	TaskQueuesInfos    []formattedTaskQueueInfoRowType `json:"taskQueuesInfos"`
 	Metadata           map[string]*common.Payload      `json:"metadata"`
+	ComputeConfig      *formattedComputeConfig         `json:"computeConfig,omitempty"`
+}
+
+type formattedComputeConfig struct {
+	ScalingGroups map[string]formattedComputeConfigScalingGroup `json:"scalingGroups"`
+}
+
+type formattedComputeConfigScalingGroup struct {
+	Provider *formattedComputeConfigProvider `json:"provider,omitempty"`
+	Scaler   *formattedComputeConfigScaler   `json:"scaler,omitempty"`
+}
+
+type formattedComputeConfigProvider struct {
+	Type string `json:"type"`
+}
+
+type formattedComputeConfigScaler struct {
+	Type string `json:"type"`
 }
 
 func drainageStatusToStr(drainage client.WorkerDeploymentVersionDrainageStatus) (string, error) {
@@ -354,6 +379,39 @@ func formatDrainageInfoProto(drainageInfo *deploymentpb.VersionDrainageInfo) (fo
 	}, nil
 }
 
+func formatComputeConfigProto(cc *computepb.ComputeConfig) *formattedComputeConfig {
+	if cc == nil {
+		return nil
+	}
+	msgSGs := cc.GetScalingGroups()
+	if len(msgSGs) == 0 {
+		return nil
+	}
+	sgs := make(map[string]formattedComputeConfigScalingGroup, len(msgSGs))
+	for name, msgSG := range msgSGs {
+		p := msgSG.GetProvider()
+		s := msgSG.GetScaler()
+		if p == nil && s == nil {
+			continue
+		}
+		sg := formattedComputeConfigScalingGroup{}
+		if p != nil {
+			sg.Provider = &formattedComputeConfigProvider{
+				Type: p.GetType(),
+			}
+		}
+		if p != nil {
+			sg.Scaler = &formattedComputeConfigScaler{
+				Type: s.GetType(),
+			}
+		}
+		sgs[name] = sg
+	}
+	return &formattedComputeConfig{
+		ScalingGroups: sgs,
+	}
+}
+
 // workerDeploymentVersionInfoProtoToRows converts gRPC proto types to formatted types for display.
 func workerDeploymentVersionInfoProtoToRows(deploymentInfo *deploymentpb.WorkerDeploymentVersionInfo, taskQueueInfos []*workflowservice.DescribeWorkerDeploymentVersionResponse_VersionTaskQueue, includeStats bool) (formattedWorkerDeploymentVersionInfoType, error) {
 	tqi, err := formatTaskQueuesInfosProto(taskQueueInfos, includeStats)
@@ -366,6 +424,8 @@ func workerDeploymentVersionInfoProtoToRows(deploymentInfo *deploymentpb.WorkerD
 		return formattedWorkerDeploymentVersionInfoType{}, err
 	}
 
+	computeConfig := formatComputeConfigProto(deploymentInfo.GetComputeConfig())
+
 	return formattedWorkerDeploymentVersionInfoType{
 		DeploymentName:     deploymentInfo.GetDeploymentVersion().GetDeploymentName(),
 		BuildID:            deploymentInfo.GetDeploymentVersion().GetBuildId(),
@@ -377,7 +437,26 @@ func workerDeploymentVersionInfoProtoToRows(deploymentInfo *deploymentpb.WorkerD
 		DrainageInfo:       drainage,
 		TaskQueuesInfos:    tqi,
 		Metadata:           deploymentInfo.GetMetadata().GetEntries(),
+		ComputeConfig:      computeConfig,
 	}, nil
+}
+
+func computeConfigSummaryStr(cc *computepb.ComputeConfig) string {
+	if cc == nil {
+		return ""
+	}
+	providers := []string{}
+	for _, sg := range cc.GetScalingGroups() {
+		p := sg.GetProvider()
+		if p == nil {
+			continue
+		}
+		pt := p.GetType()
+		if !slices.Contains(providers, pt) {
+			providers = append(providers, pt)
+		}
+	}
+	return strings.Join(providers, ",")
 }
 
 // printWorkerDeploymentVersionInfoProto prints worker deployment version info from proto types.
@@ -400,6 +479,7 @@ func printWorkerDeploymentVersionInfoProto(cctx *CommandContext, deploymentInfo 
 			drainageLastChangedTime = deploymentInfo.GetDrainageInfo().GetLastChangedTime().AsTime()
 			drainageLastCheckedTime = deploymentInfo.GetDrainageInfo().GetLastCheckedTime().AsTime()
 		}
+		computeConfigSummary := computeConfigSummaryStr(deploymentInfo.GetComputeConfig())
 
 		printMe := struct {
 			DeploymentName          string
@@ -413,6 +493,7 @@ func printWorkerDeploymentVersionInfoProto(cctx *CommandContext, deploymentInfo 
 			DrainageLastChangedTime time.Time                  `cli:",cardOmitEmpty"`
 			DrainageLastCheckedTime time.Time                  `cli:",cardOmitEmpty"`
 			Metadata                map[string]*common.Payload `cli:",cardOmitEmpty"`
+			ComputeConfigSummary    string                     `cli:",cardOmitEmpty"`
 		}{
 			DeploymentName:          deploymentInfo.GetDeploymentVersion().GetDeploymentName(),
 			BuildID:                 deploymentInfo.GetDeploymentVersion().GetBuildId(),
@@ -425,6 +506,7 @@ func printWorkerDeploymentVersionInfoProto(cctx *CommandContext, deploymentInfo 
 			DrainageLastChangedTime: drainageLastChangedTime,
 			DrainageLastCheckedTime: drainageLastCheckedTime,
 			Metadata:                deploymentInfo.GetMetadata().GetEntries(),
+			ComputeConfigSummary:    computeConfigSummary,
 		}
 		err := cctx.Printer.PrintStructured(printMe, printer.StructuredOptions{})
 		if err != nil {
@@ -601,6 +683,34 @@ func (c *TemporalWorkerDeploymentCommand) getConflictToken(cctx *CommandContext,
 	return resp.ConflictToken, nil
 }
 
+func (c *TemporalWorkerDeploymentCreateCommand) run(cctx *CommandContext, args []string) error {
+	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	ns := c.Parent.Parent.Namespace
+	identity := c.Parent.Parent.Identity
+	deploymentName := c.Name
+	requestID := uuid.NewString()
+
+	request := &workflowservice.CreateWorkerDeploymentRequest{
+		Namespace:      ns,
+		DeploymentName: deploymentName,
+		Identity:       identity,
+		RequestId:      requestID,
+	}
+
+	_, err = cl.WorkflowService().CreateWorkerDeployment(cctx, request)
+	if err != nil {
+		return fmt.Errorf("error creating worker deployment: %w", err)
+	}
+
+	cctx.Printer.Println("Successfully created worker deployment")
+	return nil
+}
+
 func (c *TemporalWorkerDeploymentDescribeCommand) run(cctx *CommandContext, args []string) error {
 	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
 	if err != nil {
@@ -773,6 +883,92 @@ func (c *TemporalWorkerDeploymentManagerIdentityUnsetCommand) run(cctx *CommandC
 	return nil
 }
 
+func validateAWSLambdaProviderDetails(details map[string]any) error {
+	for _, key := range []string{"arn", "role", "role_external_id"} {
+		if _, ok := details[key]; !ok {
+			return fmt.Errorf("missing required AWS Lambda provider detail: %s", key)
+		}
+	}
+	return nil
+}
+
+// awsLambdaProviderDetailsPayload returns the encoded Payload representing AWS
+// Lambda compute provider details.
+func (c *TemporalWorkerDeploymentCreateVersionCommand) awsLambdaProviderDetailsPayload() (*commonpb.Payload, error) {
+	// Map keys from temporal-auto-scaled-workers:
+	// https://github.com/temporalio/temporal-auto-scaled-workers/blob/c4a7e69b6504365d7e5326b0b8e6cd95e3293f96/wci/workflow/compute_provider/aws_lambda.go#L16-L20
+	providerDetails := map[string]any{
+		"arn": c.AwsLambdaFunctionArn,
+	}
+	if c.AwsLambdaAssumeRoleArn != "" {
+		providerDetails["role"] = c.AwsLambdaAssumeRoleArn
+	}
+	if c.AwsLambdaAssumeRoleExternalId != "" {
+		providerDetails["role_external_id"] = c.AwsLambdaAssumeRoleExternalId
+	}
+	err := validateAWSLambdaProviderDetails(providerDetails)
+	if err != nil {
+		return nil, err
+	}
+	dc := converter.GetDefaultDataConverter()
+	return dc.ToPayload(&providerDetails)
+}
+
+func (c *TemporalWorkerDeploymentCreateVersionCommand) run(cctx *CommandContext, args []string) error {
+	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	ns := c.Parent.Parent.Namespace
+	buildID := c.BuildId
+	identity := c.Parent.Parent.Identity
+	deploymentName := c.DeploymentName
+	requestID := uuid.NewString()
+
+	var cc *computepb.ComputeConfig
+	if c.AwsLambdaFunctionArn != "" {
+		detailsPayload, err := c.awsLambdaProviderDetailsPayload()
+		if err != nil {
+			return err
+		}
+		cc = &computepb.ComputeConfig{
+			ScalingGroups: map[string]*computepb.ComputeConfigScalingGroup{
+				"default": {
+					Provider: &computepb.ComputeProvider{
+						Type:    "aws-lambda",
+						Details: detailsPayload,
+					},
+					Scaler: &computepb.ComputeScaler{
+						// Hard-coded: no-sync is the only supported algorithm
+						// in temporal-auto-scaled-workers as of 2026-04-01.
+						Type: "no-sync",
+					},
+				},
+			},
+		}
+	}
+	request := &workflowservice.CreateWorkerDeploymentVersionRequest{
+		Namespace: ns,
+		DeploymentVersion: &deployment.WorkerDeploymentVersion{
+			DeploymentName: deploymentName,
+			BuildId:        buildID,
+		},
+		Identity:      identity,
+		ComputeConfig: cc,
+		RequestId:     requestID,
+	}
+
+	_, err = cl.WorkflowService().CreateWorkerDeploymentVersion(cctx, request)
+	if err != nil {
+		return fmt.Errorf("error creating worker deployment version: %w", err)
+	}
+
+	cctx.Printer.Println("Successfully created worker deployment version")
+	return nil
+}
+
 func (c *TemporalWorkerDeploymentDeleteVersionCommand) run(cctx *CommandContext, args []string) error {
 	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
 	if err != nil {
@@ -831,6 +1027,10 @@ func (c *TemporalWorkerDeploymentSetCurrentVersionCommand) run(cctx *CommandCont
 		return err
 	}
 	defer cl.Close()
+
+	if c.BuildId != "" && c.Unversioned {
+		return fmt.Errorf("specify either --build-id or --unversioned, not both")
+	}
 
 	token, err := c.Parent.getConflictToken(cctx, &getDeploymentConflictTokenOptions{
 		safeMode:        !c.Yes,
