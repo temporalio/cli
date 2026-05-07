@@ -9,17 +9,17 @@ import (
 )
 
 // GenerateDocsFiles generates documentation files from parsed commands.
-// splitNames specifies command names whose subcommands should each get their
+// subdirNames specifies command names whose subcommands should each get their
 // own file in a subdirectory (e.g., passing "cloud" produces cloud/namespace.mdx,
 // cloud/user.mdx, etc. instead of a single cloud.mdx).
-func GenerateDocsFiles(commands Commands, splitNames []string) (map[string][]byte, error) {
+func GenerateDocsFiles(commands Commands, subdirNames []string) (map[string][]byte, error) {
 	optionSetMap := make(map[string]OptionSets)
 	for i, optionSet := range commands.OptionSets {
 		optionSetMap[optionSet.Name] = commands.OptionSets[i]
 	}
 
 	splitParents := make(map[string]bool)
-	for _, name := range splitNames {
+	for _, name := range subdirNames {
 		splitParents[name] = true
 	}
 

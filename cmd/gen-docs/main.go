@@ -32,12 +32,12 @@ func run() error {
 	var (
 		outputDir  string
 		inputFiles stringSlice
-		splitNames stringSlice
+		subdirNames stringSlice
 	)
 
 	flag.Var(&inputFiles, "input", "Input YAML file (can be specified multiple times)")
 	flag.StringVar(&outputDir, "output", ".", "Output directory for docs")
-	flag.Var(&splitNames, "split", "Command name whose subcommands get separate files in a subdirectory (can be specified multiple times)")
+	flag.Var(&subdirNames, "subdir", "Place subcommands of this command into a subdirectory instead of a single file (can be specified multiple times)")
 	flag.Parse()
 
 	if len(inputFiles) == 0 {
@@ -62,7 +62,7 @@ func run() error {
 		return fmt.Errorf("failed parsing YAML: %w", err)
 	}
 
-	docs, err := commandsgen.GenerateDocsFiles(cmds, splitNames)
+	docs, err := commandsgen.GenerateDocsFiles(cmds, subdirNames)
 	if err != nil {
 		return fmt.Errorf("failed generating docs: %w", err)
 	}
