@@ -420,6 +420,93 @@ func (s *SharedServerSuite) TestWorkflow_Show_JSON() {
 	s.NotContains(out, "Results:")
 }
 
+func (s *SharedServerSuite) TestWorkflow_Show_Reverse() {
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
+		workflow.GetSignalChannel(ctx, "my-signal").Receive(ctx, nil)
+		return "hi!", nil
+	})
+
+	run, err := s.Client.ExecuteWorkflow(
+		s.Context,
+		client.StartWorkflowOptions{TaskQueue: s.Worker().Options.TaskQueue},
+		DevWorkflow,
+		"ignored",
+	)
+	s.NoError(err)
+	s.NoError(s.Client.SignalWorkflow(s.Context, run.GetID(), "", "my-signal", nil))
+	s.NoError(run.Get(s.Context, nil))
+
+	res := s.Execute(
+		"workflow", "show",
+		"--address", s.Address(),
+		"-w", run.GetID(),
+		"--reverse",
+	)
+	s.NoError(res.Err)
+	out := res.Stdout.String()
+	completedIdx := strings.Index(out, "WorkflowExecutionCompleted")
+	startedIdx := strings.Index(out, "WorkflowExecutionStarted")
+	s.Greater(completedIdx, -1, "output should include the completed event")
+	s.Greater(startedIdx, -1, "output should include the started event")
+	s.Less(completedIdx, startedIdx, "completed event should appear before started event in reverse order")
+}
+
+func (s *SharedServerSuite) TestWorkflow_Show_Reverse_JSON() {
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
+		workflow.GetSignalChannel(ctx, "my-signal").Receive(ctx, nil)
+		return "hi!", nil
+	})
+
+	run, err := s.Client.ExecuteWorkflow(
+		s.Context,
+		client.StartWorkflowOptions{TaskQueue: s.Worker().Options.TaskQueue},
+		DevWorkflow,
+		"workflow-param",
+	)
+	s.NoError(err)
+	s.NoError(s.Client.SignalWorkflow(s.Context, run.GetID(), "", "my-signal", nil))
+	s.NoError(run.Get(s.Context, nil))
+
+	res := s.Execute(
+		"workflow", "show",
+		"--address", s.Address(),
+		"-w", run.GetID(),
+		"--reverse",
+		"-o", "json",
+	)
+	s.NoError(res.Err)
+	out := res.Stdout.String()
+
+	var parsed struct {
+		Events []struct {
+			EventId string `json:"eventId"`
+		} `json:"events"`
+	}
+	s.NoError(json.Unmarshal([]byte(out), &parsed))
+	s.GreaterOrEqual(len(parsed.Events), 2)
+	prev := int64(-1)
+	for i, e := range parsed.Events {
+		id, err := strconv.ParseInt(e.EventId, 10, 64)
+		s.NoError(err)
+		if i > 0 {
+			s.Less(id, prev, "event %d (id=%d) should have smaller eventId than previous (%d) in reverse order", i, id, prev)
+		}
+		prev = id
+	}
+}
+
+func (s *SharedServerSuite) TestWorkflow_Show_Reverse_RejectsFollow() {
+	res := s.Execute(
+		"workflow", "show",
+		"--address", s.Address(),
+		"-w", "does-not-matter",
+		"--reverse",
+		"--follow",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "--reverse cannot be combined with --follow")
+}
+
 func (s *SharedServerSuite) TestWorkflow_List() {
 	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
 		return a, nil
