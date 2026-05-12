@@ -82,7 +82,7 @@ func (w *docWriter) writeCommand(c *Command) {
 	w.fileMap[fileName].WriteString("---")
 	w.fileMap[fileName].WriteString("\n\n")
 	w.fileMap[fileName].WriteString("{/* NOTE: This is an auto-generated file. Any edit to this file will be overwritten.\n")
-	w.fileMap[fileName].WriteString("This file is generated from https://github.com/temporalio/cli/blob/main/internal/commandsgen/commands.yml via internal/cmd/gen-docs */}\n\n")
+	w.fileMap[fileName].WriteString("This file is generated from https://github.com/temporalio/cli/blob/main/internal/temporalcli/commands.yaml and https://github.com/temporalio/cli/blob/main/cliext/option-sets.yaml via cmd/gen-docs */}\n\n")
 	// Add introductory paragraph
 	w.fileMap[fileName].WriteString(fmt.Sprintf("This page provides a reference for the `temporal` CLI `%s` command. ", fileName))
 	w.fileMap[fileName].WriteString("The flags applicable to each subcommand are presented in a table within the heading for the subcommand. ")
@@ -263,7 +263,7 @@ func (w *docWriter) writeEnvironmentVariablesPage(commands Commands) {
 	buf.WriteString("  - Temporal CLI\n")
 	buf.WriteString("---\n\n")
 	buf.WriteString("{/* NOTE: This is an auto-generated file. Any edit to this file will be overwritten.\n")
-	buf.WriteString("This file is generated from https://github.com/temporalio/cli/blob/main/internal/commandsgen/commands.yml via internal/cmd/gen-docs */}\n\n")
+	buf.WriteString("This file is generated from https://github.com/temporalio/cli/blob/main/internal/temporalcli/commands.yaml and https://github.com/temporalio/cli/blob/main/cliext/option-sets.yaml via cmd/gen-docs */}\n\n")
 	buf.WriteString("This page lists the environment variables that can configure the Temporal CLI.\n\n")
 	buf.WriteString("| Variable | Flag | Description | Default |\n")
 	buf.WriteString("|----------|------|-------------|---------|\n")
