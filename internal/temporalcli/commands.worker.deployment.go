@@ -972,7 +972,7 @@ func (c *TemporalWorkerDeploymentCreateVersionCommand) run(cctx *CommandContext,
 
 // awsLambdaProviderDetailsPayload returns the encoded Payload representing AWS
 // Lambda compute provider details.
-func (c *TemporalWorkerDeploymentReplaceVersionComputeConfigCommand) awsLambdaProviderDetailsPayload() (*commonpb.Payload, error) {
+func (c *TemporalWorkerDeploymentUpdateVersionComputeConfigCommand) awsLambdaProviderDetailsPayload() (*commonpb.Payload, error) {
 	// Map keys from temporal-auto-scaled-workers:
 	// https://github.com/temporalio/temporal-auto-scaled-workers/blob/c4a7e69b6504365d7e5326b0b8e6cd95e3293f96/wci/workflow/compute_provider/aws_lambda.go#L16-L20
 	providerDetails := map[string]any{
@@ -992,7 +992,7 @@ func (c *TemporalWorkerDeploymentReplaceVersionComputeConfigCommand) awsLambdaPr
 	return dc.ToPayload(&providerDetails)
 }
 
-func (c *TemporalWorkerDeploymentReplaceVersionComputeConfigCommand) run(cctx *CommandContext, args []string) error {
+func (c *TemporalWorkerDeploymentUpdateVersionComputeConfigCommand) run(cctx *CommandContext, args []string) error {
 	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
 	if err != nil {
 		return err
@@ -1015,7 +1015,9 @@ func (c *TemporalWorkerDeploymentReplaceVersionComputeConfigCommand) run(cctx *C
 		RequestId: requestID,
 	}
 
-	if c.AwsLambdaFunctionArn != "" {
+	if c.Remove {
+		request.RemoveComputeConfigScalingGroups = []string{"default"}
+	} else {
 		detailsPayload, err := c.awsLambdaProviderDetailsPayload()
 		if err != nil {
 			return err
@@ -1043,16 +1045,19 @@ func (c *TemporalWorkerDeploymentReplaceVersionComputeConfigCommand) run(cctx *C
 			},
 		}
 		request.ComputeConfigScalingGroups = ccScalingGroups
-	} else {
-		request.RemoveComputeConfigScalingGroups = []string{"default"}
+
 	}
 
 	_, err = cl.WorkflowService().UpdateWorkerDeploymentVersionComputeConfig(cctx, request)
 	if err != nil {
-		return fmt.Errorf("error replacing worker deployment version compute config: %w", err)
+		return fmt.Errorf("error updating worker deployment version compute config: %w", err)
 	}
 
-	cctx.Printer.Println("Successfully replaced worker deployment version compute config")
+	if c.Remove {
+		cctx.Printer.Println("Successfully removed worker deployment version compute config")
+	} else {
+		cctx.Printer.Println("Successfully updated worker deployment version compute config")
+	}
 	return nil
 }
 
