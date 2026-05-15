@@ -14,9 +14,15 @@ import (
 var defaultDynamicConfigValues = map[string]any{
 	// Make search attributes immediately visible on creation, so users don't
 	// have to wait for eventual consistency to happen when testing against the
-	// dev-server.  Since it's a very rare thing to create search attributes,
+	// dev-server. Since it's a very rare thing to create search attributes,
 	// we're comfortable that this is very unlikely to mask bugs in user code.
 	"system.forceSearchAttributesCacheRefreshOnRead": true,
+
+	// Make Nexus endpoints immediately visible on creation, so users don't
+	// have to wait for eventual consistency to happen when testing against the
+	// dev-server. Since it's a very rare thing to create Nexus endpoints,
+	// we're comfortable that this is very unlikely to mask bugs in user code.
+	"system.forceNexusEndpointRefreshOnRead": true,
 
 	// Since we disable the SA cache, we need to bump max QPS accordingly.
 	// These numbers were chosen to maintain the ratio between the two that's
