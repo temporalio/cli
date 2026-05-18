@@ -169,6 +169,43 @@ func (s *SharedServerSuite) testSignalBatchWorkflow(json bool) *CommandResult {
 	return res
 }
 
+func (s *SharedServerSuite) TestWorkflow_Delete_SingleWorkflowRequiresConfirmation() {
+	res := s.Execute(
+		"workflow", "delete",
+		"--address", s.Address(),
+		"--workflow-id", "delete-confirmation-test",
+	)
+	s.EqualError(res.Err, "user denied confirmation")
+	s.Contains(res.Stdout.String(), "Deleting Workflow Executions in a global Namespace")
+	s.Contains(res.Stdout.String(), "--grpc-meta xdc-redirection=false")
+}
+
+func (s *SharedServerSuite) TestWorkflow_Delete_SingleWorkflowSuccess() {
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
+		ctx.Done().Receive(ctx, nil)
+		return nil, ctx.Err()
+	})
+
+	run, err := s.Client.ExecuteWorkflow(
+		s.Context,
+		client.StartWorkflowOptions{TaskQueue: s.Worker().Options.TaskQueue},
+		DevWorkflow,
+		"ignored",
+	)
+	s.NoError(err)
+
+	res := s.Execute(
+		"workflow", "delete",
+		"--address", s.Address(),
+		"--workflow-id", run.GetID(),
+		"--yes",
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Deleting Workflow Executions in a global Namespace")
+	s.Contains(res.Stdout.String(), "--grpc-meta xdc-redirection=false")
+	s.Contains(res.Stdout.String(), "Delete workflow succeeded")
+}
+
 func (s *SharedServerSuite) TestWorkflow_Delete_BatchWorkflowSuccess() {
 	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
 		ctx.Done().Receive(ctx, nil)
@@ -212,6 +249,9 @@ func (s *SharedServerSuite) TestWorkflow_Delete_BatchWorkflowSuccess() {
 		"-y",
 	)
 	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Start batch against approximately 2 workflow(s)")
+	s.Contains(res.Stdout.String(), "Deleting Workflow Executions in a global Namespace")
+	s.Contains(res.Stdout.String(), "--grpc-meta xdc-redirection=false")
 
 	// Confirm workflows were deleted
 	s.Eventually(func() bool {
