@@ -71,7 +71,13 @@ func (c *TemporalWorkflowDeleteCommand) run(cctx *CommandContext, args []string)
 	}
 	defer cl.Close()
 
-	cctx.Printer.Println(workflowDeleteWarning)
+	// Only warn when the namespace is global.
+	nsResp, nsErr := cl.WorkflowService().DescribeNamespace(cctx, &workflowservice.DescribeNamespaceRequest{
+		Namespace: c.Parent.Namespace,
+	})
+	if nsErr != nil || nsResp.GetIsGlobalNamespace() {
+		fmt.Fprintln(cctx.Options.Stderr, workflowDeleteWarning)
+	}
 
 	exec, batchReq, err := c.workflowExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{
 		AllowYesWithWorkflowID: true,
@@ -108,16 +114,12 @@ func (c *TemporalWorkflowDeleteCommand) run(cctx *CommandContext, args []string)
 	return nil
 }
 
-func workflowDeleteConfirmationMessage(action string) string {
-	return fmt.Sprintf("%s? y/N", action)
-}
-
 func workflowDeleteSingleConfirmationMessage(exec *common.WorkflowExecution) string {
 	action := fmt.Sprintf("Delete Workflow %q", exec.GetWorkflowId())
 	if exec.GetRunId() != "" {
 		action += fmt.Sprintf(" with Run ID %q", exec.GetRunId())
 	}
-	return workflowDeleteConfirmationMessage(action)
+	return fmt.Sprintf("%s? y/N", action)
 }
 
 func (c *TemporalWorkflowUpdateOptionsCommand) run(cctx *CommandContext, args []string) error {

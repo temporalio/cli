@@ -176,8 +176,9 @@ func (s *SharedServerSuite) TestWorkflow_Delete_SingleWorkflowRequiresConfirmati
 		"--workflow-id", "delete-confirmation-test",
 	)
 	s.EqualError(res.Err, "user denied confirmation")
-	s.Contains(res.Stdout.String(), "Deleting Workflow Executions in a global Namespace")
-	s.Contains(res.Stdout.String(), "--grpc-meta xdc-redirection=false")
+	// Dev-server's default namespace is non-global, so the warning is suppressed.
+	s.NotContains(res.Stdout.String(), "Deleting Workflow Executions in a global Namespace")
+	s.NotContains(res.Stderr.String(), "Deleting Workflow Executions in a global Namespace")
 }
 
 func (s *SharedServerSuite) TestWorkflow_Delete_SingleWorkflowSuccess() {
@@ -201,8 +202,8 @@ func (s *SharedServerSuite) TestWorkflow_Delete_SingleWorkflowSuccess() {
 		"--yes",
 	)
 	s.NoError(res.Err)
-	s.Contains(res.Stdout.String(), "Deleting Workflow Executions in a global Namespace")
-	s.Contains(res.Stdout.String(), "--grpc-meta xdc-redirection=false")
+	s.NotContains(res.Stdout.String(), "Deleting Workflow Executions in a global Namespace")
+	s.NotContains(res.Stderr.String(), "Deleting Workflow Executions in a global Namespace")
 	s.Contains(res.Stdout.String(), "Delete workflow succeeded")
 }
 
@@ -250,8 +251,8 @@ func (s *SharedServerSuite) TestWorkflow_Delete_BatchWorkflowSuccess() {
 	)
 	s.NoError(res.Err)
 	s.Contains(res.Stdout.String(), "Start batch against approximately 2 workflow(s)")
-	s.Contains(res.Stdout.String(), "Deleting Workflow Executions in a global Namespace")
-	s.Contains(res.Stdout.String(), "--grpc-meta xdc-redirection=false")
+	s.NotContains(res.Stdout.String(), "Deleting Workflow Executions in a global Namespace")
+	s.NotContains(res.Stderr.String(), "Deleting Workflow Executions in a global Namespace")
 
 	// Confirm workflows were deleted
 	s.Eventually(func() bool {
