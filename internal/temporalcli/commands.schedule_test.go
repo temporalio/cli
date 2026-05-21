@@ -235,7 +235,7 @@ func (s *SharedServerSuite) TestSchedule_List() {
 		out = res.Stdout.String()
 		assert.Contains(t, out, schedId)
 	}, 10*time.Second, time.Second)
-	s.ContainsOnSameLine(out, schedId, "DevWorkflow", "0s" /*jitter*/, "false", "nil" /*memo*/)
+	s.ContainsOnSameLine(out, schedId, "DevWorkflow", "0s" /*jitter*/, "false", "{}" /*memo*/)
 	s.ContainsOnSameLine(out, "TestSchedule_List")
 
 	// table
