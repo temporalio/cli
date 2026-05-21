@@ -169,6 +169,11 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 		cctx.Printer.Printlnf("%-17s http://%v:%v%v", "Temporal UI:", toFriendlyIp(opts.UIIP), opts.UIPort, opts.PublicPath)
 	}
 	cctx.Printer.Printlnf("%-17s http://%v:%v/metrics", "Temporal Metrics:", toFriendlyIp(opts.FrontendIP), opts.MetricsPort)
+	if t.DbFilename == "" {
+		cctx.Printer.Printlnf("%-17s %v", "Persistence:", "in-memory (Workflow Executions are lost when the server process exits)")
+	} else {
+		cctx.Printer.Printlnf("%-17s file (%v)", "Persistence:", t.DbFilename)
+	}
 	<-cctx.Done()
 	if !t.Parent.Parent.LogLevel.ChangedFromDefault {
 		// The server routinely emits various warnings on shutdown.
