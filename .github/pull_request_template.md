@@ -37,14 +37,7 @@
 - [ ] Added functional test(s) (`SharedServerSuite`)
 - [ ] Added unit test(s) (`func TestXxx`) where applicable
 
-## How did you test it?
-
-<!-- Remove sections that don't apply to this PR -->
-
-- [ ] built
-- [ ] run locally and tested manually
-
-### Manual tests
+## Manual tests
 
 **Setup**
 ```
