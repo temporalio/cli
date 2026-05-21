@@ -36,7 +36,7 @@ jobs:
         env:
           INPUT_VERSION: ${{ inputs.version }}
           INPUT_TAG_LATEST: ${{ inputs.tag_latest }}
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const inputVersion = process.env.INPUT_VERSION;
