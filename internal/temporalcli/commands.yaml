@@ -790,7 +790,7 @@ commands:
         required: true
 
   - name: temporal config
-    summary: Manage config files (EXPERIMENTAL)
+    summary: Manage config files
     description: |
       Config files are TOML files that contain profiles, with each profile
       containing configuration for connecting to Temporal.
@@ -829,7 +829,7 @@ commands:
 
   - name: temporal config delete
     summary: |
-      Delete a config file property (EXPERIMENTAL)
+      Delete a config file property
     description: |
       Remove a property within a profile.
 
@@ -847,7 +847,7 @@ commands:
 
   - name: temporal config delete-profile
     summary: |
-      Delete an entire config profile (EXPERIMENTAL)
+      Delete an entire config profile
     description: |
       Remove a full profile entirely. The `--profile` must be set explicitly.
 
@@ -857,7 +857,7 @@ commands:
       ```
 
   - name: temporal config get
-    summary: Show config file properties (EXPERIMENTAL)
+    summary: Show config file properties
     description: |
       Display specific properties or the entire profile.
 
@@ -878,7 +878,7 @@ commands:
         description: Specific property to get.
 
   - name: temporal config list
-    summary: Show config file profiles (EXPERIMENTAL)
+    summary: Show config file profiles
     description: |
       List profile names in the config file.
 
@@ -887,7 +887,7 @@ commands:
       ```
 
   - name: temporal config set
-    summary: Set config file properties (EXPERIMENTAL)
+    summary: Set config file properties
     description: |
       Assign a value to a property and store it in the config file:
 

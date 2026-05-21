@@ -1087,7 +1087,7 @@ func NewTemporalConfigCommand(cctx *CommandContext, parent *TemporalCommand) *Te
 	var s TemporalConfigCommand
 	s.Parent = parent
 	s.Command.Use = "config"
-	s.Command.Short = "Manage config files (EXPERIMENTAL)"
+	s.Command.Short = "Manage config files"
 	if hasHighlighting {
 		s.Command.Long = "Config files are TOML files that contain profiles, with each profile\ncontaining configuration for connecting to Temporal.\n\n\x1b[1mtemporal config set \\\n    --prop address \\\n    --value us-west-2.aws.api.temporal.io:7233\x1b[0m\n\nThe default config file path is \x1b[1m$CONFIG_PATH/temporalio/temporal.toml\x1b[0m where\n\x1b[1m$CONFIG_PATH\x1b[0m is defined as \x1b[1m$HOME/.config\x1b[0m on Unix,\n\x1b[1m$HOME/Library/Application Support\x1b[0m on macOS, and \x1b[1m%AppData%\x1b[0m on Windows.\nThis can be overridden with the \x1b[1mTEMPORAL_CONFIG_FILE\x1b[0m environment\nvariable or \x1b[1m--config-file\x1b[0m.\n\nThe default profile is \x1b[1mdefault\x1b[0m. This can be overridden with the\n\x1b[1mTEMPORAL_PROFILE\x1b[0m environment variable or \x1b[1m--profile\x1b[0m."
 	} else {
@@ -1113,7 +1113,7 @@ func NewTemporalConfigDeleteCommand(cctx *CommandContext, parent *TemporalConfig
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "delete [flags]"
-	s.Command.Short = "Delete a config file property (EXPERIMENTAL)\n"
+	s.Command.Short = "Delete a config file property\n"
 	if hasHighlighting {
 		s.Command.Long = "Remove a property within a profile.\n\n\x1b[1mtemporal config delete \\\n    --prop tls.client_cert_path\x1b[0m"
 	} else {
@@ -1140,7 +1140,7 @@ func NewTemporalConfigDeleteProfileCommand(cctx *CommandContext, parent *Tempora
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "delete-profile [flags]"
-	s.Command.Short = "Delete an entire config profile (EXPERIMENTAL)\n"
+	s.Command.Short = "Delete an entire config profile\n"
 	if hasHighlighting {
 		s.Command.Long = "Remove a full profile entirely. The \x1b[1m--profile\x1b[0m must be set explicitly.\n\n\x1b[1mtemporal config delete-profile \\\n    --profile my-profile\x1b[0m"
 	} else {
@@ -1166,7 +1166,7 @@ func NewTemporalConfigGetCommand(cctx *CommandContext, parent *TemporalConfigCom
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "get [flags]"
-	s.Command.Short = "Show config file properties (EXPERIMENTAL)"
+	s.Command.Short = "Show config file properties"
 	if hasHighlighting {
 		s.Command.Long = "Display specific properties or the entire profile.\n\n\x1b[1mtemporal config get \\\n    --prop address\x1b[0m\n\nor\n\n\x1b[1mtemporal config get\x1b[0m"
 	} else {
@@ -1192,7 +1192,7 @@ func NewTemporalConfigListCommand(cctx *CommandContext, parent *TemporalConfigCo
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "list [flags]"
-	s.Command.Short = "Show config file profiles (EXPERIMENTAL)"
+	s.Command.Short = "Show config file profiles"
 	if hasHighlighting {
 		s.Command.Long = "List profile names in the config file.\n\n\x1b[1mtemporal config list\x1b[0m"
 	} else {
@@ -1219,7 +1219,7 @@ func NewTemporalConfigSetCommand(cctx *CommandContext, parent *TemporalConfigCom
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "set [flags]"
-	s.Command.Short = "Set config file properties (EXPERIMENTAL)"
+	s.Command.Short = "Set config file properties"
 	if hasHighlighting {
 		s.Command.Long = "Assign a value to a property and store it in the config file:\n\n\x1b[1mtemporal config set \\\n    --prop address \\\n    --value us-west-2.aws.api.temporal.io:7233\x1b[0m"
 	} else {
