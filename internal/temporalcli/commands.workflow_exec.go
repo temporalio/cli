@@ -25,7 +25,9 @@ import (
 	"go.temporal.io/api/temporalproto"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/temporal"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/durationpb"
 )
 
@@ -40,7 +42,7 @@ func (c *TemporalWorkflowStartCommand) run(cctx *CommandContext, args []string) 
 }
 
 func (c *TemporalWorkflowExecuteCommand) run(cctx *CommandContext, args []string) error {
-	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
+	cl, codec, err := dialClientWithCodec(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -63,6 +65,7 @@ func (c *TemporalWorkflowExecuteCommand) run(cctx *CommandContext, args []string
 			runID:          run.GetRunID(),
 			includeDetails: c.Detailed,
 			follow:         true,
+			codec:          codec,
 		}
 		if err := iter.print(cctx); err != nil && cctx.Err() == nil {
 			return fmt.Errorf("displaying history failed: %w", err)
@@ -790,6 +793,11 @@ type structuredHistoryIter struct {
 
 	// maps NexusOperationScheduled eventId → operation name for __temporal_system endpoint events
 	systemNexusOps map[int64]string
+
+	// codec is the remote payload codec configured for this client, or nil if none. Used to
+	// decode payloads nested inside system Nexus operation request/response bytes so they
+	// can be rendered alongside the rest of the event fields.
+	codec converter.PayloadCodec
 }
 
 func (s *structuredHistoryIter) print(cctx *CommandContext) error {
@@ -973,6 +981,12 @@ func (s *structuredHistoryIter) flattenFields(
 			delete(fieldsMap, k)
 		}
 	}
+	// For system Nexus operation events, deserialize the request/response payload bytes
+	// into the typed proto, decode any payloads nested inside via the codec, and merge
+	// the decoded view into the output under "unwrappedInput" / "unwrappedResult".
+	if err := s.injectSystemNexusUnwrapped(event, fieldsMap, opts); err != nil {
+		return nil, err
+	}
 	// Flatten JSON map and sort
 	fields, err := s.flattenJSONValue(nil, "", fieldsMap)
 	if err != nil {
@@ -980,6 +994,101 @@ func (s *structuredHistoryIter) flattenFields(
 	}
 	sort.Slice(fields, func(i, j int) bool { return fields[i].field < fields[j].field })
 	return fields, nil
+}
+
+// injectSystemNexusUnwrapped, if the given event is a known system Nexus operation,
+// deserializes the underlying request (on Scheduled) or response (on Completed) proto,
+// decodes any payloads nested inside via the codec, and inserts the resulting JSON
+// representation into fieldsMap under "unwrappedInput" / "unwrappedResult".
+func (s *structuredHistoryIter) injectSystemNexusUnwrapped(
+	event *history.HistoryEvent,
+	fieldsMap map[string]any,
+	opts temporalproto.CustomJSONMarshalOptions,
+) error {
+	switch event.EventType {
+	case enums.EVENT_TYPE_NEXUS_OPERATION_SCHEDULED:
+		attr := event.GetNexusOperationScheduledEventAttributes()
+		if attr == nil {
+			return nil
+		}
+		return s.unwrapAndInjectRequest(attr.GetEndpoint(), attr.GetOperation(), attr.GetInput(), fieldsMap, opts)
+	case enums.EVENT_TYPE_NEXUS_OPERATION_COMPLETED:
+		attr := event.GetNexusOperationCompletedEventAttributes()
+		if attr == nil {
+			return nil
+		}
+		op, ok := s.systemNexusOps[attr.GetScheduledEventId()]
+		if !ok {
+			return nil
+		}
+		return s.unwrapAndInjectResponse(temporalSystemNexusEndpoint, op, attr.GetResult(), fieldsMap, opts)
+	}
+	return nil
+}
+
+// unwrapAndInjectRequest looks up the registered request proto for (endpoint, operation),
+// then injects the decoded view under "unwrappedInput". No-op for unregistered ops.
+func (s *structuredHistoryIter) unwrapAndInjectRequest(
+	endpoint, operation string,
+	payload *commonpb.Payload,
+	fieldsMap map[string]any,
+	opts temporalproto.CustomJSONMarshalOptions,
+) error {
+	types, ok := systemNexusOps[systemNexusOpKey{Endpoint: endpoint, Operation: operation}]
+	if !ok {
+		return nil
+	}
+	return s.unwrapAndInject(types.NewRequest(), payload, fieldsMap, "unwrappedInput", opts)
+}
+
+// unwrapAndInjectResponse looks up the registered response proto for (endpoint, operation),
+// then injects the decoded view under "unwrappedResult". No-op for unregistered ops.
+func (s *structuredHistoryIter) unwrapAndInjectResponse(
+	endpoint, operation string,
+	payload *commonpb.Payload,
+	fieldsMap map[string]any,
+	opts temporalproto.CustomJSONMarshalOptions,
+) error {
+	types, ok := systemNexusOps[systemNexusOpKey{Endpoint: endpoint, Operation: operation}]
+	if !ok {
+		return nil
+	}
+	return s.unwrapAndInject(types.NewResponse(), payload, fieldsMap, "unwrappedResult", opts)
+}
+
+// unwrapAndInject is the shared body: unmarshal payload bytes into the supplied proto,
+// decode any payloads nested inside via the codec, marshal back to JSON, and inject the
+// resulting map into fieldsMap[key]. A nil payload is a no-op.
+func (s *structuredHistoryIter) unwrapAndInject(
+	msg proto.Message,
+	payload *commonpb.Payload,
+	fieldsMap map[string]any,
+	key string,
+	opts temporalproto.CustomJSONMarshalOptions,
+) error {
+	if payload == nil {
+		return nil
+	}
+	if err := proto.Unmarshal(payload.Data, msg); err != nil {
+		return fmt.Errorf("failed unmarshaling system nexus payload: %w", err)
+	}
+	if s.codec != nil {
+		if err := decodePayloadsInProto(s.ctx, msg, s.codec); err != nil {
+			return fmt.Errorf("failed decoding payloads in system nexus payload: %w", err)
+		}
+	}
+	unwrappedJSON, err := opts.Marshal(msg)
+	if err != nil {
+		return fmt.Errorf("failed marshaling unwrapped system nexus payload: %w", err)
+	}
+	dec := json.NewDecoder(bytes.NewReader(unwrappedJSON))
+	dec.UseNumber()
+	var unwrappedMap map[string]any
+	if err := dec.Decode(&unwrappedMap); err != nil {
+		return fmt.Errorf("failed unmarshaling unwrapped JSON for system nexus payload: %w", err)
+	}
+	fieldsMap[key] = unwrappedMap
+	return nil
 }
 
 func (s *structuredHistoryIter) flattenJSONValue(
