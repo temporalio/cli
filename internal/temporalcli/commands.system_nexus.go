@@ -30,7 +30,10 @@ type systemNexusOpTypes struct {
 // system operations. The keys' Operation values must match what the server records in
 // NexusOperationScheduledEventAttributes.Operation.
 var systemNexusOps = map[systemNexusOpKey]systemNexusOpTypes{
-	{Endpoint: temporalSystemNexusEndpoint, Operation: "SignalWithStartWorkflowExecution"}: {
+	{
+		Endpoint:  temporalSystemNexusEndpoint,
+		Operation: "SignalWithStartWorkflowExecution",
+	}: {
 		NewRequest:  func() proto.Message { return &workflowservice.SignalWithStartWorkflowExecutionRequest{} },
 		NewResponse: func() proto.Message { return &workflowservice.SignalWithStartWorkflowExecutionResponse{} },
 	},

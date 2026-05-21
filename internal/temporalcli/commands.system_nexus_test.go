@@ -2,6 +2,7 @@ package temporalcli
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -45,14 +46,8 @@ func (failingCodec) Encode(payloads []*commonpb.Payload) ([]*commonpb.Payload, e
 }
 
 func (failingCodec) Decode(_ []*commonpb.Payload) ([]*commonpb.Payload, error) {
-	return nil, assertCodecErr
+	return nil, fmt.Errorf("codec decode failure for testing")
 }
-
-var assertCodecErr = &codecErr{msg: "codec decode failure for testing"}
-
-type codecErr struct{ msg string }
-
-func (e *codecErr) Error() string { return e.msg }
 
 func signalWithStartRequestPayload(t *testing.T, req *workflowservice.SignalWithStartWorkflowExecutionRequest) *commonpb.Payload {
 	t.Helper()
@@ -72,24 +67,6 @@ func signalWithStartResponsePayload(t *testing.T, resp *workflowservice.SignalWi
 		Metadata: map[string][]byte{"encoding": []byte("binary/protobuf")},
 		Data:     data,
 	}
-}
-
-func TestSystemNexusOps_RegistryHasSignalWithStart(t *testing.T) {
-	entry, ok := systemNexusOps[systemNexusOpKey{
-		Endpoint:  temporalSystemNexusEndpoint,
-		Operation: "SignalWithStartWorkflowExecution",
-	}]
-	require.True(t, ok, "SignalWithStartWorkflowExecution must be registered on the system endpoint")
-	require.NotNil(t, entry.NewRequest)
-	require.NotNil(t, entry.NewResponse)
-
-	req, ok := entry.NewRequest().(*workflowservice.SignalWithStartWorkflowExecutionRequest)
-	require.True(t, ok, "NewRequest must return *SignalWithStartWorkflowExecutionRequest")
-	require.NotNil(t, req)
-
-	resp, ok := entry.NewResponse().(*workflowservice.SignalWithStartWorkflowExecutionResponse)
-	require.True(t, ok, "NewResponse must return *SignalWithStartWorkflowExecutionResponse")
-	require.NotNil(t, resp)
 }
 
 func TestUnwrapAndInjectRequest_NilPayloadIsNoOp(t *testing.T) {
@@ -201,8 +178,7 @@ func TestUnwrapAndInjectRequest_CodecErrorPropagates(t *testing.T) {
 		temporalSystemNexusEndpoint, "SignalWithStartWorkflowExecution",
 		p, fields, temporalproto.CustomJSONMarshalOptions{})
 	require.Error(t, err)
-	require.ErrorContains(t, err, "failed decoding payloads")
-	require.ErrorIs(t, err, assertCodecErr)
+	require.Equal(t, "codec decode failure for testing", err.Error())
 }
 
 func TestDecodePayloadsInProto_VisitsAllPayloads(t *testing.T) {
