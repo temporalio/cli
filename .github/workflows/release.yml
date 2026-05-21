@@ -47,7 +47,7 @@ jobs:
         run: echo "go=$(go version | cut -d ' ' -f 3)" >> "$GITHUB_OUTPUT"
 
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v6
+        uses: goreleaser/goreleaser-action@v7.2.1
         with:
           version: v2.12.7
           args: release
