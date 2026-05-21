@@ -178,7 +178,7 @@ func TestUnwrapAndInjectRequest_CodecErrorPropagates(t *testing.T) {
 		temporalSystemNexusEndpoint, "SignalWithStartWorkflowExecution",
 		p, fields, temporalproto.CustomJSONMarshalOptions{})
 	require.Error(t, err)
-	require.Equal(t, "codec decode failure for testing", err.Error())
+	require.Equal(t, "failed decoding payloads in system nexus payload: codec decode failure for testing", err.Error())
 }
 
 func TestDecodePayloadsInProto_VisitsAllPayloads(t *testing.T) {
