@@ -232,10 +232,12 @@ func (s *SharedServerSuite) SetupSuite() {
 				// for the task-queue command tests.
 				"frontend.namespaceRPS.visibility": 10000,
 				// Disable DescribeTaskQueue cache.
-				"frontend.activityAPIsEnabled": true,
-				"history.enableChasm":          true,
-				"activity.enableStandalone":    true,
-				"activity.longPollTimeout":     2 * time.Second,
+				"frontend.activityAPIsEnabled":    true,
+				"history.enableChasm":             true,
+				"activity.enableStandalone":       true,
+				"activity.longPollTimeout":        2 * time.Second,
+				"nexusoperation.enableStandalone": true,
+				"history.enableChasmCallbacks":    true,
 				// this is overridden since we don't want caching to be enabled
 				// while testing DescribeTaskQueue behaviour related to versioning
 				"matching.TaskQueueInfoByBuildIdTTL": 0 * time.Second,

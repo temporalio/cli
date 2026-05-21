@@ -1619,6 +1619,210 @@ commands:
         description: Property value (required).
         # required: true
 
+  - name: temporal nexus
+    summary: Start, list, and operate on Nexus Operations
+    description: |
+      Nexus Operation commands perform operations on standalone Nexus
+      Operation Executions:
+
+      ```
+      temporal nexus [command] [options]
+      ```
+
+      For example:
+
+      ```
+      temporal nexus operation list
+      ```
+    option-sets:
+      - client
+    docs:
+      description-header: >-
+        Learn how to use Temporal Nexus commands for starting, listing,
+        and managing standalone Nexus Operation Executions.
+      keywords:
+        - nexus
+        - nexus operation
+        - nexus operation start
+        - nexus operation execute
+        - nexus operation describe
+        - nexus operation cancel
+        - nexus operation terminate
+        - nexus operation list
+        - nexus operation count
+        - cli reference
+        - cli-feature
+        - command-line-interface-cli
+        - temporal cli
+      tags:
+        - Nexus
+        - Temporal CLI
+
+  - name: temporal nexus operation
+    summary: Commands for managing Nexus Operations
+    description: |
+      These commands manage standalone Nexus Operation Executions.
+
+      Nexus Operation commands follow this syntax:
+
+      ```
+      temporal nexus operation [command] [options]
+      ```
+
+  - name: temporal nexus operation start
+    summary: Start a new Standalone Nexus Operation (Experimental)
+    description: |
+      Start a new Standalone Nexus Operation Execution. Outputs the
+      Operation ID and Run ID.
+
+      ```
+      temporal nexus operation start \
+          --endpoint YourEndpoint \
+          --service YourService \
+          --operation YourOperation \
+          --operation-id YourOperationId \
+          --input '{"some-key": "some-value"}'
+      ```
+    option-sets:
+      - nexus-operation-start
+      - payload-input
+
+  - name: temporal nexus operation execute
+    summary: Start a new Standalone Nexus Operation and wait for its result (Experimental)
+    description: |
+      Start a new Standalone Nexus Operation Execution and block until
+      it completes. The result is output to stdout.
+
+      ```
+      temporal nexus operation execute \
+          --endpoint YourEndpoint \
+          --service YourService \
+          --operation YourOperation \
+          --operation-id YourOperationId \
+          --input '{"some-key": "some-value"}'
+      ```
+    option-sets:
+      - nexus-operation-start
+      - payload-input
+
+  - name: temporal nexus operation describe
+    summary: Show detailed info for a Standalone Nexus Operation (Experimental)
+    description: |
+      Display detailed information about a specific standalone Nexus
+      Operation Execution.
+
+      ```
+      temporal nexus operation describe \
+          --operation-id YourOperationId
+      ```
+    option-sets:
+      - nexus-operation-reference
+    options:
+      - name: raw
+        type: bool
+        description: Print properties without changing their format.
+
+  - name: temporal nexus operation cancel
+    summary: Request cancellation of a Standalone Nexus Operation (Experimental)
+    description: |
+      Request cancellation of a Standalone Nexus Operation.
+
+      ```
+      temporal nexus operation cancel \
+          --operation-id YourOperationId
+      ```
+
+      The Operation handler determines how to handle the
+      cancellation request.
+    option-sets:
+      - nexus-operation-reference
+    options:
+      - name: reason
+        type: string
+        description: Reason for cancellation.
+
+  - name: temporal nexus operation terminate
+    summary: Forcefully end a Standalone Nexus Operation (Experimental)
+    description: |
+      Terminate a Standalone Nexus Operation.
+
+      ```
+      temporal nexus operation terminate \
+          --operation-id YourOperationId \
+          --reason YourReason
+      ```
+
+      Operation handlers cannot see or respond to terminations.
+    option-sets:
+      - nexus-operation-reference
+    options:
+      - name: reason
+        type: string
+        description: |
+          Reason for termination.
+          Defaults to a message with the current user's name.
+
+  - name: temporal nexus operation list
+    summary: List Standalone Nexus Operations matching a query (Experimental)
+    description: |
+      List Standalone Nexus Operations. Use `--query` to filter results.
+
+      ```
+      temporal nexus operation list \
+          --query 'NexusEndpoint="YourEndpoint"'
+      ```
+
+      Visit https://docs.temporal.io/visibility to read more about
+      Search Attributes and queries.
+    options:
+      - name: query
+        short: q
+        type: string
+        description: |
+          Query to filter the Nexus Operation Executions to list.
+      - name: limit
+        type: int
+        description: |
+          Maximum number of Nexus Operation Executions to display.
+      - name: page-size
+        type: int
+        description: |
+          Maximum number of Nexus Operation Executions to fetch
+          at a time from the server.
+
+  - name: temporal nexus operation count
+    summary: Count Standalone Nexus Operations matching a query (Experimental)
+    description: |
+      Return a count of Standalone Nexus Operations. Use `--query`
+      to filter the operations to be counted.
+
+      ```
+      temporal nexus operation count \
+          --query 'NexusEndpoint="YourEndpoint"'
+      ```
+
+      Visit https://docs.temporal.io/visibility to read more about
+      Search Attributes and queries.
+    options:
+      - name: query
+        short: q
+        type: string
+        description: |
+          Query to filter Nexus Operation Executions to count.
+
+  - name: temporal nexus operation result
+    summary: Wait for and output the result of a Standalone Nexus Operation (Experimental)
+    description: |
+      Wait for a Standalone Nexus Operation to complete and output
+      the result.
+
+      ```
+      temporal nexus operation result \
+          --operation-id YourOperationId
+      ```
+    option-sets:
+      - nexus-operation-reference
+
   - name: temporal operator
     summary: Manage Temporal deployments
     description: |
@@ -5024,6 +5228,58 @@ option-sets:
           An external Nexus Endpoint that receives forwarded Nexus requests.
           May be used as an alternative to `--target-namespace` and
           `--target-task-queue`.
+
+  - name: nexus-operation-reference
+    options:
+      - name: operation-id
+        type: string
+        description: Nexus Operation ID.
+        required: true
+      - name: run-id
+        type: string
+        short: r
+        description: Run ID of the Nexus Operation.
+
+  - name: nexus-operation-start
+    options:
+      - name: endpoint
+        type: string
+        description: Nexus Endpoint name.
+        required: true
+      - name: service
+        type: string
+        description: Nexus Service name.
+        required: true
+      - name: operation
+        type: string
+        description: Nexus Operation name.
+        required: true
+      - name: operation-id
+        type: string
+        description: |
+          Nexus Operation ID.
+          If not supplied, the Server generates a unique ID.
+      - name: schedule-to-close-timeout
+        type: duration
+        description: |
+          Total time the operation is allowed to run.
+      - name: id-conflict-policy
+        type: string-enum
+        description: |
+          Policy for handling an Operation ID conflict with a
+          running operation.
+        enum-values:
+          - Fail
+          - UseExisting
+          - TerminateExisting
+      - name: id-reuse-policy
+        type: string-enum
+        description: |
+          Policy for re-using an Operation ID from a previously
+          closed operation.
+        enum-values:
+          - AllowDuplicate
+          - RejectDuplicate
 
   - name: query-modifiers
     options:
