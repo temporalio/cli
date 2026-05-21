@@ -17,6 +17,7 @@ import (
 	schedpb "go.temporal.io/api/schedule/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type printableSchedule struct {
@@ -463,6 +464,38 @@ func (c *TemporalScheduleListCommand) run(cctx *CommandContext, args []string) e
 	}
 	cctx.Printer.PrintStructured(page, printOpts)
 
+	return nil
+}
+
+func (c *TemporalScheduleListMatchingTimesCommand) run(cctx *CommandContext, args []string) error {
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	res, err := cl.WorkflowService().ListScheduleMatchingTimes(cctx, &workflowservice.ListScheduleMatchingTimesRequest{
+		Namespace:  c.Parent.Namespace,
+		ScheduleId: c.ScheduleId,
+		StartTime:  timestamppb.New(c.StartTime.Time()),
+		EndTime:    timestamppb.New(c.EndTime.Time()),
+	})
+	if err != nil {
+		return err
+	}
+
+	times := make([]time.Time, len(res.StartTime))
+	for i, t := range res.StartTime {
+		times[i] = t.AsTime()
+	}
+
+	if cctx.JSONOutput {
+		return cctx.Printer.PrintStructured(times, printer.StructuredOptions{})
+	}
+
+	for _, t := range times {
+		cctx.Printer.Println(t.Format(time.RFC3339Nano))
+	}
 	return nil
 }
 

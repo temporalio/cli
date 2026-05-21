@@ -364,6 +364,34 @@ func (s *SharedServerSuite) TestSchedule_List() {
 	s.Error(res.Err)
 }
 
+func (s *SharedServerSuite) TestSchedule_ListMatchingTimes() {
+	schedId, _, res := s.createSchedule("--calendar", `{"hour":"12","minute":"0"}`)
+	s.NoError(res.Err)
+
+	args := []string{
+		"schedule", "list-matching-times",
+		"--address", s.Address(),
+		"--schedule-id", schedId,
+		"--start-time", "2026-01-01T00:00:00Z",
+		"--end-time", "2026-01-03T00:00:00Z",
+	}
+
+	res = s.Execute(args...)
+	s.NoError(res.Err)
+	out := res.Stdout.String()
+	s.Contains(out, "2026-01-01T12:00:00Z")
+	s.Contains(out, "2026-01-02T12:00:00Z")
+
+	res = s.Execute(append(args, "--output", "json")...)
+	s.NoError(res.Err)
+	var jsonOut []string
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	s.Equal([]string{
+		"2026-01-01T12:00:00Z",
+		"2026-01-02T12:00:00Z",
+	}, jsonOut)
+}
+
 func (s *SharedServerSuite) TestSchedule_Toggle() {
 	schedId, _, res := s.createSchedule("--interval", "10d")
 	s.NoError(res.Err)

@@ -2103,6 +2103,7 @@ func NewTemporalScheduleCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.AddCommand(&NewTemporalScheduleDeleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleDescribeCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleListCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalScheduleListMatchingTimesCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleToggleCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleTriggerCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleUpdateCommand(cctx, &s).Command)
@@ -2262,6 +2263,39 @@ func NewTemporalScheduleListCommand(cctx *CommandContext, parent *TemporalSchedu
 	s.Command.Flags().BoolVarP(&s.Long, "long", "l", false, "Show detailed information.")
 	s.Command.Flags().BoolVar(&s.ReallyLong, "really-long", false, "Show extensive information in non-table form.")
 	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Filter results using given List Filter.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalScheduleListMatchingTimesCommand struct {
+	Parent  *TemporalScheduleCommand
+	Command cobra.Command
+	ScheduleIdOptions
+	EndTime   cliext.FlagTimestamp
+	StartTime cliext.FlagTimestamp
+}
+
+func NewTemporalScheduleListMatchingTimesCommand(cctx *CommandContext, parent *TemporalScheduleCommand) *TemporalScheduleListMatchingTimesCommand {
+	var s TemporalScheduleListMatchingTimesCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list-matching-times [flags]"
+	s.Command.Short = "Display future Schedule action times"
+	if hasHighlighting {
+		s.Command.Long = "Lists the times a Schedule would run in a specified interval:\n\n\x1b[1mtemporal schedule list-matching-times \\\n    --schedule-id YourScheduleId \\\n    --start-time \"2026-01-01T00:00:00Z\" \\\n    --end-time \"2026-01-02T00:00:00Z\"\x1b[0m"
+	} else {
+		s.Command.Long = "Lists the times a Schedule would run in a specified interval:\n\n```\ntemporal schedule list-matching-times \\\n    --schedule-id YourScheduleId \\\n    --start-time \"2026-01-01T00:00:00Z\" \\\n    --end-time \"2026-01-02T00:00:00Z\"\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().Var(&s.EndTime, "end-time", "End of the time interval. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "end-time")
+	s.Command.Flags().Var(&s.StartTime, "start-time", "Start of the time interval. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "start-time")
+	s.ScheduleIdOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

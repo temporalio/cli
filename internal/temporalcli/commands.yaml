@@ -2259,6 +2259,7 @@ commands:
         - schedule delete
         - schedule describe
         - schedule list
+        - schedule list-matching-times
         - schedule toggle
         - schedule trigger
         - schedule update
@@ -2404,6 +2405,29 @@ commands:
         short: q
         type: string
         description: Filter results using given List Filter.
+
+  - name: temporal schedule list-matching-times
+    summary: Display future Schedule action times
+    description: |
+      Lists the times a Schedule would run in a specified interval:
+
+      ```
+      temporal schedule list-matching-times \
+          --schedule-id YourScheduleId \
+          --start-time "2026-01-01T00:00:00Z" \
+          --end-time "2026-01-02T00:00:00Z"
+      ```
+    options:
+      - name: end-time
+        type: timestamp
+        description: End of the time interval.
+        required: true
+      - name: start-time
+        type: timestamp
+        description: Start of the time interval.
+        required: true
+    option-sets:
+      - schedule-id
 
   - name: temporal schedule toggle
     summary: Pause or unpause a Schedule
