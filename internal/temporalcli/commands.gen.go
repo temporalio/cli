@@ -2103,6 +2103,7 @@ func NewTemporalScheduleCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.AddCommand(&NewTemporalScheduleDeleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleDescribeCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleListCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalScheduleListMatchingTimesCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleToggleCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleTriggerCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleUpdateCommand(cctx, &s).Command)
@@ -2262,6 +2263,35 @@ func NewTemporalScheduleListCommand(cctx *CommandContext, parent *TemporalSchedu
 	s.Command.Flags().BoolVarP(&s.Long, "long", "l", false, "Show detailed information.")
 	s.Command.Flags().BoolVar(&s.ReallyLong, "really-long", false, "Show extensive information in non-table form.")
 	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Filter results using given List Filter.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalScheduleListMatchingTimesCommand struct {
+	Parent  *TemporalScheduleCommand
+	Command cobra.Command
+	ScheduleIdOptions
+	StartTime cliext.FlagTimestamp
+	EndTime   cliext.FlagTimestamp
+}
+
+func NewTemporalScheduleListMatchingTimesCommand(cctx *CommandContext, parent *TemporalScheduleCommand) *TemporalScheduleListMatchingTimesCommand {
+	var s TemporalScheduleListMatchingTimesCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list-matching-times [flags]"
+	s.Command.Short = "List matching times for a Schedule"
+	s.Command.Long = "List the times a Schedule would fire within a given time range.\nUse this command to preview when a Schedule will trigger Workflow\nExecutions without actually running them.\n\nFor example:\ntemporal schedule list-matching-times \\\n--schedule-id \"YourScheduleId\" \\\n--start-time \"2024-01-01T00:00:00Z\" \\\n--end-time \"2024-01-31T23:59:59Z\""
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().Var(&s.StartTime, "start-time", "Start of time range to list matching times. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "start-time")
+	s.Command.Flags().Var(&s.EndTime, "end-time", "End of time range to list matching times. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "end-time")
+	s.ScheduleIdOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

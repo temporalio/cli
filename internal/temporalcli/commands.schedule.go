@@ -11,6 +11,7 @@ import (
 	"github.com/temporalio/cli/cliext"
 	"github.com/temporalio/cli/internal/printer"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	commonpb "go.temporal.io/api/common/v1"
 	enumspb "go.temporal.io/api/enums/v1"
@@ -605,4 +606,31 @@ func formatDuration(d time.Duration) string {
 	// Remove last space
 	s = strings.TrimSpace(s)
 	return s
+}
+
+func (c *TemporalScheduleListMatchingTimesCommand) run(cctx *CommandContext, args []string) error {
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	res, err := cl.WorkflowService().ListScheduleMatchingTimes(cctx, &workflowservice.ListScheduleMatchingTimesRequest{
+		Namespace:  c.Parent.Namespace,
+		ScheduleId: c.ScheduleId,
+		StartTime:  timestamppb.New(c.StartTime.Time()),
+		EndTime:    timestamppb.New(c.EndTime.Time()),
+	})
+	if err != nil {
+		return err
+	}
+
+	cctx.Printer.StartList()
+	defer cctx.Printer.EndList()
+
+	for _, t := range res.StartTime {
+		cctx.Printer.Printlnf("%v", t.AsTime())
+	}
+
+	return nil
 }

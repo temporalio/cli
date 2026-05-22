@@ -2320,6 +2320,33 @@ commands:
       - overlap-policy
       - schedule-id
 
+  - name: temporal schedule list-matching-times
+    summary: List matching times for a Schedule
+    description: |
+      List the times a Schedule would fire within a given time range.
+      Use this command to preview when a Schedule will trigger Workflow
+      Executions without actually running them.
+
+      For example:
+
+      ```
+        temporal schedule list-matching-times \
+          --schedule-id "YourScheduleId" \
+          --start-time "2024-01-01T00:00:00Z" \
+          --end-time "2024-01-31T23:59:59Z"
+      ```
+    options:
+     - name: start-time
+       type: timestamp
+       description: Start of time range to list matching times.
+       required: true
+     - name: end-time
+       type: timestamp
+       description: End of time range to list matching times.
+       required: true
+    option-sets:
+      - schedule-id
+
   - name: temporal schedule create
     summary: Create a new Schedule
     description: |
