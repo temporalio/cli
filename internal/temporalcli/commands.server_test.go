@@ -306,7 +306,7 @@ func TestServer_StartDev_BannerPersistenceInMemory(t *testing.T) {
 		h.NoError(res.Err)
 	}
 	out := res.Stdout.String()
-	h.Contains(out, "Persistence:")
+	h.Contains(out, "Temporal Persistence:")
 	h.Contains(out, "in-memory")
 }
 
@@ -346,8 +346,8 @@ func TestServer_StartDev_BannerPersistenceFile(t *testing.T) {
 		h.NoError(res.Err)
 	}
 	out := res.Stdout.String()
-	h.Contains(out, "Persistence:")
-	h.Contains(out, "file ("+dbFilename+")")
+	h.Contains(out, "Temporal Persistence:")
+	h.Contains(out, dbFilename)
 }
 
 type testLogger struct {
