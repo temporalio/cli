@@ -2321,8 +2321,11 @@ commands:
       - schedule-id
 
   - name: temporal schedule list-matching-times
-    summary: List matching times for a Schedule
+    summary: List matching times for a Schedule (Experimental)
     description: |
+      
+      Note: This is an experimental feature and may change in the future.
+
       List the times a Schedule would fire within a given time range.
       Use this command to preview when a Schedule will trigger Workflow
       Executions without actually running them.
