@@ -1,6 +1,7 @@
 package temporalcli
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"regexp"
@@ -16,6 +17,7 @@ import (
 	commonpb "go.temporal.io/api/common/v1"
 	enumspb "go.temporal.io/api/enums/v1"
 	schedpb "go.temporal.io/api/schedule/v1"
+	"go.temporal.io/api/temporalproto"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 )
@@ -48,8 +50,8 @@ type printableSchedule struct {
 	LastUpdateAt     time.Time     `cli:",cardOmitEmpty"` // describe only
 	ActionCounts     *actionCounts `cli:",cardOmitEmpty"` // describe only
 	// SearchAttributes, Memo
-	SearchAttributes *commonpb.SearchAttributes `cli:",cardOmitEmpty"`
-	Memo             *commonpb.Memo             `cli:",cardOmitEmpty"`
+	SearchAttributes map[string]interface{} `cli:",cardOmitEmpty"`
+	Memo             *commonpb.Memo         `cli:",cardOmitEmpty"`
 }
 
 type actionCounts struct {
@@ -69,7 +71,7 @@ func describeResultToPrintable(id string, desc *client.ScheduleDescription) *pri
 	// ID, SearchAttributes, Memo
 	out := &printableSchedule{
 		ScheduleId:       id,
-		SearchAttributes: desc.SearchAttributes,
+		SearchAttributes: searchAttributesToMap(desc.SearchAttributes),
 		Memo:             desc.Memo,
 	}
 	// Schedule.Action
@@ -114,7 +116,7 @@ func listEntryToPrintable(ent *client.ScheduleListEntry) *printableSchedule {
 		Paused:           ent.Paused,
 		Notes:            ent.Note,
 		Action:           struct{ Workflow string }{Workflow: ent.WorkflowType.Name},
-		SearchAttributes: ent.SearchAttributes,
+		SearchAttributes: searchAttributesToMap(ent.SearchAttributes),
 		Memo:             ent.Memo,
 	}
 	specToPrintable(out, ent.Spec)
@@ -633,4 +635,22 @@ func (c *TemporalScheduleListMatchingTimesCommand) run(cctx *CommandContext, arg
 	}
 
 	return nil
+}
+
+func searchAttributesToMap(sa *commonpb.SearchAttributes) map[string]interface{} {
+	// Step 1 — handle nil
+	if sa == nil {
+		return nil
+	}
+	// Step 2 — marshal to JSON bytes using proto marshaler
+	b, err := temporalproto.CustomJSONMarshalOptions{}.Marshal(sa)
+	if err != nil {
+		return nil
+	}
+	// Step 3 — unmarshal bytes into plain map
+	var m map[string]interface{}
+	if err := json.Unmarshal(b, &m); err != nil {
+		return nil
+	}
+	return m
 }
