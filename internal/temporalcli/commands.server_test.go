@@ -324,6 +324,7 @@ func TestServer_StartDev_BannerPersistenceFile(t *testing.T) {
 	}()
 
 	var cl client.Client
+	// File-backed server takes longer to start due to SQLite initialization.
 	h.EventuallyWithT(func(t *assert.CollectT) {
 		select {
 		case res := <-resCh:
@@ -334,7 +335,7 @@ func TestServer_StartDev_BannerPersistenceFile(t *testing.T) {
 		var err error
 		cl, err = client.Dial(client.Options{HostPort: "127.0.0.1:" + port})
 		assert.NoError(t, err)
-	}, 3*time.Second, 200*time.Millisecond)
+	}, 15*time.Second, 200*time.Millisecond)
 	defer cl.Close()
 
 	h.CancelContext()
