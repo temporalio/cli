@@ -235,8 +235,25 @@ commands:
           Activities, this is the Activity Run ID.
       - name: result
         type: string
-        description: Result `JSON` to return.
-        required: true
+        description: |
+          Result to return.
+          Use JSON content or set --result-meta to override.
+          Can't be combined with --result-file.
+      - name: result-file
+        type: string
+        description: |
+          A path for result file.
+          Use JSON content or set --result-file to override.
+          Can't be combined with --result.
+      - name: result-meta
+        type: string
+        description: |
+          Result payload metadata as a `KEY=VALUE` pair.
+          When the KEY is "encoding", this overrides the default ("json/plain").
+      - name: result-base64
+        type: bool
+        description: |
+          Assume result is base64-encoded and attempt to decode them.
 
   - name: temporal activity count
     summary: Count Standalone Activities matching a query (Experimental)
@@ -288,6 +305,12 @@ commands:
           --start-to-close-timeout 30s \
           --input '{"some-key": "some-value"}'
       ```
+    options:
+      - name: output-file
+        type: string
+        description: |
+          A path for output file to store raw result.
+          Can't be combined with --output of json or jsonl.
     option-sets:
       - activity-start
       - payload-input
@@ -326,8 +349,24 @@ commands:
       - name: detail
         type: string
         description: |
-          Failure detail (JSON). Attached as the failure details
-          payload.
+          Failure detail. Attached as the failure details payload.
+          Use JSON content or set --detail-meta to override.
+          Can't be combined with --detail-file.
+      - name: detail-file
+        type: string
+        description: |
+          A path for result file.
+          Use JSON content or set --detail-file to override.
+          Can't be combined with --detail.
+      - name: detail-meta
+        type: string
+        description: |
+          Result payload metadata as a `KEY=VALUE` pair.
+          When the KEY is "encoding", this overrides the default ("json/plain").
+      - name: detail-base64
+        type: bool
+        description: |
+          Assume detail is base64-encoded and attempt to decode them.
       - name: reason
         type: string
         description: |
@@ -638,6 +677,12 @@ commands:
       temporal activity result \
           --activity-id YourActivityId
       ```
+    options:
+      - name: output-file
+        type: string
+        description: |
+          A path for output file to store raw result.
+          Can't be combined with --output of json or jsonl.
     option-sets:
       - activity-reference
 
