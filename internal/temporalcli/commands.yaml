@@ -1461,6 +1461,9 @@ commands:
       - name: limit
         type: int
         description: Maximum number of workers to display.
+      - name: include-system-workers
+        type: bool
+        description: Include system workers that are created implicitly by the server. By default, system workers are excluded.
 
   - name: temporal worker describe
     summary: Returns information about a specific worker (EXPERIMENTAL)
