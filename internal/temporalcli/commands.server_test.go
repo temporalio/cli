@@ -316,7 +316,14 @@ func TestServer_StartDev_BannerPersistenceFile(t *testing.T) {
 
 	port := strconv.Itoa(devserver.MustGetFreePort("127.0.0.1"))
 	httpPort := strconv.Itoa(devserver.MustGetFreePort("127.0.0.1"))
-	dbFilename := filepath.Join(t.TempDir(), "devserver-banner.sqlite")
+	// Use os.TempDir with an explicit defer-remove so Windows file-lock cleanup
+	// (os.RemoveAll in t.TempDir) does not race with a still-open SQLite handle.
+	dbFilename := filepath.Join(os.TempDir(), "devserver-banner-"+t.Name()+".sqlite")
+	t.Cleanup(func() {
+		_ = os.Remove(dbFilename)
+		_ = os.Remove(dbFilename + "-shm")
+		_ = os.Remove(dbFilename + "-wal")
+	})
 	resCh := make(chan *CommandResult, 1)
 	go func() {
 		resCh <- h.Execute("server", "start-dev", "-p", port, "--http-port", httpPort,
