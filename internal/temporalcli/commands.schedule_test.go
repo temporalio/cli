@@ -553,3 +553,44 @@ func (s *SharedServerSuite) TestSchedule_Memo_Update() {
 		return j.Schedule.Action.StartWorkflow.Memo.Fields.Bar.Data == "Mg=="
 	}, 10*time.Second, 100*time.Millisecond)
 }
+
+func (s *SharedServerSuite) TestSchedule_ListMatchingTimes() {
+	schedId, _, res := s.createSchedule("--interval", "1h")
+	s.NoError(res.Err)
+
+	now := time.Now().UTC()
+	startTime := now.Format(time.RFC3339)
+	endTime := now.Add(5 * time.Hour).Format(time.RFC3339)
+
+	// text output
+	res = s.Execute(
+		"schedule", "list-matching-times",
+		"--address", s.Address(),
+		"-s", schedId,
+		"--start-time", startTime,
+		"--end-time", endTime,
+	)
+	s.NoError(res.Err)
+	// should have timestamps in output
+	s.Contains(res.Stdout.String(), "UTC")
+
+	// json output
+	res = s.Execute(
+		"schedule", "list-matching-times",
+		"--address", s.Address(),
+		"-s", schedId,
+		"--start-time", startTime,
+		"--end-time", endTime,
+		"-o", "json",
+	)
+	s.NoError(res.Err)
+	// should parse as JSON array
+	//var times []string
+	//s.NoError(json.Unmarshal(res.Stdout.Bytes(), &times))
+
+	var times []struct {
+		Time string `json:"time"`
+	}
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &times))
+	s.NotEmpty(times)
+}
