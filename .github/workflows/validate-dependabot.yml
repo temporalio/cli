@@ -1,0 +1,29 @@
+name: Validate Dependabot Config
+on:
+  pull_request:
+    paths:
+      - '.github/dependabot.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/dependabot.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate Dependabot Config
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Validate dependabot.yml
+        run: |
+          pip install check-jsonschema==0.37.2
+          check-jsonschema --builtin-schema vendor.dependabot .github/dependabot.yml
