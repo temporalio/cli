@@ -1,10 +1,12 @@
 package temporalcli
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/fatih/color"
@@ -61,6 +63,10 @@ func (c *TemporalActivityExecuteCommand) run(cctx *CommandContext, args []string
 	}
 	defer cl.Close()
 
+	if cctx.JSONOutput && c.OutputFile != "" {
+		return fmt.Errorf("cannot use output-file if output is json(l)")
+	}
+
 	handle, err := startActivity(cctx, cl, &c.ActivityStartOptions, &c.PayloadInputOptions)
 	if err != nil {
 		return err
@@ -70,7 +76,7 @@ func (c *TemporalActivityExecuteCommand) run(cctx *CommandContext, args []string
 			cctx.Logger.Error("Failed printing execution info", "error", err)
 		}
 	}
-	return getActivityResult(cctx, cl, c.Parent.Namespace, c.ActivityId, handle.GetRunID())
+	return getActivityResult(cctx, cl, c.Parent.Namespace, c.ActivityId, handle.GetRunID(), c.OutputFile)
 }
 
 func (c *TemporalActivityResultCommand) run(cctx *CommandContext, args []string) error {
@@ -80,7 +86,11 @@ func (c *TemporalActivityResultCommand) run(cctx *CommandContext, args []string)
 	}
 	defer cl.Close()
 
-	return getActivityResult(cctx, cl, c.Parent.Namespace, c.ActivityId, c.RunId)
+	if cctx.JSONOutput && c.OutputFile != "" {
+		return fmt.Errorf("cannot use output-file if output is json(l)")
+	}
+
+	return getActivityResult(cctx, cl, c.Parent.Namespace, c.ActivityId, c.RunId, c.OutputFile)
 }
 
 func startActivity(
@@ -218,7 +228,7 @@ func mapToSearchAttributes(m map[string]any) (temporal.SearchAttributes, error) 
 	return temporal.NewSearchAttributes(updates...), nil
 }
 
-func getActivityResult(cctx *CommandContext, cl client.Client, namespace, activityID, runID string) error {
+func getActivityResult(cctx *CommandContext, cl client.Client, namespace, activityID, runID string, outputFile string) error {
 	outcome, err := pollActivityOutcome(cctx, cl, namespace, activityID, runID)
 	if err != nil {
 		var notFound *serviceerror.NotFound
@@ -230,9 +240,9 @@ func getActivityResult(cctx *CommandContext, cl client.Client, namespace, activi
 
 	switch v := outcome.GetValue().(type) {
 	case *activitypb.ActivityExecutionOutcome_Result:
-		return printActivityResult(cctx, activityID, runID, v.Result)
+		return printActivityResult(cctx, activityID, runID, v.Result, outputFile)
 	case *activitypb.ActivityExecutionOutcome_Failure:
-		if err := printActivityFailure(cctx, activityID, runID, v.Failure); err != nil {
+		if err := printActivityFailure(cctx, activityID, runID, v.Failure, outputFile); err != nil {
 			cctx.Logger.Error("Activity failed, and printing the output also failed", "error", err)
 		}
 		return fmt.Errorf("activity failed")
@@ -279,7 +289,7 @@ func pollActivityOutcome(cctx *CommandContext, cl client.Client, namespace, acti
 	}
 }
 
-func printActivityResult(cctx *CommandContext, activityID, runID string, result *common.Payloads) error {
+func printActivityResult(cctx *CommandContext, activityID, runID string, result *common.Payloads, outputFile string) error {
 	if cctx.JSONOutput {
 		var resultJSON json.RawMessage
 		var err error
@@ -309,13 +319,25 @@ func printActivityResult(cctx *CommandContext, activityID, runID string, result 
 	}
 
 	cctx.Printer.Println(color.MagentaString("Results:"))
-	var valuePtr any
-	if err := converter.GetDefaultDataConverter().FromPayloads(result, &valuePtr); err != nil {
-		return fmt.Errorf("failed decoding result: %w", err)
-	}
-	resultJSON, err := json.Marshal(valuePtr)
-	if err != nil {
-		return fmt.Errorf("failed marshaling result: %w", err)
+	var resultJSON []byte
+	var err error
+	// TODO: which is better? len(str) == 0 or str == ""
+	if outputFile == "" {
+		var valuePtr any
+		if err = converter.GetDefaultDataConverter().FromPayloads(result, &valuePtr); err != nil {
+			return fmt.Errorf("failed decoding result %v: %w", result, err)
+		}
+		resultJSON, err = json.Marshal(valuePtr)
+		if err != nil {
+			return fmt.Errorf("failed marshaling result: %w", err)
+		}
+	} else {
+		// indicate result attr as stored in output-file, and write the result payloads in the file.
+		_, err := writePayloadsToOutputFile(outputFile, result)
+		if err != nil {
+			return err
+		}
+		resultJSON = []byte("\"stored in output-file\"")
 	}
 	return cctx.Printer.PrintStructured(struct {
 		Status string
@@ -326,7 +348,7 @@ func printActivityResult(cctx *CommandContext, activityID, runID string, result 
 	}, printer.StructuredOptions{})
 }
 
-func printActivityFailure(cctx *CommandContext, activityID, runID string, f *failure.Failure) error {
+func printActivityFailure(cctx *CommandContext, activityID, runID string, f *failure.Failure, outputFile string) error {
 	if cctx.JSONOutput {
 		failureJSON, err := cctx.MarshalProtoJSON(f)
 		if err != nil {
@@ -347,14 +369,50 @@ func printActivityFailure(cctx *CommandContext, activityID, runID string, f *fai
 	}
 
 	cctx.Printer.Println(color.MagentaString("Results:"))
+	failureBodyText := cctx.MarshalFriendlyFailureBodyText(f, "    ")
+	if outputFile != "" {
+		appFailureInfo := f.GetFailureInfo().(*failure.Failure_ApplicationFailureInfo)
+		if appFailureInfo != nil {
+			// indicate in message attr as stored in output-file, and write the details' payloads in the file.
+			_, err := writePayloadsToOutputFile(outputFile, appFailureInfo.ApplicationFailureInfo.GetDetails())
+			if err != nil {
+				return err
+			}
+			indicateText := "details stored in output-file"
+			if failureBodyText == "" {
+				failureBodyText = indicateText
+			} else {
+				failureBodyText += ", " + indicateText
+			}
+		}
+		// TODO: should it create an empty output-file if no failure info present.
+	}
 	_ = cctx.Printer.PrintStructured(struct {
 		Status  string
 		Failure string `cli:",cardOmitEmpty"`
 	}{
 		Status:  color.RedString("FAILED"),
-		Failure: cctx.MarshalFriendlyFailureBodyText(f, "    "),
+		Failure: failureBodyText,
 	}, printer.StructuredOptions{})
 	return nil
+}
+
+// writePayloadsToOutputFile writes data from common.Payloads to the named output file.
+// It returns number of bytes written or any error.
+func writePayloadsToOutputFile(outputFile string, payloads *common.Payloads) (int, error) {
+	var data bytes.Buffer
+	if payloads != nil {
+		for _, payload := range payloads.Payloads {
+			data.Write(payload.Data)
+		}
+	}
+	bytes := data.Bytes()
+	// TODO: protect against accidental overwrite of an existing file
+	err := os.WriteFile(outputFile, bytes, 0644)
+	if err != nil {
+		return 0, err
+	}
+	return len(bytes), nil
 }
 
 func (c *TemporalActivityDescribeCommand) run(cctx *CommandContext, args []string) error {
@@ -568,6 +626,39 @@ func (c *TemporalActivityTerminateCommand) run(cctx *CommandContext, args []stri
 	return nil
 }
 
+// buildInputPayloadOptions builds and returns InputPayloadOptions using at most one
+// supplied values for input, inputFile, etc. It is used when input like semantics are
+// implemented at other places such as for result or detail in activity complete or
+// fail command handler, respectively. If both of input are inputFile are supplied,
+// otherwise it return nil with error. If none of these are supplied, it returns nil without error.
+func buildInputPayloadOptions(
+	input string,
+	inputFile string,
+	inputMeta string,
+	inputBase64 bool,
+) (*PayloadInputOptions, error) {
+	if input == "" && inputFile == "" {
+		// no error if none are supplied.
+		return nil, nil
+	}
+	if input != "" && inputFile != "" {
+		return nil, fmt.Errorf("provide exactly one of input or inputFile")
+	}
+
+	resultPayloadOpts := PayloadInputOptions{
+		InputBase64: inputBase64,
+	}
+	if inputMeta != "" {
+		resultPayloadOpts.InputMeta = []string{inputMeta}
+	}
+	if input != "" && inputFile == "" {
+		resultPayloadOpts.Input = []string{input}
+	} else if input == "" && inputFile != "" {
+		resultPayloadOpts.InputFile = []string{inputFile}
+	}
+	return &resultPayloadOpts, nil
+}
+
 func (c *TemporalActivityCompleteCommand) run(cctx *CommandContext, args []string) error {
 	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
@@ -575,8 +666,13 @@ func (c *TemporalActivityCompleteCommand) run(cctx *CommandContext, args []strin
 	}
 	defer cl.Close()
 
-	metadata := map[string][][]byte{"encoding": {[]byte("json/plain")}}
-	resultPayloads, err := CreatePayloads([][]byte{[]byte(c.Result)}, metadata, false)
+	resultPayloadOpts, err := buildInputPayloadOptions(c.Result, c.ResultFile, c.ResultMeta, c.ResultBase64)
+	if resultPayloadOpts == nil || err != nil {
+		// TODO: where do we check that one of result or result-file is used. also for details in activity fail command.
+		return fmt.Errorf("provide exactly one of result or result-file")
+	}
+
+	resultPayloads, err := resultPayloadOpts.buildRawInputPayloads()
 	if err != nil {
 		return err
 	}
@@ -602,10 +698,15 @@ func (c *TemporalActivityFailCommand) run(cctx *CommandContext, args []string) e
 	}
 	defer cl.Close()
 
+	detailPayloadOpts, err := buildInputPayloadOptions(c.Detail, c.DetailFile, c.DetailMeta, c.DetailBase64)
+	if err != nil {
+		// TODO: if both detail and detail-file were used, then return error.
+		return fmt.Errorf("provide one of detail or detail-file, but not both")
+	}
+
 	var detailPayloads *common.Payloads
-	if len(c.Detail) > 0 {
-		metadata := map[string][][]byte{"encoding": {[]byte("json/plain")}}
-		detailPayloads, err = CreatePayloads([][]byte{[]byte(c.Detail)}, metadata, false)
+	if detailPayloadOpts != nil {
+		detailPayloads, err = detailPayloadOpts.buildRawInputPayloads()
 		if err != nil {
 			return err
 		}
