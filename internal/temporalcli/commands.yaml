@@ -3492,8 +3492,8 @@ commands:
           --queue-rps-limit-reason <reason_string> \
           --fairness-key-rps-limit-default <requests_per_second:float> \
           --fairness-key-rps-limit-reason <reason_string> \
-          --fairness-key-weight-set HighPriority=2.0 \
-          --fairness-key-weight-set LowPriority=0.5
+          --fairness-key-weight HighPriority=2.0 \
+          --fairness-key-weight LowPriority=0.5
       ```
 
       This command supports updating:
@@ -3507,8 +3507,8 @@ commands:
         Weights control the relative share of capacity each key receives.
 
       To unset a rate limit, pass in 'default', for example: --queue-rps-limit default
-      To unset specific fairness weights, use --fairness-key-weight-unset <key>
-      To unset all fairness weights, use --fairness-key-weight-unset-all
+      To unset a specific fairness weight, use --fairness-key-weight <key>=default
+      To unset all fairness weights, use --fairness-key-weight-clear-all
     options:
       - name: task-queue
         type: string
