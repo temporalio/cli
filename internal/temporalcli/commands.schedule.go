@@ -625,16 +625,18 @@ func (c *TemporalScheduleListMatchingTimesCommand) run(cctx *CommandContext, arg
 		return err
 	}
 
-	cctx.Printer.StartList()
-	defer cctx.Printer.EndList()
+	if cctx.JSONOutput {
+		return cctx.Printer.PrintStructured(res, printer.StructuredOptions{})
+	}
 
 	type matchingTime struct {
 		Time string `json:"time"`
 	}
-
+	var rows []matchingTime
 	for _, t := range res.StartTime {
-		cctx.Printer.PrintStructured(matchingTime{Time: t.AsTime().String()}, printer.StructuredOptions{})
+		rows = append(rows, matchingTime{Time: t.AsTime().Format(time.RFC3339)})
 	}
-
-	return nil
+	return cctx.Printer.PrintStructured(rows, printer.StructuredOptions{
+		Table: &printer.TableOptions{},
+	})
 }

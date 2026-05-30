@@ -2284,11 +2284,11 @@ func NewTemporalScheduleListMatchingTimesCommand(cctx *CommandContext, parent *T
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "list-matching-times [flags]"
-	s.Command.Short = "List matching times for a Schedule (Experimental)"
+	s.Command.Short = "List matching times for a Schedule (Experimental feature)"
 	if hasHighlighting {
-		s.Command.Long = "\nNote: This is an experimental feature and may change in the future.\n\nList the times a Schedule would fire within a given time range.\nUse this command to preview when a Schedule will trigger Workflow\nExecutions without actually running them.\n\nFor example:\n\n\x1b[1m  temporal schedule list-matching-times \\\n    --schedule-id \"YourScheduleId\" \\\n    --start-time \"2024-01-01T00:00:00Z\" \\\n    --end-time \"2024-01-31T23:59:59Z\"\x1b[0m"
+		s.Command.Long = "\nNote: This is an experimental feature and may change in the future.\n\nList the times a Schedule's spec would match within a given time\nrange. The time range may be in the past or future. Use this\ncommand to preview when a Schedule will take actions without\nactually running them.\n\nFor example:\n\n\x1b[1m  temporal schedule list-matching-times \\\n    --schedule-id \"YourScheduleId\" \\\n    --start-time \"2024-01-01T00:00:00Z\" \\\n    --end-time \"2024-01-31T23:59:59Z\"\x1b[0m"
 	} else {
-		s.Command.Long = "\nNote: This is an experimental feature and may change in the future.\n\nList the times a Schedule would fire within a given time range.\nUse this command to preview when a Schedule will trigger Workflow\nExecutions without actually running them.\n\nFor example:\n\n```\n  temporal schedule list-matching-times \\\n    --schedule-id \"YourScheduleId\" \\\n    --start-time \"2024-01-01T00:00:00Z\" \\\n    --end-time \"2024-01-31T23:59:59Z\"\n```"
+		s.Command.Long = "\nNote: This is an experimental feature and may change in the future.\n\nList the times a Schedule's spec would match within a given time\nrange. The time range may be in the past or future. Use this\ncommand to preview when a Schedule will take actions without\nactually running them.\n\nFor example:\n\n```\n  temporal schedule list-matching-times \\\n    --schedule-id \"YourScheduleId\" \\\n    --start-time \"2024-01-01T00:00:00Z\" \\\n    --end-time \"2024-01-31T23:59:59Z\"\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().Var(&s.StartTime, "start-time", "Start of time range to list matching times. Required.")
