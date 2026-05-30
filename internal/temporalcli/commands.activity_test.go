@@ -33,7 +33,7 @@ func (s *SharedServerSuite) TestActivity_Complete() {
 		"activity", "complete",
 		"--activity-id", activityId,
 		"--workflow-id", wid,
-		"--result", "\"complete-activity-result\"",
+		"--input", "\"complete-activity-result\"",
 		"--identity", identity,
 		"--address", s.Address(),
 	)
@@ -88,7 +88,7 @@ func (s *SharedServerSuite) TestActivity_Complete_InvalidResult() {
 		"activity", "complete",
 		"--activity-id", activityId,
 		"--workflow-id", run.GetID(),
-		"--result", "{not json}",
+		"--input", "{not json}",
 		"--address", s.Address(),
 	)
 	s.ErrorContains(res.Err, "is not valid JSON")
@@ -1055,7 +1055,7 @@ func (s *SharedServerSuite) TestActivity_Complete_ByRunId() {
 		"activity", "complete",
 		"--activity-id", "sa-complete-test",
 		"--run-id", runID,
-		"--result", `"completed-externally"`,
+		"--input", `"completed-externally"`,
 		"--identity", identity,
 		"--address", s.Address(),
 	)
