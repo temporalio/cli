@@ -191,7 +191,7 @@ func persistentClusterID() string {
 	file := defaultDeprecatedEnvConfigFile("temporalio", "version-info")
 	if file == "" {
 		// No file, can do nothing here
-		return uuid.NewString()
+		return "dev-server-" + uuid.NewString()
 	}
 	// Try to get existing first
 	env, _ := readDeprecatedEnvConfigFile(file)
@@ -199,7 +199,7 @@ func persistentClusterID() string {
 		return id
 	}
 	// Create and try to write
-	id := uuid.NewString()
+	id := "dev-server-" + uuid.NewString()
 	_ = writeDeprecatedEnvConfigFile(file, map[string]map[string]string{"default": {"cluster-id": id}})
 	return id
 }
