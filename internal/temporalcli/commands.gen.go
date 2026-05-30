@@ -2103,6 +2103,7 @@ func NewTemporalScheduleCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.AddCommand(&NewTemporalScheduleDeleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleDescribeCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleListCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalScheduleListMatchingTimesCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleToggleCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleTriggerCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleUpdateCommand(cctx, &s).Command)
@@ -2262,6 +2263,39 @@ func NewTemporalScheduleListCommand(cctx *CommandContext, parent *TemporalSchedu
 	s.Command.Flags().BoolVarP(&s.Long, "long", "l", false, "Show detailed information.")
 	s.Command.Flags().BoolVar(&s.ReallyLong, "really-long", false, "Show extensive information in non-table form.")
 	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Filter results using given List Filter.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalScheduleListMatchingTimesCommand struct {
+	Parent  *TemporalScheduleCommand
+	Command cobra.Command
+	ScheduleIdOptions
+	StartTime cliext.FlagTimestamp
+	EndTime   cliext.FlagTimestamp
+}
+
+func NewTemporalScheduleListMatchingTimesCommand(cctx *CommandContext, parent *TemporalScheduleCommand) *TemporalScheduleListMatchingTimesCommand {
+	var s TemporalScheduleListMatchingTimesCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list-matching-times [flags]"
+	s.Command.Short = "List matching times for a Schedule (Experimental feature)"
+	if hasHighlighting {
+		s.Command.Long = "\nNote: This is an experimental feature and may change in the future.\n\nList the times a Schedule's spec would match within a given time\nrange. The time range may be in the past or future. Use this\ncommand to preview when a Schedule will take actions without\nactually running them.\n\nFor example:\n\n\x1b[1m  temporal schedule list-matching-times \\\n    --schedule-id \"YourScheduleId\" \\\n    --start-time \"2024-01-01T00:00:00Z\" \\\n    --end-time \"2024-01-31T23:59:59Z\"\x1b[0m"
+	} else {
+		s.Command.Long = "\nNote: This is an experimental feature and may change in the future.\n\nList the times a Schedule's spec would match within a given time\nrange. The time range may be in the past or future. Use this\ncommand to preview when a Schedule will take actions without\nactually running them.\n\nFor example:\n\n```\n  temporal schedule list-matching-times \\\n    --schedule-id \"YourScheduleId\" \\\n    --start-time \"2024-01-01T00:00:00Z\" \\\n    --end-time \"2024-01-31T23:59:59Z\"\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().Var(&s.StartTime, "start-time", "Start of time range to list matching times. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "start-time")
+	s.Command.Flags().Var(&s.EndTime, "end-time", "End of time range to list matching times. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "end-time")
+	s.ScheduleIdOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -2548,9 +2582,9 @@ func NewTemporalTaskQueueConfigSetCommand(cctx *CommandContext, parent *Temporal
 	s.Command.Use = "set [flags]"
 	s.Command.Short = "Set Task Queue configuration"
 	if hasHighlighting {
-		s.Command.Long = "Update configuration settings for a Task Queue.\n\n\x1b[1mtemporal task-queue config set \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type activity \\\n    --namespace YourNamespace \\\n    --queue-rps-limit <requests_per_second:float> \\\n    --queue-rps-limit-reason <reason_string> \\\n    --fairness-key-rps-limit-default <requests_per_second:float> \\\n    --fairness-key-rps-limit-reason <reason_string> \\\n    --fairness-key-weight-set HighPriority=2.0 \\\n    --fairness-key-weight-set LowPriority=0.5\x1b[0m\n\nThis command supports updating:\n- Queue rate limits: Controls the overall rate limit of the task queue.\n  This setting overrides the worker rate limit if set.\n  Unless modified, this is the system-defined rate limit.\n- Fairness key rate limit defaults: Sets default rate limits for fairness keys.\n  If set, each individual fairness key will be limited to this rate,\n  scaled by the weight of the fairness key.\n- Fairness key weight overrides: Set custom weights for specific fairness keys.\n  Weights control the relative share of capacity each key receives.\n\nTo unset a rate limit, pass in 'default', for example: --queue-rps-limit default\nTo unset specific fairness weights, use --fairness-key-weight-unset <key>\nTo unset all fairness weights, use --fairness-key-weight-unset-all"
+		s.Command.Long = "Update configuration settings for a Task Queue.\n\n\x1b[1mtemporal task-queue config set \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type activity \\\n    --namespace YourNamespace \\\n    --queue-rps-limit <requests_per_second:float> \\\n    --queue-rps-limit-reason <reason_string> \\\n    --fairness-key-rps-limit-default <requests_per_second:float> \\\n    --fairness-key-rps-limit-reason <reason_string> \\\n    --fairness-key-weight HighPriority=2.0 \\\n    --fairness-key-weight LowPriority=0.5\x1b[0m\n\nThis command supports updating:\n- Queue rate limits: Controls the overall rate limit of the task queue.\n  This setting overrides the worker rate limit if set.\n  Unless modified, this is the system-defined rate limit.\n- Fairness key rate limit defaults: Sets default rate limits for fairness keys.\n  If set, each individual fairness key will be limited to this rate,\n  scaled by the weight of the fairness key.\n- Fairness key weight overrides: Set custom weights for specific fairness keys.\n  Weights control the relative share of capacity each key receives.\n\nTo unset a rate limit, pass in 'default', for example: --queue-rps-limit default\nTo unset a specific fairness weight, use --fairness-key-weight <key>=default\nTo unset all fairness weights, use --fairness-key-weight-clear-all"
 	} else {
-		s.Command.Long = "Update configuration settings for a Task Queue.\n\n```\ntemporal task-queue config set \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type activity \\\n    --namespace YourNamespace \\\n    --queue-rps-limit <requests_per_second:float> \\\n    --queue-rps-limit-reason <reason_string> \\\n    --fairness-key-rps-limit-default <requests_per_second:float> \\\n    --fairness-key-rps-limit-reason <reason_string> \\\n    --fairness-key-weight-set HighPriority=2.0 \\\n    --fairness-key-weight-set LowPriority=0.5\n```\n\nThis command supports updating:\n- Queue rate limits: Controls the overall rate limit of the task queue.\n  This setting overrides the worker rate limit if set.\n  Unless modified, this is the system-defined rate limit.\n- Fairness key rate limit defaults: Sets default rate limits for fairness keys.\n  If set, each individual fairness key will be limited to this rate,\n  scaled by the weight of the fairness key.\n- Fairness key weight overrides: Set custom weights for specific fairness keys.\n  Weights control the relative share of capacity each key receives.\n\nTo unset a rate limit, pass in 'default', for example: --queue-rps-limit default\nTo unset specific fairness weights, use --fairness-key-weight-unset <key>\nTo unset all fairness weights, use --fairness-key-weight-unset-all"
+		s.Command.Long = "Update configuration settings for a Task Queue.\n\n```\ntemporal task-queue config set \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type activity \\\n    --namespace YourNamespace \\\n    --queue-rps-limit <requests_per_second:float> \\\n    --queue-rps-limit-reason <reason_string> \\\n    --fairness-key-rps-limit-default <requests_per_second:float> \\\n    --fairness-key-rps-limit-reason <reason_string> \\\n    --fairness-key-weight HighPriority=2.0 \\\n    --fairness-key-weight LowPriority=0.5\n```\n\nThis command supports updating:\n- Queue rate limits: Controls the overall rate limit of the task queue.\n  This setting overrides the worker rate limit if set.\n  Unless modified, this is the system-defined rate limit.\n- Fairness key rate limit defaults: Sets default rate limits for fairness keys.\n  If set, each individual fairness key will be limited to this rate,\n  scaled by the weight of the fairness key.\n- Fairness key weight overrides: Set custom weights for specific fairness keys.\n  Weights control the relative share of capacity each key receives.\n\nTo unset a rate limit, pass in 'default', for example: --queue-rps-limit default\nTo unset a specific fairness weight, use --fairness-key-weight <key>=default\nTo unset all fairness weights, use --fairness-key-weight-clear-all"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task Queue name. Required.")
@@ -3756,9 +3790,9 @@ func NewTemporalWorkflowDeleteCommand(cctx *CommandContext, parent *TemporalWork
 	s.Command.Use = "delete [flags]"
 	s.Command.Short = "Remove Workflow Execution"
 	if hasHighlighting {
-		s.Command.Long = "Delete a Workflow Executions and its Event History:\n\n\x1b[1mtemporal workflow delete \\\n    --workflow-id YourWorkflowId\x1b[0m\n\nThe removal executes asynchronously. If the Execution is Running, the Service\nterminates it before deletion.\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation. See \x1b[1mtemporal batch --help\x1b[0m for a quick reference."
+		s.Command.Long = "Delete a Workflow Execution and its Event History:\n\n\x1b[1mtemporal workflow delete \\\n    --workflow-id YourWorkflowId\x1b[0m\n\nThe removal executes asynchronously. If the Execution is Running, the Service\nterminates it before deletion.\n\nWARNING: Deleting Workflow Executions in a global Namespace removes them from\nall replicas. Requests sent to a passive cluster are forwarded to the active\ncluster by default; to target the passive cluster directly, specify\n\x1b[1m--grpc-meta xdc-redirection=false\x1b[0m.\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation. See \x1b[1mtemporal batch --help\x1b[0m for a quick reference."
 	} else {
-		s.Command.Long = "Delete a Workflow Executions and its Event History:\n\n```\ntemporal workflow delete \\\n    --workflow-id YourWorkflowId\n```\n\nThe removal executes asynchronously. If the Execution is Running, the Service\nterminates it before deletion.\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation. See `temporal batch --help` for a quick reference."
+		s.Command.Long = "Delete a Workflow Execution and its Event History:\n\n```\ntemporal workflow delete \\\n    --workflow-id YourWorkflowId\n```\n\nThe removal executes asynchronously. If the Execution is Running, the Service\nterminates it before deletion.\n\nWARNING: Deleting Workflow Executions in a global Namespace removes them from\nall replicas. Requests sent to a passive cluster are forwarded to the active\ncluster by default; to target the passive cluster directly, specify\n`--grpc-meta xdc-redirection=false`.\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation. See `temporal batch --help` for a quick reference."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.SingleWorkflowOrBatchOptions.BuildFlags(s.Command.Flags())
