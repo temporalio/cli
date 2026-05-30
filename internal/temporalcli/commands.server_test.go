@@ -271,6 +271,93 @@ func TestServer_StartDev_WithSearchAttributes(t *testing.T) {
 	}
 }
 
+func TestServer_StartDev_BannerPersistenceInMemory(t *testing.T) {
+	h := NewCommandHarness(t)
+	defer h.Close()
+
+	port := strconv.Itoa(devserver.MustGetFreePort("127.0.0.1"))
+	httpPort := strconv.Itoa(devserver.MustGetFreePort("127.0.0.1"))
+	resCh := make(chan *CommandResult, 1)
+	go func() {
+		resCh <- h.Execute("server", "start-dev", "-p", port, "--http-port", httpPort, "--headless")
+	}()
+
+	// Wait until the server is dial-able, then cancel
+	var cl client.Client
+	h.EventuallyWithT(func(t *assert.CollectT) {
+		select {
+		case res := <-resCh:
+			require.NoError(t, res.Err)
+			require.Fail(t, "got early server result")
+		default:
+		}
+		var err error
+		cl, err = client.Dial(client.Options{HostPort: "127.0.0.1:" + port})
+		assert.NoError(t, err)
+	}, 3*time.Second, 200*time.Millisecond)
+	defer cl.Close()
+
+	h.CancelContext()
+	var res *CommandResult
+	select {
+	case <-time.After(20 * time.Second):
+		h.Fail("didn't cleanup after 20 seconds")
+	case res = <-resCh:
+		h.NoError(res.Err)
+	}
+	out := res.Stdout.String()
+	h.Contains(out, "Temporal Persistence:")
+	h.Contains(out, "in-memory")
+}
+
+func TestServer_StartDev_BannerPersistenceFile(t *testing.T) {
+	h := NewCommandHarness(t)
+	defer h.Close()
+
+	port := strconv.Itoa(devserver.MustGetFreePort("127.0.0.1"))
+	httpPort := strconv.Itoa(devserver.MustGetFreePort("127.0.0.1"))
+	// Use os.TempDir with an explicit defer-remove so Windows file-lock cleanup
+	// (os.RemoveAll in t.TempDir) does not race with a still-open SQLite handle.
+	dbFilename := filepath.Join(os.TempDir(), "devserver-banner-"+t.Name()+".sqlite")
+	t.Cleanup(func() {
+		_ = os.Remove(dbFilename)
+		_ = os.Remove(dbFilename + "-shm")
+		_ = os.Remove(dbFilename + "-wal")
+	})
+	resCh := make(chan *CommandResult, 1)
+	go func() {
+		resCh <- h.Execute("server", "start-dev", "-p", port, "--http-port", httpPort,
+			"--headless", "--db-filename", dbFilename)
+	}()
+
+	var cl client.Client
+	// File-backed server takes longer to start due to SQLite initialization.
+	h.EventuallyWithT(func(t *assert.CollectT) {
+		select {
+		case res := <-resCh:
+			require.NoError(t, res.Err)
+			require.Fail(t, "got early server result")
+		default:
+		}
+		var err error
+		cl, err = client.Dial(client.Options{HostPort: "127.0.0.1:" + port})
+		assert.NoError(t, err)
+	}, 15*time.Second, 200*time.Millisecond)
+	defer cl.Close()
+
+	h.CancelContext()
+	var res *CommandResult
+	select {
+	case <-time.After(20 * time.Second):
+		h.Fail("didn't cleanup after 20 seconds")
+	case res = <-resCh:
+		h.NoError(res.Err)
+	}
+	out := res.Stdout.String()
+	h.Contains(out, "Temporal Persistence:")
+	h.Contains(out, dbFilename)
+}
+
 type testLogger struct {
 	t *testing.T
 }

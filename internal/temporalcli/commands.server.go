@@ -160,15 +160,20 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 	defer s.Stop()
 
 	cctx.Printer.Printlnf("Temporal CLI %v\n", VersionString())
-	cctx.Printer.Printlnf("%-17s %v:%v", "Temporal Server:", toFriendlyIp(opts.FrontendIP), opts.FrontendPort)
+	cctx.Printer.Printlnf("%-21s %v:%v", "Temporal Server:", toFriendlyIp(opts.FrontendIP), opts.FrontendPort)
+	if t.DbFilename == "" {
+		cctx.Printer.Printlnf("%-21s %v", "Temporal Persistence:", "in-memory")
+	} else {
+		cctx.Printer.Printlnf("%-21s %v", "Temporal Persistence:", t.DbFilename)
+	}
 	// Only print HTTP port if explicitly provided to avoid promoting the unstable HTTP API.
 	if opts.FrontendHTTPPort > 0 {
-		cctx.Printer.Printlnf("%-17s %v:%v", "Temporal HTTP:", toFriendlyIp(opts.FrontendIP), opts.FrontendHTTPPort)
+		cctx.Printer.Printlnf("%-21s %v:%v", "Temporal HTTP:", toFriendlyIp(opts.FrontendIP), opts.FrontendHTTPPort)
 	}
 	if !t.Headless {
-		cctx.Printer.Printlnf("%-17s http://%v:%v%v", "Temporal UI:", toFriendlyIp(opts.UIIP), opts.UIPort, opts.PublicPath)
+		cctx.Printer.Printlnf("%-21s http://%v:%v%v", "Temporal UI:", toFriendlyIp(opts.UIIP), opts.UIPort, opts.PublicPath)
 	}
-	cctx.Printer.Printlnf("%-17s http://%v:%v/metrics", "Temporal Metrics:", toFriendlyIp(opts.FrontendIP), opts.MetricsPort)
+	cctx.Printer.Printlnf("%-21s http://%v:%v/metrics", "Temporal Metrics:", toFriendlyIp(opts.FrontendIP), opts.MetricsPort)
 	<-cctx.Done()
 	if !t.Parent.Parent.LogLevel.ChangedFromDefault {
 		// The server routinely emits various warnings on shutdown.
