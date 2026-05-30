@@ -3,7 +3,6 @@ package temporalcli
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/google/uuid"
@@ -189,10 +188,6 @@ func persistentClusterID() string {
 	// If there is not a database file in use, we want a cluster ID to be the same
 	// for every re-run, so we set it as an environment config in a special env
 	// file. We do not error if we can neither read nor write the file.
-
-	if id := os.Getenv("TEMPORAL_DEV_SERVER_CLUSTER_ID"); id != "" {
-		return id
-	}
 
 	file := defaultDeprecatedEnvConfigFile("temporalio", "version-info")
 	if file == "" {
