@@ -2320,6 +2320,37 @@ commands:
       - overlap-policy
       - schedule-id
 
+  - name: temporal schedule list-matching-times
+    summary: List matching times for a Schedule (Experimental feature)
+    description: |
+
+      Note: This is an experimental feature and may change in the future.
+
+      List the times a Schedule's spec would match within a given time
+      range. The time range may be in the past or future. Use this
+      command to preview when a Schedule will take actions without
+      actually running them.
+
+      For example:
+
+      ```
+        temporal schedule list-matching-times \
+          --schedule-id "YourScheduleId" \
+          --start-time "2024-01-01T00:00:00Z" \
+          --end-time "2024-01-31T23:59:59Z"
+      ```
+    options:
+     - name: start-time
+       type: timestamp
+       description: Start of time range to list matching times.
+       required: true
+     - name: end-time
+       type: timestamp
+       description: End of time range to list matching times.
+       required: true
+    option-sets:
+      - schedule-id
+
   - name: temporal schedule create
     summary: Create a new Schedule
     description: |
@@ -3492,8 +3523,8 @@ commands:
           --queue-rps-limit-reason <reason_string> \
           --fairness-key-rps-limit-default <requests_per_second:float> \
           --fairness-key-rps-limit-reason <reason_string> \
-          --fairness-key-weight-set HighPriority=2.0 \
-          --fairness-key-weight-set LowPriority=0.5
+          --fairness-key-weight HighPriority=2.0 \
+          --fairness-key-weight LowPriority=0.5
       ```
 
       This command supports updating:
@@ -3507,8 +3538,8 @@ commands:
         Weights control the relative share of capacity each key receives.
 
       To unset a rate limit, pass in 'default', for example: --queue-rps-limit default
-      To unset specific fairness weights, use --fairness-key-weight-unset <key>
-      To unset all fairness weights, use --fairness-key-weight-unset-all
+      To unset a specific fairness weight, use --fairness-key-weight <key>=default
+      To unset all fairness weights, use --fairness-key-weight-clear-all
     options:
       - name: task-queue
         type: string
@@ -3665,7 +3696,7 @@ commands:
   - name: temporal workflow delete
     summary: Remove Workflow Execution
     description: |
-      Delete a Workflow Executions and its Event History:
+      Delete a Workflow Execution and its Event History:
 
       ```
       temporal workflow delete \
@@ -3674,6 +3705,11 @@ commands:
 
       The removal executes asynchronously. If the Execution is Running, the Service
       terminates it before deletion.
+
+      WARNING: Deleting Workflow Executions in a global Namespace removes them from
+      all replicas. Requests sent to a passive cluster are forwarded to the active
+      cluster by default; to target the passive cluster directly, specify
+      `--grpc-meta xdc-redirection=false`.
 
       Visit https://docs.temporal.io/visibility to read more about Search Attributes
       and Query creation. See `temporal batch --help` for a quick reference.
