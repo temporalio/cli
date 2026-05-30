@@ -251,7 +251,7 @@ func (s *SharedServerSuite) TestWorkflow_Delete_BatchWorkflowSuccess() {
 		"-y",
 	)
 	s.NoError(res.Err)
-	s.Contains(res.Stdout.String(), "Start batch against approximately 2 workflow(s)")
+	s.Contains(res.Stdout.String(), "Start batch against workflows matching query")
 	s.NotContains(res.Stdout.String(), "Deleting Workflow Executions in a global Namespace")
 	s.NotContains(res.Stderr.String(), "Deleting Workflow Executions in a global Namespace")
 
