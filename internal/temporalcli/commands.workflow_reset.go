@@ -134,12 +134,19 @@ func (c *TemporalWorkflowResetCommand) runBatchResetWithPostOps(cctx *CommandCon
 			PostResetOperations: postOps,
 		},
 	}
-	count, err := cl.CountWorkflow(cctx, &workflowservice.CountWorkflowExecutionsRequest{Query: c.Query})
-	if err != nil {
-		return fmt.Errorf("failed counting workflows from query: %w", err)
+	// The count is only used in the confirmation prompt; skip the request when --yes
+	// bypasses it, so batch jobs can still proceed if the visibility API is timing out.
+	var promptMessage string
+	if c.Yes {
+		promptMessage = fmt.Sprintf("Start batch against workflows matching query %q? y/N", c.Query)
+	} else {
+		count, err := cl.CountWorkflow(cctx, &workflowservice.CountWorkflowExecutionsRequest{Query: c.Query})
+		if err != nil {
+			return fmt.Errorf("failed counting workflows from query: %w", err)
+		}
+		promptMessage = fmt.Sprintf("Start batch against approximately %v workflow(s)? y/N", count.Count)
 	}
-	yes, err := cctx.promptYes(
-		fmt.Sprintf("Start batch against approximately %v workflow(s)? y/N", count.Count), c.Yes)
+	yes, err := cctx.promptYes(promptMessage, c.Yes)
 	if err != nil {
 		return err
 	}
