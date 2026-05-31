@@ -189,9 +189,11 @@ func (c *Command) processSection() error {
 		return fmt.Errorf("missing description for command: %s", c.FullName)
 	}
 
-	// Prepend deprecation warning box if command is deprecated
+	// Auto-handle deprecation: prepend warning box to description and append
+	// "(Deprecated)" to summary.
 	if c.Deprecated {
 		c.Description = generateDeprecationBox(c.DeprecationMessage) + c.Description
+		c.Summary += " (Deprecated)"
 	}
 
 	if len(c.NamePath) == 2 {
