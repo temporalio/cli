@@ -4571,6 +4571,7 @@ option-sets:
     external-package: github.com/temporalio/cli/cliext
   - name: client
     external-package: github.com/temporalio/cli/cliext
+    hide-from-help: true
 
   - name: overlap-policy
     options:

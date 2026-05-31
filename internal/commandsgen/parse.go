@@ -23,6 +23,7 @@ type (
 		Short              string   `yaml:"short,omitempty"`
 		Default            string   `yaml:"default,omitempty"`
 		ImpliedEnv         string   `yaml:"implied-env,omitempty"`
+		ConfigKey          string   `yaml:"config-key,omitempty"`
 		Required           bool     `yaml:"required,omitempty"`
 		Aliases            []string `yaml:"aliases,omitempty"`
 		EnumValues         []string `yaml:"enum-values,omitempty"`
@@ -63,6 +64,7 @@ type (
 		Description     string   `yaml:"description"`
 		Options         []Option `yaml:"options"`
 		ExternalPackage string   `yaml:"external-package"`
+		HideFromHelp    bool     `yaml:"hide-from-help,omitempty"`
 	}
 
 	// Commands represents the top-level structure holding commands and option sets.
