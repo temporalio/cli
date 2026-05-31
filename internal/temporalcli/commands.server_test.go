@@ -6,8 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -139,7 +137,7 @@ func startDevServerAndRunSimpleTest(t *testing.T, args []string, dialAddress str
 }
 
 func TestServer_StartDev_ConcurrentStarts(t *testing.T) {
-	startOne := func() {
+	startOne := func(t *testing.T) {
 		h := NewCommandHarness(t)
 		defer h.Close()
 
@@ -177,20 +175,20 @@ func TestServer_StartDev_ConcurrentStarts(t *testing.T) {
 		}
 	}
 
-	// Start 40 dev server instances, with 8 concurrent executions
-	instanceCounter := atomic.Int32{}
-	instanceCounter.Store(40)
-	wg := &sync.WaitGroup{}
-	for i := 0; i < 6; i++ {
-		wg.Add(1)
-		go func() {
-			for instanceCounter.Add(-1) >= 0 {
-				startOne()
-			}
-			wg.Done()
-		}()
+	// Start 40 dev server instances, with at most 8 running concurrently.
+	// Each instance runs as a parallel subtest so that the require helpers,
+	// which call t.FailNow, run on the subtest's own goroutine. Calling
+	// FailNow from an unrelated goroutine is not allowed and was masking the
+	// real cause of flakiness here.
+	sem := make(chan struct{}, 8)
+	for i := 0; i < 40; i++ {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			t.Parallel()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+			startOne(t)
+		})
 	}
-	wg.Wait()
 }
 
 func TestServer_StartDev_WithSearchAttributes(t *testing.T) {
