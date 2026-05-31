@@ -11,6 +11,7 @@ import (
 	"github.com/temporalio/cli/cliext"
 	"github.com/temporalio/cli/internal/printer"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	commonpb "go.temporal.io/api/common/v1"
 	enumspb "go.temporal.io/api/enums/v1"
@@ -605,4 +606,37 @@ func formatDuration(d time.Duration) string {
 	// Remove last space
 	s = strings.TrimSpace(s)
 	return s
+}
+
+func (c *TemporalScheduleListMatchingTimesCommand) run(cctx *CommandContext, args []string) error {
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	res, err := cl.WorkflowService().ListScheduleMatchingTimes(cctx, &workflowservice.ListScheduleMatchingTimesRequest{
+		Namespace:  c.Parent.Namespace,
+		ScheduleId: c.ScheduleId,
+		StartTime:  timestamppb.New(c.StartTime.Time()),
+		EndTime:    timestamppb.New(c.EndTime.Time()),
+	})
+	if err != nil {
+		return err
+	}
+
+	if cctx.JSONOutput {
+		return cctx.Printer.PrintStructured(res, printer.StructuredOptions{})
+	}
+
+	type matchingTime struct {
+		Time string `json:"time"`
+	}
+	var rows []matchingTime
+	for _, t := range res.StartTime {
+		rows = append(rows, matchingTime{Time: t.AsTime().Format(time.RFC3339)})
+	}
+	return cctx.Printer.PrintStructured(rows, printer.StructuredOptions{
+		Table: &printer.TableOptions{},
+	})
 }
