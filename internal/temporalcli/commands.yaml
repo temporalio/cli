@@ -2870,14 +2870,9 @@ commands:
           configuration for the task queue.
 
   - name: temporal task-queue get-build-id-reachability
-    summary: Show Build ID availability (Deprecated)
+    summary: Show Build ID availability
+    deprecated: true
     description: |
-      ```
-      +-----------------------------------------------------------------------------+
-      | CAUTION: This command is deprecated and will be removed in a later release. |
-      +-----------------------------------------------------------------------------+
-      ```
-
       Show if a given Build ID can be used for new, existing, or closed Workflows
       in Namespaces that support Worker versioning:
 
@@ -2917,14 +2912,9 @@ commands:
           Can be passed multiple times.
 
   - name: temporal task-queue get-build-ids
-    summary: Fetch Build ID versions (Deprecated)
+    summary: Fetch Build ID versions
+    deprecated: true
     description: |
-      ```
-      +-----------------------------------------------------------------------------+
-      | CAUTION: This command is deprecated and will be removed in a later release. |
-      +-----------------------------------------------------------------------------+
-      ```
-
       Fetch sets of compatible Build IDs for specified Task Queues and display their
       information:
 
@@ -2966,14 +2956,9 @@ commands:
         short: t
 
   - name: temporal task-queue update-build-ids
-    summary: Manage Build IDs (Deprecated)
+    summary: Manage Build IDs
+    deprecated: true
     description: |
-      ```
-      +-----------------------------------------------------------------------------+
-      | CAUTION: This command is deprecated and will be removed in a later release. |
-      +-----------------------------------------------------------------------------+
-      ```
-
       Add or change a Task Queue's compatible Build IDs for Namespaces using Worker
       versioning:
 
@@ -3018,14 +3003,9 @@ commands:
         description: Set the expanded Build ID set as the Task Queue default.
 
   - name: temporal task-queue update-build-ids add-new-default
-    summary: Set new default Build ID set (Deprecated)
+    summary: Set new default Build ID set
+    deprecated: true
     description: |
-      ```
-      +-----------------------------------------------------------------------------+
-      | CAUTION: This command is deprecated and will be removed in a later release. |
-      +-----------------------------------------------------------------------------+
-      ```
-
       Create a new Task Queue Build ID set, add a Build ID to it, and make it the
       overall Task Queue default. The new set will be incompatible with previous
       sets and versions.
@@ -3055,14 +3035,9 @@ commands:
         short: t
 
   - name: temporal task-queue update-build-ids promote-id-in-set
-    summary: Set Build ID as set default (Deprecated)
+    summary: Set Build ID as set default
+    deprecated: true
     description: |
-      ```
-      +-----------------------------------------------------------------------------+
-      | CAUTION: This command is deprecated and will be removed in a later release. |
-      +-----------------------------------------------------------------------------+
-      ```
-
       Establish an existing Build ID as the default in its Task Queue set. New tasks
       compatible with this set will now be dispatched to this ID:
 
@@ -3091,14 +3066,9 @@ commands:
         short: t
 
   - name: temporal task-queue update-build-ids promote-set
-    summary: Promote Build ID set (Deprecated)
+    summary: Promote Build ID set
+    deprecated: true
     description: |
-      ```
-      +-----------------------------------------------------------------------------+
-      | CAUTION: This command is deprecated and will be removed in a later release. |
-      +-----------------------------------------------------------------------------+
-      ```
-
       Promote a Build ID set to be the default on a Task Queue. Identify the set by
       providing a Build ID within it. If the set is already the default, this
       command has no effect:
@@ -3128,14 +3098,10 @@ commands:
         short: t
 
   - name: temporal task-queue versioning
-    summary: Manage Task Queue Build ID handling (Deprecated)
+    summary: Manage Task Queue Build ID handling
+    deprecated: true
+    deprecation-message: This API has been deprecated by Worker Deployment.
     description: |
-      ```
-      +---------------------------------------------------------------------+
-      | CAUTION: This API has been deprecated by Worker Deployment.         |
-      +---------------------------------------------------------------------+
-      ```
-
       Provides commands to add, list, remove, or replace Worker Build ID assignment
       and redirect rules associated with Task Queues:
 
@@ -3162,7 +3128,9 @@ commands:
         required: true
 
   - name: temporal task-queue versioning add-redirect-rule
-    summary: Add Task Queue redirect rules (Deprecated)
+    summary: Add Task Queue redirect rules
+    deprecated: true
+    deprecation-message: This API has been deprecated by Worker Deployment.
     description: |
       Add a new redirect rule for a given Task Queue. You may add at most one
       redirect rule for each distinct source build ID:
@@ -3172,12 +3140,6 @@ commands:
           --task-queue YourTaskQueue \
           --source-build-id "YourSourceBuildID" \
           --target-build-id "YourTargetBuildID"
-      ```
-
-      ```
-      +---------------------------------------------------------------------+
-      | CAUTION: This API has been deprecated by Worker Deployment.         |
-      +---------------------------------------------------------------------+
       ```
     options:
       - name: source-build-id
@@ -3194,7 +3156,9 @@ commands:
         description: Don't prompt to confirm.
 
   - name: temporal task-queue versioning commit-build-id
-    summary: Complete Build ID rollout (Deprecated)
+    summary: Complete Build ID rollout
+    deprecated: true
+    deprecation-message: This API has been deprecated by Worker Deployment.
     description: |
       Complete a Build ID's rollout and clean up unnecessary rules that might have
       been created during a gradual rollout:
@@ -3216,12 +3180,6 @@ commands:
       Rejects requests when there have been no recent pollers for this Build ID.
       This prevents committing invalid Build IDs. Use the `--force` option to
       override this validation.
-
-      ```
-      +---------------------------------------------------------------------+
-      | CAUTION: This API has been deprecated by Worker Deployment.         |
-      +---------------------------------------------------------------------+
-      ```
     options:
       - name: build-id
         type: string
@@ -3236,7 +3194,9 @@ commands:
         description: Don't prompt to confirm.
 
   - name: temporal task-queue versioning delete-assignment-rule
-    summary: Removes a Task Queue assignment rule (Deprecated)
+    summary: Removes a Task Queue assignment rule
+    deprecated: true
+    deprecation-message: This API has been deprecated by Worker Deployment.
     description: |
       Deletes a rule identified by its index in the Task Queue's list of assignment
       rules.
@@ -3250,12 +3210,6 @@ commands:
       By default, the Task Queue must retain one unconditional rule, such as "no
       hint filter" or "percentage". Otherwise, the delete operation is rejected.
       Use the `--force` option to override this validation.
-
-      ```
-      +---------------------------------------------------------------------+
-      | CAUTION: This API has been deprecated by Worker Deployment.         |
-      +---------------------------------------------------------------------+
-      ```
     options:
       - name: rule-index
         type: int
@@ -3273,7 +3227,9 @@ commands:
         description: Don't prompt to confirm.
 
   - name: temporal task-queue versioning delete-redirect-rule
-    summary: Removes Build-ID routing rule (Deprecated)
+    summary: Removes Build-ID routing rule
+    deprecated: true
+    deprecation-message: This API has been deprecated by Worker Deployment.
     description: |
       Deletes the routing rule for the given source Build ID.
 
@@ -3281,12 +3237,6 @@ commands:
       temporal task-queue versioning delete-redirect-rule \
           --task-queue YourTaskQueue \
           --source-build-id "YourBuildId"
-      ```
-
-      ```
-      +---------------------------------------------------------------------+
-      | CAUTION: This API has been deprecated by Worker Deployment.         |
-      +---------------------------------------------------------------------+
       ```
     options:
       - name: source-build-id
@@ -3299,7 +3249,9 @@ commands:
         description: Don't prompt to confirm.
 
   - name: temporal task-queue versioning get-rules
-    summary: Fetch Worker Build ID assignments and redirect rules (Deprecated)
+    summary: Fetch Worker Build ID assignments and redirect rules
+    deprecated: true
+    deprecation-message: This API has been deprecated by Worker Deployment.
     description: |
       Retrieve all the Worker Build ID assignments and redirect rules associated
       with a Task Queue:
@@ -3319,14 +3271,11 @@ commands:
         Build ID. You may add at most one redirect rule for each source Build ID.
         Redirect rules require that a target Build ID is fully compatible with
         the source Build ID.
-      ```
-      +---------------------------------------------------------------------+
-      | CAUTION: This API has been deprecated by Worker Deployment.         |
-      +---------------------------------------------------------------------+
-      ```
 
   - name: temporal task-queue versioning insert-assignment-rule
-    summary: Add an assignment rule at a index (Deprecated)
+    summary: Add an assignment rule at a index
+    deprecated: true
+    deprecation-message: This API has been deprecated by Worker Deployment.
     description: |
       Inserts a new assignment rule for this Task Queue. Rules are evaluated in
       order, starting from index 0. The first applicable rule is applied, and the
@@ -3339,12 +3288,6 @@ commands:
       ```
 
       If you do not specify a `--rule-index`, this command inserts at index 0.
-
-      ```
-      +---------------------------------------------------------------------+
-      | CAUTION: This API has been deprecated by Worker Deployment.         |
-      +---------------------------------------------------------------------+
-      ```
     options:
       - name: build-id
         type: string
@@ -3369,7 +3312,9 @@ commands:
         description: Don't prompt to confirm.
 
   - name: temporal task-queue versioning replace-assignment-rule
-    summary: Update assignment rule at index (Deprecated)
+    summary: Update assignment rule at index
+    deprecated: true
+    deprecation-message: This API has been deprecated by Worker Deployment.
     description: |
       Change an assignment rule for this Task Queue. By default, this enforces one
       unconditional rule (no hint filter or percentage). Otherwise, the operation
@@ -3396,12 +3341,6 @@ commands:
       ```
 
       Percent may vary between 0 and 100 (default).
-
-      ```
-      +---------------------------------------------------------------------+
-      | CAUTION: This API has been deprecated by Worker Deployment.         |
-      +---------------------------------------------------------------------+
-      ```
     options:
       - name: build-id
         type: string
@@ -3428,7 +3367,9 @@ commands:
         description: Bypass the validation that one unconditional rule remains.
 
   - name: temporal task-queue versioning replace-redirect-rule
-    summary: Change the target for a Build ID's redirect (Deprecated)
+    summary: Change the target for a Build ID's redirect
+    deprecated: true
+    deprecation-message: This API has been deprecated by Worker Deployment.
     description: |
       Updates a Build ID's redirect rule on a Task Queue by replacing its target
       Build ID:
@@ -3438,12 +3379,6 @@ commands:
           --task-queue YourTaskQueue \
           --source-build-id YourSourceBuildId \
           --target-build-id YourNewTargetBuildId
-      ```
-
-      ```
-      +---------------------------------------------------------------------+
-      | CAUTION: This API has been deprecated by Worker Deployment.         |
-      +---------------------------------------------------------------------+
       ```
     options:
       - name: source-build-id
