@@ -5,6 +5,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"go.temporal.io/api/enums/v1"
+	"go.temporal.io/api/proxy"
 	historypb "go.temporal.io/api/history/v1"
 )
 
@@ -66,8 +67,8 @@ func TestSystemNexusOpDisplayName(t *testing.T) {
 		return &structuredHistoryIter{reverse: reverse}
 	}
 
-	schedSystem := newScheduled(5, temporalSystemNexusEndpoint, op)
-	schedSystemFutureOp := newScheduled(5, temporalSystemNexusEndpoint, futureOp)
+	schedSystem := newScheduled(5, proxy.TemporalSystemNexusEndpoint, op)
+	schedSystemFutureOp := newScheduled(5, proxy.TemporalSystemNexusEndpoint, futureOp)
 	schedNonSystem := newScheduled(7, "some-other-endpoint", op)
 
 	tests := []struct {

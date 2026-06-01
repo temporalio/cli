@@ -26,9 +26,10 @@ func dialClient(cctx *CommandContext, c *cliext.ClientOptions) (client.Client, e
 }
 
 // dialClientWithCodec is like [dialClient] but also returns the configured remote
-// payload codec, or nil if no codec is configured. The codec is the same instance
-// used by the gRPC interceptor; callers can use it to decode payloads nested inside
-// opaque proto bytes (e.g. the request/response of a system Nexus operation).
+// payload codec, or nil if no codec is configured. The codec is needed to decode
+// payloads nested inside system Nexus operation bytes for the human-readable display
+// path. It is NOT applied via a gRPC interceptor to avoid mutating the -o json output
+// used by SDK replayers.
 func dialClientWithCodec(cctx *CommandContext, c *cliext.ClientOptions) (client.Client, converter.PayloadCodec, error) {
 	if cctx.RootCommand == nil {
 		return nil, nil, fmt.Errorf("root command unexpectedly missing when dialing client")

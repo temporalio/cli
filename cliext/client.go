@@ -289,8 +289,7 @@ func parseKeyValuePairs(pairs []string) (map[string]string, error) {
 }
 
 // newRemotePayloadCodec constructs a remote payload codec from the configured endpoint,
-// auth, and headers. The returned codec can be used both inside a gRPC interceptor and
-// to decode payloads nested inside opaque proto bytes (e.g. system Nexus operation inputs).
+// auth, and headers.
 func newRemotePayloadCodec(
 	namespace string,
 	codecEndpoint string,

@@ -2,52 +2,17 @@ package temporalcli
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	commonpb "go.temporal.io/api/common/v1"
 	enumspb "go.temporal.io/api/enums/v1"
 	historypb "go.temporal.io/api/history/v1"
+	"go.temporal.io/api/proxy"
 	"go.temporal.io/api/temporalproto"
 	"go.temporal.io/api/workflowservice/v1"
 	"google.golang.org/protobuf/proto"
 )
-
-// markingCodec is a test [converter.PayloadCodec] that prefixes every payload's
-// data with "decoded:" on Decode and tracks how many payloads it saw. It is used
-// to verify that the codec is actually invoked on payloads nested inside opaque
-// system Nexus operation bytes.
-type markingCodec struct {
-	decodeCalls int
-}
-
-func (c *markingCodec) Encode(payloads []*commonpb.Payload) ([]*commonpb.Payload, error) {
-	return payloads, nil
-}
-
-func (c *markingCodec) Decode(payloads []*commonpb.Payload) ([]*commonpb.Payload, error) {
-	out := make([]*commonpb.Payload, len(payloads))
-	for i, p := range payloads {
-		c.decodeCalls++
-		out[i] = &commonpb.Payload{
-			Metadata: p.Metadata,
-			Data:     append([]byte("decoded:"), p.Data...),
-		}
-	}
-	return out, nil
-}
-
-// failingCodec always returns an error from Decode; used to verify error propagation.
-type failingCodec struct{}
-
-func (failingCodec) Encode(payloads []*commonpb.Payload) ([]*commonpb.Payload, error) {
-	return payloads, nil
-}
-
-func (failingCodec) Decode(_ []*commonpb.Payload) ([]*commonpb.Payload, error) {
-	return nil, fmt.Errorf("codec decode failure for testing")
-}
 
 func signalWithStartRequestPayload(t *testing.T, req *workflowservice.SignalWithStartWorkflowExecutionRequest) *commonpb.Payload {
 	t.Helper()
@@ -73,7 +38,7 @@ func TestUnwrapAndInjectRequest_NilPayloadIsNoOp(t *testing.T) {
 	iter := &structuredHistoryIter{ctx: context.Background()}
 	fields := map[string]any{}
 	require.NoError(t, iter.unwrapAndInjectRequest(
-		temporalSystemNexusEndpoint, "SignalWithStartWorkflowExecution",
+		proxy.TemporalSystemNexusEndpoint, "SignalWithStartWorkflowExecution",
 		nil, fields, temporalproto.CustomJSONMarshalOptions{}))
 	require.Empty(t, fields, "nil payload should not inject anything")
 }
@@ -83,7 +48,7 @@ func TestUnwrapAndInjectRequest_UnknownOperationIsNoOp(t *testing.T) {
 	iter := &structuredHistoryIter{ctx: context.Background()}
 	fields := map[string]any{}
 	require.NoError(t, iter.unwrapAndInjectRequest(
-		temporalSystemNexusEndpoint, "NotARealOperation",
+		proxy.TemporalSystemNexusEndpoint, "NotARealOperation",
 		p, fields, temporalproto.CustomJSONMarshalOptions{}))
 	require.Empty(t, fields, "unknown operation should be a no-op")
 }
@@ -103,7 +68,7 @@ func TestUnwrapAndInjectRequest_BadProtoBytesReturnsError(t *testing.T) {
 	iter := &structuredHistoryIter{ctx: context.Background()}
 	fields := map[string]any{}
 	err := iter.unwrapAndInjectRequest(
-		temporalSystemNexusEndpoint, "SignalWithStartWorkflowExecution",
+		proxy.TemporalSystemNexusEndpoint, "SignalWithStartWorkflowExecution",
 		p, fields, temporalproto.CustomJSONMarshalOptions{})
 	require.Error(t, err)
 	require.ErrorContains(t, err, "failed unmarshaling system nexus payload")
@@ -113,7 +78,7 @@ func TestUnwrapAndInjectResponse_NilPayloadIsNoOp(t *testing.T) {
 	iter := &structuredHistoryIter{ctx: context.Background()}
 	fields := map[string]any{}
 	require.NoError(t, iter.unwrapAndInjectResponse(
-		temporalSystemNexusEndpoint, "SignalWithStartWorkflowExecution",
+		proxy.TemporalSystemNexusEndpoint, "SignalWithStartWorkflowExecution",
 		nil, fields, temporalproto.CustomJSONMarshalOptions{}))
 	require.Empty(t, fields)
 }
@@ -123,7 +88,7 @@ func TestUnwrapAndInjectResponse_UnknownOperationIsNoOp(t *testing.T) {
 	iter := &structuredHistoryIter{ctx: context.Background()}
 	fields := map[string]any{}
 	require.NoError(t, iter.unwrapAndInjectResponse(
-		temporalSystemNexusEndpoint, "NotARealOperation",
+		proxy.TemporalSystemNexusEndpoint, "NotARealOperation",
 		p, fields, temporalproto.CustomJSONMarshalOptions{}))
 	require.Empty(t, fields)
 }
@@ -133,70 +98,31 @@ func TestUnwrapAndInjectResponse_BadProtoBytesReturnsError(t *testing.T) {
 	iter := &structuredHistoryIter{ctx: context.Background()}
 	fields := map[string]any{}
 	err := iter.unwrapAndInjectResponse(
-		temporalSystemNexusEndpoint, "SignalWithStartWorkflowExecution",
+		proxy.TemporalSystemNexusEndpoint, "SignalWithStartWorkflowExecution",
 		p, fields, temporalproto.CustomJSONMarshalOptions{})
 	require.Error(t, err)
 	require.ErrorContains(t, err, "failed unmarshaling system nexus payload")
 }
 
-func TestUnwrapAndInjectRequest_DecodesAllNestedPayloads(t *testing.T) {
-	// The Input/SignalInput fields hold the user-supplied payloads, which the codec
-	// should be applied to. The outer payload bytes are raw proto and are not codec-encoded.
-	inner1 := &commonpb.Payload{Metadata: map[string][]byte{"encoding": []byte("binary/plain")}, Data: []byte("hello")}
-	inner2 := &commonpb.Payload{Metadata: map[string][]byte{"encoding": []byte("binary/plain")}, Data: []byte("world")}
-	signalInner := &commonpb.Payload{Metadata: map[string][]byte{"encoding": []byte("binary/plain")}, Data: []byte("signal-arg")}
+func TestUnwrapAndInjectRequest_UnwrapsAllFields(t *testing.T) {
 	req := &workflowservice.SignalWithStartWorkflowExecutionRequest{
 		Namespace:   "ns",
 		WorkflowId:  "wf",
-		Input:       &commonpb.Payloads{Payloads: []*commonpb.Payload{inner1, inner2}},
-		SignalInput: &commonpb.Payloads{Payloads: []*commonpb.Payload{signalInner}},
+		Input:       &commonpb.Payloads{Payloads: []*commonpb.Payload{{Data: []byte("a")}, {Data: []byte("b")}}},
+		SignalInput: &commonpb.Payloads{Payloads: []*commonpb.Payload{{Data: []byte("c")}}},
 	}
 	p := signalWithStartRequestPayload(t, req)
 
-	codec := &markingCodec{}
-	iter := &structuredHistoryIter{ctx: context.Background(), codec: codec}
+	iter := &structuredHistoryIter{ctx: context.Background()}
 	fields := map[string]any{}
 	require.NoError(t, iter.unwrapAndInjectRequest(
-		temporalSystemNexusEndpoint, "SignalWithStartWorkflowExecution",
+		proxy.TemporalSystemNexusEndpoint, "SignalWithStartWorkflowExecution",
 		p, fields, temporalproto.CustomJSONMarshalOptions{}))
-	require.Equal(t, 3, codec.decodeCalls, "codec should have been invoked once per nested payload")
 
 	unwrapped, ok := fields["unwrappedInput"].(map[string]any)
 	require.True(t, ok)
 	require.Equal(t, "ns", unwrapped["namespace"])
 	require.Equal(t, "wf", unwrapped["workflowId"])
-}
-
-func TestUnwrapAndInjectRequest_CodecErrorPropagates(t *testing.T) {
-	req := &workflowservice.SignalWithStartWorkflowExecutionRequest{
-		Input: &commonpb.Payloads{Payloads: []*commonpb.Payload{{Data: []byte("x")}}},
-	}
-	p := signalWithStartRequestPayload(t, req)
-	iter := &structuredHistoryIter{ctx: context.Background(), codec: failingCodec{}}
-	fields := map[string]any{}
-	err := iter.unwrapAndInjectRequest(
-		temporalSystemNexusEndpoint, "SignalWithStartWorkflowExecution",
-		p, fields, temporalproto.CustomJSONMarshalOptions{})
-	require.Error(t, err)
-	require.Equal(t, "failed decoding payloads in system nexus payload: codec decode failure for testing", err.Error())
-}
-
-func TestDecodePayloadsInProto_VisitsAllPayloads(t *testing.T) {
-	req := &workflowservice.SignalWithStartWorkflowExecutionRequest{
-		Input: &commonpb.Payloads{Payloads: []*commonpb.Payload{
-			{Data: []byte("a")},
-			{Data: []byte("b")},
-		}},
-		SignalInput: &commonpb.Payloads{Payloads: []*commonpb.Payload{
-			{Data: []byte("c")},
-		}},
-	}
-	codec := &markingCodec{}
-	require.NoError(t, decodePayloadsInProto(context.Background(), req, codec))
-	require.Equal(t, 3, codec.decodeCalls)
-	require.Equal(t, []byte("decoded:a"), req.Input.Payloads[0].Data)
-	require.Equal(t, []byte("decoded:b"), req.Input.Payloads[1].Data)
-	require.Equal(t, []byte("decoded:c"), req.SignalInput.Payloads[0].Data)
 }
 
 func TestInjectSystemNexusUnwrapped_ScheduledKnownOp(t *testing.T) {
@@ -210,7 +136,7 @@ func TestInjectSystemNexusUnwrapped_ScheduledKnownOp(t *testing.T) {
 		EventType: enumspb.EVENT_TYPE_NEXUS_OPERATION_SCHEDULED,
 		Attributes: &historypb.HistoryEvent_NexusOperationScheduledEventAttributes{
 			NexusOperationScheduledEventAttributes: &historypb.NexusOperationScheduledEventAttributes{
-				Endpoint:  temporalSystemNexusEndpoint,
+				Endpoint:  proxy.TemporalSystemNexusEndpoint,
 				Operation: "SignalWithStartWorkflowExecution",
 				Input:     signalWithStartRequestPayload(t, req),
 			},
@@ -304,6 +230,28 @@ func TestInjectSystemNexusUnwrapped_NonNexusEventNoOp(t *testing.T) {
 	require.Empty(t, fields)
 }
 
+// markingCodec is a test [converter.PayloadCodec] that prefixes every payload's
+// data with "decoded:" on Decode and tracks how many payloads it saw.
+type markingCodec struct {
+	decodeCalls int
+}
+
+func (c *markingCodec) Encode(payloads []*commonpb.Payload) ([]*commonpb.Payload, error) {
+	return payloads, nil
+}
+
+func (c *markingCodec) Decode(payloads []*commonpb.Payload) ([]*commonpb.Payload, error) {
+	out := make([]*commonpb.Payload, len(payloads))
+	for i, p := range payloads {
+		c.decodeCalls++
+		out[i] = &commonpb.Payload{
+			Metadata: p.Metadata,
+			Data:     append([]byte("decoded:"), p.Data...),
+		}
+	}
+	return out, nil
+}
+
 func TestInjectSystemNexusUnwrapped_AppliesCodecToScheduledInput(t *testing.T) {
 	req := &workflowservice.SignalWithStartWorkflowExecutionRequest{
 		WorkflowId: "wf",
@@ -318,7 +266,7 @@ func TestInjectSystemNexusUnwrapped_AppliesCodecToScheduledInput(t *testing.T) {
 		EventType: enumspb.EVENT_TYPE_NEXUS_OPERATION_SCHEDULED,
 		Attributes: &historypb.HistoryEvent_NexusOperationScheduledEventAttributes{
 			NexusOperationScheduledEventAttributes: &historypb.NexusOperationScheduledEventAttributes{
-				Endpoint:  temporalSystemNexusEndpoint,
+				Endpoint:  proxy.TemporalSystemNexusEndpoint,
 				Operation: "SignalWithStartWorkflowExecution",
 				Input:     signalWithStartRequestPayload(t, req),
 			},

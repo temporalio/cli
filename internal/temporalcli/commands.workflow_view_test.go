@@ -19,6 +19,7 @@ import (
 	historypb "go.temporal.io/api/history/v1"
 	nexuspb "go.temporal.io/api/nexus/v1"
 	"go.temporal.io/api/operatorservice/v1"
+	"go.temporal.io/api/proxy"
 	taskqueuepb "go.temporal.io/api/taskqueue/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
@@ -1153,10 +1154,6 @@ func (s *SharedServerSuite) TestWorkflow_Describe_RootWorkflow() {
 	s.Equal(run.GetRunID(), jsonOut.WorkflowExecutionInfo.RootExecution.GetRunId())
 }
 
-// temporalSystemNexusEndpointName is the reserved endpoint name for Temporal system
-// Nexus operations (mirrors the unexported temporalSystemNexusEndpoint constant in the
-// production code; reproduced here as a literal because the constant is not exported).
-const temporalSystemNexusEndpointName = "__temporal_system"
 
 // runSystemNexusSWSWorkflow drives a SignalWithStartWorkflowExecution Nexus operation
 // against the __temporal_system endpoint from a raw-polled caller workflow, waits for it
@@ -1195,7 +1192,7 @@ func (s *SharedServerSuite) runSystemNexusSWSWorkflow(ctx context.Context) strin
 				CommandType: enums.COMMAND_TYPE_SCHEDULE_NEXUS_OPERATION,
 				Attributes: &commandpb.Command_ScheduleNexusOperationCommandAttributes{
 					ScheduleNexusOperationCommandAttributes: &commandpb.ScheduleNexusOperationCommandAttributes{
-						Endpoint:  temporalSystemNexusEndpointName,
+						Endpoint:  proxy.TemporalSystemNexusEndpoint,
 						Service:   "WorkflowService",
 						Operation: "SignalWithStartWorkflowExecution",
 						Input: payloads.MustEncodeSingle(&workflowservice.SignalWithStartWorkflowExecutionRequest{
@@ -1321,7 +1318,7 @@ func (s *SharedServerSuite) TestWorkflow_Show_JSONOutputDoesNotUnwrapSystemNexus
 	s.True(sawCompleted, "expected a NexusOperationCompleted event in JSON output")
 	// The raw scheduled attributes must still carry the system endpoint and operation name —
 	// that's what replayers need to reconstruct the original command.
-	s.Equal(temporalSystemNexusEndpointName, schedAttrs.Endpoint)
+	s.Equal(proxy.TemporalSystemNexusEndpoint, schedAttrs.Endpoint)
 	s.Equal("SignalWithStartWorkflowExecution", schedAttrs.Operation)
 	s.Equal("WorkflowService", schedAttrs.Service)
 	s.NotNil(schedAttrs.Input, "scheduled Input payload must survive untouched in JSON output")

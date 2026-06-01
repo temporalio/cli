@@ -12,6 +12,7 @@ import (
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/failure/v1"
 	"go.temporal.io/api/history/v1"
+	"go.temporal.io/api/proxy"
 	"go.temporal.io/api/workflow/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
@@ -326,7 +327,7 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 
 		var pendingNexusOps []*workflow.PendingNexusOperationInfo
 		for _, op := range resp.PendingNexusOperations {
-			if op.GetEndpoint() != temporalSystemNexusEndpoint {
+			if op.GetEndpoint() != proxy.TemporalSystemNexusEndpoint {
 				pendingNexusOps = append(pendingNexusOps, op)
 			}
 		}

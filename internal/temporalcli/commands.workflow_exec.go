@@ -21,6 +21,7 @@ import (
 	"go.temporal.io/api/enums/v1"
 	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/history/v1"
+	"go.temporal.io/api/proxy"
 	taskqueuepb "go.temporal.io/api/taskqueue/v1"
 	"go.temporal.io/api/temporalproto"
 	"go.temporal.io/api/workflowservice/v1"
@@ -707,8 +708,6 @@ func coloredEventType(e enums.EventType) string {
 	return fn(e.String())
 }
 
-const temporalSystemNexusEndpoint = "__temporal_system"
-
 // systemNexusOpDisplayName returns a display name for Nexus operation events on the
 // "__temporal_system" endpoint, replacing the generic NexusOperation* name with the
 // actual operation name + event-type suffix. Returns "" for all other events.
@@ -720,7 +719,7 @@ func (s *structuredHistoryIter) systemNexusOpDisplayName(event *history.HistoryE
 	switch event.EventType {
 	case enums.EVENT_TYPE_NEXUS_OPERATION_SCHEDULED:
 		attr := event.GetNexusOperationScheduledEventAttributes()
-		if attr == nil || attr.Endpoint != temporalSystemNexusEndpoint {
+		if attr == nil || attr.Endpoint != proxy.TemporalSystemNexusEndpoint {
 			return ""
 		}
 		s.systemNexusOps[event.EventId] = attr.Operation
@@ -795,8 +794,8 @@ type structuredHistoryIter struct {
 	systemNexusOps map[int64]string
 
 	// codec is the remote payload codec configured for this client, or nil if none. Used to
-	// decode payloads nested inside system Nexus operation request/response bytes so they
-	// can be rendered alongside the rest of the event fields.
+	// decode payloads nested inside system Nexus operation request/response bytes for the
+	// human-readable display path only (not applied to -o json to preserve replay compatibility).
 	codec converter.PayloadCodec
 }
 
@@ -1021,7 +1020,7 @@ func (s *structuredHistoryIter) injectSystemNexusUnwrapped(
 		if !ok {
 			return nil
 		}
-		return s.unwrapAndInjectResponse(temporalSystemNexusEndpoint, op, attr.GetResult(), fieldsMap, opts)
+		return s.unwrapAndInjectResponse(proxy.TemporalSystemNexusEndpoint, op, attr.GetResult(), fieldsMap, opts)
 	}
 	return nil
 }
@@ -1034,7 +1033,7 @@ func (s *structuredHistoryIter) unwrapAndInjectRequest(
 	fieldsMap map[string]any,
 	opts temporalproto.CustomJSONMarshalOptions,
 ) error {
-	types, ok := systemNexusOps[systemNexusOpKey{Endpoint: endpoint, Operation: operation}]
+	types, ok := proxy.SystemNexusOperations[proxy.SystemNexusOpKey{Endpoint: endpoint, Operation: operation}]
 	if !ok {
 		return nil
 	}
@@ -1049,7 +1048,7 @@ func (s *structuredHistoryIter) unwrapAndInjectResponse(
 	fieldsMap map[string]any,
 	opts temporalproto.CustomJSONMarshalOptions,
 ) error {
-	types, ok := systemNexusOps[systemNexusOpKey{Endpoint: endpoint, Operation: operation}]
+	types, ok := proxy.SystemNexusOperations[proxy.SystemNexusOpKey{Endpoint: endpoint, Operation: operation}]
 	if !ok {
 		return nil
 	}
@@ -1057,8 +1056,8 @@ func (s *structuredHistoryIter) unwrapAndInjectResponse(
 }
 
 // unwrapAndInject is the shared body: unmarshal payload bytes into the supplied proto,
-// decode any payloads nested inside via the codec, marshal back to JSON, and inject the
-// resulting map into fieldsMap[key]. A nil payload is a no-op.
+// decode any nested payloads via the codec (for the human-readable display path only),
+// marshal to JSON, and inject the resulting map into fieldsMap[key]. A nil payload is a no-op.
 func (s *structuredHistoryIter) unwrapAndInject(
 	msg proto.Message,
 	payload *commonpb.Payload,
@@ -1073,7 +1072,12 @@ func (s *structuredHistoryIter) unwrapAndInject(
 		return fmt.Errorf("failed unmarshaling system nexus payload: %w", err)
 	}
 	if s.codec != nil {
-		if err := decodePayloadsInProto(s.ctx, msg, s.codec); err != nil {
+		if err := proxy.VisitPayloads(s.ctx, msg, proxy.VisitPayloadsOptions{
+			SkipSearchAttributes: true,
+			Visitor: func(_ *proxy.VisitPayloadsContext, payloads []*commonpb.Payload) ([]*commonpb.Payload, error) {
+				return s.codec.Decode(payloads)
+			},
+		}); err != nil {
 			return fmt.Errorf("failed decoding payloads in system nexus payload: %w", err)
 		}
 	}
