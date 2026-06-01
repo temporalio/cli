@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"regexp"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -250,7 +251,7 @@ func (s *SharedServerSuite) TestWorkflow_Delete_BatchWorkflowSuccess() {
 		"-y",
 	)
 	s.NoError(res.Err)
-	s.Contains(res.Stdout.String(), "Start batch against approximately 2 workflow(s)")
+	s.Contains(res.Stdout.String(), "Start batch against workflows matching query")
 	s.NotContains(res.Stdout.String(), "Deleting Workflow Executions in a global Namespace")
 	s.NotContains(res.Stderr.String(), "Deleting Workflow Executions in a global Namespace")
 
@@ -385,6 +386,51 @@ func (s *SharedServerSuite) TestWorkflow_Terminate_BatchWorkflowSuccess_JSON() {
 	var jsonRes map[string]any
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonRes))
 	s.NotEmpty(jsonRes["batchJobId"])
+}
+
+func (s *SharedServerSuite) TestWorkflow_Terminate_BatchWorkflow_SkipsCountWhenYes() {
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
+		ctx.Done().Receive(ctx, nil)
+		return nil, ctx.Err()
+	})
+
+	searchAttr := "keyword-" + uuid.NewString()
+	run, err := s.Client.ExecuteWorkflow(
+		s.Context,
+		client.StartWorkflowOptions{
+			TaskQueue:        s.Worker().Options.TaskQueue,
+			SearchAttributes: map[string]any{"CustomKeywordField": searchAttr},
+		},
+		DevWorkflow,
+		"ignored",
+	)
+	s.NoError(err)
+	s.Eventually(func() bool {
+		resp, err := s.Client.ListWorkflow(s.Context, &workflowservice.ListWorkflowExecutionsRequest{
+			Query: "CustomKeywordField = '" + searchAttr + "'",
+		})
+		s.NoError(err)
+		return len(resp.Executions) == 1
+	}, 3*time.Second, 100*time.Millisecond)
+
+	res := s.Execute(
+		"workflow", "terminate",
+		"--address", s.Address(),
+		"--query", "CustomKeywordField = '"+searchAttr+"'",
+		"--reason", "skip-count-test",
+		"--yes",
+	)
+	s.NoError(res.Err)
+
+	// Prompt text should show the query, not the count
+	s.NotContains(res.Stdout.String(), "approximately")
+	s.Contains(res.Stdout.String(), "matching query")
+
+	// Confirm workflow was terminated
+	s.Eventually(func() bool {
+		err := run.Get(s.Context, nil)
+		return err != nil && strings.Contains(err.Error(), "terminated")
+	}, 5*time.Second, 100*time.Millisecond)
 }
 
 func (s *SharedServerSuite) testTerminateBatchWorkflow(
