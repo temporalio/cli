@@ -136,6 +136,7 @@ func (s *SharedServerSuite) TestActivity_Complete_ResultMeta() {
 	runID := started["runId"].(string)
 	<-activityStarted
 
+	// although including nul (\x00) will work here, it won't in actual command line.
 	result := "\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a"
 
 	res := s.Execute(
@@ -156,6 +157,16 @@ func (s *SharedServerSuite) TestActivity_Complete_ResultMeta() {
 	s.NoError(handle.Get(s.Context, &actual))
 	s.Equal(result, string(actual))
 
+	res = s.Execute(
+		"activity", "result",
+		"--activity-id", activityId,
+		"--run-id", runID,
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+
+	output := res.Stdout.String()
+	s.Contains(output, base64.StdEncoding.EncodeToString([]byte(result)))
 }
 
 func (s *SharedServerSuite) TestActivity_Complete_ResultMeta_Protobuf() {
@@ -218,6 +229,7 @@ func (s *SharedServerSuite) TestActivity_Complete_ResultFile() {
 	runID := started["runId"].(string)
 	<-activityStarted
 
+	// this can include nul, as it gets stored in a file.
 	result := "\x48\x65\x6c\x6c\x6f\x00\x57\x6f\x72\x6c\x64"
 	resultFile := filepath.Join(s.T().TempDir(), "input.bin")
 	os.WriteFile(resultFile, []byte(result), 0644)
@@ -266,6 +278,7 @@ func (s *SharedServerSuite) TestActivity_Complete_ResultBase64() {
 	runID := started["runId"].(string)
 	<-activityStarted
 
+	// base64 encoding works with nul character.
 	result := "\x48\x65\x6c\x6c\x6f\x00\x57\x6f\x72\x6c\x64"
 	encoded := base64.StdEncoding.EncodeToString([]byte(result))
 
