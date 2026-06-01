@@ -21,6 +21,7 @@ import (
 	"go.temporal.io/api/operatorservice/v1"
 	taskqueuepb "go.temporal.io/api/taskqueue/v1"
 	"go.temporal.io/api/workflowservice/v1"
+	"go.temporal.io/api/workflowservice/v1/workflowservicenexus"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/temporalnexus"
@@ -1196,8 +1197,8 @@ func (s *SharedServerSuite) runSystemNexusSWSWorkflow(ctx context.Context) strin
 				Attributes: &commandpb.Command_ScheduleNexusOperationCommandAttributes{
 					ScheduleNexusOperationCommandAttributes: &commandpb.ScheduleNexusOperationCommandAttributes{
 						Endpoint:  temporalSystemNexusEndpointName,
-						Service:   "WorkflowService",
-						Operation: "SignalWithStartWorkflowExecution",
+						Service:   workflowservicenexus.TemporalAPIWorkflowserviceV1WorkflowService.ServiceName,
+						Operation: workflowservicenexus.TemporalAPIWorkflowserviceV1WorkflowService.SignalWithStartWorkflowExecution.Name(),
 						Input: payloads.MustEncodeSingle(&workflowservice.SignalWithStartWorkflowExecutionRequest{
 							WorkflowId:   targetWorkflowID,
 							SignalName:   "cli-test-signal",
@@ -1322,8 +1323,8 @@ func (s *SharedServerSuite) TestWorkflow_Show_JSONOutputDoesNotUnwrapSystemNexus
 	// The raw scheduled attributes must still carry the system endpoint and operation name —
 	// that's what replayers need to reconstruct the original command.
 	s.Equal(temporalSystemNexusEndpointName, schedAttrs.Endpoint)
-	s.Equal("SignalWithStartWorkflowExecution", schedAttrs.Operation)
-	s.Equal("WorkflowService", schedAttrs.Service)
+	s.Equal(workflowservicenexus.TemporalAPIWorkflowserviceV1WorkflowService.SignalWithStartWorkflowExecution.Name(), schedAttrs.Operation)
+	s.Equal(workflowservicenexus.TemporalAPIWorkflowserviceV1WorkflowService.ServiceName, schedAttrs.Service)
 	s.NotNil(schedAttrs.Input, "scheduled Input payload must survive untouched in JSON output")
 }
 
