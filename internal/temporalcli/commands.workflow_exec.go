@@ -725,6 +725,9 @@ type structuredHistoryIter struct {
 	reverseBuf       []*history.HistoryEvent
 	reverseNextToken []byte
 	reverseStarted   bool
+
+	// Tracks event times by event ID for computing durations in Details column
+	eventTimes map[int64]time.Time
 }
 
 func (s *structuredHistoryIter) print(cctx *CommandContext) error {
@@ -772,7 +775,8 @@ type structuredHistoryEvent struct {
 	Time string `cli:",width=20"`
 	// We're going to set width to a semi-reasonable number for good header
 	// placement, but we expect it to extend past for larger
-	Type string `cli:",width=26"`
+	Type    string `cli:",width=26"`
+	Details string `cli:",width=36"`
 }
 
 var structuredHistoryEventType = reflect.TypeOf(structuredHistoryEvent{})
@@ -785,11 +789,18 @@ func (s *structuredHistoryIter) Next() (any, error) {
 	if event == nil {
 		return nil, nil
 	}
+	// Track event time for duration calculations in Details
+	if s.eventTimes == nil {
+		s.eventTimes = make(map[int64]time.Time)
+	}
+	s.eventTimes[event.EventId] = event.EventTime.AsTime()
+
 	// Build data
 	data := structuredHistoryEvent{
-		ID:   event.EventId,
-		Time: event.EventTime.AsTime().Format(time.RFC3339),
-		Type: coloredEventType(event.EventType),
+		ID:      event.EventId,
+		Time:    event.EventTime.AsTime().Format(time.RFC3339),
+		Type:    coloredEventType(event.EventType),
+		Details: s.eventDetails(event),
 	}
 
 	// Follow continue as new (forward only; reverse traversal stays within the requested run)
@@ -800,6 +811,44 @@ func (s *structuredHistoryIter) Next() (any, error) {
 		}
 	}
 	return data, nil
+}
+
+func (s *structuredHistoryIter) eventDetails(event *history.HistoryEvent) string {
+	const maxLen = 40
+	var detail string
+	switch {
+	case event.GetWorkflowExecutionStartedEventAttributes() != nil:
+		if wt := event.GetWorkflowExecutionStartedEventAttributes().WorkflowType; wt != nil {
+			detail = wt.Name
+		}
+	case event.GetWorkflowTaskScheduledEventAttributes() != nil:
+		if tq := event.GetWorkflowTaskScheduledEventAttributes().TaskQueue; tq != nil {
+			detail = tq.Name
+		}
+	case event.GetWorkflowTaskStartedEventAttributes() != nil:
+		attr := event.GetWorkflowTaskStartedEventAttributes()
+		if scheduledTime, ok := s.eventTimes[attr.ScheduledEventId]; ok {
+			detail = event.EventTime.AsTime().Sub(scheduledTime).Truncate(time.Millisecond).String()
+		}
+	case event.GetWorkflowTaskCompletedEventAttributes() != nil:
+		attr := event.GetWorkflowTaskCompletedEventAttributes()
+		if startedTime, ok := s.eventTimes[attr.StartedEventId]; ok {
+			detail = event.EventTime.AsTime().Sub(startedTime).Truncate(time.Millisecond).String()
+		}
+	case event.GetStartChildWorkflowExecutionInitiatedEventAttributes() != nil:
+		if wt := event.GetStartChildWorkflowExecutionInitiatedEventAttributes().WorkflowType; wt != nil {
+			detail = wt.Name
+		}
+	case event.GetChildWorkflowExecutionCompletedEventAttributes() != nil:
+		attr := event.GetChildWorkflowExecutionCompletedEventAttributes()
+		if initiatedTime, ok := s.eventTimes[attr.InitiatedEventId]; ok {
+			detail = event.EventTime.AsTime().Sub(initiatedTime).Truncate(time.Millisecond).String()
+		}
+	}
+	if len(detail) > maxLen {
+		return detail[:maxLen-3] + "..."
+	}
+	return detail
 }
 
 func (s *structuredHistoryIter) NextRawEvent() (*history.HistoryEvent, error) {
