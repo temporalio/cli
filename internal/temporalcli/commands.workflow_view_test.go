@@ -13,16 +13,21 @@ import (
 	"github.com/nexus-rpc/sdk-go/nexus"
 	"github.com/stretchr/testify/assert"
 	"github.com/temporalio/cli/internal/temporalcli"
+	commandpb "go.temporal.io/api/command/v1"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
+	historypb "go.temporal.io/api/history/v1"
 	nexuspb "go.temporal.io/api/nexus/v1"
 	"go.temporal.io/api/operatorservice/v1"
+	taskqueuepb "go.temporal.io/api/taskqueue/v1"
 	"go.temporal.io/api/workflowservice/v1"
+	"go.temporal.io/api/workflowservice/v1/workflowservicenexus"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/temporalnexus"
 	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
+	"go.temporal.io/server/common/payloads"
 )
 
 func (s *SharedServerSuite) TestWorkflow_Describe_ActivityFailing() {
@@ -1147,4 +1152,263 @@ func (s *SharedServerSuite) TestWorkflow_Describe_RootWorkflow() {
 	s.Equal(run.GetRunID(), jsonOut.WorkflowExecutionInfo.ParentExecution.GetRunId())
 	s.Equal(run.GetID(), jsonOut.WorkflowExecutionInfo.RootExecution.GetWorkflowId())
 	s.Equal(run.GetRunID(), jsonOut.WorkflowExecutionInfo.RootExecution.GetRunId())
+}
+
+// temporalSystemNexusEndpointName is the reserved endpoint name for Temporal system
+// Nexus operations (mirrors the unexported temporalSystemNexusEndpoint constant in the
+// production code; reproduced here as a literal because the constant is not exported).
+const temporalSystemNexusEndpointName = "__temporal_system"
+
+// runSystemNexusSWSWorkflow drives a SignalWithStartWorkflowExecution Nexus operation
+// against the __temporal_system endpoint from a raw-polled caller workflow, waits for it
+// to complete, then completes the caller. Returns the caller workflow ID. The target
+// workflow is registered for cleanup via s.T().Cleanup. The SDK cannot be used here
+// because it refuses endpoints with the reserved "__temporal_" prefix.
+func (s *SharedServerSuite) runSystemNexusSWSWorkflow(ctx context.Context) string {
+	callerTaskQueue := "cli-sys-nexus-caller-" + uuid.NewString()
+	targetTaskQueue := "cli-sys-nexus-target-" + uuid.NewString()
+	targetWorkflowID := "cli-sys-nexus-target-" + uuid.NewString()
+	callerWorkflowID := "cli-sys-nexus-caller-" + uuid.NewString()
+
+	startResp, err := s.Client.WorkflowService().StartWorkflowExecution(ctx, &workflowservice.StartWorkflowExecutionRequest{
+		Namespace:    s.Namespace(),
+		WorkflowId:   callerWorkflowID,
+		WorkflowType: &common.WorkflowType{Name: "caller-workflow"},
+		TaskQueue:    &taskqueuepb.TaskQueue{Name: callerTaskQueue, Kind: enums.TASK_QUEUE_KIND_NORMAL},
+		RequestId:    uuid.NewString(),
+	})
+	s.NoError(err)
+
+	pollResp, err := s.Client.WorkflowService().PollWorkflowTaskQueue(ctx, &workflowservice.PollWorkflowTaskQueueRequest{
+		Namespace: s.Namespace(),
+		TaskQueue: &taskqueuepb.TaskQueue{Name: callerTaskQueue, Kind: enums.TASK_QUEUE_KIND_NORMAL},
+		Identity:  "cli-test",
+	})
+	s.NoError(err)
+	s.Equal(callerWorkflowID, pollResp.WorkflowExecution.WorkflowId)
+	s.Equal(startResp.RunId, pollResp.WorkflowExecution.RunId)
+
+	_, err = s.Client.WorkflowService().RespondWorkflowTaskCompleted(ctx, &workflowservice.RespondWorkflowTaskCompletedRequest{
+		Identity:  "cli-test",
+		TaskToken: pollResp.TaskToken,
+		Commands: []*commandpb.Command{
+			{
+				CommandType: enums.COMMAND_TYPE_SCHEDULE_NEXUS_OPERATION,
+				Attributes: &commandpb.Command_ScheduleNexusOperationCommandAttributes{
+					ScheduleNexusOperationCommandAttributes: &commandpb.ScheduleNexusOperationCommandAttributes{
+						Endpoint:  temporalSystemNexusEndpointName,
+						Service:   workflowservicenexus.TemporalAPIWorkflowserviceV1WorkflowService.ServiceName,
+						Operation: workflowservicenexus.TemporalAPIWorkflowserviceV1WorkflowService.SignalWithStartWorkflowExecution.Name(),
+						Input: payloads.MustEncodeSingle(&workflowservice.SignalWithStartWorkflowExecutionRequest{
+							WorkflowId:   targetWorkflowID,
+							SignalName:   "cli-test-signal",
+							WorkflowType: &common.WorkflowType{Name: "target-workflow"},
+							TaskQueue:    &taskqueuepb.TaskQueue{Name: targetTaskQueue},
+						}),
+					},
+				},
+			},
+		},
+	})
+	s.NoError(err)
+	s.T().Cleanup(func() {
+		_ = s.Client.TerminateWorkflow(context.Background(), targetWorkflowID, "", "test cleanup")
+	})
+
+	pollResp, err = s.Client.WorkflowService().PollWorkflowTaskQueue(ctx, &workflowservice.PollWorkflowTaskQueueRequest{
+		Namespace: s.Namespace(),
+		TaskQueue: &taskqueuepb.TaskQueue{Name: callerTaskQueue, Kind: enums.TASK_QUEUE_KIND_NORMAL},
+		Identity:  "cli-test",
+	})
+	s.NoError(err)
+
+	var sawCompleted bool
+	for _, e := range pollResp.History.Events {
+		if e.GetNexusOperationCompletedEventAttributes() != nil {
+			sawCompleted = true
+			break
+		}
+		if attrs := e.GetNexusOperationFailedEventAttributes(); attrs != nil {
+			s.FailNow("SignalWithStartWorkflowExecution Nexus operation failed", "failure: %v", attrs.Failure)
+		}
+	}
+	s.True(sawCompleted, "expected a NexusOperationCompleted event in caller history before completing the caller workflow")
+
+	_, err = s.Client.WorkflowService().RespondWorkflowTaskCompleted(ctx, &workflowservice.RespondWorkflowTaskCompletedRequest{
+		Identity:  "cli-test",
+		TaskToken: pollResp.TaskToken,
+		Commands: []*commandpb.Command{{
+			CommandType: enums.COMMAND_TYPE_COMPLETE_WORKFLOW_EXECUTION,
+			Attributes: &commandpb.Command_CompleteWorkflowExecutionCommandAttributes{
+				CompleteWorkflowExecutionCommandAttributes: &commandpb.CompleteWorkflowExecutionCommandAttributes{},
+			},
+		}},
+	})
+	s.NoError(err)
+	return callerWorkflowID
+}
+
+// TestWorkflow_Show_SystemNexusOperationTransformsTypeNames drives a SignalWithStart
+// Nexus operation against the __temporal_system endpoint from inside a workflow, then
+// verifies that `workflow show` (default table mode) renders the resulting history
+// events using the operation-prefixed names (e.g. SignalWithStartWorkflowExecutionScheduled)
+// instead of the generic NexusOperation* names.
+func (s *SharedServerSuite) TestWorkflow_Show_SystemNexusOperationTransformsTypeNames() {
+	ctx, cancel := context.WithTimeout(s.Context, 60*time.Second)
+	defer cancel()
+
+	callerWorkflowID := s.runSystemNexusSWSWorkflow(ctx)
+
+	res := s.Execute(
+		"workflow", "show",
+		"--address", s.Address(),
+		"-w", callerWorkflowID,
+	)
+	s.NoError(res.Err)
+	out := res.Stdout.String()
+	s.Contains(out, "SignalWithStartWorkflowExecutionScheduled", "expected transformed Scheduled name in show output")
+	s.Contains(out, "SignalWithStartWorkflowExecutionCompleted", "expected transformed Completed name in show output")
+	s.NotContains(out, "NexusOperationScheduled", "raw event type name should be replaced by the unwrapped form")
+	s.NotContains(out, "NexusOperationCompleted", "raw event type name should be replaced by the unwrapped form")
+}
+
+// TestWorkflow_Show_JSONOutputDoesNotUnwrapSystemNexus pins down that `workflow show -o json`
+// emits the raw history.History proto for system Nexus operations — no event-type name
+// rewriting and no "unwrappedInput"/"unwrappedResult" injection. JSON output must stay
+// compatible with SDK replayers, which need the exact serialized history the server stored.
+func (s *SharedServerSuite) TestWorkflow_Show_JSONOutputDoesNotUnwrapSystemNexus() {
+	ctx, cancel := context.WithTimeout(s.Context, 60*time.Second)
+	defer cancel()
+
+	callerWorkflowID := s.runSystemNexusSWSWorkflow(ctx)
+
+	res := s.Execute(
+		"workflow", "show",
+		"--address", s.Address(),
+		"-w", callerWorkflowID,
+		"-o", "json",
+	)
+	s.NoError(res.Err)
+	raw := res.Stdout.String()
+
+	// Negative assertions: none of the text-mode transformations may bleed into JSON.
+	s.NotContains(raw, "SignalWithStartWorkflowExecutionScheduled",
+		"JSON output must not rewrite NEXUS_OPERATION_SCHEDULED to the operation-prefixed name")
+	s.NotContains(raw, "SignalWithStartWorkflowExecutionCompleted",
+		"JSON output must not rewrite NEXUS_OPERATION_COMPLETED to the operation-prefixed name")
+	s.NotContains(raw, "unwrappedInput",
+		"JSON output must not inject the unwrappedInput field used by text-mode rendering")
+	s.NotContains(raw, "unwrappedResult",
+		"JSON output must not inject the unwrappedResult field used by text-mode rendering")
+
+	// Positive assertion: the raw event types still appear, and the JSON parses cleanly as
+	// a history.History proto with the original Scheduled+Completed events for the system
+	// Nexus operation.
+	var hist historypb.History
+	s.NoError(temporalcli.UnmarshalProtoJSONWithOptions([]byte(raw), &hist, false))
+	var schedAttrs *historypb.NexusOperationScheduledEventAttributes
+	var sawCompleted bool
+	for _, ev := range hist.Events {
+		if a := ev.GetNexusOperationScheduledEventAttributes(); a != nil {
+			schedAttrs = a
+		}
+		if ev.GetNexusOperationCompletedEventAttributes() != nil {
+			sawCompleted = true
+		}
+	}
+	if schedAttrs == nil {
+		s.FailNow("expected a NexusOperationScheduled event in JSON output")
+	}
+	s.True(sawCompleted, "expected a NexusOperationCompleted event in JSON output")
+	// The raw scheduled attributes must still carry the system endpoint and operation name —
+	// that's what replayers need to reconstruct the original command.
+	s.Equal(temporalSystemNexusEndpointName, schedAttrs.Endpoint)
+	s.Equal(workflowservicenexus.TemporalAPIWorkflowserviceV1WorkflowService.SignalWithStartWorkflowExecution.Name(), schedAttrs.Operation)
+	s.Equal(workflowservicenexus.TemporalAPIWorkflowserviceV1WorkflowService.ServiceName, schedAttrs.Service)
+	s.NotNil(schedAttrs.Input, "scheduled Input payload must survive untouched in JSON output")
+}
+
+// TestWorkflow_Show_UserEndpointNexusOperationDoesNotTransformTypeNames verifies the
+// negative case: when a Nexus operation runs against a non-system, user-defined endpoint,
+// `workflow show` must leave the event type names untransformed because the
+// (endpoint, operation) pair is not registered in the global systemNexusOps map.
+func (s *SharedServerSuite) TestWorkflow_Show_UserEndpointNexusOperationDoesNotTransformTypeNames() {
+	handlerWorkflowID := uuid.NewString()
+	endpointName := validEndpointName(s.T())
+
+	// Workflow that waits to be canceled. Reused from the existing Nexus describe test.
+	handlerWorkflow := func(ctx workflow.Context, input nexus.NoValue) (nexus.NoValue, error) {
+		ctx.Done().Receive(ctx, nil)
+		return nil, ctx.Err()
+	}
+
+	op := temporalnexus.NewWorkflowRunOperation("test-op", handlerWorkflow, func(ctx context.Context, _ nexus.NoValue, opts nexus.StartOperationOptions) (client.StartWorkflowOptions, error) {
+		return client.StartWorkflowOptions{ID: handlerWorkflowID}, nil
+	})
+	service := nexus.NewService("test-service")
+	s.NoError(service.Register(op))
+
+	callerWorkflow := func(ctx workflow.Context) error {
+		nc := workflow.NewNexusClient(endpointName, service.Name)
+		fut := nc.ExecuteOperation(ctx, op, nil, workflow.NexusOperationOptions{})
+		var exec workflow.NexusOperationExecution
+		if err := fut.GetNexusOperationExecution().Get(ctx, &exec); err != nil {
+			return err
+		}
+		// Block forever; the test only needs the Scheduled event to be present.
+		ctx.Done().Receive(ctx, nil)
+		return ctx.Err()
+	}
+
+	w := s.DevServer.StartDevWorker(s.Suite.T(), DevWorkerOptions{
+		Workflows:     []any{handlerWorkflow, callerWorkflow},
+		NexusServices: []*nexus.Service{service},
+	})
+	defer w.Stop()
+
+	_, err := s.Client.OperatorService().CreateNexusEndpoint(s.Context, &operatorservice.CreateNexusEndpointRequest{
+		Spec: &nexuspb.EndpointSpec{
+			Name: endpointName,
+			Target: &nexuspb.EndpointTarget{
+				Variant: &nexuspb.EndpointTarget_Worker_{
+					Worker: &nexuspb.EndpointTarget_Worker{
+						Namespace: s.Namespace(),
+						TaskQueue: w.Options.TaskQueue,
+					},
+				},
+			},
+		},
+	})
+	s.NoError(err)
+
+	run, err := s.Client.ExecuteWorkflow(
+		s.Context,
+		client.StartWorkflowOptions{TaskQueue: w.Options.TaskQueue},
+		callerWorkflow,
+	)
+	s.NoError(err)
+	s.T().Cleanup(func() {
+		_ = s.Client.TerminateWorkflow(context.Background(), run.GetID(), run.GetRunID(), "test cleanup")
+		_ = s.Client.TerminateWorkflow(context.Background(), handlerWorkflowID, "", "test cleanup")
+	})
+
+	// Wait until the operation has been scheduled — we don't need it to complete.
+	s.Eventually(func() bool {
+		resp, derr := s.Client.DescribeWorkflowExecution(s.Context, run.GetID(), run.GetRunID())
+		if derr != nil {
+			return false
+		}
+		return len(resp.PendingNexusOperations) > 0
+	}, 30*time.Second, 100*time.Millisecond)
+
+	// `workflow show` over a non-system Nexus operation must NOT transform names.
+	res := s.Execute(
+		"workflow", "show",
+		"--address", s.Address(),
+		"-w", run.GetID(),
+	)
+	s.NoError(res.Err)
+	out := res.Stdout.String()
+	s.Contains(out, "NexusOperationScheduled", "user-endpoint event type name should be preserved")
+	s.NotContains(out, "SignalWithStartWorkflowExecutionScheduled", "user-endpoint event must not pick up a system-op unwrapped name")
 }

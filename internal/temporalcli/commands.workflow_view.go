@@ -324,8 +324,14 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 			_ = cctx.Printer.PrintStructured(resp.PendingChildren, printer.StructuredOptions{})
 		}
 
-		cctx.Printer.Println(color.MagentaString("Pending Nexus Operations: %v", len(resp.PendingNexusOperations)))
-		if len(resp.PendingNexusOperations) > 0 {
+		var pendingNexusOps []*workflow.PendingNexusOperationInfo
+		for _, op := range resp.PendingNexusOperations {
+			if op.GetEndpoint() != temporalSystemNexusEndpoint {
+				pendingNexusOps = append(pendingNexusOps, op)
+			}
+		}
+		cctx.Printer.Println(color.MagentaString("Pending Nexus Operations: %v", len(pendingNexusOps)))
+		if len(pendingNexusOps) > 0 {
 			cctx.Printer.Println()
 			ops := make([]struct {
 				Endpoint                           string
@@ -348,8 +354,8 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 				CancelationLastAttemptCompleteTime time.Time                             `cli:",cardOmitEmpty"`
 				CancelationLastAttemptFailure      *failure.Failure                      `cli:",cardOmitEmpty"`
 				CancelationBlockedReason           string                                `cli:",cardOmitEmpty"`
-			}, len(resp.PendingNexusOperations))
-			for i, op := range resp.PendingNexusOperations {
+			}, len(pendingNexusOps))
+			for i, op := range pendingNexusOps {
 				ops[i].Endpoint = op.GetEndpoint()
 				ops[i].Service = op.GetService()
 				ops[i].Operation = op.GetOperation()
@@ -558,7 +564,7 @@ func (c *TemporalWorkflowShowCommand) run(cctx *CommandContext, _ []string) erro
 	}
 
 	// Call describe
-	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
+	cl, codec, err := dialClientWithCodec(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -574,6 +580,7 @@ func (c *TemporalWorkflowShowCommand) run(cctx *CommandContext, _ []string) erro
 		includeDetails: c.Detailed,
 		follow:         c.Follow,
 		reverse:        c.Reverse,
+		codec:          codec,
 	}
 	if !cctx.JSONOutput {
 		cctx.Printer.Println(color.MagentaString("Progress:"))
