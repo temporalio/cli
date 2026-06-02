@@ -6,6 +6,7 @@ import (
 	commonpb "go.temporal.io/api/common/v1"
 	"go.temporal.io/api/proxy"
 	"go.temporal.io/api/workflowservice/v1"
+	"go.temporal.io/api/workflowservice/v1/workflowservicenexus"
 	"go.temporal.io/sdk/converter"
 	"google.golang.org/protobuf/proto"
 )
@@ -29,10 +30,12 @@ type systemNexusOpTypes struct {
 // __temporal_system endpoint. Add new entries here as the server adds support for more
 // system operations. The keys' Operation values must match what the server records in
 // NexusOperationScheduledEventAttributes.Operation.
+// NOTE seankane: Part 2 of the System Operations work is to code generate this map from the
+// go.temporal.io/api/workflowservice/v1/workflowservicenexus package.
 var systemNexusOps = map[systemNexusOpKey]systemNexusOpTypes{
 	{
 		Endpoint:  temporalSystemNexusEndpoint,
-		Operation: "SignalWithStartWorkflowExecution",
+		Operation: workflowservicenexus.TemporalAPIWorkflowserviceV1WorkflowService.SignalWithStartWorkflowExecution.Name(),
 	}: {
 		NewRequest:  func() proto.Message { return &workflowservice.SignalWithStartWorkflowExecutionRequest{} },
 		NewResponse: func() proto.Message { return &workflowservice.SignalWithStartWorkflowExecutionResponse{} },
