@@ -560,7 +560,7 @@ commands:
       This restarts the activity as if it were first being
       scheduled. That is, it will reset both the number of attempts and the
       activity timeout, as well as, optionally, the
-      [heartbeat details](#resetting-activities-that-heartbeat).
+      [heartbeat details](#reset-heartbeats).
 
       If the activity may be executing (i.e. it has not yet timed out), the
       reset will take effect the next time it fails, heartbeats, or times out.
@@ -576,7 +576,7 @@ commands:
 
       Either `--activity-id` (with `--workflow-id`) or `--query` must be specified.
 
-      ### Resetting activities that heartbeat
+      ### Resetting activities that heartbeat {#reset-heartbeats}
 
       Activities that heartbeat will receive a [Canceled failure](/references/failures#cancelled-failure)
       the next time they heartbeat after a reset.

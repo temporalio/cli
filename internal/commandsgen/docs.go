@@ -265,7 +265,7 @@ func encodeJSONExample(v string) string {
 
 var (
 	reAngleBracketPlaceholder = regexp.MustCompile(`<([a-z][a-z0-9_:-]+)>`)
-	reHeadingID               = regexp.MustCompile(`^(#{1,6}\s+.+?)\s+\{#[\w-]+\}\s*$`)
+	reHeadingID               = regexp.MustCompile(`^(#{1,6}\s+.+?)\s+\{#([\w-]+)\}\s*$`)
 	reJSONInSingleQuotes      = regexp.MustCompile(`'([^']*\{[^}]*\}[^']*)'`)
 )
 
@@ -290,8 +290,8 @@ func escapeMDXDescription(desc string) string {
 			continue
 		}
 
-		// Strip {#custom-id} from headings; Docusaurus generates IDs from heading text.
-		line = reHeadingID.ReplaceAllString(line, "$1")
+		// Convert {#custom-id} to MDX-compatible {/* #custom-id */} comment syntax.
+		line = reHeadingID.ReplaceAllString(line, "$1 {/* #$2 */}")
 
 		// Escape <placeholder> patterns that MDX would parse as HTML tags.
 		// Split on backtick spans to avoid modifying inline code.
