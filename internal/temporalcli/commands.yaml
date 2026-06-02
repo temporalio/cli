@@ -1622,7 +1622,7 @@ commands:
   - name: temporal nexus
     summary: Start, list, and operate on Nexus Operations
     description: |
-      Nexus Operation commands perform operations on standalone Nexus
+      Nexus Operation commands perform operations on Standalone Nexus
       Operation Executions:
 
       ```
@@ -1639,7 +1639,7 @@ commands:
     docs:
       description-header: >-
         Learn how to use Temporal Nexus commands for starting, listing,
-        and managing standalone Nexus Operation Executions.
+        and managing Standalone Nexus Operation Executions.
       keywords:
         - nexus
         - nexus operation
@@ -1708,7 +1708,7 @@ commands:
   - name: temporal nexus operation describe
     summary: Show detailed info for a Standalone Nexus Operation (Experimental)
     description: |
-      Display detailed information about a specific standalone Nexus
+      Display detailed information about a specific Standalone Nexus
       Operation Execution.
 
       ```

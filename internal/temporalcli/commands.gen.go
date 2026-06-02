@@ -1423,9 +1423,9 @@ func NewTemporalNexusCommand(cctx *CommandContext, parent *TemporalCommand) *Tem
 	s.Command.Use = "nexus"
 	s.Command.Short = "Start, list, and operate on Nexus Operations"
 	if hasHighlighting {
-		s.Command.Long = "Nexus Operation commands perform operations on standalone Nexus\nOperation Executions:\n\n\x1b[1mtemporal nexus [command] [options]\x1b[0m\n\nFor example:\n\n\x1b[1mtemporal nexus operation list\x1b[0m"
+		s.Command.Long = "Nexus Operation commands perform operations on Standalone Nexus\nOperation Executions:\n\n\x1b[1mtemporal nexus [command] [options]\x1b[0m\n\nFor example:\n\n\x1b[1mtemporal nexus operation list\x1b[0m"
 	} else {
-		s.Command.Long = "Nexus Operation commands perform operations on standalone Nexus\nOperation Executions:\n\n```\ntemporal nexus [command] [options]\n```\n\nFor example:\n\n```\ntemporal nexus operation list\n```"
+		s.Command.Long = "Nexus Operation commands perform operations on Standalone Nexus\nOperation Executions:\n\n```\ntemporal nexus [command] [options]\n```\n\nFor example:\n\n```\ntemporal nexus operation list\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalNexusOperationCommand(cctx, &s).Command)
@@ -1530,9 +1530,9 @@ func NewTemporalNexusOperationDescribeCommand(cctx *CommandContext, parent *Temp
 	s.Command.Use = "describe [flags]"
 	s.Command.Short = "Show detailed info for a Standalone Nexus Operation (Experimental)"
 	if hasHighlighting {
-		s.Command.Long = "Display detailed information about a specific standalone Nexus\nOperation Execution.\n\n\x1b[1mtemporal nexus operation describe \\\n    --operation-id YourOperationId\x1b[0m"
+		s.Command.Long = "Display detailed information about a specific Standalone Nexus\nOperation Execution.\n\n\x1b[1mtemporal nexus operation describe \\\n    --operation-id YourOperationId\x1b[0m"
 	} else {
-		s.Command.Long = "Display detailed information about a specific standalone Nexus\nOperation Execution.\n\n```\ntemporal nexus operation describe \\\n    --operation-id YourOperationId\n```"
+		s.Command.Long = "Display detailed information about a specific Standalone Nexus\nOperation Execution.\n\n```\ntemporal nexus operation describe \\\n    --operation-id YourOperationId\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().BoolVar(&s.Raw, "raw", false, "Print properties without changing their format.")
