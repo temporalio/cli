@@ -9,6 +9,7 @@ import (
 	"io"
 	"math/rand"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/stretchr/testify/assert"
@@ -235,7 +236,7 @@ func (s *SharedServerSuite) TestSchedule_List() {
 		out = res.Stdout.String()
 		assert.Contains(t, out, schedId)
 	}, 10*time.Second, time.Second)
-	s.ContainsOnSameLine(out, schedId, "DevWorkflow", "0s" /*jitter*/, "false", "nil" /*memo*/)
+	s.ContainsOnSameLine(out, schedId, "DevWorkflow", "0s" /*jitter*/, "false", "{}" /*memo*/)
 	s.ContainsOnSameLine(out, "TestSchedule_List")
 
 	// table
@@ -552,4 +553,56 @@ func (s *SharedServerSuite) TestSchedule_Memo_Update() {
 		// Decoded 'Mg==' is 2
 		return j.Schedule.Action.StartWorkflow.Memo.Fields.Bar.Data == "Mg=="
 	}, 10*time.Second, 100*time.Millisecond)
+}
+
+func (s *SharedServerSuite) TestSchedule_ListMatchingTimes() {
+	// use a calendar spec with known hours so results are deterministic
+	schedId, _, res := s.createSchedule("--calendar", `{"hour":"3,6,9"}`)
+	s.NoError(res.Err)
+
+	// query a full day - should match exactly 3 times
+	res = s.Execute(
+		"schedule", "list-matching-times",
+		"--address", s.Address(),
+		"-s", schedId,
+		"--start-time", "2025-01-01T00:00:00Z",
+		"--end-time", "2025-01-01T23:59:59Z",
+	)
+	s.NoError(res.Err)
+	// text output should contain parseable RFC3339 timestamps
+	for _, line := range strings.Split(res.Stdout.String(), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || line == "Time" {
+			continue
+		}
+		_, err := time.Parse(time.RFC3339, line)
+		s.NoError(err, "should parse text line as time: %q", line)
+	}
+
+	// json output
+	res = s.Execute(
+		"schedule", "list-matching-times",
+		"--address", s.Address(),
+		"-s", schedId,
+		"--start-time", "2025-01-01T00:00:00Z",
+		"--end-time", "2025-01-01T23:59:59Z",
+		"-o", "json",
+	)
+	s.NoError(res.Err)
+	var resp struct {
+		StartTime []string `json:"startTime"`
+	}
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &resp))
+	s.Equal(3, len(resp.StartTime))
+}
+
+func (s *SharedServerSuite) TestSchedule_ListMatchingTimes_NotFound() {
+	res := s.Execute(
+		"schedule", "list-matching-times",
+		"--address", s.Address(),
+		"-s", "nonexistent-schedule-id",
+		"--start-time", "2025-01-01T00:00:00Z",
+		"--end-time", "2025-01-01T23:59:59Z",
+	)
+	s.Error(res.Err)
 }
