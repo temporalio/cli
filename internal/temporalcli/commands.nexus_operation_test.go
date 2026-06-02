@@ -19,20 +19,25 @@ import (
 )
 
 func (s *SharedServerSuite) setupNexusEndpointAndWorker(t *testing.T) (string, *DevWorker) {
-	endpointName := "test-ep-" + uuid.NewString()[:8]
-
-	// A handler workflow that returns its input.
 	handlerWorkflow := func(ctx workflow.Context, input string) (string, error) {
 		return "got: " + input, nil
 	}
+	return s.setupNexusEndpointWithWorkflow(t, handlerWorkflow, "handler-")
+}
 
-	// Expose the workflow as a Nexus operation.
+func (s *SharedServerSuite) setupNexusEndpointWithWorkflow(
+	t *testing.T,
+	handlerWorkflow func(workflow.Context, string) (string, error),
+	workflowIDPrefix string,
+) (string, *DevWorker) {
+	endpointName := "test-ep-" + uuid.NewString()[:8]
+
 	op := temporalnexus.NewWorkflowRunOperation(
 		"test-op",
 		handlerWorkflow,
 		func(ctx context.Context, input string, opts nexus.StartOperationOptions) (client.StartWorkflowOptions, error) {
 			return client.StartWorkflowOptions{
-				ID: "handler-" + opts.RequestID,
+				ID: workflowIDPrefix + opts.RequestID,
 			}, nil
 		},
 	)
@@ -44,7 +49,6 @@ func (s *SharedServerSuite) setupNexusEndpointAndWorker(t *testing.T) (string, *
 		NexusServices: []*nexus.Service{svc},
 	})
 
-	// Create endpoint pointing to this worker.
 	_, err := s.Client.OperatorService().CreateNexusEndpoint(s.Context, &operatorservice.CreateNexusEndpointRequest{
 		Spec: &nexuspb.EndpointSpec{
 			Name: endpointName,
@@ -195,46 +199,12 @@ func (s *SharedServerSuite) TestNexusOperationDescribe_JSON() {
 }
 
 func (s *SharedServerSuite) TestNexusOperationCancel() {
-	endpointName := "test-ep-" + uuid.NewString()[:8]
-
-	// A handler workflow that blocks until canceled.
-	handlerWorkflow := func(ctx workflow.Context, input string) (string, error) {
+	blockingHandler := func(ctx workflow.Context, input string) (string, error) {
 		ctx.Done().Receive(ctx, nil)
 		return "", ctx.Err()
 	}
-
-	op := temporalnexus.NewWorkflowRunOperation(
-		"test-op",
-		handlerWorkflow,
-		func(ctx context.Context, input string, opts nexus.StartOperationOptions) (client.StartWorkflowOptions, error) {
-			return client.StartWorkflowOptions{
-				ID: "cancel-handler-" + opts.RequestID,
-			}, nil
-		},
-	)
-	svc := nexus.NewService("test-service")
-	s.NoError(svc.Register(op))
-
-	w := s.DevServer.StartDevWorker(s.T(), DevWorkerOptions{
-		Workflows:     []any{handlerWorkflow},
-		NexusServices: []*nexus.Service{svc},
-	})
+	endpointName, w := s.setupNexusEndpointWithWorkflow(s.T(), blockingHandler, "cancel-handler-")
 	defer w.Stop()
-
-	_, err := s.Client.OperatorService().CreateNexusEndpoint(s.Context, &operatorservice.CreateNexusEndpointRequest{
-		Spec: &nexuspb.EndpointSpec{
-			Name: endpointName,
-			Target: &nexuspb.EndpointTarget{
-				Variant: &nexuspb.EndpointTarget_Worker_{
-					Worker: &nexuspb.EndpointTarget_Worker{
-						Namespace: s.Namespace(),
-						TaskQueue: w.Options.TaskQueue,
-					},
-				},
-			},
-		},
-	})
-	s.NoError(err)
 
 	opID := "cancel-op-" + uuid.NewString()[:8]
 
@@ -265,46 +235,12 @@ func (s *SharedServerSuite) TestNexusOperationCancel() {
 }
 
 func (s *SharedServerSuite) TestNexusOperationTerminate() {
-	endpointName := "test-ep-" + uuid.NewString()[:8]
-
-	// A handler workflow that blocks until canceled.
-	handlerWorkflow := func(ctx workflow.Context, input string) (string, error) {
+	blockingHandler := func(ctx workflow.Context, input string) (string, error) {
 		ctx.Done().Receive(ctx, nil)
 		return "", ctx.Err()
 	}
-
-	op := temporalnexus.NewWorkflowRunOperation(
-		"test-op",
-		handlerWorkflow,
-		func(ctx context.Context, input string, opts nexus.StartOperationOptions) (client.StartWorkflowOptions, error) {
-			return client.StartWorkflowOptions{
-				ID: "term-handler-" + opts.RequestID,
-			}, nil
-		},
-	)
-	svc := nexus.NewService("test-service")
-	s.NoError(svc.Register(op))
-
-	w := s.DevServer.StartDevWorker(s.T(), DevWorkerOptions{
-		Workflows:     []any{handlerWorkflow},
-		NexusServices: []*nexus.Service{svc},
-	})
+	endpointName, w := s.setupNexusEndpointWithWorkflow(s.T(), blockingHandler, "term-handler-")
 	defer w.Stop()
-
-	_, err := s.Client.OperatorService().CreateNexusEndpoint(s.Context, &operatorservice.CreateNexusEndpointRequest{
-		Spec: &nexuspb.EndpointSpec{
-			Name: endpointName,
-			Target: &nexuspb.EndpointTarget{
-				Variant: &nexuspb.EndpointTarget_Worker_{
-					Worker: &nexuspb.EndpointTarget_Worker{
-						Namespace: s.Namespace(),
-						TaskQueue: w.Options.TaskQueue,
-					},
-				},
-			},
-		},
-	})
-	s.NoError(err)
 
 	opID := "term-op-" + uuid.NewString()[:8]
 
@@ -552,7 +488,13 @@ func (s *SharedServerSuite) TestNexusOperationStart_ScheduleToCloseTimeout() {
 }
 
 func (s *SharedServerSuite) TestNexusOperationStart_IdConflictPolicy() {
-	endpointName, w := s.setupNexusEndpointAndWorker(s.T())
+	// Use a blocking handler so the operation stays running across the three
+	// start calls — IDConflictPolicy only triggers against an open operation.
+	blockingHandler := func(ctx workflow.Context, input string) (string, error) {
+		ctx.Done().Receive(ctx, nil)
+		return "", ctx.Err()
+	}
+	endpointName, w := s.setupNexusEndpointWithWorkflow(s.T(), blockingHandler, "conflict-handler-")
 	defer w.Stop()
 
 	opID := "conflict-op-" + uuid.NewString()[:8]
