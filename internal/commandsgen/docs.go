@@ -258,7 +258,7 @@ func encodeJSONExample(v string) string {
 	// example: 'YourKey={"your": "value"}'
 	// results in an mdx acorn rendering error
 	// and wrapping in backticks lets it render
-	re := regexp.MustCompile(`('[a-zA-Z0-9]*={.*}')`)
+	re := regexp.MustCompile(`('[^']*\{[^']*\}[^']*')`)
 	v = re.ReplaceAllString(v, "`$1`")
 	return v
 }
