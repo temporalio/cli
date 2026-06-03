@@ -6,9 +6,9 @@ updates:
       interval: weekly
     cooldown:
       default-days: 14
+    allow:
+      - dependency-type: direct
     ignore:
-      - dependency-name: "*"
-        dependency-type: indirect
       # Temporal dependencies are managed manually to ensure coordinated upgrades across all temporal packages
       - dependency-name: "go.temporal.io/*"
 
