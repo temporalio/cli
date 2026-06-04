@@ -254,10 +254,11 @@ func (w *docWriter) isLeafCommand(c *Command) bool {
 	return true
 }
 
+// encodeJSONExample wraps single-quoted JSON examples in backticks so MDX
+// does not parse curly braces as JSX expressions. This handles option
+// description table cells. See also escapeMDXDescription which handles
+// the same class of issues for command description body text.
 func encodeJSONExample(v string) string {
-	// example: 'YourKey={"your": "value"}'
-	// results in an mdx acorn rendering error
-	// and wrapping in backticks lets it render
 	re := regexp.MustCompile(`('[^']*\{[^']*\}[^']*')`)
 	v = re.ReplaceAllString(v, "`$1`")
 	return v
@@ -266,13 +267,15 @@ func encodeJSONExample(v string) string {
 var (
 	reAngleBracketPlaceholder = regexp.MustCompile(`<([a-z][a-z0-9_:-]+)>`)
 	reHeadingID               = regexp.MustCompile(`^(#{1,6}\s+.+?)\s+\{#([\w-]+)\}\s*$`)
-	reJSONInSingleQuotes      = regexp.MustCompile(`'([^']*\{[^}]*\}[^']*)'`)
+	reJSONInSingleQuotes      = regexp.MustCompile(`'([^']*\{[^']*\}[^']*)'`)
 )
 
 // escapeMDXDescription escapes patterns in command descriptions that are
 // valid Markdown but break MDX compilation: heading IDs ({#id}), bare
 // angle-bracket placeholders (<name>), and curly braces in JSON examples.
-// Code fences are left untouched.
+// Code fences are left untouched. Inline backtick spans are also preserved,
+// assuming balanced backticks. See also encodeJSONExample which handles
+// the same class of issues for option description table cells.
 func escapeMDXDescription(desc string) string {
 	lines := strings.Split(desc, "\n")
 	var result []string
