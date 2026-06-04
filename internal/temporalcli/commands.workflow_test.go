@@ -178,8 +178,8 @@ func (s *SharedServerSuite) TestWorkflow_Delete_SingleWorkflowRequiresConfirmati
 	)
 	s.EqualError(res.Err, "user denied confirmation")
 	// Dev-server's default namespace is non-global, so the warning is suppressed.
-	s.NotContains(res.Stdout.String(), "Deleting Workflow Executions in a global Namespace")
-	s.NotContains(res.Stderr.String(), "Deleting Workflow Executions in a global Namespace")
+	s.NotContains(res.Stdout.String(), "removes it from all clusters and cannot be undone")
+	s.NotContains(res.Stderr.String(), "removes it from all clusters and cannot be undone")
 }
 
 func (s *SharedServerSuite) TestWorkflow_Delete_SingleWorkflowSuccess() {
@@ -203,8 +203,8 @@ func (s *SharedServerSuite) TestWorkflow_Delete_SingleWorkflowSuccess() {
 		"--yes",
 	)
 	s.NoError(res.Err)
-	s.NotContains(res.Stdout.String(), "Deleting Workflow Executions in a global Namespace")
-	s.NotContains(res.Stderr.String(), "Deleting Workflow Executions in a global Namespace")
+	s.NotContains(res.Stdout.String(), "removes it from all clusters and cannot be undone")
+	s.NotContains(res.Stderr.String(), "removes it from all clusters and cannot be undone")
 	s.Contains(res.Stdout.String(), "Delete workflow succeeded")
 }
 
@@ -252,8 +252,8 @@ func (s *SharedServerSuite) TestWorkflow_Delete_BatchWorkflowSuccess() {
 	)
 	s.NoError(res.Err)
 	s.Contains(res.Stdout.String(), "Start batch against workflows matching query")
-	s.NotContains(res.Stdout.String(), "Deleting Workflow Executions in a global Namespace")
-	s.NotContains(res.Stderr.String(), "Deleting Workflow Executions in a global Namespace")
+	s.NotContains(res.Stdout.String(), "removes it from all clusters and cannot be undone")
+	s.NotContains(res.Stderr.String(), "removes it from all clusters and cannot be undone")
 
 	// Confirm workflows were deleted
 	s.Eventually(func() bool {

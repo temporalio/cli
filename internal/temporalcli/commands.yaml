@@ -3641,10 +3641,8 @@ commands:
       The removal executes asynchronously. If the Execution is Running, the Service
       terminates it before deletion.
 
-      WARNING: Deleting Workflow Executions in a global Namespace removes them from
-      all replicas. Requests sent to a passive cluster are forwarded to the active
-      cluster by default; to target the passive cluster directly, specify
-      `--grpc-meta xdc-redirection=false`.
+      WARNING: In a global Namespace, deleting a Workflow Execution removes it from
+      all clusters and cannot be undone.
 
       Visit https://docs.temporal.io/visibility to read more about Search Attributes
       and Query creation. See `temporal batch --help` for a quick reference.

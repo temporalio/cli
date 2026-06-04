@@ -30,7 +30,7 @@ import (
 
 const metadataQueryName = "__temporal_workflow_metadata"
 
-const workflowDeleteWarning = "WARNING: Deleting Workflow Executions in a global Namespace removes them from all replicas. Requests sent to a passive cluster are forwarded to the active cluster by default; to target the passive cluster directly, specify `--grpc-meta xdc-redirection=false`."
+const workflowDeleteWarning = "WARNING: In a global Namespace, deleting a Workflow Execution removes it from all clusters and cannot be undone."
 
 func (c *TemporalWorkflowCancelCommand) run(cctx *CommandContext, args []string) error {
 	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
