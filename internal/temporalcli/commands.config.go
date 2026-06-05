@@ -259,6 +259,7 @@ var envConfigPropsToFieldNames = map[string]string{
 	"address":                       "Address",
 	"namespace":                     "Namespace",
 	"api_key":                       "APIKey",
+	"authority":                     "Authority",
 	"tls":                           "TLS",
 	"tls.disabled":                  "Disabled",
 	"tls.client_cert_path":          "ClientCertPath",

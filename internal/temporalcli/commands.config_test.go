@@ -25,6 +25,7 @@ func TestConfig_Get(t *testing.T) {
 address = "my-address"
 namespace = "my-namespace"
 api_key = "my-api-key"
+authority = "my-authority"
 codec = { endpoint = "my-endpoint", auth = "my-auth" }
 grpc_meta = { some-heAder1 = "some-value1", some-header2 = "some-value2", some_heaDer3 = "some-value3" }
 some_future_key = "some future value not handled"
@@ -74,6 +75,7 @@ disable_host_verification = true`))
 		"address":                       "my-address",
 		"namespace":                     "my-namespace",
 		"api_key":                       "my-api-key",
+		"authority":                     "my-authority",
 		"codec.endpoint":                "my-endpoint",
 		"codec.auth":                    "my-auth",
 		"grpc_meta.some-header1":        "some-value1",
@@ -117,6 +119,7 @@ disable_host_verification = true`))
 	h.JSONEq(`{
 		"address": "my-address",
 		"api_key": "my-api-key",
+		"authority": "my-authority",
 		"codec": {
 			"auth": "my-auth",
 			"endpoint": "my-endpoint"
