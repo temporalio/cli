@@ -240,6 +240,8 @@ func (s *SharedServerSuite) SetupSuite() {
 				"history.enableSignalWithStartFromWorkflow": true,
 				"activity.enableStandalone":                 true,
 				"activity.longPollTimeout":                  2 * time.Second,
+				"nexusoperation.enableStandalone":           true,
+				"history.enableChasmCallbacks":              true,
 				// this is overridden since we don't want caching to be enabled
 				// while testing DescribeTaskQueue behaviour related to versioning
 				"matching.TaskQueueInfoByBuildIdTTL": 0 * time.Second,

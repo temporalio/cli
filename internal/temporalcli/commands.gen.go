@@ -341,6 +341,47 @@ func (v *NexusEndpointConfigOptions) BuildFlags(f *pflag.FlagSet) {
 	f.StringVar(&v.TargetUrl, "target-url", "", "An external Nexus Endpoint that receives forwarded Nexus requests. May be used as an alternative to `--target-namespace` and `--target-task-queue`. EXPERIMENTAL.")
 }
 
+type NexusOperationReferenceOptions struct {
+	OperationId string
+	RunId       string
+	FlagSet     *pflag.FlagSet
+}
+
+func (v *NexusOperationReferenceOptions) BuildFlags(f *pflag.FlagSet) {
+	v.FlagSet = f
+	f.StringVar(&v.OperationId, "operation-id", "", "Nexus Operation ID. Required.")
+	_ = cobra.MarkFlagRequired(f, "operation-id")
+	f.StringVarP(&v.RunId, "run-id", "r", "", "Run ID of the Nexus Operation.")
+}
+
+type NexusOperationStartOptions struct {
+	Endpoint               string
+	Service                string
+	Operation              string
+	OperationId            string
+	ScheduleToCloseTimeout cliext.FlagDuration
+	IdConflictPolicy       cliext.FlagStringEnum
+	IdReusePolicy          cliext.FlagStringEnum
+	FlagSet                *pflag.FlagSet
+}
+
+func (v *NexusOperationStartOptions) BuildFlags(f *pflag.FlagSet) {
+	v.FlagSet = f
+	f.StringVar(&v.Endpoint, "endpoint", "", "Nexus Endpoint name. Required.")
+	_ = cobra.MarkFlagRequired(f, "endpoint")
+	f.StringVar(&v.Service, "service", "", "Nexus Service name. Required.")
+	_ = cobra.MarkFlagRequired(f, "service")
+	f.StringVar(&v.Operation, "operation", "", "Nexus Operation name. Required.")
+	_ = cobra.MarkFlagRequired(f, "operation")
+	f.StringVar(&v.OperationId, "operation-id", "", "Nexus Operation ID. If not supplied, a unique ID is generated.")
+	v.ScheduleToCloseTimeout = 0
+	f.Var(&v.ScheduleToCloseTimeout, "schedule-to-close-timeout", "Total time the operation is allowed to run.")
+	v.IdConflictPolicy = cliext.NewFlagStringEnum([]string{"Fail", "UseExisting", "TerminateExisting"}, "")
+	f.Var(&v.IdConflictPolicy, "id-conflict-policy", "Policy for handling an Operation ID conflict with a running operation. Accepted values: Fail, UseExisting, TerminateExisting.")
+	v.IdReusePolicy = cliext.NewFlagStringEnum([]string{"AllowDuplicate", "RejectDuplicate"}, "")
+	f.Var(&v.IdReusePolicy, "id-reuse-policy", "Policy for re-using an Operation ID from a previously closed operation. Accepted values: AllowDuplicate, RejectDuplicate.")
+}
+
 type QueryModifiersOptions struct {
 	RejectCondition cliext.FlagStringEnum
 	Headers         []string
@@ -461,6 +502,7 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	s.Command.AddCommand(&NewTemporalBatchCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalConfigCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalEnvCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalNexusCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalOperatorCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalServerCommand(cctx, &s).Command)
@@ -1361,6 +1403,285 @@ func NewTemporalEnvSetCommand(cctx *CommandContext, parent *TemporalEnvCommand) 
 	s.Command.Annotations["ignoresMissingEnv"] = "true"
 	s.Command.Flags().StringVarP(&s.Key, "key", "k", "", "Property name (required).")
 	s.Command.Flags().StringVarP(&s.Value, "value", "v", "", "Property value (required).")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalNexusCommand struct {
+	Parent  *TemporalCommand
+	Command cobra.Command
+	cliext.ClientOptions
+}
+
+func NewTemporalNexusCommand(cctx *CommandContext, parent *TemporalCommand) *TemporalNexusCommand {
+	var s TemporalNexusCommand
+	s.Parent = parent
+	s.Command.Use = "nexus"
+	s.Command.Short = "Start, list, and operate on Nexus Operations"
+	if hasHighlighting {
+		s.Command.Long = "Nexus Operation commands perform operations on Nexus\nOperation Executions:\n\n\x1b[1mtemporal nexus [command] [options]\x1b[0m\n\nFor example:\n\n\x1b[1mtemporal nexus operation list\x1b[0m"
+	} else {
+		s.Command.Long = "Nexus Operation commands perform operations on Nexus\nOperation Executions:\n\n```\ntemporal nexus [command] [options]\n```\n\nFor example:\n\n```\ntemporal nexus operation list\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalNexusOperationCommand(cctx, &s).Command)
+	s.ClientOptions.BuildFlags(s.Command.PersistentFlags())
+	return &s
+}
+
+type TemporalNexusOperationCommand struct {
+	Parent  *TemporalNexusCommand
+	Command cobra.Command
+}
+
+func NewTemporalNexusOperationCommand(cctx *CommandContext, parent *TemporalNexusCommand) *TemporalNexusOperationCommand {
+	var s TemporalNexusOperationCommand
+	s.Parent = parent
+	s.Command.Use = "operation"
+	s.Command.Short = "Commands for managing Nexus Operations"
+	if hasHighlighting {
+		s.Command.Long = "These commands manage Nexus Operation Executions.\n\nNexus Operation commands follow this syntax:\n\n\x1b[1mtemporal nexus operation [command] [options]\x1b[0m"
+	} else {
+		s.Command.Long = "These commands manage Nexus Operation Executions.\n\nNexus Operation commands follow this syntax:\n\n```\ntemporal nexus operation [command] [options]\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalNexusOperationCancelCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalNexusOperationCountCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalNexusOperationDescribeCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalNexusOperationExecuteCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalNexusOperationListCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalNexusOperationResultCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalNexusOperationStartCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalNexusOperationTerminateCommand(cctx, &s).Command)
+	return &s
+}
+
+type TemporalNexusOperationCancelCommand struct {
+	Parent  *TemporalNexusOperationCommand
+	Command cobra.Command
+	NexusOperationReferenceOptions
+	Reason string
+}
+
+func NewTemporalNexusOperationCancelCommand(cctx *CommandContext, parent *TemporalNexusOperationCommand) *TemporalNexusOperationCancelCommand {
+	var s TemporalNexusOperationCancelCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "cancel [flags]"
+	s.Command.Short = "Request cancellation of a Nexus Operation (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Request cancellation of a Nexus Operation.\n\n\x1b[1mtemporal nexus operation cancel \\\n    --operation-id YourOperationId\x1b[0m\n\nThe Operation handler determines how to handle the\ncancellation request."
+	} else {
+		s.Command.Long = "Request cancellation of a Nexus Operation.\n\n```\ntemporal nexus operation cancel \\\n    --operation-id YourOperationId\n```\n\nThe Operation handler determines how to handle the\ncancellation request."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for cancellation.")
+	s.NexusOperationReferenceOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalNexusOperationCountCommand struct {
+	Parent  *TemporalNexusOperationCommand
+	Command cobra.Command
+	Query   string
+}
+
+func NewTemporalNexusOperationCountCommand(cctx *CommandContext, parent *TemporalNexusOperationCommand) *TemporalNexusOperationCountCommand {
+	var s TemporalNexusOperationCountCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "count [flags]"
+	s.Command.Short = "Count Nexus Operations matching a query (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Return a count of Nexus Operations. Use \x1b[1m--query\x1b[0m\nto filter the operations to be counted.\n\n\x1b[1mtemporal nexus operation count \\\n    --query 'NexusEndpoint=\"YourEndpoint\"'\x1b[0m\n\nVisit https://docs.temporal.io/visibility to read more about\nSearch Attributes and queries."
+	} else {
+		s.Command.Long = "Return a count of Nexus Operations. Use `--query`\nto filter the operations to be counted.\n\n```\ntemporal nexus operation count \\\n    --query 'NexusEndpoint=\"YourEndpoint\"'\n```\n\nVisit https://docs.temporal.io/visibility to read more about\nSearch Attributes and queries."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Query to filter Nexus Operation Executions to count.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalNexusOperationDescribeCommand struct {
+	Parent  *TemporalNexusOperationCommand
+	Command cobra.Command
+	NexusOperationReferenceOptions
+	Raw bool
+}
+
+func NewTemporalNexusOperationDescribeCommand(cctx *CommandContext, parent *TemporalNexusOperationCommand) *TemporalNexusOperationDescribeCommand {
+	var s TemporalNexusOperationDescribeCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "describe [flags]"
+	s.Command.Short = "Show detailed info for a Nexus Operation (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Display detailed information about a specific Nexus\nOperation Execution.\n\n\x1b[1mtemporal nexus operation describe \\\n    --operation-id YourOperationId\x1b[0m"
+	} else {
+		s.Command.Long = "Display detailed information about a specific Nexus\nOperation Execution.\n\n```\ntemporal nexus operation describe \\\n    --operation-id YourOperationId\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().BoolVar(&s.Raw, "raw", false, "Print properties without changing their format.")
+	s.NexusOperationReferenceOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalNexusOperationExecuteCommand struct {
+	Parent  *TemporalNexusOperationCommand
+	Command cobra.Command
+	NexusOperationStartOptions
+	PayloadInputOptions
+}
+
+func NewTemporalNexusOperationExecuteCommand(cctx *CommandContext, parent *TemporalNexusOperationCommand) *TemporalNexusOperationExecuteCommand {
+	var s TemporalNexusOperationExecuteCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "execute [flags]"
+	s.Command.Short = "Start a new Nexus Operation and wait for its result (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Start a new Nexus Operation Execution and block until\nit completes. The result is output to stdout.\n\n\x1b[1mtemporal nexus operation execute \\\n    --endpoint YourEndpoint \\\n    --service YourService \\\n    --operation YourOperation \\\n    --operation-id YourOperationId \\\n    --input '{\"some-key\": \"some-value\"}'\x1b[0m"
+	} else {
+		s.Command.Long = "Start a new Nexus Operation Execution and block until\nit completes. The result is output to stdout.\n\n```\ntemporal nexus operation execute \\\n    --endpoint YourEndpoint \\\n    --service YourService \\\n    --operation YourOperation \\\n    --operation-id YourOperationId \\\n    --input '{\"some-key\": \"some-value\"}'\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.NexusOperationStartOptions.BuildFlags(s.Command.Flags())
+	s.PayloadInputOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalNexusOperationListCommand struct {
+	Parent   *TemporalNexusOperationCommand
+	Command  cobra.Command
+	Query    string
+	Limit    int
+	PageSize int
+}
+
+func NewTemporalNexusOperationListCommand(cctx *CommandContext, parent *TemporalNexusOperationCommand) *TemporalNexusOperationListCommand {
+	var s TemporalNexusOperationListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "List Nexus Operations matching a query (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "List Nexus Operations. Use \x1b[1m--query\x1b[0m to filter results.\n\n\x1b[1mtemporal nexus operation list \\\n    --query 'NexusEndpoint=\"YourEndpoint\"'\x1b[0m\n\nVisit https://docs.temporal.io/visibility to read more about\nSearch Attributes and queries."
+	} else {
+		s.Command.Long = "List Nexus Operations. Use `--query` to filter results.\n\n```\ntemporal nexus operation list \\\n    --query 'NexusEndpoint=\"YourEndpoint\"'\n```\n\nVisit https://docs.temporal.io/visibility to read more about\nSearch Attributes and queries."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Query to filter the Nexus Operation Executions to list.")
+	s.Command.Flags().IntVar(&s.Limit, "limit", 0, "Maximum number of Nexus Operation Executions to display.")
+	s.Command.Flags().IntVar(&s.PageSize, "page-size", 0, "Maximum number of Nexus Operation Executions to fetch at a time from the server.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalNexusOperationResultCommand struct {
+	Parent  *TemporalNexusOperationCommand
+	Command cobra.Command
+	NexusOperationReferenceOptions
+}
+
+func NewTemporalNexusOperationResultCommand(cctx *CommandContext, parent *TemporalNexusOperationCommand) *TemporalNexusOperationResultCommand {
+	var s TemporalNexusOperationResultCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "result [flags]"
+	s.Command.Short = "Wait for and output the result of a Nexus Operation (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Wait for a Nexus Operation to complete and output\nthe result.\n\n\x1b[1mtemporal nexus operation result \\\n    --operation-id YourOperationId\x1b[0m"
+	} else {
+		s.Command.Long = "Wait for a Nexus Operation to complete and output\nthe result.\n\n```\ntemporal nexus operation result \\\n    --operation-id YourOperationId\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.NexusOperationReferenceOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalNexusOperationStartCommand struct {
+	Parent  *TemporalNexusOperationCommand
+	Command cobra.Command
+	NexusOperationStartOptions
+	PayloadInputOptions
+}
+
+func NewTemporalNexusOperationStartCommand(cctx *CommandContext, parent *TemporalNexusOperationCommand) *TemporalNexusOperationStartCommand {
+	var s TemporalNexusOperationStartCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "start [flags]"
+	s.Command.Short = "Start a new Nexus Operation (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Start a new Nexus Operation. Outputs the\nOperation ID and Run ID.\n\n\x1b[1mtemporal nexus operation start \\\n    --endpoint YourEndpoint \\\n    --service YourService \\\n    --operation YourOperation \\\n    --operation-id YourOperationId \\\n    --input '{\"some-key\": \"some-value\"}'\x1b[0m"
+	} else {
+		s.Command.Long = "Start a new Nexus Operation. Outputs the\nOperation ID and Run ID.\n\n```\ntemporal nexus operation start \\\n    --endpoint YourEndpoint \\\n    --service YourService \\\n    --operation YourOperation \\\n    --operation-id YourOperationId \\\n    --input '{\"some-key\": \"some-value\"}'\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.NexusOperationStartOptions.BuildFlags(s.Command.Flags())
+	s.PayloadInputOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalNexusOperationTerminateCommand struct {
+	Parent  *TemporalNexusOperationCommand
+	Command cobra.Command
+	NexusOperationReferenceOptions
+	Reason string
+}
+
+func NewTemporalNexusOperationTerminateCommand(cctx *CommandContext, parent *TemporalNexusOperationCommand) *TemporalNexusOperationTerminateCommand {
+	var s TemporalNexusOperationTerminateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "terminate [flags]"
+	s.Command.Short = "Forcefully end a Nexus Operation (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Terminate a Nexus Operation.\n\n\x1b[1mtemporal nexus operation terminate \\\n    --operation-id YourOperationId \\\n    --reason YourReason\x1b[0m\n\nOperation handlers cannot see or respond to terminations."
+	} else {
+		s.Command.Long = "Terminate a Nexus Operation.\n\n```\ntemporal nexus operation terminate \\\n    --operation-id YourOperationId \\\n    --reason YourReason\n```\n\nOperation handlers cannot see or respond to terminations."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for termination. Defaults to a message with the current user's name.")
+	s.NexusOperationReferenceOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
