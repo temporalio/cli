@@ -1622,7 +1622,7 @@ commands:
   - name: temporal nexus
     summary: Start, list, and operate on Nexus Operations
     description: |
-      Nexus Operation commands perform operations on Standalone Nexus
+      Nexus Operation commands perform operations on Nexus
       Operation Executions:
 
       ```
@@ -1639,7 +1639,7 @@ commands:
     docs:
       description-header: >-
         Learn how to use Temporal Nexus commands for starting, listing,
-        and managing Standalone Nexus Operation Executions.
+        and managing Nexus Operation Executions.
       keywords:
         - nexus
         - nexus operation
@@ -1659,9 +1659,9 @@ commands:
         - Temporal CLI
 
   - name: temporal nexus operation
-    summary: Commands for managing Standalone Nexus Operations
+    summary: Commands for managing Nexus Operations
     description: |
-      These commands manage Standalone Nexus Operation Executions.
+      These commands manage Nexus Operation Executions.
 
       Nexus Operation commands follow this syntax:
 
@@ -1670,9 +1670,9 @@ commands:
       ```
 
   - name: temporal nexus operation start
-    summary: Start a new Standalone Nexus Operation (Experimental)
+    summary: Start a new Nexus Operation (Experimental)
     description: |
-      Start a new Standalone Nexus Operation. Outputs the
+      Start a new Nexus Operation. Outputs the
       Operation ID and Run ID.
 
       ```
@@ -1688,9 +1688,9 @@ commands:
       - payload-input
 
   - name: temporal nexus operation execute
-    summary: Start a new Standalone Nexus Operation and wait for its result (Experimental)
+    summary: Start a new Nexus Operation and wait for its result (Experimental)
     description: |
-      Start a new Standalone Nexus Operation Execution and block until
+      Start a new Nexus Operation Execution and block until
       it completes. The result is output to stdout.
 
       ```
@@ -1706,9 +1706,9 @@ commands:
       - payload-input
 
   - name: temporal nexus operation describe
-    summary: Show detailed info for a Standalone Nexus Operation (Experimental)
+    summary: Show detailed info for a Nexus Operation (Experimental)
     description: |
-      Display detailed information about a specific Standalone Nexus
+      Display detailed information about a specific Nexus
       Operation Execution.
 
       ```
@@ -1723,9 +1723,9 @@ commands:
         description: Print properties without changing their format.
 
   - name: temporal nexus operation cancel
-    summary: Request cancellation of a Standalone Nexus Operation (Experimental)
+    summary: Request cancellation of a Nexus Operation (Experimental)
     description: |
-      Request cancellation of a Standalone Nexus Operation.
+      Request cancellation of a Nexus Operation.
 
       ```
       temporal nexus operation cancel \
@@ -1742,9 +1742,9 @@ commands:
         description: Reason for cancellation.
 
   - name: temporal nexus operation terminate
-    summary: Forcefully end a Standalone Nexus Operation (Experimental)
+    summary: Forcefully end a Nexus Operation (Experimental)
     description: |
-      Terminate a Standalone Nexus Operation.
+      Terminate a Nexus Operation.
 
       ```
       temporal nexus operation terminate \
@@ -1763,9 +1763,9 @@ commands:
           Defaults to a message with the current user's name.
 
   - name: temporal nexus operation list
-    summary: List Standalone Nexus Operations matching a query (Experimental)
+    summary: List Nexus Operations matching a query (Experimental)
     description: |
-      List Standalone Nexus Operations. Use `--query` to filter results.
+      List Nexus Operations. Use `--query` to filter results.
 
       ```
       temporal nexus operation list \
@@ -1791,9 +1791,9 @@ commands:
           at a time from the server.
 
   - name: temporal nexus operation count
-    summary: Count Standalone Nexus Operations matching a query (Experimental)
+    summary: Count Nexus Operations matching a query (Experimental)
     description: |
-      Return a count of Standalone Nexus Operations. Use `--query`
+      Return a count of Nexus Operations. Use `--query`
       to filter the operations to be counted.
 
       ```
@@ -1811,9 +1811,9 @@ commands:
           Query to filter Nexus Operation Executions to count.
 
   - name: temporal nexus operation result
-    summary: Wait for and output the result of a Standalone Nexus Operation (Experimental)
+    summary: Wait for and output the result of a Nexus Operation (Experimental)
     description: |
-      Wait for a Standalone Nexus Operation to complete and output
+      Wait for a Nexus Operation to complete and output
       the result.
 
       ```
