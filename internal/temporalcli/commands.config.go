@@ -317,10 +317,8 @@ func writeEnvConfigFile(cctx *CommandContext, conf *envconfig.ClientConfig) erro
 	if configFile == "" {
 		configFile, _ = cctx.Options.EnvLookup.LookupEnv("TEMPORAL_CONFIG_FILE")
 		if configFile == "" {
-			var err error
-			if configFile, err = envconfig.DefaultConfigFilePath(); err != nil {
-				return err
-			}
+			configFile = envconfig.DefaultConfigFilePath()
+
 		}
 	}
 

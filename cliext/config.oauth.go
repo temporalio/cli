@@ -141,11 +141,7 @@ func resolveConfigAndProfile(configFilePath, profileName string, envLookup envco
 		configFilePath, _ = envLookup.LookupEnv("TEMPORAL_CONFIG_FILE")
 	}
 	if configFilePath == "" {
-		var err error
-		configFilePath, err = envconfig.DefaultConfigFilePath()
-		if err != nil {
-			return "", "", fmt.Errorf("failed to get default config path: %w", err)
-		}
+		configFilePath = envconfig.DefaultConfigFilePath()
 	}
 
 	// Resolve profile name.
