@@ -238,22 +238,24 @@ commands:
         description: |
           Result to return.
           Use JSON content or set --result-meta to override.
-          Can't be combined with --result-file.
+          Can't be combined with --result-file. Exactly one of --result
+          or --result-file must be supplied.
       - name: result-file
         type: string
         description: |
           A path for result file.
-          Use JSON content or set --result-file to override.
+          Use JSON content or set --result-meta to override.
           Can't be combined with --result.
       - name: result-meta
         type: string
         description: |
           Result payload metadata as a `KEY=VALUE` pair.
-          When the KEY is "encoding", this overrides the default ("json/plain").
+          When the KEY is "encoding", this overrides the default
+          ("json/plain").
       - name: result-base64
         type: bool
         description: |
-          Assume result is base64-encoded and attempt to decode them.
+          Assume result is base64-encoded and attempt to decode it.
 
   - name: temporal activity count
     summary: Count Standalone Activities matching a query (Experimental)
@@ -350,17 +352,18 @@ commands:
         type: string
         description: |
           A path for result file.
-          Use JSON content or set --detail-file to override.
+          Use JSON content or set --detail-meta to override.
           Can't be combined with --detail.
       - name: detail-meta
         type: string
         description: |
           Result payload metadata as a `KEY=VALUE` pair.
-          When the KEY is "encoding", this overrides the default ("json/plain").
+          When the KEY is "encoding", this overrides the default
+          ("json/plain").
       - name: detail-base64
         type: bool
         description: |
-          Assume detail is base64-encoded and attempt to decode them.
+          Assume detail is base64-encoded and attempt to decode it.
       - name: reason
         type: string
         description: |
