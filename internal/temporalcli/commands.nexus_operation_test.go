@@ -426,27 +426,15 @@ func (s *SharedServerSuite) TestNexusOperationStart_JSON() {
 	s.Equal(opID, result.OperationId)
 	s.NotEmpty(result.RunId)
 }
-
-func (s *SharedServerSuite) TestNexusOperationStart_ServerGeneratedID() {
-	endpointName, w := s.setupNexusEndpointAndWorker(s.T())
-	defer w.Stop()
-
+func (s *SharedServerSuite) TestNexusOperationStart_OperationIDRequired() {
 	res := s.Execute(
 		"nexus", "operation", "start",
-		"--address", s.Address(),
-		"--endpoint", endpointName,
+		"--endpoint", "test-ep",
 		"--service", "test-service",
 		"--operation", "test-op",
-		"--input", `"hello"`,
-		"--output", "json",
 	)
-	s.NoError(res.Err)
-
-	var result struct {
-		OperationId string `json:"operationId"`
-	}
-	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &result))
-	s.NotEmpty(result.OperationId, "server should generate an operation ID")
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "operation-id")
 }
 
 func (s *SharedServerSuite) TestNexusOperationStart_ScheduleToCloseTimeout() {
