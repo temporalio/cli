@@ -22,6 +22,7 @@ import (
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/worker"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
 )
 
 type versionSummariesRowType struct {
@@ -894,17 +895,21 @@ func validateAWSLambdaProviderDetails(details map[string]any) error {
 
 // awsLambdaProviderDetailsPayload returns the encoded Payload representing AWS
 // Lambda compute provider details.
-func (c *TemporalWorkerDeploymentCreateVersionCommand) awsLambdaProviderDetailsPayload() (*commonpb.Payload, error) {
+func awsLambdaProviderDetailsPayload(
+	functionARN string,
+	assumeRoleARN string,
+	assumeRoleExternalID string,
+) (*commonpb.Payload, error) {
 	// Map keys from temporal-auto-scaled-workers:
 	// https://github.com/temporalio/temporal-auto-scaled-workers/blob/c4a7e69b6504365d7e5326b0b8e6cd95e3293f96/wci/workflow/compute_provider/aws_lambda.go#L16-L20
 	providerDetails := map[string]any{
-		"arn": c.AwsLambdaFunctionArn,
+		"arn": functionARN,
 	}
-	if c.AwsLambdaAssumeRoleArn != "" {
-		providerDetails["role"] = c.AwsLambdaAssumeRoleArn
+	if assumeRoleARN != "" {
+		providerDetails["role"] = assumeRoleARN
 	}
-	if c.AwsLambdaAssumeRoleExternalId != "" {
-		providerDetails["role_external_id"] = c.AwsLambdaAssumeRoleExternalId
+	if assumeRoleExternalID != "" {
+		providerDetails["role_external_id"] = assumeRoleExternalID
 	}
 	err := validateAWSLambdaProviderDetails(providerDetails)
 	if err != nil {
@@ -929,7 +934,11 @@ func (c *TemporalWorkerDeploymentCreateVersionCommand) run(cctx *CommandContext,
 
 	var cc *computepb.ComputeConfig
 	if c.AwsLambdaFunctionArn != "" {
-		detailsPayload, err := c.awsLambdaProviderDetailsPayload()
+		detailsPayload, err := awsLambdaProviderDetailsPayload(
+			c.AwsLambdaFunctionArn,
+			c.AwsLambdaAssumeRoleArn,
+			c.AwsLambdaAssumeRoleExternalId,
+		)
 		if err != nil {
 			return err
 		}
@@ -966,6 +975,82 @@ func (c *TemporalWorkerDeploymentCreateVersionCommand) run(cctx *CommandContext,
 	}
 
 	cctx.Printer.Println("Successfully created worker deployment version")
+	return nil
+}
+
+func (c *TemporalWorkerDeploymentUpdateVersionComputeConfigCommand) run(cctx *CommandContext, args []string) error {
+	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	ns := c.Parent.Parent.Namespace
+	buildID := c.BuildId
+	identity := c.Parent.Parent.Identity
+	deploymentName := c.DeploymentName
+	requestID := uuid.NewString()
+
+	request := &workflowservice.UpdateWorkerDeploymentVersionComputeConfigRequest{
+		Namespace: ns,
+		DeploymentVersion: &deployment.WorkerDeploymentVersion{
+			DeploymentName: deploymentName,
+			BuildId:        buildID,
+		},
+		Identity:  identity,
+		RequestId: requestID,
+	}
+
+	if c.Remove {
+		if c.AwsLambdaFunctionArn != "" || c.AwsLambdaAssumeRoleArn != "" || c.AwsLambdaAssumeRoleExternalId != "" {
+			return fmt.Errorf("--remove cannot be combined with --aws-lambda-function-arn, --aws-lambda-assume-role-arn, or --aws-lambda-assume-role-external-id")
+		}
+		request.RemoveComputeConfigScalingGroups = []string{"default"}
+	} else {
+		detailsPayload, err := awsLambdaProviderDetailsPayload(
+			c.AwsLambdaFunctionArn,
+			c.AwsLambdaAssumeRoleArn,
+			c.AwsLambdaAssumeRoleExternalId,
+		)
+		if err != nil {
+			return err
+		}
+		sg := &computepb.ComputeConfigScalingGroup{
+			Provider: &computepb.ComputeProvider{
+				Type:    "aws-lambda",
+				Details: detailsPayload,
+			},
+			Scaler: &computepb.ComputeScaler{
+				// Hard-coded: no-sync is the only supported algorithm
+				// in temporal-auto-scaled-workers as of 2026-04-01.
+				Type: "no-sync",
+			},
+		}
+		updatePaths := []string{
+			"provider.details",
+		}
+		ccScalingGroups := map[string]*computepb.ComputeConfigScalingGroupUpdate{
+			"default": &computepb.ComputeConfigScalingGroupUpdate{
+				ScalingGroup: sg,
+				UpdateMask: &fieldmaskpb.FieldMask{
+					Paths: updatePaths,
+				},
+			},
+		}
+		request.ComputeConfigScalingGroups = ccScalingGroups
+
+	}
+
+	_, err = cl.WorkflowService().UpdateWorkerDeploymentVersionComputeConfig(cctx, request)
+	if err != nil {
+		return fmt.Errorf("error updating worker deployment version compute config: %w", err)
+	}
+
+	if c.Remove {
+		cctx.Printer.Println("Successfully removed worker deployment version compute config")
+	} else {
+		cctx.Printer.Println("Successfully updated worker deployment version compute config")
+	}
 	return nil
 }
 
