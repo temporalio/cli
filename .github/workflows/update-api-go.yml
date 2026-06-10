@@ -103,3 +103,6 @@ jobs:
             and, if needed, fold in coordinated `go.temporal.io/sdk` / `server` bumps
             before merging.
           labels: dependencies
+          reviewers: |
+            spkane31
+            chaptersix
