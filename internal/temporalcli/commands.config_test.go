@@ -347,6 +347,7 @@ func TestConfig_Set(t *testing.T) {
 		"address":                       "my-address",
 		"namespace":                     "my-namespace",
 		"api_key":                       "my-api-key",
+		"authority":                     "my-authority",
 		"codec.endpoint":                "my-endpoint",
 		"codec.auth":                    "my-auth",
 		"grpc_meta.sOme_header1":        "some-value1",
@@ -377,6 +378,7 @@ func TestConfig_Set(t *testing.T) {
 					"address":   "my-address",
 					"namespace": "my-namespace",
 					"api_key":   "my-api-key",
+					"authority": "my-authority",
 					"tls": map[string]any{
 						"disabled":                  true,
 						"client_cert_path":          "my-client-cert-path",
