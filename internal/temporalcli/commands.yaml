@@ -1092,6 +1092,8 @@ commands:
       If a Worker Deployment Version with the supplied BuildID already exists,
       this command will return an error.
 
+      Returns an error if all compute configuration fields are empty.
+
       Note: This is an experimental feature and may change in the future.
     option-sets:
       - deployment-version
