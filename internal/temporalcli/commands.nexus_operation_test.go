@@ -734,41 +734,12 @@ func (s *SharedServerSuite) TestNexusOperationExecute_MissingOperationID() {
 	s.Error(res.Err)
 }
 
-func (s *SharedServerSuite) TestNexusOperationStart_StaticSummary() {
+func (s *SharedServerSuite) TestNexusOperationStart_OptionalStartFlags() {
 	endpointName, w := s.setupNexusEndpointAndWorker(s.T())
 	defer w.Stop()
 
-	opID := "summary-op-" + uuid.NewString()[:8]
+	opID := "optional-flags-op-" + uuid.NewString()[:8]
 	summary := "this is the operation summary"
-
-	res := s.Execute(
-		"nexus", "operation", "start",
-		"--address", s.Address(),
-		"--endpoint", endpointName,
-		"--service", "test-service",
-		"--operation", "test-op",
-		"--operation-id", opID,
-		"--input", `"hello"`,
-		"--static-summary", summary,
-	)
-	s.NoError(res.Err)
-
-	// Describe and verify the summary is reported back.
-	s.Eventually(func() bool {
-		res = s.Execute(
-			"nexus", "operation", "describe",
-			"--address", s.Address(),
-			"--operation-id", opID,
-		)
-		return res.Err == nil && strings.Contains(res.Stdout.String(), summary)
-	}, 30*time.Second, 500*time.Millisecond)
-}
-
-func (s *SharedServerSuite) TestNexusOperationStart_SearchAttribute() {
-	endpointName, w := s.setupNexusEndpointAndWorker(s.T())
-	defer w.Stop()
-
-	opID := "sa-op-" + uuid.NewString()[:8]
 	uniqueKW := "nexus-sa-" + uuid.NewString()[:8]
 
 	res := s.Execute(
@@ -779,12 +750,26 @@ func (s *SharedServerSuite) TestNexusOperationStart_SearchAttribute() {
 		"--operation", "test-op",
 		"--operation-id", opID,
 		"--input", `"hello"`,
+		"--static-summary", summary,
 		"--search-attribute", fmt.Sprintf(`CustomKeywordField="%s"`, uniqueKW),
+		"--schedule-to-close-timeout", "1m",
+		"--schedule-to-start-timeout", "30s",
+		"--start-to-close-timeout", "30s",
 	)
 	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), opID)
 
-	// List with a query filter on the search attribute — confirms the SA was
-	// attached and indexed.
+	// Describe and verify summary is reported back.
+	s.Eventually(func() bool {
+		res = s.Execute(
+			"nexus", "operation", "describe",
+			"--address", s.Address(),
+			"--operation-id", opID,
+		)
+		return res.Err == nil && strings.Contains(res.Stdout.String(), summary)
+	}, 30*time.Second, 500*time.Millisecond)
+
+	// List with a query filter on the search attribute — confirms the SA was attached and indexed.
 	s.Eventually(func() bool {
 		res = s.Execute(
 			"nexus", "operation", "list",
@@ -795,24 +780,17 @@ func (s *SharedServerSuite) TestNexusOperationStart_SearchAttribute() {
 	}, 30*time.Second, 500*time.Millisecond)
 }
 
-func (s *SharedServerSuite) TestNexusOperationStart_Timeouts() {
-	endpointName, w := s.setupNexusEndpointAndWorker(s.T())
-	defer w.Stop()
-
-	opID := "timeouts-op-" + uuid.NewString()[:8]
-
+func (s *SharedServerSuite) TestNexusOperationStart_InvalidSearchAttribute() {
 	res := s.Execute(
 		"nexus", "operation", "start",
 		"--address", s.Address(),
-		"--endpoint", endpointName,
+		"--endpoint", "test-ep",
 		"--service", "test-service",
 		"--operation", "test-op",
-		"--operation-id", opID,
-		"--input", `"hello"`,
-		"--schedule-to-close-timeout", "1m",
-		"--schedule-to-start-timeout", "30s",
-		"--start-to-close-timeout", "30s",
+		"--operation-id", "some-id",
+		"--search-attribute", "CustomKeywordField=not-valid-json",
 	)
-	s.NoError(res.Err)
-	s.Contains(res.Stdout.String(), opID)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "invalid search attribute")
 }
+
