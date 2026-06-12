@@ -979,6 +979,7 @@ commands:
         - worker deployment set-ramping-version
         - worker deployment delete-version
         - worker deployment update-version-metadata
+        - worker deployment update-version-compute-config
         - worker deployment manager-identity
 
   - name: temporal worker deployment create
@@ -1318,6 +1319,72 @@ commands:
         description: |
           Keys of entries to be deleted from metadata.
           Can be passed multiple times.
+
+  - name: temporal worker deployment update-version-compute-config
+    summary: Update compute configuration for a Version
+    description: |
+      Update compute configuration associated with a Worker Deployment
+      Version.
+
+      For example, to update the AWS Lambda function ARN associated with an
+      existing Worker Deployment Version:
+
+      ```
+       temporal worker deployment update-version-compute-config \
+          --deployment-name YourDeploymentName --build-id YourBuildID \
+          --aws-lambda-function-arn UpdatedLambdaFunctionARN
+      ```
+
+      To update the AWS IAM role ARN that is assumed by the serverless worker
+      manager associated with an existing Worker Deployment Version:
+
+      ```
+       temporal worker deployment update-version-compute-config \
+          --deployment-name YourDeploymentName --build-id YourBuildID \
+          --aws-lambda-assume-role-arn UpdatedRoleARN
+      ```
+
+      If --remove is specified, the compute configuration for the Worker
+      Deployment Version will be removed:
+
+      ```
+       temporal worker deployment update-version-compute-config \
+          --deployment-name YourDeploymentName --build-id YourBuildID \
+          --remove
+      ```
+      
+      If a Worker Deployment Version with the supplied BuildID does not exist,
+      this command will return an error.
+
+      Note: This is an experimental feature and may change in the future.
+    option-sets:
+      - deployment-version
+    options:
+      - name: aws-lambda-function-arn
+        type: string
+        description: |
+          Qualified (contains version suffix) or unqualified AWS Lambda
+          function ARN to invoke when there are no active pollers for task
+          queue targets in the Worker Deployment.
+      - name: aws-lambda-assume-role-arn
+        type: string
+        description: |
+          AWS IAM role ARN that the Temporal server will assume when invoking
+          the Lambda function that spawns a new Worker in this Worker
+          Deployment Version. Required when --aws-lambda-function-arn is
+          specified.
+      - name: aws-lambda-assume-role-external-id
+        type: string
+        description: |
+          Temporal server will enforce that the AWS IAM trust policy associated
+          with the AWS IAM role specified in --aws-lambda-assume-role-arn has
+          an aws:ExternalId condition that matches the supplied value. Required
+          when --aws-lambda-function-arn is specified.
+      - name: remove
+        type: bool
+        description: |
+          Removes any compute configuration associated with this Worker
+          Deployment Version.
 
   - name: temporal worker deployment manager-identity
     summary: Manager Identity commands change the `ManagerIdentity` of a Worker Deployment
@@ -5222,13 +5289,22 @@ option-sets:
         required: true
       - name: operation-id
         type: string
-        description: |
-          Nexus Operation ID.
-          If not supplied, a unique ID is generated.
+        description: Nexus Operation ID.
+        required: true
       - name: schedule-to-close-timeout
         type: duration
         description: |
           Total time the operation is allowed to run.
+      - name: schedule-to-start-timeout
+        type: duration
+        description: |
+          Maximum time to wait for an operation to be started (or completed
+          synchronously) by a handler.
+      - name: start-to-close-timeout
+        type: duration
+        description: |
+          Maximum time to wait for an asynchronous operation to complete
+          after it has been started.
       - name: id-conflict-policy
         type: string-enum
         description: |
@@ -5246,6 +5322,19 @@ option-sets:
         enum-values:
           - AllowDuplicate
           - RejectDuplicate
+      - name: search-attribute
+        type: string[]
+        description: |
+          Search Attribute in `KEY=VALUE` format.
+          Keys must be identifiers, and values must be JSON values.
+          For example: 'YourKey={"your": "value"}'.
+          Can be passed multiple times.
+      - name: static-summary
+        type: string
+        experimental: true
+        description: |
+          Static summary for the Nexus Operation for human consumption in UIs.
+          Uses Temporal Markdown formatting, should be a single line.
 
   - name: query-modifiers
     options:

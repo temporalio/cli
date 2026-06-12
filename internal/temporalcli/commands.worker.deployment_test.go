@@ -1292,6 +1292,32 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
 	)
 	s.Error(res.Err)
 	s.ErrorContains(res.Err, "missing required AWS Lambda provider detail: role")
+
+	// Attempting to update the compute config for a non-existent WDV
+	// should fail.
+	nonExistingBuildID := "non-existing"
+	res = s.Execute(
+		"worker", "deployment", "update-version-compute-config",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", nonExistingBuildID,
+		"--aws-lambda-function-arn", invokeARN,
+		"--aws-lambda-assume-role-arn", assumeRoleARN,
+		"--aws-lambda-assume-role-external-id", assumeRoleExternalID,
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "build ID 'non-existing' not found")
+
+	// Same for attempting to remove the compute config for a non-existent WDV.
+	res = s.Execute(
+		"worker", "deployment", "update-version-compute-config",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", nonExistingBuildID,
+		"--remove",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "build ID 'non-existing' not found")
 }
 
 // TODO(jaypipes): Enable this test when we have a way of ensuring AWS resource
@@ -1384,4 +1410,30 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_LambdaComputeConfi
 	jsonOut := jsonDeploymentVersionInfoType{}
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
 	s.NotNil(jsonOut.ComputeConfig, "ComputeConfig should not be nil.")
+
+	// We should be able to update the compute config.
+	invokeARN2 := "arn:aws:lambda:us-east-1:123456789012:function:MyExampleFunction:2"
+	assumeRoleARN2 := "arn:aws:iam::123456789012:role/MyServiceRole2"
+	res = s.Execute(
+		"worker", "deployment", "update-version-compute-config",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", computeConfigBuildID,
+		"--aws-lambda-function-arn", invokeARN2,
+		"--aws-lambda-assume-role-arn", assumeRoleARN2,
+		"--aws-lambda-assume-role-external-id", assumeRoleExternalID,
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Successfully updated worker deployment version compute config")
+
+	// As well as remove the compute config.
+	res = s.Execute(
+		"worker", "deployment", "update-version-compute-config",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", computeConfigBuildID,
+		"--remove",
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Successfully removed worker deployment version compute config")
 }

@@ -360,8 +360,12 @@ type NexusOperationStartOptions struct {
 	Operation              string
 	OperationId            string
 	ScheduleToCloseTimeout cliext.FlagDuration
+	ScheduleToStartTimeout cliext.FlagDuration
+	StartToCloseTimeout    cliext.FlagDuration
 	IdConflictPolicy       cliext.FlagStringEnum
 	IdReusePolicy          cliext.FlagStringEnum
+	SearchAttribute        []string
+	StaticSummary          string
 	FlagSet                *pflag.FlagSet
 }
 
@@ -373,13 +377,20 @@ func (v *NexusOperationStartOptions) BuildFlags(f *pflag.FlagSet) {
 	_ = cobra.MarkFlagRequired(f, "service")
 	f.StringVar(&v.Operation, "operation", "", "Nexus Operation name. Required.")
 	_ = cobra.MarkFlagRequired(f, "operation")
-	f.StringVar(&v.OperationId, "operation-id", "", "Nexus Operation ID. If not supplied, a unique ID is generated.")
+	f.StringVar(&v.OperationId, "operation-id", "", "Nexus Operation ID. Required.")
+	_ = cobra.MarkFlagRequired(f, "operation-id")
 	v.ScheduleToCloseTimeout = 0
 	f.Var(&v.ScheduleToCloseTimeout, "schedule-to-close-timeout", "Total time the operation is allowed to run.")
+	v.ScheduleToStartTimeout = 0
+	f.Var(&v.ScheduleToStartTimeout, "schedule-to-start-timeout", "Maximum time to wait for an operation to be started (or completed synchronously) by a handler.")
+	v.StartToCloseTimeout = 0
+	f.Var(&v.StartToCloseTimeout, "start-to-close-timeout", "Maximum time to wait for an asynchronous operation to complete after it has been started.")
 	v.IdConflictPolicy = cliext.NewFlagStringEnum([]string{"Fail", "UseExisting", "TerminateExisting"}, "")
 	f.Var(&v.IdConflictPolicy, "id-conflict-policy", "Policy for handling an Operation ID conflict with a running operation. Accepted values: Fail, UseExisting, TerminateExisting.")
 	v.IdReusePolicy = cliext.NewFlagStringEnum([]string{"AllowDuplicate", "RejectDuplicate"}, "")
 	f.Var(&v.IdReusePolicy, "id-reuse-policy", "Policy for re-using an Operation ID from a previously closed operation. Accepted values: AllowDuplicate, RejectDuplicate.")
+	f.StringArrayVar(&v.SearchAttribute, "search-attribute", nil, "Search Attribute in `KEY=VALUE` format. Keys must be identifiers, and values must be JSON values. For example: 'YourKey={\"your\": \"value\"}'. Can be passed multiple times.")
+	f.StringVar(&v.StaticSummary, "static-summary", "", "Static summary for the Nexus Operation for human consumption in UIs. Uses Temporal Markdown formatting, should be a single line. EXPERIMENTAL.")
 }
 
 type QueryModifiersOptions struct {
@@ -3587,6 +3598,7 @@ func NewTemporalWorkerDeploymentCommand(cctx *CommandContext, parent *TemporalWo
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentManagerIdentityCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentSetCurrentVersionCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentSetRampingVersionCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkerDeploymentUpdateVersionComputeConfigCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentUpdateVersionMetadataCommand(cctx, &s).Command)
 	return &s
 }
@@ -3933,6 +3945,41 @@ func NewTemporalWorkerDeploymentSetRampingVersionCommand(cctx *CommandContext, p
 	s.Command.Flags().BoolVar(&s.AllowNoPollers, "allow-no-pollers", false, "Override protection and set version as ramping even if it has no pollers.")
 	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm set Ramping Version.")
 	s.DeploymentVersionOrUnversionedOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalWorkerDeploymentUpdateVersionComputeConfigCommand struct {
+	Parent  *TemporalWorkerDeploymentCommand
+	Command cobra.Command
+	DeploymentVersionOptions
+	AwsLambdaFunctionArn          string
+	AwsLambdaAssumeRoleArn        string
+	AwsLambdaAssumeRoleExternalId string
+	Remove                        bool
+}
+
+func NewTemporalWorkerDeploymentUpdateVersionComputeConfigCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentCommand) *TemporalWorkerDeploymentUpdateVersionComputeConfigCommand {
+	var s TemporalWorkerDeploymentUpdateVersionComputeConfigCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "update-version-compute-config [flags]"
+	s.Command.Short = "Update compute configuration for a Version"
+	if hasHighlighting {
+		s.Command.Long = "Update compute configuration associated with a Worker Deployment\nVersion.\n\nFor example, to update the AWS Lambda function ARN associated with an\nexisting Worker Deployment Version:\n\n\x1b[1m temporal worker deployment update-version-compute-config \\\n    --deployment-name YourDeploymentName --build-id YourBuildID \\\n    --aws-lambda-function-arn UpdatedLambdaFunctionARN\x1b[0m\n\nTo update the AWS IAM role ARN that is assumed by the serverless worker\nmanager associated with an existing Worker Deployment Version:\n\n\x1b[1m temporal worker deployment update-version-compute-config \\\n    --deployment-name YourDeploymentName --build-id YourBuildID \\\n    --aws-lambda-assume-role-arn UpdatedRoleARN\x1b[0m\n\nIf --remove is specified, the compute configuration for the Worker\nDeployment Version will be removed:\n\n\x1b[1m temporal worker deployment update-version-compute-config \\\n    --deployment-name YourDeploymentName --build-id YourBuildID \\\n    --remove\x1b[0m\n\nIf a Worker Deployment Version with the supplied BuildID does not exist,\nthis command will return an error.\n\nNote: This is an experimental feature and may change in the future."
+	} else {
+		s.Command.Long = "Update compute configuration associated with a Worker Deployment\nVersion.\n\nFor example, to update the AWS Lambda function ARN associated with an\nexisting Worker Deployment Version:\n\n```\n temporal worker deployment update-version-compute-config \\\n    --deployment-name YourDeploymentName --build-id YourBuildID \\\n    --aws-lambda-function-arn UpdatedLambdaFunctionARN\n```\n\nTo update the AWS IAM role ARN that is assumed by the serverless worker\nmanager associated with an existing Worker Deployment Version:\n\n```\n temporal worker deployment update-version-compute-config \\\n    --deployment-name YourDeploymentName --build-id YourBuildID \\\n    --aws-lambda-assume-role-arn UpdatedRoleARN\n```\n\nIf --remove is specified, the compute configuration for the Worker\nDeployment Version will be removed:\n\n```\n temporal worker deployment update-version-compute-config \\\n    --deployment-name YourDeploymentName --build-id YourBuildID \\\n    --remove\n```\n\nIf a Worker Deployment Version with the supplied BuildID does not exist,\nthis command will return an error.\n\nNote: This is an experimental feature and may change in the future."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.AwsLambdaFunctionArn, "aws-lambda-function-arn", "", "Qualified (contains version suffix) or unqualified AWS Lambda function ARN to invoke when there are no active pollers for task queue targets in the Worker Deployment.")
+	s.Command.Flags().StringVar(&s.AwsLambdaAssumeRoleArn, "aws-lambda-assume-role-arn", "", "AWS IAM role ARN that the Temporal server will assume when invoking the Lambda function that spawns a new Worker in this Worker Deployment Version. Required when --aws-lambda-function-arn is specified.")
+	s.Command.Flags().StringVar(&s.AwsLambdaAssumeRoleExternalId, "aws-lambda-assume-role-external-id", "", "Temporal server will enforce that the AWS IAM trust policy associated with the AWS IAM role specified in --aws-lambda-assume-role-arn has an aws:ExternalId condition that matches the supplied value. Required when --aws-lambda-function-arn is specified.")
+	s.Command.Flags().BoolVar(&s.Remove, "remove", false, "Removes any compute configuration associated with this Worker Deployment Version.")
+	s.DeploymentVersionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
