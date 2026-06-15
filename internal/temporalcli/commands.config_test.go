@@ -151,6 +151,30 @@ disable_host_verification = true`))
 	}
 }
 
+func TestConfig_Get_NoTLSWhenUnconfigured(t *testing.T) {
+	// Regression test for #1077: `config get` (table output) must not display
+	// "tls true" for a profile that has no TLS configuration.
+	h := NewCommandHarness(t)
+	defer h.Close()
+
+	f, err := os.CreateTemp("", "")
+	h.NoError(err)
+	defer os.Remove(f.Name())
+	_, err = f.Write([]byte(`
+[profile.devtest]
+address = "localhost:17233"
+namespace = "default"`))
+	f.Close()
+	h.NoError(err)
+	h.Options.EnvLookup = EnvLookupMap{"TEMPORAL_CONFIG_FILE": f.Name(), "TEMPORAL_PROFILE": "devtest"}
+
+	res := h.Execute("config", "get")
+	h.NoError(res.Err)
+	h.Contains(res.Stdout.String(), "localhost:17233")
+	// No TLS section was configured, so "tls" should not appear at all.
+	h.NotContains(res.Stdout.String(), "tls")
+}
+
 func TestConfig_TLS_Boolean(t *testing.T) {
 	h := NewCommandHarness(t)
 	defer h.Close()
