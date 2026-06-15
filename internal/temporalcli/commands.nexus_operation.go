@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/fatih/color"
-	"github.com/google/uuid"
 	"github.com/temporalio/cli/internal/printer"
 	"go.temporal.io/api/common/v1"
 	enumspb "go.temporal.io/api/enums/v1"
@@ -448,14 +447,22 @@ func buildNexusStartOptions(s *NexusOperationStartOptions, p *PayloadInputOption
 		Service:  s.Service,
 	}
 
-	operationID := s.OperationId
-	if operationID == "" {
-		operationID = uuid.NewString()
+	opts := client.StartNexusOperationOptions{
+		ID:                     s.OperationId,
+		ScheduleToCloseTimeout: s.ScheduleToCloseTimeout.Duration(),
+		ScheduleToStartTimeout: s.ScheduleToStartTimeout.Duration(),
+		StartToCloseTimeout:    s.StartToCloseTimeout.Duration(),
+		Summary:                s.StaticSummary,
 	}
 
-	opts := client.StartNexusOperationOptions{
-		ID:                     operationID,
-		ScheduleToCloseTimeout: s.ScheduleToCloseTimeout.Duration(),
+	if len(s.SearchAttribute) > 0 {
+		saMap, err := stringKeysJSONValues(s.SearchAttribute, false)
+		if err != nil {
+			return nexusCl, nil, fmt.Errorf("invalid search attribute values: %w", err)
+		}
+		if opts.SearchAttributes, err = mapToSearchAttributes(saMap); err != nil {
+			return nexusCl, nil, err
+		}
 	}
 
 	if s.IdConflictPolicy.Value != "" {

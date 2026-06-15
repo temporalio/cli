@@ -1092,6 +1092,8 @@ commands:
       If a Worker Deployment Version with the supplied BuildID already exists,
       this command will return an error.
 
+      Returns an error if all compute configuration fields are empty.
+
       Note: This is an experimental feature and may change in the future.
     option-sets:
       - deployment-version
@@ -5289,13 +5291,22 @@ option-sets:
         required: true
       - name: operation-id
         type: string
-        description: |
-          Nexus Operation ID.
-          If not supplied, a unique ID is generated.
+        description: Nexus Operation ID.
+        required: true
       - name: schedule-to-close-timeout
         type: duration
         description: |
           Total time the operation is allowed to run.
+      - name: schedule-to-start-timeout
+        type: duration
+        description: |
+          Maximum time to wait for an operation to be started (or completed
+          synchronously) by a handler.
+      - name: start-to-close-timeout
+        type: duration
+        description: |
+          Maximum time to wait for an asynchronous operation to complete
+          after it has been started.
       - name: id-conflict-policy
         type: string-enum
         description: |
@@ -5313,6 +5324,19 @@ option-sets:
         enum-values:
           - AllowDuplicate
           - RejectDuplicate
+      - name: search-attribute
+        type: string[]
+        description: |
+          Search Attribute in `KEY=VALUE` format.
+          Keys must be identifiers, and values must be JSON values.
+          For example: 'YourKey={"your": "value"}'.
+          Can be passed multiple times.
+      - name: static-summary
+        type: string
+        experimental: true
+        description: |
+          Static summary for the Nexus Operation for human consumption in UIs.
+          Uses Temporal Markdown formatting, should be a single line.
 
   - name: query-modifiers
     options:
