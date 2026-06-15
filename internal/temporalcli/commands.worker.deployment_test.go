@@ -1153,49 +1153,67 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_EmptyComputeConfig
 	// worker deployment create-version` CLI command.
 	noComputeConfigBuildID := uuid.NewString()
 
+	// Attempting to create a WDV with no compute provider configuration should
+	// fail.
 	res := s.Execute(
 		"worker", "deployment", "create-version",
 		"--address", s.Address(),
 		"--deployment-name", deploymentName,
 		"--build-id", noComputeConfigBuildID,
 	)
-	s.NoError(res.Err)
-	s.Contains(res.Stdout.String(), "Successfully created worker deployment version")
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "missing configuration for compute provider")
 
-	// Wait for the deployment version to appear
-	s.EventuallyWithT(func(t *assert.CollectT) {
+	// TODO(jaypipes): Uncomment the test block below once support for Cloud
+	// Run is added. When we add another compute provider, we can test for the
+	// return of a duplicate WDV. Until that point, we cannot create an "empty"
+	// WDV to test the build ID existence.
+
+	/*
 		res := s.Execute(
-			"worker", "deployment", "describe-version",
+			"worker", "deployment", "create-version",
 			"--address", s.Address(),
 			"--deployment-name", deploymentName,
 			"--build-id", noComputeConfigBuildID,
 		)
-		assert.NoError(t, res.Err)
-	}, 30*time.Second, 100*time.Millisecond)
+		s.NoError(res.Err)
+		s.Contains(res.Stdout.String(), "Successfully created worker deployment version")
 
-	// Check that there is no compute config returned for this WDV
-	res = s.Execute(
-		"worker", "deployment", "describe-version",
-		"--address", s.Address(),
-		"--deployment-name", deploymentName,
-		"--build-id", noComputeConfigBuildID,
-		"--output", "json",
-	)
-	s.NoError(res.Err)
-	var jsonOut jsonDeploymentVersionInfoType
-	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
-	s.Nil(jsonOut.ComputeConfig, "ComputeConfig should be nil.")
+		// Wait for the deployment version to appear
+		s.EventuallyWithT(func(t *assert.CollectT) {
+			res := s.Execute(
+				"worker", "deployment", "describe-version",
+				"--address", s.Address(),
+				"--deployment-name", deploymentName,
+				"--build-id", noComputeConfigBuildID,
+			)
+			assert.NoError(t, res.Err)
+		}, 30*time.Second, 100*time.Millisecond)
 
-	// Attempting to create a WDV with the same BuildID should fail with a
-	// conflict error.
-	res = s.Execute(
-		"worker", "deployment", "create-version",
-		"--address", s.Address(),
-		"--deployment-name", deploymentName,
-		"--build-id", noComputeConfigBuildID,
-	)
-	s.Error(res.Err)
-	s.ErrorContains(res.Err, "already exists")
+		// Check that there is no compute config returned for this WDV
+		res = s.Execute(
+			"worker", "deployment", "describe-version",
+			"--address", s.Address(),
+			"--deployment-name", deploymentName,
+			"--build-id", noComputeConfigBuildID,
+			"--output", "json",
+		)
+		s.NoError(res.Err)
+		var jsonOut jsonDeploymentVersionInfoType
+		s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+		s.Nil(jsonOut.ComputeConfig, "ComputeConfig should be nil.")
+
+		// Attempting to create a WDV with the same BuildID should fail with a
+		// conflict error.
+		res = s.Execute(
+			"worker", "deployment", "create-version",
+			"--address", s.Address(),
+			"--deployment-name", deploymentName,
+			"--build-id", noComputeConfigBuildID,
+		)
+		s.Error(res.Err)
+		s.ErrorContains(res.Err, "already exists")
+	*/
 }
 
 func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
