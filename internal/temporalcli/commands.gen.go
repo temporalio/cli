@@ -360,8 +360,12 @@ type NexusOperationStartOptions struct {
 	Operation              string
 	OperationId            string
 	ScheduleToCloseTimeout cliext.FlagDuration
+	ScheduleToStartTimeout cliext.FlagDuration
+	StartToCloseTimeout    cliext.FlagDuration
 	IdConflictPolicy       cliext.FlagStringEnum
 	IdReusePolicy          cliext.FlagStringEnum
+	SearchAttribute        []string
+	StaticSummary          string
 	FlagSet                *pflag.FlagSet
 }
 
@@ -373,13 +377,20 @@ func (v *NexusOperationStartOptions) BuildFlags(f *pflag.FlagSet) {
 	_ = cobra.MarkFlagRequired(f, "service")
 	f.StringVar(&v.Operation, "operation", "", "Nexus Operation name. Required.")
 	_ = cobra.MarkFlagRequired(f, "operation")
-	f.StringVar(&v.OperationId, "operation-id", "", "Nexus Operation ID. If not supplied, a unique ID is generated.")
+	f.StringVar(&v.OperationId, "operation-id", "", "Nexus Operation ID. Required.")
+	_ = cobra.MarkFlagRequired(f, "operation-id")
 	v.ScheduleToCloseTimeout = 0
 	f.Var(&v.ScheduleToCloseTimeout, "schedule-to-close-timeout", "Total time the operation is allowed to run.")
+	v.ScheduleToStartTimeout = 0
+	f.Var(&v.ScheduleToStartTimeout, "schedule-to-start-timeout", "Maximum time to wait for an operation to be started (or completed synchronously) by a handler.")
+	v.StartToCloseTimeout = 0
+	f.Var(&v.StartToCloseTimeout, "start-to-close-timeout", "Maximum time to wait for an asynchronous operation to complete after it has been started.")
 	v.IdConflictPolicy = cliext.NewFlagStringEnum([]string{"Fail", "UseExisting", "TerminateExisting"}, "")
 	f.Var(&v.IdConflictPolicy, "id-conflict-policy", "Policy for handling an Operation ID conflict with a running operation. Accepted values: Fail, UseExisting, TerminateExisting.")
 	v.IdReusePolicy = cliext.NewFlagStringEnum([]string{"AllowDuplicate", "RejectDuplicate"}, "")
 	f.Var(&v.IdReusePolicy, "id-reuse-policy", "Policy for re-using an Operation ID from a previously closed operation. Accepted values: AllowDuplicate, RejectDuplicate.")
+	f.StringArrayVar(&v.SearchAttribute, "search-attribute", nil, "Search Attribute in `KEY=VALUE` format. Keys must be identifiers, and values must be JSON values. For example: 'YourKey={\"your\": \"value\"}'. Can be passed multiple times.")
+	f.StringVar(&v.StaticSummary, "static-summary", "", "Static summary for the Nexus Operation for human consumption in UIs. Uses Temporal Markdown formatting, should be a single line. EXPERIMENTAL.")
 }
 
 type QueryModifiersOptions struct {
