@@ -259,6 +259,7 @@ var envConfigPropsToFieldNames = map[string]string{
 	"address":                       "Address",
 	"namespace":                     "Namespace",
 	"api_key":                       "APIKey",
+	"authority":                     "Authority",
 	"tls":                           "TLS",
 	"tls.disabled":                  "Disabled",
 	"tls.client_cert_path":          "ClientCertPath",
@@ -317,10 +318,8 @@ func writeEnvConfigFile(cctx *CommandContext, conf *envconfig.ClientConfig) erro
 	if configFile == "" {
 		configFile, _ = cctx.Options.EnvLookup.LookupEnv("TEMPORAL_CONFIG_FILE")
 		if configFile == "" {
-			var err error
-			if configFile, err = envconfig.DefaultConfigFilePath(); err != nil {
-				return err
-			}
+			configFile = envconfig.DefaultConfigFilePath()
+
 		}
 	}
 
