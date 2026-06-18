@@ -40,6 +40,23 @@ type (
 	}
 )
 
+// Targeting errors for the activity operate commands. They name every flag a
+// caller can use so the failure tells the user exactly how to retarget:
+//   - a single Activity: --activity-id, optionally with --workflow-id (workflow
+//     Activity) and/or --run-id (specific run; standalone when no --workflow-id)
+//   - a batch of workflow Activities: --query
+var (
+	// errActivityTarget is used by the operations that support batching
+	// (unpause, reset, update-options).
+	errActivityTarget = errors.New("must specify --activity-id to target a single Activity " +
+		"(optionally with --workflow-id and/or --run-id), or --query to target a batch of Activities")
+
+	// errPauseActivityTarget is the pause equivalent; pause has no --query
+	// (batch) mode.
+	errPauseActivityTarget = errors.New("must specify --activity-id to pause an Activity " +
+		"(optionally with --workflow-id and/or --run-id)")
+)
+
 func (c *TemporalActivityStartCommand) run(cctx *CommandContext, args []string) error {
 	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
@@ -741,28 +758,42 @@ func (c *TemporalActivityUpdateOptionsCommand) run(cctx *CommandContext, args []
 		Rps:        c.Rps,
 	}
 
-	exec, batchReq, err := opts.workflowExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{})
-	if err != nil {
-		return err
+	// Target a workflow Activity (--workflow-id), a standalone Activity (no
+	// --workflow-id; the latest run unless --run-id is set), or a batch of
+	// workflow Activities (--query). The server routes to standalone-activity
+	// handling when the workflow ID is empty, so standalone Activities take the
+	// single-execution path below.
+	var exec *common.WorkflowExecution
+	var batchReq *workflowservice.StartBatchOperationRequest
+	if c.WorkflowId == "" && c.Query == "" {
+		if c.ActivityId == "" {
+			return errActivityTarget
+		}
+		exec = &common.WorkflowExecution{RunId: c.RunId}
+	} else {
+		exec, batchReq, err = opts.workflowExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{})
+		if err != nil {
+			return err
+		}
 	}
 
 	if exec != nil {
 		if c.ActivityId == "" {
-			return fmt.Errorf("either --activity-id and --workflow-id, or --query must be set")
+			return errActivityTarget
 		}
-		result, err := cl.WorkflowService().UpdateActivityOptions(cctx, &workflowservice.UpdateActivityOptionsRequest{
-			Namespace: c.Parent.Namespace,
-			Execution: &common.WorkflowExecution{
-				WorkflowId: c.WorkflowId,
-				RunId:      c.RunId,
-			},
-			Activity:        &workflowservice.UpdateActivityOptionsRequest_Id{Id: c.ActivityId},
-			ActivityOptions: activityOptions,
-			UpdateMask: &fieldmaskpb.FieldMask{
-				Paths: updatePath,
-			},
-			Identity: c.Parent.Identity,
-		})
+		result, err := cl.WorkflowService().UpdateActivityExecutionOptions(
+			cctx,
+			&workflowservice.UpdateActivityExecutionOptionsRequest{
+				Namespace:       c.Parent.Namespace,
+				WorkflowId:      c.WorkflowId,
+				RunId:           c.RunId,
+				ActivityId:      c.ActivityId,
+				ActivityOptions: activityOptions,
+				UpdateMask: &fieldmaskpb.FieldMask{
+					Paths: updatePath,
+				},
+				Identity: c.Parent.Identity,
+			})
 		if err != nil {
 			return fmt.Errorf("unable to update Activity options: %w", err)
 		}
@@ -805,8 +836,12 @@ func (c *TemporalActivityUpdateOptionsCommand) run(cctx *CommandContext, args []
 
 func (c *TemporalActivityPauseCommand) run(cctx *CommandContext, args []string) error {
 	if c.ActivityId == "" {
-		return fmt.Errorf("Activity Id must be specified")
+		return errPauseActivityTarget
 	}
+	// Set --workflow-id to target a workflow Activity. Omit it to target a
+	// standalone Activity by --activity-id (and optionally --run-id for a
+	// specific run); the server routes to standalone-activity handling when the
+	// workflow ID is empty.
 
 	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
@@ -814,21 +849,19 @@ func (c *TemporalActivityPauseCommand) run(cctx *CommandContext, args []string) 
 	}
 	defer cl.Close()
 
-	request := &workflowservice.PauseActivityRequest{
-		Namespace: c.Parent.Namespace,
-		Execution: &common.WorkflowExecution{
-			WorkflowId: c.WorkflowId,
-			RunId:      c.RunId,
-		},
-		Identity: c.Identity,
-		Reason:   c.Reason,
-		Activity: &workflowservice.PauseActivityRequest_Id{Id: c.ActivityId},
+	request := &workflowservice.PauseActivityExecutionRequest{
+		Namespace:  c.Parent.Namespace,
+		WorkflowId: c.WorkflowId,
+		ActivityId: c.ActivityId,
+		RunId:      c.RunId,
+		Identity:   c.Identity,
+		Reason:     c.Reason,
 	}
 	if request.Identity == "" {
 		request.Identity = c.Parent.Identity
 	}
 
-	_, err = cl.WorkflowService().PauseActivity(cctx, request)
+	_, err = cl.WorkflowService().PauseActivityExecution(cctx, request)
 	if err != nil {
 		return fmt.Errorf("unable to pause Activity: %w", err)
 	}
@@ -854,30 +887,42 @@ func (c *TemporalActivityUnpauseCommand) run(cctx *CommandContext, args []string
 		Rps:        c.Rps,
 	}
 
-	exec, batchReq, err := opts.workflowExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{})
-	if err != nil {
-		return err
+	// Target a workflow Activity (--workflow-id), a standalone Activity (no
+	// --workflow-id; the latest run unless --run-id is set), or a batch of
+	// workflow Activities (--query). The server routes to standalone-activity
+	// handling when the workflow ID is empty, so standalone Activities take the
+	// single-execution path below.
+	var exec *common.WorkflowExecution
+	var batchReq *workflowservice.StartBatchOperationRequest
+	if c.WorkflowId == "" && c.Query == "" {
+		if c.ActivityId == "" {
+			return errActivityTarget
+		}
+		exec = &common.WorkflowExecution{RunId: c.RunId}
+	} else {
+		exec, batchReq, err = opts.workflowExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{})
+		if err != nil {
+			return err
+		}
 	}
 
 	if exec != nil { // single workflow operation
 		if c.ActivityId == "" {
-			return fmt.Errorf("either --activity-id and --workflow-id, or --query must be set")
+			return errActivityTarget
 		}
 
-		request := &workflowservice.UnpauseActivityRequest{
-			Namespace: c.Parent.Namespace,
-			Execution: &common.WorkflowExecution{
-				WorkflowId: c.WorkflowId,
-				RunId:      c.RunId,
-			},
+		request := &workflowservice.UnpauseActivityExecutionRequest{
+			Namespace:      c.Parent.Namespace,
+			WorkflowId:     c.WorkflowId,
+			ActivityId:     c.ActivityId,
+			RunId:          c.RunId,
 			ResetAttempts:  c.ResetAttempts,
 			ResetHeartbeat: c.ResetHeartbeats,
 			Jitter:         durationpb.New(c.Jitter.Duration()),
 			Identity:       c.Parent.Identity,
-			Activity:       &workflowservice.UnpauseActivityRequest_Id{Id: c.ActivityId},
 		}
 
-		_, err = cl.WorkflowService().UnpauseActivity(cctx, request)
+		_, err = cl.WorkflowService().UnpauseActivityExecution(cctx, request)
 		if err != nil {
 			return fmt.Errorf("unable to unpause an Activity: %w", err)
 		}
@@ -920,29 +965,41 @@ func (c *TemporalActivityResetCommand) run(cctx *CommandContext, args []string) 
 		Rps:        c.Rps,
 	}
 
-	exec, batchReq, err := opts.workflowExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{})
-	if err != nil {
-		return err
+	// Target a workflow Activity (--workflow-id), a standalone Activity (no
+	// --workflow-id; the latest run unless --run-id is set), or a batch of
+	// workflow Activities (--query). The server routes to standalone-activity
+	// handling when the workflow ID is empty, so standalone Activities take the
+	// single-execution path below.
+	var exec *common.WorkflowExecution
+	var batchReq *workflowservice.StartBatchOperationRequest
+	if c.WorkflowId == "" && c.Query == "" {
+		if c.ActivityId == "" {
+			return errActivityTarget
+		}
+		exec = &common.WorkflowExecution{RunId: c.RunId}
+	} else {
+		exec, batchReq, err = opts.workflowExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{})
+		if err != nil {
+			return err
+		}
 	}
 
 	if exec != nil { // single workflow operation
 		if c.ActivityId == "" {
-			return fmt.Errorf("either --activity-id and --workflow-id, or --query must be set")
+			return errActivityTarget
 		}
 
-		request := &workflowservice.ResetActivityRequest{
-			Activity:  &workflowservice.ResetActivityRequest_Id{Id: c.ActivityId},
-			Namespace: c.Parent.Namespace,
-			Execution: &common.WorkflowExecution{
-				WorkflowId: c.WorkflowId,
-				RunId:      c.RunId,
-			},
+		request := &workflowservice.ResetActivityExecutionRequest{
+			Namespace:      c.Parent.Namespace,
+			WorkflowId:     c.WorkflowId,
+			ActivityId:     c.ActivityId,
+			RunId:          c.RunId,
 			Identity:       c.Parent.Identity,
 			KeepPaused:     c.KeepPaused,
 			ResetHeartbeat: c.ResetHeartbeats,
 		}
 
-		resp, err := cl.WorkflowService().ResetActivity(cctx, request)
+		resp, err := cl.WorkflowService().ResetActivityExecution(cctx, request)
 		if err != nil {
 			return fmt.Errorf("unable to reset an Activity: %w", err)
 		}
