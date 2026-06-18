@@ -537,9 +537,9 @@ func NewTemporalActivityCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.Use = "activity"
 	s.Command.Short = "Operate on Activity Executions"
 	if hasHighlighting {
-		s.Command.Long = "Perform operations on Activity Executions.\n\n\x1b[1mtemporal activity start \\\n    --activity-id YourActivityId \\\n    --type YourActivity \\\n    --task-queue YourTaskQueue \\\n    --start-to-close-timeout 5m\x1b[0m\n\nUse a subcommand to start, inspect, or operate on Activity Executions."
+		s.Command.Long = "Perform operations on Activity Executions.\n\n\x1b[1mtemporal activity start \\\n    --activity-id YourActivityId \\\n    --type YourActivity \\\n    --task-queue YourTaskQueue \\\n    --start-to-close-timeout 5m\x1b[0m"
 	} else {
-		s.Command.Long = "Perform operations on Activity Executions.\n\n```\ntemporal activity start \\\n    --activity-id YourActivityId \\\n    --type YourActivity \\\n    --task-queue YourTaskQueue \\\n    --start-to-close-timeout 5m\n```\n\nUse a subcommand to start, inspect, or operate on Activity Executions."
+		s.Command.Long = "Perform operations on Activity Executions.\n\n```\ntemporal activity start \\\n    --activity-id YourActivityId \\\n    --type YourActivity \\\n    --task-queue YourTaskQueue \\\n    --start-to-close-timeout 5m\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalActivityCancelCommand(cctx, &s).Command)
@@ -694,9 +694,9 @@ func NewTemporalActivityExecuteCommand(cctx *CommandContext, parent *TemporalAct
 	s.Command.Use = "execute [flags]"
 	s.Command.Short = "Start a new Standalone Activity and wait for its result (Experimental)"
 	if hasHighlighting {
-		s.Command.Long = "Start a new Standalone Activity and block until it completes.\nThe result is output to stdout.\n\n\x1b[1mtemporal activity execute \\\n    --activity-id YourActivityId \\\n    --type YourActivity \\\n    --task-queue YourTaskQueue \\\n    --start-to-close-timeout 30s \\\n    --input '{\"YourInputKey\": \"YourInputValue\"}'\x1b[0m\n\nThe command exits after the Activity completes."
+		s.Command.Long = "Start a new Standalone Activity and block until it completes.\nThe result is output to stdout.\n\n\x1b[1mtemporal activity execute \\\n    --activity-id YourActivityId \\\n    --type YourActivity \\\n    --task-queue YourTaskQueue \\\n    --start-to-close-timeout 30s \\\n    --input '{\"some-key\": \"some-value\"}'\x1b[0m\n\nThe command exits after the Activity completes."
 	} else {
-		s.Command.Long = "Start a new Standalone Activity and block until it completes.\nThe result is output to stdout.\n\n```\ntemporal activity execute \\\n    --activity-id YourActivityId \\\n    --type YourActivity \\\n    --task-queue YourTaskQueue \\\n    --start-to-close-timeout 30s \\\n    --input '{\"YourInputKey\": \"YourInputValue\"}'\n```\n\nThe command exits after the Activity completes."
+		s.Command.Long = "Start a new Standalone Activity and block until it completes.\nThe result is output to stdout.\n\n```\ntemporal activity execute \\\n    --activity-id YourActivityId \\\n    --type YourActivity \\\n    --task-queue YourTaskQueue \\\n    --start-to-close-timeout 30s \\\n    --input '{\"some-key\": \"some-value\"}'\n```\n\nThe command exits after the Activity completes."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.ActivityStartOptions.BuildFlags(s.Command.Flags())
@@ -892,9 +892,9 @@ func NewTemporalActivityStartCommand(cctx *CommandContext, parent *TemporalActiv
 	s.Command.Use = "start [flags]"
 	s.Command.Short = "Start a new Standalone Activity (Experimental)"
 	if hasHighlighting {
-		s.Command.Long = "Start a new Standalone Activity. Outputs the Activity ID and\nRun ID.\n\n\x1b[1mtemporal activity start \\\n    --activity-id YourActivityId \\\n    --type YourActivity \\\n    --task-queue YourTaskQueue \\\n    --start-to-close-timeout 5m \\\n    --input '{\"YourInputKey\": \"YourInputValue\"}'\x1b[0m\n\nThe command returns the Activity ID and Run ID."
+		s.Command.Long = "Start a new Standalone Activity. Outputs the Activity ID and\nRun ID.\n\n\x1b[1mtemporal activity start \\\n    --activity-id YourActivityId \\\n    --type YourActivity \\\n    --task-queue YourTaskQueue \\\n    --start-to-close-timeout 5m \\\n    --input '{\"some-key\": \"some-value\"}'\x1b[0m\n\nThe command returns the Activity ID and Run ID."
 	} else {
-		s.Command.Long = "Start a new Standalone Activity. Outputs the Activity ID and\nRun ID.\n\n```\ntemporal activity start \\\n    --activity-id YourActivityId \\\n    --type YourActivity \\\n    --task-queue YourTaskQueue \\\n    --start-to-close-timeout 5m \\\n    --input '{\"YourInputKey\": \"YourInputValue\"}'\n```\n\nThe command returns the Activity ID and Run ID."
+		s.Command.Long = "Start a new Standalone Activity. Outputs the Activity ID and\nRun ID.\n\n```\ntemporal activity start \\\n    --activity-id YourActivityId \\\n    --type YourActivity \\\n    --task-queue YourTaskQueue \\\n    --start-to-close-timeout 5m \\\n    --input '{\"some-key\": \"some-value\"}'\n```\n\nThe command returns the Activity ID and Run ID."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.ActivityStartOptions.BuildFlags(s.Command.Flags())
