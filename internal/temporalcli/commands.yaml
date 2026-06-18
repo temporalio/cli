@@ -157,8 +157,6 @@ commands:
           --task-queue YourTaskQueue \
           --start-to-close-timeout 5m
       ```
-
-      Use a subcommand to start, inspect, or operate on Activity Executions.
     option-sets:
       - client
     docs:
@@ -301,7 +299,7 @@ commands:
           --type YourActivity \
           --task-queue YourTaskQueue \
           --start-to-close-timeout 30s \
-          --input '{"YourInputKey": "YourInputValue"}'
+          --input '{"some-key": "some-value"}'
       ```
 
       The command exits after the Activity completes.
@@ -716,7 +714,7 @@ commands:
           --type YourActivity \
           --task-queue YourTaskQueue \
           --start-to-close-timeout 5m \
-          --input '{"YourInputKey": "YourInputValue"}'
+          --input '{"some-key": "some-value"}'
       ```
 
       The command returns the Activity ID and Run ID.
