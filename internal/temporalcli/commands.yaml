@@ -149,6 +149,16 @@ commands:
     summary: Operate on Activity Executions
     description: |
       Perform operations on Activity Executions.
+
+      ```
+      temporal activity start \
+          --activity-id YourActivityId \
+          --type YourActivity \
+          --task-queue YourTaskQueue \
+          --start-to-close-timeout 5m
+      ```
+
+      Use a subcommand to start, inspect, or operate on Activity Executions.
     option-sets:
       - client
     docs:
@@ -212,6 +222,9 @@ commands:
           --workflow-id YourWorkflowId \
           --result '{"YourResultKey": "YourResultVal"}'
       ```
+
+      Omit `--workflow-id` to target a Standalone Activity by Activity ID
+      and optional Run ID.
     options:
       - name: activity-id
         short: a
@@ -267,6 +280,8 @@ commands:
       temporal activity describe \
           --activity-id YourActivityId
       ```
+
+      If `--run-id` is omitted, the latest Activity run is described.
     option-sets:
       - activity-reference
     options:
@@ -286,8 +301,10 @@ commands:
           --type YourActivity \
           --task-queue YourTaskQueue \
           --start-to-close-timeout 30s \
-          --input '{"some-key": "some-value"}'
+          --input '{"YourInputKey": "YourInputValue"}'
       ```
+
+      The command exits after the Activity completes.
     option-sets:
       - activity-start
       - payload-input
@@ -302,6 +319,9 @@ commands:
           --activity-id YourActivityId \
           --workflow-id YourWorkflowId
       ```
+
+      Omit `--workflow-id` to target a Standalone Activity by Activity ID
+      and optional Run ID.
     options:
       - name: activity-id
         short: a
@@ -384,7 +404,8 @@ commands:
           --retry-maximum-attempts NewMaximumAttempts
       ```
 
-      You may follow this command with `temporal activity reset`, and the new values will apply after the reset.
+      You may follow this command with `temporal activity reset`, and the new
+      values will apply after the reset.
 
       Either `--activity-id` or `--query` must be specified.
 
@@ -395,12 +416,17 @@ commands:
           --query 'WorkflowType="YourWorkflow"' \
           --task-queue NewTaskQueueName
       ```
+
+      Omit `--workflow-id` to target a Standalone Activity by Activity ID
+      and optional Run ID.
     options:
       - name: activity-id
         short: a
         type: string
         description: |
-          The Activity ID to update options. Mutually exclusive with `--query`. Set `--workflow-id` to target a workflow Activity, or omit it to target a standalone Activity (the latest run unless `--run-id` is set).
+          The Activity ID to update options. Mutually exclusive with `--query`.
+          Set `--workflow-id` to target a workflow Activity, or omit it to target
+          a standalone Activity (the latest run unless `--run-id` is set).
       - name: task-queue
         type: string
         description: Name of the task queue for the Activity.
@@ -534,7 +560,7 @@ commands:
       N specified in its retry policy, `--reset-attempts` will allow the
       Activity to be retried another N times after unpausing.
 
-      Use `--reset-heartbeat` to reset the Activity's heartbeats.
+      Use `--reset-heartbeats` to reset the Activity's heartbeats.
 
       Either `--activity-id` (with `--workflow-id` for a workflow Activity, or
       alone for a standalone Activity) or `--query` must be specified.
@@ -544,8 +570,8 @@ commands:
       ```
       temporal activity unpause \
           --activity-id YourActivityId \
-          --workflow-id YourWorkflowId
-          --reset-attempts
+          --workflow-id YourWorkflowId \
+          --reset-attempts \
           --reset-heartbeats
       ```
 
@@ -555,12 +581,17 @@ commands:
       temporal activity unpause \
           --query 'TemporalPauseInfo IS NOT NULL'
       ```
+
+      Omit `--workflow-id` to target a Standalone Activity by Activity ID
+      and optional Run ID.
     options:
       - name: activity-id
         short: a
         type: string
         description: |
-          The Activity ID to unpause. Mutually exclusive with `--query`. Set `--workflow-id` to target a workflow Activity, or omit it to target a standalone Activity (the latest run unless `--run-id` is set).
+          The Activity ID to unpause. Mutually exclusive with `--query`.
+          Set `--workflow-id` to target a workflow Activity, or omit it to target
+          a standalone Activity (the latest run unless `--run-id` is set).
       - name: reset-attempts
         type: bool
         description: Reset the activity attempts.
@@ -590,32 +621,33 @@ commands:
       will apply immediately.
 
       If the activity is already paused, it will be unpaused by default.
-      You can specify `keep_paused` to prevent this.
+      You can specify `--keep-paused` to prevent this.
 
-      If the activity is paused and the `keep_paused` flag is not provided,
-      it will be unpaused. If the activity is paused and `keep_paused` flag
-      is provided - it will stay paused.
+      If the activity is paused and the `--keep-paused` flag is not provided,
+      it will be unpaused. If the activity is paused and the `--keep-paused`
+      flag is provided, it will stay paused.
 
       Either `--activity-id` (with `--workflow-id` for a workflow Activity, or
       alone for a standalone Activity) or `--query` must be specified.
 
       ### Resetting activities that heartbeat {#reset-heartbeats}
 
-      Activities that heartbeat will receive a [Canceled failure](/references/failures#cancelled-failure)
-      the next time they heartbeat after a reset.
+      Activities that heartbeat will receive a
+      [Canceled failure](/references/failures#cancelled-failure) the next time
+      they heartbeat after a reset.
 
       If, in your Activity, you need to do any cleanup when an Activity is
       reset, handle this error and then re-throw it when you've cleaned up.
 
-      If the `reset_heartbeats` flag is set, the heartbeat details will also be cleared.
+      If the `--reset-heartbeats` flag is set, the heartbeat details will also be cleared.
 
       Specify the Activity and Workflow IDs:
 
       ```
       temporal activity reset \
           --activity-id YourActivityId \
-          --workflow-id YourWorkflowId
-          --keep-paused
+          --workflow-id YourWorkflowId \
+          --keep-paused \
           --reset-heartbeats
       ```
 
@@ -625,11 +657,17 @@ commands:
       temporal activity reset \
           --query 'WorkflowType="YourWorkflow"'
       ```
+
+      Omit `--workflow-id` to target a Standalone Activity by Activity ID
+      and optional Run ID.
     options:
       - name: activity-id
         short: a
         type: string
-        description: The Activity ID to reset. Mutually exclusive with `--query`. Set `--workflow-id` to target a workflow Activity, or omit it to target a standalone Activity (the latest run unless `--run-id` is set).
+        description: |
+          The Activity ID to reset. Mutually exclusive with `--query`.
+          Set `--workflow-id` to target a workflow Activity, or omit it to target
+          a standalone Activity (the latest run unless `--run-id` is set).
       - name: keep-paused
         type: bool
         description: If the activity was paused, it will stay paused.
@@ -661,6 +699,8 @@ commands:
       temporal activity result \
           --activity-id YourActivityId
       ```
+
+      If `--run-id` is omitted, the latest Activity run is used.
     option-sets:
       - activity-reference
 
@@ -676,8 +716,10 @@ commands:
           --type YourActivity \
           --task-queue YourTaskQueue \
           --start-to-close-timeout 5m \
-          --input '{"some-key": "some-value"}'
+          --input '{"YourInputKey": "YourInputValue"}'
       ```
+
+      The command returns the Activity ID and Run ID.
     option-sets:
       - activity-start
       - payload-input
