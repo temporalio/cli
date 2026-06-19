@@ -4085,6 +4085,17 @@ commands:
           --versioning-override-build-id YourDeploymentBuildId
       ```
 
+      or to move the workflow execution to a Worker Deployment Version until
+      the next Workflow Task completes there, set behavior to `one_time`:
+
+      ```
+      temporal workflow update-options \
+          --workflow-id YourWorkflowId \
+          --versioning-override-behavior one_time \
+          --versioning-override-deployment-name YourDeploymentName \
+          --versioning-override-build-id YourDeploymentBuildId
+      ```
+
       To remove any previous overrides, set the behavior to
       `unspecified`:
 
@@ -4107,17 +4118,18 @@ commands:
         enum-values:
           - unspecified
           - pinned
+          - one_time
           - auto_upgrade
       - name: versioning-override-deployment-name
         type: string
         description:
-          When overriding to a `pinned` behavior, specifies the Deployment Name of the
-          version to target.
+          When overriding to a `pinned` or `one_time` behavior, specifies the
+          Deployment Name of the version to target.
       - name: versioning-override-build-id
         type: string
         description:
-          When overriding to a `pinned` behavior, specifies the Build ID of the
-          version to target.
+          When overriding to a `pinned` or `one_time` behavior, specifies the
+          Build ID of the version to target.
   - name: temporal workflow query
     summary: Retrieve Workflow Execution state
     description: |
@@ -5364,17 +5376,18 @@ option-sets:
         required: true
         enum-values:
           - pinned
+          - one_time
           - auto_upgrade
       - name: versioning-override-deployment-name
         type: string
         description:
-          When overriding to a `pinned` behavior, specifies the Deployment Name of the
-          version to target.
+          When overriding to a `pinned` or `one_time` behavior, specifies the
+          Deployment Name of the version to target.
       - name: versioning-override-build-id
         type: string
         description:
-          When overriding to a `pinned` behavior, specifies the Build ID of the
-          version to target.
+          When overriding to a `pinned` or `one_time` behavior, specifies the
+          Build ID of the version to target.
 
   - name: activity-reference
     options:
