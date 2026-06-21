@@ -7,19 +7,23 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/nexus-rpc/sdk-go/nexus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/temporalio/cli/internal/temporalcli"
 	commandpb "go.temporal.io/api/command/v1"
 	"go.temporal.io/api/common/v1"
+	deploymentpb "go.temporal.io/api/deployment/v1"
 	"go.temporal.io/api/enums/v1"
 	historypb "go.temporal.io/api/history/v1"
 	nexuspb "go.temporal.io/api/nexus/v1"
 	"go.temporal.io/api/operatorservice/v1"
 	taskqueuepb "go.temporal.io/api/taskqueue/v1"
+	workflowpb "go.temporal.io/api/workflow/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/api/workflowservice/v1/workflowservicenexus"
 	"go.temporal.io/sdk/client"
@@ -28,6 +32,7 @@ import (
 	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
 	"go.temporal.io/server/common/payloads"
+	"google.golang.org/grpc"
 )
 
 func (s *SharedServerSuite) TestWorkflow_Describe_ActivityFailing() {
@@ -734,6 +739,87 @@ func (s *SharedServerSuite) TestWorkflow_Describe_Deployment() {
 	s.Equal(version.BuildID, versioningInfo.DeploymentVersion.BuildId)
 	s.Equal(version.DeploymentName, versioningInfo.DeploymentVersion.DeploymentName)
 	s.Nil(versioningInfo.VersioningOverride)
+}
+
+func (s *SharedServerSuite) TestWorkflow_Describe_OneTimeOverride() {
+	workflowID := "workflow-" + uuid.NewString()
+	runID := "run-" + uuid.NewString()
+	taskQueue := "task-queue-" + uuid.NewString()
+	baseDeploymentName := "base-deployment-" + uuid.NewString()
+	baseBuildID := "base-build-" + uuid.NewString()
+	targetDeploymentName := "target-deployment-" + uuid.NewString()
+	targetBuildID := "target-build-" + uuid.NewString()
+
+	var lastRequestLock sync.Mutex
+	var describeRequest *workflowservice.DescribeWorkflowExecutionRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string, req, reply any,
+			cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption,
+		) error {
+			if r, ok := req.(*workflowservice.DescribeWorkflowExecutionRequest); ok {
+				lastRequestLock.Lock()
+				describeRequest = r
+				lastRequestLock.Unlock()
+
+				resp := reply.(*workflowservice.DescribeWorkflowExecutionResponse)
+				resp.WorkflowExecutionInfo = &workflowpb.WorkflowExecutionInfo{
+					Execution: &common.WorkflowExecution{
+						WorkflowId: workflowID,
+						RunId:      runID,
+					},
+					Type:      &common.WorkflowType{Name: "DevWorkflow"},
+					Status:    enums.WORKFLOW_EXECUTION_STATUS_RUNNING,
+					TaskQueue: taskQueue,
+					VersioningInfo: &workflowpb.WorkflowExecutionVersioningInfo{
+						Behavior: enums.VERSIONING_BEHAVIOR_AUTO_UPGRADE,
+						DeploymentVersion: &deploymentpb.WorkerDeploymentVersion{
+							DeploymentName: baseDeploymentName,
+							BuildId:        baseBuildID,
+						},
+						VersioningOverride: &workflowpb.VersioningOverride{
+							Override: &workflowpb.VersioningOverride_OneTime{
+								OneTime: &workflowpb.VersioningOverride_OneTimeOverride{
+									TargetDeploymentVersion: &deploymentpb.WorkerDeploymentVersion{
+										DeploymentName: targetDeploymentName,
+										BuildId:        targetBuildID,
+									},
+								},
+							},
+						},
+					},
+				}
+				return nil
+			}
+			return invoker(ctx, method, req, reply, cc, opts...)
+		}),
+	)
+
+	res := s.Execute(
+		"workflow", "describe",
+		"--address", s.Address(),
+		"-w", workflowID,
+		"-r", runID,
+	)
+	require.NoError(s.T(), res.Err)
+
+	lastRequestLock.Lock()
+	req := describeRequest
+	lastRequestLock.Unlock()
+
+	require.NotNil(s.T(), req)
+	s.Equal(workflowID, req.GetExecution().GetWorkflowId())
+	s.Equal(runID, req.GetExecution().GetRunId())
+
+	out := res.Stdout.String()
+	s.ContainsOnSameLine(out, "Behavior", "AutoUpgrade")
+	s.ContainsOnSameLine(out, "DeploymentName", baseDeploymentName)
+	s.ContainsOnSameLine(out, "BuildId", baseBuildID)
+	s.ContainsOnSameLine(out, "OverrideBehavior", "OneTime")
+	s.ContainsOnSameLine(out, "OverrideTargetVersionDeploymentName", targetDeploymentName)
+	s.ContainsOnSameLine(out, "OverrideTargetVersionBuildId", targetBuildID)
 }
 
 func (s *SharedServerSuite) TestWorkflow_Describe_NexusOperationAndCallback() {
