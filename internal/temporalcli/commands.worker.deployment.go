@@ -957,6 +957,9 @@ func (c *TemporalWorkerDeploymentCreateVersionCommand) run(cctx *CommandContext,
 				},
 			},
 		}
+	} else {
+		// We do not allow creation of an "empty" WDV.
+		return fmt.Errorf("missing configuration for compute provider")
 	}
 	request := &workflowservice.CreateWorkerDeploymentVersionRequest{
 		Namespace: ns,
