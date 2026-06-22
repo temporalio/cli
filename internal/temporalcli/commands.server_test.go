@@ -1,7 +1,6 @@
 package temporalcli_test
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"net"
@@ -16,7 +15,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/temporalio/cli/internal/devserver"
-	"github.com/temporalio/cli/internal/temporalcli"
 	"go.temporal.io/api/operatorservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/temporal"
@@ -142,8 +140,10 @@ func startDevServerAndRunSimpleTest(t *testing.T, args []string, dialAddress str
 }
 
 func TestServer_StartDev_ConcurrentStarts(t *testing.T) {
+	h := NewCommandHarness(t)
+
 	startOne := func() error {
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(t.Context())
 		defer cancel()
 
 		// Start in background, then wait for client to be able to connect
@@ -151,25 +151,32 @@ func TestServer_StartDev_ConcurrentStarts(t *testing.T) {
 		httpPort := strconv.Itoa(devserver.MustGetFreePort("127.0.0.1"))
 		resCh := make(chan *CommandResult, 1)
 		go func() {
-			resCh <- executeConcurrentStartCommand(ctx, "server", "start-dev", "-p", port, "--http-port", httpPort, "--headless", "--log-level", "never")
+			resCh <- h.ExecuteWithContext(ctx, "server", "start-dev", "-p", port, "--http-port", httpPort, "--headless", "--log-level", "never")
 		}()
 
 		// Try to connect for a bit while checking for error
 		var cl client.Client
 		var lastDialErr error
-		for start := time.Now(); time.Since(start) < 3*time.Second; {
+		ticker := time.NewTicker(200 * time.Millisecond)
+		defer ticker.Stop()
+		timeout := time.NewTimer(3 * time.Second)
+		defer timeout.Stop()
+
+	waitForServer:
+		for {
 			select {
 			case res := <-resCh:
 				return concurrentStartCommandResultError("got early server result", res)
-			default:
+			case <-ticker.C:
+				var err error
+				cl, err = client.Dial(client.Options{HostPort: "127.0.0.1:" + port})
+				if err == nil {
+					break waitForServer
+				}
+				lastDialErr = err
+			case <-timeout.C:
+				break waitForServer
 			}
-			var err error
-			cl, err = client.Dial(client.Options{HostPort: "127.0.0.1:" + port})
-			if err == nil {
-				break
-			}
-			lastDialErr = err
-			time.Sleep(200 * time.Millisecond)
 		}
 		if cl == nil {
 			cancel()
@@ -224,31 +231,6 @@ func TestServer_StartDev_ConcurrentStarts(t *testing.T) {
 	for err := range errCh {
 		require.NoError(t, err)
 	}
-}
-
-func executeConcurrentStartCommand(ctx context.Context, args ...string) *CommandResult {
-	res := &CommandResult{}
-	var stdin bytes.Buffer
-	options := temporalcli.CommandOptions{
-		IOStreams: temporalcli.IOStreams{
-			Stdin:  &stdin,
-			Stdout: &res.Stdout,
-			Stderr: &res.Stderr,
-		},
-		Args: args,
-		DeprecatedEnvConfig: temporalcli.DeprecatedEnvConfig{
-			DisableEnvConfig: true,
-			EnvConfigName:    "default",
-		},
-	}
-	options.Fail = func(err error) {
-		if res.Err == nil {
-			res.Err = err
-		}
-	}
-
-	temporalcli.Execute(ctx, options)
-	return res
 }
 
 func concurrentStartCommandResultError(msg string, res *CommandResult) error {
