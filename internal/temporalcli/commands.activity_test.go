@@ -233,14 +233,18 @@ func (s *SharedServerSuite) TestActivityPauseUnpause() {
 func (s *SharedServerSuite) TestActivityCommandFailed_NoActivityId() {
 	run := s.waitActivityStarted()
 
-	// pause is single-workflow only
+	// pause is single-operation only; its error names --activity-id (and the
+	// optional --workflow-id/--run-id) but not --query.
 	res := sendActivityCommand("pause", run, s)
-	s.ErrorContains(res.Err, "Activity Id must be specified")
+	s.ErrorContains(res.Err, "must specify --activity-id")
+	s.NotContains(res.Err.Error(), "--query")
 
-	// unpause and reset support both single-workflow and batch modes
+	// unpause and reset support both single-operation and batch modes, so their
+	// error names --activity-id and --query.
 	for _, command := range []string{"unpause", "reset"} {
 		res = sendActivityCommand(command, run, s)
-		s.ErrorContains(res.Err, "either --activity-id and --workflow-id, or --query must be set")
+		s.ErrorContains(res.Err, "must specify --activity-id")
+		s.ErrorContains(res.Err, "--query")
 	}
 }
 
@@ -277,6 +281,288 @@ func (s *SharedServerSuite) TestActivityReset() {
 	// make sure we receive a NotFound error from the server`
 	var notFound *serviceerror.NotFound
 	s.ErrorAs(res.Err, &notFound)
+}
+
+// Standalone (workflow-less) activity tests. These exercise CLI routing to the
+// *ActivityExecution APIs: when no --workflow-id is set, the activity is
+// targeted by --activity-id and --run-id and the server routes the request to
+// standalone-activity handling.
+
+func newStandaloneActivityID() string {
+	return "standalone-activity-" + uuid.NewString()
+}
+
+func (s *SharedServerSuite) TestActivityStandalone_Pause() {
+	handle, stopFailing := s.startStandaloneActivity(newStandaloneActivityID())
+	defer stopFailing()
+
+	res := s.Execute(
+		"activity", "pause",
+		"--activity-id", handle.GetID(),
+		"--run-id", handle.GetRunID(),
+		"--identity", identity,
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+
+	s.Eventually(func() bool {
+		return s.standaloneActivityRunState(handle) == enums.PENDING_ACTIVITY_STATE_PAUSED
+	}, 10*time.Second, 100*time.Millisecond)
+}
+
+func (s *SharedServerSuite) TestActivityStandalone_Unpause() {
+	handle, stopFailing := s.startStandaloneActivity(newStandaloneActivityID())
+	defer stopFailing()
+
+	res := s.Execute(
+		"activity", "pause",
+		"--activity-id", handle.GetID(),
+		"--run-id", handle.GetRunID(),
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	s.Eventually(func() bool {
+		return s.standaloneActivityRunState(handle) == enums.PENDING_ACTIVITY_STATE_PAUSED
+	}, 10*time.Second, 100*time.Millisecond)
+
+	res = s.Execute(
+		"activity", "unpause",
+		"--activity-id", handle.GetID(),
+		"--run-id", handle.GetRunID(),
+		"--reset-attempts",
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	s.Eventually(func() bool {
+		return s.standaloneActivityRunState(handle) != enums.PENDING_ACTIVITY_STATE_PAUSED
+	}, 10*time.Second, 100*time.Millisecond)
+}
+
+func (s *SharedServerSuite) TestActivityStandalone_Reset() {
+	handle, stopFailing := s.startStandaloneActivity(newStandaloneActivityID())
+	defer stopFailing()
+
+	res := s.Execute(
+		"activity", "reset",
+		"--activity-id", handle.GetID(),
+		"--run-id", handle.GetRunID(),
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	s.ContainsOnSameLine(res.Stdout.String(), "ServerResponse", "true")
+
+	// Targeting a missing standalone activity surfaces the server's NotFound.
+	res = s.Execute(
+		"activity", "reset",
+		"--activity-id", "fake-standalone-id",
+		"--run-id", handle.GetRunID(),
+		"--address", s.Address(),
+	)
+	s.Error(res.Err)
+	var notFound *serviceerror.NotFound
+	s.ErrorAs(res.Err, &notFound)
+}
+
+func (s *SharedServerSuite) TestActivityStandalone_UpdateOptions() {
+	handle, stopFailing := s.startStandaloneActivity(newStandaloneActivityID())
+	defer stopFailing()
+
+	res := s.Execute(
+		"activity", "update-options",
+		"--activity-id", handle.GetID(),
+		"--run-id", handle.GetRunID(),
+		"--identity", identity,
+		"--schedule-to-close-timeout", "60s",
+		"--start-to-close-timeout", "10s",
+		"--retry-initial-interval", "5s",
+		"--retry-maximum-attempts", "5",
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	out := res.Stdout.String()
+	s.ContainsOnSameLine(out, "ScheduleToCloseTimeout", "1m0s")
+	s.ContainsOnSameLine(out, "StartToCloseTimeout", "10s")
+	s.ContainsOnSameLine(out, "InitialInterval", "5s")
+	s.ContainsOnSameLine(out, "MaximumAttempts", "5")
+}
+
+func (s *SharedServerSuite) TestActivityStandalone_PauseByActivityIdOnly() {
+	handle, stopFailing := s.startStandaloneActivity(newStandaloneActivityID())
+	defer stopFailing()
+
+	// Without --run-id, the command targets the latest run of the Activity ID.
+	res := s.Execute(
+		"activity", "pause",
+		"--activity-id", handle.GetID(),
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+
+	s.Eventually(func() bool {
+		return s.standaloneActivityRunState(handle) == enums.PENDING_ACTIVITY_STATE_PAUSED
+	}, 10*time.Second, 100*time.Millisecond)
+}
+
+func (s *SharedServerSuite) TestActivityStandalone_RequiresActivityId() {
+	// With neither --activity-id nor --query, every operation is an error, and
+	// the message tells the user how to retarget: it names --activity-id and the
+	// optional --workflow-id/--run-id, plus --query for the batch-capable
+	// operations (pause has no --query mode).
+	for _, command := range []string{"pause", "unpause", "reset", "update-options"} {
+		res := s.Execute(
+			"activity", command,
+			"--address", s.Address(),
+		)
+		s.Error(res.Err, "command %q should require --activity-id", command)
+		s.ErrorContains(res.Err, "--activity-id")
+		s.ErrorContains(res.Err, "--workflow-id")
+		s.ErrorContains(res.Err, "--run-id")
+		if command == "pause" {
+			s.NotContains(res.Err.Error(), "--query")
+		} else {
+			s.ErrorContains(res.Err, "--query")
+		}
+	}
+}
+
+// startStandaloneActivity starts a standalone (workflow-less) activity that
+// fails and retries indefinitely, so it stays pending and can be paused, reset,
+// or updated cleanly. It waits for the activity to be picked up and returns the
+// handle plus a function that lets the activity complete (used for cleanup).
+func (s *SharedServerSuite) startStandaloneActivity(actID string) (client.ActivityHandle, func()) {
+	var failActivity atomic.Bool
+	failActivity.Store(true)
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		if failActivity.Load() {
+			return nil, fmt.Errorf("standalone activity failing on purpose")
+		}
+		return nil, nil
+	})
+	handle, err := s.Client.ExecuteActivity(
+		s.Context,
+		client.StartActivityOptions{
+			ID:                  actID,
+			TaskQueue:           s.Worker().Options.TaskQueue,
+			StartToCloseTimeout: time.Minute,
+			RetryPolicy: &temporal.RetryPolicy{
+				InitialInterval: time.Second,
+				MaximumInterval: time.Second,
+			},
+		},
+		"DevActivity",
+		"input",
+	)
+	s.NoError(err)
+	s.Eventually(func() bool {
+		desc, err := handle.Describe(s.Context, client.DescribeActivityOptions{})
+		s.NoError(err)
+		return desc.Attempt >= 1
+	}, 10*time.Second, 100*time.Millisecond)
+	return handle, func() { failActivity.Store(false) }
+}
+
+func (s *SharedServerSuite) standaloneActivityRunState(handle client.ActivityHandle) enums.PendingActivityState {
+	desc, err := handle.Describe(s.Context, client.DescribeActivityOptions{})
+	s.NoError(err)
+	return desc.RunState
+}
+
+// TestActivityInvalidTargeting covers every invalid row of the activity
+// single-operation targeting matrix, across all of the operations that share
+// it. A single operation needs --activity-id plus either --workflow-id or
+// --run-id, and --query is mutually exclusive with both --workflow-id and
+// --run-id, so each of these combinations is rejected.
+//
+// reset/unpause/update-options reject the --query combinations as targeting
+// errors. pause has no --query flag, so it rejects them as unknown-flag errors;
+// either way the combination is rejected, which is the behavior under test.
+func (s *SharedServerSuite) TestActivityInvalidTargeting() {
+	const q = "WorkflowType='DevWorkflow'"
+	cases := []struct {
+		name       string
+		activityID string
+		workflowID string
+		runID      string
+		query      string
+	}{
+		{name: "nothing set"},
+		{name: "run-id only", runID: "r-id"},
+		{name: "run-id and query", runID: "r-id", query: q},
+		{name: "workflow-id only", workflowID: "w-id"},
+		{name: "workflow-id and query", workflowID: "w-id", query: q},
+		{name: "workflow-id and run-id, no activity-id", workflowID: "w-id", runID: "r-id"},
+		{name: "workflow-id, run-id, and query", workflowID: "w-id", runID: "r-id", query: q},
+		{name: "activity-id, run-id, and query", activityID: "a-id", runID: "r-id", query: q},
+		{name: "activity-id, workflow-id, and query", activityID: "a-id", workflowID: "w-id", query: q},
+		{name: "all flags set", activityID: "a-id", workflowID: "w-id", runID: "r-id", query: q},
+	}
+	for _, command := range []string{"pause", "unpause", "reset", "update-options"} {
+		for _, tc := range cases {
+			args := []string{"activity", command, "--address", s.Address()}
+			if tc.activityID != "" {
+				args = append(args, "--activity-id", tc.activityID)
+			}
+			if tc.workflowID != "" {
+				args = append(args, "--workflow-id", tc.workflowID)
+			}
+			if tc.runID != "" {
+				args = append(args, "--run-id", tc.runID)
+			}
+			if tc.query != "" {
+				args = append(args, "--query", tc.query)
+			}
+			res := s.Execute(args...)
+			s.Error(res.Err, "command %q case %q should be invalid", command, tc.name)
+		}
+	}
+}
+
+// TestActivityReset_WorkflowActivityLatestRun covers --activity-id +
+// --workflow-id with no --run-id: a specific activity in the workflow's latest
+// run.
+func (s *SharedServerSuite) TestActivityReset_WorkflowActivityLatestRun() {
+	run := s.waitActivityStarted()
+
+	res := s.Execute(
+		"activity", "reset",
+		"--activity-id", activityId,
+		"--workflow-id", run.GetID(),
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	s.ContainsOnSameLine(res.Stdout.String(), "ServerResponse", "true")
+}
+
+// TestActivityReset_ActivityIdWithQueryStartsBatch covers --activity-id +
+// --query: the activity ID is ignored and a batch over the matching workflows
+// is started instead.
+func (s *SharedServerSuite) TestActivityReset_ActivityIdWithQueryStartsBatch() {
+	run := s.waitActivityStarted()
+
+	var startedBatch atomic.Bool
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string, req, reply any,
+			cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption,
+		) error {
+			if _, ok := req.(*workflowservice.StartBatchOperationRequest); ok {
+				startedBatch.Store(true)
+			}
+			return invoker(ctx, method, req, reply, cc, opts...)
+		}),
+	)
+
+	res := s.Execute(
+		"activity", "reset",
+		"--activity-id", "ignored-activity-id",
+		"--query", fmt.Sprintf("WorkflowId = '%s'", run.GetID()),
+		"--yes",
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	s.True(startedBatch.Load(), "a batch operation should have been started")
 }
 
 // Test helpers
