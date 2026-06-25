@@ -553,6 +553,7 @@ func NewTemporalActivityCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.AddCommand(&NewTemporalActivityUnpauseCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalActivityUpdateOptionsCommand(cctx, &s).Command)
 	s.ClientOptions.BuildFlags(s.Command.PersistentFlags())
+	s.ClientOptions.HideFlags()
 	return &s
 }
 
@@ -1042,6 +1043,7 @@ func NewTemporalBatchCommand(cctx *CommandContext, parent *TemporalCommand) *Tem
 	s.Command.AddCommand(&NewTemporalBatchListCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalBatchTerminateCommand(cctx, &s).Command)
 	s.ClientOptions.BuildFlags(s.Command.PersistentFlags())
+	s.ClientOptions.HideFlags()
 	return &s
 }
 
@@ -1723,6 +1725,7 @@ func NewTemporalOperatorCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.AddCommand(&NewTemporalOperatorNexusCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalOperatorSearchAttributeCommand(cctx, &s).Command)
 	s.ClientOptions.BuildFlags(s.Command.PersistentFlags())
+	s.ClientOptions.HideFlags()
 	return &s
 }
 
@@ -2440,6 +2443,7 @@ func NewTemporalScheduleCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.AddCommand(&NewTemporalScheduleTriggerCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleUpdateCommand(cctx, &s).Command)
 	s.ClientOptions.BuildFlags(s.Command.PersistentFlags())
+	s.ClientOptions.HideFlags()
 	return &s
 }
 
@@ -2838,6 +2842,7 @@ func NewTemporalTaskQueueCommand(cctx *CommandContext, parent *TemporalCommand) 
 	s.Command.AddCommand(&NewTemporalTaskQueueUpdateBuildIdsCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalTaskQueueVersioningCommand(cctx, &s).Command)
 	s.ClientOptions.BuildFlags(s.Command.PersistentFlags())
+	s.ClientOptions.HideFlags()
 	return &s
 }
 
@@ -3569,6 +3574,7 @@ func NewTemporalWorkerCommand(cctx *CommandContext, parent *TemporalCommand) *Te
 	s.Command.AddCommand(&NewTemporalWorkerDescribeCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerListCommand(cctx, &s).Command)
 	s.ClientOptions.BuildFlags(s.Command.PersistentFlags())
+	s.ClientOptions.HideFlags()
 	return &s
 }
 
@@ -4118,6 +4124,7 @@ func NewTemporalWorkflowCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.AddCommand(&NewTemporalWorkflowUpdateCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowUpdateOptionsCommand(cctx, &s).Command)
 	s.ClientOptions.BuildFlags(s.Command.PersistentFlags())
+	s.ClientOptions.HideFlags()
 	return &s
 }
 
