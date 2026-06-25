@@ -132,6 +132,11 @@ func (b *ClientOptionsBuilder) Build(ctx context.Context) (client.Options, error
 		profile.APIKey = cfg.ApiKey
 	}
 
+	// Set client authority on profile if provided
+	if cfg.ClientAuthority != "" {
+		profile.Authority = cfg.ClientAuthority
+	}
+
 	// Handle gRPC metadata from flags.
 	if len(cfg.GrpcMeta) > 0 {
 		grpcMetaFromArg, err := parseKeyValuePairs(cfg.GrpcMeta)
