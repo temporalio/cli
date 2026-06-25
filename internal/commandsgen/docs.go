@@ -30,6 +30,7 @@ func GenerateDocsFiles(commands Commands) (map[string][]byte, error) {
 
 	// Write global flags section once at the end of each file
 	w.writeGlobalFlagsSections()
+	w.writeEnvironmentVariablesPage(commands)
 
 	// Format and return
 	var finalMap = make(map[string][]byte)
@@ -81,7 +82,7 @@ func (w *docWriter) writeCommand(c *Command) {
 	w.fileMap[fileName].WriteString("---")
 	w.fileMap[fileName].WriteString("\n\n")
 	w.fileMap[fileName].WriteString("{/* NOTE: This is an auto-generated file. Any edit to this file will be overwritten.\n")
-	w.fileMap[fileName].WriteString("This file is generated from https://github.com/temporalio/cli/blob/main/internal/commandsgen/commands.yml via internal/cmd/gen-docs */}\n\n")
+	w.fileMap[fileName].WriteString("This file is generated from https://github.com/temporalio/cli/blob/main/internal/temporalcli/commands.yaml and https://github.com/temporalio/cli/blob/main/cliext/option-sets.yaml via cmd/gen-docs */}\n\n")
 	// Add introductory paragraph
 	w.fileMap[fileName].WriteString(fmt.Sprintf("This page provides a reference for the `temporal` CLI `%s` command. ", fileName))
 	w.fileMap[fileName].WriteString("The flags applicable to each subcommand are presented in a table within the heading for the subcommand. ")
@@ -222,6 +223,66 @@ func (w *docWriter) writeGlobalFlagsSections() {
 		}
 		buf.WriteString("\n")
 	}
+}
+
+func (w *docWriter) writeEnvironmentVariablesPage(commands Commands) {
+	envOptions := make(map[string]Option)
+	for _, optionSet := range commands.OptionSets {
+		for _, o := range optionSet.Options {
+			if o.ImpliedEnv != "" && !o.Hidden {
+				envOptions[o.ImpliedEnv] = o
+			}
+		}
+	}
+	for _, command := range commands.CommandList {
+		for _, o := range command.Options {
+			if o.ImpliedEnv != "" && !o.Hidden {
+				envOptions[o.ImpliedEnv] = o
+			}
+		}
+	}
+
+	envNames := make([]string, 0, len(envOptions))
+	for envName := range envOptions {
+		envNames = append(envNames, envName)
+	}
+	sort.Strings(envNames)
+
+	buf := &bytes.Buffer{}
+	buf.WriteString("---\n")
+	buf.WriteString("id: environment-variables\n")
+	buf.WriteString("title: Temporal CLI environment variables\n")
+	buf.WriteString("sidebar_label: Environment variables\n")
+	buf.WriteString("description: Reference for Temporal CLI environment variables.\n")
+	buf.WriteString("toc_max_heading_level: 4\n")
+	buf.WriteString("keywords:\n")
+	buf.WriteString("  - cli\n")
+	buf.WriteString("  - environment variables\n")
+	buf.WriteString("  - temporal cli\n")
+	buf.WriteString("tags:\n")
+	buf.WriteString("  - Temporal CLI\n")
+	buf.WriteString("---\n\n")
+	buf.WriteString("{/* NOTE: This is an auto-generated file. Any edit to this file will be overwritten.\n")
+	buf.WriteString("This file is generated from https://github.com/temporalio/cli/blob/main/internal/temporalcli/commands.yaml and https://github.com/temporalio/cli/blob/main/cliext/option-sets.yaml via cmd/gen-docs */}\n\n")
+	buf.WriteString("This page lists the environment variables that can configure the Temporal CLI.\n\n")
+	buf.WriteString("| Variable | Flag | Description | Default |\n")
+	buf.WriteString("|----------|------|-------------|---------|\n")
+
+	for _, envName := range envNames {
+		o := envOptions[envName]
+		flagName := fmt.Sprintf("`--%s`", o.Name)
+		description := encodeJSONExample(o.Description)
+		description = strings.ReplaceAll(description, "\n", "<br />")
+		description = strings.ReplaceAll(description, "|", "\\|")
+		defaultVal := ""
+		if o.Default != "" {
+			defaultVal = fmt.Sprintf("`%s`", o.Default)
+		}
+		buf.WriteString(fmt.Sprintf("| `%s` | %s | %s | %s |\n", envName, flagName, description, defaultVal))
+	}
+	buf.WriteString("\n")
+
+	w.fileMap["environment-variables"] = buf
 }
 
 func (w *docWriter) processOptions(c *Command) {

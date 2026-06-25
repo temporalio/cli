@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -35,5 +36,17 @@ func TestGenDocsMultipleInputs(t *testing.T) {
 	workflowPath := filepath.Join(outputDir, "workflow.mdx")
 	if _, err := os.Stat(workflowPath); os.IsNotExist(err) {
 		t.Fatal("workflow.mdx was not generated")
+	}
+
+	envVarsPath := filepath.Join(outputDir, "environment-variables.mdx")
+	envVars, err := os.ReadFile(envVarsPath)
+	if os.IsNotExist(err) {
+		t.Fatal("environment-variables.mdx was not generated")
+	}
+	if err != nil {
+		t.Fatalf("failed reading environment-variables.mdx: %v", err)
+	}
+	if !strings.Contains(string(envVars), "`TEMPORAL_ADDRESS`") {
+		t.Fatal("environment-variables.mdx does not include TEMPORAL_ADDRESS")
 	}
 }
