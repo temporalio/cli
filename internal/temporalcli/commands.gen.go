@@ -586,12 +586,15 @@ func NewTemporalActivityCancelCommand(cctx *CommandContext, parent *TemporalActi
 }
 
 type TemporalActivityCompleteCommand struct {
-	Parent     *TemporalActivityCommand
-	Command    cobra.Command
-	ActivityId string
-	WorkflowId string
-	RunId      string
-	Result     string
+	Parent       *TemporalActivityCommand
+	Command      cobra.Command
+	ActivityId   string
+	WorkflowId   string
+	RunId        string
+	Result       string
+	ResultFile   string
+	ResultMeta   string
+	ResultBase64 bool
 }
 
 func NewTemporalActivityCompleteCommand(cctx *CommandContext, parent *TemporalActivityCommand) *TemporalActivityCompleteCommand {
@@ -610,8 +613,10 @@ func NewTemporalActivityCompleteCommand(cctx *CommandContext, parent *TemporalAc
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "activity-id")
 	s.Command.Flags().StringVarP(&s.WorkflowId, "workflow-id", "w", "", "Workflow ID. Required for workflow Activities. Omit for Standalone Activities.")
 	s.Command.Flags().StringVarP(&s.RunId, "run-id", "r", "", "Run ID. For workflow Activities (when --workflow-id is provided), this is the Workflow Run ID. For Standalone Activities, this is the Activity Run ID.")
-	s.Command.Flags().StringVar(&s.Result, "result", "", "Result `JSON` to return. Required.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "result")
+	s.Command.Flags().StringVar(&s.Result, "result", "", "Result to return. Use JSON content or set --result-meta to override. Can't be combined with --result-file. Exactly one of --result or --result-file must be supplied.")
+	s.Command.Flags().StringVar(&s.ResultFile, "result-file", "", "A path for result file. Use JSON content or set --result-meta to override. Can't be combined with --result.")
+	s.Command.Flags().StringVar(&s.ResultMeta, "result-meta", "", "Result payload metadata as a `KEY=VALUE` pair. When the KEY is \"encoding\", this overrides the default (\"json/plain\").")
+	s.Command.Flags().BoolVar(&s.ResultBase64, "result-base64", false, "Assume result is base64-encoded and attempt to decode it.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -706,13 +711,16 @@ func NewTemporalActivityExecuteCommand(cctx *CommandContext, parent *TemporalAct
 }
 
 type TemporalActivityFailCommand struct {
-	Parent     *TemporalActivityCommand
-	Command    cobra.Command
-	ActivityId string
-	WorkflowId string
-	RunId      string
-	Detail     string
-	Reason     string
+	Parent       *TemporalActivityCommand
+	Command      cobra.Command
+	ActivityId   string
+	WorkflowId   string
+	RunId        string
+	Detail       string
+	DetailFile   string
+	DetailMeta   string
+	DetailBase64 bool
+	Reason       string
 }
 
 func NewTemporalActivityFailCommand(cctx *CommandContext, parent *TemporalActivityCommand) *TemporalActivityFailCommand {
@@ -731,7 +739,10 @@ func NewTemporalActivityFailCommand(cctx *CommandContext, parent *TemporalActivi
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "activity-id")
 	s.Command.Flags().StringVarP(&s.WorkflowId, "workflow-id", "w", "", "Workflow ID. Required for workflow Activities. Omit for Standalone Activities.")
 	s.Command.Flags().StringVarP(&s.RunId, "run-id", "r", "", "Run ID. For workflow Activities (when --workflow-id is provided), this is the Workflow Run ID. For Standalone Activities, this is the Activity Run ID.")
-	s.Command.Flags().StringVar(&s.Detail, "detail", "", "Failure detail (JSON). Attached as the failure details payload.")
+	s.Command.Flags().StringVar(&s.Detail, "detail", "", "Failure detail. Attached as the failure details payload. Use JSON content or set --detail-meta to override. Can't be combined with --detail-file.")
+	s.Command.Flags().StringVar(&s.DetailFile, "detail-file", "", "A path for result file. Use JSON content or set --detail-meta to override. Can't be combined with --detail.")
+	s.Command.Flags().StringVar(&s.DetailMeta, "detail-meta", "", "Result payload metadata as a `KEY=VALUE` pair. When the KEY is \"encoding\", this overrides the default (\"json/plain\").")
+	s.Command.Flags().BoolVar(&s.DetailBase64, "detail-base64", false, "Assume detail is base64-encoded and attempt to decode it.")
 	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Failure reason. Attached as the failure message.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
