@@ -92,7 +92,7 @@ func (w *docWriter) writeSubcommand(c *Command) {
 	fileName := c.fileName()
 	prefix := strings.Repeat("#", c.depth())
 	w.fileMap[fileName].WriteString(prefix + " " + c.leafName() + "\n\n")
-	w.fileMap[fileName].WriteString(c.Description + "\n\n")
+	w.fileMap[fileName].WriteString(escapeMDXDescription(c.Description) + "\n\n")
 
 	if w.isLeafCommand(c) {
 		// gather options from command and all options available from parent commands
@@ -254,11 +254,64 @@ func (w *docWriter) isLeafCommand(c *Command) bool {
 	return true
 }
 
+// encodeJSONExample wraps single-quoted JSON examples in backticks so MDX
+// does not parse curly braces as JSX expressions. This handles option
+// description table cells. See also escapeMDXDescription which handles
+// the same class of issues for command description body text.
 func encodeJSONExample(v string) string {
-	// example: 'YourKey={"your": "value"}'
-	// results in an mdx acorn rendering error
-	// and wrapping in backticks lets it render
-	re := regexp.MustCompile(`('[a-zA-Z0-9]*={.*}')`)
+	re := regexp.MustCompile(`('[^']*\{[^']*\}[^']*')`)
 	v = re.ReplaceAllString(v, "`$1`")
 	return v
+}
+
+var (
+	reAngleBracketPlaceholder = regexp.MustCompile(`<([a-z][a-z0-9_:-]+)>`)
+	reHeadingID               = regexp.MustCompile(`^(#{1,6}\s+.+?)\s+\{#([\w-]+)\}\s*$`)
+	reJSONInSingleQuotes      = regexp.MustCompile(`'([^']*\{[^']*\}[^']*)'`)
+)
+
+// escapeMDXDescription escapes patterns in command descriptions that are
+// valid Markdown but break MDX compilation: heading IDs ({#id}), bare
+// angle-bracket placeholders (<name>), and curly braces in JSON examples.
+// Code fences are left untouched. Inline backtick spans are also preserved,
+// assuming balanced backticks. See also encodeJSONExample which handles
+// the same class of issues for option description table cells.
+func escapeMDXDescription(desc string) string {
+	lines := strings.Split(desc, "\n")
+	var result []string
+	inCodeBlock := false
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "```") {
+			inCodeBlock = !inCodeBlock
+			result = append(result, line)
+			continue
+		}
+		if inCodeBlock {
+			result = append(result, line)
+			continue
+		}
+
+		// Convert {#custom-id} to MDX-compatible {/* #custom-id */} comment syntax.
+		line = reHeadingID.ReplaceAllString(line, "$1 {/* #$2 */}")
+
+		// Escape <placeholder> patterns that MDX would parse as HTML tags.
+		// Split on backtick spans to avoid modifying inline code.
+		parts := strings.Split(line, "`")
+		for i := range parts {
+			if i%2 == 0 { // outside backticks
+				parts[i] = reAngleBracketPlaceholder.ReplaceAllString(parts[i], `\<$1\>`)
+			}
+		}
+		line = strings.Join(parts, "`")
+
+		// Escape curly braces inside single-quoted JSON examples.
+		line = reJSONInSingleQuotes.ReplaceAllStringFunc(line, func(match string) string {
+			return strings.NewReplacer("{", `\{`, "}", `\}`).Replace(match)
+		})
+
+		result = append(result, line)
+	}
+	return strings.Join(result, "\n")
 }
