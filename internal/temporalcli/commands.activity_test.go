@@ -14,6 +14,7 @@ import (
 	"go.temporal.io/api/history/v1"
 	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/api/workflowservice/v1"
+	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/temporal"
@@ -1167,6 +1168,38 @@ func (s *SharedServerSuite) TestActivity_Terminate() {
 	s.Contains(err.Error(), "terminated")
 }
 
+func (s *SharedServerSuite) TestActivity_Delete_Success() {
+	activityStarted := make(chan struct{})
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		close(activityStarted)
+		<-ctx.Done()
+		return nil, ctx.Err()
+	})
+
+	started := s.startActivity("delete-test")
+	runID := started["runId"].(string)
+	<-activityStarted
+
+	res := s.Execute(
+		"activity", "delete",
+		"--activity-id", "delete-test",
+		"--run-id", runID,
+		"--address", s.Address(),
+		"-y",
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Delete activity succeeded")
+
+	s.Eventually(func() bool {
+		handle := s.Client.GetActivityHandle(client.GetActivityHandleOptions{
+			ActivityID: "delete-test",
+			RunID:      runID,
+		})
+		err := handle.Get(s.Context, nil)
+		return err != nil && strings.Contains(err.Error(), "activity not found")
+	}, 5*time.Second, 200*time.Millisecond)
+}
+
 func (s *SharedServerSuite) TestActivity_SearchAttributes() {
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
 		return nil, nil
@@ -1368,4 +1401,309 @@ func (s *SharedServerSuite) TestActivity_Terminate_DefaultReason_NoUnknownUser()
 	failureMsg, _ := outcome["failure"].(map[string]any)["message"].(string)
 	s.Contains(failureMsg, "Requested from CLI by")
 	s.NotContains(failureMsg, "<unknown-user>")
+}
+
+// batch operators (cancel, terminate, delete) on standalone activities
+func (s *SharedServerSuite) TestActivity_CancelTerminateDelete_BatchSuccess() {
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		// don't complete the activity
+		return nil, activity.ErrResultPending
+	})
+
+	for _, operator := range []string{"cancel", "terminate", "delete"} {
+		uniqueKW := operator + "-" + uuid.NewString()[:8]
+		activityIds := make([]string, 0, 5)
+		for i := 0; i < 5; i++ {
+			activityId := fmt.Sprintf("%s-test-%d", operator, i)
+			activityIds = append(activityIds, activityId)
+			s.startActivity(activityId,
+				"--search-attribute", fmt.Sprintf(`CustomKeywordField="%s"`, uniqueKW),
+			)
+		}
+
+		// Wait for all to be visible
+		s.Eventually(func() bool {
+			res := s.Execute(
+				"activity", "list",
+				"--address", s.Address(),
+				"--query", fmt.Sprintf(`CustomKeywordField = "%s" AND ExecutionStatus = "Running"`, uniqueKW),
+			)
+			return res.Err == nil && strings.Count(res.Stdout.String(), operator+"-test-") >= 5
+		}, 5*time.Second, 200*time.Millisecond)
+
+		// Send cancel, terminate or delete
+		reason := "test batch " + operator
+		res := s.Execute(
+			"activity", operator,
+			"--address", s.Address(),
+			"--query", fmt.Sprintf(`CustomKeywordField = "%s"`, uniqueKW),
+			"--reason", reason,
+			"-y",
+		)
+		s.NoError(res.Err)
+		s.Contains(res.Stdout.String(), "Started batch")
+
+		// get job ID for later check.
+		lines := strings.Split(strings.TrimSpace(res.Stdout.String()), "\n")
+		s.Equal(2, len(lines), "expected one success line")
+		parts := strings.Split(lines[1], ":")
+		s.Equal(2, len(parts), "expected success line to contain job ID")
+		jobId := strings.TrimSpace(parts[1])
+
+		switch operator {
+		case "cancel":
+			// Wait for all to be canceled
+			s.Eventually(func() bool {
+				count := 0
+				for _, activityId := range activityIds {
+					handle := s.Client.GetActivityHandle(client.GetActivityHandleOptions{
+						ActivityID: activityId,
+					})
+					desc, err := handle.Describe(s.Context, client.DescribeActivityOptions{})
+					if err == nil && desc.RunState.String() == "CancelRequested" {
+						count++
+					}
+				}
+				return count >= 5
+			}, 5*time.Second, 200*time.Millisecond)
+
+		case "terminate":
+			// Wait for all to be terminated
+			s.Eventually(func() bool {
+				res := s.Execute(
+					"activity", "list",
+					"--address", s.Address(),
+					"--query", fmt.Sprintf(`CustomKeywordField = "%s" AND ExecutionStatus = "Terminated"`, uniqueKW),
+				)
+				return res.Err == nil && strings.Count(res.Stdout.String(), operator+"-test-") >= 5
+			}, 5*time.Second, 200*time.Millisecond)
+
+			// //TODO: is it better to use list above or handle below?
+			// s.Eventually(func() bool {
+			// 	count := 0
+			// 	for _, activityId := range activityIds {
+			// 		handle := s.Client.GetActivityHandle(client.GetActivityHandleOptions{
+			// 			ActivityID: activityId,
+			// 		})
+			// 		err := handle.Get(s.Context, nil)
+			// 		if err != nil && strings.Contains(err.Error(), "terminated") {
+			// 			count++
+			// 		}
+			// 	}
+			// 	return count >= 5
+			// }, 5*time.Second, 200*time.Millisecond)
+
+		case "delete":
+			// Wait for all to be deleted
+			s.Eventually(func() bool {
+				res := s.Execute(
+					"activity", "list",
+					"--address", s.Address(),
+					"--query", fmt.Sprintf(`CustomKeywordField = "%s"`, uniqueKW),
+				)
+				return res.Err == nil && strings.Count(res.Stdout.String(), operator+"-test-") == 0
+			}, 5*time.Second, 200*time.Millisecond)
+		}
+
+		// check batch job has no failure
+		res = s.Execute(
+			"batch", "describe",
+			"--address", s.Address(),
+			"--job-id", jobId,
+		)
+		s.NoError(res.Err)
+		out := res.Stdout.String()
+		s.ContainsOnSameLine(out, "CompletedCount", "5/5")
+		s.ContainsOnSameLine(out, "FailureCount", "0/5")
+
+		// check for reason
+		res = s.Execute(
+			"batch", "describe",
+			"--address", s.Address(),
+			"--job-id", jobId,
+			"-o", "json",
+		)
+		s.NoError(res.Err)
+		var jsonOut map[string]any
+		s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+		s.Equal(reason, jsonOut["reason"])
+	}
+}
+
+func (s *SharedServerSuite) TestActivity_CancelTerminateDelete_BatchFailed() {
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		// don't complete the activity
+		return nil, activity.ErrResultPending
+	})
+
+	for _, operator := range []string{"cancel", "terminate", "delete"} {
+		uniqueKW := operator + "-test-fail-" + uuid.NewString()[:8]
+		activityId := operator + "-test-fail"
+		started := s.startActivity(activityId,
+			"--search-attribute", fmt.Sprintf(`CustomKeywordField="%s"`, uniqueKW),
+		)
+		runId := started["runId"].(string)
+
+		query := fmt.Sprintf(`CustomKeywordField = "%s"`, uniqueKW)
+		res := s.Execute(
+			"activity", operator,
+			"--address", s.Address(),
+			"--activity-id", activityId,
+			"--query", query,
+			"-y",
+		)
+		s.Error(res.Err)
+		s.Contains(res.Err.Error(), "cannot set query when activity ID is set")
+
+		res = s.Execute(
+			"activity", operator,
+			"--address", s.Address(),
+			"--run-id", runId,
+		)
+		s.Error(res.Err)
+		s.Contains(res.Err.Error(), "must set either activity ID or query")
+
+		res = s.Execute(
+			"activity", operator,
+			"--address", s.Address(),
+			"--activity-id", activityId,
+			"--run-id", runId,
+			"--query", query,
+			"-y",
+		)
+		s.Error(res.Err)
+		s.Contains(res.Err.Error(), "cannot set query when activity ID is set")
+
+		res = s.Execute(
+			"activity", operator,
+			"--address", s.Address(),
+			"--activity-id", activityId,
+			"--rps", "10",
+		)
+		s.Error(res.Err)
+		s.Contains(res.Err.Error(), "cannot set rps when activity ID is set")
+
+		res = s.Execute(
+			"activity", operator,
+			"--address", s.Address(),
+			"--run-id", runId,
+			"--query", query,
+			"-y",
+		)
+		s.Error(res.Err)
+		s.Contains(res.Err.Error(), "cannot set run ID when query is set")
+
+		if operator != "delete" {
+			res = s.Execute(
+				"activity", operator,
+				"--address", s.Address(),
+				"--activity-id", activityId,
+				"-y",
+			)
+			s.Error(res.Err)
+			s.Contains(res.Err.Error(), "cannot set 'yes' when activity ID is set")
+		}
+	}
+}
+
+func (s *SharedServerSuite) TestActivity_CancelTerminateDelete_BatchDefaultReason() {
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		// don't complete the activity
+		return nil, activity.ErrResultPending
+	})
+
+	for _, operator := range []string{"cancel", "terminate", "delete"} {
+		// Send cancel, terminate or delete with default reason
+		res := s.Execute(
+			"activity", operator,
+			"--address", s.Address(),
+			"--query", `CustomKeywordField = "UnknownValue"`,
+			"-y",
+		)
+		s.NoError(res.Err)
+		s.Contains(res.Stdout.String(), "Started batch")
+
+		// get job ID for later check.
+		lines := strings.Split(strings.TrimSpace(res.Stdout.String()), "\n")
+		s.Equal(2, len(lines), "expected two lines, confirmation and success message")
+		parts := strings.Split(lines[1], ":")
+		s.Equal(2, len(parts), "expected success line to contain job ID")
+		jobId := strings.TrimSpace(parts[1])
+
+		// check for reason
+		res = s.Execute(
+			"batch", "describe",
+			"--address", s.Address(),
+			"--job-id", jobId,
+			"-o", "json",
+		)
+		s.NoError(res.Err)
+		var jsonOut map[string]any
+		s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+		s.Contains(jsonOut["reason"], "Requested from CLI by")
+	}
+}
+
+func (s *SharedServerSuite) TestActivity_CancelTerminateDelete_BatchRateLimit() {
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		// don't complete the activity
+		return nil, activity.ErrResultPending
+	})
+
+	// following borrowed from testTerminateBatchWorkflow to intercept batch request
+	var lastRequestLock sync.Mutex
+	var startBatchRequest *workflowservice.StartBatchOperationRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string, req, reply any,
+			cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption,
+		) error {
+			lastRequestLock.Lock()
+			if r, ok := req.(*workflowservice.StartBatchOperationRequest); ok {
+				startBatchRequest = r
+			}
+			lastRequestLock.Unlock()
+			return invoker(ctx, method, req, reply, cc, opts...)
+		}),
+	)
+
+	for _, operator := range []string{"cancel", "terminate", "delete"} {
+		uniqueKW := operator + "-rps-" + uuid.NewString()[:8]
+		iterations := 2
+		activityIds := make([]string, 0, iterations)
+		for i := 0; i < iterations; i++ {
+			activityId := fmt.Sprintf("%s-test-rps-%d", operator, i)
+			activityIds = append(activityIds, activityId)
+			s.startActivity(activityId,
+				"--search-attribute", fmt.Sprintf(`CustomKeywordField="%s"`, uniqueKW),
+			)
+		}
+
+		// Wait for all to be visible
+		s.Eventually(func() bool {
+			res := s.Execute(
+				"activity", "list",
+				"--address", s.Address(),
+				"--query", fmt.Sprintf(`CustomKeywordField = "%s" AND ExecutionStatus = "Running"`, uniqueKW),
+			)
+			return res.Err == nil && strings.Count(res.Stdout.String(), operator+"-test-") >= iterations
+		}, 5*time.Second, 200*time.Millisecond)
+
+		// Send cancel, terminate or delete
+		var rps float32 = 1
+		s.CommandHarness.Stdin.WriteString("y\n")
+		res := s.Execute(
+			"activity", operator,
+			"--address", s.Address(),
+			"--query", fmt.Sprintf(`CustomKeywordField = "%s"`, uniqueKW),
+			"--rps", fmt.Sprint(rps),
+		)
+		s.NoError(res.Err)
+		s.Contains(res.Stdout.String(), "Started batch")
+
+		s.NotNil(startBatchRequest)
+		s.Equal(rps, startBatchRequest.MaxOperationsPerSecond)
+	}
 }
