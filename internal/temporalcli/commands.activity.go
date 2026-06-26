@@ -614,16 +614,15 @@ func (c *TemporalActivityCancelCommand) run(cctx *CommandContext, args []string)
 	} else { // batchReq != nil
 		cancelActivitiesOperation := &batch.BatchOperationCancelActivities{
 			Identity: c.Parent.Identity,
-			Reason:   c.Reason,
-			// TODO: should this be set to defaultReason() if not set?
+			// do not fallback to defaultReason, to be consistent with single activity cancel
+			Reason: c.Reason,
 		}
 
 		batchReq.Operation = &workflowservice.StartBatchOperationRequest_CancelActivitiesOperation{
 			CancelActivitiesOperation: cancelActivitiesOperation,
 		}
 
-		// TODO: unlike workflow batch operations, here reason is in both
-		// wrapper (batchReq) and included (cancel) struct.
+		// Reason in batch request falls back to defaultReason
 		if c.Reason != "" {
 			batchReq.Reason = c.Reason
 		} else {
@@ -657,6 +656,7 @@ func (c *TemporalActivityTerminateCommand) run(cctx *CommandContext, args []stri
 		return err
 	}
 
+	// Reason for single terminate or batch request falls back to defaultReason
 	reason := c.Reason
 	if reason == "" {
 		reason = defaultReason()
@@ -677,7 +677,6 @@ func (c *TemporalActivityTerminateCommand) run(cctx *CommandContext, args []stri
 			Reason:   reason,
 		}
 
-		// TODO: unlike workflow batch, here reason is in both structs.
 		batchReq.Reason = reason
 
 		batchReq.Operation = &workflowservice.StartBatchOperationRequest_TerminateActivitiesOperation{

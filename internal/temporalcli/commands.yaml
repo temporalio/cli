@@ -210,7 +210,10 @@ commands:
     options:
       - name: reason
         type: string
-        description: Reason for cancellation.
+        description: |
+          Reason for cancellation.
+          Also used as reason for batch operation with --query,
+          which defaults to a message with the current user's name.
 
   - name: temporal activity complete
     summary: Mark an activity as completed successfully with a result
@@ -703,6 +706,7 @@ commands:
         description: |
           Reason for termination.
           Defaults to a message with the current user's name.
+          Also used as reason for batch operation with --query.
 
   - name: temporal activity delete
     summary: Delete a Standalone Activity Execution (Experimental)
@@ -735,7 +739,7 @@ commands:
         description: |
           Reason for batch operation.
           Only use with --query.
-          Defaults to user name.
+          Defaults to a message with the current user's name.
 
   - name: temporal batch
     summary: Manage running batch jobs
