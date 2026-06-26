@@ -1625,7 +1625,7 @@ func (s *SharedServerSuite) TestActivity_CancelTerminateDelete_BatchDefaultReaso
 
 		// get job ID for later check.
 		lines := strings.Split(strings.TrimSpace(res.Stdout.String()), "\n")
-		s.Equal(2, len(lines), "expected one success line")
+		s.Equal(2, len(lines), "expected two lines, confirmation and success message")
 		parts := strings.Split(lines[1], ":")
 		s.Equal(2, len(parts), "expected success line to contain job ID")
 		jobId := strings.TrimSpace(parts[1])

@@ -701,7 +701,7 @@ func (c *TemporalActivityDeleteCommand) run(cctx *CommandContext, args []string)
 	defer cl.Close()
 
 	// TODO: do we need this warning, similar to workflow delete?
-	// Only warn when the namespace is global.
+	// Only warn when the namespace is global, or can't get the namespace info
 	nsResp, nsErr := cl.WorkflowService().DescribeNamespace(cctx, &workflowservice.DescribeNamespaceRequest{
 		Namespace: c.Parent.Namespace,
 	})
