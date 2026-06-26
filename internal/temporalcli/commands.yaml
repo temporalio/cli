@@ -214,6 +214,12 @@ commands:
           Reason for cancellation.
           Also used as reason for batch operation with --query,
           which defaults to a message with the current user's name.
+      - name: yes
+        type: bool
+        short: y
+        description: |
+          Don't prompt to confirm.
+          Only allowed when --query is present.
 
   - name: temporal activity complete
     summary: Mark an activity as completed successfully with a result
@@ -707,6 +713,12 @@ commands:
           Reason for termination.
           Defaults to a message with the current user's name.
           Also used as reason for batch operation with --query.
+      - name: yes
+        type: bool
+        short: y
+        description: |
+          Don't prompt to confirm.
+          Only allowed when --query is present.
 
   - name: temporal activity delete
     summary: Delete a Standalone Activity Execution (Experimental)
@@ -740,6 +752,11 @@ commands:
           Reason for batch operation.
           Only use with --query.
           Defaults to a message with the current user's name.
+      - name: yes
+        type: bool
+        short: y
+        description: |
+          Don't prompt to confirm.
 
   - name: temporal batch
     summary: Manage running batch jobs
@@ -5017,12 +5034,6 @@ option-sets:
           Content for an SQL-like `QUERY` List Filter.
           You must set either --activity-id or --query.
           Note: Using --query for batch activity operations is an experimental feature and may change in the future.
-      - name: yes
-        type: bool
-        short: y
-        description: |
-          Don't prompt to confirm.
-          Only allowed when --query is present.
       - name: rps
         type: float
         description: |

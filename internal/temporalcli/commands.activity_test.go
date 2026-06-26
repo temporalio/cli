@@ -1190,13 +1190,14 @@ func (s *SharedServerSuite) TestActivity_Delete_Success() {
 	s.NoError(res.Err)
 	s.Contains(res.Stdout.String(), "Delete activity succeeded")
 
-	handle := s.Client.GetActivityHandle(client.GetActivityHandleOptions{
-		ActivityID: "delete-test",
-		RunID:      runID,
-	})
-	err := handle.Get(s.Context, nil)
-	s.Error(err)
-	s.Contains(err.Error(), "activity not found")
+	s.Eventually(func() bool {
+		handle := s.Client.GetActivityHandle(client.GetActivityHandleOptions{
+			ActivityID: "delete-test",
+			RunID:      runID,
+		})
+		err := handle.Get(s.Context, nil)
+		return err != nil && strings.Contains(err.Error(), "activity not found")
+	}, 5*time.Second, 200*time.Millisecond)
 }
 
 func (s *SharedServerSuite) TestActivity_SearchAttributes() {
@@ -1673,7 +1674,7 @@ func (s *SharedServerSuite) TestActivity_CancelTerminateDelete_BatchRateLimit() 
 		iterations := 2
 		activityIds := make([]string, 0, iterations)
 		for i := 0; i < iterations; i++ {
-			activityId := fmt.Sprintf("%s-test-%d", operator, i)
+			activityId := fmt.Sprintf("%s-test-rps-%d", operator, i)
 			activityIds = append(activityIds, activityId)
 			s.startActivity(activityId,
 				"--search-attribute", fmt.Sprintf(`CustomKeywordField="%s"`, uniqueKW),
@@ -1692,12 +1693,12 @@ func (s *SharedServerSuite) TestActivity_CancelTerminateDelete_BatchRateLimit() 
 
 		// Send cancel, terminate or delete
 		var rps float32 = 1
+		s.CommandHarness.Stdin.WriteString("y\n")
 		res := s.Execute(
 			"activity", operator,
 			"--address", s.Address(),
 			"--query", fmt.Sprintf(`CustomKeywordField = "%s"`, uniqueKW),
 			"--rps", fmt.Sprint(rps),
-			"-y",
 		)
 		s.NoError(res.Err)
 		s.Contains(res.Stdout.String(), "Started batch")

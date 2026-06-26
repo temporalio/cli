@@ -155,7 +155,6 @@ type ActivityReferenceOrBatchOptions struct {
 	ActivityId string
 	RunId      string
 	Query      string
-	Yes        bool
 	Rps        float32
 	FlagSet    *pflag.FlagSet
 }
@@ -165,7 +164,6 @@ func (v *ActivityReferenceOrBatchOptions) BuildFlags(f *pflag.FlagSet) {
 	f.StringVarP(&v.ActivityId, "activity-id", "a", "", "Activity ID. You must set either --activity-id or --query.")
 	f.StringVarP(&v.RunId, "run-id", "r", "", "Activity Run ID. If not set, targets the latest run. Only use with --activity-id. Cannot use with --query.")
 	f.StringVarP(&v.Query, "query", "q", "", "Content for an SQL-like `QUERY` List Filter. You must set either --activity-id or --query. Note: Using --query for batch activity operations is an experimental feature and may change in the future.")
-	f.BoolVarP(&v.Yes, "yes", "y", false, "Don't prompt to confirm. Only allowed when --query is present.")
 	f.Float32Var(&v.Rps, "rps", 0, "Limit batch's requests per second. Only allowed when --query is present.")
 }
 
@@ -580,6 +578,7 @@ type TemporalActivityCancelCommand struct {
 	Command cobra.Command
 	ActivityReferenceOrBatchOptions
 	Reason string
+	Yes    bool
 }
 
 func NewTemporalActivityCancelCommand(cctx *CommandContext, parent *TemporalActivityCommand) *TemporalActivityCancelCommand {
@@ -595,6 +594,7 @@ func NewTemporalActivityCancelCommand(cctx *CommandContext, parent *TemporalActi
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for cancellation. Also used as reason for batch operation with --query, which defaults to a message with the current user's name.")
+	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm. Only allowed when --query is present.")
 	s.ActivityReferenceOrBatchOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -671,6 +671,7 @@ type TemporalActivityDeleteCommand struct {
 	Command cobra.Command
 	ActivityReferenceOrBatchOptions
 	Reason string
+	Yes    bool
 }
 
 func NewTemporalActivityDeleteCommand(cctx *CommandContext, parent *TemporalActivityCommand) *TemporalActivityDeleteCommand {
@@ -686,6 +687,7 @@ func NewTemporalActivityDeleteCommand(cctx *CommandContext, parent *TemporalActi
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for batch operation. Only use with --query. Defaults to a message with the current user's name.")
+	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm.")
 	s.ActivityReferenceOrBatchOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -954,6 +956,7 @@ type TemporalActivityTerminateCommand struct {
 	Command cobra.Command
 	ActivityReferenceOrBatchOptions
 	Reason string
+	Yes    bool
 }
 
 func NewTemporalActivityTerminateCommand(cctx *CommandContext, parent *TemporalActivityCommand) *TemporalActivityTerminateCommand {
@@ -969,6 +972,7 @@ func NewTemporalActivityTerminateCommand(cctx *CommandContext, parent *TemporalA
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for termination. Defaults to a message with the current user's name. Also used as reason for batch operation with --query.")
+	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm. Only allowed when --query is present.")
 	s.ActivityReferenceOrBatchOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {

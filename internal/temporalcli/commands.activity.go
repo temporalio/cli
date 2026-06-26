@@ -532,13 +532,14 @@ func (s *ActivityReferenceOrBatchOptions) activityExecOrBatch(
 	cctx *CommandContext,
 	namespace string,
 	cl client.Client,
+	yesFlag bool,
 	overrides singleOrBatchOverrides,
 ) (*client.GetActivityHandleOptions, *workflowservice.StartBatchOperationRequest, error) {
 	// If activity is set, we return activity handle options with activity ID and run ID
 	if s.ActivityId != "" {
 		if s.Query != "" {
 			return nil, nil, fmt.Errorf("cannot set query when activity ID is set")
-		} else if s.Yes && !overrides.AllowYesWithActivityID {
+		} else if yesFlag && !overrides.AllowYesWithActivityID {
 			return nil, nil, fmt.Errorf("cannot set 'yes' when activity ID is set")
 		} else if s.Rps != 0 {
 			return nil, nil, fmt.Errorf("cannot set rps when activity ID is set")
@@ -561,7 +562,7 @@ func (s *ActivityReferenceOrBatchOptions) activityExecOrBatch(
 	// The count is only used in the confirmation prompt; skip the request when --yes
 	// bypasses it, so batch jobs can still proceed if the visibility API is timing out.
 	var promptMessage string
-	if s.Yes {
+	if yesFlag {
 		promptMessage = fmt.Sprintf("Start batch against standalone activities matching query %q? y/N", s.Query)
 	} else {
 		count, err := cl.CountActivities(cctx, client.CountActivitiesOptions{Query: s.Query})
@@ -570,10 +571,10 @@ func (s *ActivityReferenceOrBatchOptions) activityExecOrBatch(
 		}
 		promptMessage = fmt.Sprintf("Start batch against approximately %v standalone activities(s)? y/N", count.Count)
 	}
-	yes, err := cctx.promptYes(promptMessage, s.Yes)
+	isYes, err := cctx.promptYes(promptMessage, yesFlag)
 	if err != nil {
 		return nil, nil, err
-	} else if !yes {
+	} else if !isYes {
 		// We consider this a command failure
 		return nil, nil, fmt.Errorf("user denied confirmation")
 	}
@@ -597,11 +598,12 @@ func (c *TemporalActivityCancelCommand) run(cctx *CommandContext, args []string)
 		ActivityId: c.ActivityId,
 		RunId:      c.RunId,
 		Query:      c.Query,
-		Yes:        c.Yes,
 		Rps:        c.Rps,
 	}
 
-	activityOptions, batchReq, err := opts.activityExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{})
+	// TODO: should --yes be required if -o json or jsonl is used?
+
+	activityOptions, batchReq, err := opts.activityExecOrBatch(cctx, c.Parent.Namespace, cl, c.Yes, singleOrBatchOverrides{})
 	if err != nil {
 		return err
 	}
@@ -648,11 +650,10 @@ func (c *TemporalActivityTerminateCommand) run(cctx *CommandContext, args []stri
 		ActivityId: c.ActivityId,
 		RunId:      c.RunId,
 		Query:      c.Query,
-		Yes:        c.Yes,
 		Rps:        c.Rps,
 	}
 
-	activityOptions, batchReq, err := opts.activityExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{})
+	activityOptions, batchReq, err := opts.activityExecOrBatch(cctx, c.Parent.Namespace, cl, c.Yes, singleOrBatchOverrides{})
 	if err != nil {
 		return err
 	}
@@ -712,11 +713,10 @@ func (c *TemporalActivityDeleteCommand) run(cctx *CommandContext, args []string)
 		ActivityId: c.ActivityId,
 		RunId:      c.RunId,
 		Query:      c.Query,
-		Yes:        c.Yes,
 		Rps:        c.Rps,
 	}
 
-	activityOptions, batchReq, err := opts.activityExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{
+	activityOptions, batchReq, err := opts.activityExecOrBatch(cctx, c.Parent.Namespace, cl, c.Yes, singleOrBatchOverrides{
 		AllowYesWithActivityID: true,
 	})
 	if err != nil {
