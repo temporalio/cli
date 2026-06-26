@@ -1642,3 +1642,67 @@ func (s *SharedServerSuite) TestActivity_CancelTerminateDelete_BatchDefaultReaso
 		s.Contains(jsonOut["reason"], "Requested from CLI by")
 	}
 }
+
+func (s *SharedServerSuite) TestActivity_CancelTerminateDelete_BatchRateLimit() {
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		// don't complete the activity
+		return nil, activity.ErrResultPending
+	})
+
+	// following borrowed from testTerminateBatchWorkflow to intercept batch request
+	var lastRequestLock sync.Mutex
+	var startBatchRequest *workflowservice.StartBatchOperationRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string, req, reply any,
+			cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption,
+		) error {
+			lastRequestLock.Lock()
+			if r, ok := req.(*workflowservice.StartBatchOperationRequest); ok {
+				startBatchRequest = r
+			}
+			lastRequestLock.Unlock()
+			return invoker(ctx, method, req, reply, cc, opts...)
+		}),
+	)
+
+	for _, operator := range []string{"cancel", "terminate", "delete"} {
+		uniqueKW := operator + "-rps-" + uuid.NewString()[:8]
+		iterations := 2
+		activityIds := make([]string, 0, iterations)
+		for i := 0; i < iterations; i++ {
+			activityId := fmt.Sprintf("%s-test-%d", operator, i)
+			activityIds = append(activityIds, activityId)
+			s.startActivity(activityId,
+				"--search-attribute", fmt.Sprintf(`CustomKeywordField="%s"`, uniqueKW),
+			)
+		}
+
+		// Wait for all to be visible
+		s.Eventually(func() bool {
+			res := s.Execute(
+				"activity", "list",
+				"--address", s.Address(),
+				"--query", fmt.Sprintf(`CustomKeywordField = "%s" AND ExecutionStatus = "Running"`, uniqueKW),
+			)
+			return res.Err == nil && strings.Count(res.Stdout.String(), operator+"-test-") >= iterations
+		}, 5*time.Second, 200*time.Millisecond)
+
+		// Send cancel, terminate or delete
+		var rps float32 = 1
+		res := s.Execute(
+			"activity", operator,
+			"--address", s.Address(),
+			"--query", fmt.Sprintf(`CustomKeywordField = "%s"`, uniqueKW),
+			"--rps", fmt.Sprint(rps),
+			"-y",
+		)
+		s.NoError(res.Err)
+		s.Contains(res.Stdout.String(), "Started batch")
+
+		s.NotNil(startBatchRequest)
+		s.Equal(rps, startBatchRequest.MaxOperationsPerSecond)
+	}
+}

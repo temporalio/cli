@@ -579,9 +579,10 @@ func (s *ActivityReferenceOrBatchOptions) activityExecOrBatch(
 	}
 
 	return nil, &workflowservice.StartBatchOperationRequest{
-		Namespace:       namespace,
-		JobId:           uuid.NewString(),
-		VisibilityQuery: s.Query,
+		MaxOperationsPerSecond: s.Rps,
+		Namespace:              namespace,
+		JobId:                  uuid.NewString(),
+		VisibilityQuery:        s.Query,
 	}, nil
 }
 
