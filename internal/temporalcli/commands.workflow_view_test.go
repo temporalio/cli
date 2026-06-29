@@ -820,6 +820,27 @@ func (s *SharedServerSuite) TestWorkflow_Describe_OneTimeOverride() {
 	s.ContainsOnSameLine(out, "OverrideBehavior", "OneTime")
 	s.ContainsOnSameLine(out, "OverrideTargetVersionDeploymentName", targetDeploymentName)
 	s.ContainsOnSameLine(out, "OverrideTargetVersionBuildId", targetBuildID)
+
+	res = s.Execute(
+		"workflow", "describe",
+		"--address", s.Address(),
+		"-w", workflowID,
+		"-r", runID,
+		"--output", "json",
+	)
+	require.NoError(s.T(), res.Err)
+
+	var jsonResp workflowservice.DescribeWorkflowExecutionResponse
+	require.NoError(s.T(), temporalcli.UnmarshalProtoJSONWithOptions(res.Stdout.Bytes(), &jsonResp, true))
+	versioningInfo := jsonResp.GetWorkflowExecutionInfo().GetVersioningInfo()
+	require.NotNil(s.T(), versioningInfo)
+	s.Equal(enums.VERSIONING_BEHAVIOR_AUTO_UPGRADE, versioningInfo.GetBehavior())
+	s.Equal(baseDeploymentName, versioningInfo.GetDeploymentVersion().GetDeploymentName())
+	s.Equal(baseBuildID, versioningInfo.GetDeploymentVersion().GetBuildId())
+	oneTime := versioningInfo.GetVersioningOverride().GetOneTime()
+	require.NotNil(s.T(), oneTime)
+	s.Equal(targetDeploymentName, oneTime.GetTargetDeploymentVersion().GetDeploymentName())
+	s.Equal(targetBuildID, oneTime.GetTargetDeploymentVersion().GetBuildId())
 }
 
 func (s *SharedServerSuite) TestWorkflow_Describe_NexusOperationAndCallback() {

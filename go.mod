@@ -17,10 +17,10 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/temporalio/cli/cliext v0.0.0
 	github.com/temporalio/ui-server/v2 v2.49.1
-	go.temporal.io/api v1.62.15-0.20260618002053-7c062185c563
+	go.temporal.io/api v1.62.15-0.20260625002849-da8f81b6e9cb
 	go.temporal.io/sdk v1.44.1
 	go.temporal.io/sdk/contrib/envconfig v1.0.2
-	go.temporal.io/server v1.29.0-135.0.0.20260617003708-75fcd219ad4a
+	go.temporal.io/server v1.29.0-135.0.0.20260625184343-267e150ec47a
 	golang.org/x/exp v0.0.0-20260410095643-746e56fc9e2f
 	golang.org/x/mod v0.35.0
 	golang.org/x/term v0.43.0
@@ -192,7 +192,7 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.43.0 // indirect
 	go.opentelemetry.io/otel/trace v1.43.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.10.0 // indirect
-	go.temporal.io/auto-scaled-workers v0.0.0-20260407181057-edd947d743d2 // indirect
+	go.temporal.io/auto-scaled-workers v0.0.0-20260622220320-9b1e3849116d // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/dig v1.19.0 // indirect
 	go.uber.org/fx v1.24.0 // indirect
