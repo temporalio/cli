@@ -232,6 +232,36 @@ func (c *CommandContext) MarshalFriendlyFailureBodyText(f *failure.Failure, inde
 	return
 }
 
+type countGroup interface {
+	GetGroupValues() []*commonpb.Payload
+	GetCount() int64
+}
+
+func printCountGroupsText(cctx *CommandContext, groups []countGroup) {
+	for _, group := range groups {
+		var valueStr string
+		for _, payload := range group.GetGroupValues() {
+			var value any
+			if err := converter.GetDefaultDataConverter().FromPayload(payload, &value); err != nil {
+				value = fmt.Sprintf("<failed converting: %v>", err)
+			}
+			if valueStr != "" {
+				valueStr += ", "
+			}
+			valueStr += fmt.Sprintf("%v", value)
+		}
+		cctx.Printer.Printlnf("Group total: %v, values: %v", group.GetCount(), valueStr)
+	}
+}
+
+func stripCountGroupMetadataType(groups []countGroup) {
+	for _, group := range groups {
+		for _, payload := range group.GetGroupValues() {
+			delete(payload.GetMetadata(), "type")
+		}
+	}
+}
+
 // Takes payload shorthand into account, can use
 // MarshalProtoJSONNoPayloadShorthand if needed
 func (c *CommandContext) MarshalProtoJSON(m proto.Message) ([]byte, error) {
@@ -466,6 +496,11 @@ func (c *TemporalCommand) initCommand(cctx *CommandContext) {
 			color.NoColor = true
 		}
 		cctx.ActuallyRanCommand = true
+
+		// Print deprecation warning to stderr so it doesn't break JSON output
+		if msg, ok := cmd.Annotations["deprecationWarning"]; ok {
+			fmt.Fprintf(cctx.Options.Stderr, "warning: %s\n", strings.ToLower(strings.TrimRight(msg, ".")))
+		}
 
 		if cctx.Options.DeprecatedEnvConfig.EnvConfigName != "default" {
 			if _, ok := cctx.DeprecatedEnvConfigValues[cctx.Options.DeprecatedEnvConfig.EnvConfigName]; !ok {

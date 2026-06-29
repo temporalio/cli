@@ -39,6 +39,7 @@ import (
 	uiconfig "github.com/temporalio/ui-server/v2/server/config"
 	uiserveroptions "github.com/temporalio/ui-server/v2/server/server_options"
 	"go.temporal.io/api/enums/v1"
+	"go.temporal.io/server/chasm/lib/activity"
 	"go.temporal.io/server/common/authorization"
 	"go.temporal.io/server/common/cluster"
 	"go.temporal.io/server/common/config"
@@ -47,7 +48,6 @@ import (
 	"go.temporal.io/server/common/metrics"
 	sqliteplugin "go.temporal.io/server/common/persistence/sql/sqlplugin/sqlite"
 	"go.temporal.io/server/common/primitives"
-	"go.temporal.io/server/components/nexusoperations"
 	"go.temporal.io/server/schema/sqlite"
 	sqliteschema "go.temporal.io/server/schema/sqlite"
 	"go.temporal.io/server/temporal"
@@ -240,9 +240,11 @@ func (s *StartOptions) buildServerOptions() ([]temporal.ServerOption, *slog.Leve
 	dynConf[dynamicconfig.HistoryCacheHostLevelMaxSize.Key()] = 8096
 	// Up default visibility RPS
 	dynConf[dynamicconfig.FrontendMaxNamespaceVisibilityRPSPerInstance.Key()] = 100
-	// Enable the system callback URL for worker targets.
-	// TODO: Remove this when upgrading to server 1.31.
-	dynConf[nexusoperations.UseSystemCallbackURL.Key()] = true
+
+	// Enable CHASM and SAA. These will be on by default in server v1.32, at which point these lines
+	// should be removed.
+	dynConf[dynamicconfig.EnableChasm.Key()] = true
+	dynConf[activity.Enabled.Key()] = true
 
 	// Dynamic config if set
 	for k, v := range s.DynamicConfigValues {

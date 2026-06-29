@@ -15,7 +15,7 @@ import (
 	"go.temporal.io/api/workflow/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
-	"go.temporal.io/sdk/converter"
+
 	"go.temporal.io/sdk/temporalnexus"
 )
 
@@ -324,8 +324,14 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 			_ = cctx.Printer.PrintStructured(resp.PendingChildren, printer.StructuredOptions{})
 		}
 
-		cctx.Printer.Println(color.MagentaString("Pending Nexus Operations: %v", len(resp.PendingNexusOperations)))
-		if len(resp.PendingNexusOperations) > 0 {
+		var pendingNexusOps []*workflow.PendingNexusOperationInfo
+		for _, op := range resp.PendingNexusOperations {
+			if op.GetEndpoint() != temporalSystemNexusEndpoint {
+				pendingNexusOps = append(pendingNexusOps, op)
+			}
+		}
+		cctx.Printer.Println(color.MagentaString("Pending Nexus Operations: %v", len(pendingNexusOps)))
+		if len(pendingNexusOps) > 0 {
 			cctx.Printer.Println()
 			ops := make([]struct {
 				Endpoint                           string
@@ -348,8 +354,8 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 				CancelationLastAttemptCompleteTime time.Time                             `cli:",cardOmitEmpty"`
 				CancelationLastAttemptFailure      *failure.Failure                      `cli:",cardOmitEmpty"`
 				CancelationBlockedReason           string                                `cli:",cardOmitEmpty"`
-			}, len(resp.PendingNexusOperations))
-			for i, op := range resp.PendingNexusOperations {
+			}, len(pendingNexusOps))
+			for i, op := range pendingNexusOps {
 				ops[i].Endpoint = op.GetEndpoint()
 				ops[i].Service = op.GetService()
 				ops[i].Operation = op.GetOperation()
@@ -488,35 +494,16 @@ func (c *TemporalWorkflowCountCommand) run(cctx *CommandContext, args []string) 
 		return err
 	}
 
-	// Just dump response on JSON, otherwise print total and groups
+	groups := make([]countGroup, len(resp.Groups))
+	for i, g := range resp.Groups {
+		groups[i] = g
+	}
 	if cctx.JSONOutput {
-		// Shorthand does not apply to search attributes currently, so we're going
-		// to remove the "type" from the metadata encoding on group values to make
-		// it apply
-		for _, group := range resp.Groups {
-			for _, payload := range group.GroupValues {
-				delete(payload.GetMetadata(), "type")
-			}
-		}
+		stripCountGroupMetadataType(groups)
 		return cctx.Printer.PrintStructured(resp, printer.StructuredOptions{})
 	}
-
 	cctx.Printer.Printlnf("Total: %v", resp.Count)
-	for _, group := range resp.Groups {
-		// Payload values are search attributes, so we can use the default converter
-		var valueStr string
-		for _, payload := range group.GroupValues {
-			var value any
-			if err := converter.GetDefaultDataConverter().FromPayload(payload, &value); err != nil {
-				value = fmt.Sprintf("<failed converting: %v>", err)
-			}
-			if valueStr != "" {
-				valueStr += ", "
-			}
-			valueStr += fmt.Sprintf("%v", value)
-		}
-		cctx.Printer.Printlnf("Group total: %v, values: %v", group.Count, valueStr)
-	}
+	printCountGroupsText(cctx, groups)
 	return nil
 }
 
@@ -572,8 +559,12 @@ func (c *TemporalWorkflowResultCommand) run(cctx *CommandContext, _ []string) er
 }
 
 func (c *TemporalWorkflowShowCommand) run(cctx *CommandContext, _ []string) error {
+	if c.Reverse && c.Follow {
+		return fmt.Errorf("--reverse cannot be combined with --follow")
+	}
+
 	// Call describe
-	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
+	cl, codec, err := dialClientWithCodec(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -583,10 +574,13 @@ func (c *TemporalWorkflowShowCommand) run(cctx *CommandContext, _ []string) erro
 	iter := &structuredHistoryIter{
 		ctx:            cctx,
 		client:         cl,
+		namespace:      c.Parent.Namespace,
 		workflowID:     c.WorkflowId,
 		runID:          c.RunId,
 		includeDetails: c.Detailed,
 		follow:         c.Follow,
+		reverse:        c.Reverse,
+		codec:          codec,
 	}
 	if !cctx.JSONOutput {
 		cctx.Printer.Println(color.MagentaString("Progress:"))

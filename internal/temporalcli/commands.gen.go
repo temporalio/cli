@@ -341,6 +341,58 @@ func (v *NexusEndpointConfigOptions) BuildFlags(f *pflag.FlagSet) {
 	f.StringVar(&v.TargetUrl, "target-url", "", "An external Nexus Endpoint that receives forwarded Nexus requests. May be used as an alternative to `--target-namespace` and `--target-task-queue`. EXPERIMENTAL.")
 }
 
+type NexusOperationReferenceOptions struct {
+	OperationId string
+	RunId       string
+	FlagSet     *pflag.FlagSet
+}
+
+func (v *NexusOperationReferenceOptions) BuildFlags(f *pflag.FlagSet) {
+	v.FlagSet = f
+	f.StringVar(&v.OperationId, "operation-id", "", "Nexus Operation ID. Required.")
+	_ = cobra.MarkFlagRequired(f, "operation-id")
+	f.StringVarP(&v.RunId, "run-id", "r", "", "Run ID of the Nexus Operation.")
+}
+
+type NexusOperationStartOptions struct {
+	Endpoint               string
+	Service                string
+	Operation              string
+	OperationId            string
+	ScheduleToCloseTimeout cliext.FlagDuration
+	ScheduleToStartTimeout cliext.FlagDuration
+	StartToCloseTimeout    cliext.FlagDuration
+	IdConflictPolicy       cliext.FlagStringEnum
+	IdReusePolicy          cliext.FlagStringEnum
+	SearchAttribute        []string
+	StaticSummary          string
+	FlagSet                *pflag.FlagSet
+}
+
+func (v *NexusOperationStartOptions) BuildFlags(f *pflag.FlagSet) {
+	v.FlagSet = f
+	f.StringVar(&v.Endpoint, "endpoint", "", "Nexus Endpoint name. Required.")
+	_ = cobra.MarkFlagRequired(f, "endpoint")
+	f.StringVar(&v.Service, "service", "", "Nexus Service name. Required.")
+	_ = cobra.MarkFlagRequired(f, "service")
+	f.StringVar(&v.Operation, "operation", "", "Nexus Operation name. Required.")
+	_ = cobra.MarkFlagRequired(f, "operation")
+	f.StringVar(&v.OperationId, "operation-id", "", "Nexus Operation ID. Required.")
+	_ = cobra.MarkFlagRequired(f, "operation-id")
+	v.ScheduleToCloseTimeout = 0
+	f.Var(&v.ScheduleToCloseTimeout, "schedule-to-close-timeout", "Total time the operation is allowed to run.")
+	v.ScheduleToStartTimeout = 0
+	f.Var(&v.ScheduleToStartTimeout, "schedule-to-start-timeout", "Maximum time to wait for an operation to be started (or completed synchronously) by a handler.")
+	v.StartToCloseTimeout = 0
+	f.Var(&v.StartToCloseTimeout, "start-to-close-timeout", "Maximum time to wait for an asynchronous operation to complete after it has been started.")
+	v.IdConflictPolicy = cliext.NewFlagStringEnum([]string{"Fail", "UseExisting", "TerminateExisting"}, "")
+	f.Var(&v.IdConflictPolicy, "id-conflict-policy", "Policy for handling an Operation ID conflict with a running operation. Accepted values: Fail, UseExisting, TerminateExisting.")
+	v.IdReusePolicy = cliext.NewFlagStringEnum([]string{"AllowDuplicate", "RejectDuplicate"}, "")
+	f.Var(&v.IdReusePolicy, "id-reuse-policy", "Policy for re-using an Operation ID from a previously closed operation. Accepted values: AllowDuplicate, RejectDuplicate.")
+	f.StringArrayVar(&v.SearchAttribute, "search-attribute", nil, "Search Attribute in `KEY=VALUE` format. Keys must be identifiers, and values must be JSON values. For example: 'YourKey={\"your\": \"value\"}'. Can be passed multiple times.")
+	f.StringVar(&v.StaticSummary, "static-summary", "", "Static summary for the Nexus Operation for human consumption in UIs. Uses Temporal Markdown formatting, should be a single line. EXPERIMENTAL.")
+}
+
 type QueryModifiersOptions struct {
 	RejectCondition cliext.FlagStringEnum
 	Headers         []string
@@ -370,6 +422,78 @@ func (v *WorkflowUpdateOptionsOptions) BuildFlags(f *pflag.FlagSet) {
 	f.StringVar(&v.VersioningOverrideBuildId, "versioning-override-build-id", "", "When overriding to a `pinned` behavior, specifies the Build ID of the version to target.")
 }
 
+type ActivityReferenceOptions struct {
+	ActivityId string
+	RunId      string
+	FlagSet    *pflag.FlagSet
+}
+
+func (v *ActivityReferenceOptions) BuildFlags(f *pflag.FlagSet) {
+	v.FlagSet = f
+	f.StringVarP(&v.ActivityId, "activity-id", "a", "", "Activity ID. Required.")
+	_ = cobra.MarkFlagRequired(f, "activity-id")
+	f.StringVarP(&v.RunId, "run-id", "r", "", "Activity Run ID. If not set, targets the latest run.")
+}
+
+type ActivityStartOptions struct {
+	ActivityId              string
+	Type                    string
+	TaskQueue               string
+	ScheduleToCloseTimeout  cliext.FlagDuration
+	ScheduleToStartTimeout  cliext.FlagDuration
+	StartToCloseTimeout     cliext.FlagDuration
+	HeartbeatTimeout        cliext.FlagDuration
+	RetryInitialInterval    cliext.FlagDuration
+	RetryMaximumInterval    cliext.FlagDuration
+	RetryBackoffCoefficient float32
+	RetryMaximumAttempts    int
+	IdReusePolicy           cliext.FlagStringEnum
+	IdConflictPolicy        cliext.FlagStringEnum
+	SearchAttribute         []string
+	Headers                 []string
+	StaticSummary           string
+	StaticDetails           string
+	PriorityKey             int
+	FairnessKey             string
+	FairnessWeight          float32
+	FlagSet                 *pflag.FlagSet
+}
+
+func (v *ActivityStartOptions) BuildFlags(f *pflag.FlagSet) {
+	v.FlagSet = f
+	f.StringVarP(&v.ActivityId, "activity-id", "a", "", "Activity ID. Required.")
+	_ = cobra.MarkFlagRequired(f, "activity-id")
+	f.StringVar(&v.Type, "type", "", "Activity Type name. Required.")
+	_ = cobra.MarkFlagRequired(f, "type")
+	f.StringVarP(&v.TaskQueue, "task-queue", "t", "", "Activity task queue. Required.")
+	_ = cobra.MarkFlagRequired(f, "task-queue")
+	v.ScheduleToCloseTimeout = 0
+	f.Var(&v.ScheduleToCloseTimeout, "schedule-to-close-timeout", "Maximum time for the Activity Execution, including all retries. Either this or \"start-to-close-timeout\" is required.")
+	v.ScheduleToStartTimeout = 0
+	f.Var(&v.ScheduleToStartTimeout, "schedule-to-start-timeout", "Maximum time an Activity task can stay in a task queue before a Worker picks it up. On expiry it results in a non-retryable failure and no further attempts are scheduled.")
+	v.StartToCloseTimeout = 0
+	f.Var(&v.StartToCloseTimeout, "start-to-close-timeout", "Maximum time for a single Activity attempt. On expiry a new attempt may be scheduled if permitted by the retry policy and schedule-to-close timeout. Either this or \"schedule-to-close-timeout\" is required.")
+	v.HeartbeatTimeout = 0
+	f.Var(&v.HeartbeatTimeout, "heartbeat-timeout", "Maximum time between successful Worker heartbeats. On expiry the current activity attempt fails.")
+	v.RetryInitialInterval = 0
+	f.Var(&v.RetryInitialInterval, "retry-initial-interval", "Interval of the first retry. If \"retry-backoff-coefficient\" is 1.0, it is used for all retries.")
+	v.RetryMaximumInterval = 0
+	f.Var(&v.RetryMaximumInterval, "retry-maximum-interval", "Maximum interval between retries.")
+	f.Float32Var(&v.RetryBackoffCoefficient, "retry-backoff-coefficient", 0, "Coefficient for calculating the next retry interval. Must be 1 or larger.")
+	f.IntVar(&v.RetryMaximumAttempts, "retry-maximum-attempts", 0, "Maximum number of attempts. Setting to 1 disables retries. Setting to 0 means unlimited attempts.")
+	v.IdReusePolicy = cliext.NewFlagStringEnum([]string{"AllowDuplicate", "AllowDuplicateFailedOnly", "RejectDuplicate"}, "")
+	f.Var(&v.IdReusePolicy, "id-reuse-policy", "Policy for handling activity start when an Activity with the same ID exists and has completed. Accepted values: AllowDuplicate, AllowDuplicateFailedOnly, RejectDuplicate.")
+	v.IdConflictPolicy = cliext.NewFlagStringEnum([]string{"Fail", "UseExisting"}, "")
+	f.Var(&v.IdConflictPolicy, "id-conflict-policy", "Policy for handling activity start when an Activity with the same ID is currently running. Accepted values: Fail, UseExisting.")
+	f.StringArrayVar(&v.SearchAttribute, "search-attribute", nil, "Search Attribute in `KEY=VALUE` format. Keys must be identifiers, and values must be JSON values. Can be passed multiple times. See https://docs.temporal.io/visibility.")
+	f.StringArrayVar(&v.Headers, "headers", nil, "Temporal activity headers in 'KEY=VALUE' format. Keys must be identifiers, and values must be JSON values. May be passed multiple times.")
+	f.StringVar(&v.StaticSummary, "static-summary", "", "Static Activity summary for human consumption in UIs. Uses standard Markdown formatting excluding images, HTML, and script tags. EXPERIMENTAL.")
+	f.StringVar(&v.StaticDetails, "static-details", "", "Static Activity details for human consumption in UIs. Uses standard Markdown formatting excluding images, HTML, and script tags. EXPERIMENTAL.")
+	f.IntVar(&v.PriorityKey, "priority-key", 0, "Priority key (1-5, lower = higher priority). Default is 3 when not specified.")
+	f.StringVar(&v.FairnessKey, "fairness-key", "", "Fairness key (max 64 bytes) for proportional task dispatch.")
+	f.Float32Var(&v.FairnessWeight, "fairness-weight", 0, "Weight [0.001-1000] for this fairness key.")
+}
+
 type TemporalCommand struct {
 	Command cobra.Command
 	cliext.CommonOptions
@@ -389,6 +513,7 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	s.Command.AddCommand(&NewTemporalBatchCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalConfigCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalEnvCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalNexusCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalOperatorCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalServerCommand(cctx, &s).Command)
@@ -410,28 +535,62 @@ func NewTemporalActivityCommand(cctx *CommandContext, parent *TemporalCommand) *
 	var s TemporalActivityCommand
 	s.Parent = parent
 	s.Command.Use = "activity"
-	s.Command.Short = "Complete, update, pause, unpause, reset or fail an Activity"
-	if hasHighlighting {
-		s.Command.Long = "Update an Activity's options, manage activity lifecycle or update\nan Activity's state to completed or failed.\n\nUpdating activity state marks an Activity as successfully finished or as\nhaving encountered an error.\n\n\x1b[1mtemporal activity complete \\\n    --activity-id=YourActivityId \\\n    --workflow-id=YourWorkflowId \\\n    --result='{\"YourResultKey\": \"YourResultValue\"}'\x1b[0m"
-	} else {
-		s.Command.Long = "Update an Activity's options, manage activity lifecycle or update\nan Activity's state to completed or failed.\n\nUpdating activity state marks an Activity as successfully finished or as\nhaving encountered an error.\n\n```\ntemporal activity complete \\\n    --activity-id=YourActivityId \\\n    --workflow-id=YourWorkflowId \\\n    --result='{\"YourResultKey\": \"YourResultValue\"}'\n```"
-	}
+	s.Command.Short = "Operate on Activity Executions"
+	s.Command.Long = "Perform operations on Activity Executions."
 	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalActivityCancelCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalActivityCompleteCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalActivityCountCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalActivityDescribeCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalActivityExecuteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalActivityFailCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalActivityListCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalActivityPauseCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalActivityResetCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalActivityResultCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalActivityStartCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalActivityTerminateCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalActivityUnpauseCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalActivityUpdateOptionsCommand(cctx, &s).Command)
 	s.ClientOptions.BuildFlags(s.Command.PersistentFlags())
 	return &s
 }
 
-type TemporalActivityCompleteCommand struct {
+type TemporalActivityCancelCommand struct {
 	Parent  *TemporalActivityCommand
 	Command cobra.Command
-	WorkflowReferenceOptions
+	ActivityReferenceOptions
+	Reason string
+}
+
+func NewTemporalActivityCancelCommand(cctx *CommandContext, parent *TemporalActivityCommand) *TemporalActivityCancelCommand {
+	var s TemporalActivityCancelCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "cancel [flags]"
+	s.Command.Short = "Request cancellation of a Standalone Activity (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Request cancellation of a Standalone Activity.\n\n\x1b[1mtemporal activity cancel \\\n    --activity-id YourActivityId\x1b[0m\n\nRequesting cancellation transitions the Activity's run state\nto CancelRequested. If the Activity is heartbeating, a\ncancellation error will be raised when the next heartbeat\nresponse is received; if the Activity allows this error to\npropagate, the Activity transitions to canceled status."
+	} else {
+		s.Command.Long = "Request cancellation of a Standalone Activity.\n\n```\ntemporal activity cancel \\\n    --activity-id YourActivityId\n```\n\nRequesting cancellation transitions the Activity's run state\nto CancelRequested. If the Activity is heartbeating, a\ncancellation error will be raised when the next heartbeat\nresponse is received; if the Activity allows this error to\npropagate, the Activity transitions to canceled status."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for cancellation.")
+	s.ActivityReferenceOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalActivityCompleteCommand struct {
+	Parent     *TemporalActivityCommand
+	Command    cobra.Command
 	ActivityId string
+	WorkflowId string
+	RunId      string
 	Result     string
 }
 
@@ -440,18 +599,104 @@ func NewTemporalActivityCompleteCommand(cctx *CommandContext, parent *TemporalAc
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "complete [flags]"
-	s.Command.Short = "Complete an Activity"
+	s.Command.Short = "Mark an activity as completed successfully with a result"
 	if hasHighlighting {
 		s.Command.Long = "Complete an Activity, marking it as successfully finished. Specify the\nActivity ID and include a JSON result for the returned value:\n\n\x1b[1mtemporal activity complete \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --result '{\"YourResultKey\": \"YourResultVal\"}'\x1b[0m"
 	} else {
 		s.Command.Long = "Complete an Activity, marking it as successfully finished. Specify the\nActivity ID and include a JSON result for the returned value:\n\n```\ntemporal activity complete \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --result '{\"YourResultKey\": \"YourResultVal\"}'\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "Activity ID to complete. Required.")
+	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "Activity ID. This may be the ID of an Activity invoked by a Workflow, or of a Standalone Activity. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "activity-id")
+	s.Command.Flags().StringVarP(&s.WorkflowId, "workflow-id", "w", "", "Workflow ID. Required for workflow Activities. Omit for Standalone Activities.")
+	s.Command.Flags().StringVarP(&s.RunId, "run-id", "r", "", "Run ID. For workflow Activities (when --workflow-id is provided), this is the Workflow Run ID. For Standalone Activities, this is the Activity Run ID.")
 	s.Command.Flags().StringVar(&s.Result, "result", "", "Result `JSON` to return. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "result")
-	s.WorkflowReferenceOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalActivityCountCommand struct {
+	Parent  *TemporalActivityCommand
+	Command cobra.Command
+	Query   string
+}
+
+func NewTemporalActivityCountCommand(cctx *CommandContext, parent *TemporalActivityCommand) *TemporalActivityCountCommand {
+	var s TemporalActivityCountCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "count [flags]"
+	s.Command.Short = "Count Standalone Activities matching a query (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Return a count of Standalone Activities. Use \x1b[1m--query\x1b[0m to filter\nthe activities to be counted.\n\n\x1b[1mtemporal activity count \\\n    --query 'ActivityType=\"YourActivity\"'\x1b[0m\n\nVisit https://docs.temporal.io/visibility to read more about\nSearch Attributes and queries."
+	} else {
+		s.Command.Long = "Return a count of Standalone Activities. Use `--query` to filter\nthe activities to be counted.\n\n```\ntemporal activity count \\\n    --query 'ActivityType=\"YourActivity\"'\n```\n\nVisit https://docs.temporal.io/visibility to read more about\nSearch Attributes and queries."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Query to filter Activity Executions to count.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalActivityDescribeCommand struct {
+	Parent  *TemporalActivityCommand
+	Command cobra.Command
+	ActivityReferenceOptions
+	Raw bool
+}
+
+func NewTemporalActivityDescribeCommand(cctx *CommandContext, parent *TemporalActivityCommand) *TemporalActivityDescribeCommand {
+	var s TemporalActivityDescribeCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "describe [flags]"
+	s.Command.Short = "Show detailed info for a Standalone Activity (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Display information about a Standalone Activity.\n\n\x1b[1mtemporal activity describe \\\n    --activity-id YourActivityId\x1b[0m"
+	} else {
+		s.Command.Long = "Display information about a Standalone Activity.\n\n```\ntemporal activity describe \\\n    --activity-id YourActivityId\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().BoolVar(&s.Raw, "raw", false, "Print properties without changing their format.")
+	s.ActivityReferenceOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalActivityExecuteCommand struct {
+	Parent  *TemporalActivityCommand
+	Command cobra.Command
+	ActivityStartOptions
+	PayloadInputOptions
+}
+
+func NewTemporalActivityExecuteCommand(cctx *CommandContext, parent *TemporalActivityCommand) *TemporalActivityExecuteCommand {
+	var s TemporalActivityExecuteCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "execute [flags]"
+	s.Command.Short = "Start a new Standalone Activity and wait for its result (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Start a new Standalone Activity and block until it completes.\nThe result is output to stdout.\n\n\x1b[1mtemporal activity execute \\\n    --activity-id YourActivityId \\\n    --type YourActivity \\\n    --task-queue YourTaskQueue \\\n    --start-to-close-timeout 30s \\\n    --input '{\"some-key\": \"some-value\"}'\x1b[0m"
+	} else {
+		s.Command.Long = "Start a new Standalone Activity and block until it completes.\nThe result is output to stdout.\n\n```\ntemporal activity execute \\\n    --activity-id YourActivityId \\\n    --type YourActivity \\\n    --task-queue YourTaskQueue \\\n    --start-to-close-timeout 30s \\\n    --input '{\"some-key\": \"some-value\"}'\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ActivityStartOptions.BuildFlags(s.Command.Flags())
+	s.PayloadInputOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -461,10 +706,11 @@ func NewTemporalActivityCompleteCommand(cctx *CommandContext, parent *TemporalAc
 }
 
 type TemporalActivityFailCommand struct {
-	Parent  *TemporalActivityCommand
-	Command cobra.Command
-	WorkflowReferenceOptions
+	Parent     *TemporalActivityCommand
+	Command    cobra.Command
 	ActivityId string
+	WorkflowId string
+	RunId      string
 	Detail     string
 	Reason     string
 }
@@ -474,18 +720,50 @@ func NewTemporalActivityFailCommand(cctx *CommandContext, parent *TemporalActivi
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "fail [flags]"
-	s.Command.Short = "Fail an Activity"
+	s.Command.Short = "Mark an Activity as completed unsuccessfully with an error"
 	if hasHighlighting {
-		s.Command.Long = "Fail an Activity, marking it as having encountered an error. Specify the\nActivity and Workflow IDs:\n\n\x1b[1mtemporal activity fail \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\x1b[0m"
+		s.Command.Long = "Fail an Activity, marking it as having encountered an error:\n\n\x1b[1mtemporal activity fail \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\x1b[0m"
 	} else {
-		s.Command.Long = "Fail an Activity, marking it as having encountered an error. Specify the\nActivity and Workflow IDs:\n\n```\ntemporal activity fail \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n```"
+		s.Command.Long = "Fail an Activity, marking it as having encountered an error:\n\n```\ntemporal activity fail \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "Activity ID to fail. Required.")
+	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "Activity ID. This may be the ID of an Activity invoked by a Workflow, or of a Standalone Activity. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "activity-id")
-	s.Command.Flags().StringVar(&s.Detail, "detail", "", "Reason for failing the Activity (JSON).")
-	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for failing the Activity.")
-	s.WorkflowReferenceOptions.BuildFlags(s.Command.Flags())
+	s.Command.Flags().StringVarP(&s.WorkflowId, "workflow-id", "w", "", "Workflow ID. Required for workflow Activities. Omit for Standalone Activities.")
+	s.Command.Flags().StringVarP(&s.RunId, "run-id", "r", "", "Run ID. For workflow Activities (when --workflow-id is provided), this is the Workflow Run ID. For Standalone Activities, this is the Activity Run ID.")
+	s.Command.Flags().StringVar(&s.Detail, "detail", "", "Failure detail (JSON). Attached as the failure details payload.")
+	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Failure reason. Attached as the failure message.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalActivityListCommand struct {
+	Parent   *TemporalActivityCommand
+	Command  cobra.Command
+	Query    string
+	Limit    int
+	PageSize int
+}
+
+func NewTemporalActivityListCommand(cctx *CommandContext, parent *TemporalActivityCommand) *TemporalActivityListCommand {
+	var s TemporalActivityListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "List Standalone Activities matching a query (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "List Standalone Activities. Use \x1b[1m--query\x1b[0m to filter results.\n\n\x1b[1mtemporal activity list \\\n    --query 'ActivityType=\"YourActivity\"'\x1b[0m\n\nVisit https://docs.temporal.io/visibility to read more about\nSearch Attributes and queries."
+	} else {
+		s.Command.Long = "List Standalone Activities. Use `--query` to filter results.\n\n```\ntemporal activity list \\\n    --query 'ActivityType=\"YourActivity\"'\n```\n\nVisit https://docs.temporal.io/visibility to read more about\nSearch Attributes and queries."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Query to filter the Activity Executions to list.")
+	s.Command.Flags().IntVar(&s.Limit, "limit", 0, "Maximum number of Activity Executions to display.")
+	s.Command.Flags().IntVar(&s.PageSize, "page-size", 0, "Maximum number of Activity Executions to fetch at a time from the server.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -510,9 +788,9 @@ func NewTemporalActivityPauseCommand(cctx *CommandContext, parent *TemporalActiv
 	s.Command.Use = "pause [flags]"
 	s.Command.Short = "Pause an Activity"
 	if hasHighlighting {
-		s.Command.Long = "Pause an Activity.\n\nIf the Activity is not currently running (e.g. because it previously\nfailed), it will not be run again until it is unpaused.\n\nHowever, if the Activity is currently running, it will run until the next\ntime it fails, completes, or times out, at which point the pause will kick in.\n\nIf the Activity is on its last retry attempt and fails, the failure will\nbe returned to the caller, just as if the Activity had not been paused.\n\nSpecify the Activity and Workflow IDs:\n\n\x1b[1mtemporal activity pause \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\x1b[0m\n\nTo later unpause the activity, see unpause. You may also want to\nreset the activity to unpause it while also starting it from the beginning."
+		s.Command.Long = "Pause an Activity. Not supported for Standalone Activities.\n\nIf the Activity is not currently running (e.g. because it previously\nfailed), it will not be run again until it is unpaused.\n\nHowever, if the Activity is currently running, it will run until the next\ntime it fails, completes, or times out, at which point the pause will kick in.\n\nPause does not stop or extend the Activity's Schedule-To-Close Timeout.\nA paused Activity can still time out. Use \x1b[1mtemporal activity update-options\x1b[0m\nto extend timeout settings before a long pause.\n\nIf the Activity is on its last retry attempt and fails, the failure will\nbe returned to the caller, just as if the Activity had not been paused.\n\nSpecify the Activity and Workflow IDs:\n\n\x1b[1mtemporal activity pause \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\x1b[0m\n\nTo later unpause the activity, see unpause. You may also want to\nreset the activity to unpause it while also starting it from the beginning."
 	} else {
-		s.Command.Long = "Pause an Activity.\n\nIf the Activity is not currently running (e.g. because it previously\nfailed), it will not be run again until it is unpaused.\n\nHowever, if the Activity is currently running, it will run until the next\ntime it fails, completes, or times out, at which point the pause will kick in.\n\nIf the Activity is on its last retry attempt and fails, the failure will\nbe returned to the caller, just as if the Activity had not been paused.\n\nSpecify the Activity and Workflow IDs:\n\n```\ntemporal activity pause \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n```\n\nTo later unpause the activity, see unpause. You may also want to\nreset the activity to unpause it while also starting it from the beginning."
+		s.Command.Long = "Pause an Activity. Not supported for Standalone Activities.\n\nIf the Activity is not currently running (e.g. because it previously\nfailed), it will not be run again until it is unpaused.\n\nHowever, if the Activity is currently running, it will run until the next\ntime it fails, completes, or times out, at which point the pause will kick in.\n\nPause does not stop or extend the Activity's Schedule-To-Close Timeout.\nA paused Activity can still time out. Use `temporal activity update-options`\nto extend timeout settings before a long pause.\n\nIf the Activity is on its last retry attempt and fails, the failure will\nbe returned to the caller, just as if the Activity had not been paused.\n\nSpecify the Activity and Workflow IDs:\n\n```\ntemporal activity pause \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n```\n\nTo later unpause the activity, see unpause. You may also want to\nreset the activity to unpause it while also starting it from the beginning."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "The Activity ID to pause. Required.")
@@ -546,9 +824,9 @@ func NewTemporalActivityResetCommand(cctx *CommandContext, parent *TemporalActiv
 	s.Command.Use = "reset [flags]"
 	s.Command.Short = "Reset an Activity"
 	if hasHighlighting {
-		s.Command.Long = "Reset an activity. This restarts the activity as if it were first being\nscheduled. That is, it will reset both the number of attempts and the\nactivity timeout, as well as, optionally, the\nheartbeat details.\n\nIf the activity may be executing (i.e. it has not yet timed out), the\nreset will take effect the next time it fails, heartbeats, or times out.\nIf is waiting for a retry (i.e. has failed or timed out), the reset\nwill apply immediately.\n\nIf the activity is already paused, it will be unpaused by default.\nYou can specify \x1b[1mkeep_paused\x1b[0m to prevent this.\n\nIf the activity is paused and the \x1b[1mkeep_paused\x1b[0m flag is not provided,\nit will be unpaused. If the activity is paused and \x1b[1mkeep_paused\x1b[0m flag\nis provided - it will stay paused.\n\nEither \x1b[1m--activity-id\x1b[0m (with \x1b[1m--workflow-id\x1b[0m) or \x1b[1m--query\x1b[0m must be specified.\n\n### Resetting activities that heartbeat {#reset-heartbeats}\n\nActivities that heartbeat will receive a Canceled failure\nthe next time they heartbeat after a reset.\n\nIf, in your Activity, you need to do any cleanup when an Activity is\nreset, handle this error and then re-throw it when you've cleaned up.\n\nIf the \x1b[1mreset_heartbeats\x1b[0m flag is set, the heartbeat details will also be cleared.\n\nSpecify the Activity and Workflow IDs:\n\n\x1b[1mtemporal activity reset \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n    --keep-paused\n    --reset-heartbeats\x1b[0m\n\nActivities can be reset in bulk with a visibility query list filter:\n\n\x1b[1mtemporal activity reset \\\n    --query 'WorkflowType=\"YourWorkflow\"'\x1b[0m"
+		s.Command.Long = "Reset an activity. Not supported for Standalone Activities.\nThis restarts the activity as if it were first being\nscheduled. That is, it will reset both the number of attempts and the\nactivity timeout, as well as, optionally, the\nheartbeat details.\n\nIf the activity may be executing (i.e. it has not yet timed out), the\nreset will take effect the next time it fails, heartbeats, or times out.\nIf is waiting for a retry (i.e. has failed or timed out), the reset\nwill apply immediately.\n\nIf the activity is already paused, it will be unpaused by default.\nYou can specify \x1b[1mkeep_paused\x1b[0m to prevent this.\n\nIf the activity is paused and the \x1b[1mkeep_paused\x1b[0m flag is not provided,\nit will be unpaused. If the activity is paused and \x1b[1mkeep_paused\x1b[0m flag\nis provided - it will stay paused.\n\nEither \x1b[1m--activity-id\x1b[0m (with \x1b[1m--workflow-id\x1b[0m) or \x1b[1m--query\x1b[0m must be specified.\n\n### Resetting activities that heartbeat {#reset-heartbeats}\n\nActivities that heartbeat will receive a Canceled failure\nthe next time they heartbeat after a reset.\n\nIf, in your Activity, you need to do any cleanup when an Activity is\nreset, handle this error and then re-throw it when you've cleaned up.\n\nIf the \x1b[1mreset_heartbeats\x1b[0m flag is set, the heartbeat details will also be cleared.\n\nSpecify the Activity and Workflow IDs:\n\n\x1b[1mtemporal activity reset \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n    --keep-paused\n    --reset-heartbeats\x1b[0m\n\nActivities can be reset in bulk with a visibility query list filter:\n\n\x1b[1mtemporal activity reset \\\n    --query 'WorkflowType=\"YourWorkflow\"'\x1b[0m"
 	} else {
-		s.Command.Long = "Reset an activity. This restarts the activity as if it were first being\nscheduled. That is, it will reset both the number of attempts and the\nactivity timeout, as well as, optionally, the\nheartbeat details.\n\nIf the activity may be executing (i.e. it has not yet timed out), the\nreset will take effect the next time it fails, heartbeats, or times out.\nIf is waiting for a retry (i.e. has failed or timed out), the reset\nwill apply immediately.\n\nIf the activity is already paused, it will be unpaused by default.\nYou can specify `keep_paused` to prevent this.\n\nIf the activity is paused and the `keep_paused` flag is not provided,\nit will be unpaused. If the activity is paused and `keep_paused` flag\nis provided - it will stay paused.\n\nEither `--activity-id` (with `--workflow-id`) or `--query` must be specified.\n\n### Resetting activities that heartbeat {#reset-heartbeats}\n\nActivities that heartbeat will receive a Canceled failure\nthe next time they heartbeat after a reset.\n\nIf, in your Activity, you need to do any cleanup when an Activity is\nreset, handle this error and then re-throw it when you've cleaned up.\n\nIf the `reset_heartbeats` flag is set, the heartbeat details will also be cleared.\n\nSpecify the Activity and Workflow IDs:\n\n```\ntemporal activity reset \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n    --keep-paused\n    --reset-heartbeats\n```\n\nActivities can be reset in bulk with a visibility query list filter:\n\n```\ntemporal activity reset \\\n    --query 'WorkflowType=\"YourWorkflow\"'\n```"
+		s.Command.Long = "Reset an activity. Not supported for Standalone Activities.\nThis restarts the activity as if it were first being\nscheduled. That is, it will reset both the number of attempts and the\nactivity timeout, as well as, optionally, the\nheartbeat details.\n\nIf the activity may be executing (i.e. it has not yet timed out), the\nreset will take effect the next time it fails, heartbeats, or times out.\nIf is waiting for a retry (i.e. has failed or timed out), the reset\nwill apply immediately.\n\nIf the activity is already paused, it will be unpaused by default.\nYou can specify `keep_paused` to prevent this.\n\nIf the activity is paused and the `keep_paused` flag is not provided,\nit will be unpaused. If the activity is paused and `keep_paused` flag\nis provided - it will stay paused.\n\nEither `--activity-id` (with `--workflow-id`) or `--query` must be specified.\n\n### Resetting activities that heartbeat {#reset-heartbeats}\n\nActivities that heartbeat will receive a Canceled failure\nthe next time they heartbeat after a reset.\n\nIf, in your Activity, you need to do any cleanup when an Activity is\nreset, handle this error and then re-throw it when you've cleaned up.\n\nIf the `reset_heartbeats` flag is set, the heartbeat details will also be cleared.\n\nSpecify the Activity and Workflow IDs:\n\n```\ntemporal activity reset \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n    --keep-paused\n    --reset-heartbeats\n```\n\nActivities can be reset in bulk with a visibility query list filter:\n\n```\ntemporal activity reset \\\n    --query 'WorkflowType=\"YourWorkflow\"'\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "The Activity ID to reset. Mutually exclusive with `--query`. Requires `--workflow-id` to be specified.")
@@ -559,6 +837,91 @@ func NewTemporalActivityResetCommand(cctx *CommandContext, parent *TemporalActiv
 	s.Command.Flags().Var(&s.Jitter, "jitter", "The activity will reset at random a time within the specified duration. Can only be used with --query.")
 	s.Command.Flags().BoolVar(&s.RestoreOriginalOptions, "restore-original-options", false, "Restore the original options of the activity.")
 	s.SingleActivityOrBatchOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalActivityResultCommand struct {
+	Parent  *TemporalActivityCommand
+	Command cobra.Command
+	ActivityReferenceOptions
+}
+
+func NewTemporalActivityResultCommand(cctx *CommandContext, parent *TemporalActivityCommand) *TemporalActivityResultCommand {
+	var s TemporalActivityResultCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "result [flags]"
+	s.Command.Short = "Wait for and output the result of a Standalone Activity (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Wait for a Standalone Activity to complete and output the\nresult.\n\n\x1b[1mtemporal activity result \\\n    --activity-id YourActivityId\x1b[0m"
+	} else {
+		s.Command.Long = "Wait for a Standalone Activity to complete and output the\nresult.\n\n```\ntemporal activity result \\\n    --activity-id YourActivityId\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ActivityReferenceOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalActivityStartCommand struct {
+	Parent  *TemporalActivityCommand
+	Command cobra.Command
+	ActivityStartOptions
+	PayloadInputOptions
+}
+
+func NewTemporalActivityStartCommand(cctx *CommandContext, parent *TemporalActivityCommand) *TemporalActivityStartCommand {
+	var s TemporalActivityStartCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "start [flags]"
+	s.Command.Short = "Start a new Standalone Activity (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Start a new Standalone Activity. Outputs the Activity ID and\nRun ID.\n\n\x1b[1mtemporal activity start \\\n    --activity-id YourActivityId \\\n    --type YourActivity \\\n    --task-queue YourTaskQueue \\\n    --start-to-close-timeout 5m \\\n    --input '{\"some-key\": \"some-value\"}'\x1b[0m"
+	} else {
+		s.Command.Long = "Start a new Standalone Activity. Outputs the Activity ID and\nRun ID.\n\n```\ntemporal activity start \\\n    --activity-id YourActivityId \\\n    --type YourActivity \\\n    --task-queue YourTaskQueue \\\n    --start-to-close-timeout 5m \\\n    --input '{\"some-key\": \"some-value\"}'\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ActivityStartOptions.BuildFlags(s.Command.Flags())
+	s.PayloadInputOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalActivityTerminateCommand struct {
+	Parent  *TemporalActivityCommand
+	Command cobra.Command
+	ActivityReferenceOptions
+	Reason string
+}
+
+func NewTemporalActivityTerminateCommand(cctx *CommandContext, parent *TemporalActivityCommand) *TemporalActivityTerminateCommand {
+	var s TemporalActivityTerminateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "terminate [flags]"
+	s.Command.Short = "Forcefully end a Standalone Activity (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Terminate a Standalone Activity.\n\n\x1b[1mtemporal activity terminate \\\n    --activity-id YourActivityId \\\n    --reason YourReason\x1b[0m\n\nActivity code cannot see or respond to terminations."
+	} else {
+		s.Command.Long = "Terminate a Standalone Activity.\n\n```\ntemporal activity terminate \\\n    --activity-id YourActivityId \\\n    --reason YourReason\n```\n\nActivity code cannot see or respond to terminations."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for termination. Defaults to a message with the current user's name.")
+	s.ActivityReferenceOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -584,9 +947,9 @@ func NewTemporalActivityUnpauseCommand(cctx *CommandContext, parent *TemporalAct
 	s.Command.Use = "unpause [flags]"
 	s.Command.Short = "Unpause an Activity"
 	if hasHighlighting {
-		s.Command.Long = "Re-schedule a previously-paused Activity for execution.\n\nIf the Activity is not running and is past its retry timeout, it will be\nscheduled immediately. Otherwise, it will be scheduled after its retry\ntimeout expires.\n\nUse \x1b[1m--reset-attempts\x1b[0m to reset the number of previous run attempts to\nzero. For example, if an Activity is near the maximum number of attempts\nN specified in its retry policy, \x1b[1m--reset-attempts\x1b[0m will allow the\nActivity to be retried another N times after unpausing.\n\nUse \x1b[1m--reset-heartbeat\x1b[0m to reset the Activity's heartbeats.\n\nEither \x1b[1m--activity-id\x1b[0m (with \x1b[1m--workflow-id\x1b[0m) or \x1b[1m--query\x1b[0m must be specified.\n\nSpecify the Activity and Workflow IDs:\n\n\x1b[1mtemporal activity unpause \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n    --reset-attempts\n    --reset-heartbeats\x1b[0m\n\nActivities can be unpaused in bulk via a visibility Query list filter:\n\n\x1b[1mtemporal activity unpause \\\n    --query 'TemporalPauseInfo IS NOT NULL'\x1b[0m"
+		s.Command.Long = "Re-schedule a previously-paused Activity for execution.\nNot supported for Standalone Activities.\n\nIf the Activity is not running and is past its retry timeout, it will be\nscheduled immediately. Otherwise, it will be scheduled after its retry\ntimeout expires.\n\nUse \x1b[1m--reset-attempts\x1b[0m to reset the number of previous run attempts to\nzero. For example, if an Activity is near the maximum number of attempts\nN specified in its retry policy, \x1b[1m--reset-attempts\x1b[0m will allow the\nActivity to be retried another N times after unpausing.\n\nUse \x1b[1m--reset-heartbeat\x1b[0m to reset the Activity's heartbeats.\n\nEither \x1b[1m--activity-id\x1b[0m (with \x1b[1m--workflow-id\x1b[0m) or \x1b[1m--query\x1b[0m must be specified.\n\nSpecify the Activity and Workflow IDs:\n\n\x1b[1mtemporal activity unpause \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n    --reset-attempts\n    --reset-heartbeats\x1b[0m\n\nActivities can be unpaused in bulk via a visibility Query list filter:\n\n\x1b[1mtemporal activity unpause \\\n    --query 'TemporalPauseInfo IS NOT NULL'\x1b[0m"
 	} else {
-		s.Command.Long = "Re-schedule a previously-paused Activity for execution.\n\nIf the Activity is not running and is past its retry timeout, it will be\nscheduled immediately. Otherwise, it will be scheduled after its retry\ntimeout expires.\n\nUse `--reset-attempts` to reset the number of previous run attempts to\nzero. For example, if an Activity is near the maximum number of attempts\nN specified in its retry policy, `--reset-attempts` will allow the\nActivity to be retried another N times after unpausing.\n\nUse `--reset-heartbeat` to reset the Activity's heartbeats.\n\nEither `--activity-id` (with `--workflow-id`) or `--query` must be specified.\n\nSpecify the Activity and Workflow IDs:\n\n```\ntemporal activity unpause \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n    --reset-attempts\n    --reset-heartbeats\n```\n\nActivities can be unpaused in bulk via a visibility Query list filter:\n\n```\ntemporal activity unpause \\\n    --query 'TemporalPauseInfo IS NOT NULL'\n```"
+		s.Command.Long = "Re-schedule a previously-paused Activity for execution.\nNot supported for Standalone Activities.\n\nIf the Activity is not running and is past its retry timeout, it will be\nscheduled immediately. Otherwise, it will be scheduled after its retry\ntimeout expires.\n\nUse `--reset-attempts` to reset the number of previous run attempts to\nzero. For example, if an Activity is near the maximum number of attempts\nN specified in its retry policy, `--reset-attempts` will allow the\nActivity to be retried another N times after unpausing.\n\nUse `--reset-heartbeat` to reset the Activity's heartbeats.\n\nEither `--activity-id` (with `--workflow-id`) or `--query` must be specified.\n\nSpecify the Activity and Workflow IDs:\n\n```\ntemporal activity unpause \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n    --reset-attempts\n    --reset-heartbeats\n```\n\nActivities can be unpaused in bulk via a visibility Query list filter:\n\n```\ntemporal activity unpause \\\n    --query 'TemporalPauseInfo IS NOT NULL'\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "The Activity ID to unpause. Mutually exclusive with `--query`. Requires `--workflow-id` to be specified.")
@@ -625,11 +988,11 @@ func NewTemporalActivityUpdateOptionsCommand(cctx *CommandContext, parent *Tempo
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "update-options [flags]"
-	s.Command.Short = "Update Activity options"
+	s.Command.Short = "Change the values of options affecting a running Activity"
 	if hasHighlighting {
-		s.Command.Long = "Update the options of a running Activity that were passed into it from\na Workflow. Updates are incremental, only changing the specified options.\n\nFor example:\n\n\x1b[1mtemporal activity update-options \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --task-queue NewTaskQueueName \\\n    --schedule-to-close-timeout DURATION \\\n    --schedule-to-start-timeout DURATION \\\n    --start-to-close-timeout DURATION \\\n    --heartbeat-timeout DURATION \\\n    --retry-initial-interval DURATION \\\n    --retry-maximum-interval DURATION \\\n    --retry-backoff-coefficient NewBackoffCoefficient \\\n    --retry-maximum-attempts NewMaximumAttempts\x1b[0m\n\nYou may follow this command with \x1b[1mtemporal activity reset\x1b[0m, and the new values will apply after the reset.\n\nEither \x1b[1m--activity-id\x1b[0m or \x1b[1m--query\x1b[0m must be specified.\n\nActivity options can be updated in bulk with a visibility query list filter:\n\n\x1b[1mtemporal activity update-options \\\n    --query 'WorkflowType=\"YourWorkflow\"' \\\n    --task-queue NewTaskQueueName\x1b[0m"
+		s.Command.Long = "Update the options of a running Activity that were passed into it from\na Workflow. Updates are incremental, only changing the specified options.\nNot supported for Standalone Activities.\n\nFor example:\n\n\x1b[1mtemporal activity update-options \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --task-queue NewTaskQueueName \\\n    --schedule-to-close-timeout DURATION \\\n    --schedule-to-start-timeout DURATION \\\n    --start-to-close-timeout DURATION \\\n    --heartbeat-timeout DURATION \\\n    --retry-initial-interval DURATION \\\n    --retry-maximum-interval DURATION \\\n    --retry-backoff-coefficient NewBackoffCoefficient \\\n    --retry-maximum-attempts NewMaximumAttempts\x1b[0m\n\nYou may follow this command with \x1b[1mtemporal activity reset\x1b[0m, and the new values will apply after the reset.\n\nEither \x1b[1m--activity-id\x1b[0m or \x1b[1m--query\x1b[0m must be specified.\n\nActivity options can be updated in bulk with a visibility query list filter:\n\n\x1b[1mtemporal activity update-options \\\n    --query 'WorkflowType=\"YourWorkflow\"' \\\n    --task-queue NewTaskQueueName\x1b[0m"
 	} else {
-		s.Command.Long = "Update the options of a running Activity that were passed into it from\na Workflow. Updates are incremental, only changing the specified options.\n\nFor example:\n\n```\ntemporal activity update-options \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --task-queue NewTaskQueueName \\\n    --schedule-to-close-timeout DURATION \\\n    --schedule-to-start-timeout DURATION \\\n    --start-to-close-timeout DURATION \\\n    --heartbeat-timeout DURATION \\\n    --retry-initial-interval DURATION \\\n    --retry-maximum-interval DURATION \\\n    --retry-backoff-coefficient NewBackoffCoefficient \\\n    --retry-maximum-attempts NewMaximumAttempts\n```\n\nYou may follow this command with `temporal activity reset`, and the new values will apply after the reset.\n\nEither `--activity-id` or `--query` must be specified.\n\nActivity options can be updated in bulk with a visibility query list filter:\n\n```\ntemporal activity update-options \\\n    --query 'WorkflowType=\"YourWorkflow\"' \\\n    --task-queue NewTaskQueueName\n```"
+		s.Command.Long = "Update the options of a running Activity that were passed into it from\na Workflow. Updates are incremental, only changing the specified options.\nNot supported for Standalone Activities.\n\nFor example:\n\n```\ntemporal activity update-options \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --task-queue NewTaskQueueName \\\n    --schedule-to-close-timeout DURATION \\\n    --schedule-to-start-timeout DURATION \\\n    --start-to-close-timeout DURATION \\\n    --heartbeat-timeout DURATION \\\n    --retry-initial-interval DURATION \\\n    --retry-maximum-interval DURATION \\\n    --retry-backoff-coefficient NewBackoffCoefficient \\\n    --retry-maximum-attempts NewMaximumAttempts\n```\n\nYou may follow this command with `temporal activity reset`, and the new values will apply after the reset.\n\nEither `--activity-id` or `--query` must be specified.\n\nActivity options can be updated in bulk with a visibility query list filter:\n\n```\ntemporal activity update-options \\\n    --query 'WorkflowType=\"YourWorkflow\"' \\\n    --task-queue NewTaskQueueName\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "The Activity ID to update options. Mutually exclusive with `--query`. Requires `--workflow-id` to be specified.")
@@ -1051,6 +1414,285 @@ func NewTemporalEnvSetCommand(cctx *CommandContext, parent *TemporalEnvCommand) 
 	s.Command.Annotations["ignoresMissingEnv"] = "true"
 	s.Command.Flags().StringVarP(&s.Key, "key", "k", "", "Property name (required).")
 	s.Command.Flags().StringVarP(&s.Value, "value", "v", "", "Property value (required).")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalNexusCommand struct {
+	Parent  *TemporalCommand
+	Command cobra.Command
+	cliext.ClientOptions
+}
+
+func NewTemporalNexusCommand(cctx *CommandContext, parent *TemporalCommand) *TemporalNexusCommand {
+	var s TemporalNexusCommand
+	s.Parent = parent
+	s.Command.Use = "nexus"
+	s.Command.Short = "Start, list, and operate on Nexus Operations"
+	if hasHighlighting {
+		s.Command.Long = "Nexus Operation commands perform operations on Nexus\nOperation Executions:\n\n\x1b[1mtemporal nexus [command] [options]\x1b[0m\n\nFor example:\n\n\x1b[1mtemporal nexus operation list\x1b[0m"
+	} else {
+		s.Command.Long = "Nexus Operation commands perform operations on Nexus\nOperation Executions:\n\n```\ntemporal nexus [command] [options]\n```\n\nFor example:\n\n```\ntemporal nexus operation list\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalNexusOperationCommand(cctx, &s).Command)
+	s.ClientOptions.BuildFlags(s.Command.PersistentFlags())
+	return &s
+}
+
+type TemporalNexusOperationCommand struct {
+	Parent  *TemporalNexusCommand
+	Command cobra.Command
+}
+
+func NewTemporalNexusOperationCommand(cctx *CommandContext, parent *TemporalNexusCommand) *TemporalNexusOperationCommand {
+	var s TemporalNexusOperationCommand
+	s.Parent = parent
+	s.Command.Use = "operation"
+	s.Command.Short = "Commands for managing Nexus Operations"
+	if hasHighlighting {
+		s.Command.Long = "These commands manage Nexus Operation Executions.\n\nNexus Operation commands follow this syntax:\n\n\x1b[1mtemporal nexus operation [command] [options]\x1b[0m"
+	} else {
+		s.Command.Long = "These commands manage Nexus Operation Executions.\n\nNexus Operation commands follow this syntax:\n\n```\ntemporal nexus operation [command] [options]\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalNexusOperationCancelCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalNexusOperationCountCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalNexusOperationDescribeCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalNexusOperationExecuteCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalNexusOperationListCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalNexusOperationResultCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalNexusOperationStartCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalNexusOperationTerminateCommand(cctx, &s).Command)
+	return &s
+}
+
+type TemporalNexusOperationCancelCommand struct {
+	Parent  *TemporalNexusOperationCommand
+	Command cobra.Command
+	NexusOperationReferenceOptions
+	Reason string
+}
+
+func NewTemporalNexusOperationCancelCommand(cctx *CommandContext, parent *TemporalNexusOperationCommand) *TemporalNexusOperationCancelCommand {
+	var s TemporalNexusOperationCancelCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "cancel [flags]"
+	s.Command.Short = "Request cancellation of a Nexus Operation (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Request cancellation of a Nexus Operation.\n\n\x1b[1mtemporal nexus operation cancel \\\n    --operation-id YourOperationId\x1b[0m\n\nThe Operation handler determines how to handle the\ncancellation request."
+	} else {
+		s.Command.Long = "Request cancellation of a Nexus Operation.\n\n```\ntemporal nexus operation cancel \\\n    --operation-id YourOperationId\n```\n\nThe Operation handler determines how to handle the\ncancellation request."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for cancellation.")
+	s.NexusOperationReferenceOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalNexusOperationCountCommand struct {
+	Parent  *TemporalNexusOperationCommand
+	Command cobra.Command
+	Query   string
+}
+
+func NewTemporalNexusOperationCountCommand(cctx *CommandContext, parent *TemporalNexusOperationCommand) *TemporalNexusOperationCountCommand {
+	var s TemporalNexusOperationCountCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "count [flags]"
+	s.Command.Short = "Count Nexus Operations matching a query (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Return a count of Nexus Operations. Use \x1b[1m--query\x1b[0m\nto filter the operations to be counted.\n\n\x1b[1mtemporal nexus operation count \\\n    --query 'NexusEndpoint=\"YourEndpoint\"'\x1b[0m\n\nVisit https://docs.temporal.io/visibility to read more about\nSearch Attributes and queries."
+	} else {
+		s.Command.Long = "Return a count of Nexus Operations. Use `--query`\nto filter the operations to be counted.\n\n```\ntemporal nexus operation count \\\n    --query 'NexusEndpoint=\"YourEndpoint\"'\n```\n\nVisit https://docs.temporal.io/visibility to read more about\nSearch Attributes and queries."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Query to filter Nexus Operation Executions to count.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalNexusOperationDescribeCommand struct {
+	Parent  *TemporalNexusOperationCommand
+	Command cobra.Command
+	NexusOperationReferenceOptions
+	Raw bool
+}
+
+func NewTemporalNexusOperationDescribeCommand(cctx *CommandContext, parent *TemporalNexusOperationCommand) *TemporalNexusOperationDescribeCommand {
+	var s TemporalNexusOperationDescribeCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "describe [flags]"
+	s.Command.Short = "Show detailed info for a Nexus Operation (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Display detailed information about a specific Nexus\nOperation Execution.\n\n\x1b[1mtemporal nexus operation describe \\\n    --operation-id YourOperationId\x1b[0m"
+	} else {
+		s.Command.Long = "Display detailed information about a specific Nexus\nOperation Execution.\n\n```\ntemporal nexus operation describe \\\n    --operation-id YourOperationId\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().BoolVar(&s.Raw, "raw", false, "Print properties without changing their format.")
+	s.NexusOperationReferenceOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalNexusOperationExecuteCommand struct {
+	Parent  *TemporalNexusOperationCommand
+	Command cobra.Command
+	NexusOperationStartOptions
+	PayloadInputOptions
+}
+
+func NewTemporalNexusOperationExecuteCommand(cctx *CommandContext, parent *TemporalNexusOperationCommand) *TemporalNexusOperationExecuteCommand {
+	var s TemporalNexusOperationExecuteCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "execute [flags]"
+	s.Command.Short = "Start a new Nexus Operation and wait for its result (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Start a new Nexus Operation Execution and block until\nit completes. The result is output to stdout.\n\n\x1b[1mtemporal nexus operation execute \\\n    --endpoint YourEndpoint \\\n    --service YourService \\\n    --operation YourOperation \\\n    --operation-id YourOperationId \\\n    --input '{\"some-key\": \"some-value\"}'\x1b[0m"
+	} else {
+		s.Command.Long = "Start a new Nexus Operation Execution and block until\nit completes. The result is output to stdout.\n\n```\ntemporal nexus operation execute \\\n    --endpoint YourEndpoint \\\n    --service YourService \\\n    --operation YourOperation \\\n    --operation-id YourOperationId \\\n    --input '{\"some-key\": \"some-value\"}'\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.NexusOperationStartOptions.BuildFlags(s.Command.Flags())
+	s.PayloadInputOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalNexusOperationListCommand struct {
+	Parent   *TemporalNexusOperationCommand
+	Command  cobra.Command
+	Query    string
+	Limit    int
+	PageSize int
+}
+
+func NewTemporalNexusOperationListCommand(cctx *CommandContext, parent *TemporalNexusOperationCommand) *TemporalNexusOperationListCommand {
+	var s TemporalNexusOperationListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "List Nexus Operations matching a query (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "List Nexus Operations. Use \x1b[1m--query\x1b[0m to filter results.\n\n\x1b[1mtemporal nexus operation list \\\n    --query 'NexusEndpoint=\"YourEndpoint\"'\x1b[0m\n\nVisit https://docs.temporal.io/visibility to read more about\nSearch Attributes and queries."
+	} else {
+		s.Command.Long = "List Nexus Operations. Use `--query` to filter results.\n\n```\ntemporal nexus operation list \\\n    --query 'NexusEndpoint=\"YourEndpoint\"'\n```\n\nVisit https://docs.temporal.io/visibility to read more about\nSearch Attributes and queries."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Query to filter the Nexus Operation Executions to list.")
+	s.Command.Flags().IntVar(&s.Limit, "limit", 0, "Maximum number of Nexus Operation Executions to display.")
+	s.Command.Flags().IntVar(&s.PageSize, "page-size", 0, "Maximum number of Nexus Operation Executions to fetch at a time from the server.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalNexusOperationResultCommand struct {
+	Parent  *TemporalNexusOperationCommand
+	Command cobra.Command
+	NexusOperationReferenceOptions
+}
+
+func NewTemporalNexusOperationResultCommand(cctx *CommandContext, parent *TemporalNexusOperationCommand) *TemporalNexusOperationResultCommand {
+	var s TemporalNexusOperationResultCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "result [flags]"
+	s.Command.Short = "Wait for and output the result of a Nexus Operation (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Wait for a Nexus Operation to complete and output\nthe result.\n\n\x1b[1mtemporal nexus operation result \\\n    --operation-id YourOperationId\x1b[0m"
+	} else {
+		s.Command.Long = "Wait for a Nexus Operation to complete and output\nthe result.\n\n```\ntemporal nexus operation result \\\n    --operation-id YourOperationId\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.NexusOperationReferenceOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalNexusOperationStartCommand struct {
+	Parent  *TemporalNexusOperationCommand
+	Command cobra.Command
+	NexusOperationStartOptions
+	PayloadInputOptions
+}
+
+func NewTemporalNexusOperationStartCommand(cctx *CommandContext, parent *TemporalNexusOperationCommand) *TemporalNexusOperationStartCommand {
+	var s TemporalNexusOperationStartCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "start [flags]"
+	s.Command.Short = "Start a new Nexus Operation (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Start a new Nexus Operation. Outputs the\nOperation ID and Run ID.\n\n\x1b[1mtemporal nexus operation start \\\n    --endpoint YourEndpoint \\\n    --service YourService \\\n    --operation YourOperation \\\n    --operation-id YourOperationId \\\n    --input '{\"some-key\": \"some-value\"}'\x1b[0m"
+	} else {
+		s.Command.Long = "Start a new Nexus Operation. Outputs the\nOperation ID and Run ID.\n\n```\ntemporal nexus operation start \\\n    --endpoint YourEndpoint \\\n    --service YourService \\\n    --operation YourOperation \\\n    --operation-id YourOperationId \\\n    --input '{\"some-key\": \"some-value\"}'\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.NexusOperationStartOptions.BuildFlags(s.Command.Flags())
+	s.PayloadInputOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalNexusOperationTerminateCommand struct {
+	Parent  *TemporalNexusOperationCommand
+	Command cobra.Command
+	NexusOperationReferenceOptions
+	Reason string
+}
+
+func NewTemporalNexusOperationTerminateCommand(cctx *CommandContext, parent *TemporalNexusOperationCommand) *TemporalNexusOperationTerminateCommand {
+	var s TemporalNexusOperationTerminateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "terminate [flags]"
+	s.Command.Short = "Forcefully end a Nexus Operation (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Terminate a Nexus Operation.\n\n\x1b[1mtemporal nexus operation terminate \\\n    --operation-id YourOperationId \\\n    --reason YourReason\x1b[0m\n\nOperation handlers cannot see or respond to terminations."
+	} else {
+		s.Command.Long = "Terminate a Nexus Operation.\n\n```\ntemporal nexus operation terminate \\\n    --operation-id YourOperationId \\\n    --reason YourReason\n```\n\nOperation handlers cannot see or respond to terminations."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for termination. Defaults to a message with the current user's name.")
+	s.NexusOperationReferenceOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -1793,6 +2435,7 @@ func NewTemporalScheduleCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.AddCommand(&NewTemporalScheduleDeleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleDescribeCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleListCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalScheduleListMatchingTimesCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleToggleCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleTriggerCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleUpdateCommand(cctx, &s).Command)
@@ -1952,6 +2595,39 @@ func NewTemporalScheduleListCommand(cctx *CommandContext, parent *TemporalSchedu
 	s.Command.Flags().BoolVarP(&s.Long, "long", "l", false, "Show detailed information.")
 	s.Command.Flags().BoolVar(&s.ReallyLong, "really-long", false, "Show extensive information in non-table form.")
 	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Filter results using given List Filter.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalScheduleListMatchingTimesCommand struct {
+	Parent  *TemporalScheduleCommand
+	Command cobra.Command
+	ScheduleIdOptions
+	StartTime cliext.FlagTimestamp
+	EndTime   cliext.FlagTimestamp
+}
+
+func NewTemporalScheduleListMatchingTimesCommand(cctx *CommandContext, parent *TemporalScheduleCommand) *TemporalScheduleListMatchingTimesCommand {
+	var s TemporalScheduleListMatchingTimesCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list-matching-times [flags]"
+	s.Command.Short = "List matching times for a Schedule (Experimental feature)"
+	if hasHighlighting {
+		s.Command.Long = "\nNote: This is an experimental feature and may change in the future.\n\nList the times a Schedule's spec would match within a given time\nrange. The time range may be in the past or future. Use this\ncommand to preview when a Schedule will take actions without\nactually running them.\n\nFor example:\n\n\x1b[1m  temporal schedule list-matching-times \\\n    --schedule-id \"YourScheduleId\" \\\n    --start-time \"2024-01-01T00:00:00Z\" \\\n    --end-time \"2024-01-31T23:59:59Z\"\x1b[0m"
+	} else {
+		s.Command.Long = "\nNote: This is an experimental feature and may change in the future.\n\nList the times a Schedule's spec would match within a given time\nrange. The time range may be in the past or future. Use this\ncommand to preview when a Schedule will take actions without\nactually running them.\n\nFor example:\n\n```\n  temporal schedule list-matching-times \\\n    --schedule-id \"YourScheduleId\" \\\n    --start-time \"2024-01-01T00:00:00Z\" \\\n    --end-time \"2024-01-31T23:59:59Z\"\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().Var(&s.StartTime, "start-time", "Start of time range to list matching times. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "start-time")
+	s.Command.Flags().Var(&s.EndTime, "end-time", "End of time range to list matching times. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "end-time")
+	s.ScheduleIdOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -2227,6 +2903,8 @@ type TemporalTaskQueueConfigSetCommand struct {
 	QueueRpsLimitReason        string
 	FairnessKeyRpsLimitDefault string
 	FairnessKeyRpsLimitReason  string
+	FairnessKeyWeight          []string
+	FairnessKeyWeightClearAll  bool
 }
 
 func NewTemporalTaskQueueConfigSetCommand(cctx *CommandContext, parent *TemporalTaskQueueConfigCommand) *TemporalTaskQueueConfigSetCommand {
@@ -2236,9 +2914,9 @@ func NewTemporalTaskQueueConfigSetCommand(cctx *CommandContext, parent *Temporal
 	s.Command.Use = "set [flags]"
 	s.Command.Short = "Set Task Queue configuration"
 	if hasHighlighting {
-		s.Command.Long = "Update configuration settings for a Task Queue.\n\n\x1b[1mtemporal task-queue config set \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type activity \\\n    --namespace YourNamespace \\\n    --queue-rps-limit <requests_per_second:float> \\\n    --queue-rps-limit-reason <reason_string> \\\n    --fairness-key-rps-limit-default <requests_per_second:float> \\\n    --fairness-key-rps-limit-reason <reason_string>\x1b[0m\n\nThis command supports updating:\n- Queue rate limits: Controls the overall rate limit of the task queue.\n  This setting overrides the worker rate limit if set.\n  Unless modified, this is the system-defined rate limit.\n- Fairness key rate limit defaults: Sets default rate limits for fairness keys.\n  If set, each individual fairness key will be limited to this rate,\n  scaled by the weight of the fairness key.\n\nTo unset a rate limit, pass in 'default', for example: --queue-rps-limit default"
+		s.Command.Long = "Update configuration settings for a Task Queue.\n\n\x1b[1mtemporal task-queue config set \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type activity \\\n    --namespace YourNamespace \\\n    --queue-rps-limit <requests_per_second:float> \\\n    --queue-rps-limit-reason <reason_string> \\\n    --fairness-key-rps-limit-default <requests_per_second:float> \\\n    --fairness-key-rps-limit-reason <reason_string> \\\n    --fairness-key-weight HighPriority=2.0 \\\n    --fairness-key-weight LowPriority=0.5\x1b[0m\n\nThis command supports updating:\n- Queue rate limits: Controls the overall rate limit of the task queue.\n  This setting overrides the worker rate limit if set.\n  Unless modified, this is the system-defined rate limit.\n- Fairness key rate limit defaults: Sets default rate limits for fairness keys.\n  If set, each individual fairness key will be limited to this rate,\n  scaled by the weight of the fairness key.\n- Fairness key weight overrides: Set custom weights for specific fairness keys.\n  Weights control the relative share of capacity each key receives.\n\nTo unset a rate limit, pass in 'default', for example: --queue-rps-limit default\nTo unset a specific fairness weight, use --fairness-key-weight <key>=default\nTo unset all fairness weights, use --fairness-key-weight-clear-all"
 	} else {
-		s.Command.Long = "Update configuration settings for a Task Queue.\n\n```\ntemporal task-queue config set \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type activity \\\n    --namespace YourNamespace \\\n    --queue-rps-limit <requests_per_second:float> \\\n    --queue-rps-limit-reason <reason_string> \\\n    --fairness-key-rps-limit-default <requests_per_second:float> \\\n    --fairness-key-rps-limit-reason <reason_string>\n```\n\nThis command supports updating:\n- Queue rate limits: Controls the overall rate limit of the task queue.\n  This setting overrides the worker rate limit if set.\n  Unless modified, this is the system-defined rate limit.\n- Fairness key rate limit defaults: Sets default rate limits for fairness keys.\n  If set, each individual fairness key will be limited to this rate,\n  scaled by the weight of the fairness key.\n\nTo unset a rate limit, pass in 'default', for example: --queue-rps-limit default"
+		s.Command.Long = "Update configuration settings for a Task Queue.\n\n```\ntemporal task-queue config set \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type activity \\\n    --namespace YourNamespace \\\n    --queue-rps-limit <requests_per_second:float> \\\n    --queue-rps-limit-reason <reason_string> \\\n    --fairness-key-rps-limit-default <requests_per_second:float> \\\n    --fairness-key-rps-limit-reason <reason_string> \\\n    --fairness-key-weight HighPriority=2.0 \\\n    --fairness-key-weight LowPriority=0.5\n```\n\nThis command supports updating:\n- Queue rate limits: Controls the overall rate limit of the task queue.\n  This setting overrides the worker rate limit if set.\n  Unless modified, this is the system-defined rate limit.\n- Fairness key rate limit defaults: Sets default rate limits for fairness keys.\n  If set, each individual fairness key will be limited to this rate,\n  scaled by the weight of the fairness key.\n- Fairness key weight overrides: Set custom weights for specific fairness keys.\n  Weights control the relative share of capacity each key receives.\n\nTo unset a rate limit, pass in 'default', for example: --queue-rps-limit default\nTo unset a specific fairness weight, use --fairness-key-weight <key>=default\nTo unset all fairness weights, use --fairness-key-weight-clear-all"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task Queue name. Required.")
@@ -2252,6 +2930,8 @@ func NewTemporalTaskQueueConfigSetCommand(cctx *CommandContext, parent *Temporal
 	s.Command.Flags().StringVar(&s.FairnessKeyRpsLimitDefault, "fairness-key-rps-limit-default", "", "Fairness key rate limit default in requests per second. Accepts a float; or 'default' to unset.")
 	overrideFlagDisplayType(s.Command.Flags().Lookup("fairness-key-rps-limit-default"), "float|default")
 	s.Command.Flags().StringVar(&s.FairnessKeyRpsLimitReason, "fairness-key-rps-limit-reason", "", "Reason for fairness key rate limit update.")
+	s.Command.Flags().StringArrayVar(&s.FairnessKeyWeight, "fairness-key-weight", nil, "Set or unset fairness key weight overrides in format key=weight or key=default. Use key=weight to set a positive weight value; use key=default to unset. Can be specified multiple times. Example: --fairness-key-weight HighPriority=2.0 --fairness-key-weight LowPriority=default.")
+	s.Command.Flags().BoolVar(&s.FairnessKeyWeightClearAll, "fairness-key-weight-clear-all", false, "Unset all fairness key weight overrides. Cannot be used with --fairness-key-weight.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -2283,9 +2963,9 @@ func NewTemporalTaskQueueDescribeCommand(cctx *CommandContext, parent *TemporalT
 	s.Command.Use = "describe [flags]"
 	s.Command.Short = "Show active Workers"
 	if hasHighlighting {
-		s.Command.Long = "Display a list of active Workers that have recently polled a Task Queue. The\nTemporal Server records each poll request time. A \x1b[1mLastAccessTime\x1b[0m over one\nminute may indicate the Worker is at capacity or has shut down. Temporal\nWorkers are removed if 5 minutes have passed since the last poll request.\n\n\x1b[1mtemporal task-queue describe \\\n  --task-queue YourTaskQueue\x1b[0m\n\nThis command provides poller information for a given Task Queue.\nWorkflow and Activity polling use separate Task Queues:\n\n\x1b[1mtemporal task-queue describe \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type \"activity\"\x1b[0m\n\nThis command provides the following task queue statistics:\n- \x1b[1mApproximateBacklogCount\x1b[0m: The approximate number of tasks backlogged in this\n  task queue. May count expired tasks but eventually converges to the right\n  value.\n- \x1b[1mApproximateBacklogAge\x1b[0m: Approximate age of the oldest task in the backlog,\n  based on its creation time, measured in seconds.\n- \x1b[1mTasksAddRate\x1b[0m: Approximate rate at which tasks are being added to the task\n  queue, measured in tasks per second, averaged over the last 30 seconds.\n  Includes tasks dispatched immediately without going to the backlog\n  (sync-matched tasks), as well as tasks added to the backlog. (See note below.)\n- \x1b[1mTasksDispatchRate\x1b[0m: Approximate rate at which tasks are being dispatched from\n  the task queue, measured in tasks per second, averaged over the last 30\n  seconds.  Includes tasks dispatched immediately without going to the backlog\n  (sync-matched tasks), as well as tasks added to the backlog. (See note below.)\n- \x1b[1mBacklogIncreaseRate\x1b[0m: Approximate rate at which the backlog size is\n  increasing (if positive) or decreasing (if negative), measured in tasks per\n  second, averaged over the last 30 seconds.  This is roughly equivalent to:\n  \x1b[1mTasksAddRate\x1b[0m - \x1b[1mTasksDispatchRate\x1b[0m.\n\nNOTE: The \x1b[1mTasksAddRate\x1b[0m and \x1b[1mTasksDispatchRate\x1b[0m metrics may differ from the\nactual rate of add/dispatch, because tasks may be dispatched eagerly to an\navailable worker, or may apply only to specific workers (they are \"sticky\").\nSuch tasks are not counted by these metrics. Despite the inaccuracy of\nthese two metrics, the derived metric of \x1b[1mBacklogIncreaseRate\x1b[0m is accurate\nfor backlogs older than a few seconds.\n\nSafely retire Workers assigned a Build ID by checking reachability across\nall task types. Use the flag \x1b[1m--report-reachability\x1b[0m:\n\n\x1b[1mtemporal task-queue describe \\\n    --task-queue YourTaskQueue \\\n    --select-build-id \"YourBuildId\" \\\n    --report-reachability\x1b[0m\n\nTask reachability information is returned for the requested versions and all\ntask types, which can be used to safely retire Workers with old code versions,\nprovided that they were assigned a Build ID.\n\nNote that task reachability status is deprecated in favor of Drainage Status\n(ie. of a Drained or Draining Worker Deployment Version) and will be removed \nin a future release. Also, determining task reachability incurs a non-trivial \ncomputing cost.\n\nTask reachability states are reported per build ID. The state may be one of the\nfollowing:\n\n- \x1b[1mReachable\x1b[0m: using the current versioning rules, the Build ID may be used\n  by new Workflow Executions or Activities OR there are currently open\n  Workflow or backlogged Activity tasks assigned to the queue.\n- \x1b[1mClosedWorkflowsOnly\x1b[0m: the Build ID does not have open Workflow Executions\n  and can't be reached by new Workflow Executions. It MAY have closed\n  Workflow Executions within the Namespace retention period.\n- \x1b[1mUnreachable\x1b[0m: this Build ID is not used for new Workflow Executions and\n  isn't used by any existing Workflow Execution within the retention period.\n\nTask reachability is eventually consistent. You may experience a delay until\nreachability converges to the most accurate value. This is designed to act\nin the most conservative way until convergence. For example, \x1b[1mReachable\x1b[0m is\nmore conservative than \x1b[1mClosedWorkflowsOnly\x1b[0m."
+		s.Command.Long = "Display a list of active Workers that have recently polled a Task Queue. The\nTemporal Server records each poll request time. A \x1b[1mLastAccessTime\x1b[0m over one\nminute may indicate the Worker is at capacity or has shut down. Temporal\nWorkers are removed if 5 minutes have passed since the last poll request.\n\n\x1b[1mtemporal task-queue describe \\\n  --task-queue YourTaskQueue\x1b[0m\n\nThis command provides poller information for a given Task Queue.\nWorkflow and Activity polling use separate Task Queues:\n\n\x1b[1mtemporal task-queue describe \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type \"activity\"\x1b[0m\n\nThis command provides the following task queue statistics:\n- \x1b[1mApproximateBacklogCount\x1b[0m: The approximate number of tasks backlogged in this\n  task queue. May count expired tasks but eventually converges to the right\n  value.\n- \x1b[1mApproximateBacklogAge\x1b[0m: Approximate age of the oldest task in the backlog,\n  based on its creation time, measured in seconds.\n- \x1b[1mTasksAddRate\x1b[0m: Approximate rate at which tasks are being added to the task\n  queue, measured in tasks per second, averaged over the last 30 seconds.\n  Includes tasks dispatched immediately without going to the backlog\n  (sync-matched tasks), as well as tasks added to the backlog. (See note below.)\n- \x1b[1mTasksDispatchRate\x1b[0m: Approximate rate at which tasks are being dispatched from\n  the task queue, measured in tasks per second, averaged over the last 30\n  seconds.  Includes tasks dispatched immediately without going to the backlog\n  (sync-matched tasks), as well as tasks added to the backlog. (See note below.)\n- \x1b[1mBacklogIncreaseRate\x1b[0m: Approximate rate at which the backlog size is\n  increasing (if positive) or decreasing (if negative), measured in tasks per\n  second, averaged over the last 30 seconds.  This is roughly equivalent to:\n  \x1b[1mTasksAddRate\x1b[0m - \x1b[1mTasksDispatchRate\x1b[0m.\n\nNOTE: The \x1b[1mTasksAddRate\x1b[0m and \x1b[1mTasksDispatchRate\x1b[0m metrics may differ from the\nactual rate of add/dispatch, because tasks may be dispatched eagerly to an\navailable worker, or may apply only to specific workers (they are \"sticky\").\nSuch tasks are not counted by these metrics. Despite the inaccuracy of\nthese two metrics, the derived metric of \x1b[1mBacklogIncreaseRate\x1b[0m is accurate\nfor backlogs older than a few seconds.\n\nSafely retire Workers assigned a Build ID by checking reachability across\nall task types. Use the flag \x1b[1m--report-reachability\x1b[0m:\n\n\x1b[1mtemporal task-queue describe \\\n    --task-queue YourTaskQueue \\\n    --select-build-id \"YourBuildId\" \\\n    --report-reachability\x1b[0m\n\nTask reachability information is returned for the requested versions and all\ntask types, which can be used to safely retire Workers with old code versions,\nprovided that they were assigned a Build ID.\n\nNote that task reachability status is deprecated in favor of Drainage Status\n(ie. of a Drained or Draining Worker Deployment Version) and will be removed\nin a future release. Also, determining task reachability incurs a non-trivial\ncomputing cost.\n\nTask reachability states are reported per build ID. The state may be one of the\nfollowing:\n\n- \x1b[1mReachable\x1b[0m: using the current versioning rules, the Build ID may be used\n  by new Workflow Executions or Activities OR there are currently open\n  Workflow or backlogged Activity tasks assigned to the queue.\n- \x1b[1mClosedWorkflowsOnly\x1b[0m: the Build ID does not have open Workflow Executions\n  and can't be reached by new Workflow Executions. It MAY have closed\n  Workflow Executions within the Namespace retention period.\n- \x1b[1mUnreachable\x1b[0m: this Build ID is not used for new Workflow Executions and\n  isn't used by any existing Workflow Execution within the retention period.\n\nTask reachability is eventually consistent. You may experience a delay until\nreachability converges to the most accurate value. This is designed to act\nin the most conservative way until convergence. For example, \x1b[1mReachable\x1b[0m is\nmore conservative than \x1b[1mClosedWorkflowsOnly\x1b[0m."
 	} else {
-		s.Command.Long = "Display a list of active Workers that have recently polled a Task Queue. The\nTemporal Server records each poll request time. A `LastAccessTime` over one\nminute may indicate the Worker is at capacity or has shut down. Temporal\nWorkers are removed if 5 minutes have passed since the last poll request.\n\n```\ntemporal task-queue describe \\\n  --task-queue YourTaskQueue\n```\n\nThis command provides poller information for a given Task Queue.\nWorkflow and Activity polling use separate Task Queues:\n\n```\ntemporal task-queue describe \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type \"activity\"\n```\n\nThis command provides the following task queue statistics:\n- `ApproximateBacklogCount`: The approximate number of tasks backlogged in this\n  task queue. May count expired tasks but eventually converges to the right\n  value.\n- `ApproximateBacklogAge`: Approximate age of the oldest task in the backlog,\n  based on its creation time, measured in seconds.\n- `TasksAddRate`: Approximate rate at which tasks are being added to the task\n  queue, measured in tasks per second, averaged over the last 30 seconds.\n  Includes tasks dispatched immediately without going to the backlog\n  (sync-matched tasks), as well as tasks added to the backlog. (See note below.)\n- `TasksDispatchRate`: Approximate rate at which tasks are being dispatched from\n  the task queue, measured in tasks per second, averaged over the last 30\n  seconds.  Includes tasks dispatched immediately without going to the backlog\n  (sync-matched tasks), as well as tasks added to the backlog. (See note below.)\n- `BacklogIncreaseRate`: Approximate rate at which the backlog size is\n  increasing (if positive) or decreasing (if negative), measured in tasks per\n  second, averaged over the last 30 seconds.  This is roughly equivalent to:\n  `TasksAddRate` - `TasksDispatchRate`.\n\nNOTE: The `TasksAddRate` and `TasksDispatchRate` metrics may differ from the\nactual rate of add/dispatch, because tasks may be dispatched eagerly to an\navailable worker, or may apply only to specific workers (they are \"sticky\").\nSuch tasks are not counted by these metrics. Despite the inaccuracy of\nthese two metrics, the derived metric of `BacklogIncreaseRate` is accurate\nfor backlogs older than a few seconds.\n\nSafely retire Workers assigned a Build ID by checking reachability across\nall task types. Use the flag `--report-reachability`:\n\n```\ntemporal task-queue describe \\\n    --task-queue YourTaskQueue \\\n    --select-build-id \"YourBuildId\" \\\n    --report-reachability\n```\n\nTask reachability information is returned for the requested versions and all\ntask types, which can be used to safely retire Workers with old code versions,\nprovided that they were assigned a Build ID.\n\nNote that task reachability status is deprecated in favor of Drainage Status\n(ie. of a Drained or Draining Worker Deployment Version) and will be removed \nin a future release. Also, determining task reachability incurs a non-trivial \ncomputing cost.\n\nTask reachability states are reported per build ID. The state may be one of the\nfollowing:\n\n- `Reachable`: using the current versioning rules, the Build ID may be used\n  by new Workflow Executions or Activities OR there are currently open\n  Workflow or backlogged Activity tasks assigned to the queue.\n- `ClosedWorkflowsOnly`: the Build ID does not have open Workflow Executions\n  and can't be reached by new Workflow Executions. It MAY have closed\n  Workflow Executions within the Namespace retention period.\n- `Unreachable`: this Build ID is not used for new Workflow Executions and\n  isn't used by any existing Workflow Execution within the retention period.\n\nTask reachability is eventually consistent. You may experience a delay until\nreachability converges to the most accurate value. This is designed to act\nin the most conservative way until convergence. For example, `Reachable` is\nmore conservative than `ClosedWorkflowsOnly`."
+		s.Command.Long = "Display a list of active Workers that have recently polled a Task Queue. The\nTemporal Server records each poll request time. A `LastAccessTime` over one\nminute may indicate the Worker is at capacity or has shut down. Temporal\nWorkers are removed if 5 minutes have passed since the last poll request.\n\n```\ntemporal task-queue describe \\\n  --task-queue YourTaskQueue\n```\n\nThis command provides poller information for a given Task Queue.\nWorkflow and Activity polling use separate Task Queues:\n\n```\ntemporal task-queue describe \\\n    --task-queue YourTaskQueue \\\n    --task-queue-type \"activity\"\n```\n\nThis command provides the following task queue statistics:\n- `ApproximateBacklogCount`: The approximate number of tasks backlogged in this\n  task queue. May count expired tasks but eventually converges to the right\n  value.\n- `ApproximateBacklogAge`: Approximate age of the oldest task in the backlog,\n  based on its creation time, measured in seconds.\n- `TasksAddRate`: Approximate rate at which tasks are being added to the task\n  queue, measured in tasks per second, averaged over the last 30 seconds.\n  Includes tasks dispatched immediately without going to the backlog\n  (sync-matched tasks), as well as tasks added to the backlog. (See note below.)\n- `TasksDispatchRate`: Approximate rate at which tasks are being dispatched from\n  the task queue, measured in tasks per second, averaged over the last 30\n  seconds.  Includes tasks dispatched immediately without going to the backlog\n  (sync-matched tasks), as well as tasks added to the backlog. (See note below.)\n- `BacklogIncreaseRate`: Approximate rate at which the backlog size is\n  increasing (if positive) or decreasing (if negative), measured in tasks per\n  second, averaged over the last 30 seconds.  This is roughly equivalent to:\n  `TasksAddRate` - `TasksDispatchRate`.\n\nNOTE: The `TasksAddRate` and `TasksDispatchRate` metrics may differ from the\nactual rate of add/dispatch, because tasks may be dispatched eagerly to an\navailable worker, or may apply only to specific workers (they are \"sticky\").\nSuch tasks are not counted by these metrics. Despite the inaccuracy of\nthese two metrics, the derived metric of `BacklogIncreaseRate` is accurate\nfor backlogs older than a few seconds.\n\nSafely retire Workers assigned a Build ID by checking reachability across\nall task types. Use the flag `--report-reachability`:\n\n```\ntemporal task-queue describe \\\n    --task-queue YourTaskQueue \\\n    --select-build-id \"YourBuildId\" \\\n    --report-reachability\n```\n\nTask reachability information is returned for the requested versions and all\ntask types, which can be used to safely retire Workers with old code versions,\nprovided that they were assigned a Build ID.\n\nNote that task reachability status is deprecated in favor of Drainage Status\n(ie. of a Drained or Draining Worker Deployment Version) and will be removed\nin a future release. Also, determining task reachability incurs a non-trivial\ncomputing cost.\n\nTask reachability states are reported per build ID. The state may be one of the\nfollowing:\n\n- `Reachable`: using the current versioning rules, the Build ID may be used\n  by new Workflow Executions or Activities OR there are currently open\n  Workflow or backlogged Activity tasks assigned to the queue.\n- `ClosedWorkflowsOnly`: the Build ID does not have open Workflow Executions\n  and can't be reached by new Workflow Executions. It MAY have closed\n  Workflow Executions within the Namespace retention period.\n- `Unreachable`: this Build ID is not used for new Workflow Executions and\n  isn't used by any existing Workflow Execution within the retention period.\n\nTask reachability is eventually consistent. You may experience a delay until\nreachability converges to the most accurate value. This is designed to act\nin the most conservative way until convergence. For example, `Reachable` is\nmore conservative than `ClosedWorkflowsOnly`."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task Queue name. Required.")
@@ -2330,6 +3010,8 @@ func NewTemporalTaskQueueGetBuildIdReachabilityCommand(cctx *CommandContext, par
 		s.Command.Long = "```\n+-----------------------------------------------------------------------------+\n| CAUTION: This command is deprecated and will be removed in a later release. |\n+-----------------------------------------------------------------------------+\n```\n\nShow if a given Build ID can be used for new, existing, or closed Workflows\nin Namespaces that support Worker versioning:\n\n```\ntemporal task-queue get-build-id-reachability \\\n    --task-queue YourTaskQueue \\\n    --build-id \"YourBuildId\"\n```\n\nYou can specify the `--build-id` and `--task-queue` flags multiple times. If\n`--task-queue` is omitted, the command checks Build ID reachability against\nall Task Queues."
 	}
 	s.Command.Args = cobra.NoArgs
+	s.Command.Annotations = make(map[string]string)
+	s.Command.Annotations["deprecationWarning"] = "This command is deprecated and will be removed in a later release."
 	s.Command.Flags().StringArrayVar(&s.BuildId, "build-id", nil, "One or more Build ID strings. Can be passed multiple times.")
 	s.ReachabilityType = cliext.NewFlagStringEnum([]string{"open", "closed", "existing"}, "existing")
 	s.Command.Flags().Var(&s.ReachabilityType, "reachability-type", "Reachability filter. `open`: reachable by one or more open workflows. `closed`: reachable by one or more closed workflows. `existing`: reachable by either. New Workflow Executions reachable by a Build ID are always reported. Accepted values: open, closed, existing.")
@@ -2361,6 +3043,8 @@ func NewTemporalTaskQueueGetBuildIdsCommand(cctx *CommandContext, parent *Tempor
 		s.Command.Long = "```\n+-----------------------------------------------------------------------------+\n| CAUTION: This command is deprecated and will be removed in a later release. |\n+-----------------------------------------------------------------------------+\n```\n\nFetch sets of compatible Build IDs for specified Task Queues and display their\ninformation:\n\n```\ntemporal task-queue get-build-ids \\\n    --task-queue YourTaskQueue\n```\n\nThis command is limited to Namespaces that support Worker versioning."
 	}
 	s.Command.Args = cobra.NoArgs
+	s.Command.Annotations = make(map[string]string)
+	s.Command.Annotations["deprecationWarning"] = "This command is deprecated and will be removed in a later release."
 	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task Queue name. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
 	s.Command.Flags().IntVar(&s.MaxSets, "max-sets", 0, "Max return count. Use 1 for default major version. Use 0 for all sets.")
@@ -2416,6 +3100,8 @@ func NewTemporalTaskQueueUpdateBuildIdsCommand(cctx *CommandContext, parent *Tem
 		s.Command.Long = "```\n+-----------------------------------------------------------------------------+\n| CAUTION: This command is deprecated and will be removed in a later release. |\n+-----------------------------------------------------------------------------+\n```\n\nAdd or change a Task Queue's compatible Build IDs for Namespaces using Worker\nversioning:\n\n```\ntemporal task-queue update-build-ids [subcommands] [options] \\\n    --task-queue YourTaskQueue\n```"
 	}
 	s.Command.Args = cobra.NoArgs
+	s.Command.Annotations = make(map[string]string)
+	s.Command.Annotations["deprecationWarning"] = "This command is deprecated and will be removed in a later release."
 	s.Command.AddCommand(&NewTemporalTaskQueueUpdateBuildIdsAddNewCompatibleCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalTaskQueueUpdateBuildIdsAddNewDefaultCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalTaskQueueUpdateBuildIdsPromoteIdInSetCommand(cctx, &s).Command)
@@ -2478,6 +3164,8 @@ func NewTemporalTaskQueueUpdateBuildIdsAddNewDefaultCommand(cctx *CommandContext
 		s.Command.Long = "```\n+-----------------------------------------------------------------------------+\n| CAUTION: This command is deprecated and will be removed in a later release. |\n+-----------------------------------------------------------------------------+\n```\n\nCreate a new Task Queue Build ID set, add a Build ID to it, and make it the\noverall Task Queue default. The new set will be incompatible with previous\nsets and versions.\n\n```\ntemporal task-queue update-build-ids add-new-default \\\n    --task-queue YourTaskQueue \\\n    --build-id \"YourNewBuildId\"\n```\n\n```\n+------------------------------------------------------------------------+\n| NOTICE: This command is limited to Namespaces that support Worker      |\n| versioning. Worker versioning is experimental. Versioning commands are |\n| subject to change.                                                     |\n+------------------------------------------------------------------------+\n```"
 	}
 	s.Command.Args = cobra.NoArgs
+	s.Command.Annotations = make(map[string]string)
+	s.Command.Annotations["deprecationWarning"] = "This command is deprecated and will be removed in a later release."
 	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "Build ID to be added. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "build-id")
 	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task Queue name. Required.")
@@ -2509,6 +3197,8 @@ func NewTemporalTaskQueueUpdateBuildIdsPromoteIdInSetCommand(cctx *CommandContex
 		s.Command.Long = "```\n+-----------------------------------------------------------------------------+\n| CAUTION: This command is deprecated and will be removed in a later release. |\n+-----------------------------------------------------------------------------+\n```\n\nEstablish an existing Build ID as the default in its Task Queue set. New tasks\ncompatible with this set will now be dispatched to this ID:\n\n```\ntemporal task-queue update-build-ids promote-id-in-set \\\n    --task-queue YourTaskQueue \\\n    --build-id \"YourBuildId\"\n```\n\n```\n+------------------------------------------------------------------------+\n| NOTICE: This command is limited to Namespaces that support Worker      |\n| versioning. Worker versioning is experimental. Versioning commands are |\n| subject to change.                                                     |\n+------------------------------------------------------------------------+\n```"
 	}
 	s.Command.Args = cobra.NoArgs
+	s.Command.Annotations = make(map[string]string)
+	s.Command.Annotations["deprecationWarning"] = "This command is deprecated and will be removed in a later release."
 	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "Build ID to set as default. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "build-id")
 	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task Queue name. Required.")
@@ -2540,6 +3230,8 @@ func NewTemporalTaskQueueUpdateBuildIdsPromoteSetCommand(cctx *CommandContext, p
 		s.Command.Long = "```\n+-----------------------------------------------------------------------------+\n| CAUTION: This command is deprecated and will be removed in a later release. |\n+-----------------------------------------------------------------------------+\n```\n\nPromote a Build ID set to be the default on a Task Queue. Identify the set by\nproviding a Build ID within it. If the set is already the default, this\ncommand has no effect:\n\n```\ntemporal task-queue update-build-ids promote-set \\\n    --task-queue YourTaskQueue \\\n    --build-id \"YourBuildId\"\n```\n\n```\n+------------------------------------------------------------------------+\n| NOTICE: This command is limited to Namespaces that support Worker      |\n| versioning. Worker versioning is experimental. Versioning commands are |\n| subject to change.                                                     |\n+------------------------------------------------------------------------+\n```"
 	}
 	s.Command.Args = cobra.NoArgs
+	s.Command.Annotations = make(map[string]string)
+	s.Command.Annotations["deprecationWarning"] = "This command is deprecated and will be removed in a later release."
 	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "Build ID within the promoted set. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "build-id")
 	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task Queue name. Required.")
@@ -2564,11 +3256,13 @@ func NewTemporalTaskQueueVersioningCommand(cctx *CommandContext, parent *Tempora
 	s.Command.Use = "versioning"
 	s.Command.Short = "Manage Task Queue Build ID handling (Deprecated)"
 	if hasHighlighting {
-		s.Command.Long = "\x1b[1m+---------------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment.         |\n+---------------------------------------------------------------------+\x1b[0m\n\nProvides commands to add, list, remove, or replace Worker Build ID assignment\nand redirect rules associated with Task Queues:\n\n\x1b[1mtemporal task-queue versioning [subcommands] [options] \\\n    --task-queue YourTaskQueue\x1b[0m\n\nTask Queues support the following versioning rules and policies:\n\n- Assignment Rules: manage how new executions are assigned to run on specific\n  Worker Build IDs. Each Task Queue stores a list of ordered Assignment Rules,\n  which are evaluated from first to last. Assignment Rules also allow for\n  gradual rollout of new Build IDs by setting ramp percentage.\n- Redirect Rules: automatically assign work for a source Build ID to a target\n  Build ID. You may add at most one redirect rule for each source Build ID.\n  Redirect rules require that a target Build ID is fully compatible with\n  the source Build ID."
+		s.Command.Long = "\x1b[1m+-------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment. |\n+-------------------------------------------------------------+\x1b[0m\n\nProvides commands to add, list, remove, or replace Worker Build ID assignment\nand redirect rules associated with Task Queues:\n\n\x1b[1mtemporal task-queue versioning [subcommands] [options] \\\n    --task-queue YourTaskQueue\x1b[0m\n\nTask Queues support the following versioning rules and policies:\n\n- Assignment Rules: manage how new executions are assigned to run on specific\n  Worker Build IDs. Each Task Queue stores a list of ordered Assignment Rules,\n  which are evaluated from first to last. Assignment Rules also allow for\n  gradual rollout of new Build IDs by setting ramp percentage.\n- Redirect Rules: automatically assign work for a source Build ID to a target\n  Build ID. You may add at most one redirect rule for each source Build ID.\n  Redirect rules require that a target Build ID is fully compatible with\n  the source Build ID."
 	} else {
-		s.Command.Long = "```\n+---------------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment.         |\n+---------------------------------------------------------------------+\n```\n\nProvides commands to add, list, remove, or replace Worker Build ID assignment\nand redirect rules associated with Task Queues:\n\n```\ntemporal task-queue versioning [subcommands] [options] \\\n    --task-queue YourTaskQueue\n```\n\nTask Queues support the following versioning rules and policies:\n\n- Assignment Rules: manage how new executions are assigned to run on specific\n  Worker Build IDs. Each Task Queue stores a list of ordered Assignment Rules,\n  which are evaluated from first to last. Assignment Rules also allow for\n  gradual rollout of new Build IDs by setting ramp percentage.\n- Redirect Rules: automatically assign work for a source Build ID to a target\n  Build ID. You may add at most one redirect rule for each source Build ID.\n  Redirect rules require that a target Build ID is fully compatible with\n  the source Build ID."
+		s.Command.Long = "```\n+-------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment. |\n+-------------------------------------------------------------+\n```\n\nProvides commands to add, list, remove, or replace Worker Build ID assignment\nand redirect rules associated with Task Queues:\n\n```\ntemporal task-queue versioning [subcommands] [options] \\\n    --task-queue YourTaskQueue\n```\n\nTask Queues support the following versioning rules and policies:\n\n- Assignment Rules: manage how new executions are assigned to run on specific\n  Worker Build IDs. Each Task Queue stores a list of ordered Assignment Rules,\n  which are evaluated from first to last. Assignment Rules also allow for\n  gradual rollout of new Build IDs by setting ramp percentage.\n- Redirect Rules: automatically assign work for a source Build ID to a target\n  Build ID. You may add at most one redirect rule for each source Build ID.\n  Redirect rules require that a target Build ID is fully compatible with\n  the source Build ID."
 	}
 	s.Command.Args = cobra.NoArgs
+	s.Command.Annotations = make(map[string]string)
+	s.Command.Annotations["deprecationWarning"] = "This API has been deprecated by Worker Deployment."
 	s.Command.AddCommand(&NewTemporalTaskQueueVersioningAddRedirectRuleCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalTaskQueueVersioningCommitBuildIdCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalTaskQueueVersioningDeleteAssignmentRuleCommand(cctx, &s).Command)
@@ -2597,11 +3291,13 @@ func NewTemporalTaskQueueVersioningAddRedirectRuleCommand(cctx *CommandContext, 
 	s.Command.Use = "add-redirect-rule [flags]"
 	s.Command.Short = "Add Task Queue redirect rules (Deprecated)"
 	if hasHighlighting {
-		s.Command.Long = "Add a new redirect rule for a given Task Queue. You may add at most one\nredirect rule for each distinct source build ID:\n\n\x1b[1mtemporal task-queue versioning add-redirect-rule \\\n    --task-queue YourTaskQueue \\\n    --source-build-id \"YourSourceBuildID\" \\\n    --target-build-id \"YourTargetBuildID\"\x1b[0m\n\n\x1b[1m+---------------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment.         |\n+---------------------------------------------------------------------+\x1b[0m"
+		s.Command.Long = "\x1b[1m+-------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment. |\n+-------------------------------------------------------------+\x1b[0m\n\nAdd a new redirect rule for a given Task Queue. You may add at most one\nredirect rule for each distinct source build ID:\n\n\x1b[1mtemporal task-queue versioning add-redirect-rule \\\n    --task-queue YourTaskQueue \\\n    --source-build-id \"YourSourceBuildID\" \\\n    --target-build-id \"YourTargetBuildID\"\x1b[0m"
 	} else {
-		s.Command.Long = "Add a new redirect rule for a given Task Queue. You may add at most one\nredirect rule for each distinct source build ID:\n\n```\ntemporal task-queue versioning add-redirect-rule \\\n    --task-queue YourTaskQueue \\\n    --source-build-id \"YourSourceBuildID\" \\\n    --target-build-id \"YourTargetBuildID\"\n```\n\n```\n+---------------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment.         |\n+---------------------------------------------------------------------+\n```"
+		s.Command.Long = "```\n+-------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment. |\n+-------------------------------------------------------------+\n```\n\nAdd a new redirect rule for a given Task Queue. You may add at most one\nredirect rule for each distinct source build ID:\n\n```\ntemporal task-queue versioning add-redirect-rule \\\n    --task-queue YourTaskQueue \\\n    --source-build-id \"YourSourceBuildID\" \\\n    --target-build-id \"YourTargetBuildID\"\n```"
 	}
 	s.Command.Args = cobra.NoArgs
+	s.Command.Annotations = make(map[string]string)
+	s.Command.Annotations["deprecationWarning"] = "This API has been deprecated by Worker Deployment."
 	s.Command.Flags().StringVar(&s.SourceBuildId, "source-build-id", "", "Source build ID. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "source-build-id")
 	s.Command.Flags().StringVar(&s.TargetBuildId, "target-build-id", "", "Target build ID. Required.")
@@ -2630,11 +3326,13 @@ func NewTemporalTaskQueueVersioningCommitBuildIdCommand(cctx *CommandContext, pa
 	s.Command.Use = "commit-build-id [flags]"
 	s.Command.Short = "Complete Build ID rollout (Deprecated)"
 	if hasHighlighting {
-		s.Command.Long = "Complete a Build ID's rollout and clean up unnecessary rules that might have\nbeen created during a gradual rollout:\n\n\x1b[1mtemporal task-queue versioning commit-build-id \\\n    --task-queue YourTaskQueue\n    --build-id \"YourBuildId\"\x1b[0m\n\nThis command automatically applies the following atomic changes:\n\n- Adds an unconditional assignment rule for the target Build ID at the\n  end of the list.\n- Removes all previously added assignment rules to the given target\n  Build ID.\n- Removes any unconditional assignment rules for other Build IDs.\n\nRejects requests when there have been no recent pollers for this Build ID.\nThis prevents committing invalid Build IDs. Use the \x1b[1m--force\x1b[0m option to\noverride this validation.\n\n\x1b[1m+---------------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment.         |\n+---------------------------------------------------------------------+\x1b[0m"
+		s.Command.Long = "\x1b[1m+-------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment. |\n+-------------------------------------------------------------+\x1b[0m\n\nComplete a Build ID's rollout and clean up unnecessary rules that might have\nbeen created during a gradual rollout:\n\n\x1b[1mtemporal task-queue versioning commit-build-id \\\n    --task-queue YourTaskQueue\n    --build-id \"YourBuildId\"\x1b[0m\n\nThis command automatically applies the following atomic changes:\n\n- Adds an unconditional assignment rule for the target Build ID at the\n  end of the list.\n- Removes all previously added assignment rules to the given target\n  Build ID.\n- Removes any unconditional assignment rules for other Build IDs.\n\nRejects requests when there have been no recent pollers for this Build ID.\nThis prevents committing invalid Build IDs. Use the \x1b[1m--force\x1b[0m option to\noverride this validation."
 	} else {
-		s.Command.Long = "Complete a Build ID's rollout and clean up unnecessary rules that might have\nbeen created during a gradual rollout:\n\n```\ntemporal task-queue versioning commit-build-id \\\n    --task-queue YourTaskQueue\n    --build-id \"YourBuildId\"\n```\n\nThis command automatically applies the following atomic changes:\n\n- Adds an unconditional assignment rule for the target Build ID at the\n  end of the list.\n- Removes all previously added assignment rules to the given target\n  Build ID.\n- Removes any unconditional assignment rules for other Build IDs.\n\nRejects requests when there have been no recent pollers for this Build ID.\nThis prevents committing invalid Build IDs. Use the `--force` option to\noverride this validation.\n\n```\n+---------------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment.         |\n+---------------------------------------------------------------------+\n```"
+		s.Command.Long = "```\n+-------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment. |\n+-------------------------------------------------------------+\n```\n\nComplete a Build ID's rollout and clean up unnecessary rules that might have\nbeen created during a gradual rollout:\n\n```\ntemporal task-queue versioning commit-build-id \\\n    --task-queue YourTaskQueue\n    --build-id \"YourBuildId\"\n```\n\nThis command automatically applies the following atomic changes:\n\n- Adds an unconditional assignment rule for the target Build ID at the\n  end of the list.\n- Removes all previously added assignment rules to the given target\n  Build ID.\n- Removes any unconditional assignment rules for other Build IDs.\n\nRejects requests when there have been no recent pollers for this Build ID.\nThis prevents committing invalid Build IDs. Use the `--force` option to\noverride this validation."
 	}
 	s.Command.Args = cobra.NoArgs
+	s.Command.Annotations = make(map[string]string)
+	s.Command.Annotations["deprecationWarning"] = "This API has been deprecated by Worker Deployment."
 	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "Target build ID. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "build-id")
 	s.Command.Flags().BoolVar(&s.Force, "force", false, "Bypass recent-poller validation.")
@@ -2662,11 +3360,13 @@ func NewTemporalTaskQueueVersioningDeleteAssignmentRuleCommand(cctx *CommandCont
 	s.Command.Use = "delete-assignment-rule [flags]"
 	s.Command.Short = "Removes a Task Queue assignment rule (Deprecated)"
 	if hasHighlighting {
-		s.Command.Long = "Deletes a rule identified by its index in the Task Queue's list of assignment\nrules.\n\n\x1b[1mtemporal task-queue versioning delete-assignment-rule \\\n    --task-queue YourTaskQueue \\\n    --rule-index YourIntegerRuleIndex\x1b[0m\n\nBy default, the Task Queue must retain one unconditional rule, such as \"no\nhint filter\" or \"percentage\". Otherwise, the delete operation is rejected.\nUse the \x1b[1m--force\x1b[0m option to override this validation.\n\n\x1b[1m+---------------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment.         |\n+---------------------------------------------------------------------+\x1b[0m"
+		s.Command.Long = "\x1b[1m+-------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment. |\n+-------------------------------------------------------------+\x1b[0m\n\nDeletes a rule identified by its index in the Task Queue's list of assignment\nrules.\n\n\x1b[1mtemporal task-queue versioning delete-assignment-rule \\\n    --task-queue YourTaskQueue \\\n    --rule-index YourIntegerRuleIndex\x1b[0m\n\nBy default, the Task Queue must retain one unconditional rule, such as \"no\nhint filter\" or \"percentage\". Otherwise, the delete operation is rejected.\nUse the \x1b[1m--force\x1b[0m option to override this validation."
 	} else {
-		s.Command.Long = "Deletes a rule identified by its index in the Task Queue's list of assignment\nrules.\n\n```\ntemporal task-queue versioning delete-assignment-rule \\\n    --task-queue YourTaskQueue \\\n    --rule-index YourIntegerRuleIndex\n```\n\nBy default, the Task Queue must retain one unconditional rule, such as \"no\nhint filter\" or \"percentage\". Otherwise, the delete operation is rejected.\nUse the `--force` option to override this validation.\n\n```\n+---------------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment.         |\n+---------------------------------------------------------------------+\n```"
+		s.Command.Long = "```\n+-------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment. |\n+-------------------------------------------------------------+\n```\n\nDeletes a rule identified by its index in the Task Queue's list of assignment\nrules.\n\n```\ntemporal task-queue versioning delete-assignment-rule \\\n    --task-queue YourTaskQueue \\\n    --rule-index YourIntegerRuleIndex\n```\n\nBy default, the Task Queue must retain one unconditional rule, such as \"no\nhint filter\" or \"percentage\". Otherwise, the delete operation is rejected.\nUse the `--force` option to override this validation."
 	}
 	s.Command.Args = cobra.NoArgs
+	s.Command.Annotations = make(map[string]string)
+	s.Command.Annotations["deprecationWarning"] = "This API has been deprecated by Worker Deployment."
 	s.Command.Flags().IntVarP(&s.RuleIndex, "rule-index", "i", 0, "Position of the assignment rule to be replaced. Requests for invalid indices will fail. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "rule-index")
 	s.Command.Flags().BoolVar(&s.Force, "force", false, "Bypass one-unconditional-rule validation.")
@@ -2693,11 +3393,13 @@ func NewTemporalTaskQueueVersioningDeleteRedirectRuleCommand(cctx *CommandContex
 	s.Command.Use = "delete-redirect-rule [flags]"
 	s.Command.Short = "Removes Build-ID routing rule (Deprecated)"
 	if hasHighlighting {
-		s.Command.Long = "Deletes the routing rule for the given source Build ID.\n\n\x1b[1mtemporal task-queue versioning delete-redirect-rule \\\n    --task-queue YourTaskQueue \\\n    --source-build-id \"YourBuildId\"\x1b[0m\n\n\x1b[1m+---------------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment.         |\n+---------------------------------------------------------------------+\x1b[0m"
+		s.Command.Long = "\x1b[1m+-------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment. |\n+-------------------------------------------------------------+\x1b[0m\n\nDeletes the routing rule for the given source Build ID.\n\n\x1b[1mtemporal task-queue versioning delete-redirect-rule \\\n    --task-queue YourTaskQueue \\\n    --source-build-id \"YourBuildId\"\x1b[0m"
 	} else {
-		s.Command.Long = "Deletes the routing rule for the given source Build ID.\n\n```\ntemporal task-queue versioning delete-redirect-rule \\\n    --task-queue YourTaskQueue \\\n    --source-build-id \"YourBuildId\"\n```\n\n```\n+---------------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment.         |\n+---------------------------------------------------------------------+\n```"
+		s.Command.Long = "```\n+-------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment. |\n+-------------------------------------------------------------+\n```\n\nDeletes the routing rule for the given source Build ID.\n\n```\ntemporal task-queue versioning delete-redirect-rule \\\n    --task-queue YourTaskQueue \\\n    --source-build-id \"YourBuildId\"\n```"
 	}
 	s.Command.Args = cobra.NoArgs
+	s.Command.Annotations = make(map[string]string)
+	s.Command.Annotations["deprecationWarning"] = "This API has been deprecated by Worker Deployment."
 	s.Command.Flags().StringVar(&s.SourceBuildId, "source-build-id", "", "Source Build ID. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "source-build-id")
 	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm.")
@@ -2721,11 +3423,13 @@ func NewTemporalTaskQueueVersioningGetRulesCommand(cctx *CommandContext, parent 
 	s.Command.Use = "get-rules [flags]"
 	s.Command.Short = "Fetch Worker Build ID assignments and redirect rules (Deprecated)"
 	if hasHighlighting {
-		s.Command.Long = "Retrieve all the Worker Build ID assignments and redirect rules associated\nwith a Task Queue:\n\n\x1b[1mtemporal task-queue versioning get-rules \\\n    --task-queue YourTaskQueue\x1b[0m\n\nTask Queues support the following versioning rules:\n\n- Assignment Rules: manage how new executions are assigned to run on specific\n  Worker Build IDs. Each Task Queue stores a list of ordered Assignment Rules,\n  which are evaluated from first to last. Assignment Rules also allow for\n  gradual rollout of new Build IDs by setting ramp percentage.\n- Redirect Rules: automatically assign work for a source Build ID to a target\n  Build ID. You may add at most one redirect rule for each source Build ID.\n  Redirect rules require that a target Build ID is fully compatible with\n  the source Build ID.\n\x1b[1m+---------------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment.         |\n+---------------------------------------------------------------------+\x1b[0m"
+		s.Command.Long = "\x1b[1m+-------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment. |\n+-------------------------------------------------------------+\x1b[0m\n\nRetrieve all the Worker Build ID assignments and redirect rules associated\nwith a Task Queue:\n\n\x1b[1mtemporal task-queue versioning get-rules \\\n    --task-queue YourTaskQueue\x1b[0m\n\nTask Queues support the following versioning rules:\n\n- Assignment Rules: manage how new executions are assigned to run on specific\n  Worker Build IDs. Each Task Queue stores a list of ordered Assignment Rules,\n  which are evaluated from first to last. Assignment Rules also allow for\n  gradual rollout of new Build IDs by setting ramp percentage.\n- Redirect Rules: automatically assign work for a source Build ID to a target\n  Build ID. You may add at most one redirect rule for each source Build ID.\n  Redirect rules require that a target Build ID is fully compatible with\n  the source Build ID."
 	} else {
-		s.Command.Long = "Retrieve all the Worker Build ID assignments and redirect rules associated\nwith a Task Queue:\n\n```\ntemporal task-queue versioning get-rules \\\n    --task-queue YourTaskQueue\n```\n\nTask Queues support the following versioning rules:\n\n- Assignment Rules: manage how new executions are assigned to run on specific\n  Worker Build IDs. Each Task Queue stores a list of ordered Assignment Rules,\n  which are evaluated from first to last. Assignment Rules also allow for\n  gradual rollout of new Build IDs by setting ramp percentage.\n- Redirect Rules: automatically assign work for a source Build ID to a target\n  Build ID. You may add at most one redirect rule for each source Build ID.\n  Redirect rules require that a target Build ID is fully compatible with\n  the source Build ID.\n```\n+---------------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment.         |\n+---------------------------------------------------------------------+\n```"
+		s.Command.Long = "```\n+-------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment. |\n+-------------------------------------------------------------+\n```\n\nRetrieve all the Worker Build ID assignments and redirect rules associated\nwith a Task Queue:\n\n```\ntemporal task-queue versioning get-rules \\\n    --task-queue YourTaskQueue\n```\n\nTask Queues support the following versioning rules:\n\n- Assignment Rules: manage how new executions are assigned to run on specific\n  Worker Build IDs. Each Task Queue stores a list of ordered Assignment Rules,\n  which are evaluated from first to last. Assignment Rules also allow for\n  gradual rollout of new Build IDs by setting ramp percentage.\n- Redirect Rules: automatically assign work for a source Build ID to a target\n  Build ID. You may add at most one redirect rule for each source Build ID.\n  Redirect rules require that a target Build ID is fully compatible with\n  the source Build ID."
 	}
 	s.Command.Args = cobra.NoArgs
+	s.Command.Annotations = make(map[string]string)
+	s.Command.Annotations["deprecationWarning"] = "This API has been deprecated by Worker Deployment."
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -2750,11 +3454,13 @@ func NewTemporalTaskQueueVersioningInsertAssignmentRuleCommand(cctx *CommandCont
 	s.Command.Use = "insert-assignment-rule [flags]"
 	s.Command.Short = "Add an assignment rule at a index (Deprecated)"
 	if hasHighlighting {
-		s.Command.Long = "Inserts a new assignment rule for this Task Queue. Rules are evaluated in\norder, starting from index 0. The first applicable rule is applied, and the\nrest ignored:\n\n\x1b[1mtemporal task-queue versioning insert-assignment-rule \\\n    --task-queue YourTaskQueue \\\n    --build-id \"YourBuildId\"\x1b[0m\n\nIf you do not specify a \x1b[1m--rule-index\x1b[0m, this command inserts at index 0.\n\n\x1b[1m+---------------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment.         |\n+---------------------------------------------------------------------+\x1b[0m"
+		s.Command.Long = "\x1b[1m+-------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment. |\n+-------------------------------------------------------------+\x1b[0m\n\nInserts a new assignment rule for this Task Queue. Rules are evaluated in\norder, starting from index 0. The first applicable rule is applied, and the\nrest ignored:\n\n\x1b[1mtemporal task-queue versioning insert-assignment-rule \\\n    --task-queue YourTaskQueue \\\n    --build-id \"YourBuildId\"\x1b[0m\n\nIf you do not specify a \x1b[1m--rule-index\x1b[0m, this command inserts at index 0."
 	} else {
-		s.Command.Long = "Inserts a new assignment rule for this Task Queue. Rules are evaluated in\norder, starting from index 0. The first applicable rule is applied, and the\nrest ignored:\n\n```\ntemporal task-queue versioning insert-assignment-rule \\\n    --task-queue YourTaskQueue \\\n    --build-id \"YourBuildId\"\n```\n\nIf you do not specify a `--rule-index`, this command inserts at index 0.\n\n```\n+---------------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment.         |\n+---------------------------------------------------------------------+\n```"
+		s.Command.Long = "```\n+-------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment. |\n+-------------------------------------------------------------+\n```\n\nInserts a new assignment rule for this Task Queue. Rules are evaluated in\norder, starting from index 0. The first applicable rule is applied, and the\nrest ignored:\n\n```\ntemporal task-queue versioning insert-assignment-rule \\\n    --task-queue YourTaskQueue \\\n    --build-id \"YourBuildId\"\n```\n\nIf you do not specify a `--rule-index`, this command inserts at index 0."
 	}
 	s.Command.Args = cobra.NoArgs
+	s.Command.Annotations = make(map[string]string)
+	s.Command.Annotations["deprecationWarning"] = "This API has been deprecated by Worker Deployment."
 	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "Target Build ID. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "build-id")
 	s.Command.Flags().IntVarP(&s.RuleIndex, "rule-index", "i", 0, "Insertion position. Ranges from 0 (insert at start) to count (append). Any number greater than the count is treated as \"append\".")
@@ -2785,11 +3491,13 @@ func NewTemporalTaskQueueVersioningReplaceAssignmentRuleCommand(cctx *CommandCon
 	s.Command.Use = "replace-assignment-rule [flags]"
 	s.Command.Short = "Update assignment rule at index (Deprecated)"
 	if hasHighlighting {
-		s.Command.Long = "Change an assignment rule for this Task Queue. By default, this enforces one\nunconditional rule (no hint filter or percentage). Otherwise, the operation\nwill be rejected. Set \x1b[1mforce\x1b[0m to true to bypass this validation.\n\n\x1b[1mtemporal task-queue versioning replace-assignment-rule \\\n    --task-queue YourTaskQueue \\\n    --rule-index AnIntegerIndex \\\n    --build-id \"YourBuildId\"\x1b[0m\n\nTo assign multiple assignment rules to a single Build ID, use\n'insert-assignment-rule'.\n\nTo update the percent:\n\n\x1b[1mtemporal task-queue versioning replace-assignment-rule \\\n    --task-queue YourTaskQueue \\\n    --rule-index AnIntegerIndex \\\n    --build-id \"YourBuildId\" \\\n    --percentage AnIntegerPercent\x1b[0m\n\nPercent may vary between 0 and 100 (default).\n\n\x1b[1m+---------------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment.         |\n+---------------------------------------------------------------------+\x1b[0m"
+		s.Command.Long = "\x1b[1m+-------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment. |\n+-------------------------------------------------------------+\x1b[0m\n\nChange an assignment rule for this Task Queue. By default, this enforces one\nunconditional rule (no hint filter or percentage). Otherwise, the operation\nwill be rejected. Set \x1b[1mforce\x1b[0m to true to bypass this validation.\n\n\x1b[1mtemporal task-queue versioning replace-assignment-rule \\\n    --task-queue YourTaskQueue \\\n    --rule-index AnIntegerIndex \\\n    --build-id \"YourBuildId\"\x1b[0m\n\nTo assign multiple assignment rules to a single Build ID, use\n'insert-assignment-rule'.\n\nTo update the percent:\n\n\x1b[1mtemporal task-queue versioning replace-assignment-rule \\\n    --task-queue YourTaskQueue \\\n    --rule-index AnIntegerIndex \\\n    --build-id \"YourBuildId\" \\\n    --percentage AnIntegerPercent\x1b[0m\n\nPercent may vary between 0 and 100 (default)."
 	} else {
-		s.Command.Long = "Change an assignment rule for this Task Queue. By default, this enforces one\nunconditional rule (no hint filter or percentage). Otherwise, the operation\nwill be rejected. Set `force` to true to bypass this validation.\n\n```\ntemporal task-queue versioning replace-assignment-rule \\\n    --task-queue YourTaskQueue \\\n    --rule-index AnIntegerIndex \\\n    --build-id \"YourBuildId\"\n```\n\nTo assign multiple assignment rules to a single Build ID, use\n'insert-assignment-rule'.\n\nTo update the percent:\n\n```\ntemporal task-queue versioning replace-assignment-rule \\\n    --task-queue YourTaskQueue \\\n    --rule-index AnIntegerIndex \\\n    --build-id \"YourBuildId\" \\\n    --percentage AnIntegerPercent\n```\n\nPercent may vary between 0 and 100 (default).\n\n```\n+---------------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment.         |\n+---------------------------------------------------------------------+\n```"
+		s.Command.Long = "```\n+-------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment. |\n+-------------------------------------------------------------+\n```\n\nChange an assignment rule for this Task Queue. By default, this enforces one\nunconditional rule (no hint filter or percentage). Otherwise, the operation\nwill be rejected. Set `force` to true to bypass this validation.\n\n```\ntemporal task-queue versioning replace-assignment-rule \\\n    --task-queue YourTaskQueue \\\n    --rule-index AnIntegerIndex \\\n    --build-id \"YourBuildId\"\n```\n\nTo assign multiple assignment rules to a single Build ID, use\n'insert-assignment-rule'.\n\nTo update the percent:\n\n```\ntemporal task-queue versioning replace-assignment-rule \\\n    --task-queue YourTaskQueue \\\n    --rule-index AnIntegerIndex \\\n    --build-id \"YourBuildId\" \\\n    --percentage AnIntegerPercent\n```\n\nPercent may vary between 0 and 100 (default)."
 	}
 	s.Command.Args = cobra.NoArgs
+	s.Command.Annotations = make(map[string]string)
+	s.Command.Annotations["deprecationWarning"] = "This API has been deprecated by Worker Deployment."
 	s.Command.Flags().StringVar(&s.BuildId, "build-id", "", "Target Build ID. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "build-id")
 	s.Command.Flags().IntVarP(&s.RuleIndex, "rule-index", "i", 0, "Position of the assignment rule to be replaced. Requests for invalid indices will fail. Required.")
@@ -2820,11 +3528,13 @@ func NewTemporalTaskQueueVersioningReplaceRedirectRuleCommand(cctx *CommandConte
 	s.Command.Use = "replace-redirect-rule [flags]"
 	s.Command.Short = "Change the target for a Build ID's redirect (Deprecated)"
 	if hasHighlighting {
-		s.Command.Long = "Updates a Build ID's redirect rule on a Task Queue by replacing its target\nBuild ID:\n\n\x1b[1mtemporal task-queue versioning replace-redirect-rule \\\n    --task-queue YourTaskQueue \\\n    --source-build-id YourSourceBuildId \\\n    --target-build-id YourNewTargetBuildId\x1b[0m\n\n\x1b[1m+---------------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment.         |\n+---------------------------------------------------------------------+\x1b[0m"
+		s.Command.Long = "\x1b[1m+-------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment. |\n+-------------------------------------------------------------+\x1b[0m\n\nUpdates a Build ID's redirect rule on a Task Queue by replacing its target\nBuild ID:\n\n\x1b[1mtemporal task-queue versioning replace-redirect-rule \\\n    --task-queue YourTaskQueue \\\n    --source-build-id YourSourceBuildId \\\n    --target-build-id YourNewTargetBuildId\x1b[0m"
 	} else {
-		s.Command.Long = "Updates a Build ID's redirect rule on a Task Queue by replacing its target\nBuild ID:\n\n```\ntemporal task-queue versioning replace-redirect-rule \\\n    --task-queue YourTaskQueue \\\n    --source-build-id YourSourceBuildId \\\n    --target-build-id YourNewTargetBuildId\n```\n\n```\n+---------------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment.         |\n+---------------------------------------------------------------------+\n```"
+		s.Command.Long = "```\n+-------------------------------------------------------------+\n| CAUTION: This API has been deprecated by Worker Deployment. |\n+-------------------------------------------------------------+\n```\n\nUpdates a Build ID's redirect rule on a Task Queue by replacing its target\nBuild ID:\n\n```\ntemporal task-queue versioning replace-redirect-rule \\\n    --task-queue YourTaskQueue \\\n    --source-build-id YourSourceBuildId \\\n    --target-build-id YourNewTargetBuildId\n```"
 	}
 	s.Command.Args = cobra.NoArgs
+	s.Command.Annotations = make(map[string]string)
+	s.Command.Annotations["deprecationWarning"] = "This API has been deprecated by Worker Deployment."
 	s.Command.Flags().StringVar(&s.SourceBuildId, "source-build-id", "", "Source Build ID. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "source-build-id")
 	s.Command.Flags().StringVar(&s.TargetBuildId, "target-build-id", "", "Target Build ID. Required.")
@@ -2878,6 +3588,8 @@ func NewTemporalWorkerDeploymentCommand(cctx *CommandContext, parent *TemporalWo
 		s.Command.Long = "Deployment commands perform operations on Worker Deployments:\n\n```\ntemporal worker deployment [command] [options]\n```\n\nFor example:\n\n```\ntemporal worker deployment list\n```\n\nLists the Deployments in the client's namespace.\n\nArguments can be Worker Deployment Versions associated with\na Deployment, specified using the Deployment name and Build ID.\n\nFor example:\n\n```\ntemporal worker deployment set-current-version \\\n         --deployment-name YourDeploymentName --build-id YourBuildID\n```\n\nSets the current Deployment Version for a given Deployment."
 	}
 	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalWorkerDeploymentCreateCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkerDeploymentCreateVersionCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentDeleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentDeleteVersionCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentDescribeCommand(cctx, &s).Command)
@@ -2886,7 +3598,68 @@ func NewTemporalWorkerDeploymentCommand(cctx *CommandContext, parent *TemporalWo
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentManagerIdentityCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentSetCurrentVersionCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentSetRampingVersionCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkerDeploymentUpdateVersionComputeConfigCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentUpdateVersionMetadataCommand(cctx, &s).Command)
+	return &s
+}
+
+type TemporalWorkerDeploymentCreateCommand struct {
+	Parent  *TemporalWorkerDeploymentCommand
+	Command cobra.Command
+	DeploymentNameOptions
+}
+
+func NewTemporalWorkerDeploymentCreateCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentCommand) *TemporalWorkerDeploymentCreateCommand {
+	var s TemporalWorkerDeploymentCreateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "create [flags]"
+	s.Command.Short = "Create a new Worker Deployment"
+	if hasHighlighting {
+		s.Command.Long = "Create a new Worker Deployment:\n\n\x1b[1mtemporal worker deployment create [options]\x1b[0m\n\nWorker Deployments are lazily created the first time a Worker polls the\nTemporal Server and specifies a VersionOverride. However, if you need to\npre-define a compute configuration (for instance to set up a serverless\nWorker), you need to call \x1b[1mtemporal worker deployment create-version\x1b[0m and\npass in the name of the Worker Deployment. The \x1b[1mtemporal worker\ndeployment create\x1b[0m command allows you to pre-define a Worker Deployment\nso that calls to \x1b[1mtemporal worker deployment create-version\x1b[0m will\nsucceed.\n\nIf a Worker Deployment with the supplied name already exists, this\ncommand will return an error.\n\nNote: This is an experimental feature and may change in the future."
+	} else {
+		s.Command.Long = "Create a new Worker Deployment:\n\n```\ntemporal worker deployment create [options]\n```\n\nWorker Deployments are lazily created the first time a Worker polls the\nTemporal Server and specifies a VersionOverride. However, if you need to\npre-define a compute configuration (for instance to set up a serverless\nWorker), you need to call `temporal worker deployment create-version` and\npass in the name of the Worker Deployment. The `temporal worker\ndeployment create` command allows you to pre-define a Worker Deployment\nso that calls to `temporal worker deployment create-version` will\nsucceed.\n\nIf a Worker Deployment with the supplied name already exists, this\ncommand will return an error.\n\nNote: This is an experimental feature and may change in the future."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.DeploymentNameOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalWorkerDeploymentCreateVersionCommand struct {
+	Parent  *TemporalWorkerDeploymentCommand
+	Command cobra.Command
+	DeploymentVersionOptions
+	AwsLambdaFunctionArn          string
+	AwsLambdaAssumeRoleArn        string
+	AwsLambdaAssumeRoleExternalId string
+}
+
+func NewTemporalWorkerDeploymentCreateVersionCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentCommand) *TemporalWorkerDeploymentCreateVersionCommand {
+	var s TemporalWorkerDeploymentCreateVersionCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "create-version [flags]"
+	s.Command.Short = "Create a new Worker Deployment Version"
+	if hasHighlighting {
+		s.Command.Long = "\nCreate a new Worker Deployment Version:\n\n\x1b[1mtemporal worker deployment create-version [options]\x1b[0m\n\nConfigure a Worker Deployment Version's compute configuration as needed.\nFor example, pass compute provider information for an AWS Lambda function\nthat spawns a Worker in the Worker Deployment:\n\n\x1b[1mtemporal worker deployment create-version \\\n    --namespace YourNamespaceName \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --aws-lambda-function-arn LambdaFunctionARN \\\n    --aws-lambda-assume-role-arn LambdaAssumeRoleARN \\\n    --aws-lambda-assume-role-external-id LambdaAssumeRoleExternalID\x1b[0m\n\nIf a Worker Deployment Version with the supplied BuildID already exists,\nthis command will return an error.\n\nReturns an error if all compute configuration fields are empty.\n\nNote: This is an experimental feature and may change in the future."
+	} else {
+		s.Command.Long = "\nCreate a new Worker Deployment Version:\n\n```\ntemporal worker deployment create-version [options]\n```\n\nConfigure a Worker Deployment Version's compute configuration as needed.\nFor example, pass compute provider information for an AWS Lambda function\nthat spawns a Worker in the Worker Deployment:\n\n```\ntemporal worker deployment create-version \\\n    --namespace YourNamespaceName \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --aws-lambda-function-arn LambdaFunctionARN \\\n    --aws-lambda-assume-role-arn LambdaAssumeRoleARN \\\n    --aws-lambda-assume-role-external-id LambdaAssumeRoleExternalID\n```\n\nIf a Worker Deployment Version with the supplied BuildID already exists,\nthis command will return an error.\n\nReturns an error if all compute configuration fields are empty.\n\nNote: This is an experimental feature and may change in the future."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.AwsLambdaFunctionArn, "aws-lambda-function-arn", "", "Qualified (contains version suffix) or unqualified AWS Lambda function ARN to invoke when there are no active pollers for task queue targets in the Worker Deployment.")
+	s.Command.Flags().StringVar(&s.AwsLambdaAssumeRoleArn, "aws-lambda-assume-role-arn", "", "AWS IAM role ARN that the Temporal server will assume when invoking the Lambda function that spawns a new Worker in this Worker Deployment Version. Required when --aws-lambda-function-arn is specified.")
+	s.Command.Flags().StringVar(&s.AwsLambdaAssumeRoleExternalId, "aws-lambda-assume-role-external-id", "", "Temporal server will enforce that the AWS IAM trust policy associated with the AWS IAM role specified in --aws-lambda-assume-role-arn has an aws:ExternalId condition that matches the supplied value. Required when --aws-lambda-function-arn is specified.")
+	s.DeploymentVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
 	return &s
 }
 
@@ -3038,9 +3811,9 @@ func NewTemporalWorkerDeploymentManagerIdentityCommand(cctx *CommandContext, par
 	s.Command.Use = "manager-identity"
 	s.Command.Short = "Manager Identity commands change the `ManagerIdentity` of a Worker Deployment"
 	if hasHighlighting {
-		s.Command.Long = "Manager Identity commands change the \x1b[1mManagerIdentity\x1b[0m of a Worker Deployment:\n\n\x1b[1mtemporal worker deployment manager-identity [command] [options]\x1b[0m\n\nWhen present, \x1b[1mManagerIdentity\x1b[0m is the identity of the user that has the \nexclusive right to make changes to this Worker Deployment. Empty by default.\nWhen set, users whose identity does not match the \x1b[1mManagerIdentity\x1b[0m will not\nbe able to change the Worker Deployment.\n\nThis is especially useful in environments where multiple users (such as CLI\nusers and automated controllers) may interact with the same Worker Deployment.\n\x1b[1mManagerIdentity\x1b[0m allows different users to communicate with one another about\nwho is expected to make changes to the Worker Deployment.\n\nThe current Manager Identity is returned with \x1b[1mdescribe\x1b[0m:\n\x1b[1m temporal worker deployment describe \\\n    --deployment-name YourDeploymentName\x1b[0m"
+		s.Command.Long = "Manager Identity commands change the \x1b[1mManagerIdentity\x1b[0m of a Worker Deployment:\n\n\x1b[1mtemporal worker deployment manager-identity [command] [options]\x1b[0m\n\nWhen present, \x1b[1mManagerIdentity\x1b[0m is the identity of the user that has the\nexclusive right to make changes to this Worker Deployment. Empty by default.\nWhen set, users whose identity does not match the \x1b[1mManagerIdentity\x1b[0m will not\nbe able to change the Worker Deployment.\n\nThis is especially useful in environments where multiple users (such as CLI\nusers and automated controllers) may interact with the same Worker Deployment.\n\x1b[1mManagerIdentity\x1b[0m allows different users to communicate with one another about\nwho is expected to make changes to the Worker Deployment.\n\nThe current Manager Identity is returned with \x1b[1mdescribe\x1b[0m:\n\x1b[1m temporal worker deployment describe \\\n    --deployment-name YourDeploymentName\x1b[0m"
 	} else {
-		s.Command.Long = "Manager Identity commands change the `ManagerIdentity` of a Worker Deployment:\n\n```\ntemporal worker deployment manager-identity [command] [options]\n```\n\nWhen present, `ManagerIdentity` is the identity of the user that has the \nexclusive right to make changes to this Worker Deployment. Empty by default.\nWhen set, users whose identity does not match the `ManagerIdentity` will not\nbe able to change the Worker Deployment.\n\nThis is especially useful in environments where multiple users (such as CLI\nusers and automated controllers) may interact with the same Worker Deployment.\n`ManagerIdentity` allows different users to communicate with one another about\nwho is expected to make changes to the Worker Deployment.\n\nThe current Manager Identity is returned with `describe`:\n```\n temporal worker deployment describe \\\n    --deployment-name YourDeploymentName\n```"
+		s.Command.Long = "Manager Identity commands change the `ManagerIdentity` of a Worker Deployment:\n\n```\ntemporal worker deployment manager-identity [command] [options]\n```\n\nWhen present, `ManagerIdentity` is the identity of the user that has the\nexclusive right to make changes to this Worker Deployment. Empty by default.\nWhen set, users whose identity does not match the `ManagerIdentity` will not\nbe able to change the Worker Deployment.\n\nThis is especially useful in environments where multiple users (such as CLI\nusers and automated controllers) may interact with the same Worker Deployment.\n`ManagerIdentity` allows different users to communicate with one another about\nwho is expected to make changes to the Worker Deployment.\n\nThe current Manager Identity is returned with `describe`:\n```\n temporal worker deployment describe \\\n    --deployment-name YourDeploymentName\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentManagerIdentitySetCommand(cctx, &s).Command)
@@ -3064,9 +3837,9 @@ func NewTemporalWorkerDeploymentManagerIdentitySetCommand(cctx *CommandContext, 
 	s.Command.Use = "set [flags]"
 	s.Command.Short = "Set the Manager Identity of a Worker Deployment"
 	if hasHighlighting {
-		s.Command.Long = "Set the \x1b[1mManagerIdentity\x1b[0m of a Worker Deployment given its Deployment Name.\n\nWhen present, \x1b[1mManagerIdentity\x1b[0m is the identity of the user that has the \nexclusive right to make changes to this Worker Deployment. Empty by default.\nWhen set, users whose identity does not match the \x1b[1mManagerIdentity\x1b[0m will not\nbe able to change the Worker Deployment.\n\nThis is especially useful in environments where multiple users (such as CLI\nusers and automated controllers) may interact with the same Worker Deployment.\n\x1b[1mManagerIdentity\x1b[0m allows different users to communicate with one another about\nwho is expected to make changes to the Worker Deployment.\n\n\x1b[1mtemporal worker deployment manager-identity set [options]\x1b[0m\n\nFor example:\n\n\x1b[1mtemporal worker deployment manager-identity set \\\n   --deployment-name DeploymentName \\\n   --self \\\n   --identity YourUserIdentity # optional, populated by CLI if not provided\x1b[0m\n\nSets the Manager Identity of the Deployment to the identity of the user making \nthis request. If you don't specifically pass an identity field, the CLI will \ngenerate your identity for you.\n\nFor example:\n\x1b[1mtemporal worker deployment manager-identity set \\\n   --deployment-name DeploymentName \\\n   --manager-identity NewManagerIdentity\x1b[0m\n\nSets the Manager Identity of the Deployment to any string."
+		s.Command.Long = "Set the \x1b[1mManagerIdentity\x1b[0m of a Worker Deployment given its Deployment Name.\n\nWhen present, \x1b[1mManagerIdentity\x1b[0m is the identity of the user that has the\nexclusive right to make changes to this Worker Deployment. Empty by default.\nWhen set, users whose identity does not match the \x1b[1mManagerIdentity\x1b[0m will not\nbe able to change the Worker Deployment.\n\nThis is especially useful in environments where multiple users (such as CLI\nusers and automated controllers) may interact with the same Worker Deployment.\n\x1b[1mManagerIdentity\x1b[0m allows different users to communicate with one another about\nwho is expected to make changes to the Worker Deployment.\n\n\x1b[1mtemporal worker deployment manager-identity set [options]\x1b[0m\n\nFor example:\n\n\x1b[1mtemporal worker deployment manager-identity set \\\n   --deployment-name DeploymentName \\\n   --self \\\n   --identity YourUserIdentity # optional, populated by CLI if not provided\x1b[0m\n\nSets the Manager Identity of the Deployment to the identity of the user making\nthis request. If you don't specifically pass an identity field, the CLI will\ngenerate your identity for you.\n\nFor example:\n\x1b[1mtemporal worker deployment manager-identity set \\\n   --deployment-name DeploymentName \\\n   --manager-identity NewManagerIdentity\x1b[0m\n\nSets the Manager Identity of the Deployment to any string."
 	} else {
-		s.Command.Long = "Set the `ManagerIdentity` of a Worker Deployment given its Deployment Name.\n\nWhen present, `ManagerIdentity` is the identity of the user that has the \nexclusive right to make changes to this Worker Deployment. Empty by default.\nWhen set, users whose identity does not match the `ManagerIdentity` will not\nbe able to change the Worker Deployment.\n\nThis is especially useful in environments where multiple users (such as CLI\nusers and automated controllers) may interact with the same Worker Deployment.\n`ManagerIdentity` allows different users to communicate with one another about\nwho is expected to make changes to the Worker Deployment.\n\n```\ntemporal worker deployment manager-identity set [options]\n```\n\nFor example:\n\n```\ntemporal worker deployment manager-identity set \\\n   --deployment-name DeploymentName \\\n   --self \\\n   --identity YourUserIdentity # optional, populated by CLI if not provided\n```\n\nSets the Manager Identity of the Deployment to the identity of the user making \nthis request. If you don't specifically pass an identity field, the CLI will \ngenerate your identity for you.\n\nFor example:\n```\ntemporal worker deployment manager-identity set \\\n   --deployment-name DeploymentName \\\n   --manager-identity NewManagerIdentity\n```\n\nSets the Manager Identity of the Deployment to any string."
+		s.Command.Long = "Set the `ManagerIdentity` of a Worker Deployment given its Deployment Name.\n\nWhen present, `ManagerIdentity` is the identity of the user that has the\nexclusive right to make changes to this Worker Deployment. Empty by default.\nWhen set, users whose identity does not match the `ManagerIdentity` will not\nbe able to change the Worker Deployment.\n\nThis is especially useful in environments where multiple users (such as CLI\nusers and automated controllers) may interact with the same Worker Deployment.\n`ManagerIdentity` allows different users to communicate with one another about\nwho is expected to make changes to the Worker Deployment.\n\n```\ntemporal worker deployment manager-identity set [options]\n```\n\nFor example:\n\n```\ntemporal worker deployment manager-identity set \\\n   --deployment-name DeploymentName \\\n   --self \\\n   --identity YourUserIdentity # optional, populated by CLI if not provided\n```\n\nSets the Manager Identity of the Deployment to the identity of the user making\nthis request. If you don't specifically pass an identity field, the CLI will\ngenerate your identity for you.\n\nFor example:\n```\ntemporal worker deployment manager-identity set \\\n   --deployment-name DeploymentName \\\n   --manager-identity NewManagerIdentity\n```\n\nSets the Manager Identity of the Deployment to any string."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.ManagerIdentity, "manager-identity", "", "New Manager Identity. Required unless --self is specified.")
@@ -3095,9 +3868,9 @@ func NewTemporalWorkerDeploymentManagerIdentityUnsetCommand(cctx *CommandContext
 	s.Command.Use = "unset [flags]"
 	s.Command.Short = "Unset the Manager Identity of a Worker Deployment"
 	if hasHighlighting {
-		s.Command.Long = "Unset the \x1b[1mManagerIdentity\x1b[0m of a Worker Deployment given its Deployment Name.\n\nWhen present, \x1b[1mManagerIdentity\x1b[0m is the identity of the user that has the \nexclusive right to make changes to this Worker Deployment. Empty by default.\nWhen set, users whose identity does not match the \x1b[1mManagerIdentity\x1b[0m will not\nbe able to change the Worker Deployment.\n\nThis is especially useful in environments where multiple users (such as CLI\nusers and automated controllers) may interact with the same Worker Deployment.\n\x1b[1mManagerIdentity\x1b[0m allows different users to communicate with one another about\nwho is expected to make changes to the Worker Deployment.\n\n\x1b[1mtemporal worker deployment manager-identity unset [options]\x1b[0m\n\nFor example:\n\n\x1b[1mtemporal worker deployment manager-identity unset \\\n   --deployment-name YourDeploymentName\x1b[0m\n\nClears the Manager Identity field for a given Deployment."
+		s.Command.Long = "Unset the \x1b[1mManagerIdentity\x1b[0m of a Worker Deployment given its Deployment Name.\n\nWhen present, \x1b[1mManagerIdentity\x1b[0m is the identity of the user that has the\nexclusive right to make changes to this Worker Deployment. Empty by default.\nWhen set, users whose identity does not match the \x1b[1mManagerIdentity\x1b[0m will not\nbe able to change the Worker Deployment.\n\nThis is especially useful in environments where multiple users (such as CLI\nusers and automated controllers) may interact with the same Worker Deployment.\n\x1b[1mManagerIdentity\x1b[0m allows different users to communicate with one another about\nwho is expected to make changes to the Worker Deployment.\n\n\x1b[1mtemporal worker deployment manager-identity unset [options]\x1b[0m\n\nFor example:\n\n\x1b[1mtemporal worker deployment manager-identity unset \\\n   --deployment-name YourDeploymentName\x1b[0m\n\nClears the Manager Identity field for a given Deployment."
 	} else {
-		s.Command.Long = "Unset the `ManagerIdentity` of a Worker Deployment given its Deployment Name.\n\nWhen present, `ManagerIdentity` is the identity of the user that has the \nexclusive right to make changes to this Worker Deployment. Empty by default.\nWhen set, users whose identity does not match the `ManagerIdentity` will not\nbe able to change the Worker Deployment.\n\nThis is especially useful in environments where multiple users (such as CLI\nusers and automated controllers) may interact with the same Worker Deployment.\n`ManagerIdentity` allows different users to communicate with one another about\nwho is expected to make changes to the Worker Deployment.\n\n```\ntemporal worker deployment manager-identity unset [options]\n```\n\nFor example:\n\n```\ntemporal worker deployment manager-identity unset \\\n   --deployment-name YourDeploymentName\n```\n\nClears the Manager Identity field for a given Deployment."
+		s.Command.Long = "Unset the `ManagerIdentity` of a Worker Deployment given its Deployment Name.\n\nWhen present, `ManagerIdentity` is the identity of the user that has the\nexclusive right to make changes to this Worker Deployment. Empty by default.\nWhen set, users whose identity does not match the `ManagerIdentity` will not\nbe able to change the Worker Deployment.\n\nThis is especially useful in environments where multiple users (such as CLI\nusers and automated controllers) may interact with the same Worker Deployment.\n`ManagerIdentity` allows different users to communicate with one another about\nwho is expected to make changes to the Worker Deployment.\n\n```\ntemporal worker deployment manager-identity unset [options]\n```\n\nFor example:\n\n```\ntemporal worker deployment manager-identity unset \\\n   --deployment-name YourDeploymentName\n```\n\nClears the Manager Identity field for a given Deployment."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.DeploymentName, "deployment-name", "", "Name for a Worker Deployment. Required.")
@@ -3172,6 +3945,41 @@ func NewTemporalWorkerDeploymentSetRampingVersionCommand(cctx *CommandContext, p
 	s.Command.Flags().BoolVar(&s.AllowNoPollers, "allow-no-pollers", false, "Override protection and set version as ramping even if it has no pollers.")
 	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm set Ramping Version.")
 	s.DeploymentVersionOrUnversionedOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalWorkerDeploymentUpdateVersionComputeConfigCommand struct {
+	Parent  *TemporalWorkerDeploymentCommand
+	Command cobra.Command
+	DeploymentVersionOptions
+	AwsLambdaFunctionArn          string
+	AwsLambdaAssumeRoleArn        string
+	AwsLambdaAssumeRoleExternalId string
+	Remove                        bool
+}
+
+func NewTemporalWorkerDeploymentUpdateVersionComputeConfigCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentCommand) *TemporalWorkerDeploymentUpdateVersionComputeConfigCommand {
+	var s TemporalWorkerDeploymentUpdateVersionComputeConfigCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "update-version-compute-config [flags]"
+	s.Command.Short = "Update compute configuration for a Version"
+	if hasHighlighting {
+		s.Command.Long = "Update compute configuration associated with a Worker Deployment\nVersion.\n\nFor example, to update the AWS Lambda function ARN associated with an\nexisting Worker Deployment Version:\n\n\x1b[1m temporal worker deployment update-version-compute-config \\\n    --deployment-name YourDeploymentName --build-id YourBuildID \\\n    --aws-lambda-function-arn UpdatedLambdaFunctionARN\x1b[0m\n\nTo update the AWS IAM role ARN that is assumed by the serverless worker\nmanager associated with an existing Worker Deployment Version:\n\n\x1b[1m temporal worker deployment update-version-compute-config \\\n    --deployment-name YourDeploymentName --build-id YourBuildID \\\n    --aws-lambda-assume-role-arn UpdatedRoleARN\x1b[0m\n\nIf --remove is specified, the compute configuration for the Worker\nDeployment Version will be removed:\n\n\x1b[1m temporal worker deployment update-version-compute-config \\\n    --deployment-name YourDeploymentName --build-id YourBuildID \\\n    --remove\x1b[0m\n\nIf a Worker Deployment Version with the supplied BuildID does not exist,\nthis command will return an error.\n\nNote: This is an experimental feature and may change in the future."
+	} else {
+		s.Command.Long = "Update compute configuration associated with a Worker Deployment\nVersion.\n\nFor example, to update the AWS Lambda function ARN associated with an\nexisting Worker Deployment Version:\n\n```\n temporal worker deployment update-version-compute-config \\\n    --deployment-name YourDeploymentName --build-id YourBuildID \\\n    --aws-lambda-function-arn UpdatedLambdaFunctionARN\n```\n\nTo update the AWS IAM role ARN that is assumed by the serverless worker\nmanager associated with an existing Worker Deployment Version:\n\n```\n temporal worker deployment update-version-compute-config \\\n    --deployment-name YourDeploymentName --build-id YourBuildID \\\n    --aws-lambda-assume-role-arn UpdatedRoleARN\n```\n\nIf --remove is specified, the compute configuration for the Worker\nDeployment Version will be removed:\n\n```\n temporal worker deployment update-version-compute-config \\\n    --deployment-name YourDeploymentName --build-id YourBuildID \\\n    --remove\n```\n\nIf a Worker Deployment Version with the supplied BuildID does not exist,\nthis command will return an error.\n\nNote: This is an experimental feature and may change in the future."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.AwsLambdaFunctionArn, "aws-lambda-function-arn", "", "Qualified (contains version suffix) or unqualified AWS Lambda function ARN to invoke when there are no active pollers for task queue targets in the Worker Deployment.")
+	s.Command.Flags().StringVar(&s.AwsLambdaAssumeRoleArn, "aws-lambda-assume-role-arn", "", "AWS IAM role ARN that the Temporal server will assume when invoking the Lambda function that spawns a new Worker in this Worker Deployment Version. Required when --aws-lambda-function-arn is specified.")
+	s.Command.Flags().StringVar(&s.AwsLambdaAssumeRoleExternalId, "aws-lambda-assume-role-external-id", "", "Temporal server will enforce that the AWS IAM trust policy associated with the AWS IAM role specified in --aws-lambda-assume-role-arn has an aws:ExternalId condition that matches the supplied value. Required when --aws-lambda-function-arn is specified.")
+	s.Command.Flags().BoolVar(&s.Remove, "remove", false, "Removes any compute configuration associated with this Worker Deployment Version.")
+	s.DeploymentVersionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -3380,9 +4188,9 @@ func NewTemporalWorkflowDeleteCommand(cctx *CommandContext, parent *TemporalWork
 	s.Command.Use = "delete [flags]"
 	s.Command.Short = "Remove Workflow Execution"
 	if hasHighlighting {
-		s.Command.Long = "Delete a Workflow Executions and its Event History:\n\n\x1b[1mtemporal workflow delete \\\n    --workflow-id YourWorkflowId\x1b[0m\n\nThe removal executes asynchronously. If the Execution is Running, the Service\nterminates it before deletion.\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation. See \x1b[1mtemporal batch --help\x1b[0m for a quick reference."
+		s.Command.Long = "Delete a Workflow Execution and its Event History:\n\n\x1b[1mtemporal workflow delete \\\n    --workflow-id YourWorkflowId\x1b[0m\n\nThe removal executes asynchronously. If the Execution is Running, the Service\nterminates it before deletion.\n\nWARNING: Deleting Workflow Executions in a global Namespace removes them from\nall replicas. Requests sent to a passive cluster are forwarded to the active\ncluster by default; to target the passive cluster directly, specify\n\x1b[1m--grpc-meta xdc-redirection=false\x1b[0m.\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation. See \x1b[1mtemporal batch --help\x1b[0m for a quick reference."
 	} else {
-		s.Command.Long = "Delete a Workflow Executions and its Event History:\n\n```\ntemporal workflow delete \\\n    --workflow-id YourWorkflowId\n```\n\nThe removal executes asynchronously. If the Execution is Running, the Service\nterminates it before deletion.\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation. See `temporal batch --help` for a quick reference."
+		s.Command.Long = "Delete a Workflow Execution and its Event History:\n\n```\ntemporal workflow delete \\\n    --workflow-id YourWorkflowId\n```\n\nThe removal executes asynchronously. If the Execution is Running, the Service\nterminates it before deletion.\n\nWARNING: Deleting Workflow Executions in a global Namespace removes them from\nall replicas. Requests sent to a passive cluster are forwarded to the active\ncluster by default; to target the passive cluster directly, specify\n`--grpc-meta xdc-redirection=false`.\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation. See `temporal batch --help` for a quick reference."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.SingleWorkflowOrBatchOptions.BuildFlags(s.Command.Flags())
@@ -3773,6 +4581,7 @@ type TemporalWorkflowShowCommand struct {
 	WorkflowReferenceOptions
 	Follow   bool
 	Detailed bool
+	Reverse  bool
 }
 
 func NewTemporalWorkflowShowCommand(cctx *CommandContext, parent *TemporalWorkflowCommand) *TemporalWorkflowShowCommand {
@@ -3789,6 +4598,7 @@ func NewTemporalWorkflowShowCommand(cctx *CommandContext, parent *TemporalWorkfl
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().BoolVarP(&s.Follow, "follow", "f", false, "Follow the Workflow Execution progress in real time. Does not apply to JSON output.")
 	s.Command.Flags().BoolVar(&s.Detailed, "detailed", false, "Display events as detailed sections instead of table. Does not apply to JSON output.")
+	s.Command.Flags().BoolVar(&s.Reverse, "reverse", false, "Fetch Event History newest-event-first. Cannot be combined with --follow.")
 	s.WorkflowReferenceOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
