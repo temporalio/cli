@@ -1199,6 +1199,10 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_EmptyComputeConfig
 }
 
 func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
+	// Keep the fake AWS validation case local; otherwise the SDK tries EC2 IMDS
+	// during credential resolution and waits on network retries.
+	s.T().Setenv("AWS_EC2_METADATA_DISABLED", "true")
+
 	deploymentName := uuid.NewString()
 	taskQueue := uuid.NewString()
 

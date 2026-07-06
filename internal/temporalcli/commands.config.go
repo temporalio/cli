@@ -111,13 +111,19 @@ func (c *TemporalConfigGetCommand) run(cctx *CommandContext, _ []string) error {
 		}
 		return cctx.Printer.PrintStructured(tomlConf.Profiles[profileName], printer.StructuredOptions{})
 	} else {
+		// Capture whether TLS is configured before the loop below. Looking up
+		// any "tls.*" property via reflectEnvConfigProp lazily initializes
+		// confProfile.TLS to a non-nil empty struct, which would otherwise make
+		// TLS appear configured when it is not (#1077).
+		tlsConfigured := confProfile.TLS != nil
+
 		// Get every property individually as a property-value pair except zero
 		// vals
 		var props []prop
 		for k := range envConfigPropsToFieldNames {
 			// TLS is a special case
 			if k == "tls" {
-				if confProfile.TLS != nil {
+				if tlsConfigured {
 					props = append(props, prop{Property: "tls", Value: true})
 				}
 				continue

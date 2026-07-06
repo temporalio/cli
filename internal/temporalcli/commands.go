@@ -497,6 +497,11 @@ func (c *TemporalCommand) initCommand(cctx *CommandContext) {
 		}
 		cctx.ActuallyRanCommand = true
 
+		// Print deprecation warning to stderr so it doesn't break JSON output
+		if msg, ok := cmd.Annotations["deprecationWarning"]; ok {
+			fmt.Fprintf(cctx.Options.Stderr, "warning: %s\n", strings.ToLower(strings.TrimRight(msg, ".")))
+		}
+
 		if cctx.Options.DeprecatedEnvConfig.EnvConfigName != "default" {
 			if _, ok := cctx.DeprecatedEnvConfigValues[cctx.Options.DeprecatedEnvConfig.EnvConfigName]; !ok {
 				if _, ok := cmd.Annotations["ignoresMissingEnv"]; !ok {

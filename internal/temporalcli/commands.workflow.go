@@ -30,6 +30,8 @@ import (
 
 const metadataQueryName = "__temporal_workflow_metadata"
 
+const workflowDeleteWarning = "WARNING: Deleting Workflow Executions in a global Namespace removes them from all replicas. Requests sent to a passive cluster are forwarded to the active cluster by default; to target the passive cluster directly, specify `--grpc-meta xdc-redirection=false`."
+
 func (c *TemporalWorkflowCancelCommand) run(cctx *CommandContext, args []string) error {
 	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
@@ -69,13 +71,29 @@ func (c *TemporalWorkflowDeleteCommand) run(cctx *CommandContext, args []string)
 	}
 	defer cl.Close()
 
-	exec, batchReq, err := c.workflowExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{})
+	// Only warn when the namespace is global.
+	nsResp, nsErr := cl.WorkflowService().DescribeNamespace(cctx, &workflowservice.DescribeNamespaceRequest{
+		Namespace: c.Parent.Namespace,
+	})
+	if nsErr != nil || nsResp.GetIsGlobalNamespace() {
+		fmt.Fprintln(cctx.Options.Stderr, workflowDeleteWarning)
+	}
+
+	exec, batchReq, err := c.workflowExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{
+		AllowYesWithWorkflowID: true,
+	})
 
 	// Run single or batch
 	if err != nil {
 		return err
 	} else if exec != nil {
-		_, err := cl.WorkflowService().DeleteWorkflowExecution(cctx, &workflowservice.DeleteWorkflowExecutionRequest{
+		yes, err := cctx.promptYes(workflowDeleteSingleConfirmationMessage(exec), c.Yes)
+		if err != nil {
+			return err
+		} else if !yes {
+			return fmt.Errorf("user denied confirmation")
+		}
+		_, err = cl.WorkflowService().DeleteWorkflowExecution(cctx, &workflowservice.DeleteWorkflowExecutionRequest{
 			Namespace:         c.Parent.Namespace,
 			WorkflowExecution: &common.WorkflowExecution{WorkflowId: c.WorkflowId, RunId: c.RunId},
 		})
@@ -94,6 +112,14 @@ func (c *TemporalWorkflowDeleteCommand) run(cctx *CommandContext, args []string)
 		}
 	}
 	return nil
+}
+
+func workflowDeleteSingleConfirmationMessage(exec *common.WorkflowExecution) string {
+	action := fmt.Sprintf("Delete Workflow %q", exec.GetWorkflowId())
+	if exec.GetRunId() != "" {
+		action += fmt.Sprintf(" with Run ID %q", exec.GetRunId())
+	}
+	return fmt.Sprintf("%s? y/N", action)
 }
 
 func (c *TemporalWorkflowUpdateOptionsCommand) run(cctx *CommandContext, args []string) error {
@@ -511,6 +537,7 @@ func defaultReason() string {
 
 type singleOrBatchOverrides struct {
 	AllowReasonWithWorkflowID bool
+	AllowYesWithWorkflowID    bool
 }
 
 func (s *SingleWorkflowOrBatchOptions) workflowExecOrBatch(
@@ -525,7 +552,7 @@ func (s *SingleWorkflowOrBatchOptions) workflowExecOrBatch(
 			return nil, nil, fmt.Errorf("cannot set query when workflow ID is set")
 		} else if s.Reason != "" && !overrides.AllowReasonWithWorkflowID {
 			return nil, nil, fmt.Errorf("cannot set reason when workflow ID is set")
-		} else if s.Yes {
+		} else if s.Yes && !overrides.AllowYesWithWorkflowID {
 			return nil, nil, fmt.Errorf("cannot set 'yes' when workflow ID is set")
 		} else if s.Rps != 0 {
 			return nil, nil, fmt.Errorf("cannot set rps when workflow ID is set")
@@ -542,13 +569,19 @@ func (s *SingleWorkflowOrBatchOptions) workflowExecOrBatch(
 		return nil, nil, fmt.Errorf("cannot set run ID when query is set")
 	}
 
-	// Count the workflows that will be affected
-	count, err := cl.CountWorkflow(cctx, &workflowservice.CountWorkflowExecutionsRequest{Query: s.Query})
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed counting workflows from query: %w", err)
+	// The count is only used in the confirmation prompt; skip the request when --yes
+	// bypasses it, so batch jobs can still proceed if the visibility API is timing out.
+	var promptMessage string
+	if s.Yes {
+		promptMessage = fmt.Sprintf("Start batch against workflows matching query %q? y/N", s.Query)
+	} else {
+		count, err := cl.CountWorkflow(cctx, &workflowservice.CountWorkflowExecutionsRequest{Query: s.Query})
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed counting workflows from query: %w", err)
+		}
+		promptMessage = fmt.Sprintf("Start batch against approximately %v workflow(s)? y/N", count.Count)
 	}
-	yes, err := cctx.promptYes(
-		fmt.Sprintf("Start batch against approximately %v workflow(s)? y/N", count.Count), s.Yes)
+	yes, err := cctx.promptYes(promptMessage, s.Yes)
 	if err != nil {
 		return nil, nil, err
 	} else if !yes {
