@@ -471,6 +471,10 @@ commands:
       However, if the Activity is currently running, it will run until the next
       time it fails, completes, or times out, at which point the pause will kick in.
 
+      Pause does not stop or extend the Activity's Schedule-To-Close Timeout.
+      A paused Activity can still time out. Use `temporal activity update-options`
+      to extend timeout settings before a long pause.
+
       If the Activity is on its last retry attempt and fails, the failure will
       be returned to the caller, just as if the Activity had not been paused.
 
