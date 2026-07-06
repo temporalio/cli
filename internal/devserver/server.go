@@ -166,6 +166,7 @@ func (s *Server) SuppressWarnings() {
 }
 
 func (s *StartOptions) buildUIServer() *uiserver.Server {
+	disableNewsFetch, _ := strconv.ParseBool(os.Getenv("TEMPORAL_DISABLE_NEWS_FETCH"))
 	return uiserver.NewServer(uiserveroptions.WithConfigProvider(&uiconfig.Config{
 		Host:                MaybeEscapeIPv6(s.UIIP),
 		Port:                s.UIPort,
@@ -176,6 +177,7 @@ func (s *StartOptions) buildUIServer() *uiserver.Server {
 		Codec:               uiconfig.Codec{Endpoint: s.UICodecEndpoint},
 		CORS:                uiconfig.CORS{CookieInsecure: true},
 		HideLogs:            true,
+		DisableNewsFetch:    disableNewsFetch,
 	}))
 }
 
