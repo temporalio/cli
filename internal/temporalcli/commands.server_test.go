@@ -141,7 +141,7 @@ func startDevServerAndRunSimpleTest(t *testing.T, args []string, dialAddress str
 
 func TestServer_StartDev_ConcurrentStarts(t *testing.T) {
 	h := NewCommandHarness(t)
-
+	defer h.Close()
 	startOne := func() error {
 		ctx, cancel := context.WithCancel(t.Context())
 		defer cancel()
@@ -169,8 +169,7 @@ func TestServer_StartDev_ConcurrentStarts(t *testing.T) {
 				return concurrentStartCommandResultError("got early server result", res)
 			case <-ticker.C:
 				var err error
-				cl, err = client.Dial(client.Options{HostPort: "127.0.0.1:" + port})
-				if err == nil {
+				cl, err = client.Dial(client.Options{HostPort: "127.0.0.1:" + port, Logger: testLogger{t: t}})
 					break waitForServer
 				}
 				lastDialErr = err
