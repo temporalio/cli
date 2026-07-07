@@ -131,6 +131,7 @@ func buildStartActivityOptions(opts *ActivityStartOptions) (client.StartActivity
 		ScheduleToStartTimeout: opts.ScheduleToStartTimeout.Duration(),
 		StartToCloseTimeout:    opts.StartToCloseTimeout.Duration(),
 		HeartbeatTimeout:       opts.HeartbeatTimeout.Duration(),
+		StartDelay:             opts.StartDelay.Duration(),
 		Summary:                opts.StaticSummary,
 		Details:                opts.StaticDetails,
 		Priority: temporal.Priority{
@@ -407,6 +408,7 @@ func printActivityDescription(cctx *CommandContext, info *activitypb.ActivityExe
 		ScheduleToStartTimeout  time.Duration `cli:",cardOmitEmpty"`
 		StartToCloseTimeout     time.Duration `cli:",cardOmitEmpty"`
 		HeartbeatTimeout        time.Duration `cli:",cardOmitEmpty"`
+		StartDelay              time.Duration `cli:",cardOmitEmpty"`
 		LastStartedTime         time.Time     `cli:",cardOmitEmpty"`
 		Attempt                 int32
 		ExecutionDuration       time.Duration `cli:",cardOmitEmpty"`
@@ -427,6 +429,7 @@ func printActivityDescription(cctx *CommandContext, info *activitypb.ActivityExe
 		ScheduleToStartTimeout:  info.GetScheduleToStartTimeout().AsDuration(),
 		StartToCloseTimeout:     info.GetStartToCloseTimeout().AsDuration(),
 		HeartbeatTimeout:        info.GetHeartbeatTimeout().AsDuration(),
+		StartDelay:              info.GetStartDelay().AsDuration(),
 		LastStartedTime:         timestampToTime(info.GetLastStartedTime()),
 		Attempt:                 info.GetAttempt(),
 		ExecutionDuration:       info.GetExecutionDuration().AsDuration(),
