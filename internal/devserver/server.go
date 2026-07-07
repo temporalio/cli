@@ -76,6 +76,7 @@ type StartOptions struct {
 	UIPort                int    // Required if UIIP is non-empty
 	UIAssetPath           string
 	UICodecEndpoint       string
+	UIDisableNewsFetch    bool
 	PublicPath            string
 	DatabaseFile          string
 	MetricsPort           int
@@ -176,6 +177,7 @@ func (s *StartOptions) buildUIServer() *uiserver.Server {
 		Codec:               uiconfig.Codec{Endpoint: s.UICodecEndpoint},
 		CORS:                uiconfig.CORS{CookieInsecure: true},
 		HideLogs:            true,
+		DisableNewsFetch:    s.UIDisableNewsFetch,
 	}))
 }
 
