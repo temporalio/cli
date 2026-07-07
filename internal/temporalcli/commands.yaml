@@ -2950,6 +2950,11 @@ commands:
       - name: ui-codec-endpoint
         type: string
         description: UI remote codec HTTP endpoint.
+      - name: ui-disable-news-fetch
+        type: bool
+        description: |
+          Disable the Web UI newsfeed. When set, the UI will not request the
+          newsfeed and the button to open the newsfeed panel is hidden.
       - name: sqlite-pragma
         type: string[]
         description: SQLite pragma statements in "PRAGMA=VALUE" format.

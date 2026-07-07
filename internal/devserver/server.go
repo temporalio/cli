@@ -76,6 +76,7 @@ type StartOptions struct {
 	UIPort                int    // Required if UIIP is non-empty
 	UIAssetPath           string
 	UICodecEndpoint       string
+	UIDisableNewsFetch    bool
 	PublicPath            string
 	DatabaseFile          string
 	MetricsPort           int
@@ -166,7 +167,6 @@ func (s *Server) SuppressWarnings() {
 }
 
 func (s *StartOptions) buildUIServer() *uiserver.Server {
-	disableNewsFetch, _ := strconv.ParseBool(os.Getenv("TEMPORAL_DISABLE_NEWS_FETCH"))
 	return uiserver.NewServer(uiserveroptions.WithConfigProvider(&uiconfig.Config{
 		Host:                MaybeEscapeIPv6(s.UIIP),
 		Port:                s.UIPort,
@@ -177,7 +177,7 @@ func (s *StartOptions) buildUIServer() *uiserver.Server {
 		Codec:               uiconfig.Codec{Endpoint: s.UICodecEndpoint},
 		CORS:                uiconfig.CORS{CookieInsecure: true},
 		HideLogs:            true,
-		DisableNewsFetch:    disableNewsFetch,
+		DisableNewsFetch:    s.UIDisableNewsFetch,
 	}))
 }
 
