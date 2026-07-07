@@ -75,6 +75,8 @@ func (c *Command) writeDoc(w *docWriter) error {
 		return nil
 	}
 	// If any ancestor is a split parent, route this command into that subdirectory.
+	// FullName segments are separated by single spaces (never multiple), so
+	// splitting on " " yields the exact command path.
 	if depth >= 1 {
 		parts := strings.Split(c.FullName, " ")
 		for i := len(parts) - 1; i >= 1; i-- {
@@ -190,7 +192,9 @@ func (c *Command) writeSplitDoc(w *docWriter, splitRoot string) {
 
 // splitFileName returns the file path for a command within a split parent.
 // For example, with splitRoot "cloud" and command "cloud namespace", it returns
-// "cloud/namespace".
+// "cloud/namespace". A multi-word split root is hyphenated into a single
+// directory: splitRoot "one two" with command "one two three" returns
+// "one-two/three" (not "one/two/three").
 func splitFileName(c *Command, splitRoot string) string {
 	splitParts := strings.Split(splitRoot, " ")
 	cmdParts := strings.Split(c.FullName, " ")
@@ -205,13 +209,12 @@ func (w *docWriter) writeSplitCommand(c *Command, splitRoot string) {
 	splitParts := strings.Split(splitRoot, " ")
 	cmdParts := strings.Split(c.FullName, " ")
 	leafName := cmdParts[len(splitParts)]
-	fullCmdName := strings.Join(cmdParts, " ")
 
 	buf := &bytes.Buffer{}
 	w.fileMap[fileName] = buf
 	buf.WriteString("---\n")
 	buf.WriteString("id: " + leafName + "\n")
-	buf.WriteString("title: Temporal CLI " + fullCmdName + " command reference\n")
+	buf.WriteString("title: Temporal CLI " + c.FullName + " command reference\n")
 	buf.WriteString("sidebar_label: " + leafName + "\n")
 	buf.WriteString("description: " + c.Docs.DescriptionHeader + "\n")
 	buf.WriteString("toc_max_heading_level: 4\n")
@@ -232,7 +235,7 @@ func (w *docWriter) writeSplitCommand(c *Command, splitRoot string) {
 	if w.isLeafCommand(c) {
 		w.writeLeafOptions(fileName)
 	} else {
-		buf.WriteString(fmt.Sprintf("This page provides a reference for the `temporal %s` commands. ", fullCmdName))
+		buf.WriteString(fmt.Sprintf("This page provides a reference for the `temporal %s` commands. ", c.FullName))
 		buf.WriteString("The flags applicable to each subcommand are presented in a table within the heading for the subcommand. ")
 		buf.WriteString("Refer to [Global Flags](#global-flags) for flags that you can use with every subcommand.\n\n")
 	}
@@ -427,7 +430,9 @@ func encodeJSONExample(v string) string {
 //     MDX-compatible {/* #id */} comment form, which preserves the custom anchor.
 //
 // Content inside fenced code blocks (```) and inline code spans (backticks) is
-// left untouched, since MDX does not interpret those as JSX.
+// left untouched, since MDX does not interpret those as JSX. Fence markers are
+// assumed to be on their own line (the standard CommonMark form the command
+// descriptions use): a ``` opening or closing a block must start the line.
 func escapeMDXDescription(desc string) string {
 	lines := strings.Split(desc, "\n")
 	inCodeBlock := false
