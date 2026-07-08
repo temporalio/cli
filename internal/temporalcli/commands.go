@@ -140,10 +140,15 @@ func (c *CommandContext) preprocessOptions() error {
 	// Setup default fail callback
 	if c.Options.Fail == nil {
 		c.Options.Fail = func(err error) {
-			// If context is closed, say that the program was interrupted and ignore
-			// the actual error
+			// If context is closed, say that the program was interrupted and
+			// ignore the actual error — unless the context carries a
+			// descriptive cause such as a --command-timeout expiry.
 			if c.Err() != nil {
-				err = fmt.Errorf("program interrupted")
+				if cause := context.Cause(c); cause != nil && !errors.Is(cause, context.Canceled) {
+					err = cause
+				} else {
+					err = fmt.Errorf("program interrupted")
+				}
 			}
 			fmt.Fprintf(c.Options.Stderr, "Error: %v\n", err)
 			os.Exit(1)

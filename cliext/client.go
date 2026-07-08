@@ -2,7 +2,9 @@ package cliext
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -34,6 +36,19 @@ type ClientOptionsBuilder struct {
 	// configured. Callers can use it to decode payloads outside the gRPC
 	// interceptor chain (e.g. payloads nested inside opaque proto bytes).
 	PayloadCodec converter.PayloadCodec
+
+	// ResolvedAddress is populated by Build with the final server address,
+	// after profile resolution and namespace templating.
+	ResolvedAddress string
+	// ResolvedAddressSource is populated by Build with where the final address
+	// came from: "flag", "profile", or "default".
+	ResolvedAddressSource string
+	// ResolvedProfileName is populated by Build with the config profile name
+	// used, if any.
+	ResolvedProfileName string
+	// HasAPIKey is populated by Build and reports whether API-key credentials
+	// are configured (via flag, profile, or OAuth).
+	HasAPIKey bool
 }
 
 type oauthCredentials struct {
@@ -108,8 +123,12 @@ func (b *ClientOptionsBuilder) Build(ctx context.Context) (client.Options, error
 	// override the profile version unless it was _explicitly_ set.
 	if cfg.FlagSet != nil && cfg.FlagSet.Changed("address") {
 		profile.Address = cfg.Address
+		b.ResolvedAddressSource = "flag"
 	} else if profile.Address == "" {
 		profile.Address = cfg.Address
+		b.ResolvedAddressSource = "default"
+	} else {
+		b.ResolvedAddressSource = "profile"
 	}
 	var namespaceExplicitlySet bool
 	if cfg.FlagSet != nil && cfg.FlagSet.Changed("namespace") {
@@ -126,6 +145,7 @@ func (b *ClientOptionsBuilder) Build(ctx context.Context) (client.Options, error
 	if addressHasNamespaceTemplate {
 		profile.Address = strings.ReplaceAll(profile.Address, addressNamespaceTemplate, profile.Namespace)
 	}
+	b.ResolvedAddress = profile.Address
 
 	// Set API key on profile if provided
 	if cfg.ApiKey != "" {
@@ -204,9 +224,18 @@ func (b *ClientOptionsBuilder) Build(ctx context.Context) (client.Options, error
 		profile.Codec.Auth = cfg.CodecAuth
 	}
 
+	b.ResolvedProfileName = common.Profile
+	b.HasAPIKey = profile.APIKey != ""
+
 	// Convert profile to client options.
 	clientOpts, err := profile.ToClientOptions(envconfig.ToClientOptionsRequest{})
 	if err != nil {
+		// File-path errors (e.g. an unreadable TLS cert) are common enough to
+		// deserve naming the offending file.
+		var pathErr *fs.PathError
+		if errors.As(err, &pathErr) {
+			return client.Options{}, fmt.Errorf("failed to build client options: cannot read file %q: %w", pathErr.Path, err)
+		}
 		return client.Options{}, fmt.Errorf("failed to build client options: %w", err)
 	}
 
@@ -249,6 +278,7 @@ func (b *ClientOptionsBuilder) Build(ctx context.Context) (client.Options, error
 				profileName:    result.ProfileName,
 			}
 			clientOpts.Credentials = client.NewAPIKeyDynamicCredentials(creds.getToken)
+			b.HasAPIKey = true
 		}
 	}
 
