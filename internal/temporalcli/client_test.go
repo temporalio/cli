@@ -11,6 +11,7 @@ import (
 	"encoding/pem"
 	"math/big"
 	"net"
+	"os"
 	"testing"
 	"time"
 
@@ -221,6 +222,33 @@ func TestConnectDiagnosis_CertFileMissing(t *testing.T) {
 	assert.Contains(t, msg, "cannot read file")
 	assert.Contains(t, msg, "/definitely/does/not/exist")
 	assert.NotContains(t, msg, "✓", "no probe stages expected when the dial never happened")
+}
+
+func TestConnectDiagnosis_ProfileAddressNamed(t *testing.T) {
+	// When the failing address comes from a config profile, the suggestion
+	// should say so and point at `temporal config get`.
+	f, err := os.CreateTemp("", "")
+	require.NoError(t, err)
+	t.Cleanup(func() { os.Remove(f.Name()) })
+	_, err = f.WriteString(`
+[profile.default]
+address = "does-not-exist.invalid:7233"
+`)
+	require.NoError(t, err)
+	require.NoError(t, f.Close())
+
+	h := NewCommandHarness(t)
+	h.Options.EnvLookup = EnvLookupMap{"TEMPORAL_CONFIG_FILE": f.Name()}
+	res := h.Execute(
+		"workflow", "list",
+		"--client-connect-timeout", "5s",
+	)
+
+	require.Error(t, res.Err)
+	msg := res.Err.Error()
+	assert.Contains(t, msg, "failed connecting to Temporal server at does-not-exist.invalid:7233")
+	assert.Contains(t, msg, `The address comes from config profile "default"`)
+	assert.Contains(t, msg, "temporal config get --prop address")
 }
 
 func TestConnectDiagnosis_CommandTimeoutCauseSurvives(t *testing.T) {

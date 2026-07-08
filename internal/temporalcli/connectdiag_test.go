@@ -18,6 +18,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.temporal.io/api/serviceerror"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // newTestCert generates a self-signed server certificate for 127.0.0.1.
@@ -193,6 +195,76 @@ func requireStage(t *testing.T, d *connectDiagnosis, status diagStatus, labelSub
 		}
 	}
 	t.Fatalf("no stage with status %v containing %q in %+v", status, labelSubstr, d.Stages)
+}
+
+func TestClassifyGRPCError(t *testing.T) {
+	tests := []struct {
+		name   string
+		err    error
+		cause  connectCause
+		detail string
+	}{
+		{
+			name:  "serviceerror deadline exceeded",
+			err:   fmt.Errorf("failed reaching server: %w", serviceerror.NewDeadlineExceeded("context deadline exceeded")),
+			cause: causeTimeout,
+		},
+		{
+			name:  "plain context deadline",
+			err:   fmt.Errorf("failed reaching server: %w", context.DeadlineExceeded),
+			cause: causeTimeout,
+		},
+		{
+			name:   "unauthenticated status",
+			err:    fmt.Errorf("failed reaching server: %w", status.Error(codes.Unauthenticated, "bad credentials")),
+			cause:  causeAuth,
+			detail: "bad credentials",
+		},
+		{
+			name:  "permission denied status",
+			err:   fmt.Errorf("failed reaching server: %w", status.Error(codes.PermissionDenied, "nope")),
+			cause: causeAuth,
+		},
+		{
+			name:  "unclassified error",
+			err:   fmt.Errorf("something else entirely"),
+			cause: causeUnknown,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cause, detail := classifyGRPCError(tt.err)
+			assert.Equal(t, tt.cause, cause)
+			if tt.detail != "" {
+				assert.Contains(t, detail, tt.detail)
+			}
+		})
+	}
+}
+
+func TestConnectSummary(t *testing.T) {
+	origErr := fmt.Errorf("failed reaching server: context deadline exceeded")
+	tests := []struct {
+		cause connectCause
+		want  string
+	}{
+		{causeDNS, "could not resolve host"},
+		{causeTCPRefused, "connection refused"},
+		{causeTCPTimeout, "connection timed out"},
+		{causeServerPlaintext, "TLS is enabled but the server did not respond with TLS"},
+		{causeServerSpeaksTLS, "the server requires TLS but the CLI is connecting without it"},
+		{causeClientCertRequired, "server requires client certificate (mTLS)"},
+		{causeCAVerify, "cannot verify server TLS certificate"},
+		{causeHostnameMismatch, "server TLS certificate does not match host"},
+		// Unclassified failures keep the original error text (minus the SDK
+		// prefix) so scripts matching on it keep working.
+		{causeUnknown, "context deadline exceeded"},
+		{causeTimeout, "context deadline exceeded"},
+	}
+	for _, tt := range tests {
+		got := connectSummary(&connectDiagnosis{Cause: tt.cause}, origErr)
+		assert.Contains(t, got, tt.want, "cause %v", tt.cause)
+	}
 }
 
 func TestSuggestFix(t *testing.T) {
