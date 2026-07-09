@@ -360,8 +360,12 @@ type NexusOperationStartOptions struct {
 	Operation              string
 	OperationId            string
 	ScheduleToCloseTimeout cliext.FlagDuration
+	ScheduleToStartTimeout cliext.FlagDuration
+	StartToCloseTimeout    cliext.FlagDuration
 	IdConflictPolicy       cliext.FlagStringEnum
 	IdReusePolicy          cliext.FlagStringEnum
+	SearchAttribute        []string
+	StaticSummary          string
 	FlagSet                *pflag.FlagSet
 }
 
@@ -373,13 +377,20 @@ func (v *NexusOperationStartOptions) BuildFlags(f *pflag.FlagSet) {
 	_ = cobra.MarkFlagRequired(f, "service")
 	f.StringVar(&v.Operation, "operation", "", "Nexus Operation name. Required.")
 	_ = cobra.MarkFlagRequired(f, "operation")
-	f.StringVar(&v.OperationId, "operation-id", "", "Nexus Operation ID. If not supplied, a unique ID is generated.")
+	f.StringVar(&v.OperationId, "operation-id", "", "Nexus Operation ID. Required.")
+	_ = cobra.MarkFlagRequired(f, "operation-id")
 	v.ScheduleToCloseTimeout = 0
 	f.Var(&v.ScheduleToCloseTimeout, "schedule-to-close-timeout", "Total time the operation is allowed to run.")
+	v.ScheduleToStartTimeout = 0
+	f.Var(&v.ScheduleToStartTimeout, "schedule-to-start-timeout", "Maximum time to wait for an operation to be started (or completed synchronously) by a handler.")
+	v.StartToCloseTimeout = 0
+	f.Var(&v.StartToCloseTimeout, "start-to-close-timeout", "Maximum time to wait for an asynchronous operation to complete after it has been started.")
 	v.IdConflictPolicy = cliext.NewFlagStringEnum([]string{"Fail", "UseExisting", "TerminateExisting"}, "")
 	f.Var(&v.IdConflictPolicy, "id-conflict-policy", "Policy for handling an Operation ID conflict with a running operation. Accepted values: Fail, UseExisting, TerminateExisting.")
 	v.IdReusePolicy = cliext.NewFlagStringEnum([]string{"AllowDuplicate", "RejectDuplicate"}, "")
 	f.Var(&v.IdReusePolicy, "id-reuse-policy", "Policy for re-using an Operation ID from a previously closed operation. Accepted values: AllowDuplicate, RejectDuplicate.")
+	f.StringArrayVar(&v.SearchAttribute, "search-attribute", nil, "Search Attribute in `KEY=VALUE` format. Keys must be identifiers, and values must be JSON values. For example: 'YourKey={\"your\": \"value\"}'. Can be passed multiple times.")
+	f.StringVar(&v.StaticSummary, "static-summary", "", "Static summary for the Nexus Operation for human consumption in UIs. Uses Temporal Markdown formatting, should be a single line. EXPERIMENTAL.")
 }
 
 type QueryModifiersOptions struct {
@@ -404,11 +415,11 @@ type WorkflowUpdateOptionsOptions struct {
 
 func (v *WorkflowUpdateOptionsOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
-	v.VersioningOverrideBehavior = cliext.NewFlagStringEnum([]string{"pinned", "auto_upgrade"}, "")
-	f.Var(&v.VersioningOverrideBehavior, "versioning-override-behavior", "Override the versioning behavior of a Workflow. Accepted values: pinned, auto_upgrade. Required.")
+	v.VersioningOverrideBehavior = cliext.NewFlagStringEnum([]string{"pinned", "one_time", "auto_upgrade"}, "")
+	f.Var(&v.VersioningOverrideBehavior, "versioning-override-behavior", "Override the versioning behavior of a Workflow. Accepted values: pinned, one_time, auto_upgrade. Required.")
 	_ = cobra.MarkFlagRequired(f, "versioning-override-behavior")
-	f.StringVar(&v.VersioningOverrideDeploymentName, "versioning-override-deployment-name", "", "When overriding to a `pinned` behavior, specifies the Deployment Name of the version to target.")
-	f.StringVar(&v.VersioningOverrideBuildId, "versioning-override-build-id", "", "When overriding to a `pinned` behavior, specifies the Build ID of the version to target.")
+	f.StringVar(&v.VersioningOverrideDeploymentName, "versioning-override-deployment-name", "", "When overriding to a `pinned` or `one_time` behavior, specifies the Deployment Name of the version to target.")
+	f.StringVar(&v.VersioningOverrideBuildId, "versioning-override-build-id", "", "When overriding to a `pinned` or `one_time` behavior, specifies the Build ID of the version to target.")
 }
 
 type ActivityReferenceOptions struct {
@@ -777,9 +788,9 @@ func NewTemporalActivityPauseCommand(cctx *CommandContext, parent *TemporalActiv
 	s.Command.Use = "pause [flags]"
 	s.Command.Short = "Pause an Activity"
 	if hasHighlighting {
-		s.Command.Long = "Pause an Activity. Not supported for Standalone Activities.\n\nIf the Activity is not currently running (e.g. because it previously\nfailed), it will not be run again until it is unpaused.\n\nHowever, if the Activity is currently running, it will run until the next\ntime it fails, completes, or times out, at which point the pause will kick in.\n\nIf the Activity is on its last retry attempt and fails, the failure will\nbe returned to the caller, just as if the Activity had not been paused.\n\nSpecify the Activity and Workflow IDs:\n\n\x1b[1mtemporal activity pause \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\x1b[0m\n\nTo later unpause the activity, see unpause. You may also want to\nreset the activity to unpause it while also starting it from the beginning."
+		s.Command.Long = "Pause an Activity. Not supported for Standalone Activities.\n\nIf the Activity is not currently running (e.g. because it previously\nfailed), it will not be run again until it is unpaused.\n\nHowever, if the Activity is currently running, it will run until the next\ntime it fails, completes, or times out, at which point the pause will kick in.\n\nPause does not stop or extend the Activity's Schedule-To-Close Timeout.\nA paused Activity can still time out. Use \x1b[1mtemporal activity update-options\x1b[0m\nto extend timeout settings before a long pause.\n\nIf the Activity is on its last retry attempt and fails, the failure will\nbe returned to the caller, just as if the Activity had not been paused.\n\nSpecify the Activity and Workflow IDs:\n\n\x1b[1mtemporal activity pause \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\x1b[0m\n\nTo later unpause the activity, see unpause. You may also want to\nreset the activity to unpause it while also starting it from the beginning."
 	} else {
-		s.Command.Long = "Pause an Activity. Not supported for Standalone Activities.\n\nIf the Activity is not currently running (e.g. because it previously\nfailed), it will not be run again until it is unpaused.\n\nHowever, if the Activity is currently running, it will run until the next\ntime it fails, completes, or times out, at which point the pause will kick in.\n\nIf the Activity is on its last retry attempt and fails, the failure will\nbe returned to the caller, just as if the Activity had not been paused.\n\nSpecify the Activity and Workflow IDs:\n\n```\ntemporal activity pause \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n```\n\nTo later unpause the activity, see unpause. You may also want to\nreset the activity to unpause it while also starting it from the beginning."
+		s.Command.Long = "Pause an Activity. Not supported for Standalone Activities.\n\nIf the Activity is not currently running (e.g. because it previously\nfailed), it will not be run again until it is unpaused.\n\nHowever, if the Activity is currently running, it will run until the next\ntime it fails, completes, or times out, at which point the pause will kick in.\n\nPause does not stop or extend the Activity's Schedule-To-Close Timeout.\nA paused Activity can still time out. Use `temporal activity update-options`\nto extend timeout settings before a long pause.\n\nIf the Activity is on its last retry attempt and fails, the failure will\nbe returned to the caller, just as if the Activity had not been paused.\n\nSpecify the Activity and Workflow IDs:\n\n```\ntemporal activity pause \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n```\n\nTo later unpause the activity, see unpause. You may also want to\nreset the activity to unpause it while also starting it from the beginning."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "The Activity ID to pause. Required.")
@@ -2760,6 +2771,7 @@ type TemporalServerStartDevCommand struct {
 	UiPublicPath       string
 	UiAssetPath        string
 	UiCodecEndpoint    string
+	UiDisableNewsFetch bool
 	SqlitePragma       []string
 	DynamicConfigValue []string
 	LogConfig          bool
@@ -2790,6 +2802,7 @@ func NewTemporalServerStartDevCommand(cctx *CommandContext, parent *TemporalServ
 	s.Command.Flags().StringVar(&s.UiPublicPath, "ui-public-path", "", "The public base path for the Web UI. Defaults to `/`.")
 	s.Command.Flags().StringVar(&s.UiAssetPath, "ui-asset-path", "", "UI custom assets path.")
 	s.Command.Flags().StringVar(&s.UiCodecEndpoint, "ui-codec-endpoint", "", "UI remote codec HTTP endpoint.")
+	s.Command.Flags().BoolVar(&s.UiDisableNewsFetch, "ui-disable-news-fetch", false, "Disable the Web UI newsfeed. When set, the UI will not request the newsfeed and the button to open the newsfeed panel is hidden.")
 	s.Command.Flags().StringArrayVar(&s.SqlitePragma, "sqlite-pragma", nil, "SQLite pragma statements in \"PRAGMA=VALUE\" format.")
 	s.Command.Flags().StringArrayVar(&s.DynamicConfigValue, "dynamic-config-value", nil, "Dynamic configuration value using `KEY=VALUE` pairs. Keys must be identifiers, and values must be JSON values. For example: `YourKey=\"YourString\"` Can be passed multiple times.")
 	s.Command.Flags().BoolVar(&s.LogConfig, "log-config", false, "Print the server config to stderr.")
@@ -3587,6 +3600,7 @@ func NewTemporalWorkerDeploymentCommand(cctx *CommandContext, parent *TemporalWo
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentManagerIdentityCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentSetCurrentVersionCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentSetRampingVersionCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkerDeploymentUpdateVersionComputeConfigCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentUpdateVersionMetadataCommand(cctx, &s).Command)
 	return &s
 }
@@ -3634,9 +3648,9 @@ func NewTemporalWorkerDeploymentCreateVersionCommand(cctx *CommandContext, paren
 	s.Command.Use = "create-version [flags]"
 	s.Command.Short = "Create a new Worker Deployment Version"
 	if hasHighlighting {
-		s.Command.Long = "\nCreate a new Worker Deployment Version:\n\n\x1b[1mtemporal worker deployment create-version [options]\x1b[0m\n\nConfigure a Worker Deployment Version's compute configuration as needed.\nFor example, pass compute provider information for an AWS Lambda function\nthat spawns a Worker in the Worker Deployment:\n\n\x1b[1mtemporal worker deployment create-version \\\n    --namespace YourNamespaceName \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --aws-lambda-function-arn LambdaFunctionARN \\\n    --aws-lambda-assume-role-arn LambdaAssumeRoleARN \\\n    --aws-lambda-assume-role-external-id LambdaAssumeRoleExternalID\x1b[0m\n\nIf a Worker Deployment Version with the supplied BuildID already exists,\nthis command will return an error.\n\nNote: This is an experimental feature and may change in the future."
+		s.Command.Long = "\nCreate a new Worker Deployment Version:\n\n\x1b[1mtemporal worker deployment create-version [options]\x1b[0m\n\nConfigure a Worker Deployment Version's compute configuration as needed.\nFor example, pass compute provider information for an AWS Lambda function\nthat spawns a Worker in the Worker Deployment:\n\n\x1b[1mtemporal worker deployment create-version \\\n    --namespace YourNamespaceName \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --aws-lambda-function-arn LambdaFunctionARN \\\n    --aws-lambda-assume-role-arn LambdaAssumeRoleARN \\\n    --aws-lambda-assume-role-external-id LambdaAssumeRoleExternalID\x1b[0m\n\nIf a Worker Deployment Version with the supplied BuildID already exists,\nthis command will return an error.\n\nReturns an error if all compute configuration fields are empty.\n\nNote: This is an experimental feature and may change in the future."
 	} else {
-		s.Command.Long = "\nCreate a new Worker Deployment Version:\n\n```\ntemporal worker deployment create-version [options]\n```\n\nConfigure a Worker Deployment Version's compute configuration as needed.\nFor example, pass compute provider information for an AWS Lambda function\nthat spawns a Worker in the Worker Deployment:\n\n```\ntemporal worker deployment create-version \\\n    --namespace YourNamespaceName \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --aws-lambda-function-arn LambdaFunctionARN \\\n    --aws-lambda-assume-role-arn LambdaAssumeRoleARN \\\n    --aws-lambda-assume-role-external-id LambdaAssumeRoleExternalID\n```\n\nIf a Worker Deployment Version with the supplied BuildID already exists,\nthis command will return an error.\n\nNote: This is an experimental feature and may change in the future."
+		s.Command.Long = "\nCreate a new Worker Deployment Version:\n\n```\ntemporal worker deployment create-version [options]\n```\n\nConfigure a Worker Deployment Version's compute configuration as needed.\nFor example, pass compute provider information for an AWS Lambda function\nthat spawns a Worker in the Worker Deployment:\n\n```\ntemporal worker deployment create-version \\\n    --namespace YourNamespaceName \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --aws-lambda-function-arn LambdaFunctionARN \\\n    --aws-lambda-assume-role-arn LambdaAssumeRoleARN \\\n    --aws-lambda-assume-role-external-id LambdaAssumeRoleExternalID\n```\n\nIf a Worker Deployment Version with the supplied BuildID already exists,\nthis command will return an error.\n\nReturns an error if all compute configuration fields are empty.\n\nNote: This is an experimental feature and may change in the future."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.AwsLambdaFunctionArn, "aws-lambda-function-arn", "", "Qualified (contains version suffix) or unqualified AWS Lambda function ARN to invoke when there are no active pollers for task queue targets in the Worker Deployment.")
@@ -3933,6 +3947,41 @@ func NewTemporalWorkerDeploymentSetRampingVersionCommand(cctx *CommandContext, p
 	s.Command.Flags().BoolVar(&s.AllowNoPollers, "allow-no-pollers", false, "Override protection and set version as ramping even if it has no pollers.")
 	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm set Ramping Version.")
 	s.DeploymentVersionOrUnversionedOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalWorkerDeploymentUpdateVersionComputeConfigCommand struct {
+	Parent  *TemporalWorkerDeploymentCommand
+	Command cobra.Command
+	DeploymentVersionOptions
+	AwsLambdaFunctionArn          string
+	AwsLambdaAssumeRoleArn        string
+	AwsLambdaAssumeRoleExternalId string
+	Remove                        bool
+}
+
+func NewTemporalWorkerDeploymentUpdateVersionComputeConfigCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentCommand) *TemporalWorkerDeploymentUpdateVersionComputeConfigCommand {
+	var s TemporalWorkerDeploymentUpdateVersionComputeConfigCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "update-version-compute-config [flags]"
+	s.Command.Short = "Update compute configuration for a Version"
+	if hasHighlighting {
+		s.Command.Long = "Update compute configuration associated with a Worker Deployment\nVersion.\n\nFor example, to update the AWS Lambda function ARN associated with an\nexisting Worker Deployment Version:\n\n\x1b[1m temporal worker deployment update-version-compute-config \\\n    --deployment-name YourDeploymentName --build-id YourBuildID \\\n    --aws-lambda-function-arn UpdatedLambdaFunctionARN\x1b[0m\n\nTo update the AWS IAM role ARN that is assumed by the serverless worker\nmanager associated with an existing Worker Deployment Version:\n\n\x1b[1m temporal worker deployment update-version-compute-config \\\n    --deployment-name YourDeploymentName --build-id YourBuildID \\\n    --aws-lambda-assume-role-arn UpdatedRoleARN\x1b[0m\n\nIf --remove is specified, the compute configuration for the Worker\nDeployment Version will be removed:\n\n\x1b[1m temporal worker deployment update-version-compute-config \\\n    --deployment-name YourDeploymentName --build-id YourBuildID \\\n    --remove\x1b[0m\n\nIf a Worker Deployment Version with the supplied BuildID does not exist,\nthis command will return an error.\n\nNote: This is an experimental feature and may change in the future."
+	} else {
+		s.Command.Long = "Update compute configuration associated with a Worker Deployment\nVersion.\n\nFor example, to update the AWS Lambda function ARN associated with an\nexisting Worker Deployment Version:\n\n```\n temporal worker deployment update-version-compute-config \\\n    --deployment-name YourDeploymentName --build-id YourBuildID \\\n    --aws-lambda-function-arn UpdatedLambdaFunctionARN\n```\n\nTo update the AWS IAM role ARN that is assumed by the serverless worker\nmanager associated with an existing Worker Deployment Version:\n\n```\n temporal worker deployment update-version-compute-config \\\n    --deployment-name YourDeploymentName --build-id YourBuildID \\\n    --aws-lambda-assume-role-arn UpdatedRoleARN\n```\n\nIf --remove is specified, the compute configuration for the Worker\nDeployment Version will be removed:\n\n```\n temporal worker deployment update-version-compute-config \\\n    --deployment-name YourDeploymentName --build-id YourBuildID \\\n    --remove\n```\n\nIf a Worker Deployment Version with the supplied BuildID does not exist,\nthis command will return an error.\n\nNote: This is an experimental feature and may change in the future."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.AwsLambdaFunctionArn, "aws-lambda-function-arn", "", "Qualified (contains version suffix) or unqualified AWS Lambda function ARN to invoke when there are no active pollers for task queue targets in the Worker Deployment.")
+	s.Command.Flags().StringVar(&s.AwsLambdaAssumeRoleArn, "aws-lambda-assume-role-arn", "", "AWS IAM role ARN that the Temporal server will assume when invoking the Lambda function that spawns a new Worker in this Worker Deployment Version. Required when --aws-lambda-function-arn is specified.")
+	s.Command.Flags().StringVar(&s.AwsLambdaAssumeRoleExternalId, "aws-lambda-assume-role-external-id", "", "Temporal server will enforce that the AWS IAM trust policy associated with the AWS IAM role specified in --aws-lambda-assume-role-arn has an aws:ExternalId condition that matches the supplied value. Required when --aws-lambda-function-arn is specified.")
+	s.Command.Flags().BoolVar(&s.Remove, "remove", false, "Removes any compute configuration associated with this Worker Deployment Version.")
+	s.DeploymentVersionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -5016,16 +5065,16 @@ func NewTemporalWorkflowUpdateOptionsCommand(cctx *CommandContext, parent *Tempo
 	s.Command.Use = "update-options [flags]"
 	s.Command.Short = "Change Workflow Execution Options"
 	if hasHighlighting {
-		s.Command.Long = "Modify properties of Workflow Executions:\n\n\x1b[1mtemporal workflow update-options [options]\x1b[0m\n\nIt can override the Worker Deployment configuration of a\nWorkflow Execution, which controls Worker Versioning.\n\nFor example, to force Workers in the current Deployment execute the\nnext Workflow Task change behavior to \x1b[1mauto_upgrade\x1b[0m:\n\n\x1b[1mtemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior auto_upgrade\x1b[0m\n\nor to pin the workflow execution to a Worker Deployment, set behavior\nto \x1b[1mpinned\x1b[0m:\n\n\x1b[1mtemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior pinned \\\n    --versioning-override-deployment-name YourDeploymentName \\\n    --versioning-override-build-id YourDeploymentBuildId\x1b[0m\n\nTo remove any previous overrides, set the behavior to\n\x1b[1munspecified\x1b[0m:\n\n\x1b[1mtemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior unspecified\x1b[0m\n\nTo see the current override use \x1b[1mtemporal workflow describe\x1b[0m"
+		s.Command.Long = "Modify properties of Workflow Executions:\n\n\x1b[1mtemporal workflow update-options [options]\x1b[0m\n\nIt can override the Worker Deployment configuration of a\nWorkflow Execution, which controls Worker Versioning.\n\nFor example, to force Workers in the current Deployment execute the\nnext Workflow Task change behavior to \x1b[1mauto_upgrade\x1b[0m:\n\n\x1b[1mtemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior auto_upgrade\x1b[0m\n\nor to pin the workflow execution to a Worker Deployment, set behavior\nto \x1b[1mpinned\x1b[0m:\n\n\x1b[1mtemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior pinned \\\n    --versioning-override-deployment-name YourDeploymentName \\\n    --versioning-override-build-id YourDeploymentBuildId\x1b[0m\n\nor to move the workflow execution to a Worker Deployment Version until\nthe next Workflow Task completes there, set behavior to \x1b[1mone_time\x1b[0m:\n\n\x1b[1mtemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior one_time \\\n    --versioning-override-deployment-name YourDeploymentName \\\n    --versioning-override-build-id YourDeploymentBuildId\x1b[0m\n\nTo remove any previous overrides, set the behavior to\n\x1b[1munspecified\x1b[0m:\n\n\x1b[1mtemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior unspecified\x1b[0m\n\nTo see the current override use \x1b[1mtemporal workflow describe\x1b[0m"
 	} else {
-		s.Command.Long = "Modify properties of Workflow Executions:\n\n```\ntemporal workflow update-options [options]\n```\n\nIt can override the Worker Deployment configuration of a\nWorkflow Execution, which controls Worker Versioning.\n\nFor example, to force Workers in the current Deployment execute the\nnext Workflow Task change behavior to `auto_upgrade`:\n\n```\ntemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior auto_upgrade\n```\n\nor to pin the workflow execution to a Worker Deployment, set behavior\nto `pinned`:\n\n```\ntemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior pinned \\\n    --versioning-override-deployment-name YourDeploymentName \\\n    --versioning-override-build-id YourDeploymentBuildId\n```\n\nTo remove any previous overrides, set the behavior to\n`unspecified`:\n\n```\ntemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior unspecified\n```\n\nTo see the current override use `temporal workflow describe`"
+		s.Command.Long = "Modify properties of Workflow Executions:\n\n```\ntemporal workflow update-options [options]\n```\n\nIt can override the Worker Deployment configuration of a\nWorkflow Execution, which controls Worker Versioning.\n\nFor example, to force Workers in the current Deployment execute the\nnext Workflow Task change behavior to `auto_upgrade`:\n\n```\ntemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior auto_upgrade\n```\n\nor to pin the workflow execution to a Worker Deployment, set behavior\nto `pinned`:\n\n```\ntemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior pinned \\\n    --versioning-override-deployment-name YourDeploymentName \\\n    --versioning-override-build-id YourDeploymentBuildId\n```\n\nor to move the workflow execution to a Worker Deployment Version until\nthe next Workflow Task completes there, set behavior to `one_time`:\n\n```\ntemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior one_time \\\n    --versioning-override-deployment-name YourDeploymentName \\\n    --versioning-override-build-id YourDeploymentBuildId\n```\n\nTo remove any previous overrides, set the behavior to\n`unspecified`:\n\n```\ntemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior unspecified\n```\n\nTo see the current override use `temporal workflow describe`"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.VersioningOverrideBehavior = cliext.NewFlagStringEnum([]string{"unspecified", "pinned", "auto_upgrade"}, "")
-	s.Command.Flags().Var(&s.VersioningOverrideBehavior, "versioning-override-behavior", "Override the versioning behavior of a Workflow. Accepted values: unspecified, pinned, auto_upgrade. Required.")
+	s.VersioningOverrideBehavior = cliext.NewFlagStringEnum([]string{"unspecified", "pinned", "one_time", "auto_upgrade"}, "")
+	s.Command.Flags().Var(&s.VersioningOverrideBehavior, "versioning-override-behavior", "Override the versioning behavior of a Workflow. Accepted values: unspecified, pinned, one_time, auto_upgrade. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "versioning-override-behavior")
-	s.Command.Flags().StringVar(&s.VersioningOverrideDeploymentName, "versioning-override-deployment-name", "", "When overriding to a `pinned` behavior, specifies the Deployment Name of the version to target.")
-	s.Command.Flags().StringVar(&s.VersioningOverrideBuildId, "versioning-override-build-id", "", "When overriding to a `pinned` behavior, specifies the Build ID of the version to target.")
+	s.Command.Flags().StringVar(&s.VersioningOverrideDeploymentName, "versioning-override-deployment-name", "", "When overriding to a `pinned` or `one_time` behavior, specifies the Deployment Name of the version to target.")
+	s.Command.Flags().StringVar(&s.VersioningOverrideBuildId, "versioning-override-build-id", "", "When overriding to a `pinned` or `one_time` behavior, specifies the Build ID of the version to target.")
 	s.SingleWorkflowOrBatchOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {

@@ -210,14 +210,20 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 		overrideBehavior := ""
 		overridePinnedVersionDeploymentName := ""
 		overridePinnedVersionBuildId := ""
+		overrideTargetVersionDeploymentName := ""
+		overrideTargetVersionBuildId := ""
 		if vInfo.VersioningOverride != nil {
 			switch vInfo.VersioningOverride.GetOverride().(type) {
 			case *workflow.VersioningOverride_Pinned:
-				overridePinnedVersionDeploymentName = vInfo.GetVersioningOverride().GetPinned().Version.DeploymentName
-				overridePinnedVersionBuildId = vInfo.GetVersioningOverride().GetPinned().Version.BuildId
+				overridePinnedVersionDeploymentName = vInfo.GetVersioningOverride().GetPinned().GetVersion().GetDeploymentName()
+				overridePinnedVersionBuildId = vInfo.GetVersioningOverride().GetPinned().GetVersion().GetBuildId()
 				overrideBehavior = enums.VERSIONING_BEHAVIOR_PINNED.String()
 			case *workflow.VersioningOverride_AutoUpgrade:
 				overrideBehavior = enums.VERSIONING_BEHAVIOR_AUTO_UPGRADE.String()
+			case *workflow.VersioningOverride_OneTime:
+				overrideTargetVersionDeploymentName = vInfo.GetVersioningOverride().GetOneTime().GetTargetDeploymentVersion().GetDeploymentName()
+				overrideTargetVersionBuildId = vInfo.GetVersioningOverride().GetOneTime().GetTargetDeploymentVersion().GetBuildId()
+				overrideBehavior = "OneTime"
 			}
 		}
 		_ = cctx.Printer.PrintStructured(struct {
@@ -227,6 +233,8 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 			OverrideBehavior                    string `cli:",cardOmitEmpty"`
 			OverridePinnedVersionDeploymentName string `cli:",cardOmitEmpty"`
 			OverridePinnedVersionBuildId        string `cli:",cardOmitEmpty"`
+			OverrideTargetVersionDeploymentName string `cli:",cardOmitEmpty"`
+			OverrideTargetVersionBuildId        string `cli:",cardOmitEmpty"`
 			TransitionVersionDeploymentName     string `cli:",cardOmitEmpty"`
 			TransitionVersionBuildId            string `cli:",cardOmitEmpty"`
 		}{
@@ -236,6 +244,8 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 			OverrideBehavior:                    overrideBehavior,
 			OverridePinnedVersionDeploymentName: overridePinnedVersionDeploymentName,
 			OverridePinnedVersionBuildId:        overridePinnedVersionBuildId,
+			OverrideTargetVersionDeploymentName: overrideTargetVersionDeploymentName,
+			OverrideTargetVersionBuildId:        overrideTargetVersionBuildId,
 			TransitionVersionDeploymentName:     vInfo.VersionTransition.GetDeploymentVersion().GetDeploymentName(),
 			TransitionVersionBuildId:            vInfo.VersionTransition.GetDeploymentVersion().GetBuildId(),
 		}, printer.StructuredOptions{})

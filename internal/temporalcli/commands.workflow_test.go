@@ -159,7 +159,7 @@ func (s *SharedServerSuite) testSignalBatchWorkflow(json bool) *CommandResult {
 		s.CommandHarness.Stdin.WriteString("y\n")
 	}
 	res := s.Execute(args...)
-	s.NoError(res.Err)
+	require.NoError(s.T(), res.Err)
 
 	// Confirm that all workflows complete with the signal value
 	for _, run := range runs {
@@ -202,7 +202,7 @@ func (s *SharedServerSuite) TestWorkflow_Delete_SingleWorkflowSuccess() {
 		"--workflow-id", run.GetID(),
 		"--yes",
 	)
-	s.NoError(res.Err)
+	require.NoError(s.T(), res.Err)
 	s.NotContains(res.Stdout.String(), "Deleting Workflow Executions in a global Namespace")
 	s.NotContains(res.Stderr.String(), "Deleting Workflow Executions in a global Namespace")
 	s.Contains(res.Stdout.String(), "Delete workflow succeeded")
@@ -720,6 +720,59 @@ func (s *SharedServerSuite) TestWorkflow_Batch_Update_Options_Versioning_Overrid
 	}, 10*time.Second, 100*time.Millisecond)
 }
 
+func (s *SharedServerSuite) TestWorkflow_Batch_Update_Options_OneTimeOverride() {
+	query := "WorkflowType = 'YourWorkflowType'"
+	deploymentName := "deployment-" + uuid.NewString()
+	buildID := "build-" + uuid.NewString()
+
+	var lastRequestLock sync.Mutex
+	var startBatchRequest *workflowservice.StartBatchOperationRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string, req, reply any,
+			cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption,
+		) error {
+			if r, ok := req.(*workflowservice.StartBatchOperationRequest); ok {
+				lastRequestLock.Lock()
+				startBatchRequest = r
+				lastRequestLock.Unlock()
+				return nil
+			}
+			return invoker(ctx, method, req, reply, cc, opts...)
+		}),
+	)
+
+	res := s.Execute(
+		"workflow", "update-options",
+		"--address", s.Address(),
+		"--query", query,
+		"--yes",
+		"--versioning-override-behavior", "one_time",
+		"--versioning-override-deployment-name", deploymentName,
+		"--versioning-override-build-id", buildID,
+	)
+	s.NoError(res.Err)
+
+	lastRequestLock.Lock()
+	req := startBatchRequest
+	lastRequestLock.Unlock()
+
+	require.NotNil(s.T(), req)
+	s.Equal(s.Namespace(), req.GetNamespace())
+	s.Equal(query, req.GetVisibilityQuery())
+	updateOptionsOperation := req.GetUpdateWorkflowOptionsOperation()
+	require.NotNil(s.T(), updateOptionsOperation)
+	s.Equal([]string{"versioning_override"}, updateOptionsOperation.GetUpdateMask().GetPaths())
+	override := updateOptionsOperation.GetWorkflowExecutionOptions().GetVersioningOverride()
+	require.NotNil(s.T(), override)
+	oneTime := override.GetOneTime()
+	require.NotNil(s.T(), oneTime)
+	s.Equal(deploymentName, oneTime.GetTargetDeploymentVersion().GetDeploymentName())
+	s.Equal(buildID, oneTime.GetTargetDeploymentVersion().GetBuildId())
+}
+
 func (s *SharedServerSuite) TestWorkflow_Update_Options_Versioning_Override() {
 	buildId1 := "id1-" + uuid.NewString()
 	buildId2 := "id2-" + uuid.NewString()
@@ -887,6 +940,56 @@ func (s *SharedServerSuite) TestWorkflow_Update_Options_Versioning_Override() {
 	s.NoError(temporalcli.UnmarshalProtoJSONWithOptions(res.Stdout.Bytes(), &jsonResp, true))
 	versioningInfo := jsonResp.WorkflowExecutionInfo.VersioningInfo
 	s.Nil(versioningInfo.VersioningOverride)
+}
+
+func (s *SharedServerSuite) TestWorkflow_Update_Options_OneTimeOverride() {
+	workflowID := "workflow-" + uuid.NewString()
+	deploymentName := "deployment-" + uuid.NewString()
+	buildID := "build-" + uuid.NewString()
+
+	var lastRequestLock sync.Mutex
+	var updateOptionsRequest *workflowservice.UpdateWorkflowExecutionOptionsRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string, req, reply any,
+			cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption,
+		) error {
+			if r, ok := req.(*workflowservice.UpdateWorkflowExecutionOptionsRequest); ok {
+				lastRequestLock.Lock()
+				updateOptionsRequest = r
+				lastRequestLock.Unlock()
+				return nil
+			}
+			return invoker(ctx, method, req, reply, cc, opts...)
+		}),
+	)
+
+	res := s.Execute(
+		"workflow", "update-options",
+		"--address", s.Address(),
+		"--workflow-id", workflowID,
+		"--versioning-override-behavior", "one_time",
+		"--versioning-override-deployment-name", deploymentName,
+		"--versioning-override-build-id", buildID,
+	)
+	s.NoError(res.Err)
+
+	lastRequestLock.Lock()
+	req := updateOptionsRequest
+	lastRequestLock.Unlock()
+
+	require.NotNil(s.T(), req)
+	s.Equal(s.Namespace(), req.GetNamespace())
+	s.Equal(workflowID, req.GetWorkflowExecution().GetWorkflowId())
+	s.Equal([]string{"versioning_override"}, req.GetUpdateMask().GetPaths())
+	override := req.GetWorkflowExecutionOptions().GetVersioningOverride()
+	require.NotNil(s.T(), override)
+	oneTime := override.GetOneTime()
+	require.NotNil(s.T(), oneTime)
+	s.Equal(deploymentName, oneTime.GetTargetDeploymentVersion().GetDeploymentName())
+	s.Equal(buildID, oneTime.GetTargetDeploymentVersion().GetBuildId())
 }
 
 func (s *SharedServerSuite) TestWorkflow_Update_Execute() {
