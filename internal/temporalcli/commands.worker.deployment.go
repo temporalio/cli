@@ -996,6 +996,24 @@ func computeProviderConfig(
 	}
 }
 
+// scalerTypeByProvider maps each compute provider to the scaling algorithm
+// compatible with its launch strategy in temporal-auto-scaled-workers: aws-lambda
+// is invoke-based ("no-sync"); gcp-cloud-run is worker-set-based ("rate-based").
+// WCI rejects an incompatible pairing at CreateWorkerDeploymentVersion.
+var scalerTypeByProvider = map[string]string{
+	"aws-lambda":    "no-sync",
+	"gcp-cloud-run": "rate-based",
+}
+
+// scalerTypeForProvider returns the scaling algorithm for the given provider,
+// defaulting to "no-sync" for any unmapped provider.
+func scalerTypeForProvider(providerType string) string {
+	if scaler, ok := scalerTypeByProvider[providerType]; ok {
+		return scaler
+	}
+	return "no-sync"
+}
+
 func (c *TemporalWorkerDeploymentCreateVersionCommand) run(cctx *CommandContext, args []string) error {
 	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
 	if err != nil {
@@ -1033,9 +1051,7 @@ func (c *TemporalWorkerDeploymentCreateVersionCommand) run(cctx *CommandContext,
 					Details: detailsPayload,
 				},
 				Scaler: &computepb.ComputeScaler{
-					// Hard-coded: no-sync is the only supported algorithm
-					// in temporal-auto-scaled-workers as of 2026-04-01.
-					Type: "no-sync",
+					Type: scalerTypeForProvider(providerType),
 				},
 			},
 		},
@@ -1111,13 +1127,13 @@ func (c *TemporalWorkerDeploymentUpdateVersionComputeConfigCommand) run(cctx *Co
 				Details: detailsPayload,
 			},
 			Scaler: &computepb.ComputeScaler{
-				// Hard-coded: no-sync is the only supported algorithm
-				// in temporal-auto-scaled-workers as of 2026-04-01.
-				Type: "no-sync",
+				Type: scalerTypeForProvider(providerType),
 			},
 		}
 		updatePaths := []string{
+			"provider.type",
 			"provider.details",
+			"scaler.type",
 		}
 		ccScalingGroups := map[string]*computepb.ComputeConfigScalingGroupUpdate{
 			"default": &computepb.ComputeConfigScalingGroupUpdate{
