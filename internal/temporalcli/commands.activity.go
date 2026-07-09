@@ -1,6 +1,7 @@
 package temporalcli
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -601,8 +602,6 @@ func (c *TemporalActivityCancelCommand) run(cctx *CommandContext, args []string)
 		Rps:        c.Rps,
 	}
 
-	// TODO: should --yes be required if -o json or jsonl is used?
-
 	activityOptions, batchReq, err := opts.activityExecOrBatch(cctx, c.Parent.Namespace, cl, c.Yes, singleOrBatchOverrides{})
 	if err != nil {
 		return err
@@ -621,15 +620,10 @@ func (c *TemporalActivityCancelCommand) run(cctx *CommandContext, args []string)
 			Reason: c.Reason,
 		}
 
+		// Reason in batch request falls back to defaultReason
+		batchReq.Reason = cmp.Or(c.Reason, defaultReason())
 		batchReq.Operation = &workflowservice.StartBatchOperationRequest_CancelActivitiesOperation{
 			CancelActivitiesOperation: cancelActivitiesOperation,
-		}
-
-		// Reason in batch request falls back to defaultReason
-		if c.Reason != "" {
-			batchReq.Reason = c.Reason
-		} else {
-			batchReq.Reason = defaultReason()
 		}
 
 		if err := startBatchJob(cctx, cl, batchReq); err != nil {
@@ -659,10 +653,7 @@ func (c *TemporalActivityTerminateCommand) run(cctx *CommandContext, args []stri
 	}
 
 	// Reason for single terminate or batch request falls back to defaultReason
-	reason := c.Reason
-	if reason == "" {
-		reason = defaultReason()
-	}
+	reason := cmp.Or(c.Reason, defaultReason())
 
 	if activityOptions != nil {
 		// The CLI adds a default for terminate but not cancel.
@@ -680,7 +671,6 @@ func (c *TemporalActivityTerminateCommand) run(cctx *CommandContext, args []stri
 		}
 
 		batchReq.Reason = reason
-
 		batchReq.Operation = &workflowservice.StartBatchOperationRequest_TerminateActivitiesOperation{
 			TerminateActivitiesOperation: terminateActivitiesOperation,
 		}
@@ -700,7 +690,6 @@ func (c *TemporalActivityDeleteCommand) run(cctx *CommandContext, args []string)
 	}
 	defer cl.Close()
 
-	// TODO: do we need this warning, similar to workflow delete?
 	// Only warn when the namespace is global, or can't get the namespace info
 	nsResp, nsErr := cl.WorkflowService().DescribeNamespace(cctx, &workflowservice.DescribeNamespaceRequest{
 		Namespace: c.Parent.Namespace,
@@ -741,13 +730,7 @@ func (c *TemporalActivityDeleteCommand) run(cctx *CommandContext, args []string)
 		cctx.Printer.Println("Delete activity succeeded")
 	} else { // batchReq != nil
 		deleteActivitiesOperation := &batch.BatchOperationDeleteActivities{}
-
-		if c.Reason != "" {
-			batchReq.Reason = c.Reason
-		} else {
-			batchReq.Reason = defaultReason()
-		}
-
+		batchReq.Reason = cmp.Or(c.Reason, defaultReason())
 		batchReq.Operation = &workflowservice.StartBatchOperationRequest_DeleteActivitiesOperation{
 			DeleteActivitiesOperation: deleteActivitiesOperation,
 		}

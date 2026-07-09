@@ -1478,21 +1478,6 @@ func (s *SharedServerSuite) TestActivity_CancelTerminateDelete_BatchSuccess() {
 				return res.Err == nil && strings.Count(res.Stdout.String(), operator+"-test-") >= 5
 			}, 5*time.Second, 200*time.Millisecond)
 
-			// //TODO: is it better to use list above or handle below?
-			// s.Eventually(func() bool {
-			// 	count := 0
-			// 	for _, activityId := range activityIds {
-			// 		handle := s.Client.GetActivityHandle(client.GetActivityHandleOptions{
-			// 			ActivityID: activityId,
-			// 		})
-			// 		err := handle.Get(s.Context, nil)
-			// 		if err != nil && strings.Contains(err.Error(), "terminated") {
-			// 			count++
-			// 		}
-			// 	}
-			// 	return count >= 5
-			// }, 5*time.Second, 200*time.Millisecond)
-
 		case "delete":
 			// Wait for all to be deleted
 			s.Eventually(func() bool {
@@ -1539,10 +1524,7 @@ func (s *SharedServerSuite) TestActivity_CancelTerminateDelete_BatchFailed() {
 	for _, operator := range []string{"cancel", "terminate", "delete"} {
 		uniqueKW := operator + "-test-fail-" + uuid.NewString()[:8]
 		activityId := operator + "-test-fail"
-		started := s.startActivity(activityId,
-			"--search-attribute", fmt.Sprintf(`CustomKeywordField="%s"`, uniqueKW),
-		)
-		runId := started["runId"].(string)
+		runId := operator + "-test-run-id"
 
 		query := fmt.Sprintf(`CustomKeywordField = "%s"`, uniqueKW)
 		res := s.Execute(
