@@ -2,6 +2,7 @@ package temporalcli_test
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -758,6 +759,35 @@ func (s *SharedServerSuite) TestActivity_Execute_RetriesOnEmptyPollResponse() {
 	)
 	s.NoError(res.Err)
 	s.Contains(res.Stdout.String(), "standalone-result")
+}
+
+func (s *SharedServerSuite) TestActivity_Execute_JsonWithBase64() {
+	var receivedInput any
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		receivedInput = a
+		return map[string]string{"foo": "bar"}, nil
+	})
+
+	jsonInput := `"my-input"` // JSON string as input, before base64 encode
+	base64Input := base64.StdEncoding.EncodeToString([]byte(jsonInput))
+	res := s.Execute(
+		"activity", "execute",
+		"--activity-id", "exec-test",
+		"--type", "DevActivity",
+		"--task-queue", s.Worker().Options.TaskQueue,
+		"--start-to-close-timeout", "30s",
+		"-i", base64Input,
+		"--input-base64",
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	out := res.Stdout.String()
+	s.Contains(out, "Running execution:")
+	s.ContainsOnSameLine(out, "ActivityId", "exec-test")
+	s.Contains(out, "Results:")
+	s.ContainsOnSameLine(out, "Status", "COMPLETED")
+	s.ContainsOnSameLine(out, "Result", `{"foo":"bar"}`)
+	s.Equal("my-input", receivedInput)
 }
 
 // startActivity starts an activity via the CLI and returns
