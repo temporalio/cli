@@ -1910,7 +1910,7 @@ commands:
 
       ```
       temporal nexus operation list \
-          --query 'NexusEndpoint="YourEndpoint"'
+          --query 'Endpoint="YourEndpoint"'
       ```
 
       Visit https://docs.temporal.io/visibility to read more about
@@ -1939,7 +1939,7 @@ commands:
 
       ```
       temporal nexus operation count \
-          --query 'NexusEndpoint="YourEndpoint"'
+          --query 'Endpoint="YourEndpoint"'
       ```
 
       Visit https://docs.temporal.io/visibility to read more about
