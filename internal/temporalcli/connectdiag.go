@@ -104,7 +104,7 @@ func diagnoseConnection(ctx context.Context, address string, tlsCfg *tls.Config,
 	// Stage: TCP
 	conn, err := (&net.Dialer{}).DialContext(ctx, "tcp", address)
 	if err != nil {
-		if errors.Is(err, syscall.ECONNREFUSED) {
+		if isConnRefused(err) {
 			d.fail("TCP connection refused: nothing is listening at " + address)
 			d.Cause = causeTCPRefused
 		} else if isTimeout(err) {
@@ -244,6 +244,15 @@ func classifyGRPCError(err error) (connectCause, string) {
 func (d *connectDiagnosis) ok(label string) { d.Stages = append(d.Stages, diagStage{diagOK, label}) }
 func (d *connectDiagnosis) fail(label string) {
 	d.Stages = append(d.Stages, diagStage{diagFail, label})
+}
+
+// isConnRefused reports whether err is a refused TCP connection. errors.Is
+// against syscall.ECONNREFUSED matches on unix, but Windows dials fail with
+// WSAECONNREFUSED ("No connection could be made because the target machine
+// actively refused it"), which Go does not map to syscall.ECONNREFUSED.
+func isConnRefused(err error) bool {
+	return errors.Is(err, syscall.ECONNREFUSED) ||
+		strings.Contains(err.Error(), "refused")
 }
 
 func isTimeout(err error) bool {

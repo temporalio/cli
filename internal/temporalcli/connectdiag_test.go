@@ -127,8 +127,20 @@ func TestDiagnoseConnection_ServerPlaintext(t *testing.T) {
 			if err != nil {
 				return
 			}
-			_, _ = conn.Write([]byte("HTTP/1.1 400 Bad Request\r\n\r\n"))
-			conn.Close()
+			go func() {
+				defer conn.Close()
+				_, _ = conn.Write([]byte("HTTP/1.1 400 Bad Request\r\n\r\n"))
+				// Drain the client's ClientHello before closing: closing with
+				// unread data pending sends an RST, which on Windows discards
+				// the response before the client can read it.
+				_ = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+				buf := make([]byte, 1024)
+				for {
+					if _, err := conn.Read(buf); err != nil {
+						return
+					}
+				}
+			}()
 		}
 	}()
 
