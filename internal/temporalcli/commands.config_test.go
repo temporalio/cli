@@ -154,6 +154,34 @@ disable_host_verification = true`))
 	}
 }
 
+func TestConfig_UpdateCheckOptIn(t *testing.T) {
+	h := NewCommandHarness(t)
+	configFile := t.TempDir() + "/temporal.toml"
+	h.Options.EnvLookup = EnvLookupMap{"TEMPORAL_CONFIG_FILE": configFile}
+
+	res := h.Execute("config", "set", "--prop", "cli.update_check.enabled", "--value", "true")
+	h.NoError(res.Err)
+
+	res = h.Execute("config", "get", "--prop", "cli.update_check.enabled", "-o", "json")
+	h.NoError(res.Err)
+	h.JSONEq(`{"property":"cli.update_check.enabled","value":true}`, res.Stdout.String())
+
+	res = h.Execute("config", "set", "--prop", "namespace", "--value", "testing")
+	h.NoError(res.Err)
+	var config map[string]any
+	_, err := toml.DecodeFile(configFile, &config)
+	h.NoError(err)
+	cli := config["cli"].(map[string]any)
+	updateCheck := cli["update_check"].(map[string]any)
+	h.Equal(true, updateCheck["enabled"])
+
+	res = h.Execute("config", "delete", "--prop", "cli.update_check.enabled")
+	h.NoError(res.Err)
+	res = h.Execute("config", "get", "--prop", "cli.update_check.enabled", "-o", "json")
+	h.NoError(res.Err)
+	h.JSONEq(`{"property":"cli.update_check.enabled","value":false}`, res.Stdout.String())
+}
+
 func TestConfig_Get_NoTLSWhenUnconfigured(t *testing.T) {
 	// Regression test for #1077: `config get` (table output) must not display
 	// "tls true" for a profile that has no TLS configuration.

@@ -1,6 +1,8 @@
 package temporalcli
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -14,6 +16,10 @@ import (
 )
 
 func (c *TemporalConfigDeleteCommand) run(cctx *CommandContext, _ []string) error {
+	if c.Prop == updateCheckConfigProp {
+		configFile, _ := resolveConfigFile(cctx.Options)
+		return setUpdateCheckEnabled(configFile, false)
+	}
 	// Load config
 	profileName := envConfigProfileName(cctx)
 	conf, confProfile, err := loadEnvConfigProfile(cctx, profileName, true)
@@ -58,6 +64,21 @@ func (c *TemporalConfigDeleteProfileCommand) run(cctx *CommandContext, _ []strin
 }
 
 func (c *TemporalConfigGetCommand) run(cctx *CommandContext, _ []string) error {
+	if c.Prop == updateCheckConfigProp {
+		configFile, _ := resolveConfigFile(cctx.Options)
+		_, state, err := loadUpdateCheckState(configFile)
+		if err != nil {
+			return err
+		}
+		type prop struct {
+			Property string `json:"property"`
+			Value    any    `json:"value"`
+		}
+		return cctx.Printer.PrintStructured(
+			prop{Property: c.Prop, Value: state.Enabled},
+			printer.StructuredOptions{Table: &printer.TableOptions{}},
+		)
+	}
 	// Load config profile
 	profileName := envConfigProfileName(cctx)
 	conf, confProfile, err := loadEnvConfigProfile(cctx, profileName, true)
@@ -166,6 +187,13 @@ func (c *TemporalConfigListCommand) run(cctx *CommandContext, _ []string) error 
 }
 
 func (c *TemporalConfigSetCommand) run(cctx *CommandContext, _ []string) error {
+	if c.Prop == updateCheckConfigProp {
+		if c.Value != "true" && c.Value != "false" {
+			return fmt.Errorf("must be 'true' or 'false' to set this property")
+		}
+		configFile, _ := resolveConfigFile(cctx.Options)
+		return setUpdateCheckEnabled(configFile, c.Value == "true")
+	}
 	// Load config
 	conf, confProfile, err := loadEnvConfigProfile(cctx, envConfigProfileName(cctx), false)
 	if err != nil {
@@ -327,6 +355,27 @@ func writeEnvConfigFile(cctx *CommandContext, conf *envconfig.ClientConfig) erro
 	b, err := conf.ToTOML(envconfig.ClientConfigToTOMLOptions{})
 	if err != nil {
 		return fmt.Errorf("failed building TOML: %w", err)
+	}
+	// The SDK config type only knows about connection profiles. Preserve CLI-owned
+	// top-level configuration when rewriting those profiles.
+	if existing, readErr := os.ReadFile(configFile); readErr == nil {
+		var existingRaw, generatedRaw map[string]any
+		if _, decodeErr := toml.Decode(string(existing), &existingRaw); decodeErr != nil {
+			return fmt.Errorf("failed parsing existing config: %w", decodeErr)
+		}
+		if _, decodeErr := toml.Decode(string(b), &generatedRaw); decodeErr != nil {
+			return fmt.Errorf("failed parsing generated config: %w", decodeErr)
+		}
+		if cliConfig, ok := existingRaw["cli"]; ok {
+			generatedRaw["cli"] = cliConfig
+		}
+		var buf bytes.Buffer
+		if encodeErr := toml.NewEncoder(&buf).Encode(generatedRaw); encodeErr != nil {
+			return fmt.Errorf("failed preserving CLI config: %w", encodeErr)
+		}
+		b = buf.Bytes()
+	} else if !errors.Is(readErr, os.ErrNotExist) {
+		return fmt.Errorf("failed reading existing config: %w", readErr)
 	}
 
 	// Write to file, making dirs as needed
