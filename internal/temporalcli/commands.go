@@ -145,6 +145,11 @@ func (c *CommandContext) preprocessOptions() error {
 			if c.Err() != nil {
 				err = fmt.Errorf("program interrupted")
 			}
+			if exitError, ok := errors.AsType[ExtensionNonZeroExit](err); ok {
+				// An extension failed after being found and successfully started. Here we defer
+				// to its own error handling logic, and just copy the exit code through.
+				os.Exit(exitError.ExitCode())
+			}
 			fmt.Fprintf(c.Options.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -497,6 +502,11 @@ func (c *TemporalCommand) initCommand(cctx *CommandContext) {
 		}
 		cctx.ActuallyRanCommand = true
 
+		// Print deprecation warning to stderr so it doesn't break JSON output
+		if msg, ok := cmd.Annotations["deprecationWarning"]; ok {
+			fmt.Fprintf(cctx.Options.Stderr, "warning: %s\n", strings.ToLower(strings.TrimRight(msg, ".")))
+		}
+
 		if cctx.Options.DeprecatedEnvConfig.EnvConfigName != "default" {
 			if _, ok := cctx.DeprecatedEnvConfigValues[cctx.Options.DeprecatedEnvConfig.EnvConfigName]; !ok {
 				if _, ok := cmd.Annotations["ignoresMissingEnv"]; !ok {
@@ -519,7 +529,7 @@ var buildInfo string
 func VersionString() string {
 	// To add build-time information to the version string, use
 	// go build -ldflags "-X github.com/temporalio/cli/internal.buildInfo=<MyString>"
-	var bi = buildInfo
+	bi := buildInfo
 	if bi != "" {
 		bi = fmt.Sprintf(", %s", bi)
 	}

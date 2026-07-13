@@ -234,8 +234,14 @@ func (s *SharedServerSuite) SetupSuite() {
 				// Disable DescribeTaskQueue cache.
 				"frontend.activityAPIsEnabled": true,
 				"history.enableChasm":          true,
-				"activity.enableStandalone":    true,
-				"activity.longPollTimeout":     2 * time.Second,
+				// Required by TestWorkflow_Show_SystemNexusOperationTransformsTypeNames
+				// to schedule a SignalWithStartWorkflowExecution Nexus operation against
+				// the __temporal_system endpoint from inside a workflow.
+				"history.enableSignalWithStartFromWorkflow": true,
+				"activity.enableStandalone":                 true,
+				"activity.longPollTimeout":                  2 * time.Second,
+				"nexusoperation.enableStandalone":           true,
+				"history.enableChasmCallbacks":              true,
 				// this is overridden since we don't want caching to be enabled
 				// while testing DescribeTaskQueue behaviour related to versioning
 				"matching.TaskQueueInfoByBuildIdTTL": 0 * time.Second,

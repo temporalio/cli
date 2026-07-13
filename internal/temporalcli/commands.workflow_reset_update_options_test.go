@@ -3,16 +3,19 @@ package temporalcli_test
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.temporal.io/api/enums/v1"
+	workflowpb "go.temporal.io/api/workflow/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
+	"google.golang.org/grpc"
 )
 
 func (s *SharedServerSuite) TestWorkflow_ResetWithWorkflowUpdateOptions_ValidatesArguments_MissingRequiredFlag() {
@@ -52,6 +55,115 @@ func (s *SharedServerSuite) TestWorkflow_ResetWithWorkflowUpdateOptions_Validate
 	)
 	require.Error(s.T(), res.Err)
 	require.Contains(s.T(), res.Err.Error(), "cannot set deployment name or build id with auto_upgrade behavior")
+}
+
+func (s *SharedServerSuite) TestWorkflow_ResetWithWorkflowUpdateOptions_Single_OneTimeOverrideRequest() {
+	workflowID := "workflow-" + uuid.NewString()
+	deploymentName := "deployment-" + uuid.NewString()
+	buildID := "build-" + uuid.NewString()
+
+	var lastRequestLock sync.Mutex
+	var resetRequest *workflowservice.ResetWorkflowExecutionRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string, req, reply any,
+			cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption,
+		) error {
+			if r, ok := req.(*workflowservice.ResetWorkflowExecutionRequest); ok {
+				lastRequestLock.Lock()
+				resetRequest = r
+				lastRequestLock.Unlock()
+				return nil
+			}
+			return invoker(ctx, method, req, reply, cc, opts...)
+		}),
+	)
+
+	res := s.Execute(
+		"workflow", "reset", "with-workflow-update-options",
+		"--address", s.Address(),
+		"-w", workflowID,
+		"-e", "3",
+		"--reason", "test-reset-one-time",
+		"--versioning-override-behavior", "one_time",
+		"--versioning-override-deployment-name", deploymentName,
+		"--versioning-override-build-id", buildID,
+	)
+	require.NoError(s.T(), res.Err)
+
+	lastRequestLock.Lock()
+	req := resetRequest
+	lastRequestLock.Unlock()
+
+	require.NotNil(s.T(), req)
+	require.Equal(s.T(), s.Namespace(), req.GetNamespace())
+	require.Equal(s.T(), workflowID, req.GetWorkflowExecution().GetWorkflowId())
+	require.Equal(s.T(), int64(3), req.GetWorkflowTaskFinishEventId())
+	s.requireOneTimePostResetOverride(req.GetPostResetOperations(), deploymentName, buildID)
+}
+
+func (s *SharedServerSuite) TestWorkflow_ResetBatchWithWorkflowUpdateOptions_OneTimeOverrideRequest() {
+	query := "WorkflowType = 'YourWorkflowType'"
+	deploymentName := "deployment-" + uuid.NewString()
+	buildID := "build-" + uuid.NewString()
+
+	var lastRequestLock sync.Mutex
+	var startBatchRequest *workflowservice.StartBatchOperationRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string, req, reply any,
+			cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption,
+		) error {
+			if r, ok := req.(*workflowservice.StartBatchOperationRequest); ok {
+				lastRequestLock.Lock()
+				startBatchRequest = r
+				lastRequestLock.Unlock()
+				return nil
+			}
+			return invoker(ctx, method, req, reply, cc, opts...)
+		}),
+	)
+
+	res := s.Execute(
+		"workflow", "reset", "with-workflow-update-options",
+		"--address", s.Address(),
+		"--query", query,
+		"--yes",
+		"-t", "FirstWorkflowTask",
+		"--reason", "test-batch-reset-one-time",
+		"--versioning-override-behavior", "one_time",
+		"--versioning-override-deployment-name", deploymentName,
+		"--versioning-override-build-id", buildID,
+	)
+	require.NoError(s.T(), res.Err)
+
+	lastRequestLock.Lock()
+	req := startBatchRequest
+	lastRequestLock.Unlock()
+
+	require.NotNil(s.T(), req)
+	require.Equal(s.T(), s.Namespace(), req.GetNamespace())
+	require.Equal(s.T(), query, req.GetVisibilityQuery())
+	resetOperation := req.GetResetOperation()
+	require.NotNil(s.T(), resetOperation)
+	s.requireOneTimePostResetOverride(resetOperation.GetPostResetOperations(), deploymentName, buildID)
+}
+
+func (s *SharedServerSuite) requireOneTimePostResetOverride(postOps []*workflowpb.PostResetOperation, deploymentName, buildID string) {
+	require.Len(s.T(), postOps, 1)
+	updateOptions := postOps[0].GetUpdateWorkflowOptions()
+	require.NotNil(s.T(), updateOptions)
+	require.Equal(s.T(), []string{"versioning_override"}, updateOptions.GetUpdateMask().GetPaths())
+	override := updateOptions.GetWorkflowExecutionOptions().GetVersioningOverride()
+	require.NotNil(s.T(), override)
+	oneTime := override.GetOneTime()
+	require.NotNil(s.T(), oneTime)
+	require.Equal(s.T(), deploymentName, oneTime.GetTargetDeploymentVersion().GetDeploymentName())
+	require.Equal(s.T(), buildID, oneTime.GetTargetDeploymentVersion().GetBuildId())
 }
 
 func (s *SharedServerSuite) TestWorkflow_ResetWithWorkflowUpdateOptions_Single_AutoUpgradeBehavior() {

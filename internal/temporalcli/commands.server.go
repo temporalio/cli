@@ -14,9 +14,15 @@ import (
 var defaultDynamicConfigValues = map[string]any{
 	// Make search attributes immediately visible on creation, so users don't
 	// have to wait for eventual consistency to happen when testing against the
-	// dev-server.  Since it's a very rare thing to create search attributes,
+	// dev-server. Since it's a very rare thing to create search attributes,
 	// we're comfortable that this is very unlikely to mask bugs in user code.
 	"system.forceSearchAttributesCacheRefreshOnRead": true,
+
+	// Make Nexus endpoints immediately visible on creation, so users don't
+	// have to wait for eventual consistency to happen when testing against the
+	// dev-server. Since it's a very rare thing to create Nexus endpoints,
+	// we're comfortable that this is very unlikely to mask bugs in user code.
+	"system.forceNexusEndpointRefreshOnRead": true,
 
 	// Since we disable the SA cache, we need to bump max QPS accordingly.
 	// These numbers were chosen to maintain the ratio between the two that's
@@ -86,6 +92,7 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 			}
 		}
 		opts.UIAssetPath, opts.UICodecEndpoint, opts.PublicPath = t.UiAssetPath, t.UiCodecEndpoint, t.UiPublicPath
+		opts.UIDisableNewsFetch = t.UiDisableNewsFetch
 	}
 	// Pragmas and dyn config
 	var err error
@@ -154,15 +161,20 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 	defer s.Stop()
 
 	cctx.Printer.Printlnf("Temporal CLI %v\n", VersionString())
-	cctx.Printer.Printlnf("%-17s %v:%v", "Temporal Server:", toFriendlyIp(opts.FrontendIP), opts.FrontendPort)
+	cctx.Printer.Printlnf("%-21s %v:%v", "Temporal Server:", toFriendlyIp(opts.FrontendIP), opts.FrontendPort)
+	if t.DbFilename == "" {
+		cctx.Printer.Printlnf("%-21s %v", "Temporal Persistence:", "in-memory")
+	} else {
+		cctx.Printer.Printlnf("%-21s %v", "Temporal Persistence:", t.DbFilename)
+	}
 	// Only print HTTP port if explicitly provided to avoid promoting the unstable HTTP API.
 	if opts.FrontendHTTPPort > 0 {
-		cctx.Printer.Printlnf("%-17s %v:%v", "Temporal HTTP:", toFriendlyIp(opts.FrontendIP), opts.FrontendHTTPPort)
+		cctx.Printer.Printlnf("%-21s %v:%v", "Temporal HTTP:", toFriendlyIp(opts.FrontendIP), opts.FrontendHTTPPort)
 	}
 	if !t.Headless {
-		cctx.Printer.Printlnf("%-17s http://%v:%v%v", "Temporal UI:", toFriendlyIp(opts.UIIP), opts.UIPort, opts.PublicPath)
+		cctx.Printer.Printlnf("%-21s http://%v:%v%v", "Temporal UI:", toFriendlyIp(opts.UIIP), opts.UIPort, opts.PublicPath)
 	}
-	cctx.Printer.Printlnf("%-17s http://%v:%v/metrics", "Temporal Metrics:", toFriendlyIp(opts.FrontendIP), opts.MetricsPort)
+	cctx.Printer.Printlnf("%-21s http://%v:%v/metrics", "Temporal Metrics:", toFriendlyIp(opts.FrontendIP), opts.MetricsPort)
 	<-cctx.Done()
 	if !t.Parent.Parent.LogLevel.ChangedFromDefault {
 		// The server routinely emits various warnings on shutdown.
@@ -185,7 +197,7 @@ func persistentClusterID() string {
 	file := defaultDeprecatedEnvConfigFile("temporalio", "version-info")
 	if file == "" {
 		// No file, can do nothing here
-		return uuid.NewString()
+		return "dev-server-" + uuid.NewString()
 	}
 	// Try to get existing first
 	env, _ := readDeprecatedEnvConfigFile(file)
@@ -193,7 +205,7 @@ func persistentClusterID() string {
 		return id
 	}
 	// Create and try to write
-	id := uuid.NewString()
+	id := "dev-server-" + uuid.NewString()
 	_ = writeDeprecatedEnvConfigFile(file, map[string]map[string]string{"default": {"cluster-id": id}})
 	return id
 }
