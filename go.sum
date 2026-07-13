@@ -409,8 +409,6 @@ github.com/temporalio/sqlparser v0.0.0-20231115171017-f4060bcfa6cb/go.mod h1:143
 github.com/temporalio/tchannel-go v1.22.1-0.20220818200552-1be8d8cffa5b/go.mod h1:c+V9Z/ZgkzAdyGvHrvC5AsXgN+M9Qwey04cBdKYzV7U=
 github.com/temporalio/tchannel-go v1.22.1-0.20260129151045-8706a1ab5f61 h1:v9EBEMJggmXGbVcIAjGQpKgEB+a9E/Q0brJ6fGWJvhQ=
 github.com/temporalio/tchannel-go v1.22.1-0.20260129151045-8706a1ab5f61/go.mod h1:ezRQRwu9KQXy8Wuuv1aaFFxoCNz5CeNbVOOkh3xctbY=
-github.com/temporalio/ui-server/v2 v2.50.1 h1:dlyg96lFwOIaiXywDzPnSXVf8GPULLfrXXVXGqRsvJY=
-github.com/temporalio/ui-server/v2 v2.50.1/go.mod h1:jiWHDxRe4RDXLxGwenfV+FSgjXat81okVTTZPQOlc3c=
 github.com/temporalio/ui-server/v2 v2.52.0 h1:BJ5e1teLOITbn4G9zZTuDOsROonI0uRThGlzaQ1aMxs=
 github.com/temporalio/ui-server/v2 v2.52.0/go.mod h1:HKjuLT3J/hM1nRN6Vge2Z63tPWPNUVR/2+5CMbkBQns=
 github.com/tidwall/btree v1.8.1 h1:27ehoXvm5AG/g+1VxLS1SD3vRhp/H7LuEfwNvddEdmA=
