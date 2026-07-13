@@ -40,6 +40,7 @@ import (
 	uiserveroptions "github.com/temporalio/ui-server/v2/server/server_options"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/server/chasm/lib/activity"
+	"go.temporal.io/server/chasm/lib/nexusoperation"
 	"go.temporal.io/server/common/authorization"
 	"go.temporal.io/server/common/cluster"
 	"go.temporal.io/server/common/config"
@@ -243,10 +244,12 @@ func (s *StartOptions) buildServerOptions() ([]temporal.ServerOption, *slog.Leve
 	// Up default visibility RPS
 	dynConf[dynamicconfig.FrontendMaxNamespaceVisibilityRPSPerInstance.Key()] = 100
 
-	// Enable CHASM and SAA. These will be on by default in server v1.32, at which point these lines
-	// should be removed.
+	// Enable CHASM, SAA, and standalone Nexus operations. These will be on by default in server v1.32,
+	// at which point these lines should be removed.
 	dynConf[dynamicconfig.EnableChasm.Key()] = true
 	dynConf[activity.Enabled.Key()] = true
+	dynConf[nexusoperation.Enabled.Key()] = true
+	dynConf[dynamicconfig.EnableCHASMCallbacks.Key()] = true
 
 	// Dynamic config if set
 	for k, v := range s.DynamicConfigValues {
