@@ -1006,12 +1006,13 @@ var scalerTypeByProvider = map[string]string{
 }
 
 // scalerTypeForProvider returns the scaling algorithm for the given provider,
-// defaulting to "no-sync" for any unmapped provider.
-func scalerTypeForProvider(providerType string) string {
+// erroring if the provider has no explicit mapping so an unknown or newly-added
+// provider fails loudly here rather than silently getting an incompatible scaler.
+func scalerTypeForProvider(providerType string) (string, error) {
 	if scaler, ok := scalerTypeByProvider[providerType]; ok {
-		return scaler
+		return scaler, nil
 	}
-	return "no-sync"
+	return "", fmt.Errorf("no scaler mapping for compute provider %q", providerType)
 }
 
 func (c *TemporalWorkerDeploymentCreateVersionCommand) run(cctx *CommandContext, args []string) error {
@@ -1043,6 +1044,10 @@ func (c *TemporalWorkerDeploymentCreateVersionCommand) run(cctx *CommandContext,
 		// We do not allow creation of an "empty" WDV.
 		return fmt.Errorf("missing configuration for compute provider")
 	}
+	scalerType, err := scalerTypeForProvider(providerType)
+	if err != nil {
+		return err
+	}
 	cc := &computepb.ComputeConfig{
 		ScalingGroups: map[string]*computepb.ComputeConfigScalingGroup{
 			"default": {
@@ -1051,7 +1056,7 @@ func (c *TemporalWorkerDeploymentCreateVersionCommand) run(cctx *CommandContext,
 					Details: detailsPayload,
 				},
 				Scaler: &computepb.ComputeScaler{
-					Type: scalerTypeForProvider(providerType),
+					Type: scalerType,
 				},
 			},
 		},
@@ -1121,13 +1126,17 @@ func (c *TemporalWorkerDeploymentUpdateVersionComputeConfigCommand) run(cctx *Co
 		if providerType == "" {
 			return fmt.Errorf("missing configuration for compute provider")
 		}
+		scalerType, err := scalerTypeForProvider(providerType)
+		if err != nil {
+			return err
+		}
 		sg := &computepb.ComputeConfigScalingGroup{
 			Provider: &computepb.ComputeProvider{
 				Type:    providerType,
 				Details: detailsPayload,
 			},
 			Scaler: &computepb.ComputeScaler{
-				Type: scalerTypeForProvider(providerType),
+				Type: scalerType,
 			},
 		}
 		updatePaths := []string{
