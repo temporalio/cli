@@ -22,11 +22,11 @@ require (
 	github.com/spf13/pflag v1.0.10
 	github.com/stretchr/testify v1.11.1
 	github.com/temporalio/cli/cliext v0.0.0
-	github.com/temporalio/ui-server/v2 v2.49.1
-	go.temporal.io/api v1.62.15-0.20260707174736-71cd0b61aab3
+	github.com/temporalio/ui-server/v2 v2.52.0
+	go.temporal.io/api v1.63.0
 	go.temporal.io/sdk v1.44.1
 	go.temporal.io/sdk/contrib/envconfig v1.0.2
-	go.temporal.io/server v1.32.0-157.0
+	go.temporal.io/server v1.32.0-158.0
 	golang.org/x/exp v0.0.0-20260410095643-746e56fc9e2f
 	golang.org/x/mod v0.35.0
 	golang.org/x/term v0.43.0
@@ -120,7 +120,7 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.5.2 // indirect
 	github.com/golang/mock v1.7.0-rc.1 // indirect
 	github.com/golang/snappy v1.0.0 // indirect
-	github.com/gomarkdown/markdown v0.0.0-20250311123330-531bef5e742b // indirect
+	github.com/gomarkdown/markdown v0.0.0-20260411013819-759bbc3e3207 // indirect
 	github.com/google/gnostic-models v0.7.1 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.15 // indirect

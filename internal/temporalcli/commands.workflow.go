@@ -137,9 +137,10 @@ func (c *TemporalWorkflowUpdateOptionsCommand) run(cctx *CommandContext, args []
 		}
 	}
 
-	if c.VersioningOverrideBehavior.Value == "pinned" {
+	if c.VersioningOverrideBehavior.Value == "pinned" ||
+		c.VersioningOverrideBehavior.Value == "one_time" {
 		if c.VersioningOverrideDeploymentName == "" || c.VersioningOverrideBuildId == "" {
-			return fmt.Errorf("missing deployment name and/or build id with 'pinned' behavior")
+			return fmt.Errorf("missing deployment name and/or build id with '%s' behavior", c.VersioningOverrideBehavior.Value)
 		}
 	}
 
@@ -164,9 +165,10 @@ func (c *TemporalWorkflowUpdateOptionsCommand) run(cctx *CommandContext, args []
 		overrideChange = &client.VersioningOverrideChange{
 			Value: &client.AutoUpgradeVersioningOverride{},
 		}
+	case "one_time":
 	default:
 		return fmt.Errorf(
-			"invalid deployment behavior: %v, valid values are: 'unspecified', 'pinned', and 'auto_upgrade'",
+			"invalid deployment behavior: %v, valid values are: 'unspecified', 'pinned', 'auto_upgrade', and 'one_time'",
 			c.VersioningOverrideBehavior,
 		)
 	}
@@ -176,36 +178,39 @@ func (c *TemporalWorkflowUpdateOptionsCommand) run(cctx *CommandContext, args []
 		return err
 	} else if exec != nil {
 
-		_, err := cl.UpdateWorkflowExecutionOptions(cctx, client.UpdateWorkflowExecutionOptionsRequest{
-			WorkflowId: exec.WorkflowId,
-			RunId:      exec.RunId,
-			WorkflowExecutionOptionsChanges: client.WorkflowExecutionOptionsChanges{
-				VersioningOverride: overrideChange,
-			},
-		})
+		if c.VersioningOverrideBehavior.Value == "one_time" {
+			err = c.updateWorkflowExecutionOptionsWithProto(cctx, cl, exec, oneTimeVersioningOverrideToProto(c.VersioningOverrideDeploymentName, c.VersioningOverrideBuildId))
+		} else {
+			_, err = cl.UpdateWorkflowExecutionOptions(cctx, client.UpdateWorkflowExecutionOptionsRequest{
+				WorkflowId: exec.WorkflowId,
+				RunId:      exec.RunId,
+				WorkflowExecutionOptionsChanges: client.WorkflowExecutionOptionsChanges{
+					VersioningOverride: overrideChange,
+				},
+			})
+		}
 		if err != nil {
 			return fmt.Errorf("failed to update workflow options: %w", err)
 		}
 		cctx.Printer.Println("Update workflow options succeeded")
 	} else { // Run batch
-		var workflowExecutionOptions *workflowpb.WorkflowExecutionOptions
-		protoMask, err := fieldmaskpb.New(workflowExecutionOptions, "versioning_override")
+		var protoVerOverride *workflowpb.VersioningOverride
+		if c.VersioningOverrideBehavior.Value == "one_time" {
+			protoVerOverride = oneTimeVersioningOverrideToProto(c.VersioningOverrideDeploymentName, c.VersioningOverrideBuildId)
+		} else if overrideChange != nil {
+			protoVerOverride = versioningOverrideToProto(overrideChange.Value)
+		}
+
+		workflowExecutionOptions, protoMask, err := workflowExecutionOptionsForVersioningOverride(protoVerOverride)
 		if err != nil {
 			return fmt.Errorf("invalid field mask: %w", err)
 		}
 
-		var protoVerOverride *workflowpb.VersioningOverride
-		if overrideChange != nil {
-			protoVerOverride = versioningOverrideToProto(overrideChange.Value)
-		}
-
 		batchReq.Operation = &workflowservice.StartBatchOperationRequest_UpdateWorkflowOptionsOperation{
 			UpdateWorkflowOptionsOperation: &batch.BatchOperationUpdateWorkflowExecutionOptions{
-				Identity: c.Parent.Identity,
-				WorkflowExecutionOptions: &workflowpb.WorkflowExecutionOptions{
-					VersioningOverride: protoVerOverride,
-				},
-				UpdateMask: protoMask,
+				Identity:                 c.Parent.Identity,
+				WorkflowExecutionOptions: workflowExecutionOptions,
+				UpdateMask:               protoMask,
 			},
 		}
 		if err := startBatchJob(cctx, cl, batchReq); err != nil {
@@ -213,6 +218,43 @@ func (c *TemporalWorkflowUpdateOptionsCommand) run(cctx *CommandContext, args []
 		}
 	}
 	return nil
+}
+
+func (c *TemporalWorkflowUpdateOptionsCommand) updateWorkflowExecutionOptionsWithProto(
+	ctx context.Context,
+	cl client.Client,
+	exec *common.WorkflowExecution,
+	override *workflowpb.VersioningOverride,
+) error {
+	workflowExecutionOptions, protoMask, err := workflowExecutionOptionsForVersioningOverride(override)
+	if err != nil {
+		return fmt.Errorf("invalid field mask: %w", err)
+	}
+
+	_, err = cl.WorkflowService().UpdateWorkflowExecutionOptions(ctx, &workflowservice.UpdateWorkflowExecutionOptionsRequest{
+		Namespace: c.Parent.Namespace,
+		WorkflowExecution: &common.WorkflowExecution{
+			WorkflowId: exec.GetWorkflowId(),
+			RunId:      exec.GetRunId(),
+		},
+		WorkflowExecutionOptions: workflowExecutionOptions,
+		UpdateMask:               protoMask,
+		Identity:                 c.Parent.Identity,
+	})
+	return err
+}
+
+func workflowExecutionOptionsForVersioningOverride(
+	override *workflowpb.VersioningOverride,
+) (*workflowpb.WorkflowExecutionOptions, *fieldmaskpb.FieldMask, error) {
+	workflowExecutionOptions := &workflowpb.WorkflowExecutionOptions{
+		VersioningOverride: override,
+	}
+	protoMask, err := fieldmaskpb.New(workflowExecutionOptions, "versioning_override")
+	if err != nil {
+		return nil, nil, err
+	}
+	return workflowExecutionOptions, protoMask, nil
 }
 
 func (c *TemporalWorkflowMetadataCommand) run(cctx *CommandContext, _ []string) error {
@@ -757,10 +799,7 @@ func versioningOverrideToProto(versioningOverride client.VersioningOverride) *wo
 			Override: &workflowpb.VersioningOverride_Pinned{
 				Pinned: &workflowpb.VersioningOverride_PinnedOverride{
 					Behavior: workflowpb.VersioningOverride_PINNED_OVERRIDE_BEHAVIOR_PINNED,
-					Version: &deploymentpb.WorkerDeploymentVersion{
-						DeploymentName: v.Version.DeploymentName,
-						BuildId:        v.Version.BuildID,
-					},
+					Version:  workerDeploymentVersionToProto(v.Version.DeploymentName, v.Version.BuildID),
 				},
 			},
 		}
@@ -771,5 +810,22 @@ func versioningOverrideToProto(versioningOverride client.VersioningOverride) *wo
 		}
 	default:
 		return nil
+	}
+}
+
+func workerDeploymentVersionToProto(deploymentName, buildID string) *deploymentpb.WorkerDeploymentVersion {
+	return &deploymentpb.WorkerDeploymentVersion{
+		DeploymentName: deploymentName,
+		BuildId:        buildID,
+	}
+}
+
+func oneTimeVersioningOverrideToProto(deploymentName, buildID string) *workflowpb.VersioningOverride {
+	return &workflowpb.VersioningOverride{
+		Override: &workflowpb.VersioningOverride_OneTime{
+			OneTime: &workflowpb.VersioningOverride_OneTimeOverride{
+				TargetDeploymentVersion: workerDeploymentVersionToProto(deploymentName, buildID),
+			},
+		},
 	}
 }

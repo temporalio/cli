@@ -431,11 +431,11 @@ type WorkflowUpdateOptionsOptions struct {
 
 func (v *WorkflowUpdateOptionsOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
-	v.VersioningOverrideBehavior = cliext.NewFlagStringEnum([]string{"pinned", "auto_upgrade"}, "")
-	f.Var(&v.VersioningOverrideBehavior, "versioning-override-behavior", "Override the versioning behavior of a Workflow. Accepted values: pinned, auto_upgrade. Required.")
+	v.VersioningOverrideBehavior = cliext.NewFlagStringEnum([]string{"pinned", "one_time", "auto_upgrade"}, "")
+	f.Var(&v.VersioningOverrideBehavior, "versioning-override-behavior", "Override the versioning behavior of a Workflow. Accepted values: pinned, one_time, auto_upgrade. Required.")
 	_ = cobra.MarkFlagRequired(f, "versioning-override-behavior")
-	f.StringVar(&v.VersioningOverrideDeploymentName, "versioning-override-deployment-name", "", "When overriding to a `pinned` behavior, specifies the Deployment Name of the version to target.")
-	f.StringVar(&v.VersioningOverrideBuildId, "versioning-override-build-id", "", "When overriding to a `pinned` behavior, specifies the Build ID of the version to target.")
+	f.StringVar(&v.VersioningOverrideDeploymentName, "versioning-override-deployment-name", "", "When overriding to a `pinned` or `one_time` behavior, specifies the Deployment Name of the version to target.")
+	f.StringVar(&v.VersioningOverrideBuildId, "versioning-override-build-id", "", "When overriding to a `pinned` or `one_time` behavior, specifies the Build ID of the version to target.")
 }
 
 type ActivityReferenceOptions struct {
@@ -838,9 +838,9 @@ func NewTemporalActivityPauseCommand(cctx *CommandContext, parent *TemporalActiv
 	s.Command.Use = "pause [flags]"
 	s.Command.Short = "Pause an Activity"
 	if hasHighlighting {
-		s.Command.Long = "Pause an Activity. Not supported for Standalone Activities.\n\nIf the Activity is not currently running (e.g. because it previously\nfailed), it will not be run again until it is unpaused.\n\nHowever, if the Activity is currently running, it will run until the next\ntime it fails, completes, or times out, at which point the pause will kick in.\n\nIf the Activity is on its last retry attempt and fails, the failure will\nbe returned to the caller, just as if the Activity had not been paused.\n\nSpecify the Activity and Workflow IDs:\n\n\x1b[1mtemporal activity pause \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\x1b[0m\n\nTo later unpause the activity, see unpause. You may also want to\nreset the activity to unpause it while also starting it from the beginning."
+		s.Command.Long = "Pause an Activity. Not supported for Standalone Activities.\n\nIf the Activity is not currently running (e.g. because it previously\nfailed), it will not be run again until it is unpaused.\n\nHowever, if the Activity is currently running, it will run until the next\ntime it fails, completes, or times out, at which point the pause will kick in.\n\nPause does not stop or extend the Activity's Schedule-To-Close Timeout.\nA paused Activity can still time out. Use \x1b[1mtemporal activity update-options\x1b[0m\nto extend timeout settings before a long pause.\n\nIf the Activity is on its last retry attempt and fails, the failure will\nbe returned to the caller, just as if the Activity had not been paused.\n\nSpecify the Activity and Workflow IDs:\n\n\x1b[1mtemporal activity pause \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\x1b[0m\n\nTo later unpause the activity, see unpause. You may also want to\nreset the activity to unpause it while also starting it from the beginning."
 	} else {
-		s.Command.Long = "Pause an Activity. Not supported for Standalone Activities.\n\nIf the Activity is not currently running (e.g. because it previously\nfailed), it will not be run again until it is unpaused.\n\nHowever, if the Activity is currently running, it will run until the next\ntime it fails, completes, or times out, at which point the pause will kick in.\n\nIf the Activity is on its last retry attempt and fails, the failure will\nbe returned to the caller, just as if the Activity had not been paused.\n\nSpecify the Activity and Workflow IDs:\n\n```\ntemporal activity pause \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n```\n\nTo later unpause the activity, see unpause. You may also want to\nreset the activity to unpause it while also starting it from the beginning."
+		s.Command.Long = "Pause an Activity. Not supported for Standalone Activities.\n\nIf the Activity is not currently running (e.g. because it previously\nfailed), it will not be run again until it is unpaused.\n\nHowever, if the Activity is currently running, it will run until the next\ntime it fails, completes, or times out, at which point the pause will kick in.\n\nPause does not stop or extend the Activity's Schedule-To-Close Timeout.\nA paused Activity can still time out. Use `temporal activity update-options`\nto extend timeout settings before a long pause.\n\nIf the Activity is on its last retry attempt and fails, the failure will\nbe returned to the caller, just as if the Activity had not been paused.\n\nSpecify the Activity and Workflow IDs:\n\n```\ntemporal activity pause \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n```\n\nTo later unpause the activity, see unpause. You may also want to\nreset the activity to unpause it while also starting it from the beginning."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "The Activity ID to pause. Required.")
@@ -1565,9 +1565,9 @@ func NewTemporalNexusOperationCountCommand(cctx *CommandContext, parent *Tempora
 	s.Command.Use = "count [flags]"
 	s.Command.Short = "Count Nexus Operations matching a query (Experimental)"
 	if hasHighlighting {
-		s.Command.Long = "Return a count of Nexus Operations. Use \x1b[1m--query\x1b[0m\nto filter the operations to be counted.\n\n\x1b[1mtemporal nexus operation count \\\n    --query 'NexusEndpoint=\"YourEndpoint\"'\x1b[0m\n\nVisit https://docs.temporal.io/visibility to read more about\nSearch Attributes and queries."
+		s.Command.Long = "Return a count of Nexus Operations. Use \x1b[1m--query\x1b[0m\nto filter the operations to be counted.\n\n\x1b[1mtemporal nexus operation count \\\n    --query 'Endpoint=\"YourEndpoint\"'\x1b[0m\n\nVisit https://docs.temporal.io/visibility to read more about\nSearch Attributes and queries."
 	} else {
-		s.Command.Long = "Return a count of Nexus Operations. Use `--query`\nto filter the operations to be counted.\n\n```\ntemporal nexus operation count \\\n    --query 'NexusEndpoint=\"YourEndpoint\"'\n```\n\nVisit https://docs.temporal.io/visibility to read more about\nSearch Attributes and queries."
+		s.Command.Long = "Return a count of Nexus Operations. Use `--query`\nto filter the operations to be counted.\n\n```\ntemporal nexus operation count \\\n    --query 'Endpoint=\"YourEndpoint\"'\n```\n\nVisit https://docs.temporal.io/visibility to read more about\nSearch Attributes and queries."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Query to filter Nexus Operation Executions to count.")
@@ -1652,9 +1652,9 @@ func NewTemporalNexusOperationListCommand(cctx *CommandContext, parent *Temporal
 	s.Command.Use = "list [flags]"
 	s.Command.Short = "List Nexus Operations matching a query (Experimental)"
 	if hasHighlighting {
-		s.Command.Long = "List Nexus Operations. Use \x1b[1m--query\x1b[0m to filter results.\n\n\x1b[1mtemporal nexus operation list \\\n    --query 'NexusEndpoint=\"YourEndpoint\"'\x1b[0m\n\nVisit https://docs.temporal.io/visibility to read more about\nSearch Attributes and queries."
+		s.Command.Long = "List Nexus Operations. Use \x1b[1m--query\x1b[0m to filter results.\n\n\x1b[1mtemporal nexus operation list \\\n    --query 'Endpoint=\"YourEndpoint\"'\x1b[0m\n\nVisit https://docs.temporal.io/visibility to read more about\nSearch Attributes and queries."
 	} else {
-		s.Command.Long = "List Nexus Operations. Use `--query` to filter results.\n\n```\ntemporal nexus operation list \\\n    --query 'NexusEndpoint=\"YourEndpoint\"'\n```\n\nVisit https://docs.temporal.io/visibility to read more about\nSearch Attributes and queries."
+		s.Command.Long = "List Nexus Operations. Use `--query` to filter results.\n\n```\ntemporal nexus operation list \\\n    --query 'Endpoint=\"YourEndpoint\"'\n```\n\nVisit https://docs.temporal.io/visibility to read more about\nSearch Attributes and queries."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Query to filter the Nexus Operation Executions to list.")
@@ -2823,6 +2823,7 @@ type TemporalServerStartDevCommand struct {
 	UiPublicPath       string
 	UiAssetPath        string
 	UiCodecEndpoint    string
+	UiDisableNewsFetch bool
 	SqlitePragma       []string
 	DynamicConfigValue []string
 	LogConfig          bool
@@ -2853,6 +2854,7 @@ func NewTemporalServerStartDevCommand(cctx *CommandContext, parent *TemporalServ
 	s.Command.Flags().StringVar(&s.UiPublicPath, "ui-public-path", "", "The public base path for the Web UI. Defaults to `/`.")
 	s.Command.Flags().StringVar(&s.UiAssetPath, "ui-asset-path", "", "UI custom assets path.")
 	s.Command.Flags().StringVar(&s.UiCodecEndpoint, "ui-codec-endpoint", "", "UI remote codec HTTP endpoint.")
+	s.Command.Flags().BoolVar(&s.UiDisableNewsFetch, "ui-disable-news-fetch", false, "Disable the Web UI newsfeed. When set, the UI will not request the newsfeed and the button to open the newsfeed panel is hidden.")
 	s.Command.Flags().StringArrayVar(&s.SqlitePragma, "sqlite-pragma", nil, "SQLite pragma statements in \"PRAGMA=VALUE\" format.")
 	s.Command.Flags().StringArrayVar(&s.DynamicConfigValue, "dynamic-config-value", nil, "Dynamic configuration value using `KEY=VALUE` pairs. Keys must be identifiers, and values must be JSON values. For example: `YourKey=\"YourString\"` Can be passed multiple times.")
 	s.Command.Flags().BoolVar(&s.LogConfig, "log-config", false, "Print the server config to stderr.")
@@ -5115,16 +5117,16 @@ func NewTemporalWorkflowUpdateOptionsCommand(cctx *CommandContext, parent *Tempo
 	s.Command.Use = "update-options [flags]"
 	s.Command.Short = "Change Workflow Execution Options"
 	if hasHighlighting {
-		s.Command.Long = "Modify properties of Workflow Executions:\n\n\x1b[1mtemporal workflow update-options [options]\x1b[0m\n\nIt can override the Worker Deployment configuration of a\nWorkflow Execution, which controls Worker Versioning.\n\nFor example, to force Workers in the current Deployment execute the\nnext Workflow Task change behavior to \x1b[1mauto_upgrade\x1b[0m:\n\n\x1b[1mtemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior auto_upgrade\x1b[0m\n\nor to pin the workflow execution to a Worker Deployment, set behavior\nto \x1b[1mpinned\x1b[0m:\n\n\x1b[1mtemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior pinned \\\n    --versioning-override-deployment-name YourDeploymentName \\\n    --versioning-override-build-id YourDeploymentBuildId\x1b[0m\n\nTo remove any previous overrides, set the behavior to\n\x1b[1munspecified\x1b[0m:\n\n\x1b[1mtemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior unspecified\x1b[0m\n\nTo see the current override use \x1b[1mtemporal workflow describe\x1b[0m"
+		s.Command.Long = "Modify properties of Workflow Executions:\n\n\x1b[1mtemporal workflow update-options [options]\x1b[0m\n\nIt can override the Worker Deployment configuration of a\nWorkflow Execution, which controls Worker Versioning.\n\nFor example, to force Workers in the current Deployment execute the\nnext Workflow Task change behavior to \x1b[1mauto_upgrade\x1b[0m:\n\n\x1b[1mtemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior auto_upgrade\x1b[0m\n\nor to pin the workflow execution to a Worker Deployment, set behavior\nto \x1b[1mpinned\x1b[0m:\n\n\x1b[1mtemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior pinned \\\n    --versioning-override-deployment-name YourDeploymentName \\\n    --versioning-override-build-id YourDeploymentBuildId\x1b[0m\n\nor to move the workflow execution to a Worker Deployment Version until\nthe next Workflow Task completes there, set behavior to \x1b[1mone_time\x1b[0m:\n\n\x1b[1mtemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior one_time \\\n    --versioning-override-deployment-name YourDeploymentName \\\n    --versioning-override-build-id YourDeploymentBuildId\x1b[0m\n\nTo remove any previous overrides, set the behavior to\n\x1b[1munspecified\x1b[0m:\n\n\x1b[1mtemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior unspecified\x1b[0m\n\nTo see the current override use \x1b[1mtemporal workflow describe\x1b[0m"
 	} else {
-		s.Command.Long = "Modify properties of Workflow Executions:\n\n```\ntemporal workflow update-options [options]\n```\n\nIt can override the Worker Deployment configuration of a\nWorkflow Execution, which controls Worker Versioning.\n\nFor example, to force Workers in the current Deployment execute the\nnext Workflow Task change behavior to `auto_upgrade`:\n\n```\ntemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior auto_upgrade\n```\n\nor to pin the workflow execution to a Worker Deployment, set behavior\nto `pinned`:\n\n```\ntemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior pinned \\\n    --versioning-override-deployment-name YourDeploymentName \\\n    --versioning-override-build-id YourDeploymentBuildId\n```\n\nTo remove any previous overrides, set the behavior to\n`unspecified`:\n\n```\ntemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior unspecified\n```\n\nTo see the current override use `temporal workflow describe`"
+		s.Command.Long = "Modify properties of Workflow Executions:\n\n```\ntemporal workflow update-options [options]\n```\n\nIt can override the Worker Deployment configuration of a\nWorkflow Execution, which controls Worker Versioning.\n\nFor example, to force Workers in the current Deployment execute the\nnext Workflow Task change behavior to `auto_upgrade`:\n\n```\ntemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior auto_upgrade\n```\n\nor to pin the workflow execution to a Worker Deployment, set behavior\nto `pinned`:\n\n```\ntemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior pinned \\\n    --versioning-override-deployment-name YourDeploymentName \\\n    --versioning-override-build-id YourDeploymentBuildId\n```\n\nor to move the workflow execution to a Worker Deployment Version until\nthe next Workflow Task completes there, set behavior to `one_time`:\n\n```\ntemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior one_time \\\n    --versioning-override-deployment-name YourDeploymentName \\\n    --versioning-override-build-id YourDeploymentBuildId\n```\n\nTo remove any previous overrides, set the behavior to\n`unspecified`:\n\n```\ntemporal workflow update-options \\\n    --workflow-id YourWorkflowId \\\n    --versioning-override-behavior unspecified\n```\n\nTo see the current override use `temporal workflow describe`"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.VersioningOverrideBehavior = cliext.NewFlagStringEnum([]string{"unspecified", "pinned", "auto_upgrade"}, "")
-	s.Command.Flags().Var(&s.VersioningOverrideBehavior, "versioning-override-behavior", "Override the versioning behavior of a Workflow. Accepted values: unspecified, pinned, auto_upgrade. Required.")
+	s.VersioningOverrideBehavior = cliext.NewFlagStringEnum([]string{"unspecified", "pinned", "one_time", "auto_upgrade"}, "")
+	s.Command.Flags().Var(&s.VersioningOverrideBehavior, "versioning-override-behavior", "Override the versioning behavior of a Workflow. Accepted values: unspecified, pinned, one_time, auto_upgrade. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "versioning-override-behavior")
-	s.Command.Flags().StringVar(&s.VersioningOverrideDeploymentName, "versioning-override-deployment-name", "", "When overriding to a `pinned` behavior, specifies the Deployment Name of the version to target.")
-	s.Command.Flags().StringVar(&s.VersioningOverrideBuildId, "versioning-override-build-id", "", "When overriding to a `pinned` behavior, specifies the Build ID of the version to target.")
+	s.Command.Flags().StringVar(&s.VersioningOverrideDeploymentName, "versioning-override-deployment-name", "", "When overriding to a `pinned` or `one_time` behavior, specifies the Deployment Name of the version to target.")
+	s.Command.Flags().StringVar(&s.VersioningOverrideBuildId, "versioning-override-build-id", "", "When overriding to a `pinned` or `one_time` behavior, specifies the Build ID of the version to target.")
 	s.SingleWorkflowOrBatchOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {

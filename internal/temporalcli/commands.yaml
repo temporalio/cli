@@ -492,6 +492,10 @@ commands:
       However, if the Activity is currently running, it will run until the next
       time it fails, completes, or times out, at which point the pause will kick in.
 
+      Pause does not stop or extend the Activity's Schedule-To-Close Timeout.
+      A paused Activity can still time out. Use `temporal activity update-options`
+      to extend timeout settings before a long pause.
+
       If the Activity is on its last retry attempt and fails, the failure will
       be returned to the caller, just as if the Activity had not been paused.
 
@@ -1916,7 +1920,7 @@ commands:
 
       ```
       temporal nexus operation list \
-          --query 'NexusEndpoint="YourEndpoint"'
+          --query 'Endpoint="YourEndpoint"'
       ```
 
       Visit https://docs.temporal.io/visibility to read more about
@@ -1945,7 +1949,7 @@ commands:
 
       ```
       temporal nexus operation count \
-          --query 'NexusEndpoint="YourEndpoint"'
+          --query 'Endpoint="YourEndpoint"'
       ```
 
       Visit https://docs.temporal.io/visibility to read more about
@@ -3024,6 +3028,11 @@ commands:
       - name: ui-codec-endpoint
         type: string
         description: UI remote codec HTTP endpoint.
+      - name: ui-disable-news-fetch
+        type: bool
+        description: |
+          Disable the Web UI newsfeed. When set, the UI will not request the
+          newsfeed and the button to open the newsfeed panel is hidden.
       - name: sqlite-pragma
         type: string[]
         description: SQLite pragma statements in "PRAGMA=VALUE" format.
@@ -4163,6 +4172,17 @@ commands:
           --versioning-override-build-id YourDeploymentBuildId
       ```
 
+      or to move the workflow execution to a Worker Deployment Version until
+      the next Workflow Task completes there, set behavior to `one_time`:
+
+      ```
+      temporal workflow update-options \
+          --workflow-id YourWorkflowId \
+          --versioning-override-behavior one_time \
+          --versioning-override-deployment-name YourDeploymentName \
+          --versioning-override-build-id YourDeploymentBuildId
+      ```
+
       To remove any previous overrides, set the behavior to
       `unspecified`:
 
@@ -4185,17 +4205,18 @@ commands:
         enum-values:
           - unspecified
           - pinned
+          - one_time
           - auto_upgrade
       - name: versioning-override-deployment-name
         type: string
         description:
-          When overriding to a `pinned` behavior, specifies the Deployment Name of the
-          version to target.
+          When overriding to a `pinned` or `one_time` behavior, specifies the
+          Deployment Name of the version to target.
       - name: versioning-override-build-id
         type: string
         description:
-          When overriding to a `pinned` behavior, specifies the Build ID of the
-          version to target.
+          When overriding to a `pinned` or `one_time` behavior, specifies the
+          Build ID of the version to target.
   - name: temporal workflow query
     summary: Retrieve Workflow Execution state
     description: |
@@ -5472,17 +5493,18 @@ option-sets:
         required: true
         enum-values:
           - pinned
+          - one_time
           - auto_upgrade
       - name: versioning-override-deployment-name
         type: string
         description:
-          When overriding to a `pinned` behavior, specifies the Deployment Name of the
-          version to target.
+          When overriding to a `pinned` or `one_time` behavior, specifies the
+          Deployment Name of the version to target.
       - name: versioning-override-build-id
         type: string
         description:
-          When overriding to a `pinned` behavior, specifies the Build ID of the
-          version to target.
+          When overriding to a `pinned` or `one_time` behavior, specifies the
+          Build ID of the version to target.
 
   - name: activity-reference
     options:
