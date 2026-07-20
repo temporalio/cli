@@ -1516,9 +1516,9 @@ func NewTemporalNexusOperationCountCommand(cctx *CommandContext, parent *Tempora
 	s.Command.Use = "count [flags]"
 	s.Command.Short = "Count Nexus Operations matching a query (Experimental)"
 	if hasHighlighting {
-		s.Command.Long = "Return a count of Nexus Operations. Use \x1b[1m--query\x1b[0m\nto filter the operations to be counted.\n\n\x1b[1mtemporal nexus operation count \\\n    --query 'NexusEndpoint=\"YourEndpoint\"'\x1b[0m\n\nVisit https://docs.temporal.io/visibility to read more about\nSearch Attributes and queries."
+		s.Command.Long = "Return a count of Nexus Operations. Use \x1b[1m--query\x1b[0m\nto filter the operations to be counted.\n\n\x1b[1mtemporal nexus operation count \\\n    --query 'Endpoint=\"YourEndpoint\"'\x1b[0m\n\nVisit https://docs.temporal.io/visibility to read more about\nSearch Attributes and queries."
 	} else {
-		s.Command.Long = "Return a count of Nexus Operations. Use `--query`\nto filter the operations to be counted.\n\n```\ntemporal nexus operation count \\\n    --query 'NexusEndpoint=\"YourEndpoint\"'\n```\n\nVisit https://docs.temporal.io/visibility to read more about\nSearch Attributes and queries."
+		s.Command.Long = "Return a count of Nexus Operations. Use `--query`\nto filter the operations to be counted.\n\n```\ntemporal nexus operation count \\\n    --query 'Endpoint=\"YourEndpoint\"'\n```\n\nVisit https://docs.temporal.io/visibility to read more about\nSearch Attributes and queries."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Query to filter Nexus Operation Executions to count.")
@@ -1603,9 +1603,9 @@ func NewTemporalNexusOperationListCommand(cctx *CommandContext, parent *Temporal
 	s.Command.Use = "list [flags]"
 	s.Command.Short = "List Nexus Operations matching a query (Experimental)"
 	if hasHighlighting {
-		s.Command.Long = "List Nexus Operations. Use \x1b[1m--query\x1b[0m to filter results.\n\n\x1b[1mtemporal nexus operation list \\\n    --query 'NexusEndpoint=\"YourEndpoint\"'\x1b[0m\n\nVisit https://docs.temporal.io/visibility to read more about\nSearch Attributes and queries."
+		s.Command.Long = "List Nexus Operations. Use \x1b[1m--query\x1b[0m to filter results.\n\n\x1b[1mtemporal nexus operation list \\\n    --query 'Endpoint=\"YourEndpoint\"'\x1b[0m\n\nVisit https://docs.temporal.io/visibility to read more about\nSearch Attributes and queries."
 	} else {
-		s.Command.Long = "List Nexus Operations. Use `--query` to filter results.\n\n```\ntemporal nexus operation list \\\n    --query 'NexusEndpoint=\"YourEndpoint\"'\n```\n\nVisit https://docs.temporal.io/visibility to read more about\nSearch Attributes and queries."
+		s.Command.Long = "List Nexus Operations. Use `--query` to filter results.\n\n```\ntemporal nexus operation list \\\n    --query 'Endpoint=\"YourEndpoint\"'\n```\n\nVisit https://docs.temporal.io/visibility to read more about\nSearch Attributes and queries."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Query to filter the Nexus Operation Executions to list.")
@@ -2774,6 +2774,7 @@ type TemporalServerStartDevCommand struct {
 	UiPublicPath       string
 	UiAssetPath        string
 	UiCodecEndpoint    string
+	UiDisableNewsFetch bool
 	SqlitePragma       []string
 	DynamicConfigValue []string
 	LogConfig          bool
@@ -2804,6 +2805,7 @@ func NewTemporalServerStartDevCommand(cctx *CommandContext, parent *TemporalServ
 	s.Command.Flags().StringVar(&s.UiPublicPath, "ui-public-path", "", "The public base path for the Web UI. Defaults to `/`.")
 	s.Command.Flags().StringVar(&s.UiAssetPath, "ui-asset-path", "", "UI custom assets path.")
 	s.Command.Flags().StringVar(&s.UiCodecEndpoint, "ui-codec-endpoint", "", "UI remote codec HTTP endpoint.")
+	s.Command.Flags().BoolVar(&s.UiDisableNewsFetch, "ui-disable-news-fetch", false, "Disable the Web UI newsfeed. When set, the UI will not request the newsfeed and the button to open the newsfeed panel is hidden.")
 	s.Command.Flags().StringArrayVar(&s.SqlitePragma, "sqlite-pragma", nil, "SQLite pragma statements in \"PRAGMA=VALUE\" format.")
 	s.Command.Flags().StringArrayVar(&s.DynamicConfigValue, "dynamic-config-value", nil, "Dynamic configuration value using `KEY=VALUE` pairs. Keys must be identifiers, and values must be JSON values. For example: `YourKey=\"YourString\"` Can be passed multiple times.")
 	s.Command.Flags().BoolVar(&s.LogConfig, "log-config", false, "Print the server config to stderr.")

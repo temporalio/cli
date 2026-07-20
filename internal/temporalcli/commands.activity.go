@@ -365,21 +365,23 @@ func (c *TemporalActivityDescribeCommand) run(cctx *CommandContext, args []strin
 	}
 	defer cl.Close()
 
-	handle := cl.GetActivityHandle(client.GetActivityHandleOptions{
-		ActivityID: c.ActivityId,
-		RunID:      c.RunId,
+	resp, err := cl.WorkflowService().DescribeActivityExecution(cctx, &workflowservice.DescribeActivityExecutionRequest{
+		Namespace:          c.Parent.Namespace,
+		ActivityId:         c.ActivityId,
+		RunId:              c.RunId,
+		IncludeLastFailure: true,
 	})
-	desc, err := handle.Describe(cctx, client.DescribeActivityOptions{})
 	if err != nil {
 		return fmt.Errorf("failed describing activity: %w", err)
 	}
 	if c.Raw || cctx.JSONOutput {
-		return cctx.Printer.PrintStructured(desc.RawExecutionInfo, printer.StructuredOptions{})
+		return cctx.Printer.PrintStructured(resp, printer.StructuredOptions{})
 	}
-	return printActivityDescription(cctx, desc.RawExecutionInfo)
+	return printActivityDescription(cctx, resp)
 }
 
-func printActivityDescription(cctx *CommandContext, info *activitypb.ActivityExecutionInfo) error {
+func printActivityDescription(cctx *CommandContext, resp *workflowservice.DescribeActivityExecutionResponse) error {
+	info := resp.GetInfo()
 	statusShorthand := func(s enumspb.ActivityExecutionStatus) string {
 		for name, val := range enumspb.ActivityExecutionStatus_shorthandValue {
 			if int32(s) == val {
@@ -442,7 +444,39 @@ func printActivityDescription(cctx *CommandContext, info *activitypb.ActivityExe
 	if f := info.GetLastFailure(); f != nil {
 		d.LastFailure = cctx.MarshalFriendlyFailureBodyText(f, "    ")
 	}
-	return cctx.Printer.PrintStructured(d, printer.StructuredOptions{})
+	cctx.Printer.Println(color.MagentaString("Activity Execution Info:"))
+	if err := cctx.Printer.PrintStructured(d, printer.StructuredOptions{}); err != nil {
+		return err
+	}
+	return printActivityCallbacks(cctx, resp.GetCallbacks())
+}
+
+func printActivityCallbacks(cctx *CommandContext, callbacks []*activitypb.CallbackInfo) error {
+	if len(callbacks) == 0 {
+		return nil
+	}
+	rows := make([]struct {
+		State                   string
+		Attempt                 int32
+		RegistrationTime        time.Time `cli:",cardOmitEmpty"`
+		NextAttemptScheduleTime time.Time `cli:",cardOmitEmpty"`
+		BlockedReason           string    `cli:",cardOmitEmpty"`
+		LastAttemptFailure      string    `cli:",cardOmitEmpty"`
+	}, len(callbacks))
+	for i, cb := range callbacks {
+		info := cb.GetInfo()
+		rows[i].State = info.GetState().String()
+		rows[i].Attempt = info.GetAttempt()
+		rows[i].RegistrationTime = timestampToTime(info.GetRegistrationTime())
+		rows[i].NextAttemptScheduleTime = timestampToTime(info.GetNextAttemptScheduleTime())
+		rows[i].BlockedReason = info.GetBlockedReason()
+		if f := info.GetLastAttemptFailure(); f != nil {
+			rows[i].LastAttemptFailure = cctx.MarshalFriendlyFailureBodyText(f, "    ")
+		}
+	}
+	cctx.Printer.Println()
+	cctx.Printer.Println(color.MagentaString("Callbacks:"))
+	return cctx.Printer.PrintStructured(rows, printer.StructuredOptions{Table: &printer.TableOptions{}})
 }
 
 func (c *TemporalActivityListCommand) run(cctx *CommandContext, args []string) error {
