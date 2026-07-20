@@ -979,7 +979,7 @@ func (s *SharedServerSuite) TestActivity_Describe_StartDelay() {
 	)
 	s.NoError(res.Err)
 	rawOut := res.Stdout.String()
-	s.ContainsOnSameLine(rawOut, "StartDelay", `"2s"`)
+	s.ContainsOnSameLine(rawOut, "startDelay", `"2s"`)
 }
 
 // Text-only: verifies LastFailure is rendered as text not JSON.
