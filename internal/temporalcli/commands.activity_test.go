@@ -965,7 +965,9 @@ func (s *SharedServerSuite) TestActivity_Describe_StartDelay() {
 	s.NoError(res.Err)
 	var jsonOut map[string]any
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
-	s.Equal("2s", jsonOut["startDelay"])
+	info, ok := jsonOut["info"].(map[string]any)
+	s.True(ok, "info should be present in JSON describe")
+	s.Equal("2s", info["startDelay"])
 
 	// Raw
 	res = s.Execute(
