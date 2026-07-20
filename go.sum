@@ -479,8 +479,6 @@ go.temporal.io/api v1.63.4-0.20260720155646-7a3ca3626ec2 h1:s0EE5uB7xQkAYPe2Lb59
 go.temporal.io/api v1.63.4-0.20260720155646-7a3ca3626ec2/go.mod h1:SrlW2JMwVlDP4nRWSNznUFqnSHd+YeMDS1BkYo63HCQ=
 go.temporal.io/auto-scaled-workers v0.0.0-20260706201056-4320b34799ee h1:y6A65Iml06cR3CpxW2Zn8FQLjniPDTnN4jtr69UZxXI=
 go.temporal.io/auto-scaled-workers v0.0.0-20260706201056-4320b34799ee/go.mod h1:hhHijO9XRPIkAflLJJHix61M9FzbRPqk8fSydkcLkqw=
-go.temporal.io/sdk v1.44.1 h1:Mt2OZLZpqkzDIdg9YyQzO0Rb/HqCDnnqHlIAGAJ5gqM=
-go.temporal.io/sdk v1.44.1/go.mod h1:vkApR12F9/Y8OR+hkxe7WyXQFuCX6clhzqnAk6rzDAM=
 go.temporal.io/sdk v1.46.1-0.20260720184640-f34dc3da35ab h1:iF9QRS220GeFyNWdiKx+jvQl6LAvZdXGStRCWnU5pZw=
 go.temporal.io/sdk v1.46.1-0.20260720184640-f34dc3da35ab/go.mod h1:x3v/9ImVh469kiHspoq1xgLdPnetbfuCAm+Y1+sUtIo=
 go.temporal.io/sdk/contrib/envconfig v1.0.2 h1:MGHfsuPUtsf7X9M6WYn3zYJj/mWsuYHnA1uuiL0KEuE=
