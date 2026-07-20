@@ -996,7 +996,6 @@ func (c *TemporalActivityResetCommand) run(cctx *CommandContext, args []string) 
 			RunId:          c.RunId,
 			Identity:       c.Parent.Identity,
 			KeepPaused:     c.KeepPaused,
-			ResetHeartbeat: c.ResetHeartbeats,
 		}
 
 		resp, err := cl.WorkflowService().ResetActivityExecution(cctx, request)
@@ -1006,12 +1005,10 @@ func (c *TemporalActivityResetCommand) run(cctx *CommandContext, args []string) 
 
 		resetResponse := struct {
 			KeepPaused      bool `json:"keepPaused"`
-			ResetHeartbeats bool `json:"resetHeartbeats"`
 			ServerResponse  bool `json:"-"`
 		}{
 			ServerResponse:  resp != nil,
 			KeepPaused:      c.KeepPaused,
-			ResetHeartbeats: c.ResetHeartbeats,
 		}
 
 		_ = cctx.Printer.PrintStructured(resetResponse, printer.StructuredOptions{})
@@ -1019,7 +1016,7 @@ func (c *TemporalActivityResetCommand) run(cctx *CommandContext, args []string) 
 		resetActivitiesOperation := &batch.BatchOperationResetActivities{
 			Identity:               c.Parent.Identity,
 			ResetAttempts:          c.ResetAttempts,
-			ResetHeartbeat:         c.ResetHeartbeats,
+			ResetHeartbeat:         true,
 			KeepPaused:             c.KeepPaused,
 			Jitter:                 durationpb.New(c.Jitter.Duration()),
 			RestoreOriginalOptions: c.RestoreOriginalOptions,

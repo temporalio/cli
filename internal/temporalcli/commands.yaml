@@ -645,8 +645,7 @@ commands:
       temporal activity reset \
           --activity-id YourActivityId \
           --workflow-id YourWorkflowId \
-          --keep-paused \
-          --reset-heartbeats
+          --keep-paused
       ```
 
       Activities can be reset in bulk with a visibility query list filter:
@@ -672,9 +671,6 @@ commands:
       - name: reset-attempts
         type: bool
         description: Reset the activity attempts.
-      - name: reset-heartbeats
-        type: bool
-        description: Reset the Activity's heartbeats.
       - name: jitter
         type: duration
         description: |
@@ -1062,10 +1058,10 @@ commands:
       deployment create` command allows you to pre-define a Worker Deployment
       so that calls to `temporal worker deployment create-version` will
       succeed.
-      
+
       If a Worker Deployment with the supplied name already exists, this
       command will return an error.
-      
+
       Note: This is an experimental feature and may change in the future.
     option-sets:
       - deployment-name
@@ -1464,7 +1460,7 @@ commands:
           --deployment-name YourDeploymentName --build-id YourBuildID \
           --remove
       ```
-      
+
       If a Worker Deployment Version with the supplied BuildID does not exist,
       this command will return an error.
 
