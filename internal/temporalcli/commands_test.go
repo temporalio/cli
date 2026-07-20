@@ -239,6 +239,7 @@ func (s *SharedServerSuite) SetupSuite() {
 				// the __temporal_system endpoint from inside a workflow.
 				"history.enableSignalWithStartFromWorkflow": true,
 				"activity.enableStandalone":                 true,
+				"activity.startDelayEnabled":                true,
 				"activity.longPollTimeout":                  2 * time.Second,
 				"nexusoperation.enableStandalone":           true,
 				"history.enableChasmCallbacks":              true,

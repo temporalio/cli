@@ -5630,6 +5630,11 @@ option-sets:
         description: |
           Maximum time between successful Worker heartbeats.
           On expiry the current activity attempt fails.
+      - name: start-delay
+        type: duration
+        description: |
+          Delay before dispatching the first Activity task.
+          This delay is not applied to retry attempts.
       - name: retry-initial-interval
         type: duration
         description: |

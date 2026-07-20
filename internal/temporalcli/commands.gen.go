@@ -459,6 +459,7 @@ type ActivityStartOptions struct {
 	ScheduleToStartTimeout  cliext.FlagDuration
 	StartToCloseTimeout     cliext.FlagDuration
 	HeartbeatTimeout        cliext.FlagDuration
+	StartDelay              cliext.FlagDuration
 	RetryInitialInterval    cliext.FlagDuration
 	RetryMaximumInterval    cliext.FlagDuration
 	RetryBackoffCoefficient float32
@@ -491,6 +492,8 @@ func (v *ActivityStartOptions) BuildFlags(f *pflag.FlagSet) {
 	f.Var(&v.StartToCloseTimeout, "start-to-close-timeout", "Maximum time for a single Activity attempt. On expiry a new attempt may be scheduled if permitted by the retry policy and schedule-to-close timeout. Either this or \"schedule-to-close-timeout\" is required.")
 	v.HeartbeatTimeout = 0
 	f.Var(&v.HeartbeatTimeout, "heartbeat-timeout", "Maximum time between successful Worker heartbeats. On expiry the current activity attempt fails.")
+	v.StartDelay = 0
+	f.Var(&v.StartDelay, "start-delay", "Delay before dispatching the first Activity task. This delay is not applied to retry attempts.")
 	v.RetryInitialInterval = 0
 	f.Var(&v.RetryInitialInterval, "retry-initial-interval", "Interval of the first retry. If \"retry-backoff-coefficient\" is 1.0, it is used for all retries.")
 	v.RetryMaximumInterval = 0
