@@ -605,6 +605,39 @@ func (c *TemporalActivityTerminateCommand) run(cctx *CommandContext, args []stri
 	return nil
 }
 
+// buildInputPayloadOptions builds and returns InputPayloadOptions using at most one
+// supplied values for input, inputFile, etc. It is used when input like semantics are
+// implemented at other places such as for result or detail in activity complete or
+// fail command handler, respectively. If both of input are inputFile are supplied,
+// otherwise it return nil with error. If none of these are supplied, it returns nil without error.
+func buildInputPayloadOptions(
+	input string,
+	inputFile string,
+	inputMeta string,
+	inputBase64 bool,
+) (*PayloadInputOptions, error) {
+	if input == "" && inputFile == "" {
+		// no error if none are supplied.
+		return nil, nil
+	}
+	if input != "" && inputFile != "" {
+		return nil, fmt.Errorf("provide exactly one of input or inputFile")
+	}
+
+	resultPayloadOpts := PayloadInputOptions{
+		InputBase64: inputBase64,
+	}
+	if inputMeta != "" {
+		resultPayloadOpts.InputMeta = []string{inputMeta}
+	}
+	if input != "" && inputFile == "" {
+		resultPayloadOpts.Input = []string{input}
+	} else if input == "" && inputFile != "" {
+		resultPayloadOpts.InputFile = []string{inputFile}
+	}
+	return &resultPayloadOpts, nil
+}
+
 func (c *TemporalActivityCompleteCommand) run(cctx *CommandContext, args []string) error {
 	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
@@ -612,8 +645,13 @@ func (c *TemporalActivityCompleteCommand) run(cctx *CommandContext, args []strin
 	}
 	defer cl.Close()
 
-	metadata := map[string][][]byte{"encoding": {[]byte("json/plain")}}
-	resultPayloads, err := CreatePayloads([][]byte{[]byte(c.Result)}, metadata, false)
+	resultPayloadOpts, err := buildInputPayloadOptions(c.Result, c.ResultFile, c.ResultMeta, c.ResultBase64)
+	if resultPayloadOpts == nil || err != nil {
+		// TODO: where do we check that one of result or result-file is used. also for details in activity fail command.
+		return fmt.Errorf("provide exactly one of result or result-file")
+	}
+
+	resultPayloads, err := resultPayloadOpts.buildRawInputPayloads()
 	if err != nil {
 		return err
 	}
@@ -639,10 +677,15 @@ func (c *TemporalActivityFailCommand) run(cctx *CommandContext, args []string) e
 	}
 	defer cl.Close()
 
+	detailPayloadOpts, err := buildInputPayloadOptions(c.Detail, c.DetailFile, c.DetailMeta, c.DetailBase64)
+	if err != nil {
+		// TODO: if both detail and detail-file were used, then return error.
+		return fmt.Errorf("provide one of detail or detail-file, but not both")
+	}
+
 	var detailPayloads *common.Payloads
-	if len(c.Detail) > 0 {
-		metadata := map[string][][]byte{"encoding": {[]byte("json/plain")}}
-		detailPayloads, err = CreatePayloads([][]byte{[]byte(c.Detail)}, metadata, false)
+	if detailPayloadOpts != nil {
+		detailPayloads, err = detailPayloadOpts.buildRawInputPayloads()
 		if err != nil {
 			return err
 		}
