@@ -481,10 +481,12 @@ go.temporal.io/auto-scaled-workers v0.0.0-20260706201056-4320b34799ee h1:y6A65Im
 go.temporal.io/auto-scaled-workers v0.0.0-20260706201056-4320b34799ee/go.mod h1:hhHijO9XRPIkAflLJJHix61M9FzbRPqk8fSydkcLkqw=
 go.temporal.io/sdk v1.44.1 h1:Mt2OZLZpqkzDIdg9YyQzO0Rb/HqCDnnqHlIAGAJ5gqM=
 go.temporal.io/sdk v1.44.1/go.mod h1:vkApR12F9/Y8OR+hkxe7WyXQFuCX6clhzqnAk6rzDAM=
+go.temporal.io/sdk v1.46.1-0.20260720184640-f34dc3da35ab h1:iF9QRS220GeFyNWdiKx+jvQl6LAvZdXGStRCWnU5pZw=
+go.temporal.io/sdk v1.46.1-0.20260720184640-f34dc3da35ab/go.mod h1:x3v/9ImVh469kiHspoq1xgLdPnetbfuCAm+Y1+sUtIo=
 go.temporal.io/sdk/contrib/envconfig v1.0.2 h1:MGHfsuPUtsf7X9M6WYn3zYJj/mWsuYHnA1uuiL0KEuE=
 go.temporal.io/sdk/contrib/envconfig v1.0.2/go.mod h1:MuMiH7hksps2uXnmKuAWaP9P6WbkSDy62kl64t1VJVg=
-go.temporal.io/server v1.29.0-135.0.0.20260720165610-a1b0e621c172 h1:XqrzHjyX37wQqr8lx6DkJtyPkq9Sj3byJFyRGKZcaUc=
-go.temporal.io/server v1.29.0-135.0.0.20260720165610-a1b0e621c172/go.mod h1:93eqJ9osXy/XBq5Wcev1+fPUt84JNKssQFskr7ICAr4=
+go.temporal.io/server v1.29.0-135.0.0.20260720172935-768cd1f81135 h1:8dmfUYYNLD+C5IiJ/g6cEl7m5ZjHNgWvujMg/Gf64m8=
+go.temporal.io/server v1.29.0-135.0.0.20260720172935-768cd1f81135/go.mod h1:93eqJ9osXy/XBq5Wcev1+fPUt84JNKssQFskr7ICAr4=
 go.uber.org/atomic v1.5.0/go.mod h1:sABNBOSYdrvTF6hTgEIbc7YasKWGhgEQZyfxyTvoXHQ=
 go.uber.org/atomic v1.7.0/go.mod h1:fEN4uk6kAWBTFdckzkM89CLk9XfWZrxpCo0nPH17wJc=
 go.uber.org/atomic v1.11.0 h1:ZvwS0R+56ePWxUNi+Atn9dWONBPp/AUETXlHW0DxSjE=
