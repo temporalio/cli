@@ -375,6 +375,7 @@ func (s *SharedServerSuite) TestActivityStandalone_UpdateOptions() {
 		"--schedule-to-close-timeout", "60s",
 		"--start-to-close-timeout", "10s",
 		"--retry-initial-interval", "5s",
+		"--retry-maximum-interval", "10s",
 		"--retry-maximum-attempts", "5",
 		"--address", s.Address(),
 	)
@@ -383,6 +384,7 @@ func (s *SharedServerSuite) TestActivityStandalone_UpdateOptions() {
 	s.ContainsOnSameLine(out, "ScheduleToCloseTimeout", "1m0s")
 	s.ContainsOnSameLine(out, "StartToCloseTimeout", "10s")
 	s.ContainsOnSameLine(out, "InitialInterval", "5s")
+	s.ContainsOnSameLine(out, "MaximumInterval", "10s")
 	s.ContainsOnSameLine(out, "MaximumAttempts", "5")
 }
 

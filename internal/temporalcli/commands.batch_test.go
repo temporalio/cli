@@ -67,7 +67,7 @@ func (s *SharedServerSuite) TestBatchJob_Describe() {
 			var jsonOut map[string]any
 			s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
 			s.Equal(jobId, jsonOut["jobId"])
-			s.Equal("BATCH_OPERATION_TYPE_TERMINATE", jsonOut["operationType"])
+			s.Equal("BATCH_OPERATION_TYPE_TERMINATE_WORKFLOW", jsonOut["operationType"])
 			s.Equal("REASON", jsonOut["reason"])
 		})
 	})
