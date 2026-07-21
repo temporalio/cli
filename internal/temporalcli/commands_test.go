@@ -249,6 +249,9 @@ func (s *SharedServerSuite) SetupSuite() {
 				// worker heartbeating
 				"frontend.WorkerHeartbeatsEnabled": true,
 				"frontend.ListWorkersEnabled":      true,
+				// Required by TestActivity_CancelTerminateDelete_*
+				// to enable batch operations on standalone activities.
+				"frontend.enableBatchOperationsForStandaloneActivities": true,
 			},
 		},
 	})

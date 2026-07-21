@@ -151,6 +151,22 @@ func (v *DeploymentReferenceOptions) BuildFlags(f *pflag.FlagSet) {
 	_ = cobra.MarkFlagRequired(f, "build-id")
 }
 
+type ActivityReferenceOrBatchOptions struct {
+	ActivityId string
+	RunId      string
+	Query      string
+	Rps        float32
+	FlagSet    *pflag.FlagSet
+}
+
+func (v *ActivityReferenceOrBatchOptions) BuildFlags(f *pflag.FlagSet) {
+	v.FlagSet = f
+	f.StringVarP(&v.ActivityId, "activity-id", "a", "", "Activity ID. You must set either --activity-id or --query.")
+	f.StringVarP(&v.RunId, "run-id", "r", "", "Activity Run ID. If not set, targets the latest run. Only use with --activity-id. Cannot use with --query.")
+	f.StringVarP(&v.Query, "query", "q", "", "Content for an SQL-like `QUERY` List Filter. You must set either --activity-id or --query. Note: Using --query for batch activity operations is an experimental feature and may change in the future.")
+	f.Float32Var(&v.Rps, "rps", 0, "Limit batch's requests per second. Only allowed when --query is present.")
+}
+
 type SingleActivityOrBatchOptions struct {
 	WorkflowId string
 	Query      string
@@ -544,6 +560,7 @@ func NewTemporalActivityCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.AddCommand(&NewTemporalActivityCancelCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalActivityCompleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalActivityCountCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalActivityDeleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalActivityDescribeCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalActivityExecuteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalActivityFailCommand(cctx, &s).Command)
@@ -562,8 +579,9 @@ func NewTemporalActivityCommand(cctx *CommandContext, parent *TemporalCommand) *
 type TemporalActivityCancelCommand struct {
 	Parent  *TemporalActivityCommand
 	Command cobra.Command
-	ActivityReferenceOptions
+	ActivityReferenceOrBatchOptions
 	Reason string
+	Yes    bool
 }
 
 func NewTemporalActivityCancelCommand(cctx *CommandContext, parent *TemporalActivityCommand) *TemporalActivityCancelCommand {
@@ -573,13 +591,14 @@ func NewTemporalActivityCancelCommand(cctx *CommandContext, parent *TemporalActi
 	s.Command.Use = "cancel [flags]"
 	s.Command.Short = "Request cancellation of a Standalone Activity (Experimental)"
 	if hasHighlighting {
-		s.Command.Long = "Request cancellation of a Standalone Activity.\n\n\x1b[1mtemporal activity cancel \\\n    --activity-id YourActivityId\x1b[0m\n\nRequesting cancellation transitions the Activity's run state\nto CancelRequested. If the Activity is heartbeating, a\ncancellation error will be raised when the next heartbeat\nresponse is received; if the Activity allows this error to\npropagate, the Activity transitions to canceled status."
+		s.Command.Long = "Request cancellation of a Standalone Activity.\n\n\x1b[1mtemporal activity cancel \\\n    --activity-id YourActivityId\x1b[0m\n\nRequesting cancellation transitions the Activity's run state\nto CancelRequested. If the Activity is heartbeating, a\ncancellation error will be raised when the next heartbeat\nresponse is received; if the Activity allows this error to\npropagate, the Activity transitions to canceled status.\n\nA visibility Query lets you send bulk cancellations to Standalone Activity\nExecutions matching the results:\n\n\x1b[1mtemporal activity cancel \\\n    --query YourQuery \\\n    --reason YourReason\x1b[0m\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation. See \x1b[1mtemporal batch --help\x1b[0m for a quick reference."
 	} else {
-		s.Command.Long = "Request cancellation of a Standalone Activity.\n\n```\ntemporal activity cancel \\\n    --activity-id YourActivityId\n```\n\nRequesting cancellation transitions the Activity's run state\nto CancelRequested. If the Activity is heartbeating, a\ncancellation error will be raised when the next heartbeat\nresponse is received; if the Activity allows this error to\npropagate, the Activity transitions to canceled status."
+		s.Command.Long = "Request cancellation of a Standalone Activity.\n\n```\ntemporal activity cancel \\\n    --activity-id YourActivityId\n```\n\nRequesting cancellation transitions the Activity's run state\nto CancelRequested. If the Activity is heartbeating, a\ncancellation error will be raised when the next heartbeat\nresponse is received; if the Activity allows this error to\npropagate, the Activity transitions to canceled status.\n\nA visibility Query lets you send bulk cancellations to Standalone Activity\nExecutions matching the results:\n\n```\ntemporal activity cancel \\\n    --query YourQuery \\\n    --reason YourReason\n```\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation. See `temporal batch --help` for a quick reference."
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for cancellation.")
-	s.ActivityReferenceOptions.BuildFlags(s.Command.Flags())
+	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for cancellation. Also used as reason for batch operation with --query, which defaults to a message with the current user's name.")
+	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm. Only allowed when --query is present.")
+	s.ActivityReferenceOrBatchOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -642,6 +661,37 @@ func NewTemporalActivityCountCommand(cctx *CommandContext, parent *TemporalActiv
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Query to filter Activity Executions to count.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalActivityDeleteCommand struct {
+	Parent  *TemporalActivityCommand
+	Command cobra.Command
+	ActivityReferenceOrBatchOptions
+	Reason string
+	Yes    bool
+}
+
+func NewTemporalActivityDeleteCommand(cctx *CommandContext, parent *TemporalActivityCommand) *TemporalActivityDeleteCommand {
+	var s TemporalActivityDeleteCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "delete [flags]"
+	s.Command.Short = "Delete a Standalone Activity Execution (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Delete a Standalone Activity Execution and its Event History.\n\n\x1b[1mtemporal activity delete \\\n    --activity-id YourActivityId\x1b[0m\n\nThe removal executes asynchronously. If the Execution is Running, the Service\nterminates it before deletion.\n\nA visibility Query lets you send bulk delete to Standalone Activity\nExecutions matching the results:\n\n\x1b[1mtemporal activity delete \\\n    --query YourQuery\x1b[0m\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation. See \x1b[1mtemporal batch --help\x1b[0m for a quick reference."
+	} else {
+		s.Command.Long = "Delete a Standalone Activity Execution and its Event History.\n\n```\ntemporal activity delete \\\n    --activity-id YourActivityId\n```\n\nThe removal executes asynchronously. If the Execution is Running, the Service\nterminates it before deletion.\n\nA visibility Query lets you send bulk delete to Standalone Activity\nExecutions matching the results:\n\n```\ntemporal activity delete \\\n    --query YourQuery\n```\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation. See `temporal batch --help` for a quick reference."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for batch operation. Only use with --query. Defaults to a message with the current user's name.")
+	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm.")
+	s.ActivityReferenceOrBatchOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -907,8 +957,9 @@ func NewTemporalActivityStartCommand(cctx *CommandContext, parent *TemporalActiv
 type TemporalActivityTerminateCommand struct {
 	Parent  *TemporalActivityCommand
 	Command cobra.Command
-	ActivityReferenceOptions
+	ActivityReferenceOrBatchOptions
 	Reason string
+	Yes    bool
 }
 
 func NewTemporalActivityTerminateCommand(cctx *CommandContext, parent *TemporalActivityCommand) *TemporalActivityTerminateCommand {
@@ -918,13 +969,14 @@ func NewTemporalActivityTerminateCommand(cctx *CommandContext, parent *TemporalA
 	s.Command.Use = "terminate [flags]"
 	s.Command.Short = "Forcefully end a Standalone Activity (Experimental)"
 	if hasHighlighting {
-		s.Command.Long = "Terminate a Standalone Activity.\n\n\x1b[1mtemporal activity terminate \\\n    --activity-id YourActivityId \\\n    --reason YourReason\x1b[0m\n\nActivity code cannot see or respond to terminations."
+		s.Command.Long = "Terminate a Standalone Activity.\n\n\x1b[1mtemporal activity terminate \\\n    --activity-id YourActivityId \\\n    --reason YourReason\x1b[0m\n\nActivity code cannot see or respond to terminations.\n\nA visibility Query lets you send bulk terminations to Standalone Activity\nExecutions matching the results:\n\n\x1b[1mtemporal activity terminate \\\n    --query YourQuery \\\n    --reason YourReason\x1b[0m\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation. See \x1b[1mtemporal batch --help\x1b[0m for a quick reference."
 	} else {
-		s.Command.Long = "Terminate a Standalone Activity.\n\n```\ntemporal activity terminate \\\n    --activity-id YourActivityId \\\n    --reason YourReason\n```\n\nActivity code cannot see or respond to terminations."
+		s.Command.Long = "Terminate a Standalone Activity.\n\n```\ntemporal activity terminate \\\n    --activity-id YourActivityId \\\n    --reason YourReason\n```\n\nActivity code cannot see or respond to terminations.\n\nA visibility Query lets you send bulk terminations to Standalone Activity\nExecutions matching the results:\n\n```\ntemporal activity terminate \\\n    --query YourQuery \\\n    --reason YourReason\n```\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation. See `temporal batch --help` for a quick reference."
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for termination. Defaults to a message with the current user's name.")
-	s.ActivityReferenceOptions.BuildFlags(s.Command.Flags())
+	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for termination. Defaults to a message with the current user's name. Also used as reason for batch operation with --query.")
+	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm. Only allowed when --query is present.")
+	s.ActivityReferenceOrBatchOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

@@ -193,12 +193,33 @@ commands:
       cancellation error will be raised when the next heartbeat
       response is received; if the Activity allows this error to
       propagate, the Activity transitions to canceled status.
+
+      A visibility Query lets you send bulk cancellations to Standalone Activity
+      Executions matching the results:
+
+      ```
+      temporal activity cancel \
+          --query YourQuery \
+          --reason YourReason
+      ```
+
+      Visit https://docs.temporal.io/visibility to read more about Search Attributes
+      and Query creation. See `temporal batch --help` for a quick reference.
     option-sets:
-      - activity-reference
+      - activity-reference-or-batch
     options:
       - name: reason
         type: string
-        description: Reason for cancellation.
+        description: |
+          Reason for cancellation.
+          Also used as reason for batch operation with --query,
+          which defaults to a message with the current user's name.
+      - name: yes
+        type: bool
+        short: y
+        description: |
+          Don't prompt to confirm.
+          Only allowed when --query is present.
 
   - name: temporal activity complete
     summary: Mark an activity as completed successfully with a result
@@ -675,14 +696,71 @@ commands:
       ```
 
       Activity code cannot see or respond to terminations.
+
+      A visibility Query lets you send bulk terminations to Standalone Activity
+      Executions matching the results:
+
+      ```
+      temporal activity terminate \
+          --query YourQuery \
+          --reason YourReason
+      ```
+
+      Visit https://docs.temporal.io/visibility to read more about Search Attributes
+      and Query creation. See `temporal batch --help` for a quick reference.
     option-sets:
-      - activity-reference
+      - activity-reference-or-batch
     options:
       - name: reason
         type: string
         description: |
           Reason for termination.
           Defaults to a message with the current user's name.
+          Also used as reason for batch operation with --query.
+      - name: yes
+        type: bool
+        short: y
+        description: |
+          Don't prompt to confirm.
+          Only allowed when --query is present.
+
+  - name: temporal activity delete
+    summary: Delete a Standalone Activity Execution (Experimental)
+    description: |
+      Delete a Standalone Activity Execution and its Event History.
+
+      ```
+      temporal activity delete \
+          --activity-id YourActivityId
+      ```
+
+      The removal executes asynchronously. If the Execution is Running, the Service
+      terminates it before deletion.
+
+      A visibility Query lets you send bulk delete to Standalone Activity
+      Executions matching the results:
+
+      ```
+      temporal activity delete \
+          --query YourQuery
+      ```
+
+      Visit https://docs.temporal.io/visibility to read more about Search Attributes
+      and Query creation. See `temporal batch --help` for a quick reference.
+    option-sets:
+      - activity-reference-or-batch
+    options:
+      - name: reason
+        type: string
+        description: |
+          Reason for batch operation.
+          Only use with --query.
+          Defaults to a message with the current user's name.
+      - name: yes
+        type: bool
+        short: y
+        description: |
+          Don't prompt to confirm.
 
   - name: temporal batch
     summary: Manage running batch jobs
@@ -5023,6 +5101,36 @@ option-sets:
         type: string
         description: Build ID for a Worker Deployment.
         required: true
+
+  # Combines activity-reference and --query, with an experimental note.
+  # Cannot extend activity-reference, because activity-id is not required.
+  - name: activity-reference-or-batch
+    options:
+      - name: activity-id
+        type: string
+        short: a
+        description: |
+          Activity ID.
+          You must set either --activity-id or --query.
+      - name: run-id
+        type: string
+        short: r
+        description: |
+          Activity Run ID.
+          If not set, targets the latest run.
+          Only use with --activity-id. Cannot use with --query.
+      - name: query
+        type: string
+        short: q
+        description: |
+          Content for an SQL-like `QUERY` List Filter.
+          You must set either --activity-id or --query.
+          Note: Using --query for batch activity operations is an experimental feature and may change in the future.
+      - name: rps
+        type: float
+        description: |
+          Limit batch's requests per second.
+          Only allowed when --query is present.
 
   # Duplicate of single-workflow-or-batch with an experimental note on --query.
   # Cannot extend the shared option set because workflow commands that also use
