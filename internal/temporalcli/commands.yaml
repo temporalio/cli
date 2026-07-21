@@ -1092,7 +1092,21 @@ commands:
           --aws-lambda-assume-role-arn LambdaAssumeRoleARN \
           --aws-lambda-assume-role-external-id LambdaAssumeRoleExternalID
       ```
-      
+
+      Or pass compute provider information for a GCP Cloud Run worker pool
+      that spawns a Worker in the Worker Deployment:
+
+      ```
+      temporal worker deployment create-version \
+          --namespace YourNamespaceName \
+          --deployment-name YourDeploymentName \
+          --build-id YourBuildID \
+          --gcp-cloud-run-project YourGCPProject \
+          --gcp-cloud-run-region us-central1 \
+          --gcp-cloud-run-worker-pool YourWorkerPool \
+          --gcp-cloud-run-service-account customer-sa@proj.iam.gserviceaccount.com
+      ```
+
       If a Worker Deployment Version with the supplied BuildID already exists,
       this command will return an error.
 
@@ -1122,6 +1136,27 @@ commands:
           with the AWS IAM role specified in --aws-lambda-assume-role-arn has
           an aws:ExternalId condition that matches the supplied value. Required
           when --aws-lambda-function-arn is specified.
+      - name: gcp-cloud-run-project
+        type: string
+        description: |
+          GCP project ID hosting the Cloud Run worker pool. Required when
+          --gcp-cloud-run-worker-pool is specified.
+      - name: gcp-cloud-run-region
+        type: string
+        description: |
+          Region of the Cloud Run worker pool. Required when
+          --gcp-cloud-run-worker-pool is specified.
+      - name: gcp-cloud-run-worker-pool
+        type: string
+        description: |
+          GCP Cloud Run worker pool name to scale when there are no active
+          pollers for task queue targets in the Worker Deployment.
+      - name: gcp-cloud-run-service-account
+        type: string
+        description: |
+          Customer GCP service account the Temporal server impersonates to
+          manage the Cloud Run worker pool. Required when
+          --gcp-cloud-run-worker-pool is specified.
 
   - name: temporal worker deployment describe-version
     summary: Show properties of a Worker Deployment Version
@@ -1350,6 +1385,18 @@ commands:
           --aws-lambda-assume-role-arn UpdatedRoleARN
       ```
 
+      To update the GCP Cloud Run worker pool associated with an existing
+      Worker Deployment Version:
+
+      ```
+       temporal worker deployment update-version-compute-config \
+          --deployment-name YourDeploymentName --build-id YourBuildID \
+          --gcp-cloud-run-project YourGCPProject \
+          --gcp-cloud-run-region us-central1 \
+          --gcp-cloud-run-worker-pool UpdatedWorkerPool \
+          --gcp-cloud-run-service-account customer-sa@proj.iam.gserviceaccount.com
+      ```
+
       If --remove is specified, the compute configuration for the Worker
       Deployment Version will be removed:
 
@@ -1386,6 +1433,27 @@ commands:
           with the AWS IAM role specified in --aws-lambda-assume-role-arn has
           an aws:ExternalId condition that matches the supplied value. Required
           when --aws-lambda-function-arn is specified.
+      - name: gcp-cloud-run-project
+        type: string
+        description: |
+          GCP project ID hosting the Cloud Run worker pool. Required when
+          --gcp-cloud-run-worker-pool is specified.
+      - name: gcp-cloud-run-region
+        type: string
+        description: |
+          Region of the Cloud Run worker pool. Required when
+          --gcp-cloud-run-worker-pool is specified.
+      - name: gcp-cloud-run-worker-pool
+        type: string
+        description: |
+          GCP Cloud Run worker pool name to scale when there are no active
+          pollers for task queue targets in the Worker Deployment.
+      - name: gcp-cloud-run-service-account
+        type: string
+        description: |
+          Customer GCP service account the Temporal server impersonates to
+          manage the Cloud Run worker pool. Required when
+          --gcp-cloud-run-worker-pool is specified.
       - name: remove
         type: bool
         description: |
@@ -5457,6 +5525,11 @@ option-sets:
         description: |
           Maximum time between successful Worker heartbeats.
           On expiry the current activity attempt fails.
+      - name: start-delay
+        type: duration
+        description: |
+          Delay before dispatching the first Activity task.
+          This delay is not applied to retry attempts.
       - name: retry-initial-interval
         type: duration
         description: |

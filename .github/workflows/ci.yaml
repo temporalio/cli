@@ -1,6 +1,8 @@
 name: Continuous Integration
 on:
   pull_request:
+  merge_group:
+    types: [checks_requested]
   push:
     branches:
       - main
@@ -12,7 +14,7 @@ permissions:
 jobs:
   validate-server-version:
     name: Validate Server Version
-    if: github.event_name == 'push' || github.base_ref == 'main'
+    if: github.event_name == 'push' || github.event_name == 'merge_group' || github.base_ref == 'main'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -78,6 +80,17 @@ jobs:
           name: junit-xml--${{github.run_id}}--${{github.run_attempt}}--${{matrix.os}}
           path: junit-xml
           retention-days: 14
+
+      - name: Tidy modules, confirm unchanged
+        if: ${{ matrix.checkGenCommands }}
+        shell: bash
+        run: |
+          go mod tidy
+          (
+            cd cliext
+            go mod tidy
+          )
+          git diff --exit-code -- go.mod go.sum cliext/go.mod cliext/go.sum
 
       - name: Regen code, confirm unchanged
         if: ${{ matrix.checkGenCommands }}
