@@ -607,6 +607,39 @@ func (s *SharedServerSuite) TestActivity_Start_With_Headers() {
 	s.Equal(123, val)
 }
 
+func (s *SharedServerSuite) TestActivity_Start_StartDelay() {
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		return nil, nil
+	})
+
+	var capturedRequest *workflowservice.StartActivityExecutionRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string, req, reply any,
+			cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption,
+		) error {
+			if startReq, ok := req.(*workflowservice.StartActivityExecutionRequest); ok {
+				capturedRequest = startReq
+			}
+			return invoker(ctx, method, req, reply, cc, opts...)
+		}),
+	)
+
+	res := s.Execute(
+		"activity", "start",
+		"--activity-id", "start-delay-test",
+		"--type", "DevActivity",
+		"--task-queue", s.Worker().Options.TaskQueue,
+		"--start-to-close-timeout", "30s",
+		"--start-delay", "2s",
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	s.Equal(2*time.Second, capturedRequest.GetStartDelay().AsDuration())
+}
+
 func (s *SharedServerSuite) TestActivity_Execute_Success() {
 	var receivedInput any
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
@@ -874,14 +907,17 @@ func (s *SharedServerSuite) TestActivity_Describe() {
 	s.NoError(res.Err)
 	var jsonOut map[string]any
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
-	s.Equal("describe-test", jsonOut["activityId"])
-	s.NotNil(jsonOut["activityType"])
-	s.NotNil(jsonOut["taskQueue"])
-	s.Equal("300s", jsonOut["scheduleToCloseTimeout"])
-	s.Equal("60s", jsonOut["scheduleToStartTimeout"])
-	s.Equal("30s", jsonOut["startToCloseTimeout"])
-	s.Equal("15s", jsonOut["heartbeatTimeout"])
-	retryPolicy, ok := jsonOut["retryPolicy"].(map[string]any)
+	s.NotEmpty(jsonOut["longPollToken"])
+	info, ok := jsonOut["info"].(map[string]any)
+	s.True(ok, "info should be present in JSON describe")
+	s.Equal("describe-test", info["activityId"])
+	s.NotNil(info["activityType"])
+	s.NotNil(info["taskQueue"])
+	s.Equal("300s", info["scheduleToCloseTimeout"])
+	s.Equal("60s", info["scheduleToStartTimeout"])
+	s.Equal("30s", info["startToCloseTimeout"])
+	s.Equal("15s", info["heartbeatTimeout"])
+	retryPolicy, ok := info["retryPolicy"].(map[string]any)
 	s.True(ok, "retryPolicy should be present in JSON describe")
 	s.Equal(float64(5), retryPolicy["maximumAttempts"])
 	s.Equal("2s", retryPolicy["initialInterval"])
@@ -900,6 +936,50 @@ func (s *SharedServerSuite) TestActivity_Describe() {
 	rawOut := res.Stdout.String()
 	s.Contains(rawOut, "describe-test")
 	s.Contains(rawOut, `{"name":"DevActivity"}`)
+}
+
+func (s *SharedServerSuite) TestActivity_Describe_StartDelay() {
+	started := s.startActivity("describe-start-delay-test", "--start-delay", "2s")
+	runID := started["runId"].(string)
+
+	// Text
+	res := s.Execute(
+		"activity", "describe",
+		"--activity-id", "describe-start-delay-test",
+		"--run-id", runID,
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	out := res.Stdout.String()
+	s.ContainsOnSameLine(out, "ActivityId", "describe-start-delay-test")
+	s.ContainsOnSameLine(out, "StartDelay", "2s")
+
+	// JSON
+	res = s.Execute(
+		"activity", "describe",
+		"-o", "json",
+		"--activity-id", "describe-start-delay-test",
+		"--run-id", runID,
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	var jsonOut map[string]any
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	info, ok := jsonOut["info"].(map[string]any)
+	s.True(ok, "info should be present in JSON describe")
+	s.Equal("2s", info["startDelay"])
+
+	// Raw
+	res = s.Execute(
+		"activity", "describe",
+		"--raw",
+		"--activity-id", "describe-start-delay-test",
+		"--run-id", runID,
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	rawOut := res.Stdout.String()
+	s.ContainsOnSameLine(rawOut, "startDelay", `"2s"`)
 }
 
 // Text-only: verifies LastFailure is rendered as text not JSON.

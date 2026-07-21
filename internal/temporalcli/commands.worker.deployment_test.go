@@ -1311,6 +1311,49 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
 	s.Error(res.Err)
 	s.ErrorContains(res.Err, "missing required AWS Lambda provider detail: role")
 
+	// --gcp-cloud-run-worker-pool requires project, region, and
+	// service-account; the first missing detail key is reported.
+	missingGCPProjectBuildID := uuid.NewString()
+
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", missingGCPProjectBuildID,
+		"--gcp-cloud-run-worker-pool", "my-worker-pool",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "missing required GCP Cloud Run provider detail: project")
+
+	// The impersonation target (service-account) is required too.
+	missingGCPServiceAccountBuildID := uuid.NewString()
+
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", missingGCPServiceAccountBuildID,
+		"--gcp-cloud-run-project", "my-gcp-project",
+		"--gcp-cloud-run-region", "us-central1",
+		"--gcp-cloud-run-worker-pool", "my-worker-pool",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "missing required GCP Cloud Run provider detail: service_account")
+
+	// AWS Lambda and GCP Cloud Run providers are mutually exclusive on create.
+	mixedProvidersBuildID := uuid.NewString()
+
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", mixedProvidersBuildID,
+		"--aws-lambda-function-arn", invokeARN,
+		"--gcp-cloud-run-worker-pool", "my-worker-pool",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "cannot combine --aws-lambda-* and --gcp-cloud-run-* flags")
+
 	// Attempting to update the compute config for a non-existent WDV
 	// should fail.
 	nonExistingBuildID := "non-existing"
@@ -1336,6 +1379,32 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
 	)
 	s.Error(res.Err)
 	s.ErrorContains(res.Err, "build ID 'non-existing' not found")
+
+	// AWS Lambda and GCP Cloud Run providers are mutually exclusive on update
+	// too. This is rejected client-side, before the RPC, so the existing
+	// (lazily-created) build ID is fine to target.
+	res = s.Execute(
+		"worker", "deployment", "update-version-compute-config",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", lazyCreatedBuildID,
+		"--aws-lambda-function-arn", invokeARN,
+		"--gcp-cloud-run-worker-pool", "my-worker-pool",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "cannot combine --aws-lambda-* and --gcp-cloud-run-* flags")
+
+	// --remove cannot be combined with GCP Cloud Run flags.
+	res = s.Execute(
+		"worker", "deployment", "update-version-compute-config",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", lazyCreatedBuildID,
+		"--gcp-cloud-run-worker-pool", "my-worker-pool",
+		"--remove",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "--remove cannot be combined with")
 }
 
 // TODO(jaypipes): Enable this test when we have a way of ensuring AWS resource
@@ -1440,6 +1509,124 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_LambdaComputeConfi
 		"--aws-lambda-function-arn", invokeARN2,
 		"--aws-lambda-assume-role-arn", assumeRoleARN2,
 		"--aws-lambda-assume-role-external-id", assumeRoleExternalID,
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Successfully updated worker deployment version compute config")
+
+	// As well as remove the compute config.
+	res = s.Execute(
+		"worker", "deployment", "update-version-compute-config",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", computeConfigBuildID,
+		"--remove",
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Successfully removed worker deployment version compute config")
+}
+
+// TODO(jaypipes): Enable this test when we have a way of ensuring GCP resource
+// fixtures since the CLI test harness uses a real Temporal Server and a real
+// Temporal Server validates that any supplied GCP Cloud Run worker pool and
+// service account are good (the server impersonates the service account to
+// manage the worker pool).
+func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_GCPCloudRunComputeConfig() {
+	s.T().Skip("GCP Cloud Run worker pool and service account fixtures needed.")
+	deploymentName := uuid.NewString()
+	taskQueue := uuid.NewString()
+
+	lazyCreatedBuildID := uuid.NewString()
+	lazyCreatedVer := worker.WorkerDeploymentVersion{
+		DeploymentName: deploymentName,
+		BuildID:        lazyCreatedBuildID,
+	}
+
+	// Create worker with explicit versioning. This will end up creating a
+	// WorkerDeployment with the specified name. We will then manually create a
+	// worker deployment version using the `temporal worker deployment
+	// create-version` command.
+	w1 := worker.New(s.Client, taskQueue, worker.Options{
+		DeploymentOptions: worker.DeploymentOptions{
+			UseVersioning: true,
+			Version:       lazyCreatedVer,
+		},
+	})
+
+	// Register a workflow with explicit Pinned versioning behavior to trigger
+	// creation of the worker deployment.
+	w1.RegisterWorkflowWithOptions(
+		func(ctx workflow.Context, input any) (any, error) {
+			workflow.GetSignalChannel(ctx, "complete-signal").Receive(ctx, nil)
+			return nil, nil
+		},
+		workflow.RegisterOptions{
+			Name:               "TestCreateWorkerDeploymentVersion_GCPCloudRunComputeConfig",
+			VersioningBehavior: workflow.VersioningBehaviorPinned,
+		},
+	)
+
+	s.NoError(w1.Start())
+
+	// Create a WDV with a valid GCP Cloud Run Compute Config specified and
+	// verify that the compute config provider is displayed in the output of
+	// `temporal worker deployment describe-version`.
+	computeConfigBuildID := uuid.NewString()
+
+	project := "my-gcp-project"
+	region := "us-central1"
+	workerPool := "my-worker-pool"
+	serviceAccount := "customer-sa@my-gcp-project.iam.gserviceaccount.com"
+
+	res := s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", computeConfigBuildID,
+		"--gcp-cloud-run-project", project,
+		"--gcp-cloud-run-region", region,
+		"--gcp-cloud-run-worker-pool", workerPool,
+		"--gcp-cloud-run-service-account", serviceAccount,
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Successfully created worker deployment version")
+
+	// Wait for the deployment version to appear
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "describe-version",
+			"--address", s.Address(),
+			"--deployment-name", deploymentName,
+			"--build-id", computeConfigBuildID,
+		)
+		assert.NoError(t, res.Err)
+	}, 30*time.Second, 100*time.Millisecond)
+
+	// Check that the compute config returned for this WDV reports the
+	// gcp-cloud-run provider.
+	res = s.Execute(
+		"worker", "deployment", "describe-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", computeConfigBuildID,
+		"--output", "json",
+	)
+	s.NoError(res.Err)
+	jsonOut := jsonDeploymentVersionInfoType{}
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	s.NotNil(jsonOut.ComputeConfig, "ComputeConfig should not be nil.")
+	s.Len(jsonOut.ComputeConfig.ScalingGroups, 1)
+	s.Equal("gcp-cloud-run", jsonOut.ComputeConfig.ScalingGroups[0].ProviderType)
+
+	// We should be able to update the compute config.
+	res = s.Execute(
+		"worker", "deployment", "update-version-compute-config",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", computeConfigBuildID,
+		"--gcp-cloud-run-project", project,
+		"--gcp-cloud-run-region", region,
+		"--gcp-cloud-run-worker-pool", "updated-worker-pool",
+		"--gcp-cloud-run-service-account", serviceAccount,
 	)
 	s.NoError(res.Err)
 	s.Contains(res.Stdout.String(), "Successfully updated worker deployment version compute config")
