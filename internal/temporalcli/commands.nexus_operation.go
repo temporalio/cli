@@ -302,7 +302,10 @@ func printNexusOperationDescription(cctx *CommandContext, desc *client.NexusOper
 		Identity:               desc.Identity,
 		Summary:                summary,
 	}
-	return cctx.Printer.PrintStructured(d, printer.StructuredOptions{})
+	if err := cctx.Printer.PrintStructured(d, printer.StructuredOptions{}); err != nil {
+		return err
+	}
+	return printLinks(cctx, desc.RawInfo.GetLinks())
 }
 
 func (c *TemporalNexusOperationCancelCommand) run(cctx *CommandContext, args []string) error {
