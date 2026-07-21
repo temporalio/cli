@@ -134,3 +134,21 @@ jobs:
           TEMPORAL_NAMESPACE: ${{ vars.TEMPORAL_CLIENT_NAMESPACE }}
         shell: bash
         run: go run ./cmd/temporal workflow list --limit 2 --api-key ${{ secrets.TEMPORAL_CLIENT_CLOUD_API_KEY }}
+
+  ci-passed:
+    name: ci-passed
+    if: always()
+    needs:
+      - validate-server-version
+      - build-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify required jobs passed
+        env:
+          VALIDATE_SERVER_VERSION_RESULT: ${{ needs.validate-server-version.result }}
+          BUILD_TEST_RESULT: ${{ needs.build-test.result }}
+        run: |
+          if [[ "$VALIDATE_SERVER_VERSION_RESULT" != "success" || "$BUILD_TEST_RESULT" != "success" ]]; then
+            echo "Required CI jobs did not pass" >&2
+            exit 1
+          fi
