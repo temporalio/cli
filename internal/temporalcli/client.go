@@ -2,7 +2,9 @@ package temporalcli
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/user"
 
@@ -56,6 +58,17 @@ func dialClientWithCodec(cctx *CommandContext, c *cliext.ClientOptions) (client.
 	}
 	clientOpts, err := builder.Build(cctx)
 	if err != nil {
+		// An unreadable TLS/credential file is a connection-setup problem
+		// worth a suggestion, even though no dial happened.
+		var pathErr *fs.PathError
+		if errors.As(err, &pathErr) {
+			diag := &connectDiagnosis{
+				Address: builder.ResolvedAddress,
+				Cause:   causeCertFileUnreadable,
+				Detail:  pathErr.Path,
+			}
+			return nil, nil, newConnectError(diag, connectMetaFromBuilder(cctx, builder), err)
+		}
 		return nil, nil, err
 	}
 
@@ -87,7 +100,7 @@ func dialClientWithCodec(cctx *CommandContext, c *cliext.ClientOptions) (client.
 
 	cl, err := client.DialContext(dialCtx, clientOpts)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, dialConnectError(cctx, dialCtx, builder, clientOpts, err)
 	}
 
 	// Since this namespace value is used by many commands after this call,
@@ -95,6 +108,54 @@ func dialClientWithCodec(cctx *CommandContext, c *cliext.ClientOptions) (client.
 	c.Namespace = clientOpts.Namespace
 
 	return cl, builder.PayloadCodec, nil
+}
+
+// dialConnectError enriches a client.DialContext failure with a staged
+// connection diagnosis and a suggested fix. See connectdiag.go.
+func dialConnectError(
+	cctx *CommandContext,
+	dialCtx context.Context,
+	builder *cliext.ClientOptionsBuilder,
+	clientOpts client.Options,
+	origErr error,
+) error {
+	// If a CLI-side timeout fired, surface its descriptive cause, which is
+	// otherwise lost ("context deadline exceeded" wins over "command timed
+	// out after 5s").
+	if dialCtx.Err() != nil {
+		if cause := context.Cause(dialCtx); cause != nil && !errors.Is(cause, dialCtx.Err()) {
+			origErr = fmt.Errorf("%w (%v)", origErr, cause)
+		}
+	}
+	// Never probe after an interrupt or when the whole command timed out.
+	if cctx.Err() != nil {
+		return origErr
+	}
+	if v, _ := cctx.Options.EnvLookup.LookupEnv("TEMPORAL_CLI_DISABLE_CONNECT_DIAGNOSIS"); v != "" {
+		return fmt.Errorf("failed connecting to Temporal server at %v: %w", clientOpts.HostPort, origErr)
+	}
+	// The probe has its own internal budget, but never let it exceed the
+	// user's explicit connect timeout.
+	probeCtx := context.Context(cctx)
+	if timeout := cctx.RootCommand.CommonOptions.ClientConnectTimeout.Duration(); timeout > 0 {
+		var cancel context.CancelFunc
+		probeCtx, cancel = context.WithTimeout(cctx, timeout)
+		defer cancel()
+	}
+	diag := diagnoseConnection(probeCtx, clientOpts.HostPort, clientOpts.ConnectionOptions.TLS, origErr)
+	meta := connectMetaFromBuilder(cctx, builder)
+	meta.TLSConfigured = clientOpts.ConnectionOptions.TLS != nil
+	return newConnectError(diag, meta, origErr)
+}
+
+func connectMetaFromBuilder(cctx *CommandContext, builder *cliext.ClientOptionsBuilder) connectMeta {
+	return connectMeta{
+		Args:          cctx.Options.Args,
+		Address:       builder.ResolvedAddress,
+		AddressSource: builder.ResolvedAddressSource,
+		ProfileName:   builder.ResolvedProfileName,
+		HasAPIKey:     builder.HasAPIKey,
+	}
 }
 
 func fixedHeaderOverrideInterceptor(
