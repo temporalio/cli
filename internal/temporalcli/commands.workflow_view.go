@@ -15,8 +15,6 @@ import (
 	"go.temporal.io/api/workflow/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
-
-	"go.temporal.io/sdk/temporalnexus"
 )
 
 func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []string) error {
@@ -251,44 +249,8 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 		}, printer.StructuredOptions{})
 	}
 
-	if len(resp.Callbacks) > 0 {
-		cctx.Printer.Println()
-		cctx.Printer.Println(color.MagentaString("Callbacks: %v", len(resp.Callbacks)))
-		cctx.Printer.Println()
-		cbs := make([]struct {
-			URL                     string
-			Links                   []string
-			Trigger                 string
-			State                   enums.CallbackState
-			Attempt                 int32
-			RegistrationTime        time.Time        `cli:",cardOmitEmpty"`
-			NextAttemptScheduleTime time.Time        `cli:",cardOmitEmpty"`
-			LastAttemptCompleteTime time.Time        `cli:",cardOmitEmpty"`
-			LastAttemptFailure      *failure.Failure `cli:",cardOmitEmpty"`
-			BlockedReason           string           `cli:",cardOmitEmpty"`
-		}, len(resp.Callbacks))
-		for i, cb := range resp.Callbacks {
-			cbs[i].URL = cb.GetCallback().GetNexus().GetUrl()
-			for _, link := range cb.GetCallback().GetLinks() {
-				if link.GetWorkflowEvent() != nil {
-					nexusLink := temporalnexus.ConvertLinkWorkflowEventToNexusLink(link.GetWorkflowEvent())
-					cbs[i].Links = append(cbs[i].Links, nexusLink.URL.String())
-				}
-			}
-			cbs[i].State = cb.GetState()
-			cbs[i].Attempt = cb.GetAttempt()
-			cbs[i].LastAttemptFailure = cb.LastAttemptFailure
-			cbs[i].LastAttemptCompleteTime = timestampToTime(cb.LastAttemptCompleteTime)
-			cbs[i].NextAttemptScheduleTime = timestampToTime(cb.NextAttemptScheduleTime)
-			cbs[i].RegistrationTime = timestampToTime(cb.RegistrationTime)
-			cbs[i].Trigger = "Unknown"
-			if cb.GetTrigger().GetWorkflowClosed() != nil {
-				cbs[i].Trigger = "WorkflowClosed"
-			}
-			cbs[i].BlockedReason = cb.GetBlockedReason()
-		}
-		_ = cctx.Printer.PrintStructured(cbs, printer.StructuredOptions{})
-		cctx.Printer.Println()
+	if err := printCallbacks(cctx, resp.Callbacks); err != nil {
+		return err
 	}
 
 	if running {

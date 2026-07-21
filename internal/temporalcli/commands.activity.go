@@ -448,35 +448,10 @@ func printActivityDescription(cctx *CommandContext, resp *workflowservice.Descri
 	if err := cctx.Printer.PrintStructured(d, printer.StructuredOptions{}); err != nil {
 		return err
 	}
-	return printActivityCallbacks(cctx, resp.GetCallbacks())
-}
-
-func printActivityCallbacks(cctx *CommandContext, callbacks []*activitypb.CallbackInfo) error {
-	if len(callbacks) == 0 {
-		return nil
+	if err := printLinks(cctx, info.GetLinks()); err != nil {
+		return err
 	}
-	rows := make([]struct {
-		State                   string
-		Attempt                 int32
-		RegistrationTime        time.Time `cli:",cardOmitEmpty"`
-		NextAttemptScheduleTime time.Time `cli:",cardOmitEmpty"`
-		BlockedReason           string    `cli:",cardOmitEmpty"`
-		LastAttemptFailure      string    `cli:",cardOmitEmpty"`
-	}, len(callbacks))
-	for i, cb := range callbacks {
-		info := cb.GetInfo()
-		rows[i].State = info.GetState().String()
-		rows[i].Attempt = info.GetAttempt()
-		rows[i].RegistrationTime = timestampToTime(info.GetRegistrationTime())
-		rows[i].NextAttemptScheduleTime = timestampToTime(info.GetNextAttemptScheduleTime())
-		rows[i].BlockedReason = info.GetBlockedReason()
-		if f := info.GetLastAttemptFailure(); f != nil {
-			rows[i].LastAttemptFailure = cctx.MarshalFriendlyFailureBodyText(f, "    ")
-		}
-	}
-	cctx.Printer.Println()
-	cctx.Printer.Println(color.MagentaString("Callbacks:"))
-	return cctx.Printer.PrintStructured(rows, printer.StructuredOptions{Table: &printer.TableOptions{}})
+	return printCallbacks(cctx, resp.GetCallbacks())
 }
 
 func (c *TemporalActivityListCommand) run(cctx *CommandContext, args []string) error {
