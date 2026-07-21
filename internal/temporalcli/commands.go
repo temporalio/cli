@@ -22,10 +22,14 @@ import (
 	"github.com/temporalio/cli/cliext"
 	"github.com/temporalio/cli/internal/printer"
 	"github.com/temporalio/ui-server/v2/server/version"
+	activitypb "go.temporal.io/api/activity/v1"
 	"go.temporal.io/api/common/v1"
 	commonpb "go.temporal.io/api/common/v1"
+	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/failure/v1"
+	"go.temporal.io/api/temporalnexus"
 	"go.temporal.io/api/temporalproto"
+	workflowpb "go.temporal.io/api/workflow/v1"
 	"go.temporal.io/sdk/contrib/envconfig"
 	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/temporal"
@@ -604,6 +608,123 @@ func timestampToTime(t *timestamppb.Timestamp) time.Time {
 		return time.Time{}
 	}
 	return t.AsTime()
+}
+
+// nexusLinkStrings converts Temporal common links into their Nexus link URL
+// string representations, skipping any link variant that has no Nexus
+// equivalent. The conversion helpers live in go.temporal.io/api/temporalnexus
+// (previously in the Go SDK's temporalnexus package).
+func nexusLinkStrings(links []*commonpb.Link) []string {
+	var out []string
+	for _, link := range links {
+		switch {
+		case link.GetWorkflowEvent() != nil:
+			out = append(out, temporalnexus.ConvertLinkWorkflowEventToNexusLink(link.GetWorkflowEvent()).URL.String())
+		case link.GetNexusOperation() != nil:
+			out = append(out, temporalnexus.ConvertLinkNexusOperationToNexusLink(link.GetNexusOperation()).URL.String())
+		case link.GetActivity() != nil:
+			out = append(out, temporalnexus.ConvertLinkActivityToNexusLink(link.GetActivity()).URL.String())
+		}
+	}
+	return out
+}
+
+// printLinks renders Temporal common links as a standalone Nexus links section.
+// Nothing is printed when none of the links have a Nexus representation.
+func printLinks(cctx *CommandContext, links []*commonpb.Link) error {
+	urls := nexusLinkStrings(links)
+	if len(urls) == 0 {
+		return nil
+	}
+	rows := make([]struct {
+		Link string
+	}, len(urls))
+	for i, url := range urls {
+		rows[i].Link = url
+	}
+	cctx.Printer.Println()
+	cctx.Printer.Println(color.MagentaString("Links: %v", len(urls)))
+	cctx.Printer.Println()
+	return cctx.Printer.PrintStructured(rows, printer.StructuredOptions{})
+}
+
+// callbackInfoForPrint is the subset of accessors shared by workflow.v1.CallbackInfo
+// and callback.v1.CallbackInfo (the latter nested inside activity.v1.CallbackInfo).
+// It lets the workflow and activity describe commands render callbacks through a
+// single code path (printCallbacks).
+type callbackInfoForPrint interface {
+	GetCallback() *commonpb.Callback
+	GetState() enums.CallbackState
+	GetAttempt() int32
+	GetRegistrationTime() *timestamppb.Timestamp
+	GetNextAttemptScheduleTime() *timestamppb.Timestamp
+	GetLastAttemptCompleteTime() *timestamppb.Timestamp
+	GetLastAttemptFailure() *failure.Failure
+	GetBlockedReason() string
+}
+
+type callbackForPrint interface {
+	*workflowpb.CallbackInfo | *activitypb.CallbackInfo
+}
+
+func normalizeCallbackForPrint[T callbackForPrint](cb T) (callbackInfoForPrint, string) {
+	switch cb := any(cb).(type) {
+	case *workflowpb.CallbackInfo:
+		trigger := "Unknown"
+		if cb.GetTrigger().GetWorkflowClosed() != nil {
+			trigger = "WorkflowClosed"
+		}
+		return cb, trigger
+	case *activitypb.CallbackInfo:
+		trigger := "Unknown"
+		if cb.GetTrigger().GetActivityClosed() != nil {
+			trigger = "ActivityClosed"
+		}
+		return cb.GetInfo(), trigger
+	default:
+		panic("unsupported callback type")
+	}
+}
+
+// printCallbacks renders the "Callbacks: N" section shared by the workflow and
+// activity describe commands. Nothing is printed when there are no callbacks.
+// This is only reached for text output; JSON output prints the raw describe
+// response instead.
+func printCallbacks[T callbackForPrint](cctx *CommandContext, callbacks []T) error {
+	if len(callbacks) == 0 {
+		return nil
+	}
+	rows := make([]struct {
+		URL                     string
+		Links                   []string `cli:",cardOmitEmpty"`
+		Trigger                 string
+		State                   enums.CallbackState
+		Attempt                 int32
+		RegistrationTime        time.Time `cli:",cardOmitEmpty"`
+		NextAttemptScheduleTime time.Time `cli:",cardOmitEmpty"`
+		LastAttemptCompleteTime time.Time `cli:",cardOmitEmpty"`
+		BlockedReason           string    `cli:",cardOmitEmpty"`
+		LastAttemptFailure      string    `cli:",cardOmitEmpty"`
+	}, len(callbacks))
+	for i, cb := range callbacks {
+		ci, trigger := normalizeCallbackForPrint(cb)
+		rows[i].URL = ci.GetCallback().GetNexus().GetUrl()
+		rows[i].Links = nexusLinkStrings(ci.GetCallback().GetLinks())
+		rows[i].Trigger = trigger
+		rows[i].State = ci.GetState()
+		rows[i].Attempt = ci.GetAttempt()
+		rows[i].RegistrationTime = timestampToTime(ci.GetRegistrationTime())
+		rows[i].NextAttemptScheduleTime = timestampToTime(ci.GetNextAttemptScheduleTime())
+		rows[i].LastAttemptCompleteTime = timestampToTime(ci.GetLastAttemptCompleteTime())
+		rows[i].BlockedReason = ci.GetBlockedReason()
+		if f := ci.GetLastAttemptFailure(); f != nil {
+			rows[i].LastAttemptFailure = cctx.MarshalFriendlyFailureBodyText(f, "    ")
+		}
+	}
+	cctx.Printer.Println()
+	cctx.Printer.Println(color.MagentaString("Callbacks: %v", len(callbacks)))
+	cctx.Printer.Println()
+	return cctx.Printer.PrintStructured(rows, printer.StructuredOptions{})
 }
 
 type nopWriter struct{}
