@@ -11,6 +11,7 @@ updates:
     ignore:
       # Temporal dependencies are managed manually to ensure coordinated upgrades across all temporal packages
       - dependency-name: "go.temporal.io/*"
+      - dependency-name: "github.com/temporalio/ui-server/v2"
 
   - package-ecosystem: github-actions
     directory: "/"

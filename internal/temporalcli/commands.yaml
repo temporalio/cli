@@ -2844,7 +2844,9 @@ commands:
       ```
       temporal schedule update \
           --schedule-id "YourScheduleId" \
-          --workflow-type "NewWorkflowType"
+          --workflow-id YourBaseWorkflowIdName \
+          --task-queue YourTaskQueue \
+          --type YourWorkflowType
       ```
 
       This command performs a full replacement of the Schedule
