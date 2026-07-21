@@ -375,6 +375,10 @@ func Execute(ctx context.Context, options CommandOptions) {
 	defer cancel()
 
 	if err == nil {
+		// Update checks are config-controlled, best effort, and intentionally run
+		// outside Cobra hooks so they also apply to the built-in --version path.
+		runUpdateCheck(cctx)
+
 		cmd := NewTemporalCommand(cctx)
 		cmd.Command.SetArgs(cctx.Options.Args)
 		cmd.Command.SetOut(cctx.Options.Stdout)

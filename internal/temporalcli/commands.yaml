@@ -813,6 +813,15 @@ commands:
 
       The default profile is `default`. This can be overridden with the
       `TEMPORAL_PROFILE` environment variable or `--profile`.
+
+      To opt in to periodic checks for new Temporal CLI releases, set the
+      global CLI property:
+
+      ```
+      temporal config set \
+          --prop cli.update_check.enabled \
+          --value true
+      ```
     docs:
       description-header: >-
         Temporal CLI 'config' commands allow the getting, setting, deleting, and
