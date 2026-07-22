@@ -801,6 +801,7 @@ commands:
 
       ```
       temporal config set \
+          --profile YourProfile \
           --prop address \
           --value us-west-2.aws.api.temporal.io:7233
       ```
@@ -839,6 +840,7 @@ commands:
 
       ```
       temporal config delete \
+          --profile YourProfile \
           --prop tls.client_cert_path
       ```
     options:
@@ -857,7 +859,7 @@ commands:
 
       ```
       temporal config delete-profile \
-          --profile my-profile
+          --profile YourProfile
       ```
 
   - name: temporal config get
@@ -867,6 +869,7 @@ commands:
 
       ```
       temporal config get \
+          --profile YourProfile \
           --prop address
       ```
 
@@ -897,6 +900,7 @@ commands:
 
       ```
       temporal config set \
+          --profile YourProfile \
           --prop address \
           --value us-west-2.aws.api.temporal.io:7233
       ```
