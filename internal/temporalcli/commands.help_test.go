@@ -44,6 +44,28 @@ func TestHelp_WithValueFlag(t *testing.T) {
 	}
 }
 
+func TestHelp_ConfigProfileExamples(t *testing.T) {
+	h := NewCommandHarness(t)
+
+	for _, args := range [][]string{
+		{"config", "--help"},
+		{"config", "get", "--help"},
+		{"config", "set", "--help"},
+		{"config", "delete", "--help"},
+		{"config", "delete-profile", "--help"},
+	} {
+		res := h.Execute(args...)
+		require.Contains(t, res.Stdout.String(), "--profile YourProfile", strings.Join(args[:2], " "))
+		require.NoError(t, res.Err)
+	}
+
+	res := h.Execute("config", "list", "--help")
+	descriptionAndExamples := strings.SplitN(res.Stdout.String(), "\nUsage:", 2)
+	require.Len(t, descriptionAndExamples, 2)
+	require.NotContains(t, descriptionAndExamples[0], "--profile")
+	require.NoError(t, res.Err)
+}
+
 func TestHelp_HelpShowsAllFlag(t *testing.T) {
 	h := NewCommandHarness(t)
 	res := h.Execute("help", "--help")
