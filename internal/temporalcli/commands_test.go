@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
@@ -120,6 +122,38 @@ func TestAssertContainsOnSameLine(t *testing.T) {
 	require.NoError(t, AssertContainsOnSameLine("a a", "a", "a"))
 }
 
+func TestExecuteReturnsStatusAndKeepsTerminalErrorsOnStderr(t *testing.T) {
+	badEnvFile := filepath.Join(t.TempDir(), "invalid.yaml")
+	require.NoError(t, os.WriteFile(badEnvFile, []byte("invalid: ["), 0o600))
+	t.Run("help succeeds without terminal rendering", func(t *testing.T) {
+		res := NewCommandHarness(t).Execute("--help")
+		assert.NoError(t, res.Err)
+		assert.Zero(t, res.Runtime.ExitStatus)
+		assert.Empty(t, res.Stderr.String())
+		assert.Contains(t, res.Stdout.String(), "Usage:")
+	})
+
+	for _, test := range []struct {
+		name      string
+		args      []string
+		wantUsage bool
+	}{
+		{name: "parse failure", args: []string{"workflow", "describe", "--not-a-flag"}, wantUsage: true},
+		{name: "required flag failure", args: []string{"workflow", "describe"}, wantUsage: true},
+		{name: "pre-run/configuration failure", args: []string{"workflow", "list", "--env-file", badEnvFile}},
+		{name: "runtime failure", args: []string{"config", "get", "--disable-config-file", "--disable-config-env"}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			res := NewCommandHarness(t).Execute(test.args...)
+			assert.Error(t, res.Err)
+			assert.Equal(t, 1, res.Runtime.ExitStatus)
+			assert.Equal(t, 1, strings.Count(res.Stderr.String(), "Error:"))
+			assert.Equal(t, test.wantUsage, strings.Contains(res.Stderr.String(), "Usage:"))
+			assert.Empty(t, res.Stdout.String())
+		})
+	}
+}
+
 func (h *CommandHarness) Eventually(
 	condition func() bool,
 	waitFor time.Duration,
@@ -145,9 +179,10 @@ func (h *CommandHarness) T() *testing.T {
 }
 
 type CommandResult struct {
-	Err    error
-	Stdout bytes.Buffer
-	Stderr bytes.Buffer
+	Err     error
+	Runtime temporalcli.Result
+	Stdout  bytes.Buffer
+	Stderr  bytes.Buffer
 }
 
 func (h *CommandHarness) Execute(args ...string) *CommandResult {
@@ -167,20 +202,13 @@ func (h *CommandHarness) Execute(args ...string) *CommandResult {
 	if options.DeprecatedEnvConfig.DisableEnvConfig {
 		options.DeprecatedEnvConfig.EnvConfigName = "default"
 	}
-	// Capture error
-	options.Fail = func(err error) {
-		if res.Err != nil {
-			panic("fail called twice, just failed with " + err.Error())
-		}
-		res.Err = err
-	}
-
 	// Run
 	ctx, cancel := context.WithCancel(h.Context)
 	h.t.Cleanup(cancel)
 	defer cancel()
 	h.t.Logf("Calling: %v", strings.Join(args, " "))
-	temporalcli.Execute(ctx, options)
+	res.Runtime = temporalcli.Execute(ctx, options)
+	res.Err = res.Runtime.CommandErr
 	if res.Stdout.Len() > 0 {
 		h.t.Logf("Stdout:\n-----\n%s\n-----", &res.Stdout)
 	}

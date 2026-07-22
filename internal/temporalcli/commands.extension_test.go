@@ -12,6 +12,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/temporalio/cli/internal/temporalcli"
 	"golang.org/x/tools/imports"
 )
 
@@ -237,7 +238,8 @@ func TestExtension_FailsOnNonExecutableCommand(t *testing.T) {
 
 	res := h.Execute("foo")
 
-	assert.Contains(t, res.Stdout.String(), "Usage:") // help text is shown
+	assert.Empty(t, res.Stdout.String())
+	assert.Contains(t, res.Stderr.String(), "Usage:")
 	assert.EqualError(t, res.Err, "unknown command")
 }
 
@@ -248,7 +250,10 @@ func TestExtension_PassesThroughNonZeroExit(t *testing.T) {
 	res := h.Execute("foo")
 
 	assert.Equal(t, "Args: temporal-foo \n", res.Stdout.String())
-	assert.NoError(t, res.Err)
+	var extensionErr temporalcli.ExtensionNonZeroExit
+	assert.ErrorAs(t, res.Err, &extensionErr)
+	assert.Equal(t, 42, res.Runtime.ExitStatus)
+	assert.Empty(t, res.Stderr.String(), "extension owns its stderr")
 }
 
 func TestExtension_FailsOnCommandTimeout(t *testing.T) {

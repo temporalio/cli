@@ -7,10 +7,12 @@ import (
 	"io/fs"
 	"os"
 	"os/user"
+	"strings"
 
 	"github.com/temporalio/cli/cliext"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/contrib/envconfig"
 	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/workflow"
 	"google.golang.org/grpc"
@@ -48,6 +50,7 @@ func dialClientWithCodec(cctx *CommandContext, c *cliext.ClientOptions) (client.
 		}
 		c.Identity = "temporal-cli:" + username + "@" + hostname
 	}
+	captureEffectiveConnectionSecrets(cctx, c)
 
 	// Build client options using cliext
 	builder := &cliext.ClientOptionsBuilder{
@@ -63,11 +66,11 @@ func dialClientWithCodec(cctx *CommandContext, c *cliext.ClientOptions) (client.
 		var pathErr *fs.PathError
 		if errors.As(err, &pathErr) {
 			diag := &connectDiagnosis{
-				Address: builder.ResolvedAddress,
+				Address: c.Address,
 				Cause:   causeCertFileUnreadable,
 				Detail:  pathErr.Path,
 			}
-			return nil, nil, newConnectError(diag, connectMetaFromBuilder(cctx, builder), err)
+			return nil, nil, newConnectError(diag, connectMetaFromOptions(cctx, c, client.Options{HostPort: c.Address}), err)
 		}
 		return nil, nil, err
 	}
@@ -100,7 +103,7 @@ func dialClientWithCodec(cctx *CommandContext, c *cliext.ClientOptions) (client.
 
 	cl, err := client.DialContext(dialCtx, clientOpts)
 	if err != nil {
-		return nil, nil, dialConnectError(cctx, dialCtx, builder, clientOpts, err)
+		return nil, nil, dialConnectError(cctx, dialCtx, c, clientOpts, err)
 	}
 
 	// Since this namespace value is used by many commands after this call,
@@ -115,7 +118,7 @@ func dialClientWithCodec(cctx *CommandContext, c *cliext.ClientOptions) (client.
 func dialConnectError(
 	cctx *CommandContext,
 	dialCtx context.Context,
-	builder *cliext.ClientOptionsBuilder,
+	configured *cliext.ClientOptions,
 	clientOpts client.Options,
 	origErr error,
 ) error {
@@ -134,27 +137,90 @@ func dialConnectError(
 	if v, _ := cctx.Options.EnvLookup.LookupEnv("TEMPORAL_CLI_DISABLE_CONNECT_DIAGNOSIS"); v != "" {
 		return fmt.Errorf("failed connecting to Temporal server at %v: %w", clientOpts.HostPort, origErr)
 	}
-	// The probe has its own internal budget, but never let it exceed the
-	// user's explicit connect timeout.
-	probeCtx := context.Context(cctx)
-	if timeout := cctx.RootCommand.CommonOptions.ClientConnectTimeout.Duration(); timeout > 0 {
-		var cancel context.CancelFunc
-		probeCtx, cancel = context.WithTimeout(cctx, timeout)
-		defer cancel()
-	}
-	diag := diagnoseConnection(probeCtx, clientOpts.HostPort, clientOpts.ConnectionOptions.TLS, origErr)
-	meta := connectMetaFromBuilder(cctx, builder)
+	// Diagnosis uses the remaining command context and applies its own 3s cap.
+	// ClientConnectTimeout governs only the original dial.
+	diag := diagnoseConnection(cctx, clientOpts.HostPort, clientOpts.ConnectionOptions.TLS, origErr)
+	meta := connectMetaFromOptions(cctx, configured, clientOpts)
 	meta.TLSConfigured = clientOpts.ConnectionOptions.TLS != nil
 	return newConnectError(diag, meta, origErr)
 }
 
-func connectMetaFromBuilder(cctx *CommandContext, builder *cliext.ClientOptionsBuilder) connectMeta {
-	return connectMeta{
-		Args:          cctx.Options.Args,
-		Address:       builder.ResolvedAddress,
-		AddressSource: builder.ResolvedAddressSource,
-		ProfileName:   builder.ResolvedProfileName,
-		HasAPIKey:     builder.HasAPIKey,
+func connectMetaFromOptions(cctx *CommandContext, configured *cliext.ClientOptions, resolved client.Options) connectMeta {
+	meta := connectMeta{Address: resolved.HostPort, HasAPIKey: cctx.hasAPIKey, HasOAuth: cctx.hasOAuth}
+	if configured != nil && configured.FlagSet != nil && configured.FlagSet.Changed("address") {
+		meta.AddressSource = "flag"
+	} else if configured != nil && resolved.HostPort != configured.Address {
+		meta.AddressSource = "profile"
+	} else {
+		meta.AddressSource = "default"
+	}
+	if cctx.RootCommand != nil {
+		meta.ProfileName = cctx.RootCommand.CommonOptions.Profile
+	}
+	return meta
+}
+
+func captureEffectiveConnectionSecrets(cctx *CommandContext, configured *cliext.ClientOptions) {
+	if configured != nil {
+		cctx.registerSecrets(
+			configured.ApiKey,
+			configured.CodecAuth,
+			configured.TlsCertData,
+			configured.TlsKeyData,
+			configured.TlsCaData,
+		)
+		for _, value := range append(append([]string(nil), configured.CodecHeader...), configured.GrpcMeta...) {
+			cctx.registerSecrets(value)
+			if _, secret, ok := strings.Cut(value, "="); ok {
+				cctx.registerSecrets(secret)
+			}
+		}
+		if configured.ApiKey != "" {
+			cctx.hasAPIKey = true
+		}
+	}
+	if cctx.RootCommand == nil {
+		return
+	}
+	common := cctx.RootCommand.CommonOptions
+	if !common.DisableConfigFile || !common.DisableConfigEnv {
+		profile, err := envconfig.LoadClientConfigProfile(envconfig.LoadClientConfigProfileOptions{
+			ConfigFilePath: common.ConfigFile, ConfigFileProfile: common.Profile,
+			DisableFile: common.DisableConfigFile, DisableEnv: common.DisableConfigEnv,
+			EnvLookup: cctx.Options.EnvLookup,
+		})
+		if err == nil {
+			cctx.registerSecrets(profile.APIKey)
+			cctx.hasAPIKey = cctx.hasAPIKey || profile.APIKey != ""
+			if profile.TLS != nil {
+				cctx.registerSecrets(string(profile.TLS.ClientCertData), string(profile.TLS.ClientKeyData), string(profile.TLS.ServerCACertData))
+			}
+			if profile.Codec != nil {
+				cctx.registerSecrets(profile.Codec.Auth)
+			}
+			for _, value := range profile.GRPCMeta {
+				cctx.registerSecrets(value)
+			}
+		}
+	}
+	// Match ClientOptionsBuilder precedence: an explicit --api-key suppresses
+	// OAuth loading, while a profile API key can still be replaced by a usable
+	// OAuth token from the same profile.
+	if common.DisableConfigFile || configured != nil && configured.ApiKey != "" {
+		return
+	}
+	oauth, err := cliext.LoadClientOAuth(cliext.LoadClientOAuthOptions{
+		ConfigFilePath: common.ConfigFile, ProfileName: common.Profile, EnvLookup: cctx.Options.EnvLookup,
+	})
+	if err != nil || oauth.OAuth == nil {
+		return
+	}
+	if oauth.OAuth.ClientConfig != nil {
+		cctx.registerSecrets(oauth.OAuth.ClientConfig.ClientSecret)
+	}
+	if oauth.OAuth.Token != nil {
+		cctx.registerSecrets(oauth.OAuth.Token.AccessToken, oauth.OAuth.Token.RefreshToken)
+		cctx.hasOAuth = oauth.OAuth.Token.AccessToken != ""
 	}
 }
 

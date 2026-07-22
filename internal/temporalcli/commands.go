@@ -58,10 +58,15 @@ type CommandContext struct {
 	// Is set to true if any command actually started running. This is a hack to workaround the fact
 	// that cobra does not properly exit nonzero if an unknown command/subcommand is given.
 	ActuallyRanCommand bool
+	preRunSucceeded    bool
 
 	// Root/current command only set inside of pre-run
 	RootCommand    *TemporalCommand
 	CurrentCommand *cobra.Command
+	commandCancel  context.CancelFunc
+	secretValues   []string
+	hasAPIKey      bool
+	hasOAuth       bool
 }
 
 type IOStreams struct {
@@ -81,7 +86,8 @@ type CommandOptions struct {
 	// If nil, [envconfig.EnvLookupOS] is used.
 	EnvLookup envconfig.EnvLookup
 
-	// Defaults to logging error then os.Exit(1)
+	// Fail is used by generated Run callbacks to hand their final error to the
+	// command runtime. Execute replaces it with a command-scoped recorder.
 	Fail func(error)
 
 	AdditionalClientGRPCDialOptions []grpc.DialOption
@@ -135,24 +141,6 @@ func (c *CommandContext) preprocessOptions() error {
 	}
 	if c.Options.Stderr == nil {
 		c.Options.Stderr = os.Stderr
-	}
-
-	// Setup default fail callback
-	if c.Options.Fail == nil {
-		c.Options.Fail = func(err error) {
-			// If context is closed, say that the program was interrupted and
-			// ignore the actual error — unless the context carries a
-			// descriptive cause such as a --command-timeout expiry.
-			if c.Err() != nil {
-				if cause := context.Cause(c); cause != nil && !errors.Is(cause, context.Canceled) {
-					err = cause
-				} else {
-					err = fmt.Errorf("program interrupted")
-				}
-			}
-			fmt.Fprintf(c.Options.Stderr, "Error: %v\n", err)
-			os.Exit(1)
-		}
 	}
 
 	// Update options according to the env file. MUST BE DONE LAST.
@@ -360,10 +348,16 @@ func (c *CommandContext) promptString(message string, expected string, autoConfi
 	return line == expected, nil
 }
 
-// Execute runs the Temporal CLI with the given context and options. This
-// intentionally does not return an error but rather invokes Fail on the
-// options.
-func Execute(ctx context.Context, options CommandOptions) {
+// Execute runs the Temporal CLI and returns its terminal outcome. It never
+// exits for a terminal command failure; cmd/temporal/main.go owns that process
+// exit boundary. Existing success-output broken-pipe exits in printer are a
+// separate compatibility path outside terminal error handling.
+func Execute(ctx context.Context, options CommandOptions) Result {
+	var recorder commandErrorRecorder
+	options.Fail = recorder.Record
+	origNoColor := color.NoColor
+	defer func() { color.NoColor = origNoColor }()
+
 	// Create context and run. We always get a context and cancel func back even
 	// if an error was returned. This is so we can use the context to print an
 	// error message using the appropriate Fail() method, regardless of why the
@@ -373,9 +367,17 @@ func Execute(ctx context.Context, options CommandOptions) {
 	// config file, or some other issue in their environment.)
 	cctx, cancel, err := NewCommandContext(ctx, options)
 	defer cancel()
+	defer func() {
+		if cctx.commandCancel != nil {
+			cctx.commandCancel()
+		}
+	}()
 
 	if err == nil {
 		cmd := NewTemporalCommand(cctx)
+		// The terminal handler owns both error and input-error usage rendering.
+		cmd.Command.SilenceErrors = true
+		cmd.Command.SilenceUsage = true
 		cmd.Command.SetArgs(cctx.Options.Args)
 		cmd.Command.SetOut(cctx.Options.Stdout)
 		cmd.Command.SetErr(cctx.Options.Stderr)
@@ -383,20 +385,36 @@ func Execute(ctx context.Context, options CommandOptions) {
 		// Try extension first.
 		err, cctx.ActuallyRanCommand = tryExecuteExtension(cctx, cmd)
 		if err != nil {
-			cctx.Options.Fail(err)
-			return
+			return finishCommand(cctx, err, usageForArgs(&cmd.Command, cctx.Options.Args))
 		}
 
 		// Run builtin command if no extension handled the command.
 		if !cctx.ActuallyRanCommand {
-			err = cmd.Command.ExecuteContext(cctx)
+			if unknownCommandPath(&cmd.Command, cctx.Options.Args) {
+				return finishCommand(cctx, fmt.Errorf("unknown command"), usageForArgs(&cmd.Command, nil))
+			}
+			var cobraErr error
+			recorded := runRecordedCommand(func() { cobraErr = cmd.Command.ExecuteContext(cctx) })
+			if recorded {
+				return finishCommand(cctx, recorder.Err(), "")
+			}
+			if cobraErr != nil {
+				usage := ""
+				if !cctx.ActuallyRanCommand || cctx.preRunSucceeded {
+					usage = usageForArgs(&cmd.Command, cctx.Options.Args)
+				}
+				return finishCommand(cctx, cobraErr, usage)
+			}
+			if err = recorder.Err(); err != nil {
+				return finishCommand(cctx, err, "")
+			}
 		}
 	}
 
 	if err != nil {
 		// Either we failed to create the context, OR the command itself failed.
 		// Either way, we need to print an error message.
-		cctx.Options.Fail(err)
+		return finishCommand(cctx, err, "")
 	}
 
 	// If no command ever actually got run, exit nonzero with an error.  This is
@@ -413,9 +431,165 @@ func Execute(ctx context.Context, options CommandOptions) {
 		if slices.ContainsFunc(cctx.Options.Args, func(a string) bool {
 			return slices.Contains(zeroExitArgs, a)
 		}) {
+			return Result{}
+		}
+		return finishCommand(cctx, fmt.Errorf("unknown command"), "")
+	}
+	return Result{}
+}
+
+func usageForArgs(root *cobra.Command, args []string) string {
+	command, _, findErr := root.Find(args)
+	if findErr != nil || command == nil {
+		command = root
+	}
+	return command.UsageString()
+}
+
+func unknownCommandPath(root *cobra.Command, args []string) bool {
+	current := root
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		if strings.HasPrefix(arg, "-") {
+			name, inline := parseFlagArg(arg)
+			flag, takesValue := lookupFlag(current, name)
+			if flag == nil {
+				// Cobra owns invalid-flag classification. Guessing whether an
+				// unknown flag consumes the next token can misreport that token
+				// as an unknown command.
+				return false
+			}
+			if takesValue && !inline {
+				i++
+			}
+			continue
+		}
+		var next *cobra.Command
+		for _, child := range current.Commands() {
+			if child.Name() == arg || slices.Contains(child.Aliases, arg) {
+				next = child
+				break
+			}
+		}
+		if next == nil {
+			return current.HasAvailableSubCommands() && current.Run == nil && current.RunE == nil
+		}
+		current = next
+	}
+	return false
+}
+
+func finishCommand(cctx *CommandContext, err error, usage string) Result {
+	var extensionErr ExtensionNonZeroExit
+	if errors.As(err, &extensionErr) {
+		return Result{CommandErr: err, ExitStatus: extensionErr.ExitCode()}
+	}
+	displayErr := err
+	if cctx.Err() != nil {
+		if cause := context.Cause(cctx); cause != nil && !errors.Is(cause, context.Canceled) {
+			displayErr = cause
+		} else {
+			displayErr = fmt.Errorf("program interrupted")
+		}
+	}
+	return handleTerminalError(err, terminalOptions{
+		Stderr:       cctx.Options.Stderr,
+		Color:        cctx.terminalColorEnabled(),
+		KnownSecrets: cctx.knownSecrets(),
+		Usage:        usage,
+		DisplayErr:   displayErr,
+	})
+}
+
+func (c *CommandContext) terminalColorEnabled() bool {
+	jsonOutput := c.JSONOutput
+	colorEnabled := !color.NoColor
+	for i := 0; i < len(c.Options.Args); i++ {
+		name, value, inline := strings.Cut(c.Options.Args[i], "=")
+		if !inline && i+1 < len(c.Options.Args) && (name == "-o" || name == "--output" || name == "--color") {
+			i++
+			value = c.Options.Args[i]
+		}
+		switch name {
+		case "-o", "--output":
+			jsonOutput = jsonOutput || value == "json" || value == "jsonl"
+		case "--color":
+			if value == "always" {
+				colorEnabled = true
+			} else if value == "never" {
+				colorEnabled = false
+			}
+		}
+	}
+	if c.RootCommand != nil {
+		jsonOutput = jsonOutput || c.RootCommand.Output.Value == "json" || c.RootCommand.Output.Value == "jsonl"
+		switch c.RootCommand.Color.Value {
+		case "always":
+			colorEnabled = true
+		case "never":
+			colorEnabled = false
+		}
+	}
+	return colorEnabled && !jsonOutput
+}
+
+func (c *CommandContext) knownSecrets() []string {
+	secretFlags := map[string]bool{
+		"api-key": true, "codec-auth": true, "codec-header": true,
+		"grpc-meta": true, "tls-cert-data": true, "tls-key-data": true,
+		"tls-ca-data": true,
+	}
+	secrets := append([]string(nil), c.secretValues...)
+	if c.configEnvironmentEnabled() {
+		for _, name := range []string{
+			"TEMPORAL_API_KEY", "TEMPORAL_CODEC_AUTH", "TEMPORAL_TLS_CERT_DATA",
+			"TEMPORAL_TLS_KEY_DATA", "TEMPORAL_TLS_CA_DATA",
+		} {
+			if value, ok := c.Options.EnvLookup.LookupEnv(name); ok && value != "" {
+				secrets = append(secrets, value)
+			}
+		}
+	}
+	if c.CurrentCommand == nil {
+		return secrets
+	}
+	appendFlagValues := func(flag *pflag.Flag) {
+		if values, ok := flag.Value.(pflag.SliceValue); ok {
+			for _, value := range values.GetSlice() {
+				secrets = append(secrets, value)
+				if _, secret, found := strings.Cut(value, "="); found && secret != "" {
+					secrets = append(secrets, secret)
+				}
+			}
 			return
 		}
-		cctx.Options.Fail(fmt.Errorf("unknown command"))
+		secrets = append(secrets, flag.Value.String())
+	}
+	c.CurrentCommand.Flags().VisitAll(func(flag *pflag.Flag) {
+		if secretFlags[flag.Name] && flag.Changed {
+			appendFlagValues(flag)
+		}
+	})
+	c.CurrentCommand.InheritedFlags().VisitAll(func(flag *pflag.Flag) {
+		if secretFlags[flag.Name] && flag.Changed {
+			appendFlagValues(flag)
+		}
+	})
+	return secrets
+}
+
+func (c *CommandContext) configEnvironmentEnabled() bool {
+	if c.RootCommand != nil {
+		return !c.RootCommand.CommonOptions.DisableConfigEnv
+	}
+	return !slices.Contains(c.Options.Args, "--disable-config-env")
+}
+
+func (c *CommandContext) registerSecrets(values ...string) {
+	for _, value := range values {
+		if value != "" {
+			c.secretValues = append(c.secretValues, value)
+		}
 	}
 }
 
@@ -517,6 +691,7 @@ func (c *TemporalCommand) initCommand(cctx *CommandContext) {
 				}
 			}
 		}
+		cctx.preRunSucceeded = res == nil
 		return res
 	}
 	c.Command.PersistentPostRun = func(*cobra.Command, []string) {
@@ -581,7 +756,7 @@ func (c *TemporalCommand) preRun(cctx *CommandContext) error {
 	}
 	cctx.JSONShorthandPayloads = !c.NoJsonShorthandPayloads
 	if c.CommandTimeout.Duration() > 0 {
-		cctx.Context, _ = context.WithTimeoutCause(
+		cctx.Context, cctx.commandCancel = context.WithTimeoutCause(
 			cctx.Context,
 			c.CommandTimeout.Duration(),
 			fmt.Errorf("command timed out after %v", c.CommandTimeout.Duration()),

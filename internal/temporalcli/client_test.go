@@ -108,7 +108,7 @@ func TestClientConnectTimeout(t *testing.T) {
 	assert.Contains(t, res.Err.Error(), "deadline exceeded")
 	// The friendly cause attached to the connect timeout must survive.
 	assert.Contains(t, res.Err.Error(), "command timed out after 50ms")
-	assert.Less(t, elapsed, 2*time.Second, "dial and diagnosis should respect the connect timeout")
+	assert.Less(t, elapsed, 4*time.Second, "diagnosis should respect its independent three-second cap")
 }
 
 func TestConnectDiagnosis_MTLSRequired(t *testing.T) {
@@ -124,12 +124,12 @@ func TestConnectDiagnosis_MTLSRequired(t *testing.T) {
 	)
 
 	require.Error(t, res.Err)
-	msg := res.Err.Error()
+	msg := res.Stderr.String()
 	assert.Contains(t, msg, "Connecting to "+addr)
 	assert.Contains(t, msg, "✓ TCP connection established")
 	assert.Contains(t, msg, "✗ TLS handshake failed: server requires mTLS")
-	assert.Contains(t, msg, "--tls-cert-path YourCert.pem")
-	assert.Contains(t, msg, "--tls-key-path YourKey.pem")
+	assert.Contains(t, msg, "tls.client_cert_path --value YourCert.pem")
+	assert.Contains(t, msg, "tls.client_key_path --value YourKey.pem")
 }
 
 func TestConnectDiagnosis_Refused(t *testing.T) {
@@ -147,7 +147,7 @@ func TestConnectDiagnosis_Refused(t *testing.T) {
 	)
 
 	require.Error(t, res.Err)
-	msg := res.Err.Error()
+	msg := res.Stderr.String()
 	assert.Contains(t, msg, "connection refused")
 	assert.Contains(t, msg, "✗ TCP connection refused")
 	assert.Contains(t, msg, "Nothing is listening at "+addr)
@@ -163,7 +163,7 @@ func TestConnectDiagnosis_DNSFailure(t *testing.T) {
 	)
 
 	require.Error(t, res.Err)
-	msg := res.Err.Error()
+	msg := res.Stderr.String()
 	assert.Contains(t, msg, "could not resolve host")
 	assert.Contains(t, msg, "✗ DNS lookup")
 	assert.Contains(t, msg, `Could not resolve "does-not-exist.invalid"`)
@@ -184,7 +184,7 @@ func TestConnectDiagnosis_JSONOutputHasNoANSI(t *testing.T) {
 	)
 
 	require.Error(t, res.Err)
-	assert.NotContains(t, res.Err.Error(), "\x1b[", "diagnosis must not contain ANSI escapes in JSON mode")
+	assert.NotContains(t, res.Stderr.String(), "\x1b[", "diagnosis must not contain ANSI escapes in JSON mode")
 	assert.Empty(t, res.Stdout.String(), "connection failures must not write to stdout")
 }
 
@@ -203,7 +203,7 @@ func TestConnectDiagnosis_Disabled(t *testing.T) {
 	)
 
 	require.Error(t, res.Err)
-	msg := res.Err.Error()
+	msg := res.Stderr.String()
 	assert.Contains(t, msg, "failed connecting to Temporal server at "+addr)
 	assert.NotContains(t, msg, "✗", "diagnosis must be suppressed when disabled")
 }
@@ -218,7 +218,7 @@ func TestConnectDiagnosis_CertFileMissing(t *testing.T) {
 	)
 
 	require.Error(t, res.Err)
-	msg := res.Err.Error()
+	msg := res.Stderr.String()
 	assert.Contains(t, msg, "cannot read file")
 	assert.Contains(t, msg, "/definitely/does/not/exist")
 	assert.NotContains(t, msg, "✓", "no probe stages expected when the dial never happened")
@@ -245,10 +245,10 @@ address = "does-not-exist.invalid:7233"
 	)
 
 	require.Error(t, res.Err)
-	msg := res.Err.Error()
+	msg := res.Stderr.String()
 	assert.Contains(t, msg, "failed connecting to Temporal server at does-not-exist.invalid:7233")
 	assert.Contains(t, msg, `The address comes from config profile "default"`)
-	assert.Contains(t, msg, "temporal config get --prop address")
+	assert.Contains(t, msg, "temporal config get --prop address --profile default")
 }
 
 func TestConnectDiagnosis_CommandTimeoutCauseSurvives(t *testing.T) {

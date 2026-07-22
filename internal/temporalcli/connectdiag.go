@@ -132,7 +132,11 @@ func diagnoseConnection(ctx context.Context, address string, tlsCfg *tls.Config,
 
 	// Stage: gRPC — no re-dial; classify the original error.
 	d.Cause, d.Detail = classifyGRPCError(origErr)
-	d.fail("gRPC connection failed: " + shortErr(origErr))
+	if d.Cause == causeAuth {
+		d.fail("gRPC authentication failed")
+	} else {
+		d.fail("gRPC connection failed: " + shortErr(origErr))
+	}
 	return d
 }
 
@@ -152,7 +156,8 @@ func (d *connectDiagnosis) probeTLS(ctx context.Context, conn net.Conn, host str
 	}
 	// Handshake OK; a short read distinguishes an mTLS rejection alert from a
 	// genuinely healthy connection (where the read just times out).
-	_ = tlsConn.SetReadDeadline(time.Now().Add(connectDiagnosisReadProbe))
+	stopCancel := armReadDeadline(ctx, tlsConn)
+	defer stopCancel()
 	buf := make([]byte, 1)
 	_, err := tlsConn.Read(buf)
 	if err != nil && !isTimeout(err) {
@@ -162,6 +167,15 @@ func (d *connectDiagnosis) probeTLS(ctx context.Context, conn net.Conn, host str
 		}
 	}
 	d.ok("TLS handshake succeeded")
+}
+
+func armReadDeadline(ctx context.Context, conn net.Conn) func() bool {
+	readDeadline := time.Now().Add(connectDiagnosisReadProbe)
+	if contextDeadline, ok := ctx.Deadline(); ok && contextDeadline.Before(readDeadline) {
+		readDeadline = contextDeadline
+	}
+	_ = conn.SetReadDeadline(readDeadline)
+	return context.AfterFunc(ctx, func() { _ = conn.SetReadDeadline(time.Now()) })
 }
 
 func (d *connectDiagnosis) classifyTLSError(err error) {
@@ -232,7 +246,7 @@ func classifyGRPCError(err error) (connectCause, string) {
 		if st, ok := status.FromError(unwrapped); ok {
 			switch st.Code() {
 			case codes.Unauthenticated, codes.PermissionDenied:
-				return causeAuth, st.Message()
+				return causeAuth, ""
 			case codes.DeadlineExceeded:
 				return causeTimeout, ""
 			}

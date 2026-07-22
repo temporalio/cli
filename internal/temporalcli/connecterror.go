@@ -4,60 +4,57 @@ import (
 	"fmt"
 	"net"
 	"strings"
-
-	"github.com/fatih/color"
 )
 
 // connectError is returned by dialClient when connecting to the server fails.
-// Error() renders the full multi-line diagnosis (summary, probe stages, and a
-// suggested fix); Unwrap() preserves the original dial error for
-// errors.Is/As.
+// It retains semantic observations for terminal normalization; Error stays a
+// concise, uncolored compatibility string and Unwrap preserves the cause.
 type connectError struct {
-	rendered string
-	cause    error
+	diagnosis connectDiagnosis
+	meta      connectMeta
+	cause     error
 }
 
-func (e *connectError) Error() string { return e.rendered }
+func (e *connectError) Error() string {
+	return fmt.Sprintf("failed connecting to Temporal server at %s: %s", e.meta.Address, connectSummary(&e.diagnosis, e.cause))
+}
 func (e *connectError) Unwrap() error { return e.cause }
 
-// connectMeta carries the request context the suggestion engine needs to
-// propose a concrete fix (e.g. reconstructing the exact command the user
-// typed with the missing flags appended).
+// connectMeta contains only allowlisted connection provenance. Raw argv and
+// credential values must never enter this value.
 type connectMeta struct {
-	// Args are the CLI args as typed (without the binary name).
-	Args          []string
+	// CommandPath is retained only as non-sensitive provenance for callers that
+	// still populate it. Suggestions never replay the current command.
+	CommandPath   []string
 	Address       string
 	AddressSource string // "flag", "profile", or "default"
 	ProfileName   string
 	HasAPIKey     bool
+	HasOAuth      bool
 	TLSConfigured bool
 }
 
-// newConnectError renders a connection failure into a connectError. It must
-// be called while command execution is active so that color state (JSON mode,
-// --color) is applied correctly; the rendering is captured eagerly.
 func newConnectError(d *connectDiagnosis, meta connectMeta, origErr error) *connectError {
-	var b strings.Builder
-	b.WriteString("failed connecting to Temporal server at ")
-	b.WriteString(meta.Address)
-	b.WriteString(": ")
-	b.WriteString(connectSummary(d, origErr))
-	if len(d.Stages) > 0 {
-		b.WriteString("\n\n  Connecting to ")
-		b.WriteString(meta.Address)
-		for _, stage := range d.Stages {
-			if stage.Status == diagOK {
-				b.WriteString("\n    " + color.GreenString("✓") + " " + stage.Label)
-			} else {
-				b.WriteString("\n    " + color.RedString("✗") + " " + stage.Label)
-			}
+	if meta.Address == "" {
+		meta.Address = d.Address
+	}
+	return &connectError{diagnosis: *d, meta: meta, cause: origErr}
+}
+
+func (e *connectError) report() errorReport {
+	report := errorReport{
+		Summary:      e.Error(),
+		CheckHeading: "Connecting to " + e.meta.Address,
+		Action:       suggestAction(&e.diagnosis, e.meta),
+	}
+	for _, stage := range e.diagnosis.Stages {
+		outcome := checkFailed
+		if stage.Status == diagOK {
+			outcome = checkSucceeded
 		}
+		report.Checks = append(report.Checks, errorCheck{Outcome: outcome, Message: stage.Label})
 	}
-	if suggestion := suggestFix(d, meta); suggestion != "" {
-		b.WriteString("\n\n")
-		b.WriteString(indentLines(suggestion, "  "))
-	}
-	return &connectError{rendered: b.String(), cause: origErr}
+	return report
 }
 
 // connectSummary is the one-line cause appended to the first error line. For
@@ -72,7 +69,7 @@ func connectSummary(d *connectDiagnosis, origErr error) string {
 	case causeTCPTimeout:
 		return "connection timed out"
 	case causeServerPlaintext:
-		return "TLS is enabled but the server did not respond with TLS"
+		return "TLS is enabled but the server did not respond with TLS; check tls configuration"
 	case causeServerSpeaksTLS:
 		return "the server requires TLS but the CLI is connecting without it"
 	case causeClientCertRequired:
@@ -84,54 +81,49 @@ func connectSummary(d *connectDiagnosis, origErr error) string {
 	case causeCertFileUnreadable:
 		return fmt.Sprintf("cannot read file %q", d.Detail)
 	case causeAuth:
-		if d.Detail != "" {
-			return "authentication failed: " + d.Detail
-		}
 		return "authentication failed"
 	default:
 		return shortErr(origErr)
 	}
 }
 
-// suggestFix maps a classified failure to one concrete next step. First match
-// wins; an empty return means no suggestion (the stages still render).
-func suggestFix(d *connectDiagnosis, meta connectMeta) string {
+// suggestAction maps a classified failure to one typed next step. Invocation
+// arguments are known literals plus safe command metadata, never raw argv.
+func suggestAction(d *connectDiagnosis, meta connectMeta) *displayAction {
 	host, port, _ := net.SplitHostPort(meta.Address)
 	switch d.Cause {
 	case causeCertFileUnreadable:
-		return fmt.Sprintf("Cannot read %q — check that the path exists and is readable.", d.Detail)
+		return &displayAction{Label: fmt.Sprintf("Cannot read %q — check that the path exists and is readable.", d.Detail)}
 	case causeClientCertRequired:
-		var b strings.Builder
+		message := "The server requires client certificates (mTLS). Configure both certificate paths:"
 		if isCloudHost(host) {
-			b.WriteString("This looks like a Temporal Cloud endpoint secured with mTLS. Provide client certificates:")
-		} else {
-			b.WriteString("The server requires client certificates (mTLS). Provide them:")
+			message = "This looks like a Temporal Cloud endpoint secured with mTLS. Provide client certificates:"
 		}
-		b.WriteString("\n\n")
-		b.WriteString(indentLines(reconstructCommand(meta.Args, "--tls-cert-path YourCert.pem", "--tls-key-path YourKey.pem"), "  "))
-		b.WriteString("\n\nOr configure once:\n\n")
-		b.WriteString("  temporal config set --prop tls.client_cert_path YourCert.pem\n")
-		b.WriteString("  temporal config set --prop tls.client_key_path YourKey.pem")
 		if strings.HasSuffix(host, ".api.temporal.io") {
-			b.WriteString("\n\nIf your namespace uses API-key auth instead, pass --api-key YourApiKey.")
+			message += " If the namespace uses API-key auth instead, pass --api-key."
 		}
-		return b.String()
+		return configAction(message, meta,
+			[]string{"--prop", "tls.client_cert_path", "--value", "YourCert.pem"},
+			[]string{"--prop", "tls.client_key_path", "--value", "YourKey.pem"})
 	case causeAuth:
+		if meta.HasAPIKey && meta.HasOAuth {
+			return &displayAction{Label: "The server rejected the configured API key or OAuth credentials. Verify the active credential and namespace gRPC endpoint."}
+		}
 		if meta.HasAPIKey {
-			return "The server rejected the provided API key. Verify the key is valid and that the address is your namespace's gRPC endpoint (for Temporal Cloud API keys, a regional endpoint like us-west-2.aws.api.temporal.io:7233)."
+			return &displayAction{Label: "The server rejected the configured API key. Verify it and the namespace gRPC endpoint."}
 		}
-		return "The server rejected the request as unauthenticated. If it requires an API key, pass --api-key; if it requires mTLS, pass --tls-cert-path and --tls-key-path."
+		if meta.HasOAuth {
+			return &displayAction{Label: "The server rejected the configured OAuth credentials. Verify them and the namespace gRPC endpoint."}
+		}
+		return &displayAction{Label: "The server rejected the request as unauthenticated. Configure an API key or mTLS credentials."}
 	case causeServerPlaintext:
-		return fmt.Sprintf("The server at %s does not appear to use TLS. Remove --tls and certificate flags, or double-check the address and port.", meta.Address)
+		return &displayAction{Label: fmt.Sprintf("The server at %s does not appear to use TLS. Remove TLS settings or check the address.", meta.Address)}
 	case causeServerSpeaksTLS:
-		var b strings.Builder
-		b.WriteString("The server requires TLS. Add --tls:")
-		b.WriteString("\n\n")
-		b.WriteString(indentLines(reconstructCommand(meta.Args, "--tls"), "  "))
+		message := "The server requires TLS. Add --tls:"
 		if isCloudHost(host) {
-			b.WriteString("\n\nTemporal Cloud endpoints also need client credentials: --tls-cert-path/--tls-key-path or --api-key.")
+			message += " Temporal Cloud also requires client credentials."
 		}
-		return b.String()
+		return configAction(message, meta, []string{"--prop", "tls", "--value", "true"})
 	case causeDNS:
 		s := fmt.Sprintf("Could not resolve %q — check the server address.", host)
 		if meta.AddressSource == "profile" {
@@ -139,22 +131,42 @@ func suggestFix(d *connectDiagnosis, meta connectMeta) string {
 			if profile == "" {
 				profile = "default"
 			}
-			s += fmt.Sprintf("\nThe address comes from config profile %q — inspect it with:\n\n  temporal config get --prop address", profile)
+			s += fmt.Sprintf(" The address comes from config profile %q.", profile)
+			return &displayAction{Label: s, Invocations: []displayInvocation{{Command: []string{"temporal", "config", "get"}, Args: appendProfile([]string{"--prop", "address"}, profile)}}}
 		}
-		return s
+		return &displayAction{Label: s}
 	case causeTCPRefused:
 		if isLoopbackHost(host) && port == "7233" {
-			return fmt.Sprintf("No Temporal server is running at %s. Start a local dev server with:\n\n  temporal server start-dev", meta.Address)
+			return &displayAction{Label: fmt.Sprintf("No Temporal server is running at %s. Start a local dev server:", meta.Address), Invocations: []displayInvocation{{Command: []string{"temporal", "server", "start-dev"}}}}
 		}
-		return fmt.Sprintf("Nothing is listening at %s — verify the address and that the server is running.", meta.Address)
+		return &displayAction{Label: fmt.Sprintf("Nothing is listening at %s — verify the address and that the server is running.", meta.Address)}
 	case causeCAVerify:
-		return "The server's TLS certificate is not trusted by your system roots. If the server uses a private CA, pass --tls-ca-path YourServerCA.pem."
+		return configAction("The server certificate is not trusted. Configure its private CA:", meta, []string{"--prop", "tls.server_ca_cert_path", "--value", "YourServerCA.pem"})
 	case causeHostnameMismatch:
-		return fmt.Sprintf("The server's TLS certificate is not valid for %q. If you connect via an IP or alternate name, set --tls-server-name to the name in the certificate.", host)
+		return &displayAction{Label: fmt.Sprintf("The server certificate is not valid for %q. Set --tls-server-name to a certificate name.", host)}
 	case causeTCPTimeout, causeTimeout:
-		return fmt.Sprintf("The connection stalled — a firewall or proxy may be blocking traffic to %s. Verify the address, port, and network path. Bound the wait with --client-connect-timeout.", meta.Address)
+		return &displayAction{Label: fmt.Sprintf("The connection stalled. Verify the address and network path to %s.", meta.Address)}
 	}
-	return ""
+	return nil
+}
+
+func configAction(label string, meta connectMeta, propertyArgs ...[]string) *displayAction {
+	action := &displayAction{Label: label}
+	for _, args := range propertyArgs {
+		action.Invocations = append(action.Invocations, displayInvocation{
+			Command: []string{"temporal", "config", "set"},
+			Args:    appendProfile(args, meta.ProfileName),
+		})
+	}
+	return action
+}
+
+func appendProfile(args []string, profile string) []string {
+	result := append([]string(nil), args...)
+	if profile != "" {
+		result = append(result, "--profile", profile)
+	}
+	return result
 }
 
 func isCloudHost(host string) bool {
@@ -167,42 +179,6 @@ func isLoopbackHost(host string) bool {
 	}
 	ip := net.ParseIP(host)
 	return ip != nil && ip.IsLoopback()
-}
-
-// reconstructCommand re-renders the command the user typed, one option per
-// line (matching the style used in help text), with extraFlags appended.
-func reconstructCommand(args []string, extraFlags ...string) string {
-	// Split leading command words from options.
-	var words, opts []string
-	for i, arg := range args {
-		if strings.HasPrefix(arg, "-") {
-			opts = args[i:]
-			break
-		}
-		words = append(words, arg)
-	}
-	var lines []string
-	lines = append(lines, "temporal "+strings.Join(words, " "))
-	for i := 0; i < len(opts); i++ {
-		line := opts[i]
-		// Attach the option's value, if the next arg isn't another option.
-		if !strings.Contains(line, "=") && i+1 < len(opts) && !strings.HasPrefix(opts[i+1], "-") {
-			i++
-			line += " " + quoteArg(opts[i])
-		}
-		lines = append(lines, "    "+line)
-	}
-	for _, flag := range extraFlags {
-		lines = append(lines, "    "+flag)
-	}
-	return strings.Join(lines, " \\\n")
-}
-
-func quoteArg(arg string) string {
-	if strings.ContainsAny(arg, " \t\"'") {
-		return fmt.Sprintf("%q", arg)
-	}
-	return arg
 }
 
 func indentLines(s, indent string) string {

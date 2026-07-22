@@ -223,7 +223,7 @@ func getActivityResult(cctx *CommandContext, cl client.Client, namespace, activi
 	if err != nil {
 		var notFound *serviceerror.NotFound
 		if errors.As(err, &notFound) {
-			return fmt.Errorf("activity not found: %s", activityID)
+			return &activityNotFoundError{activityID: activityID, cause: err}
 		}
 		return fmt.Errorf("failed polling activity result: %w", err)
 	}
@@ -239,6 +239,25 @@ func getActivityResult(cctx *CommandContext, cl client.Client, namespace, activi
 	default:
 		return fmt.Errorf("unexpected activity outcome type: %T", v)
 	}
+}
+
+// activityNotFoundError retains the server's typed NotFound error while
+// carrying the audited display semantics for this command family.
+type activityNotFoundError struct {
+	activityID string
+	cause      error
+}
+
+func (e *activityNotFoundError) Error() string {
+	return fmt.Sprintf("activity not found: %s", e.activityID)
+}
+
+func (e *activityNotFoundError) Unwrap() error {
+	return e.cause
+}
+
+func (e *activityNotFoundError) report() errorReport {
+	return errorReport{Summary: "standalone Activity not found"}
 }
 
 // Matches the SDK's pollActivityTimeout in internal_activity_client.go.

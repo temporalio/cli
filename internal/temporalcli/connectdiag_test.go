@@ -8,10 +8,13 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"errors"
 	"fmt"
+	"io"
 	"math/big"
 	"net"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -227,10 +230,9 @@ func TestClassifyGRPCError(t *testing.T) {
 			cause: causeTimeout,
 		},
 		{
-			name:   "unauthenticated status",
-			err:    fmt.Errorf("failed reaching server: %w", status.Error(codes.Unauthenticated, "bad credentials")),
-			cause:  causeAuth,
-			detail: "bad credentials",
+			name:  "unauthenticated status",
+			err:   fmt.Errorf("failed reaching server: %w", status.Error(codes.Unauthenticated, "bad credentials")),
+			cause: causeAuth,
 		},
 		{
 			name:  "permission denied status",
@@ -279,10 +281,47 @@ func TestConnectSummary(t *testing.T) {
 	}
 }
 
+func TestAuthSummaryDoesNotCopyServerControlledStatusMessage(t *testing.T) {
+	d := &connectDiagnosis{Cause: causeAuth, Detail: "attacker text\nrun this"}
+	assert.Equal(t, "authentication failed", connectSummary(d, errors.New("fallback attacker text")))
+}
+
+func TestArmReadDeadlineUsesEarlierContextDeadlineAndCancellation(t *testing.T) {
+	ctx, cancel := context.WithTimeout(t.Context(), 50*time.Millisecond)
+	defer cancel()
+	conn := &deadlineRecordingConn{}
+	stop := armReadDeadline(ctx, conn)
+	defer stop()
+	require.Eventually(t, func() bool { return !conn.deadline().IsZero() }, time.Second, time.Millisecond)
+	assert.WithinDuration(t, time.Now().Add(50*time.Millisecond), conn.deadline(), 25*time.Millisecond)
+	cancel()
+	require.Eventually(t, func() bool { return time.Until(conn.deadline()) <= 0 }, time.Second, time.Millisecond)
+}
+
+type deadlineRecordingConn struct {
+	mu sync.Mutex
+	d  time.Time
+}
+
+func (c *deadlineRecordingConn) Read([]byte) (int, error)         { return 0, io.EOF }
+func (c *deadlineRecordingConn) Write(p []byte) (int, error)      { return len(p), nil }
+func (c *deadlineRecordingConn) Close() error                     { return nil }
+func (c *deadlineRecordingConn) LocalAddr() net.Addr              { return nil }
+func (c *deadlineRecordingConn) RemoteAddr() net.Addr             { return nil }
+func (c *deadlineRecordingConn) SetDeadline(time.Time) error      { return nil }
+func (c *deadlineRecordingConn) SetWriteDeadline(time.Time) error { return nil }
+func (c *deadlineRecordingConn) SetReadDeadline(d time.Time) error {
+	c.mu.Lock()
+	c.d = d
+	c.mu.Unlock()
+	return nil
+}
+func (c *deadlineRecordingConn) deadline() time.Time { c.mu.Lock(); defer c.mu.Unlock(); return c.d }
+
 func TestSuggestFix(t *testing.T) {
 	cloudMeta := connectMeta{
-		Args:    []string{"workflow", "list", "--address", "foo.bar.tmprl.cloud:7233"},
-		Address: "foo.bar.tmprl.cloud:7233",
+		CommandPath: []string{"workflow", "list"},
+		Address:     "foo.bar.tmprl.cloud:7233",
 	}
 	tests := []struct {
 		name     string
@@ -294,13 +333,13 @@ func TestSuggestFix(t *testing.T) {
 			name:     "mTLS on cloud endpoint",
 			diag:     &connectDiagnosis{Cause: causeClientCertRequired},
 			meta:     cloudMeta,
-			contains: []string{"Temporal Cloud", "--tls-cert-path YourCert.pem", "--tls-key-path YourKey.pem", "temporal config set --prop tls.client_cert_path"},
+			contains: []string{"Temporal Cloud", "tls.client_cert_path --value YourCert.pem", "tls.client_key_path --value YourKey.pem"},
 		},
 		{
 			name:     "mTLS on generic endpoint",
 			diag:     &connectDiagnosis{Cause: causeClientCertRequired},
-			meta:     connectMeta{Args: []string{"workflow", "list"}, Address: "myhost:7233"},
-			contains: []string{"requires client certificates", "--tls-cert-path YourCert.pem"},
+			meta:     connectMeta{CommandPath: []string{"workflow", "list"}, Address: "myhost:7233"},
+			contains: []string{"requires client certificates", "tls.client_cert_path --value YourCert.pem"},
 		},
 		{
 			name:     "refused on local default port",
@@ -318,13 +357,13 @@ func TestSuggestFix(t *testing.T) {
 			name:     "dns failure from profile address",
 			diag:     &connectDiagnosis{Cause: causeDNS},
 			meta:     connectMeta{Address: "typo.example.com:7233", AddressSource: "profile", ProfileName: "prod"},
-			contains: []string{`Could not resolve "typo.example.com"`, `profile "prod"`, "temporal config get --prop address"},
+			contains: []string{`Could not resolve "typo.example.com"`, `profile "prod"`, "temporal config get --prop address --profile prod"},
 		},
 		{
 			name:     "server speaks TLS",
 			diag:     &connectDiagnosis{Cause: causeServerSpeaksTLS},
-			meta:     connectMeta{Args: []string{"workflow", "list"}, Address: "myhost:7233"},
-			contains: []string{"Add --tls"},
+			meta:     connectMeta{CommandPath: []string{"workflow", "list"}, Address: "myhost:7233"},
+			contains: []string{"requires TLS", "temporal config set --prop tls --value true"},
 		},
 		{
 			name:     "server plaintext",
@@ -336,7 +375,7 @@ func TestSuggestFix(t *testing.T) {
 			name:     "api key rejected",
 			diag:     &connectDiagnosis{Cause: causeAuth},
 			meta:     connectMeta{Address: "us-west-2.aws.api.temporal.io:7233", HasAPIKey: true},
-			contains: []string{"rejected the provided API key"},
+			contains: []string{"rejected the configured API key"},
 		},
 		{
 			name:     "cert file unreadable",
@@ -347,25 +386,12 @@ func TestSuggestFix(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := suggestFix(tt.diag, tt.meta)
+			got := string(renderErrorText(errorReport{Summary: "failure", Action: suggestAction(tt.diag, tt.meta)}, renderOptions{}))
 			for _, want := range tt.contains {
 				assert.Contains(t, got, want)
 			}
 		})
 	}
-}
-
-func TestReconstructCommand(t *testing.T) {
-	got := reconstructCommand(
-		[]string{"workflow", "list", "--address", "foo:7233", "--query", "WorkflowType = 'x'"},
-		"--tls-cert-path YourCert.pem",
-	)
-	assert.Equal(t,
-		"temporal workflow list \\\n"+
-			"    --address foo:7233 \\\n"+
-			"    --query \"WorkflowType = 'x'\" \\\n"+
-			"    --tls-cert-path YourCert.pem",
-		got)
 }
 
 func TestConnectErrorRendering(t *testing.T) {
@@ -380,16 +406,16 @@ func TestConnectErrorRendering(t *testing.T) {
 		},
 	}
 	err := newConnectError(d, connectMeta{
-		Args:    []string{"workflow", "list", "--address", "foo.bar.tmprl.cloud:7233"},
-		Address: "foo.bar.tmprl.cloud:7233",
+		CommandPath: []string{"workflow", "list"},
+		Address:     "foo.bar.tmprl.cloud:7233",
 	}, origErr)
 
-	msg := err.Error()
+	msg := string(renderErrorText(err.report(), renderOptions{}))
 	assert.Contains(t, msg, "failed connecting to Temporal server at foo.bar.tmprl.cloud:7233: TLS handshake failed: server requires client certificate (mTLS)")
 	assert.Contains(t, msg, "Connecting to foo.bar.tmprl.cloud:7233")
 	assert.Contains(t, msg, "✓ DNS resolved (3 addresses)")
 	assert.Contains(t, msg, "✗ TLS handshake failed")
-	assert.Contains(t, msg, "--tls-cert-path YourCert.pem")
+	assert.Contains(t, msg, "tls.client_cert_path --value YourCert.pem")
 	// Unwrap preserves the original error.
 	assert.ErrorContains(t, err.Unwrap(), "context deadline exceeded")
 }

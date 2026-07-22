@@ -38,9 +38,8 @@ func (s *SharedServerSuite) createSchedule(args ...string) (schedId, schedWfId s
 				"--address", s.Address(),
 				"-s", schedId,
 			},
-			Fail: func(error) {},
 		}
-		temporalcli.Execute(ctx, options)
+		_ = temporalcli.Execute(ctx, options)
 	})
 	res = s.Execute(append([]string{
 		"schedule", "create",

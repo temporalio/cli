@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"os"
 
 	"github.com/temporalio/cli/internal/temporalcli"
 
@@ -15,5 +16,6 @@ import (
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	temporalcli.Execute(ctx, temporalcli.CommandOptions{})
+	result := temporalcli.Execute(ctx, temporalcli.CommandOptions{})
+	os.Exit(result.ExitStatus)
 }
