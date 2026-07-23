@@ -67,7 +67,7 @@ func TestExtension_CompleteShowsExtensions(t *testing.T) {
 	h.createExtension("temporal-foo", codeEchoArgs)
 
 	res := h.Execute("__complete", "")
-	assert.Regexp(t, "foo\\s+An extension command located at .*/temporal-foo", res.Stdout.String())
+	assert.Regexp(t, `foo\s+An extension command located at .*[\\/]temporal-foo`, res.Stdout.String())
 }
 
 func TestExtension_CompleteDoesNotDelegateWithoutAdditionalArgs(t *testing.T) {
@@ -75,7 +75,7 @@ func TestExtension_CompleteDoesNotDelegateWithoutAdditionalArgs(t *testing.T) {
 	h.createExtension("temporal-foo", codeEchoArgs)
 
 	res := h.Execute("__complete", "foo")
-	assert.Regexp(t, "foo\\s+An extension command located at .*/temporal-foo", res.Stdout.String())
+	assert.Regexp(t, `foo\s+An extension command located at .*[\\/]temporal-foo`, res.Stdout.String())
 }
 
 func TestExtension_InvokesComplete(t *testing.T) {
