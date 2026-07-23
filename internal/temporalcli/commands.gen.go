@@ -1446,6 +1446,7 @@ func NewTemporalNexusCommand(cctx *CommandContext, parent *TemporalCommand) *Tem
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalNexusOperationCommand(cctx, &s).Command)
 	s.ClientOptions.BuildFlags(s.Command.PersistentFlags())
+	s.ClientOptions.HideFlags()
 	return &s
 }
 
