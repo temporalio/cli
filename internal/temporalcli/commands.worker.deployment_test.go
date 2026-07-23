@@ -1406,7 +1406,7 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
 	s.Error(res.Err)
 	s.ErrorContains(res.Err, "--remove cannot be combined with")
 
-	// Instance bounds are GCP Cloud Run (rate-based) knobs only; setting them
+	// Instance settings are GCP Cloud Run (rate-based) knobs only; setting them
 	// alongside a (fully specified) AWS Lambda provider is rejected client-side.
 	res = s.Execute(
 		"worker", "deployment", "create-version",
@@ -1421,24 +1421,7 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
 	s.Error(res.Err)
 	s.ErrorContains(res.Err, "only valid with --gcp-cloud-run-worker-pool")
 
-	// min cannot exceed max.
-	res = s.Execute(
-		"worker", "deployment", "create-version",
-		"--address", s.Address(),
-		"--deployment-name", deploymentName,
-		"--build-id", uuid.NewString(),
-		"--gcp-cloud-run-project", "my-gcp-project",
-		"--gcp-cloud-run-region", "us-central1",
-		"--gcp-cloud-run-worker-pool", "my-worker-pool",
-		"--gcp-cloud-run-service-account", "customer-sa@my-gcp-project.iam.gserviceaccount.com",
-		"--gcp-cloud-run-min-instances", "5",
-		"--gcp-cloud-run-max-instances", "3",
-	)
-	s.Error(res.Err)
-	s.ErrorContains(res.Err, "cannot exceed")
-
-	// Instance bounds must be set together: only one of the pair is rejected so
-	// min<=max never depends on the server's default for the unspecified bound.
+	// A lone bound is rejected: min, max, and initial must be set together.
 	res = s.Execute(
 		"worker", "deployment", "create-version",
 		"--address", s.Address(),
@@ -1453,8 +1436,40 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
 	s.Error(res.Err)
 	s.ErrorContains(res.Err, "must be set together")
 
-	// When both are set, an explicit max of 0 is rejected (WCI requires at
-	// least 1) rather than silently falling back to the default.
+	// min + max without initial is also rejected: initial is required too.
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", uuid.NewString(),
+		"--gcp-cloud-run-project", "my-gcp-project",
+		"--gcp-cloud-run-region", "us-central1",
+		"--gcp-cloud-run-worker-pool", "my-worker-pool",
+		"--gcp-cloud-run-service-account", "customer-sa@my-gcp-project.iam.gserviceaccount.com",
+		"--gcp-cloud-run-min-instances", "1",
+		"--gcp-cloud-run-max-instances", "3",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "must be set together")
+
+	// min cannot exceed max (all three set).
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", uuid.NewString(),
+		"--gcp-cloud-run-project", "my-gcp-project",
+		"--gcp-cloud-run-region", "us-central1",
+		"--gcp-cloud-run-worker-pool", "my-worker-pool",
+		"--gcp-cloud-run-service-account", "customer-sa@my-gcp-project.iam.gserviceaccount.com",
+		"--gcp-cloud-run-min-instances", "5",
+		"--gcp-cloud-run-max-instances", "3",
+		"--gcp-cloud-run-initial-instances", "4",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "cannot exceed")
+
+	// An explicit max of 0 is rejected (WCI requires at least 1).
 	res = s.Execute(
 		"worker", "deployment", "create-version",
 		"--address", s.Address(),
@@ -1466,11 +1481,29 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
 		"--gcp-cloud-run-service-account", "customer-sa@my-gcp-project.iam.gserviceaccount.com",
 		"--gcp-cloud-run-min-instances", "0",
 		"--gcp-cloud-run-max-instances", "0",
+		"--gcp-cloud-run-initial-instances", "0",
 	)
 	s.Error(res.Err)
 	s.ErrorContains(res.Err, "--gcp-cloud-run-max-instances must be at least 1")
 
-	// Instance bounds with AWS Lambda are also rejected on update, before the RPC.
+	// initial outside [min, max] is rejected.
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", uuid.NewString(),
+		"--gcp-cloud-run-project", "my-gcp-project",
+		"--gcp-cloud-run-region", "us-central1",
+		"--gcp-cloud-run-worker-pool", "my-worker-pool",
+		"--gcp-cloud-run-service-account", "customer-sa@my-gcp-project.iam.gserviceaccount.com",
+		"--gcp-cloud-run-min-instances", "2",
+		"--gcp-cloud-run-max-instances", "10",
+		"--gcp-cloud-run-initial-instances", "15",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "must be between")
+
+	// Instance settings with AWS Lambda are also rejected on update, before the RPC.
 	res = s.Execute(
 		"worker", "deployment", "update-version-compute-config",
 		"--address", s.Address(),
