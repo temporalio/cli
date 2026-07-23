@@ -143,12 +143,28 @@ func (o *OptionSets) writeCode(w *codeWriter) error {
 	w.writeLinef("FlagSet *%v.FlagSet", w.importPflag())
 	w.writeLinef("}\n")
 
+	// write description if present
+	if o.Description != "" {
+		w.writeLinef("func (v *%v) Description() string { return %q }", o.setStructName(), o.Description)
+		w.writeLinef("")
+	}
+
 	// write flags
 	w.writeLinef("func (v *%v) BuildFlags(f *%v.FlagSet) {",
 		o.setStructName(), w.importPflag())
 	w.writeLinef("v.FlagSet = f")
 	o.writeFlagBuilding("v", "f", w)
 	w.writeLinef("}\n")
+
+	// write HideFlags if hide-from-help is set
+	if o.HideFromHelp {
+		w.writeLinef("func (v *%v) HideFlags() {", o.setStructName())
+		w.writeLinef("if v.FlagSet == nil { return }")
+		for _, opt := range o.Options {
+			w.writeLinef("v.FlagSet.Lookup(%q).Hidden = true", opt.Name)
+		}
+		w.writeLinef("}\n")
+	}
 
 	return nil
 }
@@ -285,9 +301,15 @@ func (c *Command) writeCode(w *codeWriter) error {
 		if optSet != nil && optSet.ExternalPackage != "" {
 			// External option-set: use type name with Options suffix
 			w.writeLinef("s.%vOptions.BuildFlags(%v)", namify(include, true), flagVar)
+			if optSet.HideFromHelp {
+				w.writeLinef("s.%vOptions.HideFlags()", namify(include, true))
+			}
 		} else {
 			// Internal option-set: use struct name
 			w.writeLinef("s.%v.BuildFlags(%v)", setStructName(include), flagVar)
+			if optSet != nil && optSet.HideFromHelp {
+				w.writeLinef("s.%v.HideFlags()", setStructName(include))
+			}
 		}
 	}
 
@@ -432,8 +454,14 @@ func (o *Option) writeFlagBuilding(selfVar, flagVar string, w *codeWriter) error
 		return fmt.Errorf("unrecognized data type %v", o.Type)
 	}
 
-	// If there are enums, append to desc
+	// If there is an implied env var or config key, append to desc
 	desc := o.Description
+	if o.ImpliedEnv != "" {
+		desc += fmt.Sprintf(" Env: %s.", o.ImpliedEnv)
+	}
+	if o.ConfigKey != "" {
+		desc += fmt.Sprintf(" Config: %s.", o.ConfigKey)
+	}
 	if len(o.EnumValues) > 0 {
 		desc += fmt.Sprintf(" Accepted values: %s.", strings.Join(o.EnumValues, ", "))
 	}

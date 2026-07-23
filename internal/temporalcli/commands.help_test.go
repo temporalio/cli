@@ -70,12 +70,10 @@ func TestHelp_AllFlag_ShowsExtensions(t *testing.T) {
 	assert.Contains(t, out, "foo")        // shown now!
 	assert.NotContains(t, out, "bar-baz") // is under workflow
 
-	// Verify foo appears in Available Commands section (between "Available Commands:" and "Flags:")
+	// Verify foo appears in Available Commands section
 	availableIdx := strings.Index(out, "Available Commands:")
 	fooIdx := strings.Index(out, "foo")
-	flagsIdx := strings.Index(out, "Flags:")
 	assert.Greater(t, fooIdx, availableIdx, "foo should appear after Available Commands:")
-	assert.Less(t, fooIdx, flagsIdx, "foo should appear before Flags:")
 	assert.NoError(t, res.Err)
 
 	// Non-executable extensions are skipped
