@@ -1104,7 +1104,10 @@ commands:
           --gcp-cloud-run-project YourGCPProject \
           --gcp-cloud-run-region us-central1 \
           --gcp-cloud-run-worker-pool YourWorkerPool \
-          --gcp-cloud-run-service-account customer-sa@proj.iam.gserviceaccount.com
+          --gcp-cloud-run-service-account customer-sa@proj.iam.gserviceaccount.com \
+          --gcp-cloud-run-min-instances 1 \
+          --gcp-cloud-run-max-instances 3 \
+          --gcp-cloud-run-initial-instances 1
       ```
 
       If a Worker Deployment Version with the supplied BuildID already exists,
@@ -1157,6 +1160,30 @@ commands:
           Customer GCP service account the Temporal server impersonates to
           manage the Cloud Run worker pool. Required when
           --gcp-cloud-run-worker-pool is specified.
+      - name: gcp-cloud-run-min-instances
+        type: int
+        description: |
+          Minimum number of Cloud Run worker pool instances the scaler will
+          maintain. Optional, but must be set together with
+          --gcp-cloud-run-max-instances and --gcp-cloud-run-initial-instances.
+          Defaults to 0 when unset. Only valid with
+          --gcp-cloud-run-worker-pool.
+      - name: gcp-cloud-run-max-instances
+        type: int
+        description: |
+          Maximum number of Cloud Run worker pool instances the scaler may
+          scale up to. Optional, but must be set together with
+          --gcp-cloud-run-min-instances and --gcp-cloud-run-initial-instances.
+          Defaults to 30 when unset. Only valid with
+          --gcp-cloud-run-worker-pool.
+      - name: gcp-cloud-run-initial-instances
+        type: int
+        description: |
+          Number of Cloud Run worker pool instances the scaler starts with.
+          Optional, but must be set together with --gcp-cloud-run-min-instances
+          and --gcp-cloud-run-max-instances, and must be between them
+          (inclusive). Defaults to 0 when unset. Only valid with
+          --gcp-cloud-run-worker-pool.
 
   - name: temporal worker deployment describe-version
     summary: Show properties of a Worker Deployment Version
@@ -1394,7 +1421,10 @@ commands:
           --gcp-cloud-run-project YourGCPProject \
           --gcp-cloud-run-region us-central1 \
           --gcp-cloud-run-worker-pool UpdatedWorkerPool \
-          --gcp-cloud-run-service-account customer-sa@proj.iam.gserviceaccount.com
+          --gcp-cloud-run-service-account customer-sa@proj.iam.gserviceaccount.com \
+          --gcp-cloud-run-min-instances 1 \
+          --gcp-cloud-run-max-instances 3 \
+          --gcp-cloud-run-initial-instances 1
       ```
 
       If --remove is specified, the compute configuration for the Worker
@@ -1454,6 +1484,30 @@ commands:
           Customer GCP service account the Temporal server impersonates to
           manage the Cloud Run worker pool. Required when
           --gcp-cloud-run-worker-pool is specified.
+      - name: gcp-cloud-run-min-instances
+        type: int
+        description: |
+          Minimum number of Cloud Run worker pool instances the scaler will
+          maintain. Optional, but must be set together with
+          --gcp-cloud-run-max-instances and --gcp-cloud-run-initial-instances.
+          Defaults to 0 when unset. Only valid with
+          --gcp-cloud-run-worker-pool.
+      - name: gcp-cloud-run-max-instances
+        type: int
+        description: |
+          Maximum number of Cloud Run worker pool instances the scaler may
+          scale up to. Optional, but must be set together with
+          --gcp-cloud-run-min-instances and --gcp-cloud-run-initial-instances.
+          Defaults to 30 when unset. Only valid with
+          --gcp-cloud-run-worker-pool.
+      - name: gcp-cloud-run-initial-instances
+        type: int
+        description: |
+          Number of Cloud Run worker pool instances the scaler starts with.
+          Optional, but must be set together with --gcp-cloud-run-min-instances
+          and --gcp-cloud-run-max-instances, and must be between them
+          (inclusive). Defaults to 0 when unset. Only valid with
+          --gcp-cloud-run-worker-pool.
       - name: remove
         type: bool
         description: |

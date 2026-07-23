@@ -136,7 +136,10 @@ type formattedComputeConfigProvider struct {
 }
 
 type formattedComputeConfigScaler struct {
-	Type string `json:"type"`
+	Type             string `json:"type"`
+	MinInstances     *int64 `json:"minInstances,omitempty"`
+	MaxInstances     *int64 `json:"maxInstances,omitempty"`
+	InitialInstances *int64 `json:"initialInstances,omitempty"`
 }
 
 func drainageStatusToStr(drainage client.WorkerDeploymentVersionDrainageStatus) (string, error) {
@@ -380,6 +383,48 @@ func formatDrainageInfoProto(drainageInfo *deploymentpb.VersionDrainageInfo) (fo
 	}, nil
 }
 
+// scalerCountFromMap reads an integer worker-count value from a decoded scaler
+// details map. The default data converter round-trips JSON numbers as float64,
+// so that case is handled alongside the native int types.
+func scalerCountFromMap(m map[string]any, key string) (int64, bool) {
+	switch n := m[key].(type) {
+	case float64:
+		return int64(n), true
+	case int64:
+		return n, true
+	case int:
+		return int64(n), true
+	default:
+		return 0, false
+	}
+}
+
+// scalerInstanceBounds extracts the rate-based scaler's min_count/max_count/
+// initial_count from a ComputeScaler's details payload for display. Best-effort:
+// returns nil pointers when the scaler, its details, or a given key is absent, or
+// when the payload cannot be decoded, so read paths never fail on an unexpected
+// shape.
+func scalerInstanceBounds(s *computepb.ComputeScaler) (minInstances *int64, maxInstances *int64, initialInstances *int64) {
+	details := s.GetDetails()
+	if details == nil {
+		return nil, nil, nil
+	}
+	var m map[string]any
+	if err := converter.GetDefaultDataConverter().FromPayload(details, &m); err != nil {
+		return nil, nil, nil
+	}
+	if v, ok := scalerCountFromMap(m, "min_count"); ok {
+		minInstances = &v
+	}
+	if v, ok := scalerCountFromMap(m, "max_count"); ok {
+		maxInstances = &v
+	}
+	if v, ok := scalerCountFromMap(m, "initial_count"); ok {
+		initialInstances = &v
+	}
+	return minInstances, maxInstances, initialInstances
+}
+
 func formatComputeConfigProto(cc *computepb.ComputeConfig) *formattedComputeConfig {
 	if cc == nil {
 		return nil
@@ -401,10 +446,10 @@ func formatComputeConfigProto(cc *computepb.ComputeConfig) *formattedComputeConf
 				Type: p.GetType(),
 			}
 		}
-		if p != nil {
-			sg.Scaler = &formattedComputeConfigScaler{
-				Type: s.GetType(),
-			}
+		if s != nil {
+			fs := &formattedComputeConfigScaler{Type: s.GetType()}
+			fs.MinInstances, fs.MaxInstances, fs.InitialInstances = scalerInstanceBounds(s)
+			sg.Scaler = fs
 		}
 		sgs[name] = sg
 	}
@@ -446,18 +491,34 @@ func computeConfigSummaryStr(cc *computepb.ComputeConfig) string {
 	if cc == nil {
 		return ""
 	}
-	providers := []string{}
+	summaries := []string{}
 	for _, sg := range cc.GetScalingGroups() {
 		p := sg.GetProvider()
 		if p == nil {
 			continue
 		}
-		pt := p.GetType()
-		if !slices.Contains(providers, pt) {
-			providers = append(providers, pt)
+		summary := p.GetType()
+		// Append whichever instance settings are present so the one-line summary
+		// reflects configured scaling limits (ordered min, initial, max).
+		minI, maxI, initialI := scalerInstanceBounds(sg.GetScaler())
+		parts := []string{}
+		if minI != nil {
+			parts = append(parts, fmt.Sprintf("min %d", *minI))
+		}
+		if initialI != nil {
+			parts = append(parts, fmt.Sprintf("initial %d", *initialI))
+		}
+		if maxI != nil {
+			parts = append(parts, fmt.Sprintf("max %d", *maxI))
+		}
+		if len(parts) > 0 {
+			summary = fmt.Sprintf("%s (%s)", summary, strings.Join(parts, ", "))
+		}
+		if !slices.Contains(summaries, summary) {
+			summaries = append(summaries, summary)
 		}
 	}
-	return strings.Join(providers, ",")
+	return strings.Join(summaries, ",")
 }
 
 // printWorkerDeploymentVersionInfoProto prints worker deployment version info from proto types.
@@ -1015,6 +1076,57 @@ func scalerTypeForProvider(providerType string) (string, error) {
 	return "", fmt.Errorf("no scaler mapping for compute provider %q", providerType)
 }
 
+// gcpCloudRunScalerDetails builds the ComputeScaler.Details payload carrying the
+// rate-based scaler's worker-count settings ("min_count"/"max_count"/
+// "initial_count") from the --gcp-cloud-run-min-instances,
+// --gcp-cloud-run-max-instances, and --gcp-cloud-run-initial-instances flags. The
+// *Set booleans come from cobra's Flags().Changed, so an omitted flag stays
+// distinct from an explicit 0. Returns a nil payload when none are set, leaving
+// WCI's defaults (min_count 0, max_count 30, initial_count 0) in effect. The
+// settings are a GCP Cloud Run knob and must be supplied together; another
+// provider or a partial set is rejected.
+func gcpCloudRunScalerDetails(providerType string, minInstances int, minSet bool, maxInstances int, maxSet bool, initialInstances int, initialSet bool) (*commonpb.Payload, error) {
+	if !minSet && !maxSet && !initialSet {
+		// None set: send no scaler config so WCI applies its defaults
+		// (min_count 0, max_count 30, initial_count 0).
+		return nil, nil
+	}
+	// These are GCP Cloud Run (rate-based) knobs only. Reject on any use with
+	// another provider so the GCP-only nature is explicit, regardless of value.
+	if providerType != "gcp-cloud-run" {
+		return nil, fmt.Errorf("--gcp-cloud-run-min-instances, --gcp-cloud-run-max-instances, and --gcp-cloud-run-initial-instances are only valid with --gcp-cloud-run-worker-pool")
+	}
+	// Require all three together. A partial set would compare the explicit
+	// values against WCI's defaults for the missing ones (min 0 / max 30 /
+	// initial 0), which is non-obvious; demanding all three keeps the
+	// min<=initial<=max relationship self-contained and free of any coupling to
+	// WCI's default values.
+	if !minSet || !maxSet || !initialSet {
+		return nil, fmt.Errorf("--gcp-cloud-run-min-instances, --gcp-cloud-run-max-instances, and --gcp-cloud-run-initial-instances must be set together")
+	}
+	if minInstances < 0 {
+		return nil, fmt.Errorf("--gcp-cloud-run-min-instances cannot be negative")
+	}
+	if maxInstances < 1 {
+		return nil, fmt.Errorf("--gcp-cloud-run-max-instances must be at least 1")
+	}
+	if minInstances > maxInstances {
+		return nil, fmt.Errorf("--gcp-cloud-run-min-instances cannot exceed --gcp-cloud-run-max-instances")
+	}
+	if initialInstances < minInstances || initialInstances > maxInstances {
+		return nil, fmt.Errorf("--gcp-cloud-run-initial-instances must be between --gcp-cloud-run-min-instances and --gcp-cloud-run-max-instances")
+	}
+	// Config keys mirror the WCI rate-based scaler:
+	// https://github.com/temporalio/temporal-auto-scaled-workers/blob/main/wci/workflow/scaling_algorithm/rate_based.go
+	details := map[string]any{
+		"min_count":     minInstances,
+		"max_count":     maxInstances,
+		"initial_count": initialInstances,
+	}
+	dc := converter.GetDefaultDataConverter()
+	return dc.ToPayload(&details)
+}
+
 func (c *TemporalWorkerDeploymentCreateVersionCommand) run(cctx *CommandContext, args []string) error {
 	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
 	if err != nil {
@@ -1048,6 +1160,15 @@ func (c *TemporalWorkerDeploymentCreateVersionCommand) run(cctx *CommandContext,
 	if err != nil {
 		return err
 	}
+	scalerDetails, err := gcpCloudRunScalerDetails(
+		providerType,
+		c.GcpCloudRunMinInstances, c.Command.Flags().Changed("gcp-cloud-run-min-instances"),
+		c.GcpCloudRunMaxInstances, c.Command.Flags().Changed("gcp-cloud-run-max-instances"),
+		c.GcpCloudRunInitialInstances, c.Command.Flags().Changed("gcp-cloud-run-initial-instances"),
+	)
+	if err != nil {
+		return err
+	}
 	cc := &computepb.ComputeConfig{
 		ScalingGroups: map[string]*computepb.ComputeConfigScalingGroup{
 			"default": {
@@ -1056,7 +1177,8 @@ func (c *TemporalWorkerDeploymentCreateVersionCommand) run(cctx *CommandContext,
 					Details: detailsPayload,
 				},
 				Scaler: &computepb.ComputeScaler{
-					Type: scalerType,
+					Type:    scalerType,
+					Details: scalerDetails,
 				},
 			},
 		},
@@ -1130,19 +1252,35 @@ func (c *TemporalWorkerDeploymentUpdateVersionComputeConfigCommand) run(cctx *Co
 		if err != nil {
 			return err
 		}
+		scalerDetails, err := gcpCloudRunScalerDetails(
+			providerType,
+			c.GcpCloudRunMinInstances, c.Command.Flags().Changed("gcp-cloud-run-min-instances"),
+			c.GcpCloudRunMaxInstances, c.Command.Flags().Changed("gcp-cloud-run-max-instances"),
+			c.GcpCloudRunInitialInstances, c.Command.Flags().Changed("gcp-cloud-run-initial-instances"),
+		)
+		if err != nil {
+			return err
+		}
 		sg := &computepb.ComputeConfigScalingGroup{
 			Provider: &computepb.ComputeProvider{
 				Type:    providerType,
 				Details: detailsPayload,
 			},
 			Scaler: &computepb.ComputeScaler{
-				Type: scalerType,
+				Type:    scalerType,
+				Details: scalerDetails,
 			},
 		}
 		updatePaths := []string{
 			"provider.type",
 			"provider.details",
 			"scaler.type",
+		}
+		// Only touch scaler.details when the user supplied instance bounds;
+		// otherwise leave any existing scaler config untouched rather than
+		// clearing it.
+		if scalerDetails != nil {
+			updatePaths = append(updatePaths, "scaler.details")
 		}
 		ccScalingGroups := map[string]*computepb.ComputeConfigScalingGroupUpdate{
 			"default": &computepb.ComputeConfigScalingGroupUpdate{
