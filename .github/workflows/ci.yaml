@@ -1,6 +1,8 @@
 name: Continuous Integration
 on:
   pull_request:
+  merge_group:
+    types: [checks_requested]
   push:
     branches:
       - main
@@ -12,7 +14,7 @@ permissions:
 jobs:
   validate-server-version:
     name: Validate Server Version
-    if: github.event_name == 'push' || github.base_ref == 'main'
+    if: github.event_name == 'push' || github.event_name == 'merge_group' || github.base_ref == 'main'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -79,6 +81,17 @@ jobs:
           path: junit-xml
           retention-days: 14
 
+      - name: Tidy modules, confirm unchanged
+        if: ${{ matrix.checkGenCommands }}
+        shell: bash
+        run: |
+          go mod tidy
+          (
+            cd cliext
+            go mod tidy
+          )
+          git diff --exit-code -- go.mod go.sum cliext/go.mod cliext/go.sum
+
       - name: Regen code, confirm unchanged
         if: ${{ matrix.checkGenCommands }}
         run: |
@@ -108,7 +121,7 @@ jobs:
       - name: Test cloud API key env var
         if: ${{ matrix.cloudTestTarget && env.HAS_SECRETS == 'true' }}
         env:
-          TEMPORAL_ADDRESS: us-east-1.aws.api.temporal.io:7233
+          TEMPORAL_ADDRESS: ca-central-1.aws.api.temporal.io:7233
           TEMPORAL_NAMESPACE: ${{ vars.TEMPORAL_CLIENT_NAMESPACE }}
           TEMPORAL_API_KEY: ${{ secrets.TEMPORAL_CLIENT_CLOUD_API_KEY }}
         shell: bash
@@ -117,7 +130,25 @@ jobs:
       - name: Test cloud API key arg
         if: ${{ matrix.cloudTestTarget && env.HAS_SECRETS == 'true' }}
         env:
-          TEMPORAL_ADDRESS: us-east-1.aws.api.temporal.io:7233
+          TEMPORAL_ADDRESS: ca-central-1.aws.api.temporal.io:7233
           TEMPORAL_NAMESPACE: ${{ vars.TEMPORAL_CLIENT_NAMESPACE }}
         shell: bash
         run: go run ./cmd/temporal workflow list --limit 2 --api-key ${{ secrets.TEMPORAL_CLIENT_CLOUD_API_KEY }}
+
+  ci-passed:
+    name: ci-passed
+    if: always()
+    needs:
+      - validate-server-version
+      - build-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify required jobs passed
+        env:
+          VALIDATE_SERVER_VERSION_RESULT: ${{ needs.validate-server-version.result }}
+          BUILD_TEST_RESULT: ${{ needs.build-test.result }}
+        run: |
+          if [[ "$VALIDATE_SERVER_VERSION_RESULT" != "success" || "$BUILD_TEST_RESULT" != "success" ]]; then
+            echo "Required CI jobs did not pass" >&2
+            exit 1
+          fi

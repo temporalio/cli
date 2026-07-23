@@ -138,9 +138,10 @@ func (c *TemporalWorkerListCommand) run(cctx *CommandContext, args []string) err
 
 	for {
 		req := &workflowservice.ListWorkersRequest{
-			Namespace:     c.Parent.Namespace,
-			NextPageToken: token,
-			Query:         c.Query,
+			Namespace:            c.Parent.Namespace,
+			NextPageToken:        token,
+			Query:                c.Query,
+			IncludeSystemWorkers: c.IncludeSystemWorkers,
 		}
 
 		resp, err := svc.ListWorkers(cctx, req)

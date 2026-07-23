@@ -249,12 +249,22 @@ func (c *Command) writeCode(w *codeWriter) error {
 	} else {
 		w.writeLinef("s.Command.Args = %v.NoArgs", w.importCobra())
 	}
-	if c.IgnoreMissingEnv {
+	if c.IgnoreMissingEnv || c.Deprecated {
 		w.writeLinef("s.Command.Annotations = make(map[string]string)")
-		w.writeLinef("s.Command.Annotations[\"ignoresMissingEnv\"] = \"true\"")
+		if c.IgnoreMissingEnv {
+			w.writeLinef("s.Command.Annotations[\"ignoresMissingEnv\"] = \"true\"")
+		}
 	}
-	if c.Deprecated != "" {
-		w.writeLinef("s.Command.Deprecated = %q", c.Deprecated)
+	// Note: We intentionally don't set s.Command.Deprecated here because Cobra
+	// prints deprecation warnings to stdout, which breaks JSON output. Instead,
+	// the deprecation warning is prepended to the description/help text and
+	// printed to stderr via the annotation below.
+	if c.Deprecated {
+		msg := c.DeprecationMessage
+		if msg == "" {
+			msg = defaultDeprecationMessage
+		}
+		w.writeLinef("s.Command.Annotations[\"deprecationWarning\"] = %q", msg)
 	}
 	// Add subcommands
 	for _, subCommand := range subCommands {

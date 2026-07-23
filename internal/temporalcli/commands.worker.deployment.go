@@ -22,6 +22,7 @@ import (
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/worker"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
 )
 
 type versionSummariesRowType struct {
@@ -894,17 +895,21 @@ func validateAWSLambdaProviderDetails(details map[string]any) error {
 
 // awsLambdaProviderDetailsPayload returns the encoded Payload representing AWS
 // Lambda compute provider details.
-func (c *TemporalWorkerDeploymentCreateVersionCommand) awsLambdaProviderDetailsPayload() (*commonpb.Payload, error) {
+func awsLambdaProviderDetailsPayload(
+	functionARN string,
+	assumeRoleARN string,
+	assumeRoleExternalID string,
+) (*commonpb.Payload, error) {
 	// Map keys from temporal-auto-scaled-workers:
 	// https://github.com/temporalio/temporal-auto-scaled-workers/blob/c4a7e69b6504365d7e5326b0b8e6cd95e3293f96/wci/workflow/compute_provider/aws_lambda.go#L16-L20
 	providerDetails := map[string]any{
-		"arn": c.AwsLambdaFunctionArn,
+		"arn": functionARN,
 	}
-	if c.AwsLambdaAssumeRoleArn != "" {
-		providerDetails["role"] = c.AwsLambdaAssumeRoleArn
+	if assumeRoleARN != "" {
+		providerDetails["role"] = assumeRoleARN
 	}
-	if c.AwsLambdaAssumeRoleExternalId != "" {
-		providerDetails["role_external_id"] = c.AwsLambdaAssumeRoleExternalId
+	if assumeRoleExternalID != "" {
+		providerDetails["role_external_id"] = assumeRoleExternalID
 	}
 	err := validateAWSLambdaProviderDetails(providerDetails)
 	if err != nil {
@@ -912,6 +917,102 @@ func (c *TemporalWorkerDeploymentCreateVersionCommand) awsLambdaProviderDetailsP
 	}
 	dc := converter.GetDefaultDataConverter()
 	return dc.ToPayload(&providerDetails)
+}
+
+func validateGCPCloudRunProviderDetails(details map[string]any) error {
+	for _, key := range []string{"project", "region", "worker_pool", "service_account"} {
+		if v, ok := details[key].(string); !ok || v == "" {
+			return fmt.Errorf("missing required GCP Cloud Run provider detail: %s", key)
+		}
+	}
+	return nil
+}
+
+// gcpCloudRunProviderDetailsPayload returns the encoded Payload representing GCP
+// Cloud Run compute provider details. All four keys are required: the first
+// three name the worker-pool resource and service_account is the impersonation
+// target the serverless chain depends on.
+func gcpCloudRunProviderDetailsPayload(
+	project string,
+	region string,
+	workerPool string,
+	serviceAccount string,
+) (*commonpb.Payload, error) {
+	// Map keys from temporal-auto-scaled-workers:
+	// https://github.com/temporalio/temporal-auto-scaled-workers/blob/d1390d11cb55b4450141ede559f7832e5620c1e4/wci/workflow/compute_provider/gcp_cloudrun.go#L21-L24
+	providerDetails := map[string]any{
+		"project":         project,
+		"region":          region,
+		"worker_pool":     workerPool,
+		"service_account": serviceAccount,
+	}
+	err := validateGCPCloudRunProviderDetails(providerDetails)
+	if err != nil {
+		return nil, err
+	}
+	dc := converter.GetDefaultDataConverter()
+	return dc.ToPayload(&providerDetails)
+}
+
+// computeProviderConfig selects the single compute provider for a Worker
+// Deployment Version's "default" scaling group from the command's flags. It
+// enforces that AWS Lambda and GCP Cloud Run flags are not mixed, then
+// dispatches on the trigger flag (--aws-lambda-function-arn /
+// --gcp-cloud-run-worker-pool). Returns an empty providerType when no provider
+// flags are set, leaving the "no configuration" decision to the caller.
+func computeProviderConfig(
+	awsLambdaFunctionARN string,
+	awsLambdaAssumeRoleARN string,
+	awsLambdaAssumeRoleExternalID string,
+	gcpCloudRunProject string,
+	gcpCloudRunRegion string,
+	gcpCloudRunWorkerPool string,
+	gcpCloudRunServiceAccount string,
+) (providerType string, detailsPayload *commonpb.Payload, err error) {
+	awsSet := awsLambdaFunctionARN != "" || awsLambdaAssumeRoleARN != "" || awsLambdaAssumeRoleExternalID != ""
+	gcpSet := gcpCloudRunProject != "" || gcpCloudRunRegion != "" || gcpCloudRunWorkerPool != "" || gcpCloudRunServiceAccount != ""
+	if awsSet && gcpSet {
+		return "", nil, fmt.Errorf("cannot combine --aws-lambda-* and --gcp-cloud-run-* flags; a Worker Deployment Version supports a single compute provider")
+	}
+
+	switch {
+	case awsLambdaFunctionARN != "":
+		p, err := awsLambdaProviderDetailsPayload(
+			awsLambdaFunctionARN,
+			awsLambdaAssumeRoleARN,
+			awsLambdaAssumeRoleExternalID,
+		)
+		return "aws-lambda", p, err
+	case gcpCloudRunWorkerPool != "":
+		p, err := gcpCloudRunProviderDetailsPayload(
+			gcpCloudRunProject,
+			gcpCloudRunRegion,
+			gcpCloudRunWorkerPool,
+			gcpCloudRunServiceAccount,
+		)
+		return "gcp-cloud-run", p, err
+	default:
+		return "", nil, nil
+	}
+}
+
+// scalerTypeByProvider maps each compute provider to the scaling algorithm
+// compatible with its launch strategy in temporal-auto-scaled-workers: aws-lambda
+// is invoke-based ("no-sync"); gcp-cloud-run is worker-set-based ("rate-based").
+// WCI rejects an incompatible pairing at CreateWorkerDeploymentVersion.
+var scalerTypeByProvider = map[string]string{
+	"aws-lambda":    "no-sync",
+	"gcp-cloud-run": "rate-based",
+}
+
+// scalerTypeForProvider returns the scaling algorithm for the given provider,
+// erroring if the provider has no explicit mapping so an unknown or newly-added
+// provider fails loudly here rather than silently getting an incompatible scaler.
+func scalerTypeForProvider(providerType string) (string, error) {
+	if scaler, ok := scalerTypeByProvider[providerType]; ok {
+		return scaler, nil
+	}
+	return "", fmt.Errorf("no scaler mapping for compute provider %q", providerType)
 }
 
 func (c *TemporalWorkerDeploymentCreateVersionCommand) run(cctx *CommandContext, args []string) error {
@@ -927,27 +1028,38 @@ func (c *TemporalWorkerDeploymentCreateVersionCommand) run(cctx *CommandContext,
 	deploymentName := c.DeploymentName
 	requestID := uuid.NewString()
 
-	var cc *computepb.ComputeConfig
-	if c.AwsLambdaFunctionArn != "" {
-		detailsPayload, err := c.awsLambdaProviderDetailsPayload()
-		if err != nil {
-			return err
-		}
-		cc = &computepb.ComputeConfig{
-			ScalingGroups: map[string]*computepb.ComputeConfigScalingGroup{
-				"default": {
-					Provider: &computepb.ComputeProvider{
-						Type:    "aws-lambda",
-						Details: detailsPayload,
-					},
-					Scaler: &computepb.ComputeScaler{
-						// Hard-coded: no-sync is the only supported algorithm
-						// in temporal-auto-scaled-workers as of 2026-04-01.
-						Type: "no-sync",
-					},
+	providerType, detailsPayload, err := computeProviderConfig(
+		c.AwsLambdaFunctionArn,
+		c.AwsLambdaAssumeRoleArn,
+		c.AwsLambdaAssumeRoleExternalId,
+		c.GcpCloudRunProject,
+		c.GcpCloudRunRegion,
+		c.GcpCloudRunWorkerPool,
+		c.GcpCloudRunServiceAccount,
+	)
+	if err != nil {
+		return err
+	}
+	if providerType == "" {
+		// We do not allow creation of an "empty" WDV.
+		return fmt.Errorf("missing configuration for compute provider")
+	}
+	scalerType, err := scalerTypeForProvider(providerType)
+	if err != nil {
+		return err
+	}
+	cc := &computepb.ComputeConfig{
+		ScalingGroups: map[string]*computepb.ComputeConfigScalingGroup{
+			"default": {
+				Provider: &computepb.ComputeProvider{
+					Type:    providerType,
+					Details: detailsPayload,
+				},
+				Scaler: &computepb.ComputeScaler{
+					Type: scalerType,
 				},
 			},
-		}
+		},
 	}
 	request := &workflowservice.CreateWorkerDeploymentVersionRequest{
 		Namespace: ns,
@@ -966,6 +1078,94 @@ func (c *TemporalWorkerDeploymentCreateVersionCommand) run(cctx *CommandContext,
 	}
 
 	cctx.Printer.Println("Successfully created worker deployment version")
+	return nil
+}
+
+func (c *TemporalWorkerDeploymentUpdateVersionComputeConfigCommand) run(cctx *CommandContext, args []string) error {
+	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	ns := c.Parent.Parent.Namespace
+	buildID := c.BuildId
+	identity := c.Parent.Parent.Identity
+	deploymentName := c.DeploymentName
+	requestID := uuid.NewString()
+
+	request := &workflowservice.UpdateWorkerDeploymentVersionComputeConfigRequest{
+		Namespace: ns,
+		DeploymentVersion: &deployment.WorkerDeploymentVersion{
+			DeploymentName: deploymentName,
+			BuildId:        buildID,
+		},
+		Identity:  identity,
+		RequestId: requestID,
+	}
+
+	if c.Remove {
+		if c.AwsLambdaFunctionArn != "" || c.AwsLambdaAssumeRoleArn != "" || c.AwsLambdaAssumeRoleExternalId != "" ||
+			c.GcpCloudRunProject != "" || c.GcpCloudRunRegion != "" || c.GcpCloudRunWorkerPool != "" || c.GcpCloudRunServiceAccount != "" {
+			return fmt.Errorf("--remove cannot be combined with --aws-lambda-* or --gcp-cloud-run-* flags")
+		}
+		request.RemoveComputeConfigScalingGroups = []string{"default"}
+	} else {
+		providerType, detailsPayload, err := computeProviderConfig(
+			c.AwsLambdaFunctionArn,
+			c.AwsLambdaAssumeRoleArn,
+			c.AwsLambdaAssumeRoleExternalId,
+			c.GcpCloudRunProject,
+			c.GcpCloudRunRegion,
+			c.GcpCloudRunWorkerPool,
+			c.GcpCloudRunServiceAccount,
+		)
+		if err != nil {
+			return err
+		}
+		if providerType == "" {
+			return fmt.Errorf("missing configuration for compute provider")
+		}
+		scalerType, err := scalerTypeForProvider(providerType)
+		if err != nil {
+			return err
+		}
+		sg := &computepb.ComputeConfigScalingGroup{
+			Provider: &computepb.ComputeProvider{
+				Type:    providerType,
+				Details: detailsPayload,
+			},
+			Scaler: &computepb.ComputeScaler{
+				Type: scalerType,
+			},
+		}
+		updatePaths := []string{
+			"provider.type",
+			"provider.details",
+			"scaler.type",
+		}
+		ccScalingGroups := map[string]*computepb.ComputeConfigScalingGroupUpdate{
+			"default": &computepb.ComputeConfigScalingGroupUpdate{
+				ScalingGroup: sg,
+				UpdateMask: &fieldmaskpb.FieldMask{
+					Paths: updatePaths,
+				},
+			},
+		}
+		request.ComputeConfigScalingGroups = ccScalingGroups
+
+	}
+
+	_, err = cl.WorkflowService().UpdateWorkerDeploymentVersionComputeConfig(cctx, request)
+	if err != nil {
+		return fmt.Errorf("error updating worker deployment version compute config: %w", err)
+	}
+
+	if c.Remove {
+		cctx.Printer.Println("Successfully removed worker deployment version compute config")
+	} else {
+		cctx.Printer.Println("Successfully updated worker deployment version compute config")
+	}
 	return nil
 }
 

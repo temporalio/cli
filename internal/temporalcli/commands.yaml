@@ -471,6 +471,10 @@ commands:
       However, if the Activity is currently running, it will run until the next
       time it fails, completes, or times out, at which point the pause will kick in.
 
+      Pause does not stop or extend the Activity's Schedule-To-Close Timeout.
+      A paused Activity can still time out. Use `temporal activity update-options`
+      to extend timeout settings before a long pause.
+
       If the Activity is on its last retry attempt and fails, the failure will
       be returned to the caller, just as if the Activity had not been paused.
 
@@ -979,6 +983,7 @@ commands:
         - worker deployment set-ramping-version
         - worker deployment delete-version
         - worker deployment update-version-metadata
+        - worker deployment update-version-compute-config
         - worker deployment manager-identity
 
   - name: temporal worker deployment create
@@ -1087,9 +1092,25 @@ commands:
           --aws-lambda-assume-role-arn LambdaAssumeRoleARN \
           --aws-lambda-assume-role-external-id LambdaAssumeRoleExternalID
       ```
-      
+
+      Or pass compute provider information for a GCP Cloud Run worker pool
+      that spawns a Worker in the Worker Deployment:
+
+      ```
+      temporal worker deployment create-version \
+          --namespace YourNamespaceName \
+          --deployment-name YourDeploymentName \
+          --build-id YourBuildID \
+          --gcp-cloud-run-project YourGCPProject \
+          --gcp-cloud-run-region us-central1 \
+          --gcp-cloud-run-worker-pool YourWorkerPool \
+          --gcp-cloud-run-service-account customer-sa@proj.iam.gserviceaccount.com
+      ```
+
       If a Worker Deployment Version with the supplied BuildID already exists,
       this command will return an error.
+
+      Returns an error if all compute configuration fields are empty.
 
       Note: This is an experimental feature and may change in the future.
     option-sets:
@@ -1115,6 +1136,27 @@ commands:
           with the AWS IAM role specified in --aws-lambda-assume-role-arn has
           an aws:ExternalId condition that matches the supplied value. Required
           when --aws-lambda-function-arn is specified.
+      - name: gcp-cloud-run-project
+        type: string
+        description: |
+          GCP project ID hosting the Cloud Run worker pool. Required when
+          --gcp-cloud-run-worker-pool is specified.
+      - name: gcp-cloud-run-region
+        type: string
+        description: |
+          Region of the Cloud Run worker pool. Required when
+          --gcp-cloud-run-worker-pool is specified.
+      - name: gcp-cloud-run-worker-pool
+        type: string
+        description: |
+          GCP Cloud Run worker pool name to scale when there are no active
+          pollers for task queue targets in the Worker Deployment.
+      - name: gcp-cloud-run-service-account
+        type: string
+        description: |
+          Customer GCP service account the Temporal server impersonates to
+          manage the Cloud Run worker pool. Required when
+          --gcp-cloud-run-worker-pool is specified.
 
   - name: temporal worker deployment describe-version
     summary: Show properties of a Worker Deployment Version
@@ -1319,6 +1361,105 @@ commands:
           Keys of entries to be deleted from metadata.
           Can be passed multiple times.
 
+  - name: temporal worker deployment update-version-compute-config
+    summary: Update compute configuration for a Version
+    description: |
+      Update compute configuration associated with a Worker Deployment
+      Version.
+
+      For example, to update the AWS Lambda function ARN associated with an
+      existing Worker Deployment Version:
+
+      ```
+       temporal worker deployment update-version-compute-config \
+          --deployment-name YourDeploymentName --build-id YourBuildID \
+          --aws-lambda-function-arn UpdatedLambdaFunctionARN
+      ```
+
+      To update the AWS IAM role ARN that is assumed by the serverless worker
+      manager associated with an existing Worker Deployment Version:
+
+      ```
+       temporal worker deployment update-version-compute-config \
+          --deployment-name YourDeploymentName --build-id YourBuildID \
+          --aws-lambda-assume-role-arn UpdatedRoleARN
+      ```
+
+      To update the GCP Cloud Run worker pool associated with an existing
+      Worker Deployment Version:
+
+      ```
+       temporal worker deployment update-version-compute-config \
+          --deployment-name YourDeploymentName --build-id YourBuildID \
+          --gcp-cloud-run-project YourGCPProject \
+          --gcp-cloud-run-region us-central1 \
+          --gcp-cloud-run-worker-pool UpdatedWorkerPool \
+          --gcp-cloud-run-service-account customer-sa@proj.iam.gserviceaccount.com
+      ```
+
+      If --remove is specified, the compute configuration for the Worker
+      Deployment Version will be removed:
+
+      ```
+       temporal worker deployment update-version-compute-config \
+          --deployment-name YourDeploymentName --build-id YourBuildID \
+          --remove
+      ```
+      
+      If a Worker Deployment Version with the supplied BuildID does not exist,
+      this command will return an error.
+
+      Note: This is an experimental feature and may change in the future.
+    option-sets:
+      - deployment-version
+    options:
+      - name: aws-lambda-function-arn
+        type: string
+        description: |
+          Qualified (contains version suffix) or unqualified AWS Lambda
+          function ARN to invoke when there are no active pollers for task
+          queue targets in the Worker Deployment.
+      - name: aws-lambda-assume-role-arn
+        type: string
+        description: |
+          AWS IAM role ARN that the Temporal server will assume when invoking
+          the Lambda function that spawns a new Worker in this Worker
+          Deployment Version. Required when --aws-lambda-function-arn is
+          specified.
+      - name: aws-lambda-assume-role-external-id
+        type: string
+        description: |
+          Temporal server will enforce that the AWS IAM trust policy associated
+          with the AWS IAM role specified in --aws-lambda-assume-role-arn has
+          an aws:ExternalId condition that matches the supplied value. Required
+          when --aws-lambda-function-arn is specified.
+      - name: gcp-cloud-run-project
+        type: string
+        description: |
+          GCP project ID hosting the Cloud Run worker pool. Required when
+          --gcp-cloud-run-worker-pool is specified.
+      - name: gcp-cloud-run-region
+        type: string
+        description: |
+          Region of the Cloud Run worker pool. Required when
+          --gcp-cloud-run-worker-pool is specified.
+      - name: gcp-cloud-run-worker-pool
+        type: string
+        description: |
+          GCP Cloud Run worker pool name to scale when there are no active
+          pollers for task queue targets in the Worker Deployment.
+      - name: gcp-cloud-run-service-account
+        type: string
+        description: |
+          Customer GCP service account the Temporal server impersonates to
+          manage the Cloud Run worker pool. Required when
+          --gcp-cloud-run-worker-pool is specified.
+      - name: remove
+        type: bool
+        description: |
+          Removes any compute configuration associated with this Worker
+          Deployment Version.
+
   - name: temporal worker deployment manager-identity
     summary: Manager Identity commands change the `ManagerIdentity` of a Worker Deployment
     description: |
@@ -1461,6 +1602,9 @@ commands:
       - name: limit
         type: int
         description: Maximum number of workers to display.
+      - name: include-system-workers
+        type: bool
+        description: Include system workers that are created implicitly by the server. By default, system workers are excluded.
 
   - name: temporal worker describe
     summary: Returns information about a specific worker (EXPERIMENTAL)
@@ -1618,6 +1762,210 @@ commands:
         type: string
         description: Property value (required).
         # required: true
+
+  - name: temporal nexus
+    summary: Start, list, and operate on Nexus Operations
+    description: |
+      Nexus Operation commands perform operations on Nexus
+      Operation Executions:
+
+      ```
+      temporal nexus [command] [options]
+      ```
+
+      For example:
+
+      ```
+      temporal nexus operation list
+      ```
+    option-sets:
+      - client
+    docs:
+      description-header: >-
+        Learn how to use Temporal Nexus commands for starting, listing,
+        and managing Nexus Operation Executions.
+      keywords:
+        - nexus
+        - nexus operation
+        - nexus operation start
+        - nexus operation execute
+        - nexus operation describe
+        - nexus operation cancel
+        - nexus operation terminate
+        - nexus operation list
+        - nexus operation count
+        - cli reference
+        - cli-feature
+        - command-line-interface-cli
+        - temporal cli
+      tags:
+        - Nexus
+        - Temporal CLI
+
+  - name: temporal nexus operation
+    summary: Commands for managing Nexus Operations
+    description: |
+      These commands manage Nexus Operation Executions.
+
+      Nexus Operation commands follow this syntax:
+
+      ```
+      temporal nexus operation [command] [options]
+      ```
+
+  - name: temporal nexus operation start
+    summary: Start a new Nexus Operation (Experimental)
+    description: |
+      Start a new Nexus Operation. Outputs the
+      Operation ID and Run ID.
+
+      ```
+      temporal nexus operation start \
+          --endpoint YourEndpoint \
+          --service YourService \
+          --operation YourOperation \
+          --operation-id YourOperationId \
+          --input '{"some-key": "some-value"}'
+      ```
+    option-sets:
+      - nexus-operation-start
+      - payload-input
+
+  - name: temporal nexus operation execute
+    summary: Start a new Nexus Operation and wait for its result (Experimental)
+    description: |
+      Start a new Nexus Operation Execution and block until
+      it completes. The result is output to stdout.
+
+      ```
+      temporal nexus operation execute \
+          --endpoint YourEndpoint \
+          --service YourService \
+          --operation YourOperation \
+          --operation-id YourOperationId \
+          --input '{"some-key": "some-value"}'
+      ```
+    option-sets:
+      - nexus-operation-start
+      - payload-input
+
+  - name: temporal nexus operation describe
+    summary: Show detailed info for a Nexus Operation (Experimental)
+    description: |
+      Display detailed information about a specific Nexus
+      Operation Execution.
+
+      ```
+      temporal nexus operation describe \
+          --operation-id YourOperationId
+      ```
+    option-sets:
+      - nexus-operation-reference
+    options:
+      - name: raw
+        type: bool
+        description: Print properties without changing their format.
+
+  - name: temporal nexus operation cancel
+    summary: Request cancellation of a Nexus Operation (Experimental)
+    description: |
+      Request cancellation of a Nexus Operation.
+
+      ```
+      temporal nexus operation cancel \
+          --operation-id YourOperationId
+      ```
+
+      The Operation handler determines how to handle the
+      cancellation request.
+    option-sets:
+      - nexus-operation-reference
+    options:
+      - name: reason
+        type: string
+        description: Reason for cancellation.
+
+  - name: temporal nexus operation terminate
+    summary: Forcefully end a Nexus Operation (Experimental)
+    description: |
+      Terminate a Nexus Operation.
+
+      ```
+      temporal nexus operation terminate \
+          --operation-id YourOperationId \
+          --reason YourReason
+      ```
+
+      Operation handlers cannot see or respond to terminations.
+    option-sets:
+      - nexus-operation-reference
+    options:
+      - name: reason
+        type: string
+        description: |
+          Reason for termination.
+          Defaults to a message with the current user's name.
+
+  - name: temporal nexus operation list
+    summary: List Nexus Operations matching a query (Experimental)
+    description: |
+      List Nexus Operations. Use `--query` to filter results.
+
+      ```
+      temporal nexus operation list \
+          --query 'Endpoint="YourEndpoint"'
+      ```
+
+      Visit https://docs.temporal.io/visibility to read more about
+      Search Attributes and queries.
+    options:
+      - name: query
+        short: q
+        type: string
+        description: |
+          Query to filter the Nexus Operation Executions to list.
+      - name: limit
+        type: int
+        description: |
+          Maximum number of Nexus Operation Executions to display.
+      - name: page-size
+        type: int
+        description: |
+          Maximum number of Nexus Operation Executions to fetch
+          at a time from the server.
+
+  - name: temporal nexus operation count
+    summary: Count Nexus Operations matching a query (Experimental)
+    description: |
+      Return a count of Nexus Operations. Use `--query`
+      to filter the operations to be counted.
+
+      ```
+      temporal nexus operation count \
+          --query 'Endpoint="YourEndpoint"'
+      ```
+
+      Visit https://docs.temporal.io/visibility to read more about
+      Search Attributes and queries.
+    options:
+      - name: query
+        short: q
+        type: string
+        description: |
+          Query to filter Nexus Operation Executions to count.
+
+  - name: temporal nexus operation result
+    summary: Wait for and output the result of a Nexus Operation (Experimental)
+    description: |
+      Wait for a Nexus Operation to complete and output
+      the result.
+
+      ```
+      temporal nexus operation result \
+          --operation-id YourOperationId
+      ```
+    option-sets:
+      - nexus-operation-reference
 
   - name: temporal operator
     summary: Manage Temporal deployments
@@ -2496,7 +2844,9 @@ commands:
       ```
       temporal schedule update \
           --schedule-id "YourScheduleId" \
-          --workflow-type "NewWorkflowType"
+          --workflow-id YourBaseWorkflowIdName \
+          --task-queue YourTaskQueue \
+          --type YourWorkflowType
       ```
 
       This command performs a full replacement of the Schedule
@@ -2673,6 +3023,11 @@ commands:
       - name: ui-codec-endpoint
         type: string
         description: UI remote codec HTTP endpoint.
+      - name: ui-disable-news-fetch
+        type: bool
+        description: |
+          Disable the Web UI newsfeed. When set, the UI will not request the
+          newsfeed and the button to open the newsfeed panel is hidden.
       - name: sqlite-pragma
         type: string[]
         description: SQLite pragma statements in "PRAGMA=VALUE" format.
@@ -2870,14 +3225,9 @@ commands:
           configuration for the task queue.
 
   - name: temporal task-queue get-build-id-reachability
-    summary: Show Build ID availability (Deprecated)
+    summary: Show Build ID availability
+    deprecated: true
     description: |
-      ```
-      +-----------------------------------------------------------------------------+
-      | CAUTION: This command is deprecated and will be removed in a later release. |
-      +-----------------------------------------------------------------------------+
-      ```
-
       Show if a given Build ID can be used for new, existing, or closed Workflows
       in Namespaces that support Worker versioning:
 
@@ -2917,14 +3267,9 @@ commands:
           Can be passed multiple times.
 
   - name: temporal task-queue get-build-ids
-    summary: Fetch Build ID versions (Deprecated)
+    summary: Fetch Build ID versions
+    deprecated: true
     description: |
-      ```
-      +-----------------------------------------------------------------------------+
-      | CAUTION: This command is deprecated and will be removed in a later release. |
-      +-----------------------------------------------------------------------------+
-      ```
-
       Fetch sets of compatible Build IDs for specified Task Queues and display their
       information:
 
@@ -2966,14 +3311,9 @@ commands:
         short: t
 
   - name: temporal task-queue update-build-ids
-    summary: Manage Build IDs (Deprecated)
+    summary: Manage Build IDs
+    deprecated: true
     description: |
-      ```
-      +-----------------------------------------------------------------------------+
-      | CAUTION: This command is deprecated and will be removed in a later release. |
-      +-----------------------------------------------------------------------------+
-      ```
-
       Add or change a Task Queue's compatible Build IDs for Namespaces using Worker
       versioning:
 
@@ -3018,14 +3358,9 @@ commands:
         description: Set the expanded Build ID set as the Task Queue default.
 
   - name: temporal task-queue update-build-ids add-new-default
-    summary: Set new default Build ID set (Deprecated)
+    summary: Set new default Build ID set
+    deprecated: true
     description: |
-      ```
-      +-----------------------------------------------------------------------------+
-      | CAUTION: This command is deprecated and will be removed in a later release. |
-      +-----------------------------------------------------------------------------+
-      ```
-
       Create a new Task Queue Build ID set, add a Build ID to it, and make it the
       overall Task Queue default. The new set will be incompatible with previous
       sets and versions.
@@ -3055,14 +3390,9 @@ commands:
         short: t
 
   - name: temporal task-queue update-build-ids promote-id-in-set
-    summary: Set Build ID as set default (Deprecated)
+    summary: Set Build ID as set default
+    deprecated: true
     description: |
-      ```
-      +-----------------------------------------------------------------------------+
-      | CAUTION: This command is deprecated and will be removed in a later release. |
-      +-----------------------------------------------------------------------------+
-      ```
-
       Establish an existing Build ID as the default in its Task Queue set. New tasks
       compatible with this set will now be dispatched to this ID:
 
@@ -3091,14 +3421,9 @@ commands:
         short: t
 
   - name: temporal task-queue update-build-ids promote-set
-    summary: Promote Build ID set (Deprecated)
+    summary: Promote Build ID set
+    deprecated: true
     description: |
-      ```
-      +-----------------------------------------------------------------------------+
-      | CAUTION: This command is deprecated and will be removed in a later release. |
-      +-----------------------------------------------------------------------------+
-      ```
-
       Promote a Build ID set to be the default on a Task Queue. Identify the set by
       providing a Build ID within it. If the set is already the default, this
       command has no effect:
@@ -3128,14 +3453,10 @@ commands:
         short: t
 
   - name: temporal task-queue versioning
-    summary: Manage Task Queue Build ID handling (Deprecated)
+    summary: Manage Task Queue Build ID handling
+    deprecated: true
+    deprecation-message: This API has been deprecated by Worker Deployment.
     description: |
-      ```
-      +---------------------------------------------------------------------+
-      | CAUTION: This API has been deprecated by Worker Deployment.         |
-      +---------------------------------------------------------------------+
-      ```
-
       Provides commands to add, list, remove, or replace Worker Build ID assignment
       and redirect rules associated with Task Queues:
 
@@ -3162,7 +3483,9 @@ commands:
         required: true
 
   - name: temporal task-queue versioning add-redirect-rule
-    summary: Add Task Queue redirect rules (Deprecated)
+    summary: Add Task Queue redirect rules
+    deprecated: true
+    deprecation-message: This API has been deprecated by Worker Deployment.
     description: |
       Add a new redirect rule for a given Task Queue. You may add at most one
       redirect rule for each distinct source build ID:
@@ -3172,12 +3495,6 @@ commands:
           --task-queue YourTaskQueue \
           --source-build-id "YourSourceBuildID" \
           --target-build-id "YourTargetBuildID"
-      ```
-
-      ```
-      +---------------------------------------------------------------------+
-      | CAUTION: This API has been deprecated by Worker Deployment.         |
-      +---------------------------------------------------------------------+
       ```
     options:
       - name: source-build-id
@@ -3194,7 +3511,9 @@ commands:
         description: Don't prompt to confirm.
 
   - name: temporal task-queue versioning commit-build-id
-    summary: Complete Build ID rollout (Deprecated)
+    summary: Complete Build ID rollout
+    deprecated: true
+    deprecation-message: This API has been deprecated by Worker Deployment.
     description: |
       Complete a Build ID's rollout and clean up unnecessary rules that might have
       been created during a gradual rollout:
@@ -3216,12 +3535,6 @@ commands:
       Rejects requests when there have been no recent pollers for this Build ID.
       This prevents committing invalid Build IDs. Use the `--force` option to
       override this validation.
-
-      ```
-      +---------------------------------------------------------------------+
-      | CAUTION: This API has been deprecated by Worker Deployment.         |
-      +---------------------------------------------------------------------+
-      ```
     options:
       - name: build-id
         type: string
@@ -3236,7 +3549,9 @@ commands:
         description: Don't prompt to confirm.
 
   - name: temporal task-queue versioning delete-assignment-rule
-    summary: Removes a Task Queue assignment rule (Deprecated)
+    summary: Removes a Task Queue assignment rule
+    deprecated: true
+    deprecation-message: This API has been deprecated by Worker Deployment.
     description: |
       Deletes a rule identified by its index in the Task Queue's list of assignment
       rules.
@@ -3250,12 +3565,6 @@ commands:
       By default, the Task Queue must retain one unconditional rule, such as "no
       hint filter" or "percentage". Otherwise, the delete operation is rejected.
       Use the `--force` option to override this validation.
-
-      ```
-      +---------------------------------------------------------------------+
-      | CAUTION: This API has been deprecated by Worker Deployment.         |
-      +---------------------------------------------------------------------+
-      ```
     options:
       - name: rule-index
         type: int
@@ -3273,7 +3582,9 @@ commands:
         description: Don't prompt to confirm.
 
   - name: temporal task-queue versioning delete-redirect-rule
-    summary: Removes Build-ID routing rule (Deprecated)
+    summary: Removes Build-ID routing rule
+    deprecated: true
+    deprecation-message: This API has been deprecated by Worker Deployment.
     description: |
       Deletes the routing rule for the given source Build ID.
 
@@ -3281,12 +3592,6 @@ commands:
       temporal task-queue versioning delete-redirect-rule \
           --task-queue YourTaskQueue \
           --source-build-id "YourBuildId"
-      ```
-
-      ```
-      +---------------------------------------------------------------------+
-      | CAUTION: This API has been deprecated by Worker Deployment.         |
-      +---------------------------------------------------------------------+
       ```
     options:
       - name: source-build-id
@@ -3299,7 +3604,9 @@ commands:
         description: Don't prompt to confirm.
 
   - name: temporal task-queue versioning get-rules
-    summary: Fetch Worker Build ID assignments and redirect rules (Deprecated)
+    summary: Fetch Worker Build ID assignments and redirect rules
+    deprecated: true
+    deprecation-message: This API has been deprecated by Worker Deployment.
     description: |
       Retrieve all the Worker Build ID assignments and redirect rules associated
       with a Task Queue:
@@ -3319,14 +3626,11 @@ commands:
         Build ID. You may add at most one redirect rule for each source Build ID.
         Redirect rules require that a target Build ID is fully compatible with
         the source Build ID.
-      ```
-      +---------------------------------------------------------------------+
-      | CAUTION: This API has been deprecated by Worker Deployment.         |
-      +---------------------------------------------------------------------+
-      ```
 
   - name: temporal task-queue versioning insert-assignment-rule
-    summary: Add an assignment rule at a index (Deprecated)
+    summary: Add an assignment rule at a index
+    deprecated: true
+    deprecation-message: This API has been deprecated by Worker Deployment.
     description: |
       Inserts a new assignment rule for this Task Queue. Rules are evaluated in
       order, starting from index 0. The first applicable rule is applied, and the
@@ -3339,12 +3643,6 @@ commands:
       ```
 
       If you do not specify a `--rule-index`, this command inserts at index 0.
-
-      ```
-      +---------------------------------------------------------------------+
-      | CAUTION: This API has been deprecated by Worker Deployment.         |
-      +---------------------------------------------------------------------+
-      ```
     options:
       - name: build-id
         type: string
@@ -3369,7 +3667,9 @@ commands:
         description: Don't prompt to confirm.
 
   - name: temporal task-queue versioning replace-assignment-rule
-    summary: Update assignment rule at index (Deprecated)
+    summary: Update assignment rule at index
+    deprecated: true
+    deprecation-message: This API has been deprecated by Worker Deployment.
     description: |
       Change an assignment rule for this Task Queue. By default, this enforces one
       unconditional rule (no hint filter or percentage). Otherwise, the operation
@@ -3396,12 +3696,6 @@ commands:
       ```
 
       Percent may vary between 0 and 100 (default).
-
-      ```
-      +---------------------------------------------------------------------+
-      | CAUTION: This API has been deprecated by Worker Deployment.         |
-      +---------------------------------------------------------------------+
-      ```
     options:
       - name: build-id
         type: string
@@ -3428,7 +3722,9 @@ commands:
         description: Bypass the validation that one unconditional rule remains.
 
   - name: temporal task-queue versioning replace-redirect-rule
-    summary: Change the target for a Build ID's redirect (Deprecated)
+    summary: Change the target for a Build ID's redirect
+    deprecated: true
+    deprecation-message: This API has been deprecated by Worker Deployment.
     description: |
       Updates a Build ID's redirect rule on a Task Queue by replacing its target
       Build ID:
@@ -3438,12 +3734,6 @@ commands:
           --task-queue YourTaskQueue \
           --source-build-id YourSourceBuildId \
           --target-build-id YourNewTargetBuildId
-      ```
-
-      ```
-      +---------------------------------------------------------------------+
-      | CAUTION: This API has been deprecated by Worker Deployment.         |
-      +---------------------------------------------------------------------+
       ```
     options:
       - name: source-build-id
@@ -3877,6 +4167,17 @@ commands:
           --versioning-override-build-id YourDeploymentBuildId
       ```
 
+      or to move the workflow execution to a Worker Deployment Version until
+      the next Workflow Task completes there, set behavior to `one_time`:
+
+      ```
+      temporal workflow update-options \
+          --workflow-id YourWorkflowId \
+          --versioning-override-behavior one_time \
+          --versioning-override-deployment-name YourDeploymentName \
+          --versioning-override-build-id YourDeploymentBuildId
+      ```
+
       To remove any previous overrides, set the behavior to
       `unspecified`:
 
@@ -3899,17 +4200,18 @@ commands:
         enum-values:
           - unspecified
           - pinned
+          - one_time
           - auto_upgrade
       - name: versioning-override-deployment-name
         type: string
         description:
-          When overriding to a `pinned` behavior, specifies the Deployment Name of the
-          version to target.
+          When overriding to a `pinned` or `one_time` behavior, specifies the
+          Deployment Name of the version to target.
       - name: versioning-override-build-id
         type: string
         description:
-          When overriding to a `pinned` behavior, specifies the Build ID of the
-          version to target.
+          When overriding to a `pinned` or `one_time` behavior, specifies the
+          Build ID of the version to target.
   - name: temporal workflow query
     summary: Retrieve Workflow Execution state
     description: |
@@ -5057,6 +5359,80 @@ option-sets:
           May be used as an alternative to `--target-namespace` and
           `--target-task-queue`.
 
+  - name: nexus-operation-reference
+    options:
+      - name: operation-id
+        type: string
+        description: Nexus Operation ID.
+        required: true
+      - name: run-id
+        type: string
+        short: r
+        description: Run ID of the Nexus Operation.
+
+  - name: nexus-operation-start
+    options:
+      - name: endpoint
+        type: string
+        description: Nexus Endpoint name.
+        required: true
+      - name: service
+        type: string
+        description: Nexus Service name.
+        required: true
+      - name: operation
+        type: string
+        description: Nexus Operation name.
+        required: true
+      - name: operation-id
+        type: string
+        description: Nexus Operation ID.
+        required: true
+      - name: schedule-to-close-timeout
+        type: duration
+        description: |
+          Total time the operation is allowed to run.
+      - name: schedule-to-start-timeout
+        type: duration
+        description: |
+          Maximum time to wait for an operation to be started (or completed
+          synchronously) by a handler.
+      - name: start-to-close-timeout
+        type: duration
+        description: |
+          Maximum time to wait for an asynchronous operation to complete
+          after it has been started.
+      - name: id-conflict-policy
+        type: string-enum
+        description: |
+          Policy for handling an Operation ID conflict with a
+          running operation.
+        enum-values:
+          - Fail
+          - UseExisting
+          - TerminateExisting
+      - name: id-reuse-policy
+        type: string-enum
+        description: |
+          Policy for re-using an Operation ID from a previously
+          closed operation.
+        enum-values:
+          - AllowDuplicate
+          - RejectDuplicate
+      - name: search-attribute
+        type: string[]
+        description: |
+          Search Attribute in `KEY=VALUE` format.
+          Keys must be identifiers, and values must be JSON values.
+          For example: 'YourKey={"your": "value"}'.
+          Can be passed multiple times.
+      - name: static-summary
+        type: string
+        experimental: true
+        description: |
+          Static summary for the Nexus Operation for human consumption in UIs.
+          Uses Temporal Markdown formatting, should be a single line.
+
   - name: query-modifiers
     options:
       - name: reject-condition
@@ -5083,17 +5459,18 @@ option-sets:
         required: true
         enum-values:
           - pinned
+          - one_time
           - auto_upgrade
       - name: versioning-override-deployment-name
         type: string
         description:
-          When overriding to a `pinned` behavior, specifies the Deployment Name of the
-          version to target.
+          When overriding to a `pinned` or `one_time` behavior, specifies the
+          Deployment Name of the version to target.
       - name: versioning-override-build-id
         type: string
         description:
-          When overriding to a `pinned` behavior, specifies the Build ID of the
-          version to target.
+          When overriding to a `pinned` or `one_time` behavior, specifies the
+          Build ID of the version to target.
 
   - name: activity-reference
     options:
@@ -5151,6 +5528,11 @@ option-sets:
         description: |
           Maximum time between successful Worker heartbeats.
           On expiry the current activity attempt fails.
+      - name: start-delay
+        type: duration
+        description: |
+          Delay before dispatching the first Activity task.
+          This delay is not applied to retry attempts.
       - name: retry-initial-interval
         type: duration
         description: |
