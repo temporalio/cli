@@ -36,8 +36,20 @@ func (err ExtensionNonZeroExit) Unwrap() error {
 // tryExecuteExtension tries to execute an extension command if the command is not a built-in command.
 // It returns an error if the extension command fails, and a boolean indicating whether an extension was executed.
 func tryExecuteExtension(cctx *CommandContext, tcmd *TemporalCommand) (error, bool) {
+	// Special commands like "help" and "__complete" should be set aside and delegated to an extension command that matches
+	// the rest of the given arguments. "temporal help my-extension" should be rewritten to "temporal-my-extension help"
+	// Some of these commands, like "__complete" used for shell completion, don't actually get registered by Cobra until
+	// just before they're invoked, so we need to split out the delegatable commands before trying to Find() a matching
+	// subcommand.
+	delegatableCommands, nonDelegatedArgs := splitDelegatedCommands(cctx.Options.Args)
+
+	// If a completion command (used for generating the script that invokes "__complete") already exists or has been
+	// explicitly disabled, this will do nothing, but if neither of those cases are true, we want to make sure
+	// this command is registered so extensions can't shadow it.
+	tcmd.Command.InitDefaultCompletionCmd()
+
 	// Find the deepest matching built-in command and remaining args.
-	foundCmd, remainingArgs, findErr := tcmd.Command.Find(cctx.Options.Args)
+	foundCmd, remainingArgs, findErr := tcmd.Command.Find(nonDelegatedArgs)
 
 	// Cobra normally adds --help/-h before parsing, but extension dispatch
 	// pre-parses flags before Cobra's execution path runs. We Initialize it so that
@@ -58,6 +70,7 @@ func tryExecuteExtension(cctx *CommandContext, tcmd *TemporalCommand) (error, bo
 
 	// Search for an extension executable.
 	cmdPrefix := strings.Fields(foundCmd.CommandPath())
+
 	extPath, extArgs := lookupExtension(cmdPrefix, extArgs)
 
 	// Parse CLI args that need validation.
@@ -71,6 +84,16 @@ func tryExecuteExtension(cctx *CommandContext, tcmd *TemporalCommand) (error, bo
 		return nil, false
 	}
 
+	if len(delegatableCommands) > 0 && isCompletionCommand(delegatableCommands[0]) && len(extArgs) == 0 {
+		// __complete always expects at least one argument, the last of which is the current subcommand
+		// or argument to expand, with an empty string matching all possibilities.
+		// ["temporal", "__complete", "activity"] means this cli should return any subcommands and extentions that
+		// match "activity", whereas ["temporal", "__complete", "activity", ""] means we should show what's available
+		// on the activity subcommand. The same logic applies to extension commands, so even if we matched an extension,
+		// if there are no further args, it's still this cli's responsibility to respond to the completion request.
+		return nil, false
+	}
+
 	// Apply --command-timeout if set.
 	ctx := cctx.Context
 	if timeout := tcmd.CommandTimeout.Duration(); timeout > 0 {
@@ -79,7 +102,9 @@ func tryExecuteExtension(cctx *CommandContext, tcmd *TemporalCommand) (error, bo
 		defer cancel()
 	}
 
-	cmd := exec.CommandContext(ctx, extPath, append(cliPassArgs, extArgs...)...)
+	rebuiltArgs := slices.Concat(delegatableCommands, cliPassArgs, extArgs)
+
+	cmd := exec.CommandContext(ctx, extPath, rebuiltArgs...)
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = cctx.Options.Stdin, cctx.Options.Stdout, cctx.Options.Stderr
 	if err := cmd.Run(); err != nil {
 		if ctx.Err() != nil {
@@ -92,6 +117,36 @@ func tryExecuteExtension(cctx *CommandContext, tcmd *TemporalCommand) (error, bo
 	}
 
 	return nil, true
+}
+
+// splitDelegatedCommands separates out commands that should be delegated to an extension
+// from the rest of the args given. These commands are inherently position-dependent, so they're
+// only treated specially when they're at the start of the list of arguments.
+func splitDelegatedCommands(args []string) ([]string, []string) {
+	if len(args) == 0 {
+		return args, args
+	}
+
+	if args[0] == "help" {
+		// "help __complete" never delegates, whatever comes after, so we can just mark "help" as delegatable and see what matches
+		return args[:1], args[1:]
+	}
+
+	if isCompletionCommand(args[0]) {
+		if len(args) > 1 && args[1] == "help" {
+			// "__complete help" is what happens when a user types "temporal help<TAB>", so it should delegate both. This allows
+			// shell completion to display the available help topics available from an extension
+			return args[:2], args[2:]
+		}
+
+		return args[:1], args[1:]
+	}
+
+	return []string{}, args
+}
+
+func isCompletionCommand(arg string) bool {
+	return arg == cobra.ShellCompRequestCmd || arg == cobra.ShellCompNoDescRequestCmd
 }
 
 func groupArgs(foundCmd *cobra.Command, args []string) (cliParseArgs, cliPassArgs, extArgs []string) {
@@ -199,10 +254,9 @@ func lookupExtension(cmdPrefix, extArgs []string) (string, []string) {
 }
 
 // discoverExtensions scans the PATH for executables with the "temporal-" prefix
-// and returns their command parts (without the prefix).
-func discoverExtensions() [][]string {
-	var extensions [][]string
-	seen := make(map[string]bool)
+// and returns their commands (without the prefix) mapped to the executable path
+func discoverExtensions() map[string]string {
+	extensions := make(map[string]string)
 
 	for _, dir := range filepath.SplitList(os.Getenv("PATH")) {
 		if dir == "" {
@@ -229,13 +283,12 @@ func discoverExtensions() [][]string {
 			}
 
 			path := extensionBinaryToCommandPath(baseName)
-			key := strings.Join(path, "/")
-			if seen[key] {
+			key := strings.Join(path, " ")
+			if extensions[key] != "" {
 				continue
 			}
 
-			seen[key] = true
-			extensions = append(extensions, path)
+			extensions[key] = filepath.Join(dir, entry.Name())
 		}
 	}
 	return extensions

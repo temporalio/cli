@@ -62,6 +62,30 @@ func TestExtension_PrefersMostSpecificExtension(t *testing.T) {
 	assert.Equal(t, "Args: temporal-foo-bar \n", res.Stdout.String())
 }
 
+func TestExtension_CompleteShowsExtensions(t *testing.T) {
+	h := newExtensionHarness(t)
+	h.createExtension("temporal-foo", codeEchoArgs)
+
+	res := h.Execute("__complete", "")
+	assert.Regexp(t, "foo\\s+An extension command located at .*/temporal-foo", res.Stdout.String())
+}
+
+func TestExtension_CompleteDoesNotDelegateWithoutAdditionalArgs(t *testing.T) {
+	h := newExtensionHarness(t)
+	h.createExtension("temporal-foo", codeEchoArgs)
+
+	res := h.Execute("__complete", "foo")
+	assert.Regexp(t, "foo\\s+An extension command located at .*/temporal-foo", res.Stdout.String())
+}
+
+func TestExtension_InvokesComplete(t *testing.T) {
+	h := newExtensionHarness(t)
+	h.createExtension("temporal-foo", codeEchoArgs)
+
+	res := h.Execute("__complete", "foo", "")
+	assert.Equal(t, "Args: temporal-foo __complete \n", res.Stdout.String())
+}
+
 func TestExtension_ConvertsDashToUnderscoreInLookup(t *testing.T) {
 	h := newExtensionHarness(t)
 	h.createExtension("temporal-foo-bar_baz", codeEchoArgs)
@@ -79,6 +103,7 @@ func TestExtension_DoesNotOverrideBuiltinCommand(t *testing.T) {
 	h := newExtensionHarness(t)
 	h.createExtension("temporal-workflow", codeEchoArgs)
 	h.createExtension("temporal-workflow-list", codeEchoArgs)
+	h.createExtension("temporal-completion", codeEchoArgs)
 
 	t.Run("root command", func(t *testing.T) {
 		res := h.Execute("workflow", "--help")
@@ -101,6 +126,16 @@ func TestExtension_DoesNotOverrideBuiltinCommand(t *testing.T) {
 			assert.NotContains(t, res.Stderr.String(), "pflag: help requested")
 			assert.NoError(t, res.Err)
 		}
+	})
+
+	t.Run("__complete (shell completion)", func(t *testing.T) {
+		res := h.Execute("__complete", "")
+		assert.NotContains(t, res.Stdout.String(), "temporal-workflow")
+	})
+
+	t.Run("completion script generation", func(t *testing.T) {
+		res := h.Execute("completion", "zsh")
+		assert.NotContains(t, res.Stdout.String(), "temporal-completion")
 	})
 }
 
